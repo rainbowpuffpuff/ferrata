@@ -7,7 +7,8 @@ computed the wrong answer. Commands: `README.md`.
 
 ## Headline: `blst-accel` against the real core
 
-**Measured code:** plumbline commit **25aa07e** plus the uncommitted working-tree changes to
+**Measured code:** the `crates/plumbline-core` of commit **f030475** (byte-identical; checked with
+`results/PROVENANCE.txt`), measured before that commit as commit **25aa07e** plus the working-tree changes to
 `crates/plumbline-core` as of 6 Nov 2026 09:43 CET (`check_committee_onchain`,
 `Adoption::{Full, OnChain}`, `initialize_with`, `Blst::miller_half` / `Blst::final_half`).
 `git diff HEAD -- crates/plumbline-core` hashes to `3beb359a…`; per-file hashes are in
