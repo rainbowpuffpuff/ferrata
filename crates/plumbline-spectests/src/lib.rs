@@ -6,8 +6,10 @@
 //!   store's until a forced update first changes the spec store (the policy never forces).
 //! * `update_ranking`: checks `is_better_update` reproduces the canonical order.
 
+pub mod testkit;
+
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, HashSet},
     fs,
     path::{Path, PathBuf},
 };
@@ -34,6 +36,18 @@ pub fn vectors_dir() -> PathBuf {
     std::env::var_os("PLUMBLINE_VECTORS").map(PathBuf::from).unwrap_or_else(|| {
         Path::new(env!("CARGO_MANIFEST_DIR")).join("../../vectors").join(SPEC_TESTS_VERSION).join("tests/minimal")
     })
+}
+
+/// The consensus-spec-tests `general` directory of the same release (BLS vectors).
+pub fn general_vectors_dir() -> PathBuf {
+    vectors_dir().parent().map(|p| p.join("general")).unwrap_or_default()
+}
+
+/// The `ethereum/bls12-381-tests` vectors: `$PLUMBLINE_BLS_VECTORS`, or the pinned download.
+pub fn bls_vectors_dir() -> PathBuf {
+    std::env::var_os("PLUMBLINE_BLS_VECTORS")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| Path::new(env!("CARGO_MANIFEST_DIR")).join("../../vectors/bls12-381-tests-v0.1.2"))
 }
 
 /// Read and decompress an `.ssz_snappy` file (snappy block format).
@@ -211,8 +225,14 @@ pub struct SyncOutcome {
     pub policy_applied: usize,
     /// Updates the policy store refused, by error code.
     pub policy_refused: BTreeMap<u16, usize>,
-    /// True if a forced update changed the spec store (policy comparison stopped there).
+    /// True if a forced update changed the spec store (state comparison stopped there).
     pub forced_divergence: bool,
+    /// After that divergence the policy store is still fed every update: its refusals, by code.
+    pub policy_refused_after_divergence: BTreeMap<u16, usize>,
+    /// The policy store's finalized slot after the last step.
+    pub policy_final_slot: u64,
+    /// The spec store knows its next committee after the last step.
+    pub final_next_committee_known: bool,
 }
 
 /// Run one `sync` test case directory.
@@ -239,6 +259,7 @@ pub fn run_sync_case(dir: &Path, bls: &dyn BlsBackend) -> Result<SyncOutcome, St
 
     let mut out = SyncOutcome::default();
     let mut compare_policy = true;
+    let mut spec_finalized: HashSet<Root> = HashSet::from([store.core.finalized_header.beacon.hash_tree_root()]);
     let steps = read_yaml(&dir.join("steps.yaml"))?;
     for (i, step) in steps.as_sequence().ok_or("steps.yaml is not a list")?.iter().enumerate() {
         let (kind, body) =
@@ -261,14 +282,15 @@ pub fn run_sync_case(dir: &Path, bls: &dyn BlsBackend) -> Result<SyncOutcome, St
                 store
                     .process_update(&update, current_slot, &ctx)
                     .map_err(|e| at(format!("spec store refused: {e}")))?;
-                if compare_policy {
-                    match policy.process_update(&update, current_slot, &ctx) {
-                        Ok(_) => out.policy_applied += 1,
-                        Err(e @ (Error::NotFinalized | Error::BelowSupermajority | Error::NotNewer)) => {
-                            *out.policy_refused.entry(e.code()).or_default() += 1;
-                        }
-                        Err(e) => return Err(at(format!("policy store refused an update the spec accepted: {e}"))),
+                match policy.process_update(&update, current_slot, &ctx) {
+                    Ok(_) => out.policy_applied += 1,
+                    Err(e @ (Error::NotFinalized | Error::BelowSupermajority | Error::NotNewer)) if compare_policy => {
+                        *out.policy_refused.entry(e.code()).or_default() += 1;
                     }
+                    Err(e) if compare_policy => {
+                        return Err(at(format!("policy store refused an update the spec accepted: {e}")))
+                    }
+                    Err(e) => *out.policy_refused_after_divergence.entry(e.code()).or_default() += 1,
                 }
                 out.process_updates += 1;
             }
@@ -306,14 +328,21 @@ pub fn run_sync_case(dir: &Path, bls: &dyn BlsBackend) -> Result<SyncOutcome, St
             spec,
         )
         .map_err(at)?;
+        spec_finalized.insert(store.core.finalized_header.beacon.hash_tree_root());
+        // Safety, at every step: the policy store only ever holds a header the spec store finalized.
+        if !spec_finalized.contains(&policy.core().finalized_header.beacon.hash_tree_root()) {
+            return Err(at("policy store holds a header the spec store never finalized".into()));
+        }
         if compare_policy {
-            if policy.core != store.core {
+            if policy.core() != &store.core {
                 return Err(at("policy store diverged from the spec store without a forced update".into()));
             }
             out.policy_steps_compared += 1;
         }
         out.steps += 1;
     }
+    out.policy_final_slot = policy.core().finalized_header.beacon.slot;
+    out.final_next_committee_known = store.core.is_next_sync_committee_known();
     Ok(out)
 }
 

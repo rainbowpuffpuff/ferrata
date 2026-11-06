@@ -46,13 +46,11 @@ pub enum Error {
     SignatureInvalid = 40,
     /// The signature is not a valid compressed G2 point in the prime-order subgroup.
     SignatureMalformed = 41,
-    /// A committee public key is not a valid compressed point on the curve.
+    /// A public key fails `KeyValidate`: not a curve point, the identity, or outside G1.
     PubkeyInvalid = 42,
     /// The signing key (aggregate of the signers) is the identity point.
     SigningKeyIdentity = 43,
-    /// The signing key is not in the prime-order subgroup of G1.
-    SigningKeyNotInGroup = 44,
-    /// A committee key is not a curve point, or the keys do not sum to `aggregate_pubkey`.
+    /// A committee key fails `KeyValidate`, or the keys do not sum to `aggregate_pubkey`.
     CommitteeInvalid = 45,
 
     /// Plumbline policy: only finality updates may advance an instance.

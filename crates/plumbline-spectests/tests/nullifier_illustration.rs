@@ -1,12 +1,15 @@
-//! The nullifier trap for private consumers (proposal §5), as a runnable check.
+//! An illustration of the nullifier trap for private consumers (proposal §5). It is not
+//! evidence about Plumbline's code: no `plumbline-core` function runs here.
 //!
 //! A statement identifier is a deterministic function of public Ethereum data. If a private
-//! consumer (the RFP-022 bridge) publishes it, or any deterministic function of it, as its
-//! nullifier, anyone can recompute it for every public deposit and link each private mint to
-//! its deposit. The recommended pattern binds the nullifier to a secret committed in the
-//! deposit event instead: `N = H("nf" ‖ s ‖ fid)`.
+//! consumer publishes it, or any deterministic function of it, as its nullifier, anyone can
+//! recompute it for every public deposit and link each private mint to its deposit. The pattern
+//! binds the nullifier to a secret committed in the deposit event: `N = H("nf" ‖ s ‖ fid)`.
 //!
-//! Illustrative only: the identifier layout here stands in for the one M2 specifies.
+//! Limits of the illustration: every deposit here has a different amount, so if mints revealed
+//! amounts an observer could link them by amount anyway (RFP-022 expects fixed denominations);
+//! and "unlinkable" is checked only against a few functions an observer might guess. The
+//! identifier layout stands in for the one M2 specifies.
 
 use std::collections::HashSet;
 

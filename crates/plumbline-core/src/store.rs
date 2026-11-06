@@ -16,7 +16,7 @@ use crate::{
     upgrade::{upgrade_header, upgrade_update},
     validate::{
         current_sync_committee_gindex_at_slot, is_better_update, is_finality_update, is_sync_committee_update,
-        is_valid_light_client_header, validate_light_client_update, Context,
+        is_valid_light_client_header, validate_light_client_update, Context, SignaturePath,
     },
     Error, Root,
 };
@@ -100,6 +100,8 @@ pub struct ApplyOutcome {
     pub rotated: bool,
     /// The finalized header advanced.
     pub advanced: bool,
+    /// The store took the update's (non-empty) next sync committee as its own.
+    pub adopted: bool,
 }
 
 /// `apply_light_client_update`, minus the optimistic-header and participation bookkeeping
@@ -113,10 +115,12 @@ pub fn apply_core(core: &mut StoreCore, update: &LightClientUpdate, spec: &Chain
             return Err(Error::CommitteeUnknown);
         }
         core.next_sync_committee = update.next_sync_committee.clone();
+        outcome.adopted = !update.next_sync_committee.is_empty();
     } else if update_finalized_period == store_period + 1 {
         core.current_sync_committee =
             core::mem::replace(&mut core.next_sync_committee, update.next_sync_committee.clone());
         outcome.rotated = true;
+        outcome.adopted = !core.next_sync_committee.is_empty();
     }
     if update.finalized_header.beacon.slot > core.finalized_header.beacon.slot {
         core.finalized_header = update.finalized_header.clone();
@@ -179,7 +183,7 @@ impl LightClientStore {
         current_slot: u64,
         ctx: &Context<'_>,
     ) -> Result<(), Error> {
-        validate_light_client_update(&self.core, update, current_slot, ctx)?;
+        validate_light_client_update(&self.core, update, current_slot, ctx, SignaturePath::Spec)?;
         let spec = ctx.spec;
         let mut next = self.clone();
         let participants = update.sync_aggregate.participants();

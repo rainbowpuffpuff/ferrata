@@ -24,6 +24,15 @@ pub const DOMAIN_SYNC_COMMITTEE: [u8; 4] = [0x07, 0x00, 0x00, 0x00];
 /// `GENESIS_SLOT`.
 pub const GENESIS_SLOT: u64 = 0;
 
+/// Which BLS path verifies the sync-committee signature.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SignaturePath {
+    /// The spec's `FastAggregateVerify`, with `KeyValidate` on every signer key (spec store).
+    Spec,
+    /// For committees that passed `check_committee` when the store adopted them (policy store).
+    CheckedCommittee,
+}
+
 /// Everything an update is verified against, besides the store.
 pub struct Context<'a> {
     /// The instance's chain configuration.
@@ -244,6 +253,7 @@ pub fn validate_light_client_update(
     update: &LightClientUpdate,
     current_slot: u64,
     ctx: &Context<'_>,
+    path: SignaturePath,
 ) -> Result<(), Error> {
     let spec = ctx.spec;
     let fork = store.fork;
@@ -358,5 +368,9 @@ pub fn validate_light_client_update(
         &store.next_sync_committee
     };
     let signing_root = sync_committee_signing_root(update, ctx);
-    ctx.bls.verify_sync_aggregate(sync_committee, &sync_aggregate.bits, &signing_root, &sync_aggregate.signature)
+    let (bits, signature) = (&sync_aggregate.bits, &sync_aggregate.signature);
+    match path {
+        SignaturePath::Spec => ctx.bls.fast_aggregate_verify(sync_committee, bits, &signing_root, signature),
+        SignaturePath::CheckedCommittee => ctx.bls.verify_checked(sync_committee, bits, &signing_root, signature),
+    }
 }

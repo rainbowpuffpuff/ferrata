@@ -1,5 +1,6 @@
 //! Pure-Rust backend (zkcrypto/bls12_381), an independent implementation used as a
-//! differential oracle for the `blst` backend.
+//! differential oracle for the `blst` backend. Its hash-to-curve sits behind the crate's
+//! `experimental` feature; every signature in the spec vectors verifies under it.
 
 use bls12_381::{
     hash_to_curve::{ExpandMsgXmd, HashToCurve},
@@ -12,30 +13,90 @@ use crate::{
     Error, Root,
 };
 
-/// zkcrypto `bls12_381` with a chosen signing-key composition.
+/// zkcrypto `bls12_381` with a chosen signing-key composition for [`BlsBackend::verify_checked`].
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Zkcrypto {
     pub aggregation: Aggregation,
 }
 
 impl Zkcrypto {
-    /// A backend that always uses `aggregation`.
+    /// A backend that composes the signing key by `aggregation`.
     pub const fn new(aggregation: Aggregation) -> Self {
         Self { aggregation }
     }
 }
 
-/// Decode a compressed G1 point with an on-curve check (no subgroup check).
-fn decode_g1(bytes: &BlsPubkey) -> Result<G1Affine, Error> {
+/// Decode a compressed G1 point with an on-curve check only.
+fn uncompress(bytes: &BlsPubkey) -> Result<G1Affine, Error> {
     Option::from(G1Affine::from_compressed_unchecked(bytes)).ok_or(Error::PubkeyInvalid)
 }
 
-fn sum<'a>(mut keys: impl Iterator<Item = &'a BlsPubkey>) -> Result<G1Projective, Error> {
-    keys.try_fold(G1Projective::identity(), |acc, key| Ok(acc + decode_g1(key)?))
+/// `KeyValidate`: a curve point, not the identity, in the prime-order subgroup.
+fn key_validate(bytes: &BlsPubkey) -> Result<G1Affine, Error> {
+    let point: G1Affine = Option::from(G1Affine::from_compressed(bytes)).ok_or(Error::PubkeyInvalid)?;
+    if bool::from(point.is_identity()) {
+        return Err(Error::PubkeyInvalid);
+    }
+    Ok(point)
+}
+
+fn sum<'a>(
+    mut keys: impl Iterator<Item = &'a BlsPubkey>,
+    decode: fn(&BlsPubkey) -> Result<G1Affine, Error>,
+) -> Result<G1Projective, Error> {
+    keys.try_fold(G1Projective::identity(), |acc, key| Ok(acc + decode(key)?))
+}
+
+/// `e(−key, H(m)) · e(g1, signature) == 1`. `key` must not be the identity.
+fn pairing_check(key: &G1Projective, signing_root: &Root, signature: &BlsSignature) -> Result<(), Error> {
+    let sig: G2Affine = Option::from(G2Affine::from_compressed(signature)).ok_or(Error::SignatureMalformed)?;
+    if bool::from(sig.is_identity()) {
+        return Err(Error::SignatureInvalid);
+    }
+    let hashed = <G2Projective as HashToCurve<ExpandMsgXmd<sha2_09::Sha256>>>::hash_to_curve(signing_root, DST);
+    let check = multi_miller_loop(&[
+        (&G1Affine::from(-key), &G2Prepared::from(G2Affine::from(hashed))),
+        (&G1Affine::generator(), &G2Prepared::from(sig)),
+    ])
+    .final_exponentiation();
+    if check == Gt::identity() {
+        Ok(())
+    } else {
+        Err(Error::SignatureInvalid)
+    }
 }
 
 impl BlsBackend for Zkcrypto {
-    fn verify_sync_aggregate(
+    fn fast_aggregate_verify(
+        &self,
+        committee: &SyncCommittee,
+        bits: &[bool],
+        signing_root: &Root,
+        signature: &BlsSignature,
+    ) -> Result<(), Error> {
+        check_shape(committee, bits)?;
+        let signers = committee.pubkeys.iter().zip(bits).filter(|(_, b)| **b).map(|(k, _)| k);
+        let key = sum(signers, key_validate)?;
+        if bool::from(key.is_identity()) {
+            return Err(Error::SigningKeyIdentity);
+        }
+        pairing_check(&key, signing_root, signature)
+    }
+
+    fn check_committee(&self, committee: &SyncCommittee) -> Result<(), Error> {
+        if committee.pubkeys.is_empty() {
+            return Err(Error::CommitteeInvalid);
+        }
+        let total = sum(committee.pubkeys.iter(), key_validate).map_err(|_| Error::CommitteeInvalid)?;
+        let aggregate = uncompress(&committee.aggregate_pubkey).map_err(|_| Error::CommitteeInvalid)?;
+        if G1Affine::from(total) == aggregate {
+            Ok(())
+        } else {
+            Err(Error::CommitteeInvalid)
+        }
+    }
+
+    fn verify_checked(
         &self,
         committee: &SyncCommittee,
         bits: &[bool],
@@ -43,42 +104,15 @@ impl BlsBackend for Zkcrypto {
         signature: &BlsSignature,
     ) -> Result<(), Error> {
         let signers = check_shape(committee, bits)?;
-        let selected =
-            |want: bool| committee.pubkeys.iter().zip(bits).filter(move |(_, b)| **b == want).map(|(k, _)| k);
+        let members = |want: bool| committee.pubkeys.iter().zip(bits).filter(move |(_, b)| **b == want).map(|(k, _)| k);
         let key = if self.aggregation.subtract(signers, bits.len()) {
-            G1Projective::from(decode_g1(&committee.aggregate_pubkey)?) - sum(selected(false))?
+            G1Projective::from(uncompress(&committee.aggregate_pubkey)?) - sum(members(false), uncompress)?
         } else {
-            sum(selected(true))?
+            sum(members(true), uncompress)?
         };
         if bool::from(key.is_identity()) {
             return Err(Error::SigningKeyIdentity);
         }
-        let key = G1Affine::from(key);
-        if !bool::from(key.is_torsion_free()) {
-            return Err(Error::SigningKeyNotInGroup);
-        }
-        let sig: G2Affine = Option::from(G2Affine::from_compressed(signature)).ok_or(Error::SignatureMalformed)?;
-        let message = <G2Projective as HashToCurve<ExpandMsgXmd<sha2_09::Sha256>>>::hash_to_curve(signing_root, DST);
-        // e(key, H(m)) · e(−g1, sig) == 1
-        let check = multi_miller_loop(&[
-            (&key, &G2Prepared::from(G2Affine::from(message))),
-            (&-G1Affine::generator(), &G2Prepared::from(sig)),
-        ])
-        .final_exponentiation();
-        if check == Gt::identity() {
-            Ok(())
-        } else {
-            Err(Error::SignatureInvalid)
-        }
-    }
-
-    fn check_committee(&self, committee: &SyncCommittee) -> Result<(), Error> {
-        let sum = sum(committee.pubkeys.iter()).map_err(|_| Error::CommitteeInvalid)?;
-        let aggregate = decode_g1(&committee.aggregate_pubkey).map_err(|_| Error::CommitteeInvalid)?;
-        if G1Affine::from(sum) == aggregate {
-            Ok(())
-        } else {
-            Err(Error::CommitteeInvalid)
-        }
+        pairing_check(&key, signing_root, signature)
     }
 }

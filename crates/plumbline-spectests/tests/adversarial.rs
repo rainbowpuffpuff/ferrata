@@ -1,25 +1,23 @@
 //! Adversarial tests, built on real data from the official vectors (Electra, minimal preset).
 //!
-//! Every tampering is refused with its typed code, a refused update leaves the store unchanged,
-//! and a self-consistent fabricated chain is refused on the signature alone.
+//! Every tampering is refused, a refused update leaves the store unchanged, and a
+//! self-consistent fabricated chain is refused on the signature alone.
 
-use blst::min_pk::{AggregatePublicKey, AggregateSignature, PublicKey, SecretKey, Signature};
+use blst::min_pk::{PublicKey, SecretKey};
 use plumbline_core::{
     bls::{Aggregation, BlsBackend, Blst, Zkcrypto, DST},
     fork::Fork,
-    merkle::{
-        compute_merkle_branch_root, subtree_index, EXECUTION_PAYLOAD_GINDEX, FINALIZED_ROOT_GINDEX_ELECTRA, ZERO,
-    },
     policy::FinalizedStore,
     store::{LightClientStore, StoreCore},
-    types::{
-        BeaconBlockHeader, BlsPubkey, BlsSignature, Execution, ExecutionPayloadHeader, LightClientHeader,
-        LightClientUpdate, SyncAggregate, SyncCommittee,
-    },
-    validate::{is_finality_update, sync_committee_signing_root, Context},
-    Error, Root,
+    types::{BlsPubkey, BlsSignature, Execution, LightClientUpdate, SyncCommittee},
+    validate::{is_finality_update, Context},
+    Error,
 };
-use plumbline_spectests::{load_sync_case, vectors_dir, LoadedCase};
+use plumbline_spectests::{
+    load_sync_case,
+    testkit::{fabricated_update, fake_committee, Fabrication, FakeCommittee},
+    vectors_dir, LoadedCase,
+};
 
 static BLST: Blst = Blst::new(Aggregation::Auto);
 
@@ -64,7 +62,7 @@ impl Fixture {
         (u, slot)
     }
 
-    /// Submit to a copy of the store; a refusal must leave the store unchanged.
+    /// Submit to a copy of `store`; a refusal must leave the store unchanged.
     fn submit_to(
         &self,
         store: &FinalizedStore,
@@ -82,6 +80,12 @@ impl Fixture {
 
     fn submit(&self, update: &LightClientUpdate, slot: u64) -> Result<(), Error> {
         self.submit_to(&self.store, update, slot, &BLST)
+    }
+
+    /// The real store with its committee replaced by `fake`, as if `fake` were the true committee.
+    fn trusting(&self, fake: &FakeCommittee) -> FinalizedStore {
+        let core = StoreCore { current_sync_committee: fake.committee.clone(), ..self.store.core().clone() };
+        FinalizedStore::from_core(core, &BLST).unwrap()
     }
 }
 
@@ -106,13 +110,17 @@ fn signature_over_another_header_is_refused() {
 
 #[test]
 fn corrupted_signature_bytes_are_refused() {
+    // A flipped byte either leaves the encoding off the curve (malformed) or lands on another
+    // point (invalid), depending on the byte; both are refusals, and both libraries agree.
     let f = fixture();
     let (u, slot) = f.first();
     for byte in [0usize, 1, 20, 47, 48, 70, 95] {
         let mut t = u.clone();
         t.sync_aggregate.signature[byte] ^= 0x04;
-        let e = f.submit(&t, slot).unwrap_err();
-        assert!(matches!(e, Error::SignatureMalformed | Error::SignatureInvalid), "byte {byte}: {e}");
+        let blst = f.submit_to(&f.store, &t, slot, &Blst::default()).unwrap_err();
+        let zk = f.submit_to(&f.store, &t, slot, &Zkcrypto::default()).unwrap_err();
+        assert!(matches!(blst, Error::SignatureMalformed | Error::SignatureInvalid), "byte {byte}: {blst}");
+        assert_eq!(blst, zk, "byte {byte}: the libraries disagree");
     }
 }
 
@@ -229,107 +237,16 @@ fn policy_refuses_non_finality_and_replayed_updates() {
 }
 
 // ---------------------------------------------------------------------------------------------
-// A fabricated chain (RFP-021 Verification Security #1).
+// A fabricated chain (RFP-021 Verification Security #1, consensus half).
 
-struct FakeCommittee {
-    keys: Vec<SecretKey>,
-    committee: SyncCommittee,
-}
-
-fn fake_committee(n: usize, seed: u8) -> FakeCommittee {
-    let keys: Vec<SecretKey> = (0..n)
-        .map(|i| {
-            let mut ikm = [seed; 32];
-            ikm[0] = i as u8;
-            SecretKey::key_gen(&ikm, &[]).unwrap()
-        })
-        .collect();
-    let pks: Vec<PublicKey> = keys.iter().map(SecretKey::sk_to_pk).collect();
-    let refs: Vec<&PublicKey> = pks.iter().collect();
-    let aggregate = AggregatePublicKey::aggregate(&refs, false).unwrap().to_public_key();
-    FakeCommittee {
-        keys,
-        committee: SyncCommittee {
-            pubkeys: pks.iter().map(PublicKey::compress).collect(),
-            aggregate_pubkey: aggregate.compress(),
-        },
-    }
-}
-
-fn sign(fake: &FakeCommittee, bits: &[bool], message: &Root) -> BlsSignature {
-    let sigs: Vec<Signature> =
-        fake.keys.iter().zip(bits).filter(|(_, b)| **b).map(|(sk, _)| sk.sign(message, DST, &[])).collect();
-    let refs: Vec<&Signature> = sigs.iter().collect();
-    AggregateSignature::aggregate(&refs, false).unwrap().to_signature().compress()
-}
-
-fn filler(tag: u8) -> Root {
-    [tag; 32]
-}
-
-/// A header whose execution branch verifies against its own body root.
-fn fabricated_header(slot: u64, tag: u8) -> LightClientHeader {
-    let mut payload = ExecutionPayloadHeader::empty();
-    payload.block_number = 1_000_000 + slot;
-    payload.block_hash = filler(tag);
-    payload.state_root = filler(tag.wrapping_add(1));
-    payload.receipts_root = filler(tag.wrapping_add(2));
-    payload.timestamp = 1_700_000_000 + 6 * slot;
-    let branch: Vec<Root> = (0..4).map(|i| filler(tag.wrapping_add(10 + i))).collect();
-    let body_root = compute_merkle_branch_root(
-        &payload.hash_tree_root_deneb(),
-        &branch,
-        4,
-        subtree_index(EXECUTION_PAYLOAD_GINDEX),
-    )
-    .unwrap();
-    LightClientHeader {
-        beacon: BeaconBlockHeader {
-            slot,
-            proposer_index: 7,
-            parent_root: filler(tag.wrapping_add(20)),
-            state_root: filler(tag.wrapping_add(21)),
-            body_root,
-        },
-        execution: Execution::Payload { header: payload, branch },
-    }
-}
-
-/// A finality update about a chain that never existed, with every branch self-consistent.
-fn fabricated_update(
-    template: &LightClientUpdate,
-    fake: &FakeCommittee,
-    signers: usize,
-    ctx: &Context<'_>,
-) -> LightClientUpdate {
-    let n = fake.committee.pubkeys.len();
-    let finalized = fabricated_header(template.finalized_header.beacon.slot, 40);
-    let mut attested = fabricated_header(template.attested_header.beacon.slot, 80);
-    let finality_branch: Vec<Root> = (0..7).map(|i| filler(120 + i)).collect();
-    attested.beacon.state_root = compute_merkle_branch_root(
-        &finalized.beacon.hash_tree_root(),
-        &finality_branch,
-        7,
-        subtree_index(FINALIZED_ROOT_GINDEX_ELECTRA),
-    )
-    .unwrap();
-    let bits: Vec<bool> = (0..n).map(|i| i < signers).collect();
-    let mut update = LightClientUpdate {
-        attested_header: attested,
-        next_sync_committee: SyncCommittee::empty(n),
-        next_sync_committee_branch: vec![ZERO; 6],
-        finalized_header: finalized,
-        finality_branch,
-        sync_aggregate: SyncAggregate { bits: bits.clone(), signature: [0; 96] },
+fn fabrication(template: &LightClientUpdate, signers: usize) -> Fabrication<'static> {
+    Fabrication {
+        finalized_slot: Some(template.finalized_header.beacon.slot),
+        attested_slot: template.attested_header.beacon.slot,
         signature_slot: template.signature_slot,
-    };
-    update.sync_aggregate.signature = sign(fake, &bits, &sync_committee_signing_root(&update, ctx));
-    update
-}
-
-/// The real store with its committee replaced by `fake` (as if `fake` were the true committee).
-fn store_trusting(f: &Fixture, fake: &FakeCommittee) -> FinalizedStore {
-    FinalizedStore { core: StoreCore { current_sync_committee: fake.committee.clone(), ..f.store.core.clone() } }
+        signers,
+        next_committee: None,
+    }
 }
 
 #[test]
@@ -338,10 +255,10 @@ fn fabricated_chain_is_refused_on_the_signature() {
     let (template, slot) = f.first();
     let n = template.sync_aggregate.bits.len();
     let fake = fake_committee(n, 0xa5);
-    let update = fabricated_update(&template, &fake, n, &f.ctx(&BLST));
+    let update = fabricated_update(&fabrication(&template, n), &fake, &f.ctx(&BLST));
     for (name, bls) in backends() {
         // Positive control: the forgery is internally consistent; only the trust root differs.
-        assert_eq!(f.submit_to(&store_trusting(&f, &fake), &update, slot, bls.as_ref()), Ok(()), "{name}");
+        assert_eq!(f.submit_to(&f.trusting(&fake), &update, slot, bls.as_ref()), Ok(()), "{name}");
         // Against the real committee it is refused, and only on the signature.
         assert_eq!(f.submit_to(&f.store, &update, slot, bls.as_ref()), Err(Error::SignatureInvalid), "{name}");
     }
@@ -354,11 +271,11 @@ fn participation_floor_is_exactly_two_thirds() {
     let n = template.sync_aggregate.bits.len(); // 32 in the minimal preset
     let floor = (2 * n).div_ceil(3); // 22
     let fake = fake_committee(n, 0x3c);
-    let trusting = store_trusting(&f, &fake);
+    let trusting = f.trusting(&fake);
     for (signers, expected) in
         [(floor - 1, Err(Error::BelowSupermajority)), (floor, Ok(())), (floor + 1, Ok(())), (n, Ok(()))]
     {
-        let update = fabricated_update(&template, &fake, signers, &f.ctx(&BLST));
+        let update = fabricated_update(&fabrication(&template, signers), &fake, &f.ctx(&BLST));
         for (name, bls) in backends() {
             assert_eq!(f.submit_to(&trusting, &update, slot, bls.as_ref()), expected, "{signers} signers, {name}");
         }
@@ -372,13 +289,13 @@ fn participation_floor_is_exactly_two_thirds() {
     )
     .unwrap();
     spec_store.core.current_sync_committee = fake.committee.clone();
-    let mut none = fabricated_update(&template, &fake, 1, &f.ctx(&BLST));
+    let mut none = fabricated_update(&fabrication(&template, 1), &fake, &f.ctx(&BLST));
     none.sync_aggregate.bits = vec![false; n];
     assert_eq!(spec_store.process_update(&none, slot, &f.ctx(&BLST)), Err(Error::ParticipationLow));
 }
 
 // ---------------------------------------------------------------------------------------------
-// The signing-key composition (audit target #1), checked on hand-built edge cases.
+// The signing-key composition (audit target #1), on hand-built edge cases.
 
 fn keypair(seed: u8) -> (SecretKey, BlsPubkey) {
     let sk = SecretKey::key_gen(&[seed; 32], &[]).unwrap();
@@ -412,7 +329,7 @@ fn order_three_point() -> BlsPubkey {
     out
 }
 
-/// A curve point outside the prime-order subgroup with x ≠ 0 (blst special-cases x = 0).
+/// A curve point outside the prime-order subgroup with x ≠ 0.
 fn non_subgroup_point() -> BlsPubkey {
     (1u8..=255)
         .map(|x| {
@@ -427,14 +344,20 @@ fn non_subgroup_point() -> BlsPubkey {
 
 #[test]
 fn identity_signing_key_is_refused() {
-    // {pk, −pk} both signing: the aggregate is the identity, and the identity signature would
-    // "verify" any message if this were not checked.
+    // {pk, −pk}: two valid keys whose sum is the identity. The identity signature would "verify"
+    // any message under the identity key if this were not checked.
     let (_, pk) = keypair(1);
     let committee = SyncCommittee { pubkeys: vec![pk, negate(&pk)], aggregate_pubkey: identity_g1() };
+    let msg = [9u8; 32];
     for (name, bls) in backends() {
-        assert_eq!(bls.check_committee(&committee), Ok(()), "{name}: the committee itself is consistent");
+        assert_eq!(bls.check_committee(&committee), Ok(()), "{name}: both keys are valid");
         assert_eq!(
-            bls.verify_sync_aggregate(&committee, &[true, true], &[9; 32], &identity_g2()),
+            bls.verify_checked(&committee, &[true, true], &msg, &identity_g2()),
+            Err(Error::SigningKeyIdentity),
+            "{name}"
+        );
+        assert_eq!(
+            bls.fast_aggregate_verify(&committee, &[true, true], &msg, &identity_g2()),
             Err(Error::SigningKeyIdentity),
             "{name}"
         );
@@ -442,45 +365,27 @@ fn identity_signing_key_is_refused() {
 }
 
 #[test]
-fn signing_key_outside_the_subgroup_is_refused() {
+fn keys_outside_the_subgroup_are_refused_with_one_code_by_both_libraries() {
+    // blst refuses the order-3 (x = 0) points while decoding; zkcrypto refuses them at its
+    // subgroup check. Both report the same code, because both checks are `KeyValidate`.
     let (_, pk) = keypair(2);
-    let t = non_subgroup_point();
-    // Additive: the signers are {T, pk}. Subtractive: aggregate T, non-signer −pk, so T + pk.
-    let additive = SyncCommittee { pubkeys: vec![t, pk], aggregate_pubkey: identity_g1() };
-    let subtractive = SyncCommittee { pubkeys: vec![pk, negate(&pk)], aggregate_pubkey: t };
     let msg = [3u8; 32];
-    for (name, bls) in backends() {
-        let (committee, bits) = match name.rsplit('/').next() {
-            Some("subtractive") => (&subtractive, [true, false]),
-            Some("additive") => (&additive, [true, true]),
-            _ => continue, // `auto` is one of the two above
-        };
-        assert_eq!(
-            bls.verify_sync_aggregate(committee, &bits, &msg, &identity_g2()),
-            Err(Error::SigningKeyNotInGroup),
-            "{name}"
-        );
+    for bad in [order_three_point(), non_subgroup_point(), identity_g1()] {
+        let committee = SyncCommittee { pubkeys: vec![bad, pk], aggregate_pubkey: pk };
+        for (name, bls) in backends() {
+            assert_eq!(bls.check_committee(&committee), Err(Error::CommitteeInvalid), "{name}");
+            assert_eq!(
+                bls.fast_aggregate_verify(&committee, &[true, true], &msg, &identity_g2()),
+                Err(Error::PubkeyInvalid),
+                "{name}"
+            );
+        }
     }
 }
 
 #[test]
-fn order_three_point_is_refused_by_both_libraries_with_different_codes() {
-    // Differential finding: blst rejects the x = 0 points (order 3) while decoding, zkcrypto
-    // decodes them and rejects the aggregate at the subgroup check. Both refuse; the codes
-    // differ, which is why the program pins one backend for its error codes.
-    let (_, pk) = keypair(3);
-    let committee = SyncCommittee { pubkeys: vec![order_three_point(), pk], aggregate_pubkey: identity_g1() };
-    let msg = [4u8; 32];
-    let blst = Blst::new(Aggregation::Additive).verify_sync_aggregate(&committee, &[true, true], &msg, &identity_g2());
-    let zk =
-        Zkcrypto::new(Aggregation::Additive).verify_sync_aggregate(&committee, &[true, true], &msg, &identity_g2());
-    assert_eq!(blst, Err(Error::PubkeyInvalid));
-    assert_eq!(zk, Err(Error::SigningKeyNotInGroup));
-}
-
-#[test]
 fn off_curve_keys_and_inconsistent_committees_are_refused() {
-    // Find an x for which x³ + 4 is not a square: that compressed key is not on the curve.
+    // An x for which x³ + 4 is not a square: that compressed key is not on the curve.
     let off_curve = (1u8..=255)
         .map(|x| {
             let mut k = [0u8; 48];
@@ -493,24 +398,22 @@ fn off_curve_keys_and_inconsistent_committees_are_refused() {
     let (_, a) = keypair(4);
     let (_, b) = keypair(5);
     let bad = SyncCommittee { pubkeys: vec![a, off_curve], aggregate_pubkey: a };
-    // Wrong aggregate: valid points that do not sum to it.
     let wrong_sum = SyncCommittee { pubkeys: vec![a, b], aggregate_pubkey: a };
+    let empty = SyncCommittee { pubkeys: vec![], aggregate_pubkey: identity_g1() };
     for (name, bls) in backends() {
         assert_eq!(bls.check_committee(&bad), Err(Error::CommitteeInvalid), "{name}");
         assert_eq!(bls.check_committee(&wrong_sum), Err(Error::CommitteeInvalid), "{name}");
+        assert_eq!(bls.check_committee(&empty), Err(Error::CommitteeInvalid), "{name}");
+        assert_eq!(
+            bls.fast_aggregate_verify(&bad, &[true, true], &[0; 32], &identity_g2()),
+            Err(Error::PubkeyInvalid),
+            "{name}"
+        );
     }
-    // Decoding an off-curve key on the signing path is refused too (additive: as a signer).
-    let additive = Blst::new(Aggregation::Additive);
-    assert_eq!(
-        additive.verify_sync_aggregate(&bad, &[true, true], &[0; 32], &identity_g2()),
-        Err(Error::PubkeyInvalid)
-    );
-    let additive = Zkcrypto::new(Aggregation::Additive);
-    assert_eq!(
-        additive.verify_sync_aggregate(&bad, &[true, true], &[0; 32], &identity_g2()),
-        Err(Error::PubkeyInvalid)
-    );
 }
+
+/// One of the two verification paths of a backend.
+type VerifyFn = fn(&dyn BlsBackend, &SyncCommittee, &[bool], &[u8; 32], &BlsSignature) -> Result<(), Error>;
 
 #[test]
 fn malformed_signatures_are_refused() {
@@ -521,21 +424,25 @@ fn malformed_signatures_are_refused() {
     let mut not_compressed = good;
     not_compressed[0] &= 0x7f; // clear the compression flag
     for (name, bls) in backends() {
-        assert_eq!(bls.verify_sync_aggregate(&committee, &[true], &msg, &good), Ok(()), "{name}");
-        assert_eq!(
-            bls.verify_sync_aggregate(&committee, &[true], &[8; 32], &good),
-            Err(Error::SignatureInvalid),
-            "{name}"
-        );
-        assert_eq!(
-            bls.verify_sync_aggregate(&committee, &[true], &msg, &not_compressed),
-            Err(Error::SignatureMalformed),
-            "{name}"
-        );
-        assert_eq!(
-            bls.verify_sync_aggregate(&committee, &[false], &msg, &good),
-            Err(Error::ParticipationLow),
-            "{name}"
-        );
+        let paths: [(&str, VerifyFn); 2] = [
+            ("spec", |b, c, bits, m, s| b.fast_aggregate_verify(c, bits, m, s)),
+            ("checked", |b, c, bits, m, s| b.verify_checked(c, bits, m, s)),
+        ];
+        for (path, verify) in paths {
+            let bls = bls.as_ref();
+            assert_eq!(verify(bls, &committee, &[true], &msg, &good), Ok(()), "{name} {path}");
+            assert_eq!(
+                verify(bls, &committee, &[true], &[8; 32], &good),
+                Err(Error::SignatureInvalid),
+                "{name} {path}"
+            );
+            assert_eq!(
+                verify(bls, &committee, &[true], &msg, &not_compressed),
+                Err(Error::SignatureMalformed),
+                "{name} {path}"
+            );
+            assert_eq!(verify(bls, &committee, &[true], &msg, &identity_g2()), Err(Error::SignatureInvalid));
+            assert_eq!(verify(bls, &committee, &[false], &msg, &good), Err(Error::ParticipationLow), "{name} {path}");
+        }
     }
 }
