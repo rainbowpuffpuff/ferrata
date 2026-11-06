@@ -22,4 +22,6 @@ is part of the audit packet.
 | `split_container`, container decoders (ssz.rs, types.rs) | SSZ specification | strict: exact consumption, first offset equals fixed size, monotone offsets | SSZ guard tests; M05, M06 | |
 | `Blst::fast_aggregate_verify`, `Zkcrypto::fast_aggregate_verify` (bls/) | `FastAggregateVerify` (IETF BLS, proof-of-possession suite) | pairing computed as two Miller loops and one final exponentiation | BLS vectors; M33 | |
 | `check_committee` (bls/) | `KeyValidate` per key, `eth_aggregate_pubkeys` | refuses an empty committee | `eth_aggregate_pubkeys` vectors; M35 | |
+| `check_committee_onchain` (bls/) | (the program's adoption check) | no per-key subgroup check; relies on deposit-time `KeyValidate` | on-chain adoption guards; M41 | |
+| `Blst::miller_half`, `Blst::final_half` (bls/) | split of the pairing check | canonical big-endian Fp12 encoding | split round-trip test; M43 | |
 | `verify_checked` (bls/) | (equivalent to `FastAggregateVerify` for checked committees) | subtractive composition; identity check only | BLS vectors (both paths agree); M34 | |

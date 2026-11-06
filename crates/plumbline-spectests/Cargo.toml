@@ -16,3 +16,6 @@ hex = "0.4"
 sha2 = "0.10"
 blst = "0.3"
 
+
+[dev-dependencies]
+bls12_381 = { version = "0.8", default-features = false, features = ["groups", "alloc"] }

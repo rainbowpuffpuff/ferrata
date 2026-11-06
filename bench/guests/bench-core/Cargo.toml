@@ -1,0 +1,18 @@
+[package]
+name = "bench-core"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.88"
+publish = false
+description = "Guest-side cycle measurement of plumbline-core phases (shared by every guest config)"
+
+[features]
+blst = ["plumbline-core/blst", "dep:blst"]
+zkcrypto = ["plumbline-core/zkcrypto", "dep:bls12_381", "dep:sha2_09"]
+
+[dependencies]
+plumbline-core = { path = "../../../crates/plumbline-core", default-features = false }
+risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["std"] }
+blst = { version = "0.3", optional = true }
+bls12_381 = { version = "0.8", optional = true, default-features = false, features = ["groups", "pairings", "alloc", "experimental"] }
+sha2_09 = { package = "sha2", version = "0.9", optional = true, default-features = false }

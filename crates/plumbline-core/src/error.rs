@@ -1,7 +1,8 @@
 //! Typed errors with stable numeric codes.
 //!
-//! The same codes are returned by the on-chain program and by the off-chain dry run, and an
-//! on-chain error carries the code only: never the query, a header or an identifier.
+//! The same codes are returned by the on-chain program and by the off-chain dry run. Messages
+//! carry the code only, never the query, a header or an identifier. (On LEZ v0.4 a refused
+//! transaction is recorded only as reverted; the code reaches logs and RPC responses.)
 
 use core::fmt;
 

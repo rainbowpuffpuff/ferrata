@@ -550,3 +550,89 @@ fn bootstrap_must_match_the_checkpoint_and_its_branch() {
     let e = Some(Error::BootstrapHeaderInvalid);
     assert_eq!(init(&case.trusted_block_root, &b), (e, e));
 }
+
+// ---- On-chain committee adoption ----------------------------------------------------------
+
+#[test]
+fn onchain_adoption_skips_only_the_subgroup_check() {
+    use blst::min_pk::PublicKey;
+    let fake = fake_committee(4, 0xab);
+    let mut keys = fake.committee.pubkeys.clone();
+    // A curve point outside the prime-order subgroup, with x != 0.
+    let outside = (1u8..=255)
+        .map(|x| {
+            let mut k = [0u8; 48];
+            k[0] = 0x80;
+            k[47] = x;
+            k
+        })
+        .find(|k| PublicKey::uncompress(k).is_ok_and(|pk| pk.validate().is_err()))
+        .unwrap();
+    let mut identity = [0u8; 48];
+    identity[0] = 0xc0;
+    for bls in [&BLST as &dyn BlsBackend, &Zkcrypto::new(Aggregation::Auto)] {
+        assert_eq!(bls.check_committee(&fake.committee), Ok(()));
+        assert_eq!(bls.check_committee_onchain(&fake.committee), Ok(()));
+        // Identity seat: both refuse.
+        keys[1] = identity;
+        let c = plumbline_core::types::SyncCommittee {
+            pubkeys: keys.clone(),
+            aggregate_pubkey: fake.committee.aggregate_pubkey,
+        };
+        assert_eq!(bls.check_committee_onchain(&c), Err(Error::CommitteeInvalid));
+        // Wrong sum: both refuse.
+        keys = fake.committee.pubkeys.clone();
+        let c = with_wrong_aggregate(&fake.committee);
+        assert_eq!(bls.check_committee_onchain(&c), Err(Error::CommitteeInvalid));
+        // Outside the subgroup, with the matching aggregate: only the full check refuses. The
+        // program relies on every key of a genuine beacon state having passed `KeyValidate` at
+        // deposit, and `verify_checkpoint` and `monitor` run the full check off chain.
+        let mut odd = fake.committee.clone();
+        odd.pubkeys[2] = outside;
+        odd.aggregate_pubkey = sum_of(&odd.pubkeys);
+        assert_eq!(bls.check_committee(&odd), Err(Error::CommitteeInvalid));
+        assert_eq!(bls.check_committee_onchain(&odd), Ok(()));
+    }
+}
+
+#[test]
+fn store_adoption_mode_decides_the_check() {
+    use blst::min_pk::PublicKey;
+    use plumbline_core::policy::Adoption;
+    let case = electra();
+    let spec = &case.config.spec;
+    let fake = fake_committee(32, 0xcd);
+    let outside = (1u8..=255)
+        .map(|x| {
+            let mut k = [0u8; 48];
+            k[0] = 0x80;
+            k[47] = x;
+            k
+        })
+        .find(|k| PublicKey::uncompress(k).is_ok_and(|pk| pk.validate().is_err()))
+        .unwrap();
+    let mut odd = fake.committee.clone();
+    odd.pubkeys[7] = outside;
+    odd.aggregate_pubkey = sum_of(&odd.pubkeys);
+    let mut header = fabricated_header(16, 700);
+    let (state_root, branches) = sparse_tree(&[(CURRENT_SYNC_COMMITTEE_GINDEX_ELECTRA, odd.hash_tree_root())], 11);
+    header.beacon.state_root = state_root;
+    let bootstrap = LightClientBootstrap {
+        header: header.clone(),
+        current_sync_committee: odd,
+        current_sync_committee_branch: branches[0].clone(),
+    };
+    let trusted = header.beacon.hash_tree_root();
+    let init = |adoption| FinalizedStore::initialize_with(&trusted, &bootstrap, LcFork::Electra, spec, &BLST, adoption);
+    assert_eq!(init(Adoption::Full).err(), Some(Error::CommitteeInvalid));
+    assert!(init(Adoption::OnChain).is_ok());
+}
+
+/// Sum of compressed keys that are curve points (not necessarily in G1), compressed.
+fn sum_of(keys: &[[u8; 48]]) -> [u8; 48] {
+    use bls12_381::{G1Affine, G1Projective};
+    let total = keys.iter().fold(G1Projective::identity(), |acc, k| {
+        acc + Option::<G1Affine>::from(G1Affine::from_compressed_unchecked(k)).unwrap()
+    });
+    G1Affine::from(total).to_compressed()
+}

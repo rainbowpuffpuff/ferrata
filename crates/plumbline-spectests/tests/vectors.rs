@@ -4,7 +4,8 @@
 //! cases, so a moved or empty directory cannot pass vacuously.
 
 use plumbline_core::bls::{Aggregation, BlsBackend, Blst, Zkcrypto};
-use plumbline_spectests::{cases, run_sync_case, run_update_ranking_case, SyncOutcome};
+use plumbline_core::policy::Adoption;
+use plumbline_spectests::{cases, run_sync_case, run_sync_case_with, run_update_ranking_case, SyncOutcome};
 
 /// `sync` cases in v1.7.0-beta.4 (minimal preset): altair 8, bellatrix 11, capella 10,
 /// deneb 8, electra 5, fulu 6, gloas 4.
@@ -67,6 +68,26 @@ fn sync_vectors_blst_additive() {
 #[test]
 fn sync_vectors_blst_subtractive() {
     run_all_sync(&Blst::new(Aggregation::Subtractive));
+}
+
+#[test]
+fn sync_vectors_onchain_adoption() {
+    // The policy store adopting committees with the program's check (no per-key subgroup check).
+    let all = cases("sync").unwrap();
+    assert_eq!(all.len(), EXPECTED_SYNC_CASES);
+    for (fork, dir) in &all {
+        for bls in [&Blst::default() as &dyn BlsBackend, &Zkcrypto::default()] {
+            let full = run_sync_case(dir, bls).unwrap_or_else(|e| panic!("{}: {e}", fork.name()));
+            let onchain =
+                run_sync_case_with(dir, bls, Adoption::OnChain).unwrap_or_else(|e| panic!("{}: {e}", fork.name()));
+            assert_eq!(
+                (full.policy_steps_compared, full.policy_applied, full.policy_final_slot),
+                (onchain.policy_steps_compared, onchain.policy_applied, onchain.policy_final_slot),
+                "{}: adoption modes disagree",
+                dir.display()
+            );
+        }
+    }
 }
 
 #[test]

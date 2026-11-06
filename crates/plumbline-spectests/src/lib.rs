@@ -17,7 +17,7 @@ use std::{
 use plumbline_core::{
     bls::BlsBackend,
     fork::{ChainSpec, Fork, LcFork, Preset, FAR_FUTURE_EPOCH},
-    policy::FinalizedStore,
+    policy::{Adoption, FinalizedStore},
     store::LightClientStore,
     types::{LightClientBootstrap, LightClientHeader, LightClientUpdate},
     upgrade::{upgrade_bootstrap, upgrade_update},
@@ -235,8 +235,13 @@ pub struct SyncOutcome {
     pub final_next_committee_known: bool,
 }
 
-/// Run one `sync` test case directory.
+/// Run one `sync` test case directory, with the off-chain committee check.
 pub fn run_sync_case(dir: &Path, bls: &dyn BlsBackend) -> Result<SyncOutcome, String> {
+    run_sync_case_with(dir, bls, Adoption::Full)
+}
+
+/// Run one `sync` test case directory, with the policy store adopting committees by `adoption`.
+pub fn run_sync_case_with(dir: &Path, bls: &dyn BlsBackend, adoption: Adoption) -> Result<SyncOutcome, String> {
     let meta = read_yaml(&dir.join("meta.yaml"))?;
     let cfg = parse_config(&dir.join("config.yaml"))?;
     let spec = &cfg.spec;
@@ -253,7 +258,7 @@ pub fn run_sync_case(dir: &Path, bls: &dyn BlsBackend) -> Result<SyncOutcome, St
         .map_err(|e| format!("bootstrap upgrade: {e}"))?;
     let mut store =
         LightClientStore::initialize(&trusted, &bootstrap, store_fork, spec).map_err(|e| format!("initialize: {e}"))?;
-    let mut policy = FinalizedStore::initialize(&trusted, &bootstrap, store_fork, spec, bls)
+    let mut policy = FinalizedStore::initialize_with(&trusted, &bootstrap, store_fork, spec, bls, adoption)
         .map_err(|e| format!("policy initialize: {e}"))?;
     let ctx = Context { spec, genesis_validators_root: gvr, bls };
 

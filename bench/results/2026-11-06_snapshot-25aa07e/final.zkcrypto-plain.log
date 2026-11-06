@@ -1,0 +1,87 @@
+update_0: 512 signers, update_1: 510 signers
+## zkcrypto-plain (ELF 1083740 bytes)
+
+### E2E: bootstrap -> update_0 -> update_1
+config: zkcrypto bls12_381
+         41313  E1 decode bootstrap (SSZ)
+    3129973930  E2 FinalizedStore::initialize (incl. check_committee on 512 keys)
+         55816  E3 decode update_0 (SSZ)
+    3289011652  E4 process_update(update_0): current committee signs, adopts next committee
+         55092  E5 decode update_1 (SSZ)
+    3292192488  E6 process_update(update_1): handoff, next committee signs, rotates, adopts
+    9711332064  E  sum E1..E6 (one cycle_count delta)
+           512  info: update_0 signers
+           510  info: update_1 signers
+    9711366838  EXECUTION user cycles (SessionInfo::cycles)
+   10305470464  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 9829 segments; po2 {16, 20})
+        194.32  executor wall-clock seconds
+
+### PHASES: update_1 against the post-update_0 store
+config: zkcrypto bls12_381
+         55095  1  SSZ decode of update_1 (26,906 bytes)
+         48175  2a header validity, attested (payload header root + 4-deep execution branch)
+         48168  2b header validity, finalized
+       1123291  3a SyncCommittee hash_tree_root (512 keys + aggregate)
+          8087  3b next-committee branch check (6 deep)
+         17104  3c finality: finalized beacon header root + branch check (7 deep)
+         10280  4  signing root (attested header root, fork version, domain)
+           510  info: update_1 signers
+             2  info: update_1 non-signers
+       5595438  5s aggregation, subtractive: decompress aggregate + non-signers, add, negate
+     950372361  5a aggregation, additive: decompress every signer key + add
+      21777107  5a' additive, point additions only (keys already decompressed)
+       1820866  5d one G1 decompression (for scale)
+       4239280  5g one G1 subgroup check, affine (for scale)
+       6052034  5k G1 subgroup check of the aggregate key (earlier design; not in verify_checked)
+       1813141  5n identity check + negate key + to affine (as pairing_check)
+      11386760  6a signature decompression (G2)
+       7826580  6b signature G2 subgroup check + not identity
+      35082628  7  hash_to_G2(signing root) + to affine
+      16297418  8p G2Prepared::from x2 (line precomputation)
+      37956706  8l multi_miller_loop, 2 pairs (prepared)
+      54254124  8  Miller loop total (8p + 8l)
+      46008641  9  final exponentiation + == identity
+     162140669  B1 backend verify_checked, subtractive (plumbline code, policy store path)
+    1106915469  B2 backend verify_checked, additive (plumbline code)
+    3269268545  B3 backend fast_aggregate_verify (spec path: KeyValidate on every signer key)
+    3128358422  10a adoption, compressed: 512 x KeyValidate (decompress + G1 subgroup) + sum + compare aggregate
+     957732885  10a0 same, on-curve only (no per-key subgroup check; earlier design)
+    2205094943  10b adoption, uncompressed: 512 x (deserialize+on-curve, recompress==committed, G1 subgroup) + sum + compress==aggregate
+      34624028  10b0 same, uncompressed without the per-key subgroup check
+    2170467411  10g 512 G1 subgroup checks alone (for scale)
+    3128732202  10a' backend check_committee (plumbline code)
+     163398013  V  validate_light_client_update(update_1), CheckedCommittee path, Auto (= subtractive)
+    3292192494  P1 process_update(update_1) as served: finality + handoff (adopts next committee)
+     162696326  P2 process_update(update_1 stripped to a finality update): no committee adoption
+   29048041403  EXECUTION user cycles (SessionInfo::cycles)
+   30784126976  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 29359 segments; po2 {15, 20})
+        592.66  executor wall-clock seconds
+
+### SINGLE: one execution = restore store + decode + process_update(update_1 as served, handoff)
+config: zkcrypto bls12_381
+         74127  R1 decode store state (finalized header + 2 committees, SSZ)
+    6257465698  R2 FinalizedStore::from_core (re-checks both committees)
+         55092  R3 decode update (SSZ)
+    3292192486  R4 process_update
+    9549796842  R  sum R1..R4 + new root (one cycle_count delta)
+             1  info: adopted a committee (1 = yes)
+    9549816121  EXECUTION user cycles (SessionInfo::cycles)
+   10134487040  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 9665 segments; po2 {20})
+        142.36  executor wall-clock seconds
+
+### SINGLE: one execution = restore store + decode + process_update(update_1 as finality update)
+config: zkcrypto bls12_381
+         74127  R1 decode store state (finalized header + 2 committees, SSZ)
+    6257465698  R2 FinalizedStore::from_core (re-checks both committees)
+         55092  R3 decode update (SSZ)
+     162696320  R4 process_update
+    6420300676  R  sum R1..R4 + new root (one cycle_count delta)
+             0  info: adopted a committee (1 = yes)
+    6420319955  EXECUTION user cycles (SessionInfo::cycles)
+    6813646848  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 6498 segments; po2 {20})
+        101.01  executor wall-clock seconds
+
+
+real	17m10.362s
+user	17m15.327s
+sys	0m8.679s

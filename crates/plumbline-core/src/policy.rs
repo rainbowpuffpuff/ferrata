@@ -25,10 +25,23 @@ use crate::{
     Error, Root,
 };
 
+/// What a store checks when it adopts a committee.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Adoption {
+    /// [`BlsBackend::check_committee`]: `KeyValidate` on every key, and the sum. The default
+    /// off chain, for `verify_checkpoint` and `monitor`.
+    #[default]
+    Full,
+    /// [`BlsBackend::check_committee_onchain`]: every key on the curve and not the identity, and
+    /// the sum, without the per-key subgroup check. What the on-chain program runs.
+    OnChain,
+}
+
 /// An instance's store under Plumbline's policy.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FinalizedStore {
     core: StoreCore,
+    adoption: Adoption,
 }
 
 impl FinalizedStore {
@@ -40,19 +53,40 @@ impl FinalizedStore {
         spec: &ChainSpec,
         bls: &dyn BlsBackend,
     ) -> Result<Self, Error> {
+        Self::initialize_with(trusted_block_root, bootstrap, fork, spec, bls, Adoption::Full)
+    }
+
+    /// [`FinalizedStore::initialize`] with a chosen committee check.
+    pub fn initialize_with(
+        trusted_block_root: &Root,
+        bootstrap: &LightClientBootstrap,
+        fork: LcFork,
+        spec: &ChainSpec,
+        bls: &dyn BlsBackend,
+        adoption: Adoption,
+    ) -> Result<Self, Error> {
         let core = StoreCore::from_bootstrap(trusted_block_root, bootstrap, fork, spec)?;
-        bls.check_committee(&core.current_sync_committee)?;
-        Ok(Self { core })
+        let store = Self { core, adoption };
+        store.check(bls, &store.core.current_sync_committee)?;
+        Ok(store)
+    }
+
+    fn check(&self, bls: &dyn BlsBackend, committee: &crate::types::SyncCommittee) -> Result<(), Error> {
+        match self.adoption {
+            Adoption::Full => bls.check_committee(committee),
+            Adoption::OnChain => bls.check_committee_onchain(committee),
+        }
     }
 
     /// A store from state that did not come from a bootstrap, for tests and for restoring a
     /// store from its own accounts. Both committees are checked, as at adoption.
     pub fn from_core(core: StoreCore, bls: &dyn BlsBackend) -> Result<Self, Error> {
-        bls.check_committee(&core.current_sync_committee)?;
-        if core.is_next_sync_committee_known() {
-            bls.check_committee(&core.next_sync_committee)?;
+        let store = Self { core, adoption: Adoption::Full };
+        store.check(bls, &store.core.current_sync_committee)?;
+        if store.core.is_next_sync_committee_known() {
+            store.check(bls, &store.core.next_sync_committee)?;
         }
-        Ok(Self { core })
+        Ok(store)
     }
 
     /// The store's state.
@@ -81,7 +115,7 @@ impl FinalizedStore {
         let mut next = self.core.clone();
         let outcome = apply_core(&mut next, update, ctx.spec)?;
         if outcome.adopted {
-            ctx.bls.check_committee(&next.next_sync_committee)?;
+            self.check(ctx.bls, &next.next_sync_committee)?;
         }
         self.core = next;
         Ok(outcome)

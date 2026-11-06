@@ -24,10 +24,10 @@ Z = "bls/zkcrypto_backend.rs"
 
 MUTANTS = [
     ("M01", P, "no committee check at initialisation",
-     "        let core = StoreCore::from_bootstrap(trusted_block_root, bootstrap, fork, spec)?;\n        bls.check_committee(&core.current_sync_committee)?;\n        Ok(Self { core })",
-     "        let core = StoreCore::from_bootstrap(trusted_block_root, bootstrap, fork, spec)?;\n        Ok(Self { core })"),
+     "        let store = Self { core, adoption };\n        store.check(bls, &store.core.current_sync_committee)?;\n        Ok(store)",
+     "        let store = Self { core, adoption };\n        Ok(store)"),
     ("M02", P, "no committee check at adoption",
-     "        if outcome.adopted {\n            ctx.bls.check_committee(&next.next_sync_committee)?;\n        }\n", ""),
+     "        if outcome.adopted {\n            self.check(ctx.bls, &next.next_sync_committee)?;\n        }\n", ""),
     ("M03", V, "no NextCommitteeMismatch check",
      "        if update_attested_period == store_period\n            && next_known\n            && update.next_sync_committee != store.next_sync_committee\n        {\n            return Err(Error::NextCommitteeMismatch);\n        }\n", ""),
     ("M04", V, "attested >= finalized becomes >",
@@ -95,13 +95,12 @@ MUTANTS = [
      "            next_sync_committee_gindex_at_slot(update_attested_slot, fork, spec),", "            next_sync_committee_gindex_at_slot(update_finalized_slot, fork, spec),"),
     ("M32", V, "signature always checked against the current committee",
      "    let sync_committee = if update_signature_period == store_period {", "    let sync_committee = if true || update_signature_period == store_period {"),
-    ("M33", B, "blst KeyValidate without identity and subgroup checks",
-     "    if unsafe { blst_p1_affine_is_inf(&point) || !blst_p1_affine_in_g1(&point) } {", "    if false {"),
+    ("M33", B, "blst KeyValidate without the subgroup check",
+     "    if !unsafe { blst_p1_affine_in_g1(&point) } {", "    if false {"),
     ("M34", B, "blst checked path without the identity check",
-     "            accumulate(&mut key, members(true), uncompress)?;\n        }\n        if is_identity(&key) {\n            return Err(Error::SigningKeyIdentity);\n        }",
-     "            accumulate(&mut key, members(true), uncompress)?;\n        }"),
-    ("M35", B, "blst check_committee ignores the aggregate",
-     "        if sum_affine == aggregate {", "        if true {"),
+     "        if is_identity(&key) {\n            return Err(Error::SigningKeyIdentity);\n        }\n        Ok(key)", "        Ok(key)"),
+    ("M35", B, "blst committee check ignores the aggregate",
+     "    if sum_affine == aggregate {", "    if true {"),
     ("M36", M, "normalized branch padding not checked",
      "    if branch[..num_extra].iter().any(|b| *b != ZERO) {\n        return false;\n    }\n", ""),
     ("M37", V, "attested header validity not checked",
@@ -112,6 +111,13 @@ MUTANTS = [
      "        if update.sync_aggregate.participants() * 3 < n * 2 {", "        if update.sync_aggregate.participants() * 3 < n {"),
     ("M40", P, "policy accepts non-finality updates",
      "        if !is_finality_update(update) {\n            return Err(Error::NotFinalized);\n        }\n", ""),
+    ("M41", B, "blst on-chain check accepts the identity",
+     "    // SAFETY: `point` is a valid affine point.\n    if unsafe { blst_p1_affine_is_inf(&point) } {",
+     "    // SAFETY: `point` is a valid affine point.\n    if false && unsafe { blst_p1_affine_is_inf(&point) } {"),
+    ("M42", P, "full adoption runs the on-chain check",
+     "            Adoption::Full => bls.check_committee(committee),", "            Adoption::Full => bls.check_committee_onchain(committee),"),
+    ("M43", B, "final_half accepts any product",
+     "    if unsafe { blst_fp12_is_one(&result) } {", "    if true || unsafe { blst_fp12_is_one(&result) } {"),
 ]
 
 
@@ -126,7 +132,9 @@ def main():
     os.makedirs(COPY)
     for name in ["Cargo.toml", "Cargo.lock", "rustfmt.toml"]:
         shutil.copy(os.path.join(ROOT, name), COPY)
-    shutil.copytree(os.path.join(ROOT, "crates"), os.path.join(COPY, "crates"))
+    # Plain copies get fresh modification times, so cargo never reuses a build of an earlier
+    # mutant left in target/mutants/target.
+    shutil.copytree(os.path.join(ROOT, "crates"), os.path.join(COPY, "crates"), copy_function=shutil.copy)
     env = dict(os.environ)
     env["CARGO_TARGET_DIR"] = os.path.join(WORK, "target")
     env["TMPDIR"] = os.path.join(WORK, "tmp")

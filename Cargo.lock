@@ -229,6 +229,7 @@ dependencies = [
 name = "plumbline-spectests"
 version = "0.0.1"
 dependencies = [
+ "bls12_381",
  "blst",
  "hex",
  "plumbline-core",

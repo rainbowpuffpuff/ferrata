@@ -14,23 +14,30 @@ Every row is produced by `cargo test --workspace`.
 | `light_client/sync`, consensus-specs v1.7.0-beta.4, minimal preset (32-member committees), Altair to Gloas, including fork transitions and stores fed older forks' data | **52 / 52 cases**, 185 steps (160 `process_update`, 21 `force_update`, 4 `upgrade_store`). Finalized and optimistic headers, beacon and execution roots, are checked after every step. |
 | The same, four times | `blst` with additive, subtractive and automatic key aggregation, and zkcrypto `bls12_381`: identical |
 | `light_client/update_ranking` | **7 / 7 cases**, 399 updates in canonical order |
-| Real mainnet data (`fixtures/mainnet-p1899`) | Periods 1899 to 1903 (Fulu): 512-member committees, four handoffs, 510 to 512 signers per update. Every finalized root equals the canonical root a second provider reports. About 12 ms per update natively (blst, subtractive aggregation, committee check included at handoffs). |
-| Official BLS vectors | consensus-specs `eth_fast_aggregate_verify` (12) and `eth_aggregate_pubkeys` (8); ethereum/bls12-381-tests `fast_aggregate_verify` (12) and `verify` (29). Both libraries, all three compositions; both verification paths agree. |
+| Real mainnet data (`fixtures/mainnet-p1899`) | Periods 1899 to 1903 (Fulu): 512-member committees, four handoffs, 510 to 512 signers per update, with both committee checks (full and on-chain). Every finalized root equals the canonical root a second provider reports. A test also verifies one of these signatures through the split API's 576-byte encoding. |
+| Official BLS vectors (61 cases) | consensus-specs `eth_fast_aggregate_verify` (12) and `eth_aggregate_pubkeys` (8); ethereum/bls12-381-tests `fast_aggregate_verify` (12) and `verify` (29). Both libraries, all three compositions; both verification paths agree. |
 | Policy store against the spec store | Equal state on 150 steps. After a forced update the two diverge, and the policy store never holds a header the spec store did not finalize (checked at every step). |
 | Adversarial tests | 16 (listed below) |
-| Guard tests | 21: each pins a check that an independent review showed could be deleted without any test failing |
-| Mutation run | 40 hand-picked mutants, all killed (`scripts/mutants.py`). 32 come from that review, under which 20 had survived the earlier suite. |
+| Guard tests | 23: each pins a check that an independent review showed could be deleted without any test failing, plus the two committee checks |
+| Mutation run | 43 hand-picked mutants, all killed (`scripts/mutants.py`). 32 come from that review, under which 20 had survived the earlier suite. |
 | `no_std` | Builds for `riscv32im-unknown-none-elf` with the pure-Rust backend. The `blst` backend needs a RISC-V C toolchain (RISC Zero's), which this repository does not set up yet. |
 
-**Not done yet** (the proposal's M0 to M2): the LEZ v0.4 program and its cycle counts per step,
-the `single_merkle_proof` vectors, and the Merkle-Patricia, RLP and predicate code.
+| RISC Zero guest (`bench/`) | RISC Zero zkVM 3.0.5 executor, real mainnet update, RISC Zero's accelerated blst: a finality update costs 10.2M cycles, and splits into steps of 2.3M, 4.2M and 3.6M through the core's `miller_half` / `final_half`. A handoff adds 1.1M for the committee root, plus either 4.6M for the adoption check with uncompressed keys or 48.7M with compressed keys (`check_committee_onchain` today). See `bench/RESULTS.md`, including six library configurations. |
+
+**Not done yet** (the proposal's M0 to M2):
+- the LEZ v0.4 program and its costs inside the v0.4 shell;
+- the job-step API (validation up to the signature, applying an update after a split pairing) and
+  a store restored from the program's own state without re-checking;
+- the uncompressed-key adoption witness;
+- the `single_merkle_proof` vectors;
+- the Merkle-Patricia, RLP and predicate code.
 
 ## Run it
 
 ```sh
 scripts/fetch-vectors.sh          # pinned releases; tree hashes verified on every run
 cargo test --workspace -- --nocapture
-scripts/mutants.py                # optional: the 40-mutant run (several minutes)
+scripts/mutants.py                # optional: the 43-mutant run (several minutes)
 ```
 
 The vector tests fail rather than skip when the vectors are missing, and they pin the number of
@@ -63,19 +70,25 @@ cases, so an empty or moved directory cannot pass.
    `light_client_sync` vector exercises exactly this, and
    `stops_safely_after_a_period_without_finality` asserts the stop on all seven forks.
 
-3. **Two BLS paths.**
+3. **Two BLS paths and two committee checks.**
    - `fast_aggregate_verify` is the spec's `FastAggregateVerify` as the pyspec runs it: every
      signer key must pass `KeyValidate`. The spec store uses it.
-   - `verify_checked` serves committees that passed `check_committee` when the policy store
-     adopted them: every key `KeyValidate`d, and the keys summing to `aggregate_pubkey`. The
-     signing key can then be `aggregate_pubkey − Σ non-signers`, a handful of additions at
-     mainnet participation, with no per-update subgroup check, because a sum of G1 points stays
-     in G1.
-   - For checked committees the two paths agree exactly. The tests run every vector through both.
+   - `verify_checked` serves committees that the policy store checked when it adopted them. The
+     signing key is then `aggregate_pubkey − Σ non-signers`, a handful of additions at mainnet
+     participation, with no per-update subgroup check.
+   - `check_committee` runs `KeyValidate` on every key and checks the sum. After it, the two paths
+     agree exactly. `check_committee_onchain` is what the program will run: every key must be on
+     the curve and not the identity, and the keys must sum to the aggregate. It skips the per-key
+     subgroup check, which costs 185M cycles per committee in the guest (`bench/`), because every
+     key in a genuine beacon state passed `KeyValidate` at deposit. The off-chain tools run the
+     full check.
+   - The vectors and the mainnet replay run under both checks (`Adoption::Full` and
+     `Adoption::OnChain`).
 
-4. **The pairing is explicit.** It is computed as two Miller loops and one final
-   exponentiation. That is the seam a multi-transaction program can split at: blst exposes the
-   Miller-loop output as a plain `blst_fp12` value.
+4. **The pairing splits.** blst computes a Miller-loop product and then one final
+   exponentiation. `Blst::miller_half` returns the product as a canonical 576-byte encoding, and
+   `Blst::final_half` finishes the check from it, so a program can store the product between
+   transactions. zkcrypto computes a single `multi_miller_loop` and offers no such seam.
 
 5. **Both libraries report the same codes.** blst refuses the order-3 points (x = 0) while
    decoding, and zkcrypto refuses them at its subgroup check. Both checks are part of
@@ -134,8 +147,8 @@ unchanged.
 
 With AI assistance (Claude Code); every commit carries an `Assisted-by` trailer. Acceptance is
 mechanical: the vectors, the BLS vectors, the mainnet replay, the adversarial and guard suites,
-clippy with warnings as errors, and the `no_std` build. The author's line-by-line review against
-the spec is recorded per function in `docs/REVIEW-core.md`.
+clippy with warnings as errors, and the `no_std` build. `docs/REVIEW-core.md` maps every function
+to its spec section and records the author's line-by-line sign-off.
 
 ## License
 

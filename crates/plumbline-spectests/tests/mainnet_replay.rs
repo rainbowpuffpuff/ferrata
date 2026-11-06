@@ -8,7 +8,7 @@ use std::{fs, path::PathBuf, time::Instant};
 use plumbline_core::{
     bls::{Aggregation, BlsBackend, Blst, Zkcrypto},
     fork::{ChainSpec, Fork, LcFork, Preset, FAR_FUTURE_EPOCH},
-    policy::FinalizedStore,
+    policy::{Adoption, FinalizedStore},
     store::LightClientStore,
     types::{LightClientBootstrap, LightClientUpdate},
     validate::Context,
@@ -92,9 +92,10 @@ fn replays_five_mainnet_periods_with_both_libraries() {
         ("zkcrypto/auto", &Zkcrypto::new(Aggregation::Auto)),
         ("zkcrypto/additive", &Zkcrypto::new(Aggregation::Additive)),
     ];
-    for (name, bls) in backends {
+    for ((name, bls), adoption) in backends.into_iter().flat_map(|b| [(b, Adoption::Full), (b, Adoption::OnChain)]) {
         let trusted = root(TRUSTED_BLOCK_ROOT);
-        let mut policy = FinalizedStore::initialize(&trusted, &bootstrap, LcFork::Electra, &spec, bls).unwrap();
+        let mut policy =
+            FinalizedStore::initialize_with(&trusted, &bootstrap, LcFork::Electra, &spec, bls, adoption).unwrap();
         let mut reference = LightClientStore::initialize(&trusted, &bootstrap, LcFork::Electra, &spec).unwrap();
         let ctx = Context { spec: &spec, genesis_validators_root: root(GENESIS_VALIDATORS_ROOT), bls };
         let mut handoffs = 0;
@@ -112,7 +113,7 @@ fn replays_five_mainnet_periods_with_both_libraries() {
             assert_eq!(finalized.slot, slot, "{name} update {i}");
             assert_eq!(finalized.hash_tree_root(), root(block_root), "{name} update {i}");
             println!(
-                "{name:<18} period {} signers {}/512 finalized slot {} handoff {} ({:.1} ms incl. committee check)",
+                "{name:<18} {adoption:?} period {} signers {}/512 finalized slot {} handoff {} ({:.1} ms incl. committee check)",
                 spec.period_at_slot(update.attested_header.beacon.slot),
                 update.sync_aggregate.participants(),
                 slot,
@@ -144,4 +145,33 @@ fn mainnet_update_with_a_flipped_signer_bit_is_refused() {
         FinalizedStore::initialize(&root(TRUSTED_BLOCK_ROOT), &bootstrap, LcFork::Electra, &spec, &bls).unwrap();
     let ctx = Context { spec: &spec, genesis_validators_root: root(GENESIS_VALIDATORS_ROOT), bls: &bls };
     assert_eq!(policy.process_update(&update, update.signature_slot + 1, &ctx), Err(Error::SignatureInvalid));
+}
+
+#[test]
+fn split_verification_round_trips_through_576_bytes() {
+    // The program's seam: the Miller-loop product is encoded, stored and finished later.
+    use plumbline_core::{bls::FP12_BYTES, validate::sync_committee_signing_root};
+    let spec = mainnet();
+    let bootstrap = LightClientBootstrap::decode(&fixture("bootstrap.ssz"), LcFork::Electra, 512).unwrap();
+    let updates = updates();
+    let bls = Blst::new(Aggregation::Auto);
+    let ctx = Context { spec: &spec, genesis_validators_root: root(GENESIS_VALIDATORS_ROOT), bls: &bls };
+    let mut store =
+        FinalizedStore::initialize(&root(TRUSTED_BLOCK_ROOT), &bootstrap, LcFork::Electra, &spec, &bls).unwrap();
+    store.process_update(&updates[0], updates[0].signature_slot + 1, &ctx).unwrap();
+    // update_1 is signed in period 1900 by the committee the store just learned.
+    let u = &updates[1];
+    let committee = &store.core().next_sync_committee;
+    let signing_root = sync_committee_signing_root(u, &ctx);
+    let (bits, sig) = (&u.sync_aggregate.bits, &u.sync_aggregate.signature);
+    let product: [u8; FP12_BYTES] = bls.miller_half(committee, bits, &signing_root, sig).unwrap();
+    assert_eq!(Blst::final_half(&product), Ok(()));
+    assert_eq!(bls.verify_checked(committee, bits, &signing_root, sig), Ok(()));
+    let mut tampered = product;
+    tampered[100] ^= 1;
+    assert_eq!(Blst::final_half(&tampered), Err(Error::SignatureInvalid));
+    let mut other_root = signing_root;
+    other_root[0] ^= 1;
+    let wrong = bls.miller_half(committee, bits, &other_root, sig).unwrap();
+    assert_eq!(Blst::final_half(&wrong), Err(Error::SignatureInvalid));
 }

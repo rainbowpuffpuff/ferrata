@@ -32,6 +32,29 @@ fn uncompress(bytes: &BlsPubkey) -> Result<G1Affine, Error> {
 }
 
 /// `KeyValidate`: a curve point, not the identity, in the prime-order subgroup.
+/// A curve point that is not the identity (no subgroup check).
+fn on_curve_not_identity(bytes: &BlsPubkey) -> Result<G1Affine, Error> {
+    let point = uncompress(bytes)?;
+    if bool::from(point.is_identity()) {
+        return Err(Error::PubkeyInvalid);
+    }
+    Ok(point)
+}
+
+/// Sum the keys with `decode` and compare with `aggregate_pubkey`.
+fn check_sum(committee: &SyncCommittee, decode: fn(&BlsPubkey) -> Result<G1Affine, Error>) -> Result<(), Error> {
+    if committee.pubkeys.is_empty() {
+        return Err(Error::CommitteeInvalid);
+    }
+    let total = sum(committee.pubkeys.iter(), decode).map_err(|_| Error::CommitteeInvalid)?;
+    let aggregate = uncompress(&committee.aggregate_pubkey).map_err(|_| Error::CommitteeInvalid)?;
+    if G1Affine::from(total) == aggregate {
+        Ok(())
+    } else {
+        Err(Error::CommitteeInvalid)
+    }
+}
+
 fn key_validate(bytes: &BlsPubkey) -> Result<G1Affine, Error> {
     let point: G1Affine = Option::from(G1Affine::from_compressed(bytes)).ok_or(Error::PubkeyInvalid)?;
     if bool::from(point.is_identity()) {
@@ -84,16 +107,11 @@ impl BlsBackend for Zkcrypto {
     }
 
     fn check_committee(&self, committee: &SyncCommittee) -> Result<(), Error> {
-        if committee.pubkeys.is_empty() {
-            return Err(Error::CommitteeInvalid);
-        }
-        let total = sum(committee.pubkeys.iter(), key_validate).map_err(|_| Error::CommitteeInvalid)?;
-        let aggregate = uncompress(&committee.aggregate_pubkey).map_err(|_| Error::CommitteeInvalid)?;
-        if G1Affine::from(total) == aggregate {
-            Ok(())
-        } else {
-            Err(Error::CommitteeInvalid)
-        }
+        check_sum(committee, key_validate)
+    }
+
+    fn check_committee_onchain(&self, committee: &SyncCommittee) -> Result<(), Error> {
+        check_sum(committee, on_curve_not_identity)
     }
 
     fn verify_checked(

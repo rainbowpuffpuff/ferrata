@@ -1,0 +1,106 @@
+## blst-accel (ELF 493180 bytes)
+
+### E2E: bootstrap -> update_0 -> update_1
+config: blst
+         41313  E1 decode bootstrap (SSZ)
+     230421731  E2 FinalizedStore::initialize (incl. check_committee on 512 keys)
+         55816  E3 decode update_0 (SSZ)
+     240512955  E4 process_update(update_0): current committee signs, adopts next committee
+         55094  E5 decode update_1 (SSZ)
+     240157633  E6 process_update(update_1): handoff, next committee signs, rotates, adopts
+     711246348  E  sum E1..E6 (one cycle_count delta)
+           512  info: update_0 signers
+           510  info: update_1 signers
+     711280694  EXECUTION user cycles (SessionInfo::cycles)
+     743964672  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 710 segments; po2 {19, 20})
+         24.04  executor wall-clock seconds
+
+### PHASES: update_1 against the post-update_0 store
+config: blst
+         55090  1  SSZ decode of update_1 (26,906 bytes)
+         48174  2a header validity, attested (payload header root + 4-deep execution branch)
+         48168  2b header validity, finalized
+       1123291  3a SyncCommittee hash_tree_root (512 keys + aggregate)
+          8086  3b next-committee branch check (6 deep)
+         17101  3c finality: finalized beacon header root + branch check (7 deep)
+         10279  4  signing root (attested header root, fork version, domain)
+           510  info: update_1 signers
+             2  info: update_1 non-signers
+        285875  5s aggregation, subtractive: decompress aggregate + non-signers, add, negate
+      48318251  5a aggregation, additive: decompress every signer key + add
+       2468202  5a' additive, point additions only (keys already decompressed)
+         89958  5d one G1 decompression (for scale)
+        352595  5g one G1 subgroup check, affine (for scale)
+        352307  5k G1 subgroup check of the aggregate key (earlier design; not in verify_checked)
+          1871  5n identity check + negate key + to affine (as pairing_check)
+        183728  6a signature decompression (G2)
+        343140  6b signature G2 subgroup check + not identity
+       1169105  7  hash_to_G2(signing root) + to affine
+       4087690  8  Miller loops as plumbline: ML(H(m),-key) + ML(sig,g1) + Fp12 mul
+       3251802  8m alternative: one 2-pair blst_miller_loop_n
+       3581111  9  final exponentiation + is_one
+       9656126  B1 backend verify_checked, subtractive (plumbline code, policy store path)
+      57683915  B2 backend verify_checked, additive (plumbline code)
+     237568558  B3 backend fast_aggregate_verify (spec path: KeyValidate on every signer key)
+     229193153  10a adoption, compressed: 512 x KeyValidate (decompress + G1 subgroup) + sum + compare aggregate
+      48598973  10a0 same, on-curve only (no per-key subgroup check; earlier design)
+     185103996  10b adoption, uncompressed: 512 x (deserialize+on-curve, recompress==committed, G1 subgroup) + sum + compress==aggregate
+       4562038  10b0 same, uncompressed without the per-key subgroup check
+     180486735  10g 512 G1 subgroup checks alone (for scale)
+     229181886  10a' backend check_committee (plumbline code)
+      10913471  V  validate_light_client_update(update_1), CheckedCommittee path, Auto (= subtractive)
+     240157634  P1 process_update(update_1) as served: finality + handoff (adopts next committee)
+      10211785  P2 process_update(update_1 stripped to a finality update): no committee adoption
+    2063489130  EXECUTION user cycles (SessionInfo::cycles)
+    2156920832  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 2057 segments; po2 {20})
+         64.06  executor wall-clock seconds
+
+### SPLIT execution 1: up to and including the Miller loop (commits Fp12)
+config: blst
+         55093  S1 decode update_1 (SSZ)
+         34017  S2 decode signing committee (SSZ, 513 keys)
+        113289  S3 header validity x2 + finality branch
+         10281  S4 signing root
+        287657  S5 signing key, subtractive, negated, affine
+        526789  S6 signature decompression + G2 subgroup check
+       1169097  S7 hash_to_G2
+       4087676  S8 Miller loops (as plumbline: 2 x single-pair + Fp12 mul)
+       6290343  S  sum (one cycle_count delta, excl. input read and journal commit)
+       6391604  EXECUTION user cycles (SessionInfo::cycles)
+       7340032  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments; po2 {20})
+          0.24  executor wall-clock seconds
+
+Fp12 handed over: 576 bytes
+
+### SPLIT execution 2: final exponentiation + check from the Fp12 bytes
+config: blst
+       3581112  F9 final exponentiation + is_one
+       3581827  F  sum (one cycle_count delta)
+       3588243  EXECUTION user cycles (SessionInfo::cycles)
+       4194304  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 4 segments; po2 {20})
+          0.15  executor wall-clock seconds
+
+### SINGLE: one execution = restore store + decode + process_update(update_1 as served, handoff)
+config: blst
+         74128  R1 decode store state (finalized header + 2 committees, SSZ)
+     458362750  R2 FinalizedStore::from_core (re-checks both committees)
+         55094  R3 decode update (SSZ)
+     240157632  R4 process_update
+     698659224  R  sum R1..R4 + new root (one cycle_count delta)
+             1  info: adopted a committee (1 = yes)
+     698678272  EXECUTION user cycles (SessionInfo::cycles)
+     730333184  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 697 segments; po2 {19, 20})
+         19.52  executor wall-clock seconds
+
+### SINGLE: one execution = restore store + decode + process_update(update_1 as finality update)
+config: blst
+         74128  R1 decode store state (finalized header + 2 committees, SSZ)
+     458362750  R2 FinalizedStore::from_core (re-checks both committees)
+         55094  R3 decode update (SSZ)
+      10211782  R4 process_update
+     468713374  R  sum R1..R4 + new root (one cycle_count delta)
+             0  info: adopted a committee (1 = yes)
+     468732422  EXECUTION user cycles (SessionInfo::cycles)
+     490209280  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 468 segments; po2 {19, 20})
+         15.68  executor wall-clock seconds
+

@@ -17,8 +17,10 @@
 //!   that passed the check, both compositions return exactly what `fast_aggregate_verify`
 //!   returns, and the tests run every vector through all of them.
 //!
-//! The pairing is computed as two Miller loops and one final exponentiation. A multi-transaction
-//! program can split the verification at the point between them.
+//! The pairing is a Miller-loop product followed by one final exponentiation. The `blst` backend
+//! exposes that seam ([`Blst::miller_half`] and [`Blst::final_half`]), so a multi-transaction
+//! program can store the 576-byte Miller-loop product between transactions; zkcrypto computes one
+//! `multi_miller_loop` and offers no such seam.
 
 use crate::{
     types::{BlsSignature, SyncCommittee},
@@ -31,7 +33,7 @@ mod blst_backend;
 mod zkcrypto_backend;
 
 #[cfg(feature = "blst")]
-pub use blst_backend::Blst;
+pub use blst_backend::{Blst, FP12_BYTES};
 #[cfg(feature = "zkcrypto")]
 pub use zkcrypto_backend::Zkcrypto;
 
@@ -80,6 +82,14 @@ pub trait BlsBackend {
     /// Check a committee once, when a store adopts it. Every key must pass `KeyValidate`, and the
     /// keys must sum to `aggregate_pubkey`.
     fn check_committee(&self, committee: &SyncCommittee) -> Result<(), Error>;
+
+    /// The check the on-chain program makes when it adopts a committee: every key is a curve
+    /// point and not the identity, and the keys sum to `aggregate_pubkey`. It leaves out the
+    /// per-key subgroup check, which costs about 180M cycles per committee in a RISC Zero guest
+    /// (measured, `bench/`) and which every key of a genuine beacon state already passed when its
+    /// deposit was processed. For a committee whose keys are all in G1, `verify_checked` then
+    /// equals `fast_aggregate_verify`; `check_committee` (off chain) confirms that property.
+    fn check_committee_onchain(&self, committee: &SyncCommittee) -> Result<(), Error>;
 
     /// `FastAggregateVerify` for a committee that passed [`BlsBackend::check_committee`]. It
     /// decodes keys with an on-curve check only and builds the signing key by the backend's

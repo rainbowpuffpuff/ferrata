@@ -1,0 +1,15 @@
+[package]
+name = "host"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+methods = { path = "../methods" }
+# Executor only. Without the `prove` feature, default_executor() runs r0vm 3.0.5 over IPC.
+risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["client"] }
+# Host-side decoding of the fixtures (to build the uncompressed-key and committee inputs).
+plumbline-core = { path = "../../crates/plumbline-core", features = ["blst"] }
+blst = "0.3"
+sha2 = "0.10"
+hex = "0.4"

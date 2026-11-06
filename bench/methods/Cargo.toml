@@ -1,0 +1,19 @@
+[package]
+name = "methods"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[build-dependencies]
+risc0-build = { version = "=3.0.5" }
+
+# Each entry is a guest crate with its own workspace, lockfile and [patch.crates-io].
+[package.metadata.risc0]
+methods = [
+    "../guests/blst-accel",
+    "../guests/zkcrypto-accel",
+    "../guests/zkcrypto-plain",
+    "../guests/blst-accel-v0314",
+    "../guests/blst-plain",
+    "../guests/nopatch",
+]

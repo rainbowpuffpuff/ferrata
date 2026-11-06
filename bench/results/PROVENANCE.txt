@@ -1,0 +1,25 @@
+# Provenance of the plumbline-core measured by bench/ (blst-accel), captured before the run
+2026-11-06T09:43:33+01:00
+HEAD 25aa07e2b743fc8a5bdb52eb364496d1abd0a2d5
+git status --short -- crates/plumbline-core:
+ M crates/plumbline-core/src/bls/blst_backend.rs
+ M crates/plumbline-core/src/bls/mod.rs
+ M crates/plumbline-core/src/bls/zkcrypto_backend.rs
+ M crates/plumbline-core/src/error.rs
+ M crates/plumbline-core/src/policy.rs
+sha256 of git diff HEAD -- crates/plumbline-core: 3beb359a3284a6a7df2a65db3d581caf4c45529b19d17b02246493fc1d1a0ec0
+b52f83140b294cf5387af23b02e5e2cfa2f8ea25c4c4aca4688cf8a795026ad9  Cargo.toml
+6d40f4ef252db419f432854dc5996da47b46714071a29b1e7114f9b0d30b4576  src/bls/blst_backend.rs
+a922d7c12573d3342ab5b5050a4adc5334cf7a765dd8f8e442a6de6f9c8336e6  src/bls/mod.rs
+3436579c0c926c04998fafb2a5d5e72a68df32e8f8dc42250281e14c5b861e8f  src/bls/zkcrypto_backend.rs
+47ec5cb34bea34c9c023a01884d3814e5e3840a2af6070a1294ca4749097a1c9  src/error.rs
+41722faa46b5f54c16645276189678b4df209120cee6493ecdaf1e11c3150cfb  src/fork.rs
+c4e1fa6a69f0e53491ec1a4a585b92cdd6cf08cc542cc4fb0e470a4f348e9a25  src/hash.rs
+bf39334bafe685e72ff3feac5bb5ae1fb14dffb949af208cce1b4649047af35b  src/lib.rs
+3bfe5a9d98727f0f93a21edbc12596717fa79ed3da1711190c8b1520f04ea9dc  src/merkle.rs
+5c11550fc5d56df69563ca6b2280ce1816f768e8430dce2ecf4e41cc49474d2d  src/policy.rs
+cb76abef263e667d307125263a7251f419d7a3e8d4cae8eadf9741cfb0147575  src/ssz.rs
+3192c3dcff6219e73449405462da3955b81ae424d88ee063a1d5d4a1b07be2e5  src/store.rs
+7e2765670f6312b4da5fc946c5ed5567bd02914c417aa85c3c2c38d91af80ad2  src/types.rs
+921c9a43b93eace49e9c3ddd8d3c00851bba8154d23ca94b33fb3b5be9a663a3  src/upgrade.rs
+c43930d9f95b8ea5e8fca60afc622844dc28d97632193e3ddeb0730c70a3f267  src/validate.rs

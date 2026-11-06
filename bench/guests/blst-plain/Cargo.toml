@@ -1,0 +1,24 @@
+[package]
+name = "blst_plain"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.88"
+publish = false
+
+# Upstream blst 0.3.16 from crates.io (no RISC Zero patch), compiled for riscv32im with the
+# rzup C toolchain. SHA-256 for SSZ is still the accelerated patch.
+[workspace]
+
+[dependencies]
+bench-core = { path = "../bench-core", features = ["blst"] }
+risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["std"] }
+sha2 = "=0.10.8"
+blst = "=0.3.16"
+
+[patch.crates-io]
+sha2 = { git = "https://github.com/risc0/RustCrypto-hashes", tag = "sha2-v0.10.8-risczero.0" }
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1

@@ -1,0 +1,25 @@
+[package]
+name = "blst_accel_v0314"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.88"
+publish = false
+
+# Same as blst-accel, but with the blst tag that RISC Zero's v3.0.5 documentation
+# (website/api/zkvm/precompiles.md at tag v3.0.5) lists: blst/v0.3.14-risczero.0.
+[workspace]
+
+[dependencies]
+bench-core = { path = "../bench-core", features = ["blst"] }
+risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["std"] }
+sha2 = "=0.10.8"
+blst = "=0.3.14"
+
+[patch.crates-io]
+blst = { git = "https://github.com/risc0/blst", tag = "blst/v0.3.14-risczero.0" }
+sha2 = { git = "https://github.com/risc0/RustCrypto-hashes", tag = "sha2-v0.10.8-risczero.0" }
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
