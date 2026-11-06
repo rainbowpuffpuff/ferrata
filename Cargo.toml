@@ -1,0 +1,17 @@
+[workspace]
+resolver = "2"
+members = ["crates/plumbline-core", "crates/plumbline-spectests"]
+
+[workspace.package]
+version = "0.0.1"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+rust-version = "1.81"
+repository = "https://github.com/rainbowpuffpuff/plumbline"
+
+# BLS is slow unoptimised; optimise dependencies even in test builds.
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.test]
+opt-level = 1
