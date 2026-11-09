@@ -7,13 +7,13 @@ export TMPDIR="$here/../../tmp"   # spike/tmp: never /tmp on this machine
 mkdir -p "$TMPDIR" "$here/results"
 cd "$here"
 {
-  echo "# Provenance of the plumbline-core measured by bench/, captured before the run"
+  echo "# Provenance of the ferrata-core measured by bench/, captured before the run"
   date -Is
   echo "HEAD $(git -C .. rev-parse HEAD)"
-  echo "git status --short -- crates/plumbline-core:"
-  git -C .. status --short -- crates/plumbline-core
-  echo "sha256 of git diff HEAD -- crates/plumbline-core: $(git -C .. diff HEAD -- crates/plumbline-core | sha256sum | cut -d' ' -f1)"
-  (cd ../crates/plumbline-core && find Cargo.toml src -type f | sort | xargs sha256sum)
+  echo "git status --short -- crates/ferrata-core:"
+  git -C .. status --short -- crates/ferrata-core
+  echo "sha256 of git diff HEAD -- crates/ferrata-core: $(git -C .. diff HEAD -- crates/ferrata-core | sha256sum | cut -d' ' -f1)"
+  (cd ../crates/ferrata-core && find Cargo.toml src -type f | sort | xargs sha256sum)
 } > results/PROVENANCE.txt
 cargo build --release -p host
 ./target/release/host "$@"

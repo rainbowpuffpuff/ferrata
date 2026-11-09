@@ -26,4 +26,4 @@ jobs:
       - name: Clippy
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - name: no_std build for the RISC Zero guest ISA
-        run: cargo build -p plumbline-core --no-default-features --features zkcrypto --target riscv32im-unknown-none-elf --release --locked
+        run: cargo build -p ferrata-core --no-default-features --features zkcrypto --target riscv32im-unknown-none-elf --release --locked

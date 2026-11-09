@@ -1,6 +1,6 @@
 [package]
-name = "plumbline-core"
-description = "Ethereum sync-committee light-client verification core (Plumbline, Logos RFP-021 spike)"
+name = "ferrata-core"
+description = "Ethereum sync-committee light-client verification core (Ferrata, Logos RFP-021 spike)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

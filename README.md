@@ -1,9 +1,10 @@
-# Plumbline core
+# Ferrata core
 
 An Ethereum sync-committee light client in Rust, `no_std`, written as the verification core of
-**Plumbline**, a proposal for [Logos RFP-021](https://github.com/logos-co/rfp) (trustless
-Ethereum state attestation on LEZ). This repository is the proposal's evidence. There is no LEZ
-program code here yet; that is the proposal's first milestone.
+**Ferrata**, a proposal for [Logos RFP-021](https://github.com/logos-co/rfp) (trustless
+Ethereum state attestation on LEZ). The name comes from the *via ferrata*, a mountain route with
+fixed anchors that anyone can cross without a guide. This repository is the proposal's evidence.
+There is no LEZ program code here yet; that is the proposal's first milestone.
 
 ## Results
 
@@ -47,13 +48,13 @@ cases, so an empty or moved directory cannot pass.
 
 | Path | What |
 |---|---|
-| `crates/plumbline-core/src/validate.rs` | `validate_light_client_update`, `is_valid_light_client_header`, `get_lc_execution_root`, `is_better_update` and the gindex functions, each a transcription of the spec function of the same name |
-| `crates/plumbline-core/src/store.rs` | The spec's `LightClientStore` (optimistic header, best valid update, forced updates), used to replay the vectors |
-| `crates/plumbline-core/src/policy.rs` | `FinalizedStore`, Plumbline's on-chain policy |
-| `crates/plumbline-core/src/upgrade.rs` | Light-client data across forks, including Gloas's `execution_block_hash` |
-| `crates/plumbline-core/src/types.rs`, `ssz.rs`, `merkle.rs` | Containers, strict SSZ decoding, Merkle helpers and generalized indices |
-| `crates/plumbline-core/src/bls/` | The `BlsBackend` trait, with `blst` and zkcrypto backends |
-| `crates/plumbline-spectests/` | The vector runner, the fixtures and the test suites |
+| `crates/ferrata-core/src/validate.rs` | `validate_light_client_update`, `is_valid_light_client_header`, `get_lc_execution_root`, `is_better_update` and the gindex functions, each a transcription of the spec function of the same name |
+| `crates/ferrata-core/src/store.rs` | The spec's `LightClientStore` (optimistic header, best valid update, forced updates), used to replay the vectors |
+| `crates/ferrata-core/src/policy.rs` | `FinalizedStore`, Ferrata's on-chain policy |
+| `crates/ferrata-core/src/upgrade.rs` | Light-client data across forks, including Gloas's `execution_block_hash` |
+| `crates/ferrata-core/src/types.rs`, `ssz.rs`, `merkle.rs` | Containers, strict SSZ decoding, Merkle helpers and generalized indices |
+| `crates/ferrata-core/src/bls/` | The `BlsBackend` trait, with `blst` and zkcrypto backends |
+| `crates/ferrata-spectests/` | The vector runner, the fixtures and the test suites |
 | `docs/REVIEW-core.md` | The author's per-function review against the spec |
 
 ## Design notes
@@ -141,7 +142,7 @@ unchanged.
 - the liveness limit above.
 
 `tests/nullifier_illustration.rs` illustrates the nullifier trap of the proposal's §5. It runs no
-`plumbline-core` code, and its header states its limits.
+`ferrata-core` code, and its header states its limits.
 
 ## How this was built
 

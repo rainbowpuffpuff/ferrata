@@ -1,4 +1,4 @@
-//! Plumbline's on-chain policy.
+//! Ferrata's on-chain policy.
 //!
 //! A header enters only through a finality proof signed by at least two thirds of the sync
 //! committee. There is no optimistic header, no best-update cache and no forced update, so a
@@ -13,7 +13,7 @@
 //! period in which Ethereum finalizes nothing it can see. The next committee is learned only from
 //! a finalized update, so once updates are signed two periods ahead the store refuses them
 //! (`PeriodSkipped`). The spec's light client keeps going in that case by forcing a non-finalized
-//! header, which Plumbline will not do. Such an instance stops safely and is replaced from a
+//! header, which Ferrata will not do. Such an instance stops safely and is replaced from a
 //! fresh checkpoint (`stops_safely_after_a_period_without_finality` in the tests).
 
 use crate::{
@@ -37,7 +37,7 @@ pub enum Adoption {
     OnChain,
 }
 
-/// An instance's store under Plumbline's policy.
+/// An instance's store under Ferrata's policy.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FinalizedStore {
     core: StoreCore,

@@ -1,6 +1,6 @@
 [package]
-name = "plumbline-spectests"
-description = "Runs the official consensus-spec-tests light-client vectors against plumbline-core"
+name = "ferrata-spectests"
+description = "Runs the official consensus-spec-tests light-client vectors against ferrata-core"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -9,7 +9,7 @@ repository.workspace = true
 publish = false
 
 [dependencies]
-plumbline-core = { path = "../plumbline-core", features = ["blst", "zkcrypto"] }
+ferrata-core = { path = "../ferrata-core", features = ["blst", "zkcrypto"] }
 snap = "1"
 serde_yaml = "0.9"
 hex = "0.4"

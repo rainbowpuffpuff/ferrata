@@ -1,4 +1,4 @@
-# Cycle-count bench for plumbline-core inside a RISC Zero zkVM 3.0.5 guest (executor only).
+# Cycle-count bench for ferrata-core inside a RISC Zero zkVM 3.0.5 guest (executor only).
 # The guests under guests/ are separate workspaces (each with its own [patch.crates-io]);
 # methods/ builds them with risc0-build and embeds the ELFs, host/ runs them.
 [workspace]

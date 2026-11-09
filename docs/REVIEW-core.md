@@ -1,4 +1,4 @@
-# Per-function review of `plumbline-core` against the spec
+# Per-function review of `ferrata-core` against the spec
 
 Each row is one function: the spec section it transcribes (`consensus-specs` v1.7.0-beta.4),
 any deliberate deviation, the tests that pin it, and the author's sign-off. The deviations column
@@ -16,7 +16,7 @@ is part of the audit packet.
 | `apply_core` (store.rs) | `apply_light_client_update` | the optimistic and participation bookkeeping moved to the spec store; reports `adopted` | sync vectors; M29 | |
 | `LightClientStore::process_update` (store.rs) | `process_light_client_update` | atomic on error (the spec mutates before a late assert) | sync vectors; M23 | |
 | `LightClientStore::process_force_update` (store.rs) | `process_light_client_store_force_update` | atomic on error | sync vectors; M27 | |
-| `FinalizedStore::process_update` (policy.rs) | (Plumbline policy) | finality only, ≥ 2/3, no optimistic header, no forcing; `check_committee` on adoption | policy-vs-spec comparison; adversarial; M01, M02, M30, M39, M40 | |
+| `FinalizedStore::process_update` (policy.rs) | (Ferrata policy) | finality only, ≥ 2/3, no optimistic header, no forcing; `check_committee` on adoption | policy-vs-spec comparison; adversarial; M01, M02, M30, M39, M40 | |
 | `upgrade_header`, `upgrade_bootstrap`, `upgrade_update` (upgrade.rs) | capella, deneb, electra, gloas `fork.md` | composed step by step | sync fork-transition vectors; M26 | |
 | `is_valid_normalized_merkle_branch`, `normalize_merkle_branch` (merkle.rs) | altair helpers, electra `normalize_merkle_branch` | none | unit tests; M36 | |
 | `split_container`, container decoders (ssz.rs, types.rs) | SSZ specification | strict: exact consumption, first offset equals fixed size, monotone offsets | SSZ guard tests; M05, M06 | |

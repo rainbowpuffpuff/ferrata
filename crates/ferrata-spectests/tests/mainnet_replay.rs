@@ -5,7 +5,7 @@
 
 use std::{fs, path::PathBuf, time::Instant};
 
-use plumbline_core::{
+use ferrata_core::{
     bls::{Aggregation, BlsBackend, Blst, Zkcrypto},
     fork::{ChainSpec, Fork, LcFork, Preset, FAR_FUTURE_EPOCH},
     policy::{Adoption, FinalizedStore},
@@ -14,7 +14,7 @@ use plumbline_core::{
     validate::Context,
     Error, Root,
 };
-use plumbline_spectests::CaseConfig;
+use ferrata_spectests::CaseConfig;
 use sha2::{Digest, Sha256};
 
 /// Mainnet fork schedule, from `configs/mainnet.yaml` at consensus-specs v1.7.0-beta.4.
@@ -150,7 +150,7 @@ fn mainnet_update_with_a_flipped_signer_bit_is_refused() {
 #[test]
 fn split_verification_round_trips_through_576_bytes() {
     // The program's seam: the Miller-loop product is encoded, stored and finished later.
-    use plumbline_core::{bls::FP12_BYTES, validate::sync_committee_signing_root};
+    use ferrata_core::{bls::FP12_BYTES, validate::sync_committee_signing_root};
     let spec = mainnet();
     let bootstrap = LightClientBootstrap::decode(&fixture("bootstrap.ssz"), LcFork::Electra, 512).unwrap();
     let updates = updates();

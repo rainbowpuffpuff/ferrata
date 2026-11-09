@@ -2,7 +2,7 @@
 //!
 //! [`StoreCore`] is the state both stores share: the finalized header and the two committees.
 //! [`LightClientStore`] adds the spec's optimistic header, best-update cache and forced updates;
-//! it exists to replay the official test vectors step for step. Plumbline's on-chain policy,
+//! it exists to replay the official test vectors step for step. Ferrata's on-chain policy,
 //! which never accepts a non-finalized or forced header, is [`crate::policy::FinalizedStore`].
 //! Both run the same [`crate::validate::validate_light_client_update`] and the same
 //! [`apply_core`].
@@ -217,7 +217,7 @@ impl LightClientStore {
         Ok(())
     }
 
-    /// `process_light_client_store_force_update`. Plumbline's on-chain policy never calls this.
+    /// `process_light_client_store_force_update`. Ferrata's on-chain policy never calls this.
     pub fn process_force_update(&mut self, current_slot: u64, spec: &ChainSpec) -> Result<(), Error> {
         let timed_out = current_slot > self.core.finalized_header.beacon.slot + spec.preset.update_timeout();
         if !timed_out || self.best_valid_update.is_none() {

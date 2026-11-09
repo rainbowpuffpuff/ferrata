@@ -1,5 +1,5 @@
 //! An illustration of the nullifier trap for private consumers (proposal §5). It is not
-//! evidence about Plumbline's code: no `plumbline-core` function runs here.
+//! evidence about Ferrata's code: no `ferrata-core` function runs here.
 //!
 //! A statement identifier is a deterministic function of public Ethereum data. If a private
 //! consumer publishes it, or any deterministic function of it, as its nullifier, anyone can
@@ -37,7 +37,7 @@ struct PublicDeposit {
 /// The per-fact identifier (F.6): a public function of the fact.
 fn fact_id(chain_id: u64, d: &PublicDeposit) -> Hash {
     h(&[
-        b"plumbline/fact/log/v1",
+        b"ferrata/fact/log/v1",
         &chain_id.to_be_bytes(),
         &d.block.to_be_bytes(),
         &d.tx_index.to_be_bytes(),

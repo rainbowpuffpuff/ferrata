@@ -3,7 +3,7 @@
 //! mutation run (IDs M01–M29 in the review). A few more cover Gloas and SSZ decoding, and one
 //! documents the finalized-only store's liveness limit.
 
-use plumbline_core::{
+use ferrata_core::{
     bls::{Aggregation, BlsBackend, Blst, Zkcrypto},
     fork::{ChainSpec, LcFork, Preset, FAR_FUTURE_EPOCH},
     merkle::{CURRENT_SYNC_COMMITTEE_GINDEX_ELECTRA, EXECUTION_PAYLOAD_GINDEX, ZERO},
@@ -17,7 +17,7 @@ use plumbline_core::{
     validate::{get_lc_execution_root, is_better_update, is_valid_light_client_header, Context},
     Error,
 };
-use plumbline_spectests::{
+use ferrata_spectests::{
     cases, load_sync_case, read_ssz_snappy, run_sync_case,
     testkit::{fabricated_header, fabricated_update, fake_committee, sparse_tree, with_wrong_aggregate, Fabrication},
     vectors_dir, LoadedCase,
@@ -324,7 +324,7 @@ fn payload_header_at(slot: u64, payload: ExecutionPayloadHeader, root: [u8; 32])
 fn blob_gas_before_deneb_is_invalid() {
     let spec = staggered();
     let slot = 8; // epoch 1: Capella, before Deneb
-    let mut payload = plumbline_spectests::testkit::payload_header(slot, 1);
+    let mut payload = ferrata_spectests::testkit::payload_header(slot, 1);
     let ok = payload_header_at(slot, payload.clone(), payload.hash_tree_root_capella());
     assert!(is_valid_light_client_header(&ok, LcFork::Deneb, &spec));
     payload.blob_gas_used = 1;
@@ -575,7 +575,7 @@ fn onchain_adoption_skips_only_the_subgroup_check() {
         assert_eq!(bls.check_committee_onchain(&fake.committee), Ok(()));
         // Identity seat: both refuse.
         keys[1] = identity;
-        let c = plumbline_core::types::SyncCommittee {
+        let c = ferrata_core::types::SyncCommittee {
             pubkeys: keys.clone(),
             aggregate_pubkey: fake.committee.aggregate_pubkey,
         };
@@ -598,7 +598,7 @@ fn onchain_adoption_skips_only_the_subgroup_check() {
 #[test]
 fn store_adoption_mode_decides_the_check() {
     use blst::min_pk::PublicKey;
-    use plumbline_core::policy::Adoption;
+    use ferrata_core::policy::Adoption;
     let case = electra();
     let spec = &case.config.spec;
     let fake = fake_committee(32, 0xcd);

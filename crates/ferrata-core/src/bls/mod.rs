@@ -9,7 +9,7 @@
 //!   ([`crate::store::LightClientStore`]) uses this path.
 //! * [`BlsBackend::verify_checked`] is for a committee that has passed
 //!   [`BlsBackend::check_committee`]: every key `KeyValidate`d, and the keys summing to
-//!   `aggregate_pubkey`. Plumbline's policy store ([`crate::policy::FinalizedStore`]) runs that
+//!   `aggregate_pubkey`. Ferrata's policy store ([`crate::policy::FinalizedStore`]) runs that
 //!   check once on each committee it adopts. After that, the signing key can be built
 //!   additively, or as `aggregate_pubkey − Σ non-signers`. At mainnet participation (over 95%)
 //!   the second needs a handful of point additions instead of about 500. It also needs no

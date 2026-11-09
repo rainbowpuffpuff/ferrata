@@ -1,3 +1,10 @@
+# Note, added 2026-11-09: measured at commit f030475 under the project's former name, Plumbline
+# (crates/plumbline-core). The capture below is unchanged and its per-file hashes still match
+# f030475. The core, now crates/ferrata-core, differs from that commit only by the rename, checked
+# by scripts/check-bench-provenance.sh. The rename changed six of these hashes (Cargo.toml,
+# src/bls/mod.rs, src/error.rs, src/lib.rs, src/policy.rs, src/store.rs); the list after the
+# rename is at the end.
+
 # Provenance of the plumbline-core measured by bench/ (blst-accel), captured before the run
 2026-11-06T09:43:33+01:00
 HEAD 25aa07e2b743fc8a5bdb52eb364496d1abd0a2d5
@@ -20,6 +27,23 @@ bf39334bafe685e72ff3feac5bb5ae1fb14dffb949af208cce1b4649047af35b  src/lib.rs
 5c11550fc5d56df69563ca6b2280ce1816f768e8430dce2ecf4e41cc49474d2d  src/policy.rs
 cb76abef263e667d307125263a7251f419d7a3e8d4cae8eadf9741cfb0147575  src/ssz.rs
 3192c3dcff6219e73449405462da3955b81ae424d88ee063a1d5d4a1b07be2e5  src/store.rs
+7e2765670f6312b4da5fc946c5ed5567bd02914c417aa85c3c2c38d91af80ad2  src/types.rs
+921c9a43b93eace49e9c3ddd8d3c00851bba8154d23ca94b33fb3b5be9a663a3  src/upgrade.rs
+c43930d9f95b8ea5e8fca60afc622844dc28d97632193e3ddeb0730c70a3f267  src/validate.rs
+
+# After the rename: sha256 of crates/ferrata-core (cd crates/ferrata-core && sha256sum -c)
+cd69cd0beb9fae964d050d081c308c6d847051268b37f8ff34887d2481c9ad00  Cargo.toml
+6d40f4ef252db419f432854dc5996da47b46714071a29b1e7114f9b0d30b4576  src/bls/blst_backend.rs
+89b26c53852e82366c7027774a30b9267d132ab3d4b0aaf80e9138454e7287c6  src/bls/mod.rs
+3436579c0c926c04998fafb2a5d5e72a68df32e8f8dc42250281e14c5b861e8f  src/bls/zkcrypto_backend.rs
+ed196d80cdd35af3de4292f431002a90097a6b81fa8e96691041959a86241a68  src/error.rs
+41722faa46b5f54c16645276189678b4df209120cee6493ecdaf1e11c3150cfb  src/fork.rs
+c4e1fa6a69f0e53491ec1a4a585b92cdd6cf08cc542cc4fb0e470a4f348e9a25  src/hash.rs
+70b5ba2afb34549cf72024a4a88536460bed7b42d6471afe383ed3134466e4ef  src/lib.rs
+3bfe5a9d98727f0f93a21edbc12596717fa79ed3da1711190c8b1520f04ea9dc  src/merkle.rs
+f20090075cd0e42b613f0e21da2decbff8b65accbfcc2c0e1299a1d7f31e276f  src/policy.rs
+cb76abef263e667d307125263a7251f419d7a3e8d4cae8eadf9741cfb0147575  src/ssz.rs
+ea5b2df4350b4c55ef0397b0ee205101b592916d974db83503b610a587e41a39  src/store.rs
 7e2765670f6312b4da5fc946c5ed5567bd02914c417aa85c3c2c38d91af80ad2  src/types.rs
 921c9a43b93eace49e9c3ddd8d3c00851bba8154d23ca94b33fb3b5be9a663a3  src/upgrade.rs
 c43930d9f95b8ea5e8fca60afc622844dc28d97632193e3ddeb0730c70a3f267  src/validate.rs

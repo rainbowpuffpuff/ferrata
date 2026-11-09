@@ -3,9 +3,9 @@
 //! These tests fail (they never skip) when the vectors are missing, and they pin the number of
 //! cases, so a moved or empty directory cannot pass vacuously.
 
-use plumbline_core::bls::{Aggregation, BlsBackend, Blst, Zkcrypto};
-use plumbline_core::policy::Adoption;
-use plumbline_spectests::{cases, run_sync_case, run_sync_case_with, run_update_ranking_case, SyncOutcome};
+use ferrata_core::bls::{Aggregation, BlsBackend, Blst, Zkcrypto};
+use ferrata_core::policy::Adoption;
+use ferrata_spectests::{cases, run_sync_case, run_sync_case_with, run_update_ranking_case, SyncOutcome};
 
 /// `sync` cases in v1.7.0-beta.4 (minimal preset): altair 8, bellatrix 11, capella 10,
 /// deneb 8, electra 5, fulu 6, gloas 4.

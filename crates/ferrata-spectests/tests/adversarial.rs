@@ -4,7 +4,7 @@
 //! self-consistent fabricated chain is refused on the signature alone.
 
 use blst::min_pk::{PublicKey, SecretKey};
-use plumbline_core::{
+use ferrata_core::{
     bls::{Aggregation, BlsBackend, Blst, Zkcrypto, DST},
     fork::Fork,
     policy::FinalizedStore,
@@ -13,7 +13,7 @@ use plumbline_core::{
     validate::{is_finality_update, Context},
     Error,
 };
-use plumbline_spectests::{
+use ferrata_spectests::{
     load_sync_case,
     testkit::{fabricated_update, fake_committee, Fabrication, FakeCommittee},
     vectors_dir, LoadedCase,

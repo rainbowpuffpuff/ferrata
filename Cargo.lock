@@ -107,6 +107,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "00d174d5400e5e8fd687ad1049e2f578285fa914201b1af7e8b112a4546bd826"
 
 [[package]]
+name = "ferrata-core"
+version = "0.0.1"
+dependencies = [
+ "bls12_381",
+ "blst",
+ "group",
+ "sha2 0.10.9",
+ "sha2 0.9.9",
+]
+
+[[package]]
+name = "ferrata-spectests"
+version = "0.0.1"
+dependencies = [
+ "bls12_381",
+ "blst",
+ "ferrata-core",
+ "hex",
+ "serde_yaml",
+ "sha2 0.10.9",
+ "snap",
+]
+
+[[package]]
 name = "ff"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -212,30 +236,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81fec4625e73cf41ef4bb6846cafa6d44736525f442ba45e407c4a000a13996f"
 dependencies = [
  "group",
-]
-
-[[package]]
-name = "plumbline-core"
-version = "0.0.1"
-dependencies = [
- "bls12_381",
- "blst",
- "group",
- "sha2 0.10.9",
- "sha2 0.9.9",
-]
-
-[[package]]
-name = "plumbline-spectests"
-version = "0.0.1"
-dependencies = [
- "bls12_381",
- "blst",
- "hex",
- "plumbline-core",
- "serde_yaml",
- "sha2 0.10.9",
- "snap",
 ]
 
 [[package]]

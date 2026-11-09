@@ -1,4 +1,4 @@
-//! BLS phases with zkcrypto `bls12_381`, mirroring plumbline's `Zkcrypto` backend step by step.
+//! BLS phases with zkcrypto `bls12_381`, mirroring ferrata's `Zkcrypto` backend step by step.
 
 use std::hint::black_box;
 
@@ -6,7 +6,7 @@ use bls12_381::{
     hash_to_curve::{ExpandMsgXmd, HashToCurve},
     multi_miller_loop, G1Affine, G1Projective, G2Affine, G2Prepared, G2Projective, Gt,
 };
-use plumbline_core::{
+use ferrata_core::{
     bls::{Aggregation, Zkcrypto, DST},
     types::{BlsPubkey, BlsSignature, SyncCommittee},
     Root,
@@ -24,7 +24,7 @@ fn dec_g1(pk: &BlsPubkey) -> G1Affine {
     Option::from(G1Affine::from_compressed_unchecked(pk)).expect("pubkey decode failed")
 }
 
-/// `KeyValidate` as plumbline's zkcrypto backend does it: `from_compressed` (decompress + subgroup).
+/// `KeyValidate` as ferrata's zkcrypto backend does it: `from_compressed` (decompress + subgroup).
 fn key_validate(pk: &BlsPubkey) -> G1Affine {
     let p: G1Affine = Option::from(G1Affine::from_compressed(pk)).expect("key fails KeyValidate");
     assert!(!bool::from(p.is_identity()));
@@ -85,7 +85,7 @@ pub fn bls_phases(rec: &mut Rec, c: &SyncCommittee, bits: &[bool], msg: &Root, s
     });
 
     // 8: G2Prepared (line coefficients) for both G2 points, then the 2-pair multi Miller loop,
-    // as plumbline's pairing_check: e(-key, H(m)) * e(g1, sig).
+    // as ferrata's pairing_check: e(-key, H(m)) * e(g1, sig).
     let g1 = G1Affine::generator();
     let (hm_p, sig_p) = rec.time("8p G2Prepared::from x2 (line precomputation)", || {
         (G2Prepared::from(hm), G2Prepared::from(sig))

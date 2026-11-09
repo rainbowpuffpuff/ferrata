@@ -10,12 +10,12 @@
 use std::{fs, path::Path};
 
 use blst::min_pk::{AggregatePublicKey, PublicKey};
-use plumbline_core::{
+use ferrata_core::{
     bls::{Aggregation, BlsBackend, Blst, Zkcrypto},
     types::{BlsPubkey, BlsSignature, SyncCommittee},
     Error, Root,
 };
-use plumbline_spectests::{bls_vectors_dir, general_vectors_dir};
+use ferrata_spectests::{bls_vectors_dir, general_vectors_dir};
 use serde_yaml::Value;
 
 fn backends() -> Vec<(&'static str, Box<dyn BlsBackend>)> {

@@ -257,7 +257,7 @@ name = "bench-core"
 version = "0.1.0"
 dependencies = [
  "blst",
- "plumbline-core",
+ "ferrata-core",
  "risc0-zkvm",
 ]
 
@@ -598,6 +598,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "00d174d5400e5e8fd687ad1049e2f578285fa914201b1af7e8b112a4546bd826"
 
 [[package]]
+name = "ferrata-core"
+version = "0.0.1"
+dependencies = [
+ "blst",
+ "sha2",
+]
+
+[[package]]
 name = "find-msvc-tools"
 version = "0.1.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -903,14 +911,6 @@ name = "pin-project-lite"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
-
-[[package]]
-name = "plumbline-core"
-version = "0.0.1"
-dependencies = [
- "blst",
- "sha2",
-]
 
 [[package]]
 name = "postcard"

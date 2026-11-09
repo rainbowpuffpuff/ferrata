@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/plumbline-core", "crates/plumbline-spectests"]
+members = ["crates/ferrata-core", "crates/ferrata-spectests"]
 # bench/ is its own workspace (RISC Zero guests and host); see bench/README.md.
 exclude = ["bench"]
 
@@ -9,7 +9,7 @@ version = "0.0.1"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 rust-version = "1.81"
-repository = "https://github.com/rainbowpuffpuff/plumbline"
+repository = "https://github.com/rainbowpuffpuff/ferrata"
 
 # BLS is slow unoptimised; optimise dependencies even in test builds.
 [profile.dev.package."*"]

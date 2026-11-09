@@ -1,4 +1,4 @@
-//! `plumbline-core`: the consensus-critical core of Plumbline (Logos RFP-021).
+//! `ferrata-core`: the consensus-critical core of Ferrata (Logos RFP-021).
 //!
 //! An Ethereum sync-committee light client, Altair through Gloas, transcribed from the
 //! light-client specs at `consensus-specs` v1.7.0-beta.4 and checked against that release's
@@ -7,7 +7,7 @@
 //!
 //! * [`validate::validate_light_client_update`]: the spec's update validation (pure).
 //! * [`store::LightClientStore`]: the spec's full store, used to replay the test vectors.
-//! * [`policy::FinalizedStore`]: Plumbline's on-chain policy, which accepts only finality
+//! * [`policy::FinalizedStore`]: Ferrata's on-chain policy, which accepts only finality
 //!   updates signed by a two-thirds supermajority and never forces a header.
 //! * [`bls::BlsBackend`]: BLS12-381 behind a trait, with `blst` and zkcrypto backends.
 

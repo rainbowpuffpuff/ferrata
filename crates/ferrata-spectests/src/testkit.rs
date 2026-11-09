@@ -4,7 +4,7 @@
 use std::collections::BTreeMap;
 
 use blst::min_pk::{AggregatePublicKey, AggregateSignature, PublicKey, SecretKey, Signature};
-use plumbline_core::{
+use ferrata_core::{
     bls::DST,
     fork::LcFork,
     hash::{hash_pair, sha256},

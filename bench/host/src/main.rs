@@ -7,7 +7,7 @@
 
 use std::{fs, io::Write, path::PathBuf, time::Instant};
 
-use plumbline_core::{
+use ferrata_core::{
     bls::{Aggregation, Blst},
     fork::{ChainSpec, LcFork, Preset, FAR_FUTURE_EPOCH},
     types::LightClientUpdate,
@@ -47,7 +47,7 @@ const CONFIGS: &[Config] = &[
 ];
 
 fn fixture_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../crates/plumbline-spectests/fixtures/mainnet-p1899")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../crates/ferrata-spectests/fixtures/mainnet-p1899")
 }
 
 /// Read a fixture and check it against the pinned SHA256SUMS.
@@ -107,7 +107,7 @@ fn report(out: &mut String, title: &str, run: &Run) {
     ));
 }
 
-/// Mainnet fork schedule, as in plumbline-spectests/tests/mainnet_replay.rs.
+/// Mainnet fork schedule, as in ferrata-spectests/tests/mainnet_replay.rs.
 fn mainnet() -> ChainSpec {
     ChainSpec {
         preset: Preset::MAINNET,

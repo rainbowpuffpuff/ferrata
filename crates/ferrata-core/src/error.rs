@@ -54,11 +54,11 @@ pub enum Error {
     /// A committee key fails `KeyValidate`, or the keys do not sum to `aggregate_pubkey`.
     CommitteeInvalid = 45,
 
-    /// Plumbline policy: only finality updates may advance an instance.
+    /// Ferrata policy: only finality updates may advance an instance.
     NotFinalized = 50,
-    /// Plumbline policy: participation is below the supermajority (2/3) floor.
+    /// Ferrata policy: participation is below the supermajority (2/3) floor.
     BelowSupermajority = 51,
-    /// Plumbline policy: the update does not advance the finalized header (duplicate or stale).
+    /// Ferrata policy: the update does not advance the finalized header (duplicate or stale).
     NotNewer = 52,
 
     /// Store invariant: next committee unknown and the update finalizes outside the store period.

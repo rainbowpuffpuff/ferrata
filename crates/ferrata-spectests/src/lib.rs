@@ -1,8 +1,8 @@
-//! Runs the official `consensus-spec-tests` light-client vectors against `plumbline-core`.
+//! Runs the official `consensus-spec-tests` light-client vectors against `ferrata-core`.
 //!
 //! * `sync`: replays every step through the spec store ([`LightClientStore`]) and checks the
 //!   finalized and optimistic headers after each one. In parallel it feeds the same updates to
-//!   Plumbline's policy store ([`FinalizedStore`]) and requires its state to equal the spec
+//!   Ferrata's policy store ([`FinalizedStore`]) and requires its state to equal the spec
 //!   store's until a forced update first changes the spec store (the policy never forces).
 //! * `update_ranking`: checks `is_better_update` reproduces the canonical order.
 
@@ -14,7 +14,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use plumbline_core::{
+use ferrata_core::{
     bls::BlsBackend,
     fork::{ChainSpec, Fork, LcFork, Preset, FAR_FUTURE_EPOCH},
     policy::{Adoption, FinalizedStore},
@@ -30,10 +30,10 @@ use sha2::{Digest, Sha256};
 /// The pinned `consensus-specs` release whose vectors this harness runs.
 pub const SPEC_TESTS_VERSION: &str = "v1.7.0-beta.4";
 
-/// Directory holding `<fork>/light_client/...`: `$PLUMBLINE_VECTORS`, or the pinned download
+/// Directory holding `<fork>/light_client/...`: `$FERRATA_VECTORS`, or the pinned download
 /// made by `scripts/fetch-vectors.sh`.
 pub fn vectors_dir() -> PathBuf {
-    std::env::var_os("PLUMBLINE_VECTORS").map(PathBuf::from).unwrap_or_else(|| {
+    std::env::var_os("FERRATA_VECTORS").map(PathBuf::from).unwrap_or_else(|| {
         Path::new(env!("CARGO_MANIFEST_DIR")).join("../../vectors").join(SPEC_TESTS_VERSION).join("tests/minimal")
     })
 }
@@ -43,9 +43,9 @@ pub fn general_vectors_dir() -> PathBuf {
     vectors_dir().parent().map(|p| p.join("general")).unwrap_or_default()
 }
 
-/// The `ethereum/bls12-381-tests` vectors: `$PLUMBLINE_BLS_VECTORS`, or the pinned download.
+/// The `ethereum/bls12-381-tests` vectors: `$FERRATA_BLS_VECTORS`, or the pinned download.
 pub fn bls_vectors_dir() -> PathBuf {
-    std::env::var_os("PLUMBLINE_BLS_VECTORS")
+    std::env::var_os("FERRATA_BLS_VECTORS")
         .map(PathBuf::from)
         .unwrap_or_else(|| Path::new(env!("CARGO_MANIFEST_DIR")).join("../../vectors/bls12-381-tests-v0.1.2"))
 }
@@ -382,7 +382,7 @@ pub fn cases(handler: &str) -> Result<Vec<(Fork, PathBuf)>, String> {
     let root = vectors_dir();
     if !root.is_dir() {
         return Err(format!(
-            "spec vectors not found at {} (run scripts/fetch-vectors.sh or set PLUMBLINE_VECTORS)",
+            "spec vectors not found at {} (run scripts/fetch-vectors.sh or set FERRATA_VECTORS)",
             root.display()
         ));
     }

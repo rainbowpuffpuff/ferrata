@@ -1,4 +1,4 @@
-//! Guest-side cycle measurements for plumbline-core on real mainnet data.
+//! Guest-side cycle measurements for ferrata-core on real mainnet data.
 //!
 //! Every number recorded here is a delta of `env::cycle_count()`, which in zkVM 3.0.5 is the
 //! session's *user* cycle counter (executed instructions plus accelerator cycles; no paging,
@@ -8,7 +8,7 @@
 //! * `MODE_E2E`: decode bootstrap, `FinalizedStore::initialize`, then `process_update` on
 //!   update_0 and update_1, each step timed.
 //! * `MODE_PHASES`: the phase breakdown (1-10) for update_1 against the store state after
-//!   update_0, plus the plumbline backend calls and `process_update` with and without the
+//!   update_0, plus the ferrata backend calls and `process_update` with and without the
 //!   committee handoff.
 //! * `MODE_SPLIT_ML` / `MODE_SPLIT_FE`: the two halves of a split verification (blst only):
 //!   everything up to the Miller loop, committing the Fp12 value; then the final
@@ -16,7 +16,7 @@
 
 use std::hint::black_box;
 
-use plumbline_core::{
+use ferrata_core::{
     bls::{Aggregation, BlsBackend},
     fork::{ChainSpec, LcFork, Preset, FAR_FUTURE_EPOCH},
     merkle::is_valid_normalized_merkle_branch,
@@ -103,7 +103,7 @@ fn h32(s: &str) -> Root {
     out
 }
 
-/// Mainnet fork schedule, as in plumbline-spectests/tests/mainnet_replay.rs.
+/// Mainnet fork schedule, as in ferrata-spectests/tests/mainnet_replay.rs.
 fn mainnet() -> ChainSpec {
     ChainSpec {
         preset: Preset::MAINNET,
@@ -135,7 +135,7 @@ pub fn run() {
     env::commit(&(rec.0, extra));
 }
 
-/// Bootstrap, then update_0 and update_1 through Plumbline's policy store (Aggregation::Auto).
+/// Bootstrap, then update_0 and update_1 through Ferrata's policy store (Aggregation::Auto).
 fn e2e(rec: &mut Rec) {
     let boot_bytes = read_blob();
     let u0_bytes = read_blob();
@@ -243,11 +243,11 @@ fn phases(rec: &mut Rec) {
     rec.note("info: update_1 non-signers", N as u64 - signers);
     bls::bls_phases(rec, committee, bits, &signing_root, sig);
 
-    // The plumbline backend, as the stores call it.
-    rec.time("B1 backend verify_checked, subtractive (plumbline code, policy store path)", || {
+    // The ferrata backend, as the stores call it.
+    rec.time("B1 backend verify_checked, subtractive (ferrata code, policy store path)", || {
         backend_sub.verify_checked(committee, bits, &signing_root, sig).unwrap()
     });
-    rec.time("B2 backend verify_checked, additive (plumbline code)", || {
+    rec.time("B2 backend verify_checked, additive (ferrata code)", || {
         backend_add.verify_checked(committee, bits, &signing_root, sig).unwrap()
     });
     rec.time("B3 backend fast_aggregate_verify (spec path: KeyValidate on every signer key)", || {
@@ -258,7 +258,7 @@ fn phases(rec: &mut Rec) {
     let unc: Vec<[u8; 96]> = unc_bytes.chunks_exact(96).map(|c| c.try_into().unwrap()).collect();
     assert_eq!(unc.len(), N);
     bls::adoption_phases(rec, &u.next_sync_committee, &unc);
-    rec.time("10a' backend check_committee (plumbline code)", || {
+    rec.time("10a' backend check_committee (ferrata code)", || {
         backend_sub.check_committee(&u.next_sync_committee).unwrap()
     });
 

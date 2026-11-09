@@ -1,7 +1,7 @@
-# bench: plumbline-core cycle counts in a RISC Zero zkVM 3.0.5 guest
+# bench: ferrata-core cycle counts in a RISC Zero zkVM 3.0.5 guest
 
-This bench runs plumbline-core inside RISC Zero guests on real mainnet light-client data
-(`../crates/plumbline-spectests/fixtures/mainnet-p1899/`, checked against its `SHA256SUMS`). It
+This bench runs ferrata-core inside RISC Zero guests on real mainnet light-client data
+(`../crates/ferrata-spectests/fixtures/mainnet-p1899/`, checked against its `SHA256SUMS`). It
 uses the executor only (r0vm 3.0.5, no proving) and reports user cycles per phase and per
 execution. The numbers and what they mean are in `RESULTS.md`.
 
@@ -28,7 +28,7 @@ rzup install r0vm 3.0.5        # the executor; default_executor() finds it throu
 ## Run
 
 ```sh
-cd spike/plumbline/bench
+cd spike/ferrata/bench
 export TMPDIR=$PWD/../../tmp                  # spike/tmp: never /tmp on this machine
 cargo build --release -p host                 # compiles the six guests, then the host
 ./target/release/host blst-accel              # every mode for blst-accel, about 2.5 min
@@ -53,7 +53,7 @@ Modes (all on update_1: period 1900, handoff, 510/512 signers):
 | `single-onchain` | one whole execution per update: decode saved state + update, OnChain policy, no committee re-check |
 | `coresplit` | two executions: finality checks + `Blst::miller_half` (576 bytes out), then `Blst::final_half` |
 | `steps` | three executions: everything before the Miller loops, the Miller loops, `final_half` |
-| `phases` | phases 1–10 with raw library calls, plumbline's backend calls, `process_update` (Full policy) |
+| `phases` | phases 1–10 with raw library calls, ferrata's backend calls, `process_update` (Full policy) |
 | `e2e` | bootstrap → update_0 → update_1 through `FinalizedStore` (Full policy) |
 | `single` | one execution that restores the store with `from_core` |
 | `split` | the earlier split with raw `blst_fp12` bytes |

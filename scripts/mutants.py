@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Hand-picked mutants for plumbline-core.
+"""Hand-picked mutants for ferrata-core.
 
 Each mutant replaces one exact snippet in a scratch copy of the workspace (under
 target/mutants/), runs the whole test suite and records whether a test fails (killed) or all
@@ -17,7 +17,7 @@ import time
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WORK = os.path.join(ROOT, "target", "mutants")
 COPY = os.path.join(WORK, "ws")
-CORE = "crates/plumbline-core/src/"
+CORE = "crates/ferrata-core/src/"
 
 V, S, P, B, T, U, M = "validate.rs", "store.rs", "policy.rs", "bls/blst_backend.rs", "types.rs", "upgrade.rs", "merkle.rs"
 Z = "bls/zkcrypto_backend.rs"
@@ -140,8 +140,8 @@ def main():
     env["TMPDIR"] = os.path.join(WORK, "tmp")
     os.makedirs(env["TMPDIR"], exist_ok=True)
     vectors = os.path.join(ROOT, "vectors")
-    env.setdefault("PLUMBLINE_VECTORS", os.path.join(vectors, "v1.7.0-beta.4", "tests", "minimal"))
-    env.setdefault("PLUMBLINE_BLS_VECTORS", os.path.join(vectors, "bls12-381-tests-v0.1.2"))
+    env.setdefault("FERRATA_VECTORS", os.path.join(vectors, "v1.7.0-beta.4", "tests", "minimal"))
+    env.setdefault("FERRATA_BLS_VECTORS", os.path.join(vectors, "bls12-381-tests-v0.1.2"))
     test = ["cargo", "test", "--workspace", "--offline", "--locked", "--no-fail-fast"]
     rc, out = sh(test, env, COPY)
     if rc != 0:

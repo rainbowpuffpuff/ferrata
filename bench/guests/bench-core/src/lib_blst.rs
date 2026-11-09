@@ -1,4 +1,4 @@
-//! BLS phases with raw `blst` calls, mirroring plumbline's `Blst` backend step by step.
+//! BLS phases with raw `blst` calls, mirroring ferrata's `Blst` backend step by step.
 
 use std::hint::black_box;
 
@@ -11,7 +11,7 @@ use blst::{
     blst_p2_affine, blst_p2_affine_in_g2, blst_p2_affine_is_inf, blst_p2_affine_serialize, blst_p2_deserialize,
     blst_p2_to_affine, blst_p2_uncompress, BLST_ERROR,
 };
-use plumbline_core::{
+use ferrata_core::{
     bls::{Aggregation, Blst, DST, FP12_BYTES},
     types::{BlsPubkey, BlsSignature, SyncCommittee},
     Root,
@@ -32,7 +32,7 @@ fn dec_g1(pk: &BlsPubkey) -> blst_p1_affine {
     out
 }
 
-/// `KeyValidate` as plumbline's blst backend does it: on-curve decode, not identity, in G1.
+/// `KeyValidate` as ferrata's blst backend does it: on-curve decode, not identity, in G1.
 fn key_validate(pk: &BlsPubkey) -> blst_p1_affine {
     let p = dec_g1(pk);
     assert!(unsafe { !blst_p1_affine_is_inf(&p) && blst_p1_affine_in_g1(&p) }, "key fails KeyValidate");
@@ -70,7 +70,7 @@ fn subtractive(c: &SyncCommittee, absent: &[&BlsPubkey]) -> blst_p1 {
     key
 }
 
-/// Signature decode as plumbline does it: decompress, G2 subgroup check, not identity.
+/// Signature decode as ferrata does it: decompress, G2 subgroup check, not identity.
 fn dec_sig_checked(sig: &BlsSignature) -> blst_p2_affine {
     let mut s = blst_p2_affine::default();
     assert!(unsafe { blst_p2_uncompress(&mut s, sig.as_ptr()) } == BLST_ERROR::BLST_SUCCESS);
@@ -88,7 +88,7 @@ fn hash_to_g2(msg: &Root) -> blst_p2_affine {
     a
 }
 
-/// The two Miller loops exactly as plumbline's `pairing_check`: ML(H(m), −key) · ML(sig, g1).
+/// The two Miller loops exactly as ferrata's `pairing_check`: ML(H(m), −key) · ML(sig, g1).
 fn miller_two_single(hm: &blst_p2_affine, neg_key: &blst_p1_affine, sig: &blst_p2_affine) -> blst_fp12 {
     let (mut lhs, mut rhs, mut product) = (blst_fp12::default(), blst_fp12::default(), blst_fp12::default());
     unsafe {
@@ -164,7 +164,7 @@ pub fn bls_phases(rec: &mut Rec, c: &SyncCommittee, bits: &[bool], msg: &Root, s
     let hm = rec.time("7  hash_to_G2(signing root) + to affine", || hash_to_g2(msg));
 
     // 8
-    let f_two = rec.time("8  Miller loops as plumbline: ML(H(m),-key) + ML(sig,g1) + Fp12 mul", || {
+    let f_two = rec.time("8  Miller loops as ferrata: ML(H(m),-key) + ML(sig,g1) + Fp12 mul", || {
         miller_two_single(&hm, &neg_key, &sig)
     });
     let f_one = rec.time("8m alternative: one 2-pair blst_miller_loop_n", || miller_one_double(&hm, &neg_key, &sig));
@@ -243,7 +243,7 @@ pub fn split_ml(rec: &mut Rec, c: &SyncCommittee, bits: &[bool], msg: &Root, sig
     });
     let sig = rec.time("S6 signature decompression + G2 subgroup check", || dec_sig_checked(sig_bytes));
     let hm = rec.time("S7 hash_to_G2", || hash_to_g2(msg));
-    let f = rec.time("S8 Miller loops (as plumbline: 2 x single-pair + Fp12 mul)", || miller_two_single(&hm, &neg_key, &sig));
+    let f = rec.time("S8 Miller loops (as ferrata: 2 x single-pair + Fp12 mul)", || miller_two_single(&hm, &neg_key, &sig));
     let bytes = unsafe {
         core::slice::from_raw_parts(&f as *const blst_fp12 as *const u8, core::mem::size_of::<blst_fp12>())
     };
@@ -273,7 +273,7 @@ pub fn core_final_half(rec: &mut Rec, bytes: &[u8]) -> bool {
     rec.time("C2 Blst::final_half: decode Fp12, final exponentiation, == 1", || Blst::final_half(&product).is_ok())
 }
 
-/// The canonical Fp12 encoding of plumbline's blst backend: twelve big-endian Fp coefficients in
+/// The canonical Fp12 encoding of ferrata's blst backend: twelve big-endian Fp coefficients in
 /// `fp6[i].fp2[j].fp[k]` order (the host checks it against the core's `miller_half`).
 fn encode_fp12(f: &blst_fp12) -> Vec<u8> {
     let mut out = vec![0u8; FP12_BYTES];

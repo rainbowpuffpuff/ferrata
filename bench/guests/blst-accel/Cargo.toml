@@ -5,7 +5,7 @@ edition = "2021"
 rust-version = "1.88"
 publish = false
 
-# A guest is its own workspace, so its [patch.crates-io] applies to plumbline-core too.
+# A guest is its own workspace, so its [patch.crates-io] applies to ferrata-core too.
 [workspace]
 
 [dependencies]
