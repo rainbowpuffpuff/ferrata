@@ -1,0 +1,36 @@
+== prove eth
+date            2026-11-09T22:34:44+01:00
+host            Linux 7.2.13-200.fc44.x86_64 x86_64
+cpu             AMD Ryzen 9 7940HS w/ Radeon 780M Graphics, 16 threads
+memory          54 GiB total, 33 GiB available
+r0vm            risc0-r0vm 3.0.5
+docker image    risczero/risc0-groth16-prover@sha256:a4f80ce2e0b8e2bb7637a93c37136a6776ac00ec843a3fdf1c67b1d5ffea64ee
+loadavg         20.21 13.98 7.50 21/3547 1793159
+[eth] load before: 20.21 13.98 7.50 21/3548 1793161
+[eth] load after:  33.54 20.90 10.74 27/3506 1799753
+[eth] succinct proof: wall 109.36 s | segments 1 | user cycles 65832 | total cycles 131072 (paging 22733, reserved 42507)
+[eth] receipt: 223930 bytes bincode (seal 222668 bytes, journal 352 bytes); verifies against the release image id
+	Command being timed: "<workspace>/ferrata-bridge/target/release/host prove eth"
+	User time (seconds): 622.14
+	System time (seconds): 4.00
+	Percent of CPU this job got: 572%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 1:49.41
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 1458420
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 36
+	Minor (reclaiming a frame) page faults: 665907
+	Voluntary context switches: 5978
+	Involuntary context switches: 363454
+	Swaps: 0
+	File system inputs: 114720
+	File system outputs: 616
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+loadavg after   33.54 20.90 10.74 19/3507 1799765

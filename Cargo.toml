@@ -8,9 +8,9 @@
 # sha2) applies to ferrata-bridge-core there and nowhere else.
 [workspace]
 resolver = "2"
-members = ["crates/ferrata-bridge-core"]
+members = ["crates/ferrata-bridge-core", "methods", "host"]
 default-members = ["crates/ferrata-bridge-core"]
-exclude = ["guests", "methods", "host"]
+exclude = ["guests"]
 
 [workspace.package]
 edition = "2021"

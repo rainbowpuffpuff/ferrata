@@ -1,0 +1,14 @@
+2026-11-09T22:33:52+01:00
+r0vm: risc0-r0vm 3.0.5
+release image id 0x2ca5b06e8da21a4f51506ded03fa5bd89249080b30affe5350ee9da446fc4c41
+[eth] load before: 21.30 13.13 6.89 4/3468 1789118
+[eth] user cycles 65832 | segments 1 (po2 [17], padded total 131072) | exit Halted(0) | executor wall 0.042 s
+[eth] journal == native release_journal(): yes (352 bytes)
+[erc20] load before: 21.30 13.13 6.89 3/3463 1789123
+[erc20] user cycles 65832 | segments 1 (po2 [17], padded total 131072) | exit Halted(0) | executor wall 0.026 s
+[erc20] journal == native release_journal(): yes (352 bytes)
+
+thread '<unnamed>' panicked at src/bin/release.rs:18:19:
+release witness rejected: RootMismatch
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+[bad s_out] execution fails as it must: Guest panicked: release witness rejected: RootMismatch
