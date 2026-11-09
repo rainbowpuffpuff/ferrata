@@ -1,0 +1,25 @@
+[package]
+name = "harness"
+description = "Drives the Ferrata LEZ program through LEZ v0.4.0-rc1's state machine and fee settlement"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[dependencies]
+methods = { path = "../methods" }
+ferrata-lez-wire = { path = "../wire" }
+ferrata-core = { path = "../../crates/ferrata-core", features = ["blst"] }
+# LEZ v0.4.0-rc1 by path (see wire/Cargo.toml). `test-utils` exposes the private-account test
+# helpers the Stage 2 and 3 tests need; it refuses to build without debug assertions.
+lee = { path = "../../../upstream/lez-v0.4.0-rc1/lee/state_machine", features = ["test-utils"] }
+lee_core = { path = "../../../upstream/lez-v0.4.0-rc1/lee/state_machine/core", features = ["host", "test_utils"] }
+fee_core = { path = "../../../upstream/lez-v0.4.0-rc1/lez/programs/fee/core" }
+system_accounts = { path = "../../../upstream/lez-v0.4.0-rc1/lez/system_accounts" }
+programs = { path = "../../../upstream/lez-v0.4.0-rc1/lez/programs", default-features = false, features = ["artifacts"] }
+# LEZ's `Script` for its `scripted` test program (an actor of another program in the tests).
+test_guest_core = { path = "../../../upstream/lez-v0.4.0-rc1/test_guest_core" }
+risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["client"] }
+borsh = { version = "=1.6.1", features = ["derive"] }
+hex = "0.4"
+sha2 = "0.10"

@@ -1,8 +1,8 @@
 [workspace]
 resolver = "2"
 members = ["crates/ferrata-core", "crates/ferrata-spectests"]
-# bench/ is its own workspace (RISC Zero guests and host); see bench/README.md.
-exclude = ["bench"]
+# bench/ and lez/ are workspaces of their own (RISC Zero guests and hosts); see their READMEs.
+exclude = ["bench", "lez"]
 
 [workspace.package]
 version = "0.0.1"
