@@ -22,6 +22,8 @@ machine() {
   echo "memory          $(free -g | awk '/Mem:/ {print $2 " GiB total, " $7 " GiB available"}')"
   echo "r0vm            $(r0vm --version)"
   echo "docker image    $(docker image inspect "$IMAGE" --format '{{index .RepoDigests 0}}' 2>/dev/null || echo absent)"
+  echo "RAYON_NUM_THREADS ${RAYON_NUM_THREADS:-unset (all hardware threads)}"
+  echo "FERRATA_ARTIFACTS ${FERRATA_ARTIFACTS:-unset (artifacts/)}"
   echo "loadavg         $(cat /proc/loadavg)"
 }
 
@@ -31,11 +33,19 @@ case_name="${2:?case}"
 log="$here/artifacts/logs/$(date -u +%Y%m%dT%H%M%SZ)-$step-$case_name.log"
 
 monitor() {
+  # Per poll: time, container, cgroup memory.peak (bytes; includes page cache, e.g. the proving key
+  # read from disk), and the largest VmHWM (peak RSS, kB) among the container's processes, with its name.
   local out="$1"
   while [ ! -e "$out.stop" ]; do
     for id in $(docker ps -q --no-trunc --filter "ancestor=$IMAGE"); do
-      f="/sys/fs/cgroup/system.slice/docker-$id.scope/memory.peak"
-      [ -r "$f" ] && echo "$(date +%s.%N) ${id:0:12} $(cat "$f" 2>/dev/null || echo gone)" >> "$out"
+      cg="/sys/fs/cgroup/system.slice/docker-$id.scope"
+      peak=$(cat "$cg/memory.peak" 2>/dev/null || echo 0)
+      hwm=0; name=-
+      for pid in $(cat "$cg/cgroup.procs" 2>/dev/null); do
+        v=$(awk '/^VmHWM:/ {print $2}' "/proc/$pid/status" 2>/dev/null || true)
+        if [ "${v:-0}" -gt "$hwm" ]; then hwm=$v; name=$(awk '/^Name:/ {print $2}' "/proc/$pid/status" 2>/dev/null || echo -); fi
+      done
+      echo "$(date +%s.%N) ${id:0:12} $peak $hwm $name" >> "$out"
     done
     sleep 0.2
   done
@@ -45,7 +55,7 @@ monitor() {
   echo "== $step $case_name"
   machine
   if [ "$step" = groth16 ]; then
-    work="$here/artifacts/work/$case_name"; rm -rf "$work"; mkdir -p "$work"
+    work="$here/artifacts/work/$case_name"; rm -rf "$work" 2>/dev/null || true; mkdir -p "$work"
     export RISC0_WORK_DIR="$work"         # the Docker prover's /mnt; scratch, git-ignored
     mon="$here/artifacts/work/$case_name.monitor"; rm -f "$mon" "$mon.stop"
     monitor "$mon" & mpid=$!
@@ -55,7 +65,7 @@ monitor() {
   if [ "$step" = groth16 ]; then
     touch "$mon.stop"; wait "$mpid" || true
     if [ -s "$mon" ]; then
-      awk 'NR==1 {t0=$1} {t1=$1; peak=$3} END {printf "docker container: seen for %.1f s (first..last poll), memory.peak %.2f GiB (%d bytes)\n", t1-t0, peak/1073741824, peak}' "$mon"
+      awk 'NR==1 {t0=$1} {t1=$1; peak=$3; if ($4 > hwm) {hwm=$4; name=$5}} END {printf "docker container: seen for %.1f s (first..last poll); cgroup memory.peak %.2f GiB (%d bytes, incl. page cache); largest process peak RSS (VmHWM) %.2f GiB (%d kB, %s)\n", t1-t0, peak/1073741824, peak, hwm/1048576, hwm, name}' "$mon"
     else
       echo "docker container: never seen by the monitor"
     fi

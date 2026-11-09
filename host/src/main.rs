@@ -154,8 +154,12 @@ fn case(name: &str) -> Result<Case> {
 
 // ---- helpers ----------------------------------------------------------------------------------------
 
+/// `artifacts/`, or `$FERRATA_ARTIFACTS` (used for timing re-runs, so that the committed receipts,
+/// which the Foundry fixtures were made from, are not replaced by new randomised proofs).
 fn artifacts() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../artifacts")
+    std::env::var_os("FERRATA_ARTIFACTS")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../artifacts"))
 }
 
 fn case_dir(name: &str) -> Result<PathBuf> {
@@ -431,7 +435,7 @@ fn cmd_claim_check(n: u64) -> Result<()> {
         cycles.push(info.cycles());
     }
     println!(
-        "claim-check: {} deposits, nullifier from the claim guest (riscv32im, accelerated sha2) == native verify_claim for all; user cycles {:?}",
+        "claim-check: {} deposits, nullifier from the claim guest (zkVM executor) == native verify_claim for all; user cycles {:?}",
         cycles.len(),
         cycles
     );
