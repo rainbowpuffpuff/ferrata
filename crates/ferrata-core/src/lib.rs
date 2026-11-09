@@ -18,6 +18,13 @@
 
 extern crate alloc;
 
+// Execution layer: RLP, Merkle-Patricia proofs, execution objects and attestations.
+pub mod attest;
+pub mod exec;
+pub mod keccak;
+pub mod mpt;
+pub mod rlp;
+
 pub mod bls;
 pub mod error;
 pub mod fork;
