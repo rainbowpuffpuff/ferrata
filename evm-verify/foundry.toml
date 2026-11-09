@@ -1,0 +1,30 @@
+[profile.default]
+src = "src"
+test = "test"
+out = "out"
+libs = ["lib"]
+cache_path = "cache"
+
+# Same compiler and settings as ../../bridge-evm (the vault's own project), so gas matches what the
+# vault was built with: solc 0.8.26, already present locally, optimizer 200 runs, cancun, no IR.
+solc_version = "0.8.26"
+auto_detect_solc = false
+offline = true
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 200
+via_ir = false
+auto_detect_remappings = false
+
+remappings = [
+    "forge-std/=lib/forge-std/src/",
+    # RISC Zero's contracts (RiscZeroGroth16Verifier, ControlID) at the pinned tag, and the
+    # OpenZeppelin copy that tag pins for them.
+    "risc0/=lib/risc0-ethereum/contracts/src/",
+    "openzeppelin/=lib/risc0-ethereum/lib/openzeppelin-contracts/",
+    # FerrataVault, read-only from the neighbouring project, with the OpenZeppelin it was tested with.
+    "ferrata-vault/=../../bridge-evm/src/",
+    "@openzeppelin/contracts/=../../bridge-evm/lib/openzeppelin-contracts/contracts/",
+]
+allow_paths = ["../../bridge-evm"]
+fs_permissions = [{ access = "read", path = "./test/fixtures" }, { access = "read", path = "../vectors" }, { access = "read", path = "./out" }]
