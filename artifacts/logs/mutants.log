@@ -1,0 +1,27 @@
+baseline: all tests pass (19 s)
+M01 killed    tree.rs      path index range check off by one  [indices_beyond_the_tree_are_rejected] (23 s)
+M02 SKIP  snippet occurs 0 times in tree.rs
+M03 killed    tree.rs      incremental append takes the wrong branch  [burn_tree, deposit_tree, deposit_tree_matches_the_vault_bit_for_bit, incremental_tree_matches_full_tree] (20 s)
+M04 SURVIVED  tree.rs      incremental append overwrites every branch (23 s)
+M05 killed    encoding.rs  C preimage field order  [inbound_derivations, layouts_match_the_spec_field_by_field] (25 s)
+M06 killed    encoding.rs  fid chain id little-endian  [inbound_derivations, layouts_match_the_spec_field_by_field] (23 s)
+M07 killed    encoding.rs  N_out uses the inbound nullifier tag  [layouts_match_the_spec_field_by_field, outbound_derivations] (23 s)
+M08 killed    encoding.rs  journal recipient / fee recipient swapped  [outbound_derivations, release_journal_is_eleven_abi_words, release_journals, release_verifies_and_commits_the_vault_journal] (16 s)
+M09 killed    encoding.rs  journal decode ignores address padding  [release_journal_decode_rejects_non_canonical_bytes] (12 s)
+M10 killed    encoding.rs  burn leaves share the deposit leaf tag  [burn_tree, derivations_bind_every_input, hashed_tags_are_sha256_of_their_strings, outbound_derivations] (15 s)
+M11 killed    inbound.rs   claim nullifier keyed on the root  [claim_verifies, duplicate_commitments_get_distinct_nullifiers, every_single_field_change_fails_or_changes_the_nullifier, inbound_derivations …] (15 s)
+M12 killed    inbound.rs   recovery claims every deposit  [recover_finds_exactly_the_seven_own_deposits_among_100k] (11 s)
+M13 killed    outbound.rs  release ignores the vault in C_out  [duplicate_burn_commitments_get_distinct_nullifiers, every_single_field_change_fails_or_changes_the_journal, outbound_derivations, recover_burns_regenerates_tags_up_to_the_gap_limit …] (19 s)
+M14 killed    outbound.rs  memo not encrypted  [memo_round_trips_and_hides_the_recipient, outbound_derivations] (21 s)
+M15 killed    outbound.rs  burn scan gap limit off by one  [recover_burns_regenerates_tags_up_to_the_gap_limit] (21 s)
+M16 killed    outbound.rs  burn scan does not authenticate the memo  [recover_burns_regenerates_tags_up_to_the_gap_limit] (24 s)
+M17 killed    outbound.rs  N_out keyed on the burn root  [outbound_derivations, recover_burns_regenerates_tags_up_to_the_gap_limit, release_verifies_and_commits_the_vault_journal, same_burn_same_nullifier_under_every_later_root] (24 s)
+M18 killed    hash.rs      PRF drops the first message byte  [inbound_derivations, outbound_derivations] (23 s)
+total 18: killed 16, survived 1, did not compile 0
+exit 1
+
+== re-run of M02 with its snippet updated to the rustfmt-formatted source (2026-11-09T23:18:48+01:00)
+baseline: all tests pass (21 s)
+M02 killed    tree.rs      path verification swaps left and right  [claim_verifies, deposit_tree_matches_the_vault_bit_for_bit, duplicate_burn_commitments_get_distinct_nullifiers, duplicate_commitments_get_distinct_nullifiers …] (15 s)
+total 1 run: killed 1, survived 0, did not compile 0
+exit 0

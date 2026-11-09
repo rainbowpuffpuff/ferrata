@@ -65,7 +65,7 @@ monitor() {
   if [ "$step" = groth16 ]; then
     touch "$mon.stop"; wait "$mpid" || true
     if [ -s "$mon" ]; then
-      awk 'NR==1 {t0=$1} {t1=$1; peak=$3; if ($4 > hwm) {hwm=$4; name=$5}} END {printf "docker container: seen for %.1f s (first..last poll); cgroup memory.peak %.2f GiB (%d bytes, incl. page cache); largest process peak RSS (VmHWM) %.2f GiB (%d kB, %s)\n", t1-t0, peak/1073741824, peak, hwm/1048576, hwm, name}' "$mon"
+      awk 'NR==1 {t0=$1} {t1=$1; if ($3 > peak) peak=$3; if ($4 > hwm) {hwm=$4; name=$5}} END {printf "docker container: seen for %.1f s (first..last poll); cgroup memory.peak (max over polls) %.2f GiB (%d bytes, incl. page cache); largest process peak RSS (VmHWM) %.2f GiB (%d kB, %s)\n", t1-t0, peak/1073741824, peak, hwm/1048576, hwm, name}' "$mon"
     else
       echo "docker container: never seen by the monitor"
     fi

@@ -1,17 +1,21 @@
 == rustfmt
 == clippy (workspace; RISC0_SKIP_BUILD because clippy's wrapper leaks into risc0-build's guest build)
+    Checking ferrata-bridge-core v0.1.0 (<workspace>/ferrata-bridge/crates/ferrata-bridge-core)
    Compiling methods v0.1.0 (<workspace>/ferrata-bridge/methods)
     Checking host v0.1.0 (<workspace>/ferrata-bridge/host)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.30s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.91s
 == clippy (guest crate, risc0 toolchain, with the cfg flags risc0-build passes)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.06s
+    Checking ferrata-bridge-core v0.1.0 (<workspace>/ferrata-bridge/crates/ferrata-bridge-core)
+    Checking ferrata-guests v0.1.0 (<workspace>/ferrata-bridge/guests)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.13s
 == no_std build and clippy for riscv32im-unknown-none-elf
    Compiling ferrata-bridge-core v0.1.0 (<workspace>/ferrata-bridge/crates/ferrata-bridge-core)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.22s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.86s
     Checking ferrata-bridge-core v0.1.0 (<workspace>/ferrata-bridge/crates/ferrata-bridge-core)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.20s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.77s
 == core tests
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.09s
+   Compiling ferrata-bridge-core v0.1.0 (<workspace>/ferrata-bridge/crates/ferrata-bridge-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.20s
      Running unittests src/lib.rs (target/debug/deps/ferrata_bridge_core-9dfaf50ba27d49d9)
 
 running 0 tests
@@ -21,16 +25,16 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
      Running tests/encoding.rs (target/debug/deps/encoding-b4f8e77a4abd7b25)
 
 running 8 tests
-test hashed_tags_equal_the_vault_constants ... ok
 test hashed_tags_are_sha256_of_their_strings ... ok
+test hashed_tags_equal_the_vault_constants ... ok
 test layouts_match_the_spec_field_by_field ... ok
 test prefix_tags_are_exact_strings_and_prefix_free ... ok
 test release_journal_decode_rejects_non_canonical_bytes ... ok
-test release_journal_is_eleven_abi_words ... ok
 test claim_input_round_trips ... ok
+test release_journal_is_eleven_abi_words ... ok
 test release_input_round_trips ... ok
 
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
 
      Running tests/inbound.rs (target/debug/deps/inbound-a89bc7ec40ecc2ae)
 
@@ -42,46 +46,53 @@ test duplicate_commitments_get_distinct_nullifiers ... ok
 test same_deposit_same_nullifier_under_every_later_root ... ok
 test recover_finds_exactly_the_seven_own_deposits_among_100k ... ok
 
-test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.22s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.33s
 
      Running tests/outbound.rs (target/debug/deps/outbound-5b5c7f72ec3216f3)
 
 running 7 tests
 test duplicate_burn_commitments_get_distinct_nullifiers ... ok
 test recover_burns_regenerates_tags_up_to_the_gap_limit ... ok
-test memo_round_trips_and_hides_the_recipient ... ok
 test derivations_bind_every_input ... ok
+test memo_round_trips_and_hides_the_recipient ... ok
 test release_verifies_and_commits_the_vault_journal ... ok
 test every_single_field_change_fails_or_changes_the_journal ... ok
 test same_burn_same_nullifier_under_every_later_root ... ok
 
-test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.42s
 
      Running tests/tree.rs (target/debug/deps/tree-28b8461e9a10e53b)
 
 running 8 tests
-test last_index_hashes_from_the_right_at_every_height ... ok
 test empty_roots ... ok
+test last_index_hashes_from_the_right_at_every_height ... ok
 test indices_beyond_the_tree_are_rejected ... ok
-test wrong_index_fails ... ok
 test tampered_path_leaf_or_root_fails ... ok
+test wrong_index_fails ... ok
 test root_of_an_older_tree_does_not_accept_newer_leaves ... ok
 test every_path_verifies ... ok
 test incremental_tree_matches_full_tree ... ok
 
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.55s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.55s
+
+     Running tests/vault_tree.rs (target/debug/deps/vault_tree-213e6541e7bb9c26)
+
+running 1 test
+test deposit_tree_matches_the_vault_bit_for_bit ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
 
      Running tests/vectors.rs (target/debug/deps/vectors-e7c6bc7bebb54cb3)
 
 running 6 tests
 test tags ... ok
-test release_journals ... ok
 test inbound_derivations ... ok
+test release_journals ... ok
+test burn_tree ... ok
 test outbound_derivations ... ok
 test deposit_tree ... ok
-test burn_tree ... ok
 
-test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
 
    Doc-tests ferrata_bridge_core
 
@@ -92,39 +103,65 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 == vectors, recomputed in Python (standard library only)
 vectors OK: 245 values recomputed independently in vectors
 == zkVM executor: release guest (cycles, journal == native, bad witness fails), claim guest vs native
-    Blocking waiting for file lock on package cache
-    Blocking waiting for file lock on package cache
-    Blocking waiting for file lock on package cache
    Compiling methods v0.1.0 (<workspace>/ferrata-bridge/methods)
+   Compiling ferrata-bridge-core v0.1.0 (<workspace>/ferrata-bridge/crates/ferrata-bridge-core)
    Compiling host v0.1.0 (<workspace>/ferrata-bridge/host)
-    Finished `release` profile [optimized] target(s) in 2.26s
+    Finished `release` profile [optimized] target(s) in 8.80s
 release image id 0x2ca5b06e8da21a4f51506ded03fa5bd89249080b30affe5350ee9da446fc4c41
-[eth] load before: 12.69 16.13 13.54 5/3444 1907126
+[eth] load before: 19.72 23.42 23.15 3/3495 2031616
 [eth] user cycles 65832 | segments 1 (po2 [17], padded total 131072) | exit Halted(0) | executor wall 0.028 s
 [eth] journal == native release_journal(): yes (352 bytes)
-[erc20] load before: 12.69 16.13 13.54 3/3443 1907130
-[erc20] user cycles 65832 | segments 1 (po2 [17], padded total 131072) | exit Halted(0) | executor wall 0.025 s
+[erc20] load before: 19.72 23.42 23.15 4/3495 2031621
+[erc20] user cycles 65832 | segments 1 (po2 [17], padded total 131072) | exit Halted(0) | executor wall 0.027 s
 [erc20] journal == native release_journal(): yes (352 bytes)
 
 thread '<unnamed>' panicked at src/bin/release.rs:18:19:
 release witness rejected: RootMismatch
 note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 [bad s_out] execution fails as it must: Guest panicked: release witness rejected: RootMismatch
-claim-check: 16 deposits, nullifier from the claim guest (riscv32im, accelerated sha2) == native verify_claim for all; user cycles [60473, 60470, 60470, 60467, 60470, 60467, 60467, 60464, 60470, 60467, 60467, 60464, 60467, 60464, 60464, 60461]
+claim-check: 16 deposits, nullifier from the claim guest (zkVM executor) == native verify_claim for all; user cycles [60473, 60470, 60470, 60467, 60470, 60467, 60467, 60464, 60470, 60467, 60467, 60464, 60467, 60464, 60464, 60461]
 claim image id 0x8659c98c9022890f0e70c89b37daad47597ed12d36f716b722060f3b7cc4bb87
+== saved receipts verify against the image id built now (catches guest drift)
+release image id 0x2ca5b06e8da21a4f51506ded03fa5bd89249080b30affe5350ee9da446fc4c41
+  Groth16ReceiptVerifierParameters::default() (risc0-zkvm 3.0.5):
+    control_root       0xa54dc85ac99f851c92d7c96d7318af41dbe7c0194edfcc37eb4d422a998c1f56
+    bn254_control_id   0xc07a65145c3cb48b6101962ea607a4dd93c753bb26975cb47feb00d3666e4404
+    digest             0x73c457ba541936f0d907daf0c7253a39a9c5c427c225ba7709e44702d3c6eedc
+    selector           0x73c457ba
+[eth] receipt-succinct.bin: verifies; 223930 bytes bincode
+[eth] receipt-groth16.bin: verifies; 1201 bytes bincode
+[eth]   receipt verifier_parameters 0x73c457ba541936f0d907daf0c7253a39a9c5c427c225ba7709e44702d3c6eedc
+[eth]   seal selector             0x73c457ba
+[eth] journal: burn_root 0x85bcf8ab624268cb323e505777510eab1e1a63e7e0606bd1e7a3289e98f11bde nullifier 0x42fe0f130df5bd40f3eaba0efff441f13018e0adba11e0a945e7fae3283fdcd2 sha256 0xbd09000ed51097cd420ef2f272392a41678747eab330d6dfffc92365c36dcbd2
+release image id 0x2ca5b06e8da21a4f51506ded03fa5bd89249080b30affe5350ee9da446fc4c41
+  Groth16ReceiptVerifierParameters::default() (risc0-zkvm 3.0.5):
+    control_root       0xa54dc85ac99f851c92d7c96d7318af41dbe7c0194edfcc37eb4d422a998c1f56
+    bn254_control_id   0xc07a65145c3cb48b6101962ea607a4dd93c753bb26975cb47feb00d3666e4404
+    digest             0x73c457ba541936f0d907daf0c7253a39a9c5c427c225ba7709e44702d3c6eedc
+    selector           0x73c457ba
+[erc20] receipt-succinct.bin: verifies; 223930 bytes bincode
+[erc20] receipt-groth16.bin: verifies; 1201 bytes bincode
+[erc20]   receipt verifier_parameters 0x73c457ba541936f0d907daf0c7253a39a9c5c427c225ba7709e44702d3c6eedc
+[erc20]   seal selector             0x73c457ba
+[erc20] journal: burn_root 0x85bcf8ab624268cb323e505777510eab1e1a63e7e0606bd1e7a3289e98f11bde nullifier 0xd5881c44b9b23a89317581aaadbeacbeecdf6f1c8fd1ed3514ee24e61905f8bb sha256 0xcab00ffb84b1ce4fc9c1c635219d315d01580974c52070436ba7282324080a0f
+== neighbour drift (warnings only): vendored tree.json and the vault source vs. spike/bridge-evm now
+tree.json: identical to the vendored copy
+FerrataVault.sol: unchanged (sha256 50c3e693584c8725c19cf63cb0cdae8470ff9f303d05a5faf6a1f49958b5c2b4)
 == Foundry: journal equality, real Groth16 verifier, vault end to end
-No files changed, compilation skipped
+Compiling 1 files with Solc 0.8.26
+Solc 0.8.26 finished in 2.87s
+Compiler run successful!
 
 Ran 3 tests for test/VaultRelease.t.sol:VaultAcceptRootTest
 [PASS] test_acceptBurnRoot_refusesARootWithoutProof() (gas: 121456)
-[PASS] test_release_erc20_viaAcceptBurnRoot() (gas: 731267)
-[PASS] test_release_eth_viaAcceptBurnRoot() (gas: 699911)
-Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 8.48ms (9.92ms CPU time)
+[PASS] test_release_erc20_viaAcceptBurnRoot() (gas: 731268)
+[PASS] test_release_eth_viaAcceptBurnRoot() (gas: 699912)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 119.81ms (138.13ms CPU time)
 
 Ran 2 tests for test/JournalEquality.t.sol:JournalEqualityTest
 [PASS] test_rustJournal_equals_abiEncode_forEveryVector() (gas: 4857132)
 [PASS] test_rustJournal_equals_vaultsOwnDigest_forEveryDeployableVector() (gas: 6480812)
-Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 13.02ms (22.54ms CPU time)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 134.34ms (212.30ms CPU time)
 
 Ran 9 tests for test/Groth16Verify.t.sol:Groth16VerifyTest
 [PASS] test_gas_verifyAlone_erc20() (gas: 509647)
@@ -136,15 +173,15 @@ Ran 9 tests for test/Groth16Verify.t.sol:Groth16VerifyTest
 [PASS] test_reject_truncatedSeal() (gas: 217004)
 [PASS] test_reject_wrongImageId() (gas: 256642)
 [PASS] test_selector_isDerivedFromControlId_andMatchesTheSeal() (gas: 16624)
-Suite result: ok. 9 passed; 0 failed; 0 skipped; finished in 33.25ms (57.21ms CPU time)
+Suite result: ok. 9 passed; 0 failed; 0 skipped; finished in 219.34ms (569.91ms CPU time)
 
 Ran 5 tests for test/VaultRelease.t.sol:VaultReleaseTest
-[PASS] test_reject_rightSeal_oneJournalFieldChanged() (gas: 3113580)
+[PASS] test_reject_rightSeal_oneJournalFieldChanged() (gas: 3112384)
 [PASS] test_reject_sealForADifferentJournal() (gas: 689559)
 [PASS] test_reject_tamperedSeal() (gas: 1008181031)
-[PASS] test_release_erc20_withRealProof() (gas: 727711)
-[PASS] test_release_eth_withRealProof() (gas: 696356)
-Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 33.71ms (46.16ms CPU time)
+[PASS] test_release_erc20_withRealProof() (gas: 727712)
+[PASS] test_release_eth_withRealProof() (gas: 696357)
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 222.47ms (372.15ms CPU time)
 
-Ran 4 test suites in 35.83ms (88.46ms CPU time): 19 tests passed, 0 failed, 0 skipped (19 total tests)
+Ran 4 test suites in 235.37ms (695.97ms CPU time): 19 tests passed, 0 failed, 0 skipped (19 total tests)
 ALL CHECKS PASSED
