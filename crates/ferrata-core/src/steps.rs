@@ -10,7 +10,8 @@
 //!    [`SignerWitness`]; the signature's decoding and subgroup check; hash-to-G2. The result is a
 //!    [`Job`] holding H(m), −key and the signature (480 bytes), bound to the digests of the store
 //!    and of the update.
-//! 2. [`Job::step2`]: the two Miller loops; the job then holds their 576-byte product.
+//! 2. [`Job::step2`]: the Miller loops (one two-pair loop); the job then holds their 576-byte
+//!    product, the same bytes as [`Blst::miller_half`].
 //! 3. [`Job::step3`]: the final exponentiation (the core's [`Blst::final_half`]); the job is then
 //!    verified.
 //!
@@ -33,8 +34,8 @@
 use alloc::vec::Vec;
 
 use blst::{
-    blst_bendian_from_fp, blst_fp, blst_fp12, blst_fp12_mul, blst_fp_from_bendian, blst_hash_to_g2, blst_miller_loop,
-    blst_p1, blst_p1_add_or_double, blst_p1_affine, blst_p1_affine_generator, blst_p1_affine_serialize, blst_p1_cneg,
+    blst_bendian_from_fp, blst_fp, blst_fp12, blst_fp_from_bendian, blst_hash_to_g2, blst_miller_loop_n, blst_p1,
+    blst_p1_add_or_double, blst_p1_affine, blst_p1_affine_generator, blst_p1_affine_serialize, blst_p1_cneg,
     blst_p1_from_affine, blst_p1_is_inf, blst_p1_to_affine, blst_p1_uncompress, blst_p2, blst_p2_affine,
     blst_p2_affine_in_g2, blst_p2_affine_is_inf, blst_p2_affine_serialize, blst_p2_deserialize, blst_p2_to_affine,
     blst_p2_uncompress, BLST_ERROR,
@@ -762,18 +763,21 @@ fn deserialize_g2(bytes: &[u8; 192]) -> Result<blst_p2_affine, Error> {
     Ok(out)
 }
 
-/// `ML(H(m), −key) · ML(signature, g1)`, exactly as the core's `miller`, from the points step 1
-/// stored; encoded as [`Blst::miller_half`] encodes it.
+/// `ML(H(m), −key) · ML(signature, g1)` from the points step 1 stored, as one two-pair Miller
+/// loop (shared squarings; 3.25M cycles in the guest instead of 4.09M for two loops, `bench/`).
+/// The product is the same element as the core's `miller` computes with two loops, and is encoded
+/// as [`Blst::miller_half`] encodes it: `ferrata-spectests/tests/steps.rs` checks the 576 bytes
+/// against `miller_half` on every mainnet update.
 fn miller_from_points(hm: &[u8; 192], neg_key: &[u8; 96], signature: &[u8; 192]) -> Result<[u8; FP12_BYTES], Error> {
     let hm = deserialize_g2(hm)?;
     let neg_key = deserialize_g1(neg_key).map_err(|_| Error::Malformed)?;
     let sig = deserialize_g2(signature)?;
-    let (mut lhs, mut rhs, mut product) = (blst_fp12::default(), blst_fp12::default(), blst_fp12::default());
-    // SAFETY: every pointer refers to a live, initialised value of the type blst expects.
+    let mut product = blst_fp12::default();
+    // SAFETY: the arrays hold two valid points each, and blst reads exactly two of each.
     unsafe {
-        blst_miller_loop(&mut lhs, &hm, &neg_key);
-        blst_miller_loop(&mut rhs, &sig, blst_p1_affine_generator());
-        blst_fp12_mul(&mut product, &lhs, &rhs);
+        let qs: [*const blst_p2_affine; 2] = [&hm, &sig];
+        let ps: [*const blst_p1_affine; 2] = [&neg_key, blst_p1_affine_generator()];
+        blst_miller_loop_n(&mut product, qs.as_ptr(), ps.as_ptr(), 2);
     }
     Ok(encode_fp12(&product))
 }
