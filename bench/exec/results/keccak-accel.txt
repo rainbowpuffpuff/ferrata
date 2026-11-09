@@ -1,0 +1,62 @@
+# keccak-accel: ferrata-core execution layer, RISC Zero zkVM 3.0.5 executor, mainnet block 26379842
+
+image id 8c5bbc10b056f5074698d174324cb0bde8b5c54587bb1c6b678ac570357d627d, ELF 296572 bytes
+
+### attest_storage: WETH balance slot at block n (9 + 7 proof nodes)
+        1040  HeaderRecord::from_ssz
+      210502  attest_storage
+          54  Keccak-f permutations in the call
+      225509  EXECUTION user cycles (SessionInfo::cycles)
+      524288  EXECUTION total incl. padding/paging (1 segments)
+        0.12  executor wall-clock seconds
+
+### attest_storage: USDC balance slot at block n (9 + 8 proof nodes)
+        1040  HeaderRecord::from_ssz
+      221682  attest_storage
+          57  Keccak-f permutations in the call
+      236968  EXECUTION user cycles (SessionInfo::cycles)
+      524288  EXECUTION total incl. padding/paging (1 segments)
+        0.08  executor wall-clock seconds
+
+### attest_log: USDC Transfer in a one-log receipt (tx 2, 1 logs, 3 proof nodes, leaf 434 bytes)
+        1040  HeaderRecord::from_ssz
+       42445  attest_log
+          11  Keccak-f permutations in the call
+       53192  EXECUTION user cycles (SessionInfo::cycles)
+      131072  EXECUTION total incl. padding/paging (1 segments)
+        0.07  executor wall-clock seconds
+
+### attest_log: USDC Transfer in the block's largest receipt (tx 139, 96 logs, 5 proof nodes, leaf 17508 bytes)
+        1040  HeaderRecord::from_ssz
+      432102  attest_log
+         140  Keccak-f permutations in the call
+      444970  EXECUTION user cycles (SessionInfo::cycles)
+      524288  EXECUTION total incl. padding/paging (1 segments)
+        0.10  executor wall-clock seconds
+
+### history_hop: n to n - 16 (8 + 5 proof nodes, 649-byte header)
+        1040  HeaderRecord::from_ssz
+      182627  history_hop
+          50  Keccak-f permutations in the call
+      195318  EXECUTION user cycles (SessionInfo::cycles)
+      262144  EXECUTION total incl. padding/paging (1 segments)
+        0.07  executor wall-clock seconds
+
+### history_hop, then attest_storage (WETH) under the derived record
+        1040  HeaderRecord::from_ssz
+      182627  history_hop
+      210502  attest_storage under the derived record
+         104  Keccak-f permutations in the call
+      413514  EXECUTION user cycles (SessionInfo::cycles)
+      524288  EXECUTION total incl. padding/paging (1 segments)
+        0.14  executor wall-clock seconds
+
+### primitives: keccak256 of a 532-byte branch node; one storage identifier
+        1040  HeaderRecord::from_ssz
+        8640  keccak256 of one proof node
+        1629  storage_id (SHA-256 identifier)
+           4  Keccak-f permutations in the call
+       20282  EXECUTION user cycles (SessionInfo::cycles)
+       65536  EXECUTION total incl. padding/paging (1 segments)
+        0.11  executor wall-clock seconds
+

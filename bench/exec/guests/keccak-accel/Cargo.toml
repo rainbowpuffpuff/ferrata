@@ -1,0 +1,28 @@
+[package]
+name = "keccak_accel"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.88"
+publish = false
+
+# A guest is its own workspace, so its [patch.crates-io] applies to ferrata-core too.
+[workspace]
+
+[dependencies]
+exec-core = { path = "../exec-core" }
+risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["std"] }
+# Pin the versions the patches provide, so the resolver selects them.
+sha2 = "=0.10.8"
+tiny-keccak = "=2.0.2"
+
+[patch.crates-io]
+# RISC Zero's accelerated SHA-256 (statement identifiers), as in the light-client bench.
+sha2 = { git = "https://github.com/risc0/RustCrypto-hashes", tag = "sha2-v0.10.8-risczero.0" }
+# RISC Zero's accelerated Keccak: the fork's only tag; it calls `risc0_keccak_update`, which
+# risc0-zkvm 3.0.5 exports (guest/env, the Keccak batcher).
+tiny-keccak = { git = "https://github.com/risc0/tiny-keccak", tag = "tiny-keccak/v2.0.2-risczero.0" }
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
