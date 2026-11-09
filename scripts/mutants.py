@@ -4,7 +4,8 @@
 Each mutant replaces one exact snippet in a scratch copy of the workspace (under
 target/mutants/), runs the whole test suite and records whether a test fails (killed) or all
 pass (survived). The repository itself is only read. M01-M32 were proposed by an independent
-review of the first version of this code; M33 onward cover code added since.
+review of the first version of this code; M33-M43 cover light-client code added since, and
+M44-M93 the execution layer (RLP, Merkle-Patricia proofs, execution objects, attestations).
 
 Usage: scripts/mutants.py [ID ...]
 """
@@ -21,6 +22,7 @@ CORE = "crates/ferrata-core/src/"
 
 V, S, P, B, T, U, M = "validate.rs", "store.rs", "policy.rs", "bls/blst_backend.rs", "types.rs", "upgrade.rs", "merkle.rs"
 Z = "bls/zkcrypto_backend.rs"
+R, MP, X, A = "rlp.rs", "mpt.rs", "exec.rs", "attest.rs"
 
 MUTANTS = [
     ("M01", P, "no committee check at initialisation",
@@ -118,6 +120,117 @@ MUTANTS = [
      "            Adoption::Full => bls.check_committee(committee),", "            Adoption::Full => bls.check_committee_onchain(committee),"),
     ("M43", B, "final_half accepts any product",
      "    if unsafe { blst_fp12_is_one(&result) } {", "    if true || unsafe { blst_fp12_is_one(&result) } {"),
+    # RLP.
+    ("M44", R, "single byte below 0x80 accepted as a one-byte string",
+     "    if !is_list && len == 1 && payload[0] < 0x80 {\n        return Err(Error::RlpNonCanonical);\n    }\n", ""),
+    ("M45", R, "long-form length may start with a zero byte",
+     "    if be[0] == 0 {\n        return Err(Error::RlpNonCanonical);\n    }\n", ""),
+    ("M46", R, "long form accepted for a 55-byte payload",
+     "    if len < 56 {", "    if len < 55 {"),
+    ("M47", R, "an item may claim one byte past its input",
+     "    if end > input.len() {", "    if end > input.len() + 1 {"),
+    ("M48", R, "bytes after the item accepted",
+     "    let (item, rest) = split_first(input)?;\n    if !rest.is_empty() {\n        return Err(Error::RlpMalformed);\n    }\n",
+     "    let (item, _rest) = split_first(input)?;\n"),
+    ("M49", R, "integers may have a leading zero",
+     "        if b.first() == Some(&0) {\n            return Err(Error::RlpNonCanonical);\n        }\n", ""),
+    ("M50", R, "integers one byte longer than their field",
+     "        if b.len() > max {", "        if b.len() > max + 1 {"),
+    ("M51", R, "a fixed-arity list may have extra items",
+     "        if list.next().is_some() {\n            return Err(Error::RlpMalformed);\n        }\n", ""),
+    ("M52", R, "RLP(0x80) encoded as a single byte",
+     "    if n < 0x80 {", "    if n <= 0x80 {"),
+    # Merkle-Patricia proofs.
+    ("M53", MP, "node hash not compared with its reference",
+     "                if keccak256(node) != hash {\n                    return Err(Error::ProofNodeMismatch);\n                }\n", ""),
+    ("M54", MP, "unused proof elements accepted",
+     "    if used != proof.len() {\n        return Err(Error::ProofTrailingNodes);\n    }\n", ""),
+    ("M55", MP, "a node shorter than 32 bytes may be referenced by hash",
+     "                if used > 0 && node.len() < 32 {", "                if used > 0 && node.len() < 31 {"),
+    ("M56", MP, "the root may not be shorter than 32 bytes",
+     "                if used > 0 && node.len() < 32 {", "                if node.len() < 32 {"),
+    ("M57", MP, "an embedded node of 32 bytes accepted",
+     "        if item.raw.len() >= 32 {", "        if item.raw.len() > 32 {"),
+    ("M58", MP, "odd extension flag read as even",
+     "        1 => (false, true),", "        1 => (false, false),"),
+    ("M59", MP, "even path's padding nibble not checked",
+     "    if !odd && first & 0x0f != 0 {", "    if false {"),
+    ("M60", MP, "extension with an empty path accepted",
+     "            if path.len == 0 {\n                return Err(Error::ProofNodeInvalid);\n            }\n", ""),
+    ("M61", MP, "a leaf matches any key it is a prefix of",
+     "                break (path.len == total - pos && path.is_prefix_of(key, pos)).then_some(value);",
+     "                break path.is_prefix_of(key, pos).then_some(value);"),
+    ("M62", MP, "branch value slot ignored when the key ends there",
+     "                if pos == total {\n                    break value;\n                }",
+     "                if pos == total {\n                    break None;\n                }"),
+    ("M63", MP, "leaf with an empty value accepted",
+     "                if value.is_empty() {\n                    return Err(Error::ProofNodeInvalid);\n                }\n", ""),
+    ("M64", MP, "malformed child reference read as empty",
+     "        _ => Err(Error::ProofNodeInvalid),\n    }\n}\n\n/// A string item", "        _ => Ok(None),\n    }\n}\n\n/// A string item"),
+    ("M65", MP, "a three-item node decoded as leaf or extension",
+     "        2 => {\n            let (leaf, path) = hex_prefix(string(items[0])?)?;",
+     "        2 | 3 => {\n            let (leaf, path) = hex_prefix(string(items[0])?)?;"),
+    ("M66", MP, "an empty branch slot read as an incomplete proof",
+     "                    None => break None,", "                    None => return Err(Error::ProofIncomplete),"),
+    # Execution objects.
+    ("M67", X, "22-field header accepted as Amsterdam",
+     "        23 => HeaderShape::Amsterdam,", "        22 | 23 => HeaderShape::Amsterdam,"),
+    ("M68", X, "extra_data of 33 bytes accepted",
+     "    if f[12].bytes()?.len() > MAX_EXTRA_DATA_BYTES {", "    if f[12].bytes()?.len() > MAX_EXTRA_DATA_BYTES + 1 {"),
+    ("M69", X, "header hash not compared with the bound hash",
+     "    if keccak256(encoded) != *block_hash {\n        return Err(Error::HeaderHashMismatch);\n    }\n", ""),
+    ("M70", X, "account with a zero code hash accepted",
+     "        if account.storage_root == [0; 32] || account.code_hash == [0; 32] {",
+     "        if account.storage_root == [0; 32] {"),
+    ("M71", X, "a stored zero accepted as a storage value",
+     "    if value == [0; 32] {\n        return Err(Error::RlpMalformed);\n    }\n", ""),
+    ("M72", X, "an absent account's storage root used as is",
+     "    let root = if account.exists() { account.storage_root } else { EMPTY_ROOT };", "    let root = account.storage_root;"),
+    ("M73", X, "pre-Byzantium receipt not refused",
+     "        if status.bytes()?.len() == 32 {\n            return Err(Error::ReceiptUnsupported);\n        }\n", ""),
+    ("M74", X, "any non-zero status read as success",
+     "            1 => true,\n            _ => return Err(Error::RlpMalformed),", "            _ => true,"),
+    ("M75", X, "receipt type 5 accepted",
+     "            0x01..=0x04 => (first, rest),", "            0x01..=0x05 => (first, rest),"),
+    ("M76", X, "log index bound off by one",
+     "        if i >= self.log_count {", "        if i > self.log_count {"),
+    # Attestations.
+    ("M77", A, "failed transaction's logs attested",
+     "    if !receipt.status {\n        return Err(Error::ReceiptFailed);\n    }\n", ""),
+    ("M78", A, "record of another chain accepted",
+     "        if self.chain_id != chain_id {\n            return Err(Error::ChainMismatch);\n        }\n", ""),
+    ("M79", A, "history window one block too long",
+     "record.number - n <= HISTORY_SERVE_WINDOW", "record.number - n <= HISTORY_SERVE_WINDOW + 1"),
+    ("M80", A, "history window includes the record's own block",
+     "    if !(n < record.number && ", "    if !(n <= record.number && "),
+    ("M81", A, "history contract's code not checked",
+     "    if contract.code_hash != HISTORY_CODE_HASH {\n        return Err(Error::HistoryContractMissing);\n    }\n", ""),
+    ("M82", A, "history slot only required to be non-zero",
+     "    if prove_storage(&contract, &slot, storage_proof)? != block_hash {",
+     "    if prove_storage(&contract, &slot, storage_proof)? == [0; 32] {"),
+    ("M83", A, "history slot taken modulo 8192",
+     "(n % HISTORY_SERVE_WINDOW).to_be_bytes()", "(n % 8192).to_be_bytes()"),
+    ("M84", A, "hops do not accumulate",
+     "        Binding::History { hops } => hops.saturating_add(1),", "        Binding::History { hops } => hops,"),
+    ("M85", A, "restored history record may have zero hops",
+     "            (2, h) if h > 0 => Binding::History { hops: h },", "            (2, h) => Binding::History { hops: h },"),
+    ("M86", A, "record bytes may be longer than the record",
+     "        if bytes.len() != Self::SSZ_LEN {", "        if bytes.len() < Self::SSZ_LEN {"),
+    ("M87", A, "empty payload header accepted as a record",
+     "        if payload.block_hash == ZERO {\n            return Err(Error::BindingMismatch);\n        }\n", ""),
+    ("M88", A, "<= compares as <",
+     "            Cmp::Le => ord.is_le(),", "            Cmp::Le => ord.is_lt(),"),
+    ("M89", A, "conditions not checked",
+     "            if !c.predicate.holds(&self.field(c.field)?) {", "            if false && !c.predicate.holds(&self.field(c.field)?) {"),
+    ("M90", A, "an account's conditions skipped in a batch",
+     "        let fact = Fact::Account(account.fact);\n        fact.check(q.conditions)?;\n",
+     "        let fact = Fact::Account(account.fact);\n"),
+    ("M91", A, "empty batch accepted",
+     "    if batch.accounts.is_empty() && batch.logs.is_empty() {\n        return Err(Error::QueryInvalid);\n    }\n", ""),
+    ("M92", A, "storage identifier without the value",
+     "    h.update(slot);\n    h.update(value);\n", "    h.update(slot);\n"),
+    ("M93", A, "log identifier without the log's position",
+     "    h.update(log_index.to_be_bytes());\n", ""),
 ]
 
 
@@ -142,6 +255,7 @@ def main():
     vectors = os.path.join(ROOT, "vectors")
     env.setdefault("FERRATA_VECTORS", os.path.join(vectors, "v1.7.0-beta.4", "tests", "minimal"))
     env.setdefault("FERRATA_BLS_VECTORS", os.path.join(vectors, "bls12-381-tests-v0.1.2"))
+    env.setdefault("FERRATA_TRIE_VECTORS", os.path.join(vectors, "ethereum-tests-c67e485", "TrieTests"))
     test = ["cargo", "test", "--workspace", "--offline", "--locked", "--no-fail-fast"]
     rc, out = sh(test, env, COPY)
     if rc != 0:

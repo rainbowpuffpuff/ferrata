@@ -131,6 +131,7 @@ const CORPUS: &[(&[u8], Error, &str)] = &[
 
 #[test]
 fn corpus_of_non_canonical_and_malformed_encodings_is_refused_by_both() {
+    assert_eq!(CORPUS.len(), 21);
     for (input, code, what) in CORPUS {
         assert_eq!(ferrata_decode(input), Err(*code), "{what}");
         assert!(alloy_decode(input).is_err(), "alloy accepts: {what}");
@@ -294,5 +295,5 @@ fn random_mutations_get_the_same_verdict_from_both() {
         }
     }
     println!("mutated encodings: {accepted} accepted, {refused} refused, by both");
-    assert!(accepted > 1_000 && refused > 1_000);
+    assert_eq!((accepted, refused), (6_237, 13_763));
 }

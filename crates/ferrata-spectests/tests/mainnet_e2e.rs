@@ -388,7 +388,8 @@ fn every_log_of_the_finalized_block_is_attested() {
         [0, 2, 3, 4],
         "legacy and EIP-1559, -4844 and -7702 receipts"
     );
-    assert!(usdc_transfers >= 30, "{usdc_transfers}");
+    assert_eq!((logs, usdc_transfers), (870, 54));
+    assert_eq!(types, BTreeMap::from([(0, 12), (2, 227), (3, 2), (4, 4)]));
     println!(
         "block {N}: {} receipts {types:?}, {logs} logs attested, {usdc_transfers} USDC transfers",
         block.receipts.len()

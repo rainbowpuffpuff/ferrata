@@ -83,6 +83,7 @@ fn ethereum_tests_trie_vectors() {
     }
     // trietestnextprev.json tests iteration order (next/prev key), not roots or proofs.
     assert_eq!(cases, 25, "every TrieTests case with a root ran");
+    assert_eq!(proofs, 368);
     println!("TrieTests: {cases} cases, {proofs} proofs verified");
 }
 
@@ -207,7 +208,7 @@ fn random_tries_match_alloy_roots_proofs_and_verdicts() {
         "{inclusion} inclusion and {exclusion} exclusion proofs agree; {embedded_tries} tries had embedded nodes, \
          {tiny_roots} a root node under 32 bytes"
     );
-    assert!(embedded_tries >= 20, "the random tries exercise embedded nodes");
+    assert_eq!((inclusion, exclusion, embedded_tries, tiny_roots), (19_173, 8_968, 179, 1));
 }
 
 /// True if a node of the proof holds an embedded child (a list where a reference belongs).
@@ -283,7 +284,7 @@ fn mutated_proofs_get_the_same_verdict_from_ferrata_and_alloy() {
         }
     }
     println!("mutated proofs: {refused} refused by both, {still_valid} still valid for both");
-    assert!(refused > 4_000);
+    assert_eq!((refused, still_valid), (4_453, 307));
 }
 
 #[test]
