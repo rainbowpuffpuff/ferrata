@@ -1,0 +1,26 @@
+# ferrata-bridge: the Rust side of the Ferrata bridge commitment scheme (prototype evidence).
+#
+# crates/ferrata-bridge-core  no_std (+ optional std) encodings, trees, statements; no unsafe
+# methods/                    builds the zkVM guests in guests/ with risc0-build and embeds them
+# host/                       runs, proves and wraps the release guest; writes artifacts/
+#
+# guests/ is a workspace of its own so that its [patch.crates-io] (RISC Zero's accelerated
+# sha2) applies to ferrata-bridge-core there and nowhere else.
+[workspace]
+resolver = "2"
+members = ["crates/ferrata-bridge-core"]
+default-members = ["crates/ferrata-bridge-core"]
+exclude = ["guests", "methods", "host"]
+
+[workspace.package]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+# The RISC Zero guest toolchain is Rust 1.88.0; the core must build with it.
+rust-version = "1.88"
+
+[profile.release]
+opt-level = 3
+
+# The host runs proofs and the 100k-deposit recovery bench; tests stay quick enough unoptimised.
+[profile.dev.package."*"]
+opt-level = 2
