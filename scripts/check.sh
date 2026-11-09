@@ -42,6 +42,16 @@ echo "== saved receipts verify against the image id built now (catches guest dri
 ./target/release/host verify eth
 ./target/release/host verify erc20
 
+echo "== neighbour drift (warnings only): vendored tree.json and the vault source vs. spike/bridge-evm now"
+src="$here/../bridge-evm/test/vectors/tree.json"
+if [ -f "$src" ]; then
+  cmp -s "$src" vectors/external/bridge-evm-tree.json && echo "tree.json: identical to the vendored copy" \
+    || echo "WARNING: bridge-evm tree.json changed since it was vendored; re-copy and re-run"
+fi
+vault_sha="$(sha256sum "$here/../bridge-evm/src/FerrataVault.sol" | cut -d' ' -f1)"
+grep -q "$vault_sha" vectors/external/PROVENANCE.txt && echo "FerrataVault.sol: unchanged (sha256 $vault_sha)" \
+  || echo "WARNING: FerrataVault.sol changed since vectors/external/PROVENANCE.txt (now $vault_sha)"
+
 echo "== Foundry: journal equality, real Groth16 verifier, vault end to end"
 (cd evm-verify && forge test)
 echo "ALL CHECKS PASSED"
