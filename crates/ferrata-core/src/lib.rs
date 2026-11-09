@@ -25,10 +25,13 @@ pub mod hash;
 pub mod merkle;
 pub mod policy;
 mod ssz;
+#[cfg(feature = "blst")]
+pub mod steps;
 pub mod store;
 pub mod types;
 pub mod upgrade;
 pub mod validate;
+pub mod witness;
 
 pub use error::Error;
 
