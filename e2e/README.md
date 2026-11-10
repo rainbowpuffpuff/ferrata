@@ -16,8 +16,8 @@ programs for every call that needs one.
 **What is stand-in.** The LEZ side. The blocks and their Logos Blockchain inscriptions are built by
 [`checkpoint/fidelity/src/bin/e2e.rs`](../checkpoint/fidelity/src/bin/e2e.rs) in their real formats
 with test sequencer keys, as the bench fixtures are (`checkpoint/README.md`, "Real format vs
-stand-in"). No LEZ node ran, no bridge program exists, the blocks that carry calls to the bridge
-are not executed, and the zone's 16 blocks are 10 s apart in their own timestamps, not hours. The
+stand-in"). No LEZ node ran, the bridge program (`lez/BRIDGE-RESULTS.md`, built later) did not run
+on this zone, the blocks that carry calls to the bridge are not executed, and the zone's 16 blocks are 10 s apart in their own timestamps, not hours. The
 wallet is a test seed. The proofs are about that stand-in zone.
 
 ## The fixture: `runs/sepolia/`
