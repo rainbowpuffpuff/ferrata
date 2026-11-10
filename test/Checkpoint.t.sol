@@ -149,7 +149,7 @@ contract CheckpointTest is VaultTestBase {
         vault.finalize(b, c, SEAL);
 
         assertEq(vault.finalState(), c.newState);
-        assertEq(vault.stateEpoch(), 1);
+        assertEq(vault.revocationEpoch(), 0); // only revocations change it
         assertEq(vault.checkpointCount(), 1);
         (
             bytes32 parent,
@@ -326,6 +326,20 @@ contract CheckpointTest is VaultTestBase {
         assertEq(vault.finalState(), loser.newState);
     }
 
+    /// @notice Only revocations invalidate pending candidates. Finalising a no-op checkpoint (newState == parentState,
+    ///         if the checkpoint program can prove one) therefore cannot be used to make honest candidates restart.
+    function test_finalize_aNoOpCheckpointDoesNotInvalidatePendingCandidates() public {
+        FerrataVault.Checkpoint memory noOp = _nextCheckpoint(ROOT);
+        noOp.newState = noOp.parentState;
+        FerrataVault.Checkpoint memory honest = _nextCheckpoint(ROOT_2);
+        _submit(honest);
+        _submit(noOp);
+        _finalizeAfterDelta(noOp);
+        assertEq(vault.finalState(), GENESIS_STATE);
+        _finalizeAfterDelta(honest); // still valid, no resubmission needed
+        assertEq(vault.finalState(), honest.newState);
+    }
+
     function test_finalize_deltaRaiseDoesNotAffectASubmittedCandidate() public {
         FerrataVault.Checkpoint memory c = _nextCheckpoint(ROOT);
         _submit(c);
@@ -378,7 +392,7 @@ contract CheckpointTest is VaultTestBase {
             assertEq(vault.finalState(), c.newState);
             parent = c.newState;
         }
-        assertEq(vault.stateEpoch(), 4);
+        assertEq(vault.revocationEpoch(), 0);
     }
 
     function test_finalize_aRootFinalisedTwiceKeepsItsFirstTime() public {

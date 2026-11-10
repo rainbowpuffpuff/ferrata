@@ -66,8 +66,8 @@ contract FerrataVault is ReentrancyGuardTransient {
         bytes32 echoNonce;
     }
 
-    /// @dev A submitted, not yet finalised checkpoint, keyed by its `newState`. It is valid only in the epoch it was
-    ///      submitted in: every finalisation and every revocation starts a new epoch.
+    /// @dev A submitted, not yet finalised checkpoint, keyed by its `newState`. It is valid only while no revocation
+    ///      has happened since it was submitted (`revocationEpoch` unchanged).
     struct Candidate {
         bytes32 parentState;
         bytes32 burnRoot;
@@ -76,7 +76,7 @@ contract FerrataVault is ReentrancyGuardTransient {
         bool sunset;
         uint256 submittedAt; // 0 means no candidate
         uint256 deltaAtSubmit;
-        uint256 epoch;
+        uint256 revocationEpoch;
     }
 
     /// @dev History entry of a finalised checkpoint (spec §4.3, needed by §4.4).
@@ -225,8 +225,9 @@ contract FerrataVault is ReentrancyGuardTransient {
     bytes32 public finalState;
     /// @notice Seconds a candidate must wait for its finalisation beacon; applies to candidates submitted later.
     uint256 public delta;
-    /// @notice Incremented by every finalisation and every revocation; a candidate is valid only in its epoch.
-    uint256 public stateEpoch;
+    /// @notice Incremented by every revocation. A candidate submitted before a revocation can no longer be finalised,
+    ///         so the state a revocation restores needs a fresh candidate and a full `delta` wait (spec §4.4).
+    uint256 public revocationEpoch;
     uint256 private _lastBeaconBlock;
     Beacon[] public beacons;
     mapping(bytes32 newState => Candidate) public candidates;
@@ -556,7 +557,9 @@ contract FerrataVault is ReentrancyGuardTransient {
         if (c.nMin != nMin || c.tMin != tMin) revert WrongCommitteeFloor();
         Candidate storage existing = candidates[c.newState];
         // Resubmitting a live candidate must not restart its wait.
-        if (existing.submittedAt != 0 && existing.epoch == stateEpoch) revert CandidateAlreadySubmitted();
+        if (existing.submittedAt != 0 && existing.revocationEpoch == revocationEpoch) {
+            revert CandidateAlreadySubmitted();
+        }
         verifier.verify(seal, checkpointImageId, _checkpointDigest(c));
 
         candidates[c.newState] = Candidate({
@@ -567,7 +570,7 @@ contract FerrataVault is ReentrancyGuardTransient {
             sunset: c.sunset,
             submittedAt: block.timestamp,
             deltaAtSubmit: delta,
-            epoch: stateEpoch
+            revocationEpoch: revocationEpoch
         });
         _recordBeacon();
         emit CandidateSubmitted(
@@ -580,7 +583,7 @@ contract FerrataVault is ReentrancyGuardTransient {
     function finalize(uint256 beaconIndex, Checkpoint calldata c, bytes calldata seal) external {
         Candidate storage cand = candidates[c.newState];
         if (cand.submittedAt == 0) revert UnknownCandidate();
-        if (cand.epoch != stateEpoch || cand.parentState != finalState) revert StaleCandidate();
+        if (cand.revocationEpoch != revocationEpoch || cand.parentState != finalState) revert StaleCandidate();
         if (
             c.parentState != cand.parentState || c.burnRoot != cand.burnRoot || c.burnCount != cand.burnCount
                 || c.importedLeafCount != cand.importedLeafCount || c.sunset != cand.sunset
@@ -606,7 +609,6 @@ contract FerrataVault is ReentrancyGuardTransient {
             })
         );
         finalState = c.newState;
-        stateEpoch += 1;
         delete candidates[c.newState];
 
         uint256 previous = burnRootCheckpoint[c.burnRoot];
@@ -778,7 +780,7 @@ contract FerrataVault is ReentrancyGuardTransient {
     /// @notice Reject-only revocation (spec §4.4): checkpoint `index` and every later one stop counting, and
     ///         `finalState` returns to the state `index` was built on. Allowed within `revokeWindow` of `index`'s
     ///         finalisation. Used nullifiers stay used; nothing is accepted by this call. Pending candidates are
-    ///         invalidated too (new epoch), so the restored state needs a fresh candidate and a full `delta` wait.
+    ///         invalidated too (`revocationEpoch`), so the restored state needs a fresh candidate and a full `delta`.
     /// @dev The loop is bounded: checkpoints after `index` were finalised after it, within the window, and two
     ///      finalisations are at least `deltaFloor` apart, so at most revokeWindow / deltaFloor + 1 iterations.
     function revokeFrom(uint256 index) external onlyFreezeAuthority {
@@ -792,7 +794,7 @@ contract FerrataVault is ReentrancyGuardTransient {
             checkpoints[i].revoked = true;
         }
         finalState = first.parentState;
-        stateEpoch += 1;
+        revocationEpoch += 1;
         if (sunsetLeafCountSet && sunsetSetAt >= index) {
             sunsetLeafCountSet = false;
             sunsetLeafCount = 0;
