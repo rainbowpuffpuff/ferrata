@@ -3,29 +3,29 @@
 
 Since Glamsterdam (Sepolia, 6 October 2026) a new account, a byte of code and a new storage slot cost
 "state gas" at 1,530 gas per state byte (EIP-8037), which Foundry's EVM does not know: forge and anvil
-price a contract creation about six times too low. So no gas figure of this run comes from Foundry; every
-one comes from the node, through eth_simulateV1 and eth_estimateGas. Nothing is signed or sent: only the
-read-only methods of READ_ONLY are ever called.
+price a contract creation about six times too low. So no gas limit of this run comes from Foundry.
 
   gasplan.py plan <forge log>... --out plan.json
         the transactions of forge's logs (broadcast/<script>/<chain>/[dry-run/]<stage>-latest.json), in order
-  gasplan.py check --rpc URL --plan plan.json [--margin 1.25] [--out result.json]
-        a stage about to be sent, on the chain's latest state: every transaction in order, its gas used and the
-        least gas limit with which it succeeds (bisection on eth_simulateV1; the stage's first transaction also
-        through eth_estimateGas), then the whole stage again with each limit times the margin. Exit 1 if a
-        transaction fails, or if a limit with the margin is over what one transaction may carry.
-  gasplan.py replay --rpc URL --plan plan.json [--nonce N] [--beacon-index I --echo-nonce X]
-                    [--wait S] [--release-wait S] [--margin 1.25] [--out result.json]
-        a whole round trip of a rehearsal replayed on the node in five blocks (deploy, submit, beacon, finalize,
-        release): the waits by the blocks' timestamps, the sender's nonce set to N (so that the creations land
-        on the addresses the proofs bind), and the beacon the finalisation proof echoes written into the vault's
-        storage (its nonce depends on the block, which a replay cannot reproduce).
+  gasplan.py run --node URL --state URL --plan plan.json [--margin 1.25] [--out result.json]
+                 [--nonce N] [--beacon-index I --echo-nonce X] [--wait S] [--release-wait S] [--keep]
+        plays the planned transactions in order on `--state`, an anvil fork that holds the chain's state (a fresh
+        fork of the node before a stage is sent, or the fork of a rehearsal), and before each one asks the node
+        `--node` (Sepolia itself) for its gas on that state: eth_estimateGas with the state and the block's time
+        as overrides (the node enforces the 2^24 execution cap there: a transaction over it has no estimate), then
+        eth_simulateV1 of the transaction alone with its limit, estimate x margin, for the gas it uses. anvil's
+        receipt gives Foundry's gas of the same transaction. Exit 1 if a transaction has no estimate, fails, or
+        its limit is over the cap. The fork is put back as it was (evm_revert) unless --keep.
+        For a replay of a whole rehearsal: --nonce sets the sender's nonce first (the creations then land on the
+        addresses the proofs bind), the waits move the fork's clock before the beacon and the releases, and
+        --echo-nonce writes the beacon the finalisation proof echoes into the vault's storage at --beacon-index
+        (its nonce hashes the block's number and prevrandao, which a replay does not reproduce).
 
-Caps (EIP-8037 with EIP-7825): a transaction's execution gas is at most 2^24, its gas limit at most 2^32 - 1,
-and not more than the block's gas limit. The node enforces the first when it executes a call under Amsterdam
-(reth 2.8.0), so a call that succeeds with its limit is within it; this script checks the other two.
+Caps (EIP-8037 with EIP-7825): a transaction's execution gas is at most 2^24, its gas limit at most 2^32 - 1 and
+at most the block's gas limit. Nothing is signed or sent to the node: only the read-only methods of READ_ONLY.
 """
 import argparse
+import gzip
 import json
 import math
 import sys
@@ -138,99 +138,121 @@ def call_of(tx, gas=None):
     return c
 
 
-class Sim:
-    """The planned transactions as blocks of eth_simulateV1, and the bisection of each one's least gas limit."""
+class Fork:
+    """The anvil fork that holds the state: the sender impersonated, the transactions played in order."""
 
-    def __init__(self, node, plan, blocks, probe_gas):
-        # blocks: [{"time": seconds after the base block or None, "overrides": {...} or None, "txs": [index...]}]
-        # probe_gas: the limit of a call whose own limit is not being searched (a node runs calls with at most
-        # its RPC gas cap, 50M by default in reth and geth; left to the node, a call's default can be too low)
-        self.node, self.plan, self.blocks, self.probe_gas = node, plan, blocks, probe_gas
-        self.base = node("eth_getBlockByNumber", "latest", False)
+    def __init__(self, url):
+        self.url, self.calls = url, 0
 
-    def run(self, upto=None, gas=None):
-        """Simulate the blocks up to the transaction index `upto` (all when None); `gas` maps index -> limit."""
-        gas = gas or {}
-        req = []
-        t0 = int(self.base["timestamp"], 16)
-        for b in self.blocks:
-            txs = [i for i in b["txs"] if upto is None or i <= upto]
-            if not txs and upto is not None and min(b["txs"]) > upto:
-                break
-            bs = {"calls": [call_of(self.plan[i], gas.get(i, self.probe_gas)) for i in txs]}
-            if b.get("time") is not None:
-                bs["blockOverrides"] = {"time": hex(t0 + b["time"])}
-            if b.get("overrides"):
-                bs["stateOverrides"] = b["overrides"]
-            req.append(bs)
-        out = self.node("eth_simulateV1", {"blockStateCalls": req, "validation": False, "traceTransfers": False,
-                                           "returnFullTransactions": False}, self.base["number"])
-        res = {}
-        for b, blk in zip(self.blocks, out):
-            txs = [i for i in b["txs"] if upto is None or i <= upto]
-            for i, c in zip(txs, blk["calls"]):
-                res[i] = {"status": int(c["status"], 16), "gasUsed": int(c["gasUsed"], 16),
-                          "maxUsedGas": int(c.get("maxUsedGas", c["gasUsed"]), 16),
-                          "error": (c.get("error") or {}).get("message"), "returnData": c.get("returnData", "0x"),
-                          "block": int(blk["number"], 16), "time": int(blk["timestamp"], 16)}
-        return res
+    def __call__(self, method, *params):
+        body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": list(params)}).encode()
+        req = urllib.request.Request(self.url, body, {"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=300) as r:
+            out = json.load(r)
+        self.calls += 1
+        if "error" in out:
+            raise RpcError(f"{method}: " + json.dumps(out["error"])[:400])
+        return out["result"]
 
-    def least_gas(self, i, first, cap):
-        """The least gas limit with which transaction i succeeds after its predecessors (to 0.1 %)."""
-        ok = lambda g: self.run(upto=i, gas={i: g})[i]["status"] == 1
-        lo = max(first[i]["gasUsed"] - 1, 21000)
-        hi = math.ceil(first[i]["maxUsedGas"] * 64 / 63) + 2300
-        while not ok(hi):
-            lo, hi = hi, math.ceil(hi * 1.25)
-            if hi > cap:
-                return None
-        if ok(lo):
-            return lo
-        while hi - lo > max(64, hi // 1000):
-            mid = (lo + hi) // 2
-            lo, hi = (lo, mid) if ok(mid) else (mid, hi)
-        return hi
+    def accounts(self):
+        raw = bytes.fromhex(self("anvil_dumpState")[2:])
+        return json.loads(gzip.decompress(raw))["accounts"]
+
+    def overrides(self, addresses):
+        """The fork's state of these accounts as node overrides. Storage as stateDiff: the fork holds only the slots
+        it wrote or read, so the node keeps every other slot of an account that exists on chain."""
+        dump = {a.lower(): v for a, v in self.accounts().items()}
+        out = {}
+        for a in sorted({a.lower() for a in addresses if a}):
+            acct = dump.get(a)
+            if acct is None:
+                continue
+            nonce = acct.get("nonce", 0)
+            o = {"balance": hex(int(str(acct.get("balance", "0x0")), 0)),
+                 "nonce": hex(nonce if isinstance(nonce, int) else int(nonce, 0))}
+            if acct.get("code") not in (None, "0x", ""):
+                o["code"] = acct["code"]
+            storage = {k: v for k, v in (acct.get("storage") or {}).items()}
+            if storage:
+                o["stateDiff"] = {word(int(k, 16)): word(int(v, 16)) for k, v in storage.items()}
+            out[a] = o
+        return out
 
 
-def measure(node, plan, blocks, margin, probe_gas, estimate_first=()):
+def run(node, fork, plan, a):
     head = node("eth_getBlockByNumber", "latest", False)
     block_gas = int(head["gasLimit"], 16)
     cap = min(TX_MAX_TOTAL, block_gas)
-    sim = Sim(node, plan, blocks, probe_gas)
-    first = sim.run()
-    rows, failures = [], []
-    for i, tx in enumerate(plan):
-        r = first[i]
-        row = {"stage": tx["stage"], "what": tx["what"], "to": tx.get("to"), "status": r["status"],
-               "gasUsed": r["gasUsed"], "maxUsedGas": r["maxUsedGas"], "error": r["error"]}
-        if r["status"] != 1:
-            failures.append(f"{i} {tx['what']}: fails on the node ({r['error']})")
-            rows.append(row)
-            continue
-        least = sim.least_gas(i, first, min(cap, probe_gas))
-        row["leastLimit"] = least
-        if least is None:
-            failures.append(f"{i} {tx['what']}: no limit up to {cap} lets it succeed")
-        else:
-            row["limit"] = math.ceil(least * margin)
-            if row["limit"] > cap:
-                failures.append(f"{i} {tx['what']}: limit {row['limit']} with the margin is over the cap {cap}")
-            row["overExecutionCap"] = row["limit"] > TX_MAX_GAS
-        if i in estimate_first:
+    sender = plan[0]["from"]
+    snapshot = fork("evm_snapshot")
+    fork("anvil_impersonateAccount", sender)
+    if a.nonce is not None:
+        fork("anvil_setNonce", sender, hex(a.nonce))
+    touched = {sender} | {t["to"] for t in plan if t.get("to")}
+    rows, failures, stage = [], [], None
+    try:
+        for i, tx in enumerate(plan):
+            jump = 0
+            if tx["stage"] != stage:
+                stage = tx["stage"]
+                jump = {"beacon": a.wait, "release": a.release_wait}.get(stage, 0)
+                if stage == "finalize" and a.echo_nonce:
+                    fork("anvil_setStorageAt", tx["to"], beacon_nonce_slot(a.beacon_index), a.echo_nonce)
+            latest = fork("eth_getBlockByNumber", "latest", False)
+            # the next block's time: after the fork's last block and after the node's (eth_simulateV1 checks it)
+            node_head = node("eth_getBlockByNumber", "latest", False)
+            when = max(int(latest["timestamp"], 16), int(node_head["timestamp"], 16)) + 12 + jump
+            fork("evm_setNextBlockTimestamp", hex(when))
+            state = fork.overrides(touched)
+            row = {"stage": tx["stage"], "what": tx["what"], "to": tx.get("to"), "time": when}
             try:
-                row["estimateGas"] = int(node("eth_estimateGas", call_of(tx), "latest"), 16)
+                est = int(node("eth_estimateGas", call_of(tx), "latest", state, {"time": hex(when)}), 16)
             except RpcError as e:
-                row["estimateGas"] = None
-                failures.append(f"{i} {tx['what']}: eth_estimateGas fails: {e}")
-        rows.append(row)
-    if not failures:  # everything again, in order, with the limits that will be used
-        again = sim.run(gas={i: r["limit"] for i, r in enumerate(rows)})
-        for i, r in enumerate(rows):
-            r["withLimit"] = {"status": again[i]["status"], "gasUsed": again[i]["gasUsed"]}
-            if again[i]["status"] != 1:
-                failures.append(f"{i} {r['what']}: fails with its limit {r['limit']} ({again[i]['error']})")
-    return {"block": int(head["number"], 16), "blockGasLimit": block_gas, "cap": cap, "executionCap": TX_MAX_GAS,
-            "margin": margin, "rpcCalls": node.calls, "transactions": rows, "failures": failures}
+                est, row["error"] = None, str(e)
+                failures.append(f"{i} {tx['what']}: the node gives no estimate: {e}")
+            row["estimateGas"] = est
+            if est is not None:
+                limit = math.ceil(est * a.margin)
+                row["limit"] = limit
+                row["overExecutionCap"] = limit > TX_MAX_GAS
+                if limit > cap:
+                    failures.append(f"{i} {tx['what']}: limit {limit:,} with the margin is over the cap {cap:,}")
+                sim = node("eth_simulateV1", {"blockStateCalls": [{"blockOverrides": {"time": hex(when)},
+                    "stateOverrides": state, "calls": [call_of(tx, min(limit, a.probe_gas))]}],
+                    "validation": False}, "latest")[0]["calls"][0]
+                row["gasUsed"] = int(sim["gasUsed"], 16)
+                row["status"] = int(sim["status"], 16)
+                if row["status"] != 1:
+                    failures.append(f"{i} {tx['what']}: fails on the node with its limit "
+                                    f"({(sim.get('error') or {}).get('message')})")
+            # play it on the fork: the state for the next one, and Foundry's gas of it
+            sent = {k: v for k, v in call_of(tx, 30_000_000).items()}
+            h = fork("eth_sendTransaction", sent)
+            rc = None
+            for k in range(40):  # automine answers before the block is in; mine by hand if it is not
+                rc = fork("eth_getTransactionReceipt", h)
+                if rc:
+                    break
+                if k == 10:
+                    fork("evm_mine")
+                time.sleep(0.25)
+            if rc is None:
+                raise RpcError(f"the fork did not mine {h}")
+            row["foundryGasUsed"] = int(rc["gasUsed"], 16)
+            if int(rc["status"], 16) != 1:
+                failures.append(f"{i} {tx['what']}: reverts on the fork")
+            if rc.get("contractAddress"):
+                touched.add(rc["contractAddress"])
+                row["address"] = rc["contractAddress"]
+            rows.append(row)
+            if failures:
+                break
+    finally:
+        if not a.keep:
+            fork("evm_revert", snapshot)
+    return {"node": a.node, "block": int(head["number"], 16), "blockGasLimit": block_gas, "cap": cap,
+            "executionCap": TX_MAX_GAS, "margin": a.margin, "nodeCalls": node.calls, "transactions": rows,
+            "failures": failures}
 
 
 def report(result, out):
@@ -239,15 +261,16 @@ def report(result, out):
             json.dump(result, f, indent=1)
     print(f"node block {result['block']}, block gas limit {result['blockGasLimit']:,}, cap {result['cap']:,}, "
           f"margin {result['margin']}")
+    print(f"  {'#':>2} {'stage':8} {'transaction':32} {'Foundry used':>13} {'node used':>12} {'node estimate':>14}"
+          f" {'limit':>12}  node/Foundry")
     for i, r in enumerate(result["transactions"]):
-        lim = r.get("limit")
-        print(f"  {i:2} {r['stage']:8} {r['what'][:34]:34} used {r['gasUsed']:>12,}  least limit "
-              f"{r.get('leastLimit') or 0:>12,}  limit {lim or 0:>12,}"
-              + (f"  eth_estimateGas {r['estimateGas']:,}" if r.get("estimateGas") else "")
-              + ("  (over 2^24: EIP-8037 state gas)" if r.get("overExecutionCap") else "")
-              + ("" if r["status"] == 1 else f"  FAILS: {r['error']}"))
-    total = sum(r["gasUsed"] for r in result["transactions"])
-    print(f"  total gas used {total:,}")
+        f, n = r.get("foundryGasUsed") or 0, r.get("gasUsed") or 0
+        print(f"  {i:2} {r['stage']:8} {r['what'][:32]:32} {f:>13,} {n:>12,} {r.get('estimateGas') or 0:>14,}"
+              f" {r.get('limit') or 0:>12,}  {n / f if f else 0:5.2f}"
+              + ("  limit > 2^24 (EIP-8037 state gas)" if r.get("overExecutionCap") else ""))
+    tf = sum(r.get("foundryGasUsed") or 0 for r in result["transactions"])
+    tn = sum(r.get("gasUsed") or 0 for r in result["transactions"])
+    print(f"  total: Foundry {tf:,}, node {tn:,}" + (f" ({tn / tf:.2f}x)" if tf else ""))
     for f in result["failures"]:
         print("FAIL: " + f)
     return 1 if result["failures"] else 0
@@ -259,50 +282,27 @@ def main():
     p = sub.add_parser("plan")
     p.add_argument("logs", nargs="+")
     p.add_argument("--out", required=True)
-    for name in ("check", "replay"):
-        p = sub.add_parser(name)
-        p.add_argument("--rpc", required=True)
-        p.add_argument("--plan", required=True)
-        p.add_argument("--margin", type=float, default=1.25)
-        p.add_argument("--out")
-        p.add_argument("--probe-gas", type=int, default=50_000_000, help="the node's RPC gas cap")
+    p = sub.add_parser("run")
+    p.add_argument("--node", required=True, help="the node whose gas counts (Sepolia)")
+    p.add_argument("--state", required=True, help="an anvil fork holding the state before the first transaction")
+    p.add_argument("--plan", required=True)
+    p.add_argument("--margin", type=float, default=1.25)
+    p.add_argument("--probe-gas", type=int, default=50_000_000, help="the node's RPC gas cap")
+    p.add_argument("--out")
     p.add_argument("--nonce", type=int)
     p.add_argument("--beacon-index", type=int)
     p.add_argument("--echo-nonce")
-    p.add_argument("--wait", type=int, default=3600, help="seconds from submit to the beacon (at least W)")
-    p.add_argument("--release-wait", type=int, default=600, help="seconds from finalize to the releases")
+    p.add_argument("--wait", type=int, default=0, help="seconds the clock moves before the beacon (at least the wait W)")
+    p.add_argument("--release-wait", type=int, default=0, help="seconds it moves before the releases")
+    p.add_argument("--keep", action="store_true", help="leave the transactions on the fork")
     a = ap.parse_args()
-
     if a.cmd == "plan":
         plan = plan_from_logs(a.logs)
         with open(a.out, "w") as f:
             json.dump(plan, f, indent=1)
         print(f"{len(plan)} transactions: " + ", ".join(f"{t['stage']}:{t['what']}" for t in plan))
         return 0
-
-    node = Node(a.rpc)
-    plan = json.load(open(a.plan))
-    if a.cmd == "check":
-        blocks = [{"time": None, "txs": list(range(len(plan)))}]
-        return report(measure(node, plan, blocks, a.margin, a.probe_gas, estimate_first=(0,)), a.out)
-
-    sender = plan[0]["from"]
-    by_stage = {s: [i for i, t in enumerate(plan) if t["stage"] == s] for s in STAGES}
-    offsets = {"deploy": 12, "submit": 24, "beacon": 24 + a.wait, "finalize": 36 + a.wait,
-               "release": 36 + a.wait + a.release_wait}
-    blocks = []
-    for s in STAGES:
-        if not by_stage[s]:
-            continue
-        b = {"time": offsets[s], "txs": by_stage[s], "overrides": {}}
-        if s == STAGES[0] and a.nonce is not None:
-            b["overrides"][sender] = {"nonce": hex(a.nonce)}
-        if s == "finalize" and a.echo_nonce:
-            vault = plan[by_stage[s][0]]["to"]
-            b["overrides"][vault] = {"stateDiff": {beacon_nonce_slot(a.beacon_index): a.echo_nonce}}
-        blocks.append(b)
-    creations = tuple(i for i, t in enumerate(plan) if not t.get("to"))[:1]
-    return report(measure(node, plan, blocks, a.margin, a.probe_gas, estimate_first=creations), a.out)
+    return report(run(Node(a.node), Fork(a.state), json.load(open(a.plan)), a), a.out)
 
 
 if __name__ == "__main__":
