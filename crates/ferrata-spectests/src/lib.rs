@@ -132,7 +132,7 @@ impl CaseConfig {
     /// `get_blob_parameters(epoch)`.
     fn blob_parameters(&self, epoch: u64) -> (u64, u64) {
         let mut schedule = self.blob_schedule.clone();
-        schedule.sort_by(|a, b| b.0.cmp(&a.0));
+        schedule.sort_by_key(|entry| std::cmp::Reverse(entry.0));
         schedule
             .into_iter()
             .find(|(e, _)| epoch >= *e)
