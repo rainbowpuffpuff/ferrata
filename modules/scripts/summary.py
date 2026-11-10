@@ -58,7 +58,7 @@ def main():
         missed = [f"{k}={get(native, k)!r}" for k, v in expect.get(name, {}).items() if get(native, k) != v]
         failures += bool(missed)
         verdict = native.get("verdict", native.get("module", ""))
-        code = native.get("code", get(native, "bootstrap.code") if "bootstrap" in native else "")
+        code = native.get("code", get(native, "bootstrap.code") if native.get("bootstrap") else "")
         row = f"| {name} | {call['method']} | {verdict} | {code} | {'met' if not missed else 'MISSED: ' + ', '.join(missed)} |"
         for f in flavours:
             reply = load(rep / "replies" / f / f"{name}.json")
