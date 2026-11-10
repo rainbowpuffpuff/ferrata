@@ -35,3 +35,9 @@ sha2 = "0.10"
 # The checkpoint program's own block parser and message decoder, to check what it would collect
 # from the bridge program's transactions (tests/bridge_burn.rs).
 checkpoint-core = { path = "../../checkpoint/crates/checkpoint-core" }
+
+[features]
+# The calls whose LEZ API differs between the tags this crate builds against. The default is set
+# with the path dependencies by ../scripts/lez-select.sh (none: v0.4.0-rc1; `lez-rc2`: v0.4.0-rc2).
+default = [] # lez-select
+lez-rc2 = []

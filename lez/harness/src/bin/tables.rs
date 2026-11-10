@@ -3,12 +3,12 @@
 //! Run from `lez/` (see `RESULTS.md` for the environment):
 //! `cargo run -p harness --bin tables`
 
-use std::{fs, path::PathBuf};
+use std::fs;
 
 use harness::{attest, render, render_transitions, scenarios, TxReport};
 
 fn main() {
-    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../results");
+    let dir = harness::results_dir();
     fs::create_dir_all(&dir).unwrap();
     let write = |name: &str, title: &str, reports: &[TxReport]| {
         let text = format!(
@@ -37,7 +37,7 @@ fn main() {
     let replay = scenarios::replay(2);
     write(
         "stage1-replay.md",
-        "Init and the five mainnet updates, as LEZ v0.4.0-rc1 charges them",
+        &format!("Init and the five mainnet updates, as LEZ {} charges them", harness::LEZ_TAG),
         &replay.chain.reports,
     );
     let finality = scenarios::finality_path();
@@ -48,7 +48,7 @@ fn main() {
     );
     let refusals: Vec<TxReport> =
         scenarios::refusals().into_iter().map(|r| TxReport { label: r.case.to_string(), ..r.report }).collect();
-    write("stage1-refusals.md", "Refusals, as LEZ v0.4.0-rc1 charges them", &refusals);
+    write("stage1-refusals.md", &format!("Refusals, as LEZ {} charges them", harness::LEZ_TAG), &refusals);
     write(
         "shell-costs.md",
         "What the LEZ v0.4 shell costs: a public read, and calls with growing messages",

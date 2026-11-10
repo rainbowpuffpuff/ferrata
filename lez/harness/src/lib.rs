@@ -38,11 +38,41 @@ use lee::{
 };
 use lee_core::{
     account::{ActorState, Nonce},
-    program::TransactionEvent,
+    program::{ProgramHeader, TransactionEvent},
 };
 use settle::{classify, opening_fee_state, settle_charged_transaction, Charge, LeeTransaction};
 use sha2::{Digest, Sha256};
 use trace::{trace_public, TransitionTrace};
+
+/// The LEZ tag this harness is built against (`../scripts/lez-select.sh` sets it with the path
+/// dependencies).
+pub const LEZ_TAG: &str = if cfg!(feature = "lez-rc2") { "v0.4.0-rc2" } else { "v0.4.0-rc1" };
+
+/// Where the tests and `tables` write: `lez/results/` against v0.4.0-rc1, `lez/results/<tag>/`
+/// against another tag, so that one tag's results never overwrite another's;
+/// `FERRATA_LEZ_RESULTS_DIR` overrides it. The directory is created.
+pub fn results_dir() -> PathBuf {
+    let dir = match std::env::var_os("FERRATA_LEZ_RESULTS_DIR") {
+        Some(dir) => PathBuf::from(dir),
+        None if cfg!(feature = "lez-rc2") => PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../results").join(LEZ_TAG),
+        None => PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../results"),
+    };
+    fs::create_dir_all(&dir).expect("create the results directory");
+    dir
+}
+
+/// The program header a loader actor state holds: untagged on v0.4.0-rc1, a tagged `LoaderEntry`
+/// from v0.4.0-rc2 on (LEZ #943).
+#[cfg(feature = "lez-rc2")]
+pub fn program_header(loader_actor_state: &[u8]) -> Option<ProgramHeader> {
+    ProgramHeader::from_loader_actor_state(loader_actor_state)
+}
+
+/// The program header a loader actor state holds (v0.4.0-rc1: untagged).
+#[cfg(not(feature = "lez-rc2"))]
+pub fn program_header(loader_actor_state: &[u8]) -> Option<ProgramHeader> {
+    ProgramHeader::from_bytes(loader_actor_state)
+}
 
 /// A second deployment of the program's image, at another address: a distinct program for
 /// dispatch and PDA derivation (as `TWIN` in LEZ's own state tests).

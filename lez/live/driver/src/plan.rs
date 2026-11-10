@@ -59,11 +59,15 @@ pub fn mainnet_spec() -> ChainSpec {
     }
 }
 
+/// Ethereum mainnet's chain id, which an instance's records carry (`Config::chain_id`, as
+/// `../../harness/src/lib.rs`).
+pub const MAINNET_CHAIN_ID: u64 = 1;
+
 /// An instance config for mainnet, Electra/Fulu layout, adoption in `parts` transactions.
 pub fn mainnet_config(parts: u8) -> Config {
     let spec = mainnet_spec();
     Config {
-        chain_id: 1,
+        chain_id: MAINNET_CHAIN_ID,
         sync_committee_size: 512,
         slots_per_epoch: spec.preset.slots_per_epoch,
         epochs_per_sync_committee_period: spec.preset.epochs_per_sync_committee_period,

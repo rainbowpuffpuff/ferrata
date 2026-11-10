@@ -8,14 +8,14 @@
 //! the consumer's private inputs: the query, the account id it acts for, its keys. A read must
 //! contain none of them; a call contains the query and nothing else.
 
-use std::{fs, path::PathBuf};
+use std::fs;
 
 use ferrata_lez_wire::{consumer::ConsumerMessage, header_actor, RecordState};
 use harness::{private::*, scenarios::World, settle::LeeTransaction, *};
 use lee::Actor;
 use lee_core::{
     execution_state::BoundaryStep,
-    program::{immutable_mirror_commitment, ProgramHeader, StateReply, PROGRAM_LOADER_ACCOUNT_ID},
+    program::{immutable_mirror_commitment, StateReply, PROGRAM_LOADER_ACCOUNT_ID},
 };
 
 /// The consumer's query: what it wants to know about the record it reads.
@@ -78,7 +78,7 @@ fn check_and_dump(name: &str, title: &str, run: &PrivateRun, account: &PrivateAc
         report.push_str(&format!("- {input} ({} bytes): {}\n", needle.len(), if found { "FOUND" } else { "absent" }));
         assert_eq!(found, allowed.contains(&input), "{name}: {input} found = {found}");
     }
-    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../results");
+    let dir = harness::results_dir();
     let mut hex_dump = format!(
         "# {title}\n# The complete borsh serialization of the LeeTransaction ({} bytes): its message (the public\n# outputs of the privacy-preserving circuit, nonces, admission evidence) and its witness set (signatures,\n# proof). RISC Zero dev mode: the proof is a fake receipt ({} bytes), not a succinct receipt.\n# Written by lez/harness/tests/private_consumer.rs. Offsets in hex, 32 bytes per line.\n",
         bytes.len(),
@@ -142,7 +142,7 @@ fn a_private_consumer_reads_a_record() {
     // Read, with the consumer's image undisclosed: the claim names only a commitment root, but
     // the boundary still names the sender's program.
     let reader2 = w.chain.add_private_account(0x72, 1_000_000_000_000);
-    let program_header = ProgramHeader::from_bytes(
+    let program_header = harness::program_header(
         w.chain.state.get_account_by_id(consumer_account()).data.actor_state(PROGRAM_LOADER_ACCOUNT_ID),
     )
     .expect("the consumer is deployed");

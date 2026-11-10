@@ -51,6 +51,12 @@ sha2 = "0.10"
 log = "0.4"
 env_logger = "0.11"
 
+[features]
+# The calls whose LEZ API differs between the tags this crate builds against. The default is set
+# with the path dependencies by ../../scripts/lez-select.sh (none: v0.4.0-rc1; `lez-rc2`: v0.4.0-rc2).
+default = [] # lez-select
+lez-rc2 = []
+
 # As in LEZ's workspace, so that the wallet is built with the dependencies LEZ builds it with.
 [patch.crates-io]
 keccak = { git = "https://github.com/logos-blockchain/sponges", rev = "3a56e99771beedf04946eab21a4a62adc2951377" }

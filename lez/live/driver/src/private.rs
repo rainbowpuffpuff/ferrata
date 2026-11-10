@@ -465,6 +465,9 @@ pub async fn private_update(
     // LEZ's own dry run: the simulated public part and the fee it would reserve.
     wallet.set_dry_run(true);
     match wallet.send_privacy_preserving_tx_with_pre_check(mentions(), 0, message.clone(), &catalog, None, |_| Ok(())).await {
+        #[cfg(feature = "lez-rc2")]
+        Err(wallet::ExecutionFailureKind::DryRun(_)) => {}
+        #[cfg(not(feature = "lez-rc2"))]
         Err(wallet::ExecutionFailureKind::DryRun) => {}
         Err(error) => bail!("the wallet's dry run failed: {error}: {error:?}"),
         Ok(_) => bail!("a dry run sent a transaction"),
@@ -566,6 +569,9 @@ pub async fn prove_from_transcript(
     // The recording made the wallet's dry run first; replay it so that the calls line up.
     wallet.set_dry_run(true);
     match wallet.send_privacy_preserving_tx_with_pre_check(mentions(), 0, message.clone(), &catalog, None, |_| Ok(())).await {
+        #[cfg(feature = "lez-rc2")]
+        Err(wallet::ExecutionFailureKind::DryRun(_)) => {}
+        #[cfg(not(feature = "lez-rc2"))]
         Err(wallet::ExecutionFailureKind::DryRun) => {}
         Err(error) => bail!("the wallet's dry run failed: {error}: {error:?}"),
         Ok(_) => bail!("a dry run sent a transaction"),

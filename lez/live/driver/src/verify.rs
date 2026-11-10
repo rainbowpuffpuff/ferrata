@@ -20,7 +20,7 @@ use common::{block::Block, transaction::LeeTransaction};
 use ferrata_core::witness::CompactStore;
 use ferrata_lez_wire::InstanceState;
 use lee::{AccountId, GENESIS_BLOCK_ID};
-use lee_core::program::{ProgramHeader, PROGRAM_LOADER_ACCOUNT_ID};
+use lee_core::program::PROGRAM_LOADER_ACCOUNT_ID;
 
 use crate::{
     blocklog::{self, Elided},
@@ -206,7 +206,7 @@ pub fn check_full(recorded: &Recorded, binaries: &[GuestBinary]) -> Result<(Foll
     for program in &recorded.programs {
         let account: AccountId = program.account.parse().map_err(|e| anyhow!("programs.tsv: {e:?}"))?;
         let state = follower.state.get_account_by_id(account).data.actor_state(PROGRAM_LOADER_ACCOUNT_ID).to_vec();
-        let header = ProgramHeader::from_bytes(&state).ok_or_else(|| anyhow!("{}: no program header at {account}", program.name))?;
+        let header = crate::programs::program_header(&state).ok_or_else(|| anyhow!("{}: no program header at {account}", program.name))?;
         ensure!(image_id_hex(header.image_id) == program.image, "{}: the loader computed another image", program.name);
         ensure!(header.immutable, "{}: not immutable", program.name);
     }

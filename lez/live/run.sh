@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Ferrata on a running LEZ v0.4.0-rc1 sequencer: build, run, record.
+# Ferrata on a running LEZ sequencer (v0.4.0-rc1; LEZ_TAG=v0.4.0-rc2 for rc2): build, run, record.
 #
 #   run.sh build            LEZ's sequencer_service (as `just run-sequencer` builds it) and the driver
 #   run.sh build-standalone LEZ's sequencer_service with the `standalone` feature (mock Bedrock)
@@ -52,6 +52,7 @@ build_sequencer() { # $1: output name, rest: extra cargo arguments
 
 build_driver() {
   check_lez
+  check_driver_tag
   echo "== building the driver with $CARGO_BUILD_JOBS jobs"
   # The driver links LEZ's wallet: start its lockfile from LEZ's, so that the wallet is built
   # with the dependency versions LEZ pins (cargo keeps what applies and adds the rest).

@@ -61,7 +61,7 @@ pub fn deployment_keys(name: &str, binary: &GuestBinary) -> Vec<lee::PrivateKey>
 
 async fn deployed_header(live: &Live, header: AccountId) -> Result<Option<ProgramHeader>> {
     let state = live.actor_state(Actor::new(header, PROGRAM_LOADER_ACCOUNT_ID)).await?;
-    Ok(ProgramHeader::from_bytes(&state))
+    Ok(crate::programs::program_header(&state))
 }
 
 /// Deploy `binary` with LEZ's wallet facade (`ProgramLoader::deploy`: one `WriteSegment` per
