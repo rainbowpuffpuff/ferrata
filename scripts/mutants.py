@@ -4,8 +4,9 @@
 Each mutant replaces one exact snippet in a scratch copy of the workspace (under
 target/mutants/), runs the whole test suite and records whether a test fails (killed) or all
 pass (survived). The repository itself is only read. M01-M32 were proposed by an independent
-review of the first version of this code; M33-M43 cover light-client code added since, and
-M44-M93 the execution layer (RLP, Merkle-Patricia proofs, execution objects, attestations).
+review of the first version of this code; M33-M43 cover light-client code added since,
+M44-M93 the execution layer (RLP, Merkle-Patricia proofs, execution objects, attestations), and
+M94-M107 accumulator facts, log-index conversion, relations and block-bound identifiers.
 
 Usage: scripts/mutants.py [ID ...]
 """
@@ -22,7 +23,7 @@ CORE = "crates/ferrata-core/src/"
 
 V, S, P, B, T, U, M = "validate.rs", "store.rs", "policy.rs", "bls/blst_backend.rs", "types.rs", "upgrade.rs", "merkle.rs"
 Z = "bls/zkcrypto_backend.rs"
-R, MP, X, A = "rlp.rs", "mpt.rs", "exec.rs", "attest.rs"
+R, MP, X, A, ACC = "rlp.rs", "mpt.rs", "exec.rs", "attest.rs", "accumulator.rs"
 
 MUTANTS = [
     ("M01", P, "no committee check at initialisation",
@@ -228,9 +229,42 @@ MUTANTS = [
     ("M91", A, "empty batch accepted",
      "    if batch.accounts.is_empty() && batch.logs.is_empty() {\n        return Err(Error::QueryInvalid);\n    }\n", ""),
     ("M92", A, "storage identifier without the value",
-     "    h.update(slot);\n    h.update(value);\n", "    h.update(slot);\n"),
+     "statement(KIND_STORAGE, chain_id);\n    h.update(address);\n    h.update(slot);\n    h.update(value);\n",
+     "statement(KIND_STORAGE, chain_id);\n    h.update(address);\n    h.update(slot);\n"),
     ("M93", A, "log identifier without the log's position",
      "    h.update(log_index.to_be_bytes());\n", ""),
+    # Accumulator facts.
+    ("M94", ACC, "a path of fewer than 32 siblings accepted",
+     "    if path.len() != ACCUMULATOR_DEPTH {", "    if path.len() > ACCUMULATOR_DEPTH {"),
+    ("M95", ACC, "leaf index bound at 2^33",
+     "    if leaf_index >> ACCUMULATOR_DEPTH != 0 {", "    if leaf_index >> (ACCUMULATOR_DEPTH + 1) != 0 {"),
+    ("M96", ACC, "direction bits read the other way",
+     "        node = if (leaf_index >> height) & 1 == 1 {", "        node = if (leaf_index >> height) & 1 == 0 {"),
+    ("M97", ACC, "inner nodes without the 0x01 prefix",
+     "    h.update([0x01]);", "    h.update([0x00]);"),
+    ("M98", ACC, "the empty leaf accepted",
+     "    if *leaf == [0u8; 32] {\n        return Err(Error::AccumulatorLeafEmpty);\n    }\n", ""),
+    ("M99", ACC, "root not compared",
+     "    if computed != root.root {", "    if false {"),
+    ("M100", ACC, "leaf identifier without the index",
+     "    h.update(leaf_index.to_be_bytes());\n    h.update(leaf);", "    h.update(leaf);"),
+    ("M101", ACC, "leaf identifier with an 8-byte chain id",
+     "    h.update(chain);", "    h.update(chain_id.to_be_bytes());"),
+    # Log-index conversion, relations, block-bound identifiers, anchor slot.
+    ("M102", X, "locate_log off by one at a receipt's end",
+     "        if block_log_index < end {", "        if block_log_index <= end {"),
+    ("M103", X, "block_log_index accepts one log past a receipt",
+     "    if position >= *log_counts.get(tx)? {", "    if position > *log_counts.get(tx)? {"),
+    ("M104", A, "relations not checked",
+     "        if !(Predicate { cmp: r.cmp, rhs: value(&r.right)? }).holds(&value(&r.left)?) {",
+     "        if false && !(Predicate { cmp: r.cmp, rhs: value(&r.right)? }).holds(&value(&r.left)?) {"),
+    ("M105", A, "block-bound storage identifier without the block",
+     "    let mut h = statement(KIND_STORAGE_AT_BLOCK, chain_id);\n    h.update(block_number.to_be_bytes());\n",
+     "    let mut h = statement(KIND_STORAGE_AT_BLOCK, chain_id);\n"),
+    ("M106", A, "block-bound storage identifier shares the default kind",
+     "const KIND_STORAGE_AT_BLOCK: u8 = 0x12;", "const KIND_STORAGE_AT_BLOCK: u8 = 2;"),
+    ("M107", A, "a hop loses the anchor slot",
+     "        anchor_slot: record.anchor_slot,", "        anchor_slot: 0,"),
 ]
 
 
@@ -248,6 +282,9 @@ def main():
     # Plain copies get fresh modification times, so cargo never reuses a build of an earlier
     # mutant left in target/mutants/target.
     shutil.copytree(os.path.join(ROOT, "crates"), os.path.join(COPY, "crates"), copy_function=shutil.copy)
+    # The committed vector file the accumulator tests read (the downloaded vectors come by env).
+    os.makedirs(os.path.join(COPY, "vectors"))
+    shutil.copy(os.path.join(ROOT, "vectors", "acc-leaf.json"), os.path.join(COPY, "vectors"))
     env = dict(os.environ)
     env["CARGO_TARGET_DIR"] = os.path.join(WORK, "target")
     env["TMPDIR"] = os.path.join(WORK, "tmp")
