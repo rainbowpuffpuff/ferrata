@@ -349,6 +349,18 @@ impl CompactStore {
         self.next.is_some()
     }
 
+    /// `upgrade_lc_store_to_*` on the compact store, composed up to `to`: only the layout
+    /// changes. The upgrades rewrite the execution part of the finalized header, which the
+    /// compact store does not hold, and leave its beacon header and both committees as they are
+    /// (`ferrata-spectests/tests/steps.rs` compares this with the full store's upgrade on every
+    /// fork-transition vector). A downgrade is `ForkMismatch`.
+    pub fn upgraded(&self, to: LcFork) -> Result<Self, Error> {
+        if to < self.fork {
+            return Err(Error::ForkMismatch);
+        }
+        Ok(Self { fork: to, ..self.clone() })
+    }
+
     /// Strict encoding: fork, finalized beacon header (SSZ), current summary, next flag and
     /// summary.
     pub fn encode(&self) -> Vec<u8> {
@@ -477,6 +489,11 @@ impl CompactUpdate {
         w.bytes(&encode_sync_aggregate(&self.sync_aggregate));
         w.u64(self.signature_slot);
         w.out
+    }
+
+    /// The layout an encoding names (its first byte), which is the layout to decode it in.
+    pub fn layout_of(b: &[u8]) -> Result<LcFork, Error> {
+        fork_from_byte(*b.first().ok_or(Error::Malformed)?)
     }
 
     /// Strict decoding in the layout of `fork`, for a committee of `n`.

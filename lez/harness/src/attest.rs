@@ -109,7 +109,7 @@ pub struct Transfer {
 }
 
 impl Transfer {
-    fn read(v: &Value) -> Self {
+    pub(crate) fn read(v: &Value) -> Self {
         Self {
             tx_index: v["tx_index"].as_u64().unwrap(),
             log_index: v["log_index"].as_u64().unwrap(),
@@ -544,6 +544,7 @@ impl Stage4 {
             tx_index: log.tx_index,
             log_index: log.log_index,
             proof: self.fx.receipt_proof(log.tx_index),
+            header: None,
         };
         self.w.chain.submit(
             label,
@@ -586,7 +587,7 @@ pub fn pool_for(pool: &Pool, log: &Transfer) -> Pool {
 }
 
 /// The pool's rule for a deposit, as conditions on a log.
-fn transfer_conditions(token: &Address, to: &Address) -> Vec<Condition> {
+pub(crate) fn transfer_conditions(token: &Address, to: &Address) -> Vec<Condition> {
     Pool { ferrata: AccountId::new([0; 32]), instance_id: ZERO, chain_id: 0, token: *token, recipient: *to }
         .conditions()
 }
@@ -1061,6 +1062,7 @@ pub fn refusals() -> Vec<Refusal> {
         tx_index: t.tx_index,
         log_index: t.log_index,
         proof: s.fx.receipt_proof(t.tx_index),
+        header: None,
     };
     if let ConsumerMessage::Claim { proof, .. } = &mut forged {
         let last = proof.len() - 1;
@@ -1117,7 +1119,8 @@ pub fn refusals() -> Vec<Refusal> {
     push("consumer: Credit from another program's actor", report);
     // An attestation nobody asked for, sent to a claim actor by another program's actor: it is
     // not a reply (the actor waits for nothing), so it is not even a message of the consumer.
-    let genuine = s.expected(slot, &pool.request(t.tx_index, t.log_index, s.fx.receipt_proof(t.tx_index))).unwrap();
+    let genuine =
+        s.expected(slot, &pool.request(t.tx_index, t.log_index, s.fx.receipt_proof(t.tx_index), None)).unwrap();
     let script = Script::default().send_sync(claim, &genuine);
     let report = s.w.chain.submit(
         "unsolicited attestation",
@@ -1199,6 +1202,7 @@ impl Stage4 {
             tx_index: log.tx_index,
             log_index: log.log_index,
             proof: self.fx.receipt_proof(log.tx_index),
+            header: None,
         }
     }
 

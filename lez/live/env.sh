@@ -1,6 +1,6 @@
 # Sourced by the scripts of this directory.
 #
-# Layout (as in ../RESULTS.md §6): LEZ v0.4.0-rc1 at upstream/lez-v0.4.0-rc1 beside the
+# Layout (as in ../RESULTS.md §8): LEZ v0.4.0-rc1 at upstream/lez-v0.4.0-rc1 beside the
 # repository, unmodified, and scratch in tmp/ beside the repository. Nothing these scripts write
 # goes to /tmp or into the LEZ tree: build outputs, downloaded circuit artifacts, the sequencer's
 # home, the wallet, logs and the unabridged block log all live under tmp/sequencer.
@@ -29,7 +29,7 @@ if [ "${FERRATA_LIVE_NICE:-1}" = 0 ]; then NICE=""; else NICE="nice -n 19"; fi
 TARGET="$FERRATA_LIVE_TMP/target"             # LEZ's sequencer and the driver
 BIN="$FERRATA_LIVE_TMP/bin"
 
-# The guest toolchain of ../RESULTS.md §6, if it is installed there.
+# The guest toolchain of ../RESULTS.md §8, if it is installed there.
 if [ -z "${RISC0_HOME:-}" ] && [ -d "$BESIDE/risc0-home-lez" ]; then
   export RISC0_HOME="$BESIDE/risc0-home-lez"
 fi

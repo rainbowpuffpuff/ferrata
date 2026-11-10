@@ -1,0 +1,80 @@
+sequencer http://127.0.0.1:3040: head block 1, followed to block 0 (the last one final on Bedrock)
+fee state at height 1: base fee exec 8 / stor 8; block caps exec 10000000 / stor 1000000
+LEZ constants: wallet default gas limit 2000000, TARGET_GAS_EXEC 5000000, MAX_GAS_EXEC 10000000, TARGET_GAS_STOR 500000, MAX_GAS_STOR 1000000, PRIVATE_VERIFY_GAS 409764, PRIVATE_GAS_STOR 224063
+program: image 650e3c907c6a16aacf64506e96935cec0711763ffe3fa514a4e5926f14d42e4c, 602920 bytes (sha256 f99871e715f63a206bd17720b01373a0fc865d7e803be04e9b19e7a0aa4e82bb), user ELF 570496 bytes in 6 segment(s)
+scripted: image 4b597adb3f1a43db85829c411a987234cc84584d8bcd947f0774b852adf0da2b, 268468 bytes (sha256 94b0f2ab3a87406f9e684fdf4a64b1c9f2c35f1b24e0bb9132097840b42755a5), user ELF 236044 bytes in 3 segment(s)
+deployments: main CXnzhRVkXzwZaDFcvchMvz28iVTy9f8tmesDGpLcGSs, twin DVcubqr9iDMUwCPdL5sDo5WXLkLFB2dgnc2vdi5bsd57, scripted FeoLrnY94gX4NJQ8duSL11vmFM2r5zGkhiQgJasMKY3K
+payer 0: 6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV holds 10000000000000
+payer 1: 7wHg9sbJwc6h3NP1S9bekfAzB8CHifEcxKswCKUt3YQo holds 20000000000000
+payer 2: CbgR6tj5kWx5oziiFptM7jMvrQeYY3Mzaao6ciuhSr2r holds 10000000000000
+payer 3: 2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2 holds 20000000000000
+harness tables: 55 rows from ../ferrata-wt-inbound/lez/results
+Transaction hash is 2aa9227e749d945e097a8c28eee8e8e259b1612f9b1a3958e5ffba005df942d5
+Transaction is included in block 2
+Transaction hash is 2f7667d1ebd256c2ec6285cd347a05db229247a0ee2bc789b41ee448d3e6d879
+Transaction is included in block 3
+Transaction hash is 4e4b8c9103e83795ed29a67658a3ca49f24efc80e0b88c2371f39a5828154cab
+Transaction is included in block 4
+Transaction hash is 2b679864f6bb5cc23a01bbed28354d9cf445fa1fd87d449e4d45055baab53a3d
+Transaction is included in block 5
+Transaction hash is cf701f517ef95c039bd86a88b1f6ff9f95a36cfec3cfe6b1be89e8609efd0177
+Transaction is included in block 6
+Transaction hash is c6e876aa160bd217716cc1a08d349a7f9e5eff09a7d6e655d4976098e9501d1b
+Transaction is included in block 7
+Transaction hash is e66b963e58692010340745c9f67cf48cb9e8ce17e6fd12a17d0e278b9765ce6f
+Transaction is included in block 8
+[inbound-deploy] deploy attest: WriteSegment 6 of 6 (78976 bytes)           applied   gas         0 +   79556 bytes, block    2
+[inbound-deploy] deploy attest: WriteSegment 5 of 6 (98304 bytes)           applied   gas         0 +   98916 bytes, block    3
+[inbound-deploy] deploy attest: WriteSegment 4 of 6 (98304 bytes)           applied   gas         0 +   98916 bytes, block    4
+[inbound-deploy] deploy attest: WriteSegment 3 of 6 (98304 bytes)           applied   gas         0 +   98916 bytes, block    5
+[inbound-deploy] deploy attest: WriteSegment 2 of 6 (98304 bytes)           applied   gas         0 +   98916 bytes, block    6
+[inbound-deploy] deploy attest: WriteSegment 1 of 6 (98304 bytes)           applied   gas         0 +   98916 bytes, block    7
+[inbound-deploy] deploy attest: CreateHeader (immutable) at A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX applied   gas         0 +     608 bytes, block    8
+[deploy] attest: image 650e3c907c6a16aacf64506e96935cec0711763ffe3fa514a4e5926f14d42e4c at A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX (computed by the sequencer's loader), immutable
+Transaction hash is e04f20978e3eb949efcb9836af164caf5c38453076b48a349660c88e0f20841d
+Transaction is included in block 9
+Transaction hash is b6d716ee4ade36f80b9cc089fb37c51a60308cd15f527af52b351252703dacb6
+Transaction is included in block 10
+Transaction hash is 6e8ea0a40d7682f3c96ff32e52e2b8c92708de7ef8e49b6f38e340c01539da0e
+Transaction is included in block 11
+Transaction hash is 4ddd0355f3166241ba9fa5e2d8b2e0cc18514e744f469b57822447fcef1c0527
+Transaction is included in block 12
+Transaction hash is 3276eb6df92e302c97e7593972b379d15eebb019e337b9e16d295f662c5ad0f7
+Transaction is included in block 13
+[inbound-deploy] deploy bridge: WriteSegment 4 of 4 (65900 bytes)           applied   gas         0 +   66480 bytes, block    9
+[inbound-deploy] deploy bridge: WriteSegment 3 of 4 (98304 bytes)           applied   gas         0 +   98916 bytes, block   10
+[inbound-deploy] deploy bridge: WriteSegment 2 of 4 (98304 bytes)           applied   gas         0 +   98916 bytes, block   11
+[inbound-deploy] deploy bridge: WriteSegment 1 of 4 (98304 bytes)           applied   gas         0 +   98916 bytes, block   12
+[inbound-deploy] deploy bridge: CreateHeader (immutable) at AfrE4T3U17eZYUH3KMGDgeE6A4jnpDGum151T3VtddCp applied   gas         0 +     608 bytes, block   13
+[deploy] bridge: image 66722fc7681beaeaacdfce978ae95ba9ba9f2b576b87791d523d6cd10815f4fa at AfrE4T3U17eZYUH3KMGDgeE6A4jnpDGum151T3VtddCp (computed by the sequencer's loader), immutable
+[inbound] stand-in chain: instance 6dcc9682c09e5f77eec87d0a96d544185f59e525267cf0203c0d3a716659da39 of the attestation program at A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX; bridge at AfrE4T3U17eZYUH3KMGDgeE6A4jnpDGum151T3VtddCp (image 66722fc7681beaeaacdfce978ae95ba9ba9f2b576b87791d523d6cd10815f4fa); vault 0x5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e; configId 0x887afdb16e1fcc7ee94d521a6f5e4ffa77c0eb99c1416b13ded1cf7e028ea36d
+[inbound] stand-in Init Init                                         applied        gas    113477 block   14 + 10.3s a770812ef7e51539a7c5c5a90fadd2cb14414bc2d02e31a913e8fe25e857b0cb
+[inbound] stand-in Init adopt 1/2                                    applied        gas   3396985 block   15 + 10.0s a2f9511048be5909a386b7e829d5fc5f8d4d4c62bb7e3fb57da5dfbc353cb4b3
+[inbound] stand-in Init adopt 2/2                                    applied        gas   3477181 block   16 + 11.4s 36b96345876263b40fdd7af6f8656d5c93715236d3ebae3054aac3c38ff49198
+[inbound] stage 1 finality update Open (step 1)                      applied        gas   1994178 block   17 +  8.7s 4a91732c9d5b8961d6eddcc791de50253268e0c2a62b1c9ab6a1600384485ec5
+[inbound] stage 1 finality update Miller (step 2)                    applied        gas   3305289 block   18 +  9.9s 071b3a9162b24109eb2f710888ed2dc4967466678176216edb40a211abaef8ba
+[inbound] stage 1 finality update Finish (step 3)                    applied        gas   3715991 block   19 + 10.3s 4caa4086e5d0b2fa7add344dea1b44af939815fe44bf42c36ecce71adf818b40
+[inbound] bridge Init without the block's header (Gloas record)      refused   215 (code 215) gas     57872 block   20 + 11.0s dd9e851b8f7e68bf21bef712a56ae6f08a3e0f6834e06ea922cf98c452034118
+[inbound] bridge Init (configId in the vault's slot 2)               applied        gas    181965 block   21 +  8.8s de41fe3e3d0da39abd25c4a8d19bea31d182aea6b582f6b4dee4c33b9b1d22a1
+[inbound] bridge ImportRoot n=1 (stage 1, block 2)                   applied        gas    232278 block   22 + 10.2s 4c8d365abc31118ebad9bb1e1abb978e33ae169530149ad683e411f4095b3d47
+[inbound] root(cid, 1): Some(Root(RootState { config_id: [136, 122, 253, 177, 110, 31, 204, 126, 233, 77, 82, 26, 111, 94, 79, 250, 119, 192, 235, 153, 193, 65, 107, 19, 222, 209, 207, 126, 2, 142, 163, 109], terms: Terms { evm_chain_id: 11155111, vault: [94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94], token: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], denominations: [1000000000000000, 10000000000000000, 100000000000000000] }, leaf_count: 1, root: [94, 189, 16, 246, 84, 6, 76, 74, 90, 111, 166, 168, 31, 179, 71, 31, 218, 81, 155, 51, 28, 42, 219, 21, 132, 245, 247, 122, 26, 181, 248, 158], record_slot: 11542656, block_number: 2 }))
+[inbound] bridge Claim: deposit 0 (public) under root(cid, 1)        applied        gas    142432 block   23 +  9.7s 039a9943d6a3f850741331c16a290bd6b8eb484d24ae164f9c7d2a31cd9a65bd
+[inbound] bridge Claim: deposit 0 again (replay)                     refused   250 (code 250) gas    124481 block   24 +  9.9s 79ea76ada925c2e21c550fe74023f8f743e4bd1c4d407c8f420f2c73297ef4c9
+[inbound] stage 2 finality update Open (step 1)                      applied        gas   1994354 block   25 + 10.2s d799916c29ce6e43ec0c3b15ea5db8fe1258cf612021260786203465fea55129
+[inbound] stage 2 finality update Miller (step 2)                    applied        gas   3305289 block   26 +  9.9s 59fcff41d5e5cd00d3c18cc4903c8116e0da3637850cf552d20216f269f5652e
+[inbound] stage 2 finality update Finish (step 3)                    applied        gas   3715991 block   27 + 10.3s faa051fef275cb28b0bfbe11f16996c3f17ae24898d68fab58e5b4b8099638c0
+[inbound] bridge ImportRoot n=2 (stage 2, block 3)                   applied        gas    232278 block   28 + 10.0s 3c5da77f1a8b5215c625a96e9dabe637e35c4120aa5b9e43bb96d93165a63ae2
+[inbound] root(cid, 2): Some(Root(RootState { config_id: [136, 122, 253, 177, 110, 31, 204, 126, 233, 77, 82, 26, 111, 94, 79, 250, 119, 192, 235, 153, 193, 65, 107, 19, 222, 209, 207, 126, 2, 142, 163, 109], terms: Terms { evm_chain_id: 11155111, vault: [94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94], token: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], denominations: [1000000000000000, 10000000000000000, 100000000000000000] }, leaf_count: 2, root: [154, 191, 44, 32, 25, 157, 254, 116, 122, 59, 16, 68, 139, 67, 25, 201, 115, 48, 181, 60, 129, 3, 97, 216, 194, 55, 220, 67, 84, 141, 91, 161], record_slot: 11542720, block_number: 3 }))
+[inbound] bridge Claim: deposit 0 under root(cid, 2) (a later root)  refused   250 (code 250) gas    124481 block   29 +  8.7s c9a6cfddbd26518b11ec42c3284509dbf7855a830a41194146046a1eec667a78
+[inbound] bridge Claim: deposit 1 redirected to a public destination (a wrong opening) refused   249 (code 249) gas     93764 block   30 +  9.7s 75e3649bdca91b86123462150b4f66f29d42b18efda0f6e412233ef0eae7989b
+[inbound] bridge ClaimPrivately: deposit 1 at LEZ's private test account 0 (real proof): wallet synced at block 30
+[inbound] proved and sent in 254.8 s (252185 bytes)
+[inbound] bridge ClaimPrivately: deposit 1 at LEZ's private test account 0 (real proof) applied        gas    439815 block   57 + 16.2s 1f74fecc0c78dec410423758affdf34e514a00d93685d87603685b31ae96e9b2
+[inbound] nullifier spent: Some(Nullifier(NullifierState { config_id: [136, 122, 253, 177, 110, 31, 204, 126, 233, 77, 82, 26, 111, 94, 79, 250, 119, 192, 235, 153, 193, 65, 107, 19, 222, 209, 207, 126, 2, 142, 163, 109], leaf_count: 2, amount: 1000000000000000 }))
+[inbound] public test account 0's holding: Some(Holder(HolderState { holdings: [Holding { config_id: [136, 122, 253, 177, 110, 31, 204, 126, 233, 77, 82, 26, 111, 94, 79, 250, 119, 192, 235, 153, 193, 65, 107, 19, 222, 209, 207, 126, 2, 142, 163, 109], terms: Terms { evm_chain_id: 11155111, vault: [94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94], token: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], denominations: [1000000000000000, 10000000000000000, 100000000000000000] }, amount: 1000000000000000 }], pending: None }))
+blocks: 1..=57
+transactions: 30 sent; 26 applied, 4 refused with an exit code, 0 reverted otherwise, 0 dropped by the sequencer, 0 rejected at its RPC, 0 unfinished
+charged in all: execution gas 26648101, storage gas 1237352, base fees 223083624
+against the harness tables: 0 transactions have a harness row; execution gas equal in 0, different in 0
+base fee exec over the blocks: min 8, max 8; blocks finalized on Bedrock at export: 57 of 57
+records written to ../tmp/sequencer/run/export

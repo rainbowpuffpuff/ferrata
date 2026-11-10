@@ -1,0 +1,39 @@
+{
+  "attestation_program": "86ce4d7f54bd68b4c7356398cfda192f791c83f6fa3c3102a18ac20fefdfa04c",
+  "bridge_image_id": "66722fc7681beaeaacdfce978ae95ba9ba9f2b576b87791d523d6cd10815f4fa",
+  "bridge_program": "8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d",
+  "chain": "stand-in",
+  "checkpoint": "bff242d66bb0c18ed0e4c4cec5b29681acd828faeb242e9c2d138f4b31d1bd2f",
+  "config_id": "887afdb16e1fcc7ee94d521a6f5e4ffa77c0eb99c1416b13ded1cf7e028ea36d",
+  "instance_id": "6dcc9682c09e5f77eec87d0a96d544185f59e525267cf0203c0d3a716659da39",
+  "public_holder": "Some(Holder(HolderState { holdings: [Holding { config_id: [136, 122, 253, 177, 110, 31, 204, 126, 233, 77, 82, 26, 111, 94, 79, 250, 119, 192, 235, 153, 193, 65, 107, 19, 222, 209, 207, 126, 2, 142, 163, 109], terms: Terms { evm_chain_id: 11155111, vault: [94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94], token: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], denominations: [1000000000000000, 10000000000000000, 100000000000000000] }, amount: 1000000000000000 }], pending: None }))",
+  "stages": [
+    {
+      "block": 2,
+      "finalized_slot": 11542656,
+      "label": "stage 1",
+      "leaves": 1,
+      "root": "5ebd10f654064c4a5a6fa6a81fb3471fda519b331c2adb1584f5f77a1ab5f89e",
+      "rows": [
+        "bridge Init without the block's header (Gloas record) | refused | 215 (code 215)",
+        "bridge Init (configId in the vault's slot 2) | applied | ",
+        "bridge ImportRoot n=1 (stage 1, block 2) | applied | ",
+        "bridge Claim: deposit 0 (public) under root(cid, 1) | applied | ",
+        "bridge Claim: deposit 0 again (replay) | refused | 250 (code 250)"
+      ]
+    },
+    {
+      "block": 3,
+      "finalized_slot": 11542720,
+      "label": "stage 2",
+      "leaves": 2,
+      "root": "9abf2c20199dfe747a3b10448b4319c97330b53c810361d8c237dc43548d5ba1",
+      "rows": [
+        "bridge ImportRoot n=2 (stage 2, block 3) | applied | ",
+        "bridge Claim: deposit 0 under root(cid, 2) (a later root) | refused | 250 (code 250)",
+        "bridge Claim: deposit 1 redirected to a public destination (a wrong opening) | refused | 249 (code 249)"
+      ]
+    }
+  ],
+  "vault": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e"
+}

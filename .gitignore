@@ -27,9 +27,11 @@ __pycache__/
 /bridge/evm-verify/cache/
 /bridge/evm-verify/broadcast/
 
-# Downloaded vectors (scripts/fetch-vectors.sh); vectors/acc-leaf.json is generated and committed.
+# Downloaded vectors (scripts/fetch-vectors.sh); vectors/acc-leaf.json is generated and committed,
+# vectors/vault-tree-v2.json is the vault's own (vault/test/vectors/tree-v2.json), committed.
 /vectors/*
 !/vectors/acc-leaf.json
+!/vectors/vault-tree-v2.json
 
 # Generated fixtures, prover scratch and re-runs the sub-projects do not commit
 /checkpoint/fixtures/

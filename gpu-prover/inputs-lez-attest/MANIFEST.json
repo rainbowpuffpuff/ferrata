@@ -1,10 +1,10 @@
 {
   "binary_from": "lez/target/debug/prove_attest",
-  "ferrata_commit": "d49859124be6989a4c1af43a3ad62d2dc92e99f2",
+  "ferrata_commit": "ad40044cf64170d6e28079257219694a98d802e3",
   "ferrata_uncommitted_changes": 0,
   "fixtures_from": "crates/ferrata-spectests/fixtures/mainnet-attest-2026-11-10",
-  "expected_consumer_image_id": "711584ffe09f0b115132e33ce1485666710bc73e696e66fcc54d00aad0db949f",
-  "program_image_id": "2f3566d4f460620867a93b557776400b1039142ce92203072170c162ba2ec130",
+  "expected_consumer_image_id": "f883e6a4dbd8e49439465f918884abe1379b02276ff88676f0a4bf958ee49068",
+  "program_image_id": "9f3eb00f54f911e41710fc57d6b0258846bd4db61b57674b8a33a6457bda3e7b",
   "prove_command": "FERRATA_EXPECT_CONSUMER_IMAGE_ID=<expected_consumer_image_id> FERRATA_ATTEST_FIXTURE_DIR=<this directory>/mainnet-attest-2026-11-10 RISC0_DEV_MODE=0 RISC0_SERVER_PATH=<r0vm 3.0.5 built with CUDA> /usr/bin/time -v ./prove_attest --tx-out stage4-private-attest-tx.borsh > prove-attest.log 2>&1",
   "files": {
     "mainnet-attest-2026-11-10/SHA256SUMS": {
@@ -28,8 +28,8 @@
       "sha256": "5602e32302d32d42efb98943a14a455d50c40817e95bb970ac7247040e52ca01"
     },
     "prove_attest": {
-      "bytes": 153780640,
-      "sha256": "69d00216a6e544e09a0871f14aca050162a6ba937a90ec81bb72b9dd2b80f64e"
+      "bytes": 154518176,
+      "sha256": "6146055b28433cb2e9faa607835c5b46b17a222fdc930972167e50d18f6f11ab"
     }
   }
 }

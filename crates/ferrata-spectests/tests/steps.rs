@@ -210,6 +210,7 @@ fn steps_equal_process_update_on_every_sync_vector() {
     assert_eq!(all.len(), 52, "the pinned vectors have 52 sync cases");
     let bls = Blst::default();
     let (mut applied, mut refused, mut compared) = (0, 0, 0);
+    let (mut told_upgrades, mut self_upgrades) = (0, 0);
     for (case_index, (fork, dir)) in all.iter().enumerate() {
         let name = format!("{}/{}", fork.name(), dir.file_name().unwrap().to_string_lossy());
         let meta = yaml(dir.join("meta.yaml"));
@@ -231,6 +232,9 @@ fn steps_equal_process_update_on_every_sync_vector() {
         // Alternate one-part and two-part adoptions across cases.
         let parts = if case_index % 2 == 0 { 1 } else { 2 };
         let (mut policy, mut compact) = init_both(&trusted, &bootstrap, store_fork, spec, &bls, parts);
+        // A second compact store that is never told to upgrade: it moves to a later layout only
+        // when an update arrives in one, as a program's instance does (`steps::store_for_update`).
+        let mut auto = compact.clone();
         let ctx = Context { spec, genesis_validators_root: gvr, bls: &bls };
         for (i, step) in yaml(dir.join("steps.yaml")).as_sequence().unwrap().iter().enumerate() {
             let (kind, body) = step.as_mapping().and_then(|m| m.iter().next()).unwrap();
@@ -244,36 +248,58 @@ fn steps_equal_process_update_on_every_sync_vector() {
                         n,
                     )
                     .unwrap();
+                    let as_served = update.clone();
                     let update = upgrade_update(update, update_fork, policy.core().fork, spec).unwrap();
                     let label = format!("{name} step {i}");
-                    match compare_update(
-                        &label,
-                        &mut policy,
-                        &mut compact,
-                        &update,
-                        as_u64(&body["current_slot"]),
-                        &ctx,
-                        parts,
-                    ) {
+                    let current_slot = as_u64(&body["current_slot"]);
+                    let before = policy.core().clone();
+                    let told = compare_update(&label, &mut policy, &mut compact, &update, current_slot, &ctx, parts);
+                    match told {
                         Ok(_) => applied += 1,
                         Err(_) => refused += 1,
+                    }
+                    // The self-upgrading store takes the update in the layout it was served in,
+                    // or upgraded to its own if it is already ahead.
+                    let layout = update_fork.max(auto.fork);
+                    let served = upgrade_update(as_served, update_fork, layout, spec).unwrap();
+                    self_upgrades += usize::from(layout > auto.fork);
+                    let stepped = steps::store_for_update(&auto, layout, served.attested_header.beacon.slot, spec)
+                        .map_err(StepError::Core)
+                        .and_then(|base| run_job(&base, &before, &served, None, current_slot, spec, &gvr, parts));
+                    match (told, stepped) {
+                        (Ok(_), Ok((next, _, job))) => {
+                            // The job started from the upgraded store; the stored one is not
+                            // upgraded yet, and applying the job to it gives the same store.
+                            assert_eq!(steps::apply(&auto, &job, spec).map(|(s, _)| s), Ok(next.clone()), "{label}");
+                            auto = next;
+                        }
+                        (Err(e1), Err(e2)) => assert_eq!(e1.code(), e2.code(), "{label}: the self-upgrading store"),
+                        (told, stepped) => panic!("{label}: told {told:?}, self-upgrading {:?}", stepped.map(|s| s.1)),
                     }
                 }
                 "force_update" => {} // the policy never forces
                 "upgrade_store" => {
                     let to = lc(cfg.fork_for_version(as_version(&body["store_fork_version"])).unwrap());
                     policy.upgrade(to, spec).unwrap();
-                    assert!(to >= compact.fork);
-                    compact.fork = to;
+                    assert_eq!(compact.upgraded(compact.fork), Ok(compact.clone()), "to its own layout: unchanged");
+                    compact = compact.upgraded(to).expect("the vectors only upgrade forwards");
+                    told_upgrades += 1;
                 }
                 other => panic!("{name}: unknown step {other}"),
             }
             assert_eq!(compact, CompactStore::of(policy.core()), "{name} step {i}");
+            // The self-upgrading store is the told one, except that it may not have moved yet.
+            assert_eq!(auto.upgraded(compact.fork).as_ref(), Ok(&compact), "{name} step {i}: the self-upgrading store");
             compared += 1;
         }
     }
-    println!("steps vs process_update: 52 cases, {compared} steps compared, {applied} updates applied, {refused} refused alike");
+    println!(
+        "steps vs process_update: 52 cases, {compared} steps compared, {applied} updates applied, {refused} refused \
+         alike; {told_upgrades} store upgrades told by the vectors, {self_upgrades} made by a store that upgrades \
+         itself when an update arrives in a later layout"
+    );
     assert!(applied > 50 && refused > 10, "the vectors exercise both outcomes");
+    assert!(told_upgrades > 0 && self_upgrades > 0, "the vectors cross forks");
 }
 
 // ---------------------------------------------------------------------------------------------

@@ -33,11 +33,19 @@ vector's root and the plaintext claim of its leaf 2 spends the vector's `N`
 
 | operation | handlers run (cycles each) | execution gas | storage gas (tx bytes) |
 |---|---|---:|---:|
-| `Init`: attest the vault's slot 2 = `configId`, write `config(cid)` | Init 39,167 → Attest 82,188 → reply 33,174 | 154,529 | 1,726 |
-| `ImportRoot`: attest slots 0 and 1 under one record, write `root(cid, n)` | ImportRoot 39,151 → Attest 101,934 → reply 44,676 → WriteRoot 17,859 | 203,620 | 1,703 |
+| `Init`: attest the vault's slot 2 = `configId`, write `config(cid)` | Init 39,150 → Attest 83,231 → reply 33,174 | 155,555 | 1,726 |
+| `ImportRoot`: attest slots 0 and 1 under one record, write `root(cid, n)` | ImportRoot 38,976 → Attest 103,817 → reply 44,676 → WriteRoot 17,859 | 205,328 | 1,703 |
 | plaintext claim: path, opening of `C`, `N`, mint to a public `dest` | Claim 109,283 → Spend 17,756 → Mint 15,405 | 142,444 | 1,740 |
 | private claim, private destination (one privacy-preserving transaction) | private: ClaimPrivately 39,314, reply 113,417 (user cycles); public: Read, Spend | 439,815 | 224,063 |
 | private claim, public destination | private: the same two; public: Read, Spend, Mint | 457,925 | 224,063 |
+
+Measured in RISC Zero dev mode by `harness/tests/bridge_inbound.rs`, `bridge_private.rs` and
+`bridge_burn.rs` on the Modal build box (branch `inbound-live`, 10 Nov 2026), after the merge of the
+attestation program that attests under Gloas records (`attest` 4c2df47) and the change that lets an
+account proof carry the block's header (0ce0aa7): against the figures before, `Attest` costs 1,043
+more cycles in `Init` (82,188 → 83,231) and 1,883 more in `ImportRoot` (101,934 → 103,817), the
+bridge's `Init` 17 fewer (39,167 → 39,150) and its `ImportRoot` 175 fewer (39,151 → 38,976); the
+claims, the private claim and the burns are unchanged. Under a Gloas record, see §2a.
 | public burn of one denomination, top-level and signed by the holder | Burn (holder) 27,672 → Burn (record) 18,195 | 45,867 | 647 |
 | private burn of one denomination (one privacy-preserving transaction) | private: Burn 23,799 (user cycles); public: Burn (record) 18,195 | 427,959 | 224,063 |
 
@@ -63,7 +71,7 @@ storage slot under a mainnet state root is 9 account-proof nodes plus about 7 st
 and Stage 4 measured 273,717 cycles for one account and one slot (`RESULTS.md` §5). A real
 vault's import (one account, two slots, and a storage trie that grows with its depositors and its
 frontier) should therefore cost roughly that plus a second slot proof [E: not measured]; the
-bridge's own handlers (39,151 + 44,676 + 17,859) do not depend on it.
+bridge's own handlers (38,976 + 44,676 + 17,859) do not depend on it.
 
 ## 2. Inbound: configuration, import, claims (`results/bridge-inbound.md`, 28 transactions)
 
@@ -82,11 +90,11 @@ the overlap):
 
 | case | code | execution gas |
 |---|---|---:|
-| `Init` of another configuration of vault A (other denominations): slot 2 holds `configId(A)` | 246 `PAIRING_MISMATCH` | 149,644 |
+| `Init` of another configuration of vault A (other denominations): slot 2 holds `configId(A)` | 246 `PAIRING_MISMATCH` | 150,670 |
 | `Init` of an existing configuration | 244 `ALREADY_WRITTEN` | 30,282 |
-| import at a count already imported (refused by `WriteRoot`, after the attestation) | 244 `ALREADY_WRITTEN` | 204,728 |
-| import whose message claims count 7, or the 5-leaf root, at a block holding 8 | 247 `IMPORT_MISMATCH` | 173,340; 172,858 |
-| import for configuration A with vault B's proofs (the request names vault A) | 110 `ProofNodeMismatch` (the core's, from `Attest`) | 80,042 |
+| import at a count already imported (refused by `WriteRoot`, after the attestation) | 244 `ALREADY_WRITTEN` | 206,436 |
+| import whose message claims count 7, or the 5-leaf root, at a block holding 8 | 247 `IMPORT_MISMATCH` | 175,048; 174,566 |
+| import for configuration A with vault B's proofs (the request names vault A) | 110 `ProofNodeMismatch` (the core's, from `Attest`) | 80,491 |
 | import for a configuration never initialised | 245 `NOT_FOUND` | 14,442 |
 | the same claim again (replay) | 250 `ALREADY_CLAIMED` | 124,493 |
 | the same deposit under a second root, `root(A, 8)` | 250 `ALREADY_CLAIMED` | 124,493 |
@@ -103,6 +111,30 @@ A refusal reverts the whole transaction, so nothing is written: the test checks 
 nullifier accounts after every case. The lagging-count case is the only one where the index check
 does work the path check would not: block 102's vault holds the root of eight leaves with a count
 of six, so leaf 6's path is valid under `root(A, 6)` and only `leafIndex < count` refuses it (D13).
+
+## 2a. Under a record in the Gloas layout (`results/bridge-gloas.md`)
+
+Every Sepolia record since Gloas binds the block hash only; the attestation program then takes the
+state root from the block's RLP header, which the bridge's `Init` and `ImportRoot` carry in front of
+the vault's account proof (`bridge-wire` `HEADER_MARKER`). `harness/tests/bridge_inbound.rs`
+`inbound_under_a_gloas_record`: a record binding the hash of a real Sepolia header (block
+12,103,422, the replay fixture's bound block) whose state root is replaced by the synthetic state's,
+placed after genesis; RISC Zero dev mode, the Modal build box, commit 5b75f64.
+
+| transaction | handlers run (cycles each) | execution gas | storage gas (tx bytes) | result |
+|---|---|---:|---:|---|
+| `Init`, no header | Init 40,700 → Attest 19,520 | 60,220 | 1,780 | 215 `HEADER_REQUIRED` |
+| `Init`, a header that does not hash to the record (last byte changed) | Init 48,775 → Attest 35,677 | 84,452 | 2,507 | 120 `HeaderHashMismatch` |
+| `Init`, header in front of the account proof | Init 48,775 → Attest 110,361 → reply 33,174 | 192,310 | 2,507 | applied |
+| `ImportRoot`, no header | ImportRoot 38,847 → Attest 21,092 | 59,939 | 1,757 | 215 `HEADER_REQUIRED` |
+| `ImportRoot` (2 leaves), with the header | ImportRoot 47,321 → Attest 130,799 → reply 44,676 → WriteRoot 17,859 | 240,655 | 2,484 | applied |
+| plaintext claim under `root(C, 2)` | Claim 109,271 → Spend 17,756 → Mint 15,405 | 142,432 | 1,740 | applied |
+| the same claim again | Claim 109,271 → Spend 15,210 | 124,481 | 1,740 | 250 `ALREADY_CLAIMED` |
+
+Against the payload-layout record of §1, the header adds 781 bytes to each transaction and about
+27,000 cycles to `Attest` in `Init` (decoding the header and hashing it) and 27,000 in
+`ImportRoot`; the bridge's own handlers carry the header (+9,625 in `Init`, +8,345 in
+`ImportRoot`). Both stay under 5% of LEZ's 5M execution target.
 
 ## 3. The private claim (`results/bridge-private-claim.md`)
 
@@ -274,7 +306,7 @@ time.
 
 ```sh
 cd lez
-export RISC0_HOME=$PWD/../../risc0-home-lez        # guest Rust 1.91.1, as RESULTS.md §7
+export RISC0_HOME=$PWD/../../risc0-home-lez        # guest Rust 1.91.1, as RESULTS.md §8
 cargo test -p harness --test bridge_inbound -- --nocapture          # writes results/bridge-inbound.md
 RISC0_DEV_MODE=1 cargo test -p harness --test bridge_private --test bridge_burn -- --nocapture
                                                     # write results/bridge-private-claim.md, bridge-burn.md
@@ -286,4 +318,20 @@ RISC0_DEV_MODE=0 target/debug/prove_bridge --settle results/bridge-private-claim
 ```
 On this worktree they ran through `../../modal-build/mrun` (a cloud container), the first build
 without `RISC0_BUILD_LOCKED` because the new guest's lockfile had to be written; with the
-lockfiles committed, `--locked` and `RISC0_BUILD_LOCKED=1` apply as in `RESULTS.md` §7.
+lockfiles committed, `--locked` and `RISC0_BUILD_LOCKED=1` apply as in `RESULTS.md` §8.
+
+## 10. On a live sequencer: the inbound crossing (stand-in)
+
+[`live/inbound/README.md`](live/inbound/README.md): the same operations on a running LEZ
+v0.4.0-rc1 sequencer and Logos Blockchain node (the Modal build box, 10 Nov 2026), on a stand-in
+beacon chain (a committee whose keys we hold, Gloas-layout records binding blocks made from a real
+Sepolia header with a synthetic vault's state root): the programs deployed through LEZ's loader
+from the frozen binaries whose ids the Sepolia vault will pin; `Init` refused without the block's
+header (215) and applied with it (181,965 execution gas); `ImportRoot` n = 1 and n = 2 (232,278
+each); the plaintext claim (142,432), its replay and the same deposit under the later root refused
+(250), another destination refused (249); the private claim at LEZ's private test account 0 with a
+real proof made by LEZ's wallet on the box's CPU in 254.8 s, 252,185 bytes, 439,815 execution gas
+and 224,063 storage gas, included by the sequencer, which verifies receipts. Measured (the
+sequencer's own charges, re-checked by replaying the recorded chain through LEZ's `chain_state`).
+The session on public Sepolia waits for the deposits into the new vault.
+

@@ -68,7 +68,10 @@ pub struct Config {
     /// Unix seconds of slot 0.
     pub genesis_time: u64,
     pub seconds_per_slot: u64,
-    /// The store's light-client layout (`LcFork` as 0 = Altair … 4 = Gloas).
+    /// The light-client layout the store starts in, which is the bootstrap's (`LcFork` as
+    /// 0 = Altair … 4 = Gloas). The store moves to a later layout when the chain reaches a later
+    /// fork of `fork_epochs` (`ferrata_core::steps::store_for_update`); its current layout is in
+    /// its encoding (`InstanceState::store`).
     pub store_fork: u8,
     /// How many transactions a committee adoption is split into (1, 2, 4, …).
     pub adoption_parts: u8,
@@ -89,7 +92,7 @@ impl Config {
         }
     }
 
-    /// The store's layout, or `None` for an unknown byte.
+    /// The layout the store starts in, or `None` for an unknown byte.
     pub fn fork(&self) -> Option<LcFork> {
         Some(match self.store_fork {
             0 => LcFork::Altair,
@@ -155,7 +158,10 @@ pub enum Message {
     /// its committee. `bootstrap`: `CompactBootstrap` encoding.
     Init { config: Config, checkpoint: Root, bootstrap: Vec<u8> },
     /// Step 1 of an update, at `instance(id)`: `update` is a `CompactUpdate` encoding, `signers`
-    /// a `SignerWitness` encoding. Opens `job(id, job_id)`.
+    /// a `SignerWitness` encoding. Opens `job(id, job_id)`. The update is in the store's layout,
+    /// or in the layout of a later fork of the instance's schedule that its attested header has
+    /// reached: the job then starts from the store upgraded to that layout, and applying it
+    /// upgrades the instance's store.
     Open { update: Vec<u8>, signers: Vec<u8> },
     /// Step 2, at the job: the Miller loops.
     Miller,
@@ -241,6 +247,10 @@ impl RecordState {
 /// The event an instance emits when its finalized header advances or it activates.
 pub const FINALIZED_SELECTOR: [u8; 8] = *b"FRT-FIN1";
 
+/// The event an instance emits when applying an update moves its store to a later fork's layout:
+/// the layout it left and the layout it is in now (one byte each, as `Config::store_fork`).
+pub const UPGRADED_SELECTOR: [u8; 8] = *b"FRT-UPG1";
+
 /// The event `header(id, slot)` emits for an `Attest` sent as the root of a transaction: the
 /// instance id, the chain id and the block number (little-endian), then each statement
 /// identifier ([`attest::Attestation::event_data`]).
@@ -266,7 +276,7 @@ pub const CODE_BLOCKS: [(CodeOwner, core::ops::RangeInclusive<u8>); 5] = [
     (CodeOwner::Core, 1..=79),        // the light client: 1–61 in use
     (CodeOwner::StepApi, 80..=99),    // 80–84 in use
     (CodeOwner::Core, 100..=199),     // the execution layer: 100–163 in use
-    (CodeOwner::Program, 200..=219),  // 200–214 in use
+    (CodeOwner::Program, 200..=219),  // 200–215 in use
     (CodeOwner::Consumer, 220..=239), // 220–229 in use
 ];
 
@@ -279,7 +289,7 @@ macro_rules! exit_codes {
     };
 }
 
-/// Exit codes of the program's own refusals: 200–214 (see [`CODE_BLOCKS`]).
+/// Exit codes of the program's own refusals: 200–215 (see [`CODE_BLOCKS`]).
 pub mod code {
     exit_codes! {
         /// The message does not decode.
@@ -312,8 +322,13 @@ pub mod code {
         /// An attestation asked of an actor that holds no record.
         NO_RECORD = 213;
         /// An attestation request the program cannot serve: an accumulator leaf whose root is
-        /// not a storage fact of the same request.
+        /// not a storage fact of the same request, or a block header sent for a record that
+        /// holds the payload's fields and needs none.
         BAD_QUERY = 214;
+        /// An attestation asked, without the block's header, of a record that binds a block
+        /// hash only (a finalized header in the Gloas layout): `Request::header` must carry the
+        /// RLP header that hashes to it.
+        HEADER_REQUIRED = 215;
     }
 }
 
@@ -325,7 +340,10 @@ pub mod code {
 /// leaves of a SHA-256 accumulator whose root one of the request's storage slots holds. Each fact
 /// may carry conditions (`=, ≠, <, ≤, >, ≥` against a constant), and the request may relate two of
 /// its facts to each other. The block is the record's own, or an older one reached from it by
-/// EIP-2935 hops. Every root comes from the record: the request cannot supply one.
+/// EIP-2935 hops. Every root comes from the record: the request cannot supply one. A record of a
+/// finalized header in the Gloas layout holds only the hash of the execution block it binds (the
+/// bid's parent block); the request then carries that block's RLP header, which must hash to the
+/// recorded hash, and the roots are read from it.
 ///
 /// The reply gives, for each fact, its statement identifier (`ferrata_core::attest`,
 /// `ferrata_core::accumulator`) and its values, with the instance, the chain id and the block they
@@ -336,7 +354,7 @@ pub mod attest {
     use ferrata_core::{
         accumulator::{attest_accumulator_leaf, AccumulatorRoot},
         attest::{self as proven, history_hop},
-        witness::HeaderRecord,
+        witness::{ExecutionSummary, HeaderRecord},
         Error, Root,
     };
 
@@ -458,6 +476,11 @@ pub mod attest {
         pub instance_id: Root,
         /// The chain id the caller expects: a record of another chain refuses.
         pub chain_id: u64,
+        /// The RLP header of the record's execution block, for a record that binds a block hash
+        /// only (a finalized header in the Gloas layout). It must hash to the recorded hash; the
+        /// block number, the state root and the receipts root are then read from it. `None` for
+        /// a record that holds the payload's fields.
+        pub header: Option<Vec<u8>>,
         /// Hops from the record's block to the block the facts are proven at, newest first.
         pub hops: Vec<Hop>,
         pub accounts: Vec<AccountQuery>,
@@ -588,12 +611,15 @@ pub mod attest {
     /// `chain_id` (the fields of a `RecordState`), and return its statements.
     ///
     /// In order: the request must name this instance (`WRONG_INSTANCE`) and this chain
-    /// (`ChainMismatch`); the record must hold execution payload fields (`BindingMismatch`: a
-    /// Gloas record, which holds a block hash only, cannot be attested against yet); each hop is
-    /// verified (`ferrata_core::attest::history_hop`); the accounts, slots and logs are proven
-    /// under the resulting block's state and receipts roots and their conditions and relations
-    /// checked (`ferrata_core::attest::attest_batch`); each leaf is proven against the storage
-    /// fact it names. The first refusal ends the call.
+    /// (`ChainMismatch`); the record must give an execution block: its payload fields, with no
+    /// header in the request (`BAD_QUERY` if there is one), or, for a record that binds a block
+    /// hash only, the header in the request (`HEADER_REQUIRED` without one, `HeaderHashMismatch`
+    /// if it does not hash to the recorded hash, the RLP decoder's code if it is not a header);
+    /// a record with no execution block (the Altair layout, or a zero block hash) is
+    /// `BindingMismatch`; each hop is verified (`ferrata_core::attest::history_hop`); the
+    /// accounts, slots and logs are proven under the resulting block's state and receipts roots
+    /// and their conditions and relations checked (`ferrata_core::attest::attest_batch`); each
+    /// leaf is proven against the storage fact it names. The first refusal ends the call.
     pub fn evaluate(
         instance_id: &Root,
         chain_id: u64,
@@ -603,11 +629,22 @@ pub mod attest {
         if request.instance_id != *instance_id {
             return Err(code::WRONG_INSTANCE);
         }
-        let mut record = proven::HeaderRecord::from_recorded(recorded, chain_id).map_err(refusal)?;
-        // `attest_batch` checks the chain too; a request with hops is refused before their proofs.
-        if request.chain_id != record.chain_id() {
+        // `attest_batch` checks the chain too; here a request for another chain is refused
+        // before its header and its hops are looked at.
+        if request.chain_id != chain_id {
             return Err(refusal(Error::ChainMismatch));
         }
+        let mut record = match (&recorded.execution, &request.header) {
+            (ExecutionSummary::BlockHash(_), Some(header)) => {
+                proven::HeaderRecord::from_recorded_block_hash(recorded, chain_id, header)
+            }
+            (ExecutionSummary::BlockHash(_), None) => return Err(code::HEADER_REQUIRED),
+            (ExecutionSummary::Payload { .. }, Some(_)) => return Err(code::BAD_QUERY),
+            (ExecutionSummary::Payload { .. } | ExecutionSummary::None, _) => {
+                proven::HeaderRecord::from_recorded(recorded, chain_id)
+            }
+        }
+        .map_err(refusal)?;
         for hop in &request.hops {
             record = history_hop(&record, hop.account_proof.as_slice(), hop.storage_proof.as_slice(), &hop.header)
                 .map_err(refusal)?;
@@ -805,11 +842,13 @@ pub mod consumer {
             ]
         }
 
-        /// The request for one log as a deposit of this pool.
-        pub fn request(&self, tx_index: u64, log_index: u64, proof: Vec<Vec<u8>>) -> Request {
+        /// The request for one log as a deposit of this pool; `header` is the block's RLP
+        /// header when the record binds a block hash only ([`Request::header`]).
+        pub fn request(&self, tx_index: u64, log_index: u64, proof: Vec<Vec<u8>>, header: Option<Vec<u8>>) -> Request {
             Request {
                 instance_id: self.instance_id,
                 chain_id: self.chain_id,
+                header,
                 logs: vec![LogQuery { tx_index, log_index, proof, conditions: self.conditions() }],
                 ..Request::default()
             }
@@ -899,11 +938,19 @@ pub mod consumer {
 
         // --- The reference consumer --------------------------------------------------------------
         /// At `claim(pool, N)`: claim the log at `(tx_index, log_index)` of the block recorded at
-        /// `slot` as a deposit of `pool`, and credit its sender once.
-        Claim { pool: Pool, slot: u64, tx_index: u64, log_index: u64, proof: Vec<Vec<u8>> },
+        /// `slot` as a deposit of `pool`, and credit its sender once. `header`: the block's RLP
+        /// header, for a record that binds a block hash only ([`Request::header`]).
+        Claim { pool: Pool, slot: u64, tx_index: u64, log_index: u64, proof: Vec<Vec<u8>>, header: Option<Vec<u8>> },
         /// At a private account's actor: read the record of `slot`, verify the same fact there,
         /// and keep it in this actor's state. Sends nothing but `Read`.
-        AttestPrivately { pool: Pool, slot: u64, tx_index: u64, log_index: u64, proof: Vec<Vec<u8>> },
+        AttestPrivately {
+            pool: Pool,
+            slot: u64,
+            tx_index: u64,
+            log_index: u64,
+            proof: Vec<Vec<u8>>,
+            header: Option<Vec<u8>>,
+        },
 
         // --- Internal: accepted only from the expected actor of this program ---------------------
         /// `claim(pool, N)` → `balance(pool, owner)`: credit a claimed deposit.
@@ -975,6 +1022,7 @@ pub mod consumer {
         pub tx_index: u64,
         pub log_index: u64,
         pub proof: Vec<Vec<u8>>,
+        pub header: Option<Vec<u8>>,
     }
 
     impl ConsumerState {

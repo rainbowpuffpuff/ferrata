@@ -80,7 +80,8 @@ modal app list                                              # nothing of ours le
 # the private attestation (what was run, in a container of its own):
 ../lez/scripts/stage-prove-attest.sh $PWD/inputs-lez-attest <prove_attest built on glibc <= 2.39>
 modal run --detach modal_app.py::lez --job lez-attest --run gpu-l4-attest --limit-s 900
-scripts/fetch.sh gpu-l4-attest
+scripts/fetch.sh gpu-l4-attest                                # the second run, on the later images:
+                                                              # --run gpu-l4-attest-2, the same commands
 FERRATA_ATTEST_FIXTURE_DIR=inputs-lez-attest/mainnet-attest-2026-11-10 RISC0_DEV_MODE=0 \
   inputs-lez-attest/prove_attest --settle results/gpu-l4-attest/lez-attest/stage4-private-attest-tx.borsh
 
@@ -144,6 +145,7 @@ All are under 1 MB and are committed:
 | `results/gpu-l4-attest/lez-attest/stage4-private-attest-tx.borsh` (LEZ transaction with its 227,170-byte receipt) | 231,214 |
 | `results/gpu-l4-bridge/lez-bridge/bridge-private-claim-tx.borsh` (LEZ transaction with its 227,477-byte receipt) | 231,828 |
 | `results/gpu-l4-bridge/lez-bridge/bridge-private-burn-tx.borsh` (LEZ transaction with its 226,978-byte receipt) | 230,830 |
+| `results/gpu-l4-attest-2/lez-attest/stage4-private-attest-tx.borsh` (the same attestation on the later images) | 231,214 |
 
 Not committed (git-ignored, and none of them a receipt): `bin/` (binaries downloaded from the Volume:
 CUDA prover 119 MB, r0vm 137 MB, verifier 3 MB), `inputs/programs`, `inputs/fixtures`, and

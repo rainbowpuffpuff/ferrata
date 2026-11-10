@@ -15,6 +15,13 @@ publish = false
 [dependencies]
 ferrata-lez-wire = { path = "../../wire" }
 ferrata-core = { path = "../../../crates/ferrata-core", features = ["blst"] }
+# The bridge program's wire types and the bridge core (the inbound run's configuration, deposits
+# and claims).
+ferrata-lez-bridge-wire = { path = "../../bridge-wire" }
+ferrata-bridge-core = { path = "../../../bridge/crates/ferrata-bridge-core" }
+# The stand-in chain of the inbound run (committees we hold the keys of, branches that verify by
+# construction) and the reference trie and JSON-RPC readers for its execution side and the capture.
+ferrata-spectests = { path = "../../../crates/ferrata-spectests" }
 
 # LEZ by path: the clone sits at upstream/lez-v0.4.0-rc1 beside the repository (see ../env.sh for
 # running against another tag).

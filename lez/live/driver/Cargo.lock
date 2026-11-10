@@ -785,6 +785,15 @@ checksum = "0d8c1fef690941d3e7788d328517591fecc684c084084702d6ff1641e993699a"
 
 [[package]]
 name = "block-buffer"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4152116fd6e9dadb291ae18fc1ec3575ed6d84c29642d97890f4b4a3417297e4"
+dependencies = [
+ "generic-array 0.14.7",
+]
+
+[[package]]
+name = "block-buffer"
 version = "0.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3078c7629b62d3f0439517fa394996acacc5cbc91c5a20d8c658e77abd503a71"
@@ -808,6 +817,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "710f1dd022ef4e93f8a438b4ba958de7f64308434fa6a87104481645cc30068b"
 dependencies = [
  "hybrid-array",
+]
+
+[[package]]
+name = "bls12_381"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d7bc6d6292be3a19e6379786dac800f551e5865a5bb51ebbe3064ab80433f403"
+dependencies = [
+ "digest 0.9.0",
+ "ff 0.13.1",
+ "group 0.13.0",
+ "pairing",
+ "rand_core 0.6.4",
+ "subtle",
 ]
 
 [[package]]
@@ -1731,6 +1754,15 @@ dependencies = [
 
 [[package]]
 name = "digest"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d3dd60d1080a57a05ab032377049e0591415d2b31afd7028356dbf3cc6dcb066"
+dependencies = [
+ "generic-array 0.14.7",
+]
+
+[[package]]
+name = "digest"
 version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9ed9a281f7bc9b7576e61468ba615a66a5c8cfdff42420a70aa82701a3b1e292"
@@ -2112,12 +2144,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "ferrata-bridge-core"
+version = "0.2.0"
+dependencies = [
+ "hmac 0.12.1",
+ "sha2 0.10.9",
+]
+
+[[package]]
 name = "ferrata-core"
 version = "0.0.1"
 dependencies = [
+ "bls12_381",
  "blst",
+ "group 0.13.0",
  "sha2 0.10.9",
+ "sha2 0.9.9",
  "tiny-keccak",
+]
+
+[[package]]
+name = "ferrata-lez-bridge-wire"
+version = "0.1.0"
+dependencies = [
+ "borsh",
+ "ferrata-bridge-core",
+ "ferrata-lez-wire",
+ "lee_core",
+ "sha2 0.10.9",
 ]
 
 [[package]]
@@ -2128,6 +2182,20 @@ dependencies = [
  "ferrata-core",
  "lee_core",
  "sha2 0.10.9",
+]
+
+[[package]]
+name = "ferrata-spectests"
+version = "0.0.1"
+dependencies = [
+ "blst",
+ "ferrata-core",
+ "hex",
+ "serde_json",
+ "serde_yaml",
+ "sha2 0.10.9",
+ "sha3 0.10.9",
+ "snap",
 ]
 
 [[package]]
@@ -4128,8 +4196,11 @@ dependencies = [
  "common",
  "env_logger",
  "fee_core",
+ "ferrata-bridge-core",
  "ferrata-core",
+ "ferrata-lez-bridge-wire",
  "ferrata-lez-wire",
+ "ferrata-spectests",
  "hex",
  "lee",
  "lee_core",
@@ -5707,6 +5778,15 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.117",
+]
+
+[[package]]
+name = "pairing"
+version = "0.23.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "81fec4625e73cf41ef4bb6846cafa6d44736525f442ba45e407c4a000a13996f"
+dependencies = [
+ "group 0.13.0",
 ]
 
 [[package]]
@@ -7410,6 +7490,19 @@ dependencies = [
  "cfg-if",
  "cpufeatures 0.2.17",
  "digest 0.10.7",
+]
+
+[[package]]
+name = "sha2"
+version = "0.9.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4d58a1e1bf39749807d89cf2d98ac2dfa0ff1cb3faa38fbb64dd88ac8013d800"
+dependencies = [
+ "block-buffer 0.9.0",
+ "cfg-if",
+ "cpufeatures 0.2.17",
+ "digest 0.9.0",
+ "opaque-debug",
 ]
 
 [[package]]

@@ -6,8 +6,9 @@
 //! from a [`FinalizedStore`]'s finalized header ([`HeaderRecord::from_payload_header`] for the
 //! Capella to Fulu layouts, [`HeaderRecord::from_block_hash`] for Gloas), from another record
 //! through an EIP-2935 hop ([`history_hop`]), from the record the program wrote once for a
-//! finalized header ([`HeaderRecord::from_recorded`]: the LEZ program's `header(id, slot)`), or
-//! restored from this type's own bytes ([`HeaderRecord::from_ssz`]).
+//! finalized header (the LEZ program's `header(id, slot)`: [`HeaderRecord::from_recorded`], or
+//! [`HeaderRecord::from_recorded_block_hash`] with the block's RLP header when the record holds
+//! a block hash only), or restored from this type's own bytes ([`HeaderRecord::from_ssz`]).
 //!
 //! **Chain binding.** Each call takes the chain id the consumer is configured for and refuses a
 //! record of another chain (`ChainMismatch`). The record's chain id is the instance's, fixed when
@@ -148,8 +149,10 @@ impl HeaderRecord {
     /// chain id of the instance that wrote it. Trusted input: only for a record read from the
     /// program's own write-once record account, in the program itself or by a consumer in the
     /// program's reply. It equals [`HeaderRecord::from_payload_header`] of the store that
-    /// finalized the header. A record without a payload summary (the Altair layout, or a Gloas
-    /// record, which holds a block hash only) is refused with `BindingMismatch`.
+    /// finalized the header. A record without a payload summary is refused with
+    /// `BindingMismatch`: the Altair layout has no execution data, and a record that holds a
+    /// block hash only (Gloas) needs that block's header, see
+    /// [`HeaderRecord::from_recorded_block_hash`].
     pub fn from_recorded(record: &witness::HeaderRecord, chain_id: u64) -> Result<Self, Error> {
         let ExecutionSummary::Payload { block_number, block_hash, parent_hash, state_root, receipts_root, timestamp } =
             &record.execution
@@ -169,6 +172,40 @@ impl HeaderRecord {
             state_root: *state_root,
             receipts_root: *receipts_root,
             binding: Binding::PayloadHeader,
+        })
+    }
+
+    /// The execution view of a record the program wrote for a finalized header in the Gloas
+    /// layout, which holds only the execution block hash the header binds (the bid's parent
+    /// block). `header_rlp` is that block's RLP header, supplied by whoever asks: it must hash
+    /// to the recorded block hash (`HeaderHashMismatch`), so every field read from it (the
+    /// number, the timestamp, the parent hash, the state root and the receipts root) is the
+    /// bound block's. The record is trusted input as for [`HeaderRecord::from_recorded`]. It
+    /// equals [`HeaderRecord::from_block_hash`] of the store that finalized the header. A record
+    /// of another layout, or one that binds no block (a zero hash: a header from before the
+    /// merge carried into a Gloas store), is refused with `BindingMismatch`.
+    pub fn from_recorded_block_hash(
+        record: &witness::HeaderRecord,
+        chain_id: u64,
+        header_rlp: &[u8],
+    ) -> Result<Self, Error> {
+        let ExecutionSummary::BlockHash(block_hash) = &record.execution else {
+            return Err(Error::BindingMismatch);
+        };
+        if *block_hash == ZERO {
+            return Err(Error::BindingMismatch);
+        }
+        let exec = decode_header_with_hash(header_rlp, block_hash)?;
+        Ok(Self {
+            chain_id,
+            anchor_slot: record.beacon.slot,
+            number: exec.number,
+            timestamp: exec.timestamp,
+            block_hash: *block_hash,
+            parent_hash: exec.parent_hash,
+            state_root: exec.state_root,
+            receipts_root: exec.receipts_root,
+            binding: Binding::BlockHash,
         })
     }
 

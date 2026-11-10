@@ -226,7 +226,7 @@ fn a_private_consumer_calling_attest_publishes_its_request() {
     let pool = s.pool();
     let header = s.header(slot);
     let account = s.w.chain.add_private_account(0x83, 1_000_000_000_000);
-    let request: Request = pool.request(t.tx_index, t.log_index, s.fx.receipt_proof(t.tx_index));
+    let request: Request = pool.request(t.tx_index, t.log_index, s.fx.receipt_proof(t.tx_index), None);
     let expected = s.expected(slot, &request).unwrap();
     let call = ferrata_lez_wire::consumer::ConsumerMessage::CallAttest {
         ferrata: s.w.inst.program,

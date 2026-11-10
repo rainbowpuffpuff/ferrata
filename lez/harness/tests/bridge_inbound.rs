@@ -9,8 +9,13 @@ use ferrata_lez_bridge_wire::{
     code, config_actor, holder_actor, BridgeMessage, BridgeState, ConfigState, NullifierState, CODE_BLOCK,
 };
 use ferrata_lez_wire::{attest::evaluate, RecordState, CODE_BLOCKS};
+use ferrata_bridge_core::{
+    chain_id_u256,
+    inbound::{deposit_secret, DestKind},
+    BridgeKeys,
+};
 use harness::{
-    bridge::{render, World, CHAIN_ID, DENOMINATIONS, INSTANCE, VAULT_B},
+    bridge::{config, render, Block, Deposit, Vault, VaultSlots, World, CHAIN_ID, DENOMINATIONS, ETH, INSTANCE, VAULT_B},
     render_transitions, TxReport,
 };
 
@@ -184,6 +189,94 @@ fn inbound_configuration_import_and_plaintext_claim() {
             "# The bridge program's inbound leg (`harness/tests/bridge_inbound.rs`)\n\n\
              Bridge program image `{}`; every transaction settled by LEZ's own functions in a block of its own.\n\n\
              {table}\n## Handler executions\n\n{transitions}",
+            harness::image_id_hex(methods::FERRATA_BRIDGE_ID)
+        ),
+    )
+    .unwrap();
+}
+
+/// `Init`, `ImportRoot` and a plaintext claim under a record in the Gloas layout, which binds the
+/// block hash only (every Sepolia record since Gloas): a real Sepolia header with a synthetic
+/// state root, carried in front of the account proof (`bridge-wire::with_header`). Without it the
+/// attestation program refuses with `HEADER_REQUIRED` (215); with a header that does not hash to
+/// the recorded hash, with the core's code. Writes `results/bridge-gloas.md`.
+#[test]
+fn inbound_under_a_gloas_record() {
+    const VAULT_C: [u8; 20] = [0x33; 20];
+    let mut w = World::new();
+    let program = w.program;
+    let c = config(VAULT_C, DENOMINATIONS);
+    let cid = c.id(program);
+    let terms = c.terms;
+    let payer = w.chain.payer;
+    let keys = BridgeKeys::from_bridge_seed(&[0x5a; 32]);
+    let depositor = [0xd1; 20];
+    let deposit = Deposit {
+        leaf_index: 0,
+        depositor,
+        token: ETH,
+        amount: ferrata_lez_bridge_wire::word_of_u128(DENOMINATIONS[0]),
+        s: deposit_secret(&keys.auth, &chain_id_u256(CHAIN_ID), &VAULT_C, &depositor, 0),
+        kind: DestKind::Public,
+        dest: *payer.value(),
+    };
+    let vault = Vault { address: VAULT_C, leaves: vec![deposit.leaf(), [0xc1; 32]] };
+    let slots = VaultSlots { address: VAULT_C, root: vault.root(2), count: 2, config_id: cid };
+    let i = w.add_block(Block::gloas(9_000_096, &[slots]));
+    let served: serde_json::Value = serde_json::from_slice(&harness::sepolia::gloas_file("block.json")).unwrap();
+    let number = u64::from_str_radix(served["result"]["number"].as_str().unwrap().trim_start_matches("0x"), 16).unwrap();
+    let record = w.blocks[i].record.clone();
+    let native = |request: &ferrata_lez_wire::attest::Request| evaluate(&INSTANCE, CHAIN_ID, &record, request);
+    let mut reports = Vec::new();
+    let mut run = |report: TxReport, code: Option<u8>| {
+        expect(&report, code);
+        reports.push(report);
+    };
+
+    // Without the header: the attestation program's HEADER_REQUIRED, natively and in the guest.
+    let header = w.blocks[i].header.take();
+    let bare = native(&ferrata_lez_bridge_wire::pairing_request(&c, &w.blocks[i].pairing_proof(&VAULT_C)));
+    assert_eq!(bare.expect_err("refused natively"), ferrata_lez_wire::code::HEADER_REQUIRED);
+    let r = w.init("Init C, Gloas record, no header", &c, i);
+    run(r, Some(ferrata_lez_wire::code::HEADER_REQUIRED));
+    // Another block's header (its last byte changed): the core's hash mismatch code.
+    let mut other = header.clone().expect("a Gloas block has a header");
+    *other.last_mut().unwrap() ^= 1;
+    w.blocks[i].header = Some(other);
+    let wrong = native(&ferrata_lez_bridge_wire::pairing_request(&c, &w.blocks[i].pairing_proof(&VAULT_C)))
+        .expect_err("refused natively");
+    let r = w.init("Init C, Gloas record, another block's header", &c, i);
+    run(r, Some(wrong));
+    assert!(w.chain.actor_state(config_actor(program, &cid)).is_empty(), "nothing written");
+
+    // With the header: the configuration, the import and the claim.
+    w.blocks[i].header = header;
+    let r = w.init("Init C, Gloas record, header in front of the account proof", &c, i);
+    run(r, None);
+    let header = w.blocks[i].header.take();
+    let r = w.import("ImportRoot C, Gloas record, no header", &cid, i, vault.root(2), 2, &VAULT_C);
+    run(r, Some(ferrata_lez_wire::code::HEADER_REQUIRED));
+    w.blocks[i].header = header;
+    let r = w.import("ImportRoot C, Gloas record, with the header (2 leaves)", &cid, i, vault.root(2), 2, &VAULT_C);
+    run(r, None);
+    let stored = w.root_state(&cid, 2).expect("root(C, 2)");
+    assert_eq!((stored.root, stored.leaf_count, stored.block_number, stored.terms), (vault.root(2), 2, number, terms));
+    let r = w.claim("Claim: leaf 0 under root(C, 2)", &cid, 2, &terms, vault.witness(&deposit, 2));
+    run(r, None);
+    assert_eq!(w.balance(payer, &cid), DENOMINATIONS[0]);
+    let r = w.claim("Claim: leaf 0 again (replay)", &cid, 2, &terms, vault.witness(&deposit, 2));
+    run(r, Some(code::ALREADY_CLAIMED));
+
+    let table = render(&reports);
+    let transitions = render_transitions(&reports);
+    println!("{table}\n{transitions}");
+    fs::write(
+        results_path("bridge-gloas.md"),
+        format!(
+            "# The bridge program under a record in the Gloas layout (`harness/tests/bridge_inbound.rs`)\n\n\
+             Bridge program image `{}`; the record binds the hash of a real Sepolia header (block {number}) \
+             whose state root is replaced by the synthetic state's; every transaction settled by LEZ's own \
+             functions in a block of its own.\n\n{table}\n## Handler executions\n\n{transitions}",
             harness::image_id_hex(methods::FERRATA_BRIDGE_ID)
         ),
     )

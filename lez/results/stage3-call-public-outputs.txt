@@ -2,18 +2,18 @@ Stage 3: the same consumer sends its query to the program (ReadPadded)
 
 Decoded public fields (harness::private::describe_public_outputs):
 
-public_context.actors (2): native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@CaaDpeLpoQ78nJKXvPtpmUP2s87eowXZeDFCnArYDSie
+public_context.actors (2): native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@98nuLdy4rvh69odJA3nszo4zfisBxqtF27qVFuuKgvaB
 public_context.authorized_accounts: {}
 execution.public_root: None
 execution.boundary (6 steps):
-  - PrivateToPublic from consumer@DYMXat67yG3gSP7GFoRaTUEHduv3mLWBRr5UousHBSho to ferrata@CaaDpeLpoQ78nJKXvPtpmUP2s87eowXZeDFCnArYDSie: ReadPadded { padding: 0x73746f72616765283078303030303030303032313961623534303335366342423833394362653035333033643737303546612c20736c6f74203729203d206465706f736974202334323432 } (80 bytes)
-  - PublicToPrivate from ferrata@CaaDpeLpoQ78nJKXvPtpmUP2s87eowXZeDFCnArYDSie to consumer@DYMXat67yG3gSP7GFoRaTUEHduv3mLWBRr5UousHBSho: StateReply { state: 333 bytes } (337 bytes)
+  - PrivateToPublic from consumer@DYMXat67yG3gSP7GFoRaTUEHduv3mLWBRr5UousHBSho to ferrata@98nuLdy4rvh69odJA3nszo4zfisBxqtF27qVFuuKgvaB: ReadPadded { padding: 0x73746f72616765283078303030303030303032313961623534303335366342423833394362653035333033643737303546612c20736c6f74203729203d206465706f736974202334323432 } (80 bytes)
+  - PublicToPrivate from ferrata@98nuLdy4rvh69odJA3nszo4zfisBxqtF27qVFuuKgvaB to consumer@DYMXat67yG3gSP7GFoRaTUEHduv3mLWBRr5UousHBSho: StateReply { state: 333 bytes } (337 bytes)
   - EndPrivateSubtree
   - EndPublicSubtree
   - PrivateToPublic from native@DYMXat67yG3gSP7GFoRaTUEHduv3mLWBRr5UousHBSho to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
   - EndPublicSubtree
 execution.program_image_claims (1):
-  - Disclosed { program: consumer, image_id: 711584ffe09f0b115132e33ce1485666710bc73e696e66fcc54d00aad0db949f }
+  - Disclosed { program: consumer, image_id: f883e6a4dbd8e49439465f918884abe1379b02276ff88676f0a4bf958ee49068 }
 execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1568 bytes)
 execution.async_messages: 0
 execution.recovery_bindings: 0
@@ -31,4 +31,4 @@ The 8717 serialized bytes of the transaction were searched for the consumer's pr
 - the viewing key seed d (32 bytes): absent
 - the viewing key seed z (32 bytes): absent
 
-Charged: execution gas 422,025 (PRIVATE_VERIFY_GAS 409,764 + public part 12,261 cycles), storage gas 224,063.
+Charged: execution gas 422,023 (PRIVATE_VERIFY_GAS 409,764 + public part 12,259 cycles), storage gas 224,063.
