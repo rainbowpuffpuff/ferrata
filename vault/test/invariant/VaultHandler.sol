@@ -107,7 +107,8 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
     FerrataVault internal immutable vault;
     MockRiscZeroVerifier internal immutable verifier;
     address internal immutable admin;
-    address internal immutable freezer;
+    /// The freeze authority: changes when an admin proposal that names one is applied (v4, D13).
+    address public freezer;
     address internal immutable relayer;
     HandlerCodec internal immutable _codec;
 
@@ -148,6 +149,18 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
     bool internal _retired;
     uint256 internal _releasesFrozenUntil;
     uint256 internal _checkpointsFrozenUntil;
+
+    // v4 (D13) roles, as this handler expects them to be.
+    address[3] internal _watcherModel;
+    address[4] internal _watcherPool;
+    address[2] internal _freezerPool;
+    address[3] internal _proposedWatchers;
+    address internal _proposedFreezer;
+    uint256 internal _proposedAt; // 0: nothing proposed
+    uint256 public ghostRoleTimelockViolations; // a role change applied before its 14 days, or refused when due
+    uint256 public ghostEarlyFinalisations; // a finalisation before the candidate's wait
+    uint256 internal _watcherPauses;
+    uint256 internal _roleChanges;
 
     bytes32[] internal _leaves;
     LeafData[] internal _leafData;
@@ -190,6 +203,24 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
             _toggles.push(toggle);
             _recipients.push(address(toggle));
         }
+        for (uint256 i = 0; i < 3; i++) {
+            _watcherModel[i] = vault_.watchers(i);
+        }
+        _watcherPool = [_watcherModel[0], makeAddr("watcher pool 1"), makeAddr("watcher pool 2"), makeAddr("pool 3")];
+        _freezerPool = [makeAddr("freezer pool 0"), makeAddr("freezer pool 1")];
+    }
+
+    function watcherModel(uint256 i) external view returns (address) {
+        return _watcherModel[i];
+    }
+
+    function checkpointsFrozenUntilModel() external view returns (uint256) {
+        return _checkpointsFrozenUntil;
+    }
+
+    /// @notice This run's watcher pauses and applied role changes.
+    function roleSummary() external view returns (uint256, uint256) {
+        return (_watcherPauses, _roleChanges);
     }
 
     // ---- views for the invariant contract -------------------------------------------------------------------------
@@ -286,7 +317,8 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         vm.assume(_filled[slot]);
         (FerrataVault.Checkpoint memory c, uint256 beaconIndex) = _readyToFinalize(slot, extraWait);
         bool frozen = block.timestamp < _checkpointsFrozenUntil;
-        vault.finalize(beaconIndex, c, "");
+        if (vault.mode() == FerrataVault.Mode.B) vault.finalizeAttested(c);
+        else vault.finalize(beaconIndex, c, "");
         if (frozen) ghostCheckpointCallsDuringFreeze++;
 
         _filled[slot] = false;
@@ -327,7 +359,10 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         uint256 slot = _pendingSlot;
         vm.assume(_filled[slot] && seed % 4 == 0);
         bytes32 newState = _slot[slot].newState;
-        vm.prank(freezer);
+        // v4 (D13): a watcher or the freeze authority.
+        address canceller = (seed >> 8) % 2 == 0 ? freezer : _watcherModel[(seed >> 16) % 3];
+        vm.assume(canceller != address(0));
+        vm.prank(canceller);
         vault.cancelCandidate(newState);
         _cancelCount++;
         _pendingSlot = 1 - slot;
@@ -342,7 +377,7 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         uint256 slot = 1 - _pendingSlot;
         vm.assume(_filled[slot]);
         (FerrataVault.Checkpoint memory c, uint256 beaconIndex) = _readyToFinalize(slot, extraWait);
-        try vault.finalize(beaconIndex, c, "") {
+        try this.finalizeAs(c, beaconIndex) {
             ghostRejectedFinalisations++;
         } catch (bytes memory err) {
             // Only the selector is wanted; a shorter reason pads with zeros and matches no error.
@@ -568,6 +603,77 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         vault.setReleaseDelay(token, _bound(delay, 0, 2 hours));
     }
 
+    // ---- v4: rule (B), early finalisation, roles (D13) ---------------------------------------------------------------
+
+    /// @dev Finalises under the vault's rule; external so that a refusal can be caught.
+    function finalizeAs(FerrataVault.Checkpoint memory c, uint256 beaconIndex) external {
+        require(msg.sender == address(this), "internal");
+        if (vault.mode() == FerrataVault.Mode.B) vault.finalizeAttested(c);
+        else vault.finalize(beaconIndex, c, "");
+    }
+
+    /// @dev Tries to finalise the pending candidate before its wait is over, with a valid proof under (A) (a beacon
+    ///      recorded now); the vault must refuse. A success is counted as a violation.
+    function finalizeEarly(uint256 seed) external {
+        uint256 slot = _pendingSlot;
+        vm.assume(_filled[slot] && block.timestamp < _readyAt[slot] && seed % 2 == 0);
+        FerrataVault.Checkpoint memory c = _slot[slot];
+        uint256 beaconIndex;
+        if (vault.mode() == FerrataVault.Mode.A) {
+            vm.roll(block.number + 1);
+            beaconIndex = vault.recordBeacon();
+            (, c.echoNonce) = vault.beacons(beaconIndex);
+            verifier.accept(vault.checkpointImageId(), _codec.checkpointDigest(vault, c));
+        }
+        try this.finalizeAs(c, beaconIndex) {
+            ghostEarlyFinalisations++;
+        } catch {}
+    }
+
+    /// @dev A watcher pauses checkpoints until 12 h from now, never shortening a longer freeze.
+    function watcherPause(uint256 seed) external {
+        address w = _watcherModel[seed % 3];
+        vm.assume(w != address(0) && (seed >> 8) % 4 == 0);
+        vm.prank(w);
+        vault.pauseCheckpoints();
+        uint256 until = block.timestamp + 12 hours;
+        if (until > _checkpointsFrozenUntil) _checkpointsFrozenUntil = until;
+        _watcherPauses++;
+    }
+
+    /// @dev The admin proposes a watcher set from a small pool and, one time in three, a new freeze authority.
+    function proposeRoles(uint256 seed) external {
+        address[3] memory ws;
+        for (uint256 i = 0; i < 3; i++) {
+            uint256 pick = (seed >> (8 * i)) % 5;
+            ws[i] = pick == 4 ? address(0) : _watcherPool[pick];
+        }
+        address newFreezer = seed % 3 == 0 ? _freezerPool[(seed >> 32) % 2] : address(0);
+        vm.prank(admin);
+        vault.proposeRoles(ws, newFreezer);
+        _proposedWatchers = ws;
+        _proposedFreezer = newFreezer;
+        _proposedAt = block.timestamp;
+    }
+
+    /// @dev Applies the proposal, one time in four without waiting for its 14 days: an early success, or a refusal
+    ///      once due, is counted.
+    function applyRoles(uint256 waitSeed) external {
+        vm.assume(_proposedAt != 0);
+        if (waitSeed % 4 != 0 && block.timestamp < _proposedAt + 14 days) vm.warp(_proposedAt + 14 days);
+        bool early = block.timestamp < _proposedAt + 14 days;
+        try vault.applyRoles() {
+            if (early) ghostRoleTimelockViolations++;
+        } catch {
+            if (!early) ghostRoleTimelockViolations++;
+            return;
+        }
+        _watcherModel = _proposedWatchers;
+        if (_proposedFreezer != address(0)) freezer = _proposedFreezer;
+        _proposedAt = 0;
+        _roleChanges++;
+    }
+
     // ---- helpers ----------------------------------------------------------------------------------------------------
 
     /// @dev Whether the token's and the global release buckets have room for `amount` now (refunds draw on them).
@@ -644,6 +750,7 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         uint256 readyAt = _readyAt[slot] + _bound(extraWait, 0, 1 hours);
         if (block.timestamp < readyAt) vm.warp(readyAt);
         vm.roll(block.number + 1);
+        if (vault.mode() == FerrataVault.Mode.B) return (c, 0); // rule (B): the candidate's own journal, no beacon
         beaconIndex = vault.recordBeacon();
         (, c.echoNonce) = vault.beacons(beaconIndex);
         verifier.accept(vault.checkpointImageId(), _codec.checkpointDigest(vault, c));

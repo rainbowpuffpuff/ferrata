@@ -24,8 +24,12 @@ contract VaultInvariants is VaultTestBase {
 
     VaultHandler internal handler;
 
+    /// @dev The vault under test: the base rule (A) vault; VaultInvariantsB swaps in a rule (B) one.
+    function _useVault() internal virtual {}
+
     function setUp() public override {
         super.setUp();
+        _useVault();
 
         vm.startPrank(admin);
         // Finite caps, so the rate limiter takes part (the handler also changes them).
@@ -42,7 +46,7 @@ contract VaultInvariants is VaultTestBase {
         tokens[3] = address(usdt);
         handler = new VaultHandler(vault, verifier, admin, freezer, tokens);
 
-        bytes4[] memory selectors = new bytes4[](18);
+        bytes4[] memory selectors = new bytes4[](22);
         selectors[0] = VaultHandler.deposit.selector;
         selectors[1] = VaultHandler.submitCandidate.selector;
         selectors[2] = VaultHandler.finalizePending.selector;
@@ -61,6 +65,10 @@ contract VaultInvariants is VaultTestBase {
         selectors[15] = VaultHandler.submitBreakingCandidate.selector;
         selectors[16] = VaultHandler.finalizeRejected.selector;
         selectors[17] = VaultHandler.cancelPending.selector;
+        selectors[18] = VaultHandler.finalizeEarly.selector;
+        selectors[19] = VaultHandler.watcherPause.selector;
+        selectors[20] = VaultHandler.proposeRoles.selector;
+        selectors[21] = VaultHandler.applyRoles.selector;
         targetContract(address(handler));
         targetSelector(StdInvariant.FuzzSelector({addr: address(handler), selectors: selectors}));
     }
@@ -197,6 +205,24 @@ contract VaultInvariants is VaultTestBase {
         assertEq(vm.load(address(vault), bytes32(uint256(2))), LEZ_CONFIG_ID);
     }
 
+    /// @notice v4 (D13): the freeze authority and the watchers change only through a proposal applied after its 14
+    ///         days, and the checkpoint pause is the model's: the freeze authority's freezes, and watcher pauses that
+    ///         reach 12 h ahead and never shorten a longer one.
+    function invariant_rolesChangeOnlyThroughTheTimelock() public view {
+        assertEq(handler.ghostRoleTimelockViolations(), 0);
+        assertEq(vault.freezeAuthority(), handler.freezer());
+        for (uint256 i = 0; i < 3; i++) {
+            assertEq(vault.watchers(i), handler.watcherModel(i));
+        }
+        assertEq(vault.checkpointsFrozenUntil(), handler.checkpointsFrozenUntilModel());
+    }
+
+    /// @notice v4: no candidate is finalised before its wait; under rule (B) no beacon is ever recorded.
+    function invariant_nothingFinalisedBeforeItsWait() public view {
+        assertEq(handler.ghostEarlyFinalisations(), 0);
+        if (vault.mode() == FerrataVault.Mode.B) assertEq(vault.beaconCount(), 0);
+    }
+
     /// @dev Run summary, shown with -vv for the last run of each campaign. The run table counts the whole campaign.
     function afterInvariant() public view {
         console2.log("deposits", handler.ghostDepositCount());
@@ -215,6 +241,9 @@ contract VaultInvariants is VaultTestBase {
         for (uint256 i = 0; i < counts.length; i++) {
             console2.log(names[i], counts[i]);
         }
+        (uint256 pauses, uint256 roleChanges) = handler.roleSummary();
+        console2.log("watcher pauses", pauses);
+        console2.log("role changes", roleChanges);
     }
 
     function _history(uint256 i) internal view returns (History memory h) {
