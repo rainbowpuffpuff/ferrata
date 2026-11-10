@@ -25,7 +25,17 @@
 //!   log's position in its receipt, and [`log_hash`]. A finalized block number names one block
 //!   per chain, so the identifier does not depend on which record (direct or reached through
 //!   history hops) proved it.
-//! * The record's beacon slot, binding and hop count never enter an identifier.
+//! * The record's anchor slot, binding and hop count never enter an identifier.
+//!
+//! **Two identifiers for a state fact.** The default ([`account_id`], [`storage_id`]) follows RFP
+//! Functionality #6: identical state, identical identifier. It is safe for statements meant to
+//! hold whenever they are read ("this balance is at least X"), and unsafe as a once-per-event
+//! nullifier, since a value that changes and changes back looks the same. The block-bound
+//! variant ([`account_id_at_block`], [`storage_id_at_block`], [`Attested::id_at_block`]) adds the
+//! block number. It is safe when the consumer pins the block (a snapshot) and wants one use per
+//! pinned block. Neither identifies an event: the same unchanged value read at two blocks has two
+//! block-bound identifiers. Events are attested as logs or as accumulator leaves
+//! ([`crate::accumulator`]), whose identifiers are one per event.
 
 use alloc::vec::Vec;
 
@@ -70,7 +80,7 @@ pub enum Binding {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct HeaderRecord {
     chain_id: u64,
-    slot: u64,
+    anchor_slot: u64,
     number: u64,
     timestamp: u64,
     block_hash: Root,
@@ -96,7 +106,7 @@ impl HeaderRecord {
         }
         Ok(Self {
             chain_id,
-            slot: header.beacon.slot,
+            anchor_slot: header.beacon.slot,
             number: payload.block_number,
             timestamp: payload.timestamp,
             block_hash: payload.block_hash,
@@ -120,7 +130,7 @@ impl HeaderRecord {
         let exec = decode_header_with_hash(header_rlp, block_hash)?;
         Ok(Self {
             chain_id,
-            slot: header.beacon.slot,
+            anchor_slot: header.beacon.slot,
             number: exec.number,
             timestamp: exec.timestamp,
             block_hash: *block_hash,
@@ -135,10 +145,13 @@ impl HeaderRecord {
     pub fn chain_id(&self) -> u64 {
         self.chain_id
     }
-    /// The beacon slot of the finalized light-client header the record rests on (for a record
-    /// reached through history hops, that of the record the hops started from).
-    pub fn slot(&self) -> u64 {
-        self.slot
+    /// The beacon slot of the finalized light-client header the record rests on, its anchor.
+    /// For a record built from the light client, that header's slot. For a record reached
+    /// through EIP-2935 hops ([`Binding::History`]), the slot of the light-client record the hops
+    /// started from: not the slot of the record's own (older) block, which the record does not
+    /// know. Use [`HeaderRecord::number`] and [`HeaderRecord::timestamp`] to place the block.
+    pub fn anchor_slot(&self) -> u64 {
+        self.anchor_slot
     }
     /// The execution block number.
     pub fn number(&self) -> u64 {
@@ -169,7 +182,7 @@ impl HeaderRecord {
         self.binding
     }
 
-    /// The SSZ encoding of the fixed-size container `(chain_id, slot, number, timestamp: uint64;
+    /// The SSZ encoding of the fixed-size container `(chain_id, anchor_slot, number, timestamp: uint64;
     /// block_hash, parent_hash, state_root, receipts_root: Bytes32; binding: uint8 (0 payload
     /// header, 1 block hash, 2 history); hops: uint32)`, as the program stores it.
     pub fn to_ssz(&self) -> [u8; Self::SSZ_LEN] {
@@ -185,7 +198,7 @@ impl HeaderRecord {
             at += bytes.len();
         };
         put(&self.chain_id.to_le_bytes());
-        put(&self.slot.to_le_bytes());
+        put(&self.anchor_slot.to_le_bytes());
         put(&self.number.to_le_bytes());
         put(&self.timestamp.to_le_bytes());
         put(&self.block_hash);
@@ -216,7 +229,7 @@ impl HeaderRecord {
         };
         Ok(Self {
             chain_id: u64_at(0),
-            slot: u64_at(8),
+            anchor_slot: u64_at(8),
             number: u64_at(16),
             timestamp: u64_at(24),
             block_hash: root_at(32),
@@ -242,6 +255,8 @@ pub const LOG_TAG: &[u8; 14] = b"ferrata/log/v1";
 const KIND_ACCOUNT: u8 = 1;
 const KIND_STORAGE: u8 = 2;
 const KIND_LOG: u8 = 3;
+const KIND_ACCOUNT_AT_BLOCK: u8 = 0x11;
+const KIND_STORAGE_AT_BLOCK: u8 = 0x12;
 
 fn statement(kind: u8, chain_id: u64) -> Sha256 {
     let mut h = Sha256::new();
@@ -268,6 +283,30 @@ pub fn account_id(chain_id: u64, address: &Address, account: &Account) -> Root {
 /// zero.
 pub fn storage_id(chain_id: u64, address: &Address, slot: &Word, value: &Word) -> Root {
     let mut h = statement(KIND_STORAGE, chain_id);
+    h.update(address);
+    h.update(slot);
+    h.update(value);
+    h.finalize().into()
+}
+
+/// The block-bound variant of [`account_id`]: `SHA-256(STATEMENT_TAG ‖ 0x11 ‖ chain_id ‖
+/// block_number ‖ address ‖ nonce ‖ balance ‖ storage_root ‖ code_hash)`.
+pub fn account_id_at_block(chain_id: u64, block_number: u64, address: &Address, account: &Account) -> Root {
+    let mut h = statement(KIND_ACCOUNT_AT_BLOCK, chain_id);
+    h.update(block_number.to_be_bytes());
+    h.update(address);
+    h.update(account.nonce.to_be_bytes());
+    h.update(account.balance);
+    h.update(account.storage_root);
+    h.update(account.code_hash);
+    h.finalize().into()
+}
+
+/// The block-bound variant of [`storage_id`]: `SHA-256(STATEMENT_TAG ‖ 0x12 ‖ chain_id ‖
+/// block_number ‖ address ‖ slot ‖ value)`.
+pub fn storage_id_at_block(chain_id: u64, block_number: u64, address: &Address, slot: &Word, value: &Word) -> Root {
+    let mut h = statement(KIND_STORAGE_AT_BLOCK, chain_id);
+    h.update(block_number.to_be_bytes());
     h.update(address);
     h.update(slot);
     h.update(value);
@@ -352,6 +391,31 @@ pub struct Attested<T> {
 impl<T> Attested<T> {
     fn at(record: &HeaderRecord, fact: T, id: Root) -> Self {
         Self { chain_id: record.chain_id, block_number: record.number, block_hash: record.block_hash, fact, id }
+    }
+}
+
+impl Attested<AccountFact> {
+    /// The block-bound identifier ([`account_id_at_block`]); `id` is the default one.
+    pub fn id_at_block(&self) -> Root {
+        account_id_at_block(self.chain_id, self.block_number, &self.fact.address, &self.fact.account)
+    }
+}
+
+impl Attested<StorageFact> {
+    /// The block-bound identifier ([`storage_id_at_block`]); `id` is the default one.
+    pub fn id_at_block(&self) -> Root {
+        storage_id_at_block(self.chain_id, self.block_number, &self.fact.address, &self.fact.slot, &self.fact.value)
+    }
+}
+
+impl Attested<Fact<'_>> {
+    /// The block-bound identifier of a state fact; a log's identifier already holds its block.
+    pub fn id_at_block(&self) -> Root {
+        match &self.fact {
+            Fact::Account(a) => account_id_at_block(self.chain_id, self.block_number, &a.address, &a.account),
+            Fact::Storage(s) => storage_id_at_block(self.chain_id, self.block_number, &s.address, &s.slot, &s.value),
+            Fact::Log(_) => self.id,
+        }
     }
 }
 
@@ -499,7 +563,9 @@ pub fn attest_storage<P: AsRef<[u8]>>(
 }
 
 /// The log at position `log_index` of the receipt of transaction `tx_index` in the record's
-/// block. The transaction must have succeeded (`ReceiptFailed` otherwise).
+/// block. The transaction must have succeeded (`ReceiptFailed` otherwise). `log_index` counts
+/// from zero within the receipt, not across the block as JSON-RPC's `logIndex` does;
+/// [`crate::exec::locate_log`] converts.
 pub fn attest_log<'p, P: AsRef<[u8]>>(
     record: &HeaderRecord,
     chain_id: u64,
@@ -543,11 +609,29 @@ pub struct LogQuery<'q, P> {
     pub conditions: &'q [Condition],
 }
 
-/// Several facts under one record, each with conditions that must all hold.
+/// A field of one of a batch's facts, by the fact's position in [`attest_batch`]'s output.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Operand {
+    pub fact: usize,
+    pub field: Field,
+}
+
+/// `left <cmp> right`: a comparison between two attested values of one batch, so under one
+/// record (soft requirement #4), for example "this account's balance is at least that slot".
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Relation {
+    pub left: Operand,
+    pub cmp: Cmp,
+    pub right: Operand,
+}
+
+/// Several facts under one record, each with conditions that must all hold, and relations
+/// between them that must all hold.
 #[derive(Debug)]
 pub struct Batch<'q, P> {
     pub accounts: &'q [AccountQuery<'q, P>],
     pub logs: &'q [LogQuery<'q, P>],
+    pub relations: &'q [Relation],
 }
 
 // The queries hold only references, so they are `Copy` whatever the proof element type is
@@ -564,10 +648,12 @@ macro_rules! copy_without_bound {
 }
 copy_without_bound!(SlotQuery, AccountQuery, LogQuery, Batch);
 
-/// Prove every fact of `batch` under one record and check every condition: a compound statement
-/// over several values of one block (for example a balance and a storage slot). Each account is
-/// proven once for all its slots. Returns the facts in order (each account, then its slots, then
-/// the logs). Fails as a whole on the first refusal; an empty batch is `QueryInvalid`.
+/// Prove every fact of `batch` under one record and check every condition and relation: a
+/// compound statement over several values of one block (for example a balance and a storage
+/// slot). Each account is proven once for all its slots. Returns the facts in order (each
+/// account, then its slots, then the logs); relations name facts by that order. Fails as a whole
+/// on the first refusal; an empty batch, or a relation naming a fact or field that is not there,
+/// is `QueryInvalid`.
 pub fn attest_batch<'q, P: AsRef<[u8]>>(
     record: &HeaderRecord,
     chain_id: u64,
@@ -596,6 +682,12 @@ pub fn attest_batch<'q, P: AsRef<[u8]>>(
         fact.check(q.conditions)?;
         out.push(Attested::at(record, fact, log.id));
     }
+    let value = |o: &Operand| out.get(o.fact).ok_or(Error::QueryInvalid)?.fact.field(o.field);
+    for r in batch.relations {
+        if !(Predicate { cmp: r.cmp, rhs: value(&r.right)? }).holds(&value(&r.left)?) {
+            return Err(Error::PredicateFailed);
+        }
+    }
     Ok(out)
 }
 
@@ -604,8 +696,8 @@ pub fn attest_batch<'q, P: AsRef<[u8]>>(
 /// `header_rlp` is block `n`'s header; `n` is read from it, never supplied. The hop requires
 /// `R - 8191 <= n < R` (`HistoryOutOfWindow`), the history contract with its specified code in
 /// the record's state (`HistoryContractMissing`), and storage slot `n mod 8191` holding
-/// `KEC(header_rlp)` (`HistoryHashMismatch`). The new record keeps the chain id and the beacon
-/// slot it rests on, and counts one more hop; hops chain.
+/// `KEC(header_rlp)` (`HistoryHashMismatch`). The new record keeps the chain id and the anchor
+/// slot, and counts one more hop; hops chain.
 pub fn history_hop<P: AsRef<[u8]>>(
     record: &HeaderRecord,
     account_proof: &[P],
@@ -633,7 +725,7 @@ pub fn history_hop<P: AsRef<[u8]>>(
     };
     Ok(HeaderRecord {
         chain_id: record.chain_id,
-        slot: record.slot,
+        anchor_slot: record.anchor_slot,
         number: n,
         timestamp: header.timestamp,
         block_hash,

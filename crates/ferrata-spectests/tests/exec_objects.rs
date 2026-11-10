@@ -282,7 +282,7 @@ fn record_encoding_round_trips_and_is_strict() {
     let bytes = record_ssz(1, 99, 1234, 5678, [1; 32], [3; 32], [4; 32], 2, 3);
     assert_eq!(bytes.len(), HeaderRecord::SSZ_LEN);
     let r = HeaderRecord::from_ssz(&bytes).unwrap();
-    assert_eq!((r.chain_id(), r.slot(), r.number(), r.timestamp()), (1, 99, 1234, 5678));
+    assert_eq!((r.chain_id(), r.anchor_slot(), r.number(), r.timestamp()), (1, 99, 1234, 5678));
     assert_eq!((r.block_hash(), r.state_root(), r.receipts_root()), ([1; 32], [3; 32], [4; 32]));
     assert_eq!(r.parent_hash(), keccak(&1233u64.to_be_bytes()));
     assert_eq!(r.binding(), Binding::History { hops: 3 });
@@ -320,7 +320,10 @@ fn records_come_from_the_finalized_header() {
     let Execution::Payload { header: payload, .. } = &electra.execution else { unreachable!() };
     let store = store_with(electra.execution.clone(), LcFork::Electra);
     let r = HeaderRecord::from_payload_header(&store, 1).unwrap();
-    assert_eq!((r.chain_id(), r.slot(), r.number(), r.timestamp()), (1, 777, payload.block_number, payload.timestamp));
+    assert_eq!(
+        (r.chain_id(), r.anchor_slot(), r.number(), r.timestamp()),
+        (1, 777, payload.block_number, payload.timestamp)
+    );
     assert_eq!((r.block_hash(), r.parent_hash()), (payload.block_hash, payload.parent_hash));
     assert_eq!(
         (r.state_root(), r.receipts_root(), r.binding()),
@@ -336,7 +339,7 @@ fn records_come_from_the_finalized_header() {
     let branch = vec![ZERO; LcFork::Gloas.execution_branch_len()];
     let store = store_with(Execution::BlockHash { block_hash: keccak(&rlp), branch: branch.clone() }, LcFork::Gloas);
     let r = HeaderRecord::from_block_hash(&store, 11155111, &rlp).unwrap();
-    assert_eq!((r.chain_id(), r.slot(), r.number(), r.block_hash()), (11155111, 777, 4242, keccak(&rlp)));
+    assert_eq!((r.chain_id(), r.anchor_slot(), r.number(), r.block_hash()), (11155111, 777, 4242, keccak(&rlp)));
     assert_eq!((r.state_root(), r.receipts_root(), r.binding()), ([1; 32], [2; 32], Binding::BlockHash));
     assert_eq!(r.parent_hash(), keccak(&4242u64.to_be_bytes()));
     assert_eq!(
@@ -480,7 +483,7 @@ fn a_batch_is_one_compound_statement() {
         AccountQuery { address: SMALL, proof: small_proof.as_slice(), conditions: &small_ok, slots: &small_slots },
     ];
     let logs = [LogQuery { tx_index: 3, log_index: 2, proof: log_proof.as_slice(), conditions: &transfer }];
-    let facts = attest_batch(&record, 1, &Batch { accounts: &accounts, logs: &logs }).unwrap();
+    let facts = attest_batch(&record, 1, &Batch { accounts: &accounts, logs: &logs, relations: &[] }).unwrap();
     assert_eq!(facts.len(), 5);
     assert!(matches!(facts[0].fact, Fact::Account(a) if a.address == TOKEN));
     assert!(matches!(facts[1].fact, Fact::Storage(s) if s.value == value));
@@ -490,12 +493,110 @@ fn a_batch_is_one_compound_statement() {
     // Any failing condition, anywhere, fails the whole statement.
     let too_much = [cond(Field::Balance, Cmp::Gt, w(5))];
     let accounts2 = [AccountQuery { conditions: &too_much, ..accounts[1] }];
-    assert_eq!(attest_batch(&record, 1, &Batch { accounts: &accounts2, logs: &logs }), Err(Error::PredicateFailed));
+    assert_eq!(
+        attest_batch(&record, 1, &Batch { accounts: &accounts2, logs: &logs, relations: &[] }),
+        Err(Error::PredicateFailed)
+    );
     let wrong_field = [cond(Field::Nonce, Cmp::Eq, w(0))];
     let logs2 = [LogQuery { conditions: &wrong_field, ..logs[0] }];
-    assert_eq!(attest_batch(&record, 1, &Batch { accounts: &accounts, logs: &logs2 }), Err(Error::QueryInvalid));
+    assert_eq!(
+        attest_batch(&record, 1, &Batch { accounts: &accounts, logs: &logs2, relations: &[] }),
+        Err(Error::QueryInvalid)
+    );
     let none: [AccountQuery<'_, Vec<u8>>; 0] = [];
     let no_logs: [LogQuery<'_, Vec<u8>>; 0] = [];
-    assert_eq!(attest_batch(&record, 1, &Batch { accounts: &none, logs: &no_logs }), Err(Error::QueryInvalid));
-    assert_eq!(attest_batch(&record, 2, &Batch { accounts: &accounts, logs: &logs }), Err(Error::ChainMismatch));
+    assert_eq!(
+        attest_batch(&record, 1, &Batch { accounts: &none, logs: &no_logs, relations: &[] }),
+        Err(Error::QueryInvalid)
+    );
+    assert_eq!(
+        attest_batch(&record, 2, &Batch { accounts: &accounts, logs: &logs, relations: &[] }),
+        Err(Error::ChainMismatch)
+    );
+}
+
+#[test]
+fn block_bound_identifiers() {
+    use ferrata_core::attest::{account_id_at_block, storage_id_at_block};
+    // Values computed by an independent implementation of the documented derivation.
+    let account = Account { nonce: 5, balance: w(1000), storage_root: [0x22; 32], code_hash: [0x33; 32] };
+    assert_eq!(
+        hex::encode(account_id_at_block(1, 100, &[0x11; 20], &account)),
+        "bb4010e4fa410154ab4ba8e91379f07269800bfc470ba98aa41a9f1d7bf99f4a"
+    );
+    assert_eq!(
+        hex::encode(storage_id_at_block(1, 100, &[0x11; 20], &w(3), &w(42))),
+        "f66c650b0ce7f3a7ef2d299d5f7ee913b53178658f1ee7049a02294d0b633293"
+    );
+    // The default identifier is the same at two blocks; the block-bound one is not, and neither
+    // collides with the other kind.
+    let world = World::new(6);
+    let (slot, _) = world.slots[&TOKEN][4];
+    let (ap, sp) = world.proofs(&TOKEN, &slot);
+    let at = |n: u64| attest_storage(&world.record(1, n), 1, &TOKEN, &ap, &slot, &sp).unwrap();
+    let (a, b) = (at(500), at(501));
+    assert_eq!(a.id, b.id);
+    assert_ne!(a.id_at_block(), b.id_at_block());
+    assert_ne!(a.id, a.id_at_block());
+    assert_eq!(a.id_at_block(), storage_id_at_block(1, 500, &TOKEN, &slot, &a.fact.value));
+    let acc = attest_account(&world.record(1, 500), 1, &PLAIN, &world.state.proof(&keccak(&PLAIN))).unwrap();
+    assert_eq!(acc.id_at_block(), account_id_at_block(1, 500, &PLAIN, &acc.fact.account));
+    assert_ne!(
+        acc.id_at_block(),
+        attest_account(&world.record(1, 501), 1, &PLAIN, &world.state.proof(&keccak(&PLAIN))).unwrap().id_at_block()
+    );
+    // In a batch, a log's block-bound identifier is its identifier.
+    let log_proof = world.receipt_proof(3);
+    let logs = [LogQuery { tx_index: 3, log_index: 0, proof: log_proof.as_slice(), conditions: &[] }];
+    let none: [AccountQuery<'_, Vec<u8>>; 0] = [];
+    let facts =
+        attest_batch(&world.record(1, 500), 1, &Batch { accounts: &none, logs: &logs, relations: &[] }).unwrap();
+    assert_eq!(facts[0].id_at_block(), facts[0].id);
+}
+
+#[test]
+fn relations_compare_two_attested_values() {
+    use ferrata_core::attest::{Operand, Relation};
+    let world = World::new(7);
+    let record = world.record(1, 600);
+    let (s1, v1) = world.slots[&TOKEN][1];
+    let (s2, v2) = world.slots[&TOKEN][2];
+    let (p1, p2) = (world.storage[&TOKEN].proof(&keccak(&s1)), world.storage[&TOKEN].proof(&keccak(&s2)));
+    let token_proof = world.state.proof(&keccak(&TOKEN));
+    let plain_proof = world.state.proof(&keccak(&PLAIN));
+    let slots = [
+        SlotQuery { slot: s1, proof: p1.as_slice(), conditions: &[] },
+        SlotQuery { slot: s2, proof: p2.as_slice(), conditions: &[] },
+    ];
+    let accounts = [
+        AccountQuery { address: TOKEN, proof: token_proof.as_slice(), conditions: &[], slots: &slots },
+        AccountQuery { address: PLAIN, proof: plain_proof.as_slice(), conditions: &[], slots: &[] },
+    ];
+    // Facts: 0 token account, 1 slot s1, 2 slot s2, 3 the plain account.
+    let rel = |l: (usize, Field), cmp, r: (usize, Field)| Relation {
+        left: Operand { fact: l.0, field: l.1 },
+        cmp,
+        right: Operand { fact: r.0, field: r.1 },
+    };
+    let (lo, hi, ord) = if v1 < v2 { (1, 2, Cmp::Lt) } else { (2, 1, Cmp::Gt) };
+    let run = |relations: &[Relation]| {
+        attest_batch(&record, 1, &Batch { accounts: &accounts, logs: &[] as &[LogQuery<'_, Vec<u8>>], relations })
+            .map(|f| f.len())
+    };
+    assert_eq!(run(&[rel((1, Field::Value), ord, (2, Field::Value))]), Ok(4));
+    assert_eq!(
+        run(&[
+            rel((lo, Field::Value), Cmp::Le, (hi, Field::Value)),
+            rel((lo, Field::Value), Cmp::Ne, (hi, Field::Value))
+        ]),
+        Ok(4)
+    );
+    assert_eq!(run(&[rel((hi, Field::Value), Cmp::Lt, (lo, Field::Value))]), Err(Error::PredicateFailed));
+    assert_eq!(run(&[rel((1, Field::Value), Cmp::Eq, (1, Field::Value))]), Ok(4), "a value equals itself");
+    // An account field against a storage value, and against another account's field.
+    assert_eq!(run(&[rel((3, Field::Balance), Cmp::Gt, (0, Field::Balance))]), Ok(4), "10^20 against 0");
+    assert_eq!(run(&[rel((3, Field::Nonce), Cmp::Ge, (0, Field::Nonce))]), Ok(4));
+    // A fact that is not there, or a field its fact does not have.
+    assert_eq!(run(&[rel((4, Field::Value), Cmp::Eq, (1, Field::Value))]), Err(Error::QueryInvalid));
+    assert_eq!(run(&[rel((1, Field::Value), Cmp::Eq, (0, Field::Value))]), Err(Error::QueryInvalid));
 }

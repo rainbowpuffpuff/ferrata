@@ -178,7 +178,7 @@ fn the_record_is_the_finalized_execution_block() {
     let record = record_n();
     let block = json(&format!("block_{N}.json"));
     let second = json(&format!("block_{N}_second.json"));
-    assert_eq!((record.chain_id(), record.slot(), record.number()), (CHAIN_ID, FINALIZED_SLOT, N));
+    assert_eq!((record.chain_id(), record.anchor_slot(), record.number()), (CHAIN_ID, FINALIZED_SLOT, N));
     assert_eq!(record.binding(), Binding::PayloadHeader);
     assert_eq!(record.block_hash(), root(N_HASH));
     for b in [&block, &second] {
@@ -262,7 +262,7 @@ fn a_compound_statement_over_two_tokens_in_one_call() {
         AccountQuery { address: address(USDC), proof: usdc.proof.as_slice(), conditions: &[], slots: &uq },
     ];
     let logs: [LogQuery<'_, Vec<u8>>; 0] = [];
-    let facts = attest_batch(&record, CHAIN_ID, &Batch { accounts: &accounts, logs: &logs }).unwrap();
+    let facts = attest_batch(&record, CHAIN_ID, &Batch { accounts: &accounts, logs: &logs, relations: &[] }).unwrap();
     assert_eq!(facts.len(), 4);
     assert!(matches!(facts[1].fact, Fact::Storage(s) if s.value == ws.value));
     assert!(matches!(facts[3].fact, Fact::Storage(s) if s.value == us.value));
@@ -271,7 +271,7 @@ fn a_compound_statement_over_two_tokens_in_one_call() {
     let uq2 = [SlotQuery { conditions: &too_high, ..uq[0] }];
     let accounts2 = [accounts[0], AccountQuery { slots: &uq2, ..accounts[1] }];
     assert_eq!(
-        attest_batch(&record, CHAIN_ID, &Batch { accounts: &accounts2, logs: &logs }),
+        attest_batch(&record, CHAIN_ID, &Batch { accounts: &accounts2, logs: &logs, relations: &[] }),
         Err(Error::PredicateFailed)
     );
 }
@@ -408,7 +408,10 @@ fn left_pad(a: &[u8; 20]) -> Root {
 fn history_hop_to_the_parent_block_and_its_failed_transactions() {
     let record = record_n();
     let parent = hop(&record, &format!("proof_history_{N}.json"), K).unwrap();
-    assert_eq!((parent.number(), parent.binding(), parent.slot()), (K, Binding::History { hops: 1 }, FINALIZED_SLOT));
+    assert_eq!(
+        (parent.number(), parent.binding(), parent.anchor_slot()),
+        (K, Binding::History { hops: 1 }, FINALIZED_SLOT)
+    );
     assert_eq!(parent.block_hash(), record.parent_hash(), "n's parent hash, now proven through EIP-2935");
     let second = json(&format!("block_{K}_second.json"));
     assert_eq!(parent.receipts_root(), root(second["receiptsRoot"].as_str().unwrap()));
@@ -467,7 +470,7 @@ fn two_history_hops_with_storage_facts_under_each_record() {
     assert_ne!((at_m1.block_number, at_m1.block_hash), (at_n.block_number, at_n.block_hash));
     // Hops chain: m1 to m2 = m1 - 8191, the oldest block m1 reaches.
     let m2 = hop(&m1, &format!("proof_history_{M1}.json"), M2).unwrap();
-    assert_eq!((m2.number(), m2.binding(), m2.slot()), (M2, Binding::History { hops: 2 }, FINALIZED_SLOT));
+    assert_eq!((m2.number(), m2.binding(), m2.anchor_slot()), (M2, Binding::History { hops: 2 }, FINALIZED_SLOT));
     assert_eq!(M1 - M2, HISTORY_SERVE_WINDOW);
     assert_eq!(m2.state_root(), root(json(&format!("block_{M2}_second.json"))["stateRoot"].as_str().unwrap()));
     let at_m2 = fact_at(&m2, M2);
@@ -604,5 +607,84 @@ fn tampering_with_any_kind_of_fixture_byte_is_refused() {
     assert_eq!(
         attest_storage(&record, 11155111, &address(WETH), &weth.proof, &root(WETH_SLOT), &ws.proof).unwrap_err(),
         Error::ChainMismatch
+    );
+}
+
+#[test]
+fn block_wide_log_indices_convert_to_receipt_positions() {
+    use ferrata_core::exec::{block_log_index, locate_log};
+    let record = record_n();
+    let block = block_receipts(N);
+    let counts: Vec<u64> = block.receipts.iter().map(|r| r["logs"].as_array().unwrap().len() as u64).collect();
+    let total: u64 = counts.iter().sum();
+    assert_eq!(total, 870);
+    for r in &block.receipts {
+        let tx = quantity(&r["transactionIndex"]);
+        for (position, l) in r["logs"].as_array().unwrap().iter().enumerate() {
+            let block_wide = quantity(&l["logIndex"]);
+            assert_eq!(locate_log(&counts, block_wide), Some((tx, position as u64)), "logIndex {block_wide}");
+            assert_eq!(block_log_index(&counts, tx, position as u64), Some(block_wide));
+        }
+    }
+    // The first log of the block's largest receipt, located from JSON-RPC's logIndex and attested.
+    let largest = block.receipts.iter().max_by_key(|r| r["logs"].as_array().unwrap().len()).unwrap();
+    let l = &largest["logs"][0];
+    let (tx, position) = locate_log(&counts, quantity(&l["logIndex"])).unwrap();
+    let proof = block.proof(tx);
+    let a = attest_log(&record, CHAIN_ID, tx, position, &proof).unwrap();
+    assert_eq!(a.fact.log.data, hexb(l["data"].as_str().unwrap()).as_slice());
+    // Past the last log, past the last transaction, past a receipt's logs.
+    assert_eq!(locate_log(&counts, total), None);
+    assert_eq!(block_log_index(&counts, counts.len() as u64, 0), None);
+    let empty = counts.iter().position(|c| *c == 0).unwrap() as u64;
+    assert_eq!(block_log_index(&counts, empty, 0), None);
+    assert_eq!(block_log_index(&counts, tx, counts[tx as usize]), None);
+}
+
+#[test]
+fn the_same_balance_at_two_blocks_under_each_identifier() {
+    let record = record_n();
+    let m1 = hop(&record, &format!("proof_history_{N}.json"), M1).unwrap();
+    let slot = root(WETH_SLOT);
+    let at = |r: &HeaderRecord, n: u64| {
+        let p = proof(&format!("proof_weth_{n}.json"));
+        let s = storage_proof(&p, &slot);
+        attest_storage(r, CHAIN_ID, &address(WETH), &p.proof, &slot, &s.proof).unwrap()
+    };
+    let (a, b) = (at(&record, N), at(&m1, M1));
+    assert_eq!(a.fact.value, b.fact.value);
+    assert_eq!(a.id, b.id, "the default identifier names the value");
+    assert_ne!(a.id_at_block(), b.id_at_block(), "the block-bound one names the value at a block");
+}
+
+#[test]
+fn a_relation_between_two_real_balances() {
+    use ferrata_core::attest::{Operand, Relation};
+    let record = record_n();
+    let weth = proof(&format!("proof_weth_{N}.json"));
+    let usdc = proof(&format!("proof_usdc_{N}.json"));
+    let (ws, us) = (storage_proof(&weth, &root(WETH_SLOT)), storage_proof(&usdc, &root(USDC_SLOT)));
+    let wq = [SlotQuery { slot: root(WETH_SLOT), proof: ws.proof.as_slice(), conditions: &[] }];
+    let uq = [SlotQuery { slot: root(USDC_SLOT), proof: us.proof.as_slice(), conditions: &[] }];
+    let accounts = [
+        AccountQuery { address: address(WETH), proof: weth.proof.as_slice(), conditions: &[], slots: &wq },
+        AccountQuery { address: address(USDC), proof: usdc.proof.as_slice(), conditions: &[], slots: &uq },
+    ];
+    let logs: [LogQuery<'_, Vec<u8>>; 0] = [];
+    // Facts: 0 WETH account, 1 the pair's WETH balance, 2 USDC account, 3 the pair's USDC balance.
+    // In raw units (wei against 10^-6 USDC) the WETH balance is the larger.
+    let relation = |cmp| {
+        [Relation {
+            left: Operand { fact: 1, field: Field::Value },
+            cmp,
+            right: Operand { fact: 3, field: Field::Value },
+        }]
+    };
+    let gt = relation(Cmp::Gt);
+    assert!(attest_batch(&record, CHAIN_ID, &Batch { accounts: &accounts, logs: &logs, relations: &gt }).is_ok());
+    let lt = relation(Cmp::Lt);
+    assert_eq!(
+        attest_batch(&record, CHAIN_ID, &Batch { accounts: &accounts, logs: &logs, relations: &lt }),
+        Err(Error::PredicateFailed)
     );
 }

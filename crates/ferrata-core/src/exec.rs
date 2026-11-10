@@ -306,6 +306,37 @@ impl<'a> Receipt<'a> {
     }
 }
 
+/// Where a log sits, from JSON-RPC's block-wide `logIndex`. JSON-RPC numbers the logs of a block
+/// consecutively across its receipts; [`Receipt::log`] and `attest_log` take the log's position
+/// in its own receipt, counted from zero. Given the number of logs in every receipt of the block,
+/// in transaction order (from `eth_getBlockReceipts`), this returns the transaction index and the
+/// position, or `None` past the last log.
+///
+/// A query helper for clients, not a check: an attestation proves the log at the position it is
+/// given, so a wrong conversion yields another log or `LogIndexOutOfRange`, never a false
+/// statement.
+pub fn locate_log(log_counts: &[u64], block_log_index: u64) -> Option<(u64, u64)> {
+    let mut first: u64 = 0;
+    for (tx_index, count) in log_counts.iter().enumerate() {
+        let end = first.checked_add(*count)?;
+        if block_log_index < end {
+            return Some((tx_index as u64, block_log_index - first));
+        }
+        first = end;
+    }
+    None
+}
+
+/// The inverse of [`locate_log`]: the block-wide `logIndex` of the log at `position` in the
+/// receipt of transaction `tx_index`, or `None` if there is no such log.
+pub fn block_log_index(log_counts: &[u64], tx_index: u64, position: u64) -> Option<u64> {
+    let tx = usize::try_from(tx_index).ok()?;
+    if position >= *log_counts.get(tx)? {
+        return None;
+    }
+    log_counts[..tx].iter().try_fold(position, |acc, count| acc.checked_add(*count))
+}
+
 /// The receipt of transaction `tx_index` under `receipts_root` (the key is `RLP(tx_index)`).
 pub(crate) fn prove_receipt<'p, P: AsRef<[u8]>>(
     receipts_root: &Root,

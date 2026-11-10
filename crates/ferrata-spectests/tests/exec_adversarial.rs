@@ -262,7 +262,10 @@ fn history_hops_and_their_refusals() {
     let (n1, n2) = (h.r - 100, h.r - 100 - HISTORY_SERVE_WINDOW);
     // One hop, and the window's inclusive edge.
     let rec = h.hop(n1, h.header(n1)).unwrap();
-    assert_eq!((rec.number(), rec.block_hash(), rec.chain_id(), rec.slot()), (n1, keccak(h.header(n1)), 1, 31_000_000));
+    assert_eq!(
+        (rec.number(), rec.block_hash(), rec.chain_id(), rec.anchor_slot()),
+        (n1, keccak(h.header(n1)), 1, 31_000_000)
+    );
     assert_eq!(
         (rec.state_root(), rec.receipts_root(), rec.binding()),
         (h.n1_state.root(), [0x14; 32], Binding::History { hops: 1 })
@@ -273,7 +276,7 @@ fn history_hops_and_their_refusals() {
     let account = h.n1_state.proof(&keccak(&HISTORY_STORAGE_ADDRESS));
     let storage = h.n1_storage.proof(&keccak(&slot_of(n2)));
     let rec2 = history_hop(&rec, &account, &storage, h.header(n2)).unwrap();
-    assert_eq!((rec2.number(), rec2.binding(), rec2.slot()), (n2, Binding::History { hops: 2 }, 31_000_000));
+    assert_eq!((rec2.number(), rec2.binding(), rec2.anchor_slot()), (n2, Binding::History { hops: 2 }, 31_000_000));
     // Out of the window: the record's own block, a later block, one block too old.
     for n in [h.r, h.r + 1, h.r - HISTORY_SERVE_WINDOW - 1] {
         let hdr = header(n, [1; 32], [2; 32], 21);
