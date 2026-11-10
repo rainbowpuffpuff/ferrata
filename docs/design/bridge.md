@@ -619,6 +619,8 @@ The checkpoint proof in that test was mocked; release proofs reached the real ve
 
 Real v0.4 block formats built with LEZ's own crates; 13 core and 17 fidelity tests pass. `n = 4`, `t = 3`; 360 blocks are one hour at 10 s.
 
+Measured on one NVIDIA L4 GPU (cloud), final image, succinct receipts verified locally and journals equal to the native runs: one block 14.0 s, an idle hour 24.1 s, an hour with 5 private transactions 41.4 s, an hour with 50 private transactions 219.3 s; about 80 times faster than the laptop CPU figures below (`gpu-prover/RESULTS.md`). No Groth16 wrap was made on the GPU.
+
 | Input | User cycles (executor) | Segments |
 |---|---:|---:|
 | one empty `T` + 3 support blocks (fixed part) | 3,705,001 | 4 |
