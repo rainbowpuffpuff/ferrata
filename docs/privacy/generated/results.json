@@ -1729,5 +1729,57 @@
     "B6": null
    }
   ]
+ },
+ "sizes": {
+  "deposit (A: private destinations)": [
+   100,
+   100
+  ],
+  "deposit (B: public destinations)": [
+   100,
+   100
+  ],
+  "claim, private (default)": [
+   8953,
+   8953
+  ],
+  "claim, naive nullifier N = fid": [
+   8953,
+   8953
+  ],
+  "claim, plaintext": [
+   2061,
+   2061
+  ],
+  "burn, private holding": [
+   7857,
+   7857
+  ],
+  "release, NOut of the release statement": [
+   324,
+   324
+  ],
+  "release, naive NOut = burnId": [
+   324,
+   324
+  ]
+ },
+ "hidden": {
+  "deposit hides the LEZ destination": {
+   "values searched": 40,
+   "found": 0
+  },
+  "claim hides which deposit and a private destination": {
+   "values searched": 120,
+   "found": 0
+  },
+  "burn hides the holder and the recipient": {
+   "values searched": 40,
+   "found": 0
+  },
+  "release hides which burn": {
+   "values searched": 120,
+   "found": 0
+  }
  }
 }

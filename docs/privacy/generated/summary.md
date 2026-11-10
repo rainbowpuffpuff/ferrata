@@ -4,16 +4,16 @@ Bridge program image `23cc502547f9f0a57b1a46f0bde18e48e6a84fdedae3f7d83edfb03ffe
 
 ## The differential gate
 
-| records | identical once nullifiers, fresh randomness, own addresses and time are cut |
-|---|---|
-| deposit (A: private destinations) | yes |
-| deposit (B: public destinations) | yes |
-| claim, private (default) | yes |
-| claim, naive nullifier N = fid | yes |
-| claim, plaintext | NO: lez:claim:plaintext:01 vs lez:claim:plaintext:00: part tx differs at byte 5 of 1837/1837 after the cut (00070000003461fb6c10ff2a3297878f0c14c97c8853d10a15c6b59ef7 / 000700000046ffca34eae608130be303a685bafc3fb616fd90d4ea077c) |
-| burn, private holding | yes |
-| release, NOut of the release statement | yes |
-| release, naive NOut = burnId | yes |
+| records | bytes (LEZ transaction / Ethereum calldata), min-max | identical once nullifiers, fresh randomness, own addresses and time are cut |
+|---|---|---|
+| deposit (A: private destinations) | 100-100 | yes |
+| deposit (B: public destinations) | 100-100 | yes |
+| claim, private (default) | 8,953-8,953 | yes |
+| claim, naive nullifier N = fid | 8,953-8,953 | yes |
+| claim, plaintext | 2,061-2,061 | NO: lez:claim:plaintext:01 vs lez:claim:plaintext:00: part tx differs at byte 5 of 1837/1837 after the cut (00070000003461fb6c10ff2a3297878f0c14c97c8853d10a15c6b59ef7 / 000700000046ffca34eae608130be303a685bafc3fb616fd90d4ea077c) |
+| burn, private holding | 7,857-7,857 | yes |
+| release, NOut of the release statement | 324-324 | yes |
+| release, naive NOut = burnId | 324-324 | yes |
 
 ## The adversary
 

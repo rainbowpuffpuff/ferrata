@@ -727,7 +727,10 @@ def main():
     acct_name = {vault: "vault", relayer: "relayer"}
     acct_time = {vault, relayer}
 
-    results = {"gate": {}, "adversary": {}, "order_only": {}, "recovery": {}, "fields": {}}
+    results = {"gate": {}, "adversary": {}, "order_only": {}, "recovery": {}, "fields": {}, "sizes": {}}
+    for k, recs in G.items():
+        sz = [len(dict(x.blobs)["tx"]) if x.chain == "lez" else len(dict(x.blobs)["calldata"]) for x in recs]
+        results["sizes"][k] = [min(sz), max(sz)]
     for k, recs in G.items():
         ok, why = gate(recs, {"shared": shared_by_group.get(k, set()), "slot_names": slot_names,
                               "slot_class": slot_class, "acct_name": acct_name, "acct_time": acct_time})
@@ -803,6 +806,45 @@ def main():
     rec["rust_core"] = truth["rust_recovery"]["core_recover_burns_found"]
     results["recovery"] = rec
 
+    # Section B6's "Hidden" column, checked: each record's whole public data searched for the
+    # values that step must hide (the ground truth names them; the adversary never sees it).
+    def everything(x):
+        return b"".join(v for _, v in x.blobs) + b"".join(v for _, v in x.fields)
+
+    dest = [b(u["accounts"]["private"][0]) for u in users]
+    s_of = [prf(prf(b(u["bridge_seed"]), b"ferrata/auth/v1"), b"ferrata/s/v1" + meta["chain"] + meta["vault"] + b(u["depositor"]) + u64(0)) for u in users]
+    dep_by_user = {T["deposit"][x.seq]: dict((norm(n), v) for n, v in x.fields) for x in G["deposit (A: private destinations)"]}
+    burn_by_user = {T["burn"][x.seq]: x for x in G["burn, private holding"]}
+    hidden = {}
+    def check(step, recs, who, values_of):
+        found, checked = 0, 0
+        for x in recs:
+            data = everything(x)
+            for label, v in values_of(who[x.seq]):
+                checked += 1
+                if v in data:
+                    found += 1
+                    hidden.setdefault(step + ": FOUND", []).append(f"{x.id}: {label}")
+        hidden[step] = {"values searched": checked, "found": found}
+    check("deposit hides the LEZ destination", G["deposit (A: private destinations)"], T["deposit"],
+          lambda u: [("destination", dest[u]), ("s", s_of[u])])
+    def claim_secrets(u):
+        d = dep_by_user[u]
+        leaf = deposit_leaf(u, d["event.Deposit.depositor"][12:], d["event.Deposit.token"][12:], d["event.Deposit.amount"], d["event.Deposit.commitment"])
+        return [("destination", dest[u]), ("s", s_of[u]), ("C", d["event.Deposit.commitment"]), ("leaf", leaf),
+                ("fid", fid_of(meta["chain"], meta["vault"], u, leaf)), ("depositor", d["event.Deposit.depositor"][12:])]
+    check("claim hides which deposit and a private destination", G["claim, private (default)"], T["claim"], claim_secrets)
+    check("burn hides the holder and the recipient", G["burn, private holding"], T["burn"],
+          lambda u: [("holder (private account)", dest[u]), ("recipient", b(users[u]["recipient"]))])
+    def release_secrets(u):
+        x = burn_by_user[u]
+        g = lambda k: next(v for n, v in x.fields if n.endswith(k))
+        leaf = burn_leaf(meta["cid"], x.seq, g("Burn.token"), g("Burn.amount"), g("Burn.c_out"), g("Burn.r"))
+        return [("r", g("Burn.r")), ("COut", g("Burn.c_out")), ("memo", g("Burn.memo")), ("mac", g("Burn.mac")),
+                ("burn leaf", leaf), ("burnId", burn_id(meta["cid"], x.seq, leaf))]
+    check("release hides which burn", G["release, NOut of the release statement"], T["release"], release_secrets)
+    results["hidden"] = hidden
+
     (out_dir / "results.json").write_text(json.dumps(results, indent=1, default=lambda v: v.hex() if isinstance(v, bytes) else str(v)))
     write_markdown(out_dir, results, lez_json, scenario, n_users, half)
     print(json.dumps({"gate": {k: v["pass"] for k, v in results["gate"].items()},
@@ -815,9 +857,10 @@ def write_markdown(out_dir, results, lez_json, scenario, n, half):
          f"Bridge program image `{lez_json['bridge_image_id']}` (built at this worktree's path); vault "
          f"`{scenario['vault']}` on chain {scenario['chain_id']}; configuration `{scenario['config_id']}`; "
          f"{n} users per direction. Written by `scripts/privacy/adversary.py`.", "",
-         "## The differential gate", "", "| records | identical once nullifiers, fresh randomness, own addresses and time are cut |", "|---|---|"]
+         "## The differential gate", "", "| records | bytes (LEZ transaction / Ethereum calldata), min-max | identical once nullifiers, fresh randomness, own addresses and time are cut |", "|---|---|---|"]
     for k, v in results["gate"].items():
-        s.append(f"| {k} | {'yes' if v['pass'] else 'NO: ' + v['detail']} |")
+        lo, hi = results["sizes"][k]
+        s.append(f"| {k} | {lo:,}-{hi:,} | {'yes' if v['pass'] else 'NO: ' + v['detail']} |")
     s += ["", "## The adversary", "",
           f"Chance is 1/{n} = {100 / n:.1f}%. Success = mean over the right-hand records of 1/|best candidates| when "
           "the true partner is among them. Order-only = pairing the k-th of each side by time (allowed signal; "
@@ -839,6 +882,29 @@ def write_markdown(out_dir, results, lez_json, scenario, n, half):
           f"{r['recipients_decrypted_correctly']} of {n}; recovered NOut equal to the vault's: {r['nout_matches_vault']} of {n}",
           f"- the bridge core's `recover_burns` (v1 mac) on the same notes: {r['rust_core']} found", ""]
     (out_dir / "summary.md").write_text("\n".join(s) + "\n")
+    # Section B6, compared.
+    names = {"deposit (A: private destinations)": "deposit", "claim, private (default)": "claim",
+             "burn, private holding": "burn", "release, NOut of the release statement": "release",
+             "root import": "import-root", "claim, plaintext": "claim-plaintext"}
+    c = ["# Privacy suite: section B6 against the generated table", "",
+         "For each step: each item section B6 lists as public, and the fields that carry it; then every public field "
+         "or state change section B6 does not list (a difference); then the search for what section B6 says is hidden.", ""]
+    for step, kind in names.items():
+        rows = results["fields"][step]
+        c += [f"## {step}", "", "| §B6 public item | fields (generated) |", "|---|---|"]
+        for item in B6[kind]:
+            fs = [f"`{r['field']}`" for r in rows if r["B6"] == item]
+            c.append(f"| {item} | {', '.join(fs) if fs else 'NOT FOUND'} |")
+        c += ["", "Public and not in §B6:", ""]
+        for r in rows:
+            if r["B6"] is None:
+                c.append(f"- `{r['field']}`: {r['across records']}; {r['class']}{'; ' + r['what'] if r['what'] else ''}")
+        c.append("")
+    c += ["## §B6's hidden column, searched", "", "| what must stay hidden | values searched | found |", "|---|---:|---:|"]
+    for k, v in results["hidden"].items():
+        if isinstance(v, dict):
+            c.append(f"| {k} | {v['values searched']} | {v['found']} |")
+    (out_dir / "b6.md").write_text("\n".join(c) + "\n")
     t = ["# Privacy suite: what is public at each step (generated)", "",
          "Every field the collectors can name, across the 20 records of each step: constant, or how many distinct "
          "values; its class when it varies; the item of the proposal's section B6 it falls under (`-`: not in B6).", ""]
