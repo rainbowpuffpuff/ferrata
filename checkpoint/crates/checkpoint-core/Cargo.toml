@@ -1,0 +1,29 @@
+[package]
+name = "checkpoint-core"
+version = "0.1.0"
+description = "The Ferrata LEZ -> Ethereum checkpoint rule (SPEC-v2 §4.1-§4.2): strict parsers for LEZ blocks and Mantle inscriptions, the burn tree, the state hash and the journal. no_std, no unsafe."
+edition = "2021"
+# The RISC Zero guest toolchain on this machine is Rust 1.88; the core must build with it.
+rust-version = "1.88"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[dependencies]
+# Hashes and signatures, all no_std. In the guest these are replaced by RISC Zero's accelerated
+# forks (sha2, curve25519-dalek) through [patch.crates-io] in guests/Cargo.toml. Blake2b has no
+# RISC Zero accelerator and runs as plain RV32IM code.
+sha2 = { version = "0.10.8", default-features = false }
+blake2 = { version = "0.10.6", default-features = false }
+ed25519-dalek = { version = "2.2.0", default-features = false }
+
+[dev-dependencies]
+# Tests only: an Ed25519 signer (with rand for key generation) and borsh, to check the hand-written
+# wire codec against borsh's derive.
+ed25519-dalek = { version = "2.2.0", default-features = false, features = ["rand_core"] }
+borsh = { version = "1.5", features = ["derive"] }
+hex = "0.4"
+serde_json = "1"
+
+[features]
+default = []
+std = []

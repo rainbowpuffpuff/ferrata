@@ -1,0 +1,6 @@
+/target/
+/fixtures/
+/artifacts/work/
+/guests/target/
+/results/*-build.log
+/artifacts/*/receipt-succinct.bin

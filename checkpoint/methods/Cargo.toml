@@ -1,0 +1,17 @@
+[package]
+name = "methods"
+version = "0.1.0"
+description = "Builds the checkpoint and micro-benchmark guests with risc0-build 3.0.5, the checkpoint guest with the segment guest's image id compiled in"
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+methods-segment = { path = "../methods-segment" }
+
+[build-dependencies]
+risc0-build = { version = "=3.0.5" }
+methods-segment = { path = "../methods-segment" }
+
+[package.metadata.risc0]
+methods = ["../guests/checkpoint", "../guests/micro"]

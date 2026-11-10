@@ -1,0 +1,6 @@
+{"k":1,"loadavg":"24.91 37.59 27.85 5/3710 3761343","name":"micro-ed25519-1","padded_cycles":4194304,"segments":4,"user_cycles":3514146,"wall_s":0.137565559}
+{"k":6,"loadavg":"24.91 37.59 27.85 4/3717 3761364","name":"micro-ed25519-6","padded_cycles":22151168,"segments":22,"user_cycles":20977381,"wall_s":0.534730253}
+{"k":839,"loadavg":"24.91 37.59 27.85 6/3717 3761368","name":"micro-insc-1empty","padded_cycles":4194304,"segments":4,"user_cycles":3523833,"wall_s":0.136948683}
+{"k":5034,"loadavg":"24.91 37.59 27.85 4/3673 3761395","name":"micro-insc-6empty","padded_cycles":22544384,"segments":22,"user_cycles":21282329,"wall_s":0.549211407}
+{"k":10000,"loadavg":"24.91 37.59 27.85 4/3674 3761401","name":"micro-sha256-10000","padded_cycles":1048576,"segments":1,"user_cycles":639440,"wall_s":0.06151688}
+{"k":1000000,"loadavg":"23.32 37.05 27.72 3/3690 3761448","name":"micro-sha256-1000000","padded_cycles":67108864,"segments":64,"user_cycles":63225025,"wall_s":1.318160633}

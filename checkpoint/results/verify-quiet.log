@@ -1,0 +1,2 @@
+[cp-empty-1] receipt-succinct.bin: verifies; journal == native
+[cp-empty-1] receipt-groth16.bin: verifies; journal == native

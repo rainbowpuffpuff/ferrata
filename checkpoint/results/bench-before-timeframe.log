@@ -1,0 +1,22 @@
+== host bench (SPEC-v3 journal) 2026-11-10T03:32:37+01:00
+r0vm risc0-r0vm 3.0.5
+cpu  AMD Ryzen 9 7940HS w/ Radeon 780M Graphics, 16 threads, 54 GiB
+checkpoint 0xbbf58feda031d9a7263d64efeac5979762443acd1beb3a4b31ef73e1163334c0
+segment    0x21c03093a3d16924e5f8d00b320647148f840010c362a954ef37d76d50a7a515
+micro      0x2c52d91a026ddeea78c1b742226a828ec687069eb64ce3ea538d3a2a0bb76201
+load before: 8.91 18.91 26.69 3/3740 3393055
+cp-after-seg-180: continues from segments; run `host compose` for it
+cp-burns10-360         blocks 363 (311027 B) | user cycles     6074656 | segments   7 (7x2^20) padded     7340032 |   0.21 s | journal == native
+cp-busytip-t3          blocks 4 (3804044 B) | user cycles   224848658 | segments 232 (1x2^19+231x2^20) padded   242745344 |   4.92 s | journal == native
+cp-echo-360            blocks 366 (307569 B) | user cycles     6002025 | segments   7 (7x2^20) padded     7340032 |   0.18 s | journal == native
+cp-empty-1             blocks 4 (3356 B) | user cycles     3704942 | segments   4 (4x2^20) padded     4194304 |   0.13 s | journal == native
+cp-empty-360           blocks 363 (304557 B) | user cycles     5992803 | segments   7 (7x2^20) padded     7340032 |   0.26 s | journal == native
+cp-empty-60            blocks 63 (52857 B) | user cycles     4070947 | segments   5 (1x2^19+4x2^20) padded     4718592 |   0.19 s | journal == native
+cp-pp5-360             blocks 363 (1492272 B) | user cycles     8822292 | segments  12 (1x2^19+11x2^20) padded    12058624 |   0.37 s | journal == native
+cp-pp50-360            blocks 363 (12181707 B) | user cycles    37865967 | segments  60 (60x2^20) padded    62914560 |   2.49 s | journal == native
+cp-privburns10-360     blocks 363 (2662907 B) | user cycles    11298594 | segments  16 (16x2^20) padded    16777216 |   0.52 s | journal == native
+cp-support-t2          blocks 3 (2517 B) | user cycles     2806215 | segments   3 (3x2^20) padded     3145728 |   0.10 s | journal == native
+cp-support-t3          blocks 4 (3356 B) | user cycles     3704942 | segments   4 (4x2^20) padded     4194304 |   0.12 s | journal == native
+cp-support-t5          blocks 6 (5034 B) | user cycles     5524829 | segments   6 (6x2^20) padded     6291456 |   0.18 s | journal == native
+seg-empty-180          blocks 180 (151020 B) | user cycles     1166197 | segments   2 (1x2^19+1x2^20) padded     1572864 |   0.08 s | journal == native
+load after: 8.59 18.52 26.47 3/3734 3394645

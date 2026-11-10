@@ -1,0 +1,35 @@
+# ferrata-checkpoint: prototype of the LEZ -> Ethereum checkpoint program (SPEC-v2 §4).
+#
+# crates/checkpoint-core   the rule, no_std, no unsafe; runs on the host and in the guests
+# fidelity/                host-only: builds real-format LEZ blocks and Mantle transactions with
+#                          the upstream crates and checks the core's parsers against them; writes
+#                          the bench fixtures
+# methods-segment/, methods/  build the guests in guests/ (risc0-build 3.0.5) and embed them
+# host/                    executor bench, composition demo, proving
+#
+# guests/ is a workspace of its own so that its [patch.crates-io] (RISC Zero's accelerated sha2
+# and curve25519-dalek) applies there and nowhere else.
+[workspace]
+resolver = "2"
+members = ["crates/checkpoint-core", "fidelity", "methods-segment", "methods", "methods-plain", "host"]
+default-members = ["crates/checkpoint-core"]
+exclude = ["guests", "guests-plain"]
+
+[workspace.package]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[profile.release]
+opt-level = 3
+
+# The upstream crates and the zkVM client are slow unoptimised.
+[profile.dev.package."*"]
+opt-level = 2
+
+# LEZ v0.4.0-rc1 depends on logos-blockchain at d480efc6 by git. Point those crates at the shallow
+# clone of exactly that revision (spike/upstream/logos-blockchain-d480efc6), so nothing else is
+# fetched and the formats checked are the pinned ones.
+[patch."https://github.com/logos-blockchain/logos-blockchain.git"]
+logos-blockchain-common-http-client = { path = "../upstream/logos-blockchain-d480efc6/nodes/node/http-client" }
+logos-blockchain-core = { path = "../upstream/logos-blockchain-d480efc6/core" }
+logos-blockchain-zone-sdk = { path = "../upstream/logos-blockchain-d480efc6/zone-sdk" }

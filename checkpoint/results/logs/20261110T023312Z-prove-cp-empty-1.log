@@ -1,0 +1,36 @@
+== prove cp-empty-1
+date            2026-11-10T03:33:12+01:00
+host            Linux 7.2.13-200.fc44.x86_64 x86_64
+cpu             AMD Ryzen 9 7940HS w/ Radeon 780M Graphics, 16 threads
+memory          54 GiB total, 33 GiB available
+r0vm            risc0-r0vm 3.0.5
+docker image    risczero/risc0-groth16-prover@sha256:a4f80ce2e0b8e2bb7637a93c37136a6776ac00ec843a3fdf1c67b1d5ffea64ee
+RAYON_NUM_THREADS unset (all hardware threads)
+loadavg         13.15 18.71 26.32 8/3781 3398356
+[cp-empty-1] load before: 13.15 18.71 26.32 4/3782 3398358
+[cp-empty-1] load after:  36.76 35.01 31.95 28/3733 3452855
+[cp-empty-1] succinct proof: wall 1758.92 s | segments 4 | user cycles 3704942 | total cycles 4194304 (paging 276050, reserved 213312) | receipt 224314 bytes
+	Command being timed: "<workspace>/ferrata-checkpoint/target/release/host prove cp-empty-1"
+	User time (seconds): 13988.73
+	System time (seconds): 54.25
+	Percent of CPU this job got: 798%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 29:18.97
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 9617676
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 4
+	Minor (reclaiming a frame) page faults: 12074099
+	Voluntary context switches: 34509
+	Involuntary context switches: 5377550
+	Swaps: 0
+	File system inputs: 38696
+	File system outputs: 2440
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+loadavg after   36.76 35.01 31.95 24/3732 3452856

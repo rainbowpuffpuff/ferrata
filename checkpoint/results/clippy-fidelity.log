@@ -1,0 +1,64 @@
+warning[E0602]: unknown lint: `raw_borrows_via_references`
+  |
+  = note: requested on the command line with `-W raw_borrows_via_references`
+  = note: `#[warn(unknown_lints)]` on by default
+
+For more information about this error, try `rustc --explain E0602`.
+warning: `logos-blockchain-log-targets-macros` (lib) generated 1 warning
+warning: `logos-blockchain-log-targets` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-utils` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-groth16` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-proofs-error` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-circuits-prover` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-poseidon2` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-binary-codec-macros` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-binary-codec` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-pol` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-poq` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-time` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-dynamic-merkle` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-blend-crypto` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-zksign` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-merkle-tree` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-key-management-system-macros` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-utxotree` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-poc` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-key-management-system-keys` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-blend-proofs` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-cryptarchia-engine` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-mmr` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-core` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-tracing` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-services-utils` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-blend-message` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-time-service` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-chain-broadcast-service` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-version` (build script) generated 1 warning (1 duplicate)
+   Compiling logos-blockchain-version v0.0.0 (<workspace>/upstream/logos-blockchain-d480efc6/nodes/version)
+warning: `logos-blockchain-cryptarchia-sync` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-ledger` (lib) generated 1 warning (1 duplicate)
+warning: lee@0.1.0: Generated module at <workspace>/ferrata-checkpoint/target/debug/build/lee-4cdba8bd823ddf11/out/lee/privacy_preserving_circuit/mod.rs
+warning: programs@0.1.0: Generated module at <workspace>/ferrata-checkpoint/target/debug/build/programs-0b4f6e4500705771/out/lez/programs/mod.rs
+    Checking checkpoint-core v0.1.0 (<workspace>/ferrata-checkpoint/crates/checkpoint-core)
+warning: `logos-blockchain-libp2p` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-storage-service` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-key-management-system-operators` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-network-service` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-http-api-common` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-key-management-system-service` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-chain-service` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-sdp-service` (lib) generated 1 warning (1 duplicate)
+warning: `logos-blockchain-version` (lib) generated 1 warning (1 duplicate)
+    Checking logos-blockchain-common-http-client v0.0.0 (<workspace>/upstream/logos-blockchain-d480efc6/nodes/node/http-client)
+warning: `logos-blockchain-common-http-client` (lib) generated 1 warning (1 duplicate)
+    Checking common v0.1.0 (<workspace>/upstream/lez-v0.4.0-rc1/lez/common)
+    Checking logos-blockchain-zone-sdk v0.0.0 (<workspace>/upstream/logos-blockchain-d480efc6/zone-sdk)
+    Checking key_protocol v0.1.0 (<workspace>/upstream/lez-v0.4.0-rc1/lee/key_protocol)
+warning: `logos-blockchain-zone-sdk` (lib) generated 1 warning (1 duplicate)
+    Checking chain_state v0.1.0 (<workspace>/upstream/lez-v0.4.0-rc1/lez/chain_state)
+    Checking testnet_initial_state v0.1.0 (<workspace>/upstream/lez-v0.4.0-rc1/lez/testnet_initial_state)
+    Checking fidelity v0.1.0 (<workspace>/ferrata-checkpoint/fidelity)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.15s
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+EXIT 0
