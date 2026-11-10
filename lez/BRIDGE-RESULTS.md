@@ -319,3 +319,19 @@ RISC0_DEV_MODE=0 target/debug/prove_bridge --settle results/bridge-private-claim
 On this worktree they ran through `../../modal-build/mrun` (a cloud container), the first build
 without `RISC0_BUILD_LOCKED` because the new guest's lockfile had to be written; with the
 lockfiles committed, `--locked` and `RISC0_BUILD_LOCKED=1` apply as in `RESULTS.md` §8.
+
+## 10. On a live sequencer: the inbound crossing (stand-in)
+
+[`live/inbound/README.md`](live/inbound/README.md): the same operations on a running LEZ
+v0.4.0-rc1 sequencer and Logos Blockchain node (the Modal build box, 10 Nov 2026), on a stand-in
+beacon chain (a committee whose keys we hold, Gloas-layout records binding blocks made from a real
+Sepolia header with a synthetic vault's state root): the programs deployed through LEZ's loader
+from the frozen binaries whose ids the Sepolia vault will pin; `Init` refused without the block's
+header (215) and applied with it (181,965 execution gas); `ImportRoot` n = 1 and n = 2 (232,278
+each); the plaintext claim (142,432), its replay and the same deposit under the later root refused
+(250), another destination refused (249); the private claim at LEZ's private test account 0 with a
+real proof made by LEZ's wallet on the box's CPU in 254.8 s, 252,185 bytes, 439,815 execution gas
+and 224,063 storage gas, included by the sequencer, which verifies receipts. Measured (the
+sequencer's own charges, re-checked by replaying the recorded chain through LEZ's `chain_state`).
+The session on public Sepolia waits for the deposits into the new vault.
+
