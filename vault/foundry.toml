@@ -32,7 +32,11 @@ remappings = [
 
 # The vector test reads test/vectors/tree.json, and rewrites it only when
 # FERRATA_WRITE_VECTORS=1 is set.
-fs_permissions = [{ access = "read-write", path = "./test/vectors" }]
+fs_permissions = [
+    { access = "read-write", path = "./test/vectors" },
+    # test/real/ reads the end-to-end return-leg fixture (journals and real Groth16 seals).
+    { access = "read", path = "./test/real/fixtures" },
+]
 
 [lint]
 # Public names follow the interface fixed in the design brief (depositETH,
