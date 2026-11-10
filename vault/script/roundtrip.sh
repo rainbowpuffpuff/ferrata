@@ -3,6 +3,7 @@
 # transaction. The stages and the waits between them are in vault/README.md ("Sepolia round trip").
 #
 #   script/roundtrip.sh deploy | deposit0 | deposit1 | deposit2 | submit | beacon | finalize | release | status
+#   script/roundtrip.sh check <stage>     prices the stage on the node now and sends nothing
 #
 # Gas: every transaction's gas limit is the node's own estimate (eth_estimateGas, taken by forge right before the
 # transaction is signed, after the previous one's receipt) times FERRATA_GAS_MARGIN_PCT / 100. Foundry's EVM does not
@@ -67,6 +68,25 @@ signer=()
 # FERRATA_RESUME=1: a stage whose transactions were only partly sent; forge sends the rest of what it
 # recorded, in the recorded order, without running the script again.
 [ "${FERRATA_RESUME:-}" = 1 ] && signer+=(--resume)
+# forge, tried again when it failed on the race of a load-balanced endpoint ("block not found": the head came from one
+# node, the state was asked of another that lags) and only if the sender's nonce, latest and pending, did not move,
+# that is if nothing was sent. Any other failure, or a moved nonce, is final: the driver stops there.
+forge_try() {
+  local attempt n0 p0 log="$TMPDIR/forge-$step.log"
+  for attempt in 1 2 3 4; do
+    n0="$(cast nonce "$ETH_FROM" "${rpc[@]}")"; p0="$(cast nonce "$ETH_FROM" --block pending "${rpc[@]}")"
+    if forge script script/RoundTrip.s.sol:RoundTrip --sig "$step()" "${rpc[@]}" --sender "$ETH_FROM" "$@" 2>&1 | tee "$log"; then
+      return 0
+    fi
+    grep -q -E 'block not found|header not found' "$log" || return 1
+    [ "$(cast nonce "$ETH_FROM" "${rpc[@]}")" = "$n0" ] && [ "$(cast nonce "$ETH_FROM" --block pending "${rpc[@]}")" = "$p0" ] ||
+      { echo "forge failed after it had sent: not tried again" >&2; return 1; }
+    echo "forge met a node of the endpoint that lags (block not found), nothing was sent: trying again ($attempt)" >&2
+    sleep 15
+  done
+  return 1
+}
+
 # The stage's transactions as forge would send them (a dry run, nothing signed), priced by the node on a fork that
 # holds the chain's state: the fork the run uses for a rehearsal (put back afterwards), otherwise a throwaway fork of
 # the endpoint, started here.
@@ -77,8 +97,7 @@ gas_check() {
   rm -f "$dry"
   # --skip-simulation: forge's own re-simulation of a dry run starts the sender at nonce 0 (forge 1.3.6), which puts
   # every creation one address off for a sender that has sent before; the fork below plays the stage instead.
-  forge script script/RoundTrip.s.sol:RoundTrip --sig "$step()" "${rpc[@]}" --sender "$ETH_FROM" --skip-simulation \
-    > "$out/$step.forge.log" 2>&1 ||
+  forge_try --skip-simulation > "$out/$step.forge.log" 2>&1 ||
     { tail -n 20 "$out/$step.forge.log" >&2; return 1; }
   [ -f "$dry" ] || { echo "forge wrote no dry run of $step" >&2; return 1; }
   python3 "$here/../e2e/gasplan.py" plan "$dry" --out "$out/$step.plan.json" > /dev/null || return 1
@@ -90,7 +109,10 @@ gas_check() {
     state="http://127.0.0.1:$port"
     for attempt in 1 2 3; do
       head="$(cast block-number "${rpc[@]}")"
-      last="$(jq -r '[.stages[][]?.blockNumber // empty] | .[]' "$manifest" 2> /dev/null | while read -r b; do echo $((b)); done | sort -n | tail -n 1)"
+      last=0
+      if [ -f "$manifest" ]; then
+        last="$(jq -r '[.stages[][]?.blockNumber // empty] | .[]' "$manifest" | while read -r b; do echo $((b)); done | sort -n | tail -n 1)"
+      fi
       at=$((head - 3)); [ "${last:-0}" -le "$at" ] || at="$last"
       anvil --fork-url "$SEPOLIA_RPC_URL" --fork-block-number "$at" --host 127.0.0.1 --port "$port" --auto-impersonate \
         > "$alog" 2>&1 &
@@ -114,6 +136,11 @@ gas_check() {
   return "$rc"
 }
 
+# `check <stage>` only prices the stage as gas_check does before sending it, and sends nothing (a pre-flight).
+if [ "$step" = check ]; then
+  step="${2:?stage}"; margin="${FERRATA_GAS_MARGIN_PCT:-125}"
+  gas_check; exit
+fi
 # `record <stage>` only rewrites the manifest entry of a stage from forge's broadcast log.
 if [ "$step" = record ]; then
   step="${2:?stage}"
@@ -121,8 +148,7 @@ else
   case "$step" in deploy | deposit[0-9] | submit | beacon | finalize | release) ;; *) echo "unknown stage $step" >&2; exit 2 ;; esac
   margin="${FERRATA_GAS_MARGIN_PCT:-125}"
   if [ "${FERRATA_RESUME:-}" != 1 ]; then gas_check || { echo "STOP before $step: the node's gas check failed; nothing of $step was sent" >&2; exit 1; }; fi
-  forge script script/RoundTrip.s.sol:RoundTrip --sig "$step()" "${rpc[@]}" --sender "$ETH_FROM" "${signer[@]}" \
-    --broadcast --slow --skip-simulation --gas-estimate-multiplier "$margin"
+  forge_try "${signer[@]}" --broadcast --slow --skip-simulation --gas-estimate-multiplier "$margin"
   # A public endpoint is several nodes: give the others a block to catch up before the chain is read again.
   [ "${FERRATA_UNLOCKED:-}" = 1 ] || sleep "${FERRATA_SETTLE:-15}"
 fi
