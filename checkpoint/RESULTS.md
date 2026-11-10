@@ -337,6 +337,35 @@ Numbered for reference; "SPEC" is SPEC-v2 §4 as amended by SPEC-v3 D3.
     other than `D` inscribed blocks after `Y`; whether that implies finality is the question D1/D6
     answer, not this prototype.
 
+## The end-to-end fixture: two checkpoint proofs a contract verified
+
+The return leg of [`../e2e/`](../e2e/README.md) has a stand-in zone of 16 blocks built by
+`fidelity/src/bin/e2e.rs` (n = 4, t = 3, posting timeframe 900): an `ImportRoot`, five burns of the
+configuration beside a burn of another configuration and a burn in a reverted transaction, `T` =
+block 6, and an `Echo` in block 12. Its two checkpoints were proven with the final image
+(`0x95b816ed…3caf`, the recorded program binary, not rebuilt):
+
+| checkpoint | blocks | input | user cycles | segments | succinct proof | Groth16 wrap |
+|---|---|---|---|---|---|---|
+| candidate (`cp-e2e-candidate`, `echoNonce` = 0) | 2–9, support 7–9 | 14,385 B | 3,786,158 | 5 (4 × 2^20 + 2^15) | 15.0 s on one NVIDIA L4 (segment proofs 10.7 s, lift and join 4.1 s); receipt 224,314 B | identity_p254 18.7 s in r0vm on 16 cores, Groth16 prover image 14 s; seal 260 B |
+| finalisation (`cp-e2e-finalize`, echoes the beacon) | 2–16, `Y` = 12, support 13, 15, 16 | 20,781 B | 3,831,033 | 5 (4 × 2^20 + 2^17) | 15.4 s on the same L4 (11.0 s, 4.1 s); receipt 224,314 B | identity_p254 18.6 s, prover image 14 s; seal 260 B |
+
+Cycle counts are from the r0vm 3.0.5 executor (on a 16-core cloud machine); both guest journals equal the
+native rule's. The journals are 544 bytes and are, byte for byte, the v3 vault's own encoding of the
+`submitCandidate` and `finalize` arguments; the bridge side recomputes both independently
+(`bridge/e2e/src/checkpoint_v3.rs`) and gets the same bytes. In `vault/test/real/` the v3 vault
+accepts the candidate seal, then, after the wait and the beacon, the finalisation seal, through
+RISC Zero's unmodified Groth16 verifier behind its emergency stop; a flipped byte in either seal,
+either seal with a changed journal field, and the candidate's seal offered as the finalisation are
+refused. Both seals also verify, by read-only calls, on RISC Zero's own Groth16 verifier deployed on
+Sepolia. Receipts, seals and logs: `e2e/runs/sepolia/receipts/`.
+
+Two things the fixture showed about this program's inputs. A finalisation must prove the
+candidate's very blocks (the vault looks the candidate up by `newState`), and LEZ signs
+transactions with fresh randomness, so a zone cannot be rebuilt bit for bit: the prover has to keep
+the blocks it proved (the builder now takes them from the candidate input). And only the echo and
+what follows it is new work for the second proof: blocks 2–9 are hashed again (finding 9).
+
 ## GPU proofs of the final image
 
 The final image (`0x95b816ed…3caf`) was later proven on one NVIDIA L4 GPU for four fixtures, with every succinct receipt verified locally and every journal equal to the native run's: `cp-empty-1` in 14.0 s, the idle hour in 24.1 s, the hour with 5 private transactions in 41.4 s and the hour with 50 in 219.3 s. See `gpu-prover/RESULTS.md`. No Groth16 wrap was made for these.

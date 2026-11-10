@@ -1,0 +1,167 @@
+{
+  "chainId": 11155111,
+  "vault": "0xdfedf9a73cfb337277b95a9a1c941c3496a4385f",
+  "sender": "0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07",
+  "stages": {
+    "deploy": [
+      {
+        "hash": "0x6f446309e5a71ec05d108b34fe1013e88de12ce2883c8c3efc6cdedc736fd473",
+        "what": "RiscZeroGroth16Verifier CREATE",
+        "contractAddress": "0xfc9e7600ad98a650694013101688f0cc13220de9",
+        "to": null,
+        "blockNumber": "0xb8b673",
+        "gasUsed": "0x120152",
+        "effectiveGasPrice": "0x17d78ca",
+        "status": "0x1"
+      },
+      {
+        "hash": "0xf734f2ec9d8a337187b3821e0ece0fadca3849eb017edbf05cb8608a9ba31c25",
+        "what": "RiscZeroVerifierEmergencyStop CREATE",
+        "contractAddress": "0x8f0af3bf302c64d57f840127f94d9c123a8fa2a0",
+        "to": null,
+        "blockNumber": "0xb8b674",
+        "gasUsed": "0x6e4a0",
+        "effectiveGasPrice": "0x17d78c8",
+        "status": "0x1"
+      },
+      {
+        "hash": "0xf0fe34f4339c6ffeeaa097ed3cb14edbccf108c5cf02d22eb2e3742a59fa6d59",
+        "what": "TestToken CREATE",
+        "contractAddress": "0xe4830261a1d61df5af1be5579a3e3db738331139",
+        "to": null,
+        "blockNumber": "0xb8b675",
+        "gasUsed": "0x7c084",
+        "effectiveGasPrice": "0x17d78c7",
+        "status": "0x1"
+      },
+      {
+        "hash": "0x8189f18fb6a114fe563864ddd74f8086b7c78094709838e8992a9a66268179e3",
+        "what": "FerrataVault CREATE",
+        "contractAddress": "0xdfedf9a73cfb337277b95a9a1c941c3496a4385f",
+        "to": null,
+        "blockNumber": "0xb8b676",
+        "gasUsed": "0x53f14d",
+        "effectiveGasPrice": "0x17d78c6",
+        "status": "0x1"
+      },
+      {
+        "hash": "0x749dc2fa0539cbbbb71b74c8a3159a6e730d35880fa4d1343a8901e66e014822",
+        "what": "FerrataVault registerToken(address,(uint256[],uint256[],uint256,uint256,(uint256,uint256),(uint256,uint256),uint256)) CALL",
+        "contractAddress": null,
+        "to": "0xdfedf9a73cfb337277b95a9a1c941c3496a4385f",
+        "blockNumber": "0xb8b677",
+        "gasUsed": "0x73493",
+        "effectiveGasPrice": "0x17d78c5",
+        "status": "0x1"
+      },
+      {
+        "hash": "0x8de66c9dd97f98c9cf5bd6d2fdeaede4d6fc14a14f5224aea643198f53153afc",
+        "what": "FerrataVault registerToken(address,(uint256[],uint256[],uint256,uint256,(uint256,uint256),(uint256,uint256),uint256)) CALL",
+        "contractAddress": null,
+        "to": "0xdfedf9a73cfb337277b95a9a1c941c3496a4385f",
+        "blockNumber": "0xb8b678",
+        "gasUsed": "0x737d9",
+        "effectiveGasPrice": "0x17d78c4",
+        "status": "0x1"
+      },
+      {
+        "hash": "0xd0303f2e66f0594660703eeacf1ef4fb826a82435ace5196d0eb75694e08b8b5",
+        "what": "TestToken mint(address,uint256) CALL",
+        "contractAddress": null,
+        "to": "0xe4830261a1d61df5af1be5579a3e3db738331139",
+        "blockNumber": "0xb8b679",
+        "gasUsed": "0x10b10",
+        "effectiveGasPrice": "0x17d78c3",
+        "status": "0x1"
+      },
+      {
+        "hash": "0xfa1ea9d5d92c6b432bff9879e784928c241c6b9c6b6593042c027dd7b9c8a59b",
+        "what": "TestToken approve(address,uint256) CALL",
+        "contractAddress": null,
+        "to": "0xe4830261a1d61df5af1be5579a3e3db738331139",
+        "blockNumber": "0xb8b67a",
+        "gasUsed": "0xb4fb",
+        "effectiveGasPrice": "0x17d78c2",
+        "status": "0x1"
+      },
+      {
+        "hash": "0x2169504ded1d8f6754e5f181f6e36a71ec03a8277dc4217dc0315fc8f76dc215",
+        "what": "FerrataVault depositETH(uint8,bytes32,uint64) CALL",
+        "contractAddress": null,
+        "to": "0xdfedf9a73cfb337277b95a9a1c941c3496a4385f",
+        "blockNumber": "0xb8b67b",
+        "gasUsed": "0x2f230",
+        "effectiveGasPrice": "0x17d78c1",
+        "status": "0x1"
+      },
+      {
+        "hash": "0x00e0a9338eee0b9051e3d1c9f9f5bda4406446598d4adebafca6bf81d32f4cdc",
+        "what": "FerrataVault deposit(address,uint8,bytes32,uint64) CALL",
+        "contractAddress": null,
+        "to": "0xdfedf9a73cfb337277b95a9a1c941c3496a4385f",
+        "blockNumber": "0xb8b67c",
+        "gasUsed": "0x2f011",
+        "effectiveGasPrice": "0x17d78c0",
+        "status": "0x1"
+      }
+    ],
+    "submit": [
+      {
+        "hash": "0x6877de3e0123cd18f32c8ec3ff821a75e2d65f80853b12d92e2642e15756e911",
+        "what": "submitCandidate((uint32,uint32,bytes32,bytes32,bytes32,uint64,uint64,bool,bytes32,uint64,bytes32,uint32,uint32),bytes) CALL",
+        "contractAddress": null,
+        "to": "0xdfedf9a73cfb337277b95a9a1c941c3496a4385f",
+        "blockNumber": "0xb8b67d",
+        "gasUsed": "0x7bdea",
+        "effectiveGasPrice": "0x17d78c0",
+        "status": "0x1"
+      }
+    ],
+    "beacon": [
+      {
+        "hash": "0x6d4c423c440b1efe23bfe00bec63e7e510c76467ca23daa1951db235fffc951c",
+        "what": "recordBeacon() CALL",
+        "contractAddress": null,
+        "to": "0xdfedf9a73cfb337277b95a9a1c941c3496a4385f",
+        "blockNumber": "0xb8b67f",
+        "gasUsed": "0x12fff",
+        "effectiveGasPrice": "0x17d78bf",
+        "status": "0x1"
+      }
+    ],
+    "finalize": [
+      {
+        "hash": "0x8578d98734f8a4aebdde802bdc6fe2819b859652620cbfa4545d60ec72f009fe",
+        "what": "finalize(uint256,(uint32,uint32,bytes32,bytes32,bytes32,uint64,uint64,bool,bytes32,uint64,bytes32,uint32,uint32),bytes) CALL",
+        "contractAddress": null,
+        "to": "0xdfedf9a73cfb337277b95a9a1c941c3496a4385f",
+        "blockNumber": "0xb8b680",
+        "gasUsed": "0x740b0",
+        "effectiveGasPrice": "0x17d78bf",
+        "status": "0x1"
+      }
+    ],
+    "release": [
+      {
+        "hash": "0x8c4740d9ed914ae2d3fbdea800b2ad9eaea74f08babc461f18222d2aaefbb01d",
+        "what": "release((address,uint8,address,address,uint256,bytes32,bytes32),bytes) CALL",
+        "contractAddress": null,
+        "to": "0xdfedf9a73cfb337277b95a9a1c941c3496a4385f",
+        "blockNumber": "0xb8b682",
+        "gasUsed": "0x58aa1",
+        "effectiveGasPrice": "0x17d78bf",
+        "status": "0x1"
+      },
+      {
+        "hash": "0xda42658bb1ddf690e8a783d60bd0dca933f8e021ab5953068f8dea2322b8baaa",
+        "what": "release((address,uint8,address,address,uint256,bytes32,bytes32),bytes) CALL",
+        "contractAddress": null,
+        "to": "0xdfedf9a73cfb337277b95a9a1c941c3496a4385f",
+        "blockNumber": "0xb8b683",
+        "gasUsed": "0x5ec93",
+        "effectiveGasPrice": "0x17d78bf",
+        "status": "0x1"
+      }
+    ]
+  }
+}

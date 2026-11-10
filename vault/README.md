@@ -26,10 +26,14 @@ LEZ side reads it with an Ethereum storage proof.
 `W = Δ + (t − 1) × turnSeconds`, and is then finalised with a second proof that echoes an Ethereum beacon. Releases
 pay out against a RISC Zero proof of a burn under a finalised, unrevoked burn root.
 
-Status: prototype evidence for a grant proposal. **Not audited, not deployed anywhere.** Proofs are mocked: the
-tests' base verifier accepts exactly the (image id, journal digest) pairs a test registers. It sits behind RISC
-Zero's unmodified `RiscZeroVerifierEmergencyStop`, as a deployment's would. The commitment and nullifier
-derivations, the LEZ programs and the zkVM guests are out of scope.
+Status: prototype evidence for a grant proposal. **Not audited, not deployed anywhere.** In the vault's own 286
+tests proofs are mocked: the base verifier accepts exactly the (image id, journal digest) pairs a test registers.
+It sits behind RISC Zero's unmodified `RiscZeroVerifierEmergencyStop`, as a deployment's would. `test/real/` runs
+the return leg once with no mock on the Ethereum side: RISC Zero's real Groth16 verifier behind the same stop, a
+real proof of the checkpoint program for the candidate, a second one for the finalisation, and real proofs of the
+release program ([`../e2e/README.md`](../e2e/README.md)). The LEZ side of that run is a stand-in: blocks built with
+test sequencer keys, no node, no bridge program. The commitment and nullifier derivations, the LEZ programs and
+the zkVM guests are out of this directory's scope.
 
 ## Running it
 
@@ -39,7 +43,9 @@ export PATH="$HOME/.foundry/bin:$PATH"
 forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.0.0
 forge build --sizes                                      # no compiler warnings, no lint findings, all under EIP-170
 forge test                                               # everything, including the invariant campaign
-forge test --isolate --match-contract GasScenarios -vv   # the numbers in GAS.md
+forge test --isolate --match-contract GasScenarios -vv   # the numbers in GAS.md (mock verifier)
+forge test --match-path 'test/real/*' -vv                # the return leg with RISC Zero's real verifier and real proofs
+forge test --isolate --match-contract ReturnLegGas -vv   # its gas (GAS.md, "With the real verifier")
 forge test --gas-report --no-match-path 'test/invariant/*' > gas-report.txt
 forge coverage --report summary
 forge fmt --check
@@ -52,8 +58,9 @@ Toolchain and dependencies:
 - forge 1.3.6, solc 0.8.26 (pinned, `offline = true`), `evm_version = "cancun"`, optimizer at 200 runs.
 - forge-std v1.10.0.
 - OpenZeppelin Contracts v5.4.0. The vault uses only `SafeERC20` and `ReentrancyGuardTransient`.
-- risc0-ethereum v3.0.0. The tests use only `RiscZeroVerifierEmergencyStop` and the verifier interface, compiled
-  against the OpenZeppelin v5.2.0 that risc0-ethereum itself pins.
+- risc0-ethereum v3.0.0. The vault's own tests use only `RiscZeroVerifierEmergencyStop` and the verifier
+  interface; `test/real/` and `script/` also deploy its `RiscZeroGroth16Verifier` with its `ControlID`. All are
+  compiled unmodified against the OpenZeppelin v5.2.0 that risc0-ethereum itself pins.
 
 The vault takes the vendored one-function `IRiscZeroVerifier`, whose selector is the same as RISC Zero's. Its
 runtime is 23,650 bytes, 926 below the EIP-170 limit, so there is little room left for more features.
@@ -329,7 +336,107 @@ New in v3:
 - **Issuer risk is inherited.** A token can blacklist the vault or switch on transfer fees (USDT has such a switch).
   Rebasing tokens are unsupported.
 - **The global cap uses admin-set integer weights, not an oracle.**
-- **No real proofs.** All verification here is mocked. The Groth16 verifier's gas and behaviour are not measured.
+- **Real proofs in one run only.** `test/real/` verifies real Groth16 proofs of both programs and measures their
+  gas (GAS.md); every other test mocks the verifier. Those proofs are about a stand-in zone built with test keys.
+
+## Sepolia round trip (rehearsed end to end on a local fork; not broadcast)
+
+`script/RoundTrip.s.sol` and `script/roundtrip.sh` run the return leg on Sepolia in stages:
+RISC Zero's Groth16 verifier, its emergency stop, a test token and the vault are created, both
+assets are registered and deposited, the candidate is submitted with its real seal, the beacon is
+recorded after the wait, the finalisation is proven for that beacon and submitted, and both releases
+are paid. `script/verify-sepolia.sh` re-checks the manifest against any endpoint.
+
+**The proofs bind the deployment.** Both journals carry the chain id and the vault address, and
+`lezConfigId` commits to them too, so a proof made for one vault is worthless for another. The vault's
+address is the sender's plain CREATE address (SPEC-v3 D2), so the fixture is made for one sender and
+one nonce: `e2e/runs/sepolia/` is for `0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07` from nonce 0
+(verifier, stop, token and vault at nonces 0 to 3). `deploy` stops before it broadcasts anything if the
+sender or its nonce would put a contract anywhere else. For another sender, make a new run
+(`e2e/run.sh params <run> 11155111 <sender> <nonce>`, then every step of `e2e/README.md`); the address
+is known before deployment, so the candidate and the releases can be proven first.
+
+**The finalisation proof cannot be made in advance.** It echoes the nonce of a beacon recorded after
+the wait, which is `keccak256(prevrandao, block number, vault)` of the block that mines `recordBeacon`.
+The candidate and release seals of the committed fixture are reused as they are; the finalisation is
+proven again for the real beacon.
+
+**One command.** [`../e2e/sepolia-live.sh`](../e2e/sepolia-live.sh) runs the whole round trip unattended, from
+the repository root, with its settings in `e2e/sepolia-live.env` (not committed; `e2e/sepolia-live.env.example`
+lists them: the endpoint, the sender, the paths of the keystore file and of its password file, the profile of
+the GPU app):
+
+```sh
+e2e/sepolia-live.sh          # about 55 min plus the queue for a GPU; ends with ALL CHECKS PASSED and a DONE line
+```
+
+Before the first transaction it checks the chain id, the sender's nonce and balance, and that what the
+finalisation proof will need forty minutes later is at hand (the recorded guest programs, the GPU app's profile,
+the build wrapper or cargo and r0vm, the prover image's wrapper or Docker). It then sends the fifteen
+transactions in their nonce order (each stage simulated by forge first), sleeps through the vault's wait and the
+release delay, builds and proves the finalisation for the beacon it recorded, and runs `verify-sepolia.sh`.
+Everything it prints also goes to `e2e/runs/sepolia-live/sepolia-live.log`.
+
+It is resumable: started again, it lets a transaction that is still in the mempool land, reads the chain, sees
+which stages are complete and continues after the last one. A stage that was interrupted while it was sending
+(the deployment, the two releases) is finished with forge's own record of it (`--resume`), never sent anew. A GPU
+job that an earlier start left queued or running is waited for, not started a second time. The manifest takes
+every receipt from the chain, so it is whole even where forge was stopped before it had saved one. It stops with
+a message at the first thing that is not as planned, for instance a nonce that a transaction from outside the run
+has moved, and sends nothing after that.
+
+**The stages by hand**, which is what the driver does:
+
+```sh
+export SEPOLIA_RPC_URL=<endpoint>
+export ETH_FROM=0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07
+export ETH_KEYSTORE=<keystore file> ETH_PASSWORD=<file holding its password>   # or ETH_KEYSTORE_ACCOUNT=<name>
+export FERRATA_FIXTURE=$PWD/../e2e/runs/sepolia-live/fixture.json   # the prepared run: ../e2e/runs/sepolia without
+                                                                    # its finalisation, which is proven after the beacon
+
+script/roundtrip.sh status       # the vault is not deployed; the sender's nonce must be 0
+script/roundtrip.sh deploy       # 10 transactions: 4 creations, 2 registrations, mint, approve, 2 deposits
+script/roundtrip.sh submit       # 1 transaction: the candidate, with its real seal
+#   wait W = FERRATA_DELTA + (t - 1) x turnSeconds = 600 s + 2 x 900 s = 40 min   (`status` counts down)
+script/roundtrip.sh beacon       # 1 transaction; writes beacon.json beside the fixture
+#   prove the finalisation for that beacon, from the repository root (e2e/README.md, "Steps"):
+#     e2e/run.sh inputs sepolia-live && e2e/run.sh stage-gpu sepolia-live
+#     the GPU proof of cp-e2e-finalize -> e2e/runs/sepolia-live/receipts/cp-e2e-finalize/receipt-succinct.bin
+#     e2e/run.sh p254 sepolia-live cp-e2e-finalize; the prover image; e2e/run.sh groth16 sepolia-live cp-e2e-finalize
+#     e2e/run.sh fixture sepolia-live
+script/roundtrip.sh finalize     # 1 transaction: the finalisation, with the new seal
+#   wait the release delay: FERRATA_RELEASE_DELAY = 120 s
+script/roundtrip.sh release      # 2 transactions: ETH to a fresh recipient, the token with a relayer's fee
+script/verify-sepolia.sh ../e2e/runs/sepolia-live/manifest.json
+```
+
+The key never appears on a command line: forge reads the keystore file and the password file from
+Foundry's own variables. On a local fork that impersonates the sender, `FERRATA_UNLOCKED=1` replaces
+the keystore.
+
+**Rehearsal.** The stages ran by hand on `anvil --fork-url <a public Sepolia endpoint>` with the sender
+impersonated ([`../e2e/runs/fork/`](../e2e/runs/fork/README.md)): 15 transactions, the finalisation proven
+after the fork's beacon existed, both releases paid, and `verify-sepolia.sh` passing on the manifest,
+including what must be refused (a seal with a changed byte, the candidate's seal offered as the
+finalisation, each release replayed). The gas of every transaction is the Foundry figure of GAS.md, to the
+unit except where calldata differs. On a fork the wait is passed with `cast rpc evm_increaseTime <seconds>`
+and `cast rpc anvil_mine 1`; the beacon there is anvil's random `prevrandao`, not Ethereum's. The driver was
+then rehearsed on a second fork from a clean run directory (`FERRATA_FORK=1`;
+[`../e2e/runs/fork-driver/`](../e2e/runs/fork-driver/README.md)), with interruptions: see there.
+
+**Source verification** is a separate step, [`script/sourcify.sh`](script/sourcify.sh), and was not run.
+`script/sourcify.sh risc0` verifies RISC Zero's two contracts on Sourcify and sends only files that are public
+already. `script/sourcify.sh vault` verifies the vault and the test token, which publishes
+`src/FerrataVault.sol`, `src/interfaces/IRiscZeroVerifier.sol` and `script/TestToken.sol` of this repository
+for good; it runs only with `FERRATA_PUBLISH_SOURCES=yes`.
+
+The testnet configuration (`deploy` only; each from the environment): `FERRATA_DELTA` 600 s as both
+`deltaFloor` and the initial `delta`, `turnSeconds` 900 s (the fixture's posting timeframe of 900
+one-second slots), `FERRATA_RELEASE_DELAY` 120 s, `FERRATA_MIN_RELEASE_DELAY` 0,
+`FERRATA_REVOKE_WINDOW` 1 day, `FERRATA_MAX_FREEZE` 30 days; denominations of 0.001, 0.01 and 0.1 ETH
+and 100, 1,000 and 10,000 test tokens; the sender is the admin and the freeze authority is an address
+without a key unless `FERRATA_FREEZE_AUTHORITY` names one. The design's defaults (3 h 01 min, 24 h,
+7 days) are what `test/real/` uses; the constructor enforces none of them.
 
 ## Tests
 
@@ -353,13 +460,15 @@ the table above and drives real candidate → beacon → finalisation sequences 
 | `Admin.t.sol` | Constructor checks, including `turnSeconds` and `minReleaseDelay`; the v3 domain tag; write-once registry; relay-fee ceiling (fuzzed); role separation; two-step handovers |
 | `Caps.t.sol`, `Merkle.t.sol`, `Privacy.t.sol`, `TreeVectors.t.sol`, `GasScenarios.t.sol` | Rate limits; slots 0, 1 and 2 and tree algebra; LEZ-side data never appears in calldata, events or storage writes; vectors; gas |
 | `invariant/` | 10 invariants over 256 runs × 100 calls, listed below |
+| `real/ReturnLeg.t.sol` | No mock: RISC Zero's Groth16 verifier behind its emergency stop, the vault at the addresses the proofs bind, the design's default timers. Before any proof: the checkpoint program's two journals and the release program's two journals are byte for byte the vault's encodings, and the deposit root is the one the bridge core computed. The run: deposits, `submitCandidate` with the real checkpoint seal, the wait, `recordBeacon`, `finalize` with the seal that echoes that beacon, the release delay, `release` of ETH and of the token to recipients that held nothing. Refused: one flipped byte in each of the four seals (selector and each proof word), a valid seal of another statement, each journal field changed under its real seal (candidate, finalisation, release), a replayed release, a release against a root that is not finalised or still delayed, a finalisation one second early with the right nonce, any proof after the stop. `ReturnLegGas` measures every step. |
 
 The invariant handler deposits, submits candidates with committees of four sizes (n, t) = (3, 2), (4, 3), (7, 5),
 (10, 7) and finalises them after their own `W`, submits candidates that break monotonicity and cancels candidates,
 then tries to finalise both kinds after their full wait with valid proofs. It also revokes, retires, refunds,
 releases (some to payees that cannot receive), claims, replays nullifiers and refunds, donates, moves time, and
 changes freezes, caps and delays. Its 10 invariants:
-- `balance ≥ escrowed + totalOwed`, and `escrowed == deposits − releases − refunds`, for every token;
+- `balance == escrowed + totalOwed + donations` (an equality, so value stranded in the vault fails it too), and
+  `escrowed == deposits − releases − refunds`, for every token;
 - `totalOwed` equals the sum over all payees;
 - a used nullifier or refunded leaf is never paid again;
 - `finalState` is genesis or a state that went through `finalize`, and it is the newest non-revoked checkpoint's
@@ -390,6 +499,25 @@ tools/mutation_spotcheck.py   127/127 mutants killed
 
 The unit tests alone (without the invariant campaign) also cover 100% of the vault's lines, statements, branches and
 functions.
+
+After `test/real/` and `script/` were added (the vault's source is unchanged), on 2026-11-10, on a 16-core cloud
+machine with forge 1.3.6 and solc 0.8.26:
+
+```
+forge build --sizes    FerrataVault runtime 23,650 bytes (926 under EIP-170); RiscZeroGroth16Verifier 4,810
+forge test             Ran 23 test suites in 14.74s (144.22s CPU time): 301 tests passed, 0 failed, 0 skipped (301 total tests)
+                       (the 286 above and the 15 of test/real/, which verify real proofs)
+
+forge coverage --report summary
+| File                   | % Lines            | % Statements       | % Branches        | % Funcs          |
+| src/FerrataVault.sol   | 100.00% (458/458)  | 100.00% (579/579)  | 100.00% (103/103) | 100.00% (83/83)  |
+| script/RoundTrip.s.sol | 0.00% (0/72)       | 0.00% (0/80)       | 0.00% (0/28)      | 0.00% (0/12)     |
+| Total (incl. tests)    | 90.53% (1100/1215) | 91.12% (1252/1374) | 80.31% (155/193)  | 89.79% (211/235) |
+```
+
+The script is not run by the tests (it was run on a local fork: "Sepolia round trip"). That machine's forge counts
+the vault's lines, statements and branches slightly differently from the laptop's build quoted above (458, 579 and
+103 against 456, 584 and 108); both report 100%. The mutation spot-check was not repeated: the vault is unchanged.
 
 Fuzz tests use 256 runs. Invariants use 256 runs × 100 calls each. Handler calls with nothing to do are discarded,
 so the run table counts exactly what happened. Averaged over the ten campaigns of the final run, one campaign has

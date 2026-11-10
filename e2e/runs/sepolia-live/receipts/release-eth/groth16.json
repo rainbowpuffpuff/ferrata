@@ -1,0 +1,9 @@
+{
+  "image_id": "0xdda76672e6e05535117ed6880227a414420344cba9c47b6e112c7dabc5b027c5",
+  "journal_sha256": "bd7eaf7a44f1352b171d4cd7d174b9219ec22f27e0d4990b745e55c2e3773ee9",
+  "receipt_bytes": 1201,
+  "seal_bytes": 260,
+  "selector": "0x73c457ba",
+  "step": "groth16 receipt from proof.json (prover image run outside r0vm)",
+  "verifies": true
+}

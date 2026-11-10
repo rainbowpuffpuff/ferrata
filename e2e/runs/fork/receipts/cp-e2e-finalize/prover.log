@@ -1,0 +1,27 @@
+    0.076 [cp-e2e-finalize] image id 0x95b816ed2614e340c85fed3ba3dad1f70e7dff2da1363406ade87e1333583caf (program 439524 bytes, sha256 9a006d534a61f76bc662a6b2e61977dd9e6e01b70ad0fbde87492e9f88d0e81e)
+    0.333 [cp-e2e-finalize] executed: 5 segments, 3845364 user cycles, 0.26 s; journal == native
+   16.028 [cp-e2e-finalize] succinct proof: total 15.92 s (execute 0.26 s, 5 segment proofs 11.35 s, lift/join/check 4.31 s) | receipt 224314 bytes | verifies; journal == native
+   16.029 {"execute_s":0.256243408,"image_id":"0x95b816ed2614e340c85fed3ba3dad1f70e7dff2da1363406ade87e1333583caf","input_bytes":20781,"input_sha256":"8ef71ef9e80d2d73b190a55673473703a4c19648b7b51a61fd957e0800091561","journal_equals_native":true,"name":"cp-e2e-finalize","paging_cycles":319660,"program_bytes":439524,"program_sha256":"9a006d534a61f76bc662a6b2e61977dd9e6e01b70ad0fbde87492e9f88d0e81e","prove_session_s":15.660724334,"prover":"in-process (LocalProver path), risc0-zkvm feature cuda","receipt_bytes":224314,"receipt_kind":"succinct","receipt_sha256":"4a8c1bd940ac8bf08e6001aba7e81416bf1c28614f5a2336b3237368e2257834","recursion_s":4.308151626999999,"reserved_cycles":160352,"risc0_zkvm":"3.0.5","segment_proofs_s":11.352572707,"segment_times":[{"index":0,"po2":20,"prove_s":2.948291848},{"index":1,"po2":20,"prove_s":2.674275455},{"index":2,"po2":20,"prove_s":2.678581104},{"index":3,"po2":20,"prove_s":2.623870109},{"index":4,"po2":17,"prove_s":0.427554191}],"segments":5,"total_cycles":4325376,"total_s":15.917024386,"user_cycles":3845364,"verifies":true}
+   16.107 	Command being timed: "/root/bin/ferrata-modal-cuda prove cp-e2e-finalize /inputs/programs/checkpoint.bin /inputs/fixtures/cp-e2e-finalize.input /inputs/fixtures/cp-e2e-finalize.json /vol/results/e2e-fork/cp-e2e-finalize"
+   16.108 	User time (seconds): 14.82
+   16.108 	System time (seconds): 1.06
+   16.108 	Percent of CPU this job got: 98%
+   16.108 	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:16.10
+   16.108 	Average shared text size (kbytes): 0
+   16.109 	Average unshared data size (kbytes): 0
+   16.109 	Average stack size (kbytes): 0
+   16.109 	Average total size (kbytes): 0
+   16.109 	Maximum resident set size (kbytes): 813200
+   16.109 	Average resident set size (kbytes): 0
+   16.110 	Major (requiring I/O) page faults: 0
+   16.110 	Minor (reclaiming a frame) page faults: 0
+   16.110 	Voluntary context switches: 0
+   16.110 	Involuntary context switches: 0
+   16.110 	Swaps: 0
+   16.110 	File system inputs: 0
+   16.110 	File system outputs: 0
+   16.110 	Socket messages sent: 0
+   16.111 	Socket messages received: 0
+   16.111 	Signals delivered: 0
+   16.111 	Page size (bytes): 4096
+   16.111 	Exit status: 0

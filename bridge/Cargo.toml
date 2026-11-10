@@ -3,12 +3,14 @@
 # crates/ferrata-bridge-core  no_std (+ optional std) encodings, trees, statements; no unsafe
 # methods/                    builds the zkVM guests in guests/ with risc0-build and embeds them
 # host/                       runs, proves and wraps the release guest; writes artifacts/
+# e2e/                        the wallet side of the end-to-end return-leg fixture (../e2e/): guest
+#                             programs are read from files, so it does not build the guests
 #
 # guests/ is a workspace of its own so that its [patch.crates-io] (RISC Zero's accelerated
 # sha2) applies to ferrata-bridge-core there and nowhere else.
 [workspace]
 resolver = "2"
-members = ["crates/ferrata-bridge-core", "methods", "host"]
+members = ["crates/ferrata-bridge-core", "methods", "host", "e2e"]
 default-members = ["crates/ferrata-bridge-core"]
 exclude = ["guests"]
 

@@ -25,7 +25,11 @@ State when measured (`test/GasScenarios.t.sol`, `setUp`):
 The refund rows first retire the vault, finalise a sunset checkpoint and wait `revokeWindow` (v3 D5). The
 checkpoint rows use the test committee, n = 4 and t = 3.
 
-## Results
+## Results with the mock verifier
+
+These are the vault's own scenarios. Rows marked ¹ go through RISC Zero's emergency stop into a **mock**
+verifier; the same calls with RISC Zero's real Groth16 verifier and real proofs are measured in "With the real
+verifier" below.
 
 | Operation | v3 gas (whole transaction) | v2 |
 |---|---:|---:|
@@ -51,17 +55,68 @@ checkpoint rows use the test committee, n = 4 and t = 3.
 | `claimOwed` ETH, called through the payee contract | 37,713 | 37,697 |
 | `revokeFrom` (from `gas-report.txt`: min / median / max) | 23,698 / 69,882 / 80,514 | 23,698 / 67,217 / 77,849 |
 
-¹ **The real verifier's gas is not included.** These calls go through `RiscZeroVerifierEmergencyStop`, which a
-real deployment also pays for. Inside it sits `MockRiscZeroVerifier`, whose own execution is about 2,765 gas
-(`test_gas_mockVerifierExecution`, and the median of `verify` in `gas-report.txt`). Subtract that figure, then add
-the real RISC Zero verifier's execution, which this spike did not measure. For scale only: the 4-pair BN254
-pairing check of a standard Groth16 verifier costs 45,000 × 4 + 34,000 = 214,000 gas under EIP-1108 prices,
-before any input handling. That is a lower bound for that one step, not a measurement. The wrapper's `verify`
-has a median of 8,504 gas in the report, about 5.7k of it the wrapper's own: a paused check, plus the call into
-the base verifier.
+¹ **The real verifier's gas is not included in this table.** These calls go through
+`RiscZeroVerifierEmergencyStop`, which a real deployment also pays for. Inside it sits `MockRiscZeroVerifier`,
+whose own execution is about 2,765 gas (`test_gas_mockVerifierExecution`, and the median of `verify` in
+`gas-report.txt`). The wrapper's `verify` has a median of 8,504 gas in the report, about 5.7k of it the
+wrapper's own: a paused check, plus the call into the base verifier. The real verifier is measured below.
 
 ² The recipient is a fresh, empty account, which is the privacy-preserving default. A value transfer to an empty
 account pays the 25,000 new-account charge, and that charge is in these figures.
+
+## With the real verifier
+
+Measured on 2026-11-10 with the same compiler settings, in the return leg of `test/real/`
+([`../e2e/README.md`](../e2e/README.md)): RISC Zero's unmodified `RiscZeroGroth16Verifier` (risc0-ethereum
+v3.0.0) behind its unmodified `RiscZeroVerifierEmergencyStop`, and real Groth16 proofs of the checkpoint and
+release programs. Nothing is mocked.
+
+```
+forge test --isolate --match-contract ReturnLegGas -vv
+```
+
+State when measured: a freshly deployed vault, UNLIMITED caps, the first two deposits of the tree, no earlier
+checkpoint, committee n = 4 and t = 3, fresh recipients. It is not the state of the table above (42 deposits,
+finite caps, one earlier checkpoint), so the two tables differ by more than the verifier.
+
+| Operation | Gas, whole transaction (`forge --isolate`) | Receipt on a local fork of Sepolia (anvil) |
+|---|---:|---:|
+| `registerToken`, three denominations: ETH / the test token ³ | 472,235 / 473,073 | 472,211 / 473,049 |
+| `depositETH`, first deposit of the tree and of the address | 193,072 | 193,072 |
+| `deposit` ERC-20, second deposit of the address, first of the token | 192,529 | 192,529 |
+| `submitCandidate` with a real checkpoint seal, including the beacon it records | **507,370** | 507,370 |
+| `recordBeacon` | 77,823 | 77,823 |
+| `finalize` with a real checkpoint seal that echoes the beacon ⁴ | **475,300** | 475,312 |
+| `release` ETH, no relay fee, to a fresh recipient | **363,169** | 363,169 |
+| `release` ERC-20, registered fee to a named relayer, both fresh | **388,243** | 388,243 |
+
+Creations, from the receipts of the fork run (`forge --isolate` does not report creations through
+`vm.lastCallGas`): `RiscZeroGroth16Verifier` 1,179,986; `RiscZeroVerifierEmergencyStop` 451,744; `FerrataVault`
+5,501,261; the test token 508,036.
+
+³ The two columns differ by 24 gas because the registered release delay is 24 h in the test and 120 s in the
+fork run: two more non-zero calldata bytes.
+
+⁴ Two different proofs: the fork's finalisation echoes the nonce of the fork's own beacon, the test's echoes
+the fixture's. The 12 gas are calldata bytes of the nonce and the seal.
+
+Against the mock rows above: a candidate costs 507k where the mocked scenario reads 247k, a finalisation 475k
+against 213k, an ETH release 363k against 168k. Most of each difference is the Groth16 verification, measured
+on the v2 vault as 230,107 gas through the stop (`bridge/RESULTS.md`, Part 4); the rest is the different state
+(first candidate and first checkpoint ever, UNLIMITED caps) and, for the candidate, 260 bytes of seal instead of
+4. The v2 vault's releases with the same verifier cost 367,988 (ETH) and 397,874 (ERC-20 with a relayer's
+fee).
+
+**A checkpoint with the real verifier**: `submitCandidate` 507,370 + one later `recordBeacon` 77,823 +
+`finalize` 475,300 = **1,060,493 gas**, paid once per finalised LEZ state.
+
+Against the proposal's M0 thresholds (`docs/traceability.md`, P.3: release ≤ 450k, candidate and finalisation
+≤ 500k): both releases and the finalisation are under them; this candidate is 7,370 gas over. It is a vault's
+first candidate, so its beacon and candidate slots are written from zero; a later candidate was not measured
+with the real verifier.
+
+**The whole return leg of the test**, from an empty chain to both releases paid: 10.9M gas, of which 7.64M is
+the four creations (the vault alone 5.50M) and 0.95M the two registrations.
 
 ## What changed against v2
 
@@ -80,8 +135,8 @@ account pays the 25,000 new-account charge, and that charge is in these figures.
 
 A checkpoint is paid once per finalised LEZ state, not per user. It takes three calls: `submitCandidate` (which
 records the first beacon), one more `recordBeacon` at least `W = Δ + (t − 1) × turnSeconds` later, and `finalize`.
-That is about 247k + 78k + 213k ≈ 538k gas, plus two real verifier executions. Every burn in that state's burn
-tree then releases against it. A cancelled candidate costs its submitter the 247k and the wait; resubmitting the
+With the mock verifier that is about 247k + 78k + 213k ≈ 538k gas; with the real verifier and real proofs it
+is 1,060,493 gas ("With the real verifier"). Every burn in that state's burn tree then releases against it. A cancelled candidate costs its submitter the 247k and the wait; resubmitting the
 same state costs the same again.
 
 ## Where the deposit gas goes

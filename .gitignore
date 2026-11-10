@@ -61,3 +61,12 @@ __pycache__/
 # guest binaries deployed (they embed build paths; lez/live/README.md says how to obtain them)
 /lez/live/driver/target
 /lez/live/programs/*.bin
+
+# End-to-end return leg (e2e/): the recorded guest program binaries (they embed the build machine's
+# paths; their sha256 and image ids are in e2e/runs/*/programs.json) and the scratch of the Groth16
+# wraps (the prover's input.json and proof.json)
+/e2e/programs/
+/e2e/runs/*/work/
+/vault/script/runs/
+/e2e/sepolia-live.env
+/e2e/runs/*/sepolia-live.log

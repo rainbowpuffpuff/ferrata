@@ -1,0 +1,100 @@
+{
+  "bridge_seed_label": "e2e: user bridge seed (test value)",
+  "burns": [
+    {
+      "amount": "0x00000000000000000000000000000000000000000000000000038d7ea4c68000",
+      "c_out": "0xeb0660b8d7c6683b1d3d41580610826dec620565e6f19d24bc93374dc49718e0",
+      "mac": "0x1d8e6c8e1ff4be161427496b01ba712d",
+      "memo": "0x18478e4de87ab94a7cf0c8409d9b01d732ef96c5",
+      "r": "0x4c9ea3ded8f46066e4e29c4bdd0b5e92b3326788da9dfbe1def026cc95ae6519",
+      "token": "0x0000000000000000000000000000000000000000"
+    },
+    {
+      "amount": "0x00000000000000000000000000000000000000000000000000038d7ea4c68000",
+      "c_out": "0x48766c1565166945cfb801bf9bf58ff4d67884c220592ecd3d28f12f0ca82828",
+      "mac": "0x9a30d2e0b6c6eb8d079fbb1b160b0a44",
+      "memo": "0x1c5e44c7ad734125f18b3a123fa952ee7b9f876d",
+      "r": "0xb864f9ff13dfdf045250b038d11b11dc42fda85cf8cd1e905ecc206003972c83",
+      "token": "0x0000000000000000000000000000000000000000"
+    },
+    {
+      "amount": "0x0000000000000000000000000000000000000000000000000000000005f5e100",
+      "c_out": "0x556e4ceee133a09172944818f4d2638d1f5b55f7c530a33ac6ef8f4611268153",
+      "mac": "0x88453d0df01205ab1ca78e23996ba891",
+      "memo": "0x98c934dca603035d1851e56553f3ee98c260efd6",
+      "r": "0x8b7fd63d6bc20a3d318e3a1a8c24478212a15bf1cfa18279e33c2229a8c0f5d8",
+      "token": "0xe4830261a1d61df5af1be5579a3e3db738331139"
+    },
+    {
+      "amount": "0x0000000000000000000000000000000000000000000000000000000005f5e100",
+      "c_out": "0xd0684224907eb518a6b48149d13c760ca880c1f1a041ff867e1885fb3d360f5d",
+      "mac": "0x8e71ff4f2be5ce26980d3f6f40ebf831",
+      "memo": "0xe57964c0aa6283351c3fb6bb132646f9a7add9ac",
+      "r": "0xe6e915011d7b732d5e003e664c581c4412be6b15a4c30062e850ba39eaa99e33",
+      "token": "0xe4830261a1d61df5af1be5579a3e3db738331139"
+    },
+    {
+      "amount": "0x0000000000000000000000000000000000000000000000000000000005f5e100",
+      "c_out": "0xe85cf0719b868128b4a5d00adcfdbdd2faadb8de70cf6bf1b4d9d9de00de9180",
+      "mac": "0xc33b5616697b49f46e0e4b90e887f5ab",
+      "memo": "0xf0c30e1e76a1a7fe01a7d565630bb6ca1886e43a",
+      "r": "0x7a7d0c415209b55593c44f9f13082613a10d88fc155e1e7d6436c0b453aa58cc",
+      "token": "0xe4830261a1d61df5af1be5579a3e3db738331139"
+    }
+  ],
+  "config_id": "0x534f6617b6fa38cbe2ac07c09d065fda0fc17681551fecbb057393b22f8cd51a",
+  "depositor": "0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07",
+  "deposits": [
+    {
+      "amount": "0x00000000000000000000000000000000000000000000000000038d7ea4c68000",
+      "commitment": "0x02e9806d59a3b09a5ebb195c5492acd378c7fcdbe01fb797760c13898b7cc26e",
+      "dest": "0x1787c52d0fe3bd23e909bbb3470b4b67aa9f017fae739bb4287f58771d18143c",
+      "j": 0,
+      "kind": "private",
+      "leaf": "0x02b12d1975ecb7e1709da5ff00cc8efde4fae4626485f9d4742736025b28bdcf",
+      "leaf_index": 0,
+      "secret_s": "0xedba36d17f8928bcf9f84909448afb06ab952a5f31e6677cb5f972e81d715dba",
+      "token": "0x0000000000000000000000000000000000000000"
+    },
+    {
+      "amount": "0x0000000000000000000000000000000000000000000000000000000005f5e100",
+      "commitment": "0x05a8617d29d91d90295091c3b4eed49716e4df95d0bddbe64ca84b5cc11af098",
+      "dest": "0xe450701ab9476f193a66e29b6e6e30dd1bea130cf3915426f497ff566f4d9a3f",
+      "j": 1,
+      "kind": "public",
+      "leaf": "0x3d2315f09de64c84434f8198a2e16cd63981342d5c85c903e997a9e0ed1640fd",
+      "leaf_index": 1,
+      "secret_s": "0xb6934ac592fd82ac0a546be157311501dbc0bc8304ac21a26586ec8a0f320a19",
+      "token": "0xe4830261a1d61df5af1be5579a3e3db738331139"
+    }
+  ],
+  "evm_chain_id": 11155111,
+  "import_root": {
+    "leaf_count": 2,
+    "root": "0x0d6ae24238c4da3e89ce1ff6a7624ba192e71ae626dd1e26fcd3a6589359012f"
+  },
+  "own": [
+    {
+      "amount": "0x00000000000000000000000000000000000000000000000000038d7ea4c68000",
+      "i": 0,
+      "name": "eth",
+      "position": 1,
+      "recipient": "0x67553ad2d0f0143f8b37b4bee72d08d59984c824",
+      "relay_fee": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "relayer": "0x0000000000000000000000000000000000000000",
+      "token": "0x0000000000000000000000000000000000000000"
+    },
+    {
+      "amount": "0x0000000000000000000000000000000000000000000000000000000005f5e100",
+      "i": 1,
+      "name": "erc20",
+      "position": 3,
+      "recipient": "0x730a57fadc5f6b9e42279a9d52f349469b231962",
+      "relay_fee": "0x000000000000000000000000000000000000000000000000000000000003d090",
+      "relayer": "0xc6948a054c4da1fd85ce3b68299294704198e253",
+      "token": "0xe4830261a1d61df5af1be5579a3e3db738331139"
+    }
+  ],
+  "vault": "0xdfedf9a73cfb337277b95a9a1c941c3496a4385f",
+  "what": "The wallet side of the end-to-end return-leg fixture. Test values throughout: the bridge seed is sha256 of bridge_seed_label, and secret_s of each deposit is printed. burns are the notes published on the zone, in order; own says which are this wallet's."
+}
