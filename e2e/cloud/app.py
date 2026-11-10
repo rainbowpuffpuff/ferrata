@@ -51,6 +51,10 @@ CHAIN_ID = "11155111"
 # ---- the runner's image: the recipe of the build box (spike/modal-build/box.py), what the driver needs --------
 LEZ_COMMIT = "1806e873ea2ac0e1b608aa7cf2f9b6e1fb12db21"  # tag v0.4.0-rc1
 LB_COMMIT = "d480efc6bbb48fb493c10fe9afefd84c18a04f02"  # the Logos Blockchain revision LEZ pins
+# Foundry 1.3.6-nightly of 18 Sep 2025, the build that ran the fork rehearsals and the keystore test on the
+# laptop. The 1.3.6 release (v1.3.6) refuses `forge script --unlocked` while ETH_FROM is set, which the
+# driver's fork mode needs.
+FOUNDRY = "nightly-a4d66e8e348b9763208f715a753c82d0a4ba5b63"
 RUNNER_PATH = "/root/.cargo/bin:/root/.risc0/bin:/root/.foundry/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 APT = [
     "curl", "ca-certificates", "build-essential", "pkg-config", "libssl-dev", "git",
@@ -79,8 +83,9 @@ runner_image = (
     )
     .run_commands(
         "curl -L https://foundry.paradigm.xyz | bash",
-        "foundryup --install v1.3.6 || foundryup --install 1.3.6",
-        "forge --version && anvil --version",
+        f"foundryup --install {FOUNDRY}",
+        f"forge --version | grep -q {FOUNDRY.removeprefix('nightly-')} && anvil --version"
+        " && sha256sum /root/.foundry/bin/forge /root/.foundry/bin/cast /root/.foundry/bin/anvil",
         # vault/foundry.toml is offline: the compiler has to be there already
         "mkdir -p /opt/solc-warm/src && cd /opt/solc-warm"
         " && printf '[profile.default]\\nsolc = \"0.8.26\"\\nsrc = \"src\"\\n' > foundry.toml"
