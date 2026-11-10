@@ -43,6 +43,9 @@ fs_permissions = [
     { access = "read", path = "./out" },
     { access = "read", path = "./script/params" },
     { access = "read-write", path = "./deployments" },
+    # test/PrivacySuite.t.sol reads the LEZ half's scenario and writes what each transaction published
+    # (target/privacy/ at the repository root, not committed; FERRATA_PRIVACY_DIR overrides).
+    { access = "read-write", path = "../target/privacy" },
 ]
 
 [lint]

@@ -44,6 +44,14 @@ impl PrivateAccount {
 /// The opening under which private senders present themselves (`SenderPresentation::Blinded`).
 pub const ALIAS_OPENING: [u8; 32] = [9; 32];
 
+/// The per-transaction randomness of a private transaction's public outputs: the opening of the
+/// sender's alias (`SenderPresentation::Blinded`) and the witness's random seed.
+#[derive(Clone, Copy, Debug)]
+pub struct Freshness {
+    pub alias_opening: [u8; 32],
+    pub random_seed: [u8; 32],
+}
+
 /// What a private transaction cost and showed.
 pub struct PrivateRun {
     pub tx: PrivacyPreservingTransaction,
@@ -107,6 +115,38 @@ impl Chain {
         timestamp_ms: u64,
         predicted: Option<lee::PredictedCrossMessages>,
     ) -> Result<PrivateRun, String> {
+        let fixed = Freshness { alias_opening: ALIAS_OPENING, random_seed: [0; 32] };
+        self.prove_and_settle_private_fresh(
+            sender,
+            root,
+            message,
+            public_actors,
+            programs,
+            reserve,
+            timestamp_ms,
+            predicted,
+            fixed,
+        )
+    }
+
+    /// As [`Chain::prove_and_settle_private_with`], with the sender's alias opening and the
+    /// witness's random seed (which keys the encrypted note's ephemeral key) chosen by the caller,
+    /// as a wallet would draw them fresh for every transaction. The other entry points use the
+    /// constants of LEZ's own tests ([`ALIAS_OPENING`] and a zero seed), which make a private
+    /// account's alias and ephemeral keys a function of the account and its nonce.
+    #[allow(clippy::too_many_arguments)]
+    pub fn prove_and_settle_private_fresh(
+        &mut self,
+        sender: &PrivateAccount,
+        root: Actor,
+        message: Vec<u8>,
+        public_actors: Vec<Actor>,
+        programs: &ProgramCatalog,
+        reserve: u128,
+        timestamp_ms: u64,
+        predicted: Option<lee::PredictedCrossMessages>,
+        freshness: Freshness,
+    ) -> Result<PrivateRun, String> {
         let inbox = Actor::native_balance(system_accounts::fee_inbox_account_id());
         let mut public_actors = public_actors;
         public_actors.push(inbox);
@@ -127,7 +167,11 @@ impl Chain {
                 refund_to: Some(self.payer),
             }),
             public_context: PublicExecutionContext::new(public_actors, []),
-            private_witnesses: vec![update_witness(&sender.keys, sender.account.clone(), membership)],
+            private_witnesses: vec![{
+                let mut witness = update_witness(&sender.keys, sender.account.clone(), membership);
+                witness.random_seed = freshness.random_seed;
+                witness
+            }],
             dummy_inputs: Vec::new(),
             ciphertext_padding: None,
             recoveries: Vec::new(),
@@ -135,7 +179,8 @@ impl Chain {
         };
         let simulation = Simulation { public_actor_states, admitted_accounts: None };
         let started = Instant::now();
-        let presentation = |_| SenderPresentation::Blinded(ALIAS_OPENING);
+        let opening = freshness.alias_opening;
+        let presentation = |_| SenderPresentation::Blinded(opening);
         let (output, proof) = match predicted {
             None => lee::execute_and_prove(input, &simulation, programs, presentation, |_, _| false, no_seal),
             Some(predicted) => lee::execute_and_prove_with_cross_messages(
