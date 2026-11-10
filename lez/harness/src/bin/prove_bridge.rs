@@ -116,10 +116,8 @@ fn main() {
     };
     assert!(claim.charge.revert.is_none(), "the claim's public part reverted: {:?}", claim.charge.revert);
     assert!(w.nullifier(&vault, &n).is_some(), "the nullifier account is written");
-    let holding = HolderState {
-        holdings: vec![Holding { config_id: cid, token: ETH, amount: DENOMINATIONS[1] }],
-        pending: None,
-    };
+    let holding =
+        HolderState { holdings: vec![Holding { config_id: cid, token: ETH, amount: DENOMINATIONS[1] }], pending: None };
     let claimed = private_post_state(&w.chain, &private_keys(seed), &account.account, RESERVE, &holding)
         .expect("the chain holds the claimed account's commitment (1 ETH held)");
     // Nothing of the deposit is in the transaction; N, the configuration and the root read are.

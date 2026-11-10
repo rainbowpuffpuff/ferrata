@@ -25,8 +25,8 @@ use ferrata_lez_bridge_wire::{
 use harness::{
     attest::render_executed,
     bridge::{
-        catalog, private_burn_transition, private_keys, private_post_state, render, World, CHAIN_ID, DENOMINATIONS, ETH,
-        VAULT_B,
+        catalog, private_burn_transition, private_keys, private_post_state, render, World, CHAIN_ID, DENOMINATIONS,
+        ETH, VAULT_B,
     },
     private::PrivateAccount,
     render_transitions,

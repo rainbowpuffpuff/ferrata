@@ -12,7 +12,7 @@
 //! `bridge/vectors/inbound-v2.json` (`claim`), so `root(5)` is the vector's root and the claim of
 //! its leaf 2 must spend the vector's `N`. Leaves 5–7 are this harness's own deposits.
 
-use std::{borrow::Cow, collections::BTreeMap};
+use std::borrow::Cow;
 
 use ferrata_bridge_core::{
     chain_id_u256,
@@ -26,10 +26,10 @@ use ferrata_core::{
     Root,
 };
 use ferrata_lez_bridge_wire::{
-    self as bw, code, config_actor, config_seed, fee_slot, holder_actor, nullifier_actor, register_slots, registry_slot,
-    root_actor, root_seed, token_actor, token_seed, BridgeConfig, BridgeMessage, BridgeState, CapParams, ClaimWitness,
-    Controls, FeeSchedule, HolderState, ImportProof, NullifierState, PairingProof, RootState, ScheduleRange, TokenEntry,
-    TokenState, VaultProof, Word, SLOT_CONFIG_ID, SLOT_COUNT, SLOT_ROOT,
+    self as bw, code, config_actor, config_seed, fee_slot, holder_actor, nullifier_actor, register_slots,
+    registry_slot, root_actor, root_seed, token_actor, BridgeConfig, BridgeMessage, BridgeState, CapParams,
+    ClaimWitness, Controls, FeeSchedule, HolderState, ImportProof, NullifierState, PairingProof, RootState,
+    ScheduleRange, TokenEntry, TokenState, VaultProof, Word, SLOT_CONFIG_ID, SLOT_COUNT, SLOT_ROOT,
 };
 use ferrata_lez_wire::{header_actor, RecordState};
 use ferrata_spectests::execkit::{account_rlp, enc, keccak, Trie};
@@ -351,7 +351,8 @@ impl Block {
                 (keccak(&SLOT_COUNT).to_vec(), enc::uint(&v.count.to_be_bytes())),
                 (keccak(&SLOT_CONFIG_ID).to_vec(), enc::uint(&v.config_id)),
             ];
-            let trie = Trie::new(base.into_iter().chain(v.extra.iter().map(|(k, x)| (keccak(k).to_vec(), enc::uint(x)))));
+            let trie =
+                Trie::new(base.into_iter().chain(v.extra.iter().map(|(k, x)| (keccak(k).to_vec(), enc::uint(x)))));
             accounts.push((v.address, account_rlp(1, 0, trie.root(), keccak(b"vault code"))));
             storage.push((v.address, trie));
         }
@@ -705,7 +706,11 @@ impl World {
     ) -> TxReport {
         let message = borsh::to_vec(message).unwrap();
         let report = self.chain.submit_signed(label, root, message, actors, evidence, self.time, signers);
-        assert_eq!(report.tx_bytes, self.chain.last_tx.len(), "{label}: the kept transaction is the settled one's size");
+        assert_eq!(
+            report.tx_bytes,
+            self.chain.last_tx.len(),
+            "{label}: the kept transaction is the settled one's size"
+        );
         self.txs.push((label.to_string(), self.chain.last_tx.clone()));
         report
     }
@@ -726,11 +731,8 @@ impl World {
     pub fn init(&mut self, label: &str, config: &BridgeConfig, block: usize) -> TxReport {
         let cid = config.id(self.program);
         let b = &self.blocks[block];
-        let message = BridgeMessage::Init {
-            config: config.clone(),
-            record_slot: b.slot,
-            proof: b.pairing_proof(&config.vault),
-        };
+        let message =
+            BridgeMessage::Init { config: config.clone(), record_slot: b.slot, proof: b.pairing_proof(&config.vault) };
         let root = config_actor(self.program, &cid);
         let header = header_actor(ferrata_account(), &INSTANCE, b.slot);
         let evidence = self.evidence(root, config_seed(&cid));
@@ -756,7 +758,14 @@ impl World {
 
     /// `Register` of `entry` (with schedule 0) for configuration `cid` under block `block`, with the
     /// proofs of `vault`'s registry slots.
-    pub fn register(&mut self, label: &str, cid: &Hash, block: usize, entry: &TokenEntry, vault: &[u8; 20]) -> TxReport {
+    pub fn register(
+        &mut self,
+        label: &str,
+        cid: &Hash,
+        block: usize,
+        entry: &TokenEntry,
+        vault: &[u8; 20],
+    ) -> TxReport {
         self.register_with(label, cid, block, entry, &schedule_zero(entry), vault)
     }
 
@@ -835,9 +844,8 @@ impl World {
         relayer: Option<Hash>,
     ) -> Vec<Actor> {
         let mut actors = vec![token_actor(self.program, cid, token), config_actor(self.program, cid), nullifier];
-        let accounts = dest
-            .into_iter()
-            .chain([fee_recipient(), relayer.map(AccountId::new).unwrap_or_else(fee_recipient)]);
+        let accounts =
+            dest.into_iter().chain([fee_recipient(), relayer.map(AccountId::new).unwrap_or_else(fee_recipient)]);
         for account in accounts {
             let actor = holder_actor(self.program, account);
             if !actors.contains(&actor) {
@@ -1028,7 +1036,7 @@ pub fn private_claim_transitions(
         pre_state: transition.response.post_state.clone().expect("the claim is kept for the reply"),
         message: borsh::to_vec(&lee_core::program::StateReply { state: w.chain.actor_state(root) }).unwrap(),
     };
-    let second = crate::attest::execute("the root's reply (verifies the claim, sends Spend)", elf.elf(), &reply);
+    let second = crate::attest::execute("the root's reply (verifies the claim, sends Issue)", elf.elf(), &reply);
     vec![first, second]
 }
 

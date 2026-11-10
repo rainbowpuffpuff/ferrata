@@ -201,7 +201,7 @@ impl TokenEntry {
             return Err(code::BAD_MESSAGE);
         }
         let mut unit = self.lez_unit;
-        while unit >= 10 && unit % 10 == 0 {
+        while unit >= 10 && unit.is_multiple_of(10) {
             unit /= 10;
         }
         if unit != 1 || 10u128.checked_pow(u32::from(self.decimals)).is_some_and(|p| self.lez_unit > p) {
@@ -400,7 +400,8 @@ impl Gate {
     /// (`FROZEN`) or above the bucket (`CAPPED`).
     pub fn admit(&mut self, mints: bool, value: u128) -> Result<(), u8> {
         let now = self.now_ms;
-        let (until, bucket) = if mints { (self.mints_until, &mut self.mint) } else { (self.burns_until, &mut self.burn) };
+        let (until, bucket) =
+            if mints { (self.mints_until, &mut self.mint) } else { (self.burns_until, &mut self.burn) };
         if now < until {
             return Err(code::FROZEN);
         }
@@ -745,7 +746,10 @@ impl BridgeMessage {
 // State
 // ---------------------------------------------------------------------------------------------
 
-/// The state of an actor of the bridge program, by role.
+/// The state of an actor of the bridge program, by role. One value is decoded per handler
+/// execution, so the variants' size difference costs nothing; boxing would only complicate the
+/// handlers' patterns.
+#[allow(clippy::large_enum_variant)]
 #[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub enum BridgeState {
     Config(ConfigState),
@@ -757,6 +761,7 @@ pub enum BridgeState {
 }
 
 /// `config(cid)`.
+#[allow(clippy::large_enum_variant)]
 #[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub enum ConfigState {
     /// `Init` asked for the vault's slot 2 and the reply is outstanding (within one transaction).
@@ -1016,8 +1021,8 @@ pub fn check_import(
     pending: &PendingImport,
     attestation: &Attestation,
 ) -> Result<RootState, u8> {
-    let [root, count] = vault_slots(config, pending.record_slot, attestation, [SLOT_ROOT, SLOT_COUNT])
-        .ok_or(code::IMPORT_MISMATCH)?;
+    let [root, count] =
+        vault_slots(config, pending.record_slot, attestation, [SLOT_ROOT, SLOT_COUNT]).ok_or(code::IMPORT_MISMATCH)?;
     if root != pending.root || count != word_of(pending.leaf_count) {
         return Err(code::IMPORT_MISMATCH);
     }
@@ -1039,8 +1044,7 @@ pub fn check_pairing(
     record_slot: u64,
     attestation: &Attestation,
 ) -> Result<(), u8> {
-    let [held] =
-        vault_slots(config, record_slot, attestation, [SLOT_CONFIG_ID]).ok_or(code::IMPORT_MISMATCH)?;
+    let [held] = vault_slots(config, record_slot, attestation, [SLOT_CONFIG_ID]).ok_or(code::IMPORT_MISMATCH)?;
     if held != *config_id {
         return Err(code::PAIRING_MISMATCH);
     }

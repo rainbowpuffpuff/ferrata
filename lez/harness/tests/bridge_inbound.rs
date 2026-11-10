@@ -113,7 +113,8 @@ fn inbound_configuration_import_and_plaintext_claim() {
     let r = w.import("ImportRoot B: block 100 (8 leaves)", &cid_b, 0, w.vault_b.root(8), 8, &VAULT_B);
     run(r, None);
     // Vault A's ETH fee schedule 1 (from leaf 6), then its range closed at 8 leaves.
-    let r = w.import_fees("ImportFees ETH (A): schedule 1 at block 101", &cid_a, 1, ETH, 1, Some(eth_schedule_one()), &va);
+    let r =
+        w.import_fees("ImportFees ETH (A): schedule 1 at block 101", &cid_a, 1, ETH, 1, Some(eth_schedule_one()), &va);
     run(r, None);
     let r = w.import_fees("ImportFees ETH (A): no schedule 2 at block 101 (8 leaves)", &cid_a, 1, ETH, 2, None, &va);
     run(r, None);
@@ -159,7 +160,8 @@ fn inbound_configuration_import_and_plaintext_claim() {
     bad.dest = vector.dest;
     let r = w.claim("Claim: leaf 6 redirected to another destination", &cid_a, 8, &va, bad);
     run(r, Some(code::CLAIM_INVALID));
-    let r = w.claim("Claim: leaf 6 under root(B, 8) (another configuration's vault)", &cid_b, 8, &VAULT_B, good.clone());
+    let r =
+        w.claim("Claim: leaf 6 under root(B, 8) (another configuration's vault)", &cid_b, 8, &VAULT_B, good.clone());
     run(r, Some(code::CLAIM_INVALID));
     let odd = w.vault_a.witness(&w.odd_deposit.clone(), 8);
     let r = w.claim("Claim: leaf 7, 0.5 ETH (not a denomination)", &cid_a, 8, &va, odd);

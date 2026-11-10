@@ -63,15 +63,7 @@ fn a_private_claim_publishes_only_the_nullifier_the_denomination_and_the_root_re
     let me = holder_actor(w.program, account.id());
     let run = w
         .chain
-        .prove_and_settle_private(
-            &account,
-            me,
-            borsh::to_vec(&message).unwrap(),
-            publics,
-            &catalog(),
-            RESERVE,
-            w.time,
-        )
+        .prove_and_settle_private(&account, me, borsh::to_vec(&message).unwrap(), publics, &catalog(), RESERVE, w.time)
         .expect("settles");
     assert!(run.charge.revert.is_none(), "{:?}", run.charge.revert);
 
@@ -124,10 +116,8 @@ fn a_private_claim_publishes_only_the_nullifier_the_denomination_and_the_root_re
     assert_eq!(w.balance(relayer(), &cid), RELAY_FEES[1], "the relay fee, minted publicly");
     assert_eq!(w.balance(fee_recipient(), &cid), 0, "leaf 5 is under schedule 0: no mint fee");
     // Private state: the chain holds the commitment of the account with its 1 ETH holding.
-    let holder = HolderState {
-        holdings: vec![Holding { config_id: cid, token: ETH, amount: DENOMINATIONS[1] }],
-        pending: None,
-    };
+    let holder =
+        HolderState { holdings: vec![Holding { config_id: cid, token: ETH, amount: DENOMINATIONS[1] }], pending: None };
     let post = private_post_state(&w.chain, &private_keys(seed), &account.account, RESERVE, &holder)
         .expect("the chain holds the claimed account's commitment");
     let _ = PrivateAccount { keys: private_keys(seed), account: post };

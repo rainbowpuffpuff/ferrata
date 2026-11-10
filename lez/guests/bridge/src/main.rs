@@ -134,7 +134,17 @@ fn handle(input: &ReceiveInput) -> Result<Response, Refusal> {
             Ok(Response::keep_state().send_sync(reader, &StateReply::from(input)))
         }
         BridgeMessage::WriteRoot { root } => write_root(input, program, state, root),
-        BridgeMessage::Spend { nullifier, config_id, evm_chain_id, vault, token, leaf_count, amount, mint_to, fees } => {
+        BridgeMessage::Spend {
+            nullifier,
+            config_id,
+            evm_chain_id,
+            vault,
+            token,
+            leaf_count,
+            amount,
+            mint_to,
+            fees,
+        } => {
             let spent = Spent { nullifier, config_id, evm_chain_id, vault, token, leaf_count, amount };
             spend(input, program, state, spent, mint_to, fees)
         }
@@ -316,8 +326,13 @@ fn config_reply(input: &ReceiveInput, program: AccountId, state: &ConfigState) -
         }
         Pending::Fees { token, index, schedule, record_slot } => {
             let count = check_fees(&config, token, *index, schedule, *record_slot, &attestation)?;
-            let extend =
-                BridgeMessage::ExtendFees { config_id, token: *token, index: *index, schedule: schedule.clone(), count };
+            let extend = BridgeMessage::ExtendFees {
+                config_id,
+                token: *token,
+                index: *index,
+                schedule: schedule.clone(),
+                count,
+            };
             SyncMessage::new(token_actor(program, &config_id, token), &extend)
                 .with_pda_seeds([token_seed(&config_id, token)])
         }
@@ -514,8 +529,16 @@ fn claim_reply(input: &ReceiveInput, program: AccountId, state: &BridgeState) ->
         }
         DestKind::Public => Some(witness.dest),
     };
-    let issue =
-        issue_message(program, &root, witness.token, &claimed, pending.range, mint_to, pending.relayer, pending.time_ms);
+    let issue = issue_message(
+        program,
+        &root,
+        witness.token,
+        &claimed,
+        pending.range,
+        mint_to,
+        pending.relayer,
+        pending.time_ms,
+    );
     Ok(set(BridgeState::Holder(holder)).send(issue))
 }
 
