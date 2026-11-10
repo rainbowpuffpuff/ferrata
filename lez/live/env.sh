@@ -8,13 +8,20 @@
 LIVE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$LIVE_DIR/../.." && pwd)"
 BESIDE="$(cd "$REPO/.." && pwd)"
-# Which LEZ: the source tree and the commit it must be at. The defaults are the tag every
-# measurement of this repository is made on; LEZ_TAG only labels the results.
+# Which LEZ: the tag, the source tree and the commit it must be at. The default is the tag of the
+# recorded run in results/; LEZ_TAG=v0.4.0-rc2 selects rc2 (results/v0.4.0-rc2/). The driver's
+# manifests must point at the same tag (../scripts/lez-select.sh).
 LEZ_TAG="${LEZ_TAG:-v0.4.0-rc1}"
 LEZ_SRC="${LEZ_SRC:-$BESIDE/upstream/lez-$LEZ_TAG}"
-LEZ_COMMIT="${LEZ_COMMIT:-1806e873ea2ac0e1b608aa7cf2f9b6e1fb12db21}"
+case "$LEZ_TAG" in
+  v0.4.0-rc1) LEZ_COMMIT="${LEZ_COMMIT:-1806e873ea2ac0e1b608aa7cf2f9b6e1fb12db21}" ;;
+  v0.4.0-rc2) LEZ_COMMIT="${LEZ_COMMIT:-e3edf47402a82557103ca719b30d0bd2684338d1}" ;;
+  *) [ -n "${LEZ_COMMIT:-}" ] || { echo "error: no commit known for LEZ $LEZ_TAG: set LEZ_COMMIT" >&2; exit 1; } ;;
+esac
 
-export FERRATA_LIVE_TMP="${FERRATA_LIVE_TMP:-$BESIDE/tmp/sequencer}"
+# Scratch: tmp/sequencer for v0.4.0-rc1, tmp/sequencer-<tag> for another tag.
+if [ "$LEZ_TAG" = v0.4.0-rc1 ]; then _scratch=sequencer; else _scratch="sequencer-$LEZ_TAG"; fi
+export FERRATA_LIVE_TMP="${FERRATA_LIVE_TMP:-$BESIDE/tmp/$_scratch}"
 mkdir -p "$FERRATA_LIVE_TMP/logs" "$FERRATA_LIVE_TMP/bin"
 export TMPDIR="$FERRATA_LIVE_TMP"
 # The Logos circuit crates download their prover artifacts (47 MB) into the user's cache
@@ -52,4 +59,10 @@ check_lez() {
     [ "$head" = "$LEZ_COMMIT" ] || die "LEZ checkout is at $head, expected $LEZ_COMMIT ($LEZ_TAG)"
     [ -z "$(git -C "$LEZ_SRC" status --porcelain)" ] || die "the LEZ checkout is modified; this run needs it unmodified"
   fi
+}
+
+# The driver links LEZ's crates by path: its manifests must point at this tag.
+check_driver_tag() {
+  local selected; selected="$("$REPO/lez/scripts/lez-select.sh" --show)"
+  [ "$selected" = "$LEZ_TAG" ] || die "the driver's manifests point at LEZ $selected, not $LEZ_TAG: run lez/scripts/lez-select.sh $LEZ_TAG first"
 }

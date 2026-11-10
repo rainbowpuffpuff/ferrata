@@ -9,7 +9,7 @@
 //! execution are the one-byte `Read`, the record in the reply, and the fee; the query, its proof,
 //! the fact and its statement identifier appear nowhere in the serialized transaction.
 
-use std::{fs, path::PathBuf};
+use std::fs;
 
 use ferrata_lez_wire::{
     attest::Request,
@@ -159,7 +159,7 @@ fn a_private_consumer_attests_a_transfer_and_only_the_read_is_public() {
         grouped(cycles),
         state_bytes,
     );
-    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../results");
+    let dir = harness::results_dir();
     fs::write(dir.join("stage4-attest-private-public-outputs.txt"), &fields).unwrap();
     println!("{fields}");
 }

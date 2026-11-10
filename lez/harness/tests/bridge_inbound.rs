@@ -28,7 +28,7 @@ fn expect(report: &TxReport, code: Option<u8>) {
 }
 
 fn results_path(name: &str) -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../results").join(name)
+    harness::results_dir().join(name)
 }
 
 #[test]

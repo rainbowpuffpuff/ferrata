@@ -87,6 +87,10 @@ pub fn open_wallet(home: &Path, rpc: &str, keys: &[PrivateKey]) -> Result<Wallet
         wallet.storage_mut().key_chain_mut().add_imported_public_account(key.clone());
     }
     wallet.store_persistent_data()?;
+    // From LEZ v0.4.0-rc2 the wallet simulates a public send and does not send one that reverts
+    // (#1035); the scenario sends the program's and LEZ's refusals on purpose.
+    #[cfg(feature = "lez-rc2")]
+    wallet.set_allow_revert(true);
     Ok(wallet)
 }
 
@@ -147,6 +151,10 @@ impl Live {
         let mut config = self.wallet.config().clone();
         config.gas_limit = gas_limit;
         self.wallet.set_config(config);
+        // From LEZ v0.4.0-rc2 the wallet declares the gas it measured plus a margin unless the
+        // limit is pinned (#1035); the scenario declares its own limits, as on v0.4.0-rc1.
+        #[cfg(feature = "lez-rc2")]
+        self.wallet.set_fee_params(wallet::FeeParams { gas_limit: Some(gas_limit), ..wallet::FeeParams::default() });
     }
 
     /// The state of `actor` as the sequencer serves it, checked against the follower's.

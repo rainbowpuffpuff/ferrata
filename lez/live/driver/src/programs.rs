@@ -4,8 +4,22 @@
 use std::{fs, path::Path};
 
 use anyhow::{anyhow, ensure, Context, Result};
+use lee_core::program::ProgramHeader;
 use program_loader_core::MAX_SEGMENT_DATA_LEN;
 use sha2::{Digest, Sha256};
+
+/// The program header a loader actor state holds: a tagged `LoaderEntry` from LEZ v0.4.0-rc2 on
+/// (#943).
+#[cfg(feature = "lez-rc2")]
+pub fn program_header(loader_actor_state: &[u8]) -> Option<ProgramHeader> {
+    ProgramHeader::from_loader_actor_state(loader_actor_state)
+}
+
+/// The program header a loader actor state holds (LEZ v0.4.0-rc1: untagged).
+#[cfg(not(feature = "lez-rc2"))]
+pub fn program_header(loader_actor_state: &[u8]) -> Option<ProgramHeader> {
+    ProgramHeader::from_bytes(loader_actor_state)
+}
 
 /// The image id as hex (little-endian words, as risc0 prints a `Digest`).
 pub fn image_id_hex(id: [u32; 8]) -> String {

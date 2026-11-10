@@ -9,7 +9,12 @@
 #   FERRATA_WHERE     a line saying where the measurements ran
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
-up="$here/../../upstream/lez-v0.4.0-rc1"
+# The LEZ tree the manifests point at (scripts/lez-select.sh); results of another tag than
+# v0.4.0-rc1 go to results/<tag>/ (harness::results_dir), or to FERRATA_LEZ_RESULTS_DIR.
+tag="$("$here/scripts/lez-select.sh" --show)"
+up="$here/../../upstream/lez-$tag"
+out="${FERRATA_LEZ_RESULTS_DIR:-$here/results$([ "$tag" = v0.4.0-rc1 ] || echo "/$tag")}"
+mkdir -p "$out"
 risc0_home="${RISC0_HOME:-$HOME/.risc0}"
 # Uncommitted paths other than the results themselves (results/, which the measurements rewrite,
 # and RESULTS.md, which reports them).
@@ -33,5 +38,5 @@ guest_rust="$(ls "$risc0_home/toolchains" 2>/dev/null | sed -n 's/^v\([0-9.]*\)-
   echo "- CPU: ${cpu:-unknown}; $(grep -c ^processor /proc/cpuinfo) processors in /proc/cpuinfo, $(nproc) usable by this process (nproc)"
   echo "- RAM: $(free -g | awk '/Mem:/{print $2}') GB; GPU: none"
   echo "- OS: $(uname -sr)"
-} > "$here/results/environment.md"
-cat "$here/results/environment.md"
+} > "$out/environment.md"
+cat "$out/environment.md"

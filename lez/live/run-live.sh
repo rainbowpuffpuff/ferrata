@@ -5,7 +5,7 @@
 # everything and writes the records into results/. Nothing started here outlives the invocation.
 
 RUN_DIR="$FERRATA_LIVE_TMP/run"            # this run's scratch: node state, sequencer home, wallets, logs
-OUT="${FERRATA_LIVE_OUT:-$LIVE_DIR/results}"
+OUT="${FERRATA_LIVE_OUT:-$LIVE_DIR/results$([ "$LEZ_TAG" = v0.4.0-rc1 ] || echo "/$LEZ_TAG")}"
 PIDS="$FERRATA_LIVE_TMP/run.pids"
 PROOF_SECONDS="${FERRATA_LIVE_PROOF_SECONDS:-3600}"
 PHASES="${FERRATA_LIVE_PHASES:-info deploy replay scenarios capacity private-stored private-fake export private-real export}"
@@ -42,8 +42,9 @@ BEDROCK="${FERRATA_LIVE_BEDROCK:-}"
 if [ -z "$BEDROCK" ]; then if [ -x "$NODE_BIN" ]; then BEDROCK=node; else BEDROCK=mock; fi; fi
 case "$BEDROCK" in
   # With a Bedrock node the block interval is 10 s (LEZ's testnet.json value; local.json has
-  # 15 s): a divisor of the node's 100-slot epoch, so that the sequencer can be started in a
-  # phase in which it never publishes a block in the second before an epoch begins (below).
+  # 15 s): a divisor of the node's epoch (100 s on v0.4.0-rc1, 240 s on rc2), so that the
+  # sequencer can be started in a phase in which it never publishes a block in the second before
+  # an epoch begins (below).
   node) SEQUENCER="$BIN/sequencer_service"; [ -x "$NODE_BIN" ] || die "run.sh build-bedrock first"
         BLOCK_TIME="${FERRATA_LIVE_BLOCK_TIME:-10s}"; WAIT_FINAL=yes ;;
   mock) SEQUENCER="$BIN/sequencer_service_standalone"; BLOCK_TIME="${FERRATA_LIVE_BLOCK_TIME:-}"; WAIT_FINAL=no ;;
@@ -57,7 +58,8 @@ LOG="$RUN_DIR/logs"
 STARTED="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 # The phase of the sequencer's blocks against Bedrock's epochs. On LEZ's local node an epoch is
-# 100 slots of 1 s, and the node sets its storage gas price anew when an epoch begins. An
+# 100 slots of 1 s (v0.4.0-rc1) or 60 slots of 4 s (rc2: LEZ #1063), read from the deployment
+# settings below, and the node sets its storage gas price anew when an epoch begins. An
 # inscription the sequencer submits in the last second of an epoch can only enter the first
 # block of the next one; if the price has risen by then, the node leaves it out of every block,
 # every later inscription chains on it, and after 300 slots the sequencer gives them all up
@@ -79,6 +81,20 @@ STARTUP="${FERRATA_LIVE_STARTUP_SECONDS:-1}"     # the first guess of the sequen
 NODE_LEAD="${FERRATA_LIVE_NODE_LEAD:-4}"
 MAX_STARTS="${FERRATA_LIVE_MAX_STARTS:-10}"
 phase_note=""
+# Bedrock's slot and epoch, from the deployment settings the node runs with: an epoch is
+# (stake distribution stabilization + nonce buffer + nonce stabilization) base periods of
+# floor(security_param / slot_activation_coeff) slots (the node's cryptarchia-engine:
+# `epoch_length`, `base_period_length`).
+settings_value() { sed -n "s/^ *$1: *\([0-9][0-9]*\) *\$/\1/p" "$LEZ_SRC/bedrock/deployment-settings.yaml" | sed -n 1p; }
+SLOT_SECONDS="$(settings_value slot_duration_in_seconds)"
+EPOCH_SLOTS=$(( ( $(settings_value epoch_stake_distribution_stabilization) + $(settings_value epoch_period_nonce_buffer)
+                  + $(settings_value epoch_period_nonce_stabilization) )
+                * ( $(settings_value security_param) * $(settings_value denominator) / $(settings_value numerator) ) ))
+EPOCH_SECONDS=$(( EPOCH_SLOTS * SLOT_SECONDS ))
+[ "$EPOCH_SECONDS" -gt 0 ] || die "could not read Bedrock's slot and epoch from $LEZ_SRC/bedrock/deployment-settings.yaml"
+if [ "$ALIGN" = 1 ] && [ $(( EPOCH_SECONDS % interval )) != 0 ]; then
+  die "the block interval ($interval s) does not divide Bedrock's epoch ($EPOCH_SECONDS s): the phase cannot be held"
+fi
 
 fresh_run_dir() {
   rm -rf "$RUN_DIR"
@@ -138,8 +154,8 @@ start_bedrock() {
 }
 
 # The unix second of the node's slot 0. A slot starts on a whole second and the node proposes
-# its block about 0.1 s later: at the moment the tip's slot changes, that second minus the slot
-# (the least of three such moments, in case one was seen late).
+# its block about 0.1 s later: at the moment the tip's slot changes, that second minus the slot's
+# start (slot x SLOT_SECONDS; the least of three such moments, in case one was seen late).
 bedrock_origin() {
   local last now_slot seen=0 least="" value
   slot() { curl -fsS -m 3 "http://127.0.0.1:$BEDROCK_PORT/cryptarchia/info" 2>/dev/null | sed -n 's/.*"slot":\([0-9]*\).*/\1/p'; }
@@ -147,7 +163,7 @@ bedrock_origin() {
   for _ in $(seq 1 900); do
     now_slot="$(slot)" || true
     if [ -n "$now_slot" ] && [ -n "$last" ] && [ "$now_slot" != "$last" ] && [ "$now_slot" -gt 0 ]; then
-      value=$(( $(date +%s) - now_slot ))
+      value=$(( $(date +%s) - now_slot * SLOT_SECONDS ))
       if [ -z "$least" ] || [ "$value" -lt "$least" ]; then least="$value"; fi
       seen=$(( seen + 1 ))
       if [ "$seen" -ge 3 ]; then echo "$least"; return 0; fi
@@ -245,7 +261,7 @@ if [ "$ALIGN" = 1 ]; then
   start_bedrock
   origin="$(bedrock_origin)" || die "could not read the Bedrock node's slot clock"
   stop_all
-  phase_note="slot 0 of the Bedrock node is unix second $origin, so an epoch (100 slots) begins at seconds = $(( origin % 100 )) mod 100"
+  phase_note="slot 0 of the Bedrock node is unix second $origin, so an epoch ($EPOCH_SLOTS slots of $SLOT_SECONDS s) begins at seconds = $(( origin % EPOCH_SECONDS )) mod $EPOCH_SECONDS"
   echo "== $phase_note"
 fi
 starts=0
@@ -379,7 +395,7 @@ done
   echo "- $(sed -n 2p "$RUN_DIR/config/sequencer-process.txt")"
   if [ -n "$phase_note" ]; then
     echo "- block phase: $phase_note"
-    python3 -I "$LIVE_DIR/phase.py" "$origin" "$interval" "$LOG/sequencer.log" "$LOG/bedrock.log" || true
+    python3 -I "$LIVE_DIR/phase.py" "$origin" "$interval" "$EPOCH_SECONDS" "$LOG/sequencer.log" "$LOG/bedrock.log" || true
   fi
   if [ -s "$LOG/bedrock-gas-prices.log" ]; then
     echo "- Bedrock gas prices during the run (logs/bedrock-gas-prices.log): $(wc -l < "$LOG/bedrock-gas-prices.log") values; first: $(head -1 "$LOG/bedrock-gas-prices.log"); last: $(tail -1 "$LOG/bedrock-gas-prices.log")"

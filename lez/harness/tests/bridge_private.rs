@@ -29,7 +29,7 @@ fn occurs(haystack: &[u8], needle: &[u8]) -> bool {
 }
 
 fn results_path(name: &str) -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../results").join(name)
+    harness::results_dir().join(name)
 }
 
 #[test]

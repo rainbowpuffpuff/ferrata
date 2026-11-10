@@ -21,7 +21,7 @@
 set -euo pipefail
 . "$(dirname "${BASH_SOURCE[0]}")/env.sh"
 
-DIR="$LIVE_DIR/results"
+DIR="$LIVE_DIR/results$([ "$LEZ_TAG" = v0.4.0-rc1 ] || echo "/$LEZ_TAG")"
 RPC=""
 BINARIES=()
 while [ $# -gt 0 ]; do
