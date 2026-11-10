@@ -142,7 +142,7 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
             token: token,
             denomIndex: denomIndex,
             recipient: _recipients[recipientSeed % _recipients.length],
-            feeRecipient: (recipientSeed >> 128) % 2 == 0 ? address(0) : _recipients[(recipientSeed >> 64) % 3],
+            relayer: (recipientSeed >> 128) % 2 == 0 ? address(0) : _recipients[(recipientSeed >> 64) % 3],
             relayFee: withFee ? vault.relayFees(token)[denomIndex] : 0,
             burnRoot: _acceptedRoots[rootSeed % _acceptedRoots.length],
             nullifier: keccak256(abi.encode("nullifier", _nonce++))
@@ -167,7 +167,7 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
             token: token,
             denomIndex: denomIndex,
             recipient: makeAddr(string.concat("replay recipient ", vm.toString(recipientSeed % 1000))),
-            feeRecipient: address(0),
+            relayer: address(0),
             relayFee: 0,
             burnRoot: _acceptedRoots[recipientSeed % _acceptedRoots.length],
             nullifier: _usedNullifiers[which % _usedNullifiers.length]
@@ -283,7 +283,7 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
 
     function _releaseDigest(FerrataVault.ReleaseRequest memory r, uint256 amount) internal view returns (bytes32) {
         bytes memory context = bytes.concat(
-            sha256(bytes("ferrata/vault/release/v1")),
+            sha256(bytes("ferrata/vault/release/v2")),
             bytes32(block.chainid),
             bytes32(uint256(uint160(address(vault)))),
             vault.lezConfigId(),
@@ -294,7 +294,7 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
             bytes32(uint256(uint160(r.token))),
             bytes32(amount),
             bytes32(uint256(uint160(r.recipient))),
-            bytes32(uint256(uint160(r.feeRecipient))),
+            bytes32(uint256(uint160(r.relayer))),
             bytes32(r.relayFee)
         );
         return sha256(bytes.concat(context, payout));

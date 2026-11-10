@@ -51,7 +51,7 @@ abstract contract VaultTestBase is Test {
         address token;
         uint256 amount;
         address recipient;
-        address feeRecipient;
+        address relayer;
         uint256 relayFee;
     }
 
@@ -151,7 +151,8 @@ abstract contract VaultTestBase is Test {
             lezUnit: lezUnit,
             unitWeight: unitWeight,
             depositCap: _unlimited(),
-            releaseCap: _unlimited()
+            releaseCap: _unlimited(),
+            releaseDelay: 0
         });
     }
 
@@ -234,10 +235,10 @@ abstract contract VaultTestBase is Test {
     }
 
     /// @dev 11 words: domain, chainId, vault, lezConfigId, burnRoot, nullifier, token, amount, recipient,
-    ///      feeRecipient, relayFee.
+    ///      relayer, relayFee.
     function _releaseJournalBytes(ReleaseJournal memory j) internal pure returns (bytes memory) {
         bytes memory context = bytes.concat(
-            sha256(bytes("ferrata/vault/release/v1")),
+            sha256(bytes("ferrata/vault/release/v2")),
             bytes32(j.chainId),
             bytes32(uint256(uint160(j.vault))),
             j.lezConfigId,
@@ -248,7 +249,7 @@ abstract contract VaultTestBase is Test {
             bytes32(uint256(uint160(j.token))),
             bytes32(j.amount),
             bytes32(uint256(uint160(j.recipient))),
-            bytes32(uint256(uint160(j.feeRecipient))),
+            bytes32(uint256(uint160(j.relayer))),
             bytes32(j.relayFee)
         );
         return bytes.concat(context, payout);
@@ -291,7 +292,7 @@ abstract contract VaultTestBase is Test {
             token: r.token,
             amount: _amount(r.token, r.denomIndex),
             recipient: r.recipient,
-            feeRecipient: r.feeRecipient,
+            relayer: r.relayer,
             relayFee: r.relayFee
         });
     }
@@ -385,7 +386,7 @@ abstract contract VaultTestBase is Test {
     // Releases
     // ------------------------------------------------------------------------------------------------------------
 
-    /// @dev A request with no relay fee and feeRecipient = address(0).
+    /// @dev A request with no relay fee and relayer = address(0) (the fee, if any, would go to msg.sender).
     function _request(address token, uint8 denomIndex, address to, bytes32 burnRoot, bytes32 nullifier)
         internal
         pure
@@ -395,7 +396,7 @@ abstract contract VaultTestBase is Test {
             token: token,
             denomIndex: denomIndex,
             recipient: to,
-            feeRecipient: address(0),
+            relayer: address(0),
             relayFee: 0,
             burnRoot: burnRoot,
             nullifier: nullifier

@@ -43,7 +43,7 @@ contract ConstructorTest is VaultTestBase {
     function test_constructor_domainTagsMatchTheirDefinitions() public view {
         assertEq(vault.LEAF_TAG(), sha256(bytes("ferrata/vault/leaf/v2")));
         assertEq(vault.CHECKPOINT_DOMAIN(), sha256(bytes("ferrata/vault/checkpoint/v2")));
-        assertEq(vault.RELEASE_DOMAIN(), sha256(bytes("ferrata/vault/release/v1")));
+        assertEq(vault.RELEASE_DOMAIN(), sha256(bytes("ferrata/vault/release/v2")));
         assertEq(vault.LEAF_PREFIX(), bytes1(0x00));
         assertEq(vault.NODE_PREFIX(), bytes1(0x01));
     }
@@ -354,7 +354,7 @@ contract RegistryTest is VaultTestBase {
 
     function test_setReleaseDelay() public {
         vm.expectEmit(true, true, true, true, address(vault));
-        emit FerrataVault.ReleaseDelaySet(address(dai), 30 days);
+        emit FerrataVault.ReleaseDelaySet(address(dai), 30 days, 0);
         vm.prank(admin);
         vault.setReleaseDelay(address(dai), 30 days);
         assertEq(vault.releaseDelay(address(dai)), 30 days);

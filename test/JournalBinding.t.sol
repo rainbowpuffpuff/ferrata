@@ -14,7 +14,7 @@ contract ReleaseJournalBindingTest is VaultTestBase {
     bytes32 internal constant ROOT_B = keccak256("burn root B");
     bytes32 internal constant NULLIFIER = keccak256("nullifier");
     uint256 internal constant FEE = 0.002 ether; // the relay fee registered for 1 ETH (0.2%)
-    address internal feeTaker = makeAddr("feeTaker");
+    address internal boundRelayer = makeAddr("boundRelayer");
 
     function setUp() public override {
         super.setUp();
@@ -24,13 +24,13 @@ contract ReleaseJournalBindingTest is VaultTestBase {
         _acceptRoot(ROOT_B);
     }
 
-    /// @dev 1 ETH to `recipient`, standard fee bound to `feeTaker`, under ROOT_A.
+    /// @dev 1 ETH to `recipient`, standard fee bound to `boundRelayer`, under ROOT_A.
     function _honestRequest() internal view returns (FerrataVault.ReleaseRequest memory) {
         return FerrataVault.ReleaseRequest({
             token: ETH,
             denomIndex: 1,
             recipient: recipient,
-            feeRecipient: feeTaker,
+            relayer: boundRelayer,
             relayFee: FEE,
             burnRoot: ROOT_A,
             nullifier: NULLIFIER
@@ -105,9 +105,9 @@ contract ReleaseJournalBindingTest is VaultTestBase {
         _assertMismatchRejected(j);
     }
 
-    function test_releaseJournal_bindsFeeRecipient() public {
+    function test_releaseJournal_bindsRelayer() public {
         ReleaseJournal memory j = _honestJournal();
-        j.feeRecipient = address(0);
+        j.relayer = address(0);
         _assertMismatchRejected(j);
     }
 
@@ -131,19 +131,19 @@ contract ReleaseJournalBindingTest is VaultTestBase {
     function test_attack_relayerCannotAddAFee() public {
         FerrataVault.ReleaseRequest memory honest = _honestRequest();
         honest.relayFee = 0;
-        honest.feeRecipient = address(0);
+        honest.relayer = address(0);
         _proveRelease(_releaseJournal(honest)); // the user chose to pay no fee
         FerrataVault.ReleaseRequest memory forged = _honestRequest();
-        forged.feeRecipient = address(0);
+        forged.relayer = address(0);
         vm.prank(relayer);
         vm.expectRevert(MockRiscZeroVerifier.VerificationFailed.selector);
         vault.release(forged, SEAL);
     }
 
     function test_attack_relayerCannotRedirectTheFee() public {
-        _proveRelease(_honestJournal()); // fee bound to feeTaker
+        _proveRelease(_honestJournal()); // fee bound to boundRelayer
         FerrataVault.ReleaseRequest memory forged = _honestRequest();
-        forged.feeRecipient = relayer;
+        forged.relayer = relayer;
         vm.prank(relayer);
         vm.expectRevert(MockRiscZeroVerifier.VerificationFailed.selector);
         vault.release(forged, SEAL);

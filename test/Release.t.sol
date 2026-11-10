@@ -5,7 +5,7 @@ import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/Reentrancy
 
 import {FerrataVault} from "../src/FerrataVault.sol";
 import {IRiscZeroVerifier} from "../src/interfaces/IRiscZeroVerifier.sol";
-import {ReentrantRecipient, RejectingRecipient} from "./mocks/MockRecipients.sol";
+import {ReentrantRecipient} from "./mocks/MockRecipients.sol";
 import {MockERC20, MockReentrantToken, MockTokenBase} from "./mocks/MockTokens.sol";
 import {MockRiscZeroVerifier, RejectingVerifier} from "./mocks/MockVerifiers.sol";
 import {VaultTestBase} from "./utils/VaultTestBase.sol";
@@ -179,20 +179,6 @@ contract ReleaseTest is VaultTestBase {
         assertEq(recipient.balance, 1 ether);
     }
 
-    function test_release_delayIsReadAtReleaseTime() public {
-        // A delay set after a root was accepted applies to releases against that root (circuit breaker).
-        _deposit(alice, ETH, 1, C1);
-        _acceptRoot(ROOT);
-        vm.prank(admin);
-        vault.setReleaseDelay(ETH, 1 hours);
-        FerrataVault.ReleaseRequest memory r = _request(ETH, 1, recipient, ROOT, N1);
-        _proveRelease(_releaseJournal(r));
-        vm.expectRevert(FerrataVault.ReleaseDelayNotElapsed.selector);
-        vault.release(r, SEAL);
-        vm.warp(block.timestamp + 1 hours);
-        vault.release(r, SEAL);
-    }
-
     // ------------------------------------------------------------------------------------------------------------
     // Relay fee
     // ------------------------------------------------------------------------------------------------------------
@@ -231,7 +217,7 @@ contract ReleaseTest is VaultTestBase {
         vault.release(r, SEAL);
     }
 
-    function test_release_feeGoesToMsgSenderWhenFeeRecipientIsUnset() public {
+    function test_release_feeGoesToMsgSenderWhenRelayerIsUnset() public {
         uint256 fee = _relayFee(ETH, 1); // 0.002 ether, registered with the token
         _deposit(alice, ETH, 1, C1);
         _acceptRoot(ROOT);
@@ -249,17 +235,17 @@ contract ReleaseTest is VaultTestBase {
         assertEq(recipient.balance, 1 ether - fee);
     }
 
-    function test_release_feeGoesToBoundFeeRecipient() public {
+    function test_release_feeGoesToBoundRelayer() public {
         uint256 fee = _relayFee(ETH, 1);
-        address feeTaker = makeAddr("feeTaker");
+        address boundRelayer = makeAddr("boundRelayer");
         _deposit(alice, ETH, 1, C1);
         _acceptRoot(ROOT);
         FerrataVault.ReleaseRequest memory r = _request(ETH, 1, recipient, ROOT, N1);
         r.relayFee = fee;
-        r.feeRecipient = feeTaker;
+        r.relayer = boundRelayer;
         _release(r); // submitted by `relayer`, who is not the bound fee recipient
 
-        assertEq(feeTaker.balance, fee);
+        assertEq(boundRelayer.balance, fee);
         assertEq(relayer.balance, 0);
         assertEq(recipient.balance, 1 ether - fee);
     }
@@ -343,25 +329,6 @@ contract ReleaseTest is VaultTestBase {
     // ------------------------------------------------------------------------------------------------------------
     // Hostile recipients and tokens
     // ------------------------------------------------------------------------------------------------------------
-
-    function test_release_recipientRejectingEthOnlyFailsItsOwnRelease() public {
-        RejectingRecipient rejecting = new RejectingRecipient();
-        _deposit(alice, ETH, 1, C1);
-        _deposit(bob, ETH, 1, C2);
-        _acceptRoot(ROOT);
-
-        FerrataVault.ReleaseRequest memory r = _request(ETH, 1, address(rejecting), ROOT, N1);
-        _proveRelease(_releaseJournal(r));
-        vm.prank(relayer);
-        vm.expectRevert(FerrataVault.EthTransferFailed.selector);
-        vault.release(r, SEAL);
-
-        assertFalse(vault.nullifierUsed(N1)); // the entitlement is intact
-        assertEq(vault.escrowed(ETH), 2 ether);
-
-        _release(_request(ETH, 1, recipient, ROOT, N2)); // nobody else is blocked
-        assertEq(recipient.balance, 1 ether);
-    }
 
     function test_release_reentrantRecipientIsBlocked() public {
         ReentrantRecipient attacker = new ReentrantRecipient();

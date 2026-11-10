@@ -101,7 +101,7 @@ contract FerrataVault is ReentrancyGuardTransient {
         address token;
         uint8 denomIndex;
         address recipient;
-        address feeRecipient; // address(0) means: pay the fee to msg.sender
+        address relayer; // receives the relay fee; address(0) means msg.sender
         uint256 relayFee; // 0 or exactly the registered relay fee of this denomination
         bytes32 burnRoot;
         bytes32 nullifier;
@@ -115,6 +115,7 @@ contract FerrataVault is ReentrancyGuardTransient {
         uint256 unitWeight; // global-cap value units per lezUnit
         CapParams depositCap;
         CapParams releaseCap;
+        uint256 releaseDelay; // initial release delay (adjustable later, at most 30 days)
     }
 
     struct TokenConfig {
@@ -124,6 +125,12 @@ contract FerrataVault is ReentrancyGuardTransient {
         uint256 unitWeight;
         uint256[] denominations;
         uint256[] relayFees;
+    }
+
+    /// @dev A release-delay setting and the first checkpoint index it applies to.
+    struct DelayChange {
+        uint256 fromCheckpoint;
+        uint256 delay;
     }
 
     /// @dev Token bucket. Invariant: `level <= capacity` whenever `capacity != UNLIMITED`.
@@ -165,8 +172,8 @@ contract FerrataVault is ReentrancyGuardTransient {
     bytes32 public constant LEAF_TAG = 0x17b9508a0d0cbf61207c0fcb66f06ed92a6aeec110a54860479f0bf3cd6aff0b;
     /// @notice sha256("ferrata/vault/checkpoint/v2")
     bytes32 public constant CHECKPOINT_DOMAIN = 0xe99926553e520475aa7b6407f28efcca58fa91851d8476395f692eb871457ce1;
-    /// @notice sha256("ferrata/vault/release/v1")
-    bytes32 public constant RELEASE_DOMAIN = 0x38d947b280ef2710d905d714dc6c55d9fdaa844e4769df08152f6bed4bc9f444;
+    /// @notice sha256("ferrata/vault/release/v2")
+    bytes32 public constant RELEASE_DOMAIN = 0x6e04f4b1fa66535e182a1ef2e4f5bfdfe44f7257f1663ef81ffa4f38d7696e51;
 
     // ------------------------------------------------------------------------------------------------------------
     // Immutables: everything that defines what the vault accepts as a valid proof
@@ -232,8 +239,12 @@ contract FerrataVault is ReentrancyGuardTransient {
     mapping(address token => TokenConfig) private _tokens;
     mapping(address token => bool) public tokenDepositsFrozen;
     mapping(address token => bool) public tokenReleasesFrozen;
-    mapping(address token => uint256) public releaseDelay;
+    /// @dev Per token, every release-delay setting with the first checkpoint index it applies to (spec §5.3).
+    mapping(address token => DelayChange[]) private _releaseDelays;
     mapping(address token => uint256) public escrowed;
+    /// @notice Payments that could not be pushed (spec §5.4); only the payee can claim them.
+    mapping(address payee => mapping(address token => uint256)) public owed;
+    mapping(address token => uint256) public totalOwed;
     mapping(address depositor => uint64) public depositCount;
     mapping(bytes32 nullifier => bool) public nullifierUsed;
     mapping(uint64 leafIndex => bool) public refunded;
@@ -282,11 +293,13 @@ contract FerrataVault is ReentrancyGuardTransient {
         address indexed token,
         address indexed recipient,
         uint256 amount,
-        address feeRecipient,
+        address relayer,
         uint256 relayFee,
         bytes32 burnRoot
     );
     event Refund(uint64 indexed leafIndex, address indexed depositor, address indexed token, uint256 amount);
+    event OwedCredited(address indexed payee, address indexed token, uint256 amount);
+    event OwedClaimed(address indexed payee, address indexed token, uint256 amount);
     event Retired();
 
     event TokenRegistered(
@@ -295,7 +308,7 @@ contract FerrataVault is ReentrancyGuardTransient {
     event DepositsEnabledSet(address indexed token, bool enabled);
     event TokenCapSet(address indexed token, Direction indexed direction, uint256 capacity, uint256 refillPerSecond);
     event GlobalCapSet(Direction indexed direction, uint256 capacity, uint256 refillPerSecond);
-    event ReleaseDelaySet(address indexed token, uint256 delay);
+    event ReleaseDelaySet(address indexed token, uint256 delay, uint256 fromCheckpoint);
     event DeltaSet(uint256 delta);
     event AdminTransferStarted(address indexed currentAdmin, address indexed pendingAdmin);
     event AdminTransferred(address indexed previousAdmin, address indexed newAdmin);
@@ -384,6 +397,7 @@ contract FerrataVault is ReentrancyGuardTransient {
     error TokenReleaseCapExceeded();
     error GlobalReleaseCapExceeded();
     error EthTransferFailed();
+    error NothingOwed();
 
     error DirectEthNotAccepted();
     error FunctionNotFound();
@@ -515,7 +529,7 @@ contract FerrataVault is ReentrancyGuardTransient {
         refunded[leafIndex] = true;
         escrowed[token] -= amount;
         emit Refund(leafIndex, depositor, token, amount);
-        _pay(token, depositor, amount);
+        _payOrCredit(token, depositor, amount);
     }
 
     // ------------------------------------------------------------------------------------------------------------
@@ -607,8 +621,8 @@ contract FerrataVault is ReentrancyGuardTransient {
     // ------------------------------------------------------------------------------------------------------------
 
     /// @notice Releases one denomination to `r.recipient` against a proof of a LEZ burn. Permissionless.
-    /// @dev Checks, then the proof, then all state changes, then the payouts. A payout that fails reverts the
-    ///      whole call, so the nullifier stays unused and only this request is affected.
+    /// @dev Checks, then the proof, then all state changes, then the payouts. A payout that fails is credited to
+    ///      `owed` instead (spec §5.4): the release completes, the nullifier is used, and only the payee can claim.
     function release(ReleaseRequest calldata r, bytes calldata seal) external nonReentrant {
         uint256 amount = _checkRelease(r);
         verifier.verify(seal, releaseImageId, _releaseJournalDigest(r, amount));
@@ -617,11 +631,26 @@ contract FerrataVault is ReentrancyGuardTransient {
         _consumeReleaseCaps(r.token, amount);
         escrowed[r.token] -= amount;
 
-        address feeRecipient = r.feeRecipient == address(0) ? msg.sender : r.feeRecipient;
-        emit Release(r.nullifier, r.token, r.recipient, amount, feeRecipient, r.relayFee, r.burnRoot);
+        address feePayee = r.relayer == address(0) ? msg.sender : r.relayer;
+        emit Release(r.nullifier, r.token, r.recipient, amount, feePayee, r.relayFee, r.burnRoot);
 
-        _pay(r.token, r.recipient, amount - r.relayFee);
-        if (r.relayFee != 0) _pay(r.token, feeRecipient, r.relayFee);
+        _payOrCredit(r.token, r.recipient, amount - r.relayFee);
+        if (r.relayFee != 0) _payOrCredit(r.token, feePayee, r.relayFee);
+    }
+
+    /// @notice Withdraws what the vault owes the caller in `token` after a failed push payment. Only the payee can
+    ///         withdraw, and only to itself.
+    function claimOwed(address token) external nonReentrant {
+        uint256 amount = owed[msg.sender][token];
+        if (amount == 0) revert NothingOwed();
+        owed[msg.sender][token] = 0;
+        totalOwed[token] -= amount;
+        emit OwedClaimed(msg.sender, token, amount);
+        if (token == ETH) {
+            if (!_trySendEth(msg.sender, amount)) revert EthTransferFailed();
+        } else {
+            IERC20(token).safeTransfer(msg.sender, amount);
+        }
     }
 
     // ------------------------------------------------------------------------------------------------------------
@@ -639,6 +668,7 @@ contract FerrataVault is ReentrancyGuardTransient {
         _checkUnitWeight(p.unitWeight);
         _checkDenominations(p.denominations, p.lezUnit);
         _checkRelayFees(p.relayFees, p.denominations);
+        if (p.releaseDelay > MAX_RELEASE_DELAY) revert ReleaseDelayTooLong();
 
         cfg.registered = true;
         cfg.depositsEnabled = true;
@@ -648,10 +678,12 @@ contract FerrataVault is ReentrancyGuardTransient {
         cfg.relayFees = p.relayFees;
         _initBucket(_tokenDepositCap[token], p.depositCap.capacity, p.depositCap.refillPerSecond);
         _initBucket(_tokenReleaseCap[token], p.releaseCap.capacity, p.releaseCap.refillPerSecond);
+        _releaseDelays[token].push(DelayChange({fromCheckpoint: 0, delay: p.releaseDelay}));
 
         emit TokenRegistered(token, p.denominations, p.relayFees, p.lezUnit, p.unitWeight);
         emit TokenCapSet(token, Direction.Deposit, p.depositCap.capacity, p.depositCap.refillPerSecond);
         emit TokenCapSet(token, Direction.Release, p.releaseCap.capacity, p.releaseCap.refillPerSecond);
+        emit ReleaseDelaySet(token, p.releaseDelay, 0);
     }
 
     /// @notice Enables or disables deposits of a token (delisting). Releases are unaffected.
@@ -678,12 +710,14 @@ contract FerrataVault is ReentrancyGuardTransient {
         emit GlobalCapSet(direction, capacity, refillPerSecond);
     }
 
-    /// @notice Sets the per-token delay between a burn root's finalisation and releases against it.
+    /// @notice Sets the per-token delay between a burn root's finalisation and releases against it, for roots
+    ///         finalised after this call; roots already finalised keep the delay they were finalised under (§5.3).
     function setReleaseDelay(address token, uint256 delay) external onlyAdmin {
         _requireRegistered(token);
         if (delay > MAX_RELEASE_DELAY) revert ReleaseDelayTooLong();
-        releaseDelay[token] = delay;
-        emit ReleaseDelaySet(token, delay);
+        uint256 fromCheckpoint = checkpoints.length;
+        _releaseDelays[token].push(DelayChange({fromCheckpoint: fromCheckpoint, delay: delay}));
+        emit ReleaseDelaySet(token, delay, fromCheckpoint);
     }
 
     /// @notice Raises `delta`. It can never go down; candidates already submitted keep the delta they started with.
@@ -817,6 +851,16 @@ contract FerrataVault is ReentrancyGuardTransient {
     /// @notice The registered relay fees, one per denomination (write-once).
     function relayFees(address token) external view returns (uint256[] memory) {
         return _tokens[token].relayFees;
+    }
+
+    /// @notice The release delay that applies to roots finalised from now on.
+    function releaseDelay(address token) external view returns (uint256) {
+        return _releaseDelayFor(token, checkpoints.length);
+    }
+
+    /// @notice The release delay that applies to a root finalised as checkpoint `checkpointIndex`.
+    function releaseDelayFor(address token, uint256 checkpointIndex) external view returns (uint256) {
+        return _releaseDelayFor(token, checkpointIndex);
     }
 
     function beaconCount() external view returns (uint256) {
@@ -983,17 +1027,16 @@ contract FerrataVault is ReentrancyGuardTransient {
 
         uint256 entry = burnRootCheckpoint[r.burnRoot];
         if (entry == 0 || checkpoints[entry - 1].revoked) revert BurnRootNotAccepted();
-        if (block.timestamp < checkpoints[entry - 1].finalizedAt + releaseDelay[r.token]) {
-            revert ReleaseDelayNotElapsed();
-        }
+        uint256 delay = _releaseDelayFor(r.token, entry - 1);
+        if (block.timestamp < checkpoints[entry - 1].finalizedAt + delay) revert ReleaseDelayNotElapsed();
         if (nullifierUsed[r.nullifier]) revert NullifierAlreadyUsed();
         // A free-form fee would fingerprint the user: only 0 or the registered fee is accepted.
         if (r.relayFee != 0 && r.relayFee != cfg.relayFees[r.denomIndex]) revert InvalidRelayFee();
         if (amount > escrowed[r.token]) revert InsufficientEscrow();
     }
 
-    /// @dev sha256(abi.encode(RELEASE_DOMAIN, chainid, vault, lezConfigId, burnRoot, nullifier, token, amount,
-    ///      recipient, feeRecipient, relayFee)).
+    /// @dev sha256(abi.encode(RELEASE_DOMAIN, chainid, vault, lezConfigId, burnRoot, NOut, token, amount,
+    ///      recipient, relayer, relayFee)) (spec §5.2).
     function _releaseJournalDigest(ReleaseRequest calldata r, uint256 amount) internal view returns (bytes32) {
         return sha256(
             abi.encode(
@@ -1006,18 +1049,44 @@ contract FerrataVault is ReentrancyGuardTransient {
                 r.token,
                 amount,
                 r.recipient,
-                r.feeRecipient,
+                r.relayer,
                 r.relayFee
             )
         );
     }
 
-    function _pay(address token, address to, uint256 amount) internal {
-        if (token == ETH) {
-            (bool ok,) = to.call{value: amount}("");
-            if (!ok) revert EthTransferFailed();
-        } else {
-            IERC20(token).safeTransfer(to, amount);
+    /// @dev The delay in force for roots finalised as checkpoint `checkpointIndex`: the last setting whose
+    ///      `fromCheckpoint` is at most that index. Settings are appended in non-decreasing `fromCheckpoint` order,
+    ///      so a binary search finds how many of them precede the checkpoint.
+    function _releaseDelayFor(address token, uint256 checkpointIndex) internal view returns (uint256) {
+        DelayChange[] storage changes = _releaseDelays[token];
+        uint256 low = 0;
+        uint256 high = changes.length;
+        while (low < high) {
+            uint256 mid = (low + high) / 2;
+            if (changes[mid].fromCheckpoint <= checkpointIndex) low = mid + 1;
+            else high = mid;
+        }
+        return low == 0 ? 0 : changes[low - 1].delay;
+    }
+
+    /// @dev Pays `amount` of `token` to `payee`, or, if the transfer fails, credits it to `owed[payee][token]`
+    ///      (spec §5.4), so a payee that cannot receive never blocks or loses the payment and nobody can redirect it.
+    function _payOrCredit(address token, address payee, uint256 amount) internal {
+        bool paid = token == ETH ? _trySendEth(payee, amount) : IERC20(token).trySafeTransfer(payee, amount);
+        if (!paid) {
+            owed[payee][token] += amount;
+            totalOwed[token] += amount;
+            emit OwedCredited(payee, token, amount);
+        }
+    }
+
+    /// @dev Sends ETH without copying return data, so a payee cannot exhaust the vault's gas by returning or
+    ///      reverting with a large buffer. All gas is forwarded; the 1/64 the vault keeps pays for the fallback,
+    ///      so a payee that burns its gas only forces the submitter to send a larger gas limit.
+    function _trySendEth(address to, uint256 amount) internal returns (bool ok) {
+        assembly ("memory-safe") {
+            ok := call(gas(), to, amount, 0, 0, 0, 0)
         }
     }
 

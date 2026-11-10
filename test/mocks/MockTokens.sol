@@ -146,3 +146,29 @@ contract MockReentrantToken is MockTokenBase {
         (hookSucceeded, hookReturnData) = target.call(hookData);
     }
 }
+
+/// @notice USDC-style token whose issuer can blacklist addresses: transfers from or to them revert.
+contract MockBlacklistToken is MockTokenBase {
+    error Blacklisted();
+
+    mapping(address account => bool) public blacklisted;
+
+    constructor() MockTokenBase("Blacklisting USD", "BUSD", 6) {}
+
+    function setBlacklisted(address account, bool value) external {
+        blacklisted[account] = value;
+    }
+
+    function transfer(address to, uint256 amount) external returns (bool) {
+        if (blacklisted[msg.sender] || blacklisted[to]) revert Blacklisted();
+        _move(msg.sender, to, amount, amount);
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint256 amount) external returns (bool) {
+        if (blacklisted[from] || blacklisted[to]) revert Blacklisted();
+        _spendAllowance(from, msg.sender, amount);
+        _move(from, to, amount, amount);
+        return true;
+    }
+}
