@@ -74,16 +74,19 @@ versions() {
 }
 
 stage() { FERRATA_COMMIT=${FERRATA_COMMIT:-} "$here/stage.sh"; }
-# nix build, retried when a build fails the way the Modal box (gVisor) makes some fail: a builder that
-# exits within milliseconds can lose its terminal output, and Nix stops with "reading a line:
-# Input/output error". Another attempt resumes from what was built. Any other failure is final.
+# nix build, retried on the two failures the Modal build box (a gVisor container, builds as root
+# without a sandbox) causes: a builder whose terminal output is lost ("reading a line: Input/output
+# error", "unexpected EOF reading a line"), and /homeless-shelter left behind by a build that wrote
+# to $HOME (Nix then refuses to start further builds). Each attempt resumes from what was built.
+# Any other failure is final.
 nixb() {
   local attempt log="$out/nix-build-attempt.log"
-  for attempt in 1 2 3 4 5 6 7 8; do
+  for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
+    if [ "$(id -u)" = 0 ] && [ -d /homeless-shelter ]; then rm -rf /homeless-shelter; fi
     if nix build "$@" > >(tee "$log") 2>&1; then return 0; fi
     sleep 1
-    grep -q -E 'reading a line: Input/output error|unexpected EOF reading a line' "$log" || return 1
-    echo "check.sh: nix build $* hit the terminal error (attempt $attempt); retrying"
+    grep -q -E 'reading a line: Input/output error|unexpected EOF reading a line|/homeless-shelter. exists' "$log" || return 1
+    echo "check.sh: nix build $* stopped on a build-box error (attempt $attempt); retrying"
   done
   return 1
 }
