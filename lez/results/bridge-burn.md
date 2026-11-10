@@ -1,6 +1,6 @@
 # Burns (`harness/tests/bridge_burn.rs`); the private burn in RISC Zero dev mode
 
-Bridge program image `c0c80a6434cd0bcdaf4b32b71d4f71bfb28e5e23564fa23dfa4686792b48f1ed`.
+Bridge program image `25dfd9b283ba14b0b83a522d7d307de57288c4730f538d8862b53ad73a4a8c49`.
 
 ## Public burns and refusals
 
@@ -56,7 +56,7 @@ One LEZ block holding the transactions below (the second burn marked reverted, a
 
 | transaction | origin | message bytes | checkpoint's decoder | collected |
 |---|---|---:|---|---|
-| ImportRoot A n=8 | PublicRoot | 1177 | refused: TrailingBytes { at: 81 } | no |
+| ImportRoot A n=8 | PublicRoot | 1177 | ImportRoot (its proofs skipped) | yes |
 | Claim: leaf 6 (10 ETH to the payer) | PublicRoot | 1214 | ignored (variant 4 and up) | no |
 | Burn 1 ETH (A) by the payer | PublicRoot | 185 | Burn | yes |
 | Burn: the same note again | PublicRoot | 185 | Burn | no (reverted) |
@@ -67,4 +67,4 @@ One LEZ block holding the transactions below (the second burn marked reverted, a
 | private claim (leaf 5) | PrivateToPublic | 186 | ignored (variant 4 and up) | no |
 | private burn | PrivateToPublic | 185 | Burn | yes |
 
-NOut v2 of the first note: `c4fd62d01b14ef56ff2e6b81f6b730ac52e6cbe4431398884b0b33cf703d9fc9`.
+NOut v2 of the first note: `be6e4a867a83211873247bd21e39852a49b2637e16d06f568071384951c6f95d`.

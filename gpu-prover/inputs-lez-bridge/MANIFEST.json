@@ -1,0 +1,13 @@
+{
+  "binary_from": "lez/target/debug/prove_bridge",
+  "ferrata_commit": "21abe0564cee58d71028086d40541dd5c9c43b36",
+  "ferrata_uncommitted_changes": 0,
+  "expected_bridge_image_id": "25dfd9b283ba14b0b83a522d7d307de57288c4730f538d8862b53ad73a4a8c49",
+  "prove_command": "FERRATA_EXPECT_BRIDGE_IMAGE_ID=<expected_bridge_image_id> RISC0_DEV_MODE=0 RISC0_SERVER_PATH=<r0vm 3.0.5 built with CUDA> /usr/bin/time -v ./prove_bridge --claim-out bridge-private-claim-tx.borsh --burn-out bridge-private-burn-tx.borsh > prove-bridge.log 2>&1",
+  "files": {
+    "prove_bridge": {
+      "bytes": 156187512,
+      "sha256": "e2b20f5121d0618adb2fc11c2e8b234f4bc8b1884f09a199b6c02bb4dd581ea3"
+    }
+  }
+}

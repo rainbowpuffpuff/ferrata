@@ -1,6 +1,6 @@
 # The bridge program's inbound leg (`harness/tests/bridge_inbound.rs`)
 
-Bridge program image `c0c80a6434cd0bcdaf4b32b71d4f71bfb28e5e23564fa23dfa4686792b48f1ed`; every transaction settled by LEZ's own functions in a block of its own.
+Bridge program image `25dfd9b283ba14b0b83a522d7d307de57288c4730f538d8862b53ad73a4a8c49`; every transaction settled by LEZ's own functions in a block of its own.
 
 | # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
 |---|---|---|---:|---:|---:|---:|---|
