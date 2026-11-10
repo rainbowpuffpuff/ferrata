@@ -21,6 +21,7 @@ Prototype evidence for a grant proposal, not production code: see "Not done" and
 | `crates/checkpoint-core` | The rule as a pure `no_std` function (`#![forbid(unsafe_code)]`), used unchanged by the guests and the tests. `lez.rs` strict LEZ block parser and block hash; `mantle.rs` Logos Blockchain transaction framing, BLAKE2b tx hash and `MsgId`, inscription and `ChannelConfigOp` checks; `wire.rs` the bridge messages; `tree.rs` burn leaf and frontier; `state.rs` `configId`, `keySetHash`, `S`; `journal.rs` the ABI journal and the segment journal; `input.rs` the guest input format; `rule.rs` `run_checkpoint` (rule (A)) and `run_segment`; `rule_b.rs` `run_checkpoint_b` (rule (B)). |
 | `crates/attestor-core` | The core of `ferrata_attestor` (rule (B)), `no_std`, no Logos module packaging: the certificate by which a channel key certifies an attestation key, the final-tier message v2, Ed25519 signing and `verify_strict`, the key-set hash; `vectors/attestor-v1.json`. |
 | `fidelity/` | Host only. Builds real-format LEZ v0.4.0-rc1 blocks and transactions with LEZ's own crates and Logos Blockchain transactions with `logos-blockchain-core` at the revision LEZ pins; tests the core against them and against the real blocks in LEZ's committed sequencer dump; `src/bin/gen.rs` writes the bench fixtures. |
+| `realblocks/` | Host only. The checkpoint core over the REAL blocks of the lab's LEZ v0.4.0-rc1 sequencer chain (`../lez/lab/`): `extract.sh` reads a copy of a saved generation's node (channel, immutable blocks); `realblocks` parses and re-hashes every block, checks every inscription, compares the lab's record, and builds the rule (B) input over a span with the lab channel's key certifying an attestation key; `vault-fixture.py` writes the vault's fixture. Outputs in `realblocks/out/` (RESULTS, "Real LEZ blocks"). |
 | `guests/` | Four zkVM guests (their own workspace, with RISC Zero's `sha2`, `curve25519-dalek` and `crypto-bigint` patches): `checkpoint` (rule (A)), `checkpoint-b` (bin `checkpoint_b`, rule (B)), `segment`, `micro` (component benchmarks). |
 | `guests-plain/` | The `micro` guest built *without* those patches (A/B control). |
 | `methods-segment/`, `methods/`, `methods-plain/` | Build the guests with risc0-build 3.0.5; the checkpoint guest gets the segment guest's image id at compile time (`FERRATA_SEGMENT_ID`). |
@@ -56,6 +57,11 @@ python3 -I scripts/ruleb-table.py                         # the tables of RESULT
 RISC0_DEV_MODE=1 target/release/host compose              # the two-piece composition demo
 scripts/prove-bench.sh prove cp-empty-1 && scripts/prove-bench.sh groth16 cp-empty-1
 python3 -I scripts/derive.py                              # derived figures from results/*.jsonl
+# real lab blocks (RESULTS, "Real LEZ blocks"): a copy of the lab's generation and bundle, then
+realblocks/extract.sh <bundle.tar.zst> <gen-N.tar.zst> <out>          # node of the copy: channel, immutable blocks
+cargo +1.93.0 run --release -p realblocks -- --node-blocks <out>/blocks --channel <out>/channel.json \
+  --record ../lez/lab/results/record --txhashes realblocks/txhashes.tsv --channel-key <copied channel_signing_key> \
+  --genesis <copied deployment-settings.yaml> --from 8 --to 202 --out realblocks/out
 ```
 
 `fidelity` needs LEZ's toolchain (Rust 1.98.1, `lez-v0.4.0-rc1/rust-toolchain.toml`); the core builds
@@ -140,7 +146,8 @@ journal over the same blocks; the vault tells the two rules apart by the guest's
 | Inscriptions | **Real.** Mantle transactions `[ChannelInscribe, Transfer]` (and with `ChannelTransfer` / `ChannelWithdraw`) built and signed with `logos-blockchain-core` at `d480efc6`; the core's transaction hash, `MsgId` and signature check equal upstream's. The fee transfer's note ids and values are made up (format real). |
 | Channel configuration changes | **Real.** `ChannelConfigOp` in a Mantle transaction, built with upstream types; id (`config_tip_hash`), transaction hash and `(index, signature)` multi-signature as Bedrock verifies them. |
 | Bridge messages | **Real for the bridge program's variants 0–3** ([`../lez/bridge-wire`](../lez/BRIDGE.md), borsh's derive; `wire.rs` decodes them by hand). Its `Burn` is byte for byte variant 0; its `ImportRoot` is the four fields followed by the import's account and storage proofs (`ImportProof`), which `wire.rs` walks strictly and skips. `../lez/harness/tests/bridge_burn.rs` reads the program's own transactions, in one LEZ block, with this crate's `parse_block` and `BridgeMessage::decode`. The messages in this directory's fixtures are made here with `wire.rs`'s encoder (an `ImportRoot` with an empty proof). |
-| Keys, configuration values, user accounts | Test values. |
+| Real sequencer blocks | **Real.** The 202 blocks and 202 inscriptions of the lab's LEZ v0.4.0-rc1 sequencer and Logos Blockchain node (a devnet with one validator and leader proofs in dev mode; one channel key, n = 1): every one parsed, re-hashed and checked by the core as made; blocks 8..=202 proven under rule (B) on a GPU and accepted by the v5 vault (RESULTS, "Real LEZ blocks"). They hold the lab's light-client transactions, no bridge calls (the lab's zone runs no bridge program). |
+| Keys, configuration values, user accounts | Test values; in the real-blocks run the lab channel's own (throwaway devnet) key, a label-derived attestation key, and labels for the configuration's bridge fields. |
 
 ### Transaction shapes the extraction handles
 
@@ -206,7 +213,8 @@ withdrawals a channel withdrawal). Any other opcode is refused rather than skipp
 1. That LEZ's sequencer, on a live network, inscribes blocks only in Mantle transactions made of the
    opcodes above, and only its *own* blocks (an honest key that re-inscribed a peer's block would
    weaken the "other than `T`'s producer" argument). Read from `lez/sequencer/actors/bedrock` and
-   zone-sdk `tx_builder.rs` at the pinned revision; not observed on a network.
+   zone-sdk `tx_builder.rs` at the pinned revision; not observed on a network. Observed on the lab's devnet
+   (one sequencer): all 202 of its inscriptions are `[ChannelInscribe, Transfer]` of its own blocks.
 2. That a burn from a private holding reaches the bridge as exactly one `PrivateToPublic` delivery
    whose `message` is the `Burn` encoding: shown for the bridge program of `../lez/` in LEZ's harness
    with RISC Zero dev mode (`../lez/BRIDGE-RESULTS.md` §5), which keeps its own balances because no
@@ -242,9 +250,11 @@ withdrawals a channel withdrawal). Any other opcode is refused rather than skipp
   the vault's rule (B) path verifies one real rule (B) proof in a local EVM
   ([`../vault/README.md`](../vault/README.md)). Not built: `ferrata_attestor` as a Logos module
   (only its core, `crates/attestor-core`), the watchers' software (the vault has the watcher role).
-- This program never read the blocks of a running LEZ or Bedrock node (the LEZ program's run on a
-  sequencer, [`../lez/live/`](../lez/live/README.md), did not involve it); no proof of LEZ block
-  validity (O2) or Bedrock finality (O1) is attempted, as SPEC-v2 intends.
+- This program's tests run no LEZ or Bedrock node (the LEZ program's run on a sequencer,
+  [`../lez/live/`](../lez/live/README.md), did not involve it). Real sequencer blocks were checked and
+  proven from the lab's devnet (one validator, dev-mode leader proofs, n = 1; RESULTS, "Real LEZ
+  blocks"), read from its record and a copy of its node's state; no proof of LEZ block validity (O2)
+  or Bedrock finality (O1) is attempted, as SPEC-v2 intends.
 
 ## Network use
 

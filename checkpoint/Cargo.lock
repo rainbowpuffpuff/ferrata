@@ -5550,6 +5550,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "realblocks"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "attestor-core",
+ "checkpoint-core",
+ "ed25519-dalek",
+ "hex",
+ "serde_json",
+]
+
+[[package]]
 name = "redox_syscall"
 version = "0.5.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"

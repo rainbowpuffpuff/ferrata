@@ -18,7 +18,9 @@ programs for every call that needs one.
 with test sequencer keys, as the bench fixtures are (`checkpoint/README.md`, "Real format vs
 stand-in"). No LEZ node ran, the bridge program (`lez/BRIDGE-RESULTS.md`, built later) did not run
 on this zone, the blocks that carry calls to the bridge are not executed, and the zone's 16 blocks are 10 s apart in their own timestamps, not hours. The
-wallet is a test seed. The proofs are about that stand-in zone.
+wallet is a test seed. The proofs are about that stand-in zone. A rule (B) checkpoint over REAL sequencer
+blocks (the lab's devnet: one validator, dev-mode leader proofs, n = 1; no burns, no bridge program) was proven
+later and accepted by the v5 vault: [`checkpoint/RESULTS.md`](../checkpoint/RESULTS.md), "Real LEZ blocks".
 
 ## The fixture: `runs/sepolia/`
 

@@ -1,0 +1,202 @@
+{
+ "chain": "sepolia",
+ "lc_endpoint": "https://lodestar-sepolia.chainsafe.io",
+ "second_endpoint": "https://ethereum-sepolia-beacon-api.publicnode.com",
+ "user_agent": "ferrata-lab-fetch",
+ "started": 1794336714.5498571,
+ "bootstrap": "fixture crates/ferrata-spectests/fixtures/sepolia-gloas-2026-11-10 (period 1378, slot 11288576)",
+ "instance_finalized_slot": 11288576,
+ "finality_attested_slot": 11550240,
+ "finality_finalized_slot": 11550176,
+ "head_period": 1409,
+ "second_provider_finalized_root": "0xd7687ca2c3fa985a955b47eea16e3f18bd0da4f87b6937e73ce74504a6a1e893",
+ "updates": [
+  {
+   "period": 1378,
+   "fork_digest": "74d01459",
+   "bytes": 26906
+  },
+  {
+   "period": 1379,
+   "fork_digest": "669e6c11",
+   "bytes": 26424
+  },
+  {
+   "period": 1380,
+   "fork_digest": "669e6c11",
+   "bytes": 26424
+  },
+  {
+   "period": 1381,
+   "fork_digest": "669e6c11",
+   "bytes": 26424
+  },
+  {
+   "period": 1382,
+   "fork_digest": "669e6c11",
+   "bytes": 26424
+  },
+  {
+   "period": 1383,
+   "fork_digest": "669e6c11",
+   "bytes": 26424
+  },
+  {
+   "period": 1384,
+   "fork_digest": "669e6c11",
+   "bytes": 26424
+  },
+  {
+   "period": 1385,
+   "fork_digest": "669e6c11",
+   "bytes": 26424
+  },
+  {
+   "period": 1386,
+   "fork_digest": "669e6c11",
+   "bytes": 26424
+  },
+  {
+   "period": 1387,
+   "fork_digest": "669e6c11",
+   "bytes": 26424
+  },
+  {
+   "period": 1388,
+   "fork_digest": "669e6c11",
+   "bytes": 26424
+  },
+  {
+   "period": 1389,
+   "fork_digest": "669e6c11",
+   "bytes": 26424
+  },
+  {
+   "period": 1390,
+   "fork_digest": "669e6c11",
+   "bytes": 26424
+  },
+  {
+   "period": 1391,
+   "fork_digest": "669e6c11",
+   "bytes": 26424
+  },
+  {
+   "period": 1392,
+   "fork_digest": "669e6c11",
+   "bytes": 26424
+  },
+  {
+   "period": 1393,
+   "fork_digest": "669e6c11",
+   "bytes": 26424
+  },
+  {
+   "period": 1394,
+   "fork_digest": "669e6c11",
+   "bytes": 26424
+  },
+  {
+   "period": 1395,
+   "fork_digest": "669e6c11",
+   "bytes": 26424
+  },
+  {
+   "period": 1396,
+   "fork_digest": "669e6c11",
+   "bytes": 26424
+  },
+  {
+   "period": 1397,
+   "fork_digest": "669e6c11",
+   "bytes": 26424
+  },
+  {
+   "period": 1398,
+   "fork_digest": "669e6c11",
+   "bytes": 26424
+  },
+  {
+   "period": 1399,
+   "fork_digest": "669e6c11",
+   "bytes": 26424
+  },
+  {
+   "period": 1400,
+   "fork_digest": "669e6c11",
+   "bytes": 26424
+  },
+  {
+   "period": 1401,
+   "fork_digest": "669e6c11",
+   "bytes": 26424
+  },
+  {
+   "period": 1402,
+   "fork_digest": "669e6c11",
+   "bytes": 26424
+  },
+  {
+   "period": 1403,
+   "fork_digest": "669e6c11",
+   "bytes": 26424
+  },
+  {
+   "period": 1404,
+   "fork_digest": "669e6c11",
+   "bytes": 26424
+  },
+  {
+   "period": 1405,
+   "fork_digest": "669e6c11",
+   "bytes": 26424
+  },
+  {
+   "period": 1406,
+   "fork_digest": "669e6c11",
+   "bytes": 26424
+  },
+  {
+   "period": 1407,
+   "fork_digest": "669e6c11",
+   "bytes": 26424
+  },
+  {
+   "period": 1408,
+   "fork_digest": "669e6c11",
+   "bytes": 26424
+  },
+  {
+   "period": 1409,
+   "fork_digest": "669e6c11",
+   "bytes": 26424
+  }
+ ],
+ "finished": 1794336716.0683906,
+ "requests": [
+  {
+   "url": "https://lodestar-sepolia.chainsafe.io/eth/v1/beacon/light_client/finality_update",
+   "status": 200,
+   "bytes": 1448,
+   "sha256": "dceaa968074f6428a349091f527d41b4bc23a5b0725ee9735471f88688cff543",
+   "version": "gloas",
+   "at": 1794336714.6
+  },
+  {
+   "url": "https://ethereum-sepolia-beacon-api.publicnode.com/eth/v1/beacon/headers/11550176",
+   "status": 200,
+   "bytes": 669,
+   "sha256": "695a34670b7f69de92f5c959e7ebc3e880b68e14edde25503ea6a78d6c538d7f",
+   "version": null,
+   "at": 1794336715.1
+  },
+  {
+   "url": "https://lodestar-sepolia.chainsafe.io/eth/v1/beacon/light_client/updates?start_period=1378&count=32",
+   "status": 200,
+   "bytes": 846434,
+   "sha256": "b5c32157c38d89679e097313151f8bde4d57b79969781f8a516d6d8bd8f2d8f3",
+   "version": "fulu,gloas,gloas,gloas,gloas,gloas,gloas,gloas,gloas,gloas,gloas,gloas,gloas,gloas,gloas,gloas,gloas,gloas,gloas,gloas,gloas,gloas,gloas,gloas,gloas,gloas,gloas,gloas,gloas,gloas,gloas,gloas",
+   "at": 1794336715.2
+  }
+ ]
+}

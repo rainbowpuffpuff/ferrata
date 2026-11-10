@@ -12,7 +12,7 @@
 # and curve25519-dalek) applies there and nowhere else.
 [workspace]
 resolver = "2"
-members = ["crates/checkpoint-core", "crates/attestor-core", "fidelity", "methods-segment", "methods", "methods-plain", "host"]
+members = ["crates/checkpoint-core", "crates/attestor-core", "fidelity", "methods-segment", "methods", "methods-plain", "host", "realblocks"]
 default-members = ["crates/checkpoint-core", "crates/attestor-core"]
 exclude = ["guests", "guests-plain"]
 
