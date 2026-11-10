@@ -229,6 +229,8 @@ pub struct Chain {
     pub block_id: u64,
     /// Every report, in order.
     pub reports: Vec<TxReport>,
+    /// The last public transaction submitted, as `borsh(LeeTransaction)`.
+    pub last_tx: Vec<u8>,
 }
 
 impl Default for Chain {
@@ -254,7 +256,7 @@ impl Chain {
                 (KECCAK_SOFT, ferrata_keccak_soft_program()),
             ])
             .with_genesis_programs([(ferrata_program(), true), (consumer_program(), true), (scripted_program(), true)]);
-        Self { state, payer_key, payer, nonce: 0, block_id: 2, reports: Vec::new() }
+        Self { state, payer_key, payer, nonce: 0, block_id: 2, reports: Vec::new(), last_tx: Vec::new() }
     }
 
     /// The state of `actor` (empty if none).
@@ -272,21 +274,38 @@ impl Chain {
         evidence: Vec<PublicAccountEvidence>,
         timestamp_ms: u64,
     ) -> TxReport {
+        self.submit_signed(label, root, message, actors, evidence, timestamp_ms, &[])
+    }
+
+    /// [`Chain::submit`], signed by `signers` as well as the payer (each at its account's current
+    /// nonce), so that their accounts are authorized in it. The transaction is kept in `last_tx`.
+    #[allow(clippy::too_many_arguments)]
+    pub fn submit_signed(
+        &mut self,
+        label: &str,
+        root: Actor,
+        message: Vec<u8>,
+        actors: Vec<Actor>,
+        evidence: Vec<PublicAccountEvidence>,
+        timestamp_ms: u64,
+        signers: &[&PrivateKey],
+    ) -> TxReport {
         let gas_limit = market::MAX_GAS_EXEC;
         let fee = FeeDeclaration::new(self.payer, gas_limit, 0, u128::MAX >> 8);
         let message_bytes = message.len();
-        let msg = PublicMessage::new(
-            root,
-            message,
-            actors,
-            BTreeMap::from([(self.payer, Nonce(self.nonce))]),
-            Some(fee),
-            evidence,
-        );
-        let witness_set = WitnessSet::for_message(&msg, &[&self.payer_key]);
+        let mut nonces = BTreeMap::from([(self.payer, Nonce(self.nonce))]);
+        for key in signers {
+            let id = AccountId::from(&PublicKey::new_from_private_key(key));
+            nonces.insert(id, self.state.get_account_by_id(id).nonce);
+        }
+        let msg = PublicMessage::new(root, message, actors, nonces, Some(fee), evidence);
+        let mut keys = vec![&self.payer_key];
+        keys.extend(signers.iter().copied());
+        let witness_set = WitnessSet::for_message(&msg, &keys);
         let tx = PublicTransaction::new(msg, witness_set);
         let (transitions, _) = trace_public(&tx, &self.state, gas_limit);
         let lee_tx = LeeTransaction::Public(tx);
+        self.last_tx = borsh::to_vec(&lee_tx).expect("borsh serialization is infallible");
         let view = classify(&lee_tx).expect("classifies");
         let opening = opening_fee_state(&self.state);
         let mut summary = BlockFeeSummary::default();

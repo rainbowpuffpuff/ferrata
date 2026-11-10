@@ -14,7 +14,6 @@
 
 use std::{borrow::Cow, collections::BTreeMap};
 
-use fee_core::market;
 use ferrata_bridge_core::{
     chain_id_u256,
     inbound::{commitment, deposit_id, deposit_leaf, deposit_secret, nullifier as core_nullifier, DestKind},
@@ -27,24 +26,21 @@ use ferrata_core::{
     Root,
 };
 use ferrata_lez_bridge_wire::{
-    self as bw, code, config_actor, config_seed, holder_actor, nullifier_actor, root_actor, root_seed, BridgeConfig,
-    BridgeMessage, BridgeState, ClaimWitness, HolderState, ImportProof, NullifierState, PairingProof, RootState, Terms,
-    SLOT_CONFIG_ID, SLOT_COUNT, SLOT_ROOT,
+    self as bw, code, config_actor, config_seed, fee_slot, holder_actor, nullifier_actor, register_slots, registry_slot,
+    root_actor, root_seed, token_actor, token_seed, BridgeConfig, BridgeMessage, BridgeState, CapParams, ClaimWitness,
+    Controls, FeeSchedule, HolderState, ImportProof, NullifierState, PairingProof, RootState, ScheduleRange, TokenEntry,
+    TokenState, VaultProof, Word, SLOT_CONFIG_ID, SLOT_COUNT, SLOT_ROOT,
 };
 use ferrata_lez_wire::{header_actor, RecordState};
 use ferrata_spectests::execkit::{account_rlp, enc, keccak, Trie};
-use lee::{
-    program::Program,
-    public_transaction::{Message as PublicMessage, WitnessSet},
-    Account, AccountId, Actor, FeeDeclaration, PublicAccountEvidence, PublicTransaction,
-};
+use lee::{program::Program, Account, AccountId, Actor, PrivateKey, PublicAccountEvidence, PublicKey};
 use lee_core::{
-    account::{ActorState, Nonce},
-    program::ReceiveInput,
+    account::ActorState,
+    program::{PdaSeed, ReceiveInput},
 };
 use serde_json::Value;
 
-use crate::{ferrata_account, settle::LeeTransaction, Chain, TxReport};
+use crate::{ferrata_account, Chain, TxReport};
 
 pub fn bridge_program() -> Program {
     Program::new_unchecked(methods::FERRATA_BRIDGE_ID, Cow::Borrowed(methods::FERRATA_BRIDGE_ELF))
@@ -78,6 +74,15 @@ pub fn handler_name(input: &ReceiveInput) -> String {
         Ok(BridgeMessage::WriteRoot { .. }) => "WriteRoot",
         Ok(BridgeMessage::Spend { .. }) => "Spend",
         Ok(BridgeMessage::Mint { .. }) => "Mint",
+        Ok(BridgeMessage::Register { .. }) => "Register",
+        Ok(BridgeMessage::ImportFees { .. }) => "ImportFees",
+        Ok(BridgeMessage::WriteToken { .. }) => "WriteToken",
+        Ok(BridgeMessage::ExtendFees { .. }) => "ExtendFees",
+        Ok(BridgeMessage::Issue { .. }) => "Issue",
+        Ok(BridgeMessage::Admit { .. }) => "Admit",
+        Ok(BridgeMessage::Freeze { .. }) => "Freeze",
+        Ok(BridgeMessage::SetCap { .. }) => "SetCap",
+        Ok(BridgeMessage::Tick { .. }) => "Tick",
         // Anything that is not one of the bridge's messages is a reply it waits for.
         Err(_) => "(reply)",
     };
@@ -113,6 +118,111 @@ pub const GWEI: u128 = 1_000_000_000;
 pub const DENOMINATIONS: [u128; 3] = [100_000_000 * GWEI, 1_000_000_000 * GWEI, 10_000_000_000 * GWEI];
 /// Vault B: another configuration's vault.
 pub const VAULT_B: [u8; 20] = [0x22; 20];
+/// ETH's LEZ unit: 1 gwei (LEZ keeps nine decimals of ETH).
+pub const LEZ_UNIT: u128 = GWEI;
+/// ETH's relay fees, fixed at registration: 0.1% of each denomination.
+pub const RELAY_FEES: [u128; 3] = [100_000 * GWEI, 1_000_000 * GWEI, 10_000_000 * GWEI];
+/// Vault A's second ETH fee schedule (from leaf 6): mint and burn fees 0.5%, checkpoint fees 0.1%.
+pub const MINT_FEES_1: [u128; 3] = [500_000 * GWEI, 5_000_000 * GWEI, 50_000_000 * GWEI];
+/// When the admin announced it (Ethereum seconds), and when it took effect: seven days later.
+pub const ANNOUNCED_1: u64 = 1_699_000_000;
+/// A six-decimal token registered on vault B beside ETH; its LEZ unit is one base unit.
+pub const T2: [u8; 20] = [0x7e; 20];
+pub const T2_DENOMINATIONS: [u128; 2] = [100_000_000, 1_000_000_000];
+/// A token of vault A whose schedule 1 the vault wrote out of bounds (blocks 101 and 102 differ).
+pub const T3: [u8; 20] = [0x73; 20];
+/// Caps in value units (ETH: one unit per gwei, `unitWeight` 1): the floor, a token's and the
+/// global defaults.
+pub const FLOOR: CapParams = CapParams { capacity: 1_000_000_000, refill_per_second: 100_000 };
+pub const TOKEN_CAP: CapParams = CapParams { capacity: 100_000_000_000, refill_per_second: 10_000_000 };
+pub const GLOBAL_CAP: CapParams = CapParams { capacity: 200_000_000_000, refill_per_second: 10_000_000 };
+
+/// The signing key of a role account (`ADMIN_SEED`, `FREEZE_SEED`, `OUTSIDER_SEED`).
+pub fn role_key(seed: u8) -> PrivateKey {
+    PrivateKey::try_new([seed; 32]).unwrap()
+}
+pub const ADMIN_SEED: u8 = 0x21;
+pub const FREEZE_SEED: u8 = 0x22;
+/// A signer that holds no role.
+pub const OUTSIDER_SEED: u8 = 0x23;
+
+pub fn role_account(seed: u8) -> AccountId {
+    AccountId::from(&PublicKey::new_from_private_key(&role_key(seed)))
+}
+
+/// The fee recipient and a relayer: public accounts without keys (they only receive).
+pub fn fee_recipient() -> AccountId {
+    AccountId::new([0xfe; 32])
+}
+pub fn relayer() -> AccountId {
+    AccountId::new([0xec; 32])
+}
+
+/// ETH's registry entry: 18 decimals, LEZ unit 1 gwei, three denominations, 0.1% relay fees.
+pub fn eth_entry() -> TokenEntry {
+    TokenEntry {
+        token: ETH,
+        lez_definition: [0; 32],
+        decimals: 18,
+        lez_unit: LEZ_UNIT,
+        unit_weight: 1,
+        denominations: DENOMINATIONS.to_vec(),
+        relay_fees: RELAY_FEES.to_vec(),
+    }
+}
+
+/// T2's entry: six decimals, LEZ unit 1, two denominations, no relay fee.
+pub fn t2_entry() -> TokenEntry {
+    TokenEntry {
+        token: T2,
+        lez_definition: [0x72; 32],
+        decimals: 6,
+        lez_unit: 1,
+        unit_weight: 1,
+        denominations: T2_DENOMINATIONS.to_vec(),
+        relay_fees: vec![0; 2],
+    }
+}
+
+/// T3's entry (vault A): like ETH's.
+pub fn t3_entry() -> TokenEntry {
+    TokenEntry { token: T3, ..eth_entry() }
+}
+
+/// Schedule 0 of an entry: written at registration, no protocol fee.
+pub fn schedule_zero(entry: &TokenEntry) -> FeeSchedule {
+    let zero = vec![0; entry.denominations.len()];
+    FeeSchedule {
+        index: 0,
+        from_leaf: 0,
+        announced_at: 0,
+        effective_at: 0,
+        mint_fees: zero.clone(),
+        burn_fees: zero.clone(),
+        checkpoint_fees: zero,
+    }
+}
+
+/// Vault A's ETH schedule 1: from leaf 6, announced seven days before it took effect.
+pub fn eth_schedule_one() -> FeeSchedule {
+    FeeSchedule {
+        index: 1,
+        from_leaf: 6,
+        announced_at: ANNOUNCED_1,
+        effective_at: ANNOUNCED_1 + bw::FEE_NOTICE_SECONDS,
+        mint_fees: MINT_FEES_1.to_vec(),
+        burn_fees: MINT_FEES_1.to_vec(),
+        checkpoint_fees: RELAY_FEES.to_vec(),
+    }
+}
+
+/// T3's schedule 1 as the vault wrote it in block 101 (one day of notice) and in block 102 (a 2%
+/// mint fee).
+pub fn t3_bad_schedules() -> [FeeSchedule; 2] {
+    let short_notice = FeeSchedule { effective_at: ANNOUNCED_1 + 24 * 3600, ..eth_schedule_one() };
+    let too_high = FeeSchedule { mint_fees: DENOMINATIONS.iter().map(|d| d / 50).collect(), ..eth_schedule_one() };
+    [short_notice, too_high]
+}
 
 fn h32(v: &Value) -> Hash {
     hex::decode(v.as_str().unwrap().trim_start_matches("0x")).unwrap().try_into().unwrap()
@@ -141,6 +251,19 @@ pub struct Deposit {
 }
 
 impl Deposit {
+    /// The deposit a claim witness names.
+    pub fn of(w: &ClaimWitness) -> Self {
+        Deposit {
+            leaf_index: w.leaf_index,
+            depositor: w.depositor,
+            token: w.token,
+            amount: w.amount,
+            s: w.s,
+            kind: DestKind::from_byte(w.kind).unwrap_or(DestKind::Public),
+            dest: w.dest,
+        }
+    }
+
     pub fn commitment(&self) -> Hash {
         commitment(&self.s, self.kind, &self.dest)
     }
@@ -189,13 +312,24 @@ impl Vault {
     }
 }
 
-/// What one vault's storage holds in one block.
-#[derive(Clone, Copy, Debug)]
+/// What one vault's storage holds in one block: slots 0–2 and the registry and fee slots.
+#[derive(Clone, Debug)]
 pub struct VaultSlots {
     pub address: [u8; 20],
     pub root: Hash,
     pub count: u64,
     pub config_id: Hash,
+    pub extra: Vec<(Word, Hash)>,
+}
+
+/// The registry slots of `entry` with schedule 0 (as a vault writes them at registration), and
+/// `more` schedules.
+pub fn registry_slots(entry: &TokenEntry, more: &[FeeSchedule]) -> Vec<(Word, Hash)> {
+    let mut slots = vec![(registry_slot(&entry.token), entry.hash())];
+    for s in std::iter::once(&schedule_zero(entry)).chain(more) {
+        slots.push((fee_slot(&entry.token, s.index), s.hash(&entry.token)));
+    }
+    slots
 }
 
 /// A synthetic execution block: its state trie, the vaults' storage tries, and its record.
@@ -212,11 +346,12 @@ impl Block {
         let mut accounts = Vec::new();
         let mut storage = Vec::new();
         for v in vaults {
-            let trie = Trie::new([
+            let base = [
                 (keccak(&SLOT_ROOT).to_vec(), enc::uint(&v.root)),
                 (keccak(&SLOT_COUNT).to_vec(), enc::uint(&v.count.to_be_bytes())),
                 (keccak(&SLOT_CONFIG_ID).to_vec(), enc::uint(&v.config_id)),
-            ]);
+            ];
+            let trie = Trie::new(base.into_iter().chain(v.extra.iter().map(|(k, x)| (keccak(k).to_vec(), enc::uint(x)))));
             accounts.push((v.address, account_rlp(1, 0, trie.root(), keccak(b"vault code"))));
             storage.push((v.address, trie));
         }
@@ -252,6 +387,15 @@ impl Block {
         }
     }
 
+    /// The proofs of `vault`'s account and `slots` (an absent slot gets its exclusion proof).
+    pub fn vault_proof(&self, vault: &[u8; 20], slots: &[Word]) -> VaultProof {
+        let storage = self.storage_of(vault);
+        VaultProof {
+            account: self.state.proof(&keccak(vault)),
+            slots: slots.iter().map(|s| storage.proof(&keccak(s))).collect(),
+        }
+    }
+
     pub fn pairing_proof(&self, vault: &[u8; 20]) -> PairingProof {
         PairingProof {
             account: self.state.proof(&keccak(vault)),
@@ -273,16 +417,30 @@ impl Block {
 // The world
 // ---------------------------------------------------------------------------------------------
 
-/// The configuration of `vault` with `denominations`, reading Ethereum through the attestation
+/// The roles and caps of this world's configurations.
+pub fn controls() -> Controls {
+    Controls {
+        admin: *role_account(ADMIN_SEED).value(),
+        freeze_authority: *role_account(FREEZE_SEED).value(),
+        fee_recipient: *fee_recipient().value(),
+        floor: FLOOR,
+        token_cap: TOKEN_CAP,
+        global_cap: GLOBAL_CAP,
+    }
+}
+
+/// The configuration of `vault` with `controls`, reading Ethereum through the attestation
 /// program's genesis deployment and the synthetic instance.
-pub fn config(vault: [u8; 20], denominations: [u128; 3]) -> BridgeConfig {
+pub fn config(vault: [u8; 20], controls: Controls) -> BridgeConfig {
     BridgeConfig {
         bedrock_genesis_id: [0x0b; 32],
         channel_id: [0x01; 32],
         bridge_image_id: bridge_image_id(),
         attestation: ferrata_account(),
         instance_id: INSTANCE,
-        terms: Terms { evm_chain_id: CHAIN_ID, vault, token: ETH, denominations },
+        evm_chain_id: CHAIN_ID,
+        vault,
+        controls,
     }
 }
 
@@ -290,7 +448,7 @@ pub fn config(vault: [u8; 20], denominations: [u128; 3]) -> BridgeConfig {
 pub struct World {
     pub chain: Chain,
     pub program: AccountId,
-    /// The configuration of vault A, of vault B, and a second one of vault A (other terms).
+    /// The configuration of vault A, of vault B, and a second one of vault A (another fee recipient).
     pub config_a: BridgeConfig,
     pub config_b: BridgeConfig,
     pub config_a2: BridgeConfig,
@@ -306,12 +464,14 @@ pub struct World {
     /// Vault A, leaf 5: 1 ETH to a private account (seed `private_seed`), private kind.
     pub private_deposit: Deposit,
     pub private_seed: u8,
-    /// Vault A, leaf 6: 10 ETH to the payer, public kind.
+    /// Vault A, leaf 6: 10 ETH to the payer, public kind (fee schedule 1).
     pub payer_deposit: Deposit,
     /// Vault A, leaf 7: 0.5 ETH to the payer (not a denomination; a vault would refuse it).
     pub odd_deposit: Deposit,
     /// Vault B, leaf 3: 1 ETH to the payer.
     pub deposit_b: Deposit,
+    /// Vault B, leaf 5: 1,000 units of T2 to the payer.
+    pub deposit_t2: Deposit,
     /// S1: A has 5 leaves; S2: A has 8; S3: A's root is that of 8 leaves but its count says 6.
     pub blocks: Vec<Block>,
     pub time: u64,
@@ -343,9 +503,9 @@ impl World {
         let claim = &v["claim"];
         let vault_address = h20(&claim["vault"]);
         assert_eq!(h32(&claim["evm_chain_id"]), chain_id_u256(CHAIN_ID));
-        let config_a = config(vault_address, DENOMINATIONS);
-        let config_b = config(VAULT_B, DENOMINATIONS);
-        let config_a2 = config(vault_address, [GWEI, 2 * GWEI, 5 * GWEI]);
+        let config_a = config(vault_address, controls());
+        let config_b = config(VAULT_B, controls());
+        let config_a2 = config(vault_address, Controls { fee_recipient: [0xfd; 32], ..controls() });
         let (cid_a, cid_b, cid_a2) = (config_a.id(program), config_b.id(program), config_a2.id(program));
 
         // Vault A: the vector's five leaves, then three of this harness's own.
@@ -383,7 +543,8 @@ impl World {
         }
         let vault_a = Vault { address: vault_address, leaves };
 
-        // Vault B: eight leaves, the fourth a deposit of 1 ETH to the payer.
+        // Vault B: eight leaves, the fourth a deposit of 1 ETH to the payer, the sixth one of
+        // 1,000 units of T2.
         let deposit_b = Deposit {
             leaf_index: 3,
             depositor,
@@ -393,29 +554,52 @@ impl World {
             kind: DestKind::Public,
             dest: *chain.payer.value(),
         };
+        let deposit_t2 = Deposit {
+            leaf_index: 5,
+            token: T2,
+            amount: bw::word_of_u128(T2_DENOMINATIONS[1]),
+            s: deposit_secret(&keys.auth, &chain_id_u256(CHAIN_ID), &VAULT_B, &depositor, 1),
+            ..deposit_b.clone()
+        };
         let leaves_b = (0..8u8)
-            .map(|i| if u64::from(i) == deposit_b.leaf_index { deposit_b.leaf() } else { keccak(&[0xb0, i]) })
+            .map(|i| match u64::from(i) {
+                3 => deposit_b.leaf(),
+                5 => deposit_t2.leaf(),
+                _ => keccak(&[0xb0, i]),
+            })
             .collect();
         let vault_b = Vault { address: VAULT_B, leaves: leaves_b };
 
-        let slots_b = VaultSlots { address: VAULT_B, root: vault_b.root(8), count: 8, config_id: cid_b };
-        let slots_a = |root_n: u64, count: u64| VaultSlots {
-            address: vault_address,
-            root: vault_a.root(root_n),
-            count,
-            config_id: cid_a,
+        // The vaults' registries: vault B has ETH and T2 (schedule 0 only); vault A has ETH, whose
+        // schedule 1 took effect at leaf 6 (so it is in blocks 101 and 102, not 100), and T3, whose
+        // schedule 1 is out of bounds (a vault that wrote it: one value in each block).
+        let mut registry_b = registry_slots(&eth_entry(), &[]);
+        registry_b.extend(registry_slots(&t2_entry(), &[]));
+        let slots_b =
+            VaultSlots { address: VAULT_B, root: vault_b.root(8), count: 8, config_id: cid_b, extra: registry_b };
+        let [t3_notice, t3_fee] = t3_bad_schedules();
+        let slots_a = |root_n: u64, count: u64, eth_more: &[FeeSchedule], t3_more: &[FeeSchedule]| {
+            let mut extra = registry_slots(&eth_entry(), eth_more);
+            extra.extend(registry_slots(&t3_entry(), t3_more));
+            VaultSlots { address: vault_address, root: vault_a.root(root_n), count, config_id: cid_a, extra }
         };
+        let one = [eth_schedule_one()];
         let blocks = vec![
-            Block::new(9_000_000, 100, &[slots_a(5, 5), slots_b]),
-            Block::new(9_000_032, 101, &[slots_a(8, 8), slots_b]),
-            Block::new(9_000_064, 102, &[slots_a(8, 6), slots_b]),
+            Block::new(9_000_000, 100, &[slots_a(5, 5, &[], &[]), slots_b.clone()]),
+            Block::new(9_000_032, 101, &[slots_a(8, 8, &one, &[t3_notice]), slots_b.clone()]),
+            Block::new(9_000_064, 102, &[slots_a(8, 6, &one, &[t3_fee]), slots_b]),
         ];
 
-        // Genesis: the bridge program, the records, and an account for the vector's destination
-        // (a public account must exist, or be evidenced, to be admitted).
+        // Genesis: the bridge program, the records, and the public accounts that receive mints or
+        // sign as roles (a public account must exist, or be evidenced, to be admitted).
         let vector_dest = AccountId::new(vector.dest);
         let mut accounts: Vec<(AccountId, Account)> = blocks.iter().map(Block::record_account).collect();
-        accounts.push((vector_dest, Account::default()));
+        for id in [vector_dest, fee_recipient(), relayer()]
+            .into_iter()
+            .chain([ADMIN_SEED, FREEZE_SEED, OUTSIDER_SEED].map(role_account))
+        {
+            accounts.push((id, Account::default()));
+        }
         let state = std::mem::take(&mut chain.state);
         chain.state = state.with_public_accounts(accounts).with_genesis_programs([(bridge_program(), true)]);
         Self {
@@ -437,6 +621,7 @@ impl World {
             payer_deposit,
             odd_deposit,
             deposit_b,
+            deposit_t2,
             blocks,
             time: 1_700_000_000_000,
             txs: Vec::new(),
@@ -456,6 +641,22 @@ impl World {
         }
     }
 
+    pub fn token_state(&self, cid: &Hash, token: &[u8; 20]) -> Option<TokenState> {
+        match self.state(token_actor(self.program, cid, token)) {
+            Some(BridgeState::Token(state)) => Some(state),
+            None => None,
+            other => panic!("not a token: {other:?}"),
+        }
+    }
+
+    pub fn config_state(&self, cid: &Hash) -> Option<bw::ConfigState> {
+        match self.state(config_actor(self.program, cid)) {
+            Some(BridgeState::Config(state)) => Some(state),
+            None => None,
+            other => panic!("not a configuration: {other:?}"),
+        }
+    }
+
     pub fn holder(&self, account: AccountId) -> Option<HolderState> {
         match self.state(holder_actor(self.program, account)) {
             Some(BridgeState::Holder(holder)) => Some(holder),
@@ -464,21 +665,26 @@ impl World {
         }
     }
 
-    pub fn nullifier(&self, terms: &Terms, n: &Hash) -> Option<NullifierState> {
-        match self.state(nullifier_actor(self.program, terms.evm_chain_id, &terms.vault, n)) {
+    pub fn nullifier(&self, vault: &[u8; 20], n: &Hash) -> Option<NullifierState> {
+        match self.state(nullifier_actor(self.program, CHAIN_ID, vault, n)) {
             Some(BridgeState::Nullifier(spent)) => Some(spent),
             None => None,
             other => panic!("not a nullifier: {other:?}"),
         }
     }
 
-    /// The balance `account` holds under `cid`.
+    /// The balance of `token` that `account` holds under `cid`.
+    pub fn balance_of(&self, account: AccountId, cid: &Hash, token: &[u8; 20]) -> u128 {
+        self.holder(account).and_then(|h| h.holding(cid, token).map(|h| h.amount)).unwrap_or(0)
+    }
+
+    /// The ETH balance `account` holds under `cid`.
     pub fn balance(&self, account: AccountId, cid: &Hash) -> u128 {
-        self.holder(account).and_then(|h| h.holding(cid).map(|h| h.amount)).unwrap_or(0)
+        self.balance_of(account, cid, &ETH)
     }
 
     /// Admission evidence for a PDA root actor that does not exist yet.
-    fn evidence(&self, actor: Actor, seed: lee_core::program::PdaSeed) -> Vec<PublicAccountEvidence> {
+    fn evidence(&self, actor: Actor, seed: PdaSeed) -> Vec<PublicAccountEvidence> {
         if self.chain.state.get_account_by_id_ref(actor.account_id).is_some() {
             vec![]
         } else {
@@ -486,7 +692,25 @@ impl World {
         }
     }
 
-    /// Sign, settle and keep one public transaction whose root is `message` at `root`.
+    /// Sign (by the payer and `signers`), settle and keep one public transaction whose root is
+    /// `message` at `root`.
+    pub fn submit_signed(
+        &mut self,
+        label: &str,
+        root: Actor,
+        message: &BridgeMessage,
+        actors: Vec<Actor>,
+        evidence: Vec<PublicAccountEvidence>,
+        signers: &[&PrivateKey],
+    ) -> TxReport {
+        let message = borsh::to_vec(message).unwrap();
+        let report = self.chain.submit_signed(label, root, message, actors, evidence, self.time, signers);
+        assert_eq!(report.tx_bytes, self.chain.last_tx.len(), "{label}: the kept transaction is the settled one's size");
+        self.txs.push((label.to_string(), self.chain.last_tx.clone()));
+        report
+    }
+
+    /// Sign (by the payer), settle and keep one public transaction whose root is `message` at `root`.
     pub fn submit(
         &mut self,
         label: &str,
@@ -495,25 +719,7 @@ impl World {
         actors: Vec<Actor>,
         evidence: Vec<PublicAccountEvidence>,
     ) -> TxReport {
-        let time = self.time;
-        let message = borsh::to_vec(message).unwrap();
-        // The same transaction `Chain::submit` signs and settles, kept for the checkpoint check.
-        let fee = FeeDeclaration::new(self.chain.payer, market::MAX_GAS_EXEC, 0, u128::MAX >> 8);
-        let msg = PublicMessage::new(
-            root,
-            message.clone(),
-            actors.clone(),
-            BTreeMap::from([(self.chain.payer, Nonce(self.chain.nonce))]),
-            Some(fee),
-            evidence.clone(),
-        );
-        let witness_set = WitnessSet::for_message(&msg, &[&self.chain.payer_key]);
-        let tx = PublicTransaction::new(msg, witness_set);
-        let bytes = borsh::to_vec(&LeeTransaction::Public(tx)).unwrap();
-        let report = self.chain.submit(label, root, message, actors, evidence, time);
-        assert_eq!(report.tx_bytes, bytes.len(), "{label}: the kept transaction is the settled one's size");
-        self.txs.push((label.to_string(), bytes));
-        report
+        self.submit_signed(label, root, message, actors, evidence, &[])
     }
 
     /// `Init` of `config`, attesting its vault's slot 2 under block `block`.
@@ -523,7 +729,7 @@ impl World {
         let message = BridgeMessage::Init {
             config: config.clone(),
             record_slot: b.slot,
-            proof: b.pairing_proof(&config.terms.vault),
+            proof: b.pairing_proof(&config.vault),
         };
         let root = config_actor(self.program, &cid);
         let header = header_actor(ferrata_account(), &INSTANCE, b.slot);
@@ -548,28 +754,154 @@ impl World {
         self.submit(label, config, &message, vec![config, header, root_actor(self.program, cid, n)], evidence)
     }
 
-    /// The plaintext `Claim` of `witness` at `root(cid, n)`; `terms` name the nullifier actor.
-    pub fn claim(&mut self, label: &str, cid: &Hash, n: u64, terms: &Terms, witness: ClaimWitness) -> TxReport {
-        let root = root_actor(self.program, cid, n);
-        let d = Deposit {
-            leaf_index: witness.leaf_index,
-            depositor: witness.depositor,
-            token: witness.token,
-            amount: witness.amount,
-            s: witness.s,
-            kind: DestKind::from_byte(witness.kind).unwrap_or(DestKind::Public),
-            dest: witness.dest,
+    /// `Register` of `entry` (with schedule 0) for configuration `cid` under block `block`, with the
+    /// proofs of `vault`'s registry slots.
+    pub fn register(&mut self, label: &str, cid: &Hash, block: usize, entry: &TokenEntry, vault: &[u8; 20]) -> TxReport {
+        self.register_with(label, cid, block, entry, &schedule_zero(entry), vault)
+    }
+
+    pub fn register_with(
+        &mut self,
+        label: &str,
+        cid: &Hash,
+        block: usize,
+        entry: &TokenEntry,
+        schedule: &FeeSchedule,
+        vault: &[u8; 20],
+    ) -> TxReport {
+        let b = &self.blocks[block];
+        let message = BridgeMessage::Register {
+            config_id: *cid,
+            entry: entry.clone(),
+            schedule: schedule.clone(),
+            record_slot: b.slot,
+            proof: b.vault_proof(vault, &register_slots(&entry.token)),
         };
-        let nullifier = nullifier_actor(
-            self.program,
-            terms.evm_chain_id,
-            &terms.vault,
-            &d.nullifier(terms.evm_chain_id, &terms.vault),
-        );
-        let holder = holder_actor(self.program, AccountId::new(witness.dest));
+        let config = config_actor(self.program, cid);
+        let header = header_actor(ferrata_account(), &INSTANCE, b.slot);
+        let token = token_actor(self.program, cid, &entry.token);
+        let evidence = self.evidence(config, config_seed(cid));
+        self.submit(label, config, &message, vec![config, header, token], evidence)
+    }
+
+    /// `ImportFees` of `token`'s schedule `index` (`None`: its absence) under block `block`.
+    #[allow(clippy::too_many_arguments)]
+    pub fn import_fees(
+        &mut self,
+        label: &str,
+        cid: &Hash,
+        block: usize,
+        token: [u8; 20],
+        index: u64,
+        schedule: Option<FeeSchedule>,
+        vault: &[u8; 20],
+    ) -> TxReport {
+        let b = &self.blocks[block];
+        let message = BridgeMessage::ImportFees {
+            config_id: *cid,
+            token,
+            index,
+            schedule,
+            record_slot: b.slot,
+            proof: b.vault_proof(vault, &bw::fees_slots(&token, index)),
+        };
+        let config = config_actor(self.program, cid);
+        let header = header_actor(ferrata_account(), &INSTANCE, b.slot);
+        let evidence = self.evidence(config, config_seed(cid));
+        self.submit(label, config, &message, vec![config, header, token_actor(self.program, cid, &token)], evidence)
+    }
+
+    /// The fee schedule range a wallet names for a claim of `leaf` of `token`: the schedule the
+    /// leaf falls under and the widest range the token's state allows (the whole known range).
+    pub fn range(&self, cid: &Hash, token: &[u8; 20], leaf: u64) -> ScheduleRange {
+        match self.token_state(cid, token) {
+            None => ScheduleRange { index: 0, from_leaf: 0, until_leaf: u64::MAX },
+            Some(t) => {
+                let j = t.schedules.iter().rposition(|s| s.from_leaf <= leaf).unwrap_or(0);
+                let until = t.schedules.get(j + 1).map_or(t.known_until, |s| s.from_leaf);
+                ScheduleRange { index: j as u64, from_leaf: t.schedules[j].from_leaf, until_leaf: until }
+            }
+        }
+    }
+
+    /// The public actors of a claim beyond its first: the token, the configuration, the
+    /// nullifier, the public destination, the fee recipient and the relayer (each once).
+    pub fn claim_actors(
+        &self,
+        cid: &Hash,
+        token: &[u8; 20],
+        nullifier: Actor,
+        dest: Option<AccountId>,
+        relayer: Option<Hash>,
+    ) -> Vec<Actor> {
+        let mut actors = vec![token_actor(self.program, cid, token), config_actor(self.program, cid), nullifier];
+        let accounts = dest
+            .into_iter()
+            .chain([fee_recipient(), relayer.map(AccountId::new).unwrap_or_else(fee_recipient)]);
+        for account in accounts {
+            let actor = holder_actor(self.program, account);
+            if !actors.contains(&actor) {
+                actors.push(actor);
+            }
+        }
+        actors
+    }
+
+    /// The plaintext `Claim` of `witness` at `root(cid, n)` (the nullifier of `vault`'s deposit),
+    /// with the wallet's range, the world's relayer and time.
+    pub fn claim(&mut self, label: &str, cid: &Hash, n: u64, vault: &[u8; 20], witness: ClaimWitness) -> TxReport {
+        let range = self.range(cid, &witness.token, witness.leaf_index);
+        self.claim_with(label, cid, n, vault, witness, range, Some(*relayer().value()), self.time)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn claim_with(
+        &mut self,
+        label: &str,
+        cid: &Hash,
+        n: u64,
+        vault: &[u8; 20],
+        witness: ClaimWitness,
+        range: ScheduleRange,
+        relayer: Option<Hash>,
+        time_ms: u64,
+    ) -> TxReport {
+        let root = root_actor(self.program, cid, n);
+        let n_d = Deposit::of(&witness).nullifier(CHAIN_ID, vault);
+        let nullifier = nullifier_actor(self.program, CHAIN_ID, vault, &n_d);
+        let mut actors = vec![root];
+        actors.extend(self.claim_actors(cid, &witness.token, nullifier, Some(AccountId::new(witness.dest)), relayer));
         let evidence = self.evidence(root, root_seed(cid, n));
-        let message = BridgeMessage::Claim { config_id: *cid, leaf_count: n, witness };
-        self.submit(label, root, &message, vec![root, nullifier, holder], evidence)
+        let message = BridgeMessage::Claim { config_id: *cid, leaf_count: n, witness, range, relayer, time_ms };
+        self.submit(label, root, &message, actors, evidence)
+    }
+
+    /// A `ClaimPrivately` of `witness` under `root(cid, n)`, with the wallet's range, the world's
+    /// relayer and time.
+    pub fn claim_privately(&self, cid: &Hash, n: u64, witness: ClaimWitness) -> BridgeMessage {
+        let range = self.range(cid, &witness.token, witness.leaf_index);
+        let relayer = Some(*relayer().value());
+        BridgeMessage::ClaimPrivately { config_id: *cid, leaf_count: n, witness, range, relayer, time_ms: self.time }
+    }
+
+    /// The public actors of a private claim of `deposit` (of `vault`) under `root(cid, n)`.
+    pub fn private_claim_actors(&self, cid: &Hash, n: u64, vault: &[u8; 20], deposit: &Deposit) -> Vec<Actor> {
+        let nullifier = nullifier_actor(self.program, CHAIN_ID, vault, &deposit.nullifier(CHAIN_ID, vault));
+        let dest = (deposit.kind == DestKind::Public).then(|| AccountId::new(deposit.dest));
+        let mut actors = vec![root_actor(self.program, cid, n)];
+        actors.extend(self.claim_actors(cid, &deposit.token, nullifier, dest, Some(*relayer().value())));
+        actors
+    }
+
+    /// The actors of a burn of `note` under `cid` at `holder`: the holder, the token, the
+    /// configuration, the record.
+    pub fn burn_actors(&self, holder: Actor, cid: &Hash, note: &bw::Note) -> Vec<Actor> {
+        vec![
+            holder,
+            token_actor(self.program, cid, &note.token),
+            config_actor(self.program, cid),
+            bw::burn_actor(self.program, cid, &note.hash()),
+        ]
     }
 
     /// Any bridge message as the root of a transaction at `root`.
@@ -577,8 +909,27 @@ impl World {
         self.submit(label, root, message, actors, vec![])
     }
 
-    /// Inits of A and B, then the imports every claim test starts from: `root(cid_a, 5)` (S1),
-    /// `root(cid_a, 8)` (S2), `root(cid_a, 6)` (S3, the lagging count) and `root(cid_b, 8)`.
+    /// A role message (`Sunset`, `Freeze`, `SetCap`) as a top-level call at the actor of the
+    /// account of `seed`, signed by it, forwarded to `target`.
+    pub fn role(&mut self, label: &str, seed: u8, message: &BridgeMessage, target: Actor) -> TxReport {
+        let root = holder_actor(self.program, role_account(seed));
+        let key = role_key(seed);
+        self.submit_signed(label, root, message, vec![root, target], vec![], &[&key])
+    }
+
+    /// `Tick` at `config(cid)` or `token(cid, token)` at the world's time.
+    pub fn tick(&mut self, label: &str, cid: &Hash, token: Option<[u8; 20]>) -> TxReport {
+        let at = match &token {
+            None => config_actor(self.program, cid),
+            Some(t) => token_actor(self.program, cid, t),
+        };
+        let message = BridgeMessage::Tick { config_id: *cid, token, time_ms: self.time };
+        self.send(label, at, &message, vec![at])
+    }
+
+    /// Inits of A and B, the registrations (ETH on both, T2 on B), the imports every claim test
+    /// starts from — `root(cid_a, 5)` (S1), `root(cid_a, 8)` (S2), `root(cid_a, 6)` (S3, the lagging
+    /// count) and `root(cid_b, 8)` — and vault A's ETH fee schedule 1 with its range closed at 8.
     pub fn with_roots() -> Self {
         let mut w = Self::new();
         let (a, b) = (w.config_a.clone(), w.config_b.clone());
@@ -586,10 +937,15 @@ impl World {
         for report in [
             w.init("Init A", &a, 0),
             w.init("Init B", &b, 0),
+            w.register("Register ETH (A)", &cid_a, 0, &eth_entry(), &va),
+            w.register("Register ETH (B)", &cid_b, 0, &eth_entry(), &VAULT_B),
+            w.register("Register T2 (B)", &cid_b, 0, &t2_entry(), &VAULT_B),
             w.import("ImportRoot A n=5", &cid_a, 0, w.vault_a.root(5), 5, &va),
             w.import("ImportRoot A n=8", &cid_a, 1, w.vault_a.root(8), 8, &va),
             w.import("ImportRoot A n=6 (lagging count)", &cid_a, 2, w.vault_a.root(8), 6, &va),
             w.import("ImportRoot B n=8", &cid_b, 0, w.vault_b.root(8), 8, &VAULT_B),
+            w.import_fees("ImportFees ETH (A): schedule 1", &cid_a, 1, ETH, 1, Some(eth_schedule_one()), &va),
+            w.import_fees("ImportFees ETH (A): no schedule 2 at 8 leaves", &cid_a, 1, ETH, 2, None, &va),
         ] {
             assert!(report.ok(), "{}: {:?} (exit {:?})", report.label, report.charge.revert, report.exit_code);
         }

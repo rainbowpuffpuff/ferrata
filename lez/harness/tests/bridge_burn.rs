@@ -19,13 +19,14 @@ use ferrata_bridge_core::{
     BridgeKeys, Hash,
 };
 use ferrata_lez_bridge_wire::{
-    burn_actor, burn_mac_v2, burn_seed, code, holder_actor, nf_out_v2, nullifier_actor, root_actor, BridgeMessage,
+    burn_actor, burn_mac_v2, burn_seed, code, config_actor, holder_actor, nf_out_v2, token_actor, BridgeMessage,
     BridgeState, BurnRecord, HolderState, Holding, Note,
 };
 use harness::{
     attest::render_executed,
     bridge::{
         catalog, private_burn_transition, private_keys, private_post_state, render, World, CHAIN_ID, DENOMINATIONS, ETH,
+        VAULT_B,
     },
     private::PrivateAccount,
     render_transitions,
@@ -108,29 +109,27 @@ fn burns_and_what_the_checkpoint_collects() {
     require_dev_mode();
     let mut w = World::with_roots();
     let (cid_a, cid_b, cid_a2) = (w.cid_a, w.cid_b, w.cid_a2);
-    let (terms_a, terms_b) = (w.config_a.terms, w.config_b.terms);
-    let vault_a = terms_a.vault;
+    let vault_a = w.vault_a.address;
     let payer = w.chain.payer;
     let program = w.program;
     let mut reports = Vec::new();
 
     // Holdings: the payer 10 ETH under A and 1 ETH under B, the vector's destination 1 ETH (A).
     let claims = [
-        ("Claim: leaf 6 (10 ETH to the payer)", cid_a, terms_a, w.vault_a.witness(&w.payer_deposit.clone(), 8)),
-        ("Claim: vault B's deposit (1 ETH to the payer)", cid_b, terms_b, w.vault_b.witness(&w.deposit_b.clone(), 8)),
-        ("Claim: the vector's deposit (1 ETH)", cid_a, terms_a, w.vault_a.witness(&w.vector.clone(), 8)),
+        ("Claim: leaf 6 (10 ETH to the payer)", cid_a, vault_a, w.vault_a.witness(&w.payer_deposit.clone(), 8)),
+        ("Claim: vault B's deposit (1 ETH to the payer)", cid_b, VAULT_B, w.vault_b.witness(&w.deposit_b.clone(), 8)),
+        ("Claim: the vector's deposit (1 ETH)", cid_a, vault_a, w.vault_a.witness(&w.vector.clone(), 8)),
     ];
-    for (label, cid, terms, witness) in claims {
-        let r = w.claim(label, &cid, 8, &terms, witness);
+    for (label, cid, vault, witness) in claims {
+        let r = w.claim(label, &cid, 8, &vault, witness);
         expect(&r, None);
     }
     // A private holding: the private claim of leaf 5 (1 ETH) by its destination.
     let seed = w.private_seed;
     let account = w.chain.add_private_account(seed, 1_000_000_000_000);
     let deposit = w.private_deposit.clone();
-    let n = deposit.nullifier(CHAIN_ID, &vault_a);
-    let claim_message =
-        BridgeMessage::ClaimPrivately { config_id: cid_a, leaf_count: 8, witness: w.vault_a.witness(&deposit, 8) };
+    let claim_message = w.claim_privately(&cid_a, 8, w.vault_a.witness(&deposit, 8));
+    let claim_publics = w.private_claim_actors(&cid_a, 8, &vault_a, &deposit);
     let me = holder_actor(program, account.id());
     let private_claim = w
         .chain
@@ -138,14 +137,14 @@ fn burns_and_what_the_checkpoint_collects() {
             &account,
             me,
             borsh::to_vec(&claim_message).unwrap(),
-            vec![root_actor(program, &cid_a, 8), nullifier_actor(program, CHAIN_ID, &vault_a, &n)],
+            claim_publics,
             &catalog(),
             RESERVE,
             w.time,
         )
         .expect("the private claim settles");
     let holding = HolderState {
-        holdings: vec![Holding { config_id: cid_a, terms: terms_a, amount: DENOMINATIONS[1] }],
+        holdings: vec![Holding { config_id: cid_a, token: ETH, amount: DENOMINATIONS[1] }],
         pending: None,
     };
     let claimed = private_post_state(&w.chain, &private_keys(seed), &account.account, RESERVE, &holding)
@@ -157,8 +156,8 @@ fn burns_and_what_the_checkpoint_collects() {
     let holder = holder_actor(program, payer);
     let record1 = burn_actor(program, &cid_a, &n1.hash());
     let burn = |w: &mut World, label: &str, at: Actor, cid: Hash, note: &Note, code: Option<u8>| -> TxReport {
-        let record = burn_actor(program, &cid, &note.hash());
-        let r = w.send(label, at, &BridgeMessage::burn(cid, note), vec![at, record]);
+        let actors = w.burn_actors(at, &cid, note);
+        let r = w.send(label, at, &BridgeMessage::burn(cid, note), actors);
         expect(&r, code);
         r
     };
@@ -169,11 +168,18 @@ fn burns_and_what_the_checkpoint_collects() {
         BridgeState::Burn(BurnRecord { config_id: cid_a, note: n1 }),
         "the note, written once at burn(cid, H(note))"
     );
-    reports.push(burn(&mut w, "Burn: the same note again", holder, cid_a, &n1, Some(code::BURN_EXISTS)));
+    reports.push(burn(&mut w, "Burn: the same note again", holder, cid_a, &n1, Some(code::ALREADY_WRITTEN)));
     let (odd, _) = note(&keys, &cid_a, &vault_a, 1, ETH, DENOMINATIONS[1] / 2);
     reports.push(burn(&mut w, "Burn 0.5 ETH (not a denomination)", holder, cid_a, &odd, Some(code::NOT_REGISTERED)));
     let (other_token, _) = note(&keys, &cid_a, &vault_a, 2, [0xee; 20], DENOMINATIONS[1]);
-    reports.push(burn(&mut w, "Burn 1 unit of another token", holder, cid_a, &other_token, Some(code::NOT_REGISTERED)));
+    reports.push(burn(
+        &mut w,
+        "Burn 1 unit of another token (no holding of it)",
+        holder,
+        cid_a,
+        &other_token,
+        Some(code::INSUFFICIENT_BALANCE),
+    ));
     let (too_much, _) = note(&keys, &cid_a, &vault_a, 3, ETH, DENOMINATIONS[2]);
     reports.push(burn(&mut w, "Burn 10 ETH with 9 held", holder, cid_a, &too_much, Some(code::INSUFFICIENT_BALANCE)));
     let (n2, _) = note(&keys, &cid_a, &vault_a, 4, ETH, DENOMINATIONS[1]);
@@ -207,6 +213,16 @@ fn burns_and_what_the_checkpoint_collects() {
     );
     expect(&r, Some(code::WRONG_SENDER));
     reports.push(r);
+    // The token's account admits a burn only from a holder's actor, after its debit.
+    let token_a = token_actor(program, &cid_a, &ETH);
+    let r = w.send(
+        "Burn sent to the token account itself (a top-level call)",
+        token_a,
+        &BridgeMessage::burn(cid_a, &n2),
+        vec![token_a, config_actor(program, &cid_a), record2],
+    );
+    expect(&r, Some(code::WRONG_SENDER));
+    reports.push(r);
     // D10: a nested call. The payer signs a transaction whose root is LEZ's `scripted` test program,
     // which calls the payer's holder actor: `is_authorized` holds (the payer signed), the
     // checkpoint could not see the call, and the bridge refuses it.
@@ -224,14 +240,19 @@ fn burns_and_what_the_checkpoint_collects() {
     );
     expect(&r, Some(code::NOT_AUTHORIZED));
     reports.push(r);
-    let (n3, _) = note(&keys, &cid_b, &terms_b.vault, 0, ETH, DENOMINATIONS[1]);
+    let (n3, _) = note(&keys, &cid_b, &VAULT_B, 0, ETH, DENOMINATIONS[1]);
     reports.push(burn(&mut w, "Burn 1 ETH (B) by the payer", holder, cid_b, &n3, None));
     assert_eq!(w.balance(payer, &cid_b), 0);
     let echo = w.send("Echo (rule (A)'s nonce)", holder, &BridgeMessage::Echo { nonce: [0xec; 32] }, vec![holder]);
     expect(&echo, None);
     reports.push(echo);
-    let sunset = w.send("Sunset (not built)", holder, &BridgeMessage::Sunset { config_id: cid_a }, vec![holder]);
-    expect(&sunset, Some(code::BAD_MESSAGE));
+    let sunset = w.send(
+        "Sunset by the payer (not the freeze authority)",
+        holder,
+        &BridgeMessage::Sunset { config_id: cid_a },
+        vec![holder, config_actor(program, &cid_a)],
+    );
+    expect(&sunset, Some(code::NOT_AUTHORIZED));
     reports.push(sunset);
     assert_eq!(w.balance(payer, &cid_a), DENOMINATIONS[2] - DENOMINATIONS[1], "refusals burned nothing");
     assert_eq!(w.balance(w.vector_dest, &cid_a), DENOMINATIONS[1]);
@@ -245,13 +266,14 @@ fn burns_and_what_the_checkpoint_collects() {
     let executed_table = render_executed(&[executed]);
     let holder_p = PrivateAccount { keys: private_keys(seed), account: claimed.clone() };
     let record_p = burn_actor(program, &cid_a, &np.hash());
+    let burn_publics = w.burn_actors(me, &cid_a, &np)[1..].to_vec();
     let private_burn = w
         .chain
         .prove_and_settle_private(
             &holder_p,
             me,
             borsh::to_vec(&message).unwrap(),
-            vec![record_p],
+            burn_publics,
             &catalog(),
             RESERVE,
             w.time,
@@ -272,8 +294,8 @@ fn burns_and_what_the_checkpoint_collects() {
     assert_eq!(outgoing.len(), 2, "the burn's delivery and the fee: {outgoing:?}");
     assert_eq!(
         (outgoing[0].0, &outgoing[0].2),
-        (record_p, &borsh::to_vec(&message).unwrap()),
-        "the note, in the clear"
+        (token_a, &borsh::to_vec(&message).unwrap()),
+        "the note, in the clear, to the token's account"
     );
     assert_ne!(outgoing[0].1.account_id, account.id(), "the holder appears as an alias");
     assert_eq!(
@@ -384,7 +406,7 @@ fn burns_and_what_the_checkpoint_collects() {
         bridge_header: *program.value(),
         bridge_image_id: a.bridge_image_id,
         evm_chain_id: chain_id_u256(CHAIN_ID),
-        vault: a.terms.vault,
+        vault: a.vault,
         attestation_root_id: a.attestation_root_id(),
         salt: a.salt(),
         n_min: 1,

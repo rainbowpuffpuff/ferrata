@@ -7,11 +7,15 @@
 use std::{fs, path::PathBuf};
 
 use ferrata_lez_bridge_wire::{
-    holder_actor, nullifier_actor, root_actor, BridgeMessage, BridgeState, HolderState, Holding, NullifierState,
+    holder_actor, nullifier_actor, root_actor, token_actor, BridgeMessage, BridgeState, HolderState, Holding,
+    NullifierState, ScheduleRange,
 };
 use harness::{
     attest::render_executed,
-    bridge::{catalog, private_claim_transitions, private_keys, private_post_state, World, CHAIN_ID, DENOMINATIONS},
+    bridge::{
+        catalog, fee_recipient, private_claim_transitions, private_keys, private_post_state, relayer, World, CHAIN_ID,
+        DENOMINATIONS, ETH, MINT_FEES_1, RELAY_FEES,
+    },
     private::{describe_public_outputs, PrivateAccount},
     settle::LeeTransaction,
 };
@@ -40,10 +44,10 @@ fn a_private_claim_publishes_only_the_nullifier_the_denomination_and_the_root_re
     let account = w.chain.add_private_account(seed, 1_000_000_000_000);
     let deposit = w.private_deposit.clone();
     assert_eq!(account.id().value(), &deposit.dest, "the deposit is for this private account");
-    let (cid, terms) = (w.cid_a, w.config_a.terms);
+    let (cid, va) = (w.cid_a, w.vault_a.address);
     let witness = w.vault_a.witness(&deposit, 8);
-    let message = BridgeMessage::ClaimPrivately { config_id: cid, leaf_count: 8, witness: witness.clone() };
-    let n = deposit.nullifier(CHAIN_ID, &terms.vault);
+    let message = w.claim_privately(&cid, 8, witness.clone());
+    let n = deposit.nullifier(CHAIN_ID, &va);
 
     // The two private transitions in the executor: what a prover has to prove for the bridge.
     let executed = private_claim_transitions(&w, account.id(), &message, &cid, 8);
@@ -53,7 +57,9 @@ fn a_private_claim_publishes_only_the_nullifier_the_denomination_and_the_root_re
 
     // Through LEZ: proven (dev mode), settled.
     let root = root_actor(w.program, &cid, 8);
-    let nullifier = nullifier_actor(w.program, CHAIN_ID, &terms.vault, &n);
+    let token = token_actor(w.program, &cid, &ETH);
+    let publics = w.private_claim_actors(&cid, 8, &va, &deposit);
+    assert!(publics.contains(&nullifier_actor(w.program, CHAIN_ID, &va, &n)));
     let me = holder_actor(w.program, account.id());
     let run = w
         .chain
@@ -61,7 +67,7 @@ fn a_private_claim_publishes_only_the_nullifier_the_denomination_and_the_root_re
             &account,
             me,
             borsh::to_vec(&message).unwrap(),
-            vec![root, nullifier],
+            publics,
             &catalog(),
             RESERVE,
             w.time,
@@ -69,7 +75,7 @@ fn a_private_claim_publishes_only_the_nullifier_the_denomination_and_the_root_re
         .expect("settles");
     assert!(run.charge.revert.is_none(), "{:?}", run.charge.revert);
 
-    // What crosses into public execution: `Read` to the root, the root back, `Spend`, the fee.
+    // What crosses into public execution: `Read` to the root, the root back, `Issue`, the fee.
     let fee_inbox = Actor::native_balance(system_accounts::fee_inbox_account_id());
     let mut outgoing = Vec::new();
     let mut incoming = Vec::new();
@@ -80,20 +86,24 @@ fn a_private_claim_publishes_only_the_nullifier_the_denomination_and_the_root_re
             BoundaryStep::EndPrivateSubtree | BoundaryStep::EndPublicSubtree => {}
         }
     }
-    assert_eq!(outgoing.len(), 3, "the read, the spend and the fee: {outgoing:?}");
+    assert_eq!(outgoing.len(), 3, "the read, the issue and the fee: {outgoing:?}");
     assert_eq!(outgoing[0], (root, borsh::to_vec(&BridgeMessage::Read).unwrap()), "one Read of the root");
-    assert_eq!(outgoing[1].0, nullifier);
+    assert_eq!(outgoing[1].0, token);
     assert_eq!(
         borsh::from_slice::<BridgeMessage>(&outgoing[1].1).unwrap(),
-        BridgeMessage::Spend {
-            nullifier: n,
+        BridgeMessage::Issue {
             config_id: cid,
-            terms,
-            leaf_count: 8,
+            token: ETH,
+            nullifier: n,
             amount: DENOMINATIONS[1],
-            mint_to: None
+            range: ScheduleRange { index: 0, from_leaf: 0, until_leaf: 6 },
+            leaf_count: 8,
+            mint_to: None,
+            relayer: Some(*relayer().value()),
+            time_ms: w.time,
         },
-        "Spend carries N, the configuration, the root read and the denomination; no destination"
+        "Issue carries N, the token, the denomination, the root read, the fee schedule's range (not the leaf \
+         index), the relayer and the time; no destination"
     );
     assert_eq!(outgoing[2].0, fee_inbox, "the fee transfer");
     assert!(matches!(borsh::from_slice(&outgoing[2].1), Ok(native_token::Message::Credit(_))));
@@ -107,13 +117,17 @@ fn a_private_claim_publishes_only_the_nullifier_the_denomination_and_the_root_re
 
     // Public state: N is spent; nothing public at the private account.
     assert_eq!(
-        w.nullifier(&terms, &n),
-        Some(NullifierState { config_id: cid, leaf_count: 8, amount: DENOMINATIONS[1] })
+        w.nullifier(&va, &n),
+        Some(NullifierState { config_id: cid, token: ETH, leaf_count: 8, amount: DENOMINATIONS[1] })
     );
     assert!(w.holder(account.id()).is_none(), "no public holder state at the private account");
+    assert_eq!(w.balance(relayer(), &cid), RELAY_FEES[1], "the relay fee, minted publicly");
+    assert_eq!(w.balance(fee_recipient(), &cid), 0, "leaf 5 is under schedule 0: no mint fee");
     // Private state: the chain holds the commitment of the account with its 1 ETH holding.
-    let holder =
-        HolderState { holdings: vec![Holding { config_id: cid, terms, amount: DENOMINATIONS[1] }], pending: None };
+    let holder = HolderState {
+        holdings: vec![Holding { config_id: cid, token: ETH, amount: DENOMINATIONS[1] }],
+        pending: None,
+    };
     let post = private_post_state(&w.chain, &private_keys(seed), &account.account, RESERVE, &holder)
         .expect("the chain holds the claimed account's commitment");
     let _ = PrivateAccount { keys: private_keys(seed), account: post };
@@ -182,16 +196,13 @@ fn a_private_claim_publishes_only_the_nullifier_the_denomination_and_the_root_re
 fn a_private_claim_to_a_public_destination_and_the_refusals() {
     require_dev_mode();
     let mut w = World::with_roots();
-    let (cid, terms) = (w.cid_a, w.config_a.terms);
+    let (cid, va) = (w.cid_a, w.vault_a.address);
     // A private claim of the payer's public-kind deposit, run from a private account of its own:
     // the destination is minted publicly, the deposit stays hidden.
     let prover = w.chain.add_private_account(0x51, 1_000_000_000_000);
     let deposit = w.payer_deposit.clone();
-    let n = deposit.nullifier(CHAIN_ID, &terms.vault);
-    let message =
-        BridgeMessage::ClaimPrivately { config_id: cid, leaf_count: 8, witness: w.vault_a.witness(&deposit, 8) };
-    let payer = holder_actor(w.program, w.chain.payer);
-    let publics = vec![root_actor(w.program, &cid, 8), nullifier_actor(w.program, CHAIN_ID, &terms.vault, &n), payer];
+    let message = w.claim_privately(&cid, 8, w.vault_a.witness(&deposit, 8));
+    let publics = w.private_claim_actors(&cid, 8, &va, &deposit);
     let me = holder_actor(w.program, prover.id());
     let run = w
         .chain
@@ -207,6 +218,7 @@ fn a_private_claim_to_a_public_destination_and_the_refusals() {
         .expect("settles");
     assert!(run.charge.revert.is_none());
     assert_eq!(w.balance(w.chain.payer, &cid), DENOMINATIONS[2], "10 ETH minted to the public destination");
+    assert_eq!(w.balance(fee_recipient(), &cid), MINT_FEES_1[2], "leaf 6 is under schedule 1: its mint fee");
     let bytes = borsh::to_vec(&LeeTransaction::PrivacyPreserving(run.tx.clone())).unwrap();
     assert!(!occurs(&bytes, &deposit.leaf()) && !occurs(&bytes, &deposit.s), "which deposit paid it is hidden");
     assert!(occurs(&bytes, w.chain.payer.value()), "the public destination is visible");
@@ -232,12 +244,11 @@ fn a_private_claim_to_a_public_destination_and_the_refusals() {
     // A private-kind deposit claimed by a private account that is not its destination.
     let other = w.chain.add_private_account(0x61, 1_000_000_000_000);
     let private = w.private_deposit.clone();
-    let n = private.nullifier(CHAIN_ID, &terms.vault);
-    let message =
-        BridgeMessage::ClaimPrivately { config_id: cid, leaf_count: 8, witness: w.vault_a.witness(&private, 8) };
+    let n = private.nullifier(CHAIN_ID, &va);
+    let message = w.claim_privately(&cid, 8, w.vault_a.witness(&private, 8));
     let executed = private_claim_transitions(&w, other.id(), &message, &cid, 8);
     assert_eq!(executed.iter().map(|e| e.exit_code).collect::<Vec<_>>(), [0, 252], "WRONG_DESTINATION");
-    let publics = vec![root_actor(w.program, &cid, 8), nullifier_actor(w.program, CHAIN_ID, &terms.vault, &n)];
+    let publics = w.private_claim_actors(&cid, 8, &va, &private);
     let err = w
         .chain
         .prove_and_settle_private(
@@ -253,5 +264,5 @@ fn a_private_claim_to_a_public_destination_and_the_refusals() {
         .expect("not provable");
     println!("not the destination: {err}");
     assert!(err.contains("252"), "{err}");
-    assert!(w.nullifier(&terms, &n).is_none(), "nothing spent");
+    assert!(w.nullifier(&va, &n).is_none(), "nothing spent");
 }
