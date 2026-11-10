@@ -17,7 +17,7 @@ VOL="${LAB_VOL:-/vol}"
 WORK="${LAB_WORK:-/root/lab}"
 LAB="${LAB_FILES:-/lab}"
 DEADLINE_MIN="${LAB_DEADLINE_MIN:-20}"       # the driver submits no new job after this
-KEEP_GENERATIONS="${LAB_KEEP_GENERATIONS:-4}"
+KEEP_GENERATIONS="${LAB_KEEP_GENERATIONS:-3}"
 RPC_PORT=3040
 BEDROCK_PORT=18080
 INTERVAL=10                                   # the sequencer's block interval (s)
@@ -46,11 +46,20 @@ stop_pid() { # pid name: SIGTERM, wait up to 60 s; prints how it ended
   return 0
 }
 
+scrub() { sed -e "s#$WORK/#lab/#g" -e "s#$HOME/#~/#g"; }   # no paths of the container in the records
+
 record_session() { # status note
-  local head; head="$(cat "$WORK/head-block" 2>/dev/null || echo -)"
+  local head f n; head="$(cat "$WORK/head-block" 2>/dev/null || echo -)"
   [ -f "$VOL/records/sessions.tsv" ] || printf 'session\tstarted\tfinished\tstatus\tgeneration_saved\tsequencer_starts\tblock_phase_s\thead_block\tnote\n' > "$VOL/records/sessions.tsv"
   printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$SESSION" "$STARTED" "$(date +%s)" "$1" "${SAVED:--}" "${STARTS:-0}" "${AFTER:--}" "$head" "$2" >> "$VOL/records/sessions.tsv"
-  cp "$LOG"/*.log "$REC/" 2>/dev/null || true
+  for f in "$LOG"/*.log; do
+    [ -f "$f" ] || continue; n="$(basename "$f")"
+    case "$n" in
+      sequencer.log) scrub < "$f" | gzip -c > "$REC/sequencer.log.gz" ;;
+      bedrock.log) { sed -e 's/\x1b\[[0-9;]*m//g' "$f" | sed -n '1,60p'; echo "[...]"; sed -e 's/\x1b\[[0-9;]*m//g' "$f" | tail -n 40; } | scrub > "$REC/bedrock-excerpt.log" ;;
+      *) scrub < "$f" > "$REC/$n" ;;
+    esac
+  done
 }
 
 # ---- Restore --------------------------------------------------------------------------------
@@ -181,6 +190,7 @@ sleep 8   # an inscription the sequencer sent last is still mined
 stop_pid "$NODE_PID" node || CLEAN=0
 if grep -q -E 'Head rewound|expired unmined' "$LOG/sequencer.log"; then say "the sequencer's log reports a head rewind or an inscription given up"; fi
 SAVED=""
+{ echo "state to save:"; du -sh "$S"/* "$S"/bedrock/state/* 2>/dev/null; find "$S" -type f -size +16M -printf '%s %P\n' | sort -rn | sed -n 1,8p; } | scrub >> "$LOG/session.log"
 if [ "$CLEAN" = 1 ]; then
   rm -rf "$S/bedrock/state/logs"
   NEXT=$(( GEN + 1 ))
@@ -195,7 +205,6 @@ else
 fi
 
 # ---- Records --------------------------------------------------------------------------------
-scrub() { sed -e "s#$WORK/#lab/#g" -e "s#$HOME/#~/#g"; }
 if [ -n "$SAVED" ] && [ -d "$WORK/out" ]; then
   rm -rf "$VOL/records/latest.part"; cp -r "$WORK/out" "$VOL/records/latest.part"
   rm -rf "$VOL/records/latest"; mv "$VOL/records/latest.part" "$VOL/records/latest"
@@ -203,9 +212,6 @@ if [ -n "$SAVED" ] && [ -d "$WORK/out" ]; then
   cp "$WORK/bundle/SHA256SUMS" "$VOL/records/latest/bundle-SHA256SUMS"
 fi
 cp "$WORK/out/session.tsv" "$REC/" 2>/dev/null || true
-for f in session driver fetch sequencer-setup; do [ -f "$LOG/$f.log" ] && scrub < "$LOG/$f.log" > "$REC/$f.log"; done
-scrub < "$LOG/sequencer.log" | gzip -c > "$REC/sequencer.log.gz"
-{ sed -e 's/\x1b\[[0-9;]*m//g' "$LOG/bedrock.log" | sed -n '1,60p'; echo "[...]"; sed -e 's/\x1b\[[0-9;]*m//g' "$LOG/bedrock.log" | tail -n 40; } | scrub > "$REC/bedrock-excerpt.log"
 cp "$WORK/bedrock-info.json" "$REC/bedrock-start.json" 2>/dev/null; cp "$WORK/bedrock-end.json" "$REC/bedrock-end.json" 2>/dev/null
 echo "node slot 0 at unix second $ORIGIN; sequencer starts $STARTS; blocks $AFTER s after an epoch second; scheduler delay $DELAY s" > "$REC/phase.txt"
 status=ok; [ "$DRIVER_RC" = 0 ] || status="driver-exit-$DRIVER_RC"; [ -n "$SAVED" ] || status="not-saved"

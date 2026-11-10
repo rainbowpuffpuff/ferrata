@@ -22,9 +22,10 @@ VOLUME=ferrata-lab
 RESULTS="$LAB_DIR/results"
 mkdir -p "$LAB_TMP/pull"
 
-vol_get() { # remote local: replace local with the Volume's copy
-  rm -rf "$2"
-  modal volume get --force "$VOLUME" "$1" "$2" > /dev/null
+vol_get() { # remote local: replace local with the Volume's copy (a directory lands in local's
+  # parent under the remote's name, which the callers keep equal to local's)
+  rm -rf "$2"; mkdir -p "$(dirname "$2")"
+  modal volume get --force "$VOLUME" "$1" "$(dirname "$2")/" > /dev/null
 }
 
 case "${1:-}" in
@@ -62,6 +63,9 @@ case "${1:-}" in
     cp -r "$LAB_TMP/pull/latest" "$RESULTS/record"
     cp -r "$LAB_TMP/pull/sessions" "$RESULTS/sessions"
     cp "$LAB_TMP/pull/sessions.tsv" "$RESULTS/sessions.tsv"
+    # Sessions before 36f1ee3+1 kept raw copies of some logs: the same scrub as session.sh.
+    for f in "$RESULTS"/sessions/*/sequencer.log; do [ -f "$f" ] && { sed -e 's#/root/lab/#lab/#g' "$f" | gzip -c > "$f.gz"; rm -f "$f"; }; done
+    find "$RESULTS/sessions" -name '*.log' -exec sed -i -e 's#/root/lab/#lab/#g' {} +
     if grep -rl -E '/home/|/root/' "$RESULTS" > /dev/null 2>&1; then echo "warning: machine paths in results/:"; grep -rl -E '/home/|/root/' "$RESULTS"; fi
     echo "fetched into ${RESULTS#$REPO/}: $(wc -l < "$RESULTS/record/run.tsv") manifest lines, $(du -sh "$RESULTS" | cut -f1)"
     ;;
