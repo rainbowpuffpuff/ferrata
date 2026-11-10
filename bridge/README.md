@@ -117,6 +117,12 @@ prototype is now [`../checkpoint/`](../checkpoint/), and its proofs are not wire
 real verifier. The burn tree is built by the host, not by a LEZ program; the LEZ states `S` are computed by
 this crate from test values. The claim guest is a measurement, not LEZ's private-execution circuit.
 
+Since then the same release guest, unchanged (image id `0xdda76672…c5`, the recorded program binary), has been
+proven for a burn in the end-to-end fixture and accepted by the **v3** vault, under a burn root that two real
+proofs of the checkpoint program finalised: [`../e2e/README.md`](../e2e/README.md) and `vault/test/real/`. Nothing
+is mocked on the Ethereum side there; the zone the proofs are about is a stand-in built with test keys. The tests
+of `evm-verify/` are as they were, on the v2 vault.
+
 Versions: risc0-zkvm / risc0-build / risc0-groth16 3.0.5, r0vm 3.0.5, guest Rust 1.88.0 (rzup), host Rust
 1.93.0, `sha2-v0.10.8-risczero.0` (git 244dc3b), Docker image `risczero/risc0-groth16-prover:v2025-04-03.1`
 (`sha256:a4f80ce2…`), risc0-ethereum v3.0.0 (32aa0b6f), forge-std v1.10.0, Foundry 1.3.6-nightly (a4d66e8),

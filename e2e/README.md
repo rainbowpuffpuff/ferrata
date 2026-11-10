@@ -40,6 +40,9 @@ for one deployment; this one serves the Foundry run, a rehearsal on a fork and t
 | `receipts/<proof>/` | succinct and Groth16 receipts, the on-chain seal, the journal, timings |
 | `fixture.json` | what [`vault/test/real`](../vault/test/real/) and [`vault/script`](../vault/script/) read |
 
+[`runs/fork/`](runs/fork/README.md) is the copy used to rehearse the Sepolia scripts on a local
+fork, with that fork's beacon and the finalisation built for it.
+
 The zone (block id = position, producer = id mod 4):
 
 | Block | Contents |

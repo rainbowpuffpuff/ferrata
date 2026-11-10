@@ -250,6 +250,10 @@ stop's `EnforcedPause`. The pull-payment release credits `owed[recipient][ETH]`;
   got 76–91 % of the 16 threads. Part 2 lists every run's share.
 * **The checkpoint proof is mocked** (`vm.mockCall`, only for the checkpoint journals' exact calls), the
   burn tree is built by the host, and the LEZ states `S` come from test values: no LEZ program was run.
+  The run without that mock is [`../e2e/`](../e2e/README.md): the v3 vault, two real checkpoint proofs, and
+  this release guest unchanged (80,501 cycles again; succinct proofs in 15.1 s and 14.7 s on a 16-core cloud
+  machine; releases of 363,169 gas for ETH and 388,243 for an ERC-20 with a relayer's fee). The zone there is
+  still a stand-in.
 * **`burnFrontierHash` has no encoding in SPEC-v2.** This crate defines one (tagged, canonical frontier);
   the checkpoint program's author must use the same, or `S` will not match.
 * **The cycle count leaked the leaf index's Hamming weight** until the fix above. Branch-free code is not
