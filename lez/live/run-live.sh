@@ -41,8 +41,12 @@ check_lez
 BEDROCK="${FERRATA_LIVE_BEDROCK:-}"
 if [ -z "$BEDROCK" ]; then if [ -x "$NODE_BIN" ]; then BEDROCK=node; else BEDROCK=mock; fi; fi
 case "$BEDROCK" in
-  node) SEQUENCER="$BIN/sequencer_service"; [ -x "$NODE_BIN" ] || die "run.sh build-bedrock first" ;;
-  mock) SEQUENCER="$BIN/sequencer_service_standalone" ;;
+  # With a Bedrock node the block interval is 10 s (LEZ's testnet.json value; local.json has
+  # 15 s): a divisor of the node's 100-slot epoch, so that the sequencer can be started in a
+  # phase in which it never publishes a block in the second before an epoch begins (below).
+  node) SEQUENCER="$BIN/sequencer_service"; [ -x "$NODE_BIN" ] || die "run.sh build-bedrock first"
+        BLOCK_TIME="${FERRATA_LIVE_BLOCK_TIME:-10s}"; WAIT_FINAL=yes ;;
+  mock) SEQUENCER="$BIN/sequencer_service_standalone"; BLOCK_TIME="${FERRATA_LIVE_BLOCK_TIME:-}"; WAIT_FINAL=no ;;
   *) die "FERRATA_LIVE_BEDROCK must be node or mock" ;;
 esac
 [ -x "$SEQUENCER" ] || die "$SEQUENCER is not built (run.sh build / build-standalone)"
@@ -65,6 +69,11 @@ if [ "$BEDROCK" = node ]; then
   # loopback (in LEZ's container they are private to the container).
   sed -i -e "s#listen_address: 0.0.0.0:18080#listen_address: 127.0.0.1:$BEDROCK_PORT#" \
          -e 's#^    swarm:$#    swarm:\n      host: 127.0.0.1#' "$RUN_DIR/bedrock/node-config.yaml"
+  # For an observation only (FERRATA_LIVE_BEDROCK_TRACE=1): let the node log at trace level, so
+  # that its block proposer says why it leaves a transaction out (narrowed to that below).
+  if [ "${FERRATA_LIVE_BEDROCK_TRACE:-0}" = 1 ]; then
+    sed -i -e 's#^  level: "INFO"#  level: "TRACE"#' "$RUN_DIR/bedrock/node-config.yaml"
+  fi
   diff -u "$LEZ_SRC/bedrock/node-config.yaml" "$RUN_DIR/bedrock/node-config.yaml" \
     | sed -e "s#$LEZ_SRC/#lez/#" -e "s#$RUN_DIR/#run/#" -e 's#\t.*##' > "$RUN_DIR/config/bedrock-node-config.diff" || true
   ( cd "$RUN_DIR/bedrock" && POL_PROOF_DEV_MODE=true exec "$NODE_BIN" node-config.yaml --deployment deployment-settings.yaml ) \
@@ -78,6 +87,29 @@ if [ "$BEDROCK" = node ]; then
   done
   [ -s "$RUN_DIR/bedrock-info.json" ] || { tail -40 "$LOG/bedrock.log"; die "the Bedrock node's API did not answer"; }
   echo "   cryptarchia/info: $(cat "$RUN_DIR/bedrock-info.json")"
+  if [ "${FERRATA_LIVE_BEDROCK_TRACE:-0}" = 1 ]; then
+    # Trace level for the block proposer only; everything else as with level INFO.
+    curl -fsS -m 5 -X PUT -H 'content-type: application/json' \
+      -d '{"filters":{"*":"warn","logos_blockchain":"info","logos_blockchain::chain::leader":"trace"}}' \
+      "http://127.0.0.1:$BEDROCK_PORT/admin/tracing/filter" > "$RUN_DIR/bedrock-trace-filter.txt" 2>&1 \
+      && echo "   the node logs its block proposer at trace level" \
+      || echo "   the node refused the tracing filter: $(cat "$RUN_DIR/bedrock-trace-filter.txt")"
+  fi
+  # The node's gas prices (its /mantle/gas-prices, at its tip), read four times a second; one
+  # line whenever one of them changes.
+  gas_prices() {
+    curl -fsS -m 3 "http://127.0.0.1:$BEDROCK_PORT/mantle/gas-prices" 2>/dev/null \
+      | tr -d '"{} ' | tr ',' '\n' | grep gas_price | tr '\n' ' ' | sed 's/ $//'
+  }
+  (
+    last=""
+    while :; do
+      now="$(gas_prices)" || true
+      if [ -n "$now" ] && [ "$now" != "$last" ]; then echo "$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ) $now"; last="$now"; fi
+      sleep 0.25
+    done
+  ) > "$LOG/bedrock-gas-prices.log" 2>&1 &
+  echo $! >> "$PIDS"
 else
   echo "== Bedrock: the sequencer's in-process mock (LEZ's \`standalone\` feature); no Logos Blockchain node runs"
 fi
@@ -86,7 +118,7 @@ fi
 # LEZ's local network configuration (lez/sequencer/service/networks/local.json), with the
 # sequencer's sockets on loopback and, if asked, another block interval.
 python3 -I - "$LEZ_SRC/lez/sequencer/service/networks/local.json" "$RUN_DIR/config/sequencer_config.json" \
-    "$BEDROCK_PORT" "${FERRATA_LIVE_BLOCK_TIME:-}" "${FERRATA_LIVE_METRICS_PORT:-9000}" <<'EOF'
+    "$BEDROCK_PORT" "$BLOCK_TIME" "${FERRATA_LIVE_METRICS_PORT:-9000}" <<'EOF'
 import json, sys
 src, dst, bedrock_port, block_time, metrics_port = sys.argv[1:6]
 config = json.load(open(src))
@@ -107,6 +139,38 @@ diff -u "$LEZ_SRC/lez/sequencer/service/networks/local.json" "$RUN_DIR/config/se
 "$SEQUENCER" setup "$RUN_DIR/sequencer_home" --config "$RUN_DIR/config/sequencer_config.json" \
   --funding-public-key "$BEDROCK_FUNDING_PUBLIC_KEY" --create-channel > "$LOG/sequencer-setup.log" 2>&1 \
   || { cat "$LOG/sequencer-setup.log"; die "sequencer setup failed"; }
+
+# The phase of the sequencer's blocks against Bedrock's epochs. On this node an epoch is 100
+# slots of 1 s. An inscription the sequencer submits in the second before an epoch's first
+# block is removed from that block by the node and never included; every later inscription
+# chains on it; after 300 slots the sequencer gives them up and rewinds its head
+# (observations/rewind/). So the sequencer is started at a second from which its block ticks
+# fall TICK_AFTER seconds after the seconds at which an epoch can begin, never just before one.
+phase_note=""
+if [ "$BEDROCK" = node ] && [ "${FERRATA_LIVE_ALIGN:-1}" = 1 ]; then
+  interval="${BLOCK_TIME%s}"
+  TICK_AFTER="${FERRATA_LIVE_TICK_AFTER:-3}"
+  # Seconds from the sequencer's start to its "Block production scheduler started": 1 to 3 seen.
+  STARTUP="${FERRATA_LIVE_STARTUP_SECONDS:-2}"
+  slot() { curl -fsS -m 3 "http://127.0.0.1:$BEDROCK_PORT/cryptarchia/info" 2>/dev/null | sed -n 's/.*"slot":\([0-9]*\).*/\1/p'; }
+  # A slot starts on a whole second; the node proposes its block about 0.1 s later. Catch the
+  # moment the tip's slot changes: that second minus the slot is the second of slot 0.
+  last="$(slot)"; origin=""
+  for _ in $(seq 1 400); do
+    now_slot="$(slot)"
+    if [ -n "$now_slot" ] && [ -n "$last" ] && [ "$now_slot" != "$last" ] && [ "$now_slot" -gt 0 ]; then
+      origin=$(( $(date +%s) - now_slot )); break
+    fi
+    last="$now_slot"; sleep 0.1
+  done
+  [ -n "$origin" ] || die "could not read the Bedrock node's slot clock"
+  # The first tick is one interval after the scheduler starts, so ticks are at
+  # start + STARTUP (mod interval); they are wanted at origin + TICK_AFTER (mod interval).
+  want=$(( ( (origin + TICK_AFTER - STARTUP) % interval + interval ) % interval ))
+  while [ $(( $(date +%s) % interval )) != "$want" ]; do sleep 0.2; done
+  phase_note="slot 0 of the Bedrock node is unix second $origin, so an epoch (100 slots) begins at seconds = $(( origin % 100 )) mod 100; sequencer started at a second = $want mod $interval"
+  echo "== $phase_note"
+fi
 env -u RISC0_DEV_MODE RUST_LOG="${FERRATA_LIVE_RUST_LOG:-info,sequencer_core=debug,risc0_zkvm=warn,kameo=warn}" \
   "$SEQUENCER" start "$RUN_DIR/sequencer_home" --rpc-listen-address "127.0.0.1:$RPC_PORT" > "$LOG/sequencer.log" 2>&1 &
 SEQ_PID=$!
@@ -120,6 +184,18 @@ for i in $(seq 1 300); do
 done
 [ -n "${head_block:-}" ] || { tail -40 "$LOG/sequencer.log"; die "the sequencer's RPC did not answer"; }
 echo "   head block $head_block after ${i}s"
+if [ -n "$phase_note" ]; then
+  # Check the phase that resulted: the first block tick is one interval after the scheduler started.
+  sched="$(grep -m1 'Block production scheduler started' "$LOG/sequencer.log" | sed -n 's/^\[\([0-9T:-]*\)Z.*/\1/p')"
+  [ -n "$sched" ] || die "the sequencer did not start its block scheduler"
+  tick=$(( $(date -u -d "${sched}Z" +%s) + interval ))
+  after=$(( ( (tick - origin) % interval + interval ) % interval ))
+  phase_note="$phase_note; its blocks are made $after s after the seconds at which an epoch can begin and $(( interval - after )) s before the next such second (interval $interval s)"
+  echo "   $phase_note"
+  if [ "${FERRATA_LIVE_PHASE_CHECK:-1}" = 1 ]; then
+    [ "$after" -ge 2 ] && [ "$after" -le $(( interval / 2 )) ] || die "bad phase (blocks $after s after an epoch second): start again"
+  fi
+fi
 # What the sequencer process was started with, as the kernel reports it.
 {
   echo "command: $(tr '\0' ' ' < /proc/$SEQ_PID/cmdline | sed "s#$BESIDE/#../#g")"
@@ -130,11 +206,13 @@ cat "$RUN_DIR/config/sequencer-process.txt"
 
 # ---- The driver -----------------------------------------------------------------------------------
 DRIVER_OUT="$RUN_DIR/export"
+PHASE_SECONDS="${FERRATA_LIVE_PHASE_SECONDS:-0}"   # a cap on each phase, for observations that are cut short; 0: none
 driver() { # phase [extra options]
   local phase="$1"; shift
-  "$BIN/live-driver" "$phase" --rpc "http://127.0.0.1:$RPC_PORT" --run-dir "$RUN_DIR/driver" --out "$DRIVER_OUT" \
+  timeout --signal=TERM --kill-after=20 "$PHASE_SECONDS" "$BIN/live-driver" "$phase" --rpc "http://127.0.0.1:$RPC_PORT" --run-dir "$RUN_DIR/driver" --out "$DRIVER_OUT" \
     --program-bin "$PROGRAM_BIN" --scripted-bin "$SCRIPTED_BIN" --sequencer-log "$LOG/sequencer.log" \
-    --harness-results "$REPO/lez/results" --stored-tx "$STORED_TX" ${FERRATA_LIVE_GAS_LIMIT:+--gas-limit "$FERRATA_LIVE_GAS_LIMIT"} "$@"
+    --harness-results "$REPO/lez/results" --stored-tx "$STORED_TX" --wait-final "$WAIT_FINAL" \
+    ${FERRATA_LIVE_GAS_LIMIT:+--gas-limit "$FERRATA_LIVE_GAS_LIMIT"} "$@"
 }
 status=0
 proof_note=""
@@ -146,11 +224,12 @@ for phase in $PHASES; do
     private-real)
       if [ "$PROOF_SECONDS" = 0 ]; then echo "   skipped (FERRATA_LIVE_PROOF_SECONDS=0)" | tee -a "$LOG/driver.log"; continue; fi
       proof_started=$(date +%s)
-      # Its own session, so that a stopped proof takes its r0vm along.
-      env -u RISC0_DEV_MODE setsid timeout --signal=TERM --kill-after=20 "$PROOF_SECONDS" \
+      # Its own session, so that a stopped proof takes its r0vm along; at a lower priority than
+      # the node and the sequencer, which must keep their clocks.
+      env -u RISC0_DEV_MODE setsid --wait nice -n "${FERRATA_LIVE_PROOF_NICE:-10}" timeout --signal=TERM --kill-after=20 "$PROOF_SECONDS" \
         "$BIN/live-driver" "$phase" --rpc "http://127.0.0.1:$RPC_PORT" --run-dir "$RUN_DIR/driver" --out "$DRIVER_OUT" \
         --program-bin "$PROGRAM_BIN" --scripted-bin "$SCRIPTED_BIN" --sequencer-log "$LOG/sequencer.log" \
-        --harness-results "$REPO/lez/results" 2>&1 | tee -a "$LOG/driver.log"; rc=${PIPESTATUS[0]}
+        --harness-results "$REPO/lez/results" --wait-final "$WAIT_FINAL" 2>&1 | tee -a "$LOG/driver.log"; rc=${PIPESTATUS[0]}
       proof_note="private-real: exit $rc after $(( $(date +%s) - proof_started )) s (cap $PROOF_SECONDS s)"
       if [ "$rc" = 124 ] || [ "$rc" = 137 ]; then
         pkill -KILL -x r0vm 2>/dev/null || true
@@ -158,6 +237,9 @@ for phase in $PHASES; do
         rc=0
       fi ;;
     *) ( unset RISC0_DEV_MODE; driver "$phase" ) 2>&1 | tee -a "$LOG/driver.log"; rc=${PIPESTATUS[0]} ;;
+  esac
+  case "$rc" in
+    124|137) echo "   phase $phase was stopped at FERRATA_LIVE_PHASE_SECONDS=$PHASE_SECONDS" | tee -a "$LOG/driver.log" ;;
   esac
   if [ "$rc" != 0 ]; then echo "== phase $phase FAILED (exit $rc)" | tee -a "$LOG/driver.log"; status=$rc; break; fi
 done
@@ -182,17 +264,25 @@ scrub < "$RUN_DIR/sequencer_home/sequencer_config.json" > "$OUT/config/sequencer
 scrub < "$LOG/sequencer.log" > "$OUT/logs/sequencer.log"
 scrub < "$LOG/sequencer-setup.log" > "$OUT/logs/sequencer-setup.log"
 scrub < "$LOG/driver.log" > "$OUT/logs/driver.log"
+[ -f "$LOG/bedrock-gas-prices.log" ] && cp "$LOG/bedrock-gas-prices.log" "$OUT/logs/"
 if [ -f "$LOG/bedrock.log" ]; then
-  # The node's log is large: keep its start, the blocks it proposed that carry transactions
-  # (the zone's inscriptions are the only transactions on this network), and its end.
+  # The node's log is large: keep its start, the epochs it began (one line each; it logs each
+  # several times), the blocks it proposed that carry transactions (the zone's inscriptions are
+  # the only transactions on this network) or from which it removed one, and its end.
   plain() { sed -e 's/\x1b\[[0-9;]*m//g'; }
   {
-    plain < "$LOG/bedrock.log" | head -150
-    echo "[...] blocks proposed with transactions:"
-    plain < "$LOG/bedrock.log" | { grep -E 'proposed block .* with [1-9][0-9]* transactions' || true; }
+    # (sed and awk read to the end: under `pipefail` a reader that stops early kills the run)
+    plain < "$LOG/bedrock.log" | sed -n '1,150p'
+    echo "[...] epochs begun, blocks proposed with transactions, blocks proposed with transactions removed"
+    echo "[...] (and, if the node logged at trace level, why a transaction was left out: once per transaction and reason):"
+    plain < "$LOG/bedrock.log" \
+      | { grep -E 'epoch transition|proposed block .* with [1-9][0-9]* transactions|\([1-9][0-9]* removed\)|during block assembly' || true; } \
+      | awk '{ if ($0 ~ /epoch transition/) { match($0, /new_epoch=Epoch\([0-9]+\)/); k = substr($0, RSTART, RLENGTH); if (k in seen) next; seen[k] = 1 }
+               else if ($0 ~ /during block assembly/) { k = substr($0, index($0, "tx ")); if (k in seen) next; seen[k] = 1 }
+               print }'
     echo "[...] the end:"
     plain < "$LOG/bedrock.log" | tail -40
-    echo "the whole log: $(wc -l < "$LOG/bedrock.log") lines, $(wc -c < "$LOG/bedrock.log") bytes; blocks proposed: $(grep -c 'proposed block' "$LOG/bedrock.log" || true), of which with transactions: $(grep -c -E 'proposed block .* with [1-9][0-9]* transactions' "$LOG/bedrock.log" || true)"
+    echo "the whole log: $(wc -l < "$LOG/bedrock.log") lines, $(wc -c < "$LOG/bedrock.log") bytes; blocks proposed: $(grep -c 'proposed block' "$LOG/bedrock.log" || true), of which with transactions: $(grep -c -E 'proposed block .* with [1-9][0-9]* transactions' "$LOG/bedrock.log" || true), with a transaction removed: $(grep -c -E '\([1-9][0-9]* removed\)' "$LOG/bedrock.log" || true)"
   } | scrub > "$OUT/logs/bedrock-excerpt.log"
 fi
 for kind in fake real; do
@@ -218,10 +308,18 @@ done
   fi
   echo "- sequencer configuration: LEZ's lez/sequencer/service/networks/local.json with the changes of config/sequencer_config.diff"
   echo "- $(sed -n 2p "$RUN_DIR/config/sequencer-process.txt")"
+  if [ -n "$phase_note" ]; then
+    echo "- block phase: $phase_note"
+    python3 -I "$LIVE_DIR/phase.py" "$origin" "$interval" "$LOG/sequencer.log" "$LOG/bedrock.log" || true
+  fi
+  if [ -s "$LOG/bedrock-gas-prices.log" ]; then
+    echo "- Bedrock gas prices during the run (logs/bedrock-gas-prices.log): $(wc -l < "$LOG/bedrock-gas-prices.log") values; first: $(head -1 "$LOG/bedrock-gas-prices.log"); last: $(tail -1 "$LOG/bedrock-gas-prices.log")"
+  fi
+  echo "- head rewinds in the sequencer's log: $(grep -c 'Head rewound' "$LOG/sequencer.log" || true); inscriptions it gave up on: $(grep -c 'expired unmined' "$LOG/sequencer.log" || true)"
   echo "- driver: live-driver, built from lez/live/driver at $(git -C "$REPO" rev-parse HEAD 2>/dev/null) (uncommitted paths: $(git -C "$REPO" status --short 2>/dev/null | grep -v ' lez/live/results/' | wc -l))"
   echo "- r0vm: $(r0vm --version 2>/dev/null)"
   echo "- guest binaries: program sha256 $(sha256sum "$PROGRAM_BIN" | cut -d' ' -f1), scripted sha256 $(sha256sum "$SCRIPTED_BIN" | cut -d' ' -f1)"
-  echo "- machine: $(nproc) CPUs visible, $(sed -n 's/^model name[^:]*: //p' /proc/cpuinfo | head -1), $(awk '/MemTotal/{printf "%.0f GiB", $2/1048576}' /proc/meminfo), $(uname -sr)"
+  echo "- machine: $(nproc) CPUs visible, $(sed -n 's/^model name[^:]*: //p' /proc/cpuinfo | sed -n 1p), $(awk '/MemTotal/{printf "%.0f GiB", $2/1048576}' /proc/meminfo), $(uname -sr)"
   echo "- ports: sequencer RPC 127.0.0.1:$RPC_PORT, metrics 127.0.0.1:${FERRATA_LIVE_METRICS_PORT:-9000}, Bedrock API 127.0.0.1:$BEDROCK_PORT"
   echo "- last block: ${head_block:-?}; blocks the sequencer published to Bedrock: $(grep -c 'Published block' "$LOG/sequencer.log" || true); its last channel update: $(grep 'Channel update' "$LOG/sequencer.log" | tail -1 | sed 's/^.*Channel update: //')"
   [ -n "$bedrock_end" ] && echo "- Bedrock node at the end (cryptarchia/info): $bedrock_end"

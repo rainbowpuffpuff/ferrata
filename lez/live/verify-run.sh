@@ -47,7 +47,7 @@ env -u RISC0_DEV_MODE "$BIN/live-driver" "${args[@]}"
 if [ -n "$RPC" ]; then
   [ ${#BINARIES[@]} -ge 2 ] || die "--rpc needs the two guest binaries (the driver derives the accounts of the run from them)"
   # The program binary is the larger of the two.
-  program="$(ls -S "${BINARIES[@]}" | head -1)"; scripted="$(ls -S "${BINARIES[@]}" | tail -1)"
+  program="$(ls -S "${BINARIES[@]}" | sed -n 1p)"; scripted="$(ls -S "${BINARIES[@]}" | tail -1)"
   env -u RISC0_DEV_MODE "$BIN/live-driver" check-rpc --dir "$DIR" --rpc "$RPC" \
     --run-dir "$FERRATA_LIVE_TMP/check-rpc" --program-bin "$program" --scripted-bin "$scripted"
 fi
