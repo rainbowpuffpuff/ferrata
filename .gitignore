@@ -3,3 +3,5 @@
 /vectors/*
 !/vectors/acc-leaf.json
 /bench/target
+# Foundry dependencies of bridge/evm-verify, installed with forge install --no-git (bridge/README.md)
+/bridge/evm-verify/lib/

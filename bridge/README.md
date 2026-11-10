@@ -73,7 +73,9 @@ Python 3. Never write to `/tmp` on this machine: every script sets `TMPDIR` to `
 
 ```sh
 cd spike/ferrata-bridge
-git submodule update --init --recursive        # forge-std v1.10.0, risc0-ethereum v3.0.0
+(cd evm-verify && forge install --no-git foundry-rs/forge-std@v1.10.0 risc0/risc0-ethereum@v3.0.0)
+                                               # lib/ is not committed; evm-verify also needs the vault's
+                                               # lib/ (OpenZeppelin 5.4.0), installed as ../vault/README.md says
 scripts/check.sh                               # fmt, clippy, no_std build, core tests, Python vectors,
                                                # executor checks, cycle invariance, receipts, Foundry
 cargo run --release -p ferrata-bridge-core --example recover_bench   # recovery at 1e5 and 1e6 deposits
