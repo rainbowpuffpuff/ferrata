@@ -62,6 +62,8 @@ zstd -q -d -c "$VOL/bundle.tar.zst" | tar -C "$WORK/bundle" -xf - || { record_se
 BIN="$WORK/bundle/bin"; NODE_BIN="$WORK/bundle/node/logos-blockchain-node"; PROGRAM="$WORK/bundle/program/ferrata_lez.bin"
 chmod +x "$BIN"/* "$NODE_BIN"
 export XDG_CACHE_HOME="$WORK/bundle/xdg-cache"
+# LEZ executes programs through r0vm (RISC Zero 3.0.5), which the bundle carries.
+export PATH="$BIN:$PATH" RISC0_SERVER_PATH="$BIN/r0vm"
 GEN=0
 if [ -f "$VOL/state/current" ]; then
   GEN="$(cat "$VOL/state/current")"

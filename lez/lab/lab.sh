@@ -2,7 +2,7 @@
 # Operate the lab (README.md): a Modal app `ferrata-lab` in the workspace of LAB_PROFILE.
 #
 #   lab.sh deploy        upload the bundle built by build.sh (if it changed) and deploy the app:
-#                        the schedule starts (a session every three hours)
+#                        the schedule starts (a session every two hours)
 #   lab.sh run [MIN]     start one session now (MIN: the minutes it may submit jobs; default 20)
 #   lab.sh status        both instances' finalized slots and periods against the chains' own,
 #                        the sessions so far and their failures
@@ -44,7 +44,7 @@ case "${1:-}" in
     ( cd "$LAB_DIR" && modal deploy app.py )
     ;;
   run)
-    python3 -I -c "import modal, sys; c = modal.Function.from_name('ferrata-lab', 'session').spawn(deadline_min=int(sys.argv[1])); print('spawned', c.object_id)" "${2:-20}"
+    python3 -c "import modal, sys; c = modal.Function.from_name('ferrata-lab', 'session').spawn(deadline_min=int(sys.argv[1])); print('spawned', c.object_id)" "${2:-20}"
     ;;
   status)
     vol_get /records/sessions.tsv "$LAB_TMP/pull/sessions.tsv" || { echo "no sessions recorded yet"; exit 0; }

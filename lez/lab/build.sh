@@ -62,6 +62,9 @@ case "${1:-}" in
     rm -rf "$b" && mkdir -p "$b/bin" "$b/node" "$b/program"
     cp "$FERRATA_LIVE_TMP/bin/sequencer_service" "$FERRATA_LIVE_TMP/bin/sequencer_service.toolchain" "$b/bin/"
     cp "$FERRATA_LIVE_TMP/bin/lab-driver" "$b/bin/"
+    # LEZ executes programs through RISC Zero's r0vm (3.0.5), the sequencer from genesis on.
+    cp "$(readlink -f "$(command -v r0vm)")" "$b/bin/r0vm"
+    "$b/bin/r0vm" --version > "$b/bin/r0vm.version"
     cp "$FERRATA_LIVE_TMP/bedrock/.resolved-host/logos-blockchain-node" "$FERRATA_LIVE_TMP/bedrock/.resolved-host/metadata.json" "$b/node/"
     cp -r "$FERRATA_LIVE_TMP/xdg-cache" "$b/xdg-cache"
     cp "$LAB_TMP/program/ferrata_lez.bin" "$b/program/"

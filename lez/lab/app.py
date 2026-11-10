@@ -1,6 +1,6 @@
 """The lab on Modal: app `ferrata-lab`, a Volume `ferrata-lab`, one scheduled function.
 
-Every three hours `session` restores the zone (a LEZ v0.4.0-rc1 sequencer and its Logos
+Every two hours `session` restores the zone (a LEZ v0.4.0-rc1 sequencer and its Logos
 Blockchain node, with the driver's state) from the Volume, runs `session.sh` (start, catch up,
 submit the newest light-client updates to both instances, wait until final, stop cleanly, save a
 new generation) and commits the Volume. At most one session runs at a time.
@@ -16,7 +16,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.normpath(os.path.join(HERE, "..", ".."))
 LEZ = os.path.normpath(os.path.join(REPO, "..", "upstream", "lez-v0.4.0-rc1"))
 FIXTURE = "crates/ferrata-spectests/fixtures/sepolia-gloas-2026-11-10"
-SCHEDULE = os.environ.get("LAB_SCHEDULE", "17 */3 * * *")  # minute 17 of every third hour (UTC)
+SCHEDULE = os.environ.get("LAB_SCHEDULE", "17 */2 * * *")  # minute 17 of every second hour (UTC)
 
 image = (
     modal.Image.from_registry("ubuntu:24.04", add_python="3.12")
