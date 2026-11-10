@@ -179,6 +179,7 @@ contract RevocationTest is VaultTestBase {
     /// @notice v3 D4: a revocation restores the imported leaf count and sunset flag of the state it returns to, so the
     ///         monotonicity checks continue from there; a revoked checkpoint's count or sunset binds nothing later.
     function test_revokeFrom_restoresTheMonotonicityState() public {
+        _fillTree(16); // v4 (D11): imported counts stay within the tree
         _acceptRoot(ROOT_A); // checkpoint 0: count 0
         FerrataVault.Checkpoint memory c = _nextCheckpoint(vault, ROOT_B, 5, false);
         _submit(c);
@@ -210,6 +211,7 @@ contract RevocationTest is VaultTestBase {
     /// @notice Revoking a later checkpoint returns to a state that is already a sunset one, so the sunset stays final
     ///         and a checkpoint without it is still refused.
     function test_revokeFrom_keepsTheSunsetOfTheRestoredState() public {
+        _fillTree(16); // v4 (D11): imported counts stay within the tree
         FerrataVault.Checkpoint memory c = _nextCheckpoint(vault, ROOT_A, 4, true);
         _submit(c);
         _finalizeAfterDelta(c); // checkpoint 0: sunset at count 4

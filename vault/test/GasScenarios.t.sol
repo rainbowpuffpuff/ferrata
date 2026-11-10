@@ -71,7 +71,7 @@ contract GasScenarios is VaultTestBase {
         FerrataVault.Checkpoint memory c = _nextCheckpoint(vault, keccak256("sunset root"), 37, true);
         _submit(c);
         _finalizeAfterDelta(c);
-        vm.warp(block.timestamp + REVOKE_WINDOW);
+        vm.warp(block.timestamp + REVOKE_WINDOW + 1); // refunds open the second after (D11)
     }
 
     /// @dev A candidate's wait W = delta + (t - 1) * turnSeconds, for the default committee (t = 3).

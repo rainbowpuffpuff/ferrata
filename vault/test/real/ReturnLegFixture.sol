@@ -159,7 +159,10 @@ abstract contract ReturnLegFixture is Test {
             admin: deployer,
             freezeAuthority: freezer,
             globalDepositCap: _unlimited(),
-            globalReleaseCap: _unlimited()
+            globalReleaseCap: _unlimited(),
+            mode: FerrataVault.Mode.A,
+            watchers: [address(0), address(0), address(0)],
+            releaseCapFloor: FerrataVault.CapParams({capacity: 0, refillPerSecond: 0})
         });
     }
 

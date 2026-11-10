@@ -38,9 +38,9 @@ contract RefundTest is VaultTestBase {
         return _finalizeAfterDelta(c);
     }
 
-    /// @dev Waits until refunds open: `revokeWindow` after the sunset checkpoint that set the boundary.
+    /// @dev Waits until refunds open: the second after the sunset checkpoint's last revocable one (v3 D5, D11).
     function _openRefunds() internal {
-        uint256 opensAt = vault.sunsetFinalizedAt() + REVOKE_WINDOW;
+        uint256 opensAt = vault.sunsetFinalizedAt() + REVOKE_WINDOW + 1;
         if (block.timestamp < opensAt) vm.warp(opensAt);
     }
 
@@ -93,9 +93,10 @@ contract RefundTest is VaultTestBase {
         vault.retire();
     }
 
-    function test_retire_onlyTheFreezeAuthority() public {
+    /// @notice v4 (D13): others may retire only after KEYLESS_RETIREMENT without a finalisation (test/Roles.t.sol).
+    function test_retire_othersOnlyAfterThirtyDaysWithoutACheckpoint() public {
         vm.prank(admin);
-        vm.expectRevert(FerrataVault.NotFreezeAuthority.selector);
+        vm.expectRevert(FerrataVault.RetireNotOpen.selector);
         vault.retire();
     }
 
@@ -260,11 +261,12 @@ contract RefundTest is VaultTestBase {
         assertTrue(vault.sunsetLeafCountSet());
         assertEq(vault.sunsetLeafCount(), 2);
         vm.warp(firstAt + REVOKE_WINDOW); // the first checkpoint's window, not the second's
-        _refund(2);
+        _expectRefundRevert(2, FerrataVault.RefundNotYetOpen.selector); // its last revocable second (D11)
 
         vm.prank(freezer);
         vault.revokeFrom(first); // still inside its window (the bound is inclusive), so refunds stop again
         assertFalse(vault.sunsetLeafCountSet());
+        vm.warp(firstAt + REVOKE_WINDOW + 1);
         _expectRefundRevert(3, FerrataVault.NotRefundable.selector);
     }
 
@@ -350,9 +352,30 @@ contract RefundTest is VaultTestBase {
         _expectRefundRevert(2, FerrataVault.RefundNotYetOpen.selector);
         vm.warp(finalizedAt + REVOKE_WINDOW - 1);
         _expectRefundRevert(2, FerrataVault.RefundNotYetOpen.selector);
-        vm.warp(finalizedAt + REVOKE_WINDOW);
+        vm.warp(finalizedAt + REVOKE_WINDOW); // the last second the sunset checkpoint can be revoked (D11)
+        _expectRefundRevert(2, FerrataVault.RefundNotYetOpen.selector);
+        vm.warp(finalizedAt + REVOKE_WINDOW + 1);
         _refund(2);
         assertEq(bob.balance, 0.1 ether);
+    }
+
+    /// @notice v4 (D11): no second in which both a refund and a revocation of the sunset checkpoint are possible.
+    function test_refund_noSecondAllowsBothRefundAndRevocation() public {
+        _fourDepositsThenRetire();
+        uint256 index = _sunset(2);
+        uint256 finalizedAt = block.timestamp;
+        vm.warp(finalizedAt + REVOKE_WINDOW);
+        _expectRefundRevert(2, FerrataVault.RefundNotYetOpen.selector);
+        uint256 snapshot = vm.snapshotState();
+        vm.prank(freezer);
+        vault.revokeFrom(index); // still possible in that second
+        vm.revertToState(snapshot);
+        vm.warp(finalizedAt + REVOKE_WINDOW + 1);
+        vm.prank(freezer);
+        vm.expectRevert(FerrataVault.RevokeWindowPassed.selector);
+        vault.revokeFrom(index);
+        _refund(2);
+        assertTrue(vault.refunded(2));
     }
 
     /// @notice The global release freeze covers refunds, and lapses like every freeze. A per-token release freeze does
@@ -412,5 +435,30 @@ contract RefundTest is VaultTestBase {
         assertEq(vault.escrowed(address(usdc)), 1000e6);
         assertEq(vault.escrowed(address(dai)), 0);
         assertEq(alice.balance + bob.balance + usdc.balanceOf(bob), 0);
+    }
+
+    /// @notice v4 (D13): refunds draw on the release buckets, the token's and the global one.
+    function test_refund_drawsOnTheReleaseBuckets() public {
+        _fourDepositsThenRetire();
+        _sunset(2);
+        _openRefunds();
+        vm.prank(admin);
+        vault.setGlobalCap(FerrataVault.Direction.Release, 3e8 - 1, 0); // 0.1 ether is 3e8 value units
+        _expectRefundRevert(2, FerrataVault.GlobalReleaseCapExceeded.selector);
+        vm.startPrank(admin);
+        vault.setGlobalCap(FerrataVault.Direction.Release, UNLIMITED, 0);
+        vault.setTokenCap(ETH, FerrataVault.Direction.Release, 0.1 ether - 1, 0);
+        vm.stopPrank();
+        _expectRefundRevert(2, FerrataVault.TokenReleaseCapExceeded.selector);
+        vm.startPrank(admin);
+        vault.setTokenCap(ETH, FerrataVault.Direction.Release, UNLIMITED, 0);
+        vault.setTokenCap(ETH, FerrataVault.Direction.Release, 0.1 ether, 0); // from UNLIMITED: starts full
+        vault.setGlobalCap(FerrataVault.Direction.Release, 3e8, 0);
+        vm.stopPrank();
+        _refund(2);
+        (,, uint256 tokenLeft) = vault.tokenCap(ETH, FerrataVault.Direction.Release);
+        (,, uint256 globalLeft) = vault.globalCap(FerrataVault.Direction.Release);
+        assertEq(tokenLeft, 0);
+        assertEq(globalLeft, 0);
     }
 }

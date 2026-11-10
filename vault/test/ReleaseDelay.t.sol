@@ -145,4 +145,46 @@ contract ReleaseDelayTest is VaultTestBase {
             assertEq(vault.releaseDelayFor(ETH, index), expected);
         }
     }
+
+    /// @notice v4 (D11): a release whose delay equals revokeWindow opens only after the checkpoint's last revocable
+    ///         second; a shorter delay still opens at its own second.
+    function test_releaseDelay_equalToRevokeWindowOpensAfterTheLastRevocableSecond() public {
+        _deposit(alice, ETH, 1, keccak256("d11 a"));
+        _deposit(alice, ETH, 1, keccak256("d11 b"));
+        vm.prank(admin);
+        vault.setReleaseDelay(ETH, REVOKE_WINDOW);
+        bytes32 root = keccak256("d11 root");
+        uint256 index = _acceptRoot(root);
+        uint256 finalizedAt = block.timestamp;
+        FerrataVault.ReleaseRequest memory r = _request(ETH, 1, recipient, root, keccak256("d11 nullifier"));
+        _proveRelease(_releaseJournal(r));
+        vm.warp(finalizedAt + REVOKE_WINDOW);
+        vm.prank(relayer);
+        vm.expectRevert(FerrataVault.ReleaseDelayNotElapsed.selector);
+        vault.release(r, SEAL);
+        uint256 snapshot = vm.snapshotState();
+        vm.prank(freezer);
+        vault.revokeFrom(index); // that second still belongs to the revocation window
+        vm.revertToState(snapshot);
+        vm.warp(finalizedAt + REVOKE_WINDOW + 1);
+        vm.prank(relayer);
+        vault.release(r, SEAL);
+        assertEq(recipient.balance, 1 ether);
+
+        vm.prank(admin);
+        vault.setReleaseDelay(ETH, REVOKE_WINDOW - 1);
+        bytes32 root2 = keccak256("d11 root 2");
+        _acceptRoot(root2);
+        uint256 at2 = block.timestamp;
+        FerrataVault.ReleaseRequest memory r2 = _request(ETH, 1, recipient, root2, keccak256("d11 nullifier 2"));
+        _proveRelease(_releaseJournal(r2));
+        vm.warp(at2 + REVOKE_WINDOW - 2);
+        vm.prank(relayer);
+        vm.expectRevert(FerrataVault.ReleaseDelayNotElapsed.selector);
+        vault.release(r2, SEAL);
+        vm.warp(at2 + REVOKE_WINDOW - 1);
+        vm.prank(relayer);
+        vault.release(r2, SEAL);
+        assertEq(recipient.balance, 2 ether);
+    }
 }

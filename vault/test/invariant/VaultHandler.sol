@@ -62,12 +62,13 @@ contract HandlerCodec {
         return sha256(bytes.concat(context, payout));
     }
 
-    /// @dev The first valid sunset checkpoint's imported leaf count, and when refunds open: revokeWindow after it.
+    /// @dev The first valid sunset checkpoint's imported leaf count, and when refunds open: the second after its last
+    ///      revocable one.
     function refundBoundary(FerrataVault vault) external view returns (bool found, uint64 boundary, uint256 opensAt) {
         uint256 count = vault.checkpointCount();
         for (uint256 i = 0; i < count; i++) {
             (,,,, uint64 imported, bool sunset, bool revoked,,, uint256 finalizedAt) = vault.checkpoints(i);
-            if (sunset && !revoked) return (true, imported, finalizedAt + vault.revokeWindow());
+            if (sunset && !revoked) return (true, imported, finalizedAt + vault.revokeWindow() + 1); // v3 D11
         }
     }
 
@@ -392,11 +393,10 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
             if (boundary < leafCount && leafSeed % 4 != 0) leafIndex = boundary + leafSeed % (leafCount - boundary);
             if (waitForOpening && block.timestamp < opensAt) vm.warp(opensAt);
         }
-        bool allowed = found && leafIndex >= boundary && block.timestamp >= opensAt && _retired
-            && block.timestamp >= _releasesFrozenUntil;
-
         LeafData memory l = _leafData[leafIndex];
         uint256 amount = vault.denominations(l.token)[l.denomIndex];
+        bool allowed = found && leafIndex >= boundary && block.timestamp >= opensAt && _retired
+            && block.timestamp >= _releasesFrozenUntil && _releaseCapsAllow(l.token, amount); // v4 (D13): caps
         bool payable_ = allowed && !_leafRefunded[leafIndex]
             && ghostDeposited[l.token] - ghostReleased[l.token] - ghostRefunded[l.token] >= amount;
         bytes32[32] memory path = _codec.path(_leaves, leafIndex);
@@ -498,7 +498,16 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         address token = _tokens[tokenSeed % _tokens.length];
         amount = _bound(amount, 0, 1e24);
         if (token == ETH) {
-            vm.deal(address(vault), address(vault).balance + amount);
+            // As a real donation arrives: a contract created with the ETH self-destructs to the vault, skipping its
+            // reverting receive(). (v4: setting the vault's balance with vm.deal was lost once a later call made the
+            // vault DELEGATECALL its library; forge 1.3.6, seen in the trace of a failing run.)
+            vm.deal(address(this), address(this).balance + amount);
+            bytes memory initcode = abi.encodePacked(hex"73", address(vault), hex"ff"); // PUSH20 vault; SELFDESTRUCT
+            address created;
+            assembly ("memory-safe") {
+                created := create(amount, add(initcode, 32), mload(initcode))
+            }
+            require(created != address(0), "donation failed");
         } else {
             MockTokenBase(token).mint(address(vault), amount);
         }
@@ -560,6 +569,14 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
     }
 
     // ---- helpers ----------------------------------------------------------------------------------------------------
+
+    /// @dev Whether the token's and the global release buckets have room for `amount` now (refunds draw on them).
+    function _releaseCapsAllow(address token, uint256 amount) internal view returns (bool) {
+        (,, uint256 tokenAvailable) = vault.tokenCap(token, FerrataVault.Direction.Release);
+        (,, uint256 globalAvailable) = vault.globalCap(FerrataVault.Direction.Release);
+        (,, uint256 lezUnit, uint256 unitWeight,) = vault.tokenConfig(token);
+        return tokenAvailable >= amount && globalAvailable >= amount * unitWeight / lezUnit;
+    }
 
     /// @dev Respects monotonicity (v3 D4): the count lies between the last finalised one and the leaf count, and
     ///      after a sunset checkpoint it stays fixed and every checkpoint is a sunset one. Before retirement one

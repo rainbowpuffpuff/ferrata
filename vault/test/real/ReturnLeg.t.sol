@@ -106,9 +106,10 @@ contract ReturnLegTest is ReturnLegFixture {
 
         // Candidate: the real checkpoint seal, through the stop, into the Groth16 verifier.
         uint256 submittedAt = _submit();
-        (bytes32 parent, bytes32 root,,,,,,, uint256 at,,) = vault.candidates(c.newState);
-        assertEq(parent, genesisState);
-        assertEq(root, c.burnRoot);
+        (bytes32 digest,,,, uint48 at,,) = vault.candidates(c.newState);
+        // v4 keeps the digest of the journal the real seal was verified against.
+        assertEq(digest, sha256(candidate.journal));
+        assertEq(c.parentState, genesisState);
         assertEq(at, submittedAt);
         assertEq(vault.finalState(), genesisState, "a candidate changes nothing yet");
 
@@ -254,7 +255,8 @@ contract ReturnLegTest is ReturnLegFixture {
             if (field == 1) e.tipHash = keccak256("another tip");
             if (field == 2) e.n += 1;
             if (field == 3) e.t += 1;
-            vm.expectRevert(VerificationFailed.selector);
+            // v4 (D11): the vault compares the whole journal with the candidate's before the proof.
+            vm.expectRevert(FerrataVault.CandidateMismatch.selector);
             vault.finalize(beaconIndex, e, finalization.seal);
         }
         e = _checkpoint(finalization.journal);

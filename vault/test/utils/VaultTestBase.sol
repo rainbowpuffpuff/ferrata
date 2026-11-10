@@ -80,6 +80,10 @@ abstract contract VaultTestBase is Test {
     address internal bob = makeAddr("bob");
     address internal relayer = makeAddr("relayer");
     address internal recipient = makeAddr("recipient");
+    address internal watcher = makeAddr("watcher");
+
+    /// Rule (B) test deployment: the wait is the reaction window only (D13 default 1 h), no turn term.
+    uint256 internal constant DELTA_B = 1 hours;
 
     /// Counters that make every test checkpoint's `newState` and `burnCount` distinct.
     uint256 internal stateNonce;
@@ -129,8 +133,24 @@ abstract contract VaultTestBase is Test {
             admin: admin,
             freezeAuthority: freezer,
             globalDepositCap: _unlimited(),
-            globalReleaseCap: _unlimited()
+            globalReleaseCap: _unlimited(),
+            mode: FerrataVault.Mode.A,
+            watchers: [watcher, address(0), address(0)],
+            releaseCapFloor: _cap(0, 0)
         });
+    }
+
+    /// @dev The same deployment under rule (B): turnSeconds 0, delta and its floor 1 h.
+    function _deploymentB(IRiscZeroVerifier v, bytes32 lezConfig)
+        internal
+        view
+        returns (FerrataVault.Deployment memory d)
+    {
+        d = _deployment(v, lezConfig);
+        d.mode = FerrataVault.Mode.B;
+        d.turnSeconds = 0;
+        d.deltaFloor = DELTA_B;
+        d.initialDelta = DELTA_B;
     }
 
     function _deployVault(IRiscZeroVerifier v, bytes32 lezConfig) internal returns (FerrataVault) {
@@ -360,12 +380,23 @@ abstract contract VaultTestBase is Test {
         return _nextCheckpoint(vault, burnRoot, vault.finalImportedLeafCount(), vault.finalSunset());
     }
 
+    /// @dev Adds `k` ETH deposits from a fresh depositor, so that checkpoints may claim up to that many imported
+    ///      leaves (v4, D11: a finalised imported leaf count never exceeds the tree's leaf count).
+    function _fillTree(uint256 k) internal {
+        address filler = makeAddr("tree filler");
+        for (uint256 i = 0; i < k; i++) {
+            _deposit(filler, ETH, 0, keccak256(abi.encode("filler leaf", i)));
+        }
+    }
+
     /// @dev W = deltaAtSubmit + (t - 1) * turnSeconds, computed here independently of the vault.
     function _waitOf(FerrataVault v, bytes32 newState) internal view returns (uint256 submittedAt, uint256 wait) {
         uint32 t;
-        uint256 deltaAtSubmit;
-        (,,,,, t,,, submittedAt, deltaAtSubmit,) = v.candidates(newState);
-        wait = deltaAtSubmit + (uint256(t) - 1) * TURN_SECONDS;
+        uint32 deltaAtSubmit;
+        uint48 at;
+        (,,, t, at, deltaAtSubmit,) = v.candidates(newState);
+        submittedAt = at;
+        wait = uint256(deltaAtSubmit) + (uint256(t) - 1) * v.turnSeconds();
     }
 
     /// @dev Proves `c` as a candidate (echoNonce 0) for vault `v` and submits it.
@@ -386,6 +417,11 @@ abstract contract VaultTestBase is Test {
     {
         (uint256 submittedAt, uint256 wait) = _waitOf(v, c.newState);
         if (block.timestamp < submittedAt + wait) vm.warp(submittedAt + wait);
+        if (v.mode() == FerrataVault.Mode.B) {
+            // Rule (B): no beacon, no second proof; the candidate's own journal, once W has passed.
+            v.finalizeAttested(c);
+            return v.checkpointCount() - 1;
+        }
         vm.roll(block.number + 1);
         uint256 beaconIndex = v.recordBeacon();
         (, bytes32 nonce) = v.beacons(beaconIndex);

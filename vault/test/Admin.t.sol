@@ -456,12 +456,11 @@ contract RolesTest is VaultTestBase {
         vault.setTokenReleasesFrozen(ETH, false);
         vm.expectRevert(FerrataVault.NotFreezeAuthority.selector);
         vault.setCheckpointsFrozen(true);
-        vm.expectRevert(FerrataVault.NotFreezeAuthority.selector);
+        // v4 (D13): anyone may retire, but only 30 days after the last finalisation.
+        vm.expectRevert(FerrataVault.RetireNotOpen.selector);
         vault.retire();
         vm.expectRevert(FerrataVault.NotFreezeAuthority.selector);
         vault.revokeFrom(0);
-        vm.expectRevert(FerrataVault.NotFreezeAuthority.selector);
-        vault.transferFreezeAuthority(caller);
         vm.stopPrank();
     }
 
@@ -535,40 +534,6 @@ contract RolesTest is VaultTestBase {
         vault.acceptAdmin();
     }
 
-    function test_transferFreezeAuthority_isTwoStepAndOnlyByHolder() public {
-        vm.prank(admin); // the admin cannot appoint a freeze authority (it could then unfreeze)
-        vm.expectRevert(FerrataVault.NotFreezeAuthority.selector);
-        vault.transferFreezeAuthority(admin);
-
-        vm.expectEmit(true, true, true, true, address(vault));
-        emit FerrataVault.FreezeAuthorityTransferStarted(freezer, newFreezer);
-        vm.prank(freezer);
-        vault.transferFreezeAuthority(newFreezer);
-        assertEq(vault.freezeAuthority(), freezer);
-        assertEq(vault.pendingFreezeAuthority(), newFreezer);
-
-        vm.prank(alice);
-        vm.expectRevert(FerrataVault.NotPendingFreezeAuthority.selector);
-        vault.acceptFreezeAuthority();
-
-        vm.expectEmit(true, true, true, true, address(vault));
-        emit FerrataVault.FreezeAuthorityTransferred(freezer, newFreezer);
-        vm.prank(newFreezer);
-        vault.acceptFreezeAuthority();
-        assertEq(vault.freezeAuthority(), newFreezer);
-        assertEq(vault.pendingFreezeAuthority(), address(0));
-
-        _assertNoFreezePowers(freezer);
-        vm.prank(newFreezer);
-        vault.setDepositsFrozen(true);
-        assertTrue(vault.depositsFrozen());
-    }
-
-    function test_transferFreezeAuthority_cannotBeAcceptedByAdmin() public {
-        vm.prank(freezer);
-        vault.transferFreezeAuthority(admin);
-        vm.prank(admin);
-        vm.expectRevert(FerrataVault.RolesMustDiffer.selector);
-        vault.acceptFreezeAuthority();
-    }
+    // v4 (D13): the freeze authority has no two-step handover of its own any more; the admin replaces it through a
+    // 14-day public proposal (test/Roles.t.sol).
 }

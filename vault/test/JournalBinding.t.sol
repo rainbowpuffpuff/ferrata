@@ -196,6 +196,11 @@ contract ReleaseJournalBindingTest is VaultTestBase {
 contract CheckpointJournalBindingTest is VaultTestBase {
     bytes32 internal constant ROOT = keccak256("burn root");
 
+    function setUp() public override {
+        super.setUp();
+        _fillTree(3); // v4 (D11): the 3 imported leaves of the test checkpoints exist
+    }
+
     /// @dev Changes exactly one field of `j`, numbered in journal order after the domain word (16 fields).
     function _mutate(CheckpointJournal memory j, uint256 field) internal view {
         if (field == 0) j.chainId = block.chainid + 1;
@@ -226,7 +231,7 @@ contract CheckpointJournalBindingTest is VaultTestBase {
 
         _proveCheckpoint(_checkpointJournal(c)); // control
         vault.submitCandidate(c, SEAL);
-        (,,,,,,,, uint256 submittedAt,,) = vault.candidates(c.newState);
+        (,,,, uint48 submittedAt,,) = vault.candidates(c.newState);
         assertEq(submittedAt, block.timestamp);
     }
 

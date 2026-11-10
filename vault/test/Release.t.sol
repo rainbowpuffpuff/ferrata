@@ -2,6 +2,8 @@
 pragma solidity ^0.8.26;
 
 import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+import {IRiscZeroVerifier as IRiscZeroVerifierFull} from "risc0/IRiscZeroVerifier.sol";
+import {RiscZeroVerifierEmergencyStop} from "risc0/RiscZeroVerifierEmergencyStop.sol";
 
 import {FerrataVault} from "../src/FerrataVault.sol";
 import {IRiscZeroVerifier} from "../src/interfaces/IRiscZeroVerifier.sol";
@@ -23,7 +25,10 @@ contract VerifierSeparationTest is VaultTestBase {
 
     function test_rejectingVerifier_rejectsCheckpointsAndReleases() public {
         RejectingVerifier rejecting = new RejectingVerifier();
-        FerrataVault strict = _deployVault(IRiscZeroVerifier(address(rejecting)), LEZ_CONFIG_ID);
+        // v4: the vault reads the stop (D13), so the rejecting verifier sits behind one, as every verifier must.
+        RiscZeroVerifierEmergencyStop stop =
+            new RiscZeroVerifierEmergencyStop(IRiscZeroVerifierFull(address(rejecting)), freezer);
+        FerrataVault strict = _deployVault(IRiscZeroVerifier(address(stop)), LEZ_CONFIG_ID);
         FerrataVault.Checkpoint memory c = _nextCheckpoint(strict, ROOT, 0, false);
         vm.expectRevert(RejectingVerifier.AlwaysRejects.selector);
         strict.submitCandidate(c, SEAL);

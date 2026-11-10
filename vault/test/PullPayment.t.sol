@@ -171,7 +171,7 @@ contract PullPaymentTest is VaultTestBase {
         FerrataVault.Checkpoint memory c = _nextCheckpoint(vault, keccak256("sunset root"), leafIndex, true);
         _submit(c);
         _finalizeAfterDelta(c);
-        vm.warp(block.timestamp + REVOKE_WINDOW); // refunds open (v3 D5)
+        vm.warp(block.timestamp + REVOKE_WINDOW + 1); // refunds open (v3 D5, D11)
 
         bytes32[] memory leaves = new bytes32[](leafIndex + 1);
         for (uint64 i = 0; i < leafIndex; i++) {
