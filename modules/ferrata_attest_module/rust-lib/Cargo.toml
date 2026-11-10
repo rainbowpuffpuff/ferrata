@@ -1,0 +1,29 @@
+[package]
+name = "ferrata_attest_module"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+
+# A workspace of its own, so that cargo adopts no parent workspace. Its `package` fields are the
+# ones the staged copy of ferrata-core inherits; they equal the repository root's (stage.sh checks).
+[workspace]
+members = ["calls"]
+
+[workspace.package]
+version = "0.0.1"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+rust-version = "1.81"
+repository = "https://github.com/rainbowpuffpuff/ferrata"
+
+[lib]
+crate-type = ["staticlib"]
+
+# Cargo.lock is committed: the builder feeds it to buildRustPackage. scripts/check.sh writes it when
+# it is missing (after staging the SDK the path dependency below points at).
+[dependencies]
+serde_json = "1"
+# Staged by the builder from the logos-rust-sdk revision its code generator comes from.
+logos-rust-sdk = { path = "../logos-rust-sdk-src" }
+ferrata-attest-calls = { path = "calls" }

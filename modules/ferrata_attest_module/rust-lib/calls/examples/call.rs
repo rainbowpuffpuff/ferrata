@@ -1,0 +1,24 @@
+//! Run one method natively and print its reply: `cargo run --example call -- METHOD [REQUEST_FILE]`.
+//! `scripts/check.sh` compares these replies with the module's replies through Logos Core.
+
+fn main() {
+    let mut args = std::env::args().skip(1);
+    let method = args.next().unwrap_or_default();
+    let request = match args.next() {
+        Some(path) => std::fs::read_to_string(&path).unwrap_or_else(|e| {
+            eprintln!("call: cannot read {path}: {e}");
+            std::process::exit(2)
+        }),
+        None => String::new(),
+    };
+    let reply = match method.as_str() {
+        "version" => ferrata_attest_calls::version(),
+        "dry_run_attest" => ferrata_attest_calls::dry_run_attest(&request),
+        "verify_checkpoint" => ferrata_attest_calls::verify_checkpoint(&request),
+        _ => {
+            eprintln!("usage: call version|dry_run_attest|verify_checkpoint [REQUEST_FILE]");
+            std::process::exit(2)
+        }
+    };
+    println!("{reply}");
+}

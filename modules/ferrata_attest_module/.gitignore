@@ -1,0 +1,10 @@
+result
+result-*
+lib/
+rust-lib/target/
+rust-lib/generated/
+logos-rust-sdk-src
+# A copy of crates/ferrata-core, made by scripts/stage.sh before a build.
+rust-lib/ferrata-core/
+# check.sh output (default OUT_DIR)
+out/
