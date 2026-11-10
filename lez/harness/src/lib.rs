@@ -568,7 +568,7 @@ pub fn exit_name(code: u32) -> String {
         83 => "StepError::AdoptionIncomplete",
         84 => "StepError::NoAdoption",
         other => {
-            return match ferrata_error(other as u16) {
+            return match CORE_ERRORS.into_iter().find(|e| e.code() == u16::from(other)) {
                 Some(e) => format!("{e:?}"),
                 None => format!("code {other}"),
             }
@@ -577,7 +577,9 @@ pub fn exit_name(code: u32) -> String {
     name.to_string()
 }
 
-fn ferrata_error(code: u16) -> Option<ferrata_core::Error> {
+/// Every `ferrata_core::Error`, in the order of its declaration. The enum is `#[non_exhaustive]`,
+/// so `tests/exit_codes.rs` checks this list against the core's source.
+pub const CORE_ERRORS: [ferrata_core::Error; 47] = {
     use ferrata_core::Error as E;
     [
         E::Malformed,
@@ -604,10 +606,31 @@ fn ferrata_error(code: u16) -> Option<ferrata_core::Error> {
         E::NotNewer,
         E::CommitteeUnknown,
         E::ForkMismatch,
+        E::RlpNonCanonical,
+        E::RlpMalformed,
+        E::ProofNodeMismatch,
+        E::ProofIncomplete,
+        E::ProofTrailingNodes,
+        E::ProofNodeInvalid,
+        E::HeaderHashMismatch,
+        E::HeaderUnsupported,
+        E::ReceiptNotIncluded,
+        E::ReceiptUnsupported,
+        E::ReceiptFailed,
+        E::LogIndexOutOfRange,
+        E::PredicateFailed,
+        E::QueryInvalid,
+        E::ChainMismatch,
+        E::BindingMismatch,
+        E::HistoryOutOfWindow,
+        E::HistoryHashMismatch,
+        E::HistoryContractMissing,
+        E::AccumulatorPathInvalid,
+        E::AccumulatorIndexOutOfRange,
+        E::AccumulatorLeafEmpty,
+        E::AccumulatorRootMismatch,
     ]
-    .into_iter()
-    .find(|e| e.code() == code)
-}
+};
 
 /// A markdown table of settled transactions: per transaction, the handlers it ran with their
 /// cycles, the execution gas LEZ charged, its share of `TARGET_GAS_EXEC`, the storage gas, the

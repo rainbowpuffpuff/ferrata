@@ -213,34 +213,69 @@ pub struct RecordState {
 /// The event an instance emits when its finalized header advances or it activates.
 pub const FINALIZED_SELECTOR: [u8; 8] = *b"FRT-FIN1";
 
-/// Exit codes of the program's own refusals (the core's are 1–61, the job's 80–84).
+/// Who exits with which codes. A handler's exit code is one byte, and 0 is success.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CodeOwner {
+    /// The core's refusals (`ferrata_core::Error`), which the program passes on.
+    Core,
+    /// The step API's own refusals (`ferrata_core::steps::StepError` other than `Core`).
+    StepApi,
+    /// This program's own refusals ([`code`]).
+    Program,
+    /// The Stage 3 consumer's refusals ([`consumer::code`]).
+    Consumer,
+}
+
+/// The blocks of refusal codes. The program exits with its own codes and with the core's and the
+/// step API's, so each code must have one owner: the blocks are disjoint, and every code lies in
+/// a block of its owner (`harness/tests/exit_codes.rs` checks both). 240–255 are unassigned.
+pub const CODE_BLOCKS: [(CodeOwner, core::ops::RangeInclusive<u8>); 5] = [
+    (CodeOwner::Core, 1..=79),        // the light client: 1–61 in use
+    (CodeOwner::StepApi, 80..=99),    // 80–84 in use
+    (CodeOwner::Core, 100..=199),     // the execution layer: 100–163 in use
+    (CodeOwner::Program, 200..=219),  // 200–212 in use
+    (CodeOwner::Consumer, 220..=239), // 220–222 in use
+];
+
+/// Defines exit codes and `ALL`, every one of them with its name.
+macro_rules! exit_codes {
+    ($($(#[doc = $doc:literal])* $name:ident = $value:literal;)*) => {
+        $($(#[doc = $doc])* pub const $name: u8 = $value;)*
+        /// Every code of this module, with its name.
+        pub const ALL: &[(&str, u8)] = &[$((stringify!($name), $name)),*];
+    };
+}
+
+/// Exit codes of the program's own refusals: 200–212 (see [`CODE_BLOCKS`]).
 pub mod code {
-    /// The message does not decode.
-    pub const BAD_MESSAGE: u8 = 100;
-    /// The receiver is not the actor the message is for.
-    pub const WRONG_RECEIVER: u8 = 101;
-    /// An internal message from an actor other than the expected one.
-    pub const WRONG_SENDER: u8 = 102;
-    /// `Init` on an instance that exists.
-    pub const ALREADY_INITIALIZED: u8 = 103;
-    /// No instance at the receiver.
-    pub const NO_INSTANCE: u8 = 104;
-    /// No job at the receiver.
-    pub const NO_JOB: u8 = 105;
-    /// An update for an instance whose initial committee is not adopted yet.
-    pub const INSTANCE_INACTIVE: u8 = 106;
-    /// A job that is already open.
-    pub const JOB_EXISTS: u8 = 107;
-    /// A record that already holds another header.
-    pub const RECORD_CONFLICT: u8 = 108;
-    /// Stored state that does not decode.
-    pub const BAD_STATE: u8 = 109;
-    /// A read with no one to reply to.
-    pub const UNROUTABLE: u8 = 110;
-    /// An internal message about another instance.
-    pub const WRONG_INSTANCE: u8 = 111;
-    /// An unknown store layout in a config.
-    pub const BAD_CONFIG: u8 = 112;
+    exit_codes! {
+        /// The message does not decode.
+        BAD_MESSAGE = 200;
+        /// The receiver is not the actor the message is for.
+        WRONG_RECEIVER = 201;
+        /// An internal message from an actor other than the expected one.
+        WRONG_SENDER = 202;
+        /// `Init` on an instance that exists.
+        ALREADY_INITIALIZED = 203;
+        /// No instance at the receiver.
+        NO_INSTANCE = 204;
+        /// No job at the receiver.
+        NO_JOB = 205;
+        /// An update for an instance whose initial committee is not adopted yet.
+        INSTANCE_INACTIVE = 206;
+        /// A job that is already open.
+        JOB_EXISTS = 207;
+        /// A record that already holds another header.
+        RECORD_CONFLICT = 208;
+        /// Stored state that does not decode.
+        BAD_STATE = 209;
+        /// A read with no one to reply to.
+        UNROUTABLE = 210;
+        /// An internal message about another instance.
+        WRONG_INSTANCE = 211;
+        /// An unknown store layout in a config.
+        BAD_CONFIG = 212;
+    }
 }
 
 /// The minimal consumer of Stage 3 (`guests/consumer`): an actor of another program that reads a
@@ -270,10 +305,15 @@ pub mod consumer {
         pub query: Option<Vec<u8>>,
     }
 
-    /// Refusal codes of the consumer.
+    /// Refusal codes of the consumer: 220–222 (see [`crate::CODE_BLOCKS`]).
     pub mod code {
-        pub const BAD_MESSAGE: u8 = 120;
-        pub const BAD_STATE: u8 = 121;
-        pub const BAD_REPLY: u8 = 122;
+        exit_codes! {
+            /// The message does not decode.
+            BAD_MESSAGE = 220;
+            /// The consumer's state does not decode.
+            BAD_STATE = 221;
+            /// The reply to a read is not a `StateReply` holding a record.
+            BAD_REPLY = 222;
+        }
     }
 }

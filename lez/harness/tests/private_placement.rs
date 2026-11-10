@@ -139,7 +139,8 @@ fn a_private_sender_of_another_program_is_refused() {
     );
     let err = simulated.err().expect("the simulation of the public part fails");
     println!("another program's private actor, simulated: {err}");
-    assert!(err.contains("code 102"), "WrongSender (exit 102): {err}");
+    let wrong_sender = format!("code {}", ferrata_lez_wire::code::WRONG_SENDER);
+    assert!(err.contains(&wrong_sender), "WrongSender ({wrong_sender}): {err}");
     // A prover that skips the simulation gets a proof; settlement replays the public part, the
     // instance refuses, and the transaction falls back to paying its fee alone.
     let settled = w
@@ -161,7 +162,7 @@ fn a_private_sender_of_another_program_is_refused() {
         grouped(settled.charge.gas_exec),
         grouped(settled.charge.gas_stor)
     );
-    assert!(revert.contains("code 102"), "{revert}");
+    assert!(revert.contains(&wrong_sender), "{revert}");
     println!("{}", describe_public_outputs(&settled.tx));
     w.check_store();
 }

@@ -34,7 +34,11 @@ fn handle(input: &ReceiveInput) -> Result<Response, u8> {
     if input.from.is_some() && input.from == state.awaiting {
         let reply: StateReply = borsh::from_slice(&input.message).map_err(|_| code::BAD_REPLY)?;
         let record: RecordState = borsh::from_slice(&reply.state).map_err(|_| code::BAD_REPLY)?;
-        return Ok(Response::set_state(encode(&ConsumerState { awaiting: None, record: Some(record.record), ..state })));
+        return Ok(Response::set_state(encode(&ConsumerState {
+            awaiting: None,
+            record: Some(record.record),
+            ..state
+        })));
     }
     // Reading sends only `Read`; the query stays in this actor's (private) state. Calling sends
     // the query to the program.
