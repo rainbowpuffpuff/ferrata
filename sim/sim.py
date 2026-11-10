@@ -914,7 +914,7 @@ class Partition(Scripted):
         elif self.state == "cand":
             if self.TA is None:
                 for x in self.q.pending:
-                    if sim.l_created[sim.m_lez[x]] >= self.t0:
+                    if sim.l_created[sim.m_lez[x]] > self.t0:   # built after the cut
                         self.TA = sim.m_lez[x]
                         break
                 return

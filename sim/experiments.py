@@ -73,7 +73,8 @@ def configs():
         out.append(("h", f"n={n} t={threshold(n)} m=0: same, no adversary key (honest producer's block)", dict(n=n, m=0, attack="forkstall", honest_tip=True), 50))
     for back in (0, 1800, 2700, 3300, 3600, 3900, 4500, 5400):
         out.append(("h", f"n=3 m=1: honest back {back // 60} min before the beacon", dict(n=3, m=1, attack="forkstall", back_before_b=back), 50))
-    out.append(("h", "n=3 m=1: Δ = 3 h, honest outage", dict(n=3, m=1, attack="forkstall", delta=3 * H), 50))
+    for back in (0, 2700, 3300, 3600, 3900, 4500):
+        out.append(("h", f"n=3 m=1: Δ = 3 h, honest back {back // 60} min before the beacon", dict(n=3, m=1, attack="forkstall", delta=3 * H, back_before_b=back), 50))
     for n in ns:
         t = threshold(n)
         out.append(("h", f"n={n} t={t} m={t-1}: two honest nodes eclipsed for Δ, others live", dict(n=n, m=t - 1, attack="forkstall", eclipse=True), 50))
