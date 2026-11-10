@@ -5,7 +5,7 @@
 //! (`RISC0_DEV_MODE` unset or 0; on the CPU, or on a GPU with a CUDA build of r0vm 3.0.5), and the
 //! transaction is settled through LEZ's private settlement with the receipt verified.
 //!
-//! The same commands as `prove_private` (see `RESULTS.md`, §3 and the Stage 4 section):
+//! The same commands as `prove_private` (see `RESULTS.md`, §3 and §5):
 //!
 //! * `prove_attest [--tx-out FILE]`: prove, then settle. With `--tx-out`, the proven transaction
 //!   (borsh `LeeTransaction`, the receipt included) is also written to FILE.

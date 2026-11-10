@@ -20,7 +20,7 @@ A LEZ program acting on an Ethereum fact needs a trusted header and a proof that
 - **The attestation program** checks finality updates against the sync committee itself and writes a record of each finalized execution header it accepts. Anyone can submit updates; they stand or fall on their signatures.
 - **`ferrata-core`**, one `no_std` Rust crate, runs in the program, consumers' proofs, the Logos module, the CLI dry run and the tests. It verifies facts against a record, evaluates predicates and derives statement identifiers.
 
-The core's light client and execution layer, including accumulator-leaf facts, are built and tested natively (§5, §12). The program is in `lez/` and was driven with real mainnet data through the in-process harness over LEZ's state machine, not on a sequencer (§3, §4). Attestation through the program, successors, the weak-subjectivity bound and all off-chain software are not built (§15).
+The core's light client and execution layer, including accumulator-leaf facts, are built and tested natively (§5, §12). The program is in `lez/` and was driven with real mainnet data through the in-process harness over LEZ's state machine, not on a sequencer (§3, §4). Attestation through the program is built and was measured the same way on a mainnet block finalized on 10 November 2026: accounts, storage slots and event logs with predicates, identifiers and one history hop, a reference consumer on the public path and a private attestation (§6, §7; `lez/RESULTS.md` §5). Successors, the weak-subjectivity bound and all off-chain software are not built (§15).
 
 ## 2. Chain of trust
 
@@ -42,7 +42,7 @@ The record also carries the beacon header, the execution root and the timestamp 
 
 ## 3. The program on LEZ v0.4
 
-In LEZ v0.4 a handler sees only its own actor's state and communicates by messages. The attestation program is one immutable RISC Zero guest whose actors are program-derived accounts. The measured build has image id `e7cec90e8c2bb141de49c25c8d1e4f8496e37f0eaea9f349097bc7086e71d7d5` and is 508,240 bytes.
+In LEZ v0.4 a handler sees only its own actor's state and communicates by messages. The attestation program is one immutable RISC Zero guest whose actors are program-derived accounts. Two builds were measured. The figures of §3 and §4 are those of image `e7cec90e8c2bb141de49c25c8d1e4f8496e37f0eaea9f349097bc7086e71d7d5` (508,240 bytes), which had no attestation handler, no chain id in its configuration and a 293-byte record. The attestation figures of §5 to §7 are those of image `2f3566d4f460620867a93b557776400b1039142ce92203072170c162ba2ec130` (592,752 bytes), whose configuration holds the chain id and whose record holds it and the parent hash (333 bytes); `lez/RESULTS.md` has that build's figures for the transactions of §4, which differ from the ones here by at most 0.08% for a transaction of a million cycles or more.
 
 ### 3.1 Actors
 
@@ -66,7 +66,8 @@ There is no committee actor. An earlier version of the design kept both committe
 | `Adopt` (256 keys per part) | job | anyone | no |
 | `Finish` (step 3) | job | anyone | no |
 | `VerifyAll` (all steps in one call) | any actor | anyone | no |
-| `Read`, `Attest` | any actor | another actor | no; they reply with the actor's state |
+| `Read` | any actor | another actor | no; it replies with the actor's state |
+| `Attest` | `header(id, slot)` | anyone | no; it proves the request under the record and replies with the statements (§6.1) |
 | `JobOpen` | job | only `instance(id)` of this program | yes |
 | `Apply` | instance | only `job(id, job_id)` of this program | yes |
 | `ApplyVerified` | instance | only an actor of this program (`from_own_program`) | yes, by program |
@@ -224,7 +225,7 @@ The storage identifier leaves the block out, which suits "this value holds" but 
 
 The accumulator-leaf identifier leaves the root out, so it is the same under every later root, and uniqueness keyed on it holds across roots, where keying on the root's identifier would allow one claim per root. The bridge's deposits are this type.
 
-Status (native tests): the log, storage and account identifiers equal an independent Python computation; the block-bound variant is pinned by tests against an independent implementation; the accumulator-leaf identifiers are covered by the shared vectors (§5.1), and a leaf proven under two roots attested at two blocks has one identifier. Through the program, none is built (milestone A2).
+Status (native tests): the log, storage and account identifiers equal an independent Python computation; the block-bound variant is pinned by tests against an independent implementation; the accumulator-leaf identifiers are covered by the shared vectors (§5.1), and a leaf proven under two roots attested at two blocks has one identifier. Through the program (in-process harness, `lez/RESULTS.md` §5): the account, storage and log identifiers the program returns for a real mainnet block equal a derivation from the JSON-RPC fields alone. The accumulator-leaf identifiers are checked through the program's request function on the host, not in the guest, and the program does not return the block-bound variant (a consumer derives it from the reply).
 
 ### 5.3 Predicates (F.4, soft #4)
 
@@ -238,7 +239,7 @@ EIP-2935 keeps the last 8,191 block hashes in a system contract. One hop proves 
 
 One enum of stable numeric codes is shared by the program and the dry run, covering the U.5 failure modes. Codes seen in the measured program runs are listed in §4.4.
 
-One renumbering is outstanding. The program's own codes are 100–112 and the step API's 80–84, while `main` has since given the core's execution-layer errors 100–152. Nothing on the program branch returns those, so no code is ambiguous today, but the program's codes must move (for example to 200–212) at the merge. They were not moved yet because that changes the measured image.
+Each code has one owner: the core's are 1–79 and 100–199, the step API's 80–99, the program's own 200–214 and the reference consumer's 220–229, and a test fails if two owners share a code (`lez/harness/tests/exit_codes.rs`). The table of §4.4 was measured before the program's codes moved from 100–112 to 200–212 and shows the earlier numbers.
 
 ### 5.6 No scan (P.9)
 
@@ -248,13 +249,13 @@ No action reads a variable-length collection. Records, roots and nullifiers are 
 
 ### 6.1 Public consumers call (F.7)
 
-A public consumer sends `Attest{query}` synchronously to `header(id, slot)` and acts in its reply handler after checking that the reply comes from `header(id, slot)` of the pinned program. The program id alone would not do, because the same image can be deployed elsewhere. v0.4 runs synchronous messages depth-first in one transaction, so the check and the action succeed or fail together. A public consumer's whole read of a record costs 35,262 cycles (measured, in-process harness). **Not built**: in the program, `Attest` replies with the record's state; inclusion and predicates through the program come in milestone A2.
+A public consumer sends `Attest{query}` synchronously to `header(id, slot)` and acts in its reply handler after checking that the reply comes from `header(id, slot)` of the pinned program. The program id alone would not do, because the same image can be deployed elsewhere. v0.4 runs synchronous messages depth-first in one transaction, so the check and the action succeed or fail together. A public consumer's whole read of a record costs 35,262 cycles (measured, in-process harness). **Built** (measured in the in-process harness on a real mainnet block, `lez/RESULTS.md` §5): `Attest` proves the request's accounts, storage slots and logs under the record, checks its conditions and relations, and replies with the statement identifiers and values. A storage slot costs 273,717 cycles, a log 94,598 (1,616,902 in a receipt of 306 logs), one history hop and a slot 492,333, with RISC Zero's accelerated Keccak; without it 1,101,925, 338,670 (8,224,982) and 2,104,513. A refusal exits with a code, which on v0.4 reverts the whole transaction: the consumer's handler never runs after a failed attestation.
 
 ### 6.2 Private consumers read (F.8)
 
 Every message from a private execution to a public actor is published in plaintext (findings note §6). A private consumer therefore sends one fixed-size `Read` to a write-once record, receives it in a `StateReply` (293 bytes of state), and runs `ferrata-core` inside its own proof. At settlement LEZ re-runs the public handler and refuses the transaction if the reply differs from the prover's prediction. A record written once keeps the prediction valid; `instance(id)`, which every update changes, would not.
 
-What a read exposes (measured in the in-process harness, dev mode; every byte of the transaction searched): which record was read, the record, the consumer's program (even with an undisclosed image claim), and an alias of its account. Absent: the query, the account the consumer acts for, and its keys. The consumer therefore reads the newest record, which many consumers read, and reaches older blocks by hops inside its proof; the read then shows only that some transaction of that program acted after that record. LEZ charged the read 421,020 execution gas and 224,063 storage gas. No real proof of a read has been made.
+What a read exposes (measured in the in-process harness, dev mode; every byte of the transaction searched): which record was read, the record, the consumer's program (even with an undisclosed image claim), and an alias of its account. Absent: the query, the account the consumer acts for, and its keys. The consumer therefore reads the newest record, which many consumers read, and reaches older blocks by hops inside its proof; the read then shows only that some transaction of that program acted after that record. LEZ charged the read 421,020 execution gas and 224,063 storage gas. No real proof of a read has been made. A consumer that verifies an ERC-20 `Transfer` of a real mainnet block this way was executed, not proven: 382,336 user cycles for its two transitions, and no byte of the query, the proof or the result in the transaction (measured, in-process harness and executor, dev mode; `lez/RESULTS.md` §5).
 
 ### 6.3 Why not a private call
 
@@ -290,7 +291,7 @@ The pattern also requires consumers to:
 - check the reply's sender (§6.1) and pin the program's header account: a consumer holding the program id in mutable state lets whoever controls that pointer substitute a module that attests to anything (VS.3);
 - in a successor consumer, refuse any nullifier in the predecessor's set, with the predecessor frozen before the successor opens.
 
-The two U.6 reference consumers (an ERC-20 and a native ETH transfer to a contract) attest token, sender, recipient and amount from the vault's event, one attestation per deposit; the bridge uses accumulator leaves. **Not built**: the reference consumers (milestone A2) and the consumer guide that carries this section (milestone A4). `tests/nullifier_illustration.rs` illustrates the linkage problem; it runs no `ferrata-core` code.
+The two U.6 reference consumers (an ERC-20 and a native ETH transfer to a contract) attest token, sender, recipient and amount from the vault's event, one attestation per deposit; the bridge uses accumulator leaves. **Built** (in-process harness, `lez/RESULTS.md` §5): one reference consumer for the first case, on a plain ERC-20 `Transfer` of a real mainnet block rather than on the vault's event. It follows rules 1 to 4 and the two requirements above: it accepts the reply only from the record it asked, and it pins the program by deriving every one of its actors' addresses from its configuration (the program's account, the instance, the chain id, the token, the recipient), so that nothing mutable points at the program. Its nullifier is `H(configuration ‖ statement identifier)`, and it credits the transfer's sender. Rules 5 to 7 are **not built**: a plain `Transfer` commits to no secret, so this consumer has a private attestation and no private claim. **Not built** either: the native-ETH consumer (milestone A2) and the consumer guide that carries this section (milestone A4). `tests/nullifier_illustration.rs` illustrates the linkage problem; it runs no `ferrata-core` code.
 
 ## 8. Off-chain components (U.1–U.4, S.9, S.10)
 
@@ -382,10 +383,10 @@ Apart from the checkpoint source, whose root `verify_checkpoint` lets anyone che
 | Gate | In the repository today (measured) | Added (not built) |
 |---|---|---|
 | Spec vectors | consensus-specs v1.7.0-beta.4, minimal preset, Altair to Gloas: `sync` 52/52 (in four BLS configurations: blst with three key aggregations, and zkcrypto), `update_ranking` 7/7; 61 official BLS cases, two libraries, three compositions, both verification paths agree; TrieTests 25/25; the program's step API matches `process_update` (outcome, store, code) on all 160 updates (native tests) | through the v0.4 program (milestone A1 gate); the `single_merkle_proof` vectors |
-| Shared vectors | `vectors/acc-leaf.json` from an independent Python generator: 14 leaves, 7 refusals, 4 identifier variants (native tests) | through the program (milestone A2) |
-| Real chain | mainnet periods 1899–1903 (four handoffs) natively and in the in-process harness; the period-1906 execution test with 870 logs | the Sepolia stream through the program (milestone A1 gate); a real Sepolia (Gloas) update (M0) |
+| Shared vectors | `vectors/acc-leaf.json` from an independent Python generator: 14 leaves, 7 refusals, 4 identifier variants (native tests); the same leaves and refusals through the program's request function on the host, on a synthetic state | in the guest, through the program (milestone A2) |
+| Real chain | mainnet periods 1899–1903 (four handoffs) natively and in the in-process harness; the period-1906 execution test with 870 logs; a block of period 1907 verified and attested through the program in the in-process harness (accounts, storage slots, logs, one hop) | the Sepolia stream through the program (milestone A1 gate); a real Sepolia (Gloas) update (M0) |
 | Differential | Helios (`helios-consensus-core` at a16z/helios 0.12.0) on 33 of the 52 official cases step by step (129 steps; the other 19 carry Altair-layout data, which Helios does not decode), comparing verdict, slot, beacon root and execution root; on mainnet periods 1899–1903 and the end-to-end update; on Sepolia through the Gloas fork; on 8 mutated mainnet and 11 mutated Sepolia Gloas updates and a wrong-committee store; and on participation 0 to 32 of 32. alloy-trie and alloy-rlp for the execution layer (§5) | on every stream in CI (milestone A1) |
-| Adversarial | 16 light-client tests (incl. the fabricated chain; participation at 21, 22, 23, 32 of 32), 23 guard and 7 execution tests; three inputs on which Helios 0.12.0 departs from the specification, pinned as tests; 21 mutated mainnet updates through the step API; 18 refusals in the in-process harness | withheld Gloas payloads; VS.1 inclusion half and VS.2 through the program (milestone A2 gate) |
+| Adversarial | 16 light-client tests (incl. the fabricated chain; participation at 21, 22, 23, 32 of 32), 23 guard and 7 execution tests; three inputs on which Helios 0.12.0 departs from the specification, pinned as tests; 21 mutated mainnet updates through the step API; 18 refusals of updates and 41 of attestations and of the reference consumer in the in-process harness | withheld Gloas payloads; VS.1 inclusion half and VS.2 through the program (milestone A2 gate) |
 | Mutation | 107 hand-picked mutants, all killed (43 light client, 64 execution layer) | `cargo-mutants` over the whole core; the mutation report (milestone A4) |
 | Fuzzing | — | SSZ, RLP, Merkle-Patricia and query decoding (milestone A4) |
 
@@ -397,10 +398,10 @@ A `just bench` target will regenerate every number from a fresh checkout with re
 
 | Item | Measured today | Not yet measured |
 |---|---|---|
-| P.1 one transaction per attestation | bare guest: storage 0.21M, log 0.04–0.43M, hop 0.18M user cycles (§5.1) | through the program, incl. a hop and an accumulator leaf |
+| P.1 one transaction per attestation | bare guest: storage 0.21M, log 0.04–0.43M, hop 0.18M user cycles (§5.1); through the program (in-process harness, one transaction each): account 0.17M, storage slot 0.27M, log 0.09M (1.62M in a 306-log receipt), a hop and a slot 0.49M, a consumer's claim of a log 0.18M; without the Keccak accelerator 0.34M to 2.1M, and 8.2M for the 306-log receipt | an accumulator leaf through the program; a chain of hops |
 | P.2 cycles, gas, proof time and size | every update transaction in the in-process harness (§4.2); one real update proof on the laptop CPU: 3,240.5 s, 9.18 GiB, 227,080 bytes | attestation proof time and size |
 | P.3 tracking cost, apart from attestation cost | per-update costs in the in-process harness; amortised figures derived from them (§10) | the A4 report at the recommended cadence, with real proving |
-| P.4 user proving | none; the update proof is not a user proof (its 9.18 GiB peak exceeds the declared user minimum) | private read and claim proofs; a 320-hop claim is estimated at about 58M accelerated user cycles |
+| P.4 user proving | no proof; the update proof is not a user proof (its 9.18 GiB peak exceeds the declared user minimum). A private attestation of a log: 382,336 user cycles for the consumer's two transitions (executor, software Keccak), LEZ's privacy circuit not counted | private read, attestation and claim proofs (time, memory); a 320-hop claim is estimated at about 58M accelerated user cycles |
 | P.5 latency; P.6 off-chain resources | — | finality wait (about 13–19 minutes), update availability, the job's blocks, deferral; daemon CPU, memory, bandwidth |
 | P.7 state growth | record 293 bytes, job 1,249–1,409, instance 425–505 (in-process harness); committee storage constant | projections over one and five years |
 | P.8 BLS against a precompile | the two pairing steps (`Miller` 3.31M, `Finish` 3.65M) are 7.0M of an update's 9.2M (in-process harness); in the bare guest, Miller loops 40%, final exponentiation 35%, hash to G2 11% of 10.21M | the precompile delta; a precompile is reachable only from public transactions |
@@ -422,10 +423,12 @@ Everything new (the transcription, SSZ, Merkle-Patricia and RLP code, identifier
 
 ## 15. What is not built yet
 
-In the program: successors, the root id and the weak-subjectivity bound (§3.5, §4.6); fork upgrades; the Gloas RLP header; attestation (inclusion, predicates, identifiers, accumulator leaves, hops) on the public call and private read paths; joining an open job and clean-up of failed jobs; the exit-code renumbering (§5.5); deployment by `program_loader`; a run on a v0.4 sequencer.
+In the program: successors, the root id and the weak-subjectivity bound (§3.5, §4.6); fork upgrades; the Gloas RLP header, and with it attestation against a Gloas record (refused today); accumulator leaves in the guest (the request carries them and they are tested on the host); a chain of several hops (one was measured); joining an open job and clean-up of failed jobs; deployment by `program_loader`; a run on a v0.4 sequencer. Attestation on the public call path and the private read path is built for accounts, storage slots, event logs, predicates, identifiers and one hop (§6, `lez/RESULTS.md` §5).
+
+In the consumers: rules 5 to 7 of the pattern (the nullifier keyed on a depositor's secret) and with them a private claim; the native-ETH reference consumer; the same-address test across mainnet and a testnet (F.5).
 
 In the core: the weak-subjectivity bound (§4.6).
 
-Evidence: real proofs of a handoff and of a private read; a Sepolia (Gloas) update and a Gloas record on real data; the `single_merkle_proof` vectors; fuzzing; `cargo-mutants` over the whole core; the F.8 test and the U.6 reference consumers; `just bench` and the P.1–P.9 report, including the amortised tracking cost at the recommended cadence (§10); a deployment on LEZ testnet 0.4, which does not exist yet (until it does, a standalone v0.4 sequencer with its block log published, recorded as a shortfall against S.1).
+Evidence: real proofs of a handoff, of a private read and of a private attestation (its prover input is staged, `lez/RESULTS.md` §5); a Sepolia (Gloas) update and a Gloas record on real data; the `single_merkle_proof` vectors; fuzzing; `cargo-mutants` over the whole core; the F.8 test; `just bench` and the P.1–P.9 report, including the amortised tracking cost at the recommended cadence (§10); a deployment on LEZ testnet 0.4, which does not exist yet (until it does, a standalone v0.4 sequencer with its block log published, recorded as a shortfall against S.1).
 
 Off chain: the module, CLI, updater daemon, `monitor`, IDL check, `verify_checkpoint`, the catalog release, and the consumer, operator, CLI and trust documents.

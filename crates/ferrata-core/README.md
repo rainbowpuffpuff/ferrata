@@ -46,21 +46,21 @@ Every row is produced by `cargo test --workspace`.
 |---|---|
 | RISC Zero guest (`bench/`) | RISC Zero zkVM 3.0.5 executor, real mainnet update, RISC Zero's accelerated blst: a finality update costs 10.2M cycles, and splits into steps of 2.3M, 4.2M and 3.6M through the core's `miller_half` / `final_half`. A handoff adds 1.1M for the committee root, plus either 4.6M for the adoption check with uncompressed keys or 48.7M with compressed keys (`check_committee_onchain` today). See `bench/RESULTS.md`, including six library configurations. |
 | RISC Zero guest, execution layer (`bench/exec/`) | The same executor, mainnet block 26,379,842, with RISC Zero's accelerated Keccak (without it in brackets): `attest_storage` 0.21M user cycles (1.04M), `attest_log` 0.04M for a one-log receipt and 0.43M for a 96-log one (0.21M, 2.58M), one EIP-2935 hop 0.18M (0.95M). With the accelerator, the Keccak-f permutations (54 for a storage slot, 50 for a hop) are proven by RISC Zero's separate Keccak circuit, outside these counts. See `bench/RESULTS.md`. |
-| LEZ v0.4.0-rc1 program (`lez/`) | LEZ's own settlement with mainnet data, on the program image built after the merge (`cec0bc68…`; these figures supersede the earlier image's, and came out the same): `Init` 3 transactions, 7.09M execution gas; a finality update 3 transactions (2.19M, 3.31M, 3.72M; 9.22M); an update that adopts a committee 5 transactions, 16.08M; every transaction under the 5M target, the largest 3.73M (75%). The whole update in one public transaction (`VerifyAll`): 9.12M. Verified privately (dev mode): 479,854 execution gas and 224,063 storage gas. The one real proof (CPU: 9.05M user cycles, 54 min, 9.18 GiB, a 227,080-byte receipt) was made on the earlier image (`e7cec90e…`); the new image's is pending. See `lez/RESULTS.md`. |
+| LEZ v0.4.0-rc1 program (`lez/`) | LEZ's own settlement with mainnet data, on the program image built after the merge (`cec0bc68…`; these figures supersede the earlier image's, and came out the same): `Init` 3 transactions, 7.09M execution gas; a finality update 3 transactions (2.19M, 3.31M, 3.72M; 9.22M); an update that adopts a committee 5 transactions, 16.08M; every transaction under the 5M target, the largest 3.73M (75%). The whole update in one public transaction (`VerifyAll`): 9.12M. Verified privately (dev mode): 479,854 execution gas and 224,063 storage gas. Two real proofs of that path exist, both of earlier images: `e7cec90e…` on a laptop CPU (9.05M user cycles, 54 min, 9.18 GiB, a 227,080-byte receipt) and `cec0bc68…` on one NVIDIA L4. The image that adds attestation (`2f3566d4…`) measures within 0.4% of these figures and has no real proof. On a mainnet block finalized on 10 November 2026 it attests a storage slot in 0.27M cycles and an ERC-20 `Transfer` log in 0.09M, each in one transaction against the record it wrote; a reference consumer's claim of that log is one transaction of 0.18M, and a privately executed consumer verifies the same log in 0.38M user cycles (executor) with only the read of the record public. See `lez/RESULTS.md`. |
 
 **Not done yet** (the proposal's M0 to M2):
-- the execution layer inside the LEZ program: the program's `header(id, slot)` holds a
-  `steps::HeaderRecord`, while the attestations take an `attest::HeaderRecord` (which adds the
-  chain id, the parent hash, the anchor slot and the binding); the program has no handler that
-  attests, and the execution layer's costs are bare-guest ones (`bench/exec/`), not LEZ's;
-- in the program (`lez/RESULTS.md` §5): fork upgrades, Gloas's RLP execution header in records,
+- in the LEZ program's attestation (`lez/RESULTS.md` §5): Gloas records (the program stores the
+  bound block hash only, and `Attest` refuses them), accumulator leaves in the guest (the request
+  carries them; they are tested on the host), a chain of several hops, and of the consumer
+  pattern the nullifier keyed on a depositor's secret, with it a private claim;
+- in the program (`lez/RESULTS.md` §6): fork upgrades, Gloas's RLP execution header in records,
   successors and the root id of the proposal's §1, a submitter daemon, joining an open job, and
   clean-up of jobs whose last step fails; deployment by `program_loader` transactions (it is
   deployed at genesis); settlement through LEZ's `chain_state` crate itself (the harness runs a
   copy of its two settlement functions);
-- the real proof of the program image built after the merge (`lez/RESULTS.md` §3 says how to make
-  it elsewhere): the one real proof, of a finality update verified privately, was made on the
-  earlier image; the handoff and the consumer's read ran in RISC Zero dev mode only;
+- a real proof of the current program image (`lez/RESULTS.md` §3 says how to make it): the two
+  real proofs, of a finality update verified privately, are of earlier images; the handoff, the
+  consumer's read and the private attestation ran in RISC Zero dev mode only;
 - the `single_merkle_proof` vectors;
 - under Gloas on real data, a bootstrap and execution facts: no public Sepolia node found serves a
   light-client bootstrap for a Gloas-era checkpoint yet (Lodestar answers HTTP 500
@@ -91,7 +91,7 @@ The vector tests fail rather than skip when the vectors are missing, and they pi
 cases, so an empty or moved directory cannot pass.
 
 `lez/` is a workspace of its own, outside the root one: it needs RISC Zero's guest toolchain and
-a clone of LEZ v0.4.0-rc1 beside this repository. `lez/RESULTS.md` (§6) has the commands.
+a clone of LEZ v0.4.0-rc1 beside this repository. `lez/RESULTS.md` (§7) has the commands.
 
 ## Layout
 
@@ -107,7 +107,7 @@ a clone of LEZ v0.4.0-rc1 beside this repository. `lez/RESULTS.md` (§6) has the
 | `crates/ferrata-core/src/exec.rs` | Execution headers, accounts, storage values, receipts and logs |
 | `crates/ferrata-core/src/attest.rs` | `HeaderRecord`, the attestations consumers call, identifiers, conditions and relations, the EIP-2935 hop |
 | `crates/ferrata-core/src/accumulator.rs` | Accumulator-leaf facts: a root attested from a storage slot, a leaf proven against it by a SHA-256 path |
-| `crates/ferrata-core/src/witness.rs` | Compact forms of the store, bootstrap and update for a program's state and messages, with strict encodings; the signer witness (non-signers' keys with Merkle branches); the committee adoption from uncompressed keys, in parts |
+| `crates/ferrata-core/src/witness.rs` | Compact forms of the store, bootstrap and update for a program's state and messages, with strict encodings; the record a store keeps of each finalized header; the signer witness (non-signers' keys with Merkle branches); the committee adoption from uncompressed keys, in parts |
 | `crates/ferrata-core/src/steps.rs` | The job-step API: `process_update` split into steps of under 5M cycles (validation and hash-to-G2, the Miller loops, the final exponentiation), the adoption, and `apply` to the store the job started from |
 | `lez/` | The light client as a LEZ v0.4.0-rc1 program: wire types and guests, the harness that drives them through LEZ's settlement, the results (`lez/RESULTS.md`) |
 | `crates/ferrata-spectests/src/execkit.rs` | A reference trie (independent Keccak), synthetic blocks, JSON-RPC readers |
@@ -168,8 +168,8 @@ a clone of LEZ v0.4.0-rc1 beside this repository. `lez/RESULTS.md` (§6) has the
 7. **Execution roots come only from records.** A `HeaderRecord` holds one block's number, hash,
    state and receipts roots, the chain id and the binding it came from. It is built from a
    `FinalizedStore`'s finalized header (the payload header up to Fulu; under Gloas, the RLP
-   header that hashes to the bound block hash), derived through EIP-2935, or restored from the
-   program's own record bytes. Every attestation takes a record and the chain id the consumer
+   header that hashes to the bound block hash), derived through EIP-2935, restored from the record
+   the LEZ program wrote for a finalized header (`from_recorded`), or from its own bytes. Every attestation takes a record and the chain id the consumer
    expects; nothing takes a root from the caller. A record's `anchor_slot` is the beacon slot of
    the light-client header it rests on; for a record reached through EIP-2935 hops it is the slot
    of the record the hops started from, not a slot of the older block (place that block by its
@@ -316,20 +316,20 @@ lines, are left out):
 | `mpt.rs` | execution-spec transcription | 227 | 174 |
 | `rlp.rs` | execution-spec transcription | 199 | 145 |
 | `accumulator.rs` | new protocol logic | 188 | 130 |
-| `attest.rs` | new protocol logic | 737 | 535 |
+| `attest.rs` | new protocol logic | 769 | 557 |
 | `policy.rs` | new protocol logic | 131 | 91 |
-| `steps.rs` | new protocol logic | 809 | 622 |
-| `witness.rs` | new protocol logic | 805 | 598 |
+| `steps.rs` | new protocol logic | 721 | 547 |
+| `witness.rs` | new protocol logic | 926 | 691 |
 | `error.rs` | plumbing | 142 | 63 |
 | `lib.rs` | plumbing | 47 | 27 |
-| **total** | | **5884** | **4360** |
+| **total** | | **5949** | **4400** |
 
 | Category | Lines | Code lines |
 |---|---:|---:|
 | BLS glue and new logic | 522 | 378 |
 | consensus-spec transcription | 1710 | 1347 |
 | execution-spec transcription | 793 | 569 |
-| new protocol logic | 2670 | 1976 |
+| new protocol logic | 2735 | 2016 |
 | plumbing | 189 | 90 |
 
 - **Transcription of the consensus specification:** `validate.rs`, `store.rs`, `upgrade.rs`,

@@ -4,7 +4,7 @@
 //! public instance through LEZ's private settlement, with the receipt verified.
 //!
 //! Run from `lez/` in the dev profile (LEZ refuses to build its test helpers into a release
-//! build; dependencies are optimised, and the proving runs in `r0vm`); see `RESULTS.md`, §3 and §6:
+//! build; dependencies are optimised, and the proving runs in `r0vm`); see `RESULTS.md`, §3 and §7:
 //!
 //! * `prove_private [--tx-out FILE]`: prove, then settle. With `--tx-out`, the proven transaction
 //!   (borsh `LeeTransaction`, the receipt included) is also written to FILE.
