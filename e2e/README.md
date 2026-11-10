@@ -129,10 +129,16 @@ bind; the journals are the vault's encodings; candidate, wait, beacon, finalisat
 and both releases succeed with balances checked; every negative case is refused (the list is in
 `vault/README.md`, "Tests"). Gas of every step: `vault/GAS.md`, "With the real verifier".
 
-**Elsewhere.** The two release seals verify, by read-only `eth_call`, on RISC Zero's own
+**Elsewhere.** All four seals of `runs/sepolia/` verify, by read-only `eth_call`, on RISC Zero's own
 `RiscZeroGroth16Verifier` on Sepolia (`0x2a098988600d87650Fb061FfAff08B97149Fa84D`, directly and
-through RISC Zero's emergency stop `0x724d375B5b622e15f0E64e9Deb76a4cB17877797`); the ETH seal
-with the token release's journal digest is refused there with `VerificationFailed()`.
+through RISC Zero's emergency stop `0x724d375B5b622e15f0E64e9Deb76a4cB17877797`; checked at block
+12,105,706). The ETH release's seal with the token release's journal digest, and the candidate's
+seal with the finalisation's, are refused there with `VerificationFailed()`. No transaction was
+sent for this.
+
+**Nothing of this run is on a public network.** The round trip on Sepolia itself is prepared
+([`runs/sepolia-live/`](runs/sepolia-live/README.md), commands in `vault/README.md`) and has not
+been broadcast.
 
 **The Sepolia stages on a local fork** (`anvil --fork-url` of a public endpoint, the deployer
 impersonated; `vault/script/`, commands in `vault/README.md`; record in [`runs/fork/`](runs/fork/README.md)):

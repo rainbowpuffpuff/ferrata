@@ -1,5 +1,7 @@
 # The return leg on Sepolia
 
+**No transaction has been sent.** This directory is prepared; there is no manifest yet.
+
 The run directory of the round trip on the public Sepolia testnet (chain id 11155111), made from
 [`../sepolia/`](../sepolia/): the same deployment, wallet, zone, candidate proof and release proofs
 (their succinct receipts are in `../sepolia/receipts/`). Its own files appear as the stages run

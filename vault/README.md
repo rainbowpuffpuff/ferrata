@@ -339,7 +339,7 @@ New in v3:
 - **Real proofs in one run only.** `test/real/` verifies real Groth16 proofs of both programs and measures their
   gas (GAS.md); every other test mocks the verifier. Those proofs are about a stand-in zone built with test keys.
 
-## Sepolia round trip (rehearsed end to end on a local fork)
+## Sepolia round trip (rehearsed end to end on a local fork; not broadcast)
 
 `script/RoundTrip.s.sol` and `script/roundtrip.sh` run the return leg on Sepolia in stages:
 RISC Zero's Groth16 verifier, its emergency stop, a test token and the vault are created, both

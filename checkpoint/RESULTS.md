@@ -357,7 +357,8 @@ native rule's. The journals are 544 bytes and are, byte for byte, the v3 vault's
 accepts the candidate seal, then, after the wait and the beacon, the finalisation seal, through
 RISC Zero's unmodified Groth16 verifier behind its emergency stop; a flipped byte in either seal,
 either seal with a changed journal field, and the candidate's seal offered as the finalisation are
-refused. Receipts, seals and logs: `e2e/runs/sepolia/receipts/`.
+refused. Both seals also verify, by read-only calls, on RISC Zero's own Groth16 verifier deployed on
+Sepolia. Receipts, seals and logs: `e2e/runs/sepolia/receipts/`.
 
 Two things the fixture showed about this program's inputs. A finalisation must prove the
 candidate's very blocks (the vault looks the candidate up by `newState`), and LEZ signs
