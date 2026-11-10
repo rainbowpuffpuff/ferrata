@@ -1,0 +1,22 @@
+# A frozen copy of lez/bridge-wire at branch inbound-live a597270 (src/lib.rs byte for byte): the
+# encoding of the bridge program the inbound crossing deploys (ferrata_bridge.bin, image
+# 66722fc7..., pinned through configId by the Sepolia vault). lez/bridge-wire has moved on (the
+# registry, fees, caps, freezes and Sunset; another image id), so the live driver builds against
+# this copy. Never edit src/lib.rs: the deployed binaries are fixed. See ../README.md.
+[package]
+name = "ferrata-lez-bridge-wire"
+description = "The bridge program wire of the frozen inbound programs (image 66722fc7...), for the live driver only"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[dependencies]
+# The attestation program's interface (`attest::Request`, `Attestation`, `header_actor`, `Message::Attest`).
+ferrata-lez-wire = { path = "../../../wire" }
+# The bridge core (SPEC-v2): commitments, leaves, the claim statement, configId. no_std here.
+ferrata-bridge-core = { path = "../../../../bridge/crates/ferrata-bridge-core", default-features = false }
+# LEZ v0.4.0-rc1 by path (see lez/wire/Cargo.toml).
+lee_core = { path = "../../../../../upstream/lez-v0.4.0-rc1/lee/state_machine/core" }
+borsh = { version = "=1.6.1", features = ["derive"] }
+sha2 = { version = "0.10", default-features = false }

@@ -26,8 +26,8 @@ use ferrata_bridge_core::{
     BridgeKeys, Hash,
 };
 use ferrata_lez_bridge_wire::{
-    burn_actor, burn_mac_v2, holder_actor, nullifier_actor, root_actor, word_of_u128, BridgeMessage, BridgeState,
-    BurnRecord, HolderState, Holding, Note,
+    burn_actor, burn_mac_v2, holder_actor, token_actor, word_of_u128, BridgeMessage, BridgeState, BurnRecord,
+    HolderState, Holding, Note,
 };
 use harness::{
     bridge::{bridge_account, catalog, private_keys, private_post_state, World, CHAIN_ID, DENOMINATIONS, ETH},
@@ -92,15 +92,15 @@ fn main() {
     // funded for the fee. Deterministic.
     let mut w = World::with_roots();
     let program = w.program;
-    let (cid, terms) = (w.cid_a, w.config_a.terms);
+    let (cid, vault) = (w.cid_a, w.vault_a.address);
     let seed = w.private_seed;
     let account = w.chain.add_private_account(seed, 1_000_000_000_000);
     let deposit = w.private_deposit.clone();
     assert_eq!(account.id().value(), &deposit.dest, "the deposit is for this private account");
-    let n = deposit.nullifier(CHAIN_ID, &terms.vault);
+    let n = deposit.nullifier(CHAIN_ID, &vault);
     let me = holder_actor(program, account.id());
     let witness = w.vault_a.witness(&deposit, 8);
-    let claim_message = BridgeMessage::ClaimPrivately { config_id: cid, leaf_count: 8, witness: witness.clone() };
+    let claim_message = w.claim_privately(&cid, 8, witness.clone());
     println!(
         "private claim: vault A leaf {} (1 ETH, private kind) under root n = 8, configuration {}; N = {}",
         deposit.leaf_index,
@@ -109,15 +109,15 @@ fn main() {
     );
 
     // --- The private claim -------------------------------------------------------------------
-    let claim_actors = vec![root_actor(program, &cid, 8), nullifier_actor(program, CHAIN_ID, &terms.vault, &n)];
+    let claim_actors = w.private_claim_actors(&cid, 8, &vault, &deposit);
     let claim = match &settle_from {
         Some((path, _)) => settle(&mut w, path, "private claim"),
         None => prove(&mut w, "private claim", &account, me, &claim_message, claim_actors, claim_out.as_deref()),
     };
     assert!(claim.charge.revert.is_none(), "the claim's public part reverted: {:?}", claim.charge.revert);
-    assert!(w.nullifier(&terms, &n).is_some(), "the nullifier account is written");
+    assert!(w.nullifier(&vault, &n).is_some(), "the nullifier account is written");
     let holding =
-        HolderState { holdings: vec![Holding { config_id: cid, terms, amount: DENOMINATIONS[1] }], pending: None };
+        HolderState { holdings: vec![Holding { config_id: cid, token: ETH, amount: DENOMINATIONS[1] }], pending: None };
     let claimed = private_post_state(&w.chain, &private_keys(seed), &account.account, RESERVE, &holding)
         .expect("the chain holds the claimed account's commitment (1 ETH held)");
     // Nothing of the deposit is in the transaction; N, the configuration and the root read are.
@@ -150,13 +150,16 @@ fn main() {
 
     // --- The private burn of the claimed 1 ETH -----------------------------------------------
     let keys = BridgeKeys::from_bridge_seed(&[0x77; 32]);
-    let note = wallet_note(&keys, &cid, &terms.vault, 5, ETH, DENOMINATIONS[1]);
+    let note = wallet_note(&keys, &cid, &vault, 5, ETH, DENOMINATIONS[1]);
     let burn_message = BridgeMessage::burn(cid, &note);
     let record = burn_actor(program, &cid, &note.hash());
     let holder = PrivateAccount { keys: private_keys(seed), account: claimed.clone() };
     let burn = match &settle_from {
         Some((_, path)) => settle(&mut w, path, "private burn"),
-        None => prove(&mut w, "private burn", &holder, me, &burn_message, vec![record], burn_out.as_deref()),
+        None => {
+            let publics = w.burn_actors(me, &cid, &note)[1..].to_vec();
+            prove(&mut w, "private burn", &holder, me, &burn_message, publics, burn_out.as_deref())
+        }
     };
     assert!(burn.charge.revert.is_none(), "the burn's public part reverted: {:?}", burn.charge.revert);
     let outgoing: Vec<_> = burn
@@ -173,7 +176,7 @@ fn main() {
     assert_eq!(outgoing.len(), 2, "the burn's delivery and the fee: {outgoing:?}");
     assert_eq!(
         (outgoing[0].0, &outgoing[0].2),
-        (record, &borsh::to_vec(&burn_message).unwrap()),
+        (token_actor(program, &cid, &ETH), &borsh::to_vec(&burn_message).unwrap()),
         "the note, in the clear"
     );
     assert_ne!(outgoing[0].1.account_id, account.id(), "the holder appears as an alias");
@@ -185,7 +188,7 @@ fn main() {
     private_post_state(&w.chain, &private_keys(seed), &claimed, RESERVE, &HolderState::default())
         .expect("the chain holds the holder's commitment without the 1 ETH");
     let bytes = borsh::to_vec(&LeeTransaction::PrivacyPreserving(burn.tx.clone())).unwrap();
-    println!("private burn: one private-to-public delivery of the 185-byte Burn to the note's account, from an alias");
+    println!("private burn: one private-to-public delivery of the 185-byte Burn to the token's account, from an alias");
     report("private burn", &burn, &bytes);
 }
 
