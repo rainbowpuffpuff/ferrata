@@ -70,3 +70,6 @@ __pycache__/
 /vault/script/runs/
 /e2e/sepolia-live.env
 /e2e/runs/*/sepolia-live.log
+
+# The bridge program's prover binary staged by lez/scripts/stage-prove-bridge.sh (its sha256 is in MANIFEST.json)
+/gpu-prover/inputs-lez-bridge/prove_bridge

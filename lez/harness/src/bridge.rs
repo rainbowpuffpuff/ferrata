@@ -12,7 +12,7 @@
 //! `bridge/vectors/inbound-v2.json` (`claim`), so `root(5)` is the vector's root and the claim of
 //! its leaf 2 must spend the vector's `N`. Leaves 5–7 are this harness's own deposits.
 
-use std::{borrow::Cow, collections::BTreeMap, fs, path::PathBuf};
+use std::{borrow::Cow, collections::BTreeMap};
 
 use fee_core::market;
 use ferrata_bridge_core::{
@@ -122,10 +122,10 @@ fn h20(v: &Value) -> [u8; 20] {
     hex::decode(v.as_str().unwrap().trim_start_matches("0x")).unwrap().try_into().unwrap()
 }
 
-/// `bridge/vectors/inbound-v2.json`.
+/// `bridge/vectors/inbound-v2.json`, compiled in (so a staged binary, `prove_bridge`, needs no
+/// checkout beside it).
 pub fn inbound_vectors() -> Value {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../bridge/vectors/inbound-v2.json");
-    serde_json::from_slice(&fs::read(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()))).unwrap()
+    serde_json::from_str(include_str!("../../../bridge/vectors/inbound-v2.json")).unwrap()
 }
 
 /// One deposit whose preimage is known.

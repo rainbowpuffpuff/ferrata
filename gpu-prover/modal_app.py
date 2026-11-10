@@ -7,11 +7,13 @@ dropped client connection does not stop a build or a proof halfway:
     MODAL_PROFILE=<profile> modal run --detach modal_app.py --fixtures cp-empty-1
     MODAL_PROFILE=<profile> modal run --detach modal_app.py::lez --run <name>  # LEZ light-client update
     MODAL_PROFILE=<profile> modal run --detach modal_app.py::lez --job lez-attest --run <name>  # LEZ private attestation
+    MODAL_PROFILE=<profile> modal run --detach modal_app.py::lez --job lez-bridge --run <name>  # bridge claim + burn
 
 The guests are never rebuilt here. `inputs/programs/*.bin` are the guest program binaries of the local
 ferrata-checkpoint build (scripts/stage-inputs.sh); `inputs-lez/prove_private` and
-`inputs-lez-attest/prove_attest` are LEZ host binaries with their guests embedded (scripts/stage-lez.sh,
-and the repository's lez/scripts/stage-prove-attest.sh). Each run checks the image ids. See README.md.
+`inputs-lez-attest/prove_attest` and `inputs-lez-bridge/prove_bridge` are LEZ host binaries with their
+guests embedded (scripts/stage-lez.sh, and the repository's lez/scripts/stage-prove-attest.sh and
+lez/scripts/stage-prove-bridge.sh). Each run checks the image ids. See README.md.
 """
 
 from __future__ import annotations
@@ -53,6 +55,14 @@ LEZ_JOBS = {
         "lines": ("consumer image", "record:", "| AttestPrivately", "| the record's reply", "REAL PROOF", "DRY RUN",
                   "settled", "wrote"),
     },
+    # The bridge program's private claim, then the private burn of what it minted (lez BRIDGE-RESULTS.md §7):
+    # two transactions from one run, each written by its own option.
+    "lez-bridge": {
+        "dir": "/lez-bridge", "binary": "prove_bridge", "tx": "bridge-private-claim-tx.borsh", "log": "prove-bridge.log",
+        "more_tx": ("bridge-private-burn-tx.borsh",),
+        "args": ("--claim-out", "bridge-private-claim-tx.borsh", "--burn-out", "bridge-private-burn-tx.borsh"),
+        "lines": ("bridge image", "private claim:", "private burn:"),
+    },
 }
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -83,6 +93,7 @@ gpu_image = (
     base.add_local_dir(INPUTS, "/inputs")
     .add_local_dir(HERE / "inputs-lez", "/lez")
     .add_local_dir(HERE / "inputs-lez-attest", "/lez-attest")
+    .add_local_dir(HERE / "inputs-lez-bridge", "/lez-bridge")
 )
 
 app = modal.App(APP_NAME)
@@ -366,6 +377,10 @@ def _prove_lez(run: str, limit_s: int, job: str = "lez-update") -> dict:
     if job == "lez-update":
         job_env = {"FERRATA_EXPECT_IMAGE_ID": LEZ_IMAGE_ID, "FERRATA_FIXTURE_DIR": f"{src}/mainnet-p1899"}
         source = {"expected_image_id": LEZ_IMAGE_ID, "ferrata_lez_commit": manifest["ferrata_lez_commit"]}
+    elif job == "lez-bridge":
+        # The image both proofs cover is the bridge program's (`prove_bridge --image-ids`, in the manifest).
+        job_env = {"FERRATA_EXPECT_BRIDGE_IMAGE_ID": manifest["expected_bridge_image_id"]}
+        source = {"expected_bridge_image_id": manifest["expected_bridge_image_id"], "ferrata_commit": manifest["ferrata_commit"]}
     else:
         # The image the proof covers is the consumer's; the manifest holds the ids the staged binary
         # reported (`prove_attest --image-ids`), and the binary stops unless its consumer image is that one.
@@ -379,7 +394,8 @@ def _prove_lez(run: str, limit_s: int, job: str = "lez-update") -> dict:
     env = {**os.environ, **job_env, "RISC0_DEV_MODE": "0", "RISC0_SERVER_PATH": r0vm}
     t0 = time.time()
     with open(f"{work}/{log_name}", "w") as log:  # `> <log> 2>&1`
-        proc = subprocess.Popen(["/usr/bin/time", "-v", f"./{binary}", "--tx-out", tx_name],
+        args = list(spec.get("args", ("--tx-out", tx_name)))
+        proc = subprocess.Popen(["/usr/bin/time", "-v", f"./{binary}", *args],
                                 cwd=work, env=env, stdout=log, stderr=subprocess.STDOUT)
         try:
             rc = proc.wait(timeout=limit_s)
@@ -388,14 +404,16 @@ def _prove_lez(run: str, limit_s: int, job: str = "lez-update") -> dict:
             rc = proc.wait()
     t_end = time.time()
     sampler.stop()
-    for f in (log_name, tx_name):
+    more_tx = spec.get("more_tx", ())
+    for f in (log_name, tx_name, *more_tx):
         if os.path.exists(f"{work}/{f}"):
             shutil.copy2(f"{work}/{f}", f"{out}/{f}")
     lines = open(f"{work}/{log_name}").read().splitlines()
     print("\n".join(lines[-45:]), flush=True)
     tx = f"{work}/{tx_name}"
     record = {
-        "ok": rc == 0 and hashes_ok and os.path.exists(tx), "name": job, "run": run, "exit_code": rc,
+        "ok": rc == 0 and hashes_ok and all(os.path.exists(f"{work}/{f}") for f in (tx_name, *more_tx)),
+        "name": job, "run": run, "exit_code": rc,
         "timed_out": rc != 0 and (t_end - t0) >= limit_s,
         **_container_facts(), **source, "input_hashes_equal_manifest": hashes_ok,
         "binary_sha256": manifest["files"][binary]["sha256"],
@@ -403,6 +421,8 @@ def _prove_lez(run: str, limit_s: int, job: str = "lez-update") -> dict:
         "gnu_time": _gnu_time(lines), "gpu_stats": sampler.stats(t0, t_end), "gpu_stats_window": f"whole {binary} run",
         "log_lines": [l for l in lines if l.startswith(spec["lines"])],
         "tx_bytes": os.path.getsize(tx) if os.path.exists(tx) else None, "tx_sha256": _sha256(tx) if os.path.exists(tx) else None,
+        "more_tx": {f: {"bytes": os.path.getsize(f"{work}/{f}"), "sha256": _sha256(f"{work}/{f}")}
+                    for f in more_tx if os.path.exists(f"{work}/{f}")},
         "build_info": json.load(open(f"{BIN}/r0vm-cuda.json")), "r0vm_sha256_here": _sha256(r0vm),
         "finished_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
@@ -477,7 +497,7 @@ def main(fixtures: str = "cp-empty-1", run: str = "", limit_s: int = 1800):
 @app.local_entrypoint()
 def lez(run: str = "", limit_s: int = 3600, job: str = "lez-update"):
     """One LEZ proof in one container: `--job lez-update` (the light-client update, the default) or
-    `--job lez-attest` (one private attestation)."""
+    `--job lez-attest` (one private attestation) or `--job lez-bridge` (the bridge's private claim and burn)."""
     assert job in LEZ_JOBS, f"unknown LEZ job {job!r}: one of {sorted(LEZ_JOBS)}"
     run = run or time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
     t0 = time.time()
