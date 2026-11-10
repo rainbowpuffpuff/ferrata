@@ -404,7 +404,9 @@ done
     echo "- Bedrock gas prices during the run (logs/bedrock-gas-prices.log): $(wc -l < "$LOG/bedrock-gas-prices.log") values; first: $(head -1 "$LOG/bedrock-gas-prices.log"); last: $(tail -1 "$LOG/bedrock-gas-prices.log")"
   fi
   echo "- head rewinds in the sequencer's log: $(grep -c 'Head rewound' "$LOG/sequencer.log" || true); inscriptions it gave up on: $(grep -c 'expired unmined' "$LOG/sequencer.log" || true)"
-  echo "- driver: live-driver, built from lez/live/driver at $(git -C "$REPO" rev-parse HEAD 2>/dev/null) (uncommitted paths: $(git -C "$REPO" status --short 2>/dev/null | grep -v ' lez/live/results/' | wc -l))"
+  # Where the copy of the repository has no history (a build box), FERRATA_HEAD and FERRATA_DIRTY
+  # say what git would.
+  echo "- driver: live-driver, built from lez/live/driver at ${FERRATA_HEAD:-$(git -C "$REPO" rev-parse HEAD 2>/dev/null)} (uncommitted paths: ${FERRATA_DIRTY:-$(git -C "$REPO" status --short 2>/dev/null | grep -v ' lez/live/results/' | wc -l)})"
   echo "- r0vm: $(r0vm --version 2>/dev/null)"
   echo "- guest binaries: program sha256 $(sha256sum "$PROGRAM_BIN" | cut -d' ' -f1), scripted sha256 $(sha256sum "$SCRIPTED_BIN" | cut -d' ' -f1)"
   echo "- machine: $(nproc) CPUs visible, $(sed -n 's/^model name[^:]*: //p' /proc/cpuinfo | sed -n 1p), $(awk '/MemTotal/{printf "%.0f GiB", $2/1048576}' /proc/meminfo), $(uname -sr)"
