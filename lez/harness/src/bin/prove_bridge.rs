@@ -188,7 +188,7 @@ fn main() {
     private_post_state(&w.chain, &private_keys(seed), &claimed, RESERVE, &HolderState::default())
         .expect("the chain holds the holder's commitment without the 1 ETH");
     let bytes = borsh::to_vec(&LeeTransaction::PrivacyPreserving(burn.tx.clone())).unwrap();
-    println!("private burn: one private-to-public delivery of the 185-byte Burn to the note's account, from an alias");
+    println!("private burn: one private-to-public delivery of the 185-byte Burn to the token's account, from an alias");
     report("private burn", &burn, &bytes);
 }
 
