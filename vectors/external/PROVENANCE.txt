@@ -1,0 +1,7 @@
+vectors/external/bridge-evm-tree-v2.json is a verbatim copy of spike/bridge-evm/test/vectors/tree-v2.json
+(written by the v2 vault project's test/TreeVectors.t.sol: 8 deposits made on FerrataVault v2, leaves and roots read back from it).
+copied:            2026-11-10T02:39:33+01:00
+source mtime:      2026-11-10 02:09:34.937214613 +0100
+source sha256:     457f36e8c738e09a29966c2df5a7bcba85dda0d631180f6f1327a35ba47095b4
+The vault source was still being written when this copy was taken (no V2-DONE marker yet); scripts/check.sh reports if the source file changes later.
+Checked by crates/ferrata-bridge-core/tests/vault_tree_v2.rs.

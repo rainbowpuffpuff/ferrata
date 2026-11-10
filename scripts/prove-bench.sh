@@ -5,7 +5,8 @@
 # During `groth16`, the Docker prover container is polled every 0.2 s for its cgroup memory.peak;
 # the last value read and the first/last time it was seen are logged (lower bounds, within one poll).
 #
-# usage: scripts/prove-bench.sh <prove|p254|groth16> <eth|erc20>
+# usage: scripts/prove-bench.sh <prove|p254|groth16> <eth|erc20|ethpull>
+#        scripts/prove-bench.sh prove-claim
 #        scripts/prove-bench.sh env
 set -euo pipefail
 here="$(cd "$(dirname "$0")/.." && pwd)"
@@ -29,7 +30,7 @@ machine() {
 
 step="${1:?step}"
 if [ "$step" = env ]; then machine; exit 0; fi
-case_name="${2:?case}"
+if [ "$step" = prove-claim ]; then case_name=claim; else case_name="${2:?case}"; fi
 log="$here/artifacts/logs/$(date -u +%Y%m%dT%H%M%SZ)-$step-$case_name.log"
 
 monitor() {
@@ -60,7 +61,11 @@ monitor() {
     mon="$here/artifacts/work/$case_name.monitor"; rm -f "$mon" "$mon.stop"
     monitor "$mon" & mpid=$!
   fi
-  /usr/bin/time -v "$here/target/release/host" "$step" "$case_name" 2>&1
+  if [ "$step" = prove-claim ]; then
+    /usr/bin/time -v "$here/target/release/host" prove-claim 2>&1
+  else
+    /usr/bin/time -v "$here/target/release/host" "$step" "$case_name" 2>&1
+  fi
   status=$?
   if [ "$step" = groth16 ]; then
     touch "$mon.stop"; wait "$mpid" || true

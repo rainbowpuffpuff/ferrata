@@ -453,7 +453,11 @@ fn cmd_invariance(n: u64) -> Result<()> {
             };
             let info = default_executor().execute(env_with(&bytes)?, elf)?;
             if std::env::var_os("FERRATA_DIAG").is_some() && name == "release" {
-                println!("diag directions popcount {:2} cycles {}", rnd_index("release index", i).count_ones(), info.cycles());
+                println!(
+                    "diag directions popcount {:2} cycles {}",
+                    rnd_index("release index", i).count_ones(),
+                    info.cycles()
+                );
             }
             shapes.insert(shape(&info));
         }

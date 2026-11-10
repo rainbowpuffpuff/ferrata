@@ -93,7 +93,7 @@ MUTANTS = [
     ("H02", "hash.rs", "        let mut mac = self.0.clone();\n        mac.update(message);", "        let mut mac = self.0.clone();\n        mac.update(&message[1..]);",
      "PRF drops the first message byte"),
     ("C01", "checkpoint.rs", "two_thirds_up.min(n.saturating_sub(1)).max(1)", "two_thirds_up.max(1)", "t(n) without the n - 1 cap"),
-    ("C02", "checkpoint.rs", "(2 * u64::from(n)).div_ceil(3)", "(2 * u64::from(n)) / 3", "t(n) rounds 2n/3 down"),
+    ("C02", "checkpoint.rs", "(2 * u64::from(n)).div_ceil(3)", "((2 * u64::from(n)) / 3)", "t(n) rounds 2n/3 down"),
 ]
 
 
