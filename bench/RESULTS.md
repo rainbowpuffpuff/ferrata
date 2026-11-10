@@ -5,7 +5,7 @@
 
 **Former name.** Measured at commit f030475, before the project was renamed Ferrata, when the core
 was `crates/plumbline-core`; the earlier snapshot run below used commit 25aa07e. At the rename commit
-101d439 the core differed from f030475 only by the rename (`scripts/check-bench-provenance.sh`
+394a186 the core differed from f030475 only by the rename (`scripts/check-bench-provenance.sh`
 passes there); later commits add modules, and the functions measured here are unchanged. The raw outputs in
 `results/` are as produced, except that the row labels that named the project now say `ferrata`, as
 the current bench source prints them; `results/PROVENANCE.txt` adds the per-file hashes after the
@@ -335,9 +335,9 @@ measurements with the Full policy; they moved by at most 0.21 M.
 | **execution total incl. paging + padding** (Σ 2^po2) | 4,194,304 |
 | executor wall-clock | 0.2 s |
 
-## 2026-11-09: the execution layer, with and without accelerated Keccak (commit ea4ccfa)
+## 2026-11-09: the execution layer, with and without accelerated Keccak (commit 643e31b)
 
-**Measured code:** `crates/ferrata-core` of commit **ea4ccfa**, unchanged since 7fd2f97 (the
+**Measured code:** `crates/ferrata-core` of commit **643e31b**, unchanged since 463cac2 (the
 commit that added the execution layer); `exec/results/PROVENANCE.txt` holds the per-file hashes,
 captured before the run with no uncommitted change to the core. Guests: `exec/guests/keccak-accel`
 (image id `8c5bbc10…`) and `exec/guests/keccak-plain` (`c218315f…`); both use RISC Zero's

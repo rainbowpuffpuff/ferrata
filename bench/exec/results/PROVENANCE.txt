@@ -1,6 +1,6 @@
 # Provenance of the ferrata-core measured by bench/exec, captured before the run
 2026-11-09T22:51:19+01:00
-HEAD ea4ccfadb5445bf8f15efc818abae71a53c66a11
+HEAD 643e31be8d4a2b287a16300974d39c419325f418
 git status --short -- crates/ferrata-core (empty: the measured core is HEAD's):
 d442155ff42c0165358f2e35361297e2c7fc9a37135352e44bdfd47286248205  Cargo.toml
 db5f9d08b310157d39a5e19483e3699754457767576646f5ed70cf7b41abbb89  src/attest.rs

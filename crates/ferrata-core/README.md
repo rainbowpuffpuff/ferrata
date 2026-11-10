@@ -284,7 +284,7 @@ of that tag only.
 
   On inputs 2 and 5 ferrata's policy store refuses the committee when it adopts it, before any
   update. The 0.9.4 column for inputs 1 to 4 is what this test asserted while 0.9.4 was pinned
-  (commit `2fbbddf`); for input 5 it is read from 0.9.4's source, not run. Helios's own client
+  (commit `a4064bf`); for input 5 it is read from 0.9.4's source, not run. Helios's own client
   never calls `force_update`; its test runner and library users do. At 0.9.4 Helios's own vector
   runner covered six cases (Deneb and Electra) and did not assert that an update verifies; at
   0.12.0 it runs 17 committed cases (Deneb, Electra, Gloas and the transitions into Gloas), and

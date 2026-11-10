@@ -7,7 +7,7 @@
 # then sends the two releases with the real Groth16 seals and one standalone `verify`, and reads
 # gasUsed from each receipt. Log: artifacts/logs/<UTC time>-anvil-e2e.log
 # This is the v1 run (artifacts/v1/). It compiled the vault from what was then a sibling repository
-# (../../bridge-evm from evm-verify/); in this repository the v1 vault is commit a01fcd7 of vault/'s
+# (../../bridge-evm from evm-verify/); in this repository the v1 vault is commit c417dc2 of vault/'s
 # history, exported to artifacts/v1/vault-source/. The script is kept as it ran, not adapted.
 set -euo pipefail
 here="$(cd "$(dirname "$0")/.." && pwd)"

@@ -49,11 +49,11 @@ if [ -f "$src" ]; then
   cmp -s "$src" vectors/external/bridge-evm-tree-v2.json && echo "tree-v2.json: identical to the vendored copy" \
     || echo "WARNING: vault/test/vectors/tree-v2.json changed since it was vendored; re-copy and re-run"
 fi
-# The vault's v2 (branch v2 of the former bridge-evm repository) is commit 1d61b32 of vault/'s history.
-if git -C "$here" cat-file -e 1d61b32:src/FerrataVault.sol 2> /dev/null; then
-  git -C "$here" show 1d61b32:src/FerrataVault.sol | cmp -s - evm-verify/vendor/vault-v2/FerrataVault.sol \
-    && echo "vault: evm-verify/vendor/vault-v2 == the vault's v2 (1d61b32)" \
-    || echo "WARNING: evm-verify/vendor/vault-v2 differs from the vault's v2 (1d61b32)"
+# The vault's v2 (branch v2 of the former bridge-evm repository) is commit d64845b of vault/'s history.
+if git -C "$here" cat-file -e d64845b:src/FerrataVault.sol 2> /dev/null; then
+  git -C "$here" show d64845b:src/FerrataVault.sol | cmp -s - evm-verify/vendor/vault-v2/FerrataVault.sol \
+    && echo "vault: evm-verify/vendor/vault-v2 == the vault's v2 (d64845b)" \
+    || echo "WARNING: evm-verify/vendor/vault-v2 differs from the vault's v2 (d64845b)"
 fi
 
 echo "== Foundry: journal equality, real Groth16 verifier behind the emergency stop, vault v2 end to end"

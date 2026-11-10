@@ -168,7 +168,7 @@ Groth16ReceiptVerifierParameters::default(): control_root 0xa54dc85ac99f851c92d7
 [ethpull] journal: burnRoot 0xfcfb6067d8a2b397d205df1933ec19d4ba34ead4559da6b9a77bda07c5cea872 NOut 0x78b768addf7f0f1df91c157784c3b5d2cbc9f1c233b5c29b6c7ab72ba883f3ed sha256 0x3d706f2b6c84b60d28877cfddeaac80e227dbc64da35276abb8afbbf1b0b9ecb
 == neighbour drift (warnings only): vendored copies vs. spike/bridge-evm now
 tree-v2.json: identical to the vendored copy
-vault: evm-verify/vendor/vault-v2 == bridge-evm branch v2 (1d61b32)
+vault: evm-verify/vendor/vault-v2 == bridge-evm branch v2 (d64845b)
 == Foundry: journal equality, real Groth16 verifier behind the emergency stop, vault v2 end to end
 No files changed, compilation skipped
 

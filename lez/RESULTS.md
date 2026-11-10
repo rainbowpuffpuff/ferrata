@@ -18,12 +18,12 @@ consumer reads a record, or calls) ran through LEZ's privacy-preserving circuit 
 settlement in RISC Zero dev mode; one real proof was made on this machine's CPU (§3).
 
 **Which image these numbers come from.** Every number in this file, except those of the real
-proof, was measured on the images built after this branch merged `main` (commit 4d5fe7b, which
+proof, was measured on the images built after this branch merged `main` (commit f777187, which
 brought the core's execution layer) and after the program's exit codes were renumbered (§1):
-program `cec0bc68…`, consumer `aec03bcd…` (`results/images.md`), in runs at commit 62f4f70
-(`results/environment.md`; the dry run of §3 at 1b3984e, whose host code adds the proof's
+program `cec0bc68…`, consumer `aec03bcd…` (`results/images.md`), in runs at commit 8d0c647
+(`results/environment.md`; the dry run of §3 at 8474f15, whose host code adds the proof's
 handoff). The numbers measured on the earlier image (`e7cec90e…`, consumer
-`620e6390…`; commit 7dfae96, the branch before the merge) are superseded. Measured again, every
+`620e6390…`; commit 83b4b55, the branch before the merge) are superseded. Measured again, every
 cycle count, gas charge, fee and transaction size in §2 to §4 is the same as on the earlier
 image; what changed are the image ids, the account ids derived from them in the dumps of §3 and
 §4, and the exit codes of the refusals in §2. **The real proof (§3) and its settlement are still
@@ -228,7 +228,7 @@ blst and SHA-256, core of commit f030475, RISC Zero Rust 1.88). Here, per handle
 | work | bare guest (`../bench/`), user cycles | on LEZ: the handler(s), user cycles as LEZ metered them |
 |---|---:|---|
 | step 1 | 2,305,240 (execution total: decodes the 26.9 KB SSZ update and a 24.6 KB committee, then everything before the Miller loops) | `Open` 2,125,354–2,182,721, then `JobOpen` 22,694–25,857. The program decodes a 2.9–3.6 KB compact update and checks the non-signers' branches (two per update here) instead of decoding a committee. |
-| step 2 | 4,203,683 (two single Miller loops); the two-pair loop alone: 3,251,802 (phase 8m) | `Miller` 3,306,993–3,311,227 (the two-pair loop since commit 133dde9; 4,142,918–4,147,152 with two loops, measured on an image before that commit and not again) |
+| step 2 | 4,203,683 (two single Miller loops); the two-pair loop alone: 3,251,802 (phase 8m) | `Miller` 3,306,993–3,311,227 (the two-pair loop since commit 95c56e9; 4,142,918–4,147,152 with two loops, measured on an image before that commit and not again) |
 | step 3 | 3,597,597 (final exponentiation, execution total) | `Finish` 3,646,542–3,652,728 (also checks that the stored product is canonical, and encodes the job for `Apply`), then `Apply` 41,986–61,555 and `Record` 15,862 |
 | adoption, 512 keys | 5,685,329 (10b0: 4,562,038 for the keys, plus 3a: 1,123,291 for the committee root) | `Adopt` 3,398,071–3,417,051, twice: 6,806,252–6,826,910 |
 | a whole finality update | 10,369,179 (one execution: saved state and SSZ update decoded, policy, new root) | `VerifyAll` 9,045,235, then `ApplyVerified` 54,228 and `Record` 15,862 |
@@ -373,14 +373,14 @@ payer's alias.
 
 **The real proof was made on the earlier image; the new image's is pending.** The one real proof
 of this path (`harness/src/bin/prove_private.rs`, `RISC0_DEV_MODE=0`, CPU only) proved the
-program image `e7cec90e…` (the image of commit 7dfae96, before the merge) and was settled through
+program image `e7cec90e…` (the image of commit 83b4b55, before the merge) and was settled through
 LEZ's state machine: proven, then settled with the real receipt verified (`Proof::is_valid_for`,
 `validated_state_diff/mod.rs` via `check_privacy_preserving_circuit_proof_is_valid`), and
 applied; afterwards the instance's store equalled the native store and the record was written.
 Its transaction is the one above with the earlier image's id and the account ids derived from
 it. Log: `results/prove-private-e7cec90e.log`. Every figure in this table is the earlier image's:
 
-| earlier image `e7cec90e…`, commit 7dfae96 | |
+| earlier image `e7cec90e…`, commit 83b4b55 | |
 |---|---|
 | proven | the program's `VerifyAll` transition (step 1, Miller loops, final exponentiation, `ApplyVerified`) at a private account's actor, the fee transfer from that account, and LEZ's privacy-preserving circuit over both (`lee::execute_and_prove`, `ProverOpts::succinct()`) |
 | the program's private transition | 9,045,235 user cycles in 10 segments (9,699,328 cycles padded); on the new image the executor counts the same (`results/prove-private-dry-run.log`) |

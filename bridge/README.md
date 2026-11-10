@@ -3,9 +3,9 @@
 Prototype evidence for the Ferrata proposal (Logos RFP-022, privacy-preserving wrapped ERC-20 and ETH
 bridge for LEZ), at **specification v2**: the Rust side of the bridge's commitment scheme, a RISC Zero
 release proof and a claim measurement guest, the LEZ checkpoint encodings, and measurements showing that
-the v2 Ethereum vault (`src/FerrataVault.sol` of [`../vault/`](../vault/) at its v2 commit, `1d61b32`)
+the v2 Ethereum vault (`src/FerrataVault.sol` of [`../vault/`](../vault/) at its v2 commit, `d64845b`)
 accepts the release proof on chain behind RISC Zero's emergency stop. Unaudited prototype. Numbers and
-gaps: [RESULTS.md](RESULTS.md). The v1 code is at commit `104d746`; its vectors, receipts and logs are
+gaps: [RESULTS.md](RESULTS.md). The v1 code is at commit `8f1eb0b`; its vectors, receipts and logs are
 kept under `vectors/v1/` and `artifacts/v1/`.
 
 **Specification.** "SPEC-v2 §x" is [`docs/design/spec/bridge-spec-v2.md`](../docs/design/spec/bridge-spec-v2.md)
@@ -97,7 +97,7 @@ for c in eth erc20 ethpull; do scripts/prove-bench.sh groth16 $c; done   # Groth
 Real: the v2 release guest (image id `0xdda76672…c5`) and its succinct and Groth16 receipts made on this
 machine with r0vm 3.0.5 and RISC Zero's Docker prover; `RiscZeroGroth16Verifier` built from risc0-ethereum
 v3.0.0 `ControlID`, behind the unmodified `RiscZeroVerifierEmergencyStop`; the v2 `FerrataVault` compiled
-unmodified from a pinned read-only export of the vault's v2 (`evm-verify/vendor/vault-v2`; commit `1d61b32`
+unmodified from a pinned read-only export of the vault's v2 (`evm-verify/vendor/vault-v2`; commit `d64845b`
 in the history of `../vault/`, sha256 `3f90645f…`); the vault's own `submitCandidate`, `recordBeacon`, `finalize`,
 `release`, `claimOwed`; the payouts.
 

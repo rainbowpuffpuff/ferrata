@@ -1,4 +1,4 @@
-Copied 2026-11-10T02:36:15+01:00 from spike/ferrata-bridge/vectors (git HEAD 8851c72; these files: )
+Copied 2026-11-10T02:36:15+01:00 from spike/ferrata-bridge/vectors (git HEAD ce93e11; these files: )
 06c54d279cfab3be296b553eeac525bf580b037dd9f3e907cfe086b25dd4ef0d  vectors/keys-config-v2.json
 271e2fc738b06b7953e9f55422946367a44f9b769b4949e0c329b102b29ac0f8  vectors/burn-tree-v2.json
 caaec0d2a01df769fe8b507352463d2a1d00597b192494eccac92b5d2cbea43c  vectors/checkpoint-v2.json

@@ -1,5 +1,5 @@
 # prove_private, dry run on the new image (RISC0_DEV_MODE=1, --allow-dev-mode): NOT A PROOF; the receipt is fake.
-# It tries the commands of the pending real proof (RESULTS.md §3) on the committed tree, HEAD 1b3984e,
+# It tries the commands of the pending real proof (RESULTS.md §3) on the committed tree, HEAD 8474f15,
 # 2026-11-10T09:05:56+01:00: the executor's count of the private transition, --tx-out, and --settle of the written transaction.
 
 $ RISC0_DEV_MODE=1 target/debug/prove_private --allow-dev-mode --tx-out target/stage2-dry-run-tx.borsh

@@ -193,7 +193,7 @@ one-drop-per-nullifier gas drop. Image id `0x141329559d61e2aa260c11b98e822d6fe0c
 
 `evm-verify/`: **21 Foundry tests pass** (journal equality 2, verifier and stop 10, vault end to end 9). The
 vault is compiled unmodified from `evm-verify/vendor/vault-v2/`, a read-only export of the vault's
-branch `v2` at `1d61b32` (now in the history of `../vault/`; `FerrataVault.sol` sha256 `3f90645f…`).
+branch `v2` at `d64845b` (now in the history of `../vault/`; `FerrataVault.sol` sha256 `3f90645f…`).
 
 Wiring, as SPEC-v2 §6 says: the deployer's nonces 0–3 create `RiscZeroGroth16Verifier` (v3.0.0
 `ControlID`), `RiscZeroVerifierEmergencyStop` around it (unmodified, guardian = the vault's freeze authority),
@@ -261,7 +261,7 @@ stop's `EnforcedPause`. The pull-payment release credits `owed[recipient][ETH]`;
   Docker guest builder, which the network allowance of this build did not cover). An immutable vault pins it.
 * **The v1 vault source nearly went unrecorded:** the vault's repository (now `../vault/`) was rewritten
   before I copied it (my first copy turned out to be the in-progress v2 and was deleted). Its history still
-  holds it (commit `a01fcd7`, sha256 `50c3e693…`, the hash v1 recorded), now exported to
+  holds it (commit `c417dc2`, sha256 `50c3e693…`, the hash v1 recorded), now exported to
   `artifacts/v1/vault-source/`.
   v2 is pinned the same way (`evm-verify/vendor/vault-v2`).
 * **No anvil run for v2.** Whole-transaction gas comes from `forge --isolate`, a method v1 reconciled exactly
@@ -314,7 +314,7 @@ outside the recursion step. Phones remain unmeasured.
 
 # v1 results (older, superseded by SPEC-v2)
 
-Everything in this section is about the **v1** encodings, guest and vault (code at commit `104d746`; vectors in `vectors/v1/`, receipts and logs in `artifacts/v1/`). The v1 vault source (sha256 `50c3e693…`) is exported to `artifacts/v1/vault-source/` from the vault's commit `a01fcd7` (in the history of `../vault/`).
+Everything in this section is about the **v1** encodings, guest and vault (code at commit `8f1eb0b`; vectors in `vectors/v1/`, receipts and logs in `artifacts/v1/`). The v1 vault source (sha256 `50c3e693…`) is exported to `artifacts/v1/vault-source/` from the vault's commit `c417dc2` (in the history of `../vault/`).
 
 Every number below comes from a command run in this directory on 9 Nov 2026; the logs are in
 `artifacts/v1/logs/` (each proving log records the machine, `r0vm --version`, the Docker image digest,
@@ -450,7 +450,7 @@ Checked, not assumed:
 ### Part C: on-chain verification, measured
 
 `evm-verify/`: 19 Foundry tests, all pass. `FerrataVault` is compiled unmodified from
-the v1 vault's `src/` (commit `a01fcd7` of `../vault/`) with the vault project's own OpenZeppelin and
+the v1 vault's `src/` (commit `c417dc2` of `../vault/`) with the vault project's own OpenZeppelin and
 compiler settings.
 
 ### Gas

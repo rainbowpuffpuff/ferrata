@@ -14,9 +14,9 @@ that history:
 
 | Version | Commit | Implements |
 |---|---|---|
-| v1 (tag `v1` there) | `a01fcd7` | the first design |
-| v2 (branch `v2` there) | `1d61b32` | SPEC-v2 |
-| v3 (branch `v3` there; this one) | `b631b23` | SPEC-v2 + SPEC-v3-delta |
+| v1 (tag `v1` there) | `c417dc2` | the first design |
+| v2 (branch `v2` there) | `d64845b` | SPEC-v2 |
+| v3 (branch `v3` there; this one) | `2f40b2f` | SPEC-v2 + SPEC-v3-delta |
 
 **Inbound.** Users deposit fixed denominations of ETH or a registered ERC-20, with a hiding commitment to their LEZ
 destination. Each deposit becomes a leaf of a SHA-256 Merkle tree, and its root sits in storage slot 0, where the

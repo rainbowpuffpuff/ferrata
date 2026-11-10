@@ -14,7 +14,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 SRC = ROOT / "crates/ferrata-bridge-core/src"
 
 # (id, file, original snippet, mutated snippet, what it breaks). SPEC-v2 code; the v1 list and its
-# results are in commit 104d746 and artifacts/v1/logs/mutants.log.
+# results are in commit 8f1eb0b and artifacts/v1/logs/mutants.log.
 MUTANTS = [
     # ---- tree.rs
     ("T01", "tree.rs", "    if u64::from(path.directions) != leaf_index {",
