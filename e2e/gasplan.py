@@ -8,13 +8,14 @@ price a contract creation about six times too low. So no gas limit of this run c
   gasplan.py plan <forge log>... --out plan.json
         the transactions of forge's logs (broadcast/<script>/<chain>/[dry-run/]<stage>-latest.json), in order
   gasplan.py run --node URL --state URL --plan plan.json [--margin 1.25] [--out result.json]
-                 [--nonce N] [--beacon-index I --echo-nonce X] [--wait S] [--release-wait S] [--keep]
+                 [--accounts A,B..] [--nonce N] [--beacon-index I --echo-nonce X] [--wait S] [--release-wait S] [--keep]
         plays the planned transactions in order on `--state`, an anvil fork that holds the chain's state (a fresh
         fork of the node before a stage is sent, or the fork of a rehearsal), and before each one asks the node
         `--node` (Sepolia itself) for its gas on that state: eth_estimateGas with the state and the block's time
         as overrides (the node enforces the 2^24 execution cap there: a transaction over it has no estimate), then
         eth_simulateV1 of the transaction alone with its limit, estimate x margin, for the gas it uses. anvil's
-        receipt gives Foundry's gas of the same transaction. Exit 1 if a transaction has no estimate, fails, or
+        receipt gives Foundry's gas of the same transaction. The overrides hold the fork's state of the sender, of
+        the accounts the transactions call or create, and of --accounts (the contracts those call in turn). Exit 1 if a transaction has no estimate, fails, or
         its limit is over the cap. The fork is put back as it was (evm_revert) unless --keep.
         For a replay of a whole rehearsal: --nonce sets the sender's nonce first (the creations then land on the
         addresses the proofs bind), the waits move the fork's clock before the beacon and the releases, and
@@ -188,7 +189,7 @@ def run(node, fork, plan, a):
     fork("anvil_impersonateAccount", sender)
     if a.nonce is not None:
         fork("anvil_setNonce", sender, hex(a.nonce))
-    touched = {sender} | {t["to"] for t in plan if t.get("to")}
+    touched = {sender} | {t["to"] for t in plan if t.get("to")} | {x for x in (a.accounts or "").split(",") if x}
     rows, failures, stage = [], [], None
     try:
         for i, tx in enumerate(plan):
@@ -250,7 +251,8 @@ def run(node, fork, plan, a):
     finally:
         if not a.keep:
             fork("evm_revert", snapshot)
-    return {"node": a.node, "block": int(head["number"], 16), "blockGasLimit": block_gas, "cap": cap,
+    host = a.node.split("://", 1)[-1].split("/", 1)[0].split("?", 1)[0]  # never a key that the path may hold
+    return {"node": host, "block": int(head["number"], 16), "blockGasLimit": block_gas, "cap": cap,
             "executionCap": TX_MAX_GAS, "margin": a.margin, "nodeCalls": node.calls, "transactions": rows,
             "failures": failures}
 
@@ -289,6 +291,7 @@ def main():
     p.add_argument("--margin", type=float, default=1.25)
     p.add_argument("--probe-gas", type=int, default=50_000_000, help="the node's RPC gas cap")
     p.add_argument("--out")
+    p.add_argument("--accounts", help="more accounts whose state the fork holds (the run's contracts), comma-separated")
     p.add_argument("--nonce", type=int)
     p.add_argument("--beacon-index", type=int)
     p.add_argument("--echo-nonce")

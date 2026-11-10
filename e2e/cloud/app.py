@@ -45,7 +45,7 @@ UPSTREAM = "/opt/upstream"  # linked to <repository>/../upstream, where checkpoi
 KEY_DIR = "/root/.ferrata-key"
 HOOKS = "/root/hooks"
 MIRROR_EVERY_S = 20
-RUNNER_TIMEOUT_S = 4 * 3600
+RUNNER_TIMEOUT_S = 6 * 3600  # the run: ~5 min build, two finality waits (~15 min each), W, the GPU queue (up to 2 h)
 CHAIN_ID = "11155111"
 
 # ---- the runner's image: the recipe of the build box (spike/modal-build/box.py), what the driver needs --------
@@ -370,7 +370,9 @@ def runner(run: str, repo: str, mode: str, commit: str) -> dict:
             anvil, block = _start_anvil(r, secret["SEPOLIA_RPC_URL"])
             r.set(fork_block=block)
             deployer = json.load(open(f"{r.rundir}/fixture.json"))["deployer"]
-            env.update(SEPOLIA_RPC_URL="http://127.0.0.1:8545", ETH_FROM=deployer, FERRATA_FORK="1")
+            # the stages run on the fork; their gas is still priced by Sepolia's own node (e2e/gasplan.py)
+            env.update(SEPOLIA_RPC_URL="http://127.0.0.1:8545", ETH_FROM=deployer, FERRATA_FORK="1",
+                       FERRATA_GAS_RPC=secret["SEPOLIA_RPC_URL"])
         else:  # live: the keystore and its password as files of this container only
             missing = [k for k, v in secret.items() if not v]
             if missing:

@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 # The return leg on Sepolia from the first transaction to the last check, unattended and resumable.
 # Start it once; started again after an interruption it reads the chain, sees which stages are
-# complete and continues after the last one. It sends exactly the fifteen transactions of
-# vault/README.md ("Sepolia round trip") in their nonce order and stops with a message at the
-# first thing that is not as planned.
+# complete and continues after the last one. It sends exactly the transactions of vault/README.md
+# ("Sepolia round trip") in their nonce order and stops with a message at the first thing that is not
+# as planned. Every gas limit is the node's estimate with a margin, and a stage whose transactions the
+# node cannot price within the caps sends nothing (vault/script/roundtrip.sh, e2e/gasplan.py).
 #
 #   e2e/sepolia-live.sh [run]          the run directory under e2e/runs/ (default sepolia-live)
 #
-# Stages: pre-flight, deploy (10 transactions), submit (1), the vault's wait, beacon (1), the
+# Stages: pre-flight, deploy (8 transactions), one stage per deposit (1 each; after a deposit whose root
+# LEZ attests, the wait for its block's finality and the capture of what LEZ needs), submit (1), the
+# vault's wait, beacon (1), the
 # finalisation proof for that beacon (inputs, GPU proof, the two wrap steps, fixture), finalize (1),
 # the release delay, release (2), vault/script/verify-sepolia.sh. Everything it prints also goes
 # to <run>/sepolia-live.log; completed stages are listed in <run>/stages.done.
@@ -31,8 +34,15 @@
 #   FERRATA_FORK=1                            a rehearsal on a local fork (anvil): the sender is
 #                                             impersonated, no key is read, and the two waits are passed
 #                                             by moving the fork's clock
-#   FERRATA_HALT_AFTER=<stage>                stop cleanly after deploy, submit, beacon, proof, finalize or
-#                                             release (to do the rest later, or by hand)
+#   FERRATA_HALT_AFTER=<stage>                stop cleanly after deploy, depositN, captureN, submit, beacon,
+#                                             proof, finalize or release (to do the rest later, or by hand)
+#   FERRATA_GAS_RPC, FERRATA_GAS_MARGIN_PCT   the node that prices the transactions and the margin (125 %)
+#                                             (vault/script/roundtrip.sh)
+#   FERRATA_ATTEST_DEPOSITS                   the deposits whose root LEZ attests (default "0 1"): after
+#                                             each, the run waits for its block's finality and captures
+#                                             into <run>/attest/depositN/ what LEZ needs (the latest finality
+#                                             update, the vault's slots 0-2 proven at its block, the deposit
+#                                             logs) with FERRATA_CAPTURE_CMD; on a fork nothing is captured
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 repo="$(cd "$here/.." && pwd)"
@@ -72,6 +82,14 @@ vault="$(jq -r .vault "$fixture")"
 state="$(jq -r .newState "$fixture")"
 first="$(jq -r '.first_nonce // 0' "$run/params.json")"
 releases="$(jq -r .releaseCount "$fixture")"
+deposits="$(jq -r .depositCount "$fixture")"
+# Nonce offsets from the first: deploy 8 (vault/script/RoundTrip.s.sol deploy()), one per deposit, then the
+# candidate, the beacon, the finalisation and the releases.
+n_deploy=8
+o_submit=$((n_deploy + deposits)); o_beacon=$((o_submit + 1)); o_final=$((o_submit + 2)); o_rel=$((o_submit + 3))
+total=$((o_rel + releases))
+attest="${FERRATA_ATTEST_DEPOSITS-0 1}"
+capture_cmd="${FERRATA_CAPTURE_CMD:-python3 $repo/lez/scripts/fetch-attest-fixture.py --network sepolia --storage {vault}:0,1,2 --deposits {vault}:{from_block} {out}}"
 call() { cast call "$vault" "$@" "${rpc[@]}"; }
 word() { awk 'NR==1 {print $1}'; }
 nonce() { cast nonce "$ETH_FROM" "${rpc[@]}"; }
@@ -95,6 +113,30 @@ tx() { (cd "$repo/vault" && script/roundtrip.sh "$@"); }
 recorded() { # make sure a stage that is on chain is also in the manifest
   jq -e --arg s "$1" '.stages[$s]' "$manifest" > /dev/null 2>&1 || tx record "$1" > /dev/null ||
     die "stage $1 is on chain but not in the manifest, and forge's broadcast log for it is missing"
+}
+capture() { # deposit $1's block finalized, then what LEZ needs to attest the vault's root, into $run/attest/deposit$1
+  local i="$1" dir="$run/attest/deposit$1" block from cmd
+  [ -f "$dir/SHA256SUMS" ] && return 0
+  if [ "${FERRATA_FORK:-}" = 1 ]; then say "capture $i: skipped on a fork (its vault is not on Sepolia)"; return 0; fi
+  block=$(($(jq -r --arg s "deposit$i" '.stages[$s][-1].blockNumber' "$manifest")))
+  from=$(($(jq -r '.stages.deploy[] | select(.contractAddress != null) | .blockNumber' "$manifest" | tail -n 1)))
+  say "capture $i: waiting for block $block (deposit $i) to be finalized"
+  until [ "$(cast block finalized --field number "${rpc[@]}" 2> /dev/null || echo 0)" -ge "$block" ]; do sleep 30; done
+  mkdir -p "$run/attest"
+  cmd="${capture_cmd//\{vault\}/$vault}"; cmd="${cmd//\{from_block\}/$from}"; cmd="${cmd//\{out\}/$dir.part}"
+  for attempt in 1 2 3 4 5 6; do
+    rm -rf "$dir.part"
+    say "capture $i: $cmd"
+    if (cd "$repo" && $cmd) > "$run/attest/deposit$i.log" 2>&1 && [ -f "$dir.part/SHA256SUMS" ]; then
+      mv "$dir.part" "$dir"
+      say "capture $i: $(grep -m1 -E 'finalized slot' "$run/attest/deposit$i.log" || echo done)"
+      return 0
+    fi
+    tail -n 5 "$run/attest/deposit$i.log"
+    say "capture $i: attempt $attempt failed; the next finality update in about 6 minutes"
+    sleep 400
+  done
+  die "capture $i failed six times: see $run/attest/deposit$i.log"
 }
 pass_time() { # until the chain's clock reaches $1
   local left; left=$(($1 - $(now)))
@@ -131,7 +173,10 @@ done
 balance="$(cast balance "$ETH_FROM" "${rpc[@]}")"
 say "run $name on chain $chain: sender $ETH_FROM, nonce $(nonce) (first planned $first), balance $(cast from-wei "$balance") ETH, vault $vault"
 [ "$(nonce)" -ge "$first" ] || die "the sender's nonce is below the fixture's first nonce"
-[ "$(nonce)" -le "$((first + 15))" ] || die "the sender has sent more transactions than this run has"
+[ "$(nonce)" -le "$((first + total))" ] || die "the sender has sent more transactions than this run has ($total)"
+gas_price="$(cast gas-price "${rpc[@]}")"
+say "gas price $gas_price wei; the plan's ~65M gas (Sepolia's own estimates, vault/GAS.md) at twice that price: $(cast from-wei $((65000000 * 2 * gas_price))) ETH"
+[ "$balance" -ge $((65000000 * 2 * gas_price)) ] || die "the sender cannot pay ~65M gas at twice the gas price of now"
 if ! finalised; then # what the finalisation proof needs, checked before the first transaction and not after the wait
   for f in release.bin checkpoint.bin segment.bin; do
     [ -f "$here/programs/$f" ] || die "e2e/programs/$f is missing: the recorded guest programs (e2e/README.md)"
@@ -155,33 +200,48 @@ if ! finalised; then # what the finalisation proof needs, checked before the fir
   fi
 fi
 
-# ---- deploy: nonces first .. first+9 ---------------------------------------------------------------------
-if deployed && [ "$(nonce)" -ge "$((first + 10))" ]; then
+# ---- deploy: nonces first .. first+7 ---------------------------------------------------------------------
+if deployed && [ "$(nonce)" -ge "$((first + n_deploy))" ]; then
   recorded deploy
 elif [ "$(nonce)" = "$first" ]; then
   [ "$balance" -ge 10000000000000000 ] || die "the sender holds less than 0.01 ETH"
   # Nothing of this run is on chain yet, so any forge log for this chain id is another run's (a rehearsal
   # on a fork has the same chain id): remove them, so that a later resume or record reads only this run's.
   rm -f "$repo/vault/broadcast/RoundTrip.s.sol/$chain/"*-latest.json
-  say "deploy: 10 transactions"
+  say "deploy: $n_deploy transactions"
   tx deploy || die "the deploy stage failed"
 elif [ -f "$repo/vault/broadcast/RoundTrip.s.sol/$chain/deploy-latest.json" ]; then
-  say "deploy: $(($(nonce) - first)) of 10 transactions are on chain; sending the rest of the recorded ones"
+  say "deploy: $(($(nonce) - first)) of $n_deploy transactions are on chain; sending the rest of the recorded ones"
   (export FERRATA_RESUME=1; tx deploy) || die "resuming the deploy stage failed"
 else
   die "the sender's nonce is $(nonce): the deploy stage is half done and forge's record of it is missing"
 fi
-deployed && [ "$(nonce)" -ge "$((first + 10))" ] || die "after deploy the vault has no code or the nonce is $(nonce)"
-[ "$(call 'depositRoot()(bytes32)')" = "$(jq -r .depositRoot "$fixture")" ] || die "the vault's deposit root is not the fixture's"
+deployed && [ "$(nonce)" -ge "$((first + n_deploy))" ] || die "after deploy the vault has no code or the nonce is $(nonce)"
 [ "$(call 'checkpointImageId()(bytes32)')" = "$(jq -r .checkpointImageId "$fixture")" ] || die "the vault's checkpoint image id is not the fixture's"
+[ "$(call 'storedLezConfigId()(bytes32)')" = "$(jq -r .lezConfigId "$fixture")" ] || die "the vault's LEZ configuration id is not the fixture's"
 mark deploy
 
-# ---- submit: nonce first+10 --------------------------------------------------------------------------
+# ---- the deposits: nonces first+8 .., each its own stage; LEZ attests the root after those of $attest -----
+for i in $(seq 0 $((deposits - 1))); do
+  if [ "$(call 'nextLeafIndex()(uint64)' | word)" -gt "$i" ]; then
+    recorded "deposit$i"
+  else
+    expect_nonce $((n_deploy + i)) "deposit $i"
+    say "deposit $i: $(jq -r ".deposits[$i] | \"\(.amount) of \(.token)\"" "$fixture") at leaf $i"
+    tx "deposit$i" || die "the deposit$i stage failed"
+    [ "$(call 'nextLeafIndex()(uint64)' | word)" -gt "$i" ] || die "deposit $i is not in the vault after its stage"
+  fi
+  mark "deposit$i"
+  case " $attest " in *" $i "*) capture "$i"; mark "capture$i" ;; esac
+done
+[ "$(call 'depositRoot()(bytes32)')" = "$(jq -r .depositRoot "$fixture")" ] || die "the vault's deposit root is not the fixture's"
+
+# ---- submit ------------------------------------------------------------------------------------------
 read -r t submitted delta <<< "$(candidate)"
 if finalised || [ "${submitted:-0}" != 0 ]; then
   recorded submit
 else
-  expect_nonce 10 "the candidate"
+  expect_nonce "$o_submit" "the candidate"
   say "submit: the candidate, with its real seal"
   tx submit || die "the submit stage failed"
   read -r t submitted delta <<< "$(candidate)"
@@ -189,7 +249,7 @@ else
 fi
 mark submit
 
-# ---- the wait, then the beacon: nonce first+11 ---------------------------------------------------------
+# ---- the wait, then the beacon ---------------------------------------------------------------------------
 if ! finalised; then
   over=$((submitted + delta + (t - 1) * $(call 'turnSeconds()(uint256)' | word)))
   have=""
@@ -200,10 +260,10 @@ if ! finalised; then
     recorded beacon
   else
     pass_time "$over" "the candidate's wait W"
-    if [ "$(nonce)" = "$((first + 12))" ]; then
+    if [ "$(nonce)" = "$((first + o_beacon + 1))" ]; then
       tx record beacon > /dev/null || die "a beacon transaction is on chain but forge's record of it is missing"
     else
-      expect_nonce 11 "the beacon"
+      expect_nonce "$o_beacon" "the beacon"
       say "beacon: recordBeacon"
       tx beacon || die "the beacon stage failed"
     fi
@@ -277,8 +337,8 @@ if ! finalised; then
   fi
   mark proof
 
-  # ---- finalize: nonce first+12 ------------------------------------------------------------------------
-  expect_nonce 12 "the finalisation"
+  # ---- finalize ----------------------------------------------------------------------------------------
+  expect_nonce "$o_final" "the finalisation"
   say "finalize: with the seal that echoes the beacon"
   # recordBeacon is open to anyone: name the beacon the proof echoes, which need not be the latest by now.
   beacon_index="$(jq -er .index "$run/beacon.json")" || die "beacon.json does not say which of the vault's beacons it is"
@@ -289,7 +349,7 @@ else
 fi
 mark finalize
 
-# ---- the release delay, then the releases: nonces first+13 .. ---------------------------------------------
+# ---- the release delay, then the releases ---------------------------------------------------------------
 pending=0
 delay=0
 for i in $(seq 0 $((releases - 1))); do
@@ -300,7 +360,7 @@ done
 if [ "$pending" -gt 0 ]; then
   finalized_at="$(call 'burnRootStatus(bytes32)(bool,uint256)' "$(jq -r .burnRoot "$fixture")" | sed -n 2p | awk '{print $1}')"
   pass_time "$((finalized_at + delay))" "the release delay"
-  expect_nonce "$((13 + releases - pending))" "the releases"
+  expect_nonce "$((o_rel + releases - pending))" "the releases"
   if [ "$pending" -lt "$releases" ] && [ -f "$repo/vault/broadcast/RoundTrip.s.sol/$chain/release-latest.json" ]; then
     say "release: $((releases - pending)) of $releases are paid; sending the rest of the recorded ones"
     (export FERRATA_RESUME=1; tx release) || die "resuming the release stage failed"

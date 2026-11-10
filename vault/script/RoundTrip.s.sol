@@ -16,7 +16,10 @@ import {TestToken} from "./TestToken.sol";
 ///         ../e2e/runs/sepolia/fixture.json): the addresses the proofs bind, the journals and the seals.
 ///
 ///         deploy()    the sender's next four creations: RISC Zero's Groth16 verifier, its emergency stop, a test
-///                     token, the vault; then both registrations and both deposits
+///                     token, the vault; then both registrations, and the test token minted and approved for the
+///                     fixture's token deposits (eight transactions)
+///         depositN()  the fixture's deposit N (`.deposits[N]`) at leaf N, one transaction each: the run lets LEZ
+///                     attest the vault's root after a deposit before it sends the next
 ///         submit()    submitCandidate with the candidate's real seal
 ///         beacon()    recordBeacon, once the candidate's wait has passed
 ///         finalize()  finalize with the seal that echoes that beacon (proven after it)
@@ -45,6 +48,10 @@ contract RoundTrip is Script {
 
     function _unlimited() internal pure returns (FerrataVault.CapParams memory) {
         return FerrataVault.CapParams({capacity: UNLIMITED, refillPerSecond: 0});
+    }
+
+    function _denominations(address token) internal pure returns (uint256[] memory) {
+        return token == ETH ? _three(0.001 ether, 0.01 ether, 0.1 ether) : _three(100e6, 1000e6, 10_000e6);
     }
 
     function _params(uint256[] memory denoms, uint256[] memory fees, uint256 lezUnit, uint256 unitWeight)
@@ -112,19 +119,57 @@ contract RoundTrip is Script {
         require(address(token) == vm.parseJsonAddress(json, ".token"), "token address");
         require(address(created) == address(vault), "vault address: the sender's nonce is not the fixture's");
 
+        created.registerToken(ETH, _params(_denominations(ETH), _three(2e12, 2e13, 2e14), 1e12, 3000));
         created.registerToken(
-            ETH, _params(_three(0.001 ether, 0.01 ether, 0.1 ether), _three(2e12, 2e13, 2e14), 1e12, 3000)
+            address(token), _params(_denominations(address(token)), _three(250_000, 2_500_000, 25_000_000), 1, 1)
         );
-        created.registerToken(
-            address(token), _params(_three(100e6, 1000e6, 10_000e6), _three(250_000, 2_500_000, 25_000_000), 1, 1)
-        );
-        token.mint(sender, 100e6);
-        token.approve(address(created), 100e6);
-        created.depositETH{value: 0.001 ether}(0, vm.parseJsonBytes32(json, ".deposits[0].commitment"), 0);
-        created.deposit(address(token), 0, vm.parseJsonBytes32(json, ".deposits[1].commitment"), 1);
+        uint256 tokens = 0;
+        for (uint256 i = 0; i < vm.parseJsonUint(json, ".depositCount"); i++) {
+            if (vm.parseJsonAddress(json, string.concat(".deposits[", vm.toString(i), "].token")) == address(token)) {
+                tokens += _amount(i);
+            }
+        }
+        token.mint(sender, tokens);
+        token.approve(address(created), tokens);
         vm.stopBroadcast();
-        require(created.depositRoot() == vm.parseJsonBytes32(json, ".depositRoot"), "deposit root");
         console2.log("vault", address(created));
+    }
+
+    function _amount(uint256 i) internal view returns (uint256) {
+        return uint256(vm.parseJsonBytes32(json, string.concat(".deposits[", vm.toString(i), "].amount")));
+    }
+
+    function deposit0() external {
+        _deposit(0);
+    }
+
+    function deposit1() external {
+        _deposit(1);
+    }
+
+    function deposit2() external {
+        _deposit(2);
+    }
+
+    /// @dev Deposit i at leaf i, with the denomination index its amount selects; nothing if leaf i exists already.
+    function _deposit(uint256 i) internal {
+        uint256 count = vm.parseJsonUint(json, ".depositCount");
+        require(i < count, "the fixture has no such deposit");
+        if (vault.nextLeafIndex() > i) return;
+        require(vault.nextLeafIndex() == i, "an earlier deposit of the fixture is missing");
+        address token = vm.parseJsonAddress(json, string.concat(".deposits[", vm.toString(i), "].token"));
+        uint256 amount = _amount(i);
+        bytes32 commitment = vm.parseJsonBytes32(json, string.concat(".deposits[", vm.toString(i), "].commitment"));
+        uint256[] memory denoms = _denominations(token);
+        uint8 denom = type(uint8).max;
+        for (uint8 k = 0; k < denoms.length; k++) {
+            if (denoms[k] == amount) denom = k;
+        }
+        require(denom != type(uint8).max, "the deposit's amount is no denomination");
+        vm.broadcast();
+        if (token == ETH) vault.depositETH{value: amount}(denom, commitment, uint64(i));
+        else vault.deposit(token, denom, commitment, uint64(i));
+        if (i + 1 == count) require(vault.depositRoot() == vm.parseJsonBytes32(json, ".depositRoot"), "deposit root");
     }
 
     function _checkpoint(string memory key) internal view returns (FerrataVault.Checkpoint memory c) {
