@@ -339,20 +339,37 @@ New in v3:
 - **Real proofs in one run only.** `test/real/` verifies real Groth16 proofs of both programs and measures their
   gas (GAS.md); every other test mocks the verifier. Those proofs are about a stand-in zone built with test keys.
 
-## Sepolia round trip (rehearsed end to end on a local fork; not broadcast)
+## Sepolia round trip (rehearsed end to end on forks; the first attempt ran out of gas)
 
 `script/RoundTrip.s.sol` and `script/roundtrip.sh` run the return leg on Sepolia in stages:
-RISC Zero's Groth16 verifier, its emergency stop, a test token and the vault are created, both
-assets are registered and deposited, the candidate is submitted with its real seal, the beacon is
-recorded after the wait, the finalisation is proven for that beacon and submitted, and both releases
-are paid. `script/verify-sepolia.sh` re-checks the manifest against any endpoint.
+RISC Zero's Groth16 verifier, its emergency stop, a test token and the vault are created and both
+assets registered; the deposits follow one stage each (after each of the two that LEZ claims, the run
+waits for the deposit's block to be finalized and captures what LEZ needs to attest the vault's root);
+the candidate is submitted with its real seal, the beacon is recorded after the wait, the finalisation
+is proven for that beacon and submitted, and both releases are paid. `script/verify-sepolia.sh`
+re-checks the manifest against any endpoint.
+
+**Gas: the node's, never Foundry's.** Sepolia runs Glamsterdam since 6 October 2026, whose state gas
+(EIP-8037: 1,530 gas per byte of new code, per new account and per new storage slot) Foundry's EVM does
+not price. The first attempt (10 November, [`../e2e/runs/sepolia-live/`](../e2e/runs/sepolia-live/README.md))
+sent the verifier's creation with forge's limit of 1,533,981 and ran out of gas; the node asks 7,795,331.
+Now every gas limit is the node's own `eth_estimateGas`, taken by forge right before the transaction is
+signed (`forge script --skip-simulation --gas-estimate-multiplier 125`, with `--slow`: after the previous
+receipt), times 1.25. Before a stage sends anything, [`../e2e/gasplan.py`](../e2e/gasplan.py) plays it on
+a fork and has the node price each of its transactions on that state (`eth_estimateGas` with the fork's
+state and the block's time as overrides; the node refuses an estimate when execution gas is over the 2^24
+cap); a transaction without an estimate, or whose limit is over the block's gas limit, stops the stage with
+nothing sent (`gas/<stage>.json` in the run directory is the record). The vault's creation needs 38.5M:
+over 2^24, and valid, because the cap binds execution gas only (GAS.md, "On Sepolia since Glamsterdam").
 
 **The proofs bind the deployment.** Both journals carry the chain id and the vault address, and
 `lezConfigId` commits to them too, so a proof made for one vault is worthless for another. The vault's
 address is the sender's plain CREATE address (SPEC-v3 D2), so the fixture is made for one sender and
-one nonce: `e2e/runs/sepolia/` is for `0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07` from nonce 0
-(verifier, stop, token and vault at nonces 0 to 3). `deploy` stops before it broadcasts anything if the
-sender or its nonce would put a contract anywhere else. For another sender, make a new run
+one nonce: [`../e2e/runs/sepolia-live-2/`](../e2e/runs/sepolia-live-2/README.md) is for
+`0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07` from nonce 1 (verifier, stop, token and vault at nonces 1 to 4;
+the vault `0xd0B5fcC0B47D8E6f514f9D246Bb0b416b2048AF7`), and its `lezConfigId` is the configuration id of the
+LEZ deployment that will claim its deposits (the inbound plan, recorded in `lez-inputs.json`). `deploy` stops
+before it broadcasts anything if the sender or its nonce would put a contract anywhere else. For another sender, make a new run
 (`e2e/run.sh params <run> 11155111 <sender> <nonce>`, then every step of `e2e/README.md`); the address
 is known before deployment, so the candidate and the releases can be proven first.
 
@@ -367,15 +384,17 @@ lists them: the endpoint, the sender, the paths of the keystore file and of its 
 the GPU app):
 
 ```sh
-e2e/sepolia-live.sh          # about 55 min plus the queue for a GPU; ends with ALL CHECKS PASSED and a DONE line
+e2e/sepolia-live.sh          # about 1 h 40 min plus the queue for a GPU; ends with ALL CHECKS PASSED and a DONE line
 ```
 
 Before the first transaction it checks the chain id, the sender's nonce and balance, and that what the
 finalisation proof will need forty minutes later is at hand (the recorded guest programs, the GPU app's profile,
-the build wrapper or cargo and r0vm, the prover image's wrapper or Docker). It then sends the fifteen
-transactions in their nonce order (each stage simulated by forge first), sleeps through the vault's wait and the
-release delay, builds and proves the finalisation for the beacon it recorded, and runs `verify-sepolia.sh`.
-Everything it prints also goes to `e2e/runs/sepolia-live/sepolia-live.log`. To run it with the laptop switched
+the build wrapper or cargo and r0vm, the prover image's wrapper or Docker), and that the sender can pay 65M gas
+at twice the gas price of the moment. It then sends the sixteen transactions in their nonce order, each stage
+priced by the node first, waits for the finality of each deposit LEZ attests and captures it
+(`lez-capture-1/`, `lez-capture-2/`), sleeps through the vault's wait and the release delay, builds and proves
+the finalisation for the beacon it recorded, and runs `verify-sepolia.sh`. Everything it prints also goes to
+`e2e/runs/sepolia-live-2/sepolia-live.log`. To run it with the laptop switched
 off, [`../e2e/sepolia-cloud.sh`](../e2e/sepolia-cloud.sh) runs the same script in the cloud (`e2e/README.md`,
 "Running it in the cloud").
 
@@ -393,23 +412,29 @@ has moved, and sends nothing after that.
 export SEPOLIA_RPC_URL=<endpoint>
 export ETH_FROM=0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07
 export ETH_KEYSTORE=<keystore file> ETH_PASSWORD=<file holding its password>   # or ETH_KEYSTORE_ACCOUNT=<name>
-export FERRATA_FIXTURE=$PWD/../e2e/runs/sepolia-live/fixture.json   # the prepared run: ../e2e/runs/sepolia without
-                                                                    # its finalisation, which is proven after the beacon
+export FERRATA_FIXTURE=$PWD/../e2e/runs/sepolia-live-2/fixture.json   # the prepared run, without its finalisation,
+                                                                      # which is proven after the beacon
 
-script/roundtrip.sh status       # the vault is not deployed; the sender's nonce must be 0
-script/roundtrip.sh deploy       # 10 transactions: 4 creations, 2 registrations, mint, approve, 2 deposits
-script/roundtrip.sh submit       # 1 transaction: the candidate, with its real seal
+script/roundtrip.sh status       # the vault is not deployed; the sender's nonce must be 1
+script/roundtrip.sh deploy       # nonces 1-8: 4 creations, 2 registrations, mint, approve
+script/roundtrip.sh deposit0     # nonce 9: 0.001 ETH to LEZ's public test account 0
+#   wait until its block is finalized (cast block finalized), then capture for LEZ (the driver's capture()):
+#     lez/scripts/fetch-attest-fixture.py --network sepolia --storage <vault>:0=depositRoot(),1=nextLeafIndex(),
+#       2=storedLezConfigId() --deposits <vault>:<block of the vault's creation> --updates-from 1410 <run>/lez-capture-1
+script/roundtrip.sh deposit1     # nonce 10: 0.001 ETH to LEZ's private test account 0; wait, capture lez-capture-2
+script/roundtrip.sh deposit2     # nonce 11: 100 test tokens (leaf 2; it funds the ERC-20 release; LEZ never sees it)
+script/roundtrip.sh submit       # nonce 12: the candidate, with its real seal
 #   wait W = FERRATA_DELTA + (t - 1) x turnSeconds = 600 s + 2 x 900 s = 40 min   (`status` counts down)
-script/roundtrip.sh beacon       # 1 transaction; writes beacon.json beside the fixture
+script/roundtrip.sh beacon       # nonce 13; writes beacon.json beside the fixture
 #   prove the finalisation for that beacon, from the repository root (e2e/README.md, "Steps"):
-#     e2e/run.sh inputs sepolia-live && e2e/run.sh stage-gpu sepolia-live
-#     the GPU proof of cp-e2e-finalize -> e2e/runs/sepolia-live/receipts/cp-e2e-finalize/receipt-succinct.bin
-#     e2e/run.sh p254 sepolia-live cp-e2e-finalize; the prover image; e2e/run.sh groth16 sepolia-live cp-e2e-finalize
-#     e2e/run.sh fixture sepolia-live
-script/roundtrip.sh finalize     # 1 transaction: the finalisation, with the new seal
+#     e2e/run.sh inputs sepolia-live-2 && e2e/run.sh stage-gpu sepolia-live-2
+#     the GPU proof of cp-e2e-finalize -> e2e/runs/sepolia-live-2/receipts/cp-e2e-finalize/receipt-succinct.bin
+#     e2e/run.sh p254 sepolia-live-2 cp-e2e-finalize; the prover image; e2e/run.sh groth16 sepolia-live-2 cp-e2e-finalize
+#     e2e/run.sh fixture sepolia-live-2
+script/roundtrip.sh finalize     # nonce 14: the finalisation, with the new seal
 #   wait the release delay: FERRATA_RELEASE_DELAY = 120 s
-script/roundtrip.sh release      # 2 transactions: ETH to a fresh recipient, the token with a relayer's fee
-script/verify-sepolia.sh ../e2e/runs/sepolia-live/manifest.json
+script/roundtrip.sh release      # nonces 15-16: ETH to a fresh recipient, the token with a relayer's fee
+script/verify-sepolia.sh ../e2e/runs/sepolia-live-2/manifest.json
 ```
 
 The key never appears on a command line: forge reads the keystore file and the password file from
