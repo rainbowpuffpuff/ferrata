@@ -2,18 +2,18 @@ Stage 3: a private consumer reads header(id, slot), image undisclosed
 
 Decoded public fields (harness::private::describe_public_outputs):
 
-public_context.actors (2): ferrata@3wPjVqygcgTufKBsDpNBRJ5eKoXCoSxg1UZJRBQabyrF, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq
+public_context.actors (2): native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@9xq6bB9mVU9PcSbkerXw2tz2j6fUi5LsgcFCPJ86Vciv
 public_context.authorized_accounts: {}
 execution.public_root: None
 execution.boundary (6 steps):
-  - PrivateToPublic from consumer@AodAGCgEG5tEZ9G66zav6VgeBX9hfvyxnimA6U3L6j1C to ferrata@3wPjVqygcgTufKBsDpNBRJ5eKoXCoSxg1UZJRBQabyrF: Read (1 bytes)
-  - PublicToPrivate from ferrata@3wPjVqygcgTufKBsDpNBRJ5eKoXCoSxg1UZJRBQabyrF to consumer@AodAGCgEG5tEZ9G66zav6VgeBX9hfvyxnimA6U3L6j1C: StateReply { state: 293 bytes } (297 bytes)
+  - PrivateToPublic from consumer@AodAGCgEG5tEZ9G66zav6VgeBX9hfvyxnimA6U3L6j1C to ferrata@9xq6bB9mVU9PcSbkerXw2tz2j6fUi5LsgcFCPJ86Vciv: Read (1 bytes)
+  - PublicToPrivate from ferrata@9xq6bB9mVU9PcSbkerXw2tz2j6fUi5LsgcFCPJ86Vciv to consumer@AodAGCgEG5tEZ9G66zav6VgeBX9hfvyxnimA6U3L6j1C: StateReply { state: 293 bytes } (297 bytes)
   - EndPrivateSubtree
   - EndPublicSubtree
   - PrivateToPublic from native@AodAGCgEG5tEZ9G66zav6VgeBX9hfvyxnimA6U3L6j1C to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
   - EndPublicSubtree
 execution.program_image_claims (1):
-  - Undisclosed { commitment root: 25ab284f9fe7142feaeb0d5054840d30796cdc3b29294a0d7ae3150f124515c3 }
+  - Undisclosed { commitment root: c0c485f792dc61648b658b160d18b68d2d816ab976b685ae3d66b492b18bc341 }
 execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1612 bytes)
 execution.async_messages: 0
 execution.recovery_bindings: 0

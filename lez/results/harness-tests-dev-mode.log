@@ -1,0 +1,291 @@
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 3 tests
+test every_code_lies_in_a_block_of_its_owner ... ok
+test the_blocks_do_not_overlap ... ok
+test the_tables_name_every_core_code ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 2 tests
+test a_private_consumer_calling_the_program_publishes_its_query ... Stage 3: the same consumer calls the program with its query (Attest)
+
+Decoded public fields (harness::private::describe_public_outputs):
+
+public_context.actors (2): native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@9xq6bB9mVU9PcSbkerXw2tz2j6fUi5LsgcFCPJ86Vciv
+public_context.authorized_accounts: {}
+execution.public_root: None
+execution.boundary (6 steps):
+  - PrivateToPublic from consumer@DYMXat67yG3gSP7GFoRaTUEHduv3mLWBRr5UousHBSho to ferrata@9xq6bB9mVU9PcSbkerXw2tz2j6fUi5LsgcFCPJ86Vciv: Attest { query: 0x73746f72616765283078303030303030303032313961623534303335366342423833394362653035333033643737303546612c20736c6f74203729203d206465706f736974202334323432 } (80 bytes)
+  - PublicToPrivate from ferrata@9xq6bB9mVU9PcSbkerXw2tz2j6fUi5LsgcFCPJ86Vciv to consumer@DYMXat67yG3gSP7GFoRaTUEHduv3mLWBRr5UousHBSho: StateReply { state: 293 bytes } (297 bytes)
+  - EndPrivateSubtree
+  - EndPublicSubtree
+  - PrivateToPublic from native@DYMXat67yG3gSP7GFoRaTUEHduv3mLWBRr5UousHBSho to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
+  - EndPublicSubtree
+execution.program_image_claims (1):
+  - Disclosed { program: consumer, image_id: aec03bcd8eedf5ff1fe14673be82d21ae1c8f95954fb0b9c4db7066d538e932a }
+execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1533 bytes)
+execution.async_messages: 0
+execution.recovery_bindings: 0
+execution.validity: ValidityWindows { blocks: ValidityWindow { from: None, to: None }, timestamps: ValidityWindow { from: None, to: None } }
+execution.fee: Some("refund_to Some(78Skt7EQTvVwfWVYnA1XMjghv3aUR1V5wgQAfVLKJZG5), fallback true")
+nonces: 0, admission evidence: 0
+
+The 8567 serialized bytes of the transaction were searched for the consumer's private inputs:
+- the query (75 bytes): FOUND
+- the account id the consumer acts for (32 bytes): absent
+- the authorization secret key (32 bytes): absent
+- the nullifier secret key (32 bytes): absent
+- the nullifier public key (32 bytes): absent
+- the viewing public key (its first 32 of 1,184 bytes) (32 bytes): absent
+- the viewing key seed d (32 bytes): absent
+- the viewing key seed z (32 bytes): absent
+
+Charged: execution gas 421,475 (PRIVATE_VERIFY_GAS 409,764 + public part 11,711 cycles), storage gas 224,063.
+
+ok
+test a_private_consumer_reads_a_record ... Stage 3: a private consumer reads header(id, slot), image disclosed
+
+Decoded public fields (harness::private::describe_public_outputs):
+
+public_context.actors (2): native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@9xq6bB9mVU9PcSbkerXw2tz2j6fUi5LsgcFCPJ86Vciv
+public_context.authorized_accounts: {}
+execution.public_root: None
+execution.boundary (6 steps):
+  - PrivateToPublic from consumer@61yQrZPL8iZ8NbnqXkUEs1JR6DiuSkX3bWxdZSjYSWEu to ferrata@9xq6bB9mVU9PcSbkerXw2tz2j6fUi5LsgcFCPJ86Vciv: Read (1 bytes)
+  - PublicToPrivate from ferrata@9xq6bB9mVU9PcSbkerXw2tz2j6fUi5LsgcFCPJ86Vciv to consumer@61yQrZPL8iZ8NbnqXkUEs1JR6DiuSkX3bWxdZSjYSWEu: StateReply { state: 293 bytes } (297 bytes)
+  - EndPrivateSubtree
+  - EndPublicSubtree
+  - PrivateToPublic from native@61yQrZPL8iZ8NbnqXkUEs1JR6DiuSkX3bWxdZSjYSWEu to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
+  - EndPublicSubtree
+execution.program_image_claims (1):
+  - Disclosed { program: consumer, image_id: aec03bcd8eedf5ff1fe14673be82d21ae1c8f95954fb0b9c4db7066d538e932a }
+execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1612 bytes)
+execution.async_messages: 0
+execution.recovery_bindings: 0
+execution.validity: ValidityWindows { blocks: ValidityWindow { from: None, to: None }, timestamps: ValidityWindow { from: None, to: None } }
+execution.fee: Some("refund_to Some(78Skt7EQTvVwfWVYnA1XMjghv3aUR1V5wgQAfVLKJZG5), fallback true")
+nonces: 0, admission evidence: 0
+
+The 8567 serialized bytes of the transaction were searched for the consumer's private inputs:
+- the query (75 bytes): absent
+- the account id the consumer acts for (32 bytes): absent
+- the authorization secret key (32 bytes): absent
+- the nullifier secret key (32 bytes): absent
+- the nullifier public key (32 bytes): absent
+- the viewing public key (its first 32 of 1,184 bytes) (32 bytes): absent
+- the viewing key seed d (32 bytes): absent
+- the viewing key seed z (32 bytes): absent
+
+Charged: execution gas 421,020 (PRIVATE_VERIFY_GAS 409,764 + public part 11,256 cycles), storage gas 224,063.
+
+Stage 3: a private consumer reads header(id, slot), image undisclosed
+
+Decoded public fields (harness::private::describe_public_outputs):
+
+public_context.actors (2): native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@9xq6bB9mVU9PcSbkerXw2tz2j6fUi5LsgcFCPJ86Vciv
+public_context.authorized_accounts: {}
+execution.public_root: None
+execution.boundary (6 steps):
+  - PrivateToPublic from consumer@AodAGCgEG5tEZ9G66zav6VgeBX9hfvyxnimA6U3L6j1C to ferrata@9xq6bB9mVU9PcSbkerXw2tz2j6fUi5LsgcFCPJ86Vciv: Read (1 bytes)
+  - PublicToPrivate from ferrata@9xq6bB9mVU9PcSbkerXw2tz2j6fUi5LsgcFCPJ86Vciv to consumer@AodAGCgEG5tEZ9G66zav6VgeBX9hfvyxnimA6U3L6j1C: StateReply { state: 293 bytes } (297 bytes)
+  - EndPrivateSubtree
+  - EndPublicSubtree
+  - PrivateToPublic from native@AodAGCgEG5tEZ9G66zav6VgeBX9hfvyxnimA6U3L6j1C to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
+  - EndPublicSubtree
+execution.program_image_claims (1):
+  - Undisclosed { commitment root: c0c485f792dc61648b658b160d18b68d2d816ab976b685ae3d66b492b18bc341 }
+execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1612 bytes)
+execution.async_messages: 0
+execution.recovery_bindings: 0
+execution.validity: ValidityWindows { blocks: ValidityWindow { from: None, to: None }, timestamps: ValidityWindow { from: None, to: None } }
+execution.fee: Some("refund_to Some(78Skt7EQTvVwfWVYnA1XMjghv3aUR1V5wgQAfVLKJZG5), fallback true")
+nonces: 0, admission evidence: 0
+
+The 8503 serialized bytes of the transaction were searched for the consumer's private inputs:
+- the query (75 bytes): absent
+- the account id the consumer acts for (32 bytes): absent
+- the authorization secret key (32 bytes): absent
+- the nullifier secret key (32 bytes): absent
+- the nullifier public key (32 bytes): absent
+- the viewing public key (its first 32 of 1,184 bytes) (32 bytes): absent
+- the viewing key seed d (32 bytes): absent
+- the viewing key seed z (32 bytes): absent
+
+Charged: execution gas 421,020 (PRIVATE_VERIFY_GAS 409,764 + public part 11,256 cycles), storage gas 224,063.
+
+ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.38s
+
+
+running 3 tests
+test a_forged_update_cannot_be_proven ... forged update, private: proving failed: Program exited with non-zero code 40 after 9028059 cycles
+ok
+test a_private_sender_of_another_program_is_refused ... another program's private actor, simulated: proving failed: Program exited with non-zero code 202 after 15658 cycles
+another program's private actor, settled: reverted (Program exited with non-zero code 202 after 15658 cycles); charged execution gas 425,422, storage gas 224,063
+public_context.actors (2): ferrata@2nhBc476XLwdGYxHuku4C47GPQQU3t6Pzn9sxyQjxhXA, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq
+public_context.authorized_accounts: {}
+execution.public_root: None
+execution.boundary (4 steps):
+  - PrivateToPublic from program 658iQH85QLWrkgoguGS3JxGKWcjrD18Zw5Bpgsd3etok@DhmA7Pqr73s6N82dhULiaHCCEWWhNAgKRuYu7cZE92F9 to ferrata@2nhBc476XLwdGYxHuku4C47GPQQU3t6Pzn9sxyQjxhXA: ApplyVerified { instance_id: 62a32b1c2734, job: 438 bytes } (475 bytes)
+  - EndPublicSubtree
+  - PrivateToPublic from native@DhmA7Pqr73s6N82dhULiaHCCEWWhNAgKRuYu7cZE92F9 to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
+  - EndPublicSubtree
+execution.program_image_claims (1):
+  - Disclosed { program: 658iQH85QLWrkgoguGS3JxGKWcjrD18Zw5Bpgsd3etok, image_id: 4b597adb3f1a43db85829c411a987234cc84584d8bcd947f0774b852adf0da2b }
+execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1233 bytes)
+execution.async_messages: 0
+execution.recovery_bindings: 0
+execution.validity: ValidityWindows { blocks: ValidityWindow { from: None, to: None }, timestamps: ValidityWindow { from: None, to: None } }
+execution.fee: Some("refund_to Some(78Skt7EQTvVwfWVYnA1XMjghv3aUR1V5wgQAfVLKJZG5), fallback true")
+nonces: 0, admission evidence: 0
+
+ok
+test an_update_verified_privately_applies_to_the_public_instance ... finality update, verified privately:
+public_context.actors (3): ferrata@2nhBc476XLwdGYxHuku4C47GPQQU3t6Pzn9sxyQjxhXA, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@9xq6bB9mVU9PcSbkerXw2tz2j6fUi5LsgcFCPJ86Vciv
+public_context.authorized_accounts: {}
+execution.public_root: None
+execution.boundary (4 steps):
+  - PrivateToPublic from ferrata@EoTYfFi4rVfLkTBefMr8sB6GcyhRTZv682hg9J1S1QsL to ferrata@2nhBc476XLwdGYxHuku4C47GPQQU3t6Pzn9sxyQjxhXA: ApplyVerified { instance_id: 62a32b1c2734, job: 438 bytes } (475 bytes)
+  - EndPublicSubtree
+  - PrivateToPublic from native@EoTYfFi4rVfLkTBefMr8sB6GcyhRTZv682hg9J1S1QsL to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
+  - EndPublicSubtree
+execution.program_image_claims (1):
+  - Disclosed { program: ferrata, image_id: cec0bc687443be08c29c3216de8a3ed5f00a29d224fc266fe272f78cfe0f4d78 }
+execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1233 bytes)
+execution.async_messages: 0
+execution.recovery_bindings: 0
+execution.validity: ValidityWindows { blocks: ValidityWindow { from: None, to: None }, timestamps: ValidityWindow { from: Some(1793602427000), to: None } }
+execution.fee: Some("refund_to Some(78Skt7EQTvVwfWVYnA1XMjghv3aUR1V5wgQAfVLKJZG5), fallback true")
+nonces: 0, admission evidence: 0
+
+charged: execution gas 479,854 (PRIVATE_VERIFY_GAS 409,764 + public part 70,090 cycles), storage gas 224,063, base fee 5,631,336; tx 8021 bytes, proof 4067 bytes (dev mode)
+handoff verified privately: execution gas 448,530 (public part 38,766 cycles), storage gas 224,063
+ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.06s
+
+
+running 5 tests
+test a_finality_update_in_one_public_transaction ... | # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | finality update in one transaction (VerifyAll) | VerifyAll 9,045,235 → ApplyVerified 54,228 → Record 15,862 | 9,115,325 | 182% | 4,089 | 72,955,312 | applied |
+
+ok
+test a_finality_update_is_three_transactions ... | # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | Init Init | Init 188,943 → JobOpen 18,462 | 207,405 | 4% | 1,880 | 1,674,280 | applied |
+| 2 | Init adopt 1/2 | Adopt 3,398,071 | 3,398,071 | 68% | 24,980 | 27,384,408 | applied |
+| 3 | Init adopt 2/2 | Adopt 3,408,181 → Apply 55,931 → Record 15,862 | 3,479,974 | 70% | 25,108 | 28,040,656 | applied |
+| 4 | update_0 Open (step 1) | Open 2,125,354 → JobOpen 25,857 | 2,151,211 | 43% | 2,853 | 17,232,512 | applied |
+| 5 | update_0 Miller (step 2) | Miller 3,311,227 | 3,311,227 | 66% | 399 | 26,493,008 | applied |
+| 6 | update_0 adopt 1/2 | Adopt 3,409,859 | 3,409,859 | 68% | 24,980 | 27,478,712 | applied |
+| 7 | update_0 adopt 2/2 | Adopt 3,417,051 | 3,417,051 | 68% | 24,980 | 27,536,248 | applied |
+| 8 | update_0 Finish (step 3) | Finish 3,652,728 → Apply 41,986 | 3,694,714 | 74% | 463 | 29,561,416 | applied |
+| 9 | update_1 as finality update Open (step 1) | Open 2,166,945 → JobOpen 22,694 | 2,189,639 | 44% | 3,525 | 17,545,312 | applied |
+| 10 | update_1 as finality update Miller (step 2) | Miller 3,306,993 | 3,306,993 | 66% | 399 | 26,459,136 | applied |
+| 11 | update_1 as finality update Finish (step 3) | Finish 3,646,542 → Apply 57,085 → Record 15,862 | 3,719,489 | 74% | 527 | 29,760,128 | applied |
+| 12 | update_1 (next committee only) Open (step 1) | Open 2,180,660 → JobOpen 25,857 | 2,206,517 | 44% | 3,605 | 17,680,976 | applied |
+| 13 | update_1 (next committee only) Miller (step 2) | Miller 3,311,227 | 3,311,227 | 66% | 399 | 26,493,008 | applied |
+| 14 | update_1 (next committee only) adopt 1/2 | Adopt 3,409,859 | 3,409,859 | 68% | 24,980 | 27,478,712 | applied |
+| 15 | update_1 (next committee only) adopt 2/2 | Adopt 3,417,051 | 3,417,051 | 68% | 24,980 | 27,536,248 | applied |
+| 16 | update_1 (next committee only) Finish (step 3) | Finish 3,652,728 → Apply 41,986 | 3,694,714 | 74% | 463 | 29,561,416 | applied |
+
+ok
+test mainnet_replay_through_lez ... | # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | Init Init | Init 188,943 → JobOpen 18,462 | 207,405 | 4% | 1,880 | 1,674,280 | applied |
+| 2 | Init adopt 1/2 | Adopt 3,398,071 | 3,398,071 | 68% | 24,980 | 27,384,408 | applied |
+| 3 | Init adopt 2/2 | Adopt 3,408,181 → Apply 55,931 → Record 15,862 | 3,479,974 | 70% | 25,108 | 28,040,656 | applied |
+| 4 | update_0 Open (step 1) | Open 2,125,354 → JobOpen 25,857 | 2,151,211 | 43% | 2,853 | 17,232,512 | applied |
+| 5 | update_0 Miller (step 2) | Miller 3,311,227 | 3,311,227 | 66% | 399 | 26,493,008 | applied |
+| 6 | update_0 adopt 1/2 | Adopt 3,409,859 | 3,409,859 | 68% | 24,980 | 27,478,712 | applied |
+| 7 | update_0 adopt 2/2 | Adopt 3,417,051 | 3,417,051 | 68% | 24,980 | 27,536,248 | applied |
+| 8 | update_0 Finish (step 3) | Finish 3,652,728 → Apply 41,986 | 3,694,714 | 74% | 463 | 29,561,416 | applied |
+| 9 | update_1 Open (step 1) | Open 2,181,981 → JobOpen 25,857 | 2,207,838 | 44% | 3,605 | 17,691,544 | applied |
+| 10 | update_1 Miller (step 2) | Miller 3,311,227 | 3,311,227 | 66% | 399 | 26,493,008 | applied |
+| 11 | update_1 adopt 1/2 | Adopt 3,409,859 | 3,409,859 | 68% | 24,980 | 27,478,712 | applied |
+| 12 | update_1 adopt 2/2 | Adopt 3,417,051 | 3,417,051 | 68% | 24,980 | 27,536,248 | applied |
+| 13 | update_1 Finish (step 3) | Finish 3,652,728 → Apply 61,555 → Record 15,862 | 3,730,145 | 75% | 527 | 29,845,376 | applied |
+| 14 | update_2 Open (step 1) | Open 2,182,721 → JobOpen 25,857 | 2,208,578 | 44% | 3,615 | 17,697,544 | applied |
+| 15 | update_2 Miller (step 2) | Miller 3,311,227 | 3,311,227 | 66% | 399 | 26,493,008 | applied |
+| 16 | update_2 adopt 1/2 | Adopt 3,409,859 | 3,409,859 | 68% | 24,980 | 27,478,712 | applied |
+| 17 | update_2 adopt 2/2 | Adopt 3,417,051 | 3,417,051 | 68% | 24,980 | 27,536,248 | applied |
+| 18 | update_2 Finish (step 3) | Finish 3,652,728 → Apply 61,555 → Record 15,862 | 3,730,145 | 75% | 527 | 29,845,376 | applied |
+| 19 | update_3 Open (step 1) | Open 2,127,081 → JobOpen 25,857 | 2,152,938 | 43% | 2,852 | 17,246,320 | applied |
+| 20 | update_3 Miller (step 2) | Miller 3,311,227 | 3,311,227 | 66% | 399 | 26,493,008 | applied |
+| 21 | update_3 adopt 1/2 | Adopt 3,409,859 | 3,409,859 | 68% | 24,980 | 27,478,712 | applied |
+| 22 | update_3 adopt 2/2 | Adopt 3,417,051 | 3,417,051 | 68% | 24,980 | 27,536,248 | applied |
+| 23 | update_3 Finish (step 3) | Finish 3,652,728 → Apply 61,555 → Record 15,862 | 3,730,145 | 75% | 527 | 29,845,376 | applied |
+| 24 | update_4 Open (step 1) | Open 2,154,986 → JobOpen 25,857 | 2,180,843 | 44% | 3,221 | 17,472,512 | applied |
+| 25 | update_4 Miller (step 2) | Miller 3,311,227 | 3,311,227 | 66% | 399 | 26,493,008 | applied |
+| 26 | update_4 adopt 1/2 | Adopt 3,409,859 | 3,409,859 | 68% | 24,980 | 27,478,712 | applied |
+| 27 | update_4 adopt 2/2 | Adopt 3,417,051 | 3,417,051 | 68% | 24,980 | 27,536,248 | applied |
+| 28 | update_4 Finish (step 3) | Finish 3,652,728 → Apply 61,555 → Record 15,862 | 3,730,145 | 75% | 527 | 29,845,376 | applied |
+
+ok
+test refusals_exit_with_a_code_and_are_charged_what_they_used ... | # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | forged signature: Open (passes) | Open 2,167,071 → JobOpen 22,694 | 2,189,765 | 44% | 3,525 | 17,546,320 | applied |
+| 2 | forged signature: Miller (passes) | Miller 3,306,993 | 3,306,993 | 66% | 399 | 26,459,136 | applied |
+| 3 | forged signature: Finish | Finish 3,635,478 | 3,635,478 | 73% | 463 | 29,087,528 | refused: exit 40 (SignatureInvalid) |
+| 4 | malformed signature: Open | Open 353,214 | 353,214 | 7% | 3,525 | 2,853,912 | refused: exit 41 (SignatureMalformed) |
+| 5 | duplicate Open (same job) | Open 2,166,945 → JobOpen 16,166 | 2,183,111 | 44% | 3,525 | 17,493,088 | refused: exit 207 (JobExists) |
+| 6 | Finish before Miller (skipped step) | Finish 23,420 | 23,420 | 0% | 463 | 191,064 | refused: exit 81 (StepError::Phase) |
+| 7 | Miller replayed | Miller 20,491 | 20,491 | 0% | 399 | 167,120 | refused: exit 81 (StepError::Phase) |
+| 8 | Finish replayed after the job applied | Finish 5,731 | 5,731 | 0% | 527 | 50,064 | refused: exit 205 (NoJob) |
+| 9 | Open an applied update again | Open 207,687 | 207,687 | 4% | 3,525 | 1,689,696 | refused: exit 52 (NotNewer) |
+| 10 | Apply sent as the transaction root | Apply 17,325 | 17,325 | 0% | 905 | 145,840 | refused: exit 202 (WrongSender) |
+| 11 | Apply from another program's actor | scripted 13,172 → Apply 18,178 | 31,350 | 1% | 1,125 | 259,800 | refused: exit 202 (WrongSender) |
+| 12 | ApplyVerified from another program's actor | scripted 12,910 → ApplyVerified 15,658 | 28,568 | 1% | 1,093 | 237,288 | refused: exit 202 (WrongSender) |
+| 13 | JobOpen from another program's actor | scripted 13,095 → JobOpen 10,676 | 23,771 | 0% | 1,194 | 199,720 | refused: exit 202 (WrongSender) |
+| 14 | Record from another program's actor | scripted 9,305 → Record 8,869 | 18,174 | 0% | 731 | 151,240 | refused: exit 202 (WrongSender) |
+| 15 | update for another chain's instance: Finish | Finish 3,637,696 | 3,637,696 | 73% | 463 | 29,105,272 | refused: exit 40 (SignatureInvalid) |
+| 16 | instance A's job id sent to instance B | Finish 5,731 | 5,731 | 0% | 464 | 49,560 | refused: exit 205 (NoJob) |
+| 17 | Open before its signature slot (validity window) | Open 2,166,945 → JobOpen 22,694 | 10,000,000 | 200% | 3,525 | 80,028,200 | reverted: Execution outside of the validity window |
+| 18 | Init of an existing instance | Init 17,491 | 17,491 | 0% | 1,816 | 154,456 | refused: exit 203 (AlreadyInitialized) |
+
+ok
+test shell_costs ... | transaction | handler | cycles | segments | input bytes (ReceiveInput) | of which message | of which pre-state | journal bytes | post-state bytes | exit |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| public consumer reads header(id, slot) | consumer | 10,702 | 1 | 151 | 77 | 0 | 320 | 71 | 0 |
+| public consumer reads header(id, slot) | Read | 11,256 | 1 | 432 | 1 | 293 | 822 | – | 0 |
+| public consumer reads header(id, slot) | consumer | 13,304 | 1 | 506 | 297 | 71 | 799 | 268 | 0 |
+| public consumer calls Attest, 0-byte query | consumer | 13,955 | 1 | 419 | 77 | 268 | 849 | 328 | 0 |
+| public consumer calls Attest, 0-byte query | Attest | 11,556 | 1 | 436 | 5 | 293 | 826 | – | 0 |
+| public consumer calls Attest, 0-byte query | consumer | 14,591 | 1 | 763 | 297 | 328 | 1,052 | 264 | 0 |
+| public consumer calls Attest, 8192-byte query | consumer | 88,794 | 1 | 8,607 | 8,269 | 264 | 17,229 | 328 | 0 |
+| public consumer calls Attest, 8192-byte query | Attest | 58,236 | 1 | 8,628 | 8,197 | 293 | 9,018 | – | 0 |
+| public consumer calls Attest, 8192-byte query | consumer | 14,591 | 1 | 763 | 297 | 328 | 1,052 | 264 | 0 |
+| public consumer calls Attest, 24576-byte query | consumer | 236,590 | 1 | 24,991 | 24,653 | 264 | 49,997 | 328 | 0 |
+| public consumer calls Attest, 24576-byte query | Attest | 151,316 | 1 | 25,012 | 24,581 | 293 | 25,402 | – | 0 |
+| public consumer calls Attest, 24576-byte query | consumer | 14,591 | 1 | 763 | 297 | 328 | 1,052 | 264 | 0 |
+| public consumer calls Attest, 49152-byte query | consumer | 458,287 | 1 | 49,567 | 49,229 | 264 | 99,149 | 328 | 0 |
+| public consumer calls Attest, 49152-byte query | Attest | 290,924 | 1 | 49,588 | 49,157 | 293 | 49,978 | – | 0 |
+| public consumer calls Attest, 49152-byte query | consumer | 14,591 | 1 | 763 | 297 | 328 | 1,052 | 264 | 0 |
+
+ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 41.73s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

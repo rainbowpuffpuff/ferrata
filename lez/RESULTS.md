@@ -17,6 +17,19 @@ private actor verifies a whole update and the public instance applies it) and St
 consumer reads a record, or calls) ran through LEZ's privacy-preserving circuit and private
 settlement in RISC Zero dev mode; one real proof was made on this machine's CPU (§3).
 
+**Which image these numbers come from.** Every number in this file, except those of the real
+proof, was measured on the images built after this branch merged `main` (commit 4d5fe7b, which
+brought the core's execution layer) and after the program's exit codes were renumbered (§1):
+program `cec0bc68…`, consumer `aec03bcd…` (`results/images.md`), in runs at commit 62f4f70
+(`results/environment.md`; the dry run of §3 at 1b3984e, whose host code adds the proof's
+handoff). The numbers measured on the earlier image (`e7cec90e…`, consumer
+`620e6390…`; commit 7dfae96, the branch before the merge) are superseded. Measured again, every
+cycle count, gas charge, fee and transaction size in §2 to §4 is the same as on the earlier
+image; what changed are the image ids, the account ids derived from them in the dumps of §3 and
+§4, and the exit codes of the refusals in §2. **The real proof (§3) and its settlement are still
+the earlier image's** (9,045,235 cycles, 54 min, 9.18 GiB, a 227,080-byte receipt); the proof of
+the new image is pending, and §3 says how to make it.
+
 | operation (mainnet, 512-member committees) | transactions | largest transaction, execution gas (cycles) | total execution gas | total storage gas (bytes) |
 |---|---:|---:|---:|---:|
 | `Init`: bootstrap checks, then the adoption of its committee in two parts | 3 | 3,479,974 | 7,085,450 | 51,968 |
@@ -33,7 +46,7 @@ reports `SessionInfo::cycles`, user cycles); storage gas is the transaction's se
 
 ## 1. What was built
 
-**The program** (`guests/program`, one RISC Zero guest; image id `e7cec90e8c2bb141de49c25c8d1e4f8496e37f0eaea9f349097bc7086e71d7d5`, 508,240 bytes). Its actors are public
+**The program** (`guests/program`, one RISC Zero guest; image id `cec0bc687443be08c29c3216de8a3ed5f00a29d224fc266fe272f78cfe0f4d78`, 508,284 bytes). Its actors are public
 PDAs of the program (`wire/src/lib.rs`):
 
 | actor | seed | state | written by |
@@ -59,10 +72,28 @@ PDAs of the program (`wire/src/lib.rs`):
 | `Record` | header | **only** `instance(id)` of this program | writes the record once |
 
 Every handler checks that its receiver is the PDA the message implies. Refusals exit with a code
-(`env::exit(code)`, codes in `wire/src/lib.rs` and `ferrata_core::steps::StepError`); none panics.
+(`env::exit(code)`); none panics. An exit code is one byte, 0 is success, and the program passes
+on the core's and the step API's codes as they are, so every code has one owner:
 
-**The core additions** (`../crates/ferrata-core/src/steps.rs`, `witness.rs`; `lib.rs` gains three
-lines; nothing else in the core changed):
+| codes | owner | defined in | in use |
+|---|---|---|---|
+| 1–79 | core: the light client | `ferrata_core::Error` | 1, 10–12, 20–29, 40–43, 45, 50–52, 60–61 |
+| 80–99 | step API | `ferrata_core::steps::StepError` | 80–84 |
+| 100–199 | core: the execution layer (from `main`) | `ferrata_core::Error` | 100–101, 110–113, 120–125, 130–131, 140–141, 150–152, 160–163 |
+| 200–219 | the program's own refusals | `wire/src/lib.rs`, `code` | 200–212 |
+| 220–239 | the Stage 3 consumer (§4) | `wire/src/lib.rs`, `consumer::code` | 220–222 |
+| 240–255 | unassigned | | |
+
+`wire::CODE_BLOCKS` declares these blocks, and `harness/tests/exit_codes.rs` fails if two of them
+overlap, or if a code of the core (read from `error.rs`), the step API, the program or the
+consumer lies outside its owner's block or does not fit a byte. Until the merge with `main` the
+program's own codes were 100–112 and the consumer's 120–122; `main` gave 100–163 to the core's
+execution layer, so they moved to 200–212 and 220–222. The step API's 80–84 overlapped nothing
+and stayed.
+
+**The core additions** (`../crates/ferrata-core/src/steps.rs`, `witness.rs`; relative to `main`,
+`lib.rs` gains three lines and nothing else in the core changed; since the merge the core also
+holds `main`'s execution layer, which the program does not call):
 
 - `witness.rs`: `CommitteeSummary`; `CompactStore`, `CompactBootstrap`, `CompactUpdate` with
   strict encodings (fixed order, every length checked, flags 0/1, input consumed exactly; headers
@@ -77,7 +108,8 @@ lines; nothing else in the core changed):
 - `../crates/ferrata-spectests/tests/steps.rs`: the steps accept exactly what
   `FinalizedStore::process_update` (`Adoption::OnChain`) accepts, with the same outcome, store and
   refusal code, on all 52 sync cases (160 updates: 91 applied, 69 refused), on the mainnet replay
-  (adoption in 1, 2 and 4 parts) and on 21 single-defect mutations of a mainnet update; step 2's
+  (adoption in 1, 2 and 4 parts) and on 21 variants of mainnet update_1 (19 refused: 17 single
+  changes, a replay and an update out of order; 2 applied: as served and as a finality update); step 2's
   product equals `Blst::miller_half` byte for byte on every mainnet update; skipping, replaying or
   moving a step to another store is refused; the witness adoption agrees with
   `check_committee_onchain` on 9 real committees and 6 crafted ones (wrong aggregate, identity,
@@ -173,20 +205,20 @@ tests check the store); the fee is paid and the payer's nonce advances.
 | 2 | forged signature: Miller (passes) | Miller 3,306,993 | 3,306,993 | 66% | 399 | 26,459,136 | applied |
 | 3 | forged signature: Finish | Finish 3,635,478 | 3,635,478 | 73% | 463 | 29,087,528 | refused: exit 40 (SignatureInvalid) |
 | 4 | malformed signature: Open | Open 353,214 | 353,214 | 7% | 3,525 | 2,853,912 | refused: exit 41 (SignatureMalformed) |
-| 5 | duplicate Open (same job) | Open 2,166,945 → JobOpen 16,166 | 2,183,111 | 44% | 3,525 | 17,493,088 | refused: exit 107 (JobExists) |
+| 5 | duplicate Open (same job) | Open 2,166,945 → JobOpen 16,166 | 2,183,111 | 44% | 3,525 | 17,493,088 | refused: exit 207 (JobExists) |
 | 6 | Finish before Miller (skipped step) | Finish 23,420 | 23,420 | 0% | 463 | 191,064 | refused: exit 81 (StepError::Phase) |
 | 7 | Miller replayed | Miller 20,491 | 20,491 | 0% | 399 | 167,120 | refused: exit 81 (StepError::Phase) |
-| 8 | Finish replayed after the job applied | Finish 5,731 | 5,731 | 0% | 527 | 50,064 | refused: exit 105 (NoJob) |
+| 8 | Finish replayed after the job applied | Finish 5,731 | 5,731 | 0% | 527 | 50,064 | refused: exit 205 (NoJob) |
 | 9 | Open an applied update again | Open 207,687 | 207,687 | 4% | 3,525 | 1,689,696 | refused: exit 52 (NotNewer) |
-| 10 | Apply sent as the transaction root | Apply 17,325 | 17,325 | 0% | 905 | 145,840 | refused: exit 102 (WrongSender) |
-| 11 | Apply from another program's actor | scripted 13,172 → Apply 18,178 | 31,350 | 1% | 1,125 | 259,800 | refused: exit 102 (WrongSender) |
-| 12 | ApplyVerified from another program's actor | scripted 12,910 → ApplyVerified 15,658 | 28,568 | 1% | 1,093 | 237,288 | refused: exit 102 (WrongSender) |
-| 13 | JobOpen from another program's actor | scripted 13,095 → JobOpen 10,676 | 23,771 | 0% | 1,194 | 199,720 | refused: exit 102 (WrongSender) |
-| 14 | Record from another program's actor | scripted 9,305 → Record 8,869 | 18,174 | 0% | 731 | 151,240 | refused: exit 102 (WrongSender) |
+| 10 | Apply sent as the transaction root | Apply 17,325 | 17,325 | 0% | 905 | 145,840 | refused: exit 202 (WrongSender) |
+| 11 | Apply from another program's actor | scripted 13,172 → Apply 18,178 | 31,350 | 1% | 1,125 | 259,800 | refused: exit 202 (WrongSender) |
+| 12 | ApplyVerified from another program's actor | scripted 12,910 → ApplyVerified 15,658 | 28,568 | 1% | 1,093 | 237,288 | refused: exit 202 (WrongSender) |
+| 13 | JobOpen from another program's actor | scripted 13,095 → JobOpen 10,676 | 23,771 | 0% | 1,194 | 199,720 | refused: exit 202 (WrongSender) |
+| 14 | Record from another program's actor | scripted 9,305 → Record 8,869 | 18,174 | 0% | 731 | 151,240 | refused: exit 202 (WrongSender) |
 | 15 | update for another chain's instance: Finish | Finish 3,637,696 | 3,637,696 | 73% | 463 | 29,105,272 | refused: exit 40 (SignatureInvalid) |
-| 16 | instance A's job id sent to instance B | Finish 5,731 | 5,731 | 0% | 464 | 49,560 | refused: exit 105 (NoJob) |
+| 16 | instance A's job id sent to instance B | Finish 5,731 | 5,731 | 0% | 464 | 49,560 | refused: exit 205 (NoJob) |
 | 17 | Open before its signature slot (validity window) | Open 2,166,945 → JobOpen 22,694 | 10,000,000 | 200% | 3,525 | 80,028,200 | reverted: Execution outside of the validity window |
-| 18 | Init of an existing instance | Init 17,491 | 17,491 | 0% | 1,816 | 154,456 | refused: exit 103 (AlreadyInitialized) |
+| 18 | Init of an existing instance | Init 17,491 | 17,491 | 0% | 1,816 | 154,456 | refused: exit 203 (AlreadyInitialized) |
 
 ### Against the bare guest
 
@@ -196,7 +228,7 @@ blst and SHA-256, core of commit f030475, RISC Zero Rust 1.88). Here, per handle
 | work | bare guest (`../bench/`), user cycles | on LEZ: the handler(s), user cycles as LEZ metered them |
 |---|---:|---|
 | step 1 | 2,305,240 (execution total: decodes the 26.9 KB SSZ update and a 24.6 KB committee, then everything before the Miller loops) | `Open` 2,125,354–2,182,721, then `JobOpen` 22,694–25,857. The program decodes a 2.9–3.6 KB compact update and checks the non-signers' branches (two per update here) instead of decoding a committee. |
-| step 2 | 4,203,683 (two single Miller loops); the two-pair loop alone: 3,251,802 (phase 8m) | `Miller` 3,306,993–3,311,227 (the two-pair loop since commit 133dde9; 4,142,918–4,147,152 with two loops) |
+| step 2 | 4,203,683 (two single Miller loops); the two-pair loop alone: 3,251,802 (phase 8m) | `Miller` 3,306,993–3,311,227 (the two-pair loop since commit 133dde9; 4,142,918–4,147,152 with two loops, measured on an image before that commit and not again) |
 | step 3 | 3,597,597 (final exponentiation, execution total) | `Finish` 3,646,542–3,652,728 (also checks that the stored product is canonical, and encodes the job for `Apply`), then `Apply` 41,986–61,555 and `Record` 15,862 |
 | adoption, 512 keys | 5,685,329 (10b0: 4,562,038 for the keys, plus 3a: 1,123,291 for the committee root) | `Adopt` 3,398,071–3,417,051, twice: 6,806,252–6,826,910 |
 | a whole finality update | 10,369,179 (one execution: saved state and SSZ update decoded, policy, new root) | `VerifyAll` 9,045,235, then `ApplyVerified` 54,228 and `Record` 15,862 |
@@ -276,7 +308,8 @@ verified against, so it applies only to the instance's current store, once.
 
 **Demonstrated through the state machine** (`harness/tests/private_placement.rs`, RISC Zero dev
 mode: the private transitions and the privacy-preserving circuit are executed, not proven; the
-settlement, the public part's execution and its metering are LEZ's):
+settlement, the public part's execution and its metering are LEZ's; the test's output is in
+`results/harness-tests-dev-mode.log`):
 
 - A finality update (mainnet update_1 without its next committee) verified by `VerifyAll` at a
   private account's actor of the program, against an instance that had applied update_0 through
@@ -284,10 +317,10 @@ settlement, the public part's execution and its metering are LEZ's):
   record is written.
 - A handoff (update_1 as served, with its 512 keys in the same private call): applied likewise.
 - A private actor of *another* program (LEZ's `scripted` test program) sending the same
-  `ApplyVerified`: an honest prover's simulation stops at the instance's refusal (exit 102,
+  `ApplyVerified`: an honest prover's simulation stops at the instance's refusal (exit 202,
   `WrongSender`); a proof made without simulating the public part
   (`execute_and_prove_with_cross_messages`) settles as a revert to its fee fallback — the
-  instance refused the message (exit 102 after 15,658 cycles) and the transaction paid only its
+  instance refused the message (exit 202 after 15,658 cycles) and the transaction paid only its
   fee (execution gas 425,422, storage gas 224,063).
 - A forged update (update_2's signature on update_1) cannot be proven: the private transition
   exits with code 40 (`SignatureInvalid`) after 9,028,059 cycles, and LEZ's prover refuses a
@@ -296,7 +329,9 @@ settlement, the public part's execution and its metering are LEZ's):
 **What LEZ charges the private transaction** (`settle_private_transaction`,
 `lez/chain_state/src/apply.rs:435–556`): a flat `PRIVATE_VERIFY_GAS` = 409,764 execution gas for the
 receipt (`lez/programs/fee/core/src/market.rs:49`), plus the cycles of its public part, plus a flat
-`PRIVATE_GAS_STOR` = 224,063 storage gas (`market.rs:51–56`):
+`PRIVATE_GAS_STOR` = 224,063 storage gas (`market.rs:51–56`). Dev mode, from the test's output; the
+base fee is 8 × (execution gas + storage gas). The real proof's settlement (below, on the earlier
+image) charged the finality update the same:
 
 | private transaction | public part (cycles, metered) | execution gas | storage gas | base fee at genesis prices |
 |---|---:|---:|---:|---:|
@@ -309,20 +344,21 @@ placement trades on-chain execution (about 19× less) for storage gas (about 50�
 succinct receipt is 223,551 bytes by LEZ's constant) and for a proof made off chain. With
 `MAX_GAS_STOR` = 1,000,000 per block, at most four such transactions fit in a block.
 
-What the transaction makes public (the finality update; `describe_public_outputs` in
-`harness/src/private.rs`):
+What the transaction makes public (the finality update on the new image, from
+`results/prove-private-dry-run.log`, `describe_public_outputs` in `harness/src/private.rs`; a real
+proof publishes the same fields, with a succinct receipt where the dry run has a fake one):
 
 ```
-public_context.actors (3): ferrata@3wPjVqygcgTufKBsDpNBRJ5eKoXCoSxg1UZJRBQabyrF, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@HjvjiYbp31N2ydB8zhjeaDc51QxUytAnocCPnucNrGPZ
+public_context.actors (3): ferrata@2nhBc476XLwdGYxHuku4C47GPQQU3t6Pzn9sxyQjxhXA, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@9xq6bB9mVU9PcSbkerXw2tz2j6fUi5LsgcFCPJ86Vciv
 public_context.authorized_accounts: {}
 execution.public_root: None
 execution.boundary (4 steps):
-  - PrivateToPublic from ferrata@EoTYfFi4rVfLkTBefMr8sB6GcyhRTZv682hg9J1S1QsL to ferrata@HjvjiYbp31N2ydB8zhjeaDc51QxUytAnocCPnucNrGPZ: ApplyVerified { instance_id: 62a32b1c2734, job: 438 bytes } (475 bytes)
+  - PrivateToPublic from ferrata@EoTYfFi4rVfLkTBefMr8sB6GcyhRTZv682hg9J1S1QsL to ferrata@2nhBc476XLwdGYxHuku4C47GPQQU3t6Pzn9sxyQjxhXA: ApplyVerified { instance_id: 62a32b1c2734, job: 438 bytes } (475 bytes)
   - EndPublicSubtree
   - PrivateToPublic from native@EoTYfFi4rVfLkTBefMr8sB6GcyhRTZv682hg9J1S1QsL to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
   - EndPublicSubtree
 execution.program_image_claims (1):
-  - Disclosed { program: ferrata, image_id: e7cec90e8c2bb141de49c25c8d1e4f8496e37f0eaea9f349097bc7086e71d7d5 }
+  - Disclosed { program: ferrata, image_id: cec0bc687443be08c29c3216de8a3ed5f00a29d224fc266fe272f78cfe0f4d78 }
 execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1233 bytes)
 execution.async_messages: 0
 execution.recovery_bindings: 0
@@ -335,24 +371,59 @@ The proof claims the program's image (`Disclosed`), the boundary shows the progr
 and the header record it writes, and the sender only as a blinded alias, which is also the fee
 payer's alias.
 
-**The real proof** (`harness/src/bin/prove_private.rs`, `RISC0_DEV_MODE=0`, CPU only):
+**The real proof was made on the earlier image; the new image's is pending.** The one real proof
+of this path (`harness/src/bin/prove_private.rs`, `RISC0_DEV_MODE=0`, CPU only) proved the
+program image `e7cec90e…` (the image of commit 7dfae96, before the merge) and was settled through
+LEZ's state machine: proven, then settled with the real receipt verified (`Proof::is_valid_for`,
+`validated_state_diff/mod.rs` via `check_privacy_preserving_circuit_proof_is_valid`), and
+applied; afterwards the instance's store equalled the native store and the record was written.
+Its transaction is the one above with the earlier image's id and the account ids derived from
+it. Log: `results/prove-private-e7cec90e.log`. Every figure in this table is the earlier image's:
 
-This is the transaction whose public outputs are shown above: proven, then settled with the
-real receipt verified (`Proof::is_valid_for`, `validated_state_diff/mod.rs` via
-`check_privacy_preserving_circuit_proof_is_valid`), and applied; afterwards the instance's store
-equals the native store and the record is written. Log: `results/prove-private.log`.
-
-| | |
+| earlier image `e7cec90e…`, commit 7dfae96 | |
 |---|---|
 | proven | the program's `VerifyAll` transition (step 1, Miller loops, final exponentiation, `ApplyVerified`) at a private account's actor, the fee transfer from that account, and LEZ's privacy-preserving circuit over both (`lee::execute_and_prove`, `ProverOpts::succinct()`) |
-| the program's private transition | 9,045,235 user cycles in 10 segments (9,699,328 cycles padded) |
+| the program's private transition | 9,045,235 user cycles in 10 segments (9,699,328 cycles padded); on the new image the executor counts the same (`results/prove-private-dry-run.log`) |
 | wall clock | **3,240.5 s** for `execute_and_prove` (54 min 04 s for the whole run, setup and settlement included) |
 | CPU | AMD Ryzen 9 7940HS (8 cores, 16 threads), no GPU: 39,206 s of user time, 1,211% average |
 | peak memory | **9.18 GiB** maximum resident set (`/usr/bin/time -v`: 9,628,928 kB); a 2-second `ps` sample of all `r0vm` processes peaked at 10.2 GiB (10,710,560 kB) |
 | receipt | **227,080 bytes** (the succinct `InnerReceipt`, borsh); the transaction is 231,034 bytes. LEZ charges a flat 224,063 bytes of storage gas whatever the size (`PROOF_BYTES` + 512) |
+| settlement | execution gas 479,854 (`PRIVATE_VERIFY_GAS` 409,764 + public part 70,090 cycles), storage gas 224,063, base fee 5,631,336; the dev-mode settlement on the new image charges the same |
 | load | not recorded during the run (2026-11-09, 22:53–23:47). For 8 of its 54 minutes my own executor-only test suites ran beside it at `nice 19`; whether other agents used the CPU is not known. Load average when the result was collected (01:51): 2.46 |
 
-Proving time is that of a single run on a shared machine, not a benchmark.
+Proving time is that of a single run on a shared machine, not a benchmark. A proof of the new
+image was started on this machine (2026-11-10, 08:27) and stopped after about 29 minutes to free
+the machine; it is to be made on a GPU instead.
+
+**Proving the new image (pending).** What a run elsewhere needs; `results/prove-private-dry-run.log`
+shows these commands on the new image in dev mode:
+
+- **The image.** Program `cec0bc687443be08c29c3216de8a3ed5f00a29d224fc266fe272f78cfe0f4d78`
+  (508,284 bytes; consumer `aec03bcd…`). The guest ELF holds the absolute paths of the sources it
+  was built from (the cargo registry, the LEZ clone, this checkout) in its panic locations, so a
+  rebuild under other paths is another image. Use the binary built here,
+  `lez/target/debug/prove_private` (it embeds both guests, LEZ's privacy-preserving circuit and
+  its programs), or rebuild under the same paths; it prints the image it holds first, and
+  `FERRATA_EXPECT_IMAGE_ID` makes it stop at once on any other.
+- **What it runs on.** Linux x86-64 with glibc 2.39 or newer, and r0vm 3.0.5:
+  `RISC0_SERVER_PATH` selects the r0vm to use (a CUDA build for a GPU); without it, rzup's r0vm
+  3.0.5, then `r0vm` on `PATH`.
+- **What it reads.** `bootstrap.ssz` and `update_0.ssz` to `update_4.ssz` of
+  `crates/ferrata-spectests/fixtures/mainnet-p1899`, from `FERRATA_FIXTURE_DIR` (default: this
+  checkout); their SHA-256 sums are compiled in. Nothing else.
+- **The command:**
+  ```sh
+  FERRATA_EXPECT_IMAGE_ID=cec0bc687443be08c29c3216de8a3ed5f00a29d224fc266fe272f78cfe0f4d78 \
+  FERRATA_FIXTURE_DIR=/path/to/mainnet-p1899 RISC0_DEV_MODE=0 RISC0_SERVER_PATH=/path/to/r0vm \
+  /usr/bin/time -v ./prove_private --tx-out stage2-private-tx.borsh > prove-private.log 2>&1
+  ```
+  It proves, settles the proof there through LEZ's settlement (receipt verified), checks the
+  store and the record, and writes the proven transaction, its receipt included (about 231 KB).
+- **The receipt, back here.** The transaction goes to `lez/results/stage2-private-tx.borsh`, the
+  log to `lez/results/prove-private.log`. From `lez/`,
+  `RISC0_DEV_MODE=0 target/debug/prove_private --settle results/stage2-private-tx.borsh` settles
+  it again on this machine through LEZ's state machine, verifying the receipt, in seconds; it
+  refuses a fake receipt and any transaction that does not claim image `cec0bc68…`.
 
 
 ## 4. Stage 3: a private consumer reads a record; the same consumer calling instead
@@ -375,18 +446,18 @@ keeps the prediction valid; `instance(id)`, which every update changes, would no
 **What became public — the read** (record of slot 15,564,800, the consumer's image disclosed):
 
 ```
-public_context.actors (2): ferrata@3wPjVqygcgTufKBsDpNBRJ5eKoXCoSxg1UZJRBQabyrF, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq
+public_context.actors (2): native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@9xq6bB9mVU9PcSbkerXw2tz2j6fUi5LsgcFCPJ86Vciv
 public_context.authorized_accounts: {}
 execution.public_root: None
 execution.boundary (6 steps):
-  - PrivateToPublic from consumer@61yQrZPL8iZ8NbnqXkUEs1JR6DiuSkX3bWxdZSjYSWEu to ferrata@3wPjVqygcgTufKBsDpNBRJ5eKoXCoSxg1UZJRBQabyrF: Read (1 bytes)
-  - PublicToPrivate from ferrata@3wPjVqygcgTufKBsDpNBRJ5eKoXCoSxg1UZJRBQabyrF to consumer@61yQrZPL8iZ8NbnqXkUEs1JR6DiuSkX3bWxdZSjYSWEu: StateReply { state: 293 bytes } (297 bytes)
+  - PrivateToPublic from consumer@61yQrZPL8iZ8NbnqXkUEs1JR6DiuSkX3bWxdZSjYSWEu to ferrata@9xq6bB9mVU9PcSbkerXw2tz2j6fUi5LsgcFCPJ86Vciv: Read (1 bytes)
+  - PublicToPrivate from ferrata@9xq6bB9mVU9PcSbkerXw2tz2j6fUi5LsgcFCPJ86Vciv to consumer@61yQrZPL8iZ8NbnqXkUEs1JR6DiuSkX3bWxdZSjYSWEu: StateReply { state: 293 bytes } (297 bytes)
   - EndPrivateSubtree
   - EndPublicSubtree
   - PrivateToPublic from native@61yQrZPL8iZ8NbnqXkUEs1JR6DiuSkX3bWxdZSjYSWEu to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
   - EndPublicSubtree
 execution.program_image_claims (1):
-  - Disclosed { program: consumer, image_id: 620e6390d9027f16646e6e3e326580c19e75bff0d86b451bbe04a1dc2d0b0686 }
+  - Disclosed { program: consumer, image_id: aec03bcd8eedf5ff1fe14673be82d21ae1c8f95954fb0b9c4db7066d538e932a }
 execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1612 bytes)
 execution.async_messages: 0
 execution.recovery_bindings: 0
@@ -409,18 +480,18 @@ The 8567 serialized bytes of the transaction were searched for the consumer's pr
 program proven by membership of its header mirror, `circuit_io.rs:85–86`):
 
 ```
-public_context.actors (2): ferrata@3wPjVqygcgTufKBsDpNBRJ5eKoXCoSxg1UZJRBQabyrF, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq
+public_context.actors (2): native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@9xq6bB9mVU9PcSbkerXw2tz2j6fUi5LsgcFCPJ86Vciv
 public_context.authorized_accounts: {}
 execution.public_root: None
 execution.boundary (6 steps):
-  - PrivateToPublic from consumer@AodAGCgEG5tEZ9G66zav6VgeBX9hfvyxnimA6U3L6j1C to ferrata@3wPjVqygcgTufKBsDpNBRJ5eKoXCoSxg1UZJRBQabyrF: Read (1 bytes)
-  - PublicToPrivate from ferrata@3wPjVqygcgTufKBsDpNBRJ5eKoXCoSxg1UZJRBQabyrF to consumer@AodAGCgEG5tEZ9G66zav6VgeBX9hfvyxnimA6U3L6j1C: StateReply { state: 293 bytes } (297 bytes)
+  - PrivateToPublic from consumer@AodAGCgEG5tEZ9G66zav6VgeBX9hfvyxnimA6U3L6j1C to ferrata@9xq6bB9mVU9PcSbkerXw2tz2j6fUi5LsgcFCPJ86Vciv: Read (1 bytes)
+  - PublicToPrivate from ferrata@9xq6bB9mVU9PcSbkerXw2tz2j6fUi5LsgcFCPJ86Vciv to consumer@AodAGCgEG5tEZ9G66zav6VgeBX9hfvyxnimA6U3L6j1C: StateReply { state: 293 bytes } (297 bytes)
   - EndPrivateSubtree
   - EndPublicSubtree
   - PrivateToPublic from native@AodAGCgEG5tEZ9G66zav6VgeBX9hfvyxnimA6U3L6j1C to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
   - EndPublicSubtree
 execution.program_image_claims (1):
-  - Undisclosed { commitment root: 25ab284f9fe7142feaeb0d5054840d30796cdc3b29294a0d7ae3150f124515c3 }
+  - Undisclosed { commitment root: c0c485f792dc61648b658b160d18b68d2d816ab976b685ae3d66b492b18bc341 }
 execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1612 bytes)
 execution.async_messages: 0
 execution.recovery_bindings: 0
@@ -442,18 +513,18 @@ The 8503 serialized bytes of the transaction were searched for the consumer's pr
 **The call** (`CallAttest` with a query naming a contract, a storage slot and a deposit):
 
 ```
-public_context.actors (2): ferrata@3wPjVqygcgTufKBsDpNBRJ5eKoXCoSxg1UZJRBQabyrF, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq
+public_context.actors (2): native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@9xq6bB9mVU9PcSbkerXw2tz2j6fUi5LsgcFCPJ86Vciv
 public_context.authorized_accounts: {}
 execution.public_root: None
 execution.boundary (6 steps):
-  - PrivateToPublic from consumer@DYMXat67yG3gSP7GFoRaTUEHduv3mLWBRr5UousHBSho to ferrata@3wPjVqygcgTufKBsDpNBRJ5eKoXCoSxg1UZJRBQabyrF: Attest { query: 0x73746f72616765283078303030303030303032313961623534303335366342423833394362653035333033643737303546612c20736c6f74203729203d206465706f736974202334323432 } (80 bytes)
-  - PublicToPrivate from ferrata@3wPjVqygcgTufKBsDpNBRJ5eKoXCoSxg1UZJRBQabyrF to consumer@DYMXat67yG3gSP7GFoRaTUEHduv3mLWBRr5UousHBSho: StateReply { state: 293 bytes } (297 bytes)
+  - PrivateToPublic from consumer@DYMXat67yG3gSP7GFoRaTUEHduv3mLWBRr5UousHBSho to ferrata@9xq6bB9mVU9PcSbkerXw2tz2j6fUi5LsgcFCPJ86Vciv: Attest { query: 0x73746f72616765283078303030303030303032313961623534303335366342423833394362653035333033643737303546612c20736c6f74203729203d206465706f736974202334323432 } (80 bytes)
+  - PublicToPrivate from ferrata@9xq6bB9mVU9PcSbkerXw2tz2j6fUi5LsgcFCPJ86Vciv to consumer@DYMXat67yG3gSP7GFoRaTUEHduv3mLWBRr5UousHBSho: StateReply { state: 293 bytes } (297 bytes)
   - EndPrivateSubtree
   - EndPublicSubtree
   - PrivateToPublic from native@DYMXat67yG3gSP7GFoRaTUEHduv3mLWBRr5UousHBSho to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
   - EndPublicSubtree
 execution.program_image_claims (1):
-  - Disclosed { program: consumer, image_id: 620e6390d9027f16646e6e3e326580c19e75bff0d86b451bbe04a1dc2d0b0686 }
+  - Disclosed { program: consumer, image_id: aec03bcd8eedf5ff1fe14673be82d21ae1c8f95954fb0b9c4db7066d538e932a }
 execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1533 bytes)
 execution.async_messages: 0
 execution.recovery_bindings: 0
@@ -476,7 +547,7 @@ The complete serialized transactions are in `results/stage3-read-tx.hex`,
 `results/stage3-read-undisclosed-tx.hex` and `results/stage3-call-tx.hex` (with the decoded fields
 in the matching `*-public-outputs.txt`). They are dev-mode transactions: their proof field holds
 RISC Zero's fake receipt (4,308–4,340 bytes here), where a real one holds a succinct receipt (227,080
-bytes in §3). The search covers every byte, the fake receipt included; the tests fail if a
+bytes in §3, on the earlier image). The search covers every byte, the fake receipt included; the tests fail if a
 private input of the reader is found, or if anything but the query is found in the call.
 
 **Finding.** Reading exposes *which* record was read (the `Read` to `header(id, slot)` and the
@@ -505,7 +576,8 @@ Charged (dev mode; flat proof and storage costs as in §3): the read execution g
   `V03State::with_genesis_programs` as LEZ's own tests do, not by `program_loader` transactions;
   the cost of deploying a 508 KB image was not measured.
 - **Private paths in dev mode.** The Stage 2 and 3 tests run with `RISC0_DEV_MODE=1`. One real
-  proof was made (§3), for a finality update only, not for a handoff, and not for a consumer read.
+  proof was made (§3), for a finality update only, not for a handoff, and not for a consumer read,
+  and on the earlier image: the proof of the new image is pending.
 - **Per-handler cycles come from a replay.** `lee` reports one cycle count per transaction; the
   split by handler comes from `harness/src/trace.rs`, which re-executes each guest as `lee`'s
   `PublicBackend` does. Every test asserts that the split sums to LEZ's charge. Within a handler
@@ -516,6 +588,14 @@ Charged (dev mode; flat proof and storage costs as in §3): the read execution g
   weak-subjectivity bound; successors and the root id of the proposal's §1; a submitter daemon
   (the harness plans each job natively, as one would); joining an open job; any clean-up of jobs
   whose final step fails (they stay, unapplied).
+- **The execution layer is in the core, not yet in the program.** Since the merge with `main`
+  the core verifies storage, receipts, logs and EIP-2935 hops against an `attest::HeaderRecord`
+  (chain id, anchor slot, block number, timestamp, block hash, parent hash, state and receipts
+  roots, binding). The program's `header(id, slot)` holds a `steps::HeaderRecord` (the beacon
+  header, the execution root, and the payload's block number, block hash, state and receipts
+  roots and timestamp): no parent hash, no chain id. The two are not yet one type, and the
+  program has no handler that attests anything. The execution layer's cycle counts so far are
+  bare-guest ones (`../bench/RESULTS.md`), not LEZ's.
 - **Refusals LEZ charges at the full gas limit.** Coded exits are charged only the cycles used,
   as designed. A transaction outside its validity window (an `Open` sent before its signature
   slot) is LEZ's own refusal and was charged the whole declared gas limit, 10M (refusal 17). By
@@ -528,18 +608,14 @@ Charged (dev mode; flat proof and storage costs as in §3): the read execution g
 - **A duplicate `Open` is not cheap.** The instance cannot see whether the job exists, so the
   duplicate is refused by `JobOpen` after step 1 has run: 2,183,111 cycles. Making it cheap needs
   an extra round trip (the job asking the instance for its store), which would cost every update.
-- **Exit codes to renumber at the merge.** The program's own refusal codes are 100–112
-  (`wire/src/lib.rs`, `code`) and the consumer's 120–122; the step API's are 80–84. Since this
-  branch was cut, `main` gave the core's new errors (RLP, Merkle-Patricia, headers, receipts,
-  predicates, history) the codes 100–152. Nothing on this branch returns those errors, so no
-  exit code is ambiguous here, but after merging, the program's codes must move (e.g. to
-  200–212) before it surfaces any of them. They were not moved now because that changes the
-  program's image, on which every table here and the real proof were measured. The branches
-  merge without textual conflicts (`git merge-tree --write-tree main lez-program`).
-- **`scripts/check-bench-provenance.sh`** (not a CI gate) reports differences on this branch, by
-  design: it requires the core to equal commit f030475 up to the rename, and this branch adds
-  `steps.rs` and `witness.rs`, three lines in `lib.rs`, and `lez` to the root workspace's
-  `exclude`. The functions `bench/` measured are unchanged.
+- **`scripts/check-bench-provenance.sh`** (not a CI gate) fails, as it does on `main` before the
+  merge: it requires the core to equal commit f030475 up to the rename, file for file, and the
+  core has since gained modules (`main`'s `accumulator.rs`, `attest.rs`, `exec.rs`, `keccak.rs`,
+  `mpt.rs`, `rlp.rs`; this branch's `steps.rs` and `witness.rs`), codes in `error.rs`, module
+  lines in `lib.rs`, `tiny-keccak` in its `Cargo.toml`, and `lez` in the root workspace's
+  `exclude`. The files whose functions `bench/` measured (`bls/`, `fork.rs`, `hash.rs`,
+  `merkle.rs`, `policy.rs`, `ssz.rs`, `store.rs`, `types.rs`, `upgrade.rs`, `validate.rs`) are
+  still byte-identical to f030475 up to the rename.
 
 ### Where the old proposal text (§1–§2, "Plumbline") turned out wrong or incomplete on v0.4
 
@@ -591,15 +667,29 @@ cd lez                                               # spike/ferrata-lez/lez
 export RISC0_HOME=$PWD/../../risc0-home-lez          # rust 1.91.1 installed with `rzup install rust 1.91.1`;
                                                      # cpp 2024.1.5 and r0vm 3.0.5 linked from ~/.risc0
 export TMPDIR=$PWD/../../tmp CARGO_TARGET_DIR=$PWD/target
-RISC0_DEV_MODE=1 cargo test -p harness -- --test-threads 1 --nocapture   # Stages 1–3; prints every table
-cargo run -p harness --bin tables                                         # rewrites results/stage1-*.md, results/shell-costs.md
-./results_env.sh                                                          # rewrites results/environment.md
-RISC0_DEV_MODE=0 /usr/bin/time -v target/debug/prove_private              # the real proof of §3 (build it with
-                                                                          # `cargo build -p harness --bin prove_private`)
+export RISC0_BUILD_LOCKED=1                          # risc0-build then builds the guests with --locked
+./results_env.sh                                     # rewrites results/environment.md (run it first, on a clean tree)
+RISC0_DEV_MODE=1 cargo test -p harness --locked -- --test-threads 1 --nocapture \
+  > results/harness-tests-dev-mode.log               # Stages 1–3 and the exit codes, 13 tests: prints every
+                                                     # table; writes results/stage3-*
+cargo run -p harness --locked --bin tables           # rewrites results/stage1-*.md, shell-costs.md, images.md
+cargo build -p harness --locked --bin prove_private
+RISC0_DEV_MODE=0 /usr/bin/time -v target/debug/prove_private --tx-out results/stage2-private-tx.borsh \
+  > results/prove-private.log 2>&1                   # the real proof of §3, then its settlement (about an
+                                                     # hour on this CPU; see §3 for running it elsewhere)
+RISC0_DEV_MODE=0 target/debug/prove_private --settle results/stage2-private-tx.borsh   # settle it again
+RISC0_DEV_MODE=1 target/debug/prove_private --allow-dev-mode --tx-out target/dry-run-tx.borsh  # a dry run
 cd .. && cargo test -p ferrata-spectests --test steps -- --nocapture       # the step API against process_update
 ```
 
 The harness builds in the dev profile with optimised dependencies: LEZ refuses to build its test
 helpers (`lee/test-utils`, needed for private accounts) into a release build. The guests are
 always built in release. Cycle counts do not depend on the host build.
+
+Lint and format this workspace's own crates only. Clippy needs `RISC0_SKIP_BUILD=1`, or its
+wrapper reaches the guest build and compiles the guests with the host toolchain:
+`RISC0_SKIP_BUILD=1 cargo clippy -p ferrata-lez-wire -p harness -p methods --all-targets --locked -- -D warnings`
+(clean). `cargo fmt --all` would also rewrite the path dependencies, LEZ's crates among them; use
+`cargo fmt -p ferrata-lez-wire -p harness -p methods`, and `rustfmt --edition 2021` for the guests
+(clean).
 
