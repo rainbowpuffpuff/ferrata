@@ -135,14 +135,18 @@ through RISC Zero's emergency stop `0x724d375B5b622e15f0E64e9Deb76a4cB17877797`)
 with the token release's journal digest is refused there with `VerificationFailed()`.
 
 **The Sepolia stages on a local fork** (`anvil --fork-url` of a public endpoint, the deployer
-impersonated; `vault/script/`, commands in `vault/README.md`): `deploy` put the four contracts on the
-fixture's addresses in ten transactions (9.09M gas), `submit` had the candidate's real seal accepted
-(507,370 gas, the Foundry figure), and after 2,400 s `beacon` recorded a beacon whose nonce comes
-from the fork's own random `prevrandao`. The zone builder then produced the finalisation input for
-that nonce on the candidate's stored blocks. `verify-sepolia.sh` passes on the manifest so far,
-including an on-chain check of every seal through the deployed stop. On a fork the beacon is not
-Ethereum's: anvil draws `prevrandao` at random for each block and offers no way to set it, so the
-finalisation has to be proven in real order there too, exactly as on Sepolia. The vault reads no
+impersonated; `vault/script/`, commands in `vault/README.md`; record in [`runs/fork/`](runs/fork/README.md)):
+`deploy` put the four contracts on the fixture's addresses in ten transactions (9.09M gas), `submit`
+had the candidate's real seal accepted (507,370 gas), and after 2,400 s `beacon` recorded a beacon
+whose nonce comes from the fork's own random `prevrandao`. Only then could the finalisation be made:
+the zone builder produced its input for that nonce on the candidate's stored blocks, the L4 proved
+it in 15.9 s (after 14 minutes in the queue), and it was wrapped as the others (20.2 s, 20 s).
+`finalize` accepted it (475,312 gas), and 120 s later `release` paid both releases (363,169 and
+388,243 gas). `verify-sepolia.sh` passes on the 15 transactions: receipts, wiring, configuration,
+every seal checked again through the deployed stop, the recipients' balances, and what must be
+refused. What a fork does not give: its beacon is not Ethereum's (anvil draws `prevrandao` at random
+for each block and offers no way to set it, which is also why the finalisation has to be proven in
+real order there, exactly as on Sepolia), and its clock is moved by hand. The vault reads no
 EIP-4788 beacon root; nothing of that was exercised or needed.
 
 ## Steps

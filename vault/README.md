@@ -339,7 +339,7 @@ New in v3:
 - **Real proofs in one run only.** `test/real/` verifies real Groth16 proofs of both programs and measures their
   gas (GAS.md); every other test mocks the verifier. Those proofs are about a stand-in zone built with test keys.
 
-## Sepolia round trip (prepared; the stages were rehearsed on a local fork)
+## Sepolia round trip (rehearsed end to end on a local fork)
 
 `script/RoundTrip.s.sol` and `script/roundtrip.sh` run the return leg on Sepolia in stages:
 RISC Zero's Groth16 verifier, its emergency stop, a test token and the vault are created, both
@@ -387,6 +387,14 @@ script/verify-sepolia.sh ../e2e/runs/sepolia-live/manifest.json
 The key never appears on a command line: forge reads the keystore file and the password file from
 Foundry's own variables. On a local fork that impersonates the sender, `FERRATA_UNLOCKED=1` replaces
 the keystore.
+
+**Rehearsal.** All of the above ran on `anvil --fork-url <a public Sepolia endpoint>` with the sender
+impersonated ([`../e2e/runs/fork/`](../e2e/runs/fork/README.md)): 15 transactions, the finalisation proven
+after the fork's beacon existed, both releases paid, and `verify-sepolia.sh` passing on the manifest,
+including what must be refused (a seal with a changed byte, the candidate's seal offered as the
+finalisation, each release replayed). The gas of every transaction is the Foundry figure of GAS.md, to the
+unit except where calldata differs. On a fork the wait is passed with `cast rpc evm_increaseTime <seconds>`
+and `cast rpc anvil_mine 1`; the beacon there is anvil's random `prevrandao`, not Ethereum's.
 
 The testnet configuration (`deploy` only; each from the environment): `FERRATA_DELTA` 600 s as both
 `deltaFloor` and the initial `delta`, `turnSeconds` 900 s (the fixture's posting timeframe of 900

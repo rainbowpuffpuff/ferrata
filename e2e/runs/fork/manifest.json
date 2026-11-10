@@ -128,6 +128,40 @@
         "effectiveGasPrice": "0x17d78bf",
         "status": "0x1"
       }
+    ],
+    "finalize": [
+      {
+        "hash": "0x8578d98734f8a4aebdde802bdc6fe2819b859652620cbfa4545d60ec72f009fe",
+        "what": "finalize(uint256,(uint32,uint32,bytes32,bytes32,bytes32,uint64,uint64,bool,bytes32,uint64,bytes32,uint32,uint32),bytes) CALL",
+        "contractAddress": null,
+        "to": "0xdfedf9a73cfb337277b95a9a1c941c3496a4385f",
+        "blockNumber": "0xb8b680",
+        "gasUsed": "0x740b0",
+        "effectiveGasPrice": "0x17d78bf",
+        "status": "0x1"
+      }
+    ],
+    "release": [
+      {
+        "hash": "0x8c4740d9ed914ae2d3fbdea800b2ad9eaea74f08babc461f18222d2aaefbb01d",
+        "what": "release((address,uint8,address,address,uint256,bytes32,bytes32),bytes) CALL",
+        "contractAddress": null,
+        "to": "0xdfedf9a73cfb337277b95a9a1c941c3496a4385f",
+        "blockNumber": "0xb8b682",
+        "gasUsed": "0x58aa1",
+        "effectiveGasPrice": "0x17d78bf",
+        "status": "0x1"
+      },
+      {
+        "hash": "0xda42658bb1ddf690e8a783d60bd0dca933f8e021ab5953068f8dea2322b8baaa",
+        "what": "release((address,uint8,address,address,uint256,bytes32,bytes32),bytes) CALL",
+        "contractAddress": null,
+        "to": "0xdfedf9a73cfb337277b95a9a1c941c3496a4385f",
+        "blockNumber": "0xb8b683",
+        "gasUsed": "0x5ec93",
+        "effectiveGasPrice": "0x17d78bf",
+        "status": "0x1"
+      }
     ]
   }
 }

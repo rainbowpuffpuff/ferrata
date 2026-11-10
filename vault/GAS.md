@@ -86,9 +86,9 @@ finite caps, one earlier checkpoint), so the two tables differ by more than the 
 | `deposit` ERC-20, second deposit of the address, first of the token | 192,529 | 192,529 |
 | `submitCandidate` with a real checkpoint seal, including the beacon it records | **507,370** | 507,370 |
 | `recordBeacon` | 77,823 | 77,823 |
-| `finalize` with a real checkpoint seal that echoes the beacon | **475,300** | ⁴ |
-| `release` ETH, no relay fee, to a fresh recipient | **363,169** | ⁴ |
-| `release` ERC-20, registered fee to a named relayer, both fresh | **388,243** | ⁴ |
+| `finalize` with a real checkpoint seal that echoes the beacon ⁴ | **475,300** | 475,312 |
+| `release` ETH, no relay fee, to a fresh recipient | **363,169** | 363,169 |
+| `release` ERC-20, registered fee to a named relayer, both fresh | **388,243** | 388,243 |
 
 Creations, from the receipts of the fork run (`forge --isolate` does not report creations through
 `vm.lastCallGas`): `RiscZeroGroth16Verifier` 1,179,986; `RiscZeroVerifierEmergencyStop` 451,744; `FerrataVault`
@@ -97,7 +97,8 @@ Creations, from the receipts of the fork run (`forge --isolate` does not report 
 ³ The two columns differ by 24 gas because the registered release delay is 24 h in the test and 120 s in the
 fork run: two more non-zero calldata bytes.
 
-⁴ Not yet measured on the fork: see "Sepolia round trip" in README.md for how far the rehearsal went.
+⁴ Two different proofs: the fork's finalisation echoes the nonce of the fork's own beacon, the test's echoes
+the fixture's. The 12 gas are calldata bytes of the nonce and the seal.
 
 Against the mock rows above: a candidate costs 507k where the mocked scenario reads 247k, a finalisation 475k
 against 213k, an ETH release 363k against 168k. Most of each difference is the Groth16 verification, measured

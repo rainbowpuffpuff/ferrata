@@ -2,7 +2,10 @@
 # Re-checks a round trip's manifest against any RPC endpoint of its chain: every transaction is mined
 # and succeeded with the recorded gas, the contracts are wired as the design says, the vault holds
 # the fixture's configuration and state, every seal still verifies through the emergency stop, and
-# the releases reached their recipients. Reads only.
+# the releases reached their recipients. Then what must be refused, as simulated calls: a seal with
+# one flipped byte, a seal offered for another journal, a release against a root that is not
+# finalised (before the finalisation) and every release replayed (after it). Reads only: nothing
+# is sent, no key is needed.
 #
 #   SEPOLIA_RPC_URL=<endpoint> script/verify-sepolia.sh [manifest.json] [fixture.json]
 set -euo pipefail
@@ -64,5 +67,39 @@ for i in $(seq 0 $(($(f .releaseCount) - 1))); do
     have="$(call "$(f "$r.token")" 'balanceOf(address)(uint256)' "$(f "$r.recipient")" | awk '{print $1}')"
   fi
   [ "$have" -ge "$paid" ] && echo "ok    release $name: the recipient holds $have (paid $paid)" || { echo "FAIL  release $name: recipient holds $have, paid $paid"; fail=1; }
+done
+
+# What must be refused. Each is an eth_call that has to revert, where given with a named error.
+refused() { # name, expected error or "", then the call
+  local name="$1" want="$2" out; shift 2
+  if out="$(cast call "$@" "${rpc[@]}" 2>&1)"; then echo "FAIL  $name: the call went through"; fail=1; return; fi
+  if [ -n "$want" ] && ! grep -q "$(cast sig "$want" | cut -c3-)" <<<"$out"; then
+    echo "FAIL  $name: reverted, but not with $want: ${out:0:160}"; fail=1; return
+  fi
+  echo "ok    refused: $name${want:+ ($want)}"
+}
+flip() { local seal="$1" last="${1: -1}"; if [ "$last" = 0 ]; then echo "${seal%?}1"; else echo "${seal%?}0"; fi; }
+if [ "$(f '.candidate.seal // empty')" ]; then
+  refused "the candidate seal with its last byte changed" "" "$estop" 'verify(bytes,bytes32,bytes32)' \
+    "$(flip "$(f .candidate.seal)")" "$(f .checkpointImageId)" "$(f .candidate.journalDigest)"
+  refused "the candidate seal for the release program's image" "VerificationFailed()" "$estop" \
+    'verify(bytes,bytes32,bytes32)' "$(f .candidate.seal)" "$(f .releaseImageId)" "$(f .candidate.journalDigest)"
+  [ "$(f '.finalize.journalDigest // empty')" ] && refused "the candidate seal as the finalisation" \
+    "VerificationFailed()" "$estop" 'verify(bytes,bytes32,bytes32)' "$(f .candidate.seal)" \
+    "$(f .checkpointImageId)" "$(f .finalize.journalDigest)"
+fi
+for i in $(seq 0 $(($(f .releaseCount) - 1))); do
+  r=".releases[$i]"; name="$(f "$r.name")"
+  [ "$(f "$r.seal // empty")" ] || continue
+  request="($(f "$r.token"),0,$(f "$r.recipient"),$(f "$r.relayer"),$(cast to-dec "$(f "$r.relayFee")"),$(f "$r.burnRoot"),$(f "$r.nullifier"))"
+  release='release((address,uint8,address,address,uint256,bytes32,bytes32),bytes)'
+  refused "release $name seal with its last byte changed" "" "$estop" 'verify(bytes,bytes32,bytes32)' \
+    "$(flip "$(f "$r.seal")")" "$(f .releaseImageId)" "$(f "$r.journalDigest")"
+  if jq -e '.stages.release' "$manifest" > /dev/null; then
+    refused "release $name replayed" "NullifierAlreadyUsed()" "$vault" "$release" "$request" "$(f "$r.seal")"
+  elif ! jq -e '.stages.finalize' "$manifest" > /dev/null; then
+    refused "release $name against a root that is not finalised" "BurnRootNotAccepted()" "$vault" "$release" \
+      "$request" "$(f "$r.seal")"
+  fi
 done
 [ "$fail" = 0 ] && echo "ALL CHECKS PASSED" || { echo "SOME CHECKS FAILED"; exit 1; }

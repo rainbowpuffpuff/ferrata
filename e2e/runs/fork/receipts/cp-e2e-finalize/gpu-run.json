@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "name": "cp-e2e-finalize",
+  "gpu": "NVIDIA L4, 23034 MiB, 610.57.04, 8.9",
+  "image_ids_equal": true,
+  "input_hashes_equal_manifest": true,
+  "prover_wall_s": 16.111257076263428,
+  "container_s_until_done": 17.734687328338623,
+  "finished_at_utc": "2026-11-10T15:32:46Z"
+}

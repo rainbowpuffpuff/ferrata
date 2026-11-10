@@ -10,6 +10,6 @@ which are in `../sepolia/receipts/`. What is its own:
 | `manifest.json` | every transaction of the rehearsal: hash, block, gas, status |
 | `beacon.json` | the fork block that mined `recordBeacon`: number, anvil's random `prevrandao`, the nonce |
 | `cp-e2e-finalize.{input,json}`, `lez.json`, `fixture.json` | the finalisation for that nonce, built on the candidate's stored blocks after the beacon existed |
-| `receipts/cp-e2e-finalize/` | its proof, once made |
+| `receipts/cp-e2e-finalize/` | its proof: 15.9 s on one NVIDIA L4, wrapped to Groth16, accepted by `finalize` on the fork |
 
 The hashes are those of a private fork: they exist on no public network.
