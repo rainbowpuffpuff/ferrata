@@ -6,7 +6,7 @@ This directory runs the same program, as it was before the attestation was added
 built from the unmodified tag, inscribing its blocks on a running Logos Blockchain (Bedrock) node,
 with every transaction built, signed and sent by LEZ's wallet library over the sequencer's RPC.
 The record of that run is in [`results/`](results/); the numbers are in
-[`results/tables.md`](results/tables.md) and in `../RESULTS.md` §8.
+[`results/tables.md`](results/tables.md) and in `../RESULTS.md` §9.
 
 There is no public LEZ v0.4 network to run on (`../../docs/design/lez-v0.4-findings.md`,
 "Unconfirmed"), so this is a local zone: one sequencer and one Bedrock validator on one machine.
@@ -133,7 +133,7 @@ from them first.
 
 ## Reproduce
 
-Layout as in `../RESULTS.md` §7 (LEZ at `upstream/lez-v0.4.0-rc1` beside the repository, r0vm
+Layout as in `../RESULTS.md` §8 (LEZ at `upstream/lez-v0.4.0-rc1` beside the repository, r0vm
 3.0.5 on `PATH`). System packages: LEZ's (`build-essential clang libclang-dev libssl-dev
 pkg-config`) and `libpcsclite-dev` (LEZ's wallet links keycard support). Everything the scripts
 write goes to `tmp/sequencer` beside the repository or to `results/`; ports 3040 (sequencer RPC),

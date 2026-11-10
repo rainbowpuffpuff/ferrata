@@ -10,8 +10,14 @@
 //! event logs, accumulator leaves, with conditions) and replies to its caller with their
 //! statement identifiers: `ferrata_lez_wire::attest::evaluate`, the function a private consumer
 //! runs on the record it reads.
+//!
+//! An instance's store starts in the layout of its bootstrap and moves to the layout of a later
+//! fork of the instance's own schedule with the first update attested under that fork
+//! (`ferrata_core::steps::store_for_update`): the job starts from the upgraded store, and applying
+//! the verified job writes the upgrade.
 
 use ferrata_core::{
+    fork::ChainSpec,
     steps::{self, Job, PendingApply, StepError},
     witness::{CompactBootstrap, CompactStore, CompactUpdate, SignerWitness},
     Error, Root,
@@ -19,6 +25,7 @@ use ferrata_core::{
 use ferrata_lez_wire::{
     attest, code, header_actor, header_seed, instance_actor, instance_id, job_actor, job_id, job_seed, Config,
     InstanceState, JobState, Message, RecordState, UncompressedKey, ATTESTED_SELECTOR, FINALIZED_SELECTOR,
+    UPGRADED_SELECTOR,
 };
 use lee_core::{
     account::{AccountId, ActorState},
@@ -112,6 +119,22 @@ fn check_config(config: &Config) -> Result<(), Refusal> {
     Ok(())
 }
 
+/// An update decoded in the layout its encoding names, and the store it is verified against:
+/// `store`, or `store` upgraded to that layout when it is the layout of a later fork that the
+/// instance's schedule puts at the update's attested header (`steps::store_for_update`). Any
+/// other layout is `ForkMismatch`.
+fn update_and_store(
+    store: &CompactStore,
+    update: &[u8],
+    committee_size: usize,
+    spec: &ChainSpec,
+) -> Result<(CompactUpdate, CompactStore), Refusal> {
+    let layout = CompactUpdate::layout_of(update).map_err(core)?;
+    let update = CompactUpdate::decode(update, layout, committee_size).map_err(core)?;
+    let store = steps::store_for_update(store, layout, update.attested_header.beacon.slot, spec).map_err(core)?;
+    Ok((update, store))
+}
+
 /// `instance(id)` → `job(id, job_id)`, creating the job's account under its seed.
 fn open_job(program: AccountId, id: &Root, committee_size: u32, job: &Job) -> SyncMessage {
     let jid = job_id(id, &job.store_digest, &job.update_digest);
@@ -164,11 +187,10 @@ fn open(input: &ReceiveInput, program: AccountId, update: &[u8], signers: &[u8])
         return Err(code::INSTANCE_INACTIVE);
     }
     let config = &state.config;
-    let fork = config.fork().ok_or(code::BAD_STATE)?;
     let spec = config.spec();
     let n = config.sync_committee_size as usize;
-    let store = CompactStore::decode(&state.store).map_err(|_| code::BAD_STATE)?;
-    let update = CompactUpdate::decode(update, fork, n).map_err(core)?;
+    let stored = CompactStore::decode(&state.store).map_err(|_| code::BAD_STATE)?;
+    let (update, store) = update_and_store(&stored, update, n, &spec)?;
     let signers = SignerWitness::decode(signers, n).map_err(core)?;
     // `current_slot >= signature_slot` is enforced by the transaction's validity window: it is
     // valid only from the start of the signature slot, by the sequencer's clock.
@@ -233,13 +255,23 @@ fn apply_job(program: AccountId, mut state: InstanceState, job: &Job) -> Result<
     }
     let spec = state.config.spec();
     let store = CompactStore::decode(&state.store).map_err(|_| code::BAD_STATE)?;
+    // The job started from this store, or from this store upgraded to a later fork's layout
+    // (`open`, `verify_all`); in the second case the store returned has that layout.
     let (next, outcome) = steps::apply(&store, job, &spec).map_err(step)?;
+    let was = state.store.first().copied();
     state.store = next.encode();
+    let now = state.store.first().copied();
     state.applied += 1;
     state.active = true;
     let id = state.id;
     let chain_id = state.config.chain_id;
     let mut response = Response::set_state(encode(&state));
+    if let (Some(was), Some(now)) = (was, now) {
+        // The store's encoding starts with its layout.
+        if was != now {
+            response = response.event(ProgramEvent { selector: UPGRADED_SELECTOR, data: vec![was, now] });
+        }
+    }
     if activate || outcome.advanced {
         let record = job.pending.record();
         let slot = record.beacon.slot;
@@ -384,11 +416,10 @@ fn verify_all(
 ) -> Result<Response, Refusal> {
     check_config(config)?;
     let id = instance_id(config, checkpoint);
-    let fork = config.fork().ok_or(code::BAD_CONFIG)?;
     let spec = config.spec();
     let n = config.sync_committee_size as usize;
-    let store = CompactStore::decode(store).map_err(core)?;
-    let update = CompactUpdate::decode(update, fork, n).map_err(core)?;
+    let stored = CompactStore::decode(store).map_err(core)?;
+    let (update, store) = update_and_store(&stored, update, n, &spec)?;
     let signers = SignerWitness::decode(signers, n).map_err(core)?;
     let mut job =
         steps::step1(&store, &update, &signers, update.signature_slot, &spec, &config.genesis_validators_root, 1)

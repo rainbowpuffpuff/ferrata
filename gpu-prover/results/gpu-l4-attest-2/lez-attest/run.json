@@ -1,0 +1,102 @@
+{
+  "ok": true,
+  "name": "lez-attest",
+  "run": "gpu-l4-attest-2",
+  "exit_code": 0,
+  "timed_out": false,
+  "gpu_type_requested": "L4",
+  "gpu": "NVIDIA L4, 23034 MiB, 610.57.04, 8.9",
+  "container_cpu_cores": 4.0,
+  "container_memory_mib": 32768,
+  "nproc": "4",
+  "modal_task_id": "ta-01M73A9TSZYWVT317SEAKTBY1R",
+  "modal_region": "eu-west",
+  "modal_cloud_provider": "CLOUD_PROVIDER_GCP",
+  "expected_consumer_image_id": "f883e6a4dbd8e49439465f918884abe1379b02276ff88676f0a4bf958ee49068",
+  "program_image_id": "9f3eb00f54f911e41710fc57d6b0258846bd4db61b57674b8a33a6457bda3e7b",
+  "ferrata_commit": "ad40044cf64170d6e28079257219694a98d802e3",
+  "input_hashes_equal_manifest": true,
+  "binary_sha256": "6146055b28433cb2e9faa607835c5b46b17a222fdc930972167e50d18f6f11ab",
+  "r0vm": "risc0-r0vm 3.0.5",
+  "wall_s": 21.328880548477173,
+  "container_s_until_done": 23.34723734855652,
+  "gnu_time": {
+    "user_s": "18.81",
+    "system_s": "2.41",
+    "cpu_percent": "99%",
+    "elapsed": "0:21.28",
+    "max_rss_kib": "798040",
+    "exit_status": "0"
+  },
+  "gpu_stats": {
+    "samples": 113,
+    "sample_period_ms": 200,
+    "gpu_memory_used_mib_before": 4.0,
+    "gpu_memory_used_mib_peak": 11295.0,
+    "power_w_peak": 72.48,
+    "sm_clock_mhz_peak": 2040.0,
+    "temperature_c_peak": 49.0,
+    "gpu_busy_seconds": 13.8,
+    "first_busy_to_last_busy_s": 15.386000156402588,
+    "window_samples": 106,
+    "gpu_util_pct_mean_in_window": 45.85849056603774,
+    "gpu_util_share_of_samples_above_0_in_window": 0.6509433962264151,
+    "gpu_mem_bandwidth_util_pct_mean_in_window": 21.27358490566038,
+    "power_w_mean_in_window": 42.06811320754717
+  },
+  "gpu_stats_window": "whole prove_attest run",
+  "log_lines": [
+    "consumer image f883e6a4dbd8e49439465f918884abe1379b02276ff88676f0a4bf958ee49068 (419472 ELF bytes); program image 9f3eb00f54f911e41710fc57d6b0258846bd4db61b57674b8a33a6457bda3e7b (602912 ELF bytes); RISC0_DEV_MODE off",
+    "record: header(id, 15624480) of instance c112f29279d8, mainnet block 26384851; fact: Transfer of token a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 in transaction 0, log 0",
+    "| AttestPrivately (sends Read) | 2,251 | 4,593 | 34,337 | 1 | 131,072 | 0 |",
+    "| the record's reply (verifies the fact) | 2,719 | 2,864 | 346,240 | 1 | 524,288 | 0 |",
+    "REAL PROOF: execute_and_prove 16.1 s (prove + settle 16.3 s); receipt (succinct InnerReceipt, borsh) 227170 bytes; transaction 231214 bytes",
+    "wrote the proven transaction to stage4-private-attest-tx.borsh (231214 bytes)",
+    "settled: execution gas 421,641 (PRIVATE_VERIFY_GAS 409,764 + public part 11,877 cycles), storage gas 224,063, base fee 5,165,632"
+  ],
+  "tx_bytes": 231214,
+  "tx_sha256": "5b1d6292f7dc70894ca6f06403dbaef05f3b42e7e1c2a8a1b9b61d1c812fbdcf",
+  "build_info": {
+    "cuda_base_image": "nvidia/cuda:12.8.0-devel-ubuntu24.04",
+    "nvcc": [
+      "Cuda compilation tools, release 12.8, V12.8.61",
+      "Build cuda_12.8.r12.8/compiler.35404655_0"
+    ],
+    "rustc": "rustc 1.89.0 (29483883e 2025-08-04)",
+    "cargo": "cargo 1.89.0 (c24e10642 2025-06-23)",
+    "gcc": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+    "nvcc_append_flags": "--generate-code arch=compute_89,code=sm_89",
+    "build_container": {
+      "cpu_cores": 16.0,
+      "memory_mib": 65536
+    },
+    "binary": "r0vm-cuda",
+    "source_key": "risc0-r0vm =3.0.5 --locked --features cuda",
+    "cargo_args": [
+      "install",
+      "risc0-r0vm",
+      "--version",
+      "=3.0.5",
+      "--locked",
+      "--features",
+      "cuda",
+      "--root",
+      "/root/build/r0vm"
+    ],
+    "build_seconds": 1511.5,
+    "built_at_utc": "2026-11-10T09:17:41Z",
+    "sha256": "781ca94605f6b93ac17306e15a7c63ac35bcaaab1e13892b38ec38221b756fb7",
+    "bytes": 136895208,
+    "ldd": [
+      "linux-vdso.so.1 (0x00002b9a94737000)",
+      "\tlibstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x00002b9a9c47a000)",
+      "\tlibcuda.so.1 => not found",
+      "\tlibgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00002b9a9c6f8000)",
+      "\tlibm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00002b9a9c726000)",
+      "\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00002b9a9c80f000)",
+      "\t/lib64/ld-linux-x86-64.so.2 (0x0000564891aa3000)"
+    ]
+  },
+  "r0vm_sha256_here": "781ca94605f6b93ac17306e15a7c63ac35bcaaab1e13892b38ec38221b756fb7",
+  "finished_at_utc": "2026-11-10T18:08:07Z"
+}

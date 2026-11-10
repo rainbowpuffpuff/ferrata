@@ -274,7 +274,7 @@ time.
 
 ```sh
 cd lez
-export RISC0_HOME=$PWD/../../risc0-home-lez        # guest Rust 1.91.1, as RESULTS.md §7
+export RISC0_HOME=$PWD/../../risc0-home-lez        # guest Rust 1.91.1, as RESULTS.md §8
 cargo test -p harness --test bridge_inbound -- --nocapture          # writes results/bridge-inbound.md
 RISC0_DEV_MODE=1 cargo test -p harness --test bridge_private --test bridge_burn -- --nocapture
                                                     # write results/bridge-private-claim.md, bridge-burn.md
@@ -286,4 +286,4 @@ RISC0_DEV_MODE=0 target/debug/prove_bridge --settle results/bridge-private-claim
 ```
 On this worktree they ran through `../../modal-build/mrun` (a cloud container), the first build
 without `RISC0_BUILD_LOCKED` because the new guest's lockfile had to be written; with the
-lockfiles committed, `--locked` and `RISC0_BUILD_LOCKED=1` apply as in `RESULTS.md` §7.
+lockfiles committed, `--locked` and `RISC0_BUILD_LOCKED=1` apply as in `RESULTS.md` §8.

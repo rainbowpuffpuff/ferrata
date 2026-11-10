@@ -23,7 +23,7 @@ use ferrata_lez_wire::{
     code,
     consumer::{address_word, code as consumer_code, Deposit, Pool, TRANSFER_TOPIC},
 };
-use ferrata_spectests::execkit::{account_rlp, enc, keccak, Trie};
+use ferrata_spectests::execkit::{account_rlp, enc, header_rlp, keccak, Trie};
 use lee::AccountId;
 use serde_json::Value;
 
@@ -164,10 +164,37 @@ fn accumulator_leaves_of_the_shared_vectors_through_a_request() {
     assert!(evaluate(&INSTANCE, 1, &recorded, &request).is_ok());
     assert_eq!(evaluate(&[0x2e; 32], 1, &recorded, &request), Err(code::WRONG_INSTANCE));
     assert_eq!(evaluate(&INSTANCE, 5, &recorded, &request), Err(140), "ChainMismatch");
-    // A record without payload fields (a Gloas record holds a block hash only) cannot be attested
-    // against yet.
-    let gloas = HeaderRecord { execution: ExecutionSummary::BlockHash([9; 32]), ..recorded };
-    assert_eq!(evaluate(&INSTANCE, 1, &gloas, &request), Err(141), "BindingMismatch");
+    // A record that binds a block hash only (the Gloas layout) is attested with that block's RLP
+    // header, from which the roots are read: here the header of a real Sepolia block with the
+    // synthetic state root put in, so the same request proves the same facts.
+    let ExecutionSummary::Payload { state_root, .. } = recorded.execution else { unreachable!() };
+    let served: Value = serde_json::from_slice(&harness::sepolia::gloas_file("block.json")).unwrap();
+    let mut block = served["result"].clone();
+    block["stateRoot"] = Value::String(format!("0x{}", hex::encode(state_root)));
+    let rlp = header_rlp(&block);
+    let gloas = HeaderRecord { execution: ExecutionSummary::BlockHash(keccak(&rlp)), ..recorded.clone() };
+    assert_eq!(evaluate(&INSTANCE, 1, &gloas, &request), Err(code::HEADER_REQUIRED), "no header");
+    let with_header = Request { header: Some(rlp.clone()), ..request.clone() };
+    let by_header = evaluate(&INSTANCE, 1, &gloas, &with_header).unwrap();
+    let by_payload = evaluate(&INSTANCE, 1, &recorded, &request).unwrap();
+    assert_eq!(by_header.statements, by_payload.statements, "the same facts and identifiers");
+    let number = u64::from_str_radix(block["number"].as_str().unwrap().trim_start_matches("0x"), 16).unwrap();
+    assert_eq!((by_header.block_number, by_header.block_hash), (number, keccak(&rlp)), "from the header");
+    assert_eq!(evaluate(&INSTANCE, 1, &recorded, &with_header), Err(code::BAD_QUERY), "a header for a payload record");
+    let header = |h: Vec<u8>| Request { header: Some(h), ..request.clone() };
+    let mut tampered = rlp.clone();
+    tampered[100] ^= 1;
+    assert_eq!(evaluate(&INSTANCE, 1, &gloas, &header(tampered)), Err(120), "tampered: HeaderHashMismatch");
+    assert_eq!(evaluate(&INSTANCE, 1, &gloas, &header(rlp[..rlp.len() - 1].to_vec())), Err(120), "truncated");
+    assert_eq!(evaluate(&INSTANCE, 1, &gloas, &header([rlp.as_slice(), &[0]].concat())), Err(120), "over-long");
+    // Another block's header: the real one, whose state root is not the recorded block's.
+    assert_eq!(evaluate(&INSTANCE, 1, &gloas, &header(header_rlp(&served["result"]))), Err(120), "another block");
+    // No execution block to read: a zero block hash (a header from before the merge), the Altair
+    // layout.
+    let zero = HeaderRecord { execution: ExecutionSummary::BlockHash([0; 32]), ..recorded.clone() };
+    assert_eq!(evaluate(&INSTANCE, 1, &zero, &with_header), Err(141), "BindingMismatch");
+    let altair = HeaderRecord { execution: ExecutionSummary::None, ..recorded };
+    assert_eq!(evaluate(&INSTANCE, 1, &altair, &request), Err(141), "BindingMismatch");
 }
 
 fn pool() -> Pool {

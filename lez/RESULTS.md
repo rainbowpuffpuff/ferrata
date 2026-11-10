@@ -19,54 +19,68 @@ update runs as three transactions; 18 refusals ran through the same path (§2). 
 private actor verifies a whole update and the public instance applies it) and Stage 3 (a private
 consumer reads a record, or calls) ran through LEZ's privacy-preserving circuit and private
 settlement in RISC Zero dev mode; real proofs were made of Stage 2 on earlier images (§3, and on
-a running sequencer, §8), none of Stage 3.
+a running sequencer, §9), none of Stage 3.
 Stage 4 (§5): on a mainnet block finalized on 10 November 2026, the program attests an account, a
 storage slot and event logs under the record it wrote for that block, each in one public
 transaction; a reference consumer credits an ERC-20 `Transfer` once, in one transaction; a
 privately executed consumer verifies the same `Transfer` against the record it reads (in dev
-mode, and once with a real proof on one NVIDIA L4, §5.5); 41 refusals ran through the same paths.
+mode, and once with a real proof on one NVIDIA L4, §5.5); 41 refusals ran through the same paths. Stage 5 (§6): on Sepolia, an instance initialised from the
+bootstrap of the last period before Gloas follows every period's update to 1409 over the public
+job path, its store upgrading itself to the Gloas layout at the fork of its schedule; under the
+record of a Gloas-era block, which binds only the block hash, the program attests a storage slot,
+an ERC-20 `Transfer` and an account with the block's RLP header as witness, and refuses the same
+proofs asked as mainnet statements; the vault's deposit leaves are proven in the guest, on a
+synthetic state until the vault is deployed.
 
-**Which image these numbers come from.** Every number in this file, except those of the two real
-proofs of an update and of the run on a sequencer (§8), was measured on the images built from this
-branch, which add the attestation: program `2f3566d4…`, consumer `711584ff…`
-(`results/images.md`), in runs at commit d498591 on a Modal container (`results/environment.md`),
+**Which image these numbers come from.** Every number in this file, except those of the real
+proofs and of the run on a sequencer (§9), was measured on the images built from this branch, which add the attestation, the store's
+upgrade in place and attestation under Gloas records: program `9f3eb00f…`, consumer `f883e6a4…`
+(`results/images.md`), in runs at commit ad40044 on a Modal container (`results/environment.md`),
 not on the laptop the earlier runs used. The executor is deterministic, so the cycle counts do not
 depend on the machine; the guest ELF holds the absolute paths of its sources, so the image ids are
-those of a build under this checkout's path. The images before this branch were program
-`cec0bc68…` and consumer `aec03bcd…` (commit 8d0c647), and before the merge with `main`
-`e7cec90e…` and `620e6390…`. Against `cec0bc68…`, the execution gas of every public transaction of
-§2 of a million cycles or more changed by at most 0.08%, that of the cheaper ones by up to 4.4%
-(at most 1,826 cycles), and the public part of the private update of §3 by 1,889 cycles (70,090 to
-71,979): the configuration gained the chain id (8 bytes), the record the parent hash and the chain
-id (40 bytes), and the program is another binary. **The two real proofs of an update (§3) are of
-the earlier images**: `e7cec90e…` on the laptop CPU (9,045,235 cycles, 54 min, 9.18 GiB, a
-227,080-byte receipt) and `cec0bc68…` on one NVIDIA L4 GPU (`gpu-prover/RESULTS.md`). **One
-private attestation was proven on these images** (§5.5, consumer `711584ff…`), on the same GPU:
-13.5 s, a 227,170-byte receipt, settled with the receipt verified. The update path of §3 has no
-real proof on this program image.
+those of a build under this checkout's path. The images before were program `2f3566d4…` and
+consumer `711584ff…` (commit d498591, on which Stage 4 was first measured), before them
+`cec0bc68…` and `aec03bcd…` (commit 8d0c647), and before the merge with `main` `e7cec90e…` and
+`620e6390…`. Against `2f3566d4…`, the execution gas of every public transaction of §2 to §5 of a
+million cycles or more changed by at most 0.2% (at most 3,216 cycles), that of the cheaper ones by
+up to 7.3% (at most 5,871 cycles), and the public part of the private update of §3 by 781 cycles
+(71,979 to 72,760): updates are decoded in the layout their encoding names, applying a job looks
+for the store it started from, a request carries an optional header, and the program is another
+binary. Between `cec0bc68…` and `2f3566d4…` the same comparison gave at most 0.08% and 4.4% (at
+most 1,826 cycles), and 1,889 cycles for the private update (70,090 to 71,979): the configuration
+gained the chain id (8 bytes), the record the parent hash and the chain id (40 bytes). **The two
+real proofs of an update (§3) are of the earlier images**: `e7cec90e…` on the laptop CPU
+(9,045,235 cycles, 54 min, 9.18 GiB, a 227,080-byte receipt) and `cec0bc68…` on one NVIDIA L4
+GPU (`gpu-prover/RESULTS.md`). **The private attestation (§5.5) was proven on these images**
+(consumer `f883e6a4…`), on one NVIDIA L4: 16.1 s, a 227,170-byte receipt, settled with the receipt
+verified; a first proof had been made of the previous images (consumer `711584ff…`, 13.5 s). The update path of §3 has no real proof on this program image.
 
-**On a running sequencer (§8).** The program of the image before the attestation, `cec0bc68…`,
+**On a running sequencer (§9).** The program of the image before the attestation, `cec0bc68…`,
 deployed by LEZ's `program_loader`, ran the scenario of §2 and the private update of §3 on LEZ's
 own v0.4.0-rc1 sequencer with a Logos Blockchain node (one validator, leader proofs in dev mode):
 the 65 transactions that had a row in §2 as measured on that image had the same outcome there, 64
 at the same execution gas, and a real proof made against the live instance was verified by the
-sequencer and applied. The attestation (§5) and the bridge program (`BRIDGE-RESULTS.md`) have not
+sequencer and applied. The attestation (§5, §6) and the bridge program (`BRIDGE-RESULTS.md`) have not
 run on a sequencer.
 
 | operation (mainnet, 512-member committees) | transactions | largest transaction, execution gas (cycles) | total execution gas | total storage gas (bytes) |
 |---|---:|---:|---:|---:|
-| `Init`: bootstrap checks, then the adoption of its committee in two parts | 3 | 3,482,584 | 7,090,860 | 51,976 |
-| finality update (update_1 without its next committee) | 3 | 3,722,269 | 9,220,969 | 4,451 |
-| update that rotates and adopts a committee (mainnet updates 1–4; update_1 shown) | 5 | 3,732,932 | 16,084,181 | 54,491 |
-| update that only supplies the next committee (mainnet update_0) | 5 | 3,696,521 | 15,991,141 | 53,675 |
-| finality update as one public transaction (`VerifyAll`) | 1 | 9,118,298 | 9,118,298 | 4,097 |
-| finality update verified privately (Stage 2; one private transaction) | 1 | 481,743 | 481,743 | 224,063 |
-| attestation of a storage slot under a record (Stage 4; mainnet block 26,384,851) | 1 | 273,717 | 273,717 | 7,337 |
-| attestation of an ERC-20 `Transfer` log (receipt with 7 logs; with 306 logs) | 1 | 94,598; 1,616,902 | 94,598; 1,616,902 | 2,622; 58,811 |
-| a consumer's claim of that log: it calls the attestation and credits once | 1 | 180,115 | 180,115 | 2,767 |
-| the same log attested by a privately executed consumer (one private transaction) | 1 | 421,642 | 421,642 | 224,063 |
+| `Init`: bootstrap checks, then the adoption of its committee in two parts | 3 | 3,482,647 | 7,090,909 | 51,976 |
+| finality update (update_1 without its next committee) | 3 | 3,723,050 | 9,224,206 | 4,451 |
+| update that rotates and adopts a committee (mainnet updates 1–4; update_1 shown) | 5 | 3,733,713 | 16,087,430 | 54,491 |
+| update that only supplies the next committee (mainnet update_0) | 5 | 3,697,038 | 15,993,932 | 53,675 |
+| finality update as one public transaction (`VerifyAll`) | 1 | 9,121,514 | 9,121,514 | 4,097 |
+| finality update verified privately (Stage 2; one private transaction) | 1 | 482,524 | 482,524 | 224,063 |
+| attestation of a storage slot under a record (Stage 4; mainnet block 26,384,851) | 1 | 274,842 | 274,842 | 7,338 |
+| attestation of an ERC-20 `Transfer` log (receipt with 7 logs; with 306 logs) | 1 | 96,584; 1,618,872 | 96,584; 1,618,872 | 2,623; 58,812 |
+| a consumer's claim of that log: it calls the attestation and credits once | 1 | 183,538 | 183,538 | 2,768 |
+| the same log attested by a privately executed consumer (one private transaction) | 1 | 421,641 | 421,641 | 224,063 |
+| Sepolia: `Init` and every period's update 1378–1409 through the Gloas fork, then a finality update (Stage 5) | 166 | 3,731,712 | 525,494,412 | 1,776,529 |
+| the job that upgrades the store to the Gloas layout (period 1379) | 5 | 3,731,686 | 15,879,033 | 53,249 |
+| attestation of a storage slot under a Gloas record, with the block's RLP header (Sepolia block 12,105,936) | 1 | 278,253 | 278,253 | 7,633 |
+| the vault's slots 0 and 1 and one deposit leaf (synthetic state under a Gloas record; each further leaf about 65,500) | 1 | 186,719 | 186,719 | 3,391 |
 
-Every transaction of the jobs is under `TARGET_GAS_EXEC` (5,000,000), the largest at 75% (3,732,932) of
+Every transaction of the jobs is under `TARGET_GAS_EXEC` (5,000,000), the largest at 75% (3,733,713) of
 it; none is near `MAX_GAS_EXEC` (10,000,000). Every attestation is under the target too, the
 largest at 32% (a log in a receipt of 306 logs). Execution gas is the cycles LEZ metered (`lee`
 reports `SessionInfo::cycles`, user cycles); storage gas is the transaction's serialized size.
@@ -74,7 +88,7 @@ reports `SessionInfo::cycles`, user cycles); storage gas is the transaction's se
 
 ## 1. What was built
 
-**The program** (`guests/program`, one RISC Zero guest; image id `2f3566d4f460620867a93b557776400b1039142ce92203072170c162ba2ec130`, 592,752 bytes). Its actors are public
+**The program** (`guests/program`, one RISC Zero guest; image id `9f3eb00f54f911e41710fc57d6b0258846bd4db61b57674b8a33a6457bda3e7b`, 602,912 bytes). Its actors are public
 PDAs of the program (`wire/src/lib.rs`):
 
 | actor | seed | state | written by |
@@ -169,34 +183,34 @@ storage gas), the genesis base fees (`BASE_FEE_EXEC_MIN` = `BASE_FEE_STOR_MIN` =
 
 | # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
 |---|---|---|---:|---:|---:|---:|---|
-| 1 | Init Init | Init 190,365 → JobOpen 18,866 | 209,231 | 4% | 1,888 | 1,688,952 | applied |
-| 2 | Init adopt 1/2 | Adopt 3,399,045 | 3,399,045 | 68% | 24,980 | 27,392,200 | applied |
-| 3 | Init adopt 2/2 | Adopt 3,409,188 → Apply 56,865 → Record 16,531 | 3,482,584 | 70% | 25,108 | 28,061,536 | applied |
-| 4 | update_0 Open (step 1) | Open 2,126,069 → JobOpen 26,280 | 2,152,349 | 43% | 2,853 | 17,241,616 | applied |
-| 5 | update_0 Miller (step 2) | Miller 3,313,281 | 3,313,281 | 66% | 399 | 26,509,440 | applied |
-| 6 | update_0 adopt 1/2 | Adopt 3,410,898 | 3,410,898 | 68% | 24,980 | 27,487,024 | applied |
-| 7 | update_0 adopt 2/2 | Adopt 3,418,092 | 3,418,092 | 68% | 24,980 | 27,544,576 | applied |
-| 8 | update_0 Finish (step 3) | Finish 3,653,792 → Apply 42,729 | 3,696,521 | 74% | 463 | 29,575,872 | applied |
-| 9 | update_1 Open (step 1) | Open 2,182,698 → JobOpen 26,280 | 2,208,978 | 44% | 3,605 | 17,700,664 | applied |
-| 10 | update_1 Miller (step 2) | Miller 3,313,281 | 3,313,281 | 66% | 399 | 26,509,440 | applied |
-| 11 | update_1 adopt 1/2 | Adopt 3,410,898 | 3,410,898 | 68% | 24,980 | 27,487,024 | applied |
-| 12 | update_1 adopt 2/2 | Adopt 3,418,092 | 3,418,092 | 68% | 24,980 | 27,544,576 | applied |
-| 13 | update_1 Finish (step 3) | Finish 3,653,792 → Apply 62,609 → Record 16,531 | 3,732,932 | 75% | 527 | 29,867,672 | applied |
-| 14 | update_2 Open (step 1) | Open 2,183,272 → JobOpen 26,280 | 2,209,552 | 44% | 3,615 | 17,705,336 | applied |
-| 15 | update_2 Miller (step 2) | Miller 3,313,281 | 3,313,281 | 66% | 399 | 26,509,440 | applied |
-| 16 | update_2 adopt 1/2 | Adopt 3,410,898 | 3,410,898 | 68% | 24,980 | 27,487,024 | applied |
-| 17 | update_2 adopt 2/2 | Adopt 3,418,092 | 3,418,092 | 68% | 24,980 | 27,544,576 | applied |
-| 18 | update_2 Finish (step 3) | Finish 3,653,792 → Apply 62,609 → Record 16,531 | 3,732,932 | 75% | 527 | 29,867,672 | applied |
-| 19 | update_3 Open (step 1) | Open 2,127,738 → JobOpen 26,280 | 2,154,018 | 43% | 2,852 | 17,254,960 | applied |
-| 20 | update_3 Miller (step 2) | Miller 3,313,281 | 3,313,281 | 66% | 399 | 26,509,440 | applied |
-| 21 | update_3 adopt 1/2 | Adopt 3,410,898 | 3,410,898 | 68% | 24,980 | 27,487,024 | applied |
-| 22 | update_3 adopt 2/2 | Adopt 3,418,092 | 3,418,092 | 68% | 24,980 | 27,544,576 | applied |
-| 23 | update_3 Finish (step 3) | Finish 3,653,792 → Apply 62,609 → Record 16,531 | 3,732,932 | 75% | 527 | 29,867,672 | applied |
-| 24 | update_4 Open (step 1) | Open 2,155,701 → JobOpen 26,280 | 2,181,981 | 44% | 3,221 | 17,481,616 | applied |
-| 25 | update_4 Miller (step 2) | Miller 3,313,281 | 3,313,281 | 66% | 399 | 26,509,440 | applied |
-| 26 | update_4 adopt 1/2 | Adopt 3,410,898 | 3,410,898 | 68% | 24,980 | 27,487,024 | applied |
-| 27 | update_4 adopt 2/2 | Adopt 3,418,092 | 3,418,092 | 68% | 24,980 | 27,544,576 | applied |
-| 28 | update_4 Finish (step 3) | Finish 3,653,792 → Apply 62,609 → Record 16,531 | 3,732,932 | 75% | 527 | 29,867,672 | applied |
+| 1 | Init Init | Init 190,351 → JobOpen 18,861 | 209,212 | 4% | 1,888 | 1,688,800 | applied |
+| 2 | Init adopt 1/2 | Adopt 3,399,050 | 3,399,050 | 68% | 24,980 | 27,392,240 | applied |
+| 3 | Init adopt 2/2 | Adopt 3,409,191 → Apply 56,923 → Record 16,533 | 3,482,647 | 70% | 25,108 | 28,062,040 | applied |
+| 4 | update_0 Open (step 1) | Open 2,128,330 → JobOpen 26,275 | 2,154,605 | 43% | 2,853 | 17,259,664 | applied |
+| 5 | update_0 Miller (step 2) | Miller 3,313,287 | 3,313,287 | 66% | 399 | 26,509,488 | applied |
+| 6 | update_0 adopt 1/2 | Adopt 3,410,904 | 3,410,904 | 68% | 24,980 | 27,487,072 | applied |
+| 7 | update_0 adopt 2/2 | Adopt 3,418,098 | 3,418,098 | 68% | 24,980 | 27,544,624 | applied |
+| 8 | update_0 Finish (step 3) | Finish 3,653,799 → Apply 43,239 | 3,697,038 | 74% | 463 | 29,580,008 | applied |
+| 9 | update_1 Open (step 1) | Open 2,185,153 → JobOpen 26,275 | 2,211,428 | 44% | 3,605 | 17,720,264 | applied |
+| 10 | update_1 Miller (step 2) | Miller 3,313,287 | 3,313,287 | 66% | 399 | 26,509,488 | applied |
+| 11 | update_1 adopt 1/2 | Adopt 3,410,904 | 3,410,904 | 68% | 24,980 | 27,487,072 | applied |
+| 12 | update_1 adopt 2/2 | Adopt 3,418,098 | 3,418,098 | 68% | 24,980 | 27,544,624 | applied |
+| 13 | update_1 Finish (step 3) | Finish 3,653,799 → Apply 63,381 → Record 16,533 | 3,733,713 | 75% | 527 | 29,873,920 | applied |
+| 14 | update_2 Open (step 1) | Open 2,185,727 → JobOpen 26,275 | 2,212,002 | 44% | 3,615 | 17,724,936 | applied |
+| 15 | update_2 Miller (step 2) | Miller 3,313,287 | 3,313,287 | 66% | 399 | 26,509,488 | applied |
+| 16 | update_2 adopt 1/2 | Adopt 3,410,904 | 3,410,904 | 68% | 24,980 | 27,487,072 | applied |
+| 17 | update_2 adopt 2/2 | Adopt 3,418,098 | 3,418,098 | 68% | 24,980 | 27,544,624 | applied |
+| 18 | update_2 Finish (step 3) | Finish 3,653,799 → Apply 63,381 → Record 16,533 | 3,733,713 | 75% | 527 | 29,873,920 | applied |
+| 19 | update_3 Open (step 1) | Open 2,130,193 → JobOpen 26,275 | 2,156,468 | 43% | 2,852 | 17,274,560 | applied |
+| 20 | update_3 Miller (step 2) | Miller 3,313,287 | 3,313,287 | 66% | 399 | 26,509,488 | applied |
+| 21 | update_3 adopt 1/2 | Adopt 3,410,904 | 3,410,904 | 68% | 24,980 | 27,487,072 | applied |
+| 22 | update_3 adopt 2/2 | Adopt 3,418,098 | 3,418,098 | 68% | 24,980 | 27,544,624 | applied |
+| 23 | update_3 Finish (step 3) | Finish 3,653,799 → Apply 63,381 → Record 16,533 | 3,733,713 | 75% | 527 | 29,873,920 | applied |
+| 24 | update_4 Open (step 1) | Open 2,158,156 → JobOpen 26,275 | 2,184,431 | 44% | 3,221 | 17,501,216 | applied |
+| 25 | update_4 Miller (step 2) | Miller 3,313,287 | 3,313,287 | 66% | 399 | 26,509,488 | applied |
+| 26 | update_4 adopt 1/2 | Adopt 3,410,904 | 3,410,904 | 68% | 24,980 | 27,487,072 | applied |
+| 27 | update_4 adopt 2/2 | Adopt 3,418,098 | 3,418,098 | 68% | 24,980 | 27,544,624 | applied |
+| 28 | update_4 Finish (step 3) | Finish 3,653,799 → Apply 63,381 → Record 16,533 | 3,733,713 | 75% | 527 | 29,873,920 | applied |
 
 ### A finality update, and an update that only supplies the next committee (`results/stage1-finality.md`)
 
@@ -205,14 +219,14 @@ which then only supplies the period-1901 committee (it does not advance the head
 
 | # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
 |---|---|---|---:|---:|---:|---:|---|
-| 1 | update_1 as finality update Open (step 1) | Open 2,167,636 → JobOpen 23,107 | 2,190,743 | 44% | 3,525 | 17,554,144 | applied |
-| 2 | update_1 as finality update Miller (step 2) | Miller 3,307,957 | 3,307,957 | 66% | 399 | 26,466,848 | applied |
-| 3 | update_1 as finality update Finish (step 3) | Finish 3,647,606 → Apply 58,132 → Record 16,531 | 3,722,269 | 74% | 527 | 29,782,368 | applied |
-| 4 | update_1 (next committee only) Open (step 1) | Open 2,181,361 → JobOpen 26,280 | 2,207,641 | 44% | 3,605 | 17,689,968 | applied |
-| 5 | update_1 (next committee only) Miller (step 2) | Miller 3,313,281 | 3,313,281 | 66% | 399 | 26,509,440 | applied |
-| 6 | update_1 (next committee only) adopt 1/2 | Adopt 3,410,898 | 3,410,898 | 68% | 24,980 | 27,487,024 | applied |
-| 7 | update_1 (next committee only) adopt 2/2 | Adopt 3,418,092 | 3,418,092 | 68% | 24,980 | 27,544,576 | applied |
-| 8 | update_1 (next committee only) Finish (step 3) | Finish 3,653,792 → Apply 42,729 | 3,696,521 | 74% | 463 | 29,575,872 | applied |
+| 1 | update_1 as finality update Open (step 1) | Open 2,170,091 → JobOpen 23,102 | 2,193,193 | 44% | 3,525 | 17,573,744 | applied |
+| 2 | update_1 as finality update Miller (step 2) | Miller 3,307,963 | 3,307,963 | 66% | 399 | 26,466,896 | applied |
+| 3 | update_1 as finality update Finish (step 3) | Finish 3,647,613 → Apply 58,904 → Record 16,533 | 3,723,050 | 74% | 527 | 29,788,616 | applied |
+| 4 | update_1 (next committee only) Open (step 1) | Open 2,183,622 → JobOpen 26,275 | 2,209,897 | 44% | 3,605 | 17,708,016 | applied |
+| 5 | update_1 (next committee only) Miller (step 2) | Miller 3,313,287 | 3,313,287 | 66% | 399 | 26,509,488 | applied |
+| 6 | update_1 (next committee only) adopt 1/2 | Adopt 3,410,904 | 3,410,904 | 68% | 24,980 | 27,487,072 | applied |
+| 7 | update_1 (next committee only) adopt 2/2 | Adopt 3,418,098 | 3,418,098 | 68% | 24,980 | 27,544,624 | applied |
+| 8 | update_1 (next committee only) Finish (step 3) | Finish 3,653,799 → Apply 43,239 | 3,697,038 | 74% | 463 | 29,580,008 | applied |
 
 ### A finality update in one public transaction (`results/stage1-one-transaction.md`)
 
@@ -221,7 +235,7 @@ the instance (`ApplyVerified`, accepted from an actor of the program):
 
 | # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
 |---|---|---|---:|---:|---:|---:|---|
-| 1 | finality update in one transaction (VerifyAll) | VerifyAll 9,046,319 → ApplyVerified 55,448 → Record 16,531 | 9,118,298 | 182% | 4,097 | 72,979,160 | applied |
+| 1 | finality update in one transaction (VerifyAll) | VerifyAll 9,048,754 → ApplyVerified 56,227 → Record 16,533 | 9,121,514 | 182% | 4,097 | 73,004,888 | applied |
 
 ### Refusals (`results/stage1-refusals.md`)
 
@@ -230,24 +244,24 @@ tests check the store); the fee is paid and the payer's nonce advances.
 
 | # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
 |---|---|---|---:|---:|---:|---:|---|
-| 1 | forged signature: Open (passes) | Open 2,167,762 → JobOpen 23,107 | 2,190,869 | 44% | 3,525 | 17,555,152 | applied |
-| 2 | forged signature: Miller (passes) | Miller 3,307,957 | 3,307,957 | 66% | 399 | 26,466,848 | applied |
-| 3 | forged signature: Finish | Finish 3,636,212 | 3,636,212 | 73% | 463 | 29,093,400 | refused: exit 40 (SignatureInvalid) |
-| 4 | malformed signature: Open | Open 353,558 | 353,558 | 7% | 3,525 | 2,856,664 | refused: exit 41 (SignatureMalformed) |
-| 5 | duplicate Open (same job) | Open 2,167,636 → JobOpen 16,417 | 2,184,053 | 44% | 3,525 | 17,500,624 | refused: exit 207 (JobExists) |
-| 6 | Finish before Miller (skipped step) | Finish 24,154 | 24,154 | 0% | 463 | 196,936 | refused: exit 81 (StepError::Phase) |
-| 7 | Miller replayed | Miller 21,152 | 21,152 | 0% | 399 | 172,408 | refused: exit 81 (StepError::Phase) |
-| 8 | Finish replayed after the job applied | Finish 5,982 | 5,982 | 0% | 527 | 52,072 | refused: exit 205 (NoJob) |
-| 9 | Open an applied update again | Open 208,031 | 208,031 | 4% | 3,525 | 1,692,448 | refused: exit 52 (NotNewer) |
-| 10 | Apply sent as the transaction root | Apply 17,638 | 17,638 | 0% | 937 | 148,600 | refused: exit 202 (WrongSender) |
-| 11 | Apply from another program's actor | scripted 13,436 → Apply 18,491 | 31,927 | 1% | 1,157 | 264,672 | refused: exit 202 (WrongSender) |
-| 12 | ApplyVerified from another program's actor | scripted 13,172 → ApplyVerified 16,098 | 29,270 | 1% | 1,125 | 243,160 | refused: exit 202 (WrongSender) |
-| 13 | JobOpen from another program's actor | scripted 13,372 → JobOpen 10,902 | 24,274 | 0% | 1,226 | 204,000 | refused: exit 202 (WrongSender) |
-| 14 | Record from another program's actor | scripted 9,348 → Record 9,160 | 18,508 | 0% | 739 | 153,976 | refused: exit 202 (WrongSender) |
-| 15 | update for another chain's instance: Finish | Finish 3,638,430 | 3,638,430 | 73% | 463 | 29,111,144 | refused: exit 40 (SignatureInvalid) |
-| 16 | instance A's job id sent to instance B | Finish 5,982 | 5,982 | 0% | 464 | 51,568 | refused: exit 205 (NoJob) |
-| 17 | Open before its signature slot (validity window) | Open 2,167,636 → JobOpen 23,107 | 10,000,000 | 200% | 3,525 | 80,028,200 | reverted: Execution outside of the validity window |
-| 18 | Init of an existing instance | Init 18,201 | 18,201 | 0% | 1,824 | 160,200 | refused: exit 203 (AlreadyInitialized) |
+| 1 | forged signature: Open (passes) | Open 2,170,217 → JobOpen 23,102 | 2,193,319 | 44% | 3,525 | 17,574,752 | applied |
+| 2 | forged signature: Miller (passes) | Miller 3,307,963 | 3,307,963 | 66% | 399 | 26,466,896 | applied |
+| 3 | forged signature: Finish | Finish 3,636,217 | 3,636,217 | 73% | 463 | 29,093,440 | refused: exit 40 (SignatureInvalid) |
+| 4 | malformed signature: Open | Open 356,015 | 356,015 | 7% | 3,525 | 2,876,320 | refused: exit 41 (SignatureMalformed) |
+| 5 | duplicate Open (same job) | Open 2,170,091 → JobOpen 16,411 | 2,186,502 | 44% | 3,525 | 17,520,216 | refused: exit 207 (JobExists) |
+| 6 | Finish before Miller (skipped step) | Finish 24,159 | 24,159 | 0% | 463 | 196,976 | refused: exit 81 (StepError::Phase) |
+| 7 | Miller replayed | Miller 21,155 | 21,155 | 0% | 399 | 172,432 | refused: exit 81 (StepError::Phase) |
+| 8 | Finish replayed after the job applied | Finish 5,981 | 5,981 | 0% | 527 | 52,064 | refused: exit 205 (NoJob) |
+| 9 | Open an applied update again | Open 210,294 | 210,294 | 4% | 3,525 | 1,710,552 | refused: exit 52 (NotNewer) |
+| 10 | Apply sent as the transaction root | Apply 17,630 | 17,630 | 0% | 937 | 148,536 | refused: exit 202 (WrongSender) |
+| 11 | Apply from another program's actor | scripted 13,436 → Apply 18,483 | 31,919 | 1% | 1,157 | 264,608 | refused: exit 202 (WrongSender) |
+| 12 | ApplyVerified from another program's actor | scripted 13,172 → ApplyVerified 16,099 | 29,271 | 1% | 1,125 | 243,168 | refused: exit 202 (WrongSender) |
+| 13 | JobOpen from another program's actor | scripted 13,372 → JobOpen 10,892 | 24,264 | 0% | 1,226 | 203,920 | refused: exit 202 (WrongSender) |
+| 14 | Record from another program's actor | scripted 9,348 → Record 9,155 | 18,503 | 0% | 739 | 153,936 | refused: exit 202 (WrongSender) |
+| 15 | update for another chain's instance: Finish | Finish 3,638,435 | 3,638,435 | 73% | 463 | 29,111,184 | refused: exit 40 (SignatureInvalid) |
+| 16 | instance A's job id sent to instance B | Finish 5,981 | 5,981 | 0% | 464 | 51,560 | refused: exit 205 (NoJob) |
+| 17 | Open before its signature slot (validity window) | Open 2,170,091 → JobOpen 23,102 | 10,000,000 | 200% | 3,525 | 80,028,200 | reverted: Execution outside of the validity window |
+| 18 | Init of an existing instance | Init 18,188 | 18,188 | 0% | 1,824 | 160,096 | refused: exit 203 (AlreadyInitialized) |
 
 ### Against the bare guest
 
@@ -256,11 +270,11 @@ blst and SHA-256, core of commit f030475, RISC Zero Rust 1.88). Here, per handle
 
 | work | bare guest (`../bench/`), user cycles | on LEZ: the handler(s), user cycles as LEZ metered them |
 |---|---:|---|
-| step 1 | 2,305,240 (execution total: decodes the 26.9 KB SSZ update and a 24.6 KB committee, then everything before the Miller loops) | `Open` 2,126,069–2,183,272, then `JobOpen` 23,107–26,280. The program decodes a 2.9–3.6 KB compact update and checks the non-signers' branches (two per update here) instead of decoding a committee. |
-| step 2 | 4,203,683 (two single Miller loops); the two-pair loop alone: 3,251,802 (phase 8m) | `Miller` 3,307,957–3,313,281 (the two-pair loop since commit 95c56e9; 4,142,918–4,147,152 with two loops, measured on an image before that commit and not again) |
-| step 3 | 3,597,597 (final exponentiation, execution total) | `Finish` 3,647,606–3,653,792 (also checks that the stored product is canonical, and encodes the job for `Apply`), then `Apply` 42,729–62,609 and `Record` 16,531 |
-| adoption, 512 keys | 5,685,329 (10b0: 4,562,038 for the keys, plus 3a: 1,123,291 for the committee root) | `Adopt` 3,399,045–3,418,092, twice: 6,808,233–6,828,990 |
-| a whole finality update | 10,369,179 (one execution: saved state and SSZ update decoded, policy, new root) | `VerifyAll` 9,046,319, then `ApplyVerified` 55,448 and `Record` 16,531 |
+| step 1 | 2,305,240 (execution total: decodes the 26.9 KB SSZ update and a 24.6 KB committee, then everything before the Miller loops) | `Open` 2,128,330–2,183,272, then `JobOpen` 23,102–26,275. The program decodes a 2.9–3.6 KB compact update and checks the non-signers' branches (two per update here) instead of decoding a committee. |
+| step 2 | 4,203,683 (two single Miller loops); the two-pair loop alone: 3,251,802 (phase 8m) | `Miller` 3,307,963–3,313,287 (the two-pair loop since commit 95c56e9; 4,142,918–4,147,152 with two loops, measured on an image before that commit and not again) |
+| step 3 | 3,597,597 (final exponentiation, execution total) | `Finish` 3,647,613–3,653,799 (also checks that the stored product is canonical, and encodes the job for `Apply`), then `Apply` 43,239–63,381 and `Record` 16,533 |
+| adoption, 512 keys | 5,685,329 (10b0: 4,562,038 for the keys, plus 3a: 1,123,291 for the committee root) | `Adopt` 3,399,050–3,418,092, twice: 6,808,233–6,828,990 |
+| a whole finality update | 10,369,179 (one execution: saved state and SSZ update decoded, policy, new root) | `VerifyAll` 9,046,319, then `ApplyVerified` 56,227 and `Record` 16,533 |
 
 The steps cost on LEZ about what they cost in a bare guest: step 1 less (a smaller input), step 3
 1.5% more. The adoption costs 1.12–1.14M more than the bench's two measurements added up. About
@@ -279,16 +293,16 @@ the program ignores; the header's handler then differs only in the bytes it rece
 
 | padding bytes | `ReadPadded` handler: input bytes | journal bytes | cycles | the consumer's handler, which also sends the padding: cycles |
 |---:|---:|---:|---:|---:|
-| 0 | 476 | 906 | 12,007 | 16,379 |
-| 8,192 | 8,668 | 9,098 | 58,702 | 97,381 |
-| 24,576 | 25,052 | 25,482 | 151,767 | 257,463 |
-| 49,152 | 49,628 | 50,058 | 291,390 | 497,594 |
+| 0 | 476 | 906 | 12,005 | 16,360 |
+| 8,192 | 8,668 | 9,098 | 58,700 | 97,362 |
+| 24,576 | 25,052 | 25,482 | 151,765 | 257,444 |
+| 49,152 | 49,628 | 50,058 | 291,388 | 497,575 |
 
 Linear to within 0.4% for the program's handler: a handler pays **5.7 cycles per byte it
 receives** (reading the input, decoding it, echoing it into the journal and hashing the journal)
 and about **4.1 more per byte it sends on** (this consumer pays 9.8 per byte received and sent,
 within 1.2% of linear); a handler that does almost nothing costs 11,000–26,000 cycles (`Read`
-11,878, `Record` 16,531, `JobOpen` 18,866–26,280). A public consumer's whole read of a record
+11,878, `Record` 16,531, `JobOpen` 18,861–26,275). A public consumer's whole read of a record
 (consumer → `Read` → `StateReply` → consumer) costs 38,115 cycles. At 5.7 cycles per byte, a handler that loaded a
 24.6 KB committee from its state would pay about 0.14M cycles for it on every call, and the
 journal echo makes every byte of a message count once on receipt and again when sent on.
@@ -349,7 +363,7 @@ settlement, the public part's execution and its metering are LEZ's; the test's o
   `ApplyVerified`: an honest prover's simulation stops at the instance's refusal (exit 202,
   `WrongSender`); a proof made without simulating the public part
   (`execute_and_prove_with_cross_messages`) settles as a revert to its fee fallback — the
-  instance refused the message (exit 202 after 16,098 cycles) and the transaction paid only its
+  instance refused the message (exit 202 after 16,099 cycles) and the transaction paid only its
   fee (execution gas 425,862, storage gas 224,063).
 - A forged update (update_2's signature on update_1) cannot be proven: the private transition
   exits with code 40 (`SignatureInvalid`) after 9,028,838 cycles, and LEZ's prover refuses a
@@ -365,10 +379,10 @@ the earlier images) charged the finality update 479,854 execution gas: their pub
 
 | private transaction | public part (cycles, metered) | execution gas | storage gas | base fee at genesis prices |
 |---|---:|---:|---:|---:|
-| finality update (`ApplyVerified` → `Record`) | 71,979 | 481,743 | 224,063 | 5,646,448 |
-| update handing over a committee, no new header (`ApplyVerified`) | 39,638 | 449,402 | 224,063 | 5,387,720 (derived) |
+| finality update (`ApplyVerified` → `Record`) | 72,760 | 482,524 | 224,063 | 5,652,696 |
+| update handing over a committee, no new header (`ApplyVerified`) | 40,155 | 449,919 | 224,063 | 5,391,856 (derived) |
 
-For comparison, the same finality update through the public job costs 9,220,969
+For comparison, the same finality update through the public job costs 9,224,206
 execution gas and 4,451 storage gas in three transactions (§2). The private
 placement trades on-chain execution (about 19× less) for storage gas (about 50× more: a
 succinct receipt is 223,551 bytes by LEZ's constant) and for a proof made off chain. With
@@ -379,16 +393,16 @@ What the transaction makes public (the finality update on the image of this bran
 proof publishes the same fields, with a succinct receipt where the dry run has a fake one):
 
 ```
-public_context.actors (3): native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@CaaDpeLpoQ78nJKXvPtpmUP2s87eowXZeDFCnArYDSie, ferrata@CscQpvi8tqJEbFSz6QroaNs5PuguoJEVpewr1jX76uKi
+public_context.actors (3): native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@98nuLdy4rvh69odJA3nszo4zfisBxqtF27qVFuuKgvaB, ferrata@8eFzBrUp5Avp8A6BgTmExBiCJtPTPrp2AdNtVb1L96tK
 public_context.authorized_accounts: {}
 execution.public_root: None
 execution.boundary (4 steps):
-  - PrivateToPublic from ferrata@EoTYfFi4rVfLkTBefMr8sB6GcyhRTZv682hg9J1S1QsL to ferrata@CscQpvi8tqJEbFSz6QroaNs5PuguoJEVpewr1jX76uKi: ApplyVerified { instance_id: ce624027489c, job: 470 bytes } (507 bytes)
+  - PrivateToPublic from ferrata@EoTYfFi4rVfLkTBefMr8sB6GcyhRTZv682hg9J1S1QsL to ferrata@8eFzBrUp5Avp8A6BgTmExBiCJtPTPrp2AdNtVb1L96tK: ApplyVerified { instance_id: ce624027489c, job: 470 bytes } (507 bytes)
   - EndPublicSubtree
   - PrivateToPublic from native@EoTYfFi4rVfLkTBefMr8sB6GcyhRTZv682hg9J1S1QsL to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
   - EndPublicSubtree
 execution.program_image_claims (1):
-  - Disclosed { program: ferrata, image_id: 2f3566d4f460620867a93b557776400b1039142ce92203072170c162ba2ec130 }
+  - Disclosed { program: ferrata, image_id: 9f3eb00f54f911e41710fc57d6b0258846bd4db61b57674b8a33a6457bda3e7b }
 execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1233 bytes)
 execution.async_messages: 0
 execution.recovery_bindings: 0
@@ -418,7 +432,7 @@ it. Log: `results/prove-private-e7cec90e.log`. Every figure in this table is the
 | CPU | AMD Ryzen 9 7940HS (8 cores, 16 threads), no GPU: 39,206 s of user time, 1,211% average |
 | peak memory | **9.18 GiB** maximum resident set (`/usr/bin/time -v`: 9,628,928 kB); a 2-second `ps` sample of all `r0vm` processes peaked at 10.2 GiB (10,710,560 kB) |
 | receipt | **227,080 bytes** (the succinct `InnerReceipt`, borsh); the transaction is 231,034 bytes. LEZ charges a flat 224,063 bytes of storage gas whatever the size (`PROOF_BYTES` + 512) |
-| settlement | execution gas 479,854 (`PRIVATE_VERIFY_GAS` 409,764 + public part 70,090 cycles), storage gas 224,063, base fee 5,631,336; the dev-mode settlement on the image of this branch charges 481,743 (its public part takes 71,979 cycles) |
+| settlement | execution gas 479,854 (`PRIVATE_VERIFY_GAS` 409,764 + public part 70,090 cycles), storage gas 224,063, base fee 5,631,336; the dev-mode settlement on the image of this branch charges 482,524 (its public part takes 72,760 cycles) |
 | load | not recorded during the run (2026-11-09, 22:53–23:47). For 8 of its 54 minutes my own executor-only test suites ran beside it at `nice 19`; whether other agents used the CPU is not known. Load average when the result was collected (01:51): 2.46 |
 
 Proving time is that of a single run on a shared machine, not a benchmark. A proof of
@@ -429,8 +443,8 @@ free the machine; it was made on the GPU instead.
 run of `cec0bc68…` had it; `results/prove-private-dry-run.log` shows these commands on the image
 of this branch in dev mode:
 
-- **The image.** Program `2f3566d4f460620867a93b557776400b1039142ce92203072170c162ba2ec130`
-  (592,752 bytes; consumer `711584ff…`). The guest ELF holds the absolute paths of the sources it
+- **The image.** Program `9f3eb00f54f911e41710fc57d6b0258846bd4db61b57674b8a33a6457bda3e7b`
+  (602,912 bytes; consumer `f883e6a4…`). The guest ELF holds the absolute paths of the sources it
   was built from (the cargo registry, the LEZ clone, this checkout) in its panic locations, so a
   rebuild under other paths is another image. Use the binary built here,
   `lez/target/debug/prove_private` (it embeds both guests, LEZ's privacy-preserving circuit and
@@ -444,7 +458,7 @@ of this branch in dev mode:
   checkout); their SHA-256 sums are compiled in. Nothing else.
 - **The command:**
   ```sh
-  FERRATA_EXPECT_IMAGE_ID=2f3566d4f460620867a93b557776400b1039142ce92203072170c162ba2ec130 \
+  FERRATA_EXPECT_IMAGE_ID=9f3eb00f54f911e41710fc57d6b0258846bd4db61b57674b8a33a6457bda3e7b \
   FERRATA_FIXTURE_DIR=/path/to/mainnet-p1899 RISC0_DEV_MODE=0 RISC0_SERVER_PATH=/path/to/r0vm \
   /usr/bin/time -v ./prove_private --tx-out stage2-private-tx.borsh > prove-private.log 2>&1
   ```
@@ -480,18 +494,18 @@ keeps the prediction valid; `instance(id)`, which every update changes, would no
 **What became public — the read** (record of slot 15,564,800, the consumer's image disclosed):
 
 ```
-public_context.actors (2): native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@CaaDpeLpoQ78nJKXvPtpmUP2s87eowXZeDFCnArYDSie
+public_context.actors (2): native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@98nuLdy4rvh69odJA3nszo4zfisBxqtF27qVFuuKgvaB
 public_context.authorized_accounts: {}
 execution.public_root: None
 execution.boundary (6 steps):
-  - PrivateToPublic from consumer@61yQrZPL8iZ8NbnqXkUEs1JR6DiuSkX3bWxdZSjYSWEu to ferrata@CaaDpeLpoQ78nJKXvPtpmUP2s87eowXZeDFCnArYDSie: Read (1 bytes)
-  - PublicToPrivate from ferrata@CaaDpeLpoQ78nJKXvPtpmUP2s87eowXZeDFCnArYDSie to consumer@61yQrZPL8iZ8NbnqXkUEs1JR6DiuSkX3bWxdZSjYSWEu: StateReply { state: 333 bytes } (337 bytes)
+  - PrivateToPublic from consumer@61yQrZPL8iZ8NbnqXkUEs1JR6DiuSkX3bWxdZSjYSWEu to ferrata@98nuLdy4rvh69odJA3nszo4zfisBxqtF27qVFuuKgvaB: Read (1 bytes)
+  - PublicToPrivate from ferrata@98nuLdy4rvh69odJA3nszo4zfisBxqtF27qVFuuKgvaB to consumer@61yQrZPL8iZ8NbnqXkUEs1JR6DiuSkX3bWxdZSjYSWEu: StateReply { state: 333 bytes } (337 bytes)
   - EndPrivateSubtree
   - EndPublicSubtree
   - PrivateToPublic from native@61yQrZPL8iZ8NbnqXkUEs1JR6DiuSkX3bWxdZSjYSWEu to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
   - EndPublicSubtree
 execution.program_image_claims (1):
-  - Disclosed { program: consumer, image_id: 711584ffe09f0b115132e33ce1485666710bc73e696e66fcc54d00aad0db949f }
+  - Disclosed { program: consumer, image_id: f883e6a4dbd8e49439465f918884abe1379b02276ff88676f0a4bf958ee49068 }
 execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1647 bytes)
 execution.async_messages: 0
 execution.recovery_bindings: 0
@@ -514,12 +528,12 @@ The 8717 serialized bytes of the transaction were searched for the consumer's pr
 program proven by membership of its header mirror, `circuit_io.rs:85–86`):
 
 ```
-public_context.actors (2): native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@CaaDpeLpoQ78nJKXvPtpmUP2s87eowXZeDFCnArYDSie
+public_context.actors (2): native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@98nuLdy4rvh69odJA3nszo4zfisBxqtF27qVFuuKgvaB
 public_context.authorized_accounts: {}
 execution.public_root: None
 execution.boundary (6 steps):
-  - PrivateToPublic from consumer@AodAGCgEG5tEZ9G66zav6VgeBX9hfvyxnimA6U3L6j1C to ferrata@CaaDpeLpoQ78nJKXvPtpmUP2s87eowXZeDFCnArYDSie: Read (1 bytes)
-  - PublicToPrivate from ferrata@CaaDpeLpoQ78nJKXvPtpmUP2s87eowXZeDFCnArYDSie to consumer@AodAGCgEG5tEZ9G66zav6VgeBX9hfvyxnimA6U3L6j1C: StateReply { state: 333 bytes } (337 bytes)
+  - PrivateToPublic from consumer@AodAGCgEG5tEZ9G66zav6VgeBX9hfvyxnimA6U3L6j1C to ferrata@98nuLdy4rvh69odJA3nszo4zfisBxqtF27qVFuuKgvaB: Read (1 bytes)
+  - PublicToPrivate from ferrata@98nuLdy4rvh69odJA3nszo4zfisBxqtF27qVFuuKgvaB to consumer@AodAGCgEG5tEZ9G66zav6VgeBX9hfvyxnimA6U3L6j1C: StateReply { state: 333 bytes } (337 bytes)
   - EndPrivateSubtree
   - EndPublicSubtree
   - PrivateToPublic from native@AodAGCgEG5tEZ9G66zav6VgeBX9hfvyxnimA6U3L6j1C to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
@@ -547,18 +561,18 @@ The 8653 serialized bytes of the transaction were searched for the consumer's pr
 **The call** (`ReadPadded` with a query naming a contract, a storage slot and a deposit):
 
 ```
-public_context.actors (2): native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@CaaDpeLpoQ78nJKXvPtpmUP2s87eowXZeDFCnArYDSie
+public_context.actors (2): native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@98nuLdy4rvh69odJA3nszo4zfisBxqtF27qVFuuKgvaB
 public_context.authorized_accounts: {}
 execution.public_root: None
 execution.boundary (6 steps):
-  - PrivateToPublic from consumer@DYMXat67yG3gSP7GFoRaTUEHduv3mLWBRr5UousHBSho to ferrata@CaaDpeLpoQ78nJKXvPtpmUP2s87eowXZeDFCnArYDSie: ReadPadded { padding: 0x73746f72616765283078303030303030303032313961623534303335366342423833394362653035333033643737303546612c20736c6f74203729203d206465706f736974202334323432 } (80 bytes)
-  - PublicToPrivate from ferrata@CaaDpeLpoQ78nJKXvPtpmUP2s87eowXZeDFCnArYDSie to consumer@DYMXat67yG3gSP7GFoRaTUEHduv3mLWBRr5UousHBSho: StateReply { state: 333 bytes } (337 bytes)
+  - PrivateToPublic from consumer@DYMXat67yG3gSP7GFoRaTUEHduv3mLWBRr5UousHBSho to ferrata@98nuLdy4rvh69odJA3nszo4zfisBxqtF27qVFuuKgvaB: ReadPadded { padding: 0x73746f72616765283078303030303030303032313961623534303335366342423833394362653035333033643737303546612c20736c6f74203729203d206465706f736974202334323432 } (80 bytes)
+  - PublicToPrivate from ferrata@98nuLdy4rvh69odJA3nszo4zfisBxqtF27qVFuuKgvaB to consumer@DYMXat67yG3gSP7GFoRaTUEHduv3mLWBRr5UousHBSho: StateReply { state: 333 bytes } (337 bytes)
   - EndPrivateSubtree
   - EndPublicSubtree
   - PrivateToPublic from native@DYMXat67yG3gSP7GFoRaTUEHduv3mLWBRr5UousHBSho to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
   - EndPublicSubtree
 execution.program_image_claims (1):
-  - Disclosed { program: consumer, image_id: 711584ffe09f0b115132e33ce1485666710bc73e696e66fcc54d00aad0db949f }
+  - Disclosed { program: consumer, image_id: f883e6a4dbd8e49439465f918884abe1379b02276ff88676f0a4bf958ee49068 }
 execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1568 bytes)
 execution.async_messages: 0
 execution.recovery_bindings: 0
@@ -593,7 +607,7 @@ supports the proposal's rule — a private consumer must read, not call — and 
 slot read is public, so a consumer that must hide which block it proves against should read a
 record many consumers read (the newest), as the proposal's EIP-2935 hops do.
 
-Charged (dev mode; flat proof and storage costs as in §3): the read execution gas 421,642 (PRIVATE_VERIFY_GAS 409,764 + public part 11,878 cycles), storage gas 224,063. The call: execution gas 422,025 (PRIVATE_VERIFY_GAS 409,764 + public part 12,261 cycles), storage gas 224,063.
+Charged (dev mode; flat proof and storage costs as in §3): the read execution gas 421,641 (PRIVATE_VERIFY_GAS 409,764 + public part 11,877 cycles), storage gas 224,063. The call: execution gas 422,023 (PRIVATE_VERIFY_GAS 409,764 + public part 12,259 cycles), storage gas 224,063.
 
 
 ## 5. Stage 4: attestation through the program, on a real mainnet block
@@ -659,14 +673,14 @@ natively to know what the program must answer.
 
 | # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
 |---|---|---|---:|---:|---:|---:|---|
-| 1 | account: the WETH contract (nonce, balance, storage root, code hash) | Attest 165,692 | 165,692 | 3% | 4,423 | 1,360,920 | applied |
-| 2 | storage slot: a WETH balance, value >= 1 | Attest 273,717 | 273,717 | 5% | 7,337 | 2,248,432 | applied |
-| 3 | storage slot: an absent slot is zero | Attest 268,428 | 268,428 | 5% | 7,290 | 2,205,744 | applied |
-| 4 | account: an address without an account | Attest 149,204 | 149,204 | 3% | 4,149 | 1,226,824 | applied |
-| 5 | event log: an ERC-20 Transfer (receipt with 7 logs) | Attest 94,598 | 94,598 | 2% | 2,622 | 777,760 | applied |
-| 6 | event log: a Transfer in the block's largest receipt (306 logs) | Attest 1,616,902 | 1,616,902 | 32% | 58,811 | 13,405,704 | applied |
-| 7 | storage slot 16 blocks back: one EIP-2935 hop, then the slot | Attest 492,333 | 492,333 | 10% | 13,577 | 4,047,280 | applied |
-| 8 | four facts in one call (account, two slots, a log) and a relation | Attest 450,965 | 450,965 | 9% | 12,308 | 3,706,184 | applied |
+| 1 | account: the WETH contract (nonce, balance, storage root, code hash) | Attest 167,882 | 167,882 | 3% | 4,424 | 1,378,448 | applied |
+| 2 | storage slot: a WETH balance, value >= 1 | Attest 274,842 | 274,842 | 5% | 7,338 | 2,257,440 | applied |
+| 3 | storage slot: an absent slot is zero | Attest 269,564 | 269,564 | 5% | 7,291 | 2,214,840 | applied |
+| 4 | account: an address without an account | Attest 150,757 | 150,757 | 3% | 4,150 | 1,239,256 | applied |
+| 5 | event log: an ERC-20 Transfer (receipt with 7 logs) | Attest 96,584 | 96,584 | 2% | 2,623 | 793,656 | applied |
+| 6 | event log: a Transfer in the block's largest receipt (306 logs) | Attest 1,618,872 | 1,618,872 | 32% | 58,812 | 13,421,472 | applied |
+| 7 | storage slot 16 blocks back: one EIP-2935 hop, then the slot | Attest 498,204 | 498,204 | 10% | 13,578 | 4,094,256 | applied |
+| 8 | four facts in one call (account, two slots, a log) and a relation | Attest 453,182 | 453,182 | 9% | 12,309 | 3,723,928 | applied |
 
 Each answer is checked three ways. The event's identifiers equal those of the native evaluation
 of the same request on the record the chain holds. The values equal JSON-RPC: the account's four
@@ -677,11 +691,11 @@ derived again with SHA-256 from the JSON fields alone (`harness/src/attest.rs`).
 
 Every attestation is one transaction of one handler execution, the largest at 32% of the 5M
 target. Row 8 has the shape the bridge's `ImportRoot` needs (`../docs/design/bridge.md` §5.4: two
-slots of one contract under one record), with a log added. The cost follows the bytes hashed. A storage slot is 9 + 7 trie nodes (7,337 bytes of
-transaction); a log needs the whole receipt as the trie leaf: 94,598 cycles for a receipt with 7
-logs (2,622 bytes), 1,616,902 for the block's largest, with 306 logs (58,811 bytes). One hop adds
-the history contract's account and slot proofs and a header: 492,333 for the hop and a slot,
-against 273,717 for the slot alone.
+slots of one contract under one record), with a log added. The cost follows the bytes hashed. A storage slot is 9 + 7 trie nodes (7,338 bytes of
+transaction); a log needs the whole receipt as the trie leaf: 96,584 cycles for a receipt with 7
+logs (2,623 bytes), 1,618,872 for the block's largest, with 306 logs (58,812 bytes). One hop adds
+the history contract's account and slot proofs and a header: 498,204 for the hop and a slot,
+against 274,842 for the slot alone.
 
 ### The public consumer path (`results/stage4-attest-consumer.md`)
 
@@ -691,10 +705,10 @@ the native evaluation. Rows 3 and 4 are the reference consumer.
 
 | # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
 |---|---|---|---:|---:|---:|---:|---|
-| 1 | a public actor calls Attest: storage slot | consumer CallAttest 86,108 → Attest 277,140 → consumer (reply) 19,769 | 383,017 | 8% | 7,506 | 3,124,184 | applied |
-| 2 | a public actor calls Attest: event log | consumer CallAttest 42,644 → Attest 97,239 → consumer (reply) 21,107 | 160,990 | 3% | 2,791 | 1,310,248 | applied |
-| 3 | reference consumer: claim an ERC-20 Transfer (credits its sender once) | consumer Claim 36,068 → Attest 97,239 → consumer (reply) 31,537 → consumer Credit 15,271 | 180,115 | 4% | 2,767 | 1,463,056 | applied |
-| 4 | reference consumer: the same claim again (replay) | consumer Claim 14,818 | 14,818 | 0% | 2,767 | 140,680 | refused: exit 223 (consumer: AlreadyClaimed) |
+| 1 | a public actor calls Attest: storage slot | consumer CallAttest 87,006 → Attest 278,002 → consumer (reply) 19,768 | 384,776 | 8% | 7,507 | 3,138,264 | applied |
+| 2 | a public actor calls Attest: event log | consumer CallAttest 43,100 → Attest 99,498 → consumer (reply) 21,106 | 163,704 | 3% | 2,792 | 1,331,968 | applied |
+| 3 | reference consumer: claim an ERC-20 Transfer (credits its sender once) | consumer Claim 37,235 → Attest 99,498 → consumer (reply) 31,544 → consumer Credit 15,261 | 183,538 | 4% | 2,768 | 1,490,448 | applied |
+| 4 | reference consumer: the same claim again (replay) | consumer Claim 14,835 | 14,835 | 0% | 2,768 | 140,824 | refused: exit 223 (consumer: AlreadyClaimed) |
 
 **The reference consumer** (`guests/consumer`, module `consumer` of the wire crate) credits an
 ERC-20 `Transfer` to a given Ethereum contract once (the first of RFP-021's two U.6 cases: token,
@@ -720,11 +734,11 @@ Recommended Consumer Pattern as far as a plain `Transfer` allows:
   could act without one, the nullifier stays unspent and the claim can be sent again. The code is
   the transaction's outcome.
 
-The claim is one transaction of four handler executions and 180,115 cycles: the attestation
-97,239, the consumer 82,876 (derived: 36,068 to take the claim and forward the proof, 31,537 for
-the reply, 15,271 for the credit). The same log attested as a root costs 94,598; the reply to a
+The claim is one transaction of four handler executions and 183,538 cycles: the attestation
+97,239, the consumer 82,876 (derived: 37,235 to take the claim and forward the proof, 31,544 for
+the reply, 15,261 for the credit). The same log attested as a root costs 96,584; the reply to a
 caller adds 2,641. A second claim of the same deposit is refused by the claim actor itself after
-14,818 cycles (223), before anything is verified.
+14,835 cycles (223), before anything is verified.
 
 ### Refusals (`results/stage4-attest-refusals.md`)
 
@@ -735,47 +749,47 @@ Rows 33 to 41 go through the reference consumer.
 
 | # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
 |---|---|---|---:|---:|---:|---:|---|
-| 1 | a request for another chain id | Attest 39,228 | 39,228 | 1% | 7,303 | 372,248 | refused: exit 140 (ChainMismatch) |
-| 2 | a request bound to another instance | Attest 38,902 | 38,902 | 1% | 7,303 | 369,640 | refused: exit 211 (WrongInstance) |
-| 3 | a request bound to instance A, sent to instance B's record | Attest 38,902 | 38,902 | 1% | 7,303 | 369,640 | refused: exit 211 (WrongInstance) |
-| 4 | a request naming instance B but expecting mainnet's chain id | Attest 39,228 | 39,228 | 1% | 7,303 | 372,248 | refused: exit 140 (ChainMismatch) |
-| 5 | an actor that holds no record (no header at this slot) | Attest 31,939 | 31,939 | 1% | 7,368 | 314,456 | refused: exit 213 (NoRecord) |
-| 6 | header(id, slot) of another deployment of the same image | Attest 31,939 | 31,939 | 1% | 7,368 | 314,456 | refused: exit 213 (NoRecord) |
-| 7 | an actor of the program that is not a record (the instance) | Attest 33,648 | 33,648 | 1% | 7,303 | 327,608 | refused: exit 209 (BadState) |
-| 8 | a storage proof valid for another header's block | Attest 52,049 | 52,049 | 1% | 7,303 | 474,816 | refused: exit 110 (ProofNodeMismatch) |
-| 9 | a receipt proof valid for another header's block | Attest 28,295 | 28,295 | 1% | 2,518 | 246,504 | refused: exit 110 (ProofNodeMismatch) |
-| 10 | a forged node in the account proof | Attest 52,049 | 52,049 | 1% | 7,303 | 474,816 | refused: exit 110 (ProofNodeMismatch) |
-| 11 | a forged node in the storage proof (its leaf) | Attest 245,012 | 245,012 | 5% | 7,303 | 2,018,520 | refused: exit 110 (ProofNodeMismatch) |
-| 12 | a forged receipt (one bit of the trie leaf) | Attest 65,486 | 65,486 | 1% | 2,518 | 544,032 | refused: exit 110 (ProofNodeMismatch) |
-| 13 | a storage proof presented for another slot | Attest 184,421 | 184,421 | 4% | 7,303 | 1,533,792 | refused: exit 110 (ProofNodeMismatch) |
-| 14 | an account proof presented for another address | Attest 66,578 | 66,578 | 1% | 7,303 | 591,048 | refused: exit 110 (ProofNodeMismatch) |
-| 15 | a storage proof without its last node | Attest 242,840 | 242,840 | 5% | 7,256 | 2,000,768 | refused: exit 111 (ProofIncomplete) |
-| 16 | a storage proof with a node appended | Attest 249,114 | 249,114 | 5% | 7,839 | 2,055,624 | refused: exit 112 (ProofTrailingNodes) |
-| 17 | a predicate that does not hold (a positive balance < 1) | Attest 251,540 | 251,540 | 5% | 7,337 | 2,071,016 | refused: exit 130 (PredicateFailed) |
-| 18 | a log that is not a Transfer to the expected recipient | Attest 84,736 | 84,736 | 2% | 2,622 | 698,864 | refused: exit 130 (PredicateFailed) |
-| 19 | a condition on a field the fact does not have | Attest 251,062 | 251,062 | 5% | 7,338 | 2,067,200 | refused: exit 131 (QueryInvalid) |
-| 20 | a relation that does not hold (a balance < the contract's nonce) | Attest 251,657 | 251,657 | 5% | 7,314 | 2,071,768 | refused: exit 130 (PredicateFailed) |
-| 21 | a log index past the receipt's last log | Attest 75,292 | 75,292 | 2% | 2,518 | 622,480 | refused: exit 125 (LogIndexOutOfRange) |
-| 22 | a transaction index past the block's last transaction | Attest 62,384 | 62,384 | 1% | 1,246 | 509,040 | refused: exit 122 (ReceiptNotIncluded) |
-| 23 | a log of a transaction that failed | Attest 53,867 | 53,867 | 1% | 1,611 | 443,824 | refused: exit 124 (ReceiptFailed) |
-| 24 | a receipt proof presented for another transaction index | Attest 35,980 | 35,980 | 1% | 2,518 | 307,984 | refused: exit 110 (ProofNodeMismatch) |
-| 25 | a hop to a block that is not older than the record's | Attest 63,938 | 63,938 | 1% | 13,591 | 620,232 | refused: exit 150 (HistoryOutOfWindow) |
-| 26 | a hop with a header the history contract does not hold | Attest 244,281 | 244,281 | 5% | 13,577 | 2,062,864 | refused: exit 151 (HistoryHashMismatch) |
-| 27 | an older block's proof without its hop | Attest 52,049 | 52,049 | 1% | 7,303 | 474,816 | refused: exit 110 (ProofNodeMismatch) |
-| 28 | an empty request | Attest 14,043 | 14,043 | 0% | 459 | 116,016 | refused: exit 131 (QueryInvalid) |
-| 29 | an accumulator leaf whose root is not a storage fact | Attest 267,039 | 267,039 | 5% | 8,375 | 2,203,312 | refused: exit 214 (BadQuery) |
-| 30 | a proof whose first node is replaced by two junk bytes | Attest 41,044 | 41,044 | 1% | 6,772 | 382,528 | refused: exit 110 (ProofNodeMismatch) |
-| 31 | a message cut short by one byte | (undecodable) 31,769 | 31,769 | 1% | 7,302 | 312,568 | refused: exit 200 (BadMessage) |
-| 32 | a message with a byte appended | (undecodable) 32,105 | 32,105 | 1% | 7,304 | 315,272 | refused: exit 200 (BadMessage) |
-| 33 | consumer: a Transfer of the token to another recipient | consumer Claim 36,068 → Attest 85,855 | 121,923 | 2% | 2,767 | 997,520 | refused: exit 130 (PredicateFailed) |
-| 34 | consumer: a Transfer of another token | consumer Claim 36,068 → Attest 84,496 | 120,564 | 2% | 2,767 | 986,648 | refused: exit 130 (PredicateFailed) |
-| 35 | consumer: a claim sent to a claim actor the statement does not name | consumer Claim 36,068 → Attest 97,239 → consumer (reply) 22,295 | 155,602 | 3% | 2,767 | 1,266,952 | refused: exit 229 (consumer: NullifierMismatch) |
-| 36 | consumer: a pool configured for another chain id | consumer Claim 36,068 → Attest 22,575 | 58,643 | 1% | 2,767 | 491,280 | refused: exit 140 (ChainMismatch) |
-| 37 | consumer: a claim with a forged receipt | consumer Claim 36,068 → Attest 68,419 | 104,487 | 2% | 2,767 | 858,032 | refused: exit 110 (ProofNodeMismatch) |
-| 38 | consumer: Credit sent as the transaction root | consumer Credit 9,118 | 9,118 | 0% | 564 | 77,456 | refused: exit 225 (consumer: WrongSender) |
-| 39 | consumer: Credit from another program's actor | scripted 9,742 → consumer Credit 9,968 | 19,710 | 0% | 784 | 163,952 | refused: exit 225 (consumer: WrongSender) |
-| 40 | consumer: an attestation it did not ask for, from another program's actor | scripted 11,383 → consumer (reply) 6,987 | 18,370 | 0% | 984 | 154,832 | refused: exit 220 (consumer: BadMessage) |
-| 41 | consumer: the same deposit claimed again (replay) | consumer Claim 14,818 | 14,818 | 0% | 2,767 | 140,680 | refused: exit 223 (consumer: AlreadyClaimed) |
+| 1 | a request for another chain id | Attest 36,915 | 36,915 | 1% | 7,304 | 353,752 | refused: exit 140 (ChainMismatch) |
+| 2 | a request bound to another instance | Attest 36,689 | 36,689 | 1% | 7,304 | 351,944 | refused: exit 211 (WrongInstance) |
+| 3 | a request bound to instance A, sent to instance B's record | Attest 36,689 | 36,689 | 1% | 7,304 | 351,944 | refused: exit 211 (WrongInstance) |
+| 4 | a request naming instance B but expecting mainnet's chain id | Attest 36,915 | 36,915 | 1% | 7,304 | 353,752 | refused: exit 140 (ChainMismatch) |
+| 5 | an actor that holds no record (no header at this slot) | Attest 29,638 | 29,638 | 1% | 7,369 | 296,056 | refused: exit 213 (NoRecord) |
+| 6 | header(id, slot) of another deployment of the same image | Attest 29,638 | 29,638 | 1% | 7,369 | 296,056 | refused: exit 213 (NoRecord) |
+| 7 | an actor of the program that is not a record (the instance) | Attest 31,431 | 31,431 | 1% | 7,304 | 309,880 | refused: exit 209 (BadState) |
+| 8 | a storage proof valid for another header's block | Attest 50,339 | 50,339 | 1% | 7,304 | 461,144 | refused: exit 110 (ProofNodeMismatch) |
+| 9 | a receipt proof valid for another header's block | Attest 29,810 | 29,810 | 1% | 2,519 | 258,632 | refused: exit 110 (ProofNodeMismatch) |
+| 10 | a forged node in the account proof | Attest 50,339 | 50,339 | 1% | 7,304 | 461,144 | refused: exit 110 (ProofNodeMismatch) |
+| 11 | a forged node in the storage proof (its leaf) | Attest 246,361 | 246,361 | 5% | 7,304 | 2,029,320 | refused: exit 110 (ProofNodeMismatch) |
+| 12 | a forged receipt (one bit of the trie leaf) | Attest 67,401 | 67,401 | 1% | 2,519 | 559,360 | refused: exit 110 (ProofNodeMismatch) |
+| 13 | a storage proof presented for another slot | Attest 184,830 | 184,830 | 4% | 7,304 | 1,537,072 | refused: exit 110 (ProofNodeMismatch) |
+| 14 | an account proof presented for another address | Attest 65,058 | 65,058 | 1% | 7,304 | 578,896 | refused: exit 110 (ProofNodeMismatch) |
+| 15 | a storage proof without its last node | Attest 243,977 | 243,977 | 5% | 7,257 | 2,009,872 | refused: exit 111 (ProofIncomplete) |
+| 16 | a storage proof with a node appended | Attest 250,453 | 250,453 | 5% | 7,840 | 2,066,344 | refused: exit 112 (ProofTrailingNodes) |
+| 17 | a predicate that does not hold (a positive balance < 1) | Attest 252,848 | 252,848 | 5% | 7,338 | 2,081,488 | refused: exit 130 (PredicateFailed) |
+| 18 | a log that is not a Transfer to the expected recipient | Attest 86,647 | 86,647 | 2% | 2,623 | 714,160 | refused: exit 130 (PredicateFailed) |
+| 19 | a condition on a field the fact does not have | Attest 252,318 | 252,318 | 5% | 7,339 | 2,077,256 | refused: exit 131 (QueryInvalid) |
+| 20 | a relation that does not hold (a balance < the contract's nonce) | Attest 252,899 | 252,899 | 5% | 7,315 | 2,081,712 | refused: exit 130 (PredicateFailed) |
+| 21 | a log index past the receipt's last log | Attest 77,197 | 77,197 | 2% | 2,519 | 637,728 | refused: exit 125 (LogIndexOutOfRange) |
+| 22 | a transaction index past the block's last transaction | Attest 63,535 | 63,535 | 1% | 1,247 | 518,256 | refused: exit 122 (ReceiptNotIncluded) |
+| 23 | a log of a transaction that failed | Attest 54,574 | 54,574 | 1% | 1,612 | 449,488 | refused: exit 124 (ReceiptFailed) |
+| 24 | a receipt proof presented for another transaction index | Attest 37,681 | 37,681 | 1% | 2,519 | 321,600 | refused: exit 110 (ProofNodeMismatch) |
+| 25 | a hop to a block that is not older than the record's | Attest 64,580 | 64,580 | 1% | 13,592 | 625,376 | refused: exit 150 (HistoryOutOfWindow) |
+| 26 | a hop with a header the history contract does not hold | Attest 247,160 | 247,160 | 5% | 13,578 | 2,085,904 | refused: exit 151 (HistoryHashMismatch) |
+| 27 | an older block's proof without its hop | Attest 50,339 | 50,339 | 1% | 7,304 | 461,144 | refused: exit 110 (ProofNodeMismatch) |
+| 28 | an empty request | Attest 14,235 | 14,235 | 0% | 460 | 117,560 | refused: exit 131 (QueryInvalid) |
+| 29 | an accumulator leaf whose root is not a storage fact | Attest 267,921 | 267,921 | 5% | 8,376 | 2,210,376 | refused: exit 214 (BadQuery) |
+| 30 | a proof whose first node is replaced by two junk bytes | Attest 43,963 | 43,963 | 1% | 6,773 | 405,888 | refused: exit 110 (ProofNodeMismatch) |
+| 31 | a message cut short by one byte | (undecodable) 29,447 | 29,447 | 1% | 7,303 | 294,000 | refused: exit 200 (BadMessage) |
+| 32 | a message with a byte appended | (undecodable) 29,848 | 29,848 | 1% | 7,305 | 297,224 | refused: exit 200 (BadMessage) |
+| 33 | consumer: a Transfer of the token to another recipient | consumer Claim 37,235 → Attest 87,766 | 125,001 | 3% | 2,768 | 1,022,152 | refused: exit 130 (PredicateFailed) |
+| 34 | consumer: a Transfer of another token | consumer Claim 37,235 → Attest 86,407 | 123,642 | 2% | 2,768 | 1,011,280 | refused: exit 130 (PredicateFailed) |
+| 35 | consumer: a claim sent to a claim actor the statement does not name | consumer Claim 37,235 → Attest 99,498 → consumer (reply) 22,302 | 159,035 | 3% | 2,768 | 1,294,424 | refused: exit 229 (consumer: NullifierMismatch) |
+| 36 | consumer: a pool configured for another chain id | consumer Claim 37,235 → Attest 23,729 | 60,964 | 1% | 2,768 | 509,856 | refused: exit 140 (ChainMismatch) |
+| 37 | consumer: a claim with a forged receipt | consumer Claim 37,235 → Attest 70,334 | 107,569 | 2% | 2,768 | 882,696 | refused: exit 110 (ProofNodeMismatch) |
+| 38 | consumer: Credit sent as the transaction root | consumer Credit 9,113 | 9,113 | 0% | 564 | 77,416 | refused: exit 225 (consumer: WrongSender) |
+| 39 | consumer: Credit from another program's actor | scripted 9,742 → consumer Credit 9,963 | 19,705 | 0% | 784 | 163,912 | refused: exit 225 (consumer: WrongSender) |
+| 40 | consumer: an attestation it did not ask for, from another program's actor | scripted 11,383 → consumer (reply) 6,986 | 18,369 | 0% | 984 | 154,824 | refused: exit 220 (consumer: BadMessage) |
+| 41 | consumer: the same deposit claimed again (replay) | consumer Claim 14,835 | 14,835 | 0% | 2,768 | 140,824 | refused: exit 223 (consumer: AlreadyClaimed) |
 
 The second instance of rows 3 and 4 has the same checkpoint and committee and is configured with
 another chain id (Sepolia's): the chain id is part of the instance id, so it is another instance
@@ -799,17 +813,17 @@ accelerator:
 
 | # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
 |---|---|---|---:|---:|---:|---:|---|
-| 1 | account: the WETH contract (nonce, balance, storage root, code hash) | Attest 624,972 | 624,972 | 12% | 4,423 | 5,035,160 | applied |
-| 2 | storage slot: a WETH balance, value >= 1 | Attest 1,101,925 | 1,101,925 | 22% | 7,337 | 8,874,096 | applied |
-| 3 | storage slot: an absent slot is zero | Attest 1,081,264 | 1,081,264 | 22% | 7,290 | 8,708,432 | applied |
-| 4 | account: an address without an account | Attest 577,740 | 577,740 | 12% | 4,149 | 4,655,112 | applied |
-| 5 | event log: an ERC-20 Transfer (receipt with 7 logs) | Attest 338,670 | 338,670 | 7% | 2,622 | 2,730,336 | applied |
-| 6 | event log: a Transfer in the block's largest receipt (306 logs) | Attest 8,224,982 | 8,224,982 | 164% | 58,811 | 66,270,344 | applied |
-| 7 | storage slot 16 blocks back: one EIP-2935 hop, then the slot | Attest 2,104,513 | 2,104,513 | 42% | 13,577 | 16,944,720 | applied |
-| 8 | four facts in one call (account, two slots, a log) and a relation | Attest 1,878,681 | 1,878,681 | 38% | 12,308 | 15,127,912 | applied |
+| 1 | account: the WETH contract (nonce, balance, storage root, code hash) | Attest 625,295 | 625,295 | 13% | 4,424 | 5,037,752 | applied |
+| 2 | storage slot: a WETH balance, value >= 1 | Attest 1,099,689 | 1,099,689 | 22% | 7,338 | 8,856,216 | applied |
+| 3 | storage slot: an absent slot is zero | Attest 1,079,227 | 1,079,227 | 22% | 7,291 | 8,692,144 | applied |
+| 4 | account: an address without an account | Attest 577,801 | 577,801 | 12% | 4,150 | 4,655,608 | applied |
+| 5 | event log: an ERC-20 Transfer (receipt with 7 logs) | Attest 340,097 | 340,097 | 7% | 2,623 | 2,741,760 | applied |
+| 6 | event log: a Transfer in the block's largest receipt (306 logs) | Attest 8,226,393 | 8,226,393 | 165% | 58,812 | 66,281,640 | applied |
+| 7 | storage slot 16 blocks back: one EIP-2935 hop, then the slot | Attest 2,104,035 | 2,104,035 | 42% | 13,578 | 16,940,904 | applied |
+| 8 | four facts in one call (account, two slots, a log) and a relation | Attest 1,875,666 | 1,875,666 | 38% | 12,309 | 15,103,800 | applied |
 
 Without the accelerator an attestation costs 3.6 to 5.1 times as many cycles: a storage slot
-1,101,925 (22% of the target), a log 338,670, the hop and a slot 2,104,513. Every one stays under
+1,099,689 (22% of the target), a log 338,670, the hop and a slot 2,104,035. Every one stays under
 LEZ's cap of 10M; the log in the receipt of 306 logs, 8,224,982, is above the 5M target. The
 difference divided by the 15,372 cycles the accelerator saves per Keccak-f permutation (17,532 −
 2,160, `../bench/RESULTS.md`) gives the permutations each attestation hashes (derived): about 54
@@ -834,10 +848,10 @@ sends nothing else.
   the token address, the sender, the recipient, the amount, the statement identifier, the pool
   id, the first and last 32 bytes of each proof node, the account id and its keys: all absent
   (`results/stage4-attest-private-public-outputs.txt`).
-- **What LEZ charged**: 421,642 execution gas (`PRIVATE_VERIFY_GAS` 409,764 + 11,878 cycles for
+- **What LEZ charged**: 421,641 execution gas (`PRIVATE_VERIFY_GAS` 409,764 + 11,877 cycles for
   the public `Read`) and 224,063 storage gas, as for the read of §4.
-- **What a prover has to prove for the consumer**: its two transitions, 36,126 user cycles for
-  the call and 346,210 for the reply that verifies the fact, 382,336 together, one segment each
+- **What a prover has to prove for the consumer**: its two transitions, 34,337 user cycles for
+  the call and 346,240 for the reply that verifies the fact, 380,577 together, one segment each
   (655,360 cycles with padding). The consumer hashes with software Keccak, so this is plain
   RISC-V proving. LEZ's privacy-preserving circuit over the two receipts and the fee transfer is
   proven as well; `lee` does not report its cycles, and they are not in these counts
@@ -847,50 +861,54 @@ sends nothing else.
   a slot without a record each end the consumer's second transition with a code (110, 130, 140,
   110, 222), and LEZ's prover makes no receipt for a non-zero exit, so there is no transaction.
 - **Calling instead of reading publishes everything.** The same consumer calling `Attest`
-  privately (`CallAttest`) puts the 2,224-byte request and the 301-byte attestation into the
+  privately (`CallAttest`) puts the 2,225-byte request and the 301-byte attestation into the
   transaction in the clear; the test finds the token, the sender, the amount and the statement
-  identifier in its bytes. LEZ charged it 507,003 execution gas (409,764 + 97,239).
+  identifier in its bytes. LEZ charged it 509,262 execution gas (409,764 + 99,498).
 
 With RISC Zero's accelerated Keccak in the consumer (`guests/consumer-keccak-accel`, executor
-only) the two transitions take 138,264 user cycles instead of 382,336, and the Keccak-f
+only) the two transitions take 137,064 user cycles instead of 380,577, and the Keccak-f
 permutations would be proven by RISC Zero's Keccak circuit, as an assumption that LEZ's
 privacy-preserving circuit would have to resolve. That was not tried, so the consumer measured
 here hashes in software. The cost follows the receipt: the same attestation for the `Transfer`
-in the receipt of 306 logs takes 8,857,963 user cycles in ten segments (2,249,883 with the
+in the receipt of 306 logs takes 8,903,363 user cycles in ten segments (2,295,842 with the
 accelerator), because the 58 KB proof passes through both transitions and is hashed in the
 second.
 
-**One real proof of this path, on a GPU.** `harness/src/bin/prove_attest.rs` makes it, as
-`prove_private` does for §3, and `scripts/stage-prove-attest.sh` stages its input
+**A real proof of this path, on a GPU, on these images.** `harness/src/bin/prove_attest.rs`
+makes it, as `prove_private` does for §3, and `scripts/stage-prove-attest.sh` stages its input
 (`../gpu-prover/inputs-lez-attest/MANIFEST.json`: the binary and the fixture files it reads, by
-size and SHA-256). The binary built at commit d498591 (sha256 `69d00216…f64e`; the guests are
-those of this section) ran on one NVIDIA L4 on Modal, with r0vm 3.0.5 built with CUDA as its
-prover (`../gpu-prover/RESULTS.md`, run `gpu-l4-attest`), with this command:
+size and SHA-256). The binary built on the build box at commit ad40044 (sha256 `6146055b…11ab`,
+glibc 2.39; program `9f3eb00f…`, consumer `f883e6a4…`) ran on one NVIDIA L4 on Modal, with r0vm
+3.0.5 built with CUDA as its prover (`../gpu-prover/RESULTS.md`, run `gpu-l4-attest-2`), with
+this command:
 
 ```sh
-FERRATA_EXPECT_CONSUMER_IMAGE_ID=711584ffe09f0b115132e33ce1485666710bc73e696e66fcc54d00aad0db949f \
+FERRATA_EXPECT_CONSUMER_IMAGE_ID=f883e6a4dbd8e49439465f918884abe1379b02276ff88676f0a4bf958ee49068 \
 FERRATA_ATTEST_FIXTURE_DIR=/path/to/mainnet-attest-2026-11-10 RISC0_DEV_MODE=0 RISC0_SERVER_PATH=/path/to/r0vm \
 /usr/bin/time -v ./prove_attest --tx-out stage4-private-attest-tx.borsh > prove-attest.log 2>&1
 ```
 
 | the private attestation, proven (`results/prove-attest.log`) | |
 |---|---|
-| proven | the consumer's two private transitions (`AttestPrivately`, which sends `Read`: 36,126 user cycles; the record's reply, which verifies the `Transfer`: 346,210), the fee transfer from the private account, and LEZ's privacy-preserving circuit over them (`lee::execute_and_prove`, `ProverOpts::succinct()`). The image claimed is the consumer's, `711584ff…949f`, disclosed. |
-| wall clock | **13.5 s** for `execute_and_prove`; 0:16.99 for the whole run (setup and settlement included), 15.21 s of user time on one core |
-| machine | one NVIDIA L4 (23,034 MiB), 4 CPU cores, 32 GiB; GPU memory peak 11,296 MiB; peak host memory 0.77 GiB (810,428 kB, `/usr/bin/time -v`) |
-| receipt | **227,170 bytes** (the succinct `InnerReceipt`, borsh); the transaction is **231,214 bytes** (`results/stage4-private-attest-tx.borsh`, sha256 `f89bc6e7…b746`) |
-| settlement | in the run, with the receipt verified: execution gas 421,642 (`PRIVATE_VERIFY_GAS` 409,764 + public part 11,878 cycles), storage gas 224,063, base fee 5,165,640: the figures of the dev-mode run above |
+| proven | the consumer's two private transitions (`AttestPrivately`, which sends `Read`: 34,337 user cycles; the record's reply, which verifies the `Transfer`: 346,240), the fee transfer from the private account, and LEZ's privacy-preserving circuit over them (`lee::execute_and_prove`, `ProverOpts::succinct()`). The image claimed is the consumer's, `f883e6a4…9068`, disclosed. |
+| wall clock | **16.1 s** for `execute_and_prove`; 0:21.28 for the whole run (setup and settlement included), 18.81 s of user time on one core |
+| machine | one NVIDIA L4 (23,034 MiB), 4 CPU cores, 32 GiB; GPU memory peak 11,295 MiB; peak host memory 0.76 GiB (798,040 kB, `/usr/bin/time -v`) |
+| receipt | **227,170 bytes** (the succinct `InnerReceipt`, borsh); the transaction is **231,214 bytes** (`results/stage4-private-attest-tx.borsh`, sha256 `5b1d6292…bdcf`) |
+| settlement | in the run, with the receipt verified: execution gas 421,641 (`PRIVATE_VERIFY_GAS` 409,764 + public part 11,877 cycles), storage gas 224,063, base fee 5,165,632: the figures of the dev-mode run above |
 
-The transaction was then settled again from the file on another machine (a laptop, 2.6 s, no
+The transaction was then settled again from the file on another machine (the laptop, no
 proving), with the same binary: `RISC0_DEV_MODE=0 ./prove_attest --settle FILE` rebuilds the
 state from the fixture, checks that the transaction claims this binary's consumer image, and
 LEZ's settlement verifies the receipt (`results/prove-attest-settle.log`: "receipt verified",
-the same charge). With one bit of the receipt flipped (bit 0 of byte 115,607 of the file) the
-same command refuses it: `Invalid privacy preserving execution circuit proof`
-(`../gpu-prover/logs/lez-attest-tampered-settle.log`). `results/prove-attest-dry-run.log` is the
-proving command in dev mode. This is a single run on a shared cloud GPU, not a benchmark; the
-path was not proven on a CPU, and the attestation of the 306-log receipt (ten segments) was not
-proven at all.
+the same charge). The first proof of this path was of the previous images (consumer
+`711584ff…`, 382,336 user cycles): 13.5 s on another L4, the same receipt and transaction sizes
+(run `gpu-l4-attest`); with one bit of its receipt flipped (bit 0 of byte 115,607 of the file)
+the same settle command refused it: `Invalid privacy preserving execution circuit proof`
+(`../gpu-prover/logs/lez-attest-tampered-settle.log`); that check was not repeated for the second
+proof. `results/prove-attest-dry-run.log` is the proving command in dev mode. Each is a single
+run on a shared cloud GPU, not a benchmark (the 2.6 s between them says nothing about the
+images); the path was not proven on a CPU, and the attestation of the 306-log receipt (ten
+segments) was not proven at all.
 
 ### Decisions where the design note was silent or did not fit LEZ v0.4
 
@@ -937,27 +955,193 @@ proven at all.
 - **Rules 5 to 7 of the consumer pattern and a private claim** (decision 7); the second U.6
   reference consumer (a native ETH transfer to a contract); the F.8 test of §6.5 of the design
   note (two deposits whose transactions must be indistinguishable).
-- **Accumulator leaves through LEZ.** The request carries them and `attest::evaluate` proves
-  them, but no deployed contract keeps such a root: `harness/tests/attest_native.rs` runs the
-  shared vectors (`../vectors/acc-leaf.json`: 14 leaves, 7 refusals) through `evaluate` on the
-  host, on a synthetic state built with the reference trie. They did not run in the guest.
-- **Gloas records.** A Gloas record holds a block hash only, and `Attest` refuses it (141); the
-  RLP header that would bind its roots is not built, and neither is a store upgrade. The Sepolia
-  fixture is Gloas since October and no public node serves a bootstrap for it, so nothing here
-  ran on a testnet: mainnet only.
+- **Accumulator leaves on real data.** They run in the guest since Stage 5 (§6), on a synthetic
+  state holding the vault's own deposits under a record placed in LEZ's state, not written by
+  the program; no deployed contract kept such a root when this ran (the vault is not deployed).
+  `harness/tests/attest_native.rs` also runs the shared vectors (`../vectors/acc-leaf.json`: 14
+  leaves, 7 refusals) through `evaluate` on the host.
+- **Gloas records** are attested since Stage 5 (§6), on Sepolia; this section's mainnet block is
+  of the Fulu era.
 - **One hop, not a chain of hops**, was measured (the request allows several).
-- **The private path has one real proof, on a GPU** (§5.5: 13.5 s on an NVIDIA L4). It was not
+- **The private path has real proofs on a GPU only** (§5.5: 16.1 s on an NVIDIA L4). It was not
   proven on a CPU, so what a user's own machine needs for it is not measured, and the 306-log
   case was not proven. A read exposes which record was read (§4), and this fixture reads the
   record of the fact's own block, not the newest one.
 - **Predicates compare 256-bit words** with a constant or with another fact of the same request;
   there are no arithmetic or boolean combinations beyond "all hold".
 - **The transaction carries the proofs.** A log in a large receipt needs the whole receipt: 58.8
-  KB and 1.6M cycles for 306 logs here. LEZ counts the bytes as storage gas (58,811 of the
+  KB and 1.6M cycles for 306 logs here. LEZ counts the bytes as storage gas (58,812 of the
   block's 1,000,000), and a receipt several times larger would not fit the target.
 
 
-## 6. What did not work, what is missing, what is weaker than asked
+## 6. Stage 5: Sepolia through the Gloas fork, and attestation under a Gloas record
+
+**Question.** Can an instance whose schedule holds a later fork cross it by itself, can a record
+of the Gloas era, which binds only an execution block hash, be attested against, and do both
+hold on a live testnet? And can the accumulator leaves of the vault's deposit tree be proven by
+the program in the guest?
+
+**Answer: yes, on real Sepolia data; the vault's leaves on a synthetic state until the vault is
+deployed.** Everything here ran in the in-process harness on a Modal container (results at commit
+ad40044, `results/environment.md`), on the images of the introduction; the executor is
+deterministic. Public transactions only, except one dev-mode run of the proven path.
+
+**The data.** `../crates/ferrata-spectests/fixtures/sepolia-gloas-2026-11-10` (the core's Sepolia
+fixture: the bootstrap of period 1378, the last before Gloas, and every period's update from 1378
+to 1409; Sepolia activated Gloas at epoch 353,024, the first slot of period 1379) and
+`…/sepolia-attest-2026-11-10`, fetched for this stage by `scripts/fetch-attest-fixture.py
+--network sepolia` on 10 November 2026 at 17:10:50–17:10:53 UTC from public endpoints, without an
+API key and with a generic User-Agent (`SOURCE.md` lists every request):
+
+| | |
+|---|---|
+| finality update (Gloas layout) | attested slot 11,549,728, signature slot 11,549,729, 507 of 512 signers, period 1409 |
+| finalized header | slot 11,549,664; it binds execution block 12,105,936 (the bid's parent block), hash `0x5a2f5671…27b6` |
+| execution head when the proofs were fetched | 12,106,027, 91 blocks later |
+| storage slot | Sepolia USDC (`0x1c7d…7238`, Circle's FiatToken proxy) slot 11, `totalSupply_`: the capture checked it equals `totalSupply()` at the block |
+| log | the block's first ERC-20 `Transfer` (transaction 0, log 0; token `0x5543…925b`) |
+| one contract at one address on both chains | Multicall3 (`0xcA11…CA11`): the capture read the same code hash at block 12,105,936 and at mainnet block 26,385,920 |
+
+**The upgrade in place** (`ferrata_core::steps::store_for_update`, `steps::apply`; program
+`Open` and `VerifyAll`). An update is decoded in the layout its encoding names. If that is a later
+layout than the store's, it must be the layout of the fork that the instance's schedule (fixed at
+`Init`) puts at the update's attested slot; the job is then verified against the store upgraded to
+it, and applying the job writes the upgrade (`upgrade_lc_store_to_*` on the compact store changes
+the layout only: the store holds no execution header) and emits `FRT-UPG1` with the two layouts.
+Any other layout is `ForkMismatch` (61). Nothing else tells a store to upgrade, and a fork that is
+not in the schedule still needs a successor (design §3.5). The core's `steps` test runs a second
+compact store that is never told to upgrade beside the told one on all 52 official sync cases:
+same verdicts and codes, 12 upgrades made by the store itself, and after each step it equals the
+told store upgraded to that layout.
+
+### Sepolia from period 1378 to 1409 (`results/stage5-sepolia-replay.md`)
+
+`Init` from the period-1378 bootstrap (Electra layout, Sepolia's schedule), each period's update
+as a public job in the layout the beacon node served it in, then the finality update of the
+attestation fixture: 166 transactions (3 + 32 × 5 + 3), every one applied and under the 5M target,
+together 525,494,412 execution gas and 1,776,529 storage gas (`tests/sepolia.rs` ends instead with the
+replay fixture's own finality update: 526,306,154 and 1,788,049). After every job the instance's store
+equals the compact form of the native store (which the harness upgrades by hand at the fork, as a
+light client does), and every finalized root equals the root a second beacon provider reports. The
+store changed layout once, in the job of period 1379, and the configuration is unchanged.
+
+**What the upgrade costs**: the job that upgrades (period 1379) against the next one (1380), same
+layout and committee size:
+
+| job | `Open` (+ `JobOpen`) | `Miller` | adoption, two parts | `Finish` → `Apply` → `Record` | job's execution gas |
+|---|---:|---:|---:|---:|---:|
+| period 1378 (Electra) | 2,154,717 | 3,313,287 | 6,829,002 | 3,731,712 (Apply 61,380) | 16,028,718 |
+| period 1379 (the upgrade) | 2,013,730 | 3,310,385 | 6,823,232 | 3,731,686 (Apply 64,230) | 15,879,033 |
+| period 1380 (Gloas) | 2,013,742 | 3,310,385 | 6,823,232 | 3,728,633 (Apply 61,177) | 15,875,992 |
+
+The upgrade costs 3,053 cycles in `Apply` (finding the upgraded store the job started from, and
+the event) and nothing measurable in `Open`; 3,041 for the whole job (0.02%). A Gloas `Open` is
+about 141,000 cycles cheaper than an Electra one: the Gloas header carries a block hash and its
+branch instead of the execution payload header.
+
+The proven path follows from the same code: in dev mode, `VerifyAll` of the period-1379 update
+(Gloas layout, with the adoption of its committee) sent as one private call to a store still in
+the Electra layout upgrades the public instance's store through `ApplyVerified` (public part 76,640
+cycles; `tests/sepolia.rs`).
+
+### Attestations under the Gloas record (`results/stage5-attest.md`)
+
+A record of a finalized header in the Gloas layout holds the block hash its header binds, not the
+block's roots. `Request::header` carries that block's RLP header (678 bytes here): `evaluate`
+checks it hashes to the recorded hash and reads the number, the state root and the receipts root
+from it, never from the caller. Each attestation below is the root of a transaction to
+`header(id, 11,549,664)`, and its event names exactly the identifiers the native evaluation gives:
+
+| attestation (Sepolia block 12,105,936) | execution gas (cycles) | storage gas (bytes) |
+|---|---:|---:|
+| storage slot: USDC `totalSupply_`, value checked | 278,253 | 7,633 |
+| log: an ERC-20 `Transfer`, emitter and recipient checked | 96,713 | 2,586 |
+| account: Multicall3, code hash checked | 169,611 | 4,723 |
+| the three in one request | 469,040 | 12,658 |
+
+What the header costs: the vault's request with one leaf (below) under a Gloas record with the
+header is 186,719 cycles and 3,391 bytes; the same request under a record of the same block that
+holds the payload's fields, without a header, is 166,056 and 2,700: 20,663 cycles and 691 bytes
+per request.
+
+### Refusals under the Gloas record (`results/stage5-attest-refusals.md`)
+
+| request | exit | cycles |
+|---|---|---:|
+| no block header | 215 `HeaderRequired` | 37,744 |
+| the header with one byte changed | 120 `HeaderHashMismatch` | 47,539 |
+| the header of another block (12,103,422, the replay fixture's bound block) | 120 | 54,131 |
+| the header truncated by one byte | 120 | 52,751 |
+| the header with one byte appended | 120 | 52,953 |
+| 021 F.5: the Multicall3 proof asked as a mainnet statement (chain id 1) | 140 `ChainMismatch` | 26,253 |
+| 021 F.5: the USDC storage proof asked as a mainnet statement | 140 | 34,746 |
+| a header sent to a record that holds the payload's fields (the bootstrap's) | 214 `BadQuery` | 22,585 |
+
+On F.5: Multicall3 has one address and one code hash on both chains, so "this account has this
+code" is true of both; asked under the Sepolia record with mainnet's chain id it is refused, and
+its Sepolia statement identifier differs from the mainnet one (`tests/sepolia.rs`). 141
+(`BindingMismatch`) is left for records with no execution block at all: the Altair layout, or a
+zero block hash (`tests/attest_native.rs`, natively).
+
+### Accumulator leaves in the guest: the vault's request (`results/stage5-vault-synthetic.md`)
+
+Ferrata's vault on Sepolia (`0xdfedf9A73Cfb337277b95a9a1C941c3496A4385F`, not yet deployed when
+this ran) keeps its deposit tree's root in slot 0 and its leaf count in slot 1. `harness::vault`
+builds the request a bridge needs before it mints: the vault's account, slot 0 (equal to the
+root), slot 1 (above the highest leaf asked), and deposit leaves against the root in slot 0. Until
+the vault exists it runs on a synthetic state that holds the vault's own eight deposits
+(`../vectors/vault-tree-v2.json`, made on the Solidity vault by its tests; the harness recomputes
+every leaf and the root from the deposits): a block whose header is a real Sepolia header with that
+state root put in, and a record in the Gloas layout binding its hash. **That record is placed in
+LEZ's state with `V03State::force_insert_account` (LEZ's test utilities), at the address where the
+program writes records: the program did not write it.** From there the path is the program's own.
+
+| request | execution gas (cycles) | storage gas (bytes) |
+|---|---:|---:|
+| slots 0 and 1, no leaf | 120,879 | 2,319 |
+| slots 0 and 1 and one deposit leaf | 186,719 | 3,391 |
+| slots 0 and 1 and two leaves | 252,205 | 4,463 |
+| slots 0 and 1 and all eight leaves | 644,826 | 10,895 |
+
+A leaf costs about 65,500 cycles (65,486 for the second; 65,493 on average over eight) and 1,072
+bytes (its 32 siblings). Refused: a leaf not at its index, a leaf proven at another index, a leaf
+against slot 1 (163 `AccumulatorRootMismatch`, 172,634 to 172,637 cycles); an empty position past the count
+(130 `PredicateFailed`: slot 1's condition); the facts as mainnet statements (140); without the
+header (215).
+
+**The vault on Sepolia, once deployed.** One command captures its fixture, and one test attests
+slots 0 and 1 and its newest deposit leaf through the program under the record of the captured
+block, after following the chain from the period-1378 bootstrap through the replay fixture and the
+captured updates:
+
+```sh
+lez/scripts/fetch-attest-fixture.py --network sepolia \
+  --storage 0xdfedf9A73Cfb337277b95a9a1C941c3496A4385F:0=depositRoot(),1=nextLeafIndex() \
+  --deposits 0xdfedf9A73Cfb337277b95a9a1C941c3496A4385F:DEPLOY_BLOCK --updates-from 1410 \
+  crates/ferrata-spectests/fixtures/sepolia-vault
+cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test vault -- --nocapture
+```
+
+Until that directory exists, `the_vault_on_sepolia` says so and passes; it has not run on real
+vault data.
+
+### Departures from the design note, and what Stage 5 does not cover
+
+1. **Where the Gloas roots come from.** Design §4.7 has the record carry the roots read from the
+   RLP header. Here the record holds the block hash only and each `Attest` carries the header
+   (20,663 cycles and 691 bytes per request), so the update path never touches the execution
+   layer. Writing the roots once at `Record` would need the header in the update's last
+   transaction.
+2. **A new exit code**, 215 `HeaderRequired`; a header sent to a record that holds the payload's
+   fields is `BadQuery` (214), so a request has one encoding.
+3. **Upgrade only within the schedule.** A fork added after `Init` is still a successor's (§3.5 of
+   the design note), which is not built.
+4. **Not covered:** a bootstrap of a Gloas-era checkpoint (no public node serves one; the
+   instance starts one period before the fork); history hops under a Gloas record; the private
+   path under a Gloas record (the consumer carries the header through, unmeasured); the vault on
+   real data; Gloas on mainnet (no date yet).
+
+## 7. What did not work, what is missing, what is weaker than asked
 
 - **Settlement is a copy, not the crate.** The harness runs `chain_state::apply`'s
   `settle_charged_transaction` / `settle_private_transaction` and `classify` as copies (with
@@ -967,15 +1151,15 @@ proven at all.
   writes to accounts these transactions never touch), and the block tail (the fee program's
   `Distribute` and the clock); each transaction is settled in a block of its own. Fees are at
   the genesis base fees (8 per gas unit); no base-fee movement was simulated. On the running
-  sequencer of §8 none of this is a copy, and the block tail and the base fee are real.
+  sequencer of §9 none of this is a copy, and the block tail and the base fee are real.
 - **Deployment.** In the harness the program is deployed at genesis, immutable, with
   `V03State::with_genesis_programs` as LEZ's own tests do, not by `program_loader` transactions;
   the cost of deploying this branch's 593 KB image was not measured. On the running sequencer
-  (§8) the earlier image `cec0bc68…` was deployed by `program_loader` transactions: 6 per 508 KB
+  (§9) the earlier image `cec0bc68…` was deployed by `program_loader` transactions: 6 per 508 KB
   image, storage gas 479,496, execution gas 0.
 - **Private paths in dev mode.** The Stage 2, 3 and 4 tests run with `RISC0_DEV_MODE=1`. Real
   proofs were made of a finality update on images before this branch, in the harness by CPU
-  (`e7cec90e…`) and by GPU (`cec0bc68…`) (§3), and on the running sequencer of §8 against its
+  (`e7cec90e…`) and by GPU (`cec0bc68…`) (§3), and on the running sequencer of §9 against its
   live instance (`cec0bc68…`, by a rented machine's CPU, verified by the sequencer); and of one
   private attestation on this branch's images, by GPU (§5.5). None was made of a handoff, of
   Stage 3's private consumer (§4), or of the update path on this branch's image.
@@ -984,16 +1168,16 @@ proven at all.
   `PublicBackend` does. Every test asserts that the split sums to LEZ's charge. Within a handler
   (input decoding vs. pairing vs. journal), the split was not measured inside LEZ; §2 compares
   with the bare-guest numbers of `../bench/` and with the shell-cost measurement instead.
-- **Not implemented in the program:** fork upgrades (the store's light-client layout is fixed at
-  `Init`); Gloas's RLP execution header (records carry the bound block hash only, so a Gloas record
-  cannot be attested against: §5); the weak-subjectivity bound; successors and the root id of the proposal's §1; a submitter daemon
+- **Not implemented in the program:** a fork that is not in the schedule fixed at `Init` (a
+  scheduled one is crossed in place since Stage 5, §6); the weak-subjectivity bound; successors and the root id of the proposal's §1; a submitter daemon
   (the harness plans each job natively, as one would); joining an open job; any clean-up of jobs
   whose final step fails (they stay, unapplied).
-- **The execution layer runs in the program for records with payload fields only** (§5). The
-  handler's 273,717 cycles for a storage slot are about 63,000 more than the bare-guest call on a
+- **The execution layer's cost in the program** (§5, §6). The
+  handler's 274,842 cycles for a storage slot are about 64,000 more than the bare-guest call on a
   proof of the same shape (210,502, `../bench/RESULTS.md`, another block), most of it the 7.3 KB
-  of input the shell reads, decodes and echoes (§2). Accumulator leaves ran on the host only,
-  and a chain of several hops was not measured.
+  of input the shell reads, decodes and echoes (§2). A record that binds a block hash (Gloas)
+  adds the RLP header to every request: 20,663 cycles and 691 bytes (§6). A chain of several hops
+  was not measured.
 - **Refusals LEZ charges at the full gas limit.** Coded exits are charged only the cycles used,
   as designed. A transaction outside its validity window (an `Open` sent before its signature
   slot) is LEZ's own refusal and was charged the whole declared gas limit, 10M (refusal 17). By
@@ -1004,7 +1188,7 @@ proven at all.
   not measured: the tests admit their targets so that the program's own checks are what refuse.
   A submitter bounds both by declaring a tight gas limit.
 - **A duplicate `Open` is not cheap.** The instance cannot see whether the job exists, so the
-  duplicate is refused by `JobOpen` after step 1 has run: 2,184,053 cycles. Making it cheap needs
+  duplicate is refused by `JobOpen` after step 1 has run: 2,186,502 cycles. Making it cheap needs
   an extra round trip (the job asking the instance for its store), which would cost every update.
 - **`scripts/check-bench-provenance.sh`** (not a CI gate) fails, as it does on `main` before the
   merge: it requires the core to equal commit f030475 up to the rename, file for file, and the
@@ -1033,7 +1217,7 @@ proven at all.
    above. The proposal's clock rule (a validity window on each step) makes an early step cost its
    whole gas limit.
 4. **"Every step checks its preconditions first (job present, …)"** holds for `Miller`, `Adopt`
-   and `Finish` (refused for 5,982–24,154 cycles), not for opening a job (2,184,053).
+   and `Finish` (refused for 5,981–24,159 cycles), not for opening a job (2,186,502).
 5. **Private consumers' reads are public reads** (§4): the boundary shows which record was read,
    the record itself, and the consumer's program. An `Undisclosed` image claim hides the image
    from the claims list only; the program account still appears as the sender of the read. The
@@ -1041,13 +1225,13 @@ proven at all.
    implication that reading exposes nothing about the query is too strong: it exposes the slot.
 6. **The gas bounds hold, with margin.** No transaction of the job is above 3.73M cycles (75% of
    `TARGET_GAS_EXEC`); a whole finality update also fits one transaction under `MAX_GAS_EXEC`
-   (9,118,298 cycles), above the target. Since the caps are per block, at the target a block holds
+   (9,121,514 cycles), above the target. Since the caps are per block, at the target a block holds
    one step of a job (plus small transactions).
 7. **The "about 15 cycles per byte" of the proposal** (from a comment in LEZ's integration tests)
    measured 5.7 cycles per byte of message for this program (§2).
 
 
-## 7. Reproduce
+## 8. Reproduce
 
 Layout: LEZ at `upstream/lez-v0.4.0-rc1` beside the repository (`../../upstream/` from `lez/`; tag
 `v0.4.0-rc1`, commit `1806e873ea2ac0e1b608aa7cf2f9b6e1fb12db21`, unmodified); the crates depend on
@@ -1068,11 +1252,11 @@ export TMPDIR=$PWD/../../tmp CARGO_TARGET_DIR=$PWD/target
 export RISC0_BUILD_LOCKED=1                          # risc0-build then builds the guests with --locked
 ./results_env.sh                                     # rewrites results/environment.md (run it first, on a clean tree)
 RISC0_DEV_MODE=1 cargo test -p harness --locked -- --test-threads 1 --nocapture \
-  > results/harness-tests-dev-mode.log               # Stages 1–4 and the exit codes, 22 tests: prints every
+  > results/harness-tests-dev-mode.log               # Stages 1–5 and the exit codes, 27 tests: prints every
                                                      # table; writes results/stage3-* and
                                                      # stage4-attest-private-public-outputs.txt
 cargo run -p harness --locked --bin tables           # rewrites results/stage1-*.md, shell-costs.md, images.md,
-                                                     # stage4-attest*.md
+                                                     # stage4-attest*.md, stage5-*.md
 cargo build -p harness --locked --bin prove_private --bin prove_attest
 RISC0_DEV_MODE=1 target/debug/prove_private --allow-dev-mode --tx-out target/dry-run-tx.borsh \
   > results/prove-private-dry-run.log 2>&1           # dry runs: the commands of the real proofs with a
@@ -1086,16 +1270,21 @@ scripts/stage-prove-attest.sh OUTDIR                 # the input of a real proof
                                                      # ../gpu-prover/README.md has the commands of the GPU run
 RISC0_DEV_MODE=0 target/debug/prove_attest --settle results/stage4-private-attest-tx.borsh \
   > results/prove-attest-settle.log 2>&1             # settle the proven attestation again, receipt verified
-cd .. && cargo test -p ferrata-spectests --test steps --test mainnet_e2e -- --nocapture   # the step API against
-                                                     # process_update; the record the program writes
+cd .. && cargo test -p ferrata-spectests --test steps --test mainnet_e2e --test sepolia_steps -- --nocapture
+                                                     # the step API against process_update (with a store that
+                                                     # upgrades itself); the record the program writes; Sepolia
 lez/scripts/fetch-attest-fixture.py OUTDIR           # how the Stage 4 fixture was fetched: run today, it
                                                      # fetches the block finalized now into a new directory
+lez/scripts/fetch-attest-fixture.py --network sepolia OUTDIR   # the same for Stage 5's Sepolia fixture; the
+                                                     # vault's capture is in §6
 ```
 
-The 22 tests take about a minute and a half on eight test threads (`--test-threads 8`); the
-figures above were produced that way, on a cloud container, and do not depend on the thread
-count. The Stage 4 tests read `../crates/ferrata-spectests/fixtures/mainnet-attest-2026-11-10`
-(or `FERRATA_ATTEST_FIXTURE_DIR`); its SHA-256 sums are compiled in.
+The 27 tests take about two minutes on eight test threads (`--test-threads 8`; the longest
+test binary, `tests/sepolia.rs`, 102 s); the figures above were produced that way, on a cloud
+container, and do not depend on the thread count. The Stage 4 tests read
+`../crates/ferrata-spectests/fixtures/mainnet-attest-2026-11-10` (or `FERRATA_ATTEST_FIXTURE_DIR`),
+Stage 5 `…/sepolia-gloas-2026-11-10` and `…/sepolia-attest-2026-11-10` (or
+`FERRATA_SEPOLIA_FIXTURE_DIR`, `FERRATA_SEPOLIA_ATTEST_DIR`); their SHA-256 sums are compiled in.
 
 The harness builds in the dev profile with optimised dependencies: LEZ refuses to build its test
 helpers (`lee/test-utils`, needed for private accounts) into a release build. The guests are
@@ -1108,7 +1297,7 @@ wrapper reaches the guest build and compiles the guests with the host toolchain:
 `cargo fmt -p ferrata-lez-wire -p harness -p methods`, and `rustfmt --edition 2021` for the guests
 (clean).
 
-## 8. On a running sequencer (`live/`)
+## 9. On a running sequencer (`live/`)
 
 [`live/`](live/README.md) runs the program, at the image before the attestation (`cec0bc68…`,
 without §5), on LEZ's own sequencer instead of the harness:
@@ -1129,7 +1318,7 @@ SHA-256 in `segments.tsv`); tables: `live/results/tables.md`.
 
 | | on the sequencer | in the harness |
 |---|---|---|
-| deployment | the exact binary of image `cec0bc68…` (SHA-256 `4b7702a4…1777`), twice, and LEZ's `scripted` program, through `program_loader`: 6 transactions per 508 KB image, storage gas 479,496, execution gas 0, base fees 3,835,968; the loader computed image `cec0bc68…` | at genesis (§6) |
+| deployment | the exact binary of image `cec0bc68…` (SHA-256 `4b7702a4…1777`), twice, and LEZ's `scripted` program, through `program_loader`: 6 transactions per 508 KB image, storage gas 479,496, execution gas 0, base fees 3,835,968; the loader computed image `cec0bc68…` | at genesis (§7) |
 | transactions | 96 sent: 73 applied, 19 refused by the program, 2 reverted otherwise, 2 dropped by the sequencer; 191 blocks, all final on Bedrock | one block each |
 | the 65 with a row in §2 (as measured on `cec0bc68…`; §2 now shows `2f3566d4…`) | the same outcome and exit code in all 65; the same execution gas in 64; the other ran outside its validity window and pays its declared limit (4,000,000 here, 10,000,000 declared there) | §2 |
 | transaction bytes (storage gas) | equal in 44 of those 65; 65 bytes more in 19 and 65 fewer in 1 (not traced to a field); 607 fewer in the validity-window case, which is built differently | §2 |
