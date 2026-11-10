@@ -763,11 +763,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "00d174d5400e5e8fd687ad1049e2f578285fa914201b1af7e8b112a4546bd826"
 
 [[package]]
+name = "ferrata-bridge-core"
+version = "0.2.0"
+dependencies = [
+ "hmac",
+ "sha2",
+]
+
+[[package]]
 name = "ferrata-core"
 version = "0.0.1"
 dependencies = [
  "sha2",
  "tiny-keccak",
+]
+
+[[package]]
+name = "ferrata-lez-bridge-wire"
+version = "0.1.0"
+dependencies = [
+ "borsh",
+ "ferrata-bridge-core",
+ "ferrata-lez-wire",
+ "lee_core",
+ "sha2",
 ]
 
 [[package]]
@@ -781,10 +800,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "ferrata_consumer"
+name = "ferrata_bridge"
 version = "0.1.0"
 dependencies = [
  "borsh",
+ "ferrata-lez-bridge-wire",
  "ferrata-lez-wire",
  "lee_core",
  "risc0-zkvm",
@@ -919,6 +939,15 @@ name = "hex-literal"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6fe2267d4ed49bc07b63801559be28c718ea06c4738b7a03c94df7386d2cde46"
+
+[[package]]
+name = "hmac"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6c49c37c09c17a53d937dfbb742eb3a961d65a994e6bcdcf37e7399d0cc8ab5e"
+dependencies = [
+ "digest 0.10.7",
+]
 
 [[package]]
 name = "hybrid-array"
