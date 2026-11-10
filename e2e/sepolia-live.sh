@@ -39,10 +39,12 @@
 #   FERRATA_GAS_RPC, FERRATA_GAS_MARGIN_PCT   the node that prices the transactions and the margin (125 %)
 #                                             (vault/script/roundtrip.sh)
 #   FERRATA_ATTEST_DEPOSITS                   the deposits whose root LEZ attests (default "0 1"): after
-#                                             each, the run waits for its block's finality and captures
-#                                             into <run>/attest/depositN/ what LEZ needs (the latest finality
-#                                             update, the vault's slots 0-2 proven at its block, the deposit
-#                                             logs) with FERRATA_CAPTURE_CMD; on a fork nothing is captured
+#                                             deposit N the run waits for its block's finality and captures
+#                                             into <run>/lez-capture-<N+1>/ what the LEZ session reads (the
+#                                             latest finality update, the vault's slots 0-2 proven at its
+#                                             block, the deposit logs, the period updates) with
+#                                             FERRATA_CAPTURE_CMD (default: the command of the inbound plan,
+#                                             e2e/runs/<run>/lez-inputs.json); on a fork nothing is captured
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 repo="$(cd "$here/.." && pwd)"
@@ -89,7 +91,7 @@ n_deploy=8
 o_submit=$((n_deploy + deposits)); o_beacon=$((o_submit + 1)); o_final=$((o_submit + 2)); o_rel=$((o_submit + 3))
 total=$((o_rel + releases))
 attest="${FERRATA_ATTEST_DEPOSITS-0 1}"
-capture_cmd="${FERRATA_CAPTURE_CMD:-python3 $repo/lez/scripts/fetch-attest-fixture.py --network sepolia --storage {vault}:0,1,2 --deposits {vault}:{from_block} {out}}"
+capture_cmd="${FERRATA_CAPTURE_CMD:-python3 -I lez/scripts/fetch-attest-fixture.py --network sepolia --storage {vault}:0=depositRoot(),1=nextLeafIndex(),2=storedLezConfigId() --deposits {vault}:{from_block} --updates-from 1410 {out}}"
 call() { cast call "$vault" "$@" "${rpc[@]}"; }
 word() { awk 'NR==1 {print $1}'; }
 nonce() { cast nonce "$ETH_FROM" "${rpc[@]}"; }
@@ -114,29 +116,35 @@ recorded() { # make sure a stage that is on chain is also in the manifest
   jq -e --arg s "$1" '.stages[$s]' "$manifest" > /dev/null 2>&1 || tx record "$1" > /dev/null ||
     die "stage $1 is on chain but not in the manifest, and forge's broadcast log for it is missing"
 }
-capture() { # deposit $1's block finalized, then what LEZ needs to attest the vault's root, into $run/attest/deposit$1
-  local i="$1" dir="$run/attest/deposit$1" block from cmd
+capture() { # deposit $1's block finalized, then what the LEZ session reads, into $run/lez-capture-$(($1 + 1))
+  local i="$1" n=$(($1 + 1)) dir block from cmd got
+  dir="$run/lez-capture-$n"
   [ -f "$dir/SHA256SUMS" ] && return 0
-  if [ "${FERRATA_FORK:-}" = 1 ]; then say "capture $i: skipped on a fork (its vault is not on Sepolia)"; return 0; fi
+  if [ "${FERRATA_FORK:-}" = 1 ]; then say "capture $n: skipped on a fork (its vault is not on Sepolia)"; return 0; fi
   block=$(($(jq -r --arg s "deposit$i" '.stages[$s][-1].blockNumber' "$manifest")))
   from=$(($(jq -r '.stages.deploy[] | select(.contractAddress != null) | .blockNumber' "$manifest" | tail -n 1)))
-  say "capture $i: waiting for block $block (deposit $i) to be finalized"
+  say "capture $n: waiting for block $block (deposit $i) to be finalized"
   until [ "$(cast block finalized --field number "${rpc[@]}" 2> /dev/null || echo 0)" -ge "$block" ]; do sleep 30; done
-  mkdir -p "$run/attest"
   cmd="${capture_cmd//\{vault\}/$vault}"; cmd="${cmd//\{from_block\}/$from}"; cmd="${cmd//\{out\}/$dir.part}"
-  for attempt in 1 2 3 4 5 6; do
+  for attempt in $(seq 10); do
     rm -rf "$dir.part"
-    say "capture $i: $cmd"
-    if (cd "$repo" && $cmd) > "$run/attest/deposit$i.log" 2>&1 && [ -f "$dir.part/SHA256SUMS" ]; then
-      mv "$dir.part" "$dir"
-      say "capture $i: $(grep -m1 -E 'finalized slot' "$run/attest/deposit$i.log" || echo done)"
-      return 0
+    say "capture $n, attempt $attempt: $cmd"
+    if (cd "$repo" && $cmd) > "$run/lez-capture-$n.log" 2>&1 && [ -f "$dir.part/SHA256SUMS" ]; then
+      # the finality update must cover the deposit, and the vault then held exactly n leaves
+      got="$(jq -r '[.block // 0, (.deposits.count // -1)] | @tsv' "$dir.part/fixture.json" 2> /dev/null)"
+      if [ "$(echo "$got" | cut -f1)" -ge "$block" ] 2> /dev/null && [ "$(echo "$got" | cut -f2)" = "$n" ]; then
+        mv "$dir.part" "$dir"
+        say "capture $n: $(grep -m1 -E 'finalized slot' "$run/lez-capture-$n.log" || echo done) (block, leaves: $got)"
+        return 0
+      fi
+      say "capture $n: the capture holds block and leaves $got, not >= $block and $n"
+    else
+      tail -n 3 "$run/lez-capture-$n.log"
     fi
-    tail -n 5 "$run/attest/deposit$i.log"
-    say "capture $i: attempt $attempt failed; the next finality update in about 6 minutes"
-    sleep 400
+    say "capture $n: the next finality update in about 6.4 minutes"
+    sleep 390
   done
-  die "capture $i failed six times: see $run/attest/deposit$i.log"
+  die "capture $n failed ten times: see $run/lez-capture-$n.log"
 }
 pass_time() { # until the chain's clock reaches $1
   local left; left=$(($1 - $(now)))
