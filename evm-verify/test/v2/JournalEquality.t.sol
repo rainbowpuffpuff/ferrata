@@ -53,7 +53,9 @@ contract JournalEqualityV2Test is Test {
             bytes memory solidity = _checkpointAbi(json, i);
             assertEq(solidity.length, 416);
             assertEq(solidity, vm.parseJsonBytes(json, _key("journals", i, "journal")), "checkpoint journal bytes");
-            assertEq(sha256(solidity), vm.parseJsonBytes32(json, _key("journals", i, "digest")), "checkpoint journal digest");
+            assertEq(
+                sha256(solidity), vm.parseJsonBytes32(json, _key("journals", i, "digest")), "checkpoint journal digest"
+            );
         }
     }
 
