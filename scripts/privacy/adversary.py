@@ -450,12 +450,14 @@ B6 = {
     "release": ["recipient", "token", "denomination", "time", "N_out", "the root", "the relayer"],
 }
 B6_MAP = [  # (operation kinds, normalized field pattern, the section B6 item it is, or None)
-    ("claim burn", r"Issue\.nullifier$|derived\.nullifier_account", "N"),
-    ("claim burn import-root", r"Issue\.token$|Burn\.token$|ImportRoot\.config_id$|Issue\.config_id$|Burn\.config_id$", "token"),
-    ("claim burn", r"Issue\.amount$|Burn\.amount$|native\.Credit$", "denomination"),
+    ("claim burn", r"Issue\.nullifier$|derived\.nullifier_account|actors\[\] \(other members\)$", "N"),
+    ("claim burn import-root", r"Issue\.token$|Burn\.token$", "token"),
+    ("claim burn import-root", r"\.config_id$", "the bridge program"),
+    ("claim burn", r"Issue\.amount$|Burn\.amount$", "denomination"),
+    ("claim burn", r"native\.Credit$", "a one-time fee alias with a fixed reserve"),
     ("claim burn", r"time_ms$|^validity$|^block\.", "time"),
     ("claim", r"Issue\.leaf_count$|StateReply\.state$|message\.Read$", "the root read"),
-    ("claim burn", r"\.(out|in)\.(from|to)$", "a one-time fee alias with a fixed reserve"),
+    ("claim burn", r"\.(out|in)\.(from|to)$", "a one-time fee alias with a fixed reserve", "varies"),
     ("burn", r"Burn\.(r|memo|mac|c_out)$|derived\.burn_record_account", "the burn note"),
     ("import-root", r"ImportRoot\.", "the vault's root at a block"),
     ("deposit", r"^tx\.from$|Deposit\.depositor$|^balance", "depositor"),
@@ -470,14 +472,49 @@ B6_MAP = [  # (operation kinds, normalized field pattern, the section B6 item it
 ]
 
 
-def b6_item(kind, name):
-    for kinds, pat, item in B6_MAP:
+def b6_item(kind, name, varies=True):
+    for entry in B6_MAP:
+        kinds, pat, item = entry[:3]
+        when = entry[3] if len(entry) > 3 else None
+        if when == "varies" and not varies:
+            continue
+        if kind == "burn" and "actors" in pat:
+            continue
         if kind in kinds.split() and re.search(pat, norm(name)):
             return item
+    if kind == "burn" and re.search(r"actors\[\] \(other members\)$", name):
+        return "the burn note"
     return None
 
 
-def field_table(recs, kind):
+DESCRIBE = [  # what a field is, for the rows the classes do not describe
+    (r"^public_context\.actors\[\] \(members", "the declared public accounts every record shares (root, token, configuration, fee recipient, relayer, fee inbox; per step)"),
+    (r"^public_context\.actors\[\] \(other", "the per-record declared account"),
+    (r"\.(out|in)\.(from|to)( \(members in every record\))?$", "a public end of a boundary message (where constant: the root, the token's account, the fee inbox)"),
+    (r"Issue\.config_id$|Burn\.config_id$|Claim\.config_id$|ImportRoot\.config_id$", "configId (the bridge program, vault, chain)"),
+    (r"Issue\.range$|Claim\.range$", "the fee schedule's leaf range the claim names"),
+    (r"Issue\.relayer$|Claim\.relayer$", "the relayer the claim names (relay fee minted to it publicly)"),
+    (r"Issue\.leaf_count$|Claim\.leaf_count$", "the root read (its leaf count)"),
+    (r"StateReply\.state$|message\.Read$", "the root read (its state, returned to the private part)"),
+    (r"native\.Credit$", "the fee reserve, moved from the alias to the fee inbox"),
+    (r"^fee\.refund_to$", "where the unspent reserve goes (here the harness's one payer)"),
+    (r"^validity$", "validity windows (none set here)"),
+    (r"^fee$|^nonces$", "fee declaration / nonces of the public submitter (the harness's payer)"),
+    (r"^calldata\.index$|^event\.Deposit\.index$", "j = depositCount[depositor] (0 for a fresh depositor)"),
+    (r"relayFee$", "the registered relay fee"),
+    (r"^calldata\.seal", "the proof (mock verifier here: a constant; Groth16 on a real deployment)"),
+    (r"^witness_set$", "proof (dev mode) or signature"),
+]
+
+
+def describe(name):
+    for pat, what in DESCRIBE:
+        if re.search(pat, name):
+            return what
+    return ""
+
+
+def field_table(recs, kind, ctx):
     """One row per field name. A field with several values per record (a set, such as the declared
     actors) is split into the members common to every record and the others. A varying field whose
     values are, record by record, values of classified fields inherits their class."""
@@ -503,12 +540,14 @@ def field_table(recs, kind):
         common = set(vals[0]).intersection(*map(set, vals[1:]))
         multi = max(len(vs) for vs in vals) > 1
         if multi and common:
-            rows.append((n + " (members in every record)", size, f"constant ({len(common)})", "constant", "",
-                         b6_item(kind, n)))
+            label = n + " (members in every record)"
+            rows.append((label, size, f"constant ({len(common)})", "constant", describe(label),
+                         b6_item(kind, label, varies=False)))
         rest = [[v for v in vs if v not in common] for vs in vals]
         if not any(rest):
             if not (multi and common):
-                rows.append((n, size, "constant", "constant", classify(n)[1] or "", b6_item(kind, n)))
+                rows.append((n, size, "constant", "constant", describe(n) or classify(n)[1] or "",
+                             b6_item(kind, n, varies=False)))
             continue
         distinct = len({tuple(r) for r in rest})
         cls, what = classify(n)
@@ -518,7 +557,53 @@ def field_table(recs, kind):
             if flat and all(t is not None for t in flat) and len({(t[0], t[2]) for t in flat}) == 1:
                 cls, what = flat[0][0], f"= `{flat[0][2]}`: {flat[0][1]}"
         label = n + (" (other members)" if multi and common else "")
-        rows.append((label, size, f"{distinct} distinct", cls or "UNCLASSIFIED", what or "", b6_item(kind, n)))
+        rows.append((label, size, f"{distinct} distinct", cls or "UNCLASSIFIED", what or describe(label),
+                     b6_item(kind, label)))
+    return rows + state_rows(recs, kind, known, ctx)
+
+
+def state_rows(recs, kind, known, ctx):
+    """What each step changes in public state: LEZ accounts (before/after), the vault's storage
+    slots, and Ethereum balances."""
+    rows, n = [], len(recs)
+    if recs[0].chain == "lez":
+        shared = set.intersection(*[{a for a, _, _ in x.diff} for x in recs])
+        seen = defaultdict(list)
+        for i, x in enumerate(recs):
+            for acc, before, after in x.diff:
+                if acc in shared:
+                    seen[("shared", ctx["labels"].get(acc.hex(), "unlabelled account"))].append((before, after))
+                else:
+                    cls = known[i].get(acc)
+                    name = ctx["labels"].get(acc.hex()) or (f"the account in `{cls[2]}`" if cls else "unlabelled account")
+                    seen[("own", name, cls[0] if cls else None)].append(acc)
+        for key, vals in seen.items():
+            if key[0] == "shared":
+                varies = len(set(vals)) > 1
+                rows.append((f"state: {key[1]}", 0, "changed in every record" + (", contents vary" if varies else ""),
+                             TIME if varies else "constant", "cumulative state (order)" if varies else "", None))
+            else:
+                rows.append((f"state: {key[1]}", 0, f"one per record ({len(set(vals))} distinct)",
+                             key[2] or "UNCLASSIFIED", "created or changed by this record only",
+                             "N" if key[2] == NULLIFIER and kind == "claim" else ("the burn note" if kind == "burn" else None)))
+    else:
+        by = defaultdict(list)
+        for x in recs:
+            for acc, slot, old, new in x.writes:
+                by[("storage", ctx["slot_names"].get(slot, "slot " + slot.hex()[-8:]))].append((old, new))
+            for acc, old, new in x.balances:
+                by[("balance", ctx["acct_name"].get(acc, "per record"))].append((acc, old, new))
+        for (what, name), vals in by.items():
+            if what == "storage":
+                cls = ctx["slot_class"].get(name)
+                status = f"written in {len(vals)} of {n} records" + (", values vary" if len(set(vals)) > 1 else "")
+                rows.append((f"storage: {name}", 32, status, cls or ("constant" if len(set(vals)) == 1 else "UNCLASSIFIED"),
+                             {TIME: "tree state, counters, escrow (order)", USER: "per-depositor counter",
+                              NULLIFIER: "nullifierUsed[NOut]"}.get(cls, ""), None))
+            else:
+                cls = TIME if name in ("vault", "relayer") else USER
+                rows.append((f"balance: {name}", 32, f"changed in {len(vals)} of {n} records", cls,
+                             "cumulative (order)" if cls == TIME else "the recipient's own address", None))
     return rows
 
 
@@ -675,8 +760,9 @@ def main():
              "claim, plaintext": "claim-plaintext", "burn, private holding": "burn",
              "release, NOut of the release statement": "release"}
     imports = [x for x in lez if x.kind == "import-root" and x.variant == "private"]
-    tables = {k: field_table(G[k], kinds[k]) for k in kinds}
-    tables["root import"] = field_table(imports, "import-root")
+    tctx = {"labels": lez_json.get("accounts", {}), "slot_names": slot_names, "slot_class": slot_class, "acct_name": acct_name}
+    tables = {k: field_table(G[k], kinds[k], tctx) for k in kinds}
+    tables["root import"] = field_table(imports, "import-root", tctx)
     for k, rows in tables.items():
         results["fields"][k] = [dict(zip(("field", "bytes", "across records", "class", "what", "B6"), r)) for r in rows]
 

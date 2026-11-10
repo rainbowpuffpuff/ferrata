@@ -810,7 +810,25 @@ fn privacy_suite_lez_half() {
         "gap": GAP,
         "rust_recovery": {"inbound": inbound_recovered, "core_recover_burns_found": core_burns_found},
     });
+    // Names of the accounts the state diffs show (the same in both universes but the public destinations).
+    let mut labels = serde_json::Map::new();
+    let mut label = |id: AccountId, name: &str| {
+        labels.insert(hx(id.value()), json!(name));
+    };
+    label(system_accounts::fee_state_account_id(), "LEZ fee state");
+    label(system_accounts::fee_escrow_account_id(), "LEZ fee escrow");
+    label(system_accounts::fee_inbox_account_id(), "LEZ fee inbox");
+    label(w.chain.payer, "the harness's fee payer (refund_to)");
+    label(relayer(), "the relayer (its wrapped balance: relay fees)");
+    label(harness::bridge::fee_recipient(), "the fee recipient (its wrapped balance: mint fees)");
+    label(bw::config_actor(w.program, &cid).account_id, "config(cid) (global gate, time)");
+    label(bw::token_actor(w.program, &cid, &ETH).account_id, "token(cid, ETH) (token gate, time)");
+    label(bw::root_actor(w.program, &cid, n).account_id, "root(cid, 20)");
+    for user in &users {
+        label(user.public_dest, "a public destination (plaintext universe)");
+    }
     let lez = json!({
+        "accounts": labels,
         "bridge_image_id": harness::image_id_hex(methods::FERRATA_BRIDGE_ID),
         "program": hx(w.program.value()),
         "chain_id": CHAIN_ID,

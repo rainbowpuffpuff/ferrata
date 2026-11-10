@@ -331,7 +331,7 @@
     "bytes": 32,
     "across records": "constant",
     "class": "constant",
-    "what": "",
+    "what": "j = depositCount[depositor] (0 for a fresh depositor)",
     "B6": null
    },
    {
@@ -363,7 +363,7 @@
     "bytes": 32,
     "across records": "constant",
     "class": "constant",
-    "what": "",
+    "what": "j = depositCount[depositor] (0 for a fresh depositor)",
     "B6": null
    },
    {
@@ -405,6 +405,54 @@
     "class": "time / order",
     "what": "time",
     "B6": "time"
+   },
+   {
+    "field": "storage: mapping@61[per-sender]",
+    "bytes": 32,
+    "across records": "written in 20 of 20 records",
+    "class": "the user's own public address",
+    "what": "per-depositor counter",
+    "B6": null
+   },
+   {
+    "field": "storage: mapping@58[per-token]",
+    "bytes": 32,
+    "across records": "written in 20 of 20 records, values vary",
+    "class": "time / order",
+    "what": "tree state, counters, escrow (order)",
+    "B6": null
+   },
+   {
+    "field": "storage: _branch[level]",
+    "bytes": 32,
+    "across records": "written in 20 of 20 records, values vary",
+    "class": "time / order",
+    "what": "tree state, counters, escrow (order)",
+    "B6": null
+   },
+   {
+    "field": "storage: depositRoot",
+    "bytes": 32,
+    "across records": "written in 20 of 20 records, values vary",
+    "class": "time / order",
+    "what": "tree state, counters, escrow (order)",
+    "B6": null
+   },
+   {
+    "field": "storage: nextLeafIndex",
+    "bytes": 32,
+    "across records": "written in 20 of 20 records, values vary",
+    "class": "time / order",
+    "what": "tree state, counters, escrow (order)",
+    "B6": null
+   },
+   {
+    "field": "balance: vault",
+    "bytes": 32,
+    "across records": "changed in 20 of 20 records",
+    "class": "time / order",
+    "what": "cumulative (order)",
+    "B6": null
    }
   ],
   "claim, private (default)": [
@@ -413,7 +461,7 @@
     "bytes": 64,
     "across records": "constant (6)",
     "class": "constant",
-    "what": "",
+    "what": "the declared public accounts every record shares (root, token, configuration, fee recipient, relayer, fee inbox; per step)",
     "B6": null
    },
    {
@@ -422,7 +470,7 @@
     "across records": "20 distinct",
     "class": "nullifier",
     "what": "= `derived.nullifier_account`: the nullifier account, a PDA of N",
-    "B6": null
+    "B6": "N"
    },
    {
     "field": "boundary[].out.from",
@@ -437,15 +485,15 @@
     "bytes": 32,
     "across records": "constant (3)",
     "class": "constant",
-    "what": "",
-    "B6": "a one-time fee alias with a fixed reserve"
+    "what": "a public end of a boundary message (where constant: the root, the token's account, the fee inbox)",
+    "B6": null
    },
    {
     "field": "boundary[].out.message.Read",
     "bytes": 0,
     "across records": "constant",
     "class": "constant",
-    "what": "",
+    "what": "the root read (its state, returned to the private part)",
     "B6": "the root read"
    },
    {
@@ -453,8 +501,8 @@
     "bytes": 32,
     "across records": "constant",
     "class": "constant",
-    "what": "LEZ: the sender's one-time alias (where it varies)",
-    "B6": "a one-time fee alias with a fixed reserve"
+    "what": "a public end of a boundary message (where constant: the root, the token's account, the fee inbox)",
+    "B6": null
    },
    {
     "field": "boundary[].in.to",
@@ -469,7 +517,7 @@
     "bytes": 117,
     "across records": "constant",
     "class": "constant",
-    "what": "",
+    "what": "the root read (its state, returned to the private part)",
     "B6": "the root read"
    },
    {
@@ -477,8 +525,8 @@
     "bytes": 32,
     "across records": "constant",
     "class": "constant",
-    "what": "",
-    "B6": "token"
+    "what": "configId (the bridge program, vault, chain)",
+    "B6": "the bridge program"
    },
    {
     "field": "boundary[].out.message.Issue.token",
@@ -509,7 +557,7 @@
     "bytes": 24,
     "across records": "constant",
     "class": "constant",
-    "what": "",
+    "what": "the fee schedule's leaf range the claim names",
     "B6": null
    },
    {
@@ -517,7 +565,7 @@
     "bytes": 8,
     "across records": "constant",
     "class": "constant",
-    "what": "",
+    "what": "the root read (its leaf count)",
     "B6": "the root read"
    },
    {
@@ -525,7 +573,7 @@
     "bytes": 32,
     "across records": "constant",
     "class": "constant",
-    "what": "",
+    "what": "the relayer the claim names (relay fee minted to it publicly)",
     "B6": null
    },
    {
@@ -541,8 +589,8 @@
     "bytes": 16,
     "across records": "constant",
     "class": "constant",
-    "what": "",
-    "B6": "denomination"
+    "what": "the fee reserve, moved from the alias to the fee inbox",
+    "B6": "a one-time fee alias with a fixed reserve"
    },
    {
     "field": "private_actions[].nullifier",
@@ -589,7 +637,7 @@
     "bytes": 32,
     "across records": "constant",
     "class": "constant",
-    "what": "",
+    "what": "where the unspent reserve goes (here the harness's one payer)",
     "B6": null
    },
    {
@@ -645,23 +693,23 @@
     "bytes": 32,
     "across records": "constant",
     "class": "constant",
-    "what": "LEZ: the sender's one-time alias (where it varies)",
-    "B6": "a one-time fee alias with a fixed reserve"
+    "what": "a public end of a boundary message (where constant: the root, the token's account, the fee inbox)",
+    "B6": null
    },
    {
     "field": "fee.fallback.boundary[].out.message.native.Credit",
     "bytes": 16,
     "across records": "constant",
     "class": "constant",
-    "what": "",
-    "B6": "denomination"
+    "what": "the fee reserve, moved from the alias to the fee inbox",
+    "B6": "a one-time fee alias with a fixed reserve"
    },
    {
     "field": "validity",
     "bytes": 4,
     "across records": "constant",
     "class": "constant",
-    "what": "time",
+    "what": "validity windows (none set here)",
     "B6": "time"
    },
    {
@@ -711,6 +759,54 @@
     "class": "time / order",
     "what": "LEZ: the commitment-set root (state the proof read)",
     "B6": null
+   },
+   {
+    "field": "state: the harness's fee payer (refund_to)",
+    "bytes": 0,
+    "across records": "changed in every record, contents vary",
+    "class": "time / order",
+    "what": "cumulative state (order)",
+    "B6": null
+   },
+   {
+    "field": "state: token(cid, ETH) (token gate, time)",
+    "bytes": 0,
+    "across records": "changed in every record, contents vary",
+    "class": "time / order",
+    "what": "cumulative state (order)",
+    "B6": null
+   },
+   {
+    "field": "state: LEZ fee inbox",
+    "bytes": 0,
+    "across records": "changed in every record, contents vary",
+    "class": "time / order",
+    "what": "cumulative state (order)",
+    "B6": null
+   },
+   {
+    "field": "state: the account in `derived.nullifier_account`",
+    "bytes": 0,
+    "across records": "one per record (20 distinct)",
+    "class": "nullifier",
+    "what": "created or changed by this record only",
+    "B6": "N"
+   },
+   {
+    "field": "state: config(cid) (global gate, time)",
+    "bytes": 0,
+    "across records": "changed in every record, contents vary",
+    "class": "time / order",
+    "what": "cumulative state (order)",
+    "B6": null
+   },
+   {
+    "field": "state: the relayer (its wrapped balance: relay fees)",
+    "bytes": 0,
+    "across records": "changed in every record, contents vary",
+    "class": "time / order",
+    "what": "cumulative state (order)",
+    "B6": null
    }
   ],
   "claim, plaintext": [
@@ -719,7 +815,7 @@
     "bytes": 64,
     "across records": "constant (5)",
     "class": "constant",
-    "what": "",
+    "what": "the declared public accounts every record shares (root, token, configuration, fee recipient, relayer, fee inbox; per step)",
     "B6": null
    },
    {
@@ -727,7 +823,7 @@
     "bytes": 64,
     "across records": "20 distinct",
     "class": "UNCLASSIFIED",
-    "what": "",
+    "what": "the per-record declared account",
     "B6": null
    },
    {
@@ -743,7 +839,7 @@
     "bytes": 32,
     "across records": "constant",
     "class": "constant",
-    "what": "",
+    "what": "configId (the bridge program, vault, chain)",
     "B6": null
    },
    {
@@ -751,7 +847,7 @@
     "bytes": 8,
     "across records": "constant",
     "class": "constant",
-    "what": "",
+    "what": "the root read (its leaf count)",
     "B6": null
    },
    {
@@ -831,7 +927,7 @@
     "bytes": 24,
     "across records": "constant",
     "class": "constant",
-    "what": "",
+    "what": "the fee schedule's leaf range the claim names",
     "B6": null
    },
    {
@@ -839,7 +935,7 @@
     "bytes": 32,
     "across records": "constant",
     "class": "constant",
-    "what": "",
+    "what": "the relayer the claim names (relay fee minted to it publicly)",
     "B6": null
    },
    {
@@ -855,7 +951,7 @@
     "bytes": 65,
     "across records": "constant",
     "class": "constant",
-    "what": "",
+    "what": "fee declaration / nonces of the public submitter (the harness's payer)",
     "B6": null
    },
    {
@@ -913,6 +1009,62 @@
     "class": "constant",
     "what": "LEZ: the commitment-set root (state the proof read)",
     "B6": null
+   },
+   {
+    "field": "state: the harness's fee payer (refund_to)",
+    "bytes": 0,
+    "across records": "changed in every record, contents vary",
+    "class": "time / order",
+    "what": "cumulative state (order)",
+    "B6": null
+   },
+   {
+    "field": "state: token(cid, ETH) (token gate, time)",
+    "bytes": 0,
+    "across records": "changed in every record, contents vary",
+    "class": "time / order",
+    "what": "cumulative state (order)",
+    "B6": null
+   },
+   {
+    "field": "state: LEZ fee inbox",
+    "bytes": 0,
+    "across records": "changed in every record, contents vary",
+    "class": "time / order",
+    "what": "cumulative state (order)",
+    "B6": null
+   },
+   {
+    "field": "state: the account in `derived.nullifier_account`",
+    "bytes": 0,
+    "across records": "one per record (20 distinct)",
+    "class": "nullifier",
+    "what": "created or changed by this record only",
+    "B6": null
+   },
+   {
+    "field": "state: a public destination (plaintext universe)",
+    "bytes": 0,
+    "across records": "one per record (20 distinct)",
+    "class": "UNCLASSIFIED",
+    "what": "created or changed by this record only",
+    "B6": null
+   },
+   {
+    "field": "state: config(cid) (global gate, time)",
+    "bytes": 0,
+    "across records": "changed in every record, contents vary",
+    "class": "time / order",
+    "what": "cumulative state (order)",
+    "B6": null
+   },
+   {
+    "field": "state: the relayer (its wrapped balance: relay fees)",
+    "bytes": 0,
+    "across records": "changed in every record, contents vary",
+    "class": "time / order",
+    "what": "cumulative state (order)",
+    "B6": null
    }
   ],
   "burn, private holding": [
@@ -921,7 +1073,7 @@
     "bytes": 64,
     "across records": "constant (3)",
     "class": "constant",
-    "what": "",
+    "what": "the declared public accounts every record shares (root, token, configuration, fee recipient, relayer, fee inbox; per step)",
     "B6": null
    },
    {
@@ -930,7 +1082,7 @@
     "across records": "20 distinct",
     "class": "fresh randomness",
     "what": "= `derived.burn_record_account`: the burn record account, a PDA of H(note)",
-    "B6": null
+    "B6": "the burn note"
    },
    {
     "field": "boundary[].out.from",
@@ -945,16 +1097,16 @@
     "bytes": 32,
     "across records": "constant (2)",
     "class": "constant",
-    "what": "",
-    "B6": "a one-time fee alias with a fixed reserve"
+    "what": "a public end of a boundary message (where constant: the root, the token's account, the fee inbox)",
+    "B6": null
    },
    {
     "field": "boundary[].out.message.Burn.config_id",
     "bytes": 32,
     "across records": "constant",
     "class": "constant",
-    "what": "",
-    "B6": "token"
+    "what": "configId (the bridge program, vault, chain)",
+    "B6": "the bridge program"
    },
    {
     "field": "boundary[].out.message.Burn.r",
@@ -1009,8 +1161,8 @@
     "bytes": 16,
     "across records": "constant",
     "class": "constant",
-    "what": "",
-    "B6": "denomination"
+    "what": "the fee reserve, moved from the alias to the fee inbox",
+    "B6": "a one-time fee alias with a fixed reserve"
    },
    {
     "field": "private_actions[].nullifier",
@@ -1057,7 +1209,7 @@
     "bytes": 32,
     "across records": "constant",
     "class": "constant",
-    "what": "",
+    "what": "where the unspent reserve goes (here the harness's one payer)",
     "B6": null
    },
    {
@@ -1113,23 +1265,23 @@
     "bytes": 32,
     "across records": "constant",
     "class": "constant",
-    "what": "LEZ: the sender's one-time alias (where it varies)",
-    "B6": "a one-time fee alias with a fixed reserve"
+    "what": "a public end of a boundary message (where constant: the root, the token's account, the fee inbox)",
+    "B6": null
    },
    {
     "field": "fee.fallback.boundary[].out.message.native.Credit",
     "bytes": 16,
     "across records": "constant",
     "class": "constant",
-    "what": "",
-    "B6": "denomination"
+    "what": "the fee reserve, moved from the alias to the fee inbox",
+    "B6": "a one-time fee alias with a fixed reserve"
    },
    {
     "field": "validity",
     "bytes": 4,
     "across records": "constant",
     "class": "constant",
-    "what": "time",
+    "what": "validity windows (none set here)",
     "B6": "time"
    },
    {
@@ -1179,6 +1331,46 @@
     "class": "time / order",
     "what": "LEZ: the commitment-set root (state the proof read)",
     "B6": null
+   },
+   {
+    "field": "state: the harness's fee payer (refund_to)",
+    "bytes": 0,
+    "across records": "changed in every record, contents vary",
+    "class": "time / order",
+    "what": "cumulative state (order)",
+    "B6": null
+   },
+   {
+    "field": "state: token(cid, ETH) (token gate, time)",
+    "bytes": 0,
+    "across records": "changed in every record, contents vary",
+    "class": "time / order",
+    "what": "cumulative state (order)",
+    "B6": null
+   },
+   {
+    "field": "state: LEZ fee inbox",
+    "bytes": 0,
+    "across records": "changed in every record, contents vary",
+    "class": "time / order",
+    "what": "cumulative state (order)",
+    "B6": null
+   },
+   {
+    "field": "state: config(cid) (global gate, time)",
+    "bytes": 0,
+    "across records": "changed in every record, contents vary",
+    "class": "time / order",
+    "what": "cumulative state (order)",
+    "B6": null
+   },
+   {
+    "field": "state: the account in `derived.burn_record_account`",
+    "bytes": 0,
+    "across records": "one per record (20 distinct)",
+    "class": "fresh randomness",
+    "what": "created or changed by this record only",
+    "B6": "the burn note"
    }
   ],
   "release, NOut of the release statement": [
@@ -1243,7 +1435,7 @@
     "bytes": 32,
     "across records": "constant",
     "class": "constant",
-    "what": "",
+    "what": "the registered relay fee",
     "B6": null
    },
    {
@@ -1267,7 +1459,7 @@
     "bytes": 32,
     "across records": "constant",
     "class": "constant",
-    "what": "",
+    "what": "the proof (mock verifier here: a constant; Groth16 on a real deployment)",
     "B6": null
    },
    {
@@ -1275,7 +1467,7 @@
     "bytes": 32,
     "across records": "constant",
     "class": "constant",
-    "what": "",
+    "what": "the proof (mock verifier here: a constant; Groth16 on a real deployment)",
     "B6": null
    },
    {
@@ -1283,7 +1475,7 @@
     "bytes": 32,
     "across records": "constant",
     "class": "constant",
-    "what": "",
+    "what": "the proof (mock verifier here: a constant; Groth16 on a real deployment)",
     "B6": null
    },
    {
@@ -1339,7 +1531,7 @@
     "bytes": 32,
     "across records": "constant",
     "class": "constant",
-    "what": "",
+    "what": "the registered relay fee",
     "B6": null
    },
    {
@@ -1365,6 +1557,46 @@
     "class": "time / order",
     "what": "time",
     "B6": "time"
+   },
+   {
+    "field": "storage: mapping@62[per-nullifier]",
+    "bytes": 32,
+    "across records": "written in 20 of 20 records",
+    "class": "nullifier",
+    "what": "nullifierUsed[NOut]",
+    "B6": null
+   },
+   {
+    "field": "storage: mapping@58[per-token]",
+    "bytes": 32,
+    "across records": "written in 20 of 20 records, values vary",
+    "class": "time / order",
+    "what": "tree state, counters, escrow (order)",
+    "B6": null
+   },
+   {
+    "field": "balance: vault",
+    "bytes": 32,
+    "across records": "changed in 20 of 20 records",
+    "class": "time / order",
+    "what": "cumulative (order)",
+    "B6": null
+   },
+   {
+    "field": "balance: per record",
+    "bytes": 32,
+    "across records": "changed in 20 of 20 records",
+    "class": "the user's own public address",
+    "what": "the recipient's own address",
+    "B6": null
+   },
+   {
+    "field": "balance: relayer",
+    "bytes": 32,
+    "across records": "changed in 20 of 20 records",
+    "class": "time / order",
+    "what": "cumulative (order)",
+    "B6": null
    }
   ],
   "root import": [
@@ -1373,7 +1605,7 @@
     "bytes": 64,
     "across records": "constant (3)",
     "class": "constant",
-    "what": "",
+    "what": "the declared public accounts every record shares (root, token, configuration, fee recipient, relayer, fee inbox; per step)",
     "B6": null
    },
    {
@@ -1389,8 +1621,8 @@
     "bytes": 32,
     "across records": "constant",
     "class": "constant",
-    "what": "",
-    "B6": "token"
+    "what": "configId (the bridge program, vault, chain)",
+    "B6": "the bridge program"
    },
    {
     "field": "root.message.ImportRoot.record_slot",
@@ -1421,7 +1653,7 @@
     "bytes": 65,
     "across records": "constant",
     "class": "constant",
-    "what": "",
+    "what": "fee declaration / nonces of the public submitter (the harness's payer)",
     "B6": null
    },
    {
@@ -1429,7 +1661,7 @@
     "bytes": 52,
     "across records": "constant",
     "class": "constant",
-    "what": "time",
+    "what": "fee declaration / nonces of the public submitter (the harness's payer)",
     "B6": null
    },
    {
@@ -1437,7 +1669,7 @@
     "bytes": 100,
     "across records": "constant",
     "class": "constant",
-    "what": "the proof (dev mode: a fake receipt) or the submitter's signature",
+    "what": "proof (dev mode) or signature",
     "B6": null
    },
    {
@@ -1470,6 +1702,30 @@
     "across records": "constant",
     "class": "constant",
     "what": "LEZ: the commitment-set root (state the proof read)",
+    "B6": null
+   },
+   {
+    "field": "state: root(cid, 20)",
+    "bytes": 0,
+    "across records": "changed in every record",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "state: the harness's fee payer (refund_to)",
+    "bytes": 0,
+    "across records": "changed in every record",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "state: LEZ fee inbox",
+    "bytes": 0,
+    "across records": "changed in every record",
+    "class": "constant",
+    "what": "",
     "B6": null
    }
   ]
