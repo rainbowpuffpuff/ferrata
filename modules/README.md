@@ -69,4 +69,6 @@ module encodes `Config` itself; `check.sh` compares the result with an instance 
   several facts, conditions and relations (`attest_batch`) and accumulator leaves are not accepted yet.
 - **No `KeyValidate`** on the committee (§11.4 of the attestation note): it needs the BLS backend.
 - **No catalog release**: the package is built as a catalog would build it, not published.
+- **Logs end to end.** `dry_run_attest` accepts a log with its receipt proof, but no request in
+  `check.sh` has one (the fixture holds the block's receipts, not a proof).
 - **Linux x86-64 only** was tried.
