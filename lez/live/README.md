@@ -11,6 +11,10 @@ The record of that run is in [`results/`](results/); the numbers are in
 There is no public LEZ v0.4 network to run on (`../../docs/design/lez-v0.4-findings.md`,
 "Unconfirmed"), so this is a local zone: one sequencer and one Bedrock validator on one machine.
 
+The same session was run again on LEZ `v0.4.0-rc2` (its own sequencer, the program as built against
+rc2): [section "LEZ v0.4.0-rc2"](#lez-v040-rc2) below, record in
+[`results/v0.4.0-rc2/`](results/v0.4.0-rc2/). Everything above that section is the rc1 run.
+
 ## What ran, and in which mode
 
 | part | what | mode |
@@ -192,3 +196,67 @@ recomputes the image id from the uploaded segments; `results/programs.tsv` holds
 computed. The binaries are not in the repository (they embed the build machine's paths); the
 driver takes any `ProgramBinary` file, for instance the ones `cargo build -p methods` leaves in
 `lez/target/riscv-guest/methods/*/riscv32im-risc0-zkvm-elf/release/*.bin`.
+
+## LEZ v0.4.0-rc2
+
+One invocation of `run.sh run` on 10 November 2026, 22:16–23:09 UTC, with `LEZ_TAG=v0.4.0-rc2`,
+on a Modal build box like the rc1 run, then `verify-run.sh` once on the same machine
+([`results/v0.4.0-rc2/verify-run.log`](results/v0.4.0-rc2/verify-run.log)); scripts of commit
+`b548e18`. What rc2 changed and why the scripts changed with it:
+`../../docs/design/lez-rc2-changes.md`.
+
+| part | on rc2 | as on rc1? |
+|---|---|---|
+| Sequencer | `sequencer_service` of the unmodified tag `v0.4.0-rc2` (commit `e3edf47`), built and set up as LEZ's Justfile does, `RISC0_DEV_MODE` not set | yes, at the other tag |
+| Bedrock | the same node revision (`d480efc6`: rc2 pins it too), built by LEZ's resolver, run with rc2's `bedrock/deployment-settings.yaml`: **4 s slots and confirmation depth 3** (LEZ #1063), so 60-slot epochs of 240 s; one validator, leader proofs in dev mode | slots of 1 s, depth 5, epochs of 100 s |
+| Program | the program and LEZ's `scripted` **as built against rc2** by the harness run of `../RESULTS.md` §9: images `262cb954…` (592,728 bytes) and `15591e6c…`, the images its rc2 tables measured, deployed through rc2's loader | rc1 deployed `cec0bc68…`, the image before the attestation: the driver now builds messages with the current wire crate, which that image predates |
+| Client | the driver built against rc2: it pins each transaction's declared gas limit (rc2's wallet would declare its measurement plus 25 %) and allows reverts (rc2's wallet would not send the scripted refusals), `../RESULTS.md` §9 | the same limits and the same refusals |
+| Phase | the sequencer's blocks 1 s after the seconds at which an epoch can begin (`FERRATA_LIVE_TICK_AFTER=1`): with 4 s slots an inscription made late in an epoch has fewer slots left to be mined in before the rotation (rc1's rewind); the zone was started 6 times to get it | 3 s after |
+| Real proof | capped at 1,200 s of the box | not capped (895.6 s) |
+
+| | rc2 run | rc1 run |
+|---|---|---|
+| chain | 302 blocks, all `Finalized` on Bedrock when the record was written; 207 hold no user transaction | 191; 97 |
+| transactions | 98 sent: 74 applied, 19 refused by the program with its exit code, 2 reverted otherwise (the same two), 2 dropped (the stored GPU-proven transaction, "Unknown program"; the fake receipt, "Invalid privacy preserving execution circuit proof"), 1 unfinished (the real proof) | 96 sent: 73 applied, 19, 2, 2, none unfinished |
+| against the harness | 65 transactions with a row in `../results/v0.4.0-rc2/stage1-*.md`: the same outcome in 65, the same execution gas in 64 (the other is the validity-window case: 4,000,000 here, 10,000,000 declared there); transaction bytes equal in 44, 65 more in 19, 65 fewer in 1, 607 fewer in the validity-window case | the same counts, against the tables of its own image |
+| deployment | 18 loader transactions in blocks 3–22, **now charged execution gas**: a `WriteSegment` is charged the size of the segment it links to (98,342 for a full one, 68,790 and 39,442 for the two tails), a `CreateHeader` the whole chain (560,500 for the program, 236,126 for `scripted`). Program, twice: 7 transactions each (6 segments), execution gas 1,022,658, storage gas 564,552, base fees 12,697,680. `scripted`: execution gas 373,910, storage gas 238,456, base fees 4,898,928 | `scripted`, the same size: execution gas 0, storage gas 238,456, base fees 1,907,648; the program (`cec0bc68…`, 5 segments): execution gas 0, storage gas 479,496, base fees 3,835,968 |
+| fees | execution base fee 8 in every block but one: block 173, the only block over the 5M target (two 3.6M transactions, 7,272,424), raised it to 9 for block 174; the payer's balance fell by exactly the fee in 77 of 77 | the same, at block 92 |
+| finality | every block `Finalized` 14–25 s after the sequencer published it (mean 15.1 s, 301 blocks; whole seconds of its log) | 5–6 s (190 blocks) |
+| settlement | a public transaction settled 19.0–30.9 s after it was sent (mean 20.0 s, 77 transactions) | 8.5–19.7 s (mean 10.2 s, the same 77, by the same count) |
+| Bedrock | blocks made 1 s after the seconds at which an epoch can begin, published 2–3 s after them as the logs show it, at least 8 s before an epoch began (13 epochs began); no head rewound, no inscription given up, no transaction removed from a proposed block; the node's storage gas price rose 1 → 2 → 3 within the first seven minutes, 240 s apart, and then held | blocks 3 s after; 1 → 2 → 3 → 4 within twelve minutes; no rewind |
+| the real proof | made against the live instance on the box's CPU with 32 prover threads: **stopped at the 1,200 s cap**, unfinished; the wallet's RPC answers it was built from are in `results/v0.4.0-rc2/private/real/`. The box gave the whole 66-minute command 3,578 CPU-seconds (mrun's ledger), the rc1 run's 34-minute command 7.20 core-hours: the prover had far less CPU than on rc1 | verified and applied, 895.6 s |
+| re-check | `verify-run.sh` with the two binaries: every block hash holds with the bytecode put back (15 chunks), the 302 blocks replay through rc2's `chain_state` from the pre-genesis state, the 95 included rows equal what LEZ's settlement charges, the three image ids are as recorded, instance A applied 6 jobs and holds finalized slot 15,589,599 with root `5d1200f2…d573` | the same checks, 191 blocks |
+
+The finality and settlement figures come from `results/v0.4.0-rc2/logs/sequencer.log` and
+`logs/driver.log` (the seconds from a block's "Publishing block" line to the first "Channel update"
+that lists it as finalized; the driver's "+ … s" of each public transaction), computed the same way
+for both runs. One block tick was skipped once: block 251 came 20 s after block 250 ("Skipping turn:
+Channel moved to sequence 498 while a block on sequence 497 was being built", the only such line;
+the rc1 run had none). A rehearsal of the same phases without the real proof on LEZ's mock Bedrock
+(`FERRATA_LIVE_BEDROCK=mock`, 3 s blocks) ran clean before the recorded run; it is not part of the
+record.
+
+What the rc2 run shows that rc1's did not: **deploying costs execution gas**, one cycle per byte of
+loader state read: each segment once when the segment before it is written, and the whole chain
+again when the header is created (1,022,658 for the program's 560,304-byte user ELF, 373,910 for
+`scripted`'s 236,044 bytes, whose base fees are 2.6 times rc1's for the same binary); on rc2's test
+chain **a client waits about twice as long** for its transaction to be final; and the wallet's new
+simulation does not show in the charges (the driver pins what it declares and allows reverts),
+though by its source it would not have sent the deliberate refusals.
+
+Reproduce on rc2 (from the repository root; `../RESULTS.md` §9 builds the binaries):
+
+```sh
+scripts/fetch-upstream.sh                      # also fetches upstream/lez-v0.4.0-rc2
+lez/scripts/lez-select.sh v0.4.0-rc2           # the driver's manifests, feature and lockfile
+export LEZ_TAG=v0.4.0-rc2                      # scratch tmp/sequencer-v0.4.0-rc2, records results/v0.4.0-rc2
+lez/live/run.sh build && lez/live/run.sh build-bedrock
+lez/scripts/lez-select.sh v0.4.0-rc1           # the binaries are built; the manifests can go back
+G=lez/target/lez-v0.4.0-rc2/riscv-guest/methods   # the guests of the rc2 harness build (§9): */riscv32im-risc0-zkvm-elf/release/
+P=$(ls $G/*/riscv32im-risc0-zkvm-elf/release/ferrata_lez.bin) S=$(ls $G/*/riscv32im-risc0-zkvm-elf/release/scripted.bin)
+FERRATA_PROGRAM_BIN=$PWD/$P FERRATA_SCRIPTED_BIN=$PWD/$S \
+FERRATA_LIVE_HARNESS_RESULTS=$PWD/lez/results/v0.4.0-rc2 \
+FERRATA_LIVE_TICK_AFTER=1 FERRATA_LIVE_TICK_WINDOW="1 2" FERRATA_LIVE_PROOF_SECONDS=1200 lez/live/run.sh run
+python3 lez/live/tables.py lez/live/results/v0.4.0-rc2
+lez/live/verify-run.sh $P $S
+```
