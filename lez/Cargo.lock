@@ -280,6 +280,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50"
 
 [[package]]
+name = "attestor-core"
+version = "0.1.0"
+dependencies = [
+ "ed25519-dalek",
+ "sha2 0.10.9",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -573,6 +581,7 @@ dependencies = [
 name = "checkpoint-core"
 version = "0.1.0"
 dependencies = [
+ "attestor-core",
  "blake2",
  "ed25519-dalek",
  "sha2 0.10.9",
