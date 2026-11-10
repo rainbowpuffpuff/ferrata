@@ -21,12 +21,12 @@ The bridge moves registered ERC-20 tokens and ETH to LEZ and back in fixed denom
 
 | Component | State |
 |---|---|
-| Vault, specification v3 | Prototype: D3 to D5, D9 and `cancelCandidate`; rule (A) only; proofs mocked behind RISC Zero's unmodified emergency-stop wrapper; not audited or deployed; gas measured (§18.1). D11 and D13 not in it |
+| Vault, specification v3 | Prototype: D3 to D5, D9 and `cancelCandidate`; rule (A) only; its own suite mocks proofs behind RISC Zero's unmodified emergency-stop wrapper, and the return leg was run once with RISC Zero's real Groth16 verifier and real proofs of both programs (§18.7); not audited or deployed; gas measured (§18.1, §18.7). D11 and D13 not in it |
 | Vault, specification v2 | Prototype built; the release proof v2 was verified against it with the real Groth16 verifier (§18.2) |
 | `ferrata-bridge-core` v2 (trees, commitments, nullifiers, statements, recovery) | Built and tested, SPEC-v2 encodings; without `mac` v2 and `NOut` v2 |
-| Release guest v2 | Built; proved on a laptop CPU, verified on a local EVM against the v2 vault with the real verifier |
+| Release guest v2 | Built; proved on a laptop CPU, verified on a local EVM against the v2 vault with the real verifier and, unchanged, against the v3 vault under a burn root finalised by real checkpoint proofs (§18.7) |
 | Claim guest (the bridge's part of a claim) | Built for measurement; not LEZ's own claim circuit |
-| Checkpoint program | Prototype: SPEC-v2 §4.1–4.2 with D3, rule (A) only; cycles measured; two real proofs of a small checkpoint (§18.4). Rule (B)'s program is specified, its cost estimated |
+| Checkpoint program | Prototype: SPEC-v2 §4.1–4.2 with D3, rule (A) only; cycles measured; two real proofs of a small checkpoint (§18.4); a candidate and a finalisation proof of the end-to-end fixture accepted by the v3 vault (§18.7). Rule (B)'s program is specified, its cost estimated |
 | Rule (A) analysis | Written proof and simulation (`docs/design/finality-rule/`) |
 | Bridge program on LEZ; `ferrata_attestor`; gas drop, relayer, wrapper, `monitor` watchers | Not built |
 
@@ -595,7 +595,7 @@ Forge 1.3.6, solc 0.8.26 (200 runs, cancun), `forge test --isolate`: whole trans
 
 ¹ Through the stop wrapper around a mock verifier (about 2,765 gas); the real verifier is not included. ² Includes the 25,000 new-account charge of a fresh recipient.
 
-Derived (mock removed, the 224,320-gas Groth16 frame of §18.2 added): candidate about 470k, finalisation about 435k, so a rule (A) checkpoint with its second beacon is about 1.0M gas, paid once per finalised LEZ state; under rule (B), one proof and no beacon, about half (estimated). Caps add about 20,700 gas per deposit. Tests: 286 pass, including 10 invariants over 256 runs × 100 calls; 100 % line and branch coverage of the vault; 127 of 127 hand-written mutants killed. Proofs are mocked throughout.
+Derived (mock removed, the 224,320-gas Groth16 frame of §18.2 added): candidate about 470k, finalisation about 435k, so a rule (A) checkpoint with its second beacon is about 1.0M gas, paid once per finalised LEZ state; under rule (B), one proof and no beacon, about half (estimated). Measured since with the real verifier (§18.7): candidate 507,370, finalisation 475,300, 1,060,493 with the second beacon. Caps add about 20,700 gas per deposit. Tests: 286 pass, including 10 invariants over 256 runs × 100 calls; 100 % line and branch coverage of the vault; 127 of 127 hand-written mutants killed. Proofs are mocked throughout this suite.
 
 ### 18.2 Release proof v2: measured (laptop CPU; real verifier, v2 vault)
 
@@ -607,7 +607,7 @@ Derived (mock removed, the 224,320-gas Groth16 frame of §18.2 added): candidate
 | `verify` | 224,320 gas in the Groth16 verifier's frame; 230,107 through the stop |
 | Release, whole transaction, real verifier: ETH / ERC-20 | 367,988 / 397,874 gas (local EVM, `forge test --isolate`) |
 
-The checkpoint proof in that test was mocked; release proofs reached the real verifier.
+The checkpoint proof in that test was mocked; release proofs reached the real verifier. §18.7 is the run without that mock, on the v3 vault.
 
 ### 18.3 Core v2 and claim guest: measured (laptop CPU)
 
@@ -632,7 +632,7 @@ Measured on one NVIDIA L4 GPU (cloud), final image, succinct receipts verified l
 
 Components: BLAKE2b 55.9 cycles/B (no accelerator), SHA-256 2.59 cycles/B, Ed25519 0.83M.
 
-**Real proofs** of the fixed-part checkpoint, twice (image built just before the turn-length amendment; same input, 59 cycles fewer): succinct 1,157.5 s starting quiet, 1,758.9 s under load; Groth16 wrap 195.1–215.2 s; peak 9.62 GB; seal 260 bytes. Receipts verify locally; not verified on a contract. Extrapolated from 289 s per segment: an idle hour about 34 min plus 3.5 min to wrap; an hour with 50 private transactions about 4.8 h.
+**Real proofs** of the fixed-part checkpoint, twice (image built just before the turn-length amendment; same input, 59 cycles fewer): succinct 1,157.5 s starting quiet, 1,758.9 s under load; Groth16 wrap 195.1–215.2 s; peak 9.62 GB; seal 260 bytes. Receipts verify locally; these two were not verified on a contract (the end-to-end fixture's checkpoint proofs were: §18.7). Extrapolated from 289 s per segment: an idle hour about 34 min plus 3.5 min to wrap; an hour with 50 private transactions about 4.8 h.
 
 ### 18.5 Rule (B) program: estimated only
 
@@ -640,7 +640,23 @@ Components: BLAKE2b 55.9 cycles/B (no accelerator), SHA-256 2.59 cycles/B, Ed255
 
 ### 18.6 Simulation, and what is not measured
 
-The rule (A) simulation is a Python model of the v0.4 code (`docs/design/finality-rule/MODEL.md`), 12,000 runs for experiments (a) to (h) plus (i) to (k), deterministic per seed (§11). Not built or not measured: rule (B)'s program, attestor and vault path; the LEZ bridge program, claims and imports on LEZ; the gas drop; the real verifier inside the v3 vault; composed real proofs; latency on a network; phones and the 4-core minimum.
+The rule (A) simulation is a Python model of the v0.4 code (`docs/design/finality-rule/MODEL.md`), 12,000 runs for experiments (a) to (h) plus (i) to (k), deterministic per seed (§11). Not built or not measured: rule (B)'s program, attestor and vault path; the LEZ bridge program, claims and imports on LEZ; the gas drop; composed real proofs; latency on a network; phones and the 4-core minimum.
+
+### 18.7 The return leg end to end: measured (real verifier, v3 vault; stand-in zone)
+
+One fixture in which the checkpoint program, the release program and the v3 vault meet (`e2e/README.md`). Ethereum side, nothing mocked: RISC Zero's unmodified Groth16 verifier behind its unmodified emergency stop, the v3 vault with the default timers of §13, real Groth16 proofs. LEZ side, a stand-in: 16 blocks and their inscriptions built in the real formats with test sequencer keys (`n = 4`, `t = 3`), an `ImportRoot`, five burns; no node, no bridge program. Local EVM (Foundry), 15 tests.
+
+| Item | Result |
+|---|---|
+| Journals | The checkpoint program's 17-word journals and the release program's 11-word journals are byte for byte the vault's own encodings; the bridge side recomputes `configId`, the burn root, both states and both checkpoint journals independently and gets the same bytes |
+| Checkpoint proofs (candidate; finalisation echoing the beacon) | 3,786,158 and 3,831,033 user cycles, 5 segments each; 15.0 s and 15.4 s on one NVIDIA L4; wrapped to Groth16 (recursion 18.7 s and 18.6 s on 16 cores, Groth16 prover 14 s each) |
+| Release proofs (ETH; an ERC-20 with a relayer's fee) | 80,501 user cycles each, the unchanged release guest; 15.1 s and 14.7 s on 16 cores; wrapped likewise |
+| The run | deposits, `submitCandidate` with the real seal, the wait `W`, `recordBeacon`, `finalize` with the seal that echoes that beacon, the release delay, both releases paid to recipients that held nothing |
+| Refused | one flipped byte in each of the four seals; a valid seal of another statement; each journal field changed under its real seal; a replayed release; a release against a root not yet finalised or still delayed; a finalisation one second early with the right nonce; any proof after the stop |
+| Gas, whole transactions (`forge test --isolate`) | `submitCandidate` 507,370; `recordBeacon` 77,823; `finalize` 475,300; `release` ETH 363,169, ERC-20 388,243; a checkpoint 1,060,493 |
+| Elsewhere | the release seals also verify, by read-only calls, on RISC Zero's own Groth16 verifier deployed on Sepolia; the deployment, candidate and beacon stages of the Sepolia scripts ran on a local fork with the same gas |
+
+Found on the way: the bridge core's checkpoint encodings are still SPEC-v2 and could not equal the program's (the SPEC-v3 ones were written a second time beside it); adding code to the core, even code the release guest does not use, changes that guest's image id; and LEZ signs transactions with fresh randomness, so a prover must keep the blocks it proved a candidate for, because the finalisation has to prove the same ones.
 
 ## 19. Specified but not yet in the prototypes
 

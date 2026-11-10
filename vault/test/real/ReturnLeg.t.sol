@@ -353,9 +353,10 @@ contract ReturnLegTest is ReturnLegFixture {
     }
 }
 
-/// @notice Whole-transaction gas of every step with the real verifier, for GAS.md. Run with
+/// @notice Whole-transaction gas of every call of the return leg with the real verifier, for GAS.md. Run with
 ///             forge test --isolate --match-contract ReturnLegGas -vv
-///         so that each top-level call or creation is its own transaction (21000, calldata, cold access).
+///         so that each top-level call is its own transaction (21000, calldata, cold access). The four creations
+///         are not measured here (`vm.lastCallGas` does not cover creations); GAS.md takes them from receipts.
 contract ReturnLegGas is ReturnLegFixture {
     function setUp() public {
         _loadFixture();
@@ -367,13 +368,9 @@ contract ReturnLegGas is ReturnLegFixture {
 
     function test_gas_everyStepWithTheRealVerifier() public {
         _deployVerifier();
-        _log("deploy RiscZeroGroth16Verifier");
         _deployStop();
-        _log("deploy RiscZeroVerifierEmergencyStop");
         _deployToken();
-        _log("deploy TestToken");
         _deployVault();
-        _log("deploy FerrataVault");
         _registerEth();
         _log("registerToken ETH (3 denominations)");
         _registerToken();

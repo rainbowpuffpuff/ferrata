@@ -457,6 +457,25 @@ tools/mutation_spotcheck.py   127/127 mutants killed
 The unit tests alone (without the invariant campaign) also cover 100% of the vault's lines, statements, branches and
 functions.
 
+After `test/real/` and `script/` were added (the vault's source is unchanged), on 2026-11-10, on a 16-core cloud
+machine with forge 1.3.6 and solc 0.8.26:
+
+```
+forge build --sizes    FerrataVault runtime 23,650 bytes (926 under EIP-170); RiscZeroGroth16Verifier 4,810
+forge test             Ran 23 test suites in 14.74s (144.22s CPU time): 301 tests passed, 0 failed, 0 skipped (301 total tests)
+                       (the 286 above and the 15 of test/real/, which verify real proofs)
+
+forge coverage --report summary
+| File                   | % Lines            | % Statements       | % Branches        | % Funcs          |
+| src/FerrataVault.sol   | 100.00% (458/458)  | 100.00% (579/579)  | 100.00% (103/103) | 100.00% (83/83)  |
+| script/RoundTrip.s.sol | 0.00% (0/72)       | 0.00% (0/80)       | 0.00% (0/28)      | 0.00% (0/12)     |
+| Total (incl. tests)    | 90.53% (1100/1215) | 91.12% (1252/1374) | 80.31% (155/193)  | 89.79% (211/235) |
+```
+
+The script is not run by the tests (it was run on a local fork: "Sepolia round trip"). That machine's forge counts
+the vault's lines, statements and branches slightly differently from the laptop's build quoted above (458, 579 and
+103 against 456, 584 and 108); both report 100%. The mutation spot-check was not repeated: the vault is unchanged.
+
 Fuzz tests use 256 runs. Invariants use 256 runs × 100 calls each. Handler calls with nothing to do are discarded,
 so the run table counts exactly what happened. Averaged over the ten campaigns of the final run, one campaign has
 about 1,050 deposits, 1,680 candidates, 670 finalisations, 470 candidates that break monotonicity, 200

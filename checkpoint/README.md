@@ -192,8 +192,10 @@ withdrawals a channel withdrawal). Any other opcode is refused rather than skipp
 
 ## Not done
 
-- The vault side (§4.3–§4.5, SPEC-v3 D4–D5) is in [`../vault/`](../vault/); the Groth16 seal produced here
-  was not submitted to a contract.
+- The vault side (§4.3–§4.5, SPEC-v3 D4–D5) is in [`../vault/`](../vault/). The seals of the two one-block
+  proofs kept here were not submitted to a contract; the end-to-end return leg ([`../e2e/`](../e2e/README.md))
+  proved a candidate and a finalisation checkpoint of its own fixture, and the v3 vault accepted both seals
+  through RISC Zero's Groth16 verifier (RESULTS, "The end-to-end fixture").
 - Composition was demonstrated in dev mode only; `host compose --real` (real recursion) was not run.
 - Mode (B) of SPEC-v3 D7 is estimated from measured components (RESULTS §4), not built.
 - No real LEZ node or Bedrock node was run; no proof of LEZ block validity (O2) or Bedrock finality

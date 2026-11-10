@@ -143,7 +143,6 @@ contract RoundTrip is Script {
         FerrataVault.Checkpoint memory c = _checkpoint(".candidate.journal");
         vm.broadcast();
         vault.submitCandidate(c, vm.parseJsonBytes(json, ".candidate.seal"));
-        console2.log("the wait is over at (unix time)", _waitOver(c.newState));
     }
 
     function beacon() external {

@@ -72,6 +72,9 @@ jq --arg step "$step" --slurpfile b "$log" '
     status: .[1].status}))' "$manifest" > "$manifest.tmp" && mv "$manifest.tmp" "$manifest"
 jq -r --arg step "$step" '.stages[$step][] | "\(.hash) \(.what) gas \(.gasUsed) status \(.status)"' "$manifest"
 
+# After the candidate: when its wait is over, from the block that mined it.
+if [ "$step" = submit ]; then "$0" status; fi
+
 if [ "$step" = beacon ]; then
   # The block that recorded the beacon: its number and prevrandao give the nonce the finalisation
   # proof must echo. Written beside the fixture for `e2e/run.sh inputs`.
