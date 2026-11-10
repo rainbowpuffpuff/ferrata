@@ -38,6 +38,11 @@ fs_permissions = [
     { access = "read", path = "./test/real/fixtures" },
     # script/RoundTrip.s.sol reads the fixture of an end-to-end run.
     { access = "read", path = "../e2e/runs" },
+    # script/DeployVault.s.sol reads the library's and the vault's artifacts (it links the vault itself) and its
+    # parameters, and writes its record under deployments/.
+    { access = "read", path = "./out" },
+    { access = "read", path = "./script/params" },
+    { access = "read-write", path = "./deployments" },
 ]
 
 [lint]
