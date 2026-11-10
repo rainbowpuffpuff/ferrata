@@ -372,6 +372,11 @@ either seal with a changed journal field, and the candidate's seal offered as th
 refused. Both seals also verify, by read-only calls, on RISC Zero's own Groth16 verifier deployed on
 Sepolia. Receipts, seals and logs: `e2e/runs/sepolia/receipts/`.
 
+These proofs are of the image before the `ImportRoot` fix (header): the fixture's import is the
+bare 81-byte form, which the fixed program refuses, and over the same two inputs the fixed image
+commits `importedLeafCount` 0 instead of 2 and another `newState`, the other words unchanged
+(`../e2e/README.md`, "After the checkpoint's `ImportRoot` fix").
+
 Two things the fixture showed about this program's inputs. A finalisation must prove the
 candidate's very blocks (the vault looks the candidate up by `newState`), and LEZ signs
 transactions with fresh randomness, so a zone cannot be rebuilt bit for bit: the prover has to keep

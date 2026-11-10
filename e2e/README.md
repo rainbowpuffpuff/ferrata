@@ -95,10 +95,21 @@ byte. Run again with nothing new, it reproduces every input exactly.
 **Image ids.** The guests were not rebuilt and their sources were not touched. Their program
 binaries embed the absolute paths of the machine that built them, so a build anywhere else has
 other image ids (`checkpoint/README.md`, UNVERIFIED 7). The run uses the recorded binaries, whose
-sources are the ones in this repository: checkpoint
+sources were the ones in this repository until the checkpoint's `ImportRoot` fix (below): checkpoint
 `0x95b816ed2614e340c85fed3ba3dad1f70e7dff2da1363406ade87e1333583caf` (the image `gpu-prover/`
 measured), release `0xdda76672e6e05535117ed6880227a414420344cba9c47b6e112c7dabc5b027c5` (the image
 `bridge/RESULTS.md` measured). `runs/sepolia/programs.json` has their sha256.
+
+**After the checkpoint's `ImportRoot` fix.** The bridge program sends its `ImportRoot` with the
+import's proofs after the four fields, and the checkpoint now decodes exactly that and refuses the
+bare four fields (`checkpoint/README.md`, `lez/BRIDGE-RESULTS.md` §5). This fixture's block 2 holds
+the bare 81-byte form, which the program of this run counted. Executed on the recorded candidate and
+finalisation inputs, the fixed checkpoint image commits other journals: `importedLeafCount` is 0
+instead of 2 and `newState` differs; the other fifteen words are equal (`host bench` on the build
+box, image `0xd3c22b18…19c0`). So the fixture, both checkpoint proofs, their seals and the vault's
+`test/real/` fixture are of the program before the fix; `checkpoint/fidelity/src/bin/e2e.rs` now
+writes the import with an empty proof, and the fixture, the two proofs, the wraps and the vault
+fixture have not been made again.
 
 How little it takes to move an image id was measured on the way. A first version of this work
 added the SPEC-v3 encodings to `ferrata-bridge-core` in `checkpoint.rs`, a file the release guest
