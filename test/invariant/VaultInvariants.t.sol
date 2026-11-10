@@ -21,9 +21,6 @@ contract VaultInvariants is VaultTestBase {
         vault.setTokenCap(address(dai), FerrataVault.Direction.Release, 40_000e18, 10e18);
         vault.setGlobalCap(FerrataVault.Direction.Deposit, 500_000e6, 100e6);
         vault.setGlobalCap(FerrataVault.Direction.Release, 500_000e6, 100e6);
-        vault.setStandardRelayFee(ETH, 1, 0.002 ether);
-        vault.setStandardRelayFee(address(usdc), 1, 2e6);
-        vault.setStandardRelayFee(address(usdt), 2, 5e6);
         vm.stopPrank();
 
         address[] memory tokens = new address[](4);

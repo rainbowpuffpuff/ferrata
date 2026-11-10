@@ -36,7 +36,7 @@ contract ConstructorTest is VaultTestBase {
     }
 
     function test_constructor_domainTagsMatchTheirDefinitions() public view {
-        assertEq(vault.LEAF_TAG(), sha256(bytes("ferrata/vault/leaf/v1")));
+        assertEq(vault.LEAF_TAG(), sha256(bytes("ferrata/vault/leaf/v2")));
         assertEq(vault.ROOT_DOMAIN(), sha256(bytes("ferrata/vault/burn-root/v1")));
         assertEq(vault.RELEASE_DOMAIN(), sha256(bytes("ferrata/vault/release/v1")));
         assertEq(vault.LEAF_PREFIX(), bytes1(0x00));
@@ -102,9 +102,26 @@ contract RegistryTest is VaultTestBase {
         token = new MockERC20("Token", "TKN", 18);
     }
 
-    function _register(uint256[] memory denoms, uint256 lezUnit, uint256 unitWeight) internal {
+    /// @dev Registration parameters for `token` with finite caps.
+    function _p(uint256[] memory denoms, uint256 lezUnit, uint256 unitWeight)
+        internal
+        pure
+        returns (FerrataVault.TokenParams memory p)
+    {
+        p = _params(denoms, lezUnit, unitWeight);
+        p.depositCap = _cap(1000e18, 1e18);
+        p.releaseCap = _cap(2000e18, 2e18);
+    }
+
+    function _register(FerrataVault.TokenParams memory p) internal {
         vm.prank(admin);
-        vault.registerToken(address(token), denoms, lezUnit, unitWeight, _cap(1000e18, 1e18), _cap(2000e18, 2e18));
+        vault.registerToken(address(token), p);
+    }
+
+    function _expectRegisterRevert(FerrataVault.TokenParams memory p, bytes4 expectedError) internal {
+        vm.prank(admin);
+        vm.expectRevert(expectedError);
+        vault.registerToken(address(token), p);
     }
 
     function _one(uint256 a) internal pure returns (uint256[] memory d) {
@@ -113,14 +130,15 @@ contract RegistryTest is VaultTestBase {
     }
 
     function test_registerToken_storesConfigAndEmits() public {
-        uint256[] memory denoms = _denoms(1e18, 5e18, 25e18);
+        FerrataVault.TokenParams memory p = _p(_denoms(1e18, 5e18, 25e18), 1e12, 7);
+        p.relayFees = _denoms(0.01e18, 0.05e18, 0.25e18); // exactly 1% each, the ceiling
         vm.expectEmit(true, true, true, true, address(vault));
-        emit FerrataVault.TokenRegistered(address(token), denoms, 1e12, 7);
+        emit FerrataVault.TokenRegistered(address(token), p.denominations, p.relayFees, 1e12, 7);
         vm.expectEmit(true, true, true, true, address(vault));
         emit FerrataVault.TokenCapSet(address(token), FerrataVault.Direction.Deposit, 1000e18, 1e18);
         vm.expectEmit(true, true, true, true, address(vault));
         emit FerrataVault.TokenCapSet(address(token), FerrataVault.Direction.Release, 2000e18, 2e18);
-        _register(denoms, 1e12, 7);
+        _register(p);
 
         (bool registered, bool enabled, uint256 lezUnit, uint256 weight, uint256[] memory stored) =
             vault.tokenConfig(address(token));
@@ -128,80 +146,91 @@ contract RegistryTest is VaultTestBase {
         assertTrue(enabled);
         assertEq(lezUnit, 1e12);
         assertEq(weight, 7);
-        assertEq(stored, denoms);
+        assertEq(stored, p.denominations);
+        assertEq(vault.relayFees(address(token)), p.relayFees);
         (uint256 capacity,, uint256 available) = vault.tokenCap(address(token), FerrataVault.Direction.Release);
         assertEq(capacity, 2000e18);
         assertEq(available, 2000e18); // new buckets start full
     }
 
     function test_registerToken_onlyAdmin() public {
-        uint256[] memory denoms = _denoms(1e18, 5e18, 25e18);
+        FerrataVault.TokenParams memory p = _p(_denoms(1e18, 5e18, 25e18), 1e12, 1);
         address[2] memory notAdmin = [freezer, alice];
         for (uint256 i = 0; i < notAdmin.length; i++) {
             vm.prank(notAdmin[i]);
             vm.expectRevert(FerrataVault.NotAdmin.selector);
-            vault.registerToken(address(token), denoms, 1e12, 1, _unlimited(), _unlimited());
+            vault.registerToken(address(token), p);
         }
     }
 
-    function test_registerToken_onlyOnce() public {
-        _register(_denoms(1e18, 5e18, 25e18), 1e12, 1);
-        vm.prank(admin);
-        vm.expectRevert(FerrataVault.TokenAlreadyRegistered.selector);
-        vault.registerToken(address(token), _denoms(2e18, 5e18, 25e18), 1e12, 1, _unlimited(), _unlimited());
+    /// @notice Spec §3.4: (token, lezUnit, denominations, relay fees, unitWeight) are write-once.
+    function test_registerToken_isWriteOnce() public {
+        _register(_p(_denoms(1e18, 5e18, 25e18), 1e12, 1));
+        _expectRegisterRevert(_p(_denoms(2e18, 5e18, 25e18), 1e12, 1), FerrataVault.TokenAlreadyRegistered.selector);
+
+        // The v1 setters that could change a registered token are gone: calling them hits the fallback.
+        bytes[3] memory removed = [
+            abi.encodeWithSignature("setUnitWeight(address,uint256)", address(token), 2),
+            abi.encodeWithSignature("setStandardRelayFee(address,uint8,uint256)", address(token), 0, 1),
+            abi.encodeWithSignature(
+                "registerToken(address,uint256[],uint256,uint256,(uint256,uint256),(uint256,uint256))",
+                address(token),
+                _one(1e18),
+                1e12,
+                1,
+                _unlimited(),
+                _unlimited()
+            )
+        ];
+        for (uint256 i = 0; i < removed.length; i++) {
+            vm.prank(admin);
+            (bool ok, bytes memory ret) = address(vault).call(removed[i]);
+            assertFalse(ok);
+            assertEq(ret, abi.encodeWithSelector(FerrataVault.FunctionNotFound.selector));
+        }
+        assertEq(vault.denominations(address(token)), _denoms(1e18, 5e18, 25e18));
     }
 
     function test_registerToken_rejectsAddressWithoutCode() public {
         vm.prank(admin);
         vm.expectRevert(FerrataVault.TokenHasNoCode.selector);
-        vault.registerToken(makeAddr("not a token"), _one(1e18), 1e12, 1, _unlimited(), _unlimited());
+        vault.registerToken(makeAddr("not a token"), _p(_one(1e18), 1e12, 1));
     }
 
     function test_registerToken_denominationRules() public {
-        vm.startPrank(admin);
-        uint256[] memory empty = new uint256[](0);
-        vm.expectRevert(FerrataVault.InvalidDenominations.selector);
-        vault.registerToken(address(token), empty, 1, 1, _unlimited(), _unlimited());
+        _expectRegisterRevert(_p(new uint256[](0), 1, 1), FerrataVault.InvalidDenominations.selector);
 
         uint256[] memory nine = new uint256[](9);
         for (uint256 i = 0; i < 9; i++) {
-            nine[i] = i + 1;
+            nine[i] = (i + 1) * 100;
         }
-        vm.expectRevert(FerrataVault.InvalidDenominations.selector);
-        vault.registerToken(address(token), nine, 1, 1, _unlimited(), _unlimited());
-
-        vm.expectRevert(FerrataVault.InvalidDenominations.selector); // zero
-        vault.registerToken(address(token), _denoms(0, 1, 2), 1, 1, _unlimited(), _unlimited());
-        vm.expectRevert(FerrataVault.InvalidDenominations.selector); // repeated
-        vault.registerToken(address(token), _denoms(1, 2, 2), 1, 1, _unlimited(), _unlimited());
-        vm.expectRevert(FerrataVault.InvalidDenominations.selector); // decreasing
-        vault.registerToken(address(token), _denoms(1, 3, 2), 1, 1, _unlimited(), _unlimited());
-        vm.expectRevert(FerrataVault.InvalidDenominations.selector); // above MAX_DENOMINATION
-        vault.registerToken(address(token), _one(uint256(type(uint128).max) + 1), 1, 1, _unlimited(), _unlimited());
+        _expectRegisterRevert(_p(nine, 1, 1), FerrataVault.InvalidDenominations.selector);
+        _expectRegisterRevert(_p(_denoms(0, 100, 200), 1, 1), FerrataVault.InvalidDenominations.selector); // zero
+        _expectRegisterRevert(_p(_denoms(100, 200, 200), 1, 1), FerrataVault.InvalidDenominations.selector); // repeated
+        _expectRegisterRevert(_p(_denoms(100, 300, 200), 1, 1), FerrataVault.InvalidDenominations.selector); // decreasing
+        _expectRegisterRevert(
+            _p(_one(uint256(type(uint128).max) + 1), 1, 1), FerrataVault.InvalidDenominations.selector
+        );
 
         uint256[] memory eight = new uint256[](8);
         for (uint256 i = 0; i < 8; i++) {
-            eight[i] = i + 1;
+            eight[i] = (i + 1) * 100;
         }
-        vault.registerToken(address(token), eight, 1, 1, _unlimited(), _unlimited());
-        vm.stopPrank();
+        _register(_p(eight, 1, 1));
         assertEq(vault.denominations(address(token)).length, 8);
     }
 
     function test_registerToken_lezUnitMustBePowerOfTen() public {
         uint256[6] memory bad = [uint256(0), 2, 20, 15, 1e4 + 1, 3e4];
-        vm.startPrank(admin);
         for (uint256 i = 0; i < bad.length; i++) {
-            vm.expectRevert(FerrataVault.InvalidLezUnit.selector);
-            vault.registerToken(address(token), _one(9e4), bad[i], 1, _unlimited(), _unlimited());
+            _expectRegisterRevert(_p(_one(9e4), bad[i], 1), FerrataVault.InvalidLezUnit.selector);
         }
-        vm.stopPrank();
     }
 
     function testFuzz_registerToken_lezUnitPowersOfTenAccepted(uint8 exponent) public {
         uint256 k = bound(exponent, 0, 38); // 10**38 is the largest power of ten below MAX_DENOMINATION
         uint256 unit = 10 ** k;
-        _register(_one(unit), unit, 1);
+        _register(_p(_one(unit), unit, 1));
         (,, uint256 lezUnit,,) = vault.tokenConfig(address(token));
         assertEq(lezUnit, unit);
     }
@@ -213,9 +242,7 @@ contract RegistryTest is VaultTestBase {
             rest /= 10;
         }
         vm.assume(rest != 1);
-        vm.prank(admin);
-        vm.expectRevert(FerrataVault.InvalidLezUnit.selector);
-        vault.registerToken(address(token), _one(1e18), unit, 1, _unlimited(), _unlimited());
+        _expectRegisterRevert(_p(_one(1e18), unit, 1), FerrataVault.InvalidLezUnit.selector);
     }
 
     function test_registerToken_denominationsMustBeMultiplesOfLezUnit() public {
@@ -223,28 +250,60 @@ contract RegistryTest is VaultTestBase {
         vm.startPrank(admin);
         // 1.234567 units of a 6-decimal token is not representable with 2 decimals on LEZ (lezUnit 1e4).
         vm.expectRevert(FerrataVault.DenominationNotMultipleOfLezUnit.selector);
-        vault.registerToken(address(sixDecimals), _denoms(1e6, 1_234_567, 10e6), 1e4, 1, _unlimited(), _unlimited());
+        vault.registerToken(address(sixDecimals), _p(_denoms(1e6, 1_234_567, 10e6), 1e4, 1));
         // 1 ether + 1 wei is not representable with 6 decimals on LEZ (lezUnit 1e12).
         vm.expectRevert(FerrataVault.DenominationNotMultipleOfLezUnit.selector);
-        vault.registerToken(address(token), _denoms(1e17, 1e18 + 1, 1e19), 1e12, 1, _unlimited(), _unlimited());
+        vault.registerToken(address(token), _p(_denoms(1e17, 1e18 + 1, 1e19), 1e12, 1));
         // The same tokens with representable amounts are accepted.
-        vault.registerToken(address(sixDecimals), _denoms(1e6, 1_230_000, 10e6), 1e4, 1, _unlimited(), _unlimited());
-        vault.registerToken(address(token), _denoms(1e17, 1e18, 1e19), 1e12, 1, _unlimited(), _unlimited());
+        vault.registerToken(address(sixDecimals), _p(_denoms(1e6, 1_230_000, 10e6), 1e4, 1));
+        vault.registerToken(address(token), _p(_denoms(1e17, 1e18, 1e19), 1e12, 1));
         vm.stopPrank();
     }
 
     function test_registerToken_unitWeightBounds() public {
-        vm.startPrank(admin);
-        vm.expectRevert(FerrataVault.InvalidUnitWeight.selector);
-        vault.registerToken(address(token), _one(1e18), 1e12, 0, _unlimited(), _unlimited());
-        vm.expectRevert(FerrataVault.InvalidUnitWeight.selector);
-        vault.registerToken(
-            address(token), _one(1e18), 1e12, uint256(type(uint128).max) + 1, _unlimited(), _unlimited()
+        _expectRegisterRevert(_p(_one(1e18), 1e12, 0), FerrataVault.InvalidUnitWeight.selector);
+        _expectRegisterRevert(
+            _p(_one(1e18), 1e12, uint256(type(uint128).max) + 1), FerrataVault.InvalidUnitWeight.selector
         );
-        vm.stopPrank();
     }
 
-    // ---- setters --------------------------------------------------------------------------------------------------
+    // ---- relay fees: one per denomination, at most 1%, fixed at registration (spec §3.4) ------------------------
+
+    function test_registerToken_relayFeeAtMostOnePercent() public {
+        FerrataVault.TokenParams memory p = _p(_denoms(1e18, 5e18, 25e18), 1e12, 1);
+        p.relayFees = _denoms(0.01e18, 0.05e18 + 1, 0); // the second is 1 wei over 1%
+        _expectRegisterRevert(p, FerrataVault.RelayFeeTooHigh.selector);
+
+        // 1% of 150 is 1.5: a fee of 1 is allowed, 2 is not.
+        FerrataVault.TokenParams memory odd = _p(_denoms(150, 300, 450), 1, 1);
+        odd.relayFees = _denoms(2, 0, 0);
+        _expectRegisterRevert(odd, FerrataVault.RelayFeeTooHigh.selector);
+        odd.relayFees = _denoms(1, 3, 4);
+        _register(odd);
+        assertEq(vault.relayFees(address(token)), _denoms(1, 3, 4));
+    }
+
+    function testFuzz_registerToken_relayFeeCeiling(uint256 denomination, uint256 fee) public {
+        denomination = bound(denomination, 1, type(uint128).max);
+        FerrataVault.TokenParams memory p = _p(_one(denomination), 1, 1);
+        p.relayFees = _one(fee);
+        bool withinOnePercent = fee <= denomination / 100; // fee * 100 <= denomination, without overflow
+        vm.prank(admin);
+        if (!withinOnePercent) vm.expectRevert(FerrataVault.RelayFeeTooHigh.selector);
+        vault.registerToken(address(token), p);
+    }
+
+    function test_registerToken_oneRelayFeePerDenomination() public {
+        FerrataVault.TokenParams memory p = _p(_denoms(1e18, 5e18, 25e18), 1e12, 1);
+        p.relayFees = _one(0);
+        _expectRegisterRevert(p, FerrataVault.RelayFeeCountMismatch.selector);
+        p.relayFees = new uint256[](4);
+        _expectRegisterRevert(p, FerrataVault.RelayFeeCountMismatch.selector);
+        p.relayFees = new uint256[](3); // all zero: relaying without a fee
+        _register(p);
+    }
+
+    // ---- what stays adjustable: caps, depositsEnabled, release delays ---------------------------------------------
 
     function test_setDepositsEnabled() public {
         vm.expectEmit(true, true, true, true, address(vault));
@@ -257,39 +316,6 @@ contract RegistryTest is VaultTestBase {
         vm.prank(admin);
         vm.expectRevert(FerrataVault.TokenNotRegistered.selector);
         vault.setDepositsEnabled(address(token), false);
-    }
-
-    function test_setUnitWeight() public {
-        vm.expectEmit(true, true, true, true, address(vault));
-        emit FerrataVault.UnitWeightSet(ETH, 3500);
-        vm.prank(admin);
-        vault.setUnitWeight(ETH, 3500);
-        (,,, uint256 weight,) = vault.tokenConfig(ETH);
-        assertEq(weight, 3500);
-
-        vm.startPrank(admin);
-        vm.expectRevert(FerrataVault.InvalidUnitWeight.selector);
-        vault.setUnitWeight(ETH, 0);
-        vm.expectRevert(FerrataVault.TokenNotRegistered.selector);
-        vault.setUnitWeight(address(token), 1);
-        vm.stopPrank();
-    }
-
-    function test_setStandardRelayFee() public {
-        vm.expectEmit(true, true, true, true, address(vault));
-        emit FerrataVault.StandardRelayFeeSet(address(usdc), 2, 5e6);
-        vm.prank(admin);
-        vault.setStandardRelayFee(address(usdc), 2, 5e6);
-        assertEq(vault.standardRelayFee(address(usdc), 2), 5e6);
-
-        vm.startPrank(admin);
-        vm.expectRevert(FerrataVault.RelayFeeTooHigh.selector);
-        vault.setStandardRelayFee(address(usdc), 0, 100e6); // fee must be below the denomination
-        vm.expectRevert(FerrataVault.InvalidDenominationIndex.selector);
-        vault.setStandardRelayFee(address(usdc), 3, 1);
-        vm.expectRevert(FerrataVault.TokenNotRegistered.selector);
-        vault.setStandardRelayFee(address(token), 0, 1);
-        vm.stopPrank();
     }
 
     function test_setReleaseDelay() public {
@@ -340,17 +366,13 @@ contract RolesTest is VaultTestBase {
     function _assertNoAdminPowers(address caller) internal {
         vm.startPrank(caller);
         vm.expectRevert(FerrataVault.NotAdmin.selector);
-        vault.registerToken(address(0xbeef), _denoms(1, 2, 3), 1, 1, _unlimited(), _unlimited());
+        vault.registerToken(address(0xbeef), _params(_denoms(100, 200, 300), 1, 1));
         vm.expectRevert(FerrataVault.NotAdmin.selector);
         vault.setDepositsEnabled(ETH, false);
         vm.expectRevert(FerrataVault.NotAdmin.selector);
         vault.setTokenCap(ETH, FerrataVault.Direction.Deposit, 0, 0);
         vm.expectRevert(FerrataVault.NotAdmin.selector);
         vault.setGlobalCap(FerrataVault.Direction.Release, 0, 0);
-        vm.expectRevert(FerrataVault.NotAdmin.selector);
-        vault.setUnitWeight(ETH, 1);
-        vm.expectRevert(FerrataVault.NotAdmin.selector);
-        vault.setStandardRelayFee(ETH, 0, 1);
         vm.expectRevert(FerrataVault.NotAdmin.selector);
         vault.setReleaseDelay(ETH, 1);
         vm.expectRevert(FerrataVault.NotAdmin.selector);

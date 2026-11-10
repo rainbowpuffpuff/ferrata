@@ -21,7 +21,7 @@ contract GasScenarios is VaultTestBase {
 
     function setUp() public override {
         super.setUp();
-        // A deployed-looking configuration: every bucket finite, standard fees set, a non-empty tree, escrow on
+        // A deployed-looking configuration: every bucket finite, relay fees registered, a non-empty tree, escrow on
         // every token, one accepted root.
         address[4] memory tokens = [ETH, address(usdc), address(dai), address(usdt)];
         vm.startPrank(admin);
@@ -32,8 +32,6 @@ contract GasScenarios is VaultTestBase {
         }
         vault.setGlobalCap(FerrataVault.Direction.Deposit, 1e15, 1e10);
         vault.setGlobalCap(FerrataVault.Direction.Release, 1e15, 1e10);
-        vault.setStandardRelayFee(ETH, 1, 0.002 ether);
-        vault.setStandardRelayFee(address(dai), 1, 1e18);
         vm.stopPrank();
 
         for (uint8 i = 0; i < 37; i++) {
@@ -168,7 +166,7 @@ contract GasScenarios is VaultTestBase {
 
     function test_gas_releaseETH_withFee() public {
         FerrataVault.ReleaseRequest memory r = _request(ETH, 1, recipient, ROOT, keccak256("n2"));
-        r.relayFee = 0.002 ether;
+        r.relayFee = _relayFee(ETH, 1);
         _proveRelease(_releaseJournal(r));
         vm.prank(relayer);
         vault.release(r, SEAL);
@@ -177,7 +175,7 @@ contract GasScenarios is VaultTestBase {
 
     function test_gas_releaseERC20_withFee() public {
         FerrataVault.ReleaseRequest memory r = _request(address(dai), 1, recipient, ROOT, keccak256("n3"));
-        r.relayFee = 1e18;
+        r.relayFee = _relayFee(address(dai), 1);
         _proveRelease(_releaseJournal(r));
         vm.prank(relayer);
         vault.release(r, SEAL);

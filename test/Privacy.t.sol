@@ -125,7 +125,7 @@ contract PrivacyTest is VaultTestBase {
         bytes32[] memory expected = new bytes32[](5);
         expected[0] = bytes32(uint256(0));
         expected[1] = bytes32(uint256(1));
-        expected[2] = bytes32(uint256(2));
+        expected[2] = bytes32(uint256(3)); // _branch[0]
         expected[3] = _mappingSlot(bytes32(uint256(uint160(alice))), DEPOSIT_COUNT_SLOT);
         expected[4] = _mappingSlot(bytes32(0), ESCROWED_SLOT);
         _assertSameSet(_writtenSlots(accesses, address(vault)), expected);

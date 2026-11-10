@@ -13,7 +13,7 @@ contract ReleaseJournalBindingTest is VaultTestBase {
     bytes32 internal constant ROOT_A = keccak256("burn root A");
     bytes32 internal constant ROOT_B = keccak256("burn root B");
     bytes32 internal constant NULLIFIER = keccak256("nullifier");
-    uint256 internal constant FEE = 0.002 ether;
+    uint256 internal constant FEE = 0.002 ether; // the relay fee registered for 1 ETH (0.2%)
     address internal feeTaker = makeAddr("feeTaker");
 
     function setUp() public override {
@@ -22,8 +22,6 @@ contract ReleaseJournalBindingTest is VaultTestBase {
         _deposit(alice, ETH, 1, keccak256("c2"));
         _acceptRoot(ROOT_A);
         _acceptRoot(ROOT_B);
-        vm.prank(admin);
-        vault.setStandardRelayFee(ETH, 1, FEE);
     }
 
     /// @dev 1 ETH to `recipient`, standard fee bound to `feeTaker`, under ROOT_A.
@@ -159,8 +157,6 @@ contract ReleaseJournalBindingTest is VaultTestBase {
         rj.vault = address(other);
         _proveRoot(rj);
         other.acceptBurnRoot(ROOT_A, LEZ_BLOCK, BURN_COUNT, MIN_DEPTH, SEAL);
-        vm.prank(admin);
-        other.setStandardRelayFee(ETH, 1, FEE);
 
         _proveRelease(_honestJournal()); // valid for `vault` only
         vm.prank(relayer);
@@ -193,8 +189,6 @@ contract ReleaseJournalBindingTest is VaultTestBase {
         rj.lezConfigId = keccak256("another LEZ configuration");
         _proveRoot(rj);
         other.acceptBurnRoot(ROOT_A, LEZ_BLOCK, BURN_COUNT, MIN_DEPTH, SEAL);
-        vm.prank(admin);
-        other.setStandardRelayFee(ETH, 1, FEE);
 
         _proveRelease(_honestJournal());
         vm.prank(relayer);

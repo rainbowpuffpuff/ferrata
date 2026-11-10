@@ -94,13 +94,34 @@ abstract contract VaultTestBase is Test {
     }
 
     /// @dev Value unit = 1e-6 USD. ETH at 3000 USD: one lezUnit (1e12 wei) is worth 3000 value units.
+    ///      Relay fees are 0.2% of each denomination.
     function _registerDefaultTokens(FerrataVault v) internal {
         vm.startPrank(admin);
-        v.registerToken(ETH, _denoms(0.1 ether, 1 ether, 10 ether), 1e12, 3000, _unlimited(), _unlimited());
-        v.registerToken(address(usdc), _denoms(100e6, 1000e6, 10_000e6), 1, 1, _unlimited(), _unlimited());
-        v.registerToken(address(dai), _denoms(100e18, 1000e18, 10_000e18), 1e12, 1, _unlimited(), _unlimited());
-        v.registerToken(address(usdt), _denoms(100e6, 1000e6, 10_000e6), 1, 1, _unlimited(), _unlimited());
+        v.registerToken(ETH, _params(_denoms(0.1 ether, 1 ether, 10 ether), 1e12, 3000));
+        v.registerToken(address(usdc), _params(_denoms(100e6, 1000e6, 10_000e6), 1, 1));
+        v.registerToken(address(dai), _params(_denoms(100e18, 1000e18, 10_000e18), 1e12, 1));
+        v.registerToken(address(usdt), _params(_denoms(100e6, 1000e6, 10_000e6), 1, 1));
         vm.stopPrank();
+    }
+
+    /// @dev Registration parameters with relay fees of 0.2% per denomination and UNLIMITED caps.
+    function _params(uint256[] memory denoms, uint256 lezUnit, uint256 unitWeight)
+        internal
+        pure
+        returns (FerrataVault.TokenParams memory p)
+    {
+        uint256[] memory fees = new uint256[](denoms.length);
+        for (uint256 i = 0; i < denoms.length; i++) {
+            fees[i] = denoms[i] / 500;
+        }
+        p = FerrataVault.TokenParams({
+            denominations: denoms,
+            relayFees: fees,
+            lezUnit: lezUnit,
+            unitWeight: unitWeight,
+            depositCap: _unlimited(),
+            releaseCap: _unlimited()
+        });
     }
 
     function _denoms(uint256 a, uint256 b, uint256 c) internal pure returns (uint256[] memory d) {
@@ -112,6 +133,10 @@ abstract contract VaultTestBase is Test {
 
     function _amount(address token, uint8 denomIndex) internal view returns (uint256) {
         return vault.denominations(token)[denomIndex];
+    }
+
+    function _relayFee(address token, uint8 denomIndex) internal view returns (uint256) {
+        return vault.relayFees(token)[denomIndex];
     }
 
     function _balance(address token, address who) internal view returns (uint256) {

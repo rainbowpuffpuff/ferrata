@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Recompute test/vectors/tree.json from its inputs with hashlib, independently of the Solidity code.
+"""Recompute test/vectors/tree-v2.json (v2 leaves, which bind the depositor) from its inputs with hashlib,
+independently of the Solidity code.
 
-Usage: python3 -I tools/check_tree_vectors.py test/vectors/tree.json
+Usage: python3 -I tools/check_tree_vectors.py test/vectors/tree-v2.json
 Exits non-zero on the first mismatch.
 """
 
@@ -51,17 +52,19 @@ def main(path: str) -> None:
     leaves = []
     for i, d in enumerate(vectors["deposits"]):
         assert d["leafIndex"] == i, "leafIndex"
+        depositor = unhex(d["depositor"])
         token = unhex(d["token"])
-        assert len(token) == 20, "token length"
+        assert len(depositor) == 20 and len(token) == 20, "address length"
         preimage = (
             b"\x00"
             + tag
             + i.to_bytes(8, "big")
+            + depositor
             + token
             + int(d["amount"]).to_bytes(32, "big")
             + unhex(d["commitment"])
         )
-        assert len(preimage) == 125, "preimage length"
+        assert len(preimage) == 145, "preimage length"
         assert preimage == unhex(d["leafPreimage"]), f"leafPreimage {i}"
         leaf = sha256(preimage)
         assert leaf == unhex(d["leaf"]), f"leaf {i}"
@@ -83,4 +86,4 @@ def main(path: str) -> None:
 
 
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else "test/vectors/tree.json")
+    main(sys.argv[1] if len(sys.argv) > 1 else "test/vectors/tree-v2.json")

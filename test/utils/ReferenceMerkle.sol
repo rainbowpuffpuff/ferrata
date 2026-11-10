@@ -10,25 +10,27 @@ library ReferenceMerkle {
     uint256 internal constant DEPTH = 32;
 
     function leafTag() internal pure returns (bytes32) {
-        return sha256(bytes("ferrata/vault/leaf/v1"));
+        return sha256(bytes("ferrata/vault/leaf/v2"));
     }
 
-    /// @notice 0x00 || LEAF_TAG || uint64 leafIndex (8 bytes, big-endian) || token (20 bytes) || uint256 amount ||
-    ///         commitment: 1 + 32 + 8 + 20 + 32 + 32 = 125 bytes.
-    function leafPreimage(uint64 leafIndex, address token, uint256 amount, bytes32 commitment)
+    /// @notice 0x00 || LEAF_TAG || uint64 leafIndex (8 bytes, big-endian) || depositor (20 bytes) || token (20 bytes)
+    ///         || uint256 amount || commitment: 1 + 32 + 8 + 20 + 20 + 32 + 32 = 145 bytes.
+    function leafPreimage(uint64 leafIndex, address depositor, address token, uint256 amount, bytes32 commitment)
         internal
         pure
         returns (bytes memory)
     {
-        return bytes.concat(bytes1(0x00), leafTag(), bytes8(leafIndex), bytes20(token), bytes32(amount), commitment);
+        return bytes.concat(
+            bytes1(0x00), leafTag(), bytes8(leafIndex), bytes20(depositor), bytes20(token), bytes32(amount), commitment
+        );
     }
 
-    function leafHash(uint64 leafIndex, address token, uint256 amount, bytes32 commitment)
+    function leafHash(uint64 leafIndex, address depositor, address token, uint256 amount, bytes32 commitment)
         internal
         pure
         returns (bytes32)
     {
-        return sha256(leafPreimage(leafIndex, token, amount, commitment));
+        return sha256(leafPreimage(leafIndex, depositor, token, amount, commitment));
     }
 
     function nodeHash(bytes32 left, bytes32 right) internal pure returns (bytes32) {

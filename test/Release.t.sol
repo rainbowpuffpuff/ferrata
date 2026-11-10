@@ -273,9 +273,7 @@ contract ReleaseTest is VaultTestBase {
     // ------------------------------------------------------------------------------------------------------------
 
     function test_release_relayFeeMustBeZeroOrStandard() public {
-        uint256 fee = 0.002 ether;
-        vm.prank(admin);
-        vault.setStandardRelayFee(ETH, 1, fee);
+        uint256 fee = _relayFee(ETH, 1); // 0.002 ether, registered with the token
         for (uint256 i = 0; i < 4; i++) {
             _deposit(alice, ETH, 1, C1);
         }
@@ -309,9 +307,7 @@ contract ReleaseTest is VaultTestBase {
     }
 
     function test_release_feeGoesToMsgSenderWhenFeeRecipientIsUnset() public {
-        uint256 fee = 0.002 ether;
-        vm.prank(admin);
-        vault.setStandardRelayFee(ETH, 1, fee);
+        uint256 fee = _relayFee(ETH, 1); // 0.002 ether, registered with the token
         _deposit(alice, ETH, 1, C1);
         _acceptRoot(ROOT);
         FerrataVault.ReleaseRequest memory r = _request(ETH, 1, recipient, ROOT, N1);
@@ -329,10 +325,8 @@ contract ReleaseTest is VaultTestBase {
     }
 
     function test_release_feeGoesToBoundFeeRecipient() public {
-        uint256 fee = 0.002 ether;
+        uint256 fee = _relayFee(ETH, 1);
         address feeTaker = makeAddr("feeTaker");
-        vm.prank(admin);
-        vault.setStandardRelayFee(ETH, 1, fee);
         _deposit(alice, ETH, 1, C1);
         _acceptRoot(ROOT);
         FerrataVault.ReleaseRequest memory r = _request(ETH, 1, recipient, ROOT, N1);
@@ -346,9 +340,7 @@ contract ReleaseTest is VaultTestBase {
     }
 
     function test_release_erc20FeeSplit() public {
-        uint256 fee = 1e6; // 1 USDC on a 1000 USDC note
-        vm.prank(admin);
-        vault.setStandardRelayFee(address(usdc), 1, fee);
+        uint256 fee = _relayFee(address(usdc), 1); // 2 USDC on a 1000 USDC note
         _deposit(alice, address(usdc), 1, C1);
         _acceptRoot(ROOT);
         FerrataVault.ReleaseRequest memory r = _request(address(usdc), 1, recipient, ROOT, N1);
@@ -488,7 +480,7 @@ contract ReleaseTest is VaultTestBase {
     function test_deposit_reentrantTokenIsBlocked() public {
         MockReentrantToken token = new MockReentrantToken();
         vm.prank(admin);
-        vault.registerToken(address(token), _denoms(1e18, 2e18, 3e18), 1e12, 1, _unlimited(), _unlimited());
+        vault.registerToken(address(token), _params(_denoms(1e18, 2e18, 3e18), 1e12, 1));
         token.mint(alice, 1e18);
         vm.prank(alice);
         token.approve(address(vault), 1e18);
@@ -507,7 +499,7 @@ contract ReleaseTest is VaultTestBase {
     function test_release_reentrantTokenIsBlocked() public {
         MockReentrantToken token = new MockReentrantToken();
         vm.prank(admin);
-        vault.registerToken(address(token), _denoms(1e18, 2e18, 3e18), 1e12, 1, _unlimited(), _unlimited());
+        vault.registerToken(address(token), _params(_denoms(1e18, 2e18, 3e18), 1e12, 1));
         _deposit(alice, address(token), 0, C1);
         _deposit(bob, address(token), 0, C2);
         _acceptRoot(ROOT);

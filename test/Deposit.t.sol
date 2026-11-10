@@ -38,7 +38,7 @@ contract DepositTest is VaultTestBase {
         assertEq(vault.escrowed(ETH), amount);
         assertEq(vault.depositCount(alice), 1);
         assertEq(vault.nextLeafIndex(), 1);
-        assertEq(vault.depositRoot(), _rootOfSingleLeaf(ReferenceMerkle.leafHash(0, ETH, amount, C1)));
+        assertEq(vault.depositRoot(), _rootOfSingleLeaf(ReferenceMerkle.leafHash(0, alice, ETH, amount, C1)));
     }
 
     function test_deposit_sixDecimalToken() public {
@@ -68,21 +68,22 @@ contract DepositTest is VaultTestBase {
         assertEq(MockTokenBase(token).balanceOf(alice), 0);
         assertEq(vault.escrowed(token), amount);
         assertEq(vault.depositCount(alice), 1);
-        assertEq(vault.depositRoot(), _rootOfSingleLeaf(ReferenceMerkle.leafHash(0, token, amount, C1)));
+        assertEq(vault.depositRoot(), _rootOfSingleLeaf(ReferenceMerkle.leafHash(0, alice, token, amount, C1)));
     }
 
     function test_leafHash_matchesSpec() public view {
         bytes32 expected = sha256(
             bytes.concat(
                 bytes1(0x00),
-                sha256(bytes("ferrata/vault/leaf/v1")),
+                sha256(bytes("ferrata/vault/leaf/v2")),
                 bytes8(uint64(7)),
+                bytes20(alice),
                 bytes20(address(usdc)),
                 bytes32(uint256(1000e6)),
                 C1
             )
         );
-        assertEq(vault.leafHash(7, address(usdc), 1000e6, C1), expected);
+        assertEq(vault.leafHash(7, alice, address(usdc), 1000e6, C1), expected);
     }
 
     // ------------------------------------------------------------------------------------------------------------
@@ -92,7 +93,7 @@ contract DepositTest is VaultTestBase {
     function test_deposit_feeOnTransferTokenReverts() public {
         MockFeeOnTransferToken fot = new MockFeeOnTransferToken();
         vm.prank(admin);
-        vault.registerToken(address(fot), _denoms(1e18, 2e18, 3e18), 1e12, 1, _unlimited(), _unlimited());
+        vault.registerToken(address(fot), _params(_denoms(1e18, 2e18, 3e18), 1e12, 1));
         fot.mint(alice, 1e18);
         vm.prank(alice);
         fot.approve(address(vault), 1e18);
@@ -105,7 +106,7 @@ contract DepositTest is VaultTestBase {
     function test_deposit_falseReturningTokenReverts() public {
         MockFalseReturnToken token = new MockFalseReturnToken();
         vm.prank(admin);
-        vault.registerToken(address(token), _denoms(1e18, 2e18, 3e18), 1e12, 1, _unlimited(), _unlimited());
+        vault.registerToken(address(token), _params(_denoms(1e18, 2e18, 3e18), 1e12, 1));
         token.mint(alice, 1e18);
         vm.prank(alice);
         token.approve(address(vault), 1e18);
@@ -247,7 +248,8 @@ contract DepositTest is VaultTestBase {
     }
 
     function test_deposit_repeatedCommitmentIsAllowed() public {
-        // Bob copies Alice's commitment. That must not block Alice, and it creates a distinct leaf.
+        // Bob copies Alice's commitment. That must not block Alice, and it creates a distinct leaf (which also
+        // names Bob as its depositor).
         uint64 first = _deposit(alice, address(usdc), 0, C1);
         uint64 second = _deposit(bob, address(usdc), 0, C1);
         uint64 third = _deposit(alice, address(usdc), 0, C1);
@@ -256,9 +258,9 @@ contract DepositTest is VaultTestBase {
         assertEq(third, 2);
 
         bytes32[] memory leaves = new bytes32[](3);
-        for (uint64 i = 0; i < 3; i++) {
-            leaves[i] = ReferenceMerkle.leafHash(i, address(usdc), 100e6, C1);
-        }
+        leaves[0] = ReferenceMerkle.leafHash(0, alice, address(usdc), 100e6, C1);
+        leaves[1] = ReferenceMerkle.leafHash(1, bob, address(usdc), 100e6, C1);
+        leaves[2] = ReferenceMerkle.leafHash(2, alice, address(usdc), 100e6, C1);
         assertTrue(leaves[0] != leaves[1]);
         assertEq(vault.depositRoot(), ReferenceMerkle.root(leaves));
     }

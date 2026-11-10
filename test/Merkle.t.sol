@@ -9,8 +9,9 @@ contract MerkleTest is VaultTestBase {
     /// The storage-slot contract with the LEZ side (see README, "Storage layout").
     uint256 internal constant DEPOSIT_ROOT_SLOT = 0;
     uint256 internal constant NEXT_LEAF_INDEX_SLOT = 1;
+    uint256 internal constant LEZ_CONFIG_ID_SLOT = 2;
     /// `_branch[h]` lives at slot BRANCH_SLOT + h (from `forge inspect FerrataVault storageLayout`).
-    uint256 internal constant BRANCH_SLOT = 2;
+    uint256 internal constant BRANCH_SLOT = 3;
 
     bytes32[] internal leaves;
 
@@ -22,7 +23,7 @@ contract MerkleTest is VaultTestBase {
         bytes32 commitment = keccak256(abi.encode("commitment", seed));
         address depositor = ((seed >> 16) % 2 == 0) ? alice : bob;
         uint64 leafIndex = _deposit(depositor, token, denomIndex, commitment);
-        leaves.push(ReferenceMerkle.leafHash(leafIndex, token, _amount(token, denomIndex), commitment));
+        leaves.push(ReferenceMerkle.leafHash(leafIndex, depositor, token, _amount(token, denomIndex), commitment));
     }
 
     function _load(uint256 slot) internal view returns (bytes32) {
@@ -31,11 +32,14 @@ contract MerkleTest is VaultTestBase {
 
     // ---- storage-slot contract ------------------------------------------------------------------------------------
 
-    function test_storageSlots_rootAtSlot0_leafCountAtSlot1() public {
+    function test_storageSlots_root0_leafCount1_configId2() public {
         assertEq(vault.DEPOSIT_ROOT_SLOT(), DEPOSIT_ROOT_SLOT);
         assertEq(vault.NEXT_LEAF_INDEX_SLOT(), NEXT_LEAF_INDEX_SLOT);
+        assertEq(vault.LEZ_CONFIG_ID_SLOT(), LEZ_CONFIG_ID_SLOT);
         assertEq(_load(DEPOSIT_ROOT_SLOT), vault.depositRoot());
         assertEq(_load(NEXT_LEAF_INDEX_SLOT), bytes32(0));
+        assertEq(_load(LEZ_CONFIG_ID_SLOT), LEZ_CONFIG_ID);
+        assertEq(vault.storedLezConfigId(), vault.lezConfigId());
 
         for (uint256 i = 0; i < 6; i++) {
             _depositRandom(i);
@@ -55,6 +59,7 @@ contract MerkleTest is VaultTestBase {
         _release(_request(ETH, 0, recipient, keccak256("burn root"), keccak256("n")));
         assertEq(_load(DEPOSIT_ROOT_SLOT), root);
         assertEq(_load(NEXT_LEAF_INDEX_SLOT), bytes32(uint256(6)));
+        assertEq(_load(LEZ_CONFIG_ID_SLOT), LEZ_CONFIG_ID);
     }
 
     function test_emptyTreeRoot() public view {
@@ -138,7 +143,7 @@ contract MerkleTest is VaultTestBase {
         bytes32 commitment = keccak256("c");
         _deposit(alice, ETH, 1, commitment);
 
-        bytes32 leaf = ReferenceMerkle.leafHash(uint64(2 ** 31), ETH, 1 ether, commitment);
+        bytes32 leaf = ReferenceMerkle.leafHash(uint64(2 ** 31), alice, ETH, 1 ether, commitment);
         bytes32[] memory zeros = ReferenceMerkle.zeroHashes();
         bytes32 rightHalf = leaf;
         for (uint256 h = 0; h < 31; h++) {
@@ -163,7 +168,7 @@ contract MerkleTest is VaultTestBase {
         bytes32 commitment = keccak256("last");
         _deposit(alice, ETH, 0, commitment);
 
-        bytes32 node = ReferenceMerkle.leafHash(uint64(2 ** 32 - 1), ETH, 0.1 ether, commitment);
+        bytes32 node = ReferenceMerkle.leafHash(uint64(2 ** 32 - 1), alice, ETH, 0.1 ether, commitment);
         for (uint256 h = 0; h < 32; h++) {
             node = ReferenceMerkle.nodeHash(branch[h], node);
             assertEq(_load(BRANCH_SLOT + h), branch[h]);

@@ -99,7 +99,7 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
 
         ghostDeposited[token] += amount;
         ghostDepositCount++;
-        _leaves.push(ReferenceMerkle.leafHash(leafIndex, token, amount, commitment));
+        _leaves.push(ReferenceMerkle.leafHash(leafIndex, actor, token, amount, commitment));
     }
 
     function acceptRoot(uint256 rootSeed, uint64 lezBlockId) external {
@@ -124,7 +124,7 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
             denomIndex: denomIndex,
             recipient: _recipients[recipientSeed % _recipients.length],
             feeRecipient: (recipientSeed >> 128) % 2 == 0 ? address(0) : _recipients[(recipientSeed >> 64) % 3],
-            relayFee: withFee ? vault.standardRelayFee(token, denomIndex) : 0,
+            relayFee: withFee ? vault.relayFees(token)[denomIndex] : 0,
             burnRoot: _acceptedRoots[rootSeed % _acceptedRoots.length],
             nullifier: keccak256(abi.encode("nullifier", _nonce++))
         });

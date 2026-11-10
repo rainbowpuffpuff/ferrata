@@ -38,9 +38,19 @@ contract FerrataVault is ReentrancyGuardTransient {
         uint8 denomIndex;
         address recipient;
         address feeRecipient; // address(0) means: pay the fee to msg.sender
-        uint256 relayFee; // 0 or exactly standardRelayFee[token][denomIndex]
+        uint256 relayFee; // 0 or exactly the registered relay fee of this denomination
         bytes32 burnRoot;
         bytes32 nullifier;
+    }
+
+    /// @notice A registration. Everything here except the caps is write-once.
+    struct TokenParams {
+        uint256[] denominations; // 1..8, strictly increasing, non-zero, each a multiple of lezUnit
+        uint256[] relayFees; // one per denomination, each at most 1% of it
+        uint256 lezUnit; // a power of ten: base units per LEZ unit of the wrapped token
+        uint256 unitWeight; // global-cap value units per lezUnit
+        CapParams depositCap;
+        CapParams releaseCap;
     }
 
     struct TokenConfig {
@@ -49,6 +59,7 @@ contract FerrataVault is ReentrancyGuardTransient {
         uint256 lezUnit;
         uint256 unitWeight;
         uint256[] denominations;
+        uint256[] relayFees;
     }
 
     /// @dev Token bucket. Invariant: `level <= capacity` whenever `capacity != UNLIMITED`.
@@ -67,6 +78,8 @@ contract FerrataVault is ReentrancyGuardTransient {
     uint256 public constant DEPOSIT_ROOT_SLOT = 0;
     /// @notice Storage slot of `nextLeafIndex`; nothing else is packed into it.
     uint256 public constant NEXT_LEAF_INDEX_SLOT = 1;
+    /// @notice Storage slot of `storedLezConfigId`, which the LEZ configuration's `Init` attests (reciprocal pairing).
+    uint256 public constant LEZ_CONFIG_ID_SLOT = 2;
 
     uint256 public constant TREE_DEPTH = 32;
     uint256 public constant MAX_LEAVES = 2 ** TREE_DEPTH;
@@ -81,8 +94,8 @@ contract FerrataVault is ReentrancyGuardTransient {
 
     bytes1 public constant LEAF_PREFIX = 0x00;
     bytes1 public constant NODE_PREFIX = 0x01;
-    /// @notice sha256("ferrata/vault/leaf/v1")
-    bytes32 public constant LEAF_TAG = 0x084d5599858dde3bdadaec9a70979121276922b791de25071d145ac6b13c4286;
+    /// @notice sha256("ferrata/vault/leaf/v2")
+    bytes32 public constant LEAF_TAG = 0x17b9508a0d0cbf61207c0fcb66f06ed92a6aeec110a54860479f0bf3cd6aff0b;
     /// @notice sha256("ferrata/vault/burn-root/v1")
     bytes32 public constant ROOT_DOMAIN = 0xba4a8683e1dc6ef6e077a4cae76d60704f4e7fcd4fc6947d6c99cae3b4195738;
     /// @notice sha256("ferrata/vault/release/v1")
@@ -108,10 +121,12 @@ contract FerrataVault is ReentrancyGuardTransient {
     bytes32 public depositRoot;
     /// @notice Number of leaves in the deposit tree, i.e. the index the next leaf gets. Storage slot 1.
     uint64 public nextLeafIndex;
+    /// @notice Copy of the immutable `lezConfigId`, storage slot 2. A bytes32 starts a new slot, so slot 1 holds
+    ///         only `nextLeafIndex`.
+    bytes32 public storedLezConfigId;
     /// @dev `_branch[h]` is the root of the most recently completed subtree of height h. It is read only while
     ///      bit h of `nextLeafIndex` is set, which is exactly when that subtree is the left neighbour of the
-    ///      next leaf's path at height h. A static array always starts a new slot, so slot 1 holds only
-    ///      `nextLeafIndex`.
+    ///      next leaf's path at height h.
     bytes32[TREE_DEPTH] private _branch;
 
     address public admin;
@@ -129,7 +144,6 @@ contract FerrataVault is ReentrancyGuardTransient {
     mapping(address token => TokenConfig) private _tokens;
     mapping(address token => bool) public tokenDepositsFrozen;
     mapping(address token => bool) public tokenReleasesFrozen;
-    mapping(address token => mapping(uint8 denomIndex => uint256)) public standardRelayFee;
     mapping(address token => uint256) public releaseDelay;
     mapping(address token => uint256) public escrowed;
     mapping(address depositor => uint64) public depositCount;
@@ -164,12 +178,12 @@ contract FerrataVault is ReentrancyGuardTransient {
         bytes32 burnRoot
     );
 
-    event TokenRegistered(address indexed token, uint256[] denominations, uint256 lezUnit, uint256 unitWeight);
+    event TokenRegistered(
+        address indexed token, uint256[] denominations, uint256[] relayFees, uint256 lezUnit, uint256 unitWeight
+    );
     event DepositsEnabledSet(address indexed token, bool enabled);
     event TokenCapSet(address indexed token, Direction indexed direction, uint256 capacity, uint256 refillPerSecond);
     event GlobalCapSet(Direction indexed direction, uint256 capacity, uint256 refillPerSecond);
-    event UnitWeightSet(address indexed token, uint256 unitWeight);
-    event StandardRelayFeeSet(address indexed token, uint8 indexed denomIndex, uint256 fee);
     event ReleaseDelaySet(address indexed token, uint256 delay);
     event MinLezDepthSet(uint32 depth);
     event AdminTransferStarted(address indexed currentAdmin, address indexed pendingAdmin);
@@ -203,6 +217,7 @@ contract FerrataVault is ReentrancyGuardTransient {
     error DenominationNotMultipleOfLezUnit();
     error InvalidUnitWeight();
     error RelayFeeTooHigh();
+    error RelayFeeCountMismatch();
     error ReleaseDelayTooLong();
 
     error DepositsAreFrozen();
@@ -278,6 +293,7 @@ contract FerrataVault is ReentrancyGuardTransient {
         releaseImageId = releaseImageId_;
         rootImageId = rootImageId_;
         lezConfigId = lezConfigId_;
+        storedLezConfigId = lezConfigId_;
 
         // The root of the empty tree, so that `depositRoot` is always the root of the current tree.
         bytes32 emptySubtree = bytes32(0);
@@ -381,37 +397,30 @@ contract FerrataVault is ReentrancyGuardTransient {
     // Admin: token registry, caps, fees, delays, finality depth
     // ------------------------------------------------------------------------------------------------------------
 
-    /// @notice Registers a token (ETH is `address(0)`). A token is registered once; its denominations and
-    ///         `lezUnit` never change, because in-flight claims refer to them. Deposits start enabled.
-    /// @param denominations_ 1 to 8 strictly increasing, non-zero amounts, each an exact multiple of `lezUnit`.
-    /// @param lezUnit A power of ten: the base-unit size of one LEZ unit of the wrapped token.
-    /// @param unitWeight Global-cap value units per `lezUnit` of this token.
-    function registerToken(
-        address token,
-        uint256[] calldata denominations_,
-        uint256 lezUnit,
-        uint256 unitWeight,
-        CapParams calldata depositCap,
-        CapParams calldata releaseCap
-    ) external onlyAdmin {
+    /// @notice Registers a token (ETH is `address(0)`), once. Denominations, relay fees, `lezUnit` and `unitWeight`
+    ///         are write-once, because in-flight deposits and burns refer to them; only the caps, `depositsEnabled`
+    ///         and the release delay stay adjustable. Deposits start enabled.
+    function registerToken(address token, TokenParams calldata p) external onlyAdmin {
         TokenConfig storage cfg = _tokens[token];
         if (cfg.registered) revert TokenAlreadyRegistered();
         if (token != ETH && token.code.length == 0) revert TokenHasNoCode();
-        _checkLezUnit(lezUnit);
-        _checkUnitWeight(unitWeight);
-        _checkDenominations(denominations_, lezUnit);
+        _checkLezUnit(p.lezUnit);
+        _checkUnitWeight(p.unitWeight);
+        _checkDenominations(p.denominations, p.lezUnit);
+        _checkRelayFees(p.relayFees, p.denominations);
 
         cfg.registered = true;
         cfg.depositsEnabled = true;
-        cfg.lezUnit = lezUnit;
-        cfg.unitWeight = unitWeight;
-        cfg.denominations = denominations_;
-        _initBucket(_tokenDepositCap[token], depositCap.capacity, depositCap.refillPerSecond);
-        _initBucket(_tokenReleaseCap[token], releaseCap.capacity, releaseCap.refillPerSecond);
+        cfg.lezUnit = p.lezUnit;
+        cfg.unitWeight = p.unitWeight;
+        cfg.denominations = p.denominations;
+        cfg.relayFees = p.relayFees;
+        _initBucket(_tokenDepositCap[token], p.depositCap.capacity, p.depositCap.refillPerSecond);
+        _initBucket(_tokenReleaseCap[token], p.releaseCap.capacity, p.releaseCap.refillPerSecond);
 
-        emit TokenRegistered(token, denominations_, lezUnit, unitWeight);
-        emit TokenCapSet(token, Direction.Deposit, depositCap.capacity, depositCap.refillPerSecond);
-        emit TokenCapSet(token, Direction.Release, releaseCap.capacity, releaseCap.refillPerSecond);
+        emit TokenRegistered(token, p.denominations, p.relayFees, p.lezUnit, p.unitWeight);
+        emit TokenCapSet(token, Direction.Deposit, p.depositCap.capacity, p.depositCap.refillPerSecond);
+        emit TokenCapSet(token, Direction.Release, p.releaseCap.capacity, p.releaseCap.refillPerSecond);
     }
 
     /// @notice Enables or disables deposits of a token (delisting). Releases are unaffected.
@@ -436,23 +445,6 @@ contract FerrataVault is ReentrancyGuardTransient {
     function setGlobalCap(Direction direction, uint256 capacity, uint256 refillPerSecond) external onlyAdmin {
         _updateBucket(_globalBucket(direction), capacity, refillPerSecond);
         emit GlobalCapSet(direction, capacity, refillPerSecond);
-    }
-
-    function setUnitWeight(address token, uint256 unitWeight) external onlyAdmin {
-        _requireRegistered(token);
-        _checkUnitWeight(unitWeight);
-        _tokens[token].unitWeight = unitWeight;
-        emit UnitWeightSet(token, unitWeight);
-    }
-
-    /// @notice Sets the single non-zero relay fee a release of this denomination may carry.
-    function setStandardRelayFee(address token, uint8 denomIndex, uint256 fee) external onlyAdmin {
-        _requireRegistered(token);
-        uint256[] storage denoms = _tokens[token].denominations;
-        if (denomIndex >= denoms.length) revert InvalidDenominationIndex();
-        if (fee >= denoms[denomIndex]) revert RelayFeeTooHigh();
-        standardRelayFee[token][denomIndex] = fee;
-        emit StandardRelayFeeSet(token, denomIndex, fee);
     }
 
     /// @notice Sets the per-token delay between a burn root's acceptance and releases against it.
@@ -550,6 +542,11 @@ contract FerrataVault is ReentrancyGuardTransient {
         return _tokens[token].denominations;
     }
 
+    /// @notice The registered relay fees, one per denomination (write-once).
+    function relayFees(address token) external view returns (uint256[] memory) {
+        return _tokens[token].relayFees;
+    }
+
     /// @return capacity Bucket capacity (UNLIMITED when disabled).
     /// @return refillPerSecond Refill rate.
     /// @return available Amount that could be consumed now (UNLIMITED when disabled).
@@ -574,14 +571,14 @@ contract FerrataVault is ReentrancyGuardTransient {
         return (b.capacity, b.refillPerSecond, _available(b));
     }
 
-    /// @notice The deposit-tree leaf: sha256(0x00 || LEAF_TAG || uint64 leafIndex || token || uint256 amount ||
-    ///         commitment), 125 bytes of preimage.
-    function leafHash(uint64 leafIndex, address token, uint256 amount, bytes32 commitment)
+    /// @notice The deposit-tree leaf: sha256(0x00 || LEAF_TAG || uint64 leafIndex || depositor || token ||
+    ///         uint256 amount || commitment), 145 bytes of preimage.
+    function leafHash(uint64 leafIndex, address depositor, address token, uint256 amount, bytes32 commitment)
         public
         pure
         returns (bytes32)
     {
-        return sha256(abi.encodePacked(LEAF_PREFIX, LEAF_TAG, leafIndex, token, amount, commitment));
+        return sha256(abi.encodePacked(LEAF_PREFIX, LEAF_TAG, leafIndex, depositor, token, amount, commitment));
     }
 
     // ------------------------------------------------------------------------------------------------------------
@@ -611,7 +608,7 @@ contract FerrataVault is ReentrancyGuardTransient {
         escrowed[token] += amount;
 
         uint64 leafIndex = nextLeafIndex;
-        _insertLeaf(leafIndex, leafHash(leafIndex, token, amount, commitment));
+        _insertLeaf(leafIndex, leafHash(leafIndex, msg.sender, token, amount, commitment));
         emit Deposit(msg.sender, index, leafIndex, token, amount, commitment);
     }
 
@@ -664,7 +661,7 @@ contract FerrataVault is ReentrancyGuardTransient {
         if (block.timestamp < acceptedAt + releaseDelay[r.token]) revert ReleaseDelayNotElapsed();
         if (nullifierUsed[r.nullifier]) revert NullifierAlreadyUsed();
         // A free-form fee would fingerprint the user: only 0 or the standard fee is accepted.
-        if (r.relayFee != 0 && r.relayFee != standardRelayFee[r.token][r.denomIndex]) revert InvalidRelayFee();
+        if (r.relayFee != 0 && r.relayFee != cfg.relayFees[r.denomIndex]) revert InvalidRelayFee();
         if (amount > escrowed[r.token]) revert InsufficientEscrow();
     }
 
@@ -811,6 +808,14 @@ contract FerrataVault is ReentrancyGuardTransient {
 
     function _checkUnitWeight(uint256 unitWeight) internal pure {
         if (unitWeight == 0 || unitWeight > MAX_UNIT_WEIGHT) revert InvalidUnitWeight();
+    }
+
+    /// @dev One fee per denomination, each at most 1% of it (fee <= denomination / 100, i.e. fee * 100 <= it).
+    function _checkRelayFees(uint256[] calldata fees, uint256[] calldata denoms) internal pure {
+        if (fees.length != denoms.length) revert RelayFeeCountMismatch();
+        for (uint256 i = 0; i < fees.length; i++) {
+            if (fees[i] > denoms[i] / 100) revert RelayFeeTooHigh();
+        }
     }
 
     /// @dev 1..8 entries, strictly increasing (so all non-zero), each <= MAX_DENOMINATION and a multiple of lezUnit.
