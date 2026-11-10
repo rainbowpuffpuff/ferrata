@@ -1,0 +1,23 @@
+{
+  "attestation_key": "b707f1eedbcf1ed8ea4b7e06677eb1c1925117a021edf5d782452abc305fbc6a",
+  "certificate": "c8ec29dc1685718e6dfb551eff8445b19e5d09e590ab997cb6ac55f3b8780681adac2598ef4b0d929436d169da372aed076f33f5c7f3c4c9bca8c9f90342a40a",
+  "certificate_message": "666572726174612f6174746573742d6b65792f76310000000000000000000000000000000000000000000000000000000000007a69dd2c90d0de9cfc2902490b0e84c46418b7cd6297da0edd60a6d1dd7209f00c890b1a6f0016c8ded14023b552fe82fac5422c9d400101010101010101010101010101010101010101010101010101010101010101b707f1eedbcf1ed8ea4b7e06677eb1c1925117a021edf5d782452abc305fbc6a",
+  "channel_key": "3b14e3980d05dd3651ff5956758dd4cfecc33b837775c9e3d90279d34d3fb0a2",
+  "config_tip_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "deployment": {
+    "channel_id": "0101010101010101010101010101010101010101010101010101010101010101",
+    "evm_chain_id": 31337,
+    "lez_config_id": "da0edd60a6d1dd7209f00c890b1a6f0016c8ded14023b552fe82fac5422c9d40",
+    "vault": "0xdd2c90d0de9cfc2902490b0e84c46418b7cd6297"
+  },
+  "final_msg_id": "cc5ae8ce6324d1be95406175c3ba3934914e8ff91fac717ae3d95eb568cca79e",
+  "key_set_hash": "868b734d7ac5b0604f203fed7f95f24497a37299b50ad9fb0ab7093ae3bc8b14",
+  "posting_timeframe": 0,
+  "signature": "f2664ce7e1d1aa47cd0268fdc8caf876ac452235e3fde5fba304d8b431bab792d663801ea2b4a2d21577afa9f0d8982cdbfcb817dfa60a926837a5d1205cca01",
+  "tip_hash": "774780c60182852a283544372f21f24d9f532953bbdd8d71823a012edb322bbb",
+  "tip_id": 202,
+  "tip_node_block": "cfd9acd44928dca4cba58aa3345aed4c00251d57140d78f3d1d59d5d2299a1ee",
+  "tip_node_slot": 8856117,
+  "tip_recorded": "Finalized",
+  "what": "The attestor on the lab's data: the lab sequencer's channel key (throwaway devnet key) certifies an attestation key (derived from the public label ferrata/realblocks/attestation-key/v1, throwaway); the attestation key signs the final-tier message v2 for T."
+}

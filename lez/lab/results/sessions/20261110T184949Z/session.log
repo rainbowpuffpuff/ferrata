@@ -1,0 +1,7 @@
+[18:49:49] session 20261110T184949Z
+[18:49:50] no saved generation: a new zone
+[18:49:50] Bedrock node up: {"cryptarchia_info":{"lib":"402255ecf1448ec5d136c293f7eb818cd6137af8175bdc72f06a99cf2eef8a52","lib_slot":0,"tip":"402255ecf1448ec5d136c293f7eb818cd6137af8175bdc72f06a99cf2eef8a52","slot":0,"height":0,"state":"Bootstrapping"},"phase":"InitialBlockDownload"}
+[18:49:54] node slot 0 is unix second 1785493027
+[18:49:55] the sequencer did not start its scheduler (start 1)
+[18:49:55] sequencer had already exited (101)
+[18:49:55] node stopped (exit 143)

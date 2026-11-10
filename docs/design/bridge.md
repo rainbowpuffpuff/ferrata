@@ -660,6 +660,10 @@ One fixture in which the checkpoint program, the release program and the v3 vaul
 
 Found on the way: the bridge core's checkpoint encodings are still SPEC-v2 and could not equal the program's (the SPEC-v3 ones were written a second time beside it); adding code to the core, even code the release guest does not use, changes that guest's image id; and LEZ signs transactions with fresh randomness, so a prover must keep the blocks it proved a candidate for, because the finalisation has to prove the same ones.
 
+### 18.8 The checkpoint on real LEZ blocks: measured (real verifier, v5 vault, rule (B); a devnet)
+
+Rule (B) over blocks 8..=202 of the lab's chain (`lez/lab/`): LEZ v0.4.0-rc1's own sequencer and its Logos Blockchain node, unmodified, a devnet with one validator and leader proofs in dev mode, whose channel holds one key. The checkpoint core parses and re-hashes all 202 blocks and checks all 202 inscriptions exactly as made (no mismatch; the inscribed blocks carry status `Pending`, the RPC serves them `Finalized`; the channel's posting timeframe is 0 on Bedrock). The lab's channel key certified an attestation key, which attested block 202 final by the node's own rule (n = 1, t = 1). 195 blocks, 585 transactions, 7.66M cycles, proven in 39.5 s on one NVIDIA L4, wrapped to Groth16; the v5 vault in mode (B), with RISC Zero's verifier, accepts it, finalises it after the hour, and refuses a flipped seal byte, another key set and an early finalisation; 347,832 + 195,149 gas. No bridge program runs in the lab: no burns. `checkpoint/RESULTS.md`, "Real LEZ blocks".
+
 ## 19. Specified but not yet in the prototypes
 
 The vault prototype (v4) implements D3 to D5, D9, the vault items of D11 and D13 except fees, and both rules; the checkpoint prototype implements D3 with rule (A), and rule (B) in its own guest; the core and the release guest implement SPEC-v2. Specified, and missing from them:
