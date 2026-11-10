@@ -33,12 +33,13 @@ echoes an Ethereum beacon. Rule (B): one proof that `t` sequencers attested the 
 once `W = Δ` (1 h by default) has passed, unless a watcher cancels it. Releases pay out against a RISC Zero proof of
 a burn under a finalised, unrevoked burn root.
 
-Status: prototype evidence for a grant proposal. **Not audited, not deployed anywhere.** In the vault's own 286
+Status: prototype evidence for a grant proposal. **Not audited, not deployed anywhere.** In the vault's own 342
 tests proofs are mocked: the base verifier accepts exactly the (image id, journal digest) pairs a test registers.
 It sits behind RISC Zero's unmodified `RiscZeroVerifierEmergencyStop`, as a deployment's would. `test/real/` runs
 the return leg once with no mock on the Ethereum side: RISC Zero's real Groth16 verifier behind the same stop, a
 real proof of the checkpoint program for the candidate, a second one for the finalisation, and real proofs of the
-release program ([`../e2e/README.md`](../e2e/README.md)). The LEZ side of that run is a stand-in: blocks built with
+release program ([`../e2e/README.md`](../e2e/README.md)), and `test/real/RuleBReal.t.sol` verifies the real rule (B)
+checkpoint proof on a rule (B) vault. The LEZ side of those runs is a stand-in: blocks built with
 test sequencer keys, no node, no bridge program. The commitment and nullifier derivations, the LEZ programs and
 the zkVM guests are out of this directory's scope.
 
@@ -70,7 +71,8 @@ Toolchain and dependencies:
   compiled unmodified against the OpenZeppelin v5.2.0 that risc0-ethereum itself pins.
 
 The vault takes the vendored one-function `IRiscZeroVerifier`, whose selector is the same as RISC Zero's. Its
-runtime is 23,650 bytes, 926 below the EIP-170 limit, so there is little room left for more features.
+runtime is 24,312 bytes, 264 below the EIP-170 limit, with the library (4,917 bytes) holding the cold admin code;
+further features need more of it moved to the library.
 
 ## How it works
 
@@ -215,13 +217,15 @@ cannot lock the vault for good.
 Nothing is declared before these, and the only parent contract (`ReentrancyGuardTransient`) uses transient
 storage. Tests read slots 0–2 with `vm.load`, including in every step of the invariant campaign. The rest of the
 layout (`forge inspect FerrataVault storageLayout`):
-- 35–38: the roles, and `retired`;
-- 39–41: the deposit, release and checkpoint freeze deadlines;
-- 42–53: checkpoint state (`finalState`, `delta`, `revocationEpoch`, beacons, candidates, history, burn-root index,
-  refund boundary and its finalisation time, and the imported leaf count and sunset flag of `finalState`);
-- 54–65: registry, per-token freezes, delay history, escrow, owed, counters, nullifiers, refunded leaves, per-token
+- 35–37: the roles, with `retired` packed beside the freeze authority;
+- 38–40: the deposit, release and checkpoint freeze deadlines;
+- 41–52: checkpoint state (`finalState`, `delta`, `revocationEpoch`, beacons, candidates, history, burn-root index,
+  refund boundary and its finalisation time, and the imported leaf count, sunset flag and finalisation time of
+  `finalState` in one slot);
+- 53–64: registry, per-token freezes, delay history, escrow, owed, counters, nullifiers, refunded leaves, per-token
   buckets;
-- 66–69 and 70–73: the global buckets.
+- 65–68 and 69–72: the global buckets;
+- 73–75: the watchers; 76–80: the pending role proposal (v4).
 
 ## Encodings
 
@@ -500,30 +504,35 @@ without a key unless `FERRATA_FREEZE_AUTHORITY` names one. The design's defaults
 All tests are in `test/`. The mocks are in `test/mocks/`. `test/utils/ReferenceMerkle.sol` is a plain,
 non-incremental restatement of the tree. `test/utils/VaultTestBase.sol` rebuilds both journals word by word from
 the table above and drives real candidate → beacon → finalisation sequences with the test committee (n = 4, t = 3,
-`turnSeconds` = 900 s, Δ = 4 h, so `W` = 4 h 30 min).
+`turnSeconds` = 900 s, Δ = 4 h, so `W` = 4 h 30 min); rule (B) vaults use `turnSeconds` = 0 and Δ = 1 h.
 
 | File | What it checks |
 |---|---|
 | `Deposit.t.sol` | ETH, 6- and 18-decimal, USDT-style; fee-on-transfer and false-returning tokens rejected; denomination, index, commitment rules; unregistered and delisted tokens; a full tree refuses both deposit kinds and changes nothing (D9); plain ETH and unknown calls refused |
-| `Checkpoint.t.sol` | Beacons (one per block, nonce from prevrandao). Candidate rules. The finality rule: no beacon old enough, too-early beacon, nonce not matching the named beacon, stale parent, competing candidates, a Δ raise applying only to later candidates. The committee-sized wait, refused one second before `W` and accepted at it for t = 2, 3, 5, 7; the wait is the candidate's. Key-set floors at submission and finalisation. The checkpoint freeze stops finalisation until it lapses. Monotonicity: a lower count and a dropped sunset are refused; a later sunset checkpoint cannot lower or move the boundary. `cancelCandidate`: only the freeze authority; unknown or finalised states refused; a cancelled candidate cannot be finalised; resubmission works and restarts the wait; works under the freeze. Δ only up and capped. |
+| `Checkpoint.t.sol` | Beacons (one per block, nonce from prevrandao). Candidate rules. The finality rule: no beacon old enough, too-early beacon, nonce not matching the named beacon, stale parent, competing candidates, a Δ raise applying only to later candidates. The committee-sized wait, refused one second before `W` and accepted at it for t = 2, 3, 5, 7; the wait is the candidate's. Key-set floors at submission and finalisation. The checkpoint freeze stops finalisation until it lapses. Monotonicity: a lower count and a dropped sunset are refused; a later sunset checkpoint cannot lower or move the boundary. `cancelCandidate`: only the freeze authority; unknown or finalised states refused; a cancelled candidate cannot be finalised; resubmission works and restarts the wait; works under the freeze. Δ only up and capped. v4: a finalisation journal must equal the candidate's in every word (D11: the tip, n and t too); a checkpoint claiming more imported leaves than the tree is refused, the bound inclusive (D11); a watcher cancels too. |
 | `Revocation.t.sol` | Inside and outside the window. Release against a revoked root reverts. Nullifiers used before a revocation stay used. A re-proven checkpoint is accepted again, but the same nullifier never pays twice. Pending candidates are invalidated. A revocation restores the imported leaf count and the sunset flag. |
-| `Refund.t.sol` | Retirement is one-way. Refunds are refused before retirement, before sunset, below the boundary, before `revokeWindow` has passed (refused one second before, paid at it), under the global release freeze (not under a per-token one), twice, with a wrong path, to anyone but the leaf's depositor, for an index of 2^32 or more, and when releases took the escrow. A forged sunset checkpoint revoked inside the window pays nothing, then or later. The first sunset checkpoint fixes the boundary and the opening time. |
+| `Refund.t.sol` | Retirement is one-way. Refunds are refused before retirement, before sunset, below the boundary, before `revokeWindow` has passed (refused one second before, paid at it), under the global release freeze (not under a per-token one), twice, with a wrong path, to anyone but the leaf's depositor, for an index of 2^32 or more, and when releases took the escrow. A forged sunset checkpoint revoked inside the window pays nothing, then or later. The first sunset checkpoint fixes the boundary and the opening time. v4: the second in which the sunset checkpoint can still be revoked pays no refund, the next one does, and no second allows both (D11); refunds draw on the token's and the global release bucket (D13); others retire only after 30 days without a finalisation. |
 | `Release.t.sol` | Releases of every token kind, delisted tokens, nullifiers, relay fees, the relayer, escrow limits, image-id separation, the always-rejecting verifier, re-entry through recipient and token |
-| `ReleaseDelay.t.sol` | Delay changes apply only to later roots (raising and lowering), per-token delays, the registration delay; every delay setting between `minReleaseDelay` and `revokeWindow`; a fuzzed check of the history lookup against a linear scan |
+| `ReleaseDelay.t.sol` | Delay changes apply only to later roots (raising and lowering), per-token delays, the registration delay; every delay setting between `minReleaseDelay` and `revokeWindow`; a fuzzed check of the history lookup against a linear scan; v4: a delay equal to `revokeWindow` opens the second after the last revocable one, a shorter delay at its own second (D11) |
 | `PullPayment.t.sol` | ETH recipient that rejects then claims; blacklisted ERC-20 recipient; rejecting relayer; 600 kB revert bomb; gas burner; refund to a rejecting depositor; `claimOwed` only by the payee, not re-enterable; one stuck payee blocks nobody |
 | `JournalBinding.t.sol` | One test per field of the release journal, and per field of the 17-word checkpoint journal at both `submitCandidate` and `finalize` (a proof differing in exactly that field is rejected, with a positive control in the same test); relayer redirection, fee and replay attacks |
-| `EmergencyStop.t.sol` | After a guardian stop, `submitCandidate`, `finalize` and `release` revert, while cancellation, refund, `claimOwed`, revocation and both role handovers work; the proof-of-exploit stop; no undo |
+| `EmergencyStop.t.sol` | After a guardian stop, `submitCandidate`, `finalize`, `release` and (v4, D13) `refund` revert, while cancellation, `claimOwed`, revocation, the admin handover and the timelocked role change work; the proof-of-exploit stop; no undo |
 | `Freeze.t.sol` | All 32 combinations of the five freezes; every freeze lapses after `maxFreeze`; renewal; a lost key cannot lock the vault |
-| `Admin.t.sol` | Constructor checks, including `turnSeconds` and `minReleaseDelay`; the v3 domain tag; write-once registry; relay-fee ceiling (fuzzed); role separation; two-step handovers |
+| `Admin.t.sol` | Constructor checks, including `turnSeconds` and `minReleaseDelay`; the v3 domain tag; write-once registry; relay-fee ceiling (fuzzed); role separation; two-step handovers (v4: the admin's own; the freeze authority changes only through `proposeRoles`) |
 | `Caps.t.sol`, `Merkle.t.sol`, `Privacy.t.sol`, `TreeVectors.t.sol`, `GasScenarios.t.sol` | Rate limits; slots 0, 1 and 2 and tree algebra; LEZ-side data never appears in calldata, events or storage writes; vectors; gas |
-| `invariant/` | 10 invariants over 256 runs × 100 calls, listed below |
-| `real/ReturnLeg.t.sol` | No mock: RISC Zero's Groth16 verifier behind its emergency stop, the vault at the addresses the proofs bind, the design's default timers. Before any proof: the checkpoint program's two journals and the release program's two journals are byte for byte the vault's encodings, and the deposit root is the one the bridge core computed. The run: deposits, `submitCandidate` with the real checkpoint seal, the wait, `recordBeacon`, `finalize` with the seal that echoes that beacon, the release delay, `release` of ETH and of the token to recipients that held nothing. Refused: one flipped byte in each of the four seals (selector and each proof word), a valid seal of another statement, each journal field changed under its real seal (candidate, finalisation, release), a replayed release, a release against a root that is not finalised or still delayed, a finalisation one second early with the right nonce, any proof after the stop. `ReturnLegGas` measures every step. |
+| `invariant/` | 12 invariants over 256 runs × 100 calls, on a rule (A) vault (`VaultInvariants`) and on a rule (B) vault (`VaultInvariantsB`), listed below |
+| `ModeB.t.sol` (v4) | Rule (B): the constructor (turnSeconds 0 under B, non-zero under A); a candidate records no beacon and keeps its journal digest; final at its wait and not a second before, whatever its t; every journal word (the 11 the caller can change, and echoNonce) must be the candidate's; `recordBeacon` and `finalize` are rule (A) only, `finalizeAttested` rule (B) only; a watcher cancels within the wait and the same proof waits again in full; revocation, a competing finalisation, a pending duplicate, the checkpoint freeze, the verifier stop; monotonicity and the leaf bound; a Δ raise only for later candidates; the program's image id pinned; a release against a rule (B) root |
+| `Roles.t.sol` (v4) | Watchers: a 12-hour pause that never shortens a freeze and that the freeze authority can lift, renewable only from now, no other power, every slot counts, nobody else pauses. The admin's role change: admin only, applied by anyone 14 days later and not a second earlier, the old roles holding until then, nothing to apply, address(0) keeping the freeze authority, an empty set removing the watchers, a new proposal restarting the clock, the admin never becoming freeze authority. Keyless retirement 30 days after deployment or the last finalisation, the freeze authority at any time. The release floor: the deployment's global bucket, the global and the per-token bucket in value units, saturation, registration; deposits not floored. A verifier that is not an untripped stop refused; a renounced stop owner cannot stop it, a proof of exploit still can |
+| `real/ReturnLeg.t.sol` | No mock: RISC Zero's Groth16 verifier behind its emergency stop, the vault at the addresses the proofs bind, the design's default timers. Before any proof: the checkpoint program's two journals and the release program's two journals are byte for byte the vault's encodings, and the deposit root is the one the bridge core computed. The run: deposits, `submitCandidate` with the real checkpoint seal, the wait, `recordBeacon`, `finalize` with the seal that echoes that beacon, the release delay, `release` of ETH and of the token to recipients that held nothing. Refused: one flipped byte in each of the four seals (selector and each proof word), a valid seal of another statement, each journal field changed under its real seal (candidate, finalisation, release), a replayed release, a release against a root that is not finalised or still delayed, a finalisation one second early with the right nonce, any proof after the stop. `ReturnLegGas` measures every step. v4 runs it unchanged except where v4 refuses earlier (a finalisation journal with another tip, n or t is refused by the vault before the proof, D11). |
+| `real/RuleBReal.t.sol` (v4) | No mock, rule (B): the real `checkpoint_b` proof of `gpu-prover/results/ruleb-l4b/` wrapped to Groth16 (fixture `test/real/fixtures/rule-b.json`), RISC Zero's verifier behind its stop, a rule (B) vault constructed at the address the journal binds on chain id 1. Accepted; its journal digest kept; final after one hour and not a second earlier; refused with one flipped byte in the selector or any proof word, with each journal field changed, and by a rule (A) vault (rule (A)'s image id); a watcher cancels it. `RuleBRealGas` measures it |
 
 The invariant handler deposits, submits candidates with committees of four sizes (n, t) = (3, 2), (4, 3), (7, 5),
 (10, 7) and finalises them after their own `W`, submits candidates that break monotonicity and cancels candidates,
-then tries to finalise both kinds after their full wait with valid proofs. It also revokes, retires, refunds,
+then tries to finalise both kinds after their full wait with valid proofs, and the pending one before its wait.
+It finalises under the vault's rule (`finalizeAttested` under rule (B)). It also revokes, retires, refunds,
 releases (some to payees that cannot receive), claims, replays nullifiers and refunds, donates, moves time, and
-changes freezes, caps and delays. Its 10 invariants:
+changes freezes, caps and delays; watchers pause and cancel, and the admin's role proposals are applied on time
+and early. Its 12 invariants:
 - `balance == escrowed + totalOwed + donations` (an equality, so value stranded in the vault fails it too), and
   `escrowed == deposits − releases − refunds`, for every token;
 - `totalOwed` equals the sum over all payees;
@@ -537,44 +546,33 @@ changes freezes, caps and delays. Its 10 invariants:
 - no candidate that breaks monotonicity or was cancelled is ever finalised; nothing is submitted or finalised under
   a checkpoint freeze; and, judged from the handler's own records, a refund is paid exactly when the rules allow it
   (refused although allowed counts as a failure too);
-- the leaf count, root and slot 2 match the reference.
+- the leaf count, root and slot 2 match the reference;
+- (v4) the freeze authority and the watchers are the handler's model, changed only by a proposal applied after its
+  14 days, and `checkpointsFrozenUntil` is the model's (watcher pauses reach 12 h ahead and never shorten a freeze);
+- (v4) no candidate is finalised before its wait, and under rule (B) no beacon is ever recorded.
 
-Results of the final runs, on 2026-11-10:
-
-```
-forge build --force --sizes   Compiler run successful!   (no compiler warnings, no lint findings; all contracts under EIP-170)
-forge test             Ran 21 test suites in 17.02s (75.05s CPU time): 286 tests passed, 0 failed, 0 skipped (286 total tests)
-
-forge coverage --report summary      (all 286 tests, including the invariant campaign)
-| File                 | % Lines           | % Statements       | % Branches        | % Funcs          |
-| src/FerrataVault.sol | 100.00% (456/456) | 100.00% (584/584)  | 100.00% (108/108) | 100.00% (83/83)  |
-| Total (incl. tests)  | 95.96% (974/1015) | 96.60% (1164/1205) | 94.44% (170/180)  | 94.33% (183/194) |
-
-tools/check_tree_vectors.py   ok: 8 leaves, 33 zero hashes, roots and paths match
-tools/mutation_spotcheck.py   127/127 mutants killed
-```
-
-The unit tests alone (without the invariant campaign) also cover 100% of the vault's lines, statements, branches and
-functions.
-
-After `test/real/` and `script/` were added (the vault's source is unchanged), on 2026-11-10, on a 16-core cloud
-machine with forge 1.3.6 and solc 0.8.26:
+Results of the final v4 runs, on 2026-11-10, on the Modal build box (`spike/modal-build/mrun`), forge 1.3.6, solc
+0.8.26:
 
 ```
-forge build --sizes    FerrataVault runtime 23,650 bytes (926 under EIP-170); RiscZeroGroth16Verifier 4,810
-forge test             Ran 23 test suites in 14.74s (144.22s CPU time): 301 tests passed, 0 failed, 0 skipped (301 total tests)
-                       (the 286 above and the 15 of test/real/, which verify real proofs)
+forge build --force --sizes   FerrataVault runtime 24,312 bytes (264 under EIP-170); FerrataRegistry 4,917
+forge fmt --check             ok
+forge test                    Ran 29 test suites: 363 tests passed, 0 failed, 0 skipped (363 total tests)
+                              (including the 12 invariants twice and the 21 tests of test/real/ with real proofs)
 
-forge coverage --report summary
-| File                   | % Lines            | % Statements       | % Branches        | % Funcs          |
-| src/FerrataVault.sol   | 100.00% (458/458)  | 100.00% (579/579)  | 100.00% (103/103) | 100.00% (83/83)  |
-| script/RoundTrip.s.sol | 0.00% (0/72)       | 0.00% (0/80)       | 0.00% (0/28)      | 0.00% (0/12)     |
-| Total (incl. tests)    | 90.53% (1100/1215) | 91.12% (1252/1374) | 80.31% (155/193)  | 89.79% (211/235) |
+forge coverage --report summary      (all 363 tests)
+| File                    | % Lines           | % Statements      | % Branches        | % Funcs          |
+| src/FerrataRegistry.sol | 100.00% (112/112) | 100.00% (150/150) | 100.00% (24/24)   | 100.00% (16/16)  |
+| src/FerrataVault.sol    | 100.00% (434/434) | 100.00% (531/531) | 100.00% (104/104) | 100.00% (84/84)  |
+
+tools/mutation_spotcheck.py   in four slices (0–44, 44–88, 88–132, 132–175): 44/44, 44/44, 44/44, 43/43 killed
+                              = 175/175, every one by the unit suites (the invariant campaign was never needed)
 ```
 
-The script is not run by the tests (it was run on a local fork: "Sepolia round trip"). That machine's forge counts
-the vault's lines, statements and branches slightly differently from the laptop's build quoted above (458, 579 and
-103 against 456, 584 and 108); both report 100%. The mutation spot-check was not repeated: the vault is unchanged.
+v3's final runs (same commands, before v4): 286 tests on the laptop, then 301 with `test/real/` on the box, 100%
+coverage of the vault, 127/127 mutants. In v4 the invariant handler donates ETH by self-destruct instead of
+`vm.deal`: a balance set with `vm.deal` was lost once a later call made the vault DELEGATECALL its library (forge
+1.3.6, seen in a failing run's trace). Test contracts are not held to EIP-170 (the handler is 30,261 bytes).
 
 Fuzz tests use 256 runs. Invariants use 256 runs × 100 calls each. Handler calls with nothing to do are discarded,
 so the run table counts exactly what happened. Averaged over the ten campaigns of the final run, one campaign has
@@ -585,8 +583,10 @@ must retire the vault, finalise a sunset checkpoint and wait `revokeWindow` firs
 that did not revert, including calls that had nothing to do, so its figures (1,500 finalisations, 900
 revocations, 640 releases, 350 refunds per campaign) overstated what happened.
 
-Coverage shows only that code ran. The mutation spot-check plants 127 hand-written one-line bugs in a scratch copy
-of the contract, across deposits, the tree, the registry and delay bounds, the constructor, candidates, the
+Coverage shows only that code ran. The mutation spot-check plants 175 hand-written one-line bugs in a scratch copy
+of the vault and its library (v3's 127, 30 of them rewritten where v4 moved or changed the text, and 48 for v4: the
+two rules, the journal digest, D11, watchers, role proposals, keyless retirement, the floor, refunds on the release
+buckets and the stop), across deposits, the tree, the registry and delay bounds, the constructor, candidates, the
 committee checks and the wait, beacons, finalisation and monotonicity, the journal layout, cancellation,
 revocation, refunds and their opening rules, releases, pull payments, freezes, roles and caps. Each is caught by
 named failing tests; for example, dropping the release-freeze check from `refund` is caught by
