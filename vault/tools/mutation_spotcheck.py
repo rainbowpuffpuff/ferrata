@@ -223,6 +223,7 @@ def prepare_workspace(work: str) -> None:
         f.write(config.replace("optimizer = true", "optimizer = false"))
     shutil.copytree(os.path.join(ROOT, "src"), os.path.join(work, "src"))
     shutil.copytree(os.path.join(ROOT, "test"), os.path.join(work, "test"))
+    shutil.copytree(os.path.join(ROOT, "script"), os.path.join(work, "script"))  # test/real imports script/TestToken.sol
     os.symlink(os.path.join(ROOT, "lib"), os.path.join(work, "lib"))
 
 
