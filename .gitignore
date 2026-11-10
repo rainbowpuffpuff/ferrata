@@ -44,3 +44,15 @@ __pycache__/
 /vault/notes/
 /docs/design/finality-rule/results/*.tmp
 /docs/design/finality-rule/results/run-all.log
+
+# gpu-prover: binaries downloaded from the Volume (scripts/fetch.sh) and staged inputs
+# (scripts/stage-inputs.sh, scripts/stage-lez.sh, lez/scripts/stage-prove-attest.sh); the
+# MANIFEST.json files record their sha256.
+/gpu-prover/bin/
+/gpu-prover/prover/target/
+/gpu-prover/inputs/programs/
+/gpu-prover/inputs/fixtures/
+/gpu-prover/inputs-lez/prove_private
+/gpu-prover/inputs-lez/mainnet-p1899/
+/gpu-prover/inputs-lez-attest/prove_attest
+/gpu-prover/inputs-lez-attest/mainnet-attest-*/

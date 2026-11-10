@@ -37,9 +37,11 @@ execution gas of every public transaction of §2 of a million cycles or more cha
 0.08%, that of the cheaper ones by up to 4.4% (at most 1,826 cycles), and the public part of the
 private update of §3 by 1,889 cycles (70,090 to 71,979): the configuration gained the chain id
 (8 bytes), the record the parent hash and the chain id (40 bytes), and the program is another
-binary. **The two real proofs (§3) are of the earlier images**: `e7cec90e…` on the laptop CPU
+binary. **The two real proofs of an update (§3) are of the earlier images**: `e7cec90e…` on the laptop CPU
 (9,045,235 cycles, 54 min, 9.18 GiB, a 227,080-byte receipt) and `cec0bc68…` on one NVIDIA L4
-GPU (`gpu-prover/RESULTS.md`). The image of this branch has no real proof.
+GPU (`gpu-prover/RESULTS.md`). **One private attestation was proven on these images** (§5.5,
+consumer `711584ff…`), on the same GPU: 13.5 s, a 227,170-byte receipt, settled with the receipt
+verified. The update path of §3 has no real proof on this program image.
 
 | operation (mainnet, 512-member committees) | transactions | largest transaction, execution gas (cycles) | total execution gas | total storage gas (bytes) |
 |---|---:|---:|---:|---:|
@@ -389,7 +391,7 @@ The proof claims the program's image (`Disclosed`), the boundary shows the progr
 and the header record it writes, and the sender only as a blinded alias, which is also the fee
 payer's alias.
 
-**Two real proofs, both of images before this branch: `e7cec90e…` on the laptop CPU, `cec0bc68…` on a GPU.** The image `cec0bc68…` (the program before attestation was added) was proven on one NVIDIA L4 (49.5 s for `execute_and_prove`, 55.7 s for the whole run; receipt 227,080 bytes, transaction 231,034 bytes), and the transaction settled through LEZ's state machine with the receipt verified, at 479,854 execution gas and 224,063 storage gas: `results/prove-private.log`, `results/stage2-private-tx.borsh`, `gpu-prover/RESULTS.md`. The binary built from this branch holds another program image (`2f3566d4…`) and refuses that transaction; the image of this branch has not been proven. The rest of this paragraph is the CPU proof of `e7cec90e…`. The one real proof
+**Two real proofs, both of images before this branch: `e7cec90e…` on the laptop CPU, `cec0bc68…` on a GPU.** The image `cec0bc68…` (the program before attestation was added) was proven on one NVIDIA L4 (49.5 s for `execute_and_prove`, 55.7 s for the whole run; receipt 227,080 bytes, transaction 231,034 bytes), and the transaction settled through LEZ's state machine with the receipt verified, at 479,854 execution gas and 224,063 storage gas: `results/prove-private.log`, `results/stage2-private-tx.borsh`, `gpu-prover/RESULTS.md`. The binary built from this branch holds another program image (`2f3566d4…`) and refuses that transaction; this path has not been proven on the image of this branch (a private attestation has: §5.5). The rest of this paragraph is the CPU proof of `e7cec90e…`. The one real proof
 of this path (`harness/src/bin/prove_private.rs`, `RISC0_DEV_MODE=0`, CPU only) proved the
 program image `e7cec90e…` (the image of commit 83b4b55, before the merge) and was settled through
 LEZ's state machine: proven, then settled with the real receipt verified (`Proof::is_valid_for`,
@@ -848,10 +850,12 @@ in the receipt of 306 logs takes 8,857,963 user cycles in ten segments (2,249,88
 accelerator), because the 58 KB proof passes through both transitions and is hashed in the
 second.
 
-No real proof of this path has been made. `harness/src/bin/prove_attest.rs` is the program that
-makes one, as `prove_private` does for §3, and `scripts/stage-prove-attest.sh` stages its input
+**One real proof of this path, on a GPU.** `harness/src/bin/prove_attest.rs` makes it, as
+`prove_private` does for §3, and `scripts/stage-prove-attest.sh` stages its input
 (`../gpu-prover/inputs-lez-attest/MANIFEST.json`: the binary and the fixture files it reads, by
-size and SHA-256). The command, on a machine with r0vm 3.0.5 built with CUDA:
+size and SHA-256). The binary built at commit d498591 (sha256 `69d00216…f64e`; the guests are
+those of this section) ran on one NVIDIA L4 on Modal, with r0vm 3.0.5 built with CUDA as its
+prover (`../gpu-prover/RESULTS.md`, run `gpu-l4-attest`), with this command:
 
 ```sh
 FERRATA_EXPECT_CONSUMER_IMAGE_ID=711584ffe09f0b115132e33ce1485666710bc73e696e66fcc54d00aad0db949f \
@@ -859,9 +863,24 @@ FERRATA_ATTEST_FIXTURE_DIR=/path/to/mainnet-attest-2026-11-10 RISC0_DEV_MODE=0 R
 /usr/bin/time -v ./prove_attest --tx-out stage4-private-attest-tx.borsh > prove-attest.log 2>&1
 ```
 
-It proves, settles the transaction there with the receipt verified, and writes it;
-`prove_attest --settle FILE` settles it again elsewhere. `results/prove-attest-dry-run.log` is
-this command in dev mode.
+| the private attestation, proven (`results/prove-attest.log`) | |
+|---|---|
+| proven | the consumer's two private transitions (`AttestPrivately`, which sends `Read`: 36,126 user cycles; the record's reply, which verifies the `Transfer`: 346,210), the fee transfer from the private account, and LEZ's privacy-preserving circuit over them (`lee::execute_and_prove`, `ProverOpts::succinct()`). The image claimed is the consumer's, `711584ff…949f`, disclosed. |
+| wall clock | **13.5 s** for `execute_and_prove`; 0:16.99 for the whole run (setup and settlement included), 15.21 s of user time on one core |
+| machine | one NVIDIA L4 (23,034 MiB), 4 CPU cores, 32 GiB; GPU memory peak 11,296 MiB; peak host memory 0.77 GiB (810,428 kB, `/usr/bin/time -v`) |
+| receipt | **227,170 bytes** (the succinct `InnerReceipt`, borsh); the transaction is **231,214 bytes** (`results/stage4-private-attest-tx.borsh`, sha256 `f89bc6e7…b746`) |
+| settlement | in the run, with the receipt verified: execution gas 421,642 (`PRIVATE_VERIFY_GAS` 409,764 + public part 11,878 cycles), storage gas 224,063, base fee 5,165,640: the figures of the dev-mode run above |
+
+The transaction was then settled again from the file on another machine (a laptop, 2.6 s, no
+proving), with the same binary: `RISC0_DEV_MODE=0 ./prove_attest --settle FILE` rebuilds the
+state from the fixture, checks that the transaction claims this binary's consumer image, and
+LEZ's settlement verifies the receipt (`results/prove-attest-settle.log`: "receipt verified",
+the same charge). With one bit of the receipt flipped (bit 0 of byte 115,607 of the file) the
+same command refuses it: `Invalid privacy preserving execution circuit proof`
+(`../gpu-prover/logs/lez-attest-tampered-settle.log`). `results/prove-attest-dry-run.log` is the
+proving command in dev mode. This is a single run on a shared cloud GPU, not a benchmark; the
+path was not proven on a CPU, and the attestation of the 306-log receipt (ten segments) was not
+proven at all.
 
 ### Decisions where the design note was silent or did not fit LEZ v0.4
 
@@ -917,9 +936,10 @@ this command in dev mode.
   fixture is Gloas since October and no public node serves a bootstrap for it, so nothing here
   ran on a testnet: mainnet only.
 - **One hop, not a chain of hops**, was measured (the request allows several).
-- **The private path has no real proof**, and its cost in LEZ's privacy-preserving circuit is
-  not measured; a read exposes which record was read (§4), and this fixture reads the record of
-  the fact's own block, not the newest one.
+- **The private path has one real proof, on a GPU** (§5.5: 13.5 s on an NVIDIA L4). It was not
+  proven on a CPU, so what a user's own machine needs for it is not measured, and the 306-log
+  case was not proven. A read exposes which record was read (§4), and this fixture reads the
+  record of the fact's own block, not the newest one.
 - **Predicates compare 256-bit words** with a constant or with another fact of the same request;
   there are no arithmetic or boolean combinations beyond "all hold".
 - **The transaction carries the proofs.** A log in a large receipt needs the whole receipt: 58.8
@@ -1047,7 +1067,10 @@ RISC0_DEV_MODE=0 /usr/bin/time -v target/debug/prove_private --tx-out results/st
   > results/prove-private.log 2>&1                   # a real proof of §3 for this image, then its settlement
                                                      # (about an hour on a laptop CPU; not made for this image)
 RISC0_DEV_MODE=0 target/debug/prove_private --settle FILE     # settle a proven transaction again
-scripts/stage-prove-attest.sh OUTDIR                 # the input of a real proof of the private attestation (§5)
+scripts/stage-prove-attest.sh OUTDIR                 # the input of a real proof of the private attestation (§5);
+                                                     # ../gpu-prover/README.md has the commands of the GPU run
+RISC0_DEV_MODE=0 target/debug/prove_attest --settle results/stage4-private-attest-tx.borsh \
+  > results/prove-attest-settle.log 2>&1             # settle the proven attestation again, receipt verified
 cd .. && cargo test -p ferrata-spectests --test steps --test mainnet_e2e -- --nocapture   # the step API against
                                                      # process_update; the record the program writes
 lez/scripts/fetch-attest-fixture.py OUTDIR           # how the Stage 4 fixture was fetched: run today, it

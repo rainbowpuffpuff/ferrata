@@ -6,10 +6,12 @@ dropped client connection does not stop a build or a proof halfway:
     MODAL_PROFILE=<profile> modal run --detach modal_app.py::build             # CPU: binaries -> Volume bin/
     MODAL_PROFILE=<profile> modal run --detach modal_app.py --fixtures cp-empty-1
     MODAL_PROFILE=<profile> modal run --detach modal_app.py::lez --run <name>  # LEZ light-client update
+    MODAL_PROFILE=<profile> modal run --detach modal_app.py::lez --job lez-attest --run <name>  # LEZ private attestation
 
 The guests are never rebuilt here. `inputs/programs/*.bin` are the guest program binaries of the local
-ferrata-checkpoint build (scripts/stage-inputs.sh); `inputs-lez/prove_private` is the LEZ host binary
-with its guests embedded (scripts/stage-lez.sh). Each run checks the image ids. See README.md.
+ferrata-checkpoint build (scripts/stage-inputs.sh); `inputs-lez/prove_private` and
+`inputs-lez-attest/prove_attest` are LEZ host binaries with their guests embedded (scripts/stage-lez.sh,
+and the repository's lez/scripts/stage-prove-attest.sh). Each run checks the image ids. See README.md.
 """
 
 from __future__ import annotations
@@ -37,6 +39,20 @@ BUILD_CPU_CORES = 16.0
 BUILD_MEMORY_MIB = 65536  # nvcc on the rv32im kernels, many at once
 HARD_TIMEOUT_S = 2 * 3600  # no function runs longer than 2 h
 LEZ_IMAGE_ID = "cec0bc687443be08c29c3216de8a3ed5f00a29d224fc266fe272f78cfe0f4d78"
+# The LEZ jobs: a prebuilt host binary that proves through r0vm (RISC0_SERVER_PATH). `dir` is where its
+# staged inputs are attached in the GPU container; `tx` and `log` are the files it writes; `lines` are
+# the starts of the log lines copied into run.json.
+LEZ_JOBS = {
+    "lez-update": {  # the light-client update, lez RESULTS.md §3
+        "dir": "/lez", "binary": "prove_private", "tx": "stage2-private-tx.borsh", "log": "prove-private.log",
+        "lines": ("program image", "private transition", "REAL PROOF", "DRY RUN", "settled", "wrote", "store", "record"),
+    },
+    "lez-attest": {  # one private attestation, lez RESULTS.md §5.5
+        "dir": "/lez-attest", "binary": "prove_attest", "tx": "stage4-private-attest-tx.borsh", "log": "prove-attest.log",
+        "lines": ("consumer image", "record:", "| AttestPrivately", "| the record's reply", "REAL PROOF", "DRY RUN",
+                  "settled", "wrote"),
+    },
+}
 
 HERE = pathlib.Path(__file__).resolve().parent
 PATH = "/root/.cargo/bin:/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
@@ -59,7 +75,11 @@ base = (
 )
 # Local files are attached when a container starts (not image layers).
 build_image = base.add_local_dir(HERE / "prover", "/src/prover", ignore=["target", "**/target"])
-gpu_image = base.add_local_dir(HERE / "inputs", "/inputs").add_local_dir(HERE / "inputs-lez", "/lez")
+gpu_image = (
+    base.add_local_dir(HERE / "inputs", "/inputs")
+    .add_local_dir(HERE / "inputs-lez", "/lez")
+    .add_local_dir(HERE / "inputs-lez-attest", "/lez-attest")
+)
 
 app = modal.App(APP_NAME)
 volume = modal.Volume.from_name(VOLUME_NAME, create_if_missing=True)
@@ -317,31 +337,45 @@ def _prove_checkpoint(name: str, run: str, limit_s: int) -> dict:
     return _finish(out, run, record, ("ok", "name", "run", "gpu", "image_ids_equal", "prover_wall_s", "container_s_until_done", "finished_at_utc"))
 
 
-def _prove_lez(run: str, limit_s: int) -> dict:
-    """The LEZ light-client update (lez RESULTS.md §3): the prebuilt prove_private, with
-    r0vm 3.0.5 built with CUDA as its prover (RISC0_SERVER_PATH), exactly the documented command. Writes
-    prove-private.log, stage2-private-tx.borsh, run.json and gpu-samples.csv to results/<run>/lez-update/."""
+def _prove_lez(run: str, limit_s: int, job: str = "lez-update") -> dict:
+    """One LEZ proof with a prebuilt host binary, r0vm 3.0.5 built with CUDA as its prover
+    (RISC0_SERVER_PATH), exactly the documented command. `lez-update` is the light-client update (lez
+    RESULTS.md §3): prove_private writes prove-private.log and stage2-private-tx.borsh. `lez-attest` is one
+    private attestation (lez RESULTS.md §5.5): prove_attest writes prove-attest.log and
+    stage4-private-attest-tx.borsh. Both, with run.json and gpu-samples.csv, go to results/<run>/<job>/."""
     import os
     import shutil
     import subprocess
 
+    spec = LEZ_JOBS[job]
+    src, binary, tx_name, log_name = spec["dir"], spec["binary"], spec["tx"], spec["log"]
     t_start = time.time()
-    out = f"/vol/results/{run}/lez-update"
+    out = f"/vol/results/{run}/{job}"
     os.makedirs(out, exist_ok=True)
     with open(f"{out}/nvidia-smi.txt", "w") as f:
         f.write(_sh("nvidia-smi") + "\n")
-    work = "/root/lez"
+    work = f"/root/{job}"
     r0vm = _local_copy(f"{BIN}/r0vm-cuda", "/root/bin/r0vm")
-    _local_copy("/lez/prove_private", f"{work}/prove_private")
-    manifest = json.load(open("/lez/MANIFEST.json"))
-    hashes_ok = all(_sha256(f"/lez/{p}") == v["sha256"] for p, v in manifest["files"].items())
+    _local_copy(f"{src}/{binary}", f"{work}/{binary}")
+    manifest = json.load(open(f"{src}/MANIFEST.json"))
+    hashes_ok = all(_sha256(f"{src}/{p}") == v["sha256"] for p, v in manifest["files"].items())
+    if job == "lez-update":
+        job_env = {"FERRATA_EXPECT_IMAGE_ID": LEZ_IMAGE_ID, "FERRATA_FIXTURE_DIR": f"{src}/mainnet-p1899"}
+        source = {"expected_image_id": LEZ_IMAGE_ID, "ferrata_lez_commit": manifest["ferrata_lez_commit"]}
+    else:
+        # The image the proof covers is the consumer's; the manifest holds the ids the staged binary
+        # reported (`prove_attest --image-ids`), and the binary stops unless its consumer image is that one.
+        fixture = pathlib.PurePosixPath(manifest["fixtures_from"]).name
+        job_env = {"FERRATA_EXPECT_CONSUMER_IMAGE_ID": manifest["expected_consumer_image_id"],
+                   "FERRATA_ATTEST_FIXTURE_DIR": f"{src}/{fixture}"}
+        source = {"expected_consumer_image_id": manifest["expected_consumer_image_id"],
+                  "program_image_id": manifest["program_image_id"], "ferrata_commit": manifest["ferrata_commit"]}
 
     sampler = _GpuSampler(f"{out}/gpu-samples.csv")
-    env = {**os.environ, "FERRATA_EXPECT_IMAGE_ID": LEZ_IMAGE_ID, "FERRATA_FIXTURE_DIR": "/lez/mainnet-p1899",
-           "RISC0_DEV_MODE": "0", "RISC0_SERVER_PATH": r0vm}
+    env = {**os.environ, **job_env, "RISC0_DEV_MODE": "0", "RISC0_SERVER_PATH": r0vm}
     t0 = time.time()
-    with open(f"{work}/prove-private.log", "w") as log:  # `> prove-private.log 2>&1`
-        proc = subprocess.Popen(["/usr/bin/time", "-v", "./prove_private", "--tx-out", "stage2-private-tx.borsh"],
+    with open(f"{work}/{log_name}", "w") as log:  # `> <log> 2>&1`
+        proc = subprocess.Popen(["/usr/bin/time", "-v", f"./{binary}", "--tx-out", tx_name],
                                 cwd=work, env=env, stdout=log, stderr=subprocess.STDOUT)
         try:
             rc = proc.wait(timeout=limit_s)
@@ -350,19 +384,20 @@ def _prove_lez(run: str, limit_s: int) -> dict:
             rc = proc.wait()
     t_end = time.time()
     sampler.stop()
-    for f in ("prove-private.log", "stage2-private-tx.borsh"):
+    for f in (log_name, tx_name):
         if os.path.exists(f"{work}/{f}"):
             shutil.copy2(f"{work}/{f}", f"{out}/{f}")
-    lines = open(f"{work}/prove-private.log").read().splitlines()
+    lines = open(f"{work}/{log_name}").read().splitlines()
     print("\n".join(lines[-45:]), flush=True)
-    tx = f"{work}/stage2-private-tx.borsh"
+    tx = f"{work}/{tx_name}"
     record = {
-        "ok": rc == 0 and hashes_ok and os.path.exists(tx), "name": "lez-update", "run": run, "exit_code": rc,
-        **_container_facts(), "expected_image_id": LEZ_IMAGE_ID, "input_hashes_equal_manifest": hashes_ok,
-        "binary_sha256": manifest["files"]["prove_private"]["sha256"], "ferrata_lez_commit": manifest["ferrata_lez_commit"],
+        "ok": rc == 0 and hashes_ok and os.path.exists(tx), "name": job, "run": run, "exit_code": rc,
+        "timed_out": rc != 0 and (t_end - t0) >= limit_s,
+        **_container_facts(), **source, "input_hashes_equal_manifest": hashes_ok,
+        "binary_sha256": manifest["files"][binary]["sha256"],
         "r0vm": _sh(r0vm, "--version"), "wall_s": t_end - t0, "container_s_until_done": t_end - t_start,
-        "gnu_time": _gnu_time(lines), "gpu_stats": sampler.stats(t0, t_end), "gpu_stats_window": "whole prove_private run",
-        "log_lines": [l for l in lines if l.startswith(("program image", "private transition", "REAL PROOF", "DRY RUN", "settled", "wrote", "store", "record"))],
+        "gnu_time": _gnu_time(lines), "gpu_stats": sampler.stats(t0, t_end), "gpu_stats_window": f"whole {binary} run",
+        "log_lines": [l for l in lines if l.startswith(spec["lines"])],
         "tx_bytes": os.path.getsize(tx) if os.path.exists(tx) else None, "tx_sha256": _sha256(tx) if os.path.exists(tx) else None,
         "build_info": json.load(open(f"{BIN}/r0vm-cuda.json")), "r0vm_sha256_here": _sha256(r0vm),
         "finished_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -382,8 +417,8 @@ def prove(name: str, run: str, limit_s: int) -> dict:
 
 
 @app.function(**GPU_FUNCTION)
-def prove_lez(run: str, limit_s: int) -> dict:
-    return _prove_lez(run, limit_s)
+def prove_lez(run: str, limit_s: int, job: str = "lez-update") -> dict:
+    return _prove_lez(run, limit_s, job)
 
 
 @app.function(**GPU_FUNCTION)
@@ -393,7 +428,7 @@ def batch(jobs: list[str], run: str, limits: dict) -> list[dict]:
     records = []
     for job in jobs:
         try:
-            r = _prove_lez(run, limits[job]) if job == "lez-update" else _prove_checkpoint(job, run, limits[job])
+            r = _prove_lez(run, limits[job], job) if job in LEZ_JOBS else _prove_checkpoint(job, run, limits[job])
         except Exception as e:  # recorded, then the next job
             r = {"ok": False, "name": job, "run": run, "error": repr(e)}
         records.append(r)
@@ -403,7 +438,7 @@ def batch(jobs: list[str], run: str, limits: dict) -> list[dict]:
 
 @app.local_entrypoint()
 def batch_run(jobs: str, run: str = ""):
-    """`--jobs name=limit_s,…` (fixture names or `lez-update`), proven in this order in one container."""
+    """`--jobs name=limit_s,…` (fixture names, `lez-update` or `lez-attest`), proven in this order in one container."""
     run = run or time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
     pairs = [j.split("=") for j in jobs.split(",") if j]
     limits = {name: int(limit) for name, limit in pairs}
@@ -436,12 +471,14 @@ def main(fixtures: str = "cp-empty-1", run: str = "", limit_s: int = 1800):
 
 
 @app.local_entrypoint()
-def lez(run: str = "", limit_s: int = 3600):
-    """The LEZ light-client update proof (one container)."""
+def lez(run: str = "", limit_s: int = 3600, job: str = "lez-update"):
+    """One LEZ proof in one container: `--job lez-update` (the light-client update, the default) or
+    `--job lez-attest` (one private attestation)."""
+    assert job in LEZ_JOBS, f"unknown LEZ job {job!r}: one of {sorted(LEZ_JOBS)}"
     run = run or time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
     t0 = time.time()
-    record = prove_lez.remote(run, limit_s)
+    record = prove_lez.remote(run, limit_s, job)
     record["client_round_trip_s"] = time.time() - t0
     (HERE / "logs").mkdir(exist_ok=True)
-    (HERE / "logs" / f"run-{run}-lez-update.json").write_text(json.dumps(record, indent=2) + "\n")
-    print(f"RESULT lez-update: ok={record['ok']} wall_s={record['wall_s']:.1f} gpu={record['gpu']} tx_bytes={record['tx_bytes']}")
+    (HERE / "logs" / f"run-{run}-{job}.json").write_text(json.dumps(record, indent=2) + "\n")
+    print(f"RESULT {job}: ok={record['ok']} wall_s={record['wall_s']:.1f} gpu={record['gpu']} tx_bytes={record['tx_bytes']}")
