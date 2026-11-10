@@ -1,0 +1,166 @@
+{
+  "ok": true,
+  "name": "rb-empty-360-n4",
+  "run": "ruleb-l4b",
+  "exit_code": 0,
+  "timed_out": false,
+  "gpu_type_requested": "L4",
+  "gpu": "NVIDIA L4, 23034 MiB, 610.57.04, 8.9",
+  "container_cpu_cores": 4.0,
+  "container_memory_mib": 32768,
+  "nproc": "4",
+  "modal_task_id": "ta-01M73ABTPTNT927C80KHG5PK6R",
+  "modal_region": "us-east",
+  "modal_cloud_provider": "CLOUD_PROVIDER_GCP",
+  "image_ids_here": {
+    "checkpoint-b": "0xd359754364c10357103359276867f4fe58842c42cbb30a3ada5b241de6aa0d64",
+    "checkpoint": "0xe0b86641a069bf1ed2def38c8c14b846e7fe55626e518defc3cc7f71146d61b9",
+    "segment": "0xd42edfd361b12f83b20996241e5622c62d6e362b349b361117cfcd8dee496594"
+  },
+  "image_ids_local": {
+    "checkpoint": "0xe0b86641a069bf1ed2def38c8c14b846e7fe55626e518defc3cc7f71146d61b9",
+    "checkpoint-b": "0xd359754364c10357103359276867f4fe58842c42cbb30a3ada5b241de6aa0d64",
+    "segment": "0xd42edfd361b12f83b20996241e5622c62d6e362b349b361117cfcd8dee496594"
+  },
+  "image_ids_equal": true,
+  "input_hashes_equal_manifest": true,
+  "source_commit": "69f9ca411dd65f3388e581566eef9392d03e489e",
+  "prover_wall_s": 32.068199634552,
+  "container_s_until_done": 33.7404305934906,
+  "gnu_time": {
+    "user_s": "29.35",
+    "system_s": "2.82",
+    "cpu_percent": "100%",
+    "elapsed": "0:32.06",
+    "max_rss_kib": "878580",
+    "exit_status": "0"
+  },
+  "gpu_stats": {
+    "samples": 166,
+    "sample_period_ms": 200,
+    "gpu_memory_used_mib_before": 4.0,
+    "gpu_memory_used_mib_peak": 11155.0,
+    "power_w_peak": 74.56,
+    "sm_clock_mhz_peak": 2040.0,
+    "temperature_c_peak": 75.0,
+    "gpu_busy_seconds": 26.400000000000002,
+    "first_busy_to_last_busy_s": 29.98200011253357,
+    "window_samples": 154,
+    "gpu_util_pct_mean_in_window": 65.57142857142857,
+    "gpu_util_share_of_samples_above_0_in_window": 0.8506493506493507,
+    "gpu_mem_bandwidth_util_pct_mean_in_window": 31.0974025974026,
+    "power_w_mean_in_window": 55.886233766233765
+  },
+  "gpu_stats_window": "execution end to prover exit",
+  "prove": {
+    "execute_s": 0.850246086,
+    "image_id": "0xd359754364c10357103359276867f4fe58842c42cbb30a3ada5b241de6aa0d64",
+    "input_bytes": 308322,
+    "input_sha256": "e210f3c4ba18fa720da96bc41e8498a2162c3ffe25f3b633b8c4f3c7350b6442",
+    "journal_equals_native": true,
+    "name": "rb-empty-360-n4",
+    "paging_cycles": 791955,
+    "program_bytes": 437664,
+    "program_sha256": "386a3a313ad6645acb51a5b92460af2f0840ca55debf7af1a9efc57e109180d9",
+    "prove_session_s": 31.023232886,
+    "prover": "in-process (LocalProver path), risc0-zkvm feature cuda",
+    "receipt_bytes": 224314,
+    "receipt_kind": "succinct",
+    "receipt_sha256": "c5c63867a6cf6f54f0ed7d476e6b9d6529c780dfd7af83ebd74c795ce93b4051",
+    "recursion_s": 7.7386713129999976,
+    "reserved_cycles": 353453,
+    "risc0_zkvm": "3.0.5",
+    "segment_proofs_s": 23.284561573,
+    "segment_times": [
+      {
+        "index": 0,
+        "po2": 20,
+        "prove_s": 3.277009396
+      },
+      {
+        "index": 1,
+        "po2": 20,
+        "prove_s": 2.847229791
+      },
+      {
+        "index": 2,
+        "po2": 20,
+        "prove_s": 2.772089632
+      },
+      {
+        "index": 3,
+        "po2": 20,
+        "prove_s": 2.649642578
+      },
+      {
+        "index": 4,
+        "po2": 20,
+        "prove_s": 2.683142161
+      },
+      {
+        "index": 5,
+        "po2": 20,
+        "prove_s": 2.667108078
+      },
+      {
+        "index": 6,
+        "po2": 20,
+        "prove_s": 2.875069483
+      },
+      {
+        "index": 7,
+        "po2": 20,
+        "prove_s": 2.824591891
+      },
+      {
+        "index": 8,
+        "po2": 18,
+        "prove_s": 0.688678563
+      }
+    ],
+    "segments": 9,
+    "total_cycles": 8650752,
+    "total_s": 31.873539151,
+    "user_cycles": 7505344,
+    "verifies": true
+  },
+  "build_info": {
+    "cuda_base_image": "nvidia/cuda:12.8.0-devel-ubuntu24.04",
+    "nvcc": [
+      "Cuda compilation tools, release 12.8, V12.8.61",
+      "Build cuda_12.8.r12.8/compiler.35404655_0"
+    ],
+    "rustc": "rustc 1.89.0 (29483883e 2025-08-04)",
+    "cargo": "cargo 1.89.0 (c24e10642 2025-06-23)",
+    "gcc": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+    "nvcc_append_flags": "--generate-code arch=compute_89,code=sm_89",
+    "build_container": {
+      "cpu_cores": 16.0,
+      "memory_mib": 65536
+    },
+    "binary": "ferrata-modal-cuda",
+    "source_key": "31ecd5fd46131b5faf35653b8c03c6ddd4bf25435cca8ff17a83a24866c17a1a",
+    "cargo_args": [
+      "build",
+      "--release",
+      "--locked",
+      "--features",
+      "cuda"
+    ],
+    "build_seconds": 1503.7,
+    "built_at_utc": "2026-11-10T09:17:14Z",
+    "sha256": "085c9bf990e6b0134dac862ec419184f7ec6dc9f5683d59e14e9604c21185c64",
+    "bytes": 119441352,
+    "ldd": [
+      "linux-vdso.so.1 (0x00002b236c20e000)",
+      "\tlibstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x00002b2373200000)",
+      "\tlibcuda.so.1 => not found",
+      "\tlibgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00002b237347e000)",
+      "\tlibm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00002b23734ac000)",
+      "\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00002b2373595000)",
+      "\t/lib64/ld-linux-x86-64.so.2 (0x00005644328cb000)"
+    ]
+  },
+  "prover_binary_sha256_here": "085c9bf990e6b0134dac862ec419184f7ec6dc9f5683d59e14e9604c21185c64",
+  "finished_at_utc": "2026-11-10T18:09:23Z"
+}

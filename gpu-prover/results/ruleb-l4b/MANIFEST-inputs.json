@@ -1,0 +1,34 @@
+{
+  "source": "checkpoint (branch rule-b)",
+  "commit": "69f9ca411dd65f3388e581566eef9392d03e489e",
+  "uncommitted_changes": 0,
+  "programs_from": "target/riscv-guest/\u2026/release/{checkpoint,checkpoint_b,segment}.bin built on the Modal build box (risc0-build 3.0.5, rzup Rust 1.88.0, no Docker); checkpoint_b.bin staged as checkpoint-b.bin (the fixture kind)",
+  "local_image_ids": {
+    "checkpoint": "0xe0b86641a069bf1ed2def38c8c14b846e7fe55626e518defc3cc7f71146d61b9",
+    "checkpoint-b": "0xd359754364c10357103359276867f4fe58842c42cbb30a3ada5b241de6aa0d64",
+    "segment": "0xd42edfd361b12f83b20996241e5622c62d6e362b349b361117cfcd8dee496594"
+  },
+  "local_image_ids_from": "target/release/host ids on the build box (results/ruleb-ids.log)",
+  "files": {
+    "fixtures/rb-empty-360-n4.input": {
+      "bytes": 308322,
+      "sha256": "e210f3c4ba18fa720da96bc41e8498a2162c3ffe25f3b633b8c4f3c7350b6442"
+    },
+    "fixtures/rb-empty-360-n4.json": {
+      "bytes": 1399,
+      "sha256": "27e19a930e43e7bd0990fd88e53cba7b43c5cacdc8c3c6351643dcf2c045209d"
+    },
+    "programs/checkpoint-b.bin": {
+      "bytes": 437664,
+      "sha256": "386a3a313ad6645acb51a5b92460af2f0840ca55debf7af1a9efc57e109180d9"
+    },
+    "programs/checkpoint.bin": {
+      "bytes": 441804,
+      "sha256": "c2960f869517d9b9caab82ebe4f0e6fc366cc9e2718abdc2c2b9541cda82c9ed"
+    },
+    "programs/segment.bin": {
+      "bytes": 268888,
+      "sha256": "4748b54053ccbaa8803d79ae30c4bfae163ee0bdbc1be497983d140d881429af"
+    }
+  }
+}

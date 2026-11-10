@@ -258,6 +258,16 @@ certified attestation key in the checkpoint state, so a certificate is checked o
 every proof, would remove about half the check (≈ 0.85M per attestor) at the price of a change to
 `S`; signing attestations with the channel key itself, which would do the same, is what D13 forbids.
 
+**A real proof** (10 Nov, one NVIDIA L4 on Modal, `gpu-prover/modal_app.py` with the build box's
+program binaries; `gpu-prover/results/ruleb-l4b/`): `rb-empty-360-n4` (idle hour, `n` = 4, `t` = 3),
+9 segments, 7,505,344 user cycles (the executor's count) and 8,650,752 in total, proven in 31.9 s
+(33.7 s of container). The succinct receipt (224,314 bytes) verifies on the laptop against
+`checkpoint_b`'s image id and carries the native journal (`gpu-prover/results/verify-local.jsonl`).
+Rule (A)'s idle hour took 24.1 s on the same GPU type (7 segments, "GPU proofs of the final image").
+No Groth16 wrap was made. Two earlier attempts got no L4 within 30 minutes; their waiting clients gave
+up ("Deadline exceeded") and nothing ran; the proof was then spawned without a waiting client
+(`modal_app.py::spawn`) and ran within two minutes.
+
 **Refusals** (`crates/checkpoint-core/tests/rule_b.rs`, 13 tests; every input goes through its byte
 encoding first): too few (`refuses_too_few`); a duplicate signer, as the same attestation twice, one
 channel key with two attestation keys, or one attestation key under two channel keys
