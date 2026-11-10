@@ -1,0 +1,26 @@
+# The zkVM guests (RISC Zero 3.0.5). A workspace of its own so that the patches below apply here
+# and nowhere else. Each guest package is built by risc0-build from methods-segment/ or methods/.
+[workspace]
+resolver = "3"
+members = ["segment", "checkpoint", "micro"]
+
+[workspace.dependencies]
+checkpoint-core = { path = "../crates/checkpoint-core" }
+risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["std"] }
+bytemuck = "1"
+# Pin the versions the patches provide, so the whole graph resolves to the patched crates.
+sha2 = "=0.10.9"
+curve25519-dalek = "=4.1.3"
+
+[patch.crates-io]
+# RISC Zero's accelerated SHA-256 (zkVM sha precompile).
+sha2 = { git = "https://github.com/risc0/RustCrypto-hashes", tag = "sha2-v0.10.9-risczero.0" }
+# RISC Zero's accelerated curve25519 field arithmetic (bigint2 precompile), used by ed25519-dalek.
+curve25519-dalek = { git = "https://github.com/risc0/curve25519-dalek", tag = "curve25519-4.1.3-risczero.0" }
+# The curve25519 patch does its field arithmetic through RISC Zero's crypto-bigint fork (=0.5.5).
+crypto-bigint = { git = "https://github.com/risc0/RustCrypto-crypto-bigint", tag = "v0.5.5-risczero.0" }
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1

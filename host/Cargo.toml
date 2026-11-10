@@ -1,0 +1,18 @@
+[package]
+name = "host"
+version = "0.1.0"
+description = "Executes the checkpoint, segment and micro-benchmark guests on the fixtures; composition demo; proving and Groth16 wrapping"
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+methods = { path = "../methods" }
+methods-plain = { path = "../methods-plain" }
+checkpoint-core = { path = "../crates/checkpoint-core", features = ["std"] }
+# Client only: execution and proving run in r0vm 3.0.5 (installed with rzup), over IPC.
+risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["client"] }
+anyhow = "1"
+bincode = "1.3"
+hex = "0.4"
+serde_json = "1"
