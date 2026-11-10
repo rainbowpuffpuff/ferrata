@@ -63,7 +63,11 @@ contract RoundTrip is Script {
         });
     }
 
-    function _config(IRiscZeroVerifier verifier, address admin) internal view returns (FerrataVault.Deployment memory) {
+    function _config(IRiscZeroVerifier verifier, address admin)
+        internal
+        view
+        returns (FerrataVault.Deployment memory)
+    {
         uint256 delta = vm.envOr("FERRATA_DELTA", uint256(600));
         return FerrataVault.Deployment({
             verifier: verifier,
@@ -82,7 +86,8 @@ contract RoundTrip is Script {
             minReleaseDelay: vm.envOr("FERRATA_MIN_RELEASE_DELAY", uint256(0)),
             admin: admin,
             freezeAuthority: vm.envOr(
-                "FERRATA_FREEZE_AUTHORITY", address(uint160(uint256(keccak256("ferrata testnet: freeze authority (no key)"))))
+                "FERRATA_FREEZE_AUTHORITY",
+                address(uint160(uint256(keccak256("ferrata testnet: freeze authority (no key)"))))
             ),
             globalDepositCap: _unlimited(),
             globalReleaseCap: _unlimited()
@@ -123,7 +128,8 @@ contract RoundTrip is Script {
     }
 
     function _checkpoint(string memory key) internal view returns (FerrataVault.Checkpoint memory c) {
-        (,,,, c) = abi.decode(vm.parseJsonBytes(json, key), (bytes32, uint256, address, bytes32, FerrataVault.Checkpoint));
+        (,,,, c) =
+            abi.decode(vm.parseJsonBytes(json, key), (bytes32, uint256, address, bytes32, FerrataVault.Checkpoint));
     }
 
     /// @dev When the candidate's wait is over: submittedAt + deltaAtSubmit + (t - 1) * turnSeconds.

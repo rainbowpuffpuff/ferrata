@@ -216,7 +216,9 @@ abstract contract ReturnLegFixture is Test {
         assertEq(address(groth16), vm.parseJsonAddress(fixtureJson, ".groth16Verifier"), "verifier address");
         assertEq(address(estop), vm.parseJsonAddress(fixtureJson, ".emergencyStop"), "emergency stop address");
         assertEq(address(token), vm.parseJsonAddress(fixtureJson, ".token"), "token address");
-        assertEq(address(vault), vm.parseJsonAddress(fixtureJson, ".vault"), "the vault is not where the proofs bind it");
+        assertEq(
+            address(vault), vm.parseJsonAddress(fixtureJson, ".vault"), "the vault is not where the proofs bind it"
+        );
     }
 
     // The depositor's two deposits: one ETH denomination, then one token denomination.

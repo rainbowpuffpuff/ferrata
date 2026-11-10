@@ -42,7 +42,7 @@ use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use anyhow::{bail, ensure, Context as _, Result};
-use ferrata_bridge_core::checkpoint::{burn_frontier_hash, key_set_hash_v2, threshold, CheckpointJournalV3, LezState};
+use ferrata_bridge_core::checkpoint::{burn_frontier_hash, threshold, LezState};
 use ferrata_bridge_core::encoding::{config_id_preimage, u256_from_u128, ConfigIdentity, ReleaseInput};
 use ferrata_bridge_core::inbound::{commitment, deposit_leaf, deposit_secret, DestKind};
 use ferrata_bridge_core::outbound::{
@@ -57,6 +57,9 @@ use risc0_zkvm::{
     Groth16Receipt, Groth16ReceiptVerifierParameters, InnerReceipt, ProverOpts, Receipt,
 };
 use serde_json::{json, Value};
+
+mod checkpoint_v3;
+use checkpoint_v3::{key_set_hash_v2, CheckpointJournalV3};
 
 /// The wallet's bridge seed is `sha256` of this label: a test value, written into `wallet.json`.
 const SEED_LABEL: &str = "e2e: user bridge seed (test value)";
@@ -203,7 +206,7 @@ fn cmd_notes(opts: &BTreeMap<String, String>) -> Result<()> {
     for (j, spec) in list(&p, "deposits")?.iter().enumerate() {
         let j = j as u64;
         let (token, value): (Address, U256) = (field(spec, "token")?, amount(spec, "amount")?);
-        let kind = if j % 2 == 0 { DestKind::Private } else { DestKind::Public };
+        let kind = if j.is_multiple_of(2) { DestKind::Private } else { DestKind::Public };
         let dest = label(&format!("e2e: LEZ destination account {j}"));
         let s = deposit_secret(&wallet.auth, &chain_id, &vault, &depositor, j);
         let c = commitment(&s, kind, &dest);
@@ -726,8 +729,9 @@ fn trimmed(path: &Path) -> Option<String> {
     fs::read_to_string(path).ok().map(|s| s.trim().to_string())
 }
 
-/// `{journal, seal?}` of one proof of a run: the journal from the native run's meta file, the seal
-/// from `receipts/<name>/seal.hex` once it exists, with the receipt's journal checked against it.
+/// `{journal, seal?}` of one proof of a run: the journal from the native run's meta file, and the
+/// seal from `receipts/<name>/seal.hex` if that receipt proves this journal. A receipt of another
+/// journal (a finalisation proven for an earlier beacon) is left out and named on stderr.
 fn proof_json(run: &Path, name: &str) -> Result<Option<Value>> {
     let meta_path = run.join(format!("{name}.json"));
     if !meta_path.exists() {
@@ -738,9 +742,12 @@ fn proof_json(run: &Path, name: &str) -> Result<Option<Value>> {
     let receipts = run.join("receipts").join(name);
     if let Some(seal) = trimmed(&receipts.join("seal.hex")) {
         let proven = trimmed(&receipts.join("journal.hex")).with_context(|| format!("{name}: journal.hex"))?;
-        ensure!(proven == hx(&journal), "{name}: the wrapped receipt carries another journal");
         ensure!(unhex_vec(&seal)?.len() == 260, "{name}: seal length");
-        out["seal"] = json!(seal);
+        if proven == hx(&journal) {
+            out["seal"] = json!(seal);
+        } else {
+            eprintln!("{name}: the receipt in receipts/{name}/ proves another journal; no seal in the fixture");
+        }
     }
     Ok(Some(out))
 }

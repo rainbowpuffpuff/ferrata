@@ -32,7 +32,7 @@ contract ReturnLegTest is ReturnLegFixture {
         assertEq(address(vault.verifier()), address(estop));
         assertEq(address(estop.verifier()), address(groth16));
         assertEq(estop.owner(), freezer, "the stop's guardian is the freeze authority (SPEC-v2 section 6)");
-        assertEq(groth16.SELECTOR(), bytes4(candidate.journal.length == 0 ? bytes4(0) : bytes4(0x73c457ba)));
+        assertEq(groth16.SELECTOR(), bytes4(0x73c457ba), "the selector of risc0 3.0.x Groth16 receipts");
         assertEq(vault.checkpointImageId(), checkpointImageId);
         assertEq(vault.releaseImageId(), releaseImageId);
         assertEq(vm.load(address(vault), bytes32(uint256(2))), lezConfigId, "slot 2 holds lezConfigId");
@@ -268,7 +268,9 @@ contract ReturnLegTest is ReturnLegFixture {
         _finalize(beaconIndex);
     }
 
-    /// The release's real seal with one request field changed.
+    /// The release's real seal with one request field changed. A change of denomination alone reaches the verifier
+    /// only where the fee stays valid for it (the ETH release, fee 0); with a registered fee the vault itself
+    /// refuses first, because fees are per denomination.
     function test_negative_release_oneJournalFieldChanged() public {
         _acceptRoot();
         // Escrow for the larger denomination, so that only the proof can object to it.
@@ -284,9 +286,9 @@ contract ReturnLegTest is ReturnLegFixture {
                 if (field == 1) q.relayer = makeAddr("another relayer");
                 if (field == 2) q.relayFee = r.relayFee == 0 ? vault.relayFees(r.token)[0] : 0;
                 if (field == 3) q.nullifier = keccak256("another nullifier");
-                if (field == 4) q.denomIndex = r.token == ETH ? 1 : 0;
-                if (field == 4 && r.token != ETH) q.token = ETH;
-                vm.expectRevert(VerificationFailed.selector);
+                if (field == 4) q.denomIndex = 1;
+                bool feeStillValid = field != 4 || r.relayFee == 0;
+                vm.expectRevert(feeStillValid ? VerificationFailed.selector : FerrataVault.InvalidRelayFee.selector);
                 vault.release(q, r.seal);
             }
             assertFalse(vault.nullifierUsed(r.nullifier));

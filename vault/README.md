@@ -331,6 +331,63 @@ New in v3:
 - **The global cap uses admin-set integer weights, not an oracle.**
 - **No real proofs.** All verification here is mocked. The Groth16 verifier's gas and behaviour are not measured.
 
+## Sepolia round trip (prepared; the stages were rehearsed on a local fork)
+
+`script/RoundTrip.s.sol` and `script/roundtrip.sh` run the return leg on Sepolia in stages:
+RISC Zero's Groth16 verifier, its emergency stop, a test token and the vault are created, both
+assets are registered and deposited, the candidate is submitted with its real seal, the beacon is
+recorded after the wait, the finalisation is proven for that beacon and submitted, and both releases
+are paid. `script/verify-sepolia.sh` re-checks the manifest against any endpoint.
+
+**The proofs bind the deployment.** Both journals carry the chain id and the vault address, and
+`lezConfigId` commits to them too, so a proof made for one vault is worthless for another. The vault's
+address is the sender's plain CREATE address (SPEC-v3 D2), so the fixture is made for one sender and
+one nonce: `e2e/runs/sepolia/` is for `0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07` from nonce 0
+(verifier, stop, token and vault at nonces 0 to 3). `deploy` stops before it broadcasts anything if the
+sender or its nonce would put a contract anywhere else. For another sender, make a new run
+(`e2e/run.sh params <run> 11155111 <sender> <nonce>`, then every step of `e2e/README.md`); the address
+is known before deployment, so the candidate and the releases can be proven first.
+
+**The finalisation proof cannot be made in advance.** It echoes the nonce of a beacon recorded after
+the wait, which is `keccak256(prevrandao, block number, vault)` of the block that mines `recordBeacon`.
+The candidate and release seals of the committed fixture are reused as they are; the finalisation is
+proven again for the real beacon.
+
+```sh
+export SEPOLIA_RPC_URL=<endpoint>
+export ETH_FROM=0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07
+export ETH_KEYSTORE=<keystore file> ETH_PASSWORD=<file holding its password>   # or ETH_KEYSTORE_ACCOUNT=<name>
+cp -r ../e2e/runs/sepolia ../e2e/runs/sepolia-live && rm -rf ../e2e/runs/sepolia-live/receipts/cp-e2e-finalize
+export FERRATA_FIXTURE=$PWD/../e2e/runs/sepolia-live/fixture.json
+
+script/roundtrip.sh status       # the vault is not deployed; the sender's nonce must be 0
+script/roundtrip.sh deploy       # 10 transactions: 4 creations, 2 registrations, mint, approve, 2 deposits
+script/roundtrip.sh submit       # 1 transaction: the candidate, with its real seal
+#   wait W = FERRATA_DELTA + (t - 1) x turnSeconds = 600 s + 2 x 900 s = 40 min   (`status` counts down)
+script/roundtrip.sh beacon       # 1 transaction; writes beacon.json beside the fixture
+#   prove the finalisation for that beacon, from the repository root (e2e/README.md, "Steps"):
+#     e2e/run.sh inputs sepolia-live && e2e/run.sh stage-gpu sepolia-live
+#     the GPU proof of cp-e2e-finalize -> e2e/runs/sepolia-live/receipts/cp-e2e-finalize/receipt-succinct.bin
+#     e2e/run.sh p254 sepolia-live cp-e2e-finalize; the prover image; e2e/run.sh groth16 sepolia-live cp-e2e-finalize
+#     e2e/run.sh fixture sepolia-live
+script/roundtrip.sh finalize     # 1 transaction: the finalisation, with the new seal
+#   wait the release delay: FERRATA_RELEASE_DELAY = 120 s
+script/roundtrip.sh release      # 2 transactions: ETH to a fresh recipient, the token with a relayer's fee
+script/verify-sepolia.sh ../e2e/runs/sepolia-live/manifest.json
+```
+
+The key never appears on a command line: forge reads the keystore file and the password file from
+Foundry's own variables. On a local fork that impersonates the sender, `FERRATA_UNLOCKED=1` replaces
+the keystore.
+
+The testnet configuration (`deploy` only; each from the environment): `FERRATA_DELTA` 600 s as both
+`deltaFloor` and the initial `delta`, `turnSeconds` 900 s (the fixture's posting timeframe of 900
+one-second slots), `FERRATA_RELEASE_DELAY` 120 s, `FERRATA_MIN_RELEASE_DELAY` 0,
+`FERRATA_REVOKE_WINDOW` 1 day, `FERRATA_MAX_FREEZE` 30 days; denominations of 0.001, 0.01 and 0.1 ETH
+and 100, 1,000 and 10,000 test tokens; the sender is the admin and the freeze authority is an address
+without a key unless `FERRATA_FREEZE_AUTHORITY` names one. The design's defaults (3 h 01 min, 24 h,
+7 days) are what `test/real/` uses; the constructor enforces none of them.
+
 ## Tests
 
 All tests are in `test/`. The mocks are in `test/mocks/`. `test/utils/ReferenceMerkle.sol` is a plain,

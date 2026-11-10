@@ -69,7 +69,7 @@ tests then compare both with the contract.
 | 1 | `configId`: bridge core and checkpoint core, from the same preimage | equal |
 | 2 | Deposit root after two deposits: bridge core and the vault (`depositRoot`, slot 0) | equal |
 | 3 | Burn root over the five burns: the bridge core's full tree and incremental tree, and the checkpoint core's frontier | equal |
-| 4 | Checkpoint state `S` at genesis and at `T`, and the checkpoint journal: bridge core and checkpoint core | **differed, fixed.** The bridge core had only the SPEC-v2 layouts: a 13-word journal under the domain `ferrata/vault/checkpoint/v2` and a key-set hash without the posting timeframe. The checkpoint program and the vault are at SPEC-v3 D3 (17 words, domain v3, `ferrata/keyset/v2`). No state or journal of the bridge core could equal the program's. The bridge core gained `CheckpointJournalV3` and `key_set_hash_v2` (`bridge/crates/ferrata-bridge-core/src/checkpoint.rs`, tested); with them both states and both journals are equal byte for byte. The v2 layouts stay for the v2 vault that `bridge/evm-verify` pins. |
+| 4 | Checkpoint state `S` at genesis and at `T`, and the checkpoint journal: the bridge side and the checkpoint core | **differed, resolved beside the core.** The bridge core has only the SPEC-v2 layouts: a 13-word journal under the domain `ferrata/vault/checkpoint/v2` and a key-set hash without the posting timeframe. The checkpoint program and the vault are at SPEC-v3 D3 (17 words, domain v3, `ferrata/keyset/v2`), so no state or journal of the bridge core can equal the program's. The SPEC-v3 journal and key-set hash were written a second time from the specification text, in `bridge/e2e/src/checkpoint_v3.rs` (host only, tested); with them both states and both journals equal the checkpoint core's byte for byte. The bridge core itself was left at SPEC-v2: the guests are built from it, and adding the two encodings to it changed the release guest's program binary (see "Image ids"). Its v2 layouts are still what the v2 vault pinned in `bridge/evm-verify` reads. |
 | 5 | The checkpoint program's 17-word journal and the v3 vault's own encoding of `submitCandidate` and `finalize` arguments | equal byte for byte, both journals (`test_checkpointJournals_areTheVaultsEncoding`) |
 | 6 | The release program's 11-word journal and the v3 vault's encoding | equal byte for byte, both releases (`test_releaseJournals_areTheVaultsEncoding`); the release program is unchanged from the one that met the v2 vault |
 | 7 | The vault's `turnSeconds` and the zone's `posting_timeframe` | **differed between the prototypes' fixtures, aligned here.** The checkpoint bench fixtures use 30 slots, the vault's tests 900 s. The key-set hash binds the timeframe (D3), and the deployment check wants `turnSeconds = posting_timeframe × slot`. This fixture's zone has 900 slots of one second, LEZ's testnet value, and the vault 900 s. Nothing in the code changed. |
@@ -79,15 +79,28 @@ tests then compare both with the contract.
 Changes of the v3 specification that the prototypes do not implement (D11–D13) were not needed
 for the run and were not touched.
 
-**Image ids.** The guests were not rebuilt. Their program binaries embed the absolute paths of the
-machine that built them, so a build anywhere else has other image ids
-(`checkpoint/README.md`, UNVERIFIED 7). The run uses the recorded binaries, whose sources are the
-ones in this repository, unchanged: checkpoint
+**The zone cannot be rebuilt bit for bit, so it is kept.** LEZ signs transactions with fresh
+randomness: two runs of the builder give other block hashes from block 2 on, and so another
+`newState`. A finalisation has to prove the very blocks the candidate proved (the vault looks the
+candidate up by `newState`), and it is built after the beacon, in a second run. The builder
+therefore takes the blocks already inscribed in the run directory (the candidate input is the
+zone's record), signs only what is new, and stops if it cannot rebuild a stored block byte for
+byte. Run again with nothing new, it reproduces every input exactly.
+
+**Image ids.** The guests were not rebuilt and their sources were not touched. Their program
+binaries embed the absolute paths of the machine that built them, so a build anywhere else has
+other image ids (`checkpoint/README.md`, UNVERIFIED 7). The run uses the recorded binaries, whose
+sources are the ones in this repository: checkpoint
 `0x95b816ed2614e340c85fed3ba3dad1f70e7dff2da1363406ade87e1333583caf` (the image `gpu-prover/`
 measured), release `0xdda76672e6e05535117ed6880227a414420344cba9c47b6e112c7dabc5b027c5` (the image
-`bridge/RESULTS.md` measured). `runs/sepolia/programs.json` has their sha256. The new SPEC-v3
-encodings were added to the bridge core without moving a line of `encoding.rs`, whose line numbers
-the release guest's binary carries.
+`bridge/RESULTS.md` measured). `runs/sepolia/programs.json` has their sha256.
+
+How little it takes to move an image id was measured on the way. A first version of this work
+added the SPEC-v3 encodings to `ferrata-bridge-core` in `checkpoint.rs`, a file the release guest
+uses nothing of, and left `encoding.rs` untouched. Built twice at one path on one machine, the
+release guest's program binary had sha256 `f7342a9a…170b` with the addition and `73a82f26…4695`
+without it. The addition was moved out of the core, which is again byte for byte what the recorded
+binaries were built from.
 
 ## Steps
 

@@ -30,7 +30,10 @@
 //! | 13–16 | empty: the finalisation's support (13, 15, 16; 14 is by `T`'s producer) |
 //!
 //! Blocks 10–16 exist only with `--echo-nonce`; blocks 1–9 are the same bytes either way, so the
-//! candidate proven before the beacon is a prefix of what the finalisation proves.
+//! candidate proven before the beacon is a prefix of what the finalisation proves. LEZ signs
+//! transactions with fresh randomness, so two builds of the same zone differ in every block hash:
+//! when `<dir>` already holds a candidate input, its blocks 2–5 are taken from it (their
+//! transactions as they were signed then) and the rebuilt blocks 2–9 must equal the stored bytes.
 //!
 //! Stand-in, as everywhere in this prototype: no LEZ node and no bridge program run. Blocks that
 //! carry calls to the bridge are real-format but not executed (`Chain::push_stand_in`).
@@ -47,6 +50,7 @@ use checkpoint_core::state::{key_set_hash, State};
 use checkpoint_core::tree::zero_hashes;
 use checkpoint_core::wire::{BridgeMessage, Burn, ImportRoot};
 use checkpoint_core::Hash;
+use common::block::Block;
 use common::transaction::LeeTransaction;
 use fidelity::lez_build::{private_key, public_call, Chain};
 use fidelity::scenario::{checkpoint_input, label, Deployment, Inscribed, OwnedInput};
@@ -177,8 +181,38 @@ fn burn_message(dep: &Deployment, note: &Value) -> Result<BridgeMessage> {
     }))
 }
 
-/// The chain of the module docs. Every transaction is signed by its own test user.
-fn build_chain(dep: &Deployment, wallet: &Value, echo: Option<Hash>) -> Result<Chain> {
+/// The blocks of a checkpoint input an earlier run of this builder left in `dir` (from block 2 on),
+/// with the nonce it echoes.
+fn saved_blocks(dir: &Path, name: &str) -> Result<Option<(Hash, Vec<(Vec<u8>, Block)>)>> {
+    let path = dir.join(format!("{name}.input"));
+    if !path.exists() {
+        return Ok(None);
+    }
+    let bytes = fs::read(&path)?;
+    let input = CheckpointInput::decode(&bytes).map_err(|e| anyhow::anyhow!("{}: {e:?}", path.display()))?;
+    let blocks = input
+        .blocks
+        .iter()
+        .map(|b| Ok((b.to_vec(), borsh::from_slice::<Block>(b).context("a stored block")?)))
+        .collect::<Result<Vec<_>>>()?;
+    Ok(Some((input.echo_nonce, blocks)))
+}
+
+/// The transactions a wallet or user sent in a stored block: all but its fee and clock transactions.
+fn user_transactions(block: &Block) -> (Vec<LeeTransaction>, Vec<u64>) {
+    let count = block.body.transactions.len().saturating_sub(2);
+    (block.body.transactions[..count].to_vec(), block.body.reverted.clone())
+}
+
+/// The chain of the module docs. Every transaction is signed by its own test user; with `saved`
+/// (the stored blocks from block 2 on), the blocks that carry transactions take those of the
+/// stored blocks instead of newly signed ones, and every stored block must be rebuilt exactly.
+fn build_chain(
+    dep: &Deployment,
+    wallet: &Value,
+    echo: Option<Hash>,
+    saved: Option<&[(Vec<u8>, Block)]>,
+) -> Result<Chain> {
     let import = &wallet["import_root"];
     let leaf_count = import["leaf_count"].as_u64().context("import_root.leaf_count")?;
     let import = ImportRoot { config_id: dep.config_id(), record_slot: 0, root: field(import, "root")?, leaf_count };
@@ -195,16 +229,27 @@ fn build_chain(dep: &Deployment, wallet: &Value, echo: Option<Hash>) -> Result<C
         public_call(&private_key(user), 0, dep.bridge(), message.encode())
     };
 
+    // Blocks 2-5 as (transactions, reverted): the import, then the burns with the two ignored
+    // messages in block 4.
+    let busy: Vec<(Vec<LeeTransaction>, Vec<u64>)> = match saved {
+        Some(blocks) => blocks[..4].iter().map(|(_, block)| user_transactions(block)).collect(),
+        None => {
+            let noise = [dep.burn(1001, Some(label("e2e: another configuration"))), dep.burn(1002, None)];
+            vec![
+                (vec![call(&BridgeMessage::ImportRoot(import))], vec![]),
+                (burns[..2].iter().map(&mut call).collect(), vec![]),
+                (vec![call(&noise[0]), call(&burns[2]), call(&noise[1])], vec![2]),
+                (burns[3..].iter().map(&mut call).collect(), vec![]),
+            ]
+        }
+    };
     let mut chain = Chain::genesis()?;
-    // Block 2: the import. Blocks 3-5: the burns, with the two ignored ones in block 4.
-    chain.push_stand_in(vec![call(&BridgeMessage::ImportRoot(import))], vec![])?;
-    chain.push_stand_in(burns[..2].iter().map(&mut call).collect(), vec![])?;
-    let noise = [dep.burn(1001, Some(label("e2e: another configuration"))), dep.burn(1002, None)];
-    chain.push_stand_in(vec![call(&noise[0]), call(&burns[2]), call(&noise[1])], vec![2])?;
-    if burns.len() > 3 {
-        chain.push_stand_in(burns[3..].iter().map(&mut call).collect(), vec![])?;
-    } else {
-        chain.push_valid(Vec::new())?;
+    for (txs, reverted) in busy {
+        if txs.is_empty() {
+            chain.push_valid(Vec::new())?;
+        } else {
+            chain.push_stand_in(txs, reverted)?;
+        }
     }
     // Block 6 = T and blocks 7-9, the candidate's support.
     for _ in T..=CANDIDATE_END {
@@ -214,10 +259,17 @@ fn build_chain(dep: &Deployment, wallet: &Value, echo: Option<Hash>) -> Result<C
         // Blocks 10-11, block 12 = Y with the echo, blocks 13-16.
         chain.push_valid(Vec::new())?;
         chain.push_valid(Vec::new())?;
-        chain.push_stand_in(vec![call(&BridgeMessage::Echo { nonce })], vec![])?;
+        let (txs, reverted) = match saved.and_then(|blocks| blocks.get(Y - 1)) {
+            Some((_, block)) => user_transactions(block),
+            None => (vec![call(&BridgeMessage::Echo { nonce })], vec![]),
+        };
+        chain.push_stand_in(txs, reverted)?;
         for _ in Y + 1..=FINALIZE_END {
             chain.push_valid(Vec::new())?;
         }
+    }
+    for (i, (bytes, _)) in saved.unwrap_or_default().iter().enumerate().take(chain.blocks.len() - 1) {
+        ensure!(&chain.inscribed(i + 1) == bytes, "block {} could not be rebuilt as it was inscribed", i + 2);
     }
     ensure!(chain.blocks.len() == if echo.is_some() { FINALIZE_END + 1 } else { CANDIDATE_END + 1 }, "chain length");
     Ok(chain)
@@ -345,7 +397,16 @@ fn cmd_chain(opts: &BTreeMap<String, String>) -> Result<()> {
     ensure!(field::<32>(&wallet, "config_id")? == dep.config_id(), "the wallet file is for another configuration");
     let posting_timeframe = u32::try_from(d["posting_timeframe"].as_u64().context("posting_timeframe")?)?;
 
-    let chain = build_chain(&dep, &wallet, echo)?;
+    // An earlier run's zone: the finalisation input if it echoes this nonce, else the candidate's.
+    let saved = match (saved_blocks(&dir, "cp-e2e-finalize")?, saved_blocks(&dir, "cp-e2e-candidate")?) {
+        (Some((nonce, blocks)), _) if Some(nonce) == echo => Some(blocks),
+        (_, Some((_, blocks))) => Some(blocks),
+        _ => None,
+    };
+    if let Some(blocks) = &saved {
+        println!("the zone's blocks 2-{} are those already inscribed in {}", blocks.len() + 1, dir.display());
+    }
+    let chain = build_chain(&dep, &wallet, echo, saved.as_deref())?;
     let ins = Inscribed::new(&dep, &chain);
     let genesis = genesis_state(&dep, &chain, posting_timeframe);
     ensure!(hx(&genesis.digest()) == d["genesis"]["state"]["S"], "the genesis state differs from the deployment's");
