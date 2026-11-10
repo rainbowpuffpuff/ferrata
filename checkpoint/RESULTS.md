@@ -52,6 +52,7 @@ end).
 | rule (B) (§4) | **1.69M cycles per attestor** (certificate + attestation, two Ed25519 `verify_strict`); the check 5.1M at t = 3, 11.8M at t = 7, 16.9M at t = 10; one proof per checkpoint; rule (A) 0.89M per supporter, two proofs |
 | composition | two pieces (segment of 180 blocks, then a checkpoint verifying it) prove the same journal as one piece (dev mode) |
 | real proof (4 segments) | succinct 1,758.9 s under load, 1,157.5 s starting quiet; Groth16 wrap 215.2 s / 195.1 s under load; peak 9.62 GB (host + r0vm), Groth16 prover 7.3 GiB; seal 260 bytes, selector `0x73c457ba` |
+| real LEZ blocks (§ "Real LEZ blocks") | rule (B) over **195 real blocks** of LEZ v0.4.0-rc1's sequencer (the lab's devnet: one validator, dev-mode leader proofs, n = 1): parser and re-hash accept all 202 blocks and 202 inscriptions as made; 7.66M cycles, 11 segments, **39.5 s on one NVIDIA L4**; accepted by the v5 vault in mode (B) with RISC Zero's verifier, 347,832 + 195,149 gas |
 
 ## 1. Fidelity to the real formats
 
@@ -456,3 +457,117 @@ what follows it is new work for the second proof: blocks 2–9 are hashed again 
 ## GPU proofs of the final image
 
 The final image (`0x95b816ed…3caf`) was later proven on one NVIDIA L4 GPU for four fixtures, with every succinct receipt verified locally and every journal equal to the native run's: `cp-empty-1` in 14.0 s, the idle hour in 24.1 s, the hour with 5 private transactions in 41.4 s and the hour with 50 in 219.3 s. See `gpu-prover/RESULTS.md`. No Groth16 wrap was made for these.
+
+## Real LEZ blocks: a rule (B) checkpoint over the lab's sequencer chain, accepted by the v5 vault
+
+Every earlier checkpoint proof here was made over blocks built by a fixture builder with test keys.
+This one is over **real sequencer blocks**: the chain of the lab ([`../lez/lab/`](../lez/lab/README.md)),
+LEZ v0.4.0-rc1's own `sequencer_service` with its Logos Blockchain node (`d480efc6`) run unmodified on
+Modal, a **devnet with one validator and leader proofs in dev mode** (`POL_PROOF_DEV_MODE=true`, as LEZ's
+container sets it), whose channel holds **one key (n = 1, t = 1)**. The lab was only read: its committed
+record (`lez/lab/results/record`: the blocks as the sequencer's RPC served them, `chain.tsv`, `segments.tsv`)
+and a copy of its saved generation 3 (the state after its 22:17 UTC session on 10 Nov: 30,970,636 bytes,
+sha256 `e0ef796b…5716`, fetched with `modal volume get`), whose node was started alone on the build box to
+answer `/channel/<id>` and `/cryptarchia/blocks` (immutable blocks only; [`realblocks/extract.sh`](realblocks/extract.sh)).
+The running lab was neither stopped, changed nor redeployed. Code and outputs: [`realblocks/`](realblocks/).
+Where each step ran: the build box is the Modal build container of `spike/modal-build/mrun`; the GPU is
+one NVIDIA L4 on Modal.
+
+### The parser and re-hashing on the real blocks and inscriptions
+
+`realblocks` (build box, `out/blocks.tsv`, `out/inscriptions.jsonl`) runs checkpoint-core's own code natively
+over every block the node holds an inscription of:
+
+| check | result |
+|---|---|
+| node | 2,103 immutable blocks; 202 transactions on channel `0x01…01`, each exactly `[ChannelInscribe (0x11), Transfer (0x00)]` with an Ed25519 and a ZK proof; one inscription of each LEZ block 1..=202 |
+| blocks as inscribed (`borsh(Block)`, the inscription payloads): `parse_block` (strict), `hash_parsed_block`, ids and links | **202 of 202 accepted**; every re-hash equals the hash the block carries and `chain.tsv`'s; ids consecutive, each linked to the previous hash |
+| inscriptions: framing (`ElidedInscription::split`, `check`), BLAKE2b-256 transaction hash, `verify_strict` by the signer the op names | **202 of 202**; every hash equals the node's, 201 equal the hashes the sequencer logged (block 1 was inscribed at setup, before any session log); the signer is the channel's one accredited key `3b14e398…b0a2` |
+| message ids | each inscription's parent is the previous block's `MsgId` (block 1's is zero); block 202's `MsgId` is the channel's `tip_message` `cc5ae8ce…a79e` |
+| the record against the inscribed bytes | 196 blocks byte-equal except the status byte; 6 (blocks 2–7, the program's deployment) with the bytecode the record elides (header bytes equal; the inscribed blocks re-hash to the recorded hashes) |
+
+Findings:
+1. **No mismatch.** The parser and the block hash accept LEZ's real blocks and inscriptions exactly as the
+   sequencer made them; nothing on the checkpoint side changed, and the image ids are unchanged.
+2. **The status byte.** All 202 blocks are inscribed with `bedrock_status = Pending` (0) and served by the
+   sequencer's RPC with `Finalized` (2). The block hash leaves the byte out (as `lez.rs` assumed), but an
+   inscription signs the inscribed bytes: a rule (A) prover must take `T`'s bytes from the inscription, not from
+   the RPC, or the producer check fails. Rule (B) never re-checks an inscription.
+3. **The channel's turn length is 0 on Bedrock.** The node reports the channel with `posting_timeframe` 0,
+   `posting_timeout` 0 and `config_tip_hash` 0 (made by `sequencer_service setup --create-channel`, no
+   configuration op), although LEZ's sequencer configuration says 300. The proven key-set hash binds 0, as the
+   chain holds it. With 0 no key rotation could ever be accepted by the program (SPEC-v3 D3: an op's timeframe
+   must equal the bound one and must not be 0), and a rule (A) vault needs a non-zero turn: a bridge needs its
+   channel created with a configuration op. Neither matters here: one key, no rotation, rule (B).
+4. **UNVERIFIED item 1 observed, on a devnet.** Every inscription the sequencer made is
+   `[ChannelInscribe, Transfer]` of its own block, as read from LEZ's code; one sequencer, not a network.
+
+### The attestor on the lab's data
+
+`out/attestor.json`. The lab sequencer's channel key (generated by LEZ in the sequencer's home at setup, a
+throwaway devnet key, read from the copied generation; its public key `3b14e398…b0a2` is the one the sequencer
+logs and the channel's only key, configuration threshold 1) certifies, with attestor-core's certificate
+(`"ferrata/attest-key/v1" ‖ evmChainId ‖ vault ‖ lezConfigId ‖ channelId ‖ attKey`), an attestation key derived
+from the public label `ferrata/realblocks/attestation-key/v1` (`b707f1ee…bc6a`, throwaway). That key signs the
+final-tier message v2 for `T` = block 202 (`774780c6…2bbb`) with `finalMsgId` = its inscription's `MsgId`
+`cc5ae8ce…a79e`. `T` is final by the node's own rule: its inscription sits in node block `cfd9acd4…a1ee` at slot
+8,856,117, which the node serves among its immutable blocks (its LIB was at slot 8,856,126 when the copy
+started); the lab recorded block 202 `Finalized` and the sequencer logged `finalized 202..=202`. The committee is
+one key (n = 1, t = 1), which is what this devnet has; the program allows a one-key set only because the
+configuration's `nMin` is 1.
+
+The configuration's other values have no lab counterpart, since no bridge program runs in the lab:
+`bridgeHeader`, `bridgeImageId`, `attestationRootId`, `salt` and the vault address are SHA-256 of labels
+(`ferrata/realblocks/stand-in/…`), `evmChainId` is 31337 (a local EVM), `bedrockGenesisId` is the SHA-256 of the
+node's deployment settings; `lezConfigId` = `da0edd60…9d40`. There are no burns: the burn root is the empty tree's.
+
+### The proof
+
+| span | parent tip | blocks | transactions | block bytes | input | user cycles | segments |
+|---|---|---|---|---|---|---|---|
+| **8..=202** (every block since the program's deployment; proven) | 7 | 195 | 585 | 2,130,225 | 2,132,694 B | **7,659,550** | 11 × 2^20 (11,534,336 total) |
+| 186..=202 (the two scheduled sessions; executor only) | 185 | 17 | 51 | 87,349 | 89,106 B | 2,120,216 | 3 |
+
+Executor: r0vm 3.0.5 on the build box (`out/executor.jsonl`), both journals equal to the native run's. The
+program is `checkpoint_b` `0xd3597543…0d64`, the recorded ELF of §4 (sha256 `386a3a31…80d9`), not rebuilt (the
+guest sources are unchanged since), the same program as the v5 vault's earlier rule (B) test.
+
+GPU (`../gpu-prover/results/realblocks-l4/`): one NVIDIA L4 (workspace ws-3, GCP us-east), 10 Nov
+22:48 UTC: **39.5 s** (segment proofs 29.2 s, recursion 9.6 s; container 41.4 s), succinct receipt 224,314 bytes,
+verified in the container and again on the build box, journal equal to the native one (sha256
+`887c8d44…0d5f`). Groth16 wrap: identity_p254 17.8 s in r0vm on the build box, RISC Zero's Groth16 prover image
+15 s through `mwrap`; Groth16 receipt 1,585 bytes, verified; seal 260 bytes, selector `0x73c457ba`.
+
+### The vault
+
+`vault/test/real/RealBlocks.t.sol` (fixture `test/real/fixtures/real-blocks.json`, written by
+`realblocks/vault-fixture.py`): the v5 vault in mode (B) at the address the journal binds on chain 31337, RISC
+Zero's unmodified Groth16 verifier behind its emergency stop, the genesis state recomputed in Solidity from the
+lab channel's key, its timeframe and configuration tip and block 7, and equal to the proof's parent. Forge 1.3.6
+on the build box (`realblocks/out/forge-real.txt`): the 10 tests pass, and all 31 of `test/real/`.
+
+| step | verdict |
+|---|---|
+| `submitCandidate` with the real seal, by anyone | accepted; the vault keeps sha256 of the journal |
+| `finalizeAttested` at once, and one second before the hour | refused, `WaitNotOver` |
+| `finalizeAttested` at the hour, by anyone | accepted: `finalState` = the proof's new state at block 202, its burn root accepted |
+| one flipped byte in the selector or in any of the 8 proof words | refused |
+| the real seal with another tip hash, tip id, new state or `n` | refused, `VerificationFailed` |
+| a vault of another key set (the attestation key alone; the channel key and the attestation key) | refused, `ParentNotFinal` |
+| a vault whose floors ask for more (nMin 3, tMin 2) | refused, `WrongCommitteeFloor` |
+| a rule (A) vault (rule (A)'s image id) | refused, `VerificationFailed` |
+
+Gas (`forge test --isolate --match-contract RealBlocksGas`): `submitCandidate` **347,832**, `finalizeAttested`
+**195,149**, the same as the fixture-built rule (B) proof (347,820 and 195,149): the vault's cost does not
+depend on the blocks.
+
+### What is real and what is still stand-in
+
+Real: the blocks (LEZ v0.4.0-rc1's sequencer: in each of the 195, one of the lab's light-client job transactions
+with the block's forced fee and clock transactions, 585 in all), their inscriptions on a Logos Blockchain node, the channel and its key, the node's finality, the
+proof (GPU), the wrap, RISC Zero's verifier, the vault's code. Still stand-in or missing: the devnet itself
+(one validator with dev-mode leader proofs, one sequencer, one channel key, n = 1: no adversary, no network);
+no bridge program, so no burns, imports or sunsets in the blocks and labels in the configuration's bridge fields;
+the attestor is attestor-core driven by `realblocks` after the fact from a copy, not a running Logos module, and
+its key is label-derived; no release against this checkpoint (nothing was burned); a local EVM (chain 31337),
+nothing sent to a public network.
