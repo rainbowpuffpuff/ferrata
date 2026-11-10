@@ -32,7 +32,7 @@ use ferrata_lez_bridge_wire::{
     SLOT_CONFIG_ID, SLOT_COUNT, SLOT_ROOT,
 };
 use ferrata_lez_wire::{header_actor, RecordState};
-use ferrata_spectests::execkit::{account_rlp, enc, keccak, Trie};
+use ferrata_spectests::execkit::{account_rlp, enc, header_rlp, keccak, Trie};
 use lee::{
     program::Program,
     public_transaction::{Message as PublicMessage, WitnessSet},
@@ -198,32 +198,41 @@ pub struct VaultSlots {
     pub config_id: Hash,
 }
 
-/// A synthetic execution block: its state trie, the vaults' storage tries, and its record.
+/// A synthetic execution block: its state trie, the vaults' storage tries, and its record; for a
+/// record in the Gloas layout (which binds the block hash only), the block's RLP header, which
+/// the proofs carry in front of the account's nodes (`bridge-wire::with_header`).
 pub struct Block {
     pub slot: u64,
     pub record: HeaderRecord,
     pub state: Trie,
     pub storage: Vec<([u8; 20], Trie)>,
+    pub header: Option<Vec<u8>>,
+}
+
+/// The state trie holding `vaults` among 40 other accounts, and the vaults' storage tries.
+fn vault_state(vaults: &[VaultSlots]) -> (Trie, Vec<([u8; 20], Trie)>) {
+    let mut accounts = Vec::new();
+    let mut storage = Vec::new();
+    for v in vaults {
+        let trie = Trie::new([
+            (keccak(&SLOT_ROOT).to_vec(), enc::uint(&v.root)),
+            (keccak(&SLOT_COUNT).to_vec(), enc::uint(&v.count.to_be_bytes())),
+            (keccak(&SLOT_CONFIG_ID).to_vec(), enc::uint(&v.config_id)),
+        ]);
+        accounts.push((v.address, account_rlp(1, 0, trie.root(), keccak(b"vault code"))));
+        storage.push((v.address, trie));
+    }
+    for i in 0x40..0x68u8 {
+        accounts.push(([i; 20], account_rlp(u64::from(i), 1_000 + u128::from(i), keccak(&[0x80]), keccak(b""))));
+    }
+    (Trie::new(accounts.iter().map(|(a, rlp)| (keccak(a).to_vec(), rlp.clone()))), storage)
 }
 
 impl Block {
-    /// A block numbered `number`, at beacon slot `slot`, holding `vaults` among 40 other accounts.
+    /// A block numbered `number`, at beacon slot `slot`, holding `vaults` among 40 other accounts,
+    /// under a record in the payload layout.
     pub fn new(slot: u64, number: u64, vaults: &[VaultSlots]) -> Self {
-        let mut accounts = Vec::new();
-        let mut storage = Vec::new();
-        for v in vaults {
-            let trie = Trie::new([
-                (keccak(&SLOT_ROOT).to_vec(), enc::uint(&v.root)),
-                (keccak(&SLOT_COUNT).to_vec(), enc::uint(&v.count.to_be_bytes())),
-                (keccak(&SLOT_CONFIG_ID).to_vec(), enc::uint(&v.config_id)),
-            ]);
-            accounts.push((v.address, account_rlp(1, 0, trie.root(), keccak(b"vault code"))));
-            storage.push((v.address, trie));
-        }
-        for i in 0x40..0x68u8 {
-            accounts.push(([i; 20], account_rlp(u64::from(i), 1_000 + u128::from(i), keccak(&[0x80]), keccak(b""))));
-        }
-        let state = Trie::new(accounts.iter().map(|(a, rlp)| (keccak(a).to_vec(), rlp.clone())));
+        let (state, storage) = vault_state(vaults);
         let record = HeaderRecord {
             beacon: BeaconBlockHeader { slot, ..Default::default() },
             execution_root: [3; 32],
@@ -236,7 +245,33 @@ impl Block {
                 timestamp: 1_700_000_000 + 12 * number,
             },
         };
-        Self { slot, record, state, storage }
+        Self { slot, record, state, storage, header: None }
+    }
+
+    /// A block at beacon slot `slot` holding `vaults`, under a record in the Gloas layout: a real
+    /// Sepolia header (the replay fixture's bound block, `harness::vault::synthetic`'s) with the
+    /// synthetic state root, whose hash the record binds.
+    pub fn gloas(slot: u64, vaults: &[VaultSlots]) -> Self {
+        let (state, storage) = vault_state(vaults);
+        let served: Value = serde_json::from_slice(&crate::sepolia::gloas_file("block.json")).unwrap();
+        let mut block = served["result"].clone();
+        block["stateRoot"] = Value::String(format!("0x{}", hex::encode(state.root())));
+        let header = header_rlp(&block);
+        let record = HeaderRecord {
+            beacon: BeaconBlockHeader { slot, ..Default::default() },
+            execution_root: [0; 32],
+            execution: ExecutionSummary::BlockHash(keccak(&header)),
+        };
+        Self { slot, record, state, storage, header: Some(header) }
+    }
+
+    /// The vault's account proof, with the header in front when the record binds a hash only.
+    fn account_proof(&self, vault: &[u8; 20]) -> Vec<Vec<u8>> {
+        let nodes = self.state.proof(&keccak(vault));
+        match &self.header {
+            Some(header) => bw::with_header(header.clone(), nodes),
+            None => nodes,
+        }
     }
 
     fn storage_of(&self, vault: &[u8; 20]) -> &Trie {
@@ -246,7 +281,7 @@ impl Block {
     pub fn import_proof(&self, vault: &[u8; 20]) -> ImportProof {
         let storage = self.storage_of(vault);
         ImportProof {
-            account: self.state.proof(&keccak(vault)),
+            account: self.account_proof(vault),
             root_slot: storage.proof(&keccak(&SLOT_ROOT)),
             count_slot: storage.proof(&keccak(&SLOT_COUNT)),
         }
@@ -254,7 +289,7 @@ impl Block {
 
     pub fn pairing_proof(&self, vault: &[u8; 20]) -> PairingProof {
         PairingProof {
-            account: self.state.proof(&keccak(vault)),
+            account: self.account_proof(vault),
             config_slot: self.storage_of(vault).proof(&keccak(&SLOT_CONFIG_ID)),
         }
     }
@@ -441,6 +476,15 @@ impl World {
             time: 1_700_000_000_000,
             txs: Vec::new(),
         }
+    }
+
+    /// Add `block` after genesis: its record placed at `header(INSTANCE, slot)` as the
+    /// attestation program writes it. Returns its index in `blocks`.
+    pub fn add_block(&mut self, block: Block) -> usize {
+        let (id, account) = block.record_account();
+        self.chain.state.force_insert_account(id, account);
+        self.blocks.push(block);
+        self.blocks.len() - 1
     }
 
     fn state(&self, actor: Actor) -> Option<BridgeState> {
