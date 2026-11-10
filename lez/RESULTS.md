@@ -528,6 +528,14 @@ Charged (dev mode; flat proof and storage costs as in §3): the read execution g
 - **A duplicate `Open` is not cheap.** The instance cannot see whether the job exists, so the
   duplicate is refused by `JobOpen` after step 1 has run: 2,183,111 cycles. Making it cheap needs
   an extra round trip (the job asking the instance for its store), which would cost every update.
+- **Exit codes to renumber at the merge.** The program's own refusal codes are 100–112
+  (`wire/src/lib.rs`, `code`) and the consumer's 120–122; the step API's are 80–84. Since this
+  branch was cut, `main` gave the core's new errors (RLP, Merkle-Patricia, headers, receipts,
+  predicates, history) the codes 100–152. Nothing on this branch returns those errors, so no
+  exit code is ambiguous here, but after merging, the program's codes must move (e.g. to
+  200–212) before it surfaces any of them. They were not moved now because that changes the
+  program's image, on which every table here and the real proof were measured. The branches
+  merge without textual conflicts (`git merge-tree --write-tree main lez-program`).
 - **`scripts/check-bench-provenance.sh`** (not a CI gate) reports differences on this branch, by
   design: it requires the core to equal commit f030475 up to the rename, and this branch adds
   `steps.rs` and `witness.rs`, three lines in `lib.rs`, and `lez` to the root workspace's
