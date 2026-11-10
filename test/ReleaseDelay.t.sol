@@ -74,11 +74,37 @@ contract ReleaseDelayTest is VaultTestBase {
         assertEq(vault.releaseDelay(address(token)), 2 days);
         assertEq(vault.releaseDelayFor(address(token), 0), 2 days);
 
-        p.releaseDelay = 30 days + 1;
+        p.releaseDelay = REVOKE_WINDOW + 1;
         MockERC20 other = new MockERC20("Other", "OTH", 18);
         vm.prank(admin);
-        vm.expectRevert(FerrataVault.ReleaseDelayTooLong.selector);
+        vm.expectRevert(FerrataVault.ReleaseDelayOutOfRange.selector);
         vault.registerToken(address(other), p);
+    }
+
+    /// @notice v3 D5: every delay setting, registration included, satisfies minReleaseDelay <= delay <= revokeWindow.
+    function test_everyDelaySettingIsBetweenTheMinimumAndTheRevokeWindow() public {
+        FerrataVault.Deployment memory d = _deployment(vault.verifier(), LEZ_CONFIG_ID);
+        d.minReleaseDelay = 1 hours;
+        FerrataVault strict = new FerrataVault(d);
+        MockERC20 token = new MockERC20("Token", "TKN", 18);
+        FerrataVault.TokenParams memory p = _params(_denoms(1e18, 2e18, 3e18), 1e12, 1);
+
+        p.releaseDelay = 1 hours - 1;
+        vm.prank(admin);
+        vm.expectRevert(FerrataVault.ReleaseDelayOutOfRange.selector);
+        strict.registerToken(address(token), p);
+        p.releaseDelay = 1 hours;
+        vm.prank(admin);
+        strict.registerToken(address(token), p);
+
+        vm.startPrank(admin);
+        vm.expectRevert(FerrataVault.ReleaseDelayOutOfRange.selector);
+        strict.setReleaseDelay(address(token), 0);
+        vm.expectRevert(FerrataVault.ReleaseDelayOutOfRange.selector);
+        strict.setReleaseDelay(address(token), REVOKE_WINDOW + 1);
+        strict.setReleaseDelay(address(token), REVOKE_WINDOW);
+        vm.stopPrank();
+        assertEq(strict.releaseDelay(address(token)), REVOKE_WINDOW);
     }
 
     function test_severalChangesBeforeOneCheckpoint_lastOneWins() public {
@@ -100,7 +126,7 @@ contract ReleaseDelayTest is VaultTestBase {
         for (uint256 step = 0; step < 24; step++) {
             seed = uint256(keccak256(abi.encode(seed, step)));
             if (seed % 3 == 0) {
-                uint256 delay = (seed >> 8) % 7 days;
+                uint256 delay = (seed >> 8) % (REVOKE_WINDOW + 1);
                 vm.prank(admin);
                 vault.setReleaseDelay(ETH, delay);
                 fromCheckpoint[changes] = vault.checkpointCount();

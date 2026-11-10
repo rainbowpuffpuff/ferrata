@@ -33,6 +33,10 @@ contract ConstructorTest is VaultTestBase {
         assertEq(vault.delta(), DELTA);
         assertEq(vault.revokeWindow(), REVOKE_WINDOW);
         assertEq(vault.maxFreeze(), MAX_FREEZE);
+        assertEq(vault.turnSeconds(), TURN_SECONDS);
+        assertEq(vault.minReleaseDelay(), MIN_RELEASE_DELAY);
+        assertEq(vault.finalImportedLeafCount(), 0);
+        assertFalse(vault.finalSunset());
         assertEq(vault.admin(), admin);
         assertEq(vault.freezeAuthority(), freezer);
         assertEq(vault.nextLeafIndex(), 0);
@@ -43,7 +47,7 @@ contract ConstructorTest is VaultTestBase {
 
     function test_constructor_domainTagsMatchTheirDefinitions() public view {
         assertEq(vault.LEAF_TAG(), sha256(bytes("ferrata/vault/leaf/v2")));
-        assertEq(vault.CHECKPOINT_DOMAIN(), sha256(bytes("ferrata/vault/checkpoint/v2")));
+        assertEq(vault.CHECKPOINT_DOMAIN(), sha256(bytes("ferrata/vault/checkpoint/v3")));
         assertEq(vault.RELEASE_DOMAIN(), sha256(bytes("ferrata/vault/release/v2")));
         assertEq(vault.LEAF_PREFIX(), bytes1(0x00));
         assertEq(vault.NODE_PREFIX(), bytes1(0x01));
@@ -102,6 +106,25 @@ contract ConstructorTest is VaultTestBase {
         d = _d();
         d.maxFreeze = 0;
         _expectConstructorRevert(d, FerrataVault.InvalidMaxFreeze.selector);
+    }
+
+    function test_constructor_turnSecondsAndMinReleaseDelay() public {
+        FerrataVault.Deployment memory d = _d();
+        d.turnSeconds = 0;
+        _expectConstructorRevert(d, FerrataVault.InvalidTurnSeconds.selector);
+        d = _d();
+        d.turnSeconds = 30 days + 1;
+        _expectConstructorRevert(d, FerrataVault.InvalidTurnSeconds.selector);
+        d = _d();
+        d.minReleaseDelay = REVOKE_WINDOW + 1; // no delay could satisfy minReleaseDelay <= delay <= revokeWindow
+        _expectConstructorRevert(d, FerrataVault.InvalidMinReleaseDelay.selector);
+        d = _d();
+        d.revokeWindow = 40 days;
+        d.minReleaseDelay = 31 days; // within the window, but above the 30-day delay ceiling
+        _expectConstructorRevert(d, FerrataVault.InvalidMinReleaseDelay.selector);
+        d = _d();
+        d.minReleaseDelay = REVOKE_WINDOW; // the tightest valid setting
+        assertEq(new FerrataVault(d).minReleaseDelay(), REVOKE_WINDOW);
     }
 
     function test_constructor_rejectsZeroOrSharedRoles() public {
@@ -358,14 +381,14 @@ contract RegistryTest is VaultTestBase {
 
     function test_setReleaseDelay() public {
         vm.expectEmit(true, true, true, true, address(vault));
-        emit FerrataVault.ReleaseDelaySet(address(dai), 30 days, 0);
+        emit FerrataVault.ReleaseDelaySet(address(dai), REVOKE_WINDOW, 0);
         vm.prank(admin);
-        vault.setReleaseDelay(address(dai), 30 days);
-        assertEq(vault.releaseDelay(address(dai)), 30 days);
+        vault.setReleaseDelay(address(dai), REVOKE_WINDOW);
+        assertEq(vault.releaseDelay(address(dai)), REVOKE_WINDOW);
 
         vm.startPrank(admin);
-        vm.expectRevert(FerrataVault.ReleaseDelayTooLong.selector);
-        vault.setReleaseDelay(address(dai), 30 days + 1);
+        vm.expectRevert(FerrataVault.ReleaseDelayOutOfRange.selector);
+        vault.setReleaseDelay(address(dai), REVOKE_WINDOW + 1); // a root must stay revocable while it is delayed
         vm.expectRevert(FerrataVault.TokenNotRegistered.selector);
         vault.setReleaseDelay(address(token), 1);
         vm.stopPrank();
@@ -432,7 +455,7 @@ contract RolesTest is VaultTestBase {
         vm.expectRevert(FerrataVault.NotFreezeAuthority.selector);
         vault.setTokenReleasesFrozen(ETH, false);
         vm.expectRevert(FerrataVault.NotFreezeAuthority.selector);
-        vault.setCandidatesFrozen(true);
+        vault.setCheckpointsFrozen(true);
         vm.expectRevert(FerrataVault.NotFreezeAuthority.selector);
         vault.retire();
         vm.expectRevert(FerrataVault.NotFreezeAuthority.selector);

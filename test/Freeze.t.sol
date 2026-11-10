@@ -63,9 +63,10 @@ contract FreezeTest is VaultTestBase {
 
     // ---- tests ----------------------------------------------------------------------------------------------------
 
-    /// @notice All 32 combinations of {global deposits, global releases, DAI deposits, DAI releases, candidate
-    ///         submission} frozen. ETH (no per-token freeze) is the bystander that shows per-token freezes stay per
-    ///         token, and each freeze stops exactly its own path.
+    /// @notice All 32 combinations of {global deposits, global releases, DAI deposits, DAI releases, checkpoints}
+    ///         frozen. ETH (no per-token freeze) is the bystander that shows per-token freezes stay per token, and each
+    ///         freeze stops exactly its own path. (The checkpoint freeze also stops finalisation, and the release freeze
+    ///         refunds: Checkpoint.t.sol and Refund.t.sol.)
     function test_freeze_everyCombination() public {
         for (uint256 mask = 0; mask < 32; mask++) {
             bool globalDeposits = (mask & 1) != 0;
@@ -80,7 +81,7 @@ contract FreezeTest is VaultTestBase {
             vault.setReleasesFrozen(globalReleases);
             vault.setTokenDepositsFrozen(address(dai), daiDeposits);
             vault.setTokenReleasesFrozen(address(dai), daiReleases);
-            vault.setCandidatesFrozen(candidates);
+            vault.setCheckpointsFrozen(candidates);
             vm.stopPrank();
 
             bytes4 ethDepositError = globalDeposits ? FerrataVault.DepositsAreFrozen.selector : bytes4(0);
@@ -101,7 +102,7 @@ contract FreezeTest is VaultTestBase {
             (ok, ret) = _tryRelease(address(dai));
             _assertOutcome(ok, ret, daiReleaseError, "DAI release");
             (ok, ret) = _trySubmitCandidate();
-            _assertOutcome(ok, ret, candidates ? FerrataVault.CandidatesAreFrozen.selector : bytes4(0), "candidate");
+            _assertOutcome(ok, ret, candidates ? FerrataVault.CheckpointsAreFrozen.selector : bytes4(0), "candidate");
 
             vm.revertToState(snapshot);
         }
@@ -123,15 +124,15 @@ contract FreezeTest is VaultTestBase {
         emit FerrataVault.TokenReleasesFrozenSet(address(usdc), true, until);
         vault.setTokenReleasesFrozen(address(usdc), true);
         vm.expectEmit(true, true, true, true, address(vault));
-        emit FerrataVault.CandidatesFrozenSet(true, until);
-        vault.setCandidatesFrozen(true);
+        emit FerrataVault.CheckpointsFrozenSet(true, until);
+        vault.setCheckpointsFrozen(true);
         vm.stopPrank();
 
         assertTrue(vault.depositsFrozen());
         assertTrue(vault.releasesFrozen());
         assertTrue(vault.tokenDepositsFrozen(address(usdc)));
         assertTrue(vault.tokenReleasesFrozen(address(usdc)));
-        assertTrue(vault.candidatesFrozen());
+        assertTrue(vault.checkpointsFrozen());
         assertFalse(vault.tokenDepositsFrozen(address(dai)));
         assertEq(vault.depositsFrozenUntil(), until);
 
@@ -150,7 +151,7 @@ contract FreezeTest is VaultTestBase {
         vm.startPrank(freezer);
         vault.setDepositsFrozen(true);
         vault.setReleasesFrozen(true);
-        vault.setCandidatesFrozen(true);
+        vault.setCheckpointsFrozen(true);
         vault.setTokenDepositsFrozen(address(dai), true);
         vault.setTokenReleasesFrozen(address(dai), true);
         vm.stopPrank();
@@ -170,7 +171,7 @@ contract FreezeTest is VaultTestBase {
         vm.warp(until); // lapsed, with nobody doing anything
         assertFalse(vault.depositsFrozen());
         assertFalse(vault.releasesFrozen());
-        assertFalse(vault.candidatesFrozen());
+        assertFalse(vault.checkpointsFrozen());
         assertFalse(vault.tokenDepositsFrozen(address(dai)));
         assertFalse(vault.tokenReleasesFrozen(address(dai)));
         (ok,) = _tryDeposit(address(dai));

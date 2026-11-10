@@ -265,12 +265,29 @@ contract DepositTest is VaultTestBase {
         assertEq(vault.depositRoot(), ReferenceMerkle.root(leaves));
     }
 
+    /// @notice SPEC-v3 D9: leafIndex < 2^32. Once 2^32 leaves exist, both deposit paths revert and nothing changes.
     function test_deposit_revertsWhenTreeIsFull() public {
         vm.store(address(vault), bytes32(vault.NEXT_LEAF_INDEX_SLOT()), bytes32(uint256(2 ** 32)));
+        bytes32 rootBefore = vault.depositRoot();
         vm.deal(alice, 1 ether);
         vm.prank(alice);
         vm.expectRevert(FerrataVault.TreeFull.selector);
         vault.depositETH{value: 1 ether}(1, C1, 0);
+
+        usdc.mint(alice, 100e6);
+        vm.prank(alice);
+        usdc.approve(address(vault), 100e6);
+        vm.prank(alice);
+        vm.expectRevert(FerrataVault.TreeFull.selector);
+        vault.deposit(address(usdc), 0, C1, 0);
+
+        assertEq(vault.nextLeafIndex(), 2 ** 32);
+        assertEq(vault.depositRoot(), rootBefore);
+        assertEq(vault.depositCount(alice), 0);
+        assertEq(vault.escrowed(ETH), 0);
+        assertEq(vault.escrowed(address(usdc)), 0);
+        assertEq(alice.balance, 1 ether);
+        assertEq(usdc.balanceOf(alice), 100e6);
     }
 
     // ------------------------------------------------------------------------------------------------------------

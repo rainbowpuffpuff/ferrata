@@ -17,7 +17,7 @@ import {VaultTestBase} from "./utils/VaultTestBase.sol";
 contract EmergencyStopTest is VaultTestBase {
     bytes32 internal constant ROOT = keccak256("burn root");
 
-    function test_estop_stopsCandidatesFinalisationAndReleases_notRefundsClaimsOrRoles() public {
+    function test_estop_stopsCandidatesFinalisationAndReleases_notCancellationRefundsClaimsOrRoles() public {
         // Leaves 0 and 1 are imported on LEZ (one is released before the stop, to a payee that cannot receive);
         // leaf 2 never is, and is refundable after the sunset.
         _deposit(alice, ETH, 1, keccak256("c0"));
@@ -27,9 +27,13 @@ contract EmergencyStopTest is VaultTestBase {
         leaves[0] = ReferenceMerkle.leafHash(0, alice, ETH, 1 ether, keccak256("c0"));
         leaves[1] = ReferenceMerkle.leafHash(1, alice, ETH, 1 ether, keccak256("c1"));
         leaves[2] = ReferenceMerkle.leafHash(2, bob, ETH, 0.1 ether, keccak256("c2"));
+        vm.prank(freezer);
+        vault.retire();
         FerrataVault.Checkpoint memory sunset = _nextCheckpoint(vault, ROOT, 2, true);
         _submit(sunset);
-        _finalizeAfterDelta(sunset);
+        _finalizeAfterDelta(sunset); // checkpoint 0
+        vm.warp(block.timestamp + REVOKE_WINDOW); // refunds open (v3 D5)
+        _acceptRoot(keccak256("later root")); // checkpoint 1, still revocable after the stop
 
         ToggleRecipient payee = new ToggleRecipient(); // cannot receive yet
         _release(_request(ETH, 1, address(payee), ROOT, keccak256("paid before the stop")));
@@ -49,7 +53,7 @@ contract EmergencyStopTest is VaultTestBase {
         vm.expectRevert(Pausable.EnforcedPause.selector);
         vault.submitCandidate(fresh, SEAL);
 
-        vm.warp(block.timestamp + DELTA);
+        vm.warp(block.timestamp + DELTA + (uint256(T) - 1) * TURN_SECONDS); // the pending candidate's wait
         vm.roll(block.number + 1);
         uint256 beaconIndex = vault.recordBeacon(); // beacons need no proof
         (, bytes32 nonce) = vault.beacons(beaconIndex);
@@ -62,7 +66,9 @@ contract EmergencyStopTest is VaultTestBase {
         vault.release(r, SEAL);
         assertFalse(vault.nullifierUsed(r.nullifier));
 
-        // No proof involved: refunds, owed claims, revocation and role handovers still work.
+        // No proof involved: cancellation, refunds, owed claims, revocation and role handovers still work.
+        vm.prank(freezer);
+        vault.cancelCandidate(pending.newState);
         bytes32[] memory siblings = ReferenceMerkle.path(leaves, 2);
         bytes32[32] memory path;
         for (uint256 h = 0; h < 32; h++) {
@@ -76,8 +82,8 @@ contract EmergencyStopTest is VaultTestBase {
         assertEq(address(payee).balance, 1 ether);
 
         vm.prank(freezer);
-        vault.revokeFrom(0);
-        assertEq(vault.finalState(), GENESIS_STATE);
+        vault.revokeFrom(1);
+        assertEq(vault.finalState(), sunset.newState);
 
         address newAdmin = makeAddr("newAdmin");
         vm.prank(admin);

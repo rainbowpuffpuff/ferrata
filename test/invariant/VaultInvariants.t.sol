@@ -10,6 +10,18 @@ import {VaultTestBase} from "../utils/VaultTestBase.sol";
 import {VaultHandler} from "./VaultHandler.sol";
 
 contract VaultInvariants is VaultTestBase {
+    /// The fields of a finalised checkpoint the invariants need.
+    struct History {
+        bytes32 parentState;
+        bytes32 newState;
+        uint64 importedLeafCount;
+        bool sunset;
+        bool revoked;
+        uint64 parentImportedLeafCount;
+        bool parentSunset;
+        uint256 finalizedAt;
+    }
+
     VaultHandler internal handler;
 
     function setUp() public override {
@@ -30,7 +42,7 @@ contract VaultInvariants is VaultTestBase {
         tokens[3] = address(usdt);
         handler = new VaultHandler(vault, verifier, admin, freezer, tokens);
 
-        bytes4[] memory selectors = new bytes4[](15);
+        bytes4[] memory selectors = new bytes4[](18);
         selectors[0] = VaultHandler.deposit.selector;
         selectors[1] = VaultHandler.submitCandidate.selector;
         selectors[2] = VaultHandler.finalizePending.selector;
@@ -46,6 +58,9 @@ contract VaultInvariants is VaultTestBase {
         selectors[12] = VaultHandler.setFreeze.selector;
         selectors[13] = VaultHandler.setCap.selector;
         selectors[14] = VaultHandler.setReleaseDelay.selector;
+        selectors[15] = VaultHandler.submitBreakingCandidate.selector;
+        selectors[16] = VaultHandler.finalizeRejected.selector;
+        selectors[17] = VaultHandler.cancelPending.selector;
         targetContract(address(handler));
         targetSelector(StdInvariant.FuzzSelector({addr: address(handler), selectors: selectors}));
     }
@@ -103,13 +118,71 @@ contract VaultInvariants is VaultTestBase {
         bytes32 expected = GENESIS_STATE;
         uint256 count = vault.checkpointCount();
         for (uint256 i = count; i > 0; i--) {
-            (, bytes32 newState,,,,, bool revoked,) = vault.checkpoints(i - 1);
+            (, bytes32 newState,,,,, bool revoked,,,) = vault.checkpoints(i - 1);
             if (!revoked) {
                 expected = newState;
                 break;
             }
         }
         assertEq(state, expected);
+    }
+
+    /// @notice v3 D4: the valid (non-revoked) checkpoints form one chain from genesis; along it the imported leaf count
+    ///         never decreases, and after the first sunset checkpoint every one is a sunset checkpoint with the same
+    ///         count. Each records its parent's count and flag, and the vault's current ones are the chain's last.
+    function invariant_validHistoryIsAMonotoneChain() public view {
+        bytes32 state = GENESIS_STATE;
+        uint64 imported = 0;
+        bool sunset = false;
+        uint256 count = vault.checkpointCount();
+        for (uint256 i = 0; i < count; i++) {
+            History memory h = _history(i);
+            if (h.revoked) continue;
+            assertEq(h.parentState, state);
+            assertEq(h.parentImportedLeafCount, imported);
+            assertEq(h.parentSunset, sunset);
+            assertGe(h.importedLeafCount, imported);
+            if (sunset) {
+                assertTrue(h.sunset);
+                assertEq(h.importedLeafCount, imported);
+            }
+            state = h.newState;
+            imported = h.importedLeafCount;
+            sunset = h.sunset;
+        }
+        assertEq(vault.finalState(), state);
+        assertEq(vault.finalImportedLeafCount(), imported);
+        assertEq(vault.finalSunset(), sunset);
+    }
+
+    /// @notice v3 D5: the refund boundary, and the time refunds open from, are those of the first valid sunset
+    ///         checkpoint; without one there is no boundary.
+    function invariant_sunsetBoundaryIsTheFirstValidSunsetCheckpoint() public view {
+        uint256 count = vault.checkpointCount();
+        for (uint256 i = 0; i < count; i++) {
+            History memory h = _history(i);
+            if (h.revoked || !h.sunset) continue;
+            assertTrue(vault.sunsetLeafCountSet());
+            assertEq(vault.sunsetLeafCount(), h.importedLeafCount);
+            assertEq(vault.sunsetSetAt(), i);
+            assertEq(vault.sunsetFinalizedAt(), h.finalizedAt);
+            return;
+        }
+        assertFalse(vault.sunsetLeafCountSet());
+        assertEq(vault.sunsetLeafCount(), 0);
+        assertEq(vault.sunsetFinalizedAt(), 0);
+    }
+
+    /// @notice v3 D4/D5, judged from the handler's own records: no candidate that breaks monotonicity or was
+    ///         cancelled was finalised; no candidate was submitted or finalised under a checkpoint freeze; and a refund
+    ///         was paid exactly when the vault was retired, releases were not globally frozen, the leaf was at or above
+    ///         the first valid sunset checkpoint's count and that checkpoint was at least revokeWindow old (for a leaf
+    ///         not yet refunded whose escrow suffices).
+    function invariant_checkpointAndRefundRulesHold() public view {
+        assertEq(handler.ghostRejectedFinalisations(), 0);
+        assertEq(handler.ghostCheckpointCallsDuringFreeze(), 0);
+        assertEq(handler.ghostRefundsAgainstTheRules(), 0);
+        assertEq(handler.ghostRefundsWronglyRefused(), 0);
     }
 
     function invariant_leafCountAndRootMatchTheReference() public view {
@@ -121,13 +194,38 @@ contract VaultInvariants is VaultTestBase {
         assertEq(vm.load(address(vault), bytes32(uint256(2))), LEZ_CONFIG_ID);
     }
 
-    /// @dev Run summary, shown with -vv: shows the campaign reaches the paths the invariants are about.
+    /// @dev Run summary, shown with -vv for the last run of each campaign. The run table counts the whole campaign.
     function afterInvariant() public view {
         console2.log("deposits", handler.ghostDepositCount());
-        console2.log("finalisations", handler.ghostFinalizeCount());
-        console2.log("revocations", handler.ghostRevokeCount());
         console2.log("releases", handler.ghostReleaseCount());
-        console2.log("refunds", handler.ghostRefundCount());
-        console2.log("replays stopped by nullifier check", handler.ghostReplaysStoppedByNullifier());
+        uint256[8] memory counts = handler.summary();
+        string[8] memory names = [
+            "refunds",
+            "finalisations",
+            "sunset finalisations",
+            "cancellations",
+            "refused for monotonicity",
+            "refused as cancelled",
+            "revocations",
+            "replays stopped by nullifier check"
+        ];
+        for (uint256 i = 0; i < counts.length; i++) {
+            console2.log(names[i], counts[i]);
+        }
+    }
+
+    function _history(uint256 i) internal view returns (History memory h) {
+        (
+            h.parentState,
+            h.newState,
+            ,
+            ,
+            h.importedLeafCount,
+            h.sunset,
+            h.revoked,
+            h.parentImportedLeafCount,
+            h.parentSunset,
+            h.finalizedAt
+        ) = vault.checkpoints(i);
     }
 }

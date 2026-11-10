@@ -63,11 +63,20 @@ contract GasScenarios is VaultTestBase {
         }
     }
 
-    /// @dev Finalises a sunset checkpoint below which 37 leaves were imported: leaves 37..41 become refundable.
+    /// @dev Retires the vault and finalises a sunset checkpoint below which 37 leaves were imported: leaves 37..41
+    ///      become refundable once `revokeWindow` has passed (v3 D5).
     function _sunsetAt37() internal {
+        vm.prank(freezer);
+        vault.retire();
         FerrataVault.Checkpoint memory c = _nextCheckpoint(vault, keccak256("sunset root"), 37, true);
         _submit(c);
         _finalizeAfterDelta(c);
+        vm.warp(block.timestamp + REVOKE_WINDOW);
+    }
+
+    /// @dev A candidate's wait W = delta + (t - 1) * turnSeconds, for the default committee (t = 3).
+    function _waitT3() internal pure returns (uint256) {
+        return DELTA + (uint256(T) - 1) * TURN_SECONDS;
     }
 
     function _log(string memory scenario) internal view returns (uint256 gasUsed) {
@@ -194,7 +203,7 @@ contract GasScenarios is VaultTestBase {
     function test_gas_finalize() public {
         FerrataVault.Checkpoint memory c = _nextCheckpoint(keccak256("a new burn root"));
         _submit(c);
-        vm.warp(block.timestamp + DELTA);
+        vm.warp(block.timestamp + _waitT3());
         vm.roll(block.number + 1);
         uint256 beaconIndex = vault.recordBeacon();
         (, bytes32 nonce) = vault.beacons(beaconIndex);
@@ -203,6 +212,28 @@ contract GasScenarios is VaultTestBase {
         vm.prank(relayer);
         vault.finalize(beaconIndex, c, SEAL);
         _log("finalize (incl. mock verifier)");
+    }
+
+    function test_gas_finalize_firstSunset() public {
+        FerrataVault.Checkpoint memory c = _nextCheckpoint(vault, keccak256("sunset root"), 37, true);
+        _submit(c);
+        vm.warp(block.timestamp + _waitT3());
+        vm.roll(block.number + 1);
+        uint256 beaconIndex = vault.recordBeacon();
+        (, bytes32 nonce) = vault.beacons(beaconIndex);
+        c.echoNonce = nonce;
+        _proveCheckpoint(_checkpointJournal(c));
+        vm.prank(relayer);
+        vault.finalize(beaconIndex, c, SEAL);
+        _log("finalize, first sunset checkpoint: sets the refund boundary (incl. mock verifier)");
+    }
+
+    function test_gas_cancelCandidate() public {
+        FerrataVault.Checkpoint memory c = _nextCheckpoint(keccak256("a new burn root"));
+        _submit(c);
+        vm.prank(freezer);
+        vault.cancelCandidate(c.newState);
+        _log("cancelCandidate (freeze authority)");
     }
 
     function test_gas_releaseETH_noFee() public {

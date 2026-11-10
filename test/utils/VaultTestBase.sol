@@ -18,12 +18,17 @@ abstract contract VaultTestBase is Test {
     bytes32 internal constant CHECKPOINT_IMAGE_ID = keccak256("test: checkpoint program image id");
     bytes32 internal constant LEZ_CONFIG_ID = keccak256("test: LEZ configuration id");
     bytes32 internal constant GENESIS_STATE = keccak256("test: LEZ genesis checkpoint state");
-    uint32 internal constant N_MIN = 4;
-    uint32 internal constant T_MIN = 3;
-    uint256 internal constant DELTA_FLOOR = 1 hours;
-    uint256 internal constant DELTA = 2 hours;
+    uint32 internal constant N_MIN = 3;
+    uint32 internal constant T_MIN = 2;
+    /// Default key set of the test checkpoints: n = 4 keys, threshold t(4) = 3.
+    uint32 internal constant N = 4;
+    uint32 internal constant T = 3;
+    uint256 internal constant DELTA_FLOOR = 3 hours + 1 minutes; // v3 D4 default floor
+    uint256 internal constant DELTA = 4 hours;
+    uint256 internal constant TURN_SECONDS = 900; // posting timeframe on the repository's testnet values
     uint256 internal constant REVOKE_WINDOW = 3 days;
     uint256 internal constant MAX_FREEZE = 30 days;
+    uint256 internal constant MIN_RELEASE_DELAY = 0; // tests of the bound deploy their own vault
     address internal constant ETH = address(0);
     uint256 internal constant UNLIMITED = type(uint256).max;
     bytes internal constant SEAL = hex"5ea15ea1";
@@ -41,6 +46,10 @@ abstract contract VaultTestBase is Test {
         uint64 importedLeafCount;
         bool sunset;
         bytes32 echoNonce;
+        uint64 tipId;
+        bytes32 tipHash;
+        uint32 n;
+        uint32 t;
     }
 
     struct ReleaseJournal {
@@ -115,6 +124,8 @@ abstract contract VaultTestBase is Test {
             initialDelta: DELTA,
             revokeWindow: REVOKE_WINDOW,
             maxFreeze: MAX_FREEZE,
+            turnSeconds: TURN_SECONDS,
+            minReleaseDelay: MIN_RELEASE_DELAY,
             admin: admin,
             freezeAuthority: freezer,
             globalDepositCap: _unlimited(),
@@ -213,11 +224,11 @@ abstract contract VaultTestBase is Test {
     // Journals: the exact byte layouts a proof must commit to
     // ------------------------------------------------------------------------------------------------------------
 
-    /// @dev 13 words: domain, chainId, vault, lezConfigId, nMin, tMin, parentState, newState, burnRoot, burnCount,
-    ///      importedLeafCount, sunset, echoNonce (spec §4.2 item 5).
+    /// @dev 17 words: domain, chainId, vault, lezConfigId, nMin, tMin, parentState, newState, burnRoot, burnCount,
+    ///      importedLeafCount, sunset, echoNonce, tipId, tipHash, n, t (SPEC-v3 D3).
     function _checkpointJournalBytes(CheckpointJournal memory j) internal pure returns (bytes memory) {
         bytes memory head = bytes.concat(
-            sha256(bytes("ferrata/vault/checkpoint/v2")),
+            sha256(bytes("ferrata/vault/checkpoint/v3")),
             bytes32(j.chainId),
             bytes32(uint256(uint160(j.vault))),
             j.lezConfigId,
@@ -233,7 +244,9 @@ abstract contract VaultTestBase is Test {
             bytes32(uint256(j.sunset ? 1 : 0)),
             j.echoNonce
         );
-        return bytes.concat(head, body);
+        bytes memory tail =
+            bytes.concat(bytes32(uint256(j.tipId)), j.tipHash, bytes32(uint256(j.n)), bytes32(uint256(j.t)));
+        return bytes.concat(head, body, tail);
     }
 
     /// @dev 11 words: domain, chainId, vault, lezConfigId, burnRoot, nullifier, token, amount, recipient,
@@ -275,7 +288,11 @@ abstract contract VaultTestBase is Test {
             burnCount: c.burnCount,
             importedLeafCount: c.importedLeafCount,
             sunset: c.sunset,
-            echoNonce: c.echoNonce
+            echoNonce: c.echoNonce,
+            tipId: c.tipId,
+            tipHash: c.tipHash,
+            n: c.n,
+            t: c.t
         });
     }
 
@@ -313,7 +330,8 @@ abstract contract VaultTestBase is Test {
     // Checkpoints: candidate, beacon, finalisation
     // ------------------------------------------------------------------------------------------------------------
 
-    /// @dev A fresh checkpoint built on `v.finalState()`, with a new state id and burn count.
+    /// @dev A fresh checkpoint built on `v.finalState()`, with a new state id, tip and burn count, and the default
+    ///      key set (n = 4, t = 3).
     function _nextCheckpoint(FerrataVault v, bytes32 burnRoot, uint64 importedLeafCount, bool sunset)
         internal
         returns (FerrataVault.Checkpoint memory)
@@ -329,12 +347,25 @@ abstract contract VaultTestBase is Test {
             burnCount: burnCounter,
             importedLeafCount: importedLeafCount,
             sunset: sunset,
-            echoNonce: bytes32(0)
+            echoNonce: bytes32(0),
+            tipId: 1000 + burnCounter,
+            tipHash: keccak256(abi.encode("test LEZ tip", stateNonce)),
+            n: N,
+            t: T
         });
     }
 
+    /// @dev As above, carrying the vault's current imported leaf count and sunset flag forward (monotonicity, v3 D4).
     function _nextCheckpoint(bytes32 burnRoot) internal returns (FerrataVault.Checkpoint memory) {
-        return _nextCheckpoint(vault, burnRoot, 0, false);
+        return _nextCheckpoint(vault, burnRoot, vault.finalImportedLeafCount(), vault.finalSunset());
+    }
+
+    /// @dev W = deltaAtSubmit + (t - 1) * turnSeconds, computed here independently of the vault.
+    function _waitOf(FerrataVault v, bytes32 newState) internal view returns (uint256 submittedAt, uint256 wait) {
+        uint32 t;
+        uint256 deltaAtSubmit;
+        (,,,,, t,,, submittedAt, deltaAtSubmit,) = v.candidates(newState);
+        wait = deltaAtSubmit + (uint256(t) - 1) * TURN_SECONDS;
     }
 
     /// @dev Proves `c` as a candidate (echoNonce 0) for vault `v` and submits it.
@@ -347,14 +378,14 @@ abstract contract VaultTestBase is Test {
         _submit(vault, LEZ_CONFIG_ID, c);
     }
 
-    /// @dev Waits out the candidate's delta, records a beacon in a new block, sets `c.echoNonce` to that beacon's
+    /// @dev Waits out the candidate's wait W, records a beacon in a new block, sets `c.echoNonce` to that beacon's
     ///      nonce (so `c` is modified), proves the finalisation journal and finalises. Returns the checkpoint index.
     function _finalizeAfterDelta(FerrataVault v, bytes32 lezConfig, FerrataVault.Checkpoint memory c)
         internal
         returns (uint256 index)
     {
-        (,,,,, uint256 submittedAt, uint256 deltaAtSubmit,) = v.candidates(c.newState);
-        if (block.timestamp < submittedAt + deltaAtSubmit) vm.warp(submittedAt + deltaAtSubmit);
+        (uint256 submittedAt, uint256 wait) = _waitOf(v, c.newState);
+        if (block.timestamp < submittedAt + wait) vm.warp(submittedAt + wait);
         vm.roll(block.number + 1);
         uint256 beaconIndex = v.recordBeacon();
         (, bytes32 nonce) = v.beacons(beaconIndex);
@@ -371,7 +402,7 @@ abstract contract VaultTestBase is Test {
     /// @dev Makes `burnRoot` accepted on `v` the only way the vault allows: a candidate, a beacon `delta` later,
     ///      and a finalisation. Returns the checkpoint index.
     function _acceptRootOn(FerrataVault v, bytes32 lezConfig, bytes32 burnRoot) internal returns (uint256) {
-        FerrataVault.Checkpoint memory c = _nextCheckpoint(v, burnRoot, 0, false);
+        FerrataVault.Checkpoint memory c = _nextCheckpoint(v, burnRoot, v.finalImportedLeafCount(), v.finalSunset());
         _submit(v, lezConfig, c);
         return _finalizeAfterDelta(v, lezConfig, c);
     }

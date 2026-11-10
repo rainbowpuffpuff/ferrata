@@ -4,7 +4,7 @@ pragma solidity ^0.8.26;
 import {FerrataVault} from "../src/FerrataVault.sol";
 import {VaultTestBase} from "./utils/VaultTestBase.sol";
 
-/// @notice Spec §4.4: reject-only revocation of finalised checkpoints by the freeze authority.
+/// @notice Spec §4.4 with v3 D4/D5: reject-only revocation of finalised checkpoints by the freeze authority.
 contract RevocationTest is VaultTestBase {
     bytes32 internal constant ROOT_A = keccak256("burn root A");
     bytes32 internal constant ROOT_B = keccak256("burn root B");
@@ -13,7 +13,7 @@ contract RevocationTest is VaultTestBase {
     bytes32 internal constant N2 = keccak256("nullifier 2");
 
     function _revoked(uint256 index) internal view returns (bool revoked) {
-        (,,,,,, revoked,) = vault.checkpoints(index);
+        (,,,,,, revoked,,,) = vault.checkpoints(index);
     }
 
     function _accepted(bytes32 root) internal view returns (bool accepted) {
@@ -53,7 +53,7 @@ contract RevocationTest is VaultTestBase {
 
     function test_revokeFrom_onlyWithinTheWindow() public {
         uint256 index = _acceptRoot(ROOT_A);
-        (,,,,,,, uint256 finalizedAt) = vault.checkpoints(index);
+        (,,,,,,,,, uint256 finalizedAt) = vault.checkpoints(index);
 
         uint256 snapshot = vm.snapshotState();
         vm.warp(finalizedAt + REVOKE_WINDOW); // the last second of the window
@@ -174,5 +174,63 @@ contract RevocationTest is VaultTestBase {
         assertFalse(_accepted(ROOT_B));
         assertTrue(_accepted(ROOT_A));
         assertEq(vault.burnRootCheckpoint(ROOT_B), 2);
+    }
+
+    /// @notice v3 D4: a revocation restores the imported leaf count and sunset flag of the state it returns to, so the
+    ///         monotonicity checks continue from there; a revoked checkpoint's count or sunset binds nothing later.
+    function test_revokeFrom_restoresTheMonotonicityState() public {
+        _acceptRoot(ROOT_A); // checkpoint 0: count 0
+        FerrataVault.Checkpoint memory c = _nextCheckpoint(vault, ROOT_B, 5, false);
+        _submit(c);
+        _finalizeAfterDelta(c); // checkpoint 1: count 5
+        c = _nextCheckpoint(vault, ROOT_C, 7, true);
+        _submit(c);
+        _finalizeAfterDelta(c); // checkpoint 2: sunset at count 7
+        assertEq(vault.finalImportedLeafCount(), 7);
+        assertTrue(vault.finalSunset());
+
+        vm.prank(freezer);
+        vault.revokeFrom(2);
+        assertEq(vault.finalImportedLeafCount(), 5);
+        assertFalse(vault.finalSunset());
+        vm.prank(freezer);
+        vault.revokeFrom(1);
+        assertEq(vault.finalImportedLeafCount(), 0);
+        assertFalse(vault.finalSunset());
+
+        c = _nextCheckpoint(vault, ROOT_B, 3, false); // below both revoked counts, and no sunset: fine again
+        _submit(c);
+        uint256 index = _finalizeAfterDelta(c);
+        assertEq(vault.finalImportedLeafCount(), 3);
+        (,,,,,,, uint64 parentImported, bool parentSunset,) = vault.checkpoints(index);
+        assertEq(parentImported, 0);
+        assertFalse(parentSunset);
+    }
+
+    /// @notice Revoking a later checkpoint returns to a state that is already a sunset one, so the sunset stays final
+    ///         and a checkpoint without it is still refused.
+    function test_revokeFrom_keepsTheSunsetOfTheRestoredState() public {
+        FerrataVault.Checkpoint memory c = _nextCheckpoint(vault, ROOT_A, 4, true);
+        _submit(c);
+        _finalizeAfterDelta(c); // checkpoint 0: sunset at count 4
+        _acceptRoot(ROOT_B); // checkpoint 1: a sunset checkpoint with the same count
+        (,,,,,,, uint64 parentImported, bool parentSunset,) = vault.checkpoints(1);
+        assertEq(parentImported, 4);
+        assertTrue(parentSunset);
+        vm.prank(freezer);
+        vault.revokeFrom(1);
+        assertTrue(vault.finalSunset());
+        assertEq(vault.finalImportedLeafCount(), 4);
+
+        c = _nextCheckpoint(vault, ROOT_C, 4, false);
+        _submit(c);
+        (uint256 submittedAt, uint256 wait) = _waitOf(vault, c.newState);
+        vm.warp(submittedAt + wait);
+        vm.roll(block.number + 1);
+        uint256 b = vault.recordBeacon();
+        (, c.echoNonce) = vault.beacons(b);
+        _proveCheckpoint(_checkpointJournal(c));
+        vm.expectRevert(FerrataVault.SunsetIsFinal.selector);
+        vault.finalize(b, c, SEAL);
     }
 }

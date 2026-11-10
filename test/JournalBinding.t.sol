@@ -190,13 +190,13 @@ contract ReleaseJournalBindingTest is VaultTestBase {
     }
 }
 
-/// @notice Every field of the checkpoint journal (spec §4.2 item 5) is bound, both when a candidate is submitted and
+/// @notice Every field of the checkpoint journal (SPEC-v3 D3: 17 words) is bound, both when a candidate is submitted and
 ///         when it is finalised: a proof whose journal differs from the vault's reconstruction in exactly one field
 ///         is rejected, and the same call then succeeds once its own journal is proven (control).
 contract CheckpointJournalBindingTest is VaultTestBase {
     bytes32 internal constant ROOT = keccak256("burn root");
 
-    /// @dev Changes exactly one field of `j`, numbered in journal order after the domain word.
+    /// @dev Changes exactly one field of `j`, numbered in journal order after the domain word (16 fields).
     function _mutate(CheckpointJournal memory j, uint256 field) internal view {
         if (field == 0) j.chainId = block.chainid + 1;
         else if (field == 1) j.vault = address(0xbeef);
@@ -209,7 +209,11 @@ contract CheckpointJournalBindingTest is VaultTestBase {
         else if (field == 8) j.burnCount = j.burnCount + 1;
         else if (field == 9) j.importedLeafCount = j.importedLeafCount + 1;
         else if (field == 10) j.sunset = !j.sunset;
-        else j.echoNonce = keccak256("another echo nonce");
+        else if (field == 11) j.echoNonce = keccak256("another echo nonce");
+        else if (field == 12) j.tipId = j.tipId + 1;
+        else if (field == 13) j.tipHash = keccak256("another tip hash");
+        else if (field == 14) j.n = j.n + 1;
+        else j.t = j.t + 1;
     }
 
     function _checkSubmit(uint256 field) internal {
@@ -222,14 +226,14 @@ contract CheckpointJournalBindingTest is VaultTestBase {
 
         _proveCheckpoint(_checkpointJournal(c)); // control
         vault.submitCandidate(c, SEAL);
-        (,,,,, uint256 submittedAt,,) = vault.candidates(c.newState);
+        (,,,,,,,, uint256 submittedAt,,) = vault.candidates(c.newState);
         assertEq(submittedAt, block.timestamp);
     }
 
     function _checkFinalize(uint256 field) internal {
         FerrataVault.Checkpoint memory c = _nextCheckpoint(vault, ROOT, 3, false);
         _submit(c);
-        vm.warp(block.timestamp + DELTA);
+        vm.warp(block.timestamp + DELTA + (uint256(T) - 1) * TURN_SECONDS);
         vm.roll(block.number + 1);
         uint256 beaconIndex = vault.recordBeacon();
         (, bytes32 nonce) = vault.beacons(beaconIndex);
@@ -294,6 +298,22 @@ contract CheckpointJournalBindingTest is VaultTestBase {
         _checkSubmit(11);
     }
 
+    function test_checkpointJournal_submit_bindsTipId() public {
+        _checkSubmit(12);
+    }
+
+    function test_checkpointJournal_submit_bindsTipHash() public {
+        _checkSubmit(13);
+    }
+
+    function test_checkpointJournal_submit_bindsN() public {
+        _checkSubmit(14);
+    }
+
+    function test_checkpointJournal_submit_bindsT() public {
+        _checkSubmit(15);
+    }
+
     function test_checkpointJournal_finalize_bindsChainId() public {
         _checkFinalize(0);
     }
@@ -340,5 +360,21 @@ contract CheckpointJournalBindingTest is VaultTestBase {
 
     function test_checkpointJournal_finalize_bindsEchoNonce() public {
         _checkFinalize(11);
+    }
+
+    function test_checkpointJournal_finalize_bindsTipId() public {
+        _checkFinalize(12);
+    }
+
+    function test_checkpointJournal_finalize_bindsTipHash() public {
+        _checkFinalize(13);
+    }
+
+    function test_checkpointJournal_finalize_bindsN() public {
+        _checkFinalize(14);
+    }
+
+    function test_checkpointJournal_finalize_bindsT() public {
+        _checkFinalize(15);
     }
 }
