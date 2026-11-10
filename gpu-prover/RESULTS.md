@@ -21,7 +21,7 @@ check), the same scope as the CPU's `prove_with_opts(…, succinct)`.
 | `cp-empty-360` (idle hour) | 5,992,503 | 7 | ≈ 2,023 s (7 × 289 s, extrapolated) | **24.1 s** | 0.3 s | 17.8 s (2.54 s) | 6.0 s | 84× | 224,314 B | 11,140 MiB | 0.84 GiB | 70% |
 | `cp-pp5-360` (5 private txs) | 8,821,992 | 12 | ≈ 3,473 s (12 × 289 s, extrapolated) | **41.4 s** | 0.5 s | 30.4 s (2.53 s) | 10.5 s | 84× | 224,314 B | 11,076 MiB | 1.01 GiB | 68% |
 | `cp-pp50-360` (50 private txs) | 37,865,667 | 60 | ≈ 17,363 s = 4.8 h (60 × 289 s, extrapolated) | **219.3 s** | 3.7 s | 159.9 s (2.66 s) | 55.7 s | 79× | 224,314 B | 11,158 MiB | 1.08 GiB | 67% |
-| `real-lab-8-202` (rule (B) over 195 **real** blocks of the lab's LEZ sequencer; `checkpoint/RESULTS.md`, "Real LEZ blocks") | 7,659,550 | 11 | not run | **39.5 s** | 0.6 s | 29.2 s (2.66 s) | 9.6 s | – | 224,314 B | 11,140 MiB | in run.json | 66% |
+| `real-lab-8-202` (rule (B) over 195 **real** blocks of the lab's LEZ sequencer; `checkpoint/RESULTS.md`, "Real LEZ blocks") | 7,659,550 | 11 | not run | **39.5 s** | 0.6 s | 29.2 s (2.66 s) | 9.6 s | – | 224,314 B | 11,140 MiB | 1.01 GiB | 66% |
 
 - **Per segment.** A po2-20 segment proof takes 2.31–3.35 s on the L4. The first segment of each
   run is slower (2.84–3.18 s, CUDA start-up). The po2-19 tail segment of `cp-pp5-360` takes
