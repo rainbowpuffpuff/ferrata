@@ -1,0 +1,67 @@
+{
+  "what": "Inputs of one end-to-end run. The contracts are the deployer's CREATE addresses at first_nonce + 0..3 (Groth16 verifier, emergency stop, test token, vault). Amounts are base units.",
+  "chain_id": 11155111,
+  "deployer": "0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07",
+  "first_nonce": 1,
+  "groth16_verifier": "0x8f0Af3Bf302C64d57f840127F94d9c123a8Fa2A0",
+  "emergency_stop": "0xe4830261A1D61Df5AF1be5579a3e3DB738331139",
+  "token": "0xdfedf9A73Cfb337277b95a9a1C941c3496A4385F",
+  "vault": "0xd0B5fcC0B47D8E6f514f9D246Bb0b416b2048AF7",
+  "depositor": "0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07",
+  "deposits": [
+    {
+      "token": "0x0000000000000000000000000000000000000000",
+      "amount": "1000000000000000",
+      "kind": "public",
+      "dest": "0x54d662b664519cb8aef608ae84a63e041cc16019e4a07c34828311996f0c817a"
+    },
+    {
+      "token": "0x0000000000000000000000000000000000000000",
+      "amount": "1000000000000000",
+      "kind": "private",
+      "dest": "0x2d6cb849edc6d8b1599c558ecd87bc09b4420bdc60f1b3be85547a5834b153fc"
+    },
+    {
+      "token": "0xdfedf9A73Cfb337277b95a9a1C941c3496A4385F",
+      "amount": "100000000",
+      "kind": "public",
+      "dest": "0xf3c51bbb22e82d18ace85c61212978dfc50028701d4efe11213b69d14b673ea9"
+    }
+  ],
+  "burns": [
+    {
+      "name": "eth",
+      "token": "0x0000000000000000000000000000000000000000",
+      "amount": "1000000000000000",
+      "recipient": "0x67553ad2d0f0143f8b37b4bee72d08d59984c824",
+      "relayer": "0x0000000000000000000000000000000000000000",
+      "relay_fee": "0"
+    },
+    {
+      "name": "erc20",
+      "token": "0xdfedf9A73Cfb337277b95a9a1C941c3496A4385F",
+      "amount": "100000000",
+      "recipient": "0x730a57fadc5f6b9e42279a9d52f349469b231962",
+      "relayer": "0xc6948a054c4da1fd85ce3b68299294704198e253",
+      "relay_fee": "250000"
+    }
+  ],
+  "lez_identity": {
+    "bedrock_genesis_id": "0x64b4418d697955f44288c4a5b8ead0ce7ffc2963aa6117b54cddc7fb70b3068d",
+    "channel_id": "0x0a358e03f1ed683759adcb4747cdfaf5eb3a5899407981f555641f068f5140a6",
+    "bridge_header": "0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d",
+    "bridge_image_id": "0x66722fc7681beaeaacdfce978ae95ba9ba9f2b576b87791d523d6cd10815f4fa",
+    "attestation_root_id": "0x0f0feabd0d70d3202282037513e256d817c4749d3925d3457b077f9ca5e5d524",
+    "salt": "0xbadde82cf76c7f5a543569fd2dd5b326637d336d948734a291572f4e05fa7bf5"
+  },
+  "lez_inputs": {
+    "source": {
+      "file": "spike/tmp/inbound/sepolia-plan.json",
+      "sha256": "e26824d8ba12d3c533c9eb53c553c477f9a7a3568270a658a66a59171253813a",
+      "status": "FINAL, written 2026-11-10 20:54 UTC by the inbound agent on branch inbound-live at e0067b8. The bridge guest is frozen: ",
+      "fields": "config_identity.{bedrock_genesis_id,channel_id,bridge_header,bridge_image_id,attestation_root_id,salt}.value; deposits[j].{kind,dest,amount_wei}",
+      "third_deposit": "the test token's deposit (leaf 2) is this run's own, not the plan's: sent after capture 2, so no root LEZ attests holds it; it funds the ERC-20 release of the return leg; its dest is a label (sha256 of 'e2e: LEZ destination account 2'), never claimed"
+    },
+    "sha256": "989b98e1943eb3e12a52fb79596813a139e03a8a3c9853eb9b43065504462970"
+  }
+}
