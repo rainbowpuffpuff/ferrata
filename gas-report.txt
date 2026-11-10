@@ -1,0 +1,645 @@
+No files changed, compilation skipped
+
+Ran 7 tests for test/Admin.t.sol:ConstructorTest
+[PASS] test_constructor_domainTagsMatchTheirDefinitions() (gas: 26583)
+[PASS] test_constructor_globalCapsStartFull() (gas: 3413476)
+[PASS] test_constructor_rejectsBadImageIds() (gas: 1013518)
+[PASS] test_constructor_rejectsVerifierWithoutCode() (gas: 344536)
+[PASS] test_constructor_rejectsZeroLezConfigId() (gas: 344832)
+[PASS] test_constructor_rejectsZeroOrSharedRoles() (gas: 1014024)
+[PASS] test_constructor_setsImmutablesRolesAndEmptyRoot() (gas: 82422)
+Suite result: ok. 7 passed; 0 failed; 0 skipped; finished in 12.19ms (3.64ms CPU time)
+
+Ran 7 tests for test/JournalBinding.t.sol:RootJournalBindingTest
+[PASS] test_rootJournal_bindsBurnCount() (gas: 224397)
+[PASS] test_rootJournal_bindsBurnRoot() (gas: 224239)
+[PASS] test_rootJournal_bindsChainId() (gas: 224303)
+[PASS] test_rootJournal_bindsDepth() (gas: 224262)
+[PASS] test_rootJournal_bindsLezBlockId() (gas: 224354)
+[PASS] test_rootJournal_bindsLezConfigId() (gas: 224260)
+[PASS] test_rootJournal_bindsVault() (gas: 228175)
+Suite result: ok. 7 passed; 0 failed; 0 skipped; finished in 13.87ms (7.77ms CPU time)
+
+Ran 9 tests for test/Release.t.sol:AcceptBurnRootTest
+[PASS] test_acceptBurnRoot_belowMinDepthReverts() (gas: 93284)
+[PASS] test_acceptBurnRoot_depthIncreaseDoesNotAffectAcceptedRoot() (gas: 662656)
+[PASS] test_acceptBurnRoot_olderBlockIsAcceptedButDoesNotLowerLatest() (gas: 245426)
+[PASS] test_acceptBurnRoot_recordsFirstAcceptance() (gas: 139858)
+[PASS] test_acceptBurnRoot_releaseProgramCannotStandInForRootProgram() (gas: 96527)
+[PASS] test_acceptBurnRoot_replayedProofDoesNotMoveTimestamp() (gas: 171065)
+[PASS] test_acceptBurnRoot_sameRootAtLaterBlockKeepsTimestamp() (gas: 234771)
+[PASS] test_acceptBurnRoot_withoutValidProofReverts() (gas: 42773)
+[PASS] test_rejectingVerifier_rejectsRootsAndReleases() (gas: 3937842)
+Suite result: ok. 9 passed; 0 failed; 0 skipped; finished in 16.11ms (7.75ms CPU time)
+
+Ran 8 tests for test/Admin.t.sol:RolesTest
+[PASS] test_roles_adminCannotFreezeOrUnfreeze() (gas: 286656)
+[PASS] test_roles_freezeAuthorityCannotAdminister() (gas: 238786)
+[PASS] test_roles_strangerHasNoPowers() (gas: 463227)
+[PASS] test_transferAdmin_canBeCancelledOrReplaced() (gas: 170715)
+[PASS] test_transferAdmin_cannotBeAcceptedByFreezeAuthority() (gas: 87244)
+[PASS] test_transferAdmin_isTwoStep() (gas: 451490)
+[PASS] test_transferFreezeAuthority_cannotBeAcceptedByAdmin() (gas: 70141)
+[PASS] test_transferFreezeAuthority_isTwoStepAndOnlyByHolder() (gas: 451943)
+Suite result: ok. 8 passed; 0 failed; 0 skipped; finished in 19.17ms (12.86ms CPU time)
+
+Ran 1 test for test/TreeVectors.t.sol:TreeVectorsTest
+[PASS] test_treeVectors_matchCommittedFile() (gas: 9870325)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 47.71ms (39.91ms CPU time)
+
+Ran 5 tests for test/Freeze.t.sol:FreezeTest
+[PASS] test_freeze_delaysButNeverInvalidatesAClaim() (gas: 304886)
+[PASS] test_freeze_everyCombination() (gas: 14086594)
+[PASS] test_freeze_perTokenRequiresRegisteredToken() (gas: 579277)
+[PASS] test_freeze_releaseDelayRunsFromAcceptanceAfterUnfreeze() (gas: 525094)
+[PASS] test_freeze_settersEmitAndSetFlags() (gas: 229060)
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 79.61ms (68.25ms CPU time)
+
+Ran 3 tests for test/Privacy.t.sol:PrivacyTest
+[PASS] test_privacy_depositRevealsNothingBeyondTheCommitment() (gas: 3645988)
+[PASS] test_privacy_failuresCarryOnlyASelector() (gas: 1112387)
+[PASS] test_privacy_releaseRevealsNoLezAccount() (gas: 8049391)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 170.15ms (162.58ms CPU time)
+
+Ran 16 tests for test/Admin.t.sol:RegistryTest
+[PASS] testFuzz_registerToken_lezUnitPowersOfTenAccepted(uint8) (runs: 256, μ: 357177, ~: 356788)
+[PASS] testFuzz_registerToken_nonPowersOfTenRejected(uint256) (runs: 253, μ: 46345, ~: 46273)
+[PASS] test_registerToken_denominationRules() (gas: 693314)
+[PASS] test_registerToken_denominationsMustBeMultiplesOfLezUnit() (gas: 1267457)
+[PASS] test_registerToken_lezUnitMustBePowerOfTen() (gas: 214552)
+[PASS] test_registerToken_onlyAdmin() (gas: 72739)
+[PASS] test_registerToken_onlyOnce() (gas: 418145)
+[PASS] test_registerToken_rejectsAddressWithoutCode() (gas: 44511)
+[PASS] test_registerToken_storesConfigAndEmits() (gas: 433196)
+[PASS] test_registerToken_unitWeightBounds() (gas: 83191)
+[PASS] test_setCaps_emitAndRequireRegistration() (gas: 173241)
+[PASS] test_setDepositsEnabled() (gas: 99918)
+[PASS] test_setMinLezDepth() (gas: 44859)
+[PASS] test_setReleaseDelay() (gas: 134278)
+[PASS] test_setStandardRelayFee() (gas: 175434)
+[PASS] test_setUnitWeight() (gas: 126807)
+Suite result: ok. 16 passed; 0 failed; 0 skipped; finished in 170.24ms (174.41ms CPU time)
+
+Ran 13 tests for test/GasScenarios.t.sol:GasScenarios
+[PASS] test_gas_acceptBurnRoot_newRoot() (gas: 130409)
+[PASS] test_gas_baselinePlainTransfer() (gas: 67557)
+[PASS] test_gas_depositERC20_firstByAddress() (gas: 295824)
+[PASS] test_gas_depositERC20_laterByAddress() (gas: 466917)
+[PASS] test_gas_depositETH_firstByAddress() (gas: 185193)
+[PASS] test_gas_depositETH_laterByAddress() (gas: 339476)
+[PASS] test_gas_depositETH_laterByAddress_capsUnlimited() (gas: 369343)
+[PASS] test_gas_depositETH_rangeOver128Leaves() (gas: 20356045)
+[PASS] test_gas_depositUsdtStyle_firstByAddress() (gas: 295741)
+[PASS] test_gas_mockVerifierExecution() (gas: 177107)
+[PASS] test_gas_releaseERC20_withFee() (gas: 263111)
+[PASS] test_gas_releaseETH_noFee() (gas: 230607)
+[PASS] test_gas_releaseETH_withFee() (gas: 240444)
+Suite result: ok. 13 passed; 0 failed; 0 skipped; finished in 170.30ms (146.09ms CPU time)
+
+Ran 8 tests for test/Merkle.t.sol:MerkleTest
+[PASS] testFuzz_incrementalRootMatchesReference(uint256,uint8) (runs: 256, μ: 6242527, ~: 4791498)
+[PASS] testFuzz_merklePathVerifiesAgainstDepositRoot(uint256,uint8,uint256) (runs: 256, μ: 4242690, ~: 3522903)
+[PASS] test_emptyTreeRoot() (gas: 99708)
+[PASS] test_highIndex_usesStoredBranchAtTopLevel() (gas: 295178)
+[PASS] test_incrementalRootMatchesReference_130Deposits() (gas: 99715514)
+[PASS] test_insertion_writesExactlyOneBranchSlot() (gas: 12282549)
+[PASS] test_lastLeafCompletesTheTree() (gas: 542357)
+[PASS] test_storageSlots_rootAtSlot0_leafCountAtSlot1() (gas: 3033364)
+Suite result: ok. 8 passed; 0 failed; 0 skipped; finished in 5.59s (9.36s CPU time)
+
+Ran 26 tests for test/Release.t.sol:ReleaseTest
+[PASS] test_deposit_reentrantTokenIsBlocked() (gas: 1685324)
+[PASS] test_release_cannotExceedEscrow() (gas: 812358)
+[PASS] test_release_delayIsPerToken() (gas: 597070)
+[PASS] test_release_delayIsReadAtReleaseTime() (gas: 632696)
+[PASS] test_release_eighteenDecimalToken() (gas: 702073)
+[PASS] test_release_erc20FeeSplit() (gas: 779856)
+[PASS] test_release_escrowIsPerToken() (gas: 676460)
+[PASS] test_release_eth() (gas: 552032)
+[PASS] test_release_feeGoesToBoundFeeRecipient() (gas: 639793)
+[PASS] test_release_feeGoesToMsgSenderWhenFeeRecipientIsUnset() (gas: 613168)
+[PASS] test_release_invalidDenominationIndexReverts() (gas: 161215)
+[PASS] test_release_nonZeroFeeRejectedWhenNoStandardFeeIsSet() (gas: 465915)
+[PASS] test_release_recipientRejectingEthOnlyFailsItsOwnRelease() (gas: 1028643)
+[PASS] test_release_reentrantRecipientCannotDeposit() (gas: 1147969)
+[PASS] test_release_reentrantRecipientIsBlocked() (gas: 1660089)
+[PASS] test_release_reentrantTokenIsBlocked() (gas: 2528851)
+[PASS] test_release_relayFeeMustBeZeroOrStandard() (gas: 1664247)
+[PASS] test_release_rootProgramCannotStandInForReleaseProgram() (gas: 472905)
+[PASS] test_release_sameNullifierTwiceReverts() (gas: 1027656)
+[PASS] test_release_sixDecimalToken() (gas: 702017)
+[PASS] test_release_unknownRootReverts() (gas: 339714)
+[PASS] test_release_unregisteredTokenReverts() (gas: 670846)
+[PASS] test_release_usdtStyleTokenWithoutReturnValue() (gas: 702016)
+[PASS] test_release_waitsForReleaseDelay() (gas: 682966)
+[PASS] test_release_worksForDelistedToken() (gas: 844327)
+[PASS] test_release_zeroRecipientReverts() (gas: 453954)
+Suite result: ok. 26 passed; 0 failed; 0 skipped; finished in 7.90s (66.17ms CPU time)
+
+Ran 22 tests for test/Deposit.t.sol:DepositTest
+[PASS] test_depositETH_disabledReverts() (gas: 81176)
+[PASS] test_depositETH_escrowsAndAppendsLeaf() (gas: 318150)
+[PASS] test_depositETH_wrongValueReverts() (gas: 143545)
+[PASS] test_deposit_disabledTokenRevertsAndReenableWorks() (gas: 444703)
+[PASS] test_deposit_eighteenDecimalToken() (gas: 475984)
+[PASS] test_deposit_erc20PathIsNotPayable() (gas: 163992)
+[PASS] test_deposit_ethSentinelThroughErc20PathReverts() (gas: 33827)
+[PASS] test_deposit_falseReturningTokenReverts() (gas: 916719)
+[PASS] test_deposit_feeOnTransferTokenReverts() (gas: 1069896)
+[PASS] test_deposit_indexIsPerDepositor() (gas: 516670)
+[PASS] test_deposit_repeatedCommitmentIsAllowed() (gas: 1014188)
+[PASS] test_deposit_revertsWhenTreeIsFull() (gas: 57307)
+[PASS] test_deposit_sixDecimalToken() (gas: 475872)
+[PASS] test_deposit_unregisteredTokenReverts() (gas: 552703)
+[PASS] test_deposit_usdtStyleTokenWithoutReturnValue() (gas: 475853)
+[PASS] test_deposit_wrongDenominationIndexReverts() (gas: 237654)
+[PASS] test_deposit_wrongIndexReverts() (gas: 481153)
+[PASS] test_deposit_zeroCommitmentReverts() (gas: 203113)
+[PASS] test_fallback_rejectsUnknownCalls() (gas: 62482)
+[PASS] test_leafHash_matchesSpec() (gas: 12252)
+[PASS] test_receive_rejectsPlainEth() (gas: 47515)
+[PASS] test_usdtMock_hasNoReturnValue() (gas: 174902)
+Suite result: ok. 22 passed; 0 failed; 0 skipped; finished in 7.90s (26.68ms CPU time)
+
+Ran 16 tests for test/JournalBinding.t.sol:ReleaseJournalBindingTest
+[PASS] test_attack_proofCannotBeReplayedAcrossLezConfigurations() (gas: 5235373)
+[PASS] test_attack_proofCannotBeReplayedOnAnotherChain() (gas: 309622)
+[PASS] test_attack_proofCannotBeReplayedOnAnotherVault() (gas: 5404070)
+[PASS] test_attack_relayerCannotAddAFee() (gas: 144012)
+[PASS] test_attack_relayerCannotRedirectFunds() (gas: 144453)
+[PASS] test_attack_relayerCannotRedirectTheFee() (gas: 144432)
+[PASS] test_releaseJournal_bindsAmount() (gas: 388814)
+[PASS] test_releaseJournal_bindsBurnRoot() (gas: 388859)
+[PASS] test_releaseJournal_bindsChainId() (gas: 388879)
+[PASS] test_releaseJournal_bindsFeeRecipient() (gas: 388835)
+[PASS] test_releaseJournal_bindsLezConfigId() (gas: 388858)
+[PASS] test_releaseJournal_bindsNullifier() (gas: 388858)
+[PASS] test_releaseJournal_bindsRecipient() (gas: 390955)
+[PASS] test_releaseJournal_bindsRelayFee() (gas: 388879)
+[PASS] test_releaseJournal_bindsToken() (gas: 390954)
+[PASS] test_releaseJournal_bindsVault() (gas: 392838)
+Suite result: ok. 16 passed; 0 failed; 0 skipped; finished in 8.54s (21.15ms CPU time)
+
+Ran 13 tests for test/Caps.t.sol:CapsTest
+[PASS] testFuzz_tokenDepositCap_boundsThroughput(uint256) (runs: 256, μ: 7746671, ~: 7734174)
+[PASS] test_capUpdate_fromUnlimitedStartsFull() (gas: 67312)
+[PASS] test_capUpdate_loweringTakesEffectAtOnce() (gas: 685649)
+[PASS] test_capUpdate_raisingAddsNoInstantHeadroom() (gas: 791916)
+[PASS] test_capUpdate_settlesRefillEarnedUnderOldRate() (gas: 805635)
+[PASS] test_globalDepositCapRejection_leavesTokenBucketUntouched() (gas: 395186)
+[PASS] test_globalDepositCap_countsValueAcrossTokens() (gas: 1285471)
+[PASS] test_globalReleaseCap_countsValueAcrossTokens() (gas: 1727542)
+[PASS] test_refillSaturatesWithoutOverflow() (gas: 1151127)
+[PASS] test_tokenDepositCap_exhaustsAndRefillsOverTime() (gas: 1416382)
+[PASS] test_tokenDepositCap_rejectionConsumesNothing() (gas: 657101)
+[PASS] test_tokenReleaseCap_exhaustsAndRefillsOverTime() (gas: 1616662)
+[PASS] test_unlimitedCapacityDisablesTheCap() (gas: 2243182)
+Suite result: ok. 13 passed; 0 failed; 0 skipped; finished in 8.54s (4.96s CPU time)
+
+Ran 5 tests for test/invariant/VaultInvariants.t.sol:VaultInvariants
+[PASS] invariant_depositRootMatchesReference() (runs: 256, calls: 25600, reverts: 3563)
+
+╭--------------+-----------------+-------+---------+----------╮
+| Contract     | Selector        | Calls | Reverts | Discards |
++=============================================================+
+| VaultHandler | acceptRoot      | 2856  | 477     | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | deposit         | 2833  | 1121    | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | donate          | 2849  | 0       | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | release         | 2860  | 1965    | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | replayNullifier | 2779  | 0       | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | setCap          | 2825  | 0       | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | setFreeze       | 2898  | 0       | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | setReleaseDelay | 2830  | 0       | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | warp            | 2870  | 0       | 0        |
+╰--------------+-----------------+-------+---------+----------╯
+
+[PASS] invariant_escrowEqualsDepositsMinusReleases() (runs: 256, calls: 25600, reverts: 3632)
+
+╭--------------+-----------------+-------+---------+----------╮
+| Contract     | Selector        | Calls | Reverts | Discards |
++=============================================================+
+| VaultHandler | acceptRoot      | 2856  | 489     | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | deposit         | 2833  | 1168    | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | donate          | 2849  | 0       | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | release         | 2860  | 1975    | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | replayNullifier | 2779  | 0       | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | setCap          | 2825  | 0       | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | setFreeze       | 2898  | 0       | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | setReleaseDelay | 2830  | 0       | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | warp            | 2870  | 0       | 0        |
+╰--------------+-----------------+-------+---------+----------╯
+
+[PASS] invariant_leafCountEqualsDepositCount() (runs: 256, calls: 25600, reverts: 3702)
+
+╭--------------+-----------------+-------+---------+----------╮
+| Contract     | Selector        | Calls | Reverts | Discards |
++=============================================================+
+| VaultHandler | acceptRoot      | 2856  | 552     | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | deposit         | 2833  | 1171    | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | donate          | 2849  | 0       | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | release         | 2860  | 1979    | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | replayNullifier | 2779  | 0       | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | setCap          | 2825  | 0       | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | setFreeze       | 2898  | 0       | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | setReleaseDelay | 2830  | 0       | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | warp            | 2870  | 0       | 0        |
+╰--------------+-----------------+-------+---------+----------╯
+
+[PASS] invariant_usedNullifierIsNeverAcceptedAgain() (runs: 256, calls: 25600, reverts: 3661)
+
+╭--------------+-----------------+-------+---------+----------╮
+| Contract     | Selector        | Calls | Reverts | Discards |
++=============================================================+
+| VaultHandler | acceptRoot      | 2856  | 527     | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | deposit         | 2833  | 1165    | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | donate          | 2849  | 0       | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | release         | 2860  | 1969    | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | replayNullifier | 2779  | 0       | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | setCap          | 2825  | 0       | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | setFreeze       | 2898  | 0       | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | setReleaseDelay | 2830  | 0       | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | warp            | 2870  | 0       | 0        |
+╰--------------+-----------------+-------+---------+----------╯
+
+[PASS] invariant_vaultBalanceCoversEscrow() (runs: 256, calls: 25600, reverts: 3695)
+
+╭--------------+-----------------+-------+---------+----------╮
+| Contract     | Selector        | Calls | Reverts | Discards |
++=============================================================+
+| VaultHandler | acceptRoot      | 2856  | 554     | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | deposit         | 2833  | 1165    | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | donate          | 2849  | 0       | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | release         | 2860  | 1976    | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | replayNullifier | 2779  | 0       | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | setCap          | 2825  | 0       | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | setFreeze       | 2898  | 0       | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | setReleaseDelay | 2830  | 0       | 0        |
+|--------------+-----------------+-------+---------+----------|
+| VaultHandler | warp            | 2870  | 0       | 0        |
+╰--------------+-----------------+-------+---------+----------╯
+
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 22.93s (52.95s CPU time)
+
+╭--------------------------------------------+-----------------+--------+--------+--------+---------╮
+| src/FerrataVault.sol:FerrataVault Contract |                 |        |        |        |         |
++===================================================================================================+
+| Deployment Cost                            | Deployment Size |        |        |        |         |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| 3308826                                    | 15420           |        |        |        |         |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+|                                            |                 |        |        |        |         |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| Function Name                              | Min             | Avg    | Median | Max    | # Calls |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| DEPOSIT_ROOT_SLOT                          | 316             | 316    | 316    | 316    | 1       |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| LEAF_PREFIX                                | 328             | 328    | 328    | 328    | 1       |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| LEAF_TAG                                   | 296             | 296    | 296    | 296    | 2       |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| NEXT_LEAF_INDEX_SLOT                       | 273             | 273    | 273    | 273    | 2       |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| NODE_PREFIX                                | 293             | 293    | 293    | 293    | 1       |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| RELEASE_DOMAIN                             | 294             | 294    | 294    | 294    | 1       |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| ROOT_DOMAIN                                | 318             | 318    | 318    | 318    | 1       |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| acceptAdmin                                | 23501           | 25025  | 23501  | 30508  | 6       |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| acceptBurnRoot                             | 25482           | 50082  | 58499  | 61767  | 11828   |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| acceptFreezeAuthority                      | 23500           | 28149  | 25640  | 35307  | 3       |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| admin                                      | 2424            | 2424   | 2424   | 2424   | 4       |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| burnRootAcceptedAt                         | 2558            | 2558   | 2558   | 2558   | 23      |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| denominations                              | 9684            | 9684   | 9684   | 20875  | 70362   |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| deposit                                    | 22454           | 150305 | 155196 | 281584 | 19809   |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| depositCount                               | 2666            | 2666   | 2666   | 2666   | 23931   |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| depositETH                                 | 24771           | 152250 | 146485 | 230279 | 4288    |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| depositRoot                                | 2373            | 2373   | 2373   | 2373   | 3968    |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| depositsFrozen                             | 2399            | 2399   | 2399   | 2399   | 2       |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| escrowed                                   | 2638            | 2638   | 2638   | 2638   | 8917    |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| fallback                                   | 21355           | 21355  | 21355  | 21355  | 2       |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| freezeAuthority                            | 2427            | 2427   | 2427   | 2427   | 3       |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| globalCap                                  | 5043            | 9534   | 10123  | 10309  | 8       |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| latestLezBlockId                           | 2420            | 2420   | 2420   | 2420   | 3       |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| leafHash                                   | 1339            | 1339   | 1339   | 1339   | 9       |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| lezConfigId                                | 252             | 252    | 252    | 252    | 20336   |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| minLezDepth                                | 2441            | 2441   | 2441   | 2441   | 11702   |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| nextLeafIndex                              | 2427            | 2427   | 2427   | 2427   | 16270   |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| nullifierUsed                              | 2558            | 2558   | 2558   | 2558   | 38      |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| pendingAdmin                               | 2471            | 2471   | 2471   | 2471   | 2       |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| pendingFreezeAuthority                     | 2448            | 2448   | 2448   | 2448   | 2       |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| receive                                    | 0               | 10553  | 10553  | 21106  | 2       |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| registerToken                              | 26522           | 261005 | 330381 | 446043 | 1188    |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| release                                    | 26346           | 71629  | 43217  | 198421 | 8758    |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| releaseDelay                               | 2575            | 2575   | 2575   | 2575   | 1       |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| releaseImageId                             | 272             | 272    | 272    | 272    | 8637    |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| releasesFrozen                             | 2388            | 2388   | 2388   | 2388   | 2       |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| rootImageId                                | 274             | 274    | 274    | 274    | 11700   |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| setDepositsEnabled                         | 24019           | 28179  | 30818  | 31070  | 9       |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| setDepositsFrozen                          | 23810           | 30659  | 27088  | 47000  | 3790    |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| setGlobalCap                               | 24067           | 46772  | 44262  | 80322  | 7296    |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| setMinLezDepth                             | 23778           | 27261  | 29874  | 29874  | 7       |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| setReleaseDelay                            | 23982           | 38766  | 33018  | 50130  | 14225   |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| setReleasesFrozen                          | 23766           | 30517  | 27061  | 46973  | 3678    |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| setStandardRelayFee                        | 24203           | 52739  | 55101  | 55353  | 70      |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| setTokenCap                                | 24257           | 55853  | 56746  | 81463  | 7343    |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| setTokenDepositsFrozen                     | 24019           | 34777  | 30236  | 50148  | 3646    |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| setTokenReleasesFrozen                     | 23974           | 34579  | 30202  | 50114  | 3537    |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| setUnitWeight                              | 23939           | 26211  | 25085  | 32807  | 6       |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| standardRelayFee                           | 2800            | 2800   | 2800   | 2800   | 1426    |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| tokenCap                                   | 5203            | 10320  | 10459  | 10478  | 7699    |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| tokenConfig                                | 11820           | 16143  | 16296  | 16296  | 7509    |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| tokenDepositsFrozen                        | 2596            | 2596   | 2596   | 2596   | 2       |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| tokenReleasesFrozen                        | 2617            | 2617   | 2617   | 2617   | 1       |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| transferAdmin                              | 24018           | 33968  | 28166  | 47786  | 8       |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| transferFreezeAuthority                    | 24038           | 26260  | 24038  | 30706  | 6       |
+|--------------------------------------------+-----------------+--------+--------+--------+---------|
+| verifier                                   | 283             | 283    | 283    | 283    | 1       |
+╰--------------------------------------------+-----------------+--------+--------+--------+---------╯
+
+╭-------------------------------------------------------+-----------------+--------+--------+--------+---------╮
+| test/invariant/VaultHandler.sol:VaultHandler Contract |                 |        |        |        |         |
++==============================================================================================================+
+| Deployment Cost                                       | Deployment Size |        |        |        |         |
+|-------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| 3240367                                               | 15674           |        |        |        |         |
+|-------------------------------------------------------+-----------------+--------+--------+--------+---------|
+|                                                       |                 |        |        |        |         |
+|-------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| Function Name                                         | Min             | Avg    | Median | Max    | # Calls |
+|-------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| acceptRoot                                            | 97750           | 142897 | 169676 | 189925 | 11699   |
+|-------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| deposit                                               | 199204          | 340851 | 337868 | 491738 | 8419    |
+|-------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| donate                                                | 13786           | 42606  | 45118  | 80074  | 14290   |
+|-------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| ghostDepositCount                                     | 2328            | 2328   | 2328   | 2328   | 7       |
+|-------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| ghostDeposited                                        | 2567            | 2567   | 2567   | 2567   | 4       |
+|-------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| ghostDoubleSpends                                     | 2372            | 2372   | 2372   | 2372   | 1       |
+|-------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| ghostReleaseCount                                     | 2394            | 2394   | 2394   | 2394   | 6       |
+|-------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| ghostReleased                                         | 2611            | 2611   | 2611   | 2611   | 4       |
+|-------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| ghostReplaysStoppedByNullifier                        | 2307            | 2307   | 2307   | 2307   | 5       |
+|-------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| leaves                                                | 22872           | 22872  | 22872  | 22872  | 1       |
+|-------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| release                                               | 2533            | 197417 | 281933 | 414838 | 4482    |
+|-------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| replayNullifier                                       | 2429            | 66540  | 2429   | 176522 | 13950   |
+|-------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| setCap                                                | 62638           | 89071  | 89145  | 128322 | 14200   |
+|-------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| setFreeze                                             | 36238           | 43773  | 41227  | 61379  | 14550   |
+|-------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| setReleaseDelay                                       | 41897           | 53235  | 47645  | 64745  | 14215   |
+|-------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| tokens                                                | 11862           | 11862  | 11862  | 11862  | 2       |
+|-------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| usedNullifiers                                        | 18485           | 18485  | 18485  | 18485  | 1       |
+|-------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| warp                                                  | 6666            | 7089   | 7350   | 7350   | 14395   |
+╰-------------------------------------------------------+-----------------+--------+--------+--------+---------╯
+
+╭-----------------------------------------------------------+-----------------+--------+--------+--------+---------╮
+| test/mocks/MockRecipients.sol:ReentrantRecipient Contract |                 |        |        |        |         |
++==================================================================================================================+
+| Deployment Cost                                           | Deployment Size |        |        |        |         |
+|-----------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| 393057                                                    | 1599            |        |        |        |         |
+|-----------------------------------------------------------+-----------------+--------+--------+--------+---------|
+|                                                           |                 |        |        |        |         |
+|-----------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| Function Name                                             | Min             | Avg    | Median | Max    | # Calls |
+|-----------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| hookCalled                                                | 2375            | 2375   | 2375   | 2375   | 2       |
+|-----------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| hookReturnData                                            | 3154            | 3154   | 3154   | 3154   | 2       |
+|-----------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| hookSucceeded                                             | 2342            | 2342   | 2342   | 2342   | 1       |
+|-----------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| setHook                                                   | 136603          | 195152 | 195152 | 253702 | 2       |
+╰-----------------------------------------------------------+-----------------+--------+--------+--------+---------╯
+
+╭----------------------------------------------+-----------------+-------+--------+-------+---------╮
+| test/mocks/MockTokens.sol:MockERC20 Contract |                 |       |        |       |         |
++===================================================================================================+
+| Deployment Cost                              | Deployment Size |       |        |       |         |
+|----------------------------------------------+-----------------+-------+--------+-------+---------|
+| 481521                                       | 2653            |       |        |       |         |
+|----------------------------------------------+-----------------+-------+--------+-------+---------|
+|                                              |                 |       |        |       |         |
+|----------------------------------------------+-----------------+-------+--------+-------+---------|
+| Function Name                                | Min             | Avg   | Median | Max   | # Calls |
+|----------------------------------------------+-----------------+-------+--------+-------+---------|
+| approve                                      | 26216           | 41820 | 46116  | 46464 | 15749   |
+|----------------------------------------------+-----------------+-------+--------+-------+---------|
+| balanceOf                                    | 538             | 1538  | 2538   | 2538  | 31482   |
+|----------------------------------------------+-----------------+-------+--------+-------+---------|
+| mint                                         | 28409           | 44394 | 34129  | 68329 | 22636   |
+╰----------------------------------------------+-----------------+-------+--------+-------+---------╯
+
+╭---------------------------------------------------------+-----------------+-------+--------+-------+---------╮
+| test/mocks/MockTokens.sol:MockFalseReturnToken Contract |                 |       |        |       |         |
++==============================================================================================================+
+| Deployment Cost                                         | Deployment Size |       |        |       |         |
+|---------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| 374062                                                  | 1731            |       |        |       |         |
+|---------------------------------------------------------+-----------------+-------+--------+-------+---------|
+|                                                         |                 |       |        |       |         |
+|---------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| Function Name                                           | Min             | Avg   | Median | Max   | # Calls |
+|---------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| approve                                                 | 46152           | 46152 | 46152  | 46152 | 1       |
+|---------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| balanceOf                                               | 2538            | 2538  | 2538   | 2538  | 1       |
+|---------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| mint                                                    | 68281           | 68281 | 68281  | 68281 | 1       |
+╰---------------------------------------------------------+-----------------+-------+--------+-------+---------╯
+
+╭-----------------------------------------------------------+-----------------+-------+--------+-------+---------╮
+| test/mocks/MockTokens.sol:MockFeeOnTransferToken Contract |                 |       |        |       |         |
++================================================================================================================+
+| Deployment Cost                                           | Deployment Size |       |        |       |         |
+|-----------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| 487968                                                    | 2254            |       |        |       |         |
+|-----------------------------------------------------------+-----------------+-------+--------+-------+---------|
+|                                                           |                 |       |        |       |         |
+|-----------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| Function Name                                             | Min             | Avg   | Median | Max   | # Calls |
+|-----------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| approve                                                   | 46152           | 46152 | 46152  | 46152 | 1       |
+|-----------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| balanceOf                                                 | 538             | 1538  | 1538   | 2538  | 2       |
+|-----------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| mint                                                      | 68281           | 68281 | 68281  | 68281 | 1       |
+╰-----------------------------------------------------------+-----------------+-------+--------+-------+---------╯
+
+╭-------------------------------------------------------+-----------------+--------+--------+--------+---------╮
+| test/mocks/MockTokens.sol:MockReentrantToken Contract |                 |        |        |        |         |
++==============================================================================================================+
+| Deployment Cost                                       | Deployment Size |        |        |        |         |
+|-------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| 735248                                                | 3406            |        |        |        |         |
+|-------------------------------------------------------+-----------------+--------+--------+--------+---------|
+|                                                       |                 |        |        |        |         |
+|-------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| Function Name                                         | Min             | Avg    | Median | Max    | # Calls |
+|-------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| approve                                               | 46175           | 46175  | 46175  | 46175  | 3       |
+|-------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| balanceOf                                             | 583             | 1725   | 2583   | 2583   | 7       |
+|-------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| hookCalled                                            | 2353            | 2353   | 2353   | 2353   | 2       |
+|-------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| hookReturnData                                        | 3209            | 3209   | 3209   | 3209   | 2       |
+|-------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| hookSucceeded                                         | 2343            | 2343   | 2343   | 2343   | 1       |
+|-------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| mint                                                  | 51248           | 62648  | 68348  | 68348  | 3       |
+|-------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| setHook                                               | 159269          | 216606 | 216606 | 273943 | 2       |
+╰-------------------------------------------------------+-----------------+--------+--------+--------+---------╯
+
+╭---------------------------------------------+-----------------+-------+--------+-------+---------╮
+| test/mocks/MockTokens.sol:MockUSDT Contract |                 |       |        |       |         |
++==================================================================================================+
+| Deployment Cost                             | Deployment Size |       |        |       |         |
+|---------------------------------------------+-----------------+-------+--------+-------+---------|
+| 478917                                      | 2641            |       |        |       |         |
+|---------------------------------------------+-----------------+-------+--------+-------+---------|
+|                                             |                 |       |        |       |         |
+|---------------------------------------------+-----------------+-------+--------+-------+---------|
+| Function Name                               | Min             | Avg   | Median | Max   | # Calls |
+|---------------------------------------------+-----------------+-------+--------+-------+---------|
+| approve                                     | 46092           | 46120 | 46116  | 46464 | 4046    |
+|---------------------------------------------+-----------------+-------+--------+-------+---------|
+| balanceOf                                   | 538             | 1538  | 2538   | 2538  | 8095    |
+|---------------------------------------------+-----------------+-------+--------+-------+---------|
+| mint                                        | 28409           | 48317 | 51145  | 68329 | 7792    |
+|---------------------------------------------+-----------------+-------+--------+-------+---------|
+| transfer                                    | 49139           | 49139 | 49139  | 49139 | 1       |
+╰---------------------------------------------+-----------------+-------+--------+-------+---------╯
+
+╭------------------------------------------------------------+-----------------+-------+--------+-------+---------╮
+| test/mocks/MockVerifiers.sol:MockRiscZeroVerifier Contract |                 |       |        |       |         |
++=================================================================================================================+
+| Deployment Cost                                            | Deployment Size |       |        |       |         |
+|------------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| 153411                                                     | 491             |       |        |       |         |
+|------------------------------------------------------------+-----------------+-------+--------+-------+---------|
+|                                                            |                 |       |        |       |         |
+|------------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| Function Name                                              | Min             | Avg   | Median | Max   | # Calls |
+|------------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| accept                                                     | 24642           | 44539 | 44554  | 44554 | 20570   |
+|------------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| verify                                                     | 432             | 2688  | 2687   | 25231 | 14726   |
+╰------------------------------------------------------------+-----------------+-------+--------+-------+---------╯
+
+╭---------------------------------------------------------+-----------------+-----+--------+-----+---------╮
+| test/mocks/MockVerifiers.sol:RejectingVerifier Contract |                 |     |        |     |         |
++==========================================================================================================+
+| Deployment Cost                                         | Deployment Size |     |        |     |         |
+|---------------------------------------------------------+-----------------+-----+--------+-----+---------|
+| 108579                                                  | 282             |     |        |     |         |
+|---------------------------------------------------------+-----------------+-----+--------+-----+---------|
+|                                                         |                 |     |        |     |         |
+|---------------------------------------------------------+-----------------+-----+--------+-----+---------|
+| Function Name                                           | Min             | Avg | Median | Max | # Calls |
+|---------------------------------------------------------+-----------------+-----+--------+-----+---------|
+| verify                                                  | 432             | 432 | 432    | 432 | 1       |
+╰---------------------------------------------------------+-----------------+-----+--------+-----+---------╯
+
+
+Ran 15 test suites in 23.71s (62.10s CPU time): 159 tests passed, 0 failed, 0 skipped (159 total tests)
