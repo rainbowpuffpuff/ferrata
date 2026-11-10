@@ -1,15 +1,22 @@
 # FerrataVault v3: the Ethereum half of a private lock-and-mint bridge (spike)
 
-`src/FerrataVault.sol` is the Ethereum vault of a privacy-preserving lock-and-mint bridge to LEZ (Logos RFP-022). On
-this branch it implements `notes/design/SPEC-v2.md` as amended by `notes/design/SPEC-v3-delta.md` (both in the
-parent repository): D3 to D5 and D9 of the delta, including `cancelCandidate`. D7 (mode B) is specified, not built;
-D8 lists limits that stay as they are.
+`src/FerrataVault.sol` is the Ethereum vault of a privacy-preserving lock-and-mint bridge to LEZ (Logos RFP-022). It
+implements the bridge specification v2 as amended by the v3 changes: D3 to D5 and D9 of the delta, including
+`cancelCandidate`. D7 (mode B) is specified, not built; D8 lists limits that stay as they are.
 
-| Branch / tag | Implements |
-|---|---|
-| `main`, tag `v1` | the original design brief (first review round) |
-| `v2` | SPEC-v2 |
-| `v3` (this one) | SPEC-v2 + SPEC-v3-delta |
+**Specification.** "SPEC-v2 §x" is [`docs/design/spec/bridge-spec-v2.md`](../docs/design/spec/bridge-spec-v2.md)
+and "SPEC-v3-delta Dn" (or "v3 Dn") is
+[`docs/design/spec/bridge-spec-v3-changes.md`](../docs/design/spec/bridge-spec-v3-changes.md). Source comments
+cite the same two files by their working names, `notes/design/SPEC-v2.md` and `notes/design/SPEC-v3-delta.md`.
+
+This directory was the separate `bridge-evm` repository, imported with its history; its versions are commits of
+that history:
+
+| Version | Commit | Implements |
+|---|---|---|
+| v1 (tag `v1` there) | `a01fcd7` | the first design |
+| v2 (branch `v2` there) | `1d61b32` | SPEC-v2 |
+| v3 (branch `v3` there; this one) | `b631b23` | SPEC-v2 + SPEC-v3-delta |
 
 **Inbound.** Users deposit fixed denominations of ETH or a registered ERC-20, with a hiding commitment to their LEZ
 destination. Each deposit becomes a leaf of a SHA-256 Merkle tree, and its root sits in storage slot 0, where the

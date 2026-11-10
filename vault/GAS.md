@@ -1,6 +1,7 @@
 # FerrataVault v3 gas
 
-Measured on 2026-11-10 with forge 1.3.6, solc 0.8.26, optimizer on (200 runs), EVM cancun.
+Measured on 2026-11-10 with forge 1.3.6, solc 0.8.26, optimizer on (200 runs), EVM cancun. "v3 Dn" is item Dn of
+[`docs/design/spec/bridge-spec-v3-changes.md`](../docs/design/spec/bridge-spec-v3-changes.md).
 
 ```
 forge test --isolate --match-contract GasScenarios -vv
