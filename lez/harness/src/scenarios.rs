@@ -459,7 +459,7 @@ pub fn shell_costs() -> Vec<TxReport> {
     let evidence = vec![PublicAccountEvidence::Pda { program: consumer_account(), seed }];
     let header = header_actor(w.inst.program, &w.inst.id, slot);
     let mut out = Vec::new();
-    let read = ConsumerMessage::ReadRecord { ferrata: w.inst.program, instance_id: w.inst.id, slot };
+    let read = ConsumerMessage::ReadRecord { ferrata: w.inst.program, instance_id: w.inst.id, slot, query: vec![] };
     out.push(w.chain.submit(
         "public consumer reads header(id, slot)",
         consumer,

@@ -38,9 +38,9 @@ PDAs of the program (`wire/src/lib.rs`):
 
 | actor | seed | state | written by |
 |---|---|---|---|
-| `instance(id)` | `H(…/instance ‖ id)` | the config, an active flag and the compact store: fork, finalized beacon header, current and next committee as *summaries* (key root + aggregate key, 80 bytes each); 619 bytes | `Init`; `Apply` / `ApplyVerified` |
-| `job(id, job_id)` | `H(…/job ‖ id ‖ job_id)` | one job: store and update digests, the signature check's phase (H(m), −key, signature: 480 bytes; then the 576-byte Miller product), the adoption's progress, what to apply | `JobOpen`; `Miller`, `Adopt`; cleared by `Finish` |
-| `header(id, slot)` | `H(…/header ‖ id ‖ slot)` | the record of a finalized header (beacon header, execution root, block number, block hash, state and receipts roots, timestamp), written once | `Record` |
+| `instance(id)` | `H(…/instance ‖ id)` | the config, an active flag and the compact store: fork, finalized beacon header, current and next committee as *summaries* (key root + aggregate key, 80 bytes each); 425 bytes, 505 with a next committee | `Init`; `Apply` / `ApplyVerified` |
+| `job(id, job_id)` | `H(…/job ‖ id ‖ job_id)` | one job: store and update digests, the signature check's phase (H(m), −key, signature: 480 bytes; then the 576-byte Miller product), the adoption's progress, what to apply; 1,249–1,409 bytes | `JobOpen`; `Miller`, `Adopt`; cleared by `Finish` |
+| `header(id, slot)` | `H(…/header ‖ id ‖ slot)` | the record of a finalized header (beacon header, execution root, block number, block hash, state and receipts roots, timestamp), written once; 293 bytes | `Record` |
 
 `id = H(config ‖ checkpoint)`; `job_id = H(id ‖ store digest ‖ update digest)`.
 
@@ -218,16 +218,17 @@ handler then differs only in the bytes it receives and echoes.
 
 | query bytes | `Attest` handler: input bytes | journal bytes | cycles | the consumer's handler, which also sends the query: cycles |
 |---:|---:|---:|---:|---:|
-| 0 | 436 | 826 | 11,556 | 14,263 |
-| 8,192 | 8,628 | 9,018 | 58,236 | 95,338 |
-| 24,576 | 25,012 | 25,402 | 151,316 | 255,422 |
-| 49,152 | 49,588 | 49,978 | 290,924 | 495,551 |
+| 0 | 436 | 826 | 11,556 | 13,955 |
+| 8,192 | 8,628 | 9,018 | 58,236 | 88,794 |
+| 24,576 | 25,012 | 25,402 | 151,316 | 236,590 |
+| 49,152 | 49,588 | 49,978 | 290,924 | 458,287 |
 
-Linear to within 0.2%: a handler pays **5.7 cycles per byte it receives** (reading the input,
-decoding it, echoing it into the journal and hashing the journal) and about **4.1 more per byte
-it sends**; a handler that does almost nothing costs 9,000–26,000 cycles (`Read` 11,256, `Record`
-15,862, `JobOpen` 18,462–25,857). A public consumer's whole read of a record (consumer → `Read`
-→ `StateReply` → consumer) costs 34,320 cycles. At 5.7 cycles per byte, a handler that loaded a
+Linear to within 0.5%: a handler pays **5.7 cycles per byte it receives** (reading the input,
+decoding it, echoing it into the journal and hashing the journal) and about **3.4 more per byte
+it sends on** (this consumer pays 9.0 per byte received and sent); a handler that does almost
+nothing costs 9,000–26,000 cycles (`Read` 11,256, `Record` 15,862, `JobOpen` 18,462–25,857). A
+public consumer's whole read of a record (consumer → `Read` → `StateReply` → consumer) costs
+35,262 cycles. At 5.7 cycles per byte, a handler that loaded a
 24.6 KB committee from its state would pay about 0.14M cycles for it on every call, and the
 journal echo makes every byte of a message count once on receipt and again when sent on.
 Storage gas, by contrast, counts only the transaction's bytes
@@ -293,7 +294,7 @@ settlement, the public part's execution and its metering are LEZ's):
   non-zero exit (`lee/state_machine/src/privacy_preserving_transaction/circuit/mod.rs:674–697`).
 
 **What LEZ charges the private transaction** (`settle_private_transaction`,
-`lez/chain_state/src/apply.rs:435–`): a flat `PRIVATE_VERIFY_GAS` = 409,764 execution gas for the
+`lez/chain_state/src/apply.rs:435–556`): a flat `PRIVATE_VERIFY_GAS` = 409,764 execution gas for the
 receipt (`lez/programs/fee/core/src/market.rs:49`), plus the cycles of its public part, plus a flat
 `PRIVATE_GAS_STOR` = 224,063 storage gas (`market.rs:51–56`):
 
@@ -374,21 +375,109 @@ keeps the prediction valid; `instance(id)`, which every update changes, would no
 **What became public — the read** (record of slot 15,564,800, the consumer's image disclosed):
 
 ```
-«STAGE3_READ»
+public_context.actors (2): ferrata@3wPjVqygcgTufKBsDpNBRJ5eKoXCoSxg1UZJRBQabyrF, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq
+public_context.authorized_accounts: {}
+execution.public_root: None
+execution.boundary (6 steps):
+  - PrivateToPublic from consumer@61yQrZPL8iZ8NbnqXkUEs1JR6DiuSkX3bWxdZSjYSWEu to ferrata@3wPjVqygcgTufKBsDpNBRJ5eKoXCoSxg1UZJRBQabyrF: Read (1 bytes)
+  - PublicToPrivate from ferrata@3wPjVqygcgTufKBsDpNBRJ5eKoXCoSxg1UZJRBQabyrF to consumer@61yQrZPL8iZ8NbnqXkUEs1JR6DiuSkX3bWxdZSjYSWEu: StateReply { state: 293 bytes } (297 bytes)
+  - EndPrivateSubtree
+  - EndPublicSubtree
+  - PrivateToPublic from native@61yQrZPL8iZ8NbnqXkUEs1JR6DiuSkX3bWxdZSjYSWEu to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
+  - EndPublicSubtree
+execution.program_image_claims (1):
+  - Disclosed { program: consumer, image_id: 620e6390d9027f16646e6e3e326580c19e75bff0d86b451bbe04a1dc2d0b0686 }
+execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1612 bytes)
+execution.async_messages: 0
+execution.recovery_bindings: 0
+execution.validity: ValidityWindows { blocks: ValidityWindow { from: None, to: None }, timestamps: ValidityWindow { from: None, to: None } }
+execution.fee: Some("refund_to Some(78Skt7EQTvVwfWVYnA1XMjghv3aUR1V5wgQAfVLKJZG5), fallback true")
+nonces: 0, admission evidence: 0
+
+The 8567 serialized bytes of the transaction were searched for the consumer's private inputs:
+- the query (75 bytes): absent
+- the account id the consumer acts for (32 bytes): absent
+- the authorization secret key (32 bytes): absent
+- the nullifier secret key (32 bytes): absent
+- the nullifier public key (32 bytes): absent
+- the viewing public key (its first 32 of 1,184 bytes) (32 bytes): absent
+- the viewing key seed d (32 bytes): absent
+- the viewing key seed z (32 bytes): absent
 ```
 
 **The read with the consumer's image undisclosed** (`ProgramKind::Undisclosed`: an immutable
 program proven by membership of its header mirror, `circuit_io.rs:85–86`):
 
 ```
-«STAGE3_READ_UNDISCLOSED»
+public_context.actors (2): ferrata@3wPjVqygcgTufKBsDpNBRJ5eKoXCoSxg1UZJRBQabyrF, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq
+public_context.authorized_accounts: {}
+execution.public_root: None
+execution.boundary (6 steps):
+  - PrivateToPublic from consumer@AodAGCgEG5tEZ9G66zav6VgeBX9hfvyxnimA6U3L6j1C to ferrata@3wPjVqygcgTufKBsDpNBRJ5eKoXCoSxg1UZJRBQabyrF: Read (1 bytes)
+  - PublicToPrivate from ferrata@3wPjVqygcgTufKBsDpNBRJ5eKoXCoSxg1UZJRBQabyrF to consumer@AodAGCgEG5tEZ9G66zav6VgeBX9hfvyxnimA6U3L6j1C: StateReply { state: 293 bytes } (297 bytes)
+  - EndPrivateSubtree
+  - EndPublicSubtree
+  - PrivateToPublic from native@AodAGCgEG5tEZ9G66zav6VgeBX9hfvyxnimA6U3L6j1C to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
+  - EndPublicSubtree
+execution.program_image_claims (1):
+  - Undisclosed { commitment root: 25ab284f9fe7142feaeb0d5054840d30796cdc3b29294a0d7ae3150f124515c3 }
+execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1612 bytes)
+execution.async_messages: 0
+execution.recovery_bindings: 0
+execution.validity: ValidityWindows { blocks: ValidityWindow { from: None, to: None }, timestamps: ValidityWindow { from: None, to: None } }
+execution.fee: Some("refund_to Some(78Skt7EQTvVwfWVYnA1XMjghv3aUR1V5wgQAfVLKJZG5), fallback true")
+nonces: 0, admission evidence: 0
+
+The 8503 serialized bytes of the transaction were searched for the consumer's private inputs:
+- the query (75 bytes): absent
+- the account id the consumer acts for (32 bytes): absent
+- the authorization secret key (32 bytes): absent
+- the nullifier secret key (32 bytes): absent
+- the nullifier public key (32 bytes): absent
+- the viewing public key (its first 32 of 1,184 bytes) (32 bytes): absent
+- the viewing key seed d (32 bytes): absent
+- the viewing key seed z (32 bytes): absent
 ```
 
 **The call** (`CallAttest` with a query naming a contract, a storage slot and a deposit):
 
 ```
-«STAGE3_CALL»
+public_context.actors (2): ferrata@3wPjVqygcgTufKBsDpNBRJ5eKoXCoSxg1UZJRBQabyrF, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq
+public_context.authorized_accounts: {}
+execution.public_root: None
+execution.boundary (6 steps):
+  - PrivateToPublic from consumer@DYMXat67yG3gSP7GFoRaTUEHduv3mLWBRr5UousHBSho to ferrata@3wPjVqygcgTufKBsDpNBRJ5eKoXCoSxg1UZJRBQabyrF: Attest { query: 0x73746f72616765283078303030303030303032313961623534303335366342423833394362653035333033643737303546612c20736c6f74203729203d206465706f736974202334323432 } (80 bytes)
+  - PublicToPrivate from ferrata@3wPjVqygcgTufKBsDpNBRJ5eKoXCoSxg1UZJRBQabyrF to consumer@DYMXat67yG3gSP7GFoRaTUEHduv3mLWBRr5UousHBSho: StateReply { state: 293 bytes } (297 bytes)
+  - EndPrivateSubtree
+  - EndPublicSubtree
+  - PrivateToPublic from native@DYMXat67yG3gSP7GFoRaTUEHduv3mLWBRr5UousHBSho to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
+  - EndPublicSubtree
+execution.program_image_claims (1):
+  - Disclosed { program: consumer, image_id: 620e6390d9027f16646e6e3e326580c19e75bff0d86b451bbe04a1dc2d0b0686 }
+execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1533 bytes)
+execution.async_messages: 0
+execution.recovery_bindings: 0
+execution.validity: ValidityWindows { blocks: ValidityWindow { from: None, to: None }, timestamps: ValidityWindow { from: None, to: None } }
+execution.fee: Some("refund_to Some(78Skt7EQTvVwfWVYnA1XMjghv3aUR1V5wgQAfVLKJZG5), fallback true")
+nonces: 0, admission evidence: 0
+
+The 8567 serialized bytes of the transaction were searched for the consumer's private inputs:
+- the query (75 bytes): FOUND
+- the account id the consumer acts for (32 bytes): absent
+- the authorization secret key (32 bytes): absent
+- the nullifier secret key (32 bytes): absent
+- the nullifier public key (32 bytes): absent
+- the viewing public key (its first 32 of 1,184 bytes) (32 bytes): absent
+- the viewing key seed d (32 bytes): absent
+- the viewing key seed z (32 bytes): absent
 ```
+
+The complete serialized transactions are in `results/stage3-read-tx.hex`,
+`results/stage3-read-undisclosed-tx.hex` and `results/stage3-call-tx.hex` (with the decoded fields
+in the matching `*-public-outputs.txt`). They are dev-mode transactions: their proof field holds
+RISC Zero's fake receipt (4,308–4,340 bytes here), where a real one holds a succinct receipt (227,080
+bytes in §3). The search covers every byte, the fake receipt included; the tests fail if a
+private input of the reader is found, or if anything but the query is found in the call.
 
 **Finding.** Reading exposes *which* record was read (the `Read` to `header(id, slot)` and the
 whole record in the `StateReply`), the consumer's program (as the read's sender, even when its
@@ -399,7 +488,7 @@ supports the proposal's rule — a private consumer must read, not call — and 
 slot read is public, so a consumer that must hide which block it proves against should read a
 record many consumers read (the newest), as the proposal's EIP-2935 hops do.
 
-Charged (dev mode; flat proof and storage costs as in §3): «STAGE3_CHARGES»
+Charged (dev mode; flat proof and storage costs as in §3): the read execution gas 421,020 (PRIVATE_VERIFY_GAS 409,764 + public part 11,256 cycles), storage gas 224,063. The call: execution gas 421,475 (PRIVATE_VERIFY_GAS 409,764 + public part 11,711 cycles), storage gas 224,063.
 
 
 ## 5. What did not work, what is missing, what is weaker than asked
@@ -428,11 +517,14 @@ Charged (dev mode; flat proof and storage costs as in §3): «STAGE3_CHARGES»
   (the harness plans each job natively, as one would); joining an open job; any clean-up of jobs
   whose final step fails (they stay, unapplied).
 - **Refusals LEZ charges at the full gas limit.** Coded exits are charged only the cycles used,
-  as designed. Two refusals are LEZ's own and are charged the whole declared gas limit (10M here):
-  a transaction outside its validity window (an `Open` sent before its signature slot), and a
-  delivery to an account that is not admitted (`lee/state_machine/src/validated_state_diff/mod.rs:495–503`:
-  every error other than `ProgramExitedWithCode` is charged `cycle_budget`). A submitter bounds
-  both by declaring a tight gas limit.
+  as designed. A transaction outside its validity window (an `Open` sent before its signature
+  slot) is LEZ's own refusal and was charged the whole declared gas limit, 10M (refusal 17). By
+  the same code a delivery to an account that is not admitted is too
+  (`lee/state_machine/src/validated_state_diff/mod.rs:495–503`: every error other than
+  `ProgramExitedWithCode` is charged `cycle_budget`; `ExecutionError::UnadmittedPublicActor`,
+  `lee/state_machine/core/src/execution_state.rs:1209`, is such an error) — read in the source,
+  not measured: the tests admit their targets so that the program's own checks are what refuse.
+  A submitter bounds both by declaring a tight gas limit.
 - **A duplicate `Open` is not cheap.** The instance cannot see whether the job exists, so the
   duplicate is refused by `JobOpen` after step 1 has run: 2,183,111 cycles. Making it cheap needs
   an extra round trip (the job asking the instance for its store), which would cost every update.

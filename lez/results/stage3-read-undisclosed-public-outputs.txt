@@ -1,0 +1,34 @@
+Stage 3: a private consumer reads header(id, slot), image undisclosed
+
+Decoded public fields (harness::private::describe_public_outputs):
+
+public_context.actors (2): ferrata@3wPjVqygcgTufKBsDpNBRJ5eKoXCoSxg1UZJRBQabyrF, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq
+public_context.authorized_accounts: {}
+execution.public_root: None
+execution.boundary (6 steps):
+  - PrivateToPublic from consumer@AodAGCgEG5tEZ9G66zav6VgeBX9hfvyxnimA6U3L6j1C to ferrata@3wPjVqygcgTufKBsDpNBRJ5eKoXCoSxg1UZJRBQabyrF: Read (1 bytes)
+  - PublicToPrivate from ferrata@3wPjVqygcgTufKBsDpNBRJ5eKoXCoSxg1UZJRBQabyrF to consumer@AodAGCgEG5tEZ9G66zav6VgeBX9hfvyxnimA6U3L6j1C: StateReply { state: 293 bytes } (297 bytes)
+  - EndPrivateSubtree
+  - EndPublicSubtree
+  - PrivateToPublic from native@AodAGCgEG5tEZ9G66zav6VgeBX9hfvyxnimA6U3L6j1C to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
+  - EndPublicSubtree
+execution.program_image_claims (1):
+  - Undisclosed { commitment root: 25ab284f9fe7142feaeb0d5054840d30796cdc3b29294a0d7ae3150f124515c3 }
+execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1612 bytes)
+execution.async_messages: 0
+execution.recovery_bindings: 0
+execution.validity: ValidityWindows { blocks: ValidityWindow { from: None, to: None }, timestamps: ValidityWindow { from: None, to: None } }
+execution.fee: Some("refund_to Some(78Skt7EQTvVwfWVYnA1XMjghv3aUR1V5wgQAfVLKJZG5), fallback true")
+nonces: 0, admission evidence: 0
+
+The 8503 serialized bytes of the transaction were searched for the consumer's private inputs:
+- the query (75 bytes): absent
+- the account id the consumer acts for (32 bytes): absent
+- the authorization secret key (32 bytes): absent
+- the nullifier secret key (32 bytes): absent
+- the nullifier public key (32 bytes): absent
+- the viewing public key (its first 32 of 1,184 bytes) (32 bytes): absent
+- the viewing key seed d (32 bytes): absent
+- the viewing key seed z (32 bytes): absent
+
+Charged: execution gas 421,020 (PRIVATE_VERIFY_GAS 409,764 + public part 11,256 cycles), storage gas 224,063.

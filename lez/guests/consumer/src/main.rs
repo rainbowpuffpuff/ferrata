@@ -34,15 +34,20 @@ fn handle(input: &ReceiveInput) -> Result<Response, u8> {
     if input.from.is_some() && input.from == state.awaiting {
         let reply: StateReply = borsh::from_slice(&input.message).map_err(|_| code::BAD_REPLY)?;
         let record: RecordState = borsh::from_slice(&reply.state).map_err(|_| code::BAD_REPLY)?;
-        return Ok(Response::set_state(encode(&ConsumerState { awaiting: None, record: Some(record.record) })));
+        return Ok(Response::set_state(encode(&ConsumerState { awaiting: None, record: Some(record.record), ..state })));
     }
-    let (ferrata, instance_id, slot, message) = match borsh::from_slice(&input.message) {
-        Ok(ConsumerMessage::ReadRecord { ferrata, instance_id, slot }) => (ferrata, instance_id, slot, Message::Read),
+    // Reading sends only `Read`; the query stays in this actor's (private) state. Calling sends
+    // the query to the program.
+    let (ferrata, instance_id, slot, message, kept) = match borsh::from_slice(&input.message) {
+        Ok(ConsumerMessage::ReadRecord { ferrata, instance_id, slot, query }) => {
+            (ferrata, instance_id, slot, Message::Read, Some(query))
+        }
         Ok(ConsumerMessage::CallAttest { ferrata, instance_id, slot, query }) => {
-            (ferrata, instance_id, slot, Message::Attest { query })
+            (ferrata, instance_id, slot, Message::Attest { query }, None)
         }
         Err(_) => return Err(code::BAD_MESSAGE),
     };
     let header = header_actor(ferrata, &instance_id, slot);
-    Ok(Response::set_state(encode(&ConsumerState { awaiting: Some(header), ..state })).send_sync(header, &message))
+    let state = ConsumerState { awaiting: Some(header), record: state.record, query: kept };
+    Ok(Response::set_state(encode(&state)).send_sync(header, &message))
 }

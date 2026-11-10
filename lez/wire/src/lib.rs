@@ -253,8 +253,9 @@ pub mod consumer {
     #[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
     pub enum ConsumerMessage {
         /// Read `header(id, slot)` of the Ferrata program at `ferrata` (`Read` → `StateReply`)
-        /// and keep the record in this actor's state.
-        ReadRecord { ferrata: AccountId, instance_id: Root, slot: u64 },
+        /// and keep the record, with the consumer's own `query` (which it never sends), in this
+        /// actor's state.
+        ReadRecord { ferrata: AccountId, instance_id: Root, slot: u64, query: Vec<u8> },
         /// The same, but by calling the program with a query (`Attest`).
         CallAttest { ferrata: AccountId, instance_id: Root, slot: u64, query: Vec<u8> },
     }
@@ -265,6 +266,8 @@ pub mod consumer {
         pub awaiting: Option<Actor>,
         /// The last record read (`RecordState` encoding).
         pub record: Option<Vec<u8>>,
+        /// The query the consumer answers privately with the record it reads.
+        pub query: Option<Vec<u8>>,
     }
 
     /// Refusal codes of the consumer.

@@ -1,0 +1,34 @@
+Stage 3: the same consumer calls the program with its query (Attest)
+
+Decoded public fields (harness::private::describe_public_outputs):
+
+public_context.actors (2): ferrata@3wPjVqygcgTufKBsDpNBRJ5eKoXCoSxg1UZJRBQabyrF, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq
+public_context.authorized_accounts: {}
+execution.public_root: None
+execution.boundary (6 steps):
+  - PrivateToPublic from consumer@DYMXat67yG3gSP7GFoRaTUEHduv3mLWBRr5UousHBSho to ferrata@3wPjVqygcgTufKBsDpNBRJ5eKoXCoSxg1UZJRBQabyrF: Attest { query: 0x73746f72616765283078303030303030303032313961623534303335366342423833394362653035333033643737303546612c20736c6f74203729203d206465706f736974202334323432 } (80 bytes)
+  - PublicToPrivate from ferrata@3wPjVqygcgTufKBsDpNBRJ5eKoXCoSxg1UZJRBQabyrF to consumer@DYMXat67yG3gSP7GFoRaTUEHduv3mLWBRr5UousHBSho: StateReply { state: 293 bytes } (297 bytes)
+  - EndPrivateSubtree
+  - EndPublicSubtree
+  - PrivateToPublic from native@DYMXat67yG3gSP7GFoRaTUEHduv3mLWBRr5UousHBSho to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
+  - EndPublicSubtree
+execution.program_image_claims (1):
+  - Disclosed { program: consumer, image_id: 620e6390d9027f16646e6e3e326580c19e75bff0d86b451bbe04a1dc2d0b0686 }
+execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1533 bytes)
+execution.async_messages: 0
+execution.recovery_bindings: 0
+execution.validity: ValidityWindows { blocks: ValidityWindow { from: None, to: None }, timestamps: ValidityWindow { from: None, to: None } }
+execution.fee: Some("refund_to Some(78Skt7EQTvVwfWVYnA1XMjghv3aUR1V5wgQAfVLKJZG5), fallback true")
+nonces: 0, admission evidence: 0
+
+The 8567 serialized bytes of the transaction were searched for the consumer's private inputs:
+- the query (75 bytes): FOUND
+- the account id the consumer acts for (32 bytes): absent
+- the authorization secret key (32 bytes): absent
+- the nullifier secret key (32 bytes): absent
+- the nullifier public key (32 bytes): absent
+- the viewing public key (its first 32 of 1,184 bytes) (32 bytes): absent
+- the viewing key seed d (32 bytes): absent
+- the viewing key seed z (32 bytes): absent
+
+Charged: execution gas 421,475 (PRIVATE_VERIFY_GAS 409,764 + public part 11,711 cycles), storage gas 224,063.
