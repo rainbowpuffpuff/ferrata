@@ -8,7 +8,8 @@
 //!     image id, size and sha256 of guest program binaries
 //! ferrata-e2e notes --deployment <deployment.json> --params <params.json> --out <wallet.json>
 //!     the wallet's deposits (commitments, leaves, the deposit root the zone imports) and burn
-//!     notes, between other users' notes, in the order they are published
+//!     notes, between other users' notes, in the order they are published; a deposit of the
+//!     params file may name its LEZ destination ("kind": "private" | "public", "dest": 0x + 32 bytes)
 //! ferrata-e2e release --deployment <d> --wallet <w> --lez <lez.json> --out-dir <dir>
 //!     reads the zone as an observer, recovers the wallet's burns from its seed, rebuilds the burn
 //!     tree, recomputes the checkpoint journals, and writes release-<name>.{input,json}
@@ -199,15 +200,26 @@ fn cmd_notes(opts: &BTreeMap<String, String>) -> Result<()> {
     let (chain_id, vault) = (id.evm_chain_id, id.vault);
     let wallet = BridgeKeys::from_bridge_seed(&label(SEED_LABEL));
 
-    // Deposits: the wallet is the depositor's, the vault is fresh, so deposit j is leaf j.
+    // Deposits: the wallet is the depositor's, the vault is fresh, so deposit j is leaf j. A deposit
+    // goes to the LEZ account its "kind" and "dest" name; without them, to a made-up account of
+    // kind private for even j, public for odd j.
     let depositor: Address = field(&p, "depositor")?;
     let mut tree = IncrementalTree::new();
     let mut deposits = Vec::new();
     for (j, spec) in list(&p, "deposits")?.iter().enumerate() {
         let j = j as u64;
         let (token, value): (Address, U256) = (field(spec, "token")?, amount(spec, "amount")?);
-        let kind = if j.is_multiple_of(2) { DestKind::Private } else { DestKind::Public };
-        let dest = label(&format!("e2e: LEZ destination account {j}"));
+        let kind = match spec.get("kind").map(Value::as_str) {
+            None if j.is_multiple_of(2) => DestKind::Private,
+            None => DestKind::Public,
+            Some(Some("private")) => DestKind::Private,
+            Some(Some("public")) => DestKind::Public,
+            Some(_) => bail!("deposit {j}: \"kind\" is \"private\" or \"public\", not {}", spec["kind"]),
+        };
+        let dest = match spec.get("dest") {
+            None => label(&format!("e2e: LEZ destination account {j}")),
+            Some(_) => field(spec, "dest")?,
+        };
         let s = deposit_secret(&wallet.auth, &chain_id, &vault, &depositor, j);
         let c = commitment(&s, kind, &dest);
         let leaf = deposit_leaf(j, &depositor, &token, &value, &c);
