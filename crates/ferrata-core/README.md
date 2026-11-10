@@ -5,8 +5,13 @@ An Ethereum sync-committee light client in Rust, `no_std`, written as the verifi
 Ethereum state attestation on LEZ). The name comes from the *via ferrata*, a mountain route with
 fixed anchors that anyone can cross without a guide. This repository is the proposal's evidence.
 The light client also runs as a LEZ v0.4.0-rc1 program (`lez/`), driven with mainnet data through
-LEZ's own state transition functions and fee settlement; [`lez/RESULTS.md`](lez/RESULTS.md) has
+LEZ's own state transition functions and fee settlement; [`lez/RESULTS.md`](../../lez/RESULTS.md) has
 what it does, what each step costs, and what is missing.
+
+This file documents the core, its test crate (`crates/ferrata-spectests`), `bench/` and `lez/`; it
+was the repository's README before the bridge prototypes joined it, and the
+[repository README](../../README.md) now gives the overview. Paths below are relative to the
+repository root, and commands run from there.
 
 ## Results
 
