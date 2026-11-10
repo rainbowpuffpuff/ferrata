@@ -6,7 +6,8 @@
 # as planned. Every gas limit is the node's estimate with a margin, and a stage whose transactions the
 # node cannot price within the caps sends nothing (vault/script/roundtrip.sh, e2e/gasplan.py).
 #
-#   e2e/sepolia-live.sh [run]          the run directory under e2e/runs/ (default sepolia-live)
+#   e2e/sepolia-live.sh [run]          the run directory under e2e/runs/ (default sepolia-live-2;
+#                                      sepolia-live is the attempt of 10 November that ran out of gas)
 #
 # Stages: pre-flight, deploy (8 transactions), one stage per deposit (1 each; after a deposit whose root
 # LEZ attests, the wait for its block's finality and the capture of what LEZ needs), submit (1), the
@@ -48,7 +49,7 @@
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 repo="$(cd "$here/.." && pwd)"
-name="${1:-sepolia-live}"
+name="${1:-sepolia-live-2}"
 run="$here/runs/$name"
 export TMPDIR="${TMPDIR:-$repo/../tmp}" FOUNDRY_DISABLE_NIGHTLY_WARNING=1
 mkdir -p "$TMPDIR"

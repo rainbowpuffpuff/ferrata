@@ -8,7 +8,7 @@
 #   e2e/sepolia-cloud.sh fetch [run]                  the run directory from the cloud into e2e/runs/<run>/
 #   e2e/sepolia-cloud.sh stop                         cancel running runners and stop the app
 #
-# [run] is a directory under e2e/runs/ (default sepolia-live). `start` signs on Sepolia only after a typed
+# [run] is a directory under e2e/runs/ (default sepolia-live-2; sepolia-live is the attempt of 10 November that ran out of gas). `start` signs on Sepolia only after a typed
 # yes (or --yes); with --fork the runner rehearses on anvil forking Sepolia, impersonating the deployer.
 # Settings come from e2e/sepolia-live.env (or $FERRATA_ENV_FILE), the file e2e/sepolia-live.sh reads:
 # MODAL_PROFILE names the Modal workspace (always given per command, never activated); `setup` reads the
@@ -40,9 +40,9 @@ start)
     esac
     shift
   done
-  ctl start "${1:-sepolia-live}" "$mode" "${yes[@]}"
+  ctl start "${1:-sepolia-live-2}" "$mode" "${yes[@]}"
   ;;
-status | fetch) ctl "$cmd" "${1:-sepolia-live}" ;;
+status | fetch) ctl "$cmd" "${1:-sepolia-live-2}" ;;
 stop) ctl stop ;;
 *) sed -n '2,10p' "$0" >&2; exit 2 ;;
 esac
