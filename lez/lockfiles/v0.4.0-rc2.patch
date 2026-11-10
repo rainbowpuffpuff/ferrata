@@ -1,0 +1,156 @@
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -442,6 +442,7 @@
+ version = "0.1.0"
+ dependencies = [
+  "borsh",
++ "cross_zone_emission_core",
+  "lee_core",
+  "risc0-zkvm",
+ ]
+@@ -691,10 +692,19 @@
+ ]
+ 
+ [[package]]
++name = "cross_zone_emission_core"
++version = "0.1.0"
++dependencies = [
++ "borsh",
++ "lee_core",
++]
++
++[[package]]
+ name = "cross_zone_inbox_core"
+ version = "0.1.0"
+ dependencies = [
+  "borsh",
++ "cross_zone_emission_core",
+  "cross_zone_marker_core",
+  "lee_core",
+  "risc0-zkvm",
+@@ -706,6 +716,7 @@
+ version = "0.1.0"
+ dependencies = [
+  "borsh",
++ "cross_zone_emission_core",
+  "lee_core",
+  "risc0-zkvm",
+ ]
+@@ -715,6 +726,7 @@
+ version = "0.1.0"
+ dependencies = [
+  "borsh",
++ "cross_zone_emission_core",
+  "lee_core",
+  "risc0-zkvm",
+ ]
+@@ -1974,6 +1986,7 @@
+ version = "0.1.0"
+ dependencies = [
+  "borsh",
++ "cross_zone_emission_core",
+  "lee_core",
+ ]
+ 
+@@ -2071,6 +2084,7 @@
+  "lee_core",
+  "risc0-binfmt",
+  "risc0-zkos-v1compat",
++ "thiserror",
+ ]
+ 
+ [[package]]
+@@ -3536,6 +3550,7 @@
+ version = "0.1.0"
+ dependencies = [
+  "borsh",
++ "cross_zone_emission_core",
+  "lee_core",
+  "risc0-zkvm",
+ ]
+--- a/live/driver/Cargo.lock
++++ b/live/driver/Cargo.lock
+@@ -860,6 +860,7 @@
+ version = "0.1.0"
+ dependencies = [
+  "borsh",
++ "cross_zone_emission_core",
+  "lee_core",
+  "risc0-zkvm",
+ ]
+@@ -1041,6 +1042,7 @@
+ version = "0.1.0"
+ dependencies = [
+  "anyhow",
++ "async-trait",
+  "borsh",
+  "common",
+  "fee_core",
+@@ -1205,7 +1207,6 @@
+  "lee_core",
+  "log",
+  "logos-blockchain-common-http-client",
+- "ping_core",
+  "programs",
+  "serde",
+  "serde_with",
+@@ -1360,10 +1361,19 @@
+ checksum = "790eea4361631c5e7d22598ecd5723ff611904e3344ce8720784c93e3d83d40b"
+ 
+ [[package]]
++name = "cross_zone_emission_core"
++version = "0.1.0"
++dependencies = [
++ "borsh",
++ "lee_core",
++]
++
++[[package]]
+ name = "cross_zone_inbox_core"
+ version = "0.1.0"
+ dependencies = [
+  "borsh",
++ "cross_zone_emission_core",
+  "cross_zone_marker_core",
+  "lee_core",
+  "risc0-zkvm",
+@@ -1375,6 +1385,7 @@
+ version = "0.1.0"
+ dependencies = [
+  "borsh",
++ "cross_zone_emission_core",
+  "lee_core",
+  "risc0-zkvm",
+ ]
+@@ -1384,6 +1395,7 @@
+ version = "0.1.0"
+ dependencies = [
+  "borsh",
++ "cross_zone_emission_core",
+  "lee_core",
+  "risc0-zkvm",
+ ]
+@@ -5840,6 +5852,7 @@
+ version = "0.1.0"
+ dependencies = [
+  "borsh",
++ "cross_zone_emission_core",
+  "lee_core",
+ ]
+ 
+@@ -6052,6 +6065,7 @@
+  "lee_core",
+  "risc0-binfmt",
+  "risc0-zkos-v1compat",
++ "thiserror 2.0.18",
+ ]
+ 
+ [[package]]
+@@ -9300,6 +9314,7 @@
+ version = "0.1.0"
+ dependencies = [
+  "borsh",
++ "cross_zone_emission_core",
+  "lee_core",
+  "risc0-zkvm",
+ ]
