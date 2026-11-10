@@ -405,7 +405,7 @@ fn private_fields(tx: &PrivacyPreservingTransaction, program: AccountId) -> Vec<
     let e = &m.execution;
     let mut f = Vec::new();
     for (i, a) in m.public_context.actors.iter().enumerate() {
-        f.push((format!("public_context.actors[{i}]"), a.account_id.value().to_vec()));
+        f.push((format!("public_context.actors[{i}]"), [&a.account_id.value()[..], &a.program_account_id.value()[..]].concat()));
     }
     boundary_fields("boundary", &e.boundary, program, &mut f);
     for (j, a) in e.private_actions.iter().enumerate() {
@@ -435,7 +435,7 @@ fn public_fields(tx_bytes: &[u8], program: AccountId) -> Vec<(String, Vec<u8>)> 
     let m = &tx.message;
     let mut f = Vec::new();
     for (i, a) in m.public_context.actors.iter().enumerate() {
-        f.push((format!("public_context.actors[{i}]"), a.account_id.value().to_vec()));
+        f.push((format!("public_context.actors[{i}]"), [&a.account_id.value()[..], &a.program_account_id.value()[..]].concat()));
     }
     f.push(("root.to".into(), m.execution.root.to.account_id.value().to_vec()));
     delivery_fields("root.message", &m.execution.root.to, &m.execution.root.message, program, &mut f);
@@ -604,6 +604,9 @@ fn privacy_suite_lez_half() {
             collect_private(&mut w, format!("lez:claim:private:{k:02}"), "claim", k, &accounts[u], &message, publics, fresh);
         let expected = d.nullifier(CHAIN_ID, &VAULT_P);
         assert_eq!(field(&r, "Issue.nullifier"), expected, "{}: N", r.id);
+        let mut r = r;
+        let account = nullifier_actor(w.program, CHAIN_ID, &VAULT_P, &expected).account_id;
+        r.fields.push(("derived.nullifier_account".into(), account.value().to_vec()));
         nullifiers[u] = expected;
         records.push(r);
         let holder =
@@ -638,6 +641,9 @@ fn privacy_suite_lez_half() {
             })
             .collect();
         assert_eq!(collected.len(), 1, "{}: one burn in the clear", r.id);
+        let mut r = r;
+        let record = bw::burn_actor(w.program, &cid, &note.hash()).account_id;
+        r.fields.push(("derived.burn_record_account".into(), record.value().to_vec()));
         assert_eq!(
             (collected[0].r, collected[0].c_out, collected[0].memo, collected[0].mac),
             (note.r, note.c_out, note.memo, note.mac)
@@ -758,9 +764,10 @@ fn privacy_suite_lez_half() {
         let mut actors = vec![bw::root_actor(wb.program, &cid, n)];
         actors.extend(wb.claim_actors(&cid, &ETH, nf, Some(user_account(&users[u])), Some(*relayer().value())));
         let time = wb.time;
-        let r = collect_public(&mut wb, format!("lez:claim:plaintext:{k:02}"), "claim", "plaintext", k, &actors, |w| {
+        let mut r = collect_public(&mut wb, format!("lez:claim:plaintext:{k:02}"), "claim", "plaintext", k, &actors, |w| {
             w.claim_with("plaintext claim", &cid, n, &VAULT_P, witness, range, Some(*relayer().value()), time)
         });
+        r.fields.push(("derived.nullifier_account".into(), nf.account_id.value().to_vec()));
         records.push(r);
     }
 

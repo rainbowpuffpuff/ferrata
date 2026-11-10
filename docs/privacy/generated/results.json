@@ -1,0 +1,1477 @@
+{
+ "gate": {
+  "deposit (A: private destinations)": {
+   "pass": true,
+   "detail": "identical after the cut"
+  },
+  "deposit (B: public destinations)": {
+   "pass": true,
+   "detail": "identical after the cut"
+  },
+  "claim, private (default)": {
+   "pass": true,
+   "detail": "identical after the cut"
+  },
+  "claim, naive nullifier N = fid": {
+   "pass": true,
+   "detail": "identical after the cut"
+  },
+  "claim, plaintext": {
+   "pass": false,
+   "detail": "lez:claim:plaintext:01 vs lez:claim:plaintext:00: part tx differs at byte 5 of 1837/1837 after the cut (00070000003461fb6c10ff2a3297878f0c14c97c8853d10a15c6b59ef7 / 000700000046ffca34eae608130be303a685bafc3fb616fd90d4ea077c)"
+  },
+  "burn, private holding": {
+   "pass": true,
+   "detail": "identical after the cut"
+  },
+  "release, NOut of the release statement": {
+   "pass": true,
+   "detail": "identical after the cut"
+  },
+  "release, naive NOut = burnId": {
+   "pass": true,
+   "detail": "identical after the cut"
+  }
+ },
+ "adversary": {
+  "inbound, private (default)": {
+   "success": 0.05000000000000001,
+   "chance": 0.05,
+   "exactly_identified": 0,
+   "candidate_set_sizes": [
+    [
+     20,
+     20
+    ]
+   ],
+   "max_score": 0.0,
+   "without_derived_identifiers": 0.05000000000000001,
+   "with_order_state": 0.05000000000000001
+  },
+  "inbound, naive nullifier N = fid": {
+   "success": 1.0,
+   "chance": 0.05,
+   "exactly_identified": 20,
+   "candidate_set_sizes": [
+    [
+     1,
+     20
+    ]
+   ],
+   "max_score": 50.927448650417844,
+   "without_derived_identifiers": 0.05000000000000001,
+   "with_order_state": 1.0
+  },
+  "inbound, plaintext claim": {
+   "success": 1.0,
+   "chance": 0.05,
+   "exactly_identified": 20,
+   "candidate_set_sizes": [
+    [
+     1,
+     20
+    ]
+   ],
+   "max_score": 155.97750524950447,
+   "without_derived_identifiers": 1.0,
+   "with_order_state": 1.0
+  },
+  "outbound, private (default)": {
+   "success": 0.05000000000000001,
+   "chance": 0.05,
+   "exactly_identified": 0,
+   "candidate_set_sizes": [
+    [
+     20,
+     20
+    ]
+   ],
+   "max_score": 0.0,
+   "without_derived_identifiers": 0.05000000000000001,
+   "with_order_state": 0.05000000000000001
+  },
+  "outbound, naive NOut = burnId": {
+   "success": 1.0,
+   "chance": 0.05,
+   "exactly_identified": 20,
+   "candidate_set_sizes": [
+    [
+     1,
+     20
+    ]
+   ],
+   "max_score": 50.927448650417844,
+   "without_derived_identifiers": 0.05000000000000001,
+   "with_order_state": 1.0
+  },
+  "round trip: deposit to release (informational)": {
+   "success": 0.05000000000000001,
+   "chance": 0.05,
+   "exactly_identified": 0,
+   "candidate_set_sizes": [
+    [
+     20,
+     20
+    ]
+   ],
+   "max_score": 0.0,
+   "without_derived_identifiers": 0.05000000000000001,
+   "with_order_state": 0.05000000000000001
+  },
+  "on LEZ: claim to burn (informational)": {
+   "success": 0.04500000000000001,
+   "chance": 0.05,
+   "exactly_identified": 0,
+   "candidate_set_sizes": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     1
+    ],
+    [
+     20,
+     18
+    ]
+   ],
+   "max_score": 2.995732273553991,
+   "without_derived_identifiers": 0.04500000000000001,
+   "with_order_state": 0.04500000000000001
+  }
+ },
+ "order_only": {
+  "inbound, private (default)": 0.0,
+  "inbound, naive nullifier N = fid": 0.0,
+  "inbound, plaintext claim": 0.05,
+  "outbound, private (default)": 0.05,
+  "outbound, naive NOut = burnId": 0.05,
+  "round trip: deposit to release (informational)": 0.05,
+  "on LEZ: claim to burn (informational)": 0.05
+ },
+ "recovery": {
+  "unclaimed_found": 10,
+  "unclaimed_expected": 10,
+  "claimed_seen_as_claimed": 10,
+  "unreleased_found": 10,
+  "unreleased_expected": 10,
+  "released_seen_as_released": 10,
+  "foreign_items": 0,
+  "nout_matches_vault": 20,
+  "per_user": [
+   {
+    "user": 0,
+    "deposits_found": 1,
+    "burns_found": 1,
+    "recipient_ok": true
+   },
+   {
+    "user": 1,
+    "deposits_found": 1,
+    "burns_found": 1,
+    "recipient_ok": true
+   },
+   {
+    "user": 2,
+    "deposits_found": 1,
+    "burns_found": 1,
+    "recipient_ok": true
+   },
+   {
+    "user": 3,
+    "deposits_found": 1,
+    "burns_found": 1,
+    "recipient_ok": true
+   },
+   {
+    "user": 4,
+    "deposits_found": 1,
+    "burns_found": 1,
+    "recipient_ok": true
+   },
+   {
+    "user": 5,
+    "deposits_found": 1,
+    "burns_found": 1,
+    "recipient_ok": true
+   },
+   {
+    "user": 6,
+    "deposits_found": 1,
+    "burns_found": 1,
+    "recipient_ok": true
+   },
+   {
+    "user": 7,
+    "deposits_found": 1,
+    "burns_found": 1,
+    "recipient_ok": true
+   },
+   {
+    "user": 8,
+    "deposits_found": 1,
+    "burns_found": 1,
+    "recipient_ok": true
+   },
+   {
+    "user": 9,
+    "deposits_found": 1,
+    "burns_found": 1,
+    "recipient_ok": true
+   },
+   {
+    "user": 10,
+    "deposits_found": 1,
+    "burns_found": 1,
+    "recipient_ok": true
+   },
+   {
+    "user": 11,
+    "deposits_found": 1,
+    "burns_found": 1,
+    "recipient_ok": true
+   },
+   {
+    "user": 12,
+    "deposits_found": 1,
+    "burns_found": 1,
+    "recipient_ok": true
+   },
+   {
+    "user": 13,
+    "deposits_found": 1,
+    "burns_found": 1,
+    "recipient_ok": true
+   },
+   {
+    "user": 14,
+    "deposits_found": 1,
+    "burns_found": 1,
+    "recipient_ok": true
+   },
+   {
+    "user": 15,
+    "deposits_found": 1,
+    "burns_found": 1,
+    "recipient_ok": true
+   },
+   {
+    "user": 16,
+    "deposits_found": 1,
+    "burns_found": 1,
+    "recipient_ok": true
+   },
+   {
+    "user": 17,
+    "deposits_found": 1,
+    "burns_found": 1,
+    "recipient_ok": true
+   },
+   {
+    "user": 18,
+    "deposits_found": 1,
+    "burns_found": 1,
+    "recipient_ok": true
+   },
+   {
+    "user": 19,
+    "deposits_found": 1,
+    "burns_found": 1,
+    "recipient_ok": true
+   }
+  ],
+  "recipients_decrypted_correctly": 20,
+  "rust_core": 0
+ },
+ "fields": {
+  "deposit (A: private destinations)": [
+   {
+    "field": "tx.from",
+    "bytes": 20,
+    "across records": "20 distinct",
+    "class": "the user's own public address",
+    "what": "the depositor (or the submitting relayer)",
+    "B6": "depositor"
+   },
+   {
+    "field": "tx.value",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": "denomination"
+   },
+   {
+    "field": "calldata.selector",
+    "bytes": 4,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "calldata.denomIndex",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": "denomination"
+   },
+   {
+    "field": "calldata.commitment",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "fresh randomness",
+    "what": "LEZ: the private account's new commitment",
+    "B6": "C"
+   },
+   {
+    "field": "calldata.index",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "event.Deposit.sig",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "event.Deposit.depositor",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "the user's own public address",
+    "what": "the depositor (or the submitting relayer)",
+    "B6": "depositor"
+   },
+   {
+    "field": "event.Deposit.token",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": "token"
+   },
+   {
+    "field": "event.Deposit.index",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "event.Deposit.leafIndex",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "time / order",
+    "what": "the deposit's position (its order)",
+    "B6": null
+   },
+   {
+    "field": "event.Deposit.amount",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": "denomination"
+   },
+   {
+    "field": "event.Deposit.commitment",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "fresh randomness",
+    "what": "LEZ: the private account's new commitment",
+    "B6": "C"
+   },
+   {
+    "field": "block.number",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "time / order",
+    "what": "time",
+    "B6": "time"
+   },
+   {
+    "field": "block.timestamp",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "time / order",
+    "what": "time",
+    "B6": "time"
+   }
+  ],
+  "claim, private (default)": [
+   {
+    "field": "public_context.actors[] (members in every record)",
+    "bytes": 64,
+    "across records": "constant (6)",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "public_context.actors[] (other members)",
+    "bytes": 64,
+    "across records": "20 distinct",
+    "class": "nullifier",
+    "what": "= `derived.nullifier_account`: the nullifier account, a PDA of N",
+    "B6": null
+   },
+   {
+    "field": "boundary[].out.from",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "fresh randomness",
+    "what": "LEZ: the sender's one-time alias (where it varies)",
+    "B6": "a one-time fee alias with a fixed reserve"
+   },
+   {
+    "field": "boundary[].out.to (members in every record)",
+    "bytes": 32,
+    "across records": "constant (3)",
+    "class": "constant",
+    "what": "",
+    "B6": "a one-time fee alias with a fixed reserve"
+   },
+   {
+    "field": "boundary[].out.message.Read",
+    "bytes": 0,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": "the root read"
+   },
+   {
+    "field": "boundary[].in.from",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "LEZ: the sender's one-time alias (where it varies)",
+    "B6": "a one-time fee alias with a fixed reserve"
+   },
+   {
+    "field": "boundary[].in.to",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "fresh randomness",
+    "what": "LEZ: the sender's one-time alias (where it varies)",
+    "B6": "a one-time fee alias with a fixed reserve"
+   },
+   {
+    "field": "boundary[].in.message.StateReply.state",
+    "bytes": 117,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": "the root read"
+   },
+   {
+    "field": "boundary[].out.message.Issue.config_id",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": "token"
+   },
+   {
+    "field": "boundary[].out.message.Issue.token",
+    "bytes": 20,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": "token"
+   },
+   {
+    "field": "boundary[].out.message.Issue.nullifier",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "nullifier",
+    "what": "N",
+    "B6": "N"
+   },
+   {
+    "field": "boundary[].out.message.Issue.amount",
+    "bytes": 16,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": "denomination"
+   },
+   {
+    "field": "boundary[].out.message.Issue.range",
+    "bytes": 24,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "boundary[].out.message.Issue.leaf_count",
+    "bytes": 8,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": "the root read"
+   },
+   {
+    "field": "boundary[].out.message.Issue.relayer",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "boundary[].out.message.Issue.time_ms",
+    "bytes": 8,
+    "across records": "20 distinct",
+    "class": "time / order",
+    "what": "time",
+    "B6": "time"
+   },
+   {
+    "field": "boundary[].out.message.native.Credit",
+    "bytes": 16,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": "denomination"
+   },
+   {
+    "field": "private_actions[].nullifier",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "nullifier",
+    "what": "LEZ: the private account's nullifier (main action; fee fallback)",
+    "B6": null
+   },
+   {
+    "field": "private_actions[].commitment_root",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "time / order",
+    "what": "LEZ: the commitment-set root (state the proof read)",
+    "B6": null
+   },
+   {
+    "field": "private_actions[].commitment",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "fresh randomness",
+    "what": "LEZ: the private account's new commitment",
+    "B6": null
+   },
+   {
+    "field": "private_actions[].note.ciphertext",
+    "bytes": 247,
+    "across records": "20 distinct",
+    "class": "fresh randomness",
+    "what": "LEZ: the private account's encrypted note and ephemeral key",
+    "B6": null
+   },
+   {
+    "field": "private_actions[].note.epk",
+    "bytes": 1088,
+    "across records": "20 distinct",
+    "class": "fresh randomness",
+    "what": "LEZ: the private account's encrypted note and ephemeral key",
+    "B6": null
+   },
+   {
+    "field": "fee.refund_to",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "fee.fallback.action.nullifier",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "nullifier",
+    "what": "LEZ: the private account's nullifier (main action; fee fallback)",
+    "B6": null
+   },
+   {
+    "field": "fee.fallback.action.commitment_root",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "time / order",
+    "what": "LEZ: the commitment-set root (state the proof read)",
+    "B6": null
+   },
+   {
+    "field": "fee.fallback.action.commitment",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "fresh randomness",
+    "what": "LEZ: the private account's new commitment",
+    "B6": null
+   },
+   {
+    "field": "fee.fallback.action.note.ciphertext",
+    "bytes": 137,
+    "across records": "20 distinct",
+    "class": "fresh randomness",
+    "what": "LEZ: the private account's encrypted note and ephemeral key",
+    "B6": null
+   },
+   {
+    "field": "fee.fallback.action.note.epk",
+    "bytes": 1088,
+    "across records": "20 distinct",
+    "class": "fresh randomness",
+    "what": "LEZ: the private account's encrypted note and ephemeral key",
+    "B6": null
+   },
+   {
+    "field": "fee.fallback.boundary[].out.from",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "fresh randomness",
+    "what": "LEZ: the sender's one-time alias (where it varies)",
+    "B6": "a one-time fee alias with a fixed reserve"
+   },
+   {
+    "field": "fee.fallback.boundary[].out.to",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "LEZ: the sender's one-time alias (where it varies)",
+    "B6": "a one-time fee alias with a fixed reserve"
+   },
+   {
+    "field": "fee.fallback.boundary[].out.message.native.Credit",
+    "bytes": 16,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": "denomination"
+   },
+   {
+    "field": "validity",
+    "bytes": 4,
+    "across records": "constant",
+    "class": "constant",
+    "what": "time",
+    "B6": "time"
+   },
+   {
+    "field": "witness_set",
+    "bytes": 4541,
+    "across records": "20 distinct",
+    "class": "fresh randomness",
+    "what": "the proof (dev mode: a fake receipt) or the submitter's signature",
+    "B6": null
+   },
+   {
+    "field": "derived.nullifier_account",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "nullifier",
+    "what": "the nullifier account, a PDA of N",
+    "B6": "N"
+   },
+   {
+    "field": "block.id",
+    "bytes": 8,
+    "across records": "20 distinct",
+    "class": "time / order",
+    "what": "time",
+    "B6": "time"
+   },
+   {
+    "field": "block.timestamp",
+    "bytes": 8,
+    "across records": "20 distinct",
+    "class": "time / order",
+    "what": "time",
+    "B6": "time"
+   },
+   {
+    "field": "commitment_root.before",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "time / order",
+    "what": "LEZ: the commitment-set root (state the proof read)",
+    "B6": null
+   },
+   {
+    "field": "commitment_root.after",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "time / order",
+    "what": "LEZ: the commitment-set root (state the proof read)",
+    "B6": null
+   }
+  ],
+  "claim, plaintext": [
+   {
+    "field": "public_context.actors[] (members in every record)",
+    "bytes": 64,
+    "across records": "constant (5)",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "public_context.actors[] (other members)",
+    "bytes": 64,
+    "across records": "20 distinct",
+    "class": "UNCLASSIFIED",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "root.to",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "root.message.Claim.config_id",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "root.message.Claim.leaf_count",
+    "bytes": 8,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "root.message.Claim.witness.depositor",
+    "bytes": 20,
+    "across records": "20 distinct",
+    "class": "UNCLASSIFIED",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "root.message.Claim.witness.token",
+    "bytes": 20,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "root.message.Claim.witness.amount",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "root.message.Claim.witness.leaf_index",
+    "bytes": 8,
+    "across records": "20 distinct",
+    "class": "UNCLASSIFIED",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "root.message.Claim.witness.path[] (members in every record)",
+    "bytes": 32,
+    "across records": "constant (27)",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "root.message.Claim.witness.path[] (other members)",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "UNCLASSIFIED",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "root.message.Claim.witness.s",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "UNCLASSIFIED",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "root.message.Claim.witness.kind",
+    "bytes": 1,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "root.message.Claim.witness.dest",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "UNCLASSIFIED",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "root.message.Claim.range",
+    "bytes": 24,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "root.message.Claim.relayer",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "root.message.Claim.time_ms",
+    "bytes": 8,
+    "across records": "20 distinct",
+    "class": "time / order",
+    "what": "time",
+    "B6": null
+   },
+   {
+    "field": "fee",
+    "bytes": 65,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "nonces",
+    "bytes": 52,
+    "across records": "20 distinct",
+    "class": "time / order",
+    "what": "time",
+    "B6": null
+   },
+   {
+    "field": "witness_set",
+    "bytes": 100,
+    "across records": "20 distinct",
+    "class": "fresh randomness",
+    "what": "the proof (dev mode: a fake receipt) or the submitter's signature",
+    "B6": null
+   },
+   {
+    "field": "derived.nullifier_account",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "nullifier",
+    "what": "the nullifier account, a PDA of N",
+    "B6": null
+   },
+   {
+    "field": "block.id",
+    "bytes": 8,
+    "across records": "20 distinct",
+    "class": "time / order",
+    "what": "time",
+    "B6": null
+   },
+   {
+    "field": "block.timestamp",
+    "bytes": 8,
+    "across records": "20 distinct",
+    "class": "time / order",
+    "what": "time",
+    "B6": null
+   },
+   {
+    "field": "commitment_root.before",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "LEZ: the commitment-set root (state the proof read)",
+    "B6": null
+   },
+   {
+    "field": "commitment_root.after",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "LEZ: the commitment-set root (state the proof read)",
+    "B6": null
+   }
+  ],
+  "burn, private holding": [
+   {
+    "field": "public_context.actors[] (members in every record)",
+    "bytes": 64,
+    "across records": "constant (3)",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "public_context.actors[] (other members)",
+    "bytes": 64,
+    "across records": "20 distinct",
+    "class": "fresh randomness",
+    "what": "= `derived.burn_record_account`: the burn record account, a PDA of H(note)",
+    "B6": null
+   },
+   {
+    "field": "boundary[].out.from",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "fresh randomness",
+    "what": "LEZ: the sender's one-time alias (where it varies)",
+    "B6": "a one-time fee alias with a fixed reserve"
+   },
+   {
+    "field": "boundary[].out.to (members in every record)",
+    "bytes": 32,
+    "across records": "constant (2)",
+    "class": "constant",
+    "what": "",
+    "B6": "a one-time fee alias with a fixed reserve"
+   },
+   {
+    "field": "boundary[].out.message.Burn.config_id",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": "token"
+   },
+   {
+    "field": "boundary[].out.message.Burn.r",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "fresh randomness",
+    "what": "the burn note (tag, encrypted recipient, mac, COut)",
+    "B6": "the burn note"
+   },
+   {
+    "field": "boundary[].out.message.Burn.memo",
+    "bytes": 20,
+    "across records": "20 distinct",
+    "class": "fresh randomness",
+    "what": "the burn note (tag, encrypted recipient, mac, COut)",
+    "B6": "the burn note"
+   },
+   {
+    "field": "boundary[].out.message.Burn.mac",
+    "bytes": 16,
+    "across records": "20 distinct",
+    "class": "fresh randomness",
+    "what": "the burn note (tag, encrypted recipient, mac, COut)",
+    "B6": "the burn note"
+   },
+   {
+    "field": "boundary[].out.message.Burn.token",
+    "bytes": 20,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": "token"
+   },
+   {
+    "field": "boundary[].out.message.Burn.amount",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": "denomination"
+   },
+   {
+    "field": "boundary[].out.message.Burn.c_out",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "fresh randomness",
+    "what": "the burn note (tag, encrypted recipient, mac, COut)",
+    "B6": "the burn note"
+   },
+   {
+    "field": "boundary[].out.message.native.Credit",
+    "bytes": 16,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": "denomination"
+   },
+   {
+    "field": "private_actions[].nullifier",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "nullifier",
+    "what": "LEZ: the private account's nullifier (main action; fee fallback)",
+    "B6": null
+   },
+   {
+    "field": "private_actions[].commitment_root",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "time / order",
+    "what": "LEZ: the commitment-set root (state the proof read)",
+    "B6": null
+   },
+   {
+    "field": "private_actions[].commitment",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "fresh randomness",
+    "what": "LEZ: the private account's new commitment",
+    "B6": null
+   },
+   {
+    "field": "private_actions[].note.ciphertext",
+    "bytes": 179,
+    "across records": "20 distinct",
+    "class": "fresh randomness",
+    "what": "LEZ: the private account's encrypted note and ephemeral key",
+    "B6": null
+   },
+   {
+    "field": "private_actions[].note.epk",
+    "bytes": 1088,
+    "across records": "20 distinct",
+    "class": "fresh randomness",
+    "what": "LEZ: the private account's encrypted note and ephemeral key",
+    "B6": null
+   },
+   {
+    "field": "fee.refund_to",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "fee.fallback.action.nullifier",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "nullifier",
+    "what": "LEZ: the private account's nullifier (main action; fee fallback)",
+    "B6": null
+   },
+   {
+    "field": "fee.fallback.action.commitment_root",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "time / order",
+    "what": "LEZ: the commitment-set root (state the proof read)",
+    "B6": null
+   },
+   {
+    "field": "fee.fallback.action.commitment",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "fresh randomness",
+    "what": "LEZ: the private account's new commitment",
+    "B6": null
+   },
+   {
+    "field": "fee.fallback.action.note.ciphertext",
+    "bytes": 247,
+    "across records": "20 distinct",
+    "class": "fresh randomness",
+    "what": "LEZ: the private account's encrypted note and ephemeral key",
+    "B6": null
+   },
+   {
+    "field": "fee.fallback.action.note.epk",
+    "bytes": 1088,
+    "across records": "20 distinct",
+    "class": "fresh randomness",
+    "what": "LEZ: the private account's encrypted note and ephemeral key",
+    "B6": null
+   },
+   {
+    "field": "fee.fallback.boundary[].out.from",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "fresh randomness",
+    "what": "LEZ: the sender's one-time alias (where it varies)",
+    "B6": "a one-time fee alias with a fixed reserve"
+   },
+   {
+    "field": "fee.fallback.boundary[].out.to",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "LEZ: the sender's one-time alias (where it varies)",
+    "B6": "a one-time fee alias with a fixed reserve"
+   },
+   {
+    "field": "fee.fallback.boundary[].out.message.native.Credit",
+    "bytes": 16,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": "denomination"
+   },
+   {
+    "field": "validity",
+    "bytes": 4,
+    "across records": "constant",
+    "class": "constant",
+    "what": "time",
+    "B6": "time"
+   },
+   {
+    "field": "witness_set",
+    "bytes": 3993,
+    "across records": "20 distinct",
+    "class": "fresh randomness",
+    "what": "the proof (dev mode: a fake receipt) or the submitter's signature",
+    "B6": null
+   },
+   {
+    "field": "derived.burn_record_account",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "fresh randomness",
+    "what": "the burn record account, a PDA of H(note)",
+    "B6": "the burn note"
+   },
+   {
+    "field": "block.id",
+    "bytes": 8,
+    "across records": "20 distinct",
+    "class": "time / order",
+    "what": "time",
+    "B6": "time"
+   },
+   {
+    "field": "block.timestamp",
+    "bytes": 8,
+    "across records": "20 distinct",
+    "class": "time / order",
+    "what": "time",
+    "B6": "time"
+   },
+   {
+    "field": "commitment_root.before",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "time / order",
+    "what": "LEZ: the commitment-set root (state the proof read)",
+    "B6": null
+   },
+   {
+    "field": "commitment_root.after",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "time / order",
+    "what": "LEZ: the commitment-set root (state the proof read)",
+    "B6": null
+   }
+  ],
+  "release, NOut of the release statement": [
+   {
+    "field": "tx.from",
+    "bytes": 20,
+    "across records": "constant",
+    "class": "constant",
+    "what": "the depositor (or the submitting relayer)",
+    "B6": "the relayer"
+   },
+   {
+    "field": "tx.value",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": "denomination"
+   },
+   {
+    "field": "calldata.selector",
+    "bytes": 4,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "calldata.request.token",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": "token"
+   },
+   {
+    "field": "calldata.request.denomIndex",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": "denomination"
+   },
+   {
+    "field": "calldata.request.recipient",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "the user's own public address",
+    "what": "the release recipient",
+    "B6": "recipient"
+   },
+   {
+    "field": "calldata.request.relayer",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": "the relayer"
+   },
+   {
+    "field": "calldata.request.relayFee",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "calldata.request.burnRoot",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": "the root"
+   },
+   {
+    "field": "calldata.request.nullifier",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "nullifier",
+    "what": "NOut",
+    "B6": "N_out"
+   },
+   {
+    "field": "calldata.seal.offset",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "calldata.seal.length",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "calldata.seal[]",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "event.Release.sig",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "event.Release.nullifier",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "nullifier",
+    "what": "NOut",
+    "B6": "N_out"
+   },
+   {
+    "field": "event.Release.token",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": "token"
+   },
+   {
+    "field": "event.Release.recipient",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "the user's own public address",
+    "what": "the release recipient",
+    "B6": "recipient"
+   },
+   {
+    "field": "event.Release.amount",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": "denomination"
+   },
+   {
+    "field": "event.Release.relayer",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": "the relayer"
+   },
+   {
+    "field": "event.Release.relayFee",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "event.Release.burnRoot",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": "the root"
+   },
+   {
+    "field": "block.number",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "time / order",
+    "what": "time",
+    "B6": "time"
+   },
+   {
+    "field": "block.timestamp",
+    "bytes": 32,
+    "across records": "20 distinct",
+    "class": "time / order",
+    "what": "time",
+    "B6": "time"
+   }
+  ],
+  "root import": [
+   {
+    "field": "public_context.actors[] (members in every record)",
+    "bytes": 64,
+    "across records": "constant (3)",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "root.to",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "root.message.ImportRoot.config_id",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": "token"
+   },
+   {
+    "field": "root.message.ImportRoot.record_slot",
+    "bytes": 8,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": "the vault's root at a block"
+   },
+   {
+    "field": "root.message.ImportRoot.root",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": "the vault's root at a block"
+   },
+   {
+    "field": "root.message.ImportRoot.leaf_count",
+    "bytes": 8,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": "the vault's root at a block"
+   },
+   {
+    "field": "fee",
+    "bytes": 65,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "nonces",
+    "bytes": 52,
+    "across records": "constant",
+    "class": "constant",
+    "what": "time",
+    "B6": null
+   },
+   {
+    "field": "witness_set",
+    "bytes": 100,
+    "across records": "constant",
+    "class": "constant",
+    "what": "the proof (dev mode: a fake receipt) or the submitter's signature",
+    "B6": null
+   },
+   {
+    "field": "block.id",
+    "bytes": 8,
+    "across records": "constant",
+    "class": "constant",
+    "what": "time",
+    "B6": null
+   },
+   {
+    "field": "block.timestamp",
+    "bytes": 8,
+    "across records": "constant",
+    "class": "constant",
+    "what": "time",
+    "B6": null
+   },
+   {
+    "field": "commitment_root.before",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "LEZ: the commitment-set root (state the proof read)",
+    "B6": null
+   },
+   {
+    "field": "commitment_root.after",
+    "bytes": 32,
+    "across records": "constant",
+    "class": "constant",
+    "what": "LEZ: the commitment-set root (state the proof read)",
+    "B6": null
+   }
+  ]
+ }
+}
