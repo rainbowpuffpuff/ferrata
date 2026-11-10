@@ -199,6 +199,19 @@ pub struct JobRun {
 }
 
 impl World {
+    /// An instance of `config` trusting `checkpoint`, from a bootstrap in layout `fork`.
+    pub fn with_checkpoint(
+        name: &str,
+        program: AccountId,
+        config: ferrata_lez_wire::Config,
+        checkpoint: Root,
+        bootstrap: &LightClientBootstrap,
+        fork: LcFork,
+    ) -> Result<Self> {
+        let native = Native::with_fork(&config, &checkpoint, bootstrap, fork)?;
+        Ok(Self { inst: Instance::new(name, program, config, checkpoint), native, jobs: Vec::new() })
+    }
+
     pub fn new(name: &str, program: AccountId, config: ferrata_lez_wire::Config, bootstrap: &LightClientBootstrap) -> Result<Self> {
         let checkpoint = root(TRUSTED_BLOCK_ROOT);
         let native = Native::new(&config, &checkpoint, bootstrap)?;
@@ -235,7 +248,8 @@ pub async fn check_record(live: &Live, world: &World, slot: u64) -> Result<()> {
     ensure!(!state.is_empty(), "instance {}: no record for slot {slot}", world.inst.name);
     let record: RecordState = borsh::from_slice(&state)?;
     ensure!(record.instance_id == world.inst.id, "the record names another instance");
-    let expected = HeaderRecord::of(&world.native.core().finalized_header, LcFork::Electra, &world.native.spec);
+    let core = world.native.core();
+    let expected = HeaderRecord::of(&core.finalized_header, core.fork, &world.native.spec);
     ensure!(record.record == expected.encode(), "the record is not the native finalized header's");
     Ok(())
 }
@@ -343,9 +357,13 @@ pub async fn update_job(
     payer: AccountId,
 ) -> Result<JobRun> {
     let inst = &world.inst;
-    let fork = inst.fork();
     let spec = inst.config.spec();
-    let on_chain = store(live, inst).await?;
+    let stored = store(live, inst).await?;
+    // The layout a beacon node serves the update in, or the store's if later; the job starts from
+    // the stored store upgraded to it (as `../../harness/src/lib.rs` `Instance::update_in`).
+    let fork = layout_for(&inst.config, &stored, update);
+    let on_chain = steps::store_for_update(&stored, fork, update.attested_header.beacon.slot, &spec)
+        .unwrap_or_else(|_| stored.clone());
     let compact = CompactUpdate::of(update);
     let witness = signer_witness(full, update, &spec);
     let jid = job_id(&inst.id, &on_chain.digest(), &compact.digest(fork));
@@ -408,9 +426,27 @@ pub async fn update_job(
 }
 
 /// Run `update` as a job on the chain and natively; they must agree.
+/// The layout an update goes to an instance in: the one the instance's schedule puts at its
+/// attested header (the layout a beacon node serves it in), or the store's own if later.
+pub fn layout_for(config: &ferrata_lez_wire::Config, stored: &CompactStore, update: &LightClientUpdate) -> LcFork {
+    let spec = config.spec();
+    let served = spec.fork_at_epoch(spec.epoch_at_slot(update.attested_header.beacon.slot)).lc_fork();
+    served.map_or(stored.fork, |served| served.max(stored.fork))
+}
+
 pub async fn apply(live: &mut Live, world: &mut World, update: &LightClientUpdate, label: &str, harness: Harness, payer: AccountId) -> Result<JobRun> {
-    let before = world.native.core().clone();
-    let native = world.native.process(update);
+    // The native store is upgraded by hand at a fork, as a light client does, and keeps the
+    // upgrade only if the update is accepted.
+    let layout = layout_for(&world.inst.config, &store(live, &world.inst).await?, update);
+    let mut next = world.native.clone();
+    if layout > next.core().fork {
+        next.store.upgrade(layout, &next.spec).map_err(|e| anyhow!("{label}: the native store does not upgrade: {e:?}"))?;
+    }
+    let before = next.core().clone();
+    let native = next.process(update);
+    if native.is_ok() {
+        world.native = next;
+    }
     let run = update_job(live, world, update, &before, label, &harness, payer).await?;
     let all_applied = run.outcomes.iter().all(Outcome::applied);
     match native {

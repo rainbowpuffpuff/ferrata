@@ -279,7 +279,7 @@ driver() { # phase [extra options]
   timeout --signal=TERM --kill-after=20 "$PHASE_SECONDS" "$BIN/live-driver" "$phase" --rpc "http://127.0.0.1:$RPC_PORT" --run-dir "$RUN_DIR/driver" --out "$DRIVER_OUT" \
     --program-bin "$PROGRAM_BIN" --scripted-bin "$SCRIPTED_BIN" --sequencer-log "$LOG/sequencer.log" \
     --harness-results "$REPO/lez/results" --stored-tx "$STORED_TX" --wait-final "$WAIT_FINAL" \
-    ${FERRATA_LIVE_GAS_LIMIT:+--gas-limit "$FERRATA_LIVE_GAS_LIMIT"} "$@"
+    ${FERRATA_LIVE_GAS_LIMIT:+--gas-limit "$FERRATA_LIVE_GAS_LIMIT"} ${FERRATA_LIVE_DRIVER_EXTRA:-} "$@"
 }
 status=0
 proof_note=""
@@ -305,6 +305,9 @@ for phase in $PHASES; do
         echo "   the proof was stopped at the cap of $PROOF_SECONDS s; its prover input is recorded" | tee -a "$LOG/driver.log"
         rc=0
       fi ;;
+    inbound)   # ../inbound/run.sh: a real proof of the private claim unless FERRATA_INBOUND_PRIVATE=fake
+      ( if [ "${FERRATA_INBOUND_PRIVATE:-real}" = fake ]; then export RISC0_DEV_MODE=1; else unset RISC0_DEV_MODE; fi
+        driver "$phase" ) 2>&1 | tee -a "$LOG/driver.log"; rc=${PIPESTATUS[0]} ;;
     *) ( unset RISC0_DEV_MODE; driver "$phase" ) 2>&1 | tee -a "$LOG/driver.log"; rc=${PIPESTATUS[0]} ;;
   esac
   case "$rc" in

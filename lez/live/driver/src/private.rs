@@ -391,7 +391,7 @@ pub fn private_job(twin: AccountId, fixtures: &Fixtures, on_chain: Option<&ferra
     Ok(PrivateJob { world, update, message, slot })
 }
 
-fn private_wallet(home: &Path, rpc: &str, client: TapClient) -> Result<(WalletCore<TapClient>, AccountId)> {
+pub(crate) fn private_wallet(home: &Path, rpc: &str, client: TapClient) -> Result<(WalletCore<TapClient>, AccountId)> {
     check_loopback(rpc)?;
     fs::create_dir_all(home)?;
     let config_path = home.join("wallet_config.json");

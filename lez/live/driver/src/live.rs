@@ -277,10 +277,15 @@ impl Live {
     /// Send one public transaction through LEZ's wallet: `actors` are declared in order, the
     /// message goes to `actors[root]`, `payer` pays (co-signing if it is not an actor).
     pub async fn send(&mut self, tx: Tx) -> Result<Result<Sent, Outcome>> {
+        let mentions: Vec<AccountMention> = tx.actors.iter().map(|pda| mention(*pda)).collect();
+        self.send_mentions(tx, mentions).await
+    }
+
+    /// `tx` with these account mentions instead of its PDAs (for actors that are not PDAs).
+    pub async fn send_mentions(&mut self, tx: Tx, mentions: Vec<AccountMention>) -> Result<Result<Sent, Outcome>> {
         self.sync().await?;
         let gas_limit = tx.gas_limit.unwrap_or(self.opts.gas_limit);
         self.set_gas_limit(gas_limit);
-        let mentions: Vec<AccountMention> = tx.actors.iter().map(|pda| mention(*pda)).collect();
         let balance_before = self.balance(tx.payer).await?;
         let since_head = self.head().await?;
         match self.wallet.send_pub_tx_paid_by(mentions, tx.root, tx.message, Some(tx.payer)).await {
@@ -309,6 +314,14 @@ impl Live {
                 self.save_rows()?;
                 Ok(Err(Outcome { row, receipt: None }))
             }
+        }
+    }
+
+    /// Send with explicit mentions and wait.
+    pub async fn submit_mentions(&mut self, tx: Tx, mentions: Vec<AccountMention>) -> Result<Outcome> {
+        match self.send_mentions(tx, mentions).await? {
+            Ok(sent) => self.settle(sent).await,
+            Err(outcome) => Ok(outcome),
         }
     }
 

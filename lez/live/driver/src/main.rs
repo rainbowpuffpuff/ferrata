@@ -6,6 +6,9 @@
 //!
 //! Commands (in the order `../run.sh run` calls them):
 //!   info            the guest binaries, the accounts of the run, the sequencer's head
+//!   inbound-deploy  deploy the attestation program (attest) and the bridge (bridge, --bridge-bin)
+//!   inbound         the inbound crossing (--chain stand-in | sepolia --capture DIR --capture DIR
+//!                   [--vault ADDR]; --private real | fake | skip): ../inbound/README.md
 //!   deploy          deploy the program twice (main, twin) and LEZ's scripted test program
 //!   replay          instance A on the main deployment: Init and the five mainnet updates
 //!   scenarios       the twin deployment: finality path and refusals
@@ -16,6 +19,7 @@
 //!   submit-proven   submit a private update proven elsewhere (--tx FILE, from prove-from-transcript)
 //!   export          write the records into --out
 //! Without a sequencer:
+//!   inbound-check   the inbound chain natively (--program-bin, --bridge-bin, --chain ...)
 //!   inbound-plan    the inbound run's configuration identity (--attest-bin, --bridge-bin, --vault HEX)
 //!   verify          re-check a recorded run in --dir, fully if --binary FILE ... are given
 //!   prove-from-transcript  prove the private update from a recorded RPC transcript
@@ -110,6 +114,8 @@ struct Run {
     fixtures: Fixtures,
     program: GuestBinary,
     scripted: GuestBinary,
+    /// The bridge program (`--bridge-bin`), for the inbound commands.
+    bridge: Option<GuestBinary>,
     payers: Vec<AccountId>,
 }
 
@@ -135,6 +141,11 @@ async fn open(args: &Args, phase: &str) -> Result<Run> {
     keys.extend(deployment_keys("main", &program));
     keys.extend(deployment_keys("twin", &program));
     keys.extend(deployment_keys("scripted", &scripted));
+    let bridge = args.get("bridge-bin").map(|p| GuestBinary::load("bridge", Path::new(p))).transpose()?;
+    if let Some(bridge) = &bridge {
+        keys.extend(deployment_keys(inbound::ATTEST, &program));
+        keys.extend(deployment_keys(inbound::BRIDGE, bridge));
+    }
     let run_dir = args.path("run-dir")?;
     let opts = Options {
         rpc: args.get("rpc").unwrap_or("http://127.0.0.1:3040").to_string(),
@@ -147,7 +158,7 @@ async fn open(args: &Args, phase: &str) -> Result<Run> {
     };
     let mut live = Live::open(opts, &keys).await?;
     live.phase = phase.to_string();
-    Ok(Run { live, fixtures: fixtures(args)?, program, scripted, payers: payer_keys.iter().map(account_of).collect() })
+    Ok(Run { live, fixtures: fixtures(args)?, program, scripted, bridge, payers: payer_keys.iter().map(account_of).collect() })
 }
 
 async fn info(run: &Run) -> Result<()> {
@@ -261,7 +272,11 @@ async fn export(run: &mut Run) -> Result<()> {
     fs::write(out.join("chain.tsv"), chain)?;
 
     let mut programs = String::from("name\theader_account\timage_id\tbinary_sha256\tbinary_bytes\tuser_elf_bytes\tsegments\n");
-    for (name, binary) in [("main", &run.program), ("twin", &run.program), ("scripted", &run.scripted)] {
+    let deployed: Vec<(&str, &GuestBinary)> = match &run.bridge {
+        Some(bridge) => vec![(inbound::ATTEST, &run.program), (inbound::BRIDGE, bridge)],
+        None => vec![("main", &run.program), ("twin", &run.program), ("scripted", &run.scripted)],
+    };
+    for (name, binary) in deployed {
         let (header, segments) = deployment_accounts(name, binary);
         writeln!(
             programs,
@@ -353,6 +368,17 @@ async fn export(run: &mut Run) -> Result<()> {
 async fn run(args: Args) -> Result<()> {
     match args.command.as_str() {
         "verify" => return verify::verify(&args.path("dir")?, &args.all("binary")),
+        "inbound-check" => {
+            let program = GuestBinary::load("program", &args.path("program-bin")?)?;
+            let bridge = GuestBinary::load("bridge", &args.path("bridge-bin")?)?;
+            let attest = deployment_accounts(inbound::ATTEST, &program).0;
+            let chain = match args.get("chain").unwrap_or("stand-in") {
+                "stand-in" => inbound::stand_in(attest, &bridge, &repository_root())?,
+                "sepolia" => inbound::sepolia(&repository_root(), &args.all("capture"), args.get("vault"))?,
+                other => bail!("--chain {other}: stand-in or sepolia"),
+            };
+            return inbound::check(&chain, attest, &bridge);
+        }
         "inbound-plan" => {
             let ids = inbound::plan_ids(&args.path("attest-bin")?, &args.path("bridge-bin")?, args.get("vault"))?;
             println!("{}", serde_json::to_string_pretty(&ids)?);
@@ -406,6 +432,24 @@ async fn run(args: Args) -> Result<()> {
         "submit-proven" => {
             let twin = run.twin();
             private::submit_proven(&mut run.live, twin, &run.fixtures, &args.path("tx")?).await?;
+        }
+        "inbound-deploy" => {
+            let bridge = run.bridge.clone().ok_or_else(|| anyhow!("--bridge-bin is required"))?;
+            let (program, payer) = (run.program.clone(), run.payers[1]);
+            scenario::deploy(&mut run.live, inbound::ATTEST, &program, payer).await?;
+            scenario::deploy(&mut run.live, inbound::BRIDGE, &bridge, payer).await?;
+        }
+        "inbound" => {
+            let bridge = run.bridge.clone().ok_or_else(|| anyhow!("--bridge-bin is required"))?;
+            let attest = deployment_accounts(inbound::ATTEST, &run.program).0;
+            let chain = match args.get("chain").unwrap_or("stand-in") {
+                "stand-in" => inbound::stand_in(attest, &bridge, &repository_root())?,
+                "sepolia" => inbound::sepolia(&repository_root(), &args.all("capture"), args.get("vault"))?,
+                other => bail!("--chain {other}: stand-in or sepolia"),
+            };
+            let private = args.get("private").unwrap_or("real").to_string();
+            let payer = run.payers[1];
+            inbound::session(&mut run.live, attest, &bridge, &chain, payer, &private).await?;
         }
         "export" => export(&mut run).await?,
         "check-rpc" => verify::check_rpc(&args.path("dir")?, &run.live.wallet).await?,

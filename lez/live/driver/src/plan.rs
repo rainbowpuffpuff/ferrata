@@ -212,6 +212,7 @@ impl Instance {
 
 /// The native light client next to an instance: it supplies the full committees a submitter
 /// needs for the signer witness, and what the instance's store must equal after each job.
+#[derive(Clone)]
 pub struct Native {
     pub store: FinalizedStore,
     pub spec: ChainSpec,
@@ -220,9 +221,14 @@ pub struct Native {
 
 impl Native {
     pub fn new(config: &Config, checkpoint: &Root, bootstrap: &LightClientBootstrap) -> Result<Self> {
+        Self::with_fork(config, checkpoint, bootstrap, LcFork::Electra)
+    }
+
+    /// The native store from a bootstrap in layout `fork`.
+    pub fn with_fork(config: &Config, checkpoint: &Root, bootstrap: &LightClientBootstrap, fork: LcFork) -> Result<Self> {
         let spec = config.spec();
         let store =
-            FinalizedStore::initialize_with(checkpoint, bootstrap, LcFork::Electra, &spec, &BLS, Adoption::OnChain)
+            FinalizedStore::initialize_with(checkpoint, bootstrap, fork, &spec, &BLS, Adoption::OnChain)
                 .map_err(|e| anyhow!("the native store refuses the bootstrap: {e:?}"))?;
         Ok(Self { store, spec, genesis_validators_root: config.genesis_validators_root })
     }
