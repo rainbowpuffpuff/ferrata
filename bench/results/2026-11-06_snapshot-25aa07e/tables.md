@@ -25,18 +25,18 @@ Exact user cycles (env::cycle_count deltas; execution rows from SessionInfo). n/
 | 7  hash_to_G2(signing root) + to affine | 1,169,105 | 1,597,276 | 2,603,759 | 35,082,628 | 25,192,835 | 35,155,831 |
 | 8p G2Prepared::from x2 (line precomputation) | n/a | n/a | 2,415,747 | 16,297,418 | n/a | 16,297,418 |
 | 8l multi_miller_loop, 2 pairs (prepared) | n/a | n/a | 6,396,415 | 37,956,706 | n/a | 37,956,706 |
-| 8  Miller loops as plumbline: ML(H(m),-key) + ML(sig,g1) + Fp12 mul | 4,087,690 | 4,439,734 | 8,812,162 | 54,254,124 | 79,753,003 | 54,254,124 |
+| 8  Miller loops as ferrata: ML(H(m),-key) + ML(sig,g1) + Fp12 mul | 4,087,690 | 4,439,734 | 8,812,162 | 54,254,124 | 79,753,003 | 54,254,124 |
 | 8m alternative: one 2-pair blst_miller_loop_n | 3,251,802 | 3,589,657 | n/a | n/a | 65,831,039 | n/a |
 | 9  final exponentiation + is_one | 3,581,111 | 4,540,856 | 10,955,696 | 46,008,641 | 49,950,200 | 46,008,641 |
-| B1 backend verify_checked, subtractive (plumbline code, policy store path) | 9,656,126 | 11,600,307 | 24,460,930 | 162,140,669 | 172,267,356 | 162,213,907 |
-| B2 backend verify_checked, additive (plumbline code) | 57,683,915 | 60,976,389 | 118,135,083 | 1,106,915,469 | 1,191,119,219 | 1,106,988,708 |
+| B1 backend verify_checked, subtractive (ferrata code, policy store path) | 9,656,126 | 11,600,307 | 24,460,930 | 162,140,669 | 172,267,356 | 162,213,907 |
+| B2 backend verify_checked, additive (ferrata code) | 57,683,915 | 60,976,389 | 118,135,083 | 1,106,915,469 | 1,191,119,219 | 1,106,988,708 |
 | B3 backend fast_aggregate_verify (spec path: KeyValidate on every signer key) | 237,568,558 | 239,050,028 | 550,656,680 | 3,269,268,545 | 3,977,909,158 | 3,269,341,784 |
 | 10a adoption, compressed: 512 x KeyValidate (decompress + G1 subgroup) + sum + compare aggregate | 229,193,153 | 228,628,890 | 528,771,299 | 3,128,358,422 | 3,828,573,244 | 3,128,358,422 |
 | 10a0 same, on-curve only (no per-key subgroup check; earlier design) | 48,598,973 | 49,953,174 | 94,737,624 | 957,732,885 | 1,030,950,968 | 957,734,421 |
 | 10b adoption, uncompressed: 512 x (deserialize+on-curve, recompress==committed, G1 subgroup) + sum + compress==aggregate | 185,103,996 | 185,853,390 | 440,178,481 | 2,205,094,943 | 2,846,203,554 | 2,205,094,943 |
 | 10b0 same, uncompressed without the per-key subgroup check | 4,562,038 | 7,229,896 | 6,256,426 | 34,624,028 | 48,633,500 | 34,625,561 |
 | 10g 512 G1 subgroup checks alone (for scale) | 180,486,735 | 178,568,271 | 433,921,615 | 2,170,467,411 | 2,797,514,831 | 2,170,467,407 |
-| 10a' backend check_committee (plumbline code) | 229,181,886 | 228,818,340 | 529,162,054 | 3,128,732,202 | 3,828,762,694 | 3,128,732,202 |
+| 10a' backend check_committee (ferrata code) | 229,181,886 | 228,818,340 | 529,162,054 | 3,128,732,202 | 3,828,762,694 | 3,128,732,202 |
 | V  validate_light_client_update(update_1), CheckedCommittee path, Auto (= subtractive) | 10,913,471 | 12,857,652 | 25,718,275 | 163,398,013 | 173,524,701 | 172,181,495 |
 | P1 process_update(update_1) as served: finality + handoff (adopts next committee) | 240,157,634 | 241,738,269 | 554,942,607 | 3,292,192,494 | 4,002,349,672 | 3,300,975,974 |
 | P2 process_update(update_1 stripped to a finality update): no committee adoption | 10,211,785 | 12,155,966 | 25,016,588 | 162,696,326 | 172,823,015 | 163,606,709 |
@@ -104,7 +104,7 @@ Exact user cycles (env::cycle_count deltas; execution rows from SessionInfo). n/
 | S5 signing key, subtractive, negated, affine | 287,657 | 386,286 | 6,229,951 |
 | S6 signature decompression + G2 subgroup check | 526,789 | 631,785 | 11,136,997 |
 | S7 hash_to_G2 | 1,169,097 | 1,597,268 | 25,192,827 |
-| S8 Miller loops (as plumbline: 2 x single-pair + Fp12 mul) | 4,087,676 | 4,439,720 | 79,752,989 |
+| S8 Miller loops (as ferrata: 2 x single-pair + Fp12 mul) | 4,087,676 | 4,439,720 | 79,752,989 |
 | S  sum (one cycle_count delta, excl. input read and journal commit) | 6,290,343 | 7,274,183 | 122,531,888 |
 | **execution total, user cycles** (SessionInfo) | 6,391,604 | 7,375,444 | 122,633,149 |
 | segments (2^20 cycles each) | 7 | 8 | 122 |

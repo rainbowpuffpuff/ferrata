@@ -141,18 +141,18 @@ Exact user cycles (env::cycle_count deltas; execution rows from SessionInfo). n/
 | 6a signature decompression (G2) | 183,728 |
 | 6b signature G2 subgroup check + not identity | 343,140 |
 | 7  hash_to_G2(signing root) + to affine | 1,169,105 |
-| 8  Miller loops as plumbline: ML(H(m),-key) + ML(sig,g1) + Fp12 mul | 4,087,690 |
+| 8  Miller loops as ferrata: ML(H(m),-key) + ML(sig,g1) + Fp12 mul | 4,087,690 |
 | 8m alternative: one 2-pair blst_miller_loop_n | 3,251,802 |
 | 9  final exponentiation + is_one | 3,581,111 |
-| B1 backend verify_checked, subtractive (plumbline code, policy store path) | 9,657,332 |
-| B2 backend verify_checked, additive (plumbline code) | 57,685,120 |
+| B1 backend verify_checked, subtractive (ferrata code, policy store path) | 9,657,332 |
+| B2 backend verify_checked, additive (ferrata code) | 57,685,120 |
 | B3 backend fast_aggregate_verify (spec path: KeyValidate on every signer key) | 237,619,457 |
 | 10a adoption, compressed: 512 x KeyValidate (decompress + G1 subgroup) + sum + compare aggregate | 229,193,154 |
 | 10a0 same, on-curve only (no per-key subgroup check; earlier design) | 48,598,974 |
 | 10b adoption, uncompressed: 512 x (deserialize+on-curve, recompress==committed, G1 subgroup) + sum + compress==aggregate | 185,103,996 |
 | 10b0 same, uncompressed without the per-key subgroup check | 4,562,038 |
 | 10g 512 G1 subgroup checks alone (for scale) | 180,486,735 |
-| 10a' backend check_committee (plumbline code) | 229,282,242 |
+| 10a' backend check_committee (ferrata code) | 229,282,242 |
 | V  validate_light_client_update(update_1), CheckedCommittee path, Auto (= subtractive) | 10,914,681 |
 | P1 process_update(update_1) as served: finality + handoff (adopts next committee) | 240,259,352 |
 | P2 process_update(update_1 stripped to a finality update): no committee adoption | 10,213,139 |
@@ -220,7 +220,7 @@ Exact user cycles (env::cycle_count deltas; execution rows from SessionInfo). n/
 | S5 signing key, subtractive, negated, affine | 287,660 |
 | S6 signature decompression + G2 subgroup check | 526,791 |
 | S7 hash_to_G2 | 1,169,103 |
-| S8 Miller loops (as plumbline: 2 x single-pair + Fp12 mul) | 4,087,683 |
+| S8 Miller loops (as ferrata: 2 x single-pair + Fp12 mul) | 4,087,683 |
 | S  sum (one cycle_count delta, excl. input read and journal commit) | 6,290,348 |
 | **execution total, user cycles** (SessionInfo) | 6,391,612 |
 | segments (2^20 cycles each) | 7 |

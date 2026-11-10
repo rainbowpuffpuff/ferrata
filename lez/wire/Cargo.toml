@@ -10,7 +10,7 @@ publish = false
 # The verification core. The guest selects the blst backend (RISC Zero's fork); the host, native blst.
 ferrata-core = { path = "../../crates/ferrata-core", default-features = false }
 # LEZ v0.4.0-rc1 (tag v0.4.0-rc1, commit 1806e873), by path: the clone must sit at
-# spike/upstream/lez-v0.4.0-rc1 next to this repository's parent directory.
+# upstream/lez-v0.4.0-rc1 beside the repository (../../../upstream from here).
 lee_core = { path = "../../../upstream/lez-v0.4.0-rc1/lee/state_machine/core" }
 borsh = { version = "=1.6.1", features = ["derive"] }
 sha2 = { version = "0.10", default-features = false }

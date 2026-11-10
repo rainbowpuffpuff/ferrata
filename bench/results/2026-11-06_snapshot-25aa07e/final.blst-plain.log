@@ -37,18 +37,18 @@ config: blst
        3949220  6a signature decompression (G2)
        7187856  6b signature G2 subgroup check + not identity
       25192835  7  hash_to_G2(signing root) + to affine
-      79753003  8  Miller loops as plumbline: ML(H(m),-key) + ML(sig,g1) + Fp12 mul
+      79753003  8  Miller loops as ferrata: ML(H(m),-key) + ML(sig,g1) + Fp12 mul
       65831039  8m alternative: one 2-pair blst_miller_loop_n
       49950200  9  final exponentiation + is_one
-     172267356  B1 backend verify_checked, subtractive (plumbline code, policy store path)
-    1191119219  B2 backend verify_checked, additive (plumbline code)
+     172267356  B1 backend verify_checked, subtractive (ferrata code, policy store path)
+    1191119219  B2 backend verify_checked, additive (ferrata code)
     3977909158  B3 backend fast_aggregate_verify (spec path: KeyValidate on every signer key)
     3828573244  10a adoption, compressed: 512 x KeyValidate (decompress + G1 subgroup) + sum + compare aggregate
     1030950968  10a0 same, on-curve only (no per-key subgroup check; earlier design)
     2846203554  10b adoption, uncompressed: 512 x (deserialize+on-curve, recompress==committed, G1 subgroup) + sum + compress==aggregate
       48633500  10b0 same, uncompressed without the per-key subgroup check
     2797514831  10g 512 G1 subgroup checks alone (for scale)
-    3828762694  10a' backend check_committee (plumbline code)
+    3828762694  10a' backend check_committee (ferrata code)
      173524701  V  validate_light_client_update(update_1), CheckedCommittee path, Auto (= subtractive)
     4002349672  P1 process_update(update_1) as served: finality + handoff (adopts next committee)
      172823015  P2 process_update(update_1 stripped to a finality update): no committee adoption
@@ -65,7 +65,7 @@ config: blst
        6229951  S5 signing key, subtractive, negated, affine
       11136997  S6 signature decompression + G2 subgroup check
       25192827  S7 hash_to_G2
-      79752989  S8 Miller loops (as plumbline: 2 x single-pair + Fp12 mul)
+      79752989  S8 Miller loops (as ferrata: 2 x single-pair + Fp12 mul)
      122531888  S  sum (one cycle_count delta, excl. input read and journal commit)
      122633149  EXECUTION user cycles (SessionInfo::cycles)
      127926272  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 122 segments; po2 {20})

@@ -3,7 +3,7 @@
 # Usage: ./run.sh [CONFIG ...] [--modes MODE,...]      Results go to results/.
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
-export TMPDIR="$here/../../tmp"   # spike/tmp: never /tmp on this machine
+export TMPDIR="$here/../../tmp"   # tmp/ beside the repository, not /tmp
 mkdir -p "$TMPDIR" "$here/results"
 cd "$here"
 {

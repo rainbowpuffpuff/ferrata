@@ -617,7 +617,7 @@ Charged (dev mode; flat proof and storage costs as in §3): the read execution g
   `merkle.rs`, `policy.rs`, `ssz.rs`, `store.rs`, `types.rs`, `upgrade.rs`, `validate.rs`) are
   still byte-identical to f030475 up to the rename.
 
-### Where the old proposal text (§1–§2, "Plumbline") turned out wrong or incomplete on v0.4
+### Where the earlier proposal text (§1–§2) turned out wrong or incomplete on v0.4
 
 1. **No `committee(id)` actor.** The proposal kept both committees' compressed keys (49 KB) in a
    committee actor. On v0.4 a handler sees only its own actor's state, and every byte it loads
@@ -651,9 +651,9 @@ Charged (dev mode; flat proof and storage costs as in §3): the read execution g
 
 ## 6. Reproduce
 
-Layout: this repository's worktree and LEZ's at `spike/upstream/lez-v0.4.0-rc1` (tag
-`v0.4.0-rc1`, commit `1806e873ea2ac0e1b608aa7cf2f9b6e1fb12db21`, unmodified), side by side as in
-`../../upstream/`; the crates depend on LEZ by path. The environment of the measurements is in
+Layout: LEZ at `upstream/lez-v0.4.0-rc1` beside the repository (`../../upstream/` from `lez/`; tag
+`v0.4.0-rc1`, commit `1806e873ea2ac0e1b608aa7cf2f9b6e1fb12db21`, unmodified); the crates depend on
+LEZ by path. The environment of the measurements is in
 `results/environment.md` (`./results_env.sh` writes it).
 
 Toolchains, matching LEZ: host Rust 1.98.1 (LEZ's `rust-toolchain.toml`; `lez/rust-toolchain.toml`
@@ -663,7 +663,7 @@ guest toolchain was installed into a separate `RISC0_HOME` so as not to change t
 default (1.88.0, which `../bench/` uses):
 
 ```sh
-cd lez                                               # spike/ferrata-lez/lez
+cd lez                                               # from the repository root
 export RISC0_HOME=$PWD/../../risc0-home-lez          # rust 1.91.1 installed with `rzup install rust 1.91.1`;
                                                      # cpp 2024.1.5 and r0vm 3.0.5 linked from ~/.risc0
 export TMPDIR=$PWD/../../tmp CARGO_TARGET_DIR=$PWD/target

@@ -3,11 +3,12 @@
 (The execution layer, measured on 9 Nov 2026, has its own section below:
 "2026-11-09: the execution layer".)
 
-**Former name.** Measured at commit f030475 under the project's former name, Plumbline
-(`crates/plumbline-core`); the earlier snapshot run below used commit 25aa07e. The core differs
+**Former name.** Measured at commit f030475, before the project was renamed Ferrata, when the core
+was `crates/plumbline-core`; the earlier snapshot run below used commit 25aa07e. The core differs
 from f030475 only by the rename, checked by `scripts/check-bench-provenance.sh`. The raw outputs in
-`results/` are left as produced and use the former name; `results/PROVENANCE.txt` adds the
-per-file hashes after the rename, which changed six of them. A guest built after the rename is a
+`results/` are as produced, except that the row labels that named the project now say `ferrata`, as
+the current bench source prints them; `results/PROVENANCE.txt` adds the per-file hashes after the
+rename, which changed six of them. A guest built after the rename is a
 different image from the measured one (`651d5639…`), which contains the former name and paths.
 
 RISC Zero **executor only** (`default_executor().execute`, r0vm 3.0.5, no proving). Every guest
@@ -712,7 +713,7 @@ extra comparisons. All six built and ran.
 | guest image measured against the real core | `blst_accel` sha256 `651d5639e25c6008…` |
 | guest images of the earlier snapshot run (sha256 of the `.bin` that `methods` embeds) | `blst_accel` `adc296e76c5816d1…`; `blst_accel_v0314` `0a273f7e2157167a…`; `blst_plain` `2e80b4e3540e6cf9…`; `nopatch` `626ac0527518e3b6…`; `zkcrypto_accel` `843df2e115cc5b83…`; `zkcrypto_plain` `c3b05d0697c408aa…` |
 | ferrata-core, headline run | `../crates/plumbline-core` by path: commit 25aa07e plus the uncommitted working tree of 6 Nov 2026 09:43 CET (`results/PROVENANCE.txt`) |
-| ferrata-core, earlier snapshot run | a copy equal to commit **25aa07e** ("Apply round-1 review: exact BLS semantics, mainnet replay, guard tests") except rustfmt line wrapping at three places in the two BLS backend files |
+| ferrata-core, earlier snapshot run | a copy equal to commit **25aa07e** except rustfmt line wrapping at three places in the two BLS backend files |
 
 **Why the earlier run used a snapshot.** While the bench was first being written, ferrata-core's
 working tree changed under it (between 08:35 and
@@ -725,10 +726,10 @@ formatting). The bench now lives in the repository as `bench/` and depends on
 
 ## Reproduce
 
-See `README.md` for the commands. In short, from `spike/ferrata/bench`:
+See `README.md` for the commands. In short, from `bench/`:
 
 ```sh
-export TMPDIR=$PWD/../../tmp                 # spike/tmp; never /tmp on this machine
+export TMPDIR=$PWD/../../tmp                 # tmp/ beside the repository, not /tmp
 cargo build --release -p host                # risc0-build compiles the six guests, then the host
 ./target/release/host blst-accel             # every mode for blst-accel, ~2.5 min -> results/blst-accel.all.txt
 python3 -I tools/table.py results --headline # the headline table above
@@ -754,19 +755,19 @@ not used), and `~/.cargo/bin` is already on `PATH`.
 | `rzup install r0vm 3.0.5` | `~/.risc0/extensions/v3.0.5-cargo-risczero-x86_64-unknown-linux-gnu/{r0vm,cargo-risczero}` (119 MB) and the symlinks `~/.cargo/bin/r0vm`, `~/.cargo/bin/cargo-risczero` |
 | rzup bookkeeping | `~/.risc0/settings.toml`, `~/.risc0/.rzup`, `~/.risc0/tmp/` (lock files) |
 | cargo caches (normal) | git checkouts of risc0/blst, risc0/zkcrypto-bls12_381, risc0/RustCrypto-hashes under `~/.cargo/git/`; crates under `~/.cargo/registry/` |
-| this bench | `spike/ferrata/bench/`, moved there from `spike/plumbline-bench/` (`target/` is 3.0 GB of build output, ignored by `bench/.gitignore`); `spike/tmp/` (TMPDIR, left empty). Sources fetched only to read them (crate sources of rzup, risc0-build, risc0-zkvm, risc0-zkvm-platform, risc0-circuit-rv32im, bls12_381; git metadata of the two RISC Zero forks) were kept in `spike/downloads/` during the work and deleted afterwards |
+| this bench | `bench/` (`target/` is 3.0 GB of build output, ignored by `bench/.gitignore`); the TMPDIR beside the repository (left empty). Sources fetched only to read them (crate sources of rzup, risc0-build, risc0-zkvm, risc0-zkvm-platform, risc0-circuit-rv32im, bls12_381; git metadata of the two RISC Zero forks) were kept outside the repository during the work and deleted afterwards |
 
 Remove everything RISC Zero:
 
 ```sh
 rm -rf ~/.risc0 ~/.rustup/toolchains/risc0 ~/.cargo/bin/r0vm ~/.cargo/bin/cargo-risczero
 cargo uninstall rzup
-rm -rf spike/ferrata/bench/target      # build output only
+rm -rf bench/target                    # build output only
 ```
 
 rzup looks for a GitHub token in `GITHUB_TOKEN` or in `~/.config/gh/hosts.yml` (`oauth_token`);
 neither held one here, so its downloads from GitHub were unauthenticated. Only public toolchains,
-crates and git tags were downloaded; nothing about the user was sent anywhere, and no proving
+crates and git tags were downloaded; no personal information was sent anywhere, and no proving
 service (Bonsai/Boundless) was used.
 
 ## What did not work, and caveats

@@ -1,5 +1,5 @@
-# Note, added 2026-11-09: measured at commit f030475 under the project's former name, Plumbline
-# (crates/plumbline-core). The capture below is unchanged and its per-file hashes still match
+# Note, added 2026-11-09: measured at commit f030475, before the project was renamed Ferrata
+# (the core was then crates/plumbline-core). The capture below is unchanged and its per-file hashes still match
 # f030475. The core, now crates/ferrata-core, differs from that commit only by the rename, checked
 # by scripts/check-bench-provenance.sh. The rename changed six of these hashes (Cargo.toml,
 # src/bls/mod.rs, src/error.rs, src/lib.rs, src/policy.rs, src/store.rs); the list after the
