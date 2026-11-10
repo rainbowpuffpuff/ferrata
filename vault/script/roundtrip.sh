@@ -75,7 +75,10 @@ gas_check() {
   out="$(dirname "$fixture")/gas"
   mkdir -p "$out"
   rm -f "$dry"
-  forge script script/RoundTrip.s.sol:RoundTrip --sig "$step()" "${rpc[@]}" --sender "$ETH_FROM" > "$out/$step.forge.log" 2>&1 ||
+  # --skip-simulation: forge's own re-simulation of a dry run starts the sender at nonce 0 (forge 1.3.6), which puts
+  # every creation one address off for a sender that has sent before; the fork below plays the stage instead.
+  forge script script/RoundTrip.s.sol:RoundTrip --sig "$step()" "${rpc[@]}" --sender "$ETH_FROM" --skip-simulation \
+    > "$out/$step.forge.log" 2>&1 ||
     { tail -n 20 "$out/$step.forge.log" >&2; return 1; }
   [ -f "$dry" ] || { echo "forge wrote no dry run of $step" >&2; return 1; }
   python3 "$here/../e2e/gasplan.py" plan "$dry" --out "$out/$step.plan.json" > /dev/null || return 1

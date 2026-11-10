@@ -35,7 +35,7 @@
 #   FERRATA_FORK=1                            a rehearsal on a local fork (anvil): the sender is
 #                                             impersonated, no key is read, and the two waits are passed
 #                                             by moving the fork's clock
-#   FERRATA_HALT_AFTER=<stage>                stop cleanly after deploy, depositN, captureN, submit, beacon,
+#   FERRATA_HALT_AFTER=<stage>                stop cleanly after deploy, deposit0-2, capture1-2, submit, beacon,
 #                                             proof, finalize or release (to do the rest later, or by hand)
 #   FERRATA_GAS_RPC, FERRATA_GAS_MARGIN_PCT   the node that prices the transactions and the margin (125 %)
 #                                             (vault/script/roundtrip.sh)
@@ -241,7 +241,7 @@ for i in $(seq 0 $((deposits - 1))); do
     [ "$(call 'nextLeafIndex()(uint64)' | word)" -gt "$i" ] || die "deposit $i is not in the vault after its stage"
   fi
   mark "deposit$i"
-  case " $attest " in *" $i "*) capture "$i"; mark "capture$i" ;; esac
+  case " $attest " in *" $i "*) capture "$i"; mark "capture$((i + 1))" ;; esac
 done
 [ "$(call 'depositRoot()(bytes32)')" = "$(jq -r .depositRoot "$fixture")" ] || die "the vault's deposit root is not the fixture's"
 
