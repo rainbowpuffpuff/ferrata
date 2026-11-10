@@ -1151,3 +1151,62 @@ Bedrock's storage gas price for the zone's inscriptions rose from 1 to 4 within 
 Reproduce (Linux x86-64; ports and packages in `live/README.md`; the guest binaries as it says):
 `lez/live/run.sh build`, `lez/live/run.sh build-bedrock`, `lez/live/run.sh run`,
 `python3 lez/live/tables.py`, `lez/live/verify-run.sh`.
+
+## 9. LEZ v0.4.0-rc2
+
+LEZ tagged `v0.4.0-rc2` (commit `e3edf47402a82557103ca719b30d0bd2684338d1`) on 9 November 2026,
+59 commits after rc1. What changed, and what each change touches here:
+[`../docs/design/lez-rc2-changes.md`](../docs/design/lez-rc2-changes.md). Sections 1–8 were
+measured on rc1 and stay as they were; this section is rc2. Its runs were made on a Modal build
+box (`results/v0.4.0-rc2/environment.md`), at commit `cd7a230` for the harness.
+
+### What moving to rc2 took
+
+| where | change | why |
+|---|---|---|
+| the guests (program, consumer, bridge, `scripted`, the two Keccak variants) | none | `lee_core`'s program-facing API did not change |
+| the ten manifests with LEZ path dependencies | `scripts/lez-select.sh <tag>` points them at `upstream/lez-<tag>`; the committed state is `v0.4.0-rc1` | Cargo has no variables in manifests; rc1 must still build to the same images |
+| lockfiles | `lockfiles/v0.4.0-rc2.patch`, applied and reverted by the same script: LEZ's own path crates only (the new `cross_zone_emission_core`, `program_loader_core` → `thiserror`; for the driver also `chain_state` → `async-trait`, `common` without `ping_core`); no external crate changes version; the six guests' lockfiles do not change | rc2's crates add dependency edges; `--locked` builds |
+| harness | `ProgramHeader::from_bytes` → `from_loader_actor_state` behind the feature `lez-rc2` (one call, `tests/private_consumer.rs`); results of another tag under `results/<tag>/` (`harness::results_dir`), titles carry the tag | the loader's tagged state (LEZ #943); rc1's results stay as they are |
+| harness's copy of LEZ's settlement (`harness/src/settle.rs`) | none | the functions it copies are unchanged in rc2 (`chain_state/src/apply.rs` and `classify.rs` untouched; `common/src/transaction.rs` changed only in `is_system_injection`, which is not copied; `fee_core::assess` only factored out `fee_for`) |
+| live driver | the header decoder (two calls), `ExecutionFailureKind::DryRun(_)` (two matches), the declared gas limit pinned (`FeeParams::gas_limit`) and reverts allowed (`set_allow_revert`), all behind `lez-rc2` | LEZ #943; rc2's wallet measures every public send and does not send one that reverts (#1035) |
+| live driver (not rc2) | `chain_id` in the instance's config and in one refusal's `Record` | the wire gained it with the attestation, after the rc1 run: the driver had stopped compiling against either tag |
+| `live/` scripts | the tag's commit and scratch directory; Bedrock's slot and epoch read from the deployment settings (`run-live.sh`, `phase.py`); the harness tables compared with are a parameter | rc2's test chain runs 4 s slots and 240 s epochs (LEZ #1063) |
+
+### The harness on rc2 (`results/v0.4.0-rc2/`)
+
+`lez/scripts/lez-select.sh v0.4.0-rc2`, then the commands of §7 with
+`CARGO_TARGET_DIR=$PWD/target/lez-v0.4.0-rc2` (box script `spike/tmp/rc2/box1.sh`):
+
+- **All 27 tests pass** (16 suites; `results/v0.4.0-rc2/harness-tests-dev-mode.log`), with
+  `RISC0_DEV_MODE=1`: the private paths are executed and settled with fake receipts, as on rc1.
+- **Every table row is the same as on rc1.** On the same box, the same source was built and run
+  against rc1 after switching back (`results/v0.4.0-rc2/rc1-rerun/`), and the two runs' tables
+  compared cell by cell (`scripts/compare-tables.py`; `results/v0.4.0-rc2/compare-v0.4.0-rc1.md`):
+  in the 13 result files with tables (Stage 1, the shell costs, Stage 4, the bridge's inbound,
+  burn and private claim), all 438 table rows are equal — handler cycles, execution gas, storage
+  gas, base fee, result. What differs is the image ids (`results/v0.4.0-rc2/images.md`: program `262cb954…`,
+  consumer `bfc974b5…`, LEZ's `scripted` `15591e6c…`, bridge `38579fe6…`, against `59b68c3c…`,
+  `2b03539d…`, `4b597adb…` and `0e4df3de…` for the rc1 build on the same box; the ELF sizes are
+  equal, the path of the LEZ tree inside them is not) and what is derived from them: the
+  programs' account ids and the bridge's note commitment `NOut`. The Stage 3 transactions and
+  the decoded public fields of Stage 3 and 4 are of the same sizes on both
+  (`stage3-*-tx.hex`, `*-public-outputs.txt`).
+- **The dry runs of the three provers** give the same figures as on rc1: the private update
+  9,046,319 user cycles, settled at execution gas 481,743 (public part 71,979), storage gas
+  224,063, base fee 5,646,448, a 4,099-byte fake receipt in an 8,085-byte transaction
+  (`prove-private-dry-run.log`, against `../results/prove-private-dry-run.log`); the private
+  attestation an 8,201-byte transaction; the bridge's private claim and burn execution gas 439,815
+  and 427,959, storage gas 224,063 each, the figures its real proofs settled at on rc1
+  (`prove-bridge-dry-run.log`, against `results/prove-bridge.log`).
+- **rc1 still builds**: after `lez-select.sh v0.4.0-rc1`, the 27 tests pass and every table equals
+  the committed one (`results/v0.4.0-rc2/rc1-rerun/compare-committed.md`; the image ids differ
+  with the checkout's path, §3). The committed rc1 test log (`results/harness-tests-dev-mode.log`,
+  22 tests) predates the bridge tests; the rerun's log has all 27.
+
+Why nothing moved: rc2 charges the loader's own messages per byte, but a deployed program's
+execution is metered as before; the fee formula is the same; the circuit's new check does not
+change what a private transaction is charged (a fixed `PRIVATE_VERIFY_GAS` plus its public part
+and its size). No real proof was made in the harness on rc2: the circuit changed (its image id
+with it), so the GPU-proven transactions of §3, §5 and the bridge are rc1 evidence only
+(`../docs/design/lez-rc2-changes.md`).
