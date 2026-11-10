@@ -33,7 +33,7 @@ case "${1:-}" in
     [ -f "$LAB_TMP/bundle.tar.zst" ] || { echo "no bundle: build.sh all && build.sh pack on the build box first" >&2; exit 1; }
     modal volume create "$VOLUME" > /dev/null 2>&1 || true
     local_sum="$(sha256sum "$LAB_TMP/bundle.tar.zst" | cut -d' ' -f1)"
-    remote_sum="$(modal volume get --force "$VOLUME" /bundle.sha256 - 2>/dev/null | cut -d' ' -f1 || true)"
+    remote_sum="$(vol_get /bundle.sha256 "$LAB_TMP/pull/bundle.sha256" 2>/dev/null && cut -d' ' -f1 "$LAB_TMP/pull/bundle.sha256" || true)"
     if [ "$local_sum" != "$remote_sum" ]; then
       modal volume put --force "$VOLUME" "$LAB_TMP/bundle.tar.zst" /bundle.tar.zst > /dev/null
       echo "$local_sum  bundle.tar.zst" > "$LAB_TMP/bundle.sha256"
