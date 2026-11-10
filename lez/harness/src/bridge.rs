@@ -935,6 +935,45 @@ impl World {
         self.send(label, at, &message, vec![at])
     }
 
+    /// Another vault, before any transaction (its address outside `0x40…40`–`0x67…67`, the filler
+    /// accounts of [`Block::new`]): `leaves` are its whole deposit tree, ETH is registered
+    /// in its storage with schedule 0 only, and a synthetic block at beacon slot `slot` (number
+    /// `number`) holding it is recorded at the attestation program, as the records of
+    /// [`World::new`] are. Returns its configuration (this world's controls), the configuration id
+    /// and the block's index for [`World::init`], [`World::register`] and [`World::import`].
+    pub fn add_vault(
+        &mut self,
+        address: [u8; 20],
+        leaves: Vec<Hash>,
+        slot: u64,
+        number: u64,
+    ) -> (BridgeConfig, Hash, usize) {
+        assert!(!(0x40..0x68).contains(&address[0]) || address != [address[0]; 20], "a filler account's address");
+        let config = config(address, controls());
+        let cid = config.id(self.program);
+        let vault = Vault { address, leaves };
+        let count = vault.leaves.len() as u64;
+        let slots = VaultSlots {
+            address,
+            root: vault.root(count),
+            count,
+            config_id: cid,
+            extra: registry_slots(&eth_entry(), &[]),
+        };
+        let block = Block::new(slot, number, &[slots]);
+        let state = std::mem::take(&mut self.chain.state);
+        self.chain.state = state.with_public_accounts([block.record_account()]);
+        self.blocks.push(block);
+        (config, cid, self.blocks.len() - 1)
+    }
+
+    /// Public accounts that exist from genesis (so that a claim can mint to them), before any
+    /// transaction.
+    pub fn add_public_accounts(&mut self, ids: &[AccountId]) {
+        let state = std::mem::take(&mut self.chain.state);
+        self.chain.state = state.with_public_accounts(ids.iter().map(|id| (*id, Account::default())));
+    }
+
     /// Inits of A and B, the registrations (ETH on both, T2 on B), the imports every claim test
     /// starts from — `root(cid_a, 5)` (S1), `root(cid_a, 8)` (S2), `root(cid_a, 6)` (S3, the lagging
     /// count) and `root(cid_b, 8)` — and vault A's ETH fee schedule 1 with its range closed at 8.

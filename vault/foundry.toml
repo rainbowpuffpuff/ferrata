@@ -38,6 +38,9 @@ fs_permissions = [
     { access = "read", path = "./test/real/fixtures" },
     # script/RoundTrip.s.sol reads the fixture of an end-to-end run.
     { access = "read", path = "../e2e/runs" },
+    # test/PrivacySuite.t.sol reads the LEZ half's scenario and writes what each transaction published
+    # (target/privacy/ at the repository root, not committed; FERRATA_PRIVACY_DIR overrides).
+    { access = "read-write", path = "../target/privacy" },
 ]
 
 [lint]
