@@ -30,9 +30,10 @@ Left out: permissionless `Sunset` (30 days without a finalised checkpoint: the a
 no block timestamp and the vault no such slot), the replacement of the freeze authority after a
 14-day timelock and the 12-hour watchers (vault-side roles; on LEZ the roles are fixed per
 configuration), the gas drop (B2), transfers between holders, off-chain software (importer,
-wallet, prover daemons), mode (A)/(B) finality (that is the checkpoint's and the vault's), and the
-vault side of the registry and fee schedules (`FerrataVault.sol` does not yet write the slots of
-§5; the harness's synthetic vault does). Private execution runs in RISC Zero dev mode in the
+wallet, prover daemons) and mode (A)/(B) finality (that is the checkpoint's and the vault's). The
+vault side of the registry and fee schedules is FerrataVault v5's (`vault/`), which writes the slots
+of §5; the harness reads them both from its synthetic vault and from the storage v5 itself wrote
+(`harness/tests/bridge_vault_storage.rs`, `BRIDGE-RESULTS.md` §8a). Private execution runs in RISC Zero dev mode in the
 tests; the private claim and burn of the earlier image were proven for real (`BRIDGE-RESULTS.md`
 §7), not this image's.
 
@@ -171,7 +172,7 @@ roots, burn notes, every encoding the checkpoint reads and every refusal stay as
    is now `WRONG_SENDER`), 255 became `CAPPED` (a repeated burn note is now `ALREADY_WRITTEN`).
    `lez/wire/src/lib.rs` is not edited: its line numbers are in the attestation guest's ELF.
 7. The vault's registry and fee slots are defined here (§5), with SHA-256 slot keys rather than
-   Solidity mappings; `FerrataVault.sol` does not write them yet.
+   Solidity mappings; FerrataVault v5 writes them in this encoding (`BRIDGE-RESULTS.md` §8a).
 8. Burns carry no time (the 185-byte `Burn` is the checkpoint's): their freezes and buckets use the
    latest time the token and configuration actors have accepted, which claims, role messages and
    `Tick` advance. Conservative: a burn bucket never refills beyond a validated time, and a lapsed
@@ -181,7 +182,7 @@ roots, burn notes, every encoding the checkpoint reads and every refusal stay as
 
 ## 5. Registry, fees, caps, freezes and `Sunset`
 
-**Vault storage the LEZ side attests** (defined here; the synthetic vault holds it):
+**Vault storage the LEZ side attests** (defined here; FerrataVault v5 and the harness's synthetic vault write it):
 - the entry of `token`: slot `sha256("ferrata/vault/registry/v1" ‖ token)` holds
   `sha256("ferrata/registry/v1" ‖ token ‖ lezDefinition ‖ decimals:u8 ‖ lezUnit:u256 ‖
   unitWeight:u256 ‖ k:u8 ‖ denominations[k]:u256 ‖ relayFees[k]:u256)`, written once at registration;

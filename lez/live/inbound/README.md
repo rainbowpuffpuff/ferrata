@@ -45,6 +45,15 @@ are not in the repository (they embed the build machine's paths); [`run.sh`](run
 other file. The bridge guest, `bridge-wire`, the attestation wire and the bridge core must not
 change: any change gives another image id, and so another `configId`.
 
+**The program this crossing uses is the frozen one, not the tree's.** Since the merge of branch
+`bridge-complete` into `integration`, `../../guests/bridge` and `../../bridge-wire` are a later
+program: the registry, fees by leaf index, caps, freezes and `Sunset`, with this crossing's header
+in front of the account proof kept (built at the integration worktree's path, its image is
+`f11b1aba…58eb`; image ids depend on the build path). Its messages and `configId` differ, so the
+real Sepolia crossing deploys the frozen binaries above (bridge image `66722fc7…f4fa`), and the live
+driver builds against a byte-for-byte copy of the frozen program's wire,
+[`../frozen/bridge-wire`](../frozen/README.md).
+
 The block's RLP header, which the attestation program needs under a record in the Gloas layout
 (every Sepolia record since Gloas binds the block hash only), travels inside the account proof list
 of `Init` and `ImportRoot` behind a marker (`bridge-wire` `HEADER_MARKER`, `with_header`), so that

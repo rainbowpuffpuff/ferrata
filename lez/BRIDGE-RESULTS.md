@@ -21,8 +21,8 @@ counts do not depend on the machine. Private executions ran in RISC Zero dev mod
 `results/bridge-controls.md`, written by the tests.
 
 **What is synthetic.** The Ethereum side. Two vaults' storage (slot 0 the deposit root, slot 1 the
-leaf count, slot 2 `lezConfigId`, and the registry and fee-schedule slots `BRIDGE.md` §5 defines,
-which `FerrataVault.sol` does not write yet) sits in the state tries of three synthetic execution
+leaf count, slot 2 `lezConfigId`, and the registry and fee-schedule slots `BRIDGE.md` §5 defines)
+sits in the state tries of three synthetic execution
 blocks built with the reference trie of `ferrata-spectests`, and those blocks' records are placed in the
 attestation program's `header(id, slot)` actors at genesis instead of being written by the light
 client after a finality update (Stages 1–4 measured that path on mainnet data). From there on
@@ -299,9 +299,8 @@ now built; §8 shows the checkpoint collecting it once, from the freeze authorit
    `ALREADY_WRITTEN`) became `CAPPED`. `lez/wire/src/lib.rs` (`CODE_BLOCKS`) is not edited: its
    line numbers are in the attestation guest's ELF.
 9. **The vault's registry and fee slots are defined here** (`BRIDGE.md` §5): SHA-256 slot keys,
-   so the guest needs no keccak and the slots do not depend on the vault's layout. `FerrataVault.sol`
-   (v3 here, v4 on its own branch) does not write them; until it does, the LEZ side is tested against
-   the synthetic vault only.
+   so the guest needs no keccak and the slots do not depend on the vault's layout. FerrataVault v5
+   writes them; §8a runs the program on the storage it wrote.
 10. **Burns carry no time.** The 185-byte `Burn` is the checkpoint's, with no room for one; a
     burn's freezes and buckets use the latest time its token and configuration actors accepted
     (from claims, role messages and `Tick`). Conservative: a burn bucket never refills beyond a
@@ -403,14 +402,47 @@ It collects exactly one `Sunset` (byte for byte its variant 2, 33 bytes) and the
 acts through its own actor of the bridge at the top level, so the `Sunset` that executes is a
 visible call; the program refuses a `Sunset` that is not (D10's rule, as for burns).
 
+## 8a. On FerrataVault's own storage (`results/bridge-vault-storage.md`, 23 transactions)
+
+The vault storage of §1–§8 is synthetic. `vault/test/RegistryStorage.t.sol` runs FerrataVault v5
+itself in a local EVM (Foundry): the vault suite's four default tokens and a six-decimal token with
+checkpoint fees registered, three deposits (moment P); then ETH's schedule 1 (mint 0.5%, burn 0.1%,
+checkpoint 0.05% of each denomination) announced and in force seven days later from the next
+deposit, and three more deposits (moment Q). It exports every slot the vault and its library wrote
+(139 at P, 149 at Q, read with `vm.record`/`vm.accesses`) and what the vault's events say (entries,
+schedules, deposits), with the depositors' secrets, to `vault/test/vectors/registry-storage.json`,
+which every `forge test` compares with a fresh export. Nothing there computes a LEZ-side slot or
+hash. `harness/tests/bridge_vault_storage.rs` builds an execution block holding exactly that storage
+for each moment (`Block::with_storage`) and runs the program on it (dev mode, build box):
+
+| step | execution gas |
+|---|---:|
+| `Register` of each of the five tokens: the vault's entry and schedule 0 at P | 424,496–448,038 |
+| `ImportRoot` of the vault's own slots 0 and 1, at P (3 leaves) and at Q (6 leaves) | 277,456; 278,292 |
+| `ImportFees`: ETH's schedule 1 at Q; the absence of each token's next schedule | 306,172; 277,600–288,838 |
+| a claim of each of the six deposits | 236,493–266,875 |
+| refused with 247 `IMPORT_MISMATCH`: an entry with another `lezUnit`; schedule 0 a second later; schedule 1 with another mint fee | 374,134; 376,671; 252,988 |
+
+Each claim mints exactly the denomination to its destination, the registered relay fee to the
+relayer and, for ETH's leaves 3 and 5, schedule 1's mint fee to the fee recipient; the roots are
+the bridge core's tree over the leaves recomputed from the `Deposit` events. So the encodings of
+`BRIDGE.md` §5 agree on both sides (the entry, the schedules, the slot keys, slot 1 holding the
+leaf count alone), and neither side was changed. The vault's real storage trie gives longer proofs
+than the synthetic one: `Register` costs about 425,000 here against 322,294 in §8 (`Attest`
+219,872–244,382 cycles). Two parts are not the vault's: `Init` runs under a synthetic block whose
+slot 2 holds the configuration's id, since a vault built in Foundry cannot hold a `configId` that
+depends on this program's image (the pairing is §2's subject); and the depositors' destinations are
+added as LEZ accounts, as the world's genesis adds its own (a public account must exist to be
+admitted).
+
 ## 9. What is not built
 
-The vault side of the registry and fee schedules (`FerrataVault.sol` writes neither slot of
-`BRIDGE.md` §5); a permissionless `Sunset` (30 days without a finalised checkpoint), the 14-day
+A permissionless `Sunset` (30 days without a finalised checkpoint), the 14-day
 replacement of the freeze authority and the watchers on LEZ; a multisig freeze authority; the gas
 drop; a transfer between holders; the switch to a token program; real proofs of the extended
-program (§7 is of the earlier image) and of a private claim to a public destination; a real vault
-(Sepolia) and records written by the light client in the same run; the checkpoint program running
+program (§7 is of the earlier image) and of a private claim to a public destination; a run of this
+program on a sequencer (§11's crossing deploys the frozen earlier program); a vault on Sepolia (§8a's
+vault ran in a local EVM) and records written by the light client in the same run; the checkpoint program running
 over these blocks end to end (only its parser and decoder ran); the off-chain importer, wallet and
 relayer.
 

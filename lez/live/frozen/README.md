@@ -9,7 +9,8 @@ exactly these binaries.
 The bridge program in `../../bridge-wire` and `../../guests/bridge` has moved on since: the
 registry, fees by leaf index, caps, freezes, roles and `Sunset` (branch `bridge-complete`), merged
 with the Gloas header of the crossing's program (branch `inbound-live`). Its messages and its
-configuration differ, and so does its image id (`../../BRIDGE-RESULTS.md` §8).
+configuration differ, and so does its image id (`f11b1aba…58eb` built at the integration
+worktree's path; image ids depend on the build path; `../../BRIDGE-RESULTS.md` §8).
 
 `bridge-wire/` here is `lez/bridge-wire` as it was when the binaries were frozen (branch
 `inbound-live` a597270), `src/lib.rs` byte for byte (SHA-256 `a11f87d5…1f50`); only the paths in
