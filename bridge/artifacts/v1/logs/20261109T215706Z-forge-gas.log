@@ -1,0 +1,102 @@
+== forge test (default mode), 2026-11-09T22:57:06+01:00
+No files changed, compilation skipped
+Ran 2 tests for test/Groth16Verify.t.sol:Groth16VerifyTest
+[PASS] test_gas_verifyAlone_erc20() (gas: 509647)
+Logs:
+  verify-erc20
+    snapshotGasLastCall (callee frame): 224320
+    gasleft() delta (frame + CALL)     : 229623
+    calldata bytes / EIP-2028 gas      : 420 5640
+    as its own tx, estimate 21000+calldata+frame: 250960
+[PASS] test_gas_verifyAlone_eth() (gas: 509693)
+Logs:
+  verify-eth
+    snapshotGasLastCall (callee frame): 224320
+    gasleft() delta (frame + CALL)     : 229623
+    calldata bytes / EIP-2028 gas      : 420 5628
+    as its own tx, estimate 21000+calldata+frame: 250948
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 57.80ms (88.36ms CPU time)
+Ran 2 tests for test/VaultRelease.t.sol:VaultAcceptRootTest
+[PASS] test_release_erc20_viaAcceptBurnRoot() (gas: 731268)
+Logs:
+  release-erc20-via-wrapper
+    snapshotGasLastCall (vault.release frame, incl. Groth16 verify): 343072
+    gasleft() delta (frame + CALL from the test contract)          : 344083
+    calldata bytes / EIP-2028 gas                                  : 580 7036
+    as a transaction, estimate 21000 + calldata + frame            : 371108
+[PASS] test_release_eth_viaAcceptBurnRoot() (gas: 699912)
+Logs:
+  release-eth-via-wrapper
+    snapshotGasLastCall (vault.release frame, incl. Groth16 verify): 319727
+    gasleft() delta (frame + CALL from the test contract)          : 320738
+    calldata bytes / EIP-2028 gas                                  : 580 6520
+    as a transaction, estimate 21000 + calldata + frame            : 347247
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 70.64ms (61.13ms CPU time)
+Ran 2 tests for test/VaultRelease.t.sol:VaultReleaseTest
+[PASS] test_release_erc20_withRealProof() (gas: 727712)
+Logs:
+  release-erc20
+    snapshotGasLastCall (vault.release frame, incl. Groth16 verify): 339519
+    gasleft() delta (frame + CALL from the test contract)          : 340500
+    calldata bytes / EIP-2028 gas                                  : 580 7036
+    as a transaction, estimate 21000 + calldata + frame            : 367555
+[PASS] test_release_eth_withRealProof() (gas: 696357)
+Logs:
+  release-eth
+    snapshotGasLastCall (vault.release frame, incl. Groth16 verify): 316174
+    gasleft() delta (frame + CALL from the test contract)          : 317155
+    calldata bytes / EIP-2028 gas                                  : 580 6520
+    as a transaction, estimate 21000 + calldata + frame            : 343694
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 68.86ms (75.64ms CPU time)
+Ran 3 test suites in 83.42ms (197.30ms CPU time): 6 tests passed, 0 failed, 0 skipped (6 total tests)
+== forge test --isolate (each top-level state-changing call is its own transaction)
+No files changed, compilation skipped
+Ran 2 tests for test/VaultRelease.t.sol:VaultAcceptRootTest
+[PASS] test_release_erc20_viaAcceptBurnRoot() (gas: 845340)
+Logs:
+  release-erc20-via-wrapper
+    snapshotGasLastCall (vault.release frame, incl. Groth16 verify): 381608
+    gasleft() delta (frame + CALL from the test contract)          : 384619
+    calldata bytes / EIP-2028 gas                                  : 580 7036
+    as a transaction, estimate 21000 + calldata + frame            : 409644
+[PASS] test_release_eth_viaAcceptBurnRoot() (gas: 800952)
+Logs:
+  release-eth-via-wrapper
+    snapshotGasLastCall (vault.release frame, incl. Groth16 verify): 353747
+    gasleft() delta (frame + CALL from the test contract)          : 356758
+    calldata bytes / EIP-2028 gas                                  : 580 6520
+    as a transaction, estimate 21000 + calldata + frame            : 381267
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 11.20ms (8.36ms CPU time)
+Ran 2 tests for test/VaultRelease.t.sol:VaultReleaseTest
+[PASS] test_release_erc20_withRealProof() (gas: 841784)
+Logs:
+  release-erc20
+    snapshotGasLastCall (vault.release frame, incl. Groth16 verify): 378055
+    gasleft() delta (frame + CALL from the test contract)          : 381036
+    calldata bytes / EIP-2028 gas                                  : 580 7036
+    as a transaction, estimate 21000 + calldata + frame            : 406091
+[PASS] test_release_eth_withRealProof() (gas: 797397)
+Logs:
+  release-eth
+    snapshotGasLastCall (vault.release frame, incl. Groth16 verify): 350194
+    gasleft() delta (frame + CALL from the test contract)          : 353175
+    calldata bytes / EIP-2028 gas                                  : 580 6520
+    as a transaction, estimate 21000 + calldata + frame            : 377714
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 12.19ms (10.32ms CPU time)
+Ran 2 tests for test/Groth16Verify.t.sol:Groth16VerifyTest
+[PASS] test_gas_verifyAlone_erc20() (gas: 511647)
+Logs:
+  verify-erc20
+    snapshotGasLastCall (callee frame): 224320
+    gasleft() delta (frame + CALL)     : 229623
+    calldata bytes / EIP-2028 gas      : 420 5640
+    as its own tx, estimate 21000+calldata+frame: 250960
+[PASS] test_gas_verifyAlone_eth() (gas: 511693)
+Logs:
+  verify-eth
+    snapshotGasLastCall (callee frame): 224320
+    gasleft() delta (frame + CALL)     : 229623
+    calldata bytes / EIP-2028 gas      : 420 5628
+    as its own tx, estimate 21000+calldata+frame: 250948
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 12.22ms (8.04ms CPU time)
+Ran 3 test suites in 14.07ms (35.61ms CPU time): 6 tests passed, 0 failed, 0 skipped (6 total tests)

@@ -1,0 +1,9 @@
+== A/B: release and claim guests built WITHOUT RISC Zero's sha2 patch (crates.io sha2 0.10.8, software SHA-256), 2026-11-09T22:59:49+01:00
+   temporary build; guests/Cargo.toml and Cargo.lock were restored afterwards and the image id checked
+release image id 0x0920b5adafac2063d7b34274cd286a29ab369d1b64460080cacf60f3f0c5db07
+[eth] user cycles 342062 | segments 1 (po2 [19], padded total 524288) | exit Halted(0) | executor wall 0.110 s
+[eth] journal == native release_journal(): yes (352 bytes)
+[erc20] user cycles 342062 | segments 1 (po2 [19], padded total 524288) | exit Halted(0) | executor wall 0.072 s
+[erc20] journal == native release_journal(): yes (352 bytes)
+claim-check: 4 deposits, nullifier from the claim guest (zkVM executor) == native verify_claim for all; user cycles [336751, 336749, 336749, 336747]
+claim image id 0x1e00d02b52adc23dd2ea545e541b54b47c4b002c5c667cf6894c6a1761305056

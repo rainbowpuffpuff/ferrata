@@ -1,0 +1,11 @@
+/target/
+/tmp/
+/evm-verify/out/
+/evm-verify/cache/
+/evm-verify/broadcast/
+# Groth16 prover scratch (input.json, witness files); the results are copied to artifacts/
+/artifacts/work/
+/artifacts/rerun/
+__pycache__/
+/artifacts/rerun-lowload/
+/artifacts/rerun-quiet/

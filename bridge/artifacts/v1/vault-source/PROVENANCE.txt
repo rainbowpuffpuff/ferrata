@@ -1,0 +1,5 @@
+Read-only export of the v1 vault the v1 results were measured against.
+source: git -C spike/bridge-evm show a01fcd7:<path> (FerrataVault v1 spike: vault, tests, tree vectors, gas report)
+exported: 2026-11-10T03:37:52+01:00
+50c3e693584c8725c19cf63cb0cdae8470ff9f303d05a5faf6a1f49958b5c2b4  FerrataVault.sol
+b2ed0df8d1f46887962b09aaa6dc56d0ae7ae5929b5675f498014bac1b7aad55  interfaces/IRiscZeroVerifier.sol

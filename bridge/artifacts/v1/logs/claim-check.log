@@ -1,0 +1,3 @@
+2026-11-09T22:34:10+01:00
+claim-check: 16 deposits, nullifier from the claim guest (riscv32im, accelerated sha2) == native verify_claim for all; user cycles [60473, 60470, 60470, 60467, 60470, 60467, 60467, 60464, 60470, 60467, 60467, 60464, 60467, 60464, 60464, 60461]
+claim image id 0x8659c98c9022890f0e70c89b37daad47597ed12d36f716b722060f3b7cc4bb87

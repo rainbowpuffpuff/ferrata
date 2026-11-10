@@ -1,0 +1,16 @@
+2026-11-10T02:16:01+01:00
+r0vm: risc0-r0vm 3.0.5
+release image id 0xdda76672e6e05535117ed6880227a414420344cba9c47b6e112c7dabc5b027c5
+claim image id   0x141329559d61e2aa260c11b98e822d6fe0ce4bee7874580be9b6518afad5c429
+[release eth] user cycles 80501 | segments 1 (po2 [17], padded total 131072) | exit Halted(0) | journal == native: yes | executor wall 0.025 s
+[release erc20] user cycles 80501 | segments 1 (po2 [17], padded total 131072) | exit Halted(0) | journal == native: yes | executor wall 0.026 s
+[release ethpull] user cycles 80501 | segments 1 (po2 [17], padded total 131072) | exit Halted(0) | journal == native: yes | executor wall 0.031 s
+[claim] user cycles 74379 | segments 1 (po2 [17]) | exit Halted(0)
+
+thread '<unnamed>' panicked at src/bin/release.rs:20:19:
+release witness rejected: RootMismatch
+[bad sOut] execution fails as it must: Guest panicked: release witness rejected: RootMismatch
+
+thread '<unnamed>' panicked at src/bin/release.rs:20:19:
+release witness rejected: DirectionsMismatch
+[bad directions] execution fails as it must: Guest panicked: release witness rejected: DirectionsMismatch

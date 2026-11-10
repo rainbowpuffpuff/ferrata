@@ -1,0 +1,73 @@
+{
+  "description": "Tags. 'hashed' tags enter preimages as the SHA-256 of the ASCII string; 'prefix' tags as the ASCII bytes themselves. ferrata/vault/burn-root/v1 is the vault's root-journal domain (not used by this crate).",
+  "hashed": [
+    {
+      "sha256": "0x084d5599858dde3bdadaec9a70979121276922b791de25071d145ac6b13c4286",
+      "tag": "ferrata/vault/leaf/v1"
+    },
+    {
+      "sha256": "0xb9a876f3673cc2c3546df046edc81938bcdbc115e53e6b0614b94bf16ae7f53b",
+      "tag": "ferrata/burn/leaf/v1"
+    },
+    {
+      "sha256": "0x38d947b280ef2710d905d714dc6c55d9fdaa844e4769df08152f6bed4bc9f444",
+      "tag": "ferrata/vault/release/v1"
+    },
+    {
+      "sha256": "0xba4a8683e1dc6ef6e077a4cae76d60704f4e7fcd4fc6947d6c99cae3b4195738",
+      "tag": "ferrata/vault/burn-root/v1"
+    }
+  ],
+  "prefix": [
+    {
+      "bytes": "0x666572726174612f732f7631",
+      "length": 12,
+      "tag": "ferrata/s/v1"
+    },
+    {
+      "bytes": "0x666572726174612f432f7631",
+      "length": 12,
+      "tag": "ferrata/C/v1"
+    },
+    {
+      "bytes": "0x666572726174612f6465706f7369742f7631",
+      "length": 18,
+      "tag": "ferrata/deposit/v1"
+    },
+    {
+      "bytes": "0x666572726174612f6e662f7631",
+      "length": 13,
+      "tag": "ferrata/nf/v1"
+    },
+    {
+      "bytes": "0x666572726174612f6275726e2d7461672f7631",
+      "length": 19,
+      "tag": "ferrata/burn-tag/v1"
+    },
+    {
+      "bytes": "0x666572726174612f732d6f75742f7631",
+      "length": 16,
+      "tag": "ferrata/s-out/v1"
+    },
+    {
+      "bytes": "0x666572726174612f6d656d6f2f7631",
+      "length": 15,
+      "tag": "ferrata/memo/v1"
+    },
+    {
+      "bytes": "0x666572726174612f436f75742f7631",
+      "length": 15,
+      "tag": "ferrata/Cout/v1"
+    },
+    {
+      "bytes": "0x666572726174612f6275726e2f7631",
+      "length": 15,
+      "tag": "ferrata/burn/v1"
+    },
+    {
+      "bytes": "0x666572726174612f6e662d6f75742f7631",
+      "length": 17,
+      "tag": "ferrata/nf-out/v1"
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+Read-only export of the v2 vault from spike/bridge-evm (a separate repository), pinned for evm-verify's v2 tests.
+source: git -C spike/bridge-evm show v2:<path>, branch v2 at commit 1d61b32f0ca0c05d96d718d15de7b7f073691569 (Gas, docs and gas report for v2)
+exported: 2026-11-10T03:28:56+01:00
+3f90645fb706e9691eefcfab6640293e791a864c8481eaf1d397c3e4f17beffd  FerrataVault.sol
+b2ed0df8d1f46887962b09aaa6dc56d0ae7ae5929b5675f498014bac1b7aad55  interfaces/IRiscZeroVerifier.sol

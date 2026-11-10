@@ -1,0 +1,50 @@
+== groth16 eth
+date            2026-11-09T23:09:27+01:00
+host            Linux 7.2.13-200.fc44.x86_64 x86_64
+cpu             AMD Ryzen 9 7940HS w/ Radeon 780M Graphics, 16 threads
+memory          54 GiB total, 24 GiB available
+r0vm            risc0-r0vm 3.0.5
+docker image    risczero/risc0-groth16-prover@sha256:a4f80ce2e0b8e2bb7637a93c37136a6776ac00ec843a3fdf1c67b1d5ffea64ee
+RAYON_NUM_THREADS unset (all hardware threads)
+FERRATA_ARTIFACTS <workspace>/ferrata-bridge/artifacts/rerun
+loadavg         35.15 30.14 22.50 25/3524 1969276
+[eth] load before: 35.15 30.14 22.50 19/3527 1969283
+[eth] load after:  31.21 30.97 24.07 4/3523 1984197
+[eth] identity_p254 + Groth16 (Docker): wall 162.93 s
+[eth] Groth16 receipt: 1201 bytes bincode; on-chain seal 260 bytes = selector 0x73c457ba + proof 256; verifies against the release image id
+	Command being timed: "<workspace>/ferrata-bridge/target/release/host groth16 eth"
+	User time (seconds): 898.88
+	System time (seconds): 2.11
+	Percent of CPU this job got: 552%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 2:42.94
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 1442828
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 3
+	Minor (reclaiming a frame) page faults: 380198
+	Voluntary context switches: 4049
+	Involuntary context switches: 377914
+	Swaps: 0
+	File system inputs: 5456
+	File system outputs: 2336
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+docker container: seen for 38.7 s (first..last poll); cgroup memory.peak 0.00 GiB (0 bytes, incl. page cache); largest process peak RSS (VmHWM) 7.32 GiB (7673380 kB, prover)
+work dir after the run:
+total 968
+drwxr-xr-x. 1 q    q        54 Nov  9 23:12 .
+drwxr-xr-x. 1 q    q       132 Nov  9 23:12 ..
+-rw-r--r--. 1 q    q    760957 Nov  9 23:11 input.json
+-rw-r--r--. 1 root root    724 Nov  9 23:12 proof.json
+-rw-r--r--. 1 q    q    222668 Nov  9 23:11 seal.r0
+loadavg after   31.21 30.97 24.07 3/3520 1984201
+
+CORRECTION (2026-11-09T23:12:32+01:00): the 'cgroup memory.peak 0.00 GiB' above is a summary bug (it printed the last poll, taken as the container exited).
+Recomputed from 20261109T220927Z-groth16-eth.monitor.txt (columns: unix time, container, cgroup memory.peak bytes, largest VmHWM kB, process):
+docker container: seen for 38.7 s; cgroup memory.peak max 7.34 GiB (7879168000 bytes, incl. page cache); largest process peak RSS (VmHWM) 7.32 GiB (7673380 kB, prover)

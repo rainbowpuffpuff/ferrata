@@ -1,0 +1,6 @@
+2026-11-10T02:15:57+01:00
+loadavg 4.18 4.06 4.87 10/3977 2824883
+[release] 64 random valid witnesses (leaf indices 0, 2^32-1, 0x55555555, 0xAAAAAAAA, then random; random siblings, secrets and public fields): distinct (user cycles, segment po2s): {(80501, [17])} (2.1 s)
+[claim] 64 random valid witnesses (leaf indices 0, 2^32-1, 0x55555555, 0xAAAAAAAA, then random; random siblings, secrets and public fields): distinct (user cycles, segment po2s): {(74379, [17])} (1.9 s)
+cycle counts are independent of the witness for both guests
+claim-check: 16 deposits (both kinds), the claim guest's journal == native (root, chain, vault, N, token, amount) for all; distinct (user cycles, po2s): {(74379, [17])}

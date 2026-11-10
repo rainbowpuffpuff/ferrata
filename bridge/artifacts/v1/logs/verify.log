@@ -1,0 +1,25 @@
+2026-11-09T22:40:56+01:00
+release image id 0x2ca5b06e8da21a4f51506ded03fa5bd89249080b30affe5350ee9da446fc4c41
+  Groth16ReceiptVerifierParameters::default() (risc0-zkvm 3.0.5):
+    control_root       0xa54dc85ac99f851c92d7c96d7318af41dbe7c0194edfcc37eb4d422a998c1f56
+    bn254_control_id   0xc07a65145c3cb48b6101962ea607a4dd93c753bb26975cb47feb00d3666e4404
+    digest             0x73c457ba541936f0d907daf0c7253a39a9c5c427c225ba7709e44702d3c6eedc
+    selector           0x73c457ba
+[eth] receipt-succinct.bin: verifies; 223930 bytes bincode
+[eth] receipt-groth16.bin: verifies; 1201 bytes bincode
+[eth]   receipt verifier_parameters 0x73c457ba541936f0d907daf0c7253a39a9c5c427c225ba7709e44702d3c6eedc
+[eth]   seal selector             0x73c457ba
+[eth] journal: burn_root 0x85bcf8ab624268cb323e505777510eab1e1a63e7e0606bd1e7a3289e98f11bde nullifier 0x42fe0f130df5bd40f3eaba0efff441f13018e0adba11e0a945e7fae3283fdcd2 sha256 0xbd09000ed51097cd420ef2f272392a41678747eab330d6dfffc92365c36dcbd2
+release image id 0x2ca5b06e8da21a4f51506ded03fa5bd89249080b30affe5350ee9da446fc4c41
+  Groth16ReceiptVerifierParameters::default() (risc0-zkvm 3.0.5):
+    control_root       0xa54dc85ac99f851c92d7c96d7318af41dbe7c0194edfcc37eb4d422a998c1f56
+    bn254_control_id   0xc07a65145c3cb48b6101962ea607a4dd93c753bb26975cb47feb00d3666e4404
+    digest             0x73c457ba541936f0d907daf0c7253a39a9c5c427c225ba7709e44702d3c6eedc
+    selector           0x73c457ba
+[erc20] receipt-succinct.bin: verifies; 223930 bytes bincode
+[erc20] receipt-groth16.bin: verifies; 1201 bytes bincode
+[erc20]   receipt verifier_parameters 0x73c457ba541936f0d907daf0c7253a39a9c5c427c225ba7709e44702d3c6eedc
+[erc20]   seal selector             0x73c457ba
+[erc20] journal: burn_root 0x85bcf8ab624268cb323e505777510eab1e1a63e7e0606bd1e7a3289e98f11bde nullifier 0xd5881c44b9b23a89317581aaadbeacbeecdf6f1c8fd1ed3514ee24e61905f8bb sha256 0xcab00ffb84b1ce4fc9c1c635219d315d01580974c52070436ba7282324080a0f
+wrote <workspace>/ferrata-bridge/host/../evm-verify/test/fixtures/release-eth.json
+wrote <workspace>/ferrata-bridge/host/../evm-verify/test/fixtures/release-erc20.json

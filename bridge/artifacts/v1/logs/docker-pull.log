@@ -1,0 +1,49 @@
+2026-11-09T22:15:56+01:00
+2.28 2.06 1.73 3/3468 1722866
+v2025-04-03.1: Pulling from risczero/risc0-groth16-prover
+6e909acdb790: Pulling fs layer
+adb5a1b1cc57: Pulling fs layer
+e735b5bcd9b5: Pulling fs layer
+e09dc7fe7eae: Pulling fs layer
+86045e485feb: Pulling fs layer
+b672a9635276: Pulling fs layer
+2aac0f1f99e8: Pulling fs layer
+0438cae47bf9: Pulling fs layer
+4f4fb700ef54: Pulling fs layer
+e09dc7fe7eae: Waiting
+86045e485feb: Waiting
+b672a9635276: Waiting
+2aac0f1f99e8: Waiting
+4f4fb700ef54: Waiting
+0438cae47bf9: Waiting
+adb5a1b1cc57: Verifying Checksum
+adb5a1b1cc57: Download complete
+6e909acdb790: Download complete
+6e909acdb790: Pull complete
+adb5a1b1cc57: Pull complete
+86045e485feb: Verifying Checksum
+86045e485feb: Download complete
+b672a9635276: Verifying Checksum
+b672a9635276: Download complete
+2aac0f1f99e8: Verifying Checksum
+2aac0f1f99e8: Download complete
+0438cae47bf9: Verifying Checksum
+0438cae47bf9: Download complete
+4f4fb700ef54: Download complete
+e735b5bcd9b5: Verifying Checksum
+e735b5bcd9b5: Download complete
+e735b5bcd9b5: Pull complete
+e09dc7fe7eae: Verifying Checksum
+e09dc7fe7eae: Download complete
+e09dc7fe7eae: Pull complete
+86045e485feb: Pull complete
+b672a9635276: Pull complete
+2aac0f1f99e8: Pull complete
+0438cae47bf9: Pull complete
+4f4fb700ef54: Pull complete
+Digest: sha256:a4f80ce2e0b8e2bb7637a93c37136a6776ac00ec843a3fdf1c67b1d5ffea64ee
+Status: Downloaded newer image for risczero/risc0-groth16-prover:v2025-04-03.1
+docker.io/risczero/risc0-groth16-prover:v2025-04-03.1
+exit=0
+2026-11-09T22:21:23+01:00
+sha256:f6f756b0899c29d869d6a01fbbded3887a8f51429653177ee4b3ffad294324cd 2800107759 risczero/risc0-groth16-prover@sha256:a4f80ce2e0b8e2bb7637a93c37136a6776ac00ec843a3fdf1c67b1d5ffea64ee

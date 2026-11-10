@@ -1,0 +1,14 @@
+{
+  "burnCount": 12,
+  "burnRoot": "0xfcfb6067d8a2b397d205df1933ec19d4ba34ead4559da6b9a77bda07c5cea872",
+  "chainId": 31337,
+  "description": "Checkpoint side of the v2 scenario (the checkpoint proof itself is mocked in evm-verify): genesisState and newState are S (SPEC-v2 §4.1) of the states in artifacts/scenario.json.",
+  "genesisState": "0xd691f6602fe9917ec58aeefc1900f7fbfa54d803f9dac27086c87fc9eeecf1e1",
+  "importedLeafCount": 3,
+  "lezConfigId": "0xc47aa009dcbbb106bc7685175e630a1226fcf3591e95696be733a3f0297a0a22",
+  "nMin": 4,
+  "newState": "0xc8db4aaead4cab04540ed9f14df1d892906ff96078ff9f20c5057b4aecd6ced8",
+  "sunset": false,
+  "tMin": 3,
+  "vault": "0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9"
+}

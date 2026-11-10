@@ -1,0 +1,46 @@
+== groth16 erc20
+date            2026-11-10T03:20:29+01:00
+host            Linux 7.2.13-200.fc44.x86_64 x86_64
+cpu             AMD Ryzen 9 7940HS w/ Radeon 780M Graphics, 16 threads
+memory          54 GiB total, 32 GiB available
+r0vm            risc0-r0vm 3.0.5
+docker image    risczero/risc0-groth16-prover@sha256:a4f80ce2e0b8e2bb7637a93c37136a6776ac00ec843a3fdf1c67b1d5ffea64ee
+RAYON_NUM_THREADS unset (all hardware threads)
+FERRATA_ARTIFACTS unset (artifacts/)
+loadavg         22.06 28.95 32.33 8/3664 3295912
+[erc20] load before: 22.06 28.95 32.33 7/3674 3295929
+[erc20] load after:  22.40 27.63 31.46 5/3655 3316536
+[erc20] identity_p254 + Groth16 (Docker): wall 127.08 s
+[erc20] Groth16 receipt: 1201 bytes bincode; on-chain seal 260 bytes = selector 0x73c457ba + proof 256; verifies against the release image id
+	Command being timed: "<workspace>/ferrata-bridge/target/release/host groth16 erc20"
+	User time (seconds): 936.61
+	System time (seconds): 2.47
+	Percent of CPU this job got: 738%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 2:07.08
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 1443584
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 380332
+	Voluntary context switches: 5704
+	Involuntary context switches: 380592
+	Swaps: 0
+	File system inputs: 440
+	File system outputs: 2080
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+docker container: seen for 28.3 s (first..last poll); cgroup memory.peak (max over polls) 8.61 GiB (9250189312 bytes, incl. page cache); largest process peak RSS (VmHWM) 7.32 GiB (7676060 kB, prover)
+work dir after the run:
+total 968
+drwxr-xr-x. 1 q    q        54 Nov 10 03:22 .
+drwxr-xr-x. 1 q    q       132 Nov 10 03:22 ..
+-rw-r--r--. 1 q    q    760848 Nov 10 03:22 input.json
+-rw-r--r--. 1 root root    723 Nov 10 03:22 proof.json
+-rw-r--r--. 1 q    q    222668 Nov 10 03:22 seal.r0
+loadavg after   22.40 27.63 31.46 3/3651 3316553
