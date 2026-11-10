@@ -1,0 +1,58 @@
+[profile.default]
+src = "src"
+test = "test"
+script = "script"
+out = "out"
+libs = ["lib"]
+cache_path = "cache"
+
+# Pinned compiler, already present locally; never download one. 0.8.26 is the
+# floor of the source pragma and, unlike 0.8.28, does not trigger forge's
+# "consider prague" heuristic for evm_version = "cancun".
+solc_version = "0.8.26"
+auto_detect_solc = false
+offline = true
+# Remappings are listed explicitly below. Auto-detection would also read
+# lib/openzeppelin-contracts/foundry.toml (evm_version = 'prague').
+auto_detect_remappings = false
+
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 200
+via_ir = false
+
+remappings = [
+    "forge-std/=lib/forge-std/src/",
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+    "risc0/=lib/risc0-ethereum/contracts/src/",
+    # RiscZeroVerifierEmergencyStop imports "openzeppelin/contracts/...". Point that prefix at the
+    # OpenZeppelin release risc0-ethereum v3.0.0 pins itself (v5.2.0), so the wrapper compiles as shipped.
+    "openzeppelin/=lib/risc0-ethereum/lib/openzeppelin-contracts/",
+]
+
+# The vector test reads test/vectors/tree.json, and rewrites it only when
+# FERRATA_WRITE_VECTORS=1 is set.
+fs_permissions = [{ access = "read-write", path = "./test/vectors" }]
+
+[lint]
+# Public names follow the interface fixed in the design brief (depositETH,
+# verifier, releaseImageId, rootImageId, lezConfigId), which other components
+# call by those names.
+exclude_lints = ["mixed-case-function", "screaming-snake-case-immutable"]
+
+[fuzz]
+runs = 256
+seed = "0xfe77a7a"
+
+[invariant]
+runs = 256
+depth = 100
+fail_on_revert = false
+
+[fmt]
+line_length = 120
+tab_width = 4
+bracket_spacing = false
+int_types = "long"
+number_underscore = "thousands"
+sort_imports = true
