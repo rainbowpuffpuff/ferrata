@@ -160,7 +160,7 @@ fn privacy_preserving_shapes_match_lez() {
     let private_actor = Actor::new(AccountId::new([0xA1; 32]), AccountId::new(label("token program")));
     let fee_inbox = Actor::native_balance(AccountId::new([0xFE; 32]));
     let image: ProgramId = [7, 6, 5, 4, 3, 2, 1, 0];
-    let shapes = vec![
+    let shapes = [
         // A burn from a private holding: the private token actor sends Burn to the bridge.
         PpSpec {
             deliveries: vec![

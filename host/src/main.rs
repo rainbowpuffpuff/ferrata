@@ -316,6 +316,29 @@ fn cmd_compose(real: bool) -> Result<()> {
     let claim = cp.receipt.claim()?.value()?;
     let assumptions = claim.output.value()?.map(|o| o.assumptions.value().map(|a| a.len()).unwrap_or(0));
     println!("final receipt claim: unresolved assumptions {:?}", assumptions);
+
+    // The guest, not only the core, enforces the composition: piece 2 without piece 1's receipt,
+    // and with a receipt of the segment guest over other blocks (1..=179), must both fail.
+    let without = ExecutorEnv::builder().write_slice(&len).write_slice(&cp_input).build()?;
+    match execute(CHECKPOINT_ELF, without) {
+        Ok(r) => bail!("piece 2 executed without piece 1's receipt (exit {:?})", r.info.exit_code),
+        Err(e) => {
+            println!("piece 2 without piece 1's receipt: refused ({})", e.to_string().lines().next().unwrap_or(""))
+        }
+    }
+    let mut short = checkpoint_core::input::SegmentInput::decode(&seg_input).map_err(|e| anyhow::anyhow!("{e:?}"))?;
+    short.blocks.pop();
+    let other = default_prover().prove_with_opts(env_for(&short.encode())?, SEGMENT_ELF, &opts)?;
+    ensure!(other.receipt.journal.bytes != seg.receipt.journal.bytes, "a different segment journal");
+    let wrong =
+        ExecutorEnv::builder().write_slice(&len).write_slice(&cp_input).add_assumption(other.receipt).build()?;
+    match execute(CHECKPOINT_ELF, wrong) {
+        Ok(r) => bail!("piece 2 executed with another segment's receipt (exit {:?})", r.info.exit_code),
+        Err(e) => println!(
+            "piece 2 with a receipt of another segment (blocks 1..=179): refused ({})",
+            e.to_string().lines().next().unwrap_or("")
+        ),
+    }
     record(
         "compose",
         &json!({"real": real, "segment_user_cycles": seg.stats.user_cycles, "segment_segments": seg.stats.segments,
@@ -409,7 +432,7 @@ fn cmd_verify(name: &str) -> Result<()> {
     for file in ["receipt-succinct.bin", "receipt-groth16.bin"] {
         match load_receipt(name, file) {
             Ok(r) => {
-                r.verify(id).with_context(|| format!("{file}"))?;
+                r.verify(id).with_context(|| file.to_string())?;
                 ensure!(hex::encode(&r.journal.bytes) == meta["journal"].as_str().unwrap(), "{file}: journal");
                 println!("[{name}] {file}: verifies; journal == native");
             }

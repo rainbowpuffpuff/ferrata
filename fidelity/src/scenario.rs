@@ -126,12 +126,16 @@ impl Inscribed {
     }
 }
 
+/// A configuration change as carried in an input: the whole transaction, the op's position, and
+/// its `(key index, signature)` pairs.
+pub type OwnedConfigChange = (Vec<u8>, u8, Vec<(u16, [u8; 64])>);
+
 /// An owned checkpoint input ([`OwnedInput::view`] lends it as the core's [`CheckpointInput`]).
 #[derive(Clone)]
 pub struct OwnedInput {
     pub config: Config,
     pub parent: State,
-    pub config_changes: Vec<(Vec<u8>, u8, Vec<(u16, [u8; 64])>)>,
+    pub config_changes: Vec<OwnedConfigChange>,
     pub blocks: Vec<Vec<u8>>,
     pub t_index: u32,
     pub echo_nonce: Hash,
@@ -184,6 +188,7 @@ impl OwnedInput {
 /// A checkpoint over chain blocks `parent_index+1 ..= e`, with `T = t`, `Y` found from
 /// `echo_nonce`, and support from the first `support` distinct keys (other than `T`'s producer)
 /// that inscribed blocks after `y`.
+#[allow(clippy::too_many_arguments, reason = "a scenario constructor: each position is its own argument")]
 pub fn checkpoint_input(
     dep: &Deployment,
     ins: &Inscribed,

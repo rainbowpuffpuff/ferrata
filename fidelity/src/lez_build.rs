@@ -153,11 +153,14 @@ pub fn native_transfer(signer: &PrivateKey, nonce: u128, to: AccountId, amount: 
     common::test_utils::create_transaction_native_token_transfer(account_of(signer), nonce, to, amount, signer)
 }
 
+/// One boundary delivery of a stand-in: `(private→public?, from, to, message)`.
+pub type DeliverySpec = (bool, Actor, Actor, Vec<u8>);
+
 /// What a stand-in privacy-preserving transaction carries in the clear.
 #[derive(Clone)]
 pub struct PpSpec {
-    /// The boundary: `(private→public?, from, to, message)` per delivery.
-    pub deliveries: Vec<(bool, Actor, Actor, Vec<u8>)>,
+    /// The boundary, one entry per delivery.
+    pub deliveries: Vec<DeliverySpec>,
     pub public_root: Option<(Actor, Vec<u8>)>,
     /// Private actions and the ciphertext length of each note.
     pub actions: usize,
@@ -165,7 +168,7 @@ pub struct PpSpec {
     pub recovery_bindings: usize,
     pub sealed_messages: usize,
     /// A fee fallback whose boundary carries these deliveries.
-    pub fallback: Option<Vec<(bool, Actor, Actor, Vec<u8>)>>,
+    pub fallback: Option<Vec<DeliverySpec>>,
     pub claims: Vec<ProgramImageClaim>,
     pub proof_len: usize,
 }
@@ -195,7 +198,7 @@ fn note(len: usize, salt: u8) -> EncryptedNote {
     }
 }
 
-fn boundary(deliveries: &[(bool, Actor, Actor, Vec<u8>)]) -> Boundary {
+fn boundary(deliveries: &[DeliverySpec]) -> Boundary {
     let mut steps = Vec::new();
     for (private_to_public, from, to, message) in deliveries {
         let delivery = Delivery {
