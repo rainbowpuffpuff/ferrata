@@ -4,8 +4,9 @@
 "2026-11-09: the execution layer".)
 
 **Former name.** Measured at commit f030475, before the project was renamed Ferrata, when the core
-was `crates/plumbline-core`; the earlier snapshot run below used commit 25aa07e. The core differs
-from f030475 only by the rename, checked by `scripts/check-bench-provenance.sh`. The raw outputs in
+was `crates/plumbline-core`; the earlier snapshot run below used commit 25aa07e. At the rename commit
+101d439 the core differed from f030475 only by the rename (`scripts/check-bench-provenance.sh`
+passes there); later commits add modules, and the functions measured here are unchanged. The raw outputs in
 `results/` are as produced, except that the row labels that named the project now say `ferrata`, as
 the current bench source prints them; `results/PROVENANCE.txt` adds the per-file hashes after the
 rename, which changed six of them. A guest built after the rename is a

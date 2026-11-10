@@ -20,7 +20,7 @@ A LEZ program acting on an Ethereum fact needs a trusted header and a proof that
 - **The attestation program** checks finality updates against the sync committee itself and writes a record of each finalized execution header it accepts. Anyone can submit updates; they stand or fall on their signatures.
 - **`ferrata-core`**, one `no_std` Rust crate, runs in the program, consumers' proofs, the Logos module, the CLI dry run and the tests. It verifies facts against a record, evaluates predicates and derives statement identifiers.
 
-The core's light client and execution layer, including accumulator-leaf facts, are built and tested natively (§5, §12). The program is built on the `lez-program` branch, which merges into `main` without textual conflicts, and was driven with real mainnet data through the in-process harness over LEZ's state machine, not on a sequencer (§3, §4). Attestation through the program, successors, the weak-subjectivity bound and all off-chain software are not built (§15).
+The core's light client and execution layer, including accumulator-leaf facts, are built and tested natively (§5, §12). The program is in `lez/` and was driven with real mainnet data through the in-process harness over LEZ's state machine, not on a sequencer (§3, §4). Attestation through the program, successors, the weak-subjectivity bound and all off-chain software are not built (§15).
 
 ## 2. Chain of trust
 

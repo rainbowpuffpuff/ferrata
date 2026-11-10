@@ -31,7 +31,7 @@ every other command.
 
 The guests need RISC Zero's toolchain (`rzup`, r0vm 3.0.5), the vault Foundry (forge 1.3.6, solc
 0.8.26), and the Groth16 wraps Docker on x86-64. `lez/` and the checkpoint's fidelity tests read LEZ
-v0.4.0-rc1 and Logos Blockchain from `upstream/` beside the repository. Scripts keep their scratch in
+v0.4.0-rc1 and Logos Blockchain from `upstream/` beside the repository. `scripts/fetch-upstream.sh` fetches both at the pinned commits. Scripts keep their scratch in
 `tmp/` beside the repository, not in `/tmp`.
 
 `vault/`, `bridge/`, `checkpoint/` and `docs/design/finality-rule/` were separate repositories,
