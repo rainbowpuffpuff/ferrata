@@ -178,7 +178,7 @@ fn burns_and_what_the_checkpoint_collects() {
     let (n2, _) = note(&keys, &cid_a, &vault_a, 4, ETH, DENOMINATIONS[1]);
     let vector_holder = holder_actor(program, w.vector_dest);
     reports.push(burn(&mut w, "Burn at the vector's destination, not signed by it", vector_holder, cid_a, &n2, Some(code::NOT_AUTHORIZED)));
-    burn(&mut w, "Burn under a configuration the payer holds nothing of", holder, cid_a2, &n2, Some(code::INSUFFICIENT_BALANCE));
+    reports.push(burn(&mut w, "Burn under a configuration the payer holds nothing of", holder, cid_a2, &n2, Some(code::INSUFFICIENT_BALANCE)));
     let record2 = burn_actor(program, &cid_a, &n2.hash());
     // A root call at a PDA that does not exist yet needs admission evidence (LEZ refuses it
     // otherwise, before the program runs).
@@ -328,6 +328,25 @@ fn burns_and_what_the_checkpoint_collects() {
         checkpoint_core::tree::burn_leaf(&cid_a, 0, &n1.token, &n1.amount, &n1.c_out, &n1.r),
         burn_leaf(&cid_a, 0, &n1.token, &n1.amount, &n1.c_out, &n1.r)
     );
+    // The checkpoint derives the same configId from its pinned inputs, so these burns are the
+    // ones it selects; and the program's Burn is byte for byte the checkpoint's variant 0.
+    let a = &w.config_a;
+    let pinned = checkpoint_core::state::Config {
+        bedrock_genesis_id: a.bedrock_genesis_id,
+        channel_id: a.channel_id,
+        bridge_header: *program.value(),
+        bridge_image_id: a.bridge_image_id,
+        evm_chain_id: chain_id_u256(CHAIN_ID),
+        vault: a.terms.vault,
+        attestation_root_id: a.attestation_root_id(),
+        salt: a.salt(),
+        n_min: 1,
+        t_min: 1,
+    };
+    assert_eq!(pinned.config_id(), cid_a, "the checkpoint's configId is the program's");
+    let encoded = borsh::to_vec(&BridgeMessage::burn(cid_a, &n1)).unwrap();
+    assert_eq!(encoded.len(), checkpoint_core::wire::BURN_LEN);
+    assert_eq!(CpMessage::Burn(burns[0]).encode(), encoded, "the checkpoint re-encodes the same bytes");
     // Mismatch: the program's ImportRoot carries the proofs after the checkpoint's four fields,
     // which the checkpoint's decoder refuses (trailing bytes), so it would not count the import.
     assert_eq!(undecodable, ["ImportRoot A n=8"], "only the import is undecodable");

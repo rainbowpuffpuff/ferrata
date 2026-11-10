@@ -12,11 +12,12 @@ Bridge program image `c0c80a6434cd0bcdaf4b32b71d4f71bfb28e5e23564fa23dfa4686792b
 | 4 | Burn 1 unit of another token | bridge Burn 18,958 | 18,958 | 0% | 647 | 156,840 | refused: exit 251 (NOT_REGISTERED) |
 | 5 | Burn 10 ETH with 9 held | bridge Burn 19,349 | 19,349 | 0% | 647 | 159,968 | refused: exit 254 (INSUFFICIENT_BALANCE) |
 | 6 | Burn at the vector's destination, not signed by it | bridge Burn 16,605 | 16,605 | 0% | 647 | 138,016 | refused: exit 253 (NOT_AUTHORIZED) |
-| 7 | Burn sent to the burn account itself | bridge Burn 13,652 | 13,652 | 0% | 648 | 114,400 | refused: exit 243 (WRONG_SENDER) |
-| 8 | Burn as a nested call from another program, in a transaction the holder signed | scripted 10,383 → bridge Burn 19,427 | 29,810 | 1% | 867 | 245,416 | refused: exit 253 (NOT_AUTHORIZED) |
-| 9 | Burn 1 ETH (B) by the payer | bridge Burn 26,985 → bridge Burn 18,195 | 45,180 | 1% | 647 | 366,616 | applied |
-| 10 | Echo (rule (A)'s nonce) | bridge Echo 11,559 | 11,559 | 0% | 431 | 95,920 | applied |
-| 11 | Sunset (not built) | bridge Sunset 10,050 | 10,050 | 0% | 431 | 83,848 | refused: exit 240 (BAD_MESSAGE) |
+| 7 | Burn under a configuration the payer holds nothing of | bridge Burn 18,605 | 18,605 | 0% | 647 | 154,016 | refused: exit 254 (INSUFFICIENT_BALANCE) |
+| 8 | Burn sent to the burn account itself | bridge Burn 13,652 | 13,652 | 0% | 648 | 114,400 | refused: exit 243 (WRONG_SENDER) |
+| 9 | Burn as a nested call from another program, in a transaction the holder signed | scripted 10,383 → bridge Burn 19,427 | 29,810 | 1% | 867 | 245,416 | refused: exit 253 (NOT_AUTHORIZED) |
+| 10 | Burn 1 ETH (B) by the payer | bridge Burn 26,985 → bridge Burn 18,195 | 45,180 | 1% | 647 | 366,616 | applied |
+| 11 | Echo (rule (A)'s nonce) | bridge Echo 11,559 | 11,559 | 0% | 431 | 95,920 | applied |
+| 12 | Sunset (not built) | bridge Sunset 10,050 | 10,050 | 0% | 431 | 83,848 | refused: exit 240 (BAD_MESSAGE) |
 
 ## Handler executions
 
@@ -30,6 +31,7 @@ Bridge program image `c0c80a6434cd0bcdaf4b32b71d4f71bfb28e5e23564fa23dfa4686792b
 | Burn 1 unit of another token | bridge Burn | 18,958 | 1 | 553 | 185 | 294 | 0 | – | 251 |
 | Burn 10 ETH with 9 held | bridge Burn | 19,349 | 1 | 553 | 185 | 294 | 0 | – | 254 |
 | Burn at the vector's destination, not signed by it | bridge Burn | 16,605 | 1 | 409 | 185 | 150 | 0 | – | 253 |
+| Burn under a configuration the payer holds nothing of | bridge Burn | 18,605 | 1 | 553 | 185 | 294 | 0 | – | 254 |
 | Burn sent to the burn account itself | bridge Burn | 13,652 | 1 | 259 | 185 | 0 | 0 | – | 243 |
 | Burn as a nested call from another program, in a transaction the holder signed | scripted | 10,383 | 1 | 350 | 276 | 0 | 628 | – | 0 |
 | Burn as a nested call from another program, in a transaction the holder signed | bridge Burn | 19,427 | 1 | 617 | 185 | 294 | 0 | – | 253 |

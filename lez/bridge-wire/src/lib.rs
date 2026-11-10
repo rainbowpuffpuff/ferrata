@@ -279,33 +279,33 @@ pub struct ClaimWitness {
 /// checkpoint's (module docs).
 #[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub enum BridgeMessage {
-    /// 0. At a holder's actor, as a top-level call or the root of a private execution: destroy one
+    /// Variant 0: At a holder's actor, as a top-level call or the root of a private execution: destroy one
     /// denomination and publish the note. Then, from that actor, at `burn(cid, H(note))`: record
     /// the note once.
     Burn { config_id: Root, r: Root, memo: Address, mac: [u8; 16], token: Address, amount: Word, c_out: Root },
-    /// 1. At `config(cid)`: attest the vault's slots 0 and 1 under the record at `record_slot` and
+    /// Variant 1: At `config(cid)`: attest the vault's slots 0 and 1 under the record at `record_slot` and
     /// write `root(cid, leaf_count)` if they hold `root` and `leaf_count`.
     ImportRoot { config_id: Root, record_slot: u64, root: Root, leaf_count: u64, proof: ImportProof },
-    /// 2. Reserved for the configuration's one-way `Sunset`; not built, refused.
+    /// Variant 2: Reserved for the configuration's one-way `Sunset`; not built, refused.
     Sunset { config_id: Root },
-    /// 3. Rule (A)'s echo nonce: accepted anywhere, changes nothing.
+    /// Variant 3: Rule (A)'s echo nonce: accepted anywhere, changes nothing.
     Echo { nonce: Root },
-    /// 4. At `config(cid)`, `cid` computed from `config`: attest the vault's slot 2 and write the
+    /// Variant 4: At `config(cid)`, `cid` computed from `config`: attest the vault's slot 2 and write the
     /// configuration if it holds `cid` (the reciprocal pairing, B5).
     Init { config: BridgeConfig, record_slot: u64, proof: PairingProof },
-    /// 5. At `root(cid, n)`: the plaintext claim, for a public destination.
+    /// Variant 5: At `root(cid, n)`: the plaintext claim, for a public destination.
     Claim { config_id: Root, leaf_count: u64, witness: ClaimWitness },
-    /// 6. At the claimant's own actor, meant to run privately: read `root(cid, n)`, verify the
+    /// Variant 6: At the claimant's own actor, meant to run privately: read `root(cid, n)`, verify the
     /// claim inside this execution, spend `N`; a private destination must be this account.
     ClaimPrivately { config_id: Root, leaf_count: u64, witness: ClaimWitness },
-    /// 7. Reply with this actor's state (`StateReply`), LEZ v0.4's read idiom.
+    /// Variant 7: Reply with this actor's state (`StateReply`), LEZ v0.4's read idiom.
     Read,
-    /// 8. `config(cid)` → `root(cid, n)`: the verified root, written once.
+    /// Variant 8: `config(cid)` → `root(cid, n)`: the verified root, written once.
     WriteRoot { root: RootState },
-    /// 9. An actor of this program → `nullifier(chain, vault, N)`: spend `N` once; mint to
+    /// Variant 9: An actor of this program → `nullifier(chain, vault, N)`: spend `N` once; mint to
     /// `mint_to` (a public account) if given.
     Spend { nullifier: Root, config_id: Root, terms: Terms, leaf_count: u64, amount: u128, mint_to: Option<Root> },
-    /// 10. `nullifier(chain, vault, N)` → a holder: credit one denomination.
+    /// Variant 10: `nullifier(chain, vault, N)` → a holder: credit one denomination.
     Mint { nullifier: Root, config_id: Root, terms: Terms, amount: u128 },
 }
 
