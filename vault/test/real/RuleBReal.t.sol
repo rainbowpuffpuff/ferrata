@@ -71,7 +71,8 @@ abstract contract RuleBRealFixture is Test {
             globalReleaseCap: FerrataVault.CapParams({capacity: type(uint256).max, refillPerSecond: 0}),
             mode: mode,
             watchers: [watcher, address(0), address(0)],
-            releaseCapFloor: FerrataVault.CapParams({capacity: 0, refillPerSecond: 0})
+            releaseCapFloor: FerrataVault.CapParams({capacity: 0, refillPerSecond: 0}),
+            feeRecipient: address(0xFEE)
         });
         bytes memory initcode = abi.encodePacked(type(FerrataVault).creationCode, abi.encode(d));
         vm.etch(at, initcode);

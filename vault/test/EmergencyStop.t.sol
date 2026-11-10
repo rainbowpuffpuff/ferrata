@@ -24,9 +24,9 @@ contract EmergencyStopTest is VaultTestBase {
         _deposit(alice, ETH, 1, keccak256("c1"));
         _deposit(bob, ETH, 0, keccak256("c2"));
         bytes32[] memory leaves = new bytes32[](3);
-        leaves[0] = ReferenceMerkle.leafHash(0, alice, ETH, 1 ether, keccak256("c0"));
-        leaves[1] = ReferenceMerkle.leafHash(1, alice, ETH, 1 ether, keccak256("c1"));
-        leaves[2] = ReferenceMerkle.leafHash(2, bob, ETH, 0.1 ether, keccak256("c2"));
+        leaves[0] = _leafHash(0, alice, ETH, 1 ether, keccak256("c0"));
+        leaves[1] = _leafHash(1, alice, ETH, 1 ether, keccak256("c1"));
+        leaves[2] = _leafHash(2, bob, ETH, 0.1 ether, keccak256("c2"));
         vm.prank(freezer);
         vault.retire();
         FerrataVault.Checkpoint memory sunset = _nextCheckpoint(vault, ROOT, 2, true);

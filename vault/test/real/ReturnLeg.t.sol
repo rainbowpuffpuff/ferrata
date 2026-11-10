@@ -49,7 +49,7 @@ contract ReturnLegTest is ReturnLegFixture {
         FerrataVault.Checkpoint memory c = _checkpoint(candidate.journal);
         assertEq(candidate.journal.length, 17 * 32);
         assertEq(
-            candidate.journal, abi.encode(vault.CHECKPOINT_DOMAIN(), block.chainid, address(vault), lezConfigId, c)
+            candidate.journal, abi.encode(sha256(bytes("ferrata/vault/checkpoint/v3")), block.chainid, address(vault), lezConfigId, c)
         );
         assertEq(c.parentState, genesisState);
         assertEq(c.echoNonce, bytes32(0));
@@ -60,7 +60,7 @@ contract ReturnLegTest is ReturnLegFixture {
 
         FerrataVault.Checkpoint memory e = _checkpoint(finalization.journal);
         assertEq(
-            finalization.journal, abi.encode(vault.CHECKPOINT_DOMAIN(), block.chainid, address(vault), lezConfigId, e)
+            finalization.journal, abi.encode(sha256(bytes("ferrata/vault/checkpoint/v3")), block.chainid, address(vault), lezConfigId, e)
         );
         assertEq(e.echoNonce, beaconNonce);
         assertEq(
@@ -78,11 +78,12 @@ contract ReturnLegTest is ReturnLegFixture {
         for (uint256 i = 0; i < releases.length; i++) {
             ReleaseCase memory r = releases[i];
             assertEq(r.burnRoot, c.burnRoot, "the release is against the checkpoint's burn root");
-            assertEq(r.amount, vault.denominations(r.token)[0]);
+            (,,,, uint256[] memory denoms) = vault.tokenConfig(r.token);
+            assertEq(r.amount, denoms[0]);
             assertEq(
                 r.journal,
                 abi.encode(
-                    vault.RELEASE_DOMAIN(),
+                    sha256(bytes("ferrata/vault/release/v2")),
                     block.chainid,
                     address(vault),
                     lezConfigId,
@@ -286,7 +287,7 @@ contract ReturnLegTest is ReturnLegFixture {
                 q = _request(r);
                 if (field == 0) q.recipient = makeAddr("thief");
                 if (field == 1) q.relayer = makeAddr("another relayer");
-                if (field == 2) q.relayFee = r.relayFee == 0 ? vault.relayFees(r.token)[0] : 0;
+                if (field == 2) q.relayFee = r.relayFee == 0 ? _registeredRelayFee(r.token) : 0;
                 if (field == 3) q.nullifier = keccak256("another nullifier");
                 if (field == 4) q.denomIndex = 1;
                 bool feeStillValid = field != 4 || r.relayFee == 0;

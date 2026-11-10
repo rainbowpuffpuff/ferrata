@@ -71,7 +71,7 @@ contract ReleaseDelayTest is VaultTestBase {
         p.releaseDelay = 2 days;
         vm.prank(admin);
         vault.registerToken(address(token), p);
-        assertEq(vault.releaseDelay(address(token)), 2 days);
+        assertEq(vault.releaseDelayFor(address(token), vault.checkpointCount()), 2 days);
         assertEq(vault.releaseDelayFor(address(token), 0), 2 days);
 
         p.releaseDelay = REVOKE_WINDOW + 1;
@@ -104,7 +104,7 @@ contract ReleaseDelayTest is VaultTestBase {
         strict.setReleaseDelay(address(token), REVOKE_WINDOW + 1);
         strict.setReleaseDelay(address(token), REVOKE_WINDOW);
         vm.stopPrank();
-        assertEq(strict.releaseDelay(address(token)), REVOKE_WINDOW);
+        assertEq(strict.releaseDelayFor(address(token), strict.checkpointCount()), REVOKE_WINDOW);
     }
 
     function test_severalChangesBeforeOneCheckpoint_lastOneWins() public {

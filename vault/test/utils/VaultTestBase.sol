@@ -9,6 +9,7 @@ import {FerrataVault} from "../../src/FerrataVault.sol";
 import {IRiscZeroVerifier} from "../../src/interfaces/IRiscZeroVerifier.sol";
 import {MockERC20, MockTokenBase, MockUSDT} from "../mocks/MockTokens.sol";
 import {MockRiscZeroVerifier} from "../mocks/MockVerifiers.sol";
+import {ReferenceMerkle} from "./ReferenceMerkle.sol";
 
 /// @notice Shared fixture: a vault with ETH, a 6-decimal token, an 18-decimal token and a USDT-style token
 ///         registered, all caps UNLIMITED, verifying through RISC Zero's emergency-stop wrapper. Journals are rebuilt
@@ -32,6 +33,14 @@ abstract contract VaultTestBase is Test {
     address internal constant ETH = address(0);
     uint256 internal constant UNLIMITED = type(uint256).max;
     bytes internal constant SEAL = hex"5ea15ea1";
+    // The vault's internal constants (v5 made them internal for EIP-170), from the written spec.
+    uint256 internal constant DEPOSIT_ROOT_SLOT_ = 0;
+    uint256 internal constant NEXT_LEAF_INDEX_SLOT_ = 1;
+    uint256 internal constant LEZ_CONFIG_ID_SLOT_ = 2;
+    uint256 internal constant MAX_DELTA_ = 30 days;
+    /// The fee ceiling and notice (D13).
+    uint256 internal constant FEE_CEILING_DIVISOR = 100;
+    uint256 internal constant FEE_NOTICE = 7 days;
 
     struct CheckpointJournal {
         uint256 chainId;
@@ -81,6 +90,7 @@ abstract contract VaultTestBase is Test {
     address internal relayer = makeAddr("relayer");
     address internal recipient = makeAddr("recipient");
     address internal watcher = makeAddr("watcher");
+    address internal feeRecipient = makeAddr("feeRecipient");
 
     /// Rule (B) test deployment: the wait is the reaction window only (D13 default 1 h), no turn term.
     uint256 internal constant DELTA_B = 1 hours;
@@ -136,7 +146,8 @@ abstract contract VaultTestBase is Test {
             globalReleaseCap: _unlimited(),
             mode: FerrataVault.Mode.A,
             watchers: [watcher, address(0), address(0)],
-            releaseCapFloor: _cap(0, 0)
+            releaseCapFloor: _cap(0, 0),
+            feeRecipient: feeRecipient
         });
     }
 
@@ -168,7 +179,8 @@ abstract contract VaultTestBase is Test {
         vm.stopPrank();
     }
 
-    /// @dev Registration parameters with relay fees of 0.2% per denomination and UNLIMITED caps.
+    /// @dev Registration parameters with relay fees of 0.2% per denomination, no checkpoint fee and UNLIMITED caps;
+    ///      decimals 18 (every test unit is at most 10**18).
     function _params(uint256[] memory denoms, uint256 lezUnit, uint256 unitWeight)
         internal
         pure
@@ -185,7 +197,10 @@ abstract contract VaultTestBase is Test {
             unitWeight: unitWeight,
             depositCap: _unlimited(),
             releaseCap: _unlimited(),
-            releaseDelay: 0
+            releaseDelay: 0,
+            lezDefinition: keccak256(abi.encode("test LEZ definition", denoms[0])),
+            decimals: 18,
+            checkpointFees: new uint256[](denoms.length)
         });
     }
 
@@ -197,11 +212,57 @@ abstract contract VaultTestBase is Test {
     }
 
     function _amount(address token, uint8 denomIndex) internal view returns (uint256) {
-        return vault.denominations(token)[denomIndex];
+        return _denomsOf(vault, token)[denomIndex];
     }
 
     function _relayFee(address token, uint8 denomIndex) internal view returns (uint256) {
-        return vault.relayFees(token)[denomIndex];
+        (, uint256 relayFee,,) = vault.fees(token, 0, denomIndex);
+        return relayFee;
+    }
+
+    function _denomsOf(FerrataVault v, address token) internal view returns (uint256[] memory denoms) {
+        (,,,, denoms) = v.tokenConfig(token);
+    }
+
+    /// @dev The registered relay fees (the same in every fee schedule).
+    function _relayFeesOf(FerrataVault v, address token) internal view returns (uint256[] memory fees) {
+        fees = new uint256[](_denomsOf(v, token).length);
+        for (uint8 i = 0; i < fees.length; i++) {
+            (, fees[i],,) = v.fees(token, 0, i);
+        }
+    }
+
+    /// @dev The fee schedule a deposit or release of `token` gets now: the announced one once due, else the current.
+    function _scheduleNow(FerrataVault v, address token) internal view returns (uint256) {
+        (uint64 current, uint64 pendingAt) = v.feeState(token);
+        return pendingAt != 0 && block.timestamp >= pendingAt ? uint256(current) + 1 : current;
+    }
+
+    /// @dev What a deposit of `denomIndex` escrows now: the denomination, its mint fee and its relay fee (D13).
+    function _depositTotal(FerrataVault v, address token, uint8 denomIndex) internal view returns (uint256) {
+        (uint256 mintFee, uint256 relayFee,,) = v.fees(token, _scheduleNow(v, token), denomIndex);
+        return _denomsOf(v, token)[denomIndex] + mintFee + relayFee;
+    }
+
+    /// @dev The deposit-tree leaf, from the reference implementation (spec §3.1).
+    function _leafHash(uint64 leafIndex, address depositor, address token, uint256 amount, bytes32 commitment)
+        internal
+        pure
+        returns (bytes32)
+    {
+        return ReferenceMerkle.leafHash(leafIndex, depositor, token, amount, commitment);
+    }
+
+    /// @dev Checkpoint record `i` of `v`, decoded from the getter's return data as one struct (eleven return values do
+    ///      not fit on the stack next to a caller's locals).
+    function _checkpointRecord(FerrataVault v, uint256 i) internal view returns (FerrataVault.FinalizedCheckpoint memory) {
+        (bool ok, bytes memory data) = address(v).staticcall(abi.encodeCall(v.checkpoints, (i)));
+        require(ok, "checkpoint getter");
+        return abi.decode(data, (FerrataVault.FinalizedCheckpoint));
+    }
+
+    function _isFrozen(uint256 until) internal view returns (bool) {
+        return block.timestamp < until;
     }
 
     function _balance(address token, address who) internal view returns (uint256) {
@@ -219,12 +280,13 @@ abstract contract VaultTestBase is Test {
         return _depositInto(vault, from, token, denomIndex, commitment);
     }
 
-    /// @dev Funds `from`, approves if needed, and deposits with the correct per-depositor index.
+    /// @dev Funds `from` with the deposit's total (denomination and fees), approves if needed, and deposits with the
+    ///      correct per-depositor index.
     function _depositInto(FerrataVault v, address from, address token, uint8 denomIndex, bytes32 commitment)
         internal
         returns (uint64 leafIndex)
     {
-        uint256 amount = v.denominations(token)[denomIndex];
+        uint256 amount = _depositTotal(v, token, denomIndex);
         uint64 index = v.depositCount(from);
         leafIndex = v.nextLeafIndex();
         if (token == ETH) {
@@ -329,7 +391,7 @@ abstract contract VaultTestBase is Test {
             burnRoot: r.burnRoot,
             nullifier: r.nullifier,
             token: r.token,
-            amount: _amount(r.token, r.denomIndex),
+            amount: _denomsOf(vault, r.token)[r.denomIndex],
             recipient: r.recipient,
             relayer: r.relayer,
             relayFee: r.relayFee

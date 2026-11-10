@@ -137,7 +137,10 @@ abstract contract ReturnLegFixture is Test {
             unitWeight: unitWeight,
             depositCap: _unlimited(),
             releaseCap: _unlimited(),
-            releaseDelay: RELEASE_DELAY
+            releaseDelay: RELEASE_DELAY,
+            lezDefinition: bytes32(0),
+            decimals: 18,
+            checkpointFees: new uint256[](denoms.length)
         });
     }
 
@@ -162,7 +165,8 @@ abstract contract ReturnLegFixture is Test {
             globalReleaseCap: _unlimited(),
             mode: FerrataVault.Mode.A,
             watchers: [address(0), address(0), address(0)],
-            releaseCapFloor: FerrataVault.CapParams({capacity: 0, refillPerSecond: 0})
+            releaseCapFloor: FerrataVault.CapParams({capacity: 0, refillPerSecond: 0}),
+            feeRecipient: address(0xFEE)
         });
     }
 
@@ -301,4 +305,10 @@ abstract contract ReturnLegFixture is Test {
         out = bytes.concat(data);
         out[at] = bytes1(uint8(out[at]) ^ 0x01);
     }
+
+    /// @dev The registered relay fee of the first denomination (the same in every fee schedule).
+    function _registeredRelayFee(address t) internal view returns (uint256 relayFee) {
+        (, relayFee,,) = vault.fees(t, 0, 0);
+    }
+
 }

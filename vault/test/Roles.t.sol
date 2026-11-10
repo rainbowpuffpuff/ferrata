@@ -43,8 +43,8 @@ contract RolesTest is VaultTestBase {
         vm.warp(at + PAUSE);
         vault.submitCandidate(c, SEAL);
         // Not other freezes.
-        assertFalse(vault.depositsFrozen());
-        assertFalse(vault.releasesFrozen());
+        assertFalse(_isFrozen(vault.depositsFrozenUntil()));
+        assertFalse(_isFrozen(vault.releasesFrozenUntil()));
     }
 
     function test_watcher_pauseNeverShortensALongerFreeze_andTheFreezeAuthorityCanLiftIt() public {
@@ -59,10 +59,10 @@ contract RolesTest is VaultTestBase {
         vault.setCheckpointsFrozen(false);
         vm.prank(watcher);
         vault.pauseCheckpoints();
-        assertTrue(vault.checkpointsFrozen());
+        assertTrue(_isFrozen(vault.checkpointsFrozenUntil()));
         vm.prank(freezer);
         vault.setCheckpointsFrozen(false);
-        assertFalse(vault.checkpointsFrozen());
+        assertFalse(_isFrozen(vault.checkpointsFrozenUntil()));
     }
 
     /// @notice A watcher can renew its pause: the risk D13 accepts until the admin replaces it (14 days).
@@ -105,7 +105,7 @@ contract RolesTest is VaultTestBase {
             vault.setCheckpointsFrozen(false);
             vm.prank(ws[i]);
             vault.pauseCheckpoints();
-            assertTrue(vault.checkpointsFrozen());
+            assertTrue(_isFrozen(vault.checkpointsFrozenUntil()));
         }
     }
 
@@ -138,11 +138,10 @@ contract RolesTest is VaultTestBase {
         emit FerrataVault.RolesProposed([watcher2, alice, address(0)], newFreezer, at + TIMELOCK);
         vm.prank(admin);
         vault.proposeRoles([watcher2, alice, address(0)], newFreezer);
-        FerrataVault.RoleProposal memory p = vault.roleProposal();
-        assertEq(p.watchers[0], watcher2);
-        assertEq(p.watchers[1], alice);
-        assertEq(p.freezeAuthority, newFreezer);
-        assertEq(p.effectiveAt, at + TIMELOCK);
+        // The getter shows the proposed freeze authority and the time; the watchers are in `RolesProposed` (above).
+        (address proposedAuthority, uint256 effectiveAt) = vault.roleProposal();
+        assertEq(proposedAuthority, newFreezer);
+        assertEq(effectiveAt, at + TIMELOCK);
 
         vm.warp(at + TIMELOCK - 1);
         vm.expectRevert(FerrataVault.TimelockNotOver.selector);
@@ -175,10 +174,9 @@ contract RolesTest is VaultTestBase {
         vm.prank(alice);
         vault.pauseCheckpoints();
 
-        p = vault.roleProposal();
-        assertEq(p.effectiveAt, 0);
-        assertEq(p.freezeAuthority, address(0));
-        assertEq(p.watchers[0], address(0));
+        (proposedAuthority, effectiveAt) = vault.roleProposal();
+        assertEq(effectiveAt, 0);
+        assertEq(proposedAuthority, address(0));
         vm.expectRevert(FerrataVault.NoProposal.selector);
         vault.applyRoles(); // consumed
     }

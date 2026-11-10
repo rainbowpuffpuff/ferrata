@@ -21,7 +21,7 @@ contract RefundTest is VaultTestBase {
     function _dep(address who, address token, uint8 denomIndex, bytes32 commitment) internal returns (uint64 i) {
         i = _deposit(who, token, denomIndex, commitment);
         leafData.push(Leaf(who, token, denomIndex, commitment));
-        leaves.push(ReferenceMerkle.leafHash(i, who, token, _amount(token, denomIndex), commitment));
+        leaves.push(_leafHash(i, who, token, _amount(token, denomIndex), commitment));
     }
 
     function _path(uint64 i) internal view returns (bytes32[32] memory p) {
@@ -314,12 +314,12 @@ contract RefundTest is VaultTestBase {
 
         vm.expectRevert(FerrataVault.UnknownLeaf.selector);
         vault.refund(alias_, l.depositor, l.token, l.denomIndex, l.commitment, p);
-        vm.store(address(vault), bytes32(vault.NEXT_LEAF_INDEX_SLOT()), bytes32(uint256(2 ** 32))); // a full tree
+        vm.store(address(vault), bytes32(NEXT_LEAF_INDEX_SLOT_), bytes32(uint256(2 ** 32))); // a full tree
         vm.expectRevert(FerrataVault.UnknownLeaf.selector);
         vault.refund(alias_, l.depositor, l.token, l.denomIndex, l.commitment, p);
         assertTrue(
-            ReferenceMerkle.leafHash(alias_, l.depositor, l.token, 0.1 ether, l.commitment)
-                != ReferenceMerkle.leafHash(2, l.depositor, l.token, 0.1 ether, l.commitment)
+            _leafHash(alias_, l.depositor, l.token, 0.1 ether, l.commitment)
+                != _leafHash(2, l.depositor, l.token, 0.1 ether, l.commitment)
         );
         _refund(2); // the real index still works
         assertFalse(vault.refunded(alias_));
@@ -345,7 +345,7 @@ contract RefundTest is VaultTestBase {
         _fourDepositsThenRetire();
         uint256 index = _sunset(2);
         uint256 finalizedAt = block.timestamp;
-        (,,,,,,,,, uint256 recordedAt) = vault.checkpoints(index);
+        (,,,,,,,,, uint64 recordedAt,) = vault.checkpoints(index);
         assertEq(recordedAt, finalizedAt);
         assertEq(vault.sunsetFinalizedAt(), finalizedAt);
 

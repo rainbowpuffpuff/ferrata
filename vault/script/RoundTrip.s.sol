@@ -59,7 +59,10 @@ contract RoundTrip is Script {
             unitWeight: unitWeight,
             depositCap: _unlimited(),
             releaseCap: _unlimited(),
-            releaseDelay: vm.envOr("FERRATA_RELEASE_DELAY", uint256(120))
+            releaseDelay: vm.envOr("FERRATA_RELEASE_DELAY", uint256(120)),
+            lezDefinition: bytes32(0),
+            decimals: 18,
+            checkpointFees: new uint256[](denoms.length)
         });
     }
 
@@ -93,7 +96,8 @@ contract RoundTrip is Script {
             globalReleaseCap: _unlimited(),
             mode: FerrataVault.Mode.A,
             watchers: [address(0), address(0), address(0)],
-            releaseCapFloor: FerrataVault.CapParams({capacity: 0, refillPerSecond: 0})
+            releaseCapFloor: FerrataVault.CapParams({capacity: 0, refillPerSecond: 0}),
+            feeRecipient: admin
         });
     }
 

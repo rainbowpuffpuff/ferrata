@@ -167,28 +167,18 @@ contract CheckpointTest is VaultTestBase {
     }
 
     function _assertFirstCheckpointRecord(FerrataVault.Checkpoint memory c) internal view {
-        (
-            bytes32 parent,
-            bytes32 newState,
-            bytes32 burnRoot,
-            uint64 burnCount,
-            uint64 imported,
-            bool sunset,
-            bool revoked,
-            uint64 parentImported,
-            bool parentSunset,
-            uint256 finalizedAt
-        ) = vault.checkpoints(0);
-        assertEq(parent, GENESIS_STATE);
-        assertEq(newState, c.newState);
-        assertEq(burnRoot, ROOT);
-        assertEq(burnCount, c.burnCount);
-        assertEq(imported, 0);
-        assertFalse(sunset);
-        assertFalse(revoked);
-        assertEq(parentImported, 0); // genesis carries no imported leaves and no sunset
-        assertFalse(parentSunset);
-        assertEq(finalizedAt, block.timestamp);
+        FerrataVault.FinalizedCheckpoint memory h = _checkpointRecord(vault, 0);
+        assertEq(h.parentState, GENESIS_STATE);
+        assertEq(h.newState, c.newState);
+        assertEq(h.burnRoot, ROOT);
+        assertEq(h.burnCount, c.burnCount);
+        assertEq(h.importedLeafCount, 0);
+        assertFalse(h.sunset);
+        assertFalse(h.revoked);
+        assertEq(h.parentImportedLeafCount, 0); // genesis carries no imported leaves and no sunset
+        assertFalse(h.parentSunset);
+        assertEq(h.finalizedAt, block.timestamp);
+        assertEq(h.finalizer, address(this)); // D13: credited the checkpoint fee of releases against it
     }
 
     function test_finalize_impossibleBeforeDelta_noBeaconIsOldEnough() public {
@@ -737,7 +727,7 @@ contract CheckpointTest is VaultTestBase {
         vm.startPrank(admin);
         vm.expectRevert(FerrataVault.DeltaCanOnlyRise.selector);
         vault.raiseDelta(DELTA - 1);
-        uint256 ceiling = vault.MAX_DELTA();
+        uint256 ceiling = MAX_DELTA_;
         vm.expectRevert(FerrataVault.DeltaTooLong.selector);
         vault.raiseDelta(ceiling + 1);
         vm.expectEmit(true, true, true, true, address(vault));

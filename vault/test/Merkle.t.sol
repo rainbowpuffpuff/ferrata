@@ -23,7 +23,7 @@ contract MerkleTest is VaultTestBase {
         bytes32 commitment = keccak256(abi.encode("commitment", seed));
         address depositor = ((seed >> 16) % 2 == 0) ? alice : bob;
         uint64 leafIndex = _deposit(depositor, token, denomIndex, commitment);
-        leaves.push(ReferenceMerkle.leafHash(leafIndex, depositor, token, _amount(token, denomIndex), commitment));
+        leaves.push(_leafHash(leafIndex, depositor, token, _amount(token, denomIndex), commitment));
     }
 
     function _load(uint256 slot) internal view returns (bytes32) {
@@ -33,9 +33,6 @@ contract MerkleTest is VaultTestBase {
     // ---- storage-slot contract ------------------------------------------------------------------------------------
 
     function test_storageSlots_root0_leafCount1_configId2() public {
-        assertEq(vault.DEPOSIT_ROOT_SLOT(), DEPOSIT_ROOT_SLOT);
-        assertEq(vault.NEXT_LEAF_INDEX_SLOT(), NEXT_LEAF_INDEX_SLOT);
-        assertEq(vault.LEZ_CONFIG_ID_SLOT(), LEZ_CONFIG_ID_SLOT);
         assertEq(_load(DEPOSIT_ROOT_SLOT), vault.depositRoot());
         assertEq(_load(NEXT_LEAF_INDEX_SLOT), bytes32(0));
         assertEq(_load(LEZ_CONFIG_ID_SLOT), LEZ_CONFIG_ID);
@@ -143,7 +140,7 @@ contract MerkleTest is VaultTestBase {
         bytes32 commitment = keccak256("c");
         _deposit(alice, ETH, 1, commitment);
 
-        bytes32 leaf = ReferenceMerkle.leafHash(uint64(2 ** 31), alice, ETH, 1 ether, commitment);
+        bytes32 leaf = _leafHash(uint64(2 ** 31), alice, ETH, 1 ether, commitment);
         bytes32[] memory zeros = ReferenceMerkle.zeroHashes();
         bytes32 rightHalf = leaf;
         for (uint256 h = 0; h < 31; h++) {
@@ -168,7 +165,7 @@ contract MerkleTest is VaultTestBase {
         bytes32 commitment = keccak256("last");
         _deposit(alice, ETH, 0, commitment);
 
-        bytes32 node = ReferenceMerkle.leafHash(uint64(2 ** 32 - 1), alice, ETH, 0.1 ether, commitment);
+        bytes32 node = _leafHash(uint64(2 ** 32 - 1), alice, ETH, 0.1 ether, commitment);
         for (uint256 h = 0; h < 32; h++) {
             node = ReferenceMerkle.nodeHash(branch[h], node);
             assertEq(_load(BRANCH_SLOT + h), branch[h]);

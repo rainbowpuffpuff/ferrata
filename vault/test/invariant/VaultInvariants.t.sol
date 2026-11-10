@@ -19,7 +19,8 @@ contract VaultInvariants is VaultTestBase {
         bool revoked;
         uint64 parentImportedLeafCount;
         bool parentSunset;
-        uint256 finalizedAt;
+        uint64 finalizedAt;
+        address finalizer;
     }
 
     VaultHandler internal handler;
@@ -44,9 +45,14 @@ contract VaultInvariants is VaultTestBase {
         tokens[1] = address(usdc);
         tokens[2] = address(dai);
         tokens[3] = address(usdt);
-        handler = new VaultHandler(vault, verifier, admin, freezer, tokens);
+        handler = new VaultHandler(vault, verifier, admin, freezer, tokens, uint64(block.timestamp));
+        // v5 (D13): every token starts with a fee change announced and due, so fees take part from the first call.
+        for (uint256 i = 0; i < tokens.length; i++) {
+            handler.announceFees(i, 7 + 10 * i);
+        }
+        vm.warp(block.timestamp + FEE_NOTICE);
 
-        bytes4[] memory selectors = new bytes4[](22);
+        bytes4[] memory selectors = new bytes4[](26);
         selectors[0] = VaultHandler.deposit.selector;
         selectors[1] = VaultHandler.submitCandidate.selector;
         selectors[2] = VaultHandler.finalizePending.selector;
@@ -69,6 +75,10 @@ contract VaultInvariants is VaultTestBase {
         selectors[19] = VaultHandler.watcherPause.selector;
         selectors[20] = VaultHandler.proposeRoles.selector;
         selectors[21] = VaultHandler.applyRoles.selector;
+        selectors[22] = VaultHandler.claim.selector;
+        selectors[23] = VaultHandler.burn.selector;
+        selectors[24] = VaultHandler.announceFees.selector;
+        selectors[25] = VaultHandler.applyFees.selector;
         targetContract(address(handler));
         targetSelector(StdInvariant.FuzzSelector({addr: address(handler), selectors: selectors}));
     }
@@ -79,6 +89,25 @@ contract VaultInvariants is VaultTestBase {
             address t = tokens[i];
             assertEq(vault.escrowed(t), handler.ghostDeposited(t) - handler.ghostReleased(t) - handler.ghostRefunded(t));
         }
+    }
+
+    /// @notice D13 / proposal §B4 (Security #6): the wrapped supply on LEZ equals escrow less unminted deposits and
+    ///         unreleased burns. The supply is the LEZ model's: claims mint what the attested fee schedule of the leaf
+    ///         and the registered relay fee say, never what the vault says it escrowed; burns take one denomination.
+    function invariant_supplyIsEscrowLessUnmintedDepositsAndUnreleasedBurns() public view {
+        address[] memory tokens = handler.tokens();
+        for (uint256 i = 0; i < tokens.length; i++) {
+            address t = tokens[i];
+            assertEq(handler.ghostSupply(t), vault.escrowed(t) - handler.ghostUnminted(t) - handler.ghostUnreleased(t));
+        }
+    }
+
+    /// @notice D13: every deposit escrowed, every release paid and credited, every refund returned exactly what the
+    ///         fee model says; every published schedule hash is the model's preimage; no claimed deposit was refunded.
+    function invariant_feesFollowTheAnnouncedSchedules() public view {
+        assertEq(handler.ghostFeeMismatches(), 0);
+        assertEq(handler.ghostPublishedMismatches(), 0);
+        assertEq(handler.ghostRefundsOfClaimedLeaves(), 0);
     }
 
     /// @dev An equality, not `balance >= escrowed + totalOwed`: a one-sided bound stays green when value is
@@ -129,7 +158,7 @@ contract VaultInvariants is VaultTestBase {
         bytes32 expected = GENESIS_STATE;
         uint256 count = vault.checkpointCount();
         for (uint256 i = count; i > 0; i--) {
-            (, bytes32 newState,,,,, bool revoked,,,) = vault.checkpoints(i - 1);
+            (, bytes32 newState,,,,, bool revoked,,,,) = vault.checkpoints(i - 1);
             if (!revoked) {
                 expected = newState;
                 break;
@@ -241,23 +270,27 @@ contract VaultInvariants is VaultTestBase {
         for (uint256 i = 0; i < counts.length; i++) {
             console2.log(names[i], counts[i]);
         }
+        (uint256 claims, uint256 burns, uint256 feeChanges) = handler.feeSummary();
+        console2.log("LEZ claims", claims);
+        console2.log("LEZ burns", burns);
+        console2.log("fee changes in force", feeChanges);
         (uint256 pauses, uint256 roleChanges) = handler.roleSummary();
         console2.log("watcher pauses", pauses);
         console2.log("role changes", roleChanges);
     }
 
     function _history(uint256 i) internal view returns (History memory h) {
-        (
-            h.parentState,
-            h.newState,
-            ,
-            ,
-            h.importedLeafCount,
-            h.sunset,
-            h.revoked,
-            h.parentImportedLeafCount,
-            h.parentSunset,
-            h.finalizedAt
-        ) = vault.checkpoints(i);
+        FerrataVault.FinalizedCheckpoint memory c = _checkpointRecord(vault, i);
+        h = History(
+            c.parentState,
+            c.newState,
+            c.importedLeafCount,
+            c.sunset,
+            c.revoked,
+            c.parentImportedLeafCount,
+            c.parentSunset,
+            c.finalizedAt,
+            c.finalizer
+        );
     }
 }

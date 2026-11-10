@@ -38,7 +38,7 @@ contract DepositTest is VaultTestBase {
         assertEq(vault.escrowed(ETH), amount);
         assertEq(vault.depositCount(alice), 1);
         assertEq(vault.nextLeafIndex(), 1);
-        assertEq(vault.depositRoot(), _rootOfSingleLeaf(ReferenceMerkle.leafHash(0, alice, ETH, amount, C1)));
+        assertEq(vault.depositRoot(), _rootOfSingleLeaf(_leafHash(0, alice, ETH, amount, C1)));
     }
 
     function test_deposit_sixDecimalToken() public {
@@ -68,7 +68,7 @@ contract DepositTest is VaultTestBase {
         assertEq(MockTokenBase(token).balanceOf(alice), 0);
         assertEq(vault.escrowed(token), amount);
         assertEq(vault.depositCount(alice), 1);
-        assertEq(vault.depositRoot(), _rootOfSingleLeaf(ReferenceMerkle.leafHash(0, alice, token, amount, C1)));
+        assertEq(vault.depositRoot(), _rootOfSingleLeaf(_leafHash(0, alice, token, amount, C1)));
     }
 
     function test_leafHash_matchesSpec() public view {
@@ -83,7 +83,7 @@ contract DepositTest is VaultTestBase {
                 C1
             )
         );
-        assertEq(vault.leafHash(7, alice, address(usdc), 1000e6, C1), expected);
+        assertEq(_leafHash(7, alice, address(usdc), 1000e6, C1), expected);
     }
 
     // ------------------------------------------------------------------------------------------------------------
@@ -258,16 +258,16 @@ contract DepositTest is VaultTestBase {
         assertEq(third, 2);
 
         bytes32[] memory leaves = new bytes32[](3);
-        leaves[0] = ReferenceMerkle.leafHash(0, alice, address(usdc), 100e6, C1);
-        leaves[1] = ReferenceMerkle.leafHash(1, bob, address(usdc), 100e6, C1);
-        leaves[2] = ReferenceMerkle.leafHash(2, alice, address(usdc), 100e6, C1);
+        leaves[0] = _leafHash(0, alice, address(usdc), 100e6, C1);
+        leaves[1] = _leafHash(1, bob, address(usdc), 100e6, C1);
+        leaves[2] = _leafHash(2, alice, address(usdc), 100e6, C1);
         assertTrue(leaves[0] != leaves[1]);
         assertEq(vault.depositRoot(), ReferenceMerkle.root(leaves));
     }
 
     /// @notice SPEC-v3 D9: leafIndex < 2^32. Once 2^32 leaves exist, both deposit paths revert and nothing changes.
     function test_deposit_revertsWhenTreeIsFull() public {
-        vm.store(address(vault), bytes32(vault.NEXT_LEAF_INDEX_SLOT()), bytes32(uint256(2 ** 32)));
+        vm.store(address(vault), bytes32(NEXT_LEAF_INDEX_SLOT_), bytes32(uint256(2 ** 32)));
         bytes32 rootBefore = vault.depositRoot();
         vm.deal(alice, 1 ether);
         vm.prank(alice);

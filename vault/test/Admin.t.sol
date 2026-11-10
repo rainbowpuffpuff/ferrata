@@ -39,18 +39,11 @@ contract ConstructorTest is VaultTestBase {
         assertFalse(vault.finalSunset());
         assertEq(vault.admin(), admin);
         assertEq(vault.freezeAuthority(), freezer);
+        assertEq(vault.feeRecipient(), feeRecipient);
         assertEq(vault.nextLeafIndex(), 0);
         assertEq(vault.depositRoot(), ReferenceMerkle.zeroHashes()[32]);
         assertEq(vault.checkpointCount(), 0);
         assertFalse(vault.retired());
-    }
-
-    function test_constructor_domainTagsMatchTheirDefinitions() public view {
-        assertEq(vault.LEAF_TAG(), sha256(bytes("ferrata/vault/leaf/v2")));
-        assertEq(vault.CHECKPOINT_DOMAIN(), sha256(bytes("ferrata/vault/checkpoint/v3")));
-        assertEq(vault.RELEASE_DOMAIN(), sha256(bytes("ferrata/vault/release/v2")));
-        assertEq(vault.LEAF_PREFIX(), bytes1(0x00));
-        assertEq(vault.NODE_PREFIX(), bytes1(0x01));
     }
 
     function test_constructor_rejectsVerifierWithoutCode() public {
@@ -135,6 +128,9 @@ contract ConstructorTest is VaultTestBase {
         d.freezeAuthority = address(0);
         _expectConstructorRevert(d, FerrataVault.ZeroAddress.selector);
         d = _d();
+        d.feeRecipient = address(0); // D13: burn fees need a recipient
+        _expectConstructorRevert(d, FerrataVault.ZeroAddress.selector);
+        d = _d();
         d.freezeAuthority = d.admin;
         _expectConstructorRevert(d, FerrataVault.RolesMustDiffer.selector);
     }
@@ -208,7 +204,7 @@ contract RegistryTest is VaultTestBase {
         assertEq(lezUnit, 1e12);
         assertEq(weight, 7);
         assertEq(stored, p.denominations);
-        assertEq(vault.relayFees(address(token)), p.relayFees);
+        assertEq(_relayFeesOf(vault, address(token)), p.relayFees);
         (uint256 capacity,, uint256 available) = vault.tokenCap(address(token), FerrataVault.Direction.Release);
         assertEq(capacity, 2000e18);
         assertEq(available, 2000e18); // new buckets start full
@@ -249,7 +245,7 @@ contract RegistryTest is VaultTestBase {
             assertFalse(ok);
             assertEq(ret, abi.encodeWithSelector(FerrataVault.FunctionNotFound.selector));
         }
-        assertEq(vault.denominations(address(token)), _denoms(1e18, 5e18, 25e18));
+        assertEq(_denomsOf(vault, address(token)), _denoms(1e18, 5e18, 25e18));
     }
 
     function test_registerToken_rejectsAddressWithoutCode() public {
@@ -278,7 +274,7 @@ contract RegistryTest is VaultTestBase {
             eight[i] = (i + 1) * 100;
         }
         _register(_p(eight, 1, 1));
-        assertEq(vault.denominations(address(token)).length, 8);
+        assertEq(_denomsOf(vault, address(token)).length, 8);
     }
 
     function test_registerToken_lezUnitMustBePowerOfTen() public {
@@ -341,7 +337,7 @@ contract RegistryTest is VaultTestBase {
         _expectRegisterRevert(odd, FerrataVault.RelayFeeTooHigh.selector);
         odd.relayFees = _denoms(1, 3, 4);
         _register(odd);
-        assertEq(vault.relayFees(address(token)), _denoms(1, 3, 4));
+        assertEq(_relayFeesOf(vault, address(token)), _denoms(1, 3, 4));
     }
 
     function testFuzz_registerToken_relayFeeCeiling(uint256 denomination, uint256 fee) public {
@@ -384,7 +380,7 @@ contract RegistryTest is VaultTestBase {
         emit FerrataVault.ReleaseDelaySet(address(dai), REVOKE_WINDOW, 0);
         vm.prank(admin);
         vault.setReleaseDelay(address(dai), REVOKE_WINDOW);
-        assertEq(vault.releaseDelay(address(dai)), REVOKE_WINDOW);
+        assertEq(vault.releaseDelayFor(address(dai), vault.checkpointCount()), REVOKE_WINDOW);
 
         vm.startPrank(admin);
         vm.expectRevert(FerrataVault.ReleaseDelayOutOfRange.selector);
@@ -468,7 +464,7 @@ contract RolesTest is VaultTestBase {
         vm.prank(freezer);
         vault.setReleasesFrozen(true);
         _assertNoFreezePowers(admin);
-        assertTrue(vault.releasesFrozen());
+        assertTrue(_isFrozen(vault.releasesFrozenUntil()));
     }
 
     function test_roles_freezeAuthorityCannotAdminister() public {

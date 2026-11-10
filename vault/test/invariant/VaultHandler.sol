@@ -67,9 +67,62 @@ contract HandlerCodec {
     function refundBoundary(FerrataVault vault) external view returns (bool found, uint64 boundary, uint256 opensAt) {
         uint256 count = vault.checkpointCount();
         for (uint256 i = 0; i < count; i++) {
-            (,,,, uint64 imported, bool sunset, bool revoked,,, uint256 finalizedAt) = vault.checkpoints(i);
+            (,,,, uint64 imported, bool sunset, bool revoked,,, uint64 finalizedAt,) = vault.checkpoints(i);
             if (sunset && !revoked) return (true, imported, finalizedAt + vault.revokeWindow() + 1); // v3 D11
         }
+    }
+
+    /// @dev The imported leaf count of the newest valid checkpoint that can no longer be revoked: every later valid
+    ///      count, so every refund boundary, is at least this, so a leaf below it can never be refunded and LEZ may
+    ///      mint it (the model's claims stay below it).
+    function settledImported(FerrataVault vault) external view returns (uint64) {
+        uint256 count = vault.checkpointCount();
+        for (uint256 i = count; i > 0; i--) {
+            (,,,, uint64 imported,, bool revoked,,, uint64 finalizedAt,) = vault.checkpoints(i - 1);
+            if (!revoked && block.timestamp > finalizedAt + vault.revokeWindow()) return imported;
+        }
+        return 0;
+    }
+
+    /// @dev The checkpoint fee's payee for releases against `burnRoot`: the finaliser of its checkpoint.
+    function finalizerOf(FerrataVault vault, bytes32 burnRoot) external view returns (address finalizer) {
+        uint256 entry = vault.burnRootCheckpoint(burnRoot);
+        if (entry != 0) (,,,,,,,,,, finalizer) = vault.checkpoints(entry - 1);
+    }
+
+    /// @dev bridge-wire `fee_slot`: sha256("ferrata/vault/fees/v1" || token || index:u64).
+    function feeSlot(address token, uint256 index) external pure returns (bytes32) {
+        return sha256(bytes.concat(bytes("ferrata/vault/fees/v1"), bytes20(token), bytes8(uint64(index))));
+    }
+
+    /// @dev bridge-wire `FeeSchedule::hash`, built byte by byte from its definition.
+    function scheduleHash(
+        address token,
+        uint256 index,
+        uint64[3] calldata times, // fromLeaf, announcedAt, effectiveAt
+        uint256[] calldata mintFees,
+        uint256[] calldata burnFees,
+        uint256[] calldata checkpointFees
+    ) external pure returns (bytes32) {
+        bytes memory m = bytes.concat(
+            bytes("ferrata/fees/v1"),
+            bytes20(token),
+            bytes8(uint64(index)),
+            bytes8(times[0]),
+            bytes8(times[1]),
+            bytes8(times[2]),
+            bytes1(uint8(mintFees.length))
+        );
+        for (uint256 i = 0; i < mintFees.length; i++) {
+            m = bytes.concat(m, bytes32(mintFees[i]));
+        }
+        for (uint256 i = 0; i < burnFees.length; i++) {
+            m = bytes.concat(m, bytes32(burnFees[i]));
+        }
+        for (uint256 i = 0; i < checkpointFees.length; i++) {
+            m = bytes.concat(m, bytes32(checkpointFees[i]));
+        }
+        return sha256(m);
     }
 
     function path(bytes32[] calldata leaves, uint64 leafIndex) external pure returns (bytes32[32] memory p) {
@@ -83,8 +136,9 @@ contract HandlerCodec {
 /// @notice Drives the vault through random sequences of deposits, checkpoint candidates (four committee sizes),
 ///         finalisations, cancellations, attempts to finalise checkpoints that break monotonicity or were cancelled,
 ///         revocations, retirement, refunds, releases (some to payees that cannot receive), owed claims, nullifier
-///         and refund replays, direct donations, time, freezes and admin changes, and keeps ghost accounting for the
-///         invariants. Calls the vault rejects simply revert the handler call, which also discards the ghost updates.
+///         and refund replays, direct donations, time, freezes and admin changes, fee announcements (v5, D13), and
+///         keeps ghost accounting for the invariants, including a model of the LEZ side: claims mint what the attested
+///         fee schedule of the leaf says, burns take one denomination out of the wrapped supply, releases pay burns. Calls the vault rejects simply revert the handler call, which also discards the ghost updates.
 ///         Calls that have nothing to do are discarded (vm.assume), so in the run table "calls - reverts - discards"
 ///         of finalizePending, cancelPending, finalizeRejected, revoke, refund and release counts exactly the
 ///         finalisations, cancellations, refusals observed, revocations, refunds and releases.
@@ -104,13 +158,51 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         bytes32 commitment;
     }
 
+    /// A fee schedule as this handler expects it (v5, D13); `effectiveAt` 0 in `_pending` means none announced.
+    struct Schedule {
+        uint64 fromLeaf;
+        uint64 announcedAt;
+        uint64 effectiveAt;
+        uint256[] mintFees;
+        uint256[] burnFees;
+        uint256[] checkpointFees;
+    }
+
+    /// A burn on LEZ (modelled) waiting for its release.
+    struct Burn {
+        address token;
+        uint8 denomIndex;
+        bytes32 nullifier;
+    }
+
     FerrataVault internal immutable vault;
     MockRiscZeroVerifier internal immutable verifier;
     address internal immutable admin;
     /// The freeze authority: changes when an admin proposal that names one is applied (v4, D13).
     address public freezer;
     address internal immutable relayer;
+    address internal immutable feeRecipient;
     HandlerCodec internal immutable _codec;
+
+    // ---- v5 (D13): the fee model and the LEZ supply model
+    mapping(address token => Schedule[]) internal _schedules; // in force, by index
+    mapping(address token => Schedule) internal _pending;
+    mapping(uint64 leafIndex => uint256) internal _escrowOf; // what each deposit escrowed (measured)
+    mapping(uint64 leafIndex => bool) internal _claimed;
+    Burn[] internal _pendingBurns;
+    /// Wrapped supply on LEZ, the escrow of deposits neither claimed nor refunded, burns not yet released.
+    mapping(address token => uint256) public ghostSupply;
+    mapping(address token => uint256) public ghostUnminted;
+    mapping(address token => uint256) public ghostUnreleased;
+    /// A deposit, release or refund that moved other amounts than the fee model says.
+    uint256 public ghostFeeMismatches;
+    /// A published schedule hash that is not the model's preimage, or a slot published (or not) against the model.
+    uint256 public ghostPublishedMismatches;
+    /// A refund of a leaf the model claimed on LEZ (a double payout).
+    uint256 public ghostRefundsOfClaimedLeaves;
+    uint256 internal _claimCount;
+    uint256 internal _burnCount;
+    uint256 internal _feeChanges;
 
     address[] internal _tokens;
     address[] internal _actors;
@@ -185,15 +277,29 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         MockRiscZeroVerifier verifier_,
         address admin_,
         address freezer_,
-        address[] memory tokens_
+        address[] memory tokens_,
+        uint64 registeredAt
     ) {
         vault = vault_;
         verifier = verifier_;
         admin = admin_;
         freezer = freezer_;
         relayer = makeAddr("handler relayer");
+        feeRecipient = vault_.feeRecipient();
         _codec = new HandlerCodec();
         _tokens = tokens_;
+        // Fee schedule 0 of each token: registration's (no mint or burn fee), in force from leaf 0.
+        for (uint256 t = 0; t < tokens_.length; t++) {
+            (,,,, uint256[] memory denoms) = vault_.tokenConfig(tokens_[t]);
+            Schedule storage s0 = _schedules[tokens_[t]].push();
+            (s0.fromLeaf, s0.announcedAt, s0.effectiveAt) = (0, registeredAt, registeredAt);
+            for (uint8 i = 0; i < denoms.length; i++) {
+                (,,, uint256 checkpointFee) = vault_.fees(tokens_[t], 0, i);
+                s0.mintFees.push(0);
+                s0.burnFees.push(0);
+                s0.checkpointFees.push(checkpointFee);
+            }
+        }
         for (uint256 i = 0; i < 3; i++) {
             _actors.push(makeAddr(string.concat("depositor ", vm.toString(i))));
             _recipients.push(makeAddr(string.concat("recipient ", vm.toString(i))));
@@ -256,9 +362,10 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         ];
     }
 
-    /// @notice Every address the vault could owe: recipients, the relayer, depositors (refunds), the handler.
+    /// @notice Every address the vault could owe: recipients, the relayer, depositors (refunds), the handler (the
+    ///         finaliser, credited checkpoint fees) and the fee recipient (burn fees).
     function payees() external view returns (address[] memory list) {
-        list = new address[](_recipients.length + _actors.length + 2);
+        list = new address[](_recipients.length + _actors.length + 3);
         uint256 n;
         for (uint256 i = 0; i < _recipients.length; i++) {
             list[n++] = _recipients[i];
@@ -268,6 +375,12 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         }
         list[n++] = relayer;
         list[n++] = address(this);
+        list[n++] = feeRecipient;
+    }
+
+    /// @notice This run's claims and burns (modelled on LEZ) and fee changes put in force.
+    function feeSummary() external view returns (uint256, uint256, uint256) {
+        return (_claimCount, _burnCount, _feeChanges);
     }
 
     // ---- deposits -------------------------------------------------------------------------------------------------
@@ -275,30 +388,59 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
     function deposit(uint256 actorSeed, uint256 tokenSeed, uint256 denomSeed, bytes32 commitment) external {
         address actor = _actors[actorSeed % _actors.length];
         address token = _tokens[tokenSeed % _tokens.length];
-        uint256[] memory denoms = vault.denominations(token);
         // forge-lint: disable-next-line(unsafe-typecast)
-        uint8 denomIndex = uint8(denomSeed % denoms.length); // < 8: a token has at most 8 denominations
-        uint256 amount = denoms[denomIndex];
+        uint8 denomIndex = uint8(denomSeed % _denoms(token).length); // < 8: a token has at most 8 denominations
         if (commitment == bytes32(0)) commitment = bytes32(uint256(1));
-        uint64 index = vault.depositCount(actor);
         uint64 leafIndex = vault.nextLeafIndex();
-
-        if (token == ETH) {
-            vm.deal(actor, amount);
-            vm.prank(actor);
-            vault.depositETH{value: amount}(denomIndex, commitment, index);
-        } else {
-            MockTokenBase(token).mint(actor, amount);
-            vm.prank(actor);
-            MockTokenBase(token).approve(address(vault), amount);
-            vm.prank(actor);
-            vault.deposit(token, denomIndex, commitment, index);
-        }
-
-        ghostDeposited[token] += amount;
+        // The model's fees: a due change is in force first (D13), then the denomination, mint and relay fee.
+        _applyDue(token);
+        uint256 total = _denoms(token)[denomIndex] + _current(token).mintFees[denomIndex] + _relayFee(token, denomIndex);
+        uint256 escrowed = _callDeposit(actor, token, denomIndex, commitment, total);
+        if (escrowed == type(uint256).max) return; // refused for a different amount: counted
+        if (escrowed != total) ghostFeeMismatches++;
+        _escrowOf[leafIndex] = escrowed;
+        ghostDeposited[token] += escrowed;
+        ghostUnminted[token] += escrowed;
         ghostDepositCount++;
-        _leaves.push(ReferenceMerkle.leafHash(leafIndex, actor, token, amount, commitment));
+        _leaves.push(ReferenceMerkle.leafHash(leafIndex, actor, token, _denoms(token)[denomIndex], commitment));
         _leafData.push(LeafData(actor, token, denomIndex, commitment));
+    }
+
+    /// @dev Funds `actor` with `total`, approves it for a token, deposits, and returns what the vault's balance
+    ///      gained. A refusal of the vault's own (freeze, retirement, caps, delisting) discards the call; any other
+    ///      (a different amount expected: a wrong ETH value or a short allowance) is a fee mismatch, and returns
+    ///      type(uint256).max.
+    function _callDeposit(address actor, address token, uint8 denomIndex, bytes32 commitment, uint256 total)
+        internal
+        returns (uint256)
+    {
+        uint64 index = vault.depositCount(actor);
+        uint256 before = _balanceOf(token, address(vault));
+        bytes memory err;
+        bool ok;
+        if (token == ETH) {
+            vm.deal(actor, total);
+            vm.prank(actor);
+            try vault.depositETH{value: total}(denomIndex, commitment, index) {
+                ok = true;
+            } catch (bytes memory e) {
+                err = e;
+            }
+        } else {
+            MockTokenBase(token).mint(actor, total);
+            vm.prank(actor);
+            MockTokenBase(token).approve(address(vault), total);
+            vm.prank(actor);
+            try vault.deposit(token, denomIndex, commitment, index) {
+                ok = true;
+            } catch (bytes memory e) {
+                err = e;
+            }
+        }
+        if (ok) return _balanceOf(token, address(vault)) - before;
+        if (_isDepositRefusal(err)) revert RefusedForAnotherReason();
+        ghostFeeMismatches++;
+        return type(uint256).max;
     }
 
     // ---- checkpoints ----------------------------------------------------------------------------------------------
@@ -429,14 +571,16 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
             if (waitForOpening && block.timestamp < opensAt) vm.warp(opensAt);
         }
         LeafData memory l = _leafData[leafIndex];
-        uint256 amount = vault.denominations(l.token)[l.denomIndex];
+        uint256 amount = _escrowOf[leafIndex]; // v5: a refund returns the leaf's whole escrow, fees included
         bool allowed = found && leafIndex >= boundary && block.timestamp >= opensAt && _retired
             && block.timestamp >= _releasesFrozenUntil && _releaseCapsAllow(l.token, amount); // v4 (D13): caps
         bool payable_ = allowed && !_leafRefunded[leafIndex]
             && ghostDeposited[l.token] - ghostReleased[l.token] - ghostRefunded[l.token] >= amount;
         bytes32[32] memory path = _codec.path(_leaves, leafIndex);
+        uint256 before = _valueOf(l.token, l.depositor);
         try vault.refund(leafIndex, l.depositor, l.token, l.denomIndex, l.commitment, path) {
             if (!allowed) ghostRefundsAgainstTheRules++;
+            if (_valueOf(l.token, l.depositor) - before != amount) ghostFeeMismatches++;
         } catch {
             if (payable_) {
                 ghostRefundsWronglyRefused++;
@@ -445,6 +589,8 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
             revert RefundRefusedAsExpected();
         }
         ghostRefunded[l.token] += amount;
+        if (_claimed[leafIndex]) ghostRefundsOfClaimedLeaves++;
+        else ghostUnminted[l.token] -= amount;
         _refundCount++;
         _refundedLeaves.push(leafIndex);
         _leafRefunded[leafIndex] = true;
@@ -458,36 +604,125 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         bytes32[32] memory path = _codec.path(_leaves, leafIndex);
         try vault.refund(leafIndex, l.depositor, l.token, l.denomIndex, l.commitment, path) {
             ghostDoubleRefunds++;
-            ghostRefunded[l.token] += vault.denominations(l.token)[l.denomIndex];
+            ghostRefunded[l.token] += _escrowOf[leafIndex];
         } catch {}
     }
 
     // ---- releases and owed claims ---------------------------------------------------------------------------------
 
-    function release(uint256 tokenSeed, uint256 denomSeed, uint256 rootSeed, uint256 recipientSeed, bool withFee)
-        external
-    {
-        vm.assume(_acceptedRoots.length != 0);
-        address token = _tokens[tokenSeed % _tokens.length];
-        uint8 denomIndex = _affordableDenomination(token, denomSeed);
+    /// @dev Releases a burn of the LEZ model against an accepted root, and checks every payout against the fee model:
+    ///      the recipient gets the denomination less the relay fee it names and the burn and checkpoint fees in force,
+    ///      the fee recipient is credited the burn fee and the root's finaliser the checkpoint fee (D13).
+    function release(uint256 burnSeed, uint256 rootSeed, uint256 recipientSeed, bool withFee) external {
+        vm.assume(_acceptedRoots.length != 0 && _pendingBurns.length != 0);
+        uint256 which = burnSeed % _pendingBurns.length;
+        Burn memory b = _pendingBurns[which];
         FerrataVault.ReleaseRequest memory r = FerrataVault.ReleaseRequest({
-            token: token,
-            denomIndex: denomIndex,
+            token: b.token,
+            denomIndex: b.denomIndex,
             recipient: _recipients[recipientSeed % _recipients.length],
             relayer: (recipientSeed >> 128) % 2 == 0 ? address(0) : _recipients[(recipientSeed >> 64) % _recipients.length],
-            relayFee: withFee ? vault.relayFees(token)[denomIndex] : 0,
+            relayFee: withFee ? _relayFee(b.token, b.denomIndex) : 0,
             burnRoot: _acceptedRoots[rootSeed % _acceptedRoots.length],
-            nullifier: keccak256(abi.encode("nullifier", _nonce++))
+            nullifier: b.nullifier
         });
-        uint256 amount = vault.denominations(token)[denomIndex];
+        uint256 amount = _denoms(b.token)[b.denomIndex];
         verifier.accept(vault.releaseImageId(), _codec.releaseDigest(vault, r, amount));
+        _applyDue(b.token);
+        uint256[3] memory expected = _expectedReleasePayouts(r, amount); // recipient, fee recipient, finaliser
+        address finalizer = _codec.finalizerOf(vault, r.burnRoot);
+        uint256[3] memory before =
+            [_valueOf(b.token, r.recipient), vault.owed(feeRecipient, b.token), vault.owed(finalizer, b.token)];
 
         vm.prank(relayer);
         vault.release(r, "");
 
-        ghostReleased[token] += amount;
+        if (
+            _valueOf(b.token, r.recipient) - before[0] != expected[0]
+                || vault.owed(feeRecipient, b.token) - before[1] != expected[1]
+                || vault.owed(finalizer, b.token) - before[2] != expected[2]
+        ) ghostFeeMismatches++;
+        ghostReleased[b.token] += amount;
+        ghostUnreleased[b.token] -= amount;
         ghostReleaseCount++;
         _usedNullifiers.push(r.nullifier);
+        _pendingBurns[which] = _pendingBurns[_pendingBurns.length - 1];
+        _pendingBurns.pop();
+    }
+
+    /// @dev LEZ model: claims a deposit below the settled import count (so never refundable), minting what LEZ mints:
+    ///      the denomination, the mint fee of the schedule of its leaf index and the relay fee. Checks first that the
+    ///      vault publishes that schedule's hash at its slot and that the next slot is published only if the model has
+    ///      that schedule in force (what LEZ's Register and ImportFees attest).
+    function claim(uint256 leafSeed) external {
+        uint64 settled = _codec.settledImported(vault);
+        vm.assume(settled != 0);
+        uint64 leafIndex = uint64(leafSeed % settled);
+        vm.assume(!_claimed[leafIndex] && !_leafRefunded[leafIndex]);
+        LeafData memory l = _leafData[leafIndex];
+        Schedule[] storage list = _schedules[l.token];
+        uint256 index = list.length - 1;
+        while (list[index].fromLeaf > leafIndex) index--;
+        Schedule storage s = list[index];
+        bytes32 published = vm.load(address(vault), _codec.feeSlot(l.token, index));
+        bytes32 next = vm.load(address(vault), _codec.feeSlot(l.token, index + 1));
+        if (published != _scheduleHash(l.token, index, s) || (next != bytes32(0)) != (index + 1 < list.length)) {
+            ghostPublishedMismatches++;
+        }
+        uint256 minted = _denoms(l.token)[l.denomIndex] + s.mintFees[l.denomIndex] + _relayFee(l.token, l.denomIndex);
+        ghostSupply[l.token] += minted;
+        ghostUnminted[l.token] -= _escrowOf[leafIndex];
+        _claimed[leafIndex] = true;
+        _claimCount++;
+    }
+
+    /// @dev LEZ model: a holder burns one denomination of the wrapped supply.
+    function burn(uint256 tokenSeed, uint256 denomSeed) external {
+        address token = _tokens[tokenSeed % _tokens.length];
+        uint256[] memory denoms = _denoms(token);
+        // forge-lint: disable-next-line(unsafe-typecast)
+        uint8 denomIndex = uint8(denomSeed % denoms.length);
+        vm.assume(ghostSupply[token] >= denoms[denomIndex]);
+        ghostSupply[token] -= denoms[denomIndex];
+        ghostUnreleased[token] += denoms[denomIndex];
+        _pendingBurns.push(Burn(token, denomIndex, keccak256(abi.encode("burn", _nonce++))));
+        _burnCount++;
+    }
+
+    /// @dev The admin announces a fee schedule: random fees up to the 1% ceiling (mint fees in whole LEZ units), or,
+    ///      one time in five, the fees in force, which withdraws a pending announcement.
+    function announceFees(uint256 tokenSeed, uint256 seed) public {
+        address token = _tokens[tokenSeed % _tokens.length];
+        uint256[] memory denoms = _denoms(token);
+        (,, uint256 lezUnit,,) = vault.tokenConfig(token);
+        _applyDue(token);
+        Schedule storage current = _current(token);
+        uint256[][3] memory f;
+        bool withdraw = seed % 5 == 0;
+        for (uint256 j = 0; j < 3; j++) {
+            f[j] = new uint256[](denoms.length);
+        }
+        for (uint256 i = 0; i < denoms.length; i++) {
+            uint256 ceiling = denoms[i] / 100;
+            f[0][i] = withdraw ? current.mintFees[i] : _bound(uint256(keccak256(abi.encode(seed, i, 0))), 0, ceiling / lezUnit) * lezUnit;
+            f[1][i] = withdraw ? current.burnFees[i] : _bound(uint256(keccak256(abi.encode(seed, i, 1))), 0, ceiling);
+            f[2][i] = withdraw ? current.checkpointFees[i] : _bound(uint256(keccak256(abi.encode(seed, i, 2))), 0, ceiling);
+        }
+        vm.prank(admin);
+        vault.announceFees(token, f[0], f[1], f[2]);
+        Schedule storage p = _pending[token];
+        (p.fromLeaf, p.announcedAt, p.effectiveAt) = (0, uint64(block.timestamp), uint64(block.timestamp + 7 days));
+        p.mintFees = f[0];
+        p.burnFees = f[1];
+        p.checkpointFees = f[2];
+        if (withdraw) p.effectiveAt = 0;
+    }
+
+    /// @dev Anyone puts a due fee change in force.
+    function applyFees(uint256 tokenSeed) external {
+        address token = _tokens[tokenSeed % _tokens.length];
+        _applyDue(token);
+        vault.applyFees(token);
     }
 
     /// @dev Tries to spend an already used nullifier with a fresh, otherwise valid proof (new recipient).
@@ -504,7 +739,7 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
             burnRoot: _acceptedRoots[recipientSeed % _acceptedRoots.length],
             nullifier: _usedNullifiers[which % _usedNullifiers.length]
         });
-        uint256 amount = vault.denominations(token)[denomIndex];
+        uint256 amount = _denoms(token)[denomIndex];
         verifier.accept(vault.releaseImageId(), _codec.releaseDigest(vault, r, amount));
 
         vm.prank(relayer);
@@ -574,7 +809,7 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         external
     {
         address token = _tokens[tokenSeed % _tokens.length];
-        uint256 largest = vault.denominations(token)[2];
+        uint256 largest = _denoms(token)[2];
         uint256 capacity;
         uint256 choice = capacitySeed % 8;
         if (choice == 0) capacity = UNLIMITED;
@@ -758,7 +993,7 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
 
     /// @dev Prefers a denomination the escrow can cover, so that releases often get past the escrow check.
     function _affordableDenomination(address token, uint256 seed) internal view returns (uint8) {
-        uint256[] memory denoms = vault.denominations(token);
+        uint256[] memory denoms = _denoms(token);
         uint256 escrow = vault.escrowed(token);
         // forge-lint: disable-next-line(unsafe-typecast)
         uint8 start = uint8(seed % denoms.length); // < 8: a token has at most 8 denominations
@@ -768,4 +1003,70 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         }
         return start;
     }
+
+    // ---- v5 helpers -------------------------------------------------------------------------------------------------
+
+    function _denoms(address token) internal view returns (uint256[] memory denoms) {
+        (,,,, denoms) = vault.tokenConfig(token);
+    }
+
+    function _relayFee(address token, uint8 denomIndex) internal view returns (uint256 relayFee) {
+        (, relayFee,,) = vault.fees(token, 0, denomIndex);
+    }
+
+    function _current(address token) internal view returns (Schedule storage) {
+        return _schedules[token][_schedules[token].length - 1];
+    }
+
+    /// @dev The model's side of a due fee change: in force from the current leaf count, at this block's time.
+    function _applyDue(address token) internal {
+        Schedule storage p = _pending[token];
+        if (p.effectiveAt == 0 || block.timestamp < p.effectiveAt) return;
+        Schedule storage s = _schedules[token].push();
+        (s.fromLeaf, s.announcedAt, s.effectiveAt) = (vault.nextLeafIndex(), p.announcedAt, uint64(block.timestamp));
+        s.mintFees = p.mintFees;
+        s.burnFees = p.burnFees;
+        s.checkpointFees = p.checkpointFees;
+        p.effectiveAt = 0;
+        _feeChanges++;
+    }
+
+    function _scheduleHash(address token, uint256 index, Schedule storage s) internal view returns (bytes32) {
+        return _codec.scheduleHash(
+            token, index, [s.fromLeaf, s.announcedAt, s.effectiveAt], s.mintFees, s.burnFees, s.checkpointFees
+        );
+    }
+
+    /// @dev What a release pays the recipient (less the relay fee unless the recipient also relays) and credits the
+    ///      fee recipient and the finaliser, under the schedule in force.
+    function _expectedReleasePayouts(FerrataVault.ReleaseRequest memory r, uint256 amount)
+        internal
+        view
+        returns (uint256[3] memory e)
+    {
+        Schedule storage s = _current(r.token);
+        uint256 burnFee = s.burnFees[r.denomIndex];
+        uint256 checkpointFee = s.checkpointFees[r.denomIndex];
+        address feePayee = r.relayer == address(0) ? relayer : r.relayer;
+        e[0] = amount - burnFee - checkpointFee - (feePayee == r.recipient ? 0 : r.relayFee);
+        e[1] = burnFee;
+        e[2] = checkpointFee;
+    }
+
+    /// @dev Balance plus what the vault owes: a payment either arrives or is credited.
+    function _valueOf(address token, address who) internal view returns (uint256) {
+        return _balanceOf(token, who) + vault.owed(who, token);
+    }
+
+    function _balanceOf(address token, address who) internal view returns (uint256) {
+        return token == ETH ? who.balance : MockTokenBase(token).balanceOf(who);
+    }
+
+    function _isDepositRefusal(bytes memory err) internal pure returns (bool) {
+        bytes4 e = bytes4(err);
+        return e == FerrataVault.VaultRetired.selector || e == FerrataVault.DepositsAreFrozen.selector
+            || e == FerrataVault.TokenDepositsAreFrozen.selector || e == FerrataVault.DepositsDisabled.selector
+            || e == FerrataVault.TokenDepositCapExceeded.selector || e == FerrataVault.GlobalDepositCapExceeded.selector;
+    }
+
 }

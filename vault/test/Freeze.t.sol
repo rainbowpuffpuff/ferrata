@@ -128,19 +128,19 @@ contract FreezeTest is VaultTestBase {
         vault.setCheckpointsFrozen(true);
         vm.stopPrank();
 
-        assertTrue(vault.depositsFrozen());
-        assertTrue(vault.releasesFrozen());
-        assertTrue(vault.tokenDepositsFrozen(address(usdc)));
-        assertTrue(vault.tokenReleasesFrozen(address(usdc)));
-        assertTrue(vault.checkpointsFrozen());
-        assertFalse(vault.tokenDepositsFrozen(address(dai)));
+        assertTrue(_isFrozen(vault.depositsFrozenUntil()));
+        assertTrue(_isFrozen(vault.releasesFrozenUntil()));
+        assertTrue(_isFrozen(vault.tokenDepositsFrozenUntil(address(usdc))));
+        assertTrue(_isFrozen(vault.tokenReleasesFrozenUntil(address(usdc))));
+        assertTrue(_isFrozen(vault.checkpointsFrozenUntil()));
+        assertFalse(_isFrozen(vault.tokenDepositsFrozenUntil(address(dai))));
         assertEq(vault.depositsFrozenUntil(), until);
 
         vm.expectEmit(true, true, true, true, address(vault));
         emit FerrataVault.DepositsFrozenSet(false, 0);
         vm.prank(freezer);
         vault.setDepositsFrozen(false);
-        assertFalse(vault.depositsFrozen());
+        assertFalse(_isFrozen(vault.depositsFrozenUntil()));
     }
 
     // ---- expiry (spec §7): a freeze lasts maxFreeze unless renewed ------------------------------------------------
@@ -169,11 +169,11 @@ contract FreezeTest is VaultTestBase {
         assertFalse(ok);
 
         vm.warp(until); // lapsed, with nobody doing anything
-        assertFalse(vault.depositsFrozen());
-        assertFalse(vault.releasesFrozen());
-        assertFalse(vault.checkpointsFrozen());
-        assertFalse(vault.tokenDepositsFrozen(address(dai)));
-        assertFalse(vault.tokenReleasesFrozen(address(dai)));
+        assertFalse(_isFrozen(vault.depositsFrozenUntil()));
+        assertFalse(_isFrozen(vault.releasesFrozenUntil()));
+        assertFalse(_isFrozen(vault.checkpointsFrozenUntil()));
+        assertFalse(_isFrozen(vault.tokenDepositsFrozenUntil(address(dai))));
+        assertFalse(_isFrozen(vault.tokenReleasesFrozenUntil(address(dai))));
         (ok,) = _tryDeposit(address(dai));
         assertTrue(ok);
         (ok,) = _tryRelease(address(dai));

@@ -65,7 +65,7 @@ contract GasScenarios is VaultTestBase {
 
     function _recordedDeposit(address token, uint8 denomIndex, bytes32 commitment) internal {
         uint64 leafIndex = _deposit(warmup, token, denomIndex, commitment);
-        leaves.push(ReferenceMerkle.leafHash(leafIndex, warmup, token, _amount(token, denomIndex), commitment));
+        leaves.push(_leafHash(leafIndex, warmup, token, _amount(token, denomIndex), commitment));
     }
 
     function _path(uint64 leafIndex) internal view returns (bytes32[32] memory path) {

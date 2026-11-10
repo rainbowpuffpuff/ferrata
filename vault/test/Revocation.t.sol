@@ -13,7 +13,7 @@ contract RevocationTest is VaultTestBase {
     bytes32 internal constant N2 = keccak256("nullifier 2");
 
     function _revoked(uint256 index) internal view returns (bool revoked) {
-        (,,,,,, revoked,,,) = vault.checkpoints(index);
+        (,,,,,, revoked,,,,) = vault.checkpoints(index);
     }
 
     function _accepted(bytes32 root) internal view returns (bool accepted) {
@@ -53,7 +53,7 @@ contract RevocationTest is VaultTestBase {
 
     function test_revokeFrom_onlyWithinTheWindow() public {
         uint256 index = _acceptRoot(ROOT_A);
-        (,,,,,,,,, uint256 finalizedAt) = vault.checkpoints(index);
+        (,,,,,,,,, uint64 finalizedAt,) = vault.checkpoints(index);
 
         uint256 snapshot = vm.snapshotState();
         vm.warp(finalizedAt + REVOKE_WINDOW); // the last second of the window
@@ -203,7 +203,7 @@ contract RevocationTest is VaultTestBase {
         _submit(c);
         uint256 index = _finalizeAfterDelta(c);
         assertEq(vault.finalImportedLeafCount(), 3);
-        (,,,,,,, uint64 parentImported, bool parentSunset,) = vault.checkpoints(index);
+        (,,,,,,, uint64 parentImported, bool parentSunset,,) = vault.checkpoints(index);
         assertEq(parentImported, 0);
         assertFalse(parentSunset);
     }
@@ -216,7 +216,7 @@ contract RevocationTest is VaultTestBase {
         _submit(c);
         _finalizeAfterDelta(c); // checkpoint 0: sunset at count 4
         _acceptRoot(ROOT_B); // checkpoint 1: a sunset checkpoint with the same count
-        (,,,,,,, uint64 parentImported, bool parentSunset,) = vault.checkpoints(1);
+        (,,,,,,, uint64 parentImported, bool parentSunset,,) = vault.checkpoints(1);
         assertEq(parentImported, 4);
         assertTrue(parentSunset);
         vm.prank(freezer);

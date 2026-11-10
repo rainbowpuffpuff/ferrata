@@ -176,7 +176,7 @@ contract PullPaymentTest is VaultTestBase {
         bytes32[] memory leaves = new bytes32[](leafIndex + 1);
         for (uint64 i = 0; i < leafIndex; i++) {
             bool isEth = i % 2 == 0;
-            leaves[i] = ReferenceMerkle.leafHash(
+            leaves[i] = _leafHash(
                 i,
                 alice,
                 isEth ? ETH : address(busd),
@@ -185,7 +185,7 @@ contract PullPaymentTest is VaultTestBase {
             );
         }
         leaves[leafIndex] =
-            ReferenceMerkle.leafHash(leafIndex, address(depositorContract), ETH, 1 ether, keccak256("contract deposit"));
+            _leafHash(leafIndex, address(depositorContract), ETH, 1 ether, keccak256("contract deposit"));
         bytes32[] memory siblings = ReferenceMerkle.path(leaves, leafIndex);
         bytes32[32] memory path;
         for (uint256 h = 0; h < 32; h++) {
