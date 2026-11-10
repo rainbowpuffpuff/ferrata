@@ -53,6 +53,12 @@ at the same execution gas, and a real proof made against the live instance was v
 sequencer and applied. The attestation (§5) and the bridge program (`BRIDGE-RESULTS.md`) have not
 run on a sequencer.
 
+**On LEZ v0.4.0-rc2 (§9).** Built against rc2 with no change to the guests, the programs give the
+same figures in every row of the harness's tables (`results/`: cycles, gas, bytes, fees, results;
+the harness on rc2 against the same source on rc1, on one machine); only the image ids move. On rc2's own sequencer, deployment through the loader now
+pays execution gas, and blocks were final on Bedrock after 14–25 s instead of 5–6 s; no real proof
+was made on rc2.
+
 | operation (mainnet, 512-member committees) | transactions | largest transaction, execution gas (cycles) | total execution gas | total storage gas (bytes) |
 |---|---:|---:|---:|---:|
 | `Init`: bootstrap checks, then the adoption of its committee in two parts | 3 | 3,482,584 | 7,090,860 | 51,976 |
@@ -1210,3 +1216,51 @@ change what a private transaction is charged (a fixed `PRIVATE_VERIFY_GAS` plus 
 and its size). No real proof was made in the harness on rc2: the circuit changed (its image id
 with it), so the GPU-proven transactions of §3, §5 and the bridge are rc1 evidence only
 (`../docs/design/lez-rc2-changes.md`).
+
+### On a running rc2 sequencer (`live/results/v0.4.0-rc2/`)
+
+The session of §8 on LEZ's own `v0.4.0-rc2` sequencer and the Bedrock node it pins (the same
+revision, now run with rc2's 4 s slots and confirmation depth 3), with the program and `scripted`
+as built against rc2 above (images `262cb954…`, `15591e6c…`), deployed through rc2's loader:
+[`live/README.md`](live/README.md), section "LEZ v0.4.0-rc2"; tables
+`live/results/v0.4.0-rc2/tables.md`. One run, 10 November 2026, on the build box.
+
+| | on the rc2 sequencer | the rc1 run (§8) |
+|---|---|---|
+| transactions | 98 sent: 74 applied, 19 refused by the program, 2 reverted otherwise, 2 dropped, 1 unfinished (the real proof); 302 blocks, all final on Bedrock | 96: 73, 19, 2, 2; 191 blocks |
+| the 65 with a row in the harness tables of the same image (`results/v0.4.0-rc2/stage1-*.md`) | the same outcome in 65, the same execution gas in 64 (the validity-window case, as on rc1); transaction bytes as on rc1 (equal in 44, ±65 in 20, 607 fewer in that case) | the same counts, on image `cec0bc68…` |
+| deployment, 268,468-byte `scripted` (the same size on both) | 4 transactions, **execution gas 373,910**, storage gas 238,456, base fees 4,898,928 | execution gas 0, storage gas 238,456, base fees 1,907,648 |
+| deployment, the program (592,728 bytes, 6 segments; rc1: 508,284, 5) | 7 transactions, execution gas 1,022,658, storage gas 564,552, base fees 12,697,680 | 6, 0, 479,496, 3,835,968 |
+| finality on Bedrock, from publication | 14–25 s, mean 15.1 s (301 blocks) | 5–6 s (190 blocks) |
+| a public transaction, sent to settled | 19.0–30.9 s, mean 20.0 s (77) | 8.5–19.7 s, mean 10.2 s (77) |
+| base fee | 8; 9 after the one block over the 5M target (block 173) | the same (block 92) |
+| head rewinds, inscriptions given up | none (blocks made 1 s after an epoch second; 13 epochs of 240 s) | none |
+| the real proof against the live instance | stopped at its 1,200 s cap (32 prover threads; the box gave the whole command 3,578 CPU-seconds in 66 minutes, the rc1 run 7.20 core-hours in 34) | 895.6 s, verified and applied |
+| re-check (`verify-run.sh`) | every block hash holds, the chain replays from the pre-genesis state, the 95 included rows equal LEZ's settlement | the same, 191 blocks |
+
+So on rc2, as on rc1, the sequencer charges each of these transactions what the harness charges it;
+what changed is around them: deploying through the loader now pays execution gas (one cycle per
+byte of loader state read: each segment once when the one before it is written, and the chain again
+for the header), and a block of rc2's test chain is final on Bedrock after about 15 s instead of 6.
+**No real proof ran on rc2**: the one attempt was stopped at the 20-minute cap of this work, on a
+box that gave it far less CPU than the rc1 run had; a proof on rc2 is to be made on a GPU, against
+a live instance (§8: a proof is bound to the deployment it is made for).
+
+### Reproduce on rc2
+
+```sh
+scripts/fetch-upstream.sh                     # also upstream/lez-v0.4.0-rc2 (commit e3edf47)
+lez/scripts/lez-select.sh v0.4.0-rc2          # manifests, feature lez-rc2, lockfiles/v0.4.0-rc2.patch
+cd lez
+export RISC0_HOME=$PWD/../../risc0-home-lez TMPDIR=$PWD/../../tmp
+export CARGO_TARGET_DIR=$PWD/target/lez-v0.4.0-rc2 RISC0_BUILD_LOCKED=1
+./results_env.sh                              # results/v0.4.0-rc2/environment.md
+RISC0_DEV_MODE=1 cargo test -p harness --locked -- --test-threads 8 --nocapture \
+  > results/v0.4.0-rc2/harness-tests-dev-mode.log
+cargo run -p harness --locked --bin tables    # results/v0.4.0-rc2/*.md
+python3 -I scripts/compare-tables.py results results/v0.4.0-rc2 v0.4.0-rc1 v0.4.0-rc2
+scripts/lez-select.sh v0.4.0-rc1              # back to the committed state
+```
+
+The live session: `live/README.md`, "LEZ v0.4.0-rc2". The box scripts that ran all of it are in
+`spike/tmp/rc2/` (`box1.sh`, `box3.sh`) beside the repository, not in it.
