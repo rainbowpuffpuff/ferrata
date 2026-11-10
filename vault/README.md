@@ -1,8 +1,12 @@
-# FerrataVault v3: the Ethereum half of a private lock-and-mint bridge (spike)
+# FerrataVault v4: the Ethereum half of a private lock-and-mint bridge (spike)
 
 `src/FerrataVault.sol` is the Ethereum vault of a privacy-preserving lock-and-mint bridge to LEZ (Logos RFP-022). It
-implements the bridge specification v2 as amended by the v3 changes: D3 to D5 and D9 of the delta, including
-`cancelCandidate`. D7 (mode B) is specified, not built; D8 lists limits that stay as they are.
+implements the bridge specification v2 as amended by the v3 changes: D3 to D5 and D9 of the delta, and the vault
+items of D11 and D13: both finality rules behind an immutable `mode` (rule (B) of D7 and D13 beside rule (A)),
+watchers, the admin's 14-day role change, keyless retirement, the floor under the release buckets, refunds drawing
+on the release buckets and stopping with the verifier, and D11's boundary second and journal comparison. D13's
+fees are not built. D8 lists limits that stay as they are. `src/FerrataRegistry.sol` is its linked library
+(registration, cap settings, role proposals, the checks of a revocation), which keeps the vault under EIP-170.
 
 **Specification.** "SPEC-v2 §x" is [`docs/design/spec/bridge-spec-v2.md`](../docs/design/spec/bridge-spec-v2.md)
 and "SPEC-v3-delta Dn" (or "v3 Dn") is
@@ -16,15 +20,18 @@ that history:
 |---|---|---|
 | v1 (tag `v1` there) | `c417dc2` | the first design |
 | v2 (branch `v2` there) | `d64845b` | SPEC-v2 |
-| v3 (branch `v3` there; this one) | `2f40b2f` | SPEC-v2 + SPEC-v3-delta |
+| v3 (branch `v3` there) | `2f40b2f` | SPEC-v2 + SPEC-v3-delta D3–D5, D9 |
+| v4 (branch `vault-v4` of this repository; this one) | `3b0f059` and later | + rule (B), the vault items of D11 and D13 |
 
 **Inbound.** Users deposit fixed denominations of ETH or a registered ERC-20, with a hiding commitment to their LEZ
 destination. Each deposit becomes a leaf of a SHA-256 Merkle tree, and its root sits in storage slot 0, where the
 LEZ side reads it with an Ethereum storage proof.
 
-**Outbound.** The vault follows LEZ through proven checkpoints. A checkpoint is first a candidate, then must wait
-`W = Δ + (t − 1) × turnSeconds`, and is then finalised with a second proof that echoes an Ethereum beacon. Releases
-pay out against a RISC Zero proof of a burn under a finalised, unrevoked burn root.
+**Outbound.** The vault follows LEZ through proven checkpoints, under one of two rules fixed at deployment
+(`mode`). Rule (A): a candidate waits `W = Δ + (t − 1) × turnSeconds` and is finalised with a second proof that
+echoes an Ethereum beacon. Rule (B): one proof that `t` sequencers attested the tip as final; the candidate is final
+once `W = Δ` (1 h by default) has passed, unless a watcher cancels it. Releases pay out against a RISC Zero proof of
+a burn under a finalised, unrevoked burn root.
 
 Status: prototype evidence for a grant proposal. **Not audited, not deployed anywhere.** In the vault's own 286
 tests proofs are mocked: the base verifier accepts exactly the (image id, journal digest) pairs a test registers.
@@ -81,47 +88,66 @@ is `address(0)`.
   for an index of 2^32 or more is refused. Indices `i` and `i + 2^32` would otherwise share a path.
 - After `retire()`, deposits revert forever.
 
-### LEZ checkpoints: the finality rule in plain words
+### LEZ checkpoints: the finality rules in plain words
 
 The vault keeps `finalState`, the latest finalised LEZ checkpoint state, which starts at the immutable
-`genesisState`. Moving it forward takes three steps.
+`genesisState`. Under rule (A) moving it forward takes three steps.
 
 1. **Candidate.** Anyone submits a checkpoint proof whose `parentState` is `finalState` and whose `echoNonce` is 0.
    Its journal states the deployment's `nMin`/`tMin`, the tip `T` the checkpoint was cut at (`tipId`, `tipHash`),
    and the size `n` and threshold `t` of the key set in `newState`. The vault itself requires `n ≥ nMin` and
-   `t ≥ tMin`. The program behind the proof checks one inscription of `T` by its producer `D` and shows that at
-   least `t` keys other than `D` built on `T`. The vault records the candidate with its tip and `t`, the time, and
-   the current Δ (`deltaAtSubmit`). It also records a beacon: the block time plus
-   `keccak256(prevrandao, block.number, vault)`.
+   `t ≥ tMin`, and refuses a `newState` that is already pending (D13). The program behind the proof checks one
+   inscription of `T` by its producer `D` and shows that at least `t` keys other than `D` built on `T`. The vault
+   keeps the SHA-256 digest of the journal the proof was verified against, the tip, `t`, the time, the current Δ
+   (`deltaAtSubmit`) and the revocation epoch, in three storage slots. Under rule (A) it also records a beacon: the
+   block time plus `keccak256(prevrandao, block.number, vault)`.
 2. **Wait `W = deltaAtSubmit + (t − 1) × turnSeconds`.** `turnSeconds` is the channel's posting timeframe, an
    immutable. The turn term covers `t − 1` corrupted keys each holding a full turn with empty inscriptions. In
-   this window the candidate's tip is public, and a monitor compares it with an honest LEZ node's final tier.
-3. **Finalisation.** Anyone takes a beacon recorded at least `W` after the candidate. Its nonce could not be known
-   before then. Someone posts that nonce on LEZ, and a second proof shows `t` other sequencers building on blocks
-   that contain it. The vault checks that the second proof echoes exactly that beacon's nonce, carries the
-   candidate's fields, and names a key set that meets the floors. It also checks monotonicity: `importedLeafCount`
-   never decreases along finalised checkpoints, and once one is a sunset checkpoint, every later one is a sunset
-   checkpoint with the same count. The candidate then becomes final: its burn root is accepted, and the first
-   sunset checkpoint sets the refund boundary.
+   this window the candidate's tip is public, and a watcher compares it with an honest LEZ node's final tier.
+3. **Finalisation** (`finalize`). Anyone takes a beacon recorded at least `W` after the candidate. Its nonce could
+   not be known before then. Someone posts that nonce on LEZ, and a second proof shows `t` other sequencers building
+   on blocks that contain it. The vault checks that the second proof echoes exactly that beacon's nonce and that its
+   journal is the candidate's word for word apart from `echoNonce` (the digest; so the tip, `n` and `t` are compared
+   too, D11). It also checks monotonicity: `importedLeafCount` never decreases along finalised checkpoints, and once
+   one is a sunset checkpoint, every later one is a sunset checkpoint with the same count; and `importedLeafCount ≤
+   nextLeafIndex` (D11). The candidate then becomes final: its burn root is accepted, and the first sunset checkpoint
+   sets the refund boundary.
 
-Candidates that are never finalised are harmless, because everything starts from `finalState`. A revocation
-invalidates every pending candidate; a finalisation does not. The assumptions are stated below.
+**Rule (B)** (`mode = B`; the checkpoint image is `checkpoint_b`'s). Its journal is word for word rule (A)'s
+candidate journal, but the program has checked that at least `t` keys of the key set signed, through certified
+attestation keys, final tips that are `T` or descend from `T`. One proof suffices:
+1. `submitCandidate` as above, without a beacon.
+2. Wait `W = deltaAtSubmit`: `turnSeconds` is 0 under rule (B), and Δ (default 1 h) is a reaction window against
+   `t` stolen keys. A watcher checks on submission that the tip is already in its own node's final tier, and
+   cancels the candidate otherwise.
+3. `finalizeAttested(journal fields)`, anyone: the fields must be the journal the candidate's proof was verified
+   against, word for word (its digest), the wait over, monotonicity and the leaf bound as above, no checkpoint
+   freeze and no verifier stop. No second proof and no beacon.
 
-### Reject-only powers of the freeze authority
+`recordBeacon` and `finalize` revert `WrongMode` under rule (B), `finalizeAttested` under rule (A). Candidates that
+are never finalised are harmless, because everything starts from `finalState`. A revocation invalidates every
+pending candidate; a finalisation does not. The assumptions are stated below.
 
-- **`cancelCandidate(newState)`.** Deletes a pending (not yet finalised) candidate and emits
-  `CandidateCancelled(newState, tipId, tipHash)`. Unknown and already finalised states are refused. Finalised
-  checkpoints are untouched, and the same state can be submitted again as a fresh candidate, which waits a full
-  `W` from its new submission time: a cancellation costs an honest prover one wait. The monitor calls it when a
-  candidate's tip is not in an honest node's final tier by `submittedAt + Δ_g`.
-- **The checkpoint freeze** (`setCheckpointsFrozen`) stops both `submitCandidate` and `finalize`. It is the general
-  pause and lapses like every freeze.
-- **`revokeFrom(index)`**, within `revokeWindow` of that checkpoint's finalisation, and only for a checkpoint not
-  already revoked. It marks checkpoint `index` and every later one revoked, so their burn roots stop counting. It
-  restores `finalState`, and that state's imported leaf count and sunset flag, to those `index` was built on. If a
-  revoked checkpoint set the refund boundary, the boundary is cleared. Used nullifiers stay used. It accepts
-  nothing: the restored state needs a fresh candidate and a full wait.
-- **`retire()`**, one-way. It stops deposits forever. It cannot touch escrow, checkpoints or releases.
+### Reject-only powers: watchers and the freeze authority
+
+- **`cancelCandidate(newState)`**, by any watcher or the freeze authority. Deletes a pending (not yet finalised)
+  candidate and emits `CandidateCancelled(newState, tipId, tipHash)`. Unknown and already finalised states are
+  refused. Finalised checkpoints are untouched, and the same state can be submitted again as a fresh candidate,
+  which waits a full `W` from its new submission time: a cancellation costs an honest prover one wait, and the
+  watcher must cancel again (D11: not sticky). Rule (A): when the tip is not in an honest node's final tier by
+  `submittedAt + Δ_g`, or the key set is not the live one; rule (B): when the tip is not already final.
+- **`pauseCheckpoints()`**, by a watcher: stops `submitCandidate` and finalisation until 12 h from now. It never
+  shortens a longer freeze, and a watcher cannot lift it; the freeze authority can.
+- **The checkpoint freeze** (`setCheckpointsFrozen`, freeze authority) stops both submission and finalisation. It is
+  the general pause and lapses like every freeze.
+- **`revokeFrom(index)`** (freeze authority), within `revokeWindow` of that checkpoint's finalisation, and only for a
+  checkpoint not already revoked. It marks checkpoint `index` and every later one revoked, so their burn roots stop
+  counting. It restores `finalState`, and that state's imported leaf count and sunset flag, to those `index` was
+  built on. If a revoked checkpoint set the refund boundary, the boundary is cleared. Used nullifiers stay used. It
+  accepts nothing: the restored state needs a fresh candidate and a full wait.
+- **`retire()`**, one-way: the freeze authority at any time; anyone once no checkpoint has been finalised for 30 days
+  (counted from deployment before the first), so that refunds never depend on the freeze key (D13). It stops
+  deposits forever. It cannot touch escrow, checkpoints or releases.
 
 ### Refunds
 
@@ -129,9 +155,10 @@ invalidates every pending candidate; a finalisation does not. The assumptions ar
 - a retired vault, so the deposit root no longer moves and a refund's path cannot go stale;
 - a refund boundary: the first non-revoked sunset checkpoint, whose `importedLeafCount` is the boundary. A later
   sunset checkpoint can neither lower it nor move it;
-- `block.timestamp ≥ sunsetFinalizedAt + revokeWindow`, so that a forged sunset checkpoint can be revoked before any
-  refund;
-- no global release freeze in force;
+- `block.timestamp > sunsetFinalizedAt + revokeWindow`: the second after the last one in which the sunset checkpoint
+  can be revoked (D5, D11), so that a forged sunset checkpoint can be revoked before any refund;
+- no global release freeze in force, and no verifier stop (D13: after a stop nothing more is refunded);
+- room in the token's and the global release bucket, on which a refund draws (D13);
 - a leaf at or above the boundary, below `nextLeafIndex`, not refunded before, with a 32-step path to the current
   `depositRoot`.
 
@@ -145,7 +172,7 @@ requires:
 - the token's release delay elapsed since that root's finalisation. The delay is the one in force when the root
   was finalised: a change applies only to roots finalised afterwards. Every delay setting, at registration
   included, satisfies `minReleaseDelay ≤ delay ≤ revokeWindow`, so a checkpoint stays revocable for as long as its
-  releases are delayed;
+  releases are delayed; a delay equal to `revokeWindow` opens only the second after the last revocable one (D11);
 - an unused nullifier;
 - `relayFee` equal to 0 or exactly the registered fee for that denomination;
 - enough escrow and cap;
@@ -161,15 +188,18 @@ with a huge revert.
 
 ### Verifier and stop
 
-`verifier` is immutable. A deployment points it at a `RiscZeroVerifierEmergencyStop` wrapping the Groth16 verifier,
-with the freeze authority as guardian; anyone with a proof of exploit can also stop it. A stop is one-way. Every
-later call that needs a proof reverts: `submitCandidate`, `finalize` and `release`. Cancellation, refunds,
-`claimOwed`, revocation and role handovers still work. Nothing can change what the vault accepts.
+`verifier` is immutable. A deployment points it at a `RiscZeroVerifierEmergencyStop` wrapping the Groth16 verifier
+and renounces the stop's owner (D13), so that only RISC Zero's own proof of exploit (`estop(receipt)`, a verifying
+receipt for the zero claim digest) can trip it. The constructor refuses a verifier that does not answer `paused()`
+or is already stopped. A stop is one-way. After it, every call that needs a proof reverts (`submitCandidate`,
+`finalize`, `release`), and so do rule (B) finalisations and refunds (D13). Cancellation, `claimOwed`, revocation
+and role changes still work. Nothing can change what the vault accepts.
 
 ### Freezes
 
-The freeze authority can freeze deposits, releases (globally or per token) and checkpoints. The global release
-freeze also stops refunds; the checkpoint freeze stops submission and finalisation. A freeze lasts `maxFreeze`
+The freeze authority can freeze deposits, releases (globally or per token) and checkpoints; a watcher can pause
+checkpoints for at most 12 h. The global release freeze also stops refunds; the checkpoint freeze stops submission
+and finalisation. A freeze lasts `maxFreeze`
 (immutable) unless renewed; freezing again restarts it, and unfreezing ends it at once. A lost freeze key therefore
 cannot lock the vault for good.
 
@@ -227,13 +257,16 @@ Both journals are `abi.encode` of static values, one 32-byte word each, and the 
 
 | | Can | Cannot |
 |---|---|---|
-| **admin** | Register a token once: denominations, relay fees (≤ 1% each), `lezUnit` and `unitWeight` are then fixed. Enable or disable deposits per token. Set caps. Set release delays, for roots finalised later, always with `minReleaseDelay ≤ delay ≤ revokeWindow` (and ≤ 30 days). Raise Δ (never below `deltaFloor`, at most 30 days). Hand the role on in two steps. | Freeze or unfreeze, cancel, revoke, retire, stop the verifier. Change a registered token's denominations, fees, `lezUnit` or weight. Lower Δ. Touch escrow. Change the verifier, image ids, `lezConfigId`, `genesisState`, `nMin`, `tMin`, `deltaFloor`, `revokeWindow`, `maxFreeze`, `turnSeconds` or `minReleaseDelay` (all immutable). |
-| **freeze authority** | Freeze and unfreeze deposits, releases and checkpoints (each freeze lapses after `maxFreeze` unless renewed). `cancelCandidate` a pending candidate. `revokeFrom` within the window. `retire()`. As the stop's guardian, stop the verifier. Hand the role on in two steps. | Touch the registry, caps, delays, Δ or escrow. Accept anything. Cancel a finalised checkpoint (only revoke it, within the window). Undo a stop or a retirement. |
-| **anyone** | Deposit. `recordBeacon`. Submit and finalise checkpoints with proofs, and submit a cancelled state again. Release with a proof (as relayer). Refund once the rules above allow it. Stop the verifier with a proof of exploit. | |
+| **admin** | Register a token once: denominations, relay fees (≤ 1% each), `lezUnit` and `unitWeight` are then fixed. Enable or disable deposits per token. Set caps, a release bucket never below the immutable floor. Set release delays, for roots finalised later, always with `minReleaseDelay ≤ delay ≤ revokeWindow` (and ≤ 30 days). Raise Δ (never below `deltaFloor`, at most 30 days). Propose a watcher set and a new freeze authority, applied 14 days later (`proposeRoles`). Hand its own role on in two steps. | Freeze or unfreeze, cancel, pause, revoke, retire, stop the verifier. Change a registered token's denominations, fees, `lezUnit` or weight. Lower Δ. Set a release bucket below the floor. Change the roles faster than 14 days. Touch escrow. Change the verifier, `mode`, image ids, `lezConfigId`, `genesisState`, `nMin`, `tMin`, `deltaFloor`, `revokeWindow`, `maxFreeze`, `turnSeconds`, `minReleaseDelay` or the floor (all immutable). |
+| **watchers** (up to three, D13) | `cancelCandidate` a pending candidate. `pauseCheckpoints()` until 12 h from now. | Anything else: lift a pause, shorten a freeze, freeze anything else, revoke, retire. |
+| **freeze authority** (a multisig) | Freeze and unfreeze deposits, releases and checkpoints (each freeze lapses after `maxFreeze` unless renewed). `cancelCandidate`. `revokeFrom` within the window. `retire()` at any time. | Touch the registry, caps, delays, Δ or escrow. Accept anything. Cancel a finalised checkpoint (only revoke it, within the window). Undo a stop or a retirement. Hand itself over: only the admin's proposal changes it. |
+| **anyone** | Deposit. `recordBeacon` (rule (A)). Submit and finalise checkpoints (`finalize` with a proof under (A), `finalizeAttested` after the wait under (B)), and submit a cancelled state again. Release with a proof (as relayer). Refund once the rules above allow it. `applyRoles` once a proposal is 14 days old. `retire()` once no checkpoint has been finalised for 30 days. Stop the verifier with a proof of exploit. | |
 | **payee** | `claimOwed` what it is owed, to itself. | |
 
-Each role is handed on only by its current holder. One address cannot hold both roles. The stop's guardian is the
-wrapper's own `Ownable2Step` owner, so it has to be handed over separately.
+The admin hands its role on in two steps. The freeze authority and the watchers change only through the admin's
+proposal, which anyone applies 14 days later (D13: a lost or compromised freeze key is replaced in public). One
+address cannot be both admin and freeze authority. The stop's owner is renounced at deployment, so the stop has no
+guardian.
 
 ## Assumptions (SPEC-v3 D6, verbatim)
 
@@ -283,50 +316,69 @@ deployment sets `deltaFloor ≥ Δ_g + S + ε`, 3 h 01 min by default, and the d
 ## Where I interpreted or departed from the spec
 
 Kept from v2:
-- **`finalize` also requires the deployed `nMin`/`tMin`** in its journal. §4.3 lists this check for candidates only.
 - **`finalize(beaconIndex, journalFields, seal)`.** The spec's separate `newState` argument is taken from the
-  journal fields.
+  journal fields; rule (B)'s `finalizeAttested(journalFields)` likewise.
 - **Release delays as a history.** The delay is stored as a history per token (`fromCheckpoint`, `delay`). It is
   ordered by checkpoint index, which is exact even when a change and a finalisation share a block. Registration
   sets the initial delay.
 - **Bounds the spec does not state:** `deltaFloor` non-zero; release delays at most 30 days (on top of D5's
   `≤ revokeWindow`).
 
-(v2's other readings are now spec: revocation invalidates pending candidates, an already revoked checkpoint cannot
-be revoked again, Δ has a 30-day ceiling.)
-
-New in v3:
-- **What `finalize` compares.** It compares the v2 fields with the candidate (`parentState`, `burnRoot`,
-  `burnCount`, `importedLeafCount`, `sunset`, and `newState` as the key), not `tipId`, `tipHash`, `n` or `t`.
-  `newState` commits to the tip and the key set (SPEC-v2 §4.1), so a sound proof of the same state carries the same
-  values. The wait always uses the candidate's stored `t` (D4: "with `t` from its journal"); the floors are checked
-  on each journal.
+Kept from v3:
 - **Monotonicity is checked at finalisation only**, as D4 says ("along finalised checkpoints"). A candidate that
   breaks it can be submitted, but never finalised.
 - **Only the global release freeze stops refunds**, as D5 words it. A per-token release freeze stops that token's
   releases, not its refunds.
-- **Constructor bounds:** `0 < turnSeconds ≤ 30 days`; `minReleaseDelay ≤ revokeWindow` and `≤ 30 days`.
+- **Constructor bounds:** `minReleaseDelay ≤ revokeWindow` and `≤ 30 days`.
 - **`cancelCandidate`** refuses a state that was never submitted and one already finalised alike
-  (`UnknownCandidate`; the vault does not tell them apart). It also deletes a stale candidate, which is harmless.
-  It works under the checkpoint freeze and after a verifier stop, since it needs no proof. To put the tip in
-  `CandidateCancelled`, every candidate stores `tipId` and `tipHash`, which costs about 22k gas per submission.
-- **The boundary second.** `revokeFrom` is allowed up to and including `finalizedAt + revokeWindow`, and refunds
-  (and releases under a delay equal to `revokeWindow`) open at that same second, as D5's `>=` says. Within that one
-  second a refund and a revocation can land in either order.
-- The vault checks `n` and `t` against the floors, not that `t = t(n)` (the program's rule), and it does not
-  compare `importedLeafCount` with its own `nextLeafIndex`.
+  (`UnknownCandidate`). It also deletes a stale candidate, which is harmless. It works under the checkpoint freeze
+  and after a verifier stop, since it needs no proof. Every candidate keeps its tip for `CandidateCancelled`.
+- The vault checks `n` and `t` against the floors, not that `t = t(n)` (the program's rule).
+
+New in v4:
+- **The candidate keeps the digest of its journal**, not its fields, and a finalisation must re-present the journal
+  word for word (under (A) apart from `echoNonce`). This is D11's comparison of `t` and the tip, extended to every
+  word, and it makes a candidate three storage slots instead of seven.
+- **Rule (B) needs `turnSeconds = 0`**, so that one formula, `W = deltaAtSubmit + (t − 1) × turnSeconds`, serves
+  both rules; rule (A) keeps `0 < turnSeconds ≤ 30 days`.
+- **Nothing is finalised after a verifier stop under rule (B) either** (D13 says only that nothing more is released
+  or refunded; under rule (A) the second proof cannot verify anyway).
+- **The D11 boundary second only where D11 names it:** refunds, and releases whose delay equals `revokeWindow`, open
+  at `finalizedAt + revokeWindow + 1`; a shorter delay still opens at `finalizedAt + delay`.
+- **One role proposal, one timelock.** `proposeRoles(watchers[3], freezeAuthority)` (address(0): unchanged) takes
+  effect 14 days later, applied by anyone; a new proposal replaces a pending one. D13 gives the 14 days for the
+  freeze authority and "a timelock" for the watchers; the watchers matter for safety under rule (A), so they get
+  the same 14 days. Two separate proposals cost 1.1 kB of bytecode the vault does not have.
+- **The freeze authority keeps `cancelCandidate`** (D13 names the watchers): it is reject-only, weaker than the
+  checkpoint freeze it holds anyway, and a backstop when no watcher is set.
+- **The freeze authority no longer hands itself over** (v3's two-step `transferFreezeAuthority`). D13's admin
+  replacement is the one way it changes; a multisig rotates its own signers. Removed also for bytecode.
+- **The floor covers the release buckets only** (per token and global, capacity and refill, in value units; a token's
+  bucket is converted at its weight, saturating instead of overflowing). Deposit buckets have no floor: an admin
+  who closes deposits stalls no exit.
+- **"Release uses the newest root whose release delay has passed"** (D13) is the holder's rule in the wallet
+  (`docs/design/bridge.md` §12), not a vault check: `NOut` v2 is the same under every root, and a vault check would
+  make a release revert whenever a newer root matured between proving and inclusion.
+- **The stop's owner is renounced by the deployment, not checked by the vault**; the vault checks only that the
+  stop answers `paused()` and is not tripped.
+- **Not built: D13's fees** (deposits escrowing the mint and relay fees, releases less the burn, relay and
+  checkpoint fees, the checkpoint fee to whoever finalised the root, fee schedules announced seven days ahead).
+  They change the deposit leaf, the registry and the LEZ claim together.
 
 ## Known limits (SPEC-v3 D8, kept) and residual risks
 
-- **A tripped verifier stop strands all escrow except owed balances**, unless a sunset checkpoint was finalised
-  first. No new checkpoints follow, and nothing more is released.
-- **The stop wrapper's owner is not moved by a freeze-authority handover**, and the upstream wrapper lets its owner
-  renounce.
-- **The freeze key is powerful.** A compromised freeze authority can keep renewing freezes, cancel every candidate,
-  revoke honest checkpoints within the window, or retire the vault: a denial of service, not theft. Replacing it
-  through the admin under a timelock is an open decision. The admin can stall exits by setting caps to 0.
-- **Refunds now depend on the freeze authority.** Only it can `retire()`, and refunds need a retired vault. A freeze
-  key lost before retirement means no refunds, ever.
+- **A tripped verifier stop strands all escrow except owed balances.** No new checkpoints follow, and nothing more
+  is released or refunded (D13).
+- **The freeze key is powerful until replaced.** A compromised freeze authority can keep renewing freezes, cancel
+  every candidate, revoke honest checkpoints within the window, or retire the vault: a denial of service, not theft.
+  The admin replaces it after 14 days (D13). A compromised admin can, after the same 14 days, install its own freeze
+  authority and remove the watchers; the public proposal is the warning.
+- **A watcher can delay checkpoints** by cancelling every candidate and renewing 12-hour pauses, until the admin
+  replaces it 14 days after proposing to. Under rule (A) the watchers are also trusted for safety outside F1–F4.
+- **Keyless retirement follows any 30 days without a finalisation**, including 30 days of checkpoint freezes or
+  watcher pauses: a long pause lets anyone retire the vault, which stops deposits for good.
+- **An unrevoked wrong checkpoint older than `revokeWindow` halts the vault for good** (D13): every later candidate
+  descends from it.
 - **A payee that can never receive** (a contract without `receive`, a permanently blacklisted address) keeps an
   `owed` balance it cannot collect.
 - **Retired keys stay counted** until a finalised checkpoint carries the rotation; LEZ's `exit_delay` (about 40 min
@@ -335,9 +387,14 @@ New in v3:
   vault.** No party can move it.
 - **Issuer risk is inherited.** A token can blacklist the vault or switch on transfer fees (USDT has such a switch).
   Rebasing tokens are unsupported.
-- **The global cap uses admin-set integer weights, not an oracle.**
-- **Real proofs in one run only.** `test/real/` verifies real Groth16 proofs of both programs and measures their
-  gas (GAS.md); every other test mocks the verifier. Those proofs are about a stand-in zone built with test keys.
+- **The global cap uses admin-set integer weights, not an oracle**; the floor is in the same value units.
+- **The library is a second contract.** `FerrataRegistry` is linked at its deployed address, fixed in the vault's
+  bytecode; it has no state, and its functions run in the vault's storage only through the vault's own functions. A
+  forge script deploys a linked library itself before the vault, which shifts the deployer's nonces: a v4 deployment
+  whose addresses are predicted (the proofs bind the vault's address) must deploy the library first, or from
+  another account.
+- **Real proofs in two runs only.** `test/real/` verifies real Groth16 proofs of both checkpoint rules and of the
+  release program; every other test mocks the verifier. Those proofs are about a stand-in zone built with test keys.
 
 ## Sepolia round trip (rehearsed end to end on a local fork; not broadcast)
 
