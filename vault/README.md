@@ -480,13 +480,13 @@ next step:
 3. the library `FerrataRegistry`;
 4. `FerrataVault`: the artifact's creation code with its 11 call sites of the library linked to that address (solc's
    placeholder, `__$` + 17 bytes of `keccak256("src/FerrataRegistry.sol:FerrataRegistry")` + `$__`); never
-   `new FerrataVault`, which would make forge deploy a library of its own;
+   `new FerrataVault`, which would make forge deploy a library of its own. Before it, the recorded library's runtime
+   code must be FerrataRegistry's exactly, since the vault DELEGATECALLs it;
 5. the test token;
 6. `registerToken` for ETH (0.001, 0.01, 0.1 ETH; relay fee 0.2%, checkpoint fee 0.1%) and 7. for the token (100,
    1,000, 10,000; 0.25% and 0.1%): schedule 0, protocol fees at zero;
 8. `renounceOwnership()` of the stop: nobody holds its guardian key (proposal §B5), and only RISC Zero's proof of
    an exploit can trip it;
-   Before it, the recorded library's runtime code must be FerrataRegistry's exactly (the vault DELEGATECALLs it);
 9. no transaction: the checks (the stop has no owner, is not tripped and wraps the verifier; the vault's verifier is
    the stop; its rule, admin and freeze authority; both registrations, schedule 0, the published registry and fee
    hashes), then `complete: true`.
