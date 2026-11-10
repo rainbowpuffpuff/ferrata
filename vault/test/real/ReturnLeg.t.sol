@@ -49,7 +49,8 @@ contract ReturnLegTest is ReturnLegFixture {
         FerrataVault.Checkpoint memory c = _checkpoint(candidate.journal);
         assertEq(candidate.journal.length, 17 * 32);
         assertEq(
-            candidate.journal, abi.encode(sha256(bytes("ferrata/vault/checkpoint/v3")), block.chainid, address(vault), lezConfigId, c)
+            candidate.journal,
+            abi.encode(sha256(bytes("ferrata/vault/checkpoint/v3")), block.chainid, address(vault), lezConfigId, c)
         );
         assertEq(c.parentState, genesisState);
         assertEq(c.echoNonce, bytes32(0));
@@ -60,7 +61,8 @@ contract ReturnLegTest is ReturnLegFixture {
 
         FerrataVault.Checkpoint memory e = _checkpoint(finalization.journal);
         assertEq(
-            finalization.journal, abi.encode(sha256(bytes("ferrata/vault/checkpoint/v3")), block.chainid, address(vault), lezConfigId, e)
+            finalization.journal,
+            abi.encode(sha256(bytes("ferrata/vault/checkpoint/v3")), block.chainid, address(vault), lezConfigId, e)
         );
         assertEq(e.echoNonce, beaconNonce);
         assertEq(
@@ -135,10 +137,11 @@ contract ReturnLegTest is ReturnLegFixture {
         for (uint256 i = 0; i < releases.length; i++) {
             _releaseAndCheck(releases[i]);
         }
-        assertEq(vault.escrowed(ETH), 0);
-        assertEq(vault.escrowed(address(token)), 0);
-        assertEq(address(vault).balance, 0);
-        assertEq(token.balanceOf(address(vault)), 0);
+        // v5 (D13): what stays is the deposits' relay fees, which back the relay fees their claims mint on LEZ.
+        assertEq(vault.escrowed(ETH), 2e12);
+        assertEq(vault.escrowed(address(token)), 250_000);
+        assertEq(address(vault).balance, 2e12);
+        assertEq(token.balanceOf(address(vault)), 250_000);
     }
 
     function _balance(address asset, address who) internal view returns (uint256) {
@@ -279,7 +282,7 @@ contract ReturnLegTest is ReturnLegFixture {
         // Escrow for the larger denomination, so that only the proof can object to it.
         vm.deal(depositor, 1 ether);
         vm.prank(depositor);
-        vault.depositETH{value: 0.01 ether}(1, keccak256("someone's commitment"), 2);
+        vault.depositETH{value: 0.01 ether + 2e13}(1, keccak256("someone's commitment"), 2); // with its relay fee
         for (uint256 i = 0; i < releases.length; i++) {
             ReleaseCase memory r = releases[i];
             FerrataVault.ReleaseRequest memory q;

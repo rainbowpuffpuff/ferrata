@@ -95,6 +95,10 @@ abstract contract VaultTestBase is Test {
     /// Rule (B) test deployment: the wait is the reaction window only (D13 default 1 h), no turn term.
     uint256 internal constant DELTA_B = 1 hours;
 
+    /// Relay fee of the default registrations: 1/relayFeeDivisor of each denomination (0: none). Suites that test
+    /// another mechanism with round numbers (caps) set 0; the fee rules have their own tests (Fees.t.sol).
+    uint256 internal relayFeeDivisor = 500;
+
     /// Counters that make every test checkpoint's `newState` and `burnCount` distinct.
     uint256 internal stateNonce;
     uint64 internal burnCounter;
@@ -183,12 +187,14 @@ abstract contract VaultTestBase is Test {
     ///      decimals 18 (every test unit is at most 10**18).
     function _params(uint256[] memory denoms, uint256 lezUnit, uint256 unitWeight)
         internal
-        pure
+        view
         returns (FerrataVault.TokenParams memory p)
     {
         uint256[] memory fees = new uint256[](denoms.length);
         for (uint256 i = 0; i < denoms.length; i++) {
-            fees[i] = denoms[i] / 500;
+            // A whole number of LEZ units (v5: the claim mints it on LEZ).
+            uint256 fee = relayFeeDivisor == 0 ? 0 : denoms[i] / relayFeeDivisor;
+            fees[i] = lezUnit == 0 ? fee : fee / lezUnit * lezUnit;
         }
         p = FerrataVault.TokenParams({
             denominations: denoms,
@@ -198,7 +204,7 @@ abstract contract VaultTestBase is Test {
             depositCap: _unlimited(),
             releaseCap: _unlimited(),
             releaseDelay: 0,
-            lezDefinition: keccak256(abi.encode("test LEZ definition", denoms[0])),
+            lezDefinition: keccak256(abi.encode("test LEZ definition", denoms)),
             decimals: 18,
             checkpointFees: new uint256[](denoms.length)
         });
@@ -255,7 +261,11 @@ abstract contract VaultTestBase is Test {
 
     /// @dev Checkpoint record `i` of `v`, decoded from the getter's return data as one struct (eleven return values do
     ///      not fit on the stack next to a caller's locals).
-    function _checkpointRecord(FerrataVault v, uint256 i) internal view returns (FerrataVault.FinalizedCheckpoint memory) {
+    function _checkpointRecord(FerrataVault v, uint256 i)
+        internal
+        view
+        returns (FerrataVault.FinalizedCheckpoint memory)
+    {
         (bool ok, bytes memory data) = address(v).staticcall(abi.encodeCall(v.checkpoints, (i)));
         require(ok, "checkpoint getter");
         return abi.decode(data, (FerrataVault.FinalizedCheckpoint));

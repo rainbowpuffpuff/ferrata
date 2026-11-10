@@ -704,9 +704,12 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         }
         for (uint256 i = 0; i < denoms.length; i++) {
             uint256 ceiling = denoms[i] / 100;
-            f[0][i] = withdraw ? current.mintFees[i] : _bound(uint256(keccak256(abi.encode(seed, i, 0))), 0, ceiling / lezUnit) * lezUnit;
+            f[0][i] = withdraw
+                ? current.mintFees[i]
+                : _bound(uint256(keccak256(abi.encode(seed, i, 0))), 0, ceiling / lezUnit) * lezUnit;
             f[1][i] = withdraw ? current.burnFees[i] : _bound(uint256(keccak256(abi.encode(seed, i, 1))), 0, ceiling);
-            f[2][i] = withdraw ? current.checkpointFees[i] : _bound(uint256(keccak256(abi.encode(seed, i, 2))), 0, ceiling);
+            f[2][i] =
+                withdraw ? current.checkpointFees[i] : _bound(uint256(keccak256(abi.encode(seed, i, 2))), 0, ceiling);
         }
         vm.prank(admin);
         vault.announceFees(token, f[0], f[1], f[2]);
@@ -1068,5 +1071,4 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
             || e == FerrataVault.TokenDepositsAreFrozen.selector || e == FerrataVault.DepositsDisabled.selector
             || e == FerrataVault.TokenDepositCapExceeded.selector || e == FerrataVault.GlobalDepositCapExceeded.selector;
     }
-
 }

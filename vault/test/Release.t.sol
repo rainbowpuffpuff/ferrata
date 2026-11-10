@@ -74,8 +74,9 @@ contract ReleaseTest is VaultTestBase {
 
         assertEq(recipient.balance, 1 ether);
         assertEq(relayer.balance, 0);
-        assertEq(address(vault).balance, 0);
-        assertEq(vault.escrowed(ETH), 0);
+        // v5 (D13): the deposit's relay fee stays in escrow; it backs the relay fee its claim mints on LEZ.
+        assertEq(address(vault).balance, 1 ether / 500);
+        assertEq(vault.escrowed(ETH), 1 ether / 500);
         assertTrue(vault.nullifierUsed(N1));
     }
 
@@ -98,8 +99,8 @@ contract ReleaseTest is VaultTestBase {
         _release(_request(token, denomIndex, recipient, ROOT, N1));
 
         assertEq(MockTokenBase(token).balanceOf(recipient), amount);
-        assertEq(MockTokenBase(token).balanceOf(address(vault)), 0);
-        assertEq(vault.escrowed(token), 0);
+        assertEq(MockTokenBase(token).balanceOf(address(vault)), amount / 500); // the deposit's relay fee (v5)
+        assertEq(vault.escrowed(token), amount / 500);
         assertTrue(vault.nullifierUsed(N1));
     }
 
@@ -142,7 +143,7 @@ contract ReleaseTest is VaultTestBase {
         vm.expectRevert(FerrataVault.NullifierAlreadyUsed.selector);
         vault.release(again, SEAL);
 
-        assertEq(vault.escrowed(ETH), 1 ether);
+        assertEq(vault.escrowed(ETH), 1 ether + 2 * (1 ether / 500)); // one deposit and both relay fees (v5)
         assertEq(recipient.balance, 1 ether);
         assertEq(bob.balance, 0);
     }
@@ -265,7 +266,7 @@ contract ReleaseTest is VaultTestBase {
 
         assertEq(usdc.balanceOf(recipient), 1000e6 - fee);
         assertEq(usdc.balanceOf(relayer), fee);
-        assertEq(usdc.balanceOf(address(vault)), 0);
+        assertEq(usdc.balanceOf(address(vault)), fee); // the deposit escrowed one relay fee for its claim (v5)
     }
 
     // ------------------------------------------------------------------------------------------------------------
@@ -307,9 +308,9 @@ contract ReleaseTest is VaultTestBase {
         vm.expectRevert(FerrataVault.InsufficientEscrow.selector);
         vault.release(r, SEAL);
 
-        _deposit(alice, ETH, 1, C2); // 1.1 ETH escrowed now
+        _deposit(alice, ETH, 1, C2); // 1.1022 ETH escrowed now (denominations and 0.2% relay fees, v5)
         vault.release(r, SEAL);
-        assertEq(vault.escrowed(ETH), 0.1 ether);
+        assertEq(vault.escrowed(ETH), 0.1 ether + 0.1 ether / 500 + 1 ether / 500);
     }
 
     function test_release_escrowIsPerToken() public {
@@ -354,7 +355,7 @@ contract ReleaseTest is VaultTestBase {
         assertEq(address(attacker).balance, 1 ether);
         assertTrue(vault.nullifierUsed(N1));
         assertFalse(vault.nullifierUsed(N2));
-        assertEq(vault.escrowed(ETH), 1 ether);
+        assertEq(vault.escrowed(ETH), 1 ether + 2 * (1 ether / 500));
 
         // Outside the payout the second release is fine.
         vault.release(inner, SEAL);
@@ -378,9 +379,10 @@ contract ReleaseTest is VaultTestBase {
         MockReentrantToken token = new MockReentrantToken();
         vm.prank(admin);
         vault.registerToken(address(token), _params(_denoms(1e18, 2e18, 3e18), 1e12, 1));
-        token.mint(alice, 1e18);
+        uint256 total = _depositTotal(vault, address(token), 0);
+        token.mint(alice, total);
         vm.prank(alice);
-        token.approve(address(vault), 1e18);
+        token.approve(address(vault), total);
         token.setHook(address(vault), abi.encodeCall(FerrataVault.deposit, (address(token), 0, C2, 0)));
 
         vm.prank(alice);
@@ -390,7 +392,7 @@ contract ReleaseTest is VaultTestBase {
         assertFalse(token.hookSucceeded());
         assertEq(token.hookReturnData(), _reentrantCallError());
         assertEq(vault.nextLeafIndex(), 1);
-        assertEq(vault.escrowed(address(token)), 1e18);
+        assertEq(vault.escrowed(address(token)), total);
     }
 
     function test_release_reentrantTokenIsBlocked() public {
@@ -411,6 +413,6 @@ contract ReleaseTest is VaultTestBase {
         assertEq(token.hookReturnData(), _reentrantCallError());
         assertEq(token.balanceOf(recipient), 1e18);
         assertFalse(vault.nullifierUsed(N2));
-        assertEq(vault.escrowed(address(token)), 1e18);
+        assertEq(vault.escrowed(address(token)), 1e18 + 2 * (1e18 / 500));
     }
 }

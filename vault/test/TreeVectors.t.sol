@@ -74,9 +74,7 @@ contract TreeVectorsTest is VaultTestBase {
             roots[i] = vault.depositRoot();
 
             // Cross-check the vault against the independent reference before writing anything down.
-            assertEq(
-                leaves[i], _leafHash(leafIndex, plan[i].depositor, plan[i].token, amount, commitments[i])
-            );
+            assertEq(leaves[i], _leafHash(leafIndex, plan[i].depositor, plan[i].token, amount, commitments[i]));
             bytes32[] memory prefix = new bytes32[](i + 1);
             for (uint256 k = 0; k <= i; k++) {
                 prefix[k] = leaves[k];

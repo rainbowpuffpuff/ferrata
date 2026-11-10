@@ -1086,8 +1086,6 @@ contract FerrataVault is ReentrancyGuardTransient {
         return (cfg.registered, cfg.depositsEnabled, cfg.lezUnit, cfg.unitWeight, cfg.denominations);
     }
 
-
-
     /// @notice The fees of denomination `denomIndex` under fee schedule `index` of `token` (D13). A deposit under it
     ///         escrows the denomination + mintFee + relayFee; a release under it pays the denomination less burnFee,
     ///         checkpointFee and the relay fee its proof names (0 or relayFee).
@@ -1101,12 +1099,6 @@ contract FerrataVault is ReentrancyGuardTransient {
         uint256 outbound = s.outbound[denomIndex];
         return (inbound >> 128, uint128(inbound), outbound >> 128, uint128(outbound));
     }
-
-
-
-
-
-
 
     /// @notice The release delay that applies to a root finalised as checkpoint `checkpointIndex`.
     function releaseDelayFor(address token, uint256 checkpointIndex) external view returns (uint256) {
@@ -1223,7 +1215,6 @@ contract FerrataVault is ReentrancyGuardTransient {
         depositRoot = node;
         nextLeafIndex = leafIndex + 1;
     }
-
 
     /// @dev Inner node: sha256(0x01 || left || right). The empty leaf is bytes32(0).
     function _hashNode(bytes32 left, bytes32 right) internal pure returns (bytes32) {

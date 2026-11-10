@@ -24,6 +24,12 @@ contract RefundTest is VaultTestBase {
         leaves.push(_leafHash(i, who, token, _amount(token, denomIndex), commitment));
     }
 
+    /// @dev What a deposit of denomination `d` escrowed, so what its refund returns (v5, D13): the denomination and its
+    ///      relay fee (1/500 in these registrations; schedule 0 has no mint fee).
+    function _withFee(uint256 d) internal pure returns (uint256) {
+        return d + d / 500;
+    }
+
     function _path(uint64 i) internal view returns (bytes32[32] memory p) {
         bytes32[] memory siblings = ReferenceMerkle.path(leaves, i);
         for (uint256 h = 0; h < 32; h++) {
@@ -107,7 +113,7 @@ contract RefundTest is VaultTestBase {
         _acceptRoot(keccak256("root"));
         _release(_request(ETH, 1, recipient, keccak256("root"), keccak256("n")));
         assertEq(recipient.balance, 1 ether);
-        assertEq(vault.escrowed(ETH), 0);
+        assertEq(vault.escrowed(ETH), 1 ether / 500); // the deposit's relay fee, for its claim on LEZ (v5)
     }
 
     // ---- refund ---------------------------------------------------------------------------------------------------
@@ -118,15 +124,15 @@ contract RefundTest is VaultTestBase {
         _openRefunds();
 
         vm.expectEmit(true, true, true, true, address(vault));
-        emit FerrataVault.Refund(2, bob, ETH, 0.1 ether);
+        emit FerrataVault.Refund(2, bob, ETH, _withFee(0.1 ether));
         vm.prank(relayer); // permissionless
         _refund(2);
         _refund(3);
 
-        assertEq(bob.balance, 0.1 ether);
-        assertEq(dai.balanceOf(alice), 10_000e18);
+        assertEq(bob.balance, _withFee(0.1 ether));
+        assertEq(dai.balanceOf(alice), _withFee(10_000e18));
         assertEq(relayer.balance, 0);
-        assertEq(vault.escrowed(ETH), 1 ether);
+        assertEq(vault.escrowed(ETH), _withFee(1 ether));
         assertEq(vault.escrowed(address(dai)), 0);
         assertTrue(vault.refunded(2));
         assertTrue(vault.refunded(3));
@@ -155,7 +161,7 @@ contract RefundTest is VaultTestBase {
         _openRefunds();
         _refund(2); // 0.1 ETH; leaf 0's 1 ETH stays escrowed, so only the refunded flag can stop a second payment
         _expectRefundRevert(2, FerrataVault.AlreadyRefunded.selector);
-        assertEq(vault.escrowed(ETH), 1 ether);
+        assertEq(vault.escrowed(ETH), _withFee(1 ether));
     }
 
     function test_refund_wrongPathReverts() public {
@@ -196,7 +202,7 @@ contract RefundTest is VaultTestBase {
 
         vm.prank(relayer);
         vault.refund(2, l.depositor, l.token, l.denomIndex, l.commitment, p);
-        assertEq(bob.balance, 0.1 ether); // the depositor is paid, whoever submits
+        assertEq(bob.balance, _withFee(0.1 ether)); // the depositor is paid, whoever submits
         assertEq(relayer.balance, 0);
     }
 
@@ -230,7 +236,7 @@ contract RefundTest is VaultTestBase {
         _expectRefundRevert(3, FerrataVault.RefundNotYetOpen.selector);
         _openRefunds();
         _refund(3);
-        assertEq(dai.balanceOf(alice), 10_000e18);
+        assertEq(dai.balanceOf(alice), _withFee(10_000e18));
     }
 
     function test_refund_revokingOnlyLaterCheckpointsKeepsRefunds() public {
@@ -338,7 +344,7 @@ contract RefundTest is VaultTestBase {
         vm.prank(freezer);
         vault.retire();
         _refund(1);
-        assertEq(bob.balance, 0.1 ether);
+        assertEq(bob.balance, _withFee(0.1 ether));
     }
 
     function test_refund_opensRevokeWindowAfterTheSunsetCheckpoint() public {
@@ -356,7 +362,7 @@ contract RefundTest is VaultTestBase {
         _expectRefundRevert(2, FerrataVault.RefundNotYetOpen.selector);
         vm.warp(finalizedAt + REVOKE_WINDOW + 1);
         _refund(2);
-        assertEq(bob.balance, 0.1 ether);
+        assertEq(bob.balance, _withFee(0.1 ether));
     }
 
     /// @notice v4 (D11): no second in which both a refund and a revocation of the sunset checkpoint are possible.
@@ -392,12 +398,12 @@ contract RefundTest is VaultTestBase {
         _expectRefundRevert(2, FerrataVault.ReleasesAreFrozen.selector);
         vm.warp(block.timestamp + 1);
         _refund(2);
-        assertEq(bob.balance, 0.1 ether);
+        assertEq(bob.balance, _withFee(0.1 ether));
 
         vm.prank(freezer);
         vault.setTokenReleasesFrozen(address(dai), true);
         _refund(3);
-        assertEq(dai.balanceOf(alice), 10_000e18);
+        assertEq(dai.balanceOf(alice), _withFee(10_000e18));
     }
 
     /// @notice v3 D5: a forged sunset checkpoint, here one claiming LEZ imported nothing (so deposits LEZ did mint
@@ -431,8 +437,8 @@ contract RefundTest is VaultTestBase {
         for (uint64 i = 0; i < 3; i++) {
             assertFalse(vault.refunded(i));
         }
-        assertEq(vault.escrowed(ETH), 1.1 ether);
-        assertEq(vault.escrowed(address(usdc)), 1000e6);
+        assertEq(vault.escrowed(ETH), _withFee(1.1 ether));
+        assertEq(vault.escrowed(address(usdc)), _withFee(1000e6));
         assertEq(vault.escrowed(address(dai)), 0);
         assertEq(alice.balance + bob.balance + usdc.balanceOf(bob), 0);
     }
@@ -442,18 +448,22 @@ contract RefundTest is VaultTestBase {
         _fourDepositsThenRetire();
         _sunset(2);
         _openRefunds();
+        // v5: the buckets count what the refund returns, the denomination and its relay fee: 0.1002 ETH, which is
+        // 100,200 lezUnits of 3000 value units each.
+        uint256 total = _withFee(0.1 ether);
+        uint256 units = total / 1e12 * 3000;
         vm.prank(admin);
-        vault.setGlobalCap(FerrataVault.Direction.Release, 3e8 - 1, 0); // 0.1 ether is 3e8 value units
+        vault.setGlobalCap(FerrataVault.Direction.Release, units - 1, 0);
         _expectRefundRevert(2, FerrataVault.GlobalReleaseCapExceeded.selector);
         vm.startPrank(admin);
         vault.setGlobalCap(FerrataVault.Direction.Release, UNLIMITED, 0);
-        vault.setTokenCap(ETH, FerrataVault.Direction.Release, 0.1 ether - 1, 0);
+        vault.setTokenCap(ETH, FerrataVault.Direction.Release, total - 1, 0);
         vm.stopPrank();
         _expectRefundRevert(2, FerrataVault.TokenReleaseCapExceeded.selector);
         vm.startPrank(admin);
         vault.setTokenCap(ETH, FerrataVault.Direction.Release, UNLIMITED, 0);
-        vault.setTokenCap(ETH, FerrataVault.Direction.Release, 0.1 ether, 0); // from UNLIMITED: starts full
-        vault.setGlobalCap(FerrataVault.Direction.Release, 3e8, 0);
+        vault.setTokenCap(ETH, FerrataVault.Direction.Release, total, 0); // from UNLIMITED: starts full
+        vault.setGlobalCap(FerrataVault.Direction.Release, units, 0);
         vm.stopPrank();
         _refund(2);
         (,, uint256 tokenLeft) = vault.tokenCap(ETH, FerrataVault.Direction.Release);

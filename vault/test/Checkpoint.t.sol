@@ -178,7 +178,7 @@ contract CheckpointTest is VaultTestBase {
         assertEq(h.parentImportedLeafCount, 0); // genesis carries no imported leaves and no sunset
         assertFalse(h.parentSunset);
         assertEq(h.finalizedAt, block.timestamp);
-        assertEq(h.finalizer, address(this)); // D13: credited the checkpoint fee of releases against it
+        assertEq(h.finalizer, relayer); // the finalize call's sender (D13: credited the checkpoint fee of its releases)
     }
 
     function test_finalize_impossibleBeforeDelta_noBeaconIsOldEnough() public {

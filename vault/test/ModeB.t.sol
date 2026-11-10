@@ -297,7 +297,7 @@ contract ModeBTest is VaultTestBase {
         vm.prank(relayer);
         vb.release(r, SEAL);
         assertEq(recipient.balance, 1 ether);
-        assertEq(vb.escrowed(ETH), 1 ether);
+        assertEq(vb.escrowed(ETH), 1 ether + 2 * (1 ether / 500)); // and both deposits' relay fees (v5)
     }
 
     // ---- helpers ----------------------------------------------------------------------------------------------------

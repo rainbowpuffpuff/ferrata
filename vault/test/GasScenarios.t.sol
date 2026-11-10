@@ -102,6 +102,11 @@ contract GasScenarios is VaultTestBase {
         }
     }
 
+    /// @dev What one 1 ETH deposit sends: the denomination and its relay fee (v5).
+    function _t() internal view returns (uint256) {
+        return _depositTotal(vault, ETH, 1);
+    }
+
     function _fundAndApprove(address token, address who, uint256 amount) internal {
         MockTokenBase(token).mint(who, amount);
         vm.prank(who);
@@ -121,18 +126,18 @@ contract GasScenarios is VaultTestBase {
     // ---- deposits -------------------------------------------------------------------------------------------------
 
     function test_gas_depositETH_firstByAddress() public {
-        vm.deal(fresh, 1 ether);
+        vm.deal(fresh, _t());
         vm.prank(fresh);
-        vault.depositETH{value: 1 ether}(1, C, 0);
+        vault.depositETH{value: _t()}(1, C, 0);
         _log("depositETH, first deposit by the address");
     }
 
     function test_gas_depositETH_laterByAddress() public {
-        vm.deal(fresh, 2 ether);
+        vm.deal(fresh, 2 * _t());
         vm.prank(fresh);
-        vault.depositETH{value: 1 ether}(1, C, 0);
+        vault.depositETH{value: _t()}(1, C, 0);
         vm.prank(fresh);
-        vault.depositETH{value: 1 ether}(1, C, 1);
+        vault.depositETH{value: _t()}(1, C, 1);
         _log("depositETH, later deposit by the address");
     }
 
@@ -141,23 +146,23 @@ contract GasScenarios is VaultTestBase {
         vault.setTokenCap(ETH, FerrataVault.Direction.Deposit, UNLIMITED, 0);
         vault.setGlobalCap(FerrataVault.Direction.Deposit, UNLIMITED, 0);
         vm.stopPrank();
-        vm.deal(fresh, 2 ether);
+        vm.deal(fresh, 2 * _t());
         vm.prank(fresh);
-        vault.depositETH{value: 1 ether}(1, C, 0);
+        vault.depositETH{value: _t()}(1, C, 0);
         vm.prank(fresh);
-        vault.depositETH{value: 1 ether}(1, C, 1);
+        vault.depositETH{value: _t()}(1, C, 1);
         _log("depositETH, later deposit by the address, caps UNLIMITED");
     }
 
     function test_gas_depositERC20_firstByAddress() public {
-        _fundAndApprove(address(dai), fresh, 1000e18);
+        _fundAndApprove(address(dai), fresh, _depositTotal(vault, address(dai), 1));
         vm.prank(fresh);
         vault.deposit(address(dai), 1, C, 0);
         _log("deposit ERC-20 (18 dec, returns bool), first deposit by the address");
     }
 
     function test_gas_depositERC20_laterByAddress() public {
-        _fundAndApprove(address(dai), fresh, 2000e18);
+        _fundAndApprove(address(dai), fresh, 2 * _depositTotal(vault, address(dai), 1));
         vm.prank(fresh);
         vault.deposit(address(dai), 1, C, 0);
         vm.prank(fresh);
@@ -166,7 +171,7 @@ contract GasScenarios is VaultTestBase {
     }
 
     function test_gas_depositUsdtStyle_firstByAddress() public {
-        _fundAndApprove(address(usdt), fresh, 1000e6);
+        _fundAndApprove(address(usdt), fresh, _depositTotal(vault, address(usdt), 1));
         vm.prank(fresh);
         vault.deposit(address(usdt), 1, C, 0);
         _log("deposit USDT-style (no return value), first deposit by the address");
@@ -177,13 +182,13 @@ contract GasScenarios is VaultTestBase {
     function test_gas_depositETH_rangeOver128Leaves() public {
         vm.deal(fresh, 200 ether);
         vm.prank(fresh);
-        vault.depositETH{value: 1 ether}(1, C, 0);
+        vault.depositETH{value: _t()}(1, C, 0);
         uint256 lo = type(uint256).max;
         uint256 hi;
         uint256 sum;
         for (uint64 i = 1; i <= 128; i++) {
             vm.prank(fresh);
-            vault.depositETH{value: 1 ether}(1, C, i);
+            vault.depositETH{value: _t()}(1, C, i);
             uint256 g = vm.lastCallGas().gasTotalUsed;
             lo = g < lo ? g : lo;
             hi = g > hi ? g : hi;

@@ -233,13 +233,13 @@ abstract contract ReturnLegFixture is Test {
     function _depositEth() internal {
         vm.deal(depositor, 1 ether);
         vm.prank(depositor);
-        vault.depositETH{value: 0.001 ether}(0, commitments[0], 0);
+        vault.depositETH{value: 0.001 ether + 2e12}(0, commitments[0], 0); // and its relay fee (v5)
     }
 
     function _fundToken() internal {
-        token.mint(depositor, 100e6);
+        token.mint(depositor, 100e6 + 250_000); // the denomination and its relay fee (v5)
         vm.prank(depositor);
-        token.approve(address(vault), 100e6);
+        token.approve(address(vault), 100e6 + 250_000);
     }
 
     function _depositToken() internal {
@@ -310,5 +310,4 @@ abstract contract ReturnLegFixture is Test {
     function _registeredRelayFee(address t) internal view returns (uint256 relayFee) {
         (, relayFee,,) = vault.fees(t, 0, 0);
     }
-
 }

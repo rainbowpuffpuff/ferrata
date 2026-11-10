@@ -113,7 +113,7 @@ contract RevocationTest is VaultTestBase {
         vm.prank(freezer);
         vault.revokeFrom(0);
         assertTrue(vault.nullifierUsed(N1));
-        assertEq(vault.escrowed(ETH), 1 ether); // the release that happened stays a release
+        assertEq(vault.escrowed(ETH), 1 ether + 2 * (1 ether / 500)); // the release that happened stays a release
     }
 
     /// @notice After a revocation the same LEZ state can be proven again: it needs a fresh candidate and a full

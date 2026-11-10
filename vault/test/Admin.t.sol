@@ -162,7 +162,7 @@ contract RegistryTest is VaultTestBase {
     /// @dev Registration parameters for `token` with finite caps.
     function _p(uint256[] memory denoms, uint256 lezUnit, uint256 unitWeight)
         internal
-        pure
+        view
         returns (FerrataVault.TokenParams memory p)
     {
         p = _params(denoms, lezUnit, unitWeight);
@@ -268,6 +268,8 @@ contract RegistryTest is VaultTestBase {
         _expectRegisterRevert(
             _p(_one(uint256(type(uint128).max) + 1), 1, 1), FerrataVault.InvalidDenominations.selector
         );
+        // v5: at most (2**128 - 1) / 2, since the LEZ side's cap arithmetic takes twice the largest in 128 bits.
+        _expectRegisterRevert(_p(_one(type(uint128).max / 2 + 1), 1, 1), FerrataVault.InvalidDenominations.selector);
 
         uint256[] memory eight = new uint256[](8);
         for (uint256 i = 0; i < 8; i++) {
@@ -287,7 +289,9 @@ contract RegistryTest is VaultTestBase {
     function testFuzz_registerToken_lezUnitPowersOfTenAccepted(uint8 exponent) public {
         uint256 k = bound(exponent, 0, 38); // 10**38 is the largest power of ten below MAX_DENOMINATION
         uint256 unit = 10 ** k;
-        _register(_p(_one(unit), unit, 1));
+        FerrataVault.TokenParams memory p = _p(_one(unit), unit, 1);
+        p.decimals = 38; // v5: lezUnit <= 10**decimals
+        _register(p);
         (,, uint256 lezUnit,,) = vault.tokenConfig(address(token));
         assertEq(lezUnit, unit);
     }
@@ -341,7 +345,7 @@ contract RegistryTest is VaultTestBase {
     }
 
     function testFuzz_registerToken_relayFeeCeiling(uint256 denomination, uint256 fee) public {
-        denomination = bound(denomination, 1, type(uint128).max);
+        denomination = bound(denomination, 1, type(uint128).max / 2);
         FerrataVault.TokenParams memory p = _p(_one(denomination), 1, 1);
         p.relayFees = _one(fee);
         bool withinOnePercent = fee <= denomination / 100; // fee * 100 <= denomination, without overflow

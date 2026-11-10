@@ -52,7 +52,7 @@ contract PullPaymentTest is VaultTestBase {
         vault.release(r, SEAL);
 
         assertTrue(vault.nullifierUsed(r.nullifier)); // the release happened
-        assertEq(vault.escrowed(ETH), 3 ether);
+        assertEq(vault.escrowed(ETH), 3 ether + 4 * (1 ether / 500)); // and the four deposits' relay fees (v5)
         assertEq(vault.owed(address(payee), ETH), 1 ether);
         assertEq(vault.totalOwed(ETH), 1 ether);
         assertEq(address(vault).balance, vaultBalance); // the ETH is still in the vault, now owed
@@ -107,8 +107,8 @@ contract PullPaymentTest is VaultTestBase {
         _releaseTo(ETH, recipient, address(0), false);
         assertEq(recipient.balance, 2 ether);
         assertEq(vault.owed(address(stuck), ETH), 2 ether);
-        assertEq(vault.escrowed(ETH), 0);
-        assertEq(address(vault).balance, vault.totalOwed(ETH));
+        assertEq(vault.escrowed(ETH), 4 * (1 ether / 500)); // the deposits' relay fees, for their claims (v5)
+        assertEq(address(vault).balance, vault.totalOwed(ETH) + vault.escrowed(ETH));
     }
 
     function test_revertBombRecipient_isCreditedWithinAnOrdinaryGasLimit() public {
@@ -163,8 +163,9 @@ contract PullPaymentTest is VaultTestBase {
     function test_refundToADepositorThatCannotReceive_isCredited() public {
         ToggleRecipient depositorContract = new ToggleRecipient();
         uint64 leafIndex = vault.nextLeafIndex();
-        vm.deal(address(this), 1 ether);
-        depositorContract.depositETH{value: 1 ether}(address(vault), 1, keccak256("contract deposit"), 0);
+        uint256 total = _depositTotal(vault, ETH, 1); // 1 ETH and its relay fee (v5)
+        vm.deal(address(this), total);
+        depositorContract.depositETH{value: total}(address(vault), 1, keccak256("contract deposit"), 0);
 
         vm.prank(freezer);
         vault.retire();
@@ -192,10 +193,10 @@ contract PullPaymentTest is VaultTestBase {
             path[h] = siblings[h];
         }
         vault.refund(leafIndex, address(depositorContract), ETH, 1, keccak256("contract deposit"), path);
-        assertEq(vault.owed(address(depositorContract), ETH), 1 ether);
+        assertEq(vault.owed(address(depositorContract), ETH), total);
 
         depositorContract.setOpen(true);
         depositorContract.claim(address(vault), ETH);
-        assertEq(address(depositorContract).balance, 1 ether);
+        assertEq(address(depositorContract).balance, total);
     }
 }

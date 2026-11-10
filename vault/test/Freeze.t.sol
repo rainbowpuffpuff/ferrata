@@ -21,7 +21,7 @@ contract FreezeTest is VaultTestBase {
     // ---- attempt helpers: return (success, revert data) instead of reverting ------------------------------------
 
     function _tryDeposit(address token) internal returns (bool ok, bytes memory ret) {
-        uint256 amount = _amount(token, 0);
+        uint256 amount = _depositTotal(vault, token, 0); // the denomination and its fees (v5)
         uint64 index = vault.depositCount(bob);
         bytes32 commitment = keccak256(abi.encode("bob", index));
         if (token == ETH) {
