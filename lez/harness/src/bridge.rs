@@ -486,7 +486,8 @@ impl World {
         }
     }
 
-    fn submit(
+    /// Sign, settle and keep one public transaction whose root is `message` at `root`.
+    pub fn submit(
         &mut self,
         label: &str,
         root: Actor,

@@ -19,7 +19,7 @@ use ferrata_bridge_core::{
     BridgeKeys, Hash,
 };
 use ferrata_lez_bridge_wire::{
-    burn_actor, burn_mac_v2, code, holder_actor, nf_out_v2, nullifier_actor, root_actor, BridgeMessage, BridgeState,
+    burn_actor, burn_mac_v2, burn_seed, code, holder_actor, nf_out_v2, nullifier_actor, root_actor, BridgeMessage, BridgeState,
     BurnRecord, Holding, HolderState, Note,
 };
 use harness::{
@@ -180,7 +180,12 @@ fn burns_and_what_the_checkpoint_collects() {
     reports.push(burn(&mut w, "Burn at the vector's destination, not signed by it", vector_holder, cid_a, &n2, Some(code::NOT_AUTHORIZED)));
     burn(&mut w, "Burn under a configuration the payer holds nothing of", holder, cid_a2, &n2, Some(code::INSUFFICIENT_BALANCE));
     let record2 = burn_actor(program, &cid_a, &n2.hash());
-    reports.push(burn(&mut w, "Burn sent to the burn account itself", record2, cid_a, &n2, Some(code::WRONG_SENDER)));
+    // A root call at a PDA that does not exist yet needs admission evidence (LEZ refuses it
+    // otherwise, before the program runs).
+    let evidence = vec![PublicAccountEvidence::Pda { program, seed: burn_seed(&cid_a, &n2.hash()) }];
+    let r = w.submit("Burn sent to the burn account itself", record2, &BridgeMessage::burn(cid_a, &n2), vec![record2], evidence);
+    expect(&r, Some(code::WRONG_SENDER));
+    reports.push(r);
     // D10: a nested call. The payer signs a transaction whose root is LEZ's `scripted` test program,
     // which calls the payer's holder actor: `is_authorized` holds (the payer signed), the
     // checkpoint could not see the call, and the bridge refuses it.
