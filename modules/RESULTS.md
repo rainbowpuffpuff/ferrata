@@ -9,8 +9,7 @@ what the request must produce. Step failures 0, check failures 0.
 
 ## Where it ran
 
-The project's Modal build box (`spike/modal-build/mrun`, profile `stufflaters`), from a fresh
-container: a gVisor sandbox that reports `Linux 4.19.0-gvisor x86_64`, up to 32 cores and 64 GiB,
+A Modal cloud container (the project's build box), started fresh: a gVisor sandbox that reports `Linux 4.19.0-gvisor x86_64`, up to 32 cores and 64 GiB,
 Ubuntu 24.04 image. Nix 2.28.3 (pinned, see [What failed](#what-failed-on-the-way)), cargo 1.93.0,
 Python 3.12.1, jq 1.7. On the laptop only `requests.py` ran (to check its output), and one request to
 the Logos cache. Every number below
@@ -41,7 +40,7 @@ first runs.
 | `nix build logos-logoscore-cli#ctl-bundle-dir` (after the dev build) | 616.6 |
 | portable: daemon start, install, load, `module show`, 11 calls, `module ls`, daemon stop | 0.4, 0.7, 0.1, 0.1, ≤0.1 each, 0.1, 0.6 |
 
-Whole run: 2,796 s, 9.45 core-hours, about 0.59 USD (mrun's estimate). Call times are `logosctl call`
+Whole run: 2,796 s, 9.45 core-hours, about 0.59 USD (the build box's estimate). Call times are `logosctl call`
 wall clock, process start included, at 0.1 s resolution.
 
 `logosctl module show` lists `version()`, `dry_run_attest(QString)` and `verify_checkpoint(QString)`
@@ -130,7 +129,7 @@ repository; `check.sh` holds those for 2 and 5.
    each; with 4 builds of 8 cores the run completed.
 
 Modal spend for all of this work, including the failed runs, probes and a clean-up: 23 calls,
-3,442 s, about 0.82 USD (mrun's ledger estimates).
+3,442 s, about 0.82 USD (the build box's estimates).
 
 ## Not done
 
@@ -145,5 +144,5 @@ Modal spend for all of this work, including the failed runs, probes and a clean-
 ## Reproduce
 
 On Linux x86-64 with Nix (flakes), cargo, python3 and jq: `modules/scripts/check.sh [OUT_DIR]`
-(`PORTABLE=0` skips the portable package). On the build box: `mrun --timeout 10800 -- 'modules/scripts/check.sh OUT_DIR'`,
-with the box set up as above. The report is `OUT_DIR/report/summary.md`.
+(`PORTABLE=0` skips the portable package). In a gVisor container like the one above, Nix needs the
+set-up described under [What failed](#what-failed-on-the-way). The report is `OUT_DIR/report/summary.md`.
