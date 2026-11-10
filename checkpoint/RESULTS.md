@@ -336,3 +336,7 @@ Numbered for reference; "SPEC" is SPEC-v2 §4 as amended by SPEC-v3 D3.
 13. **Finality (SPEC-v3 D1) is outside what a cycle table shows**: the program proves that `t` keys
     other than `D` inscribed blocks after `Y`; whether that implies finality is the question D1/D6
     answer, not this prototype.
+
+## GPU proofs of the final image
+
+The final image (`0x95b816ed…3caf`) was later proven on one NVIDIA L4 GPU for four fixtures, with every succinct receipt verified locally and every journal equal to the native run's: `cp-empty-1` in 14.0 s, the idle hour in 24.1 s, the hour with 5 private transactions in 41.4 s and the hour with 50 in 219.3 s. See `gpu-prover/RESULTS.md`. No Groth16 wrap was made for these.

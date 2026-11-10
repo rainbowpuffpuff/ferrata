@@ -1,0 +1,42 @@
+{
+  "binary_from": "lez/target/debug/prove_private",
+  "ferrata_lez_commit": "9b90c794fdb53ba126888a37466a08371305538b",
+  "ferrata_lez_uncommitted_changes": 0,
+  "fixtures_from": "the repository root/crates/ferrata-spectests/fixtures/mainnet-p1899",
+  "ferrata_commit": "9b90c794fdb53ba126888a37466a08371305538b",
+  "expected_image_id": "cec0bc687443be08c29c3216de8a3ed5f00a29d224fc266fe272f78cfe0f4d78",
+  "files": {
+    "mainnet-p1899/SHA256SUMS": {
+      "bytes": 475,
+      "sha256": "bc7815b9b672abde8299277e26a739f14ddc240379a38842c0a5665e291f6994"
+    },
+    "mainnet-p1899/bootstrap.ssz": {
+      "bytes": 25673,
+      "sha256": "508173306d69b7d25539784ae01691dfe710b40e828dcc03ff3b90a1f009cd12"
+    },
+    "mainnet-p1899/update_0.ssz": {
+      "bytes": 26922,
+      "sha256": "f3e235029ee51c2eb0e3c0781e5c51f10428204ee4e56496a2eb2064594e9dd5"
+    },
+    "mainnet-p1899/update_1.ssz": {
+      "bytes": 26906,
+      "sha256": "0c6258b87e2314cf80f113904d6981171faa4bb7c32aa7039c2e91f5b1d8166d"
+    },
+    "mainnet-p1899/update_2.ssz": {
+      "bytes": 26916,
+      "sha256": "8f31543cc1d7c72328ae8441e79e13c063a448c01b68d185a8bf70f4f463bfd0"
+    },
+    "mainnet-p1899/update_3.ssz": {
+      "bytes": 26921,
+      "sha256": "3cf08e101120d9d19c59b208c30e372a726783c3cce8098d9eacc0109b92db9e"
+    },
+    "mainnet-p1899/update_4.ssz": {
+      "bytes": 26906,
+      "sha256": "e92e5e8c549cea8216195fcf21b70823bc8cb0295443ca4e82abdb5c8b11ae6c"
+    },
+    "prove_private": {
+      "bytes": 137228744,
+      "sha256": "f23fba6afd5ad87903d496ae07dae1cf4beb4857568c71e3d899f276355f0a26"
+    }
+  }
+}

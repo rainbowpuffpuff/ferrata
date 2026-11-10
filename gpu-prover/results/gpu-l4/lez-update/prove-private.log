@@ -1,0 +1,45 @@
+program image cec0bc687443be08c29c3216de8a3ed5f00a29d224fc266fe272f78cfe0f4d78 (508284 ELF bytes); consumer image aec03bcd8eedf5ff1fe14673be82d21ae1c8f95954fb0b9c4db7066d538e932a; RISC0_DEV_MODE off
+private transition (VerifyAll, finality update): 9,045,235 user cycles, 10 segments, 9,699,328 cycles padded (sum of 2^po2), exit Halted(0)
+REAL PROOF: execute_and_prove 49.5 s (prove + settle 49.8 s); receipt (succinct InnerReceipt, borsh) 227080 bytes; transaction 231034 bytes
+wrote the proven transaction to stage2-private-tx.borsh (231034 bytes)
+public_context.actors (3): ferrata@2nhBc476XLwdGYxHuku4C47GPQQU3t6Pzn9sxyQjxhXA, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@9xq6bB9mVU9PcSbkerXw2tz2j6fUi5LsgcFCPJ86Vciv
+public_context.authorized_accounts: {}
+execution.public_root: None
+execution.boundary (4 steps):
+  - PrivateToPublic from ferrata@EoTYfFi4rVfLkTBefMr8sB6GcyhRTZv682hg9J1S1QsL to ferrata@2nhBc476XLwdGYxHuku4C47GPQQU3t6Pzn9sxyQjxhXA: ApplyVerified { instance_id: 62a32b1c2734, job: 438 bytes } (475 bytes)
+  - EndPublicSubtree
+  - PrivateToPublic from native@EoTYfFi4rVfLkTBefMr8sB6GcyhRTZv682hg9J1S1QsL to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
+  - EndPublicSubtree
+execution.program_image_claims (1):
+  - Disclosed { program: ferrata, image_id: cec0bc687443be08c29c3216de8a3ed5f00a29d224fc266fe272f78cfe0f4d78 }
+execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1233 bytes)
+execution.async_messages: 0
+execution.recovery_bindings: 0
+execution.validity: ValidityWindows { blocks: ValidityWindow { from: None, to: None }, timestamps: ValidityWindow { from: Some(1793602427000), to: None } }
+execution.fee: Some("refund_to Some(78Skt7EQTvVwfWVYnA1XMjghv3aUR1V5wgQAfVLKJZG5), fallback true")
+nonces: 0, admission evidence: 0
+
+settled: execution gas 479,854 (PRIVATE_VERIFY_GAS 409,764 + public part 70,090 cycles), storage gas 224,063, base fee 5,631,336
+	Command being timed: "./prove_private --tx-out stage2-private-tx.borsh"
+	User time (seconds): 51.27
+	System time (seconds): 4.13
+	Percent of CPU this job got: 99%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:55.72
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 845032
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 0
+	Voluntary context switches: 1601
+	Involuntary context switches: 0
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 0
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

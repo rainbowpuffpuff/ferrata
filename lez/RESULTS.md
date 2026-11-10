@@ -27,8 +27,8 @@ handoff). The numbers measured on the earlier image (`e7cec90e…`, consumer
 cycle count, gas charge, fee and transaction size in §2 to §4 is the same as on the earlier
 image; what changed are the image ids, the account ids derived from them in the dumps of §3 and
 §4, and the exit codes of the refusals in §2. **The real proof (§3) and its settlement are still
-the earlier image's** (9,045,235 cycles, 54 min, 9.18 GiB, a 227,080-byte receipt); the proof of
-the new image is pending, and §3 says how to make it.
+the earlier image's** (9,045,235 cycles, 54 min, 9.18 GiB, a 227,080-byte receipt); the new
+image was then proven on one NVIDIA L4 GPU and settled here (§3; `gpu-prover/RESULTS.md`).
 
 | operation (mainnet, 512-member committees) | transactions | largest transaction, execution gas (cycles) | total execution gas | total storage gas (bytes) |
 |---|---:|---:|---:|---:|
@@ -371,7 +371,7 @@ The proof claims the program's image (`Disclosed`), the boundary shows the progr
 and the header record it writes, and the sender only as a blinded alias, which is also the fee
 payer's alias.
 
-**The real proof was made on the earlier image; the new image's is pending.** The one real proof
+**Two real proofs: the earlier image on the laptop CPU, the new image on a GPU.** The new image `cec0bc68…` was proven on one NVIDIA L4 (49.5 s for `execute_and_prove`, 55.7 s for the whole run; receipt 227,080 bytes, transaction 231,034 bytes), and the transaction settled here through LEZ's state machine with the receipt verified, at the same gas (479,854 execution, 224,063 storage): `results/prove-private.log`, `results/stage2-private-tx.borsh`, `gpu-prover/RESULTS.md`. The rest of this paragraph is the CPU proof of the earlier image. The one real proof
 of this path (`harness/src/bin/prove_private.rs`, `RISC0_DEV_MODE=0`, CPU only) proved the
 program image `e7cec90e…` (the image of commit 83b4b55, before the merge) and was settled through
 LEZ's state machine: proven, then settled with the real receipt verified (`Proof::is_valid_for`,
@@ -395,7 +395,7 @@ Proving time is that of a single run on a shared machine, not a benchmark. A pro
 image was started on this machine (2026-11-10, 08:27) and stopped after about 29 minutes to free
 the machine; it is to be made on a GPU instead.
 
-**Proving the new image (pending).** What a run elsewhere needs; `results/prove-private-dry-run.log`
+**Proving the new image elsewhere (done on the GPU, as above).** What a run elsewhere needs; `results/prove-private-dry-run.log`
 shows these commands on the new image in dev mode:
 
 - **The image.** Program `cec0bc687443be08c29c3216de8a3ed5f00a29d224fc266fe272f78cfe0f4d78`
@@ -577,7 +577,7 @@ Charged (dev mode; flat proof and storage costs as in §3): the read execution g
   the cost of deploying a 508 KB image was not measured.
 - **Private paths in dev mode.** The Stage 2 and 3 tests run with `RISC0_DEV_MODE=1`. One real
   proof was made (§3), for a finality update only, not for a handoff, and not for a consumer read,
-  and on the earlier image: the proof of the new image is pending.
+  on the earlier image by CPU and on the new image by GPU.
 - **Per-handler cycles come from a replay.** `lee` reports one cycle count per transaction; the
   split by handler comes from `harness/src/trace.rs`, which re-executes each guest as `lee`'s
   `PublicBackend` does. Every test asserts that the split sums to LEZ's charge. Within a handler

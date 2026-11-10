@@ -1,0 +1,62 @@
+{
+  "execute_s": 0.31050262,
+  "image_id": "0x95b816ed2614e340c85fed3ba3dad1f70e7dff2da1363406ade87e1333583caf",
+  "input_bytes": 308570,
+  "input_sha256": "91cbdf4e2625220e2103a988b7334aafcbb73d85dc5ecc61e148e72890caa153",
+  "journal_equals_native": true,
+  "name": "cp-empty-360",
+  "paging_cycles": 746778,
+  "program_bytes": 439524,
+  "program_sha256": "9a006d534a61f76bc662a6b2e61977dd9e6e01b70ad0fbde87492e9f88d0e81e",
+  "prove_session_s": 23.756201933,
+  "prover": "in-process (LocalProver path), risc0-zkvm feature cuda",
+  "receipt_bytes": 224314,
+  "receipt_kind": "succinct",
+  "receipt_sha256": "9044de408286beca93f6a8908bfefa971e6f03a84da10abddf476b4fda453d74",
+  "recursion_s": 5.960989662000003,
+  "reserved_cycles": 600751,
+  "risc0_zkvm": "3.0.5",
+  "segment_proofs_s": 17.795212270999997,
+  "segment_times": [
+    {
+      "index": 0,
+      "po2": 20,
+      "prove_s": 2.836056524
+    },
+    {
+      "index": 1,
+      "po2": 20,
+      "prove_s": 2.454007898
+    },
+    {
+      "index": 2,
+      "po2": 20,
+      "prove_s": 2.4830710529999998
+    },
+    {
+      "index": 3,
+      "po2": 20,
+      "prove_s": 2.567910618
+    },
+    {
+      "index": 4,
+      "po2": 20,
+      "prove_s": 2.560355606
+    },
+    {
+      "index": 5,
+      "po2": 20,
+      "prove_s": 2.5858348060000003
+    },
+    {
+      "index": 6,
+      "po2": 20,
+      "prove_s": 2.307975766
+    }
+  ],
+  "segments": 7,
+  "total_cycles": 7340032,
+  "total_s": 24.066771449,
+  "user_cycles": 5992503,
+  "verifies": true
+}

@@ -1,0 +1,37 @@
+{
+  "cuda_base_image": "nvidia/cuda:12.8.0-devel-ubuntu24.04",
+  "nvcc": [
+    "Cuda compilation tools, release 12.8, V12.8.61",
+    "Build cuda_12.8.r12.8/compiler.35404655_0"
+  ],
+  "rustc": "rustc 1.89.0 (29483883e 2025-08-04)",
+  "cargo": "cargo 1.89.0 (c24e10642 2025-06-23)",
+  "gcc": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+  "nvcc_append_flags": "--generate-code arch=compute_89,code=sm_89",
+  "build_container": {
+    "cpu_cores": 16.0,
+    "memory_mib": 65536
+  },
+  "binary": "ferrata-modal-cuda",
+  "source_key": "31ecd5fd46131b5faf35653b8c03c6ddd4bf25435cca8ff17a83a24866c17a1a",
+  "cargo_args": [
+    "build",
+    "--release",
+    "--locked",
+    "--features",
+    "cuda"
+  ],
+  "build_seconds": 1503.7,
+  "built_at_utc": "2026-11-10T09:17:14Z",
+  "sha256": "085c9bf990e6b0134dac862ec419184f7ec6dc9f5683d59e14e9604c21185c64",
+  "bytes": 119441352,
+  "ldd": [
+    "linux-vdso.so.1 (0x00002b236c20e000)",
+    "\tlibstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x00002b2373200000)",
+    "\tlibcuda.so.1 => not found",
+    "\tlibgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00002b237347e000)",
+    "\tlibm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00002b23734ac000)",
+    "\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00002b2373595000)",
+    "\t/lib64/ld-linux-x86-64.so.2 (0x00005644328cb000)"
+  ]
+}

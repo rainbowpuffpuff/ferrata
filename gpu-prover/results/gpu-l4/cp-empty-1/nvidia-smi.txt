@@ -1,0 +1,111 @@
+Tue Nov 10 09:51:07 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 610.57.04              KMD Version: 610.57.04     CUDA UMD Version: 13.3     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA L4                      On  |   00000000:80:01.0 Off |                    0 |
+| N/A   71C    P8             23W /   72W |       8MiB /  23034MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+
+==============NVSMI LOG==============
+
+Timestamp                                              : Tue Nov 10 09:51:08 2026
+Driver Version                                         : 610.57.04 [Deprecated; will be removed in CUDA 14.0. Use KMD Version instead]
+CUDA Version                                           : 13.3 [Deprecated; will be removed in CUDA 14.0. Use CUDA UMD Version instead]
+KMD Version                                            : 610.57.04
+CUDA UMD Version                                       : 13.3
+
+Attached GPUs                                          : 1
+GPU 00000000:80:01.0
+    FB Memory Usage
+        Total                                          : 23034 MiB
+        Reserved                                       : 443 MiB
+        Used                                           : 8 MiB
+        Free                                           : 22585 MiB
+    BAR1 Memory Usage
+        Total                                          : 32768 MiB
+        Used                                           : 7 MiB
+        Free                                           : 32761 MiB
+    Conf Compute Protected Memory Usage
+        Total                                          : 0 MiB
+        Used                                           : 0 MiB
+        Free                                           : 0 MiB
+    Compute Mode                                       : Default
+    GPU Power Readings
+        Average Power Draw                             : 21.40 W
+        Instantaneous Power Draw                       : 19.32 W
+        GPU Ceiling Power Limit
+            Current Power Limit                        : 72.00 W
+            Requested Power Limit                      : 72.00 W
+            Default Power Limit                        : 72.00 W
+        GPU Base Power
+            Current Base Power                         : N/A
+            Requested Base Power                       : N/A
+            Default Base Power                         : N/A
+        Min Power Limit                                : 40.00 W
+        Max Power Limit                                : 72.00 W
+    Power Samples
+        Duration                                       : 15.28 sec
+        Number of Samples                              : 119
+        Max                                            : 72.95 W
+        Min                                            : 19.41 W
+        Avg                                            : 24.50 W
+    GPU Memory Power Readings 
+        Average Power Draw                             : N/A
+        Instantaneous Power Draw                       : N/A
+    Module Power Readings
+        Average Power Draw                             : N/A
+        Instantaneous Power Draw                       : N/A
+        Current Power Limit                            : N/A
+        Requested Power Limit                          : N/A
+        Default Power Limit                            : N/A
+        Min Power Limit                                : N/A
+        Max Power Limit                                : N/A
+    EDPp Multiplier                                    : N/A
+    Clocks
+        Graphics                                       : 210 MHz
+        SM                                             : 210 MHz
+        Memory                                         : 405 MHz
+        Video                                          : 765 MHz
+    Applications Clocks
+        Graphics                                       : Requested functionality has been deprecated
+        Memory                                         : Requested functionality has been deprecated
+    Default Applications Clocks
+        Graphics                                       : Requested functionality has been deprecated
+        Memory                                         : Requested functionality has been deprecated
+    Deferred Clocks
+        Memory                                         : N/A
+    Max Clocks
+        Graphics                                       : 2040 MHz
+        SM                                             : 2040 MHz
+        Memory                                         : 6251 MHz
+        Video                                          : 1770 MHz
+    Max Customer Boost Clocks
+        Graphics                                       : 2040 MHz
+    SM Clock Samples
+        Duration                                       : Not Found
+        Number of Samples                              : Not Found
+        Max                                            : Not Found
+        Min                                            : Not Found
+        Avg                                            : Not Found
+    Memory Clock Samples
+        Duration                                       : Not Found
+        Number of Samples                              : Not Found
+        Max                                            : Not Found
+        Min                                            : Not Found
+        Avg                                            : Not Found
+    Clock Policy
+        Auto Boost                                     : N/A
+        Auto Boost Default                             : N/A

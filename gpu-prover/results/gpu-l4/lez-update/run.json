@@ -1,0 +1,98 @@
+{
+  "ok": true,
+  "name": "lez-update",
+  "run": "gpu-l4",
+  "exit_code": 0,
+  "gpu_type_requested": "L4",
+  "gpu": "NVIDIA L4, 23034 MiB, 610.57.04, 8.9",
+  "container_cpu_cores": 4.0,
+  "container_memory_mib": 32768,
+  "nproc": "4",
+  "modal_task_id": "ta-01M72HRYRK97NS82FMF53RNJTR",
+  "modal_region": "eu-west",
+  "modal_cloud_provider": "CLOUD_PROVIDER_GCP",
+  "expected_image_id": "cec0bc687443be08c29c3216de8a3ed5f00a29d224fc266fe272f78cfe0f4d78",
+  "input_hashes_equal_manifest": true,
+  "binary_sha256": "f23fba6afd5ad87903d496ae07dae1cf4beb4857568c71e3d899f276355f0a26",
+  "ferrata_lez_commit": "9b90c794fdb53ba126888a37466a08371305538b",
+  "r0vm": "risc0-r0vm 3.0.5",
+  "wall_s": 55.76879000663757,
+  "container_s_until_done": 58.51931834220886,
+  "gnu_time": {
+    "user_s": "51.27",
+    "system_s": "4.13",
+    "cpu_percent": "99%",
+    "elapsed": "0:55.72",
+    "max_rss_kib": "845032",
+    "exit_status": "0"
+  },
+  "gpu_stats": {
+    "samples": 282,
+    "sample_period_ms": 200,
+    "gpu_memory_used_mib_before": 41.0,
+    "gpu_memory_used_mib_peak": 11300.0,
+    "power_w_peak": 74.24,
+    "sm_clock_mhz_peak": 2040.0,
+    "temperature_c_peak": 83.0,
+    "gpu_busy_seconds": 38.400000000000006,
+    "first_busy_to_last_busy_s": 47.1029999256134,
+    "window_samples": 275,
+    "gpu_util_pct_mean_in_window": 54.65090909090909,
+    "gpu_util_share_of_samples_above_0_in_window": 0.6981818181818182,
+    "gpu_mem_bandwidth_util_pct_mean_in_window": 25.80727272727273,
+    "power_w_mean_in_window": 51.23501818181818
+  },
+  "gpu_stats_window": "whole prove_private run",
+  "log_lines": [
+    "program image cec0bc687443be08c29c3216de8a3ed5f00a29d224fc266fe272f78cfe0f4d78 (508284 ELF bytes); consumer image aec03bcd8eedf5ff1fe14673be82d21ae1c8f95954fb0b9c4db7066d538e932a; RISC0_DEV_MODE off",
+    "private transition (VerifyAll, finality update): 9,045,235 user cycles, 10 segments, 9,699,328 cycles padded (sum of 2^po2), exit Halted(0)",
+    "REAL PROOF: execute_and_prove 49.5 s (prove + settle 49.8 s); receipt (succinct InnerReceipt, borsh) 227080 bytes; transaction 231034 bytes",
+    "wrote the proven transaction to stage2-private-tx.borsh (231034 bytes)",
+    "settled: execution gas 479,854 (PRIVATE_VERIFY_GAS 409,764 + public part 70,090 cycles), storage gas 224,063, base fee 5,631,336"
+  ],
+  "tx_bytes": 231034,
+  "tx_sha256": "518f5aa7f866538b8f93ff6255b1a724981909080bd330e0812a9230907539bb",
+  "build_info": {
+    "cuda_base_image": "nvidia/cuda:12.8.0-devel-ubuntu24.04",
+    "nvcc": [
+      "Cuda compilation tools, release 12.8, V12.8.61",
+      "Build cuda_12.8.r12.8/compiler.35404655_0"
+    ],
+    "rustc": "rustc 1.89.0 (29483883e 2025-08-04)",
+    "cargo": "cargo 1.89.0 (c24e10642 2025-06-23)",
+    "gcc": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+    "nvcc_append_flags": "--generate-code arch=compute_89,code=sm_89",
+    "build_container": {
+      "cpu_cores": 16.0,
+      "memory_mib": 65536
+    },
+    "binary": "r0vm-cuda",
+    "source_key": "risc0-r0vm =3.0.5 --locked --features cuda",
+    "cargo_args": [
+      "install",
+      "risc0-r0vm",
+      "--version",
+      "=3.0.5",
+      "--locked",
+      "--features",
+      "cuda",
+      "--root",
+      "/root/build/r0vm"
+    ],
+    "build_seconds": 1511.5,
+    "built_at_utc": "2026-11-10T09:17:41Z",
+    "sha256": "781ca94605f6b93ac17306e15a7c63ac35bcaaab1e13892b38ec38221b756fb7",
+    "bytes": 136895208,
+    "ldd": [
+      "linux-vdso.so.1 (0x00002b9a94737000)",
+      "\tlibstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x00002b9a9c47a000)",
+      "\tlibcuda.so.1 => not found",
+      "\tlibgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00002b9a9c6f8000)",
+      "\tlibm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00002b9a9c726000)",
+      "\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00002b9a9c80f000)",
+      "\t/lib64/ld-linux-x86-64.so.2 (0x0000564891aa3000)"
+    ]
+  },
+  "r0vm_sha256_here": "781ca94605f6b93ac17306e15a7c63ac35bcaaab1e13892b38ec38221b756fb7",
+  "finished_at_utc": "2026-11-10T11:01:19Z"
+}

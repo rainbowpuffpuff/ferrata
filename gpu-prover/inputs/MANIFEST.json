@@ -1,0 +1,53 @@
+{
+  "source": "checkpoint",
+  "commit": "aaa9f0c5917cf4c96eb61650eb12654eabf2b72e",
+  "uncommitted_changes": 0,
+  "programs_from": "target/riscv-guest/\u2026/release/{checkpoint,segment}.bin (risc0-build 3.0.5, rzup Rust 1.88.0, no Docker)",
+  "local_image_ids": {
+    "checkpoint": "0x95b816ed2614e340c85fed3ba3dad1f70e7dff2da1363406ade87e1333583caf",
+    "segment": "0xbdfb94a6b6ea12e996f332b28ce4791dc7362f28da602769192f589a61fee043"
+  },
+  "local_image_ids_from": "target/release/host ids (the ids compiled into the local host)",
+  "files": {
+    "fixtures/cp-empty-1.input": {
+      "bytes": 5933,
+      "sha256": "b192f15601c760fa7d033e709a24355d53a51fb097b13b8a6acc817eda4ef342"
+    },
+    "fixtures/cp-empty-1.json": {
+      "bytes": 1437,
+      "sha256": "84f4f77979aa50effcf2bb3dcf0ce1025a5c68e23bedc41189822f00e1e8b733"
+    },
+    "fixtures/cp-empty-360.input": {
+      "bytes": 308570,
+      "sha256": "91cbdf4e2625220e2103a988b7334aafcbb73d85dc5ecc61e148e72890caa153"
+    },
+    "fixtures/cp-empty-360.json": {
+      "bytes": 1450,
+      "sha256": "13aa8682e015e74d970a16a30cb3cdb43c90cbda93ddd878b5a54f776408f282"
+    },
+    "fixtures/cp-pp5-360.input": {
+      "bytes": 1496285,
+      "sha256": "ddc5b3f6842e2338299569ffaf5a447bc84c9adbd99c11c060ece84faf7d69fb"
+    },
+    "fixtures/cp-pp5-360.json": {
+      "bytes": 1508,
+      "sha256": "451ed4ac157e905b69d96582805801ca9a19992629a2bed2d450ddaac45bc805"
+    },
+    "fixtures/cp-pp50-360.input": {
+      "bytes": 12185720,
+      "sha256": "a3621da51c0eea084b1bf191bd1805b33c4c73d15755a3b29f19e2c334c37d04"
+    },
+    "fixtures/cp-pp50-360.json": {
+      "bytes": 1511,
+      "sha256": "9cadb46050776b29d71f54bfcc3fa3f87f55eb36cfd25bb1bab791e5dfcd22e7"
+    },
+    "programs/checkpoint.bin": {
+      "bytes": 439524,
+      "sha256": "9a006d534a61f76bc662a6b2e61977dd9e6e01b70ad0fbde87492e9f88d0e81e"
+    },
+    "programs/segment.bin": {
+      "bytes": 267968,
+      "sha256": "bb85150dfc0f767f77056fd2627afe892fd686e173f2a10cd977c93a01203ced"
+    }
+  }
+}

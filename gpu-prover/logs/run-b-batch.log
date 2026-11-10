@@ -1,0 +1,169 @@
+start 2026-11-10T11:53:31+01:00
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/<workspace-name>/main/ap-BfZY9ulBo0gcF7dv2lLhUt
+✓ Created objects.
+├── 🔨 Created mount 
+│   <workspace>/modal-prover/modal_app.py
+├── 🔨 Created mount 
+│   <workspace>/modal-prover/prover
+├── 🔨 Created mount 
+│   <workspace>/modal-prover/inputs-lez
+├── 🔨 Created mount 
+│   <workspace>/modal-prover/inputs
+├── 🔨 Created function prove.
+├── 🔨 Created function build.
+├── 🔨 Created function prove_lez.
+└── 🔨 Created function batch.
+
+==========
+== CUDA ==
+==========
+
+CUDA Version 12.8.0
+
+Container image Copyright (c) 2016-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+This container image and its contents are governed by the NVIDIA Deep Learning Container License.
+By pulling and using the container, you accept the terms and conditions of this license:
+https://developer.nvidia.com/ngc/nvidia-deep-learning-container-license
+
+A copy of this license is made available in this container at /NGC-DL-CONTAINER-LICENSE for your convenience.
+
+[cp-empty-360 +    0.1s] [cp-empty-360] image id 0x95b816ed2614e340c85fed3ba3dad1f70e7dff2da1363406ade87e1333583caf (program 439524 bytes, sha256 9a006d534a61f76bc662a6b2e61977dd9e6e01b70ad0fbde87492e9f88d0e81e)
+[cp-empty-360 +    0.4s] [cp-empty-360] executed: 7 segments, 5992503 user cycles, 0.31 s; journal == native
+[cp-empty-360 +   24.2s] [cp-empty-360] succinct proof: total 24.07 s (execute 0.31 s, 7 segment proofs 17.80 s, lift/join/check 5.96 s) | receipt 224314 bytes | verifies; journal == native
+[cp-empty-360 +   24.2s] {"execute_s":0.31050262,"image_id":"0x95b816ed2614e340c85fed3ba3dad1f70e7dff2da1363406ade87e1333583caf","input_bytes":308570,"input_sha256":"91cbdf4e2625220e2103a988b7334aafcbb73d85dc5ecc61e148e72890caa153","journal_equals_native":true,"name":"cp-empty-360","paging_cycles":746778,"program_bytes":439524,"program_sha256":"9a006d534a61f76bc662a6b2e61977dd9e6e01b70ad0fbde87492e9f88d0e81e","prove_session_s":23.756201933,"prover":"in-process (LocalProver path), risc0-zkvm feature cuda","receipt_bytes":224314,"receipt_kind":"succinct","receipt_sha256":"9044de408286beca93f6a8908bfefa971e6f03a84da10abddf476b4fda453d74","recursion_s":5.960989662000003,"reserved_cycles":600751,"risc0_zkvm":"3.0.5","segment_proofs_s":17.795212270999997,"segment_times":[{"index":0,"po2":20,"prove_s":2.836056524},{"index":1,"po2":20,"prove_s":2.454007898},{"index":2,"po2":20,"prove_s":2.4830710529999998},{"index":3,"po2":20,"prove_s":2.567910618},{"index":4,"po2":20,"prove_s":2.560355606},{"index":5,"po2":20,"prove_s":2.5858348060000003},{"index":6,"po2":20,"prove_s":2.307975766}],"segments":7,"total_cycles":7340032,"total_s":24.066771449,"user_cycles":5992503,"verifies":true}
+[cp-empty-360 +   24.3s]        Command being timed: "/root/bin/ferrata-modal-cuda prove cp-empty-360 /inputs/programs/checkpoint.bin /inputs/fixtures/cp-empty-360.input /inputs/fixtures/cp-empty-360.json /vol/results/gpu-l4/cp-empty-360"
+[cp-empty-360 +   24.3s]        User time (seconds): 22.63
+[cp-empty-360 +   24.3s]        System time (seconds): 1.41
+[cp-empty-360 +   24.3s]        Percent of CPU this job got: 99%
+[cp-empty-360 +   24.3s]        Elapsed (wall clock) time (h:mm:ss or m:ss): 0:24.25
+[cp-empty-360 +   24.3s]        Average shared text size (kbytes): 0
+[cp-empty-360 +   24.3s]        Average unshared data size (kbytes): 0
+[cp-empty-360 +   24.3s]        Average stack size (kbytes): 0
+[cp-empty-360 +   24.3s]        Average total size (kbytes): 0
+[cp-empty-360 +   24.3s]        Maximum resident set size (kbytes): 883196
+[cp-empty-360 +   24.3s]        Average resident set size (kbytes): 0
+[cp-empty-360 +   24.3s]        Major (requiring I/O) page faults: 0
+[cp-empty-360 +   24.3s]        Minor (reclaiming a frame) page faults: 0
+[cp-empty-360 +   24.3s]        Voluntary context switches: 0
+[cp-empty-360 +   24.3s]        Involuntary context switches: 0
+[cp-empty-360 +   24.3s]        Swaps: 0
+[cp-empty-360 +   24.3s]        File system inputs: 0
+[cp-empty-360 +   24.3s]        File system outputs: 0
+[cp-empty-360 +   24.3s]        Socket messages sent: 0
+[cp-empty-360 +   24.3s]        Socket messages received: 0
+[cp-empty-360 +   24.3s]        Signals delivered: 0
+[cp-empty-360 +   24.3s]        Page size (bytes): 4096
+[cp-empty-360 +   24.3s]        Exit status: 0
+BATCH cp-empty-360: ok=True
+[cp-pp5-360 +    0.1s] [cp-pp5-360] image id 0x95b816ed2614e340c85fed3ba3dad1f70e7dff2da1363406ade87e1333583caf (program 439524 bytes, sha256 9a006d534a61f76bc662a6b2e61977dd9e6e01b70ad0fbde87492e9f88d0e81e)
+[cp-pp5-360 +    0.6s] [cp-pp5-360] executed: 12 segments, 8821992 user cycles, 0.52 s; journal == native
+[cp-pp5-360 +   41.6s] [cp-pp5-360] succinct proof: total 41.45 s (execute 0.52 s, 12 segment proofs 30.41 s, lift/join/check 10.52 s) | receipt 224314 bytes | verifies; journal == native
+[cp-pp5-360 +   41.6s] {"execute_s":0.522809778,"image_id":"0x95b816ed2614e340c85fed3ba3dad1f70e7dff2da1363406ade87e1333583caf","input_bytes":1496285,"input_sha256":"ddc5b3f6842e2338299569ffaf5a447bc84c9adbd99c11c060ece84faf7d69fb","journal_equals_native":true,"name":"cp-pp5-360","paging_cycles":2885260,"program_bytes":439524,"program_sha256":"9a006d534a61f76bc662a6b2e61977dd9e6e01b70ad0fbde87492e9f88d0e81e","prove_session_s":40.926712662,"prover":"in-process (LocalProver path), risc0-zkvm feature cuda","receipt_bytes":224314,"receipt_kind":"succinct","receipt_sha256":"5f64e35ce6f21529acca678b31526e4604a940c90aff5e91d880251073015efb","recursion_s":10.520181241,"reserved_cycles":351372,"risc0_zkvm":"3.0.5","segment_proofs_s":30.406531421,"segment_times":[{"index":0,"po2":20,"prove_s":3.182443299},{"index":1,"po2":20,"prove_s":2.56133014},{"index":2,"po2":20,"prove_s":2.62822937},{"index":3,"po2":20,"prove_s":2.561658512},{"index":4,"po2":20,"prove_s":2.597313249},{"index":5,"po2":20,"prove_s":2.544984119},{"index":6,"po2":20,"prove_s":2.557635683},{"index":7,"po2":20,"prove_s":2.600539159},{"index":8,"po2":20,"prove_s":2.67610395},{"index":9,"po2":20,"prove_s":2.557836301},{"index":10,"po2":20,"prove_s":2.590650701},{"index":11,"po2":19,"prove_s":1.347806938}],"segments":12,"total_cycles":12058624,"total_s":41.449571399,"user_cycles":8821992,"verifies":true}
+[cp-pp5-360 +   41.6s]  Command being timed: "/root/bin/ferrata-modal-cuda prove cp-pp5-360 /inputs/programs/checkpoint.bin /inputs/fixtures/cp-pp5-360.input /inputs/fixtures/cp-pp5-360.json /vol/results/gpu-l4/cp-pp5-360"
+[cp-pp5-360 +   41.6s]  User time (seconds): 38.97
+[cp-pp5-360 +   41.6s]  System time (seconds): 2.50
+[cp-pp5-360 +   41.6s]  Percent of CPU this job got: 99%
+[cp-pp5-360 +   41.6s]  Elapsed (wall clock) time (h:mm:ss or m:ss): 0:41.64
+[cp-pp5-360 +   41.6s]  Average shared text size (kbytes): 0
+[cp-pp5-360 +   41.6s]  Average unshared data size (kbytes): 0
+[cp-pp5-360 +   41.6s]  Average stack size (kbytes): 0
+[cp-pp5-360 +   41.6s]  Average total size (kbytes): 0
+[cp-pp5-360 +   41.6s]  Maximum resident set size (kbytes): 1056092
+[cp-pp5-360 +   41.7s]  Average resident set size (kbytes): 0
+[cp-pp5-360 +   41.7s]  Major (requiring I/O) page faults: 0
+[cp-pp5-360 +   41.7s]  Minor (reclaiming a frame) page faults: 0
+[cp-pp5-360 +   41.7s]  Voluntary context switches: 0
+[cp-pp5-360 +   41.7s]  Involuntary context switches: 0
+[cp-pp5-360 +   41.7s]  Swaps: 0
+[cp-pp5-360 +   41.7s]  File system inputs: 0
+[cp-pp5-360 +   41.7s]  File system outputs: 0
+[cp-pp5-360 +   41.7s]  Socket messages sent: 0
+[cp-pp5-360 +   41.7s]  Socket messages received: 0
+[cp-pp5-360 +   41.7s]  Signals delivered: 0
+[cp-pp5-360 +   41.7s]  Page size (bytes): 4096
+[cp-pp5-360 +   41.7s]  Exit status: 0
+BATCH cp-pp5-360: ok=True
+program image cec0bc687443be08c29c3216de8a3ed5f00a29d224fc266fe272f78cfe0f4d78 (508284 ELF bytes); consumer image aec03bcd8eedf5ff1fe14673be82d21ae1c8f95954fb0b9c4db7066d538e932a; RISC0_DEV_MODE off
+private transition (VerifyAll, finality update): 9,045,235 user cycles, 10 segments, 9,699,328 cycles padded (sum of 2^po2), exit Halted(0)
+REAL PROOF: execute_and_prove 49.5 s (prove + settle 49.8 s); receipt (succinct InnerReceipt, borsh) 227080 bytes; transaction 231034 bytes
+wrote the proven transaction to stage2-private-tx.borsh (231034 bytes)
+public_context.actors (3): ferrata@2nhBc476XLwdGYxHuku4C47GPQQU3t6Pzn9sxyQjxhXA, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@9xq6bB9mVU9PcSbkerXw2tz2j6fUi5LsgcFCPJ86Vciv
+public_context.authorized_accounts: {}
+execution.public_root: None
+execution.boundary (4 steps):
+  - PrivateToPublic from ferrata@EoTYfFi4rVfLkTBefMr8sB6GcyhRTZv682hg9J1S1QsL to ferrata@2nhBc476XLwdGYxHuku4C47GPQQU3t6Pzn9sxyQjxhXA: ApplyVerified { instance_id: 62a32b1c2734, job: 438 bytes } (475 bytes)
+  - EndPublicSubtree
+  - PrivateToPublic from native@EoTYfFi4rVfLkTBefMr8sB6GcyhRTZv682hg9J1S1QsL to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
+  - EndPublicSubtree
+execution.program_image_claims (1):
+  - Disclosed { program: ferrata, image_id: cec0bc687443be08c29c3216de8a3ed5f00a29d224fc266fe272f78cfe0f4d78 }
+execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1233 bytes)
+execution.async_messages: 0
+execution.recovery_bindings: 0
+execution.validity: ValidityWindows { blocks: ValidityWindow { from: None, to: None }, timestamps: ValidityWindow { from: Some(1793602427000), to: None } }
+execution.fee: Some("refund_to Some(78Skt7EQTvVwfWVYnA1XMjghv3aUR1V5wgQAfVLKJZG5), fallback true")
+nonces: 0, admission evidence: 0
+
+settled: execution gas 479,854 (PRIVATE_VERIFY_GAS 409,764 + public part 70,090 cycles), storage gas 224,063, base fee 5,631,336
+        Command being timed: "./prove_private --tx-out stage2-private-tx.borsh"
+        User time (seconds): 51.27
+        System time (seconds): 4.13
+        Percent of CPU this job got: 99%
+        Elapsed (wall clock) time (h:mm:ss or m:ss): 0:55.72
+        Average shared text size (kbytes): 0
+        Average unshared data size (kbytes): 0
+        Average stack size (kbytes): 0
+        Average total size (kbytes): 0
+        Maximum resident set size (kbytes): 845032
+        Average resident set size (kbytes): 0
+        Major (requiring I/O) page faults: 0
+        Minor (reclaiming a frame) page faults: 0
+        Voluntary context switches: 1601
+        Involuntary context switches: 0
+        Swaps: 0
+        File system inputs: 0
+        File system outputs: 0
+        Socket messages sent: 0
+        Socket messages received: 0
+        Signals delivered: 0
+        Page size (bytes): 4096
+        Exit status: 0
+BATCH lez-update: ok=True
+[cp-pp50-360 +    0.1s] [cp-pp50-360] image id 0x95b816ed2614e340c85fed3ba3dad1f70e7dff2da1363406ade87e1333583caf (program 439524 bytes, sha256 9a006d534a61f76bc662a6b2e61977dd9e6e01b70ad0fbde87492e9f88d0e81e)
+[cp-pp50-360 +    3.8s] [cp-pp50-360] executed: 60 segments, 37865667 user cycles, 3.72 s; journal == native
+[cp-pp50-360 +  219.5s] [cp-pp50-360] succinct proof: total 219.30 s (execute 3.72 s, 60 segment proofs 159.87 s, lift/join/check 55.71 s) | receipt 224314 bytes | verifies; journal == native
+[cp-pp50-360 +  219.5s] {"execute_s":3.718922799,"image_id":"0x95b816ed2614e340c85fed3ba3dad1f70e7dff2da1363406ade87e1333583caf","input_bytes":12185720,"input_sha256":"a3621da51c0eea084b1bf191bd1805b33c4c73d15755a3b29f19e2c334c37d04","journal_equals_native":true,"name":"cp-pp50-360","paging_cycles":23166895,"program_bytes":439524,"program_sha256":"9a006d534a61f76bc662a6b2e61977dd9e6e01b70ad0fbde87492e9f88d0e81e","prove_session_s":215.581255785,"prover":"in-process (LocalProver path), risc0-zkvm feature cuda","receipt_bytes":224314,"receipt_kind":"succinct","receipt_sha256":"fd308f0f7df7dc77c19601bf0640890e8e47f4766a7c836498681cbff5791cf1","recursion_s":55.71263703299999,"reserved_cycles":1881998,"risc0_zkvm":"3.0.5","segment_proofs_s":159.868618752,"segment_times":[{"index":0,"po2":20,"prove_s":3.174746949},{"index":1,"po2":20,"prove_s":2.794827557},{"index":2,"po2":20,"prove_s":2.784388395},{"index":3,"po2":20,"prove_s":2.76302177},{"index":4,"po2":20,"prove_s":2.827802163},{"index":5,"po2":20,"prove_s":2.783774787},{"index":6,"po2":20,"prove_s":2.773135933},{"index":7,"po2":20,"prove_s":2.818326108},{"index":8,"po2":20,"prove_s":2.830361933},{"index":9,"po2":20,"prove_s":2.662982869},{"index":10,"po2":20,"prove_s":2.659030699},{"index":11,"po2":20,"prove_s":2.602694594},{"index":12,"po2":20,"prove_s":2.563766818},{"index":13,"po2":20,"prove_s":2.6442517739999998},{"index":14,"po2":20,"prove_s":2.5793847100000002},{"index":15,"po2":20,"prove_s":2.56772226},{"index":16,"po2":20,"prove_s":2.5800419359999998},{"index":17,"po2":20,"prove_s":3.291496997},{"index":18,"po2":20,"prove_s":3.352228192},{"index":19,"po2":20,"prove_s":2.633216638},{"index":20,"po2":20,"prove_s":2.733233369},{"index":21,"po2":20,"prove_s":2.620092134},{"index":22,"po2":20,"prove_s":2.690914726},{"index":23,"po2":20,"prove_s":2.6527450139999997},{"index":24,"po2":20,"prove_s":2.62544512},{"index":25,"po2":20,"prove_s":2.558655471},{"index":26,"po2":20,"prove_s":2.61399631},{"index":27,"po2":20,"prove_s":2.60497798},{"index":28,"po2":20,"prove_s":2.568369423},{"index":29,"po2":20,"prove_s":2.557929166},{"index":30,"po2":20,"prove_s":2.592822398},{"index":31,"po2":20,"prove_s":2.619952213},{"index":32,"po2":20,"prove_s":2.565999942},{"index":33,"po2":20,"prove_s":2.589534928},{"index":34,"po2":20,"prove_s":2.612279418},{"index":35,"po2":20,"prove_s":2.585195274},{"index":36,"po2":20,"prove_s":2.655090955},{"index":37,"po2":20,"prove_s":2.592721162},{"index":38,"po2":20,"prove_s":2.626038765},{"index":39,"po2":20,"prove_s":2.5954947219999998},{"index":40,"po2":20,"prove_s":2.590703787},{"index":41,"po2":20,"prove_s":2.625067335},{"index":42,"po2":20,"prove_s":2.636421602},{"index":43,"po2":20,"prove_s":2.618043639},{"index":44,"po2":20,"prove_s":2.674748906},{"index":45,"po2":20,"prove_s":2.613073709},{"index":46,"po2":20,"prove_s":2.586062814},{"index":47,"po2":20,"prove_s":2.571412461},{"index":48,"po2":20,"prove_s":2.600348683},{"index":49,"po2":20,"prove_s":2.634427719},{"index":50,"po2":20,"prove_s":2.622507092},{"index":51,"po2":20,"prove_s":2.648060154},{"index":52,"po2":20,"prove_s":2.600431849},{"index":53,"po2":20,"prove_s":2.581320268},{"index":54,"po2":20,"prove_s":2.573364935},{"index":55,"po2":20,"prove_s":2.556500019},{"index":56,"po2":20,"prove_s":2.601804957},{"index":57,"po2":20,"prove_s":2.583129747},{"index":58,"po2":20,"prove_s":2.550975271},{"index":59,"po2":20,"prove_s":2.451522233}],"segments":60,"total_cycles":62914560,"total_s":219.300244277,"user_cycles":37865667,"verifies":true}
+[cp-pp50-360 +  219.6s]         Command being timed: "/root/bin/ferrata-modal-cuda prove cp-pp50-360 /inputs/programs/checkpoint.bin /inputs/fixtures/cp-pp50-360.input /inputs/fixtures/cp-pp50-360.json /vol/results/gpu-l4/cp-pp50-360"
+[cp-pp50-360 +  219.6s]         User time (seconds): 204.24
+[cp-pp50-360 +  219.6s]         System time (seconds): 13.92
+[cp-pp50-360 +  219.6s]         Percent of CPU this job got: 99%
+[cp-pp50-360 +  219.6s]         Elapsed (wall clock) time (h:mm:ss or m:ss): 3:39.58
+[cp-pp50-360 +  219.6s]         Average shared text size (kbytes): 0
+[cp-pp50-360 +  219.6s]         Average unshared data size (kbytes): 0
+[cp-pp50-360 +  219.6s]         Average stack size (kbytes): 0
+[cp-pp50-360 +  219.6s]         Average total size (kbytes): 0
+[cp-pp50-360 +  219.6s]         Maximum resident set size (kbytes): 1135752
+[cp-pp50-360 +  219.6s]         Average resident set size (kbytes): 0
+[cp-pp50-360 +  219.6s]         Major (requiring I/O) page faults: 0
+[cp-pp50-360 +  219.6s]         Minor (reclaiming a frame) page faults: 0
+[cp-pp50-360 +  219.6s]         Voluntary context switches: 0
+[cp-pp50-360 +  219.6s]         Involuntary context switches: 0
+[cp-pp50-360 +  219.6s]         Swaps: 0
+[cp-pp50-360 +  219.6s]         File system inputs: 0
+[cp-pp50-360 +  219.6s]         File system outputs: 0
+[cp-pp50-360 +  219.6s]         Socket messages sent: 0
+[cp-pp50-360 +  219.6s]         Socket messages received: 0
+[cp-pp50-360 +  219.6s]         Signals delivered: 0
+[cp-pp50-360 +  219.6s]         Page size (bytes): 4096
+[cp-pp50-360 +  219.6s]         Exit status: 0
+BATCH cp-pp50-360: ok=True
+RESULT cp-empty-360: ok=True total_s=24.066771449 segments=7 error=None
+RESULT cp-pp5-360: ok=True total_s=41.449571399 segments=12 error=None
+RESULT lez-update: ok=True total_s=55.76879000663757 segments=None error=None
+RESULT cp-pp50-360: ok=True total_s=219.300244277 segments=60 error=None
+✓ App completed. View run at 
+https://modal.com/apps/<workspace-name>/main/ap-BfZY9ulBo0gcF7dv2lLhUt
+exit 0 2026-11-10T12:05:07+01:00
