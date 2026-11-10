@@ -80,7 +80,33 @@ pub async fn deploy(live: &mut Live, name: &str, binary: &GuestBinary, payer: Ac
     live.set_gas_limit(wallet::DEFAULT_GAS_LIMIT);
     let returned = ProgramLoader(&live.wallet).deploy(header, &segments, binary.bytes.clone(), true, Some(payer)).await?;
     ensure!(returned == header, "the loader facade returned another header account");
-    live.sync().await?;
+    // The facade waited for each transaction to be in a block of the head; wait until the
+    // follower holds them all (in blocks final on Bedrock).
+    let started = std::time::Instant::now();
+    loop {
+        live.sync().await?;
+        let followed = live
+            .follower
+            .blocks
+            .iter()
+            .filter(|b| b.header.block_id > from)
+            .flat_map(|b| b.body.transactions.iter())
+            .filter_map(|tx| tx.public_call())
+            .filter(|(to, _)| {
+                to.program_account_id == PROGRAM_LOADER_ACCOUNT_ID && (to.account_id == header || segments.contains(&to.account_id))
+            })
+            .count();
+        if followed == segments.len() + 1 {
+            break;
+        }
+        ensure!(
+            started.elapsed() < crate::live::SETTLE_TIMEOUT,
+            "{name}: {followed} of {} loader transactions are final after {} s",
+            segments.len() + 1,
+            crate::live::SETTLE_TIMEOUT.as_secs()
+        );
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    }
     let balance_after = live.balance(payer).await?;
 
     // The loader's transactions of this deployment, as the sequencer included them.

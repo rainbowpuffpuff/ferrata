@@ -24,7 +24,9 @@
 //! Options: --rpc URL (default http://127.0.0.1:3040), --run-dir DIR, --out DIR,
 //! --program-bin FILE, --scripted-bin FILE, --fixtures DIR, --harness-results DIR,
 //! --sequencer-log FILE, --gas-limit N (default 4000000), --stored-tx FILE, --dir DIR,
-//! --binary FILE (repeatable), --transcript FILE, --tx-out FILE.
+//! --binary FILE (repeatable), --transcript FILE, --tx-out FILE, --tx FILE,
+//! --wait-final yes|no (default yes: a transaction is settled once its block is final on Bedrock;
+//! no for LEZ's mock Bedrock, where no block becomes final).
 
 mod blocklog;
 mod follower;
@@ -139,6 +141,7 @@ async fn open(args: &Args, phase: &str) -> Result<Run> {
         harness_results: args.get("harness-results").map(PathBuf::from).unwrap_or_else(|| repository_root().join("lez/results")),
         sequencer_log: args.get("sequencer-log").map(PathBuf::from),
         gas_limit: args.get("gas-limit").map(str::parse).transpose()?.unwrap_or(4_000_000),
+        wait_final: args.get("wait-final") != Some("no"),
     };
     let mut live = Live::open(opts, &keys).await?;
     live.phase = phase.to_string();
@@ -147,7 +150,13 @@ async fn open(args: &Args, phase: &str) -> Result<Run> {
 
 async fn info(run: &Run) -> Result<()> {
     let live = &run.live;
-    println!("sequencer {}: head block {}", live.opts.rpc, live.follower.height());
+    println!(
+        "sequencer {}: head block {}, followed to block {}{}",
+        live.opts.rpc,
+        live.head().await?,
+        live.follower.height(),
+        if live.opts.wait_final { " (the last one final on Bedrock)" } else { " (no Bedrock finality: LEZ's mock)" }
+    );
     let quote = {
         use wallet::WalletSequencerClient as _;
         live.wallet.client().get_fee_state().await?

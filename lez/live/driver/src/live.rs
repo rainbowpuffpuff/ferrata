@@ -8,7 +8,7 @@ use std::{
 };
 
 use anyhow::{anyhow, bail, ensure, Result};
-use common::{transaction::LeeTransaction, HashType};
+use common::{block::BedrockStatus, transaction::LeeTransaction, HashType};
 use lee::{AccountId, Actor, PrivateKey};
 use sequencer_service_rpc::SequencerClient;
 use wallet::{AccountIdentity, AccountMention, WalletCore};
@@ -24,6 +24,11 @@ use crate::{
 /// recorded as dropped by the sequencer.
 pub const DROP_AFTER_BLOCKS: u64 = 4;
 
+/// How long a transaction that was seen in a block may take to be final on Bedrock. The
+/// sequencer gives up on an inscription Bedrock does not mine after 300 slots (its
+/// `stale_refund_slots`), rewinds its head and includes the transactions again.
+pub const SETTLE_TIMEOUT: Duration = Duration::from_secs(1500);
+
 pub struct Options {
     pub rpc: String,
     pub run_dir: PathBuf,
@@ -32,6 +37,9 @@ pub struct Options {
     pub sequencer_log: Option<PathBuf>,
     /// Gas limit declared for the program's job steps.
     pub gas_limit: u64,
+    /// Follow only blocks that are final on Bedrock, and treat a transaction as settled only
+    /// then. Without a Bedrock (LEZ's mock) no block ever becomes final: follow the head.
+    pub wait_final: bool,
 }
 
 pub struct Live {
@@ -117,13 +125,19 @@ impl Live {
         self.wallet.get_last_block_id().await
     }
 
-    /// Bring the follower to the sequencer's head.
+    /// Bring the follower up to the sequencer's chain: to its head, or, with a Bedrock, to the
+    /// last block that is final there. Blocks of the head that are not final yet can still be
+    /// replaced (the sequencer rewinds its head when an inscription is not mined), so the
+    /// follower never applies one.
     pub async fn sync(&mut self) -> Result<Vec<Receipt>> {
         let head = self.head().await?;
         let mut receipts = Vec::new();
         while self.follower.height() < head {
             let id = self.follower.height() + 1;
             let block = self.wallet.get_block(id).await?.ok_or_else(|| anyhow!("the sequencer has no block {id}"))?;
+            if self.opts.wait_final && !matches!(block.bedrock_status, BedrockStatus::Finalized) {
+                break;
+            }
             receipts.extend(self.follower.apply(block)?);
         }
         Ok(receipts)
@@ -165,16 +179,36 @@ impl Live {
         text.lines().filter(|l| l.contains(hash)).map(str::to_string).collect()
     }
 
-    /// Wait until the sequencer has put `hash` in a block, or has produced `DROP_AFTER_BLOCKS`
-    /// blocks without it.
-    pub async fn wait_inclusion(&self, hash: HashType, since_head: u64) -> Result<Option<u64>> {
+    /// Wait until `hash` is settled: in a block the follower has applied (a block final on
+    /// Bedrock, if there is one). `None` if the sequencer produced `DROP_AFTER_BLOCKS` blocks
+    /// without ever including it. Also returns the head blocks it was seen in on the way: more
+    /// than one means the sequencer rewound its head and included it again.
+    pub async fn wait_settled(&mut self, hash: HashType, since_head: u64) -> Result<(Option<u64>, Vec<u64>)> {
+        let started = std::time::Instant::now();
+        let mut seen: Vec<u64> = Vec::new();
         loop {
-            if let Some((_, block_id)) = self.wallet.get_transaction(hash).await? {
-                return Ok(Some(block_id));
+            let found = self.wallet.get_transaction(hash).await?.map(|(_, block_id)| block_id);
+            if let Some(block_id) = found {
+                if seen.last() != Some(&block_id) {
+                    if !seen.is_empty() {
+                        println!("[{}] {hash} moved from block {} to block {block_id}: the head was rewound", self.phase, seen[seen.len() - 1]);
+                    }
+                    seen.push(block_id);
+                }
+                self.sync().await?;
+                if self.follower.receipt(&hash).is_some() {
+                    return Ok((Some(block_id), seen));
+                }
+            } else if seen.is_empty() && self.head().await? >= since_head + DROP_AFTER_BLOCKS {
+                if self.wallet.get_transaction(hash).await?.is_none() {
+                    return Ok((None, seen));
+                }
             }
-            if self.head().await? >= since_head + DROP_AFTER_BLOCKS {
-                return Ok(self.wallet.get_transaction(hash).await?.map(|(_, block_id)| block_id));
-            }
+            ensure!(
+                started.elapsed() < SETTLE_TIMEOUT,
+                "{hash} was seen in block(s) {seen:?} but is not final after {} s",
+                SETTLE_TIMEOUT.as_secs()
+            );
             tokio::time::sleep(Duration::from_millis(400)).await;
         }
     }
@@ -197,8 +231,11 @@ impl Live {
         let Sent { step, hash, since_head, payer, balance_before, harness, note, sent_at } = sent;
         let mut row = Row { phase: self.phase.clone(), step: step.clone(), tx_hash: hash.to_string(), note, ..Row::default() };
         self.harness_columns(&mut row, &harness);
-        let included = self.wait_inclusion(hash, since_head).await?;
-        self.sync().await?;
+        let (included, seen) = self.wait_settled(hash, since_head).await?;
+        if seen.len() > 1 {
+            let first = seen[..seen.len() - 1].iter().map(u64::to_string).collect::<Vec<_>>().join(", ");
+            row.note = format!("first included in block {first} of a head the sequencer rewound; {}", row.note);
+        }
         let receipt = self.follower.receipt(&hash).cloned();
         match (&included, &receipt) {
             (Some(block_id), Some(receipt)) => {

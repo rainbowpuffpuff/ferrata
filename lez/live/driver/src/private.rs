@@ -487,10 +487,11 @@ pub async fn private_update(
     live.save()?;
     let pending_index = live.rows.len() - 1;
 
-    let since_head = live.head().await?;
     let started = Instant::now();
     let sent = wallet.send_privacy_preserving_tx_with_pre_check(mentions(), 0, message, &catalog, None, |_| Ok(())).await;
     let seconds = started.elapsed().as_secs_f64();
+    // The proof can take an hour of blocks: the wait for inclusion counts from the submission.
+    let since_head = live.head().await?;
     live.rows.remove(pending_index);
     let hash = match sent {
         Ok((hash, _)) => hash,
