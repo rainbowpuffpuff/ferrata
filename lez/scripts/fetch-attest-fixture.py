@@ -49,15 +49,18 @@ block's RLP header. The script then fetches, in this order:
    if given);
 5. with `--deposits VAULT:FROM_BLOCK`: the vault's `Deposit` logs from FROM_BLOCK to the block
    (`eth_getLogs`), the leaves of the deposit tree whose root is the vault's slot 0;
-6. the canonical root of the finalized beacon block from a second beacon provider.
+6. with `--updates-from P`: every period's update from P to the period before the finality
+   update's (the replay fixture ends at period 1409; an instance needs these to reach the record);
+7. the canonical root of the finalized beacon block from a second beacon provider.
 
   lez/scripts/fetch-attest-fixture.py --network sepolia [--storage ADDR:SLOT[=getter()][,SLOT...]]...
-      [--log-token ADDR] [--same-address ADDR] [--deposits VAULT:FROM_BLOCK] OUTDIR
+      [--log-token ADDR] [--same-address ADDR] [--deposits VAULT:FROM_BLOCK] [--updates-from P] OUTDIR
 
 SLOT is a decimal or 0x-hex slot number. Without `--storage`, Sepolia USDC's `totalSupply_`
 (slot 11, checked against `totalSupply()`). Ferrata's vault, once deployed:
 `--storage 0xdfedf9A73Cfb337277b95a9a1C941c3496A4385F:0=depositRoot(),1=nextLeafIndex()
- --deposits 0xdfedf9A73Cfb337277b95a9a1C941c3496A4385F:DEPLOY_BLOCK`.
+ --deposits 0xdfedf9A73Cfb337277b95a9a1C941c3496A4385F:DEPLOY_BLOCK --updates-from 1410`
+into `crates/ferrata-spectests/fixtures/sepolia-vault` (read by `lez/harness/tests/vault.rs`).
 """
 import argparse
 import hashlib
@@ -137,9 +140,11 @@ def main():
     p.add_argument("--log-token")
     p.add_argument("--same-address", default=MULTICALL3)
     p.add_argument("--deposits")
+    p.add_argument("--updates-from", type=int)
     p.add_argument("out")
     a = p.parse_args()
-    if a.network == "mainnet" and (a.storage or a.log_token or a.deposits or a.same_address != MULTICALL3):
+    if a.network == "mainnet" and (a.storage or a.log_token or a.deposits or a.updates_from
+                                   or a.same_address != MULTICALL3):
         p.error("mainnet fetches the fixed Stage 4 fixture; the other options are for a Gloas network")
     os.makedirs(a.out)
     try:
@@ -251,6 +256,21 @@ def fetch_gloas(out, a):
         deposits = {"vault": vault.lower(), "from_block": int(start), "event": DEPOSIT_EVENT, "topic": topic,
                     "count": len(logs), "file": f"deposits_{n}.json"}
 
+    # 6. The updates an instance needs to reach the finality update's period.
+    updates = []
+    if a.updates_from is not None and a.updates_from < period:
+        count = period - a.updates_from
+        stream = f.beacon(beacon[0], f"/eth/v1/beacon/light_client/updates?start_period={a.updates_from}&count={count}",
+                          None, ssz=True)
+        for i, (digest, payload) in enumerate(gloas.split_chunks(stream)):
+            u = gloas.parse_update(payload)
+            if u["layout"] != "gloas" or u["attested"] // SLOTS_PER_PERIOD != a.updates_from + i:
+                raise SystemExit(f"update {i} of the stream is not period {a.updates_from + i} in the Gloas layout")
+            f.save(f"update_{a.updates_from + i}.ssz", payload)
+            updates.append(a.updates_from + i)
+        if len(updates) != count:
+            raise SystemExit(f"{len(updates)} updates served, {count} asked")
+
     # Second providers: the block, and the finalized beacon block's root.
     second, _ = f.rpc_any("eth_getBlockByHash", [block_hash, False], "block_second.json",
                           [e for e in execution if e != served])
@@ -283,6 +303,7 @@ def fetch_gloas(out, a):
                          "mainnet_block": int(mainnet_block, 16), "mainnet_code_hash": on_mainnet["codeHash"]},
         "transfer": transfer,
         "deposits": deposits,
+        "updates": updates,
     }
     f.save("fixture.json", (json.dumps(manifest, indent=2) + "\n").encode())
     files = sorted(x for x in os.listdir(out) if x not in ("SOURCE.md", "SHA256SUMS"))

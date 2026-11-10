@@ -12,6 +12,7 @@ pub mod scenarios;
 pub mod sepolia;
 pub mod settle;
 pub mod trace;
+pub mod vault;
 
 use std::{borrow::Cow, collections::BTreeMap, fs, path::PathBuf};
 
