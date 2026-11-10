@@ -1,0 +1,3 @@
+session	started	finished	status	generation_saved	sequencer_starts	block_phase_s	head_block	note
+20261110T184949Z	1794336589	1794336595	failed	-	1	-1	-	sequencer did not start
+20261110T185145Z	1794336705	1794338573	ok	1	1	6	185	transactions: 184 sent; 184 applied, 0 refused with an exit code, 0 reverted otherwise, 0 dropped, 0 rejected at the RPC, 0 unfinished
