@@ -444,3 +444,87 @@ fn last_time(w: &World) -> u64 {
 pub fn record(w: &World, slot: u64) -> Option<RecordState> {
     w.inst.record(&w.chain, slot)
 }
+
+/// What the LEZ shell costs, measured with this program: a public consumer's read of a record
+/// (consumer → `Read` → `StateReply` → consumer), and `Attest` calls whose query grows, so the
+/// header's handler differs only in the bytes it receives and echoes in its journal.
+pub fn shell_costs() -> Vec<TxReport> {
+    use ferrata_lez_wire::consumer::ConsumerMessage;
+    let mut w = World::new(2);
+    let u0 = w.updates[0].clone();
+    w.apply(&u0, "update_0");
+    let slot = w.bootstrap.header.beacon.slot;
+    let seed = lee_core::program::PdaSeed::new([0x33; 32]);
+    let consumer = Actor::new(AccountId::for_public_pda(&consumer_account(), &seed), consumer_account());
+    let evidence = vec![PublicAccountEvidence::Pda { program: consumer_account(), seed }];
+    let header = header_actor(w.inst.program, &w.inst.id, slot);
+    let mut out = Vec::new();
+    let read = ConsumerMessage::ReadRecord { ferrata: w.inst.program, instance_id: w.inst.id, slot };
+    out.push(w.chain.submit(
+        "public consumer reads header(id, slot)",
+        consumer,
+        borsh::to_vec(&read).unwrap(),
+        vec![consumer, header],
+        evidence.clone(),
+        0,
+    ));
+    for size in [0usize, 8 * 1024, 24 * 1024, 48 * 1024] {
+        let call = ConsumerMessage::CallAttest {
+            ferrata: w.inst.program,
+            instance_id: w.inst.id,
+            slot,
+            query: vec![0xab; size],
+        };
+        out.push(w.chain.submit(
+            &format!("public consumer calls Attest, {size}-byte query"),
+            consumer,
+            borsh::to_vec(&call).unwrap(),
+            vec![consumer, header],
+            evidence.clone(),
+            0,
+        ));
+    }
+    for r in &out {
+        assert!(r.ok(), "{}: {:?}", r.label, r.charge.revert);
+    }
+    out
+}
+
+/// The whole verification of a finality update in one public transaction: `VerifyAll` sent to a
+/// public actor of the program (the payer's account under the program), which hands the
+/// verified job to the instance with `ApplyVerified`.
+pub fn one_transaction_update() -> Vec<TxReport> {
+    use ferrata_core::witness::CompactUpdate;
+    let mut w = World::new(2);
+    let u0 = w.updates[0].clone();
+    w.apply(&u0, "update_0");
+    let update = as_finality_update(&w.updates[1]);
+    let store = w.inst.store(&w.chain);
+    let witness = Instance::signer_witness(w.native.core(), &update, &w.spec);
+    let message = Message::VerifyAll {
+        config: w.inst.config.clone(),
+        checkpoint: w.inst.checkpoint,
+        store: store.encode(),
+        update: CompactUpdate::of(&update).encode(LcFork::Electra),
+        signers: witness.encode(),
+        adoption: vec![],
+    };
+    let verifier = Actor::new(w.chain.payer, ferrata_account());
+    let header = header_actor(w.inst.program, &w.inst.id, update.finalized_header.beacon.slot);
+    let time = w.inst.config.slot_start_ms(update.signature_slot) + 12_000;
+    let report = w.chain.submit(
+        "finality update in one transaction (VerifyAll)",
+        verifier,
+        borsh::to_vec(&message).unwrap(),
+        vec![verifier, w.inst.actor(), header],
+        vec![],
+        time,
+    );
+    assert!(report.ok(), "{:?}", report.charge.revert);
+    let spec = w.spec.clone();
+    let ctx = Context { spec: &spec, genesis_validators_root: root(GENESIS_VALIDATORS_ROOT), bls: &BLS };
+    w.native.process_update(&update, update.signature_slot + 1, &ctx).unwrap();
+    w.check_store();
+    w.check_record(update.finalized_header.beacon.slot);
+    vec![report]
+}

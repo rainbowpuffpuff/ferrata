@@ -37,3 +37,16 @@ fn refusals_exit_with_a_code_and_are_charged_what_they_used() {
         assert!(r.report.charge.gas_exec <= MAX_GAS_EXEC, "{}", r.case);
     }
 }
+
+#[test]
+fn a_finality_update_in_one_public_transaction() {
+    let reports = scenarios::one_transaction_update();
+    println!("{}", render(&reports));
+    assert!(reports[0].charge.gas_exec <= MAX_GAS_EXEC, "over MAX_GAS_EXEC");
+}
+
+#[test]
+fn shell_costs() {
+    let reports = scenarios::shell_costs();
+    println!("{}", harness::render_transitions(&reports));
+}

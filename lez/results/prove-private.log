@@ -1,0 +1,51 @@
+# prove_private: the real proof of Stage 2 (RISC0_DEV_MODE=0, CPU), as logged
+# Started 2026-11-09T22:53:16+01:00, ended 2026-11-09T23:47:20+01:00. Load average was not recorded during the run.
+# From 23:28 to 23:36 the executor-only test suites of lez/ ran beside it at nice 19 (one executor at a time).
+# Lines 'WARNING: proving in dev mode' do not occur: this run did not use dev mode.
+2026-11-09T22:53:16+01:00
+private transition (VerifyAll, finality update): 9,045,235 user cycles, 10 segments, 9,699,328 cycles padded (sum of 2^po2), exit Halted(0)
+public_context.actors (3): ferrata@3wPjVqygcgTufKBsDpNBRJ5eKoXCoSxg1UZJRBQabyrF, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@HjvjiYbp31N2ydB8zhjeaDc51QxUytAnocCPnucNrGPZ
+public_context.authorized_accounts: {}
+execution.public_root: None
+execution.boundary (4 steps):
+  - PrivateToPublic from ferrata@EoTYfFi4rVfLkTBefMr8sB6GcyhRTZv682hg9J1S1QsL to ferrata@HjvjiYbp31N2ydB8zhjeaDc51QxUytAnocCPnucNrGPZ: ApplyVerified { instance_id: 62a32b1c2734, job: 438 bytes } (475 bytes)
+  - EndPublicSubtree
+  - PrivateToPublic from native@EoTYfFi4rVfLkTBefMr8sB6GcyhRTZv682hg9J1S1QsL to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
+  - EndPublicSubtree
+execution.program_image_claims (1):
+  - Disclosed { program: ferrata, image_id: e7cec90e8c2bb141de49c25c8d1e4f8496e37f0eaea9f349097bc7086e71d7d5 }
+execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1233 bytes)
+execution.async_messages: 0
+execution.recovery_bindings: 0
+execution.validity: ValidityWindows { blocks: ValidityWindow { from: None, to: None }, timestamps: ValidityWindow { from: Some(1793602427000), to: None } }
+execution.fee: Some("refund_to Some(78Skt7EQTvVwfWVYnA1XMjghv3aUR1V5wgQAfVLKJZG5), fallback true")
+nonces: 0, admission evidence: 0
+
+REAL PROOF: execute_and_prove 3240.5 s (prove + settle 3240.7 s); receipt (succinct InnerReceipt, borsh) 227080 bytes; transaction 231034 bytes
+settled: execution gas 479,854 (PRIVATE_VERIFY_GAS 409,764 + public part 70,090 cycles), storage gas 224,063, base fee 5,631,336
+	Command being timed: "target/debug/prove_private"
+	User time (seconds): 39206.54
+	System time (seconds): 105.86
+	Percent of CPU this job got: 1211%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 54:04.15
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 9628928
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 54
+	Minor (reclaiming a frame) page faults: 38622697
+	Voluntary context switches: 128586
+	Involuntary context switches: 8355497
+	Swaps: 0
+	File system inputs: 86760
+	File system outputs: 3936
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+exit 0
+2026-11-09T23:47:20+01:00
+# r0vm resident-set peak sampled every 2 s by ps (sum of all r0vm processes): 10710560 kB

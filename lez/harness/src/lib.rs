@@ -6,6 +6,7 @@
 //! action to split its cycles by transition. The program is deployed at genesis, immutable, as
 //! LEZ's own tests deploy programs (`V03State::with_genesis_programs`).
 
+pub mod private;
 pub mod scenarios;
 pub mod settle;
 pub mod trace;
@@ -635,6 +636,32 @@ pub fn render(reports: &[TxReport]) -> String {
             grouped(r.charge.fee_base as u64),
             result,
         ));
+    }
+    out
+}
+
+/// Every handler execution of `reports`: cycles, segments, and the bytes it read and committed.
+pub fn render_transitions(reports: &[TxReport]) -> String {
+    let mut out = String::from(
+        "| transaction | handler | cycles | segments | input bytes (ReceiveInput) | of which message | of which pre-state | journal bytes | post-state bytes | exit |\n\
+         |---|---|---:|---:|---:|---:|---:|---:|---:|---:|\n",
+    );
+    for r in reports {
+        for t in &r.transitions {
+            out.push_str(&format!(
+                "| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |\n",
+                r.label,
+                t.handler,
+                grouped(t.cycles),
+                t.segments,
+                grouped(t.input_bytes as u64),
+                grouped(t.message_bytes as u64),
+                grouped(t.pre_state_bytes as u64),
+                grouped(t.journal_bytes as u64),
+                t.post_state_bytes.map_or("–".to_string(), |b| grouped(b as u64)),
+                t.exit_code,
+            ));
+        }
     }
     out
 }
