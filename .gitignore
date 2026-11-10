@@ -58,3 +58,8 @@ __pycache__/
 /gpu-prover/inputs-lez/mainnet-p1899/
 /gpu-prover/inputs-lez-attest/prove_attest
 /gpu-prover/inputs-lez-attest/mainnet-attest-*/
+
+# The live sequencer run (lez/live): the driver's build output if it is built in place, and the
+# guest binaries deployed (they embed build paths; lez/live/README.md says how to obtain them)
+/lez/live/driver/target
+/lez/live/programs/*.bin
