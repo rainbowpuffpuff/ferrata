@@ -1,6 +1,6 @@
 # Burns (`harness/tests/bridge_burn.rs`); the private burn in RISC Zero dev mode
 
-Bridge program image `b5d177bb06a625166e8d39d10113655e113b768d3ebb101d496689b5d6691132`.
+Bridge program image `f11b1aba55fde1ea977f74a54cc927ff50253e8bf479c89dac0b3658177c58eb`.
 
 ## Public burns and refusals
 
@@ -77,4 +77,4 @@ One LEZ block holding the transactions below (the second burn marked reverted, a
 | private claim (leaf 5) | PrivateToPublic | 175 | ignored (variant 4 and up) | no |
 | private burn | PrivateToPublic | 185 | Burn | yes |
 
-NOut v2 of the first note: `331221d58f48325249bc574cac81c86878faf4ca0e649463bdf81b112a42d348`.
+NOut v2 of the first note: `5f39ce245042b28efdbc34bba22531748b015ed71d8b5f7fa664fd977672d890`.

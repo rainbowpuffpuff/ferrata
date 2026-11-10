@@ -1,36 +1,36 @@
 # Registry, fees, caps, freezes and Sunset (`harness/tests/bridge_controls.rs`)
 
-Bridge program image `b5d177bb06a625166e8d39d10113655e113b768d3ebb101d496689b5d6691132`; every transaction settled by LEZ's own functions in a block of its own.
+Bridge program image `f11b1aba55fde1ea977f74a54cc927ff50253e8bf479c89dac0b3658177c58eb`; every transaction settled by LEZ's own functions in a block of its own.
 
 | # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
 |---|---|---|---:|---:|---:|---:|---|
-| 1 | Init A | bridge Init 43,855 → Attest 84,756 → bridge (reply) 39,214 | 167,825 | 3% | 1,946 | 1,358,168 | applied |
-| 2 | Init B | bridge Init 43,235 → Attest 82,663 → bridge (reply) 39,214 | 165,112 | 3% | 1,882 | 1,335,952 | applied |
-| 3 | Register ETH (A): entry, schedules 0 and 1, count at block 100 | bridge Register 72,604 → Attest 147,234 → bridge (reply) 73,421 → bridge WriteToken 29,035 | 322,294 | 6% | 2,747 | 2,600,328 | applied |
-| 4 | Register ETH (A) again | bridge Register 78,596 → Attest 161,526 → bridge (reply) 73,202 → bridge WriteToken 31,286 | 344,610 | 7% | 3,080 | 2,781,520 | refused: exit 244 (ALREADY_WRITTEN) |
-| 5 | Register T2 (A): vault A holds no entry for it | bridge Register 64,015 → Attest 143,668 → bridge (reply) 49,206 | 256,889 | 5% | 2,633 | 2,076,176 | refused: exit 247 (IMPORT_MISMATCH) |
+| 1 | Init A | bridge Init 43,668 → Attest 85,725 → bridge (reply) 39,214 | 168,607 | 3% | 1,946 | 1,364,424 | applied |
+| 2 | Init B | bridge Init 43,048 → Attest 83,634 → bridge (reply) 39,214 | 165,896 | 3% | 1,882 | 1,342,224 | applied |
+| 3 | Register ETH (A): entry, schedules 0 and 1, count at block 100 | bridge Register 72,084 → Attest 150,208 → bridge (reply) 73,421 → bridge WriteToken 29,035 | 324,748 | 6% | 2,747 | 2,619,960 | applied |
+| 4 | Register ETH (A) again | bridge Register 78,767 → Attest 164,757 → bridge (reply) 73,202 → bridge WriteToken 31,286 | 348,012 | 7% | 3,080 | 2,808,736 | refused: exit 244 (ALREADY_WRITTEN) |
+| 5 | Register T2 (A): vault A holds no entry for it | bridge Register 64,292 → Attest 146,721 → bridge (reply) 49,206 | 260,219 | 5% | 2,633 | 2,102,816 | refused: exit 247 (IMPORT_MISMATCH) |
 | 6 | Register ETH (A'): configuration never initialised | bridge Register 20,064 | 20,064 | 0% | 2,812 | 183,008 | refused: exit 245 (NOT_FOUND) |
-| 7 | Register ETH (B) with other relay fees than the vault's | bridge Register 75,459 → Attest 153,207 → bridge (reply) 49,859 | 278,525 | 6% | 2,770 | 2,250,360 | refused: exit 247 (IMPORT_MISMATCH) |
+| 7 | Register ETH (B) with other relay fees than the vault's | bridge Register 74,985 → Attest 155,163 → bridge (reply) 49,859 | 280,007 | 6% | 2,770 | 2,262,216 | refused: exit 247 (IMPORT_MISMATCH) |
 | 8 | Register: nine denominations | bridge Register 34,232 | 34,232 | 1% | 3,177 | 299,272 | refused: exit 240 (BAD_MESSAGE) |
 | 9 | Register: a denomination not a multiple of the LEZ unit | bridge Register 35,556 | 35,556 | 1% | 2,770 | 306,608 | refused: exit 240 (BAD_MESSAGE) |
 | 10 | Register: a relay fee of 2% | bridge Register 35,760 | 35,760 | 1% | 2,770 | 308,240 | refused: exit 240 (BAD_MESSAGE) |
 | 11 | Register: a LEZ unit that is not a power of ten | bridge Register 34,985 | 34,985 | 1% | 2,770 | 302,040 | refused: exit 240 (BAD_MESSAGE) |
 | 12 | Register: schedule 0 with a mint fee | bridge Register 39,673 | 39,673 | 1% | 2,770 | 339,544 | refused: exit 240 (BAD_MESSAGE) |
-| 13 | Register ETH (B) | bridge Register 75,461 → Attest 153,207 → bridge (reply) 73,421 → bridge WriteToken 29,035 | 331,124 | 7% | 2,770 | 2,671,152 | applied |
-| 14 | Register T2 (B): a second token of the same configuration | bridge Register 71,060 → Attest 164,572 → bridge (reply) 71,627 → bridge WriteToken 28,047 | 335,306 | 7% | 2,850 | 2,705,248 | applied |
-| 15 | Register T3 (A) at block 101: schedule 1 present, covers nothing yet | bridge Register 80,402 → Attest 176,416 → bridge (reply) 73,202 → bridge WriteToken 29,035 | 359,055 | 7% | 3,254 | 2,898,472 | applied |
-| 16 | ImportRoot A n=5 | bridge ImportRoot 48,263 → Attest 107,114 → bridge (reply) 52,945 → bridge WriteRoot 16,328 | 224,650 | 4% | 1,895 | 1,812,360 | applied |
-| 17 | ImportRoot A n=8 | bridge ImportRoot 49,391 → Attest 111,079 → bridge (reply) 52,945 → bridge WriteRoot 16,328 | 229,743 | 5% | 2,025 | 1,854,144 | applied |
-| 18 | ImportRoot B n=8 | bridge ImportRoot 48,069 → Attest 112,079 → bridge (reply) 52,945 → bridge WriteRoot 16,328 | 229,421 | 5% | 1,918 | 1,850,712 | applied |
+| 13 | Register ETH (B) | bridge Register 74,987 → Attest 155,163 → bridge (reply) 73,421 → bridge WriteToken 29,035 | 332,606 | 7% | 2,770 | 2,683,008 | applied |
+| 14 | Register T2 (B): a second token of the same configuration | bridge Register 71,039 → Attest 167,274 → bridge (reply) 71,627 → bridge WriteToken 28,047 | 337,987 | 7% | 2,850 | 2,726,696 | applied |
+| 15 | Register T3 (A) at block 101: schedule 1 present, covers nothing yet | bridge Register 79,848 → Attest 178,613 → bridge (reply) 73,202 → bridge WriteToken 29,035 | 360,698 | 7% | 3,254 | 2,911,616 | applied |
+| 16 | ImportRoot A n=5 | bridge ImportRoot 47,969 → Attest 108,849 → bridge (reply) 52,945 → bridge WriteRoot 16,328 | 226,091 | 5% | 1,895 | 1,823,888 | applied |
+| 17 | ImportRoot A n=8 | bridge ImportRoot 49,536 → Attest 112,749 → bridge (reply) 52,945 → bridge WriteRoot 16,328 | 231,558 | 5% | 2,025 | 1,868,664 | applied |
+| 18 | ImportRoot B n=8 | bridge ImportRoot 47,772 → Attest 114,375 → bridge (reply) 52,945 → bridge WriteRoot 16,328 | 231,420 | 5% | 1,918 | 1,866,704 | applied |
 | 19 | Claim leaf 6 before its schedule is known: range [0, 8) | bridge Claim 107,526 → bridge Issue 24,470 | 131,996 | 3% | 2,061 | 1,072,456 | refused: exit 248 (LEAF_NOT_IMPORTED) |
-| 20 | ImportFees ETH (A) schedule 1 at block 100 (not there yet) | bridge ImportFees 51,417 → Attest 101,290 → bridge (reply) 42,198 | 194,905 | 4% | 2,003 | 1,575,264 | refused: exit 247 (IMPORT_MISMATCH) |
-| 21 | ImportFees ETH (A): schedule 2 before 1 | bridge ImportFees 48,745 → Attest 105,917 → bridge (reply) 51,842 → bridge ExtendFees 24,606 | 231,110 | 5% | 1,945 | 1,864,440 | refused: exit 247 (IMPORT_MISMATCH) |
-| 22 | ImportFees ETH (A) schedule 1 at block 101 | bridge ImportFees 53,935 → Attest 111,079 → bridge (reply) 57,503 → bridge ExtendFees 38,134 | 260,651 | 5% | 2,206 | 2,102,856 | applied |
-| 23 | ImportFees ETH (A) schedule 1 again | bridge ImportFees 53,935 → Attest 111,079 → bridge (reply) 57,503 → bridge ExtendFees 27,304 | 249,821 | 5% | 2,206 | 2,016,216 | refused: exit 247 (IMPORT_MISMATCH) |
+| 20 | ImportFees ETH (A) schedule 1 at block 100 (not there yet) | bridge ImportFees 51,355 → Attest 103,426 → bridge (reply) 42,198 | 196,979 | 4% | 2,003 | 1,591,856 | refused: exit 247 (IMPORT_MISMATCH) |
+| 21 | ImportFees ETH (A): schedule 2 before 1 | bridge ImportFees 48,326 → Attest 107,315 → bridge (reply) 51,842 → bridge ExtendFees 24,606 | 232,089 | 5% | 1,945 | 1,872,272 | refused: exit 247 (IMPORT_MISMATCH) |
+| 22 | ImportFees ETH (A) schedule 1 at block 101 | bridge ImportFees 54,087 → Attest 112,749 → bridge (reply) 57,503 → bridge ExtendFees 38,134 | 262,473 | 5% | 2,206 | 2,117,432 | applied |
+| 23 | ImportFees ETH (A) schedule 1 again | bridge ImportFees 54,087 → Attest 112,749 → bridge (reply) 57,503 → bridge ExtendFees 27,304 | 251,643 | 5% | 2,206 | 2,030,792 | refused: exit 247 (IMPORT_MISMATCH) |
 | 24 | Claim leaf 6 in schedule 1's range [6, 8) before it is closed | bridge Claim 107,526 → bridge Issue 25,911 | 133,437 | 3% | 2,061 | 1,083,984 | refused: exit 248 (LEAF_NOT_IMPORTED) |
-| 25 | ImportFees ETH (A): no schedule 2 at block 101 (8 leaves) | bridge ImportFees 48,745 → Attest 105,917 → bridge (reply) 51,842 → bridge ExtendFees 36,134 | 242,638 | 5% | 1,945 | 1,956,664 | applied |
-| 26 | ImportFees T3 (A) schedule 1: one day of notice | bridge ImportFees 53,935 → Attest 111,079 → bridge (reply) 57,503 → bridge ExtendFees 27,942 | 250,459 | 5% | 2,206 | 2,021,320 | refused: exit 240 (BAD_MESSAGE) |
-| 27 | ImportFees T3 (A) schedule 1: a 2% mint fee | bridge ImportFees 53,935 → Attest 111,079 → bridge (reply) 57,503 → bridge ExtendFees 26,157 | 248,674 | 5% | 2,206 | 2,007,040 | refused: exit 240 (BAD_MESSAGE) |
+| 25 | ImportFees ETH (A): no schedule 2 at block 101 (8 leaves) | bridge ImportFees 48,326 → Attest 107,315 → bridge (reply) 51,842 → bridge ExtendFees 36,134 | 243,617 | 5% | 1,945 | 1,964,496 | applied |
+| 26 | ImportFees T3 (A) schedule 1: one day of notice | bridge ImportFees 54,087 → Attest 112,749 → bridge (reply) 57,503 → bridge ExtendFees 27,942 | 252,281 | 5% | 2,206 | 2,035,896 | refused: exit 240 (BAD_MESSAGE) |
+| 27 | ImportFees T3 (A) schedule 1: a 2% mint fee | bridge ImportFees 54,087 → Attest 112,749 → bridge (reply) 57,503 → bridge ExtendFees 26,157 | 250,496 | 5% | 2,206 | 2,021,616 | refused: exit 240 (BAD_MESSAGE) |
 | 28 | Claim leaf 6 under schedule 0's range [0, 6) | bridge Claim 31,744 | 31,744 | 1% | 2,061 | 270,440 | refused: exit 248 (LEAF_NOT_IMPORTED) |
 | 29 | Claim leaf 2 under schedule 1's range [6, 8) | bridge Claim 31,741 | 31,741 | 1% | 2,061 | 270,416 | refused: exit 248 (LEAF_NOT_IMPORTED) |
 | 30 | SetCap (admin): ETH (A) mints 11 ETH, 0.01 ETH/s | bridge SetCap 12,790 → bridge SetCap 36,839 | 49,629 | 1% | 733 | 402,896 | applied |
@@ -81,85 +81,85 @@ Bridge program image `b5d177bb06a625166e8d39d10113655e113b768d3ebb101d496689b5d6
 
 | transaction | handler | cycles | segments | input bytes (ReceiveInput) | of which message | of which pre-state | journal bytes | post-state bytes | exit |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| Init A | bridge Init | 43,855 | 1 | 1,493 | 1,419 | 0 | 3,135 | 390 | 0 |
-| Init A | Attest | 84,756 | 1 | 1,626 | 1,155 | 333 | 2,089 | – | 0 |
+| Init A | bridge Init | 43,668 | 1 | 1,493 | 1,419 | 0 | 3,136 | 390 | 0 |
+| Init A | Attest | 85,725 | 1 | 1,627 | 1,156 | 333 | 2,090 | – | 0 |
 | Init A | bridge (reply) | 39,214 | 1 | 898 | 370 | 390 | 1,443 | 520 | 0 |
-| Init B | bridge Init | 43,235 | 1 | 1,429 | 1,355 | 0 | 3,007 | 390 | 0 |
-| Init B | Attest | 82,663 | 1 | 1,562 | 1,091 | 333 | 2,025 | – | 0 |
+| Init B | bridge Init | 43,048 | 1 | 1,429 | 1,355 | 0 | 3,008 | 390 | 0 |
+| Init B | Attest | 83,634 | 1 | 1,563 | 1,092 | 333 | 2,026 | – | 0 |
 | Init B | bridge (reply) | 39,214 | 1 | 898 | 370 | 390 | 1,443 | 520 | 0 |
-| Register ETH (A): entry, schedules 0 and 1, count at block 100 | bridge Register | 72,604 | 1 | 2,815 | 2,221 | 520 | 5,850 | 906 | 0 |
-| Register ETH (A): entry, schedules 0 and 1, count at block 100 | Attest | 147,234 | 1 | 2,503 | 2,032 | 333 | 3,317 | – | 0 |
+| Register ETH (A): entry, schedules 0 and 1, count at block 100 | bridge Register | 72,084 | 1 | 2,815 | 2,221 | 520 | 5,851 | 906 | 0 |
+| Register ETH (A): entry, schedules 0 and 1, count at block 100 | Attest | 150,208 | 1 | 2,504 | 2,033 | 333 | 3,318 | – | 0 |
 | Register ETH (A): entry, schedules 0 and 1, count at block 100 | bridge (reply) | 73,421 | 1 | 1,765 | 721 | 906 | 3,192 | 520 | 0 |
 | Register ETH (A): entry, schedules 0 and 1, count at block 100 | bridge WriteToken | 29,035 | 1 | 916 | 778 | 0 | 1,719 | 778 | 0 |
-| Register ETH (A) again | bridge Register | 78,596 | 1 | 3,148 | 2,554 | 520 | 6,516 | 906 | 0 |
-| Register ETH (A) again | Attest | 161,526 | 1 | 2,836 | 2,365 | 333 | 3,650 | – | 0 |
+| Register ETH (A) again | bridge Register | 78,767 | 1 | 3,148 | 2,554 | 520 | 6,517 | 906 | 0 |
+| Register ETH (A) again | Attest | 164,757 | 1 | 2,837 | 2,366 | 333 | 3,651 | – | 0 |
 | Register ETH (A) again | bridge (reply) | 73,202 | 1 | 1,765 | 721 | 906 | 3,192 | 520 | 0 |
 | Register ETH (A) again | bridge WriteToken | 31,286 | 1 | 1,694 | 778 | 778 | 0 | – | 244 |
-| Register T2 (A): vault A holds no entry for it | bridge Register | 64,015 | 1 | 2,701 | 2,107 | 520 | 5,622 | 826 | 0 |
-| Register T2 (A): vault A holds no entry for it | Attest | 143,668 | 1 | 2,469 | 1,998 | 333 | 3,283 | – | 0 |
+| Register T2 (A): vault A holds no entry for it | bridge Register | 64,292 | 1 | 2,701 | 2,107 | 520 | 5,623 | 826 | 0 |
+| Register T2 (A): vault A holds no entry for it | Attest | 146,721 | 1 | 2,470 | 1,999 | 333 | 3,284 | – | 0 |
 | Register T2 (A): vault A holds no entry for it | bridge (reply) | 49,206 | 1 | 1,685 | 721 | 826 | 0 | – | 247 |
 | Register ETH (A'): configuration never initialised | bridge Register | 20,064 | 1 | 2,295 | 2,221 | 0 | 0 | – | 245 |
-| Register ETH (B) with other relay fees than the vault's | bridge Register | 75,459 | 1 | 2,838 | 2,244 | 520 | 5,896 | 906 | 0 |
-| Register ETH (B) with other relay fees than the vault's | Attest | 153,207 | 1 | 2,526 | 2,055 | 333 | 3,340 | – | 0 |
+| Register ETH (B) with other relay fees than the vault's | bridge Register | 74,985 | 1 | 2,838 | 2,244 | 520 | 5,897 | 906 | 0 |
+| Register ETH (B) with other relay fees than the vault's | Attest | 155,163 | 1 | 2,527 | 2,056 | 333 | 3,341 | – | 0 |
 | Register ETH (B) with other relay fees than the vault's | bridge (reply) | 49,859 | 1 | 1,765 | 721 | 906 | 0 | – | 247 |
 | Register: nine denominations | bridge Register | 34,232 | 1 | 3,245 | 2,651 | 520 | 0 | – | 240 |
 | Register: a denomination not a multiple of the LEZ unit | bridge Register | 35,556 | 1 | 2,838 | 2,244 | 520 | 0 | – | 240 |
 | Register: a relay fee of 2% | bridge Register | 35,760 | 1 | 2,838 | 2,244 | 520 | 0 | – | 240 |
 | Register: a LEZ unit that is not a power of ten | bridge Register | 34,985 | 1 | 2,838 | 2,244 | 520 | 0 | – | 240 |
 | Register: schedule 0 with a mint fee | bridge Register | 39,673 | 1 | 2,838 | 2,244 | 520 | 0 | – | 240 |
-| Register ETH (B) | bridge Register | 75,461 | 1 | 2,838 | 2,244 | 520 | 5,896 | 906 | 0 |
-| Register ETH (B) | Attest | 153,207 | 1 | 2,526 | 2,055 | 333 | 3,340 | – | 0 |
+| Register ETH (B) | bridge Register | 74,987 | 1 | 2,838 | 2,244 | 520 | 5,897 | 906 | 0 |
+| Register ETH (B) | Attest | 155,163 | 1 | 2,527 | 2,056 | 333 | 3,341 | – | 0 |
 | Register ETH (B) | bridge (reply) | 73,421 | 1 | 1,765 | 721 | 906 | 3,192 | 520 | 0 |
 | Register ETH (B) | bridge WriteToken | 29,035 | 1 | 916 | 778 | 0 | 1,719 | 778 | 0 |
-| Register T2 (B): a second token of the same configuration | bridge Register | 71,060 | 1 | 2,918 | 2,324 | 520 | 6,056 | 826 | 0 |
-| Register T2 (B): a second token of the same configuration | Attest | 164,572 | 1 | 2,686 | 2,215 | 333 | 3,500 | – | 0 |
+| Register T2 (B): a second token of the same configuration | bridge Register | 71,039 | 1 | 2,918 | 2,324 | 520 | 6,057 | 826 | 0 |
+| Register T2 (B): a second token of the same configuration | Attest | 167,274 | 1 | 2,687 | 2,216 | 333 | 3,501 | – | 0 |
 | Register T2 (B): a second token of the same configuration | bridge (reply) | 71,627 | 1 | 1,685 | 721 | 826 | 3,032 | 520 | 0 |
 | Register T2 (B): a second token of the same configuration | bridge WriteToken | 28,047 | 1 | 836 | 698 | 0 | 1,559 | 698 | 0 |
-| Register T3 (A) at block 101: schedule 1 present, covers nothing yet | bridge Register | 80,402 | 1 | 3,322 | 2,728 | 520 | 6,864 | 906 | 0 |
-| Register T3 (A) at block 101: schedule 1 present, covers nothing yet | Attest | 176,416 | 1 | 3,010 | 2,539 | 333 | 3,824 | – | 0 |
+| Register T3 (A) at block 101: schedule 1 present, covers nothing yet | bridge Register | 79,848 | 1 | 3,322 | 2,728 | 520 | 6,865 | 906 | 0 |
+| Register T3 (A) at block 101: schedule 1 present, covers nothing yet | Attest | 178,613 | 1 | 3,011 | 2,540 | 333 | 3,825 | – | 0 |
 | Register T3 (A) at block 101: schedule 1 present, covers nothing yet | bridge (reply) | 73,202 | 1 | 1,765 | 721 | 906 | 3,192 | 520 | 0 |
 | Register T3 (A) at block 101: schedule 1 present, covers nothing yet | bridge WriteToken | 29,035 | 1 | 916 | 778 | 0 | 1,719 | 778 | 0 |
-| ImportRoot A n=5 | bridge ImportRoot | 48,263 | 1 | 1,963 | 1,369 | 520 | 4,078 | 569 | 0 |
-| ImportRoot A n=5 | Attest | 107,114 | 1 | 1,920 | 1,449 | 333 | 2,500 | – | 0 |
+| ImportRoot A n=5 | bridge ImportRoot | 47,969 | 1 | 1,963 | 1,369 | 520 | 4,079 | 569 | 0 |
+| ImportRoot A n=5 | Attest | 108,849 | 1 | 1,921 | 1,450 | 333 | 2,501 | – | 0 |
 | ImportRoot A n=5 | bridge (reply) | 52,945 | 1 | 1,194 | 487 | 569 | 1,960 | 520 | 0 |
 | ImportRoot A n=5 | bridge WriteRoot | 16,328 | 1 | 255 | 117 | 0 | 397 | 117 | 0 |
-| ImportRoot A n=8 | bridge ImportRoot | 49,391 | 1 | 2,093 | 1,499 | 520 | 4,338 | 569 | 0 |
-| ImportRoot A n=8 | Attest | 111,079 | 1 | 2,050 | 1,579 | 333 | 2,630 | – | 0 |
+| ImportRoot A n=8 | bridge ImportRoot | 49,536 | 1 | 2,093 | 1,499 | 520 | 4,339 | 569 | 0 |
+| ImportRoot A n=8 | Attest | 112,749 | 1 | 2,051 | 1,580 | 333 | 2,631 | – | 0 |
 | ImportRoot A n=8 | bridge (reply) | 52,945 | 1 | 1,194 | 487 | 569 | 1,960 | 520 | 0 |
 | ImportRoot A n=8 | bridge WriteRoot | 16,328 | 1 | 255 | 117 | 0 | 397 | 117 | 0 |
-| ImportRoot B n=8 | bridge ImportRoot | 48,069 | 1 | 1,986 | 1,392 | 520 | 4,124 | 569 | 0 |
-| ImportRoot B n=8 | Attest | 112,079 | 1 | 1,943 | 1,472 | 333 | 2,523 | – | 0 |
+| ImportRoot B n=8 | bridge ImportRoot | 47,772 | 1 | 1,986 | 1,392 | 520 | 4,125 | 569 | 0 |
+| ImportRoot B n=8 | Attest | 114,375 | 1 | 1,944 | 1,473 | 333 | 2,524 | – | 0 |
 | ImportRoot B n=8 | bridge (reply) | 52,945 | 1 | 1,194 | 487 | 569 | 1,960 | 520 | 0 |
 | ImportRoot B n=8 | bridge WriteRoot | 16,328 | 1 | 255 | 117 | 0 | 397 | 117 | 0 |
 | Claim leaf 6 before its schedule is known: range [0, 8) | bridge Claim | 107,526 | 1 | 1,470 | 1,279 | 117 | 1,770 | – | 0 |
 | Claim leaf 6 before its schedule is known: range [0, 8) | bridge Issue | 24,470 | 1 | 1,123 | 207 | 778 | 0 | – | 248 |
-| ImportFees ETH (A) schedule 1 at block 100 (not there yet) | bridge ImportFees | 51,417 | 1 | 2,071 | 1,477 | 520 | 4,290 | 746 | 0 |
-| ImportFees ETH (A) schedule 1 at block 100 (not there yet) | Attest | 101,290 | 1 | 1,847 | 1,376 | 333 | 2,427 | – | 0 |
+| ImportFees ETH (A) schedule 1 at block 100 (not there yet) | bridge ImportFees | 51,355 | 1 | 2,071 | 1,477 | 520 | 4,291 | 746 | 0 |
+| ImportFees ETH (A) schedule 1 at block 100 (not there yet) | Attest | 103,426 | 1 | 1,848 | 1,377 | 333 | 2,428 | – | 0 |
 | ImportFees ETH (A) schedule 1 at block 100 (not there yet) | bridge (reply) | 42,198 | 1 | 1,371 | 487 | 746 | 0 | – | 247 |
-| ImportFees ETH (A): schedule 2 before 1 | bridge ImportFees | 48,745 | 1 | 2,013 | 1,419 | 520 | 4,174 | 558 | 0 |
-| ImportFees ETH (A): schedule 2 before 1 | Attest | 105,917 | 1 | 1,977 | 1,506 | 333 | 2,557 | – | 0 |
+| ImportFees ETH (A): schedule 2 before 1 | bridge ImportFees | 48,326 | 1 | 2,013 | 1,419 | 520 | 4,175 | 558 | 0 |
+| ImportFees ETH (A): schedule 2 before 1 | Attest | 107,315 | 1 | 1,978 | 1,507 | 333 | 2,558 | – | 0 |
 | ImportFees ETH (A): schedule 2 before 1 | bridge (reply) | 51,842 | 1 | 1,183 | 487 | 558 | 1,902 | 520 | 0 |
 | ImportFees ETH (A): schedule 2 before 1 | bridge ExtendFees | 24,606 | 1 | 986 | 70 | 778 | 0 | – | 247 |
-| ImportFees ETH (A) schedule 1 at block 101 | bridge ImportFees | 53,935 | 1 | 2,274 | 1,680 | 520 | 4,696 | 746 | 0 |
-| ImportFees ETH (A) schedule 1 at block 101 | Attest | 111,079 | 1 | 2,050 | 1,579 | 333 | 2,630 | – | 0 |
+| ImportFees ETH (A) schedule 1 at block 101 | bridge ImportFees | 54,087 | 1 | 2,274 | 1,680 | 520 | 4,697 | 746 | 0 |
+| ImportFees ETH (A) schedule 1 at block 101 | Attest | 112,749 | 1 | 2,051 | 1,580 | 333 | 2,631 | – | 0 |
 | ImportFees ETH (A) schedule 1 at block 101 | bridge (reply) | 57,503 | 1 | 1,371 | 487 | 746 | 2,278 | 520 | 0 |
 | ImportFees ETH (A) schedule 1 at block 101 | bridge ExtendFees | 38,134 | 1 | 1,174 | 258 | 778 | 2,165 | 966 | 0 |
-| ImportFees ETH (A) schedule 1 again | bridge ImportFees | 53,935 | 1 | 2,274 | 1,680 | 520 | 4,696 | 746 | 0 |
-| ImportFees ETH (A) schedule 1 again | Attest | 111,079 | 1 | 2,050 | 1,579 | 333 | 2,630 | – | 0 |
+| ImportFees ETH (A) schedule 1 again | bridge ImportFees | 54,087 | 1 | 2,274 | 1,680 | 520 | 4,697 | 746 | 0 |
+| ImportFees ETH (A) schedule 1 again | Attest | 112,749 | 1 | 2,051 | 1,580 | 333 | 2,631 | – | 0 |
 | ImportFees ETH (A) schedule 1 again | bridge (reply) | 57,503 | 1 | 1,371 | 487 | 746 | 2,278 | 520 | 0 |
 | ImportFees ETH (A) schedule 1 again | bridge ExtendFees | 27,304 | 1 | 1,362 | 258 | 966 | 0 | – | 247 |
 | Claim leaf 6 in schedule 1's range [6, 8) before it is closed | bridge Claim | 107,526 | 1 | 1,470 | 1,279 | 117 | 1,770 | – | 0 |
 | Claim leaf 6 in schedule 1's range [6, 8) before it is closed | bridge Issue | 25,911 | 1 | 1,311 | 207 | 966 | 0 | – | 248 |
-| ImportFees ETH (A): no schedule 2 at block 101 (8 leaves) | bridge ImportFees | 48,745 | 1 | 2,013 | 1,419 | 520 | 4,174 | 558 | 0 |
-| ImportFees ETH (A): no schedule 2 at block 101 (8 leaves) | Attest | 105,917 | 1 | 1,977 | 1,506 | 333 | 2,557 | – | 0 |
+| ImportFees ETH (A): no schedule 2 at block 101 (8 leaves) | bridge ImportFees | 48,326 | 1 | 2,013 | 1,419 | 520 | 4,175 | 558 | 0 |
+| ImportFees ETH (A): no schedule 2 at block 101 (8 leaves) | Attest | 107,315 | 1 | 1,978 | 1,507 | 333 | 2,558 | – | 0 |
 | ImportFees ETH (A): no schedule 2 at block 101 (8 leaves) | bridge (reply) | 51,842 | 1 | 1,183 | 487 | 558 | 1,902 | 520 | 0 |
 | ImportFees ETH (A): no schedule 2 at block 101 (8 leaves) | bridge ExtendFees | 36,134 | 1 | 1,174 | 70 | 966 | 2,165 | 966 | 0 |
-| ImportFees T3 (A) schedule 1: one day of notice | bridge ImportFees | 53,935 | 1 | 2,274 | 1,680 | 520 | 4,696 | 746 | 0 |
-| ImportFees T3 (A) schedule 1: one day of notice | Attest | 111,079 | 1 | 2,050 | 1,579 | 333 | 2,630 | – | 0 |
+| ImportFees T3 (A) schedule 1: one day of notice | bridge ImportFees | 54,087 | 1 | 2,274 | 1,680 | 520 | 4,697 | 746 | 0 |
+| ImportFees T3 (A) schedule 1: one day of notice | Attest | 112,749 | 1 | 2,051 | 1,580 | 333 | 2,631 | – | 0 |
 | ImportFees T3 (A) schedule 1: one day of notice | bridge (reply) | 57,503 | 1 | 1,371 | 487 | 746 | 2,278 | 520 | 0 |
 | ImportFees T3 (A) schedule 1: one day of notice | bridge ExtendFees | 27,942 | 1 | 1,174 | 258 | 778 | 0 | – | 240 |
-| ImportFees T3 (A) schedule 1: a 2% mint fee | bridge ImportFees | 53,935 | 1 | 2,274 | 1,680 | 520 | 4,696 | 746 | 0 |
-| ImportFees T3 (A) schedule 1: a 2% mint fee | Attest | 111,079 | 1 | 2,050 | 1,579 | 333 | 2,630 | – | 0 |
+| ImportFees T3 (A) schedule 1: a 2% mint fee | bridge ImportFees | 54,087 | 1 | 2,274 | 1,680 | 520 | 4,697 | 746 | 0 |
+| ImportFees T3 (A) schedule 1: a 2% mint fee | Attest | 112,749 | 1 | 2,051 | 1,580 | 333 | 2,631 | – | 0 |
 | ImportFees T3 (A) schedule 1: a 2% mint fee | bridge (reply) | 57,503 | 1 | 1,371 | 487 | 746 | 2,278 | 520 | 0 |
 | ImportFees T3 (A) schedule 1: a 2% mint fee | bridge ExtendFees | 26,157 | 1 | 1,174 | 258 | 778 | 0 | – | 240 |
 | Claim leaf 6 under schedule 0's range [0, 6) | bridge Claim | 31,744 | 1 | 1,470 | 1,279 | 117 | 0 | – | 248 |
