@@ -78,6 +78,48 @@ def configs():
     for n in ns:
         t = threshold(n)
         out.append(("h", f"n={n} t={t} m={t-1}: two honest nodes eclipsed for Δ, others live", dict(n=n, m=t - 1, attack="forkstall", eclipse=True), 50))
+    # ---------------------------------------------------------------- SPEC-v3 follow-up
+    V3 = dict(delta=10860, turn_wait=True)              # W = 3 h 01 min + (t - 1) * 15 min
+    waits = (("flat Δ = 2 h", dict(delta=7200)), ("flat Δ = 3 h 01", dict(delta=10860)), ("v3 W", V3))
+    for n in ns + (13, 16):
+        t = threshold(n)
+        for wname, wkw in waits:
+            seeds = 100 if n <= 10 else 50
+            out.append(("i", f"n={n} t={t} m={t-1}: fork attack + turn hogging, {wname}",
+                        dict(n=n, m=t - 1, attack="forkstall", outage=False, hog=True, **wkw), seeds))
+    for n in ns:
+        t = threshold(n)
+        out.append(("i", f"n={n} t={t} m={t-1}: + honest turns kept off chain (network), v3 W",
+                    dict(n=n, m=t - 1, attack="forkstall", outage=False, hog=True, suppress=True, **V3), 50))
+    attacks = []
+    for n in ns:
+        t = threshold(n)
+        attacks.append((f"n={n} t={t} m={t-1}: outage + two forks", dict(n=n, m=t - 1, attack="forkstall")))
+    for n in (2, 3, 4):
+        attacks.append((f"n={n} t={threshold(n)} m=0: outage + two forks, no adversary key", dict(n=n, m=0, attack="forkstall", honest_tip=True)))
+    for n in ns:
+        t = threshold(n)
+        attacks.append((f"n={n} t={t} m={t-1}: two nodes eclipsed for W", dict(n=n, m=t - 1, attack="forkstall", eclipse=True)))
+    for n in ns:
+        t = threshold(n)
+        attacks.append((f"n={n} t={t} m={t-1}: hogging + honest turns kept off chain", dict(n=n, m=t - 1, attack="forkstall", outage=False, hog=True, suppress=True)))
+    for guard in ("off", "freeze-hold", "freeze-lift", "cancel"):
+        for name, kw in attacks:
+            out.append(("j", f"{name}; guard {guard}", dict(kw, guard=guard, **V3), 50))
+    for guard in ("freeze-hold", "cancel-tip"):
+        for n in ns:
+            t = threshold(n)
+            out.append(("j", f"n={n} t={t}: honest operation; guard {guard}", dict(n=n, m=t - 1, guard=guard, **V3), 100))
+    for guard in ("freeze-hold", "freeze-lift", "cancel"):
+        out.append(("j", f"n=4 t=3: honest operation, Bedrock at half rate; guard {guard}", dict(n=4, m=2, guard=guard, slowdown=(2 * H, 28 * H, 0.5), **V3), 50))
+    for guard in ("off", "freeze-lift", "cancel-tip"):
+        for n in (7, 10):
+            t = threshold(n)
+            out.append(("j", f"n={n} t={t} m={t-1}: adversary hogs every turn but signs honest candidates; guard {guard}",
+                        dict(n=n, m=t - 1, attack="hog", accelerate=True, guard=guard, **V3), 50))
+    for n in ns:
+        t = threshold(n)
+        out.append(("k", f"n={n} t={t}: honest operation, v3 W = {(10860 + (t - 1) * 900) / H:.2f} h", dict(n=n, m=t - 1, **V3), 100))
     return out
 
 
@@ -95,6 +137,8 @@ def summarize(out):
         depths=[r["depth"] for r in finals],
         honest_depths=[r["depth"] for r in honest],
         attack=out["attack"],
+        monitor=out.get("monitor", {}),
+        delays=[r.get("frozen_delay", 0) for r in honest],
     )
 
 
@@ -136,6 +180,37 @@ def depth_table(rows, k=120):
         d = [x for r in rs for x in r["depths"]]
         below = sum(1 for x in d if x < k)
         lines.append(f"| {label} | {len(d)} | {q(d, .01)} / {q(d, .1)} / {q(d, .5)} | {below}/{len(d)} = {below / max(1, len(d)):.3f} |")
+    return "\n".join(lines)
+
+
+def wait_table(rows):
+    lines = ["| experiment | runs | attack succeeded | not canonical (P1) | why it failed (count) | view control, max s | empty inscriptions posted, max |",
+             "|---|---|---|---|---|---|---|"]
+    for label, rs in rows:
+        att = [r["attack"] for r in rs]
+        reasons = defaultdict(int)
+        for a in att:
+            if a["outcome"] != "finalised":
+                reasons[a["reason"] or str(a["outcome"])] += 1
+        why = "; ".join(f"{k} ({v})" for k, v in reasons.items()) or "–"
+        succ = sum(1 for a in att if a["outcome"] == "finalised")
+        lines.append(f"| {label} | {len(rs)} | {succ}/{len(rs)} | {sum(r['p1'] for r in rs)} | {why} "
+                     f"| {max((a.get('capture_time') or 0) for a in att)} | {max((a.get('hog_posts') or 0) for a in att)} |")
+    return "\n".join(lines)
+
+
+def guard_table(rows):
+    lines = ["| experiment | runs | honest finalisations | runs with a freeze | freezes (stall / tip trigger) | candidates cancelled | honest finalisations delayed | delay p50 / max (h) | honest candidates lost | frozen time per run (h) |",
+             "|---|---|---|---|---|---|---|---|---|---|"]
+    for label, rs in rows:
+        mon = [r["monitor"] for r in rs]
+        d = [x for r in rs for x in r["delays"] if x > 0]
+        hon = sum(len(r["delays"]) for r in rs)
+        lines.append(f"| {label} | {len(rs)} | {hon} | {sum(1 for m in mon if m.get('trips'))} "
+                     f"| {sum(m.get('stall_trips', 0) for m in mon)} / {sum(m.get('tip_trips', 0) for m in mon)} "
+                     f"| {sum(m.get('cancelled', 0) for m in mon)} | {len(d)} "
+                     f"| {hours(q(d, .5))} / {hours(max(d)) if d else '–'} | {sum(m.get('lost', 0) for m in mon)} "
+                     f"| {sum(m.get('frozen_time', 0) for m in mon) / len(rs) / H:.2f} |")
     return "\n".join(lines)
 
 
@@ -223,6 +298,11 @@ def main():
         rows = [(label, groups[exp][label]) for label in order[exp]]
         md.append(f"## ({exp})")
         md.append(table(rows))
+        if exp == "i":
+            md += ["", wait_table(rows)]
+        if exp == "j":
+            att = [(l, rs) for l, rs in rows if any(r["attack"].get("outcome") is not None for r in rs)]
+            md += ["", wait_table(att), "", guard_table([(l, rs) for l, rs in rows if l not in {a for a, _ in att}])]
         if exp in ("a", "b", "c", "d", "h", "f"):
             att = [(l, rs) for l, rs in rows if any(r["attack"]["outcome"] is not None for r in rs)]
             if att:

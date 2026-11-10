@@ -2,7 +2,7 @@
 
 ## How these numbers were produced
 
-`cd sim && python3 experiments.py` (Python 3.14, standard library only, 14 worker processes). Raw per-run records are in `results/raw.jsonl`; the generated tables are in `results/tables.md`. Every run is deterministic for its seed (seeds 1…N per configuration).
+`cd sim && python3 experiments.py` (Python 3.14, standard library only, 14 worker processes; 12,000 runs, 25 min). Raw per-run records are in `results/raw.jsonl`; the generated tables are in `results/tables.md`. Every run is deterministic for its seed (seeds 1…N per configuration).
 
 **Parameters**, unless a row says otherwise. They are the repository's testnet values (MODEL M3, M6):
 
@@ -259,3 +259,96 @@ The chance that a Bedrock adversary with stake share `q` ever overtakes a lead o
 | 60 | 5.6e-58 | 2.4e-29 | 2.7e-11 | 5.9e-06 |
 | 90 | 1.3e-86 | 1.1e-43 | 1.4e-16 | 1.4e-08 |
 | 120 | 3.1e-115 | 5.6e-58 | 7.4e-22 | 3.5e-11 |
+
+## SPEC-v3 follow-up: experiments (i)–(k)
+
+SPEC-v3 (`notes/design/SPEC-v3-delta.md` D3, D4):
+- `D` checked;
+- wait `W = 3 h 01 min + (t − 1) × 15 min`;
+- a checkpoint freeze set by `monitor`. The tip trigger fires when a candidate's tip is not in the honest final tier by `a + 2 h`. The stall trigger fires when that final tier has not advanced for 30 min.
+
+`m = t − 1` adversary keys sit consecutively in the turn order. In LEZ they get there by grinding key bytes: the committee is sorted by key (`committee_discovery.rs:58-68`). Generated tables are in `results/tables.md`.
+
+### (i) Turn hogging: m = t − 1 keys hold each of their turns with empty inscriptions; fork attack around it; honest sequencers live
+
+Each adversary key holds its 900 s turn by getting an empty inscription included at least every 150 s (MODEL M3.1; `LEMMA.md` §8.1). Results are attack successes; each success is a never-canonical tip finalised.
+
+| n | t | m | hog | flat Δ = 2 h | flat Δ = 3 h 01 | v3 W | W |
+|---|---|---|---|---|---|---|---|
+| 3 | 2 | 1 | 15 min | 0/100 | 0/100 | 0/100 | 3.27 h |
+| 4 | 3 | 2 | 30 min | 0/100 | 0/100 | 0/100 | 3.52 h |
+| 7 | 5 | 4 | 60 min | 0/100 | 0/100 | 0/100 | 4.02 h |
+| 10 | 7 | 6 | 90 min | **67/100** | 0/100 | 0/100 | 4.52 h |
+| 13 | 9 | 8 | 120 min | **48/50** | 0/50 | 0/50 | 5.02 h |
+| 16 | 11 | 10 | 150 min | **50/50** | **16/50** | 0/50 | 5.52 h |
+
+The same, plus a network adversary that keeps each honest sequencer's inscriptions off the chain while it is scheduled. Every honest turn then passes after 150 s, and F2 fails: under v3 W the attack succeeds in **43/50, 48/50, 50/50, 45/50** runs (n = 3, 4, 7, 10).
+
+- Each fork controls two honest nodes' views for 5 min (n = 3) to 28 min (n = 16); an attack posts up to 329 empty inscriptions.
+- Every failure is "no fork root": by the beacon, the first honest block after the hog was more than `k` Bedrock blocks old.
+- Success needs the beacon to come less than about `D_k` (≈ 1 h) after the hog ends: `wait + (m + 1) × 150 s − m × 900 s < D_k`. That predicts the pattern above: 1 % per attempt at n = 7 and 2 h, observed 0/100. The losses at n = 10 and 2 h are attempts started while an honest block was in flight, plus the wait for an adversary slot for the second fork.
+- `W` cancels the hog term exactly, so it held in all 500 attempts.
+
+### (j) v3 under the earlier attacks, with and without the checkpoint freeze
+
+Guard readings:
+- **held:** D4 literally; the freeze lasts until it expires (30 days).
+- **lifted:** the authority lifts it once another block is final at the tip's height.
+- **cancel:** the authority cancels the candidate instead (a reject-only call SPEC-v3 lacks); the stall trigger still freezes.
+
+50 runs per cell; entries are attack successes.
+
+| attack, v3 W | n | guard off | held | lifted | cancel |
+|---|---|---|---|---|---|
+| outage of all honest sequencers + two short forks, m = t − 1 | 3 / 4 / 7 / 10 | 45 / 48 / 50 / 45 | 0 | 0 | 0 |
+| same, no adversary key (m = 0) | 2 / 3 / 4 | 50 / 50 / 50 | 0 | 0 | 0 |
+| two honest nodes eclipsed for W, m = t − 1 | 3 / 4 / 7 / 10 | 50 / 50 / 50 / 50 | 0 | 0 / 0 / **50 / 50** | 0 |
+| hogging + honest turns kept off chain | 3 / 4 / 7 / 10 | 43 / 48 / 50 / 45 | 0 | **1** / 0 / 0 / 0 | 0 |
+
+Honest finalisations in the same attack runs, outage rows n = 3 / 4 / 7 / 10:
+
+| guard | honest finalisations |
+|---|---|
+| held | **0** in every row: the vault never finalises again |
+| lifted | 203 / 200 / 150 / 100 |
+| cancel | 240 / 200 / 150 / 100 |
+
+The eclipse and hogging rows behave the same way.
+
+How each reading fails:
+- **Lifted** fails against the long eclipse whenever a third honest sequencer keeps LEZ live (n = 7, 10). The tip is overtaken at once, the freeze lifts, and the eclipsed nodes' support finalises it. At n = 3, 4 both honest sequencers are the eclipsed ones, nothing overtakes the tip, and the freeze stays on.
+- **Held** stops everything and stops the vault with it.
+- **Cancel** stopped every attack and kept finalising.
+
+Pauses and freezes:
+
+| scenario (v3 W) | guard | runs | runs with a freeze | frozen per run (h of 28) | honest finalisations | delayed by the freeze (p50 / max) | candidates cancelled (lost) |
+|---|---|---|---|---|---|---|---|
+| honest operation, n = 3 / 4 / 7 / 10 | held | 400 | **0** | 0 | 550 / 494 / 317 / 300 | **0** | 0 |
+| same | cancel, tip trigger only | 400 | 0 | 0 | same | 0 | 0 |
+| honest, Bedrock at half rate, n = 4 | held | 50 | **19** | 4.57 | 213 | (frozen runs stop) | 0 |
+| same | lifted | 50 | 19 | 0.03 | 250 | 0 | 0 |
+| same | cancel | 50 | 0 | 0 | 239 | 0 | 20 (16) |
+| adversary holds every turn, signs honest candidates, n = 7 | off | 50 | 0 | 0 | 205 | 0 | 0 |
+| same | stall trigger at 30 min | 50 | **50** | **7.27** | 202 | 14 (0.50 / 1.40 h) | 0 |
+| same | cancel, tip trigger only | 50 | 0 | 0 | 205 | 0 | 0 |
+| same, n = 10 | off | 50 | 0 | 0 | 219 | 0 | 0 |
+| same, n = 10 | stall trigger at 30 min | 50 | **50** | **10.11** | 166 | 113 (0.87 / 2.13 h) | 0 |
+| same, n = 10 | cancel, tip trigger only | 50 | 0 | 0 | 219 | 0 | 0 |
+
+- **No false pauses in honest operation**, at S/2 = 30 min: 0 freezes in 800 runs, no honest finalisation delayed.
+- **The stall trigger fires when a minority holds its turns**, which v3's assumptions allow. It froze every such run, for 7.3 h (n = 7) and 10.1 h (n = 10) of 28 h, and delayed up to 2.1 h.
+- **The tip trigger fires falsely only under a Bedrock slowdown.** At half rate honest tips are sometimes not final by `a + 2 h`. Held then halts the vault in 19 of 50 runs; cancel costs a resubmission.
+
+A targeted check, not part of the tables: attackers that keep trying for 4 h instead of 1 h made no difference in the outage and hogging-with-suppression cases: 0 successes in 27 runs at n = 3, across the three readings (`Params.patience`).
+
+### (k) Honest-operation latency under v3 (tip creation to finalisation)
+
+| n | t | W | runs | finalisations | median | p90 | shallowest at finalisation | v2, flat 2 h (median) |
+|---|---|---|---|---|---|---|---|---|
+| 3 | 2 | 3.27 h | 100 | 550 | **4.00 h** | 4.21 h | 379 blocks | 2.65 h |
+| 4 | 3 | 3.52 h | 100 | 494 | **4.67 h** | 4.96 h | 454 | 3.29 h |
+| 7 | 5 | 4.02 h | 100 | 317 | **6.11 h** | 6.37 h | 582 | 4.24 h |
+| 10 | 7 | 4.52 h | 100 | 300 | **7.68 h** | 7.92 h | 764 | 5.20 h |
+
+Latency is W plus about two rounds of `t` posting turns, unchanged by the guard (no freeze in honest operation).

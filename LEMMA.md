@@ -4,6 +4,7 @@ Short answer.
 - **Validity holds.** If the vault accepts a candidate for `T`, then `T` and every block below it are valid LEZ blocks, provided fewer than `t` keys are adversarial, honest sequencers re-execute, and the proof system is sound. Nothing about Logos Blockchain ("Bedrock") or time is needed.
 - **Finality, as specified, does not hold.** With SPEC §4.6's assumptions (i)–(iv), the vault can finalise a block that never becomes final on LEZ, with one adversarial key out of three, and even with none (§3).
 - **Finality holds with an added assumption.** It is true under a liveness ("progress") assumption on honest sequencers that §4.6 does not state, with Bedrock's assumptions applied to each sequencer's own node, and with Δ sized by a budget (§4).
+- **SPEC-v3 (§8).** Its wait `W` absorbs turn hogging by up to `t − 1` adversarial keys, which breaks any flat Δ for a large enough committee. It still needs honest progress (F2). The checkpoint freeze carries everything else, and only if a bad candidate is cancelled rather than merely frozen.
 
 Model items (M…, W…) refer to `MODEL.md`. Experiment letters refer to `RESULTS.md`.
 
@@ -211,10 +212,134 @@ Measured on testnet parameters (experiment (a)): from a tip's creation to its fi
 
 ## 7. Repairing the rule
 
-The smallest changes that make the finality statement true are in `FINDINGS.md`. In short:
+The smallest changes that make the finality statement true are in the hand-back report, saved at `the summary of findings` (from this directory: `../../the summary of findings`). In short:
 - check `D`;
 - state A3, A4 per node, add A5, restate (iv) as A7;
 - fix `deltaFloor = Δ_g + Δ_p + ε`;
 - add a reject-only stall guard.
 
-No change to *what the two proofs show* removes A5. Every honest signature the vault can see certifies "`T` was in my head at time τ". No finite set of such certificates rules out "`T` left every honest chain and came back". Only a certificate of a node's final tier does: option (B), compared in `FINDINGS.md`.
+No change to *what the two proofs show* removes A5. Every honest signature the vault can see certifies "`T` was in my head at time τ". No finite set of such certificates rules out "`T` left every honest chain and came back". Only a certificate of a node's final tier does: option (B), compared in that report. SPEC-v3 adopted the repair; §8 tests it.
+
+## 8. SPEC-v3, the repaired rule, under test
+
+SPEC-v3 (`notes/design/SPEC-v3-delta.md` D3, D4, D6) does three things:
+- checks `D`;
+- waits `W = delta + (t − 1) × turn` with `delta ≥ Δ_g + S + ε`: 2 h + 1 h + 1 min by default, `turn = posting_timeframe = 900 s`;
+- adds a checkpoint freeze that `monitor` sets when a candidate's tip is not in an honest node's final tier by `a + Δ_g`, or when that final tier has not advanced for `S/2`.
+
+Experiments (i)–(k) in `RESULTS.md`.
+
+### 8.1 Turn hogging: the attack the first report did not price
+
+How adversary keys hold their turns (code path):
+- A scheduled key keeps its turn for the whole `posting_timeframe` as long as one of its inscriptions lands at least every `posting_timeout` slots. Executing an inscription sets `tip_slot` to the block's slot ([lb] `inscribe.rs:249-262`). `round_robin` stays on the timeframe branch while `slot − tip_slot < posting_timeout` (`channel.rs:221-241`).
+- The inscriptions can be empty. LEZ treats an empty payload as a missed turn, not an offence ([lez] `bedrock/src/actor.rs:236-240`; `slasher/src/protocol.rs:24-32`).
+- The turn order is the order of `accredited_keys`, which LEZ sorts by key bytes (`committee_discovery.rs:58-68`). An attacker grinds its keys into one consecutive run.
+
+So `m` adversarial keys keep every honest inscription off the chain for `m × posting_timeframe` while every honest sequencer is up: 15 min × (t − 1) at testnet values. The simulator reproduces it exactly: in a traced n = 10 run, keys 4–9 held 900 s each and the canonical fold sat at the attacked block's parent for 5,400 s.
+
+Combined with the two-fork attack of §3, with no outage:
+1. `T_A` is made at the start of the first adversarial turn (`s₀`).
+2. The fooled nodes' turns on the private fork come only after the adversary's own keys have timed out there, so the candidate lands at `a ≈ s₀ + (m + 1) × posting_timeout`.
+3. No honest block lands before `s₀ + m × posting_timeframe`.
+4. At the beacon `b = a + wait`, the second fork can still root below the first honest block if that block is less than `k` Bedrock blocks old.
+
+Hence the attack succeeds when `wait + (m + 1) × posting_timeout − m × posting_timeframe` is less than the time Bedrock takes for `k` blocks (≈ 1 h ± 5 min).
+
+The same fork-and-turn timing applies to any variant in which the attacked block is honest, so making `T_A` an honest block gains nothing. Moving the fork point earlier lets honest blocks overtake `T_A`.
+
+Experiment (i), attack successes (each success is a never-canonical tip finalised; 100 runs, 50 for n ≥ 13):
+
+| n | t | m | flat Δ = 2 h | flat Δ = 3 h 01 | v3 W |
+|---|---|---|---|---|---|
+| 3 | 2 | 1 | 0 | 0 | 0 |
+| 4 | 3 | 2 | 0 | 0 | 0 |
+| 7 | 5 | 4 | 0 | 0 | 0 |
+| 10 | 7 | 6 | **67/100** | 0 | 0 |
+| 13 | 9 | 8 | **48/50** | 0 | 0 |
+| 16 | 11 | 10 | **50/50** | **16/50** | 0 |
+| hogging + honest turns kept off chain, n = 3 / 4 / 7 / 10 | | | – | – | **43 / 48 / 50 / 45 of 50** |
+
+**Verdict on the claim.** The claim is right about the mechanism and wrong about n = 7.
+- A flat 2 h fails from n = 10 (t − 1 = 6 turns, 90 min of hog). It held at n = 7: 0/100, against a predicted ≈ 1 % per attempt.
+- A flat 3 h 01 min holds up to n = 13 and fails from n = 16.
+- In general a flat Δ fails once `(t − 1) × (posting_timeframe − posting_timeout) − posting_timeout > Δ − D_k`, roughly `t ≥ 7` at 2 h and `t ≥ 11` at 3 h 01.
+- v3's `W` holds at every n (0 of 500 attempts), because its `(t − 1) × turn` term is exactly the hog.
+- It does not hold once honest inscriptions are kept off the chain. That breaks F2, and only the freeze helps.
+
+### 8.2 Is Theorem F's Δ_p "(t − 1) turns + S"?
+
+Yes. The proof is unchanged; turn hogging is one way A5's window is used up while every honest sequencer is up. Write `Δ_p = (t − 1) × turn + S`, with `S` also absorbing the time an honest producer's first inscription takes to land (one Bedrock block; the turn is lost after `posting_timeout` if Bedrock produces nothing). It holds only under three conditions:
+1. **`t − 1` must bound the adversarial keys in the channel's *live* accredited set,** not just in the vault's `K`. The hog length is set by the live schedule. If the vault's `K` is stale (W5), or the attacker staked extra keys (W6), the live set can hold more than `t(K) − 1` adversarial keys in a row.
+2. **`turn` must be the live `posting_timeframe` and must be non-zero.**
+   - With `posting_timeframe = 0`, a key that keeps posting keeps its turn indefinitely (`channel.rs:232-241`: with no timeframe and no timeout, the index stays at `tip_sequencer`).
+   - LEZ copies the posting parameters from its genesis `ChannelParams` into every config it signs (`lib.rs:2674-2675`). A `ChannelConfigOp` signed by the threshold could still change them, and the checkpoint program applies config ops without looking at those fields.
+3. **Honest inscriptions must be able to land.** A network adversary that keeps each honest sequencer's inscriptions off the chain for the first `posting_timeout` of its turn makes every honest turn pass with no block. Every adversarial turn is held by hogging. That is a total stall, F2 fails, and `W` does not help: experiment (i), last rows.
+
+### 8.3 The monitor's checkpoint freeze
+
+D4 does not say when the freeze ends. The tip condition ("not in an honest final tier by `a + Δ_g`") never clears by itself, so I tested both readings and an alternative:
+- **held:** the freeze is kept until it expires (`maxFreeze`, 30 days);
+- **lifted:** the freeze authority lifts it once another block is final at the tip's height;
+- **cancel:** a reject-only call that SPEC-v3 does not have; the authority cancels the candidate instead of freezing.
+
+The stall trigger freezes while the final tier is stalled, under all three.
+
+Experiment (j), attack successes, 50 runs per cell, v3 W:
+
+| attack | n | guard off | held | lifted | cancel |
+|---|---|---|---|---|---|
+| honest outage + two short forks, m = t − 1 | 3 / 4 / 7 / 10 | 45 / 48 / 50 / 45 | 0 | 0 | 0 |
+| same, no adversary key | 2 / 3 / 4 | 50 / 50 / 50 | 0 | 0 | 0 |
+| two honest nodes eclipsed for W | 3 / 4 / 7 / 10 | 50 each | 0 | 0 / 0 / **50 / 50** | 0 |
+| hogging + honest turns kept off chain | 3 / 4 / 7 / 10 | 43 / 48 / 50 / 45 | 0 | **1** / 0 / 0 / 0 | 0 |
+
+False pauses at S/2 = 30 min:
+- Honest operation: 0 freezes in 800 runs, no honest finalisation delayed.
+- A minority holding every one of its turns (within F2): the stall trigger froze every run, 7.3 h (n = 7) and 10.1 h (n = 10) per 28 h, delaying honest finalisations by up to 2.1 h.
+- Bedrock at half rate: the tip trigger fired on honest candidates in 19 of 50 runs.
+
+- **The freeze is load-bearing.** Without it, v3 falls to every F2 or F1 failure tested.
+- **Read literally (held), it stops every attack and stops the vault.** In the attack runs no honest checkpoint is finalised afterwards. In 19 of 50 honest runs with Bedrock at half rate it halts the vault for the rest of the run.
+- **Lifted once the tip is overtaken, it is unsafe.** Support collected before the lift remains valid. The long eclipse succeeds whenever a third honest sequencer keeps LEZ live (100 of 100 at n = 7, 10), and one hogging run won the race.
+- **Cancelling the candidate stopped every attack and kept the vault finalising.** Its cost: under a Bedrock slowdown it cancels some honest candidates (20 in 50 half-rate runs), which then resubmit.
+- **The stall trigger adds nothing once candidates are cancelled at `a + Δ_g`**, and at `S/2` it hands a turn-holding minority a pause.
+
+### 8.4 Latency under v3
+
+Experiment (k), from a tip's creation to its finalisation, honest operation:
+
+| n | t | W | median | p90 | v2 flat 2 h median |
+|---|---|---|---|---|---|
+| 3 | 2 | 3.27 h | 4.00 h | 4.21 h | 2.65 h |
+| 4 | 3 | 3.52 h | 4.67 h | 4.96 h | 3.29 h |
+| 7 | 5 | 4.02 h | 6.11 h | 6.37 h | 4.24 h |
+| 10 | 7 | 4.52 h | 7.68 h | 7.92 h | 5.20 h |
+
+These numbers cover 1,661 finalisations; none was less than 379 Bedrock blocks deep.
+
+### 8.5 D6 wording that matches what is proved
+
+Proposed replacement for the Finality and "What breaks it" parts of SPEC-v3 D6. Validity, Floors and Chains stand.
+
+> **Finality.** Those blocks are also final on LEZ (in every honest node's final tier, never reverted), provided in addition:
+> - (F1) on the Logos Blockchain node of every honest sequencer, as its LEZ node has processed it, no reorganisation goes deeper than `k`, and at least `k` blocks arrive in every window Δ_g (no eclipse, no lag, no slowdown);
+> - (F2) whenever an honest sequencer holds a LEZ block of height `h`, a block of height at least `h` enters the canonical chain's fold within `(t − 1) × turn + S`. This needs:
+>   - at most `t − 1` adversarial keys in the channel's live accredited set, not only in `K`;
+>   - `turn` = the live `posting_timeframe`, and > 0;
+>   - honest sequencers up except for stalls of at most S;
+>   - their inscriptions neither censored nor kept off the chain by eclipse;
+> - (F3) nobody learns a beacon value more than ε before the Ethereum block that records it;
+> - (F4) `W ≥ Δ_g + (t − 1) × turn + S + ε`. The vault enforces this only together with D3's rule that the checkpoint program refuses a `ChannelConfigOp` changing `posting_timeframe` (or setting it to 0).
+>
+> **What breaks it.**
+> - `t` keys can sign any history. The candidate is public for `W` before it can finalise; the monitor's tip check stops it, and `revokeFrom` un-accepts it within the window.
+> - Turn hogging by the adversary's own keys does not break the rule: `W` absorbs it.
+> - A never-final block can be finalised with fewer than `t` keys, even with none, if F2 fails for more than `S` beyond the hog and the attacker can twice show two honest sequencer nodes a short private fork. F2 fails if honest sequencers stall, or their inscriptions are kept off the chain.
+> - Two honest sequencer nodes eclipsed for about `W` defeat the wait whatever the honest sequencers do.
+> - The monitor's tip check stops all of these, provided:
+>   - `monitor`'s own node is not eclipsed;
+>   - `monitor` and the freeze authority are live;
+>   - the offending candidate is cancelled (or the freeze held until it can no longer be finalised).
+>
+>   Lifting the freeze once the tip is overtaken re-opens the eclipse attack. The stall check fires only after `(t − 1) × turn + S/2` without final-tier progress.

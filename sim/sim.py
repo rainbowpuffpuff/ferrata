@@ -124,6 +124,14 @@ class Params:
     slowdown: tuple | None = None  # (start, end, factor) on the honest leader rate
     accelerate: bool = False    # adversary keys sign every honest candidate at once
     prover_period: int = 30
+    # SPEC-v3 (notes/design/SPEC-v3-delta.md D4)
+    turn_wait: bool = False     # W = delta + (t - 1) * posting_timeframe instead of a flat delta
+    guard: str = "off"          # off | freeze-hold | freeze-lift | cancel | cancel-tip (Monitor)
+    guard_dg: int = 7200        # Δ_g: a candidate's tip must be final by submittedAt + Δ_g
+    guard_stall: int = 1800     # S/2: the honest final tier must advance at least this often
+    hog: bool = False           # forkstall: adversary turns held with empty inscriptions
+    suppress: bool = False      # forkstall: honest turns kept off chain for their first timeout
+    patience: int = 3600        # forkstall: how long the second fork phase keeps trying
 
 
 @dataclass
@@ -187,6 +195,12 @@ class Vault:
         self.final = 0               # LEZ genesis
         self.cands = {}              # T -> (submittedAt, finalState tip at submission)
         self.beacons = []            # Ethereum time of each beacon
+        self.blocked = False         # the last refusal was only the checkpoint freeze
+
+    def wait(self):
+        """Flat Δ (SPEC-v2), or W = Δ + (t - 1) * turn (SPEC-v3 D4)."""
+        P = self.sim.P
+        return P.delta + ((self.sim.t - 1) * P.timeframe if P.turn_wait else 0)
 
     def support(self, T, nonce, free):
         sim, rule = self.sim, self.sim.P.rule
@@ -204,9 +218,13 @@ class Vault:
 
     def submit_candidate(self, T, s, free=frozenset()):
         sim = self.sim
+        self.blocked = False
         if T == self.final or not sim.lt.is_anc(self.final, T):
             return False
         if self.support(T, None, free) < sim.t:
+            return False
+        if sim.monitor.frozen:
+            self.blocked = True
             return False
         self.cands[T] = (s, self.final)
         self.record_beacon(s)        # "Also records a beacon"
@@ -218,12 +236,16 @@ class Vault:
         return len(self.beacons) - 1
 
     def finalize(self, T, i, s, free=frozenset(), who="honest"):
+        self.blocked = False
         c = self.cands.get(T)
         if c is None or c[1] != self.final:
             return False
-        if self.beacons[i] < c[0] + self.sim.P.delta:
+        if self.beacons[i] < c[0] + self.wait():
             return False
         if self.support(T, i, free) < self.sim.t:
+            return False
+        if self.sim.monitor.frozen:
+            self.blocked = True
             return False
         self.final = T
         self.sim.on_finalised(T, s, who)
@@ -263,17 +285,69 @@ class Vault:
         return False
 
 
+class Monitor:
+    """SPEC-v3 D4 checkpoint freeze, driven by an honest node's final tier (the public chain's).
+
+    Both readings of D4's tip trigger: a usable candidate whose tip is not final by
+    submittedAt + Δ_g.  The stall trigger (final tier not advanced for guard_stall) freezes
+    while the stall lasts, in every mode except 'cancel-tip'.
+    'freeze-hold' the tip trigger's freeze is held until it expires (maxFreeze, 30 days):
+                  for the rest of the run.  D4 read literally.
+    'freeze-lift' the authority lifts it once the tip is overtaken (another block final at
+                  its height).
+    'cancel'      the authority rejects the candidate instead (a reject-only call that
+                  SPEC-v3 does not have); no freeze for it.
+    'cancel-tip'  'cancel' without the stall trigger."""
+
+    def __init__(self, sim):
+        self.sim, self.frozen, self.latched = sim, False, False
+        self.height = self.advanced = 0
+        self.trips = self.stall_trips = self.tip_trips = self.cancelled = self.frozen_time = 0
+
+    def step(self, s):
+        sim, P = self.sim, self.sim.P
+        if P.guard == "off":
+            return
+        final = sim.b_lez[sim.lib(sim.pub_tip)]
+        if sim.lt.dep[final] > self.height or self.height == 0:
+            self.height, self.advanced = sim.lt.dep[final], s   # (no stall before the first final block)
+        stall = P.guard != "cancel-tip" and s - self.advanced >= P.guard_stall
+        bad = False
+        V = sim.vault
+        for T in list(V.cands):
+            a, parent = V.cands[T]
+            if parent != V.final or s < a + P.guard_dg or sim.lt.is_anc(T, final):
+                continue
+            if P.guard.startswith("cancel"):
+                del V.cands[T]
+                self.cancelled += 1
+            elif P.guard == "freeze-hold":
+                bad = self.latched = True
+            elif sim.lt.dep[final] < sim.lt.dep[T]:
+                bad = True       # 'freeze-lift': not final, not yet overtaken
+        freeze = stall or bad or self.latched
+        if freeze and not self.frozen:
+            self.trips += 1
+            self.stall_trips += stall
+            self.tip_trips += bad
+        if freeze:
+            self.frozen_time += P.prover_period
+        self.frozen = freeze
+
+
 class HonestProver:
     """Picks the public LEZ head, waits for t supporters, submits, waits Δ, records a
     beacon, has the nonce echoed on LEZ, waits for t supporters after it, finalises."""
 
     def __init__(self, sim):
         self.sim, self.state, self.T = sim, "idle", None
+        self.delay = 0               # time this target spent refused only by the freeze
+        self.lost = 0                # candidates the authority cancelled under us
 
     def reset(self):
         if self.T is not None:
             self.sim.drop_watches(self.T)
-        self.state, self.T = "idle", None
+        self.state, self.T, self.delay = "idle", None, 0
 
     def step(self, s):
         sim, V, P = self.sim, self.sim.vault, self.sim.P
@@ -286,6 +360,9 @@ class HonestProver:
             self.reset()   # orphaned, or someone else finalised first
         if self.state in ("cand", "final") and s - self.since > 6 * 3600:
             self.reset()
+        if self.state in ("wait", "final") and self.T not in V.cands:
+            self.lost += 1
+            self.reset()             # cancelled by the freeze authority
         if self.state == "idle":
             T = sim.b_lez[sim.pub_tip]
             if T != V.final and sim.lt.is_anc(V.final, T):
@@ -293,14 +370,19 @@ class HonestProver:
         elif self.state == "cand":
             if V.submit_candidate(self.T, s, free):
                 self.a, self.state = s, "wait"
+            elif V.blocked:
+                self.delay += P.prover_period
         elif self.state == "wait":
-            if -(-s // P.eth_slot) * P.eth_slot >= self.a + P.delta:
+            if -(-s // P.eth_slot) * P.eth_slot >= self.a + V.wait():
                 self.i = V.record_beacon(s)
                 sim.echo.add(self.i)       # a relayer submits the echo transaction on LEZ
                 self.state, self.since = "final", s
         elif self.state == "final":
             if V.finalize(self.T, self.i, s, free):
+                sim.finals[-1]["frozen_delay"] = self.delay
                 self.reset()
+            elif V.blocked:
+                self.delay += P.prover_period
 
 
     def step_ts(self, s):
@@ -349,6 +431,7 @@ class Sim:
         for q in self.seqs:
             self.by_phase.setdefault(q.phase, []).append(q)
         self.vault = Vault(self)
+        self.monitor = Monitor(self)
         self.prover = HonestProver(self)
         self.attack = make_attack(self)
 
@@ -524,7 +607,8 @@ class Sim:
             return
         tip = self.node_tip(q)
         lez, pin, chan = self.head(q, tip)
-        if not (q.captured or q.frozen):
+        reaches = not (q.captured or q.frozen or self.attack.mute(q, s))
+        if reaches:
             for x in q.pending:          # the SDK keeps re-posting what is pending
                 self.admit(x, s)
         idx, _ = round_robin(chan, s, self.n, self.P.timeframe, self.P.timeout)
@@ -535,7 +619,7 @@ class Sim:
         x = self.new_msg(pin, q.key, b, self.b_slot[self.lib(tip)])
         q.pending.append(x)
         self.pending_set.add(x)
-        if not (q.captured or q.frozen):
+        if reaches:
             self.admit(x, s + 1)
 
     def capture(self, q, b):
@@ -578,8 +662,10 @@ class Sim:
             for q in self.by_phase.get(s % P.block_interval, ()):
                 self.tick(q, s)
             self.attack.step(s)
-            if s % P.prover_period == 0 and s < P.horizon:
-                self.prover.step(s)
+            if s % P.prover_period == 0:
+                self.monitor.step(s)
+                if s < P.horizon:
+                    self.prover.step(s)
         canon = self.b_lez[self.lib(self.pub_tip)]
         head = self.b_lez[self.pub_tip]
         for r in self.finals:
@@ -587,11 +673,34 @@ class Sim:
             r["canonical"] = self.lt.is_anc(T, canon)
             r["undecided"] = not r["canonical"] and self.lt.is_anc(T, head)
             r["latency"] = r["time"] - r["created"]
+        M = self.monitor
         return dict(seed=self.seed, finals=self.finals, attack=self.attack.report(),
-                    lez_height=self.lt.dep[canon], bedrock_height=self.bt.dep[self.pub_tip])
+                    lez_height=self.lt.dep[canon], bedrock_height=self.bt.dep[self.pub_tip],
+                    monitor=dict(trips=M.trips, stall_trips=M.stall_trips, tip_trips=M.tip_trips,
+                                 cancelled=M.cancelled, frozen_time=M.frozen_time,
+                                 lost=self.prover.lost))
 
 
 # ==================================================================== attacks
+def hog_step(attack, s):
+    """Hold the adversary's turns on the public chain with empty inscriptions (M3.1): one
+    landing at least every posting_timeout keeps the turn for posting_timeframe
+    (inscribe.rs:249-262 resets tip_slot; channel.rs:221-258 then stays on the timeframe
+    branch).  Returns whether an adversary key is scheduled now."""
+    sim = attack.sim
+    idx, _ = sim.rr(sim.pub_tip, s)
+    if idx not in sim.bad:
+        return False
+    tip = sim.b_chan[sim.pub_tip][0]
+    x = attack.hog_x
+    if x is not None and sim.mt.par[x] == tip and sim.m_signer[x] == idx:
+        return True                  # ours waits for the next Bedrock block
+    attack.hog_x = sim.new_msg(tip, idx, ROOT)
+    sim.admit(attack.hog_x, s)
+    attack.hog_posts += 1
+    return True
+
+
 class NoAttack:
     def __init__(self, sim):
         self.sim = sim
@@ -606,11 +715,31 @@ class NoAttack:
     def offline(self, key, s):
         return False
 
+    def mute(self, q, s):
+        """Whether the network adversary keeps q's inscriptions off the public chain now."""
+        return False
+
     def prover_paused(self, s):
         return False
 
     def report(self):
         return dict(outcome=self.outcome, reason=self.reason)
+
+
+class Hog(NoAttack):
+    """Adversary keys hold every one of their turns with empty inscriptions, all run long,
+    and produce no blocks; with P.accelerate they still sign honest candidates at once.
+    A liveness pressure on the stall trigger, not a safety attack."""
+
+    def __init__(self, sim):
+        super().__init__(sim)
+        self.hog_x, self.hog_posts = None, 0
+
+    def silent(self, key, s):
+        return True
+
+    def step(self, s):
+        hog_step(self, s)
 
 
 class Withhold(NoAttack):
@@ -628,6 +757,8 @@ class Scripted(NoAttack):
         self.state = "wait"
         self.fooled, self.queue, self.priv = [], [], None
         self.private_blocks, self.capture_time, self.captured_since = 0, 0, None
+        self.hog_x, self.hog_posts, self.hogging = None, 0, False
+        self.muted_time = 0
 
     @property
     def running(self):
@@ -680,7 +811,8 @@ class Scripted(NoAttack):
 
     def report(self):
         return dict(outcome=self.outcome, reason=self.reason, private_blocks=self.private_blocks,
-                    capture_time=self.capture_time)
+                    capture_time=self.capture_time, hog_posts=self.hog_posts,
+                    muted_time=self.muted_time)
 
 
 class ForkStall(Scripted):
@@ -713,8 +845,22 @@ class ForkStall(Scripted):
         keys = [(after + i) % sim.n for i in range(1, sim.n + 1)]
         return [k for k in keys if k not in sim.bad and k not in exclude]
 
+    def mute(self, q, s):
+        """With P.suppress, a network adversary keeps each honest sequencer's inscriptions off
+        the public chain while it is scheduled there, so its turn passes after posting_timeout."""
+        sim = self.sim
+        if not (sim.P.suppress and self.state in ("fool1", "stall", "fork2")) or q.key in sim.bad:
+            return False
+        if sim.rr(sim.pub_tip, s)[0] != q.key:
+            return False
+        self.muted_time += sim.P.block_interval
+        return True
+
     def step(self, s):
         sim, P, V = self.sim, self.sim.P, self.sim.vault
+        if self.running:
+            if self.hogging and not hog_step(self, s):
+                self.hogging = P.suppress    # under suppression we hog every adversary turn
         if self.state == "wait":
             if s < P.attack_start or sim.prover.state == "final":
                 return
@@ -739,6 +885,8 @@ class ForkStall(Scripted):
                 return
             if idx not in sim.bad:
                 return
+            if P.hog and (idx != min(sim.bad) or s - sim.rr(sim.pub_tip, s)[1] > 60):
+                return      # start with the first of our consecutive turns
             p0 = sim.b_chan[sim.pub_tip][0]
             if sim.competitor(p0, s, set(range(sim.n)) - sim.bad):
                 return      # wait until our own earlier blocks have landed
@@ -748,6 +896,7 @@ class ForkStall(Scripted):
             # after p0 on the public chain, so no honest unmined block can land there later.
             junk = sim.new_msg(p0, idx, ROOT)
             sim.admit(junk, s)
+            self.hog_x, self.hogging = junk, P.hog
             # T_A: a valid block only the adversary has, inscribed on a private block.
             self.TA = sim.new_lez(head, idx, True, s, s, frozenset(), honest=False)
             self.eA = sim.new_msg(p0, idx, self.TA)
@@ -777,9 +926,11 @@ class ForkStall(Scripted):
             self.mine_next(s, self.TA)
             if V.support(self.TA, None, self.free) >= sim.t:
                 if not V.submit_candidate(self.TA, s, self.free):
+                    if V.blocked:
+                        return          # frozen: try again on the next slot
                     return self.fail(s, "candidate refused")
                 self.a = s
-                self.b_time = -(-(s + P.delta) // P.eth_slot) * P.eth_slot
+                self.b_time = -(-(s + V.wait()) // P.eth_slot) * P.eth_slot
                 if not self.eclipse:
                     self.end_capture(s)
                 self.state = "stall"
@@ -790,7 +941,7 @@ class ForkStall(Scripted):
                 self.i = V.record_beacon(s)
                 self.state, self.t0 = "fork2", s
         elif self.state == "fork2":
-            if s - self.t0 > 3600:
+            if s - self.t0 > P.patience:
                 return self.fail(s, "no fork root: the canonical chain moved past T_A's parent")
             if self.eclipse:
                 # The fooled nodes never left the private fork: extend it with Y.
@@ -833,8 +984,13 @@ class ForkStall(Scripted):
             self.mine_next(s, self.anchor)
             if V.finalize(self.TA, self.i, s, self.free, who="adversary"):
                 return self.succeed(s)
-            if s - self.t0 > 3600:
-                self.fail(s, "fooled nodes did not build in time")
+            if V.blocked:
+                self.frozen_out = True
+            if self.TA not in V.cands:
+                return self.fail(s, "candidate cancelled by the freeze authority")
+            if s - self.t0 > P.patience:
+                self.fail(s, "refused: checkpoint freeze" if getattr(self, "frozen_out", False)
+                          else "fooled nodes did not build in time")
 
     def find_root(self):
         """The shallowest public block, at most k-1 below the tip, whose fold ends at
@@ -999,6 +1155,8 @@ def make_attack(sim):
         return NoAttack(sim)
     if kind == "withhold":
         return Withhold(sim)
+    if kind == "hog":
+        return Hog(sim)
     if kind == "forkstall":
         return ForkStall(sim)
     if kind == "skew":
