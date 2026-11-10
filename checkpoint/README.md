@@ -4,8 +4,10 @@ Prototype of the program that lets an Ethereum vault follow a LEZ (Logos Executi
 SPEC-v2 §4.1–§4.2 with SPEC-v3 D3 (checked producer inscription, 17-word journal, posting timeframe
 pinned in the key-set hash), as a RISC Zero 3.0.5 guest. It re-hashes LEZ blocks in
 their real format, collects the bridge's burns into the burn tree, follows the channel's key
-rotations, checks that enough accredited sequencers inscribed blocks on top of the tip, and commits
-the 17-word journal the vault reads. Measured numbers are in [RESULTS.md](RESULTS.md).
+rotations, checks that enough accredited sequencers inscribed blocks on top of the tip (finality
+rule (A)) or attested their nodes' final tier at the tip or after it (rule (B), SPEC-v3 D7 and D13,
+in its own guest), and commits the 17-word journal the vault reads. Measured numbers are in
+[RESULTS.md](RESULTS.md).
 
 **Specification.** "SPEC-v2 §x" is [`docs/design/spec/bridge-spec-v2.md`](../docs/design/spec/bridge-spec-v2.md)
 and "SPEC-v3 Dn" is [`docs/design/spec/bridge-spec-v3-changes.md`](../docs/design/spec/bridge-spec-v3-changes.md).
@@ -16,13 +18,14 @@ Prototype evidence for a grant proposal, not production code: see "Not done" and
 
 | Path | What |
 |---|---|
-| `crates/checkpoint-core` | The rule as a pure `no_std` function (`#![forbid(unsafe_code)]`), used unchanged by the guests and the tests. `lez.rs` strict LEZ block parser and block hash; `mantle.rs` Logos Blockchain transaction framing, BLAKE2b tx hash and `MsgId`, inscription and `ChannelConfigOp` checks; `wire.rs` the bridge messages; `tree.rs` burn leaf and frontier; `state.rs` `configId`, `keySetHash`, `S`; `journal.rs` the ABI journal and the segment journal; `input.rs` the guest input format; `rule.rs` `run_checkpoint` and `run_segment`. |
+| `crates/checkpoint-core` | The rule as a pure `no_std` function (`#![forbid(unsafe_code)]`), used unchanged by the guests and the tests. `lez.rs` strict LEZ block parser and block hash; `mantle.rs` Logos Blockchain transaction framing, BLAKE2b tx hash and `MsgId`, inscription and `ChannelConfigOp` checks; `wire.rs` the bridge messages; `tree.rs` burn leaf and frontier; `state.rs` `configId`, `keySetHash`, `S`; `journal.rs` the ABI journal and the segment journal; `input.rs` the guest input format; `rule.rs` `run_checkpoint` (rule (A)) and `run_segment`; `rule_b.rs` `run_checkpoint_b` (rule (B)). |
+| `crates/attestor-core` | The core of `ferrata_attestor` (rule (B)), `no_std`, no Logos module packaging: the certificate by which a channel key certifies an attestation key, the final-tier message v2, Ed25519 signing and `verify_strict`, the key-set hash; `vectors/attestor-v1.json`. |
 | `fidelity/` | Host only. Builds real-format LEZ v0.4.0-rc1 blocks and transactions with LEZ's own crates and Logos Blockchain transactions with `logos-blockchain-core` at the revision LEZ pins; tests the core against them and against the real blocks in LEZ's committed sequencer dump; `src/bin/gen.rs` writes the bench fixtures. |
-| `guests/` | Three zkVM guests (their own workspace, with RISC Zero's `sha2`, `curve25519-dalek` and `crypto-bigint` patches): `checkpoint`, `segment`, `micro` (component benchmarks). |
+| `guests/` | Four zkVM guests (their own workspace, with RISC Zero's `sha2`, `curve25519-dalek` and `crypto-bigint` patches): `checkpoint` (rule (A)), `checkpoint-b` (bin `checkpoint_b`, rule (B)), `segment`, `micro` (component benchmarks). |
 | `guests-plain/` | The `micro` guest built *without* those patches (A/B control). |
 | `methods-segment/`, `methods/`, `methods-plain/` | Build the guests with risc0-build 3.0.5; the checkpoint guest gets the segment guest's image id at compile time (`FERRATA_SEGMENT_ID`). |
-| `host/` | Executes the guests on the fixtures (journal compared with the native run), micro-benchmarks, the composition demo, proving, Groth16 wrapping. |
-| `scripts/` | `prove-bench.sh` (proving with machine, load, GNU time and Docker memory logged), `derive.py` (derived figures from the JSON lines). |
+| `host/` | Executes the guests on the fixtures (journal compared with the native run), micro-benchmarks, `gen-b` (rule (A) and rule (B) fixtures over the same blocks, `gen_b.rs`), the composition demo, proving, Groth16 wrapping. |
+| `scripts/` | `prove-bench.sh` (proving with machine, load, GNU time and Docker memory logged), `derive.py` (derived figures from the JSON lines), `ruleb-table.py` (rule (B) against rule (A)), `check-attestor-vectors.py` (the attestor's vectors, checked by an independent RFC 8032 implementation). |
 | `artifacts/` | The Groth16 seals, journals and receipts of the real proofs (succinct receipts git-ignored). |
 | `vectors/external/ferrata-bridge/` | Vectors of `ferrata-bridge`, now [`../bridge/`](../bridge/) (an independent implementation of the same SPEC-v2 encodings), checked by `crates/checkpoint-core/tests/cross_vectors.rs`. |
 | `results/` | Logs and JSON lines of every measured run. |
@@ -38,14 +41,18 @@ export TMPDIR=$PWD/../../tmp CARGO_TARGET_DIR=$PWD/target
 # cache under that tmp/ instead of ~/.cache:
 export XDG_CACHE_HOME=$PWD/../../tmp/xdg-cache
 
-cargo +1.88 test -p checkpoint-core                       # unit tests + cross-implementation vectors
-cargo +1.88 clippy -p checkpoint-core --all-targets -- -D warnings
+cargo +1.88 test -p checkpoint-core -p attestor-core      # unit tests, rule (B), cross-implementation vectors
+cargo +1.88 clippy -p checkpoint-core -p attestor-core --all-targets -- -D warnings
+python3 -I scripts/check-attestor-vectors.py              # the attestor's vectors, independently
 cargo +1.98.1 test -p fidelity -- --nocapture             # fidelity to LEZ / Logos Blockchain, the rule's refusals
 cargo +1.98.1 run -p fidelity --bin gen -- all            # fixtures/ (28 MB, git-ignored; ~25 min, LEZ's
                                                           # apply_block runs the fee and clock programs)
 cargo +1.98.1 run -p fidelity --bin gen -- rejournal      # re-derive expected journals after a format change
 cargo +1.93.0 build --release -p host                     # builds the guests too (risc0-build, rzup toolchain)
 target/release/host ids | micro [--plain] | bench [name…] | compose [--real] | prove <name> | groth16 <name> | verify <name>
+target/release/host gen-b && target/release/host bench 'ra-*' 'rb-*'   # rule (B) against rule (A); needs
+                                                          # cp-empty-1, cp-empty-360, cp-pp5-360, cp-pp50-360
+python3 -I scripts/ruleb-table.py                         # the tables of RESULTS §4
 RISC0_DEV_MODE=1 target/release/host compose              # the two-piece composition demo
 scripts/prove-bench.sh prove cp-empty-1 && scripts/prove-bench.sh groth16 cp-empty-1
 python3 -I scripts/derive.py                              # derived figures from results/*.jsonl
@@ -109,6 +116,19 @@ is compiled into the checkpoint guest), checks they chain from `P` to the state 
 and does the rest. Segments are independent of each other, so a backlog can be proven in parallel
 pieces and joined by one checkpoint; the vault sees one journal and one image id.
 
+### Rule (B) (`rule_b::run_checkpoint_b`, guest `checkpoint_b`; SPEC-v3 D7 and D13)
+
+Steps 1–4 and 8 as above (`rule::up_to_tip` is shared; `echoNonce` is 0). The blocks after `T` are
+linked like the others and form the hash-linked path from `T`. In place of 5–7: each attestation
+names a channel key, which must be in the key set after this proof's rotations; an attestation key
+that channel key certified for this deployment (`"ferrata/attest-key/v1" ‖ evmChainId ‖ vault ‖
+lezConfigId ‖ channelId ‖ attKey`); and a final tip, which must be `T` or a block on the path after
+it. The attestation key must have signed `"ferrata/final-tier/v2" ‖ evmChainId ‖ vault ‖ lezConfigId ‖
+channelId ‖ keySetHash ‖ tipId ‖ tipHash ‖ finalMsgId` with the live key set's hash (Ed25519
+`verify_strict` over the whole message). A repeated channel key or attestation key refuses the
+input; at least `t(n)` attestations are needed. The journal is byte for byte rule (A)'s candidate
+journal over the same blocks; the vault tells the two rules apart by the guest's image id.
+
 ## Real format vs stand-in
 
 | Thing | Status |
@@ -163,6 +183,10 @@ withdrawals a channel withdrawal). Any other opcode is refused rather than skipp
 | Support entries by `D` | SPEC-v3: support is by keys "other than `D`" | checked, not counted | A useless entry costs the prover cycles, nothing else. |
 | Empty input | silent | at least one block up to `T` is required | A pure key-rotation checkpoint is not supported. |
 | Parent state with `postingTimeframe = 0` | SPEC-v3 D3 refuses *ops* with 0 | not refused (as written); no rotation can then ever apply (each op either differs or is 0) | A genesis state with 0 must be caught by the deployment check (`turnSeconds` = timeframe × slot). Reported in RESULTS. |
+| Rule (B) certificate | D13: `("ferrata/attest-key/v1", channelId, attKey)` | also binds `evmChainId`, `vault`, `lezConfigId` | A certificate cannot be carried to another vault or configuration on the same channel, so a leaked attestation key is confined to one deployment; a certificate "from another configuration" is then refusable. The cost: one certificate per deployment, not per channel. |
+| Rule (B) validity of a certificate | D13: dies when its channel key leaves `K` | the channel key must be in the live set; no other bound | As specified. A key that leaves and later rejoins `K` revives its old certificates; binding the configuration tip instead would force every attestor to re-certify at every rotation. |
+| Rule (B) repeated keys | silent | a repeated channel key or attestation key refuses the input | One attestor cannot count twice, and two channel keys cannot share one attestor's signature. |
+| Rule (B) `finalMsgId` | signed | signed, not checked | Checking it means BLAKE2b over the tip's whole inscription, which rule (B) exists to avoid; it is for watchers. |
 
 ## UNVERIFIED
 
@@ -197,7 +221,9 @@ withdrawals a channel withdrawal). Any other opcode is refused rather than skipp
   proved a candidate and a finalisation checkpoint of its own fixture, and the v3 vault accepted both seals
   through RISC Zero's Groth16 verifier (RESULTS, "The end-to-end fixture").
 - Composition was demonstrated in dev mode only; `host compose --real` (real recursion) was not run.
-- Mode (B) of SPEC-v3 D7 is estimated from measured components (RESULTS §4), not built.
+- Rule (B) (SPEC-v3 D7, D13) is built in the program and measured in the executor (RESULTS §4). Not
+  built: `ferrata_attestor` as a Logos module (only its core, `crates/attestor-core`), the vault's
+  mode (B) path, watchers.
 - No real LEZ node or Bedrock node was run; no proof of LEZ block validity (O2) or Bedrock finality
   (O1) is attempted, as SPEC-v2 intends.
 

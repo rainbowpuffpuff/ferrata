@@ -3,7 +3,9 @@
 Every number below comes from a command run in this directory on 10 Nov 2026; logs and JSON lines
 are in `results/` (`bench.log`, `micro.log`, `compose-*.log`, `logs/*prove*.log`, `*.jsonl`).
 Derived figures show their inputs (`python3 -I scripts/derive.py` recomputes them from the JSON
-lines). The program measured implements SPEC-v2 §4.1–§4.2 with SPEC-v3 D3 (checked producer
+lines). §4 (rule (B), and rule (A) again on the same blocks) was measured later the same day on the
+Modal build box, with that build's own image ids (§4). The program measured elsewhere implements
+SPEC-v2 §4.1–§4.2 with SPEC-v3 D3 (checked producer
 inscription, 17-word journal, posting timeframe pinned in the key-set hash); image ids: checkpoint
 `0x95b816ed2614e340c85fed3ba3dad1f70e7dff2da1363406ade87e1333583caf`, segment
 `0xbdfb94a6b6ea12e996f332b28ce4791dc7362f28da602769192f589a61fee043` (local toolchain build, not
@@ -47,6 +49,7 @@ end).
 | one hour with 50 private transactions | **37.9M cycles**, 60 segments |
 | `T` and 3 support blocks each holding 4 private transactions | **224.8M cycles**, 232 segments (BLAKE2b over the inscriptions) |
 | components | SHA-256 2.59 cycles/B (accelerated; 63.1 without the patch), BLAKE2b-256 **55.9 cycles/B** (no accelerator), Ed25519 `verify_strict` **0.83M** (3.49M without the patch), burn leaf + append 4,234 |
+| rule (B) (§4) | **1.69M cycles per attestor** (certificate + attestation, two Ed25519 `verify_strict`); the check 5.1M at t = 3, 11.8M at t = 7, 16.9M at t = 10; one proof per checkpoint; rule (A) 0.89M per supporter, two proofs |
 | composition | two pieces (segment of 180 blocks, then a checkpoint verifying it) prove the same journal as one piece (dev mode) |
 | real proof (4 segments) | succinct 1,758.9 s under load, 1,157.5 s starting quiet; Groth16 wrap 215.2 s / 195.1 s under load; peak 9.62 GB (host + r0vm), Groth16 prover 7.3 GiB; seal 260 bytes, selector `0x73c457ba` |
 
@@ -178,24 +181,98 @@ Unpatched figures: `(c(6) − c(1)) / 5` for Ed25519 = (20,977,381 − 3,514,146
   and moderately busy hours with small support blocks (measured 6.0M idle, 8.8M with 5 PP txs,
   37.9M with 50); it misses that each signature check needs BLAKE2b over the whole inscribed block.
 
-## 4. Mode (B) of SPEC-v3 D7, estimate (no program built)
+## 4. Rule (B) of SPEC-v3 D7 and D13: built and measured
 
-Mode (B) checks `t` Ed25519 signatures over a ~210-byte attestation (`"ferrata/final-tier/v1"`(21) ‖
-evmChainId(32) ‖ vault(20) ‖ lezConfigId ‖ channelId ‖ tipId(8) ‖ tipHash ‖ finalMsgId) and walks
-the hash links from `T` to the attested tips. Estimate = `t` × 854,264 (measured, 200-byte message)
-+ `d` × 6,405 (measured marginal per empty block; 2,684 cycles/KB for busy blocks), where `d` is the
-number of blocks from `T` to the furthest attested tip. **ESTIMATE**, not a measured program:
+`crates/attestor-core` (the attestor's certificate and final-tier message v2), `rule_b.rs`
+(`run_checkpoint_b`) and the guest `guests/checkpoint-b` (bin `checkpoint_b`). Rule (B) shares steps
+1–3 with rule (A) (`rule::up_to_tip`: configuration, segments, rotations, blocks up to `T`), links
+the blocks after `T`, and accepts `T` on `t(n)` attestations, each by a channel key of the live set
+through an attestation key that channel key certified for this deployment, over `T` or a block after
+it on the hash-linked path. Its journal is rule (A)'s 17 words with `echoNonce` = 0, byte for byte
+(test `journal_is_rule_a_candidate_journal_over_the_same_blocks`; every generated fixture pair is
+checked the same way); a vault tells the rules apart by the image id.
 
-| t | signatures | + walk d = 1 | + walk d = 60 (10 min) | + walk d = 360 (1 h) | mode (A) as built: (t + 1) inscription checks, empty blocks (measured) |
-|---|---|---|---|---|---|
-| 2 | 1.71M | 1.72M | 2.09M | 4.01M | 2.81M (`cp-support-t2`) |
-| 3 | 2.56M | 2.57M | 2.95M | 4.87M | 3.71M (`cp-support-t3`) |
-| 5 | 4.27M | 4.28M | 4.66M | 6.58M | 5.53M (`cp-support-t5`) |
-| 7 | 5.98M | 5.99M | 6.36M | 8.29M | ~7.35M (t = 5 plus 2 × 0.91M, extrapolated) |
+**Where and what.** Executor (r0vm 3.0.5) on the Modal build box through `mrun`, 10 Nov 2026,
+`target/release/host bench` (`results/ruleb-bench.log`, `results/ruleb-bench.jsonl`); user cycles are
+deterministic. Image ids of that build (`results/ruleb-ids.log`): `checkpoint_b`
+`0xd359754364c10357103359276867f4fe58842c42cbb30a3ada5b241de6aa0d64`, `checkpoint` (rule (A))
+`0xe0b86641a069bf1ed2def38c8c14b846e7fe55626e518defc3cc7f71146d61b9`, `segment`
+`0xd42edfd361b12f83b20996241e5622c62d6e362b349b361117cfcd8dee496594` (box build; ids embed paths).
+Fixtures: `host gen-b` takes the blocks of `cp-empty-1`, `cp-empty-360`, `cp-pp5-360` and `cp-pp50-360`
+and, for each committee, replaces the parent's keys with `n` seeded test keys and writes a rule (A)
+input (`ra-*`: `T`'s inscription by key 0 and `t` support inscriptions by keys 1..t over the three
+blocks after `T`, in turn; each is the source's own inscription transaction with only the signer and
+signature changed) and a rule (B) input (`rb-*`: `t` attestations on `T`, `T + 1`, `T + 2`, `T + 3`, …
+in turn, `finalMsgId` the message id of the source's inscription of that block), plus `rb-tonly-n*`
+(`T` alone, every attestation on `T`). Committees: the specification's `n` = 3, 4, 7, 10 (`t` = 2, 3, 5,
+7) and `n` = 15 for `t` = 10. The original rule (A) fixtures re-run on this build: `cp-empty-1`
+3,706,275, `cp-empty-360` 5,993,418, `cp-pp5-360` 8,822,907, `cp-pp50-360` 37,866,582 user cycles, each
+journal equal to the one recorded when the fixture was made (+915 to +1,274 cycles against §2: the
+shared-prefix refactor and another build).
 
-The difference that matters is not in this table: mode (B) never hashes an inscription with BLAKE2b,
-so its cost does not grow with how busy the support blocks are (mode (A): +54M per counted block
-holding 4 private transactions).
+**The check alone** (user cycles, segments in brackets; `T` + 3 is one empty `T` and the three empty
+blocks after it, the input of rule (A)'s support check in §2):
+
+| n | t | rule (B), `T` alone | rule (B), `T` + 3 | rule (A), `T` + 3 | (B) − (A) |
+|---|---|---:|---:|---:|---:|
+| 3 | 2 | 3,512,323 (4) | 3,531,918 (4) | 2,839,418 (4) | +692,500 |
+| 4 | 3 | 5,204,341 (6) | 5,217,212 (6) | 3,740,489 (4) | +1,476,723 |
+| 7 | 5 | 8,567,359 (9) | 8,578,098 (9) | 5,528,554 (6) | +3,049,544 |
+| 10 | 7 | 11,926,488 (13) | 11,946,328 (13) | 7,331,406 (8) | +4,614,922 |
+| 15 | 10 | 17,047,608 (18) | 17,080,999 (18) | 10,017,922 (11) | +7,063,077 |
+
+**The same hours as §2** (whole checkpoint proof, user cycles and segments):
+
+| n | t | idle hour (A) | idle hour (B) | 5 PP txs (A) | 5 PP txs (B) | 50 PP txs (A) | 50 PP txs (B) |
+|---|---|---:|---:|---:|---:|---:|---:|
+| 3 | 2 | 5,093,496 (6) | 5,779,891 (7) | 7,940,328 (11) | 8,645,883 (12) | 36,995,607 (59) | 37,698,589 (60) |
+| 4 | 3 | 5,984,291 (7) | 7,505,344 (9) | 8,833,632 (12) | 10,325,095 (13) | 37,883,560 (60) | 39,389,729 (62) |
+| 7 | 5 | 7,771,007 (9) | 10,863,894 (12) | 10,618,888 (14) | 13,672,957 (17) | 39,658,893 (62) | 42,755,918 (65) |
+| 10 | 7 | 9,543,975 (11) | 14,245,801 (16) | 12,399,755 (16) | 17,083,183 (20) | 41,451,827 (64) | 46,143,502 (69) |
+| 15 | 10 | 12,202,341 (14) | 19,307,122 (21) | 15,062,287 (19) | 22,180,769 (26) | 44,132,718 (67) | 51,146,220 (74) |
+
+**Derived** (`python3 -I scripts/ruleb-table.py`, least squares over the five committees on one
+source's blocks): rule (B) costs **1.69M cycles per attestor** (slopes 1,681,779 to 1,692,370 on the
+five sources; residuals at most 32,375), rule (A) **0.89M per supporter** (888,654 to 897,332),
+whatever the hour holds. Each attestor is two Ed25519 `verify_strict`: the certificate (169-byte
+message) and the attestation (241 bytes); from §2's micro figures (826,530 cycles at 32 bytes,
+854,264 at 200, so about 165 cycles per message byte of unaccelerated SHA-512) that is about 849k +
+861k = 1.71M. The other costs of the check (membership, repetition, the path) are below the
+residuals. So per proof, on the same blocks with small support blocks, rule (B) costs more than rule
+(A): +0.69M at `t` = 2 to +7.1M at `t` = 10.
+
+Per checkpoint the comparison turns. Rule (A) proves twice (candidate and finalisation), and the
+finalisation proof also links every block from `T` to the block carrying the beacon's echo, at
+least `W = 3 h 01 min + (t − 1) × 15 min` of blocks on the default floor (§3: 6,405 cycles per idle
+block, 34.17M per hour with 50 private transactions). DERIVED examples at `n` = 4: idle hour, rule (A)
+2 × 5.98M + 1,266 blocks × 6,405 = 20.1M against rule (B) 7.5M; an hour with 50 private transactions
+throughout, rule (A) 2 × 37.88M + 3.52 h × 34.17M = 196.0M against rule (B) 39.4M. Rule (B) also does
+not grow with the support blocks: rule (A)'s inscription check is BLAKE2b over the whole block (54.1M
+for a block with 4 private transactions, §2), rule (B) hashes no inscription.
+
+**The estimate this replaces** (`t` × 854,264 + 6,405 per block walked: 2.56M at `t` = 3 to 5.98M at
+`t` = 7) counted the attestations only. The certificates, which D13 added after the estimate, double
+the signature count: measured 5.07M at `t` = 3 and 11.8M at `t` = 7 for the check (slope × `t`), 3.4M
+at `t` = 2, 8.5M at `t` = 5, 16.9M at `t` = 10. Not built, and what it would save: carrying each
+certified attestation key in the checkpoint state, so a certificate is checked once rather than in
+every proof, would remove about half the check (≈ 0.85M per attestor) at the price of a change to
+`S`; signing attestations with the channel key itself, which would do the same, is what D13 forbids.
+
+**Refusals** (`crates/checkpoint-core/tests/rule_b.rs`, 13 tests; every input goes through its byte
+encoding first): too few (`refuses_too_few`); a duplicate signer, as the same attestation twice, one
+channel key with two attestation keys, or one attestation key under two channel keys
+(`refuses_a_duplicate_signer`); an uncertified key (`refuses_an_uncertified_key`); a certificate for
+another channel, configuration, chain or vault (`refuses_a_certificate_from_another_channel_or_configuration`);
+a key outside the live set (`refuses_a_key_not_in_the_live_set`); a key removed by a rotation, with
+the key the rotation added accepted (`a_key_removed_by_a_rotation_is_refused_and_a_key_added_counts`);
+a stale or wrong key-set hash (`refuses_a_wrong_key_set_hash`); a wrong tip, final message id, chain,
+vault, configuration, channel or domain (`refuses_a_wrong_tip_chain_vault_configuration_or_domain`);
+an ancestor of `T`, a fork block, a block beyond the input, an id that does not match its hash
+(`refuses_an_attestation_over_a_block_that_is_not_a_descendant`); a tampered block after `T`
+(`blocks_after_the_tip_are_linked`); the single-key case only under `nMin <= 1`. The attestor's own
+tests (`crates/attestor-core/tests/attestor.rs`, 6) bind every field of both messages, and its vectors
+(`crates/attestor-core/vectors/attestor-v1.json`) are reproduced by `scripts/check-attestor-vectors.py`,
+an RFC 8032 reference implementation in Python that shares no code with the crate.
 
 ## 5. Composition
 
