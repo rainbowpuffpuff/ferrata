@@ -109,7 +109,7 @@ the record). The Volume keeps the state after `stop`; `modal volume delete ferra
 | transactions | 190, all applied, none refused, reverted, dropped or rejected; the program's transactions used 208,951 (`Init`) to 3,731,712 (`Finish`) execution gas, none over the 5M target; fees 4,629,926,648 in all (the payers held 1e13 and 2e13 at genesis) |
 | re-check | `lab.sh verify` after each session: 191 blocks replay, 190 manifest rows equal LEZ's charges; Sepolia at finalized slot 11,550,623 (period 1,409, Gloas layout), root `3d9e0f27…ab50`, and mainnet at 15,626,400 (period 1,907), root `5a754269…d661`, both equal to the native client; both roots equal the second provider's |
 | state | generation 2: 20,402,011 bytes compressed (node 52M, sequencer 48M, driver 5.6M on disk) |
-| cost | billed by Modal (`modal.billing`, hourly): the build box 0.2768 USD; the lab's failed start and catch-up session together 0.0642 USD (31 min, two physical cores requested) |
+| cost | billed by Modal (`modal.billing`, hourly buckets, workspace `rainbowpuffpuff`): the build box 0.2768 USD for the builds (18:00–20:00 UTC) and 0.0522 USD for two `lab.sh verify` runs; the lab's failed start and catch-up session together 0.0642 USD (31 min, two physical cores requested); the scheduled session of 20:17 UTC 0.0064 USD (the whole 20:00 hour of the app). At twelve such sessions a day: about 0.08 USD a day, 0.54 USD to 17 November (derived) |
 
 ## The claim that can be made today
 
