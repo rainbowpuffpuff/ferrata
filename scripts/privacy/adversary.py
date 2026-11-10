@@ -844,6 +844,17 @@ def main():
                 ("burn leaf", leaf), ("burnId", burn_id(meta["cid"], x.seq, leaf))]
     check("release hides which burn", G["release, NOut of the release statement"], T["release"], release_secrets)
     results["hidden"] = hidden
+    # Which commitment-set root each private transaction was proven against: the state's root just
+    # before it (the newest), or an older one.
+    newest, total = 0, 0
+    for k in ("claim, private (default)", "burn, private holding"):
+        for x in G[k]:
+            before = dict(x.fields)["commitment_root.before"]
+            for n, v in x.fields:
+                if norm(n) in ("private_actions[].commitment_root", "fee.fallback.action.commitment_root"):
+                    total += 1
+                    newest += v == before
+    results["proof_roots_newest"] = [newest, total]
 
     (out_dir / "results.json").write_text(json.dumps(results, indent=1, default=lambda v: v.hex() if isinstance(v, bytes) else str(v)))
     write_markdown(out_dir, results, lez_json, scenario, n_users, half)
@@ -880,7 +891,9 @@ def write_markdown(out_dir, results, lez_json, scenario, n, half):
           f"as released: {r['released_seen_as_released']} of {n - r['unreleased_expected']}",
           f"- other users' items wrongly taken as own: {r['foreign_items']}; recipients decrypted and authenticated: "
           f"{r['recipients_decrypted_correctly']} of {n}; recovered NOut equal to the vault's: {r['nout_matches_vault']} of {n}",
-          f"- the bridge core's `recover_burns` (v1 mac) on the same notes: {r['rust_core']} found", ""]
+          f"- the bridge core's `recover_burns` (v1 mac) on the same notes: {r['rust_core']} found", "",
+          f"Private actions proven against the newest commitment-set root: {results['proof_roots_newest'][0]} of "
+          f"{results['proof_roots_newest'][1]}.", ""]
     (out_dir / "summary.md").write_text("\n".join(s) + "\n")
     # Section B6, compared.
     names = {"deposit (A: private destinations)": "deposit", "claim, private (default)": "claim",

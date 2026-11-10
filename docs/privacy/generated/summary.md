@@ -36,3 +36,5 @@ Chance is 1/20 = 5.0%. Success = mean over the right-hand records of 1/|best can
 - other users' items wrongly taken as own: 0; recipients decrypted and authenticated: 20 of 20; recovered NOut equal to the vault's: 20 of 20
 - the bridge core's `recover_burns` (v1 mac) on the same notes: 0 found
 
+Private actions proven against the newest commitment-set root: 80 of 80.
+

@@ -1781,5 +1781,9 @@
    "values searched": 120,
    "found": 0
   }
- }
+ },
+ "proof_roots_newest": [
+  80,
+  80
+ ]
 }
