@@ -111,6 +111,7 @@ contract DeployVault is Script {
                 address(RiscZeroVerifierEmergencyStop(r.stop).verifier()) == r.groth16,
                 "DeployVault: the recorded stop wraps another verifier"
             );
+            _checkLibraryCode(r.registry);
             r.vault = _create(r, s, abi.encodePacked(_linkedVaultCode(r.registry), abi.encode(_deployment(r.stop))));
         } else if (s == Step.Token) {
             r.token = _create(r, s, type(TestToken).creationCode);
@@ -375,6 +376,22 @@ contract DeployVault is Script {
         code = vm.replace(code, placeholder, vm.replace(vm.toString(registry), "0x", ""));
         require(vm.indexOf(code, "__$") == type(uint256).max, "DeployVault: the vault links another library");
         return vm.parseBytes(code);
+    }
+
+    /// @dev The vault DELEGATECALLs its library, so the recorded address must hold exactly FerrataRegistry's runtime code:
+    ///      the artifact's, with solc's call protection (PUSH20 <the library's own address>, written at deployment).
+    function _checkLibraryCode(address registry) internal view {
+        bytes memory expected = vm.parseJsonBytes(vm.readFile(LIBRARY_ARTIFACT), ".deployedBytecode.object");
+        require(
+            expected.length > 21 && uint8(expected[0]) == 0x73, "DeployVault: the library artifact has no call guard"
+        );
+        bytes20 self = bytes20(registry);
+        for (uint256 i = 0; i < 20; i++) {
+            expected[1 + i] = self[i];
+        }
+        require(
+            keccak256(registry.code) == keccak256(expected), "DeployVault: the recorded library is not FerrataRegistry"
+        );
     }
 
     function _placeholder() internal pure returns (string memory) {

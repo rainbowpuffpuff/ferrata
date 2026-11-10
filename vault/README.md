@@ -486,6 +486,7 @@ next step:
    1,000, 10,000; 0.25% and 0.1%): schedule 0, protocol fees at zero;
 8. `renounceOwnership()` of the stop: nobody holds its guardian key (proposal §B5), and only RISC Zero's proof of
    an exploit can trip it;
+   Before it, the recorded library's runtime code must be FerrataRegistry's exactly (the vault DELEGATECALLs it);
 9. no transaction: the checks (the stop has no owner, is not tripped and wraps the verifier; the vault's verifier is
    the stop; its rule, admin and freeze authority; both registrations, schedule 0, the published registry and fee
    hashes), then `complete: true`.
@@ -526,7 +527,7 @@ the LEZ configuration and genesis of the Sepolia run, and the LEZ token definiti
 registration is write-once, so set them before a deployment the LEZ side will read.
 
 **The rehearsal** (`script/fork-rehearsal.sh`, 2026-11-10, on the Modal build box: anvil 1.3.6 forking Sepolia at
-block 12,107,254 with Foundry's gas rules, accounts impersonated):
+block 12,107,296 with Foundry's gas rules, accounts impersonated):
 
 | Step | Node estimate (anvil) | Limit sent (× 1.25) | Gas used |
 |---|---:|---:|---:|
