@@ -720,3 +720,21 @@ pub mod code {
         BURN_EXISTS = 255;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_header_travels_in_front_of_the_account_proof() {
+        let nodes = alloc::vec![alloc::vec![0xf8, 0x51, 0x80], alloc::vec![0xe2, 0x01]];
+        let header = alloc::vec![0xf9, 0x02, 0x5a, 0xa0];
+        assert_eq!(split_header(&nodes), (None, nodes.clone()));
+        assert_eq!(split_header(&with_header(header.clone(), nodes.clone())), (Some(header.clone()), nodes.clone()));
+        // A list that starts with the marker but carries nothing after it is not a header.
+        let lone = alloc::vec![HEADER_MARKER.to_vec()];
+        assert_eq!(split_header(&lone), (None, lone.clone()));
+        // A trie node is an RLP list: its first byte is at least 0xc0, the marker's is not.
+        assert!(HEADER_MARKER[0] < 0xc0);
+    }
+}
