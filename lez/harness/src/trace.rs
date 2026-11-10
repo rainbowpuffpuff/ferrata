@@ -129,8 +129,8 @@ impl ExecutionEnvironment for Tracer<'_> {
 
 /// The handler a transition ran, for the tables.
 pub fn handler_name(input: &ReceiveInput) -> String {
-    if input.receiver.program_account_id == crate::ferrata_account() || input.receiver.program_account_id == crate::TWIN
-    {
+    let program = input.receiver.program_account_id;
+    if program == crate::ferrata_account() || program == crate::TWIN || program == crate::KECCAK_SOFT {
         use ferrata_lez_wire::Message as M;
         let name = match borsh::from_slice::<M>(&input.message) {
             Ok(M::Init { .. }) => "Init",
@@ -139,6 +139,7 @@ pub fn handler_name(input: &ReceiveInput) -> String {
             Ok(M::Adopt { .. }) => "Adopt",
             Ok(M::Finish) => "Finish",
             Ok(M::Read) => "Read",
+            Ok(M::ReadPadded { .. }) => "ReadPadded",
             Ok(M::Attest { .. }) => "Attest",
             Ok(M::VerifyAll { .. }) => "VerifyAll",
             Ok(M::JobOpen { .. }) => "JobOpen",
@@ -150,7 +151,18 @@ pub fn handler_name(input: &ReceiveInput) -> String {
         return name.to_string();
     }
     if input.receiver.program_account_id == crate::consumer_account() {
-        return "consumer".into();
+        use ferrata_lez_wire::consumer::ConsumerMessage as C;
+        // Anything that is not one of the consumer's messages is a reply it waits for.
+        let name = match borsh::from_slice::<C>(&input.message) {
+            Ok(C::ReadRecord { .. }) => "consumer ReadRecord",
+            Ok(C::ReadPadded { .. }) => "consumer ReadPadded",
+            Ok(C::CallAttest { .. }) => "consumer CallAttest",
+            Ok(C::Claim { .. }) => "consumer Claim",
+            Ok(C::AttestPrivately { .. }) => "consumer AttestPrivately",
+            Ok(C::Credit { .. }) => "consumer Credit",
+            Err(_) => "consumer (reply)",
+        };
+        return name.to_string();
     }
     if input.receiver.program_account_id == crate::scripted_account() {
         return "scripted".into();

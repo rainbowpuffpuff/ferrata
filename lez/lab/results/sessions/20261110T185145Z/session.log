@@ -1,0 +1,20 @@
+[18:51:45] session 20261110T185145Z
+[18:51:47] no saved generation: a new zone
+[18:51:47] Bedrock node up: {"cryptarchia_info":{"lib":"402255ecf1448ec5d136c293f7eb818cd6137af8175bdc72f06a99cf2eef8a52","lib_slot":0,"tip":"402255ecf1448ec5d136c293f7eb818cd6137af8175bdc72f06a99cf2eef8a52","slot":0,"height":0,"state":"Bootstrapping"},"phase":"InitialBlockDownload"}
+[18:51:51] node slot 0 is unix second 1785493027
+[18:51:54] sequencer start 1: scheduler after 2 s; its blocks fall 6 s after an epoch second
+[18:51:54] sequencer up, head block 1
+sepolia: instance at slot 11288576, head period 1409, 32 update(s), finality update yes; 3 request(s)
+mainnet: instance at slot 15625920, head period 1907, 1 update(s), finality update yes; 6 request(s)
+[19:22:41] driver exit 0
+[mainnet] mainnet #1 period p1907 fin 15622144: applied (5 transactions, blocks 178-182); rotated false advanced false adopted true
+[20261110T185145Z] mainnet #2 finality p1907 fin 15625984 Open (step 1)       applied        gas   2275397 block  183 +  9.6s e3f79f451b9542ae782702c36d4264d98b870fc1e18ad2dd4b92a1f8d0ed1bc1
+[20261110T185145Z] mainnet #2 finality p1907 fin 15625984 Miller (step 2)     applied        gas   3307963 block  184 +  9.9s e4de270cbb1f6116b8c16271c1d1c57d09bdfcec8b8406d9d6bedfc0830310e2
+[20261110T185145Z] mainnet #2 finality p1907 fin 15625984 Finish (step 3)     applied        gas   3723564 block  185 + 10.3s ee81667639aee1248eb88bd1356c4c2daee5acb361b8d0d2ddcb15278135fb9c
+[mainnet] mainnet #2 finality p1907 fin 15625984: applied (3 transactions, blocks 183-185); rotated false advanced true adopted false
+[mainnet] 2 job(s) applied this session, 0 committee handoff(s)
+blocks: 1..=185 (every one final on Bedrock)
+transactions: 184 sent; 184 applied, 0 refused with an exit code, 0 reverted otherwise, 0 dropped, 0 rejected at the RPC, 0 unfinished
+[19:22:42] sequencer stopped (exit 0)
+[19:22:51] node stopped (exit 143)
+[19:22:53] saved generation 1 (341897099 bytes)

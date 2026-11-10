@@ -2,7 +2,7 @@
 //! applied to the public instance. Run in RISC Zero dev mode (`RISC0_DEV_MODE=1`, fake receipts):
 //! the private transitions and the privacy-preserving circuit are executed, not proven; the
 //! settlement path, the public part's execution and its metering are the real ones. The real
-//! proof is the `prove_private` binary, built in the dev profile (see `lez/RESULTS.md`, §3 and §6).
+//! proof is the `prove_private` binary, built in the dev profile (see `lez/RESULTS.md`, §3 and §7).
 
 use ferrata_core::{fork::LcFork, witness::CompactUpdate};
 use ferrata_lez_wire::{header_actor, Message};

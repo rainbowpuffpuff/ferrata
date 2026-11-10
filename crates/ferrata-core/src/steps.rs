@@ -19,12 +19,21 @@
 //! ([`Job::adopt`], in parts). [`apply`] then applies the verified job to the store it started
 //! from, and to no other: it compares the store's digest with the job's.
 //!
+//! **Forks.** A store keeps the layout it was created in until the chain reaches a later fork of
+//! its own schedule. The first update attested under that fork arrives in the fork's layout;
+//! [`store_for_update`] then gives the store upgraded to it (`upgrade_lc_store_to_*`), step 1
+//! runs on that store, and [`apply`] makes the upgrade the store's together with the update. An
+//! update in an earlier layout than the store's is refused: its submitter upgrades it first
+//! ([`crate::upgrade::upgrade_update`]).
+//!
 //! **Equivalence.** For every update, the steps accept exactly when `process_update` with
 //! `Adoption::OnChain` accepts, and the resulting store is the compact form of its store. The
 //! refusal code is the same when an update has a single defect. With several, the steps report
 //! the cheapest one first: `NotNewer` and `CommitteeUnknown` before the signature, where
 //! `process_update` verifies the signature first. `tests/steps.rs` in `ferrata-spectests` checks
-//! this on every spec vector, on the mainnet replay and on mutated mainnet updates.
+//! this on every spec vector, on the mainnet replay and on mutated mainnet updates; on the
+//! vectors that cross a fork it also checks that a store which is never told to upgrade, and
+//! moves only by [`store_for_update`], accepts and refuses the same updates.
 //!
 //! The signing key is always composed subtractively. The policy's two-thirds floor bounds the
 //! non-signers to a third of the committee, so this is never the longer composition.
@@ -47,11 +56,10 @@ use crate::{
     hash::sha256,
     merkle::{is_valid_merkle_branch, is_valid_normalized_merkle_branch, ZERO},
     store::ApplyOutcome,
-    types::{BeaconBlockHeader, BlsSignature, Execution, LightClientHeader},
+    types::{BeaconBlockHeader, BlsSignature},
     validate::{
         compute_domain, compute_signing_root, current_sync_committee_gindex_at_slot, finalized_root_gindex_at_slot,
-        get_lc_execution_root, is_valid_light_client_header, next_sync_committee_gindex_at_slot, DOMAIN_SYNC_COMMITTEE,
-        GENESIS_SLOT,
+        is_valid_light_client_header, next_sync_committee_gindex_at_slot, DOMAIN_SYNC_COMMITTEE, GENESIS_SLOT,
     },
     witness::{
         add_affine, deserialize_g1, key_branch_depth, pubkey_leaf, witness_key, AdoptionProgress, CommitteeSummary,
@@ -101,96 +109,9 @@ impl From<Error> for StepError {
 // Header record
 // ---------------------------------------------------------------------------------------------
 
-/// What a store records about a finalized header: the beacon header, the execution root it binds
-/// (`get_lc_execution_root`) and the execution fields a consumer proves against.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct HeaderRecord {
-    pub beacon: BeaconBlockHeader,
-    pub execution_root: Root,
-    pub execution: ExecutionSummary,
-}
-
-/// The execution part of a [`HeaderRecord`], by header layout.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum ExecutionSummary {
-    /// Altair layout: no execution data.
-    None,
-    /// Capella to Electra layouts: fields of the execution payload header.
-    Payload { block_number: u64, block_hash: Root, state_root: Root, receipts_root: Root, timestamp: u64 },
-    /// Gloas layout: the bound block hash (the bid's parent block hash).
-    BlockHash(Root),
-}
-
-impl HeaderRecord {
-    /// The record of a header in the layout of `fork`.
-    pub fn of(header: &LightClientHeader, fork: LcFork, spec: &ChainSpec) -> Self {
-        let execution = match &header.execution {
-            Execution::None => ExecutionSummary::None,
-            Execution::Payload { header: p, .. } => ExecutionSummary::Payload {
-                block_number: p.block_number,
-                block_hash: p.block_hash,
-                state_root: p.state_root,
-                receipts_root: p.receipts_root,
-                timestamp: p.timestamp,
-            },
-            Execution::BlockHash { block_hash, .. } => ExecutionSummary::BlockHash(*block_hash),
-        };
-        Self { beacon: header.beacon.clone(), execution_root: get_lc_execution_root(header, fork, spec), execution }
-    }
-
-    fn write(&self, w: &mut Writer) {
-        w.bytes(&crate::witness::encode_beacon_header(&self.beacon));
-        w.bytes(&self.execution_root);
-        match &self.execution {
-            ExecutionSummary::None => w.u8(0),
-            ExecutionSummary::Payload { block_number, block_hash, state_root, receipts_root, timestamp } => {
-                w.u8(1);
-                w.u64(*block_number);
-                w.bytes(block_hash);
-                w.bytes(state_root);
-                w.bytes(receipts_root);
-                w.u64(*timestamp);
-            }
-            ExecutionSummary::BlockHash(h) => {
-                w.u8(2);
-                w.bytes(h);
-            }
-        }
-    }
-
-    fn read(r: &mut Reader<'_>) -> Result<Self, Error> {
-        let beacon = BeaconBlockHeader::decode(r.take(BeaconBlockHeader::SSZ_LEN)?)?;
-        let execution_root = r.array()?;
-        let execution = match r.u8()? {
-            0 => ExecutionSummary::None,
-            1 => ExecutionSummary::Payload {
-                block_number: r.u64()?,
-                block_hash: r.array()?,
-                state_root: r.array()?,
-                receipts_root: r.array()?,
-                timestamp: r.u64()?,
-            },
-            2 => ExecutionSummary::BlockHash(r.array()?),
-            _ => return Err(Error::Malformed),
-        };
-        Ok(Self { beacon, execution_root, execution })
-    }
-
-    /// Strict encoding.
-    pub fn encode(&self) -> Vec<u8> {
-        let mut w = Writer::default();
-        self.write(&mut w);
-        w.out
-    }
-
-    /// Strict decoding.
-    pub fn decode(b: &[u8]) -> Result<Self, Error> {
-        let mut r = Reader::new(b);
-        let out = Self::read(&mut r)?;
-        r.finish()?;
-        Ok(out)
-    }
-}
+// The record a store keeps of a finalized header. It lives in [`crate::witness`], which builds
+// without a BLS backend, so that a consumer can decode a record it reads without linking one.
+pub use crate::witness::{ExecutionSummary, HeaderRecord};
 
 // ---------------------------------------------------------------------------------------------
 // Validation over the compact store
@@ -327,6 +248,46 @@ pub fn validate_compact(
     let domain = compute_domain(DOMAIN_SYNC_COMMITTEE, fork_version, genesis_validators_root);
     let signing_root = compute_signing_root(&update.attested_header.beacon.hash_tree_root(), &domain);
     Ok((signer, signing_root))
+}
+
+/// The store an update encoded in `layout` is verified against and applied to.
+///
+/// * `layout` is the store's: the store itself.
+/// * `layout` is later: the store upgraded to it ([`CompactStore::upgraded`]), provided `layout`
+///   is the layout of the fork that the schedule of `spec` puts at the update's attested header.
+///   So a store moves to a fork's layout with the first update attested under that fork and at
+///   no other time, and only to a fork of the schedule its instance was created with: a layout
+///   the schedule has not reached at the attested slot is `ForkMismatch`.
+/// * `layout` is earlier: `ForkMismatch`.
+///
+/// Nothing is written here: the upgrade becomes the store's when a job that started from the
+/// upgraded store is applied ([`apply`]).
+pub fn store_for_update(
+    store: &CompactStore,
+    layout: LcFork,
+    attested_slot: u64,
+    spec: &ChainSpec,
+) -> Result<CompactStore, Error> {
+    if layout == store.fork {
+        return Ok(store.clone());
+    }
+    let scheduled = spec.fork_at_epoch(spec.epoch_at_slot(attested_slot)).lc_fork();
+    if layout < store.fork || scheduled != Some(layout) {
+        return Err(Error::ForkMismatch);
+    }
+    store.upgraded(layout)
+}
+
+/// `store`, or `store` upgraded to a later layout, whichever has `digest`: the store a job that
+/// names `digest` started from.
+fn started_from(store: &CompactStore, digest: &Root) -> Option<CompactStore> {
+    let mut candidate = store.clone();
+    loop {
+        if candidate.digest() == *digest {
+            return Some(candidate);
+        }
+        candidate.fork = candidate.fork.next()?;
+    }
 }
 
 /// `StoreCore::update_advances` over the compact store.
@@ -638,7 +599,9 @@ pub fn step1(
     })
 }
 
-/// Apply a verified job to `store`, which must be the store the job started from.
+/// Apply a verified job to `store`, which must be the store the job started from: `store`
+/// itself, or, for an update, `store` upgraded to the later layout the update came in
+/// ([`store_for_update`]). The store returned then has that layout.
 pub fn apply(store: &CompactStore, job: &Job, spec: &ChainSpec) -> Result<(CompactStore, ApplyOutcome), StepError> {
     if job.phase != Phase::Verified {
         return Err(StepError::Phase);
@@ -646,12 +609,17 @@ pub fn apply(store: &CompactStore, job: &Job, spec: &ChainSpec) -> Result<(Compa
     if job.adoption_pending() {
         return Err(StepError::AdoptionIncomplete);
     }
-    if store.digest() != job.store_digest {
-        return Err(StepError::StoreChanged);
-    }
     match &job.pending {
-        PendingApply::Activate { .. } => Ok((store.clone(), ApplyOutcome::default())),
-        PendingApply::Update { finalized, next, .. } => Ok(apply_core_compact(store, finalized, *next, spec)?),
+        PendingApply::Activate { .. } => {
+            if store.digest() != job.store_digest {
+                return Err(StepError::StoreChanged);
+            }
+            Ok((store.clone(), ApplyOutcome::default()))
+        }
+        PendingApply::Update { finalized, next, .. } => {
+            let base = started_from(store, &job.store_digest).ok_or(StepError::StoreChanged)?;
+            Ok(apply_core_compact(&base, finalized, *next, spec)?)
+        }
     }
 }
 

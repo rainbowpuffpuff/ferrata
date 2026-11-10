@@ -1,14 +1,16 @@
 # modal-prover
 
-RISC Zero 3.0.5 proving of `checkpoint` fixtures, and of the LEZ light-client update
-(`lez`), on one NVIDIA L4 GPU on Modal, in a Modal workspace (app `ferrata-prover`, Volume `ferrata-prover`), with the
+RISC Zero 3.0.5 proving of `checkpoint` fixtures, of the LEZ light-client update
+(`lez`) and of one private attestation against a light-client record (`lez/RESULTS.md` §5.5), on one
+NVIDIA L4 GPU on Modal, in a Modal workspace (app `ferrata-prover`, Volume `ferrata-prover`), with the
 receipts verified on the laptop. Measured numbers, the CPU-versus-GPU table, costs, and links to the
 documentation consulted are in [RESULTS.md](RESULTS.md).
 
 Prototype evidence for a grant proposal. Nothing here is pushed or published. The only upload is to the
 owner's Modal workspace: this directory's `prover/` sources and `modal_app.py`; `inputs/` (two guest
-program binaries and four fixtures); and `inputs-lez/` (the prebuilt `prove_private` and six
-mainnet-p1899 fixtures). No personal data is in any of them.
+program binaries and four fixtures); `inputs-lez/` (the prebuilt `prove_private` and six
+mainnet-p1899 fixtures); and `inputs-lez-attest/` (the prebuilt `prove_attest` and the five files of the
+`mainnet-attest-2026-11-10` fixture it reads). No personal data is in any of them.
 
 ## What is proven, and with which program
 
@@ -33,16 +35,23 @@ host's image id.
 
 | Path | What |
 |---|---|
-| `modal_app.py` | The Modal app. The image is CUDA 12.8 devel with Rust 1.89. `build` is CPU only (16 cores, 64 GiB). It compiles three binaries into the Volume's `bin/`: the GPU prover, the same program without CUDA, and `risc0-r0vm` 3.0.5 with its `cuda` feature. `prove` proves one ferrata-checkpoint fixture per container on an L4. `prove_lez` runs the LEZ light-client update proof. `batch` runs several of these one after another in one GPU container. Every function has a 2 h hard timeout. Entrypoints: `main` (fixtures, one container each), `lez`, and `batch_run`. |
+| `modal_app.py` | The Modal app. The image is CUDA 12.8 devel with Rust 1.89. `build` is CPU only (16 cores, 64 GiB). It compiles three binaries into the Volume's `bin/`: the GPU prover, the same program without CUDA, and `risc0-r0vm` 3.0.5 with its `cuda` feature. `prove` proves one ferrata-checkpoint fixture per container on an L4. `prove_lez` runs one LEZ proof with a prebuilt host binary (`LEZ_JOBS`): `lez-update`, the light-client update, or `lez-attest`, one private attestation. `batch` runs several of these one after another in one GPU container. Every function has a 2 h hard timeout. Entrypoints: `main` (fixtures, one container each), `lez` (`--job lez-update`, the default, or `--job lez-attest`), and `batch_run`. |
 | `prover/` | `ferrata-modal`, one small Rust program on `risc0-zkvm =3.0.5`. With `--features cuda` it is the GPU prover (`prove`). Without it, it only computes image ids and verifies receipts (`image-id`, `verify`). The lockfile pins every `risc0-*` crate, `sppark` and `blst` to the versions in the risc0 v3.0.5 tag's lockfile, which is also the lockfile packaged with crates.io `risc0-r0vm` 3.0.5. |
 | `scripts/stage-inputs.sh` | Copies the guest programs and fixtures from `checkpoint` (read-only) into `inputs/`, and writes `inputs/MANIFEST.json`. |
 | `FERRATA_INPUTS` | Another staged inputs directory for `modal_app.py` (`programs/`, `fixtures/`, `MANIFEST.json`), in place of `inputs/`: the end-to-end return leg stages its two checkpoint inputs with `e2e/run.sh stage-gpu <run>` and proves them with `--jobs cp-e2e-candidate=600,cp-e2e-finalize=600` ([`../e2e/README.md`](../e2e/README.md)). |
 | `scripts/stage-lez.sh` | Copies `lez/target/debug/prove_private` and the six `mainnet-p1899` fixtures into `inputs-lez/` (read-only on both repositories), and writes `inputs-lez/MANIFEST.json`. |
-| `scripts/fetch.sh` | Downloads `results/` and the CUDA-free verifier (`bin/`) from the Volume. |
+| `inputs-lez-attest/` | The input of the private attestation proof, written by `lez/scripts/stage-prove-attest.sh OUTDIR [BINARY]`: the prebuilt `prove_attest` (the consumer and program guests and LEZ's privacy-preserving circuit embedded), the fixture files it reads, and `MANIFEST.json` with their sizes and SHA-256, the two image ids the binary reports and the command. |
+| `scripts/fetch.sh [RUN]` | Downloads `results/` and the CUDA-free verifier (`bin/`) from the Volume; with a run name, only `results/<RUN>/`. |
 | `scripts/verify.sh` | Local verification of every downloaded receipt; writes `results/verify-local.jsonl`. |
 | `scripts/summarize.py` | The CPU-versus-GPU table and the cost estimate, computed from the `run.json` files. |
-| `results/gpu-l4/<fixture>/` | `receipt-succinct.bin`, `journal.hex`, `prove.json` (the prover's own timings), `run.json` (everything: GPU, image ids, GNU time, GPU samples summary, binary metadata), `prover.log`, `gpu-samples.csv` (nvidia-smi every 200 ms), `nvidia-smi.txt`. `results/gpu-l4/lez-update/` holds `prove-private.log`, `stage2-private-tx.borsh` and `run.json`. `results/gpu-l4/timings.jsonl` has one JSON line per proof; `results/verify-local.jsonl` has the laptop's verification. |
-| `logs/` | Run logs and the LEZ local settle check (`lez-local-settle.log`). The build logs and the billing reports are not included in this repository. `lock-risc0-versions.txt` lists the pinned versions. |
+| `results/gpu-l4/<fixture>/` | `receipt-succinct.bin`, `journal.hex`, `prove.json` (the prover's own timings), `run.json` (everything: GPU, image ids, GNU time, GPU samples summary, binary metadata), `prover.log`, `gpu-samples.csv` (nvidia-smi every 200 ms), `nvidia-smi.txt`. `results/gpu-l4/lez-update/` holds `prove-private.log`, `stage2-private-tx.borsh` and `run.json`. `results/gpu-l4/timings.jsonl` has one JSON line per proof; `results/verify-local.jsonl` has the laptop's verification. `results/gpu-l4-attest/lez-attest/` holds `prove-attest.log`, `stage4-private-attest-tx.borsh`, `run.json`, `gpu-samples.csv` and `nvidia-smi.txt` of the private attestation. |
+| `logs/` | Run logs (`run-a-…`, `run-b-…`, and `run-c-lez-attest.log` for the private attestation) and the LEZ local settle checks (`lez-local-settle.log`; `lez-attest-local-settle.log`, and `lez-attest-tampered-settle.log` for the refusal of a transaction with one bit of its receipt flipped). The build logs and the billing reports are not included in this repository. `lock-risc0-versions.txt` lists the pinned versions. |
+
+The scripts are the ones the runs used, with their paths changed to this repository's layout
+(`../checkpoint`, `../lez`, `../crates`) and the Modal profile taken from `MODAL_PROFILE`. In this
+layout only `scripts/summarize.py` has been run (it reproduces the figures from `results/`); the
+four shell scripts were syntax-checked (`bash -n`), not run: the runs here were made from a
+working directory in which `checkpoint/` and `lez/` were separate checkouts.
 
 ## Run it
 
@@ -50,7 +59,7 @@ Every Modal command takes the workspace profile in its own environment. `modal p
 used, because the machine's active profile belongs to another workspace.
 
 ```sh
-export TMPDIR=$PWD/../tmp MODAL_PROFILE=<profile>
+export MODAL_PROFILE=<profile>
 scripts/stage-inputs.sh && scripts/stage-lez.sh             # inputs/ and inputs-lez/
 modal run --detach modal_app.py::build --what prover       # CPU only, once: GPU prover + verifier -> Volume bin/
 modal run --detach modal_app.py::build --what r0vm         # CPU only, once: r0vm 3.0.5 with CUDA (in parallel)
@@ -60,6 +69,14 @@ modal run --detach modal_app.py::batch_run --run gpu-l4 \
   --jobs cp-empty-360=900,cp-pp5-360=1200,lez-update=2700,cp-pp50-360=1800
 scripts/fetch.sh && scripts/verify.sh && python3 -I scripts/summarize.py
 modal app list                                              # nothing of ours left running
+
+# the private attestation (what was run, in a container of its own):
+../lez/scripts/stage-prove-attest.sh $PWD/inputs-lez-attest <prove_attest built on glibc <= 2.39>
+modal run --detach modal_app.py::lez --job lez-attest --run gpu-l4-attest --limit-s 900
+scripts/fetch.sh gpu-l4-attest                                # the second run, on the later images:
+                                                              # --run gpu-l4-attest-2, the same commands
+FERRATA_ATTEST_FIXTURE_DIR=inputs-lez-attest/mainnet-attest-2026-11-10 RISC0_DEV_MODE=0 \
+  inputs-lez-attest/prove_attest --settle results/gpu-l4-attest/lez-attest/stage4-private-attest-tx.borsh
 ```
 
 The runs are detached because the first build attempt was lost. Modal stopped the non-detached app
@@ -109,8 +126,11 @@ All are under 1 MB and are committed:
 | `results/gpu-l4/cp-pp5-360/receipt-succinct.bin` | 224,314 |
 | `results/gpu-l4/cp-pp50-360/receipt-succinct.bin` | 224,314 |
 | `results/gpu-l4/lez-update/stage2-private-tx.borsh` (LEZ transaction with its 227,080-byte receipt) | 231,034 |
+| `results/gpu-l4-attest/lez-attest/stage4-private-attest-tx.borsh` (LEZ transaction with its 227,170-byte receipt) | 231,214 |
+| `results/gpu-l4-attest-2/lez-attest/stage4-private-attest-tx.borsh` (the same attestation on the later images) | 231,214 |
 
 Not committed (git-ignored, and none of them a receipt): `bin/` (binaries downloaded from the Volume:
 CUDA prover 119 MB, r0vm 137 MB, verifier 3 MB), `inputs/programs`, `inputs/fixtures`, and
-`inputs-lez/` except the manifests (the 136 MB `prove_private` and the fixtures). Their sha256 are in
+`inputs-lez/` and `inputs-lez-attest/` except the manifests (the 136 MB `prove_private`, the 154 MB
+`prove_attest` and the fixtures). Their sha256 are in
 the manifests, in `logs/bin-meta/*.json` and in each `run.json` (`build_info`).

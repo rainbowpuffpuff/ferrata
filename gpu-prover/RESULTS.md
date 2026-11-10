@@ -1,8 +1,10 @@
 # Results: RISC Zero 3.0.5 proving on one NVIDIA L4 (Modal)
 
-Every number below comes from a run on 10 Nov 2026. The files are in `results/gpu-l4/<job>/`:
-`run.json` holds everything, `prove.json` holds the prover's own timings, plus `prover.log` or
-`prove-private.log`, `gpu-samples.csv` and `nvidia-smi.txt`. `python3 -I scripts/summarize.py`
+Every number below comes from a run on 10 Nov 2026. The files are in `results/gpu-l4/<job>/`
+(the private attestation's in `results/gpu-l4-attest/lez-attest/` and, on the later images,
+`results/gpu-l4-attest-2/lez-attest/`):
+`run.json` holds everything, `prove.json` holds the prover's own timings, plus `prover.log`,
+`prove-private.log` or `prove-attest.log`, `gpu-samples.csv` and `nvidia-smi.txt`. `python3 -I scripts/summarize.py`
 recomputes the table and the cost from `run.json`. CPU numbers are quoted from
 `checkpoint/RESULTS.md` and `lez/RESULTS.md` §3; none was re-measured.
 
@@ -66,6 +68,81 @@ execution.program_image_claims (1):
 settled: execution gas 479,854 (PRIVATE_VERIFY_GAS 409,764 + public part 70,090 cycles), storage gas 224,063, base fee 5,631,336
 ```
 
+## The LEZ private attestation (`lez`, RESULTS.md §5.5)
+
+One private attestation: a consumer executed at a private account reads the record of mainnet block
+26,384,851 (`header(id, 15624480)`) and verifies against it an ERC-20 `Transfer` log of that block
+(token `a0b86991…eb48`, transaction 0, log 0). The proof covers the consumer's two private
+transitions and LEZ's privacy-preserving circuit over them; the light-client program's part of the
+transaction (`Read`) is public. Prebuilt `prove_attest` (sha256 `69d00216…f64e`, built from the
+repository at `d498591`), unchanged, with the documented command line. `RISC0_SERVER_PATH` points at
+the CUDA build of r0vm 3.0.5. The staged files matched that run's `inputs-lez-attest/MANIFEST.json`
+(`input_hashes_equal_manifest: true`; the manifest as of commit b811cdd, since replaced by the
+second run's). Run `gpu-l4-attest`, in a container of its own.
+
+| | **NVIDIA L4** |
+|---|---|
+| image proven | consumer `711584ffe09f0b115132e33ce1485666710bc73e696e66fcc54d00aad0db949f` (`FERRATA_EXPECT_CONSUMER_IMAGE_ID` checked; "RISC0_DEV_MODE off"). The light-client program in the same binary is `2f3566d4f460620867a93b557776400b1039142ce92203072170c162ba2ec130`. |
+| private transitions | `AttestPrivately` (sends `Read`): 36,126 user cycles, 1 segment (131,072 cycles padded). The record's reply (verifies the fact): 346,210 user cycles, 1 segment (524,288 padded). Both exit 0. |
+| `execute_and_prove` | **13.5 s** (prove + settle 13.6 s) |
+| whole run (`/usr/bin/time -v`) | **0:16.99** (user 15.21 s, system 1.95 s, 100% of one core) |
+| peak host memory (GNU time max RSS) | **0.77 GiB** (810,428 kB) |
+| peak GPU memory | **11,296 MiB** (5 MiB before); GPU busy 12.2 s of the 17.0 s, mean utilisation 56% over the whole run |
+| receipt | **227,170 bytes**; transaction **231,214 bytes** (sha256 `f89bc6e7eca8db8219e8d4abc2f085861020a5b470cce2c9ca25e0776354b746`) |
+| settlement in the run | receipt verified; execution gas 421,642 (`PRIVATE_VERIFY_GAS` 409,764 + public part 11,878 cycles), storage gas 224,063, base fee 5,165,640; exit 0 |
+| where | Modal task `ta-01M733QC6TQT81W43J260J3AFR`, AWS `eu-south`, 4 CPU cores and 32 GiB; 18.8 s from the function's start to done; the L4 was scheduled at once (client round trip 29.7 s) |
+
+There is no CPU figure to compare with: this transaction was never proven on a CPU. Against the
+light-client update above, the private part is 24 times smaller in user cycles (382,336 against
+9,045,235) and the proof 3.7 times faster (13.5 s against 49.5 s): most of the 13.5 s is LEZ's
+privacy-preserving circuit and the recursion, which do not shrink with the program.
+
+**Local settle check** (laptop, with the staged binary; full output in
+`logs/lez-attest-local-settle.log`): `RISC0_DEV_MODE=0 inputs-lez-attest/prove_attest --settle
+results/gpu-l4-attest/lez-attest/stage4-private-attest-tx.borsh` **passed**, exit 0, 2.6 s wall:
+
+```
+consumer image 711584ffe09f0b115132e33ce1485666710bc73e696e66fcc54d00aad0db949f (411108 ELF bytes); program image 2f3566d4…c130 (592752 ELF bytes); RISC0_DEV_MODE off
+SETTLED FROM results/gpu-l4-attest/lez-attest/stage4-private-attest-tx.borsh (receipt verified): receipt 227170 bytes, transaction 231214 bytes, settled in 0.1 s
+execution.program_image_claims (1):
+  - Disclosed { program: consumer, image_id: 711584ffe09f0b115132e33ce1485666710bc73e696e66fcc54d00aad0db949f }
+settled: execution gas 421,642 (PRIVATE_VERIFY_GAS 409,764 + public part 11,878 cycles), storage gas 224,063, base fee 5,165,640
+```
+
+**Negative control** (`logs/lez-attest-tampered-settle.log`): the same transaction with bit 0 of byte
+115,607 flipped (inside the receipt) is refused by the same command, exit 101: `settlement accepts
+the transaction: "Invalid privacy preserving execution circuit proof"`.
+
+### The same attestation on the images that add Gloas records (run `gpu-l4-attest-2`)
+
+The program and the consumer were rebuilt when the store's upgrade in place and attestation under
+Gloas records were added (`lez/RESULTS.md` §6), so the proof above is of the previous images. The
+same command proved the same attestation on the new ones: prebuilt `prove_attest` (sha256
+`6146055b…11ab`, built on the build box from the repository at `ad40044`, glibc 2.39), staged with
+`lez/scripts/stage-prove-attest.sh` (`inputs-lez-attest/MANIFEST.json`), run `gpu-l4-attest-2`.
+
+| | **NVIDIA L4** |
+|---|---|
+| image proven | consumer `f883e6a4dbd8e49439465f918884abe1379b02276ff88676f0a4bf958ee49068` (`FERRATA_EXPECT_CONSUMER_IMAGE_ID` checked; "RISC0_DEV_MODE off"). The light-client program in the same binary is `9f3eb00f54f911e41710fc57d6b0258846bd4db61b57674b8a33a6457bda3e7b`. |
+| private transitions | `AttestPrivately` (sends `Read`): 34,337 user cycles; the record's reply (verifies the fact): 346,240; 380,577 together (`lez/results/stage4-attest-private.md`, executor). |
+| `execute_and_prove` | **16.1 s** (prove + settle 16.3 s) |
+| whole run (`/usr/bin/time -v`) | **0:21.28** (user 18.81 s, system 2.41 s, 99% of one core) |
+| peak host memory (GNU time max RSS) | **0.76 GiB** (798,040 kB) |
+| peak GPU memory | **11,295 MiB** (4 MiB before); GPU busy 13.8 s, mean utilisation 46% between the first and the last busy sample (15.4 s) |
+| receipt | **227,170 bytes**; transaction **231,214 bytes** (sha256 `5b1d6292f7dc70894ca6f06403dbaef05f3b42e7e1c2a8a1b9b61d1c812fbdcf`) |
+| settlement in the run | receipt verified; execution gas 421,641 (`PRIVATE_VERIFY_GAS` 409,764 + public part 11,877 cycles), storage gas 224,063, base fee 5,165,632; exit 0 |
+| where | Modal task `ta-01M73A9TSZYWVT317SEAKTBY1R`, GCP `eu-west`, 4 CPU cores and 32 GiB; 23.3 s from the function's start to done (finished 18:08:07 UTC). The L4 was **not** scheduled at once: the call waited about 24 minutes, and the local client gave up first (`ConnectionError: Deadline exceeded`); the detached app then ran the function, and the results were read from the Volume (`scripts/fetch.sh gpu-l4-attest-2`). Billing was not queried; the GPU container lived about 23 s. |
+
+The same transaction 0.4% smaller in user cycles took 2.6 s longer to prove on another L4 in
+another cloud; one run each, so the difference says nothing about the images. Against the
+light-client update above the proof is 3.1 times faster (16.1 s against 49.5 s).
+
+**Local settle check** (laptop, with the staged binary; `logs/lez-attest-2-local-settle.log`):
+`RISC0_DEV_MODE=0 inputs-lez-attest/prove_attest --settle
+results/gpu-l4-attest-2/lez-attest/stage4-private-attest-tx.borsh` **passed**, exit 0: "SETTLED FROM
+… (receipt verified): receipt 227170 bytes, transaction 231214 bytes, settled in 0.1 s". The
+negative control was not repeated for this run.
+
 ## Was the GPU really used?
 
 Yes, on four counts.
@@ -79,7 +156,8 @@ Yes, on four counts.
 3. **The CPU was not doing the work.** The prover process used one CPU core (99%).
 4. **The time.** About 2.6 s per segment against 289 s on the laptop's 16 threads.
 
-The same holds for the LEZ run: GPU memory went from 41 to 11,300 MiB and the GPU was busy for 38 s.
+The same holds for the LEZ runs: for the update, GPU memory went from 41 to 11,300 MiB and the GPU
+was busy for 38 s; for the private attestation, from 5 to 11,296 MiB and 12.2 s.
 
 ## Image ids and receipt verification
 
@@ -114,6 +192,7 @@ in USD:
 | proof (a) `cp-empty-1` | `ap-xI851feOdDZZ4TmAIm4Gvp` | 0.001 | 0.001 | 0.004 | 0.007 |
 | proofs (b), (c), LEZ, (d) in one container | `ap-BfZY9ulBo0gcF7dv2lLhUt` | 0.019 | 0.026 | 0.081 | 0.126 |
 | **total** | | | | | **1.70** |
+| later, the LEZ private attestation (the same report, read after the run) | `ap-pU6UFjGYoXx7wYAVCXylkC` | 0.001 | 0.002 | 0.006 | 0.009 |
 
 - **GPU.** 385 L4-seconds billed ($0.085 at $0.000222/s). The functions themselves ran 366 s
   (`summarize.py`), which at $0.000345/s for L4 + 4 cores + 32 GiB comes to $0.13. The rest is
@@ -128,7 +207,7 @@ in USD:
 
 | | |
 |---|---|
-| GPU | **NVIDIA L4**, 23,034 MiB, compute capability 8.9, driver 610.57.04 (CUDA 13.3 user-mode driver), Modal `gpu="L4"`, GCP `us-east` |
+| GPU | **NVIDIA L4**, 23,034 MiB, compute capability 8.9, driver 610.57.04 (CUDA 13.3 user-mode driver), Modal `gpu="L4"`: GCP `us-east` for `cp-empty-1`, GCP `eu-west` for the batch of four, AWS `eu-south` for the private attestation (`modal_region` and `modal_cloud_provider` in each `run.json`) |
 | container | 4 CPU cores requested (`nproc` 4), 32 GiB memory; one proof at a time, each in its own process |
 | image | `nvidia/cuda:12.8.0-devel-ubuntu24.04`: index digest `sha256:9a8fffc32a955361aa66d754e7a0cda2513052eaf5aaf8f3ba69b80578d1c6a9`, amd64 manifest `sha256:813c3b834aaafe2df2891f9a840c412a4df3c073dd9e0ac75aab810ed82a5b48`. Plus Modal's Python 3.12, Ubuntu packages (gcc 13.3.0, clang 18, protobuf-compiler, GNU time) and rustup with Rust 1.89.0. nvcc 12.8 (V12.8.61) with `NVCC_APPEND_FLAGS="--generate-code arch=compute_89,code=sm_89"`. |
 | prover | `prover/` (`ferrata-modal`) with `risc0-zkvm =3.0.5`, feature `cuda`, in-process (`LocalProver` path). The `risc0-*` crates, `sppark` 0.1.12 and `blst` 0.3.15 are pinned to the risc0 v3.0.5 tag's lockfile. Binary sha256 `085c9bf990e6b0134dac862ec419184f7ec6dc9f5683d59e14e9604c21185c64`, built in 1,503.7 s on 16 CPU cores (`bin/ferrata-modal-cuda.json`). It needs `libcuda.so.1`. |
@@ -202,15 +281,16 @@ plus the crates.io sources of the pinned versions.
   Rust dependencies are pinned by `prover/Cargo.lock` and by r0vm's packaged lockfile. The built
   binaries' sha256 are recorded.
 
-## Next: another workspace (the LEZ light-client update is done this way above)
+## Next: another workspace (the LEZ light-client update and the private attestation are done this way above)
 
 What this app needs from a RISC Zero 3.0.x workspace, in order of preference:
 
 1. **A host that talks to r0vm** (risc0-zkvm with only `client`). Ship the host binary, built on
    glibc ≤ 2.39, with its embedded guests, never rebuilt remotely. Ship its input files. Point
    `RISC0_SERVER_PATH` at `bin/r0vm-cuda`, the CUDA build of r0vm 3.0.5 already on the Volume. That
-   is `prove_lez`: copy it, change the staged binary, inputs, environment and command line, and
-   stage with a script like `scripts/stage-lez.sh`. Nothing is rebuilt.
+   is `prove_lez`: add a row to `LEZ_JOBS` (the staged directory, the binary, the files it writes)
+   and the job's environment, and stage with a script like `scripts/stage-lez.sh`. Nothing is
+   rebuilt. The private attestation (`lez-attest`) was added this way.
 2. **A guest program and its input stream only.** Stage the `.bin` the host embeds, and an expected
    journal from an executor run, as `inputs/programs/<kind>.bin` and `inputs/fixtures/<name>.json`
    (`{"kind", "journal"}`). `ferrata-modal prove` writes the input as ferrata-checkpoint does: a

@@ -5,15 +5,27 @@
 //! message is accepted only from the actor of this program that sends it. Refusals exit with a
 //! code instead of panicking: LEZ then charges only the cycles used
 //! (`lee::validated_state_diff::charged_cycles`), not the whole gas limit.
+//!
+//! `Attest` at `header(id, slot)` proves facts of the recorded block (accounts, storage slots,
+//! event logs, accumulator leaves, with conditions) and replies to its caller with their
+//! statement identifiers: `ferrata_lez_wire::attest::evaluate`, the function a private consumer
+//! runs on the record it reads.
+//!
+//! An instance's store starts in the layout of its bootstrap and moves to the layout of a later
+//! fork of the instance's own schedule with the first update attested under that fork
+//! (`ferrata_core::steps::store_for_update`): the job starts from the upgraded store, and applying
+//! the verified job writes the upgrade.
 
 use ferrata_core::{
+    fork::ChainSpec,
     steps::{self, Job, PendingApply, StepError},
     witness::{CompactBootstrap, CompactStore, CompactUpdate, SignerWitness},
     Error, Root,
 };
 use ferrata_lez_wire::{
-    code, header_actor, header_seed, instance_actor, instance_id, job_actor, job_id, job_seed, Config, InstanceState,
-    JobState, Message, RecordState, UncompressedKey, FINALIZED_SELECTOR,
+    attest, code, header_actor, header_seed, instance_actor, instance_id, job_actor, job_id, job_seed, Config,
+    InstanceState, JobState, Message, RecordState, UncompressedKey, ATTESTED_SELECTOR, FINALIZED_SELECTOR,
+    UPGRADED_SELECTOR,
 };
 use lee_core::{
     account::{AccountId, ActorState},
@@ -51,7 +63,8 @@ fn handle(input: &ReceiveInput) -> Result<Response, Refusal> {
         Message::Miller => miller(input, program),
         Message::Adopt { part, keys } => adopt(input, program, part, &keys),
         Message::Finish => finish(input, program),
-        Message::Read | Message::Attest { .. } => read(input),
+        Message::Read | Message::ReadPadded { .. } => read(input),
+        Message::Attest { request } => attest(input, program, &request),
         Message::VerifyAll { config, checkpoint, store, update, signers, adoption } => {
             verify_all(program, &config, &checkpoint, &store, &update, &signers, &adoption)
         }
@@ -60,7 +73,9 @@ fn handle(input: &ReceiveInput) -> Result<Response, Refusal> {
         }
         Message::Apply { instance_id, job_id, job } => apply(input, program, &instance_id, &job_id, &job),
         Message::ApplyVerified { instance_id, job } => apply_verified(input, program, &instance_id, &job),
-        Message::Record { instance_id, slot, record } => write_record(input, program, instance_id, slot, record),
+        Message::Record { instance_id, slot, chain_id, record } => {
+            write_record(input, program, instance_id, slot, chain_id, record)
+        }
     }
 }
 
@@ -102,6 +117,22 @@ fn check_config(config: &Config) -> Result<(), Refusal> {
         return Err(code::BAD_CONFIG);
     }
     Ok(())
+}
+
+/// An update decoded in the layout its encoding names, and the store it is verified against:
+/// `store`, or `store` upgraded to that layout when it is the layout of a later fork that the
+/// instance's schedule puts at the update's attested header (`steps::store_for_update`). Any
+/// other layout is `ForkMismatch`.
+fn update_and_store(
+    store: &CompactStore,
+    update: &[u8],
+    committee_size: usize,
+    spec: &ChainSpec,
+) -> Result<(CompactUpdate, CompactStore), Refusal> {
+    let layout = CompactUpdate::layout_of(update).map_err(core)?;
+    let update = CompactUpdate::decode(update, layout, committee_size).map_err(core)?;
+    let store = steps::store_for_update(store, layout, update.attested_header.beacon.slot, spec).map_err(core)?;
+    Ok((update, store))
 }
 
 /// `instance(id)` → `job(id, job_id)`, creating the job's account under its seed.
@@ -156,11 +187,10 @@ fn open(input: &ReceiveInput, program: AccountId, update: &[u8], signers: &[u8])
         return Err(code::INSTANCE_INACTIVE);
     }
     let config = &state.config;
-    let fork = config.fork().ok_or(code::BAD_STATE)?;
     let spec = config.spec();
     let n = config.sync_committee_size as usize;
-    let store = CompactStore::decode(&state.store).map_err(|_| code::BAD_STATE)?;
-    let update = CompactUpdate::decode(update, fork, n).map_err(core)?;
+    let stored = CompactStore::decode(&state.store).map_err(|_| code::BAD_STATE)?;
+    let (update, store) = update_and_store(&stored, update, n, &spec)?;
     let signers = SignerWitness::decode(signers, n).map_err(core)?;
     // `current_slot >= signature_slot` is enforced by the transaction's validity window: it is
     // valid only from the start of the signature slot, by the sequencer's clock.
@@ -225,12 +255,23 @@ fn apply_job(program: AccountId, mut state: InstanceState, job: &Job) -> Result<
     }
     let spec = state.config.spec();
     let store = CompactStore::decode(&state.store).map_err(|_| code::BAD_STATE)?;
+    // The job started from this store, or from this store upgraded to a later fork's layout
+    // (`open`, `verify_all`); in the second case the store returned has that layout.
     let (next, outcome) = steps::apply(&store, job, &spec).map_err(step)?;
+    let was = state.store.first().copied();
     state.store = next.encode();
+    let now = state.store.first().copied();
     state.applied += 1;
     state.active = true;
     let id = state.id;
+    let chain_id = state.config.chain_id;
     let mut response = Response::set_state(encode(&state));
+    if let (Some(was), Some(now)) = (was, now) {
+        // The store's encoding starts with its layout.
+        if was != now {
+            response = response.event(ProgramEvent { selector: UPGRADED_SELECTOR, data: vec![was, now] });
+        }
+    }
     if activate || outcome.advanced {
         let record = job.pending.record();
         let slot = record.beacon.slot;
@@ -240,7 +281,7 @@ fn apply_job(program: AccountId, mut state: InstanceState, job: &Job) -> Result<
             .send(
                 SyncMessage::new(
                     header_actor(program, &id, slot),
-                    &Message::Record { instance_id: id, slot, record: record.encode() },
+                    &Message::Record { instance_id: id, slot, chain_id, record: record.encode() },
                 )
                 .with_pda_seeds([header_seed(&id, slot)]),
             )
@@ -308,6 +349,7 @@ fn write_record(
     program: AccountId,
     instance: Root,
     slot: u64,
+    chain_id: u64,
     record: Vec<u8>,
 ) -> Result<Response, Refusal> {
     if input.from != Some(instance_actor(program, &instance)) {
@@ -316,11 +358,39 @@ fn write_record(
     if input.receiver != header_actor(program, &instance, slot) {
         return Err(code::WRONG_RECEIVER);
     }
-    let state = encode(&RecordState { instance_id: instance, record });
+    let state = encode(&RecordState { instance_id: instance, chain_id, record });
     if !input.pre_state.is_empty() && *input.pre_state != *state {
         return Err(code::RECORD_CONFLICT);
     }
     Ok(Response::set_state(state))
+}
+
+/// Prove the facts of `request` under this actor's record and hand the statements to the caller.
+///
+/// The record is one an instance of this program wrote: only `Record`, accepted from
+/// `instance(id)` alone, writes a `RecordState`, and it writes it at `header(id, slot)`, which is
+/// checked here again. Nothing else is trusted: the state and receipts roots come from the
+/// record, the instance and the chain id the caller expects must be the record's, and every
+/// proof is verified by the core. The handler changes no state, so a record serves any number of
+/// attestations, in any order, for as long as it exists.
+fn attest(input: &ReceiveInput, program: AccountId, request: &attest::Request) -> Result<Response, Refusal> {
+    if input.pre_state.is_empty() {
+        return Err(code::NO_RECORD);
+    }
+    let state: RecordState = borsh::from_slice(&input.pre_state).map_err(|_| code::BAD_STATE)?;
+    let recorded = state.header()?;
+    if input.receiver != header_actor(program, &state.instance_id, recorded.beacon.slot) {
+        return Err(code::WRONG_RECEIVER);
+    }
+    let attestation = attest::evaluate(&state.instance_id, state.chain_id, &recorded, request)?;
+    Ok(match input.from {
+        // A consumer called: the statements are its reply, in the same transaction.
+        Some(caller) => Response::keep_state().send_sync(caller, &attestation),
+        // Sent as a transaction's root there is nobody to reply to: the identifiers are an event.
+        None => {
+            Response::keep_state().event(ProgramEvent { selector: ATTESTED_SELECTOR, data: attestation.event_data() })
+        }
+    })
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -346,11 +416,10 @@ fn verify_all(
 ) -> Result<Response, Refusal> {
     check_config(config)?;
     let id = instance_id(config, checkpoint);
-    let fork = config.fork().ok_or(code::BAD_CONFIG)?;
     let spec = config.spec();
     let n = config.sync_committee_size as usize;
-    let store = CompactStore::decode(store).map_err(core)?;
-    let update = CompactUpdate::decode(update, fork, n).map_err(core)?;
+    let stored = CompactStore::decode(store).map_err(core)?;
+    let (update, store) = update_and_store(&stored, update, n, &spec)?;
     let signers = SignerWitness::decode(signers, n).map_err(core)?;
     let mut job =
         steps::step1(&store, &update, &signers, update.signature_slot, &spec, &config.genesis_validators_root, 1)

@@ -1,0 +1,53 @@
+consumer image 711584ffe09f0b115132e33ce1485666710bc73e696e66fcc54d00aad0db949f (411108 ELF bytes); program image 2f3566d4f460620867a93b557776400b1039142ce92203072170c162ba2ec130 (592752 ELF bytes); RISC0_DEV_MODE off
+record: header(id, 15624480) of instance c112f29279d8, mainnet block 26384851; fact: Transfer of token a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 in transaction 0, log 0
+the consumer's private transitions (executor):
+| handler execution | input bytes (ReceiveInput) | journal bytes | user cycles | segments | cycles with padding (sum of 2^po2) | exit |
+|---|---:|---:|---:|---:|---:|---:|
+| AttestPrivately (sends Read) | 2,250 | 4,591 | 36,126 | 1 | 131,072 | 0 |
+| the record's reply (verifies the fact) | 2,718 | 2,863 | 346,210 | 1 | 524,288 | 0 |
+
+REAL PROOF: execute_and_prove 13.5 s (prove + settle 13.6 s); receipt (succinct InnerReceipt, borsh) 227170 bytes; transaction 231214 bytes
+wrote the proven transaction to stage4-private-attest-tx.borsh (231214 bytes)
+public_context.actors (2): native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@HGXtvV47v5spjyQBZAvRf3AdXRfSScd7Sqyyq1HYNgYA
+public_context.authorized_accounts: {}
+execution.public_root: None
+execution.boundary (6 steps):
+  - PrivateToPublic from consumer@2Zg2ZpSuJvUqoUGyxFu2mY7rwV7JnWEQLGfc2rNDzDSV to ferrata@HGXtvV47v5spjyQBZAvRf3AdXRfSScd7Sqyyq1HYNgYA: Read (1 bytes)
+  - PublicToPrivate from ferrata@HGXtvV47v5spjyQBZAvRf3AdXRfSScd7Sqyyq1HYNgYA to consumer@2Zg2ZpSuJvUqoUGyxFu2mY7rwV7JnWEQLGfc2rNDzDSV: StateReply { state: 333 bytes } (337 bytes)
+  - EndPrivateSubtree
+  - EndPublicSubtree
+  - PrivateToPublic from native@2Zg2ZpSuJvUqoUGyxFu2mY7rwV7JnWEQLGfc2rNDzDSV to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
+  - EndPublicSubtree
+execution.program_image_claims (1):
+  - Disclosed { program: consumer, image_id: 711584ffe09f0b115132e33ce1485666710bc73e696e66fcc54d00aad0db949f }
+execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1389 bytes)
+execution.async_messages: 0
+execution.recovery_bindings: 0
+execution.validity: ValidityWindows { blocks: ValidityWindow { from: None, to: None }, timestamps: ValidityWindow { from: None, to: None } }
+execution.fee: Some("refund_to Some(78Skt7EQTvVwfWVYnA1XMjghv3aUR1V5wgQAfVLKJZG5), fallback true")
+nonces: 0, admission evidence: 0
+
+settled: execution gas 421,642 (PRIVATE_VERIFY_GAS 409,764 + public part 11,878 cycles), storage gas 224,063, base fee 5,165,640
+	Command being timed: "./prove_attest --tx-out stage4-private-attest-tx.borsh"
+	User time (seconds): 15.21
+	System time (seconds): 1.95
+	Percent of CPU this job got: 100%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:16.99
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 810428
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 0
+	Voluntary context switches: 2945
+	Involuntary context switches: 0
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 0
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

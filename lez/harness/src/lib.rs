@@ -6,10 +6,13 @@
 //! action to split its cycles by transition. The program is deployed at genesis, immutable, as
 //! LEZ's own tests deploy programs (`V03State::with_genesis_programs`).
 
+pub mod attest;
 pub mod private;
 pub mod scenarios;
+pub mod sepolia;
 pub mod settle;
 pub mod trace;
+pub mod vault;
 
 use std::{borrow::Cow, collections::BTreeMap, fs, path::PathBuf};
 
@@ -44,6 +47,10 @@ use trace::{trace_public, TransitionTrace};
 /// dispatch and PDA derivation (as `TWIN` in LEZ's own state tests).
 pub const TWIN: AccountId = AccountId::new([0x5c; 32]);
 
+/// Where the program built without the accelerated Keccak is deployed, for the comparison of
+/// Stage 4 (`guests/program-keccak-soft`).
+pub const KECCAK_SOFT: AccountId = AccountId::new([0x5d; 32]);
+
 pub fn ferrata_program() -> Program {
     Program::new_unchecked(methods::FERRATA_LEZ_ID, Cow::Borrowed(methods::FERRATA_LEZ_ELF))
 }
@@ -51,6 +58,19 @@ pub fn ferrata_program() -> Program {
 /// Where the genesis deployment of the program lives.
 pub fn ferrata_account() -> AccountId {
     AccountId::from_builtin_program(methods::FERRATA_LEZ_ID)
+}
+
+/// The program with every Keccak-f permutation computed in the guest.
+pub fn ferrata_keccak_soft_program() -> Program {
+    Program::new_unchecked(methods::FERRATA_LEZ_KECCAK_SOFT_ID, Cow::Borrowed(methods::FERRATA_LEZ_KECCAK_SOFT_ELF))
+}
+
+/// The consumer with RISC Zero's accelerated Keccak (executor comparison only).
+pub fn consumer_keccak_accel_program() -> Program {
+    Program::new_unchecked(
+        methods::FERRATA_CONSUMER_KECCAK_ACCEL_ID,
+        Cow::Borrowed(methods::FERRATA_CONSUMER_KECCAK_ACCEL_ELF),
+    )
 }
 
 pub fn consumer_program() -> Program {
@@ -78,6 +98,8 @@ pub fn image_id_hex(id: [u32; 8]) -> String {
 // Mainnet data
 // ---------------------------------------------------------------------------------------------
 
+/// Mainnet's execution chain id (EIP-155).
+pub const MAINNET_CHAIN_ID: u64 = 1;
 /// Mainnet `GENESIS_TIME`.
 pub const MAINNET_GENESIS_TIME: u64 = 1_606_824_023;
 pub const GENESIS_VALIDATORS_ROOT: &str = "4b363db94e286120d76eb905340fdd4e54bfe9f06bf33ff6cf5ad27f511bfe95";
@@ -118,6 +140,7 @@ pub fn mainnet_spec() -> ChainSpec {
 pub fn mainnet_config(parts: u8) -> Config {
     let spec = mainnet_spec();
     Config {
+        chain_id: MAINNET_CHAIN_ID,
         sync_committee_size: 512,
         slots_per_epoch: spec.preset.slots_per_epoch,
         epochs_per_sync_committee_period: spec.preset.epochs_per_sync_committee_period,
@@ -226,7 +249,11 @@ impl Chain {
                 (system_accounts::fee_inbox_account_id(), Account::default()),
                 (payer, Account::funded(1 << 100)),
             ])
-            .with_named_programs([(programs::fee_account_id(), programs::fee()), (TWIN, ferrata_program())])
+            .with_named_programs([
+                (programs::fee_account_id(), programs::fee()),
+                (TWIN, ferrata_program()),
+                (KECCAK_SOFT, ferrata_keccak_soft_program()),
+            ])
             .with_genesis_programs([(ferrata_program(), true), (consumer_program(), true), (scripted_program(), true)]);
         Self { state, payer_key, payer, nonce: 0, block_id: 2, reports: Vec::new() }
     }
@@ -440,13 +467,43 @@ impl Instance {
         SignerWitness::build(committee, &update.sync_aggregate.bits).unwrap_or_default()
     }
 
-    /// The whole job for one update: `Open`, `Miller`, the adoption parts if it adopts a
-    /// committee, `Finish`. The job is first run natively to name its actors and to know whether
-    /// it adopts and advances (as a submitter would). Stops at the first refused transaction.
-    pub fn update(&self, chain: &mut Chain, update: &LightClientUpdate, full: &StoreCore, label: &str) -> JobRun {
-        let fork = self.fork();
+    /// The layout a submitter sends `update` in to an instance whose store is `store`: the
+    /// layout of the fork the instance's schedule puts at the update's attested header, which is
+    /// the layout a beacon node serves it in, or the store's own if that is later (the submitter
+    /// then upgrades the update first).
+    pub fn layout_for(&self, store: &CompactStore, update: &LightClientUpdate) -> LcFork {
         let spec = self.config.spec();
-        let store = self.store(chain);
+        let slot = update.attested_header.beacon.slot;
+        let served = spec.fork_at_epoch(spec.epoch_at_slot(slot)).lc_fork().expect("a light-client fork");
+        served.max(store.fork)
+    }
+
+    /// The whole job for one update, sent in the layout [`Instance::layout_for`] gives.
+    pub fn update(&self, chain: &mut Chain, update: &LightClientUpdate, full: &StoreCore, label: &str) -> JobRun {
+        let layout = self.layout_for(&self.store(chain), update);
+        self.update_in(chain, update, layout, full, label)
+    }
+
+    /// The whole job for one update encoded in `layout`: `Open`, `Miller`, the adoption parts if
+    /// it adopts a committee, `Finish`. The job is first run natively to name its actors and to
+    /// know whether it adopts and advances (as a submitter would). Stops at the first refused
+    /// transaction.
+    pub fn update_in(
+        &self,
+        chain: &mut Chain,
+        update: &LightClientUpdate,
+        layout: LcFork,
+        full: &StoreCore,
+        label: &str,
+    ) -> JobRun {
+        let fork = layout;
+        let spec = self.config.spec();
+        let stored = self.store(chain);
+        // The store the job starts from: the stored one, or the stored one upgraded to the
+        // update's layout. If the program will refuse the layout, no job is opened, and the
+        // stored store only names the job actor the transaction lists.
+        let store = steps::store_for_update(&stored, layout, update.attested_header.beacon.slot, &spec)
+            .unwrap_or_else(|_| stored.clone());
         let compact = CompactUpdate::of(update);
         let witness = Self::signer_witness(full, update, &spec);
         let jid = job_id(&self.id, &store.digest(), &compact.digest(fork));
@@ -555,7 +612,7 @@ pub fn grouped(n: u64) -> String {
 
 /// What a refusal's exit code means.
 pub fn exit_name(code: u32) -> String {
-    use ferrata_lez_wire::code as c;
+    use ferrata_lez_wire::{code as c, consumer::code as k};
     let name = match code as u8 {
         c::BAD_MESSAGE => "BadMessage",
         c::WRONG_RECEIVER => "WrongReceiver",
@@ -570,6 +627,19 @@ pub fn exit_name(code: u32) -> String {
         c::UNROUTABLE => "Unroutable",
         c::WRONG_INSTANCE => "WrongInstance",
         c::BAD_CONFIG => "BadConfig",
+        c::NO_RECORD => "NoRecord",
+        c::BAD_QUERY => "BadQuery",
+        c::HEADER_REQUIRED => "HeaderRequired",
+        k::BAD_MESSAGE => "consumer: BadMessage",
+        k::BAD_STATE => "consumer: BadState",
+        k::BAD_REPLY => "consumer: BadReply",
+        k::ALREADY_CLAIMED => "consumer: AlreadyClaimed",
+        k::WRONG_RECEIVER => "consumer: WrongReceiver",
+        k::WRONG_SENDER => "consumer: WrongSender",
+        k::BINDING_MISMATCH => "consumer: BindingMismatch",
+        k::UNEXPECTED_FACT => "consumer: UnexpectedFact",
+        k::AMOUNT_TOO_LARGE => "consumer: AmountTooLarge",
+        k::NULLIFIER_MISMATCH => "consumer: NullifierMismatch",
         80 => "StepError::Witness",
         81 => "StepError::Phase",
         82 => "StepError::StoreChanged",

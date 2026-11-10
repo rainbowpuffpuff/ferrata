@@ -1,6 +1,6 @@
 //! Stage 3: a consumer actor of another program, executed privately, that reads one
 //! `header(id, slot)` record with LEZ v0.4's read idiom (`Read` → `StateReply`), and the same
-//! consumer calling the program with a query instead. Dev mode (`RISC0_DEV_MODE=1`): executed, not
+//! consumer sending its query to the program instead. Dev mode (`RISC0_DEV_MODE=1`): executed, not
 //! proven; settlement and the public part are the real ones.
 //!
 //! Each test writes the whole serialized transaction (`lez/results/stage3-*-tx.hex`) and its
@@ -180,18 +180,21 @@ fn a_private_consumer_reads_a_record() {
 }
 
 #[test]
-fn a_private_consumer_calling_the_program_publishes_its_query() {
+fn a_private_consumer_calling_the_program_publishes_what_it_sends() {
     require_dev_mode();
     let mut w = world();
     let slot = w.updates[1].finalized_header.beacon.slot;
     let header = header_actor(w.inst.program, &w.inst.id, slot);
     let time = w.inst.config.slot_start_ms(w.updates[2].signature_slot) + 12_000;
     let caller = w.chain.add_private_account(0x73, 1_000_000_000_000);
-    let call = borsh::to_vec(&ConsumerMessage::CallAttest {
+    // The same read with the query sent along (`ReadPadded`, which the program ignores): whatever
+    // a private execution sends to a public actor is published. The real call, `Attest` with a
+    // request and its proofs, is in `attest_private.rs`.
+    let call = borsh::to_vec(&ConsumerMessage::ReadPadded {
         ferrata: w.inst.program,
         instance_id: w.inst.id,
         slot,
-        query: QUERY.to_vec(),
+        padding: QUERY.to_vec(),
     })
     .unwrap();
     let run = w
@@ -215,7 +218,7 @@ fn a_private_consumer_calling_the_program_publishes_its_query() {
     // Calling publishes the query; nothing else of the consumer's may occur.
     check_and_dump(
         "stage3-call",
-        "Stage 3: the same consumer calls the program with its query (Attest)",
+        "Stage 3: the same consumer sends its query to the program (ReadPadded)",
         &run,
         &caller,
         &["the query"],

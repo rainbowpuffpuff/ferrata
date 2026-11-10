@@ -1,0 +1,4 @@
+lab/state/sequencer_home is set up
+  channel signing public key  1b48faf77ebe08f817c8ae517988c1e60814f5c1a408ea857f797d38a5aa87b0
+`start` creates the channel if it does not exist yet.
+Creating the channel stakes that key at genesis.

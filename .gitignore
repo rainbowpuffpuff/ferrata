@@ -27,9 +27,11 @@ __pycache__/
 /bridge/evm-verify/cache/
 /bridge/evm-verify/broadcast/
 
-# Downloaded vectors (scripts/fetch-vectors.sh); vectors/acc-leaf.json is generated and committed.
+# Downloaded vectors (scripts/fetch-vectors.sh); vectors/acc-leaf.json is generated and committed,
+# vectors/vault-tree-v2.json is the vault's own (vault/test/vectors/tree-v2.json), committed.
 /vectors/*
 !/vectors/acc-leaf.json
+!/vectors/vault-tree-v2.json
 
 # Generated fixtures, prover scratch and re-runs the sub-projects do not commit
 /checkpoint/fixtures/
@@ -53,3 +55,20 @@ __pycache__/
 /vault/script/runs/
 /e2e/sepolia-live.env
 /e2e/runs/*/sepolia-live.log
+
+# gpu-prover: binaries downloaded from the Volume (scripts/fetch.sh) and staged inputs
+# (scripts/stage-inputs.sh, scripts/stage-lez.sh, lez/scripts/stage-prove-attest.sh); the
+# MANIFEST.json files record their sha256.
+/gpu-prover/bin/
+/gpu-prover/prover/target/
+/gpu-prover/inputs/programs/
+/gpu-prover/inputs/fixtures/
+/gpu-prover/inputs-lez/prove_private
+/gpu-prover/inputs-lez/mainnet-p1899/
+/gpu-prover/inputs-lez-attest/prove_attest
+/gpu-prover/inputs-lez-attest/mainnet-attest-*/
+
+# The live sequencer run (lez/live): the driver's build output if it is built in place, and the
+# guest binaries deployed (they embed build paths; lez/live/README.md says how to obtain them)
+/lez/live/driver/target
+/lez/live/programs/*.bin

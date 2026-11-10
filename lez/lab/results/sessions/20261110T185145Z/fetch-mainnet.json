@@ -1,0 +1,71 @@
+{
+ "chain": "mainnet",
+ "lc_endpoint": "https://lodestar-mainnet.chainsafe.io",
+ "second_endpoint": "https://ethereum-beacon-api.publicnode.com",
+ "user_agent": "ferrata-lab-fetch",
+ "started": 1794336716.1626363,
+ "bootstrap": "finalized checkpoint 0x4baa732e5dbdbe97932abcf62c7caccc1cba8e9c14118d153aea629e25a4abff (slot 15625920), canonical at https://ethereum-beacon-api.publicnode.com",
+ "instance_finalized_slot": 15625920,
+ "finality_attested_slot": 15626048,
+ "finality_finalized_slot": 15625984,
+ "head_period": 1907,
+ "second_provider_finalized_root": "0x2090d125994fbc246962dac0a2657730a2aaba5ce2abec399c71e16e2f039f3d",
+ "updates": [
+  {
+   "period": 1907,
+   "fork_digest": "8c9f62fe",
+   "bytes": 26920
+  }
+ ],
+ "finished": 1794336718.0066583,
+ "requests": [
+  {
+   "url": "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/states/finalized/finality_checkpoints",
+   "status": 200,
+   "bytes": 394,
+   "sha256": "156bf227ac72c16c08d15ef798cef8fb68e9b5acb3cfb75357278e4cbce0c618",
+   "version": null,
+   "at": 1794336716.2
+  },
+  {
+   "url": "https://ethereum-beacon-api.publicnode.com/eth/v1/beacon/headers/0x4baa732e5dbdbe97932abcf62c7caccc1cba8e9c14118d153aea629e25a4abff",
+   "status": 200,
+   "bytes": 672,
+   "sha256": "c6003cfd1b628f0f3856b796cd570fbd6d6c81611ce315a1df080727a91d4162",
+   "version": null,
+   "at": 1794336716.6
+  },
+  {
+   "url": "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/light_client/bootstrap/0x4baa732e5dbdbe97932abcf62c7caccc1cba8e9c14118d153aea629e25a4abff",
+   "status": 200,
+   "bytes": 25675,
+   "sha256": "1f7660da72b3a93f425ea932d6af12d66838d10772364e2c45dda50b29f62ddf",
+   "version": "fulu",
+   "at": 1794336716.6
+  },
+  {
+   "url": "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/light_client/finality_update",
+   "status": 200,
+   "bytes": 2104,
+   "sha256": "4b174abcfba8d87311c812fc550d2606d9163f3ce3b4a4cebea0a2050585aab1",
+   "version": "fulu",
+   "at": 1794336717.1
+  },
+  {
+   "url": "https://ethereum-beacon-api.publicnode.com/eth/v1/beacon/headers/15625984",
+   "status": 200,
+   "bytes": 672,
+   "sha256": "292e334256a43951d4c2581fd0e3355193dc5c40f4f37142e0867ba78f64b9d4",
+   "version": null,
+   "at": 1794336717.5
+  },
+  {
+   "url": "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/light_client/updates?start_period=1907&count=1",
+   "status": 200,
+   "bytes": 26932,
+   "sha256": "4f6623bee3731b584237c3a70d21a7e6d1b0d034090fd988cd2f82bcb9c02ce2",
+   "version": "fulu",
+   "at": 1794336717.5
+  }
+ ]
+}

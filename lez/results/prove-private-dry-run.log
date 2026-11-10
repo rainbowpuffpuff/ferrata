@@ -1,26 +1,21 @@
-# prove_private, dry run on the new image (RISC0_DEV_MODE=1, --allow-dev-mode): NOT A PROOF; the receipt is fake.
-# It tries the commands of the pending real proof (RESULTS.md §3) on the committed tree, HEAD 8474f15,
-# 2026-11-10T09:05:56+01:00: the executor's count of the private transition, --tx-out, and --settle of the written transaction.
-
-$ RISC0_DEV_MODE=1 target/debug/prove_private --allow-dev-mode --tx-out target/stage2-dry-run-tx.borsh
-program image cec0bc687443be08c29c3216de8a3ed5f00a29d224fc266fe272f78cfe0f4d78 (508284 ELF bytes); consumer image aec03bcd8eedf5ff1fe14673be82d21ae1c8f95954fb0b9c4db7066d538e932a; RISC0_DEV_MODE on
-private transition (VerifyAll, finality update): 9,045,235 user cycles, 10 segments, 9,699,328 cycles padded (sum of 2^po2), exit Halted(0)
+program image 9f3eb00f54f911e41710fc57d6b0258846bd4db61b57674b8a33a6457bda3e7b (602912 ELF bytes); consumer image f883e6a4dbd8e49439465f918884abe1379b02276ff88676f0a4bf958ee49068; RISC0_DEV_MODE on
+private transition (VerifyAll, finality update): 9,048,754 user cycles, 10 segments, 9,699,328 cycles padded (sum of 2^po2), exit Halted(0)
 WARNING: proving in dev mode. This will not generate valid, secure proofs.
 WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
 WARNING: proving in dev mode. This will not generate valid, secure proofs.
 WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
-DRY RUN, NOT A PROOF (RISC0_DEV_MODE=1): execute_and_prove 0.7 s (prove + settle 0.8 s); receipt (fake receipt) 4067 bytes; transaction 8021 bytes
-wrote the proven transaction to target/stage2-dry-run-tx.borsh (8021 bytes)
-public_context.actors (3): ferrata@2nhBc476XLwdGYxHuku4C47GPQQU3t6Pzn9sxyQjxhXA, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@9xq6bB9mVU9PcSbkerXw2tz2j6fUi5LsgcFCPJ86Vciv
+DRY RUN, NOT A PROOF (RISC0_DEV_MODE=1): execute_and_prove 1.2 s (prove + settle 1.5 s); receipt (fake receipt) 4099 bytes; transaction 8085 bytes
+wrote the proven transaction to target/dry-run-tx.borsh (8085 bytes)
+public_context.actors (3): ferrata@8eFzBrUp5Avp8A6BgTmExBiCJtPTPrp2AdNtVb1L96tK, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@98nuLdy4rvh69odJA3nszo4zfisBxqtF27qVFuuKgvaB
 public_context.authorized_accounts: {}
 execution.public_root: None
 execution.boundary (4 steps):
-  - PrivateToPublic from ferrata@EoTYfFi4rVfLkTBefMr8sB6GcyhRTZv682hg9J1S1QsL to ferrata@2nhBc476XLwdGYxHuku4C47GPQQU3t6Pzn9sxyQjxhXA: ApplyVerified { instance_id: 62a32b1c2734, job: 438 bytes } (475 bytes)
+  - PrivateToPublic from ferrata@EoTYfFi4rVfLkTBefMr8sB6GcyhRTZv682hg9J1S1QsL to ferrata@8eFzBrUp5Avp8A6BgTmExBiCJtPTPrp2AdNtVb1L96tK: ApplyVerified { instance_id: ce624027489c, job: 470 bytes } (507 bytes)
   - EndPublicSubtree
   - PrivateToPublic from native@EoTYfFi4rVfLkTBefMr8sB6GcyhRTZv682hg9J1S1QsL to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
   - EndPublicSubtree
 execution.program_image_claims (1):
-  - Disclosed { program: ferrata, image_id: cec0bc687443be08c29c3216de8a3ed5f00a29d224fc266fe272f78cfe0f4d78 }
+  - Disclosed { program: ferrata, image_id: 9f3eb00f54f911e41710fc57d6b0258846bd4db61b57674b8a33a6457bda3e7b }
 execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1233 bytes)
 execution.async_messages: 0
 execution.recovery_bindings: 0
@@ -28,34 +23,4 @@ execution.validity: ValidityWindows { blocks: ValidityWindow { from: None, to: N
 execution.fee: Some("refund_to Some(78Skt7EQTvVwfWVYnA1XMjghv3aUR1V5wgQAfVLKJZG5), fallback true")
 nonces: 0, admission evidence: 0
 
-settled: execution gas 479,854 (PRIVATE_VERIFY_GAS 409,764 + public part 70,090 cycles), storage gas 224,063, base fee 5,631,336
-exit 0
-
-$ RISC0_DEV_MODE=1 target/debug/prove_private --settle target/stage2-dry-run-tx.borsh
-program image cec0bc687443be08c29c3216de8a3ed5f00a29d224fc266fe272f78cfe0f4d78 (508284 ELF bytes); consumer image aec03bcd8eedf5ff1fe14673be82d21ae1c8f95954fb0b9c4db7066d538e932a; RISC0_DEV_MODE on
-SETTLED FROM target/stage2-dry-run-tx.borsh (RISC0_DEV_MODE on: a fake receipt passes too): receipt 4067 bytes, transaction 8021 bytes, settled in 0.1 s
-public_context.actors (3): ferrata@2nhBc476XLwdGYxHuku4C47GPQQU3t6Pzn9sxyQjxhXA, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@9xq6bB9mVU9PcSbkerXw2tz2j6fUi5LsgcFCPJ86Vciv
-public_context.authorized_accounts: {}
-execution.public_root: None
-execution.boundary (4 steps):
-  - PrivateToPublic from ferrata@EoTYfFi4rVfLkTBefMr8sB6GcyhRTZv682hg9J1S1QsL to ferrata@2nhBc476XLwdGYxHuku4C47GPQQU3t6Pzn9sxyQjxhXA: ApplyVerified { instance_id: 62a32b1c2734, job: 438 bytes } (475 bytes)
-  - EndPublicSubtree
-  - PrivateToPublic from native@EoTYfFi4rVfLkTBefMr8sB6GcyhRTZv682hg9J1S1QsL to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
-  - EndPublicSubtree
-execution.program_image_claims (1):
-  - Disclosed { program: ferrata, image_id: cec0bc687443be08c29c3216de8a3ed5f00a29d224fc266fe272f78cfe0f4d78 }
-execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1233 bytes)
-execution.async_messages: 0
-execution.recovery_bindings: 0
-execution.validity: ValidityWindows { blocks: ValidityWindow { from: None, to: None }, timestamps: ValidityWindow { from: Some(1793602427000), to: None } }
-execution.fee: Some("refund_to Some(78Skt7EQTvVwfWVYnA1XMjghv3aUR1V5wgQAfVLKJZG5), fallback true")
-nonces: 0, admission evidence: 0
-
-settled: execution gas 479,854 (PRIVATE_VERIFY_GAS 409,764 + public part 70,090 cycles), storage gas 224,063, base fee 5,631,336
-exit 0
-
-$ RISC0_DEV_MODE=0 target/debug/prove_private --settle target/stage2-dry-run-tx.borsh   # the fake receipt must be refused
-program image cec0bc687443be08c29c3216de8a3ed5f00a29d224fc266fe272f78cfe0f4d78 (508284 ELF bytes); consumer image aec03bcd8eedf5ff1fe14673be82d21ae1c8f95954fb0b9c4db7066d538e932a; RISC0_DEV_MODE off
-thread 'main' (3999564) panicked at harness/src/bin/prove_private.rs:185:14:
-settlement accepts the transaction: "Invalid privacy preserving execution circuit proof"
-exit 101
+settled: execution gas 482,524 (PRIVATE_VERIFY_GAS 409,764 + public part 72,760 cycles), storage gas 224,063, base fee 5,652,696

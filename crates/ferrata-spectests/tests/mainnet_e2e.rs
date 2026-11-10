@@ -26,7 +26,7 @@ use ferrata_core::{
     rlp::encode_u64,
     types::{LightClientBootstrap, LightClientHeader, LightClientUpdate, SyncAggregate, SyncCommittee},
     validate::Context,
-    Error, Root,
+    witness, Error, Root,
 };
 use ferrata_spectests::execkit::{
     account_proof, header_rlp, hexb, quantity, receipt_rlp, word, AccountProof, Trie, TRANSFER,
@@ -202,6 +202,47 @@ fn the_record_is_the_finalized_execution_block() {
     assert_eq!(h.requests_hash, Some(root(block["requestsHash"].as_str().unwrap())));
     // The record survives its SSZ encoding.
     assert_eq!(HeaderRecord::from_ssz(&record.to_ssz()), Ok(record));
+}
+
+#[test]
+fn the_record_the_program_writes_restores_the_same_record() {
+    // The LEZ program stores a `witness::HeaderRecord` per finalized header; an attestation
+    // restores the execution view from it. That view must be the store's own record.
+    let store = verified_store(&Blst::new(Aggregation::Auto), Adoption::OnChain).unwrap();
+    let written = witness::HeaderRecord::of(&store.core().finalized_header, LcFork::Electra, &mainnet());
+    assert_eq!(HeaderRecord::from_recorded(&written, CHAIN_ID), Ok(record_n()));
+    // Through its bytes, as a consumer receives it.
+    let bytes = written.encode();
+    assert_eq!(bytes.len(), 289, "beacon header, execution root, layout byte, six payload fields");
+    let read = witness::HeaderRecord::decode(&bytes).unwrap();
+    assert_eq!(read, written);
+    assert_eq!(HeaderRecord::from_recorded(&read, CHAIN_ID), Ok(record_n()));
+    // The chain id is the instance's, not the record's: another instance, another record.
+    assert_ne!(HeaderRecord::from_recorded(&written, 11_155_111), Ok(record_n()));
+    // A truncated or extended encoding is refused, and so is a record without payload fields.
+    assert_eq!(witness::HeaderRecord::decode(&bytes[..288]), Err(Error::Malformed));
+    assert_eq!(witness::HeaderRecord::decode(&[&bytes[..], &[0]].concat()), Err(Error::Malformed));
+    for execution in [witness::ExecutionSummary::None, witness::ExecutionSummary::BlockHash([7; 32])] {
+        let other = witness::HeaderRecord { execution, ..written.clone() };
+        assert_eq!(HeaderRecord::from_recorded(&other, CHAIN_ID), Err(Error::BindingMismatch));
+    }
+    let witness::ExecutionSummary::Payload { block_number, parent_hash, state_root, receipts_root, timestamp, .. } =
+        written.execution.clone()
+    else {
+        panic!("a Fulu record holds payload fields");
+    };
+    let unbound = witness::HeaderRecord {
+        execution: witness::ExecutionSummary::Payload {
+            block_number,
+            block_hash: ZERO,
+            parent_hash,
+            state_root,
+            receipts_root,
+            timestamp,
+        },
+        ..written
+    };
+    assert_eq!(HeaderRecord::from_recorded(&unbound, CHAIN_ID), Err(Error::BindingMismatch));
 }
 
 #[test]

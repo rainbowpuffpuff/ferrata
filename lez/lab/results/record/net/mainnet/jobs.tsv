@@ -1,0 +1,6 @@
+session	chain	seq	kind	period	attested_slot	signature_slot	finalized_slot	layout	rotated	advanced	adopted	job_id	transactions	first_block	last_block	status	note
+20261110T185145Z	mainnet	0	init	1907	-	-	15625920	electra	-	-	-	bd23840de13f9476652a35098cd9992915662aaa8a6562f0995f6535470f820d	3	175	177	applied	checkpoint 4baa732e5dbdbe97932abcf62c7caccc1cba8e9c14118d153aea629e25a4abff
+20261110T185145Z	mainnet	1	period	1907	15622208	15622209	15622144	electra	false	false	true	4419e29653c14fa5cddaa00857ddbaeb25b79715553ac167e7e56a6542873d20	5	178	182	applied	update 001907.ssz
+20261110T185145Z	mainnet	2	finality	1907	15626048	15626049	15625984	electra	false	true	false	32185ce6d2023cacfcb1cc9d6ab430d55220d97b6e69510fd9e9a20308ff3446	3	183	185	applied	finality_update
+20261110T201707Z	mainnet	3	finality	1907	15626473	15626474	15626400	electra	false	true	false	ebd2bec4cee845cb9ccb0cbe7754a52de2c13d4dad8ea3e2aa602878b29cdd57	3	189	191	applied	finality_update
+20261110T221706Z	mainnet	4	finality	1907	15627074	15627075	15627008	electra	false	true	false	2d8565a2a0a7f7d3ee0fbc866fbe53ae2b73ced6690ddee64ad1d01fc4148257	3	200	202	applied	finality_update
