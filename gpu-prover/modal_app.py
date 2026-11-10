@@ -15,6 +15,7 @@ with its guests embedded (scripts/stage-lez.sh). Each run checks the image ids. 
 from __future__ import annotations
 
 import json
+import os
 import pathlib
 import time
 
@@ -59,7 +60,10 @@ base = (
 )
 # Local files are attached when a container starts (not image layers).
 build_image = base.add_local_dir(HERE / "prover", "/src/prover", ignore=["target", "**/target"])
-gpu_image = base.add_local_dir(HERE / "inputs", "/inputs").add_local_dir(HERE / "inputs-lez", "/lez")
+# FERRATA_INPUTS: another staged inputs directory (programs/, fixtures/, MANIFEST.json), for example
+# the one `e2e/run.sh stage-gpu <run>` writes; the default is the one scripts/stage-inputs.sh fills.
+INPUTS = pathlib.Path(os.environ.get("FERRATA_INPUTS") or HERE / "inputs")
+gpu_image = base.add_local_dir(INPUTS, "/inputs").add_local_dir(HERE / "inputs-lez", "/lez")
 
 app = modal.App(APP_NAME)
 volume = modal.Volume.from_name(VOLUME_NAME, create_if_missing=True)
