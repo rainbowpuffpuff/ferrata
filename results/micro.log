@@ -1,0 +1,53 @@
+== host micro 2026-11-10T07:17:02+01:00
+r0vm risc0-r0vm 3.0.5
+cpu  AMD Ryzen 9 7940HS w/ Radeon 780M Graphics, 16 threads
+checkpoint 0x95b816ed2614e340c85fed3ba3dad1f70e7dff2da1363406ade87e1333583caf
+segment    0xbdfb94a6b6ea12e996f332b28ce4791dc7362f28da602769192f589a61fee043
+micro      0x1fa0020bbc0f91ce34b86d3e8c7621e1b03cc795e27ef6bf964efae8bc275c30
+load before: 26.90 38.19 27.99 2/3649 3760919
+micro-blake2b-10000      k 10000 | user cycles      569851 | segments   1 (1x2^20) | 0.05 s
+micro-blake2b-1000000    k 1000000 | user cycles    55989842 | segments  57 (57x2^20) | 1.07 s
+micro-ed25519-1          k 1 | user cycles      840272 | segments   1 (1x2^20) | 0.06 s
+micro-ed25519-6          k 6 | user cycles     4972920 | segments   6 (1x2^18+5x2^20) | 0.17 s
+micro-ed25519msg200-1    k 1 | user cycles      860941 | segments   1 (1x2^20) | 0.06 s
+micro-ed25519msg200-6    k 6 | user cycles     5132259 | segments   6 (1x2^19+5x2^20) | 0.18 s
+micro-hash-10empty       k 8390 | user cycles       57435 | segments   1 (1x2^17) | 0.04 s
+micro-hash-110empty      k 92290 | user cycles      604964 | segments   1 (1x2^20) | 0.07 s
+micro-hash-pp4           k 951011 | user cycles     2562746 | segments   5 (1x2^19+4x2^20) | 0.24 s
+micro-insc-1empty        k 839 | user cycles      895823 | segments   1 (1x2^20) | 0.07 s
+micro-insc-6empty        k 5034 | user cycles     5353477 | segments   6 (6x2^20) | 0.18 s
+micro-insc-pp4           k 951011 | user cycles    54080473 | segments  55 (55x2^20) | 1.20 s
+micro-parse-10empty      k 8390 | user cycles       20022 | segments   1 (1x2^16) | 0.06 s
+micro-parse-110empty     k 92290 | user cycles      187051 | segments   1 (1x2^19) | 0.06 s
+micro-parse-pp4          k 951011 | user cycles       98048 | segments   1 (1x2^20) | 0.16 s
+micro-read-10000         k 10000 | user cycles        4174 | segments   1 (1x2^16) | 0.05 s
+micro-read-1000000       k 1000000 | user cycles       95059 | segments   1 (1x2^20) | 0.17 s
+micro-sha256-10000       k 10000 | user cycles       31172 | segments   1 (1x2^17) | 0.07 s
+micro-sha256-1000000     k 1000000 | user cycles     2685725 | segments   5 (5x2^20) | 0.30 s
+micro-sha256native-10000 k 10000 | user cycles       30407 | segments   1 (1x2^17) | 0.05 s
+micro-sha256native-1000000 k 1000000 | user cycles     2685009 | segments   5 (5x2^20) | 0.29 s
+micro-tree-1             k 1 | user cycles      100960 | segments   1 (1x2^17) | 0.06 s
+micro-tree-101           k 101 | user cycles      524390 | segments   1 (1x2^20) | 0.06 s
+
+marginal costs (differences of the runs above; 'read' is the cost of reading input bytes):
+  input read                           0.092 cycles/byte
+  SHA-256 (accelerated)                2.590 cycles/byte (on top of reading)
+  SHA-256 via risc0_zkvm::sha          2.590 cycles/byte (on top of reading; the zkVM's own API)
+  BLAKE2b-256 (plain RV32IM)          55.888 cycles/byte (on top of reading)
+  Ed25519 verify_strict               826530 cycles each (32-byte message)
+  Ed25519 verify_strict, 200 B        854264 cycles each (200-byte message)
+  burn leaf + frontier append           4234 cycles each
+  empty block (839 bytes): parse 1670, hash 3805 cycles
+  inscription check, empty block      891531 cycles each (BLAKE2b of the tx + Ed25519 + framing)
+  block with 4 PP txs (951011 bytes): parse 98048 cycles (0.1031/byte), parse+hash 2562746, inscription check 54080473
+load after: 24.91 37.59 27.85 4/3710 3761338
+
+== host micro --plain (A/B: guest built without the sha2 / curve25519-dalek / crypto-bigint patches)
+unpatched micro guest 0x883a5b72b70da59fe69cd61167526d86886e4aad1f365ca72e0c89fcaa531060 ; load before: 24.91 37.59 27.85 4/3710 3761339
+micro-ed25519-1          k 1 | user cycles     3514146 | segments   4 (4x2^20) | 0.14 s  [unpatched]
+micro-ed25519-6          k 6 | user cycles    20977381 | segments  22 (1x2^17+21x2^20) | 0.53 s  [unpatched]
+micro-insc-1empty        k 839 | user cycles     3523833 | segments   4 (4x2^20) | 0.14 s  [unpatched]
+micro-insc-6empty        k 5034 | user cycles    21282329 | segments  22 (1x2^19+21x2^20) | 0.55 s  [unpatched]
+micro-sha256-10000       k 10000 | user cycles      639440 | segments   1 (1x2^20) | 0.06 s  [unpatched]
+micro-sha256-1000000     k 1000000 | user cycles    63225025 | segments  64 (64x2^20) | 1.32 s  [unpatched]
+load after: 23.32 37.05 27.72 4/3690 3761449

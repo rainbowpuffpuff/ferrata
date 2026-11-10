@@ -1,0 +1,10 @@
+== prove cp-empty-1
+date            2026-11-10T03:22:45+01:00
+host            Linux 7.2.13-200.fc44.x86_64 x86_64
+cpu             AMD Ryzen 9 7940HS w/ Radeon 780M Graphics, 16 threads
+memory          54 GiB total, 33 GiB available
+r0vm            risc0-r0vm 3.0.5
+docker image    risczero/risc0-groth16-prover@sha256:a4f80ce2e0b8e2bb7637a93c37136a6776ac00ec843a3fdf1c67b1d5ffea64ee
+RAYON_NUM_THREADS unset (all hardware threads)
+loadavg         22.61 27.59 31.42 26/3745 3318528
+[cp-empty-1] load before: 22.61 27.59 31.42 23/3745 3318531

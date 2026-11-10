@@ -1,0 +1,16 @@
+== RISC0_DEV_MODE=1 host compose 2026-11-10T07:17:09+01:00
+segment image 0xbdfb94a6b6ea12e996f332b28ce4791dc7362f28da602769192f589a61fee043 ; checkpoint image 0x95b816ed2614e340c85fed3ba3dad1f70e7dff2da1363406ade87e1333583caf
+load before: 23.32 37.05 27.72 4/3690 3761456
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+piece 1 (segment, 180 blocks): dev-mode (fake) receipt | user cycles 1168480 | segments 2 | 0.1 s | receipt verifies against the segment image
+piece 2 (checkpoint, 180 blocks + 3 support, verifies piece 1): user cycles 4867931 | segments 6 | 0.34 s (executor)
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+piece 2 proved: fake (dev mode) | 0.3 s | verifies against the checkpoint image | journal == one-piece cp-empty-360
+final receipt claim: unresolved assumptions Some(0)
+piece 2 without piece 1's receipt: refused (sys_verify_integrity: no receipt found to resolve assumption: claim digest 561c482bc9007fb9cb170100d1f4d2102a19851bd7128d6830cd8452d2dc9b3b, control root 0000000000000000000000000000000000000000000000000000000000000000)
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+piece 2 with a receipt of another segment (blocks 1..=179): refused (sys_verify_integrity: no receipt found to resolve assumption: claim digest 561c482bc9007fb9cb170100d1f4d2102a19851bd7128d6830cd8452d2dc9b3b, control root 0000000000000000000000000000000000000000000000000000000000000000)
+exit 0; load after: 23.32 37.05 27.72 6/3691 3761496

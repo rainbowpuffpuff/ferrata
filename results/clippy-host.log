@@ -1,0 +1,7 @@
+   Compiling methods-segment v0.1.0 (<workspace>/ferrata-checkpoint/methods-segment)
+   Compiling methods-plain v0.1.0 (<workspace>/ferrata-checkpoint/methods-plain)
+    Checking checkpoint-core v0.1.0 (<workspace>/ferrata-checkpoint/crates/checkpoint-core)
+   Compiling methods v0.1.0 (<workspace>/ferrata-checkpoint/methods)
+    Checking host v0.1.0 (<workspace>/ferrata-checkpoint/host)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.54s
+EXIT 0
