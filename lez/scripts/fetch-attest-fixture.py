@@ -32,7 +32,34 @@ Usage: lez/scripts/fetch-attest-fixture.py OUTDIR      (OUTDIR must not exist ye
 
 If the finalized block has no failed transaction or no ERC-20 `Transfer` to a contract, the script
 stops without writing a fixture: run it again after the next finality update (about 6 minutes).
+
+**A Gloas network (`--network sepolia`).** From the Gloas fork on, a light-client header binds only
+the hash of an execution block (the bid's parent block, EIP-7732), and an attestation carries that
+block's RLP header. The script then fetches, in this order:
+
+1. the latest finality update (SSZ, Gloas layout) from a beacon node that serves it;
+2. the execution block its finalized header binds, by hash, from two execution providers; its RLP
+   header, rebuilt and checked against the hash (the state and receipts roots come from it);
+3. at once, while the public nodes still hold that block's state: `eth_getProof` for every
+   `--storage` contract and its slots, with an `eth_call` cross-check for a slot given as
+   `SLOT=getter()`; `eth_getProof` for the `--same-address` account (default Multicall3), and the
+   same account on mainnet (latest block), to record that one contract has one address and one code
+   hash on both chains (the chain-binding test asks a Sepolia fact as a mainnet statement);
+4. `eth_getBlockReceipts` of the block, and the first ERC-20 `Transfer` in it (of `--log-token`
+   if given);
+5. with `--deposits VAULT:FROM_BLOCK`: the vault's `Deposit` logs from FROM_BLOCK to the block
+   (`eth_getLogs`), the leaves of the deposit tree whose root is the vault's slot 0;
+6. the canonical root of the finalized beacon block from a second beacon provider.
+
+  lez/scripts/fetch-attest-fixture.py --network sepolia [--storage ADDR:SLOT[=getter()][,SLOT...]]...
+      [--log-token ADDR] [--same-address ADDR] [--deposits VAULT:FROM_BLOCK] OUTDIR
+
+SLOT is a decimal or 0x-hex slot number. Without `--storage`, Sepolia USDC's `totalSupply_`
+(slot 11, checked against `totalSupply()`). Ferrata's vault, once deployed:
+`--storage 0xdfedf9A73Cfb337277b95a9a1C941c3496A4385F:0=depositRoot(),1=nextLeafIndex()
+ --deposits 0xdfedf9A73Cfb337277b95a9a1C941c3496A4385F:DEPLOY_BLOCK`.
 """
+import argparse
 import hashlib
 import importlib.util
 import json
@@ -47,6 +74,10 @@ _spec = importlib.util.spec_from_file_location(
     "fetch_mainnet_e2e", os.path.join(HERE, "..", "..", "scripts", "fetch-mainnet-e2e.py"))
 e2e = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(e2e)
+_spec = importlib.util.spec_from_file_location(
+    "fetch_sepolia_gloas", os.path.join(HERE, "..", "..", "scripts", "fetch-sepolia-gloas.py"))
+gloas = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(gloas)
 
 CHAIN_ID = 1
 WETH = e2e.WETH
@@ -90,16 +121,212 @@ def describe(tx_index, position, log, receipts):
     }
 
 
+NETWORKS = {"sepolia": 11155111}
+SEPOLIA_USDC = "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238"  # Circle's FiatToken proxy on Sepolia
+MULTICALL3 = "0xca11bde05977b3631167028862be2a173976ca11"
+# keccak256("Deposit(address,uint64,uint64,address,uint256,bytes32)"): FerrataVault's event.
+DEPOSIT_EVENT = "Deposit(address,uint64,uint64,address,uint256,bytes32)"
+LOG_RANGE = 10_000  # blocks per eth_getLogs request
+EMPTY_CODE_HASH = "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+
+
 def main():
-    if len(sys.argv) != 2:
-        sys.exit(__doc__)
-    out = sys.argv[1]
-    os.makedirs(out)
+    p = argparse.ArgumentParser(usage=__doc__.split("Usage: ")[1].split("\n")[0])
+    p.add_argument("--network", choices=["mainnet", *NETWORKS], default="mainnet")
+    p.add_argument("--storage", action="append", default=[])
+    p.add_argument("--log-token")
+    p.add_argument("--same-address", default=MULTICALL3)
+    p.add_argument("--deposits")
+    p.add_argument("out")
+    a = p.parse_args()
+    if a.network == "mainnet" and (a.storage or a.log_token or a.deposits or a.same_address != MULTICALL3):
+        p.error("mainnet fetches the fixed Stage 4 fixture; the other options are for a Gloas network")
+    os.makedirs(a.out)
     try:
-        fetch(out)
+        if a.network == "mainnet":
+            fetch(a.out)
+        else:
+            fetch_gloas(a.out, a)
     except BaseException:
-        shutil.rmtree(out, ignore_errors=True)  # never leave half a fixture behind
+        shutil.rmtree(a.out, ignore_errors=True)  # never leave half a fixture behind
         raise
+
+
+def slot_word(text):
+    return e2e.word(int(text, 16) if text.lower().startswith("0x") else int(text))
+
+
+def parse_storage(spec):
+    """`ADDR:SLOT[=getter()][,SLOT...]` -> (address, [(slot word, getter or None)])."""
+    address, _, slots = spec.partition(":")
+    if len(address) != 42 or not slots:
+        raise SystemExit(f"--storage {spec}: expected ADDR:SLOT[=getter()][,SLOT...]")
+    out = []
+    for item in slots.split(","):
+        slot, _, getter = item.partition("=")
+        out.append((slot_word(slot), getter or None))
+    return address.lower(), out
+
+
+def selector(signature):
+    return "0x" + e2e.keccak256(signature.encode())[:4].hex()
+
+
+def fetch_gloas(out, a):
+    """The fixture of an attestation under a record in the Gloas layout (see the docstring)."""
+    f = e2e.Fetcher(out)
+    started = e2e.now()
+    chain_id = NETWORKS[a.network]
+    beacon, execution = gloas.BEACON, gloas.EXECUTION
+    storage = [parse_storage(x) for x in (a.storage or [f"{SEPOLIA_USDC}:11=totalSupply()"])]
+
+    # 1. The finality update, and 2. the bound block, by hash.
+    fu_raw = f.beacon(beacon[0], "/eth/v1/beacon/light_client/finality_update", "finality_update.ssz", ssz=True)
+    fu = gloas.parse_finality_update(fu_raw)
+    fin = fu["finalized"]
+    period = fu["signature_slot"] // SLOTS_PER_PERIOD
+    if fin["slot"] // SLOTS_PER_PERIOD != period:
+        raise SystemExit("finalized slot and signature slot are in different periods; retry later")
+    block_hash = "0x" + fin["block_hash"]
+    block, served = f.rpc_any("eth_getBlockByHash", [block_hash, False], "block.json", execution)
+    n = int(block["number"], 16)
+    rlp = e2e.header_rlp(block)
+    if "0x" + e2e.keccak256(rlp).hex() != block_hash:
+        raise SystemExit(f"rebuilt header of {block_hash} does not hash to it")
+    f.save("header.rlp", rlp)
+    print(f"finalized slot {fin['slot']} binds block {n} {block_hash} (period {period})", flush=True)
+
+    # 3. State-dependent requests, at once.
+    state_n = [served] + [e for e in execution if e != served]
+    facts = []
+    for address, slots in storage:
+        proof, _ = f.rpc_any("eth_getProof", [address, [w for w, _ in slots], hex(n)], f"proof_{address}_{n}.json",
+                             state_n)
+        if proof["codeHash"] == EMPTY_CODE_HASH:
+            raise SystemExit(f"{address} has no code at {n}")
+        entry = {"address": address, "slots": []}
+        for (word_, getter), sp in zip(slots, proof["storageProof"]):
+            value = "0x" + int(sp["value"], 16).to_bytes(32, "big").hex()
+            row = {"slot": word_, "value": value}
+            if getter:
+                called, _ = f.rpc_any("eth_call", [{"to": address, "data": selector(getter)}, hex(n)],
+                                      f"call_{address}_{getter.split('(')[0]}_{n}.json", state_n)
+                if int(called, 16) != int(value, 16):
+                    raise SystemExit(f"{address} slot {word_} is {value}, {getter} returns {called}")
+                row["getter"] = getter
+            entry["slots"].append(row)
+        facts.append(entry)
+    same, _ = f.rpc_any("eth_getProof", [a.same_address, [], hex(n)], f"proof_{a.same_address}_{n}.json", state_n)
+    head, _ = f.rpc_any("eth_blockNumber", [], None, state_n)
+    print(f"proofs at {n} served; head {int(head, 16)}", flush=True)
+    mainnet_block, _ = f.rpc_any("eth_blockNumber", [], None, e2e.EXECUTION)
+    on_mainnet, _ = f.rpc_any("eth_getProof", [a.same_address, [], mainnet_block],
+                              f"proof_{a.same_address}_mainnet_{int(mainnet_block, 16)}.json", e2e.EXECUTION)
+    if same["codeHash"] == EMPTY_CODE_HASH or same["codeHash"] != on_mainnet["codeHash"]:
+        raise SystemExit(f"{a.same_address}: code hash {same['codeHash']} here, {on_mainnet['codeHash']} on mainnet")
+
+    # 4. Receipts, and the ERC-20 Transfer the tests attest.
+    receipts, _ = f.rpc_any("eth_getBlockReceipts", [hex(n)], f"receipts_{n}.json", state_n)
+    if [int(r["transactionIndex"], 16) for r in receipts] != list(range(len(receipts))):
+        raise SystemExit("receipts are not in transaction order")
+    transfers = [t for t in erc20_transfers(receipts)
+                 if a.log_token is None or t[2]["address"].lower() == a.log_token.lower()]
+    if not transfers:
+        raise SystemExit(f"block {n} has no ERC-20 Transfer{' of ' + a.log_token if a.log_token else ''}; "
+                         "run again after the next finality update")
+    transfer = describe(*transfers[0], receipts)
+
+    # 5. The vault's deposits.
+    deposits = None
+    if a.deposits:
+        vault, _, start = a.deposits.partition(":")
+        topic = "0x" + e2e.keccak256(DEPOSIT_EVENT.encode()).hex()
+        logs = []
+        for lo in range(int(start), n + 1, LOG_RANGE):
+            hi = min(lo + LOG_RANGE - 1, n)
+            got, _ = f.rpc_any("eth_getLogs", [{"address": vault, "topics": [topic], "fromBlock": hex(lo),
+                                                "toBlock": hex(hi)}], None, state_n)
+            logs += got
+        f.save(f"deposits_{n}.json", (json.dumps(logs, indent=1) + "\n").encode())
+        deposits = {"vault": vault.lower(), "from_block": int(start), "event": DEPOSIT_EVENT, "topic": topic,
+                    "count": len(logs), "file": f"deposits_{n}.json"}
+
+    # Second providers: the block, and the finalized beacon block's root.
+    second, _ = f.rpc_any("eth_getBlockByHash", [block_hash, False], "block_second.json",
+                          [e for e in execution if e != served])
+    for field in ["hash", "number", "stateRoot", "receiptsRoot"]:
+        if second[field] != block[field]:
+            raise SystemExit(f"providers disagree on block {n} {field}")
+    finalized_root = "0x" + e2e.beacon_header_root(fin["beacon"])
+    raw = f.beacon(beacon[1], f"/eth/v1/beacon/headers/{fin['slot']}", f"beacon_header_{fin['slot']}_second.json",
+                   ssz=False)
+    if json.loads(raw)["data"]["root"] != finalized_root:
+        raise SystemExit(f"second beacon provider reports another root for slot {fin['slot']}")
+
+    manifest = {
+        "network": a.network,
+        "chain_id": chain_id,
+        "period": period,
+        "attested_slot": fu["attested"]["slot"],
+        "signature_slot": fu["signature_slot"],
+        "participants": fu["participants"],
+        "finalized_slot": fin["slot"],
+        "finalized_root": finalized_root,
+        "block": n,
+        "block_hash": block_hash,
+        "state_root": block["stateRoot"],
+        "receipts_root": block["receiptsRoot"],
+        "receipts": len(receipts),
+        "head_when_fetched": int(head, 16),
+        "storage": facts,
+        "same_address": {"address": a.same_address, "code_hash": same["codeHash"],
+                         "mainnet_block": int(mainnet_block, 16), "mainnet_code_hash": on_mainnet["codeHash"]},
+        "transfer": transfer,
+        "deposits": deposits,
+    }
+    f.save("fixture.json", (json.dumps(manifest, indent=2) + "\n").encode())
+    files = sorted(x for x in os.listdir(out) if x not in ("SOURCE.md", "SHA256SUMS"))
+    sums = {x: hashlib.sha256(open(os.path.join(out, x), "rb").read()).hexdigest() for x in files}
+    with open(os.path.join(out, "SHA256SUMS"), "w") as s:
+        s.writelines(f"{sums[x]}  {x}\n" for x in files)
+    t = transfer
+    lines = [
+        f"# {a.network.capitalize()} fixture of the attestation tests under a Gloas record",
+        "",
+        f"Fetched by `lez/scripts/fetch-attest-fixture.py --network {a.network}` between {started} and {e2e.now()}",
+        f"(UTC). Every request went to a public endpoint without an API key, with User-Agent `{e2e.UA}`.",
+        "Responses are stored byte for byte; `header.rlp` is rebuilt from `block.json` by the script, which",
+        "checked that it hashes to the bound block hash; `fixture.json` records the script's choices.",
+        "`SHA256SUMS` pins every file.",
+        "",
+        "| | |",
+        "|---|---|",
+        f"| chain | {a.network}, chain id {chain_id} |",
+        f"| finality update (Gloas) | attested slot {fu['attested']['slot']}, signature slot {fu['signature_slot']}, "
+        f"{fu['participants']}/512 signers (period {period}) |",
+        f"| finalized beacon block | slot {fin['slot']}, root {finalized_root} |",
+        f"| bound execution block (the bid's parent) | {n}, hash {block_hash} |",
+        f"| its state root / receipts root | {block['stateRoot']} / {block['receiptsRoot']} |",
+        f"| execution head when the proofs were fetched | {int(head, 16)} |",
+    ]
+    for entry in facts:
+        for row in entry["slots"]:
+            check = f", equal to `{row['getter']}` at the block" if "getter" in row else ""
+            lines.append(f"| storage | {entry['address']} slot {row['slot']} = {row['value']}{check} |")
+    lines += [
+        f"| same address on mainnet | {a.same_address}: code hash {same['codeHash']} at {n} and at mainnet block "
+        f"{int(mainnet_block, 16)} |",
+        f"| ERC-20 `Transfer` | tx {t['tx_index']}, log {t['log_index']} of {t['logs_in_receipt']} (`logIndex` "
+        f"{t['block_log_index']}): {t['token']} from {t['from']} to {t['to']}, value {int(t['value'], 16)} |",
+    ]
+    if deposits:
+        lines.append(f"| vault deposits | {deposits['count']} `Deposit` logs of {deposits['vault']} from block "
+                     f"{deposits['from_block']} to {n} |")
+    lines += ["", "## Requests", "", "| UTC | endpoint | request | file | note |", "|---|---|---|---|---|"]
+    lines += [f"| {r['at']} | {r['endpoint']} | `{r['request']}` | {r['file'] or ''} | {r['note']} |" for r in e2e.LOG]
+    with open(os.path.join(out, "SOURCE.md"), "w") as s:
+        s.write("\n".join(lines) + "\n")
+    print("done:", out)
 
 
 def fetch(out):
