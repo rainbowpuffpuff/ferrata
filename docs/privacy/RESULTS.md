@@ -8,8 +8,9 @@ bridge program on LEZ v0.4.0-rc1 (through LEZ's own state machine, private paths
 and `FerrataVault` v3 (Foundry, mock verifier).
 
 **Where it ran.** Everything below ran on the Modal build box of this worktree (`spike/modal-build/mrun`,
-2 vCPU), `scripts/privacy/run.sh`: the LEZ half in 73.5 s, the Foundry half in 0.37 s, the analysis in
-about 4 s; the whole run 1 min 30 s. The numbers are the box's output, copied from
+2 vCPU), `scripts/privacy/run.sh` at this commit's code: the LEZ half in 74.8 s, the Foundry half in
+0.34 s, the analysis in about 4 s; the whole run 1 min 27 s. A repeat run wrote a byte-identical
+`results.json` (the run is deterministic). The numbers are the box's output, copied from
 [`generated/summary.md`](generated/summary.md), [`generated/b6.md`](generated/b6.md) and
 [`generated/results.json`](generated/results.json), which `scripts/privacy/adversary.py` wrote. The bridge
 program's image in this build is `23cc5025…9132` (built at this worktree's path; the ELF holds its
@@ -136,11 +137,12 @@ Gas is public, and it varies; every variation follows the operation's position, 
   the state the claims before it left; the cause of the 5,186 was not isolated. Storage gas is constant
   (224,063 private, 2,061 plaintext).
 - **LEZ burns.** The first burn costs 578 gas more than the 19 others, which cost the same.
-- **Ethereum releases.** The first costs 103,781 gas, the 19 others 78,781: the first relay fee creates
-  the relayer's account (25,000). The naive releases show the same.
-- **Ethereum deposits.** Gas follows the leaf index (138,240 for leaf 0; about 98,600 when a leaf writes a
-  frontier level for the first time; about 78,700–78,900 otherwise), the same sequence in both universes,
-  whose commitments differ.
+- **Ethereum releases.** The first costs 103,781 gas, the 19 others 78,781: 25,000 more, the EVM's charge
+  for a value transfer that creates an account, here the relayer's (a fresh address) on its first relay
+  fee. The naive releases show the same.
+- **Ethereum deposits.** Gas follows the leaf index: 138,240 for leaf 0; 98,562 to 98,928 for leaves 1, 3,
+  7 and 15, which write a level of the tree's frontier for the first time; 78,662 to 78,906 otherwise. The
+  sequence is the same in both universes, whose commitments and destinations differ.
 
 So the receipts carry order, as the base fee does (it moves with the chain's history), and nothing that
 tells one user from another; a client that pays for the first use of a relayer, or that is the first to
