@@ -1,21 +1,29 @@
 //! The bridge program's wire messages, as far as checkpoints read them.
 //!
-//! The bridge program does not exist yet, so this module *defines* the format: a borsh enum,
-//! encoded by hand here (no_std, no derive) and checked against `#[derive(BorshSerialize)]` in the
-//! tests. The bridge program must decode with exactly this code (it is no_std for that reason):
-//! the checkpoint extracts what this decoder accepts, and the program must act on exactly that.
+//! A borsh enum, decoded by hand here (no_std, no derive) and checked against
+//! `#[derive(BorshSerialize)]` in the tests. The bridge program (`lez/bridge-wire`) encodes the same
+//! variants 0-3 with borsh's derive; `lez/harness/tests/bridge_burn.rs` reads the program's own
+//! transactions with this decoder. The checkpoint extracts what this decoder accepts, and the
+//! program must act on exactly that.
 //!
 //! ```text
 //! enum BridgeMessage {                          // borsh: u8 variant index, then the fields
 //!     Burn { config_id: [u8; 32], r: [u8; 32], memo: [u8; 20], mac: [u8; 16],
 //!            token: [u8; 20], amount: [u8; 32] /* u256 big-endian */, c_out: [u8; 32] },  // 0
-//!     ImportRoot { config_id: [u8; 32], record_slot: u64, root: [u8; 32], leaf_count: u64 }, // 1
+//!     ImportRoot { config_id: [u8; 32], record_slot: u64, root: [u8; 32], leaf_count: u64,
+//!                  proof: ImportProof },                                                   // 1
 //!     Sunset { config_id: [u8; 32] },                                                      // 2
 //!     Echo { nonce: [u8; 32] },                                                            // 3
 //! }
+//! struct ImportProof { account: Vec<Vec<u8>>, root_slot: Vec<Vec<u8>>, count_slot: Vec<Vec<u8>> }
 //! ```
-//! A real bridge program has more messages (claims, `Init`, fees, admin); they take variant
-//! indices from 4 up, and checkpoints ignore them.
+//! `ImportProof` holds the Merkle-Patricia proofs of the vault's account and of its storage slots 0
+//! and 1, which the program checks in the same transaction. Checkpoints do not read it: they walk
+//! its borsh lengths strictly (each bounded by the bytes that remain) and skip it, so an import is
+//! counted exactly when its whole message is well-formed. The encoder writes an empty proof.
+//!
+//! The program has more messages (claims, `Init`, replies); they take variant indices from 4 up,
+//! and checkpoints ignore them.
 
 use alloc::vec::Vec;
 
@@ -59,6 +67,20 @@ pub const TAG_ECHO: u8 = 3;
 /// Encoded length of a `Burn` message: tag + 32 + 32 + 20 + 16 + 20 + 32 + 32.
 pub const BURN_LEN: usize = 185;
 
+/// An `ImportProof` with its three lists empty: three borsh `u32` zero lengths.
+pub const EMPTY_IMPORT_PROOF: [u8; 12] = [0; 12];
+
+/// Walks one `ImportProof` (three borsh `Vec<Vec<u8>>`) without keeping it.
+fn skip_import_proof(r: &mut Reader<'_>) -> Result<(), Error> {
+    for what in ["ImportProof.account", "ImportProof.root_slot", "ImportProof.count_slot"] {
+        // Every element is at least its own u32 length.
+        for _ in 0..r.len_u32(what, 4)? {
+            r.bytes_u32(what)?;
+        }
+    }
+    Ok(())
+}
+
 impl BridgeMessage {
     /// Decodes a whole message. `Ok(None)` for a well-formed message of a variant checkpoints do
     /// not read (index 4 and up); `Err` for bytes that are not exactly one message of a known
@@ -75,12 +97,16 @@ impl BridgeMessage {
                 amount: *r.array()?,
                 c_out: *r.array()?,
             }),
-            TAG_IMPORT_ROOT => Self::ImportRoot(ImportRoot {
-                config_id: *r.array()?,
-                record_slot: r.u64_le()?,
-                root: *r.array()?,
-                leaf_count: r.u64_le()?,
-            }),
+            TAG_IMPORT_ROOT => {
+                let m = ImportRoot {
+                    config_id: *r.array()?,
+                    record_slot: r.u64_le()?,
+                    root: *r.array()?,
+                    leaf_count: r.u64_le()?,
+                };
+                skip_import_proof(&mut r)?;
+                Self::ImportRoot(m)
+            }
             TAG_SUNSET => Self::Sunset { config_id: *r.array()? },
             TAG_ECHO => Self::Echo { nonce: *r.array()? },
             _ => return Ok(None),
@@ -104,6 +130,7 @@ impl BridgeMessage {
                 out.extend_from_slice(&m.record_slot.to_le_bytes());
                 out.extend_from_slice(&m.root);
                 out.extend_from_slice(&m.leaf_count.to_le_bytes());
+                out.extend_from_slice(&EMPTY_IMPORT_PROOF);
             }
             Self::Sunset { config_id } => {
                 out.push(TAG_SUNSET);

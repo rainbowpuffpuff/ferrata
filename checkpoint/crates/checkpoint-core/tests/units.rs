@@ -9,7 +9,7 @@ use checkpoint_core::journal::{CheckpointJournal, SegmentJournal, CHECKPOINT_JOU
 use checkpoint_core::lez::{parse_block, NoVisitor};
 use checkpoint_core::mantle::{inscription_msg_id, opcodes, ElidedInscription};
 use checkpoint_core::tree::{burn_leaf, node, zero_hashes, Frontier, MAX_LEAVES};
-use checkpoint_core::wire::{BridgeMessage, Burn, ImportRoot, BURN_LEN};
+use checkpoint_core::wire::{BridgeMessage, Burn, ImportRoot, BURN_LEN, EMPTY_IMPORT_PROOF};
 use checkpoint_core::{Error, Hash};
 use common::*;
 
@@ -31,6 +31,14 @@ fn hashed_constants() {
 
 // ---- wire ------------------------------------------------------------------------------------------
 
+/// The bridge program's `ImportProof` (`lez/bridge-wire`), written with borsh's derive.
+#[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Default, Clone)]
+struct DerivedImportProof {
+    account: Vec<Vec<u8>>,
+    root_slot: Vec<Vec<u8>>,
+    count_slot: Vec<Vec<u8>>,
+}
+
 /// The same enum written with borsh's derive; the hand codec must agree byte for byte.
 #[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug)]
 enum Derived {
@@ -48,6 +56,7 @@ enum Derived {
         record_slot: u64,
         root: [u8; 32],
         leaf_count: u64,
+        proof: DerivedImportProof,
     },
     Sunset {
         config_id: [u8; 32],
@@ -88,7 +97,13 @@ fn wire_codec_equals_borsh_derive() {
                 root: [9; 32],
                 leaf_count: 77,
             }),
-            Derived::ImportRoot { config_id: [8; 32], record_slot: 0x0102, root: [9; 32], leaf_count: 77 },
+            Derived::ImportRoot {
+                config_id: [8; 32],
+                record_slot: 0x0102,
+                root: [9; 32],
+                leaf_count: 77,
+                proof: DerivedImportProof::default(),
+            },
         ),
         (BridgeMessage::Sunset { config_id: [10; 32] }, Derived::Sunset { config_id: [10; 32] }),
         (BridgeMessage::Echo { nonce: [11; 32] }, Derived::Echo { nonce: [11; 32] }),
@@ -99,6 +114,55 @@ fn wire_codec_equals_borsh_derive() {
         assert_eq!(BridgeMessage::decode(&bytes).unwrap(), Some(ours));
     }
     assert_eq!(BridgeMessage::Burn(burn).encode().len(), BURN_LEN);
+    assert_eq!(borsh::to_vec(&DerivedImportProof::default()).unwrap(), EMPTY_IMPORT_PROOF);
+}
+
+/// `ImportRoot` as the bridge program sends it: the four fields, then the proofs of the vault's
+/// account and of its slots 0 and 1. The checkpoint reads the four fields and walks the proof
+/// strictly; the four fields alone (the format before the program existed) are refused.
+#[test]
+fn wire_import_root_skips_its_proof_strictly() {
+    let node = |len: usize, b: u8| vec![b; len];
+    let proof = DerivedImportProof {
+        account: vec![node(532, 1), node(83, 2), node(0, 3), node(104, 4)],
+        root_slot: vec![node(532, 5), node(67, 6)],
+        count_slot: vec![node(33, 7)],
+    };
+    let four = ImportRoot { config_id: [8; 32], record_slot: 9_000_000, root: [9; 32], leaf_count: 8 };
+    let program = |proof: DerivedImportProof| {
+        borsh::to_vec(&Derived::ImportRoot {
+            config_id: [8; 32],
+            record_slot: 9_000_000,
+            root: [9; 32],
+            leaf_count: 8,
+            proof,
+        })
+        .unwrap()
+    };
+    let full = program(proof.clone());
+    assert_eq!(BridgeMessage::decode(&full).unwrap(), Some(BridgeMessage::ImportRoot(four)));
+    // The four fields alone: 81 bytes, the proof missing.
+    assert_eq!(BridgeMessage::decode(&full[..81]), Err(Error::Truncated { at: 81 }));
+    // Every shorter prefix and one byte more are refused.
+    for k in 0..full.len() {
+        assert!(BridgeMessage::decode(&full[..k]).is_err(), "prefix of {k} bytes");
+    }
+    let mut long = full.clone();
+    long.push(0);
+    assert!(matches!(BridgeMessage::decode(&long), Err(Error::TrailingBytes { .. })));
+    // A list or element length beyond the input is refused before anything is read.
+    let mut hostile = full[..81].to_vec();
+    hostile.extend_from_slice(&u32::MAX.to_le_bytes());
+    assert!(matches!(BridgeMessage::decode(&hostile), Err(Error::BadLength { what: "ImportProof.account" })));
+    let mut hostile = full[..81].to_vec();
+    hostile.extend_from_slice(&1u32.to_le_bytes());
+    hostile.extend_from_slice(&100u32.to_le_bytes());
+    hostile.extend_from_slice(&[0; 8]);
+    assert!(matches!(BridgeMessage::decode(&hostile), Err(Error::BadLength { what: "ImportProof.account" })));
+    // The encoder writes an empty proof, which the program's decoder accepts too.
+    let encoded = BridgeMessage::ImportRoot(four).encode();
+    assert_eq!(encoded, program(DerivedImportProof::default()));
+    assert_eq!(encoded.len(), 81 + EMPTY_IMPORT_PROOF.len());
 }
 
 #[test]

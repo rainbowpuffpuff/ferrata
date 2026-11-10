@@ -115,11 +115,11 @@ pieces and joined by one checkpoint; the vault sees one journal and one image id
 |---|---|
 | LEZ block encoding, block hash, id/link rules | **Real.** Blocks built with LEZ's `HashableBlockData::into_pending_block`; every parsed field, every transaction's byte span and the hash equal LEZ's own (`fidelity/tests/formats.rs`), including the 7 blocks of LEZ's committed sequencer database dump (`test_fixtures/fixtures/prebuilt_sequencer_db.dump`, made by LEZ's sequencer and wallet). |
 | Empty blocks | **Real.** The forced fee transaction and the clock transaction, built by LEZ's `fee_invocation`/`clock_invocation` with the summary and payout from `derive_block_summary`, on LEZ's testnet genesis state; every such block is accepted by LEZ's `apply_block`. 839 bytes (fee tx 447, clock tx 303), the same size as the empty blocks in LEZ's dump. |
-| Public transactions | **Real format.** Native transfers executed by `apply_block`; calls to the bridge signed with LEZ's `WitnessSet::for_message`, with a `FeeDeclaration`. The bridge calls cannot execute (no bridge program exists), so blocks holding them are *stand-in blocks*: real format, fee and clock transactions from the equivalent empty block, `reverted` chosen by the test. |
+| Public transactions | **Real format.** Native transfers executed by `apply_block`; calls to the bridge signed with LEZ's `WitnessSet::for_message`, with a `FeeDeclaration`. The bridge calls in these blocks are not executed (the bridge program, [`../lez/`](../lez/BRIDGE.md), runs in LEZ's harness, not over these blocks), so blocks holding them are *stand-in blocks*: real format, fee and clock transactions from the equivalent empty block, `reverted` chosen by the test. |
 | Privacy-preserving transactions | **Message part real, proof stand-in.** (a) The two PP transactions in LEZ's dump (made by LEZ's wallet; their receipts are `RISC0_DEV_MODE` receipts), used as they are for parsing tests and, for the benches, with the receipt replaced by 223,551 filler bytes (`PROOF_BYTES`, LEZ's fee market). (b) Shapes built from LEZ's own types (`ProvenExecution`, `Delivery`, `PrivateAction`, …) with bridge deliveries, a public root, sealed messages, both program-claim kinds and a fee fallback: real format, not provable. |
 | Inscriptions | **Real.** Mantle transactions `[ChannelInscribe, Transfer]` (and with `ChannelTransfer` / `ChannelWithdraw`) built and signed with `logos-blockchain-core` at `d480efc6`; the core's transaction hash, `MsgId` and signature check equal upstream's. The fee transfer's note ids and values are made up (format real). |
 | Channel configuration changes | **Real.** `ChannelConfigOp` in a Mantle transaction, built with upstream types; id (`config_tip_hash`), transaction hash and `(index, signature)` multi-signature as Bedrock verifies them. |
-| Bridge messages | **Defined here** (`wire.rs`): the bridge program does not exist yet. |
+| Bridge messages | **Real for the bridge program's variants 0–3** ([`../lez/bridge-wire`](../lez/BRIDGE.md), borsh's derive; `wire.rs` decodes them by hand). Its `Burn` is byte for byte variant 0; its `ImportRoot` is the four fields followed by the import's account and storage proofs (`ImportProof`), which `wire.rs` walks strictly and skips. `../lez/harness/tests/bridge_burn.rs` reads the program's own transactions, in one LEZ block, with this crate's `parse_block` and `BridgeMessage::decode`. The messages in this directory's fixtures are made here with `wire.rs`'s encoder (an `ImportRoot` with an empty proof). |
 | Keys, configuration values, user accounts | Test values. |
 
 ### Transaction shapes the extraction handles
@@ -137,9 +137,22 @@ pieces and joined by one checkpoint; the vault sees one journal and one image id
 | Async messages to the bridge, the bridge running as a private actor | **not visible, cannot be extracted** |
 
 The bridge program must therefore act on `Burn`, `ImportRoot` and `Sunset` only when they reach it as
-a root call or a private→public boundary delivery, and must decode with `wire.rs`; otherwise a burn
-could destroy tokens without a burn leaf. Whether a v0.4 program can tell those cases apart is not
-checked here (UNVERIFIED).
+a root call or a private→public boundary delivery, and must decode as `wire.rs` does; otherwise a
+burn could destroy tokens without a burn leaf. Whether a v0.4 program can tell those cases apart is
+not checked here (UNVERIFIED).
+
+**A dependency on the bridge program: replies are never visible calls** (`../lez/BRIDGE-RESULTS.md`
+§5, mismatch 2). The extraction decodes every visible message to `bridgeHeader` as a bridge message,
+while the program first treats a message from an actor it is waiting for as a reply (an
+`Attestation` from the attestation program, a root's `StateReply`), not as a bridge message. The two
+readings agree only because no reply to the bridge is visible in a block today: the attestation
+reply is nested in public execution, and a root's reply to a private claimant is a public→private
+delivery, which the extraction ignores. A handler that waited for a reply carried by a visible call
+(a private→public delivery or a root call to the bridge) would break this: the checkpoint would read
+the reply with `wire.rs`, and a reply whose bytes happen to be a well-formed `Burn` (185 bytes
+starting with 0, the size of a root's state) would be collected as a burn that never happened. The
+program must keep every reply invisible to the block; a change there must be checked against this
+extraction.
 
 ### Inscription transactions the support check parses
 
@@ -171,12 +184,16 @@ withdrawals a channel withdrawal). Any other opcode is refused rather than skipp
    weaken the "other than `T`'s producer" argument). Read from `lez/sequencer/actors/bedrock` and
    zone-sdk `tx_builder.rs` at the pinned revision; not observed on a network.
 2. That a burn from a private holding reaches the bridge as exactly one `PrivateToPublic` delivery
-   whose `message` is the `Burn` encoding: it depends on how the (unwritten) token and bridge programs
-   are built. The delivery format itself is LEZ's and is tested.
+   whose `message` is the `Burn` encoding: shown for the bridge program of `../lez/` in LEZ's harness
+   with RISC Zero dev mode (`../lez/BRIDGE-RESULTS.md` §5), which keeps its own balances because no
+   v0.4 token program is released; how a token program would change it is open. The delivery format
+   itself is LEZ's and is tested.
 3. That a v0.4 program can refuse the calls that would not be visible in a block (another public
    program calling it; being run as a private actor): the bridge program needs this; not checked.
-4. Privacy-preserving transactions with real (non-dev-mode) proofs: none was produced; the benches
-   use LEZ-wallet message parts with filler proofs of the size LEZ's fee market assumes (223,551 bytes).
+4. Privacy-preserving transactions with real (non-dev-mode) proofs: none was run through this parser;
+   the benches use LEZ-wallet message parts with filler proofs of the size LEZ's fee market assumes
+   (223,551 bytes). Real ones exist elsewhere in the repository (`../lez/results/*-tx.borsh`,
+   `../lez/live/results/private/real/`).
 5. secp256k1 public keys in LEZ witness sets and admission evidence are taken as 32 opaque bytes; LEZ's
    decoder validates them (the mutation test finds exactly this difference). A block that only differs
    in this way is invalid for LEZ and cannot gather honest support.
@@ -198,8 +215,9 @@ withdrawals a channel withdrawal). Any other opcode is refused rather than skipp
   through RISC Zero's Groth16 verifier (RESULTS, "The end-to-end fixture").
 - Composition was demonstrated in dev mode only; `host compose --real` (real recursion) was not run.
 - Mode (B) of SPEC-v3 D7 is estimated from measured components (RESULTS §4), not built.
-- No real LEZ node or Bedrock node was run; no proof of LEZ block validity (O2) or Bedrock finality
-  (O1) is attempted, as SPEC-v2 intends.
+- This program never read the blocks of a running LEZ or Bedrock node (the LEZ program's run on a
+  sequencer, [`../lez/live/`](../lez/live/README.md), did not involve it); no proof of LEZ block
+  validity (O2) or Bedrock finality (O1) is attempted, as SPEC-v2 intends.
 
 ## Network use
 

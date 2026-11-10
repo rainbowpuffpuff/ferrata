@@ -319,6 +319,7 @@ fn burns_and_what_the_checkpoint_collects() {
         "| transaction | origin | message bytes | checkpoint's decoder | collected |\n|---|---|---:|---|---|\n",
     );
     let mut burns = Vec::new();
+    let mut imports = Vec::new();
     let mut undecodable = Vec::new();
     for (index, origin, message) in &visitor.calls {
         let label = rows[*index as usize].0;
@@ -332,7 +333,12 @@ fn burns_and_what_the_checkpoint_collects() {
                 }
                 "Burn".to_string()
             }
-            Ok(Some(CpMessage::ImportRoot(_))) => "ImportRoot".to_string(),
+            Ok(Some(CpMessage::ImportRoot(m))) => {
+                if collected {
+                    imports.push((*m, message.to_vec()));
+                }
+                "ImportRoot (its proofs skipped)".to_string()
+            }
             Ok(Some(CpMessage::Echo { .. })) => "Echo".to_string(),
             Ok(Some(CpMessage::Sunset { .. })) => "Sunset".to_string(),
             Ok(None) => "ignored (variant 4 and up)".to_string(),
@@ -388,9 +394,24 @@ fn burns_and_what_the_checkpoint_collects() {
     let encoded = borsh::to_vec(&BridgeMessage::burn(cid_a, &n1)).unwrap();
     assert_eq!(encoded.len(), checkpoint_core::wire::BURN_LEN);
     assert_eq!(CpMessage::Burn(burns[0]).encode(), encoded, "the checkpoint re-encodes the same bytes");
-    // Mismatch: the program's ImportRoot carries the proofs after the checkpoint's four fields,
-    // which the checkpoint's decoder refuses (trailing bytes), so it would not count the import.
-    assert_eq!(undecodable, ["ImportRoot A n=8"], "only the import is undecodable");
+    // The program's ImportRoot carries its proofs after the checkpoint's four fields; the
+    // checkpoint walks them strictly and counts the import (BRIDGE-RESULTS.md §5, mismatch 1, fixed
+    // on the checkpoint side). From the same bytes both decoders read the same four fields.
+    assert!(undecodable.is_empty(), "nothing public is undecodable: {undecodable:?}");
+    assert_eq!(imports.len(), 1, "exactly the one import is collected");
+    let (m, message) = &imports[0];
+    match borsh::from_slice::<BridgeMessage>(message).expect("the program decodes its own message") {
+        BridgeMessage::ImportRoot { config_id, record_slot, root, leaf_count, proof } => {
+            assert_eq!((m.config_id, m.record_slot, m.root, m.leaf_count), (config_id, record_slot, root, leaf_count));
+            assert_eq!((config_id, leaf_count), (cid_a, 8));
+            assert!(
+                !proof.account.is_empty() && !proof.root_slot.is_empty() && !proof.count_slot.is_empty(),
+                "the import carries the three proofs"
+            );
+            assert!(CpMessage::decode(&message[..81]).is_err(), "the four fields alone are refused");
+        }
+        other => panic!("not an import: {other:?}"),
+    }
 
     let table_reports = render(&reports);
     fs::write(

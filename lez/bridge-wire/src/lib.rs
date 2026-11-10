@@ -17,7 +17,7 @@
 //! the checkpoint program decodes every call to this program that a LEZ block shows in the clear
 //! with that decoder. `Burn` is byte for byte its variant 0 (185 bytes). `ImportRoot` is its
 //! variant 1's four fields followed by the Merkle-Patricia proofs the import needs in the same
-//! transaction, which the checkpoint's decoder does not accept yet (`lez/BRIDGE-RESULTS.md`).
+//! transaction, which the checkpoint's decoder walks strictly and skips (`lez/BRIDGE-RESULTS.md`).
 
 extern crate alloc;
 
