@@ -381,7 +381,10 @@ fn action_fields(prefix: &str, a: &PrivateAction, f: &mut Vec<(String, Vec<u8>)>
     f.push((format!("{prefix}.commitment_root"), borsh::to_vec(&a.root).unwrap()));
     f.push((format!("{prefix}.commitment"), borsh::to_vec(&a.commitment).unwrap()));
     // `Vec`-backed: the length prefix (4 bytes) stays outside the field.
-    f.push((format!("{prefix}.note.ciphertext"), borsh::to_vec(&a.encrypted_post_state.ciphertext).unwrap()[4..].to_vec()));
+    f.push((
+        format!("{prefix}.note.ciphertext"),
+        borsh::to_vec(&a.encrypted_post_state.ciphertext).unwrap()[4..].to_vec(),
+    ));
     f.push((format!("{prefix}.note.epk"), borsh::to_vec(&a.encrypted_post_state.epk).unwrap()[4..].to_vec()));
 }
 
@@ -405,7 +408,10 @@ fn private_fields(tx: &PrivacyPreservingTransaction, program: AccountId) -> Vec<
     let e = &m.execution;
     let mut f = Vec::new();
     for (i, a) in m.public_context.actors.iter().enumerate() {
-        f.push((format!("public_context.actors[{i}]"), [&a.account_id.value()[..], &a.program_account_id.value()[..]].concat()));
+        f.push((
+            format!("public_context.actors[{i}]"),
+            [&a.account_id.value()[..], &a.program_account_id.value()[..]].concat(),
+        ));
     }
     boundary_fields("boundary", &e.boundary, program, &mut f);
     for (j, a) in e.private_actions.iter().enumerate() {
@@ -435,7 +441,10 @@ fn public_fields(tx_bytes: &[u8], program: AccountId) -> Vec<(String, Vec<u8>)> 
     let m = &tx.message;
     let mut f = Vec::new();
     for (i, a) in m.public_context.actors.iter().enumerate() {
-        f.push((format!("public_context.actors[{i}]"), [&a.account_id.value()[..], &a.program_account_id.value()[..]].concat()));
+        f.push((
+            format!("public_context.actors[{i}]"),
+            [&a.account_id.value()[..], &a.program_account_id.value()[..]].concat(),
+        ));
     }
     f.push(("root.to".into(), m.execution.root.to.account_id.value().to_vec()));
     delivery_fields("root.message", &m.execution.root.to, &m.execution.root.message, program, &mut f);
@@ -600,8 +609,16 @@ fn privacy_suite_lez_half() {
             alias_opening: h("ferrata/privacy-suite/alias-opening", 1, k as u64),
             random_seed: h("ferrata/privacy-suite/random-seed", 1, k as u64),
         };
-        let r =
-            collect_private(&mut w, format!("lez:claim:private:{k:02}"), "claim", k, &accounts[u], &message, publics, fresh);
+        let r = collect_private(
+            &mut w,
+            format!("lez:claim:private:{k:02}"),
+            "claim",
+            k,
+            &accounts[u],
+            &message,
+            publics,
+            fresh,
+        );
         let expected = d.nullifier(CHAIN_ID, &VAULT_P);
         assert_eq!(field(&r, "Issue.nullifier"), expected, "{}: N", r.id);
         let mut r = r;
@@ -611,8 +628,9 @@ fn privacy_suite_lez_half() {
         records.push(r);
         let holder =
             HolderState { holdings: vec![Holding { config_id: cid, token: ETH, amount: AMOUNT }], pending: None };
-        let post = private_post_state(&w.chain, &private_keys(users[u].lez_seed), &accounts[u].account, RESERVE, &holder)
-            .expect("the chain holds the claimed account's commitment");
+        let post =
+            private_post_state(&w.chain, &private_keys(users[u].lez_seed), &accounts[u].account, RESERVE, &holder)
+                .expect("the chain holds the claimed account's commitment");
         holders[u] = Some(PrivateAccount { keys: private_keys(users[u].lez_seed), account: post });
     }
 
@@ -630,7 +648,8 @@ fn privacy_suite_lez_half() {
             alias_opening: h("ferrata/privacy-suite/alias-opening", 2, k as u64),
             random_seed: h("ferrata/privacy-suite/random-seed", 2, k as u64),
         };
-        let r = collect_private(&mut w, format!("lez:burn:private:{k:02}"), "burn", k, holder, &message, publics, fresh);
+        let r =
+            collect_private(&mut w, format!("lez:burn:private:{k:02}"), "burn", k, holder, &message, publics, fresh);
         // The checkpoint's view of the block: exactly this note, in the clear, from public execution.
         let collected: Vec<_> = r
             .clear_calls
@@ -672,7 +691,8 @@ fn privacy_suite_lez_half() {
             relayer: h20("ferrata/privacy-suite/eth-relayer", 0),
             relay_fee: word(ETH_RELAY_FEE),
         };
-        let witness = ReleaseWitness { burn_index: b as u64, path: burn_tree.path(b as u64).unwrap(), s_out: *s_out, r: note.r };
+        let witness =
+            ReleaseWitness { burn_index: b as u64, path: burn_tree.path(b as u64).unwrap(), s_out: *s_out, r: note.r };
         let nout = verify_release(&burn_root, &witness, &public).expect("the release statement holds");
         let naive = burn_id(&cid, b as u64, &burn_leaves[b]);
         for (list, nf) in [(&mut releases_private, nout), (&mut releases_naive, naive)] {
@@ -715,7 +735,8 @@ fn privacy_suite_lez_half() {
     let mut inbound_recovered = Vec::new();
     let mut unclaimed_users = 0;
     for (u, user) in users.iter().enumerate() {
-        let owned = recover(&user.keys.auth, &chain, &VAULT_P, &vault_deposits, GAP, |kind, a| user.account(u, kind, a));
+        let owned =
+            recover(&user.keys.auth, &chain, &VAULT_P, &vault_deposits, GAP, |kind, a| user.account(u, kind, a));
         assert_eq!(owned.len(), 1, "user {u} finds exactly its own deposit");
         assert_eq!((owned[0].deposit.leaf_index, owned[0].nullifier), (u as u64, nullifiers[u]));
         let unclaimed = owned.iter().filter(|o| !spent_at_half.contains(&o.nullifier)).count();
@@ -751,7 +772,8 @@ fn privacy_suite_lez_half() {
     // ---- Universe B: public destinations, the plaintext path (linkable) -----------------------
     let mut wb = World::new();
     wb.add_public_accounts(&users.iter().map(|u| u.public_dest).collect::<Vec<_>>());
-    let deposits_b: Vec<Deposit> = users.iter().enumerate().map(|(u, user)| user.deposit(u, DestKind::Public)).collect();
+    let deposits_b: Vec<Deposit> =
+        users.iter().enumerate().map(|(u, user)| user.deposit(u, DestKind::Public)).collect();
     let (cid_b, vault_b, import_b) = set_up_vault(&mut wb, deposits_b.iter().map(Deposit::leaf).collect(), "plaintext");
     assert_eq!(cid_b, cid, "one configuration of vault P in both universes");
     records.push(import_b);
@@ -764,9 +786,10 @@ fn privacy_suite_lez_half() {
         let mut actors = vec![bw::root_actor(wb.program, &cid, n)];
         actors.extend(wb.claim_actors(&cid, &ETH, nf, Some(user_account(&users[u])), Some(*relayer().value())));
         let time = wb.time;
-        let mut r = collect_public(&mut wb, format!("lez:claim:plaintext:{k:02}"), "claim", "plaintext", k, &actors, |w| {
-            w.claim_with("plaintext claim", &cid, n, &VAULT_P, witness, range, Some(*relayer().value()), time)
-        });
+        let mut r =
+            collect_public(&mut wb, format!("lez:claim:plaintext:{k:02}"), "claim", "plaintext", k, &actors, |w| {
+                w.claim_with("plaintext claim", &cid, n, &VAULT_P, witness, range, Some(*relayer().value()), time)
+            });
         r.fields.push(("derived.nullifier_account".into(), nf.account_id.value().to_vec()));
         records.push(r);
     }

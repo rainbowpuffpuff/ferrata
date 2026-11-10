@@ -84,7 +84,15 @@ contract PrivacySuiteTest is VaultTestBase {
             bytes32 commitment = vm.parseJsonBytes32(scenario, string.concat(at, ".commitment"));
             vm.deal(depositor, 1 ether);
             bytes memory callData = abi.encodeCall(FerrataVault.depositETH, (1, commitment, 0));
-            _record(string.concat("eth:deposit:", variant, ":", _two(u)), "deposit", variant, u, depositor, 1 ether, callData);
+            _record(
+                string.concat("eth:deposit:", variant, ":", _two(u)),
+                "deposit",
+                variant,
+                u,
+                depositor,
+                1 ether,
+                callData
+            );
         }
         assertEq(vault.nextLeafIndex(), users, "leaf count");
         assertEq(
@@ -110,7 +118,9 @@ contract PrivacySuiteTest is VaultTestBase {
             // The journal the bridge core's release statement committed to: the vault must rebuild it exactly.
             verifier.accept(RELEASE_IMAGE_ID, sha256(vm.parseJsonBytes(scenario, string.concat(at, ".journal"))));
             bytes memory callData = abi.encodeCall(FerrataVault.release, (r, SEAL));
-            _record(string.concat("eth:release:", variant, ":", _two(k)), "release", variant, k, ethRelayer, 0, callData);
+            _record(
+                string.concat("eth:release:", variant, ":", _two(k)), "release", variant, k, ethRelayer, 0, callData
+            );
             assertTrue(vault.nullifierUsed(r.nullifier), "released");
         }
     }
@@ -179,7 +189,9 @@ contract PrivacySuiteTest is VaultTestBase {
         for (uint256 i = 0; i < accesses.length; i++) {
             if (accesses[i].oldBalance == accesses[i].newBalance || accesses[i].reverted) continue;
             out = string.concat(out, first ? "" : ",", '{"account":"', vm.toString(accesses[i].account), '","old":"');
-            out = string.concat(out, vm.toString(accesses[i].oldBalance), '","new":"', vm.toString(accesses[i].newBalance));
+            out = string.concat(
+                out, vm.toString(accesses[i].oldBalance), '","new":"', vm.toString(accesses[i].newBalance)
+            );
             out = string.concat(out, '"}');
             first = false;
         }
