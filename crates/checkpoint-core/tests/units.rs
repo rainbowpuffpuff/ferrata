@@ -26,7 +26,7 @@ fn threshold_matches_lez() {
 #[test]
 fn hashed_constants() {
     assert_eq!(BURN_TAG, sha256(b"ferrata/burn/leaf/v2"));
-    assert_eq!(CHECKPOINT_DOMAIN, sha256(b"ferrata/vault/checkpoint/v2"));
+    assert_eq!(CHECKPOINT_DOMAIN, sha256(b"ferrata/vault/checkpoint/v3"));
 }
 
 // ---- wire ------------------------------------------------------------------------------------------
@@ -178,6 +178,10 @@ fn journal_layout() {
         imported_leaf_count: 9,
         sunset: true,
         echo_nonce: [10; 32],
+        tip_id: 0x0A0B,
+        tip_hash: [11; 32],
+        n: 7,
+        t: 5,
     };
     let e = j.encode();
     assert_eq!(e.len(), CHECKPOINT_JOURNAL_LEN);
@@ -194,7 +198,11 @@ fn journal_layout() {
         w[31] = 1;
         w
     });
-    assert_eq!(&e[384..], &[10; 32]);
+    assert_eq!(&e[384..416], &[10; 32]);
+    assert_eq!((&e[416..446], e[446], e[447]), (&[0u8; 30][..], 0x0A, 0x0B));
+    assert_eq!(&e[448..480], &[11; 32]);
+    assert_eq!((e[511], e[543]), (7, 5));
+    assert_eq!(&e[480..511], &[0; 31]);
     let s = SegmentJournal { lez_config_id: [1; 32], start_state: [2; 32], end_state: [3; 32] };
     assert_eq!(SegmentJournal::decode(&s.encode()).unwrap(), s);
 }

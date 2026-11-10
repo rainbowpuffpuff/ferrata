@@ -11,9 +11,9 @@
 # and curve25519-dalek) applies there and nowhere else.
 [workspace]
 resolver = "2"
-members = ["crates/checkpoint-core"]
+members = ["crates/checkpoint-core", "fidelity", "methods-segment", "methods", "methods-plain", "host"]
 default-members = ["crates/checkpoint-core"]
-exclude = ["guests"]
+exclude = ["guests", "guests-plain"]
 
 [workspace.package]
 edition = "2021"

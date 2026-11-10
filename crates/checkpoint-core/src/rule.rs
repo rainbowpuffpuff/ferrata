@@ -9,10 +9,12 @@
 //!    id (+1) and its `prev_block_hash`. For blocks up to `T`, the bridge messages of
 //!    non-reverted transactions are applied in block, transaction and call order. After `T`, the
 //!    first block carrying `Echo{echoNonce}` is `Y` (`Y = T` when `echoNonce = 0`).
-//! 4. `T`'s inscription names its producer, who must hold a current key.
-//! 5. Support: inscriptions of blocks in `(Y, E]` by at least `t(n)` distinct current keys other
-//!    than `T`'s producer (with `n = 1` allowed only when `nMin ≤ 1`, by that one key).
-//! 6. The journal.
+//! 4. Producer and support (SPEC-v3 D3 item 4): one inscription of `T` is checked exactly like a
+//!    counted one; its signer `D` must be in the key set `K`. Support: checked inscriptions of
+//!    blocks in `(Y, E]` by at least `t(n)` distinct keys of `K` other than `D` (entries by `D` are
+//!    checked but not counted). With `n = 1`, allowed only when `nMin ≤ 1`, the one key is `D` and
+//!    the supporter.
+//! 5. The 17-word journal (SPEC-v3 D3 item 5).
 
 use alloc::vec::Vec;
 
@@ -253,13 +255,13 @@ pub fn run_checkpoint(input: &CheckpointInput<'_>) -> Result<Outcome, Error> {
     }
     let y_index = y_index.ok_or(Error::EchoNotFound)?;
 
-    // T's producer.
+    // The producer D: one checked inscription of T, by a key of K.
     let producer = input.producer.check(input.blocks[t_index], &config.channel_id)?;
     if !state.keys.contains(&producer.signer) {
         return Err(Error::NotAccredited);
     }
 
-    // Support.
+    // Support: distinct keys of K other than D (D itself when n = 1 and single-key is allowed).
     let n = u32::try_from(state.keys.len()).unwrap_or(u32::MAX);
     let need = threshold(n);
     let single_key = n == 1 && config.allow_single_key();
@@ -269,14 +271,13 @@ pub fn run_checkpoint(input: &CheckpointInput<'_>) -> Result<Outcome, Error> {
         if entry.block_index <= y_index || block_index >= input.blocks.len() {
             return Err(Error::SupportOutOfRange { block_index: entry.block_index });
         }
+        // Every supplied inscription must check, counted or not.
         let inscription = entry.inscription.check(input.blocks[block_index], &config.channel_id)?;
         if !state.keys.contains(&inscription.signer) {
             return Err(Error::NotAccredited);
         }
-        if inscription.signer == producer.signer && !single_key {
-            return Err(Error::SupportByProducer);
-        }
-        if !counted.contains(&inscription.signer) {
+        let excluded = inscription.signer == producer.signer && !single_key;
+        if !excluded && !counted.contains(&inscription.signer) {
             counted.push(inscription.signer);
         }
     }
@@ -298,6 +299,10 @@ pub fn run_checkpoint(input: &CheckpointInput<'_>) -> Result<Outcome, Error> {
         imported_leaf_count: state.imported_leaf_count,
         sunset: state.sunset,
         echo_nonce: input.echo_nonce,
+        tip_id: state.tip_id,
+        tip_hash: state.tip_hash,
+        n,
+        t: need,
     };
     Ok(Outcome { journal, new_state: state, y_index, producer: producer.signer, support_keys: have, threshold: need })
 }

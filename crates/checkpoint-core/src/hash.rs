@@ -43,8 +43,8 @@ pub fn threshold(n: u32) -> u32 {
 
 /// `sha256("ferrata/burn/leaf/v2")` (SPEC-v2 §5.1).
 pub const BURN_TAG: Hash = hex32("93474c5ad2f57f5fc610ad22e3f6d50e51b98a4c0eb611dde536a7317c0e8cf2");
-/// `sha256("ferrata/vault/checkpoint/v2")` (SPEC-v2 §4.2 item 5).
-pub const CHECKPOINT_DOMAIN: Hash = hex32("e99926553e520475aa7b6407f28efcca58fa91851d8476395f692eb871457ce1");
+/// `sha256("ferrata/vault/checkpoint/v3")` (SPEC-v3 D3, replacing SPEC-v2 §4.2 item 5's v2 domain).
+pub const CHECKPOINT_DOMAIN: Hash = hex32("bdb3b52df781536a6bcce7088d156b3951a00a45ec8bcf2805ba8406fbeb5ec7");
 
 /// ASCII tags that prefix preimages as they are (SPEC-v2: "Tags are the ASCII bytes of the quoted
 /// string").

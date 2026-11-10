@@ -56,8 +56,6 @@ pub enum Error {
     EchoNotFound,
     /// A support entry names a block outside `(Y, E]`.
     SupportOutOfRange { block_index: u32 },
-    /// A support entry is signed by the key that inscribed `T`.
-    SupportByProducer,
     /// Fewer distinct supporting keys than the threshold.
     InsufficientSupport { have: u32, need: u32 },
     /// A key set smaller than the deployment floor `nMin`.

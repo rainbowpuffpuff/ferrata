@@ -76,20 +76,44 @@ pub fn key_set_hash(keys: &[Hash]) -> Hash {
     h.finalize().into()
 }
 
+/// `S = H("ferrata/lez-state/v1" ‖ tipId:u64 ‖ tipHash ‖ keySetHash ‖ configTipHash ‖
+/// burnCount:u64 ‖ burnFrontierHash ‖ importedLeafCount:u64 ‖ sunset:u8)`, from its parts.
+#[allow(clippy::too_many_arguments)]
+pub fn state_digest(
+    tip_id: u64,
+    tip_hash: &Hash,
+    key_set_hash: &Hash,
+    config_tip_hash: &Hash,
+    burn_count: u64,
+    burn_frontier_hash: &Hash,
+    imported_leaf_count: u64,
+    sunset: bool,
+) -> Hash {
+    sha256_parts(&[
+        TAG_LEZ_STATE,
+        &tip_id.to_be_bytes(),
+        tip_hash,
+        key_set_hash,
+        config_tip_hash,
+        &burn_count.to_be_bytes(),
+        burn_frontier_hash,
+        &imported_leaf_count.to_be_bytes(),
+        &[u8::from(sunset)],
+    ])
+}
+
 impl State {
-    /// `S = H("ferrata/lez-state/v1" ‖ tipId:u64 ‖ tipHash ‖ keySetHash ‖ configTipHash ‖
-    /// burnCount:u64 ‖ burnFrontierHash ‖ importedLeafCount:u64 ‖ sunset:u8)`.
+    /// `S` of this state ([`state_digest`]).
     pub fn digest(&self) -> Hash {
-        sha256_parts(&[
-            TAG_LEZ_STATE,
-            &self.tip_id.to_be_bytes(),
+        state_digest(
+            self.tip_id,
             &self.tip_hash,
             &key_set_hash(&self.keys),
             &self.config_tip_hash,
-            &self.burns.count.to_be_bytes(),
+            self.burns.count,
             &self.burns.hash(),
-            &self.imported_leaf_count.to_be_bytes(),
-            &[u8::from(self.sunset)],
-        ])
+            self.imported_leaf_count,
+            self.sunset,
+        )
     }
 }

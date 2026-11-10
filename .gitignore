@@ -2,3 +2,6 @@
 /fixtures/
 /artifacts/work/
 /guests/target/
+/results/*-build.log
+/results/prove-run.out
+/artifacts/*/receipt-*.bin

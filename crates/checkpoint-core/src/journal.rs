@@ -1,10 +1,11 @@
 //! What the guests commit.
 //!
-//! The checkpoint journal is SPEC-v2 §4.2 item 5, ABI-encoded by hand (thirteen static words):
+//! The checkpoint journal is SPEC-v3 D3 item 5 (which replaces SPEC-v2 §4.2 item 5), ABI-encoded
+//! by hand (seventeen static words):
 //!
 //! | word | field | Solidity type | layout |
 //! |---|---|---|---|
-//! | 0 | `CHECKPOINT_DOMAIN` | bytes32 | as is |
+//! | 0 | `CHECKPOINT_DOMAIN` = `sha256("ferrata/vault/checkpoint/v3")` | bytes32 | as is |
 //! | 1 | `evmChainId` | uint256 | as is (big-endian) |
 //! | 2 | `vault` | address | 12 zero bytes ‖ 20 bytes |
 //! | 3 | `lezConfigId` | bytes32 | as is |
@@ -14,6 +15,11 @@
 //! | 9, 10 | `burnCount`, `importedLeafCount` | uint64 | 24 zero bytes ‖ u64 BE |
 //! | 11 | `sunset` | bool | 31 zero bytes ‖ 0x00/0x01 |
 //! | 12 | `echoNonce` | bytes32 | as is |
+//! | 13 | `tipId` (`T`'s block id) | uint64 | 24 zero bytes ‖ u64 BE |
+//! | 14 | `tipHash` (`T`'s hash) | bytes32 | as is |
+//! | 15, 16 | `n`, `t` (`|K|` and `t(n)` of the key set in `newState`) | uint32 | 28 zero bytes ‖ u32 BE |
+//!
+//! Words 1–12 are laid out exactly as in SPEC-v2's 13-word journal.
 //!
 //! The segment journal is this crate's own (composition, `rule::run_segment`); no contract reads
 //! it, only the checkpoint guest, through `env::verify`.
@@ -22,7 +28,7 @@ use crate::hash::{CHECKPOINT_DOMAIN, TAG_SEGMENT};
 use crate::reader::Reader;
 use crate::{Address, Error, Hash};
 
-pub const CHECKPOINT_JOURNAL_LEN: usize = 13 * 32;
+pub const CHECKPOINT_JOURNAL_LEN: usize = 17 * 32;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CheckpointJournal {
@@ -38,6 +44,12 @@ pub struct CheckpointJournal {
     pub imported_leaf_count: u64,
     pub sunset: bool,
     pub echo_nonce: Hash,
+    /// `T`'s block id and hash.
+    pub tip_id: u64,
+    pub tip_hash: Hash,
+    /// Size and threshold of the key set in `newState`.
+    pub n: u32,
+    pub t: u32,
 }
 
 fn word_u64(x: u64) -> Hash {
@@ -54,7 +66,7 @@ fn word_address(a: &Address) -> Hash {
 
 impl CheckpointJournal {
     pub fn encode(&self) -> [u8; CHECKPOINT_JOURNAL_LEN] {
-        let words: [Hash; 13] = [
+        let words: [Hash; 17] = [
             CHECKPOINT_DOMAIN,
             self.evm_chain_id,
             word_address(&self.vault),
@@ -68,6 +80,10 @@ impl CheckpointJournal {
             word_u64(self.imported_leaf_count),
             word_u64(u64::from(self.sunset)),
             self.echo_nonce,
+            word_u64(self.tip_id),
+            self.tip_hash,
+            word_u64(u64::from(self.n)),
+            word_u64(u64::from(self.t)),
         ];
         let mut out = [0u8; CHECKPOINT_JOURNAL_LEN];
         for (i, w) in words.iter().enumerate() {
