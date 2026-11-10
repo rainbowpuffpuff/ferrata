@@ -117,6 +117,15 @@ pub enum Error {
     HistoryHashMismatch = 151,
     /// EIP-2935: no history contract with the specified code in the record's state.
     HistoryContractMissing = 152,
+
+    /// Accumulator: the path does not have 32 siblings.
+    AccumulatorPathInvalid = 160,
+    /// Accumulator: the leaf index is 2^32 or more (it would share a path with its low 32 bits).
+    AccumulatorIndexOutOfRange = 161,
+    /// Accumulator: the leaf is the empty leaf (32 zero bytes).
+    AccumulatorLeafEmpty = 162,
+    /// Accumulator: the path does not hash the leaf to the attested root.
+    AccumulatorRootMismatch = 163,
 }
 
 impl Error {

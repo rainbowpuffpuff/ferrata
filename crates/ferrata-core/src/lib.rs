@@ -19,6 +19,7 @@
 extern crate alloc;
 
 // Execution layer: RLP, Merkle-Patricia proofs, execution objects and attestations.
+pub mod accumulator;
 pub mod attest;
 pub mod exec;
 pub mod keccak;
