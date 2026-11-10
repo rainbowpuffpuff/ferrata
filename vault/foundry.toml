@@ -36,6 +36,8 @@ fs_permissions = [
     { access = "read-write", path = "./test/vectors" },
     # test/real/ reads the end-to-end return-leg fixture (journals and real Groth16 seals).
     { access = "read", path = "./test/real/fixtures" },
+    # script/RoundTrip.s.sol reads the fixture of an end-to-end run.
+    { access = "read", path = "../e2e/runs" },
 ]
 
 [lint]
