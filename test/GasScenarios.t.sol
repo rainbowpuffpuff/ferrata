@@ -4,7 +4,9 @@ pragma solidity ^0.8.26;
 import {console2} from "forge-std/console2.sol";
 
 import {FerrataVault} from "../src/FerrataVault.sol";
-import {MockTokenBase} from "./mocks/MockTokens.sol";
+import {ToggleRecipient} from "./mocks/MockRecipients.sol";
+import {MockBlacklistToken, MockTokenBase} from "./mocks/MockTokens.sol";
+import {ReferenceMerkle} from "./utils/ReferenceMerkle.sol";
 import {VaultTestBase} from "./utils/VaultTestBase.sol";
 
 /// @notice Gas per scenario for GAS.md. Run with
@@ -18,6 +20,8 @@ contract GasScenarios is VaultTestBase {
     address internal fresh = makeAddr("fresh depositor");
     bytes32 internal constant C = keccak256("commitment");
     bytes32 internal constant ROOT = keccak256("burn root");
+    MockBlacklistToken internal busd;
+    bytes32[] internal leaves;
 
     function setUp() public override {
         super.setUp();
@@ -35,12 +39,35 @@ contract GasScenarios is VaultTestBase {
         vm.stopPrank();
 
         for (uint8 i = 0; i < 37; i++) {
-            _deposit(warmup, tokens[i % 4], i % 3, keccak256(abi.encode(i)));
+            _recordedDeposit(tokens[i % 4], i % 3, keccak256(abi.encode(i)));
         }
         for (uint256 i = 0; i < 4; i++) {
-            _deposit(warmup, tokens[i], 2, keccak256(abi.encode("escrow", i)));
+            _recordedDeposit(tokens[i], 2, keccak256(abi.encode("escrow", i)));
         }
+        busd = new MockBlacklistToken();
+        vm.prank(admin);
+        vault.registerToken(address(busd), _params(_denoms(100e6, 1000e6, 10_000e6), 1, 1));
+        _recordedDeposit(address(busd), 1, keccak256("busd escrow"));
         _acceptRoot(ROOT);
+    }
+
+    function _recordedDeposit(address token, uint8 denomIndex, bytes32 commitment) internal {
+        uint64 leafIndex = _deposit(warmup, token, denomIndex, commitment);
+        leaves.push(ReferenceMerkle.leafHash(leafIndex, warmup, token, _amount(token, denomIndex), commitment));
+    }
+
+    function _path(uint64 leafIndex) internal view returns (bytes32[32] memory path) {
+        bytes32[] memory siblings = ReferenceMerkle.path(leaves, leafIndex);
+        for (uint256 h = 0; h < 32; h++) {
+            path[h] = siblings[h];
+        }
+    }
+
+    /// @dev Finalises a sunset checkpoint below which 37 leaves were imported: leaves 37..41 become refundable.
+    function _sunsetAt37() internal {
+        FerrataVault.Checkpoint memory c = _nextCheckpoint(vault, keccak256("sunset root"), 37, true);
+        _submit(c);
+        _finalizeAfterDelta(c);
     }
 
     function _log(string memory scenario) internal view returns (uint256 gasUsed) {
@@ -202,6 +229,49 @@ contract GasScenarios is VaultTestBase {
         vm.prank(relayer);
         vault.release(r, SEAL);
         _log("release ERC-20 (18 dec), standard fee to msg.sender (incl. mock verifier)");
+    }
+
+    function test_gas_releaseETH_recipientCannotReceive_credited() public {
+        ToggleRecipient payee = new ToggleRecipient(); // closed
+        FerrataVault.ReleaseRequest memory r = _request(ETH, 1, address(payee), ROOT, keccak256("n5"));
+        _proveRelease(_releaseJournal(r));
+        vm.prank(relayer);
+        vault.release(r, SEAL);
+        _log("release ETH, recipient cannot receive: credited to owed (incl. mock verifier)");
+    }
+
+    function test_gas_refundETH() public {
+        _sunsetAt37();
+        bytes32[32] memory path = _path(37); // 10 ETH, deposit "escrow" 0
+        vm.prank(relayer);
+        vault.refund(37, warmup, ETH, 2, keccak256(abi.encode("escrow", uint256(0))), path);
+        _log("refund ETH (32-step path check against depositRoot)");
+    }
+
+    function test_gas_refundERC20() public {
+        _sunsetAt37();
+        bytes32[32] memory path = _path(39); // 10,000 DAI, deposit "escrow" 2
+        vm.prank(relayer);
+        vault.refund(39, warmup, address(dai), 2, keccak256(abi.encode("escrow", uint256(2))), path);
+        _log("refund ERC-20 (18 dec)");
+    }
+
+    function test_gas_claimOwedERC20() public {
+        busd.setBlacklisted(recipient, true);
+        FerrataVault.ReleaseRequest memory r = _request(address(busd), 1, recipient, ROOT, keccak256("n6"));
+        _release(r); // credited: the token refuses the transfer
+        busd.setBlacklisted(recipient, false);
+        vm.prank(recipient);
+        vault.claimOwed(address(busd));
+        _log("claimOwed ERC-20 by the payee");
+    }
+
+    function test_gas_claimOwedETH_viaContractPayee() public {
+        ToggleRecipient payee = new ToggleRecipient();
+        _release(_request(ETH, 1, address(payee), ROOT, keccak256("n7")));
+        payee.setOpen(true);
+        payee.claim(address(vault), ETH);
+        _log("claimOwed ETH, called through the payee contract");
     }
 
     /// @notice The mock verifier's own execution inside the measured releases: one cold storage read plus
