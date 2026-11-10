@@ -16,6 +16,7 @@
 //!   submit-proven   submit a private update proven elsewhere (--tx FILE, from prove-from-transcript)
 //!   export          write the records into --out
 //! Without a sequencer:
+//!   inbound-plan    the inbound run's configuration identity (--attest-bin, --bridge-bin, --vault HEX)
 //!   verify          re-check a recorded run in --dir, fully if --binary FILE ... are given
 //!   prove-from-transcript  prove the private update from a recorded RPC transcript
 //! Against a running sequencer:
@@ -30,6 +31,7 @@
 
 mod blocklog;
 mod follower;
+mod inbound;
 mod keys;
 mod live;
 mod manifest;
@@ -351,6 +353,11 @@ async fn export(run: &mut Run) -> Result<()> {
 async fn run(args: Args) -> Result<()> {
     match args.command.as_str() {
         "verify" => return verify::verify(&args.path("dir")?, &args.all("binary")),
+        "inbound-plan" => {
+            let ids = inbound::plan_ids(&args.path("attest-bin")?, &args.path("bridge-bin")?, args.get("vault"))?;
+            println!("{}", serde_json::to_string_pretty(&ids)?);
+            return Ok(());
+        }
         "prove-from-transcript" => {
             let program = GuestBinary::load("program", &args.path("program-bin")?)?;
             let twin = deployment_accounts("twin", &program).0;

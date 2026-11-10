@@ -2112,12 +2112,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "ferrata-bridge-core"
+version = "0.2.0"
+dependencies = [
+ "hmac 0.12.1",
+ "sha2 0.10.9",
+]
+
+[[package]]
 name = "ferrata-core"
 version = "0.0.1"
 dependencies = [
  "blst",
  "sha2 0.10.9",
  "tiny-keccak",
+]
+
+[[package]]
+name = "ferrata-lez-bridge-wire"
+version = "0.1.0"
+dependencies = [
+ "borsh",
+ "ferrata-bridge-core",
+ "ferrata-lez-wire",
+ "lee_core",
+ "sha2 0.10.9",
 ]
 
 [[package]]
@@ -4128,7 +4147,9 @@ dependencies = [
  "common",
  "env_logger",
  "fee_core",
+ "ferrata-bridge-core",
  "ferrata-core",
+ "ferrata-lez-bridge-wire",
  "ferrata-lez-wire",
  "hex",
  "lee",

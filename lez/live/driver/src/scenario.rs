@@ -594,7 +594,8 @@ pub async fn scenarios(
         live.submit(scripted_tx("JobOpen from another program's actor", inst.job(&jid), &open)?)
             .await?
             .expect_exit(code::WRONG_SENDER)?;
-        let record = Message::Record { instance_id: inst.id, slot: 99_999_999, record: vec![1, 2, 3] };
+        let record =
+            Message::Record { instance_id: inst.id, slot: 99_999_999, chain_id: inst.config.chain_id, record: vec![1, 2, 3] };
         live.submit(scripted_tx("Record from another program's actor", inst.header(99_999_999), &record)?)
             .await?
             .expect_exit(code::WRONG_SENDER)?;

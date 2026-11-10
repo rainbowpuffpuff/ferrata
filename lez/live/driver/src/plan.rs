@@ -63,6 +63,7 @@ pub fn mainnet_spec() -> ChainSpec {
 pub fn mainnet_config(parts: u8) -> Config {
     let spec = mainnet_spec();
     Config {
+        chain_id: 1,
         sync_committee_size: 512,
         slots_per_epoch: spec.preset.slots_per_epoch,
         epochs_per_sync_committee_period: spec.preset.epochs_per_sync_committee_period,
@@ -71,6 +72,44 @@ pub fn mainnet_config(parts: u8) -> Config {
         fork_epochs: spec.epochs,
         genesis_validators_root: root(GENESIS_VALIDATORS_ROOT),
         genesis_time: MAINNET_GENESIS_TIME,
+        seconds_per_slot: 12,
+        store_fork: 3,
+        adoption_parts: parts,
+    }
+}
+
+/// Sepolia (`../../harness/src/sepolia.rs`, the attestation program's Stage 5).
+pub const SEPOLIA_CHAIN_ID: u64 = 11_155_111;
+pub const SEPOLIA_GENESIS_TIME: u64 = 1_655_733_600;
+pub const SEPOLIA_GENESIS_VALIDATORS_ROOT: &str = "d8ea171f3c94aea21ebc42a1ed61052acf3f9209c00e4efbaaddac09ed9b8078";
+/// The block root of the bootstrap of period 1378 (slot 11,288,576), the last period before Gloas.
+pub const SEPOLIA_CHECKPOINT: &str = "5f71d7f650f9252b48749b5f062c0c234e01afd69f364ab600e2b6051494b20d";
+
+/// Sepolia's fork schedule (eth-clients/sepolia `metadata/config.yaml` at 7b1b9d9): Gloas at
+/// epoch 353,024.
+pub fn sepolia_spec() -> ChainSpec {
+    let v = |b: u8| [0x90, 0x00, 0x00, b];
+    ChainSpec {
+        preset: Preset::MAINNET,
+        versions: [v(0x69), v(0x70), v(0x71), v(0x72), v(0x73), v(0x74), v(0x75), v(0x76), [0; 4]],
+        epochs: [0, 50, 100, 56_832, 132_608, 222_464, 272_640, 353_024, FAR_FUTURE_EPOCH],
+    }
+}
+
+/// An instance config for Sepolia, as the harness's `sepolia_config`: the store starts in the
+/// Electra layout (the bootstrap is of the Fulu era), the schedule has Gloas.
+pub fn sepolia_config(parts: u8) -> Config {
+    let spec = sepolia_spec();
+    Config {
+        chain_id: SEPOLIA_CHAIN_ID,
+        sync_committee_size: 512,
+        slots_per_epoch: spec.preset.slots_per_epoch,
+        epochs_per_sync_committee_period: spec.preset.epochs_per_sync_committee_period,
+        min_sync_committee_participants: spec.preset.min_sync_committee_participants,
+        fork_versions: spec.versions,
+        fork_epochs: spec.epochs,
+        genesis_validators_root: root(SEPOLIA_GENESIS_VALIDATORS_ROOT),
+        genesis_time: SEPOLIA_GENESIS_TIME,
         seconds_per_slot: 12,
         store_fork: 3,
         adoption_parts: parts,
