@@ -53,7 +53,7 @@ unset GITHUB_TOKEN GH_TOKEN
 die() { echo "error: $*" >&2; exit 1; }
 
 check_lez() {
-  [ -f "$LEZ_SRC/Cargo.toml" ] || die "LEZ $LEZ_TAG not found at $LEZ_SRC (scripts/fetch-upstream.sh fetches v0.4.0-rc1)"
+  [ -f "$LEZ_SRC/Cargo.toml" ] || die "LEZ $LEZ_TAG not found at $LEZ_SRC (scripts/fetch-upstream.sh fetches v0.4.0-rc1 and rc2)"
   if [ -d "$LEZ_SRC/.git" ]; then
     local head; head="$(git -C "$LEZ_SRC" rev-parse HEAD)"
     [ "$head" = "$LEZ_COMMIT" ] || die "LEZ checkout is at $head, expected $LEZ_COMMIT ($LEZ_TAG)"
