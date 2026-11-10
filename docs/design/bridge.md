@@ -2,7 +2,7 @@
 
 This note describes Ferrata's bridge between Ethereum and the Logos Execution Zone (LEZ): an immutable vault on Ethereum, an immutable bridge program on LEZ, and the proofs between them. The inbound leg reads Ethereum through the RFP-021 attestation primitive, which has its own design note and is not repeated here. LEZ and Logos Blockchain facts are cited from the repository's LEZ v0.4 findings note, `docs/design/lez-v0.4-findings.md`, by section ("findings §n"). The analysis of finality rule (A) is in `docs/design/finality-rule/MODEL.md` (the behaviour of the v0.4 code, with source citations), `docs/design/finality-rule/LEMMA.md` (proofs and the counterexample) and `docs/design/finality-rule/RESULTS.md` (simulations, including the v3 experiments (i) to (k)).
 
-The design is specification v2 as amended by specification v3 (changes D1 to D13; D13, of 10 Nov 2026, is the newest and overrides earlier items where they differ). Requirement IDs are RFP-022's (F.x, U.x, R.x, P.x, Security #n, Privacy #n, soft #n); `021:` marks RFP-021's.
+The design is specification v2 ([`spec/bridge-spec-v2.md`](spec/bridge-spec-v2.md), cited as SPEC-v2) as amended by specification v3 ([`spec/bridge-spec-v3-changes.md`](spec/bridge-spec-v3-changes.md), changes D1 to D13; D13, of 10 Nov 2026, is the newest and overrides earlier items where they differ). Requirement IDs are RFP-022's (F.x, U.x, R.x, P.x, Security #n, Privacy #n, soft #n); `021:` marks RFP-021's.
 
 **Labels.** Every number carries one:
 - **measured**: from a run reproducible from the repository, with where it ran (Python simulator, local EVM under Foundry, RISC Zero executor or prover on a laptop CPU, mock or real verifier);
