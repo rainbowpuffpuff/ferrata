@@ -4,6 +4,7 @@ pragma solidity ^0.8.26;
 import {console2} from "forge-std/console2.sol";
 
 import {FerrataVault} from "../src/FerrataVault.sol";
+import {IRiscZeroVerifier} from "../src/interfaces/IRiscZeroVerifier.sol";
 import {ToggleRecipient} from "./mocks/MockRecipients.sol";
 import {MockBlacklistToken, MockTokenBase} from "./mocks/MockTokens.sol";
 import {ReferenceMerkle} from "./utils/ReferenceMerkle.sol";
@@ -25,6 +26,17 @@ contract GasScenarios is VaultTestBase {
 
     function setUp() public override {
         super.setUp();
+        _prepareState();
+    }
+
+    /// @dev v4: the same state on a rule (B) vault, for the rule (B) rows (the other rows run on rule (A)).
+    function _switchToRuleB() internal {
+        vault = new FerrataVault(_deploymentB(IRiscZeroVerifier(address(estop)), LEZ_CONFIG_ID));
+        _registerDefaultTokens(vault);
+        _prepareState();
+    }
+
+    function _prepareState() internal {
         // A deployed-looking configuration: every bucket finite, relay fees registered, a non-empty tree, escrow on
         // every token, one accepted root.
         address[4] memory tokens = [ETH, address(usdc), address(dai), address(usdt)];
@@ -234,6 +246,48 @@ contract GasScenarios is VaultTestBase {
         vm.prank(freezer);
         vault.cancelCandidate(c.newState);
         _log("cancelCandidate (freeze authority)");
+    }
+
+    function test_gas_ruleB_submitCandidate() public {
+        _switchToRuleB();
+        FerrataVault.Checkpoint memory c = _nextCheckpoint(keccak256("a new burn root"));
+        _proveCheckpoint(_checkpointJournal(c));
+        vm.prank(relayer);
+        vault.submitCandidate(c, SEAL);
+        _log("rule (B): submitCandidate, no beacon (incl. mock verifier)");
+    }
+
+    function test_gas_ruleB_finalizeAttested() public {
+        _switchToRuleB();
+        FerrataVault.Checkpoint memory c = _nextCheckpoint(keccak256("a new burn root"));
+        _submit(c);
+        vm.warp(block.timestamp + DELTA_B);
+        vm.prank(relayer);
+        vault.finalizeAttested(c);
+        _log("rule (B): finalizeAttested (no proof; reads the stop)");
+    }
+
+    function test_gas_cancelCandidate_byWatcher() public {
+        FerrataVault.Checkpoint memory c = _nextCheckpoint(keccak256("a new burn root"));
+        _submit(c);
+        vm.prank(watcher);
+        vault.cancelCandidate(c.newState);
+        _log("cancelCandidate (watcher)");
+    }
+
+    function test_gas_pauseCheckpoints_byWatcher() public {
+        vm.prank(watcher);
+        vault.pauseCheckpoints();
+        _log("pauseCheckpoints (watcher)");
+    }
+
+    function test_gas_proposeAndApplyRoles() public {
+        vm.prank(admin);
+        vault.proposeRoles([watcher, relayer, address(0)], makeAddr("new freeze authority"));
+        _log("proposeRoles (admin; two watchers and a freeze authority)");
+        vm.warp(block.timestamp + 14 days);
+        vault.applyRoles();
+        _log("applyRoles (anyone, after 14 days)");
     }
 
     function test_gas_releaseETH_noFee() public {

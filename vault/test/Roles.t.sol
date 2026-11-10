@@ -94,6 +94,21 @@ contract RolesTest is VaultTestBase {
         vm.stopPrank();
     }
 
+    function test_watchers_everySlotCounts() public {
+        address[3] memory ws = [alice, bob, makeAddr("watcher3")];
+        vm.prank(admin);
+        vault.proposeRoles(ws, address(0));
+        vm.warp(block.timestamp + TIMELOCK);
+        vault.applyRoles();
+        for (uint256 i = 0; i < 3; i++) {
+            vm.prank(freezer);
+            vault.setCheckpointsFrozen(false);
+            vm.prank(ws[i]);
+            vault.pauseCheckpoints();
+            assertTrue(vault.checkpointsFrozen());
+        }
+    }
+
     function test_pauseCheckpoints_onlyWatchers() public {
         address[4] memory others = [admin, freezer, alice, address(0xbeef)];
         for (uint256 i = 0; i < others.length; i++) {
@@ -227,6 +242,7 @@ contract RolesTest is VaultTestBase {
 
     function test_retire_anyoneThirtyDaysAfterDeploymentWithoutACheckpoint() public {
         uint256 deployedAt = vault.lastFinalizedAt();
+        assertEq(deployedAt, block.timestamp); // the clock starts at deployment (setUp ran in this block)
         vm.warp(deployedAt + KEYLESS - 1);
         vm.prank(alice);
         vm.expectRevert(FerrataVault.RetireNotOpen.selector);
