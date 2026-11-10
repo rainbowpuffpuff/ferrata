@@ -1,0 +1,13 @@
+# Cycle counts of ferrata-core's execution layer (attest_storage, attest_log, history_hop) in a
+# RISC Zero zkVM 3.0.5 guest, on the mainnet end-to-end fixture; executor only. A workspace of its
+# own, so the light-client bench next to it (its guests, lockfiles and results) is untouched.
+[workspace]
+resolver = "2"
+members = ["host", "methods"]
+exclude = ["guests"]
+
+[profile.dev]
+opt-level = 3
+
+[profile.release]
+opt-level = 3

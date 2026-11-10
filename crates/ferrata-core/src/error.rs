@@ -65,6 +65,67 @@ pub enum Error {
     CommitteeUnknown = 60,
     /// Data of one fork was handed to a store of another (or a downgrade was requested).
     ForkMismatch = 61,
+
+    // Execution layer (RLP, Merkle-Patricia proofs, execution objects, attestations): 100 up.
+    /// RLP that is not the canonical encoding: a non-minimal length, a long-form length with a
+    /// leading zero, a single byte below 0x80 wrapped as a string, or an integer with a leading
+    /// zero byte.
+    RlpNonCanonical = 100,
+    /// RLP that is truncated or does not have the expected shape: a length past the end of the
+    /// input or of the enclosing list, bytes after the item, a list where a string belongs (or
+    /// the reverse), a wrong item count or field size, or an integer too large for its field.
+    RlpMalformed = 101,
+
+    /// Inclusion proof: a node's Keccak-256 differs from the root or from its parent's reference.
+    ProofNodeMismatch = 110,
+    /// Inclusion proof: the proof ends before the walk reaches a value or the key's absence.
+    ProofIncomplete = 111,
+    /// Inclusion proof: elements remain after the walk ended.
+    ProofTrailingNodes = 112,
+    /// Inclusion proof: a node is not a canonical trie node (item count, hex-prefix flag or
+    /// padding, empty extension path, child reference, empty value, or a node shorter than 32
+    /// bytes referenced by hash).
+    ProofNodeInvalid = 113,
+
+    /// keccak256 of an RLP block header differs from the hash it must match.
+    HeaderHashMismatch = 120,
+    /// A block header that is not of the Cancun (20 fields), Prague/Osaka (21) or Amsterdam (23)
+    /// layout.
+    HeaderUnsupported = 121,
+    /// The receipts trie has no receipt at the requested transaction index.
+    ReceiptNotIncluded = 122,
+    /// A pre-Byzantium receipt (state root instead of status) or an unknown receipt type.
+    ReceiptUnsupported = 123,
+    /// The transaction failed (receipt status 0).
+    ReceiptFailed = 124,
+    /// The receipt has no log at the requested position.
+    LogIndexOutOfRange = 125,
+
+    /// A condition of the statement does not hold.
+    PredicateFailed = 130,
+    /// A condition names a field its fact does not have, or the query is empty.
+    QueryInvalid = 131,
+
+    /// The record belongs to another chain than the consumer is configured for.
+    ChainMismatch = 140,
+    /// The finalized header does not carry the execution binding the record constructor reads.
+    BindingMismatch = 141,
+
+    /// EIP-2935: the older block is not among the 8191 blocks before the record's block.
+    HistoryOutOfWindow = 150,
+    /// EIP-2935: the history slot does not hold keccak256 of the supplied header.
+    HistoryHashMismatch = 151,
+    /// EIP-2935: no history contract with the specified code in the record's state.
+    HistoryContractMissing = 152,
+
+    /// Accumulator: the path does not have 32 siblings.
+    AccumulatorPathInvalid = 160,
+    /// Accumulator: the leaf index is 2^32 or more (it would share a path with its low 32 bits).
+    AccumulatorIndexOutOfRange = 161,
+    /// Accumulator: the leaf is the empty leaf (32 zero bytes).
+    AccumulatorLeafEmpty = 162,
+    /// Accumulator: the path does not hash the leaf to the attested root.
+    AccumulatorRootMismatch = 163,
 }
 
 impl Error {

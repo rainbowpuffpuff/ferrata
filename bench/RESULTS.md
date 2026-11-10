@@ -1,5 +1,8 @@
 # Ferrata: cycles to verify one mainnet light-client update in a RISC Zero zkVM 3.0.5 guest
 
+(The execution layer, measured on 9 Nov 2026, has its own section below:
+"2026-11-09: the execution layer".)
+
 **Former name.** Measured at commit f030475 under the project's former name, Plumbline
 (`crates/plumbline-core`); the earlier snapshot run below used commit 25aa07e. The core differs
 from f030475 only by the rename, checked by `scripts/check-bench-provenance.sh`. The raw outputs in
@@ -329,6 +332,56 @@ measurements with the Full policy; they moved by at most 0.21 M.
 | segments (2^20 cycles each) | 4 |
 | **execution total incl. paging + padding** (Σ 2^po2) | 4,194,304 |
 | executor wall-clock | 0.2 s |
+
+## 2026-11-09: the execution layer, with and without accelerated Keccak (commit ea4ccfa)
+
+**Measured code:** `crates/ferrata-core` of commit **ea4ccfa**, unchanged since 7fd2f97 (the
+commit that added the execution layer); `exec/results/PROVENANCE.txt` holds the per-file hashes,
+captured before the run with no uncommitted change to the core. Guests: `exec/guests/keccak-accel`
+(image id `8c5bbc10…`) and `exec/guests/keccak-plain` (`c218315f…`); both use RISC Zero's
+accelerated SHA-256, and only the first patches in RISC Zero's `tiny-keccak`
+(`tiny-keccak/v2.0.2-risczero.0`). RISC Zero zkVM 3.0.5, **executor only** (r0vm 3.0.5). Data:
+mainnet block 26,379,842 from `crates/ferrata-spectests/fixtures/mainnet-e2e-2026-11-09`. The
+host runs the light client natively (bootstrap and finality update) to obtain the block's record;
+each guest restores it from its 165 SSZ bytes, as a private consumer would, and asserts every
+result against the host's native computation. Raw outputs: `exec/results/keccak-*.txt`; commands:
+`README.md`. This run did not touch the light-client guests or their results.
+
+| user cycles | Keccak-f | keccak-accel: call | keccak-accel: execution | keccak-plain: call | keccak-plain: execution |
+|---|---:|---:|---:|---:|---:|
+| `attest_storage`: WETH balance slot (9 + 7 proof nodes) | 54 | 210,502 | 225,509 | 1,040,590 | 1,053,660 |
+| `attest_storage`: USDC balance slot (9 + 8) | 57 | 221,682 | 236,968 | 1,097,886 | 1,111,235 |
+| `attest_log`: USDC `Transfer` in a one-log receipt (tx 2; 3 nodes, 434-byte leaf) | 11 | 42,445 | 53,192 | 211,537 | 220,347 |
+| `attest_log`: USDC `Transfer` in the block's largest receipt (tx 139, 96 logs; 5 nodes, 17,508-byte leaf) | 140 | 432,102 | 444,970 | 2,584,182 | 2,595,113 |
+| `history_hop`: n to n − 16 (8 + 5 nodes, 649-byte header) | 50 | 182,627 | 195,318 | 951,227 | 961,981 |
+| `history_hop`, then `attest_storage` (WETH) under the derived record | 104 | 393,129 | 413,514 | 1,991,817 | 2,010,265 |
+| `keccak256` of one 532-byte branch node | 4 | 8,640 | | 70,128 | |
+| `storage_id` (SHA-256 identifier) | 0 | 1,629 | | 1,629 | |
+
+* **Call and execution.** "call" is the `env::cycle_count()` delta around the call. "execution"
+  is `SessionInfo::cycles()` for the whole run: reading the inputs (the proofs), restoring the
+  record (1,040 cycles), the call, committing the journal and, for keccak-accel, flushing the
+  Keccak batch at exit. With padding and paging (Σ 2^po2), each attestation row takes one segment
+  of 2^17 to 2^19 with keccak-accel, and 2^18 (one-log receipt) to 3 · 2^20 (96-log receipt)
+  with keccak-plain.
+* **Keccak is most of it.** A Keccak-f permutation costs 17,532 user cycles in software
+  (70,128 / 4) and 2,160 with the accelerator (8,640 / 4), about 8 times less. What remains of
+  `attest_storage` (RLP decoding, the nibble walk, copies) is 93,862 cycles in both configurations
+  (210,502 − 54 × 2,160 = 1,040,590 − 54 × 17,532), so the per-permutation figures account for
+  the whole difference.
+* **What the accelerated counts leave out.** With the accelerator the guest does not compute
+  Keccak-f: the host computes each permutation (`sys_keccak`), the guest absorbs input and
+  output into a SHA-256 claim (eight accelerated compressions: the 2,160 cycles), and RISC Zero's
+  separate Keccak circuit proves the batch, which enters the receipt as an assumption resolved
+  when the receipt is composed. That circuit's work is not in these user cycles; the "Keccak-f"
+  column is the number of permutations it proves. Proving time and receipt size are not
+  measured here.
+* **Receipts scale with their size.** `attest_log` hashes the whole receipt (the trie leaf) and
+  decodes and checks every log in it, so the 96-log receipt costs ten times the one-log receipt.
+* **Hops add up linearly.** One hop is 0.18 M accelerated (0.95 M in software) plus 50
+  permutations; a claim with k hops pays that k times before its own `attest_*` (the proposal's
+  P.4 extrapolation, 320 hops, would be about 58 M accelerated user cycles if every hop's proofs
+  were this size, plus 16,000 permutations in the Keccak circuit; not measured).
 
 ## Earlier snapshot (commit 25aa07e): all six configurations
 

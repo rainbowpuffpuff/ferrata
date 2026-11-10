@@ -1,3 +1,5 @@
 /target
-/vectors
+# Downloaded vectors (scripts/fetch-vectors.sh); vectors/acc-leaf.json is generated and committed.
+/vectors/*
+!/vectors/acc-leaf.json
 /bench/target

@@ -61,6 +61,28 @@ Modes (all on update_1: period 1900, handoff, 510/512 signers):
 The host checks every 576-byte Fp12 handed between executions against the core's `miller_half`,
 computed natively. The guests assert every verdict.
 
+## The execution layer (`exec/`)
+
+`exec/` is a second workspace with its own host, methods and two guests. It measures
+`attest_storage`, `attest_log` and `history_hop` on the mainnet end-to-end fixture
+(`../crates/ferrata-spectests/fixtures/mainnet-e2e-2026-11-09/`, checked against its
+`SHA256SUMS`), with and without RISC Zero's accelerated Keccak:
+
+* `keccak-accel`: `tiny-keccak` from `risc0/tiny-keccak` tag `tiny-keccak/v2.0.2-risczero.0`
+  (the fork's only tag; it calls `risc0_keccak_update`, which risc0-zkvm 3.0.5 exports), plus
+  the accelerated SHA-256 used by the light-client guests;
+* `keccak-plain`: the same, with `tiny-keccak` 2.0.2 from crates.io.
+
+```sh
+cd spike/ferrata/bench/exec
+export TMPDIR=$PWD/../../../tmp
+cargo build --release -p exec-host      # compiles the two guests, then the host
+./target/release/exec-host              # both configurations, results/<config>.txt
+```
+
+The host runs the light client natively to obtain the record of block 26,379,842, computes every
+expected result natively, and the guests assert them. Results and their reading: `RESULTS.md`.
+
 ## Notes
 
 * The guest lockfiles are resolved for the guest toolchain's Rust 1.88. If they ever have to be

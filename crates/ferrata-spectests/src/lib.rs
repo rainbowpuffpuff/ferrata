@@ -6,6 +6,7 @@
 //!   store's until a forced update first changes the spec store (the policy never forces).
 //! * `update_ranking`: checks `is_better_update` reproduces the canonical order.
 
+pub mod execkit;
 pub mod testkit;
 
 use std::{

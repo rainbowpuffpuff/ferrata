@@ -15,7 +15,19 @@ serde_yaml = "0.9"
 hex = "0.4"
 sha2 = "0.10"
 blst = "0.3"
+serde_json = "1"
+# Keccak-256 for the reference trie, independent of the core's tiny-keccak.
+sha3 = "0.10"
 
 
 [dev-dependencies]
 bls12_381 = { version = "0.8", default-features = false, features = ["groups", "alloc"] }
+# Differential oracles for the execution layer (tests only).
+alloy-rlp = "0.3.17"
+alloy-trie = { version = "0.9.9", features = ["std"] }
+alloy-primitives = "1.7.3"
+# Differential oracle for the light client: Helios's consensus core (a16z/helios tag 0.9.4; not on
+# crates.io), with the SSZ and tree-hash crates its types use. Tests only, never the core.
+helios-consensus-core = { git = "https://github.com/a16z/helios", rev = "3686d998e1e87c840ca04d3bea9c7386bbace6cb" }
+ethereum_ssz = "0.9"
+tree_hash = "0.10"

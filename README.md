@@ -20,10 +20,21 @@ Every row is produced by `cargo test --workspace`.
 | Policy store against the spec store | Equal state on 150 steps. After a forced update the two diverge, and the policy store never holds a header the spec store did not finalize (checked at every step). |
 | Adversarial tests | 16 (listed below) |
 | Guard tests | 23: each pins a check that an independent review showed could be deleted without any test failing, plus the two committee checks |
-| Mutation run | 43 hand-picked mutants, all killed (`scripts/mutants.py`). 32 come from that review, under which 20 had survived the earlier suite. |
+| **Execution layer** | |
+| Real mainnet, end to end (`fixtures/mainnet-e2e-2026-11-09`) | A bootstrap (slot 15,613,952) and a finality update (512/512 signers) of period 1906, verified with both libraries and both committee checks, finalize execution block 26,379,842; its `HeaderRecord` equals two providers' block. WETH, USDC and an address without an account: every fact equals `eth_getProof` and `balanceOf`. The receipts trie, rebuilt with alloy-trie, equals the record's root, and all 870 logs of its 245 receipts (types 0, 2, 3, 4; 54 USDC transfers) are attested. EIP-2935 hops reach the parent block, whose 3 failed transactions are refused, and n − 16, then n − 16 − 8191 (the window's edge), with a storage fact under each of these two. Tampering with each kind of fixture byte is refused, each with its expected code (a corrupted signature with either BLS code, as in the adversarial tests). |
+| `ethereum/tests` TrieTests (pinned at `c67e485`) | **25 / 25 cases**, every root, and 368 inclusion and exclusion proofs (`trietestnextprev.json` tests iteration, not proofs) |
+| Merkle-Patricia proofs against alloy-trie 0.9.9 | 240 random tries in four key families (179 with embedded nodes): equal roots, byte-identical proofs, 19,173 inclusion and 8,968 exclusion proofs accepted by both; 4,453 mutated proofs refused by both. Two documented differences (below). |
+| Strict RLP against alloy-rlp 0.3.17 | 21 non-canonical or malformed encodings, each refused with its code (and by alloy-rlp); 3,000 random round trips; 20,000 mutated encodings with the same verdict from both (6,237 accepted, 13,763 refused) |
+| Execution objects | Headers of the Cancun (20 fields), Prague/Osaka (21) and Amsterdam (23) layouts and every field rule; accounts; storage values; receipts of types 0 to 4, pre-Byzantium refused; record encoding; statement identifiers equal to an independent Python computation |
+| Execution adversarial tests | 7 tests (listed below), each refusal checked for its exact code |
+| Accumulator-leaf facts (`vectors/acc-leaf.json`) | Vectors written by an independent Python implementation and shared with the bridge crate: 14 leaves in two snapshots, 7 refusals with their codes, 4 identifier variants. A leaf proven under two roots attested at two blocks has one identifier; every sibling and every index bit is bound; an index of 2^32 or more and the empty leaf are refused. |
+| Differential oracle: Helios (`helios-consensus-core` 0.9.4) | 26 of the 52 official `sync` cases replayed step by step through Helios and ferrata's spec store (100 steps: 86 updates, 12 forced updates, 2 store upgrades): identical verdicts, finalized and optimistic headers after every step. 26 skipped, each listed: 19 with Altair-layout data (Helios cannot decode it), 7 with Gloas (not in Helios). Mainnet periods 1899–1903 and the end-to-end finality update: identical. 8 mutated mainnet updates and a store holding the wrong committee: refused by both. Participation 0 to 32 of 32 with real signatures: identical. Four inputs on which Helios departs from the spec (below). |
+| Signature checks on every path | The identity, a point outside G2, a point off the curve and two bad encodings are refused by the spec path, the checked path and the split path (`miller_half` / `final_half`), with both libraries and every key aggregation, and by both stores |
+| Mutation run | 107 hand-picked mutants, all killed (`scripts/mutants.py`, `docs/mutants-run.log`). 43 cover the light client; 32 of those come from an independent review, under which 20 had survived the earlier suite. 64 cover the execution layer: length checks, hash comparisons, indices and bounds, canonical-form checks, the receipt status check, the EIP-2935 window, identifiers, predicates and relations, accumulator paths and identifiers, log-index conversion. |
 | `no_std` | Builds for `riscv32im-unknown-none-elf` with the pure-Rust backend. The `blst` backend needs a RISC-V C toolchain (RISC Zero's), which this repository does not set up yet. |
 
 | RISC Zero guest (`bench/`) | RISC Zero zkVM 3.0.5 executor, real mainnet update, RISC Zero's accelerated blst: a finality update costs 10.2M cycles, and splits into steps of 2.3M, 4.2M and 3.6M through the core's `miller_half` / `final_half`. A handoff adds 1.1M for the committee root, plus either 4.6M for the adoption check with uncompressed keys or 48.7M with compressed keys (`check_committee_onchain` today). See `bench/RESULTS.md`, including six library configurations. |
+| RISC Zero guest, execution layer (`bench/exec/`) | The same executor, mainnet block 26,379,842, with RISC Zero's accelerated Keccak (without it in brackets): `attest_storage` 0.21M user cycles (1.04M), `attest_log` 0.04M for a one-log receipt and 0.43M for a 96-log one (0.21M, 2.58M), one EIP-2935 hop 0.18M (0.95M). With the accelerator, the Keccak-f permutations (54 for a storage slot, 50 for a hop) are proven by RISC Zero's separate Keccak circuit, outside these counts. See `bench/RESULTS.md`. |
 
 **Not done yet** (the proposal's M0 to M2):
 - the LEZ v0.4 program and its costs inside the v0.4 shell;
@@ -31,15 +42,25 @@ Every row is produced by `cargo test --workspace`.
   a store restored from the program's own state without re-checking;
 - the uncompressed-key adoption witness;
 - the `single_merkle_proof` vectors;
-- the Merkle-Patricia, RLP and predicate code.
+- a Gloas record on real data: `HeaderRecord::from_block_hash` is tested on synthetic stores only,
+  since mainnet has no Gloas date and the fixture is Fulu;
+- fuzzing (`cargo-fuzz` on RLP, Merkle-Patricia and query decoding) and `cargo-mutants` over the
+  whole core;
+- a weak-subjectivity bound (see "Weak subjectivity" below).
 
 ## Run it
 
 ```sh
-scripts/fetch-vectors.sh          # pinned releases; tree hashes verified on every run
+scripts/fetch-vectors.sh          # pinned releases and TrieTests; hashes verified on every run
 cargo test --workspace -- --nocapture
-scripts/mutants.py                # optional: the 43-mutant run (several minutes)
+scripts/mutants.py                # optional: the 107-mutant run (78 minutes here, on a loaded machine)
 ```
+
+The mainnet fixtures are committed. `scripts/fetch-mainnet-e2e.py OUTDIR` shows how the
+end-to-end one was made; run today, it fetches a newer block into a new directory.
+`vectors/acc-leaf.json` is committed too, and `scripts/gen-acc-leaf-vectors.py` rewrites it.
+The Helios oracle is a git dev-dependency of the test crate only (a16z/helios tag 0.9.4, rev
+`3686d99`), fetched by cargo; `ferrata-core` never depends on it.
 
 The vector tests fail rather than skip when the vectors are missing, and they pin the number of
 cases, so an empty or moved directory cannot pass.
@@ -54,6 +75,15 @@ cases, so an empty or moved directory cannot pass.
 | `crates/ferrata-core/src/upgrade.rs` | Light-client data across forks, including Gloas's `execution_block_hash` |
 | `crates/ferrata-core/src/types.rs`, `ssz.rs`, `merkle.rs` | Containers, strict SSZ decoding, Merkle helpers and generalized indices |
 | `crates/ferrata-core/src/bls/` | The `BlsBackend` trait, with `blst` and zkcrypto backends |
+| `crates/ferrata-core/src/rlp.rs`, `mpt.rs`, `keccak.rs` | Strict RLP views, Merkle-Patricia proof verification, Keccak-256 behind one function |
+| `crates/ferrata-core/src/exec.rs` | Execution headers, accounts, storage values, receipts and logs |
+| `crates/ferrata-core/src/attest.rs` | `HeaderRecord`, the attestations consumers call, identifiers, conditions and relations, the EIP-2935 hop |
+| `crates/ferrata-core/src/accumulator.rs` | Accumulator-leaf facts: a root attested from a storage slot, a leaf proven against it by a SHA-256 path |
+| `crates/ferrata-spectests/src/execkit.rs` | A reference trie (independent Keccak), synthetic blocks, JSON-RPC readers |
+| `scripts/fetch-mainnet-e2e.py` | The fetch tool of the mainnet end-to-end fixture (standard library only) |
+| `scripts/gen-acc-leaf-vectors.py`, `vectors/acc-leaf.json` | The accumulator vectors and their independent generator (hashlib) |
+| `crates/ferrata-spectests/tests/helios_oracle.rs` | The differential oracle against Helios |
+| `scripts/count-lines.py` | The line counts of "Reuse and audit surface" |
 | `crates/ferrata-spectests/` | The vector runner, the fixtures and the test suites |
 | `docs/REVIEW-core.md` | The author's per-function review against the spec |
 
@@ -102,6 +132,179 @@ cases, so an empty or moved directory cannot pass.
    tests check that the padding must stay zero. The native Gloas vectors bind a single constant
    block hash, so the tampering tests on Gloas headers matter more than the vectors here.
 
+7. **Execution roots come only from records.** A `HeaderRecord` holds one block's number, hash,
+   state and receipts roots, the chain id and the binding it came from. It is built from a
+   `FinalizedStore`'s finalized header (the payload header up to Fulu; under Gloas, the RLP
+   header that hashes to the bound block hash), derived through EIP-2935, or restored from the
+   program's own record bytes. Every attestation takes a record and the chain id the consumer
+   expects; nothing takes a root from the caller. A record's `anchor_slot` is the beacon slot of
+   the light-client header it rests on; for a record reached through EIP-2935 hops it is the slot
+   of the record the hops started from, not a slot of the older block (place that block by its
+   number and timestamp).
+
+8. **Identifiers name facts.** A storage fact's identifier is SHA-256 over a tag, the chain id,
+   the address, the slot and the value; an account's over the chain id, the address and its four
+   fields. The block is left out, so the same value read at two blocks has one identifier (the
+   mainnet test shows this for a real balance). That suits "this value holds", not "this event
+   happened once": a balance that changes and changes back gets the same identifier, so
+   once-per-event consumers key on logs or accumulator leaves (note 12), whose identifiers are one
+   per event. A block-bound variant (`id_at_block`, kinds `0x11` and `0x12`) adds the block number,
+   for consumers that pin a block (a snapshot) and want one use per pinned block; it does not
+   identify events either, since an unchanged value at two blocks gets two of them. `attest.rs`
+   documents the exact derivations, and tests pin both variants against an independent
+   implementation.
+
+9. **Header shapes.** The decoder accepts the Cancun (20 fields), Prague/Osaka (21) and Amsterdam
+   (23) layouts. Amsterdam, as `execution-specs` defines it today, adds `block_access_list_hash`
+   (EIP-7928) and then `slot_number` (EIP-7843). Anything else is refused, including unknown
+   trailing fields, so a fork that adds a header field needs a new release before it activates
+   (`exec.rs` explains the choice).
+
+10. **EIP-2935.** A hop takes the older block's number from its header, never from the caller,
+    requires `R − 8191 ≤ n < R`, the history contract with the code EIP-2935 specifies, and slot
+    `n mod 8191` holding the header's hash. Hops chain; the mainnet test makes three real ones.
+
+11. **Two differences from alloy-trie.** The empty trie is proven only by the empty proof
+    (alloy-trie also accepts `[0x80]`), and a trie whose root node is shorter than 32 bytes is
+    still rooted by its hash (alloy-trie 0.9.9 refuses every proof of such a trie; Ethereum's
+    state, storage and receipt tries never have one).
+
+12. **Accumulator facts.** Some contracts keep the root of a SHA-256 Merkle accumulator in one
+    storage slot (the Ferrata bridge vault keeps its deposits that way). `attest_accumulator_root`
+    is a storage attestation whose value is that root; `attest_accumulator_leaf` proves a leaf
+    against it: depth 32, inner node `SHA-256(0x01 ‖ left ‖ right)`, empty leaf zero, direction
+    bits from the leaf index, which must be below 2^32. Its identifier is
+    `SHA-256("ferrata/fact/acc-leaf/v1" ‖ chain_id ‖ address ‖ slot ‖ leaf_index ‖ leaf)` (chain id
+    and slot as 32 bytes, index as 8), and leaves the root out, so a leaf has one identifier under
+    every later root. The leaf is opaque to the core: nothing is specific to one contract.
+
+13. **Log positions.** `attest_log` takes the log's position in its receipt, counted from zero.
+    JSON-RPC's `logIndex` counts across the whole block; `exec::locate_log` converts it, given each
+    receipt's log count, and `exec::block_log_index` converts back (a test checks both on all 870
+    logs of the mainnet block). A wrong conversion proves another log or none, never a false one.
+
+14. **Relations.** Besides conditions against constants, a batch can compare two attested values
+    of one record (`Relation`, soft requirement #4): for example "this account's balance is at
+    least that slot's value".
+
+15. **Where the signature is checked.** The aggregate signature must be a canonical compressed
+    encoding of a point of G2 (on the curve, in the prime-order subgroup) and not the identity.
+    With blst this is `miller()` in `bls/blst_backend.rs`, which every path calls before any
+    pairing, `miller_half` included (`final_half` only finishes a product `miller_half` made);
+    with zkcrypto, `pairing_check()` in `bls/zkcrypto_backend.rs`. `tests/signature_paths.rs`
+    checks every path and both stores.
+
+## Weak subjectivity
+
+The policy store enforces **no weak-subjectivity bound today**, and nothing configures one.
+`FinalizedStore::process_update` takes `current_slot` from its caller and checks only the spec's
+slot order (`current_slot ≥ signature_slot > attested_slot ≥ finalized_slot`) and period rule
+(an update must be signed in the store's period, or in the next once the next committee is
+known: `PeriodSkipped`). `ChainSpec` holds the preset and the fork schedule, and no bound. An
+instance can therefore be advanced from an old checkpoint, one period at a time, by any chain of
+handoffs its committees signed. The proposal's slot rule and clock rule (§2, "Weak subjectivity")
+are not implemented here.
+
+## Differential oracle: Helios
+
+`tests/helios_oracle.rs` runs Helios's consensus core (`helios-consensus-core` from a16z/helios,
+tag 0.9.4, rev `3686d99`; the light-client logic of the Helios lineage that SP1 Helios and
+`r0vm-helios` derive from) beside ferrata on the same bytes. It is a dev-dependency of the test
+crate only.
+
+- **What Helios can express.** Its types decode the Capella, Deneb and Electra light-client
+  layouts, and its fork schedule ends at Fulu, on the mainnet and minimal presets. Of the 52
+  official `sync` cases, 26 run step by step through Helios and ferrata's spec store (Capella 9,
+  Deneb 7, Electra 5, Fulu 5:
+  100 steps, 86 updates, 12 forced updates, 2 store upgrades), with identical verdicts and
+  identical finalized and optimistic headers after every step. Skipped, each named by the test:
+  19 cases with Altair-layout data (Helios decodes a header as a union of the three later
+  layouts, so the fixed-size Altair header does not decode) and 7 with Gloas.
+- **Mainnet.** Periods 1899 to 1903 (bootstrap and five updates) and the end-to-end finality
+  update: ferrata's policy store, its spec store and Helios agree on every verdict and finalized
+  root.
+- **Mutations.** A flipped signature byte, finality-branch byte, next-committee-branch byte,
+  next-committee key or attested state root, a flipped signer bit, no signers, a signature slot
+  in the future, and a store holding the wrong committee: all three refuse each, and nothing
+  changes. Participation from 0 to 32 of 32, with real signatures on a chain whose keys the test
+  holds: identical verdicts; both finalize from 22 signers, and the policy store refuses below.
+- **Where Helios departs from the specification.** On four inputs, none of them produced by a
+  genuine chain with an honest committee, Helios 0.9.4 does not do what the spec says, and
+  ferrata does (`where_helios_departs_from_the_specification`):
+  1. an update whose next committee contradicts the one the store holds: the spec refuses it
+     (`validate_light_client_update`); Helios has no such check and accepts;
+  2. a signer key that is the identity point: `FastAggregateVerify` requires `KeyValidate` on every
+     key; Helios checks only the aggregate and accepts;
+  3. an empty finalized header with a finality branch that does not prove the zero root: the
+     spec refuses it; Helios skips the finality check and accepts (anyone can build this from a
+     genuine signed update, since the signature covers only the attested header);
+  4. a forced update whose best update carries no finality, which the spec handles by finalizing
+     the attested header: Helios's `force_update` unwraps the absent finalized header and panics.
+     Helios's own client never calls `force_update`; its test runner and library users do.
+
+  Helios's own vector runner covers six cases (Deneb and Electra) and does not assert that an
+  update verifies; the comparison here asserts every verdict.
+
+## Reuse and audit surface
+
+`scripts/count-lines.py` counts the non-test Rust of `ferrata-core` (physical lines as `wc -l`
+counts them, then lines that are neither blank nor comments; the two in-crate test modules, 81
+lines, are left out):
+
+| File | Category | Lines | Code lines |
+|---|---|---:|---:|
+| `bls/blst_backend.rs` | BLS glue and new logic | 270 | 209 |
+| `bls/mod.rs` | BLS glue and new logic | 116 | 57 |
+| `bls/zkcrypto_backend.rs` | BLS glue and new logic | 136 | 112 |
+| `fork.rs` | consensus-spec transcription | 173 | 124 |
+| `hash.rs` | consensus-spec transcription | 18 | 11 |
+| `merkle.rs` | consensus-spec transcription | 131 | 82 |
+| `ssz.rs` | consensus-spec transcription | 89 | 70 |
+| `store.rs` | consensus-spec transcription | 251 | 197 |
+| `types.rs` | consensus-spec transcription | 518 | 421 |
+| `upgrade.rs` | consensus-spec transcription | 154 | 136 |
+| `validate.rs` | consensus-spec transcription | 376 | 306 |
+| `exec.rs` | execution-spec transcription | 349 | 241 |
+| `keccak.rs` | execution-spec transcription | 18 | 9 |
+| `mpt.rs` | execution-spec transcription | 227 | 174 |
+| `rlp.rs` | execution-spec transcription | 199 | 145 |
+| `accumulator.rs` | new protocol logic | 188 | 130 |
+| `attest.rs` | new protocol logic | 737 | 535 |
+| `policy.rs` | new protocol logic | 131 | 91 |
+| `error.rs` | plumbing | 142 | 63 |
+| `lib.rs` | plumbing | 44 | 24 |
+| **total** | | **4267** | **3137** |
+
+| Category | Lines | Code lines |
+|---|---:|---:|
+| BLS glue and new logic | 522 | 378 |
+| consensus-spec transcription | 1710 | 1347 |
+| execution-spec transcription | 793 | 569 |
+| new protocol logic | 1056 | 756 |
+| plumbing | 186 | 87 |
+
+- **Transcription of the consensus specification:** `validate.rs`, `store.rs`, `upgrade.rs`,
+  `types.rs`, `ssz.rs`, `merkle.rs`, `fork.rs`, `hash.rs`: each function follows the spec
+  function of the same name (`docs/REVIEW-core.md`). **Transcription of execution-layer
+  specifications** (Yellow Paper appendices B to D, the EIPs named in `exec.rs`): `rlp.rs`,
+  `mpt.rs`, `exec.rs`, `keccak.rs`.
+- **New protocol logic, with no specification to transcribe:** `policy.rs` (the finalized-only
+  policy and adoption checks), `attest.rs` (records, identifiers, conditions and relations, the
+  EIP-2935 hop), `accumulator.rs`, and in `bls/` the checked path, the on-chain adoption check and
+  the pairing split around the libraries' primitives.
+- **Third-party cryptography** (normal dependencies of `ferrata-core`):
+
+  | Crate | Version | Used for | Public audit |
+  |---|---|---|---|
+  | `blst` (supranational) | 0.3.17 | BLS12-381, default backend | NCC Group, January 2021 (cited in the blst README: `research.nccgroup.com/wp-content/uploads/2021/01/NCC_Group_EthereumFoundation_ETHF002_Report_2021-01-20_v1.0.pdf`); formal verification by Galois described there as ongoing. The audited code predates 0.3.17. |
+  | `bls12_381` (zkcrypto), with `group` 0.13, `ff` 0.13, `pairing` 0.23 | 0.8.0 | BLS12-381, second backend (differential oracle off chain) | none: its README says "This implementation has not been reviewed or audited" |
+  | `sha2` (RustCrypto) | 0.10.9; 0.9.9 for zkcrypto's hash-to-curve | SHA-256 | none found |
+  | `tiny-keccak` | 2.0.2 | Keccak-256 | none found |
+
+  RISC Zero's accelerated forks of `blst`, `sha2` and `tiny-keccak` are used only by the guests in
+  `bench/`. Every line counted above is new code written for Ferrata and unaudited; the proposal's
+  audit covers it.
+
 ## Adversarial and guard tests
 
 `tests/adversarial.rs` uses real vector data. Every refusal is checked for its error code. Where
@@ -141,14 +344,32 @@ unchanged.
 - the bootstrap's checkpoint and branch;
 - the liveness limit above.
 
+`tests/exec_adversarial.rs` covers the execution layer, each case with its exact code:
+- **Proofs:** a tampered node at every depth; truncated, extended, reordered and spliced proofs;
+  a substituted value, key or root; inclusion and exclusion confused (a truncated inclusion
+  proof, an absent key's proof for a present key, a leaf appended to an exclusion proof).
+- **Bridge-exploit classes:** a forged trie that holds the attacker's value (refused at the
+  root); a forged subtree spliced under genuine nodes (refused where it is attached, at every
+  depth); a proof that stops at an ancestor (never yields the ancestor); forged nodes with extra
+  items or trailing bytes behind a hash-consistent path.
+- **Receipts and records:** a receipt at another index, an index past the last transaction, a
+  log index out of range, a failed transaction, a storage proof replayed under another account,
+  an account proof under another block's record, another chain.
+- **EIP-2935:** the window's edges, a slot mismatch, a substituted header, an unstored block, an
+  unknown header shape, a missing contract or one with other code, chained hops.
+
+`tests/mainnet_e2e.rs` repeats the tampering on real data, and `tests/mpt_proofs.rs` checks the
+node rules behind the hash check by re-linking forged nodes to a new root.
+
 `tests/nullifier_illustration.rs` illustrates the nullifier trap of the proposal's §5. It runs no
 `ferrata-core` code, and its header states its limits.
 
 ## How this was built
 
 With AI assistance (Claude Code); every commit carries an `Assisted-by` trailer. Acceptance is
-mechanical: the vectors, the BLS vectors, the mainnet replay, the adversarial and guard suites,
-clippy with warnings as errors, and the `no_std` build. `docs/REVIEW-core.md` maps every function
+mechanical: the vectors, the BLS vectors, the mainnet replay and end-to-end run, the
+TrieTests, the alloy differentials, the Helios oracle, the adversarial and guard suites, clippy
+with warnings as errors, and the `no_std` build. `docs/REVIEW-core.md` maps every function
 to its spec section and records the author's line-by-line sign-off.
 
 ## License
