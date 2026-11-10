@@ -108,21 +108,22 @@ contract FreezeTest is VaultTestBase {
     }
 
     function test_freeze_settersEmitAndSetFlags() public {
+        uint256 until = block.timestamp + MAX_FREEZE;
         vm.startPrank(freezer);
         vm.expectEmit(true, true, true, true, address(vault));
-        emit FerrataVault.DepositsFrozenSet(true);
+        emit FerrataVault.DepositsFrozenSet(true, until);
         vault.setDepositsFrozen(true);
         vm.expectEmit(true, true, true, true, address(vault));
-        emit FerrataVault.ReleasesFrozenSet(true);
+        emit FerrataVault.ReleasesFrozenSet(true, until);
         vault.setReleasesFrozen(true);
         vm.expectEmit(true, true, true, true, address(vault));
-        emit FerrataVault.TokenDepositsFrozenSet(address(usdc), true);
+        emit FerrataVault.TokenDepositsFrozenSet(address(usdc), true, until);
         vault.setTokenDepositsFrozen(address(usdc), true);
         vm.expectEmit(true, true, true, true, address(vault));
-        emit FerrataVault.TokenReleasesFrozenSet(address(usdc), true);
+        emit FerrataVault.TokenReleasesFrozenSet(address(usdc), true, until);
         vault.setTokenReleasesFrozen(address(usdc), true);
         vm.expectEmit(true, true, true, true, address(vault));
-        emit FerrataVault.CandidatesFrozenSet(true);
+        emit FerrataVault.CandidatesFrozenSet(true, until);
         vault.setCandidatesFrozen(true);
         vm.stopPrank();
 
@@ -132,6 +133,76 @@ contract FreezeTest is VaultTestBase {
         assertTrue(vault.tokenReleasesFrozen(address(usdc)));
         assertTrue(vault.candidatesFrozen());
         assertFalse(vault.tokenDepositsFrozen(address(dai)));
+        assertEq(vault.depositsFrozenUntil(), until);
+
+        vm.expectEmit(true, true, true, true, address(vault));
+        emit FerrataVault.DepositsFrozenSet(false, 0);
+        vm.prank(freezer);
+        vault.setDepositsFrozen(false);
+        assertFalse(vault.depositsFrozen());
+    }
+
+    // ---- expiry (spec §7): a freeze lasts maxFreeze unless renewed ------------------------------------------------
+
+    /// @dev Freezes everything at once and returns the time the freezes lapse.
+    function _freezeEverything() internal returns (uint256 until) {
+        until = block.timestamp + MAX_FREEZE;
+        vm.startPrank(freezer);
+        vault.setDepositsFrozen(true);
+        vault.setReleasesFrozen(true);
+        vault.setCandidatesFrozen(true);
+        vault.setTokenDepositsFrozen(address(dai), true);
+        vault.setTokenReleasesFrozen(address(dai), true);
+        vm.stopPrank();
+    }
+
+    function test_freeze_everyKindExpiresAfterMaxFreeze() public {
+        uint256 until = _freezeEverything();
+
+        vm.warp(until - 1); // the last frozen second
+        (bool ok,) = _tryDeposit(address(dai));
+        assertFalse(ok);
+        (ok,) = _tryRelease(address(dai));
+        assertFalse(ok);
+        (ok,) = _trySubmitCandidate();
+        assertFalse(ok);
+
+        vm.warp(until); // lapsed, with nobody doing anything
+        assertFalse(vault.depositsFrozen());
+        assertFalse(vault.releasesFrozen());
+        assertFalse(vault.candidatesFrozen());
+        assertFalse(vault.tokenDepositsFrozen(address(dai)));
+        assertFalse(vault.tokenReleasesFrozen(address(dai)));
+        (ok,) = _tryDeposit(address(dai));
+        assertTrue(ok);
+        (ok,) = _tryRelease(address(dai));
+        assertTrue(ok);
+        (ok,) = _trySubmitCandidate();
+        assertTrue(ok);
+    }
+
+    function test_freeze_renewingRestartsTheClock() public {
+        uint256 first = _freezeEverything();
+        vm.warp(first - 1 days);
+        uint256 second = _freezeEverything(); // renewed before it lapsed
+        assertEq(second, first - 1 days + MAX_FREEZE);
+        vm.warp(first);
+        (bool ok, bytes memory ret) = _tryRelease(ETH);
+        assertFalse(ok);
+        assertEq(ret, abi.encodeWithSelector(FerrataVault.ReleasesAreFrozen.selector));
+        vm.warp(second);
+        (ok,) = _tryRelease(ETH);
+        assertTrue(ok);
+    }
+
+    function test_freeze_aLostFreezeKeyCannotLockTheVaultForever() public {
+        _freezeEverything();
+        // The freeze authority's key is lost: nobody can unfreeze, but every freeze still lapses.
+        vm.warp(block.timestamp + MAX_FREEZE);
+        (bool ok,) = _tryDeposit(ETH);
+        assertTrue(ok);
+        (ok,) = _tryRelease(ETH);
+        assertTrue(ok);
     }
 
     function test_freeze_perTokenRequiresRegisteredToken() public {

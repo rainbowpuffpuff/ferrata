@@ -23,6 +23,7 @@ abstract contract VaultTestBase is Test {
     uint256 internal constant DELTA_FLOOR = 1 hours;
     uint256 internal constant DELTA = 2 hours;
     uint256 internal constant REVOKE_WINDOW = 3 days;
+    uint256 internal constant MAX_FREEZE = 30 days;
     address internal constant ETH = address(0);
     uint256 internal constant UNLIMITED = type(uint256).max;
     bytes internal constant SEAL = hex"5ea15ea1";
@@ -113,6 +114,7 @@ abstract contract VaultTestBase is Test {
             deltaFloor: DELTA_FLOOR,
             initialDelta: DELTA,
             revokeWindow: REVOKE_WINDOW,
+            maxFreeze: MAX_FREEZE,
             admin: admin,
             freezeAuthority: freezer,
             globalDepositCap: _unlimited(),

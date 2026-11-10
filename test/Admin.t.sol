@@ -32,6 +32,7 @@ contract ConstructorTest is VaultTestBase {
         assertEq(vault.deltaFloor(), DELTA_FLOOR);
         assertEq(vault.delta(), DELTA);
         assertEq(vault.revokeWindow(), REVOKE_WINDOW);
+        assertEq(vault.maxFreeze(), MAX_FREEZE);
         assertEq(vault.admin(), admin);
         assertEq(vault.freezeAuthority(), freezer);
         assertEq(vault.nextLeafIndex(), 0);
@@ -98,6 +99,9 @@ contract ConstructorTest is VaultTestBase {
         d = _d();
         d.revokeWindow = 0;
         _expectConstructorRevert(d, FerrataVault.InvalidRevokeWindow.selector);
+        d = _d();
+        d.maxFreeze = 0;
+        _expectConstructorRevert(d, FerrataVault.InvalidMaxFreeze.selector);
     }
 
     function test_constructor_rejectsZeroOrSharedRoles() public {

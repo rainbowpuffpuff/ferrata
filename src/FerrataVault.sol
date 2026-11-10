@@ -45,6 +45,7 @@ contract FerrataVault is ReentrancyGuardTransient {
         uint256 deltaFloor; // seconds; `delta` can never go below it
         uint256 initialDelta;
         uint256 revokeWindow; // seconds after finalisation during which a checkpoint can be revoked
+        uint256 maxFreeze; // seconds a freeze lasts unless renewed (spec §7)
         address admin;
         address freezeAuthority;
         CapParams globalDepositCap; // value units; starts full
@@ -189,6 +190,7 @@ contract FerrataVault is ReentrancyGuardTransient {
     uint32 public immutable tMin;
     uint256 public immutable deltaFloor;
     uint256 public immutable revokeWindow;
+    uint256 public immutable maxFreeze;
 
     // ------------------------------------------------------------------------------------------------------------
     // Storage. The first three variables are part of the cross-chain interface: the LEZ side reads `depositRoot`
@@ -212,11 +214,12 @@ contract FerrataVault is ReentrancyGuardTransient {
     address public pendingAdmin;
     address public freezeAuthority;
     address public pendingFreezeAuthority;
-    bool public depositsFrozen;
-    bool public releasesFrozen;
-    bool public candidatesFrozen;
     /// @notice Set once by `retire()`; deposits revert forever afterwards.
     bool public retired;
+    /// @notice Freezes are stored as the time they lapse (0: not frozen); see `depositsFrozen()` etc.
+    uint256 public depositsFrozenUntil;
+    uint256 public releasesFrozenUntil;
+    uint256 public candidatesFrozenUntil;
 
     /// @notice The latest finalised LEZ checkpoint state (starts at `genesisState`).
     bytes32 public finalState;
@@ -237,8 +240,8 @@ contract FerrataVault is ReentrancyGuardTransient {
     uint256 public sunsetSetAt;
 
     mapping(address token => TokenConfig) private _tokens;
-    mapping(address token => bool) public tokenDepositsFrozen;
-    mapping(address token => bool) public tokenReleasesFrozen;
+    mapping(address token => uint256) public tokenDepositsFrozenUntil;
+    mapping(address token => uint256) public tokenReleasesFrozenUntil;
     /// @dev Per token, every release-delay setting with the first checkpoint index it applies to (spec §5.3).
     mapping(address token => DelayChange[]) private _releaseDelays;
     mapping(address token => uint256) public escrowed;
@@ -314,11 +317,11 @@ contract FerrataVault is ReentrancyGuardTransient {
     event AdminTransferred(address indexed previousAdmin, address indexed newAdmin);
     event FreezeAuthorityTransferStarted(address indexed currentAuthority, address indexed pendingAuthority);
     event FreezeAuthorityTransferred(address indexed previousAuthority, address indexed newAuthority);
-    event DepositsFrozenSet(bool frozen);
-    event ReleasesFrozenSet(bool frozen);
-    event CandidatesFrozenSet(bool frozen);
-    event TokenDepositsFrozenSet(address indexed token, bool frozen);
-    event TokenReleasesFrozenSet(address indexed token, bool frozen);
+    event DepositsFrozenSet(bool frozen, uint256 until);
+    event ReleasesFrozenSet(bool frozen, uint256 until);
+    event CandidatesFrozenSet(bool frozen, uint256 until);
+    event TokenDepositsFrozenSet(address indexed token, bool frozen, uint256 until);
+    event TokenReleasesFrozenSet(address indexed token, bool frozen, uint256 until);
 
     // ------------------------------------------------------------------------------------------------------------
     // Errors. None carries parameters, so no error echoes user data.
@@ -337,6 +340,7 @@ contract FerrataVault is ReentrancyGuardTransient {
     error InvalidCommitteeFloor();
     error InvalidDelta();
     error InvalidRevokeWindow();
+    error InvalidMaxFreeze();
 
     error TokenAlreadyRegistered();
     error TokenNotRegistered();
@@ -431,6 +435,7 @@ contract FerrataVault is ReentrancyGuardTransient {
         if (d.nMin == 0 || d.tMin == 0) revert InvalidCommitteeFloor();
         if (d.deltaFloor == 0 || d.initialDelta < d.deltaFloor || d.initialDelta > MAX_DELTA) revert InvalidDelta();
         if (d.revokeWindow == 0) revert InvalidRevokeWindow();
+        if (d.maxFreeze == 0) revert InvalidMaxFreeze();
         if (d.admin == address(0) || d.freezeAuthority == address(0)) revert ZeroAddress();
         if (d.admin == d.freezeAuthority) revert RolesMustDiffer();
 
@@ -444,6 +449,7 @@ contract FerrataVault is ReentrancyGuardTransient {
         tMin = d.tMin;
         deltaFloor = d.deltaFloor;
         revokeWindow = d.revokeWindow;
+        maxFreeze = d.maxFreeze;
 
         // The root of the empty tree, so that `depositRoot` is always the root of the current tree.
         bytes32 emptySubtree = bytes32(0);
@@ -544,7 +550,7 @@ contract FerrataVault is ReentrancyGuardTransient {
 
     /// @notice Submits a candidate checkpoint built on `finalState`. Permissionless; starts its `delta` wait.
     function submitCandidate(Checkpoint calldata c, bytes calldata seal) external {
-        if (candidatesFrozen) revert CandidatesAreFrozen();
+        if (_frozen(candidatesFrozenUntil)) revert CandidatesAreFrozen();
         if (c.parentState != finalState) revert ParentNotFinal();
         if (c.echoNonce != bytes32(0)) revert EchoNonceNotZero();
         if (c.nMin != nMin || c.tMin != tMin) revert WrongCommitteeFloor();
@@ -730,34 +736,36 @@ contract FerrataVault is ReentrancyGuardTransient {
 
     // ------------------------------------------------------------------------------------------------------------
     // Freeze authority. It cannot touch the registry, caps or escrow; the admin cannot freeze or unfreeze.
+    // A freeze lasts `maxFreeze` unless renewed (freezing again restarts it), so a lost key cannot lock the vault
+    // forever (spec §7). Unfreezing ends it at once.
     // ------------------------------------------------------------------------------------------------------------
 
     function setDepositsFrozen(bool frozen) external onlyFreezeAuthority {
-        depositsFrozen = frozen;
-        emit DepositsFrozenSet(frozen);
+        depositsFrozenUntil = _freezeUntil(frozen);
+        emit DepositsFrozenSet(frozen, depositsFrozenUntil);
     }
 
     function setReleasesFrozen(bool frozen) external onlyFreezeAuthority {
-        releasesFrozen = frozen;
-        emit ReleasesFrozenSet(frozen);
+        releasesFrozenUntil = _freezeUntil(frozen);
+        emit ReleasesFrozenSet(frozen, releasesFrozenUntil);
     }
 
     /// @notice Stops new candidates. Candidates already submitted can still be finalised (spec §4.3).
     function setCandidatesFrozen(bool frozen) external onlyFreezeAuthority {
-        candidatesFrozen = frozen;
-        emit CandidatesFrozenSet(frozen);
+        candidatesFrozenUntil = _freezeUntil(frozen);
+        emit CandidatesFrozenSet(frozen, candidatesFrozenUntil);
     }
 
     function setTokenDepositsFrozen(address token, bool frozen) external onlyFreezeAuthority {
         _requireRegistered(token);
-        tokenDepositsFrozen[token] = frozen;
-        emit TokenDepositsFrozenSet(token, frozen);
+        tokenDepositsFrozenUntil[token] = _freezeUntil(frozen);
+        emit TokenDepositsFrozenSet(token, frozen, tokenDepositsFrozenUntil[token]);
     }
 
     function setTokenReleasesFrozen(address token, bool frozen) external onlyFreezeAuthority {
         _requireRegistered(token);
-        tokenReleasesFrozen[token] = frozen;
-        emit TokenReleasesFrozenSet(token, frozen);
+        tokenReleasesFrozenUntil[token] = _freezeUntil(frozen);
+        emit TokenReleasesFrozenSet(token, frozen, tokenReleasesFrozenUntil[token]);
     }
 
     /// @notice Stops deposits forever (spec §4.5). It cannot touch escrow, checkpoints or releases.
@@ -853,6 +861,26 @@ contract FerrataVault is ReentrancyGuardTransient {
         return _tokens[token].relayFees;
     }
 
+    function depositsFrozen() external view returns (bool) {
+        return _frozen(depositsFrozenUntil);
+    }
+
+    function releasesFrozen() external view returns (bool) {
+        return _frozen(releasesFrozenUntil);
+    }
+
+    function candidatesFrozen() external view returns (bool) {
+        return _frozen(candidatesFrozenUntil);
+    }
+
+    function tokenDepositsFrozen(address token) external view returns (bool) {
+        return _frozen(tokenDepositsFrozenUntil[token]);
+    }
+
+    function tokenReleasesFrozen(address token) external view returns (bool) {
+        return _frozen(tokenReleasesFrozenUntil[token]);
+    }
+
     /// @notice The release delay that applies to roots finalised from now on.
     function releaseDelay(address token) external view returns (uint256) {
         return _releaseDelayFor(token, checkpoints.length);
@@ -922,10 +950,10 @@ contract FerrataVault is ReentrancyGuardTransient {
         returns (uint256 amount)
     {
         if (retired) revert VaultRetired();
-        if (depositsFrozen) revert DepositsAreFrozen();
+        if (_frozen(depositsFrozenUntil)) revert DepositsAreFrozen();
         TokenConfig storage cfg = _tokens[token];
         if (!cfg.registered) revert TokenNotRegistered();
-        if (tokenDepositsFrozen[token]) revert TokenDepositsAreFrozen();
+        if (_frozen(tokenDepositsFrozenUntil[token])) revert TokenDepositsAreFrozen();
         if (!cfg.depositsEnabled) revert DepositsDisabled();
         if (denomIndex >= cfg.denominations.length) revert InvalidDenominationIndex();
         if (commitment == bytes32(0)) revert ZeroCommitment();
@@ -1017,10 +1045,10 @@ contract FerrataVault is ReentrancyGuardTransient {
     // ------------------------------------------------------------------------------------------------------------
 
     function _checkRelease(ReleaseRequest calldata r) internal view returns (uint256 amount) {
-        if (releasesFrozen) revert ReleasesAreFrozen();
+        if (_frozen(releasesFrozenUntil)) revert ReleasesAreFrozen();
         TokenConfig storage cfg = _tokens[r.token];
         if (!cfg.registered) revert TokenNotRegistered();
-        if (tokenReleasesFrozen[r.token]) revert TokenReleasesAreFrozen();
+        if (_frozen(tokenReleasesFrozenUntil[r.token])) revert TokenReleasesAreFrozen();
         if (r.denomIndex >= cfg.denominations.length) revert InvalidDenominationIndex();
         amount = cfg.denominations[r.denomIndex];
         if (r.recipient == address(0)) revert ZeroRecipient();
@@ -1167,6 +1195,14 @@ contract FerrataVault is ReentrancyGuardTransient {
     // ------------------------------------------------------------------------------------------------------------
     // Internal: access control and registry validation
     // ------------------------------------------------------------------------------------------------------------
+
+    function _freezeUntil(bool frozen) internal view returns (uint256) {
+        return frozen ? block.timestamp + maxFreeze : 0;
+    }
+
+    function _frozen(uint256 until) internal view returns (bool) {
+        return block.timestamp < until;
+    }
 
     function _checkAdmin() internal view {
         if (msg.sender != admin) revert NotAdmin();

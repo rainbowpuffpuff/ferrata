@@ -7,6 +7,7 @@ import {Receipt as RiscZeroReceipt} from "risc0/IRiscZeroVerifier.sol";
 import {RiscZeroVerifierEmergencyStop} from "risc0/RiscZeroVerifierEmergencyStop.sol";
 
 import {FerrataVault} from "../src/FerrataVault.sol";
+import {ToggleRecipient} from "./mocks/MockRecipients.sol";
 import {ReferenceMerkle} from "./utils/ReferenceMerkle.sol";
 import {VaultTestBase} from "./utils/VaultTestBase.sol";
 
@@ -16,16 +17,23 @@ import {VaultTestBase} from "./utils/VaultTestBase.sol";
 contract EmergencyStopTest is VaultTestBase {
     bytes32 internal constant ROOT = keccak256("burn root");
 
-    function test_estop_stopsCandidatesFinalisationAndReleases_notRefundsOrRoles() public {
-        // Leaf 0 is imported on LEZ and later released; leaf 1 never is, and is refundable after the sunset.
+    function test_estop_stopsCandidatesFinalisationAndReleases_notRefundsClaimsOrRoles() public {
+        // Leaves 0 and 1 are imported on LEZ (one is released before the stop, to a payee that cannot receive);
+        // leaf 2 never is, and is refundable after the sunset.
         _deposit(alice, ETH, 1, keccak256("c0"));
-        _deposit(bob, ETH, 0, keccak256("c1"));
-        bytes32[] memory leaves = new bytes32[](2);
+        _deposit(alice, ETH, 1, keccak256("c1"));
+        _deposit(bob, ETH, 0, keccak256("c2"));
+        bytes32[] memory leaves = new bytes32[](3);
         leaves[0] = ReferenceMerkle.leafHash(0, alice, ETH, 1 ether, keccak256("c0"));
-        leaves[1] = ReferenceMerkle.leafHash(1, bob, ETH, 0.1 ether, keccak256("c1"));
-        FerrataVault.Checkpoint memory sunset = _nextCheckpoint(vault, ROOT, 1, true);
+        leaves[1] = ReferenceMerkle.leafHash(1, alice, ETH, 1 ether, keccak256("c1"));
+        leaves[2] = ReferenceMerkle.leafHash(2, bob, ETH, 0.1 ether, keccak256("c2"));
+        FerrataVault.Checkpoint memory sunset = _nextCheckpoint(vault, ROOT, 2, true);
         _submit(sunset);
         _finalizeAfterDelta(sunset);
+
+        ToggleRecipient payee = new ToggleRecipient(); // cannot receive yet
+        _release(_request(ETH, 1, address(payee), ROOT, keccak256("paid before the stop")));
+        assertEq(vault.owed(address(payee), ETH), 1 ether);
 
         FerrataVault.Checkpoint memory pending = _nextCheckpoint(keccak256("next root"));
         _submit(pending); // submitted before the stop
@@ -54,14 +62,22 @@ contract EmergencyStopTest is VaultTestBase {
         vault.release(r, SEAL);
         assertFalse(vault.nullifierUsed(r.nullifier));
 
-        // No proof involved: refunds, deposits and role handovers still work.
-        bytes32[] memory siblings = ReferenceMerkle.path(leaves, 1);
+        // No proof involved: refunds, owed claims, revocation and role handovers still work.
+        bytes32[] memory siblings = ReferenceMerkle.path(leaves, 2);
         bytes32[32] memory path;
         for (uint256 h = 0; h < 32; h++) {
             path[h] = siblings[h];
         }
-        vault.refund(1, bob, ETH, 0, keccak256("c1"), path);
+        vault.refund(2, bob, ETH, 0, keccak256("c2"), path);
         assertEq(bob.balance, 0.1 ether);
+
+        payee.setOpen(true);
+        payee.claim(address(vault), ETH);
+        assertEq(address(payee).balance, 1 ether);
+
+        vm.prank(freezer);
+        vault.revokeFrom(0);
+        assertEq(vault.finalState(), GENESIS_STATE);
 
         address newAdmin = makeAddr("newAdmin");
         vm.prank(admin);
