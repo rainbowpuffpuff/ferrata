@@ -1,21 +1,21 @@
-program image 2f3566d4f460620867a93b557776400b1039142ce92203072170c162ba2ec130 (592752 ELF bytes); consumer image 711584ffe09f0b115132e33ce1485666710bc73e696e66fcc54d00aad0db949f; RISC0_DEV_MODE on
-private transition (VerifyAll, finality update): 9,046,319 user cycles, 10 segments, 9,699,328 cycles padded (sum of 2^po2), exit Halted(0)
+program image 9f3eb00f54f911e41710fc57d6b0258846bd4db61b57674b8a33a6457bda3e7b (602912 ELF bytes); consumer image f883e6a4dbd8e49439465f918884abe1379b02276ff88676f0a4bf958ee49068; RISC0_DEV_MODE on
+private transition (VerifyAll, finality update): 9,048,754 user cycles, 10 segments, 9,699,328 cycles padded (sum of 2^po2), exit Halted(0)
 WARNING: proving in dev mode. This will not generate valid, secure proofs.
 WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
 WARNING: proving in dev mode. This will not generate valid, secure proofs.
 WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
-DRY RUN, NOT A PROOF (RISC0_DEV_MODE=1): execute_and_prove 1.4 s (prove + settle 1.6 s); receipt (fake receipt) 4099 bytes; transaction 8085 bytes
+DRY RUN, NOT A PROOF (RISC0_DEV_MODE=1): execute_and_prove 1.2 s (prove + settle 1.5 s); receipt (fake receipt) 4099 bytes; transaction 8085 bytes
 wrote the proven transaction to target/dry-run-tx.borsh (8085 bytes)
-public_context.actors (3): native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@CaaDpeLpoQ78nJKXvPtpmUP2s87eowXZeDFCnArYDSie, ferrata@CscQpvi8tqJEbFSz6QroaNs5PuguoJEVpewr1jX76uKi
+public_context.actors (3): ferrata@8eFzBrUp5Avp8A6BgTmExBiCJtPTPrp2AdNtVb1L96tK, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@98nuLdy4rvh69odJA3nszo4zfisBxqtF27qVFuuKgvaB
 public_context.authorized_accounts: {}
 execution.public_root: None
 execution.boundary (4 steps):
-  - PrivateToPublic from ferrata@EoTYfFi4rVfLkTBefMr8sB6GcyhRTZv682hg9J1S1QsL to ferrata@CscQpvi8tqJEbFSz6QroaNs5PuguoJEVpewr1jX76uKi: ApplyVerified { instance_id: ce624027489c, job: 470 bytes } (507 bytes)
+  - PrivateToPublic from ferrata@EoTYfFi4rVfLkTBefMr8sB6GcyhRTZv682hg9J1S1QsL to ferrata@8eFzBrUp5Avp8A6BgTmExBiCJtPTPrp2AdNtVb1L96tK: ApplyVerified { instance_id: ce624027489c, job: 470 bytes } (507 bytes)
   - EndPublicSubtree
   - PrivateToPublic from native@EoTYfFi4rVfLkTBefMr8sB6GcyhRTZv682hg9J1S1QsL to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
   - EndPublicSubtree
 execution.program_image_claims (1):
-  - Disclosed { program: ferrata, image_id: 2f3566d4f460620867a93b557776400b1039142ce92203072170c162ba2ec130 }
+  - Disclosed { program: ferrata, image_id: 9f3eb00f54f911e41710fc57d6b0258846bd4db61b57674b8a33a6457bda3e7b }
 execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1233 bytes)
 execution.async_messages: 0
 execution.recovery_bindings: 0
@@ -23,4 +23,4 @@ execution.validity: ValidityWindows { blocks: ValidityWindow { from: None, to: N
 execution.fee: Some("refund_to Some(78Skt7EQTvVwfWVYnA1XMjghv3aUR1V5wgQAfVLKJZG5), fallback true")
 nonces: 0, admission evidence: 0
 
-settled: execution gas 481,743 (PRIVATE_VERIFY_GAS 409,764 + public part 71,979 cycles), storage gas 224,063, base fee 5,646,448
+settled: execution gas 482,524 (PRIVATE_VERIFY_GAS 409,764 + public part 72,760 cycles), storage gas 224,063, base fee 5,652,696

@@ -2,18 +2,18 @@ Stage 3: a private consumer reads header(id, slot), image undisclosed
 
 Decoded public fields (harness::private::describe_public_outputs):
 
-public_context.actors (2): native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@CaaDpeLpoQ78nJKXvPtpmUP2s87eowXZeDFCnArYDSie
+public_context.actors (2): native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@98nuLdy4rvh69odJA3nszo4zfisBxqtF27qVFuuKgvaB
 public_context.authorized_accounts: {}
 execution.public_root: None
 execution.boundary (6 steps):
-  - PrivateToPublic from consumer@AodAGCgEG5tEZ9G66zav6VgeBX9hfvyxnimA6U3L6j1C to ferrata@CaaDpeLpoQ78nJKXvPtpmUP2s87eowXZeDFCnArYDSie: Read (1 bytes)
-  - PublicToPrivate from ferrata@CaaDpeLpoQ78nJKXvPtpmUP2s87eowXZeDFCnArYDSie to consumer@AodAGCgEG5tEZ9G66zav6VgeBX9hfvyxnimA6U3L6j1C: StateReply { state: 333 bytes } (337 bytes)
+  - PrivateToPublic from consumer@AodAGCgEG5tEZ9G66zav6VgeBX9hfvyxnimA6U3L6j1C to ferrata@98nuLdy4rvh69odJA3nszo4zfisBxqtF27qVFuuKgvaB: Read (1 bytes)
+  - PublicToPrivate from ferrata@98nuLdy4rvh69odJA3nszo4zfisBxqtF27qVFuuKgvaB to consumer@AodAGCgEG5tEZ9G66zav6VgeBX9hfvyxnimA6U3L6j1C: StateReply { state: 333 bytes } (337 bytes)
   - EndPrivateSubtree
   - EndPublicSubtree
   - PrivateToPublic from native@AodAGCgEG5tEZ9G66zav6VgeBX9hfvyxnimA6U3L6j1C to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
   - EndPublicSubtree
 execution.program_image_claims (1):
-  - Undisclosed { commitment root: 68bcf51bd719dd2b5a9bb4d3f848b8fd3df3abc5e6942b89bdf655a853b87141 }
+  - Undisclosed { commitment root: 2a28699cd5b5fcda741b4840d179270ace74c1e5d2c18cc73571f821f85ec999 }
 execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1647 bytes)
 execution.async_messages: 0
 execution.recovery_bindings: 0
@@ -31,4 +31,4 @@ The 8653 serialized bytes of the transaction were searched for the consumer's pr
 - the viewing key seed d (32 bytes): absent
 - the viewing key seed z (32 bytes): absent
 
-Charged: execution gas 421,642 (PRIVATE_VERIFY_GAS 409,764 + public part 11,878 cycles), storage gas 224,063.
+Charged: execution gas 421,641 (PRIVATE_VERIFY_GAS 409,764 + public part 11,877 cycles), storage gas 224,063.
