@@ -1,37 +1,62 @@
-//! Inbound leg (Ethereum deposit -> LEZ mint).
+//! Inbound leg (Ethereum deposit -> LEZ mint), SPEC-v2 §3.
 //!
-//! The wallet derives a per-deposit secret `s` from the bridge key `k` and the deposit's public
-//! coordinates (vault, depositor, the depositor's deposit counter `j`), deposits with the
-//! commitment `C = H(s ‖ dest)`, and later claims by opening `C` under an imported deposit root.
-//! The nullifier `N = H(s ‖ fid)` is a function of the secret and of the leaf's identity, not of
-//! the root or of who submits the claim, so a public claim and a privately proven claim of the
-//! same deposit publish the same `N`, and a deposit cannot be claimed twice under two roots.
+//! The wallet derives a per-deposit secret `s` from `kAuth` and the deposit's public coordinates
+//! (chain, vault, depositor, the depositor's counter `j`), deposits with `C = H(s ‖ kind ‖ dest)`,
+//! and later claims by opening `C` under an imported deposit root. The nullifier
+//! `N = H(s ‖ fid)` depends on the secret and on `fid`, the identifier of "leaf `leafIndex` of the
+//! accumulator at slot 0 of `vault`", never on the root: a deposit has one nullifier under every
+//! later root, so it cannot be claimed once per root.
 
 use crate::encoding::{
     commitment_preimage, deposit_id_preimage, deposit_leaf_preimage, deposit_secret_message, nullifier_preimage,
 };
-use crate::tree::{verify_path, Path};
-use crate::{sha256, Address, BridgeKey, Hash, VerifyError, U256};
+use crate::tree::{verify_path, MerklePath};
+use crate::{sha256, Address, BridgeKey, Hash, VerifyError, WriteOnceSet, U256};
 
-/// `s = HMAC-SHA256(k, "ferrata/s/v1" ‖ chain_id ‖ vault ‖ depositor ‖ j)`, where `j` is the
-/// vault's `depositCount[depositor]` at the time of the deposit.
-pub fn deposit_secret(key: &BridgeKey, chain_id: u64, vault: &Address, depositor: &Address, j: u64) -> Hash {
-    key.prf(&deposit_secret_message(chain_id, vault, depositor, j))
+/// The destination kind committed in `C` (§3.3). A private-kind claim must execute as the
+/// destination account itself; the kind byte stops a commitment made for one kind from being
+/// opened as the other.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[repr(u8)]
+pub enum DestKind {
+    /// A private LEZ account (`0x01`).
+    Private = 0x01,
+    /// A public LEZ account (`0x02`).
+    Public = 0x02,
 }
 
-/// `C = sha256("ferrata/C/v1" ‖ s ‖ dest)`; `dest` is the LEZ account id that receives the mint.
-pub fn commitment(s: &Hash, dest: &Hash) -> Hash {
-    sha256(&commitment_preimage(s, dest))
+impl DestKind {
+    /// Both kinds.
+    pub const ALL: [DestKind; 2] = [DestKind::Private, DestKind::Public];
+
+    /// The kind with this byte, if any.
+    pub fn from_byte(b: u8) -> Option<Self> {
+        match b {
+            0x01 => Some(DestKind::Private),
+            0x02 => Some(DestKind::Public),
+            _ => None,
+        }
+    }
 }
 
-/// The vault's leaf for a deposit:
-/// `sha256(0x00 ‖ LEAF_TAG ‖ leaf_index ‖ token ‖ amount ‖ C)`.
-pub fn deposit_leaf(leaf_index: u64, token: &Address, amount: &U256, commitment: &Hash) -> Hash {
-    sha256(&deposit_leaf_preimage(leaf_index, token, amount, commitment))
+/// `s = HMAC(kAuth, "ferrata/s/v1" ‖ evmChainId ‖ vault ‖ depositor ‖ j)`, `j` being the vault's
+/// `depositCount[depositor]` at deposit time.
+pub fn deposit_secret(auth: &BridgeKey, chain_id: &U256, vault: &Address, depositor: &Address, j: u64) -> Hash {
+    auth.prf(&deposit_secret_message(chain_id, vault, depositor, j))
 }
 
-/// `fid = sha256("ferrata/deposit/v1" ‖ chain_id ‖ vault ‖ leaf_index ‖ leaf)`.
-pub fn deposit_id(chain_id: u64, vault: &Address, leaf_index: u64, leaf: &Hash) -> Hash {
+/// `C = sha256("ferrata/C/v1" ‖ s ‖ kind ‖ dest)`.
+pub fn commitment(s: &Hash, kind: DestKind, dest: &Hash) -> Hash {
+    sha256(&commitment_preimage(s, kind, dest))
+}
+
+/// The vault's leaf: `sha256(0x00 ‖ LEAF_TAG ‖ leafIndex ‖ depositor ‖ token ‖ amount ‖ C)`.
+pub fn deposit_leaf(leaf_index: u64, depositor: &Address, token: &Address, amount: &U256, c: &Hash) -> Hash {
+    sha256(&deposit_leaf_preimage(leaf_index, depositor, token, amount, c))
+}
+
+/// `fid = sha256("ferrata/fact/acc-leaf/v1" ‖ evmChainId ‖ vault ‖ slot 0 ‖ leafIndex ‖ leaf)`.
+pub fn deposit_id(chain_id: &U256, vault: &Address, leaf_index: u64, leaf: &Hash) -> Hash {
     sha256(&deposit_id_preimage(chain_id, vault, leaf_index, leaf))
 }
 
@@ -40,39 +65,68 @@ pub fn nullifier(s: &Hash, fid: &Hash) -> Hash {
     sha256(&nullifier_preimage(s, fid))
 }
 
-/// What a claimant knows about one deposit. In a public claim the whole witness is public; in a
-/// private claim it stays inside the proof.
+/// Everything a claimant knows about one deposit. In a plaintext public claim the whole witness is
+/// public; in a privacy-preserving claim it stays inside the proof.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ClaimWitness {
+    /// `msg.sender` of the deposit (bound in the leaf).
+    pub depositor: Address,
     /// Token deposited (`0x00…00` = native ETH).
     pub token: Address,
     /// Amount deposited.
     pub amount: U256,
-    /// The deposit's leaf index in the vault tree.
+    /// The deposit's leaf index.
     pub leaf_index: u64,
-    /// Merkle path of the leaf under the claimed root.
-    pub path: Path,
+    /// Merkle path of the leaf under the claimed root; its direction bits must equal `leaf_index`.
+    pub path: MerklePath,
     /// The deposit secret.
     pub s: Hash,
-    /// The LEZ destination committed to in `C`.
+    /// Destination kind.
+    pub kind: DestKind,
+    /// The LEZ destination account id.
     pub dest: Hash,
 }
 
-/// The claim statement: recomputes `C`, the leaf, and the path to `root`, and returns the
-/// nullifier `N`. On success the caller mints `amount` of `token` to `dest` and records `N`.
-pub fn verify_claim(root: &Hash, w: &ClaimWitness, chain_id: u64, vault: &Address) -> Result<Hash, VerifyError> {
-    let c = commitment(&w.s, &w.dest);
-    let leaf = deposit_leaf(w.leaf_index, &w.token, &w.amount, &c);
+/// The claim statement (§3.3): recomputes `C` and the leaf, checks the path to `root` with direction
+/// bits equal to `leafIndex`, and returns `N`. The caller then publishes `N`, `token` and `amount`
+/// and mints to `dest`. `chain_id` and `vault` enter only `N`: they must come from the program's
+/// configuration (the vault whose root was imported), never from the claimant.
+pub fn verify_claim(root: &Hash, w: &ClaimWitness, chain_id: &U256, vault: &Address) -> Result<Hash, VerifyError> {
+    let c = commitment(&w.s, w.kind, &w.dest);
+    let leaf = deposit_leaf(w.leaf_index, &w.depositor, &w.token, &w.amount, &c);
     verify_path(root, &leaf, w.leaf_index, &w.path)?;
     Ok(nullifier(&w.s, &deposit_id(chain_id, vault, w.leaf_index, &leaf)))
 }
 
-/// One `Deposit` event of the vault: `(depositor, index j, leafIndex, token, amount, commitment)`.
+/// Key of an inbound nullifier account (§1): one namespace for the whole bridge program, keyed by
+/// `(evmChainId, vault, N)`, so two configurations cannot both mint against one vault deposit.
+pub type NullifierKey = (U256, Address, Hash);
+
+/// A claim whose nullifier is already recorded.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct AlreadyClaimed;
+
+/// What the LEZ bridge program does after [`verify_claim`]: record `(evmChainId, vault, N)` in its
+/// write-once nullifier set, refusing a second claim of the same deposit.
+pub fn register_claim(
+    nullifiers: &mut impl WriteOnceSet<NullifierKey>,
+    chain_id: &U256,
+    vault: &Address,
+    n: &Hash,
+) -> Result<(), AlreadyClaimed> {
+    if nullifiers.insert_new((*chain_id, *vault, *n)) {
+        Ok(())
+    } else {
+        Err(AlreadyClaimed)
+    }
+}
+
+/// One `Deposit` event of the vault.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct VaultDeposit {
     /// `msg.sender` of the deposit.
     pub depositor: Address,
-    /// The depositor's deposit counter `j` (`Deposit.index`).
+    /// The depositor's counter `j`.
     pub j: u64,
     /// Position in the deposit tree.
     pub leaf_index: u64,
@@ -91,36 +145,52 @@ pub struct OwnedDeposit {
     pub deposit: VaultDeposit,
     /// The deposit secret.
     pub s: Hash,
-    /// The LEZ destination.
+    /// Destination kind.
+    pub kind: DestKind,
+    /// The wallet's account index of the destination.
+    pub account_index: u32,
+    /// The destination account id.
     pub dest: Hash,
     /// The vault leaf.
     pub leaf: Hash,
-    /// The nullifier the claim will publish.
+    /// The nullifier a claim will publish.
     pub nullifier: Hash,
 }
 
-/// Wallet recovery: one pass over every deposit of the vault, keeping those whose commitment
-/// opens with `s` derived from `key` and the destination `dest_for(depositor, j)`. Costs one
-/// HMAC, one SHA-256 and one `dest_for` call per deposit.
+/// Wallet recovery (§3.3, review §7): one pass over every deposit of the vault. For each deposit,
+/// `s` is derived from `kAuth` and the deposit's `(depositor, j)`, and `C` is recomputed for the
+/// `2·gap` candidate destinations `dest_of(kind, a)`, `a = 0..gap`, both kinds (computed once, up
+/// front). Destinations outside that window, or not derived from the seed, are not found.
+/// Cost per deposit: one HMAC and up to `2·gap` SHA-256 of 77 bytes.
 #[cfg(feature = "std")]
 pub fn recover(
-    key: &BridgeKey,
-    chain_id: u64,
+    auth: &BridgeKey,
+    chain_id: &U256,
     vault: &Address,
     deposits: &[VaultDeposit],
-    dest_for: impl Fn(&Address, u64) -> Hash,
+    gap: u32,
+    dest_of: impl Fn(DestKind, u32) -> Hash,
 ) -> Vec<OwnedDeposit> {
-    deposits
-        .iter()
-        .filter_map(|d| {
-            let s = deposit_secret(key, chain_id, vault, &d.depositor, d.j);
-            let dest = dest_for(&d.depositor, d.j);
-            if commitment(&s, &dest) != d.commitment {
-                return None;
-            }
-            let leaf = deposit_leaf(d.leaf_index, &d.token, &d.amount, &d.commitment);
+    let candidates: Vec<(DestKind, u32, Hash)> =
+        (0..gap).flat_map(|a| DestKind::ALL.map(|kind| (kind, a, dest_of(kind, a)))).collect();
+    let mut owned = Vec::new();
+    for d in deposits {
+        let s = deposit_secret(auth, chain_id, vault, &d.depositor, d.j);
+        if let Some((kind, account_index, dest)) =
+            candidates.iter().find(|(kind, _, dest)| commitment(&s, *kind, dest) == d.commitment)
+        {
+            let leaf = deposit_leaf(d.leaf_index, &d.depositor, &d.token, &d.amount, &d.commitment);
             let nullifier = nullifier(&s, &deposit_id(chain_id, vault, d.leaf_index, &leaf));
-            Some(OwnedDeposit { deposit: d.clone(), s, dest, leaf, nullifier })
-        })
-        .collect()
+            owned.push(OwnedDeposit {
+                deposit: d.clone(),
+                s,
+                kind: *kind,
+                account_index: *account_index,
+                dest: *dest,
+                leaf,
+                nullifier,
+            });
+        }
+    }
+    owned
 }

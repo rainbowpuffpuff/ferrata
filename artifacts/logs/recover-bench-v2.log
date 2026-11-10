@@ -1,0 +1,11 @@
+2026-11-10T02:11:32+01:00
+model name	: AMD Ryzen 9 7940HS w/ Radeon 780M Graphics
+loadavg before: 3.40 5.75 5.58 6/3966 2796842
+recover, 100000 deposits, g = 5 (2g = 10 candidate C per deposit), 7 own found (8 planted): 5 runs, ms: ["156.5", "130.3", "118.8", "128.9", "127.8"]
+  min 118.8 ms, median 128.9 ms, max 156.5 ms; public data read: 6000000 bytes to match (60/deposit), 12000000 bytes with every leaf for paths (120/deposit)
+recover, 1000000 deposits, g = 5 (2g = 10 candidate C per deposit), 7 own found (8 planted): 5 runs, ms: ["1308.6", "1561.5", "1310.1", "1202.2", "1265.8"]
+  min 1202.2 ms, median 1308.6 ms, max 1561.5 ms; public data read: 60000000 bytes to match (60/deposit), 120000000 bytes with every leaf for paths (120/deposit)
+loadavg after: 3.87 5.77 5.59 4/3982 2797573
+	User time (seconds): 7.47
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:07.58
+	Maximum resident set size (kbytes): 119132

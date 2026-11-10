@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Independent check of vectors/*.json: recomputes every output from its inputs with the Python
 standard library (hashlib, hmac) and the layouts written in the README, sharing no code with the
-Rust crate. Run: python3 -I scripts/check_vectors.py [vectors-dir]"""
+Rust crate. Run: python3 -I scripts/check_vectors_v1.py [vectors-dir]  (v1 encodings, superseded; kept to check vectors/v1)"""
 
 import hashlib
 import hmac
@@ -196,7 +196,7 @@ def check_journals(v):
 
 
 def main():
-    d = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else pathlib.Path(__file__).resolve().parent.parent / "vectors")
+    d = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else pathlib.Path(__file__).resolve().parent.parent / "vectors" / "v1")
     load = lambda n: json.loads((d / n).read_text())
     check_tags(load("tags.json"))
     check_tree(load("deposit-tree.json"), LEAF_TAG)
