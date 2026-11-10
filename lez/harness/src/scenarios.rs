@@ -38,8 +38,8 @@ impl World {
         Self::from_parts(mainnet_config(parts), root(TRUSTED_BLOCK_ROOT), mainnet_bootstrap(), mainnet_updates())
     }
 
-    /// An instance of `config` (Electra layout) initialized from `bootstrap` at `checkpoint`, on
-    /// a new chain; `updates` are kept for the caller to apply.
+    /// An instance of `config` initialized from `bootstrap` (in the layout `config.store_fork`
+    /// names) at `checkpoint`, on a new chain; `updates` are kept for the caller to apply.
     pub fn from_parts(
         config: Config,
         checkpoint: Root,
@@ -61,7 +61,7 @@ impl World {
         let spec = config.spec();
         let inst = Instance::new(program, config, checkpoint);
         let native =
-            FinalizedStore::initialize_with(&checkpoint, &bootstrap, LcFork::Electra, &spec, &BLS, Adoption::OnChain)
+            FinalizedStore::initialize_with(&checkpoint, &bootstrap, inst.fork(), &spec, &BLS, Adoption::OnChain)
                 .unwrap();
         let run = inst.init(&mut chain, &bootstrap, "Init");
         assert!(run.reports.iter().all(TxReport::ok), "initialization refused: {:?}", run.reports);
@@ -91,20 +91,31 @@ impl World {
         let record = self.inst.record(&self.chain, slot).expect("record written");
         assert_eq!(record.instance_id, self.inst.id);
         assert_eq!(record.chain_id, self.inst.config.chain_id, "the record carries the instance's chain id");
-        let expected = HeaderRecord::of(&self.native.core().finalized_header, LcFork::Electra, &self.spec);
+        let native = self.native.core();
+        let expected = HeaderRecord::of(&native.finalized_header, native.fork, &self.spec);
         assert_eq!(record.record, expected.encode(), "the record is the native finalized header's");
     }
 
-    /// Run `update` as a job on LEZ and natively; they must agree.
+    /// Run `update` as a job on LEZ and natively; they must agree. The update goes to the
+    /// instance in the layout a beacon node serves it in ([`Instance::layout_for`]). Where that
+    /// is a later layout than the store's, the instance upgrades itself; the native store is
+    /// upgraded here by hand, as a light client does at a fork, and keeps the upgrade only if
+    /// the update is accepted.
     pub fn apply(&mut self, update: &LightClientUpdate, label: &str) -> JobRun {
-        let before = self.native.core().clone();
+        let layout = self.inst.layout_for(&self.inst.store(&self.chain), update);
+        let mut next = self.native.clone();
+        if layout > next.core().fork {
+            next.upgrade(layout, &self.spec).expect("a store upgrades forwards");
+        }
+        let before = next.core().clone();
         let ctx =
             Context { spec: &self.spec, genesis_validators_root: self.inst.config.genesis_validators_root, bls: &BLS };
-        let native = self.native.process_update(update, update.signature_slot + 1, &ctx);
-        let run = self.inst.update(&mut self.chain, update, &before, label);
+        let native = next.process_update(update, update.signature_slot + 1, &ctx);
+        let run = self.inst.update_in(&mut self.chain, update, layout, &before, label);
         let all_ok = run.reports.iter().all(TxReport::ok);
         match native {
             Ok(outcome) => {
+                self.native = next;
                 assert!(all_ok, "{label}: LEZ refused what the native store accepts: {:#?}", run.reports.last());
                 assert_eq!(run.outcome, Some(outcome), "{label}: outcomes differ");
                 self.check_store();

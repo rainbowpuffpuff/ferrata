@@ -80,22 +80,22 @@ fn handle(input: &ReceiveInput) -> Result<Response, Refusal> {
             Ok(Response::set_state(encode(&ConsumerState::Reader(state)))
                 .send_sync(header, &Message::Attest { request }))
         }
-        ConsumerMessage::Claim { pool, slot, tx_index, log_index, proof } => {
-            claim(state, pool, slot, tx_index, log_index, proof)
+        ConsumerMessage::Claim { pool, slot, tx_index, log_index, proof, header } => {
+            claim(state, pool, slot, tx_index, log_index, proof, header)
         }
-        ConsumerMessage::AttestPrivately { pool, slot, tx_index, log_index, proof } => {
+        ConsumerMessage::AttestPrivately { pool, slot, tx_index, log_index, proof, header } => {
             let private = match state {
                 None => PrivateState::default(),
                 Some(ConsumerState::Private(private)) => private,
                 Some(_) => return Err(code::BAD_STATE),
             };
-            let header = header_actor(pool.ferrata, &pool.instance_id, slot);
+            let record = header_actor(pool.ferrata, &pool.instance_id, slot);
             let state = PrivateState {
-                awaiting: Some(header),
-                pending: Some(PendingAttest { pool, tx_index, log_index, proof }),
+                awaiting: Some(record),
+                pending: Some(PendingAttest { pool, tx_index, log_index, proof, header }),
                 ..private
             };
-            Ok(Response::set_state(encode(&ConsumerState::Private(state))).send_sync(header, &Message::Read))
+            Ok(Response::set_state(encode(&ConsumerState::Private(state))).send_sync(record, &Message::Read))
         }
         ConsumerMessage::Credit { pool_id, nullifier, owner, amount } => {
             credit(input, program, state, pool_id, nullifier, owner, amount)
@@ -124,6 +124,7 @@ fn claim(
     tx_index: u64,
     log_index: u64,
     proof: Vec<Vec<u8>>,
+    header: Option<Vec<u8>>,
 ) -> Result<Response, Refusal> {
     match state {
         None | Some(ConsumerState::Claim(ClaimState::Pending { .. })) => {}
@@ -131,10 +132,10 @@ fn claim(
         Some(_) => return Err(code::BAD_STATE),
     }
     // The record is addressed from the pool alone: its program, its instance.
-    let header = header_actor(pool.ferrata, &pool.instance_id, slot);
-    let request = pool.request(tx_index, log_index, proof);
-    let state = ConsumerState::Claim(ClaimState::Pending { pool, header });
-    Ok(Response::set_state(encode(&state)).send_sync(header, &Message::Attest { request }))
+    let record = header_actor(pool.ferrata, &pool.instance_id, slot);
+    let request = pool.request(tx_index, log_index, proof, header);
+    let state = ConsumerState::Claim(ClaimState::Pending { pool, header: record });
+    Ok(Response::set_state(encode(&state)).send_sync(record, &Message::Attest { request }))
 }
 
 /// `claim(pool, N)` → `balance(pool, owner)`: add a claimed deposit to its owner's balance.
@@ -210,7 +211,12 @@ fn reply(input: &ReceiveInput, program: AccountId, state: &ConsumerState) -> Res
             let record: RecordState = borsh::from_slice(&reply.state).map_err(|_| code::BAD_REPLY)?;
             let recorded = record.header().map_err(|_| code::BAD_REPLY)?;
             // The program's own verification, here: the same request against the record read.
-            let request = pending.pool.request(pending.tx_index, pending.log_index, pending.proof.clone());
+            let request = pending.pool.request(
+                pending.tx_index,
+                pending.log_index,
+                pending.proof.clone(),
+                pending.header.clone(),
+            );
             let attestation = attest::evaluate(&record.instance_id, record.chain_id, &recorded, &request)?;
             let deposit = pending.pool.accept(&attestation)?;
             let state = PrivateState {

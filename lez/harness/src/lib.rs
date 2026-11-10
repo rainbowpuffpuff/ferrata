@@ -9,6 +9,7 @@
 pub mod attest;
 pub mod private;
 pub mod scenarios;
+pub mod sepolia;
 pub mod settle;
 pub mod trace;
 
@@ -465,13 +466,43 @@ impl Instance {
         SignerWitness::build(committee, &update.sync_aggregate.bits).unwrap_or_default()
     }
 
-    /// The whole job for one update: `Open`, `Miller`, the adoption parts if it adopts a
-    /// committee, `Finish`. The job is first run natively to name its actors and to know whether
-    /// it adopts and advances (as a submitter would). Stops at the first refused transaction.
-    pub fn update(&self, chain: &mut Chain, update: &LightClientUpdate, full: &StoreCore, label: &str) -> JobRun {
-        let fork = self.fork();
+    /// The layout a submitter sends `update` in to an instance whose store is `store`: the
+    /// layout of the fork the instance's schedule puts at the update's attested header, which is
+    /// the layout a beacon node serves it in, or the store's own if that is later (the submitter
+    /// then upgrades the update first).
+    pub fn layout_for(&self, store: &CompactStore, update: &LightClientUpdate) -> LcFork {
         let spec = self.config.spec();
-        let store = self.store(chain);
+        let slot = update.attested_header.beacon.slot;
+        let served = spec.fork_at_epoch(spec.epoch_at_slot(slot)).lc_fork().expect("a light-client fork");
+        served.max(store.fork)
+    }
+
+    /// The whole job for one update, sent in the layout [`Instance::layout_for`] gives.
+    pub fn update(&self, chain: &mut Chain, update: &LightClientUpdate, full: &StoreCore, label: &str) -> JobRun {
+        let layout = self.layout_for(&self.store(chain), update);
+        self.update_in(chain, update, layout, full, label)
+    }
+
+    /// The whole job for one update encoded in `layout`: `Open`, `Miller`, the adoption parts if
+    /// it adopts a committee, `Finish`. The job is first run natively to name its actors and to
+    /// know whether it adopts and advances (as a submitter would). Stops at the first refused
+    /// transaction.
+    pub fn update_in(
+        &self,
+        chain: &mut Chain,
+        update: &LightClientUpdate,
+        layout: LcFork,
+        full: &StoreCore,
+        label: &str,
+    ) -> JobRun {
+        let fork = layout;
+        let spec = self.config.spec();
+        let stored = self.store(chain);
+        // The store the job starts from: the stored one, or the stored one upgraded to the
+        // update's layout. If the program will refuse the layout, no job is opened, and the
+        // stored store only names the job actor the transaction lists.
+        let store = steps::store_for_update(&stored, layout, update.attested_header.beacon.slot, &spec)
+            .unwrap_or_else(|_| stored.clone());
         let compact = CompactUpdate::of(update);
         let witness = Self::signer_witness(full, update, &spec);
         let jid = job_id(&self.id, &store.digest(), &compact.digest(fork));
@@ -597,6 +628,7 @@ pub fn exit_name(code: u32) -> String {
         c::BAD_CONFIG => "BadConfig",
         c::NO_RECORD => "NoRecord",
         c::BAD_QUERY => "BadQuery",
+        c::HEADER_REQUIRED => "HeaderRequired",
         k::BAD_MESSAGE => "consumer: BadMessage",
         k::BAD_STATE => "consumer: BadState",
         k::BAD_REPLY => "consumer: BadReply",
