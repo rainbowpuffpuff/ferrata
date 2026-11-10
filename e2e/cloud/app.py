@@ -272,8 +272,13 @@ def _start_anvil(r: _Run, upstream: str) -> tuple[subprocess.Popen, str]:
     Tried three times: an anvil that exits at once leaves its redacted log as anvil-attempt-<k>.log."""
     local = "http://127.0.0.1:8545"
     for attempt in (1, 2, 3):
+        # five blocks behind the head: at the head a load-balanced endpoint can answer "block not found" from a node
+        # that lags, and anvil exits ("failed to create genesis"; seen on 10 Nov 2026)
+        head = subprocess.run(["cast", "block-number"], capture_output=True, text=True,
+                              env={**os.environ, "ETH_RPC_URL": upstream}).stdout.strip()
+        at = ["--fork-block-number", str(int(head) - 5)] if head.isdigit() else []
         out = open("/root/anvil.log", "w")
-        proc = subprocess.Popen(["anvil", "--fork-url", upstream, "--auto-impersonate", "--block-time", "2",
+        proc = subprocess.Popen(["anvil", "--fork-url", upstream, *at, "--auto-impersonate", "--block-time", "2",
                                  "--host", "127.0.0.1", "--port", "8545"], stdout=out, stderr=subprocess.STDOUT,
                                 start_new_session=True)
         for _ in range(90):

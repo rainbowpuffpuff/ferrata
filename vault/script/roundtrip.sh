@@ -84,10 +84,16 @@ gas_check() {
   python3 "$here/../e2e/gasplan.py" plan "$dry" --out "$out/$step.plan.json" > /dev/null || return 1
   if [ "${FERRATA_UNLOCKED:-}" != 1 ]; then
     # Its log stays out of the run directory: anvil's banner names the endpoint, which may hold a key.
-    local port="${FERRATA_GAS_FORK_PORT:-8547}" alog="$TMPDIR/gas-fork-$step.log" attempt line
+    # It forks three blocks behind the head, where every node behind a load-balanced endpoint has the state (at the
+    # head anvil can be told "block not found"), but never before this run's last transaction.
+    local port="${FERRATA_GAS_FORK_PORT:-8547}" alog="$TMPDIR/gas-fork-$step.log" attempt line head last at
     state="http://127.0.0.1:$port"
     for attempt in 1 2 3; do
-      anvil --fork-url "$SEPOLIA_RPC_URL" --host 127.0.0.1 --port "$port" --auto-impersonate > "$alog" 2>&1 &
+      head="$(cast block-number "${rpc[@]}")"
+      last="$(jq -r '[.stages[][]?.blockNumber // empty] | .[]' "$manifest" 2> /dev/null | while read -r b; do echo $((b)); done | sort -n | tail -n 1)"
+      at=$((head - 3)); [ "${last:-0}" -le "$at" ] || at="$last"
+      anvil --fork-url "$SEPOLIA_RPC_URL" --fork-block-number "$at" --host 127.0.0.1 --port "$port" --auto-impersonate \
+        > "$alog" 2>&1 &
       pid=$!
       for _ in $(seq 60); do
         cast chain-id --rpc-url "$state" > /dev/null 2>&1 && break 2

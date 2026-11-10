@@ -53,3 +53,5 @@ __pycache__/
 /vault/script/runs/
 /e2e/sepolia-live.env
 /e2e/runs/*/sepolia-live.log
+# forge's dry runs of the gas check name local paths
+/e2e/runs/*/gas/*.forge.log
