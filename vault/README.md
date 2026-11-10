@@ -728,6 +728,13 @@ tools/mutation_spotcheck.py   in eight slices of 28 (the last 27): 223/223 kille
                               (the invariant campaign was never needed)
 ```
 
+On branch `integration` (the same `src/`, plus `test/RegistryStorage.t.sol`, which exports the
+vault's own storage for the LEZ side's test, `../lez/BRIDGE-RESULTS.md` §8a), measured on its build
+box: `forge test` 31 suites, 396 tests passed; coverage of both files as above; the mutation run
+223/223 killed again; `forge fmt --check` ok. `forge build --sizes` gives the same sizes but exits 1,
+because a test contract (`VaultHandler`, 37,928 bytes) is above EIP-170, which forge does not enforce
+in tests.
+
 The deployment and rehearsal scripts (`script/DeployVault.s.sol`, `script/ForkRehearsal.s.sol`) are not run by
 `forge test`; `forge coverage` lists them at 0%. `script/fork-rehearsal.sh` runs every step of the first under both
 rules, its refusal, and every function of the second ("Deployment").
