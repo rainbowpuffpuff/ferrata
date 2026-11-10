@@ -11,15 +11,21 @@
 #   FERRATA_LIVE_BEDROCK   node (default if build-bedrock was run) | mock
 #   FERRATA_LIVE_BLOCK_TIME  the sequencer's block interval; default 10s with a Bedrock node (LEZ's
 #                          testnet.json value), LEZ's local.json value (15s) with the mock
-#   FERRATA_LIVE_TICK_AFTER  with a Bedrock node: seconds after the seconds at which a Bedrock epoch
-#                          can begin at which the sequencer makes its blocks (default 3; run-live.sh
-#                          says why); FERRATA_LIVE_ALIGN=0 starts the sequencer at once instead
+#   FERRATA_LIVE_TICK_AFTER, FERRATA_LIVE_TICK_WINDOW  with a Bedrock node: the seconds after the
+#                          seconds at which a Bedrock epoch can begin at which the sequencer is
+#                          to make its blocks (default 3), and the range accepted (default "1 6");
+#                          the zone is started again until it is met (at most
+#                          FERRATA_LIVE_MAX_STARTS times, default 10; run-live.sh says why).
+#                          FERRATA_LIVE_ALIGN=0 starts the zone once, whatever the phase
 #   FERRATA_PROGRAM_BIN, FERRATA_SCRIPTED_BIN   the guest binaries to deploy (see README.md)
 #   FERRATA_LIVE_PHASES    space-separated phases of the driver (default: all)
 #   FERRATA_LIVE_PROOF_SECONDS  cap on the real proof of the private update (default 3600; 0 skips it)
+#   FERRATA_LIVE_PROOF_THREADS  the prover's thread count (RAYON_NUM_THREADS), for a machine that
+#                          reports fewer CPUs than it may use; FERRATA_LIVE_PROOF_NICE its niceness
+#                          (default 10: below the node and the sequencer)
 #   FERRATA_LIVE_OUT       where the records go (default results/ here)
-#   For the observations in observations/: FERRATA_LIVE_PHASE_SECONDS (a cap on each phase),
-#   FERRATA_LIVE_PHASE_CHECK=0, FERRATA_LIVE_STARTUP_SECONDS, FERRATA_LIVE_BEDROCK_TRACE=1
+#   For the observations in observations/: FERRATA_LIVE_PHASE_SECONDS (a cap on each phase) and
+#   FERRATA_LIVE_BEDROCK_TRACE=1 (the node's block proposer logs at trace level)
 #   FERRATA_LIVE_JOBS, FERRATA_LIVE_NICE   build parallelism (default 4 jobs under nice 19)
 #   FERRATA_LIVE_RPC_PORT, FERRATA_LIVE_BEDROCK_PORT  (defaults 3040, 18080: LEZ's)
 set -euo pipefail
@@ -81,5 +87,5 @@ case "${1:-}" in
   build-bedrock) build_bedrock ;;
   run) . "$LIVE_DIR/run-live.sh" ;;
   stop) . "$LIVE_DIR/run-live.sh" ;;
-  *) sed -n '2,20p' "${BASH_SOURCE[0]}"; exit 2 ;;
+  *) awk 'NR > 1 && /^set -euo/ { exit } NR > 1' "${BASH_SOURCE[0]}"; exit 2 ;;
 esac

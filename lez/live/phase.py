@@ -10,17 +10,21 @@ import re
 import sys
 import time
 
-STAMP = re.compile(r"(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)")
+STAMP = re.compile(r"(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(\.\d+)?")
 
 
 def seconds(path, needle):
+    """Whole seconds of the lines that hold `needle`. A stamp with a fraction (the node's) is
+    rounded to the nearest second: the node begins a slot within some 15 ms of a whole second,
+    before it or after it. The sequencer's stamps have no fraction."""
     out = []
     with open(path, errors="replace") as log:
         for line in log:
             if needle in line:
                 found = STAMP.search(line)
                 if found:
-                    out.append(calendar.timegm(time.strptime(found.group(1), "%Y-%m-%dT%H:%M:%S")))
+                    whole = calendar.timegm(time.strptime(found.group(1), "%Y-%m-%dT%H:%M:%S"))
+                    out.append(whole + (1 if found.group(2) and float(found.group(2)) >= 0.5 else 0))
     return out
 
 
