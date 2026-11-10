@@ -25,7 +25,7 @@ import modal
 
 APP_NAME = "ferrata-prover"
 VOLUME_NAME = "ferrata-prover"
-GPU = "L4"  # NVIDIA L4: Ada Lovelace, compute capability 8.9, 24 GB
+GPU = os.environ.get("FERRATA_GPU", "L4")  # NVIDIA L4 (FERRATA_GPU=L40S: the fallback when no L4 is scheduled): Ada Lovelace, compute capability 8.9, 24 GB
 # risc0 v3.0.5's kernel build scripts use `-arch=native` unless NVCC_APPEND_FLAGS/NVCC_PREPEND_FLAGS
 # is set (risc0/build_kernel/src/lib.rs, circuit/rv32im-sys/build.rs); the build container has no
 # GPU, so the architecture is named, as risc0's CI does for its Ada runner (-arch=sm_89).
