@@ -31,6 +31,10 @@ host's image id.
 | checkpoint | `0x95b816ed2614e340c85fed3ba3dad1f70e7dff2da1363406ade87e1333583caf` |
 | segment | `0xbdfb94a6b6ea12e996f332b28ce4791dc7362f28da602769192f589a61fee043` |
 
+These are the images every checkpoint proof here is of. The checkpoint's later `ImportRoot` fix
+changed both guests (`../checkpoint/RESULTS.md`, "The images after the `ImportRoot` fix"); its
+images have not been proven.
+
 ## Layout
 
 | Path | What |

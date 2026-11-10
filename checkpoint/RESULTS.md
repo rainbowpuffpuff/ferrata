@@ -12,6 +12,18 @@ posting-timeframe amendment, with checkpoint image `0xbbf58fed…34c0`; that pro
 the key-set hash encoding and the timeframe check, and runs the same input in 3,704,942 user cycles
 against 3,705,001 now (same 4 segments).
 
+**The images after the `ImportRoot` fix.** On the integration branch (commit 12d17e3) variant 1 of
+the bridge messages carries the bridge program's `ImportProof`, which `wire.rs` walks strictly and
+skips (README, "Real format vs stand-in"). That changes `checkpoint-core`, so both guests change.
+Built under the integration checkout's path on the build box (`host ids`): before the fix checkpoint
+`0x2b25a9f248b14a7db950e1e35ddc334687cf6e8b6a6ed815081efe8669f81093`, segment
+`0xe384a99fbea39d289a22d8f8b80eba31fcb3c10eabae479bc26491e94e6a689c`; with the fix checkpoint
+`0xd3c22b181ca5201cfc4501bc09be6013793238e14e1df5bd03c278213d7319c0`, segment
+`0x7d0c6d4d2021010398023970840e3f4cba8dfeef2b66a6814b368405dc7082e2` (`micro`, which decodes no
+message, is `0x57a0aa8d…18e3` in both). Every figure and proof in this file is of images from
+before the fix (the ids above, or earlier ones where a section says so); the benches were not
+re-run on the fixed images (their fixtures are rebuilt by `gen all`, about 25 min).
+
 In the committed logs, the absolute path of the directory the commands ran in is written `<workspace>`
 (this directory was then `<workspace>/ferrata-checkpoint`, and the upstream sources were under
 `<workspace>/upstream`).

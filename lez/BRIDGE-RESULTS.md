@@ -1,7 +1,11 @@
 # The Ferrata bridge program on LEZ v0.4.0-rc1, measured through LEZ's state machine
 
 The bridge program of RFP-022 (`guests/bridge`, one RISC Zero guest; image
-`c0c80a6434cd0bcdaf4b32b71d4f71bfb28e5e23564fa23dfa4686792b48f1ed`), with its wire crate
+`c0c80a6434cd0bcdaf4b32b71d4f71bfb28e5e23564fa23dfa4686792b48f1ed` on the branch that built it, and
+`25dfd9b283ba14b0b83a522d7d307de57288c4730f538d8862b53ad73a4a8c49` built from the same sources under
+the integration branch's checkout path: the ELF holds its build paths. The tests re-run there gave
+the same figures, apart from the image, the ids derived from it and the import of §5; the
+`results/bridge-*.md` files are from that re-run, and §7's real proofs are of that image), with its wire crate
 (`bridge-wire/`) and the harness that drives it (`harness/src/bridge.rs`,
 `harness/tests/bridge_{inbound,private,burn}.rs`). The plan, the actors and the messages are in
 [BRIDGE.md](BRIDGE.md). Every number below is LEZ's own accounting of a transaction that ran:
@@ -164,12 +168,11 @@ the index a burn is collected at and v2 does not. The bridge program never sees 
 
 The test puts the public transactions (as settled) and the two privacy-preserving ones into one
 LEZ block, the repeated burn marked reverted, and reads it with `checkpoint-core`'s own
-`parse_block` and `BridgeMessage::decode` (branch `e2e-outbound` has the same `checkpoint/crates`
-as this branch: `git diff --stat` shows no change there):
+`parse_block` and `BridgeMessage::decode`, as fixed on the integration branch (mismatch 1 below):
 
 | transaction | origin | bytes | the checkpoint's decoder | collected |
 |---|---|---:|---|---|
-| `ImportRoot` (n = 8) | public root | 1,177 | refused: `TrailingBytes { at: 81 }` | **no** |
+| `ImportRoot` (n = 8) | public root | 1,177 | `ImportRoot`, its proofs skipped (before the fix: refused, `TrailingBytes { at: 81 }`) | yes |
 | plaintext claim | public root | 1,214 | ignored (variant 4 and up) | no |
 | public burn, A | public root | 185 | `Burn` | yes |
 | the same note again | public root | 185 | `Burn` | no (reverted) |
@@ -179,27 +182,32 @@ as this branch: `git diff --stat` shows no change there):
 | private claim: the root's reply | public → private | 189 | — | no (not public execution) |
 | private burn | private → public | 185 | `Burn` | yes |
 
-It collects exactly the three burns that happened, in order, each with its note and
-configuration; its burn leaf equals the bridge core's; its `configId`, computed from the inputs it
+It collects exactly the import and the three burns that happened, in order, each burn with its
+note and configuration; from the import's bytes the program's decoder and the checkpoint's read the
+same four fields; its burn leaf equals the bridge core's; its `configId`, computed from the inputs it
 pins (with this prototype's `attestationRootId` and `salt`, §6), equals the program's; and it
 re-encodes the program's `Burn` byte for byte (185 bytes, its `BURN_LEN`).
 
 **Mismatches, and which side should change.**
-1. **`ImportRoot` is not collected** (severe if left: `importedLeafCount` would never advance, and
-   after a sunset the vault would refund deposits that are still claimable on LEZ). The
-   checkpoint's variant 1 is exactly its four fields; the program needs the account and two
-   storage proofs in the same transaction, and a public transaction's only visible data is its
-   root message, so they follow the four fields (`ImportProof`: three borsh `Vec<Vec<u8>>`). The
-   checkpoint should change: decode variant 1 as the four fields followed by `ImportProof`, walk
-   its borsh lengths strictly and ignore it. Nothing else in the program's encoding needs it.
+1. **`ImportRoot` was not collected; fixed on the checkpoint side** (severe if left:
+   `importedLeafCount` would never advance, and after a sunset the vault would refund deposits
+   that are still claimable on LEZ). The checkpoint's variant 1 was exactly its four fields; the
+   program needs the account and two storage proofs in the same transaction, and a public
+   transaction's only visible data is its root message, so they follow the four fields
+   (`ImportProof`: three borsh `Vec<Vec<u8>>`). The checkpoint now decodes variant 1 as the four
+   fields followed by `ImportProof`, walks its borsh lengths strictly and skips it
+   (`checkpoint-core`'s `wire.rs`; `wire_import_root_skips_its_proof_strictly`, and this test on
+   the program's own transaction). The bare four fields are refused. The checkpoint's two guests
+   changed with it (`../checkpoint/RESULTS.md`), and the end-to-end fixture, whose import has the
+   old form, is now refused by the fixed program (`../e2e/README.md`).
 2. **Replies are never visible calls, and the checkpoint should rely on that only knowingly.**
    The checkpoint decodes every visible message to a bridge actor, while the program first treats
    a message from the actor it waits for as a reply (an `Attestation`, a `StateReply`), not as a
    bridge message. Today no reply to a bridge actor is a visible call (the attestation reply is
    nested in public execution; the root's reply to a private claimant is public→private), so the
    two decoders never disagree. A future handler that waits for a reply from a private actor
-   would break that; the program side should keep it so, and the checkpoint's README should state
-   it.
+   would break that; the program side should keep it so. The checkpoint's README states the
+   dependency ("A dependency on the bridge program").
 3. **Configuration identity.** The checkpoint takes `attestationRootId` and `salt` as opaque
    inputs; this prototype defines them (§6). No change, but a deployment must pin the same values.
 

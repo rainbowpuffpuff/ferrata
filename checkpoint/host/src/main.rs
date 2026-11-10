@@ -237,7 +237,8 @@ fn cmd_bench(names: &[String]) -> Result<()> {
         let (elf, _) = guest_elf(meta["kind"].as_str().unwrap_or(""))?;
         let run = execute(elf, env_for(&input)?)?;
         let want = meta["journal"].as_str().context("journal")?;
-        ensure!(hex::encode(&run.info.journal.bytes) == want, "{name}: guest journal differs from the native run");
+        let got = hex::encode(&run.info.journal.bytes);
+        ensure!(got == want, "{name}: guest journal differs from the native run: guest {got}, fixture {want}");
         println!(
             "{name:<22} blocks {:>4} ({:>9} B) | user cycles {:>11} | segments {:>3} ({}) padded {:>11} | {:>6.2} s | journal == native",
             meta["blocks"],
