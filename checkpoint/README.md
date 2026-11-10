@@ -192,8 +192,8 @@ withdrawals a channel withdrawal). Any other opcode is refused rather than skipp
    program calling it; being run as a private actor): the bridge program needs this; not checked.
 4. Privacy-preserving transactions with real (non-dev-mode) proofs: none was run through this parser;
    the benches use LEZ-wallet message parts with filler proofs of the size LEZ's fee market assumes
-   (223,551 bytes). Real ones exist elsewhere in the repository (`../lez/results/*-tx.borsh`,
-   `../lez/live/results/private/real/`).
+   (223,551 bytes). Real ones exist elsewhere in the repository (`../lez/results/*-tx.borsh`, among
+   them the bridge program's proven private claim and burn, and `../lez/live/results/private/real/`).
 5. secp256k1 public keys in LEZ witness sets and admission evidence are taken as 32 opaque bytes; LEZ's
    decoder validates them (the mutation test finds exactly this difference). A block that only differs
    in this way is invalid for LEZ and cannot gather honest support.
