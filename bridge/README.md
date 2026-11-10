@@ -1,12 +1,16 @@
 # ferrata-bridge
 
 Prototype evidence for the Ferrata proposal (Logos RFP-022, privacy-preserving wrapped ERC-20 and ETH
-bridge for LEZ), at **specification v2** (`notes/design/SPEC-v2.md`, which applies the round-1 reviews):
-the Rust side of the bridge's commitment scheme, a RISC Zero release proof and a claim measurement
-guest, the LEZ checkpoint encodings, and measurements showing that the v2 Ethereum vault
-(`spike/bridge-evm/src/FerrataVault.sol`) accepts the release proof on chain behind RISC Zero's emergency
-stop. Unaudited prototype. Numbers and gaps: [RESULTS.md](RESULTS.md). The v1 code is at commit
-`104d746`; its vectors, receipts and logs are kept under `vectors/v1/` and `artifacts/v1/`.
+bridge for LEZ), at **specification v2**: the Rust side of the bridge's commitment scheme, a RISC Zero
+release proof and a claim measurement guest, the LEZ checkpoint encodings, and measurements showing that
+the v2 Ethereum vault (`src/FerrataVault.sol` of [`../vault/`](../vault/) at its v2 commit, `1d61b32`)
+accepts the release proof on chain behind RISC Zero's emergency stop. Unaudited prototype. Numbers and
+gaps: [RESULTS.md](RESULTS.md). The v1 code is at commit `104d746`; its vectors, receipts and logs are
+kept under `vectors/v1/` and `artifacts/v1/`.
+
+**Specification.** "SPEC-v2 §x" is [`docs/design/spec/bridge-spec-v2.md`](../docs/design/spec/bridge-spec-v2.md)
+and "v3 Dn" is [`docs/design/spec/bridge-spec-v3-changes.md`](../docs/design/spec/bridge-spec-v3-changes.md);
+source comments cite them by their working names, `notes/design/SPEC-v2.md` and `notes/design/SPEC-v3-delta.md`.
 
 | path | what |
 |---|---|
@@ -69,10 +73,11 @@ Statements:
 
 Prerequisites, all local: Rust 1.93 with the `riscv32im-unknown-none-elf` target; RISC Zero's toolchain
 via `rzup` (Rust 1.88.0, cpp 2024.1.5, r0vm 3.0.5); Docker (x86-64) for the Groth16 step; Foundry;
-Python 3. Never write to `/tmp` on this machine: every script sets `TMPDIR` to `spike/tmp`.
+Python 3. Every script sets `TMPDIR` to `tmp/` beside the repository (`../../tmp` from here, as `bench/`
+does), not `/tmp`.
 
 ```sh
-cd spike/ferrata-bridge
+cd bridge                                      # from the repository root
 (cd evm-verify && forge install --no-git foundry-rs/forge-std@v1.10.0 risc0/risc0-ethereum@v3.0.0)
                                                # lib/ is not committed; evm-verify also needs the vault's
                                                # lib/ (OpenZeppelin 5.4.0), installed as ../vault/README.md says
@@ -92,11 +97,12 @@ for c in eth erc20 ethpull; do scripts/prove-bench.sh groth16 $c; done   # Groth
 Real: the v2 release guest (image id `0xdda76672…c5`) and its succinct and Groth16 receipts made on this
 machine with r0vm 3.0.5 and RISC Zero's Docker prover; `RiscZeroGroth16Verifier` built from risc0-ethereum
 v3.0.0 `ControlID`, behind the unmodified `RiscZeroVerifierEmergencyStop`; the v2 `FerrataVault` compiled
-unmodified from a pinned read-only export of `spike/bridge-evm` branch `v2` (`evm-verify/vendor/vault-v2`,
-commit `1d61b32`, sha256 `3f90645f…`); the vault's own `submitCandidate`, `recordBeacon`, `finalize`,
+unmodified from a pinned read-only export of the vault's v2 (`evm-verify/vendor/vault-v2`; commit `1d61b32`
+in the history of `../vault/`, sha256 `3f90645f…`); the vault's own `submitCandidate`, `recordBeacon`, `finalize`,
 `release`, `claimOwed`; the payouts.
 
-Mocked: the LEZ checkpoint proof (the checkpoint program is built elsewhere and does not exist yet). In
+Mocked: the LEZ checkpoint proof (the checkpoint program did not exist when these tests were written; its
+prototype is now [`../checkpoint/`](../checkpoint/), and its proofs are not wired into these tests). In
 `evm-verify/test/v2/VaultV2.t.sol` it is answered with `vm.mockCall` on the emergency stop for exactly the
 `verify(seal, checkpointImageId, digest)` call of each checkpoint journal; every release proof reaches the
 real verifier. The burn tree is built by the host, not by a LEZ program; the LEZ states `S` are computed by
@@ -105,6 +111,6 @@ this crate from test values. The claim guest is a measurement, not LEZ's private
 Versions: risc0-zkvm / risc0-build / risc0-groth16 3.0.5, r0vm 3.0.5, guest Rust 1.88.0 (rzup), host Rust
 1.93.0, `sha2-v0.10.8-risczero.0` (git 244dc3b), Docker image `risczero/risc0-groth16-prover:v2025-04-03.1`
 (`sha256:a4f80ce2…`), risc0-ethereum v3.0.0 (32aa0b6f), forge-std v1.10.0, Foundry 1.3.6-nightly (a4d66e8),
-solc 0.8.26 (200 runs, cancun). OpenZeppelin for the vault: 5.4.0 from `spike/bridge-evm/lib` (read-only).
+solc 0.8.26 (200 runs, cancun). OpenZeppelin for the vault: 5.4.0 from `../vault/lib` (read-only).
 
 Licence: MIT OR Apache-2.0.

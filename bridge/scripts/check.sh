@@ -5,7 +5,7 @@
 set -euo pipefail
 here="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$here"
-export TMPDIR="$here/../tmp"            # spike/tmp: never /tmp on this machine
+export TMPDIR="$here/../../tmp"         # tmp/ beside the repository, as bench/ uses; not /tmp
 export CARGO_TARGET_DIR="$here/target"
 export FOUNDRY_DISABLE_NIGHTLY_WARNING=1
 unset RISC0_DEV_MODE
@@ -43,16 +43,17 @@ cargo build --release -p host
 echo "== saved receipts verify against the image id built now (catches guest drift)"
 for c in eth erc20 ethpull; do ./target/release/host verify $c; done
 
-echo "== neighbour drift (warnings only): vendored copies vs. spike/bridge-evm now"
-src="$here/../bridge-evm/test/vectors/tree-v2.json"
+echo "== neighbour drift (warnings only): vendored copies vs. ../vault now"
+src="$here/../vault/test/vectors/tree-v2.json"
 if [ -f "$src" ]; then
   cmp -s "$src" vectors/external/bridge-evm-tree-v2.json && echo "tree-v2.json: identical to the vendored copy" \
-    || echo "WARNING: bridge-evm tree-v2.json changed since it was vendored; re-copy and re-run"
+    || echo "WARNING: vault/test/vectors/tree-v2.json changed since it was vendored; re-copy and re-run"
 fi
-if git -C "$here/../bridge-evm" rev-parse -q --verify v2 > /dev/null 2>&1; then
-  git -C "$here/../bridge-evm" show v2:src/FerrataVault.sol | cmp -s - evm-verify/vendor/vault-v2/FerrataVault.sol \
-    && echo "vault: evm-verify/vendor/vault-v2 == bridge-evm branch v2 ($(git -C "$here/../bridge-evm" rev-parse --short v2))" \
-    || echo "WARNING: bridge-evm branch v2 changed since evm-verify/vendor/vault-v2 was exported"
+# The vault's v2 (branch v2 of the former bridge-evm repository) is commit 1d61b32 of vault/'s history.
+if git -C "$here" cat-file -e 1d61b32:src/FerrataVault.sol 2> /dev/null; then
+  git -C "$here" show 1d61b32:src/FerrataVault.sol | cmp -s - evm-verify/vendor/vault-v2/FerrataVault.sol \
+    && echo "vault: evm-verify/vendor/vault-v2 == the vault's v2 (1d61b32)" \
+    || echo "WARNING: evm-verify/vendor/vault-v2 differs from the vault's v2 (1d61b32)"
 fi
 
 echo "== Foundry: journal equality, real Groth16 verifier behind the emergency stop, vault v2 end to end"

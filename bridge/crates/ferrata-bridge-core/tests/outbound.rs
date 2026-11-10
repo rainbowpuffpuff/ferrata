@@ -1,6 +1,6 @@
 //! Burn -> release (SPEC-v2 §5): the release statement and its journal, burn notes and their MAC, the
-//! burn-tag registry, and burn recovery. Tests named `attack_*` are the negative tests for the
-//! reviewed attacks.
+//! burn-tag registry, and burn recovery. Tests named `attack_*` are negative tests for specific
+//! attacks.
 
 mod common;
 
@@ -96,7 +96,7 @@ proptest! {
         prop_assert_eq!(at(&early).unwrap(), at(&late).unwrap());
     }
 
-    /// Review r2 §1(b): a burn appended under another configuration (another configId, even with
+    /// A burn appended under another configuration (another configId, even with
     /// the same chain, vault, token, amount and recipient) cannot satisfy a release for this one.
     #[test]
     fn attack_burn_from_another_config_cannot_satisfy_a_release(case in release_case(), at in 0usize..32, mask in 1u8..=255) {
@@ -116,7 +116,7 @@ proptest! {
         prop_assert!(verify_release(&tree.root(), &w2, &as_other).is_ok());
     }
 
-    /// Review r2 §1(a): the leaf binds token and amount, so a burn of one denomination of one token
+    /// The leaf binds token and amount, so a burn of one denomination of one token
     /// cannot release another token or another amount.
     #[test]
     fn attack_wrong_token_or_amount_fails(case in release_case(), at in 0usize..32, mask in 1u8..=255) {
@@ -132,7 +132,7 @@ proptest! {
         prop_assert_eq!(verify_release(&case.burn_root, &case.witness, &p), Err(VerifyError::RootMismatch));
     }
 
-    /// Review r2 §4(a): a copier who puts a victim's `(r, memo, mac, COut)` on a burn of another
+    /// A copier who puts a victim's `(r, memo, mac, COut)` on a burn of another
     /// token or amount fails the victim's MAC check, so the victim's wallet ignores the copy.
     #[test]
     fn attack_copied_note_with_other_token_or_amount_fails_the_mac(seed in any::<[u8; 32]>(), i in any::<u64>(), at in 0usize..32, mask in 1u8..=255) {
@@ -234,7 +234,7 @@ proptest! {
     }
 }
 
-/// Review r2 §4(b): the bridge program refuses a repeated `r`, with this helper.
+/// The bridge program refuses a repeated `r`, with this helper.
 #[test]
 fn attack_repeated_burn_tag_is_refused_by_the_registry() {
     let k = keys("seed");

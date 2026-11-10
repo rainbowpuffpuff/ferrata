@@ -10,7 +10,7 @@
 #        scripts/prove-bench.sh env
 set -euo pipefail
 here="$(cd "$(dirname "$0")/.." && pwd)"
-export TMPDIR="$here/../tmp"            # spike/tmp: never /tmp on this machine (RAM-backed)
+export TMPDIR="$here/../../tmp"         # tmp/ beside the repository, as bench/ uses; not /tmp
 export CARGO_TARGET_DIR="$here/target"
 unset RISC0_DEV_MODE
 mkdir -p "$TMPDIR" "$here/artifacts/logs"

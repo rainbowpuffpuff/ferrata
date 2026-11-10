@@ -3,7 +3,12 @@
 Every number below comes from a command run in this directory on 10 Nov 2026; the logs are in
 `artifacts/logs/` (each proving log records the machine, `r0vm --version`, the Docker image digest, the
 load average before and after, and GNU time's report). Derived figures show their inputs. The older v1
-results follow at the end, clearly labelled.
+results follow at the end, clearly labelled. In the committed logs, the absolute path of the directory
+the commands ran in is written `<workspace>` (this directory was then `<workspace>/ferrata-bridge`).
+
+**Specification.** "SPEC-v2 §x" is [`docs/design/spec/bridge-spec-v2.md`](../docs/design/spec/bridge-spec-v2.md)
+and "v3 Dn" is [`docs/design/spec/bridge-spec-v3-changes.md`](../docs/design/spec/bridge-spec-v3-changes.md);
+source comments cite them by their working names, `notes/design/SPEC-v2.md` and `notes/design/SPEC-v3-delta.md`.
 
 **Machine.** AMD Ryzen 9 7940HS (a laptop part: 8 cores, 16 threads), 54 GiB RAM, no NVIDIA GPU, Fedora 44,
 Linux 7.2.13, x86-64. Other agents shared the machine; the load average is printed next to every timing.
@@ -24,16 +29,16 @@ build and clippy are clean.
 | `tests/vectors.rs` | 7 | writes (`FERRATA_WRITE_VECTORS=1`) or checks the eight `vectors/*-v2.json` files |
 | `tests/vault_tree_v2.rs` | 1 | the v2 vault's own deposit-tree vectors, bit for bit (below) |
 
-Negative tests for the reviewed attacks (each a named test):
+Negative tests for specific attacks (each a named test):
 
-| attack (review r2) | test | result |
+| attack | test | result |
 |---|---|---|
-| §9: claim one deposit once per root | `attack_same_deposit_under_two_roots_gives_same_nullifier` | same `N` under roots n and n+1; the registry refuses the second |
-| §1(b): a burn of another configuration | `attack_burn_from_another_config_cannot_satisfy_a_release` | `RootMismatch` (verifies only for its own `configId`) |
-| §1(a): wrong token or amount | `attack_wrong_token_or_amount_fails` | `RootMismatch` |
-| §4(a): copied note on another token/amount | `attack_copied_note_with_other_token_or_amount_fails_the_mac` | MAC fails (also for another `COut` and another view key); the scan ignores it |
-| §4(b): repeated `r` | `attack_repeated_burn_tag_is_refused_by_the_registry` | `RepeatedTag` for a reused `i` and for a copied `r` |
-| §7: private kind opened as public | `attack_private_kind_commitment_cannot_be_opened_as_public` | `RootMismatch` both ways |
+| claim one deposit once per root | `attack_same_deposit_under_two_roots_gives_same_nullifier` | same `N` under roots n and n+1; the registry refuses the second |
+| a burn of another configuration | `attack_burn_from_another_config_cannot_satisfy_a_release` | `RootMismatch` (verifies only for its own `configId`) |
+| wrong token or amount | `attack_wrong_token_or_amount_fails` | `RootMismatch` |
+| copied note on another token/amount | `attack_copied_note_with_other_token_or_amount_fails_the_mac` | MAC fails (also for another `COut` and another view key); the scan ignores it |
+| repeated `r` | `attack_repeated_burn_tag_is_refused_by_the_registry` | `RepeatedTag` for a reused `i` and for a copied `r` |
+| private kind opened as public | `attack_private_kind_commitment_cannot_be_opened_as_public` | `RootMismatch` both ways |
 
 Vectors: `python3 -I scripts/check_vectors_v2.py vectors` → `v2 vectors OK: 529 values recomputed
 independently` (the canonical frontier is recomputed there from complete subtrees, a different algorithm
@@ -187,8 +192,8 @@ one-drop-per-nullifier gas drop. Image id `0x141329559d61e2aa260c11b98e822d6fe0c
 ## Part 4: the v2 vault, measured
 
 `evm-verify/`: **21 Foundry tests pass** (journal equality 2, verifier and stop 10, vault end to end 9). The
-vault is compiled unmodified from `evm-verify/vendor/vault-v2/`, a read-only export of `spike/bridge-evm`
-branch `v2` at `1d61b32` (`FerrataVault.sol` sha256 `3f90645f…`; the `V2-DONE` marker appeared at 03:21:15).
+vault is compiled unmodified from `evm-verify/vendor/vault-v2/`, a read-only export of the vault's
+branch `v2` at `1d61b32` (now in the history of `../vault/`; `FerrataVault.sol` sha256 `3f90645f…`).
 
 Wiring, as SPEC-v2 §6 says: the deployer's nonces 0–3 create `RiscZeroGroth16Verifier` (v3.0.0
 `ControlID`), `RiscZeroVerifierEmergencyStop` around it (unmodified, guardian = the vault's freeze authority),
@@ -253,10 +258,11 @@ stop's `EnforcedPause`. The pull-payment release credits `owed[recipient][ETH]`;
   is missed (the test plants one at account 7 and finds it only with a wider window). There is no sliding
   window; the wallet must keep destinations inside its gap.
 * **The image id is not reproducible across machines as built** (local rzup toolchain, not RISC Zero's
-  Docker guest builder, which this task's network allowance did not cover). An immutable vault pins it.
-* **The v1 vault source nearly went unrecorded:** `spike/bridge-evm` was rewritten before I copied it (my
-  first copy turned out to be the in-progress v2 and was deleted). That repository's history still holds it
-  (commit `a01fcd7`, sha256 `50c3e693…`, the hash v1 recorded), now exported to `artifacts/v1/vault-source/`.
+  Docker guest builder, which the network allowance of this build did not cover). An immutable vault pins it.
+* **The v1 vault source nearly went unrecorded:** the vault's repository (now `../vault/`) was rewritten
+  before I copied it (my first copy turned out to be the in-progress v2 and was deleted). Its history still
+  holds it (commit `a01fcd7`, sha256 `50c3e693…`, the hash v1 recorded), now exported to
+  `artifacts/v1/vault-source/`.
   v2 is pinned the same way (`evm-verify/vendor/vault-v2`).
 * **No anvil run for v2.** Whole-transaction gas comes from `forge --isolate`, a method v1 reconciled exactly
   with anvil receipts.
@@ -308,7 +314,7 @@ outside the recursion step. Phones remain unmeasured.
 
 # v1 results (older, superseded by SPEC-v2)
 
-Everything in this section is about the **v1** encodings, guest and vault (code at commit `104d746`; vectors in `vectors/v1/`, receipts and logs in `artifacts/v1/`). The v1 vault source (sha256 `50c3e693…`) is exported to `artifacts/v1/vault-source/` from `spike/bridge-evm` commit `a01fcd7`.
+Everything in this section is about the **v1** encodings, guest and vault (code at commit `104d746`; vectors in `vectors/v1/`, receipts and logs in `artifacts/v1/`). The v1 vault source (sha256 `50c3e693…`) is exported to `artifacts/v1/vault-source/` from the vault's commit `a01fcd7` (in the history of `../vault/`).
 
 Every number below comes from a command run in this directory on 9 Nov 2026; the logs are in
 `artifacts/v1/logs/` (each proving log records the machine, `r0vm --version`, the Docker image digest,
@@ -439,12 +445,13 @@ Checked, not assumed:
 4. `contracts/deployment.toml` at v3.0.0 lists `RiscZeroGroth16Verifier` version 3.0.0, selector
    `0x73c457ba`, at `0x2a098988600d87650Fb061FfAff08B97149Fa84D` on Ethereum mainnet, Sepolia, Holesky,
    Hoodi and other chains. That is RISC Zero's record: I did not query any chain or compare deployed
-   bytecode (no RPC access in this task).
+   bytecode (no RPC access during this build).
 
 ### Part C: on-chain verification, measured
 
 `evm-verify/`: 19 Foundry tests, all pass. `FerrataVault` is compiled unmodified from
-`../../bridge-evm/src` with the vault project's own OpenZeppelin and compiler settings.
+the v1 vault's `src/` (commit `a01fcd7` of `../vault/`) with the vault project's own OpenZeppelin and
+compiler settings.
 
 ### Gas
 
@@ -506,10 +513,10 @@ unmodified requests still release. Replaying a successful release reverts `Nulli
 * **No device other than this laptop CPU was measured.** Phone figures below are extrapolations.
 * **The LEZ burn-root proof is mocked**, and the burn tree is built by the host, not by a LEZ program.
 * **The image id is not reproducible across machines as built.** The guest was built with the local
-  rzup toolchain, not with RISC Zero's Docker guest builder (`cargo risczero build`), which this task's
-  network allowance did not cover. An immutable vault pins this id, so a production build must be
+  rzup toolchain, not with RISC Zero's Docker guest builder (`cargo risczero build`), which the
+  network allowance of this build did not cover. An immutable vault pins this id, so a production build must be
   reproducible.
-* **`recover_burns` takes `chainId` and `vault`**, which the brief's signature omits: they are needed to
+* **`recover_burns` takes `chainId` and `vault`**, which the planned signature omits: they are needed to
   recompute `C_out`. `recover` takes structs instead of tuples.
 * **Clippy on the host workspace runs with `RISC0_SKIP_BUILD=1`**: under clippy, its driver leaks into
   risc0-build's inner guest build, which then lacks the zkVM `std`. The guest crate is linted separately

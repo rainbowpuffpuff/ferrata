@@ -157,7 +157,7 @@ pub struct OwnedDeposit {
     pub nullifier: Hash,
 }
 
-/// Wallet recovery (§3.3, review §7): one pass over every deposit of the vault. For each deposit,
+/// Wallet recovery (§3.3): one pass over every deposit of the vault. For each deposit,
 /// `s` is derived from `kAuth` and the deposit's `(depositor, j)`, and `C` is recomputed for the
 /// `2·gap` candidate destinations `dest_of(kind, a)`, `a = 0..gap`, both kinds (computed once, up
 /// front). Destinations outside that window, or not derived from the seed, are not found.

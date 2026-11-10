@@ -1,5 +1,5 @@
 //! Deposit -> mint (SPEC-v2 §2, §3): keys, the claim statement, its nullifier, the nullifier
-//! registry, and wallet recovery. Tests named `attack_*` are the negative tests for the reviewed
+//! registry, and wallet recovery. Tests named `attack_*` are negative tests for specific
 //! attacks.
 
 mod common;
@@ -111,7 +111,7 @@ proptest! {
         prop_assert_ne!(n1, n2);
     }
 
-    /// Review r2 §9: the attested statement is the root; a nullifier keyed on it would allow one
+    /// The attested statement is the root; a nullifier keyed on it would allow one
     /// mint per root. `fid` does not depend on the root, so the same deposit claimed under root n and
     /// a later root n+1 gives the same `N`, and the registry refuses the second claim.
     #[test]
@@ -131,7 +131,7 @@ proptest! {
         prop_assert_eq!(register_claim(&mut registry, &case.chain_id, &case.vault, &n_b), Err(AlreadyClaimed));
     }
 
-    /// Review r2 §7: a commitment made for a private destination cannot be opened as a public one
+    /// A commitment made for a private destination cannot be opened as a public one
     /// (nor the other way round), even with the same 32-byte destination id.
     #[test]
     fn attack_private_kind_commitment_cannot_be_opened_as_public(case in claim_case()) {
