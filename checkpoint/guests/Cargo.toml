@@ -2,7 +2,7 @@
 # and nowhere else. Each guest package is built by risc0-build from methods-segment/ or methods/.
 [workspace]
 resolver = "3"
-members = ["segment", "checkpoint", "micro"]
+members = ["segment", "checkpoint", "checkpoint-b", "micro"]
 
 [workspace.dependencies]
 checkpoint-core = { path = "../crates/checkpoint-core" }

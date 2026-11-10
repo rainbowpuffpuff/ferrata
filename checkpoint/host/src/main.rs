@@ -1,11 +1,13 @@
 //! Host for the checkpoint guests. Every number it prints comes from the run it reports.
 //!
 //! ```text
-//! host ids                       image ids of the three guests
+//! host ids                       image ids of the guests
 //! host micro [--plain]           execute every fixtures/micro-* input; marginal costs per component
 //!                                (--plain: the guest built without the sha2/curve25519 patches)
-//! host bench [name…]             execute checkpoint/segment fixtures (default: all of them); user
-//!                                cycles, segments, padded cycles, wall time; journal == native
+//! host gen-b                     rule (A) and rule (B) fixtures over the same blocks (gen_b.rs)
+//! host bench [name…]             execute checkpoint/segment fixtures (default: all cp-/seg- ones; a
+//!                                name ending in * is a prefix); user cycles, segments, padded
+//!                                cycles, wall time; journal == the one recorded at generation
 //! host compose                   composition: segment receipt -> checkpoint that verifies it
 //!                                (uses RISC0_DEV_MODE receipts unless --real is given)
 //! host prove <name>              succinct proof of a fixture -> artifacts/<name>/
@@ -19,8 +21,12 @@ use std::io::Write as _;
 use std::path::PathBuf;
 use std::time::Instant;
 
+mod gen_b;
+
 use anyhow::{bail, ensure, Context as _, Result};
-use methods::{CHECKPOINT_ELF, CHECKPOINT_ID, MICRO_ELF, MICRO_ID, SEGMENT_ELF, SEGMENT_ID};
+use methods::{
+    CHECKPOINT_B_ELF, CHECKPOINT_B_ID, CHECKPOINT_ELF, CHECKPOINT_ID, MICRO_ELF, MICRO_ID, SEGMENT_ELF, SEGMENT_ID,
+};
 use risc0_zkvm::{
     default_executor, default_prover, Digest, ExecutorEnv, InnerReceipt, ProverOpts, Receipt, SessionInfo,
 };
@@ -105,6 +111,7 @@ fn execute(elf: &[u8], env: ExecutorEnv<'_>) -> Result<Run> {
 fn guest_elf(kind: &str) -> Result<(&'static [u8], [u32; 8])> {
     Ok(match kind {
         "checkpoint" => (CHECKPOINT_ELF, CHECKPOINT_ID),
+        "checkpoint-b" => (CHECKPOINT_B_ELF, CHECKPOINT_B_ID),
         "segment" => (SEGMENT_ELF, SEGMENT_ID),
         "micro" => (MICRO_ELF, MICRO_ID),
         other => bail!("unknown fixture kind {other}"),
@@ -114,9 +121,10 @@ fn guest_elf(kind: &str) -> Result<(&'static [u8], [u32; 8])> {
 // ---- commands ----------------------------------------------------------------------------------------
 
 fn cmd_ids() {
-    println!("checkpoint {}", image_hex(CHECKPOINT_ID));
-    println!("segment    {}", image_hex(SEGMENT_ID));
-    println!("micro      {}", image_hex(MICRO_ID));
+    println!("checkpoint   {}", image_hex(CHECKPOINT_ID));
+    println!("checkpoint_b {}", image_hex(CHECKPOINT_B_ID));
+    println!("segment      {}", image_hex(SEGMENT_ID));
+    println!("micro        {}", image_hex(MICRO_ID));
 }
 
 /// `--plain`: the same micro-benchmarks on the guest built without RISC Zero's sha2 and
@@ -225,7 +233,14 @@ fn cmd_bench(names: &[String]) -> Result<()> {
         all.extend(fixture_names("seg-")?);
         all
     } else {
-        names.to_vec()
+        let mut all = Vec::new();
+        for name in names {
+            match name.strip_suffix('*') {
+                Some(prefix) => all.extend(fixture_names(prefix)?),
+                None => all.push(name.clone()),
+            }
+        }
+        all
     };
     println!("load before: {}", loadavg());
     for name in names {
@@ -250,7 +265,8 @@ fn cmd_bench(names: &[String]) -> Result<()> {
         );
         record(
             "bench",
-            &json!({"name": name, "blocks": meta["blocks"], "blocks_to_t": meta["blocks_to_t"],
+            &json!({"name": name, "kind": meta["kind"], "n": meta["n"], "t": meta["t"],
+                                 "blocks": meta["blocks"], "blocks_to_t": meta["blocks_to_t"],
                                  "block_bytes": meta["block_bytes"], "block_bytes_to_t": meta["block_bytes_to_t"],
                                  "support_entries": meta["support_entries"], "user_cycles": run.info.cycles(),
                                  "segments": run.info.segments.len(), "po2": run.po2s(), "padded_cycles": run.padded(),
@@ -453,10 +469,13 @@ fn main() -> Result<()> {
         Some("micro") if args.iter().any(|a| a == "--plain") => cmd_micro_plain(),
         Some("micro") => cmd_micro(),
         Some("bench") => cmd_bench(&args[1..]),
+        Some("gen-b") => gen_b::cmd_gen_b(&root().join("fixtures")),
         Some("compose") => cmd_compose(args.iter().any(|a| a == "--real")),
         Some("prove") => cmd_prove(arg(1)?),
         Some("groth16") => cmd_groth16(arg(1)?),
         Some("verify") => cmd_verify(arg(1)?),
-        _ => bail!("usage: host ids | micro | bench [name…] | compose [--real] | prove <name> | groth16 <name> | verify <name>"),
+        _ => bail!(
+            "usage: host ids | micro | gen-b | bench [name…] | compose [--real] | prove <name> | groth16 <name> | verify <name>"
+        ),
     }
 }
