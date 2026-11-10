@@ -354,8 +354,7 @@ fn vault_state(vaults: &[VaultSlots]) -> (Trie, Vec<([u8; 20], Trie)>) {
             (keccak(&SLOT_COUNT).to_vec(), enc::uint(&v.count.to_be_bytes())),
             (keccak(&SLOT_CONFIG_ID).to_vec(), enc::uint(&v.config_id)),
         ];
-        let trie =
-            Trie::new(base.into_iter().chain(v.extra.iter().map(|(k, x)| (keccak(k).to_vec(), enc::uint(x)))));
+        let trie = Trie::new(base.into_iter().chain(v.extra.iter().map(|(k, x)| (keccak(k).to_vec(), enc::uint(x)))));
         accounts.push((v.address, account_rlp(1, 0, trie.root(), keccak(b"vault code"))));
         storage.push((v.address, trie));
     }
@@ -369,9 +368,8 @@ fn vault_state(vaults: &[VaultSlots]) -> (Trie, Vec<([u8; 20], Trie)>) {
 /// every slot it wrote, zero values left out, as Ethereum's state does) among the same 40 other
 /// accounts, and the vault's storage trie.
 fn storage_state(address: [u8; 20], slots: &[(Word, Hash)]) -> (Trie, Vec<([u8; 20], Trie)>) {
-    let trie = Trie::new(
-        slots.iter().filter(|(_, x)| *x != [0u8; 32]).map(|(k, x)| (keccak(k).to_vec(), enc::uint(x))),
-    );
+    let trie =
+        Trie::new(slots.iter().filter(|(_, x)| *x != [0u8; 32]).map(|(k, x)| (keccak(k).to_vec(), enc::uint(x))));
     let mut accounts = vec![(address, account_rlp(1, 0, trie.root(), keccak(b"vault code")))];
     for i in 0x40..0x68u8 {
         accounts.push(([i; 20], account_rlp(u64::from(i), 1_000 + u128::from(i), keccak(&[0x80]), keccak(b""))));

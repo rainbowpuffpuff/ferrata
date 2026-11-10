@@ -961,12 +961,7 @@ fn vault_query(config: &BridgeConfig, account: &[Vec<u8>], slots: Vec<SlotQuery>
         instance_id: config.instance_id,
         chain_id: config.evm_chain_id,
         header,
-        accounts: alloc::vec![AccountQuery {
-            address: config.vault,
-            proof: account,
-            conditions: Vec::new(),
-            slots,
-        }],
+        accounts: alloc::vec![AccountQuery { address: config.vault, proof: account, conditions: Vec::new(), slots }],
         ..Request::default()
     }
 }

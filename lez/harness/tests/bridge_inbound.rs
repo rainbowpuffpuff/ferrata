@@ -5,15 +5,15 @@
 
 use std::{fs, path::PathBuf};
 
-use ferrata_lez_bridge_wire::{
-    code, config_actor, holder_actor, BridgeMessage, BridgeState, ConfigState, NullifierState, CODE_BLOCK,
-};
-use ferrata_lez_wire::{attest::evaluate, RecordState, CODE_BLOCKS};
 use ferrata_bridge_core::{
     chain_id_u256,
     inbound::{deposit_secret, DestKind},
     BridgeKeys,
 };
+use ferrata_lez_bridge_wire::{
+    code, config_actor, holder_actor, BridgeMessage, BridgeState, ConfigState, NullifierState, CODE_BLOCK,
+};
+use ferrata_lez_wire::{attest::evaluate, RecordState, CODE_BLOCKS};
 use harness::{
     bridge::{
         config, controls, eth_entry, eth_schedule_one, fee_recipient, registry_slots, relayer, render, Block, Deposit,
@@ -247,7 +247,8 @@ fn inbound_under_a_gloas_record() {
     let slots = VaultSlots { address: VAULT_C, root: vault.root(2), count: 2, config_id: cid, extra };
     let i = w.add_block(Block::gloas(9_000_096, &[slots]));
     let served: serde_json::Value = serde_json::from_slice(&harness::sepolia::gloas_file("block.json")).unwrap();
-    let number = u64::from_str_radix(served["result"]["number"].as_str().unwrap().trim_start_matches("0x"), 16).unwrap();
+    let number =
+        u64::from_str_radix(served["result"]["number"].as_str().unwrap().trim_start_matches("0x"), 16).unwrap();
     let record = w.blocks[i].record.clone();
     let native = |request: &ferrata_lez_wire::attest::Request| evaluate(&INSTANCE, CHAIN_ID, &record, request);
     let mut reports = Vec::new();
@@ -289,7 +290,10 @@ fn inbound_under_a_gloas_record() {
     let r = w.import("ImportRoot C, Gloas record, with the header (2 leaves)", &cid, i, vault.root(2), 2, &VAULT_C);
     run(r, None);
     let stored = w.root_state(&cid, 2).expect("root(C, 2)");
-    assert_eq!((stored.root, stored.leaf_count, stored.block_number, stored.vault), (vault.root(2), 2, number, VAULT_C));
+    assert_eq!(
+        (stored.root, stored.leaf_count, stored.block_number, stored.vault),
+        (vault.root(2), 2, number, VAULT_C)
+    );
     let r = w.claim("Claim: leaf 0 under root(C, 2)", &cid, 2, &VAULT_C, vault.witness(&deposit, 2));
     run(r, None);
     assert_eq!(w.balance(payer, &cid), DENOMINATIONS[0], "exactly the denomination");

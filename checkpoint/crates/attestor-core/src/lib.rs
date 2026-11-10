@@ -130,7 +130,12 @@ pub fn verify_certificate(channel_key: &Hash, deployment: &Deployment, att_key: 
 }
 
 /// The attestation key's signature of `tip` under the live key set `key_set_hash`.
-pub fn sign_attestation(att_key: &SigningKey, deployment: &Deployment, key_set_hash: &Hash, tip: &FinalTip) -> [u8; 64] {
+pub fn sign_attestation(
+    att_key: &SigningKey,
+    deployment: &Deployment,
+    key_set_hash: &Hash,
+    tip: &FinalTip,
+) -> [u8; 64] {
     att_key.sign(&deployment.attestation_message(key_set_hash, tip)).to_bytes()
 }
 

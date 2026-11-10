@@ -19,7 +19,12 @@ fn uint256(x: u64) -> Hash {
 }
 
 fn deployment() -> Deployment {
-    Deployment { evm_chain_id: uint256(11_155_111), vault: [0x5a; 20], lez_config_id: [0xc0; 32], channel_id: [0xc4; 32] }
+    Deployment {
+        evm_chain_id: uint256(11_155_111),
+        vault: [0x5a; 20],
+        lez_config_id: [0xc0; 32],
+        channel_id: [0xc4; 32],
+    }
 }
 
 fn tip() -> FinalTip {
@@ -66,7 +71,8 @@ fn vector(d: &Deployment, channel_seeds: &[u8], att_seed: u8, timeframe: u32, ti
 
 #[test]
 fn vectors() {
-    let d2 = Deployment { evm_chain_id: uint256(1), vault: [0x11; 20], lez_config_id: [0x22; 32], channel_id: [0x33; 32] };
+    let d2 =
+        Deployment { evm_chain_id: uint256(1), vault: [0x11; 20], lez_config_id: [0x22; 32], channel_id: [0x33; 32] };
     let tip2 = FinalTip { tip_id: 0x0102_0304_0506_0708, tip_hash: [0x44; 32], final_msg_id: [0x55; 32] };
     let all = json!({
         "description": "ferrata_attestor core: certificate (ferrata/attest-key/v1, binding the deployment) and final-tier attestation v2 (ferrata/final-tier/v2), Ed25519 (RFC 8032) over the whole tagged message; keys from 32-byte seeds; key_set_hash is SPEC-v3 D3's v2 encoding; signed_attestation is the checkpoint program's 264-byte input entry.",

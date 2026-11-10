@@ -126,14 +126,19 @@ fn the_bridge_reads_the_vaults_own_registry_fees_and_tree() {
     let vault: [u8; 20] = bytes(&fx["vault"]);
     let tokens: Vec<TokenEntry> = fx["tokens"].as_array().unwrap().iter().map(entry).collect();
     let schedules: Vec<FeeSchedule> = fx["schedules"].as_array().unwrap().iter().map(schedule).collect();
-    let schedule_tokens: Vec<[u8; 20]> = fx["schedules"].as_array().unwrap().iter().map(|s| bytes(&s["token"])).collect();
+    let schedule_tokens: Vec<[u8; 20]> =
+        fx["schedules"].as_array().unwrap().iter().map(|s| bytes(&s["token"])).collect();
     let deposits: Vec<Deposit> = fx["deposits"].as_array().unwrap().iter().map(deposit).collect();
     let snapshots = fx["snapshots"].as_array().unwrap();
     let (p_slots, q_slots) = (storage(&snapshots[0]), storage(&snapshots[1]));
     let (n_p, n_q) = (small(&snapshots[0]["leaf_count"]), small(&snapshots[1]["leaf_count"]));
-    let eth_one = schedules.iter().zip(&schedule_tokens).find(|(s, t)| s.index == 1 && **t == ETH).expect("ETH's schedule 1");
+    let eth_one =
+        schedules.iter().zip(&schedule_tokens).find(|(s, t)| s.index == 1 && **t == ETH).expect("ETH's schedule 1");
     let eth_one = eth_one.0.clone();
-    assert!(n_p > 0 && n_q > n_p && eth_one.from_leaf >= n_p && eth_one.from_leaf < n_q, "the scenario of the vault test");
+    assert!(
+        n_p > 0 && n_q > n_p && eth_one.from_leaf >= n_p && eth_one.from_leaf < n_q,
+        "the scenario of the vault test"
+    );
 
     // The LEZ side's own slots and hashes against the vault's storage and events, natively first.
     for (t, raw) in tokens.iter().zip(fx["tokens"].as_array().unwrap()) {
@@ -180,7 +185,14 @@ fn the_bridge_reads_the_vaults_own_registry_fees_and_tree() {
     let eth = tokens.iter().find(|t| t.token == ETH).expect("ETH registered").clone();
     let mut wrong = eth.clone();
     wrong.lez_unit *= 10;
-    let r = w.register_with("Register ETH with lezUnit ×10 (not the vault's entry)", &cid, p, &wrong, &zero_of(&ETH), &vault);
+    let r = w.register_with(
+        "Register ETH with lezUnit ×10 (not the vault's entry)",
+        &cid,
+        p,
+        &wrong,
+        &zero_of(&ETH),
+        &vault,
+    );
     run(r, Some(code::IMPORT_MISMATCH));
     let mut wrong_zero = zero_of(&ETH);
     wrong_zero.effective_at += 1;
@@ -209,10 +221,11 @@ fn the_bridge_reads_the_vaults_own_registry_fees_and_tree() {
     };
     let mut expected_relay: Vec<([u8; 20], u128)> = Vec::new();
     let mut expected_mint: Vec<([u8; 20], u128)> = Vec::new();
-    let add = |list: &mut Vec<([u8; 20], u128)>, token: [u8; 20], x: u128| match list.iter_mut().find(|(t, _)| *t == token) {
-        Some((_, sum)) => *sum += x,
-        None => list.push((token, x)),
-    };
+    let add =
+        |list: &mut Vec<([u8; 20], u128)>, token: [u8; 20], x: u128| match list.iter_mut().find(|(t, _)| *t == token) {
+            Some((_, sum)) => *sum += x,
+            None => list.push((token, x)),
+        };
     let mut claim_all = |w: &mut World, run: &mut dyn FnMut(TxReport, Option<u8>), n: u64, from: u64| {
         for d in deposits.iter().filter(|d| d.leaf_index >= from && d.leaf_index < n) {
             let (_, relay, mint, denomination) = fee_of(d);
@@ -230,7 +243,8 @@ fn the_bridge_reads_the_vaults_own_registry_fees_and_tree() {
     wrong_one.mint_fees[0] += eth.lez_unit;
     let r = w.import_fees("ImportFees ETH schedule 1 with another mint fee", &cid, q, ETH, 1, Some(wrong_one), &vault);
     run(r, Some(code::IMPORT_MISMATCH));
-    let r = w.import_fees("ImportFees ETH: the vault's schedule 1 at Q", &cid, q, ETH, 1, Some(eth_one.clone()), &vault);
+    let r =
+        w.import_fees("ImportFees ETH: the vault's schedule 1 at Q", &cid, q, ETH, 1, Some(eth_one.clone()), &vault);
     run(r, None);
     for t in &tokens {
         let next = schedules.iter().zip(&schedule_tokens).filter(|(_, tok)| **tok == t.token).count() as u64;

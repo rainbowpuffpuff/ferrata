@@ -90,7 +90,9 @@ contract RegistryStorageTest is VaultTestBase {
 
         string memory json = _json();
         if (vm.envOr("FERRATA_WRITE_VECTORS", false)) vm.writeFile(PATH, json);
-        assertEq(vm.readFile(PATH), json, "test/vectors/registry-storage.json is stale: rerun with FERRATA_WRITE_VECTORS=1");
+        assertEq(
+            vm.readFile(PATH), json, "test/vectors/registry-storage.json is stale: rerun with FERRATA_WRITE_VECTORS=1"
+        );
     }
 
     function _json() internal view returns (string memory) {
@@ -101,7 +103,8 @@ contract RegistryStorageTest is VaultTestBase {
             "\",\n  \"tokens\": [",
             _tokens()
         );
-        string memory body = string.concat("\n  ],\n  \"schedules\": [", schedules, "\n  ],\n  \"deposits\": [", deposits);
+        string memory body =
+            string.concat("\n  ],\n  \"schedules\": [", schedules, "\n  ],\n  \"deposits\": [", deposits);
         return string.concat(head, body, "\n  ],\n  \"snapshots\": [", snapshots, "\n  ]\n}\n");
     }
 
@@ -135,10 +138,18 @@ contract RegistryStorageTest is VaultTestBase {
             n++;
         }
         string memory head = string.concat(
-            "\n    {\n      \"name\": \"", name, "\",\n      \"leaf_count\": ", vm.toString(uint256(vault.nextLeafIndex()))
+            "\n    {\n      \"name\": \"",
+            name,
+            "\",\n      \"leaf_count\": ",
+            vm.toString(uint256(vault.nextLeafIndex()))
         );
         snapshots = string.concat(
-            snapshots, bytes(snapshots).length == 0 ? "" : ",", head, ",\n      \"storage\": [", slots, "\n      ]\n    }"
+            snapshots,
+            bytes(snapshots).length == 0 ? "" : ",",
+            head,
+            ",\n      \"storage\": [",
+            slots,
+            "\n      ]\n    }"
         );
     }
 
@@ -195,8 +206,9 @@ contract RegistryStorageTest is VaultTestBase {
         uint256 index = uint256(log.topics[2]);
         (uint64 announcedAt,, uint256[] memory mintFees, uint256[] memory burnFees, uint256[] memory checkpointFees) =
             abi.decode(log.data, (uint64, uint64, uint256[], uint256[], uint256[]));
-        string memory head =
-            string.concat("\"announced_at\": ", vm.toString(uint256(announcedAt)), ",\n      \"mint_fees\": ", _list(mintFees));
+        string memory head = string.concat(
+            "\"announced_at\": ", vm.toString(uint256(announcedAt)), ",\n      \"mint_fees\": ", _list(mintFees)
+        );
         announced[token][index] = string.concat(
             head, ",\n      \"burn_fees\": ", _list(burnFees), ",\n      \"checkpoint_fees\": ", _list(checkpointFees)
         );
@@ -209,7 +221,10 @@ contract RegistryStorageTest is VaultTestBase {
         string memory head =
             string.concat("\n    {\"token\": \"", vm.toString(token), "\", \"index\": ", vm.toString(index));
         string memory leaf = string.concat(
-            ", \"from_leaf\": ", vm.toString(uint256(fromLeaf)), ", \"effective_at\": ", vm.toString(uint256(effectiveAt))
+            ", \"from_leaf\": ",
+            vm.toString(uint256(fromLeaf)),
+            ", \"effective_at\": ",
+            vm.toString(uint256(effectiveAt))
         );
         string memory hash = string.concat(",\n      \"schedule_hash\": \"", vm.toString(scheduleHash), "\", ");
         schedules = string.concat(
@@ -226,7 +241,11 @@ contract RegistryStorageTest is VaultTestBase {
             "\n    {\"leaf_index\": ", vm.toString(uint256(leafIndex)), ", \"depositor\": \"", vm.toString(depositor)
         );
         string memory what = string.concat(
-            "\", \"token\": \"", vm.toString(token), "\", \"amount\": \"", vm.toString(amount), "\",\n      \"commitment\": \""
+            "\", \"token\": \"",
+            vm.toString(token),
+            "\", \"amount\": \"",
+            vm.toString(amount),
+            "\",\n      \"commitment\": \""
         );
         string memory wallet = string.concat(
             vm.toString(commitment),
