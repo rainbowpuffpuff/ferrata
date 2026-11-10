@@ -242,8 +242,32 @@ impl Note {
     }
 }
 
+/// First element of an `account` list that carries the block's RLP header in front of the
+/// account's Merkle-Patricia nodes: `[HEADER_MARKER, header, nodes…]`. A record in the Gloas
+/// layout binds the block hash only, and the attestation program takes the state root from the
+/// header (`Request::header`). A trie node is an RLP list (first byte at least `0xc0`), so this
+/// tag (first byte `f`) is never one. Carrying the header inside the list keeps `ImportRoot`'s
+/// encoding, which the checkpoint walks list by list, as it is.
+pub const HEADER_MARKER: &[u8] = b"ferrata-lez/v1/bridge/rlp-header";
+
+/// `account` with a header in front of it, as [`split_header`] reads it.
+pub fn with_header(header: Vec<u8>, account: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
+    let mut out = alloc::vec![HEADER_MARKER.to_vec(), header];
+    out.extend(account);
+    out
+}
+
+/// The header an `account` list carries, if any, and the account's own nodes.
+pub fn split_header(account: &[Vec<u8>]) -> (Option<Vec<u8>>, Vec<Vec<u8>>) {
+    match account {
+        [marker, header, nodes @ ..] if marker.as_slice() == HEADER_MARKER => (Some(header.clone()), nodes.to_vec()),
+        _ => (None, account.to_vec()),
+    }
+}
+
 /// The proofs of an import: the vault's account and its slots 0 and 1 (`eth_getProof`'s
-/// `accountProof` and `storageProof[i].proof`).
+/// `accountProof` and `storageProof[i].proof`); `account` may carry the block's header in front
+/// ([`with_header`]).
 #[derive(Clone, Debug, Default, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub struct ImportProof {
     pub account: Vec<Vec<u8>>,
@@ -251,7 +275,8 @@ pub struct ImportProof {
     pub count_slot: Vec<Vec<u8>>,
 }
 
-/// The proofs of the pairing: the vault's account and its slot 2.
+/// The proofs of the pairing: the vault's account and its slot 2; `account` may carry the
+/// block's header in front ([`with_header`]).
 #[derive(Clone, Debug, Default, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub struct PairingProof {
     pub account: Vec<Vec<u8>>,
@@ -450,12 +475,14 @@ pub struct BurnRecord {
 
 /// The attestation request of an import: the vault's account and its slots 0 and 1.
 pub fn import_request(config: &BridgeConfig, proof: &ImportProof) -> Request {
+    let (header, account) = split_header(&proof.account);
     Request {
         instance_id: config.instance_id,
         chain_id: config.terms.evm_chain_id,
+        header,
         accounts: alloc::vec![AccountQuery {
             address: config.terms.vault,
-            proof: proof.account.clone(),
+            proof: account,
             conditions: Vec::new(),
             slots: alloc::vec![
                 SlotQuery { slot: SLOT_ROOT, proof: proof.root_slot.clone(), conditions: Vec::new() },
@@ -468,12 +495,14 @@ pub fn import_request(config: &BridgeConfig, proof: &ImportProof) -> Request {
 
 /// The attestation request of the pairing: the vault's account and its slot 2.
 pub fn pairing_request(config: &BridgeConfig, proof: &PairingProof) -> Request {
+    let (header, account) = split_header(&proof.account);
     Request {
         instance_id: config.instance_id,
         chain_id: config.terms.evm_chain_id,
+        header,
         accounts: alloc::vec![AccountQuery {
             address: config.terms.vault,
-            proof: proof.account.clone(),
+            proof: account,
             conditions: Vec::new(),
             slots: alloc::vec![SlotQuery {
                 slot: SLOT_CONFIG_ID,
