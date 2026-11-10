@@ -30,46 +30,54 @@ contract VaultInvariants is VaultTestBase {
         tokens[3] = address(usdt);
         handler = new VaultHandler(vault, verifier, admin, freezer, tokens);
 
-        bytes4[] memory selectors = new bytes4[](9);
+        bytes4[] memory selectors = new bytes4[](15);
         selectors[0] = VaultHandler.deposit.selector;
-        selectors[1] = VaultHandler.acceptRoot.selector;
-        selectors[2] = VaultHandler.release.selector;
-        selectors[3] = VaultHandler.replayNullifier.selector;
-        selectors[4] = VaultHandler.donate.selector;
-        selectors[5] = VaultHandler.warp.selector;
-        selectors[6] = VaultHandler.setFreeze.selector;
-        selectors[7] = VaultHandler.setCap.selector;
-        selectors[8] = VaultHandler.setReleaseDelay.selector;
+        selectors[1] = VaultHandler.submitCandidate.selector;
+        selectors[2] = VaultHandler.finalizePending.selector;
+        selectors[3] = VaultHandler.revoke.selector;
+        selectors[4] = VaultHandler.retire.selector;
+        selectors[5] = VaultHandler.refund.selector;
+        selectors[6] = VaultHandler.replayRefund.selector;
+        selectors[7] = VaultHandler.release.selector;
+        selectors[8] = VaultHandler.replayNullifier.selector;
+        selectors[9] = VaultHandler.togglePayee.selector;
+        selectors[10] = VaultHandler.donate.selector;
+        selectors[11] = VaultHandler.warp.selector;
+        selectors[12] = VaultHandler.setFreeze.selector;
+        selectors[13] = VaultHandler.setCap.selector;
+        selectors[14] = VaultHandler.setReleaseDelay.selector;
         targetContract(address(handler));
         targetSelector(StdInvariant.FuzzSelector({addr: address(handler), selectors: selectors}));
     }
 
-    function invariant_escrowEqualsDepositsMinusReleases() public view {
+    function invariant_escrowEqualsDepositsMinusReleasesMinusRefunds() public view {
         address[] memory tokens = handler.tokens();
         for (uint256 i = 0; i < tokens.length; i++) {
-            assertEq(vault.escrowed(tokens[i]), handler.ghostDeposited(tokens[i]) - handler.ghostReleased(tokens[i]));
+            address t = tokens[i];
+            assertEq(vault.escrowed(t), handler.ghostDeposited(t) - handler.ghostReleased(t) - handler.ghostRefunded(t));
         }
     }
 
-    function invariant_vaultBalanceCoversEscrow() public view {
+    function invariant_balanceCoversEscrowPlusOwed() public view {
         address[] memory tokens = handler.tokens();
         for (uint256 i = 0; i < tokens.length; i++) {
-            assertGe(_balance(tokens[i], address(vault)), vault.escrowed(tokens[i]));
+            assertGe(_balance(tokens[i], address(vault)), vault.escrowed(tokens[i]) + vault.totalOwed(tokens[i]));
         }
     }
 
-    function invariant_leafCountEqualsDepositCount() public view {
-        assertEq(vault.nextLeafIndex(), handler.ghostDepositCount());
-        assertEq(vm.load(address(vault), bytes32(uint256(1))), bytes32(handler.ghostDepositCount()));
+    function invariant_totalOwedIsTheSumOverPayees() public view {
+        address[] memory tokens = handler.tokens();
+        address[] memory payees = handler.payees();
+        for (uint256 i = 0; i < tokens.length; i++) {
+            uint256 sum;
+            for (uint256 k = 0; k < payees.length; k++) {
+                sum += vault.owed(payees[k], tokens[i]);
+            }
+            assertEq(vault.totalOwed(tokens[i]), sum);
+        }
     }
 
-    function invariant_depositRootMatchesReference() public view {
-        bytes32 expected = ReferenceMerkle.root(handler.leaves());
-        assertEq(vault.depositRoot(), expected);
-        assertEq(vm.load(address(vault), bytes32(uint256(0))), expected);
-    }
-
-    function invariant_usedNullifierIsNeverAcceptedAgain() public view {
+    function invariant_usedNullifierIsNeverPaidAgain() public view {
         assertEq(handler.ghostDoubleSpends(), 0);
         bytes32[] memory used = handler.usedNullifiers();
         for (uint256 i = 0; i < used.length; i++) {
@@ -78,11 +86,48 @@ contract VaultInvariants is VaultTestBase {
         assertEq(used.length, handler.ghostReleaseCount());
     }
 
-    /// @dev Run summary, shown with -vv: shows the campaign reached successful releases and replay attempts that
-    ///      only the nullifier check stopped, i.e. that the invariants above are not passing vacuously.
+    function invariant_refundedLeafIsNeverPaidAgain() public view {
+        assertEq(handler.ghostDoubleRefunds(), 0);
+        uint64[] memory refunded = handler.refundedLeaves();
+        for (uint256 i = 0; i < refunded.length; i++) {
+            assertTrue(vault.refunded(refunded[i]));
+        }
+    }
+
+    /// @notice finalState is genesis or a state that went through finalize, and it is the newest state of the valid
+    ///         (non-revoked) history: the last valid checkpoint's newState, or genesis if there is none.
+    function invariant_finalStateIsGenesisOrFinalised() public view {
+        bytes32 state = vault.finalState();
+        assertTrue(state == GENESIS_STATE || handler.ghostWentThroughFinalize(state));
+
+        bytes32 expected = GENESIS_STATE;
+        uint256 count = vault.checkpointCount();
+        for (uint256 i = count; i > 0; i--) {
+            (, bytes32 newState,,,,, bool revoked,) = vault.checkpoints(i - 1);
+            if (!revoked) {
+                expected = newState;
+                break;
+            }
+        }
+        assertEq(state, expected);
+    }
+
+    function invariant_leafCountAndRootMatchTheReference() public view {
+        assertEq(vault.nextLeafIndex(), handler.ghostDepositCount());
+        assertEq(vm.load(address(vault), bytes32(uint256(1))), bytes32(handler.ghostDepositCount()));
+        bytes32 expected = ReferenceMerkle.root(handler.leaves());
+        assertEq(vault.depositRoot(), expected);
+        assertEq(vm.load(address(vault), bytes32(uint256(0))), expected);
+        assertEq(vm.load(address(vault), bytes32(uint256(2))), LEZ_CONFIG_ID);
+    }
+
+    /// @dev Run summary, shown with -vv: shows the campaign reaches the paths the invariants are about.
     function afterInvariant() public view {
         console2.log("deposits", handler.ghostDepositCount());
+        console2.log("finalisations", handler.ghostFinalizeCount());
+        console2.log("revocations", handler.ghostRevokeCount());
         console2.log("releases", handler.ghostReleaseCount());
+        console2.log("refunds", handler.ghostRefundCount());
         console2.log("replays stopped by nullifier check", handler.ghostReplaysStoppedByNullifier());
     }
 }
