@@ -80,11 +80,22 @@ gas_check() {
   [ -f "$dry" ] || { echo "forge wrote no dry run of $step" >&2; return 1; }
   python3 "$here/../e2e/gasplan.py" plan "$dry" --out "$out/$step.plan.json" > /dev/null || return 1
   if [ "${FERRATA_UNLOCKED:-}" != 1 ]; then
-    local port="${FERRATA_GAS_FORK_PORT:-8547}"
-    anvil --fork-url "$SEPOLIA_RPC_URL" --port "$port" --auto-impersonate > "$out/$step.anvil.log" 2>&1 &
-    pid=$!
+    # Its log stays out of the run directory: anvil's banner names the endpoint, which may hold a key.
+    local port="${FERRATA_GAS_FORK_PORT:-8547}" alog="$TMPDIR/gas-fork-$step.log" attempt line
     state="http://127.0.0.1:$port"
-    for _ in $(seq 60); do cast chain-id --rpc-url "$state" > /dev/null 2>&1 && break; sleep 1; done
+    for attempt in 1 2 3; do
+      anvil --fork-url "$SEPOLIA_RPC_URL" --host 127.0.0.1 --port "$port" --auto-impersonate > "$alog" 2>&1 &
+      pid=$!
+      for _ in $(seq 60); do
+        cast chain-id --rpc-url "$state" > /dev/null 2>&1 && break 2
+        kill -0 "$pid" 2> /dev/null || break
+        sleep 1
+      done
+      kill "$pid" 2> /dev/null; wait "$pid" 2> /dev/null || true; pid=""
+      tail -n 3 "$alog" | while IFS= read -r line; do echo "anvil, attempt $attempt: ${line//"$SEPOLIA_RPC_URL"/<endpoint>}" >&2; done
+      sleep 10
+    done
+    [ -n "$pid" ] || { echo "no fork of the endpoint in three attempts: the gas check cannot run" >&2; return 1; }
   fi
   echo "gas check of $step: the node $(echo "${FERRATA_GAS_RPC:-$SEPOLIA_RPC_URL}" | sed 's,^\([a-z]*://[^/?]*\).*,\1,') prices each transaction on the state of $state"
   python3 "$here/../e2e/gasplan.py" run --node "${FERRATA_GAS_RPC:-$SEPOLIA_RPC_URL}" --state "$state" \

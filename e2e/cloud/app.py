@@ -268,24 +268,33 @@ def _hooks(python: str, repo: str) -> dict:
 
 def _start_anvil(r: _Run, upstream: str) -> tuple[subprocess.Popen, str]:
     """anvil on a fork of Sepolia at its latest block, a block every 2 s, every sender impersonable.
-    Its output stays in the container (the banner names the endpoint); a copy without it goes to the Volume."""
-    out = open("/root/anvil.log", "w")
-    proc = subprocess.Popen(["anvil", "--fork-url", upstream, "--auto-impersonate", "--block-time", "2",
-                             "--host", "127.0.0.1", "--port", "8545"], stdout=out, stderr=subprocess.STDOUT,
-                            start_new_session=True)
+    Its output stays in the container (the banner names the endpoint); a copy without it goes to the Volume.
+    Tried three times: an anvil that exits at once leaves its redacted log as anvil-attempt-<k>.log."""
     local = "http://127.0.0.1:8545"
-    for _ in range(90):
-        time.sleep(2)
-        c = subprocess.run(["cast", "chain-id", "--rpc-url", local], capture_output=True, text=True)
-        if c.returncode == 0 and c.stdout.strip() == CHAIN_ID:
-            break
-        if proc.poll() is not None:
-            raise RuntimeError("anvil exited")
-    else:
-        raise RuntimeError("anvil did not answer as chain 11155111 within 3 minutes")
-    block = subprocess.run(["cast", "block-number", "--rpc-url", local], capture_output=True, text=True).stdout.strip()
-    r.say(f"anvil: a fork of Sepolia at block {block}, a block every 2 s, senders impersonated")
-    return proc, block
+    for attempt in (1, 2, 3):
+        out = open("/root/anvil.log", "w")
+        proc = subprocess.Popen(["anvil", "--fork-url", upstream, "--auto-impersonate", "--block-time", "2",
+                                 "--host", "127.0.0.1", "--port", "8545"], stdout=out, stderr=subprocess.STDOUT,
+                                start_new_session=True)
+        for _ in range(90):
+            time.sleep(2)
+            c = subprocess.run(["cast", "chain-id", "--rpc-url", local], capture_output=True, text=True)
+            if c.returncode == 0 and c.stdout.strip() == CHAIN_ID:
+                block = subprocess.run(["cast", "block-number", "--rpc-url", local], capture_output=True,
+                                       text=True).stdout.strip()
+                r.say(f"anvil: a fork of Sepolia at block {block}, a block every 2 s, senders impersonated")
+                return proc, block
+            if proc.poll() is not None:
+                break
+        if proc.poll() is None:
+            os.killpg(proc.pid, signal.SIGTERM)
+            proc.wait(timeout=20)
+        out.close()
+        _copy_redacted("/root/anvil.log", f"{r.cloud}/anvil-attempt-{attempt}.log", upstream)
+        tail = open(f"{r.cloud}/anvil-attempt-{attempt}.log", errors="replace").read().strip().splitlines()[-3:]
+        r.say(f"anvil attempt {attempt} failed (exit {proc.returncode}): " + " | ".join(tail))
+        time.sleep(15)
+    raise RuntimeError("anvil did not fork Sepolia in three attempts: see anvil-attempt-*.log")
 
 
 def _copy_redacted(src: str, dst: str, secret: str | None) -> None:
