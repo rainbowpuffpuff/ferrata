@@ -177,7 +177,7 @@ fn finality_update(b: &[u8]) -> LightClientUpdate {
         next_sync_committee: SyncCommittee::empty(512),
         next_sync_committee_branch: vec![ZERO; LcFork::Electra.sync_committee_branch_len()],
         finalized_header: LightClientHeader::decode(&b[fin..], LcFork::Electra).unwrap(),
-        finality_branch: b[8..232].chunks_exact(32).map(|c| c.try_into().unwrap()).collect(),
+        finality_branch: b[8..232].as_chunks::<32>().0.to_vec(),
         sync_aggregate: SyncAggregate::decode(&b[232..392], 512).unwrap(),
         signature_slot: u64::from_le_bytes(b[392..400].try_into().unwrap()),
     }

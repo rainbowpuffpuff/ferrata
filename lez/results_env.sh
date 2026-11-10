@@ -16,6 +16,8 @@ risc0_home="${RISC0_HOME:-$HOME/.risc0}"
 dirty="${FERRATA_DIRTY:-$(git -C "$here" status --short -- ':(top)' ':(top,exclude)lez/results' ':(top,exclude)lez/RESULTS.md' | wc -l)}"
 head="${FERRATA_HEAD:-$(git -C "$here" rev-parse HEAD)}"
 lez="${FERRATA_LEZ:-$(git -C "$up" describe --tags 2>/dev/null) = $(git -C "$up" rev-parse HEAD), upstream tree clean: $([ -z "$(git -C "$up" status --short)" ] && echo yes || echo NO)}"
+cpu="$(lscpu 2>/dev/null | sed -n 's/^Model name: *//p' | head -1)"
+if [ -z "$cpu" ] || [ "$cpu" = unknown ]; then cpu="$(sed -n 's/^model name[^:]*: *//p' /proc/cpuinfo | head -1)"; fi
 guest_rust="$(ls "$risc0_home/toolchains" 2>/dev/null | sed -n 's/^v\([0-9.]*\)-rust-.*/\1/p' | sort -V | tail -1)"
 {
   echo "# Measurement environment"
@@ -28,7 +30,7 @@ guest_rust="$(ls "$risc0_home/toolchains" 2>/dev/null | sed -n 's/^v\([0-9.]*\)-
   echo "- r0vm: $(r0vm --version)"
   echo "- host toolchain: $(rustc +1.98.1 --version)"
   echo "- guest toolchain: RISC Zero Rust ${guest_rust:-unknown} (in RISC0_HOME), C++ 2024.1.5"
-  echo "- CPU: $(lscpu | sed -n 's/^Model name: *//p' | head -1), $(nproc) threads"
+  echo "- CPU: ${cpu:-unknown}; $(grep -c ^processor /proc/cpuinfo) processors in /proc/cpuinfo, $(nproc) usable by this process (nproc)"
   echo "- RAM: $(free -g | awk '/Mem:/{print $2}') GB; GPU: none"
   echo "- OS: $(uname -sr)"
 } > "$here/results/environment.md"
