@@ -365,11 +365,34 @@ fn vault_state(vaults: &[VaultSlots]) -> (Trie, Vec<([u8; 20], Trie)>) {
     (Trie::new(accounts.iter().map(|(a, rlp)| (keccak(a).to_vec(), rlp.clone()))), storage)
 }
 
+/// The state trie holding the vault at `address` with exactly `slots` (a real vault's own storage:
+/// every slot it wrote, zero values left out, as Ethereum's state does) among the same 40 other
+/// accounts, and the vault's storage trie.
+fn storage_state(address: [u8; 20], slots: &[(Word, Hash)]) -> (Trie, Vec<([u8; 20], Trie)>) {
+    let trie = Trie::new(
+        slots.iter().filter(|(_, x)| *x != [0u8; 32]).map(|(k, x)| (keccak(k).to_vec(), enc::uint(x))),
+    );
+    let mut accounts = vec![(address, account_rlp(1, 0, trie.root(), keccak(b"vault code")))];
+    for i in 0x40..0x68u8 {
+        accounts.push(([i; 20], account_rlp(u64::from(i), 1_000 + u128::from(i), keccak(&[0x80]), keccak(b""))));
+    }
+    (Trie::new(accounts.iter().map(|(a, rlp)| (keccak(a).to_vec(), rlp.clone()))), vec![(address, trie)])
+}
+
 impl Block {
     /// A block numbered `number`, at beacon slot `slot`, holding `vaults` among 40 other accounts,
     /// under a record in the payload layout.
     pub fn new(slot: u64, number: u64, vaults: &[VaultSlots]) -> Self {
-        let (state, storage) = vault_state(vaults);
+        Self::payload(slot, number, vault_state(vaults))
+    }
+
+    /// A block holding the vault at `address` with exactly the storage `slots` it wrote
+    /// (`vault/test/RegistryStorage.t.sol` exports FerrataVault's own), under a payload record.
+    pub fn with_storage(slot: u64, number: u64, address: [u8; 20], slots: &[(Word, Hash)]) -> Self {
+        Self::payload(slot, number, storage_state(address, slots))
+    }
+
+    fn payload(slot: u64, number: u64, (state, storage): (Trie, Vec<([u8; 20], Trie)>)) -> Self {
         let record = HeaderRecord {
             beacon: BeaconBlockHeader { slot, ..Default::default() },
             execution_root: [3; 32],
