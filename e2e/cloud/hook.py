@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """The driver's hooks inside the cloud runner (e2e/cloud/app.py writes the wrappers that call this).
 
-    hook.py gpu <inputs dir> <proof> <job> <out dir>   FERRATA_GPU_CMD: gpu_prove on one L4; leaves its
+    hook.py gpu <inputs dir> <proof> <job> <out dir>   FERRATA_GPU_CMD: gpu_prove on one GPU; leaves its
                                                        files (prove.json, receipt-succinct.bin, run.json,
                                                        prover.log, ...) in <out dir>
     hook.py wrap <input.json> <proof.json>             FERRATA_MWRAP: groth16_wrap, RISC Zero's prover image
     hook.py ping                                       the app answers from inside the container
 
-A GPU job that waits longer than FERRATA_GPU_WAIT_S (default 1800 s) for its result is cancelled and
-queued again, at most FERRATA_GPU_ATTEMPTS times (default 3): a job once waited 42 minutes for an L4
-that a second request got within five.
+The GPU job is queued once and waited for up to FERRATA_GPU_WAIT_S (default 7200 s): Modal keeps it in
+the queue until a GPU is free. It is not cancelled and queued again: a cancelled input keeps its place
+and is handed the next free GPU, only to be cancelled there (seen on 10 Nov 2026, twice).
 """
 import io
 import json
@@ -32,29 +32,25 @@ def gpu(inputs: str, proof: str, job: str, out: str) -> int:
     with tarfile.open(fileobj=buf, mode="w:gz") as tf:
         tf.add(inputs, arcname=".")
     fn = modal.Function.from_name(APP_NAME, "gpu_prove")
-    wait_s = int(os.environ.get("FERRATA_GPU_WAIT_S", "1800"))
-    attempts = int(os.environ.get("FERRATA_GPU_ATTEMPTS", "3"))
-    for attempt in range(1, attempts + 1):
-        call = fn.spawn(buf.getvalue(), proof, job, 600)
-        say(f"{job}: {proof} queued on gpu_prove, call {call.object_id} (attempt {attempt} of {attempts})")
-        try:
-            res = call.get(timeout=wait_s)
-        except TimeoutError:
-            say(f"no result after {wait_s} s: cancelling call {call.object_id}")
-            call.cancel()
-            continue
-        os.makedirs(out, exist_ok=True)
-        for name, data in res["files"].items():
-            with open(os.path.join(out, name), "wb") as f:
-                f.write(data)
-        rec = res["record"]
-        p = rec.get("prove") or {}
-        say(f"RESULT {proof}: ok={rec['ok']} gpu={rec['gpu']} prover_wall_s={rec['prover_wall_s']:.1f}"
-            f" total_s={p.get('total_s')} segments={p.get('segments')} image_ids_equal={rec['image_ids_equal']}"
-            f" inputs_equal_manifest={rec['input_hashes_equal_manifest']} task={rec.get('task')}")
-        return 0 if res["ok"] else 1
-    say(f"no GPU result in {attempts} attempts")
-    return 1
+    wait_s = int(os.environ.get("FERRATA_GPU_WAIT_S", "7200"))
+    call = fn.spawn(buf.getvalue(), proof, job, 600)
+    say(f"{job}: {proof} queued on gpu_prove, call {call.object_id}; waiting up to {wait_s} s")
+    try:
+        res = call.get(timeout=wait_s)
+    except TimeoutError:
+        say(f"no result after {wait_s} s: cancelling call {call.object_id}")
+        call.cancel()
+        return 1
+    os.makedirs(out, exist_ok=True)
+    for name, data in res["files"].items():
+        with open(os.path.join(out, name), "wb") as f:
+            f.write(data)
+    rec = res["record"]
+    p = rec.get("prove") or {}
+    say(f"RESULT {proof}: ok={rec['ok']} gpu={rec['gpu']} prover_wall_s={rec['prover_wall_s']:.1f}"
+        f" total_s={p.get('total_s')} segments={p.get('segments')} image_ids_equal={rec['image_ids_equal']}"
+        f" inputs_equal_manifest={rec['input_hashes_equal_manifest']} task={rec.get('task')}")
+    return 0 if res["ok"] else 1
 
 
 def wrap(input_json: str, proof_json: str) -> int:

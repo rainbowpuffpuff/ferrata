@@ -375,7 +375,9 @@ finalisation proof will need forty minutes later is at hand (the recorded guest 
 the build wrapper or cargo and r0vm, the prover image's wrapper or Docker). It then sends the fifteen
 transactions in their nonce order (each stage simulated by forge first), sleeps through the vault's wait and the
 release delay, builds and proves the finalisation for the beacon it recorded, and runs `verify-sepolia.sh`.
-Everything it prints also goes to `e2e/runs/sepolia-live/sepolia-live.log`.
+Everything it prints also goes to `e2e/runs/sepolia-live/sepolia-live.log`. To run it with the laptop switched
+off, [`../e2e/sepolia-cloud.sh`](../e2e/sepolia-cloud.sh) runs the same script in the cloud (`e2e/README.md`,
+"Running it in the cloud").
 
 It is resumable: started again, it lets a transaction that is still in the mempool land, reads the chain, sees
 which stages are complete and continues after the last one. A stage that was interrupted while it was sending

@@ -43,6 +43,7 @@ for one deployment; this one serves the Foundry run, a rehearsal on a fork and t
 [`runs/fork/`](runs/fork/README.md) is the copy used to rehearse the Sepolia scripts on a local
 fork, with that fork's beacon and the finalisation built for it;
 [`runs/fork-driver/`](runs/fork-driver/README.md) the same for the one-command driver;
+[`runs/cloud-fork/`](runs/cloud-fork/README.md) the same driver run in the cloud ("Running it in the cloud");
 [`runs/sepolia-live/`](runs/sepolia-live/README.md) the prepared directory of the run on Sepolia.
 
 The zone, by block id (the producer of a block is the key at index id mod 4):
@@ -183,3 +184,78 @@ The finalisation proof can only be made after the beacon exists: `beacon.json` g
 `run.sh inputs` rebuilds the zone with the echo block (blocks 1–9 are the same bytes), and only
 `cp-e2e-finalize` is proven again. For the Foundry run the beacon block is chosen by the test
 (`vm.roll`, `vm.prevrandao`); on a chain it is the block that mined `recordBeacon`.
+
+## Running it in the cloud
+
+[`sepolia-cloud.sh`](sepolia-cloud.sh) runs `sepolia-live.sh` itself on Modal, so that nothing is needed
+from the laptop between `start` and `fetch`: the laptop can be switched off. The app is
+[`cloud/app.py`](cloud/app.py) (`ferrata-sepolia`), in the workspace that `MODAL_PROFILE` of
+`e2e/sepolia-live.env` names (always given per command, never activated):
+
+| Function | What runs there |
+|---|---|
+| `runner` | the driver, every `forge script` and `cast` call, the cargo steps (`run.sh inputs`, `p254`, `groth16`, `fixture`) and r0vm (`identity_p254` on its CPU); one container per start, not preemptible, 2 cores and 4 GiB reserved, up to 16 cores and 32 GiB used, at most 4 h, no retries |
+| `gpu_prove` | the checkpoint proof on one NVIDIA L4 (on an L40S when no L4 is free: also Ada, compute capability 8.9, the same binary), with the image recipe of [`gpu-prover/`](../gpu-prover/) and the CUDA prover it built (its Volume `ferrata-prover`, mounted read-only) |
+| `groth16_wrap` | RISC Zero's prover image `risczero/risc0-groth16-prover:v2025-04-03.1`, run as a function |
+
+```sh
+e2e/sepolia-cloud.sh setup     # once (idempotent): the Secret with the key, then deploy the app
+e2e/sepolia-cloud.sh start     # prints sender, nonce, balance, gas price; waits for a typed yes; returns at once
+e2e/sepolia-cloud.sh status    # any time: the runner's state, the stages done, the last lines of the log
+e2e/sepolia-cloud.sh fetch     # the run directory back into e2e/runs/sepolia-live/ (the runner's logs in work/cloud/)
+e2e/sepolia-cloud.sh stop      # cancels a running runner and stops the app (`setup` again before the next start)
+```
+
+A real run takes about an hour plus the wait for a GPU: some 5 minutes of building (304 s in the
+rehearsal), then the driver's 55 minutes (`vault/README.md`). Then `fetch`, read the DONE line at the end
+of `e2e/runs/sepolia-live/sepolia-live.log`, and commit the run directory as for the local run
+(`vault/README.md`, "Sepolia round trip"). Source verification stays a separate step, from the laptop.
+
+**The key.** `setup` reads the keystore file and the password file named by `ETH_KEYSTORE` and
+`ETH_PASSWORD` by path, in its own process, and stores their contents, with `SEPOLIA_RPC_URL` and
+`ETH_FROM`, in the Modal Secret `ferrata-sepolia-key`. The runner takes all four out of its environment
+before anything else runs; only on a live run does it write the keystore and the password as two files
+(mode 600) inside its own container, for forge to read through `ETH_KEYSTORE` and `ETH_PASSWORD` as on the
+laptop. They are never on the Volume, in a log or on a command line. Whoever can use that workspace can sign
+with this key, so it must stay a throwaway testnet key; after the run,
+`MODAL_PROFILE=<profile> modal secret delete ferrata-sepolia-key` removes it.
+
+**A start.** `start` checks the run directory and the inputs (the guest programs against the run's
+`programs.json`, `vault/lib`), then uploads to the Volume `ferrata-sepolia`: a git bundle of `HEAD` (the
+GPU manifest records the commit), the files git does not ignore as they are in the checkout, and the two
+ignored inputs `e2e/programs/` and `vault/lib/` (never `e2e/sepolia-live.env`); the run directory only
+if the cloud has no copy of it yet, since afterwards the cloud's copy is the run's state. It spawns the
+runner and returns. The runner rebuilds the repository at the same absolute path, builds
+`ferrata-e2e`, the zone builder and the vault before the first transaction (a build error sends nothing),
+and runs the driver with `FERRATA_MRUN` unset and its two hooks pointing at `gpu_prove` and
+`groth16_wrap` ([`cloud/hook.py`](cloud/hook.py)). It mirrors the run directory and forge's records of
+the stages to the Volume every 20 s and when the driver stops. Started again after an interruption, the
+driver reads the chain and continues after the last complete stage, exactly as on the laptop, with forge's
+records back from the Volume.
+
+**The GPU.** The hook queues the proof once and waits up to two hours for it (`FERRATA_GPU_WAIT_S`); Modal
+keeps it queued until a GPU is free. It never cancels and queues again: a cancelled input keeps its place
+in Modal's queue and is handed the next free GPU, only to be dropped there. In the rehearsal no L4 was free
+for 50 minutes, two re-queues of an earlier version of the hook were lost that way, and the proof ran on
+the L40S fallback. On Sepolia the wait only delays `finalize`: the vault sets no age limit on a beacon.
+
+**What differs from the local run.** The driver is the same file; its one addition is the hook
+`FERRATA_GPU_CMD` (unset, the GPU step is the `modal run` of the rehearsals, unchanged). Foundry in the
+runner is the laptop's 1.3.6-nightly of 18 September 2025 (`nightly-a4d66e8…`; forge, cast and anvil have
+the same sha256 as the laptop's): the 1.3.6 release refuses `forge script --unlocked` while `ETH_FROM` is
+set. `identity_p254` runs on the runner's CPU instead of the build box.
+
+**Rehearsed in the cloud** ([`runs/cloud-fork/`](runs/cloud-fork/README.md)): `start --fork cloud-fork` from a
+clean copy of `runs/sepolia-live/` on 10 November 2026. The runner built for 304 s, started anvil on a fork
+of Sepolia and ran the driver: deploy, submit and beacon in 23 s (the fork's clock moved), the finalisation
+input in 18 s, 74 minutes of GPU queue, the proof in 7.9 s on an L40S, `identity_p254` in 30 s on the
+runner's CPU, the prover image in 22 s, then finalize, release and `verify-sepolia.sh` in 10 s: ALL CHECKS
+PASSED and `DONE: 15 transactions on chain 11155111, 10898492 gas`, every stage's gas equal to the laptop's
+rehearsal. `start` returned 22 and 64 s after it was called (its two runs); `status` and `fetch` worked
+during the build, during the GPU wait and after DONE.
+
+**Cost.** Modal billed the app 1.46 USD for all of this work on 10 November (setup, a self-test, a first
+start that forge stopped before any transaction, the rehearsal): CPU 0.76 and memory 0.23 (the runner is
+non-preemptible and holds 2 cores and 4 GiB through every wait), GPU 0.46 (L40S 0.33, L4 0.13, two of the
+three GPU containers spent on the cancelled inputs). Deployed and idle the app runs no container; `stop`
+removes it, and `setup` brings it back in under a minute once its images are built.
