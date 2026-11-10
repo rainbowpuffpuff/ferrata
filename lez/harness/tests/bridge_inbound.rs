@@ -133,7 +133,7 @@ fn inbound_configuration_import_and_plaintext_claim() {
     run(r, Some(code::CLAIM_INVALID));
     let mut bad = good.clone();
     bad.amount = ferrata_lez_bridge_wire::word_of_u128(DENOMINATIONS[1]);
-    let r = w.claim("Claim: leaf 6 as 1 ETH (another leaf)", &cid_a, 8, &terms_a, bad);
+    let r = w.claim("Claim: leaf 6 as 1 ETH instead of 10 (another leaf)", &cid_a, 8, &terms_a, bad);
     run(r, Some(code::CLAIM_INVALID));
     let mut bad = good.clone();
     bad.leaf_index = 4;
@@ -159,9 +159,9 @@ fn inbound_configuration_import_and_plaintext_claim() {
     run(r, Some(code::WRONG_SENDER));
     assert_eq!(w.balance(payer, &cid_a), 0, "no refusal minted");
 
-    let r = w.claim("Claim: leaf 6, 0.1 ETH to the payer, under root(A, 8)", &cid_a, 8, &terms_a, good);
+    let r = w.claim("Claim: leaf 6, 10 ETH to the payer, under root(A, 8)", &cid_a, 8, &terms_a, good);
     run(r, None);
-    assert_eq!(w.balance(payer, &cid_a), DENOMINATIONS[0]);
+    assert_eq!(w.balance(payer, &cid_a), DENOMINATIONS[2]);
     let deposit_b = w.deposit_b.clone();
     let witness_b = w.vault_b.witness(&deposit_b, 8);
     let r = w.claim("Claim: vault B's deposit under root(B, 8)", &cid_b, 8, &terms_b, witness_b);

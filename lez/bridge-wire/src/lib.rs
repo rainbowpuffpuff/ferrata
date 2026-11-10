@@ -27,7 +27,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use ferrata_bridge_core::{
     chain_id_u256,
     encoding::{config_id_preimage, ConfigIdentity},
-    inbound::{self, DestKind},
+    inbound,
     sha256,
     tree::{MerklePath, TREE_DEPTH},
 };

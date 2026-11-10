@@ -12,7 +12,7 @@
 //! `bridge/vectors/inbound-v2.json` (`claim`), so `root(5)` is the vector's root and the claim of
 //! its leaf 2 must spend the vector's `N`. Leaves 5–7 are this harness's own deposits.
 
-use std::{borrow::Cow, fs, path::PathBuf};
+use std::{borrow::Cow, collections::BTreeMap, fs, path::PathBuf};
 
 use ferrata_bridge_core::{
     chain_id_u256,
@@ -32,11 +32,19 @@ use ferrata_lez_bridge_wire::{
 };
 use ferrata_lez_wire::{header_actor, RecordState};
 use ferrata_spectests::execkit::{account_rlp, enc, keccak, Trie};
-use lee::{program::Program, Account, AccountId, Actor, PublicAccountEvidence};
-use lee_core::{account::ActorState, program::ReceiveInput};
+use fee_core::market;
+use lee::{
+    program::Program,
+    public_transaction::{Message as PublicMessage, WitnessSet},
+    Account, AccountId, Actor, FeeDeclaration, PublicAccountEvidence, PublicTransaction,
+};
+use lee_core::{
+    account::{ActorState, Nonce},
+    program::ReceiveInput,
+};
 use serde_json::Value;
 
-use crate::{ferrata_account, Chain, TxReport};
+use crate::{ferrata_account, settle::LeeTransaction, Chain, TxReport};
 
 pub fn bridge_program() -> Program {
     Program::new_unchecked(methods::FERRATA_BRIDGE_ID, Cow::Borrowed(methods::FERRATA_BRIDGE_ELF))
@@ -298,7 +306,7 @@ pub struct World {
     /// Vault A, leaf 5: 1 ETH to a private account (seed `private_seed`), private kind.
     pub private_deposit: Deposit,
     pub private_seed: u8,
-    /// Vault A, leaf 6: 0.1 ETH to the payer, public kind.
+    /// Vault A, leaf 6: 10 ETH to the payer, public kind.
     pub payer_deposit: Deposit,
     /// Vault A, leaf 7: 0.5 ETH to the payer (not a denomination; a vault would refuse it).
     pub odd_deposit: Deposit,
@@ -307,6 +315,8 @@ pub struct World {
     /// S1: A has 5 leaves; S2: A has 8; S3: A's root is that of 8 leaves but its count says 6.
     pub blocks: Vec<Block>,
     pub time: u64,
+    /// Every public transaction submitted, as `borsh(LeeTransaction)`: what a block carries.
+    pub txs: Vec<(String, Vec<u8>)>,
 }
 
 /// The private account the private deposit is for (`Chain::add_private_account` keys).
@@ -365,7 +375,7 @@ impl World {
             dest,
         };
         let private_deposit = own(5, 0, DENOMINATIONS[1], DestKind::Private, *private_account_id(private_seed).value());
-        let payer_deposit = own(6, 1, DENOMINATIONS[0], DestKind::Public, *chain.payer.value());
+        let payer_deposit = own(6, 1, DENOMINATIONS[2], DestKind::Public, *chain.payer.value());
         let odd_deposit = own(7, 2, DENOMINATIONS[1] / 2, DestKind::Public, *chain.payer.value());
         for d in [&private_deposit, &payer_deposit, &odd_deposit] {
             assert_eq!(leaves.len() as u64, d.leaf_index);
@@ -429,6 +439,7 @@ impl World {
             deposit_b,
             blocks,
             time: 1_700_000_000_000,
+            txs: Vec::new(),
         }
     }
 
@@ -484,7 +495,24 @@ impl World {
         evidence: Vec<PublicAccountEvidence>,
     ) -> TxReport {
         let time = self.time;
-        self.chain.submit(label, root, borsh::to_vec(message).unwrap(), actors, evidence, time)
+        let message = borsh::to_vec(message).unwrap();
+        // The same transaction `Chain::submit` signs and settles, kept for the checkpoint check.
+        let fee = FeeDeclaration::new(self.chain.payer, market::MAX_GAS_EXEC, 0, u128::MAX >> 8);
+        let msg = PublicMessage::new(
+            root,
+            message.clone(),
+            actors.clone(),
+            BTreeMap::from([(self.chain.payer, Nonce(self.chain.nonce))]),
+            Some(fee),
+            evidence.clone(),
+        );
+        let witness_set = WitnessSet::for_message(&msg, &[&self.chain.payer_key]);
+        let tx = PublicTransaction::new(msg, witness_set);
+        let bytes = borsh::to_vec(&LeeTransaction::Public(tx)).unwrap();
+        let report = self.chain.submit(label, root, message, actors, evidence, time);
+        assert_eq!(report.tx_bytes, bytes.len(), "{label}: the kept transaction is the settled one's size");
+        self.txs.push((label.to_string(), bytes));
+        report
     }
 
     /// `Init` of `config`, attesting its vault's slot 2 under block `block`.
@@ -553,4 +581,95 @@ impl World {
         }
         w
     }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Private execution (dev mode in the tests)
+// ---------------------------------------------------------------------------------------------
+
+/// The programs a private transaction of the bridge tests runs: the bridge, privately at the
+/// claimant's or holder's account and publicly at its PDAs.
+pub fn catalog() -> lee::privacy_preserving_transaction::circuit::ProgramCatalog {
+    lee::privacy_preserving_transaction::circuit::ProgramCatalog::from([(bridge_account(), bridge_program())])
+}
+
+/// The keys of `Chain::add_private_account(seed, …)`.
+pub fn private_keys(seed: u8) -> lee::test_utils::TestPrivateKeys {
+    lee::test_utils::TestPrivateKeys {
+        ask: lee_core::AuthorizationSecretKey([seed; 32]),
+        d: [seed.wrapping_add(1); 32],
+        z: [seed.wrapping_add(2); 32],
+    }
+}
+
+/// A private account's state after a private transaction of the bridge: the fee `reserve` gone
+/// from its native balance, the bridge's actor state `holder`, and the nonce advanced as LEZ
+/// advances a private account's nonce. Returned only if the chain holds its commitment, so the
+/// reconstruction is checked, not assumed.
+pub fn private_post_state(
+    chain: &Chain,
+    keys: &lee::test_utils::TestPrivateKeys,
+    before: &Account,
+    reserve: u128,
+    holder: &HolderState,
+) -> Option<Account> {
+    let balance = before.data.native_balance().ok()?.checked_sub(reserve)?;
+    let mut post = before.clone();
+    post.data.set_actor_state(
+        lee_core::native_token::NATIVE_TOKEN_PROGRAM_ID,
+        lee_core::native_token::encode_balance(balance),
+    );
+    post.data.set_actor_state(
+        bridge_account(),
+        ActorState::from(borsh::to_vec(&BridgeState::Holder(holder.clone())).unwrap()),
+    );
+    let advanced = Account { nonce: post.nonce.private_account_nonce_increment(&keys.nsk()), ..post.clone() };
+    [advanced, post].into_iter().find(|candidate| {
+        chain.state.get_proof_for_commitment(&lee_core::Commitment::new(&keys.account_id(), candidate)).is_some()
+    })
+}
+
+/// The two private transitions of a `ClaimPrivately` in the executor alone (what a prover proves
+/// for the bridge): the root call at `account`'s actor, which sends `Read`, then the root's reply,
+/// in which the claim is verified. The second runs only if the first succeeds.
+pub fn private_claim_transitions(
+    w: &World,
+    account: AccountId,
+    message: &BridgeMessage,
+    cid: &Hash,
+    n: u64,
+) -> Vec<crate::attest::Executed> {
+    let actor = holder_actor(w.program, account);
+    let call = ReceiveInput {
+        receiver: actor,
+        from: None,
+        is_authorized: true,
+        pre_state: Default::default(),
+        message: borsh::to_vec(message).unwrap(),
+    };
+    let elf = bridge_program();
+    let first = crate::attest::execute("ClaimPrivately (sends Read)", elf.elf(), &call);
+    let Some(transition) = &first.transition else { return vec![first] };
+    let root = root_actor(w.program, cid, n);
+    let reply = ReceiveInput {
+        receiver: actor,
+        from: Some(root),
+        is_authorized: true,
+        pre_state: transition.response.post_state.clone().expect("the claim is kept for the reply"),
+        message: borsh::to_vec(&lee_core::program::StateReply { state: w.chain.actor_state(root) }).unwrap(),
+    };
+    let second = crate::attest::execute("the root's reply (verifies the claim, sends Spend)", elf.elf(), &reply);
+    vec![first, second]
+}
+
+/// One private holder's `Burn` in the executor alone.
+pub fn private_burn_transition(w: &World, account: AccountId, pre_state: ActorState, message: &BridgeMessage) -> crate::attest::Executed {
+    let call = ReceiveInput {
+        receiver: holder_actor(w.program, account),
+        from: None,
+        is_authorized: true,
+        pre_state,
+        message: borsh::to_vec(message).unwrap(),
+    };
+    crate::attest::execute("Burn at the private holder (debits, sends Burn)", bridge_program().elf(), &call)
 }
