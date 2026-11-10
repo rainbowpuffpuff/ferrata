@@ -15,6 +15,10 @@ CLI=github:logos-co/logos-logoscore-cli/66d098d3af1367cf831b69c13a5aa8345edeb682
 MODULE=ferrata_attest_module
 PORTABLE=${PORTABLE:-1}
 
+# On the build box (a container) the stack limit is "unlimited", and Nix's evaluation of the module's
+# flake overflowed its stack; with a finite limit of 1 GiB it does not.
+if [ "$(ulimit -s)" = unlimited ]; then ulimit -s 1048576; fi
+
 here=$(cd "$(dirname "$0")" && pwd)
 repo=$(cd "$here/../.." && pwd)
 mod="$repo/modules/$MODULE"
