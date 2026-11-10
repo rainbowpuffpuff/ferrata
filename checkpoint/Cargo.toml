@@ -1,6 +1,7 @@
 # ferrata-checkpoint: prototype of the LEZ -> Ethereum checkpoint program (SPEC-v2 §4).
 #
 # crates/checkpoint-core   the rule, no_std, no unsafe; runs on the host and in the guests
+# crates/attestor-core     rule (B)'s attestor: certificate, final-tier message v2, Ed25519; no_std
 # fidelity/                host-only: builds real-format LEZ blocks and Mantle transactions with
 #                          the upstream crates and checks the core's parsers against them; writes
 #                          the bench fixtures
@@ -11,8 +12,8 @@
 # and curve25519-dalek) applies there and nowhere else.
 [workspace]
 resolver = "2"
-members = ["crates/checkpoint-core", "fidelity", "methods-segment", "methods", "methods-plain", "host"]
-default-members = ["crates/checkpoint-core"]
+members = ["crates/checkpoint-core", "crates/attestor-core", "fidelity", "methods-segment", "methods", "methods-plain", "host"]
+default-members = ["crates/checkpoint-core", "crates/attestor-core"]
 exclude = ["guests", "guests-plain"]
 
 [workspace.package]

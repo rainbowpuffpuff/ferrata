@@ -1,0 +1,19 @@
+[package]
+name = "attestor-core"
+version = "0.1.0"
+description = "The core of ferrata_attestor (finality rule (B), SPEC-v3 D7 and D13): the attestation-key certificate, the final-tier message v2, Ed25519 signing and verification, the key-set hash. no_std, no unsafe."
+edition = "2021"
+# The RISC Zero guest toolchain on this machine is Rust 1.88; the checkpoint guest builds this crate.
+rust-version = "1.88"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[dependencies]
+# no_std. In the checkpoint guest these resolve to RISC Zero's accelerated forks through
+# [patch.crates-io] in guests/Cargo.toml (sha2; curve25519-dalek under ed25519-dalek).
+sha2 = { version = "0.10.8", default-features = false }
+ed25519-dalek = { version = "2.2.0", default-features = false }
+
+[dev-dependencies]
+hex = "0.4"
+serde_json = "1"

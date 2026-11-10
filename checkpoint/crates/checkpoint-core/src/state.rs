@@ -2,7 +2,7 @@
 
 use alloc::vec::Vec;
 
-use crate::hash::{sha256_parts, TAG_CONFIG, TAG_KEYSET, TAG_LEZ_STATE};
+use crate::hash::{sha256_parts, TAG_CONFIG, TAG_LEZ_STATE};
 use crate::tree::Frontier;
 use crate::{Address, Hash};
 
@@ -66,19 +66,8 @@ pub struct State {
 }
 
 /// `keySetHash = H("ferrata/keyset/v2" ‖ n:u32 ‖ postingTimeframe:u32 ‖ key_1 ‖ … ‖ key_n)`
-/// (SPEC-v3 D3).
-pub fn key_set_hash(keys: &[Hash], posting_timeframe: u32) -> Hash {
-    use sha2::{Digest as _, Sha256};
-    let n = u32::try_from(keys.len()).unwrap_or(u32::MAX);
-    let mut h = Sha256::new();
-    h.update(TAG_KEYSET);
-    h.update(n.to_be_bytes());
-    h.update(posting_timeframe.to_be_bytes());
-    for key in keys {
-        h.update(key);
-    }
-    h.finalize().into()
-}
+/// (SPEC-v3 D3). Defined once, in the attestor core, because under rule (B) every attestor signs it.
+pub use attestor_core::key_set_hash;
 
 /// `S = H("ferrata/lez-state/v1" ‖ tipId:u64 ‖ tipHash ‖ keySetHash ‖ configTipHash ‖
 /// burnCount:u64 ‖ burnFrontierHash ‖ importedLeafCount:u64 ‖ sunset:u8)`, from its parts.
