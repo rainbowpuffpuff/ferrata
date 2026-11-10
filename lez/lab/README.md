@@ -105,25 +105,28 @@ the record). The Volume keeps the state after `stop`; `modal volume delete ferra
 
 | | |
 |---|---|
-| sessions | 10 Nov 18:49 UTC: failed to start (r0vm was not in the bundle; fixed, kept in the record). 18:51–19:22 UTC: the catch-up, 1,868 s, 184 transactions, all applied, blocks 1–185. 20:17 UTC (scheduled, after 54 min stopped): 123 s, 6 transactions, all applied, blocks 186–191 |
-| transactions | 190, all applied, none refused, reverted, dropped or rejected; the program's transactions used 208,951 (`Init`) to 3,731,712 (`Finish`) execution gas, none over the 5M target; fees 4,629,926,648 in all (the payers held 1e13 and 2e13 at genesis) |
-| re-check | `lab.sh verify` after each session: 191 blocks replay, 190 manifest rows equal LEZ's charges; Sepolia at finalized slot 11,550,623 (period 1,409, Gloas layout), root `3d9e0f27…ab50`, and mainnet at 15,626,400 (period 1,907), root `5a754269…d661`, both equal to the native client; both roots equal the second provider's |
-| state | generation 2: 20,402,011 bytes compressed (node 52M, sequencer 48M, driver 5.6M on disk) |
+| sessions | 10 Nov 18:49 UTC: failed to start (r0vm was not in the bundle; fixed, kept in the record). 18:51–19:22 UTC: the catch-up, 1,868 s, 184 transactions, all applied, blocks 1–185. 20:17 UTC (scheduled, after 54 min stopped): 123 s, 6 transactions, all applied, blocks 186–191. 22:17 UTC (scheduled): 133 s, 11 transactions, all applied, blocks 192–202, Sepolia's first live committee handoff (its period-1410 update) |
+| transactions | 201, all applied, none refused, reverted, dropped or rejected; the program's transactions used 208,951 (`Init`) to 3,731,712 (`Finish`) execution gas, none over the 5M target; fees 4,629,926,648 in all (the payers held 1e13 and 2e13 at genesis) |
+| re-check | `lab.sh verify` after each session, on the build box (exit 0 each time); after the third: 202 blocks replay, 201 manifest rows equal LEZ's charges; Sepolia at finalized slot 11,551,200 (period 1,410, Gloas layout), root `80088b24…9a30`, and mainnet at 15,627,008 (period 1,907), root `4b909f85…7bdb`, both equal to the native client; at every session both roots equal the second provider's |
+| state | generation 2: 20,402,011 bytes compressed (node 52M, sequencer 48M, driver 5.6M on disk); generation 3: 30,970,636 bytes. It grows with the node's and the sequencer's write-ahead logs; `sessions/<id>/session.log` lists the largest files at every save |
 | cost | billed by Modal (`modal.billing`, hourly buckets, workspace `rainbowpuffpuff`): the build box 0.2768 USD for the builds (18:00–20:00 UTC) and 0.0522 USD for two `lab.sh verify` runs; the lab's failed start and catch-up session together 0.0642 USD (31 min, two physical cores requested); the scheduled session of 20:17 UTC 0.0064 USD (the whole 20:00 hour of the app). At twelve such sessions a day: about 0.08 USD a day, 0.54 USD to 17 November (derived) |
 
 ## The claim that can be made today
 
-As of the session of 10 November 2026, 20:17 UTC (`results/`, re-checked by `lab.sh verify`):
+As of the session of 10 November 2026, 22:17 UTC (`results/`, re-checked by `lab.sh verify`):
 
 > Two instances of Ferrata's light-client program have followed their chains on LEZ v0.4.0-rc1's
 > own sequencer (one Bedrock validator, leader proofs in dev mode) since 10 November 2026,
 > 19:22 UTC, with no manual repair. **Sepolia:** initialized from the period-1378 bootstrap,
-> through the Gloas fork, 34 updates applied (32 period updates, 2 finality updates), 31
-> committee handoffs; finalized slot 11,550,623. **Mainnet:** initialized at the finalized
-> checkpoint of slot 15,625,920, 3 updates applied (1 period update, 2 finality updates), 0
-> committee handoffs so far; finalized slot 15,626,400. 190 transactions, all applied; 191
-> blocks, all final on Bedrock; the whole chain replays offline to the recorded charges and to
-> both instances' stores.
+> through the Gloas fork, 36 updates applied (33 period updates, 3 finality updates), 32
+> committee handoffs (one of them live, into period 1,410); finalized slot 11,551,200.
+> **Mainnet:** initialized at the finalized checkpoint of slot 15,625,920, 4 updates applied
+> (1 period update, 3 finality updates), 0 committee handoffs so far (its next period begins
+> at slot 15,630,336); finalized slot 15,627,008. 4 sessions, of which 1 failed to start
+> before the first good one; 3 good, 2 of them scheduled. 201 transactions, all applied; 202
+> blocks, all final on Bedrock; the whole chain replays offline to the recorded charges and
+> to both instances' stores, and both finalized roots are the ones a second beacon provider
+> reports.
 
 Seven consecutive days from 19:22 UTC on 10 November end at 19:22 UTC on 17 November. A
 submission earlier that day can claim six days and the hours since; `lab.sh status` and
