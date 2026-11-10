@@ -6,7 +6,8 @@ Short answer.
 - **Finality holds with an added assumption.** It is true under a liveness ("progress") assumption on honest sequencers that §4.6 does not state, with Bedrock's assumptions applied to each sequencer's own node, and with Δ sized by a budget (§4).
 - **SPEC-v3 (§8).** Its wait `W` absorbs turn hogging by up to `t − 1` adversarial keys, which breaks any flat Δ for a large enough committee. It still needs honest progress (F2). The checkpoint freeze carries everything else, and only if a bad candidate is cancelled rather than merely frozen.
 
-Model items (M…, W…) refer to `MODEL.md`. Experiment letters refer to `RESULTS.md`.
+Model items (M…, W…) refer to `MODEL.md`. Experiment letters refer to `RESULTS.md`. "SPEC-v2" (also "SPEC") is [`docs/design/spec/bridge-spec-v2.md`](../spec/bridge-spec-v2.md); "SPEC-v3" is
+[`docs/design/spec/bridge-spec-v3-changes.md`](../spec/bridge-spec-v3-changes.md).
 
 ## 0. The rule, as analysed
 
@@ -117,7 +118,7 @@ Notes on the proof:
 - ε ≈ 1 min.
 - With `Δ_p = 1 h`: `Δ ≥ 2.02 + 1 + 0.02 ≈ 3.05 h`.
 
-## 5. The cases the brief asks about
+## 5. The cases examined
 
 **5.1 Bedrock short forks and re-inclusion.**
 - An inscription that left the chain is re-admitted by the mempool for up to 1 h, and anyone can re-post it later (M2.3). Any scheduled key can inscribe a copy of the block's bytes (M1.6). So "seen before `a`" and "seen after `a + Δ`" do not imply "on chain throughout" (W2).
@@ -212,24 +213,24 @@ Measured on testnet parameters (experiment (a)): from a tip's creation to its fi
 
 ## 7. Repairing the rule
 
-The smallest changes that make the finality statement true are in the hand-back report, saved at `the summary of findings` (from this directory: `../../the summary of findings`). In short:
+The smallest changes that make the finality statement true:
 - check `D`;
 - state A3, A4 per node, add A5, restate (iv) as A7;
 - fix `deltaFloor = Δ_g + Δ_p + ε`;
 - add a reject-only stall guard.
 
-No change to *what the two proofs show* removes A5. Every honest signature the vault can see certifies "`T` was in my head at time τ". No finite set of such certificates rules out "`T` left every honest chain and came back". Only a certificate of a node's final tier does: option (B), compared in that report. SPEC-v3 adopted the repair; §8 tests it.
+No change to *what the two proofs show* removes A5. Every honest signature the vault can see certifies "`T` was in my head at time τ". No finite set of such certificates rules out "`T` left every honest chain and came back". Only a certificate of a node's final tier does: option (B), the final-tier attestations of SPEC-v3 D7. SPEC-v3 adopted the repair; §8 tests it.
 
 ## 8. SPEC-v3, the repaired rule, under test
 
-SPEC-v3 (`notes/design/SPEC-v3-delta.md` D3, D4, D6) does three things:
+SPEC-v3 (D3, D4, D6) does three things:
 - checks `D`;
 - waits `W = delta + (t − 1) × turn` with `delta ≥ Δ_g + S + ε`: 2 h + 1 h + 1 min by default, `turn = posting_timeframe = 900 s`;
 - adds a checkpoint freeze that `monitor` sets when a candidate's tip is not in an honest node's final tier by `a + Δ_g`, or when that final tier has not advanced for `S/2`.
 
 Experiments (i)–(k) in `RESULTS.md`.
 
-### 8.1 Turn hogging: the attack the first report did not price
+### 8.1 Turn hogging: the attack the first repair did not price
 
 How adversary keys hold their turns (code path):
 - A scheduled key keeps its turn for the whole `posting_timeframe` as long as one of its inscriptions lands at least every `posting_timeout` slots. Executing an inscription sets `tip_slot` to the block's slot ([lb] `inscribe.rs:249-262`). `round_robin` stays on the timeframe branch while `slot − tip_slot < posting_timeout` (`channel.rs:221-241`).

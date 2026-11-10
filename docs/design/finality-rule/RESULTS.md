@@ -1,5 +1,8 @@
 # RESULTS: simulation of the SPEC-v2 §4 rule
 
+"SPEC-v2" (also "SPEC") is [`docs/design/spec/bridge-spec-v2.md`](../spec/bridge-spec-v2.md); "SPEC-v3" is
+[`docs/design/spec/bridge-spec-v3-changes.md`](../spec/bridge-spec-v3-changes.md).
+
 ## How these numbers were produced
 
 `cd sim && python3 experiments.py` (Python 3.14, standard library only, 14 worker processes; 12,000 runs, 25 min). Raw per-run records are in `results/raw.jsonl`; the generated tables are in `results/tables.md`. Every run is deterministic for its seed (seeds 1…N per configuration).
@@ -119,12 +122,12 @@ The adversary's keys sequence like everyone else ("honest operation"). In the la
 
 ## (d) The earlier timestamp rule and v2, same scenario
 
-The scenario, the reviewers' attack (r2-crypto §2):
+The scenario, an attack proposed against the earlier rule:
 - `m = t − 1` adversary keys;
 - one honest sequencer's clock Δ ahead;
 - the views of two honest nodes controlled for a few minutes: 3 private Bedrock blocks, 5 min (n = 3) to 18 min (n = 10).
 
-The earlier rule is implemented as the reviewers attacked it: t keys after `T`, then t keys whose timestamps are ≥ Δ later, no exclusion.
+The earlier rule is implemented as that attack assumes it: t keys after `T`, then t keys whose timestamps are ≥ Δ later, no exclusion.
 
 | n | t | m | rule | runs | P1 | P2 | attack | view control, max |
 |---|---|---|---|---|---|---|---|---|
@@ -262,7 +265,7 @@ The chance that a Bedrock adversary with stake share `q` ever overtakes a lead o
 
 ## SPEC-v3 follow-up: experiments (i)–(k)
 
-SPEC-v3 (`notes/design/SPEC-v3-delta.md` D3, D4):
+SPEC-v3 (D3, D4):
 - `D` checked;
 - wait `W = 3 h 01 min + (t − 1) × 15 min`;
 - a checkpoint freeze set by `monitor`. The tip trigger fires when a candidate's tip is not in the honest final tier by `a + 2 h`. The stall trigger fires when that final tier has not advanced for 30 min.

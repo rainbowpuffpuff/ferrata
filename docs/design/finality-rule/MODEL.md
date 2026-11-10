@@ -1,10 +1,10 @@
 # MODEL: what LEZ v0.4 sequencers and Logos Blockchain actually do
 
-The finality rule of `notes/design/SPEC-v2.md` §4 is an inference from sequencer behaviour. This file lists the behaviour the inference relies on, each item with the code that implements it, and flags (**W1–W9**) every place where the code is weaker than SPEC §4.6 assumes. The simulator (`sim/sim.py`) implements exactly these items; the item numbers are referenced in its comments.
+The finality rule of SPEC-v2 §4 ([`docs/design/spec/bridge-spec-v2.md`](../spec/bridge-spec-v2.md); SPEC-v3 is [`docs/design/spec/bridge-spec-v3-changes.md`](../spec/bridge-spec-v3-changes.md)) is an inference from sequencer behaviour. This file lists the behaviour the inference relies on, each item with the code that implements it, and flags (**W1–W9**) every place where the code is weaker than SPEC §4.6 assumes. The simulator (`sim/sim.py`) implements exactly these items; the item numbers are referenced in its comments.
 
-**Clones** (read only):
-- `[lez]` = `spike/upstream/lez-v0.4.0-rc1`, tag `v0.4.0-rc1`, commit `1806e87`.
-- `[lb]` = `spike/upstream/logos-blockchain`, commit `ee5e344` (2026-11-09). LEZ pins `d480efc6`, an older revision (R1 header); the line numbers below are for `ee5e344`.
+**Sources** (read only):
+- `[lez]` = [LEZ](https://github.com/logos-blockchain/logos-execution-zone/tree/v0.4.0-rc1), tag `v0.4.0-rc1`, commit `1806e87`.
+- `[lb]` = [Logos Blockchain](https://github.com/logos-blockchain/logos-blockchain/tree/ee5e344), commit `ee5e344` (2026-11-09). LEZ pins `d480efc6`, an older revision (R1 header); the line numbers below are for `ee5e344`.
 
 "UNVERIFIED" marks a statement I could not tie to code.
 

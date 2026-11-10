@@ -124,7 +124,7 @@ class Params:
     slowdown: tuple | None = None  # (start, end, factor) on the honest leader rate
     accelerate: bool = False    # adversary keys sign every honest candidate at once
     prover_period: int = 30
-    # SPEC-v3 (notes/design/SPEC-v3-delta.md D4)
+    # SPEC-v3 D4 (docs/design/spec/bridge-spec-v3-changes.md)
     turn_wait: bool = False     # W = delta + (t - 1) * posting_timeframe instead of a flat delta
     guard: str = "off"          # off | freeze-hold | freeze-lift | cancel | cancel-tip (Monitor)
     guard_dg: int = 7200        # Δ_g: a candidate's tip must be final by submittedAt + Δ_g
@@ -1009,7 +1009,7 @@ class ForkStall(Scripted):
 
 
 class SkewCapture(Scripted):
-    """The reviewers' attack on the earlier timestamp rule (r2-crypto §2): one honest
+    """An attack proposed against the earlier timestamp rule: one honest
     clock Δ ahead and a fork that lives for two posting turns.  Rule 'ts' only."""
 
     def step(self, s):
