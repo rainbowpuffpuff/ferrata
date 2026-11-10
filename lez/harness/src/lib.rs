@@ -132,15 +132,23 @@ pub fn mainnet_config(parts: u8) -> Config {
     }
 }
 
+/// The mainnet fixtures: `FERRATA_FIXTURE_DIR` if set (to run a built binary elsewhere), else
+/// `crates/ferrata-spectests/fixtures/mainnet-p1899` of this checkout.
 pub fn fixture_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../crates/ferrata-spectests/fixtures/mainnet-p1899")
+    std::env::var_os("FERRATA_FIXTURE_DIR").map(PathBuf::from).unwrap_or_else(|| {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../crates/ferrata-spectests/fixtures/mainnet-p1899")
+    })
 }
+
+/// The fixtures' pinned `SHA256SUMS`, compiled in, so that another fixture directory cannot
+/// change what the fixtures must hash to.
+const FIXTURE_SUMS: &str = include_str!("../../../crates/ferrata-spectests/fixtures/mainnet-p1899/SHA256SUMS");
 
 /// Read a fixture and check it against the pinned `SHA256SUMS`.
 pub fn fixture(name: &str) -> Vec<u8> {
-    let bytes = fs::read(fixture_dir().join(name)).unwrap();
-    let sums = fs::read_to_string(fixture_dir().join("SHA256SUMS")).unwrap();
-    let want = sums.lines().find(|l| l.ends_with(name)).unwrap().split_whitespace().next().unwrap();
+    let path = fixture_dir().join(name);
+    let bytes = fs::read(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+    let want = FIXTURE_SUMS.lines().find(|l| l.ends_with(name)).unwrap().split_whitespace().next().unwrap();
     assert_eq!(hex::encode(Sha256::digest(&bytes)), want, "{name} does not match SHA256SUMS");
     bytes
 }
