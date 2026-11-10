@@ -127,7 +127,11 @@ fn input<'a>(
         parent: p.clone(),
         config_changes: rotations
             .iter()
-            .map(|(ops, sigs)| ConfigChange { ops, op_index: 0, signatures: sigs.iter().map(|(i, s)| (*i, s)).collect() })
+            .map(|(ops, sigs)| ConfigChange {
+                ops,
+                op_index: 0,
+                signatures: sigs.iter().map(|(i, s)| (*i, s)).collect(),
+            })
             .collect(),
         blocks: blocks.iter().map(Vec::as_slice).collect(),
         t_index: T,
@@ -243,10 +247,12 @@ fn refuses_an_uncertified_key() {
     let tip2 = tip(&w.hashes, 2);
     // Certified by itself rather than by the channel key it names.
     let a = att(2);
-    let self_signed = SignedAttestation::new(&a, pk(&channel(2)), sign_certificate(&a, &w.d, &pk(&a)), &w.d, &w.ksh, tip2);
+    let self_signed =
+        SignedAttestation::new(&a, pk(&channel(2)), sign_certificate(&a, &w.d, &pk(&a)), &w.d, &w.ksh, tip2);
     assert_eq!(w.run(vec![w.by(0, 2), w.by(1, 2), self_signed]).unwrap_err(), Error::BadCertificate);
     // Certified by another member of the set than the one it names.
-    let borrowed = SignedAttestation::new(&a, pk(&channel(2)), sign_certificate(&channel(3), &w.d, &pk(&a)), &w.d, &w.ksh, tip2);
+    let borrowed =
+        SignedAttestation::new(&a, pk(&channel(2)), sign_certificate(&channel(3), &w.d, &pk(&a)), &w.d, &w.ksh, tip2);
     assert_eq!(w.run(vec![w.by(0, 2), w.by(1, 2), borrowed]).unwrap_err(), Error::BadCertificate);
     // No certificate at all.
     let none = SignedAttestation::new(&a, pk(&channel(2)), [0; 64], &w.d, &w.ksh, tip2);
@@ -288,7 +294,8 @@ fn a_key_removed_by_a_rotation_is_refused_and_a_key_added_counts() {
     let w = world();
     // Key 3 leaves, key 4 joins; keys 0..3 sign (t(4) = 3).
     let new_keys: Vec<Hash> = [0u8, 1, 2, 4].iter().map(|i| pk(&channel(*i))).collect();
-    let rot = vec![rotation(&w.c, &w.p.config_tip_hash, &new_keys, &[(0, channel(0)), (1, channel(1)), (2, channel(2))])];
+    let rot =
+        vec![rotation(&w.c, &w.p.config_tip_hash, &new_keys, &[(0, channel(0)), (1, channel(1)), (2, channel(2))])];
     let live = key_set_hash(&new_keys, TIMEFRAME);
     let by = |i: u8, index: usize| attest(&w.d, &channel(i), &att(i), &live, tip(&w.hashes, index));
 
@@ -305,7 +312,8 @@ fn refuses_a_wrong_key_set_hash() {
     let w = world();
     // After a rotation, attestations still naming the parent's key set (a stale attestor).
     let new_keys: Vec<Hash> = [0u8, 1, 2, 4].iter().map(|i| pk(&channel(*i))).collect();
-    let rot = vec![rotation(&w.c, &w.p.config_tip_hash, &new_keys, &[(0, channel(0)), (1, channel(1)), (2, channel(2))])];
+    let rot =
+        vec![rotation(&w.c, &w.p.config_tip_hash, &new_keys, &[(0, channel(0)), (1, channel(1)), (2, channel(2))])];
     let stale = input(&w.c, &w.p, &w.blocks, &rot, vec![w.by(0, 2), w.by(1, 3), w.by(2, 4)]);
     assert_eq!(run_b(&stale).unwrap_err(), Error::BadAttestation);
     // Without a rotation: the same keys under another turn length.
