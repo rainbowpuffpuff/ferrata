@@ -1,0 +1,182 @@
+    Updating crates.io index
+    Updating git repository `https://github.com/logos-co/Overwatch`
+    Updating git repository `https://github.com/logos-blockchain/logos-blockchain-circuits.git`
+    Updating git submodule `https://github.com/iden3/circomlib.git`
+    Updating git submodule `https://github.com/iden3/rapidsnark.git`
+    Updating git submodule `https://github.com/iden3/circom_runtime.git`
+    Updating git submodule `https://github.com/iden3/ffiasm`
+    Updating git submodule `https://github.com/nlohmann/json.git`
+    Updating git submodule `https://github.com/pistacheio/pistache`
+    Updating git submodule `https://github.com/google/googletest.git`
+    Updating git submodule `https://github.com/Tencent/rapidjson`
+    Updating git submodule `https://github.com/google/googletest.git`
+    Updating git repository `https://github.com/EspressoSystems/jellyfish.git`
+    Updating git repository `https://github.com/logos-blockchain/logos-blockchain-rust-rapidsnark.git`
+    Updating git repository `https://github.com/arkworks-rs/spongefish.git`
+ Downloading crates ...
+  Downloaded cpufeatures v0.2.17
+  Downloaded cfg_aliases v0.2.1
+  Downloaded version_check v0.9.5
+  Downloaded crypto-common v0.1.7
+  Downloaded rustc_version v0.4.1
+  Downloaded signature v2.2.0
+  Downloaded blake2 v0.10.6
+  Downloaded subtle v2.6.1
+  Downloaded zmij v1.0.21
+  Downloaded unicode-ident v1.0.24
+  Downloaded serde_core v1.0.228
+  Downloaded serde_json v1.0.150
+  Downloaded indexmap v2.14.0
+  Downloaded typenum v1.20.1
+  Downloaded memchr v2.8.1
+  Downloaded hashbrown v0.17.1
+  Downloaded winnow v1.0.3
+  Downloaded toml_edit v0.25.12+spec-1.1.0
+  Downloaded ed25519-dalek v2.2.0
+  Downloaded curve25519-dalek v4.1.3
+  Downloaded proc-macro2 v1.0.106
+  Downloaded toml_parser v1.1.2+spec-1.1.0
+  Downloaded semver v1.0.28
+  Downloaded syn v2.0.117
+  Downloaded quote v1.0.45
+  Downloaded borsh v1.6.1
+  Downloaded toml_datetime v1.1.1+spec-1.1.0
+  Downloaded rand_core v0.6.4
+  Downloaded once_cell v1.21.4
+  Downloaded hex v0.4.3
+  Downloaded equivalent v1.0.2
+  Downloaded ed25519 v2.2.3
+  Downloaded digest v0.10.7
+  Downloaded proc-macro-crate v3.5.0
+  Downloaded itoa v1.0.18
+  Downloaded generic-array v0.14.7
+  Downloaded sha2 v0.10.9
+  Downloaded bytes v1.12.1
+  Downloaded borsh-derive v1.6.1
+  Downloaded curve25519-dalek-derive v0.1.1
+  Downloaded cfg-if v1.0.4
+  Downloaded block-buffer v0.10.4
+   Compiling version_check v0.9.5
+   Compiling proc-macro2 v1.0.106
+   Compiling quote v1.0.45
+   Compiling typenum v1.20.1
+   Compiling unicode-ident v1.0.24
+   Compiling subtle v2.6.1
+   Compiling semver v1.0.28
+   Compiling cfg-if v1.0.4
+   Compiling cpufeatures v0.2.17
+   Compiling signature v2.2.0
+   Compiling zmij v1.0.21
+   Compiling serde_core v1.0.228
+   Compiling rand_core v0.6.4
+   Compiling winnow v1.0.3
+   Compiling serde_json v1.0.150
+   Compiling equivalent v1.0.2
+   Compiling hashbrown v0.17.1
+   Compiling toml_datetime v1.1.1+spec-1.1.0
+   Compiling itoa v1.0.18
+   Compiling memchr v2.8.1
+   Compiling cfg_aliases v0.2.1
+   Compiling hex v0.4.3
+   Compiling once_cell v1.21.4
+   Compiling ed25519 v2.2.3
+   Compiling rustc_version v0.4.1
+   Compiling borsh v1.6.1
+   Compiling generic-array v0.14.7
+   Compiling indexmap v2.14.0
+   Compiling curve25519-dalek v4.1.3
+   Compiling toml_parser v1.1.2+spec-1.1.0
+   Compiling toml_edit v0.25.12+spec-1.1.0
+   Compiling syn v2.0.117
+   Compiling crypto-common v0.1.7
+   Compiling block-buffer v0.10.4
+   Compiling digest v0.10.7
+   Compiling sha2 v0.10.9
+   Compiling blake2 v0.10.6
+   Compiling proc-macro-crate v3.5.0
+   Compiling curve25519-dalek-derive v0.1.1
+   Compiling borsh-derive v1.6.1
+   Compiling ed25519-dalek v2.2.0
+   Compiling attestor-core v0.1.0 (<workspace>/ferrata-wt-ruleb/checkpoint/crates/attestor-core)
+   Compiling checkpoint-core v0.1.0 (<workspace>/ferrata-wt-ruleb/checkpoint/crates/checkpoint-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 41.82s
+     Running unittests src/lib.rs (target/debug/deps/attestor_core-b78a15403658d6a1)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/attestor.rs (target/debug/deps/attestor-0da936bcc97eb1bd)
+
+running 6 tests
+test message_layout ... ok
+test small_order_attestation_key_is_refused ... ok
+test certificate_is_not_an_attestation_and_v1_is_not_v2 ... ok
+test encoding_round_trips ... ok
+test every_field_is_bound ... ok
+test vectors ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src/lib.rs (target/debug/deps/checkpoint_core-46eec5c99a2a7051)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/cross_vectors.rs (target/debug/deps/cross_vectors-b4395b0e2237501c)
+
+running 3 tests
+test config_ids ... ok
+test key_sets_states_journals ... ok
+test burn_tree ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/rule_b.rs (target/debug/deps/rule_b-aa343f071ca0257c)
+
+running 13 tests
+test refuses_a_key_not_in_the_live_set ... ok
+test journal_is_rule_a_candidate_journal_over_the_same_blocks ... ok
+test refuses_too_few ... ok
+test blocks_after_the_tip_are_linked ... ok
+test refuses_a_wrong_key_set_hash ... ok
+test single_key_only_where_the_floor_allows_it ... ok
+test refuses_an_uncertified_key ... ok
+test a_key_removed_by_a_rotation_is_refused_and_a_key_added_counts ... ok
+test accepts_t_attestations_over_the_tip_and_its_descendants ... ok
+test refuses_a_duplicate_signer ... ok
+test refuses_an_attestation_over_a_block_that_is_not_a_descendant ... ok
+test refuses_a_certificate_from_another_channel_or_configuration ... ok
+test refuses_a_wrong_tip_chain_vault_configuration_or_domain ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/units.rs (target/debug/deps/units-8e1ef567c738d823)
+
+running 10 tests
+test frontier_rejects_non_canonical_and_full ... ok
+test block_parses_and_hashes ... ok
+test hashed_constants ... ok
+test block_parser_is_strict ... ok
+test wire_decode_is_exact ... ok
+test threshold_matches_lez ... ok
+test wire_codec_equals_borsh_derive ... ok
+test journal_layout ... ok
+test inscription_check ... ok
+test frontier_root_equals_naive_root_and_stays_canonical ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+   Doc-tests attestor_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests checkpoint_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

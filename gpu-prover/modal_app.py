@@ -307,11 +307,14 @@ def _prove_checkpoint(name: str, run: str, limit_s: int) -> dict:
     # The inputs as staged on the laptop, and the image ids recomputed here from the uploaded programs.
     manifest = json.load(open("/inputs/MANIFEST.json"))
     hashes_ok = all(_sha256(f"/inputs/{p}") == v["sha256"] for p, v in manifest["files"].items() if os.path.exists(f"/inputs/{p}"))
-    id_lines = _sh(prover, "image-id", "/inputs/programs/checkpoint.bin", "/inputs/programs/segment.bin").splitlines()
-    ids = {pathlib.Path(r["program"]).stem: r["image_id"] for r in (json.loads(l) for l in id_lines if l.startswith("{"))}
-    ids_equal = ids == manifest["local_image_ids"]
     meta = json.load(open(f"/inputs/fixtures/{name}.json"))
     program = f"/inputs/programs/{meta['kind']}.bin"
+    # The segment guest, rule (A)'s checkpoint guest and the fixture's own program (checkpoint-b.bin for a
+    # rule (B) fixture): every id the manifest names is recomputed from the uploaded binaries.
+    programs = sorted({"/inputs/programs/checkpoint.bin", "/inputs/programs/segment.bin", program})
+    id_lines = _sh(prover, "image-id", *programs).splitlines()
+    ids = {pathlib.Path(r["program"]).stem: r["image_id"] for r in (json.loads(l) for l in id_lines if l.startswith("{"))}
+    ids_equal = ids == manifest["local_image_ids"]
 
     sampler = _GpuSampler(f"{out}/gpu-samples.csv")
     cmd = ["/usr/bin/time", "-v", prover, "prove", name, program, f"/inputs/fixtures/{name}.input", f"/inputs/fixtures/{name}.json", out]
@@ -492,6 +495,17 @@ def main(fixtures: str = "cp-empty-1", run: str = "", limit_s: int = 1800):
               f"segments={p.get('segments')} round_trip_s={record['client_round_trip_s']:.1f} gpu={record['gpu']}")
         if not record["ok"]:
             raise SystemExit(f"{name}: failed (exit {record['exit_code']}); not continuing")
+
+
+@app.local_entrypoint()
+def spawn(fixtures: str = "cp-empty-1", run: str = "", limit_s: int = 1800):
+    """Spawns the proofs (one container each) and returns at once: with --detach the app lives until they
+    finish, and each result lands on the Volume under results/<run>/<name>/. `main` waits instead, and its
+    client gave up ("Deadline exceeded") after 30 min with no L4 scheduled (rule-b branch, 10 Nov 2026)."""
+    run = run or time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+    for name in [f for f in fixtures.split(",") if f]:
+        call = prove.spawn(name, run, limit_s)
+        print(f"SPAWNED {name}: call {call.object_id}, results/{run}/{name}/ on the Volume")
 
 
 @app.local_entrypoint()

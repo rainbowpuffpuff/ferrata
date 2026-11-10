@@ -1,0 +1,9 @@
+{
+  "image_id": "0xd359754364c10357103359276867f4fe58842c42cbb30a3ada5b241de6aa0d64",
+  "loadavg_after": "0.00 0.00 0.00 0/0 0",
+  "loadavg_before": "0.00 0.00 0.00 0/0 0",
+  "p254_seal_bytes": 222668,
+  "step": "identity_p254",
+  "threads": 32,
+  "wall_s": 19.842773745
+}

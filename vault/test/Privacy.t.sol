@@ -99,12 +99,13 @@ contract PrivacyTest is VaultTestBase {
     function test_privacy_depositRevealsNothingBeyondTheCommitment() public {
         bytes32 commitment = sha256(bytes.concat("example commitment scheme", LEZ_DESTINATION, BLINDING));
         bytes memory callData = abi.encodeCall(FerrataVault.depositETH, (1, commitment, 0));
-        vm.deal(alice, 1 ether);
+        uint256 total = _depositTotal(vault, ETH, 1); // the denomination and its relay fee (v5)
+        vm.deal(alice, total);
 
         vm.recordLogs();
         vm.startStateDiffRecording();
         vm.prank(alice);
-        (bool ok,) = address(vault).call{value: 1 ether}(callData);
+        (bool ok,) = address(vault).call{value: total}(callData);
         Vm.AccountAccess[] memory accesses = vm.stopAndReturnStateDiff();
         Vm.Log[] memory logs = vm.getRecordedLogs();
         assertTrue(ok);

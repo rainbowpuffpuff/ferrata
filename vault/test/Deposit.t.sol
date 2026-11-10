@@ -24,21 +24,24 @@ contract DepositTest is VaultTestBase {
     // Happy paths: ETH, 6- and 18-decimal tokens, USDT-style token
     // ------------------------------------------------------------------------------------------------------------
 
+    /// @dev v5 (D13): the deposit escrows the denomination plus the relay fee (0.2% in these registrations; no mint
+    ///      fee in schedule 0); the leaf and the event carry the denomination.
     function test_depositETH_escrowsAndAppendsLeaf() public {
         uint256 amount = 1 ether;
-        vm.deal(alice, amount);
+        uint256 total = amount + amount / 500;
+        vm.deal(alice, total);
 
         vm.expectEmit(true, true, true, true, address(vault));
         emit FerrataVault.Deposit(alice, 0, 0, ETH, amount, C1);
         vm.prank(alice);
-        vault.depositETH{value: amount}(1, C1, 0);
+        vault.depositETH{value: total}(1, C1, 0);
 
-        assertEq(address(vault).balance, amount);
+        assertEq(address(vault).balance, total);
         assertEq(alice.balance, 0);
-        assertEq(vault.escrowed(ETH), amount);
+        assertEq(vault.escrowed(ETH), total);
         assertEq(vault.depositCount(alice), 1);
         assertEq(vault.nextLeafIndex(), 1);
-        assertEq(vault.depositRoot(), _rootOfSingleLeaf(ReferenceMerkle.leafHash(0, alice, ETH, amount, C1)));
+        assertEq(vault.depositRoot(), _rootOfSingleLeaf(_leafHash(0, alice, ETH, amount, C1)));
     }
 
     function test_deposit_sixDecimalToken() public {
@@ -55,20 +58,21 @@ contract DepositTest is VaultTestBase {
 
     function _assertTokenDeposit(address token, uint8 denomIndex) internal {
         uint256 amount = _amount(token, denomIndex);
-        MockTokenBase(token).mint(alice, amount);
+        uint256 total = amount + amount / 500; // the relay fee of these registrations
+        MockTokenBase(token).mint(alice, total);
         vm.prank(alice);
-        MockTokenBase(token).approve(address(vault), amount);
+        MockTokenBase(token).approve(address(vault), total);
 
         vm.expectEmit(true, true, true, true, address(vault));
         emit FerrataVault.Deposit(alice, 0, 0, token, amount, C1);
         vm.prank(alice);
         vault.deposit(token, denomIndex, C1, 0);
 
-        assertEq(MockTokenBase(token).balanceOf(address(vault)), amount);
+        assertEq(MockTokenBase(token).balanceOf(address(vault)), total);
         assertEq(MockTokenBase(token).balanceOf(alice), 0);
-        assertEq(vault.escrowed(token), amount);
+        assertEq(vault.escrowed(token), total);
         assertEq(vault.depositCount(alice), 1);
-        assertEq(vault.depositRoot(), _rootOfSingleLeaf(ReferenceMerkle.leafHash(0, alice, token, amount, C1)));
+        assertEq(vault.depositRoot(), _rootOfSingleLeaf(_leafHash(0, alice, token, amount, C1)));
     }
 
     function test_leafHash_matchesSpec() public view {
@@ -83,7 +87,7 @@ contract DepositTest is VaultTestBase {
                 C1
             )
         );
-        assertEq(vault.leafHash(7, alice, address(usdc), 1000e6, C1), expected);
+        assertEq(_leafHash(7, alice, address(usdc), 1000e6, C1), expected);
     }
 
     // ------------------------------------------------------------------------------------------------------------
@@ -94,9 +98,10 @@ contract DepositTest is VaultTestBase {
         MockFeeOnTransferToken fot = new MockFeeOnTransferToken();
         vm.prank(admin);
         vault.registerToken(address(fot), _params(_denoms(1e18, 2e18, 3e18), 1e12, 1));
-        fot.mint(alice, 1e18);
+        uint256 total = _depositTotal(vault, address(fot), 0);
+        fot.mint(alice, total);
         vm.prank(alice);
-        fot.approve(address(vault), 1e18);
+        fot.approve(address(vault), total);
 
         vm.prank(alice);
         vm.expectRevert(FerrataVault.TransferAmountMismatch.selector);
@@ -126,9 +131,10 @@ contract DepositTest is VaultTestBase {
     function test_deposit_disabledTokenRevertsAndReenableWorks() public {
         vm.prank(admin);
         vault.setDepositsEnabled(address(dai), false);
-        dai.mint(alice, 100e18);
+        uint256 total = _depositTotal(vault, address(dai), 0);
+        dai.mint(alice, total);
         vm.prank(alice);
-        dai.approve(address(vault), 100e18);
+        dai.approve(address(vault), total);
 
         vm.prank(alice);
         vm.expectRevert(FerrataVault.DepositsDisabled.selector);
@@ -138,7 +144,7 @@ contract DepositTest is VaultTestBase {
         vault.setDepositsEnabled(address(dai), true);
         vm.prank(alice);
         vault.deposit(address(dai), 0, C1, 0);
-        assertEq(vault.escrowed(address(dai)), 100e18);
+        assertEq(vault.escrowed(address(dai)), total);
     }
 
     function test_depositETH_disabledReverts() public {
@@ -171,7 +177,9 @@ contract DepositTest is VaultTestBase {
 
     function test_depositETH_wrongValueReverts() public {
         vm.deal(alice, 10 ether);
-        uint256[3] memory wrong = [uint256(0), 1 ether - 1, 1 ether + 1];
+        uint256 total = _depositTotal(vault, ETH, 1);
+        // v5: the denomination alone is short of its relay fee.
+        uint256[4] memory wrong = [uint256(0), total - 1, total + 1, 1 ether];
         for (uint256 i = 0; i < wrong.length; i++) {
             vm.prank(alice);
             vm.expectRevert(FerrataVault.WrongEthAmount.selector);
@@ -209,38 +217,40 @@ contract DepositTest is VaultTestBase {
 
     function test_deposit_wrongIndexReverts() public {
         vm.deal(alice, 10 ether);
+        uint256 total = _depositTotal(vault, ETH, 1);
         // Index ahead of the counter.
         vm.prank(alice);
         vm.expectRevert(FerrataVault.WrongDepositIndex.selector);
-        vault.depositETH{value: 1 ether}(1, C1, 1);
+        vault.depositETH{value: total}(1, C1, 1);
 
         vm.prank(alice);
-        vault.depositETH{value: 1 ether}(1, C1, 0);
+        vault.depositETH{value: total}(1, C1, 0);
 
         // Replaying index 0 (e.g. a resubmitted transaction).
         vm.prank(alice);
         vm.expectRevert(FerrataVault.WrongDepositIndex.selector);
-        vault.depositETH{value: 1 ether}(1, C1, 0);
+        vault.depositETH{value: total}(1, C1, 0);
 
         // Skipping ahead.
         vm.prank(alice);
         vm.expectRevert(FerrataVault.WrongDepositIndex.selector);
-        vault.depositETH{value: 1 ether}(1, C1, 2);
+        vault.depositETH{value: total}(1, C1, 2);
 
         vm.prank(alice);
-        vault.depositETH{value: 1 ether}(1, C1, 1);
+        vault.depositETH{value: total}(1, C1, 1);
         assertEq(vault.depositCount(alice), 2);
     }
 
     function test_deposit_indexIsPerDepositor() public {
         vm.deal(alice, 10 ether);
         vm.deal(bob, 10 ether);
+        uint256 total = _depositTotal(vault, ETH, 1);
         vm.prank(alice);
-        vault.depositETH{value: 1 ether}(1, C1, 0);
+        vault.depositETH{value: total}(1, C1, 0);
         vm.prank(bob);
-        vault.depositETH{value: 1 ether}(1, C1, 0);
+        vault.depositETH{value: total}(1, C1, 0);
         vm.prank(alice);
-        vault.depositETH{value: 1 ether}(1, C1, 1);
+        vault.depositETH{value: total}(1, C1, 1);
 
         assertEq(vault.depositCount(alice), 2);
         assertEq(vault.depositCount(bob), 1);
@@ -258,16 +268,16 @@ contract DepositTest is VaultTestBase {
         assertEq(third, 2);
 
         bytes32[] memory leaves = new bytes32[](3);
-        leaves[0] = ReferenceMerkle.leafHash(0, alice, address(usdc), 100e6, C1);
-        leaves[1] = ReferenceMerkle.leafHash(1, bob, address(usdc), 100e6, C1);
-        leaves[2] = ReferenceMerkle.leafHash(2, alice, address(usdc), 100e6, C1);
+        leaves[0] = _leafHash(0, alice, address(usdc), 100e6, C1);
+        leaves[1] = _leafHash(1, bob, address(usdc), 100e6, C1);
+        leaves[2] = _leafHash(2, alice, address(usdc), 100e6, C1);
         assertTrue(leaves[0] != leaves[1]);
         assertEq(vault.depositRoot(), ReferenceMerkle.root(leaves));
     }
 
     /// @notice SPEC-v3 D9: leafIndex < 2^32. Once 2^32 leaves exist, both deposit paths revert and nothing changes.
     function test_deposit_revertsWhenTreeIsFull() public {
-        vm.store(address(vault), bytes32(vault.NEXT_LEAF_INDEX_SLOT()), bytes32(uint256(2 ** 32)));
+        vm.store(address(vault), bytes32(NEXT_LEAF_INDEX_SLOT_), bytes32(uint256(2 ** 32)));
         bytes32 rootBefore = vault.depositRoot();
         vm.deal(alice, 1 ether);
         vm.prank(alice);

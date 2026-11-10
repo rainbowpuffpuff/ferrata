@@ -17,22 +17,22 @@ import {VaultTestBase} from "./utils/VaultTestBase.sol";
 contract EmergencyStopTest is VaultTestBase {
     bytes32 internal constant ROOT = keccak256("burn root");
 
-    function test_estop_stopsCandidatesFinalisationAndReleases_notCancellationRefundsClaimsOrRoles() public {
+    function test_estop_stopsCandidatesFinalisationReleasesAndRefunds_notCancellationClaimsOrRoles() public {
         // Leaves 0 and 1 are imported on LEZ (one is released before the stop, to a payee that cannot receive);
         // leaf 2 never is, and is refundable after the sunset.
         _deposit(alice, ETH, 1, keccak256("c0"));
         _deposit(alice, ETH, 1, keccak256("c1"));
         _deposit(bob, ETH, 0, keccak256("c2"));
         bytes32[] memory leaves = new bytes32[](3);
-        leaves[0] = ReferenceMerkle.leafHash(0, alice, ETH, 1 ether, keccak256("c0"));
-        leaves[1] = ReferenceMerkle.leafHash(1, alice, ETH, 1 ether, keccak256("c1"));
-        leaves[2] = ReferenceMerkle.leafHash(2, bob, ETH, 0.1 ether, keccak256("c2"));
+        leaves[0] = _leafHash(0, alice, ETH, 1 ether, keccak256("c0"));
+        leaves[1] = _leafHash(1, alice, ETH, 1 ether, keccak256("c1"));
+        leaves[2] = _leafHash(2, bob, ETH, 0.1 ether, keccak256("c2"));
         vm.prank(freezer);
         vault.retire();
         FerrataVault.Checkpoint memory sunset = _nextCheckpoint(vault, ROOT, 2, true);
         _submit(sunset);
         _finalizeAfterDelta(sunset); // checkpoint 0
-        vm.warp(block.timestamp + REVOKE_WINDOW); // refunds open (v3 D5)
+        vm.warp(block.timestamp + REVOKE_WINDOW + 1); // refunds open (v3 D5, D11)
         _acceptRoot(keccak256("later root")); // checkpoint 1, still revocable after the stop
 
         ToggleRecipient payee = new ToggleRecipient(); // cannot receive yet
@@ -66,7 +66,7 @@ contract EmergencyStopTest is VaultTestBase {
         vault.release(r, SEAL);
         assertFalse(vault.nullifierUsed(r.nullifier));
 
-        // No proof involved: cancellation, refunds, owed claims, revocation and role handovers still work.
+        // No proof involved: cancellation, owed claims, revocation and role changes still work; refunds do not (D13).
         vm.prank(freezer);
         vault.cancelCandidate(pending.newState);
         bytes32[] memory siblings = ReferenceMerkle.path(leaves, 2);
@@ -74,8 +74,9 @@ contract EmergencyStopTest is VaultTestBase {
         for (uint256 h = 0; h < 32; h++) {
             path[h] = siblings[h];
         }
+        vm.expectRevert(FerrataVault.VerifierStopped.selector);
         vault.refund(2, bob, ETH, 0, keccak256("c2"), path);
-        assertEq(bob.balance, 0.1 ether);
+        assertFalse(vault.refunded(2));
 
         payee.setOpen(true);
         payee.claim(address(vault), ETH);
@@ -92,10 +93,10 @@ contract EmergencyStopTest is VaultTestBase {
         vault.acceptAdmin();
         assertEq(vault.admin(), newAdmin);
         address newFreezer = makeAddr("newFreezer");
-        vm.prank(freezer);
-        vault.transferFreezeAuthority(newFreezer);
-        vm.prank(newFreezer);
-        vault.acceptFreezeAuthority();
+        vm.prank(newAdmin);
+        vault.proposeRoles([watcher, address(0), address(0)], newFreezer);
+        vm.warp(block.timestamp + 14 days);
+        vault.applyRoles();
         assertEq(vault.freezeAuthority(), newFreezer);
     }
 

@@ -49,7 +49,8 @@ contract ReturnLegTest is ReturnLegFixture {
         FerrataVault.Checkpoint memory c = _checkpoint(candidate.journal);
         assertEq(candidate.journal.length, 17 * 32);
         assertEq(
-            candidate.journal, abi.encode(vault.CHECKPOINT_DOMAIN(), block.chainid, address(vault), lezConfigId, c)
+            candidate.journal,
+            abi.encode(sha256(bytes("ferrata/vault/checkpoint/v3")), block.chainid, address(vault), lezConfigId, c)
         );
         assertEq(c.parentState, genesisState);
         assertEq(c.echoNonce, bytes32(0));
@@ -60,7 +61,8 @@ contract ReturnLegTest is ReturnLegFixture {
 
         FerrataVault.Checkpoint memory e = _checkpoint(finalization.journal);
         assertEq(
-            finalization.journal, abi.encode(vault.CHECKPOINT_DOMAIN(), block.chainid, address(vault), lezConfigId, e)
+            finalization.journal,
+            abi.encode(sha256(bytes("ferrata/vault/checkpoint/v3")), block.chainid, address(vault), lezConfigId, e)
         );
         assertEq(e.echoNonce, beaconNonce);
         assertEq(
@@ -78,11 +80,12 @@ contract ReturnLegTest is ReturnLegFixture {
         for (uint256 i = 0; i < releases.length; i++) {
             ReleaseCase memory r = releases[i];
             assertEq(r.burnRoot, c.burnRoot, "the release is against the checkpoint's burn root");
-            assertEq(r.amount, vault.denominations(r.token)[0]);
+            (,,,, uint256[] memory denoms) = vault.tokenConfig(r.token);
+            assertEq(r.amount, denoms[0]);
             assertEq(
                 r.journal,
                 abi.encode(
-                    vault.RELEASE_DOMAIN(),
+                    sha256(bytes("ferrata/vault/release/v2")),
                     block.chainid,
                     address(vault),
                     lezConfigId,
@@ -106,9 +109,10 @@ contract ReturnLegTest is ReturnLegFixture {
 
         // Candidate: the real checkpoint seal, through the stop, into the Groth16 verifier.
         uint256 submittedAt = _submit();
-        (bytes32 parent, bytes32 root,,,,,,, uint256 at,,) = vault.candidates(c.newState);
-        assertEq(parent, genesisState);
-        assertEq(root, c.burnRoot);
+        (bytes32 digest,,,, uint48 at,,) = vault.candidates(c.newState);
+        // v4 keeps the digest of the journal the real seal was verified against.
+        assertEq(digest, sha256(candidate.journal));
+        assertEq(c.parentState, genesisState);
         assertEq(at, submittedAt);
         assertEq(vault.finalState(), genesisState, "a candidate changes nothing yet");
 
@@ -133,10 +137,11 @@ contract ReturnLegTest is ReturnLegFixture {
         for (uint256 i = 0; i < releases.length; i++) {
             _releaseAndCheck(releases[i]);
         }
-        assertEq(vault.escrowed(ETH), 0);
-        assertEq(vault.escrowed(address(token)), 0);
-        assertEq(address(vault).balance, 0);
-        assertEq(token.balanceOf(address(vault)), 0);
+        // v5 (D13): what stays is the deposits' relay fees, which back the relay fees their claims mint on LEZ.
+        assertEq(vault.escrowed(ETH), 2e12);
+        assertEq(vault.escrowed(address(token)), 250_000);
+        assertEq(address(vault).balance, 2e12);
+        assertEq(token.balanceOf(address(vault)), 250_000);
     }
 
     function _balance(address asset, address who) internal view returns (uint256) {
@@ -254,7 +259,8 @@ contract ReturnLegTest is ReturnLegFixture {
             if (field == 1) e.tipHash = keccak256("another tip");
             if (field == 2) e.n += 1;
             if (field == 3) e.t += 1;
-            vm.expectRevert(VerificationFailed.selector);
+            // v4 (D11): the vault compares the whole journal with the candidate's before the proof.
+            vm.expectRevert(FerrataVault.CandidateMismatch.selector);
             vault.finalize(beaconIndex, e, finalization.seal);
         }
         e = _checkpoint(finalization.journal);
@@ -276,7 +282,7 @@ contract ReturnLegTest is ReturnLegFixture {
         // Escrow for the larger denomination, so that only the proof can object to it.
         vm.deal(depositor, 1 ether);
         vm.prank(depositor);
-        vault.depositETH{value: 0.01 ether}(1, keccak256("someone's commitment"), 2);
+        vault.depositETH{value: 0.01 ether + 2e13}(1, keccak256("someone's commitment"), 2); // with its relay fee
         for (uint256 i = 0; i < releases.length; i++) {
             ReleaseCase memory r = releases[i];
             FerrataVault.ReleaseRequest memory q;
@@ -284,7 +290,7 @@ contract ReturnLegTest is ReturnLegFixture {
                 q = _request(r);
                 if (field == 0) q.recipient = makeAddr("thief");
                 if (field == 1) q.relayer = makeAddr("another relayer");
-                if (field == 2) q.relayFee = r.relayFee == 0 ? vault.relayFees(r.token)[0] : 0;
+                if (field == 2) q.relayFee = r.relayFee == 0 ? _registeredRelayFee(r.token) : 0;
                 if (field == 3) q.nullifier = keccak256("another nullifier");
                 if (field == 4) q.denomIndex = 1;
                 bool feeStillValid = field != 4 || r.relayFee == 0;

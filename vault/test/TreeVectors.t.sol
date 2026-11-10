@@ -70,13 +70,11 @@ contract TreeVectorsTest is VaultTestBase {
             uint64 leafIndex = _deposit(plan[i].depositor, plan[i].token, plan[i].denomIndex, commitments[i]);
             assertEq(leafIndex, i);
             uint256 amount = _amount(plan[i].token, plan[i].denomIndex);
-            leaves[i] = vault.leafHash(leafIndex, plan[i].depositor, plan[i].token, amount, commitments[i]);
+            leaves[i] = _leafHash(leafIndex, plan[i].depositor, plan[i].token, amount, commitments[i]);
             roots[i] = vault.depositRoot();
 
             // Cross-check the vault against the independent reference before writing anything down.
-            assertEq(
-                leaves[i], ReferenceMerkle.leafHash(leafIndex, plan[i].depositor, plan[i].token, amount, commitments[i])
-            );
+            assertEq(leaves[i], _leafHash(leafIndex, plan[i].depositor, plan[i].token, amount, commitments[i]));
             bytes32[] memory prefix = new bytes32[](i + 1);
             for (uint256 k = 0; k <= i; k++) {
                 prefix[k] = leaves[k];
@@ -91,7 +89,7 @@ contract TreeVectorsTest is VaultTestBase {
             '  "treeDepth": 32,\n',
             '  "leafTagPreimage": "ferrata/vault/leaf/v2",\n',
             '  "leafTag": "',
-            vm.toString(vault.LEAF_TAG()),
+            vm.toString(sha256(bytes("ferrata/vault/leaf/v2"))),
             '",\n',
             '  "leafEncoding": "sha256(0x00 || leafTag || uint64 leafIndex, 8 bytes big-endian || depositor, 20 bytes ',
             '|| token, 20 bytes || uint256 amount, 32 bytes big-endian || commitment, 32 bytes): a 145-byte preimage",\n',

@@ -52,7 +52,7 @@ contract PullPaymentTest is VaultTestBase {
         vault.release(r, SEAL);
 
         assertTrue(vault.nullifierUsed(r.nullifier)); // the release happened
-        assertEq(vault.escrowed(ETH), 3 ether);
+        assertEq(vault.escrowed(ETH), 3 ether + 4 * (1 ether / 500)); // and the four deposits' relay fees (v5)
         assertEq(vault.owed(address(payee), ETH), 1 ether);
         assertEq(vault.totalOwed(ETH), 1 ether);
         assertEq(address(vault).balance, vaultBalance); // the ETH is still in the vault, now owed
@@ -107,8 +107,8 @@ contract PullPaymentTest is VaultTestBase {
         _releaseTo(ETH, recipient, address(0), false);
         assertEq(recipient.balance, 2 ether);
         assertEq(vault.owed(address(stuck), ETH), 2 ether);
-        assertEq(vault.escrowed(ETH), 0);
-        assertEq(address(vault).balance, vault.totalOwed(ETH));
+        assertEq(vault.escrowed(ETH), 4 * (1 ether / 500)); // the deposits' relay fees, for their claims (v5)
+        assertEq(address(vault).balance, vault.totalOwed(ETH) + vault.escrowed(ETH));
     }
 
     function test_revertBombRecipient_isCreditedWithinAnOrdinaryGasLimit() public {
@@ -163,20 +163,21 @@ contract PullPaymentTest is VaultTestBase {
     function test_refundToADepositorThatCannotReceive_isCredited() public {
         ToggleRecipient depositorContract = new ToggleRecipient();
         uint64 leafIndex = vault.nextLeafIndex();
-        vm.deal(address(this), 1 ether);
-        depositorContract.depositETH{value: 1 ether}(address(vault), 1, keccak256("contract deposit"), 0);
+        uint256 total = _depositTotal(vault, ETH, 1); // 1 ETH and its relay fee (v5)
+        vm.deal(address(this), total);
+        depositorContract.depositETH{value: total}(address(vault), 1, keccak256("contract deposit"), 0);
 
         vm.prank(freezer);
         vault.retire();
         FerrataVault.Checkpoint memory c = _nextCheckpoint(vault, keccak256("sunset root"), leafIndex, true);
         _submit(c);
         _finalizeAfterDelta(c);
-        vm.warp(block.timestamp + REVOKE_WINDOW); // refunds open (v3 D5)
+        vm.warp(block.timestamp + REVOKE_WINDOW + 1); // refunds open (v3 D5, D11)
 
         bytes32[] memory leaves = new bytes32[](leafIndex + 1);
         for (uint64 i = 0; i < leafIndex; i++) {
             bool isEth = i % 2 == 0;
-            leaves[i] = ReferenceMerkle.leafHash(
+            leaves[i] = _leafHash(
                 i,
                 alice,
                 isEth ? ETH : address(busd),
@@ -185,17 +186,17 @@ contract PullPaymentTest is VaultTestBase {
             );
         }
         leaves[leafIndex] =
-            ReferenceMerkle.leafHash(leafIndex, address(depositorContract), ETH, 1 ether, keccak256("contract deposit"));
+            _leafHash(leafIndex, address(depositorContract), ETH, 1 ether, keccak256("contract deposit"));
         bytes32[] memory siblings = ReferenceMerkle.path(leaves, leafIndex);
         bytes32[32] memory path;
         for (uint256 h = 0; h < 32; h++) {
             path[h] = siblings[h];
         }
         vault.refund(leafIndex, address(depositorContract), ETH, 1, keccak256("contract deposit"), path);
-        assertEq(vault.owed(address(depositorContract), ETH), 1 ether);
+        assertEq(vault.owed(address(depositorContract), ETH), total);
 
         depositorContract.setOpen(true);
         depositorContract.claim(address(vault), ETH);
-        assertEq(address(depositorContract).balance, 1 ether);
+        assertEq(address(depositorContract).balance, total);
     }
 }

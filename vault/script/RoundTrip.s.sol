@@ -59,7 +59,10 @@ contract RoundTrip is Script {
             unitWeight: unitWeight,
             depositCap: _unlimited(),
             releaseCap: _unlimited(),
-            releaseDelay: vm.envOr("FERRATA_RELEASE_DELAY", uint256(120))
+            releaseDelay: vm.envOr("FERRATA_RELEASE_DELAY", uint256(120)),
+            lezDefinition: bytes32(0),
+            decimals: 18,
+            checkpointFees: new uint256[](denoms.length)
         });
     }
 
@@ -90,7 +93,11 @@ contract RoundTrip is Script {
                 address(uint160(uint256(keccak256("ferrata testnet: freeze authority (no key)"))))
             ),
             globalDepositCap: _unlimited(),
-            globalReleaseCap: _unlimited()
+            globalReleaseCap: _unlimited(),
+            mode: FerrataVault.Mode.A,
+            watchers: [address(0), address(0), address(0)],
+            releaseCapFloor: FerrataVault.CapParams({capacity: 0, refillPerSecond: 0}),
+            feeRecipient: admin
         });
     }
 
@@ -134,9 +141,9 @@ contract RoundTrip is Script {
 
     /// @dev When the candidate's wait is over: submittedAt + deltaAtSubmit + (t - 1) * turnSeconds.
     function _waitOver(bytes32 newState) internal view returns (uint256) {
-        (,,,,, uint32 t,,, uint256 submittedAt, uint256 deltaAtSubmit,) = vault.candidates(newState);
+        (,,, uint32 t, uint48 submittedAt, uint32 deltaAtSubmit,) = vault.candidates(newState);
         require(submittedAt != 0, "no such candidate");
-        return submittedAt + deltaAtSubmit + (uint256(t) - 1) * vault.turnSeconds();
+        return uint256(submittedAt) + deltaAtSubmit + (uint256(t) - 1) * vault.turnSeconds();
     }
 
     function submit() external {

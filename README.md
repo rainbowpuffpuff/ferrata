@@ -27,9 +27,9 @@ every other command.
 | [Bridge program](lez/BRIDGE-RESULTS.md), `lez/` | The RFP-022 bridge program on LEZ v0.4.0-rc1 ([plan](lez/BRIDGE.md)): a configuration paired with its vault, tokens registered by attesting the vault's registry, `ImportRoot` through the attestation program's direct path, plaintext and private claims with write-once nullifiers, fees by leaf index, token and global caps with a caller time, freezes, roles and `Sunset`, wrapped balances in the bridge's own accounts (no v0.4 token program is released), burns with write-once notes in the checkpoint's encoding | In-process harness over LEZ's own state machine and fee settlement, on a cloud container; a synthetic vault (its registry and fee slots too: `FerrataVault.sol` does not write them yet) and records placed at genesis (the first deposits are the shared vectors'); private execution in RISC Zero dev mode in the tests; then one real proof each of a private claim and a private burn on one NVIDIA L4, of the program before its fees, caps and freezes, settled with the receipts verified on the build box | Prototype: 72 transactions for the registry (two tokens in a configuration), fees by leaf index, caps, freezes and `Sunset`, besides the inbound, private and burn tests, every refusal with its code. Import 229,743 execution gas, plaintext claim 239,431 (142,444 before fees, caps and freezes), public burn 130,868 (45,867 before); a private claim 539,060 (LEZ's fixed 409,764 + 129,296) with only `N`, the denomination, the root read and the fee schedule's range public; the checkpoint's own parser collects the public and the private burn byte for byte, the import, and the freeze authority's `Sunset` once. Proven: the private claim in 15.3 s and the private burn in 12.4 s (227,477- and 226,978-byte receipts); one flipped bit in either receipt is refused | `cd lez && RISC0_DEV_MODE=1 cargo test -p harness --test bridge_inbound --test bridge_private --test bridge_burn --test bridge_controls`; the proofs: `lez/BRIDGE-RESULTS.md` §7 |
 | [Inbound crossing, live](lez/live/inbound/README.md), `lez/live/inbound/` | Ethereum to LEZ on a running LEZ v0.4.0-rc1 sequencer and Logos Blockchain node: the attestation and bridge programs deployed through LEZ's loader, an instance following a beacon chain, the bridge paired with the vault, `ImportRoot`, a plaintext claim and a private claim with a real proof the sequencer verifies, and the refusals; the configuration's identity fixed in advance for the Sepolia vault | Modal build box (CPU), scripted and recorded; re-checked by replaying the recorded chain through LEZ's block application | Stand-in session done (its beacon chain and execution blocks made with keys we hold, not Ethereum): 57 blocks, 30 transactions as expected, the private claim proven in 254.8 s on CPU and included. The Sepolia session waits for the deposits | `cd lez && live/inbound/run.sh stand-in` on the build box |
 | [GPU proving](gpu-prover/RESULTS.md), `gpu-prover/` | A small Modal app that proves the checkpoint fixtures, the LEZ update, one private attestation and the bridge program's private claim and burn with RISC Zero 3.0.5 on a GPU | One NVIDIA L4 in the cloud; receipts verified on the laptop (the bridge's on the build box) | Measured: 14–219 s per checkpoint proof (an hour of blocks with 50 private transactions in 219 s) and 49.5 s for the LEZ update, about 80 times faster than the laptop CPU; 16.1 s for the private attestation on the current images, 13.5 s on the previous ones; 15.3 s and 12.4 s for the bridge's private claim and burn (no CPU figure) | `gpu-prover/README.md` |
-| [Vault](vault/README.md), `vault/` | `FerrataVault`, the immutable Ethereum vault (Solidity), at specification v2 with v3 D3–D5 and D9 | Local EVM (Foundry): its own suite with a mock verifier behind RISC Zero's unmodified emergency-stop wrapper; the return leg with RISC Zero's real Groth16 verifier and real proofs | Prototype: 286 tests with the mock verifier, 100% line and branch coverage, 127 of 127 planted bugs caught, 10 invariants; rule (A) only; 15 more tests run the return leg with real proofs | `cd vault && forge test` (install the pinned dependencies first: `vault/README.md`) |
+| [Vault](vault/README.md), `vault/` | `FerrataVault` v5, the immutable Ethereum vault (Solidity), and its linked library: specification v2 with v3 D3–D5, D9 and the vault items of D11 and D13 (rule (B) beside rule (A) behind an immutable `mode`, watchers, the 14-day role change, keyless retirement, the cap floor, and D13's fees: mint, relay, burn and checkpoint fees under a 1% ceiling, changed seven days after announcement, published for LEZ); a deployment script that takes every gas limit from the node's estimate | Local EVM (Foundry): its own suite with a mock verifier behind RISC Zero's unmodified emergency-stop wrapper; the return leg with RISC Zero's real Groth16 verifier and real proofs; the deployment rehearsed on a local anvil fork of Sepolia, creation gas measured read-only on Sepolia | Prototype: 395 tests, 100% line and branch coverage of the vault and its library, 223 of 223 planted bugs caught, 14 invariants (balance equality, supply) on a rule (A) and on a rule (B) vault; real proofs of both rules verified (`test/real/`): a rule (B) checkpoint costs 542,969 gas against 974,346 for rule (A); on today's Sepolia (EIP-8037) the vault's creation costs 39.5 M gas and fits | `cd vault && forge test` (install the pinned dependencies first: `vault/README.md`) |
 | [Bridge core and release proof](bridge/README.md), `bridge/` | `ferrata-bridge-core` (commitments, trees, nullifiers, claim and release statements, recovery), the release and claim guests, and the release checked on Ethereum | Laptop CPU (RISC Zero 3.0.5 prover; Groth16 wrap in Docker on x86); local EVM with RISC Zero's real Groth16 verifier: the v2 vault with the checkpoint proof mocked, and the v3 vault with real checkpoint proofs (`e2e/`) | Prototype at specification v2: the release guest takes 80,501 cycles whatever the witness, proven in 37–49 s; an ETH release costs 367,988 gas on the v2 vault | `cd bridge && scripts/check.sh` (no proving; `bridge/scripts/prove-bench.sh` proves) |
-| [Checkpoint program](checkpoint/README.md), `checkpoint/` | The LEZ to Ethereum checkpoint proof: re-hashes LEZ blocks, collects burns, follows key rotations, checks the support rule | RISC Zero executor on a laptop CPU, on LEZ blocks and Logos Blockchain inscriptions built with their own crates; two real proofs of a one-block checkpoint, wrapped to Groth16; a candidate and a finalisation proof of the end-to-end fixture, which the v3 vault accepted through RISC Zero's Groth16 verifier (`e2e/`); all of images from before this branch's `ImportRoot` fix, which changed both guests; no node ran | Prototype: specification v2 §4.1–4.2 with v3 D3, rule (A) only; cycles measured | `cd checkpoint && cargo +1.88 test -p checkpoint-core` |
+| [Checkpoint program](checkpoint/README.md), `checkpoint/` | The LEZ to Ethereum checkpoint proof: re-hashes LEZ blocks, collects burns, follows key rotations, checks the support rule (A) or the final-tier attestations (B); `crates/attestor-core`, the attestor's certificate and message | RISC Zero executor on a laptop CPU and, for rule (B), on the Modal build box, on LEZ blocks and Logos Blockchain inscriptions built with their own crates; two real proofs of a one-block checkpoint, wrapped to Groth16; a candidate and a finalisation proof of the end-to-end fixture, which the v3 vault accepted through RISC Zero's Groth16 verifier (`e2e/`); all of images from before this branch's `ImportRoot` fix, which changed both guests; no node ran | Prototype: specification v2 §4.1–4.2 with v3 D3; rule (A), and rule (B) of v3 D7 and D13 in its own guest; cycles of both measured on the same blocks | `cd checkpoint && cargo +1.88 test -p checkpoint-core -p attestor-core` |
 | [Return leg, end to end](e2e/README.md), `e2e/` | One fixture in which the checkpoint program, the release program and the v3 vault meet: a stand-in zone with burns, its candidate and finalisation checkpoints, the releases against the checkpoint's burn root, and the Sepolia scripts in `vault/script/` | Fixture, release proofs and the first wrap step on a 16-core cloud machine; checkpoint proofs on one NVIDIA L4; RISC Zero's Groth16 prover image in the cloud; local EVM (Foundry) with RISC Zero's real verifier; the Sepolia stages on a local fork | Run: every proof accepted by the v3 vault with no mock on the Ethereum side, every negative case refused; the LEZ side is a stand-in (test keys, no node, no bridge program); proven with the checkpoint program before its `ImportRoot` fix, which refuses this fixture's import | `cd vault && forge test --match-path 'test/real/*'` (`e2e/README.md` for the fixture) |
 | [Finality-rule analysis](docs/design/finality-rule/LEMMA.md), `docs/design/finality-rule/` | A model of LEZ v0.4 sequencer and Logos Blockchain behaviour cited to source lines, a written proof, and a discrete-event simulator | Simulator (Python, standard library), not a network | Broke the earlier rule (A); the repaired rule shows no violation in 500 adversarial runs within its conditions | `cd docs/design/finality-rule/sim && python3 experiments.py` (12,000 runs, 25 min on 14 processes; `python3 test_sim.py` checks the model) |
 
@@ -61,12 +61,13 @@ imported with their history: their earlier commits keep their original paths.
 ## Specified but not built
 
 The design notes specify these; there is no code for them here:
-- in the bridge program on LEZ (`lez/BRIDGE-RESULTS.md` §9): the vault side of its registry and fee
-  slots, a permissionless `Sunset`, the freeze authority's 14-day handover and the watchers on LEZ,
-  transfers between holders, the switch to a v0.4 token program when one is released;
-- rule (B): `ferrata_attestor`, the Logos module with which each sequencer would sign its node's final
-  tier, and the rule (B) path in the checkpoint program and the vault (its cost is estimated only);
-- the gas drop and the relayer; `monitor` and the watcher role;
+- in the bridge program on LEZ (`lez/BRIDGE-RESULTS.md` §9): a permissionless `Sunset`, the freeze
+  authority's 14-day handover and the watchers on LEZ, transfers between holders, the switch to a v0.4
+  token program when one is released;
+- rule (B): `ferrata_attestor` as the Logos module with which each sequencer would sign its node's
+  final tier (its core, the certificate and the final-tier message, is `checkpoint/crates/attestor-core`);
+  the rule (B) paths of the checkpoint program (`checkpoint/RESULTS.md` §4) and of the vault (v4) are built;
+- the gas drop and the relayer; `monitor`, the watchers' node-side program (the vault's watcher role is built);
 - the Logos modules (`ferrata_attest_module`, `ferrata_bridge_module`), the CLI, the updater and relayer
   daemons, the IDL, the mini-app and the admin view;
 - in the attestation program: successors and the root id (a fork not in the schedule fixed at
@@ -78,31 +79,22 @@ The design notes specify these; there is no code for them here:
 
 Changes in [the v3 specification](docs/design/spec/bridge-spec-v3-changes.md) that the prototypes do not
 implement yet:
-- vault (D11): the one-second boundary between revocation and refunds or releases; `finalize` also
-  comparing `t` and the tip with the candidate and checking `importedLeafCount <= nextLeafIndex`;
-  further logic in a linked library, since the runtime is 926 bytes under the EIP-170 limit;
 - bridge core (D12): `mac` v2, which also covers `memo` (the bridge program's tests make their notes with
   it, from `lez/bridge-wire`); the witness-independence check of the guests' cycle counts runs in
   `bridge/scripts/check.sh`, not in CI;
-- rule (B) as the proposed rule (D13): both finalisation paths in the vault behind an immutable `mode`,
-  the v2 final-tier message, attestation-key certificates, a one-hour wait, watchers checking a
-  candidate when it is submitted;
-- rule (A) (D13): watchers cancelling a candidate whose key set is not the live one; Δ_g of 3 h when
-  participation is partial; `submitCandidate` refusing a state already pending;
-- roles (D13): up to three watchers that can only cancel candidates and pause checkpoints for 12 h; a
-  multisig freeze authority that the admin replaces after a 14-day timelock; the emergency stop's owner
-  renounced at deployment; `retire()` and `Sunset` open to anyone after 30 days without a finalised
-  checkpoint; an immutable floor under the caps;
-- inbound (D13): refunds drawing on the release cap; the gas-drop receipt binding
-  `(N, oneTimeAddress, relayer)` (`ImportRoot` attesting slots 0 and 1, and claims refusing
+- rule (B) (D13): watchers checking a candidate when it is submitted (`monitor`; the vault's rule (B)
+  path, the final-tier message and the attestation-key certificates are built);
+- rule (A) (D13): watchers cancelling a candidate whose key set is not the live one (`monitor`); Δ_g of
+  3 h when participation is partial (a deployment parameter);
+- roles (D13): LEZ's keyless `Sunset` (the vault's side, the watchers, the 14-day role change, keyless
+  `retire()`, the cap floor and the deployment script that renounces the emergency stop's owner, is built;
+  the bridge program's `Sunset` is the freeze authority's);
+- inbound (D13): the gas-drop receipt binding `(N, oneTimeAddress, relayer)` (refunds drawing on the
+  release cap are in the vault; `ImportRoot` attesting slots 0 and 1, and claims refusing
   `leafIndex >= count`, are in the bridge program);
 - outbound (D13): `NOut` v2 in the release guest (the bridge program's wire crate has it, wallet side
-  only); releases against the newest root whose delay has passed (the write-once burn account keyed on
-  the whole note is in the bridge program);
-- checkpoint program: decoding the bridge program's `ImportRoot`, which carries its proofs after the
-  four fields the checkpoint reads (`lez/BRIDGE-RESULTS.md` §5);
-- fees (D13): a deposit escrows the denomination plus the mint and relay fees, and a burn releases the
-  denomination less the burn, relay and checkpoint fees.
+  only); releases against the newest root whose delay has passed, a wallet rule (the write-once burn
+  account keyed on the whole note is in the bridge program).
 
 ## Not audited. Not for production.
 

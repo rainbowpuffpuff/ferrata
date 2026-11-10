@@ -1,0 +1,18 @@
+[package]
+name = "ferrata-checkpoint-b-guest"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.88"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[[bin]]
+name = "checkpoint_b"
+path = "src/main.rs"
+
+[dependencies]
+checkpoint-core.workspace = true
+risc0-zkvm.workspace = true
+bytemuck.workspace = true
+sha2.workspace = true
+curve25519-dalek.workspace = true

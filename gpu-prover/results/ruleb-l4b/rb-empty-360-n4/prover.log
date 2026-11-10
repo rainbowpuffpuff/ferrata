@@ -1,0 +1,27 @@
+    0.071 [rb-empty-360-n4] image id 0xd359754364c10357103359276867f4fe58842c42cbb30a3ada5b241de6aa0d64 (program 437664 bytes, sha256 386a3a313ad6645acb51a5b92460af2f0840ca55debf7af1a9efc57e109180d9)
+    0.922 [rb-empty-360-n4] executed: 9 segments, 7505344 user cycles, 0.85 s; journal == native
+   31.981 [rb-empty-360-n4] succinct proof: total 31.87 s (execute 0.85 s, 9 segment proofs 23.28 s, lift/join/check 7.74 s) | receipt 224314 bytes | verifies; journal == native
+   31.982 {"execute_s":0.850246086,"image_id":"0xd359754364c10357103359276867f4fe58842c42cbb30a3ada5b241de6aa0d64","input_bytes":308322,"input_sha256":"e210f3c4ba18fa720da96bc41e8498a2162c3ffe25f3b633b8c4f3c7350b6442","journal_equals_native":true,"name":"rb-empty-360-n4","paging_cycles":791955,"program_bytes":437664,"program_sha256":"386a3a313ad6645acb51a5b92460af2f0840ca55debf7af1a9efc57e109180d9","prove_session_s":31.023232886,"prover":"in-process (LocalProver path), risc0-zkvm feature cuda","receipt_bytes":224314,"receipt_kind":"succinct","receipt_sha256":"c5c63867a6cf6f54f0ed7d476e6b9d6529c780dfd7af83ebd74c795ce93b4051","recursion_s":7.7386713129999976,"reserved_cycles":353453,"risc0_zkvm":"3.0.5","segment_proofs_s":23.284561573,"segment_times":[{"index":0,"po2":20,"prove_s":3.277009396},{"index":1,"po2":20,"prove_s":2.847229791},{"index":2,"po2":20,"prove_s":2.772089632},{"index":3,"po2":20,"prove_s":2.649642578},{"index":4,"po2":20,"prove_s":2.683142161},{"index":5,"po2":20,"prove_s":2.667108078},{"index":6,"po2":20,"prove_s":2.875069483},{"index":7,"po2":20,"prove_s":2.824591891},{"index":8,"po2":18,"prove_s":0.688678563}],"segments":9,"total_cycles":8650752,"total_s":31.873539151,"user_cycles":7505344,"verifies":true}
+   32.065 	Command being timed: "/root/bin/ferrata-modal-cuda prove rb-empty-360-n4 /inputs/programs/checkpoint-b.bin /inputs/fixtures/rb-empty-360-n4.input /inputs/fixtures/rb-empty-360-n4.json /vol/results/ruleb-l4b/rb-empty-360-n4"
+   32.065 	User time (seconds): 29.35
+   32.065 	System time (seconds): 2.82
+   32.065 	Percent of CPU this job got: 100%
+   32.065 	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:32.06
+   32.066 	Average shared text size (kbytes): 0
+   32.066 	Average unshared data size (kbytes): 0
+   32.066 	Average stack size (kbytes): 0
+   32.066 	Average total size (kbytes): 0
+   32.066 	Maximum resident set size (kbytes): 878580
+   32.066 	Average resident set size (kbytes): 0
+   32.066 	Major (requiring I/O) page faults: 0
+   32.067 	Minor (reclaiming a frame) page faults: 0
+   32.067 	Voluntary context switches: 0
+   32.067 	Involuntary context switches: 0
+   32.067 	Swaps: 0
+   32.067 	File system inputs: 0
+   32.067 	File system outputs: 0
+   32.067 	Socket messages sent: 0
+   32.067 	Socket messages received: 0
+   32.068 	Signals delivered: 0
+   32.068 	Page size (bytes): 4096
+   32.068 	Exit status: 0

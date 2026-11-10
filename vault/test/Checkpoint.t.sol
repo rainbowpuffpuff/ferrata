@@ -15,9 +15,9 @@ contract CheckpointTest is VaultTestBase {
     function _candidate(FerrataVault.Checkpoint memory c)
         internal
         view
-        returns (bytes32 parent, uint256 submittedAt, uint256 deltaAtSubmit, uint256 epoch)
+        returns (bytes32 digest, uint256 submittedAt, uint256 deltaAtSubmit, uint256 epoch)
     {
-        (parent,,,,,,,, submittedAt, deltaAtSubmit, epoch) = vault.candidates(c.newState);
+        (digest,,,, submittedAt, deltaAtSubmit, epoch) = vault.candidates(c.newState);
     }
 
     /// @dev Records a beacon in a new block at time `at` and returns its index and nonce.
@@ -68,8 +68,9 @@ contract CheckpointTest is VaultTestBase {
         vm.prank(relayer); // permissionless
         vault.submitCandidate(c, SEAL);
 
-        (bytes32 parent, uint256 submittedAt, uint256 deltaAtSubmit, uint256 epoch) = _candidate(c);
-        assertEq(parent, GENESIS_STATE);
+        (bytes32 digest, uint256 submittedAt, uint256 deltaAtSubmit, uint256 epoch) = _candidate(c);
+        // v4 stores the digest of the journal the proof was verified against, not the fields.
+        assertEq(digest, sha256(_checkpointJournalBytes(_checkpointJournal(c))));
         assertEq(submittedAt, block.timestamp);
         assertEq(deltaAtSubmit, DELTA);
         assertEq(epoch, 0);
@@ -166,28 +167,18 @@ contract CheckpointTest is VaultTestBase {
     }
 
     function _assertFirstCheckpointRecord(FerrataVault.Checkpoint memory c) internal view {
-        (
-            bytes32 parent,
-            bytes32 newState,
-            bytes32 burnRoot,
-            uint64 burnCount,
-            uint64 imported,
-            bool sunset,
-            bool revoked,
-            uint64 parentImported,
-            bool parentSunset,
-            uint256 finalizedAt
-        ) = vault.checkpoints(0);
-        assertEq(parent, GENESIS_STATE);
-        assertEq(newState, c.newState);
-        assertEq(burnRoot, ROOT);
-        assertEq(burnCount, c.burnCount);
-        assertEq(imported, 0);
-        assertFalse(sunset);
-        assertFalse(revoked);
-        assertEq(parentImported, 0); // genesis carries no imported leaves and no sunset
-        assertFalse(parentSunset);
-        assertEq(finalizedAt, block.timestamp);
+        FerrataVault.FinalizedCheckpoint memory h = _checkpointRecord(vault, 0);
+        assertEq(h.parentState, GENESIS_STATE);
+        assertEq(h.newState, c.newState);
+        assertEq(h.burnRoot, ROOT);
+        assertEq(h.burnCount, c.burnCount);
+        assertEq(h.importedLeafCount, 0);
+        assertFalse(h.sunset);
+        assertFalse(h.revoked);
+        assertEq(h.parentImportedLeafCount, 0); // genesis carries no imported leaves and no sunset
+        assertFalse(h.parentSunset);
+        assertEq(h.finalizedAt, block.timestamp);
+        assertEq(h.finalizer, relayer); // the finalize call's sender (D13: credited the checkpoint fee of its releases)
     }
 
     function test_finalize_impossibleBeforeDelta_noBeaconIsOldEnough() public {
@@ -265,23 +256,30 @@ contract CheckpointTest is VaultTestBase {
         (uint256 b, bytes32 nonce) = _beaconAt(block.timestamp + W);
         c.echoNonce = nonce;
 
-        for (uint256 field = 0; field < 5; field++) {
+        // v4: every journal word but echoNonce must be the candidate's (its digest), including the tip, n, t (D11)
+        // and the floors; newState is the key, so a changed one names no candidate.
+        for (uint256 field = 0; field < 11; field++) {
             FerrataVault.Checkpoint memory changed = _copy(c);
             if (field == 0) changed.parentState = keccak256("other parent");
             if (field == 1) changed.burnRoot = ROOT_2;
             if (field == 2) changed.burnCount = c.burnCount + 1;
-            if (field == 3) changed.importedLeafCount = 7;
+            if (field == 3) changed.importedLeafCount = c.importedLeafCount + 1;
             if (field == 4) changed.sunset = true;
+            if (field == 5) changed.tipId = c.tipId + 1;
+            if (field == 6) changed.tipHash = keccak256("other tip");
+            if (field == 7) changed.n = c.n + 1;
+            if (field == 8) changed.t = c.t + 1;
+            if (field == 9) changed.nMin = N_MIN + 1;
+            if (field == 10) changed.tMin = T_MIN - 1;
             _proveCheckpoint(_checkpointJournal(changed)); // a valid proof of the changed statement
             vm.expectRevert(FerrataVault.CandidateMismatch.selector);
             vault.finalize(b, changed, SEAL);
         }
-
-        FerrataVault.Checkpoint memory floor = _copy(c);
-        floor.tMin = T_MIN - 1;
-        _proveCheckpoint(_checkpointJournal(floor));
-        vm.expectRevert(FerrataVault.WrongCommitteeFloor.selector);
-        vault.finalize(b, floor, SEAL);
+        FerrataVault.Checkpoint memory other = _copy(c);
+        other.newState = keccak256("other new state");
+        _proveCheckpoint(_checkpointJournal(other));
+        vm.expectRevert(FerrataVault.UnknownCandidate.selector);
+        vault.finalize(b, other, SEAL);
 
         _tryFinalize(c, b, nonce);
     }
@@ -415,7 +413,7 @@ contract CheckpointTest is VaultTestBase {
         c.t = t;
         _submit(c);
         uint256 submittedAt = block.timestamp;
-        (,,,,, uint32 storedT,,,,,) = vault.candidates(c.newState);
+        (,,, uint32 storedT,,,) = vault.candidates(c.newState);
         assertEq(storedT, t);
         uint256 wait = DELTA + (uint256(t) - 1) * TURN_SECONDS;
 
@@ -456,8 +454,15 @@ contract CheckpointTest is VaultTestBase {
         c.t = 2;
         _submit(c);
         (uint256 b, bytes32 nonce) = _beaconAt(block.timestamp + DELTA + TURN_SECONDS);
-        c.n = 10;
-        c.t = 7;
+        // v4 (D11): a finalisation journal with another committee is refused outright, so the wait can only be the
+        // candidate's: t = 2 waits one turn, and a beacon after it suffices.
+        FerrataVault.Checkpoint memory bigger = _copy(c);
+        bigger.n = 10;
+        bigger.t = 7;
+        bigger.echoNonce = nonce;
+        _proveCheckpoint(_checkpointJournal(bigger));
+        vm.expectRevert(FerrataVault.CandidateMismatch.selector);
+        vault.finalize(b, bigger, SEAL);
         _tryFinalize(c, b, nonce);
         assertEq(vault.finalState(), c.newState);
     }
@@ -482,14 +487,16 @@ contract CheckpointTest is VaultTestBase {
         (uint256 b, bytes32 nonce) = _beaconAt(block.timestamp + W);
         c.echoNonce = nonce;
 
+        // v4: the finalisation journal must be the candidate's word for word, whose key set met the floors at
+        // submission, so a finalisation proof's own smaller key set is refused as a mismatch.
         c.n = N_MIN - 1; // the finalisation proof's own key set
         _proveCheckpoint(_checkpointJournal(c));
-        vm.expectRevert(FerrataVault.KeySetBelowFloor.selector);
+        vm.expectRevert(FerrataVault.CandidateMismatch.selector);
         vault.finalize(b, c, SEAL);
         c.n = N;
         c.t = T_MIN - 1;
         _proveCheckpoint(_checkpointJournal(c));
-        vm.expectRevert(FerrataVault.KeySetBelowFloor.selector);
+        vm.expectRevert(FerrataVault.CandidateMismatch.selector);
         vault.finalize(b, c, SEAL);
 
         c.t = T;
@@ -516,6 +523,7 @@ contract CheckpointTest is VaultTestBase {
     }
 
     function test_monotonicity_importedLeafCountCannotDecrease() public {
+        _fillTree(16); // v4 (D11): imported counts stay within the tree
         _finalizeNext(5, false);
         assertEq(vault.finalImportedLeafCount(), 5);
         _expectFinalizeRevert(4, false, FerrataVault.ImportedLeafCountDecreased.selector);
@@ -525,6 +533,7 @@ contract CheckpointTest is VaultTestBase {
     }
 
     function test_monotonicity_sunsetCannotGoBackToFalse() public {
+        _fillTree(16); // v4 (D11): imported counts stay within the tree
         _finalizeNext(5, true);
         assertTrue(vault.finalSunset());
         _expectFinalizeRevert(5, false, FerrataVault.SunsetIsFinal.selector);
@@ -535,6 +544,7 @@ contract CheckpointTest is VaultTestBase {
 
     /// @notice v3 D5: the first sunset checkpoint fixes the boundary; a later one cannot lower it or move it.
     function test_sunsetBoundary_aLaterSunsetCheckpointCannotLowerIt() public {
+        _fillTree(16); // v4 (D11): imported counts stay within the tree
         uint256 first = _finalizeNext(5, true);
         uint256 setAt = vault.sunsetFinalizedAt();
         _expectFinalizeRevert(3, true, FerrataVault.ImportedLeafCountDecreased.selector);
@@ -569,6 +579,7 @@ contract CheckpointTest is VaultTestBase {
     }
 
     function test_finalize_sunsetCheckpointSetsTheRefundBoundary() public {
+        _fillTree(5); // v4 (D11): imported counts stay within the tree
         FerrataVault.Checkpoint memory c = _nextCheckpoint(vault, ROOT, 5, true);
         _submit(c);
         (uint256 b, bytes32 nonce) = _beaconAt(block.timestamp + W);
@@ -593,8 +604,8 @@ contract CheckpointTest is VaultTestBase {
         vm.prank(freezer);
         vault.cancelCandidate(c.newState);
 
-        (bytes32 parent, uint256 submittedAt,,) = _candidate(c);
-        assertEq(parent, bytes32(0));
+        (bytes32 digest, uint256 submittedAt,,) = _candidate(c);
+        assertEq(digest, bytes32(0));
         assertEq(submittedAt, 0);
         assertEq(vault.finalState(), c.parentState);
         assertEq(vault.checkpointCount(), 1);
@@ -603,17 +614,38 @@ contract CheckpointTest is VaultTestBase {
         assertEq(vault.revocationEpoch(), 0);
     }
 
-    function test_cancelCandidate_onlyTheFreezeAuthority() public {
+    /// @notice v4 (D13): a watcher or the freeze authority may cancel; nobody else.
+    function test_cancelCandidate_onlyAWatcherOrTheFreezeAuthority() public {
         FerrataVault.Checkpoint memory c = _nextCheckpoint(ROOT);
         _submit(c);
         address[3] memory others = [admin, alice, relayer];
         for (uint256 i = 0; i < others.length; i++) {
             vm.prank(others[i]);
-            vm.expectRevert(FerrataVault.NotFreezeAuthority.selector);
+            vm.expectRevert(FerrataVault.NotWatcher.selector);
             vault.cancelCandidate(c.newState);
         }
         (, uint256 submittedAt,,) = _candidate(c);
         assertEq(submittedAt, block.timestamp);
+
+        vm.prank(watcher);
+        vault.cancelCandidate(c.newState);
+        (, submittedAt,,) = _candidate(c);
+        assertEq(submittedAt, 0);
+    }
+
+    /// @notice v4 (D11): a checkpoint cannot claim more imported leaves than the tree has; the bound is inclusive.
+    function test_finalize_importedLeafCountAboveTheTreeIsRefused() public {
+        _fillTree(2);
+        FerrataVault.Checkpoint memory c = _nextCheckpoint(vault, ROOT, 3, false);
+        _submit(c);
+        (uint256 b, bytes32 nonce) = _beaconAt(block.timestamp + W);
+        c.echoNonce = nonce;
+        _proveCheckpoint(_checkpointJournal(c));
+        vm.expectRevert(FerrataVault.ImportedLeafCountTooHigh.selector);
+        vault.finalize(b, c, SEAL);
+        _fillTree(1); // now the tree has 3 leaves
+        vault.finalize(b, c, SEAL);
+        assertEq(vault.finalImportedLeafCount(), 3);
     }
 
     function test_cancelCandidate_unknownOrFinalisedCandidateRefused() public {
@@ -695,7 +727,7 @@ contract CheckpointTest is VaultTestBase {
         vm.startPrank(admin);
         vm.expectRevert(FerrataVault.DeltaCanOnlyRise.selector);
         vault.raiseDelta(DELTA - 1);
-        uint256 ceiling = vault.MAX_DELTA();
+        uint256 ceiling = MAX_DELTA_;
         vm.expectRevert(FerrataVault.DeltaTooLong.selector);
         vault.raiseDelta(ceiling + 1);
         vm.expectEmit(true, true, true, true, address(vault));

@@ -21,14 +21,14 @@ The bridge moves registered ERC-20 tokens and ETH to LEZ and back in fixed denom
 
 | Component | State |
 |---|---|
-| Vault, specification v3 | Prototype: D3 to D5, D9 and `cancelCandidate`; rule (A) only; its own suite mocks proofs behind RISC Zero's unmodified emergency-stop wrapper, and the return leg was run once with RISC Zero's real Groth16 verifier and real proofs of both programs (§18.7); not audited or deployed; gas measured (§18.1, §18.7). D11 and D13 not in it |
+| Vault, specification v3 (vault v4) | Prototype: D3 to D5, D9, and the vault items of D11 and D13 (both rules behind an immutable `mode`, watchers, the 14-day role change, keyless retirement, the cap floor) with a linked library; its own suite mocks proofs behind RISC Zero's unmodified emergency-stop wrapper; the return leg (rule (A)) and a real rule (B) checkpoint proof were verified with RISC Zero's real Groth16 verifier (§10.3, §18.7); not audited or deployed; gas measured (§18.1, §18.7, `vault/GAS.md`). D13's fees not in it |
 | Vault, specification v2 | Prototype built; the release proof v2 was verified against it with the real Groth16 verifier (§18.2) |
 | `ferrata-bridge-core` v2 (trees, commitments, nullifiers, statements, recovery) | Built and tested, SPEC-v2 encodings; without `mac` v2 and `NOut` v2 |
 | Release guest v2 | Built; proved on a laptop CPU, verified on a local EVM against the v2 vault with the real verifier and, unchanged, against the v3 vault under a burn root finalised by real checkpoint proofs (§18.7) |
 | Claim guest (the bridge's part of a claim) | Built for measurement; not LEZ's own claim circuit |
-| Checkpoint program | Prototype: SPEC-v2 §4.1–4.2 with D3, rule (A) only; cycles measured; two real proofs of a small checkpoint (§18.4); a candidate and a finalisation proof of the end-to-end fixture accepted by the v3 vault (§18.7). Rule (B)'s program is specified, its cost estimated |
+| Checkpoint program | Prototype: SPEC-v2 §4.1–4.2 with D3, rule (A) with cycles measured; two real proofs of a small checkpoint (§18.4); a candidate and a finalisation proof of the end-to-end fixture accepted by the v3 vault (§18.7). Rule (B) of D7 and D13 built in its own guest, with the attestor's core; cycles measured against rule (A) on the same blocks (§18.5) |
 | Rule (A) analysis | Written proof and simulation (`docs/design/finality-rule/`) |
-| Bridge program on LEZ; `ferrata_attestor`; gas drop, relayer, wrapper, `monitor` watchers | Not built |
+| Bridge program on LEZ; `ferrata_attestor` as a Logos module (its core is built, §8.3); gas drop, relayer, wrapper, `monitor` watchers | Not built |
 
 ## 2. Overview
 
@@ -195,7 +195,7 @@ CHECKPOINT_DOMAIN = H("ferrata/vault/checkpoint/v3")
 
 The program does not check transaction signatures, private-transaction proofs or LEZ's other validity rules; an invalid block is caught only through support (V2, §11.4).
 
-### 8.3 Support under rule (B): final-tier attestations (proposed; not built)
+### 8.3 Support under rule (B): final-tier attestations (proposed; built in the checkpoint program, not in the vault)
 
 Each sequencer runs `ferrata_attestor`, a Logos module, which signs its node's final tip with an attestation key (D13):
 
@@ -203,11 +203,13 @@ Each sequencer runs `ferrata_attestor`, a Logos module, which signs its node's f
 ("ferrata/final-tier/v2", evmChainId, vault, lezConfigId, channelId, keySetHash, tipId, tipHash, finalMsgId)
 ```
 
-Ed25519 over the whole tagged message, never over a bare 32-byte digest. `keySetHash` is the attestor's live key set and must equal the proof's `K`.
+Ed25519 over the whole tagged message (241 bytes, `tipId` big-endian), never over a bare 32-byte digest. `keySetHash` is the attestor's live key set and must equal the proof's `K`.
 
-**Attestation keys.** Each sequencer's channel key signs, once, a certificate `("ferrata/attest-key/v1", channelId, attKey)`. The proof carries the certificates; a certificate dies when its channel key leaves `K`. The channel key never signs bridge data.
+**Attestation keys.** Each sequencer's channel key signs, once per deployment, a certificate `("ferrata/attest-key/v1", evmChainId, vault, lezConfigId, channelId, attKey)` (169 bytes). D13 names only `channelId` and `attKey`; the prototype also binds the deployment, so that a certificate cannot be carried to another vault or configuration on the same channel and a leaked attestation key is confined to one deployment. The proof carries the certificates; a certificate dies when its channel key leaves `K` (there is no other bound: a key that leaves and rejoins `K` revives its certificates). The channel key never signs bridge data.
 
-**Rule.** The program accepts `T` if at least `t` keys of `K`, through certified attestation keys, signed final tips that are `T` or descend from `T` on the hash-linked path. One proof per checkpoint, no beacon, no producer exclusion, no hashing of inscribed support blocks.
+**Rule.** The program accepts `T` if at least `t` keys of `K`, through certified attestation keys, signed final tips that are `T` or descend from `T` on the hash-linked path. One proof per checkpoint, no beacon, no producer exclusion, no hashing of inscriptions. A repeated channel key or attestation key refuses the input. `finalMsgId` is signed for watchers and not checked: checking it would mean BLAKE2b over the tip's inscription. An attestation needs no nonce or deadline: it states a fact that does not expire, one over a tip below `T` cannot support `T`, and its key-set hash retires it at the next rotation. The journal is word for word rule (A)'s candidate journal over the same blocks; the vault tells the rules apart by the guest's image id.
+
+**Cost** (measured, executor, §18.5): 1.69M cycles per attestor, the two Ed25519 checks; 5.1M at `t` = 3, 11.8M at `t` = 7, whatever the blocks hold. Code: `checkpoint/crates/attestor-core` (the attestor's core, with vectors checked by an independent RFC 8032 implementation), `checkpoint/crates/checkpoint-core/src/rule_b.rs`, the guest `checkpoint/guests/checkpoint-b`.
 
 ### 8.4 Support under rule (A): inferred (fallback; built in the checkpoint prototype)
 
@@ -215,7 +217,7 @@ Ed25519 over the whole tagged message, never over a bare 32-byte digest. `keySet
 
 **Single-key testnets.** `allowSingleKey` holds only when the pinned `nMin <= 1` (D10), so a prover cannot switch it on in production. Such a vault is secured by one hot key, and its documentation says so.
 
-**Cost.** Each counted inscription is BLAKE2b over the whole block (55.9 cycles per byte, no accelerator): 0.89M cycles for an empty block, 54.1M for one with four private transactions (measured, executor, §18.4). Provers choose small tip and support blocks; rule (B) hashes no blocks.
+**Cost.** Each counted inscription is BLAKE2b over the whole block (55.9 cycles per byte, no accelerator): 0.89M cycles for an empty block, 54.1M for one with four private transactions (measured, executor, §18.4). Provers choose small tip and support blocks; rule (B) hashes no inscription.
 
 ### 8.5 Key rotation
 
@@ -241,7 +243,7 @@ Each honest signature rule (A) sees certifies "`T` was in my head at some time";
 | Watcher check | tip already final on submission | tip final by `submittedAt + Δ_g`; live key set |
 | Silent keys tolerated | `n − t` | `n − 1 − t`; none for `n <= 5` |
 | Recommended committee | floors `nMin >= 3`, `tMin >= 2` | `n >= 6` |
-| Guest cost (cycles) | 2.6–8.3M for `t` = 3 to 7 (estimated, D7 message, certificates not included) | 3.70M fixed for `n = 4`, small blocks; up to 224.8M with busy support blocks (measured, executor) |
+| Guest cost (cycles) | 1.69M per attestor: 5.1M at `t` = 3 to 11.8M at `t` = 7, whatever the blocks hold; one proof per checkpoint (measured, executor) | 0.89M per supporter plus `T`'s own check with small blocks (3.70M at `n = 4`), up to 224.8M with busy support blocks; two proofs per checkpoint (measured, executor) |
 | Outbound latency before the release delay | about 3 h (estimated) | 7–22 h (estimated); 4.00–7.68 h median from tip to finalisation in simulation (§11.7) |
 | Operator duties | an attestor beside every sequencer | none |
 
@@ -273,7 +275,7 @@ Rule (A): `finalize(beaconIndex, journal fields, seal)`, permissionless, require
 
 **Beacons.** `recordBeacon()`, permissionless, appends `(block.timestamp, keccak256(abi.encode(block.prevrandao, block.number, address(this))))`, at most one per block.
 
-Rule (B): the candidate's single proof carries the attestations; `finalize` takes no second proof and no beacon and succeeds once the wait has passed. Not built.
+Rule (B): the candidate's single proof carries the attestations; `finalizeAttested` takes no second proof and no beacon and succeeds once the wait has passed. Built in vault v4, measured with RISC Zero's real verifier on the real rule (B) proof: `submitCandidate` 347,766 gas, `finalizeAttested` 196,601, so 544,367 a checkpoint against 975,734 for rule (A) on the same vault (`vault/GAS.md`). As designed: `submitCandidate` records no beacon and stores the digest of the journal the seal was verified against; the rule (B) finalisation re-presents the journal, checks its digest (which authenticates the tip, `n` and `t` as D11 asks), the live candidate and `submittedAt + deltaAtSubmit`, then makes the same state changes as rule (A)'s; about 0.71M gas a checkpoint against 1.06M (§18.1, estimated).
 
 On finalisation, `finalState = newState`, the checkpoint joins the history with `finalizedAt`, its `burnRoot` is accepted, and `CheckpointFinalized` is emitted with `tipId`, `tipHash`, `n`, `t`. The first non-revoked sunset checkpoint sets the refund boundary.
 
@@ -283,7 +285,7 @@ On finalisation, `finalState = newState`, the checkpoint joins the history with 
 
 `cancelCandidate(newState)` deletes a pending candidate; it is reject-only. The same state can be submitted again and waits again in full. In simulation, cancelling stopped every modelled attack on rule (A), including the long eclipse; pausing did not, or halted the vault (§11.7).
 
-- **Who.** Under D13, any one of the watchers (§14). In the vault prototype it is a freeze-authority call (the watcher role is not built).
+- **Who.** Under D13, any one of the watchers (§14); in vault v4 also the freeze authority.
 - **When.** Under rule (A), a watcher cancels a candidate whose `(tipId, tipHash)` is not in its own honest LEZ node's final tier by `submittedAt + Δ_g`, and a candidate whose `keySetHash` is not the channel's live set at its tip (§11.5). Under rule (B), a watcher checks on submission: the tip must already be in its final tier.
 - **Not sticky.** The same public proof can be resubmitted, so a watcher cancels again within every wait; a persistent attacker is answered with the checkpoint pause (D11).
 - In the prototype it works under the checkpoint pause and after a verifier stop, and emits `CandidateCancelled(newState, tipId, tipHash)`.
@@ -528,7 +530,7 @@ None of these parties learns anything private; relayers and wrappers learn a tim
 - **Emergency stop (D13).** The stop wrapper's owner is renounced in the deployment script. Only RISC Zero's own `estop(receipt)` (a verifying receipt with a zero claim digest) can trip it. A bug in Ferrata's own guests is answered by the release freeze and `revokeFrom`.
 - **Keyless retirement (D13).** `retire()` and LEZ `Sunset` become permissionless once no checkpoint has finalised for 30 days. This supersedes D11's first item (anyone may retire once a sunset checkpoint has been final for longer than `revokeWindow`).
 
-None of these four is in the vault prototype: there `cancelCandidate` and `retire()` are freeze-authority calls, the stop's guardian is the freeze authority, and the freeze authority changes only by a two-step handover, so a freeze key lost before retirement means no refunds (§19).
+Vault v4 has all four on its side: watchers cancel and pause for at most 12 h; one admin proposal, applied by anyone 14 days later, changes the watchers and replaces the freeze authority (whose own handover is gone); `retire()` is open to anyone after 30 days without a finalisation; the vault requires an untripped stop and leaves the renunciation of its owner to the deployment script. A freeze key lost before retirement no longer blocks refunds.
 
 Off-chain roles are liveness-only under rule (B); under rule (A) the watchers have a safety role outside F1–F4 (§11.8).
 
@@ -595,7 +597,7 @@ Forge 1.3.6, solc 0.8.26 (200 runs, cancun), `forge test --isolate`: whole trans
 
 ¹ Through the stop wrapper around a mock verifier (about 2,765 gas); the real verifier is not included. ² Includes the 25,000 new-account charge of a fresh recipient.
 
-Derived (mock removed, the 224,320-gas Groth16 frame of §18.2 added): candidate about 470k, finalisation about 435k, so a rule (A) checkpoint with its second beacon is about 1.0M gas, paid once per finalised LEZ state; under rule (B), one proof and no beacon, about half (estimated). Measured since with the real verifier (§18.7): candidate 507,370, finalisation 475,300, 1,060,493 with the second beacon. Caps add about 20,700 gas per deposit. Tests: 286 pass, including 10 invariants over 256 runs × 100 calls; 100 % line and branch coverage of the vault; 127 of 127 hand-written mutants killed. Proofs are mocked throughout this suite.
+Derived (mock removed, the 224,320-gas Groth16 frame of §18.2 added): candidate about 470k, finalisation about 435k, so a rule (A) checkpoint with its second beacon is about 1.0M gas, paid once per finalised LEZ state; under rule (B), one proof and no beacon, measured on vault v4 with the real verifier and the real rule (B) proof at 544,367 against 975,734 for rule (A) on the same vault (`vault/GAS.md`; the earlier estimate was about 0.71M from the measured figures below: the candidate less the beacon it records, about 56.8k, plus a stored journal digest, 22.1k, is about 0.47M; the finalisation less the verifier through the stop, 230,107, the beacon reads and the seal's calldata is about 0.24M). Measured since with the real verifier (§18.7): candidate 507,370, finalisation 475,300, 1,060,493 with the second beacon. Caps add about 20,700 gas per deposit. Tests: 286 pass, including 10 invariants over 256 runs × 100 calls; 100 % line and branch coverage of the vault; 127 of 127 hand-written mutants killed. Proofs are mocked throughout this suite.
 
 ### 18.2 Release proof v2: measured (laptop CPU; real verifier, v2 vault)
 
@@ -634,13 +636,13 @@ Components: BLAKE2b 55.9 cycles/B (no accelerator), SHA-256 2.59 cycles/B, Ed255
 
 **Real proofs** of the fixed-part checkpoint, twice (image built just before the turn-length amendment; same input, 59 cycles fewer): succinct 1,157.5 s starting quiet, 1,758.9 s under load; Groth16 wrap 195.1–215.2 s; peak 9.62 GB; seal 260 bytes. Receipts verify locally; these two were not verified on a contract (the end-to-end fixture's checkpoint proofs were: §18.7). Extrapolated from 289 s per segment: an idle hour about 34 min plus 3.5 min to wrap; an hour with 50 private transactions about 4.8 h.
 
-### 18.5 Rule (B) program: estimated only
+### 18.5 Rule (B) program: measured (executor, Modal build box)
 
-`t` × 854,264 cycles (measured Ed25519, 200-byte message) plus 6,405 per block walked: 2.6M at `t = 3` to 8.3M at `t = 7` over an hour of blocks. Made for the D7 message; D13's certificate checks are not included.
+`checkpoint/RESULTS.md` §4, on the blocks of the rule (A) fixtures of §18.4, with seeded keys at `n` = 3, 4, 7, 10, 15. Rule (B) costs 1.69M cycles per attestor (two Ed25519 `verify_strict`, certificate and attestation; the slope over the five committees), so the check is 3.4M at `t` = 2, 5.1M at `t` = 3, 8.5M at `t` = 5, 11.8M at `t` = 7 and 16.9M at `t` = 10: about twice the earlier estimate, which counted the attestations and not the certificates. Whole proofs, rule (B) against rule (A) on the same blocks: idle hour 7.51M against 5.98M at `n` = 4 and 19.31M against 12.20M at `n` = 15; an hour with 50 private transactions 39.39M against 37.88M at `n` = 4. Per checkpoint rule (B) is the cheaper: rule (A) proves twice and its second proof also links the blocks of the wait (derived: 20.1M against 7.5M for the idle hour at `n` = 4). 13 tests cover every refusal (§8.3). One real proof: the idle hour at `n` = 4 on one NVIDIA L4, 9 segments, 31.9 s (rule (A)'s idle hour: 24.1 s, §18.4); the succinct receipt verifies locally against `checkpoint_b`'s image id. No Groth16 wrap.
 
 ### 18.6 Simulation, and what is not measured
 
-The rule (A) simulation is a Python model of the v0.4 code (`docs/design/finality-rule/MODEL.md`), 12,000 runs for experiments (a) to (h) plus (i) to (k), deterministic per seed (§11). Not built or not measured: rule (B)'s program, attestor and vault path; the LEZ bridge program, claims and imports on LEZ; the gas drop; composed real proofs; latency on a network; phones and the 4-core minimum.
+The rule (A) simulation is a Python model of the v0.4 code (`docs/design/finality-rule/MODEL.md`), 12,000 runs for experiments (a) to (h) plus (i) to (k), deterministic per seed (§11). Not built or not measured: `ferrata_attestor` as a Logos module and the vault's rule (B) path; the LEZ bridge program, claims and imports on LEZ; the gas drop; composed real proofs; latency on a network; phones and the 4-core minimum.
 
 ### 18.7 The return leg end to end: measured (real verifier, v3 vault; stand-in zone)
 
@@ -660,19 +662,19 @@ Found on the way: the bridge core's checkpoint encodings are still SPEC-v2 and c
 
 ## 19. Specified but not yet in the prototypes
 
-The vault prototype implements D3 to D5, D9 and `cancelCandidate` (rule (A) only); the checkpoint prototype implements D3 with rule (A) only; the core and the release guest implement SPEC-v2. Specified, and missing from them:
+The vault prototype (v4) implements D3 to D5, D9, the vault items of D11 and D13 except fees, and both rules; the checkpoint prototype implements D3 with rule (A), and rule (B) in its own guest; the core and the release guest implement SPEC-v2. Specified, and missing from them:
 
 | Source | Item | Prototype today |
 |---|---|---|
-| D11 | refunds, and releases whose delay equals `revokeWindow`, open only after the last revocable second | open at that same second |
-| D11 | `finalize` also compares `t` and the tip, and checks `importedLeafCount <= nextLeafIndex` | compares v2 fields and `newState` only |
-| D11 | further logic in a linked library | runtime 23,650 bytes, 926 under EIP-170 |
+| D11 | refunds, and releases whose delay equals `revokeWindow`, open only after the last revocable second | built (vault v4) |
+| D11 | `finalize` also compares `t` and the tip, and checks `importedLeafCount <= nextLeafIndex` | built (vault v4: the whole journal, by its digest) |
+| D11 | further logic in a linked library | built (vault v4: `FerrataRegistry`; runtime 24,312 bytes, 264 under EIP-170) |
 | D12 | `mac` v2 covering `memo` | MAC without `memo` |
-| D13 | rule (B): `final-tier/v2` message, attestation-key certificates, `ferrata_attestor`, program and vault path, immutable `mode`, 1 h wait | rule (A) only; rule (B) cost estimated |
-| D13 | `submitCandidate` refuses a `newState` already pending | not checked |
-| D13 | watchers; cancelling candidates whose key set lags | the freeze authority cancels |
-| D13 | 14-day freeze-authority replacement; renounced stop owner; no refunds after a stop; keyless retirement after 30 days; cap floor | two-step handover; guardian = freeze authority; refunds work after a stop; only the freeze authority retires |
-| D13 | `ImportRoot` over slots 0 and 1; claim bound `leafIndex < count`; refunds on the release bucket; gas-drop receipt binding | no LEZ program yet |
+| D13 | rule (B): `final-tier/v2` message, attestation-key certificates, `ferrata_attestor`, program and vault path, immutable `mode`, 1 h wait | program and vault paths built and measured; `ferrata_attestor` module not built |
+| D13 | `submitCandidate` refuses a `newState` already pending | built (v3 and v4) |
+| D13 | watchers; cancelling candidates whose key set lags | vault side built (v4: up to three watchers); `monitor` not built |
+| D13 | 14-day freeze-authority replacement; renounced stop owner; no refunds after a stop; keyless retirement after 30 days; cap floor | built (vault v4); the stop owner's renunciation is a deployment-script step, not run |
+| D13 | `ImportRoot` over slots 0 and 1; claim bound `leafIndex < count`; refunds on the release bucket; gas-drop receipt binding | refunds on the release bucket built (vault v4); no LEZ program yet |
 | D13 | `NOut` v2; burn account keyed on the whole note; newest root past its delay | SPEC-v2 `NOut` with `burnId` |
 | D13 | fees escrowed at deposit; checkpoint fee; default caps | v2/v3 fee and cap logic |
 

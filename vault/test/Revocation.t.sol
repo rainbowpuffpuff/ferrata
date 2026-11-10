@@ -13,7 +13,7 @@ contract RevocationTest is VaultTestBase {
     bytes32 internal constant N2 = keccak256("nullifier 2");
 
     function _revoked(uint256 index) internal view returns (bool revoked) {
-        (,,,,,, revoked,,,) = vault.checkpoints(index);
+        (,,,,,, revoked,,,,) = vault.checkpoints(index);
     }
 
     function _accepted(bytes32 root) internal view returns (bool accepted) {
@@ -53,7 +53,7 @@ contract RevocationTest is VaultTestBase {
 
     function test_revokeFrom_onlyWithinTheWindow() public {
         uint256 index = _acceptRoot(ROOT_A);
-        (,,,,,,,,, uint256 finalizedAt) = vault.checkpoints(index);
+        (,,,,,,,,, uint64 finalizedAt,) = vault.checkpoints(index);
 
         uint256 snapshot = vm.snapshotState();
         vm.warp(finalizedAt + REVOKE_WINDOW); // the last second of the window
@@ -113,7 +113,7 @@ contract RevocationTest is VaultTestBase {
         vm.prank(freezer);
         vault.revokeFrom(0);
         assertTrue(vault.nullifierUsed(N1));
-        assertEq(vault.escrowed(ETH), 1 ether); // the release that happened stays a release
+        assertEq(vault.escrowed(ETH), 1 ether + 2 * (1 ether / 500)); // the release that happened stays a release
     }
 
     /// @notice After a revocation the same LEZ state can be proven again: it needs a fresh candidate and a full
@@ -179,6 +179,7 @@ contract RevocationTest is VaultTestBase {
     /// @notice v3 D4: a revocation restores the imported leaf count and sunset flag of the state it returns to, so the
     ///         monotonicity checks continue from there; a revoked checkpoint's count or sunset binds nothing later.
     function test_revokeFrom_restoresTheMonotonicityState() public {
+        _fillTree(16); // v4 (D11): imported counts stay within the tree
         _acceptRoot(ROOT_A); // checkpoint 0: count 0
         FerrataVault.Checkpoint memory c = _nextCheckpoint(vault, ROOT_B, 5, false);
         _submit(c);
@@ -202,7 +203,7 @@ contract RevocationTest is VaultTestBase {
         _submit(c);
         uint256 index = _finalizeAfterDelta(c);
         assertEq(vault.finalImportedLeafCount(), 3);
-        (,,,,,,, uint64 parentImported, bool parentSunset,) = vault.checkpoints(index);
+        (,,,,,,, uint64 parentImported, bool parentSunset,,) = vault.checkpoints(index);
         assertEq(parentImported, 0);
         assertFalse(parentSunset);
     }
@@ -210,11 +211,12 @@ contract RevocationTest is VaultTestBase {
     /// @notice Revoking a later checkpoint returns to a state that is already a sunset one, so the sunset stays final
     ///         and a checkpoint without it is still refused.
     function test_revokeFrom_keepsTheSunsetOfTheRestoredState() public {
+        _fillTree(16); // v4 (D11): imported counts stay within the tree
         FerrataVault.Checkpoint memory c = _nextCheckpoint(vault, ROOT_A, 4, true);
         _submit(c);
         _finalizeAfterDelta(c); // checkpoint 0: sunset at count 4
         _acceptRoot(ROOT_B); // checkpoint 1: a sunset checkpoint with the same count
-        (,,,,,,, uint64 parentImported, bool parentSunset,) = vault.checkpoints(1);
+        (,,,,,,, uint64 parentImported, bool parentSunset,,) = vault.checkpoints(1);
         assertEq(parentImported, 4);
         assertTrue(parentSunset);
         vm.prank(freezer);

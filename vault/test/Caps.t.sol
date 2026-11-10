@@ -14,6 +14,13 @@ contract CapsTest is VaultTestBase {
     bytes32 internal constant ROOT = keccak256("burn root");
     uint256 internal nullifierNonce;
 
+    /// @dev Caps are tested on tokens without a relay fee, so the bucket arithmetic reads in whole denominations;
+    ///      that the buckets count the whole escrow movement, fees included, is tested in Fees.t.sol.
+    function setUp() public override {
+        relayFeeDivisor = 0;
+        super.setUp();
+    }
+
     function _setTokenCap(address token, FerrataVault.Direction d, uint256 capacity, uint256 refill) internal {
         vm.prank(admin);
         vault.setTokenCap(token, d, capacity, refill);

@@ -7,7 +7,9 @@
 //!   transaction hash and `MsgId`, inscription checks, `ChannelConfigOp`.
 //! - [`tree`], [`state`], [`journal`]: the burn tree, the state hash `S`, the ABI journal.
 //! - [`input`]: the guests' input format.
-//! - [`rule`]: [`rule::run_checkpoint`] and [`rule::run_segment`].
+//! - [`rule`]: [`rule::run_checkpoint`] (finality rule (A)) and [`rule::run_segment`].
+//! - [`rule_b`]: [`rule_b::run_checkpoint_b`], finality rule (B): final-tier attestations by
+//!   certified attestation keys ([`attestor_core`]).
 #![no_std]
 #![forbid(unsafe_code)]
 
@@ -21,6 +23,7 @@ pub mod lez;
 pub mod mantle;
 pub mod reader;
 pub mod rule;
+pub mod rule_b;
 pub mod state;
 pub mod tree;
 pub mod wire;

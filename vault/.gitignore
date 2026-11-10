@@ -2,6 +2,8 @@ out/
 cache/
 notes/
 broadcast/
+# Records of script/fork-rehearsal.sh (a local fork; addresses that exist nowhere else).
+deployments/fork-*
 snapshots/
 # Dependencies are installed with `forge install --no-git` at the tags listed in README.md.
 lib/

@@ -1,7 +1,7 @@
 [package]
 name = "host"
 version = "0.1.0"
-description = "Executes the checkpoint, segment and micro-benchmark guests on the fixtures; composition demo; proving and Groth16 wrapping"
+description = "Executes the checkpoint (rules A and B), segment and micro-benchmark guests on the fixtures; rule (B) fixtures; composition demo; proving and Groth16 wrapping"
 edition.workspace = true
 license.workspace = true
 publish = false
@@ -10,6 +10,9 @@ publish = false
 methods = { path = "../methods" }
 methods-plain = { path = "../methods-plain" }
 checkpoint-core = { path = "../crates/checkpoint-core", features = ["std"] }
+# gen-b: rule (B) fixtures (certificates, attestations) and re-signed rule (A) inscriptions.
+attestor-core = { path = "../crates/attestor-core" }
+ed25519-dalek = { version = "2.2.0", default-features = false }
 # Client only: execution and proving run in r0vm 3.0.5 (installed with rzup), over IPC.
 risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["client"] }
 anyhow = "1"

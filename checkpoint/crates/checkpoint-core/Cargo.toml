@@ -15,6 +15,8 @@ publish = false
 sha2 = { version = "0.10.8", default-features = false }
 blake2 = { version = "0.10.6", default-features = false }
 ed25519-dalek = { version = "2.2.0", default-features = false }
+# Rule (B): the attestor's messages and the key-set hash, defined once for the attestor and the program.
+attestor-core = { path = "../attestor-core" }
 
 [dev-dependencies]
 # Tests only: an Ed25519 signer (with rand for key generation) and borsh, to check the hand-written

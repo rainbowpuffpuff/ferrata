@@ -1,0 +1,13 @@
+{
+  "_source": "checkpointImageIdA, releaseImageId, lezConfigId, genesisState, nMin, tMin, postingTimeframe: e2e/runs/sepolia/fixture.json (the Sepolia run's programs, LEZ configuration and genesis); checkpointImageIdB: test/real/fixtures/rule-b.json imageId (guest checkpoint_b). The LEZ definitions are placeholders: registration is write-once, so set the LEZ side's token definition accounts before a deployment the LEZ side will read.",
+  "checkpointImageIdA": "0x95b816ed2614e340c85fed3ba3dad1f70e7dff2da1363406ade87e1333583caf",
+  "checkpointImageIdB": "0xd359754364c10357103359276867f4fe58842c42cbb30a3ada5b241de6aa0d64",
+  "releaseImageId": "0xdda76672e6e05535117ed6880227a414420344cba9c47b6e112c7dabc5b027c5",
+  "lezConfigId": "0x534f6617b6fa38cbe2ac07c09d065fda0fc17681551fecbb057393b22f8cd51a",
+  "genesisState": "0x8e54c7d6a8de29730ff8874b4f6ab32653c3d6f85274cc44fa19057391a3efb8",
+  "nMin": 3,
+  "tMin": 2,
+  "postingTimeframe": 900,
+  "ethLezDefinition": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "tokenLezDefinition": "0x0000000000000000000000000000000000000000000000000000000000000000"
+}

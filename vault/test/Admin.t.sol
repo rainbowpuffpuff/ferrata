@@ -39,18 +39,11 @@ contract ConstructorTest is VaultTestBase {
         assertFalse(vault.finalSunset());
         assertEq(vault.admin(), admin);
         assertEq(vault.freezeAuthority(), freezer);
+        assertEq(vault.feeRecipient(), feeRecipient);
         assertEq(vault.nextLeafIndex(), 0);
         assertEq(vault.depositRoot(), ReferenceMerkle.zeroHashes()[32]);
         assertEq(vault.checkpointCount(), 0);
         assertFalse(vault.retired());
-    }
-
-    function test_constructor_domainTagsMatchTheirDefinitions() public view {
-        assertEq(vault.LEAF_TAG(), sha256(bytes("ferrata/vault/leaf/v2")));
-        assertEq(vault.CHECKPOINT_DOMAIN(), sha256(bytes("ferrata/vault/checkpoint/v3")));
-        assertEq(vault.RELEASE_DOMAIN(), sha256(bytes("ferrata/vault/release/v2")));
-        assertEq(vault.LEAF_PREFIX(), bytes1(0x00));
-        assertEq(vault.NODE_PREFIX(), bytes1(0x01));
     }
 
     function test_constructor_rejectsVerifierWithoutCode() public {
@@ -135,6 +128,9 @@ contract ConstructorTest is VaultTestBase {
         d.freezeAuthority = address(0);
         _expectConstructorRevert(d, FerrataVault.ZeroAddress.selector);
         d = _d();
+        d.feeRecipient = address(0); // D13: burn fees need a recipient
+        _expectConstructorRevert(d, FerrataVault.ZeroAddress.selector);
+        d = _d();
         d.freezeAuthority = d.admin;
         _expectConstructorRevert(d, FerrataVault.RolesMustDiffer.selector);
     }
@@ -166,7 +162,7 @@ contract RegistryTest is VaultTestBase {
     /// @dev Registration parameters for `token` with finite caps.
     function _p(uint256[] memory denoms, uint256 lezUnit, uint256 unitWeight)
         internal
-        pure
+        view
         returns (FerrataVault.TokenParams memory p)
     {
         p = _params(denoms, lezUnit, unitWeight);
@@ -208,7 +204,7 @@ contract RegistryTest is VaultTestBase {
         assertEq(lezUnit, 1e12);
         assertEq(weight, 7);
         assertEq(stored, p.denominations);
-        assertEq(vault.relayFees(address(token)), p.relayFees);
+        assertEq(_relayFeesOf(vault, address(token)), p.relayFees);
         (uint256 capacity,, uint256 available) = vault.tokenCap(address(token), FerrataVault.Direction.Release);
         assertEq(capacity, 2000e18);
         assertEq(available, 2000e18); // new buckets start full
@@ -249,7 +245,7 @@ contract RegistryTest is VaultTestBase {
             assertFalse(ok);
             assertEq(ret, abi.encodeWithSelector(FerrataVault.FunctionNotFound.selector));
         }
-        assertEq(vault.denominations(address(token)), _denoms(1e18, 5e18, 25e18));
+        assertEq(_denomsOf(vault, address(token)), _denoms(1e18, 5e18, 25e18));
     }
 
     function test_registerToken_rejectsAddressWithoutCode() public {
@@ -272,13 +268,15 @@ contract RegistryTest is VaultTestBase {
         _expectRegisterRevert(
             _p(_one(uint256(type(uint128).max) + 1), 1, 1), FerrataVault.InvalidDenominations.selector
         );
+        // v5: at most (2**128 - 1) / 2, since the LEZ side's cap arithmetic takes twice the largest in 128 bits.
+        _expectRegisterRevert(_p(_one(type(uint128).max / 2 + 1), 1, 1), FerrataVault.InvalidDenominations.selector);
 
         uint256[] memory eight = new uint256[](8);
         for (uint256 i = 0; i < 8; i++) {
             eight[i] = (i + 1) * 100;
         }
         _register(_p(eight, 1, 1));
-        assertEq(vault.denominations(address(token)).length, 8);
+        assertEq(_denomsOf(vault, address(token)).length, 8);
     }
 
     function test_registerToken_lezUnitMustBePowerOfTen() public {
@@ -291,7 +289,9 @@ contract RegistryTest is VaultTestBase {
     function testFuzz_registerToken_lezUnitPowersOfTenAccepted(uint8 exponent) public {
         uint256 k = bound(exponent, 0, 38); // 10**38 is the largest power of ten below MAX_DENOMINATION
         uint256 unit = 10 ** k;
-        _register(_p(_one(unit), unit, 1));
+        FerrataVault.TokenParams memory p = _p(_one(unit), unit, 1);
+        p.decimals = 38; // v5: lezUnit <= 10**decimals
+        _register(p);
         (,, uint256 lezUnit,,) = vault.tokenConfig(address(token));
         assertEq(lezUnit, unit);
     }
@@ -341,11 +341,11 @@ contract RegistryTest is VaultTestBase {
         _expectRegisterRevert(odd, FerrataVault.RelayFeeTooHigh.selector);
         odd.relayFees = _denoms(1, 3, 4);
         _register(odd);
-        assertEq(vault.relayFees(address(token)), _denoms(1, 3, 4));
+        assertEq(_relayFeesOf(vault, address(token)), _denoms(1, 3, 4));
     }
 
     function testFuzz_registerToken_relayFeeCeiling(uint256 denomination, uint256 fee) public {
-        denomination = bound(denomination, 1, type(uint128).max);
+        denomination = bound(denomination, 1, type(uint128).max / 2);
         FerrataVault.TokenParams memory p = _p(_one(denomination), 1, 1);
         p.relayFees = _one(fee);
         bool withinOnePercent = fee <= denomination / 100; // fee * 100 <= denomination, without overflow
@@ -384,7 +384,7 @@ contract RegistryTest is VaultTestBase {
         emit FerrataVault.ReleaseDelaySet(address(dai), REVOKE_WINDOW, 0);
         vm.prank(admin);
         vault.setReleaseDelay(address(dai), REVOKE_WINDOW);
-        assertEq(vault.releaseDelay(address(dai)), REVOKE_WINDOW);
+        assertEq(vault.releaseDelayFor(address(dai), vault.checkpointCount()), REVOKE_WINDOW);
 
         vm.startPrank(admin);
         vm.expectRevert(FerrataVault.ReleaseDelayOutOfRange.selector);
@@ -456,12 +456,11 @@ contract RolesTest is VaultTestBase {
         vault.setTokenReleasesFrozen(ETH, false);
         vm.expectRevert(FerrataVault.NotFreezeAuthority.selector);
         vault.setCheckpointsFrozen(true);
-        vm.expectRevert(FerrataVault.NotFreezeAuthority.selector);
+        // v4 (D13): anyone may retire, but only 30 days after the last finalisation.
+        vm.expectRevert(FerrataVault.RetireNotOpen.selector);
         vault.retire();
         vm.expectRevert(FerrataVault.NotFreezeAuthority.selector);
         vault.revokeFrom(0);
-        vm.expectRevert(FerrataVault.NotFreezeAuthority.selector);
-        vault.transferFreezeAuthority(caller);
         vm.stopPrank();
     }
 
@@ -469,7 +468,7 @@ contract RolesTest is VaultTestBase {
         vm.prank(freezer);
         vault.setReleasesFrozen(true);
         _assertNoFreezePowers(admin);
-        assertTrue(vault.releasesFrozen());
+        assertTrue(_isFrozen(vault.releasesFrozenUntil()));
     }
 
     function test_roles_freezeAuthorityCannotAdminister() public {
@@ -535,40 +534,6 @@ contract RolesTest is VaultTestBase {
         vault.acceptAdmin();
     }
 
-    function test_transferFreezeAuthority_isTwoStepAndOnlyByHolder() public {
-        vm.prank(admin); // the admin cannot appoint a freeze authority (it could then unfreeze)
-        vm.expectRevert(FerrataVault.NotFreezeAuthority.selector);
-        vault.transferFreezeAuthority(admin);
-
-        vm.expectEmit(true, true, true, true, address(vault));
-        emit FerrataVault.FreezeAuthorityTransferStarted(freezer, newFreezer);
-        vm.prank(freezer);
-        vault.transferFreezeAuthority(newFreezer);
-        assertEq(vault.freezeAuthority(), freezer);
-        assertEq(vault.pendingFreezeAuthority(), newFreezer);
-
-        vm.prank(alice);
-        vm.expectRevert(FerrataVault.NotPendingFreezeAuthority.selector);
-        vault.acceptFreezeAuthority();
-
-        vm.expectEmit(true, true, true, true, address(vault));
-        emit FerrataVault.FreezeAuthorityTransferred(freezer, newFreezer);
-        vm.prank(newFreezer);
-        vault.acceptFreezeAuthority();
-        assertEq(vault.freezeAuthority(), newFreezer);
-        assertEq(vault.pendingFreezeAuthority(), address(0));
-
-        _assertNoFreezePowers(freezer);
-        vm.prank(newFreezer);
-        vault.setDepositsFrozen(true);
-        assertTrue(vault.depositsFrozen());
-    }
-
-    function test_transferFreezeAuthority_cannotBeAcceptedByAdmin() public {
-        vm.prank(freezer);
-        vault.transferFreezeAuthority(admin);
-        vm.prank(admin);
-        vm.expectRevert(FerrataVault.RolesMustDiffer.selector);
-        vault.acceptFreezeAuthority();
-    }
+    // v4 (D13): the freeze authority has no two-step handover of its own any more; the admin replaces it through a
+    // 14-day public proposal (test/Roles.t.sol).
 }

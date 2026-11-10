@@ -137,7 +137,10 @@ abstract contract ReturnLegFixture is Test {
             unitWeight: unitWeight,
             depositCap: _unlimited(),
             releaseCap: _unlimited(),
-            releaseDelay: RELEASE_DELAY
+            releaseDelay: RELEASE_DELAY,
+            lezDefinition: bytes32(0),
+            decimals: 18,
+            checkpointFees: new uint256[](denoms.length)
         });
     }
 
@@ -159,7 +162,11 @@ abstract contract ReturnLegFixture is Test {
             admin: deployer,
             freezeAuthority: freezer,
             globalDepositCap: _unlimited(),
-            globalReleaseCap: _unlimited()
+            globalReleaseCap: _unlimited(),
+            mode: FerrataVault.Mode.A,
+            watchers: [address(0), address(0), address(0)],
+            releaseCapFloor: FerrataVault.CapParams({capacity: 0, refillPerSecond: 0}),
+            feeRecipient: address(0xFEE)
         });
     }
 
@@ -226,13 +233,13 @@ abstract contract ReturnLegFixture is Test {
     function _depositEth() internal {
         vm.deal(depositor, 1 ether);
         vm.prank(depositor);
-        vault.depositETH{value: 0.001 ether}(0, commitments[0], 0);
+        vault.depositETH{value: 0.001 ether + 2e12}(0, commitments[0], 0); // and its relay fee (v5)
     }
 
     function _fundToken() internal {
-        token.mint(depositor, 100e6);
+        token.mint(depositor, 100e6 + 250_000); // the denomination and its relay fee (v5)
         vm.prank(depositor);
-        token.approve(address(vault), 100e6);
+        token.approve(address(vault), 100e6 + 250_000);
     }
 
     function _depositToken() internal {
@@ -297,5 +304,10 @@ abstract contract ReturnLegFixture is Test {
     function _flip(bytes memory data, uint256 at) internal pure returns (bytes memory out) {
         out = bytes.concat(data);
         out[at] = bytes1(uint8(out[at]) ^ 0x01);
+    }
+
+    /// @dev The registered relay fee of the first denomination (the same in every fee schedule).
+    function _registeredRelayFee(address t) internal view returns (uint256 relayFee) {
+        (, relayFee,,) = vault.fees(t, 0, 0);
     }
 }

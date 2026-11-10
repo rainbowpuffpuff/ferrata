@@ -4,6 +4,7 @@ pragma solidity ^0.8.26;
 import {console2} from "forge-std/console2.sol";
 
 import {FerrataVault} from "../src/FerrataVault.sol";
+import {IRiscZeroVerifier} from "../src/interfaces/IRiscZeroVerifier.sol";
 import {ToggleRecipient} from "./mocks/MockRecipients.sol";
 import {MockBlacklistToken, MockTokenBase} from "./mocks/MockTokens.sol";
 import {ReferenceMerkle} from "./utils/ReferenceMerkle.sol";
@@ -25,6 +26,17 @@ contract GasScenarios is VaultTestBase {
 
     function setUp() public override {
         super.setUp();
+        _prepareState();
+    }
+
+    /// @dev v4: the same state on a rule (B) vault, for the rule (B) rows (the other rows run on rule (A)).
+    function _switchToRuleB() internal {
+        vault = new FerrataVault(_deploymentB(IRiscZeroVerifier(address(estop)), LEZ_CONFIG_ID));
+        _registerDefaultTokens(vault);
+        _prepareState();
+    }
+
+    function _prepareState() internal {
         // A deployed-looking configuration: every bucket finite, relay fees registered, a non-empty tree, escrow on
         // every token, one accepted root.
         address[4] memory tokens = [ETH, address(usdc), address(dai), address(usdt)];
@@ -53,7 +65,7 @@ contract GasScenarios is VaultTestBase {
 
     function _recordedDeposit(address token, uint8 denomIndex, bytes32 commitment) internal {
         uint64 leafIndex = _deposit(warmup, token, denomIndex, commitment);
-        leaves.push(ReferenceMerkle.leafHash(leafIndex, warmup, token, _amount(token, denomIndex), commitment));
+        leaves.push(_leafHash(leafIndex, warmup, token, _amount(token, denomIndex), commitment));
     }
 
     function _path(uint64 leafIndex) internal view returns (bytes32[32] memory path) {
@@ -71,7 +83,7 @@ contract GasScenarios is VaultTestBase {
         FerrataVault.Checkpoint memory c = _nextCheckpoint(vault, keccak256("sunset root"), 37, true);
         _submit(c);
         _finalizeAfterDelta(c);
-        vm.warp(block.timestamp + REVOKE_WINDOW);
+        vm.warp(block.timestamp + REVOKE_WINDOW + 1); // refunds open the second after (D11)
     }
 
     /// @dev A candidate's wait W = delta + (t - 1) * turnSeconds, for the default committee (t = 3).
@@ -88,6 +100,11 @@ contract GasScenarios is VaultTestBase {
         for (uint256 i = 0; i < data.length; i++) {
             g += data[i] == 0 ? 4 : 16;
         }
+    }
+
+    /// @dev What one 1 ETH deposit sends: the denomination and its relay fee (v5).
+    function _t() internal view returns (uint256) {
+        return _depositTotal(vault, ETH, 1);
     }
 
     function _fundAndApprove(address token, address who, uint256 amount) internal {
@@ -109,18 +126,18 @@ contract GasScenarios is VaultTestBase {
     // ---- deposits -------------------------------------------------------------------------------------------------
 
     function test_gas_depositETH_firstByAddress() public {
-        vm.deal(fresh, 1 ether);
+        vm.deal(fresh, _t());
         vm.prank(fresh);
-        vault.depositETH{value: 1 ether}(1, C, 0);
+        vault.depositETH{value: _t()}(1, C, 0);
         _log("depositETH, first deposit by the address");
     }
 
     function test_gas_depositETH_laterByAddress() public {
-        vm.deal(fresh, 2 ether);
+        vm.deal(fresh, 2 * _t());
         vm.prank(fresh);
-        vault.depositETH{value: 1 ether}(1, C, 0);
+        vault.depositETH{value: _t()}(1, C, 0);
         vm.prank(fresh);
-        vault.depositETH{value: 1 ether}(1, C, 1);
+        vault.depositETH{value: _t()}(1, C, 1);
         _log("depositETH, later deposit by the address");
     }
 
@@ -129,23 +146,23 @@ contract GasScenarios is VaultTestBase {
         vault.setTokenCap(ETH, FerrataVault.Direction.Deposit, UNLIMITED, 0);
         vault.setGlobalCap(FerrataVault.Direction.Deposit, UNLIMITED, 0);
         vm.stopPrank();
-        vm.deal(fresh, 2 ether);
+        vm.deal(fresh, 2 * _t());
         vm.prank(fresh);
-        vault.depositETH{value: 1 ether}(1, C, 0);
+        vault.depositETH{value: _t()}(1, C, 0);
         vm.prank(fresh);
-        vault.depositETH{value: 1 ether}(1, C, 1);
+        vault.depositETH{value: _t()}(1, C, 1);
         _log("depositETH, later deposit by the address, caps UNLIMITED");
     }
 
     function test_gas_depositERC20_firstByAddress() public {
-        _fundAndApprove(address(dai), fresh, 1000e18);
+        _fundAndApprove(address(dai), fresh, _depositTotal(vault, address(dai), 1));
         vm.prank(fresh);
         vault.deposit(address(dai), 1, C, 0);
         _log("deposit ERC-20 (18 dec, returns bool), first deposit by the address");
     }
 
     function test_gas_depositERC20_laterByAddress() public {
-        _fundAndApprove(address(dai), fresh, 2000e18);
+        _fundAndApprove(address(dai), fresh, 2 * _depositTotal(vault, address(dai), 1));
         vm.prank(fresh);
         vault.deposit(address(dai), 1, C, 0);
         vm.prank(fresh);
@@ -154,7 +171,7 @@ contract GasScenarios is VaultTestBase {
     }
 
     function test_gas_depositUsdtStyle_firstByAddress() public {
-        _fundAndApprove(address(usdt), fresh, 1000e6);
+        _fundAndApprove(address(usdt), fresh, _depositTotal(vault, address(usdt), 1));
         vm.prank(fresh);
         vault.deposit(address(usdt), 1, C, 0);
         _log("deposit USDT-style (no return value), first deposit by the address");
@@ -165,13 +182,13 @@ contract GasScenarios is VaultTestBase {
     function test_gas_depositETH_rangeOver128Leaves() public {
         vm.deal(fresh, 200 ether);
         vm.prank(fresh);
-        vault.depositETH{value: 1 ether}(1, C, 0);
+        vault.depositETH{value: _t()}(1, C, 0);
         uint256 lo = type(uint256).max;
         uint256 hi;
         uint256 sum;
         for (uint64 i = 1; i <= 128; i++) {
             vm.prank(fresh);
-            vault.depositETH{value: 1 ether}(1, C, i);
+            vault.depositETH{value: _t()}(1, C, i);
             uint256 g = vm.lastCallGas().gasTotalUsed;
             lo = g < lo ? g : lo;
             hi = g > hi ? g : hi;
@@ -236,6 +253,48 @@ contract GasScenarios is VaultTestBase {
         _log("cancelCandidate (freeze authority)");
     }
 
+    function test_gas_ruleB_submitCandidate() public {
+        _switchToRuleB();
+        FerrataVault.Checkpoint memory c = _nextCheckpoint(keccak256("a new burn root"));
+        _proveCheckpoint(_checkpointJournal(c));
+        vm.prank(relayer);
+        vault.submitCandidate(c, SEAL);
+        _log("rule (B): submitCandidate, no beacon (incl. mock verifier)");
+    }
+
+    function test_gas_ruleB_finalizeAttested() public {
+        _switchToRuleB();
+        FerrataVault.Checkpoint memory c = _nextCheckpoint(keccak256("a new burn root"));
+        _submit(c);
+        vm.warp(block.timestamp + DELTA_B);
+        vm.prank(relayer);
+        vault.finalizeAttested(c);
+        _log("rule (B): finalizeAttested (no proof; reads the stop)");
+    }
+
+    function test_gas_cancelCandidate_byWatcher() public {
+        FerrataVault.Checkpoint memory c = _nextCheckpoint(keccak256("a new burn root"));
+        _submit(c);
+        vm.prank(watcher);
+        vault.cancelCandidate(c.newState);
+        _log("cancelCandidate (watcher)");
+    }
+
+    function test_gas_pauseCheckpoints_byWatcher() public {
+        vm.prank(watcher);
+        vault.pauseCheckpoints();
+        _log("pauseCheckpoints (watcher)");
+    }
+
+    function test_gas_proposeAndApplyRoles() public {
+        vm.prank(admin);
+        vault.proposeRoles([watcher, relayer, address(0)], makeAddr("new freeze authority"));
+        _log("proposeRoles (admin; two watchers and a freeze authority)");
+        vm.warp(block.timestamp + 14 days);
+        vault.applyRoles();
+        _log("applyRoles (anyone, after 14 days)");
+    }
+
     function test_gas_releaseETH_noFee() public {
         FerrataVault.ReleaseRequest memory r = _request(ETH, 1, recipient, ROOT, keccak256("n1"));
         _proveRelease(_releaseJournal(r));
@@ -260,6 +319,81 @@ contract GasScenarios is VaultTestBase {
         vm.prank(relayer);
         vault.release(r, SEAL);
         _log("release ERC-20 (18 dec), standard fee to msg.sender (incl. mock verifier)");
+    }
+
+    // ---- fees (v5, D13) -------------------------------------------------------------------------------------------
+
+    /// @dev 0.1% of each ETH denomination (whole LEZ units of 1e12 wei), for every fee of an announcement.
+    function _ethFees() internal pure returns (uint256[] memory) {
+        return _denoms(0.1 ether / 1000, 1 ether / 1000, 10 ether / 1000);
+    }
+
+    /// @dev Announces fee schedule 1 on ETH (mint, burn and checkpoint fees of 0.1%) and waits out the notice.
+    function _announceEthFees() internal {
+        uint256[] memory f = _ethFees();
+        vm.prank(admin);
+        vault.announceFees(ETH, f, f, f);
+        vm.warp(block.timestamp + FEE_NOTICE);
+    }
+
+    function test_gas_announceFees() public {
+        uint256[] memory f = _ethFees();
+        vm.prank(admin);
+        vault.announceFees(ETH, f, f, f);
+        _log("announceFees, 3 denominations");
+    }
+
+    function test_gas_applyFees() public {
+        _announceEthFees();
+        vault.applyFees(ETH);
+        _log("applyFees, puts a due fee change in force");
+    }
+
+    function test_gas_depositETH_putsDueFeeChangeInForce() public {
+        _announceEthFees();
+        uint256 total = _t();
+        vm.deal(fresh, total);
+        vm.prank(fresh);
+        vault.depositETH{value: total}(1, C, 0);
+        _log("depositETH, first by the address, puts a due fee change in force");
+    }
+
+    function test_gas_depositETH_laterByAddress_mintFeeInForce() public {
+        _announceEthFees();
+        vault.applyFees(ETH);
+        uint256 total = _t();
+        vm.deal(fresh, 2 * total);
+        vm.prank(fresh);
+        vault.depositETH{value: total}(1, C, 0);
+        vm.prank(fresh);
+        vault.depositETH{value: total}(1, C, 1);
+        _log("depositETH, later deposit by the address, mint fee in force");
+    }
+
+    function test_gas_releaseETH_releaseFees_firstCredits() public {
+        _announceEthFees();
+        vault.applyFees(ETH);
+        FerrataVault.ReleaseRequest memory r = _request(ETH, 1, recipient, ROOT, keccak256("f1"));
+        r.relayFee = _relayFee(ETH, 1);
+        _proveRelease(_releaseJournal(r));
+        vm.prank(relayer);
+        vault.release(r, SEAL);
+        _log("release ETH, relay + burn + checkpoint fees, first credits (incl. mock verifier)");
+    }
+
+    function test_gas_releaseETH_releaseFees_laterCredits() public {
+        _announceEthFees();
+        vault.applyFees(ETH);
+        FerrataVault.ReleaseRequest memory r = _request(ETH, 1, recipient, ROOT, keccak256("f2"));
+        r.relayFee = _relayFee(ETH, 1);
+        _release(r);
+        // Another fresh recipient, as in every release row; only the two fee credits are no longer first.
+        r.recipient = makeAddr("second recipient");
+        r.nullifier = keccak256("f3");
+        _proveRelease(_releaseJournal(r));
+        vm.prank(relayer);
+        vault.release(r, SEAL);
+        _log("release ETH, relay + burn + checkpoint fees, later credits (incl. mock verifier)");
     }
 
     function test_gas_releaseETH_recipientCannotReceive_credited() public {
