@@ -370,13 +370,20 @@ the GPU app):
 e2e/sepolia-live.sh          # about 55 min plus the queue for a GPU; ends with ALL CHECKS PASSED and a DONE line
 ```
 
-It checks the chain id, the sender's nonce and balance, sends the fifteen transactions in their nonce order
-(each stage simulated by forge first), sleeps through the vault's wait and the release delay, builds and proves
-the finalisation for the beacon it recorded, and runs `verify-sepolia.sh`. Everything it prints also goes to
-`e2e/runs/sepolia-live/sepolia-live.log`. It is resumable: started again, it reads the chain, sees which stages
-are complete and continues after the last one; a stage that was interrupted while it was sending is finished
-with forge's own record of it (`--resume`), never sent anew. It stops with a message at the first thing that is
-not as planned, for instance a nonce that a transaction from outside the run has moved.
+Before the first transaction it checks the chain id, the sender's nonce and balance, and that what the
+finalisation proof will need forty minutes later is at hand (the recorded guest programs, the GPU app's profile,
+the build wrapper or cargo and r0vm, the prover image's wrapper or Docker). It then sends the fifteen
+transactions in their nonce order (each stage simulated by forge first), sleeps through the vault's wait and the
+release delay, builds and proves the finalisation for the beacon it recorded, and runs `verify-sepolia.sh`.
+Everything it prints also goes to `e2e/runs/sepolia-live/sepolia-live.log`.
+
+It is resumable: started again, it lets a transaction that is still in the mempool land, reads the chain, sees
+which stages are complete and continues after the last one. A stage that was interrupted while it was sending
+(the deployment, the two releases) is finished with forge's own record of it (`--resume`), never sent anew. A GPU
+job that an earlier start left queued or running is waited for, not started a second time. The manifest takes
+every receipt from the chain, so it is whole even where forge was stopped before it had saved one. It stops with
+a message at the first thing that is not as planned, for instance a nonce that a transaction from outside the run
+has moved, and sends nothing after that.
 
 **The stages by hand**, which is what the driver does:
 
@@ -384,8 +391,8 @@ not as planned, for instance a nonce that a transaction from outside the run has
 export SEPOLIA_RPC_URL=<endpoint>
 export ETH_FROM=0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07
 export ETH_KEYSTORE=<keystore file> ETH_PASSWORD=<file holding its password>   # or ETH_KEYSTORE_ACCOUNT=<name>
-cp -r ../e2e/runs/sepolia ../e2e/runs/sepolia-live && rm -rf ../e2e/runs/sepolia-live/receipts/cp-e2e-finalize
-export FERRATA_FIXTURE=$PWD/../e2e/runs/sepolia-live/fixture.json
+export FERRATA_FIXTURE=$PWD/../e2e/runs/sepolia-live/fixture.json   # the prepared run: ../e2e/runs/sepolia without
+                                                                    # its finalisation, which is proven after the beacon
 
 script/roundtrip.sh status       # the vault is not deployed; the sender's nonce must be 0
 script/roundtrip.sh deploy       # 10 transactions: 4 creations, 2 registrations, mint, approve, 2 deposits

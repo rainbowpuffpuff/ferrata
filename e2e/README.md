@@ -36,14 +36,16 @@ for one deployment; this one serves the Foundry run, a rehearsal on a fork and t
 | `release-eth.{input,json}`, `release-erc20.{input,json}` | the release guest's inputs for the wallet's two burns, against the checkpoint's burn root |
 | `programs.json` | sha256 and image id of the guest program binaries that were executed and proven |
 | `executor.jsonl` | every guest executed on its input: cycles, segments, journal equal to the native one |
-| `beacon.json` | the Ethereum block whose beacon the finalisation echoes: number, `prevrandao`, nonce |
+| `beacon.json` | the block whose beacon the finalisation echoes: number, `prevrandao`, nonce. Here a chosen number and a labelled test `prevrandao`, which the Foundry test sets with `vm.roll` and `vm.prevrandao`; on a chain, the block that mined `recordBeacon` |
 | `receipts/<proof>/` | succinct and Groth16 receipts, the on-chain seal, the journal, timings |
 | `fixture.json` | what [`vault/test/real`](../vault/test/real/) and [`vault/script`](../vault/script/) read |
 
 [`runs/fork/`](runs/fork/README.md) is the copy used to rehearse the Sepolia scripts on a local
-fork, with that fork's beacon and the finalisation built for it.
+fork, with that fork's beacon and the finalisation built for it;
+[`runs/fork-driver/`](runs/fork-driver/README.md) the same for the one-command driver;
+[`runs/sepolia-live/`](runs/sepolia-live/README.md) the prepared directory of the run on Sepolia.
 
-The zone (block id = position, producer = id mod 4):
+The zone, by block id (the producer of a block is the key at index id mod 4):
 
 | Block | Contents |
 |---|---|
@@ -173,6 +175,9 @@ EIP-4788 beacon root; nothing of that was exercised or needed.
 The two wrap steps are exactly what risc0-zkvm 3.0.5 does in `succinct_to_groth16`; they are
 split because the first needs r0vm and no Docker and the second is one container run.
 `ferrata-e2e wrap` does both through r0vm where Docker is at hand.
+
+For the round trip on Sepolia, [`sepolia-live.sh`](sepolia-live.sh) drives these steps and the
+transactions of `vault/script/` as one resumable command (`vault/README.md`, "Sepolia round trip").
 
 The finalisation proof can only be made after the beacon exists: `beacon.json` gives the nonce,
 `run.sh inputs` rebuilds the zone with the echo block (blocks 1–9 are the same bytes), and only

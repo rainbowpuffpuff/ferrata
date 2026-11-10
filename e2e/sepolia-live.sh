@@ -117,16 +117,44 @@ chain="$(cast chain-id "${rpc[@]}")"
 [ "$chain" = "$(jq -r .chainId "$fixture")" ] || die "the endpoint is chain $chain, the fixture is for $(jq -r .chainId "$fixture")"
 [ "$(echo "$ETH_FROM" | tr 'A-F' 'a-f')" = "$(jq -r .deployer "$fixture" | tr 'A-F' 'a-f')" ] || die "ETH_FROM is not the fixture's deployer"
 jq -e '.candidate.seal and ([.releases[].seal] | all)' "$fixture" > /dev/null || die "the fixture lacks the candidate's or a release's seal"
+# A transaction of an interrupted start that is still in the mempool: let it land before reading the chain.
+for _ in $(seq 60); do
+  [ "$(cast nonce "$ETH_FROM" --block pending "${rpc[@]}")" = "$(nonce)" ] && break
+  say "a transaction of the sender is still pending; waiting for it"
+  sleep 10
+done
+[ "$(cast nonce "$ETH_FROM" --block pending "${rpc[@]}")" = "$(nonce)" ] || die "a transaction of the sender has been pending for ten minutes"
 balance="$(cast balance "$ETH_FROM" "${rpc[@]}")"
 say "run $name on chain $chain: sender $ETH_FROM, nonce $(nonce) (first planned $first), balance $(cast from-wei "$balance") ETH, vault $vault"
 [ "$(nonce)" -ge "$first" ] || die "the sender's nonce is below the fixture's first nonce"
 [ "$(nonce)" -le "$((first + 15))" ] || die "the sender has sent more transactions than this run has"
+if ! finalised; then # what the finalisation proof needs, checked before the first transaction and not after the wait
+  for f in release.bin checkpoint.bin segment.bin; do
+    [ -f "$here/programs/$f" ] || die "e2e/programs/$f is missing: the recorded guest programs (e2e/README.md)"
+  done
+  command -v modal > /dev/null || die "modal is not installed: the finalisation proof runs on the GPU app"
+  [ -n "${MODAL_PROFILE:-}" ] || die "set MODAL_PROFILE, the profile that runs gpu-prover/modal_app.py"
+  modal app list --json > /dev/null 2>&1 || die "modal does not answer under the profile $MODAL_PROFILE"
+  if [ -n "${FERRATA_MRUN:-}" ]; then
+    [ -x "$FERRATA_MRUN" ] || die "FERRATA_MRUN ($FERRATA_MRUN) is not an executable file"
+  else
+    for tool in cargo r0vm; do command -v "$tool" > /dev/null || die "$tool is not installed (or set FERRATA_MRUN)"; done
+  fi
+  if [ -n "${FERRATA_MWRAP:-}" ]; then
+    [ -x "$FERRATA_MWRAP" ] || die "FERRATA_MWRAP ($FERRATA_MWRAP) is not an executable file"
+  else
+    command -v docker > /dev/null || die "docker is not installed (or set FERRATA_MWRAP)"
+  fi
+fi
 
 # ---- deploy: nonces first .. first+9 ---------------------------------------------------------------------
 if deployed && [ "$(nonce)" -ge "$((first + 10))" ]; then
   recorded deploy
 elif [ "$(nonce)" = "$first" ]; then
   [ "$balance" -ge 10000000000000000 ] || die "the sender holds less than 0.01 ETH"
+  # Nothing of this run is on chain yet, so any forge log for this chain id is another run's (a rehearsal
+  # on a fork has the same chain id): remove them, so that a later resume or record reads only this run's.
+  rm -f "$repo/vault/broadcast/RoundTrip.s.sol/$chain/"*-latest.json
   say "deploy: 10 transactions"
   tx deploy || die "the deploy stage failed"
 elif [ -f "$repo/vault/broadcast/RoundTrip.s.sol/$chain/deploy-latest.json" ]; then
@@ -187,18 +215,35 @@ if ! finalised; then
     if [ "$(jq -r '.input_sha256 // empty' "$receipts/prove.json" 2> /dev/null)" != "$input_sha" ]; then
       : "${MODAL_PROFILE:?set MODAL_PROFILE for the GPU proof}"
       gpu_run="e2e-$name-$(jq -r .blockNumber "$run/beacon.json")"
+      gpu_job="job $gpu_run input $input_sha"
+      gpu_log="$run/work/gpu-run.log"
       scratch="$run/work/gpu-results"
       rm -rf "$scratch" "$receipts"; mkdir -p "$scratch" "$receipts"
-      fetch() { (cd "$scratch" && modal volume get --force ferrata-prover "results/$gpu_run/$proof" . > /dev/null 2>&1); }
-      if ! fetch || [ "$(jq -r '.input_sha256 // empty' "$scratch/$proof/prove.json" 2> /dev/null)" != "$input_sha" ]; then
+      proven() { # the receipt of exactly this input is on the app's Volume
+        rm -rf "${scratch:?}/$proof"
+        (cd "$scratch" && modal volume get --force ferrata-prover "results/$gpu_run/$proof" . > /dev/null 2>&1) &&
+          [ "$(jq -r '.input_sha256 // empty' "$scratch/$proof/prove.json" 2> /dev/null)" = "$input_sha" ]
+      }
+      queued() { # a job for this input that an earlier start of this script left on the app, not yet stopped
+        local app
+        [ "$(head -n 1 "$gpu_log" 2> /dev/null)" = "$gpu_job" ] || return 1
+        app="$(grep -o 'ap-[A-Za-z0-9]\{12,\}' "$gpu_log" | head -n 1)"
+        [ -n "$app" ] && modal app list --json 2> /dev/null |
+          jq -e --arg app "$app" 'any(.[]; .app_id == $app and .stopped_at == null)' > /dev/null
+      }
+      if ! proven && queued; then
+        say "proof 2/5: the GPU job an earlier start of this script queued is still on the app; waiting for it"
+        while queued; do sleep 30; done
+      fi
+      if ! proven; then
         say "proof 2/5: the checkpoint proof on the GPU app (the queue for a GPU can take half an hour)"
         "$here/run.sh" stage-gpu "$name" > /dev/null
+        echo "$gpu_job" > "$gpu_log"
         (cd "$repo/gpu-prover" && FERRATA_INPUTS="$run/work/gpu-inputs" modal run --detach modal_app.py::batch_run \
-          --jobs "$proof=600" --run "$gpu_run") > "$run/work/gpu-run.log" 2>&1 || die "the GPU run failed: see $run/work/gpu-run.log"
+          --jobs "$proof=600" --run "$gpu_run") >> "$gpu_log" 2>&1 || die "the GPU run failed: see $gpu_log"
         rm -f "$repo/gpu-prover/logs/run-$gpu_run-$proof.json"
-        fetch || die "the GPU proof is not on the Volume"
+        proven || die "the GPU proof of this input is not on the Volume: see $gpu_log"
       fi
-      [ "$(jq -r '.input_sha256 // empty' "$scratch/$proof/prove.json")" = "$input_sha" ] || die "the GPU receipt is for another input"
       cp "$scratch/$proof/receipt-succinct.bin" "$scratch/$proof/prove.json" "$receipts/"
     fi
     say "proof 3/5: identity_p254"
@@ -219,7 +264,9 @@ if ! finalised; then
   # ---- finalize: nonce first+12 ------------------------------------------------------------------------
   expect_nonce 12 "the finalisation"
   say "finalize: with the seal that echoes the beacon"
-  tx finalize || die "the finalize stage failed"
+  # recordBeacon is open to anyone: name the beacon the proof echoes, which need not be the latest by now.
+  beacon_index="$(jq -er .index "$run/beacon.json")" || die "beacon.json does not say which of the vault's beacons it is"
+  (export FERRATA_BEACON_INDEX="$beacon_index"; tx finalize) || die "the finalize stage failed"
   finalised || die "the vault's finalState is not the checkpoint's new state after finalize"
 else
   recorded finalize
@@ -238,8 +285,13 @@ if [ "$pending" -gt 0 ]; then
   finalized_at="$(call 'burnRootStatus(bytes32)(bool,uint256)' "$(jq -r .burnRoot "$fixture")" | sed -n 2p | awk '{print $1}')"
   pass_time "$((finalized_at + delay))" "the release delay"
   expect_nonce "$((13 + releases - pending))" "the releases"
-  say "release: $pending release(s)"
-  tx release || die "the release stage failed"
+  if [ "$pending" -lt "$releases" ] && [ -f "$repo/vault/broadcast/RoundTrip.s.sol/$chain/release-latest.json" ]; then
+    say "release: $((releases - pending)) of $releases are paid; sending the rest of the recorded ones"
+    (export FERRATA_RESUME=1; tx release) || die "resuming the release stage failed"
+  else
+    say "release: $pending release(s)"
+    tx release || die "the release stage failed"
+  fi
 else
   recorded release
 fi

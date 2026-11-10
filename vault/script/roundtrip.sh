@@ -12,6 +12,8 @@
 #     ETH_KEYSTORE_ACCOUNT          a name under ~/.foundry/keystores (forge asks for the password)
 #   FERRATA_UNLOCKED=1  no key: the endpoint is a local fork that impersonates ETH_FROM
 #   FERRATA_RESUME=1    finish a stage that was interrupted while it was sending (forge --resume)
+#   FERRATA_SETTLE      seconds between a stage's last receipt and the next read of the chain (default 15;
+#                       not on a fork)
 #   FERRATA_FIXTURE   the run's fixture.json (default ../e2e/runs/sepolia/fixture.json)
 #   FERRATA_MANIFEST  where transactions are recorded (default manifest.json beside the fixture)
 #   FERRATA_DELTA, FERRATA_RELEASE_DELAY, FERRATA_REVOKE_WINDOW, FERRATA_MAX_FREEZE,
@@ -61,19 +63,33 @@ else
   case "$step" in deploy | submit | beacon | finalize | release) ;; *) echo "unknown stage $step" >&2; exit 2 ;; esac
   forge script script/RoundTrip.s.sol:RoundTrip --sig "$step()" "${rpc[@]}" --sender "$ETH_FROM" "${signer[@]}" \
     --broadcast --slow
+  # A public endpoint is several nodes: give the others a block to catch up before the chain is read again.
+  [ "${FERRATA_UNLOCKED:-}" = 1 ] || sleep "${FERRATA_SETTLE:-15}"
 fi
 
-# The manifest: what forge broadcast and the receipts it got back.
+# The manifest: the transactions forge sent (its broadcast log names them), each with the receipt the
+# chain gives now. So a stage whose forge was stopped between sending and saving a receipt is still
+# recorded whole.
 log="broadcast/RoundTrip.s.sol/$chain/$step-latest.json"
 [ -f "$manifest" ] || jq -n --argjson chain "$chain" --arg vault "$vault" --arg from "$ETH_FROM" \
   '{chainId: $chain, vault: $vault, sender: $from, stages: {}}' > "$manifest"
-jq --arg step "$step" --slurpfile b "$log" '
-  .stages[$step] = ([$b[0].transactions, $b[0].receipts] | transpose | map({
-    hash: .[0].hash,
-    what: ([.[0].contractName, .[0].function, .[0].transactionType] | map(select(. != null)) | join(" ")),
-    contractAddress: (.[1].contractAddress // null), to: (.[1].to // null),
-    blockNumber: .[1].blockNumber, gasUsed: .[1].gasUsed, effectiveGasPrice: .[1].effectiveGasPrice,
-    status: .[1].status}))' "$manifest" > "$manifest.tmp" && mv "$manifest.tmp" "$manifest"
+jq -c '.transactions[] | {hash, what: ([.contractName, .function, .transactionType] | map(select(. != null)) | join(" "))}' "$log" |
+  while read -r sent; do
+    hash="$(jq -r '.hash // empty' <<< "$sent")"
+    [ -n "$hash" ] || { echo "forge's log of the $step stage holds a transaction that was not sent" >&2; exit 1; }
+    receipt=""
+    for _ in $(seq 12); do # tried for a minute: a load-balanced endpoint can answer from a node one block behind
+      receipt="$(cast receipt "$hash" --async --json "${rpc[@]}" 2> /dev/null < /dev/null)" && break
+      sleep 5
+    done
+    [ -n "$receipt" ] ||
+      { echo "the chain has no receipt for $hash, which forge's log of the $step stage names" >&2; exit 1; }
+    jq -c --argjson sent "$sent" '$sent + {contractAddress: (.contractAddress // null), to: (.to // null),
+      blockNumber, gasUsed, effectiveGasPrice, status}' <<< "$receipt"
+  done | jq -s . > "$manifest.stage"
+jq --arg step "$step" --slurpfile sent "$manifest.stage" '.stages[$step] = $sent[0]' "$manifest" > "$manifest.tmp" &&
+  mv "$manifest.tmp" "$manifest"
+rm -f "$manifest.stage"
 jq -r --arg step "$step" '.stages[$step][] | "\(.hash) \(.what) gas \(.gasUsed) status \(.status)"' "$manifest"
 
 # After the candidate: when its wait is over, from the block that mined it.
