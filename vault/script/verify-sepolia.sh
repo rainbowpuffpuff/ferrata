@@ -12,7 +12,7 @@ set -euo pipefail
 here="$(cd "$(dirname "$0")/.." && pwd)"
 export TMPDIR="${TMPDIR:-$here/../../tmp}" FOUNDRY_DISABLE_NIGHTLY_WARNING=1
 : "${SEPOLIA_RPC_URL:?set SEPOLIA_RPC_URL}"
-manifest="${1:-$here/../e2e/runs/sepolia/manifest.json}"
+manifest="${1:-$here/../e2e/runs/sepolia-live/manifest.json}"
 fixture="${2:-$(dirname "$manifest")/fixture.json}"
 rpc=(--rpc-url "$SEPOLIA_RPC_URL")
 fail=0

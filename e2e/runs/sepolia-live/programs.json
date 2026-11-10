@@ -1,0 +1,17 @@
+{
+  "release": {
+    "image_id": "0xdda76672e6e05535117ed6880227a414420344cba9c47b6e112c7dabc5b027c5",
+    "bytes": 231072,
+    "sha256": "5848434a63270911f044269d0edc62acbf6aba911dce427993537a4e2bb8344a"
+  },
+  "checkpoint": {
+    "image_id": "0x95b816ed2614e340c85fed3ba3dad1f70e7dff2da1363406ade87e1333583caf",
+    "bytes": 439524,
+    "sha256": "9a006d534a61f76bc662a6b2e61977dd9e6e01b70ad0fbde87492e9f88d0e81e"
+  },
+  "segment": {
+    "image_id": "0xbdfb94a6b6ea12e996f332b28ce4791dc7362f28da602769192f589a61fee043",
+    "bytes": 267968,
+    "sha256": "bb85150dfc0f767f77056fd2627afe892fd686e173f2a10cd977c93a01203ced"
+  }
+}
