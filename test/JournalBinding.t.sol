@@ -152,7 +152,7 @@ contract ReleaseJournalBindingTest is VaultTestBase {
     }
 
     function test_attack_proofCannotBeReplayedOnAnotherVault() public {
-        FerrataVault other = _deployVault(IRiscZeroVerifier(address(verifier)), LEZ_CONFIG_ID);
+        FerrataVault other = _deployVault(IRiscZeroVerifier(address(estop)), LEZ_CONFIG_ID);
         _registerDefaultTokens(other);
         _depositInto(other, alice, ETH, 1, keccak256("c3"));
         RootJournal memory rj = _rootJournal(ROOT_A, LEZ_BLOCK, BURN_COUNT, MIN_DEPTH);
@@ -185,7 +185,7 @@ contract ReleaseJournalBindingTest is VaultTestBase {
     }
 
     function test_attack_proofCannotBeReplayedAcrossLezConfigurations() public {
-        FerrataVault other = _deployVault(IRiscZeroVerifier(address(verifier)), keccak256("another LEZ configuration"));
+        FerrataVault other = _deployVault(IRiscZeroVerifier(address(estop)), keccak256("another LEZ configuration"));
         _registerDefaultTokens(other);
         _depositInto(other, alice, ETH, 1, keccak256("c3"));
         RootJournal memory rj = _rootJournal(ROOT_A, LEZ_BLOCK, BURN_COUNT, MIN_DEPTH);

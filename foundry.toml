@@ -24,6 +24,10 @@ via_ir = false
 remappings = [
     "forge-std/=lib/forge-std/src/",
     "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+    "risc0/=lib/risc0-ethereum/contracts/src/",
+    # RiscZeroVerifierEmergencyStop imports "openzeppelin/contracts/...". Point that prefix at the
+    # OpenZeppelin release risc0-ethereum v3.0.0 pins itself (v5.2.0), so the wrapper compiles as shipped.
+    "openzeppelin/=lib/risc0-ethereum/lib/openzeppelin-contracts/",
 ]
 
 # The vector test reads test/vectors/tree.json, and rewrites it only when

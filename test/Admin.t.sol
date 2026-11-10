@@ -22,7 +22,9 @@ contract ConstructorTest is VaultTestBase {
     }
 
     function test_constructor_setsImmutablesRolesAndEmptyRoot() public view {
-        assertEq(address(vault.verifier()), address(verifier));
+        assertEq(address(vault.verifier()), address(estop));
+        assertEq(address(estop.verifier()), address(verifier));
+        assertEq(estop.owner(), freezer); // the freeze authority is the stop's guardian
         assertEq(vault.releaseImageId(), RELEASE_IMAGE_ID);
         assertEq(vault.rootImageId(), ROOT_IMAGE_ID);
         assertEq(vault.lezConfigId(), LEZ_CONFIG_ID);

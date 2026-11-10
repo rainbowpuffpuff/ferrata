@@ -2,6 +2,8 @@
 pragma solidity ^0.8.26;
 
 import {Test} from "forge-std/Test.sol";
+import {IRiscZeroVerifier as IRiscZeroVerifierFull} from "risc0/IRiscZeroVerifier.sol";
+import {RiscZeroVerifierEmergencyStop} from "risc0/RiscZeroVerifierEmergencyStop.sol";
 
 import {FerrataVault} from "../../src/FerrataVault.sol";
 import {IRiscZeroVerifier} from "../../src/interfaces/IRiscZeroVerifier.sol";
@@ -48,7 +50,10 @@ abstract contract VaultTestBase is Test {
     }
 
     FerrataVault internal vault;
+    /// The base verifier: accepts exactly the journals a test registers.
     MockRiscZeroVerifier internal verifier;
+    /// The vault's verifier: RISC Zero's unmodified emergency-stop wrapper around `verifier`, guardian = freezer.
+    RiscZeroVerifierEmergencyStop internal estop;
     MockERC20 internal usdc; // 6 decimals
     MockERC20 internal dai; // 18 decimals
     MockUSDT internal usdt; // 6 decimals, transfer/transferFrom return nothing
@@ -62,10 +67,11 @@ abstract contract VaultTestBase is Test {
 
     function setUp() public virtual {
         verifier = new MockRiscZeroVerifier();
+        estop = new RiscZeroVerifierEmergencyStop(IRiscZeroVerifierFull(address(verifier)), freezer);
         usdc = new MockERC20("USD Coin", "USDC", 6);
         dai = new MockERC20("Dai Stablecoin", "DAI", 18);
         usdt = new MockUSDT("Tether USD", "USDT", 6);
-        vault = _deployVault(IRiscZeroVerifier(address(verifier)), LEZ_CONFIG_ID);
+        vault = _deployVault(IRiscZeroVerifier(address(estop)), LEZ_CONFIG_ID);
         _registerDefaultTokens(vault);
     }
 
