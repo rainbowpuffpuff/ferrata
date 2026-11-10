@@ -1119,7 +1119,8 @@ pub fn refusals() -> Vec<Refusal> {
     push("consumer: Credit from another program's actor", report);
     // An attestation nobody asked for, sent to a claim actor by another program's actor: it is
     // not a reply (the actor waits for nothing), so it is not even a message of the consumer.
-    let genuine = s.expected(slot, &pool.request(t.tx_index, t.log_index, s.fx.receipt_proof(t.tx_index), None)).unwrap();
+    let genuine =
+        s.expected(slot, &pool.request(t.tx_index, t.log_index, s.fx.receipt_proof(t.tx_index), None)).unwrap();
     let script = Script::default().send_sync(claim, &genuine);
     let report = s.w.chain.submit(
         "unsolicited attestation",

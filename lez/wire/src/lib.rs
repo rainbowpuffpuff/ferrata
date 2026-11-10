@@ -844,13 +844,7 @@ pub mod consumer {
 
         /// The request for one log as a deposit of this pool; `header` is the block's RLP
         /// header when the record binds a block hash only ([`Request::header`]).
-        pub fn request(
-            &self,
-            tx_index: u64,
-            log_index: u64,
-            proof: Vec<Vec<u8>>,
-            header: Option<Vec<u8>>,
-        ) -> Request {
+        pub fn request(&self, tx_index: u64, log_index: u64, proof: Vec<Vec<u8>>, header: Option<Vec<u8>>) -> Request {
             Request {
                 instance_id: self.instance_id,
                 chain_id: self.chain_id,

@@ -124,12 +124,12 @@ fn job_on(
     update: &LightClientUpdate,
     spec: &ChainSpec,
 ) -> Result<Job, StepError> {
-    let committee = if spec.period_at_slot(update.signature_slot) == spec.period_at_slot(full.finalized_header.beacon.slot)
-    {
-        &full.current_sync_committee
-    } else {
-        &full.next_sync_committee
-    };
+    let committee =
+        if spec.period_at_slot(update.signature_slot) == spec.period_at_slot(full.finalized_header.beacon.slot) {
+            &full.current_sync_committee
+        } else {
+            &full.next_sync_committee
+        };
     let witness = SignerWitness::build(committee, &update.sync_aggregate.bits).unwrap_or_default();
     let compact = CompactUpdate::of(update);
     let encoded = compact.encode(base.fork);
@@ -217,7 +217,10 @@ fn the_compact_store_follows_sepolia_through_the_fork_by_itself() {
     let rlp = fixture("header.rlp");
     let view = attest::HeaderRecord::from_recorded_block_hash(&record, SEPOLIA, &rlp).unwrap();
     assert_eq!(view, attest::HeaderRecord::from_block_hash(&policy, SEPOLIA, &rlp).unwrap());
-    assert_eq!((view.number(), view.block_hash(), view.binding()), (BLOCK_NUMBER, root(BLOCK_HASH), attest::Binding::BlockHash));
+    assert_eq!(
+        (view.number(), view.block_hash(), view.binding()),
+        (BLOCK_NUMBER, root(BLOCK_HASH), attest::Binding::BlockHash)
+    );
     for name in ["block.json", "block_second.json"] {
         let block: Value = serde_json::from_slice(&fixture(name)).unwrap();
         let field = |f: &str| root(block["result"][f].as_str().unwrap());

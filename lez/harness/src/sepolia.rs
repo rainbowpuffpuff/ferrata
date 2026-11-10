@@ -328,7 +328,11 @@ impl Default for Stage5 {
 impl Stage5 {
     pub fn new() -> Self {
         let fx = SepoliaFacts::load();
-        assert!(fx.period <= LAST_PERIOD + 1, "the replay's store knows the committees up to period {}", LAST_PERIOD + 1);
+        assert!(
+            fx.period <= LAST_PERIOD + 1,
+            "the replay's store knows the committees up to period {}",
+            LAST_PERIOD + 1
+        );
         let mut w = replay(2, LAST_PERIOD);
         let update = fx.update.clone();
         let run = w.apply(&update, "finality update (attestation fixture)");
@@ -405,10 +409,15 @@ pub fn attestations() -> (Stage5, Vec<TxReport>, Vec<TxReport>) {
     // 1. A storage slot: Sepolia USDC's `totalSupply_`, equal to `totalSupply()` at the block.
     let usdc = s.fx.storage_proof();
     let storage = Request {
-        accounts: vec![account_query(&usdc, vec![], vec![(s.fx.slot, vec![condition(Field::Value, Cmp::Eq, s.fx.value)])])],
+        accounts: vec![account_query(
+            &usdc,
+            vec![],
+            vec![(s.fx.slot, vec![condition(Field::Value, Cmp::Eq, s.fx.value)])],
+        )],
         ..s.request()
     };
-    let (report, a) = s.accept("storage slot: Sepolia USDC totalSupply_ (slot 11), with the block header", slot, &storage);
+    let (report, a) =
+        s.accept("storage slot: Sepolia USDC totalSupply_ (slot 11), with the block header", slot, &storage);
     assert_eq!((a.block_number, a.block_hash, a.chain_id), (s.fx.block, s.fx.block_hash, SEPOLIA_CHAIN_ID));
     assert_eq!(a.statements[1].id, storage_statement_id(SEPOLIA_CHAIN_ID, &s.fx.contract, &s.fx.slot, &s.fx.value));
     accepted.push(report);
@@ -433,7 +442,11 @@ pub fn attestations() -> (Stage5, Vec<TxReport>, Vec<TxReport>) {
     let multicall = s.fx.same_address_proof();
     assert_eq!(multicall.code_hash, s.fx.mainnet_code_hash, "the same code on both chains");
     let account = Request {
-        accounts: vec![account_query(&multicall, vec![condition(Field::CodeHash, Cmp::Eq, multicall.code_hash)], vec![])],
+        accounts: vec![account_query(
+            &multicall,
+            vec![condition(Field::CodeHash, Cmp::Eq, multicall.code_hash)],
+            vec![],
+        )],
         ..s.request()
     };
     let (report, a) = s.accept("account: Multicall3 (code hash), with the block header", slot, &account);
@@ -442,7 +455,11 @@ pub fn attestations() -> (Stage5, Vec<TxReport>, Vec<TxReport>) {
     accepted.push(report);
 
     // 4. All three in one request.
-    let batch = Request { accounts: [storage.accounts.clone(), account.accounts.clone()].concat(), logs: log.logs.clone(), ..s.request() };
+    let batch = Request {
+        accounts: [storage.accounts.clone(), account.accounts.clone()].concat(),
+        logs: log.logs.clone(),
+        ..s.request()
+    };
     let (report, a) = s.accept("the three in one request, with the block header", slot, &batch);
     assert_eq!(a.statements.len(), 4, "USDC, its slot, Multicall3, the log");
     accepted.push(report);
@@ -459,7 +476,11 @@ pub fn attestations() -> (Stage5, Vec<TxReport>, Vec<TxReport>) {
         ("the header of another block (12,103,422, the replay fixture's)", header(Some(bound_header())), 120),
         ("the block header truncated by one byte", header(Some(rlp[..rlp.len() - 1].to_vec())), 120),
         ("the block header with one byte appended", header(Some([rlp.as_slice(), &[0x80]].concat())), 120),
-        ("F.5: the same proof asked as a mainnet statement (chain id 1)", Request { chain_id: 1, ..account.clone() }, 140),
+        (
+            "F.5: the same proof asked as a mainnet statement (chain id 1)",
+            Request { chain_id: 1, ..account.clone() },
+            140,
+        ),
         ("F.5: the same storage proof asked as a mainnet statement", Request { chain_id: 1, ..storage.clone() }, 140),
     ];
     for (label, request, code) in cases {
@@ -468,6 +489,11 @@ pub fn attestations() -> (Stage5, Vec<TxReport>, Vec<TxReport>) {
     // A record that holds the payload's fields takes no header: the bootstrap's (Electra layout).
     let boot = s.w.bootstrap.header.beacon.slot;
     let at_boot = Request { header: Some(rlp.clone()), ..log.clone() };
-    refused.push(s.refuse("a block header sent to a record that holds the payload (the bootstrap's)", boot, &at_boot, ferrata_lez_wire::code::BAD_QUERY));
+    refused.push(s.refuse(
+        "a block header sent to a record that holds the payload (the bootstrap's)",
+        boot,
+        &at_boot,
+        ferrata_lez_wire::code::BAD_QUERY,
+    ));
     (s, accepted, refused)
 }

@@ -153,7 +153,10 @@ pub fn vault_request(base: Request, proof: &AccountProof, root: &Root, leaves: &
                 slot(1, vec![condition(Field::Value, Cmp::Gt, u256(u128::from(highest)))]),
             ],
         }],
-        leaves: leaves.iter().map(|(i, leaf, path)| LeafQuery { root: 1, leaf_index: *i, leaf: *leaf, path: path.clone() }).collect(),
+        leaves: leaves
+            .iter()
+            .map(|(i, leaf, path)| LeafQuery { root: 1, leaf_index: *i, leaf: *leaf, path: path.clone() })
+            .collect(),
         ..base
     }
 }
@@ -339,6 +342,34 @@ pub fn synthetic_attestations() -> (Vec<TxReport>, Vec<TxReport>) {
         accepted.push(report);
     }
     let one = vault_request(base.clone(), &s.proof, &s.root, &[leaf(n - 1)]);
+    // What the header costs: the same request under a record of the same block that holds the
+    // payload's fields (the Capella-to-Fulu layouts), which takes no header.
+    let h = ferrata_core::exec::decode_header_with_hash(&s.header, &s.block_hash).unwrap();
+    let payload = HeaderRecord {
+        beacon: BeaconBlockHeader { slot: SYNTHETIC_SLOT + 1, ..Default::default() },
+        execution_root: [0; 32],
+        execution: ExecutionSummary::Payload {
+            block_number: h.number,
+            block_hash: s.block_hash,
+            parent_hash: h.parent_hash,
+            state_root: h.state_root,
+            receipts_root: h.receipts_root,
+            timestamp: h.timestamp,
+        },
+    };
+    let at_payload = place_record(&mut chain, SYNTHETIC_INSTANCE, SEPOLIA_CHAIN_ID, &payload);
+    let (report, a) = run(
+        &mut chain,
+        (&SYNTHETIC_INSTANCE, SEPOLIA_CHAIN_ID, &payload),
+        "the same with one leaf, under a record that holds the payload's fields (no header)",
+        at_payload,
+        &Request { header: None, ..one.clone() },
+        time,
+    );
+    let by_payload = a.expect("accepted");
+    let by_header = evaluate(&SYNTHETIC_INSTANCE, SEPOLIA_CHAIN_ID, &s.record, &one).unwrap();
+    assert_eq!(by_payload.statements, by_header.statements, "the same facts and identifiers");
+    accepted.push(report);
     let mut refused = Vec::new();
     let mut wrong_leaf = one.clone();
     wrong_leaf.leaves[0].leaf = s.leaves[0];
@@ -430,8 +461,14 @@ pub fn real(dir: &Path) -> Vec<TxReport> {
     let actor = header_actor(w.inst.program, &w.inst.id, slot);
     let time = w.inst.config.slot_start_ms(finality.signature_slot) + 12_000;
     let id = w.inst.id;
-    let (report, a) =
-        run(&mut w.chain, (&id, SEPOLIA_CHAIN_ID, &record), "the vault: slots 0, 1 and its newest deposit leaf", actor, &request, time);
+    let (report, a) = run(
+        &mut w.chain,
+        (&id, SEPOLIA_CHAIN_ID, &record),
+        "the vault: slots 0, 1 and its newest deposit leaf",
+        actor,
+        &request,
+        time,
+    );
     check_vault_attestation(&a.expect("accepted"), &root, deposits.len() as u64, &leaf);
     vec![report]
 }
