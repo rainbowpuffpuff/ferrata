@@ -4,7 +4,9 @@ An Ethereum sync-committee light client in Rust, `no_std`, written as the verifi
 **Ferrata**, a proposal for [Logos RFP-021](https://github.com/logos-co/rfp) (trustless
 Ethereum state attestation on LEZ). The name comes from the *via ferrata*, a mountain route with
 fixed anchors that anyone can cross without a guide. This repository is the proposal's evidence.
-There is no LEZ program code here yet; that is the proposal's first milestone.
+The light client also runs as a LEZ v0.4.0-rc1 program (`lez/`), driven with mainnet data through
+LEZ's own state transition functions and fee settlement; [`lez/RESULTS.md`](lez/RESULTS.md) has
+what it does, what each step costs, and what is missing.
 
 ## Results
 
@@ -18,6 +20,7 @@ Every row is produced by `cargo test --workspace`.
 | Real mainnet data (`fixtures/mainnet-p1899`) | Periods 1899 to 1903 (Fulu): 512-member committees, four handoffs, 510 to 512 signers per update, with both committee checks (full and on-chain). Every finalized root equals the canonical root a second provider reports. A test also verifies one of these signatures through the split API's 576-byte encoding. |
 | Official BLS vectors (61 cases) | consensus-specs `eth_fast_aggregate_verify` (12) and `eth_aggregate_pubkeys` (8); ethereum/bls12-381-tests `fast_aggregate_verify` (12) and `verify` (29). Both libraries, all three compositions; both verification paths agree. |
 | Policy store against the spec store | Equal state on 150 steps. After a forced update the two diverge, and the policy store never holds a header the spec store did not finalize (checked at every step). |
+| Job-step API against the policy store (`tests/steps.rs`) | The steps the LEZ program runs (`steps.rs`, over the compact store and witnesses of `witness.rs`) accept exactly what `FinalizedStore::process_update` (`Adoption::OnChain`) accepts, with the same store and refusal code: all 52 `sync` cases (160 updates: 91 applied, 69 refused), the mainnet replay with the committee adoption in 1, 2 and 4 parts, and 21 variants of a mainnet update. Step 2's product equals `Blst::miller_half` byte for byte; skipped, replayed and misdirected steps are refused; the uncompressed-key adoption agrees with `check_committee_onchain` on 9 real and 6 crafted committees. |
 | Adversarial tests | 16 (listed below) |
 | Guard tests | 23: each pins a check that an independent review showed could be deleted without any test failing, plus the two committee checks |
 | **Execution layer** | |
@@ -31,22 +34,34 @@ Every row is produced by `cargo test --workspace`.
 | Differential oracle: Helios (`helios-consensus-core` 0.9.4) | 26 of the 52 official `sync` cases replayed step by step through Helios and ferrata's spec store (100 steps: 86 updates, 12 forced updates, 2 store upgrades): identical verdicts, finalized and optimistic headers after every step. 26 skipped, each listed: 19 with Altair-layout data (Helios cannot decode it), 7 with Gloas (not in Helios). Mainnet periods 1899–1903 and the end-to-end finality update: identical. 8 mutated mainnet updates and a store holding the wrong committee: refused by both. Participation 0 to 32 of 32 with real signatures: identical. Four inputs on which Helios departs from the spec (below). |
 | Signature checks on every path | The identity, a point outside G2, a point off the curve and two bad encodings are refused by the spec path, the checked path and the split path (`miller_half` / `final_half`), with both libraries and every key aggregation, and by both stores |
 | Mutation run | 107 hand-picked mutants, all killed (`scripts/mutants.py`, `docs/mutants-run.log`). 43 cover the light client; 32 of those come from an independent review, under which 20 had survived the earlier suite. 64 cover the execution layer: length checks, hash comparisons, indices and bounds, canonical-form checks, the receipt status check, the EIP-2935 window, identifiers, predicates and relations, accumulator paths and identifiers, log-index conversion. |
-| `no_std` | Builds for `riscv32im-unknown-none-elf` with the pure-Rust backend. The `blst` backend needs a RISC-V C toolchain (RISC Zero's), which this repository does not set up yet. |
+| `no_std` | Builds for `riscv32im-unknown-none-elf` with the pure-Rust backend. The `blst` backend needs a RISC-V C toolchain (RISC Zero's), which CI does not set up; `bench/` and `lez/` build it for RISC Zero's guests with that toolchain. |
 
+| RISC Zero guests and the LEZ program | Result |
+|---|---|
 | RISC Zero guest (`bench/`) | RISC Zero zkVM 3.0.5 executor, real mainnet update, RISC Zero's accelerated blst: a finality update costs 10.2M cycles, and splits into steps of 2.3M, 4.2M and 3.6M through the core's `miller_half` / `final_half`. A handoff adds 1.1M for the committee root, plus either 4.6M for the adoption check with uncompressed keys or 48.7M with compressed keys (`check_committee_onchain` today). See `bench/RESULTS.md`, including six library configurations. |
 | RISC Zero guest, execution layer (`bench/exec/`) | The same executor, mainnet block 26,379,842, with RISC Zero's accelerated Keccak (without it in brackets): `attest_storage` 0.21M user cycles (1.04M), `attest_log` 0.04M for a one-log receipt and 0.43M for a 96-log one (0.21M, 2.58M), one EIP-2935 hop 0.18M (0.95M). With the accelerator, the Keccak-f permutations (54 for a storage slot, 50 for a hop) are proven by RISC Zero's separate Keccak circuit, outside these counts. See `bench/RESULTS.md`. |
+| LEZ v0.4.0-rc1 program (`lez/`) | LEZ's own settlement with mainnet data, on the program image built after the merge (`cec0bc68…`; these figures supersede the earlier image's, and came out the same): `Init` 3 transactions, 7.09M execution gas; a finality update 3 transactions (2.19M, 3.31M, 3.72M; 9.22M); an update that adopts a committee 5 transactions, 16.08M; every transaction under the 5M target, the largest 3.73M (75%). The whole update in one public transaction (`VerifyAll`): 9.12M. Verified privately (dev mode): 479,854 execution gas and 224,063 storage gas. The one real proof (CPU: 9.05M user cycles, 54 min, 9.18 GiB, a 227,080-byte receipt) was made on the earlier image (`e7cec90e…`); the new image's is pending. See `lez/RESULTS.md`. |
 
 **Not done yet** (the proposal's M0 to M2):
-- the LEZ v0.4 program and its costs inside the v0.4 shell;
-- the job-step API (validation up to the signature, applying an update after a split pairing) and
-  a store restored from the program's own state without re-checking;
-- the uncompressed-key adoption witness;
+- the execution layer inside the LEZ program: the program's `header(id, slot)` holds a
+  `steps::HeaderRecord`, while the attestations take an `attest::HeaderRecord` (which adds the
+  chain id, the parent hash, the anchor slot and the binding); the program has no handler that
+  attests, and the execution layer's costs are bare-guest ones (`bench/exec/`), not LEZ's;
+- in the program (`lez/RESULTS.md` §5): fork upgrades, Gloas's RLP execution header in records,
+  successors and the root id of the proposal's §1, a submitter daemon, joining an open job, and
+  clean-up of jobs whose last step fails; deployment by `program_loader` transactions (it is
+  deployed at genesis); settlement through LEZ's `chain_state` crate itself (the harness runs a
+  copy of its two settlement functions);
+- the real proof of the program image built after the merge (`lez/RESULTS.md` §3 says how to make
+  it elsewhere): the one real proof, of a finality update verified privately, was made on the
+  earlier image; the handoff and the consumer's read ran in RISC Zero dev mode only;
 - the `single_merkle_proof` vectors;
 - a Gloas record on real data: `HeaderRecord::from_block_hash` is tested on synthetic stores only,
   since mainnet has no Gloas date and the fixture is Fulu;
 - fuzzing (`cargo-fuzz` on RLP, Merkle-Patricia and query decoding) and `cargo-mutants` over the
-  whole core;
-- a weak-subjectivity bound (see "Weak subjectivity" below).
+  whole core; no hand-picked mutant covers `steps.rs` or `witness.rs`, and `docs/REVIEW-core.md`
+  does not review them;
+- a weak-subjectivity bound (see "Weak subjectivity" below), in the core and in the program.
 
 ## Run it
 
@@ -65,6 +80,9 @@ The Helios oracle is a git dev-dependency of the test crate only (a16z/helios ta
 The vector tests fail rather than skip when the vectors are missing, and they pin the number of
 cases, so an empty or moved directory cannot pass.
 
+`lez/` is a workspace of its own, outside the root one: it needs RISC Zero's guest toolchain and
+a clone of LEZ v0.4.0-rc1 beside this repository. `lez/RESULTS.md` (§6) has the commands.
+
 ## Layout
 
 | Path | What |
@@ -79,6 +97,9 @@ cases, so an empty or moved directory cannot pass.
 | `crates/ferrata-core/src/exec.rs` | Execution headers, accounts, storage values, receipts and logs |
 | `crates/ferrata-core/src/attest.rs` | `HeaderRecord`, the attestations consumers call, identifiers, conditions and relations, the EIP-2935 hop |
 | `crates/ferrata-core/src/accumulator.rs` | Accumulator-leaf facts: a root attested from a storage slot, a leaf proven against it by a SHA-256 path |
+| `crates/ferrata-core/src/witness.rs` | Compact forms of the store, bootstrap and update for a program's state and messages, with strict encodings; the signer witness (non-signers' keys with Merkle branches); the committee adoption from uncompressed keys, in parts |
+| `crates/ferrata-core/src/steps.rs` | The job-step API: `process_update` split into steps of under 5M cycles (validation and hash-to-G2, the Miller loops, the final exponentiation), the adoption, and `apply` to the store the job started from |
+| `lez/` | The light client as a LEZ v0.4.0-rc1 program: wire types and guests, the harness that drives them through LEZ's settlement, the results (`lez/RESULTS.md`) |
 | `crates/ferrata-spectests/src/execkit.rs` | A reference trie (independent Keccak), synthetic blocks, JSON-RPC readers |
 | `scripts/fetch-mainnet-e2e.py` | The fetch tool of the mainnet end-to-end fixture (standard library only) |
 | `scripts/gen-acc-leaf-vectors.py`, `vectors/acc-leaf.json` | The accumulator vectors and their independent generator (hashlib) |
@@ -108,7 +129,8 @@ cases, so an empty or moved directory cannot pass.
      signing key is then `aggregate_pubkey − Σ non-signers`, a handful of additions at mainnet
      participation, with no per-update subgroup check.
    - `check_committee` runs `KeyValidate` on every key and checks the sum. After it, the two paths
-     agree exactly. `check_committee_onchain` is what the program will run: every key must be on
+     agree exactly. `check_committee_onchain` is what the program checks (`lez/` runs it from
+     uncompressed keys, `witness.rs`, and `tests/steps.rs` shows the two agree): every key must be on
      the curve and not the identity, and the keys must sum to the aggregate. It skips the per-key
      subgroup check, which costs 185M cycles per committee in the guest (`bench/`), because every
      key in a genuine beacon state passed `KeyValidate` at deposit. The off-chain tools run the
@@ -248,7 +270,7 @@ crate only.
 ## Reuse and audit surface
 
 `scripts/count-lines.py` counts the non-test Rust of `ferrata-core` (physical lines as `wc -l`
-counts them, then lines that are neither blank nor comments; the two in-crate test modules, 81
+counts them, then lines that are neither blank nor comments; the four in-crate test modules, 172
 lines, are left out):
 
 | File | Category | Lines | Code lines |
@@ -271,17 +293,19 @@ lines, are left out):
 | `accumulator.rs` | new protocol logic | 188 | 130 |
 | `attest.rs` | new protocol logic | 737 | 535 |
 | `policy.rs` | new protocol logic | 131 | 91 |
+| `steps.rs` | new protocol logic | 809 | 622 |
+| `witness.rs` | new protocol logic | 805 | 598 |
 | `error.rs` | plumbing | 142 | 63 |
-| `lib.rs` | plumbing | 44 | 24 |
-| **total** | | **4267** | **3137** |
+| `lib.rs` | plumbing | 47 | 27 |
+| **total** | | **5884** | **4360** |
 
 | Category | Lines | Code lines |
 |---|---:|---:|
 | BLS glue and new logic | 522 | 378 |
 | consensus-spec transcription | 1710 | 1347 |
 | execution-spec transcription | 793 | 569 |
-| new protocol logic | 1056 | 756 |
-| plumbing | 186 | 87 |
+| new protocol logic | 2670 | 1976 |
+| plumbing | 189 | 90 |
 
 - **Transcription of the consensus specification:** `validate.rs`, `store.rs`, `upgrade.rs`,
   `types.rs`, `ssz.rs`, `merkle.rs`, `fork.rs`, `hash.rs`: each function follows the spec
@@ -290,7 +314,8 @@ lines, are left out):
   `mpt.rs`, `exec.rs`, `keccak.rs`.
 - **New protocol logic, with no specification to transcribe:** `policy.rs` (the finalized-only
   policy and adoption checks), `attest.rs` (records, identifiers, conditions and relations, the
-  EIP-2935 hop), `accumulator.rs`, and in `bls/` the checked path, the on-chain adoption check and
+  EIP-2935 hop), `accumulator.rs`, `steps.rs` and `witness.rs` (the LEZ program's job steps,
+  compact encodings and witnesses), and in `bls/` the checked path, the on-chain adoption check and
   the pairing split around the libraries' primitives.
 - **Third-party cryptography** (normal dependencies of `ferrata-core`):
 
@@ -301,9 +326,9 @@ lines, are left out):
   | `sha2` (RustCrypto) | 0.10.9; 0.9.9 for zkcrypto's hash-to-curve | SHA-256 | none found |
   | `tiny-keccak` | 2.0.2 | Keccak-256 | none found |
 
-  RISC Zero's accelerated forks of `blst`, `sha2` and `tiny-keccak` are used only by the guests in
-  `bench/`. Every line counted above is new code written for Ferrata and unaudited; the proposal's
-  audit covers it.
+  RISC Zero's accelerated forks of `blst`, `sha2` and `tiny-keccak` are used only by guests: all
+  three in `bench/`, and those of `blst` (0.3.16) and `sha2` in `lez/`. Every line counted above is
+  new code written for Ferrata and unaudited; the proposal's audit covers it.
 
 ## Adversarial and guard tests
 
@@ -368,9 +393,11 @@ node rules behind the hash check by re-linking forged nodes to a new root.
 
 With AI assistance (Claude Code); every commit carries an `Assisted-by` trailer. Acceptance is
 mechanical: the vectors, the BLS vectors, the mainnet replay and end-to-end run, the
-TrieTests, the alloy differentials, the Helios oracle, the adversarial and guard suites, clippy
-with warnings as errors, and the `no_std` build. `docs/REVIEW-core.md` maps every function
-to its spec section and records the author's line-by-line sign-off.
+TrieTests, the alloy differentials, the Helios oracle, the adversarial and guard suites, the job
+steps' equivalence with the policy store, clippy with warnings as errors, and the `no_std` build.
+`docs/REVIEW-core.md` maps every function of the light client and the execution layer to its
+spec section and records the author's line-by-line sign-off; it does not cover `steps.rs` and
+`witness.rs` yet.
 
 ## License
 
