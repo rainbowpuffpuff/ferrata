@@ -3,7 +3,7 @@
 # repository's root workspace like bench/. The guests under guests/ are workspaces of their own.
 [workspace]
 resolver = "2"
-members = ["wire", "methods", "harness"]
+members = ["wire", "bridge-wire", "methods", "harness"]
 exclude = ["guests"]
 
 # BLS and the zkVM client are slow unoptimised; optimise dependencies even in test builds.
