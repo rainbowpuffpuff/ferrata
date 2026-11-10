@@ -1,10 +1,12 @@
 //! The Ferrata bridge program on LEZ v0.4 (`guests/bridge`): its messages, actor state and
-//! addresses, and the two checks it runs on Ethereum facts (the import of a deposit root, and the
-//! claim of a deposit), shared by the guest and the host. The plan is `lez/BRIDGE.md`.
+//! addresses, and the checks it runs on Ethereum facts (the pairing, the import of a deposit root,
+//! a token's registry entry and fee schedules, the claim of a deposit), shared by the guest and the
+//! host. The plan is `lez/BRIDGE.md`.
 //!
 //! | actor | address | state |
 //! |---|---|---|
-//! | `config(cid)` | PDA `H(…/config ‖ cid)` | [`ConfigState`]: the configuration, paired with its vault |
+//! | `config(cid)` | PDA `H(…/config ‖ cid)` | [`ConfigState`]: the configuration, paired with its vault; global freezes, caps, `Sunset` |
+//! | `token(cid, token)` | PDA `H(…/token ‖ cid ‖ token)` | [`TokenState`]: a registry entry attested from the vault, its fee schedules, the token's freezes and caps |
 //! | `root(cid, n)` | PDA `H(…/root ‖ cid ‖ n)` | [`RootState`]: the vault's root at leaf count `n`, written once |
 //! | `nullifier(chain, vault, N)` | PDA `H(…/nullifier ‖ chain ‖ vault ‖ N)` | [`NullifierState`]: `N` spent, written once |
 //! | holder | the holder's own account | [`HolderState`]: wrapped balances (the M0 fallback: no v0.4 token program) |
@@ -15,9 +17,10 @@
 //!
 //! Message variants 0–3 are the checkpoint's (`checkpoint/crates/checkpoint-core/src/wire.rs`):
 //! the checkpoint program decodes every call to this program that a LEZ block shows in the clear
-//! with that decoder. `Burn` is byte for byte its variant 0 (185 bytes). `ImportRoot` is its
-//! variant 1's four fields followed by the Merkle-Patricia proofs the import needs in the same
-//! transaction, which the checkpoint's decoder walks strictly and skips (`lez/BRIDGE-RESULTS.md`).
+//! with that decoder. `Burn` is byte for byte its variant 0 (185 bytes), `Sunset` its variant 2
+//! (33 bytes). `ImportRoot` is its variant 1's four fields followed by the Merkle-Patricia proofs
+//! the import needs in the same transaction, which the checkpoint's decoder walks strictly and
+//! skips (`lez/BRIDGE-RESULTS.md`).
 
 extern crate alloc;
 
@@ -27,8 +30,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use ferrata_bridge_core::{
     chain_id_u256,
     encoding::{config_id_preimage, ConfigIdentity},
-    inbound,
-    sha256,
+    inbound, sha256,
     tree::{MerklePath, TREE_DEPTH},
 };
 use ferrata_lez_wire::attest::{AccountQuery, Attestation, Fact, Request, SlotQuery, Statement};
@@ -59,10 +61,32 @@ fn tagged_hash(tag: &[u8], parts: &[&[u8]]) -> Root {
     h.finalize().into()
 }
 
+/// SHA-256 of the concatenation of `parts` (the vault's `sha256(abi.encodePacked(…))`).
+fn plain_hash(parts: &[&[u8]]) -> Root {
+    let mut h = Sha256::new();
+    for p in parts {
+        h.update(p);
+    }
+    h.finalize().into()
+}
+
 /// The vault's storage slots (SPEC-v2 §3.1): the deposit root, the leaf count, `lezConfigId`.
 pub const SLOT_ROOT: Word = word_of(0);
 pub const SLOT_COUNT: Word = word_of(1);
 pub const SLOT_CONFIG_ID: Word = word_of(2);
+
+/// The vault's slot holding the hash of `token`'s registry entry ([`TokenEntry::hash`]):
+/// `sha256("ferrata/vault/registry/v1" ‖ token)`. A SHA-256 slot, not a Solidity mapping: the guest
+/// has SHA-256 accelerated and no keccak, and the slot does not depend on the vault's layout.
+pub fn registry_slot(token: &Address) -> Word {
+    plain_hash(&[b"ferrata/vault/registry/v1", token])
+}
+
+/// The vault's slot holding the hash of `token`'s fee schedule `index` ([`FeeSchedule::hash`]),
+/// zero until that schedule takes effect: `sha256("ferrata/vault/fees/v1" ‖ token ‖ index:u64)`.
+pub fn fee_slot(token: &Address, index: u64) -> Word {
+    plain_hash(&[b"ferrata/vault/fees/v1", token, &index.to_be_bytes()])
+}
 
 /// `n` as a 256-bit big-endian word.
 pub const fn word_of(n: u64) -> Word {
@@ -100,30 +124,337 @@ pub fn word_of_u128(n: u128) -> Word {
 }
 
 // ---------------------------------------------------------------------------------------------
-// The configuration
+// Bounds (proposal §B4, D13)
 // ---------------------------------------------------------------------------------------------
 
-/// What claims, mints and burns of one configuration check: its chain and vault, and its one
-/// registered token with its denominations (in the token's base units). Copied from the
-/// configuration into every root and every holding, so neither a claim nor a burn reads the
-/// configuration again.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
-pub struct Terms {
-    pub evm_chain_id: u64,
-    pub vault: Address,
+/// At most eight denominations per token (F.8).
+pub const MAX_DENOMINATIONS: usize = 8;
+/// The immutable fee ceiling: every fee is at most 1/100 of its denomination.
+pub const FEE_CEILING_DIVISOR: u128 = 100;
+/// The notice of a fee change in Ethereum seconds: seven days.
+pub const FEE_NOTICE_SECONDS: u64 = 7 * 24 * 3600;
+/// The longest freeze, in LEZ milliseconds: 30 days, unless renewed.
+pub const MAX_FREEZE_MS: u64 = 30 * 24 * 3600 * 1000;
+/// The validity window of a caller-supplied time: the block's timestamp must lie in
+/// `[t, t + TIME_WINDOW_MS)`, so `t` is at most the block time and at most this much behind it.
+pub const TIME_WINDOW_MS: u64 = 10 * 60 * 1000;
+/// A bucket of this capacity never refuses.
+pub const UNLIMITED: u128 = u128::MAX;
+
+// ---------------------------------------------------------------------------------------------
+// The registry (F.8, F.10) and fee schedules (F.13)
+// ---------------------------------------------------------------------------------------------
+
+/// A token's registry entry, write-once on the vault and created on LEZ by attesting the hash the
+/// vault holds at [`registry_slot`]. Amounts are in the token's base units.
+#[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub struct TokenEntry {
     pub token: Address,
-    pub denominations: [u128; 3],
+    /// The wrapped token's definition account on LEZ (zero in the M0 fallback: the bridge keeps
+    /// the balances itself, `lez/BRIDGE.md` §3).
+    pub lez_definition: Root,
+    /// The token's decimals on Ethereum.
+    pub decimals: u8,
+    /// Base units per LEZ unit: a power of ten (the v0.4 token program has no decimals field, so
+    /// the registry holds the conversion).
+    pub lez_unit: u128,
+    /// Global-cap value units per LEZ unit (the vault's `unitWeight`).
+    pub unit_weight: u128,
+    /// 1 to 8, strictly increasing, each an exact multiple of `lez_unit`.
+    pub denominations: Vec<u128>,
+    /// One per denomination, fixed at registration, each at most 1% of it.
+    pub relay_fees: Vec<u128>,
 }
 
-impl Terms {
-    /// `amount` as one of the registered denominations, if it is one.
-    pub fn denomination(&self, amount: &Word) -> Option<u128> {
-        let amount = u128_of(amount)?;
-        self.denominations.contains(&amount).then_some(amount)
+fn put_word(out: &mut Vec<u8>, v: u128) {
+    out.extend_from_slice(&word_of_u128(v));
+}
+
+impl TokenEntry {
+    /// `sha256("ferrata/registry/v1" ‖ token ‖ lezDefinition ‖ decimals:u8 ‖ lezUnit:u256 ‖
+    /// unitWeight:u256 ‖ k:u8 ‖ denominations[k]:u256 ‖ relayFees[k]:u256)`: what the vault holds.
+    pub fn hash(&self) -> Root {
+        let mut m = Vec::with_capacity(19 + 20 + 32 + 1 + 64 + 1 + 64 * self.denominations.len());
+        m.extend_from_slice(b"ferrata/registry/v1");
+        m.extend_from_slice(&self.token);
+        m.extend_from_slice(&self.lez_definition);
+        m.push(self.decimals);
+        put_word(&mut m, self.lez_unit);
+        put_word(&mut m, self.unit_weight);
+        m.push(self.denominations.len() as u8);
+        for d in &self.denominations {
+            put_word(&mut m, *d);
+        }
+        for f in &self.relay_fees {
+            put_word(&mut m, *f);
+        }
+        sha256(&m)
+    }
+
+    /// The bounds of §B4: 1 to 8 denominations, strictly increasing, each an exact multiple of a
+    /// power-of-ten LEZ unit; relay fees at most 1% and multiples of the LEZ unit (they are minted
+    /// on LEZ); a non-zero unit weight; and the cap arithmetic of twice the largest denomination
+    /// fits 128 bits.
+    pub fn check(&self) -> Result<(), u8> {
+        let k = self.denominations.len();
+        if k == 0 || k > MAX_DENOMINATIONS || self.relay_fees.len() != k || self.unit_weight == 0 {
+            return Err(code::BAD_MESSAGE);
+        }
+        let mut unit = self.lez_unit;
+        while unit >= 10 && unit % 10 == 0 {
+            unit /= 10;
+        }
+        if unit != 1 || 10u128.checked_pow(u32::from(self.decimals)).is_some_and(|p| self.lez_unit > p) {
+            return Err(code::BAD_MESSAGE);
+        }
+        let mut previous = 0u128;
+        for (d, fee) in self.denominations.iter().zip(&self.relay_fees) {
+            if *d <= previous || d % self.lez_unit != 0 || *fee > d / FEE_CEILING_DIVISOR || fee % self.lez_unit != 0 {
+                return Err(code::BAD_MESSAGE);
+            }
+            previous = *d;
+        }
+        previous.checked_mul(2).and_then(|twice| self.value(twice)).ok_or(code::BAD_MESSAGE)?;
+        Ok(())
+    }
+
+    /// The index of `amount` among the denominations.
+    pub fn index_of(&self, amount: u128) -> Option<usize> {
+        self.denominations.iter().position(|d| *d == amount)
+    }
+
+    /// `amount` in global-cap value units: `amount / lezUnit × unitWeight`.
+    pub fn value(&self, amount: u128) -> Option<u128> {
+        (amount / self.lez_unit).checked_mul(self.unit_weight)
     }
 }
 
-/// One configuration of the bridge (SPEC-v2 §1), with the prototype's one-token registry.
+/// A fee schedule of one token: written by the vault at [`fee_slot`]`(token, index)` when it takes
+/// effect, applying to deposits with a leaf index from `from_leaf` until the next schedule's
+/// `from_leaf` (a deposit keeps the schedule of its leaf index, §B4). Fees in base units, one per
+/// denomination.
+#[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub struct FeeSchedule {
+    pub index: u64,
+    pub from_leaf: u64,
+    /// Ethereum seconds: when the admin announced it, and when it took effect.
+    pub announced_at: u64,
+    pub effective_at: u64,
+    /// Minted on LEZ to the fee recipient by a claim (D13).
+    pub mint_fees: Vec<u128>,
+    /// Deducted from a release on Ethereum (D13); the LEZ side only checks the ceiling.
+    pub burn_fees: Vec<u128>,
+    pub checkpoint_fees: Vec<u128>,
+}
+
+impl FeeSchedule {
+    /// `sha256("ferrata/fees/v1" ‖ token ‖ index:u64 ‖ fromLeaf:u64 ‖ announcedAt:u64 ‖
+    /// effectiveAt:u64 ‖ k:u8 ‖ mintFees[k] ‖ burnFees[k] ‖ checkpointFees[k])` (u256 words).
+    pub fn hash(&self, token: &Address) -> Root {
+        let mut m = Vec::with_capacity(15 + 20 + 32 + 1 + 96 * self.mint_fees.len());
+        m.extend_from_slice(b"ferrata/fees/v1");
+        m.extend_from_slice(token);
+        for n in [self.index, self.from_leaf, self.announced_at, self.effective_at] {
+            m.extend_from_slice(&n.to_be_bytes());
+        }
+        m.push(self.mint_fees.len() as u8);
+        for list in [&self.mint_fees, &self.burn_fees, &self.checkpoint_fees] {
+            for f in list {
+                put_word(&mut m, *f);
+            }
+        }
+        sha256(&m)
+    }
+
+    /// The bounds of §B4 against `entry`: one fee per denomination, each at most 1% of it, mint
+    /// fees multiples of the LEZ unit; schedule 0 (the registration's) charges no protocol fee
+    /// ("protocol fees start at zero"); a later one took effect at least seven days of Ethereum time
+    /// after it was announced.
+    pub fn check(&self, entry: &TokenEntry) -> Result<(), u8> {
+        let k = entry.denominations.len();
+        if self.mint_fees.len() != k || self.burn_fees.len() != k || self.checkpoint_fees.len() != k {
+            return Err(code::BAD_MESSAGE);
+        }
+        for (i, d) in entry.denominations.iter().enumerate() {
+            let ceiling = d / FEE_CEILING_DIVISOR;
+            let (mint, burn, checkpoint) = (self.mint_fees[i], self.burn_fees[i], self.checkpoint_fees[i]);
+            if mint > ceiling || burn > ceiling || checkpoint > ceiling || mint % entry.lez_unit != 0 {
+                return Err(code::BAD_MESSAGE);
+            }
+            if self.index == 0 && (mint != 0 || burn != 0) {
+                return Err(code::BAD_MESSAGE);
+            }
+        }
+        if self.index > 0 && self.announced_at.checked_add(FEE_NOTICE_SECONDS).is_none_or(|t| self.effective_at < t) {
+            return Err(code::BAD_MESSAGE);
+        }
+        Ok(())
+    }
+}
+
+/// Which fee schedule a claim says its leaf falls under: schedule `index` covers
+/// `[from_leaf, until_leaf)`. The claimant checks its leaf index against the range inside its own
+/// execution (privately, for a private claim); the token actor checks the range against its
+/// schedules. A private claim so publishes the range, not the leaf index.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub struct ScheduleRange {
+    pub index: u64,
+    pub from_leaf: u64,
+    pub until_leaf: u64,
+}
+
+impl ScheduleRange {
+    pub fn covers(&self, leaf_index: u64) -> Result<(), u8> {
+        if leaf_index < self.from_leaf || leaf_index >= self.until_leaf {
+            return Err(code::LEAF_NOT_IMPORTED);
+        }
+        Ok(())
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Caps (F.11) and freezes (F.14)
+// ---------------------------------------------------------------------------------------------
+
+/// A token bucket's parameters, in global-cap value units: `capacity` and the refill per second.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub struct CapParams {
+    pub capacity: u128,
+    pub refill_per_second: u128,
+}
+
+impl CapParams {
+    /// At least `floor` in both parameters (the admin cannot cut a cap below the immutable floor).
+    pub fn at_least(&self, floor: &CapParams) -> bool {
+        self.capacity >= floor.capacity && self.refill_per_second >= floor.refill_per_second
+    }
+}
+
+/// A token bucket. Invariant: `level <= capacity`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub struct Bucket {
+    pub capacity: u128,
+    pub refill_per_second: u128,
+    /// Available at `last_ms`.
+    pub level: u128,
+    pub last_ms: u64,
+}
+
+impl Bucket {
+    pub fn full(p: CapParams) -> Self {
+        Self { capacity: p.capacity, refill_per_second: p.refill_per_second, level: p.capacity, last_ms: 0 }
+    }
+
+    fn refill(&mut self, now_ms: u64) {
+        if now_ms > self.last_ms {
+            let add = u128::from(now_ms - self.last_ms).saturating_mul(self.refill_per_second) / 1000;
+            self.level = self.capacity.min(self.level.saturating_add(add));
+            self.last_ms = now_ms;
+        }
+    }
+
+    /// Take `value` at `now_ms`, refilled first; refused (`CAPPED`) if the bucket holds less.
+    pub fn take(&mut self, value: u128, now_ms: u64) -> Result<(), u8> {
+        if self.capacity == UNLIMITED {
+            return Ok(());
+        }
+        self.refill(now_ms);
+        self.level = self.level.checked_sub(value).ok_or(code::CAPPED)?;
+        Ok(())
+    }
+
+    /// New parameters at `now_ms`: refilled under the old ones first, the level kept within the
+    /// new capacity.
+    pub fn set(&mut self, p: CapParams, now_ms: u64) {
+        self.refill(now_ms);
+        self.capacity = p.capacity;
+        self.refill_per_second = p.refill_per_second;
+        self.level = self.level.min(p.capacity);
+    }
+}
+
+/// Freezes and caps of one scope (a token, or the configuration as a whole), with the latest
+/// caller-supplied time it has accepted (monotone).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub struct Gate {
+    pub now_ms: u64,
+    /// Mints (claims) or burns are refused while `now_ms < *_until`; 0: not frozen.
+    pub mints_until: u64,
+    pub burns_until: u64,
+    pub mint: Bucket,
+    pub burn: Bucket,
+}
+
+impl Gate {
+    pub fn new(cap: CapParams) -> Self {
+        Self { now_ms: 0, mints_until: 0, burns_until: 0, mint: Bucket::full(cap), burn: Bucket::full(cap) }
+    }
+
+    /// Advance the stored time to `t` if it is later (v0.4 programs cannot read the clock: `t` is
+    /// the caller's, bounded by the transaction's validity window).
+    pub fn advance(&mut self, t: u64) {
+        self.now_ms = self.now_ms.max(t);
+    }
+
+    /// Admit `value` minted (`mints`) or burned at the stored time: refused while frozen
+    /// (`FROZEN`) or above the bucket (`CAPPED`).
+    pub fn admit(&mut self, mints: bool, value: u128) -> Result<(), u8> {
+        let now = self.now_ms;
+        let (until, bucket) = if mints { (self.mints_until, &mut self.mint) } else { (self.burns_until, &mut self.burn) };
+        if now < until {
+            return Err(code::FROZEN);
+        }
+        bucket.take(value, now)
+    }
+
+    /// Freeze (or, with `until_ms = 0`, unfreeze) mints and/or burns at time `t`: at most
+    /// `MAX_FREEZE_MS` ahead.
+    pub fn freeze(&mut self, mints: bool, burns: bool, until_ms: u64, t: u64) -> Result<(), u8> {
+        if until_ms != 0 && (until_ms <= t || until_ms - t > MAX_FREEZE_MS) {
+            return Err(code::BAD_MESSAGE);
+        }
+        self.advance(t);
+        if mints {
+            self.mints_until = until_ms;
+        }
+        if burns {
+            self.burns_until = until_ms;
+        }
+        Ok(())
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// The configuration
+// ---------------------------------------------------------------------------------------------
+
+/// A configuration's roles and cap defaults, fixed at `Init` (committed by `configId` through the
+/// salt). Roles are LEZ accounts acting through their own actor of this program.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub struct Controls {
+    /// Sets caps, never below `floor`; cannot freeze or unfreeze.
+    pub admin: Root,
+    /// Freezes mints and burns (≤ 30 days unless renewed) and runs `Sunset`.
+    pub freeze_authority: Root,
+    /// Receives the mint fees (and the relay fee of a claim that names no relayer).
+    pub fee_recipient: Root,
+    /// The immutable floor of every cap.
+    pub floor: CapParams,
+    /// The caps a token starts with at registration, and the global caps.
+    pub token_cap: CapParams,
+    pub global_cap: CapParams,
+}
+
+impl Controls {
+    pub fn check(&self) -> Result<(), u8> {
+        if !self.token_cap.at_least(&self.floor) || !self.global_cap.at_least(&self.floor) {
+            return Err(code::BAD_MESSAGE);
+        }
+        Ok(())
+    }
+}
+
+/// One configuration of the bridge (SPEC-v2 §1).
 #[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub struct BridgeConfig {
     pub bedrock_genesis_id: Root,
@@ -135,7 +466,9 @@ pub struct BridgeConfig {
     pub attestation: AccountId,
     /// The attestation instance those records belong to.
     pub instance_id: Root,
-    pub terms: Terms,
+    pub evm_chain_id: u64,
+    pub vault: Address,
+    pub controls: Controls,
 }
 
 impl BridgeConfig {
@@ -146,15 +479,11 @@ impl BridgeConfig {
         tagged_hash(b"attestation-root", &[self.attestation.value(), &self.instance_id])
     }
 
-    /// `H(…/terms ‖ token ‖ denominations)`: the prototype's `salt`, so that `configId` (which
-    /// the vault pins and holds in slot 2) commits to the registry and an `Init` cannot install
-    /// other terms. The specified registry, attested from the vault, is not built.
+    /// `H(…/controls ‖ borsh(controls))`: the prototype's `salt`, so that `configId` (which the
+    /// vault pins and holds in slot 2) commits to the roles and cap defaults and a front-run `Init`
+    /// cannot install others. Tokens are not in it: each is registered from the vault's registry.
     pub fn salt(&self) -> Root {
-        let mut denominations = [0u8; 48];
-        for (i, d) in self.terms.denominations.iter().enumerate() {
-            denominations[16 * i..16 * (i + 1)].copy_from_slice(&d.to_be_bytes());
-        }
-        tagged_hash(b"terms", &[&self.terms.token, &denominations])
+        tagged_hash(b"controls", &[&borsh::to_vec(&self.controls).expect("borsh serialization is infallible")])
     }
 
     /// SPEC-v2 §1 `configId` for this configuration of the bridge program deployed at
@@ -165,8 +494,8 @@ impl BridgeConfig {
             channel_id: self.channel_id,
             bridge_header: *bridge_header.value(),
             bridge_image_id: self.bridge_image_id,
-            evm_chain_id: chain_id_u256(self.terms.evm_chain_id),
-            vault: self.terms.vault,
+            evm_chain_id: chain_id_u256(self.evm_chain_id),
+            vault: self.vault,
             attestation_root_id: self.attestation_root_id(),
             salt: self.salt(),
         }))
@@ -179,6 +508,10 @@ impl BridgeConfig {
 
 pub fn config_seed(config_id: &Root) -> PdaSeed {
     PdaSeed::new(tagged_hash(b"config", &[config_id]))
+}
+
+pub fn token_seed(config_id: &Root, token: &Address) -> PdaSeed {
+    PdaSeed::new(tagged_hash(b"token", &[config_id, token]))
 }
 
 pub fn root_seed(config_id: &Root, leaf_count: u64) -> PdaSeed {
@@ -201,6 +534,10 @@ pub fn config_actor(program: AccountId, config_id: &Root) -> Actor {
     pda(program, &config_seed(config_id))
 }
 
+pub fn token_actor(program: AccountId, config_id: &Root, token: &Address) -> Actor {
+    pda(program, &token_seed(config_id, token))
+}
+
 pub fn root_actor(program: AccountId, config_id: &Root, leaf_count: u64) -> Actor {
     pda(program, &root_seed(config_id, leaf_count))
 }
@@ -213,7 +550,8 @@ pub fn burn_actor(program: AccountId, config_id: &Root, note_hash: &Root) -> Act
     pda(program, &burn_seed(config_id, note_hash))
 }
 
-/// The bridge program's actor at `account`: a holder's wrapped balances.
+/// The bridge program's actor at `account`: a holder's wrapped balances, and the actor through
+/// which a role (admin, freeze authority) acts.
 pub fn holder_actor(program: AccountId, account: AccountId) -> Actor {
     Actor::new(account, program)
 }
@@ -243,7 +581,7 @@ impl Note {
 }
 
 /// The proofs of an import: the vault's account and its slots 0 and 1 (`eth_getProof`'s
-/// `accountProof` and `storageProof[i].proof`).
+/// `accountProof` and `storageProof[i].proof`). Its encoding is what the checkpoint skips.
 #[derive(Clone, Debug, Default, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub struct ImportProof {
     pub account: Vec<Vec<u8>>,
@@ -256,6 +594,14 @@ pub struct ImportProof {
 pub struct PairingProof {
     pub account: Vec<Vec<u8>>,
     pub config_slot: Vec<Vec<u8>>,
+}
+
+/// The proofs of a registration or a fee import: the vault's account and one storage proof per
+/// slot asked, in order.
+#[derive(Clone, Debug, Default, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub struct VaultProof {
+    pub account: Vec<Vec<u8>>,
+    pub slots: Vec<Vec<Vec<u8>>>,
 }
 
 /// What a claimant knows about one deposit (`ferrata_bridge_core::inbound::ClaimWitness`). The
@@ -279,34 +625,105 @@ pub struct ClaimWitness {
 /// checkpoint's (module docs).
 #[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub enum BridgeMessage {
-    /// Variant 0: At a holder's actor, as a top-level call or the root of a private execution: destroy one
-    /// denomination and publish the note. Then, from that actor, at `burn(cid, H(note))`: record
-    /// the note once.
+    /// Variant 0. At a holder's actor, as a top-level call or the root of a private execution:
+    /// debit one denomination and send the note to `token(cid, token)`, which admits it (the
+    /// denomination, the burn freezes and caps) and records it once at `burn(cid, H(note))`.
     Burn { config_id: Root, r: Root, memo: Address, mac: [u8; 16], token: Address, amount: Word, c_out: Root },
-    /// Variant 1: At `config(cid)`: attest the vault's slots 0 and 1 under the record at `record_slot` and
-    /// write `root(cid, leaf_count)` if they hold `root` and `leaf_count`.
+    /// Variant 1. At `config(cid)`: attest the vault's slots 0 and 1 under the record at
+    /// `record_slot` and write `root(cid, leaf_count)` if they hold `root` and `leaf_count`.
+    /// Refused after `Sunset`.
     ImportRoot { config_id: Root, record_slot: u64, root: Root, leaf_count: u64, proof: ImportProof },
-    /// Variant 2: Reserved for the configuration's one-way `Sunset`; not built, refused.
+    /// Variant 2. The configuration's one-way `Sunset`: a top-level call (or private root) at the
+    /// freeze authority's own actor, forwarded to `config(cid)`; stops `ImportRoot` for good.
     Sunset { config_id: Root },
-    /// Variant 3: Rule (A)'s echo nonce: accepted anywhere, changes nothing.
+    /// Variant 3. Rule (A)'s echo nonce: accepted anywhere, changes nothing.
     Echo { nonce: Root },
-    /// Variant 4: At `config(cid)`, `cid` computed from `config`: attest the vault's slot 2 and write the
-    /// configuration if it holds `cid` (the reciprocal pairing, B5).
+    /// Variant 4. At `config(cid)`, `cid` computed from `config`: attest the vault's slot 2 and
+    /// write the configuration if it holds `cid` (the reciprocal pairing, B5).
     Init { config: BridgeConfig, record_slot: u64, proof: PairingProof },
-    /// Variant 5: At `root(cid, n)`: the plaintext claim, for a public destination.
-    Claim { config_id: Root, leaf_count: u64, witness: ClaimWitness },
-    /// Variant 6: At the claimant's own actor, meant to run privately: read `root(cid, n)`, verify the
-    /// claim inside this execution, spend `N`; a private destination must be this account.
-    ClaimPrivately { config_id: Root, leaf_count: u64, witness: ClaimWitness },
-    /// Variant 7: Reply with this actor's state (`StateReply`), LEZ v0.4's read idiom.
+    /// Variant 5. At `root(cid, n)`: the plaintext claim, for a public destination. `relayer`
+    /// receives the relay fee (`None`: the fee recipient); `time_ms` is the caller's time.
+    Claim {
+        config_id: Root,
+        leaf_count: u64,
+        witness: ClaimWitness,
+        range: ScheduleRange,
+        relayer: Option<Root>,
+        time_ms: u64,
+    },
+    /// Variant 6. At the claimant's own actor, meant to run privately: read `root(cid, n)`, verify
+    /// the claim inside this execution, then `Issue`; a private destination must be this account.
+    ClaimPrivately {
+        config_id: Root,
+        leaf_count: u64,
+        witness: ClaimWitness,
+        range: ScheduleRange,
+        relayer: Option<Root>,
+        time_ms: u64,
+    },
+    /// Variant 7. Reply with this actor's state (`StateReply`), LEZ v0.4's read idiom.
     Read,
-    /// Variant 8: `config(cid)` → `root(cid, n)`: the verified root, written once.
+    /// Variant 8. `config(cid)` → `root(cid, n)`: the verified root, written once.
     WriteRoot { root: RootState },
-    /// Variant 9: An actor of this program → `nullifier(chain, vault, N)`: spend `N` once; mint to
-    /// `mint_to` (a public account) if given.
-    Spend { nullifier: Root, config_id: Root, terms: Terms, leaf_count: u64, amount: u128, mint_to: Option<Root> },
-    /// Variant 10: `nullifier(chain, vault, N)` → a holder: credit one denomination.
-    Mint { nullifier: Root, config_id: Root, terms: Terms, amount: u128 },
+    /// Variant 9. `token(cid, token)` → `nullifier(chain, vault, N)`: spend `N` once; mint the
+    /// denomination to `mint_to` (a public account) if given, and each fee to its account.
+    Spend {
+        nullifier: Root,
+        config_id: Root,
+        evm_chain_id: u64,
+        vault: Address,
+        token: Address,
+        leaf_count: u64,
+        amount: u128,
+        mint_to: Option<Root>,
+        fees: Vec<(Root, u128)>,
+    },
+    /// Variant 10. `nullifier(chain, vault, N)` → a holder: credit `amount` of `token`.
+    Mint { nullifier: Root, config_id: Root, evm_chain_id: u64, vault: Address, token: Address, amount: u128 },
+    /// Variant 11. At `config(cid)`: attest the vault's registry entry of `entry.token`, its fee
+    /// schedules 0 and 1 and its leaf count under one record, and write `token(cid, token)`.
+    Register { config_id: Root, entry: TokenEntry, schedule: FeeSchedule, record_slot: u64, proof: VaultProof },
+    /// Variant 12. At `config(cid)`: attest the vault's fee schedule `index` of `token` (its hash,
+    /// or zero if `schedule` is `None`) and its leaf count, and extend `token(cid, token)`.
+    ImportFees {
+        config_id: Root,
+        token: Address,
+        index: u64,
+        schedule: Option<FeeSchedule>,
+        record_slot: u64,
+        proof: VaultProof,
+    },
+    /// Variant 13. `config(cid)` → `token(cid, token)`: the attested entry, written once.
+    WriteToken { state: TokenState },
+    /// Variant 14. `config(cid)` → `token(cid, token)`: an attested fee schedule (appended), or
+    /// the attested absence of schedule `index` at a leaf count (the schedules cover up to it).
+    ExtendFees { config_id: Root, token: Address, index: u64, schedule: Option<FeeSchedule>, count: u64 },
+    /// Variant 15. A claimant (the root of a plaintext claim, or a private claimant) →
+    /// `token(cid, token)` after verifying the deposit: the denomination, the fee schedule of the
+    /// range, the mint freezes and caps; then `Admit` to `config(cid)` and `Spend`.
+    Issue {
+        config_id: Root,
+        token: Address,
+        nullifier: Root,
+        amount: u128,
+        range: ScheduleRange,
+        leaf_count: u64,
+        mint_to: Option<Root>,
+        relayer: Option<Root>,
+        time_ms: u64,
+    },
+    /// Variant 16. `token(cid, token)` → `config(cid)`: the global freeze and bucket of a mint or a
+    /// burn of `value` units, at `time_ms` (a claim's) or the stored time (a burn's).
+    Admit { config_id: Root, token: Address, mints: bool, value: u128, time_ms: Option<u64> },
+    /// Variant 17. The freeze authority, like `Sunset`: freeze mints and/or burns of `token` (or of
+    /// the whole configuration) until `until_ms` (≤ 30 days after `time_ms`; 0 unfreezes).
+    Freeze { config_id: Root, token: Option<Address>, mints: bool, burns: bool, until_ms: u64, time_ms: u64 },
+    /// Variant 18. The admin, like `Sunset`: set the mint (or burn) bucket of `token` (or the
+    /// global one), never below the floor.
+    SetCap { config_id: Root, token: Option<Address>, mints: bool, cap: CapParams, time_ms: u64 },
+    /// Variant 19. Anyone, at `config(cid)` or `token(cid, token)`: advance its stored time (for
+    /// burns, which carry none).
+    Tick { config_id: Root, token: Option<Address>, time_ms: u64 },
 }
 
 impl BridgeMessage {
@@ -336,6 +753,7 @@ pub enum BridgeState {
     Nullifier(NullifierState),
     Holder(HolderState),
     Burn(BurnRecord),
+    Token(TokenState),
 }
 
 /// `config(cid)`.
@@ -343,9 +761,10 @@ pub enum BridgeState {
 pub enum ConfigState {
     /// `Init` asked for the vault's slot 2 and the reply is outstanding (within one transaction).
     Pairing { config: BridgeConfig, record_slot: u64 },
-    /// The configuration, paired with its vault. `pending` is an import whose attestation is
-    /// outstanding (within one transaction); it is `None` between transactions.
-    Ready { config: BridgeConfig, pending: Option<PendingImport> },
+    /// The configuration, paired with its vault. `pending` is an attestation outstanding within
+    /// one transaction (`None` between transactions); `gate` the global freezes and caps;
+    /// `sunset` the one-way retirement.
+    Ready { config: BridgeConfig, pending: Option<Pending>, gate: Gate, sunset: bool },
 }
 
 impl ConfigState {
@@ -359,11 +778,28 @@ impl ConfigState {
     pub fn awaiting(&self) -> Option<Actor> {
         let slot = match self {
             ConfigState::Pairing { record_slot, .. } => *record_slot,
-            ConfigState::Ready { pending: Some(p), .. } => p.record_slot,
+            ConfigState::Ready { pending: Some(p), .. } => p.record_slot(),
             ConfigState::Ready { pending: None, .. } => return None,
         };
         let config = self.config();
         Some(ferrata_lez_wire::header_actor(config.attestation, &config.instance_id, slot))
+    }
+}
+
+/// An attestation of `config(cid)` between its `Attest` and the reply.
+#[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub enum Pending {
+    Import(PendingImport),
+    Register { entry: TokenEntry, schedule: FeeSchedule, record_slot: u64 },
+    Fees { token: Address, index: u64, schedule: Option<FeeSchedule>, record_slot: u64 },
+}
+
+impl Pending {
+    pub fn record_slot(&self) -> u64 {
+        match self {
+            Pending::Import(p) => p.record_slot,
+            Pending::Register { record_slot, .. } | Pending::Fees { record_slot, .. } => *record_slot,
+        }
     }
 }
 
@@ -379,7 +815,8 @@ pub struct PendingImport {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub struct RootState {
     pub config_id: Root,
-    pub terms: Terms,
+    pub evm_chain_id: u64,
+    pub vault: Address,
     pub leaf_count: u64,
     pub root: Root,
     /// The beacon slot of the record the root was attested under, and its execution block.
@@ -387,21 +824,55 @@ pub struct RootState {
     pub block_number: u64,
 }
 
+/// `token(cid, token)`: a registered token of one configuration.
+#[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub struct TokenState {
+    pub config_id: Root,
+    pub evm_chain_id: u64,
+    pub vault: Address,
+    pub entry: TokenEntry,
+    /// By index; `from_leaf` non-decreasing.
+    pub schedules: Vec<FeeSchedule>,
+    /// Every leaf index below this falls under a known schedule.
+    pub known_until: u64,
+    /// The configuration's roles and floor (copied at registration; immutable).
+    pub controls: Controls,
+    pub gate: Gate,
+}
+
+impl TokenState {
+    /// The denomination index and the mint and relay fees of a claim of `amount` whose leaf lies in
+    /// `range`: `range` must start at its schedule's `from_leaf` and end no later than the next
+    /// schedule's, or than `known_until` for the last one.
+    pub fn fees_for(&self, amount: u128, range: &ScheduleRange) -> Result<(u128, u128), u8> {
+        let d = self.entry.index_of(amount).ok_or(code::NOT_REGISTERED)?;
+        let index = usize::try_from(range.index).map_err(|_| code::LEAF_NOT_IMPORTED)?;
+        let schedule = self.schedules.get(index).ok_or(code::LEAF_NOT_IMPORTED)?;
+        let bound = self.schedules.get(index + 1).map_or(self.known_until, |next| next.from_leaf);
+        if range.from_leaf != schedule.from_leaf || range.until_leaf > bound || range.until_leaf <= range.from_leaf {
+            return Err(code::LEAF_NOT_IMPORTED);
+        }
+        Ok((schedule.mint_fees[d], self.entry.relay_fees[d]))
+    }
+}
+
 /// `nullifier(chain, vault, N)`: spent.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub struct NullifierState {
     pub config_id: Root,
+    pub token: Address,
     /// The leaf count of the root the claim read.
     pub leaf_count: u64,
     pub amount: u128,
 }
 
-/// A holder's wrapped balance under one configuration.
+/// A holder's wrapped balance of one token under one configuration.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub struct Holding {
     pub config_id: Root,
-    pub terms: Terms,
-    /// In the token's base units; always a sum of whole denominations.
+    pub token: Address,
+    /// In the token's base units: a sum of whole denominations for users; the fee recipient and
+    /// relayers also hold fees.
     pub amount: u128,
 }
 
@@ -414,18 +885,18 @@ pub struct HolderState {
 }
 
 impl HolderState {
-    /// Add `amount` to the holding of `config_id`.
-    pub fn credit(&mut self, config_id: &Root, terms: &Terms, amount: u128) -> Option<()> {
-        match self.holdings.iter_mut().find(|h| h.config_id == *config_id) {
+    /// Add `amount` of `token` to the holding under `config_id`.
+    pub fn credit(&mut self, config_id: &Root, token: &Address, amount: u128) -> Option<()> {
+        match self.holdings.iter_mut().find(|h| h.config_id == *config_id && h.token == *token) {
             Some(h) => h.amount = h.amount.checked_add(amount)?,
-            None => self.holdings.push(Holding { config_id: *config_id, terms: *terms, amount }),
+            None => self.holdings.push(Holding { config_id: *config_id, token: *token, amount }),
         }
         Some(())
     }
 
-    /// The holding of `config_id`.
-    pub fn holding(&self, config_id: &Root) -> Option<&Holding> {
-        self.holdings.iter().find(|h| h.config_id == *config_id)
+    /// The holding of `token` under `config_id`.
+    pub fn holding(&self, config_id: &Root, token: &Address) -> Option<&Holding> {
+        self.holdings.iter().find(|h| h.config_id == *config_id && h.token == *token)
     }
 }
 
@@ -435,6 +906,9 @@ pub struct PendingClaim {
     pub config_id: Root,
     pub leaf_count: u64,
     pub witness: ClaimWitness,
+    pub range: ScheduleRange,
+    pub relayer: Option<Root>,
+    pub time_ms: u64,
 }
 
 /// `burn(cid, H(note))`.
@@ -448,61 +922,74 @@ pub struct BurnRecord {
 // Checks
 // ---------------------------------------------------------------------------------------------
 
-/// The attestation request of an import: the vault's account and its slots 0 and 1.
-pub fn import_request(config: &BridgeConfig, proof: &ImportProof) -> Request {
+fn vault_query(config: &BridgeConfig, account: &[Vec<u8>], slots: Vec<SlotQuery>) -> Request {
     Request {
         instance_id: config.instance_id,
-        chain_id: config.terms.evm_chain_id,
+        chain_id: config.evm_chain_id,
         accounts: alloc::vec![AccountQuery {
-            address: config.terms.vault,
-            proof: proof.account.clone(),
+            address: config.vault,
+            proof: account.to_vec(),
             conditions: Vec::new(),
-            slots: alloc::vec![
-                SlotQuery { slot: SLOT_ROOT, proof: proof.root_slot.clone(), conditions: Vec::new() },
-                SlotQuery { slot: SLOT_COUNT, proof: proof.count_slot.clone(), conditions: Vec::new() },
-            ],
+            slots,
         }],
         ..Request::default()
     }
 }
 
+fn slot_query(slot: Word, proof: &[Vec<u8>]) -> SlotQuery {
+    SlotQuery { slot, proof: proof.to_vec(), conditions: Vec::new() }
+}
+
+/// The attestation request of an import: the vault's account and its slots 0 and 1.
+pub fn import_request(config: &BridgeConfig, proof: &ImportProof) -> Request {
+    vault_query(
+        config,
+        &proof.account,
+        alloc::vec![slot_query(SLOT_ROOT, &proof.root_slot), slot_query(SLOT_COUNT, &proof.count_slot)],
+    )
+}
+
 /// The attestation request of the pairing: the vault's account and its slot 2.
 pub fn pairing_request(config: &BridgeConfig, proof: &PairingProof) -> Request {
-    Request {
-        instance_id: config.instance_id,
-        chain_id: config.terms.evm_chain_id,
-        accounts: alloc::vec![AccountQuery {
-            address: config.terms.vault,
-            proof: proof.account.clone(),
-            conditions: Vec::new(),
-            slots: alloc::vec![SlotQuery {
-                slot: SLOT_CONFIG_ID,
-                proof: proof.config_slot.clone(),
-                conditions: Vec::new(),
-            }],
-        }],
-        ..Request::default()
+    vault_query(config, &proof.account, alloc::vec![slot_query(SLOT_CONFIG_ID, &proof.config_slot)])
+}
+
+/// The slots a registration of `token` attests: its entry, its fee schedules 0 and 1, the leaf count.
+pub fn register_slots(token: &Address) -> [Word; 4] {
+    [registry_slot(token), fee_slot(token, 0), fee_slot(token, 1), SLOT_COUNT]
+}
+
+/// The slots a fee import attests: schedule `index` of `token`, the leaf count.
+pub fn fees_slots(token: &Address, index: u64) -> [Word; 2] {
+    [fee_slot(token, index), SLOT_COUNT]
+}
+
+/// The attestation request of the vault's account and `slots`, one proof each.
+pub fn vault_request(config: &BridgeConfig, slots: &[Word], proof: &VaultProof) -> Result<Request, u8> {
+    if proof.slots.len() != slots.len() {
+        return Err(code::BAD_MESSAGE);
     }
+    Ok(vault_query(config, &proof.account, slots.iter().zip(&proof.slots).map(|(s, p)| slot_query(*s, p)).collect()))
 }
 
 /// The values of the vault's slots that `attestation` proves, in the order asked, if it is an
 /// attestation of exactly the vault's account and those slots, for the configuration's instance
 /// and chain, at the record of `record_slot`, without hops.
-fn vault_slots<const K: usize>(
+pub fn vault_slots<const K: usize>(
     config: &BridgeConfig,
     record_slot: u64,
     attestation: &Attestation,
     slots: [Word; K],
 ) -> Option<[Word; K]> {
     if attestation.instance_id != config.instance_id
-        || attestation.chain_id != config.terms.evm_chain_id
+        || attestation.chain_id != config.evm_chain_id
         || attestation.slot != record_slot
         || attestation.hops != 0
         || attestation.statements.len() != K + 1
     {
         return None;
     }
-    let vault = config.terms.vault;
+    let vault = config.vault;
     let [Statement { fact: Fact::Account { address, .. }, .. }, rest @ ..] = attestation.statements.as_slice() else {
         return None;
     };
@@ -536,7 +1023,8 @@ pub fn check_import(
     }
     Ok(RootState {
         config_id: *config_id,
-        terms: config.terms,
+        evm_chain_id: config.evm_chain_id,
+        vault: config.vault,
         leaf_count: pending.leaf_count,
         root,
         record_slot: pending.record_slot,
@@ -559,7 +1047,60 @@ pub fn check_pairing(
     Ok(())
 }
 
-/// What a verified claim gives: the nullifier, the denomination and the destination's kind.
+/// Check the reply to `Register`: the vault holds `entry`'s hash and schedule 0's; the token's
+/// state, whose schedules cover the leaves up to the attested count if schedule 1 does not exist
+/// yet (else up to schedule 0's start: `ImportFees` extends it).
+pub fn check_register(
+    config: &BridgeConfig,
+    config_id: &Root,
+    entry: &TokenEntry,
+    schedule: &FeeSchedule,
+    record_slot: u64,
+    attestation: &Attestation,
+) -> Result<TokenState, u8> {
+    let [held_entry, held_fees, next_fees, count] =
+        vault_slots(config, record_slot, attestation, register_slots(&entry.token)).ok_or(code::IMPORT_MISMATCH)?;
+    let count = u64_of(&count).ok_or(code::IMPORT_MISMATCH)?;
+    if held_entry != entry.hash() || held_fees != schedule.hash(&entry.token) || schedule.from_leaf > count {
+        return Err(code::IMPORT_MISMATCH);
+    }
+    let known_until = if next_fees == [0u8; 32] { count } else { schedule.from_leaf };
+    Ok(TokenState {
+        config_id: *config_id,
+        evm_chain_id: config.evm_chain_id,
+        vault: config.vault,
+        entry: entry.clone(),
+        schedules: alloc::vec![schedule.clone()],
+        known_until,
+        controls: config.controls,
+        gate: Gate::new(config.controls.token_cap),
+    })
+}
+
+/// Check the reply to `ImportFees`: the vault's slot of schedule `index` holds `schedule`'s hash
+/// (or zero, for `None`); gives the attested leaf count.
+pub fn check_fees(
+    config: &BridgeConfig,
+    token: &Address,
+    index: u64,
+    schedule: &Option<FeeSchedule>,
+    record_slot: u64,
+    attestation: &Attestation,
+) -> Result<u64, u8> {
+    let [held, count] =
+        vault_slots(config, record_slot, attestation, fees_slots(token, index)).ok_or(code::IMPORT_MISMATCH)?;
+    let expected = match schedule {
+        Some(s) if s.index == index => s.hash(token),
+        Some(_) => return Err(code::IMPORT_MISMATCH),
+        None => [0u8; 32],
+    };
+    if held != expected {
+        return Err(code::IMPORT_MISMATCH);
+    }
+    u64_of(&count).ok_or(code::IMPORT_MISMATCH)
+}
+
+/// What a verified claim gives: the nullifier, the amount and the destination's kind.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Claimed {
     pub nullifier: Root,
@@ -568,20 +1109,18 @@ pub struct Claimed {
 }
 
 /// The claim statement (SPEC-v2 §3.3, D9, D13) against an imported root: the kind is known, the
-/// leaf index is below the root's count, the token is the configuration's and the amount one of
-/// its denominations; then the bridge core recomputes `C` and the leaf from the witness, checks
-/// the path (direction bits = the leaf index) to the root, and gives `N = H(s ‖ fid)` with the
-/// configuration's chain and vault.
-pub fn verify_claim(root: &RootState, w: &ClaimWitness) -> Result<Claimed, u8> {
+/// leaf index is below the root's count and inside the claimed fee schedule range; then the
+/// bridge core recomputes `C` and the leaf from the witness, checks the path (direction bits = the
+/// leaf index) to the root, and gives `N = H(s ‖ fid)` with the configuration's chain and vault.
+/// The token and the denomination are the token actor's to check (`Issue`).
+pub fn verify_claim(root: &RootState, w: &ClaimWitness, range: &ScheduleRange) -> Result<Claimed, u8> {
     let kind = DestKind::from_byte(w.kind).ok_or(code::CLAIM_INVALID)?;
     if w.leaf_index >= root.leaf_count {
         return Err(code::LEAF_NOT_IMPORTED);
     }
+    range.covers(w.leaf_index)?;
     let directions = u32::try_from(w.leaf_index).map_err(|_| code::LEAF_NOT_IMPORTED)?;
-    if w.token != root.terms.token {
-        return Err(code::NOT_REGISTERED);
-    }
-    let amount = root.terms.denomination(&w.amount).ok_or(code::NOT_REGISTERED)?;
+    let amount = u128_of(&w.amount).ok_or(code::NOT_REGISTERED)?;
     let siblings: [Root; TREE_DEPTH] = w.path.as_slice().try_into().map_err(|_| code::CLAIM_INVALID)?;
     let witness = inbound::ClaimWitness {
         depositor: w.depositor,
@@ -593,13 +1132,8 @@ pub fn verify_claim(root: &RootState, w: &ClaimWitness) -> Result<Claimed, u8> {
         kind,
         dest: w.dest,
     };
-    let nullifier = inbound::verify_claim(
-        &root.root,
-        &witness,
-        &chain_id_u256(root.terms.evm_chain_id),
-        &root.terms.vault,
-    )
-    .map_err(|_| code::CLAIM_INVALID)?;
+    let nullifier = inbound::verify_claim(&root.root, &witness, &chain_id_u256(root.evm_chain_id), &root.vault)
+        .map_err(|_| code::CLAIM_INVALID)?;
     Ok(Claimed { nullifier, amount, kind })
 }
 
@@ -651,43 +1185,53 @@ macro_rules! exit_codes {
 
 pub mod code {
     exit_codes! {
-        /// A message that does not decode, or that the bridge does not take (`Sunset`: not built).
+        /// A message that does not decode or that this actor does not take, or values outside the
+        /// specified bounds: more than eight denominations, unsorted or zero, not multiples of a
+        /// power-of-ten LEZ unit, a fee above 1% of its denomination, a protocol fee in schedule 0,
+        /// a fee change with less than seven days' notice, a freeze beyond 30 days, a cap below the
+        /// floor.
         BAD_MESSAGE = 240;
         /// Stored state that does not decode, or is another role's, or a transaction-internal
-        /// step (a pending import or claim) found where none can be.
+        /// step (a pending attestation or claim) found where none can be.
         BAD_STATE = 241;
-        /// The receiver is not the actor the message names.
-        WRONG_RECEIVER = 242;
-        /// An internal message from an actor other than the expected one, or a read with nobody
-        /// to reply to.
+        /// Mints or burns frozen (of the token, or of the whole configuration), or an import
+        /// after `Sunset`.
+        FROZEN = 242;
+        /// An internal message from an actor other than the expected one, a read with nobody to
+        /// reply to, or a receiver that is not the actor the message names.
         WRONG_SENDER = 243;
-        /// `Init` of a configuration that exists, or a second import at the same leaf count.
+        /// A write-once account already written: the configuration, a root at the same leaf
+        /// count, a token's entry, a burn note, the sunset.
         ALREADY_WRITTEN = 244;
         /// No configuration (an import before `Init`), or no imported root (a claim).
         NOT_FOUND = 245;
         /// The vault's slot 2 does not hold the configuration's id.
         PAIRING_MISMATCH = 246;
-        /// The attested facts are not the vault's slots with the message's root and count (or of
-        /// another instance, chain or record).
+        /// The attested facts are not the vault's slots holding what the message says (the root
+        /// and count, the registry entry, a fee schedule, a schedule out of order), or are of
+        /// another instance, chain or record.
         IMPORT_MISMATCH = 247;
-        /// A leaf index at or above the imported root's leaf count.
+        /// A leaf index at or above the imported root's leaf count, or outside the fee schedule
+        /// range the claim names, or beyond the leaves the imported fee schedules cover.
         LEAF_NOT_IMPORTED = 248;
         /// The opening, the leaf and the path do not hash to the root (a wrong leaf, path or
         /// destination), or an unknown kind.
         CLAIM_INVALID = 249;
         /// The deposit's nullifier is spent.
         ALREADY_CLAIMED = 250;
-        /// A token other than the configuration's, or an amount that is not one of its
-        /// denominations.
+        /// A token with no registry entry in the configuration, or an amount that is not one of
+        /// its denominations.
         NOT_REGISTERED = 251;
         /// A destination this path cannot credit: a plaintext claim of a private-kind deposit, or
         /// a private-kind claim not run as its destination.
         WRONG_DESTINATION = 252;
-        /// A burn not authorised by its holder, or not a top-level call or private root (D10).
+        /// A burn not authorised by its holder, or not a top-level call or private root (D10); a
+        /// control message (`Sunset`, `Freeze`, `SetCap`) not from the configured role, or not a
+        /// top-level call at its own actor.
         NOT_AUTHORIZED = 253;
         /// A holding smaller than the denomination burned.
         INSUFFICIENT_BALANCE = 254;
-        /// A burn note that is already published.
-        BURN_EXISTS = 255;
+        /// The token's or the global mint or burn bucket holds less than the amount.
+        CAPPED = 255;
     }
 }
