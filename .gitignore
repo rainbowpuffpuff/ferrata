@@ -1,7 +1,46 @@
+# The sub-projects keep their own .gitignore files; this one lists, for the whole repository, what
+# is never committed.
+
+# Build outputs
 /target
+/bench/target
+/bench/exec/target
+/lez/target
+/lez/guests/*/target
+/bridge/target
+/bridge/guests/target
+/checkpoint/target
+/checkpoint/guests/target
+/checkpoint/guests-plain/target
+__pycache__/
+*.pyc
+
+# Foundry: dependencies (installed with forge install --no-git at the pins in vault/README.md and
+# bridge/README.md) and build output
+/vault/lib/
+/vault/out/
+/vault/cache/
+/vault/broadcast/
+/vault/snapshots/
+/bridge/evm-verify/lib/
+/bridge/evm-verify/out/
+/bridge/evm-verify/cache/
+/bridge/evm-verify/broadcast/
+
 # Downloaded vectors (scripts/fetch-vectors.sh); vectors/acc-leaf.json is generated and committed.
 /vectors/*
 !/vectors/acc-leaf.json
-/bench/target
-# Foundry dependencies of bridge/evm-verify, installed with forge install --no-git (bridge/README.md)
-/bridge/evm-verify/lib/
+
+# Generated fixtures, prover scratch and re-runs the sub-projects do not commit
+/checkpoint/fixtures/
+/checkpoint/artifacts/work/
+/checkpoint/artifacts/*/receipt-succinct.bin
+/checkpoint/results/*-build.log
+/bridge/artifacts/work/
+/bridge/artifacts/rerun/
+/bridge/artifacts/rerun-lowload/
+/bridge/artifacts/rerun-quiet/
+/bridge/tmp/
+/vault/notes/
+/docs/design/finality-rule/results/*.tmp
+/docs/design/finality-rule/results/run-all.log
