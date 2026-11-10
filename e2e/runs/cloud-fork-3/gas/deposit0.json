@@ -1,0 +1,24 @@
+{
+ "node": "ethereum-sepolia-rpc.publicnode.com",
+ "block": 12107461,
+ "blockGasLimit": 200000000,
+ "cap": 200000000,
+ "executionCap": 16777216,
+ "margin": 1.25,
+ "nodeCalls": 4,
+ "transactions": [
+  {
+   "stage": "deposit0",
+   "what": "depositETH",
+   "to": "0xd0b5fcc0b47d8e6f514f9d246bb0b416b2048af7",
+   "time": 1794348036,
+   "estimateGas": 557701,
+   "limit": 697127,
+   "overExecutionCap": false,
+   "gasUsed": 552152,
+   "status": 1,
+   "foundryGasUsed": 193072
+  }
+ ],
+ "failures": []
+}
