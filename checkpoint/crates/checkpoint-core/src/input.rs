@@ -14,10 +14,16 @@
 //! Support       = block_index u32 ‖ Inscription
 //! CheckpointInput = Config ‖ State ‖ vec<ConfigChange> ‖ vec<bytes(block)> ‖ t_index u32 ‖
 //!                   echo_nonce(32) ‖ Inscription (of T) ‖ vec<Support> ‖ vec<SegmentJournal(125)>
+//! Attestation   = channel_key ‖ att_key ‖ certificate(64) ‖ tip_id u64 ‖ tip_hash ‖ final_msg_id ‖
+//!                 signature(64)                       (264 bytes, attestor_core::SignedAttestation)
+//! CheckpointInputB = Config ‖ State ‖ vec<ConfigChange> ‖ vec<bytes(block)> ‖ t_index u32 ‖
+//!                    vec<Attestation> ‖ vec<SegmentJournal(125)>            (rule (B))
 //! SegmentInput  = Config ‖ State ‖ vec<bytes(block)>
 //! ```
 
 use alloc::vec::Vec;
+
+use attestor_core::{SignedAttestation, SIGNED_ATTESTATION_LEN};
 
 use crate::journal::{SegmentJournal, SEGMENT_JOURNAL_LEN};
 use crate::mantle::{ConfigChange, ElidedInscription};
@@ -48,6 +54,20 @@ pub struct CheckpointInput<'a> {
     pub producer: ElidedInscription<'a>,
     pub support: Vec<Support<'a>>,
     /// Journals of segments proving `P → … → parent`, verified by the guest with `env::verify`.
+    pub segments: Vec<SegmentJournal>,
+}
+
+/// Rule (B) (SPEC-v3 D7, D13): as [`CheckpointInput`], with final-tier attestations in place of the
+/// echo nonce (always 0), `T`'s inscription and the support inscriptions. `blocks` run from
+/// `parent.tip_id + 1` to the furthest attested tip; `blocks[t_index]` is `T`.
+#[derive(Clone, Debug)]
+pub struct CheckpointInputB<'a> {
+    pub config: Config,
+    pub parent: State,
+    pub config_changes: Vec<ConfigChange<'a>>,
+    pub blocks: Vec<&'a [u8]>,
+    pub t_index: u32,
+    pub attestations: Vec<SignedAttestation>,
     pub segments: Vec<SegmentJournal>,
 }
 
@@ -125,27 +145,50 @@ impl Writer {
         }
         self
     }
+
+    pub fn config_changes(&mut self, changes: &[ConfigChange<'_>]) -> &mut Self {
+        self.len(changes.len());
+        for c in changes {
+            self.bytes(c.ops).u8(c.op_index).len(c.signatures.len());
+            for (index, sig) in &c.signatures {
+                self.u16(*index).raw(*sig);
+            }
+        }
+        self
+    }
+
+    pub fn segments(&mut self, segments: &[SegmentJournal]) -> &mut Self {
+        self.len(segments.len());
+        for s in segments {
+            self.raw(&s.encode());
+        }
+        self
+    }
 }
 
 impl CheckpointInput<'_> {
     pub fn encode(&self) -> Vec<u8> {
         let mut w = Writer::default();
-        w.config(&self.config).state(&self.parent).len(self.config_changes.len());
-        for c in &self.config_changes {
-            w.bytes(c.ops).u8(c.op_index).len(c.signatures.len());
-            for (index, sig) in &c.signatures {
-                w.u16(*index).raw(*sig);
-            }
-        }
+        w.config(&self.config).state(&self.parent).config_changes(&self.config_changes);
         w.blocks(&self.blocks).u32(self.t_index).raw(&self.echo_nonce).inscription(&self.producer);
         w.len(self.support.len());
         for s in &self.support {
             w.u32(s.block_index).inscription(&s.inscription);
         }
-        w.len(self.segments.len());
-        for s in &self.segments {
-            w.raw(&s.encode());
+        w.segments(&self.segments);
+        w.0
+    }
+}
+
+impl CheckpointInputB<'_> {
+    pub fn encode(&self) -> Vec<u8> {
+        let mut w = Writer::default();
+        w.config(&self.config).state(&self.parent).config_changes(&self.config_changes);
+        w.blocks(&self.blocks).u32(self.t_index).len(self.attestations.len());
+        for a in &self.attestations {
+            w.raw(&a.encode());
         }
+        w.segments(&self.segments);
         w.0
     }
 }
@@ -217,23 +260,37 @@ fn blocks<'a>(r: &mut Reader<'a>) -> Result<Vec<&'a [u8]>, Error> {
     Ok(out)
 }
 
+fn config_changes<'a>(r: &mut Reader<'a>) -> Result<Vec<ConfigChange<'a>>, Error> {
+    let n = r.len_u32("config changes", 9)?;
+    let mut config_changes = Vec::with_capacity(n);
+    for _ in 0..n {
+        let ops = r.bytes_u32("config ops")?;
+        let op_index = r.u8()?;
+        let k = r.len_u32("config signatures", 66)?;
+        let mut signatures = Vec::with_capacity(k);
+        for _ in 0..k {
+            signatures.push((r.u16_le()?, r.array()?));
+        }
+        config_changes.push(ConfigChange { ops, op_index, signatures });
+    }
+    Ok(config_changes)
+}
+
+fn segments(r: &mut Reader<'_>) -> Result<Vec<SegmentJournal>, Error> {
+    let n = r.len_u32("segments", SEGMENT_JOURNAL_LEN)?;
+    let mut segments = Vec::with_capacity(n);
+    for _ in 0..n {
+        segments.push(SegmentJournal::decode(r.take(SEGMENT_JOURNAL_LEN)?)?);
+    }
+    Ok(segments)
+}
+
 impl<'a> CheckpointInput<'a> {
     pub fn decode(bytes: &'a [u8]) -> Result<Self, Error> {
         let mut r = Reader::new(bytes);
         let config = config(&mut r)?;
         let parent = state(&mut r)?;
-        let n = r.len_u32("config changes", 9)?;
-        let mut config_changes = Vec::with_capacity(n);
-        for _ in 0..n {
-            let ops = r.bytes_u32("config ops")?;
-            let op_index = r.u8()?;
-            let k = r.len_u32("config signatures", 66)?;
-            let mut signatures = Vec::with_capacity(k);
-            for _ in 0..k {
-                signatures.push((r.u16_le()?, r.array()?));
-            }
-            config_changes.push(ConfigChange { ops, op_index, signatures });
-        }
+        let config_changes = config_changes(&mut r)?;
         let blocks = blocks(&mut r)?;
         let t_index = r.u32_le()?;
         let echo_nonce = *r.array()?;
@@ -243,13 +300,28 @@ impl<'a> CheckpointInput<'a> {
         for _ in 0..n {
             support.push(Support { block_index: r.u32_le()?, inscription: inscription(&mut r)? });
         }
-        let n = r.len_u32("segments", SEGMENT_JOURNAL_LEN)?;
-        let mut segments = Vec::with_capacity(n);
-        for _ in 0..n {
-            segments.push(SegmentJournal::decode(r.take(SEGMENT_JOURNAL_LEN)?)?);
-        }
+        let segments = segments(&mut r)?;
         r.finish()?;
         Ok(Self { config, parent, config_changes, blocks, t_index, echo_nonce, producer, support, segments })
+    }
+}
+
+impl<'a> CheckpointInputB<'a> {
+    pub fn decode(bytes: &'a [u8]) -> Result<Self, Error> {
+        let mut r = Reader::new(bytes);
+        let config = config(&mut r)?;
+        let parent = state(&mut r)?;
+        let config_changes = config_changes(&mut r)?;
+        let blocks = blocks(&mut r)?;
+        let t_index = r.u32_le()?;
+        let n = r.len_u32("attestations", SIGNED_ATTESTATION_LEN)?;
+        let mut attestations = Vec::with_capacity(n);
+        for _ in 0..n {
+            attestations.push(SignedAttestation::decode(r.array()?));
+        }
+        let segments = segments(&mut r)?;
+        r.finish()?;
+        Ok(Self { config, parent, config_changes, blocks, t_index, attestations, segments })
     }
 }
 

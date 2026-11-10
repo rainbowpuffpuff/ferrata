@@ -44,7 +44,8 @@ pub enum Error {
     InvalidKey,
     /// An Ed25519 signature that does not verify (`verify_strict`).
     BadSignature,
-    /// An inscription signer or configuration signer that is not in the current key set.
+    /// An inscription signer, configuration signer or (rule (B)) attesting channel key that is not
+    /// in the current key set.
     NotAccredited,
 
     // ---- the rule (SPEC-v2 §4.2) ---------------------------------------------------------------
@@ -75,6 +76,19 @@ pub enum Error {
     /// A configuration op whose `posting_timeframe` differs from the one bound in the current
     /// key-set hash, or is 0 (SPEC-v3 D3).
     ConfigTimeframe { current: u32, proposed: u32 },
+
+    // ---- rule (B): final-tier attestations (SPEC-v3 D7, D13) ----------------------------------
+    /// An attestation whose channel key did not certify its attestation key for this deployment.
+    BadCertificate,
+    /// An attestation whose key did not sign the final-tier message v2 for this deployment, the
+    /// live key set's hash and the tip it names.
+    BadAttestation,
+    /// Two attestations by one channel key, or one attestation key under two channel keys.
+    DuplicateAttestor,
+    /// An attested tip that is neither `T` nor a block after `T` on the input's hash-linked path.
+    NotADescendant { tip_id: u64 },
+    /// Fewer attestations than the threshold.
+    InsufficientAttestations { have: u32, need: u32 },
 
     // ---- composition ---------------------------------------------------------------------------
     /// A segment journal of another configuration, or one that does not decode.

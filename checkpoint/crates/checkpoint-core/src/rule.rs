@@ -16,6 +16,8 @@
 //!    checked but not counted). With `n = 1`, allowed only when `nMin ≤ 1`, the one key is `D` and
 //!    the supporter.
 //! 5. The 17-word journal (SPEC-v3 D3 item 5).
+//!
+//! Steps 1–3 are [`up_to_tip`], which rule (B) ([`crate::rule_b`]) shares.
 
 use alloc::vec::Vec;
 
@@ -61,14 +63,16 @@ impl<'a> Visitor<'a> for CallsTo<'_, 'a> {
 }
 
 /// One block, checked against its predecessor `(prev_id, prev_hash)`.
-struct LinkedBlock<'a> {
-    id: u64,
-    hash: Hash,
+pub(crate) struct LinkedBlock<'a> {
+    pub(crate) id: u64,
+    pub(crate) hash: Hash,
     /// Calls to the bridge program executed publicly, with whether their transaction reverted.
-    calls: Vec<(&'a [u8], bool)>,
+    pub(crate) calls: Vec<(&'a [u8], bool)>,
 }
 
-fn link_block<'a>(
+/// Parses `bytes` strictly, recomputes its hash and checks it against the stored one, its id
+/// (`prev_id + 1`) and its `prev_block_hash`.
+pub(crate) fn link_block<'a>(
     index: u32,
     bytes: &'a [u8],
     prev_id: u64,
@@ -199,23 +203,40 @@ fn apply_config_change(state: &mut State, change: &ConfigChange<'_>, channel_id:
     Ok(())
 }
 
-/// The full checkpoint rule (module docs). Refuses (returns `Err`) rather than producing a weaker
-/// journal.
-pub fn run_checkpoint(input: &CheckpointInput<'_>) -> Result<Outcome, Error> {
-    let config = &input.config;
+/// What steps 1–3 leave for the support check of either rule.
+pub(crate) struct UpToTip {
+    pub(crate) config_id: Hash,
+    /// `P`, the journal's `parentState`.
+    pub(crate) parent_state: Hash,
+    /// The state at `T`, with the key set after this proof's rotations (the set in `newState`).
+    pub(crate) state: State,
+    pub(crate) t_index: usize,
+}
+
+/// Steps 1–3 of the module docs, shared by both rules: `lezConfigId`; the parent's frontier; the
+/// segments chaining to the parent; the key rotations with the floors on every set reached; the
+/// blocks up to `T` linked and extracted.
+pub(crate) fn up_to_tip(
+    config: &Config,
+    parent: &State,
+    segments: &[SegmentJournal],
+    config_changes: &[ConfigChange<'_>],
+    blocks: &[&[u8]],
+    t_index: u32,
+) -> Result<UpToTip, Error> {
     let config_id = config.config_id();
-    if !input.parent.burns.is_canonical() {
+    if !parent.burns.is_canonical() {
         return Err(Error::BadParentFrontier);
     }
 
     // P: the parent itself, or the start of the first segment when segments lead up to it.
-    let continued_from = input.parent.digest();
-    let parent_state = match (input.segments.first(), input.segments.last()) {
+    let continued_from = parent.digest();
+    let parent_state = match (segments.first(), segments.last()) {
         (Some(first), Some(last)) => {
-            if input.segments.iter().any(|s| s.lez_config_id != config_id) {
+            if segments.iter().any(|s| s.lez_config_id != config_id) {
                 return Err(Error::SegmentConfigMismatch);
             }
-            let chained = input.segments.windows(2).all(|w| w[0].end_state == w[1].start_state);
+            let chained = segments.windows(2).all(|w| w[0].end_state == w[1].start_state);
             if !chained || last.end_state != continued_from {
                 return Err(Error::SegmentChainBroken);
             }
@@ -228,19 +249,28 @@ pub fn run_checkpoint(input: &CheckpointInput<'_>) -> Result<Outcome, Error> {
     // Every key set reached must meet the floors; the parent's own set is checked only when no
     // change replaces it (a genesis channel may start below them and rotate up in its first
     // checkpoint).
-    let mut state = input.parent.clone();
-    for change in &input.config_changes {
+    let mut state = parent.clone();
+    for change in config_changes {
         apply_config_change(&mut state, change, &config.channel_id)?;
         check_key_set(&state.keys, config)?;
     }
     check_key_set(&state.keys, config)?;
 
     // Blocks up to T: link and extract.
-    let t_index = usize::try_from(input.t_index).map_err(|_| Error::BadTipIndex)?;
-    if t_index >= input.blocks.len() {
+    let t_index = usize::try_from(t_index).map_err(|_| Error::BadTipIndex)?;
+    if t_index >= blocks.len() {
         return Err(Error::BadTipIndex);
     }
-    extend(&mut state, &config_id, &config.bridge_header, &input.blocks[..=t_index])?;
+    extend(&mut state, &config_id, &config.bridge_header, &blocks[..=t_index])?;
+    Ok(UpToTip { config_id, parent_state, state, t_index })
+}
+
+/// The full checkpoint rule (module docs). Refuses (returns `Err`) rather than producing a weaker
+/// journal.
+pub fn run_checkpoint(input: &CheckpointInput<'_>) -> Result<Outcome, Error> {
+    let config = &input.config;
+    let UpToTip { config_id, parent_state, state, t_index } =
+        up_to_tip(config, &input.parent, &input.segments, &input.config_changes, &input.blocks, input.t_index)?;
 
     // Blocks after T: link, and find Y.
     let echo_wanted = input.echo_nonce != [0u8; 32];
