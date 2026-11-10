@@ -1335,3 +1335,10 @@ Bedrock's storage gas price for the zone's inscriptions rose from 1 to 4 within 
 Reproduce (Linux x86-64; ports and packages in `live/README.md`; the guest binaries as it says):
 `lez/live/run.sh build`, `lez/live/run.sh build-bedrock`, `lez/live/run.sh run`,
 `python3 lez/live/tables.py`, `lez/live/verify-run.sh`.
+
+**Kept running ([`lab/`](lab/README.md)).** The same zone, made to persist on Modal and driven
+every two hours, keeps two instances of this branch's program (rebuilt at another path: image
+`61b7b70d…`) following Sepolia, from the period-1378 bootstrap through the Gloas fork, and
+mainnet, from a finalized checkpoint, over the public job path; every session is recorded and
+the record replays offline (`lez/lab/lab.sh verify`). The numbers and the claim are in
+`lab/README.md`.
