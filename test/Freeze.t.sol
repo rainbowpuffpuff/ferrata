@@ -45,12 +45,10 @@ contract FreezeTest is VaultTestBase {
         (ok, ret) = address(vault).call(abi.encodeCall(FerrataVault.release, (r, SEAL)));
     }
 
-    function _tryAcceptRoot() internal returns (bool ok, bytes memory ret) {
-        bytes32 root = keccak256(abi.encode("root", nonce++));
-        _proveRoot(_rootJournal(root, LEZ_BLOCK, BURN_COUNT, MIN_DEPTH));
-        (ok, ret) = address(vault).call(
-            abi.encodeCall(FerrataVault.acceptBurnRoot, (root, LEZ_BLOCK, BURN_COUNT, MIN_DEPTH, SEAL))
-        );
+    function _trySubmitCandidate() internal returns (bool ok, bytes memory ret) {
+        FerrataVault.Checkpoint memory c = _nextCheckpoint(keccak256(abi.encode("root", nonce++)));
+        _proveCheckpoint(_checkpointJournal(c));
+        (ok, ret) = address(vault).call(abi.encodeCall(FerrataVault.submitCandidate, (c, SEAL)));
     }
 
     /// @dev expectedError == 0 means the call must succeed; otherwise it must fail with exactly that error.
@@ -65,14 +63,16 @@ contract FreezeTest is VaultTestBase {
 
     // ---- tests ----------------------------------------------------------------------------------------------------
 
-    /// @notice All 16 combinations of {global deposits, global releases, DAI deposits, DAI releases} frozen.
-    ///         ETH (no per-token freeze) is the bystander that shows per-token freezes stay per token.
+    /// @notice All 32 combinations of {global deposits, global releases, DAI deposits, DAI releases, candidate
+    ///         submission} frozen. ETH (no per-token freeze) is the bystander that shows per-token freezes stay per
+    ///         token, and each freeze stops exactly its own path.
     function test_freeze_everyCombination() public {
-        for (uint256 mask = 0; mask < 16; mask++) {
+        for (uint256 mask = 0; mask < 32; mask++) {
             bool globalDeposits = (mask & 1) != 0;
             bool globalReleases = (mask & 2) != 0;
             bool daiDeposits = (mask & 4) != 0;
             bool daiReleases = (mask & 8) != 0;
+            bool candidates = (mask & 16) != 0;
 
             uint256 snapshot = vm.snapshotState();
             vm.startPrank(freezer);
@@ -80,6 +80,7 @@ contract FreezeTest is VaultTestBase {
             vault.setReleasesFrozen(globalReleases);
             vault.setTokenDepositsFrozen(address(dai), daiDeposits);
             vault.setTokenReleasesFrozen(address(dai), daiReleases);
+            vault.setCandidatesFrozen(candidates);
             vm.stopPrank();
 
             bytes4 ethDepositError = globalDeposits ? FerrataVault.DepositsAreFrozen.selector : bytes4(0);
@@ -99,9 +100,8 @@ contract FreezeTest is VaultTestBase {
             _assertOutcome(ok, ret, ethReleaseError, "ETH release");
             (ok, ret) = _tryRelease(address(dai));
             _assertOutcome(ok, ret, daiReleaseError, "DAI release");
-            // Root acceptance follows the global release freeze only.
-            (ok, ret) = _tryAcceptRoot();
-            _assertOutcome(ok, ret, ethReleaseError, "acceptBurnRoot");
+            (ok, ret) = _trySubmitCandidate();
+            _assertOutcome(ok, ret, candidates ? FerrataVault.CandidatesAreFrozen.selector : bytes4(0), "candidate");
 
             vm.revertToState(snapshot);
         }
@@ -121,12 +121,16 @@ contract FreezeTest is VaultTestBase {
         vm.expectEmit(true, true, true, true, address(vault));
         emit FerrataVault.TokenReleasesFrozenSet(address(usdc), true);
         vault.setTokenReleasesFrozen(address(usdc), true);
+        vm.expectEmit(true, true, true, true, address(vault));
+        emit FerrataVault.CandidatesFrozenSet(true);
+        vault.setCandidatesFrozen(true);
         vm.stopPrank();
 
         assertTrue(vault.depositsFrozen());
         assertTrue(vault.releasesFrozen());
         assertTrue(vault.tokenDepositsFrozen(address(usdc)));
         assertTrue(vault.tokenReleasesFrozen(address(usdc)));
+        assertTrue(vault.candidatesFrozen());
         assertFalse(vault.tokenDepositsFrozen(address(dai)));
     }
 
@@ -153,30 +157,5 @@ contract FreezeTest is VaultTestBase {
         vault.setReleasesFrozen(false);
         vault.release(r, SEAL); // the same proof, a year later
         assertEq(recipient.balance, 0.1 ether);
-    }
-
-    function test_freeze_releaseDelayRunsFromAcceptanceAfterUnfreeze() public {
-        vm.prank(admin);
-        vault.setReleaseDelay(ETH, 1 days);
-        vm.prank(freezer);
-        vault.setReleasesFrozen(true);
-
-        bytes32 root = keccak256("root proven during the freeze");
-        _proveRoot(_rootJournal(root, LEZ_BLOCK, BURN_COUNT, MIN_DEPTH));
-        vm.expectRevert(FerrataVault.ReleasesAreFrozen.selector);
-        vault.acceptBurnRoot(root, LEZ_BLOCK, BURN_COUNT, MIN_DEPTH, SEAL);
-
-        vm.warp(block.timestamp + 2 days); // longer than the delay
-        vm.prank(freezer);
-        vault.setReleasesFrozen(false);
-        vault.acceptBurnRoot(root, LEZ_BLOCK, BURN_COUNT, MIN_DEPTH, SEAL);
-        assertEq(vault.burnRootAcceptedAt(root), block.timestamp);
-
-        FerrataVault.ReleaseRequest memory r = _request(ETH, 0, recipient, root, keccak256("n"));
-        _proveRelease(_releaseJournal(r));
-        vm.expectRevert(FerrataVault.ReleaseDelayNotElapsed.selector);
-        vault.release(r, SEAL); // the full delay applies after the unfreeze
-        vm.warp(block.timestamp + 1 days);
-        vault.release(r, SEAL);
     }
 }

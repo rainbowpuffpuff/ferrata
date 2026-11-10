@@ -153,10 +153,7 @@ contract ReleaseJournalBindingTest is VaultTestBase {
         FerrataVault other = _deployVault(IRiscZeroVerifier(address(estop)), LEZ_CONFIG_ID);
         _registerDefaultTokens(other);
         _depositInto(other, alice, ETH, 1, keccak256("c3"));
-        RootJournal memory rj = _rootJournal(ROOT_A, LEZ_BLOCK, BURN_COUNT, MIN_DEPTH);
-        rj.vault = address(other);
-        _proveRoot(rj);
-        other.acceptBurnRoot(ROOT_A, LEZ_BLOCK, BURN_COUNT, MIN_DEPTH, SEAL);
+        _acceptRootOn(other, LEZ_CONFIG_ID, ROOT_A);
 
         _proveRelease(_honestJournal()); // valid for `vault` only
         vm.prank(relayer);
@@ -184,11 +181,7 @@ contract ReleaseJournalBindingTest is VaultTestBase {
         FerrataVault other = _deployVault(IRiscZeroVerifier(address(estop)), keccak256("another LEZ configuration"));
         _registerDefaultTokens(other);
         _depositInto(other, alice, ETH, 1, keccak256("c3"));
-        RootJournal memory rj = _rootJournal(ROOT_A, LEZ_BLOCK, BURN_COUNT, MIN_DEPTH);
-        rj.vault = address(other);
-        rj.lezConfigId = keccak256("another LEZ configuration");
-        _proveRoot(rj);
-        other.acceptBurnRoot(ROOT_A, LEZ_BLOCK, BURN_COUNT, MIN_DEPTH, SEAL);
+        _acceptRootOn(other, keccak256("another LEZ configuration"), ROOT_A);
 
         _proveRelease(_honestJournal());
         vm.prank(relayer);
@@ -197,66 +190,155 @@ contract ReleaseJournalBindingTest is VaultTestBase {
     }
 }
 
-/// @notice Every field of the (provisional) burn-root journal is bound, with the same control as above.
-contract RootJournalBindingTest is VaultTestBase {
+/// @notice Every field of the checkpoint journal (spec §4.2 item 5) is bound, both when a candidate is submitted and
+///         when it is finalised: a proof whose journal differs from the vault's reconstruction in exactly one field
+///         is rejected, and the same call then succeeds once its own journal is proven (control).
+contract CheckpointJournalBindingTest is VaultTestBase {
     bytes32 internal constant ROOT = keccak256("burn root");
-    uint32 internal constant DEPTH = MIN_DEPTH + 1;
 
-    function _honestJournal() internal view returns (RootJournal memory) {
-        return _rootJournal(ROOT, LEZ_BLOCK, BURN_COUNT, DEPTH);
+    /// @dev Changes exactly one field of `j`, numbered in journal order after the domain word.
+    function _mutate(CheckpointJournal memory j, uint256 field) internal view {
+        if (field == 0) j.chainId = block.chainid + 1;
+        else if (field == 1) j.vault = address(0xbeef);
+        else if (field == 2) j.lezConfigId = keccak256("another LEZ configuration");
+        else if (field == 3) j.nMin = N_MIN + 1;
+        else if (field == 4) j.tMin = T_MIN + 1;
+        else if (field == 5) j.parentState = keccak256("another parent state");
+        else if (field == 6) j.newState = keccak256("another new state");
+        else if (field == 7) j.burnRoot = keccak256("another burn root");
+        else if (field == 8) j.burnCount = j.burnCount + 1;
+        else if (field == 9) j.importedLeafCount = j.importedLeafCount + 1;
+        else if (field == 10) j.sunset = !j.sunset;
+        else j.echoNonce = keccak256("another echo nonce");
     }
 
-    function _assertMismatchRejected(RootJournal memory proven) internal {
-        _proveRoot(proven);
+    function _checkSubmit(uint256 field) internal {
+        FerrataVault.Checkpoint memory c = _nextCheckpoint(vault, ROOT, 3, false);
+        CheckpointJournal memory proven = _checkpointJournal(c);
+        _mutate(proven, field);
+        _proveCheckpoint(proven);
         vm.expectRevert(MockRiscZeroVerifier.VerificationFailed.selector);
-        vault.acceptBurnRoot(ROOT, LEZ_BLOCK, BURN_COUNT, DEPTH, SEAL);
-        assertEq(vault.burnRootAcceptedAt(ROOT), 0);
+        vault.submitCandidate(c, SEAL);
 
-        _proveRoot(_honestJournal()); // control
-        vault.acceptBurnRoot(ROOT, LEZ_BLOCK, BURN_COUNT, DEPTH, SEAL);
-        assertEq(vault.burnRootAcceptedAt(ROOT), block.timestamp);
+        _proveCheckpoint(_checkpointJournal(c)); // control
+        vault.submitCandidate(c, SEAL);
+        (,,,,, uint256 submittedAt,,) = vault.candidates(c.newState);
+        assertEq(submittedAt, block.timestamp);
     }
 
-    function test_rootJournal_bindsChainId() public {
-        RootJournal memory j = _honestJournal();
-        j.chainId = block.chainid + 1;
-        _assertMismatchRejected(j);
+    function _checkFinalize(uint256 field) internal {
+        FerrataVault.Checkpoint memory c = _nextCheckpoint(vault, ROOT, 3, false);
+        _submit(c);
+        vm.warp(block.timestamp + DELTA);
+        vm.roll(block.number + 1);
+        uint256 beaconIndex = vault.recordBeacon();
+        (, bytes32 nonce) = vault.beacons(beaconIndex);
+        c.echoNonce = nonce;
+
+        CheckpointJournal memory proven = _checkpointJournal(c);
+        _mutate(proven, field);
+        _proveCheckpoint(proven);
+        vm.expectRevert(MockRiscZeroVerifier.VerificationFailed.selector);
+        vault.finalize(beaconIndex, c, SEAL);
+
+        _proveCheckpoint(_checkpointJournal(c)); // control
+        vault.finalize(beaconIndex, c, SEAL);
+        assertEq(vault.finalState(), c.newState);
     }
 
-    function test_rootJournal_bindsVault() public {
-        RootJournal memory j = _honestJournal();
-        j.vault = makeAddr("another vault");
-        _assertMismatchRejected(j);
+    function test_checkpointJournal_submit_bindsChainId() public {
+        _checkSubmit(0);
     }
 
-    function test_rootJournal_bindsLezConfigId() public {
-        RootJournal memory j = _honestJournal();
-        j.lezConfigId = keccak256("another LEZ configuration");
-        _assertMismatchRejected(j);
+    function test_checkpointJournal_submit_bindsVault() public {
+        _checkSubmit(1);
     }
 
-    function test_rootJournal_bindsLezBlockId() public {
-        RootJournal memory j = _honestJournal();
-        j.lezBlockId = LEZ_BLOCK + 1;
-        _assertMismatchRejected(j);
+    function test_checkpointJournal_submit_bindsLezConfigId() public {
+        _checkSubmit(2);
     }
 
-    function test_rootJournal_bindsBurnRoot() public {
-        RootJournal memory j = _honestJournal();
-        j.burnRoot = keccak256("another burn root");
-        _assertMismatchRejected(j);
+    function test_checkpointJournal_submit_bindsNMin() public {
+        _checkSubmit(3);
     }
 
-    function test_rootJournal_bindsBurnCount() public {
-        RootJournal memory j = _honestJournal();
-        j.burnCount = BURN_COUNT + 1;
-        _assertMismatchRejected(j);
+    function test_checkpointJournal_submit_bindsTMin() public {
+        _checkSubmit(4);
     }
 
-    function test_rootJournal_bindsDepth() public {
-        // The proof attests a shallower depth than the caller claims.
-        RootJournal memory j = _honestJournal();
-        j.depth = MIN_DEPTH;
-        _assertMismatchRejected(j);
+    function test_checkpointJournal_submit_bindsParentState() public {
+        _checkSubmit(5);
+    }
+
+    function test_checkpointJournal_submit_bindsNewState() public {
+        _checkSubmit(6);
+    }
+
+    function test_checkpointJournal_submit_bindsBurnRoot() public {
+        _checkSubmit(7);
+    }
+
+    function test_checkpointJournal_submit_bindsBurnCount() public {
+        _checkSubmit(8);
+    }
+
+    function test_checkpointJournal_submit_bindsImportedLeafCount() public {
+        _checkSubmit(9);
+    }
+
+    function test_checkpointJournal_submit_bindsSunset() public {
+        _checkSubmit(10);
+    }
+
+    function test_checkpointJournal_submit_bindsEchoNonce() public {
+        _checkSubmit(11);
+    }
+
+    function test_checkpointJournal_finalize_bindsChainId() public {
+        _checkFinalize(0);
+    }
+
+    function test_checkpointJournal_finalize_bindsVault() public {
+        _checkFinalize(1);
+    }
+
+    function test_checkpointJournal_finalize_bindsLezConfigId() public {
+        _checkFinalize(2);
+    }
+
+    function test_checkpointJournal_finalize_bindsNMin() public {
+        _checkFinalize(3);
+    }
+
+    function test_checkpointJournal_finalize_bindsTMin() public {
+        _checkFinalize(4);
+    }
+
+    function test_checkpointJournal_finalize_bindsParentState() public {
+        _checkFinalize(5);
+    }
+
+    function test_checkpointJournal_finalize_bindsNewState() public {
+        _checkFinalize(6);
+    }
+
+    function test_checkpointJournal_finalize_bindsBurnRoot() public {
+        _checkFinalize(7);
+    }
+
+    function test_checkpointJournal_finalize_bindsBurnCount() public {
+        _checkFinalize(8);
+    }
+
+    function test_checkpointJournal_finalize_bindsImportedLeafCount() public {
+        _checkFinalize(9);
+    }
+
+    function test_checkpointJournal_finalize_bindsSunset() public {
+        _checkFinalize(10);
+    }
+
+    function test_checkpointJournal_finalize_bindsEchoNonce() public {
+        _checkFinalize(11);
     }
 }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 pragma solidity ^0.8.26;
 
+import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 import {FerrataVault} from "../src/FerrataVault.sol";
@@ -10,17 +11,15 @@ import {VaultTestBase} from "./utils/VaultTestBase.sol";
 ///         The vault never receives LEZ-side data, so the first two tests pass by construction. They exist to fail
 ///         if a later change adds an argument, event field or storage write that carries such data: every storage
 ///         slot a deposit or release writes is listed explicitly, and the one event each emits is checked field by
-///         field. Mapping slots are computed from the layout in README.md (`forge inspect FerrataVault storageLayout`).
+///         field. Mapping slots are located with forge-std's stdStorage, so the list stays exact as the layout grows.
 contract PrivacyTest is VaultTestBase {
+    using stdStorage for StdStorage;
+
     // LEZ-side values of one user. A real client derives them from the wallet seed; here they are constants.
     bytes32 internal constant LEZ_DESTINATION = keccak256("LEZ destination account");
     bytes32 internal constant BLINDING = keccak256("blinding for (depositor, index), derived from the seed");
     bytes32 internal constant LEZ_BURN_ACCOUNT = keccak256("LEZ account the burn came from");
     bytes32 internal constant BURN_SECRET = keccak256("burn secret, derived from the seed");
-
-    uint256 internal constant ESCROWED_SLOT = 44;
-    uint256 internal constant DEPOSIT_COUNT_SLOT = 45;
-    uint256 internal constant NULLIFIER_USED_SLOT = 47;
 
     function _contains(bytes memory haystack, bytes32 needle) internal pure returns (bool) {
         if (haystack.length < 32) return false;
@@ -92,8 +91,9 @@ contract PrivacyTest is VaultTestBase {
         }
     }
 
-    function _mappingSlot(bytes32 key, uint256 baseSlot) internal pure returns (bytes32) {
-        return keccak256(abi.encode(key, baseSlot));
+    /// @dev The storage slot behind `getter(key)` on the vault, found by stdStorage.
+    function _slotOf(bytes4 getter, bytes32 key) internal returns (bytes32) {
+        return bytes32(stdstore.target(address(vault)).sig(getter).with_key(key).find());
     }
 
     function test_privacy_depositRevealsNothingBeyondTheCommitment() public {
@@ -126,8 +126,8 @@ contract PrivacyTest is VaultTestBase {
         expected[0] = bytes32(uint256(0));
         expected[1] = bytes32(uint256(1));
         expected[2] = bytes32(uint256(3)); // _branch[0]
-        expected[3] = _mappingSlot(bytes32(uint256(uint160(alice))), DEPOSIT_COUNT_SLOT);
-        expected[4] = _mappingSlot(bytes32(0), ESCROWED_SLOT);
+        expected[3] = _slotOf(vault.depositCount.selector, bytes32(uint256(uint160(alice))));
+        expected[4] = _slotOf(vault.escrowed.selector, bytes32(0));
         _assertSameSet(_writtenSlots(accesses, address(vault)), expected);
     }
 
@@ -158,8 +158,8 @@ contract PrivacyTest is VaultTestBase {
         assertEq(logs[0].data, abi.encode(uint256(1 ether), relayer, uint256(0), burnRoot));
 
         bytes32[] memory expected = new bytes32[](2);
-        expected[0] = _mappingSlot(nullifier, NULLIFIER_USED_SLOT);
-        expected[1] = _mappingSlot(bytes32(0), ESCROWED_SLOT);
+        expected[0] = _slotOf(vault.nullifierUsed.selector, nullifier);
+        expected[1] = _slotOf(vault.escrowed.selector, bytes32(0));
         _assertSameSet(_writtenSlots(accesses, address(vault)), expected);
     }
 

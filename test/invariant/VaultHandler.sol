@@ -38,6 +38,7 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
     mapping(bytes32 root => bool) internal _isAcceptedRoot;
     bytes32[] internal _usedNullifiers;
     uint256 internal _nonce;
+    uint64 internal _checkpointNonce;
 
     constructor(
         FerrataVault vault_,
@@ -102,11 +103,29 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         _leaves.push(ReferenceMerkle.leafHash(leafIndex, actor, token, amount, commitment));
     }
 
-    function acceptRoot(uint256 rootSeed, uint64 lezBlockId) external {
-        bytes32 root = keccak256(abi.encode("burn root", rootSeed % 8)); // a small set, so re-acceptance happens
-        uint32 depth = vault.minLezDepth();
-        verifier.accept(vault.rootImageId(), _rootDigest(root, lezBlockId, 1, depth));
-        vault.acceptBurnRoot(root, lezBlockId, 1, depth, "");
+    /// @dev Proves and finalises a checkpoint on top of `finalState` (candidate, a beacon `delta` later, finalise).
+    function acceptRoot(uint256 rootSeed) external {
+        bytes32 root = keccak256(abi.encode("burn root", rootSeed % 8)); // a small set, so roots repeat
+        _checkpointNonce += 1;
+        FerrataVault.Checkpoint memory c = FerrataVault.Checkpoint({
+            nMin: vault.nMin(),
+            tMin: vault.tMin(),
+            parentState: vault.finalState(),
+            newState: keccak256(abi.encode("handler state", _checkpointNonce)),
+            burnRoot: root,
+            burnCount: _checkpointNonce,
+            importedLeafCount: 0,
+            sunset: false,
+            echoNonce: bytes32(0)
+        });
+        verifier.accept(vault.checkpointImageId(), _checkpointDigest(c));
+        vault.submitCandidate(c, "");
+        vm.warp(block.timestamp + vault.delta());
+        vm.roll(block.number + 1);
+        uint256 beaconIndex = vault.recordBeacon();
+        (, c.echoNonce) = vault.beacons(beaconIndex);
+        verifier.accept(vault.checkpointImageId(), _checkpointDigest(c));
+        vault.finalize(beaconIndex, c, "");
         if (!_isAcceptedRoot[root]) {
             _isAcceptedRoot[root] = true;
             _acceptedRoots.push(root);
@@ -241,23 +260,25 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         return start;
     }
 
-    function _rootDigest(bytes32 root, uint64 lezBlockId, uint64 burnCount, uint32 depth)
-        internal
-        view
-        returns (bytes32)
-    {
-        return sha256(
-            bytes.concat(
-                sha256(bytes("ferrata/vault/burn-root/v1")),
-                bytes32(block.chainid),
-                bytes32(uint256(uint160(address(vault)))),
-                vault.lezConfigId(),
-                bytes32(uint256(lezBlockId)),
-                root,
-                bytes32(uint256(burnCount)),
-                bytes32(uint256(depth))
-            )
+    function _checkpointDigest(FerrataVault.Checkpoint memory c) internal view returns (bytes32) {
+        bytes memory head = bytes.concat(
+            sha256(bytes("ferrata/vault/checkpoint/v2")),
+            bytes32(block.chainid),
+            bytes32(uint256(uint160(address(vault)))),
+            vault.lezConfigId(),
+            bytes32(uint256(c.nMin)),
+            bytes32(uint256(c.tMin))
         );
+        bytes memory body = bytes.concat(
+            c.parentState,
+            c.newState,
+            c.burnRoot,
+            bytes32(uint256(c.burnCount)),
+            bytes32(uint256(c.importedLeafCount)),
+            bytes32(uint256(c.sunset ? 1 : 0)),
+            c.echoNonce
+        );
+        return sha256(bytes.concat(head, body));
     }
 
     function _releaseDigest(FerrataVault.ReleaseRequest memory r, uint256 amount) internal view returns (bytes32) {

@@ -10,100 +10,25 @@ import {MockERC20, MockReentrantToken, MockTokenBase} from "./mocks/MockTokens.s
 import {MockRiscZeroVerifier, RejectingVerifier} from "./mocks/MockVerifiers.sol";
 import {VaultTestBase} from "./utils/VaultTestBase.sol";
 
-contract AcceptBurnRootTest is VaultTestBase {
+contract VerifierSeparationTest is VaultTestBase {
     bytes32 internal constant ROOT = keccak256("burn root 1");
-    bytes32 internal constant ROOT_2 = keccak256("burn root 2");
 
-    function test_acceptBurnRoot_recordsFirstAcceptance() public {
-        vm.warp(1_700_000_000);
-        _proveRoot(_rootJournal(ROOT, LEZ_BLOCK, BURN_COUNT, MIN_DEPTH));
-
-        vm.expectEmit(true, true, true, true, address(vault));
-        emit FerrataVault.BurnRootAccepted(ROOT, LEZ_BLOCK, BURN_COUNT, MIN_DEPTH);
-        vm.prank(relayer); // permissionless
-        vault.acceptBurnRoot(ROOT, LEZ_BLOCK, BURN_COUNT, MIN_DEPTH, SEAL);
-
-        assertEq(vault.burnRootAcceptedAt(ROOT), 1_700_000_000);
-        assertEq(vault.latestLezBlockId(), LEZ_BLOCK);
-    }
-
-    function test_acceptBurnRoot_replayedProofDoesNotMoveTimestamp() public {
-        _acceptRoot(ROOT);
-        uint256 acceptedAt = vault.burnRootAcceptedAt(ROOT);
-
-        vm.warp(block.timestamp + 7 days);
-        vm.recordLogs();
-        vault.acceptBurnRoot(ROOT, LEZ_BLOCK, BURN_COUNT, MIN_DEPTH, SEAL); // the same public seal, replayed
-        assertEq(vm.getRecordedLogs().length, 0);
-        assertEq(vault.burnRootAcceptedAt(ROOT), acceptedAt);
-    }
-
-    function test_acceptBurnRoot_sameRootAtLaterBlockKeepsTimestamp() public {
-        _acceptRoot(ROOT);
-        uint256 acceptedAt = vault.burnRootAcceptedAt(ROOT);
-
-        vm.warp(block.timestamp + 1 hours);
-        _proveRoot(_rootJournal(ROOT, LEZ_BLOCK + 50, BURN_COUNT, MIN_DEPTH + 50));
-        vault.acceptBurnRoot(ROOT, LEZ_BLOCK + 50, BURN_COUNT, MIN_DEPTH + 50, SEAL);
-
-        assertEq(vault.burnRootAcceptedAt(ROOT), acceptedAt);
-        assertEq(vault.latestLezBlockId(), LEZ_BLOCK + 50);
-    }
-
-    function test_acceptBurnRoot_olderBlockIsAcceptedButDoesNotLowerLatest() public {
-        _acceptRoot(ROOT);
-        _proveRoot(_rootJournal(ROOT_2, LEZ_BLOCK - 100, 5, MIN_DEPTH));
-        vault.acceptBurnRoot(ROOT_2, LEZ_BLOCK - 100, 5, MIN_DEPTH, SEAL);
-
-        assertEq(vault.burnRootAcceptedAt(ROOT_2), block.timestamp);
-        assertEq(vault.latestLezBlockId(), LEZ_BLOCK);
-    }
-
-    function test_acceptBurnRoot_belowMinDepthReverts() public {
-        _proveRoot(_rootJournal(ROOT, LEZ_BLOCK, BURN_COUNT, MIN_DEPTH - 1));
-        vm.expectRevert(FerrataVault.InsufficientLezDepth.selector);
-        vault.acceptBurnRoot(ROOT, LEZ_BLOCK, BURN_COUNT, MIN_DEPTH - 1, SEAL);
-        assertEq(vault.burnRootAcceptedAt(ROOT), 0);
-    }
-
-    function test_acceptBurnRoot_depthIncreaseDoesNotAffectAcceptedRoot() public {
-        _deposit(alice, ETH, 1, keccak256("c"));
-        _acceptRoot(ROOT); // at exactly MIN_DEPTH
-
-        vm.prank(admin);
-        vault.setMinLezDepth(MIN_DEPTH * 2);
-
-        // A new root at the old depth is now refused ...
-        _proveRoot(_rootJournal(ROOT_2, LEZ_BLOCK, BURN_COUNT, MIN_DEPTH));
-        vm.expectRevert(FerrataVault.InsufficientLezDepth.selector);
-        vault.acceptBurnRoot(ROOT_2, LEZ_BLOCK, BURN_COUNT, MIN_DEPTH, SEAL);
-
-        // ... but the root accepted under the old depth still releases.
-        _release(_request(ETH, 1, recipient, ROOT, keccak256("n")));
-        assertEq(recipient.balance, 1 ether);
-    }
-
-    function test_acceptBurnRoot_withoutValidProofReverts() public {
-        vm.expectRevert(MockRiscZeroVerifier.VerificationFailed.selector);
-        vault.acceptBurnRoot(ROOT, LEZ_BLOCK, BURN_COUNT, MIN_DEPTH, SEAL);
-    }
-
-    function test_acceptBurnRoot_releaseProgramCannotStandInForRootProgram() public {
+    function test_releaseProgramCannotStandInForTheCheckpointProgram() public {
+        FerrataVault.Checkpoint memory c = _nextCheckpoint(ROOT);
         // The right journal, proven by the wrong program.
-        verifier.accept(
-            RELEASE_IMAGE_ID, sha256(_rootJournalBytes(_rootJournal(ROOT, LEZ_BLOCK, BURN_COUNT, MIN_DEPTH)))
-        );
+        verifier.accept(RELEASE_IMAGE_ID, sha256(_checkpointJournalBytes(_checkpointJournal(c))));
         vm.expectRevert(MockRiscZeroVerifier.VerificationFailed.selector);
-        vault.acceptBurnRoot(ROOT, LEZ_BLOCK, BURN_COUNT, MIN_DEPTH, SEAL);
+        vault.submitCandidate(c, SEAL);
     }
 
-    function test_rejectingVerifier_rejectsRootsAndReleases() public {
+    function test_rejectingVerifier_rejectsCheckpointsAndReleases() public {
         RejectingVerifier rejecting = new RejectingVerifier();
         FerrataVault strict = _deployVault(IRiscZeroVerifier(address(rejecting)), LEZ_CONFIG_ID);
+        FerrataVault.Checkpoint memory c = _nextCheckpoint(strict, ROOT, 0, false);
         vm.expectRevert(RejectingVerifier.AlwaysRejects.selector);
-        strict.acceptBurnRoot(ROOT, LEZ_BLOCK, BURN_COUNT, MIN_DEPTH, SEAL);
+        strict.submitCandidate(c, SEAL);
 
-        // For the release path: accept a root first, then put the rejecting code at the verifier's address.
+        // For the release path: finalise a root first, then put the rejecting code at the base verifier's address.
         _deposit(alice, ETH, 1, keccak256("c"));
         _acceptRoot(ROOT);
         vm.etch(address(verifier), address(rejecting).code);
@@ -221,7 +146,7 @@ contract ReleaseTest is VaultTestBase {
         _deposit(alice, ETH, 1, C1);
         FerrataVault.ReleaseRequest memory r = _request(ETH, 1, recipient, ROOT, N1);
         _proveRelease(_releaseJournal(r)); // a valid release proof does not help without the root
-        vm.expectRevert(FerrataVault.UnknownBurnRoot.selector);
+        vm.expectRevert(FerrataVault.BurnRootNotAccepted.selector);
         vault.release(r, SEAL);
     }
 
@@ -230,7 +155,7 @@ contract ReleaseTest is VaultTestBase {
         vault.setReleaseDelay(ETH, 1 days);
         _deposit(alice, ETH, 1, C1);
         _acceptRoot(ROOT);
-        uint256 acceptedAt = vault.burnRootAcceptedAt(ROOT);
+        uint256 acceptedAt = _finalizedAt(ROOT);
         FerrataVault.ReleaseRequest memory r = _request(ETH, 1, recipient, ROOT, N1);
         _proveRelease(_releaseJournal(r));
 
@@ -410,7 +335,7 @@ contract ReleaseTest is VaultTestBase {
         _deposit(alice, ETH, 1, C1);
         _acceptRoot(ROOT);
         FerrataVault.ReleaseRequest memory r = _request(ETH, 1, recipient, ROOT, N1);
-        verifier.accept(ROOT_IMAGE_ID, sha256(_releaseJournalBytes(_releaseJournal(r))));
+        verifier.accept(CHECKPOINT_IMAGE_ID, sha256(_releaseJournalBytes(_releaseJournal(r))));
         vm.expectRevert(MockRiscZeroVerifier.VerificationFailed.selector);
         vault.release(r, SEAL);
     }

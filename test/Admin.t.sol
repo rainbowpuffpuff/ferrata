@@ -8,81 +8,115 @@ import {ReferenceMerkle} from "./utils/ReferenceMerkle.sol";
 import {VaultTestBase} from "./utils/VaultTestBase.sol";
 
 contract ConstructorTest is VaultTestBase {
-    function _construct(
-        address v,
-        bytes32 releaseId,
-        bytes32 rootId,
-        bytes32 lezConfig,
-        address admin_,
-        address freezer_
-    ) internal returns (FerrataVault) {
-        return new FerrataVault(
-            IRiscZeroVerifier(v), releaseId, rootId, lezConfig, admin_, freezer_, MIN_DEPTH, _unlimited(), _unlimited()
-        );
+    function _expectConstructorRevert(FerrataVault.Deployment memory d, bytes4 expectedError) internal {
+        vm.expectRevert(expectedError);
+        new FerrataVault(d);
     }
 
-    function test_constructor_setsImmutablesRolesAndEmptyRoot() public view {
+    function _d() internal view returns (FerrataVault.Deployment memory) {
+        return _deployment(IRiscZeroVerifier(address(estop)), LEZ_CONFIG_ID);
+    }
+
+    function test_constructor_setsImmutablesStateAndRoles() public view {
         assertEq(address(vault.verifier()), address(estop));
         assertEq(address(estop.verifier()), address(verifier));
         assertEq(estop.owner(), freezer); // the freeze authority is the stop's guardian
+        assertEq(vault.checkpointImageId(), CHECKPOINT_IMAGE_ID);
         assertEq(vault.releaseImageId(), RELEASE_IMAGE_ID);
-        assertEq(vault.rootImageId(), ROOT_IMAGE_ID);
         assertEq(vault.lezConfigId(), LEZ_CONFIG_ID);
+        assertEq(vault.storedLezConfigId(), LEZ_CONFIG_ID);
+        assertEq(vault.genesisState(), GENESIS_STATE);
+        assertEq(vault.finalState(), GENESIS_STATE);
+        assertEq(vault.nMin(), N_MIN);
+        assertEq(vault.tMin(), T_MIN);
+        assertEq(vault.deltaFloor(), DELTA_FLOOR);
+        assertEq(vault.delta(), DELTA);
+        assertEq(vault.revokeWindow(), REVOKE_WINDOW);
         assertEq(vault.admin(), admin);
         assertEq(vault.freezeAuthority(), freezer);
-        assertEq(vault.minLezDepth(), MIN_DEPTH);
         assertEq(vault.nextLeafIndex(), 0);
         assertEq(vault.depositRoot(), ReferenceMerkle.zeroHashes()[32]);
+        assertEq(vault.checkpointCount(), 0);
+        assertFalse(vault.retired());
     }
 
     function test_constructor_domainTagsMatchTheirDefinitions() public view {
         assertEq(vault.LEAF_TAG(), sha256(bytes("ferrata/vault/leaf/v2")));
-        assertEq(vault.ROOT_DOMAIN(), sha256(bytes("ferrata/vault/burn-root/v1")));
+        assertEq(vault.CHECKPOINT_DOMAIN(), sha256(bytes("ferrata/vault/checkpoint/v2")));
         assertEq(vault.RELEASE_DOMAIN(), sha256(bytes("ferrata/vault/release/v1")));
         assertEq(vault.LEAF_PREFIX(), bytes1(0x00));
         assertEq(vault.NODE_PREFIX(), bytes1(0x01));
     }
 
     function test_constructor_rejectsVerifierWithoutCode() public {
-        vm.expectRevert(FerrataVault.VerifierHasNoCode.selector);
-        _construct(makeAddr("eoa"), RELEASE_IMAGE_ID, ROOT_IMAGE_ID, LEZ_CONFIG_ID, admin, freezer);
+        FerrataVault.Deployment memory d = _d();
+        d.verifier = IRiscZeroVerifier(makeAddr("eoa"));
+        _expectConstructorRevert(d, FerrataVault.VerifierHasNoCode.selector);
     }
 
     function test_constructor_rejectsBadImageIds() public {
-        vm.expectRevert(FerrataVault.InvalidImageIds.selector);
-        _construct(address(verifier), bytes32(0), ROOT_IMAGE_ID, LEZ_CONFIG_ID, admin, freezer);
-        vm.expectRevert(FerrataVault.InvalidImageIds.selector);
-        _construct(address(verifier), RELEASE_IMAGE_ID, bytes32(0), LEZ_CONFIG_ID, admin, freezer);
-        vm.expectRevert(FerrataVault.InvalidImageIds.selector);
-        _construct(address(verifier), RELEASE_IMAGE_ID, RELEASE_IMAGE_ID, LEZ_CONFIG_ID, admin, freezer);
+        FerrataVault.Deployment memory d = _d();
+        d.checkpointImageId = bytes32(0);
+        _expectConstructorRevert(d, FerrataVault.InvalidImageIds.selector);
+        d = _d();
+        d.releaseImageId = bytes32(0);
+        _expectConstructorRevert(d, FerrataVault.InvalidImageIds.selector);
+        d = _d();
+        d.releaseImageId = d.checkpointImageId;
+        _expectConstructorRevert(d, FerrataVault.InvalidImageIds.selector);
     }
 
-    function test_constructor_rejectsZeroLezConfigId() public {
-        vm.expectRevert(FerrataVault.InvalidLezConfigId.selector);
-        _construct(address(verifier), RELEASE_IMAGE_ID, ROOT_IMAGE_ID, bytes32(0), admin, freezer);
+    function test_constructor_rejectsZeroConfigOrGenesis() public {
+        FerrataVault.Deployment memory d = _d();
+        d.lezConfigId = bytes32(0);
+        _expectConstructorRevert(d, FerrataVault.InvalidLezConfigId.selector);
+        d = _d();
+        d.genesisState = bytes32(0);
+        _expectConstructorRevert(d, FerrataVault.InvalidGenesisState.selector);
+    }
+
+    function test_constructor_rejectsZeroCommitteeFloor() public {
+        FerrataVault.Deployment memory d = _d();
+        d.nMin = 0;
+        _expectConstructorRevert(d, FerrataVault.InvalidCommitteeFloor.selector);
+        d = _d();
+        d.tMin = 0;
+        _expectConstructorRevert(d, FerrataVault.InvalidCommitteeFloor.selector);
+    }
+
+    function test_constructor_deltaRules() public {
+        FerrataVault.Deployment memory d = _d();
+        d.deltaFloor = 0;
+        d.initialDelta = 0;
+        _expectConstructorRevert(d, FerrataVault.InvalidDelta.selector);
+        d = _d();
+        d.initialDelta = DELTA_FLOOR - 1;
+        _expectConstructorRevert(d, FerrataVault.InvalidDelta.selector);
+        d = _d();
+        d.initialDelta = 30 days + 1;
+        _expectConstructorRevert(d, FerrataVault.InvalidDelta.selector);
+        d = _d();
+        d.revokeWindow = 0;
+        _expectConstructorRevert(d, FerrataVault.InvalidRevokeWindow.selector);
     }
 
     function test_constructor_rejectsZeroOrSharedRoles() public {
-        vm.expectRevert(FerrataVault.ZeroAddress.selector);
-        _construct(address(verifier), RELEASE_IMAGE_ID, ROOT_IMAGE_ID, LEZ_CONFIG_ID, address(0), freezer);
-        vm.expectRevert(FerrataVault.ZeroAddress.selector);
-        _construct(address(verifier), RELEASE_IMAGE_ID, ROOT_IMAGE_ID, LEZ_CONFIG_ID, admin, address(0));
-        vm.expectRevert(FerrataVault.RolesMustDiffer.selector);
-        _construct(address(verifier), RELEASE_IMAGE_ID, ROOT_IMAGE_ID, LEZ_CONFIG_ID, admin, admin);
+        FerrataVault.Deployment memory d = _d();
+        d.admin = address(0);
+        _expectConstructorRevert(d, FerrataVault.ZeroAddress.selector);
+        d = _d();
+        d.freezeAuthority = address(0);
+        _expectConstructorRevert(d, FerrataVault.ZeroAddress.selector);
+        d = _d();
+        d.freezeAuthority = d.admin;
+        _expectConstructorRevert(d, FerrataVault.RolesMustDiffer.selector);
     }
 
     function test_constructor_globalCapsStartFull() public {
-        FerrataVault v = new FerrataVault(
-            IRiscZeroVerifier(address(verifier)),
-            RELEASE_IMAGE_ID,
-            ROOT_IMAGE_ID,
-            LEZ_CONFIG_ID,
-            admin,
-            freezer,
-            MIN_DEPTH,
-            _cap(500, 1),
-            _cap(700, 2)
-        );
+        FerrataVault.Deployment memory d = _d();
+        d.globalDepositCap = _cap(500, 1);
+        d.globalReleaseCap = _cap(700, 2);
+        FerrataVault v = new FerrataVault(d);
         (uint256 capacity, uint256 refill, uint256 available) = v.globalCap(FerrataVault.Direction.Deposit);
         assertEq(capacity, 500);
         assertEq(refill, 1);
@@ -333,14 +367,6 @@ contract RegistryTest is VaultTestBase {
         vm.stopPrank();
     }
 
-    function test_setMinLezDepth() public {
-        vm.expectEmit(true, true, true, true, address(vault));
-        emit FerrataVault.MinLezDepthSet(128);
-        vm.prank(admin);
-        vault.setMinLezDepth(128);
-        assertEq(vault.minLezDepth(), 128);
-    }
-
     function test_setCaps_emitAndRequireRegistration() public {
         vm.expectEmit(true, true, true, true, address(vault));
         emit FerrataVault.TokenCapSet(address(dai), FerrataVault.Direction.Release, 5e18, 1);
@@ -376,7 +402,7 @@ contract RolesTest is VaultTestBase {
         vm.expectRevert(FerrataVault.NotAdmin.selector);
         vault.setReleaseDelay(ETH, 1);
         vm.expectRevert(FerrataVault.NotAdmin.selector);
-        vault.setMinLezDepth(1);
+        vault.raiseDelta(DELTA + 1);
         vm.expectRevert(FerrataVault.NotAdmin.selector);
         vault.transferAdmin(caller);
         vm.stopPrank();
@@ -401,6 +427,12 @@ contract RolesTest is VaultTestBase {
         vault.setTokenReleasesFrozen(ETH, true);
         vm.expectRevert(FerrataVault.NotFreezeAuthority.selector);
         vault.setTokenReleasesFrozen(ETH, false);
+        vm.expectRevert(FerrataVault.NotFreezeAuthority.selector);
+        vault.setCandidatesFrozen(true);
+        vm.expectRevert(FerrataVault.NotFreezeAuthority.selector);
+        vault.retire();
+        vm.expectRevert(FerrataVault.NotFreezeAuthority.selector);
+        vault.revokeFrom(0);
         vm.expectRevert(FerrataVault.NotFreezeAuthority.selector);
         vault.transferFreezeAuthority(caller);
         vm.stopPrank();
@@ -443,8 +475,8 @@ contract RolesTest is VaultTestBase {
 
         _assertNoAdminPowers(admin); // the old admin is out
         vm.prank(newAdmin);
-        vault.setMinLezDepth(7);
-        assertEq(vault.minLezDepth(), 7);
+        vault.raiseDelta(DELTA + 7);
+        assertEq(vault.delta(), DELTA + 7);
 
         vm.prank(newAdmin);
         vm.expectRevert(FerrataVault.NotPendingAdmin.selector); // cannot be accepted twice

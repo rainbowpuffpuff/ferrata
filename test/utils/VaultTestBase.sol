@@ -11,29 +11,35 @@ import {MockERC20, MockTokenBase, MockUSDT} from "../mocks/MockTokens.sol";
 import {MockRiscZeroVerifier} from "../mocks/MockVerifiers.sol";
 
 /// @notice Shared fixture: a vault with ETH, a 6-decimal token, an 18-decimal token and a USDT-style token
-///         registered, all caps UNLIMITED. Journals are rebuilt here word by word from the written spec
-///         (README), not with the vault's own encoding functions.
+///         registered, all caps UNLIMITED, verifying through RISC Zero's emergency-stop wrapper. Journals are rebuilt
+///         here word by word from the written spec (README, SPEC-v2), not with the vault's own encoding functions.
 abstract contract VaultTestBase is Test {
     bytes32 internal constant RELEASE_IMAGE_ID = keccak256("test: release program image id");
-    bytes32 internal constant ROOT_IMAGE_ID = keccak256("test: burn-root program image id");
-    bytes32 internal constant LEZ_CONFIG_ID = keccak256("test: LEZ network / zone / bridge program / config 1");
-    uint32 internal constant MIN_DEPTH = 64;
+    bytes32 internal constant CHECKPOINT_IMAGE_ID = keccak256("test: checkpoint program image id");
+    bytes32 internal constant LEZ_CONFIG_ID = keccak256("test: LEZ configuration id");
+    bytes32 internal constant GENESIS_STATE = keccak256("test: LEZ genesis checkpoint state");
+    uint32 internal constant N_MIN = 4;
+    uint32 internal constant T_MIN = 3;
+    uint256 internal constant DELTA_FLOOR = 1 hours;
+    uint256 internal constant DELTA = 2 hours;
+    uint256 internal constant REVOKE_WINDOW = 3 days;
     address internal constant ETH = address(0);
     uint256 internal constant UNLIMITED = type(uint256).max;
     bytes internal constant SEAL = hex"5ea15ea1";
 
-    /// Defaults used by `_acceptRoot`.
-    uint64 internal constant LEZ_BLOCK = 1000;
-    uint64 internal constant BURN_COUNT = 10;
-
-    struct RootJournal {
+    struct CheckpointJournal {
         uint256 chainId;
         address vault;
         bytes32 lezConfigId;
-        uint64 lezBlockId;
+        uint32 nMin;
+        uint32 tMin;
+        bytes32 parentState;
+        bytes32 newState;
         bytes32 burnRoot;
         uint64 burnCount;
-        uint32 depth;
+        uint64 importedLeafCount;
+        bool sunset;
+        bytes32 echoNonce;
     }
 
     struct ReleaseJournal {
@@ -65,6 +71,10 @@ abstract contract VaultTestBase is Test {
     address internal relayer = makeAddr("relayer");
     address internal recipient = makeAddr("recipient");
 
+    /// Counters that make every test checkpoint's `newState` and `burnCount` distinct.
+    uint256 internal stateNonce;
+    uint64 internal burnCounter;
+
     function setUp() public virtual {
         verifier = new MockRiscZeroVerifier();
         estop = new RiscZeroVerifierEmergencyStop(IRiscZeroVerifierFull(address(verifier)), freezer);
@@ -87,10 +97,31 @@ abstract contract VaultTestBase is Test {
         return FerrataVault.CapParams({capacity: capacity, refillPerSecond: refillPerSecond});
     }
 
+    function _deployment(IRiscZeroVerifier v, bytes32 lezConfig)
+        internal
+        view
+        returns (FerrataVault.Deployment memory)
+    {
+        return FerrataVault.Deployment({
+            verifier: v,
+            checkpointImageId: CHECKPOINT_IMAGE_ID,
+            releaseImageId: RELEASE_IMAGE_ID,
+            lezConfigId: lezConfig,
+            genesisState: GENESIS_STATE,
+            nMin: N_MIN,
+            tMin: T_MIN,
+            deltaFloor: DELTA_FLOOR,
+            initialDelta: DELTA,
+            revokeWindow: REVOKE_WINDOW,
+            admin: admin,
+            freezeAuthority: freezer,
+            globalDepositCap: _unlimited(),
+            globalReleaseCap: _unlimited()
+        });
+    }
+
     function _deployVault(IRiscZeroVerifier v, bytes32 lezConfig) internal returns (FerrataVault) {
-        return new FerrataVault(
-            v, RELEASE_IMAGE_ID, ROOT_IMAGE_ID, lezConfig, admin, freezer, MIN_DEPTH, _unlimited(), _unlimited()
-        );
+        return new FerrataVault(_deployment(v, lezConfig));
     }
 
     /// @dev Value unit = 1e-6 USD. ETH at 3000 USD: one lezUnit (1e12 wei) is worth 3000 value units.
@@ -179,18 +210,27 @@ abstract contract VaultTestBase is Test {
     // Journals: the exact byte layouts a proof must commit to
     // ------------------------------------------------------------------------------------------------------------
 
-    /// @dev 8 words: domain, chainId, vault, lezConfigId, lezBlockId, burnRoot, burnCount, depth.
-    function _rootJournalBytes(RootJournal memory j) internal pure returns (bytes memory) {
-        return bytes.concat(
-            sha256(bytes("ferrata/vault/burn-root/v1")),
+    /// @dev 13 words: domain, chainId, vault, lezConfigId, nMin, tMin, parentState, newState, burnRoot, burnCount,
+    ///      importedLeafCount, sunset, echoNonce (spec §4.2 item 5).
+    function _checkpointJournalBytes(CheckpointJournal memory j) internal pure returns (bytes memory) {
+        bytes memory head = bytes.concat(
+            sha256(bytes("ferrata/vault/checkpoint/v2")),
             bytes32(j.chainId),
             bytes32(uint256(uint160(j.vault))),
             j.lezConfigId,
-            bytes32(uint256(j.lezBlockId)),
+            bytes32(uint256(j.nMin)),
+            bytes32(uint256(j.tMin))
+        );
+        bytes memory body = bytes.concat(
+            j.parentState,
+            j.newState,
             j.burnRoot,
             bytes32(uint256(j.burnCount)),
-            bytes32(uint256(j.depth))
+            bytes32(uint256(j.importedLeafCount)),
+            bytes32(uint256(j.sunset ? 1 : 0)),
+            j.echoNonce
         );
+        return bytes.concat(head, body);
     }
 
     /// @dev 11 words: domain, chainId, vault, lezConfigId, burnRoot, nullifier, token, amount, recipient,
@@ -214,20 +254,30 @@ abstract contract VaultTestBase is Test {
         return bytes.concat(context, payout);
     }
 
-    function _rootJournal(bytes32 burnRoot, uint64 lezBlockId, uint64 burnCount, uint32 depth)
+    /// @dev The journal a checkpoint proof for vault `v` (configured with `lezConfig`) must commit to for `c`.
+    function _checkpointJournal(FerrataVault v, bytes32 lezConfig, FerrataVault.Checkpoint memory c)
         internal
         view
-        returns (RootJournal memory)
+        returns (CheckpointJournal memory)
     {
-        return RootJournal({
+        return CheckpointJournal({
             chainId: block.chainid,
-            vault: address(vault),
-            lezConfigId: LEZ_CONFIG_ID,
-            lezBlockId: lezBlockId,
-            burnRoot: burnRoot,
-            burnCount: burnCount,
-            depth: depth
+            vault: address(v),
+            lezConfigId: lezConfig,
+            nMin: c.nMin,
+            tMin: c.tMin,
+            parentState: c.parentState,
+            newState: c.newState,
+            burnRoot: c.burnRoot,
+            burnCount: c.burnCount,
+            importedLeafCount: c.importedLeafCount,
+            sunset: c.sunset,
+            echoNonce: c.echoNonce
         });
+    }
+
+    function _checkpointJournal(FerrataVault.Checkpoint memory c) internal view returns (CheckpointJournal memory) {
+        return _checkpointJournal(vault, LEZ_CONFIG_ID, c);
     }
 
     /// @dev The journal the vault should reconstruct for `r`.
@@ -246,9 +296,9 @@ abstract contract VaultTestBase is Test {
         });
     }
 
-    /// @dev Stands in for proving: makes the mock verifier accept this journal for the root program.
-    function _proveRoot(RootJournal memory j) internal {
-        verifier.accept(ROOT_IMAGE_ID, sha256(_rootJournalBytes(j)));
+    /// @dev Stands in for proving: makes the mock verifier accept this journal for the checkpoint program.
+    function _proveCheckpoint(CheckpointJournal memory j) internal {
+        verifier.accept(CHECKPOINT_IMAGE_ID, sha256(_checkpointJournalBytes(j)));
     }
 
     /// @dev Stands in for proving: makes the mock verifier accept this journal for the release program.
@@ -256,10 +306,79 @@ abstract contract VaultTestBase is Test {
         verifier.accept(RELEASE_IMAGE_ID, sha256(_releaseJournalBytes(j)));
     }
 
-    /// @dev Proves and accepts `burnRoot` at the default LEZ block and burn count, at exactly the minimum depth.
-    function _acceptRoot(bytes32 burnRoot) internal {
-        _proveRoot(_rootJournal(burnRoot, LEZ_BLOCK, BURN_COUNT, MIN_DEPTH));
-        vault.acceptBurnRoot(burnRoot, LEZ_BLOCK, BURN_COUNT, MIN_DEPTH, SEAL);
+    // ------------------------------------------------------------------------------------------------------------
+    // Checkpoints: candidate, beacon, finalisation
+    // ------------------------------------------------------------------------------------------------------------
+
+    /// @dev A fresh checkpoint built on `v.finalState()`, with a new state id and burn count.
+    function _nextCheckpoint(FerrataVault v, bytes32 burnRoot, uint64 importedLeafCount, bool sunset)
+        internal
+        returns (FerrataVault.Checkpoint memory)
+    {
+        stateNonce += 1;
+        burnCounter += 1;
+        return FerrataVault.Checkpoint({
+            nMin: N_MIN,
+            tMin: T_MIN,
+            parentState: v.finalState(),
+            newState: keccak256(abi.encode("test LEZ checkpoint state", stateNonce)),
+            burnRoot: burnRoot,
+            burnCount: burnCounter,
+            importedLeafCount: importedLeafCount,
+            sunset: sunset,
+            echoNonce: bytes32(0)
+        });
+    }
+
+    function _nextCheckpoint(bytes32 burnRoot) internal returns (FerrataVault.Checkpoint memory) {
+        return _nextCheckpoint(vault, burnRoot, 0, false);
+    }
+
+    /// @dev Proves `c` as a candidate (echoNonce 0) for vault `v` and submits it.
+    function _submit(FerrataVault v, bytes32 lezConfig, FerrataVault.Checkpoint memory c) internal {
+        _proveCheckpoint(_checkpointJournal(v, lezConfig, c));
+        v.submitCandidate(c, SEAL);
+    }
+
+    function _submit(FerrataVault.Checkpoint memory c) internal {
+        _submit(vault, LEZ_CONFIG_ID, c);
+    }
+
+    /// @dev Waits out the candidate's delta, records a beacon in a new block, sets `c.echoNonce` to that beacon's
+    ///      nonce (so `c` is modified), proves the finalisation journal and finalises. Returns the checkpoint index.
+    function _finalizeAfterDelta(FerrataVault v, bytes32 lezConfig, FerrataVault.Checkpoint memory c)
+        internal
+        returns (uint256 index)
+    {
+        (,,,,, uint256 submittedAt, uint256 deltaAtSubmit,) = v.candidates(c.newState);
+        if (block.timestamp < submittedAt + deltaAtSubmit) vm.warp(submittedAt + deltaAtSubmit);
+        vm.roll(block.number + 1);
+        uint256 beaconIndex = v.recordBeacon();
+        (, bytes32 nonce) = v.beacons(beaconIndex);
+        c.echoNonce = nonce;
+        _proveCheckpoint(_checkpointJournal(v, lezConfig, c));
+        v.finalize(beaconIndex, c, SEAL);
+        return v.checkpointCount() - 1;
+    }
+
+    function _finalizeAfterDelta(FerrataVault.Checkpoint memory c) internal returns (uint256) {
+        return _finalizeAfterDelta(vault, LEZ_CONFIG_ID, c);
+    }
+
+    /// @dev Makes `burnRoot` accepted on `v` the only way the vault allows: a candidate, a beacon `delta` later,
+    ///      and a finalisation. Returns the checkpoint index.
+    function _acceptRootOn(FerrataVault v, bytes32 lezConfig, bytes32 burnRoot) internal returns (uint256) {
+        FerrataVault.Checkpoint memory c = _nextCheckpoint(v, burnRoot, 0, false);
+        _submit(v, lezConfig, c);
+        return _finalizeAfterDelta(v, lezConfig, c);
+    }
+
+    function _acceptRoot(bytes32 burnRoot) internal returns (uint256) {
+        return _acceptRootOn(vault, LEZ_CONFIG_ID, burnRoot);
+    }
+
+    function _finalizedAt(bytes32 burnRoot) internal view returns (uint256 finalizedAt) {
+        (, finalizedAt) = vault.burnRootStatus(burnRoot);
     }
 
     // ------------------------------------------------------------------------------------------------------------

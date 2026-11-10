@@ -52,7 +52,7 @@ contract MerkleTest is VaultTestBase {
         // Admin, freeze and release activity leaves both slots alone.
         bytes32 root = vault.depositRoot();
         vm.prank(admin);
-        vault.setMinLezDepth(1);
+        vault.raiseDelta(DELTA + 1);
         vm.prank(freezer);
         vault.setDepositsFrozen(true);
         _acceptRoot(keccak256("burn root"));

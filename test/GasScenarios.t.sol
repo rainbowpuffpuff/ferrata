@@ -11,7 +11,7 @@ import {VaultTestBase} from "./utils/VaultTestBase.sol";
 ///             forge test --isolate --match-contract GasScenarios -vv
 ///         so every top-level call is its own transaction (cold storage, 21000 base cost and calldata included).
 ///         Without --isolate the logged numbers are execution-only and not comparable. The first row, a plain ETH
-///         transfer, must read 21000 in isolated mode. Release and acceptBurnRoot numbers include the mock
+///         transfer, must read 21000 in isolated mode. Numbers for calls that verify a proof include the mock
 ///         verifier's own execution, which `test_gas_mockVerifierExecution` estimates separately.
 contract GasScenarios is VaultTestBase {
     address internal warmup = makeAddr("warm-up depositor");
@@ -148,12 +148,34 @@ contract GasScenarios is VaultTestBase {
 
     // ---- release side ---------------------------------------------------------------------------------------------
 
-    function test_gas_acceptBurnRoot_newRoot() public {
-        bytes32 root = keccak256("a new burn root");
-        _proveRoot(_rootJournal(root, LEZ_BLOCK + 1, BURN_COUNT, MIN_DEPTH));
+    function test_gas_submitCandidate() public {
+        FerrataVault.Checkpoint memory c = _nextCheckpoint(keccak256("a new burn root"));
+        _proveCheckpoint(_checkpointJournal(c));
+        vm.roll(block.number + 1); // so the call records its own beacon
         vm.prank(relayer);
-        vault.acceptBurnRoot(root, LEZ_BLOCK + 1, BURN_COUNT, MIN_DEPTH, SEAL);
-        _log("acceptBurnRoot, new root (incl. mock verifier)");
+        vault.submitCandidate(c, SEAL);
+        _log("submitCandidate, incl. its beacon (incl. mock verifier)");
+    }
+
+    function test_gas_recordBeacon() public {
+        vm.roll(block.number + 1);
+        vm.prank(relayer);
+        vault.recordBeacon();
+        _log("recordBeacon");
+    }
+
+    function test_gas_finalize() public {
+        FerrataVault.Checkpoint memory c = _nextCheckpoint(keccak256("a new burn root"));
+        _submit(c);
+        vm.warp(block.timestamp + DELTA);
+        vm.roll(block.number + 1);
+        uint256 beaconIndex = vault.recordBeacon();
+        (, bytes32 nonce) = vault.beacons(beaconIndex);
+        c.echoNonce = nonce;
+        _proveCheckpoint(_checkpointJournal(c));
+        vm.prank(relayer);
+        vault.finalize(beaconIndex, c, SEAL);
+        _log("finalize (incl. mock verifier)");
     }
 
     function test_gas_releaseETH_noFee() public {
