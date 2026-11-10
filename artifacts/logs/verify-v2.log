@@ -1,0 +1,24 @@
+2026-11-10T03:28:00+01:00
+release image id 0xdda76672e6e05535117ed6880227a414420344cba9c47b6e112c7dabc5b027c5
+Groth16ReceiptVerifierParameters::default(): control_root 0xa54dc85ac99f851c92d7c96d7318af41dbe7c0194edfcc37eb4d422a998c1f56 bn254_control_id 0xc07a65145c3cb48b6101962ea607a4dd93c753bb26975cb47feb00d3666e4404 digest 0x73c457ba541936f0d907daf0c7253a39a9c5c427c225ba7709e44702d3c6eedc selector 0x73c457ba
+[eth] receipt-succinct.bin: verifies; 223930 bytes bincode
+[eth] receipt-groth16.bin: verifies; 1201 bytes bincode
+[eth]   seal selector 0x73c457ba
+[eth] journal: burnRoot 0xfcfb6067d8a2b397d205df1933ec19d4ba34ead4559da6b9a77bda07c5cea872 NOut 0x5a7f981cb267f31d45c07940c0aad3c76aaa6bb191dd23e1ff7fb1d12df5ef4c sha256 0x58581b6367f6c9e5cbb72d0f174c282873ee5c11554a0cdd204f17bf67e57fe2
+release image id 0xdda76672e6e05535117ed6880227a414420344cba9c47b6e112c7dabc5b027c5
+Groth16ReceiptVerifierParameters::default(): control_root 0xa54dc85ac99f851c92d7c96d7318af41dbe7c0194edfcc37eb4d422a998c1f56 bn254_control_id 0xc07a65145c3cb48b6101962ea607a4dd93c753bb26975cb47feb00d3666e4404 digest 0x73c457ba541936f0d907daf0c7253a39a9c5c427c225ba7709e44702d3c6eedc selector 0x73c457ba
+[erc20] receipt-succinct.bin: verifies; 223930 bytes bincode
+[erc20] receipt-groth16.bin: verifies; 1201 bytes bincode
+[erc20]   seal selector 0x73c457ba
+[erc20] journal: burnRoot 0xfcfb6067d8a2b397d205df1933ec19d4ba34ead4559da6b9a77bda07c5cea872 NOut 0xbdd5cc6a907bd2ecf3bd568708ce8a43a4e1dbe25054d335968abf700eeb7a48 sha256 0xcb236a60277c10779accd6948c52fb1503cdbd1e42c00fda70b4883ea934c586
+release image id 0xdda76672e6e05535117ed6880227a414420344cba9c47b6e112c7dabc5b027c5
+Groth16ReceiptVerifierParameters::default(): control_root 0xa54dc85ac99f851c92d7c96d7318af41dbe7c0194edfcc37eb4d422a998c1f56 bn254_control_id 0xc07a65145c3cb48b6101962ea607a4dd93c753bb26975cb47feb00d3666e4404 digest 0x73c457ba541936f0d907daf0c7253a39a9c5c427c225ba7709e44702d3c6eedc selector 0x73c457ba
+[ethpull] receipt-succinct.bin: verifies; 223930 bytes bincode
+[ethpull] receipt-groth16.bin: verifies; 1201 bytes bincode
+[ethpull]   seal selector 0x73c457ba
+[ethpull] journal: burnRoot 0xfcfb6067d8a2b397d205df1933ec19d4ba34ead4559da6b9a77bda07c5cea872 NOut 0x78b768addf7f0f1df91c157784c3b5d2cbc9f1c233b5c29b6c7ab72ba883f3ed sha256 0x3d706f2b6c84b60d28877cfddeaac80e227dbc64da35276abb8afbbf1b0b9ecb
+scenario.json written
+wrote <workspace>/ferrata-bridge/host/../evm-verify/test/fixtures/v2/release-eth.json
+wrote <workspace>/ferrata-bridge/host/../evm-verify/test/fixtures/v2/release-erc20.json
+wrote <workspace>/ferrata-bridge/host/../evm-verify/test/fixtures/v2/release-ethpull.json
+wrote <workspace>/ferrata-bridge/host/../evm-verify/test/fixtures/v2/checkpoint.json
