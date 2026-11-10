@@ -1,8 +1,11 @@
-# FerrataVault gas: v4, with v3 and v2 beside it
+# FerrataVault gas: v5, with v4, v3 and v2 beside it
 
-v4 measured on 2026-11-10 on the Modal build box (`spike/modal-build/mrun`), v3 earlier the same day, both with forge
-1.3.6, solc 0.8.26, optimizer on (200 runs), EVM cancun. "v3 Dn" is item Dn of
-[`docs/design/spec/bridge-spec-v3-changes.md`](../docs/design/spec/bridge-spec-v3-changes.md).
+v5 (D13's fees) measured on 2026-11-10 on the Modal build box (`spike/modal-build/mrun`), v4 and v3 earlier the same
+day, all with forge 1.3.6, solc 0.8.26, optimizer on (200 runs), EVM cancun. "v3 Dn" is item Dn of
+[`docs/design/spec/bridge-spec-v3-changes.md`](../docs/design/spec/bridge-spec-v3-changes.md). These are Foundry's
+gas rules (Prague). Sepolia has run Glamsterdam since 6 October 2026, which prices new state far higher (EIP-8037):
+creation costs there are in "Creating the contracts on today's Sepolia" below; calls that write new storage cost
+more there too and were not measured on Sepolia.
 
 ```
 forge test --isolate --match-contract GasScenarios -vv
@@ -21,7 +24,8 @@ State when measured (`test/GasScenarios.t.sol`, `setUp`):
 - 42 earlier deposits in the tree, and escrow in every token;
 - one finalised checkpoint;
 - finite per-token and global caps on every bucket;
-- relay fees registered.
+- relay fees registered (fee schedule 0: no mint, burn or checkpoint fee); the v5 fee rows first announce schedule 1
+  on ETH (mint, burn and checkpoint fee 0.1% of each denomination) and wait out its seven days.
 
 The refund rows first retire the vault, finalise a sunset checkpoint and wait until refunds open, the second after
 `revokeWindow` (v3 D5, D11). The
@@ -33,35 +37,41 @@ These are the vault's own scenarios. Rows marked ¹ go through RISC Zero's emerg
 verifier; the same calls with RISC Zero's real Groth16 verifier and real proofs are measured in "With the real
 verifier" below.
 
-| Operation | v4 gas (whole transaction) | v3 | v2 |
-|---|---:|---:|---:|
-| `depositETH`, first deposit by the address | 173,873 | 173,920 | 173,917 |
-| `depositETH`, later deposit by the address | 153,875 | 153,922 | 153,919 |
-| `depositETH`, later deposit, all caps UNLIMITED (for comparison) | 133,137 | 133,184 | 133,181 |
-| `depositETH`, later deposits over 128 consecutive leaves: min / mean / max | 147,509 / 153,794 / 177,341 | 147,556 / 153,841 / 177,388 | 147,553 / 153,838 / 177,385 |
-| `deposit` ERC-20 (18 decimals, returns bool), first deposit by the address | 192,338 | 192,346 | 192,431 |
-| `deposit` ERC-20, later deposit by the address | 172,340 | 172,348 | 172,433 |
-| `deposit` USDT-style (no return value), first deposit by the address | 192,370 | 192,378 | 192,463 |
-| `recordBeacon` (new beacon) | 77,850 | 77,823 | 77,845 |
-| `submitCandidate`, including the beacon it records ¹ | 178,501 | 247,481 | 221,157 |
-| `finalize` ¹ | 216,659 | 212,565 | 200,736 |
-| `finalize`, the first sunset checkpoint (sets the refund boundary) ¹ | 285,193 | 300,999 | – |
-| `cancelCandidate` (freeze authority) | 33,023 | 46,740 | – |
-| `release` ETH, no relay fee ¹ ² | 167,943 | 167,995 | 168,038 |
-| `release` ETH, registered fee paid to `msg.sender` ¹ ² | 179,599 | 179,657 | 179,700 |
-| `release` ERC-20 (18 decimals), registered fee paid to `msg.sender` ¹ | 200,339 | 200,397 | 200,440 |
-| `release` ETH, the recipient cannot receive, so the amount is credited to `owed` ¹ | 191,706 | 191,758 | 191,801 |
-| `refund` ETH (32-step path checked against `depositRoot`) | 167,710 | 127,577 | 121,087 |
-| `refund` ERC-20 (18 decimals) | 194,099 | 153,965 | 147,475 |
-| `claimOwed` ERC-20, by the payee | 60,126 | 60,132 | 60,112 |
-| `claimOwed` ETH, called through the payee contract | 37,708 | 37,713 | 37,697 |
-| `revokeFrom` (from `gas-report.txt`: min / median / max) | 23,676 / 73,280 / 83,912 | 23,698 / 69,882 / 80,514 | 23,698 / 67,217 / 77,849 |
-| rule (B): `submitCandidate`, no beacon ¹ | 122,055 | – | – |
-| rule (B): `finalizeAttested` after the wait (no proof; reads the stop) | 199,413 | – | – |
-| `cancelCandidate` (watcher) | 34,798 | – | – |
-| `pauseCheckpoints` (watcher) | 47,282 | – | – |
-| `proposeRoles` (admin: two watchers and a freeze authority) | 123,368 | – | – |
-| `applyRoles` (anyone, 14 days later) | 68,951 | – | – |
+| Operation | v5 gas (whole transaction) | v4 | v3 | v2 |
+|---|---:|---:|---:|---:|
+| `depositETH`, first deposit by the address | 179,275 | 173,873 | 173,920 | 173,917 |
+| `depositETH`, later deposit by the address | 159,285 | 153,875 | 153,922 | 153,919 |
+| `depositETH`, later deposit, all caps UNLIMITED (for comparison) | 138,539 | 133,137 | 133,184 | 133,181 |
+| `depositETH`, later deposits over 128 consecutive leaves: min / mean / max | 152,919 / 159,204 / 182,751 | 147,509 / 153,794 / 177,341 | 147,556 / 153,841 / 177,388 | 147,553 / 153,838 / 177,385 |
+| `deposit` ERC-20 (18 decimals, returns bool), first deposit by the address | 197,762 | 192,338 | 192,346 | 192,431 |
+| `deposit` ERC-20, later deposit by the address | 177,772 | 172,340 | 172,348 | 172,433 |
+| `deposit` USDT-style (no return value), first deposit by the address | 197,794 | 192,370 | 192,378 | 192,463 |
+| `recordBeacon` (new beacon) | 77,937 | 77,850 | 77,823 | 77,845 |
+| `submitCandidate`, including the beacon it records ¹ | 178,555 | 178,501 | 247,481 | 221,157 |
+| `finalize` ¹ | 215,130 | 216,659 | 212,565 | 200,736 |
+| `finalize`, the first sunset checkpoint (sets the refund boundary) ¹ | 283,672 | 285,193 | 300,999 | – |
+| `cancelCandidate` (freeze authority) | 35,663 | 33,023 | 46,740 | – |
+| `release` ETH, no relay fee ¹ ² | 173,683 | 167,943 | 167,995 | 168,038 |
+| `release` ETH, registered fee paid to `msg.sender` ¹ ² | 185,343 | 179,599 | 179,657 | 179,700 |
+| `release` ERC-20 (18 decimals), registered fee paid to `msg.sender` ¹ | 206,083 | 200,339 | 200,397 | 200,440 |
+| `release` ETH, the recipient cannot receive, so the amount is credited to `owed` ¹ | 197,485 | 191,706 | 191,758 | 191,801 |
+| `refund` ETH (32-step path checked against `depositRoot`) | 179,155 | 167,710 | 127,577 | 121,087 |
+| `refund` ERC-20 (18 decimals) | 205,540 | 194,099 | 153,965 | 147,475 |
+| `claimOwed` ERC-20, by the payee | 64,992 | 60,126 | 60,132 | 60,112 |
+| `claimOwed` ETH, called through the payee contract | 37,761 | 37,708 | 37,713 | 37,697 |
+| `revokeFrom` (from `gas-report.txt`: min / median / max) | 23,786 / 73,420 / 84,052 | 23,676 / 73,280 / 83,912 | 23,698 / 69,882 / 80,514 | 23,698 / 67,217 / 77,849 |
+| rule (B): `submitCandidate`, no beacon ¹ | 122,109 | 122,055 | – | – |
+| rule (B): `finalizeAttested` after the wait (no proof; reads the stop) | 197,961 | 199,413 | – | – |
+| `cancelCandidate` (watcher) | 37,438 | 34,798 | – | – |
+| `pauseCheckpoints` (watcher) | 47,260 | 47,282 | – | – |
+| `proposeRoles` (admin: two watchers and a freeze authority) | 123,391 | 123,368 | – | – |
+| `applyRoles` (anyone, 14 days later) | 68,988 | 68,951 | – | – |
+| `announceFees`, three denominations (admin; v5) | 248,450 | – | – | – |
+| `applyFees`, puts a due fee change in force (anyone; v5) | 82,892 | – | – | – |
+| `depositETH`, first deposit by the address, also puts a due fee change in force (v5) | 232,182 | – | – | – |
+| `depositETH`, later deposit by the address, a mint fee in force (v5) | 159,285 | – | – | – |
+| `release` ETH, relay, burn and checkpoint fees; first credits to the fee recipient and the finaliser ¹ ² (v5) | 256,557 | – | – | – |
+| `release` ETH, the same, later credits ¹ ² (v5) | 200,257 | – | – | – |
 
 ¹ **The real verifier's gas is not included in this table.** These calls go through
 `RiscZeroVerifierEmergencyStop`, which a real deployment also pays for. Inside it sits `MockRiscZeroVerifier`,
@@ -125,6 +135,72 @@ with the real verifier.
 
 **The whole return leg of the test**, from an empty chain to both releases paid: 10.9M gas, of which 7.64M is
 the four creations (the vault alone 5.50M) and 0.95M the two registrations.
+
+## What changed in v5 (D13 fees; mock verifier, same state)
+
+Measured differences against v4 in the table above; the causes are read from the code, not traced.
+- **Deposits about +5.4k** (179,275 against 173,873 for a first ETH deposit): the token's fee state and its schedule's
+  word are read, and the total escrowed is the denomination plus the mint and relay fees. A deposit that also puts a
+  due fee change in force costs 232,182 (first deposit by the address); `applyFees` alone costs 82,892.
+- **Releases about +5.7k** (185,343 against 179,599 with the relay fee): the schedule in force and the root's finaliser
+  are read. With burn and checkpoint fees in force, the two credits to `owed` cost 256,557 when both slots are
+  written from zero and 200,257 later (fresh recipients in both).
+- **Refunds about +11.4k** (179,155 against 167,710): the leaf's checks and its escrow moved into the library
+  (a DELEGATECALL) with a search for the leaf's schedule.
+- **`cancelCandidate` +2.6k**: its body moved into the library (EIP-170).
+- **Checkpoints unchanged**: `submitCandidate` +54, `recordBeacon` +87, `finalize` −1,529, `finalizeAttested` −1,452. The
+  finaliser's address is packed with `finalizedAt` in the slot the history already wrote.
+- **`registerToken`** (real-verifier table below): 647,208 against 472,235; registration also stores fee schedule 0
+  and publishes the registry entry's hash and schedule 0's hash for the LEZ side.
+
+## v5 with the real verifier
+
+Same tests and state as "Rule (B) and rule (A) with the real verifier (v4)" below (`ReturnLegGas`, `RuleBRealGas`,
+`forge test --isolate`; the fixture's registrations carry no checkpoint fee):
+
+| Step | v5 | v4 |
+|---|---:|---:|
+| rule (B): `submitCandidate`, real `checkpoint_b` seal (no beacon) | 347,820 | 347,766 |
+| rule (B): `finalizeAttested` after the wait | 195,149 | 196,601 |
+| **a rule (B) checkpoint** | **542,969** | 544,367 |
+| rule (A): `submitCandidate`, real checkpoint seal (records a beacon) | 438,444 | 438,390 |
+| rule (A): `recordBeacon` | 77,937 | 77,850 |
+| rule (A): `finalize`, real seal echoing the beacon | 457,965 | 459,494 |
+| **a rule (A) checkpoint** | **974,346** | 975,734 |
+| `release` ETH / ERC-20, real release seal | 373,657 / 403,523 | 363,117 / 388,179 |
+| `registerToken`, three denominations: ETH / ERC-20 | 647,208 / 648,046 | 472,235 / 473,073 |
+| `depositETH`, first of the tree / `deposit` ERC-20, second of the address | 198,427 / 197,945 | 193,072 / 192,529 |
+
+Every row is under the M0 thresholds (`docs/traceability.md`, P.3: candidate and finalisation ≤ 500k, release ≤ 450k).
+
+## Creating the contracts on today's Sepolia
+
+Measured read-only on 2026-11-10 with `eth_estimateGas` against `https://ethereum-sepolia-rpc.publicnode.com` (reth
+v2.10.0, block 12,107,166, block gas limit 200,000,000), the vault's constructor given the stop's and the library's
+runtime code by state override; beside them the receipts of the same creations on a local anvil fork (Foundry's
+rules) from `script/fork-rehearsal.sh`:
+
+| Creation | Runtime bytes | Sepolia (Glamsterdam) | Foundry / anvil |
+|---|---:|---:|---:|
+| `RiscZeroGroth16Verifier` | 4,810 | 7,795,331 | 1,179,986 |
+| `RiscZeroVerifierEmergencyStop` | 1,698 | 2,977,644 | 451,756 |
+| `FerrataRegistry` (the library) | 11,606 | **18,301,151** | 2,563,131 |
+| `FerrataVault`, rule (A) / rule (B) | 24,242 | **39,538,106 / 39,538,070** | 5,681,056 / 5,681,009 |
+| test token | 1,862 | 3,342,971 | 508,036 |
+
+EIP-8037 charges 1,530 gas per byte of code deposited, 183,600 for a new account and 97,920 for a new storage slot,
+as *state gas*; EIP-7825's per-transaction cap of 2^24 = 16,777,216 now applies to *execution* gas only, and the
+whole `tx.gas` is capped at 2^32 − 1 and by the block gas limit (EIP-8037). Sepolia's fork date and the node's
+behaviour come from the Sepolia measurement work on the branch `sepolia-cloud`: Glamsterdam active since
+6 October 2026 (`eth_config`), and this node's `eth_estimateGas` refusing a transaction whose execution gas exceeds
+2^24, so every estimate above, all of which succeeded, fits the execution cap. The library's and the vault's
+totals are above 2^24 (by 1,523,935 and 22,760,890), almost all of it state gas: the vault's code alone is
+24,242 × 1,530 = 37,090,260. With the deployment script's margin of 1.25 their limits are 22,876,438 and 49,422,632,
+under the block gas limit: **both fit, and no split is needed.** On a chain that capped the whole transaction at
+2^24 at this price, a creation could deposit about 10.6 kB of code (8.4 kB with the margin; derived from the
+library's and the token's estimates), and the vault and library together (35,848 bytes) would have to become at
+least five contracts. `script/deploy.sh` takes every limit from the node's estimate and refuses a transaction above
+the cap of the rule it is told (`FERRATA_GAS_RULE=eip8037` on Sepolia); see `README.md`, "Deployment".
 
 ## What changed in v4 (mock verifier, same state)
 

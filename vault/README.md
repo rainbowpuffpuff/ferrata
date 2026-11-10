@@ -1,12 +1,13 @@
-# FerrataVault v4: the Ethereum half of a private lock-and-mint bridge (spike)
+# FerrataVault v5: the Ethereum half of a private lock-and-mint bridge (spike)
 
 `src/FerrataVault.sol` is the Ethereum vault of a privacy-preserving lock-and-mint bridge to LEZ (Logos RFP-022). It
 implements the bridge specification v2 as amended by the v3 changes: D3 to D5 and D9 of the delta, and the vault
 items of D11 and D13: both finality rules behind an immutable `mode` (rule (B) of D7 and D13 beside rule (A)),
 watchers, the admin's 14-day role change, keyless retirement, the floor under the release buckets, refunds drawing
-on the release buckets and stopping with the verifier, and D11's boundary second and journal comparison. D13's
-fees are not built. D8 lists limits that stay as they are. `src/FerrataRegistry.sol` is its linked library
-(registration, cap settings, role proposals, the checks of a revocation), which keeps the vault under EIP-170.
+on the release buckets and stopping with the verifier, and D11's boundary second and journal comparison; v5 adds
+D13's fees. D8 lists limits that stay as they are. `src/FerrataRegistry.sol` is its linked library (registration,
+cap settings, role proposals, the checks of a revocation, fee schedules and their publication for LEZ, the refund's
+leaf checks), which keeps the vault under EIP-170.
 
 **Specification.** "SPEC-v2 §x" is [`docs/design/spec/bridge-spec-v2.md`](../docs/design/spec/bridge-spec-v2.md)
 and "SPEC-v3-delta Dn" (or "v3 Dn") is
@@ -21,7 +22,8 @@ that history:
 | v1 (tag `v1` there) | `c417dc2` | the first design |
 | v2 (branch `v2` there) | `d64845b` | SPEC-v2 |
 | v3 (branch `v3` there) | `2f40b2f` | SPEC-v2 + SPEC-v3-delta D3–D5, D9 |
-| v4 (branch `vault-v4` of this repository; this one) | `3b0f059` and later | + rule (B), the vault items of D11 and D13 |
+| v4 (branch `vault-v4` of this repository) | `3b0f059` to `c7703f6` | + rule (B), the vault items of D11 and D13 |
+| v5 (branch `vault-fees`; this one) | `ebc0e72` and later | + D13's fees; the deployment script |
 
 **Inbound.** Users deposit fixed denominations of ETH or a registered ERC-20, with a hiding commitment to their LEZ
 destination. Each deposit becomes a leaf of a SHA-256 Merkle tree, and its root sits in storage slot 0, where the
@@ -33,8 +35,8 @@ echoes an Ethereum beacon. Rule (B): one proof that `t` sequencers attested the 
 once `W = Δ` (1 h by default) has passed, unless a watcher cancels it. Releases pay out against a RISC Zero proof of
 a burn under a finalised, unrevoked burn root.
 
-Status: prototype evidence for a grant proposal. **Not audited, not deployed anywhere.** In the vault's own 343
-tests proofs are mocked: the base verifier accepts exactly the (image id, journal digest) pairs a test registers.
+Status: prototype evidence for a grant proposal. **Not audited, not deployed anywhere** (the deployment script is
+rehearsed on a local fork of Sepolia only). In the vault's own 374 tests proofs are mocked: the base verifier accepts exactly the (image id, journal digest) pairs a test registers.
 It sits behind RISC Zero's unmodified `RiscZeroVerifierEmergencyStop`, as a deployment's would. `test/real/` runs
 the return leg once with no mock on the Ethereum side: RISC Zero's real Groth16 verifier behind the same stop, a
 real proof of the checkpoint program for the candidate, a second one for the finalisation, and real proofs of the
@@ -188,6 +190,44 @@ release still completes and the nullifier is used. Only the payee can withdraw, 
 itself. ETH is sent with a `call` that copies no return data, so a hostile recipient cannot run the vault out of gas
 with a huge revert.
 
+### Fees (v5, D13)
+
+Every fee is a fixed amount per token and denomination, at most 1% of that denomination (a constant ceiling, each
+fee on its own), in the token itself:
+- the **relay fee**, registered with the token and write-once (as in v4). A deposit escrows it and the claim on LEZ
+  pays it to the relayer; a release pays it to its relayer when the proof names it (0 or exactly the registered fee);
+- the **mint fee** (protocol), escrowed by a deposit beside the denomination, in whole LEZ units;
+- the **burn fee** (protocol), kept from a release and credited to the immutable `feeRecipient`;
+- the **checkpoint fee**, kept from a release and credited to whoever finalised the root the release is proven
+  against (the sender of `finalize` under rule (A), of `finalizeAttested` under rule (B)).
+
+A deposit escrows the denomination plus the mint and relay fees of the schedule in force; its leaf and its `Deposit`
+event keep the denomination. A release pays the denomination less the relay fee its proof names and the burn and
+checkpoint fees of the schedule in force at the release. Burn and checkpoint fees are credited to `owed` and claimed
+with `claimOwed`, never pushed, so no finaliser can make releases costly. A refund returns the leaf's whole escrow:
+the denomination and the mint and relay fees of the schedule of its leaf index. The caps count what moves: a
+deposit's total, a release's denomination, a refund's total.
+
+**Schedules.** Registration sets schedule 0: no mint or burn fee (protocol fees start at zero) and the checkpoint
+fees given. The admin announces schedule `current + 1` with `announceFees(token, mintFees, burnFees, checkpointFees)`.
+It takes effect seven days of Ethereum time later, at the token's first deposit or release from then on or at
+anyone's `applyFees(token)`, and applies to the deposits from the leaf count at that moment (`fromLeaf`); a deposit
+keeps the schedule of its leaf index. One change can be pending per token: a new announcement replaces it and
+restarts the seven days, announcing the fees in force withdraws it, and a change already due is put in force before
+a new announcement is recorded. `feeState(token)` and `fees(token, index, denomIndex)` read them.
+
+**Published for the LEZ side.** Slots 81 and 82 hold the fee state and the schedules. The registry entry and every
+schedule in force are published as SHA-256 hashes at SHA-256 slots, which LEZ reads with a storage proof as it reads
+slot 0: at `sha256("ferrata/vault/registry/v1" ‖ token)` the hash `sha256("ferrata/registry/v1" ‖ token ‖
+lezDefinition ‖ decimals:u8 ‖ lezUnit ‖ unitWeight ‖ k:u8 ‖ denominations[k] ‖ relayFees[k])`, and at
+`sha256("ferrata/vault/fees/v1" ‖ token ‖ index:u64)` the hash `sha256("ferrata/fees/v1" ‖ token ‖ index:u64 ‖
+fromLeaf:u64 ‖ announcedAt:u64 ‖ effectiveAt:u64 ‖ k:u8 ‖ mintFees[k] ‖ burnFees[k] ‖ checkpointFees[k])`, zero until
+the schedule is in force (u256 words unless marked). These are the encodings of `lez/bridge-wire` on the branch
+`bridge-complete` (a9c676b, work in progress), and the vault refuses what that code refuses: a fee above 1%, mint
+and relay fees that are not whole LEZ units, a mint or burn fee in schedule 0, a `lezUnit` above 10^decimals, a
+largest denomination whose double does not fit in 128 bits. If the LEZ side changes them, `_publishEntry` and
+`_publishSchedule` in `FerrataRegistry` are the one place to follow. `test/Fees.t.sol` pins known answers of both.
+
 ### Verifier and stop
 
 `verifier` is immutable. A deployment points it at a `RiscZeroVerifierEmergencyStop` wrapping the Groth16 verifier
@@ -225,7 +265,9 @@ layout (`forge inspect FerrataVault storageLayout`):
 - 53–64: registry, per-token freezes, delay history, escrow, owed, counters, nullifiers, refunded leaves, per-token
   buckets;
 - 65–68 and 69–72: the global buckets;
-- 73–75: the watchers; 76–80: the pending role proposal (v4).
+- 73–75: the watchers; 76–80: the pending role proposal (v4);
+- 81–82: the fee state and the fee schedules (v5); the published registry and fee hashes sit at SHA-256 slots
+  ("Fees").
 
 ## Encodings
 
@@ -319,6 +361,33 @@ deployment sets `deltaFloor ≥ Δ_g + S + ε`, 3 h 01 min by default, and the d
 
 ## Where I interpreted or departed from the spec
 
+v5, D13's fees: where the specification leaves a choice (the LEZ side, built at the same time on `bridge-complete`,
+has to agree on each):
+- **Which fees change by announcement.** The mint and burn fees (protocol fees, zero at registration) and the
+  checkpoint fee (set at registration). The relay fee stays write-once.
+- **The 1% ceiling** applies to each fee on its own, not to their sum.
+- **Units.** Mint and relay fees are whole LEZ units, since LEZ mints them; burn and checkpoint fees may be any base
+  unit, since Ethereum keeps them.
+- **"Seven days of Ethereum time after they are announced"** is a lower bound: the change takes effect at the token's
+  first deposit or release, or anyone's `applyFees`, at or after announcement + 7 days; `fromLeaf` is the leaf count
+  then, and the published `effectiveAt` is that block's time.
+- **One pending change per token**: a new announcement replaces it and restarts the notice; announcing the fees in
+  force withdraws it.
+- **A release pays the fees in force at the release**, not those of the root's checkpoint. Rejected: the root's
+  schedule, inexact in time under lazy activation and a search on the hot path.
+- **"Whoever finalised the root used"** is the sender of `finalize` (A) or `finalizeAttested` (B), recorded in the
+  checkpoint's history entry; under rule (B) anyone may finalise after the wait, so finalisers race for the fee.
+  Rejected: the candidate's submitter (one more slot per candidate, about 22k gas).
+- **Who receives the burn fee**: an immutable `feeRecipient` set at deployment. Burn and checkpoint fees are
+  credited, never pushed.
+- **Relay fee**: a release's stays 0 or the registered fee (v4); a deposit always escrows it, since the claim on LEZ
+  pays it.
+- **A refund returns the leaf's whole escrow** (denomination, mint and relay fee of its schedule); the caps count
+  escrow movements (a deposit's total, a release's denomination, a refund's total).
+- **Schedule 0** starts at the leaf count at registration. **Events**: `Release` is unchanged, fee credits are
+  `OwedCredited`, and `Refund.amount` is the total refunded.
+- **Encodings and checks** of the registry entry and the schedules: those of `lez/bridge-wire` at a9c676b ("Fees").
+
 Kept from v2:
 - **`finalize(beaconIndex, journalFields, seal)`.** The spec's separate `newState` argument is taken from the
   journal fields; rule (B)'s `finalizeAttested(journalFields)` likewise.
@@ -399,6 +468,88 @@ New in v4:
   another account.
 - **Real proofs in two runs only.** `test/real/` verifies real Groth16 proofs of both checkpoint rules and of the
   release program; every other test mocks the verifier. Those proofs are about a stand-in zone built with test keys.
+
+## Deployment (v5): `script/deploy.sh` (rehearsed on a local fork of Sepolia; not broadcast)
+
+`script/DeployVault.s.sol` deploys a test vault under rule (A) or (B), **one transaction per run**; `script/deploy.sh`
+runs it until its record says complete and stops at the first run that fails. Each run reads the record
+(`deployments/<chain id>-<mode>.json`, or `FERRATA_OUT`), counts a recorded address only if it has code, and does the
+next step:
+1. RISC Zero's `RiscZeroGroth16Verifier` (or the one `FERRATA_GROTH16_VERIFIER` names);
+2. `RiscZeroVerifierEmergencyStop` around it, owned by the deployer;
+3. the library `FerrataRegistry`;
+4. `FerrataVault`: the artifact's creation code with its 11 call sites of the library linked to that address (solc's
+   placeholder, `__$` + 17 bytes of `keccak256("src/FerrataRegistry.sol:FerrataRegistry")` + `$__`); never
+   `new FerrataVault`, which would make forge deploy a library of its own;
+5. the test token;
+6. `registerToken` for ETH (0.001, 0.01, 0.1 ETH; relay fee 0.2%, checkpoint fee 0.1%) and 7. for the token (100,
+   1,000, 10,000; 0.25% and 0.1%): schedule 0, protocol fees at zero;
+8. `renounceOwnership()` of the stop: nobody holds its guardian key (proposal §B5), and only RISC Zero's proof of
+   an exploit can trip it;
+9. no transaction: the checks (the stop has no owner, is not tripped and wraps the verifier; the vault's verifier is
+   the stop; its rule, admin and freeze authority; both registrations, schedule 0, the published registry and fee
+   hashes), then `complete: true`.
+
+The record holds every address, the deployer, the rule, the gas rule and margin, and per transaction the node's
+estimate and the limit.
+
+**Gas.** Before it sends, a run asks the node for `eth_estimateGas` of that transaction on the chain as the earlier
+runs left it (`vm.rpc`), and refuses, sending nothing, unless estimate × `FERRATA_GAS_MARGIN_PCT` / 100 (default 125)
+is within the cap of `FERRATA_GAS_RULE`: `eip7825` (the default) caps the limit at 2^24; `eip8037` (Sepolia since
+6 October 2026) caps it at the block gas limit and 2^32 − 1, the node's estimate having already refused anything
+whose execution gas exceeds 2^24. `FERRATA_TX_GAS_CAP` lowers the cap further. forge then sends the transaction with
+`--skip-simulation --gas-estimate-multiplier` at the same margin, so its limit is the node's estimate times the
+margin; `deploy.sh` reads the sent limit back from the node and stops if it differs. One transaction per run is what
+makes every estimate real: a transaction that depends on the previous one can only be estimated once that one is
+mined. On today's Sepolia the creations cost 7.80 M (verifier), 2.98 M (stop), 18.30 M (library), 39.54 M (vault) and
+3.34 M (token) gas: `GAS.md`, "Creating the contracts on today's Sepolia". The registrations were not measured there.
+
+**Keys.** Neither the script nor the driver reads one. forge signs with Foundry's own keystore variables
+(`ETH_KEYSTORE`, `ETH_PASSWORD`: a keystore file and a file holding its password) or, against a local fork, with
+`--unlocked`. The script refuses chain 1, forge's default sender (no key given) and, except on chain 31337, the
+public anvil accounts.
+
+```
+cd vault && forge build
+# Sepolia (not run here; the owner's command):
+export ETH_KEYSTORE=<keystore file> ETH_PASSWORD=<file holding its password> ETH_FROM=<its address>
+FERRATA_MODE=A FERRATA_GAS_RULE=eip8037 FERRATA_RPC_URL=<Sepolia RPC> script/deploy.sh
+# the rehearsal on a local anvil fork of Sepolia (no key; nothing reaches Sepolia):
+script/fork-rehearsal.sh [<log directory>]
+```
+
+Testnet defaults: `FERRATA_DELTA` 600 s, `FERRATA_REVOKE_WINDOW` 1 day, `FERRATA_MAX_FREEZE` 30 days,
+`FERRATA_MIN_RELEASE_DELAY` 0, `FERRATA_RELEASE_DELAY` 120 s, a freeze authority nobody holds a key for
+(`FERRATA_FREEZE_AUTHORITY`), the deployer as admin and fee recipient (`FERRATA_FEE_RECIPIENT`), no watchers
+(`FERRATA_WATCHERS`), caps UNLIMITED. `script/params/sepolia.json` gives both rules' image ids, the release image id,
+the LEZ configuration and genesis of the Sepolia run, and the LEZ token definitions, which are zero placeholders:
+registration is write-once, so set them before a deployment the LEZ side will read.
+
+**The rehearsal** (`script/fork-rehearsal.sh`, 2026-11-10, on the Modal build box: anvil 1.3.6 forking Sepolia at
+block 12,107,254 with Foundry's gas rules, accounts impersonated):
+
+| Step | Node estimate (anvil) | Limit sent (× 1.25) | Gas used |
+|---|---:|---:|---:|
+| Groth16 verifier | 1,179,986 | 1,474,982 | 1,179,986 |
+| emergency stop | 451,756 | 564,695 | 451,756 |
+| `FerrataRegistry` | 2,563,131 | 3,203,913 | 2,563,131 |
+| `FerrataVault`, rule (A) / rule (B) | 5,681,056 / 5,681,009 | 7,101,320 / 7,101,261 | 5,681,056 / 5,681,009 |
+| test token | 508,036 | 635,045 | 508,036 |
+| `registerToken` ETH / token | 717,698 / 718,489 | 897,122 / 898,111 | 707,052 / 707,830 |
+| `renounceOwnership` of the stop | 30,324 | 37,905 | 25,524 |
+
+- Rule (A), RISC Zero's real verifier, `eip7825`: complete; deposits of 0.001 ETH and 100 tokens escrowed
+  1,002,000,000,000,000 wei and 100,250,000 (the denomination and the relay fee; mint fee 0), and the deposit root
+  is the reference's.
+- A refusal: the same script with `FERRATA_TX_GAS_CAP=100000` refused the first creation (estimate 1,179,986) and sent
+  nothing; the deployer's nonce did not move.
+- Rule (B), `eip8037`, the stop around an accept-all **test** verifier (`RehearsalAcceptAllVerifier`; no proof exists
+  for a vault at a fresh address without a GPU prover): complete; the same deposits; the freeze authority retired the
+  vault and submitted a sunset candidate that imported no leaf; `finalizeAttested` 601 s later; after the revoke
+  window (86,401 s) both refunds paid the depositor its 1,002,000,000,000,000 wei and 100,250,000 back and left no
+  escrow.
+- Read-only against the public Sepolia node itself, step 1 without `--broadcast`: estimate 7,795,331, limit
+  9,744,163, cap 199,609,187 (the block gas limit).
 
 ## Sepolia round trip (rehearsed end to end on a local fork; not broadcast)
 
@@ -520,7 +671,8 @@ the table above and drives real candidate → beacon → finalisation sequences 
 | `Freeze.t.sol` | All 32 combinations of the five freezes; every freeze lapses after `maxFreeze`; renewal; a lost key cannot lock the vault |
 | `Admin.t.sol` | Constructor checks, including `turnSeconds` and `minReleaseDelay`; the v3 domain tag; write-once registry; relay-fee ceiling (fuzzed); role separation; two-step handovers (v4: the admin's own; the freeze authority changes only through `proposeRoles`) |
 | `Caps.t.sol`, `Merkle.t.sol`, `Privacy.t.sol`, `TreeVectors.t.sol`, `GasScenarios.t.sol` | Rate limits; slots 0, 1 and 2 and tree algebra; LEZ-side data never appears in calldata, events or storage writes; vectors; gas |
-| `invariant/` | 12 invariants over 256 runs × 100 calls, on a rule (A) vault (`VaultInvariants`) and on a rule (B) vault (`VaultInvariantsB`), listed below |
+| `Fees.t.sol` (v5) | D13's fees, 22 tests: registration publishes the registry entry and schedule 0 at their slots (known answers, recomputed byte by byte) and emits them; the fee rules (1% ceiling, LEZ units, schedule 0 without mint or burn fee, twice the largest denomination in 128 bits); `announceFees` only by the admin and only for a registered token (fuzzed ceiling); a change in force seven days after its announcement and not a second earlier, a deposit after it sending the new total, a new announcement replacing the pending one, announcing the fees in force withdrawing it, a due change taking effect before the next announcement; `applyFees` permissionless, acting only when due; a refund returning the escrow of its leaf's schedule; releases paying the denomination less the relay, burn and checkpoint fees, with and without a relay fee, putting a due change in force, crediting nothing for zero fees, the checkpoint fee credited to the finaliser and never pushed, under rule (B) to the sender of `finalizeAttested`; deposit buckets counting the whole escrow; fuzzed fee arithmetic |
+| `invariant/` | 14 invariants over 256 runs × 100 calls, on a rule (A) vault (`VaultInvariants`) and on a rule (B) vault (`VaultInvariantsB`), listed below |
 | `ModeB.t.sol` (v4) | Rule (B): the constructor (turnSeconds 0 under B, non-zero under A); a candidate records no beacon and keeps its journal digest; final at its wait and not a second before, whatever its t; every journal word (the 11 the caller can change, and echoNonce) must be the candidate's; `recordBeacon` and `finalize` are rule (A) only, `finalizeAttested` rule (B) only; a watcher cancels within the wait and the same proof waits again in full; revocation, a competing finalisation, a pending duplicate, the checkpoint freeze, the verifier stop; monotonicity and the leaf bound; a Δ raise only for later candidates; the program's image id pinned; a release against a rule (B) root |
 | `Roles.t.sol` (v4) | Watchers: a 12-hour pause that never shortens a freeze and that the freeze authority can lift, renewable only from now, no other power, every slot counts, nobody else pauses. The admin's role change: admin only, applied by anyone 14 days later and not a second earlier, the old roles holding until then, nothing to apply, address(0) keeping the freeze authority, an empty set removing the watchers, a new proposal restarting the clock, the admin never becoming freeze authority. Keyless retirement 30 days after deployment or the last finalisation, the freeze authority at any time. The release floor: the deployment's global bucket, the global and the per-token bucket in value units, saturation, registration, a fuzz test against hand-worked thresholds; deposits not floored. A verifier that is not an untripped stop refused; a renounced stop owner cannot stop it, a proof of exploit still can |
 | `real/ReturnLeg.t.sol` | No mock: RISC Zero's Groth16 verifier behind its emergency stop, the vault at the addresses the proofs bind, the design's default timers. Before any proof: the checkpoint program's two journals and the release program's two journals are byte for byte the vault's encodings, and the deposit root is the one the bridge core computed. The run: deposits, `submitCandidate` with the real checkpoint seal, the wait, `recordBeacon`, `finalize` with the seal that echoes that beacon, the release delay, `release` of ETH and of the token to recipients that held nothing. Refused: one flipped byte in each of the four seals (selector and each proof word), a valid seal of another statement, each journal field changed under its real seal (candidate, finalisation, release), a replayed release, a release against a root that is not finalised or still delayed, a finalisation one second early with the right nonce, any proof after the stop. `ReturnLegGas` measures every step. v4 runs it unchanged except where v4 refuses earlier (a finalisation journal with another tip, n or t is refused by the vault before the proof, D11). |
@@ -532,7 +684,8 @@ then tries to finalise both kinds after their full wait with valid proofs, and t
 It finalises under the vault's rule (`finalizeAttested` under rule (B)). It also revokes, retires, refunds,
 releases (some to payees that cannot receive), claims, replays nullifiers and refunds, donates, moves time, and
 changes freezes, caps and delays; watchers pause and cancel, and the admin's role proposals are applied on time
-and early. Its 12 invariants:
+and early; since v5 it also announces and applies fees, and models the LEZ side's supply (claims of settled
+deposits, burns, releases of burns). Its 14 invariants:
 - `balance == escrowed + totalOwed + donations` (an equality, so value stranded in the vault fails it too), and
   `escrowed == deposits − releases − refunds`, for every token;
 - `totalOwed` equals the sum over all payees;
@@ -549,26 +702,36 @@ and early. Its 12 invariants:
 - the leaf count, root and slot 2 match the reference;
 - (v4) the freeze authority and the watchers are the handler's model, changed only by a proposal applied after its
   14 days, and `checkpointsFrozenUntil` is the model's (watcher pauses reach 12 h ahead and never shorten a freeze);
-- (v4) no candidate is finalised before its wait, and under rule (B) no beacon is ever recorded.
+- (v4) no candidate is finalised before its wait, and under rule (B) no beacon is ever recorded;
+- (v5) supply: for every token, the wrapped supply on LEZ (the handler's model: a claim mints what the leaf's attested
+  schedule and the registered relay fee say, a burn takes one denomination) equals the escrow less the deposits not
+  yet minted and the burns not yet released;
+- (v5) every deposit escrowed, every release paid and credited, every refund returned exactly what the fee model
+  says; every published schedule hash is the model's preimage; no claimed deposit is refunded.
 
-Results of the final v4 runs, on 2026-11-10, on the Modal build box (`spike/modal-build/mrun`), forge 1.3.6, solc
+Results of the final v5 runs, on 2026-11-10, on the Modal build box (`spike/modal-build/mrun`), forge 1.3.6, solc
 0.8.26:
 
 ```
-forge build --force --sizes   FerrataVault runtime 24,312 bytes (264 under EIP-170); FerrataRegistry 4,917
+forge build --sizes           FerrataVault runtime 24,242 bytes (334 under EIP-170); FerrataRegistry 11,606
 forge fmt --check             ok
-forge test                    Ran 29 test suites: 364 tests passed, 0 failed, 0 skipped (364 total tests)
-                              (including the 12 invariants twice and the 21 tests of test/real/ with real proofs)
+forge test                    Ran 30 test suites: 395 tests passed, 0 failed, 0 skipped (395 total tests)
+                              (including the 14 invariants twice and the 21 tests of test/real/ with real proofs)
 
-forge coverage --report summary      (all 364 tests)
+forge coverage --report summary      (all 395 tests)
 | File                    | % Lines           | % Statements      | % Branches        | % Funcs          |
-| src/FerrataRegistry.sol | 100.00% (112/112) | 100.00% (150/150) | 100.00% (24/24)   | 100.00% (16/16)  |
-| src/FerrataVault.sol    | 100.00% (434/434) | 100.00% (531/531) | 100.00% (104/104) | 100.00% (84/84)  |
+| src/FerrataRegistry.sol | 100.00% (227/227) | 100.00% (316/316) | 100.00% (41/41)   | 100.00% (31/31)  |
+| src/FerrataVault.sol    | 100.00% (426/426) | 100.00% (522/522) | 100.00% (102/102) | 100.00% (80/80)  |
 
-tools/mutation_spotcheck.py   in four slices (0–44, 44–88, 88–132, 132–175): 44/44, 44/44, 44/44, 43/43 killed
-                              = 175/175, every one by the unit suites (the invariant campaign was never needed)
+tools/mutation_spotcheck.py   in eight slices of 28 (the last 27): 223/223 killed, every one by the unit suites
+                              (the invariant campaign was never needed)
 ```
 
+The deployment and rehearsal scripts (`script/DeployVault.s.sol`, `script/ForkRehearsal.s.sol`) are not run by
+`forge test`; `forge coverage` lists them at 0%. `script/fork-rehearsal.sh` runs every step of the first under both
+rules, its refusal, and every function of the second ("Deployment").
+
+v4's final runs: 364 tests, 100% coverage of the vault and its library, 175/175 mutants.
 v3's final runs (same commands, before v4): 286 tests on the laptop, then 301 with `test/real/` on the box, 100%
 coverage of the vault, 127/127 mutants. In v4 the invariant handler donates ETH by self-destruct instead of
 `vm.deal`: a balance set with `vm.deal` was lost once a later call made the vault DELEGATECALL its library (forge
@@ -583,10 +746,12 @@ must retire the vault, finalise a sunset checkpoint and wait `revokeWindow` firs
 that did not revert, including calls that had nothing to do, so its figures (1,500 finalisations, 900
 revocations, 640 releases, 350 refunds per campaign) overstated what happened.
 
-Coverage shows only that code ran. The mutation spot-check plants 175 hand-written one-line bugs in a scratch copy
+Coverage shows only that code ran. The mutation spot-check plants 223 hand-written one-line bugs in a scratch copy
 of the vault and its library (v3's 127, 30 of them rewritten where v4 moved or changed the text, and 48 for v4: the
 two rules, the journal digest, D11, watchers, role proposals, keyless retirement, the floor, refunds on the release
-buckets and the stop), across deposits, the tree, the registry and delay bounds, the constructor, candidates, the
+buckets and the stop; v5 retargets 14 of those where the code moved into the library and adds 48 for the fees:
+schedules, notice, replacement, ceilings and units, the escrowed and paid amounts, the credits, the publication's
+slots and hashes, refunds by schedule), across deposits, the tree, the registry and delay bounds, the constructor, candidates, the
 committee checks and the wait, beacons, finalisation and monotonicity, the journal layout, cancellation,
 revocation, refunds and their opening rules, releases, pull payments, freezes, roles and caps. Each is caught by
 named failing tests; for example, dropping the release-freeze check from `refund` is caught by
