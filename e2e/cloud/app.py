@@ -11,7 +11,7 @@ Deployed and driven by e2e/sepolia-cloud.sh (setup, start, status, fetch, stop; 
                 (e2e/cloud/hook.py). The run directory is mirrored to the Volume every 20 s and when the
                 driver stops. Mode "live" signs with the keystore of the Secret; mode "fork" starts
                 anvil on a fork of Sepolia and the driver impersonates the deployer (no key is read).
-  gpu_prove     one NVIDIA L4: the succinct checkpoint proof of the staged inputs, with the CUDA prover
+  gpu_prove     one NVIDIA L4 (an L40S if no L4 is free): the succinct checkpoint proof of the staged inputs, with the CUDA prover
                 that gpu-prover/modal_app.py::build put on the Volume ferrata-prover (mounted read-only).
   groth16_wrap  RISC Zero's Groth16 prover image, run as a plain function (no Docker).
 
@@ -107,6 +107,9 @@ runner_image = (
 )
 
 # ---- the GPU image: the recipe of gpu-prover/modal_app.py (`base`), unchanged, without the staged inputs --------
+# One NVIDIA L4, as gpu-prover/ measured; an L40S only when no L4 can be had (also Ada, compute capability
+# 8.9, so the same sm_89 binary). On 10 Nov 2026 an L4 call of this app waited over an hour for capacity.
+GPU = ["L4", "L40S"]
 CUDA_BASE = "nvidia/cuda:12.8.0-devel-ubuntu24.04"
 RUST_TOOLCHAIN = "1.89.0"
 NVCC_APPEND_FLAGS = "--generate-code arch=compute_89,code=sm_89"
@@ -416,7 +419,7 @@ def runner(run: str, repo: str, mode: str, commit: str) -> dict:
 
 
 # ---- the GPU proof ------------------------------------------------------------------------------------------
-@app.function(image=gpu_image, gpu="L4", cpu=4.0, memory=32768, timeout=3600,
+@app.function(image=gpu_image, gpu=GPU, cpu=4.0, memory=32768, timeout=3600,
               volumes={"/vol": prover_volume.read_only()}, max_containers=1, single_use_containers=True, retries=0)
 def gpu_prove(inputs_tar: bytes, name: str, job: str, limit_s: int) -> dict:
     """The succinct proof of fixture <name> of the staged inputs (programs/, fixtures/, MANIFEST.json, as
