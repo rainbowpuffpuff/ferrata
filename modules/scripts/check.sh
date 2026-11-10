@@ -74,7 +74,21 @@ versions() {
 }
 
 stage() { FERRATA_COMMIT=${FERRATA_COMMIT:-} "$here/stage.sh"; }
-sdk() { nix build "$BUILDER#rust-sdk-src" -o "$mod/logos-rust-sdk-src"; }
+# nix build, retried when a build fails the way the Modal box (gVisor) makes some fail: a builder that
+# exits within milliseconds can lose its terminal output, and Nix stops with "reading a line:
+# Input/output error". Another attempt resumes from what was built. Any other failure is final.
+nixb() {
+  local attempt log="$out/nix-build-attempt.log"
+  for attempt in 1 2 3 4 5 6 7 8; do
+    if nix build "$@" > >(tee "$log") 2>&1; then return 0; fi
+    sleep 1
+    grep -q -E 'reading a line: Input/output error|unexpected EOF reading a line' "$log" || return 1
+    echo "check.sh: nix build $* hit the terminal error (attempt $attempt); retrying"
+  done
+  return 1
+}
+
+sdk() { nixb "$BUILDER#rust-sdk-src" -o "$mod/logos-rust-sdk-src"; }
 lockfile() { (cd "$mod/rust-lib" && cargo generate-lockfile); }
 native_test() { (cd "$mod/rust-lib" && cargo test --release --locked -p ferrata-attest-calls); }
 native_calls() {
@@ -99,8 +113,8 @@ prepare_build() {
   git add -f rust-lib/ferrata-core rust-lib/Cargo.lock
   if [ ! -f flake.lock ]; then nix flake lock; git add flake.lock; fi
 }
-build() { (cd "$out/build" && nix build ".#$1" -o "$out/$1" -L); }
-logosctl_build() { nix build "$CLI#$1" -o "$out/$2"; }
+build() { (cd "$out/build" && nixb ".#$1" -o "$out/$1" -L); }
+logosctl_build() { nixb "$CLI#$1" -o "$out/$2"; }
 
 # core FLAVOUR LOGOSCTL PACKAGE_DIR: install the package into a fresh session, load, call, stop.
 core() {
