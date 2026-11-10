@@ -164,6 +164,8 @@ done
 # Whatever happened, write the records of what did run.
 if [ "$status" != 0 ]; then ( unset RISC0_DEV_MODE; driver export ) 2>&1 | tee -a "$LOG/driver.log"; fi
 head_block="$(rpc getLastBlockId 2>/dev/null | sed -n 's/.*"result":\([0-9]*\).*/\1/p')"
+bedrock_end=""
+if [ "$BEDROCK" = node ]; then bedrock_end="$(curl -fsS -m 5 "http://127.0.0.1:$BEDROCK_PORT/cryptarchia/info" 2>/dev/null)"; fi
 set -e
 
 # ---- Stop, then collect ---------------------------------------------------------------------------
@@ -181,10 +183,17 @@ scrub < "$LOG/sequencer.log" > "$OUT/logs/sequencer.log"
 scrub < "$LOG/sequencer-setup.log" > "$OUT/logs/sequencer-setup.log"
 scrub < "$LOG/driver.log" > "$OUT/logs/driver.log"
 if [ -f "$LOG/bedrock.log" ]; then
-  # The node's log is large; keep its start, every line about the zone's channel, and its end.
-  { head -200 "$LOG/bedrock.log"; echo "[...]"; grep -i -E 'channel|inscri' "$LOG/bedrock.log" | head -400; echo "[...]"; tail -100 "$LOG/bedrock.log"; } \
-    | scrub > "$OUT/logs/bedrock-excerpt.log"
-  wc -lc < "$LOG/bedrock.log" | awk '{print "the whole log: " $1 " lines, " $2 " bytes"}' >> "$OUT/logs/bedrock-excerpt.log"
+  # The node's log is large: keep its start, the blocks it proposed that carry transactions
+  # (the zone's inscriptions are the only transactions on this network), and its end.
+  plain() { sed -e 's/\x1b\[[0-9;]*m//g'; }
+  {
+    plain < "$LOG/bedrock.log" | head -150
+    echo "[...] blocks proposed with transactions:"
+    plain < "$LOG/bedrock.log" | { grep -E 'proposed block .* with [1-9][0-9]* transactions' || true; }
+    echo "[...] the end:"
+    plain < "$LOG/bedrock.log" | tail -40
+    echo "the whole log: $(wc -l < "$LOG/bedrock.log") lines, $(wc -c < "$LOG/bedrock.log") bytes; blocks proposed: $(grep -c 'proposed block' "$LOG/bedrock.log" || true), of which with transactions: $(grep -c -E 'proposed block .* with [1-9][0-9]* transactions' "$LOG/bedrock.log" || true)"
+  } | scrub > "$OUT/logs/bedrock-excerpt.log"
 fi
 for kind in fake real; do
   d="$RUN_DIR/driver/private-$kind"
@@ -214,7 +223,8 @@ done
   echo "- guest binaries: program sha256 $(sha256sum "$PROGRAM_BIN" | cut -d' ' -f1), scripted sha256 $(sha256sum "$SCRIPTED_BIN" | cut -d' ' -f1)"
   echo "- machine: $(nproc) CPUs visible, $(sed -n 's/^model name[^:]*: //p' /proc/cpuinfo | head -1), $(awk '/MemTotal/{printf "%.0f GiB", $2/1048576}' /proc/meminfo), $(uname -sr)"
   echo "- ports: sequencer RPC 127.0.0.1:$RPC_PORT, metrics 127.0.0.1:${FERRATA_LIVE_METRICS_PORT:-9000}, Bedrock API 127.0.0.1:$BEDROCK_PORT"
-  echo "- last block: ${head_block:-?}"
+  echo "- last block: ${head_block:-?}; blocks the sequencer published to Bedrock: $(grep -c 'Published block' "$LOG/sequencer.log" || true); its last channel update: $(grep 'Channel update' "$LOG/sequencer.log" | tail -1 | sed 's/^.*Channel update: //')"
+  [ -n "$bedrock_end" ] && echo "- Bedrock node at the end (cryptarchia/info): $bedrock_end"
 } > "$OUT/environment.md"
 cat "$OUT/environment.md"
 echo "== records in ${OUT#$REPO/}"

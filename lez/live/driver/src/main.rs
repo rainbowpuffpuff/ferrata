@@ -13,6 +13,7 @@
 //!   private-stored  submit lez/results/stage2-private-tx.borsh (the real-proof transaction)
 //!   private-fake    the private update for the live instance with a fake receipt (RISC0_DEV_MODE=1)
 //!   private-real    the same with a real proof (RISC0_DEV_MODE unset)
+//!   submit-proven   submit a private update proven elsewhere (--tx FILE, from prove-from-transcript)
 //!   export          write the records into --out
 //! Without a sequencer:
 //!   verify          re-check a recorded run in --dir, fully if --binary FILE ... are given
@@ -351,7 +352,7 @@ async fn run(args: Args) -> Result<()> {
         _ => {}
     }
     let phase = match args.command.as_str() {
-        "private-stored" | "private-fake" | "private-real" => "private",
+        "private-stored" | "private-fake" | "private-real" | "submit-proven" => "private",
         other => other,
     };
     let mut run = open(&args, phase).await?;
@@ -385,6 +386,10 @@ async fn run(args: Args) -> Result<()> {
                 if args.command == "private-fake" { (private::Proof::Fake, "fake") } else { (private::Proof::Real, "real") };
             let program = run.program.clone();
             private::private_update(&mut run.live, twin, &run.fixtures, &program, proof, name).await?;
+        }
+        "submit-proven" => {
+            let twin = run.twin();
+            private::submit_proven(&mut run.live, twin, &run.fixtures, &args.path("tx")?).await?;
         }
         "export" => export(&mut run).await?,
         "check-rpc" => verify::check_rpc(&args.path("dir")?, &run.live.wallet).await?,

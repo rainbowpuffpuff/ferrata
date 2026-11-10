@@ -194,7 +194,7 @@ impl Live {
 
     /// Record a transaction that was sent: wait for it, read its receipt from the follower.
     pub async fn settle(&mut self, sent: Sent) -> Result<Outcome> {
-        let Sent { step, hash, since_head, payer, balance_before, harness, note } = sent;
+        let Sent { step, hash, since_head, payer, balance_before, harness, note, sent_at } = sent;
         let mut row = Row { phase: self.phase.clone(), step: step.clone(), tx_hash: hash.to_string(), note, ..Row::default() };
         self.harness_columns(&mut row, &harness);
         let included = self.wait_inclusion(hash, since_head).await?;
@@ -222,8 +222,15 @@ impl Live {
             _ => bail!("{step}: the sequencer and the follower disagree on whether {hash} is included"),
         }
         println!(
-            "[{}] {:<58} {:<9} {:>4} gas {:>9} block {:>4} {}",
-            self.phase, row.step, row.status, row.exit, row.exec_gas, row.block, row.tx_hash
+            "[{}] {:<58} {:<9} {:>4} gas {:>9} block {:>4} +{:>5.1}s {}",
+            self.phase,
+            row.step,
+            row.status,
+            row.exit,
+            row.exec_gas,
+            row.block,
+            sent_at.elapsed().as_secs_f64(),
+            row.tx_hash
         );
         self.rows.push(row.clone());
         self.save_rows()?;
@@ -243,6 +250,7 @@ impl Live {
             Ok(hash) => Ok(Ok(Sent {
                 step: tx.step,
                 hash,
+                sent_at: std::time::Instant::now(),
                 since_head,
                 payer: Some(tx.payer),
                 balance_before,
@@ -287,6 +295,7 @@ impl Live {
                 self.settle(Sent {
                     step: step.to_string(),
                     hash,
+                    sent_at: std::time::Instant::now(),
                     since_head,
                     payer: None,
                     balance_before: 0,
@@ -343,6 +352,9 @@ pub struct Tx {
 pub struct Sent {
     pub step: String,
     pub hash: HashType,
+    /// When the sequencer's RPC accepted it (the row's `+s` is the time to its inclusion and
+    /// to the follower's reading of it).
+    pub sent_at: std::time::Instant,
     pub since_head: u64,
     pub payer: Option<AccountId>,
     pub balance_before: u128,

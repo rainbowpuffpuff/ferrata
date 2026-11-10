@@ -85,6 +85,25 @@ pub async fn stored(live: &mut Live, path: &Path) -> Result<()> {
     live.save()
 }
 
+/// Submit a privacy-preserving transaction proven elsewhere (`prove-from-transcript`) for the
+/// twin deployment's instance B, and check what it did.
+pub async fn submit_proven(live: &mut Live, twin: AccountId, fixtures: &Fixtures, path: &Path) -> Result<()> {
+    let bytes = fs::read(path).with_context(|| format!("reading {}", path.display()))?;
+    let tx: LeeTransaction = borsh::from_slice(&bytes).map_err(|e| anyhow!("{}: {e}", path.display()))?;
+    live.sync().await?;
+    let on_chain = store(live, &world_b_after(twin, fixtures, &[])?.inst).await?;
+    let PrivateJob { mut world, update, slot, .. } = private_job(twin, fixtures, Some(&on_chain))?;
+    let note = format!("{} bytes: {}", bytes.len(), describe_claims(&tx));
+    let outcome = live.send_raw("private update for the live instance, real proof made elsewhere", tx, note).await?;
+    if outcome.applied() {
+        world.native.process(&update).map_err(|e| anyhow!("native: {e:?}"))?;
+        check_store(live, &world).await?;
+        check_record(live, &world, slot).await?;
+        println!("[private] the instance holds the native store after the update, and the record of slot {slot}");
+    }
+    live.save()
+}
+
 // ---------------------------------------------------------------------------------------------
 // The wallet's sequencer client, recorded or replayed
 // ---------------------------------------------------------------------------------------------
@@ -494,6 +513,7 @@ pub async fn private_update(
         .settle(Sent {
             step: step.to_string(),
             hash,
+            sent_at: Instant::now(),
             since_head,
             payer: None,
             balance_before: 0,
