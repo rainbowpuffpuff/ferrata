@@ -48,8 +48,13 @@ pub fn zero_hashes() -> [Hash; TREE_DEPTH + 1] {
 
 /// `(left, right)`: `(running, sibling)` if the low bit of `bit` is 0, `(sibling, running)` if it is
 /// 1, selected with a byte mask instead of a branch.
+///
+/// The mask passes through `core::hint::black_box`: without it, LLVM recognises
+/// `a ^ ((a ^ b) & -bit)` as a select and, on rv32im (no conditional move), lowers it to a branch.
+/// Measured in the release guest: 4 extra cycles per 1 bit of the leaf index, i.e. the cycle count
+/// leaked the index's Hamming weight (artifacts/logs/invariance-v2.log).
 fn ordered(running: &Hash, sibling: &Hash, bit: u32) -> (Hash, Hash) {
-    let mask = 0u8.wrapping_sub((bit & 1) as u8);
+    let mask = core::hint::black_box(0u8.wrapping_sub((bit & 1) as u8));
     let mut left = [0u8; 32];
     let mut right = [0u8; 32];
     for (((l, r), a), b) in left.iter_mut().zip(right.iter_mut()).zip(running).zip(sibling) {

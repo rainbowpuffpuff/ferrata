@@ -1,0 +1,5 @@
+2026-11-10T02:14:51+01:00
+loadavg 1.77 3.95 4.91 3/3927 2816447
+[release] 64 random valid witnesses (leaf indices 0, 2^32-1, 0x55555555, 0xAAAAAAAA, then random; random siblings, secrets and public fields): distinct (user cycles, segment po2s): {(64136, [17]), (64176, [17]), (64180, [17]), (64184, [17]), (64188, [17]), (64192, [17]), (64196, [17]), (64200, [17]), (64204, [17]), (64208, [17]), (64212, [17]), (64216, [17]), (64220, [17]), (64264, [17])} (1.5 s)
+Error: release: the cycle count depends on the witness
+claim-check: 16 deposits (both kinds), the claim guest's journal == native (root, chain, vault, N, token, amount) for all; distinct (user cycles, po2s): {(58052, [17]), (58056, [17]), (58060, [17]), (58064, [17]), (58068, [17])}

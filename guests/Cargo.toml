@@ -1,7 +1,7 @@
 [package]
 name = "ferrata-guests"
 version = "0.1.0"
-description = "RISC Zero zkVM 3.0.5 guests: release (the release proof) and claim (test vehicle)"
+description = "RISC Zero zkVM 3.0.5 guests (SPEC-v2): release (the release proof) and claim (measurement only)"
 edition = "2021"
 rust-version = "1.88"
 license = "MIT OR Apache-2.0"
