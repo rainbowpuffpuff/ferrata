@@ -33,6 +33,9 @@ CATEGORY = {
     "keccak.rs": "execution-spec transcription",
     "attest.rs": "new protocol logic",
     "accumulator.rs": "new protocol logic",
+    # The LEZ program's job-step API and its compact encodings and witnesses (lez/RESULTS.md).
+    "steps.rs": "new protocol logic",
+    "witness.rs": "new protocol logic",
     "error.rs": "plumbing",
     "lib.rs": "plumbing",
 }
