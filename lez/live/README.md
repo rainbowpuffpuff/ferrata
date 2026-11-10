@@ -26,7 +26,24 @@ directly for the run: a transaction reaches the state machine only through the s
 its mempool and its block builder, and counts only once the block that holds it is final on
 Bedrock.
 
-TBD(results)
+## The recorded run
+
+One invocation of `run.sh run` on 10 November 2026, 16:58–17:30 UTC, with the scripts of commit
+`9582b15`, then `verify-run.sh` once on the same machine
+([`results/verify-run.log`](results/verify-run.log)). Every figure below is in
+[`results/tables.md`](results/tables.md), `results/environment.md` or the logs of `results/`.
+
+| | |
+|---|---|
+| chain | 191 blocks, every one `Finalized` on Bedrock when the record was written, 10.00 s apart; 97 hold no user transaction (most of them made while the proof ran) |
+| transactions | 96 sent by the wallet: 73 applied, 19 refused by the program with its exit code, 2 reverted otherwise (an adoption sent with the wallet's default gas limit; a job opened before its signature slot), 2 dropped by the sequencer (the first two private transactions below); none rejected at the RPC, none left unfinished |
+| deployment | three images through `program_loader`: 16 transactions in blocks 2–17, execution gas 0. A 508,284-byte image takes 6 (5 `WriteSegment`, 1 `CreateHeader`): storage gas 479,496, base fees 3,835,968 |
+| against the harness | 65 transactions have a row in `../results/stage1-*.md`. Execution gas is equal in 64; the other ran outside its validity window and is charged its declared limit (4,000,000 here, 10,000,000 declared in the harness). Transaction bytes (storage gas) are equal in 44; 19 are 65 bytes longer here and one is 65 bytes shorter (not traced to a field), and the validity-window case is 607 bytes shorter (built differently: the harness sets the block time, here the instance's slots start ten years later) |
+| fees | execution base fee 8 in every block but one: block 92, the only block over the 5M target (two transactions, 7,270,956), raised it to 9 for block 93. The payer's balance on the sequencer fell by exactly the fee in 77 of the 77 transactions where it was read before and after |
+| the private path | (i) the GPU-proven transaction `../results/stage2-private-tx.borsh`: dropped; the sequencer's words: "failed settlement: State transition failed at transaction 0: Invalid input: Unknown program Ev5SfFrpL4nCs5iccBFMXFmUvz5ckzXz37Vgy4B6GT1h, skipping it" (it was proven against the harness state, where the program sits at another account). (ii) The same update built for the live instance with a fake receipt (the wallet in dev mode): dropped, "Invalid privacy preserving execution circuit proof, skipping it". (iii) The same update with a real proof made on this machine's CPU (32 prover threads; proven and sent in 895.6 s; receipt 237,412 bytes, transaction 251,763): verified by the sequencer and applied in block 191, settled 17.6 s after it was sent, at execution gas 479,854, storage gas 224,063 and fee 5,631,336, the harness's figures; the instance then held the native store |
+| Bedrock | the sequencer's blocks were made 3 s after the seconds at which an epoch can begin (181 blocks; 10 at 4 s), never closer than 6 s before an epoch began (20 epochs began); no head rewound, no inscription given up; the node's storage gas price rose 1 → 2 → 3 → 4 |
+| re-check | `verify-run.sh` with the two guest binaries: every block hash holds with the bytecode put back; the 191 blocks replay through LEZ's `chain_state` from the pre-genesis state; the 94 included rows equal what LEZ's settlement charges; the three image ids are as recorded; instance A applied 6 jobs and holds finalized slot 15,589,599 with root `5d1200f2…d573` |
+| machine | a rented Linux container under gVisor, 64 GiB; it reports 2 CPUs, but the whole 34-minute command used 7.20 core-hours of CPU time |
 
 ## How results are read: the sequencer has no receipts
 
@@ -47,13 +64,44 @@ the state the transaction ran against. It applies a block only when the sequence
 
 - the block's own fee transaction must carry exactly the totals the follower computes, or
   `apply_block` fails; the driver sends one transaction per block wherever it can, so for
-  TBD(alone) transactions the sequencer's block total is that transaction's charge;
+  92 of the 94 included transactions the sequencer's block total is that transaction's charge;
 - the payer's balance is read from the sequencer before and after each transaction, and must
   fall by the fee;
 - the instance's store is read from the sequencer after every job and must equal the compact
   form of the native light client's store, and each header record the native finalized header's.
 
-TBD(findings)
+## What the running system showed that the harness could not
+
+- **The head is not the chain.** In the first recorded attempt (15 s blocks, the driver following
+  the sequencer's head), the sequencer rewound its head from block 37 to block 16 and the driver
+  failed ([`observations/rewind/`](observations/rewind/)). The runs of
+  [`observations/epoch-boundary/`](observations/epoch-boundary/) narrow it to the second before a
+  Bedrock epoch begins: with the sequencer's blocks made 1 s before, its head was rewound once and
+  it gave up 31 inscriptions; made 3 s or 5 s before, never. The node raises its storage gas price
+  at the epoch rotations that follow inscriptions (1 → 2 → 3 → 4 in the recorded run).
+  `run-live.sh` gives our reading of the node's source: an inscription funded just before a
+  rotation is left out after it, every later inscription chains on it, and after 300 slots the
+  sequencer gives them all up and rewinds. So the recorded run settles a transaction only in a
+  block `Finalized` on Bedrock, and keeps the sequencer's blocks out of an epoch's last seconds.
+  Every client of a LEZ zone has to do the first; the second is the sequencer operator's.
+- **Finality took 5–6 s.** Each of the 190 blocks after genesis was reported `Finalized` 5 or 6 s
+  after the sequencer created it (whole seconds of its log; at the end the node's last
+  irreversible block was 5 slots behind its tip), and a public transaction was settled 8.5–19.7 s
+  after it was sent (mean 10.3 s, 78 transactions). This is one validator with leader proofs in
+  dev mode, not a network.
+- **A proof is bound to the deployment it was made for.** The GPU-proven transaction, valid in
+  the harness, is refused by the sequencer as "Unknown program": the harness deploys the program
+  at genesis, the zone through `program_loader`, and the program's account differs. A real proof
+  has to be made against the live instance; on this machine's CPU that took 895.6 s, and the
+  sequencer verified and applied it.
+- **The wallet's default gas limit is too low for this program.** An adoption sent with LEZ's
+  wallet default (2,000,000) reverted ("Execution exceeded its cycle budget of 2000000 cycles")
+  and paid 2,000,000; a job's transactions have to declare their limit (the largest needs
+  3,730,145).
+- **The base fee moves.** Two 3.6M transactions in block 92 put it over the 5M target and the
+  next block's execution base fee was 9, not 8; the harness settles everything at genesis fees.
+- **Deployment is a series of transactions, not a genesis entry.** What the harness could not
+  measure: 6 `program_loader` transactions per 508 KB image, storage gas 479,496, execution gas 0.
 
 ## The record
 
@@ -69,11 +117,18 @@ TBD(findings)
 | `results/logs/` | the sequencer's log, the driver's output, an excerpt of the node's log, the node's gas prices |
 | `results/private/` | the private transactions that were built and, for each attempt, every RPC answer the wallet built it from |
 | `results/environment.md` | versions, the binaries' SHA-256, the machine, ports, the block phase, the proof's duration |
+| `results/summary.txt` | the driver's summary at the end of the run |
+| `results/verify-run.log` | the output of `verify-run.sh` with the guest binaries, run once after the run on the same machine (paths shortened) |
 | `observations/` | runs that are not the record: what the three programs logged when the head was rewound, and the runs made to find out why |
 
 `blocks.borsh` holds no program bytecode because the guest binaries embed the absolute paths
 of the machine that built them (`../RESULTS.md` §3). Putting the chunks back from the binaries
 reproduces the blocks byte for byte, which the block hashes prove.
+
+`environment.md` says the driver was built "at HEAD (uncommitted paths: 18)": the machine's copy
+of the repository has the files but no git history, so `git rev-parse HEAD` printed `HEAD`. The
+sources were those of commit `9582b15` (the tree was clean); the run's command rebuilt the driver
+from them first.
 
 ## Reproduce
 
