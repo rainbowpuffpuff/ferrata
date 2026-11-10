@@ -1,0 +1,8 @@
+{
+  "bedrock_genesis_id": "0x64b4418d697955f44288c4a5b8ead0ce7ffc2963aa6117b54cddc7fb70b3068d",
+  "channel_id": "0x0a358e03f1ed683759adcb4747cdfaf5eb3a5899407981f555641f068f5140a6",
+  "bridge_header": "0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d",
+  "bridge_image_id": "0x66722fc7681beaeaacdfce978ae95ba9ba9f2b576b87791d523d6cd10815f4fa",
+  "attestation_root_id": "0x0f0feabd0d70d3202282037513e256d817c4749d3925d3457b077f9ca5e5d524",
+  "salt": "0xbadde82cf76c7f5a543569fd2dd5b326637d336d948734a291572f4e05fa7bf5"
+}

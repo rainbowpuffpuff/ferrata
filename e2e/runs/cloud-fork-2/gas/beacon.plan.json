@@ -1,0 +1,11 @@
+[
+ {
+  "stage": "beacon",
+  "what": "recordBeacon",
+  "from": "0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07",
+  "to": "0xd0b5fcc0b47d8e6f514f9d246bb0b416b2048af7",
+  "input": "0xc8e8834e",
+  "value": "0x0",
+  "address": "0xd0b5fcc0b47d8e6f514f9d246bb0b416b2048af7"
+ }
+]

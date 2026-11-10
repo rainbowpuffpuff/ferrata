@@ -2,11 +2,22 @@
 # The end-to-end return leg, one step per subcommand (e2e/README.md says which step runs where and
 # in which order). A run is a directory e2e/runs/<name>/ that starts with params.json.
 #
-#   run.sh params <run> <chain id> <deployer> <first nonce>   addresses and amounts of a run
+#   run.sh params <run> <chain id> <deployer> <first nonce> [<lez-inputs.json>]
+#                                                             addresses and amounts of a run
 #   run.sh beacon <run> <block number> <prevrandao>           the Ethereum block whose beacon the
 #                                                             finalisation echoes -> beacon.json
 #   run.sh inputs <run>          deployment, wallet, zone, checkpoint inputs, release inputs; every
 #                                guest is executed on its input (no proving); fixture.json so far
+#
+# lez-inputs.json names a real LEZ deployment and the accounts the deposits go to:
+#   {"identity": {"bedrock_genesis_id", "channel_id", "bridge_header", "bridge_image_id",
+#                 "attestation_root_id", "salt"},                  each 0x + 32 bytes
+#    "deposits": [{"token": "eth" | "test-token", "amount": "<base units>",
+#                  "kind": "private" | "public", "dest": "0x<32 bytes>"}, ...],     in leaf order
+#    "source": {...}}                                               where the values came from
+# params.json then holds lez_identity, these deposits and lez_inputs (source and the file's sha256);
+# inputs writes lez_identity to <run>/lez-identity.json for the deployment's configId. Without it,
+# the identity is a stand-in and the deposits go to made-up accounts.
 #   run.sh prove-release <run>   succinct receipts of the release guest (CPU, r0vm)
 #   run.sh stage-gpu <run>       work/gpu-inputs/: what gpu-prover/modal_app.py proves on a GPU
 #   run.sh p254 <run> <proof>    first step of the Groth16 wrap -> work/<proof>/input.json
@@ -38,10 +49,10 @@ fresh() { cast keccak "$1" | sed 's/^0x.\{24\}/0x/'; }
 
 case "$step" in
 params)
-  chain="${3:?chain id}"; deployer="${4:?deployer}"; nonce="${5:?first nonce}"
+  chain="${3:?chain id}"; deployer="${4:?deployer}"; nonce="${5:?first nonce}"; lez_inputs="${6:-}"
   at() { cast compute-address "$deployer" --nonce $((nonce + $1)) | awk '{print $NF}'; }
   token="$(at 2)"
-  jq -n --argjson chain "$chain" --arg deployer "$deployer" --argjson nonce "$nonce" \
+  params="$(jq -n --argjson chain "$chain" --arg deployer "$deployer" --argjson nonce "$nonce" \
     --arg groth16 "$(at 0)" --arg estop "$(at 1)" --arg token "$token" --arg vault "$(at 3)" \
     --arg eth_recipient "$(fresh 'ferrata e2e: ETH recipient')" \
     --arg erc20_recipient "$(fresh 'ferrata e2e: ERC-20 recipient')" \
@@ -55,7 +66,26 @@ params)
       burns: [
         {name: "eth", token: $eth, amount: "1000000000000000", recipient: $eth_recipient, relayer: $eth, relay_fee: "0"},
         {name: "erc20", token: $token, amount: "100000000", recipient: $erc20_recipient, relayer: $relayer, relay_fee: "250000"}
-      ]}' > "$run/params.json"
+      ]}')"
+  if [ -n "$lez_inputs" ]; then
+    params="$(jq --slurpfile f "$lez_inputs" --arg sha256 "$(sha256sum "$lez_inputs" | cut -d' ' -f1)" --arg token "$token" \
+      --arg eth 0x0000000000000000000000000000000000000000 '
+      def hex32: type == "string" and test("^0x[0-9a-fA-F]{64}$");
+      def check(ok; what): if ok then . else error("lez inputs: \(what)") end;
+      ["bedrock_genesis_id", "channel_id", "bridge_header", "bridge_image_id", "attestation_root_id", "salt"] as $keys
+      | $f[0] as $f
+      | check(($f.identity | type) == "object" and ($f.identity | keys) == ($keys | sort)
+              and all($keys[]; $f.identity[.] | hex32); "identity: exactly \($keys), each 0x + 32 bytes")
+      | check(($f.deposits | type) == "array" and ($f.deposits | length) > 0; "deposits: a non-empty array")
+      | .deposits = [$f.deposits[]
+          | check((.token == "eth" or .token == "test-token") and (.amount | type == "string" and test("^[0-9]+$"))
+                  and (.kind == "private" or .kind == "public") and (.dest | hex32);
+                  "deposit \(.): token eth | test-token, amount in base units (a decimal string), kind private | public, dest 0x + 32 bytes")
+          | {token: (if .token == "eth" then $eth else $token end), amount, kind, dest}]
+      | .lez_identity = ($keys | map({(.): $f.identity[.]}) | add)
+      | .lez_inputs = {source: $f.source, sha256: $sha256}' <<< "$params")"
+  fi
+  printf '%s\n' "$params" > "$run/params.json"
   cat "$run/params.json"
   ;;
 beacon)
@@ -68,7 +98,13 @@ beacon)
   ;;
 inputs)
   p="$run/params.json"
-  lez deployment --chain-id "$(jq -r .chain_id "$p")" --vault "$(jq -r .vault "$p")" --out "$run/deployment.json"
+  identity_args=()
+  if jq -e 'has("lez_identity")' "$p" > /dev/null; then
+    jq .lez_identity "$p" > "$run/lez-identity.json"
+    identity_args=(--identity "$run/lez-identity.json")
+  fi
+  lez deployment --chain-id "$(jq -r .chain_id "$p")" --vault "$(jq -r .vault "$p")" "${identity_args[@]}" \
+    --out "$run/deployment.json"
   e2e notes --deployment "$run/deployment.json" --params "$p" --out "$run/wallet.json"
   echo_args=()
   [ -f "$run/beacon.json" ] && echo_args=(--echo-nonce "$(jq -r .nonce "$run/beacon.json")")

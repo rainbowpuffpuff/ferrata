@@ -45,7 +45,11 @@ for one deployment; this one serves the Foundry run, a rehearsal on a fork and t
 [`runs/fork/`](runs/fork/README.md) is the copy used to rehearse the Sepolia scripts on a local
 fork, with that fork's beacon and the finalisation built for it;
 [`runs/fork-driver/`](runs/fork-driver/README.md) the same for the one-command driver;
-[`runs/sepolia-live/`](runs/sepolia-live/README.md) the prepared directory of the run on Sepolia.
+[`runs/cloud-fork/`](runs/cloud-fork/README.md) the same driver run in the cloud ("Running it in the cloud");
+[`runs/sepolia-live/`](runs/sepolia-live/README.md) the first attempt on Sepolia, which ran out of gas at its first
+transaction; [`runs/sepolia-live-2/`](runs/sepolia-live-2/README.md) the prepared run that replaces it (deployer nonce
+1, paired with the LEZ deployment of the inbound plan); [`runs/cloud-fork-2/`](runs/cloud-fork-2/README.md) its
+rehearsal in the cloud and its dry pass against Sepolia's node.
 
 The zone, by block id (the producer of a block is the key at index id mod 4):
 
@@ -151,9 +155,10 @@ through RISC Zero's emergency stop `0x724d375B5b622e15f0E64e9Deb76a4cB17877797`;
 seal with the finalisation's, are refused there with `VerificationFailed()`. No transaction was
 sent for this.
 
-**Nothing of this run is on a public network.** The round trip on Sepolia itself is prepared
-([`runs/sepolia-live/`](runs/sepolia-live/README.md), commands in `vault/README.md`) and has not
-been broadcast.
+**Nothing of this run is on a public network.** On Sepolia the first attempt
+([`runs/sepolia-live/`](runs/sepolia-live/README.md)) sent one transaction, which ran out of gas ("What the round
+trip costs on today's Sepolia" below); the round trip is prepared again as
+[`runs/sepolia-live-2/`](runs/sepolia-live-2/README.md) (commands in `vault/README.md`) and has not been broadcast.
 
 **The Sepolia stages on a local fork** (`anvil --fork-url` of a public endpoint, the deployer
 impersonated; `vault/script/`, commands in `vault/README.md`; record in [`runs/fork/`](runs/fork/README.md)):
@@ -169,6 +174,46 @@ refused. What a fork does not give: its beacon is not Ethereum's (anvil draws `p
 for each block and offers no way to set it, which is also why the finalisation has to be proven in
 real order there, exactly as on Sepolia), and its clock is moved by hand. The vault reads no
 EIP-4788 beacon root; nothing of that was exercised or needed.
+
+## What the round trip costs on today's Sepolia
+
+The first attempt on Sepolia (10 November 2026, [`runs/sepolia-live/`](runs/sepolia-live/README.md)) ran out of gas
+at its first transaction: Sepolia has run Glamsterdam since 6 October 2026, and its state gas (EIP-8037: 1,530 gas
+per byte of new code, 183,600 per new account, 97,920 per new storage slot) is not in Foundry's EVM, so forge, anvil
+and every rehearsal before it priced the round trip about six times too low (`vault/GAS.md`, "On Sepolia since
+Glamsterdam", with the specifications and the constants measured on the node). Since then no gas figure of the run
+comes from Foundry: each limit is Sepolia's own `eth_estimateGas` times 1.25, and each stage is priced by the node
+before it is sent ([`gasplan.py`](gasplan.py), `vault/README.md`, "Sepolia round trip").
+
+The sixteen transactions of [`runs/sepolia-live-2/`](runs/sepolia-live-2/README.md), as its cloud rehearsal sent
+them ([`runs/cloud-fork-2/`](runs/cloud-fork-2/README.md)), each priced by Sepolia's node (reth 2.10.0, block
+12,107,415) on the state of a fork of Sepolia at the deployer's real nonce, in order, on 10 November 2026 about 21:50
+UTC (`runs/cloud-fork-2/gas-sepolia.json`). "Foundry" is anvil's receipt of the same transaction.
+
+| Nonce | Stage | Transaction | Foundry | Sepolia, gas used | Sepolia `eth_estimateGas` | Gas limit sent (x 1.25) | Sepolia / Foundry |
+|---:|---|---|---:|---:|---:|---:|---:|
+| 1 | deploy | create RISC Zero's Groth16 verifier | 1,179,986 | 7,732,792 | 7,795,331 | 9,744,164 | 6.55 |
+| 2 | deploy | create its emergency stop | 451,756 | 2,953,040 | 2,977,644 | 3,722,055 | 6.54 |
+| 3 | deploy | create the test token | 508,036 | 3,315,490 | 3,342,971 | 4,178,714 | 6.53 |
+| 4 | deploy | create the vault | 5,501,261 | 38,170,341 | 38,474,447 | 48,093,059 | 6.94 |
+| 5 | deploy | registerToken (ETH) | 472,211 | 2,136,791 | 2,154,917 | 2,693,647 | 4.53 |
+| 6 | deploy | registerToken (test token) | 473,049 | 2,138,129 | 2,156,266 | 2,695,333 | 4.52 |
+| 7 | deploy | mint (test token) | 68,368 | 238,408 | 241,467 | 301,834 | 3.49 |
+| 8 | deploy | approve (test token) | 46,331 | 128,251 | 129,343 | 161,679 | 2.77 |
+| 9 | deposit0 | deposit 0: 0.001 ETH (public, to LEZ) | 193,072 | 552,152 | 557,701 | 697,127 | 2.86 |
+| 10 | deposit1 | deposit 1: 0.001 ETH (private, to LEZ) | 143,906 | 260,526 | 263,761 | 329,702 | 1.81 |
+| 11 | deposit2 | deposit 2: 100 test tokens | 175,429 | 375,237 | 399,156 | 498,945 | 2.14 |
+| 12 | submit | submitCandidate | 507,370 | 1,381,770 | 1,393,904 | 1,742,380 | 2.72 |
+| 13 | beacon | recordBeacon | 77,823 | 262,063 | 265,310 | 331,638 | 3.37 |
+| 14 | finalize | finalize | 475,288 | 1,183,452 | 1,263,884 | 1,579,855 | 2.49 |
+| 15 | release | release (ETH) | 367,957 | 619,477 | 625,561 | 781,952 | 1.68 |
+| 16 | release | release (test token, relayer fee) | 388,219 | 648,447 | 675,619 | 844,524 | 1.67 |
+| | | **all 16** | **11,030,062** | **62,096,366** | | | **5.63** |
+
+The vault's creation needs more than the 2^24 gas a transaction may spend on execution and is valid all the same:
+since EIP-8037 that cap binds execution gas only, and 36.4M of the 38.5M are state gas for its 23,650 bytes of code.
+At the 74 wei per gas of the first attempt the whole run costs about 0.000000005 ETH; at 1 gwei it would cost 0.062
+ETH. Mainnet has not scheduled Glamsterdam: until it does, mainnet charges the Foundry column.
 
 ## Steps
 
@@ -196,3 +241,85 @@ The finalisation proof can only be made after the beacon exists: `beacon.json` g
 `run.sh inputs` rebuilds the zone with the echo block (blocks 1–9 are the same bytes), and only
 `cp-e2e-finalize` is proven again. For the Foundry run the beacon block is chosen by the test
 (`vm.roll`, `vm.prevrandao`); on a chain it is the block that mined `recordBeacon`.
+
+## Running it in the cloud
+
+[`sepolia-cloud.sh`](sepolia-cloud.sh) runs `sepolia-live.sh` itself on Modal, so that nothing is needed
+from the laptop between `start` and `fetch`: the laptop can be switched off. The app is
+[`cloud/app.py`](cloud/app.py) (`ferrata-sepolia`), in the workspace that `MODAL_PROFILE` of
+`e2e/sepolia-live.env` names (always given per command, never activated):
+
+| Function | What runs there |
+|---|---|
+| `runner` | the driver, every `forge script` and `cast` call, the cargo steps (`run.sh inputs`, `p254`, `groth16`, `fixture`) and r0vm (`identity_p254` on its CPU); one container per start, not preemptible, 2 cores and 4 GiB reserved, up to 16 cores and 32 GiB used, at most 4 h, no retries |
+| `gpu_prove` | the checkpoint proof on one NVIDIA L4 (on an L40S when no L4 is free: also Ada, compute capability 8.9, the same binary), with the image recipe of [`gpu-prover/`](../gpu-prover/) and the CUDA prover it built (its Volume `ferrata-prover`, mounted read-only) |
+| `groth16_wrap` | RISC Zero's prover image `risczero/risc0-groth16-prover:v2025-04-03.1`, run as a function |
+
+```sh
+e2e/sepolia-cloud.sh setup     # once (idempotent): the Secret with the key, then deploy the app
+e2e/sepolia-cloud.sh start     # prints sender, nonce, balance, gas price; waits for a typed yes; returns at once
+e2e/sepolia-cloud.sh status    # any time: the runner's state, the stages done, the last lines of the log
+e2e/sepolia-cloud.sh fetch     # the run directory back into e2e/runs/sepolia-live-2/ (the runner's logs in work/cloud/)
+e2e/sepolia-cloud.sh stop      # cancels a running runner and stops the app (`setup` again before the next start)
+```
+
+A real run takes about an hour and three quarters plus the wait for a GPU: 4 to 7 minutes of building (236 to
+408 s in the rehearsals), then the driver: the deployment, a deposit, the finality of its block (about 15 minutes)
+and the capture for LEZ, the second deposit and its finality and capture, the third deposit, the candidate, the
+wait W (40 minutes), the beacon, the finalisation proof, the release delay, the releases. The default run is
+`sepolia-live-2`. Then `fetch`, read the DONE line at the end of `e2e/runs/sepolia-live-2/sepolia-live.log`, give
+`lez-capture-1/` and `lez-capture-2/` to the LEZ session, and commit the run directory as for the local run
+(`vault/README.md`, "Sepolia round trip"). Source verification stays a separate step, from the laptop.
+
+**The key.** `setup` reads the keystore file and the password file named by `ETH_KEYSTORE` and
+`ETH_PASSWORD` by path, in its own process, and stores their contents, with `SEPOLIA_RPC_URL` and
+`ETH_FROM`, in the Modal Secret `ferrata-sepolia-key`. The runner takes all four out of its environment
+before anything else runs; only on a live run does it write the keystore and the password as two files
+(mode 600) inside its own container, for forge to read through `ETH_KEYSTORE` and `ETH_PASSWORD` as on the
+laptop. They are never on the Volume, in a log or on a command line. Whoever can use that workspace can sign
+with this key, so it must stay a throwaway testnet key; after the run,
+`MODAL_PROFILE=<profile> modal secret delete ferrata-sepolia-key` removes it.
+
+**A start.** `start` checks the run directory and the inputs (the guest programs against the run's
+`programs.json`, `vault/lib`), then uploads to the Volume `ferrata-sepolia`: a git bundle of `HEAD` (the
+GPU manifest records the commit), the files git does not ignore as they are in the checkout, and the two
+ignored inputs `e2e/programs/` and `vault/lib/` (never `e2e/sepolia-live.env`); the run directory only
+if the cloud has no copy of it yet, since afterwards the cloud's copy is the run's state. It spawns the
+runner and returns. The runner rebuilds the repository at the same absolute path, builds
+`ferrata-e2e`, the zone builder and the vault before the first transaction (a build error sends nothing),
+and runs the driver with `FERRATA_MRUN` unset and its two hooks pointing at `gpu_prove` and
+`groth16_wrap` ([`cloud/hook.py`](cloud/hook.py)). It mirrors the run directory and forge's records of
+the stages to the Volume every 20 s and when the driver stops. Started again after an interruption, the
+driver reads the chain and continues after the last complete stage, exactly as on the laptop, with forge's
+records back from the Volume.
+
+**The GPU.** The hook queues the proof once and waits up to two hours for it (`FERRATA_GPU_WAIT_S`); Modal
+keeps it queued until a GPU is free. It never cancels and queues again: a cancelled input keeps its place
+in Modal's queue and is handed the next free GPU, only to be dropped there. In the rehearsal no L4 was free
+for 50 minutes, two re-queues of an earlier version of the hook were lost that way, and the proof ran on
+the L40S fallback. On Sepolia the wait only delays `finalize`: the vault sets no age limit on a beacon.
+
+**What differs from the local run.** The driver is the same file; its one addition is the hook
+`FERRATA_GPU_CMD` (unset, the GPU step is the `modal run` of the rehearsals, unchanged). Foundry in the
+runner is the laptop's 1.3.6-nightly of 18 September 2025 (`nightly-a4d66e8…`; forge, cast and anvil have
+the same sha256 as the laptop's): the 1.3.6 release refuses `forge script --unlocked` while `ETH_FROM` is
+set. `identity_p254` runs on the runner's CPU instead of the build box.
+
+**Rehearsed in the cloud again for the second run** ([`runs/cloud-fork-2/`](runs/cloud-fork-2/README.md)): `start
+--fork cloud-fork-2` from a clean copy of `runs/sepolia-live-2/`, to `ALL CHECKS PASSED` and `DONE: 16 transactions`,
+every stage priced by Sepolia's node before it was sent; then the dry pass of its sixteen transactions against the node.
+
+**Rehearsed in the cloud** ([`runs/cloud-fork/`](runs/cloud-fork/README.md)): `start --fork cloud-fork` from a
+clean copy of `runs/sepolia-live/` on 10 November 2026. The runner built for 304 s, started anvil on a fork
+of Sepolia and ran the driver: deploy, submit and beacon in 23 s (the fork's clock moved), the finalisation
+input in 18 s, 74 minutes of GPU queue, the proof in 7.9 s on an L40S, `identity_p254` in 30 s on the
+runner's CPU, the prover image in 22 s, then finalize, release and `verify-sepolia.sh` in 10 s: ALL CHECKS
+PASSED and `DONE: 15 transactions on chain 11155111, 10898492 gas`, every stage's gas equal to the laptop's
+rehearsal. `start` returned 22 and 64 s after it was called (its two runs); `status` and `fetch` worked
+during the build, during the GPU wait and after DONE.
+
+**Cost.** Modal billed the app 1.46 USD for all of this work on 10 November (setup, a self-test, a first
+start that forge stopped before any transaction, the rehearsal): CPU 0.76 and memory 0.23 (the runner is
+non-preemptible and holds 2 cores and 4 GiB through every wait), GPU 0.46 (L40S 0.33, L4 0.13, two of the
+three GPU containers spent on the cancelled inputs). Deployed and idle the app runs no container; `stop`
+removes it, and `setup` brings it back in under a minute once its images are built.
