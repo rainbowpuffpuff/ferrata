@@ -174,7 +174,7 @@ randomness, a user's own address or time. The differences, each a finding:
    from an alias). §B6's burn row lists only token, denomination, time and the note.
 5. **LEZ's own private-transaction fields.** Every private claim and burn carries two private actions
    (the main one and the fee fallback), each with a nullifier, a new commitment, an encrypted note (a
-   ciphertext of 137 to 247 bytes and a 1,088-byte encapsulated key) and the commitment-set root it was
+   ciphertext of 137 to 247 bytes and a 1,088-byte ephemeral public key) and the commitment-set root it was
    proven against. They are nullifiers, fresh randomness and a state reference, and §B6 lists none of
    them. The root shows which state the proof read: 80 of 80 private actions here were proven against
    the root just before their transaction, the newest. A wallet that proved a burn against an older root
