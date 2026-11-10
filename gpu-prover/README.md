@@ -1,7 +1,8 @@
 # modal-prover
 
 RISC Zero 3.0.5 proving of `checkpoint` fixtures, of the LEZ light-client update
-(`lez`) and of one private attestation against a light-client record (`lez/RESULTS.md` §5.5), on one
+(`lez`), of one private attestation against a light-client record (`lez/RESULTS.md` §5.5) and of
+the bridge program's private claim and private burn (`lez/BRIDGE-RESULTS.md` §7), on one
 NVIDIA L4 GPU on Modal, in a Modal workspace (app `ferrata-prover`, Volume `ferrata-prover`), with the
 receipts verified on the laptop. Measured numbers, the CPU-versus-GPU table, costs, and links to the
 documentation consulted are in [RESULTS.md](RESULTS.md).
@@ -9,8 +10,9 @@ documentation consulted are in [RESULTS.md](RESULTS.md).
 Prototype evidence for a grant proposal. Nothing here is pushed or published. The only upload is to the
 owner's Modal workspace: this directory's `prover/` sources and `modal_app.py`; `inputs/` (two guest
 program binaries and four fixtures); `inputs-lez/` (the prebuilt `prove_private` and six
-mainnet-p1899 fixtures); and `inputs-lez-attest/` (the prebuilt `prove_attest` and the five files of the
-`mainnet-attest-2026-11-10` fixture it reads). No personal data is in any of them.
+mainnet-p1899 fixtures); `inputs-lez-attest/` (the prebuilt `prove_attest` and the five files of the
+`mainnet-attest-2026-11-10` fixture it reads); and `inputs-lez-bridge/` (the prebuilt `prove_bridge`).
+No personal data is in any of them.
 
 ## What is proven, and with which program
 
@@ -45,6 +47,7 @@ images have not been proven.
 | `FERRATA_INPUTS` | Another staged inputs directory for `modal_app.py` (`programs/`, `fixtures/`, `MANIFEST.json`), in place of `inputs/`: the end-to-end return leg stages its two checkpoint inputs with `e2e/run.sh stage-gpu <run>` and proves them with `--jobs cp-e2e-candidate=600,cp-e2e-finalize=600` ([`../e2e/README.md`](../e2e/README.md)). |
 | `scripts/stage-lez.sh` | Copies `lez/target/debug/prove_private` and the six `mainnet-p1899` fixtures into `inputs-lez/` (read-only on both repositories), and writes `inputs-lez/MANIFEST.json`. |
 | `inputs-lez-attest/` | The input of the private attestation proof, written by `lez/scripts/stage-prove-attest.sh OUTDIR [BINARY]`: the prebuilt `prove_attest` (the consumer and program guests and LEZ's privacy-preserving circuit embedded), the fixture files it reads, and `MANIFEST.json` with their sizes and SHA-256, the two image ids the binary reports and the command. |
+| `inputs-lez-bridge/` | The input of the bridge program's two proofs, written by `lez/scripts/stage-prove-bridge.sh OUTDIR [BINARY]`: the prebuilt `prove_bridge` (the bridge guest and LEZ's privacy-preserving circuit embedded) and `MANIFEST.json` with its sha256 and the bridge image it reports. The binary is git-ignored. |
 | `scripts/fetch.sh [RUN]` | Downloads `results/` and the CUDA-free verifier (`bin/`) from the Volume; with a run name, only `results/<RUN>/`. |
 | `scripts/verify.sh` | Local verification of every downloaded receipt; writes `results/verify-local.jsonl`. |
 | `scripts/summarize.py` | The CPU-versus-GPU table and the cost estimate, computed from the `run.json` files. |
@@ -80,6 +83,15 @@ modal run --detach modal_app.py::lez --job lez-attest --run gpu-l4-attest --limi
 scripts/fetch.sh gpu-l4-attest
 FERRATA_ATTEST_FIXTURE_DIR=inputs-lez-attest/mainnet-attest-2026-11-10 RISC0_DEV_MODE=0 \
   inputs-lez-attest/prove_attest --settle results/gpu-l4-attest/lez-attest/stage4-private-attest-tx.borsh
+
+# the bridge program's private claim and private burn (what was run; the binary built and staged on
+# the build box, the settle checks run there too, not on the laptop):
+../lez/scripts/stage-prove-bridge.sh $PWD/inputs-lez-bridge <prove_bridge built on glibc <= 2.39>
+MODAL_PROFILE=ws-3 modal run --detach modal_app.py::lez --job lez-bridge --run gpu-l4-bridge --limit-s 1800
+MODAL_PROFILE=ws-3 scripts/fetch.sh gpu-l4-bridge
+(cd ../lez && RISC0_DEV_MODE=0 target/debug/prove_bridge --settle \
+  ../gpu-prover/results/gpu-l4-bridge/lez-bridge/bridge-private-claim-tx.borsh \
+  ../gpu-prover/results/gpu-l4-bridge/lez-bridge/bridge-private-burn-tx.borsh)
 ```
 
 The runs are detached because the first build attempt was lost. Modal stopped the non-detached app
@@ -130,6 +142,8 @@ All are under 1 MB and are committed:
 | `results/gpu-l4/cp-pp50-360/receipt-succinct.bin` | 224,314 |
 | `results/gpu-l4/lez-update/stage2-private-tx.borsh` (LEZ transaction with its 227,080-byte receipt) | 231,034 |
 | `results/gpu-l4-attest/lez-attest/stage4-private-attest-tx.borsh` (LEZ transaction with its 227,170-byte receipt) | 231,214 |
+| `results/gpu-l4-bridge/lez-bridge/bridge-private-claim-tx.borsh` (LEZ transaction with its 227,477-byte receipt) | 231,828 |
+| `results/gpu-l4-bridge/lez-bridge/bridge-private-burn-tx.borsh` (LEZ transaction with its 226,978-byte receipt) | 230,830 |
 
 Not committed (git-ignored, and none of them a receipt): `bin/` (binaries downloaded from the Volume:
 CUDA prover 119 MB, r0vm 137 MB, verifier 3 MB), `inputs/programs`, `inputs/fixtures`, and

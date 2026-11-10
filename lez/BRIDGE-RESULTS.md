@@ -14,8 +14,8 @@ the same figures, apart from the image, the ids derived from it and the import o
 `Attest` calls (built from this branch's unchanged sources; `RESULTS.md` records its image as
 `2f3566d4…`, which these runs did not re-check). They ran on this worktree's Modal
 build box (`spike/modal-build/mrun`), not on the laptop; the executor is deterministic, so the
-cycle counts do not depend on the machine. Private executions ran in RISC Zero dev mode: executed,
-not proven. The tables are `results/bridge-inbound.md`, `results/bridge-private-claim.md` and
+cycle counts do not depend on the machine. Private executions ran in RISC Zero dev mode in the
+tests; the private claim and the private burn were then proven for real (§7). The tables are `results/bridge-inbound.md`, `results/bridge-private-claim.md` and
 `results/bridge-burn.md`, written by the tests.
 
 **What is synthetic.** The Ethereum side. Two vaults' storage (slot 0 the deposit root, slot 1 the
@@ -237,17 +237,40 @@ re-encodes the program's `Burn` byte for byte (185 bytes, its `BURN_LEN`).
    told them apart would say more than a refusal should, B6); `NOT_FOUND` covers a missing
    configuration and a missing root.
 
-## 7. What is not built
+## 7. Real proofs of the private claim and the private burn
+
+`harness/src/bin/prove_bridge.rs` makes the private claim of §3 (leaf 5, 1 ETH, to its private
+destination) and then that holder's private burn of §4 on the state of the tests
+(`World::with_roots`), each proven by `r0vm` and settled through LEZ's private settlement with the
+receipt verified. Proven on one NVIDIA L4 (`../gpu-prover/RESULTS.md`, job `lez-bridge`, run
+`gpu-l4-bridge`), bridge image `25dfd9b2…8c49`:
+
+| transaction | private transitions (user cycles, padded) | `execute_and_prove` | receipt | transaction | execution gas | storage gas |
+|---|---|---:|---:|---:|---:|---:|
+| private claim | 39,314 (131,072) + 113,417 (262,144) | 15.3 s | 227,477 B | 231,828 B | 439,815 | 224,063 |
+| private burn | 23,799 (131,072) | 12.4 s | 226,978 B | 230,830 B | 427,959 | 224,063 |
+
+The run took 33.0 s for both (0.78 GiB peak host memory, 11,384 MiB peak GPU memory). The charges are
+the dev-mode figures of §1: the private part's cost is LEZ's fixed `PRIVATE_VERIFY_GAS`, whatever the
+receipt. Settled again on the build box from the two files (`results/prove-bridge-settle.log`):
+both receipts verify, the claimed holding, the nullifier, the recorded note and the emptied holding
+are found, and the claim's 231,828 bytes hold none of its private inputs (the search of §3); with
+bit 0 of one byte inside either receipt flipped, settlement refuses it ("Invalid privacy preserving
+execution circuit proof"). The transactions: `results/bridge-private-claim-tx.borsh`,
+`results/bridge-private-burn-tx.borsh`; the GPU log `results/prove-bridge.log`.
+
+## 8. What is not built
 
 Fees, relay fees and the fee recipient (D13); caps and freezes; `Sunset` (its variant is reserved
 and refused); the registry beyond one token and its attestation from the vault; the gas drop; a
-transfer between holders; the switch to a token program; real proofs of the private claim and
-burn (dev mode only); a real vault (Sepolia) and records written by the light client in the same
+transfer between holders; the switch to a token program; a real proof of a private claim to a
+public destination (§3's second path; only the private-destination claim and the private burn are
+proven, §7); a real vault (Sepolia) and records written by the light client in the same
 run; the checkpoint program running over these blocks end to end (only its parser and decoder
 ran); the off-chain importer, wallet and relayer; caps on mints and burns with a caller-supplied
 time.
 
-## 8. Reproduce
+## 9. Reproduce
 
 ```sh
 cd lez
@@ -255,6 +278,11 @@ export RISC0_HOME=$PWD/../../risc0-home-lez        # guest Rust 1.91.1, as RESUL
 cargo test -p harness --test bridge_inbound -- --nocapture          # writes results/bridge-inbound.md
 RISC0_DEV_MODE=1 cargo test -p harness --test bridge_private --test bridge_burn -- --nocapture
                                                     # write results/bridge-private-claim.md, bridge-burn.md
+cargo build -p harness --locked --bin prove_bridge   # §7
+RISC0_DEV_MODE=1 target/debug/prove_bridge --allow-dev-mode   # dry run: the same commands, fake receipts
+scripts/stage-prove-bridge.sh ../gpu-prover/inputs-lez-bridge   # then ../gpu-prover/README.md, job lez-bridge
+RISC0_DEV_MODE=0 target/debug/prove_bridge --settle results/bridge-private-claim-tx.borsh \
+  results/bridge-private-burn-tx.borsh               # settle the proven pair again, receipts verified
 ```
 On this worktree they ran through `../../modal-build/mrun` (a cloud container), the first build
 without `RISC0_BUILD_LOCKED` because the new guest's lockfile had to be written; with the

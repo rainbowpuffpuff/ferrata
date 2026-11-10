@@ -1,9 +1,10 @@
 # Results: RISC Zero 3.0.5 proving on one NVIDIA L4 (Modal)
 
 Every number below comes from a run on 10 Nov 2026. The files are in `results/gpu-l4/<job>/`
-(the private attestation's in `results/gpu-l4-attest/lez-attest/`):
+(the private attestation's in `results/gpu-l4-attest/lez-attest/`, the bridge program's in
+`results/gpu-l4-bridge/lez-bridge/`):
 `run.json` holds everything, `prove.json` holds the prover's own timings, plus `prover.log`,
-`prove-private.log` or `prove-attest.log`, `gpu-samples.csv` and `nvidia-smi.txt`. `python3 -I scripts/summarize.py`
+`prove-private.log`, `prove-attest.log` or `prove-bridge.log`, `gpu-samples.csv` and `nvidia-smi.txt`. `python3 -I scripts/summarize.py`
 recomputes the table and the cost from `run.json`. CPU numbers are quoted from
 `checkpoint/RESULTS.md` and `lez/RESULTS.md` §3; none was re-measured.
 
@@ -110,6 +111,47 @@ settled: execution gas 421,642 (PRIVATE_VERIFY_GAS 409,764 + public part 11,878 
 **Negative control** (`logs/lez-attest-tampered-settle.log`): the same transaction with bit 0 of byte
 115,607 flipped (inside the receipt) is refused by the same command, exit 101: `settlement accepts
 the transaction: "Invalid privacy preserving execution circuit proof"`.
+
+## The bridge program's private claim and private burn (`lez`, BRIDGE-RESULTS.md §7)
+
+Two privacy-preserving transactions of the RFP-022 bridge program, proven one after the other in one
+run of `prove_bridge` on the state of the bridge tests (`World::with_roots`): the private claim of
+vault A's leaf 5 (1 ETH, private kind) by its private destination, then that holder's private burn
+of the 1 ETH. Each proof covers the bridge program's private transitions, the fee transfer and LEZ's
+privacy-preserving circuit over them. Prebuilt `prove_bridge` (sha256 `e2b20f51…1ea3`, 156,187,512
+bytes, built on the build box (glibc 2.39) from the integration branch at `21abe05`), staged by
+`../lez/scripts/stage-prove-bridge.sh` into `inputs-lez-bridge/`; job `lez-bridge` (`modal_app.py`),
+run `gpu-l4-bridge`, profile `ws-3`, one container. The staged binary matches the manifest
+(`input_hashes_equal_manifest: true`).
+
+| | **NVIDIA L4** |
+|---|---|
+| image proven | bridge program `25dfd9b283ba14b0b83a522d7d307de57288c4730f538d8862b53ad73a4a8c49` (`FERRATA_EXPECT_BRIDGE_IMAGE_ID` checked; "RISC0_DEV_MODE off") |
+| private transitions (executor, `../lez/results/bridge-*.md`) | claim: `ClaimPrivately` 39,314 user cycles (131,072 padded) and the root's reply 113,417 (262,144 padded); burn: 23,799 (131,072 padded) |
+| `execute_and_prove` | claim **15.3 s** (prove + settle 15.6 s); burn **12.4 s** (12.6 s) |
+| whole run, both proofs (`/usr/bin/time -v`) | **0:33.03** (user 28.96 s, system 3.84 s, 99% of one core) |
+| peak host memory (GNU time max RSS) | **0.78 GiB** (816,100 kB) |
+| peak GPU memory | **11,384 MiB** (7 MiB before); GPU busy 23.2 s of the 33.0 s, mean utilisation 52% over the whole run |
+| receipts | claim **227,477 bytes** (transaction 231,828 bytes, sha256 `1fdb4207…d437`); burn **226,978 bytes** (transaction 230,830 bytes, sha256 `aea412d8…1093`) |
+| settlement in the run | receipts verified; claim: execution gas 439,815 (409,764 + 30,051), storage gas 224,063; burn: 427,959 (409,764 + 18,195), 224,063; both exit 0 |
+| where | Modal, one L4; 35.4 s from the function's start to done (`run.json`). The local client lost its connection after the function returned ("Deadline exceeded"), so `logs/run-gpu-l4-bridge-lez-bridge.json` was not written; `results/gpu-l4-bridge/lez-bridge/run.json` is the run's record |
+
+**Settle check on the build box** (not the laptop; `logs/lez-bridge-settle.log`): `RISC0_DEV_MODE=0
+target/debug/prove_bridge --settle <claim> <burn>` rebuilt the state, settled both transactions in
+order with the receipts verified (0.2 s each) and found the claimed holding, the nullifier, the
+recorded note and the emptied holding; exit 0. Of the claim's 231,828 bytes none holds the
+destination, `s`, `C`, the leaf, the depositor, the witness or any of the 32 path siblings; `N`,
+`configId` and the root read are present.
+
+**Negative controls** (`logs/lez-bridge-flip.log`, `logs/lez-bridge-tampered-*-settle.log`): bit 0
+of byte 118,089 of the claim (inside its receipt, bytes 4,351–231,828) and of byte 117,341 of the burn
+(inside its receipt, bytes 3,852–230,830) flipped, one file at a time: each is refused by the same
+command, exit 101, `settlement refuses …: Invalid privacy preserving execution circuit proof` (for
+the burn, after the untouched claim settled).
+
+**Cost** (estimated from the run; the billing report did not yet list the app,
+`ap-ecNfKTimXEk6SDRo14ii37`): about 35 L4-seconds, under 0.01 USD at the rates above, plus the
+image build and start-up.
 
 ## Was the GPU really used?
 
