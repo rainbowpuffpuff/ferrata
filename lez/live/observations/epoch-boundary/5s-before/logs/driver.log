@@ -1,0 +1,62 @@
+sequencer http://127.0.0.1:3040: head block 1, followed to block 0 (the last one final on Bedrock)
+fee state at height 1: base fee exec 8 / stor 8; block caps exec 10000000 / stor 1000000
+LEZ constants: wallet default gas limit 2000000, TARGET_GAS_EXEC 5000000, MAX_GAS_EXEC 10000000, TARGET_GAS_STOR 500000, MAX_GAS_STOR 1000000, PRIVATE_VERIFY_GAS 409764, PRIVATE_GAS_STOR 224063
+program: image cec0bc687443be08c29c3216de8a3ed5f00a29d224fc266fe272f78cfe0f4d78, 508284 bytes (sha256 4b7702a4491ba9c5f9520155ee04e486328902bc7e0b64a2d1214c44fae01777), user ELF 475860 bytes in 5 segment(s)
+scripted: image 4b597adb3f1a43db85829c411a987234cc84584d8bcd947f0774b852adf0da2b, 268468 bytes (sha256 94b0f2ab3a87406f9e684fdf4a64b1c9f2c35f1b24e0bb9132097840b42755a5), user ELF 236044 bytes in 3 segment(s)
+deployments: main CXnzhRVkXzwZaDFcvchMvz28iVTy9f8tmesDGpLcGSs, twin DVcubqr9iDMUwCPdL5sDo5WXLkLFB2dgnc2vdi5bsd57, scripted FeoLrnY94gX4NJQ8duSL11vmFM2r5zGkhiQgJasMKY3K
+payer 0: 6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV holds 10000000000000
+payer 1: 7wHg9sbJwc6h3NP1S9bekfAzB8CHifEcxKswCKUt3YQo holds 20000000000000
+payer 2: CbgR6tj5kWx5oziiFptM7jMvrQeYY3Mzaao6ciuhSr2r holds 10000000000000
+payer 3: 2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2 holds 20000000000000
+harness tables: 55 rows from ../ferrata-wt-sequencer/lez/results
+Transaction hash is 13a7c1e5639a453ad3a9254f238349190cd39dfe0963a602fa75ef990584af3c
+Transaction is included in block 2
+Transaction hash is 5aea60b93aa94695851305fe792215d05bd965e20f9c7eca628a915efede5335
+Transaction is included in block 3
+Transaction hash is e8cb08d48272dc264b39b22d6adc4062fcc1df552732911bf0f787d61162b3e1
+Transaction is included in block 4
+Transaction hash is dbd244b5e72d2066280d8bf17790ff2ee1c4d4c2831b575fab9e1810884f8db6
+Transaction is included in block 5
+Transaction hash is 4ce26902cc3bdb1b9a1e23d6312f33b883c6694ee3e926fdaba724d20980cc15
+Transaction is included in block 6
+Transaction hash is 63142b4a399bf65e48468a43bedf066ddc5b35fc2ad192e6d93d66c6dc5bd363
+Transaction is included in block 7
+[deploy] deploy main: WriteSegment 5 of 5 (82644 bytes)             applied   gas         0 +   83224 bytes, block    2
+[deploy] deploy main: WriteSegment 4 of 5 (98304 bytes)             applied   gas         0 +   98916 bytes, block    3
+[deploy] deploy main: WriteSegment 3 of 5 (98304 bytes)             applied   gas         0 +   98916 bytes, block    4
+[deploy] deploy main: WriteSegment 2 of 5 (98304 bytes)             applied   gas         0 +   98916 bytes, block    5
+[deploy] deploy main: WriteSegment 1 of 5 (98304 bytes)             applied   gas         0 +   98916 bytes, block    6
+[deploy] deploy main: CreateHeader (immutable) at CXnzhRVkXzwZaDFcvchMvz28iVTy9f8tmesDGpLcGSs applied   gas         0 +     608 bytes, block    7
+[deploy] main: image cec0bc687443be08c29c3216de8a3ed5f00a29d224fc266fe272f78cfe0f4d78 at CXnzhRVkXzwZaDFcvchMvz28iVTy9f8tmesDGpLcGSs (computed by the sequencer's loader), immutable
+Transaction hash is b686fa5de77b8acdfd9029c9b2e3569b4ef66381ec8dd2cdd86ae14322db514a
+Transaction is included in block 8
+Transaction hash is 007529a2648b92c9150bf8e7c467f631f3a0a36d271d15679c1e9ba2e71609ee
+Transaction is included in block 9
+Transaction hash is 36c6a865d8d5ab51625af55b54883c52930f693d2d14ed00fefe6590c199e675
+Transaction is included in block 10
+Transaction hash is ebf87fa859b7da6e8417f95aca44aa03821e31e50374157aaadeb2c643ff4e90
+Transaction is included in block 11
+Transaction hash is 1261820b028206a6d71f6ce3390978583812e54cbc39882a1eecc0845c5b68ce
+Transaction is included in block 12
+Transaction hash is 53344a25dfa4c4f79995b3416b3fe1c7988288f47a8d2bf1d2cf24ea44f57c5e
+Transaction is included in block 13
+[deploy] deploy twin: WriteSegment 5 of 5 (82644 bytes)             applied   gas         0 +   83224 bytes, block    8
+[deploy] deploy twin: WriteSegment 4 of 5 (98304 bytes)             applied   gas         0 +   98916 bytes, block    9
+[deploy] deploy twin: WriteSegment 3 of 5 (98304 bytes)             applied   gas         0 +   98916 bytes, block   10
+[deploy] deploy twin: WriteSegment 2 of 5 (98304 bytes)             applied   gas         0 +   98916 bytes, block   11
+[deploy] deploy twin: WriteSegment 1 of 5 (98304 bytes)             applied   gas         0 +   98916 bytes, block   12
+[deploy] deploy twin: CreateHeader (immutable) at DVcubqr9iDMUwCPdL5sDo5WXLkLFB2dgnc2vdi5bsd57 applied   gas         0 +     608 bytes, block   13
+[deploy] twin: image cec0bc687443be08c29c3216de8a3ed5f00a29d224fc266fe272f78cfe0f4d78 at DVcubqr9iDMUwCPdL5sDo5WXLkLFB2dgnc2vdi5bsd57 (computed by the sequencer's loader), immutable
+Transaction hash is d8255d4cfd559dd8c654ca2f05dcfeb245460c669a64ff02254fb1647e410acd
+Transaction is included in block 14
+Transaction hash is d88d7ff9aa49ef45ad01cc3817c6e1132c9e456cd3bab411f6be341c55538fa0
+Transaction is included in block 15
+Transaction hash is 2c9f2c35020cd8defab376839ca186d67bdcbbb1f2c4354761d3f6d9861bda52
+Transaction is included in block 16
+Transaction hash is 915c0429fcd6262699a65a2559ed34e8a2b36fd3d019d8e2ea9b65ae4edec633
+Transaction is included in block 17
+[deploy] deploy scripted: WriteSegment 3 of 3 (39436 bytes)         applied   gas         0 +   40016 bytes, block   14
+[deploy] deploy scripted: WriteSegment 2 of 3 (98304 bytes)         applied   gas         0 +   98916 bytes, block   15
+[deploy] deploy scripted: WriteSegment 1 of 3 (98304 bytes)         applied   gas         0 +   98916 bytes, block   16
+[deploy] deploy scripted: CreateHeader (immutable) at FeoLrnY94gX4NJQ8duSL11vmFM2r5zGkhiQgJasMKY3K applied   gas         0 +     608 bytes, block   17
+[deploy] scripted: image 4b597adb3f1a43db85829c411a987234cc84584d8bcd947f0774b852adf0da2b at FeoLrnY94gX4NJQ8duSL11vmFM2r5zGkhiQgJasMKY3K (computed by the sequencer's loader), immutable

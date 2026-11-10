@@ -1,0 +1,25 @@
+--- lez/bedrock/node-config.yaml
++++ run/bedrock/node-config.yaml
+@@ -1,6 +1,7 @@
+ network:
+   backend:
+     swarm:
++      host: 127.0.0.1
+       node_key: 2b1d8337d0d30c6135336a537bf65349d18837c8d5cf3e0c927882e54e0b4b3d
+ blend:
+   non_ephemeral_signing_key_id: 86c8519f00178e9eb1fe5f4247e4bed77d4c9f6da2fb10e8a1fdd7ba6bc79fa0
+@@ -43,7 +44,7 @@
+ 
+ api:
+   backend:
+-    listen_address: 0.0.0.0:18080
++    listen_address: 127.0.0.1:18080
+     cors_origins: []
+     timeout: 30s
+     max_body_size: 10485760
+@@ -64,4 +65,4 @@
+     open_metrics:
+       enabled: false
+   console: None
+-  level: "INFO"
++  level: "TRACE"

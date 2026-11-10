@@ -18,30 +18,40 @@ provider reports, and `header(id, slot)` holds the native finalized header's rec
 update runs as three transactions; 18 refusals ran through the same path (§2). Stage 2 (one
 private actor verifies a whole update and the public instance applies it) and Stage 3 (a private
 consumer reads a record, or calls) ran through LEZ's privacy-preserving circuit and private
-settlement in RISC Zero dev mode; real proofs were made of Stage 2 only, on earlier images (§3).
+settlement in RISC Zero dev mode; real proofs were made of Stage 2 on earlier images (§3, and on
+a running sequencer, §8), none of Stage 3.
 Stage 4 (§5): on a mainnet block finalized on 10 November 2026, the program attests an account, a
 storage slot and event logs under the record it wrote for that block, each in one public
 transaction; a reference consumer credits an ERC-20 `Transfer` once, in one transaction; a
-privately executed consumer verifies the same `Transfer` against the record it reads; 41
-refusals ran through the same paths.
+privately executed consumer verifies the same `Transfer` against the record it reads (in dev
+mode, and once with a real proof on one NVIDIA L4, §5.5); 41 refusals ran through the same paths.
 
 **Which image these numbers come from.** Every number in this file, except those of the two real
-proofs, was measured on the images built from this branch, which add the attestation: program
-`2f3566d4…`, consumer `711584ff…` (`results/images.md`), in runs at commit d498591 on a Modal
-container (`results/environment.md`), not on the laptop the earlier runs used. The executor is
-deterministic, so the cycle counts do not depend on the machine; the guest ELF holds the absolute
-paths of its sources, so the image ids are those of a build under this checkout's path. The
-images before this branch were program `cec0bc68…` and consumer `aec03bcd…` (commit 8d0c647),
-and before the merge with `main` `e7cec90e…` and `620e6390…`. Against `cec0bc68…`, the
-execution gas of every public transaction of §2 of a million cycles or more changed by at most
-0.08%, that of the cheaper ones by up to 4.4% (at most 1,826 cycles), and the public part of the
-private update of §3 by 1,889 cycles (70,090 to 71,979): the configuration gained the chain id
-(8 bytes), the record the parent hash and the chain id (40 bytes), and the program is another
-binary. **The two real proofs of an update (§3) are of the earlier images**: `e7cec90e…` on the laptop CPU
-(9,045,235 cycles, 54 min, 9.18 GiB, a 227,080-byte receipt) and `cec0bc68…` on one NVIDIA L4
-GPU (`gpu-prover/RESULTS.md`). **One private attestation was proven on these images** (§5.5,
-consumer `711584ff…`), on the same GPU: 13.5 s, a 227,170-byte receipt, settled with the receipt
-verified. The update path of §3 has no real proof on this program image.
+proofs of an update and of the run on a sequencer (§8), was measured on the images built from this
+branch, which add the attestation: program `2f3566d4…`, consumer `711584ff…`
+(`results/images.md`), in runs at commit d498591 on a Modal container (`results/environment.md`),
+not on the laptop the earlier runs used. The executor is deterministic, so the cycle counts do not
+depend on the machine; the guest ELF holds the absolute paths of its sources, so the image ids are
+those of a build under this checkout's path. The images before this branch were program
+`cec0bc68…` and consumer `aec03bcd…` (commit 8d0c647), and before the merge with `main`
+`e7cec90e…` and `620e6390…`. Against `cec0bc68…`, the execution gas of every public transaction of
+§2 of a million cycles or more changed by at most 0.08%, that of the cheaper ones by up to 4.4%
+(at most 1,826 cycles), and the public part of the private update of §3 by 1,889 cycles (70,090 to
+71,979): the configuration gained the chain id (8 bytes), the record the parent hash and the chain
+id (40 bytes), and the program is another binary. **The two real proofs of an update (§3) are of
+the earlier images**: `e7cec90e…` on the laptop CPU (9,045,235 cycles, 54 min, 9.18 GiB, a
+227,080-byte receipt) and `cec0bc68…` on one NVIDIA L4 GPU (`gpu-prover/RESULTS.md`). **One
+private attestation was proven on these images** (§5.5, consumer `711584ff…`), on the same GPU:
+13.5 s, a 227,170-byte receipt, settled with the receipt verified. The update path of §3 has no
+real proof on this program image.
+
+**On a running sequencer (§8).** The program of the image before the attestation, `cec0bc68…`,
+deployed by LEZ's `program_loader`, ran the scenario of §2 and the private update of §3 on LEZ's
+own v0.4.0-rc1 sequencer with a Logos Blockchain node (one validator, leader proofs in dev mode):
+the 65 transactions that had a row in §2 as measured on that image had the same outcome there, 64
+at the same execution gas, and a real proof made against the live instance was verified by the
+sequencer and applied. The attestation (§5) and the bridge program (`BRIDGE-RESULTS.md`) have not
+run on a sequencer.
 
 | operation (mainnet, 512-member committees) | transactions | largest transaction, execution gas (cycles) | total execution gas | total storage gas (bytes) |
 |---|---:|---:|---:|---:|
@@ -956,14 +966,19 @@ proven at all.
   out: the bridge and cross-zone-inbox guards of `validate_user_state_modification` (they reject
   writes to accounts these transactions never touch), and the block tail (the fee program's
   `Distribute` and the clock); each transaction is settled in a block of its own. Fees are at
-  the genesis base fees (8 per gas unit); no base-fee movement was simulated.
-- **Deployment.** The program is deployed at genesis, immutable, with
+  the genesis base fees (8 per gas unit); no base-fee movement was simulated. On the running
+  sequencer of §8 none of this is a copy, and the block tail and the base fee are real.
+- **Deployment.** In the harness the program is deployed at genesis, immutable, with
   `V03State::with_genesis_programs` as LEZ's own tests do, not by `program_loader` transactions;
-  the cost of deploying a 593 KB image was not measured.
-- **Private paths in dev mode.** The Stage 2, 3 and 4 tests run with `RISC0_DEV_MODE=1`. Two real
-  proofs were made (§3), both of a finality update and both of images before this branch (one by
-  CPU, one by GPU): none of a handoff, of a consumer's read, of a private attestation, or of this
-  branch's image.
+  the cost of deploying this branch's 593 KB image was not measured. On the running sequencer
+  (§8) the earlier image `cec0bc68…` was deployed by `program_loader` transactions: 6 per 508 KB
+  image, storage gas 479,496, execution gas 0.
+- **Private paths in dev mode.** The Stage 2, 3 and 4 tests run with `RISC0_DEV_MODE=1`. Real
+  proofs were made of a finality update on images before this branch, in the harness by CPU
+  (`e7cec90e…`) and by GPU (`cec0bc68…`) (§3), and on the running sequencer of §8 against its
+  live instance (`cec0bc68…`, by a rented machine's CPU, verified by the sequencer); and of one
+  private attestation on this branch's images, by GPU (§5.5). None was made of a handoff, of
+  Stage 3's private consumer (§4), or of the update path on this branch's image.
 - **Per-handler cycles come from a replay.** `lee` reports one cycle count per transaction; the
   split by handler comes from `harness/src/trace.rs`, which re-executes each guest as `lee`'s
   `PublicBackend` does. Every test asserts that the split sums to LEZ's charge. Within a handler
@@ -1093,3 +1108,46 @@ wrapper reaches the guest build and compiles the guests with the host toolchain:
 `cargo fmt -p ferrata-lez-wire -p harness -p methods`, and `rustfmt --edition 2021` for the guests
 (clean).
 
+## 8. On a running sequencer (`live/`)
+
+[`live/`](live/README.md) runs the program, at the image before the attestation (`cec0bc68…`,
+without §5), on LEZ's own sequencer instead of the harness:
+`sequencer_service` from the unmodified tag `v0.4.0-rc1`, set up and started as LEZ's Justfile
+does, without `RISC0_DEV_MODE` (it verifies receipts), inscribing its blocks on a Logos
+Blockchain (Bedrock) node at `d480efc6`, the revision LEZ's `Cargo.lock` pins, built by LEZ's own
+resolver and run with LEZ's node configuration: **one validator, leader proofs in dev mode**
+(`POL_PROOF_DEV_MODE=true`, as LEZ's container entrypoint sets it), 1 s slots, 100-slot epochs.
+Every transaction was built, signed and sent by LEZ's wallet over the sequencer's RPC and counted
+only once its block was `Finalized` on Bedrock; the driver reads each charge by settling the block
+with `chain_state::apply`, whose totals the block's own fee transaction must match. One recorded
+run, 10 November 2026, on a rented Linux container (a Modal build box, like the harness runs of this image's
+figures, `results/environment.md`), re-checked there by
+`live/verify-run.sh`: with the bytecode put back every block hash holds, and the whole chain
+replays from the pre-genesis state to the recorded charges. Record: `live/results/` (manifest
+`run.tsv`; block log `blocks.borsh`, the 13 program bytecode chunks elided and listed with their
+SHA-256 in `segments.tsv`); tables: `live/results/tables.md`.
+
+| | on the sequencer | in the harness |
+|---|---|---|
+| deployment | the exact binary of image `cec0bc68…` (SHA-256 `4b7702a4…1777`), twice, and LEZ's `scripted` program, through `program_loader`: 6 transactions per 508 KB image, storage gas 479,496, execution gas 0, base fees 3,835,968; the loader computed image `cec0bc68…` | at genesis (§6) |
+| transactions | 96 sent: 73 applied, 19 refused by the program, 2 reverted otherwise, 2 dropped by the sequencer; 191 blocks, all final on Bedrock | one block each |
+| the 65 with a row in §2 (as measured on `cec0bc68…`; §2 now shows `2f3566d4…`) | the same outcome and exit code in all 65; the same execution gas in 64; the other ran outside its validity window and pays its declared limit (4,000,000 here, 10,000,000 declared there) | §2 |
+| transaction bytes (storage gas) | equal in 44 of those 65; 65 bytes more in 19 and 65 fewer in 1 (not traced to a field); 607 fewer in the validity-window case, which is built differently | §2 |
+| base fee | 8; 9 in the block after the one block over the 5M target (block 92, two 3.6M transactions) | 8 throughout |
+| the stored GPU-proven transaction | dropped: "Invalid input: Unknown program Ev5SfFrp…" (proven against the harness state, where the program sits at another account) | settled (§3) |
+| the update with a fake receipt | dropped: "Invalid privacy preserving execution circuit proof" | refused (§3) |
+| the update with a real proof | made against the live instance on the container's CPU with 32 prover threads, 895.6 s (image `e7cec90e…` took 3,240.5 s on the laptop's 16 threads, this image 49.5 s on an L4 GPU: §3); verified and applied: execution gas 479,854, storage gas 224,063, fee 5,631,336; receipt 237,412 bytes | the same gas and fee on this image (§3 now shows `2f3566d4…`: 71,979 public instead of 70,090) |
+
+What the running system showed that the harness could not (details: `live/README.md`): the
+sequencer's head is not its chain (blocks made in the last second before a Bedrock epoch led to a
+rewind from block 37 to 16 in a first attempt, and to a rewind and 31 inscriptions given up when
+repeated on purpose; never with blocks made 3 s or 5 s before, nor in the recorded run), so a
+client must settle only on blocks final on Bedrock; finality took 5–6 s per block and a public
+transaction was settled 8.5–19.7 s after it was sent (one validator in dev mode, not a network); a
+proof is bound to the deployment it was made for; LEZ's wallet default gas limit (2,000,000) is
+below what a job's transactions need (one reverted and paid 2,000,000); the base fee moves; and
+Bedrock's storage gas price for the zone's inscriptions rose from 1 to 4 within twelve minutes.
+
+Reproduce (Linux x86-64; ports and packages in `live/README.md`; the guest binaries as it says):
+`lez/live/run.sh build`, `lez/live/run.sh build-bedrock`, `lez/live/run.sh run`,
+`python3 lez/live/tables.py`, `lez/live/verify-run.sh`.
