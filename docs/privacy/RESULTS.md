@@ -8,8 +8,8 @@ bridge program on LEZ v0.4.0-rc1 (through LEZ's own state machine, private paths
 and `FerrataVault` v3 (Foundry, mock verifier).
 
 **Where it ran.** Everything below ran on the Modal build box of this worktree (`spike/modal-build/mrun`,
-2 vCPU), `scripts/privacy/run.sh`: the LEZ half in 71.9 s, the Foundry half in 0.36 s, the analysis in
-about 4 s; the whole run 1 min 25 s. The numbers are the box's output, copied from
+2 vCPU), `scripts/privacy/run.sh`: the LEZ half in 73.5 s, the Foundry half in 0.37 s, the analysis in
+about 4 s; the whole run 1 min 30 s. The numbers are the box's output, copied from
 [`generated/summary.md`](generated/summary.md), [`generated/b6.md`](generated/b6.md) and
 [`generated/results.json`](generated/results.json), which `scripts/privacy/adversary.py` wrote. The bridge
 program's image in this build is `23cc5025…9132` (built at this worktree's path; the ELF holds its
@@ -19,7 +19,7 @@ build paths, so it differs from `BRIDGE-RESULTS.md`'s `b5d177bb…`; no guest so
 
 | check | default private path | linkable variants |
 |---|---|---|
-| differential gate (identical once nullifiers, fresh randomness, a user's own address and time are cut) | identical: deposits, private claims (8,953 bytes each), private burns (7,857), releases (324 bytes of calldata) | plaintext claim: **differs** (the destination's account, the witness); naive `N = fid` claim: identical (the gate cannot see that a nullifier is computable; the adversary does) |
+| differential gate (identical once nullifiers, fresh randomness, a user's own address and time are cut; receipts included) | identical: deposits, private claims (8,953 bytes each), private burns (7,857), releases (324 bytes of calldata) | plaintext claim: **differs** (the destination's account, the witness); naive `N = fid` claim: identical (the gate cannot see that a nullifier is computable; the adversary does) |
 | adversary, inbound (deposit → claim), chance 5.0% | **5.0%**: no shared value at all; every candidate set is all 20 deposits | naive `N = fid`: **100%** (20 of 20 identified); plaintext claim: **100%** (20 of 20) |
 | adversary, outbound (burn → release), chance 5.0% | **5.0%**: every candidate set is all 20 burns | naive `NOut = burnId`: **100%** (20 of 20) |
 | §B6's hidden column, searched in every record's public bytes | 0 of 320 values found (destination, `s`, `C`, leaf, `fid`, depositor; holder, recipient; `r`, `COut`, memo, mac, burn leaf, `burnId`) | – |
@@ -56,9 +56,10 @@ nullifier (the mock verifier accepts any registered journal).
 **Collectors.** LEZ: per transaction, its bytes (`borsh(LeeTransaction)`), the block body (read back
 with the checkpoint program's parser, which also checks that each burn is in the clear exactly once),
 the events, the state diff (every declared public account and the fee accounts, before and after, and
-the commitment-set root before and after) and every field the test can name. Ethereum
-(`vault/test/PrivacySuite.t.sol`): the vault deployed at P with P's configuration id; per transaction,
-the sender, value, calldata, events, every storage write and every balance change. Two cross-checks
+the commitment-set root before and after), what settlement charged (execution and storage gas, cycles,
+base fee) and every field the test can name. Ethereum (`vault/test/PrivacySuite.t.sol`): the vault
+deployed at P with P's configuration id; per transaction, the sender, value, calldata, events, every
+storage write, every balance change and the gas used. Two cross-checks
 tie the halves: the vault's deposit root after the 20 deposits equals the harness's tree root, in both
 universes; and the vault accepts each release only if the journal the bridge core's release statement
 built (`verify_release`, what the release guest runs) is byte for byte the one it rebuilds. Both hold.
@@ -67,7 +68,9 @@ built (`verify_release`, what the release guest runs) is byte for byte the one i
 nullifier account, LEZ's private-account nullifiers, `NOut`), fresh randomness (`C`, the burn note, LEZ
 commitments, encrypted notes, aliases, the proof), a user's own public address (depositor, recipient)
 or time and order (blocks, timestamps, the claim's time, commitment-set roots, the leaf index, the
-vault's tree and escrow) are cut out where they vary; the rest must be byte for byte identical.
+vault's tree and escrow, the base fee) are cut out where they vary; the rest, receipts included, must be
+byte for byte identical. Gas counts as order only where the data show that it follows the operation's
+position and not its user (below).
 Accounts every record of a step changes (the fee accounts, the token's and the configuration's gates,
 the relayer's balance, the payer) are compared as cumulative state: the same accounts in every record,
 their contents left to the adversary.
@@ -123,6 +126,25 @@ memo, checks `COut` and computes `NOut` (v1, the release guest's).
 chance here because the orders are random by construction. The naive variants are found only through a
 derived identifier (`fid`, `burnId`): without them the adversary is at chance, which is why the
 adversary computes them.
+
+### Receipts
+
+Gas is public, and it varies; every variation follows the operation's position, not its user:
+- **LEZ claims.** Execution gas, minus the first claim's: `[0, 5188, 5189, 5189, 5187, 5188, 5188, 5186,
+  5186, …]` by position, the same sequence in the private and the plaintext universe, whose users stand
+  in different orders, so it is the shared public part (Issue, Admit, Spend, the mints) that varies, with
+  the state the claims before it left; the cause of the 5,186 was not isolated. Storage gas is constant
+  (224,063 private, 2,061 plaintext).
+- **LEZ burns.** The first burn costs 578 gas more than the 19 others, which cost the same.
+- **Ethereum releases.** The first costs 103,781 gas, the 19 others 78,781: the first relay fee creates
+  the relayer's account (25,000). The naive releases show the same.
+- **Ethereum deposits.** Gas follows the leaf index (138,240 for leaf 0; about 98,600 when a leaf writes a
+  frontier level for the first time; about 78,700–78,900 otherwise), the same sequence in both universes,
+  whose commitments differ.
+
+So the receipts carry order, as the base fee does (it moves with the chain's history), and nothing that
+tells one user from another; a client that pays for the first use of a relayer, or that is the first to
+claim, is visible as such, which §B6's timing residual already covers.
 
 ### What is public at each step, against §B6
 
