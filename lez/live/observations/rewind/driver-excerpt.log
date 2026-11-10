@@ -1,0 +1,25 @@
+# The driver of the same attempt, from the first job step of the replay to its end. It followed the sequencer's
+# head: every row down to block 37 was read from a block that Bedrock never included (blocks 17..37 were made
+# again later with other contents), and the driver stopped when the head no longer matched what it had applied.
+[replay] update_0 Open (step 1)                                     applied        gas   2151211 block   21 + 14.4s 9b56ba997f39f8eebb817ffb230b8e029f1f195452fdf68a5d68dfce35cb5f33
+[replay] update_0 Miller (step 2)                                   applied        gas   3311227 block   22 + 15.0s 95b6f767e6e8441c98093af40d1803065594879f5614beb2765620d5a0386434
+[replay] update_0 adopt 1/2                                         applied        gas   3409859 block   23 + 14.9s 6425bf643387bbafa4db4ecd603eef7565faf43985dc73050a2117135d0efff8
+[replay] update_0 adopt 2/2                                         applied        gas   3417051 block   24 + 15.0s aab72ec83ad330c99fea42a084da444b860fd322565fd61679c3b8a50d0cd7e0
+[replay] update_0 Finish (step 3)                                   applied        gas   3694714 block   25 + 15.4s f50777ef646d1804b1eeefc144065507da5fad70f0086928cfa330e6dbb672ea
+[replay] update_1 Open (step 1)                                     applied        gas   2207838 block   26 + 14.8s c3d6d11d89a5475215d0d1cec5c107ed14db0c3ea7beeb20892916acb5c12281
+[replay] update_1 Miller (step 2)                                   applied        gas   3311227 block   27 + 14.8s b7a5fdfe8c56f15a3b3ece39c5476447552fd1b091ccc6aed5bf2fefdd6b590b
+[replay] update_1 adopt 1/2                                         applied        gas   3409859 block   28 + 15.0s 827620532c9e8c83de99fc640905cb8673239b21f7a68fa40f7404a6e6a714d1
+[replay] update_1 adopt 2/2                                         applied        gas   3417051 block   29 + 14.9s 39601083f7a2f5445e4655810a1c3f4a64edf3d4dddcad27d8305d08d5d9a4ac
+[replay] update_1 Finish (step 3)                                   applied        gas   3730145 block   30 + 15.8s e31a247e9b8491a2bfc0d84fbc712e6c84244dbb8a1367ad302b0ea2c9c01244
+[replay] update_2 Open (step 1)                                     applied        gas   2208578 block   31 + 14.4s ba4d1a5994791256f5424124439304db2fd995f2a3dd46c135d3b0bbb8af7baa
+[replay] update_2 Miller (step 2)                                   applied        gas   3311227 block   32 + 14.9s fe701e2dda134f6063dbce3e5c61c8d8a06cb3bb0517fd3366ab439225d144ec
+[replay] update_2 adopt 1/2                                         applied        gas   3409859 block   33 + 14.9s ef145f449d092fcdccd328a83a7a7afea01de5cf987e555fa122b6aa076918d5
+[replay] update_2 adopt 2/2                                         applied        gas   3417051 block   34 + 15.0s 6458c606e8b7cd8d92ee78baacb41314b31aff7b98c990484439bb8656078f7f
+[replay] update_2 Finish (step 3)                                   applied        gas   3730145 block   35 + 15.8s 6b59c2784930b6da84ded527ba4394e0811c34f2aa8892c1d1508c7d5570bd35
+[replay] update_3 Open (step 1)                                     applied        gas   2152938 block   36 + 14.5s 56fd2d3b7fb74cfc77e74a28ba21300930119c57ec2b087f4b6d7b91628ff6c6
+[replay] update_3 Miller (step 2)                                   applied        gas   3311227 block   37 + 14.9s ad6b4b2b9f7b4a8e532b6363d2dacce3da0285e4154c1fb49a4462d09e519c4b
+[replay] update_3 adopt 1/2                                         dropped        gas           block      + 60.5s e110c1aed35314317a8dce72f57fa53f11ea5980a5f55627f8b52e3d967ca56e
+[replay] update_3 adopt 2/2                                         dropped        gas           block      + 59.3s 59e2738e06b16f7c1e886c7190f7771c140480e75bc3ee0bf62a41e83011e71f
+Error: update_3 Finish (step 3): the sequencer and the follower disagree on whether b346b27a5e5eb9c8a1d8f564e1e80b9d3ac74d911375fd36f32c2d2bc4af408d is included
+== phase replay FAILED (exit 1)
+Error: block 17 changed under the run
