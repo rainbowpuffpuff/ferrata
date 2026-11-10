@@ -142,12 +142,14 @@ contract PrivacySuiteTest is VaultTestBase {
         vm.startStateDiffRecording();
         vm.prank(from);
         (bool ok,) = address(vault).call{value: value}(callData);
+        uint256 gasUsed = vm.lastCallGas().gasTotalUsed;
         Vm.AccountAccess[] memory accesses = vm.stopAndReturnStateDiff();
         Vm.Log[] memory logs = vm.getRecordedLogs();
         assertTrue(ok, id);
         string memory line = string.concat('{"id":"', id, '","chain":"eth","kind":"', kind, '","variant":"', variant);
         line = string.concat(line, '","seq":', vm.toString(seq), ',"block":', vm.toString(block.number));
-        line = string.concat(line, ',"time":', vm.toString(block.timestamp), ',"from":"', vm.toString(from));
+        line = string.concat(line, ',"time":', vm.toString(block.timestamp), ',"gas":', vm.toString(gasUsed));
+        line = string.concat(line, ',"from":"', vm.toString(from));
         line = string.concat(line, '","to":"', vm.toString(address(vault)), '","value":"', vm.toString(value));
         line = string.concat(line, '","calldata":"', vm.toString(callData), '","logs":', _logs(logs));
         line = string.concat(line, ',"writes":', _writes(accesses), ',"balances":', _balances(accesses), "}");

@@ -482,7 +482,7 @@ fn collect_public(
         seq,
         block_id,
         time_ms: w.time,
-        fields: public_fields(&tx, w.program),
+        fields: [public_fields(&tx, w.program), receipt_fields(&report.charge)].concat(),
         clear_calls: clear_calls(w, &body),
         tx,
         block: body,
@@ -539,7 +539,7 @@ fn collect_private(
         seq,
         block_id,
         time_ms: time,
-        fields: private_fields(&run.tx, w.program),
+        fields: [private_fields(&run.tx, w.program), receipt_fields(&run.charge)].concat(),
         clear_calls: clear_calls(w, &body),
         tx,
         block: body,
@@ -548,6 +548,16 @@ fn collect_private(
         root_before,
         root_after: commitment_root(w),
     }
+}
+
+/// What settlement charged: public in LEZ's fee accounting (the receipt of the transaction).
+fn receipt_fields(c: &harness::settle::Charge) -> Vec<(String, Vec<u8>)> {
+    vec![
+        ("receipt.gas_exec".into(), c.gas_exec.to_le_bytes().to_vec()),
+        ("receipt.cycles".into(), c.cycles.to_le_bytes().to_vec()),
+        ("receipt.gas_stor".into(), c.gas_stor.to_le_bytes().to_vec()),
+        ("receipt.fee_base".into(), c.fee_base.to_le_bytes().to_vec()),
+    ]
 }
 
 fn field<'a>(r: &'a Record, suffix: &str) -> &'a [u8] {

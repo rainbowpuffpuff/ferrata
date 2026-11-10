@@ -407,6 +407,14 @@
     "B6": "time"
    },
    {
+    "field": "receipt.gasUsed.deposit",
+    "bytes": 32,
+    "across records": "8 distinct",
+    "class": "time / order",
+    "what": "gas used: depends on the leaf position (order), see the summary",
+    "B6": null
+   },
+   {
     "field": "storage: mapping@61[per-sender]",
     "bytes": 32,
     "across records": "written in 20 of 20 records",
@@ -721,6 +729,38 @@
     "B6": null
    },
    {
+    "field": "receipt.gas_exec",
+    "bytes": 8,
+    "across records": "5 distinct",
+    "class": "time / order",
+    "what": "LEZ execution gas: follows the position (the shared state the public part updates)",
+    "B6": null
+   },
+   {
+    "field": "receipt.cycles",
+    "bytes": 8,
+    "across records": "5 distinct",
+    "class": "time / order",
+    "what": "LEZ execution gas: follows the position (the shared state the public part updates)",
+    "B6": null
+   },
+   {
+    "field": "receipt.gas_stor",
+    "bytes": 8,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "receipt.fee_base",
+    "bytes": 16,
+    "across records": "5 distinct",
+    "class": "time / order",
+    "what": "LEZ: the base fee at the block's opening (moves with the chain's history)",
+    "B6": null
+   },
+   {
     "field": "derived.nullifier_account",
     "bytes": 32,
     "across records": "20 distinct",
@@ -968,6 +1008,38 @@
     "across records": "20 distinct",
     "class": "fresh randomness",
     "what": "the proof (dev mode: a fake receipt) or the submitter's signature",
+    "B6": null
+   },
+   {
+    "field": "receipt.gas_exec",
+    "bytes": 8,
+    "across records": "5 distinct",
+    "class": "time / order",
+    "what": "LEZ execution gas: follows the position (the shared state the public part updates)",
+    "B6": null
+   },
+   {
+    "field": "receipt.cycles",
+    "bytes": 8,
+    "across records": "5 distinct",
+    "class": "time / order",
+    "what": "LEZ execution gas: follows the position (the shared state the public part updates)",
+    "B6": null
+   },
+   {
+    "field": "receipt.gas_stor",
+    "bytes": 8,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "receipt.fee_base",
+    "bytes": 16,
+    "across records": "5 distinct",
+    "class": "time / order",
+    "what": "LEZ: the base fee at the block's opening (moves with the chain's history)",
     "B6": null
    },
    {
@@ -1293,6 +1365,38 @@
     "B6": null
    },
    {
+    "field": "receipt.gas_exec",
+    "bytes": 8,
+    "across records": "2 distinct",
+    "class": "time / order",
+    "what": "LEZ execution gas: follows the position (the shared state the public part updates)",
+    "B6": null
+   },
+   {
+    "field": "receipt.cycles",
+    "bytes": 8,
+    "across records": "2 distinct",
+    "class": "time / order",
+    "what": "LEZ execution gas: follows the position (the shared state the public part updates)",
+    "B6": null
+   },
+   {
+    "field": "receipt.gas_stor",
+    "bytes": 8,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "receipt.fee_base",
+    "bytes": 16,
+    "across records": "2 distinct",
+    "class": "time / order",
+    "what": "LEZ: the base fee at the block's opening (moves with the chain's history)",
+    "B6": null
+   },
+   {
     "field": "derived.burn_record_account",
     "bytes": 32,
     "across records": "20 distinct",
@@ -1559,6 +1663,14 @@
     "B6": "time"
    },
    {
+    "field": "receipt.gasUsed",
+    "bytes": 32,
+    "across records": "2 distinct",
+    "class": "time / order",
+    "what": "gas used: the first release's relay fee creates the relayer's account",
+    "B6": null
+   },
+   {
     "field": "storage: mapping@62[per-nullifier]",
     "bytes": 32,
     "across records": "written in 20 of 20 records",
@@ -1673,6 +1785,38 @@
     "B6": null
    },
    {
+    "field": "receipt.gas_exec",
+    "bytes": 8,
+    "across records": "constant",
+    "class": "constant",
+    "what": "LEZ execution gas: follows the position (the shared state the public part updates)",
+    "B6": null
+   },
+   {
+    "field": "receipt.cycles",
+    "bytes": 8,
+    "across records": "constant",
+    "class": "constant",
+    "what": "LEZ execution gas: follows the position (the shared state the public part updates)",
+    "B6": null
+   },
+   {
+    "field": "receipt.gas_stor",
+    "bytes": 8,
+    "across records": "constant",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "receipt.fee_base",
+    "bytes": 16,
+    "across records": "constant",
+    "class": "constant",
+    "what": "LEZ: the base fee at the block's opening (moves with the chain's history)",
+    "B6": null
+   },
+   {
     "field": "block.id",
     "bytes": 8,
     "across records": "constant",
@@ -1764,6 +1908,101 @@
    324
   ]
  },
+ "receipts_by_position": {
+  "claims private": [
+   0,
+   5188,
+   5189,
+   5189,
+   5187,
+   5188,
+   5188,
+   5186,
+   5186,
+   5186,
+   5186,
+   5186,
+   5186,
+   5187,
+   5186,
+   5186,
+   5187,
+   5186,
+   5186,
+   5186
+  ],
+  "claims plaintext": [
+   0,
+   5188,
+   5189,
+   5189,
+   5187,
+   5188,
+   5188,
+   5186,
+   5186,
+   5186,
+   5186,
+   5186,
+   5186,
+   5187,
+   5186,
+   5186,
+   5187,
+   5186,
+   5186,
+   5186
+  ],
+  "burns": [
+   0,
+   -578,
+   -578,
+   -578,
+   -578,
+   -578,
+   -578,
+   -578,
+   -578,
+   -578,
+   -578,
+   -578,
+   -578,
+   -578,
+   -578,
+   -578,
+   -578,
+   -578,
+   -578,
+   -578
+  ],
+  "releases": [
+   0,
+   -25000,
+   -25000,
+   -25000,
+   -25000,
+   -25000,
+   -25000,
+   -25000,
+   -25000,
+   -25000,
+   -25000,
+   -25000,
+   -25000,
+   -25000,
+   -25000,
+   -25000,
+   -25000,
+   -25000,
+   -25000,
+   -25000
+  ],
+  "checks": {
+   "LEZ claims: the same gas steps by position in both universes (users in different orders)": true,
+   "LEZ burns: only the first differs": true,
+   "Ethereum releases: only the first differs, by 25,000 (the relayer's account created)": true
+  }
+ },
  "hidden": {
   "deposit hides the LEZ destination": {
    "values searched": 40,
@@ -1785,5 +2024,131 @@
  "proof_roots_newest": [
   80,
   80
- ]
+ ],
+ "gas": {
+  "deposit A by leaf index": [
+   138240,
+   98562,
+   78662,
+   98684,
+   78662,
+   78784,
+   78784,
+   98806,
+   78662,
+   78784,
+   78784,
+   78906,
+   78784,
+   78906,
+   78906,
+   98928,
+   78662,
+   78784,
+   78784,
+   78906
+  ],
+  "deposit B by leaf index": [
+   138240,
+   98562,
+   78662,
+   98684,
+   78662,
+   78784,
+   78784,
+   98806,
+   78662,
+   78784,
+   78784,
+   78906,
+   78784,
+   78906,
+   78906,
+   98928,
+   78662,
+   78784,
+   78784,
+   78906
+  ],
+  "deposit A equals B": true,
+  "release distinct values": [
+   78781,
+   103781
+  ],
+  "release naive distinct values": [
+   78781,
+   103781
+  ]
+ },
+ "lez_receipts": {
+  "claim, private (default)": {
+   "receipt.gas_exec": [
+    536214,
+    541400,
+    541401,
+    541402,
+    541403
+   ],
+   "receipt.cycles": [
+    126450,
+    131636,
+    131637,
+    131638,
+    131639
+   ],
+   "receipt.gas_stor": [
+    224063
+   ],
+   "receipt.fee_base": [
+    6082216,
+    6123704,
+    6123712,
+    6123720,
+    6123728
+   ]
+  },
+  "burn, private holding": {
+   "receipt.gas_exec": [
+    510617,
+    511195
+   ],
+   "receipt.cycles": [
+    100853,
+    101431
+   ],
+   "receipt.gas_stor": [
+    224063
+   ],
+   "receipt.fee_base": [
+    5877440,
+    5882064
+   ]
+  },
+  "claim, plaintext": {
+   "receipt.gas_exec": [
+    236585,
+    241771,
+    241772,
+    241773,
+    241774
+   ],
+   "receipt.cycles": [
+    236585,
+    241771,
+    241772,
+    241773,
+    241774
+   ],
+   "receipt.gas_stor": [
+    2061
+   ],
+   "receipt.fee_base": [
+    1909168,
+    1950656,
+    1950664,
+    1950672,
+    1950680
+   ]
+  }
+ }
 }

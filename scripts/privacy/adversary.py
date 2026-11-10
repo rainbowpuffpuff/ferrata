@@ -157,6 +157,7 @@ def load_lez(data):
             x.blobs.append(("diff.account", b(d["account"])))
             x.blobs.append(("diff.before", b(d["before"])))
             x.blobs.append(("diff.after", b(d["after"])))
+        x.blobs.append(("receipt", b"".join(b(v) for n, v in r["fields"] if n.startswith("receipt."))))
         x.blobs.append(("commitment_root.before", b(r["commitment_root_before"])))
         x.blobs.append(("commitment_root.after", b(r["commitment_root_after"])))
         x.fields = [(n, b(v)) for n, v in r["fields"]]
@@ -210,6 +211,9 @@ def load_eth(lines):
         for acc, old, new in x.balances:
             x.blobs += [("balance.account", acc), ("balance.old", old), ("balance.new", new)]
         x.fields += [("block.number", word(r["block"])), ("block.timestamp", word(r["time"]))]
+        # Gas used is public (the receipt). A deposit's depends on which level of the tree's frontier
+        # its leaf index writes, so it is named apart and checked against the other universe below.
+        x.fields.append(("receipt.gasUsed" + (".deposit" if r["kind"] == "deposit" else ""), word(r["gas"])))
         x.time = [word(r["block"]), word(r["time"])]
         recs.append(x)
     return recs
@@ -235,6 +239,8 @@ CLASSES = [
     (r"^derived\.burn_record_account$", FRESH, "the burn record account, a PDA of H(note)"),
     (r"^witness_set$", FRESH, "the proof (dev mode: a fake receipt) or the submitter's signature"),
     (r"(Issue|Claim)\.time_ms$|^validity$|^nonces$|^block\.(id|timestamp|number)$", TIME, "time"),
+    (r"^receipt\.fee_base$", TIME, "LEZ: the base fee at the block's opening (moves with the chain's history)"),
+    (r"^receipt\.gasUsed\.deposit$", TIME, "gas used: depends on the leaf position (order), see the summary"),
     # Ethereum.
     (r"^calldata\.commitment$|^event\.Deposit\.commitment$", FRESH, "C, a hiding commitment"),
     (r"^tx\.from$|^event\.Deposit\.depositor$", USER, "the depositor (or the submitting relayer)"),
@@ -244,7 +250,12 @@ CLASSES = [
 ]
 
 
+EXPLAINED = {}  # receipt fields shown (in main) to depend on position only
+
+
 def classify(name):
+    if norm(name) in EXPLAINED:
+        return EXPLAINED[norm(name)]
     for pat, cls, what in CLASSES:
         if re.search(pat, norm(name)):
             return cls, what
@@ -283,6 +294,7 @@ def gate(recs, ctx):
         parts = []
         if x.chain == "lez":
             parts.append(("tx", cut(dict(x.blobs)["tx"], allowed)))
+            parts.append(("receipt", cut(dict(x.blobs)["receipt"], allowed)))
             parts.append(("block.rest", cut(dict(x.blobs)["block.rest"], allowed)))
             for name, v in x.blobs:
                 if name.startswith("event"):
@@ -728,6 +740,28 @@ def main():
     acct_time = {vault, relayer}
 
     results = {"gate": {}, "adversary": {}, "order_only": {}, "recovery": {}, "fields": {}, "sizes": {}}
+    # Receipts: gas varies; it is order (time) only if it follows the position, not the user.
+    def by_seq(k, name, endian):
+        return [int.from_bytes(next(v for n, v in x.fields if n == name), endian) for x in G[k]]
+    steps = lambda v: [a - v[0] for a in v]
+    pc = by_seq("claim, private (default)", "receipt.gas_exec", "little")
+    pp = by_seq("claim, plaintext", "receipt.gas_exec", "little")
+    bu = by_seq("burn, private holding", "receipt.gas_exec", "little")
+    rg = by_seq("release, NOut of the release statement", "receipt.gasUsed", "big")
+    checks = {
+        "LEZ claims: the same gas steps by position in both universes (users in different orders)":
+            steps(pc) == steps(pp) and T["claim"] != T["plaintext"],
+        "LEZ burns: only the first differs": len(set(bu[1:])) == 1,
+        "Ethereum releases: only the first differs, by 25,000 (the relayer's account created)":
+            len(set(rg[1:])) == 1 and rg[0] - rg[1] == 25000,
+    }
+    results["receipts_by_position"] = {"claims private": steps(pc), "claims plaintext": steps(pp), "burns": steps(bu),
+                                       "releases": steps(rg), "checks": checks}
+    if all(list(checks.values())[:2]):
+        for n in ("receipt.gas_exec", "receipt.cycles"):
+            EXPLAINED[n] = (TIME, "LEZ execution gas: follows the position (the shared state the public part updates)")
+    if list(checks.values())[2]:
+        EXPLAINED["receipt.gasUsed"] = (TIME, "gas used: the first release's relay fee creates the relayer's account")
     for k, recs in G.items():
         sz = [len(dict(x.blobs)["tx"]) if x.chain == "lez" else len(dict(x.blobs)["calldata"]) for x in recs]
         results["sizes"][k] = [min(sz), max(sz)]
@@ -855,6 +889,20 @@ def main():
                     total += 1
                     newest += v == before
     results["proof_roots_newest"] = [newest, total]
+    gas = lambda k: [int.from_bytes(next(v for n, v in x.fields if n.startswith("receipt.gasUsed")), "big") for x in G[k]]
+    ga, gb = gas("deposit (A: private destinations)"), gas("deposit (B: public destinations)")
+    results["gas"] = {"deposit A by leaf index": ga, "deposit B by leaf index": gb, "deposit A equals B": ga == gb,
+                      "release distinct values": sorted(set(gas("release, NOut of the release statement"))),
+                      "release naive distinct values": sorted(set(gas("release, naive NOut = burnId")))}
+    lez_receipts = {}
+    for k in ("claim, private (default)", "burn, private holding", "claim, plaintext"):
+        vals = defaultdict(set)
+        for x in G[k]:
+            for n, v in x.fields:
+                if n.startswith("receipt."):
+                    vals[n].add(int.from_bytes(v, "little"))
+        lez_receipts[k] = {n: sorted(v) for n, v in vals.items()}
+    results["lez_receipts"] = lez_receipts
 
     (out_dir / "results.json").write_text(json.dumps(results, indent=1, default=lambda v: v.hex() if isinstance(v, bytes) else str(v)))
     write_markdown(out_dir, results, lez_json, scenario, n_users, half)
@@ -893,7 +941,21 @@ def write_markdown(out_dir, results, lez_json, scenario, n, half):
           f"{r['recipients_decrypted_correctly']} of {n}; recovered NOut equal to the vault's: {r['nout_matches_vault']} of {n}",
           f"- the bridge core's `recover_burns` (v1 mac) on the same notes: {r['rust_core']} found", "",
           f"Private actions proven against the newest commitment-set root: {results['proof_roots_newest'][0]} of "
-          f"{results['proof_roots_newest'][1]}.", ""]
+          f"{results['proof_roots_newest'][1]}.", "",
+          "## Receipts", "",
+          f"- Ethereum gas used, deposits by leaf index (universe A): {results['gas']['deposit A by leaf index']}; "
+          f"the same in universe B (other commitments, public destinations): {results['gas']['deposit A equals B']}",
+          f"- Ethereum gas used, releases: distinct values {results['gas']['release distinct values']} (NOut of the "
+          f"release statement), {results['gas']['release naive distinct values']} (naive)"]
+    rp = results["receipts_by_position"]
+    s.append(f"- execution gas by position, minus the first: private claims {rp['claims private']}; plaintext claims "
+             f"{rp['claims plaintext']}; burns {rp['burns']}; releases (Ethereum) {rp['releases']}")
+    for k, v in rp["checks"].items():
+        s.append(f"- {k}: {'yes' if v else 'NO'}")
+    for k, v in results["lez_receipts"].items():
+        s.append(f"- LEZ, {k}: " + "; ".join(f"{n[8:]} {vals if len(vals) > 3 else ', '.join(map(str, vals))}"
+                                              for n, vals in v.items()))
+    s.append("")
     (out_dir / "summary.md").write_text("\n".join(s) + "\n")
     # Section B6, compared.
     names = {"deposit (A: private destinations)": "deposit", "claim, private (default)": "claim",

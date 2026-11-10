@@ -21,6 +21,7 @@ Every field the collectors can name, across the 20 records of each step: constan
 | `event.Deposit.commitment` | 32 | 20 distinct | fresh randomness | LEZ: the private account's new commitment | C |
 | `block.number` | 32 | 20 distinct | time / order | time | time |
 | `block.timestamp` | 32 | 20 distinct | time / order | time | time |
+| `receipt.gasUsed.deposit` | 32 | 8 distinct | time / order | gas used: depends on the leaf position (order), see the summary | - |
 | `storage: mapping@61[per-sender]` | 32 | written in 20 of 20 records | the user's own public address | per-depositor counter | - |
 | `storage: mapping@58[per-token]` | 32 | written in 20 of 20 records, values vary | time / order | tree state, counters, escrow (order) | - |
 | `storage: _branch[level]` | 32 | written in 20 of 20 records, values vary | time / order | tree state, counters, escrow (order) | - |
@@ -65,6 +66,10 @@ Every field the collectors can name, across the 20 records of each step: constan
 | `fee.fallback.boundary[].out.message.native.Credit` | 16 | constant | constant | the fee reserve, moved from the alias to the fee inbox | a one-time fee alias with a fixed reserve |
 | `validity` | 4 | constant | constant | validity windows (none set here) | time |
 | `witness_set` | 4541 | 20 distinct | fresh randomness | the proof (dev mode: a fake receipt) or the submitter's signature | - |
+| `receipt.gas_exec` | 8 | 5 distinct | time / order | LEZ execution gas: follows the position (the shared state the public part updates) | - |
+| `receipt.cycles` | 8 | 5 distinct | time / order | LEZ execution gas: follows the position (the shared state the public part updates) | - |
+| `receipt.gas_stor` | 8 | constant | constant |  | - |
+| `receipt.fee_base` | 16 | 5 distinct | time / order | LEZ: the base fee at the block's opening (moves with the chain's history) | - |
 | `derived.nullifier_account` | 32 | 20 distinct | nullifier | the nullifier account, a PDA of N | N |
 | `block.id` | 8 | 20 distinct | time / order | time | time |
 | `block.timestamp` | 8 | 20 distinct | time / order | time | time |
@@ -101,6 +106,10 @@ Every field the collectors can name, across the 20 records of each step: constan
 | `fee` | 65 | constant | constant | fee declaration / nonces of the public submitter (the harness's payer) | - |
 | `nonces` | 52 | 20 distinct | time / order | time | - |
 | `witness_set` | 100 | 20 distinct | fresh randomness | the proof (dev mode: a fake receipt) or the submitter's signature | - |
+| `receipt.gas_exec` | 8 | 5 distinct | time / order | LEZ execution gas: follows the position (the shared state the public part updates) | - |
+| `receipt.cycles` | 8 | 5 distinct | time / order | LEZ execution gas: follows the position (the shared state the public part updates) | - |
+| `receipt.gas_stor` | 8 | constant | constant |  | - |
+| `receipt.fee_base` | 16 | 5 distinct | time / order | LEZ: the base fee at the block's opening (moves with the chain's history) | - |
 | `derived.nullifier_account` | 32 | 20 distinct | nullifier | the nullifier account, a PDA of N | - |
 | `block.id` | 8 | 20 distinct | time / order | time | - |
 | `block.timestamp` | 8 | 20 distinct | time / order | time | - |
@@ -146,6 +155,10 @@ Every field the collectors can name, across the 20 records of each step: constan
 | `fee.fallback.boundary[].out.message.native.Credit` | 16 | constant | constant | the fee reserve, moved from the alias to the fee inbox | a one-time fee alias with a fixed reserve |
 | `validity` | 4 | constant | constant | validity windows (none set here) | time |
 | `witness_set` | 3993 | 20 distinct | fresh randomness | the proof (dev mode: a fake receipt) or the submitter's signature | - |
+| `receipt.gas_exec` | 8 | 2 distinct | time / order | LEZ execution gas: follows the position (the shared state the public part updates) | - |
+| `receipt.cycles` | 8 | 2 distinct | time / order | LEZ execution gas: follows the position (the shared state the public part updates) | - |
+| `receipt.gas_stor` | 8 | constant | constant |  | - |
+| `receipt.fee_base` | 16 | 2 distinct | time / order | LEZ: the base fee at the block's opening (moves with the chain's history) | - |
 | `derived.burn_record_account` | 32 | 20 distinct | fresh randomness | the burn record account, a PDA of H(note) | the burn note |
 | `block.id` | 8 | 20 distinct | time / order | time | time |
 | `block.timestamp` | 8 | 20 distinct | time / order | time | time |
@@ -184,6 +197,7 @@ Every field the collectors can name, across the 20 records of each step: constan
 | `event.Release.burnRoot` | 32 | constant | constant |  | the root |
 | `block.number` | 32 | 20 distinct | time / order | time | time |
 | `block.timestamp` | 32 | 20 distinct | time / order | time | time |
+| `receipt.gasUsed` | 32 | 2 distinct | time / order | gas used: the first release's relay fee creates the relayer's account | - |
 | `storage: mapping@62[per-nullifier]` | 32 | written in 20 of 20 records | nullifier | nullifierUsed[NOut] | - |
 | `storage: mapping@58[per-token]` | 32 | written in 20 of 20 records, values vary | time / order | tree state, counters, escrow (order) | - |
 | `balance: vault` | 32 | changed in 20 of 20 records | time / order | cumulative (order) | - |
@@ -203,6 +217,10 @@ Every field the collectors can name, across the 20 records of each step: constan
 | `fee` | 65 | constant | constant | fee declaration / nonces of the public submitter (the harness's payer) | - |
 | `nonces` | 52 | constant | constant | fee declaration / nonces of the public submitter (the harness's payer) | - |
 | `witness_set` | 100 | constant | constant | proof (dev mode) or signature | - |
+| `receipt.gas_exec` | 8 | constant | constant | LEZ execution gas: follows the position (the shared state the public part updates) | - |
+| `receipt.cycles` | 8 | constant | constant | LEZ execution gas: follows the position (the shared state the public part updates) | - |
+| `receipt.gas_stor` | 8 | constant | constant |  | - |
+| `receipt.fee_base` | 16 | constant | constant | LEZ: the base fee at the block's opening (moves with the chain's history) | - |
 | `block.id` | 8 | constant | constant | time | - |
 | `block.timestamp` | 8 | constant | constant | time | - |
 | `commitment_root.before` | 32 | constant | constant | LEZ: the commitment-set root (state the proof read) | - |

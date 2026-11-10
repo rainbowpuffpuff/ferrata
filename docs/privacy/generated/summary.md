@@ -38,3 +38,15 @@ Chance is 1/20 = 5.0%. Success = mean over the right-hand records of 1/|best can
 
 Private actions proven against the newest commitment-set root: 80 of 80.
 
+## Receipts
+
+- Ethereum gas used, deposits by leaf index (universe A): [138240, 98562, 78662, 98684, 78662, 78784, 78784, 98806, 78662, 78784, 78784, 78906, 78784, 78906, 78906, 98928, 78662, 78784, 78784, 78906]; the same in universe B (other commitments, public destinations): True
+- Ethereum gas used, releases: distinct values [78781, 103781] (NOut of the release statement), [78781, 103781] (naive)
+- execution gas by position, minus the first: private claims [0, 5188, 5189, 5189, 5187, 5188, 5188, 5186, 5186, 5186, 5186, 5186, 5186, 5187, 5186, 5186, 5187, 5186, 5186, 5186]; plaintext claims [0, 5188, 5189, 5189, 5187, 5188, 5188, 5186, 5186, 5186, 5186, 5186, 5186, 5187, 5186, 5186, 5187, 5186, 5186, 5186]; burns [0, -578, -578, -578, -578, -578, -578, -578, -578, -578, -578, -578, -578, -578, -578, -578, -578, -578, -578, -578]; releases (Ethereum) [0, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000]
+- LEZ claims: the same gas steps by position in both universes (users in different orders): yes
+- LEZ burns: only the first differs: yes
+- Ethereum releases: only the first differs, by 25,000 (the relayer's account created): yes
+- LEZ, claim, private (default): gas_exec [536214, 541400, 541401, 541402, 541403]; cycles [126450, 131636, 131637, 131638, 131639]; gas_stor 224063; fee_base [6082216, 6123704, 6123712, 6123720, 6123728]
+- LEZ, burn, private holding: gas_exec 510617, 511195; cycles 100853, 101431; gas_stor 224063; fee_base 5877440, 5882064
+- LEZ, claim, plaintext: gas_exec [236585, 241771, 241772, 241773, 241774]; cycles [236585, 241771, 241772, 241773, 241774]; gas_stor 2061; fee_base [1909168, 1950656, 1950664, 1950672, 1950680]
+
