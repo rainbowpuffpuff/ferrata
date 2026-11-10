@@ -1,0 +1,110 @@
+{
+  "ok": true,
+  "name": "lez-bridge",
+  "run": "gpu-l4-bridge",
+  "exit_code": 0,
+  "timed_out": false,
+  "gpu_type_requested": "L4",
+  "gpu": "NVIDIA L4, 23034 MiB, 610.57.04, 8.9",
+  "container_cpu_cores": 4.0,
+  "container_memory_mib": 32768,
+  "nproc": "4",
+  "modal_task_id": "ta-01M73D78YMH0C52SJZZETFH91R",
+  "modal_region": "us-west",
+  "modal_cloud_provider": "CLOUD_PROVIDER_GCP",
+  "expected_bridge_image_id": "25dfd9b283ba14b0b83a522d7d307de57288c4730f538d8862b53ad73a4a8c49",
+  "ferrata_commit": "21abe0564cee58d71028086d40541dd5c9c43b36",
+  "input_hashes_equal_manifest": true,
+  "binary_sha256": "e2b20f5121d0618adb2fc11c2e8b234f4bc8b1884f09a199b6c02bb4dd581ea3",
+  "r0vm": "risc0-r0vm 3.0.5",
+  "wall_s": 33.04887056350708,
+  "container_s_until_done": 35.35965275764465,
+  "gnu_time": {
+    "user_s": "28.96",
+    "system_s": "3.84",
+    "cpu_percent": "99%",
+    "elapsed": "0:33.03",
+    "max_rss_kib": "816100",
+    "exit_status": "0"
+  },
+  "gpu_stats": {
+    "samples": 171,
+    "sample_period_ms": 200,
+    "gpu_memory_used_mib_before": 7.0,
+    "gpu_memory_used_mib_peak": 11384.0,
+    "power_w_peak": 74.67,
+    "sm_clock_mhz_peak": 2040.0,
+    "temperature_c_peak": 56.0,
+    "gpu_busy_seconds": 23.200000000000003,
+    "first_busy_to_last_busy_s": 27.358999967575073,
+    "window_samples": 163,
+    "gpu_util_pct_mean_in_window": 51.625766871165645,
+    "gpu_util_share_of_samples_above_0_in_window": 0.7116564417177914,
+    "gpu_mem_bandwidth_util_pct_mean_in_window": 23.58282208588957,
+    "power_w_mean_in_window": 46.6759509202454
+  },
+  "gpu_stats_window": "whole prove_bridge run",
+  "log_lines": [
+    "bridge image 25dfd9b283ba14b0b83a522d7d307de57288c4730f538d8862b53ad73a4a8c49 (392388 ELF bytes); RISC0_DEV_MODE off",
+    "private claim: vault A leaf 5 (1 ETH, private kind) under root n = 8, configuration 08f89d7ba04a; N = 1dbba1cacb2c3b88480a9f252a16cac0d96c2685524509f4b2165d1a6df068c2",
+    "private claim: REAL PROOF: execute_and_prove 15.3 s (prove + settle 15.6 s); receipt (succinct InnerReceipt, borsh) 227477 bytes; transaction 231828 bytes",
+    "private claim: wrote the proven transaction to bridge-private-claim-tx.borsh (231828 bytes)",
+    "private claim: of its 231828 transaction bytes, none holds the destination, s, C, the leaf, the depositor, the witness or any of 32 path siblings; N, configId and the root read are present",
+    "private claim: settled: execution gas 439,815 (PRIVATE_VERIFY_GAS 409,764 + public part 30,051 cycles), storage gas 224,063, base fee 5,311,024; receipt at bytes 4,351..231,828 of 231,828",
+    "private burn: REAL PROOF: execute_and_prove 12.4 s (prove + settle 12.6 s); receipt (succinct InnerReceipt, borsh) 226978 bytes; transaction 230830 bytes",
+    "private burn: wrote the proven transaction to bridge-private-burn-tx.borsh (230830 bytes)",
+    "private burn: one private-to-public delivery of the 185-byte Burn to the note's account, from an alias",
+    "private burn: settled: execution gas 427,959 (PRIVATE_VERIFY_GAS 409,764 + public part 18,195 cycles), storage gas 224,063, base fee 5,216,176; receipt at bytes 3,852..230,830 of 230,830"
+  ],
+  "tx_bytes": 231828,
+  "tx_sha256": "1fdb42076236d3d4625ee87d5b2dc482206bee03255c5a8edef170bae15dd437",
+  "more_tx": {
+    "bridge-private-burn-tx.borsh": {
+      "bytes": 230830,
+      "sha256": "aea412d8d5745db37fb0407c21aff071abd7ab614b1ba76bf6af7df6f08b1093"
+    }
+  },
+  "build_info": {
+    "cuda_base_image": "nvidia/cuda:12.8.0-devel-ubuntu24.04",
+    "nvcc": [
+      "Cuda compilation tools, release 12.8, V12.8.61",
+      "Build cuda_12.8.r12.8/compiler.35404655_0"
+    ],
+    "rustc": "rustc 1.89.0 (29483883e 2025-08-04)",
+    "cargo": "cargo 1.89.0 (c24e10642 2025-06-23)",
+    "gcc": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+    "nvcc_append_flags": "--generate-code arch=compute_89,code=sm_89",
+    "build_container": {
+      "cpu_cores": 16.0,
+      "memory_mib": 65536
+    },
+    "binary": "r0vm-cuda",
+    "source_key": "risc0-r0vm =3.0.5 --locked --features cuda",
+    "cargo_args": [
+      "install",
+      "risc0-r0vm",
+      "--version",
+      "=3.0.5",
+      "--locked",
+      "--features",
+      "cuda",
+      "--root",
+      "/root/build/r0vm"
+    ],
+    "build_seconds": 1511.5,
+    "built_at_utc": "2026-11-10T09:17:41Z",
+    "sha256": "781ca94605f6b93ac17306e15a7c63ac35bcaaab1e13892b38ec38221b756fb7",
+    "bytes": 136895208,
+    "ldd": [
+      "linux-vdso.so.1 (0x00002b9a94737000)",
+      "\tlibstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x00002b9a9c47a000)",
+      "\tlibcuda.so.1 => not found",
+      "\tlibgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00002b9a9c6f8000)",
+      "\tlibm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00002b9a9c726000)",
+      "\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00002b9a9c80f000)",
+      "\t/lib64/ld-linux-x86-64.so.2 (0x0000564891aa3000)"
+    ]
+  },
+  "r0vm_sha256_here": "781ca94605f6b93ac17306e15a7c63ac35bcaaab1e13892b38ec38221b756fb7",
+  "finished_at_utc": "2026-11-10T18:59:22Z"
+}

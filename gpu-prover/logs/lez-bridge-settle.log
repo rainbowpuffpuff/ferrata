@@ -1,0 +1,8 @@
+bridge image 25dfd9b283ba14b0b83a522d7d307de57288c4730f538d8862b53ad73a4a8c49 (392388 ELF bytes); RISC0_DEV_MODE off
+private claim: vault A leaf 5 (1 ETH, private kind) under root n = 8, configuration 08f89d7ba04a; N = 1dbba1cacb2c3b88480a9f252a16cac0d96c2685524509f4b2165d1a6df068c2
+private claim: SETTLED FROM ../gpu-prover/results/gpu-l4-bridge/lez-bridge/bridge-private-claim-tx.borsh (receipt verified): receipt 227477 bytes, transaction 231828 bytes, settled in 0.2 s
+private claim: of its 231828 transaction bytes, none holds the destination, s, C, the leaf, the depositor, the witness or any of 32 path siblings; N, configId and the root read are present
+private claim: settled: execution gas 439,815 (PRIVATE_VERIFY_GAS 409,764 + public part 30,051 cycles), storage gas 224,063, base fee 5,311,024; receipt at bytes 4,351..231,828 of 231,828
+private burn: SETTLED FROM ../gpu-prover/results/gpu-l4-bridge/lez-bridge/bridge-private-burn-tx.borsh (receipt verified): receipt 226978 bytes, transaction 230830 bytes, settled in 0.2 s
+private burn: one private-to-public delivery of the 185-byte Burn to the note's account, from an alias
+private burn: settled: execution gas 427,959 (PRIVATE_VERIFY_GAS 409,764 + public part 18,195 cycles), storage gas 224,063, base fee 5,216,176; receipt at bytes 3,852..230,830 of 230,830

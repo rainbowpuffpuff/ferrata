@@ -1,0 +1,2 @@
+private claim: receipt at bytes 4351..231828 of 231828; flipped bit 0 of byte 118089 -> target/tampered-claim.borsh
+private burn: receipt at bytes 3852..230830 of 230830; flipped bit 0 of byte 117341 -> target/tampered-burn.borsh

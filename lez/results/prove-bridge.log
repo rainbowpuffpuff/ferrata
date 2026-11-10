@@ -1,0 +1,33 @@
+bridge image 25dfd9b283ba14b0b83a522d7d307de57288c4730f538d8862b53ad73a4a8c49 (392388 ELF bytes); RISC0_DEV_MODE off
+private claim: vault A leaf 5 (1 ETH, private kind) under root n = 8, configuration 08f89d7ba04a; N = 1dbba1cacb2c3b88480a9f252a16cac0d96c2685524509f4b2165d1a6df068c2
+private claim: REAL PROOF: execute_and_prove 15.3 s (prove + settle 15.6 s); receipt (succinct InnerReceipt, borsh) 227477 bytes; transaction 231828 bytes
+private claim: wrote the proven transaction to bridge-private-claim-tx.borsh (231828 bytes)
+private claim: of its 231828 transaction bytes, none holds the destination, s, C, the leaf, the depositor, the witness or any of 32 path siblings; N, configId and the root read are present
+private claim: settled: execution gas 439,815 (PRIVATE_VERIFY_GAS 409,764 + public part 30,051 cycles), storage gas 224,063, base fee 5,311,024; receipt at bytes 4,351..231,828 of 231,828
+private burn: REAL PROOF: execute_and_prove 12.4 s (prove + settle 12.6 s); receipt (succinct InnerReceipt, borsh) 226978 bytes; transaction 230830 bytes
+private burn: wrote the proven transaction to bridge-private-burn-tx.borsh (230830 bytes)
+private burn: one private-to-public delivery of the 185-byte Burn to the note's account, from an alias
+private burn: settled: execution gas 427,959 (PRIVATE_VERIFY_GAS 409,764 + public part 18,195 cycles), storage gas 224,063, base fee 5,216,176; receipt at bytes 3,852..230,830 of 230,830
+	Command being timed: "./prove_bridge --claim-out bridge-private-claim-tx.borsh --burn-out bridge-private-burn-tx.borsh"
+	User time (seconds): 28.96
+	System time (seconds): 3.84
+	Percent of CPU this job got: 99%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:33.03
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 816100
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 0
+	Voluntary context switches: 3131
+	Involuntary context switches: 0
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 0
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
