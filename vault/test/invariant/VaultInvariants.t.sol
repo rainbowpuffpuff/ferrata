@@ -73,10 +73,13 @@ contract VaultInvariants is VaultTestBase {
         }
     }
 
-    function invariant_balanceCoversEscrowPlusOwed() public view {
+    /// @dev An equality, not `balance >= escrowed + totalOwed`: a one-sided bound stays green when value is
+    ///      stranded in the vault (paid out short, a fee neither paid nor credited), and the vault has no rescue path.
+    function invariant_balanceIsEscrowPlusOwedPlusDonations() public view {
         address[] memory tokens = handler.tokens();
         for (uint256 i = 0; i < tokens.length; i++) {
-            assertGe(_balance(tokens[i], address(vault)), vault.escrowed(tokens[i]) + vault.totalOwed(tokens[i]));
+            address t = tokens[i];
+            assertEq(_balance(t, address(vault)), vault.escrowed(t) + vault.totalOwed(t) + handler.ghostDonated(t));
         }
     }
 
