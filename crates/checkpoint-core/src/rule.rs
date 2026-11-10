@@ -4,7 +4,8 @@
 //! 1. `lezConfigId` from its preimage; the parent state's frontier must be canonical; with
 //!    segments, the segments must chain from `P` to the state the input continues from.
 //! 2. Channel configuration changes, in `configTipHash` order, each signed by at least
-//!    `t(current n)` current keys; every key set reached must satisfy `nMin` and `tMin`.
+//!    `t(current n)` current keys and keeping the posting timeframe (non-zero) bound in the key-set
+//!    hash (SPEC-v3 D3); every key set reached must satisfy `nMin` and `tMin`.
 //! 3. Blocks `P.tip+1 … E`: each parsed strictly, re-hashed, checked against its stored hash, its
 //!    id (+1) and its `prev_block_hash`. For blocks up to `T`, the bridge messages of
 //!    non-reverted transactions are applied in block, transaction and call order. After `T`, the
@@ -152,9 +153,10 @@ fn check_key_set(keys: &[Hash], config: &Config) -> Result<(), Error> {
 }
 
 /// Applies one channel configuration change (Bedrock's `ChannelConfigOp` rule at the pinned rev,
-/// with SPEC-v2's threshold): the op is for our channel and extends the configuration tip; its
-/// thresholds are non-zero and its keys non-empty, valid and not of small order (as
-/// `VerifiedChannelKeys` decoding and preverify require); at least `t(current n)` signatures by
+/// with SPEC-v2's threshold and SPEC-v3 D3's pinned turn length): the op is for our channel and
+/// extends the configuration tip; its thresholds are non-zero and its keys non-empty, valid and not
+/// of small order (as `VerifiedChannelKeys` decoding and preverify require); its
+/// `posting_timeframe` equals the current one and is not 0; at least `t(current n)` signatures by
 /// distinct current keys (indices into the current list) verify over the transaction hash.
 fn apply_config_change(state: &mut State, change: &ConfigChange<'_>, channel_id: &Hash) -> Result<(), Error> {
     let (op, tx_hash) = change.op()?;
@@ -166,6 +168,11 @@ fn apply_config_change(state: &mut State, change: &ConfigChange<'_>, channel_id:
     }
     if op.configuration_threshold == 0 || op.transfer_threshold == 0 || op.keys.is_empty() {
         return Err(Error::ConfigMalformed);
+    }
+    // SPEC-v3 D3: the turn length is pinned. The vault's wait has a term (t − 1) × turn, sound only
+    // if the turn cannot change under it; with 0 a key that keeps posting holds its turn forever.
+    if op.posting_timeframe != state.posting_timeframe || op.posting_timeframe == 0 {
+        return Err(Error::ConfigTimeframe { current: state.posting_timeframe, proposed: op.posting_timeframe });
     }
     for key in &op.keys {
         let key = VerifyingKey::from_bytes(key).map_err(|_| Error::InvalidKey)?;

@@ -1,5 +1,6 @@
 //! The encodings this crate shares with `spike/ferrata-bridge` (an independent implementation of
-//! the same SPEC-v2 encodings): `configId`, the burn leaf, frontier and root, `keySetHash`, `S`, and
+//! the same SPEC-v2 encodings): `configId`, the burn leaf, frontier and root, the v1 `keySetHash`
+//! convention (SPEC-v3 D3 adds the posting timeframe), `S` from its parts, and
 //! words 1-12 of the checkpoint journal (their vectors are SPEC-v2's 13-word journal; SPEC-v3 keeps
 //! those words), checked against that project's vectors (copied to
 //! `vectors/external/ferrata-bridge/`, provenance in `PROVENANCE.txt`).
@@ -77,9 +78,16 @@ fn burn_tree() {
 #[test]
 fn key_sets_states_journals() {
     let v = load("checkpoint-v2.json");
+    // Their key-set vectors use SPEC-v2's `"ferrata/keyset/v1" ‖ n ‖ keys`; SPEC-v3 D3 (this
+    // crate) adds the posting timeframe under a v2 tag. Check the shared convention (u32 count,
+    // keys in order) by recomputing v1, and that v2 differs from it.
     for k in v["keysets"].as_array().unwrap() {
         let keys: Vec<Hash> = k["keys"].as_array().unwrap().iter().map(h32).collect();
-        assert_eq!(key_set_hash(&keys), h32(&k["key_set_hash"]));
+        let n = u32::try_from(keys.len()).unwrap().to_be_bytes();
+        let mut v1: Vec<&[u8]> = vec![b"ferrata/keyset/v1", &n];
+        v1.extend(keys.iter().map(|k| k.as_slice()));
+        assert_eq!(checkpoint_core::hash::sha256_parts(&v1), h32(&k["key_set_hash"]));
+        assert_ne!(key_set_hash(&keys, 30), h32(&k["key_set_hash"]));
     }
     for s in v["states"].as_array().unwrap() {
         let digest = state_digest(

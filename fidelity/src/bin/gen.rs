@@ -350,6 +350,14 @@ fn micro() -> Result<()> {
 /// journal (and the fields derived from the run) in its JSON; the inputs are unchanged. Used when
 /// the journal format changes (SPEC-v3: 13 -> 17 words) without rebuilding the chains.
 fn rejournal() -> Result<()> {
+    // Segments first: their journals feed the checkpoints that continue from them.
+    let seg_bytes = fs::read(out_dir().join("seg-empty-180.input"))?;
+    let (seg, _) = run_segment(&SegmentInput::decode(&seg_bytes).unwrap()).map_err(|e| anyhow::anyhow!("{e:?}"))?;
+    let seg_json = out_dir().join("seg-empty-180.json");
+    let mut meta: serde_json::Value = serde_json::from_slice(&fs::read(&seg_json)?)?;
+    meta["journal"] = json!(hex::encode(seg.encode()));
+    fs::write(&seg_json, serde_json::to_string_pretty(&meta)? + "\n")?;
+    println!("rejournaled seg-empty-180");
     let mut names: Vec<String> = fs::read_dir(out_dir())?
         .filter_map(|e| e.ok()?.file_name().into_string().ok())
         .filter_map(|f| f.strip_suffix(".json").map(str::to_string))
@@ -357,7 +365,19 @@ fn rejournal() -> Result<()> {
         .collect();
     names.sort();
     for name in names {
-        let input = fs::read(out_dir().join(format!("{name}.input")))?;
+        let mut input = fs::read(out_dir().join(format!("{name}.input")))?;
+        let reencoded = {
+            let mut decoded = CheckpointInput::decode(&input).unwrap();
+            // The only fixture with segments continues from seg-empty-180: give it that journal.
+            (!decoded.segments.is_empty()).then(|| {
+                decoded.segments = vec![seg];
+                decoded.encode()
+            })
+        };
+        if let Some(bytes) = reencoded {
+            input = bytes;
+            fs::write(out_dir().join(format!("{name}.input")), &input)?;
+        }
         let mut meta: serde_json::Value = serde_json::from_slice(&fs::read(out_dir().join(format!("{name}.json")))?)?;
         let out =
             run_checkpoint(&CheckpointInput::decode(&input).unwrap()).map_err(|e| anyhow::anyhow!("{name}: {e:?}"))?;

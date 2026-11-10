@@ -72,6 +72,9 @@ pub enum Error {
     ConfigBadIndex,
     /// Fewer configuration signatures than `t(current n)`.
     ConfigThresholdUnmet { have: u32, need: u32 },
+    /// A configuration op whose `posting_timeframe` differs from the one bound in the current
+    /// key-set hash, or is 0 (SPEC-v3 D3).
+    ConfigTimeframe { current: u32, proposed: u32 },
 
     // ---- composition ---------------------------------------------------------------------------
     /// A segment journal of another configuration, or one that does not decode.

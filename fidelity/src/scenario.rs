@@ -91,6 +91,7 @@ impl Deployment {
             tip_id: g.header.block_id,
             tip_hash: g.header.hash.0,
             keys: self.keys(),
+            posting_timeframe: crate::bedrock::POSTING_TIMEFRAME,
             config_tip_hash: label("fidelity: configuration tip at genesis"),
             burns: Frontier::default(),
             imported_leaf_count: 0,

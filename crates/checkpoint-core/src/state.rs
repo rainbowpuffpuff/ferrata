@@ -57,19 +57,23 @@ pub struct State {
     pub tip_hash: Hash,
     /// The channel's accredited keys, in `accredited_keys` order.
     pub keys: Vec<Hash>,
+    /// The channel's `posting_timeframe` (slots per turn), bound into `keySetHash` (SPEC-v3 D3).
+    pub posting_timeframe: u32,
     pub config_tip_hash: Hash,
     pub burns: Frontier,
     pub imported_leaf_count: u64,
     pub sunset: bool,
 }
 
-/// `keySetHash = H("ferrata/keyset/v1" ‖ n:u32 ‖ key_1 ‖ … ‖ key_n)`.
-pub fn key_set_hash(keys: &[Hash]) -> Hash {
+/// `keySetHash = H("ferrata/keyset/v2" ‖ n:u32 ‖ postingTimeframe:u32 ‖ key_1 ‖ … ‖ key_n)`
+/// (SPEC-v3 D3).
+pub fn key_set_hash(keys: &[Hash], posting_timeframe: u32) -> Hash {
     use sha2::{Digest as _, Sha256};
     let n = u32::try_from(keys.len()).unwrap_or(u32::MAX);
     let mut h = Sha256::new();
     h.update(TAG_KEYSET);
     h.update(n.to_be_bytes());
+    h.update(posting_timeframe.to_be_bytes());
     for key in keys {
         h.update(key);
     }
@@ -108,7 +112,7 @@ impl State {
         state_digest(
             self.tip_id,
             &self.tip_hash,
-            &key_set_hash(&self.keys),
+            &key_set_hash(&self.keys, self.posting_timeframe),
             &self.config_tip_hash,
             self.burns.count,
             &self.burns.hash(),

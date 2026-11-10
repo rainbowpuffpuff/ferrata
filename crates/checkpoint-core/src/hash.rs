@@ -50,7 +50,8 @@ pub const CHECKPOINT_DOMAIN: Hash = hex32("bdb3b52df781536a6bcce7088d156b3951a00
 /// string").
 pub const TAG_CONFIG: &[u8] = b"ferrata/config/v1";
 pub const TAG_LEZ_STATE: &[u8] = b"ferrata/lez-state/v1";
-pub const TAG_KEYSET: &[u8] = b"ferrata/keyset/v1";
+/// SPEC-v3 D3: the key-set hash binds the channel's posting timeframe (v2 of the encoding).
+pub const TAG_KEYSET: &[u8] = b"ferrata/keyset/v2";
 /// Not in SPEC-v2 (which says only "hash of the incremental burn tree's frontier"); the encoding
 /// `spike/ferrata-bridge` chose, adopted here so both implementations agree.
 pub const TAG_BURN_FRONTIER: &[u8] = b"ferrata/burn-frontier/v1";

@@ -6,7 +6,7 @@ use checkpoint_core::rule::{run_checkpoint, Outcome};
 use checkpoint_core::tree::{burn_leaf, zero_hashes, Frontier};
 use checkpoint_core::wire::BridgeMessage;
 use checkpoint_core::{Error, Hash};
-use fidelity::bedrock::{config_change, inscribe, Extra, Sequencer};
+use fidelity::bedrock::{config_change, config_change_with_timeframe, inscribe, Extra, Sequencer, POSTING_TIMEFRAME};
 use fidelity::lez_build::{pp_stand_in, private_key, public_call, Chain, PpSpec};
 use fidelity::scenario::{checkpoint_input, label, run_segment, Deployment, Inscribed, OwnedInput};
 use lee::{AccountId, Actor};
@@ -286,6 +286,28 @@ fn key_rotations_need_t_current_signatures_and_respect_the_floors() {
     let mut i = base.clone();
     i.config_changes = vec![as_change(&small)];
     assert_eq!(run(&i), Err(Error::KeySetTooSmall { n: 2, n_min: 3 }));
+
+    // SPEC-v3 D3: the posting timeframe bound in the key-set hash cannot change, nor be 0.
+    let signers = [(0, &s[0]), (1, &s[1]), (3, &s[3])];
+    let longer = config_change_with_timeframe(channel, tip, &reordered, 3, &signers, POSTING_TIMEFRAME + 1);
+    let mut i = base.clone();
+    i.config_changes = vec![as_change(&longer)];
+    assert_eq!(run(&i), Err(Error::ConfigTimeframe { current: POSTING_TIMEFRAME, proposed: POSTING_TIMEFRAME + 1 }));
+    let zero = config_change_with_timeframe(channel, tip, &reordered, 3, &signers, 0);
+    let mut i = base.clone();
+    i.config_changes = vec![as_change(&zero)];
+    assert_eq!(run(&i), Err(Error::ConfigTimeframe { current: POSTING_TIMEFRAME, proposed: 0 }));
+    // ... and a state whose timeframe is 0 cannot rotate at all (every op either differs or is 0).
+    let mut zero_state = base.clone();
+    zero_state.parent.posting_timeframe = 0;
+    zero_state.config_changes = vec![as_change(&zero)];
+    assert_eq!(run(&zero_state), Err(Error::ConfigTimeframe { current: 0, proposed: 0 }));
+    // Keeping it is what the accepted rotation above does; the timeframe is in keySetHash, so
+    // the same keys under another timeframe give another S.
+    let mut other_timeframe = base.clone();
+    other_timeframe.parent.posting_timeframe = POSTING_TIMEFRAME + 1;
+    assert_ne!(run(&other_timeframe).unwrap().journal.parent_state, run(&base).unwrap().journal.parent_state);
+    assert_eq!(out.new_state.posting_timeframe, POSTING_TIMEFRAME);
 
     // A threshold below tMin: n = 3 gives t = 2; with tMin = 3 the set is refused.
     let mut strict = base.clone();

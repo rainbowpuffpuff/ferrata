@@ -114,6 +114,9 @@ pub struct ConfigChange {
     pub signatures: Vec<(u16, [u8; 64])>,
 }
 
+/// The posting timeframe (slots per turn) of the test deployments' channel.
+pub const POSTING_TIMEFRAME: u32 = 30;
+
 pub fn config_change(
     channel: Hash,
     parent: Hash,
@@ -121,12 +124,24 @@ pub fn config_change(
     configuration_threshold: u16,
     signers: &[(u16, &Sequencer)],
 ) -> ConfigChange {
+    config_change_with_timeframe(channel, parent, keys, configuration_threshold, signers, POSTING_TIMEFRAME)
+}
+
+/// [`config_change`] with an explicit `posting_timeframe`.
+pub fn config_change_with_timeframe(
+    channel: Hash,
+    parent: Hash,
+    keys: &[&Sequencer],
+    configuration_threshold: u16,
+    signers: &[(u16, &Sequencer)],
+    posting_timeframe: u32,
+) -> ConfigChange {
     let new_keys: Vec<_> = keys.iter().map(|k| k.0.public_key()).collect();
     let op = ChannelConfigOp {
         channel: ChannelId::from(channel),
         parent: MsgId::from(parent),
         keys: VerifiedChannelKeys::try_from(new_keys).expect("non-empty"),
-        posting_timeframe: SlotTimeframe::from(30u32),
+        posting_timeframe: SlotTimeframe::from(posting_timeframe),
         posting_timeout: SlotTimeout::from(60u32),
         configuration_threshold,
         transfer_threshold: configuration_threshold,

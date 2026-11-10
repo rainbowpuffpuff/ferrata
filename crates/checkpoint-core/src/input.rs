@@ -7,8 +7,8 @@
 //! ```text
 //! Config        = bedrock_genesis_id ‖ channel_id ‖ bridge_header ‖ bridge_image_id ‖
 //!                 evm_chain_id ‖ vault(20) ‖ attestation_root_id ‖ salt ‖ n_min u32 ‖ t_min u32
-//! State         = tip_id u64 ‖ tip_hash ‖ vec<key(32)> ‖ config_tip_hash ‖ burn_count u64 ‖
-//!                 frontier(32·32) ‖ imported_leaf_count u64 ‖ sunset u8
+//! State         = tip_id u64 ‖ tip_hash ‖ vec<key(32)> ‖ posting_timeframe u32 ‖ config_tip_hash ‖
+//!                 burn_count u64 ‖ frontier(32·32) ‖ imported_leaf_count u64 ‖ sunset u8
 //! ConfigChange  = bytes(ops) ‖ op_index u8 ‖ vec<(key_index u16 ‖ signature(64))>
 //! Inscription   = bytes(prefix) ‖ bytes(suffix) ‖ signature(64)      (see mantle::ElidedInscription)
 //! Support       = block_index u32 ‖ Inscription
@@ -107,7 +107,7 @@ impl Writer {
         for k in &s.keys {
             self.raw(k);
         }
-        self.raw(&s.config_tip_hash).u64(s.burns.count);
+        self.u32(s.posting_timeframe).raw(&s.config_tip_hash).u64(s.burns.count);
         for n in &s.burns.nodes {
             self.raw(n);
         }
@@ -183,6 +183,7 @@ fn state(r: &mut Reader<'_>) -> Result<State, Error> {
     for _ in 0..n {
         keys.push(*r.array()?);
     }
+    let posting_timeframe = r.u32_le()?;
     let config_tip_hash = *r.array()?;
     let count = r.u64_le()?;
     let mut nodes = [[0u8; 32]; DEPTH];
@@ -191,7 +192,16 @@ fn state(r: &mut Reader<'_>) -> Result<State, Error> {
     }
     let imported_leaf_count = r.u64_le()?;
     let sunset = r.bool("sunset")?;
-    Ok(State { tip_id, tip_hash, keys, config_tip_hash, burns: Frontier { count, nodes }, imported_leaf_count, sunset })
+    Ok(State {
+        tip_id,
+        tip_hash,
+        keys,
+        posting_timeframe,
+        config_tip_hash,
+        burns: Frontier { count, nodes },
+        imported_leaf_count,
+        sunset,
+    })
 }
 
 fn inscription<'a>(r: &mut Reader<'a>) -> Result<ElidedInscription<'a>, Error> {
