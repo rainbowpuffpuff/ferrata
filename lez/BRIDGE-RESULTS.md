@@ -6,8 +6,9 @@ The bridge program of RFP-022 (`guests/bridge`, one RISC Zero guest; image
 `harness/tests/bridge_{inbound,private,burn}.rs`). The plan, the actors and the messages are in
 [BRIDGE.md](BRIDGE.md). Every number below is LEZ's own accounting of a transaction that ran:
 `lee`'s state transition functions and the copy of LEZ's fee settlement that Stages 1–4 use
-([RESULTS.md](RESULTS.md) §1), each transaction in a block of its own, the attestation program
-`2f3566d4…` (Stage 4) answering the bridge's `Attest` calls. They ran on this worktree's Modal
+([RESULTS.md](RESULTS.md) §1), each transaction in a block of its own, the attestation program answering the bridge's
+`Attest` calls (built from this branch's unchanged sources; `RESULTS.md` records its image as
+`2f3566d4…`, which these runs did not re-check). They ran on this worktree's Modal
 build box (`spike/modal-build/mrun`), not on the laptop; the executor is deterministic, so the
 cycle counts do not depend on the machine. Private executions ran in RISC Zero dev mode: executed,
 not proven. The tables are `results/bridge-inbound.md`, `results/bridge-private-claim.md` and
@@ -152,7 +153,10 @@ appears as an alias.
 The nested case is D10's: a holder's signature authorises every delivery to its account in the
 transaction, at any depth, so the bridge cannot rely on `is_authorized` alone; it refuses a burn
 that carries a sender, because the checkpoint would not see a nested call and the tokens would be
-destroyed without a burn leaf. NOut (D13) is wallet and release side, `H("ferrata/nf-out/v2" ‖
+destroyed without a burn leaf. An asynchronous message is delivered as a transaction's root with its
+sender as `from` (`lee/state_machine/core/src/execution_state.rs`, lines 1090–1113 of the tag), so
+it is refused the same way; that was read in the source, not run (the harness delivers no
+asynchronous messages). NOut (D13) is wallet and release side, `H("ferrata/nf-out/v2" ‖
 sOut)`, here `bridge-wire::nf_out_v2`: the test shows that v1 (`H(… ‖ sOut ‖ burnId)`) changes with
 the index a burn is collected at and v2 does not. The bridge program never sees `sOut` or `kView`.
 
