@@ -321,6 +321,81 @@ contract GasScenarios is VaultTestBase {
         _log("release ERC-20 (18 dec), standard fee to msg.sender (incl. mock verifier)");
     }
 
+    // ---- fees (v5, D13) -------------------------------------------------------------------------------------------
+
+    /// @dev 0.1% of each ETH denomination (whole LEZ units of 1e12 wei), for every fee of an announcement.
+    function _ethFees() internal pure returns (uint256[] memory) {
+        return _denoms(0.1 ether / 1000, 1 ether / 1000, 10 ether / 1000);
+    }
+
+    /// @dev Announces fee schedule 1 on ETH (mint, burn and checkpoint fees of 0.1%) and waits out the notice.
+    function _announceEthFees() internal {
+        uint256[] memory f = _ethFees();
+        vm.prank(admin);
+        vault.announceFees(ETH, f, f, f);
+        vm.warp(block.timestamp + FEE_NOTICE);
+    }
+
+    function test_gas_announceFees() public {
+        uint256[] memory f = _ethFees();
+        vm.prank(admin);
+        vault.announceFees(ETH, f, f, f);
+        _log("announceFees, 3 denominations");
+    }
+
+    function test_gas_applyFees() public {
+        _announceEthFees();
+        vault.applyFees(ETH);
+        _log("applyFees, puts a due fee change in force");
+    }
+
+    function test_gas_depositETH_putsDueFeeChangeInForce() public {
+        _announceEthFees();
+        uint256 total = _t();
+        vm.deal(fresh, total);
+        vm.prank(fresh);
+        vault.depositETH{value: total}(1, C, 0);
+        _log("depositETH, first by the address, puts a due fee change in force");
+    }
+
+    function test_gas_depositETH_laterByAddress_mintFeeInForce() public {
+        _announceEthFees();
+        vault.applyFees(ETH);
+        uint256 total = _t();
+        vm.deal(fresh, 2 * total);
+        vm.prank(fresh);
+        vault.depositETH{value: total}(1, C, 0);
+        vm.prank(fresh);
+        vault.depositETH{value: total}(1, C, 1);
+        _log("depositETH, later deposit by the address, mint fee in force");
+    }
+
+    function test_gas_releaseETH_releaseFees_firstCredits() public {
+        _announceEthFees();
+        vault.applyFees(ETH);
+        FerrataVault.ReleaseRequest memory r = _request(ETH, 1, recipient, ROOT, keccak256("f1"));
+        r.relayFee = _relayFee(ETH, 1);
+        _proveRelease(_releaseJournal(r));
+        vm.prank(relayer);
+        vault.release(r, SEAL);
+        _log("release ETH, relay + burn + checkpoint fees, first credits (incl. mock verifier)");
+    }
+
+    function test_gas_releaseETH_releaseFees_laterCredits() public {
+        _announceEthFees();
+        vault.applyFees(ETH);
+        FerrataVault.ReleaseRequest memory r = _request(ETH, 1, recipient, ROOT, keccak256("f2"));
+        r.relayFee = _relayFee(ETH, 1);
+        _release(r);
+        // Another fresh recipient, as in every release row; only the two fee credits are no longer first.
+        r.recipient = makeAddr("second recipient");
+        r.nullifier = keccak256("f3");
+        _proveRelease(_releaseJournal(r));
+        vm.prank(relayer);
+        vault.release(r, SEAL);
+        _log("release ETH, relay + burn + checkpoint fees, later credits (incl. mock verifier)");
+    }
+
     function test_gas_releaseETH_recipientCannotReceive_credited() public {
         ToggleRecipient payee = new ToggleRecipient(); // closed
         FerrataVault.ReleaseRequest memory r = _request(ETH, 1, address(payee), ROOT, keccak256("n5"));
