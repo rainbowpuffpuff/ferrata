@@ -51,6 +51,14 @@ contract VaultInvariants is VaultTestBase {
             handler.announceFees(i, 7 + 10 * i);
         }
         vm.warp(block.timestamp + FEE_NOTICE);
+        // ... and eight deposits (which put those changes in force) that a checkpoint imported and that can no longer
+        // be revoked, so the LEZ model can claim, burn and release from the first call.
+        for (uint256 i = 0; i < 8; i++) {
+            handler.deposit(i, i, i, keccak256(abi.encode("seed deposit", i)));
+        }
+        handler.submitCandidate(1, 8, false, 0); // imports all eight leaves
+        handler.finalizePending(0);
+        vm.warp(block.timestamp + REVOKE_WINDOW + 1);
 
         bytes4[] memory selectors = new bytes4[](26);
         selectors[0] = VaultHandler.deposit.selector;

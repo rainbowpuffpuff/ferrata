@@ -676,17 +676,24 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         _claimCount++;
     }
 
-    /// @dev LEZ model: a holder burns one denomination of the wrapped supply.
+    /// @dev LEZ model: a holder burns one denomination of the wrapped supply (the first token and denomination from
+    ///      the seeds that the supply covers).
     function burn(uint256 tokenSeed, uint256 denomSeed) external {
-        address token = _tokens[tokenSeed % _tokens.length];
-        uint256[] memory denoms = _denoms(token);
-        // forge-lint: disable-next-line(unsafe-typecast)
-        uint8 denomIndex = uint8(denomSeed % denoms.length);
-        vm.assume(ghostSupply[token] >= denoms[denomIndex]);
-        ghostSupply[token] -= denoms[denomIndex];
-        ghostUnreleased[token] += denoms[denomIndex];
-        _pendingBurns.push(Burn(token, denomIndex, keccak256(abi.encode("burn", _nonce++))));
-        _burnCount++;
+        for (uint256 k = 0; k < _tokens.length; k++) {
+            address token = _tokens[(tokenSeed + k) % _tokens.length];
+            uint256[] memory denoms = _denoms(token);
+            for (uint256 j = 0; j < denoms.length; j++) {
+                // forge-lint: disable-next-line(unsafe-typecast)
+                uint8 denomIndex = uint8((denomSeed + j) % denoms.length);
+                if (ghostSupply[token] < denoms[denomIndex]) continue;
+                ghostSupply[token] -= denoms[denomIndex];
+                ghostUnreleased[token] += denoms[denomIndex];
+                _pendingBurns.push(Burn(token, denomIndex, keccak256(abi.encode("burn", _nonce++))));
+                _burnCount++;
+                return;
+            }
+        }
+        vm.assume(false); // nothing to burn yet
     }
 
     /// @dev The admin announces a fee schedule: random fees up to the 1% ceiling (mint fees in whole LEZ units), or,
