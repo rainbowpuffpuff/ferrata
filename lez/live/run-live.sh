@@ -12,6 +12,9 @@ PHASES="${FERRATA_LIVE_PHASES:-info deploy replay scenarios capacity private-sto
 PROGRAM_BIN="${FERRATA_PROGRAM_BIN:-$FERRATA_LIVE_TMP/program/ferrata_lez-from-prove_private.bin}"
 SCRIPTED_BIN="${FERRATA_SCRIPTED_BIN:-$FERRATA_LIVE_TMP/program/scripted-from-prove_private.bin}"
 STORED_TX="${FERRATA_STORED_TX:-$REPO/lez/results/stage2-private-tx.borsh}"
+# The harness tables (stage1-*.md) each transaction is compared with: those of the deployed image
+# (the default holds the image the harness builds now).
+HARNESS_RESULTS="${FERRATA_LIVE_HARNESS_RESULTS:-$REPO/lez/results}"
 
 stop_all() {
   [ -f "$PIDS" ] || return 0
@@ -294,7 +297,7 @@ driver() { # phase [extra options]
   local phase="$1"; shift
   timeout --signal=TERM --kill-after=20 "$PHASE_SECONDS" "$BIN/live-driver" "$phase" --rpc "http://127.0.0.1:$RPC_PORT" --run-dir "$RUN_DIR/driver" --out "$DRIVER_OUT" \
     --program-bin "$PROGRAM_BIN" --scripted-bin "$SCRIPTED_BIN" --sequencer-log "$LOG/sequencer.log" \
-    --harness-results "$REPO/lez/results" --stored-tx "$STORED_TX" --wait-final "$WAIT_FINAL" \
+    --harness-results "$HARNESS_RESULTS" --stored-tx "$STORED_TX" --wait-final "$WAIT_FINAL" \
     ${FERRATA_LIVE_GAS_LIMIT:+--gas-limit "$FERRATA_LIVE_GAS_LIMIT"} "$@"
 }
 status=0
@@ -314,7 +317,7 @@ for phase in $PHASES; do
         setsid --wait nice -n "${FERRATA_LIVE_PROOF_NICE:-10}" timeout --signal=TERM --kill-after=20 "$PROOF_SECONDS" \
         "$BIN/live-driver" "$phase" --rpc "http://127.0.0.1:$RPC_PORT" --run-dir "$RUN_DIR/driver" --out "$DRIVER_OUT" \
         --program-bin "$PROGRAM_BIN" --scripted-bin "$SCRIPTED_BIN" --sequencer-log "$LOG/sequencer.log" \
-        --harness-results "$REPO/lez/results" --wait-final "$WAIT_FINAL" 2>&1 | tee -a "$LOG/driver.log"; rc=${PIPESTATUS[0]}
+        --harness-results "$HARNESS_RESULTS" --wait-final "$WAIT_FINAL" 2>&1 | tee -a "$LOG/driver.log"; rc=${PIPESTATUS[0]}
       proof_note="private-real: exit $rc after $(( $(date +%s) - proof_started )) s (cap $PROOF_SECONDS s; nice ${FERRATA_LIVE_PROOF_NICE:-10}; RAYON_NUM_THREADS ${FERRATA_LIVE_PROOF_THREADS:-not set})"
       if [ "$rc" = 124 ] || [ "$rc" = 137 ]; then
         pkill -KILL -x r0vm 2>/dev/null || true
