@@ -17,4 +17,6 @@ methods = [
     # The same two programs with the other Keccak, for the comparison of RESULTS.md only.
     "../guests/program-keccak-soft",
     "../guests/consumer-keccak-accel",
+    # The bridge program (BRIDGE.md).
+    "../guests/bridge",
 ]

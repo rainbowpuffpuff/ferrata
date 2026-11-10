@@ -7,6 +7,7 @@
 //! LEZ's own tests deploy programs (`V03State::with_genesis_programs`).
 
 pub mod attest;
+pub mod bridge;
 pub mod private;
 pub mod scenarios;
 pub mod settle;

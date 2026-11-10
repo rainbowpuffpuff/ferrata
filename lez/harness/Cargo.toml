@@ -9,6 +9,9 @@ publish = false
 [dependencies]
 methods = { path = "../methods" }
 ferrata-lez-wire = { path = "../wire" }
+# The bridge program's wire types, and the bridge core (std: full trees with paths, key derivation).
+ferrata-lez-bridge-wire = { path = "../bridge-wire" }
+ferrata-bridge-core = { path = "../../bridge/crates/ferrata-bridge-core" }
 ferrata-core = { path = "../../crates/ferrata-core", features = ["blst"] }
 # The reference Merkle-Patricia trie and the JSON-RPC readers of the core's test crate: the Stage 4
 # tests rebuild a block's receipts trie from `eth_getBlockReceipts` and read `eth_getProof`.
@@ -27,3 +30,8 @@ risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["client
 borsh = { version = "=1.6.1", features = ["derive"] }
 hex = "0.4"
 sha2 = "0.10"
+
+[dev-dependencies]
+# The checkpoint program's own block parser and message decoder, to check what it would collect
+# from the bridge program's transactions (tests/bridge_burn.rs).
+checkpoint-core = { path = "../../checkpoint/crates/checkpoint-core" }
