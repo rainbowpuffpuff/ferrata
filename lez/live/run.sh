@@ -40,6 +40,9 @@ build_sequencer() { # $1: output name, rest: extra cargo arguments
 build_driver() {
   check_lez
   echo "== building the driver with $CARGO_BUILD_JOBS jobs"
+  # The driver links LEZ's wallet: start its lockfile from LEZ's, so that the wallet is built
+  # with the dependency versions LEZ pins (cargo keeps what applies and adds the rest).
+  [ -f "$LIVE_DIR/driver/Cargo.lock" ] || cp "$LEZ_SRC/Cargo.lock" "$LIVE_DIR/driver/Cargo.lock"
   ( cd "$LIVE_DIR/driver" && CARGO_TARGET_DIR="$TARGET" $NICE cargo build --release )
   cp "$TARGET/release/live-driver" "$BIN/live-driver"
 }
