@@ -31,27 +31,30 @@ echo "== core tests"
 cargo test -p ferrata-bridge-core
 
 echo "== vectors, recomputed in Python (standard library only)"
-python3 -I scripts/check_vectors.py vectors
+python3 -I -B scripts/check_vectors_v2.py vectors
+python3 -I -B scripts/check_vectors_v1.py vectors/v1   # superseded v1 vectors, kept checkable
 
-echo "== zkVM executor: release guest (cycles, journal == native, bad witness fails), claim guest vs native"
+echo "== zkVM executor: cycles, journal == native, bad witnesses fail; cycle count independent of the witness"
 cargo build --release -p host
 ./target/release/host execute
+./target/release/host invariance 64
 ./target/release/host claim-check 16
 
 echo "== saved receipts verify against the image id built now (catches guest drift)"
-./target/release/host verify eth
-./target/release/host verify erc20
+for c in eth erc20 ethpull; do ./target/release/host verify $c; done
 
-echo "== neighbour drift (warnings only): vendored tree.json and the vault source vs. spike/bridge-evm now"
-src="$here/../bridge-evm/test/vectors/tree.json"
+echo "== neighbour drift (warnings only): vendored copies vs. spike/bridge-evm now"
+src="$here/../bridge-evm/test/vectors/tree-v2.json"
 if [ -f "$src" ]; then
-  cmp -s "$src" vectors/external/bridge-evm-tree.json && echo "tree.json: identical to the vendored copy" \
-    || echo "WARNING: bridge-evm tree.json changed since it was vendored; re-copy and re-run"
+  cmp -s "$src" vectors/external/bridge-evm-tree-v2.json && echo "tree-v2.json: identical to the vendored copy" \
+    || echo "WARNING: bridge-evm tree-v2.json changed since it was vendored; re-copy and re-run"
 fi
-vault_sha="$(sha256sum "$here/../bridge-evm/src/FerrataVault.sol" | cut -d' ' -f1)"
-grep -q "$vault_sha" vectors/external/PROVENANCE.txt && echo "FerrataVault.sol: unchanged (sha256 $vault_sha)" \
-  || echo "WARNING: FerrataVault.sol changed since vectors/external/PROVENANCE.txt (now $vault_sha)"
+if git -C "$here/../bridge-evm" rev-parse -q --verify v2 > /dev/null 2>&1; then
+  git -C "$here/../bridge-evm" show v2:src/FerrataVault.sol | cmp -s - evm-verify/vendor/vault-v2/FerrataVault.sol \
+    && echo "vault: evm-verify/vendor/vault-v2 == bridge-evm branch v2 ($(git -C "$here/../bridge-evm" rev-parse --short v2))" \
+    || echo "WARNING: bridge-evm branch v2 changed since evm-verify/vendor/vault-v2 was exported"
+fi
 
-echo "== Foundry: journal equality, real Groth16 verifier, vault end to end"
+echo "== Foundry: journal equality, real Groth16 verifier behind the emergency stop, vault v2 end to end"
 (cd evm-verify && forge test)
 echo "ALL CHECKS PASSED"

@@ -332,7 +332,7 @@ fn random_release_input(i: u64) -> ReleaseInput {
 /// A valid claim input built from random values (its own root).
 fn random_claim_input(i: u64) -> ClaimInput {
     let leaf_index = rnd_index("claim index", i);
-    let kind = if i % 2 == 0 { DestKind::Private } else { DestKind::Public };
+    let kind = if i.is_multiple_of(2) { DestKind::Private } else { DestKind::Public };
     let (s, dest) = (rnd("claim s", i), rnd("claim dest", i));
     let (depositor, token, amount) =
         (rnd_addr("claim depositor", i), rnd_addr("claim token", i), rnd("claim amount", i));
