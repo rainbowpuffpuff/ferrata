@@ -186,7 +186,9 @@ The other commits are tests (`6197dff0`, `e48e1b4c`, `787d56e5`, `206038a7`, `75
 `9a629137`, `0fb43b63`, `49fe7d81`), `CODEOWNERS` (`1f6b8ff1`), the wallet docs (`00746e09`) and
 merges.
 
-## What Ferrata changes for rc2 (predicted from the diff)
+## What Ferrata changes for rc2
+
+Predicted from the diff, then confirmed by building and running (`../../lez/RESULTS.md` §9):
 
 | where | change | why |
 |---|---|---|
@@ -196,3 +198,12 @@ merges.
 | driver | feature `lez-rc2`: renamed header decoder, `DryRun(_)`, the declared gas limit pinned, reverts allowed | API rename; the wallet's new simulation and refusal |
 | `lez/live` scripts | the LEZ tag's commit and scratch directory; Bedrock's slot and epoch length from its deployment settings | rc2 runs 4 s slots and 240 s epochs |
 | guests | none | `lee_core`'s program-facing API is unchanged |
+
+What the build found besides: the lockfile changes are exactly LEZ's own path crates
+(`cross_zone_emission_core` is new; `program_loader_core` → `thiserror`; `chain_state` →
+`async-trait`; `common` drops `ping_core`), no external crate changes version, and the six guests'
+lockfiles do not change. The harness's copy of LEZ's settlement (`lez/harness/src/settle.rs`) still
+matches: the functions it copies are unchanged in rc2. The live driver had stopped compiling on
+either tag for a reason that is not rc2's: the wire gained a `chain_id` with the attestation, after
+the rc1 run. Every table row the harness measures (cycles, execution and storage gas, base fees,
+results) is the same on rc2 as on rc1; only the image ids move.
