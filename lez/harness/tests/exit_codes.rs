@@ -102,9 +102,7 @@ fn the_tables_name_every_core_code() {
     // The list the tables name codes with (harness::exit_name) is the core's declaration.
     let listed: Vec<(String, u16)> = harness::CORE_ERRORS.iter().map(|e| (format!("{e:?}"), e.code())).collect();
     assert_eq!(listed, core_codes_in_source());
-    for (owner, name, value) in every_code() {
-        if owner != CodeOwner::Consumer {
-            assert!(!harness::exit_name(u32::from(value)).starts_with("code "), "{name} has no name in the tables");
-        }
+    for (_, name, value) in every_code() {
+        assert!(!harness::exit_name(u32::from(value)).starts_with("code "), "{name} has no name in the tables");
     }
 }

@@ -5,6 +5,11 @@
 //! message is accepted only from the actor of this program that sends it. Refusals exit with a
 //! code instead of panicking: LEZ then charges only the cycles used
 //! (`lee::validated_state_diff::charged_cycles`), not the whole gas limit.
+//!
+//! `Attest` at `header(id, slot)` proves facts of the recorded block (accounts, storage slots,
+//! event logs, accumulator leaves, with conditions) and replies to its caller with their
+//! statement identifiers: `ferrata_lez_wire::attest::evaluate`, the function a private consumer
+//! runs on the record it reads.
 
 use ferrata_core::{
     steps::{self, Job, PendingApply, StepError},
@@ -12,8 +17,8 @@ use ferrata_core::{
     Error, Root,
 };
 use ferrata_lez_wire::{
-    code, header_actor, header_seed, instance_actor, instance_id, job_actor, job_id, job_seed, Config, InstanceState,
-    JobState, Message, RecordState, UncompressedKey, FINALIZED_SELECTOR,
+    attest, code, header_actor, header_seed, instance_actor, instance_id, job_actor, job_id, job_seed, Config,
+    InstanceState, JobState, Message, RecordState, UncompressedKey, ATTESTED_SELECTOR, FINALIZED_SELECTOR,
 };
 use lee_core::{
     account::{AccountId, ActorState},
@@ -51,7 +56,8 @@ fn handle(input: &ReceiveInput) -> Result<Response, Refusal> {
         Message::Miller => miller(input, program),
         Message::Adopt { part, keys } => adopt(input, program, part, &keys),
         Message::Finish => finish(input, program),
-        Message::Read | Message::Attest { .. } => read(input),
+        Message::Read | Message::ReadPadded { .. } => read(input),
+        Message::Attest { request } => attest(input, program, &request),
         Message::VerifyAll { config, checkpoint, store, update, signers, adoption } => {
             verify_all(program, &config, &checkpoint, &store, &update, &signers, &adoption)
         }
@@ -60,7 +66,9 @@ fn handle(input: &ReceiveInput) -> Result<Response, Refusal> {
         }
         Message::Apply { instance_id, job_id, job } => apply(input, program, &instance_id, &job_id, &job),
         Message::ApplyVerified { instance_id, job } => apply_verified(input, program, &instance_id, &job),
-        Message::Record { instance_id, slot, record } => write_record(input, program, instance_id, slot, record),
+        Message::Record { instance_id, slot, chain_id, record } => {
+            write_record(input, program, instance_id, slot, chain_id, record)
+        }
     }
 }
 
@@ -230,6 +238,7 @@ fn apply_job(program: AccountId, mut state: InstanceState, job: &Job) -> Result<
     state.applied += 1;
     state.active = true;
     let id = state.id;
+    let chain_id = state.config.chain_id;
     let mut response = Response::set_state(encode(&state));
     if activate || outcome.advanced {
         let record = job.pending.record();
@@ -240,7 +249,7 @@ fn apply_job(program: AccountId, mut state: InstanceState, job: &Job) -> Result<
             .send(
                 SyncMessage::new(
                     header_actor(program, &id, slot),
-                    &Message::Record { instance_id: id, slot, record: record.encode() },
+                    &Message::Record { instance_id: id, slot, chain_id, record: record.encode() },
                 )
                 .with_pda_seeds([header_seed(&id, slot)]),
             )
@@ -308,6 +317,7 @@ fn write_record(
     program: AccountId,
     instance: Root,
     slot: u64,
+    chain_id: u64,
     record: Vec<u8>,
 ) -> Result<Response, Refusal> {
     if input.from != Some(instance_actor(program, &instance)) {
@@ -316,11 +326,39 @@ fn write_record(
     if input.receiver != header_actor(program, &instance, slot) {
         return Err(code::WRONG_RECEIVER);
     }
-    let state = encode(&RecordState { instance_id: instance, record });
+    let state = encode(&RecordState { instance_id: instance, chain_id, record });
     if !input.pre_state.is_empty() && *input.pre_state != *state {
         return Err(code::RECORD_CONFLICT);
     }
     Ok(Response::set_state(state))
+}
+
+/// Prove the facts of `request` under this actor's record and hand the statements to the caller.
+///
+/// The record is one an instance of this program wrote: only `Record`, accepted from
+/// `instance(id)` alone, writes a `RecordState`, and it writes it at `header(id, slot)`, which is
+/// checked here again. Nothing else is trusted: the state and receipts roots come from the
+/// record, the instance and the chain id the caller expects must be the record's, and every
+/// proof is verified by the core. The handler changes no state, so a record serves any number of
+/// attestations, in any order, for as long as it exists.
+fn attest(input: &ReceiveInput, program: AccountId, request: &attest::Request) -> Result<Response, Refusal> {
+    if input.pre_state.is_empty() {
+        return Err(code::NO_RECORD);
+    }
+    let state: RecordState = borsh::from_slice(&input.pre_state).map_err(|_| code::BAD_STATE)?;
+    let recorded = state.header()?;
+    if input.receiver != header_actor(program, &state.instance_id, recorded.beacon.slot) {
+        return Err(code::WRONG_RECEIVER);
+    }
+    let attestation = attest::evaluate(&state.instance_id, state.chain_id, &recorded, request)?;
+    Ok(match input.from {
+        // A consumer called: the statements are its reply, in the same transaction.
+        Some(caller) => Response::keep_state().send_sync(caller, &attestation),
+        // Sent as a transaction's root there is nobody to reply to: the identifiers are an event.
+        None => {
+            Response::keep_state().event(ProgramEvent { selector: ATTESTED_SELECTOR, data: attestation.event_data() })
+        }
+    })
 }
 
 // ---------------------------------------------------------------------------------------------

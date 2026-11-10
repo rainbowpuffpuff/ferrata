@@ -10,6 +10,10 @@ publish = false
 methods = { path = "../methods" }
 ferrata-lez-wire = { path = "../wire" }
 ferrata-core = { path = "../../crates/ferrata-core", features = ["blst"] }
+# The reference Merkle-Patricia trie and the JSON-RPC readers of the core's test crate: the Stage 4
+# tests rebuild a block's receipts trie from `eth_getBlockReceipts` and read `eth_getProof`.
+ferrata-spectests = { path = "../../crates/ferrata-spectests" }
+serde_json = "1"
 # LEZ v0.4.0-rc1 by path (see wire/Cargo.toml). `test-utils` exposes the private-account test
 # helpers the Stage 2 and 3 tests need; it refuses to build without debug assertions.
 lee = { path = "../../../upstream/lez-v0.4.0-rc1/lee/state_machine", features = ["test-utils"] }

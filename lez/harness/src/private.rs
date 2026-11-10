@@ -9,7 +9,7 @@ use std::{
 };
 
 use fee_core::BlockFeeSummary;
-use ferrata_lez_wire::Message;
+use ferrata_lez_wire::{attest::Attestation, Message};
 use lee::{
     privacy_preserving_transaction::{circuit::ProgramCatalog, Message as PrivateMessage, WitnessSet},
     test_utils::{no_seal, update_witness, TestPrivateKeys},
@@ -201,12 +201,28 @@ fn describe_message(delivery: &Delivery<Actor>) -> String {
                 format!("ApplyVerified {{ instance_id: {}, job: {} bytes }}", hex::encode(&instance_id[..6]), job.len())
             }
             Ok(Message::Read) => "Read".into(),
-            Ok(Message::Attest { query }) => format!("Attest {{ query: 0x{} }}", hex::encode(&query)),
+            Ok(Message::ReadPadded { padding }) => format!("ReadPadded {{ padding: 0x{} }}", hex::encode(&padding)),
+            Ok(Message::Attest { request }) => format!(
+                "Attest {{ instance_id: {}, chain_id: {}, hops: {}, accounts: {}, logs: {}, leaves: {}, relations: {} }}",
+                hex::encode(&request.instance_id[..6]),
+                request.chain_id,
+                request.hops.len(),
+                request.accounts.len(),
+                request.logs.len(),
+                request.leaves.len(),
+                request.relations.len()
+            ),
             Ok(other) => format!("{:.80}", format!("{other:?}")),
             Err(_) => "(undecodable)".into(),
         }
     } else if to == native_token::NATIVE_TOKEN_PROGRAM_ID {
         format!("{:?}", borsh::from_slice::<native_token::Message>(bytes).ok())
+    } else if let Ok(attestation) = borsh::from_slice::<Attestation>(bytes) {
+        format!(
+            "Attestation {{ block: {}, statements: {} }}",
+            attestation.block_number,
+            attestation.statements.iter().map(|s| hex::encode(&s.id[..6])).collect::<Vec<_>>().join(", ")
+        )
     } else if let Ok(reply) = borsh::from_slice::<StateReply>(bytes) {
         format!("StateReply {{ state: {} bytes }}", reply.state.len())
     } else {

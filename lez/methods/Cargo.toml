@@ -10,4 +10,11 @@ risc0-build = { version = "=3.0.5" }
 
 # Each entry is a guest crate with its own workspace, lockfile and [patch.crates-io].
 [package.metadata.risc0]
-methods = ["../guests/program", "../guests/consumer", "../guests/scripted"]
+methods = [
+    "../guests/program",
+    "../guests/consumer",
+    "../guests/scripted",
+    # The same two programs with the other Keccak, for the comparison of RESULTS.md only.
+    "../guests/program-keccak-soft",
+    "../guests/consumer-keccak-accel",
+]

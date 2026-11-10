@@ -12,7 +12,7 @@ use ferrata_core::{
     validate::Context,
     witness::CompactStore,
 };
-use ferrata_lez_wire::{header_actor, instance_seed, job_actor, Message, RecordState};
+use ferrata_lez_wire::{header_actor, instance_seed, job_actor, Config, Message, RecordState};
 use lee::{AccountId, Actor, PublicAccountEvidence};
 use test_guest_core::Script;
 
@@ -20,7 +20,7 @@ use crate::*;
 
 pub static BLS: Blst = Blst::new(Aggregation::Auto);
 
-/// A chain with one mainnet instance, next to the native store.
+/// A chain with one instance, next to the native store.
 pub struct World {
     pub chain: Chain,
     pub inst: Instance,
@@ -32,24 +32,40 @@ pub struct World {
 }
 
 impl World {
-    /// `Init` and the bootstrap committee's adoption, in `parts` transactions.
+    /// The mainnet instance of periods 1899–1903: `Init` and the bootstrap committee's adoption,
+    /// in `parts` transactions.
     pub fn new(parts: u8) -> Self {
+        Self::from_parts(mainnet_config(parts), root(TRUSTED_BLOCK_ROOT), mainnet_bootstrap(), mainnet_updates())
+    }
+
+    /// An instance of `config` (Electra layout) initialized from `bootstrap` at `checkpoint`, on
+    /// a new chain; `updates` are kept for the caller to apply.
+    pub fn from_parts(
+        config: Config,
+        checkpoint: Root,
+        bootstrap: LightClientBootstrap,
+        updates: Vec<LightClientUpdate>,
+    ) -> Self {
+        Self::at(ferrata_account(), config, checkpoint, bootstrap, updates)
+    }
+
+    /// As [`World::from_parts`], for the deployment of the program at `program`.
+    pub fn at(
+        program: AccountId,
+        config: Config,
+        checkpoint: Root,
+        bootstrap: LightClientBootstrap,
+        updates: Vec<LightClientUpdate>,
+    ) -> Self {
         let mut chain = Chain::new();
-        let inst = Instance::new(ferrata_account(), mainnet_config(parts), root(TRUSTED_BLOCK_ROOT));
-        let bootstrap = mainnet_bootstrap();
-        let spec = mainnet_spec();
-        let native = FinalizedStore::initialize_with(
-            &root(TRUSTED_BLOCK_ROOT),
-            &bootstrap,
-            LcFork::Electra,
-            &spec,
-            &BLS,
-            Adoption::OnChain,
-        )
-        .unwrap();
+        let spec = config.spec();
+        let inst = Instance::new(program, config, checkpoint);
+        let native =
+            FinalizedStore::initialize_with(&checkpoint, &bootstrap, LcFork::Electra, &spec, &BLS, Adoption::OnChain)
+                .unwrap();
         let run = inst.init(&mut chain, &bootstrap, "Init");
         assert!(run.reports.iter().all(TxReport::ok), "initialization refused: {:?}", run.reports);
-        let world = Self { chain, inst, native, spec, bootstrap, updates: mainnet_updates(), runs: vec![run] };
+        let world = Self { chain, inst, native, spec, bootstrap, updates, runs: vec![run] };
         let state = world.inst.state(&world.chain).unwrap();
         assert!(state.active, "the instance activates with its last adoption part");
         world.check_store();
@@ -58,7 +74,7 @@ impl World {
     }
 
     pub fn ctx(&self) -> Context<'_> {
-        Context { spec: &self.spec, genesis_validators_root: root(GENESIS_VALIDATORS_ROOT), bls: &BLS }
+        Context { spec: &self.spec, genesis_validators_root: self.inst.config.genesis_validators_root, bls: &BLS }
     }
 
     /// The instance holds the compact form of the native store.
@@ -74,6 +90,7 @@ impl World {
     pub fn check_record(&self, slot: u64) {
         let record = self.inst.record(&self.chain, slot).expect("record written");
         assert_eq!(record.instance_id, self.inst.id);
+        assert_eq!(record.chain_id, self.inst.config.chain_id, "the record carries the instance's chain id");
         let expected = HeaderRecord::of(&self.native.core().finalized_header, LcFork::Electra, &self.spec);
         assert_eq!(record.record, expected.encode(), "the record is the native finalized header's");
     }
@@ -81,7 +98,8 @@ impl World {
     /// Run `update` as a job on LEZ and natively; they must agree.
     pub fn apply(&mut self, update: &LightClientUpdate, label: &str) -> JobRun {
         let before = self.native.core().clone();
-        let ctx = Context { spec: &self.spec, genesis_validators_root: root(GENESIS_VALIDATORS_ROOT), bls: &BLS };
+        let ctx =
+            Context { spec: &self.spec, genesis_validators_root: self.inst.config.genesis_validators_root, bls: &BLS };
         let native = self.native.process_update(update, update.signature_slot + 1, &ctx);
         let run = self.inst.update(&mut self.chain, update, &before, label);
         let all_ok = run.reports.iter().all(TxReport::ok);
@@ -312,7 +330,7 @@ pub fn refusals() -> Vec<Refusal> {
         assert_eq!(r.exit_code, Some(ferrata_lez_wire::code::WRONG_SENDER as u32));
         out.push(Refusal { case: "JobOpen from another program's actor", report: r });
         let header = header_actor(inst.program, &inst.id, 99_999_999);
-        let record = Message::Record { instance_id: inst.id, slot: 99_999_999, record: vec![1, 2, 3] };
+        let record = Message::Record { instance_id: inst.id, slot: 99_999_999, chain_id: 1, record: vec![1, 2, 3] };
         let r = scripted(
             "Record from another program",
             header,
@@ -446,8 +464,9 @@ pub fn record(w: &World, slot: u64) -> Option<RecordState> {
 }
 
 /// What the LEZ shell costs, measured with this program: a public consumer's read of a record
-/// (consumer → `Read` → `StateReply` → consumer), and `Attest` calls whose query grows, so the
-/// header's handler differs only in the bytes it receives and echoes in its journal.
+/// (consumer → `Read` → `StateReply` → consumer), and the same read with padding that grows
+/// (`ReadPadded`, which the program ignores), so the header's handler differs only in the bytes
+/// it receives and echoes in its journal.
 pub fn shell_costs() -> Vec<TxReport> {
     use ferrata_lez_wire::consumer::ConsumerMessage;
     let mut w = World::new(2);
@@ -469,14 +488,14 @@ pub fn shell_costs() -> Vec<TxReport> {
         0,
     ));
     for size in [0usize, 8 * 1024, 24 * 1024, 48 * 1024] {
-        let call = ConsumerMessage::CallAttest {
+        let call = ConsumerMessage::ReadPadded {
             ferrata: w.inst.program,
             instance_id: w.inst.id,
             slot,
-            query: vec![0xab; size],
+            padding: vec![0xab; size],
         };
         out.push(w.chain.submit(
-            &format!("public consumer calls Attest, {size}-byte query"),
+            &format!("public consumer reads with {size} bytes of padding (ReadPadded)"),
             consumer,
             borsh::to_vec(&call).unwrap(),
             vec![consumer, header],
