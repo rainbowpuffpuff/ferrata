@@ -142,8 +142,9 @@ contract RefundTest is VaultTestBase {
     function test_refund_onlyOnce() public {
         _fourDepositsThenRetire();
         _sunset(0);
-        _refund(0);
-        _expectRefundRevert(0, FerrataVault.AlreadyRefunded.selector);
+        _refund(2); // 0.1 ETH; leaf 0's 1 ETH stays escrowed, so only the refunded flag can stop a second payment
+        _expectRefundRevert(2, FerrataVault.AlreadyRefunded.selector);
+        assertEq(vault.escrowed(ETH), 1 ether);
     }
 
     function test_refund_wrongPathReverts() public {
