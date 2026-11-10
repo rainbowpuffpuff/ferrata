@@ -33,7 +33,7 @@ echoes an Ethereum beacon. Rule (B): one proof that `t` sequencers attested the 
 once `W = Δ` (1 h by default) has passed, unless a watcher cancels it. Releases pay out against a RISC Zero proof of
 a burn under a finalised, unrevoked burn root.
 
-Status: prototype evidence for a grant proposal. **Not audited, not deployed anywhere.** In the vault's own 342
+Status: prototype evidence for a grant proposal. **Not audited, not deployed anywhere.** In the vault's own 343
 tests proofs are mocked: the base verifier accepts exactly the (image id, journal digest) pairs a test registers.
 It sits behind RISC Zero's unmodified `RiscZeroVerifierEmergencyStop`, as a deployment's would. `test/real/` runs
 the return leg once with no mock on the Ethereum side: RISC Zero's real Groth16 verifier behind the same stop, a
@@ -557,10 +557,10 @@ Results of the final v4 runs, on 2026-11-10, on the Modal build box (`spike/moda
 ```
 forge build --force --sizes   FerrataVault runtime 24,312 bytes (264 under EIP-170); FerrataRegistry 4,917
 forge fmt --check             ok
-forge test                    Ran 29 test suites: 363 tests passed, 0 failed, 0 skipped (363 total tests)
+forge test                    Ran 29 test suites: 364 tests passed, 0 failed, 0 skipped (364 total tests)
                               (including the 12 invariants twice and the 21 tests of test/real/ with real proofs)
 
-forge coverage --report summary      (all 363 tests)
+forge coverage --report summary      (all 364 tests)
 | File                    | % Lines           | % Statements      | % Branches        | % Funcs          |
 | src/FerrataRegistry.sol | 100.00% (112/112) | 100.00% (150/150) | 100.00% (24/24)   | 100.00% (16/16)  |
 | src/FerrataVault.sol    | 100.00% (434/434) | 100.00% (531/531) | 100.00% (104/104) | 100.00% (84/84)  |

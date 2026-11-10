@@ -346,6 +346,19 @@ contract RolesTest is VaultTestBase {
         vm.stopPrank();
     }
 
+    /// @notice The floor on ETH's release bucket against thresholds worked out by hand: 1e9 value units are
+    ///         ceil(1e9 * 1e12 / 3000) = 333,333,333,333,333,334 wei, and 1e3 per second are 333,333,333,334 wei per
+    ///         second. Inputs are drawn around both thresholds.
+    function testFuzz_capFloor_tokenBucketMatchesHandWorkedThresholds(uint256 capacity, uint256 refill) public {
+        FerrataVault v = _flooredVault();
+        capacity = bound(capacity, 333_333_333_333_333_000, 333_333_333_333_333_700);
+        refill = bound(refill, 333_333_333_000, 333_333_333_700);
+        bool allowed = capacity >= 333_333_333_333_333_334 && refill >= 333_333_333_334;
+        vm.prank(admin);
+        if (!allowed) vm.expectRevert(FerrataVault.CapBelowFloor.selector);
+        v.setTokenCap(ETH, FerrataVault.Direction.Release, capacity, refill);
+    }
+
     // ---- the verifier must be a stop that is not tripped ------------------------------------------------------------
 
     function test_constructor_refusesAVerifierThatIsNotAnUntrippedStop() public {
