@@ -44,3 +44,10 @@ __pycache__/
 /vault/notes/
 /docs/design/finality-rule/results/*.tmp
 /docs/design/finality-rule/results/run-all.log
+
+# End-to-end return leg (e2e/): the recorded guest program binaries (they embed the build machine's
+# paths; their sha256 and image ids are in e2e/runs/*/programs.json) and the scratch of the Groth16
+# wraps (the prover's input.json and proof.json)
+/e2e/programs/
+/e2e/runs/*/work/
+/vault/script/runs/
