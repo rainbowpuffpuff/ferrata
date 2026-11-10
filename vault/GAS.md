@@ -25,6 +25,73 @@ State when measured (`test/GasScenarios.t.sol`, `setUp`):
 The refund rows first retire the vault, finalise a sunset checkpoint and wait `revokeWindow` (v3 D5). The
 checkpoint rows use the test committee, n = 4 and t = 3.
 
+## On Sepolia since Glamsterdam: what the round trip really costs
+
+**Every figure below this section is Foundry's** (forge 1.3.6's EVM, which knows Ethereum's gas schedule up to
+Prague/Osaka: today's mainnet). Sepolia has run **Glamsterdam** since 6 October 2026 13:53:36 UTC (epoch 353,024,
+timestamp 1,791,294,816: the activation table of [EIP-7773](https://eips.ethereum.org/EIPS/eip-7773), equal to the
+`activationTime` the node reports in `eth_config`; reth v2.7.0, 28 September 2026: "prepares Sepolia for the
+Glamsterdam hardfork"). Its gas changes are not in Foundry, and the first live run died of it: the Groth16
+verifier's creation was sent with forge's limit of 1,533,981 (1.3 x its own 1,179,986) and ran out of gas
+(tx `0x673cdb72…c7c1`, block 12,106,853); Sepolia's node asks 7,795,331 for it.
+
+What changed (the specifications, and the constants as the node itself charges them):
+- [EIP-8037](https://eips.ethereum.org/EIPS/eip-8037), state creation gas: a new price unit, `CPSB` = 1,530 gas per
+  byte of new state, charged as **state gas**. A new account costs 120 x 1,530 = 183,600 (was 32,000 for a creation,
+  25,000 for a value transfer to an empty account); a byte of deployed code 1,530 (was 200) plus 6 per word for its
+  hash; a new storage slot 64 x 1,530 = 97,920 (was 20,000). Measured on the node with `eth_simulateV1` and code
+  overrides (read-only probes, 10 November 2026): SSTORE into an empty slot 125,026 against 27,106 into a set one (the
+  difference is 97,920); a creation returning 0, 1,024 and 4,096 bytes of code 207,668, 1,774,690 and 6,475,744.
+- The same EIP makes the 2^24 = 16,777,216 transaction cap of [EIP-7825](https://eips.ethereum.org/EIPS/eip-7825)
+  a cap on **execution gas only**; state gas comes from the rest of the limit (a "reservoir"), up to 2^32 - 1.
+  The node's `eth_estimateGas` enforces the execution cap (a loop of 18.2M execution gas has no estimate) and
+  prices state gas in full.
+- [EIP-8038](https://eips.ethereum.org/EIPS/eip-8038), state access: cold account 3,000 (was 2,600), account write
+  9,000, storage write 10,000, creation access 12,000; [EIP-2780](https://eips.ethereum.org/EIPS/eip-2780): the
+  21,000 base becomes 12,000 plus what a transaction touches; [EIP-7976](https://eips.ethereum.org/EIPS/eip-7976),
+  [EIP-7981](https://eips.ethereum.org/EIPS/eip-7981): calldata and access-list floors;
+  [EIP-7954](https://eips.ethereum.org/EIPS/eip-7954): code up to 64 KiB.
+
+**The fifteen transactions of the rehearsed round trip, priced by Sepolia's node** (10 November 2026, about 21:00
+UTC). The transactions are exactly those of the cloud rehearsal ([`../e2e/runs/cloud-fork/`](../e2e/runs/cloud-fork/)
+`plan.json`, from forge's records of it), played in order on a local anvil fork of Sepolia; before each, the node
+(reth 2.10.0 at a public endpoint, block 12,107,143) was asked with that fork's state as overrides: `eth_estimateGas`,
+and `eth_simulateV1` of the transaction alone for the gas it uses. The finalisation echoes the rehearsal's beacon,
+written into the fork's vault. Command: `e2e/gasplan.py run --node <Sepolia> --state <fork> --plan plan.json
+--nonce 0 --beacon-index 1 --echo-nonce <its echo> --wait 2460 --release-wait 180`; record
+[`../e2e/runs/cloud-fork/gas-sepolia.json`](../e2e/runs/cloud-fork/gas-sepolia.json). "Foundry" is anvil's receipt
+of the same transaction, equal to the rehearsal's manifest.
+
+| # | Transaction | Foundry (anvil receipt) | Sepolia (node, gas used) | Sepolia `eth_estimateGas` | Limit (x 1.25) | Sepolia / Foundry |
+|---|---|---:|---:|---:|---:|---:|
+| 0 | create RiscZeroGroth16Verifier | 1,179,986 | 7,732,792 | 7,795,331 | 9,744,164 | 6.55 |
+| 1 | create RiscZeroVerifierEmergencyStop | 451,744 | 2,953,028 | 2,977,632 | 3,722,040 | 6.54 |
+| 2 | create TestToken | 508,036 | 3,315,490 | 3,342,971 | 4,178,714 | 6.53 |
+| 3 | create FerrataVault | 5,501,261 | 38,170,341 | 38,474,447 | 48,093,059 * | 6.94 |
+| 4 | registerToken (ETH) | 472,211 | 2,136,791 | 2,154,917 | 2,693,647 | 4.53 |
+| 5 | registerToken (test token) | 473,049 | 2,138,129 | 2,156,266 | 2,695,333 | 4.52 |
+| 6 | mint (test token) | 68,368 | 238,408 | 241,467 | 301,834 | 3.49 |
+| 7 | approve (test token) | 46,331 | 128,251 | 129,343 | 161,679 | 2.77 |
+| 8 | depositETH | 193,072 | 552,152 | 557,701 | 697,127 | 2.86 |
+| 9 | deposit (test token) | 192,529 | 473,157 | 498,242 | 622,803 | 2.46 |
+| 10 | submitCandidate | 507,370 | 1,381,770 | 1,393,904 | 1,742,380 | 2.72 |
+| 11 | recordBeacon | 77,823 | 262,063 | 265,310 | 331,638 | 3.37 |
+| 12 | finalize | 475,300 | 1,183,464 | 1,263,896 | 1,579,870 | 2.49 |
+| 13 | release (ETH) | 363,169 | 607,873 | 625,711 | 782,139 | 1.67 |
+| 14 | release (test token, relayer fee) | 388,243 | 648,471 | 675,643 | 844,554 | 1.67 |
+| | **all 15** | **10,898,492** | **61,922,180** | 62,552,781 | | **5.68** |
+
+\* over 2^24 and valid: the vault's creation needs 38.5M, of which (23,650 bytes of code + a new account) x 1,530
+= 36,368,100 is state gas; its execution gas is far below the cap. **The vault fits in one transaction; no split
+is needed** (and splitting would not help: the state gas of the code is per byte wherever it lands).
+
+Where the factor comes from: creations pay 1,530 per byte of code (6.5x to 6.9x), registrations and deposits pay
+97,920 per new slot (2.5x to 4.5x), the proof-verifying calls mostly execution (1.7x to 2.7x). At the gas price of
+the failed attempt (74 wei) the whole round trip costs about 0.0000000046 ETH; at 1 gwei it would be 0.062 ETH,
+of which the deployment is 0.057 ETH. Mainnet has not scheduled Glamsterdam (EIP-7773 leaves its row empty), so the
+figures of the following sections are still what mainnet charges today; once it ships, a deposit costs about
+0.47M to 0.55M gas instead of 0.19M, and deploying the vault about 38M instead of 5.5M.
+
 ## Results with the mock verifier
 
 These are the vault's own scenarios. Rows marked ¹ go through RISC Zero's emergency stop into a **mock**
