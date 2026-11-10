@@ -102,6 +102,46 @@ release guest's program binary had sha256 `f7342a9a…170b` with the addition an
 without it. The addition was moved out of the core, which is again byte for byte what the recorded
 binaries were built from.
 
+## Results
+
+Measured on 10 Nov 2026. "Box" is a 16-core cloud machine (32 threads; r0vm 3.0.5, CPU only), "L4" one
+NVIDIA L4 in the cloud ([`gpu-prover/`](../gpu-prover/)), "prover image" RISC Zero's
+`risc0-groth16-prover:v2025-04-03.1` run as a cloud function. Nothing was proven on the laptop.
+
+| Proof | User cycles, segments | Succinct receipt | Wrap step 1 (`identity_p254`) | Wrap step 2 (prover image) |
+|---|---|---|---|---|
+| `cp-e2e-candidate` | 3,786,158; 5 | 15.0 s on the L4 (execute 0.24 s, segments 10.7 s, lift and join 4.1 s) | 18.7 s on the box | 14 s |
+| `cp-e2e-finalize` | 3,831,033; 5 | 15.4 s on the L4 (0.23 s, 11.0 s, 4.1 s) | 18.6 s on the box | 14 s |
+| `release-eth` | 80,501; 1 | 15.1 s on the box | 19.5 s on the box | 18 s |
+| `release-erc20` | 80,501; 1 | 14.7 s on the box | 19.3 s on the box | 13 s |
+
+Every succinct receipt is 224 KB (223,930 or 224,314 bytes), every seal 260 bytes with selector
+`0x73c457ba`; every Groth16 receipt verifies against its image id and carries the native journal
+(`receipts/<proof>/groth16.json`). The L4 queue, not the proving, set the pace: the two checkpoint
+proofs waited 26 minutes for a GPU and then took 31 seconds together.
+
+**The run** ([`vault/test/real/ReturnLeg.t.sol`](../vault/test/real/ReturnLeg.t.sol), 15 tests, all
+pass; `cd vault && forge test --match-path 'test/real/*'`): the deployment is the one the proofs
+bind; the journals are the vault's encodings; candidate, wait, beacon, finalisation, release delay
+and both releases succeed with balances checked; every negative case is refused (the list is in
+`vault/README.md`, "Tests"). Gas of every step: `vault/GAS.md`, "With the real verifier".
+
+**Elsewhere.** The two release seals verify, by read-only `eth_call`, on RISC Zero's own
+`RiscZeroGroth16Verifier` on Sepolia (`0x2a098988600d87650Fb061FfAff08B97149Fa84D`, directly and
+through RISC Zero's emergency stop `0x724d375B5b622e15f0E64e9Deb76a4cB17877797`); the ETH seal
+with the token release's journal digest is refused there with `VerificationFailed()`.
+
+**The Sepolia stages on a local fork** (`anvil --fork-url` of a public endpoint, the deployer
+impersonated; `vault/script/`, commands in `vault/README.md`): `deploy` put the four contracts on the
+fixture's addresses in ten transactions (9.09M gas), `submit` had the candidate's real seal accepted
+(507,370 gas, the Foundry figure), and after 2,400 s `beacon` recorded a beacon whose nonce comes
+from the fork's own random `prevrandao`. The zone builder then produced the finalisation input for
+that nonce on the candidate's stored blocks. `verify-sepolia.sh` passes on the manifest so far,
+including an on-chain check of every seal through the deployed stop. On a fork the beacon is not
+Ethereum's: anvil draws `prevrandao` at random for each block and offers no way to set it, so the
+finalisation has to be proven in real order there too, exactly as on Sepolia. The vault reads no
+EIP-4788 beacon root; nothing of that was exercised or needed.
+
 ## Steps
 
 `run.sh` has one subcommand per step; `<run>` is a directory under `runs/`.

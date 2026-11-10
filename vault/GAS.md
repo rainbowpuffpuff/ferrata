@@ -109,6 +109,11 @@ fee).
 **A checkpoint with the real verifier**: `submitCandidate` 507,370 + one later `recordBeacon` 77,823 +
 `finalize` 475,300 = **1,060,493 gas**, paid once per finalised LEZ state.
 
+Against the proposal's M0 thresholds (`docs/traceability.md`, P.3: release ≤ 450k, candidate and finalisation
+≤ 500k): both releases and the finalisation are under them; this candidate is 7,370 gas over. It is a vault's
+first candidate, so its beacon and candidate slots are written from zero; a later candidate was not measured
+with the real verifier.
+
 **The whole return leg of the test**, from an empty chain to both releases paid: 10.9M gas, of which 7.64M is
 the four creations (the vault alone 5.50M) and 0.95M the two registrations.
 
