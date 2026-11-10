@@ -1,0 +1,314 @@
+#!/usr/bin/env python3
+"""Fetch the mainnet fixture of the attestation tests (`lez/harness/tests/attest_*.rs`).
+
+The program records a finalized header only after it has verified it, so the fixture is one
+finalized mainnet block together with what proves it and what is proven under it:
+
+1. the latest light-client finality update (SSZ) from a beacon node; it finalizes execution block
+   `n`;
+2. while the public nodes still hold the state of `n` (most keep about 128 blocks, and a finalized
+   block is already 64 to 95 blocks old): `eth_getProof` at `n` for WETH (the balance slot of one
+   holder and an empty slot), for an address without an account, and for the EIP-2935 history
+   contract (the slot of `m = n - 16`); `eth_getProof` at `m` for the same WETH slot;
+   `eth_call balanceOf` at both blocks as a cross-check;
+3. `eth_getBlockReceipts` for `n` (the tests rebuild the receipts trie from it), and from it the
+   logs the tests attest: an ERC-20 `Transfer` whose recipient is a contract (`eth_getCode` at `n`),
+   another `Transfer` of the same token to another recipient, a `Transfer` of another token, a
+   `Transfer` in the receipt with the most logs, and a failed transaction;
+4. the block headers of `n` and `m`, rebuilt as RLP from `eth_getBlockByNumber` and checked against
+   their hashes, and the same blocks from a second execution provider;
+5. a light-client bootstrap for a finalized checkpoint earlier in the same sync-committee period
+   (what `Init` verifies), and the canonical roots of both beacon blocks from a second beacon
+   provider.
+
+`fixture.json` records every choice (blocks, slots, addresses, log positions); SOURCE.md lists every
+request with its endpoint and JSON-RPC method; SHA256SUMS pins every file.
+
+Python standard library only; the HTTP, Keccak, RLP and SSZ helpers are those of
+`scripts/fetch-mainnet-e2e.py`. Every request goes to a public endpoint without an API key, with
+the generic User-Agent `ferrata-fixture-fetch` and nothing else that identifies the caller.
+
+Usage: lez/scripts/fetch-attest-fixture.py OUTDIR      (OUTDIR must not exist yet)
+
+If the finalized block has no failed transaction or no ERC-20 `Transfer` to a contract, the script
+stops without writing a fixture: run it again after the next finality update (about 6 minutes).
+"""
+import hashlib
+import importlib.util
+import json
+import os
+import shutil
+import sys
+import urllib.error
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.dont_write_bytecode = True  # no __pycache__ beside the imported script
+_spec = importlib.util.spec_from_file_location(
+    "fetch_mainnet_e2e", os.path.join(HERE, "..", "..", "scripts", "fetch-mainnet-e2e.py"))
+e2e = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(e2e)
+
+CHAIN_ID = 1
+WETH = e2e.WETH
+HOLDER = e2e.HOLDER  # Uniswap v2 USDC/WETH pair
+WETH_BALANCE_SLOT = e2e.WETH_BALANCE_SLOT
+EMPTY_SLOT = e2e.EMPTY_SLOT
+ABSENT = e2e.ABSENT
+HISTORY = e2e.HISTORY
+HISTORY_SERVE_WINDOW = e2e.HISTORY_SERVE_WINDOW
+HOP = 16
+SLOTS_PER_PERIOD = e2e.SLOTS_PER_PERIOD
+# keccak256("Transfer(address,address,uint256)")
+TRANSFER = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+# How many distinct recipients to ask `eth_getCode` about before giving up.
+MAX_CODE_PROBES = 24
+
+
+def erc20_transfers(receipts):
+    """(tx index, position in the receipt, log) of every ERC-20 `Transfer` of a successful
+    transaction: three topics and one 32-byte data word (an ERC-721 transfer has four topics)."""
+    out = []
+    for r in receipts:
+        if r["status"] != "0x1":
+            continue
+        for position, log in enumerate(r["logs"]):
+            if len(log["topics"]) == 3 and log["topics"][0] == TRANSFER and len(log["data"]) == 2 + 64:
+                out.append((int(r["transactionIndex"], 16), position, log))
+    return out
+
+
+def describe(tx_index, position, log, receipts):
+    return {
+        "tx_index": tx_index,
+        "log_index": position,
+        "block_log_index": int(log["logIndex"], 16),
+        "logs_in_receipt": len(receipts[tx_index]["logs"]),
+        "token": log["address"],
+        "from": "0x" + log["topics"][1][26:],
+        "to": "0x" + log["topics"][2][26:],
+        "value": log["data"],
+    }
+
+
+def main():
+    if len(sys.argv) != 2:
+        sys.exit(__doc__)
+    out = sys.argv[1]
+    os.makedirs(out)
+    try:
+        fetch(out)
+    except BaseException:
+        shutil.rmtree(out, ignore_errors=True)  # never leave half a fixture behind
+        raise
+
+
+def fetch(out):
+    f = e2e.Fetcher(out)
+    started = e2e.now()
+    beacon, execution = e2e.BEACON, e2e.EXECUTION
+
+    # 1. The finality update.
+    fu_raw = f.beacon(beacon[0], "/eth/v1/beacon/light_client/finality_update", "finality_update.ssz", ssz=True)
+    fu = e2e.parse_finality_update(fu_raw)
+    fin = fu["finalized"]
+    n = fin["block_number"]
+    m = n - HOP
+    period = fu["signature_slot"] // SLOTS_PER_PERIOD
+    if fin["slot"] // SLOTS_PER_PERIOD != period:
+        raise SystemExit("finalized slot and signature slot are in different periods; retry later")
+    print(f"finalized slot {fin['slot']} block {n} 0x{fin['block_hash']} (period {period})", flush=True)
+
+    # 2. State-dependent requests, the older block first.
+    holder_slot = e2e.mapping_slot(HOLDER, WETH_BALANCE_SLOT)
+    call = "0x70a08231" + HOLDER[2:].rjust(64, "0")
+    _, at_m = f.rpc_any("eth_getProof", [WETH, [holder_slot], hex(m)], f"proof_weth_{m}.json")
+    f.rpc_any("eth_call", [{"to": WETH, "data": call}, hex(m)], f"call_weth_balance_{m}.json", [at_m] + execution)
+    _, at_n = f.rpc_any("eth_getProof", [WETH, [holder_slot, EMPTY_SLOT], hex(n)], f"proof_weth_{n}.json")
+    state_n = [at_n] + execution
+    f.rpc_any("eth_getProof", [ABSENT, [e2e.word(0)], hex(n)], f"proof_absent_{n}.json", state_n)
+    f.rpc_any("eth_getProof", [HISTORY, [e2e.word(m % HISTORY_SERVE_WINDOW)], hex(n)], f"proof_history_{n}.json",
+              state_n)
+    f.rpc_any("eth_call", [{"to": WETH, "data": call}, hex(n)], f"call_weth_balance_{n}.json", state_n)
+
+    # 3. Receipts of n, and the logs the tests attest.
+    receipts, _ = f.rpc_any("eth_getBlockReceipts", [hex(n)], f"receipts_{n}.json")
+    if [int(r["transactionIndex"], 16) for r in receipts] != list(range(len(receipts))):
+        raise SystemExit("receipts are not in transaction order")
+    failed = [int(r["transactionIndex"], 16) for r in receipts if r["status"] == "0x0"]
+    transfers = erc20_transfers(receipts)
+    if not failed:
+        raise SystemExit(f"block {n} has no failed transaction; run again after the next finality update")
+    is_contract = {}
+    chosen = None
+    for tx_index, position, log in transfers:
+        to = "0x" + log["topics"][2][26:]
+        if to not in is_contract:
+            if len(is_contract) >= MAX_CODE_PROBES:
+                break
+            code, _ = f.rpc_any("eth_getCode", [to, hex(n)], None, state_n)
+            is_contract[to] = code != "0x"
+        if is_contract[to]:
+            chosen = (tx_index, position, log)
+            break
+    if chosen is None:
+        raise SystemExit(f"block {n} has no ERC-20 Transfer to a contract among the first recipients; run again later")
+    transfer = describe(*chosen, receipts)
+    f.rpc_any("eth_getCode", [transfer["to"], hex(n)], f"code_recipient_{n}.json", state_n)
+    head, _ = f.rpc_any("eth_blockNumber", [], None, state_n)
+    print(f"proofs at {m} and {n} served; head {int(head, 16)}", flush=True)
+
+    def first(predicate):
+        return next((describe(t, p, l, receipts) for t, p, l in transfers if predicate(t, p, l)), None)
+
+    other_recipient = first(lambda t, p, l: l["address"] == transfer["token"]
+                            and "0x" + l["topics"][2][26:] != transfer["to"])
+    other_token = first(lambda t, p, l: l["address"] != transfer["token"])
+    largest = max(receipts, key=lambda r: len(r["logs"]))
+    largest_tx = int(largest["transactionIndex"], 16)
+    in_largest = first(lambda t, p, l: t == largest_tx)
+    if other_recipient is None or other_token is None or in_largest is None:
+        raise SystemExit(f"block {n} lacks one of the logs the tests need; run again after the next finality update")
+
+    # 4. Headers (rebuilt as RLP and checked), and a second execution provider.
+    rebuilt, served = {}, {}
+    for number in (n, m):
+        block, served[number] = f.rpc_any("eth_getBlockByNumber", [hex(number), False], f"block_{number}.json")
+        rlp = e2e.header_rlp(block)
+        if "0x" + e2e.keccak256(rlp).hex() != block["hash"] or int(block["number"], 16) != number:
+            raise SystemExit(f"rebuilt header {number} does not hash to {block['hash']}")
+        f.save(f"header_{number}.rlp", rlp)
+        rebuilt[number] = block
+    for field, value in [("hash", fin["block_hash"]), ("stateRoot", fin["state_root"]),
+                         ("receiptsRoot", fin["receipts_root"])]:
+        if rebuilt[n][field] != "0x" + value:
+            raise SystemExit(f"execution block {n} does not match the finalized light-client header ({field})")
+    second = [e for e in execution if e != served[n]]
+    for number in (n, m):
+        block, _ = f.rpc_any("eth_getBlockByNumber", [hex(number), False], f"block_{number}_second.json", second)
+        for field in ["hash", "stateRoot", "receiptsRoot"]:
+            if block[field] != rebuilt[number][field]:
+                raise SystemExit(f"providers disagree on block {number} {field}")
+
+    # 5. Bootstrap for a checkpoint earlier in the same period, and second-provider beacon roots.
+    first_epoch = period * SLOTS_PER_PERIOD // 32
+    boot_slot = boot_root = None
+    for epoch in range(first_epoch, fin["slot"] // 32):
+        slot = epoch * 32
+        try:
+            hdr = json.loads(f.beacon(beacon[1], f"/eth/v1/beacon/headers/{slot}", None, ssz=False))["data"]
+        except urllib.error.HTTPError:
+            continue  # empty slot: no checkpoint block at the epoch start
+        try:
+            f.beacon(beacon[0], f"/eth/v1/beacon/light_client/bootstrap/{hdr['root']}", "bootstrap.ssz", ssz=True)
+        except urllib.error.HTTPError as e:
+            print(f"bootstrap for slot {slot} refused ({e.code}); trying the next epoch", flush=True)
+            continue
+        boot_slot, boot_root = slot, hdr["root"]
+        break
+    if boot_slot is None:
+        raise SystemExit("no bootstrap served for this period")
+    finalized_root = "0x" + e2e.beacon_header_root(fin["beacon"])
+    for slot, expected in [(boot_slot, boot_root), (fin["slot"], finalized_root)]:
+        raw = f.beacon(beacon[1], f"/eth/v1/beacon/headers/{slot}", f"beacon_header_{slot}_second.json", ssz=False)
+        if json.loads(raw)["data"]["root"] != expected:
+            raise SystemExit(f"second beacon provider reports another root for slot {slot}")
+
+    # fixture.json: every choice, for the tests (which check each against the responses).
+    manifest = {
+        "chain_id": CHAIN_ID,
+        "period": period,
+        "bootstrap_slot": boot_slot,
+        "bootstrap_root": boot_root,
+        "attested_slot": fu["attested"]["slot"],
+        "signature_slot": fu["signature_slot"],
+        "participants": fu["participants"],
+        "finalized_slot": fin["slot"],
+        "finalized_root": finalized_root,
+        "block": n,
+        "block_hash": "0x" + fin["block_hash"],
+        "state_root": "0x" + fin["state_root"],
+        "receipts_root": "0x" + fin["receipts_root"],
+        "receipts": len(receipts),
+        "hop_block": m,
+        "hop_block_hash": rebuilt[m]["hash"],
+        "head_when_fetched": int(head, 16),
+        "weth": WETH,
+        "holder": HOLDER,
+        "weth_balance_slot": holder_slot,
+        "empty_slot": EMPTY_SLOT,
+        "absent_account": ABSENT,
+        "history_slot": e2e.word(m % HISTORY_SERVE_WINDOW),
+        "transfer": transfer,
+        "transfer_other_recipient": other_recipient,
+        "transfer_other_token": other_token,
+        "transfer_in_largest_receipt": in_largest,
+        "failed_tx": failed[0],
+    }
+    f.save("fixture.json", (json.dumps(manifest, indent=2) + "\n").encode())
+
+    # SOURCE.md and SHA256SUMS.
+    files = sorted(x for x in os.listdir(out) if x not in ("SOURCE.md", "SHA256SUMS"))
+    sums = {x: hashlib.sha256(open(os.path.join(out, x), "rb").read()).hexdigest() for x in files}
+    with open(os.path.join(out, "SHA256SUMS"), "w") as s:
+        s.writelines(f"{sums[x]}  {x}\n" for x in files)
+
+    def log_row(name, t):
+        return (f"| {name} | tx {t['tx_index']}, log {t['log_index']} of {t['logs_in_receipt']} in its receipt "
+                f"(`logIndex` {t['block_log_index']}) | {t['token']} | {t['from']} | {t['to']} | {int(t['value'], 16)} |")
+
+    lines = [
+        "# Mainnet fixture of the attestation tests: one finalized block and facts under it",
+        "",
+        f"Fetched by `lez/scripts/fetch-attest-fixture.py` between {started} and {e2e.now()} (UTC). Every",
+        f"request went to a public endpoint without an API key, with User-Agent `{e2e.UA}`. Responses are",
+        "stored byte for byte; `header_*.rlp` are rebuilt from `block_*.json` by the script, which checked",
+        "that each hashes to the block's hash; `fixture.json` records the script's choices. `SHA256SUMS`",
+        "pins every file.",
+        "",
+        "| | |",
+        "|---|---|",
+        f"| chain | Ethereum mainnet, chain id {CHAIN_ID} |",
+        f"| sync-committee period | {period} |",
+        f"| bootstrap (the checkpoint `Init` trusts) | slot {boot_slot}, block root {boot_root} |",
+        f"| finality update | attested slot {fu['attested']['slot']}, signature slot {fu['signature_slot']}, "
+        f"{fu['participants']}/512 signers |",
+        f"| finalized beacon block | slot {fin['slot']}, root {finalized_root} |",
+        f"| finalized execution block `n` | {n}, hash 0x{fin['block_hash']} |",
+        f"| `n` state root / receipts root | 0x{fin['state_root']} / 0x{fin['receipts_root']} |",
+        f"| `n` receipts | {len(receipts)} ({len(failed)} failed; the first failed transaction is {failed[0]}) |",
+        f"| `m` = n - {HOP} (one EIP-2935 hop from n) | {m}, hash {rebuilt[m]['hash']} |",
+        f"| execution head when the proofs at n were fetched | {int(head, 16)} |",
+        f"| WETH | {WETH} |",
+        f"| holder (Uniswap v2 USDC/WETH pair) | {HOLDER} |",
+        f"| WETH balance slot, empty slot | {holder_slot}, {EMPTY_SLOT} |",
+        f"| address without an account | {ABSENT} (`keccak256(\"ferrata/absent-account\")[12..]`) |",
+        f"| history contract, slot of m | {HISTORY}, {e2e.word(m % HISTORY_SERVE_WINDOW)} |",
+        "",
+        "Logs chosen in block `n` (ERC-20 `Transfer`: three topics, one data word; positions count from zero):",
+        "",
+        "| log | where | token | from | to | value |",
+        "|---|---|---|---|---|---:|",
+        log_row("the first `Transfer` whose recipient has code at n (`code_recipient_*.json`)", transfer),
+        log_row("the first `Transfer` of that token to another recipient", other_recipient),
+        log_row("the first `Transfer` of another token", other_token),
+        log_row("the first `Transfer` in the receipt with the most logs", in_largest),
+        "",
+        "Cross-checks made by the script: the finalized light-client header's execution block hash, state",
+        "root and receipts root equal those of `block_n`; a second execution provider (`block_*_second.json`)",
+        "reports the same hash, state root and receipts root for n and m; a second beacon provider",
+        "(`beacon_header_*_second.json`) reports the finalized block root computed from the update, and the",
+        "bootstrap's block root.",
+        "",
+        "## Requests",
+        "",
+        "| UTC | endpoint | request | file | note |",
+        "|---|---|---|---|---|",
+    ]
+    lines += [f"| {r['at']} | {r['endpoint']} | `{r['request']}` | {r['file'] or ''} | {r['note']} |" for r in e2e.LOG]
+    with open(os.path.join(out, "SOURCE.md"), "w") as s:
+        s.write("\n".join(lines) + "\n")
+    print("done:", out)
+
+
+if __name__ == "__main__":
+    main()
