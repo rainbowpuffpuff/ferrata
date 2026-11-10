@@ -13,13 +13,17 @@ jobs:
         with:
           components: clippy, rustfmt
           targets: riscv32im-unknown-none-elf
+      # Only the downloaded vectors: vectors/acc-leaf.json is committed and must come from git.
       - uses: actions/cache@v4
         with:
-          path: vectors
-          key: vectors-consensus-specs-v1.7.0-beta.4-bls12-381-tests-v0.1.2-ethereum-tests-c67e485
+          path: |
+            vectors/v1.7.0-beta.4
+            vectors/bls12-381-tests-v0.1.2
+            vectors/ethereum-tests-c67e485
+          key: vectors-consensus-specs-v1.7.0-beta.4-bls12-381-tests-v0.1.2-ethereum-tests-c67e485-v2
       - name: Fetch pinned spec vectors
         run: scripts/fetch-vectors.sh
-      - name: Spec and trie vectors, adversarial suites, mainnet replay and end-to-end, nullifier demo
+      - name: Vectors, Helios oracle, adversarial suites, mainnet replay and end-to-end, nullifier demo
         run: cargo test --workspace --locked -- --nocapture
       - name: Format
         run: cargo fmt --all -- --check
