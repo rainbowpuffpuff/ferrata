@@ -1,0 +1,1 @@
+{"ok": true, "name": "lez-attest", "run": "gpu-l4-attest-2", "gpu": "NVIDIA L4, 23034 MiB, 610.57.04, 8.9", "wall_s": 21.328880548477173, "container_s_until_done": 23.34723734855652, "tx_bytes": 231214, "finished_at_utc": "2026-11-10T18:08:07Z"}

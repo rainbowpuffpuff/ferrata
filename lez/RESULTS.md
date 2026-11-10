@@ -50,10 +50,9 @@ most 1,826 cycles), and 1,889 cycles for the private update (70,090 to 71,979): 
 gained the chain id (8 bytes), the record the parent hash and the chain id (40 bytes). **The two
 real proofs of an update (§3) are of the earlier images**: `e7cec90e…` on the laptop CPU
 (9,045,235 cycles, 54 min, 9.18 GiB, a 227,080-byte receipt) and `cec0bc68…` on one NVIDIA L4
-GPU (`gpu-prover/RESULTS.md`). **The one real proof of a private attestation (§5.5) is of the
-previous images** (consumer `711584ff…`, 382,336 user cycles; on `f883e6a4…` the same
-transitions take 380,577), on the same GPU: 13.5 s, a 227,170-byte receipt, settled with the
-receipt verified. Neither path has a real proof on these images.
+GPU (`gpu-prover/RESULTS.md`). **The private attestation (§5.5) was proven on these images**
+(consumer `f883e6a4…`), on one NVIDIA L4: 16.1 s, a 227,170-byte receipt, settled with the receipt
+verified; a first proof had been made of the previous images (consumer `711584ff…`, 13.5 s). The update path of §3 has no real proof on this program image.
 
 | operation (mainnet, 512-member committees) | transactions | largest transaction, execution gas (cycles) | total execution gas | total storage gas (bytes) |
 |---|---:|---:|---:|---:|
@@ -866,37 +865,41 @@ in the receipt of 306 logs takes 8,903,363 user cycles in ten segments (2,295,84
 accelerator), because the 58 KB proof passes through both transitions and is hashed in the
 second.
 
-**One real proof of this path, on a GPU.** `harness/src/bin/prove_attest.rs` makes it, as
-`prove_private` does for §3, and `scripts/stage-prove-attest.sh` stages its input
+**A real proof of this path, on a GPU, on these images.** `harness/src/bin/prove_attest.rs`
+makes it, as `prove_private` does for §3, and `scripts/stage-prove-attest.sh` stages its input
 (`../gpu-prover/inputs-lez-attest/MANIFEST.json`: the binary and the fixture files it reads, by
-size and SHA-256). The binary built at commit d498591 (sha256 `69d00216…f64e`; its guests are
-the previous images, program `2f3566d4…` and consumer `711584ff…`) ran on one NVIDIA L4 on Modal, with r0vm 3.0.5 built with CUDA as its
-prover (`../gpu-prover/RESULTS.md`, run `gpu-l4-attest`), with this command:
+size and SHA-256). The binary built on the build box at commit ad40044 (sha256 `6146055b…11ab`,
+glibc 2.39; program `9f3eb00f…`, consumer `f883e6a4…`) ran on one NVIDIA L4 on Modal, with r0vm
+3.0.5 built with CUDA as its prover (`../gpu-prover/RESULTS.md`, run `gpu-l4-attest-2`), with
+this command:
 
 ```sh
-FERRATA_EXPECT_CONSUMER_IMAGE_ID=711584ffe09f0b115132e33ce1485666710bc73e696e66fcc54d00aad0db949f \
+FERRATA_EXPECT_CONSUMER_IMAGE_ID=f883e6a4dbd8e49439465f918884abe1379b02276ff88676f0a4bf958ee49068 \
 FERRATA_ATTEST_FIXTURE_DIR=/path/to/mainnet-attest-2026-11-10 RISC0_DEV_MODE=0 RISC0_SERVER_PATH=/path/to/r0vm \
 /usr/bin/time -v ./prove_attest --tx-out stage4-private-attest-tx.borsh > prove-attest.log 2>&1
 ```
 
 | the private attestation, proven (`results/prove-attest.log`) | |
 |---|---|
-| proven | the consumer's two private transitions (`AttestPrivately`, which sends `Read`: 36,126 user cycles; the record's reply, which verifies the `Transfer`: 346,210), the fee transfer from the private account, and LEZ's privacy-preserving circuit over them (`lee::execute_and_prove`, `ProverOpts::succinct()`). The image claimed is the consumer's, `711584ff…949f`, disclosed. |
-| wall clock | **13.5 s** for `execute_and_prove`; 0:16.99 for the whole run (setup and settlement included), 15.21 s of user time on one core |
-| machine | one NVIDIA L4 (23,034 MiB), 4 CPU cores, 32 GiB; GPU memory peak 11,296 MiB; peak host memory 0.77 GiB (810,428 kB, `/usr/bin/time -v`) |
-| receipt | **227,170 bytes** (the succinct `InnerReceipt`, borsh); the transaction is **231,214 bytes** (`results/stage4-private-attest-tx.borsh`, sha256 `f89bc6e7…b746`) |
-| settlement | in the run, with the receipt verified: execution gas 421,642 (`PRIVATE_VERIFY_GAS` 409,764 + public part 11,878 cycles), storage gas 224,063, base fee 5,165,640: the figures of the dev-mode run above |
+| proven | the consumer's two private transitions (`AttestPrivately`, which sends `Read`: 34,337 user cycles; the record's reply, which verifies the `Transfer`: 346,240), the fee transfer from the private account, and LEZ's privacy-preserving circuit over them (`lee::execute_and_prove`, `ProverOpts::succinct()`). The image claimed is the consumer's, `f883e6a4…9068`, disclosed. |
+| wall clock | **16.1 s** for `execute_and_prove`; 0:21.28 for the whole run (setup and settlement included), 18.81 s of user time on one core |
+| machine | one NVIDIA L4 (23,034 MiB), 4 CPU cores, 32 GiB; GPU memory peak 11,295 MiB; peak host memory 0.76 GiB (798,040 kB, `/usr/bin/time -v`) |
+| receipt | **227,170 bytes** (the succinct `InnerReceipt`, borsh); the transaction is **231,214 bytes** (`results/stage4-private-attest-tx.borsh`, sha256 `5b1d6292…bdcf`) |
+| settlement | in the run, with the receipt verified: execution gas 421,641 (`PRIVATE_VERIFY_GAS` 409,764 + public part 11,877 cycles), storage gas 224,063, base fee 5,165,632: the figures of the dev-mode run above |
 
-The transaction was then settled again from the file on another machine (a laptop, 2.6 s, no
+The transaction was then settled again from the file on another machine (the laptop, no
 proving), with the same binary: `RISC0_DEV_MODE=0 ./prove_attest --settle FILE` rebuilds the
 state from the fixture, checks that the transaction claims this binary's consumer image, and
 LEZ's settlement verifies the receipt (`results/prove-attest-settle.log`: "receipt verified",
-the same charge). With one bit of the receipt flipped (bit 0 of byte 115,607 of the file) the
-same command refuses it: `Invalid privacy preserving execution circuit proof`
-(`../gpu-prover/logs/lez-attest-tampered-settle.log`). `results/prove-attest-dry-run.log` is the
-proving command in dev mode. This is a single run on a shared cloud GPU, not a benchmark; the
-path was not proven on a CPU, and the attestation of the 306-log receipt (ten segments) was not
-proven at all.
+the same charge). The first proof of this path was of the previous images (consumer
+`711584ff…`, 382,336 user cycles): 13.5 s on another L4, the same receipt and transaction sizes
+(run `gpu-l4-attest`); with one bit of its receipt flipped (bit 0 of byte 115,607 of the file)
+the same settle command refused it: `Invalid privacy preserving execution circuit proof`
+(`../gpu-prover/logs/lez-attest-tampered-settle.log`); that check was not repeated for the second
+proof. `results/prove-attest-dry-run.log` is the proving command in dev mode. Each is a single
+run on a shared cloud GPU, not a benchmark (the 2.6 s between them says nothing about the
+images); the path was not proven on a CPU, and the attestation of the 306-log receipt (ten
+segments) was not proven at all.
 
 ### Decisions where the design note was silent or did not fit LEZ v0.4
 
@@ -951,7 +954,7 @@ proven at all.
 - **Gloas records** are attested since Stage 5 (§6), on Sepolia; this section's mainnet block is
   of the Fulu era.
 - **One hop, not a chain of hops**, was measured (the request allows several).
-- **The private path has one real proof, on a GPU** (§5.5: 13.5 s on an NVIDIA L4). It was not
+- **The private path has real proofs on a GPU only** (§5.5: 16.1 s on an NVIDIA L4). It was not
   proven on a CPU, so what a user's own machine needs for it is not measured, and the 306-log
   case was not proven. A read exposes which record was read (§4), and this fixture reads the
   record of the fact's own block, not the newest one.
