@@ -5,3 +5,4 @@ broadcast/
 snapshots/
 # Dependencies are installed with `forge install --no-git` at the tags listed in README.md.
 lib/
+__pycache__/
