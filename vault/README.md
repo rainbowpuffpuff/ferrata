@@ -26,10 +26,14 @@ LEZ side reads it with an Ethereum storage proof.
 `W = Δ + (t − 1) × turnSeconds`, and is then finalised with a second proof that echoes an Ethereum beacon. Releases
 pay out against a RISC Zero proof of a burn under a finalised, unrevoked burn root.
 
-Status: prototype evidence for a grant proposal. **Not audited, not deployed anywhere.** Proofs are mocked: the
-tests' base verifier accepts exactly the (image id, journal digest) pairs a test registers. It sits behind RISC
-Zero's unmodified `RiscZeroVerifierEmergencyStop`, as a deployment's would. The commitment and nullifier
-derivations, the LEZ programs and the zkVM guests are out of scope.
+Status: prototype evidence for a grant proposal. **Not audited, not deployed anywhere.** In the vault's own 286
+tests proofs are mocked: the base verifier accepts exactly the (image id, journal digest) pairs a test registers.
+It sits behind RISC Zero's unmodified `RiscZeroVerifierEmergencyStop`, as a deployment's would. `test/real/` runs
+the return leg once with no mock on the Ethereum side: RISC Zero's real Groth16 verifier behind the same stop, a
+real proof of the checkpoint program for the candidate, a second one for the finalisation, and real proofs of the
+release program ([`../e2e/README.md`](../e2e/README.md)). The LEZ side of that run is a stand-in: blocks built with
+test sequencer keys, no node, no bridge program. The commitment and nullifier derivations, the LEZ programs and
+the zkVM guests are out of this directory's scope.
 
 ## Running it
 
@@ -39,7 +43,9 @@ export PATH="$HOME/.foundry/bin:$PATH"
 forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.0.0
 forge build --sizes                                      # no compiler warnings, no lint findings, all under EIP-170
 forge test                                               # everything, including the invariant campaign
-forge test --isolate --match-contract GasScenarios -vv   # the numbers in GAS.md
+forge test --isolate --match-contract GasScenarios -vv   # the numbers in GAS.md (mock verifier)
+forge test --match-path 'test/real/*' -vv                # the return leg with RISC Zero's real verifier and real proofs
+forge test --isolate --match-contract ReturnLegGas -vv   # its gas (GAS.md, "With the real verifier")
 forge test --gas-report --no-match-path 'test/invariant/*' > gas-report.txt
 forge coverage --report summary
 forge fmt --check
@@ -52,8 +58,9 @@ Toolchain and dependencies:
 - forge 1.3.6, solc 0.8.26 (pinned, `offline = true`), `evm_version = "cancun"`, optimizer at 200 runs.
 - forge-std v1.10.0.
 - OpenZeppelin Contracts v5.4.0. The vault uses only `SafeERC20` and `ReentrancyGuardTransient`.
-- risc0-ethereum v3.0.0. The tests use only `RiscZeroVerifierEmergencyStop` and the verifier interface, compiled
-  against the OpenZeppelin v5.2.0 that risc0-ethereum itself pins.
+- risc0-ethereum v3.0.0. The vault's own tests use only `RiscZeroVerifierEmergencyStop` and the verifier
+  interface; `test/real/` and `script/` also deploy its `RiscZeroGroth16Verifier` with its `ControlID`. All are
+  compiled unmodified against the OpenZeppelin v5.2.0 that risc0-ethereum itself pins.
 
 The vault takes the vendored one-function `IRiscZeroVerifier`, whose selector is the same as RISC Zero's. Its
 runtime is 23,650 bytes, 926 below the EIP-170 limit, so there is little room left for more features.
@@ -329,7 +336,8 @@ New in v3:
 - **Issuer risk is inherited.** A token can blacklist the vault or switch on transfer fees (USDT has such a switch).
   Rebasing tokens are unsupported.
 - **The global cap uses admin-set integer weights, not an oracle.**
-- **No real proofs.** All verification here is mocked. The Groth16 verifier's gas and behaviour are not measured.
+- **Real proofs in one run only.** `test/real/` verifies real Groth16 proofs of both programs and measures their
+  gas (GAS.md); every other test mocks the verifier. Those proofs are about a stand-in zone built with test keys.
 
 ## Sepolia round trip (prepared; the stages were rehearsed on a local fork)
 
@@ -410,6 +418,7 @@ the table above and drives real candidate → beacon → finalisation sequences 
 | `Admin.t.sol` | Constructor checks, including `turnSeconds` and `minReleaseDelay`; the v3 domain tag; write-once registry; relay-fee ceiling (fuzzed); role separation; two-step handovers |
 | `Caps.t.sol`, `Merkle.t.sol`, `Privacy.t.sol`, `TreeVectors.t.sol`, `GasScenarios.t.sol` | Rate limits; slots 0, 1 and 2 and tree algebra; LEZ-side data never appears in calldata, events or storage writes; vectors; gas |
 | `invariant/` | 10 invariants over 256 runs × 100 calls, listed below |
+| `real/ReturnLeg.t.sol` | No mock: RISC Zero's Groth16 verifier behind its emergency stop, the vault at the addresses the proofs bind, the design's default timers. Before any proof: the checkpoint program's two journals and the release program's two journals are byte for byte the vault's encodings, and the deposit root is the one the bridge core computed. The run: deposits, `submitCandidate` with the real checkpoint seal, the wait, `recordBeacon`, `finalize` with the seal that echoes that beacon, the release delay, `release` of ETH and of the token to recipients that held nothing. Refused: one flipped byte in each of the four seals (selector and each proof word), a valid seal of another statement, each journal field changed under its real seal (candidate, finalisation, release), a replayed release, a release against a root that is not finalised or still delayed, a finalisation one second early with the right nonce, any proof after the stop. `ReturnLegGas` measures every step. |
 
 The invariant handler deposits, submits candidates with committees of four sizes (n, t) = (3, 2), (4, 3), (7, 5),
 (10, 7) and finalises them after their own `W`, submits candidates that break monotonicity and cancels candidates,

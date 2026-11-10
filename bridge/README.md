@@ -20,6 +20,7 @@ source comments cite them by their working names, `notes/design/SPEC-v2.md` and 
 | `methods/`, `host/` | risc0-build embedding; the host CLI that executes, checks witness-independence of the cycle count, proves, wraps to Groth16, verifies and writes fixtures. |
 | `artifacts/` | v2 receipts, seals, journals, `scenario.json`, and every run log (machine, load, GNU time). |
 | `evm-verify/` | Foundry: v2 journal equality, the real `RiscZeroGroth16Verifier` behind `RiscZeroVerifierEmergencyStop` (risc0-ethereum v3.0.0), and the v2 vault end to end. |
+| `e2e/` | Host-only tool of the end-to-end return leg ([`../e2e/`](../e2e/README.md)): the wallet side of its fixture (deposits, burn notes, release witnesses), executor and prover runs of guest programs read from files, the Groth16 wrap in its two steps, and the SPEC-v3 D3 checkpoint journal and key-set hash (`src/checkpoint_v3.rs`). It does not build the guests. |
 | `scripts/` | `check.sh` (every non-proving check), `prove-bench.sh` (measured proving steps), `mutants.py` (hand-written mutation pass), `check_vectors_v2.py`, `check_vectors_v1.py`. |
 
 ## Encodings (SPEC-v2)
@@ -50,9 +51,17 @@ preimage and HMAC message starts with an ASCII tag, and no tag is a prefix of an
 | `keySetHash` | SHA-256 | 21 + 32n | `"ferrata/keyset/v1" ‖ n:u32 ‖ key_1 ‖ … ‖ key_n` |
 | `burnFrontierHash` | SHA-256 | 1048 | `"ferrata/burn-frontier/v1" ‖ f_0 ‖ … ‖ f_31`, canonical frontier (`f_h` = 0 where bit h of the count is 0). **Not defined in SPEC-v2; this crate's choice.** |
 | `S` | SHA-256 | 173 | `"ferrata/lez-state/v1" ‖ tipId:u64 ‖ tipHash ‖ keySetHash ‖ configTipHash ‖ burnCount:u64 ‖ burnFrontierHash ‖ importedLeafCount:u64 ‖ sunset:u8` |
-| checkpoint journal | (vault hashes it) | 416 | `abi.encode(sha256("ferrata/vault/checkpoint/v2"), evmChainId, vault, lezConfigId, nMin, tMin, parentState, newState, burnRoot, burnCount, importedLeafCount, sunset, echoNonce)` |
+| checkpoint journal (SPEC-v2) | (vault hashes it) | 416 | `abi.encode(sha256("ferrata/vault/checkpoint/v2"), evmChainId, vault, lezConfigId, nMin, tMin, parentState, newState, burnRoot, burnCount, importedLeafCount, sunset, echoNonce)` |
 | release journal | (vault hashes it) | 352 | `abi.encode(sha256("ferrata/vault/release/v2"), evmChainId, vault, lezConfigId, burnRoot, NOut, token, amount, recipient, relayer, relayFee)` |
 | release guest input | private | 1340 | `burnRoot ‖ burnIndex:u64 ‖ directions:u32 ‖ siblings:32×32 ‖ sOut ‖ r ‖ evmChainId ‖ vault ‖ configId ‖ token ‖ amount ‖ recipient ‖ relayer ‖ relayFee` |
+
+`keySetHash`, `S` and the checkpoint journal above are the SPEC-v2 layouts, which the v2 vault of
+`evm-verify/` reads. The checkpoint program and the v3 vault use SPEC-v3 D3: `keySetHash =
+sha256("ferrata/keyset/v2" ‖ n:u32 ‖ postingTimeframe:u32 ‖ keys)` and a 17-word journal under
+`sha256("ferrata/vault/checkpoint/v3")` that adds `tipId`, `tipHash`, `n`, `t`. Those two are in
+`e2e/src/checkpoint_v3.rs`, not in the core: the guests are built from the core, and adding them to
+it changed the release guest's program binary and with it the image id (measured,
+[`../e2e/README.md`](../e2e/README.md)).
 
 Statements:
 

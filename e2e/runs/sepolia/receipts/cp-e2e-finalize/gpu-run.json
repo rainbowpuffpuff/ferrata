@@ -1,0 +1,23 @@
+{
+  "ok": true,
+  "name": "cp-e2e-finalize",
+  "gpu": "NVIDIA L4, 23034 MiB, 610.57.04, 8.9",
+  "image_ids_equal": true,
+  "input_hashes_equal_manifest": true,
+  "prover_wall_s": 15.5717031955719,
+  "container_s_until_done": 17.119962453842163,
+  "gnu_time": {
+    "user_s": "14.29",
+    "system_s": "1.08",
+    "cpu_percent": "98%",
+    "elapsed": "0:15.56",
+    "max_rss_kib": "807116",
+    "exit_status": "0"
+  },
+  "gpu_stats": {
+    "gpu_memory_used_mib_peak": 11093.0,
+    "gpu_util_pct_mean_in_window": 66.42666666666666,
+    "power_w_mean_in_window": 54.276133333333334
+  },
+  "finished_at_utc": "2026-11-10T15:12:53Z"
+}
