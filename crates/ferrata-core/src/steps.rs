@@ -47,11 +47,10 @@ use crate::{
     hash::sha256,
     merkle::{is_valid_merkle_branch, is_valid_normalized_merkle_branch, ZERO},
     store::ApplyOutcome,
-    types::{BeaconBlockHeader, BlsSignature, Execution, LightClientHeader},
+    types::{BeaconBlockHeader, BlsSignature},
     validate::{
         compute_domain, compute_signing_root, current_sync_committee_gindex_at_slot, finalized_root_gindex_at_slot,
-        get_lc_execution_root, is_valid_light_client_header, next_sync_committee_gindex_at_slot, DOMAIN_SYNC_COMMITTEE,
-        GENESIS_SLOT,
+        is_valid_light_client_header, next_sync_committee_gindex_at_slot, DOMAIN_SYNC_COMMITTEE, GENESIS_SLOT,
     },
     witness::{
         add_affine, deserialize_g1, key_branch_depth, pubkey_leaf, witness_key, AdoptionProgress, CommitteeSummary,
@@ -101,96 +100,9 @@ impl From<Error> for StepError {
 // Header record
 // ---------------------------------------------------------------------------------------------
 
-/// What a store records about a finalized header: the beacon header, the execution root it binds
-/// (`get_lc_execution_root`) and the execution fields a consumer proves against.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct HeaderRecord {
-    pub beacon: BeaconBlockHeader,
-    pub execution_root: Root,
-    pub execution: ExecutionSummary,
-}
-
-/// The execution part of a [`HeaderRecord`], by header layout.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum ExecutionSummary {
-    /// Altair layout: no execution data.
-    None,
-    /// Capella to Electra layouts: fields of the execution payload header.
-    Payload { block_number: u64, block_hash: Root, state_root: Root, receipts_root: Root, timestamp: u64 },
-    /// Gloas layout: the bound block hash (the bid's parent block hash).
-    BlockHash(Root),
-}
-
-impl HeaderRecord {
-    /// The record of a header in the layout of `fork`.
-    pub fn of(header: &LightClientHeader, fork: LcFork, spec: &ChainSpec) -> Self {
-        let execution = match &header.execution {
-            Execution::None => ExecutionSummary::None,
-            Execution::Payload { header: p, .. } => ExecutionSummary::Payload {
-                block_number: p.block_number,
-                block_hash: p.block_hash,
-                state_root: p.state_root,
-                receipts_root: p.receipts_root,
-                timestamp: p.timestamp,
-            },
-            Execution::BlockHash { block_hash, .. } => ExecutionSummary::BlockHash(*block_hash),
-        };
-        Self { beacon: header.beacon.clone(), execution_root: get_lc_execution_root(header, fork, spec), execution }
-    }
-
-    fn write(&self, w: &mut Writer) {
-        w.bytes(&crate::witness::encode_beacon_header(&self.beacon));
-        w.bytes(&self.execution_root);
-        match &self.execution {
-            ExecutionSummary::None => w.u8(0),
-            ExecutionSummary::Payload { block_number, block_hash, state_root, receipts_root, timestamp } => {
-                w.u8(1);
-                w.u64(*block_number);
-                w.bytes(block_hash);
-                w.bytes(state_root);
-                w.bytes(receipts_root);
-                w.u64(*timestamp);
-            }
-            ExecutionSummary::BlockHash(h) => {
-                w.u8(2);
-                w.bytes(h);
-            }
-        }
-    }
-
-    fn read(r: &mut Reader<'_>) -> Result<Self, Error> {
-        let beacon = BeaconBlockHeader::decode(r.take(BeaconBlockHeader::SSZ_LEN)?)?;
-        let execution_root = r.array()?;
-        let execution = match r.u8()? {
-            0 => ExecutionSummary::None,
-            1 => ExecutionSummary::Payload {
-                block_number: r.u64()?,
-                block_hash: r.array()?,
-                state_root: r.array()?,
-                receipts_root: r.array()?,
-                timestamp: r.u64()?,
-            },
-            2 => ExecutionSummary::BlockHash(r.array()?),
-            _ => return Err(Error::Malformed),
-        };
-        Ok(Self { beacon, execution_root, execution })
-    }
-
-    /// Strict encoding.
-    pub fn encode(&self) -> Vec<u8> {
-        let mut w = Writer::default();
-        self.write(&mut w);
-        w.out
-    }
-
-    /// Strict decoding.
-    pub fn decode(b: &[u8]) -> Result<Self, Error> {
-        let mut r = Reader::new(b);
-        let out = Self::read(&mut r)?;
-        r.finish()?;
-        Ok(out)
-    }
-}
+// The record a store keeps of a finalized header. It lives in [`crate::witness`], which builds
+// without a BLS backend, so that a consumer can decode a record it reads without linking one.
+pub use crate::witness::{ExecutionSummary, HeaderRecord};
 
 // ---------------------------------------------------------------------------------------------
 // Validation over the compact store

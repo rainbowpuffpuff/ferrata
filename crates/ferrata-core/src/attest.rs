@@ -2,11 +2,12 @@
 //! conditions on them. This is the layer consumers call.
 //!
 //! **Where roots come from.** Every function here takes its execution roots from a
-//! [`HeaderRecord`], never from the caller. A record is built in one of three ways only:
+//! [`HeaderRecord`], never from the caller. A record is built in one of four ways only:
 //! from a [`FinalizedStore`]'s finalized header ([`HeaderRecord::from_payload_header`] for the
 //! Capella to Fulu layouts, [`HeaderRecord::from_block_hash`] for Gloas), from another record
-//! through an EIP-2935 hop ([`history_hop`]), or restored from the bytes the program itself wrote
-//! to its write-once record account ([`HeaderRecord::from_ssz`]).
+//! through an EIP-2935 hop ([`history_hop`]), from the record the program wrote once for a
+//! finalized header ([`HeaderRecord::from_recorded`]: the LEZ program's `header(id, slot)`), or
+//! restored from this type's own bytes ([`HeaderRecord::from_ssz`]).
 //!
 //! **Chain binding.** Each call takes the chain id the consumer is configured for and refuses a
 //! record of another chain (`ChainMismatch`). The record's chain id is the instance's, fixed when
@@ -51,6 +52,7 @@ use crate::{
     mpt::hex,
     policy::FinalizedStore,
     types::Execution,
+    witness::{self, ExecutionSummary},
     Error, Root,
 };
 
@@ -141,6 +143,35 @@ impl HeaderRecord {
         })
     }
 
+    /// The execution view of a record the program wrote for a finalized header
+    /// ([`witness::HeaderRecord`], the state of the LEZ program's `header(id, slot)`), under the
+    /// chain id of the instance that wrote it. Trusted input: only for a record read from the
+    /// program's own write-once record account, in the program itself or by a consumer in the
+    /// program's reply. It equals [`HeaderRecord::from_payload_header`] of the store that
+    /// finalized the header. A record without a payload summary (the Altair layout, or a Gloas
+    /// record, which holds a block hash only) is refused with `BindingMismatch`.
+    pub fn from_recorded(record: &witness::HeaderRecord, chain_id: u64) -> Result<Self, Error> {
+        let ExecutionSummary::Payload { block_number, block_hash, parent_hash, state_root, receipts_root, timestamp } =
+            &record.execution
+        else {
+            return Err(Error::BindingMismatch);
+        };
+        if *block_hash == ZERO {
+            return Err(Error::BindingMismatch);
+        }
+        Ok(Self {
+            chain_id,
+            anchor_slot: record.beacon.slot,
+            number: *block_number,
+            timestamp: *timestamp,
+            block_hash: *block_hash,
+            parent_hash: *parent_hash,
+            state_root: *state_root,
+            receipts_root: *receipts_root,
+            binding: Binding::PayloadHeader,
+        })
+    }
+
     /// The chain id of the instance that made the record.
     pub fn chain_id(&self) -> u64 {
         self.chain_id
@@ -210,10 +241,11 @@ impl HeaderRecord {
         out
     }
 
-    /// Restore a record from [`HeaderRecord::to_ssz`] bytes. Trusted input: only for bytes the
-    /// program read back from its own write-once record account (a private consumer receives
-    /// them in the program's reply). Refuses a wrong length, an unknown binding, and a hop count
-    /// that does not fit the binding (`Malformed`).
+    /// Restore a record from [`HeaderRecord::to_ssz`] bytes. Trusted input: only for bytes a
+    /// verifier wrote itself from a record it had built in one of the other ways (the LEZ program
+    /// stores a [`witness::HeaderRecord`] instead: see [`HeaderRecord::from_recorded`]). Refuses
+    /// a wrong length, an unknown binding, and a hop count that does not fit the binding
+    /// (`Malformed`).
     pub fn from_ssz(bytes: &[u8]) -> Result<Self, Error> {
         if bytes.len() != Self::SSZ_LEN {
             return Err(Error::Malformed);
