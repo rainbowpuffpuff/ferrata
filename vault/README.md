@@ -467,7 +467,8 @@ The invariant handler deposits, submits candidates with committees of four sizes
 then tries to finalise both kinds after their full wait with valid proofs. It also revokes, retires, refunds,
 releases (some to payees that cannot receive), claims, replays nullifiers and refunds, donates, moves time, and
 changes freezes, caps and delays. Its 10 invariants:
-- `balance ≥ escrowed + totalOwed`, and `escrowed == deposits − releases − refunds`, for every token;
+- `balance == escrowed + totalOwed + donations` (an equality, so value stranded in the vault fails it too), and
+  `escrowed == deposits − releases − refunds`, for every token;
 - `totalOwed` equals the sum over all payees;
 - a used nullifier or refunded leaf is never paid again;
 - `finalState` is genesis or a state that went through `finalize`, and it is the newest non-revoked checkpoint's

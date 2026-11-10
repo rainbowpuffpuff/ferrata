@@ -1,0 +1,39 @@
+{
+  "what": "Inputs of one end-to-end run. The contracts are the deployer's CREATE addresses at first_nonce + 0..3 (Groth16 verifier, emergency stop, test token, vault). Amounts are base units.",
+  "chain_id": 11155111,
+  "deployer": "0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07",
+  "first_nonce": 0,
+  "groth16_verifier": "0xfc9e7600aD98A650694013101688F0Cc13220de9",
+  "emergency_stop": "0x8f0Af3Bf302C64d57f840127F94d9c123a8Fa2A0",
+  "token": "0xe4830261A1D61Df5AF1be5579a3e3DB738331139",
+  "vault": "0xdfedf9A73Cfb337277b95a9a1C941c3496A4385F",
+  "depositor": "0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07",
+  "deposits": [
+    {
+      "token": "0x0000000000000000000000000000000000000000",
+      "amount": "1000000000000000"
+    },
+    {
+      "token": "0xe4830261A1D61Df5AF1be5579a3e3DB738331139",
+      "amount": "100000000"
+    }
+  ],
+  "burns": [
+    {
+      "name": "eth",
+      "token": "0x0000000000000000000000000000000000000000",
+      "amount": "1000000000000000",
+      "recipient": "0x67553ad2d0f0143f8b37b4bee72d08d59984c824",
+      "relayer": "0x0000000000000000000000000000000000000000",
+      "relay_fee": "0"
+    },
+    {
+      "name": "erc20",
+      "token": "0xe4830261A1D61Df5AF1be5579a3e3DB738331139",
+      "amount": "100000000",
+      "recipient": "0x730a57fadc5f6b9e42279a9d52f349469b231962",
+      "relayer": "0xc6948a054c4da1fd85ce3b68299294704198e253",
+      "relay_fee": "250000"
+    }
+  ]
+}

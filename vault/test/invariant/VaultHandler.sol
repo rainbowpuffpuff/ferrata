@@ -118,6 +118,7 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
     mapping(address token => uint256) public ghostDeposited;
     mapping(address token => uint256) public ghostReleased;
     mapping(address token => uint256) public ghostRefunded;
+    mapping(address token => uint256) public ghostDonated;
     uint256 public ghostDepositCount;
     uint256 public ghostReleaseCount;
     uint256 public ghostDoubleSpends;
@@ -501,6 +502,7 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         } else {
             MockTokenBase(token).mint(address(vault), amount);
         }
+        ghostDonated[token] += amount;
     }
 
     function warp(uint256 secondsForward) external {
