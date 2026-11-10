@@ -2,15 +2,19 @@
 
 The bridge program of RFP-022 (`guests/bridge`, one RISC Zero guest), with its wire crate
 (`bridge-wire/`) and the harness that drives it (`harness/src/bridge.rs`,
-`harness/tests/bridge_{inbound,private,burn,controls}.rs`). The plan, the actors and the messages
-are in [BRIDGE.md](BRIDGE.md). Since this branch (`bridge-complete`) the program also has the
+`harness/tests/bridge_{inbound,private,burn,controls,vault_storage}.rs`). The plan, the actors and
+the messages are in [BRIDGE.md](BRIDGE.md). Since branch `bridge-complete` the program also has the
 registry attested from the vault, fees by leaf index, token and global caps, freezes and roles,
-and `Sunset` (§8). **Images.** The extended program is
-`b5d177bb06a625166e8d39d10113655e113b768d3ebb101d496689b5d6691132` built at this worktree's path
-(the ELF holds its build paths). The figures marked *before* are the program as integrated
-(136cf35), re-run on this worktree's build box before any change: image `64faa2e3…7267` at this
-path, every gas figure equal to the tables the integration branch committed for `25dfd9b2…8c49`
-(only the image and the ids derived from it differ). §7's real proofs are of `25dfd9b2…8c49`, the
+and `Sunset` (§8); on branch `integration` it is merged with the Gloas header of `inbound-live`
+(§2a) and runs against that branch's attestation program. **Images.** The merged program is
+`f11b1aba55fde1ea977f74a54cc927ff50253e8bf479c89dac0b3658177c58eb` built at the integration
+worktree's path (the ELF holds its build paths); `bridge-complete`'s own was `b5d177bb…1132` at its
+path. The figures marked *after* are the merged program's, measured on the integration build box;
+those marked *before* are the program as first integrated (136cf35), re-run on `bridge-complete`'s
+build box before any change: image `64faa2e3…7267` at that path, every gas figure equal to the
+tables the integration branch committed for `25dfd9b2…8c49` (only the image and the ids derived
+from it differ). The inbound crossing on a live sequencer (§11) deploys neither: it uses the frozen
+program of `inbound-live` (`66722fc7…f4fa`). §7's real proofs are of `25dfd9b2…8c49`, the
 program before this extension. Every number below is LEZ's own accounting of a transaction that
 ran: `lee`'s state transition functions and the copy of LEZ's fee settlement that Stages 1–4 use
 ([RESULTS.md](RESULTS.md) §1), each transaction in a block of its own, the attestation program
@@ -39,10 +43,10 @@ comes later.
 
 | operation | handlers run, after (cycles each) | execution gas, before → after | storage gas (tx bytes), before → after |
 |---|---|---:|---:|
-| `Init`: attest the vault's slot 2 = `configId`, write `config(cid)` | Init 43,855 → Attest 84,756 → reply 39,214 | 154,529 → 167,825 | 1,726 → 1,946 |
-| `ImportRoot` (8 leaves): attest slots 0 and 1, write `root(cid, n)` | ImportRoot 49,391 → Attest 111,079 → reply 52,945 → WriteRoot 16,328 | 203,620 → 229,743 | 1,703 → 2,025 |
-| `Register` a token: attest its entry, fee slots 0 and 1, the count | Register 72,604 → Attest 147,234 → reply 73,421 → WriteToken 29,035 | new: 322,294 | 2,747 |
-| `ImportFees`: a schedule; the absence of the next one | ImportFees 53,935 → Attest 111,079 → reply 57,503 → ExtendFees 38,134; 48,745 → 105,917 → 51,842 → 36,134 | new: 260,651; 242,638 | 2,206; 1,945 |
+| `Init`: attest the vault's slot 2 = `configId`, write `config(cid)` | Init 43,668 → Attest 85,725 → reply 39,214 | 154,529 → 168,607 | 1,726 → 1,946 |
+| `ImportRoot` (8 leaves): attest slots 0 and 1, write `root(cid, n)` | ImportRoot 49,536 → Attest 112,749 → reply 52,945 → WriteRoot 16,328 | 203,620 → 231,558 | 1,703 → 2,025 |
+| `Register` a token: attest its entry, fee slots 0 and 1, the count | Register 72,084 → Attest 150,208 → reply 73,421 → WriteToken 29,035 | new: 324,748 | 2,747 |
+| `ImportFees`: a schedule; the absence of the next one | ImportFees 54,087 → Attest 112,749 → reply 57,503 → ExtendFees 38,134; 48,326 → 107,315 → 51,842 → 36,134 | new: 262,473; 243,617 | 2,206; 1,945 |
 | plaintext claim, 1 ETH under fee schedule 0 (relay fee only) | Claim 107,526 → Issue 47,239 → Admit 34,291 → Spend 21,901 → Mint 14,237 → Mint 14,237 | 142,444 → 239,431 | 1,740 → 2,061 |
 | plaintext claim, 10 ETH under schedule 1 (mint and relay fee) | Claim 107,526 → Issue 47,250 → Admit 34,003 → Spend 24,145 → three Mints (14,237; 14,237; 19,181) | 142,456 → 260,579 | 1,740 → 2,061 |
 | private claim, private destination (one privacy-preserving transaction) | private: ClaimPrivately 41,133, reply 111,838 (user cycles); public: Read, Issue, Admit, Spend, Mint (the relay fee) | 439,815 → 539,060 | 224,063 |
@@ -54,8 +58,13 @@ comes later.
 | `Sunset` (freeze authority) | Sunset (its actor) 11,140 → Sunset (`config(cid)`) 30,844 | new: 41,984 | 671 |
 | `Tick` at a token; at the configuration | 32,821; 27,213 | new: 32,821; 27,213 | 460; 440 |
 
-Every transaction is under `TARGET_GAS_EXEC` (5,000,000); the largest public one, `Register`, at
-6.4%. **What the controls cost.** A claim now runs two more handlers (`Issue` at the token: the
+Every transaction is under `TARGET_GAS_EXEC` (5,000,000); the largest applied public one is a
+`Register` (360,698 in §8, 7.2%; 448,038 on the vault's own storage, §8a). **What the merge
+changed.** Against `bridge-complete`'s own run only the operations that attest move, because the
+attestation program of `inbound-live` (which attests under Gloas records) answers a little more
+expensively: `Init` +782 execution gas, `ImportRoot` +1,815 (8 leaves), `Register` +2,454,
+`ImportFees` +1,822; claims, burns, roles and the private transitions are unchanged. **What the
+controls cost.** A claim now runs two more handlers (`Issue` at the token: the
 denomination, the fee schedule, the token's freeze and bucket; `Admit` at the configuration: the
 global ones) and one `Mint` per fee: +96,987 execution gas for a plaintext claim of 1 ETH
 (×1.68), +118,123 with a mint fee. A burn runs the token's handler and `Admit`: +85,001 (×2.85).
@@ -76,10 +85,11 @@ proofs of the earlier image (15.3 s and 12.4 s on one NVIDIA L4) are the expecta
 **The attestation inside an import costs less here than it would on mainnet.** The synthetic state
 trie holds 42 accounts and each vault's storage trie at most nine slots, so each proof is 2–3 nodes; a
 storage slot under a mainnet state root is 9 account-proof nodes plus about 7 storage-proof nodes,
-and Stage 4 measured 273,717 cycles for one account and one slot (`RESULTS.md` §5). A real
+and Stage 4 measured 274,842 cycles for one account and one slot (`RESULTS.md` §5). A real
 vault's import (one account, two slots) and a registration (four slots) should therefore cost
 roughly that plus one or three more slot proofs [E: not measured]; the bridge's own handlers do not
-depend on it.
+depend on it. §8a runs on the storage a real vault wrote (139 and 149 slots), still under a
+synthetic state trie of 41 accounts.
 
 ## 2. Inbound: configuration, import, claims (`results/bridge-inbound.md`, 32 transactions)
 
@@ -101,11 +111,11 @@ the overlap):
 
 | case | code | execution gas |
 |---|---|---:|
-| `Init` of another configuration of vault A (another fee recipient): slot 2 holds `configId(A)` | 246 `PAIRING_MISMATCH` | 160,979 |
+| `Init` of another configuration of vault A (another fee recipient): slot 2 holds `configId(A)` | 246 `PAIRING_MISMATCH` | 161,761 |
 | `Init` of an existing configuration | 244 `ALREADY_WRITTEN` | 38,101 |
-| import at a count already imported (refused by `WriteRoot`, after the attestation) | 244 `ALREADY_WRITTEN` | 231,621 |
-| import whose message claims count 7, or the 5-leaf root, at a block holding 8 | 247 `IMPORT_MISMATCH` | 198,688; 198,208 |
-| import for configuration A with vault B's proofs (the request names vault A) | 110 `ProofNodeMismatch` (the core's, from `Attest`) | 90,745 |
+| import at a count already imported (refused by `WriteRoot`, after the attestation) | 244 `ALREADY_WRITTEN` | 233,436 |
+| import whose message claims count 7, or the 5-leaf root, at a block holding 8 | 247 `IMPORT_MISMATCH` | 200,503; 200,023 |
+| import for configuration A with vault B's proofs (the request names vault A) | 110 `ProofNodeMismatch` (the core's, from `Attest`) | 90,829 |
 | import for a configuration never initialised | 245 `NOT_FOUND` | 15,124 |
 | the same claim again (replay), refused by the nullifier after `Issue` and `Admit` | 250 `ALREADY_CLAIMED` | 207,707 |
 | the same deposit under a second root, `root(A, 8)` | 250 `ALREADY_CLAIMED` | 207,707 |
@@ -128,26 +138,31 @@ of six, so leaf 6's path is valid under `root(A, 6)` and only `leafIndex < count
 ## 2a. Under a record in the Gloas layout (`results/bridge-gloas.md`)
 
 Every Sepolia record since Gloas binds the block hash only; the attestation program then takes the
-state root from the block's RLP header, which the bridge's `Init` and `ImportRoot` carry in front of
-the vault's account proof (`bridge-wire` `HEADER_MARKER`). `harness/tests/bridge_inbound.rs`
-`inbound_under_a_gloas_record`: a record binding the hash of a real Sepolia header (block
-12,103,422, the replay fixture's bound block) whose state root is replaced by the synthetic state's,
-placed after genesis; RISC Zero dev mode, the Modal build box, commit 5b75f64.
+state root from the block's RLP header, which the bridge's messages carry in front of the vault's
+account proof (`bridge-wire` `HEADER_MARKER`, from branch `inbound-live`): `Init`, `ImportRoot` and,
+since the merge with `bridge-complete`, `Register` and `ImportFees`, which share one request builder
+(`vault_query`). `harness/tests/bridge_inbound.rs` `inbound_under_a_gloas_record`: a record binding
+the hash of a real Sepolia header (block 12,103,422, the replay fixture's bound block) whose state
+root is replaced by the synthetic state's, placed after genesis; RISC Zero dev mode, the Modal build
+box, the merged program (`f11b1aba…`).
 
 | transaction | handlers run (cycles each) | execution gas | storage gas (tx bytes) | result |
 |---|---|---:|---:|---|
-| `Init`, no header | Init 40,700 → Attest 19,520 | 60,220 | 1,780 | 215 `HEADER_REQUIRED` |
-| `Init`, a header that does not hash to the record (last byte changed) | Init 48,775 → Attest 35,677 | 84,452 | 2,507 | 120 `HeaderHashMismatch` |
-| `Init`, header in front of the account proof | Init 48,775 → Attest 110,361 → reply 33,174 | 192,310 | 2,507 | applied |
-| `ImportRoot`, no header | ImportRoot 38,847 → Attest 21,092 | 59,939 | 1,757 | 215 `HEADER_REQUIRED` |
-| `ImportRoot` (2 leaves), with the header | ImportRoot 47,321 → Attest 130,799 → reply 44,676 → WriteRoot 17,859 | 240,655 | 2,484 | applied |
-| plaintext claim under `root(C, 2)` | Claim 109,271 → Spend 17,756 → Mint 15,405 | 142,432 | 1,740 | applied |
-| the same claim again | Claim 109,271 → Spend 15,210 | 124,481 | 1,740 | 250 `ALREADY_CLAIMED` |
+| `Init`, no header | Init 44,953 → Attest 19,716 | 64,669 | 1,968 | 215 `HEADER_REQUIRED` |
+| `Init`, a header that does not hash to the record (last byte changed) | Init 52,893 → Attest 35,873 | 88,766 | 2,695 | 120 `HeaderHashMismatch` |
+| `Init`, header in front of the account proof | Init 52,893 → Attest 112,452 → reply 39,214 | 204,559 | 2,695 | applied |
+| `Register` ETH, no header | Register 71,768 → Attest 24,707 | 96,475 | 2,673 | 215 `HEADER_REQUIRED` |
+| `Register` ETH, with the header | Register 82,628 → Attest 175,195 → reply 73,421 → WriteToken 29,035 | 360,279 | 3,400 | applied |
+| `ImportRoot`, no header | ImportRoot 48,884 → Attest 21,484 | 70,368 | 1,885 | 215 `HEADER_REQUIRED` |
+| `ImportRoot` (2 leaves), with the header | ImportRoot 57,941 → Attest 134,981 → reply 52,945 → WriteRoot 16,328 | 262,195 | 2,612 | applied |
+| plaintext claim under `root(C, 2)` (relay fee to the relayer) | Claim 107,526 → Issue 44,380 → Admit 34,291 → Spend 21,901 → Mint 14,237 → Mint 14,237 | 236,572 | 2,061 | applied |
+| the same claim again | Claim 107,526 → Issue 44,092 → Admit 34,003 → Spend 19,227 | 204,848 | 2,061 | 250 `ALREADY_CLAIMED` |
 
-Against the payload-layout record of §1, the header adds 781 bytes to each transaction and about
-27,000 cycles to `Attest` in `Init` (decoding the header and hashing it) and 27,000 in
-`ImportRoot`; the bridge's own handlers carry the header (+9,625 in `Init`, +8,345 in
-`ImportRoot`). Both stay under 5% of LEZ's 5M execution target.
+Against the payload-layout `Init` of §1, the header adds 749 bytes to the transaction, 26,727
+cycles to `Attest` (decoding and hashing the header) and 9,225 to the bridge's own `Init`, which
+carries it; `Register` grows alike. The largest, `Register`, stays at 7.2% of LEZ's 5M execution
+target. Before the merge (branch `inbound-live`, commit 5b75f64, the program the live crossing of
+§11 deploys) the same test had no `Register` and its applied `Init` cost 192,310.
 
 ## 3. The private claim (`results/bridge-private-claim.md`)
 
@@ -352,17 +367,17 @@ transaction (the test checks the balances, nullifiers and token states after the
 
 | case | code | execution gas |
 |---|---|---:|
-| **Registry.** `Register` ETH (A): entry, schedules 0 and 1, count attested at block 100 (schedule 1 absent: covers 5 leaves) | applied | 322,294 |
-| ETH (A) again (refused by `WriteToken`, after the attestation) | 244 `ALREADY_WRITTEN` | 344,610 |
-| T2 at vault A, which holds no entry for it; ETH (B) with relay fees other than the vault's | 247 `IMPORT_MISMATCH` | 256,889; 278,525 |
+| **Registry.** `Register` ETH (A): entry, schedules 0 and 1, count attested at block 100 (schedule 1 absent: covers 5 leaves) | applied | 324,748 |
+| ETH (A) again (refused by `WriteToken`, after the attestation) | 244 `ALREADY_WRITTEN` | 348,012 |
+| T2 at vault A, which holds no entry for it; ETH (B) with relay fees other than the vault's | 247 `IMPORT_MISMATCH` | 260,219; 280,007 |
 | ETH for configuration A', never initialised | 245 `NOT_FOUND` | 20,064 |
 | nine denominations; a denomination not a multiple of the LEZ unit; a 2% relay fee; a LEZ unit that is not a power of ten; schedule 0 with a mint fee (refused before any attestation) | 240 `BAD_MESSAGE` | 34,232; 35,556; 35,760; 34,985; 39,673 |
-| ETH (B), then T2 (B): a second token of one configuration | applied | 331,124; 335,306 |
+| ETH (B), then T2 (B): a second token of one configuration | applied | 332,606; 337,987 |
 | **Fees by leaf index.** A claim of leaf 6 naming the range `[0, 8)` before schedule 1 is known (`known_until` = 5) | 248 `LEAF_NOT_IMPORTED` | 131,996 |
-| `ImportFees` ETH (A) schedule 1 at block 100, where it is not yet; schedule 2 before 1; schedule 1 twice | 247 `IMPORT_MISMATCH` | 194,905; 231,110; 249,821 |
-| schedule 1 at block 101 (`known_until` → 6), then its absence of a schedule 2 at 8 leaves (→ 8) | applied | 260,651; 242,638 |
+| `ImportFees` ETH (A) schedule 1 at block 100, where it is not yet; schedule 2 before 1; schedule 1 twice | 247 `IMPORT_MISMATCH` | 196,979; 232,089; 251,643 |
+| schedule 1 at block 101 (`known_until` → 6), then its absence of a schedule 2 at 8 leaves (→ 8) | applied | 262,473; 243,617 |
 | leaf 6 in schedule 1's range `[6, 8)` before the range was closed at 8 | 248 `LEAF_NOT_IMPORTED` | 133,437 |
-| T3's schedule 1 as its vault wrote it: one day of notice; a 2% mint fee (refused by the token) | 240 `BAD_MESSAGE` | 250,459; 248,674 |
+| T3's schedule 1 as its vault wrote it: one day of notice; a 2% mint fee (refused by the token) | 240 `BAD_MESSAGE` | 252,281; 250,496 |
 | leaf 6 under schedule 0's range `[0, 6)`; leaf 2 under schedule 1's `[6, 8)` (refused by the claimant) | 248 `LEAF_NOT_IMPORTED` | 31,744; 31,741 |
 | **Caps.** `SetCap` by the admin: ETH (A) mints 11 ETH, 0.01 ETH/s | applied | 49,629 |
 | below the floor; by the freeze authority; by a signer with no role; sent to the token's account itself | 240; 253 `NOT_AUTHORIZED` (three) | 39,385; 38,917; 38,917; 25,079 |
@@ -428,7 +443,7 @@ relayer and, for ETH's leaves 3 and 5, schedule 1's mint fee to the fee recipien
 the bridge core's tree over the leaves recomputed from the `Deposit` events. So the encodings of
 `BRIDGE.md` §5 agree on both sides (the entry, the schedules, the slot keys, slot 1 holding the
 leaf count alone), and neither side was changed. The vault's real storage trie gives longer proofs
-than the synthetic one: `Register` costs about 425,000 here against 322,294 in §8 (`Attest`
+than the synthetic one: `Register` costs about 425,000 here against 324,748 in §8 (`Attest`
 219,872–244,382 cycles). Two parts are not the vault's: `Init` runs under a synthetic block whose
 slot 2 holds the configuration's id, since a vault built in Foundry cannot hold a `configId` that
 depends on this program's image (the pairing is §2's subject); and the depositors' destinations are
@@ -452,17 +467,18 @@ relayer.
 cd lez
 export RISC0_HOME=$PWD/../../risc0-home-lez        # guest Rust 1.91.1, as RESULTS.md §8
 RISC0_DEV_MODE=1 cargo test -p harness --test bridge_inbound --test bridge_private --test bridge_burn \
-  --test bridge_controls -- --nocapture      # write results/bridge-{inbound,gloas,private-claim,burn,controls}.md
+  --test bridge_controls --test bridge_vault_storage -- --nocapture
+                    # write results/bridge-{inbound,gloas,private-claim,burn,controls,vault-storage}.md
+(cd ../vault && forge test --match-contract RegistryStorageTest)   # §8a: the vault's export, compared
 cargo build -p harness --locked --bin prove_bridge   # §7
 RISC0_DEV_MODE=1 target/debug/prove_bridge --allow-dev-mode   # dry run: the same commands, fake receipts
 scripts/stage-prove-bridge.sh ../gpu-prover/inputs-lez-bridge   # then ../gpu-prover/README.md, job lez-bridge
 RISC0_DEV_MODE=0 target/debug/prove_bridge --settle results/bridge-private-claim-tx.borsh \
   results/bridge-private-burn-tx.borsh   # the proven pair of §7: only on the tree that proved it (136cf35)
 ```
-On this worktree they ran through `../../modal-build/mrun` (a cloud container, 2 vCPU) with
-`--locked` and `RISC0_BUILD_LOCKED=1`: the four bridge tests in 99 s, the whole harness (28 tests)
-in 243 s, `prove_bridge`'s dry run (claim and burn settled with fake receipts), rustfmt and clippy
-(`-D warnings`) clean.
+On the integration worktree they ran through `../../modal-build/mrun` (a cloud container, 2 vCPU)
+with `--locked` and `RISC0_BUILD_LOCKED=1`: the whole harness (35 tests) in 290 s, `prove_bridge`'s
+dry run (claim and burn settled with fake receipts), rustfmt and clippy (`-D warnings`) clean.
 
 ## 11. On a live sequencer: the inbound crossing (stand-in)
 
