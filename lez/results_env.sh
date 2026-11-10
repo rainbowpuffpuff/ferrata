@@ -3,11 +3,13 @@
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 up="$here/../../upstream/lez-v0.4.0-rc1"
+# Counted before the file below is rewritten, and without it: it would otherwise count itself.
+dirty=$(git -C "$here" status --short -- ':(top)' ':(top,exclude)lez/results/environment.md' | wc -l)
 {
   echo "# Measurement environment"
   echo
   echo "- date: $(date -Is)"
-  echo "- ferrata worktree HEAD: $(git -C "$here" rev-parse HEAD) (uncommitted: $(git -C "$here" status --short | wc -l) paths)"
+  echo "- ferrata worktree HEAD: $(git -C "$here" rev-parse HEAD) (uncommitted: $dirty paths besides this file)"
   echo "- LEZ: $(git -C "$up" describe --tags 2>/dev/null) = $(git -C "$up" rev-parse HEAD), upstream tree clean: $([ -z "$(git -C "$up" status --short)" ] && echo yes || echo NO)"
   echo "- risc0-zkvm (host and guests): $(grep -A1 'name = "risc0-zkvm"' "$here/Cargo.lock" | sed -n 2p | tr -d ' ')"
   echo "- r0vm: $(r0vm --version)"
