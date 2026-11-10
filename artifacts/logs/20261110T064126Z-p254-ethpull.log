@@ -1,0 +1,37 @@
+== p254 ethpull
+date            2026-11-10T07:41:26+01:00
+host            Linux 7.2.13-200.fc44.x86_64 x86_64
+cpu             AMD Ryzen 9 7940HS w/ Radeon 780M Graphics, 16 threads
+memory          54 GiB total, 33 GiB available
+r0vm            risc0-r0vm 3.0.5
+docker image    risczero/risc0-groth16-prover@sha256:a4f80ce2e0b8e2bb7637a93c37136a6776ac00ec843a3fdf1c67b1d5ffea64ee
+RAYON_NUM_THREADS unset (all hardware threads)
+FERRATA_ARTIFACTS <workspace>/ferrata-bridge/artifacts/rerun-quiet
+loadavg         1.91 5.18 9.92 1/3628 3803337
+[ethpull] load before: 1.91 5.18 9.92 1/3629 3803339
+[ethpull] load after:  11.91 7.43 10.42 1/3620 3804598
+[ethpull] identity_p254: wall 56.44 s | p254 seal 222668 bytes
+	Command being timed: "<workspace>/ferrata-bridge/target/release/host p254 ethpull"
+	User time (seconds): 816.72
+	System time (seconds): 1.18
+	Percent of CPU this job got: 1449%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:56.44
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 1442896
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 373917
+	Voluntary context switches: 3907
+	Involuntary context switches: 142201
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 0
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+loadavg after   11.91 7.43 10.42 1/3619 3804599
