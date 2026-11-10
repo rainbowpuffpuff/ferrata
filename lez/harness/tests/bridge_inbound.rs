@@ -8,7 +8,7 @@ use std::{fs, path::PathBuf};
 use ferrata_lez_bridge_wire::{
     code, config_actor, holder_actor, BridgeMessage, BridgeState, ConfigState, NullifierState, CODE_BLOCK,
 };
-use ferrata_lez_wire::{attest::evaluate, CODE_BLOCKS, RecordState};
+use ferrata_lez_wire::{attest::evaluate, RecordState, CODE_BLOCKS};
 use harness::{
     bridge::{render, World, CHAIN_ID, DENOMINATIONS, INSTANCE, VAULT_B},
     render_transitions, TxReport,
@@ -81,7 +81,10 @@ fn inbound_configuration_import_and_plaintext_claim() {
     run(r, None);
     let stored = w.root_state(&cid_a, 5).expect("root(A, 5)");
     assert_eq!((stored.root, stored.leaf_count, stored.block_number, stored.terms), (root5, 5, 100, terms_a));
-    assert_eq!(stored.root, ferrata_bridge_core::tree::Tree::from_leaves(w.vault_a.leaves[..5].to_vec()).unwrap().root());
+    assert_eq!(
+        stored.root,
+        ferrata_bridge_core::tree::Tree::from_leaves(w.vault_a.leaves[..5].to_vec()).unwrap().root()
+    );
     let r = w.import("ImportRoot A: block 101 (8 leaves)", &cid_a, 1, root8, 8, &va);
     run(r, None);
     let r = w.import("ImportRoot A: block 101 again (same count)", &cid_a, 1, root8, 8, &va);
@@ -107,7 +110,8 @@ fn inbound_configuration_import_and_plaintext_claim() {
     // --- Plaintext claims -------------------------------------------------------------------
     let vector = w.vector.clone();
     let witness5 = w.vault_a.witness(&vector, 5);
-    let r = w.claim("Claim: the shared vector's deposit (leaf 2) under root(A, 5)", &cid_a, 5, &terms_a, witness5.clone());
+    let r =
+        w.claim("Claim: the shared vector's deposit (leaf 2) under root(A, 5)", &cid_a, 5, &terms_a, witness5.clone());
     run(r, None);
     assert_eq!(vector.nullifier(CHAIN_ID, &va), w.vector_n, "the vector's N");
     assert_eq!(
@@ -143,7 +147,8 @@ fn inbound_configuration_import_and_plaintext_claim() {
     bad.dest = vector.dest;
     let r = w.claim("Claim: leaf 6 redirected to another destination", &cid_a, 8, &terms_a, bad);
     run(r, Some(code::CLAIM_INVALID));
-    let r = w.claim("Claim: leaf 6 under root(B, 8) (another configuration's vault)", &cid_b, 8, &terms_b, good.clone());
+    let r =
+        w.claim("Claim: leaf 6 under root(B, 8) (another configuration's vault)", &cid_b, 8, &terms_b, good.clone());
     run(r, Some(code::CLAIM_INVALID));
     let odd = w.vault_a.witness(&w.odd_deposit.clone(), 8);
     let r = w.claim("Claim: leaf 7, 0.5 ETH (not a denomination)", &cid_a, 8, &terms_a, odd);

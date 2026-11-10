@@ -19,8 +19,8 @@ use ferrata_bridge_core::{
     BridgeKeys, Hash,
 };
 use ferrata_lez_bridge_wire::{
-    burn_actor, burn_mac_v2, burn_seed, code, holder_actor, nf_out_v2, nullifier_actor, root_actor, BridgeMessage, BridgeState,
-    BurnRecord, Holding, HolderState, Note,
+    burn_actor, burn_mac_v2, burn_seed, code, holder_actor, nf_out_v2, nullifier_actor, root_actor, BridgeMessage,
+    BridgeState, BurnRecord, HolderState, Holding, Note,
 };
 use harness::{
     attest::render_executed,
@@ -129,7 +129,8 @@ fn burns_and_what_the_checkpoint_collects() {
     let account = w.chain.add_private_account(seed, 1_000_000_000_000);
     let deposit = w.private_deposit.clone();
     let n = deposit.nullifier(CHAIN_ID, &vault_a);
-    let claim_message = BridgeMessage::ClaimPrivately { config_id: cid_a, leaf_count: 8, witness: w.vault_a.witness(&deposit, 8) };
+    let claim_message =
+        BridgeMessage::ClaimPrivately { config_id: cid_a, leaf_count: 8, witness: w.vault_a.witness(&deposit, 8) };
     let me = holder_actor(program, account.id());
     let private_claim = w
         .chain
@@ -177,20 +178,41 @@ fn burns_and_what_the_checkpoint_collects() {
     reports.push(burn(&mut w, "Burn 10 ETH with 9 held", holder, cid_a, &too_much, Some(code::INSUFFICIENT_BALANCE)));
     let (n2, _) = note(&keys, &cid_a, &vault_a, 4, ETH, DENOMINATIONS[1]);
     let vector_holder = holder_actor(program, w.vector_dest);
-    reports.push(burn(&mut w, "Burn at the vector's destination, not signed by it", vector_holder, cid_a, &n2, Some(code::NOT_AUTHORIZED)));
-    reports.push(burn(&mut w, "Burn under a configuration the payer holds nothing of", holder, cid_a2, &n2, Some(code::INSUFFICIENT_BALANCE)));
+    reports.push(burn(
+        &mut w,
+        "Burn at the vector's destination, not signed by it",
+        vector_holder,
+        cid_a,
+        &n2,
+        Some(code::NOT_AUTHORIZED),
+    ));
+    reports.push(burn(
+        &mut w,
+        "Burn under a configuration the payer holds nothing of",
+        holder,
+        cid_a2,
+        &n2,
+        Some(code::INSUFFICIENT_BALANCE),
+    ));
     let record2 = burn_actor(program, &cid_a, &n2.hash());
     // A root call at a PDA that does not exist yet needs admission evidence (LEZ refuses it
     // otherwise, before the program runs).
     let evidence = vec![PublicAccountEvidence::Pda { program, seed: burn_seed(&cid_a, &n2.hash()) }];
-    let r = w.submit("Burn sent to the burn account itself", record2, &BridgeMessage::burn(cid_a, &n2), vec![record2], evidence);
+    let r = w.submit(
+        "Burn sent to the burn account itself",
+        record2,
+        &BridgeMessage::burn(cid_a, &n2),
+        vec![record2],
+        evidence,
+    );
     expect(&r, Some(code::WRONG_SENDER));
     reports.push(r);
     // D10: a nested call. The payer signs a transaction whose root is LEZ's `scripted` test program,
     // which calls the payer's holder actor: `is_authorized` holds (the payer signed), the
     // checkpoint could not see the call, and the bridge refuses it.
     let seed_pda = PdaSeed::new([7; 32]);
-    let attacker = Actor::new(AccountId::for_public_pda(&harness::scripted_account(), &seed_pda), harness::scripted_account());
+    let attacker =
+        Actor::new(AccountId::for_public_pda(&harness::scripted_account(), &seed_pda), harness::scripted_account());
     let script = Script::default().send_sync(holder, &BridgeMessage::burn(cid_a, &n2));
     let r = w.chain.submit(
         "Burn as a nested call from another program, in a transaction the holder signed",
@@ -225,7 +247,15 @@ fn burns_and_what_the_checkpoint_collects() {
     let record_p = burn_actor(program, &cid_a, &np.hash());
     let private_burn = w
         .chain
-        .prove_and_settle_private(&holder_p, me, borsh::to_vec(&message).unwrap(), vec![record_p], &catalog(), RESERVE, w.time)
+        .prove_and_settle_private(
+            &holder_p,
+            me,
+            borsh::to_vec(&message).unwrap(),
+            vec![record_p],
+            &catalog(),
+            RESERVE,
+            w.time,
+        )
         .expect("the private burn settles");
     assert!(private_burn.charge.revert.is_none());
     let outgoing: Vec<_> = private_burn
@@ -240,7 +270,11 @@ fn burns_and_what_the_checkpoint_collects() {
         })
         .collect();
     assert_eq!(outgoing.len(), 2, "the burn's delivery and the fee: {outgoing:?}");
-    assert_eq!((outgoing[0].0, &outgoing[0].2), (record_p, &borsh::to_vec(&message).unwrap()), "the note, in the clear");
+    assert_eq!(
+        (outgoing[0].0, &outgoing[0].2),
+        (record_p, &borsh::to_vec(&message).unwrap()),
+        "the note, in the clear"
+    );
     assert_ne!(outgoing[0].1.account_id, account.id(), "the holder appears as an alias");
     assert_eq!(
         borsh::from_slice::<BridgeState>(&w.chain.actor_state(record_p)).unwrap(),
@@ -268,7 +302,11 @@ fn burns_and_what_the_checkpoint_collects() {
         ("Burn: the same note again", tx("Burn: the same note again"), true),
         ("Burn 1 ETH (B) by the payer", tx("Burn 1 ETH (B) by the payer"), false),
         ("Echo (rule (A)'s nonce)", tx("Echo (rule (A)'s nonce)"), false),
-        ("private claim (leaf 5)", borsh::to_vec(&LeeTransaction::PrivacyPreserving(private_claim.tx.clone())).unwrap(), false),
+        (
+            "private claim (leaf 5)",
+            borsh::to_vec(&LeeTransaction::PrivacyPreserving(private_claim.tx.clone())).unwrap(),
+            false,
+        ),
         ("private burn", borsh::to_vec(&LeeTransaction::PrivacyPreserving(private_burn.tx.clone())).unwrap(), false),
     ];
     let txs: Vec<&[u8]> = rows.iter().map(|(_, b, _)| b.as_slice()).collect();
@@ -321,7 +359,10 @@ fn burns_and_what_the_checkpoint_collects() {
     let expected = [(cid_a, n1), (cid_b, n3), (cid_a, np)];
     assert_eq!(burns.len(), 3, "{burns:?}");
     for (b, (cid, note)) in burns.iter().zip(expected) {
-        assert_eq!((b.config_id, b.r, b.memo, b.mac, b.token, b.amount, b.c_out), (cid, note.r, note.memo, note.mac, note.token, note.amount, note.c_out));
+        assert_eq!(
+            (b.config_id, b.r, b.memo, b.mac, b.token, b.amount, b.c_out),
+            (cid, note.r, note.memo, note.mac, note.token, note.amount, note.c_out)
+        );
     }
     // Its burn leaf is the bridge core's.
     assert_eq!(

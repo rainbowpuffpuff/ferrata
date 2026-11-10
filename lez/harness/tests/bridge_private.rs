@@ -7,7 +7,7 @@
 use std::{fs, path::PathBuf};
 
 use ferrata_lez_bridge_wire::{
-    holder_actor, nullifier_actor, root_actor, BridgeMessage, BridgeState, Holding, HolderState, NullifierState,
+    holder_actor, nullifier_actor, root_actor, BridgeMessage, BridgeState, HolderState, Holding, NullifierState,
 };
 use harness::{
     attest::render_executed,
@@ -106,7 +106,10 @@ fn a_private_claim_publishes_only_the_nullifier_the_denomination_and_the_root_re
     );
 
     // Public state: N is spent; nothing public at the private account.
-    assert_eq!(w.nullifier(&terms, &n), Some(NullifierState { config_id: cid, leaf_count: 8, amount: DENOMINATIONS[1] }));
+    assert_eq!(
+        w.nullifier(&terms, &n),
+        Some(NullifierState { config_id: cid, leaf_count: 8, amount: DENOMINATIONS[1] })
+    );
     assert!(w.holder(account.id()).is_none(), "no public holder state at the private account");
     // Private state: the chain holds the commitment of the account with its 1 ETH holding.
     let holder =
@@ -142,7 +145,8 @@ fn a_private_claim_publishes_only_the_nullifier_the_denomination_and_the_root_re
         }
     }
     // And what must be there (B6): N, the configuration, the root read.
-    for (what, needle) in [("N", n.to_vec()), ("configId", cid.to_vec()), ("the root read", w.vault_a.root(8).to_vec())] {
+    for (what, needle) in [("N", n.to_vec()), ("configId", cid.to_vec()), ("the root read", w.vault_a.root(8).to_vec())]
+    {
         let hit = occurs(&bytes, &needle);
         report.push_str(&format!("- {what} (public by design): {}\n", if hit { "present" } else { "MISSING" }));
         assert!(hit, "{what} is public");
@@ -184,13 +188,22 @@ fn a_private_claim_to_a_public_destination_and_the_refusals() {
     let prover = w.chain.add_private_account(0x51, 1_000_000_000_000);
     let deposit = w.payer_deposit.clone();
     let n = deposit.nullifier(CHAIN_ID, &terms.vault);
-    let message = BridgeMessage::ClaimPrivately { config_id: cid, leaf_count: 8, witness: w.vault_a.witness(&deposit, 8) };
+    let message =
+        BridgeMessage::ClaimPrivately { config_id: cid, leaf_count: 8, witness: w.vault_a.witness(&deposit, 8) };
     let payer = holder_actor(w.program, w.chain.payer);
     let publics = vec![root_actor(w.program, &cid, 8), nullifier_actor(w.program, CHAIN_ID, &terms.vault, &n), payer];
     let me = holder_actor(w.program, prover.id());
     let run = w
         .chain
-        .prove_and_settle_private(&prover, me, borsh::to_vec(&message).unwrap(), publics.clone(), &catalog(), RESERVE, w.time)
+        .prove_and_settle_private(
+            &prover,
+            me,
+            borsh::to_vec(&message).unwrap(),
+            publics.clone(),
+            &catalog(),
+            RESERVE,
+            w.time,
+        )
         .expect("settles");
     assert!(run.charge.revert.is_none());
     assert_eq!(w.balance(w.chain.payer, &cid), DENOMINATIONS[2], "10 ETH minted to the public destination");
@@ -203,9 +216,15 @@ fn a_private_claim_to_a_public_destination_and_the_refusals() {
     );
 
     // The same claim again: the public part refuses (ALREADY_CLAIMED), so nothing can be proven.
-    let again = w
-        .chain
-        .prove_and_settle_private(&prover, me, borsh::to_vec(&message).unwrap(), publics, &catalog(), RESERVE, w.time);
+    let again = w.chain.prove_and_settle_private(
+        &prover,
+        me,
+        borsh::to_vec(&message).unwrap(),
+        publics,
+        &catalog(),
+        RESERVE,
+        w.time,
+    );
     let err = again.err().expect("a replay cannot be proven");
     println!("replay: {err}");
     assert!(err.contains("250"), "{err}");
@@ -214,7 +233,8 @@ fn a_private_claim_to_a_public_destination_and_the_refusals() {
     let other = w.chain.add_private_account(0x61, 1_000_000_000_000);
     let private = w.private_deposit.clone();
     let n = private.nullifier(CHAIN_ID, &terms.vault);
-    let message = BridgeMessage::ClaimPrivately { config_id: cid, leaf_count: 8, witness: w.vault_a.witness(&private, 8) };
+    let message =
+        BridgeMessage::ClaimPrivately { config_id: cid, leaf_count: 8, witness: w.vault_a.witness(&private, 8) };
     let executed = private_claim_transitions(&w, other.id(), &message, &cid, 8);
     assert_eq!(executed.iter().map(|e| e.exit_code).collect::<Vec<_>>(), [0, 252], "WRONG_DESTINATION");
     let publics = vec![root_actor(w.program, &cid, 8), nullifier_actor(w.program, CHAIN_ID, &terms.vault, &n)];

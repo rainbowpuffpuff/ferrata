@@ -14,6 +14,7 @@
 
 use std::{borrow::Cow, collections::BTreeMap, fs, path::PathBuf};
 
+use fee_core::market;
 use ferrata_bridge_core::{
     chain_id_u256,
     inbound::{commitment, deposit_id, deposit_leaf, deposit_secret, nullifier as core_nullifier, DestKind},
@@ -32,7 +33,6 @@ use ferrata_lez_bridge_wire::{
 };
 use ferrata_lez_wire::{header_actor, RecordState};
 use ferrata_spectests::execkit::{account_rlp, enc, keccak, Trie};
-use fee_core::market;
 use lee::{
     program::Program,
     public_transaction::{Message as PublicMessage, WitnessSet},
@@ -520,8 +520,11 @@ impl World {
     pub fn init(&mut self, label: &str, config: &BridgeConfig, block: usize) -> TxReport {
         let cid = config.id(self.program);
         let b = &self.blocks[block];
-        let message =
-            BridgeMessage::Init { config: config.clone(), record_slot: b.slot, proof: b.pairing_proof(&config.terms.vault) };
+        let message = BridgeMessage::Init {
+            config: config.clone(),
+            record_slot: b.slot,
+            proof: b.pairing_proof(&config.terms.vault),
+        };
         let root = config_actor(self.program, &cid);
         let header = header_actor(ferrata_account(), &INSTANCE, b.slot);
         let evidence = self.evidence(root, config_seed(&cid));
@@ -532,8 +535,13 @@ impl World {
     /// proofs of `vault`'s slots in that block.
     pub fn import(&mut self, label: &str, cid: &Hash, block: usize, root: Hash, n: u64, vault: &[u8; 20]) -> TxReport {
         let b = &self.blocks[block];
-        let message =
-            BridgeMessage::ImportRoot { config_id: *cid, record_slot: b.slot, root, leaf_count: n, proof: b.import_proof(vault) };
+        let message = BridgeMessage::ImportRoot {
+            config_id: *cid,
+            record_slot: b.slot,
+            root,
+            leaf_count: n,
+            proof: b.import_proof(vault),
+        };
         let config = config_actor(self.program, cid);
         let header = header_actor(ferrata_account(), &INSTANCE, b.slot);
         let evidence = self.evidence(config, config_seed(cid));
@@ -552,7 +560,12 @@ impl World {
             kind: DestKind::from_byte(witness.kind).unwrap_or(DestKind::Public),
             dest: witness.dest,
         };
-        let nullifier = nullifier_actor(self.program, terms.evm_chain_id, &terms.vault, &d.nullifier(terms.evm_chain_id, &terms.vault));
+        let nullifier = nullifier_actor(
+            self.program,
+            terms.evm_chain_id,
+            &terms.vault,
+            &d.nullifier(terms.evm_chain_id, &terms.vault),
+        );
         let holder = holder_actor(self.program, AccountId::new(witness.dest));
         let evidence = self.evidence(root, root_seed(cid, n));
         let message = BridgeMessage::Claim { config_id: *cid, leaf_count: n, witness };
@@ -664,7 +677,12 @@ pub fn private_claim_transitions(
 }
 
 /// One private holder's `Burn` in the executor alone.
-pub fn private_burn_transition(w: &World, account: AccountId, pre_state: ActorState, message: &BridgeMessage) -> crate::attest::Executed {
+pub fn private_burn_transition(
+    w: &World,
+    account: AccountId,
+    pre_state: ActorState,
+    message: &BridgeMessage,
+) -> crate::attest::Executed {
     let call = ReceiveInput {
         receiver: holder_actor(w.program, account),
         from: None,
