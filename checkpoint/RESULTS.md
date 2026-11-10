@@ -26,6 +26,16 @@ message, is `0x57a0aa8d…18e3` in both). Every figure and proof in this file is
 before the fix (the ids above, or earlier ones where a section says so); the benches were not
 re-run on the fixed images (their fixtures are rebuilt by `gen all`, about 25 min).
 
+**The images after the merge of rule (B)** (branch `vault-fees`, which carries `rule-b`, merged into
+`integration`): `checkpoint-core` now also holds rule (B) and depends on `crates/attestor-core`, so
+every guest changes again. Built under the integration checkout's path on the build box (`host ids`,
+second integration pass): checkpoint
+`0xcfcbe41edeaf2c216e96de230f0b4fdff146fa936b1454bd0f097732a4972a20`, checkpoint_b
+`0xe18205281d624e54bcc1c1cd920fbd6147eaf4a62d1b711285a953a81c4fc19c`, segment
+`0x073db46707af69d8c1f0333df87cb9b18cf4e138e57ff8680d0a530fb441004e`, micro
+`0xe42a76fa920e0f2a9a115ad8530c2f5fb139b9a1e40741a18045a36d7d31c79a`. No proof or bench here is of
+these images: §4's are of the `rule-b` build below (before the `ImportRoot` fix), the rest as above.
+
 In the committed logs, the absolute path of the directory the commands ran in is written `<workspace>`
 (this directory was then `<workspace>/ferrata-checkpoint`, and the upstream sources were under
 `<workspace>/upstream`).
