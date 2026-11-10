@@ -28,7 +28,7 @@ struct DumpEntry {
 
 pub fn dump_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../upstream/lez-v0.4.0-rc1/test_fixtures/fixtures/prebuilt_sequencer_db.dump")
+        .join("../../../upstream/lez-v0.4.0-rc1/test_fixtures/fixtures/prebuilt_sequencer_db.dump")
 }
 
 /// The stored blocks, by id, as the raw bytes the database held and as decoded by LEZ's types.

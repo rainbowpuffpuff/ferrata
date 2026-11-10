@@ -3,12 +3,12 @@
 # machine, the load average before and after, the host's output and GNU time's report (its
 # "Maximum resident set size" covers the host and the r0vm child it waits for). During `groth16`
 # the Docker prover container is polled every 0.2 s for its cgroup memory.peak and the largest
-# VmHWM of its processes (lower bounds, within one poll). Adapted from spike/ferrata-bridge.
+# VmHWM of its processes (lower bounds, within one poll). Adapted from bridge/scripts/prove-bench.sh.
 #
 # usage: scripts/prove-bench.sh <prove|groth16|compose> <name|--real>
 set -euo pipefail
 here="$(cd "$(dirname "$0")/.." && pwd)"
-export TMPDIR="$here/../tmp"            # spike/tmp: never /tmp on this machine (RAM-backed)
+export TMPDIR="$here/../../tmp"         # tmp/ beside the repository, as bench/ uses; not /tmp
 export CARGO_TARGET_DIR="$here/target"
 unset RISC0_DEV_MODE
 mkdir -p "$TMPDIR" "$here/results/logs"

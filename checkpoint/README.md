@@ -1,12 +1,14 @@
 # ferrata-checkpoint
 
 Prototype of the program that lets an Ethereum vault follow a LEZ (Logos Execution Zone) chain:
-SPEC-v2 §4.1–§4.2 (`notes/design/SPEC-v2.md`) with SPEC-v3 D3 (`notes/design/SPEC-v3-delta.md`:
-checked producer inscription, 17-word journal, posting timeframe pinned in the key-set hash), as a
-RISC Zero 3.0.5 guest. It re-hashes LEZ blocks in
+SPEC-v2 §4.1–§4.2 with SPEC-v3 D3 (checked producer inscription, 17-word journal, posting timeframe
+pinned in the key-set hash), as a RISC Zero 3.0.5 guest. It re-hashes LEZ blocks in
 their real format, collects the bridge's burns into the burn tree, follows the channel's key
 rotations, checks that enough accredited sequencers inscribed blocks on top of the tip, and commits
-the 13-word journal the vault reads. Measured numbers are in [RESULTS.md](RESULTS.md).
+the 17-word journal the vault reads. Measured numbers are in [RESULTS.md](RESULTS.md).
+
+**Specification.** "SPEC-v2 §x" is [`docs/design/spec/bridge-spec-v2.md`](../docs/design/spec/bridge-spec-v2.md)
+and "SPEC-v3 Dn" is [`docs/design/spec/bridge-spec-v3-changes.md`](../docs/design/spec/bridge-spec-v3-changes.md).
 
 Prototype evidence for a grant proposal, not production code: see "Not done" and "UNVERIFIED" below.
 
@@ -22,19 +24,19 @@ Prototype evidence for a grant proposal, not production code: see "Not done" and
 | `host/` | Executes the guests on the fixtures (journal compared with the native run), micro-benchmarks, the composition demo, proving, Groth16 wrapping. |
 | `scripts/` | `prove-bench.sh` (proving with machine, load, GNU time and Docker memory logged), `derive.py` (derived figures from the JSON lines). |
 | `artifacts/` | The Groth16 seals, journals and receipts of the real proofs (succinct receipts git-ignored). |
-| `vectors/external/ferrata-bridge/` | Vectors of `spike/ferrata-bridge` (an independent implementation of the same SPEC-v2 encodings), checked by `crates/checkpoint-core/tests/cross_vectors.rs`. |
+| `vectors/external/ferrata-bridge/` | Vectors of `ferrata-bridge`, now [`../bridge/`](../bridge/) (an independent implementation of the same SPEC-v2 encodings), checked by `crates/checkpoint-core/tests/cross_vectors.rs`. |
 | `results/` | Logs and JSON lines of every measured run. |
 
 ## Run it
 
-All tools write scratch under `spike/tmp` (never `/tmp`, which is RAM-backed on this machine) and use
-one target directory:
+All tools write scratch under `tmp/` beside the repository, as `bench/` does (never `/tmp`), and use
+one target directory. From the repository root, `cd checkpoint`, then:
 
 ```sh
-export TMPDIR=$PWD/../tmp CARGO_TARGET_DIR=$PWD/target
+export TMPDIR=$PWD/../../tmp CARGO_TARGET_DIR=$PWD/target
 # Logos Blockchain's circuit crates download prebuilt witness generators at build time; keep that
-# cache under spike/tmp instead of ~/.cache:
-export XDG_CACHE_HOME=$PWD/../tmp/xdg-cache
+# cache under that tmp/ instead of ~/.cache:
+export XDG_CACHE_HOME=$PWD/../../tmp/xdg-cache
 
 cargo +1.88 test -p checkpoint-core                       # unit tests + cross-implementation vectors
 cargo +1.88 clippy -p checkpoint-core --all-targets -- -D warnings
@@ -50,10 +52,12 @@ python3 -I scripts/derive.py                              # derived figures from
 ```
 
 `fidelity` needs LEZ's toolchain (Rust 1.98.1, `lez-v0.4.0-rc1/rust-toolchain.toml`); the core builds
-with the RISC Zero guest toolchain (Rust 1.88). Upstream sources are used read-only by path:
-`spike/upstream/lez-v0.4.0-rc1` (tag v0.4.0-rc1, 1806e87) and `spike/upstream/logos-blockchain-d480efc6`
-(a shallow fetch of exactly the revision LEZ pins; the older clone `spike/upstream/logos-blockchain` is
-at ee5e344 and differs in `inscribe.rs`, `config.rs`, `transactions/codec.rs`, `ops/mod.rs` and more,
+with the RISC Zero guest toolchain (Rust 1.88). Upstream sources are used read-only by path, from
+`upstream/` beside the repository (where `lez/` expects LEZ too): `upstream/lez-v0.4.0-rc1`
+([LEZ](https://github.com/logos-blockchain/logos-execution-zone/tree/v0.4.0-rc1), tag v0.4.0-rc1,
+1806e87) and `upstream/logos-blockchain-d480efc6` (a shallow fetch of exactly the revision LEZ pins of
+[Logos Blockchain](https://github.com/logos-blockchain/logos-blockchain); an older clone at ee5e344
+differs in `inscribe.rs`, `config.rs`, `transactions/codec.rs`, `ops/mod.rs` and more,
 so it was not used). The workspace `[patch]` points LEZ's git dependencies on logos-blockchain at
 that shallow clone, so the formats checked are the pinned ones and nothing else is fetched from it.
 
@@ -148,14 +152,14 @@ withdrawals a channel withdrawal). Any other opcode is refused rather than skipp
 
 | Item | SPEC-v2 | Here | Why |
 |---|---|---|---|
-| `burnFrontierHash` encoding | "hash of the frontier (32 nodes)" | `sha256("ferrata/burn-frontier/v1" ‖ f_0 ‖ … ‖ f_31)`, `f_h` = 0 when bit `h` of the count is 0 | The encoding `spike/ferrata-bridge` chose; checked against its vectors. Zeroing makes the hash a function of the leaves alone. |
+| `burnFrontierHash` encoding | "hash of the frontier (32 nodes)" | `sha256("ferrata/burn-frontier/v1" ‖ f_0 ‖ … ‖ f_31)`, `f_h` = 0 when bit `h` of the count is 0 | The encoding `ferrata-bridge` (now `../bridge/`) chose; checked against its vectors. Zeroing makes the hash a function of the leaves alone. |
 | Burn tree capacity | depth 32 | at most 2^32 − 1 leaves | A frontier cannot store the last leaf (as in Ethereum's deposit contract). |
 | `T`'s producer | SPEC-v2: "other than the key that inscribed `T`"; SPEC-v3 D3: one checked inscription of `T` by `D ∈ K` | as SPEC-v3 (implemented before v3 arrived) | Without the check the prover names `T`'s producer freely (any key can sign *an* inscription of `T`'s bytes); see RESULTS, finding 1. |
 | `allowSingleKey` | a deployment constant, not in the journal | allowed exactly when `nMin ≤ 1` | The vault pins `nMin` through the journal; a constant the journal does not carry could be set by the prover. |
 | `importedLeafCount` | "successful `ImportRoot` updates it" | `max(current, leafCount)`, ignored after `Sunset` | Lowering it would let leaves already claimable on LEZ be refunded on Ethereum. |
 | Rotation threshold | "at least `t(current n)`" signatures | at least `t(current n)` distinct current keys, indices unique; repeated keys in a set refused | Bedrock itself requires *exactly* the channel's recorded `configuration_threshold` (LEZ sets it to `t(n)`), and its key list is a vector that would let one key fill two indices. |
 | Echo in a reverted transaction | silent | counts | Inclusion in a block built after the nonce was known is what the echo proves. |
-| Echo variant | silent | `Echo{nonce}` has no `configId` | As in the task's wire definition. |
+| Echo variant | silent | `Echo{nonce}` has no `configId` | As the prototype's wire format defines it (`wire.rs`). |
 | Support entries by `D` | SPEC-v3: support is by keys "other than `D`" | checked, not counted | A useless entry costs the prover cycles, nothing else. |
 | Empty input | silent | at least one block up to `T` is required | A pure key-rotation checkpoint is not supported. |
 | Parent state with `postingTimeframe = 0` | SPEC-v3 D3 refuses *ops* with 0 | not refused (as written); no rotation can then ever apply (each op either differs or is 0) | A genesis state with 0 must be caught by the deployment check (`turnSeconds` = timeframe × slot). Reported in RESULTS. |
@@ -180,7 +184,7 @@ withdrawals a channel withdrawal). Any other opcode is refused rather than skipp
    `crypto-bigint v0.5.5-risczero.0` match the versions LEZ and logos-blockchain lock (sha2 0.10.9,
    curve25519-dalek 4.1.3); they build and run under r0vm 3.0.5 and the A/B run shows they are active
    (RESULTS). Whether RISC Zero lists exactly these tags for 3.0.5 was not checked against its
-   documentation (no web access in this task).
+   documentation (no web access during this build).
 7. Guest image ids depend on the local RISC Zero toolchain (Rust 1.88, no Docker build): not
    reproducible elsewhere as they stand.
 8. Network parameters: 10 s blocks (LEZ's testnet config), committee sizes `n` = 3, 4, 7. The live
@@ -188,7 +192,7 @@ withdrawals a channel withdrawal). Any other opcode is refused rather than skipp
 
 ## Not done
 
-- The vault side (§4.3–§4.5, SPEC-v3 D4–D5) is in `spike/bridge-evm`; the Groth16 seal produced here
+- The vault side (§4.3–§4.5, SPEC-v3 D4–D5) is in [`../vault/`](../vault/); the Groth16 seal produced here
   was not submitted to a contract.
 - Composition was demonstrated in dev mode only; `host compose --real` (real recursion) was not run.
 - Mode (B) of SPEC-v3 D7 is estimated from measured components (RESULTS §4), not built.
@@ -201,5 +205,5 @@ Crates from crates.io; git dependencies of LEZ's crates (resolved to the pinned 
 revision through the workspace `[patch]`, plus Overwatch, logos-blockchain-circuits, jellyfish,
 rust-rapidsnark, spongefish); RISC Zero's patch forks; a shallow `git fetch` of logos-blockchain at
 `d480efc6`. Building logos-blockchain's circuit crates downloads their prebuilt witness generators and
-rapidsnark from those projects' GitHub releases (kept under `spike/tmp` with `XDG_CACHE_HOME`). The
+rapidsnark from those projects' GitHub releases (kept under that `tmp/` with `XDG_CACHE_HOME`). The
 Groth16 prover image was already present. Nothing was uploaded.

@@ -9,19 +9,19 @@ publish = false
 [dependencies]
 checkpoint-core = { path = "../crates/checkpoint-core", features = ["std"] }
 # LEZ v0.4.0-rc1 (tag clone, read-only), by path.
-common = { path = "../../upstream/lez-v0.4.0-rc1/lez/common" }
-chain_state = { path = "../../upstream/lez-v0.4.0-rc1/lez/chain_state" }
-lee = { path = "../../upstream/lez-v0.4.0-rc1/lee/state_machine" }
-lee_core = { path = "../../upstream/lez-v0.4.0-rc1/lee/state_machine/core", features = ["host"] }
-testnet_initial_state = { path = "../../upstream/lez-v0.4.0-rc1/lez/testnet_initial_state" }
-fee_core = { path = "../../upstream/lez-v0.4.0-rc1/lez/programs/fee/core" }
-system_accounts = { path = "../../upstream/lez-v0.4.0-rc1/lez/system_accounts" }
+common = { path = "../../../upstream/lez-v0.4.0-rc1/lez/common" }
+chain_state = { path = "../../../upstream/lez-v0.4.0-rc1/lez/chain_state" }
+lee = { path = "../../../upstream/lez-v0.4.0-rc1/lee/state_machine" }
+lee_core = { path = "../../../upstream/lez-v0.4.0-rc1/lee/state_machine/core", features = ["host"] }
+testnet_initial_state = { path = "../../../upstream/lez-v0.4.0-rc1/lez/testnet_initial_state" }
+fee_core = { path = "../../../upstream/lez-v0.4.0-rc1/lez/programs/fee/core" }
+system_accounts = { path = "../../../upstream/lez-v0.4.0-rc1/lez/system_accounts" }
 # Logos Blockchain at the revision LEZ pins (d480efc6, shallow clone, read-only), by path.
-logos-blockchain-core = { path = "../../upstream/logos-blockchain-d480efc6/core" }
-logos-blockchain-key-management-system-keys = { path = "../../upstream/logos-blockchain-d480efc6/kms/keys" }
-logos-blockchain-groth16 = { path = "../../upstream/logos-blockchain-d480efc6/zk/groth16" }
-logos-blockchain-utils = { path = "../../upstream/logos-blockchain-d480efc6/utils" }
-logos-blockchain-binary-codec = { path = "../../upstream/logos-blockchain-d480efc6/binary-codec" }
+logos-blockchain-core = { path = "../../../upstream/logos-blockchain-d480efc6/core" }
+logos-blockchain-key-management-system-keys = { path = "../../../upstream/logos-blockchain-d480efc6/kms/keys" }
+logos-blockchain-groth16 = { path = "../../../upstream/logos-blockchain-d480efc6/zk/groth16" }
+logos-blockchain-utils = { path = "../../../upstream/logos-blockchain-d480efc6/utils" }
+logos-blockchain-binary-codec = { path = "../../../upstream/logos-blockchain-d480efc6/binary-codec" }
 # Same version LEZ's lockfile resolves.
 borsh = { version = "=1.6.1", features = ["derive"] }
 # To read LEZ's committed sequencer database dump (test_fixtures/fixtures/*.dump).

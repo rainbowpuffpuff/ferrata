@@ -12,6 +12,13 @@ posting-timeframe amendment, with checkpoint image `0xbbf58fed…34c0`; that pro
 the key-set hash encoding and the timeframe check, and runs the same input in 3,704,942 user cycles
 against 3,705,001 now (same 4 segments).
 
+In the committed logs, the absolute path of the directory the commands ran in is written `<workspace>`
+(this directory was then `<workspace>/ferrata-checkpoint`, and the upstream sources were under
+`<workspace>/upstream`).
+
+**Specification.** "SPEC-v2 §x" is [`docs/design/spec/bridge-spec-v2.md`](../docs/design/spec/bridge-spec-v2.md)
+and "SPEC-v3 Dn" is [`docs/design/spec/bridge-spec-v3-changes.md`](../docs/design/spec/bridge-spec-v3-changes.md).
+
 **Machine.** AMD Ryzen 9 7940HS (8 cores, 16 threads), 54 GiB RAM, no NVIDIA GPU, Fedora 44, Linux
 7.2.13. **Versions.** r0vm 3.0.5, risc0-zkvm 3.0.5 (host `client` feature), risc0-build 3.0.5, RISC
 Zero guest toolchain Rust 1.88.0, host Rust 1.93.0 (LEZ crates: 1.98.1); RISC Zero patches
@@ -30,7 +37,7 @@ end).
 
 | | |
 |---|---|
-| core tests | 13 pass (`cargo +1.88 test -p checkpoint-core`): unit tests and the cross-implementation vectors of `spike/ferrata-bridge` (configId, burn leaf/frontier/root, the v1 keySetHash convention, S from parts, journal words 1–12) |
+| core tests | 13 pass (`cargo +1.88 test -p checkpoint-core`): unit tests and the cross-implementation vectors of `ferrata-bridge`, now `../bridge/` (configId, burn leaf/frontier/root, the v1 keySetHash convention, S from parts, journal words 1–12) |
 | fidelity tests | 17 pass (`cargo +1.98.1 test -p fidelity`): 7 format tests against LEZ and Logos Blockchain code, 10 rule tests |
 | empty LEZ block | 839 bytes (fee tx 447, clock tx 303); identical size to the empty blocks of LEZ's own sequencer dump |
 | marginal cost per empty block | **6,405 cycles** |
@@ -238,7 +245,7 @@ container is polled every 0.2 s.
 Both receipts of each run verify against the proven image id and carry the journal the native
 run produced for that program (`host verify cp-empty-1`, `results/verify-under-load.log`,
 `results/verify-quiet.log`); the seal's selector `0x73c457ba` is the one risc0-ethereum 3.0.x's
-`RiscZeroGroth16Verifier` expects (as `spike/ferrata-bridge` confirmed on that verifier for 3.0.5
+`RiscZeroGroth16Verifier` expects (as `ferrata-bridge`, now `../bridge/`, confirmed on that verifier for 3.0.5
 receipts; not re-checked on a contract here). Seals, journals and Groth16 receipts are in
 `artifacts/cp-empty-1-under-load/` and `artifacts/cp-empty-1-run2/`. The final image was not proven
 again (same input, 59 more user cycles, same 4 segments).

@@ -27,9 +27,10 @@ opt-level = 3
 opt-level = 2
 
 # LEZ v0.4.0-rc1 depends on logos-blockchain at d480efc6 by git. Point those crates at the shallow
-# clone of exactly that revision (spike/upstream/logos-blockchain-d480efc6), so nothing else is
+# clone of exactly that revision (upstream/logos-blockchain-d480efc6 beside the repository, where
+# lez/ also expects LEZ), so nothing else is
 # fetched and the formats checked are the pinned ones.
 [patch."https://github.com/logos-blockchain/logos-blockchain.git"]
-logos-blockchain-common-http-client = { path = "../upstream/logos-blockchain-d480efc6/nodes/node/http-client" }
-logos-blockchain-core = { path = "../upstream/logos-blockchain-d480efc6/core" }
-logos-blockchain-zone-sdk = { path = "../upstream/logos-blockchain-d480efc6/zone-sdk" }
+logos-blockchain-common-http-client = { path = "../../upstream/logos-blockchain-d480efc6/nodes/node/http-client" }
+logos-blockchain-core = { path = "../../upstream/logos-blockchain-d480efc6/core" }
+logos-blockchain-zone-sdk = { path = "../../upstream/logos-blockchain-d480efc6/zone-sdk" }
