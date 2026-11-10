@@ -3,15 +3,21 @@
 //! v0.4.0-rc1's crates and logos-blockchain-core d480efc6, with test sequencer keys.
 //!
 //! ```text
-//! e2e deployment --chain-id <n> --vault <0x…> [--posting-timeframe <slots>] --out <deployment.json>
+//! e2e deployment --chain-id <n> --vault <0x…> [--posting-timeframe <slots>] [--identity <identity.json>]
+//!                --out <deployment.json>
 //!     the configuration a vault is paired with: the preimage of configId, the sequencer keys, the
-//!     genesis block and the genesis checkpoint state S (the vault's `genesisState`)
+//!     genesis block and the genesis checkpoint state S (the vault's `genesisState`). The identity
+//!     file gives the other six values of configId's preimage (a real LEZ deployment's), each 0x +
+//!     32 bytes: {"bedrock_genesis_id", "channel_id", "bridge_header", "bridge_image_id",
+//!     "attestation_root_id", "salt"}; without it they are stand-in values
 //! e2e chain --deployment <deployment.json> --wallet <wallet.json> [--echo-nonce <0x…>] --out-dir <dir>
 //!     the blocks, their inscriptions and the checkpoint inputs:
 //!       <dir>/cp-e2e-candidate.{input,json}   candidate checkpoint (echoNonce = 0)
 //!       <dir>/cp-e2e-finalize.{input,json}    finalisation checkpoint (with --echo-nonce)
 //!       <dir>/lez.json                        what an observer of the zone reads: every block's
 //!                                             id, hash and messages to the bridge, the state at T
+//!     with the deployment file's configuration identity: its channel id in the inscriptions, its
+//!     bridge header as the program the zone's transactions call
 //! ```
 //!
 //! The chain (block id = position + 1, producer = id mod 4, n = 4 keys, t = 3):
@@ -76,6 +82,10 @@ fn field<const N: usize>(v: &Value, key: &str) -> Result<[u8; N]> {
     unhex(v[key].as_str().with_context(|| format!("missing \"{key}\""))?)
 }
 
+fn read_json(path: &str) -> Result<Value> {
+    serde_json::from_slice(&fs::read(path).with_context(|| path.to_string())?).with_context(|| path.to_string())
+}
+
 /// `--name value` pairs after the subcommand.
 fn options(args: &[String]) -> Result<BTreeMap<String, String>> {
     let mut out = BTreeMap::new();
@@ -91,13 +101,28 @@ fn required<'a>(opts: &'a BTreeMap<String, String>, name: &str) -> Result<&'a st
     opts.get(name).map(String::as_str).with_context(|| format!("--{name} is required"))
 }
 
-/// The test deployment (n = 4 keys, `nMin` = 3, `tMin` = 2) for one vault on one chain.
-fn deployment(chain_id: u64, vault: [u8; 20]) -> Deployment {
+/// The part of configId's preimage an identity file gives (`deployment --identity`): all but the
+/// chain id and the vault, which are the vault's own.
+const IDENTITY: [&str; 6] =
+    ["bedrock_genesis_id", "channel_id", "bridge_header", "bridge_image_id", "attestation_root_id", "salt"];
+
+/// The test deployment (n = 4 keys, `nMin` = 3, `tMin` = 2) for one vault on one chain, with the
+/// [`IDENTITY`] values of `identity` if given (other keys are not read), else stand-in values.
+fn deployment(chain_id: u64, vault: [u8; 20], identity: Option<&Value>) -> Result<Deployment> {
     let mut dep = Deployment::new(4, 3, 2);
     dep.config.evm_chain_id = [0u8; 32];
     dep.config.evm_chain_id[24..].copy_from_slice(&chain_id.to_be_bytes());
     dep.config.vault = vault;
-    dep
+    if let Some(i) = identity {
+        let c = &mut dep.config;
+        c.bedrock_genesis_id = field(i, "bedrock_genesis_id")?;
+        c.channel_id = field(i, "channel_id")?;
+        c.bridge_header = field(i, "bridge_header")?;
+        c.bridge_image_id = field(i, "bridge_image_id")?;
+        c.attestation_root_id = field(i, "attestation_root_id")?;
+        c.salt = field(i, "salt")?;
+    }
+    Ok(dep)
 }
 
 /// The state at the genesis block, with the channel's posting timeframe as given.
@@ -130,7 +155,15 @@ fn cmd_deployment(opts: &BTreeMap<String, String>) -> Result<()> {
     let vault: [u8; 20] = unhex(required(opts, "vault")?)?;
     let posting_timeframe: u32 = opts.get("posting-timeframe").map_or(Ok(900), |s| s.parse()).context("timeframe")?;
     ensure!(posting_timeframe != 0, "a posting timeframe of 0 is refused by the deployment check (SPEC-v3 D10)");
-    let dep = deployment(chain_id, vault);
+    let identity = opts.get("identity").map(|path| read_json(path)).transpose()?;
+    if let Some(i) = &identity {
+        let keys = i.as_object().context("--identity: a JSON object")?;
+        ensure!(
+            keys.len() == IDENTITY.len() && IDENTITY.iter().all(|k| keys.contains_key(*k)),
+            "--identity: exactly the keys {IDENTITY:?}"
+        );
+    }
+    let dep = deployment(chain_id, vault, identity.as_ref())?;
     let chain = Chain::genesis()?;
     let genesis = genesis_state(&dep, &chain, posting_timeframe);
     let c = &dep.config;
@@ -381,18 +414,15 @@ fn checkpoint_json(name: &str, input: &OwnedInput, out: &Outcome, first_block: u
 }
 
 fn cmd_chain(opts: &BTreeMap<String, String>) -> Result<()> {
-    let read = |name: &str| -> Result<Value> {
-        let path = required(opts, name)?;
-        serde_json::from_slice(&fs::read(path).with_context(|| path.to_string())?).with_context(|| path.to_string())
-    };
-    let (d, wallet) = (read("deployment")?, read("wallet")?);
+    let (d, wallet) = (read_json(required(opts, "deployment")?)?, read_json(required(opts, "wallet")?)?);
     let dir = PathBuf::from(required(opts, "out-dir")?);
     fs::create_dir_all(&dir)?;
     let echo: Option<Hash> = opts.get("echo-nonce").map(|s| unhex(s)).transpose()?;
     ensure!(echo != Some([0u8; 32]), "an echo nonce of 0 means no echo: leave --echo-nonce out");
 
+    // The deployment's own identity (stand-in values when it was made without --identity).
     let chain_id = d["evm_chain_id"].as_u64().context("evm_chain_id")?;
-    let dep = deployment(chain_id, field(&d, "vault")?);
+    let dep = deployment(chain_id, field(&d, "vault")?, Some(&d["config_identity"]))?;
     ensure!(hx(&dep.config_id()) == d["config_id"], "the deployment file is for another configuration");
     ensure!(field::<32>(&wallet, "config_id")? == dep.config_id(), "the wallet file is for another configuration");
     let posting_timeframe = u32::try_from(d["posting_timeframe"].as_u64().context("posting_timeframe")?)?;
@@ -470,7 +500,8 @@ fn main() -> Result<()> {
         Some("deployment") => cmd_deployment(&options(&args[1..])?),
         Some("chain") => cmd_chain(&options(&args[1..])?),
         _ => bail!(
-            "usage: e2e deployment --chain-id <n> --vault <0x…> [--posting-timeframe <slots>] --out <file>\n       \
+            "usage: e2e deployment --chain-id <n> --vault <0x…> [--posting-timeframe <slots>] [--identity <file>] \
+             --out <file>\n       \
              e2e chain --deployment <file> --wallet <file> [--echo-nonce <0x…>] --out-dir <dir>"
         ),
     }
