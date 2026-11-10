@@ -24,6 +24,10 @@
 #                                             it cargo and r0vm run here
 #   FERRATA_MWRAP                             optional: `<wrapper> input.json proof.json` runs RISC Zero's
 #                                             Groth16 prover image elsewhere; without it Docker runs it here
+#   FERRATA_GPU_CMD                           optional: `<command> <inputs dir> <proof> <job> <out dir>` proves
+#                                             the staged inputs on a GPU and leaves prove.json and
+#                                             receipt-succinct.bin in <out dir>; without it the GPU app
+#                                             gpu-prover/modal_app.py runs under MODAL_PROFILE
 #   FERRATA_FORK=1                            a rehearsal on a local fork (anvil): the sender is
 #                                             impersonated, no key is read, and the two waits are passed
 #                                             by moving the fork's clock
@@ -132,9 +136,13 @@ if ! finalised; then # what the finalisation proof needs, checked before the fir
   for f in release.bin checkpoint.bin segment.bin; do
     [ -f "$here/programs/$f" ] || die "e2e/programs/$f is missing: the recorded guest programs (e2e/README.md)"
   done
-  command -v modal > /dev/null || die "modal is not installed: the finalisation proof runs on the GPU app"
-  [ -n "${MODAL_PROFILE:-}" ] || die "set MODAL_PROFILE, the profile that runs gpu-prover/modal_app.py"
-  modal app list --json > /dev/null 2>&1 || die "modal does not answer under the profile $MODAL_PROFILE"
+  if [ -n "${FERRATA_GPU_CMD:-}" ]; then
+    [ -x "$FERRATA_GPU_CMD" ] || die "FERRATA_GPU_CMD ($FERRATA_GPU_CMD) is not an executable file"
+  else
+    command -v modal > /dev/null || die "modal is not installed: the finalisation proof runs on the GPU app"
+    [ -n "${MODAL_PROFILE:-}" ] || die "set MODAL_PROFILE, the profile that runs gpu-prover/modal_app.py"
+    modal app list --json > /dev/null 2>&1 || die "modal does not answer under the profile $MODAL_PROFILE"
+  fi
   if [ -n "${FERRATA_MRUN:-}" ]; then
     [ -x "$FERRATA_MRUN" ] || die "FERRATA_MRUN ($FERRATA_MRUN) is not an executable file"
   else
@@ -213,19 +221,22 @@ if ! finalised; then
     input_sha="$(sha256sum "$run/$proof.input" | cut -d' ' -f1)"
     receipts="$run/receipts/$proof"
     if [ "$(jq -r '.input_sha256 // empty' "$receipts/prove.json" 2> /dev/null)" != "$input_sha" ]; then
-      : "${MODAL_PROFILE:?set MODAL_PROFILE for the GPU proof}"
+      [ -n "${FERRATA_GPU_CMD:-}" ] || : "${MODAL_PROFILE:?set MODAL_PROFILE for the GPU proof}"
       gpu_run="e2e-$name-$(jq -r .blockNumber "$run/beacon.json")"
       gpu_job="job $gpu_run input $input_sha"
       gpu_log="$run/work/gpu-run.log"
       scratch="$run/work/gpu-results"
       rm -rf "$scratch" "$receipts"; mkdir -p "$scratch" "$receipts"
-      proven() { # the receipt of exactly this input is on the app's Volume
-        rm -rf "${scratch:?}/$proof"
-        (cd "$scratch" && modal volume get --force ferrata-prover "results/$gpu_run/$proof" . > /dev/null 2>&1) &&
-          [ "$(jq -r '.input_sha256 // empty' "$scratch/$proof/prove.json" 2> /dev/null)" = "$input_sha" ]
+      proven() { # the receipt of exactly this input is on the app's Volume (FERRATA_GPU_CMD: in $scratch)
+        if [ -z "${FERRATA_GPU_CMD:-}" ]; then
+          rm -rf "${scratch:?}/$proof"
+          (cd "$scratch" && modal volume get --force ferrata-prover "results/$gpu_run/$proof" . > /dev/null 2>&1) || return 1
+        fi
+        [ "$(jq -r '.input_sha256 // empty' "$scratch/$proof/prove.json" 2> /dev/null)" = "$input_sha" ]
       }
       queued() { # a job for this input that an earlier start of this script left on the app, not yet stopped
         local app
+        [ -z "${FERRATA_GPU_CMD:-}" ] || return 1
         [ "$(head -n 1 "$gpu_log" 2> /dev/null)" = "$gpu_job" ] || return 1
         app="$(grep -o 'ap-[A-Za-z0-9]\{12,\}' "$gpu_log" | head -n 1)"
         [ -n "$app" ] && modal app list --json 2> /dev/null |
@@ -239,9 +250,14 @@ if ! finalised; then
         say "proof 2/5: the checkpoint proof on the GPU app (the queue for a GPU can take half an hour)"
         "$here/run.sh" stage-gpu "$name" > /dev/null
         echo "$gpu_job" > "$gpu_log"
-        (cd "$repo/gpu-prover" && FERRATA_INPUTS="$run/work/gpu-inputs" modal run --detach modal_app.py::batch_run \
-          --jobs "$proof=600" --run "$gpu_run") >> "$gpu_log" 2>&1 || die "the GPU run failed: see $gpu_log"
-        rm -f "$repo/gpu-prover/logs/run-$gpu_run-$proof.json"
+        if [ -n "${FERRATA_GPU_CMD:-}" ]; then
+          "$FERRATA_GPU_CMD" "$run/work/gpu-inputs" "$proof" "$gpu_run" "$scratch/$proof" >> "$gpu_log" 2>&1 ||
+            die "the GPU run failed: see $gpu_log"
+        else
+          (cd "$repo/gpu-prover" && FERRATA_INPUTS="$run/work/gpu-inputs" modal run --detach modal_app.py::batch_run \
+            --jobs "$proof=600" --run "$gpu_run") >> "$gpu_log" 2>&1 || die "the GPU run failed: see $gpu_log"
+          rm -f "$repo/gpu-prover/logs/run-$gpu_run-$proof.json"
+        fi
         proven || die "the GPU proof of this input is not on the Volume: see $gpu_log"
       fi
       cp "$scratch/$proof/receipt-succinct.bin" "$scratch/$proof/prove.json" "$receipts/"
