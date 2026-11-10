@@ -11,6 +11,7 @@
 #     ETH_KEYSTORE + ETH_PASSWORD   a keystore file and a file holding its password, or
 #     ETH_KEYSTORE_ACCOUNT          a name under ~/.foundry/keystores (forge asks for the password)
 #   FERRATA_UNLOCKED=1  no key: the endpoint is a local fork that impersonates ETH_FROM
+#   FERRATA_RESUME=1    finish a stage that was interrupted while it was sending (forge --resume)
 #   FERRATA_FIXTURE   the run's fixture.json (default ../e2e/runs/sepolia/fixture.json)
 #   FERRATA_MANIFEST  where transactions are recorded (default manifest.json beside the fixture)
 #   FERRATA_DELTA, FERRATA_RELEASE_DELAY, FERRATA_REVOKE_WINDOW, FERRATA_MAX_FREEZE,
@@ -38,9 +39,9 @@ if [ "$step" = status ]; then
   if [ "$(cast code "$vault" "${rpc[@]}")" = 0x ]; then echo "vault $vault: not deployed"; exit 0; fi
   state="$(jq -r .newState "$fixture")"
   echo "vault $vault: finalState $(call 'finalState()(bytes32)'), $(call 'beaconCount()(uint256)') beacon(s), $(call 'checkpointCount()(uint256)') checkpoint(s)"
-  read -r submitted delta <<<"$(call 'candidates(bytes32)(bytes32,bytes32,uint64,uint64,bool,uint32,uint64,bytes32,uint256,uint256,uint256)' "$state" | sed -n '9p;10p' | awk '{print $1}' | tr '\n' ' ')"
+  read -r t submitted delta <<<"$(call 'candidates(bytes32)(bytes32,bytes32,uint64,uint64,bool,uint32,uint64,bytes32,uint256,uint256,uint256)' "$state" | sed -n '6p;9p;10p' | awk '{print $1}' | tr '\n' ' ')"
   if [ "${submitted:-0}" != 0 ]; then
-    over=$((submitted + delta + 2 * $(call 'turnSeconds()(uint256)' | awk '{print $1}')))
+    over=$((submitted + delta + (t - 1) * $(call 'turnSeconds()(uint256)' | awk '{print $1}')))
     echo "candidate $state: submitted at $submitted, wait over at $over ($((over - now)) s from now)"
   fi
   echo "burn root $(jq -r .burnRoot "$fixture"): $(call 'burnRootStatus(bytes32)(bool,uint256)' "$(jq -r .burnRoot "$fixture")" | tr '\n' ' ')"
@@ -50,6 +51,9 @@ fi
 : "${ETH_FROM:?set ETH_FROM to the deployer address}"
 signer=()
 [ "${FERRATA_UNLOCKED:-}" = 1 ] && signer=(--unlocked)
+# FERRATA_RESUME=1: a stage whose transactions were only partly sent; forge sends the rest of what it
+# recorded, in the recorded order, without running the script again.
+[ "${FERRATA_RESUME:-}" = 1 ] && signer+=(--resume)
 # `record <stage>` only rewrites the manifest entry of a stage from forge's broadcast log.
 if [ "$step" = record ]; then
   step="${2:?stage}"

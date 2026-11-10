@@ -361,6 +361,25 @@ the wait, which is `keccak256(prevrandao, block number, vault)` of the block tha
 The candidate and release seals of the committed fixture are reused as they are; the finalisation is
 proven again for the real beacon.
 
+**One command.** [`../e2e/sepolia-live.sh`](../e2e/sepolia-live.sh) runs the whole round trip unattended, from
+the repository root, with its settings in `e2e/sepolia-live.env` (not committed; `e2e/sepolia-live.env.example`
+lists them: the endpoint, the sender, the paths of the keystore file and of its password file, the profile of
+the GPU app):
+
+```sh
+e2e/sepolia-live.sh          # about 55 min plus the queue for a GPU; ends with ALL CHECKS PASSED and a DONE line
+```
+
+It checks the chain id, the sender's nonce and balance, sends the fifteen transactions in their nonce order
+(each stage simulated by forge first), sleeps through the vault's wait and the release delay, builds and proves
+the finalisation for the beacon it recorded, and runs `verify-sepolia.sh`. Everything it prints also goes to
+`e2e/runs/sepolia-live/sepolia-live.log`. It is resumable: started again, it reads the chain, sees which stages
+are complete and continues after the last one; a stage that was interrupted while it was sending is finished
+with forge's own record of it (`--resume`), never sent anew. It stops with a message at the first thing that is
+not as planned, for instance a nonce that a transaction from outside the run has moved.
+
+**The stages by hand**, which is what the driver does:
+
 ```sh
 export SEPOLIA_RPC_URL=<endpoint>
 export ETH_FROM=0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07
@@ -388,13 +407,21 @@ The key never appears on a command line: forge reads the keystore file and the p
 Foundry's own variables. On a local fork that impersonates the sender, `FERRATA_UNLOCKED=1` replaces
 the keystore.
 
-**Rehearsal.** All of the above ran on `anvil --fork-url <a public Sepolia endpoint>` with the sender
+**Rehearsal.** The stages ran by hand on `anvil --fork-url <a public Sepolia endpoint>` with the sender
 impersonated ([`../e2e/runs/fork/`](../e2e/runs/fork/README.md)): 15 transactions, the finalisation proven
 after the fork's beacon existed, both releases paid, and `verify-sepolia.sh` passing on the manifest,
 including what must be refused (a seal with a changed byte, the candidate's seal offered as the
 finalisation, each release replayed). The gas of every transaction is the Foundry figure of GAS.md, to the
 unit except where calldata differs. On a fork the wait is passed with `cast rpc evm_increaseTime <seconds>`
-and `cast rpc anvil_mine 1`; the beacon there is anvil's random `prevrandao`, not Ethereum's.
+and `cast rpc anvil_mine 1`; the beacon there is anvil's random `prevrandao`, not Ethereum's. The driver was
+then rehearsed on a second fork from a clean run directory (`FERRATA_FORK=1`;
+[`../e2e/runs/fork-driver/`](../e2e/runs/fork-driver/README.md)), with interruptions: see there.
+
+**Source verification** is a separate step, [`script/sourcify.sh`](script/sourcify.sh), and was not run.
+`script/sourcify.sh risc0` verifies RISC Zero's two contracts on Sourcify and sends only files that are public
+already. `script/sourcify.sh vault` verifies the vault and the test token, which publishes
+`src/FerrataVault.sol`, `src/interfaces/IRiscZeroVerifier.sol` and `script/TestToken.sol` of this repository
+for good; it runs only with `FERRATA_PUBLISH_SOURCES=yes`.
 
 The testnet configuration (`deploy` only; each from the environment): `FERRATA_DELTA` 600 s as both
 `deltaFloor` and the initial `delta`, `turnSeconds` 900 s (the fixture's posting timeframe of 900

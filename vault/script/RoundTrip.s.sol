@@ -175,6 +175,8 @@ contract RoundTrip is Script {
                 burnRoot: vm.parseJsonBytes32(json, string.concat(at, ".burnRoot")),
                 nullifier: vm.parseJsonBytes32(json, string.concat(at, ".nullifier"))
             });
+            // A release already paid (the stage was interrupted between two) is not sent again.
+            if (vault.nullifierUsed(r.nullifier)) continue;
             (bool accepted, uint256 finalizedAt) = vault.burnRootStatus(r.burnRoot);
             require(accepted, "the burn root is not finalised");
             require(block.timestamp >= finalizedAt + vault.releaseDelayFor(r.token, 0), "the release delay is not over");

@@ -51,3 +51,5 @@ __pycache__/
 /e2e/programs/
 /e2e/runs/*/work/
 /vault/script/runs/
+/e2e/sepolia-live.env
+/e2e/runs/*/sepolia-live.log
