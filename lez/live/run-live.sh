@@ -306,7 +306,11 @@ for phase in $PHASES; do
         rc=0
       fi ;;
     inbound)   # ../inbound/run.sh: a real proof of the private claim unless FERRATA_INBOUND_PRIVATE=fake
+      # The proof runs in the driver: its threads as private-real's (FERRATA_LIVE_PROOF_THREADS),
+      # below the node and the sequencer (FERRATA_LIVE_PROOF_NICE).
       ( if [ "${FERRATA_INBOUND_PRIVATE:-real}" = fake ]; then export RISC0_DEV_MODE=1; else unset RISC0_DEV_MODE; fi
+        if [ -n "${FERRATA_LIVE_PROOF_THREADS:-}" ]; then export RAYON_NUM_THREADS="$FERRATA_LIVE_PROOF_THREADS"; fi
+        renice -n "${FERRATA_LIVE_PROOF_NICE:-10}" -p $BASHPID > /dev/null
         driver "$phase" ) 2>&1 | tee -a "$LOG/driver.log"; rc=${PIPESTATUS[0]} ;;
     *) ( unset RISC0_DEV_MODE; driver "$phase" ) 2>&1 | tee -a "$LOG/driver.log"; rc=${PIPESTATUS[0]} ;;
   esac

@@ -1,0 +1,31 @@
+phase	step	tx_hash	block	position	status	exit	exec_gas	stor_gas	gas_limit	base_fee_exec	base_fee_stor	fee	payer_debit	block_txs	block_exec_gas	block_stor_gas	harness_exec_gas	harness_stor_gas	harness_result	note
+inbound-deploy	deploy attest: WriteSegment 6 of 6 (78976 bytes)	2aa9227e749d945e097a8c28eee8e8e259b1612f9b1a3958e5ffba005df942d5	2	0	applied	-	0	79556	2000000	8	8	636448	-	1	0	79556	-	-	-	-
+inbound-deploy	deploy attest: WriteSegment 5 of 6 (98304 bytes)	2f7667d1ebd256c2ec6285cd347a05db229247a0ee2bc789b41ee448d3e6d879	3	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+inbound-deploy	deploy attest: WriteSegment 4 of 6 (98304 bytes)	4e4b8c9103e83795ed29a67658a3ca49f24efc80e0b88c2371f39a5828154cab	4	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+inbound-deploy	deploy attest: WriteSegment 3 of 6 (98304 bytes)	2b679864f6bb5cc23a01bbed28354d9cf445fa1fd87d449e4d45055baab53a3d	5	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+inbound-deploy	deploy attest: WriteSegment 2 of 6 (98304 bytes)	cf701f517ef95c039bd86a88b1f6ff9f95a36cfec3cfe6b1be89e8609efd0177	6	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+inbound-deploy	deploy attest: WriteSegment 1 of 6 (98304 bytes)	c6e876aa160bd217716cc1a08d349a7f9e5eff09a7d6e655d4976098e9501d1b	7	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+inbound-deploy	deploy attest: CreateHeader (immutable) at A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX	e66b963e58692010340745c9f67cf48cb9e8ce17e6fd12a17d0e278b9765ce6f	8	0	applied	-	0	608	2000000	8	8	4864	4597952	1	0	608	-	-	-	payer_debit is for the whole deployment; its fees sum to 4597952
+inbound-deploy	deploy bridge: WriteSegment 4 of 4 (65900 bytes)	e04f20978e3eb949efcb9836af164caf5c38453076b48a349660c88e0f20841d	9	0	applied	-	0	66480	2000000	8	8	531840	-	1	0	66480	-	-	-	-
+inbound-deploy	deploy bridge: WriteSegment 3 of 4 (98304 bytes)	b6d716ee4ade36f80b9cc089fb37c51a60308cd15f527af52b351252703dacb6	10	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+inbound-deploy	deploy bridge: WriteSegment 2 of 4 (98304 bytes)	6e8ea0a40d7682f3c96ff32e52e2b8c92708de7ef8e49b6f38e340c01539da0e	11	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+inbound-deploy	deploy bridge: WriteSegment 1 of 4 (98304 bytes)	4ddd0355f3166241ba9fa5e2d8b2e0cc18514e744f469b57822447fcef1c0527	12	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+inbound-deploy	deploy bridge: CreateHeader (immutable) at AfrE4T3U17eZYUH3KMGDgeE6A4jnpDGum151T3VtddCp	3276eb6df92e302c97e7593972b379d15eebb019e337b9e16d295f662c5ad0f7	13	0	applied	-	0	608	2000000	8	8	4864	2910688	1	0	608	-	-	-	payer_debit is for the whole deployment; its fees sum to 2910688
+inbound	stand-in Init Init	a770812ef7e51539a7c5c5a90fadd2cb14414bc2d02e31a913e8fe25e857b0cb	14	0	applied	-	113477	1756	4000000	8	8	921864	921864	1	113477	1756	-	-	-	-
+inbound	stand-in Init adopt 1/2	a2f9511048be5909a386b7e829d5fc5f8d4d4c62bb7e3fb57da5dfbc353cb4b3	15	0	applied	-	3396985	24980	4000000	8	8	27375720	27375720	1	3396985	24980	-	-	-	-
+inbound	stand-in Init adopt 2/2	36b96345876263b40fdd7af6f8656d5c93715236d3ebae3054aac3c38ff49198	16	0	applied	-	3477181	25173	4000000	8	8	28018832	28018832	1	3477181	25173	-	-	-	-
+inbound	stage 1 finality update Open (step 1)	4a91732c9d5b8961d6eddcc791de50253268e0c2a62b1c9ab6a1600384485ec5	17	0	applied	-	1994178	2348	4000000	8	8	15972208	15972208	1	1994178	2348	-	-	-	-
+inbound	stage 1 finality update Miller (step 2)	071b3a9162b24109eb2f710888ed2dc4967466678176216edb40a211abaef8ba	18	0	applied	-	3305289	399	4000000	8	8	26445504	26445504	1	3305289	399	-	-	-	-
+inbound	stage 1 finality update Finish (step 3)	4caa4086e5d0b2fa7add344dea1b44af939815fe44bf42c36ecce71adf818b40	19	0	applied	-	3715991	592	4000000	8	8	29732664	29732664	1	3715991	592	-	-	-	-
+inbound	bridge Init without the block's header (Gloas record)	dd9e851b8f7e68bf21bef712a56ae6f08a3e0f6834e06ea922cf98c452034118	20	0	refused	215 (code 215)	57872	1694	4000000	8	8	476528	476528	1	57872	1694	-	-	-	-
+inbound	bridge Init (configId in the vault's slot 2)	de41fe3e3d0da39abd25c4a8d19bea31d182aea6b582f6b4dee4c33b9b1d22a1	21	0	applied	-	181965	2418	4000000	8	8	1475064	1475064	1	181965	2418	-	-	-	-
+inbound	bridge ImportRoot n=1 (stage 1, block 2)	4c8d365abc31118ebad9bb1e1abb978e33ae169530149ad683e411f4095b3d47	22	0	applied	-	232278	2460	4000000	8	8	1877904	1877904	1	232278	2460	-	-	-	-
+inbound	bridge Claim: deposit 0 (public) under root(cid, 1)	039a9943d6a3f850741331c16a290bd6b8eb484d24ae164f9c7d2a31cd9a65bd	23	0	applied	-	142432	1805	4000000	8	8	1153896	1153896	1	142432	1805	-	-	-	-
+inbound	bridge Claim: deposit 0 again (replay)	79ea76ada925c2e21c550fe74023f8f743e4bd1c4d407c8f420f2c73297ef4c9	24	0	refused	250 (code 250)	124481	1740	4000000	8	8	1009768	1009768	1	124481	1740	-	-	-	-
+inbound	stage 2 finality update Open (step 1)	d799916c29ce6e43ec0c3b15ea5db8fe1258cf612021260786203465fea55129	25	0	applied	-	1994354	2348	4000000	8	8	15973616	15973616	1	1994354	2348	-	-	-	-
+inbound	stage 2 finality update Miller (step 2)	59fcff41d5e5cd00d3c18cc4903c8116e0da3637850cf552d20216f269f5652e	26	0	applied	-	3305289	399	4000000	8	8	26445504	26445504	1	3305289	399	-	-	-	-
+inbound	stage 2 finality update Finish (step 3)	faa051fef275cb28b0bfbe11f16996c3f17ae24898d68fab58e5b4b8099638c0	27	0	applied	-	3715991	592	4000000	8	8	29732664	29732664	1	3715991	592	-	-	-	-
+inbound	bridge ImportRoot n=2 (stage 2, block 3)	3c5da77f1a8b5215c625a96e9dabe637e35c4120aa5b9e43bb96d93165a63ae2	28	0	applied	-	232278	2460	4000000	8	8	1877904	1877904	1	232278	2460	-	-	-	-
+inbound	bridge Claim: deposit 0 under root(cid, 2) (a later root)	c9a6cfddbd26518b11ec42c3284509dbf7855a830a41194146046a1eec667a78	29	0	refused	250 (code 250)	124481	1740	4000000	8	8	1009768	1009768	1	124481	1740	-	-	-	-
+inbound	bridge Claim: deposit 1 redirected to a public destination (a wrong opening)	75e3649bdca91b86123462150b4f66f29d42b18efda0f6e412233ef0eae7989b	30	0	refused	249 (code 249)	93764	1805	4000000	8	8	764552	764552	1	93764	1805	-	-	-	-
+inbound	bridge ClaimPrivately: deposit 1 at LEZ's private test account 0 (real proof)	1f74fecc0c78dec410423758affdf34e514a00d93685d87603685b31ae96e9b2	57	0	applied	-	439815	224063	-	8	8	5311024	-	1	439815	224063	-	-	-	execute_and_prove and submission 254.8 s; transaction 252185 bytes
