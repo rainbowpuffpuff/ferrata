@@ -25,13 +25,14 @@ Every row is produced by `cargo test --workspace`.
 | Guard tests | 23: each pins a check that an independent review showed could be deleted without any test failing, plus the two committee checks |
 | **Execution layer** | |
 | Real mainnet, end to end (`fixtures/mainnet-e2e-2026-11-09`) | A bootstrap (slot 15,613,952) and a finality update (512/512 signers) of period 1906, verified with both libraries and both committee checks, finalize execution block 26,379,842; its `HeaderRecord` equals two providers' block. WETH, USDC and an address without an account: every fact equals `eth_getProof` and `balanceOf`. The receipts trie, rebuilt with alloy-trie, equals the record's root, and all 870 logs of its 245 receipts (types 0, 2, 3, 4; 54 USDC transfers) are attested. EIP-2935 hops reach the parent block, whose 3 failed transactions are refused, and n − 16, then n − 16 − 8191 (the window's edge), with a storage fact under each of these two. Tampering with each kind of fixture byte is refused, each with its expected code (a corrupted signature with either BLS code, as in the adversarial tests). |
+| Real Sepolia data through the Gloas fork (`fixtures/sepolia-gloas-2026-11-10`, `tests/sepolia_gloas.rs`) | Sepolia activated Gloas at epoch 353,024, the first slot of period 1379. The one public Sepolia node found serving light-client data (Lodestar) serves no bootstrap for a Gloas-era checkpoint: HTTP 500 (Lighthouse answers 404 to every light-client request; see the fixture's `SOURCE.md`). So the stores start from the bootstrap of period 1378 and follow the real chain: the period-1378 update, the upgrade to the Gloas layout, the update of every period from 1379 to 1409 (31 committee handoffs under Gloas, 506 to 512 of 512 signers), and a Gloas finality update (477/512) that finalizes slot 11,547,104. Both libraries, both committee checks, policy and spec store: identical. Every finalized root equals the canonical root a second provider reports, and every update's fork digest is the one computed for Sepolia. The `HeaderRecord` comes from the bid's parent block hash and the real RLP header (Amsterdam, 23 fields) of block 12,103,422, and equals two providers' block. Tampering is refused, each with its expected code (a corrupted signature with either BLS code): the bound or the attested block hash, the execution or the finality branch, the signature, a signer bit, mainnet's `genesis_validators_root`, a Gloas update to a store not upgraded, a next-committee key, five flipped bytes of the RLP header and a truncated one, and the payload-header constructor on a Gloas store. |
 | `ethereum/tests` TrieTests (pinned at `c67e485`) | **25 / 25 cases**, every root, and 368 inclusion and exclusion proofs (`trietestnextprev.json` tests iteration, not proofs) |
 | Merkle-Patricia proofs against alloy-trie 0.9.9 | 240 random tries in four key families (179 with embedded nodes): equal roots, byte-identical proofs, 19,173 inclusion and 8,968 exclusion proofs accepted by both; 4,453 mutated proofs refused by both. Two documented differences (below). |
 | Strict RLP against alloy-rlp 0.3.17 | 21 non-canonical or malformed encodings, each refused with its code (and by alloy-rlp); 3,000 random round trips; 20,000 mutated encodings with the same verdict from both (6,237 accepted, 13,763 refused) |
 | Execution objects | Headers of the Cancun (20 fields), Prague/Osaka (21) and Amsterdam (23) layouts and every field rule; accounts; storage values; receipts of types 0 to 4, pre-Byzantium refused; record encoding; statement identifiers equal to an independent Python computation |
 | Execution adversarial tests | 7 tests (listed below), each refusal checked for its exact code |
 | Accumulator-leaf facts (`vectors/acc-leaf.json`) | Vectors written by an independent Python implementation and shared with the bridge crate: 14 leaves in two snapshots, 7 refusals with their codes, 4 identifier variants. A leaf proven under two roots attested at two blocks has one identifier; every sibling and every index bit is bound; an index of 2^32 or more and the empty leaf are refused. |
-| Differential oracle: Helios (`helios-consensus-core` 0.9.4) | 26 of the 52 official `sync` cases replayed step by step through Helios and ferrata's spec store (100 steps: 86 updates, 12 forced updates, 2 store upgrades): identical verdicts, finalized and optimistic headers after every step. 26 skipped, each listed: 19 with Altair-layout data (Helios cannot decode it), 7 with Gloas (not in Helios). Mainnet periods 1899–1903 and the end-to-end finality update: identical. 8 mutated mainnet updates and a store holding the wrong committee: refused by both. Participation 0 to 32 of 32 with real signatures: identical. Four inputs on which Helios departs from the spec (below). |
+| Differential oracle: Helios (`helios-consensus-core` 0.12.0) | 33 of the 52 official `sync` cases replayed step by step through Helios and ferrata's spec store (129 steps: 111 updates, 15 forced updates, 3 store upgrades), among them all 7 whose chain schedules Gloas: identical verdicts, finalized and optimistic headers after every step. The other 19, each listed, hold Altair-layout data, which Helios cannot decode. Mainnet periods 1899–1903, the mainnet end-to-end finality update, and Sepolia through its Gloas fork (32 updates and a Gloas finality update): identical. 8 mutated mainnet updates, a store holding the wrong committee, and 11 mutated Sepolia Gloas inputs: refused by both. Participation 0 to 32 of 32 with real signatures: identical. Three inputs on which Helios 0.12.0 departs from the spec, and two on which 0.9.4 did and 0.12.0 no longer does (below). |
 | Signature checks on every path | The identity, a point outside G2, a point off the curve and two bad encodings are refused by the spec path, the checked path and the split path (`miller_half` / `final_half`), with both libraries and every key aggregation, and by both stores |
 | Mutation run | 107 hand-picked mutants, all killed (`scripts/mutants.py`, `docs/mutants-run.log`). 43 cover the light client; 32 of those come from an independent review, under which 20 had survived the earlier suite. 64 cover the execution layer: length checks, hash comparisons, indices and bounds, canonical-form checks, the receipt status check, the EIP-2935 window, identifiers, predicates and relations, accumulator paths and identifiers, log-index conversion. |
 | `no_std` | Builds for `riscv32im-unknown-none-elf` with the pure-Rust backend. The `blst` backend needs a RISC-V C toolchain (RISC Zero's), which CI does not set up; `bench/` and `lez/` build it for RISC Zero's guests with that toolchain. |
@@ -56,8 +57,11 @@ Every row is produced by `cargo test --workspace`.
   it elsewhere): the one real proof, of a finality update verified privately, was made on the
   earlier image; the handoff and the consumer's read ran in RISC Zero dev mode only;
 - the `single_merkle_proof` vectors;
-- a Gloas record on real data: `HeaderRecord::from_block_hash` is tested on synthetic stores only,
-  since mainnet has no Gloas date and the fixture is Fulu;
+- under Gloas on real data, a bootstrap and execution facts: no public Sepolia node found serves a
+  light-client bootstrap for a Gloas-era checkpoint yet (Lodestar answers HTTP 500
+  "syncCommitteeWitness not available", Lighthouse 404), so the Sepolia fixture starts one period
+  before the fork; and the Sepolia test ends at the `HeaderRecord`: no account, storage slot or
+  log of an Amsterdam block is attested yet (mainnet has no Gloas date);
 - fuzzing (`cargo-fuzz` on RLP, Merkle-Patricia and query decoding) and `cargo-mutants` over the
   whole core; no hand-picked mutant covers `steps.rs` or `witness.rs`, and `docs/REVIEW-core.md`
   does not review them;
@@ -71,11 +75,12 @@ cargo test --workspace -- --nocapture
 scripts/mutants.py                # optional: the 107-mutant run (78 minutes here, on a loaded machine)
 ```
 
-The mainnet fixtures are committed. `scripts/fetch-mainnet-e2e.py OUTDIR` shows how the
-end-to-end one was made; run today, it fetches a newer block into a new directory.
+The mainnet and Sepolia fixtures are committed. `scripts/fetch-mainnet-e2e.py OUTDIR` and
+`scripts/fetch-sepolia-gloas.py OUTDIR` show how the end-to-end and the Sepolia ones were made;
+run today, each fetches newer data into a new directory.
 `vectors/acc-leaf.json` is committed too, and `scripts/gen-acc-leaf-vectors.py` rewrites it.
-The Helios oracle is a git dev-dependency of the test crate only (a16z/helios tag 0.9.4, rev
-`3686d99`), fetched by cargo; `ferrata-core` never depends on it.
+The Helios oracle is a git dev-dependency of the test crate only (a16z/helios tag 0.12.0, rev
+`2af9b41`), fetched by cargo; `ferrata-core` never depends on it.
 
 The vector tests fail rather than skip when the vectors are missing, and they pin the number of
 cases, so an empty or moved directory cannot pass.
@@ -103,6 +108,7 @@ a clone of LEZ v0.4.0-rc1 beside this repository. `lez/RESULTS.md` (§6) has the
 | `crates/ferrata-spectests/src/execkit.rs` | A reference trie (independent Keccak), synthetic blocks, JSON-RPC readers |
 | `scripts/fetch-mainnet-e2e.py` | The fetch tool of the mainnet end-to-end fixture (standard library only) |
 | `scripts/gen-acc-leaf-vectors.py`, `vectors/acc-leaf.json` | The accumulator vectors and their independent generator (hashlib) |
+| `crates/ferrata-spectests/tests/sepolia_gloas.rs`, `scripts/fetch-sepolia-gloas.py` | Real Sepolia data through the Gloas fork, and the fixture's fetch tool (standard library only) |
 | `crates/ferrata-spectests/tests/helios_oracle.rs` | The differential oracle against Helios |
 | `scripts/count-lines.py` | The line counts of "Reuse and audit surface" |
 | `crates/ferrata-spectests/` | The vector runner, the fixtures and the test suites |
@@ -152,7 +158,7 @@ a clone of LEZ v0.4.0-rc1 beside this repository. `lez/RESULTS.md` (§6) has the
    The light-client header therefore binds the bid's `parent_block_hash` (gindex 2,856). Older
    headers carried into a Gloas store become a block hash plus a zero-padded branch, and the guard
    tests check that the padding must stay zero. The native Gloas vectors bind a single constant
-   block hash, so the tampering tests on Gloas headers matter more than the vectors here.
+   block hash; the Sepolia fixture binds real ones, and Gloas headers are tampered with on both.
 
 7. **Execution roots come only from records.** A `HeaderRecord` holds one block's number, hash,
    state and receipts roots, the chain id and the binding it came from. It is built from a
@@ -230,42 +236,56 @@ are not implemented here.
 ## Differential oracle: Helios
 
 `tests/helios_oracle.rs` runs Helios's consensus core (`helios-consensus-core` from a16z/helios,
-tag 0.9.4, rev `3686d99`; the light-client logic of the Helios lineage that SP1 Helios and
-`r0vm-helios` derive from) beside ferrata on the same bytes. It is a dev-dependency of the test
-crate only.
+tag 0.12.0 of 5 October 2026, rev `2af9b41`; the light-client logic of the Helios lineage that SP1
+Helios and `r0vm-helios` derive from) beside ferrata on the same bytes. It is a dev-dependency of
+the test crate only, locked at the dependency versions of Helios's own lockfile (alloy 2.1.0).
+Until November 2026 the pin was tag 0.9.4 (rev `3686d99`); what is said below of 0.9.4 is said
+of that tag only.
 
-- **What Helios can express.** Its types decode the Capella, Deneb and Electra light-client
-  layouts, and its fork schedule ends at Fulu, on the mainnet and minimal presets. Of the 52
-  official `sync` cases, 26 run step by step through Helios and ferrata's spec store (Capella 9,
-  Deneb 7, Electra 5, Fulu 5:
-  100 steps, 86 updates, 12 forced updates, 2 store upgrades), with identical verdicts and
-  identical finalized and optimistic headers after every step. Skipped, each named by the test:
-  19 cases with Altair-layout data (Helios decodes a header as a union of the three later
-  layouts, so the fixed-size Altair header does not decode) and 7 with Gloas.
-- **Mainnet.** Periods 1899 to 1903 (bootstrap and five updates) and the end-to-end finality
-  update: ferrata's policy store, its spec store and Helios agree on every verdict and finalized
-  root.
-- **Mutations.** A flipped signature byte, finality-branch byte, next-committee-branch byte,
-  next-committee key or attested state root, a flipped signer bit, no signers, a signature slot
-  in the future, and a store holding the wrong committee: all three refuse each, and nothing
-  changes. Participation from 0 to 32 of 32, with real signatures on a chain whose keys the test
-  holds: identical verdicts; both finalize from 22 signers, and the policy store refuses below.
-- **Where Helios departs from the specification.** On four inputs, none of them produced by a
-  genuine chain with an honest committee, Helios 0.9.4 does not do what the spec says, and
-  ferrata does (`where_helios_departs_from_the_specification`):
-  1. an update whose next committee contradicts the one the store holds: the spec refuses it
-     (`validate_light_client_update`); Helios has no such check and accepts;
-  2. a signer key that is the identity point: `FastAggregateVerify` requires `KeyValidate` on every
-     key; Helios checks only the aggregate and accepts;
-  3. an empty finalized header with a finality branch that does not prove the zero root: the
-     spec refuses it; Helios skips the finality check and accepts (anyone can build this from a
-     genuine signed update, since the signature covers only the attested header);
-  4. a forced update whose best update carries no finality, which the spec handles by finalizing
-     the attested header: Helios's `force_update` unwraps the absent finalized header and panics.
-     Helios's own client never calls `force_update`; its test runner and library users do.
+- **What Helios can express.** At 0.12.0 its types decode light-client data in the Capella,
+  Deneb, Electra and Gloas layouts, and its fork schedule runs to Gloas. Data in the Altair layout
+  does not decode: Helios decodes the header inside a bootstrap or an update as a variable-size
+  union, and the Altair header is a fixed-size field. Of the 52 official `sync` cases, 33 run step
+  by step through Helios and ferrata's spec store (Capella 10, Deneb 8, Electra 5, Fulu 6, Gloas
+  4: 129 steps, 111 updates, 15 forced updates, 3 store upgrades), among them all 7 whose chain
+  schedules Gloas, with identical verdicts and identical finalized and optimistic headers (slot,
+  beacon root, execution root) after every step. The other 19 hold Altair-layout data; the test
+  names each and asserts that they are exactly the cases Helios cannot decode. At 0.9.4, which had
+  no Gloas fork and no Gloas layout, 26 cases ran, with identical verdicts and the same headers by
+  slot and beacon root (execution roots were not compared then); the 7 Gloas cases could not.
+- **Real chains.** Mainnet periods 1899 to 1903 (bootstrap and five updates), the mainnet
+  end-to-end finality update, and Sepolia from period 1378 through the Gloas fork to a Gloas
+  finality update (32 updates, 31 of them under Gloas): ferrata's policy store, its spec store
+  and Helios agree on every verdict and finalized root, and the spec store and Helios on every
+  finalized and optimistic header (slot, beacon root, execution root); on Sepolia that execution
+  root is the bound block hash.
+- **Mutations.** On mainnet Electra data: a flipped signature byte, finality-branch byte,
+  next-committee-branch byte, next-committee key or attested state root, a flipped signer bit, no
+  signers, a signature slot in the future, and a store holding the wrong committee. On Sepolia
+  Gloas data: the same kinds, the attested and the finalized execution block hash, and the
+  execution branch. All three refuse each, and nothing changes. Participation from 0 to 32 of 32,
+  with real signatures on a chain whose keys the test holds: identical verdicts; both finalize
+  from 22 signers, and the policy store refuses below.
+- **Where Helios departs from the specification** (`where_helios_departs_from_the_specification`).
+  None of these inputs is produced by a genuine chain with an honest committee.
 
-  Helios's own vector runner covers six cases (Deneb and Electra) and does not assert that an
-  update verifies; the comparison here asserts every verdict.
+  | Input | The spec, and ferrata | Helios 0.9.4 | Helios 0.12.0 |
+  |---|---|---|---|
+  | 1. An update whose next committee contradicts the one the store holds | refused (`validate_light_client_update`) | accepted | refused (a16z/helios#819) |
+  | 2. A signer key that is the identity point | refused: `FastAggregateVerify` requires `KeyValidate` on every key | accepted | accepted |
+  | 3. An empty finalized header with a finality branch that does not prove the zero root (anyone can build it from a genuine signed update: the signature covers only the attested header) | refused | accepted: the finality check is skipped | accepted, the same way |
+  | 4. A forced update whose best update carries no finality | the attested header is finalized | panic: `force_update` unwraps the absent finalized header | the attested header is finalized (#820) |
+  | 5. A committee whose `aggregate_pubkey` is not the sum of its keys, more than half of them signing | accepted: the spec never reads that field | accepted: it sums the signers' keys | refused: it derives the signers' key from the field (#751) |
+
+  On inputs 2 and 5 ferrata's policy store refuses the committee when it adopts it, before any
+  update. The 0.9.4 column for inputs 1 to 4 is what this test asserted while 0.9.4 was pinned
+  (commit `2fbbddf`); for input 5 it is read from 0.9.4's source, not run. Helios's own client
+  never calls `force_update`; its test runner and library users do. At 0.9.4 Helios's own vector
+  runner covered six cases (Deneb and Electra) and did not assert that an update verifies; at
+  0.12.0 it runs 17 committed cases (Deneb, Electra, Gloas and the transitions into Gloas), and
+  every Capella-to-Gloas case of a release on request, and asserts each verdict and header. The
+  comparison here asserts, after every step of the 33 cases, that both verdicts and both stores'
+  finalized and optimistic headers (slot, beacon root, execution root) are the same.
 
 ## Reuse and audit surface
 
@@ -392,9 +412,10 @@ node rules behind the hash check by re-linking forged nodes to a new root.
 ## How this was built
 
 With AI assistance (Claude Code); every commit carries an `Assisted-by` trailer. Acceptance is
-mechanical: the vectors, the BLS vectors, the mainnet replay and end-to-end run, the
-TrieTests, the alloy differentials, the Helios oracle, the adversarial and guard suites, the job
-steps' equivalence with the policy store, clippy with warnings as errors, and the `no_std` build.
+mechanical: the vectors, the BLS vectors, the mainnet replay and end-to-end run, the Sepolia
+run through Gloas, the TrieTests, the alloy differentials, the Helios oracle, the adversarial
+and guard suites, the job steps' equivalence with the policy store, clippy with warnings as
+errors, and the `no_std` build.
 `docs/REVIEW-core.md` maps every function of the light client and the execution layer to its
 spec section and records the author's line-by-line sign-off; it does not cover `steps.rs` and
 `witness.rs` yet.

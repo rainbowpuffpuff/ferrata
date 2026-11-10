@@ -1,23 +1,27 @@
 //! A differential oracle for the light client: Helios's consensus core (`helios-consensus-core`,
-//! a16z/helios tag 0.9.4, rev 3686d99) beside ferrata-core.
+//! a16z/helios tag 0.12.0, rev 2af9b41) beside ferrata-core.
 //!
-//! * Every official `light_client/sync` case (consensus-specs v1.7.0-beta.4, minimal preset)
-//!   that Helios can express, replayed step by step through both: Helios's
-//!   `verify_generic_update`, then `apply_generic_update` or `force_update`, against ferrata's
-//!   spec store. After every step the verdicts and the finalized and optimistic headers must
-//!   agree. Helios 0.9.4 cannot express two classes, which are skipped and listed: data in the
-//!   Altair layout (it decodes a light-client header as an SSZ union of the Capella, Deneb and
-//!   Electra layouts, so the fixed-size Altair header does not decode), and anything with Gloas
-//!   (no Gloas fork in its `Forks`, no Gloas layout).
-//! * The two mainnet fixtures: periods 1899 to 1903 (bootstrap and five updates), and the
-//!   end-to-end fixture (bootstrap and a finality update of period 1906).
-//! * Mutated inputs, as bytes both decode: a flipped signature byte, finality-branch byte,
-//!   next-committee-branch byte, next-committee key, attested state root, signer bit; no
-//!   signers; a signature slot in the future; and a store holding the wrong committee. All refuse.
+//! * Every official `light_client/sync` case (consensus-specs v1.7.0-beta.4, minimal preset),
+//!   replayed step by step through both: Helios's `verify_generic_update`, then
+//!   `apply_generic_update` or `force_update`, against ferrata's spec store. After every step the
+//!   verdicts and the finalized and optimistic headers (slot, beacon root, execution root) must
+//!   agree. Cases whose data Helios cannot decode are listed instead: those holding data in the
+//!   Altair layout (Helios decodes light-client data as an SSZ union of layouts in which the
+//!   header is a variable-size field, so the fixed-size Altair header does not decode).
+//! * Three real chains: mainnet periods 1899 to 1903 (bootstrap and five updates), the mainnet
+//!   end-to-end fixture (bootstrap and a finality update of period 1906), and Sepolia through its
+//!   Gloas fork (the bootstrap of period 1378, the update of every period from 1378 to 1409, and a
+//!   Gloas finality update).
+//! * Mutated inputs, as bytes both decode: on mainnet Electra data, a flipped signature byte,
+//!   finality-branch byte, next-committee-branch byte, next-committee key, attested state root,
+//!   signer bit; no signers; a signature slot in the future; a store holding the wrong committee.
+//!   On Sepolia Gloas data, the same and the bound execution block hashes and their branch. All
+//!   refuse.
 //! * Participation from 0 to 32 of 32 signers with real signatures, on a fabricated chain whose
 //!   keys the test holds (the compared vectors have no update below two thirds).
-//! * Four inputs on which Helios departs from the specification, pinned with the spec rule that
-//!   decides each (`where_helios_departs_from_the_specification`).
+//! * The inputs on which Helios departs from the specification, pinned with the spec rule that
+//!   decides each, and the two departures of 0.9.4 that 0.12.0 no longer has
+//!   (`where_helios_departs_from_the_specification`).
 //!
 //! Both sides decode the same SSZ bytes: Helios picks its layout by trial decoding, ferrata by the
 //! fork the vector names, as the spec does.
@@ -33,7 +37,7 @@ use ferrata_core::{
     store::{LightClientStore, StoreCore},
     types::{LightClientBootstrap, LightClientHeader, LightClientUpdate, SyncAggregate, SyncCommittee},
     upgrade::{upgrade_bootstrap, upgrade_update},
-    validate::Context,
+    validate::{get_lc_execution_root, Context},
     Root,
 };
 use ferrata_spectests::{cases, parse_config, read_ssz_snappy, CaseConfig};
@@ -64,6 +68,7 @@ fn forks(spec: &ChainSpec) -> Forks {
         deneb: f(Fork::Deneb),
         electra: f(Fork::Electra),
         fulu: f(Fork::Fulu),
+        gloas: f(Fork::Gloas),
     }
 }
 
@@ -98,16 +103,20 @@ fn helios_update<S: HeliosSpec>(bytes: &[u8]) -> Option<GenericUpdate<S>> {
     HFinalityUpdate::<S>::from_ssz_bytes(bytes).ok().map(|u| GenericUpdate::from(&u))
 }
 
-/// (slot, beacon root) of the finalized and optimistic headers.
-type Heads = ((u64, Root), (u64, Root));
+/// (slot, beacon root, execution root) of the finalized and the optimistic header.
+type Heads = ((u64, Root, Root), (u64, Root, Root));
 
-fn ours(store: &LightClientStore) -> Heads {
-    let h = |x: &LightClientHeader| (x.beacon.slot, x.beacon.hash_tree_root());
+fn ours(store: &LightClientStore, spec: &ChainSpec) -> Heads {
+    let h = |x: &LightClientHeader| {
+        (x.beacon.slot, x.beacon.hash_tree_root(), get_lc_execution_root(x, store.core.fork, spec))
+    };
     (h(&store.core.finalized_header), h(&store.optimistic_header))
 }
 
 fn theirs<S: HeliosSpec>(store: &HStore<S>) -> Heads {
-    let h = |x: &helios_consensus_core::types::LightClientHeader| (x.beacon().slot, x.beacon().tree_hash_root().0);
+    let h = |x: &helios_consensus_core::types::LightClientHeader| {
+        (x.beacon().slot, x.beacon().tree_hash_root().0, x.execution_root().0)
+    };
     (h(&store.finalized_header), h(&store.optimistic_header))
 }
 
@@ -123,8 +132,35 @@ struct Tally {
     upgrades: usize,
 }
 
-/// Replay one sync case through both; `Err` names the first disagreement.
-fn compare_case(dir: &Path, tally: &mut Tally) -> Result<(), String> {
+impl Tally {
+    fn add(&mut self, t: &Tally) {
+        self.cases += t.cases;
+        self.steps += t.steps;
+        self.updates_accepted_by_both += t.updates_accepted_by_both;
+        self.below_supermajority += t.below_supermajority;
+        self.force_updates += t.force_updates;
+        self.upgrades += t.upgrades;
+    }
+}
+
+/// Why a case did not run to the end.
+#[derive(Debug)]
+enum Fail {
+    /// Helios cannot decode some of the case's data.
+    Undecodable(String),
+    /// A disagreement (or a vector ferrata cannot process).
+    Differ(String),
+}
+
+impl From<String> for Fail {
+    fn from(e: String) -> Self {
+        Fail::Differ(e)
+    }
+}
+
+/// Replay one sync case through both: what was compared, or why the comparison stopped.
+fn compare_case(dir: &Path) -> Result<Tally, Fail> {
+    let mut tally = Tally::default();
     let meta = yaml(&dir.join("meta.yaml"));
     let cfg: CaseConfig = parse_config(&dir.join("config.yaml"))?;
     let spec = &cfg.spec;
@@ -148,12 +184,12 @@ fn compare_case(dir: &Path, tally: &mut Tally) -> Result<(), String> {
     let mut store = LightClientStore::initialize(&trusted, &boot, store_fork, spec)
         .map_err(|e| format!("ferrata bootstrap: {e}"))?;
     let hboot = HBootstrap::<MinimalConsensusSpec>::from_ssz_bytes(&raw)
-        .map_err(|e| format!("helios cannot decode the bootstrap: {e:?}"))?;
+        .map_err(|e| Fail::Undecodable(format!("the bootstrap: {e:?}")))?;
     verify_bootstrap(&hboot, b256(&trusted), &hforks).map_err(|e| format!("helios refuses the bootstrap: {e}"))?;
     let mut hstore = HStore::<MinimalConsensusSpec>::default();
     apply_bootstrap(&mut hstore, &hboot);
-    if ours(&store) != theirs(&hstore) {
-        return Err("bootstrap: headers differ".into());
+    if ours(&store, spec) != theirs(&hstore) {
+        return Err(Fail::Differ("bootstrap: headers differ".into()));
     }
 
     for (i, step) in yaml(&dir.join("steps.yaml")).as_sequence().unwrap().iter().enumerate() {
@@ -173,10 +209,13 @@ fn compare_case(dir: &Path, tally: &mut Tally) -> Result<(), String> {
                 .map_err(|e| e.to_string())?;
                 let ferrata = store.process_update(&update, current_slot, &ctx);
                 let hupdate = helios_update::<MinimalConsensusSpec>(&bytes)
-                    .ok_or(format!("step {i}: helios cannot decode {name}"))?;
+                    .ok_or_else(|| Fail::Undecodable(format!("step {i}: {name}")))?;
                 let helios = verify_generic_update(&hupdate, current_slot, &hstore, b256(&gvr), &hforks);
                 if ferrata.is_ok() != helios.is_ok() {
-                    return Err(format!("step {i} ({name}): ferrata {ferrata:?}, helios {:?}", helios.err()));
+                    return Err(Fail::Differ(format!(
+                        "step {i} ({name}): ferrata {ferrata:?}, helios {:?}",
+                        helios.err()
+                    )));
                 }
                 if helios.is_ok() {
                     apply_generic_update(&mut hstore, &hupdate);
@@ -197,31 +236,26 @@ fn compare_case(dir: &Path, tally: &mut Tally) -> Result<(), String> {
                 store.upgrade(to, spec).map_err(|e| e.to_string())?;
                 tally.upgrades += 1;
             }
-            other => return Err(format!("unknown step {other}")),
+            other => return Err(Fail::Differ(format!("unknown step {other}"))),
         }
-        if ours(&store) != theirs(&hstore) {
-            return Err(format!(
+        if ours(&store, spec) != theirs(&hstore) {
+            return Err(Fail::Differ(format!(
                 "step {i} ({}): ferrata {:?}, helios {:?}",
                 kind.as_str().unwrap(),
-                ours(&store),
+                ours(&store, spec),
                 theirs(&hstore)
-            ));
+            )));
         }
         tally.steps += 1;
     }
-    tally.cases += 1;
-    Ok(())
+    tally.cases = 1;
+    Ok(tally)
 }
 
-/// Why Helios cannot take a case, if it cannot: its data must be in a layout Helios decodes
-/// (Capella, Deneb or Electra; Helios 0.9.4 decodes a light-client header as an SSZ union of those
-/// three, so the fixed-size Altair header does not decode, and it has no Gloas layout), and the
-/// chain must not schedule Gloas (Helios's `Forks` ends at Fulu).
-fn inexpressible(dir: &Path) -> Option<&'static str> {
+/// Whether a case holds data in the Altair layout (by the fork digests its bootstrap and
+/// updates are served under).
+fn has_altair_layout_data(dir: &Path) -> bool {
     let cfg = parse_config(&dir.join("config.yaml")).unwrap();
-    if cfg.spec.fork_epoch(Fork::Gloas) != FAR_FUTURE_EPOCH {
-        return Some("Gloas scheduled (no Gloas fork or layout in Helios)");
-    }
     let meta = yaml(&dir.join("meta.yaml"));
     let gvr = hex32(&meta["genesis_validators_root"]);
     let mut digests = vec![digest(&meta["bootstrap_fork_digest"])];
@@ -230,40 +264,41 @@ fn inexpressible(dir: &Path) -> Option<&'static str> {
             digests.push(digest(&body["update_fork_digest"]));
         }
     }
-    let layouts = digests.iter().map(|d| cfg.fork_for_digest(&gvr, *d).unwrap().lc_fork().unwrap());
-    layouts.into_iter().any(|l| l == LcFork::Altair).then_some("Altair-layout data (Helios cannot decode it)")
+    digests.iter().any(|d| cfg.fork_for_digest(&gvr, *d).unwrap().lc_fork() == Some(LcFork::Altair))
 }
 
 #[test]
 fn official_sync_vectors_agree_with_helios() {
     let mut tally = Tally::default();
-    let mut skipped = std::collections::BTreeMap::<&str, Vec<String>>::new();
+    let mut undecodable = Vec::new();
     let mut by_fork = std::collections::BTreeMap::new();
+    let mut gloas_scheduled = 0;
     for (fork, dir) in cases("sync").unwrap() {
         let name = format!("{}/{}", fork.name(), dir.file_name().unwrap().to_string_lossy());
-        if let Some(reason) = inexpressible(&dir) {
-            skipped.entry(reason).or_default().push(name);
-            continue;
+        let result = compare_case(&dir);
+        // Helios decodes every case except exactly those with Altair-layout data.
+        let decoded = !matches!(result, Err(Fail::Undecodable(_)));
+        assert_eq!(decoded, !has_altair_layout_data(&dir), "{name}: {result:?}");
+        match result {
+            Ok(t) => {
+                tally.add(&t);
+                *by_fork.entry(fork.name()).or_insert(0) += 1;
+                let cfg = parse_config(&dir.join("config.yaml")).unwrap();
+                gloas_scheduled += usize::from(cfg.spec.fork_epoch(Fork::Gloas) != FAR_FUTURE_EPOCH);
+            }
+            Err(Fail::Undecodable(what)) => undecodable.push(format!("{name} ({what})")),
+            Err(Fail::Differ(e)) => panic!("{name}: {e}"),
         }
-        compare_case(&dir, &mut tally).unwrap_or_else(|e| panic!("{name}: {e}"));
-        *by_fork.entry(fork.name()).or_insert(0) += 1;
     }
     println!("helios oracle: {tally:?}; compared by fork {by_fork:?}");
-    for (reason, names) in &skipped {
-        println!("skipped, {reason}: {} cases: {names:?}", names.len());
-    }
-    let skipped_total: usize = skipped.values().map(Vec::len).sum();
-    assert_eq!(tally.cases + skipped_total, 52, "every sync case either ran or is listed as skipped");
-    let counts = |r: &str| skipped.get(r).map_or(0, Vec::len);
-    assert_eq!(
-        (
-            tally.cases,
-            counts("Altair-layout data (Helios cannot decode it)"),
-            counts("Gloas scheduled (no Gloas fork or layout in Helios)")
-        ),
-        (26, 19, 7)
-    );
-    assert_eq!((tally.steps, tally.updates_accepted_by_both, tally.force_updates, tally.upgrades), (100, 86, 12, 2));
+    println!("not decoded by helios ({}): {undecodable:?}", undecodable.len());
+    assert_eq!((tally.cases, undecodable.len()), (33, 19), "every sync case either ran or is listed");
+    let compared: Vec<_> = by_fork.into_iter().collect();
+    assert_eq!(compared, [("capella", 10), ("deneb", 8), ("electra", 5), ("fulu", 6), ("gloas", 4)]);
+    // Among them every case whose chain schedules Gloas (three fork transitions into Gloas and
+    // the four Gloas cases); Helios 0.9.4 had no Gloas fork and could take none of them.
+    assert_eq!(gloas_scheduled, 7);
+    assert_eq!((tally.steps, tally.updates_accepted_by_both, tally.force_updates, tally.upgrades), (129, 111, 15, 3));
     // Every compared vector update has at least two thirds of the signers; participation below
     // that is compared on fabricated data (`participation_from_zero_to_full_agrees_with_helios`).
     assert_eq!(tally.below_supermajority, 0);
@@ -290,6 +325,20 @@ fn mainnet() -> ChainSpec {
 
 const GVR: &str = "4b363db94e286120d76eb905340fdd4e54bfe9f06bf33ff6cf5ad27f511bfe95";
 
+/// Sepolia's fork schedule (eth-clients/sepolia `metadata/config.yaml`, as in
+/// `tests/sepolia_gloas.rs`): Gloas from epoch 353,024.
+fn sepolia() -> ChainSpec {
+    let v = |b: u8| [0x90, 0x00, 0x00, b];
+    ChainSpec {
+        preset: Preset::MAINNET,
+        versions: [v(0x69), v(0x70), v(0x71), v(0x72), v(0x73), v(0x74), v(0x75), v(0x76), [0; 4]],
+        epochs: [0, 50, 100, 56_832, 132_608, 222_464, 272_640, 353_024, FAR_FUTURE_EPOCH],
+    }
+}
+
+const SEPOLIA: &str = "sepolia-gloas-2026-11-10";
+const SEPOLIA_GVR: &str = "d8ea171f3c94aea21ebc42a1ed61052acf3f9209c00e4efbaaddac09ed9b8078";
+
 fn root(s: &str) -> Root {
     hex::decode(s.trim_start_matches("0x")).unwrap().try_into().unwrap()
 }
@@ -298,32 +347,55 @@ fn fixture(dir: &str, name: &str) -> Vec<u8> {
     fs::read(Path::new(env!("CARGO_MANIFEST_DIR")).join("fixtures").join(dir).join(name)).unwrap()
 }
 
-/// `LightClientFinalityUpdate` (Electra layout) as the update it stands for.
-fn finality_update(b: &[u8]) -> LightClientUpdate {
-    let u32_at = |o: usize| u32::from_le_bytes(b[o..o + 4].try_into().unwrap()) as usize;
-    let (att, fin) = (u32_at(0), u32_at(4));
+/// `LightClientFinalityUpdate` as the update it stands for: in the Electra layout the two
+/// headers sit behind offsets; in the Gloas layout every field is fixed-size.
+fn finality_update(b: &[u8], layout: LcFork) -> LightClientUpdate {
+    let (attested, finalized, rest) = match layout {
+        LcFork::Electra => {
+            let u32_at = |o: usize| u32::from_le_bytes(b[o..o + 4].try_into().unwrap()) as usize;
+            let (att, fin) = (u32_at(0), u32_at(4));
+            (&b[att..fin], &b[fin..], &b[8..att])
+        }
+        LcFork::Gloas => {
+            const H: usize = 112 + 32 + 11 * 32;
+            (&b[..H], &b[H..2 * H], &b[2 * H..])
+        }
+        other => panic!("no finality update layout for {other:?} here"),
+    };
+    // The finality branch, the sync aggregate (160 bytes), the signature slot.
+    let branch = 32 * layout.finality_branch_len();
+    assert_eq!(rest.len(), branch + 168);
     LightClientUpdate {
-        attested_header: LightClientHeader::decode(&b[att..fin], LcFork::Electra).unwrap(),
+        attested_header: LightClientHeader::decode(attested, layout).unwrap(),
         next_sync_committee: SyncCommittee::empty(512),
-        next_sync_committee_branch: vec![ZERO; LcFork::Electra.sync_committee_branch_len()],
-        finalized_header: LightClientHeader::decode(&b[fin..], LcFork::Electra).unwrap(),
-        finality_branch: b[8..232].chunks_exact(32).map(|c| c.try_into().unwrap()).collect(),
-        sync_aggregate: SyncAggregate::decode(&b[232..392], 512).unwrap(),
-        signature_slot: u64::from_le_bytes(b[392..400].try_into().unwrap()),
+        next_sync_committee_branch: vec![ZERO; layout.sync_committee_branch_len()],
+        finalized_header: LightClientHeader::decode(finalized, layout).unwrap(),
+        finality_branch: rest[..branch].chunks_exact(32).map(|c| c.try_into().unwrap()).collect(),
+        sync_aggregate: SyncAggregate::decode(&rest[branch..branch + 160], 512).unwrap(),
+        signature_slot: u64::from_le_bytes(rest[branch + 160..].try_into().unwrap()),
     }
 }
 
-/// Both stores, bootstrapped from the same bytes.
+/// What some bytes are to ferrata, which decodes by the fork the data is served under (Helios
+/// finds out by trial decoding).
+#[derive(Clone, Copy, Debug)]
+enum Data {
+    Update(LcFork),
+    FinalityUpdate(LcFork),
+}
+
+/// Ferrata's policy store and spec store and Helios's store, bootstrapped from the same bytes.
+#[derive(Clone)]
 struct Pair {
     spec: ChainSpec,
+    gvr: Root,
     ours: FinalizedStore,
     spec_store: LightClientStore,
     theirs: HStore<MainnetConsensusSpec>,
 }
 
 impl Pair {
-    fn new(dir: &str, trusted: &str) -> Pair {
-        let spec = mainnet();
+    fn new(spec: ChainSpec, gvr: &str, dir: &str, trusted: &str) -> Pair {
         let raw = fixture(dir, "bootstrap.ssz");
         let boot = LightClientBootstrap::decode(&raw, LcFork::Electra, 512).unwrap();
         let ours = FinalizedStore::initialize(&root(trusted), &boot, LcFork::Electra, &spec, &BLST).unwrap();
@@ -332,18 +404,26 @@ impl Pair {
         verify_bootstrap(&hboot, b256(&root(trusted)), &forks(&spec)).unwrap();
         let mut theirs = HStore::default();
         apply_bootstrap(&mut theirs, &hboot);
-        Pair { spec, ours, spec_store, theirs }
+        Pair { spec, gvr: root(gvr), ours, spec_store, theirs }
+    }
+
+    fn mainnet(dir: &str, trusted: &str) -> Pair {
+        Pair::new(mainnet(), GVR, dir, trusted)
+    }
+
+    /// Sepolia from the bootstrap of period 1378, the last before Gloas.
+    fn sepolia() -> Pair {
+        Pair::new(sepolia(), SEPOLIA_GVR, SEPOLIA, "0x5f71d7f650f9252b48749b5f062c0c234e01afd69f364ab600e2b6051494b20d")
     }
 
     /// Submit one update (as SSZ bytes) to all three stores; returns (ferrata policy, ferrata
     /// spec, helios) verdicts.
-    fn submit(&mut self, bytes: &[u8], finality_only: bool) -> (bool, bool, bool) {
+    fn submit(&mut self, bytes: &[u8], data: Data) -> (bool, bool, bool) {
         let spec = self.spec.clone();
-        let ctx = Context { spec: &spec, genesis_validators_root: root(GVR), bls: &BLST };
-        let update = if finality_only {
-            std::panic::catch_unwind(|| finality_update(bytes)).ok()
-        } else {
-            LightClientUpdate::decode(bytes, LcFork::Electra, 512).ok()
+        let ctx = Context { spec: &spec, genesis_validators_root: self.gvr, bls: &BLST };
+        let update = match data {
+            Data::FinalityUpdate(layout) => std::panic::catch_unwind(|| finality_update(bytes, layout)).ok(),
+            Data::Update(layout) => LightClientUpdate::decode(bytes, layout, 512).ok(),
         };
         let helios = helios_update::<MainnetConsensusSpec>(bytes);
         let Some(update) = update else {
@@ -357,11 +437,17 @@ impl Pair {
     }
 
     fn helios(&mut self, update: &GenericUpdate<MainnetConsensusSpec>, slot: u64) -> bool {
-        let ok = verify_generic_update(update, slot, &self.theirs, b256(&root(GVR)), &forks(&self.spec)).is_ok();
+        let ok = verify_generic_update(update, slot, &self.theirs, b256(&self.gvr), &forks(&self.spec)).is_ok();
         if ok {
             apply_generic_update(&mut self.theirs, update);
         }
         ok
+    }
+
+    /// Ferrata's stores move to a later layout at a fork; Helios's holds headers of any layout.
+    fn upgrade(&mut self, to: LcFork) {
+        self.ours.upgrade(to, &self.spec).unwrap();
+        self.spec_store.upgrade(to, &self.spec).unwrap();
     }
 
     fn finalized(&self) -> (Root, Root, Root) {
@@ -371,16 +457,22 @@ impl Pair {
             self.theirs.finalized_header.beacon().tree_hash_root().0,
         )
     }
+
+    /// The three hold the same finalized header, and ferrata's spec store and Helios's store the
+    /// same optimistic header.
+    fn agree(&self) -> bool {
+        let (a, b, c) = self.finalized();
+        a == b && b == c && ours(&self.spec_store, &self.spec) == theirs(&self.theirs)
+    }
 }
 
 #[test]
 fn mainnet_periods_1899_to_1903_agree_with_helios() {
-    let mut pair = Pair::new("mainnet-p1899", "0x64b56a372f8c4ccc274d9f42c9b4a1d9a18966a20188992bcac15b1c6e7d91ac");
+    let mut pair = Pair::mainnet("mainnet-p1899", "0x64b56a372f8c4ccc274d9f42c9b4a1d9a18966a20188992bcac15b1c6e7d91ac");
     for i in 0..5 {
         let bytes = fixture("mainnet-p1899", &format!("update_{i}.ssz"));
-        assert_eq!(pair.submit(&bytes, false), (true, true, true), "update {i}");
-        let (a, b, c) = pair.finalized();
-        assert!(a == b && b == c, "update {i}: finalized roots differ");
+        assert_eq!(pair.submit(&bytes, Data::Update(LcFork::Electra)), (true, true, true), "update {i}");
+        assert!(pair.agree(), "update {i}: headers differ");
     }
     // The canonical root after update 4 (second provider, fixtures/mainnet-p1899/SOURCE.md).
     assert_eq!(pair.finalized().2, root("0x5d1200f2c031f01aa2c3385c881ca6cac727c23d3080e0ac53169160c8ddd573"));
@@ -389,12 +481,119 @@ fn mainnet_periods_1899_to_1903_agree_with_helios() {
 #[test]
 fn mainnet_end_to_end_finality_update_agrees_with_helios() {
     let mut pair =
-        Pair::new("mainnet-e2e-2026-11-09", "0xdab6b45fd34b9da264b15ad3e85dad586f836f3b11f5922e4c116b53574aefd3");
+        Pair::mainnet("mainnet-e2e-2026-11-09", "0xdab6b45fd34b9da264b15ad3e85dad586f836f3b11f5922e4c116b53574aefd3");
     let bytes = fixture("mainnet-e2e-2026-11-09", "finality_update.ssz");
-    assert_eq!(pair.submit(&bytes, true), (true, true, true));
-    let (a, b, c) = pair.finalized();
-    assert!(a == b && b == c);
-    assert_eq!(c, root("0x816b21ca5caac9461691752d78c06fa70df01537dce36caa77a753bdf46f1f0c"));
+    assert_eq!(pair.submit(&bytes, Data::FinalityUpdate(LcFork::Electra)), (true, true, true));
+    assert!(pair.agree());
+    assert_eq!(pair.finalized().2, root("0x816b21ca5caac9461691752d78c06fa70df01537dce36caa77a753bdf46f1f0c"));
+}
+
+/// The update of Sepolia period `p`: Electra layout before the Gloas fork, Gloas from 1379.
+fn sepolia_update(p: u64) -> (Vec<u8>, Data) {
+    let layout = if p < 1379 { LcFork::Electra } else { LcFork::Gloas };
+    (fixture(SEPOLIA, &format!("update_{p}.ssz")), Data::Update(layout))
+}
+
+/// The three stores after Sepolia's updates up to period `last`, upgraded at the fork.
+fn sepolia_through(last: u64) -> Pair {
+    let mut pair = Pair::sepolia();
+    for p in 1378..=last {
+        if p == 1379 {
+            pair.upgrade(LcFork::Gloas);
+        }
+        let (bytes, data) = sepolia_update(p);
+        assert_eq!(pair.submit(&bytes, data), (true, true, true), "period {p}");
+        assert!(pair.agree(), "period {p}: headers differ");
+    }
+    pair
+}
+
+#[test]
+fn sepolia_through_the_gloas_fork_agrees_with_helios() {
+    // Every period's update from 1378 (Fulu) to 1409, 31 of them under Gloas; then the latest
+    // Gloas finality update.
+    let mut pair = sepolia_through(1409);
+    let bytes = fixture(SEPOLIA, "finality_update.ssz");
+    assert_eq!(pair.submit(&bytes, Data::FinalityUpdate(LcFork::Gloas)), (true, true, true));
+    assert!(pair.agree());
+    // The canonical root at slot 11547104 (second provider, the fixture's SOURCE.md), and the
+    // execution block hash both bind: the bid's parent block.
+    assert_eq!(pair.finalized().2, root("0xface3c3725d1760873c4e115e74446e7e5c0164a71da7228bbb66b92bc8ed6ef"));
+    let helios_hash = pair.theirs.finalized_header.execution_root();
+    let ferrata_core::types::Execution::BlockHash { block_hash, .. } = &pair.ours.core().finalized_header.execution
+    else {
+        panic!("not the Gloas layout")
+    };
+    assert_eq!(helios_hash, B256::from(*block_hash));
+    assert_eq!(helios_hash, B256::from(root("0xcd9fa3661248bb2411636d3498a1dda97f0ee50d02b8ac894969e391f2978435")));
+}
+
+/// Byte offsets inside Sepolia's Gloas-layout data (512 keys; every field fixed-size).
+mod gloas_layout {
+    pub const HEADER: usize = 112 + 32 + 11 * 32;
+    /// Within a header: the beacon state root, the execution block hash, the execution branch.
+    pub const STATE_ROOT: usize = 48;
+    pub const BLOCK_HASH: usize = 112;
+    pub const EXECUTION_BRANCH: usize = 144;
+    /// `LightClientFinalityUpdate`.
+    pub const FU_FINALIZED: usize = HEADER;
+    pub const FU_FINALITY_BRANCH: usize = 2 * HEADER;
+    pub const FU_BITS: usize = FU_FINALITY_BRANCH + 9 * 32;
+    pub const FU_SIGNATURE: usize = FU_BITS + 64;
+    pub const FU_SIGNATURE_SLOT: usize = FU_SIGNATURE + 96;
+    /// `LightClientUpdate`.
+    pub const NEXT_COMMITTEE: usize = HEADER;
+    pub const NEXT_BRANCH: usize = NEXT_COMMITTEE + 513 * 48;
+}
+
+#[test]
+fn mutated_sepolia_gloas_data_is_refused_by_both() {
+    use gloas_layout::*;
+    // The offsets are right: they hold what the decoder reads there.
+    let fu_bytes = fixture(SEPOLIA, "finality_update.ssz");
+    let fu = finality_update(&fu_bytes, LcFork::Gloas);
+    assert_eq!(&fu_bytes[FU_SIGNATURE..FU_SIGNATURE + 96], &fu.sync_aggregate.signature);
+    assert_eq!(&fu_bytes[FU_FINALITY_BRANCH..FU_FINALITY_BRANCH + 32], &fu.finality_branch[0]);
+    assert_eq!(&fu_bytes[STATE_ROOT..STATE_ROOT + 32], &fu.attested_header.beacon.state_root);
+    let ferrata_core::types::Execution::BlockHash { block_hash, branch } = &fu.finalized_header.execution else {
+        panic!("not the Gloas layout")
+    };
+    assert_eq!(&fu_bytes[FU_FINALIZED + BLOCK_HASH..FU_FINALIZED + BLOCK_HASH + 32], block_hash);
+    assert_eq!(&fu_bytes[FU_FINALIZED + EXECUTION_BRANCH + 320..FU_FINALIZED + EXECUTION_BRANCH + 352], &branch[10]);
+    let at_1409 = sepolia_through(1409);
+    let mutations: Vec<Mutation> = vec![
+        ("signature byte", Box::new(|b: &mut Vec<u8>| b[FU_SIGNATURE + 40] ^= 0x01)),
+        ("finality branch byte", Box::new(|b: &mut Vec<u8>| b[FU_FINALITY_BRANCH + 3 * 32] ^= 0x01)),
+        ("attested state root", Box::new(|b: &mut Vec<u8>| b[STATE_ROOT] ^= 0x01)),
+        ("attested execution block hash", Box::new(|b: &mut Vec<u8>| b[BLOCK_HASH + 5] ^= 0x01)),
+        ("finalized execution block hash", Box::new(|b: &mut Vec<u8>| b[FU_FINALIZED + BLOCK_HASH] ^= 0x01)),
+        ("finalized execution branch", Box::new(|b: &mut Vec<u8>| b[FU_FINALIZED + EXECUTION_BRANCH + 330] ^= 0x01)),
+        ("one signer bit", Box::new(|b: &mut Vec<u8>| b[FU_BITS] ^= 0x01)),
+        ("no signers", Box::new(|b: &mut Vec<u8>| b[FU_BITS..FU_SIGNATURE].fill(0))),
+        ("signature slot far in the future", Box::new(|b: &mut Vec<u8>| b[FU_SIGNATURE_SLOT + 4] ^= 0x10)),
+    ];
+    for (what, mutate) in &mutations {
+        let mut bytes = fu_bytes.clone();
+        mutate(&mut bytes);
+        let mut pair = at_1409.clone();
+        let before = pair.finalized();
+        assert_eq!(pair.submit(&bytes, Data::FinalityUpdate(LcFork::Gloas)), (false, false, false), "{what}");
+        assert_eq!(pair.finalized(), before, "{what}: a refused update changed a store");
+    }
+    // The first committee handoff under Gloas (period 1379), with its next committee altered.
+    let mut at_fork = sepolia_through(1378);
+    at_fork.upgrade(LcFork::Gloas);
+    let (u1379, data) = sepolia_update(1379);
+    assert_eq!(at_fork.clone().submit(&u1379, data), (true, true, true));
+    let handoff: Vec<Mutation> = vec![
+        ("next committee key byte", Box::new(|b: &mut Vec<u8>| b[NEXT_COMMITTEE + 100] ^= 0x01)),
+        ("next-committee branch byte", Box::new(|b: &mut Vec<u8>| b[NEXT_BRANCH + 2 * 32 + 7] ^= 0x01)),
+    ];
+    for (what, mutate) in &handoff {
+        let mut bytes = u1379.clone();
+        mutate(&mut bytes);
+        assert_eq!(at_fork.clone().submit(&bytes, data), (false, false, false), "{what}");
+    }
 }
 
 /// Byte offsets inside a mainnet `LightClientUpdate` (Electra layout, 512 keys).
@@ -434,23 +633,25 @@ fn mutated_mainnet_updates_are_refused_by_both() {
         ("no signers", Box::new(|b: &mut Vec<u8>| b[layout::BITS..layout::SIGNATURE].fill(0))),
         ("signature slot far in the future", Box::new(|b: &mut Vec<u8>| b[layout::SIGNATURE_SLOT + 4] ^= 0x10)),
     ];
+    let electra = Data::Update(LcFork::Electra);
     for (what, mutate) in &mutations {
         let mut bytes = original.clone();
         mutate(&mut bytes);
-        let mut pair = Pair::new("mainnet-p1899", "0x64b56a372f8c4ccc274d9f42c9b4a1d9a18966a20188992bcac15b1c6e7d91ac");
+        let mut pair =
+            Pair::mainnet("mainnet-p1899", "0x64b56a372f8c4ccc274d9f42c9b4a1d9a18966a20188992bcac15b1c6e7d91ac");
         let before = pair.finalized();
-        assert_eq!(pair.submit(&bytes, false), (false, false, false), "{what}");
+        assert_eq!(pair.submit(&bytes, electra), (false, false, false), "{what}");
         assert_eq!(pair.finalized(), before, "{what}: a refused update changed a store");
     }
     // A store that holds the wrong committee: the period-1900 committee in place of 1899's.
-    let mut pair = Pair::new("mainnet-p1899", "0x64b56a372f8c4ccc274d9f42c9b4a1d9a18966a20188992bcac15b1c6e7d91ac");
+    let mut pair = Pair::mainnet("mainnet-p1899", "0x64b56a372f8c4ccc274d9f42c9b4a1d9a18966a20188992bcac15b1c6e7d91ac");
     let next = decoded.next_sync_committee.clone();
     let core = StoreCore { current_sync_committee: next.clone(), ..pair.ours.core().clone() };
     pair.ours = FinalizedStore::from_core(core.clone(), &BLST).unwrap();
     pair.spec_store.core = core;
     let hnext = helios_update::<MainnetConsensusSpec>(&original).unwrap().next_sync_committee.unwrap();
     pair.theirs.current_sync_committee = hnext;
-    assert_eq!(pair.submit(&original, false), (false, false, false), "wrong committee");
+    assert_eq!(pair.submit(&original, electra), (false, false, false), "wrong committee");
 }
 
 /// SSZ encoding of Electra-layout light-client data (the inverse of ferrata's decoders), to hand
@@ -594,7 +795,7 @@ fn participation_from_zero_to_full_agrees_with_helios() {
         if helios.is_ok() {
             apply_generic_update(&mut hstore, &hupdate);
         }
-        assert_eq!(ours(&spec_store), theirs(&hstore), "{signers} signers");
+        assert_eq!(ours(&spec_store, spec), theirs(&hstore), "{signers} signers");
         // Both finalize exactly from 22 of 32 (two thirds); the policy store also refuses below.
         let finalized = spec_store.core.finalized_header.beacon.slot == 72;
         assert_eq!(finalized, signers >= 22, "{signers} signers");
@@ -665,12 +866,14 @@ impl Fabricated {
     }
 }
 
-/// Four inputs on which Helios 0.9.4 departs from the light-client specification. None occurs on
-/// a genuine chain with an honest committee, and none was among the inputs compared above; each
-/// is pinned here so the README can state it, with the spec's rule that decides it.
+/// Inputs on which Helios departs from the light-client specification, each pinned with the spec
+/// rule that decides it. None occurs on a genuine chain with an honest committee, and none was
+/// among the inputs compared above. Helios 0.9.4 departed on inputs 1 to 4; at 0.12.0 it no longer
+/// departs on 1 (a16z/helios#819) or 4 (#820), still departs on 2 and 3, and departs on 5, which
+/// came with #751.
 #[test]
 fn where_helios_departs_from_the_specification() {
-    use ferrata_spectests::testkit::{fabricated_update, fake_committee, sign, Fabrication};
+    use ferrata_spectests::testkit::{fabricated_update, fake_committee, sign, with_wrong_aggregate, Fabrication};
     let fake = fake_committee(32, 0x5a);
     let chain = fabricated_chain(&fake.committee);
     let ctx = chain.ctx();
@@ -690,17 +893,18 @@ fn where_helios_departs_from_the_specification() {
 
     // 1. A next committee that contradicts the one the store holds (validate_light_client_update:
     //    `if update_attested_period == store_period and is_next_sync_committee_known(store):
-    //    assert update.next_sync_committee == store.next_sync_committee`). Ferrata refuses; Helios
-    //    has no such check and accepts.
+    //    assert update.next_sync_committee == store.next_sync_committee`). Ferrata refuses. Helios
+    //    0.9.4 had no such check and accepted; 0.12.0 refuses as well (a16z/helios#819).
     let (b, c) = (fake_committee(32, 0x6b).committee, fake_committee(32, 0x7c).committee);
-    let (mut ours, mut theirs) = chain.stores();
-    assert_eq!(chain.submit(&mut ours, &mut theirs, &finality(72, 80, Some(&b)), 82), (Ok(()), true));
-    let (ferrata, helios) = chain.submit(&mut ours, &mut theirs, &finality(88, 96, Some(&c)), 98);
+    let (mut ours1, mut theirs1) = chain.stores();
+    assert_eq!(chain.submit(&mut ours1, &mut theirs1, &finality(72, 80, Some(&b)), 82), (Ok(()), true));
+    let (ferrata, helios) = chain.submit(&mut ours1, &mut theirs1, &finality(88, 96, Some(&c)), 98);
     assert_eq!(
         (ferrata, helios),
-        (Err(ferrata_core::Error::NextCommitteeMismatch), true),
+        (Err(ferrata_core::Error::NextCommitteeMismatch), false),
         "next committee contradiction"
     );
+    assert_eq!(ours(&ours1, &chain.spec), theirs(&theirs1));
 
     // 2. A signer key that is the identity point. FastAggregateVerify requires KeyValidate on every
     //    key, and KeyValidate refuses the identity. Ferrata's spec store refuses (its policy store
@@ -711,6 +915,14 @@ fn where_helios_departs_from_the_specification() {
         let mut id = [0u8; 48];
         id[0] = 0xc0;
         id
+    };
+    // The aggregate stays the sum of the keys (the identity adds nothing), so that Helios's use
+    // of that field (input 5) does not decide this input.
+    with_identity.aggregate_pubkey = {
+        use blst::min_pk::{AggregatePublicKey, PublicKey};
+        let keys: Vec<PublicKey> =
+            with_identity.pubkeys.iter().filter(|k| k[0] != 0xc0).map(|k| PublicKey::from_bytes(k).unwrap()).collect();
+        AggregatePublicKey::aggregate(&keys.iter().collect::<Vec<_>>(), false).unwrap().to_public_key().compress()
     };
     let chain2 = fabricated_chain(&with_identity);
     let ctx2 = chain2.ctx();
@@ -759,8 +971,9 @@ fn where_helios_departs_from_the_specification() {
     );
 
     // 4. A forced update whose best valid update carries no finality (a valid update): the spec
-    //    then treats the attested header as finalized. Ferrata does; Helios's `force_update`
-    //    unwraps the absent finalized header and panics.
+    //    then treats the attested header as finalized. Ferrata does. Helios 0.9.4's `force_update`
+    //    unwrapped the absent finalized header and panicked; 0.12.0 does what the spec does
+    //    (a16z/helios#820).
     let optimistic = fabricated_update(
         &Fabrication { finalized_slot: None, attested_slot: 80, signature_slot: 81, signers: 32, next_committee: None },
         &fake,
@@ -771,7 +984,46 @@ fn where_helios_departs_from_the_specification() {
     let timed_out = 64 + chain.spec.preset.update_timeout() + 1;
     ours4.process_force_update(timed_out, &chain.spec).unwrap();
     assert_eq!(ours4.core.finalized_header.beacon.slot, 80, "the spec forces the attested header");
-    let forced =
-        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| helios_force_update(&mut theirs4, timed_out)));
-    assert!(forced.is_err(), "helios force_update panics on a best update without finality");
+    helios_force_update(&mut theirs4, timed_out);
+    assert_eq!(ours(&ours4, &chain.spec), theirs(&theirs4), "forced update");
+
+    // 5. A committee whose `aggregate_pubkey` is not the sum of its keys. The spec never reads the
+    //    field: `validate_light_client_update` checks the signature against the participants' keys
+    //    (`eth_fast_aggregate_verify`), so ferrata's spec store accepts an update all members
+    //    signed (its policy store refuses such a committee at bootstrap). Helios 0.12.0 derives the
+    //    participants' key from the field when more than half sign (a16z/helios#751), and refuses.
+    let chain5 = fabricated_chain(&with_wrong_aggregate(&fake.committee));
+    let ctx5 = chain5.ctx();
+    let signed_by_all = fabricated_update(
+        &Fabrication {
+            finalized_slot: Some(72),
+            attested_slot: 80,
+            signature_slot: 81,
+            signers: 32,
+            next_committee: None,
+        },
+        &fake,
+        &ctx5,
+    );
+    let (mut ours5, mut theirs5) = chain5.stores();
+    assert_eq!(chain5.submit(&mut ours5, &mut theirs5, &signed_by_all, 82), (Ok(()), false), "aggregate field");
+    assert_eq!(
+        FinalizedStore::initialize(&chain5.trusted, &chain5.bootstrap, LcFork::Electra, &chain5.spec, &BLST)
+            .unwrap_err(),
+        ferrata_core::Error::CommitteeInvalid
+    );
+    // With no more than half signing, Helios sums the participants' keys, as the spec does.
+    let signed_by_half = fabricated_update(
+        &Fabrication {
+            finalized_slot: Some(72),
+            attested_slot: 80,
+            signature_slot: 81,
+            signers: 16,
+            next_committee: None,
+        },
+        &fake,
+        &ctx5,
+    );
+    let (mut ours5, mut theirs5) = chain5.stores();
+    assert_eq!(chain5.submit(&mut ours5, &mut theirs5, &signed_by_half, 82), (Ok(()), true), "half signing");
 }

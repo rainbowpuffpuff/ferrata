@@ -136,7 +136,7 @@ HEADER_FIELDS = [
     ("receiptsRoot", "b"), ("logsBloom", "b"), ("difficulty", "i"), ("number", "i"), ("gasLimit", "i"),
     ("gasUsed", "i"), ("timestamp", "i"), ("extraData", "b"), ("mixHash", "b"), ("nonce", "b"),
     ("baseFeePerGas", "i"), ("withdrawalsRoot", "b"), ("blobGasUsed", "i"), ("excessBlobGas", "i"),
-    ("parentBeaconBlockRoot", "b"), ("requestsHash", "b"), ("blockAccessListHash", "b"),
+    ("parentBeaconBlockRoot", "b"), ("requestsHash", "b"), ("blockAccessListHash", "b"), ("slotNumber", "i"),
 ]
 
 
