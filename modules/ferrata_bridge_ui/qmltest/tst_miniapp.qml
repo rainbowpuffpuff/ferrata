@@ -23,7 +23,7 @@ Item {
         }
         function el(name) { var it = findChild(host.app, name); verify(it !== null, "found " + name); return it; }
         function idle() { tryVerify(function () { return host.app.busy === 0; }, 180000, "calls finished"); }
-        function click(name) { var it = el(name); verify(it.visible, name + " visible"); verify(it.enabled, name + " enabled"); mouseClick(it); }
+        function click(name) { wait(80); var it = el(name); verify(it.visible, name + " visible"); verify(it.enabled, name + " enabled"); mouseClick(it); }
         function shot(name) { idle(); wait(200); var img = grabImage(host.app); img.save("results/screenshots/" + name + ".png"); }
         function tab(name) { click("tab." + name); wait(150); }
         function has(text, part) { return String(text).indexOf(part) >= 0; }
