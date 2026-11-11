@@ -54,7 +54,7 @@ so the wall clock below is an upper bound for that machine.
 | Release, ETH / ERC-20, with RISC Zero's real Groth16 verifier | **373,657** / **403,523** gas | 373,657 / 403,523 |
 | Deposit, first of the tree (real-verifier suite) / later ETH deposit | **200,572** / **161,430** gas | 159,285-198,427 before the fixes, which add 2.1k per deposit: 200,572 and 161,430 exactly |
 | Checkpoint under (A) with the real verifier: submit + recordBeacon + finalize | **1,002,201** gas (derived: 463,096 + 77,828 + 461,277) | 974,346 + 28.0k with the fixes = 1,002,346 (derived; 0.01 % apart) |
-| Finality update, `process_update`; the three steps | **10.21 M**; 2.31 M, 4.20 M, 3.60 M user cycles | "an update's 9.2M" public execution gas, steps of 2.3M, 4.2M and 3.6M (EVIDENCE row 2) |
+| Finality update, `process_update`; the three steps | **10.21 M**; 2.31 M, 4.20 M, 3.60 M user cycles | 10.2M cycles, in steps of 2.3M, 4.2M and 3.6M (EVIDENCE row 2) |
 | Every other figure of `bench/results/` in these modes | equal to the committed `bench/results/blst-accel.all.txt` (the executor is deterministic) | |
 | Gas suite | 34 of 34 tests passed (`GasScenarios`, `ReturnLegGas`) | |
 
