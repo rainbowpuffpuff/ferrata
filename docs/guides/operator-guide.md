@@ -303,13 +303,13 @@ Running it:
   re-reads every pending candidate before acting. A lost state file costs a rescan, never a missed
   cancellation. One process per state file is enforced by an OS lock. A stuck transaction times out,
   and the next poll retries.
-- **Rehearsal.** `monitor/tests/anvil-e2e.sh`, on a local anvil chain, makes 38 checks:
+- **Rehearsal.** `monitor/tests/anvil-e2e.sh`, on a local anvil chain, makes 40 checks:
   - an honest candidate passes untouched;
   - wrong ones are cancelled in time;
-  - a monitor killed mid-window and restarted still cancels, 2,999 s before the deadline;
+  - a monitor killed mid-window and restarted still cancels, 3,000 s before the deadline;
   - a lost state file is recovered from the chain;
-  - a revocation by the freeze authority's monitor, the persistent-candidate pause, and the
-    rule (A) cases.
+  - a revocation by the freeze authority's monitor, the persistent-candidate pause, the rule (A)
+    cases, and a corrupted attestor's final-tier message flagged.
 
 A watcher that lies can only delay finalisation until the admin replaces it. One that stops lets a bad
 candidate through: under rule (B) the release delay and revocation still catch it; under rule (A),

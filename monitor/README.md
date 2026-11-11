@@ -123,25 +123,26 @@ All runs were on the Modal build box (`mrun --profile yasmeen`), never on the la
 - [`tests/anvil-e2e.sh`](tests/anvil-e2e.sh): a local anvil chain (chain id 31337, no fork, nothing
   sent to any public network). It deploys a v5 vault through
   [`vault/script/MonitorFixture.s.sol`](../vault/script/MonitorFixture.s.sol), with an accept-all
-  verifier (the monitor never reads proofs) and the monitor's fresh key as the watcher. All 38 checks
+  verifier (the monitor never reads proofs) and the monitor's fresh key as the watcher. All 40 checks
   pass ([`results/anvil-e2e/summary.md`](results/anvil-e2e/summary.md)).
 
 The scenarios:
 
 | | Scenario | Outcome |
 |---|---|---|
-| S1 | honest candidate (rule B) | passed, untouched for 3 polls, finalised after the wait |
+| S1 | honest candidate (rule B); the node view carries the attestors' published final-tier messages (real Ed25519, `examples/attestations.rs`) | passed, untouched for 3 polls, its tip attested by 3 live certified keys; the certified key that signed a forged tip 12 raised a critical `attestation-finding` (`conflictingTip`); finalised after the wait |
 | S2 | tip conflicting with the final tier | cancelled in the first poll; `finalizeAttested` refused after the wait |
 | S3 | stale key set (n = 3, t = 2 against four keys) | cancelled (`keySetNotLive`) |
 | S4 | honest and wrong pending together | only the wrong one cancelled; the honest one finalised |
-| S5 | monitor SIGKILLed while waiting on a tip its node lacks | a second monitor on the same state file is refused; after the restart from the state file, cancelled 601 s after the submission, 2,999 s before the deadline |
+| S5 | monitor SIGKILLed while waiting on a tip its node lacks | a second monitor on the same state file is refused; after the restart from the state file, cancelled 600 s after the submission, 3,000 s before the deadline |
 | S6 | state file lost | a fresh monitor rescans from the deployment block and makes exactly one cancellation (the pending wrong one); the two finalised checkpoints are audited as good |
 | S7 | wrong checkpoint finalised while no monitor ran | the watcher raises `finalized-wrong` with the deadline; the freeze authority's monitor revokes checkpoint 2, and `finalState` returns to its parent |
 | S8 | cancelled state submitted again | cancelled again, `persistent-candidate`, a 12 h pause; a submission during the pause is refused |
 | A1–A3 | rule (A) vault (turnSeconds 900, Δ 3 h 01 min) | honest candidate passed and finalised with a beacon after W = 12,660 s; stale key set cancelled at once; tip not final cancelled 7,202 s after the submission (Δ_g = 7,200 s), 5,458 s before the deadline |
 | A4 | final tier stalled (rule A) | `final-tier-stalled` and the 12 h pause |
 | R1–R4 | the lab's real record as the node view | final tier 258; real tip passes, other hash cancelled, tip 259 waits |
-| | alerting | every critical alert reached the `--alert-cmd` pager |
+| | alerting | all 19 critical alerts reached the `--alert-cmd` pager |
+| | resources (build box) | the daemon held 42,280 kB resident (VmRSS) at its kill; a run of 2 polls with a full rescan took 26,880 kB max RSS and 1.04 s |
 
 A `cancelCandidate` sent by the monitor used **41,477 gas** (41,468 in S5), from the receipts
 (measured, anvil). This includes the 21,000 base and the calldata. The vault's Foundry table gives
