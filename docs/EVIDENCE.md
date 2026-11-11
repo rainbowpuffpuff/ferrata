@@ -101,7 +101,8 @@ in [`evidence-suites.txt`](evidence-suites.txt). Image ids are those of that wor
 | Command-line tool (`cli/`) | 4 unit tests passed; the end-to-end test (anvil, the harness in dev mode, the mock verifier) passed; fmt clean |
 | Privacy suite (`scripts/privacy/run.sh`) | both halves pass; recovery 10 of 10 unclaimed deposits and 10 of 10 unreleased burns; its tables differ from the committed ones (`docs/privacy/generated/`, kept from the third pass) only by the image id and by claim transactions 16 and 8 bytes shorter (no caller time) |
 | Vault: `forge test`, invariants, coverage | 433 passed, 1 skipped (the privacy suite's Ethereum half, run above) in 38 suites, 43 of them with real proofs (`test/real/`, 10 suites); invariants 28 passed in 2 suites; coverage 100% (lines, statements, branches, functions) of both files; `forge fmt --check` clean; FerrataVault 24,254 B (322 B under EIP-170; `--sizes` exits 1 only for the test-only `VaultHandler`, as before) |
+| Link checker (`scripts/check-links.py`, laptop: it needs git) | 24 files, 833 links, 0 broken |
 
 Not re-run here: the LEZ v0.4.0-rc2 selection, `bridge/scripts/check.sh`, `modules/scripts/check.sh`, `bench/`, the
-finality simulator, the lab's `lab.sh verify`, the vault's mutation run (254/254 killed on branch `secfix-vault`), the
-link checker, and any proof outside the crown rehearsal (row 31).
+finality simulator, the lab's `lab.sh verify`, the vault's mutation run (254/254 killed on branch `secfix-vault`), and
+any proof outside the crown rehearsal (row 31).

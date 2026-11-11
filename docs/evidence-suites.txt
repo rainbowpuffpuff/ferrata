@@ -51,6 +51,8 @@ Run "final2" (11 Nov 05:21 - 05:31 UTC, on a box warmed by two earlier runs of t
                                                                        245/245, 338/338, 45/45, 33/33
     forge fmt --check                                                  ok
 
+Link checker (laptop: it reads `git ls-files`; at 5916222): python3 -I scripts/check-links.py   24 files, 833 links, 0 broken
+
 Earlier runs of the same script on this box: "warm" (at 998fff8, before the security merges) and "final" (at
 db9f034); their failures were fixed by b93a945 and b369d65 (realblocks-crown missing the producer inscription, then
 its clippy lints; the crown script's 7-field candidates() destructuring; formatting).
