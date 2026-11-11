@@ -363,12 +363,12 @@ fn gate_two_honest_one_adversary() {
         // Ethereum moves on once both honest updaters have nothing left to do on a chain.
         let mut done = true;
         for c in 0..recs.len() {
+            if !(idle[c] && clocks[c].now() >= recs[c].entries.len()) {
+                done = false;
+            }
             if idle[c] && clocks[c].now() < recs[c].entries.len() {
                 clocks[c].set(clocks[c].now() + 1);
                 junk_due[c] = true;
-            }
-            if !(idle[c] && clocks[c].now() >= recs[c].entries.len()) {
-                done = false;
             }
         }
         if done {
