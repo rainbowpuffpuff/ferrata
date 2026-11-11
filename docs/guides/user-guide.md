@@ -121,9 +121,10 @@ proved a private claim on a Modal build box's CPU in 254.8 s (252,185-byte trans
 sequencer, which verifies receipts, included it ([`lez/live/inbound/README.md`](../../lez/live/inbound/README.md);
 [`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §11); the merged program's private claim was proven
 by LEZ's wallet on a cloud CPU (16 cores reserved, up to 32) and sent in 276.8 s on a LEZ devnet, in the
-crown rehearsal ([`e2e/runs/crown-rehearsal-3`](../../e2e/runs/crown-rehearsal-3/README.md)). **Not
-measured:** the private claim on a user's laptop or at the declared minimum (16 GB, 8 cores,
-[`attestation.md`](../design/attestation.md) §13).
+crown rehearsal ([`e2e/runs/crown-rehearsal-3`](../../e2e/runs/crown-rehearsal-3/README.md)); as this repository's
+harness builds it, it was proven in 905.4 s on cloud CPUs held to 8 CPUs and 16 GiB (the declared minimum's numbers)
+and in 463.7 s at 16 CPUs ([`lez/results/p4-minimum`](../../lez/results/p4-minimum/README.md)). **Not measured:** the private claim on a user's
+laptop or on macOS (declared minimum: 16 GB, 8 cores, [`attestation.md`](../design/attestation.md) §13).
 
 **Fees.** The claim mints your denomination to you and the escrowed fees to the fee recipient and to
 the relayer it names ([`bridge.md`](../design/bridge.md) §5.5, §13). The LEZ transaction fee of a
@@ -373,8 +374,8 @@ The integration surface today is the program messages and the derivations; the L
 - the gas drop and the relayer and wrapper services;
 - a transfer of wrapped tokens between holders; the switch to LEZ's token program;
 - a real proof of a private claim to a public destination, and laptop or GPU proofs of the current program
-  image's private claim and burn (the crown rehearsal proved them on a cloud CPU); any user-side proof at the
-  declared minimum (8 cores, 16 GB) or on macOS;
+  image's private claim and burn (the crown rehearsal and `lez/results/p4-minimum` proved them on cloud CPUs, the
+  latter held to 8 and 16 CPUs with 16 GiB); any user-side proof on a laptop or on macOS;
 - the v5 vault on public Sepolia, and a private claim of a Sepolia deposit: the v3 vault of the end-to-end
   fixture is on Sepolia with one deposit, deposit 0, which a LEZ sequencer we run claimed by the plaintext
   path; deposit 1, the private kind, waits for the owner's run

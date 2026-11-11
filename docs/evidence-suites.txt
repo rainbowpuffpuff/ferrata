@@ -80,3 +80,9 @@ script, run r1 cold: 497 s in all):
                                                                        20/20, the core's recover_burns 20 found; output
                                                                        equal byte for byte to docs/privacy/generated
   link checker on the laptop at the branch's tip (it reads `git ls-files`)   24 files, 843 links, 0 broken
+
+The p4-minimum fold (11 Nov 2026: EVIDENCE rows 32-34, row 5, performance P.4, traceability P.4; documents only,
+plus lez/results/p4-minimum and lez/harness/src/bin/prove_native_transfer.rs, whose harness clippy -D warnings
+ran clean on the build box with RISC0_SKIP_BUILD=1 before the merge):
+  link checker on the laptop (it reads `git ls-files`)                24 files, 859 links, 0 broken
+  python3 -I scripts/check-links.py lez/results/p4-minimum/README.md   1 file, 11 links, 0 broken

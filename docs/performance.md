@@ -116,9 +116,14 @@ recommended cadence with real proving and recorded hardware (milestone A4).
 
 Declared minimum for user-side proving: **16 GB of memory and 8 cores, x86-64 or Apple Silicon**
 ([`attestation.md`](design/attestation.md) §13). Measured: the private attestation on one L4, 16.1 s,
-0.76 GiB host memory (P.2). The update proof is an updater's, not a user's (9.18 GiB peak). **Gaps:** the private
-attestation on a mid-range laptop CPU and at the declared minimum; macOS; a chain of hops (a 320-hop claim
-is estimated at about 58M accelerated user cycles).
+0.76 GiB host memory (P.2); on CPUs, in cloud containers held to 8 and to 16 CPUs with 16 GiB hard (AMD Zen 3
+servers), **904.3 s** and **497.3 s** (medians of 3), 9.25 GiB peak: 2,355,666 user cycles, of which LEZ's
+privacy-preserving circuit takes 1,975,089 and 85 % of the time ([`p4-minimum`](../lez/results/p4-minimum/README.md),
+[EVIDENCE](EVIDENCE.md) row 32). For scale, the cheapest private transaction of LEZ's own wallet takes 991.7 s and
+488.6 s on the same shapes (row 34). Modal's 8 CPUs are 8 hardware threads; an 8-core x86 laptop usually has 16.
+The update proof is an updater's, not a user's (9.18 GiB peak). **Gaps:** a mid-range laptop and macOS; the
+attestation as a client that pads like LEZ's wallet would send it (*estimated* +1.0M cycles, about 10 min at
+16 CPUs); a chain of hops (a 320-hop claim is estimated at about 58M accelerated user cycles).
 
 ### P.5 End-to-end attestation latency
 
@@ -245,17 +250,23 @@ vault on Sepolia's rules; a later (not first) candidate with the real verifier.
 | release (succinct), earlier image | 80,501 user cycles, constant over 64 witnesses; **37.1–48.6 s**, peak 1.46 GB, receipt 223,930 B (up to 150 s under load) | laptop CPU | [`bridge.md`](design/bridge.md) §18.2 |
 | release, current image (`NOut` v2, review M-3) | 77,736 user cycles, constant over 64 witnesses (executor); proven and wrapped in the crown rehearsal | build box (executor); cloud | [`evidence-suites.txt`](evidence-suites.txt); [`crown-rehearsal-3`](../e2e/runs/crown-rehearsal-3/README.md) |
 | release, end-to-end run | 15.1 s and 14.7 s | 16 cores | [`bridge.md`](design/bridge.md) §18.7 |
+| release, current image: the holder's succinct proof | **46.0 s** at 8 CPUs, **26.4–27.0 s** at 16; peak 1.5 GiB; receipt 223,930 B | cloud containers held to 8 / 16 CPUs and 16 GiB (AMD Zen 3) | [`p4-minimum`](../lez/results/p4-minimum/README.md) |
+| its Groth16 wrap (any relayer's) | `identity_p254` 68.8–70.8 s / 39.3 s, then the prover image 18.8–23.7 s / 15.6–16.6 s; 7.6 GiB at most; seal 260 B | the same shapes; the prover image in a gVisor container | [`p4-minimum`](../lez/results/p4-minimum/README.md) |
 | Groth16 wrap of a release | 77.5–79.9 s; about 7.3 GiB; seal 260 B; **x86 only** | laptop CPU | [`bridge.md`](design/bridge.md) §18.2 |
 | claim statement (the bridge's part) | 74,379 user cycles; 38.90 s | laptop CPU | [`bridge.md`](design/bridge.md) §18.3 |
 | full LEZ private claim (earlier image) | **15.3 s**; receipt 227,477 B; 0.78 GiB host for claim and burn | one L4 | [`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md) §7 |
 | full LEZ private claim, LEZ's wallet (earlier program) | **254.8 s**; transaction 252,185 B | a cloud build box's CPU | [`lez/live/inbound/README.md`](../lez/live/inbound/README.md) |
 | private claim and private burn of the merged program, LEZ's wallet on a devnet | **276.8 s** and **336.0 s**, proving and sending | a cloud CPU container, 16 cores reserved, up to 32 | [`crown-rehearsal-3`](../e2e/runs/crown-rehearsal-3/README.md) |
 | private burn (earlier image) | **12.4 s**; receipt 226,978 B | one L4 | [`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md) §7 |
+| private claim and private burn of the merged program, as this harness builds them | claim **905.4 s** / **463.7 s**, burn **756.3 s** / **389.0 s** at 8 / 16 CPUs (medians of 3; at 16 one run each on an Intel Xeon, 371.4 s and 310.6 s); peak 9.24 GiB | cloud containers held to 8 / 16 CPUs and 16 GiB | [`p4-minimum`](../lez/results/p4-minimum/README.md), [EVIDENCE](EVIDENCE.md) row 33 |
+| LEZ's own wallet: its cheapest private transaction (the yardstick) | **991.7 s** / **488.6 s** at 8 / 16 CPUs; 2,851,842 user cycles | the same | [`p4-minimum`](../lez/results/p4-minimum/README.md), row 34 |
 | recovery scan | median 128.9 ms per 100,000 deposits, 1,308.6 ms per 1,000,000 | laptop CPU, one thread | [`bridge.md`](design/bridge.md) §18.3 |
 
-Declared minimum: 16 GB and 8 cores, x86-64 or Apple Silicon. **Gaps:** the full private claim and burn on a
-mid-range laptop and at the declared minimum; macOS; real proofs of the current program image on a laptop or a
-GPU (the crown rehearsal proved it on a cloud CPU); the wrap on Apple Silicon (not supported today).
+Declared minimum: 16 GB and 8 cores, x86-64 or Apple Silicon. The release's succinct proof needs the holder's burn
+secret `sOut`, so it is the user's; the wrap takes only the succinct receipt, so any relayer can make it
+([`bridge.md`](design/bridge.md) §12.2, §12.3). **Gaps:** a mid-range laptop and macOS; the claim and burn as a client
+that pads like LEZ's wallet would send them (*estimated* +1.0M cycles each); the current program image on a GPU; the
+wrap on Apple Silicon (not supported today).
 
 ### P.5 Latency: deposit to mint, burn to release
 
@@ -273,7 +284,7 @@ and both claims; its duration is not a latency figure (stand-in beacon chain)
 | the vault's wait | 1 h | `W` = 3 h 16 min (`n` = 3) to 4 h 31 min (`n` = 10) at the default floor | design ([`bridge.md`](design/bridge.md) §11.6) |
 | tip to finalisation | about 3 h | 7–22 h; **4.00–7.68 h median** in simulation (`n` = 3 to 10) | estimated; simulated ([`bridge.md`](design/bridge.md) §9, §11.7) |
 | release delay | ≥ 24 h outside testnets (0 allowed on testnets) | the same | design ([`bridge.md`](design/bridge.md) §13) |
-| the user's release proof and wrap | about 40 s + 80 s on a laptop | the same | measured (P.4) |
+| the user's release proof and a relayer's wrap | 46.0 s at 8 CPUs, 26.7 s at 16, plus 55–93 s of wrap (about 40 s + 80 s on a laptop, earlier image) | the same | measured (P.4) |
 | privacy delay | the client's choice | the same | design |
 
 The rehearsed testnet round trip (wait 40 min, release delay 120 s) runs in about 55 minutes plus the queue
@@ -328,8 +339,8 @@ over one and five years with real traffic (milestone B4).
 
 ## Gaps, in one list
 
-`just bench`; any user-side proof at the declared minimum or on macOS; a CPU proof of the private
-attestation, and laptop proofs of the claim and burn of the current images; latency measured end to end on either leg; the
+`just bench`; user-side proofs on a laptop and on macOS (cloud CPUs held to 8 and 16 CPUs: P.4), and as a client
+that pads like LEZ's wallet; latency measured end to end on either leg; the
 recommended-cadence tracking cost with real proving; daemon resources; the BLS precompile delta; cost
 against state size; the v5 vault on Sepolia's gas rules; an import under a mainnet state root; LEZ account
 overhead. Every one is a milestone deliverable ([`attestation.md`](design/attestation.md) §13;
