@@ -100,12 +100,14 @@ The design notes specify these; there is no code for them here:
   the rule (B) paths of the checkpoint program (`checkpoint/RESULTS.md` §4) and of the vault (v4) are built;
 - the gas drop and the relayer; `monitor`, the watchers' node-side program (the vault's watcher role is built);
 - the Logos modules beyond a prototype: `ferrata_bridge_module`, and of `ferrata_attest_module` all but
-  the three methods in `modules/` (no network, no transactions, no log attested end to end); the CLI,
-  the updater and relayer daemons, the IDL, the mini-app and the admin view;
+  the three methods in `modules/` (no network, no transactions, no log attested end to end); the
+  attestation side's CLI with dry runs (the bridge's `ferrata` CLI is a prototype in `cli/`, whose README
+  says what it does not do), the updater and relayer daemons, the IDL, the mini-app and the admin view;
 - in the attestation program: successors and the root id (a fork not in the schedule fixed at
   `Init`); the weak-subjectivity bound, in the core too; the vault's deposit leaves on real data
-  (the vault is not deployed yet: the capture command and the test are ready, `lez/RESULTS.md`
-  §6, and the owner's Sepolia run, under way, captures two deposits for it, `e2e/runs/sepolia-live-2/`); in the reference consumer, the nullifier keyed on a depositor's secret and with it a
+  through the attestation program's leaf requests (they ran on a synthetic state, `lez/RESULTS.md` §6;
+  the vault on Sepolia has been read only by the bridge program's `Init` and `ImportRoot`,
+  `lez/live/inbound/README.md`); in the reference consumer, the nullifier keyed on a depositor's secret and with it a
   private claim (the bridge program has both), and the second reference consumer
   (`docs/design/attestation.md` §15, `lez/RESULTS.md` §5).
 
@@ -131,13 +133,23 @@ implement yet:
 
 ## Not audited. Not for production.
 
-No part of this repository has been audited, and nothing is deployed. The prototypes exist to measure
-and to test the design; the audit is planned for the code the proposal would deliver.
+No part of this repository has been audited. One piece is deployed on a public network: the v3 vault of
+the end-to-end fixture (not the v5 vault of `vault/`) is on Sepolia at
+[`0xd0B5fcC0B47D8E6f514f9D246Bb0b416b2048AF7`](https://sepolia.etherscan.io/address/0xd0B5fcC0B47D8E6f514f9D246Bb0b416b2048AF7) (created by
+transaction `0x0a5c3a64b6357c76e273f3ecd91ad58078f9c872f3ab90e68dba521de0589f12`, block 12,107,894), with one deposit, deposit 0
+(transaction `0xf3235de7115886851c2a92b6471e1cdce9c8aa9fa3c39558d60cade17a5789a0`, block 12,107,901, 0.001 ETH).
+Deposit 0 was claimed on LEZ by the plaintext path: on a LEZ v0.4.0-rc1 sequencer we run, from a capture
+of Sepolia's finalized state, with the frozen bridge program, not this tree's
+([`lez/live/inbound/README.md`](lez/live/inbound/README.md), "The real session"). No public LEZ network runs
+any of it: LEZ testnet 0.4 does not exist. The prototypes exist to measure and to test the design; the audit
+is planned for the code the proposal would deliver.
 
 ## How it was built
 
 The code and the documents were drafted with coding agents (Claude Code) under the author's design,
-review and acceptance tests, and every commit carries an `Assisted-by` trailer. The author owns the
+review and acceptance tests; every commit was made this way. Not every commit says so: 145 of the 327
+commits up to `1ed19aa` carry an `Assisted-by` trailer (`git log --grep=Assisted-by`), and the others,
+most of those of 10 and 11 November, should be read the same way. The author owns the
 design, the decisions and the acceptance tests: the specification and BLS vectors, the real-chain
 replays, the differential oracles, the adversarial and mutation suites and the measurements each
 directory documents. [docs/REVIEW-core.md](docs/REVIEW-core.md) maps each function of the core to its

@@ -50,7 +50,8 @@ Every row is produced by `cargo test --workspace`.
 
 **Not done yet** (the proposal's M0 to M2):
 - in the LEZ program's attestation (`lez/RESULTS.md` §5, §6): accumulator leaves on real data
-  (they run in the guest on a synthetic state; the vault is not deployed yet), a chain of several
+  (they run in the guest on a synthetic state; the vault on Sepolia, deployed on 11 November 2026, has not been
+  attested this way), a chain of several
   hops, history hops and the private path under a Gloas record, and of the consumer pattern the
   nullifier keyed on a depositor's secret, with it a private claim;
 - in the program (`lez/RESULTS.md` §7): a fork that is not in the schedule fixed at `Init` (a

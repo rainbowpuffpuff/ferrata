@@ -35,8 +35,9 @@ echoes an Ethereum beacon. Rule (B): one proof that `t` sequencers attested the 
 once `W = Δ` (1 h by default) has passed, unless a watcher cancels it. Releases pay out against a RISC Zero proof of
 a burn under a finalised, unrevoked burn root.
 
-Status: prototype evidence for a grant proposal. **Not audited, not deployed anywhere** (the deployment script is
-rehearsed on a local fork of Sepolia only). In the vault's own 374 tests proofs are mocked: the base verifier accepts exactly the (image id, journal digest) pairs a test registers.
+Status: prototype evidence for a grant proposal. **Not audited.** This v5 vault is not deployed anywhere (its deployment
+script is rehearsed on a local fork of Sepolia only); the v3 vault of the end-to-end fixture is on Sepolia with one deposit
+(`../lez/live/inbound/README.md`, "On Sepolia"). In the vault's own 374 tests proofs are mocked: the base verifier accepts exactly the (image id, journal digest) pairs a test registers.
 It sits behind RISC Zero's unmodified `RiscZeroVerifierEmergencyStop`, as a deployment's would. `test/real/` runs
 the return leg once with no mock on the Ethereum side: RISC Zero's real Groth16 verifier behind the same stop, a
 real proof of the checkpoint program for the candidate, a second one for the finalisation, and real proofs of the
@@ -634,7 +635,7 @@ export ETH_KEYSTORE=<keystore file> ETH_PASSWORD=<file holding its password>   #
 export FERRATA_FIXTURE=$PWD/../e2e/runs/sepolia-live-2/fixture.json   # the prepared run, without its finalisation,
                                                                       # which is proven after the beacon
 
-script/roundtrip.sh status       # the vault is not deployed; the sender's nonce must be 1
+script/roundtrip.sh status       # before the run: the vault is not deployed and the sender's nonce is 1
 script/roundtrip.sh deploy       # nonces 1-8: 4 creations, 2 registrations, mint, approve
 script/roundtrip.sh deposit0     # nonce 9: 0.001 ETH to LEZ's public test account 0
 #   wait until its block is finalized (cast block finalized), then capture for LEZ (the driver's capture()):

@@ -1,6 +1,9 @@
 # The return leg on Sepolia, second run
 
-**Prepared; no transaction has been sent.** It replaces [`../sepolia-live/`](../sepolia-live/README.md), whose
+**Run on 11 November 2026 as far as deposit 0.** The deployment stage and deposit 0 were sent: the vault's
+creation (`0x0a5c3a64…9f12`, block 12,107,894) and deposit 0 (`0xf3235de7…89a0`, block 12,107,901) are
+listed with explorer links in [`lez/live/inbound/README.md`](../../../lez/live/inbound/README.md), which also
+claims deposit 0 on LEZ; no stage after deposit 0 has run. It replaces [`../sepolia-live/`](../sepolia-live/README.md), whose
 first transaction ran out of gas on 10 November 2026 (Foundry does not price Sepolia's Glamsterdam state gas;
 `vault/GAS.md`, "On Sepolia since Glamsterdam"). Every gas limit of this run is Sepolia's own estimate times 1.25
 (`vault/README.md`, "Sepolia round trip").

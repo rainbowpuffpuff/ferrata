@@ -987,8 +987,8 @@ of the Gloas era, which binds only an execution block hash, be attested against,
 hold on a live testnet? And can the accumulator leaves of the vault's deposit tree be proven by
 the program in the guest?
 
-**Answer: yes, on real Sepolia data; the vault's leaves on a synthetic state until the vault is
-deployed.** Everything here ran in the in-process harness on a Modal container (results at commit
+**Answer: yes, on real Sepolia data; the vault's leaves on a synthetic state only (the vault is on
+Sepolia since 11 November 2026, and this test has not been run on it).** Everything here ran in the in-process harness on a Modal container (results at commit
 ad40044, `results/environment.md`), on the images of the introduction; the executor is
 deterministic. Public transactions only, except one dev-mode run of the proven path.
 
@@ -1091,8 +1091,8 @@ zero block hash (`tests/attest_native.rs`, natively).
 
 ### Accumulator leaves in the guest: the vault's request (`results/stage5-vault-synthetic.md`)
 
-Ferrata's vault on Sepolia (`0xdfedf9A73Cfb337277b95a9a1C941c3496A4385F`, not yet deployed when
-this ran) keeps its deposit tree's root in slot 0 and its leaf count in slot 1. `harness::vault`
+Ferrata's vault on Sepolia (then planned at `0xdfedf9A73Cfb337277b95a9a1C941c3496A4385F`, an address the
+re-planned run gave to its test token; the vault is at `0xd0B5fcC0B47D8E6f514f9D246Bb0b416b2048AF7` since 11 November 2026) keeps its deposit tree's root in slot 0 and its leaf count in slot 1. `harness::vault`
 builds the request a bridge needs before it mints: the vault's account, slot 0 (equal to the
 root), slot 1 (above the highest leaf asked), and deposit leaves against the root in slot 0. Until
 the vault exists it runs on a synthetic state that holds the vault's own eight deposits
@@ -1115,21 +1115,22 @@ against slot 1 (163 `AccumulatorRootMismatch`, 172,634 to 172,637 cycles); an em
 (130 `PredicateFailed`: slot 1's condition); the facts as mainnet statements (140); without the
 header (215).
 
-**The vault on Sepolia, once deployed.** One command captures its fixture, and one test attests
+**The vault on Sepolia** (deployed on 11 November 2026 at block 12,107,894). One command captures its fixture, and one test attests
 slots 0 and 1 and its newest deposit leaf through the program under the record of the captured
 block, after following the chain from the period-1378 bootstrap through the replay fixture and the
 captured updates:
 
 ```sh
 lez/scripts/fetch-attest-fixture.py --network sepolia \
-  --storage 0xdfedf9A73Cfb337277b95a9a1C941c3496A4385F:0=depositRoot(),1=nextLeafIndex() \
-  --deposits 0xdfedf9A73Cfb337277b95a9a1C941c3496A4385F:DEPLOY_BLOCK --updates-from 1410 \
+  --storage 0xd0B5fcC0B47D8E6f514f9D246Bb0b416b2048AF7:0=depositRoot(),1=nextLeafIndex() \
+  --deposits 0xd0B5fcC0B47D8E6f514f9D246Bb0b416b2048AF7:12107894 --updates-from 1410 \
   crates/ferrata-spectests/fixtures/sepolia-vault
 cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test vault -- --nocapture
 ```
 
 Until that directory exists, `the_vault_on_sepolia` says so and passes; it has not run on real
-vault data.
+vault data. (The bridge's crossing took its own capture of the vault's slots 0 to 2 and deposit 0,
+`crates/ferrata-spectests/fixtures/sepolia-inbound-2026-11-11-1`, `live/inbound/README.md`.)
 
 ### Departures from the design note, and what Stage 5 does not cover
 

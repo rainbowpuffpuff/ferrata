@@ -373,6 +373,8 @@ The integration surface today is the program messages and the derivations; the L
 - real proofs of the current program image's private claim and burn, and of a private claim to a public
   destination; any user-side proof at the declared 4-core, 8 GB minimum or on macOS;
 - the release guest with `NOut` v2 and `mac` v2;
-- a vault on public Sepolia holding deposits: the deployment script is rehearsed on forks; the live
-  session waits for deposits ([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §11);
+- the v5 vault on public Sepolia, and a private claim of a Sepolia deposit: the v3 vault of the end-to-end
+  fixture is on Sepolia with one deposit, deposit 0, which a LEZ sequencer we run claimed by the plaintext
+  path; deposit 1, the private kind, waits for the owner's run
+  ([`lez/live/inbound/README.md`](../../lez/live/inbound/README.md); [`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §11);
 - LEZ testnet 0.4 itself, which did not exist when this was written.
