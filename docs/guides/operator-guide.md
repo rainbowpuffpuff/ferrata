@@ -14,9 +14,10 @@ year. Every role below is permissionless except the watchers', and none can make
 vault accept something false ([`docs/design/attestation.md`](../design/attestation.md) §9, §11.5;
 [`docs/design/bridge.md`](../design/bridge.md) §14).
 
-**Status.** The daemons are **not built**: the updater, the bridge relayer (root imports, checkpoint
-proofs, gas drops, wrapping and submission) and `monitor` are designed as Logos modules run under
-`logosctl daemon`, with structured logs, clean shutdown and configurable endpoints and depths
+**Status.** The daemons are **not built**, except `monitor` (§7). The updater and the bridge relayer
+(root imports, checkpoint proofs, gas drops, wrapping and submission) are designed as Logos modules
+run under `logosctl daemon`, with structured logs, clean shutdown and configurable endpoints and depths.
+`monitor` is a standalone program ([`monitor/`](../../monitor/README.md)), not yet a module
 ([`attestation.md`](../design/attestation.md) §8; [`bridge.md`](../design/bridge.md) §1). What runs
 today, and what this guide describes from measurement, is the **lab** (§2), the harness and live
 drivers, the checkpoint prover's host, and the end-to-end scripts.
@@ -259,21 +260,66 @@ the cloud").
 
 ## 7. Watchers (`monitor`)
 
-Up to three hot addresses, set by the admin's proposal and applied 14 days later; each runs its own Logos
-Blockchain, LEZ and Ethereum nodes ([`bridge.md`](../design/bridge.md) §14; [`vault/README.md`](../../vault/README.md), "Roles").
+Up to three hot addresses, set by the admin's proposal and applied 14 days later. Each watcher runs its
+own Logos Blockchain, LEZ and Ethereum nodes ([`bridge.md`](../design/bridge.md) §14;
+[`vault/README.md`](../../vault/README.md), "Roles"). The program is [`monitor/`](../../monitor/README.md):
+one process per watcher key, following one vault. It is **built and rehearsed on a local chain**;
+nothing more yet.
 
-- **Cancel** a pending candidate (`cancelCandidate`, 37,438 gas) when, under rule (B), its tip is not
-  already in the watcher's node's final tier; under rule (A), when the tip is not final by
-  `submittedAt + Δ_g`, or the key set lags the live one.
-- **Pause** checkpoints until 12 h from now (`pauseCheckpoints`, 47,260 gas); a watcher cannot lift a
-  pause or shorten a freeze.
-- Nothing else: watchers cannot freeze anything else, revoke, retire or move funds.
-- Gas from [`vault/GAS.md`](../../vault/GAS.md) (v5, mock-verifier table; these calls verify no proof).
+What a watcher can do:
 
-A watcher that lies can only delay finalisation until the admin replaces it; one that stops lets a bad
-candidate through, which under rule (B) the release delay and revocation still catch, and under rule (A),
-outside its conditions, can lose funds ([`bridge.md`](../design/bridge.md) §11.8, §14; [`docs/trust.md`](../trust.md)).
-`monitor` is **not built**; the vault side is.
+- **Cancel** a pending candidate (`cancelCandidate`; 37,438 gas in the vault's Foundry table; 41,477
+  in `monitor`'s own transactions on anvil, base cost included). `monitor` does this when:
+  - the tip conflicts with its nodes' final tier;
+  - `n` or `t` is not the live key set's at the tip (D13);
+  - a checkpoint field differs from its node's own computation;
+  - under rule (B), the tip is not already final when the candidate is submitted (it allows its own
+    node `--b-lag-grace`, 300 s);
+  - under rule (A), the tip is not final by `submittedAt + Δ_g`.
+
+  `monitor` always cancels before the deadline minus `--margin`.
+- **Pause** checkpoints until 12 h from now (`pauseCheckpoints`, 47,260 gas). `monitor` does this
+  when a cancelled state is submitted again (D11), and, under rule (A), when its nodes' final tier has
+  not advanced for `--stall-pause-after`, which should be set to `(t − 1) × turnSeconds + S/2` (D4). A
+  watcher cannot lift a pause or shorten a freeze; the persistent case is raised to the freeze
+  authority, which decides on the checkpoint freeze.
+- Nothing else: watchers cannot freeze anything else, revoke, retire or move funds. A wrong checkpoint
+  that was finalised while no watcher acted raises `finalized-wrong`, with `revokeFrom(index)` and its
+  deadline, for the freeze authority's multisig. A `monitor` holding the freeze authority's key, as on
+  a testnet, revokes it itself.
+- Gas from [`vault/GAS.md`](../../vault/GAS.md) (v5, mock-verifier table; these calls verify no proof)
+  and [`monitor/README.md`](../../monitor/README.md) (receipts on anvil).
+
+Running it:
+- **Node view.** `monitor` reads its nodes through a node view, a JSON document per poll: the final
+  tier, the channel's key sets, and optionally the checkpoint fields at a tip and the attestors'
+  published final-tier messages. A file or a command supplies it; `--node` can be given once per
+  node, and all nodes must agree. `monitor node-view` builds the view from a LEZ sequencer's block
+  record. A client that reads the sequencer's RPC directly is not built.
+- **Key.** The watcher key comes from the environment (`--key-env`) or a keystore, never from the
+  command line.
+- **Alerts.** Alerts are JSON lines, written to a log and passed to an operator command (a pager).
+- **Restarts.** The state file is rewritten atomically, and a restart rescans the vault's events and
+  re-reads every pending candidate before acting. A lost state file costs a rescan, never a missed
+  cancellation. One process per state file is enforced by an OS lock. A stuck transaction times out,
+  and the next poll retries.
+- **Rehearsal.** `monitor/tests/anvil-e2e.sh`, on a local anvil chain, makes 38 checks:
+  - an honest candidate passes untouched;
+  - wrong ones are cancelled in time;
+  - a monitor killed mid-window and restarted still cancels, 2,999 s before the deadline;
+  - a lost state file is recovered from the chain;
+  - a revocation by the freeze authority's monitor, the persistent-candidate pause, and the
+    rule (A) cases.
+
+A watcher that lies can only delay finalisation until the admin replaces it. One that stops lets a bad
+candidate through: under rule (B) the release delay and revocation still catch it; under rule (A),
+outside its conditions, funds can be lost ([`bridge.md`](../design/bridge.md) §11.8, §14;
+[`docs/trust.md`](../trust.md)). Not built:
+- a client for the LEZ RPC and the Logos Blockchain node's channel answer;
+- the node-side computation of the checkpoint fields;
+- the Logos module;
+- fee bumping;
+- a run against a public network.
 
 ## 8. Keys
 
@@ -335,7 +381,8 @@ checkpoints after a sunset until holders have released ([`bridge.md`](../design/
 
 ## 12. What is not built
 
-The updater, relayer and `monitor` daemons and their Logos modules; `verify_checkpoint`; the rule (B)
+The updater and relayer daemons, and the Logos modules of all three daemons (`monitor` is built as a
+standalone program, §7); `verify_checkpoint`; the rule (B)
 attestor module; the gas drop; joining an open job and job clean-up; the weak-subjectivity bound; the
 duplicate-rate acceptance run; daemon resource measurements; the amortised costs at the recommended
 cadence with real proving (milestones A4, B4); a deployment on a public LEZ network. Sources:
