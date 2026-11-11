@@ -219,7 +219,15 @@ impl LightClientStore {
 
     /// `process_light_client_store_force_update`. Ferrata's on-chain policy never calls this.
     pub fn process_force_update(&mut self, current_slot: u64, spec: &ChainSpec) -> Result<(), Error> {
-        let timed_out = current_slot > self.core.finalized_header.beacon.slot + spec.preset.update_timeout();
+        // The spec's integers are unbounded: a deadline past u64::MAX is never reached (and
+        // must not wrap around to an early one).
+        let timed_out = self
+            .core
+            .finalized_header
+            .beacon
+            .slot
+            .checked_add(spec.preset.update_timeout())
+            .is_some_and(|deadline| current_slot > deadline);
         if !timed_out || self.best_valid_update.is_none() {
             return Ok(());
         }

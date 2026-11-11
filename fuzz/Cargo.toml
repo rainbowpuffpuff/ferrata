@@ -1,0 +1,81 @@
+[package]
+name = "ferrata-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+ferrata-core = { path = "../crates/ferrata-core", features = ["blst"] }
+# Reference implementations the tests already compare with (same versions as the workspace).
+alloy-rlp = "0.3.17"
+alloy-trie = { version = "0.9.9", features = ["std"] }
+alloy-primitives = "1.7.3"
+
+[dev-dependencies]
+# Seed maker only (examples/seeds.rs): reads the committed vectors and fixtures.
+ferrata-spectests = { path = "../crates/ferrata-spectests" }
+serde_json = "1"
+
+# Its own workspace, as cargo-fuzz expects; the root workspace lists its members explicitly.
+[workspace]
+members = ["."]
+
+[profile.release]
+debug = 1
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "rlp"
+path = "fuzz_targets/rlp.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "mpt"
+path = "fuzz_targets/mpt.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "exec"
+path = "fuzz_targets/exec.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "ssz"
+path = "fuzz_targets/ssz.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "witness"
+path = "fuzz_targets/witness.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "merkle"
+path = "fuzz_targets/merkle.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "lc"
+path = "fuzz_targets/lc.rs"
+test = false
+doc = false
+bench = false
