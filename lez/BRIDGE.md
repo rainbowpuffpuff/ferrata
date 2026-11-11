@@ -229,7 +229,7 @@ refuses afterwards (`FROZEN`), everything else goes on.
 
 ## 6. Time: attested Ethereum time (milestone B2; review r3, attack A)
 
-**The flaw this replaces** (review r3, `notes/reviews/draft6/r3-engineer.md` §2 A). LEZ
+**The flaw this replaces** (the draft-6 engineering review r3, §2 A). LEZ
 v0.4.0-rc1 neither bounds nor orders block timestamps, and the program took its time from the
 caller, kept monotone and advanced by a `Tick` anyone could send, each under a validity window
 around the block's timestamp. So the producer whose turn it was could stamp a block a year ahead
