@@ -18,7 +18,7 @@
   },
   "claim, plaintext": {
    "pass": false,
-   "detail": "lez:claim:plaintext:01 vs lez:claim:plaintext:00: part tx differs at byte 5 of 1837/1837 after the cut (00070000003461fb6c10ff2a3297878f0c14c97c8853d10a15c6b59ef7 / 000700000041a2c36cd9bef1e8910e169fa802d053dff965c4c14b38cc)"
+   "detail": "lez:claim:plaintext:01 vs lez:claim:plaintext:00: part tx differs at byte 133 of 1837/1837 after the cut (604a6caf8e675390505dac63c2398893a28af818fa03ceff121a6a8e1635d324 / 604a6caf8e6753907828282b5c8a554cd898798f67a1f779fe87c3cb85c5c28d)"
   },
   "burn, private holding": {
    "pass": true,
@@ -119,22 +119,22 @@
    "with_order_state": 0.05000000000000001
   },
   "on LEZ: claim to burn (informational)": {
-   "success": 0.047500000000000014,
+   "success": 0.04500000000000001,
    "chance": 0.05,
    "exactly_identified": 0,
    "candidate_set_sizes": [
     [
      1,
-     1
+     2
     ],
     [
      20,
-     19
+     18
     ]
    ],
    "max_score": 2.995732273553991,
-   "without_derived_identifiers": 0.047500000000000014,
-   "with_order_state": 0.047500000000000014
+   "without_derived_identifiers": 0.04500000000000001,
+   "with_order_state": 0.04500000000000001
   }
  },
  "order_only": {
@@ -278,7 +278,7 @@
    }
   ],
   "recipients_decrypted_correctly": 20,
-  "rust_core": 0
+  "rust_core": 20
  },
  "fields": {
   "deposit (A: private destinations)": [
@@ -581,14 +581,6 @@
     "B6": null
    },
    {
-    "field": "boundary[].out.message.Issue.time_ms",
-    "bytes": 8,
-    "across records": "20 distinct",
-    "class": "time / order",
-    "what": "time",
-    "B6": "time"
-   },
-   {
     "field": "boundary[].out.message.native.Credit",
     "bytes": 16,
     "across records": "constant",
@@ -718,7 +710,7 @@
    },
    {
     "field": "witness_set",
-    "bytes": 4541,
+    "bytes": 4533,
     "across records": "20 distinct",
     "class": "fresh randomness",
     "what": "the proof (dev mode: a fake receipt) or the submitter's signature",
@@ -727,7 +719,7 @@
    {
     "field": "receipt.gas_exec",
     "bytes": 8,
-    "across records": "5 distinct",
+    "across records": "2 distinct",
     "class": "time / order",
     "what": "LEZ execution gas: follows the position (the shared state the public part updates)",
     "B6": null
@@ -735,7 +727,7 @@
    {
     "field": "receipt.cycles",
     "bytes": 8,
-    "across records": "5 distinct",
+    "across records": "2 distinct",
     "class": "time / order",
     "what": "LEZ execution gas: follows the position (the shared state the public part updates)",
     "B6": null
@@ -751,7 +743,7 @@
    {
     "field": "receipt.fee_base",
     "bytes": 16,
-    "across records": "5 distinct",
+    "across records": "2 distinct",
     "class": "time / order",
     "what": "LEZ: the base fee at the block's opening (moves with the chain's history)",
     "B6": null
@@ -797,7 +789,15 @@
     "B6": null
    },
    {
-    "field": "state: token(cid, ETH) (token gate, time)",
+    "field": "state: the account in `derived.nullifier_account`",
+    "bytes": 0,
+    "across records": "one per record (20 distinct)",
+    "class": "nullifier",
+    "what": "created or changed by this record only",
+    "B6": "N"
+   },
+   {
+    "field": "state: config(cid) (global gate, time)",
     "bytes": 0,
     "across records": "changed in every record, contents vary",
     "class": "time / order",
@@ -813,14 +813,6 @@
     "B6": null
    },
    {
-    "field": "state: the account in `derived.nullifier_account`",
-    "bytes": 0,
-    "across records": "one per record (20 distinct)",
-    "class": "nullifier",
-    "what": "created or changed by this record only",
-    "B6": "N"
-   },
-   {
     "field": "state: LEZ fee inbox",
     "bytes": 0,
     "across records": "changed in every record, contents vary",
@@ -829,7 +821,7 @@
     "B6": null
    },
    {
-    "field": "state: config(cid) (global gate, time)",
+    "field": "state: holder(the relayer) (its wrapped balance: relay fees)",
     "bytes": 0,
     "across records": "changed in every record, contents vary",
     "class": "time / order",
@@ -837,7 +829,7 @@
     "B6": null
    },
    {
-    "field": "state: the relayer (its wrapped balance: relay fees)",
+    "field": "state: token(cid, ETH) (token gate, time)",
     "bytes": 0,
     "across records": "changed in every record, contents vary",
     "class": "time / order",
@@ -975,14 +967,6 @@
     "B6": null
    },
    {
-    "field": "root.message.Claim.time_ms",
-    "bytes": 8,
-    "across records": "20 distinct",
-    "class": "time / order",
-    "what": "time",
-    "B6": null
-   },
-   {
     "field": "fee",
     "bytes": 65,
     "across records": "constant",
@@ -1009,7 +993,7 @@
    {
     "field": "receipt.gas_exec",
     "bytes": 8,
-    "across records": "5 distinct",
+    "across records": "2 distinct",
     "class": "time / order",
     "what": "LEZ execution gas: follows the position (the shared state the public part updates)",
     "B6": null
@@ -1017,7 +1001,7 @@
    {
     "field": "receipt.cycles",
     "bytes": 8,
-    "across records": "5 distinct",
+    "across records": "2 distinct",
     "class": "time / order",
     "what": "LEZ execution gas: follows the position (the shared state the public part updates)",
     "B6": null
@@ -1033,7 +1017,7 @@
    {
     "field": "receipt.fee_base",
     "bytes": 16,
-    "across records": "5 distinct",
+    "across records": "2 distinct",
     "class": "time / order",
     "what": "LEZ: the base fee at the block's opening (moves with the chain's history)",
     "B6": null
@@ -1079,7 +1063,15 @@
     "B6": null
    },
    {
-    "field": "state: token(cid, ETH) (token gate, time)",
+    "field": "state: the account in `derived.nullifier_account`",
+    "bytes": 0,
+    "across records": "one per record (20 distinct)",
+    "class": "nullifier",
+    "what": "created or changed by this record only",
+    "B6": null
+   },
+   {
+    "field": "state: config(cid) (global gate, time)",
     "bytes": 0,
     "across records": "changed in every record, contents vary",
     "class": "time / order",
@@ -1103,35 +1095,27 @@
     "B6": null
    },
    {
-    "field": "state: a public destination (plaintext universe)",
+    "field": "state: holder(the relayer) (its wrapped balance: relay fees)",
+    "bytes": 0,
+    "across records": "changed in every record, contents vary",
+    "class": "time / order",
+    "what": "cumulative state (order)",
+    "B6": null
+   },
+   {
+    "field": "state: token(cid, ETH) (token gate, time)",
+    "bytes": 0,
+    "across records": "changed in every record, contents vary",
+    "class": "time / order",
+    "what": "cumulative state (order)",
+    "B6": null
+   },
+   {
+    "field": "state: holder(a public destination) (plaintext universe)",
     "bytes": 0,
     "across records": "one per record (20 distinct)",
     "class": "UNCLASSIFIED",
     "what": "created or changed by this record only",
-    "B6": null
-   },
-   {
-    "field": "state: the account in `derived.nullifier_account`",
-    "bytes": 0,
-    "across records": "one per record (20 distinct)",
-    "class": "nullifier",
-    "what": "created or changed by this record only",
-    "B6": null
-   },
-   {
-    "field": "state: config(cid) (global gate, time)",
-    "bytes": 0,
-    "across records": "changed in every record, contents vary",
-    "class": "time / order",
-    "what": "cumulative state (order)",
-    "B6": null
-   },
-   {
-    "field": "state: the relayer (its wrapped balance: relay fees)",
-    "bytes": 0,
-    "across records": "changed in every record, contents vary",
-    "class": "time / order",
-    "what": "cumulative state (order)",
     "B6": null
    }
   ],
@@ -1363,16 +1347,16 @@
    {
     "field": "receipt.gas_exec",
     "bytes": 8,
-    "across records": "2 distinct",
-    "class": "time / order",
+    "across records": "constant",
+    "class": "constant",
     "what": "LEZ execution gas: follows the position (the shared state the public part updates)",
     "B6": null
    },
    {
     "field": "receipt.cycles",
     "bytes": 8,
-    "across records": "2 distinct",
-    "class": "time / order",
+    "across records": "constant",
+    "class": "constant",
     "what": "LEZ execution gas: follows the position (the shared state the public part updates)",
     "B6": null
    },
@@ -1387,8 +1371,8 @@
    {
     "field": "receipt.fee_base",
     "bytes": 16,
-    "across records": "2 distinct",
-    "class": "time / order",
+    "across records": "constant",
+    "class": "constant",
     "what": "LEZ: the base fee at the block's opening (moves with the chain's history)",
     "B6": null
    },
@@ -1433,7 +1417,15 @@
     "B6": null
    },
    {
-    "field": "state: token(cid, ETH) (token gate, time)",
+    "field": "state: the account in `derived.burn_record_account`",
+    "bytes": 0,
+    "across records": "one per record (20 distinct)",
+    "class": "fresh randomness",
+    "what": "created or changed by this record only",
+    "B6": "the burn note"
+   },
+   {
+    "field": "state: config(cid) (global gate, time)",
     "bytes": 0,
     "across records": "changed in every record, contents vary",
     "class": "time / order",
@@ -1457,15 +1449,7 @@
     "B6": null
    },
    {
-    "field": "state: the account in `derived.burn_record_account`",
-    "bytes": 0,
-    "across records": "one per record (20 distinct)",
-    "class": "fresh randomness",
-    "what": "created or changed by this record only",
-    "B6": "the burn note"
-   },
-   {
-    "field": "state: config(cid) (global gate, time)",
+    "field": "state: token(cid, ETH) (token gate, time)",
     "bytes": 0,
     "across records": "changed in every record, contents vary",
     "class": "time / order",
@@ -1880,16 +1864,16 @@
    100
   ],
   "claim, private (default)": [
-   8953,
-   8953
+   8937,
+   8937
   ],
   "claim, naive nullifier N = fid": [
-   8953,
-   8953
+   8937,
+   8937
   ],
   "claim, plaintext": [
-   2061,
-   2061
+   2053,
+   2053
   ],
   "burn, private holding": [
    7857,
@@ -1907,69 +1891,69 @@
  "receipts_by_position": {
   "claims private": [
    0,
-   5188,
-   5189,
-   5189,
-   5187,
-   5188,
-   5188,
-   5186,
-   5186,
-   5186,
-   5186,
-   5186,
-   5186,
-   5187,
-   5186,
-   5186,
-   5187,
-   5186,
-   5186,
-   5186
+   4720,
+   4720,
+   4720,
+   4720,
+   4720,
+   4720,
+   4720,
+   4720,
+   4720,
+   4720,
+   4720,
+   4720,
+   4720,
+   4720,
+   4720,
+   4720,
+   4720,
+   4720,
+   4720
   ],
   "claims plaintext": [
    0,
-   5188,
-   5189,
-   5189,
-   5187,
-   5188,
-   5188,
-   5186,
-   5186,
-   5186,
-   5186,
-   5186,
-   5186,
-   5187,
-   5186,
-   5186,
-   5187,
-   5186,
-   5186,
-   5186
+   4720,
+   4720,
+   4720,
+   4720,
+   4720,
+   4720,
+   4720,
+   4720,
+   4720,
+   4720,
+   4720,
+   4720,
+   4720,
+   4720,
+   4720,
+   4720,
+   4720,
+   4720,
+   4720
   ],
   "burns": [
    0,
-   -578,
-   -578,
-   -578,
-   -578,
-   -578,
-   -578,
-   -578,
-   -578,
-   -578,
-   -578,
-   -578,
-   -578,
-   -578,
-   -578,
-   -578,
-   -578,
-   -578,
-   -578,
-   -578
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
   ],
   "releases": [
    0,
@@ -2023,48 +2007,48 @@
  ],
  "gas": {
   "deposit A by leaf index": [
-   139595,
-   99917,
-   80017,
-   100039,
-   80017,
-   80139,
-   80139,
-   100161,
-   80017,
-   80139,
-   80139,
-   80261,
-   80139,
-   80261,
-   80261,
-   100283,
-   80017,
-   80139,
-   80139,
-   80261
+   139740,
+   100062,
+   80162,
+   100184,
+   80162,
+   80284,
+   80284,
+   100306,
+   80162,
+   80284,
+   80284,
+   80406,
+   80284,
+   80406,
+   80406,
+   100428,
+   80162,
+   80284,
+   80284,
+   80406
   ],
   "deposit B by leaf index": [
-   139595,
-   99917,
-   80017,
-   100039,
-   80017,
-   80139,
-   80139,
-   100161,
-   80017,
-   80139,
-   80139,
-   80261,
-   80139,
-   80261,
-   80261,
-   100283,
-   80017,
-   80139,
-   80139,
-   80261
+   139740,
+   100062,
+   80162,
+   100184,
+   80162,
+   80284,
+   80284,
+   100306,
+   80162,
+   80284,
+   80284,
+   80406,
+   80284,
+   80406,
+   80406,
+   100428,
+   80162,
+   80284,
+   80284,
+   80406
   ],
   "deposit A equals B": true,
   "release distinct values": [
@@ -2079,71 +2063,50 @@
  "lez_receipts": {
   "claim, private (default)": {
    "receipt.gas_exec": [
-    536214,
-    541400,
-    541401,
-    541402,
-    541403
+    547629,
+    552349
    ],
    "receipt.cycles": [
-    126450,
-    131636,
-    131637,
-    131638,
-    131639
+    137865,
+    142585
    ],
    "receipt.gas_stor": [
     224063
    ],
    "receipt.fee_base": [
-    6082216,
-    6123704,
-    6123712,
-    6123720,
-    6123728
+    6173536,
+    6211296
    ]
   },
   "burn, private holding": {
    "receipt.gas_exec": [
-    510617,
-    511195
+    514490
    ],
    "receipt.cycles": [
-    100853,
-    101431
+    104726
    ],
    "receipt.gas_stor": [
     224063
    ],
    "receipt.fee_base": [
-    5877440,
-    5882064
+    5908424
    ]
   },
   "claim, plaintext": {
    "receipt.gas_exec": [
-    236585,
-    241771,
-    241772,
-    241773,
-    241774
+    255012,
+    259732
    ],
    "receipt.cycles": [
-    236585,
-    241771,
-    241772,
-    241773,
-    241774
+    255012,
+    259732
    ],
    "receipt.gas_stor": [
-    2061
+    2053
    ],
    "receipt.fee_base": [
-    1909168,
-    1950656,
-    1950664,
-    1950672,
-    1950680
+    2056520,
+    2094280
    ]
   }
  }

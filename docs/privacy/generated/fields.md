@@ -48,7 +48,6 @@ Every field the collectors can name, across the 20 records of each step: constan
 | `boundary[].out.message.Issue.range` | 24 | constant | constant | the fee schedule's leaf range the claim names | - |
 | `boundary[].out.message.Issue.leaf_count` | 8 | constant | constant | the root read (its leaf count) | the root read |
 | `boundary[].out.message.Issue.relayer` | 32 | constant | constant | the relayer the claim names (relay fee minted to it publicly) | - |
-| `boundary[].out.message.Issue.time_ms` | 8 | 20 distinct | time / order | time | time |
 | `boundary[].out.message.native.Credit` | 16 | constant | constant | the fee reserve, moved from the alias to the fee inbox | a one-time fee alias with a fixed reserve |
 | `private_actions[].nullifier` | 32 | 20 distinct | nullifier | LEZ: the private account's nullifier (main action; fee fallback) | - |
 | `private_actions[].commitment_root` | 32 | 20 distinct | time / order | LEZ: the commitment-set root (state the proof read) | - |
@@ -65,22 +64,22 @@ Every field the collectors can name, across the 20 records of each step: constan
 | `fee.fallback.boundary[].out.to` | 32 | constant | constant | a public end of a boundary message (where constant: the root, the token's account, the fee inbox) | - |
 | `fee.fallback.boundary[].out.message.native.Credit` | 16 | constant | constant | the fee reserve, moved from the alias to the fee inbox | a one-time fee alias with a fixed reserve |
 | `validity` | 4 | constant | constant | validity windows (none set here) | time |
-| `witness_set` | 4541 | 20 distinct | fresh randomness | the proof (dev mode: a fake receipt) or the submitter's signature | - |
-| `receipt.gas_exec` | 8 | 5 distinct | time / order | LEZ execution gas: follows the position (the shared state the public part updates) | - |
-| `receipt.cycles` | 8 | 5 distinct | time / order | LEZ execution gas: follows the position (the shared state the public part updates) | - |
+| `witness_set` | 4533 | 20 distinct | fresh randomness | the proof (dev mode: a fake receipt) or the submitter's signature | - |
+| `receipt.gas_exec` | 8 | 2 distinct | time / order | LEZ execution gas: follows the position (the shared state the public part updates) | - |
+| `receipt.cycles` | 8 | 2 distinct | time / order | LEZ execution gas: follows the position (the shared state the public part updates) | - |
 | `receipt.gas_stor` | 8 | constant | constant |  | - |
-| `receipt.fee_base` | 16 | 5 distinct | time / order | LEZ: the base fee at the block's opening (moves with the chain's history) | - |
+| `receipt.fee_base` | 16 | 2 distinct | time / order | LEZ: the base fee at the block's opening (moves with the chain's history) | - |
 | `derived.nullifier_account` | 32 | 20 distinct | nullifier | the nullifier account, a PDA of N | N |
 | `block.id` | 8 | 20 distinct | time / order | time | time |
 | `block.timestamp` | 8 | 20 distinct | time / order | time | time |
 | `commitment_root.before` | 32 | 20 distinct | time / order | LEZ: the commitment-set root (state the proof read) | - |
 | `commitment_root.after` | 32 | 20 distinct | time / order | LEZ: the commitment-set root (state the proof read) | - |
-| `state: token(cid, ETH) (token gate, time)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
-| `state: the harness's fee payer (refund_to)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 | `state: the account in `derived.nullifier_account`` | 0 | one per record (20 distinct) | nullifier | created or changed by this record only | N |
-| `state: LEZ fee inbox` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 | `state: config(cid) (global gate, time)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
-| `state: the relayer (its wrapped balance: relay fees)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
+| `state: the harness's fee payer (refund_to)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
+| `state: LEZ fee inbox` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
+| `state: holder(the relayer) (its wrapped balance: relay fees)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
+| `state: token(cid, ETH) (token gate, time)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 
 ## claim, plaintext
 
@@ -102,26 +101,25 @@ Every field the collectors can name, across the 20 records of each step: constan
 | `root.message.Claim.witness.dest` | 32 | 20 distinct | UNCLASSIFIED |  | - |
 | `root.message.Claim.range` | 24 | constant | constant | the fee schedule's leaf range the claim names | - |
 | `root.message.Claim.relayer` | 32 | constant | constant | the relayer the claim names (relay fee minted to it publicly) | - |
-| `root.message.Claim.time_ms` | 8 | 20 distinct | time / order | time | - |
 | `fee` | 65 | constant | constant | fee declaration / nonces of the public submitter (the harness's payer) | - |
 | `nonces` | 52 | 20 distinct | time / order | time | - |
 | `witness_set` | 100 | 20 distinct | fresh randomness | the proof (dev mode: a fake receipt) or the submitter's signature | - |
-| `receipt.gas_exec` | 8 | 5 distinct | time / order | LEZ execution gas: follows the position (the shared state the public part updates) | - |
-| `receipt.cycles` | 8 | 5 distinct | time / order | LEZ execution gas: follows the position (the shared state the public part updates) | - |
+| `receipt.gas_exec` | 8 | 2 distinct | time / order | LEZ execution gas: follows the position (the shared state the public part updates) | - |
+| `receipt.cycles` | 8 | 2 distinct | time / order | LEZ execution gas: follows the position (the shared state the public part updates) | - |
 | `receipt.gas_stor` | 8 | constant | constant |  | - |
-| `receipt.fee_base` | 16 | 5 distinct | time / order | LEZ: the base fee at the block's opening (moves with the chain's history) | - |
+| `receipt.fee_base` | 16 | 2 distinct | time / order | LEZ: the base fee at the block's opening (moves with the chain's history) | - |
 | `derived.nullifier_account` | 32 | 20 distinct | nullifier | the nullifier account, a PDA of N | - |
 | `block.id` | 8 | 20 distinct | time / order | time | - |
 | `block.timestamp` | 8 | 20 distinct | time / order | time | - |
 | `commitment_root.before` | 32 | constant | constant | LEZ: the commitment-set root (state the proof read) | - |
 | `commitment_root.after` | 32 | constant | constant | LEZ: the commitment-set root (state the proof read) | - |
-| `state: token(cid, ETH) (token gate, time)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
-| `state: the harness's fee payer (refund_to)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
-| `state: LEZ fee inbox` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
-| `state: a public destination (plaintext universe)` | 0 | one per record (20 distinct) | UNCLASSIFIED | created or changed by this record only | - |
 | `state: the account in `derived.nullifier_account`` | 0 | one per record (20 distinct) | nullifier | created or changed by this record only | - |
 | `state: config(cid) (global gate, time)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
-| `state: the relayer (its wrapped balance: relay fees)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
+| `state: the harness's fee payer (refund_to)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
+| `state: LEZ fee inbox` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
+| `state: holder(the relayer) (its wrapped balance: relay fees)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
+| `state: token(cid, ETH) (token gate, time)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
+| `state: holder(a public destination) (plaintext universe)` | 0 | one per record (20 distinct) | UNCLASSIFIED | created or changed by this record only | - |
 
 ## burn, private holding
 
@@ -155,20 +153,20 @@ Every field the collectors can name, across the 20 records of each step: constan
 | `fee.fallback.boundary[].out.message.native.Credit` | 16 | constant | constant | the fee reserve, moved from the alias to the fee inbox | a one-time fee alias with a fixed reserve |
 | `validity` | 4 | constant | constant | validity windows (none set here) | time |
 | `witness_set` | 3993 | 20 distinct | fresh randomness | the proof (dev mode: a fake receipt) or the submitter's signature | - |
-| `receipt.gas_exec` | 8 | 2 distinct | time / order | LEZ execution gas: follows the position (the shared state the public part updates) | - |
-| `receipt.cycles` | 8 | 2 distinct | time / order | LEZ execution gas: follows the position (the shared state the public part updates) | - |
+| `receipt.gas_exec` | 8 | constant | constant | LEZ execution gas: follows the position (the shared state the public part updates) | - |
+| `receipt.cycles` | 8 | constant | constant | LEZ execution gas: follows the position (the shared state the public part updates) | - |
 | `receipt.gas_stor` | 8 | constant | constant |  | - |
-| `receipt.fee_base` | 16 | 2 distinct | time / order | LEZ: the base fee at the block's opening (moves with the chain's history) | - |
+| `receipt.fee_base` | 16 | constant | constant | LEZ: the base fee at the block's opening (moves with the chain's history) | - |
 | `derived.burn_record_account` | 32 | 20 distinct | fresh randomness | the burn record account, a PDA of H(note) | the burn note |
 | `block.id` | 8 | 20 distinct | time / order | time | time |
 | `block.timestamp` | 8 | 20 distinct | time / order | time | time |
 | `commitment_root.before` | 32 | 20 distinct | time / order | LEZ: the commitment-set root (state the proof read) | - |
 | `commitment_root.after` | 32 | 20 distinct | time / order | LEZ: the commitment-set root (state the proof read) | - |
-| `state: token(cid, ETH) (token gate, time)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
-| `state: the harness's fee payer (refund_to)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
-| `state: LEZ fee inbox` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 | `state: the account in `derived.burn_record_account`` | 0 | one per record (20 distinct) | fresh randomness | created or changed by this record only | the burn note |
 | `state: config(cid) (global gate, time)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
+| `state: the harness's fee payer (refund_to)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
+| `state: LEZ fee inbox` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
+| `state: token(cid, ETH) (token gate, time)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 
 ## release, NOut of the release statement
 

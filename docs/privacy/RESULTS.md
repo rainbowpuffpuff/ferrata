@@ -20,17 +20,16 @@ build paths, so it differs from `BRIDGE-RESULTS.md`'s `b5d177bb…`; no guest so
 merged bridge program (registry, fees, the Gloas header; image `5943b750…42f3` at that worktree's path) and
 `FerrataVault` v5, whose deposits must carry the denomination plus the mint and relay fees in force (the test
 now sends that total). `scripts/privacy/run.sh` ran there on the build box (83 s) and the files in
-[`generated/`](generated/) are that run's. Unchanged: the gate, the adversary's rates on both private paths
+[`generated/`](generated/) were that run's until the re-run on the merged programs (below). Unchanged: the gate, the adversary's rates on both private paths
 and on the plaintext and naive variants, the hidden column, the recovery. Changed: the Ethereum gas (v5:
 deposits 1,355 more, releases 1,680 more, below), v5's storage slots in the field table, and the
 informational claim → burn rate, 4.5% → 4.8% (its candidate sets depend on the build's ids). The figures
-below are the re-run's where they differ.
+below are the latest re-run's, on the merged programs (after the next paragraph).
 
 **Re-run with attested time (branch `lez-time-fix`, 11 November 2026).** The bridge program's freezes and
 caps now run on attested Ethereum time and no message carries a caller's time (`../../lez/BRIDGE.md` §6;
 image `d0c11833…23cd` at that worktree's path). `scripts/privacy/run.sh` ran on that worktree's build box
-(89 s) into a scratch directory; [`generated/`](generated/) was **not** replaced and is still the
-`integration3` run's. Against it: the gate's verdicts, the inbound and outbound rates and the recovery are
+(89 s) into a scratch directory; [`generated/`](generated/) was **not** replaced then. Against it: the gate's verdicts, the inbound and outbound rates and the recovery are
 unchanged; the private claim is 16 bytes shorter (8,937) and the plaintext claim 8 (2,053); the fields
 `Issue.time_ms` (in every private claim's boundary message) and `Claim.time_ms` are gone, so the private
 claim no longer publishes a caller's time (its block still dates it); claims' execution gas by position is
@@ -38,18 +37,33 @@ now `[0, 4937, 4937, …]` (the `5,186`–`5,189` wobble is gone) and burns' is 
 and the informational claim → burn rate is 5.0%, chance, with every candidate set of size 20 (it was 4.8%,
 one record with a set of size 1; that rate also moves with the build's ids, above).
 
+**Re-run on the merged programs (branch `integration6`, 11 November 2026).** The bridge program with both the
+time fix and the security fixes (image `cf41b7e5…5390`, built at the `integration5` worktree's path: the image of
+`../../lez/results/`) and `FerrataVault` v5 with its security fixes. `scripts/privacy/run.sh` ran on the build box
+(77 to 80 s; 384 s to build it from cold), and [`generated/`](generated/) is now that run's. Two changes to the
+suite came first: its seed-only wallet derives `NOut` as D13's v2, `H("ferrata/nf-out/v2" ‖ sOut)` (review M-3;
+with v1 it still found every unreleased burn but saw none of the 10 released ones as released), and it names the
+holder PDAs where wrapped balances now sit (review C-1). Against the `integration3` run: the gate's verdicts, the
+inbound and outbound rates, the hidden column and the recovery are unchanged; the private claim is 8,937 bytes and
+the plaintext claim 2,053, without the caller's time, as on `lez-time-fix`; the plaintext claims now differ from
+byte 133 on (the declared accounts, after the program id), then the witness; LEZ execution gas is the same for
+every claim after the first and for every burn; Ethereum deposits cost 145 more (the vault's security fixes); the
+bridge core's `recover_burns` finds all 20 notes (D12's v2 mac in the core, review I-4: finding 8 below is
+resolved); the informational claim → burn rate is 4.5% (two records drew a wrong singleton set; the rate moves
+with the build's ids).
+
 ## Results in brief
 
 | check | default private path | linkable variants |
 |---|---|---|
-| differential gate (identical once nullifiers, fresh randomness, a user's own address and time are cut; receipts included) | identical: deposits, private claims (8,953 bytes each), private burns (7,857), releases (324 bytes of calldata) | plaintext claim: **differs** (the destination's account, the witness); naive `N = fid` claim: identical (the gate cannot see that a nullifier is computable; the adversary does) |
+| differential gate (identical once nullifiers, fresh randomness, a user's own address and time are cut; receipts included) | identical: deposits, private claims (8,937 bytes each), private burns (7,857), releases (324 bytes of calldata) | plaintext claim: **differs** (the declared accounts, the witness); naive `N = fid` claim: identical (the gate cannot see that a nullifier is computable; the adversary does) |
 | adversary, inbound (deposit → claim), chance 5.0% | **5.0%**: no shared value at all; every candidate set is all 20 deposits | naive `N = fid`: **100%** (20 of 20 identified); plaintext claim: **100%** (20 of 20) |
 | adversary, outbound (burn → release), chance 5.0% | **5.0%**: every candidate set is all 20 burns | naive `NOut = burnId`: **100%** (20 of 20) |
 | §B6's hidden column, searched in every record's public bytes | 0 of 320 values found (destination, `s`, `C`, leaf, `fid`, depositor; holder, recipient; `r`, `COut`, memo, mac, burn leaf, `burnId`) | – |
 | recovery from the seed alone, after 10 claims and 10 releases | unclaimed deposits **10 of 10**, unreleased burns **10 of 10**; claimed and released ones seen as such, 10 and 10; no other user's item taken; recovered `NOut` equal to the vault's for 20 of 20 | – |
 
 Informational: deposit → release over the round trip, 5.0%; claim → burn on LEZ (the same private
-accounts), 4.8%. Including the order-bearing state the main adversary leaves out (below) changes none of
+accounts), 4.5%. Including the order-bearing state the main adversary leaves out (below) changes none of
 the rates.
 
 ## Method
@@ -126,9 +140,9 @@ memo, checks `COut` and computes `NOut` (v1, the release guest's).
 |---|---|---|
 | deposit (A: private destinations) | 100–100 | yes |
 | deposit (B: public destinations) | 100–100 | yes |
-| claim, private (default) | 8,953–8,953 | yes |
-| claim, naive nullifier N = fid | 8,953–8,953 | yes |
-| claim, plaintext | 2,061–2,061 | no: from byte 5 of the transaction (the declared actors: the destination's account), then the witness |
+| claim, private (default) | 8,937–8,937 | yes |
+| claim, naive nullifier N = fid | 8,937–8,937 | yes |
+| claim, plaintext | 2,053–2,053 | no: from byte 133 of the transaction (the declared accounts, after the program id), then the witness |
 | burn, private holding | 7,857–7,857 | yes |
 | release, NOut of the release statement | 324–324 | yes |
 | release, naive NOut = burnId | 324–324 | yes |
@@ -143,7 +157,7 @@ memo, checks `COut` and computes `NOut` (v1, the release guest's).
 | outbound, private (default) | 5.0% | 0 of 20 | 20: 20 | 5.0% | 5.0% | 5.0% |
 | outbound, naive NOut = burnId | 100.0% | 20 of 20 | 1: 20 | 5.0% | 100.0% | 5.0% |
 | round trip: deposit to release | 5.0% | 0 of 20 | 20: 20 | 5.0% | 5.0% | 5.0% |
-| on LEZ: claim to burn | 4.8% | 0 of 20 | 1: 1, 20: 19 | 4.8% | 4.8% | 5.0% |
+| on LEZ: claim to burn | 4.5% | 0 of 20 | 1: 2, 20: 18 | 4.5% | 4.5% | 5.0% |
 
 "Order only" pairs the k-th of each side in time order: what the client's delay has to defeat, at
 chance here because the orders are random by construction. The naive variants are found only through a
@@ -153,17 +167,16 @@ adversary computes them.
 ### Receipts
 
 Gas is public, and it varies; every variation follows the operation's position, not its user:
-- **LEZ claims.** Execution gas, minus the first claim's: `[0, 5188, 5189, 5189, 5187, 5188, 5188, 5186,
-  5186, …]` by position, the same sequence in the private and the plaintext universe, whose users stand
-  in different orders, so it is the shared public part (Issue, Admit, Spend, the mints) that varies, with
-  the state the claims before it left; the cause of the 5,186 was not isolated. Storage gas is constant
-  (224,063 private, 2,061 plaintext).
-- **LEZ burns.** The first burn costs 578 gas more than the 19 others, which cost the same.
+- **LEZ claims.** Execution gas, minus the first claim's: `[0, 4720, 4720, …]` by position, the same
+  sequence in the private and the plaintext universe, whose users stand in different orders, so it is the
+  shared public part (Issue, Admit, Spend, the mints) that varies, with the state the claims before it left.
+  Storage gas is constant (224,063 private, 2,053 plaintext).
+- **LEZ burns.** Every burn costs the same.
 - **Ethereum releases.** The first costs 105,461 gas, the 19 others 80,461: 25,000 more, the EVM's charge
   for a value transfer that creates an account, here the relayer's (a fresh address) on its first relay
   fee. The naive releases show the same.
-- **Ethereum deposits.** Gas follows the leaf index: 139,595 for leaf 0; 99,917 to 100,283 for leaves 1, 3,
-  7 and 15, which write a level of the tree's frontier for the first time; 80,017 to 80,261 otherwise. The
+- **Ethereum deposits.** Gas follows the leaf index: 139,740 for leaf 0; 100,062 to 100,428 for leaves 1, 3,
+  7 and 15, which write a level of the tree's frontier for the first time; 80,162 to 80,406 otherwise. The
   sequence is the same in both universes, whose commitments and destinations differ.
 
 So the receipts carry order, as the base fee does (it moves with the chain's history), and nothing that
@@ -211,11 +224,11 @@ Everything public about the root import is §B6's "the vault's root at a block" 
 
 ## Other findings
 
-8. **The bridge core's burn recovery cannot find LEZ's notes.** `ferrata_bridge_core::outbound::recover_burns`
-   checks the v1 mac (without the memo); the notes LEZ records carry D12's v2 mac (over the memo). Run
-   over the 20 burns, it found 0 of 20; the suite's wallet, with the v2 mac, finds 20 of 20. The fix
-   belongs in a wallet-side crate: the core is compiled into the release guest, whose image is frozen
-   (adding to the core changed that image before, `bridge/README.md`).
+8. **The bridge core's burn recovery could not find LEZ's notes (resolved).** `ferrata_bridge_core::outbound::recover_burns`
+   checked the v1 mac (without the memo), while the notes LEZ records carry D12's v2 mac (over the memo): run
+   over the 20 burns, it found 0 of 20 on `integration3`. The security fixes moved the core to the v2 mac
+   (review I-4; the release image changed anyway with `NOut` v2, M-3), and on the merged programs it finds
+   20 of 20, as the suite's own wallet does.
 9. **LEZ's test helpers make aliases and ephemeral keys deterministic.** With `ALIAS_OPENING = [9; 32]`
    and a zero witness seed, as the harness's other tests and LEZ's own use, an alias is
    `SHA-256(prefix ‖ account ‖ factor)` (`lee` core `program/mod.rs`, `blinded`) and the note's ephemeral
