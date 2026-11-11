@@ -114,7 +114,7 @@ recommended cadence with real proving and recorded hardware (milestone A4).
 
 ### P.4 User proving (RFP-021)
 
-Declared minimum for user-side proving: **16 GB of memory and 8 cores, x86-64 or Apple Silicon**
+Declared minimum for user-side proving: **16 GB of memory and 8 cores with 16 threads, x86-64** (Apple Silicon in M0)
 ([`attestation.md`](design/attestation.md) §13). Measured: the private attestation on one L4, 16.1 s,
 0.76 GiB host memory (P.2); on CPUs, in cloud containers held to 8 and to 16 CPUs with 16 GiB hard (AMD Zen 3
 servers), **904.3 s** and **497.3 s** (medians of 3), 9.25 GiB peak: 2,355,666 user cycles, of which LEZ's
@@ -262,7 +262,7 @@ vault on Sepolia's rules; a later (not first) candidate with the real verifier.
 | LEZ's own wallet: its cheapest private transaction (the yardstick) | **991.7 s** / **488.6 s** at 8 / 16 CPUs; 2,851,842 user cycles | the same | [`p4-minimum`](../lez/results/p4-minimum/README.md), row 34 |
 | recovery scan | median 128.9 ms per 100,000 deposits, 1,308.6 ms per 1,000,000 | laptop CPU, one thread | [`bridge.md`](design/bridge.md) §18.3 |
 
-Declared minimum: 16 GB and 8 cores, x86-64 or Apple Silicon. The release's succinct proof needs the holder's burn
+Declared minimum: 16 GB and 8 cores with 16 threads, x86-64 (Apple Silicon in M0). The release's succinct proof needs the holder's burn
 secret `sOut`, so it is the user's; the wrap takes only the succinct receipt, so any relayer can make it
 ([`bridge.md`](design/bridge.md) §12.2, §12.3). **Gaps:** a mid-range laptop and macOS; the claim and burn as a client
 that pads like LEZ's wallet would send them (*estimated* +1.0M cycles each); the current program image on a GPU; the
