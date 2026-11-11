@@ -13,22 +13,10 @@ use anyhow::{anyhow, bail, Context, Result};
 use common::{block::Block, transaction::LeeTransaction};
 use ferrata_lez_wire::Message;
 
-fn label(m: &Message) -> &'static str {
-    match m {
-        Message::Init { .. } => "Init",
-        Message::Open { .. } => "Open",
-        Message::Miller => "Miller",
-        Message::Adopt { .. } => "Adopt",
-        Message::Finish => "Finish",
-        Message::Read => "Read",
-        Message::ReadPadded { .. } => "ReadPadded",
-        Message::Attest { .. } => "Attest",
-        Message::VerifyAll { .. } => "VerifyAll",
-        Message::JobOpen { .. } => "JobOpen",
-        Message::Apply { .. } => "Apply",
-        Message::ApplyVerified { .. } => "ApplyVerified",
-        Message::Record { .. } => "Record",
-    }
+/// The variant's name, from its `Debug` text: no match on the enum, so that a variant added to the
+/// wire does not stop this driver from building (the IDL's own guard is `idl_vectors.rs`).
+fn label(m: &Message) -> String {
+    format!("{m:?}").split([' ', '{', '(']).next().unwrap_or_default().to_string()
 }
 
 fn main() -> Result<()> {
@@ -53,7 +41,7 @@ fn main() -> Result<()> {
             .collect();
         let blocks: Vec<Block> = borsh::from_slice(&fs::read(blocks_path)?)
             .map_err(|e| anyhow!("{}: not a borsh list of LEZ blocks: {e}", blocks_path.display()))?;
-        let (mut public, mut others, mut ours) = (0usize, 0usize, BTreeMap::<&str, usize>::new());
+        let (mut public, mut others, mut ours) = (0usize, 0usize, BTreeMap::<String, usize>::new());
         let (mut older, mut first_older) = (0usize, String::new());
         for block in &blocks {
             for (position, tx) in block.body.transactions.iter().enumerate() {
@@ -78,7 +66,7 @@ fn main() -> Result<()> {
                     }
                 };
                 let l = label(&message);
-                *ours.entry(l).or_default() += 1;
+                *ours.entry(l.clone()).or_default() += 1;
                 let debug = format!("{message:?}");
                 if debug.contains('"') || debug.contains('\\') {
                     bail!("Debug text needs escaping");

@@ -691,6 +691,9 @@ fn print_attestation(a: &Attestation) {
             Fact::AccumulatorLeaf { address, leaf_index, leaf, .. } => {
                 format!("accumulator leaf {leaf_index} of {} = {}", h(address), h(leaf))
             }
+            // A fact kind added to the wire later is printed as it is, rather than breaking this build.
+            #[allow(unreachable_patterns)]
+            other => format!("{other:?}"),
         };
         println!("    [{i}] {fact}\n        statement id {}", h(&st.id));
     }
