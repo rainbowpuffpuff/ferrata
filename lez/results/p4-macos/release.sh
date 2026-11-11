@@ -3,7 +3,7 @@
 # ferrata-e2e (release, as the crown runner); then the succinct proof of the crown's release program
 # (~/w/in/release/release.bin, image 0x17257f91...f5cd, the program of p4-minimum's second pass) on the witness
 # release-private-1, two runs, each verified with `ferrata-e2e verify`.
-# usage: bash ~/w/release.sh > ~/w/out/release.log 2>&1   (marks in ~/w/out/progress.txt)
+# usage (after copying e2e-wrap-feature.patch to ~/w): bash ~/w/release.sh > ~/w/out/release.log 2>&1   (marks in ~/w/out/progress.txt)
 set -u
 W=$HOME/w; O=$W/out; P=$O/progress.txt; R=$O/release; IN=$W/in/release
 IMG=0x17257f91bca70abf7a5476b498d687e95b6fb4d59e75b6bca1d46877ac9bf5cd
@@ -22,8 +22,14 @@ sampler() { # $1 csv: every 1 s r0vm's RSS and vm_stat's free / compressor pages
     sleep 1
   done
 }
+# macOS: ferrata-e2e's default feature `wrap` (risc0-groth16 `prove`) builds risc0-sys's Metal kernels with full Xcode's
+# `metal`, absent from the Command Line Tools; the patch (lez/results/p4-macos/e2e-wrap-feature.patch, on the branch)
+# puts it behind `wrap`, and the succinct proof needs only --no-default-features.
+git -C "$W/ferrata" apply --check "$W/e2e-wrap-feature.patch" 2>/dev/null && git -C "$W/ferrata" apply "$W/e2e-wrap-feature.patch"
+git -C "$W/ferrata" diff > "$R/source.diff"
 mark "BEGIN release-build"
-(cd "$W/ferrata/bridge" && /usr/bin/time -l cargo build --release --locked -p methods -p ferrata-e2e) > "$R/build.log" 2>&1
+(cd "$W/ferrata/bridge" && /usr/bin/time -l cargo build --release --locked -p methods \
+  && /usr/bin/time -l cargo build --release --locked -p ferrata-e2e --no-default-features) > "$R/build.log" 2>&1
 rc=$?; mark "END release-build exit $rc"; [ "$rc" = 0 ] || exit "$rc"
 E=$W/ferrata/bridge/target/release/ferrata-e2e
 {

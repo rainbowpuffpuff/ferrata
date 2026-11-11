@@ -12,3 +12,19 @@
 2026-11-11T22:00:19Z BEGIN run-1-attest
 2026-11-11T22:08:19Z END run-1-attest exit 0
 2026-11-11T22:08:19Z BEGIN run-1-bridge
+2026-11-11T22:22:43Z END run-1-bridge exit 0
+2026-11-11T22:22:43Z BEGIN run-2-attest
+2026-11-11T22:30:41Z END run-2-attest exit 0
+2026-11-11T22:30:41Z BEGIN run-2-bridge
+2026-11-11T22:44:58Z END run-2-bridge exit 0
+2026-11-11T22:44:58Z DONE
+2026-11-11T22:45:08Z BEGIN release-build
+2026-11-11T22:45:18Z END release-build exit 101
+2026-11-11T22:48:18Z BEGIN release-build
+2026-11-11T22:48:51Z END release-build exit 0
+2026-11-11T22:48:51Z release-exec exit 0
+2026-11-11T22:48:51Z BEGIN release-prove-1
+2026-11-11T22:49:10Z END release-prove-1 exit 0
+2026-11-11T22:49:10Z BEGIN release-prove-2
+2026-11-11T22:49:28Z END release-prove-2 exit 0
+2026-11-11T22:49:28Z RELEASE DONE

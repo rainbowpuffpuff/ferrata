@@ -1,0 +1,6 @@
+bridge image af14e3b5c7b5771e6df5d1ec239ab00c86649a37452e542a9aaf361347af3a9a (541732 ELF bytes); RISC0_DEV_MODE off; shape wallet
+private claim: vault A leaf 5 (1 ETH, private kind) under root n = 8, configuration 4aa46b825dbc; N = 1dbba1cacb2c3b88480a9f252a16cac0d96c2685524509f4b2165d1a6df068c2
+
+thread 'main' (72916) panicked at harness/src/bin/prove_bridge.rs:289:33:
+private claim: settlement refuses tampered-tx-claim.borsh: Invalid privacy preserving execution circuit proof
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

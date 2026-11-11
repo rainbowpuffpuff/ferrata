@@ -1,0 +1,277 @@
+{
+ "m1": {
+  "proofs": [
+   {
+    "run": 1,
+    "job": "attest",
+    "tamper": [
+     {
+      "tx": "tx-attest.borsh",
+      "byte": 127651,
+      "settle_exit": 101
+     }
+    ],
+    "prove_exit": 0,
+    "wall_s": 861,
+    "settle_exit": 0,
+    "time_l": {
+     "real_s": 860.75,
+     "user_s": 6520.95,
+     "sys_s": 16.64,
+     "max_rss_bytes": 9975611392,
+     "peak_footprint_bytes": 14910464
+    },
+    "mem": {
+     "samples": 404,
+     "r0vm_rss_max_gib": 9.29,
+     "free_min_gib": 0.05,
+     "compressor_max_gib": 0.04,
+     "swapouts_during": 0
+    },
+    "powermetrics": {
+     "gpu_active_pct": [
+      3.09,
+      2.74,
+      2.72,
+      2.71,
+      2.69,
+      2.6
+     ],
+     "cluster_active_pct": {
+      "E-Cluster": [
+       100.0,
+       98.96,
+       99.96,
+       99.99,
+       100.0,
+       100.0
+      ],
+      "P-Cluster": [
+       100.0,
+       100.0,
+       100.0,
+       100.0,
+       100.0,
+       100.0
+      ]
+     },
+     "bytes": 17804
+    },
+    "settle": [
+     "SETTLED FROM tx-attest.borsh (receipt verified): receipt 239214 bytes, transaction 255302 bytes, settled in 0.1 s",
+     "settled: execution gas 421,641 (PRIVATE_VERIFY_GAS 409,764 + public part 11,877 cycles), storage gas 224,063, base fee 5,165,632"
+    ],
+    "label": "private attestation",
+    "execute_and_prove_s": 858.5,
+    "prove_and_settle_s": 858.6,
+    "receipt_bytes": 239214,
+    "tx_bytes": 255302,
+    "proven_sessions": [
+     {
+      "segments": 1,
+      "total_cycles": 131072,
+      "user_cycles": 34337,
+      "gap_s": 17.6
+     },
+     {
+      "segments": 1,
+      "total_cycles": 524288,
+      "user_cycles": 346240,
+      "gap_s": 73.7
+     },
+     {
+      "segments": 4,
+      "total_cycles": 3670016,
+      "user_cycles": 2954202,
+      "gap_s": 767.0
+     }
+    ],
+    "user_cycles": 3334779,
+    "segments": 6,
+    "total_cycles": 4325376
+   },
+   {
+    "run": 1,
+    "job": "bridge",
+    "tamper": [],
+    "time_l": {},
+    "mem": {
+     "samples": 14,
+     "r0vm_rss_max_gib": 1.61,
+     "free_min_gib": 7.62,
+     "compressor_max_gib": 0.04,
+     "swapouts_during": 0
+    },
+    "powermetrics": {},
+    "settle": [],
+    "label": "bridge (no REAL PROOF line)"
+   }
+  ],
+  "release": []
+ },
+ "m4": {
+  "proofs": [
+   {
+    "run": 1,
+    "job": "attest",
+    "tamper": [
+     {
+      "tx": "tx-attest.borsh",
+      "byte": 127651,
+      "settle_exit": 101
+     }
+    ],
+    "prove_exit": 0,
+    "wall_s": 477,
+    "settle_exit": 0,
+    "time_l": {
+     "real_s": 477.29,
+     "user_s": 4424.35,
+     "sys_s": 9.19,
+     "max_rss_bytes": 9968451584,
+     "peak_footprint_bytes": 18924000
+    },
+    "mem": {
+     "samples": 230,
+     "r0vm_rss_max_gib": 9.28,
+     "free_min_gib": 0.05,
+     "compressor_max_gib": 0.0,
+     "swapouts_during": 0
+    },
+    "powermetrics": {
+     "gpu_active_pct": [
+      1.45,
+      1.76,
+      1.67,
+      1.58,
+      1.86,
+      1.64
+     ],
+     "cluster_active_pct": {
+      "E-Cluster": [
+       100.0,
+       85.91,
+       97.61,
+       100.0,
+       97.17,
+       99.92
+      ],
+      "P-Cluster": [
+       100.0,
+       100.0,
+       100.0,
+       100.0,
+       100.0,
+       100.0
+      ]
+     },
+     "bytes": 26790
+    },
+    "settle": [
+     "SETTLED FROM tx-attest.borsh (receipt verified): receipt 239214 bytes, transaction 255302 bytes, settled in 0.1 s",
+     "settled: execution gas 421,641 (PRIVATE_VERIFY_GAS 409,764 + public part 11,877 cycles), storage gas 224,063, base fee 5,165,632"
+    ],
+    "label": "private attestation",
+    "execute_and_prove_s": 475.7,
+    "prove_and_settle_s": 475.7,
+    "receipt_bytes": 239214,
+    "tx_bytes": 255302,
+    "proven_sessions": [
+     {
+      "segments": 1,
+      "total_cycles": 131072,
+      "user_cycles": 34337,
+      "gap_s": 10.0
+     },
+     {
+      "segments": 1,
+      "total_cycles": 524288,
+      "user_cycles": 346240,
+      "gap_s": 41.4
+     },
+     {
+      "segments": 4,
+      "total_cycles": 3670016,
+      "user_cycles": 2953575,
+      "gap_s": 424.1
+     }
+    ],
+    "user_cycles": 3334152,
+    "segments": 6,
+    "total_cycles": 4325376
+   },
+   {
+    "run": 1,
+    "job": "bridge",
+    "tamper": [],
+    "time_l": {},
+    "mem": {
+     "samples": 248,
+     "r0vm_rss_max_gib": 9.44,
+     "free_min_gib": 0.06,
+     "compressor_max_gib": 0.0,
+     "swapouts_during": 0
+    },
+    "powermetrics": {
+     "gpu_active_pct": [
+      1.67,
+      1.44,
+      1.64,
+      1.59,
+      1.71,
+      1.43
+     ],
+     "cluster_active_pct": {
+      "E-Cluster": [
+       97.76,
+       99.79,
+       96.89,
+       99.84,
+       100.0,
+       100.0
+      ],
+      "P-Cluster": [
+       100.0,
+       100.0,
+       100.0,
+       100.0,
+       100.0,
+       100.0
+      ]
+     },
+     "bytes": 26790
+    },
+    "settle": [],
+    "label": "private claim",
+    "execute_and_prove_s": 453.5,
+    "prove_and_settle_s": 453.7,
+    "receipt_bytes": 239628,
+    "tx_bytes": 256130,
+    "proven_sessions": [
+     {
+      "segments": 1,
+      "total_cycles": 131072,
+      "user_cycles": 41160,
+      "gap_s": 9.8
+     },
+     {
+      "segments": 1,
+      "total_cycles": 262144,
+      "user_cycles": 111596,
+      "gap_s": 19.7
+     },
+     {
+      "segments": 4,
+      "total_cycles": 3670016,
+      "user_cycles": 2971387,
+      "gap_s": 423.8
+     }
+    ],
+    "user_cycles": 3124143,
+    "segments": 6,
+    "total_cycles": 4063232
+   }
+  ],
+  "release": []
+ }
+}

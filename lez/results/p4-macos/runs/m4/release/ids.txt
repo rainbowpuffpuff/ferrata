@@ -1,0 +1,6 @@
+== the release guest as built here (path-dependent image id)
+/Users/ec2-user/w/ferrata/bridge/target/riscv-guest/methods/ferrata-guests/riscv32im-risc0-zkvm-elf/release/claim.bin 215356 bytes; {"bytes":215356,"image_id":"0x8d14c68c4220f814b73db8e8fc9d2e2c79151e3a4958d024727e84a9590b0150","program":"/Users/ec2-user/w/ferrata/bridge/target/riscv-guest/methods/ferrata-guests/riscv32im-risc0-zkvm-elf/release/claim.bin","sha256":"ffe9d72a00bcf5fef1270c8d550bf0fd934c625db45bce2b34757adf82c5b5bf"}
+/Users/ec2-user/w/ferrata/bridge/target/riscv-guest/methods/ferrata-guests/riscv32im-risc0-zkvm-elf/release/release.bin 216568 bytes; {"bytes":216568,"image_id":"0xa4fc73311d02a7de1c41f7867b3025c971be0f584129826aca805b53577d7caa","program":"/Users/ec2-user/w/ferrata/bridge/target/riscv-guest/methods/ferrata-guests/riscv32im-risc0-zkvm-elf/release/release.bin","sha256":"bcc7f32b41cebcf5c7ff6b1054da4ad0e9897833472940a7375e8698d4738076"}
+== the crown's release.bin (p4-minimum's program)
+a6abe992cada41db6af2b2934cc214a3fbbaf3d3d1d7e326186b5af70024668e  /Users/ec2-user/w/in/release/release.bin
+{"bytes":230480,"image_id":"0x17257f91bca70abf7a5476b498d687e95b6fb4d59e75b6bca1d46877ac9bf5cd","program":"/Users/ec2-user/w/in/release/release.bin","sha256":"a6abe992cada41db6af2b2934cc214a3fbbaf3d3d1d7e326186b5af70024668e"}
