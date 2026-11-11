@@ -649,7 +649,23 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         .map(|b| burn_leaf(&cid, b.burn_index, &b.note.token, &b.note.amount, &b.note.c_out, &b.note.r))
         .collect();
     let burn_root = Tree::from_leaves(burn_leaves).map_err(|_| anyhow!("tree"))?.root();
+    // The relayer's burn watch (with FERRATA_GASDROP_ELF): 11 burns on the zone, none accepted, no candidate
+    // live: a checkpoint is needed; once the root of all 11 is accepted, none is.
+    let watch = ferrata_cli::relayer::Relayer { vault, me: ANVIL0, accept_unpaid: false };
+    if gas_drop.is_some() {
+        let accepted = eth::accepted_burn_roots(&p, vault, 0, 10_000).await?;
+        let live = watch.candidates(&p, 0).await?.len();
+        let need = ferrata_cli::relayer::checkpoint_needed(history.burns.len() as u64, &accepted, live);
+        ensure!(need == Some((11, 0)), "the burn watch asks for a checkpoint of 11 burns: {need:?}");
+    }
     accept_burn_root(&p, vault, B256::from(cid), burn_root, 11).await?;
+    if gas_drop.is_some() {
+        let accepted = eth::accepted_burn_roots(&p, vault, 0, 10_000).await?;
+        let live = watch.candidates(&p, 0).await?.len();
+        let need = ferrata_cli::relayer::checkpoint_needed(history.burns.len() as u64, &accepted, live);
+        ensure!(need.is_none() && live == 0, "no checkpoint needed once 11 burns are accepted: {need:?}, {live} live");
+        println!("BURN WATCH: 11 burns on the zone -> checkpoint needed (0 accepted); after acceptance -> none");
+    }
     let released = eth::released_nullifiers(&p, vault, 0, 10_000).await?;
     let (burn_rows, next_i) = scan::burns(&user, &ctx, &history, &released);
     ensure!(burn_rows.len() == 11 && next_i == 11, "11 burns of the user, next counter 11");

@@ -219,11 +219,11 @@ impl Daemon {
         if let Some((seq, ctx)) = &self.zone {
             let history = lez::history_of(seq, ctx).await?;
             let accepted = eth::accepted_burn_roots(&self.p, self.r.vault, self.from_block, 10_000).await?;
-            let covered = accepted.iter().map(|(_, n)| *n).max().unwrap_or(0);
-            let burns = history.burns.len() as u64;
             let live = self.r.candidates(&self.p, self.from_block).await?;
             let path = self.state.join("needs-checkpoint.json");
-            if burns > covered && live.is_empty() {
+            if let Some((burns, covered)) =
+                relayer::checkpoint_needed(history.burns.len() as u64, &accepted, live.len())
+            {
                 std::fs::write(
                     &path,
                     serde_json::to_vec_pretty(

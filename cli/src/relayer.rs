@@ -329,6 +329,14 @@ impl Relayer {
     }
 }
 
+/// The burn watch: whether the relayer should ask its checkpoint prover for a checkpoint. It should when
+/// LEZ has published more burns (`lez_burns`, from the bridge program's `Burn` calls of this configuration)
+/// than the newest accepted burn root covers, and no candidate is live. Returns (burns, accepted count).
+pub fn checkpoint_needed(lez_burns: u64, accepted: &[(B256, u64)], live_candidates: usize) -> Option<(u64, u64)> {
+    let covered = accepted.iter().map(|(_, n)| *n).max().unwrap_or(0);
+    (lez_burns > covered && live_candidates == 0).then_some((lez_burns, covered))
+}
+
 /// What a `Release` event paid this relayer (the relay fee), if it is the payee.
 pub fn relay_fee_paid(receipt: &TransactionReceipt, me: Address) -> Option<(Address, U256)> {
     receipt.inner.logs().iter().find_map(|log| {

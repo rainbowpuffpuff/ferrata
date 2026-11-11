@@ -15,7 +15,7 @@
       "event": "finalized",
       "gasUsed": 218385,
       "newState": "0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd",
-      "t": 1794421827,
+      "t": 1794422021,
       "tx": "0x4dcf1f566df7270cd8b074803aae7e809636a8018e3dc5b93a02e5fdd44d224f"
     },
     "wait": 3600
@@ -60,7 +60,7 @@
     "feesCollected": {
       "amount": "2000000000000",
       "event": "fees-collected",
-      "t": 1794421841,
+      "t": 1794422035,
       "token": "0x0000000000000000000000000000000000000000",
       "tx": "0xc4852c14542a43b59409935c78088def4360e3efa5b33bf8116cb739960846c4"
     }
