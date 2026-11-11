@@ -165,17 +165,27 @@ contract RuleBMultiTest is RuleBMultiFixture {
         assertTrue(accepted);
     }
 
-    /// The journal's committee words are proven: a journal claiming fewer signatures or another
-    /// committee under the real seal is refused.
+    /// Fewer signatures than the floor: the vault refuses a journal claiming t = 1 before it verifies.
+    function test_ruleBMulti_aJournalBelowTheFloorIsRefused() public {
+        FerrataVault.Checkpoint memory x = _checkpoint();
+        x.t = 1;
+        vm.expectRevert(FerrataVault.KeySetBelowFloor.selector);
+        vault.submitCandidate(x, seal);
+        x.t = 2;
+        x.n = 2;
+        vm.expectRevert(FerrataVault.KeySetBelowFloor.selector);
+        vault.submitCandidate(x, seal);
+    }
+
+    /// The journal's committee words are proven: another committee or tip under the real seal is refused.
     function test_ruleBMulti_anotherCommitteeUnderTheRealSealIsRefused() public {
         FerrataVault.Checkpoint memory c = _checkpoint();
-        for (uint256 field = 0; field < 5; field++) {
+        for (uint256 field = 0; field < 4; field++) {
             FerrataVault.Checkpoint memory x = abi.decode(abi.encode(c), (FerrataVault.Checkpoint));
-            if (field == 0) x.t = 1;
-            if (field == 1) x.t = 3;
-            if (field == 2) x.n = 4;
-            if (field == 3) x.tipHash = keccak256("another tip");
-            if (field == 4) x.newState = keccak256("another state");
+            if (field == 0) x.t = 3;
+            if (field == 1) x.n = 4;
+            if (field == 2) x.tipHash = keccak256("another tip");
+            if (field == 3) x.newState = keccak256("another state");
             vm.expectRevert(VerificationFailed.selector);
             vault.submitCandidate(x, seal);
         }
