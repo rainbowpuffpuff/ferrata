@@ -4,7 +4,7 @@
 Modal build box (the same gVisor container as `modules/RESULTS.md`, Ubuntu 24.04), the mini-app was
 packaged by logos-module-builder as a dev and a portable `.lgx`, and its view was driven headless by
 Qt Quick Test against the devnet backend: **15 of 15 test functions passed** (`results/qmltest.txt`,
-`results/qmltest.xml`), with a screenshot of each state (`results/screenshots/`, 31 files). Every number
+`results/qmltest.xml`), with a screenshot of each state (`results/screenshots/`, 32 files). Every number
 below comes from those runs' logs; the commit that ran is the one that adds `results/`.
 
 ## Where it ran
@@ -30,9 +30,10 @@ plugin (a QML-only `ui_qml` module).
 
 ## The headless run
 
-`scripts/box-test.sh`: backend built in 26 s (warm), up 3 s later; the 15 test functions in 27.0 s;
-the whole script 57 s. The backend answered 50 calls in 9.0 s in total (the slowest a root import,
-1.74 s: the harness executes the bridge guest).
+`scripts/box-test.sh` (the run committed here): backend built in 47 s (incremental), up 3 s later; the
+15 test functions in 29.9 s; the whole script 80 s. The backend answered 53 calls in 11.1 s in total
+(the slowest 1.96 s, a root import: the harness executes the bridge guest); 6 of them were the refusals
+the test asks for. The run before it, without the freeze's lift, also passed 15 of 15 (27.0 s).
 
 | Test | What it drives and checks | Screenshots |
 |---|---|---|
@@ -46,8 +47,8 @@ the whole script 57 s. The backend answered 50 calls in 9.0 s in total (the slow
 | `test_08_plaintext_claim` | plaintext only after its acknowledgement; settled by the bridge program in the harness: 0.1 ETH at public `/0` | 17 |
 | `test_09_error_messages` | U.08: a second claim → "Already claimed" (code 250), with no hash in the message; a burn above the holding → "Insufficient balance" (254) | 18, 19 |
 | `test_10_burn` | the private burn (default) is answered "not settled here"; a public burn after its acknowledgement debits the holder | 20, 21 |
-| `test_11_checkpoint_and_release` | the checkpoint (stand-in prover: candidate, beacon, finalisation on the vault) and the release sent by a relayer: **0.1 ETH paid to the fresh recipient address** the view generated, block 16; positions show 0 not released | 22–24 |
-| `test_12_admin` | roles and floor; `SetCap` below the floor refused by the program (240 `BAD_MESSAGE`); `SetCap` 11 ETH accepted; `Freeze` of mints for 1 h by the freeze authority; the next plaintext claim refused with 242 `FROZEN` ("Frozen: …"); the registry shows the freeze | 25–30 |
+| `test_11_checkpoint_and_release` | the checkpoint (stand-in prover: candidate, beacon, finalisation on the vault) and the release sent by a relayer: **0.1 ETH paid to the fresh recipient address** the view generated (block 15); positions show 0 not released | 22–24 |
+| `test_12_admin` | roles and floor; `SetCap` below the floor refused by the program (240 `BAD_MESSAGE`); `SetCap` 11 ETH accepted; `Freeze` of mints for 1 h by the freeze authority; the next plaintext claim refused with 242 `FROZEN` ("Frozen: …"); the registry shows the freeze; the freeze authority lifts it and the same claim goes through (leaf 2, root of 3 leaves) | 25–30b |
 | `test_13_privacy` | the four steps' public/private tables | 31 |
 
 The settled round trip, public by explicit choice: deposit (anvil) → root import (harness) → plaintext
@@ -56,7 +57,7 @@ fresh address by a relayer).
 
 ## What failed on the way
 
-Four runs before the passing one, all on the test or the view, none on the backend's methods:
+Four runs before the first passing one, all on the test or the view, none on the backend's methods:
 
 1. Qt 6.4's `grabImage(...).save()` returns nothing: the test's check on its return value failed every
    function at its first screenshot, and the rest cascaded (2 of 15 passed).
