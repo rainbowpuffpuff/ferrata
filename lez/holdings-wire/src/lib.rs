@@ -132,30 +132,32 @@ pub enum HoldingsMessage {
     },
 }
 
-/// Exit codes of this program's own refusals: 240–249, outside every block Ferrata's programs
-/// use (`ferrata_lez_wire::CODE_BLOCKS`: 1–239), so an exit code says who refused.
+/// Exit codes of this program's own refusals: 230–239. A refusal of the attestation program ends
+/// the transaction with that program's code (1–219, `ferrata_lez_wire::CODE_BLOCKS`), so these
+/// must not collide with them; 230–239 are also unused by the reference consumer (220–229) and the
+/// bridge program (240–255), so no code of a Ferrata program means two things.
 pub mod code {
     /// The message does not decode.
-    pub const BAD_MESSAGE: u8 = 240;
+    pub const BAD_MESSAGE: u8 = 230;
     /// Stored state that does not decode.
-    pub const BAD_STATE: u8 = 241;
+    pub const BAD_STATE: u8 = 231;
     /// `Check` at another actor than `holding(gate, holder)`.
-    pub const WRONG_RECEIVER: u8 = 242;
+    pub const WRONG_RECEIVER: u8 = 232;
     /// While a check waits: a message from another actor than the record it asked.
-    pub const WRONG_SENDER: u8 = 243;
+    pub const WRONG_SENDER: u8 = 233;
     /// A reply that is not an attestation.
-    pub const BAD_REPLY: u8 = 244;
+    pub const BAD_REPLY: u8 = 234;
     /// An attestation of another instance than the gate's.
-    pub const WRONG_INSTANCE: u8 = 245;
+    pub const WRONG_INSTANCE: u8 = 235;
     /// An attestation for another chain than the gate's.
-    pub const WRONG_CHAIN: u8 = 246;
+    pub const WRONG_CHAIN: u8 = 236;
     /// An attestation whose facts are not the two asked for (the token's account, then the
     /// holder's balance slot), or proven at an older block than the record's.
-    pub const WRONG_FACTS: u8 = 247;
+    pub const WRONG_FACTS: u8 = 237;
     /// A balance below the gate's minimum.
-    pub const BELOW_MINIMUM: u8 = 248;
+    pub const BELOW_MINIMUM: u8 = 238;
     /// A check at a block no newer than the holding it would replace.
-    pub const STALE: u8 = 249;
+    pub const STALE: u8 = 239;
 }
 
 impl Gate {

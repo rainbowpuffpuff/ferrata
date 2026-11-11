@@ -143,6 +143,15 @@ impl Holdings {
     }
 }
 
+/// The handler a transition of `ferrata_holdings` ran, for the tables: `Check`, or the reply it
+/// waits for (an attestation).
+pub fn handler_name(input: &ReceiveInput) -> String {
+    match borsh::from_slice::<HoldingsMessage>(&input.message) {
+        Ok(HoldingsMessage::Check { .. }) => "holdings Check".into(),
+        Err(_) => "holdings (reply)".into(),
+    }
+}
+
 // ---------------------------------------------------------------------------------------------
 // The transitions of a transaction, with their inputs (for proving them)
 // ---------------------------------------------------------------------------------------------

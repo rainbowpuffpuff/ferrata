@@ -167,6 +167,9 @@ pub fn handler_name(input: &ReceiveInput) -> String {
     if input.receiver.program_account_id == crate::bridge::bridge_account() {
         return crate::bridge::handler_name(input);
     }
+    if input.receiver.program_account_id == crate::holdings::holdings_account() {
+        return crate::holdings::handler_name(input);
+    }
     if input.receiver.program_account_id == crate::scripted_account() {
         return "scripted".into();
     }

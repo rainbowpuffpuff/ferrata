@@ -771,6 +771,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "ferrata-lez-holdings-wire"
+version = "0.1.0"
+dependencies = [
+ "borsh",
+ "ferrata-core",
+ "ferrata-lez-wire",
+ "lee_core",
+ "sha2",
+]
+
+[[package]]
 name = "ferrata-lez-wire"
 version = "0.1.0"
 dependencies = [
@@ -781,10 +792,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "ferrata_consumer"
+name = "ferrata_holdings"
 version = "0.1.0"
 dependencies = [
  "borsh",
+ "ferrata-lez-holdings-wire",
  "ferrata-lez-wire",
  "lee_core",
  "risc0-zkvm",
