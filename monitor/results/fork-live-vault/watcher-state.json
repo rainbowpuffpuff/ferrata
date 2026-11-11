@@ -1,0 +1,95 @@
+{
+  "vault": "0xfe3199fa2634413cbac317371076cae3eb2d9e54",
+  "nextBlock": 12113600,
+  "candidates": {
+    "0x39131a22d104ebb04684e21377f34cbb2eee7027f339315d6e0b125f797c26e3": {
+      "candidate": {
+        "newState": "0x39131a22d104ebb04684e21377f34cbb2eee7027f339315d6e0b125f797c26e3",
+        "parentState": "0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd",
+        "burnRoot": "0x5d0f13e9c5b01875340da3e0eeefee25f2c665fc91b940505e54d588bdeb0210",
+        "burnCount": 1,
+        "importedLeafCount": 0,
+        "sunset": false,
+        "deltaAtSubmit": 3600,
+        "tipId": 252,
+        "tipHash": "0x3d12099e043ce3bcbc213c77a3690496213ee6fc4c6da3dfbf0fd7eec2d47287",
+        "n": 1,
+        "t": 1,
+        "submittedAt": 1794422874
+      },
+      "status": "cancelledByUs",
+      "verdict": {
+        "verdict": "cancel",
+        "reason": {
+          "kind": "tipConflict",
+          "node": "crown-devnet",
+          "tipId": 252,
+          "finalHash": "0xe55977023d6e1ae1bcfdb3625affcdca7acf061067922a1dacc052380dc76ecf"
+        }
+      },
+      "firstSeenAt": 1794422874,
+      "cancelTx": "0x30250ca6bdc3697eb922991a3e9e6e6d82c9aa5c9ea541e796a00218412477ea",
+      "cancelledAt": 1794422875
+    },
+    "0x4e0f5d113bf724886b9ecb1cc0f0055fc5c3be0f822d467e6833295cbf394e07": {
+      "candidate": {
+        "newState": "0x4e0f5d113bf724886b9ecb1cc0f0055fc5c3be0f822d467e6833295cbf394e07",
+        "parentState": "0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd",
+        "burnRoot": "0x5d0f13e9c5b01875340da3e0eeefee25f2c665fc91b940505e54d588bdeb0210",
+        "burnCount": 1,
+        "importedLeafCount": 0,
+        "sunset": false,
+        "deltaAtSubmit": 3600,
+        "tipId": 252,
+        "tipHash": "0xe55977023d6e1ae1bcfdb3625affcdca7acf061067922a1dacc052380dc76ecf",
+        "n": 1,
+        "t": 1,
+        "submittedAt": 1794422872
+      },
+      "status": "pending",
+      "verdict": {
+        "verdict": "pass"
+      },
+      "firstSeenAt": 1794422874,
+      "cancelTx": null,
+      "cancelledAt": null
+    },
+    "0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd": {
+      "candidate": {
+        "newState": "0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd",
+        "parentState": "0xa696b3c8deaa881c962e3d768e8ee28c9b08ce60b709c058ea21db82c541bef9",
+        "burnRoot": "0xbefcd570e779294d22eac9ca5a5299631f124b46b09e415c65bba012694b0151",
+        "burnCount": 2,
+        "importedLeafCount": 2,
+        "sunset": false,
+        "deltaAtSubmit": 3600,
+        "tipId": 252,
+        "tipHash": "0xe55977023d6e1ae1bcfdb3625affcdca7acf061067922a1dacc052380dc76ecf",
+        "n": 1,
+        "t": 1,
+        "submittedAt": 0
+      },
+      "status": "gone",
+      "verdict": null,
+      "firstSeenAt": 1794422868,
+      "cancelTx": null,
+      "cancelledAt": null
+    }
+  },
+  "cancelEvents": {
+    "0x39131a22d104ebb04684e21377f34cbb2eee7027f339315d6e0b125f797c26e3": {
+      "0x30250ca6bdc3697eb922991a3e9e6e6d82c9aa5c9ea541e796a00218412477ea": 12113599
+    }
+  },
+  "finalized": {
+    "0": "ok"
+  },
+  "toAudit": {},
+  "alerted": [
+    "pass:0x4e0f5d113bf724886b9ecb1cc0f0055fc5c3be0f822d467e6833295cbf394e07:1794422872"
+  ],
+  "finalHeight": 252,
+  "finalHeightSince": 1794422868,
+  "pausedAt": null,
+  "polls": 4
+}
