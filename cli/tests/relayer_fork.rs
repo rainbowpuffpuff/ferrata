@@ -218,9 +218,10 @@ async fn relayer_on_a_sepolia_fork_with_crown_live_1_proofs() -> Result<()> {
     let (name0, j0, s0) = &releases[0];
     job(&inbox, &format!("03-release-{name0}-early.json"), json!({ "kind": "release", "journal": j0, "seal": s0 }))?;
     let log3 = daemon(&url, &state, &inbox, NAMED, &["--accept-unpaid"])?;
-    let early = events(&log3, "job-refused");
-    ensure!(early.len() == 1, "an early release was not refused");
-    println!("early release: {}", early[0]["reason"]);
+    let early = events(&log3, "job-deferred");
+    ensure!(early.len() == 1, "an early release was not deferred");
+    ensure!(inbox.join(format!("03-release-{name0}-early.json")).exists(), "the deferred job left the inbox");
+    println!("early release: deferred, {}", early[0]["reason"]);
     results.insert("earlyRelease".into(), early[0]["reason"].clone());
 
     // 4. The wait W (deltaAtSubmit), then the daemon finalises the candidate (anyone may).

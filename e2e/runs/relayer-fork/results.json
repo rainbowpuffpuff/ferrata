@@ -15,7 +15,7 @@
       "event": "finalized",
       "gasUsed": 218385,
       "newState": "0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd",
-      "t": 1794415367,
+      "t": 1794421827,
       "tx": "0x4dcf1f566df7270cd8b074803aae7e809636a8018e3dc5b93a02e5fdd44d224f"
     },
     "wait": 3600
@@ -37,30 +37,30 @@
       {
         "gasUsed": 393108,
         "kind": "release",
-        "nullifier": "0x324dbfffe264185b60518bc4340a9172258498dfca519a6a015afefe67f67c4a",
-        "paid": "0",
-        "paidTo": "0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07",
-        "recipient": "0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07",
-        "relayFee": "0",
-        "token": "0x0000000000000000000000000000000000000000",
-        "tx": "0x9b5f29b2b2ee6a044e22fe0b2b670b4e30f075505767b19588ff670c84f937e0"
-      },
-      {
-        "gasUsed": 358908,
-        "kind": "release",
         "nullifier": "0x6b5ec36ee357ba03fad0f9bb4afe4ef32c424722cd6c52131f48beffe1886414",
         "paid": "0",
         "paidTo": "0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07",
         "recipient": "0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07",
         "relayFee": "0",
         "token": "0x0000000000000000000000000000000000000000",
-        "tx": "0x86a6b0822601d781e8b7e82f2d31e2285ea40b73b998f4e9635da423f988696a"
+        "tx": "0x6112fab05b47ef793f14f7330f41a37c317f4085a4bbadbdd475d91ad7b1af0e"
+      },
+      {
+        "gasUsed": 358908,
+        "kind": "release",
+        "nullifier": "0x324dbfffe264185b60518bc4340a9172258498dfca519a6a015afefe67f67c4a",
+        "paid": "0",
+        "paidTo": "0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07",
+        "recipient": "0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07",
+        "relayFee": "0",
+        "token": "0x0000000000000000000000000000000000000000",
+        "tx": "0xc9bbd6ae4062a9c2d64be130d994f7bd6ab6f0b3019c3a2e55b887da72ec4b66"
       }
     ],
     "feesCollected": {
       "amount": "2000000000000",
       "event": "fees-collected",
-      "t": 1794415382,
+      "t": 1794421841,
       "token": "0x0000000000000000000000000000000000000000",
       "tx": "0xc4852c14542a43b59409935c78088def4360e3efa5b33bf8116cb739960846c4"
     }

@@ -141,6 +141,29 @@ pub fn checkpoint_from_journal(j: &[u8]) -> Result<CheckpointJob> {
     })
 }
 
+/// Blocks per `eth_getLogs` request.
+pub const LOG_CHUNK: u64 = 10_000;
+
+/// Vault errors after which a job may succeed later (a root not final yet, a delay, a freeze, a cap), and
+/// transport failures: the daemon keeps such a job in its inbox and retries it next round.
+pub const TEMPORARY: [&str; 10] = [
+    "BurnRootNotAccepted",
+    "ReleaseDelayNotElapsed",
+    "ReleasesAreFrozen",
+    "TokenReleasesAreFrozen",
+    "TokenReleaseCapExceeded",
+    "GlobalReleaseCapExceeded",
+    "CheckpointsAreFrozen",
+    "error sending request",
+    "timed out",
+    "connection",
+];
+
+/// Whether a job that failed with `reason` should be retried rather than refused for good.
+pub fn temporary(reason: &str) -> bool {
+    TEMPORARY.iter().any(|t| reason.contains(t))
+}
+
 /// The relayer's own identity and its terms.
 #[derive(Clone, Debug)]
 pub struct Relayer {
@@ -241,11 +264,20 @@ impl Relayer {
     /// Live candidates on the vault (any submitter's), rebuilt from their `CandidateSubmitted` events
     /// and the vault's committee floors, each checked against the journal digest the vault stored.
     pub async fn candidates(&self, p: &DynProvider, from_block: u64) -> Result<Vec<(IRelayVault::Checkpoint, u64)>> {
-        let filter = Filter::new()
-            .address(self.vault)
-            .event_signature(IRelayVault::CandidateSubmitted::SIGNATURE_HASH)
-            .from_block(from_block);
-        let logs = p.get_logs(&filter).await?;
+        // In ranges of LOG_CHUNK blocks: public endpoints limit the range of one eth_getLogs.
+        let latest = p.get_block_number().await?;
+        let mut logs = Vec::new();
+        let mut start = from_block;
+        while start <= latest {
+            let end = (start + LOG_CHUNK - 1).min(latest);
+            let filter = Filter::new()
+                .address(self.vault)
+                .event_signature(IRelayVault::CandidateSubmitted::SIGNATURE_HASH)
+                .from_block(start)
+                .to_block(end);
+            logs.extend(p.get_logs(&filter).await.with_context(|| format!("eth_getLogs {start}..{end}"))?);
+            start = end + 1;
+        }
         let n_min = eth::view(p, self.vault, IRelayVault::nMinCall {}, None).await?;
         let t_min = eth::view(p, self.vault, IRelayVault::tMinCall {}, None).await?;
         let chain_id = p.get_chain_id().await?;
@@ -491,13 +523,24 @@ pub async fn gas_drop<C: Credit>(
     now: u64,
 ) -> Result<(GasDropJournal, String)> {
     let j = check_gas_drop(receipt_json, ctx, claimed, book).map_err(|r| anyhow!("{r}"))?;
-    let tx = credit.credit(j.one_time_address, amount).await?;
-    book.record(
-        &j.nullifier,
-        DropRecord { one_time_address: hx(&j.one_time_address), amount, at: now, tx: tx.clone() },
-    );
+    // Recorded before the credit is sent: a crash between the two cannot lead to a second drop for this N
+    // after a restart. A credit that fails stays recorded as failed (it may have been sent); the operator
+    // removes the entry only knowing it was not.
+    let record = |tx: String| DropRecord { one_time_address: hx(&j.one_time_address), amount, at: now, tx };
+    book.record(&j.nullifier, record("pending".into()));
     book.save(book_path)?;
-    Ok((j, tx))
+    match credit.credit(j.one_time_address, amount).await {
+        Ok(tx) => {
+            book.record(&j.nullifier, record(tx.clone()));
+            book.save(book_path)?;
+            Ok((j, tx))
+        }
+        Err(e) => {
+            book.record(&j.nullifier, record(format!("failed: {e:#}")));
+            book.save(book_path)?;
+            Err(e.context("the credit failed; recorded as failed"))
+        }
+    }
 }
 
 /// A job file in the relayer's inbox (`<inbox>/*.json`), handed over by a user who opts in or by

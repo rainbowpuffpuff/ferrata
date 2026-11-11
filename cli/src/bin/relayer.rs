@@ -86,6 +86,9 @@ struct Cli {
     /// Native LEZ sent per gas drop.
     #[arg(long, default_value_t = 0, global = true)]
     drop_amount: u128,
+    /// Seconds a job may wait in the inbox for a temporary condition (root not final, delay, freeze, cap).
+    #[arg(long, default_value_t = 7 * 24 * 3600, global = true)]
+    max_job_age: u64,
     #[command(subcommand)]
     command: Command,
 }
@@ -128,6 +131,10 @@ struct Daemon {
     drop_amount: u128,
     /// Tokens whose credited fees the relayer collects (ETH, and every token of a release it sent).
     tokens: std::collections::BTreeSet<Address>,
+    /// The vault runs rule (B) (`mode() == 1`): candidates are finalised with `finalizeAttested`.
+    rule_b: bool,
+    /// A job deferred for longer than this (seconds) is refused.
+    max_job_age: u64,
 }
 
 impl Daemon {
@@ -145,7 +152,22 @@ impl Daemon {
         for file in files {
             let name = file.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
             let outcome = self.job(&file, &v).await;
-            let dir = if outcome.is_ok() { "done" } else { "refused" };
+            let age = std::fs::metadata(&file)
+                .and_then(|m| m.modified())
+                .ok()
+                .and_then(|t| t.elapsed().ok())
+                .map(|d| d.as_secs())
+                .unwrap_or(0);
+            let dir = match &outcome {
+                Ok(_) => "done",
+                // A root not final yet, a delay, a freeze, a cap, a transport failure: retried next round,
+                // until the job is older than --max-job-age.
+                Err(e) if relayer::temporary(&format!("{e:#}")) && age < self.max_job_age => {
+                    log("job-deferred", json!({ "job": name, "reason": format!("{e:#}"), "ageSecs": age }));
+                    continue;
+                }
+                Err(_) => "refused",
+            };
             std::fs::create_dir_all(self.state.join(dir))?;
             std::fs::rename(&file, self.state.join(dir).join(&name))?;
             match outcome {
@@ -156,6 +178,14 @@ impl Daemon {
         // 2. Candidates whose wait is over.
         let v = self.r.view(&self.p).await?;
         for (c, ready_at) in self.r.candidates(&self.p, self.from_block).await? {
+            if !self.rule_b {
+                // Rule (A) finalises with a second proof echoing a beacon: the checkpoint prover's job.
+                log(
+                    "candidate-not-finalized",
+                    json!({ "newState": c.newState, "reason": "rule (A) vault: finalize needs a beacon proof" }),
+                );
+                continue;
+            }
             if v.now < ready_at {
                 log("candidate-waiting", json!({ "newState": c.newState, "readyAt": ready_at, "now": v.now }));
                 continue;
@@ -317,6 +347,7 @@ async fn main() -> Result<()> {
         }
         None => None,
     };
+    let p_mode = p.clone();
     let mut d = Daemon {
         p,
         r,
@@ -327,6 +358,8 @@ async fn main() -> Result<()> {
         lez_me: cli.lez_account.as_deref().map(h32).transpose()?,
         drop_amount: cli.drop_amount,
         tokens: [Address::ZERO].into_iter().collect(),
+        rule_b: eth::view(&p_mode, vault, IRelayVault::modeCall {}, None).await? == 1,
+        max_job_age: cli.max_job_age,
     };
     log(
         "start",
