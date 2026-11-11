@@ -14,6 +14,7 @@ use std::path::PathBuf;
 use alloy::{
     primitives::{Address, Bytes, B256, U256},
     providers::DynProvider,
+    sol_types::SolCall as _,
 };
 use anyhow::{anyhow, bail, ensure, Context as _, Result};
 use ferrata_bridge_core::{chain_id_u256, inbound, inbound::DestKind, Hash};
@@ -136,6 +137,8 @@ pub struct DepositOpts {
     pub gap: u32,
     /// The depositor, when only printing (`--from`).
     pub from: Option<Address>,
+    /// Send the ERC-20 `approve` the deposit needs first.
+    pub approve: bool,
     pub send: bool,
     pub yes: bool,
     pub confirmations: u64,
@@ -202,28 +205,58 @@ pub async fn deposit(
     out.line(format!("  destination   your {} LEZ account /{} (hidden: C commits to it)", kind_name(dk), o.account));
     out.line(format!("  commitment C  {}", hx(&commitment)));
     out.line(format!("  claim delay   {delay} h after the deposit (from your seed; `ferrata claim` waits for it)"));
+    let mut approve_call: Option<Bytes> = None;
     if o.token != eth::ETH {
         let allowance =
             eth::view(&eth.p, o.token, eth::IERC20Meta::allowanceCall { owner: depositor, spender: eth.vault }, None)
                 .await?;
         out.line(format!(
-            "  allowance     {} of {} needed for the vault (approve it first; ETH needs none)",
+            "  allowance     {} of {} needed for the vault",
             u128::try_from(allowance).map(show).unwrap_or_else(|_| allowance.to_string()),
             show(price.total)
         ));
+        if allowance < U256::from(price.total) {
+            if o.approve {
+                let data = Bytes::from(
+                    eth::IERC20Meta::approveCall { spender: eth.vault, amount: U256::from(price.total) }.abi_encode(),
+                );
+                out.line(format!(
+                    "would send first: approve({}, {}) to the token {}  data {data}",
+                    eth.vault, price.total, o.token
+                ));
+                approve_call = Some(data);
+            } else {
+                out.line("  the deposit needs that allowance first: add --approve to send the approve before it");
+            }
+        }
     }
     out.line(format!("would send: to {}  value {}  data {}", eth.vault, value, input));
-    match eth::preflight(&eth.p, depositor, eth.vault, input.clone(), value).await {
-        Ok(f) => out.line(format!(
-            "cost: {} to the vault, and a network fee of about {} ({} gas at {} wei, eth_estimateGas)",
-            show(price.total),
-            units::show(f.fee(), 18, "ETH"),
-            f.gas,
-            f.gas_price
-        )),
-        Err(e) if signer.is_some() && o.send => return Err(e),
-        Err(e) => {
-            out.line(format!("cost: {} to the vault; the call does not pass eth_call now: {e}", show(price.total)))
+    if let Some(data) = &approve_call {
+        match eth::preflight(&eth.p, depositor, o.token, data.clone(), U256::ZERO).await {
+            Ok(f) => out.line(format!(
+                "cost: {} to the vault; the approve's network fee about {} ({} gas, eth_estimateGas); the deposit's is estimated once the allowance is in place",
+                show(price.total),
+                units::show(f.fee(), 18, "ETH"),
+                f.gas
+            )),
+            Err(e) if signer.is_some() && o.send => return Err(e),
+            Err(e) => {
+                out.line(format!("cost: {} to the vault; the approve does not pass eth_call now: {e}", show(price.total)))
+            }
+        }
+    } else {
+        match eth::preflight(&eth.p, depositor, eth.vault, input.clone(), value).await {
+            Ok(f) => out.line(format!(
+                "cost: {} to the vault, and a network fee of about {} ({} gas at {} wei, eth_estimateGas)",
+                show(price.total),
+                units::show(f.fee(), 18, "ETH"),
+                f.gas,
+                f.gas_price
+            )),
+            Err(e) if signer.is_some() && o.send => return Err(e),
+            Err(e) => {
+                out.line(format!("cost: {} to the vault; the call does not pass eth_call now: {e}", show(price.total)))
+            }
         }
     }
     let leaks = privacy::deposit_leaks(&privacy::DepositChoice {
@@ -235,6 +268,9 @@ pub async fn deposit(
         denomination: &show(price.denomination),
     });
     out.extend(privacy::render(&privacy::DEPOSIT, &leaks));
+    if approve_call.is_some() {
+        out.line("  the approve is public too: your address, the token, the vault and the amount, which the deposit shows anyway");
+    }
     if o.public && !o.accept_public {
         if o.send {
             bail!("refusing a public destination without --i-accept-public-account: the account and its balance become public on LEZ when the deposit is claimed; deposit to a private account (the default) instead");
@@ -245,6 +281,10 @@ pub async fn deposit(
         return Ok(Deposited { commitment, nullifier, j, sent: None });
     }
     let signer = signer.ok_or_else(|| anyhow!("--send needs --keystore and --password-file"))?;
+    if let Some(data) = approve_call {
+        let rc = eth::send(&signer.p, depositor, o.token, data, U256::ZERO, o.confirmations).await?;
+        out.line(format!("approved: {} in block {}", rc.transaction_hash, rc.block_number.unwrap_or_default()));
+    }
     let receipt = eth::send(&signer.p, depositor, eth.vault, input, value, o.confirmations).await?;
     let leaf = eth::deposit_of_receipt(&receipt).map(|d| d.leafIndex);
     out.line(format!("sent: {} in block {}", receipt.transaction_hash, receipt.block_number.unwrap_or_default()));

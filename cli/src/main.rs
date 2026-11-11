@@ -126,6 +126,9 @@ enum Command {
         /// The depositor's address, to print a deposit without a keystore.
         #[arg(long)]
         from: Option<Address>,
+        /// Send the ERC-20 approve the deposit needs first (ETH needs none).
+        #[arg(long)]
+        approve: bool,
         #[command(flatten)]
         send: Send,
     },
@@ -358,7 +361,7 @@ async fn run(cli: Cli, out: &mut flow::Out) -> Result<(&'static str, serde_json:
             ("keys", json!({}))
         }
 
-        Command::Deposit { token, denomination, kind, i_accept_public_account, account: a, from, send } => {
+        Command::Deposit { token, denomination, kind, i_accept_public_account, account: a, from, approve, send } => {
             let seed = seed_of(c)?;
             let e = eth_side(c).await?;
             let signer = signer_of(c, &send)?;
@@ -370,6 +373,7 @@ async fn run(cli: Cli, out: &mut flow::Out) -> Result<(&'static str, serde_json:
                 account: a,
                 gap: c.gap,
                 from,
+                approve,
                 send: send.send,
                 yes: send.yes,
                 confirmations: send.confirmations,

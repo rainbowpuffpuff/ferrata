@@ -28,7 +28,7 @@ use alloy::{
     rpc::types::TransactionRequest,
     signers::local::PrivateKeySigner,
     sol,
-    sol_types::SolCall,
+    sol_types::{sol_data, SolCall, SolType},
 };
 use anyhow::{anyhow, bail, ensure, Context as _, Result};
 use borsh::BorshDeserialize as _;
@@ -50,6 +50,17 @@ sol! {
     #[allow(missing_docs)]
     interface IMock {
         function accept(bytes32 imageId, bytes32 journalDigest) external;
+    }
+    #[allow(missing_docs)]
+    interface IAdmin {
+        struct CapParams { uint256 capacity; uint256 refillPerSecond; }
+        struct TokenParams {
+            uint256[] denominations; uint256[] relayFees; uint256 lezUnit; uint256 unitWeight; CapParams depositCap;
+            CapParams releaseCap; uint256 releaseDelay; bytes32 lezDefinition; uint8 decimals; uint256[] checkpointFees;
+        }
+        function registerToken(address token, TokenParams p) external;
+        function mint(address to, uint256 amount) external;
+        function balanceOf(address who) external view returns (uint256);
     }
     #[allow(missing_docs)]
     interface ICheckpoints {
@@ -1356,6 +1367,89 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         "status names the newest import and the record it read"
     );
     ensure!(zone_lines.iter().any(|l| l == "  burns published: 12"), "status counts the burns");
+
+    // ---- An ERC-20 shaped like USDT (its transfers return no boolean): the deposit's dry run asks for
+    //      the allowance; `--approve` sends the approve, then the deposit, through the binary.
+    // Deployed from the vault's build artifact through this provider (one nonce manager for anvil's account).
+    let artifact: serde_json::Value = serde_json::from_slice(&std::fs::read(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../vault/out/MockTokens.sol/MockUSDT.json"),
+    )?)?;
+    let code = hex::decode(
+        artifact["bytecode"]["object"].as_str().context("the artifact's bytecode")?.trim_start_matches("0x"),
+    )?;
+    let ctor = <(sol_data::String, sol_data::String, sol_data::Uint<8>) as SolType>::abi_encode_params(&(
+        "Tether USD".to_string(),
+        "USDT".to_string(),
+        6u8,
+    ));
+    let deploy = TransactionRequest::default().with_from(ANVIL0).with_deploy_code([code, ctor].concat());
+    let usdt = p.send_transaction(deploy).await?.get_receipt().await?.contract_address.context("MockUSDT's address")?;
+    ensure!(!p.get_code_at(usdt).await?.is_empty(), "MockUSDT deployed");
+    anvil_send(
+        &p,
+        usdt,
+        IAdmin::mintCall { to: keystores[0].1, amount: U256::from(10_000_000u64) }.abi_encode(),
+        U256::ZERO,
+    )
+    .await?;
+    let unlimited = IAdmin::CapParams { capacity: U256::MAX, refillPerSecond: U256::ZERO };
+    let params = IAdmin::TokenParams {
+        denominations: vec![U256::from(1_000_000u64)],
+        relayFees: vec![U256::from(10_000u64)],
+        lezUnit: U256::from(1u64),
+        unitWeight: U256::from(1u64),
+        depositCap: unlimited.clone(),
+        releaseCap: unlimited,
+        releaseDelay: U256::from(120u64),
+        lezDefinition: B256::repeat_byte(0x7e),
+        decimals: 6,
+        checkpointFees: vec![U256::ZERO],
+    };
+    anvil_send(&p, vault, IAdmin::registerTokenCall { token: usdt, p: params }.abi_encode(), U256::ZERO).await?;
+    let usdt_arg = usdt.to_string();
+    let dry = dry_deposit(&["--token", &usdt_arg, "--denomination", "0"])?;
+    print!("{dry}");
+    ensure!(
+        dry.contains("1 USDT (1000000 base units, 6 decimals)") && dry.contains("add --approve"),
+        "the ERC-20 deposit's dry run asks for the allowance"
+    );
+    let mut args = common(&seed_user);
+    args.extend(
+        [
+            "deposit",
+            "--token",
+            &usdt_arg,
+            "--denomination",
+            "0",
+            "--approve",
+            "--keystore",
+            &user_ks.display().to_string(),
+            "--password-file",
+            &password.display().to_string(),
+            "--send",
+            "--yes",
+        ]
+        .map(String::from),
+    );
+    let sent = ferrata(&args.iter().map(String::as_str).collect::<Vec<_>>())?;
+    print!("{sent}");
+    let held = eth::view(&p, usdt, IAdmin::balanceOfCall { who: vault }, None).await?;
+    ensure!(
+        sent.contains("would send first: approve(")
+            && sent.contains("approved: ")
+            && sent.contains("sent: ")
+            && held == U256::from(1_010_000u64),
+        "approve, then deposit: the vault holds {held} (1 USDT and the 0.01 USDT relay fee)"
+    );
+    let scan_out =
+        ferrata(&[common(&seed_user), vec!["scan".into()]].concat().iter().map(String::as_str).collect::<Vec<_>>())?;
+    ensure!(
+        scan_out.contains("deposits of this seed: 13") && scan_out.contains("1 USDT (1000000 base units, 6 decimals)"),
+        "the scan finds the USDT deposit"
+    );
+    println!(
+        "ERC-20: a USDT-shaped token approved and deposited through the binary; the vault holds {held} base units"
+    );
 
     // The relayer's release (cli/src/relayer.rs), with `FERRATA_GASDROP_ELF`: the holder of burn 1 opts in
     // with a release that pays the relayer the registered relay fee; the relayer checks and sends it
