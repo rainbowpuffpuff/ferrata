@@ -121,9 +121,11 @@ servers), **904.3 s** and **497.3 s** (medians of 3), 9.25 GiB peak: 2,355,666 u
 privacy-preserving circuit takes 1,975,089 and 85 % of the time ([`p4-minimum`](../lez/results/p4-minimum/README.md),
 [EVIDENCE](EVIDENCE.md) row 32). For scale, the cheapest private transaction of LEZ's own wallet takes 991.7 s and
 488.6 s on the same shapes (row 34). Modal's 8 CPUs are 8 hardware threads; an 8-core x86 laptop usually has 16.
-The update proof is an updater's, not a user's (9.18 GiB peak). **Gaps:** a mid-range laptop and macOS; the
-attestation as a client that pads like LEZ's wallet would send it (*estimated* +1.0M cycles, about 10 min at
-16 CPUs); a chain of hops (a 320-hop claim is estimated at about 58M accelerated user cycles).
+Padded as LEZ's wallet pads every private transaction (7 private actions, 512-byte notes, the fee's recovery note:
+what a client sends), the attestation takes **1,236.8 s** and **633.3 s** on the same shapes (medians of 2), LEZ's
+circuit 979,362–980,875 user cycles more (4 segments, was 3), the same 9.25 GiB peak (row 38). The update proof is
+an updater's, not a user's (9.18 GiB peak). **Gaps:** a mid-range laptop and macOS; a chain of hops (a 320-hop
+claim is estimated at about 58M accelerated user cycles).
 
 ### P.5 End-to-end attestation latency
 
@@ -259,13 +261,13 @@ vault on Sepolia's rules; a later (not first) candidate with the real verifier.
 | private claim and private burn of the merged program, LEZ's wallet on a devnet | **276.8 s** and **336.0 s**, proving and sending | a cloud CPU container, 16 cores reserved, up to 32 | [`crown-rehearsal-3`](../e2e/runs/crown-rehearsal-3/README.md) |
 | private burn (earlier image) | **12.4 s**; receipt 226,978 B | one L4 | [`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md) §7 |
 | private claim and private burn of the merged program, as this harness builds them | claim **905.4 s** / **463.7 s**, burn **756.3 s** / **389.0 s** at 8 / 16 CPUs (medians of 3; at 16 one run each on an Intel Xeon, 371.4 s and 310.6 s); peak 9.24 GiB | cloud containers held to 8 / 16 CPUs and 16 GiB | [`p4-minimum`](../lez/results/p4-minimum/README.md), [EVIDENCE](EVIDENCE.md) row 33 |
+| private claim and private burn of the merged program, padded as LEZ's wallet pads them (what a client sends) | claim **1,146.0 s** / **600.7 s**, burn **988.9 s** / **525.9 s** at 8 / 16 CPUs (medians of 2); LEZ's circuit about 0.98–0.99M user cycles more; peak 9.25 GiB | the same | [`p4-minimum`](../lez/results/p4-minimum/README.md), [EVIDENCE](EVIDENCE.md) row 38 |
 | LEZ's own wallet: its cheapest private transaction (the yardstick) | **991.7 s** / **488.6 s** at 8 / 16 CPUs; 2,851,842 user cycles | the same | [`p4-minimum`](../lez/results/p4-minimum/README.md), row 34 |
 | recovery scan | median 128.9 ms per 100,000 deposits, 1,308.6 ms per 1,000,000 | laptop CPU, one thread | [`bridge.md`](design/bridge.md) §18.3 |
 
 Declared minimum: 16 GB and 8 cores with 16 threads, x86-64 (Apple Silicon in M0). The release's succinct proof needs the holder's burn
 secret `sOut`, so it is the user's; the wrap takes only the succinct receipt, so any relayer can make it
-([`bridge.md`](design/bridge.md) §12.2, §12.3). **Gaps:** a mid-range laptop and macOS; the claim and burn as a client
-that pads like LEZ's wallet would send them (*estimated* +1.0M cycles each); the current program image on a GPU; the
+([`bridge.md`](design/bridge.md) §12.2, §12.3). **Gaps:** a mid-range laptop and macOS; the current program image on a GPU; the
 wrap on Apple Silicon (not supported today).
 
 ### P.5 Latency: deposit to mint, burn to release
@@ -339,8 +341,8 @@ over one and five years with real traffic (milestone B4).
 
 ## Gaps, in one list
 
-`just bench`; user-side proofs on a laptop and on macOS (cloud CPUs held to 8 and 16 CPUs: P.4), and as a client
-that pads like LEZ's wallet; latency measured end to end on either leg; the
+`just bench`; user-side proofs on a laptop and on macOS (cloud CPUs held to 8 and 16 CPUs, padded as LEZ's wallet
+pads: P.4); latency measured end to end on either leg; the
 recommended-cadence tracking cost with real proving; daemon resources; the BLS precompile delta; cost
 against state size; the v5 vault on Sepolia's gas rules; an import under a mainnet state root; LEZ account
 overhead. Every one is a milestone deliverable ([`attestation.md`](design/attestation.md) §13;

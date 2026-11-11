@@ -386,7 +386,8 @@ publishes; RPC providers which blocks are fetched (recovery downloads whole list
   except watchers and the multisigs is permissionless; freezes lapse; claims never expire. User escape:
   submit directly; pick another relayer per operation; refunds after retirement, which anyone can trigger
   after 30 days without a checkpoint.
-- **Open.** Risk: guest image ids are not reproducible yet; the daemons and modules do not exist yet.
+- **Open.** Risk: guest image ids reproduce only at the published crown build path (§5), not at any path; the
+  daemons and modules do not exist yet.
   Mitigation: the whole stack is in this repository; the deployment is scripted and rehearsed. User
   escape: run your own updater, importer, prover and wrapper from the repository.
 - **Free.** The repository is licensed MIT OR Apache-2.0, at the user's option ([`README.md`](../README.md); [`LICENSE-APACHE`](../LICENSE-APACHE),
@@ -406,5 +407,5 @@ publishes; RPC providers which blocks are fetched (recovery downloads whole list
 
 `verify_checkpoint`; the weak-subjectivity bound; successors and root ids; `monitor`; the rule (B)
 attestor module; LEZ-side watchers, multisig roles, 14-day replacement and permissionless `Sunset`; the
-gas drop; reproducible guest builds; the audit. Sources: [`attestation.md`](design/attestation.md) §15;
+gas drop; guest builds independent of the build path (§5: today the ids reproduce at the crown build path only); the audit. Sources: [`attestation.md`](design/attestation.md) §15;
 [`bridge.md`](design/bridge.md) §19; [`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md) §9.

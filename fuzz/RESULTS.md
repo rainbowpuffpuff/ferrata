@@ -69,7 +69,11 @@ The minimized corpus is committed (`fuzz/corpus/`, 3.7 MB); the seeds (7.4 MB) a
 
 Fixes on branch `fuzz-core` change no code that the guests run except `store.rs`'s
 `process_force_update`, which only the spec store calls (Ferrata's programs use the policy
-store); image ids were not re-measured.
+store). The image ids were measured unchanged when this branch was merged into `integration6`
+(11 Nov 2026): with this `store.rs`, the six programs of `e2e/crown/README.md`'s table rebuilt at
+the crown build path, and the lab's attestation program rebuilt at the lab's path
+(`lez/lab/README.md`, `61b7b70d…2f9a`), came out byte-identical to the deployed ones
+(`scripts/reproduce-image-ids.sh build` on the build box; `docs/EVIDENCE.md` row 37).
 
 One harness error of ours, found by the smoke run and corrected before the long run: `lc`
 first asserted that `process_update` succeeds exactly when validation does; the spec's
