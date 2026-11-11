@@ -1,0 +1,140 @@
+[mrun] box ferrata-wt-relayer (ta-01M75PMMARWWZCJXHY72GH5K0R): no snapshot
+warning: lee@0.1.0: Generated module at <spike>/ferrata-wt-relayer/cli/target/debug/build/lee-877df153abcd63ea/out/lee/privacy_preserving_circuit/mod.rs
+warning: programs@0.1.0: Generated module at <spike>/ferrata-wt-relayer/cli/target/debug/build/programs-97339dfc0047c7cb/out/lez/programs/mod.rs
+   Compiling methods v0.1.0 (<spike>/ferrata-wt-relayer/lez/methods)
+   Compiling harness v0.1.0 (<spike>/ferrata-wt-relayer/lez/harness)
+   Compiling ferrata-cli v0.1.0 (<spike>/ferrata-wt-relayer/cli)
+    Finished `test` profile [optimized + debuginfo] target(s) in 7.23s
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+     Running tests/gasdrop.rs (target/debug/deps/gasdrop-a193fe7d97764287)
+
+running 1 test
+drop sent: N 0x166a0391b6c22cdf02c38c8fff9c28617cf560457a13f729449b33196739982d -> 0xbb4d1f512a422d4a6f23f0a3f418ef31ca25b4678a88a56dc8b3e2c9fd0bd9d2 (credit 1)
+gas drop: 1 credit for N; refused: other relayer, other configuration, root not imported, claimed, wrong image, changed journal, second drop (also after restart)
+test one_drop_per_n_on_a_real_receipt ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.43s
+
+warning: lee@0.1.0: Generated module at <spike>/ferrata-wt-relayer/cli/target/debug/build/lee-877df153abcd63ea/out/lee/privacy_preserving_circuit/mod.rs
+warning: programs@0.1.0: Generated module at <spike>/ferrata-wt-relayer/cli/target/debug/build/programs-97339dfc0047c7cb/out/lez/programs/mod.rs
+   Compiling methods v0.1.0 (<spike>/ferrata-wt-relayer/lez/methods)
+   Compiling harness v0.1.0 (<spike>/ferrata-wt-relayer/lez/harness)
+   Compiling ferrata-cli v0.1.0 (<spike>/ferrata-wt-relayer/cli)
+    Finished `test` profile [optimized + debuginfo] target(s) in 9.30s
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+     Running tests/relayer_fork.rs (target/debug/deps/relayer_fork-0dc3a8c8240bcd28)
+
+running 1 test
+fork: https://rpc.sepolia.ethpandaops.io at block 12111745
+forged checkpoint: refused (status 0); eth_call: server returned an error response: error code 3: execution reverted: custom error 0x439cc0cd, data: "0x439cc0cd"
+daemon {"chainId":11155111,"configId":"0x0c71ff13ed7e84bb5367f2ce0cee0ce9039b6f7b541a489438a1ec8fade83854","event":"start","finalState":"0xa696b3c8deaa881c962e3d768e8ee28c9b08ce60b709c058ea21db82c541bef9","gasDrops":false,"relayer":"0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07","t":1794415358,"vault":"0xfe3199fa2634413cbac317371076cae3eb2d9e54"}
+daemon {"event":"job-done","job":"01-checkpoint.json","result":{"burnCount":2,"burnRoot":"0xbefcd570e779294d22eac9ca5a5299631f124b46b09e415c65bba012694b0151","gasUsed":375281,"kind":"candidate","newState":"0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd","tx":"0xbf9bbec2761ccac73f9f167181874e8820a2efb6e4ef136ca48323649b140468"},"t":1794415361}
+daemon {"event":"candidate-waiting","newState":"0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd","now":1794400063,"readyAt":1794403663,"t":1794415361}
+daemon {"event":"stop","rounds":1,"t":1794415361}
+daemon {"chainId":11155111,"configId":"0x0c71ff13ed7e84bb5367f2ce0cee0ce9039b6f7b541a489438a1ec8fade83854","event":"start","finalState":"0xa696b3c8deaa881c962e3d768e8ee28c9b08ce60b709c058ea21db82c541bef9","gasDrops":false,"relayer":"0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07","t":1794415361,"vault":"0xfe3199fa2634413cbac317371076cae3eb2d9e54"}
+daemon {"event":"job-refused","job":"02-checkpoint-again.json","reason":"skipped: 0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd is already a candidate","t":1794415361}
+daemon {"event":"candidate-waiting","newState":"0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd","now":1794400063,"readyAt":1794403663,"t":1794415361}
+daemon {"event":"stop","rounds":1,"t":1794415361}
+daemon {"chainId":11155111,"configId":"0x0c71ff13ed7e84bb5367f2ce0cee0ce9039b6f7b541a489438a1ec8fade83854","event":"start","finalState":"0xa696b3c8deaa881c962e3d768e8ee28c9b08ce60b709c058ea21db82c541bef9","gasDrops":false,"relayer":"0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07","t":1794415362,"vault":"0xfe3199fa2634413cbac317371076cae3eb2d9e54"}
+daemon {"event":"job-refused","job":"03-release-public-0-early.json","reason":"refused: vault error BurnRootNotAccepted() (eth_call before sending): the burn root is not one of a finalized, unrevoked checkpoint","t":1794415364}
+daemon {"event":"candidate-waiting","newState":"0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd","now":1794400063,"readyAt":1794403663,"t":1794415364}
+daemon {"event":"stop","rounds":1,"t":1794415364}
+early release: "refused: vault error BurnRootNotAccepted() (eth_call before sending): the burn root is not one of a finalized, unrevoked checkpoint"
+daemon {"chainId":11155111,"configId":"0x0c71ff13ed7e84bb5367f2ce0cee0ce9039b6f7b541a489438a1ec8fade83854","event":"start","finalState":"0xa696b3c8deaa881c962e3d768e8ee28c9b08ce60b709c058ea21db82c541bef9","gasDrops":false,"relayer":"0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07","t":1794415364,"vault":"0xfe3199fa2634413cbac317371076cae3eb2d9e54"}
+daemon {"burnCount":2,"burnRoot":"0xbefcd570e779294d22eac9ca5a5299631f124b46b09e415c65bba012694b0151","event":"finalized","gasUsed":218385,"newState":"0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd","t":1794415367,"tx":"0x4dcf1f566df7270cd8b074803aae7e809636a8018e3dc5b93a02e5fdd44d224f"}
+daemon {"event":"stop","rounds":1,"t":1794415367}
+tampered release (relayer and fee redirected to the misbehaving relayer): refused; eth_call: server returned an error response: error code 3: execution reverted: custom error 0x439cc0cd, data: "0x439cc0cd"
+tampered release (recipient redirected): refused; eth_call: server returned an error response: error code 3: execution reverted: custom error 0x439cc0cd, data: "0x439cc0cd"
+tampered release (fee raised): refused; eth_call: server returned an error response: error code 3: execution reverted: custom error 0x439cc0cd, data: "0x439cc0cd"
+daemon {"chainId":11155111,"configId":"0x0c71ff13ed7e84bb5367f2ce0cee0ce9039b6f7b541a489438a1ec8fade83854","event":"start","finalState":"0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd","gasDrops":false,"relayer":"0x00000000000000000000000000000000000bad01","t":1794415376,"vault":"0xfe3199fa2634413cbac317371076cae3eb2d9e54"}
+daemon {"event":"job-refused","job":"01-release.json","reason":"refused: the proof names relayer 0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07; only it can be paid for this release (this relayer is 0x00000000000000000000000000000000000bAD01)","t":1794415376}
+daemon {"event":"stop","rounds":1,"t":1794415376}
+daemon {"chainId":11155111,"configId":"0x0c71ff13ed7e84bb5367f2ce0cee0ce9039b6f7b541a489438a1ec8fade83854","event":"start","finalState":"0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd","gasDrops":false,"relayer":"0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07","t":1794415376,"vault":"0xfe3199fa2634413cbac317371076cae3eb2d9e54"}
+daemon {"event":"job-refused","job":"01-release.json","reason":"refused: the proof pays no relay fee","t":1794415376}
+daemon {"event":"stop","rounds":1,"t":1794415376}
+daemon {"chainId":11155111,"configId":"0x0c71ff13ed7e84bb5367f2ce0cee0ce9039b6f7b541a489438a1ec8fade83854","event":"start","finalState":"0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd","gasDrops":false,"relayer":"0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07","t":1794415376,"vault":"0xfe3199fa2634413cbac317371076cae3eb2d9e54"}
+daemon {"event":"job-done","job":"04-release-private-1.json","result":{"gasUsed":393108,"kind":"release","nullifier":"0x324dbfffe264185b60518bc4340a9172258498dfca519a6a015afefe67f67c4a","paid":"0","paidTo":"0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07","recipient":"0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07","relayFee":"0","token":"0x0000000000000000000000000000000000000000","tx":"0x9b5f29b2b2ee6a044e22fe0b2b670b4e30f075505767b19588ff670c84f937e0"},"t":1794415380}
+daemon {"event":"job-done","job":"04-release-public-0.json","result":{"gasUsed":358908,"kind":"release","nullifier":"0x6b5ec36ee357ba03fad0f9bb4afe4ef32c424722cd6c52131f48beffe1886414","paid":"0","paidTo":"0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07","recipient":"0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07","relayFee":"0","token":"0x0000000000000000000000000000000000000000","tx":"0x86a6b0822601d781e8b7e82f2d31e2285ea40b73b998f4e9635da423f988696a"},"t":1794415382}
+daemon {"amount":"2000000000000","event":"fees-collected","t":1794415382,"token":"0x0000000000000000000000000000000000000000","tx":"0xc4852c14542a43b59409935c78088def4360e3efa5b33bf8116cb739960846c4"}
+daemon {"event":"stop","rounds":1,"t":1794415382}
+daemon {"chainId":11155111,"configId":"0x0c71ff13ed7e84bb5367f2ce0cee0ce9039b6f7b541a489438a1ec8fade83854","event":"start","finalState":"0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd","gasDrops":false,"relayer":"0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07","t":1794415382,"vault":"0xfe3199fa2634413cbac317371076cae3eb2d9e54"}
+daemon {"event":"job-refused","job":"05-release-again.json","reason":"refused: NOut 0x6b5ec36ee357ba03fad0f9bb4afe4ef32c424722cd6c52131f48beffe1886414 is already released","t":1794415382}
+daemon {"event":"stop","rounds":1,"t":1794415382}
+results: <spike>/ferrata-wt-relayer/cli/../e2e/runs/relayer-fork/results.json
+test relayer_on_a_sepolia_fork_with_crown_live_1_proofs ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 32.35s
+
+gas-drop guest: <spike>/ferrata-wt-relayer/cli/../bridge/target/riscv-guest/methods/ferrata-guests/riscv32im-risc0-zkvm-elf/release/gasdrop.bin
+warning: lee@0.1.0: Generated module at <spike>/ferrata-wt-relayer/cli/target/debug/build/lee-877df153abcd63ea/out/lee/privacy_preserving_circuit/mod.rs
+warning: programs@0.1.0: Generated module at <spike>/ferrata-wt-relayer/cli/target/debug/build/programs-97339dfc0047c7cb/out/lez/programs/mod.rs
+   Compiling methods v0.1.0 (<spike>/ferrata-wt-relayer/lez/methods)
+   Compiling harness v0.1.0 (<spike>/ferrata-wt-relayer/lez/harness)
+   Compiling ferrata-cli v0.1.0 (<spike>/ferrata-wt-relayer/cli)
+    Finished `test` profile [optimized + debuginfo] target(s) in 12.79s
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+     Running tests/e2e.rs (target/debug/deps/e2e-aee3ae58cf4b2605)
+
+running 1 test
+anvil: vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9, configId 0xf8330a9c8a072dfebdcd231edf344da847b208398d6af0c1632282eac6394c3e
+deposit to the vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9 on chain 1
+  denomination  10 ETH (10000000000000000000 base units, 18 decimals)
+  mint fee      0 ETH (0 base units, 18 decimals)  (schedule 0)
+  relay fee     0.01 ETH (10000000000000000 base units, 18 decimals)
+  total         10.01 ETH (10010000000000000000 base units, 18 decimals)
+  depositor     0xF902A5F3c20d89c6198d3DE6f82057E1FeCFcb83   j = 0
+  commitment C  0xb38bdf6a29291ecfb574f4471f100be766cb66d49310d107bf18bcfa3b203e34
+public on Ethereum: the depositor, the token, the denomination and fees, the time, C.
+hidden: the LEZ destination (public account /0); C commits to it.
+note: a public destination becomes visible when it is claimed (which deposit paid it stays hidden in a private claim).
+call: to 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9  value 10010000000000000000  data 0xf7edb8570000000000000000000000000000000000000000000000000000000000000002b38bdf6a29291ecfb574f4471f100be766cb66d49310d107bf18bcfa3b203e340000000000000000000000000000000000000000000000000000000000000000
+sent: 0x76a0dfd463074875e4199b95e93d502a9de998d6808ef9fce8c59f152bd3374e in block 6 (leaf Some(0))
+stale j: refused: vault error WrongDepositIndex() (eth_call before sending): the index j is not depositCount[sender]: another deposit from this address came first
+vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9: 16 deposits at block 21, root 0x0ac2c92a92771272f2be7db849a10c803323a7a4f50c7676e0b98c6b2599c607 (equal to depositRoot: checked)
+deposits of this seed: 11
+  leaf      0  j    0  10 ETH (10000000000000000000 base units, 18 decimals)  to public /0  N 0xa801627b07a184f8  claim state unknown (no --sequencer)
+  leaf      2  j    1  0.1 ETH (100000000000000000 base units, 18 decimals)  to private /0  N 0x9df76dc1b68e3838  claim state unknown (no --sequencer)
+  leaf      3  j    2  0.1 ETH (100000000000000000 base units, 18 decimals)  to public /1  N 0x40914244c9aa0617  claim state unknown (no --sequencer)
+  leaf      5  j    3  0.1 ETH (100000000000000000 base units, 18 decimals)  to private /2  N 0xd7ca5e2a8c615a9c  claim state unknown (no --sequencer)
+  leaf      6  j    4  0.1 ETH (100000000000000000 base units, 18 decimals)  to public /3  N 0x883f2449b5db197f  claim state unknown (no --sequencer)
+  leaf      8  j    5  0.1 ETH (100000000000000000 base units, 18 decimals)  to private /4  N 0xa1c8581eda289954  claim state unknown (no --sequencer)
+  leaf      9  j    6  0.1 ETH (100000000000000000 base units, 18 decimals)  to public /5  N 0x3f7651f9d457dd65  claim state unknown (no --sequencer)
+  leaf     11  j    7  0.1 ETH (100000000000000000 base units, 18 decimals)  to private /6  N 0x8f1b8f4f322cc873  claim state unknown (no --sequencer)
+  leaf     12  j    8  0.1 ETH (100000000000000000 base units, 18 decimals)  to public /7  N 0x7cbbb7494d1a23e3  claim state unknown (no --sequencer)
+  leaf     14  j    9  0.1 ETH (100000000000000000 base units, 18 decimals)  to private /0  N 0x80e27333285e2207  claim state unknown (no --sequencer)
+  leaf     15  j   10  0.1 ETH (100000000000000000 base units, 18 decimals)  to public /1  N 0xd4844d70bf456ce4  claim state unknown (no --sequencer)
+vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9: 16 deposits, root 0x0ac2c92a92771272f2be7db849a10c803323a7a4f50c7676e0b98c6b2599c607, configId 0xf8330a9c8a072dfebdcd231edf344da847b208398d6af0c1632282eac6394c3e
+  retired false; deposits frozen until 0; releases frozen until 0
+  checkpoints 0; final imported leaf count 0
+  global deposit cap: capacity unlimited, refill 0 value units/s, available unlimited
+  global release cap: capacity unlimited, refill 0 value units/s, available unlimited
+token 0x0000000000000000000000000000000000000000 (ETH): registered true, deposits enabled true, lezUnit 1000000000
+  [0] 0.1 ETH (100000000000000000 base units, 18 decimals)  mint fee 0 ETH (0 base units, 18 decimals)  relay fee 0.0001 ETH (100000000000000 base units, 18 decimals)  burn fee 0 ETH (0 base units, 18 decimals)  checkpoint fee 0 ETH (0 base units, 18 decimals)
+  [1] 1 ETH (1000000000000000000 base units, 18 decimals)  mint fee 0 ETH (0 base units, 18 decimals)  relay fee 0.001 ETH (1000000000000000 base units, 18 decimals)  burn fee 0 ETH (0 base units, 18 decimals)  checkpoint fee 0 ETH (0 base units, 18 decimals)
+  [2] 10 ETH (10000000000000000000 base units, 18 decimals)  mint fee 0 ETH (0 base units, 18 decimals)  relay fee 0.01 ETH (10000000000000000 base units, 18 decimals)  burn fee 0 ETH (0 base units, 18 decimals)  checkpoint fee 0 ETH (0 base units, 18 decimals)
+  deposit cap: capacity unlimited, refill 0 ETH (0 base units, 18 decimals)/s, available unlimited
+  release cap: capacity unlimited, refill 0 ETH (0 base units, 18 decimals)/s, available unlimited
+zone: root(16) imported; ETH fees known to leaf 16
+gas-drop receipt: real succinct proof in 14.9 s (76230 user cycles)
+GAS DROP: N 0xa801627b07a184f8c4208be937a872b99c3e9075215fee5a8896e292d21c8422 -> one-time address 0x2a945f1adfa57eead2357f36423f8de39e1248d1524fb05854ce5f4954f8d1b0 (native credit 1 (harness stand-in)); replay to another relayer and a second drop refused
+claim: plaintext claim of leaf 0 under root(cid, 16) (harness, block 6); N 0xa801627b07a184f8c4208be937a872b99c3e9075215fee5a8896e292d21c8422
+GAS DROP: the claim named the relayer, minted it the relay fee 10000000000000000; afterwards any relayer refuses the receipt (claimed)
+second claim: refused: LEZ bridge program exit code 250 ALREADY_CLAIMED (checked before sending): the deposit's nullifier is spent: it was claimed already
+release: 0x63467d11d2dd9a7d68e532292641f30c5eaea7a2a0a76520cad023a7fd977bb7 in block Some(30)
+RECOVERY: 10 of 10 unclaimed deposits (1 claimed), 10 of 10 unreleased burns (1 released); 16 deposits in the vault
+zone: configuration ready, sunset false; attestation program 0xb300178cb9df05998924cc7ac855a6a9e9d39c551ff00c18fd6ed27e596dfb57, instance 0x1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d
+  gate Gate { now_ms: 0, mints_until: 0, burns_until: 0, mint: Bucket { capacity: 200000000000, refill_per_second: 10000000, level: 189990000000, last_ms: 0 }, burn: Bucket { capacity: 200000000000, refill_per_second: 10000000, level: 198900000000, last_ms: 0 } }
+  instance(id) is not on this zone (its records are read where written)
+  newest imported root: root(cid, 16) (1 imports), from header(id, 9000064): execution block 9000064 0x07d646c9e59ee2c36669e352fa127e78b07794ed305b84db5f8d68dd9b7b6573 (time 1807997168)
+  burns published: 11
+private claim seen: leaf 2 marked claimed once a private transaction names its nullifier account (2 claimed)
+RELAYER: burn 1 released by the relayer (134985 gas), relay fee 100000000000000 wei paid to it; redirected recipient refused: the vault would revert: server returned an error response: error code 3: execution reverted: custom error 0x439cc0cd, data: "0x439cc0cd"; another relayer: refused: the proof names relayer 0x2e11FF18D77f9235c8C872BBcC07E6f457E20F9c; only it can be paid for this release (this relayer is 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266)
+test deposit_scan_claim_burn_release_and_recovery ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 32.49s
+
+[mrun] 1 file(s) copied back: e2e/runs/relayer-fork/results.json
+[mrun] exit 0, 96 s, 0.15 core-hours, about 0.02 USD (ledger 0.23 of 20.00 USD)
