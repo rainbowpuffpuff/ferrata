@@ -320,8 +320,9 @@ client's messages for each code (the module).
   after a final sunset checkpoint and its 7-day revocation window. Anyone may retire once no checkpoint
   has been finalised for 30 days.
 - **Verifier stopped** (only by RISC Zero's own proof that its proof system is unsound): nothing more
-  is released or refunded; owed balances stay claimable. In the prototype, refunds still work after a
-  stop, which differs from the specification ([`bridge.md`](../design/bridge.md) §15).
+  is released or refunded; owed balances stay claimable with `claimOwed` (vault v5; the sentence of
+  [`bridge.md`](../design/bridge.md) §15 that refunds still work after a stop describes an earlier
+  prototype: in v5 `refund` requires no verifier stop, [`vault/README.md`](../../vault/README.md), "Refunds").
 - **A wrong checkpoint not revoked within 7 days halts the vault for good.** What bounds your loss is
   in `docs/trust.md`.
 
