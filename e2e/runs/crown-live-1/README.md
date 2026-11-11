@@ -116,6 +116,11 @@ deposits' relay fees, escrowed with them) + `totalOwed(ETH)` 2,000,000,000,000 =
   replaced by its name in the files). Its releases check first failed here (the vault's balance above deposits minus
   the `Release` amounts): it counted the gross amount as paid out; it now subtracts the fees each release credited to
   `owed` and checks the balance against `escrowed` + `totalOwed`.
+- `controls/`: the same script on altered copies of these records (publicnode, 15:28-15:38Z; a copy's directory name, `t1`
+  to `t3`, is what its first line calls the run): one deposit commitment, one byte of the checkpoint seal and the
+  genesis state changed, **5 failed** (`verify-sepolia-tampered.txt`); one byte of a node of capture 1's account
+  proof, **1 failed** (`-tampered-capture`); release 1's recipient, **1 failed** (`-tampered-recipient`); exit status
+  1 each. crown-rehearsal-3's records (the fork; same deployer, nonces and vault address) against Sepolia: **5 failed**.
 
 ## Files
 

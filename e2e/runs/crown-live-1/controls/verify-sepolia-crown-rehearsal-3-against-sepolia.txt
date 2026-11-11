@@ -1,0 +1,15 @@
+run crown-rehearsal-3 (fork), vault 0xfE3199fa2634413CbAC317371076Cae3EB2d9E54, deployer 0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07, rpc <publicnode: public Sepolia endpoint>
+PASS     chain: Sepolia (chain id 11155111), head 12112608, finalized 12112519
+PASS     image ids: e2e/crown/README.md's table = the ids pinned here = the run's records: README table equal, params.json equal, LEZ session A's deployed programs equal
+PASS     deployment: every CREATE address from the deployer's nonces, code where a contract was created: emergency stop 0x2ea64575… nonce 10 (1698 B); FerrataRegistry library 0xe5d797c9… nonce 11 (12504 B); FerrataVault 0xfe3199fa… nonce 12 (24254 B); test token 0x8e1140d7… nonce 13 (1862 B); nonces N+4..N+6 are calls (no code)
+FAIL     vault immutables (eth_call) = README ids, configId, genesisState, rule (B), verifier, registry library: lezConfigId 0x0c71ff13ed7e84bb5367f2ce0cee0ce9039b6f7b541a489438a1ec8fade83854, slot 2 0x0c71ff13ed7e84bb5367f2ce0cee0ce9039b6f7b541a489438a1ec8fade83854, identity 0x4e8a604732af48407d6c3270f4f5a43a18fd773738c3ff44df47c1b7e3de103b
+PASS     configId and genesisState recomputed from LEZ session A's records: configId 0x4e8a6047… (bridge image 0x0e9dcd79…), genesisState at T0 = 18
+FAIL     every recorded transaction: status, block, sender, target, gas used: deposit-0 0xa2dd2f34a80542d2e32b13eeb9672bd42bbfaa07df18f56d3d681aead398b1dc: no receipt on chain
+PASS     deployer's nonce = first nonce + 7 deployment transactions + the recorded ones: nonce 23 = 10 + 7 + 6
+PASS     deposits: Deposit events, commitments recomputed, leaf count, escrow: j0 leaf 0 1000000000000000 wei public, commitment recomputed; j1 leaf 1 1000000000000000 wei private, commitment recomputed; nextLeafIndex 2; ETH sent by the deposit transactions 2004000000000000 wei; vault balance 6000000000000 wei
+PENDING  captures: the vault storage LEZ imported is Sepolia's (header = the chain's final block; storage proofs checked): no captures recorded
+PASS     checkpoint journal fields = the vault, the identity and the LEZ records: parent = genesisState, new state 0xb9b3e2de…, tip T1 = 95 (0x6ba0ee1e…), LEZ blocks 19..=95, burns 2, imported leaves 2, burn root 0x5912a169…
+FAIL     checkpoint submitted: CandidateSubmitted event = the journal; seal verified by the vault's verifier (eth_call): the submit transaction was not found on chain (see the transactions check)
+FAIL     checkpoint final on the vault (finalizeAttested after the wait): the recorded submit transaction is not on chain
+FAIL     releases: recipients, amounts, nullifiers spent, seals verified: the run's checkpoint (its submit transaction) is not on chain
+7 passed, 1 pending, 5 failed (26 RPC calls)
