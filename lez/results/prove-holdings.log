@@ -1,0 +1,46 @@
+ferrata_holdings image id: 4985868d3491e4597353315176de75075e46660e89c8601205bfaf57a732cd4f
+ferrata (attestation) image id: d2fb9aec1d052c60ac6a3371c05858c647c6503d32e0ec563433d0b5657ae600
+mode: real proofs (r0vm)
+
+| # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | accepted: the pair held ≥ 1,000 WETH | holdings Check 111,198 → Attest 278,002 → holdings (reply) 41,910 | 431,110 | 9% | 7,493 | 3,508,824 | applied |
+
+| transaction | handler | cycles | segments | input bytes (ReceiveInput) | of which message | of which pre-state | journal bytes | post-state bytes | exit |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| accepted: the pair held ≥ 1,000 WETH | holdings Check | 111,198 | 1 | 7,040 | 6,966 | 0 | 14,319 | 242 | 0 |
+| accepted: the pair held ≥ 1,000 WETH | Attest | 278,002 | 1 | 7,411 | 6,940 | 333 | 7,874 | – | 0 |
+| accepted: the pair held ≥ 1,000 WETH | holdings (reply) | 41,910 | 1 | 750 | 370 | 242 | 940 | 165 | 0 |
+
+| # | program | handler | user cycles | total cycles (padded) | segments | proving time (s) | receipt | receipt bytes |
+|---|---|---|---:|---:|---:|---:|---|---:|
+| 1 | ferrata_holdings | holdings Check | 111,198 | 262,144 | 1 | 21.1 | succinct | 251,813 |
+| 2 | ferrata (attestation) | Attest | 278,002 | 524,288 | 1 | 64.4 | succinct | 238,923 |
+| 3 | ferrata_holdings | holdings (reply) | 41,910 | 131,072 | 1 | 13.6 | succinct | 225,055 |
+
+all 3 handler executions proven and verified; proving time in total 99.1 s
+	Command being timed: "env RISC0_DEV_MODE=0 target/debug/prove_holdings"
+	User time (seconds): 2597.70
+	System time (seconds): 105.36
+	Percent of CPU this job got: 2616%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 1:43.29
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 4925292
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 0
+	Voluntary context switches: 1996621
+	Involuntary context switches: 0
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 0
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+
+Where: a Modal CPU container (mrun, profile indeea), 11 November 2026: 32 processors in /proc/cpuinfo (model not reported), nproc 2, 64 GB RAM, no GPU; r0vm 3.0.5; guests built with RISC Zero Rust 1.91.1; source as committed with this log (the image ids embed the build's absolute paths). The same image's previous run (this file's earlier version in the branch's history): 21.2 + 64.6 + 13.5 = 99.3 s of proving, 1:43.64 wall, peak RSS 4,939,312 kB.

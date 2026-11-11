@@ -12,6 +12,8 @@ ferrata-lez-wire = { path = "../wire" }
 # The bridge program's wire types, and the bridge core (std: full trees with paths, key derivation).
 ferrata-lez-bridge-wire = { path = "../bridge-wire" }
 ferrata-bridge-core = { path = "../../bridge/crates/ferrata-bridge-core" }
+# The second consumer of the attestation (guests/holdings): its messages, state and acceptance check.
+ferrata-lez-holdings-wire = { path = "../holdings-wire" }
 ferrata-core = { path = "../../crates/ferrata-core", features = ["blst"] }
 # The reference Merkle-Patricia trie and the JSON-RPC readers of the core's test crate: the Stage 4
 # tests rebuild a block's receipts trie from `eth_getBlockReceipts` and read `eth_getProof`.

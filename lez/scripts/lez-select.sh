@@ -21,7 +21,8 @@ set -euo pipefail
 lez="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 beside="$(cd "$lez/../.." && pwd)"
 manifests=(wire bridge-wire harness guests/program guests/program-keccak-soft guests/consumer
-           guests/consumer-keccak-accel guests/scripted guests/bridge live/driver live/frozen/bridge-wire)
+           guests/consumer-keccak-accel guests/scripted guests/bridge live/driver live/frozen/bridge-wire
+           holdings-wire guests/holdings)
 featured=(harness live/driver)
 
 die() { echo "lez-select: $*" >&2; exit 1; }

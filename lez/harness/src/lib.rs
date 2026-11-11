@@ -8,6 +8,7 @@
 
 pub mod attest;
 pub mod bridge;
+pub mod holdings;
 pub mod private;
 pub mod scenarios;
 pub mod sepolia;
@@ -662,8 +663,19 @@ pub fn grouped(n: u64) -> String {
 
 /// What a refusal's exit code means.
 pub fn exit_name(code: u32) -> String {
+    use ferrata_lez_holdings_wire::code as h;
     use ferrata_lez_wire::{code as c, consumer::code as k};
     let name = match code as u8 {
+        h::BAD_MESSAGE => "holdings: BadMessage",
+        h::BAD_STATE => "holdings: BadState",
+        h::WRONG_RECEIVER => "holdings: WrongReceiver",
+        h::WRONG_SENDER => "holdings: WrongSender",
+        h::BAD_REPLY => "holdings: BadReply",
+        h::WRONG_INSTANCE => "holdings: WrongInstance",
+        h::WRONG_CHAIN => "holdings: WrongChain",
+        h::WRONG_FACTS => "holdings: WrongFacts",
+        h::BELOW_MINIMUM => "holdings: BelowMinimum",
+        h::STALE => "holdings: Stale",
         c::BAD_MESSAGE => "BadMessage",
         c::WRONG_RECEIVER => "WrongReceiver",
         c::WRONG_SENDER => "WrongSender",
