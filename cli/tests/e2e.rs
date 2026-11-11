@@ -36,14 +36,14 @@ use ferrata_bridge_core::{inbound::DestKind, outbound::burn_leaf, sha256, tree::
 use ferrata_cli::{
     codes, eth,
     eth::IVault,
-    hx,
-    lez::{self, Applied, Context, Ledger, LezCall, Mention},
+    flow, hx,
+    lez::{self, Applied, BurnFrom, Context, Ledger, LezCall, Mention},
     release, scan,
     seed::Seed,
 };
-use ferrata_lez_bridge_wire::{fee_slot, registry_slot, FeeSchedule};
-use harness::{bridge as hb, TxReport};
-use lee::{AccountId, PrivateKey, PublicAccountEvidence};
+use ferrata_lez_bridge_wire::{fee_slot, registry_slot, BridgeMessage, BridgeState, FeeSchedule, HolderState, Holding};
+use harness::{bridge as hb, private::PrivateAccount, TxReport};
+use lee::{test_utils::TestPrivateKeys, AccountId, PrivateKey, PublicAccountEvidence};
 use lee_core::account::Actor;
 
 sol! {
@@ -74,6 +74,10 @@ const OTHER: &str = "legal winner thank year wave sausage worth useful legal win
 /// anvil's first default account (unlocked on anvil; it signs nothing of the user's).
 const ANVIL0: Address = alloy::primitives::address!("f39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
 const SEAL: [u8; 4] = [0x5e, 0xa1, 0x5e, 0xa1];
+/// The LEZ fee a private transaction pays from the private account's native balance, as the
+/// harness's own private tests reserve it.
+const RESERVE: u128 = 100_000_000;
+const ETH_1: u128 = 1_000_000_000_000_000_000;
 
 // ---- the zone: the harness behind the tool's `Ledger` ------------------------------------------
 
@@ -81,6 +85,16 @@ struct HarnessLedger {
     world: hb::World,
     applied: Vec<Applied>,
     keys: HashMap<AccountId, PrivateKey>,
+    /// The wallet's private accounts: their secret keys (ask, d, z) and their state as LEZ's wallet
+    /// holds it after decrypting it from the zone (stand-in: the harness keeps the state the chain
+    /// committed, checked against the commitment after every private transaction).
+    private: HashMap<AccountId, (([u8; 32], [u8; 32], [u8; 32]), lee::Account)>,
+    /// Public accounts named by applied privacy-preserving transactions.
+    touched: HashSet<AccountId>,
+}
+
+fn test_keys(s: &([u8; 32], [u8; 32], [u8; 32])) -> TestPrivateKeys {
+    TestPrivateKeys { ask: lee_core::AuthorizationSecretKey(s.0), d: s.1, z: s.2 }
 }
 
 impl HarnessLedger {
@@ -95,6 +109,71 @@ impl HarnessLedger {
             let root = &tx.message.execution.root;
             self.applied.push(Applied { to: root.to, message: root.message.clone() });
         }
+    }
+
+    /// The seed's private accounts /0 … /n-1 on the zone, from the keys LEZ's wallet derives, each with a
+    /// native balance for its private fees (stand-in: the gas drop's credit, which a relayer sends).
+    fn add_private_accounts(&mut self, seed: &Seed, n: u32) -> Result<()> {
+        let ids = seed.private_account_ids(n)?;
+        for (a, secrets) in seed.private_account_secrets(n)?.into_iter().enumerate() {
+            ensure!(
+                test_keys(&secrets).account_id() == ids[a],
+                "the harness derives private account /{a} from the wallet's keys as LEZ's wallet does"
+            );
+            let added = self.world.chain.add_private_account_with_keys(test_keys(&secrets), 1_000_000_000_000);
+            self.private.insert(ids[a], (secrets, added.account));
+        }
+        Ok(())
+    }
+
+    /// Proves and settles a private call (rooted at one of the wallet's private accounts) as LEZ's
+    /// wallet does, in RISC Zero dev mode; keeps its visible calls and the public accounts it names,
+    /// and the account's new state (checked against the chain's commitment).
+    fn settle_private(&mut self, call: &LezCall, me: Actor) -> Result<String> {
+        let program = self.world.program;
+        let (secrets, before) =
+            self.private.get(&me.account_id).cloned().ok_or_else(|| anyhow!("not one of the wallet's private accounts"))?;
+        let sender = PrivateAccount { keys: test_keys(&secrets), account: before.clone() };
+        let publics: Vec<Actor> = call.mentions[1..].iter().map(Mention::actor).collect();
+        let time = self.world.time;
+        let run = self
+            .world
+            .chain
+            .prove_and_settle_private(&sender, me, borsh::to_vec(&call.message)?, publics, &hb::catalog(), RESERVE, time)
+            .map_err(|e| anyhow!("the private transaction does not prove (the program refuses it): {e}"))?;
+        ensure!(run.charge.revert.is_none(), "the private transaction reverted: {:?}", run.charge.revert);
+        self.applied.extend(lez::visible_calls(&run.tx, program));
+        self.touched.extend(run.tx.message.public_account_ids());
+        let mut holder = match BridgeState::try_from_slice(&before.data.actor_state(program).to_vec()) {
+            Ok(BridgeState::Holder(h)) => h,
+            _ => HolderState::default(),
+        };
+        let mut change = |cid: [u8; 32], token: [u8; 20], delta: i128| {
+            match holder.holdings.iter().position(|h| h.config_id == cid && h.token == token) {
+                Some(k) => {
+                    let left = (holder.holdings[k].amount as i128 + delta) as u128;
+                    if left == 0 {
+                        holder.holdings.remove(k);
+                    } else {
+                        holder.holdings[k].amount = left;
+                    }
+                }
+                None => holder.holdings.push(Holding { config_id: cid, token, amount: delta as u128 }),
+            }
+        };
+        match &call.message {
+            BridgeMessage::ClaimPrivately { config_id, witness, .. } if AccountId::new(witness.dest) == me.account_id => {
+                change(*config_id, witness.token, ferrata_cli::units::word_to_u128(&witness.amount)? as i128)
+            }
+            BridgeMessage::Burn { config_id, token, amount, .. } => {
+                change(*config_id, *token, -(ferrata_cli::units::word_to_u128(amount)? as i128))
+            }
+            _ => {}
+        }
+        let after = hb::private_post_state(&self.world.chain, &test_keys(&secrets), &before, RESERVE, &holder)
+            .ok_or_else(|| anyhow!("the private account's new state is not the one the chain committed"))?;
+        self.private.insert(me.account_id, (secrets, after));
+        Ok(format!("{} (harness, private, block {})", call.what, self.world.chain.block_id - 1))
     }
 
     /// Sends `call` without the tool's checks: what the program itself answers.
@@ -135,11 +214,22 @@ impl Ledger for HarnessLedger {
         Ok(self.applied.iter().filter(|a| a.to.program_account_id == program).cloned().collect())
     }
 
+    async fn applied_with_private(&self, program: AccountId) -> Result<(Vec<Applied>, HashSet<AccountId>)> {
+        Ok((self.applied(program).await?, self.touched.clone()))
+    }
+
+    async fn private_account(&mut self, id: AccountId) -> Result<Option<lee::Account>> {
+        Ok(self.private.get(&id).map(|(_, a)| a.clone()))
+    }
+
     async fn actor_state(&self, actor: Actor) -> Result<Vec<u8>> {
         Ok(self.world.chain.actor_state(actor).to_vec())
     }
 
     async fn submit(&mut self, call: &LezCall) -> Result<String> {
+        if let Some(Mention::PrivateSelf(me)) = call.mentions.first() {
+            return self.settle_private(call, *me);
+        }
         let report = self.settle(call);
         match (report.ok(), report.exit_code) {
             (true, _) => Ok(format!("{} (harness, block {})", call.what, self.world.chain.block_id - 1)),
@@ -228,7 +318,14 @@ fn checkpoint_journal(chain_id: u64, vault: Address, cid: B256, c: &ICheckpoints
 }
 
 /// Stands in for the checkpoint prover and relayer: candidate, wait, beacon, finalisation.
-async fn accept_burn_root(p: &DynProvider, vault: Address, cid: B256, burn_root: Hash, burn_count: u64) -> Result<()> {
+async fn accept_burn_root(
+    p: &DynProvider,
+    vault: Address,
+    cid: B256,
+    burn_root: Hash,
+    burn_count: u64,
+    wait_release_delay: bool,
+) -> Result<()> {
     let chain_id = p.get_chain_id().await?;
     let mock_image = eth::view(p, vault, ICheckpoints::checkpointImageIdCall {}, None).await?;
     let verifier = std::env::var("FERRATA_E2E_VERIFIER")?.parse::<Address>()?;
@@ -273,7 +370,14 @@ async fn accept_burn_root(p: &DynProvider, vault: Address, cid: B256, burn_root:
         U256::ZERO,
     )
     .await?;
-    // The token's release delay (120 s).
+    if wait_release_delay {
+        pass_release_delay(p).await?;
+    }
+    Ok(())
+}
+
+/// The token's release delay (120 s) passes.
+async fn pass_release_delay(p: &DynProvider) -> Result<()> {
     p.raw_request::<_, serde_json::Value>("evm_increaseTime".into(), (200u64,)).await?;
     p.raw_request::<_, serde_json::Value>("evm_mine".into(), Vec::<u64>::new()).await?;
     Ok(())
@@ -298,7 +402,13 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     let p = wait_for(&rpc).await?;
 
     // The zone, and the configuration of the vault anvil's first account is about to deploy.
-    let mut zone = HarnessLedger { world: hb::World::new(), applied: Vec::new(), keys: HashMap::new() };
+    let mut zone = HarnessLedger {
+        world: hb::World::new(),
+        applied: Vec::new(),
+        keys: HashMap::new(),
+        private: HashMap::new(),
+        touched: HashSet::new(),
+    };
     let program = zone.world.program;
     // The deployer's contracts: the linked FerrataRegistry library, the mock, its emergency stop, the vault.
     let vault = ANVIL0.create(3);
@@ -399,6 +509,9 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
             ]
             .map(String::from),
         );
+        if kind == "public" {
+            args.push("--i-accept-public-account".into());
+        }
         ferrata(&args.iter().map(String::as_str).collect::<Vec<_>>())
     };
 
@@ -406,8 +519,24 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     // more of 0.1 ETH to accounts of both kinds (left unclaimed), and five of another user's.
     let user_ks = &keystores[0].0;
     let other_ks = &keystores[1].0;
+    // The public path needs its own acknowledgement: refused without it, after the warning.
+    let mut unacked = common(&seed_user);
+    unacked.extend(
+        ["deposit", "--denomination", "2", "--kind", "public", "--keystore", &user_ks.display().to_string()]
+            .map(String::from),
+    );
+    unacked.extend(["--password-file".to_string(), password.display().to_string(), "--send".into(), "--yes".into()]);
+    let refused_public = ferrata(&unacked.iter().map(String::as_str).collect::<Vec<_>>()).expect_err("unacknowledged");
+    println!("public deposit without acknowledgement: {refused_public}");
+    ensure!(
+        refused_public.to_string().contains("WARNING")
+            && refused_public.to_string().contains("High: a direct link is public")
+            && refused_public.to_string().contains("refusing a public destination without --i-accept-public-account"),
+        "the public deposit warns and is refused without its acknowledgement"
+    );
     let first = deposit(&seed_user, user_ks, 2, "public", 0)?;
     print!("{first}");
+    ensure!(first.contains("WARNING") && first.contains("sent: "), "the acknowledged public deposit warns, then sends");
     let mut expected_unclaimed = Vec::new();
     for k in 0..10u32 {
         if k % 2 == 0 {
@@ -571,11 +700,43 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         gas_drop = Some((receipt_json, dctx, relayer_lez));
     }
 
-    // Claim leaf 0 (plaintext: a public destination, no proof).
-    let plan =
-        lez::plan_claim(&zone, &ctx, &leaves, &big.owned, &history, false, gas_drop.as_ref().map(|g| g.2)).await?;
-    let sent = zone.submit(&plan.call).await?;
-    println!("claim: {sent}; N {}", hx(&plan.nullifier));
+    // Claim leaf 0 through the tool's claim, the public path: held by the deposit's claim delay
+    // unless the user opts out, and refused without its own acknowledgement after the warning.
+    let eth_side = flow::Eth { p: p.clone(), vault, chain_id: 1, from_block: 0, chunk: 10_000 };
+    let mut copts = flow::ClaimOpts {
+        leaf: Some(0),
+        plaintext: true,
+        accept_plaintext: false,
+        no_delay: false,
+        relayer: gas_drop.as_ref().map(|g| g.2),
+        gap: 8,
+        send: true,
+        yes: true,
+    };
+    let held = flow::claim(&eth_side, &user, &mut zone, &ctx, &copts, &mut flow::Out::new(true))
+        .await
+        .err()
+        .context("a claim within its delay is held")?;
+    println!("claim within the delay: {held}");
+    ensure!(held.to_string().contains("held by your claim delay"), "{held}");
+    copts.no_delay = true;
+    let mut out = flow::Out::new(true);
+    let unacked = flow::claim(&eth_side, &user, &mut zone, &ctx, &copts, &mut out)
+        .await
+        .err()
+        .context("the plaintext path needs its acknowledgement")?;
+    println!("plaintext claim without acknowledgement: {unacked}");
+    ensure!(
+        unacked.to_string().contains("refusing the plaintext path")
+            && out.text().contains("WARNING")
+            && out.text().contains("Plaintext claim: names on LEZ which deposit paid which account.")
+            && out.text().contains("Claiming before your random delay ends"),
+        "the plaintext claim warns, names its exposure and is refused without its acknowledgement"
+    );
+    copts.accept_plaintext = true;
+    let claimed0 = flow::claim(&eth_side, &user, &mut zone, &ctx, &copts, &mut flow::Out::new(true)).await?;
+    let plan = claimed0.plan;
+    println!("claim: {:?}; N {}", claimed0.sent, hx(&plan.nullifier));
     let holder = AccountId::new(big.owned.dest);
     ensure!(zone.world.balance(holder, &cid) == 10_000_000_000_000_000_000, "the holder holds 10 ETH on LEZ");
     if let Some((receipt_json, dctx, relayer_lez)) = &gas_drop {
@@ -596,22 +757,47 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     // A second claim of the same deposit: the tool refuses it with the program's code, and the
     // program, sent the same call without the tool's check, exits with that code.
     let history = lez::history(&ctx, &zone.applied(program).await?);
-    let again = lez::plan_claim(&zone, &ctx, &leaves, &big.owned, &history, false, None).await.expect_err("claimed");
+    let again =
+        lez::plan_claim(&zone, &ctx, &leaves, &big.owned, &history, false, None, None).await.expect_err("claimed");
     println!("second claim: {again}");
     ensure!(again.to_string().contains("250 ALREADY_CLAIMED"), "the tool names 250");
     let report = zone.settle(&plan.call);
     ensure!(report.exit_code == Some(250), "the program exits 250, got {:?}", report.exit_code);
 
-    // Burns: eleven of 0.1 ETH from /0, released to the depositor's address.
+    // Burns: eleven of 0.1 ETH from public /0, released to the depositor's address. The first through
+    // the tool's burn: the public path is refused without its acknowledgement, after the warning.
     let keys = user.bridge_keys();
     let recipient = keystores[0].1;
-    for _ in 0..11 {
+    let mut bopts = flow::BurnOpts {
+        public: true,
+        accept_public: false,
+        account: 0,
+        token: eth::ETH,
+        amount: "0.1".into(),
+        recipient,
+        send: true,
+        yes: true,
+    };
+    let mut out = flow::Out::new(true);
+    let unacked = flow::burn(&eth_side, &user, &mut zone, &ctx, &bopts, &mut out)
+        .await
+        .err()
+        .context("a public burn needs its acknowledgement")?;
+    ensure!(
+        unacked.to_string().contains("refusing to burn from a public account")
+            && out.text().contains("Burn from a public account: the holder, its balance and the burn are public on LEZ.")
+            && out.text().contains("The recipient is an address you used before"),
+        "the public burn warns and is refused without its acknowledgement: {unacked}"
+    );
+    bopts.accept_public = true;
+    flow::burn(&eth_side, &user, &mut zone, &ctx, &bopts, &mut flow::Out::new(true)).await?;
+    for _ in 0..10 {
         let history = lez::history(&ctx, &zone.applied(program).await?);
         let plan = lez::plan_burn(
             &zone,
             &ctx,
             &keys,
-            holder,
+            BurnFrom::Public(holder),
             [0; 20],
             100_000_000_000_000_000,
             recipient.into_array(),
@@ -630,7 +816,7 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         &zone,
         &ctx,
         &keys,
-        holder,
+        BurnFrom::Public(holder),
         [0; 20],
         10_000_000_000_000_000_000,
         recipient.into_array(),
@@ -658,7 +844,7 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         let need = ferrata_cli::relayer::checkpoint_needed(history.burns.len() as u64, &accepted, live);
         ensure!(need == Some((11, 0)), "the burn watch asks for a checkpoint of 11 burns: {need:?}");
     }
-    accept_burn_root(&p, vault, B256::from(cid), burn_root, 11).await?;
+    accept_burn_root(&p, vault, B256::from(cid), burn_root, 11, true).await?;
     if gas_drop.is_some() {
         let accepted = eth::accepted_burn_roots(&p, vault, 0, 10_000).await?;
         let live = watch.candidates(&p, 0).await?.len();
@@ -672,9 +858,35 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     let roots = eth::accepted_burn_roots(&p, vault, 0, 10_000).await?;
     let (root_b, count) = *roots.last().expect("an accepted burn root");
     ensure!(root_b.0 == burn_root && count == 11, "the vault accepted the burn root");
-    let rplan = release::plan(&ctx, &history, &burn_rows[0].owned, root_b.0, count, 0, [0; 20], 0)?;
+    // The release of burn 0 through the tool's release, sent by the user (`--self-send`): a dry run
+    // first (the root by the wallet's rule, the cost, the exposure), then signed and sent.
+    let self_opts = |seal: Option<Bytes>, send: bool| flow::ReleaseOpts {
+        burn: Some(0),
+        via: flow::Via::Myself,
+        seal,
+        job_out: None,
+        input_out: None,
+        program: None,
+        prove: false,
+        send,
+        yes: send,
+        confirmations: 1,
+    };
+    let mut out = flow::Out::new(true);
+    let dry = flow::release_burn(&eth_side, &user, &mut zone, &ctx, None, &self_opts(None, false), &mut out).await?;
+    ensure!(
+        dry.root.count == 11
+            && dry.root.root.0 == burn_root
+            && out.text().contains("the newest accepted root whose release delay (")
+            && out.text().contains("Elevated: a timing or fee-payer correlation")
+            && out.text().contains("You send the release yourself")
+            && out.text().contains("not sent: a dry run"),
+        "the self-sent release's dry run"
+    );
+    let rplan = dry.plan;
     let release_image = eth::view(&p, vault, ICheckpoints::releaseImageIdCall {}, None).await?;
     let verifier: Address = std::env::var("FERRATA_E2E_VERIFIER")?.parse()?;
+    // Stand-in for the Groth16 proof: the mock verifier accepts the exact journal.
     anvil_send(
         &p,
         verifier,
@@ -683,12 +895,21 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     )
     .await?;
     let before = p.get_balance(recipient).await?;
-    let relayer_signer = eth::keystore_signer(other_ks, &password)?;
-    let sp = eth::signing_provider(&rpc, relayer_signer)?;
-    let receipt =
-        eth::send(&sp, keystores[1].1, vault, release::calldata(&rplan, Bytes::from(SEAL.to_vec())), U256::ZERO, 1)
-            .await?;
-    println!("release: {} in block {:?}", receipt.transaction_hash, receipt.block_number);
+    let sp = eth::signing_provider(&rpc, eth::keystore_signer(other_ks, &password)?)?;
+    let sender = flow::Signer { p: sp.clone(), address: keystores[1].1 };
+    let mut out = flow::Out::new(true);
+    let sent = flow::release_burn(
+        &eth_side,
+        &user,
+        &mut zone,
+        &ctx,
+        Some(&sender),
+        &self_opts(Some(Bytes::from(SEAL.to_vec())), true),
+        &mut out,
+    )
+    .await?;
+    ensure!(sent.plan.nullifier == rplan.nullifier && out.text().contains("network fee  about"), "sent as planned");
+    println!("release: {:?}", sent.sent);
     ensure!(
         p.get_balance(recipient).await? - before == U256::from(100_000_000_000_000_000u128),
         "the recipient received 0.1 ETH"
@@ -697,43 +918,277 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         eth::view(&p, vault, IVault::nullifierUsedCall { nullifier: B256::from(rplan.nullifier) }, None).await?,
         "NOut used"
     );
+    // Twice: the tool refuses it before sending; the vault, sent it anyway, refuses it too.
+    let again = flow::release_burn(
+        &eth_side,
+        &user,
+        &mut zone,
+        &ctx,
+        Some(&sender),
+        &self_opts(Some(Bytes::from(SEAL.to_vec())), true),
+        &mut flow::Out::new(true),
+    )
+    .await
+    .err()
+    .context("a released burn")?;
+    ensure!(again.to_string().contains("NullifierAlreadyUsed") && again.to_string().contains("checked before sending"), "{again}");
     let twice =
         eth::send(&sp, keystores[1].1, vault, release::calldata(&rplan, Bytes::from(SEAL.to_vec())), U256::ZERO, 1)
             .await
             .expect_err("released");
     ensure!(twice.to_string().contains("NullifierAlreadyUsed"), "{twice}");
 
-    // Recovery: a wiped client with only the seed phrase.
-    let wiped = Seed::from_phrase(&std::fs::read_to_string(&seed_user)?)?;
-    let list = eth::deposit_list(&p, vault, 0, 10_000).await?;
-    let history = lez::history(&ctx, &zone.applied(program).await?);
-    let refunded = eth::refunded_leaves(&p, vault, 0, 10_000).await?;
-    let rows = scan::deposits(&wiped, &ctx, &list, 8, &history, &refunded)?;
-    let unclaimed: Vec<_> = rows
-        .iter()
-        .filter(|r| !matches!(r.state, scan::DepositState::Claimed | scan::DepositState::Refunded))
-        .collect();
-    let claimed = rows.iter().filter(|r| r.state == scan::DepositState::Claimed).count();
-    let released = eth::released_nullifiers(&p, vault, 0, 10_000).await?;
-    let (burns, _) = scan::burns(&wiped, &ctx, &history, &released);
-    let unreleased = burns.iter().filter(|b| !b.released).count();
-    let found: Vec<(String, u32)> = unclaimed
-        .iter()
-        .map(|r| {
-            (if r.owned.kind == DestKind::Private { "private" } else { "public" }.to_string(), r.owned.account_index)
-        })
-        .collect();
-    let want: Vec<(String, u32)> = expected_unclaimed.iter().map(|(k, a)| (k.to_string(), *a)).collect();
-    println!(
-        "RECOVERY: {} of {} unclaimed deposits ({} claimed), {} of 10 unreleased burns ({} released); {} deposits in the vault",
-        unclaimed.len(),
-        want.len(),
-        claimed,
-        unreleased,
-        burns.len() - unreleased,
-        list.deposits.len()
+    // ---- The private round trip, on the defaults ------------------------------------------------
+    // The wallet's private accounts /0 and /1 on the zone, from the keys LEZ's wallet derives.
+    zone.add_private_accounts(&user, 2)?;
+    let private0 = user.private_account_ids(1)?[0];
+    // 1. A deposit on the defaults through the binary (private /0; 1 ETH): a dry run, then sent.
+    let dep_args = |send: bool| -> Vec<String> {
+        let mut a = common(&seed_user);
+        a.extend(["deposit".to_string(), "--denomination".into(), "1".into()]);
+        if send {
+            a.extend([
+                "--keystore".to_string(),
+                user_ks.display().to_string(),
+                "--password-file".into(),
+                password.display().to_string(),
+                "--send".into(),
+                "--yes".into(),
+            ]);
+        } else {
+            a.extend(["--from".to_string(), keystores[0].1.to_string()]);
+        }
+        a
+    };
+    let dry = ferrata(&dep_args(false).iter().map(String::as_str).collect::<Vec<_>>())?;
+    print!("{dry}");
+    ensure!(
+        dry.contains("your private LEZ account /0")
+            && dry.contains("would send: to")
+            && dry.contains("cost: ")
+            && dry.contains("eth_estimateGas")
+            && dry.contains("privacy of these choices: Minimal")
+            && !dry.contains("WARNING")
+            && dry.contains("not sent: a dry run"),
+        "the default deposit's dry run: what it sends, what becomes public, its cost"
     );
-    ensure!(found == want, "the unclaimed deposits found are the ten made: {found:?}");
+    let sent = ferrata(&dep_args(true).iter().map(String::as_str).collect::<Vec<_>>())?;
+    print!("{sent}");
+    ensure!(sent.contains("sent: "), "the default deposit is sent");
+    // 2. The relayer imports root(17) and ETH's fee range to it.
+    let n2 = eth::view(&p, vault, IVault::nextLeafIndexCall {}, None).await?;
+    let leaf_p = n2 - 1;
+    let root2 = eth::view(&p, vault, IVault::depositRootCall {}, None).await?;
+    let mut storage3 = vec![(word(0), slot(&p, vault, word(0)).await?), (word(1), slot(&p, vault, word(1)).await?)];
+    storage3.push((word(2), cid));
+    let b2 = zone.world.add_block(hb::Block::with_storage(9_000_128, 9_000_128, vault.into_array(), &storage3));
+    let r = zone.world.import("ImportRoot 17 (relayer)", &cid, b2, root2.0, n2, &vault.into_array());
+    ensure!(r.ok(), "ImportRoot 17: {:?}", r.exit_code);
+    zone.record(&r);
+    let r = zone.world.import_fees("ImportFees ETH 1 = none (relayer)", &cid, b2, [0; 20], 1, None, &vault.into_array());
+    ensure!(r.ok(), "ImportFees at 17: {:?}", r.exit_code);
+    zone.record(&r);
+    // 3. The claim on the defaults: held by the deposit's claim delay; past it, private.
+    let mut copts = flow::ClaimOpts {
+        leaf: Some(leaf_p),
+        plaintext: false,
+        accept_plaintext: false,
+        no_delay: false,
+        relayer: None,
+        gap: 8,
+        send: true,
+        yes: true,
+    };
+    let held = flow::claim(&eth_side, &user, &mut zone, &ctx, &copts, &mut flow::Out::new(true))
+        .await
+        .err()
+        .context("held by its delay")?;
+    ensure!(held.to_string().contains("held by your claim delay"), "{held}");
+    let list = eth::deposit_list(&p, vault, 0, 10_000).await?;
+    let mine = scan::deposits(&user, &ctx, &list, 8, &lez::History::default(), &HashSet::new())?;
+    let n_p = mine.iter().find(|r| r.owned.deposit.leaf_index == leaf_p).context("leaf 16 is the user's")?.owned.nullifier;
+    let opens = flow::claimable_from(list.blocks[leaf_p as usize], user.claim_delay_hours(&n_p));
+    let blocks = opens - list.block;
+    p.raw_request::<_, serde_json::Value>("anvil_mine".into(), (format!("0x{blocks:x}"),)).await?;
+    println!("claim delay: {} h = {blocks} blocks mined", user.claim_delay_hours(&n_p));
+    copts.send = false;
+    let mut out = flow::Out::new(true);
+    let dry = flow::claim(&eth_side, &user, &mut zone, &ctx, &copts, &mut out).await?;
+    ensure!(
+        dry.sent.is_none()
+            && out.text().contains("ClaimPrivately")
+            && out.text().contains("privacy of these choices: Minimal")
+            && out.text().contains(", passed")
+            && out.text().contains("not sent: a dry run"),
+        "the default claim's dry run"
+    );
+    copts.send = true;
+    let claimed_p = flow::claim(&eth_side, &user, &mut zone, &ctx, &copts, &mut flow::Out::new(true)).await?;
+    println!("private claim: {:?}", claimed_p.sent);
+    let held_p = flow::private_holding(&mut zone, &ctx, private0, &[0; 20]).await?;
+    ensure!(held_p == ETH_1, "private /0 holds 1 ETH: {held_p}");
+    ensure!(
+        !zone.applied(program).await?.iter().any(|a| matches!(
+            BridgeMessage::try_from_slice(&a.message),
+            Ok(BridgeMessage::Claim { witness, .. }) if witness.leaf_index == leaf_p
+        )),
+        "no plaintext claim names the deposit"
+    );
+    // Again: refused before sending (250), and by the program itself when proven anyway.
+    let again = flow::claim(&eth_side, &user, &mut zone, &ctx, &copts, &mut flow::Out::new(true))
+        .await
+        .err()
+        .context("claimed")?;
+    ensure!(again.to_string().contains("250 ALREADY_CLAIMED"), "{again}");
+    let Some(Mention::PrivateSelf(me)) = claimed_p.plan.call.mentions.first().cloned() else { bail!("a private claim") };
+    let replay = zone.settle_private(&claimed_p.plan.call, me).expect_err("a replayed private claim");
+    ensure!(replay.to_string().contains("250"), "the program refuses the replay: {replay}");
+    // 4. The burn on the defaults: from private /0, to a fresh recipient; a dry run, then sent.
+    let fresh = PrivateKeySigner::random().address();
+    let mut bopts = flow::BurnOpts {
+        public: false,
+        accept_public: false,
+        account: 0,
+        token: eth::ETH,
+        amount: "1".into(),
+        recipient: fresh,
+        send: false,
+        yes: false,
+    };
+    let mut out = flow::Out::new(true);
+    flow::burn(&eth_side, &user, &mut zone, &ctx, &bopts, &mut out).await?;
+    ensure!(
+        out.text().contains("Burn from a private account: the holder stays private.")
+            && out.text().contains("privacy of these choices: Minimal")
+            && out.text().contains("  cost ")
+            && out.text().contains("not sent: a dry run"),
+        "the default burn's dry run"
+    );
+    bopts.send = true;
+    bopts.yes = true;
+    let burned = flow::burn(&eth_side, &user, &mut zone, &ctx, &bopts, &mut flow::Out::new(true)).await?;
+    ensure!(flow::private_holding(&mut zone, &ctx, private0, &[0; 20]).await? == 0, "the private holding is burned");
+    // Refusals: more than the holding (254), not a denomination (251), more decimals than the token's.
+    for (amount, want) in [("1", "254 INSUFFICIENT_BALANCE"), ("0.5", "251 NOT_REGISTERED"), ("0.1000000000000000001", "decimal")] {
+        let o = flow::BurnOpts { amount: amount.into(), ..bopts.clone() };
+        let e = flow::burn(&eth_side, &user, &mut zone, &ctx, &o, &mut flow::Out::new(false)).await.err().context("refused")?;
+        println!("burn {amount}: {e:#}");
+        ensure!(format!("{e:#}").contains(want), "burn {amount}: {e:#}");
+    }
+    // 5. The checkpoint of all twelve burns, finalised but in its release delay: the private burn is
+    //    refused (only that root covers it); burn 1 is planned against the older root meanwhile.
+    let history = lez::history_of(&zone, &ctx).await?;
+    ensure!(history.burns.len() == 12, "the private burn's note is on the zone: {} burns", history.burns.len());
+    let burn_leaves2: Vec<Hash> = history
+        .burns
+        .iter()
+        .map(|b| burn_leaf(&cid, b.burn_index, &b.note.token, &b.note.amount, &b.note.c_out, &b.note.r))
+        .collect();
+    let burn_root2 = Tree::from_leaves(burn_leaves2).map_err(|_| anyhow!("tree"))?.root();
+    accept_burn_root(&p, vault, B256::from(cid), burn_root2, 12, false).await?;
+    let job_path = dir.join("release-job.json");
+    let _ = std::fs::remove_file(&job_path);
+    let ropts = |burn: u64, seal: Option<Bytes>, job: Option<PathBuf>| flow::ReleaseOpts {
+        burn: Some(burn),
+        via: flow::Via::Relayer(None),
+        seal,
+        job_out: job,
+        input_out: None,
+        program: None,
+        prove: false,
+        send: false,
+        yes: false,
+        confirmations: 1,
+    };
+    let early = flow::release_burn(&eth_side, &user, &mut zone, &ctx, None, &ropts(burned.plan.i, None, None), &mut flow::Out::new(true))
+        .await
+        .err()
+        .context("in its release delay")?;
+    println!("release in the delay: {early}");
+    ensure!(early.to_string().contains("ReleaseDelayNotElapsed"), "{early}");
+    let older = flow::release_burn(&eth_side, &user, &mut zone, &ctx, None, &ropts(1, None, None), &mut flow::Out::new(true)).await?;
+    ensure!(older.root.count == 11, "burn 1 goes against the older root while the newer is in its delay");
+    pass_release_delay(&p).await?;
+    // 6. The release on the defaults: through any relayer, paid the registered relay fee; the tool
+    //    writes the relayer's job (the journal and the proof, nothing secret).
+    let planned = flow::release_burn(&eth_side, &user, &mut zone, &ctx, None, &ropts(burned.plan.i, None, None), &mut flow::Out::new(true)).await?;
+    ensure!(planned.root.count == 12, "the newest root, once its delay has passed");
+    anvil_send(
+        &p,
+        verifier,
+        IMock::acceptCall { imageId: release_image, journalDigest: B256::from(sha256(&planned.plan.journal)) }.abi_encode(),
+        U256::ZERO,
+    )
+    .await?;
+    let mut out = flow::Out::new(true);
+    let rel = flow::release_burn(
+        &eth_side,
+        &user,
+        &mut zone,
+        &ctx,
+        None,
+        &ropts(burned.plan.i, Some(Bytes::from(SEAL.to_vec())), Some(job_path.clone())),
+        &mut out,
+    )
+    .await?;
+    ensure!(
+        rel.job.is_some()
+            && out.text().contains("submitted by any relayer")
+            && out.text().contains("privacy of these choices: Minimal"),
+        "the default release goes through a relayer"
+    );
+    // The relayer takes the job from its inbox, checks it, sends it, and is paid the relay fee.
+    use ferrata_cli::relayer::{self as rl, Job, Relayer};
+    let job: Job = serde_json::from_slice(&std::fs::read(&job_path)?)?;
+    let Job::Release { journal, seal } = job else { bail!("a release job") };
+    let relayer_eth = keystores[1].1;
+    let relayer = Relayer { vault, me: relayer_eth, accept_unpaid: false };
+    let view = relayer.view(&sp).await?;
+    let (_, input) = relayer.plan_release(&sp, &view, &rl::unhex(&journal)?, Bytes::from(rl::unhex(&seal)?)).await?;
+    let before = p.get_balance(fresh).await?;
+    let rc = relayer.submit(&sp, input).await?;
+    let (_, paid) = rl::relay_fee_paid(&rc, relayer_eth).context("a Release paying the relayer")?;
+    let relay_fee = flow::release_fees(&eth_side, eth::ETH, ETH_1).await?.3;
+    let got = p.get_balance(fresh).await? - before;
+    ensure!(
+        paid == U256::from(relay_fee) && got == U256::from(ETH_1 - relay_fee),
+        "the fresh recipient received {got}, the relayer {paid} (relay fee {relay_fee})"
+    );
+    println!("PRIVATE ROUND TRIP: 1 ETH deposited to private /0, claimed privately after its delay, burned from private /0, released by a relayer to a fresh address ({got} wei; relay fee {paid})");
+
+    // ---- Recovery from the seed alone ------------------------------------------------------------
+    // A fresh client with only the seed file: every deposit and its state, every burn and whether it
+    // is released, the holdings. (The private holdings are the LEZ wallet's view: the harness stands in
+    // for its sync, keeping the states the chain committed.)
+    let wiped = Seed::from_phrase(&std::fs::read_to_string(&seed_user)?)?;
+    let mut out = flow::Out::new(true);
+    let rec = flow::recover(&eth_side, &wiped, 8, Some((&mut zone, &ctx)), true, &mut out).await?;
+    let want: Vec<(DestKind, u32)> = expected_unclaimed
+        .iter()
+        .map(|(k, a)| (if *k == "private" { DestKind::Private } else { DestKind::Public }, *a))
+        .collect();
+    println!(
+        "RECOVERY: {} deposits ({} claimed, {} unclaimed), {} burns ({} released), holdings {:?}; {} deposits in the vault",
+        rec.deposits,
+        rec.claimed,
+        rec.unclaimed.len(),
+        rec.burns,
+        rec.released,
+        rec.holdings,
+        n2
+    );
+    ensure!(rec.unclaimed == want, "the unclaimed deposits found are the ten made: {:?}", rec.unclaimed);
+    ensure!(
+        rec.deposits == 12 && rec.claimed == 2 && rec.burns == 12 && rec.released == 2 && rec.next_burn_counter == 12,
+        "recovery: deposits, claims (one private), burns (one private), releases"
+    );
+    ensure!(
+        rec.holdings == vec![(DestKind::Public, 0, eth::ETH, 10 * ETH_1 - 11 * ETH_1 / 10)],
+        "holdings: 8.9 ETH at public /0, nothing left at private /0: {:?}",
+        rec.holdings
+    );
+    let history = lez::history_of(&zone, &ctx).await?;
+    let n = n2;
 
     // Status, the zone's part (the library function `ferrata status --sequencer` prints).
     let zone_lines = lez::zone_status(&zone, &ctx, &history).await?;
@@ -746,24 +1201,7 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
             .any(|l| l.contains(&format!("newest imported root: root(cid, {n})")) && l.contains("from header(id, ")),
         "status names the newest import and the record it read"
     );
-    ensure!(zone_lines.iter().any(|l| l == "  burns published: 11"), "status counts the burns");
-
-    // A private claim names its nullifier account in its public part. The harness settles no private
-    // transaction here, so the history is given one such account: the scan then marks that deposit
-    // claimed, matched locally from the account id (no per-item query).
-    let target = unclaimed[0];
-    let mut seen = history.clone();
-    seen.touched_privately.insert(
-        ferrata_lez_bridge_wire::nullifier_actor(program, 1, &vault.into_array(), &target.owned.nullifier).account_id,
-    );
-    let rows2 = scan::deposits(&wiped, &ctx, &list, 8, &seen, &refunded)?;
-    let claimed2 = rows2.iter().filter(|r| r.state == scan::DepositState::Claimed).count();
-    println!(
-        "private claim seen: leaf {} marked claimed once a private transaction names its nullifier account ({claimed2} claimed)",
-        target.owned.deposit.leaf_index
-    );
-    ensure!(claimed2 == 2, "the nullifier account named privately marks its deposit claimed");
-    ensure!(claimed == 1 && unreleased == 10 && burns.len() == 11, "recovery");
+    ensure!(zone_lines.iter().any(|l| l == "  burns published: 12"), "status counts the burns");
 
     // The relayer's release (cli/src/relayer.rs), with `FERRATA_GASDROP_ELF`: the holder of burn 1 opts in
     // with a release that pays the relayer the registered relay fee; the relayer checks and sends it

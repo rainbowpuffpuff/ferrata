@@ -379,6 +379,7 @@ pub async fn claim<L: Ledger>(
 
 // ---- burn ----------------------------------------------------------------------------------------
 
+#[derive(Clone)]
 pub struct BurnOpts {
     /// Burn from public account /a instead of private account /a.
     pub public: bool,
