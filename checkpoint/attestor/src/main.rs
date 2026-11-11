@@ -22,7 +22,10 @@
 //!                                              inscription, with T's inscription from the node's answers
 //! retip   --base IN --answers DIR --tip N --out IN2   T moved to block N of the input (its inscription
 //!                                              from the node); the later blocks become the path after T
-//! rekey   --base IN --keys HEX,HEX,... --n-min N --t-min T --out IN2
+//! rekey   --base IN --keys HEX,HEX,... --n-min N --t-min T [--posting-timeframe P] --out IN2
+//! rotate  --base IN --keys HEX,HEX,... --threshold C --signer I:KEY... --out IN2
+//!                                              devnet set-up: one rotation of the base's set, signed
+//!                                              by the keys at indices I of the parent's set
 //!                                              devnet set-up: a stand-in key set and floors
 //! ```
 use std::fs;
@@ -36,7 +39,7 @@ use checkpoint_core::Hash;
 use ed25519_dalek::SigningKey;
 use ferrata_attestor::{
     assemble_unchecked, attestation_from_json, attestation_json, collect, deployment_from_json, deployment_json,
-    deployment_of, final_tier, fixture_meta, hex_str, hexa, read_key, rekey_base, Attestor, LastSigned, NodeAnswers,
+    deployment_of, final_tier, fixture_meta, hex_str, hexa, read_key, Attestor, LastSigned, NodeAnswers,
 };
 use serde_json::{json, Value};
 
@@ -247,10 +250,43 @@ fn cmd_retip(a: &Args) -> Result<()> {
     Ok(())
 }
 
+fn cmd_rotate(a: &Args) -> Result<()> {
+    let base = fs::read(a.get("base")?)?;
+    let input = CheckpointInputB::decode(&base).map_err(|e| anyhow!("{e:?}"))?;
+    let keys: Vec<Hash> = a.get("keys")?.split(',').map(|k| hex_str(k, "key")).collect::<Result<_>>()?;
+    let ops = ferrata_attestor::channel_config_tx(
+        &input.config.channel_id,
+        &input.parent.config_tip_hash,
+        &keys,
+        input.parent.posting_timeframe,
+        a.get("threshold")?.parse()?,
+    )?;
+    let signers: Vec<(u16, SigningKey)> = a
+        .all("signer")
+        .into_iter()
+        .map(|s| {
+            let (i, path) = s.split_once(':').context("--signer INDEX:KEYFILE")?;
+            Ok((i.parse()?, read_key(Path::new(path))?))
+        })
+        .collect::<Result<_>>()?;
+    let refs: Vec<(u16, &SigningKey)> = signers.iter().map(|(i, k)| (*i, k)).collect();
+    let bytes = ferrata_attestor::rotate_base(&base, &ops, &refs)?;
+    fs::write(a.get("out")?, &bytes)?;
+    println!("rotation to {} keys signed by {} of {}", keys.len(), refs.len(), input.parent.keys.len());
+    Ok(())
+}
+
 fn cmd_rekey(a: &Args) -> Result<()> {
     let base = fs::read(a.get("base")?)?;
     let keys: Vec<Hash> = a.get("keys")?.split(',').map(|k| hex_str(k, "key")).collect::<Result<_>>()?;
-    let bytes = rekey_base(&base, &keys, a.get("n-min")?.parse()?, a.get("t-min")?.parse()?)?;
+    let timeframe = a.opt("posting-timeframe").map(str::parse).transpose()?;
+    let bytes = ferrata_attestor::rekey_base_with_timeframe(
+        &base,
+        &keys,
+        a.get("n-min")?.parse()?,
+        a.get("t-min")?.parse()?,
+        timeframe,
+    )?;
     fs::write(a.get("out")?, &bytes)?;
     let input = CheckpointInputB::decode(&bytes).map_err(|e| anyhow!("{e:?}"))?;
     println!(
@@ -281,6 +317,7 @@ fn main() -> Result<()> {
         "rekey" => cmd_rekey(&a),
         "upgrade" => cmd_upgrade(&a),
         "retip" => cmd_retip(&a),
+        "rotate" => cmd_rotate(&a),
         other => bail!("unknown command {other}"),
     }
 }

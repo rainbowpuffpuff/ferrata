@@ -18,3 +18,10 @@ Guest panicked: checkpoint refused: NotAccredited
 Guest panicked: checkpoint refused: DuplicateAttestor
 -- rbm-refuse-behind
 Guest panicked: checkpoint refused: NotADescendant { tip_id: 201 }
+rbm-lab-rot            blocks 17 (87349 B) | user cycles     6539536 | segments   7 (7x2^20) padded     7340032 |   0.39 s | journal == native
+-- rbm-refuse-removed-key
+Guest panicked: checkpoint refused: NotAccredited
+-- rbm-refuse-rotation-one-signer
+Guest panicked: checkpoint refused: ConfigThresholdUnmet { have: 1, need: 2 }
+-- rbm-refuse-old-set
+Guest panicked: checkpoint refused: BadAttestation

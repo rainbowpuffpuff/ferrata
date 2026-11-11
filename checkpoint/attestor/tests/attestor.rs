@@ -15,8 +15,9 @@ use checkpoint_core::rule_b::run_checkpoint_b;
 use checkpoint_core::{Error, Hash};
 use ed25519_dalek::SigningKey;
 use ferrata_attestor::{
-    assemble_unchecked, collect, deployment_of, final_inscriptions, final_tier, hexa, rekey_base, retip,
-    upgrade_pre_producer_input, Attestor, Dropped, FinalTier, LastSigned, NodeAnswers,
+    assemble_unchecked, channel_config_tx, collect, deployment_of, final_inscriptions, final_tier, hexa, rekey_base,
+    rekey_base_with_timeframe, retip, rotate_base, upgrade_pre_producer_input, Attestor, Dropped, FinalTier,
+    LastSigned, NodeAnswers,
 };
 use serde_json::{json, Value};
 
@@ -354,4 +355,48 @@ fn attestations_of_a_descendant_of_t_count_and_an_attestor_behind_t_is_refused()
     // ... but it supports T = 200 (201 is on the path after 200).
     let ok = run(&assemble_unchecked(&base200, &[a0, a2_behind]).unwrap()).unwrap();
     assert_eq!(ok.attestors, 2);
+}
+
+#[test]
+fn a_rotation_by_two_of_three_and_attestations_under_the_new_set() {
+    // Stand-in: a non-zero posting timeframe (a rotation needs one, SPEC-v3 D3; the lab's channel has 0).
+    const P: u32 = 20;
+    let (k1, k2, k3) = (key("channel-1"), key("channel-2"), key("channel-3"));
+    let old = [h(LAB_KEY), pk(&k1), pk(&k2)];
+    let new = [h(LAB_KEY), pk(&k1), pk(&k3)];
+    let base = rekey_base_with_timeframe(&real_input(), &old, 3, 2, Some(P)).unwrap();
+    let d = deployment(&base);
+    let ops = channel_config_tx(&h(CHANNEL), &[0u8; 32], &new, P, 2).unwrap();
+    let rotated = rotate_base(&base, &ops, &[(1, &k1), (2, &k2)]).unwrap();
+    let tier_with = |keys: &[Hash]| {
+        let mut answers = lab_answers();
+        answers.channel["accredited_keys"] = json!(keys.iter().map(hex::encode).collect::<Vec<_>>());
+        answers.channel["posting_timeframe"] = json!(P);
+        final_tier(&answers, &h(CHANNEL)).unwrap()
+    };
+    let tier = tier_with(&new);
+    let a0 = lab_attestor(&d).attest(&tier, None).unwrap();
+    let a1 = attestor(1, &d).attest(&tier, None).unwrap();
+    let c = collect(&rotated, &[a0, a1]).unwrap();
+    let outcome = run(&c.input).unwrap();
+    assert_eq!(outcome.new_state.keys, new.to_vec());
+    assert_eq!((outcome.journal.n, outcome.journal.t, outcome.attestors), (3, 2, 2));
+    // Refused: a key the rotation removed (k2's attestor refuses to sign; a forced signature is not counted).
+    let at2 = attestor(2, &d);
+    assert!(at2.attest(&tier, None).unwrap_err().to_string().contains("not in the channel's live key set"));
+    let a2 = SignedAttestation::new(&at2.att_key, at2.channel_key, at2.certificate, &d, &tier.key_set_hash, tier.tip);
+    assert_eq!(run(&assemble_unchecked(&rotated, &[a0, a2]).unwrap()).unwrap_err(), Error::NotAccredited);
+    // Refused: the rotation signed by one key of three.
+    let weak = rotate_base(&base, &ops, &[(1, &k1)]).unwrap();
+    assert_eq!(
+        run(&assemble_unchecked(&weak, &[a0, a1]).unwrap()).unwrap_err(),
+        Error::ConfigThresholdUnmet { have: 1, need: 2 }
+    );
+    // Refused: attestations over the set before the rotation.
+    let before = tier_with(&old);
+    let b0 = lab_attestor(&d).attest(&before, None).unwrap();
+    let b1 = attestor(1, &d).attest(&before, None).unwrap();
+    assert_eq!(run(&assemble_unchecked(&rotated, &[b0, b1]).unwrap()).unwrap_err(), Error::BadAttestation);
+    // ... and they are what the input without the rotation needs.
+    assert_eq!(run(&collect(&base, &[b0, b1]).unwrap().input).unwrap().attestors, 2);
 }

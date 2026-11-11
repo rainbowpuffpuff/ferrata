@@ -32,6 +32,20 @@ rbm-lab-n3-t200: accepted: n = 3, t = 2, 2 attestations counted, producer 3b14e3
 -- an attestor whose node had finalised only up to 201 signs 201: it cannot support T = 202
 attested: channel key ee5875eb126e89d3d2179d8045d20f57376c0a8bf79b53c45929ae18ece6df42 | attestation key 9b065ce4e440e2a2c9ebfc0dca343392d071ec2e23f0d6be37b8a4589069917f | final tip 201 6cd2988369eef60af52526824e3eebe4e5c06d7c22533354ed6be6fd426bbc46 (final message 07e61773476bab4adb3b5976010ae7779b8b4b9aabc3098d2ed374b50c5c53e1) | node lib slot 8856116, blocks 1..=201 checked | key set n = 3 hash 54d8d8dc5a0368d5a027629b0581c7dba0cd16446bbec37a806fdfc7cad3fece
 rbm-refuse-behind: refused: NotADescendant { tip_id: 201 }
+== 6b. a key rotation {lab, k1, k2} -> {lab, k1, k3} in the proof, signed by k1 and k2 (2 of 3)
+   (stand-in posting timeframe 20: a rotation needs a non-zero turn, SPEC-v3 D3; the lab's channel has 0)
+re-keyed: n = 3, nMin = 3, tMin = 2, configId da0edd60a6d1dd7209f00c890b1a6f0016c8ded14023b552fe82fac5422c9d40, parent state 8ef5578aaab37e285887770626048ebea338f373a0a05663fddcc294f5765194
+rotation to 3 keys signed by 2 of 3
+rotation to 3 keys signed by 1 of 3
+attested: channel key 3b14e3980d05dd3651ff5956758dd4cfecc33b837775c9e3d90279d34d3fb0a2 | attestation key b707f1eedbcf1ed8ea4b7e06677eb1c1925117a021edf5d782452abc305fbc6a | final tip 202 774780c60182852a283544372f21f24d9f532953bbdd8d71823a012edb322bbb (final message cc5ae8ce6324d1be95406175c3ba3934914e8ff91fac717ae3d95eb568cca79e) | node lib slot 8856126, blocks 1..=202 checked | key set n = 3 hash a5afa2dc1c66b0754fdebe1653b914fac94f26be1db54722bd590cd1516566cb
+attested: channel key e3db11180792a86624197292eb8e6bbbe6dc11b504f0e66016724bf267d06813 | attestation key a7a11c4ab803a6e28e51b92e7c65f9cfaba3b2d2656d83468607eceac036369b | final tip 202 774780c60182852a283544372f21f24d9f532953bbdd8d71823a012edb322bbb (final message cc5ae8ce6324d1be95406175c3ba3934914e8ff91fac717ae3d95eb568cca79e) | node lib slot 8856126, blocks 1..=202 checked | key set n = 3 hash a5afa2dc1c66b0754fdebe1653b914fac94f26be1db54722bd590cd1516566cb
+-- sequencer 2, removed by the rotation, asks its node: it refuses
+Error: refused: channel key ee5875eb126e89d3d2179d8045d20f57376c0a8bf79b53c45929ae18ece6df42 is not in the channel's live key set (its certificate is dead)
+kept 2 of 2 (n = 3, t = 2)
+rbm-lab-rot: accepted: n = 3, t = 2, 2 attestations counted, producer 3b14e3980d05dd3651ff5956758dd4cfecc33b837775c9e3d90279d34d3fb0a2
+rbm-refuse-removed-key: refused: NotAccredited
+rbm-refuse-rotation-one-signer: refused: ConfigThresholdUnmet { have: 1, need: 2 }
+rbm-refuse-old-set: refused: BadAttestation
 == 7. inputs the program must refuse
 rbm-refuse-too-few: refused: InsufficientAttestations { have: 1, need: 2 }
 rbm-refuse-none: refused: InsufficientAttestations { have: 0, need: 2 }

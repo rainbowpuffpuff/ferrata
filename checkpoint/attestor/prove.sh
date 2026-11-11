@@ -5,9 +5,9 @@
 cd "$(dirname "$0")/.."
 unset RISC0_DEV_MODE
 echo "== executor: accepted inputs"
-target/release/host bench rbm-lab-n3-t2 rbm-lab-n3-all rbm-lab-n3-t200 2>&1 | tail -n 6
+target/release/host bench rbm-lab-n3-t2 rbm-lab-n3-all rbm-lab-n3-t200 rbm-lab-rot 2>&1 | tail -n 6
 echo "== executor: inputs the guest must refuse"
-for f in too-few none uncertified other-vault other-chain outsider duplicate behind; do
+for f in too-few none uncertified other-vault other-chain outsider duplicate behind removed-key rotation-one-signer old-set; do
   echo "-- rbm-refuse-$f"; target/release/host bench rbm-refuse-$f 2>&1 | grep -E -o "checkpoint refused: [A-Za-z]+[^\"]{0,40}|Error: .{0,160}" | head -2
 done
 echo "== succinct proof (CPU, $(nproc) threads)"

@@ -111,7 +111,43 @@ $bin assemble --base "$work/base-n3.input" --att "$out/att-0.json" --att "$out/a
   --out fixtures/rbm-refuse-behind.input --meta fixtures/rbm-refuse-behind.json --name rbm-refuse-behind \
   --expect NotADescendant --description "must be refused: an attestation of 201 for T = 202 (its node was behind)"
 
+echo "== 6b. a key rotation {lab, k1, k2} -> {lab, k1, k3} in the proof, signed by k1 and k2 (2 of 3)"
+echo "   (stand-in posting timeframe 20: a rotation needs a non-zero turn, SPEC-v3 D3; the lab's channel has 0)"
+k3=$($bin keygen --seed-label channel-3 --out "$work/channel-3.key")
+$bin rekey --base "$work/base-n1.input" --keys "$lab,$k1,$k2" --n-min 3 --t-min 2 --posting-timeframe 20 \
+  --out "$work/base-n3-p20.input"
+$bin rotate --base "$work/base-n3-p20.input" --keys "$lab,$k1,$k3" --threshold 2 \
+  --signer "1:$work/channel-1.key" --signer "2:$work/channel-2.key" --out "$work/base-rot.input"
+$bin rotate --base "$work/base-n3-p20.input" --keys "$lab,$k1,$k3" --threshold 2 \
+  --signer "1:$work/channel-1.key" --out "$work/base-rot-weak.input"
+cp -r "$work/answers-n3" "$work/answers-rot"
+python3 -I - "$work/answers-rot/channel.json" "$lab" "$k1" "$k3" <<'PY'
+import json, sys
+path, *keys = sys.argv[1:]
+c = json.load(open(path)); c["accredited_keys"] = keys; c["posting_timeframe"] = 20; json.dump(c, open(path, "w"))
+PY
+for i in 0 1; do
+  $bin attest --deployment "$out/deployment.json" --cert "$out/cert-$i.json" --att-key "$work/attestation-$i.key" \
+    --answers "$work/answers-rot" --out "$out/att-rot-$i.json"
+done
+echo "-- sequencer 2, removed by the rotation, asks its node: it refuses"
+if $bin attest --deployment "$out/deployment.json" --cert "$out/cert-2.json" --att-key "$work/attestation-2.key" \
+    --answers "$work/answers-rot" --out "$work/x.json" 2> "$work/refusal.txt"; then echo "UNEXPECTED: signed"; exit 1
+else tail -n 1 "$work/refusal.txt"; fi
+$bin collect --base "$work/base-rot.input" --att "$out/att-rot-0.json" --att "$out/att-rot-1.json" \
+  --out fixtures/rbm-lab-rot.input --meta fixtures/rbm-lab-rot.json --name rbm-lab-rot \
+  --description "the lab's real blocks 186..=202 with a rotation {lab, k1, k2} -> {lab, k1, k3} signed by 2 of 3 (stand-in keys and posting timeframe 20); attestations of the lab's attestor and attestor 1 under the new set"
+$bin assemble --base "$work/base-rot.input" --att "$out/att-rot-0.json" --att "$out/att-2.json" \
+  --out fixtures/rbm-refuse-removed-key.input --meta fixtures/rbm-refuse-removed-key.json --name rbm-refuse-removed-key \
+  --expect NotAccredited --description "must be refused: the attestation of k2, a key the rotation in the same proof removed"
+$bin assemble --base "$work/base-rot-weak.input" --att "$out/att-rot-0.json" --att "$out/att-rot-1.json" \
+  --out fixtures/rbm-refuse-rotation-one-signer.input --meta fixtures/rbm-refuse-rotation-one-signer.json \
+  --name rbm-refuse-rotation-one-signer --expect ConfigThresholdUnmet --description "must be refused: the rotation signed by one key of three"
+$bin assemble --base "$work/base-rot.input" --att "$out/att-0.json" --att "$out/att-1.json" \
+  --out fixtures/rbm-refuse-old-set.input --meta fixtures/rbm-refuse-old-set.json --name rbm-refuse-old-set \
+  --expect BadAttestation --description "must be refused: attestations over the key set before the rotation"
+
 echo "== 7. inputs the program must refuse"
 $refusals --base "$work/base-n3.input" --answers "$work/answers-n3" --out-dir fixtures
-cp fixtures/rbm-lab-n3-t2.json fixtures/rbm-lab-n3-all.json fixtures/rbm-lab-n3-t200.json fixtures/rbm-refuse-*.json fixtures/rbm-lab-n3-t2.input "$out/"
+cp fixtures/rbm-lab-n3-t2.json fixtures/rbm-lab-n3-all.json fixtures/rbm-lab-n3-t200.json fixtures/rbm-lab-rot.json fixtures/rbm-refuse-*.json fixtures/rbm-lab-n3-t2.input "$out/"
 echo "devnet run done: $out"

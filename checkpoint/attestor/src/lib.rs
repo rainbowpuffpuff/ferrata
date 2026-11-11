@@ -468,12 +468,14 @@ pub struct Collected {
 /// needs an input that applies no key rotation.
 pub fn collect(base: &[u8], attestations: &[SignedAttestation]) -> Result<Collected> {
     let mut input = CheckpointInputB::decode(base).map_err(|e| anyhow!("base input: {e:?}"))?;
-    ensure!(
-        input.config_changes.is_empty(),
-        "the base input rotates keys: the collector checks against the parent's set"
-    );
     let deployment = deployment_of(&input.config);
-    let keys = &input.parent.keys;
+    // K: the parent's set, or the set of the input's last rotation (whose signatures and floors the
+    // program checks; the collector only needs the set the attestations must be over).
+    let keys: Vec<Hash> = match input.config_changes.last() {
+        None => input.parent.keys.clone(),
+        Some(change) => change.op().map_err(|e| anyhow!("rotation: {e:?}"))?.0.keys.iter().map(|k| **k).collect(),
+    };
+    let keys = &keys;
     let ksh = key_set_hash(keys, input.parent.posting_timeframe);
     let n = u32::try_from(keys.len())?;
     let t = threshold(n);
@@ -550,12 +552,67 @@ pub fn retip(base: &[u8], answers: &NodeAnswers, tip: u64) -> Result<Vec<u8>> {
 /// order) with the deployment floors `n_min`, `t_min`; its attestations removed. The producer's
 /// inscription is kept, so `keys` must contain `T`'s signer for the program to accept it.
 pub fn rekey_base(base: &[u8], keys: &[Hash], n_min: u32, t_min: u32) -> Result<Vec<u8>> {
+    rekey_base_with_timeframe(base, keys, n_min, t_min, None)
+}
+
+/// [`rekey_base`], also replacing the parent's posting timeframe (a rotation needs a non-zero one,
+/// SPEC-v3 D3; the lab's one-sequencer channel has 0).
+pub fn rekey_base_with_timeframe(
+    base: &[u8],
+    keys: &[Hash],
+    n_min: u32,
+    t_min: u32,
+    posting_timeframe: Option<u32>,
+) -> Result<Vec<u8>> {
     let mut input = CheckpointInputB::decode(base).map_err(|e| anyhow!("base input: {e:?}"))?;
     ensure!(input.config_changes.is_empty(), "the base input rotates keys");
     input.parent.keys = keys.to_vec();
+    if let Some(p) = posting_timeframe {
+        input.parent.posting_timeframe = p;
+    }
     input.config.n_min = n_min;
     input.config.t_min = t_min;
     input.attestations = Vec::new();
+    Ok(input.encode())
+}
+
+/// A Mantle transaction with one `ChannelConfigOp` (`checkpoint-core::mantle`'s encoding: channel,
+/// parent configuration, `u16` key count and keys, posting timeframe and timeout, configuration and
+/// transfer thresholds), as the channel's keys would sign it to rotate the set. Devnet set-up: on a
+/// running zone the sequencers' committee proposes and inscribes this transaction.
+pub fn channel_config_tx(
+    channel: &Hash,
+    parent: &Hash,
+    keys: &[Hash],
+    posting_timeframe: u32,
+    configuration_threshold: u16,
+) -> Result<Vec<u8>> {
+    let mut ops = vec![1u8, checkpoint_core::mantle::OP_CHANNEL_CONFIG];
+    ops.extend(channel);
+    ops.extend(parent);
+    ops.extend(u16::try_from(keys.len())?.to_le_bytes());
+    for k in keys {
+        ops.extend(k);
+    }
+    ops.extend(posting_timeframe.to_le_bytes());
+    ops.extend(posting_timeframe.to_le_bytes()); // posting timeout: one turn
+    ops.extend(configuration_threshold.to_le_bytes());
+    ops.extend(1u16.to_le_bytes()); // transfer threshold
+    Ok(ops)
+}
+
+/// `base` with one rotation: the configuration transaction `ops` and its signatures over the
+/// transaction hash, each `(index of the signing key in the parent's set, signing key)`.
+pub fn rotate_base(base: &[u8], ops: &[u8], signers: &[(u16, &SigningKey)]) -> Result<Vec<u8>> {
+    use ed25519_dalek::Signer as _;
+    let mut input = CheckpointInputB::decode(base).map_err(|e| anyhow!("base input: {e:?}"))?;
+    let hash = tx_hash(ops);
+    let sigs: Vec<(u16, [u8; 64])> = signers.iter().map(|(i, k)| (*i, k.sign(&hash).to_bytes())).collect();
+    input.config_changes = vec![checkpoint_core::mantle::ConfigChange {
+        ops,
+        op_index: 0,
+        signatures: sigs.iter().map(|(i, s)| (*i, s)).collect(),
+    }];
     Ok(input.encode())
 }
 
