@@ -109,7 +109,8 @@ fuzz_target!(|data: &[u8]| {
 
     let (mut id, mut hash) = (input.parent.tip_id, input.parent.tip_hash);
     for (i, block) in input.blocks.iter().enumerate() {
-        let s = parse_block(block, &mut NoVisitor).unwrap_or_else(|e| panic!("accepted: block {i} does not parse: {e:?}"));
+        let s =
+            parse_block(block, &mut NoVisitor).unwrap_or_else(|e| panic!("accepted: block {i} does not parse: {e:?}"));
         assert_eq!(hash_parsed_block(block).unwrap(), s.header.hash, "accepted: block {i} does not carry its hash");
         assert_eq!(s.header.prev_block_hash, hash, "accepted: block {i} does not chain");
         assert_eq!(Some(s.header.block_id), id.checked_add(1), "accepted: block {i}'s id does not follow");

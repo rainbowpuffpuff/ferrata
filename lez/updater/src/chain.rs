@@ -74,6 +74,10 @@ pub fn preset(name: &str, adoption_parts: u8) -> Result<Config> {
         seconds_per_slot: 12,
         store_fork: 3,
         adoption_parts,
+        // Electra's weak-subjectivity period for 33,554,432 ETH on the mainnet configuration (the specification's
+        // table), as the harness and the live driver configure their instances (lc-a1); a stand-in for the period
+        // of the checkpoint state.
+        ws_period_epochs: 3_532,
     })
 }
 

@@ -37,18 +37,20 @@ fn main() {
     let mut messages: BTreeSet<Vec<u8>> = BTreeSet::new();
 
     // The recorded inscriptions of blocks 1..=202 (prefix, suffix, signature, transaction hash).
-    let rows: BTreeMap<u64, serde_json::Value> = fs::read_to_string(repo.join("checkpoint/realblocks/out/inscriptions.jsonl"))
-        .expect("inscriptions.jsonl")
-        .lines()
-        .map(|l| serde_json::from_str::<serde_json::Value>(l).expect("json line"))
-        .map(|v| (v["block"].as_u64().unwrap(), v))
-        .collect();
+    let rows: BTreeMap<u64, serde_json::Value> =
+        fs::read_to_string(repo.join("checkpoint/realblocks/out/inscriptions.jsonl"))
+            .expect("inscriptions.jsonl")
+            .lines()
+            .map(|l| serde_json::from_str::<serde_json::Value>(l).expect("json line"))
+            .map(|v| (v["block"].as_u64().unwrap(), v))
+            .collect();
     for (name, first) in [("real-lab-186-202", 186u64), ("real-lab-8-202", 8)] {
         let recorded = fs::read(repo.join(format!("checkpoint/realblocks/out/{name}.input"))).expect("recorded input");
         // Recorded before rule (B) took T's producer inscription (commit 91c0df8): insert it, from
         // the recorded inscription of T = 202, before the attestations (one, no segments).
         let row = &rows[&202];
-        let (prefix, suffix, signature) = (hex_field(&row["prefix"]), hex_field(&row["suffix"]), hex_field(&row["signature"]));
+        let (prefix, suffix, signature) =
+            (hex_field(&row["prefix"]), hex_field(&row["suffix"]), hex_field(&row["signature"]));
         let mut producer = Vec::new();
         producer.extend_from_slice(&(prefix.len() as u32).to_le_bytes());
         producer.extend_from_slice(&prefix);
@@ -61,7 +63,12 @@ fn main() {
         for (j, block) in input.blocks.iter().enumerate() {
             let row = &rows[&(first + j as u64)];
             let ops = [hex_field(&row["prefix"]), block.to_vec(), hex_field(&row["suffix"])].concat();
-            assert_eq!(checkpoint_core::mantle::tx_hash(&ops)[..], hex_field(&row["tx_hash"])[..], "block {}", first + j as u64);
+            assert_eq!(
+                checkpoint_core::mantle::tx_hash(&ops)[..],
+                hex_field(&row["tx_hash"])[..],
+                "block {}",
+                first + j as u64
+            );
             seeds.entry("mantle").or_default().insert(with(&[0, 0], &ops));
             for i in 0..usize::from(ops[0]) {
                 if ElidedInscription::split(&ops, i, &[0; 64]).is_ok() {
@@ -104,7 +111,11 @@ fn main() {
         seeds.entry("checkpoint_input").or_default().insert(with(&[0], &a.encode()));
         for k in [1usize, 2, 4, 8, input.blocks.len()] {
             let k = k.min(input.blocks.len());
-            let s = SegmentInput { config: input.config.clone(), parent: input.parent.clone(), blocks: input.blocks[..k].to_vec() };
+            let s = SegmentInput {
+                config: input.config.clone(),
+                parent: input.parent.clone(),
+                blocks: input.blocks[..k].to_vec(),
+            };
             seeds.entry("checkpoint_input").or_default().insert(with(&[2], &s.encode()));
         }
     }

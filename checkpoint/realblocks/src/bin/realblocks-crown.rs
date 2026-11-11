@@ -60,9 +60,7 @@ const CHANNEL_ID: Hash = [1u8; 32];
 fn args() -> Result<BTreeMap<String, String>> {
     let v: Vec<String> = std::env::args().skip(1).collect();
     ensure!(v.len().is_multiple_of(2), "arguments come in --key value pairs");
-    v.chunks(2)
-        .map(|p| Ok((p[0].strip_prefix("--").context("expected --key")?.to_string(), p[1].clone())))
-        .collect()
+    v.chunks(2).map(|p| Ok((p[0].strip_prefix("--").context("expected --key")?.to_string(), p[1].clone()))).collect()
 }
 
 fn hexa<const N: usize>(v: &Value, what: &str) -> Result<[u8; N]> {
@@ -141,7 +139,8 @@ impl Ins {
 /// Every inscription of `channel` in the node's immutable blocks, by LEZ block id.
 fn load_inscriptions(dir: &Path, channel: &Hash) -> Result<(BTreeMap<u64, Ins>, usize, usize)> {
     let mut files: Vec<PathBuf> = fs::read_dir(dir)?.map(|e| Ok(e?.path())).collect::<Result<_>>()?;
-    files.sort_by_key(|p| p.file_name().and_then(|n| n.to_str()).and_then(|n| n.split('-').next()?.parse::<u64>().ok()));
+    files
+        .sort_by_key(|p| p.file_name().and_then(|n| n.to_str()).and_then(|n| n.split('-').next()?.parse::<u64>().ok()));
     let (mut out, mut node_blocks, mut other) = (BTreeMap::new(), 0usize, 0usize);
     for f in files {
         let blocks: Vec<Value> = serde_json::from_slice(&fs::read(&f)?).with_context(|| format!("{}", f.display()))?;
@@ -149,7 +148,8 @@ fn load_inscriptions(dir: &Path, channel: &Hash) -> Result<(BTreeMap<u64, Ins>, 
             node_blocks += 1;
             for tx in b["transactions"].as_array().context("transactions")? {
                 let ops = tx["mantle_tx"]["ops"].as_array().context("ops")?;
-                let first_is_ours = ops.first().and_then(|o| o["opcode"].as_u64()) == Some(u64::from(OP_CHANNEL_INSCRIBE))
+                let first_is_ours = ops.first().and_then(|o| o["opcode"].as_u64())
+                    == Some(u64::from(OP_CHANNEL_INSCRIBE))
                     && hexa::<32>(&ops[0]["payload"]["channel_id"], "channel")? == *channel;
                 if !first_is_ours {
                     other += 1;
@@ -164,7 +164,8 @@ fn load_inscriptions(dir: &Path, channel: &Hash) -> Result<(BTreeMap<u64, Ins>, 
                         break;
                     }
                 }
-                let bytes = found.with_context(|| format!("tx {}: no encoding reproduces its hash", hex::encode(served)))?;
+                let bytes =
+                    found.with_context(|| format!("tx {}: no encoding reproduces its hash", hex::encode(served)))?;
                 let ins = Ins {
                     node_block: b["header"]["id"].as_str().context("header id")?.to_string(),
                     slot: b["header"]["slot"].as_u64().context("slot")?,
@@ -251,15 +252,18 @@ fn main() -> Result<()> {
     let channel_json: Value = serde_json::from_slice(&fs::read(node.join("channel.json"))?).context("channel.json")?;
     let info_path = if node.join("info.json").exists() { node.join("info.json") } else { node.join("info-start.json") };
     let info: Value = serde_json::from_slice(&fs::read(info_path)?).context("info.json")?;
-    let lib_slot = info["lib_slot"].as_u64().or(info["cryptarchia_info"]["lib_slot"].as_u64()).context("info.json: lib_slot")?;
+    let lib_slot =
+        info["lib_slot"].as_u64().or(info["cryptarchia_info"]["lib_slot"].as_u64()).context("info.json: lib_slot")?;
     let (id, t0, t1, tip_hashes) = identity(&a)?;
     ensure!(t0 >= 1 && t1 > t0, "need 1 <= T0 < T1");
 
     // ---- the run's configuration, checked against the node and the bridge wire's configId ------------
     let genesis_bytes = fs::read(get("genesis")?)?;
     let bedrock_genesis_id = sha256_parts(&[genesis_bytes.as_slice()]);
-    ensure!(bedrock_genesis_id == hexa::<32>(&id["bedrockGenesisId"], "bedrockGenesisId")?,
-        "identity.bedrockGenesisId is not the SHA-256 of these deployment settings");
+    ensure!(
+        bedrock_genesis_id == hexa::<32>(&id["bedrockGenesisId"], "bedrockGenesisId")?,
+        "identity.bedrockGenesisId is not the SHA-256 of these deployment settings"
+    );
     ensure!(hexa::<32>(&id["channelId"], "channelId")? == CHANNEL_ID, "identity.channelId is not 0x01…01");
     let chain_id = id["chainId"].as_u64().context("identity.chainId")?;
     let mut evm_chain_id = [0u8; 32];
@@ -281,16 +285,25 @@ fn main() -> Result<()> {
     // `"configId": null` only for a stand-in identity (a rehearsal): then nothing pins it to the wire's.
     let config_id_checked = !id["configId"].is_null();
     if config_id_checked {
-        ensure!(config_id == hexa::<32>(&id["configId"], "configId")?,
-            "checkpoint-core's configId {} is not identity.configId (the bridge wire's)", hx(&config_id));
+        ensure!(
+            config_id == hexa::<32>(&id["configId"], "configId")?,
+            "checkpoint-core's configId {} is not identity.configId (the bridge wire's)",
+            hx(&config_id)
+        );
     } else {
-        eprintln!("WARNING: identity.configId is null: configId {} is checkpoint-core's alone (stand-in)", hx(&config_id));
+        eprintln!(
+            "WARNING: identity.configId is null: configId {} is checkpoint-core's alone (stand-in)",
+            hx(&config_id)
+        );
     }
 
     // ---- every inscription of the channel the node holds as final, checked by checkpoint-core --------
     let (ins, node_blocks, other_txs) = load_inscriptions(&node.join("blocks"), &CHANNEL_ID)?;
     let (first, last) = (*ins.keys().next().context("no inscriptions")?, *ins.keys().last().context("none")?);
-    ensure!(ins.keys().copied().eq(first..=last), "the node's final inscriptions are not contiguous in {first}..={last}");
+    ensure!(
+        ins.keys().copied().eq(first..=last),
+        "the node's final inscriptions are not contiguous in {first}..={last}"
+    );
     ensure!(first <= t0 && t1 <= last, "the node holds final inscriptions of blocks {first}..={last}, not {t0}..={t1}");
     let channel_key = hexa::<32>(&channel_json["accredited_keys"][0], "accredited key")?;
     ensure!(channel_json["accredited_keys"].as_array().map(Vec::len) == Some(1), "the channel holds more than one key");
@@ -334,11 +347,23 @@ fn main() -> Result<()> {
             }
         }
         let st = STATUS.get(s.status as usize).copied().unwrap_or("?");
-        rows.push(format!("{k}\t{}\t{}\t{}\t{st}\t{}\t{}\t{}\t{}\t{}\t{rec_note}", hex::encode(h), payload.len(), s.tx_count,
-            i.node_block, i.slot, hex::encode(c.tx_hash), hex::encode(msg), hex::encode(c.parent)));
-        lines.push(json!({"block": k, "node_block": i.node_block, "slot": i.slot, "tx_hash": hex::encode(c.tx_hash),
+        rows.push(format!(
+            "{k}\t{}\t{}\t{}\t{st}\t{}\t{}\t{}\t{}\t{}\t{rec_note}",
+            hex::encode(h),
+            payload.len(),
+            s.tx_count,
+            i.node_block,
+            i.slot,
+            hex::encode(c.tx_hash),
+            hex::encode(msg),
+            hex::encode(c.parent)
+        ));
+        lines.push(
+            json!({"block": k, "node_block": i.node_block, "slot": i.slot, "tx_hash": hex::encode(c.tx_hash),
             "signature": hex::encode(i.sig), "payload_bytes": payload.len(),
-            "payload_sha256": hex::encode(sha256_parts(&[payload])), "msg_id": hex::encode(msg)}).to_string());
+            "payload_sha256": hex::encode(sha256_parts(&[payload])), "msg_id": hex::encode(msg)})
+            .to_string(),
+        );
         msg_ids.insert(k, msg);
         prev_hash = h;
         prev_msg = msg;
@@ -380,8 +405,11 @@ fn main() -> Result<()> {
         sunset: false,
     };
     if let Some(g) = id.get("genesisState").filter(|v| !v.is_null()) {
-        ensure!(parent.digest() == hexa::<32>(g, "genesisState")?,
-            "the state at T0 {} is not identity.genesisState (the vault's)", hx(&parent.digest()));
+        ensure!(
+            parent.digest() == hexa::<32>(g, "genesisState")?,
+            "the state at T0 {} is not identity.genesisState (the vault's)",
+            hx(&parent.digest())
+        );
     }
     let att_sk = SigningKey::from_bytes(&sha256_parts(&[b"ferrata/crown/attestation-key/v1", &channel_sk_bytes]));
     let att_pk = att_sk.verifying_key().to_bytes();
@@ -431,7 +459,9 @@ fn main() -> Result<()> {
                         "r": hx(&b.r), "memo": hx(&b.memo), "mac": hx(&b.mac), "token": hx(&b.token),
                         "amount": hx(&b.amount), "c_out": hx(&b.c_out), "leaf": hx(&leaf)}));
                 }
-                BridgeMessage::ImportRoot(m) if !sunset => imports.push(json!({"block": k, "tx": tx, "leaf_count": m.leaf_count})),
+                BridgeMessage::ImportRoot(m) if !sunset => {
+                    imports.push(json!({"block": k, "tx": tx, "leaf_count": m.leaf_count}))
+                }
                 BridgeMessage::Sunset { .. } => sunset = true,
                 _ => {}
             }
