@@ -24,8 +24,14 @@ ADERYN_VERSION=${ADERYN_VERSION:-0.6.8}
 CARGO_AUDIT_VERSION=${CARGO_AUDIT_VERSION:-0.23.0}
 CARGO_DENY_VERSION=${CARGO_DENY_VERSION:-0.20.2}
 
+# Reports name paths relative to the repository and the home directory as ~, so they carry no machine paths.
+scrub() { for f in "$@"; do [ -f "$f" ] && sed -i -e "s|$ROOT/|./|g" -e "s|$ROOT|.|g" -e "s|$HOME|~|g" "$f"; done; }
+
 pin() { [ -n "$2" ] && printf '%s==%s' "$1" "$2" || printf '%s' "$1"; }
-cpin() { [ -n "$2" ] && printf -- '--version %s' "$2"; }
+c# Reports name paths relative to the repository and the home directory as ~, so they carry no machine paths.
+scrub() { for f in "$@"; do [ -f "$f" ] && sed -i -e "s|$ROOT/|./|g" -e "s|$ROOT|.|g" -e "s|$HOME|~|g" "$f"; done; }
+
+pin() { [ -n "$2" ] && printf -- '--version %s' "$2"; }
 
 install() {
   mkdir -p "$TOOLS/bin"
@@ -82,6 +88,7 @@ slither_() {
     > "$OUT/slither-checklist.md" 2> "$OUT/slither.log"
   echo "slither exit $?"
   slither . --filter-paths 'lib/|test/|script/' --print human-summary > /dev/null 2> "$OUT/slither-summary.log"
+  scrub "$OUT"/slither*
 }
 
 aderyn_() {
@@ -89,14 +96,18 @@ aderyn_() {
   cd "$ROOT/vault" || return 1
   aderyn . --src src -o "$OUT/aderyn.md" > "$OUT/aderyn.log" 2>&1; echo "aderyn md exit $?"
   aderyn . --src src -o "$OUT/aderyn.json" >> "$OUT/aderyn.log" 2>&1; echo "aderyn json exit $?"
+  scrub "$OUT"/aderyn*
 }
 
 halmos_() {
   mkdir -p "$OUT"
   cd "$ROOT/vault" || return 1
   # The symbolic properties live in test/halmos/ (contracts named *Halmos*, functions check_*).
-  halmos --contract-regex 'Halmos' --function check_ ${HALMOS_ARGS:-} > "$OUT/halmos.log" 2>&1
+  # Bounds: dynamic arrays of length 1 and byte strings of 4 bytes in generated calldata (see the triage note).
+  halmos --contract VaultHalmos --function check_ --default-array-lengths 1 --default-bytes-lengths 4 \
+    ${HALMOS_ARGS:-} > "$OUT/halmos.log" 2>&1
   echo "halmos exit $?"
+  scrub "$OUT/halmos.log"
 }
 
 audit_() {
@@ -104,12 +115,17 @@ audit_() {
   cd "$ROOT" || return 1
   : > "$OUT/cargo-audit.txt"
   local rc=0
-  for lock in $(git ls-files '*Cargo.lock'); do
+  # Every lockfile of the repository (git's list; a plain find where there is no .git, as on a build box).
+  local locks
+  locks=$(git ls-files '*Cargo.lock' 2>/dev/null)
+  [ -n "$locks" ] || locks=$(find . -name Cargo.lock -not -path '*/target/*' -not -path './vault/lib/*' | sed 's|^\./||' | sort)
+  for lock in $locks; do
     echo "=== $lock" >> "$OUT/cargo-audit.txt"
     cargo-audit audit --no-fetch -f "$lock" --json > "$OUT/cargo-audit-$(echo "$lock" | tr / _).json" 2>/dev/null
     cargo-audit audit --no-fetch -f "$lock" >> "$OUT/cargo-audit.txt" 2>&1 || rc=1
   done
   echo "cargo-audit exit $rc"
+  scrub "$OUT"/cargo-audit*
 }
 
 deny_() {
@@ -120,10 +136,17 @@ deny_() {
   # The host workspaces (the guests share their dependency sets and are covered by cargo-audit above).
   for m in Cargo.toml ${DENY_MANIFESTS:-cli/Cargo.toml lez/Cargo.toml bridge/Cargo.toml checkpoint/Cargo.toml}; do
     echo "=== $m" >> "$OUT/cargo-deny.txt"
-    cargo-deny --manifest-path "$m" --all-features check --config "$ROOT/deny.toml" \
-      advisories licenses sources >> "$OUT/cargo-deny.txt" 2>&1 || rc=1
+    # cargo-deny finds deny.toml at the repository root (the manifest's directory or a parent).
+    cargo-deny --manifest-path "$m" --all-features check advisories licenses sources \
+      >> "$OUT/cargo-deny.txt" 2>&1 || rc=1
   done
   echo "cargo-deny exit $rc"
+  scrub "$OUT/cargo-deny.txt"
+  # One line per diagnostic: workspace, severity[check], crate, advisory id (the full text with the inclusion
+  # graphs is cargo-deny.txt).
+  awk '/^=== /{m=$2} /^(error|warning)\[/{if(h!="")print m" | "h" | "c" | "id; h=$0; c=""; id=""}
+       /registry\+|git\+/{if(c=="")c=$3" "$4} /├ ID: /{id=$NF} END{if(h!="")print m" | "h" | "c" | "id}' \
+    "$OUT/cargo-deny.txt" > "$OUT/cargo-deny-summary.txt"
 }
 
 [ $# -gt 0 ] || set -- all

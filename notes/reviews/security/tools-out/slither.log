@@ -1,0 +1,114 @@
+
+Detector: encode-packed-collision
+FerrataRegistry._publishEntry(address,FerrataVault.TokenParams) (src/FerrataRegistry.sol#531-547) calls abi.encodePacked() with multiple dynamic arguments:
+	- h = sha256(bytes)(abi.encodePacked(ferrata/registry/v1,token,p.lezDefinition,p.decimals,p.lezUnit,p.unitWeight,uint8(p.denominations.length),p.denominations,p.relayFees)) (src/FerrataRegistry.sol#532-544)
+FerrataRegistry._feeWords(FerrataVault.FeeSchedule,uint256) (src/FerrataRegistry.sol#572-582) calls abi.encodePacked() with multiple dynamic arguments:
+	- abi.encodePacked(mint,burn,checkpoint) (src/FerrataRegistry.sol#581)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#abi-encodePacked-collision
+
+Detector: divide-before-multiply
+FerrataRegistry._checkDenominations(uint256[],uint256,uint256) (src/FerrataRegistry.sol#459-473) performs a multiplication on the result of a division:
+	- 2 * previous / lezUnit * unitWeight > type()(uint128).max (src/FerrataRegistry.sol#472)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#divide-before-multiply
+
+Detector: incorrect-equality
+FerrataVault._finalize(FerrataVault.Checkpoint,address) (src/FerrataVault.sol#811-846) uses a dangerous strict equality:
+	- previous == 0 || checkpoints[previous - 1].revoked (src/FerrataVault.sol#836)
+FerrataVault._recordBeacon() (src/FerrataVault.sol#1256-1265) uses a dangerous strict equality:
+	- index != 0 && _lastBeaconBlock == block.number (src/FerrataVault.sol#1258)
+FerrataVault.burnRootStatus(bytes32) (src/FerrataVault.sol#1144-1148) uses a dangerous strict equality:
+	- entry == 0 || checkpoints[entry - 1].revoked (src/FerrataVault.sol#1146)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#dangerous-strict-equalities
+
+Detector: missing-zero-check
+FerrataVault.transferAdmin(address).newAdmin (src/FerrataVault.sol#1068) lacks a zero-check on :
+		- pendingAdmin = newAdmin (src/FerrataVault.sol#1069)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#missing-zero-address-validation
+
+Detector: timestamp
+FerrataRegistry.applyFees(mapping(address => FerrataVault.TokenConfig),mapping(address => FerrataVault.FeeState),mapping(address => mapping(uint256 => FerrataVault.FeeSchedule)),address) (src/FerrataRegistry.sol#124-143) uses timestamp for comparisons
+	Dangerous comparisons:
+	- pendingAt == 0 || block.timestamp < pendingAt (src/FerrataRegistry.sol#133)
+FerrataRegistry.applyRoles(FerrataVault.RoleProposal,address[3],address,address) (src/FerrataRegistry.sol#313-334) uses timestamp for comparisons
+	Dangerous comparisons:
+	- block.timestamp < effectiveAt (src/FerrataRegistry.sol#321)
+FerrataRegistry.revokeFrom(FerrataVault.FinalizedCheckpoint[],uint256,uint256) (src/FerrataRegistry.sol#341-353) uses timestamp for comparisons
+	Dangerous comparisons:
+	- block.timestamp > first.finalizedAt + revokeWindow (src/FerrataRegistry.sol#347)
+FerrataRegistry.currentLevel(FerrataVault.Bucket) (src/FerrataRegistry.sol#366-371) uses timestamp for comparisons
+	Dangerous comparisons:
+	- b.refillPerSecond != 0 && elapsed > missing / b.refillPerSecond (src/FerrataRegistry.sol#369)
+FerrataRegistry._updateBucket(FerrataVault.Bucket,uint256,uint256) (src/FerrataRegistry.sol#410-417) uses timestamp for comparisons
+	Dangerous comparisons:
+	- level > capacity (src/FerrataRegistry.sol#412)
+FerrataVault.refund(uint64,address,address,uint8,bytes32,bytes32[32]) (src/FerrataVault.sol#707-733) uses timestamp for comparisons
+	Dangerous comparisons:
+	- block.timestamp < _refundsOpenAt() (src/FerrataVault.sol#719)
+FerrataVault.finalizeAttested(FerrataVault.Checkpoint) (src/FerrataVault.sol#799-807) uses timestamp for comparisons
+	Dangerous comparisons:
+	- block.timestamp < cand.submittedAt + _wait(cand) (src/FerrataVault.sol#802)
+FerrataVault._finalize(FerrataVault.Checkpoint,address) (src/FerrataVault.sol#811-846) uses timestamp for comparisons
+	Dangerous comparisons:
+	- previous == 0 || checkpoints[previous - 1].revoked (src/FerrataVault.sol#836)
+FerrataVault.setCheckpointsFrozen(bool) (src/FerrataVault.sol#973-978) uses timestamp for comparisons
+	Dangerous comparisons:
+	- until > block.timestamp (src/FerrataVault.sol#975)
+FerrataVault.retire() (src/FerrataVault.sol#995-1000) uses timestamp for comparisons
+	Dangerous comparisons:
+	- msg.sender != freezeAuthority && block.timestamp < retireOpensAt() (src/FerrataVault.sol#996)
+FerrataVault.retireOpensAt() (src/FerrataVault.sol#1007-1015) uses timestamp for comparisons
+	Dangerous comparisons:
+	- checkpointsFrozenUntil > from (src/FerrataVault.sol#1009)
+	- sunsetOpens < opensAt (src/FerrataVault.sol#1013)
+FerrataVault.pauseCheckpoints() (src/FerrataVault.sol#1034-1039) uses timestamp for comparisons
+	Dangerous comparisons:
+	- until > checkpointsFrozenUntil (src/FerrataVault.sol#1037)
+FerrataVault.revokeFrom(uint256) (src/FerrataVault.sol#1045-1060) uses timestamp for comparisons
+	Dangerous comparisons:
+	- sunsetLeafCountSet && sunsetSetAt >= index (src/FerrataVault.sol#1053)
+FerrataVault.burnRootStatus(bytes32) (src/FerrataVault.sol#1144-1148) uses timestamp for comparisons
+	Dangerous comparisons:
+	- entry == 0 || checkpoints[entry - 1].revoked (src/FerrataVault.sol#1146)
+FerrataVault._recordBeacon() (src/FerrataVault.sol#1256-1265) uses timestamp for comparisons
+	Dangerous comparisons:
+	- index != 0 && _lastBeaconBlock == block.number (src/FerrataVault.sol#1258)
+FerrataVault._checkRelease(FerrataVault.ReleaseRequest) (src/FerrataVault.sol#1357-1378) uses timestamp for comparisons
+	Dangerous comparisons:
+	- block.timestamp < opensAt (src/FerrataVault.sol#1373)
+FerrataVault._feesInForce(address) (src/FerrataVault.sol#1440-1447) uses timestamp for comparisons
+	Dangerous comparisons:
+	- pendingAt != 0 && block.timestamp >= pendingAt (src/FerrataVault.sol#1444)
+FerrataVault._frozen(uint256) (src/FerrataVault.sol#1510-1512) uses timestamp for comparisons
+	Dangerous comparisons:
+	- block.timestamp < until (src/FerrataVault.sol#1511)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#block-timestamp
+
+Detector: assembly
+FerrataRegistry.claimOwed(mapping(address => mapping(address => uint256)),mapping(address => uint256),address) (src/FerrataRegistry.sol#276-295) uses assembly
+	- INLINE ASM (src/FerrataRegistry.sol#288-290)
+FerrataRegistry._store(bytes32,bytes32) (src/FerrataRegistry.sol#584-588) uses assembly
+	- INLINE ASM (src/FerrataRegistry.sol#585-587)
+FerrataRegistry._depositRoot() (src/FerrataRegistry.sol#595-599) uses assembly
+	- INLINE ASM (src/FerrataRegistry.sol#596-598)
+FerrataRegistry._leafCount() (src/FerrataRegistry.sol#601-605) uses assembly
+	- INLINE ASM (src/FerrataRegistry.sol#602-604)
+FerrataVault._trySendEth(address,uint256) (src/FerrataVault.sol#1452-1456) uses assembly
+	- INLINE ASM (src/FerrataVault.sol#1453-1455)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#assembly-usage
+
+Detector: cyclomatic-complexity
+FerrataVault.constructor(FerrataVault.Deployment) (src/FerrataVault.sol#578-657) has a high cyclomatic complexity (18).
+FerrataVault._checkRelease(FerrataVault.ReleaseRequest) (src/FerrataVault.sol#1357-1378) has a high cyclomatic complexity (12).
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#cyclomatic-complexity
+
+Detector: unused-state
+FerrataVault.DEPOSIT_ROOT_SLOT (src/FerrataVault.sol#212) is never used in FerrataVault (src/FerrataVault.sol#27-1534)
+FerrataVault.NEXT_LEAF_INDEX_SLOT (src/FerrataVault.sol#214) is never used in FerrataVault (src/FerrataVault.sol#27-1534)
+FerrataVault.LEZ_CONFIG_ID_SLOT (src/FerrataVault.sol#216) is never used in FerrataVault (src/FerrataVault.sol#27-1534)
+FerrataVault.ROLE_TIMELOCK (src/FerrataVault.sol#227) is never used in FerrataVault (src/FerrataVault.sol#27-1534)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#unused-state-variable
+
+Detector: immutable-states
+FerrataVault.storedLezConfigId (src/FerrataVault.sol#286) should be immutable 
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#state-variables-that-could-be-declared-immutable
+. analyzed (10 contracts with 102 detectors), 37 result(s) found

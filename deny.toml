@@ -34,6 +34,13 @@ allow = [
     "OpenSSL",
 ]
 
+# MPL-2.0 is file-level copyleft: using these crates unmodified as dependencies keeps the workspace's licence
+# (triage: notes/reviews/security/tools-2026-11-11.md). Allowed for these two crates only.
+exceptions = [
+    { allow = ["MPL-2.0"], crate = "attohttpc" },
+    { allow = ["MPL-2.0"], crate = "option-ext" },
+]
+
 [licenses.private]
 ignore = true
 
@@ -41,4 +48,16 @@ ignore = true
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-allow-git = []
+# Git dependencies, each pinned to a commit in the lockfiles: Logos (the platform Ferrata targets: LEZ, the
+# Logos Blockchain node, its circuits, Overwatch, sponges, rapidsnark), what they pull in (jellyfish,
+# spongefish, keycard-rs), and Helios (the root workspace's differential test oracle, a dev-dependency).
+allow-git = [
+    "https://github.com/EspressoSystems/jellyfish",
+    "https://github.com/EspressoSystems/jellyfish.git",
+    "https://github.com/arkworks-rs/spongefish.git",
+    "https://github.com/keycard-tech/keycard-rs",
+    "https://github.com/a16z/helios",
+]
+
+[sources.allow-org]
+github = ["logos-blockchain", "logos-co"]

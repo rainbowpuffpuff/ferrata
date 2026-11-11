@@ -1,0 +1,676 @@
+{
+  "files_summary": {
+    "total_source_units": 4,
+    "total_sloc": 1531
+  },
+  "files_details": {
+    "files_details": [
+      {
+        "file_path": "src/FerrataRegistry.sol",
+        "n_sloc": 476
+      },
+      {
+        "file_path": "src/FerrataVault.sol",
+        "n_sloc": 1047
+      },
+      {
+        "file_path": "src/interfaces/IEmergencyStop.sol",
+        "n_sloc": 4
+      },
+      {
+        "file_path": "src/interfaces/IRiscZeroVerifier.sol",
+        "n_sloc": 4
+      }
+    ]
+  },
+  "issue_count": {
+    "high": 5,
+    "low": 12
+  },
+  "high_issues": {
+    "issues": [
+      {
+        "title": "`abi.encodePacked()` Hash Collision",
+        "description": "abi.encodePacked() should not be used with dynamic types when passing the result to a hash function such as `keccak256()`. Use `abi.encode()` instead which will pad items to 32 bytes, preventing hash collisions: https://docs.soliditylang.org/en/v0.8.13/abi-spec.html#non-standard-packed-mode. (e.g. `abi.encodePacked(0x123,0x456)` => `0x123456` => `abi.encodePacked(0x1,0x23456)`, but `abi.encode(0x123,0x456)` => `0x0...1230...456`). Unless there is a compelling reason, `abi.encode` should be preferred. If there is only one argument to `abi.encodePacked()` it can often be cast to `bytes()` or `bytes32()` instead: https://ethereum.stackexchange.com/questions/30912/how-to-compare-strings-in-solidity#answer-82739. If all arguments are strings and or bytes, `bytes.concat()` should be used instead.",
+        "detector_name": "abi-encode-packed-hash-collision",
+        "instances": [
+          {
+            "contract_path": "src/FerrataRegistry.sol",
+            "line_no": 533,
+            "src": "28377:16",
+            "src_char": "28359:16"
+          },
+          {
+            "contract_path": "src/FerrataRegistry.sol",
+            "line_no": 557,
+            "src": "29444:16",
+            "src_char": "29404:16"
+          },
+          {
+            "contract_path": "src/FerrataRegistry.sol",
+            "line_no": 581,
+            "src": "30390:16",
+            "src_char": "30346:16"
+          }
+        ]
+      },
+      {
+        "title": "Contract locks Ether without a withdraw function",
+        "description": "It appears that the contract includes a payable function to accept Ether but lacks a corresponding function to withdraw it, which leads to the Ether being locked in the contract. To resolve this issue, please implement a public or external function that allows for the withdrawal of Ether from the contract.",
+        "detector_name": "contract-locks-ether",
+        "instances": [
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 27,
+            "src": "2105:12",
+            "src_char": "2105:12"
+          }
+        ]
+      },
+      {
+        "title": "Reentrancy: State change after external call",
+        "description": "Changing state after an external call can lead to re-entrancy attacks.Use the checks-effects-interactions pattern to avoid this issue.",
+        "detector_name": "reentrancy-state-change",
+        "instances": [
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 602,
+            "src": "29844:190",
+            "src_char": "29835:190",
+            "hint": "State is changed at: `verifier = d.verifier`, `checkpointImageId = d.checkpointImageId`, `releaseImageId = d.releaseImageId`, `lezConfigId = d.lezConfigId`, `storedLezConfigId = d.lezConfigId`, `genesisState = d.genesisState`, `nMin = d.nMin`, `tMin = d.tMin`, `deltaFloor = d.deltaFloor`, `revokeWindow = d.revokeWindow`, `maxFreeze = d.maxFreeze`, `turnSeconds = d.turnSeconds`, `minReleaseDelay = d.minReleaseDelay`, `mode = d.mode`, `releaseCapFloor = d.releaseCapFloor.capacity`, `releaseRefillFloor = d.releaseCapFloor.refillPerSecond`, `feeRecipient = d.feeRecipient`, `_keylessSpan = (uint256(d.tMin) - 1) * d.turnSeconds + KEYLESS_RETIREMENT`, `depositRoot = emptySubtree`, `finalState = d.genesisState`, `delta = d.initialDelta`, `admin = d.admin`, `freezeAuthority = d.freezeAuthority`, `watchers = d.watchers`, `keylessFrom = uint64(block.timestamp)`"
+          },
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 761,
+            "src": "38514:48",
+            "src_char": "38502:48",
+            "hint": "State is changed at: `candidates[c.newState] = Candidate({\n            journalDigest: digest,\n            tipHash: c.tipHash,\n            tipId: c.tipId,\n            t: c.t,\n            submittedAt: uint48(block.timestamp),\n            deltaAtSubmit: uint32(delta),\n            epoch: uint64(epoch),\n            prover: msg.sender\n        })`, `keylessFrom = uint64(block.timestamp)`"
+          },
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 861,
+            "src": "44032:71",
+            "src_char": "44019:71",
+            "hint": "State is changed at: `nullifierUsed[r.nullifier] = true`, `escrowed[r.token] -= amount`"
+          }
+        ]
+      },
+      {
+        "title": "Unsafe Casting of integers",
+        "description": "Downcasting int/uints in Solidity can be unsafe due to the potential for data loss and unintended behavior.When downcasting a larger integer type to a smaller one (e.g., uint256 to uint128), the value may exceed the range of the target type,leading to truncation and loss of significant digits. Use OpenZeppelin's SafeCast library to safely downcast integers.",
+        "detector_name": "unsafe-casting",
+        "instances": [
+          {
+            "contract_path": "src/FerrataRegistry.sol",
+            "line_no": 139,
+            "src": "8032:13",
+            "src_char": "8032:13"
+          },
+          {
+            "contract_path": "src/FerrataRegistry.sol",
+            "line_no": 560,
+            "src": "29536:13",
+            "src_char": "29496:13"
+          },
+          {
+            "contract_path": "src/FerrataRegistry.sol",
+            "line_no": 564,
+            "src": "29657:8",
+            "src_char": "29617:8"
+          },
+          {
+            "contract_path": "src/FerrataRegistry.sol",
+            "line_no": 568,
+            "src": "29795:13",
+            "src_char": "29755:13"
+          }
+        ]
+      },
+      {
+        "title": "Weak Randomness",
+        "description": "The use of keccak256 hash functions on predictable values like block.timestamp, block.number, or similar data, including modulo operations on these values, should be avoided for generating randomness, as they are easily predictable and manipulable. The `PREVRANDAO` opcode also should not be used as a source of randomness. Instead, utilize Chainlink VRF for cryptographically secure and provably random values to ensure protocol integrity.",
+        "detector_name": "weak-randomness",
+        "instances": [
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 1262,
+            "src": "65728:68",
+            "src_char": "65709:68"
+          },
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 1262,
+            "src": "65749:16",
+            "src_char": "65730:16"
+          }
+        ]
+      }
+    ]
+  },
+  "low_issues": {
+    "issues": [
+      {
+        "title": "Costly operations inside loop",
+        "description": "Invoking `SSTORE` operations in loops may waste gas. Use a local variable to hold the loop computation result.",
+        "detector_name": "costly-loop",
+        "instances": [
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 1231,
+            "src": "64324:439",
+            "src_char": "64306:439"
+          }
+        ]
+      },
+      {
+        "title": "Incorrect Order of Division and Multiplication",
+        "description": "Division operations followed directly by multiplication operations can lead to precision loss due to the way integer arithmetic is handled in Solidity./\n        Consider Multiplication before Division.",
+        "detector_name": "division-before-multiplication",
+        "instances": [
+          {
+            "contract_path": "src/FerrataRegistry.sol",
+            "line_no": 472,
+            "src": "25028:22",
+            "src_char": "25028:22"
+          }
+        ]
+      },
+      {
+        "title": "Internal Function Used Only Once",
+        "description": "Instead of separating the logic into a separate function, consider inlining the logic into the calling function. This can reduce the number of function calls and improve readability.",
+        "detector_name": "internal-function-used-once",
+        "instances": [
+          {
+            "contract_path": "src/FerrataRegistry.sol",
+            "line_no": 366,
+            "src": "19614:12",
+            "src_char": "19614:12"
+          }
+        ]
+      },
+      {
+        "title": "Literal Instead of Constant",
+        "description": "Define and use `constant` variables instead of using literals. If the same constant literal value is used multiple times, create a constant state variable and reference it throughout the contract.",
+        "detector_name": "literal-instead-of-constant",
+        "instances": [
+          {
+            "contract_path": "src/FerrataRegistry.sol",
+            "line_no": 158,
+            "src": "9152:2",
+            "src_char": "9152:2"
+          },
+          {
+            "contract_path": "src/FerrataRegistry.sol",
+            "line_no": 166,
+            "src": "9725:2",
+            "src_char": "9725:2"
+          },
+          {
+            "contract_path": "src/FerrataRegistry.sol",
+            "line_no": 193,
+            "src": "11214:3",
+            "src_char": "11214:3"
+          },
+          {
+            "contract_path": "src/FerrataRegistry.sol",
+            "line_no": 300,
+            "src": "16043:1",
+            "src_char": "16043:1"
+          },
+          {
+            "contract_path": "src/FerrataRegistry.sol",
+            "line_no": 315,
+            "src": "16755:1",
+            "src_char": "16755:1"
+          },
+          {
+            "contract_path": "src/FerrataRegistry.sol",
+            "line_no": 322,
+            "src": "17102:1",
+            "src_char": "17102:1"
+          },
+          {
+            "contract_path": "src/FerrataRegistry.sol",
+            "line_no": 441,
+            "src": "23299:2",
+            "src_char": "23299:2"
+          },
+          {
+            "contract_path": "src/FerrataRegistry.sol",
+            "line_no": 442,
+            "src": "23330:2",
+            "src_char": "23330:2"
+          },
+          {
+            "contract_path": "src/FerrataRegistry.sol",
+            "line_no": 444,
+            "src": "23397:2",
+            "src_char": "23397:2"
+          },
+          {
+            "contract_path": "src/FerrataRegistry.sol",
+            "line_no": 520,
+            "src": "27618:3",
+            "src_char": "27618:3"
+          },
+          {
+            "contract_path": "src/FerrataRegistry.sol",
+            "line_no": 521,
+            "src": "27688:3",
+            "src_char": "27688:3"
+          },
+          {
+            "contract_path": "src/FerrataRegistry.sol",
+            "line_no": 577,
+            "src": "30264:3",
+            "src_char": "30220:3"
+          },
+          {
+            "contract_path": "src/FerrataRegistry.sol",
+            "line_no": 578,
+            "src": "30308:3",
+            "src_char": "30264:3"
+          },
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 1127,
+            "src": "58884:3",
+            "src_char": "58866:3"
+          },
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 1127,
+            "src": "58919:3",
+            "src_char": "58901:3"
+          },
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 1207,
+            "src": "62942:3",
+            "src_char": "62924:3"
+          },
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 1432,
+            "src": "74890:3",
+            "src_char": "74869:3"
+          }
+        ]
+      },
+      {
+        "title": "Local Variable Shadows State Variable",
+        "description": "Rename the local variable that shadows another state variable.",
+        "detector_name": "local-variable-shadowing",
+        "instances": [
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 54,
+            "src": "3019:8",
+            "src_char": "3019:8"
+          },
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 55,
+            "src": "3119:17",
+            "src_char": "3118:17"
+          },
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 56,
+            "src": "3154:14",
+            "src_char": "3153:14"
+          },
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 57,
+            "src": "3186:11",
+            "src_char": "3185:11"
+          },
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 58,
+            "src": "3215:12",
+            "src_char": "3214:12"
+          },
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 59,
+            "src": "3306:4",
+            "src_char": "3305:4"
+          },
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 60,
+            "src": "3392:4",
+            "src_char": "3391:4"
+          },
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 61,
+            "src": "3478:10",
+            "src_char": "3477:10"
+          },
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 63,
+            "src": "3578:12",
+            "src_char": "3577:12"
+          },
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 64,
+            "src": "3679:9",
+            "src_char": "3678:9"
+          },
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 65,
+            "src": "3758:11",
+            "src_char": "3756:11"
+          },
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 66,
+            "src": "3880:15",
+            "src_char": "3878:15"
+          },
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 67,
+            "src": "3988:5",
+            "src_char": "3986:5"
+          },
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 68,
+            "src": "4011:15",
+            "src_char": "4009:15"
+          },
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 71,
+            "src": "4169:4",
+            "src_char": "4167:4"
+          },
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 72,
+            "src": "4281:8",
+            "src_char": "4279:8"
+          },
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 73,
+            "src": "4396:15",
+            "src_char": "4394:15"
+          },
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 74,
+            "src": "4506:12",
+            "src_char": "4504:12"
+          },
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 80,
+            "src": "4810:4",
+            "src_char": "4808:4"
+          },
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 81,
+            "src": "4831:4",
+            "src_char": "4829:4"
+          },
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 194,
+            "src": "10023:8",
+            "src_char": "10019:8"
+          },
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 195,
+            "src": "10049:15",
+            "src_char": "10045:15"
+          }
+        ]
+      },
+      {
+        "title": "PUSH0 Opcode",
+        "description": "Solc compiler version 0.8.20 switches the default target EVM version to Shanghai, which means that the generated bytecode will include PUSH0 opcodes. Be sure to select the appropriate EVM version in case you intend to deploy on a chain other than mainnet like L2 chains that may not support PUSH0, otherwise deployment of your contracts will fail.",
+        "detector_name": "push-zero-opcode",
+        "instances": [
+          {
+            "contract_path": "src/FerrataRegistry.sol",
+            "line_no": 2,
+            "src": "46:24",
+            "src_char": "46:24"
+          },
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 2,
+            "src": "46:24",
+            "src_char": "46:24"
+          },
+          {
+            "contract_path": "src/interfaces/IEmergencyStop.sol",
+            "line_no": 2,
+            "src": "46:24",
+            "src_char": "46:24"
+          },
+          {
+            "contract_path": "src/interfaces/IRiscZeroVerifier.sol",
+            "line_no": 2,
+            "src": "46:24",
+            "src_char": "46:24"
+          }
+        ]
+      },
+      {
+        "title": "State Change Without Event",
+        "description": "There are state variable changes in this function but no event is emitted. Consider emitting an event to enable offchain indexers to track the changes.",
+        "detector_name": "state-change-without-event",
+        "instances": [
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 1092,
+            "src": "57299:10",
+            "src_char": "57281:10"
+          }
+        ]
+      },
+      {
+        "title": "Address State Variable Set Without Checks",
+        "description": "Check for `address(0)` when assigning values to address state variables.",
+        "detector_name": "state-no-address-check",
+        "instances": [
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 1069,
+            "src": "56074:23",
+            "src_char": "56056:23"
+          }
+        ]
+      },
+      {
+        "title": "State Variable Could Be Immutable",
+        "description": "State variables that are only changed in the constructor should be declared immutable to save gas. Add the `immutable` attribute to state variables that are only changed in the constructor",
+        "detector_name": "state-variable-could-be-immutable",
+        "instances": [
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 286,
+            "src": "15533:17",
+            "src_char": "15528:17"
+          },
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 353,
+            "src": "19500:8",
+            "src_char": "19491:8"
+          }
+        ]
+      },
+      {
+        "title": "Unchecked Return",
+        "description": "Function returns a value but it is ignored. Consider checking the return value.",
+        "detector_name": "unchecked-return",
+        "instances": [
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 915,
+            "src": "47252:19",
+            "src_char": "47239:19"
+          }
+        ]
+      },
+      {
+        "title": "Unspecific Solidity Pragma",
+        "description": "Consider using a specific version of Solidity in your contracts instead of a wide version. For example, instead of `pragma solidity ^0.8.0;`, use `pragma solidity 0.8.0;`",
+        "detector_name": "unspecific-solidity-pragma",
+        "instances": [
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 2,
+            "src": "46:24",
+            "src_char": "46:24"
+          },
+          {
+            "contract_path": "src/interfaces/IEmergencyStop.sol",
+            "line_no": 2,
+            "src": "46:24",
+            "src_char": "46:24"
+          },
+          {
+            "contract_path": "src/interfaces/IRiscZeroVerifier.sol",
+            "line_no": 2,
+            "src": "46:24",
+            "src_char": "46:24"
+          }
+        ]
+      },
+      {
+        "title": "Unused State Variable",
+        "description": "State variable appears to be unused. No analysis has been performed to see if any inline assembly references it. Consider removing this unused variable.",
+        "detector_name": "unused-state-variable",
+        "instances": [
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 212,
+            "src": "10729:17",
+            "src_char": "10725:17"
+          },
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 214,
+            "src": "10863:20",
+            "src_char": "10859:20"
+          },
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 216,
+            "src": "11039:18",
+            "src_char": "11035:18"
+          },
+          {
+            "contract_path": "src/FerrataVault.sol",
+            "line_no": 227,
+            "src": "11805:13",
+            "src_char": "11801:13"
+          }
+        ]
+      }
+    ]
+  },
+  "detectors_used": [
+    "abi-encode-packed-hash-collision",
+    "arbitrary-transfer-from",
+    "assert-state-change",
+    "block-timestamp-deadline",
+    "boolean-equality",
+    "builtin-symbol-shadowing",
+    "centralization-risk",
+    "constant-function-changes-state",
+    "constant-function-contains-assembly",
+    "contract-locks-ether",
+    "costly-loop",
+    "dangerous-unary-operator",
+    "dead-code",
+    "delegate-call-unchecked-address",
+    "delegatecall-in-loop",
+    "delete-nested-mapping",
+    "deprecated-oz-function",
+    "division-before-multiplication",
+    "dynamic-array-length-assignment",
+    "ecrecover",
+    "empty-block",
+    "empty-require-revert",
+    "enumerable-loop-removal",
+    "eth-send-unchecked-address",
+    "experimental-encoder",
+    "function-initializing-state",
+    "function-pointer-in-constructor",
+    "function-selector-collision",
+    "inconsistent-type-names",
+    "incorrect-caret-operator",
+    "incorrect-erc20-interface",
+    "incorrect-erc721-interface",
+    "incorrect-shift-order",
+    "incorrect-use-of-modifier",
+    "internal-function-used-once",
+    "large-numeric-literal",
+    "literal-instead-of-constant",
+    "local-variable-shadowing",
+    "missing-inheritance",
+    "misused-boolean",
+    "modifier-used-only-once",
+    "msg-value-in-loop",
+    "multiple-constructors",
+    "multiple-placeholders",
+    "nested-struct-in-mapping",
+    "non-reentrant-not-first",
+    "out-of-order-retryable",
+    "pre-declared-local-variable-usage",
+    "push-zero-opcode",
+    "redundant-statement",
+    "reentrancy-state-change",
+    "require-revert-in-loop",
+    "return-bomb",
+    "reused-contract-name",
+    "rtlo",
+    "selfdestruct",
+    "signed-integer-storage-array",
+    "solmate-safe-transfer-lib",
+    "state-change-without-event",
+    "state-no-address-check",
+    "state-variable-could-be-constant",
+    "state-variable-could-be-immutable",
+    "state-variable-init-order",
+    "state-variable-read-external",
+    "state-variable-shadowing",
+    "storage-array-length-not-cached",
+    "storage-array-memory-edit",
+    "strict-equality-contract-balance",
+    "tautological-compare",
+    "tautology-or-contradiction",
+    "todo",
+    "tx-origin-used-for-auth",
+    "unchecked-low-level-call",
+    "unchecked-return",
+    "unchecked-send",
+    "uninitialized-local-variable",
+    "unprotected-initializer",
+    "unsafe-casting",
+    "unsafe-erc20-operation",
+    "unsafe-oz-erc721-mint",
+    "unspecific-solidity-pragma",
+    "unused-error",
+    "unused-import",
+    "unused-public-function",
+    "unused-state-variable",
+    "void-constructor",
+    "weak-randomness",
+    "yul-return"
+  ]
+}

@@ -1,0 +1,2219 @@
+=== Cargo.lock
+      Loaded 1458 security advisories (from ~/.cargo/advisory-db)
+warning: directory ~/.cargo/advisory-db is locked, waiting for up to 300 seconds for it to become available
+    Scanning Cargo.lock for vulnerabilities (370 crate dependencies)
+Crate:     crypto-bigint
+Version:   0.5.5
+Title:     Multiple timing variability issues in operations intended to be constant-time
+Date:      2026-10-23
+ID:        RUSTSEC-2026-0387
+URL:       https://github.com/RustCrypto/crypto-bigint/pull/1365
+Solution:  Upgrade to >=0.7.6 (patched)
+
+Crate:     derivative
+Version:   2.2.0
+Warning:   unmaintained
+Title:     `derivative` is unmaintained; consider using an alternative
+Date:      2024-06-26
+ID:        RUSTSEC-2024-0388
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0388
+Solution:  No fixed upgrade is available!
+
+Crate:     paste
+Version:   1.0.15
+Warning:   unmaintained
+Title:     paste - no longer maintained
+Date:      2024-10-07
+ID:        RUSTSEC-2024-0436
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0436
+Solution:  No fixed upgrade is available!
+
+Crate:     unsafe-libyaml
+Version:   0.2.11
+Warning:   unmaintained
+Title:     unsafe-libyaml is unmaintained
+Date:      2024-03-25
+ID:        RUSTSEC-2024-0449
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0449
+Solution:  No fixed upgrade is available!
+
+error: 1 vulnerability found!
+warning: 3 allowed warnings found
+=== bench/Cargo.lock
+      Loaded 1458 security advisories (from ~/.cargo/advisory-db)
+    Scanning bench/Cargo.lock for vulnerabilities (284 crate dependencies)
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ahash
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-bn254
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-crypto-primitives
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-crypto-primitives-macros
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-ec
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-groth16
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-poly
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-r1cs-std
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-relations
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-snark
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: arraydeque
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: bincode
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: bit-vec
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: blake2
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: block
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: bytemuck
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: bytemuck_derive
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: cargo-platform
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: cargo_metadata
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: cobs
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: core-graphics-types
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: derive_builder
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: derive_builder_core
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: derive_builder_macro
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: dirs
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: dirs-sys
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: docker-generate
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: downcast-rs
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: elf
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: embedded-io
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: embedded-io
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: foreign-types
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: foreign-types-macros
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: foreign-types-shared
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: hashlink
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: hex-literal
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: include_bytes_aligned
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: lazy-regex
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: lazy-regex-proc_macros
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: libredox
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: malloc_buf
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: merlin
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: metal
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: no_std_strings
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: num-bigint-dig
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: num-iter
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: num_enum
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: num_enum_derive
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: objc
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: option-ext
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: pem-rfc7468
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: pkcs1
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: postcard
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: prost
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: prost-derive
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: redox_users
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-binfmt
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-build
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-circuit-keccak
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-circuit-recursion
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-circuit-rv32im
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-core
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-groth16
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-zkos-v1compat
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-zkp
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-zkvm
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-zkvm-platform
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: rrs-lib
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: rsa
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: rzup
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: spin
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: stability
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: toml_write
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: yaml-rust2
+Crate:     rsa
+Version:   0.9.10
+Title:     Marvin Attack: potential key recovery through timing sidechannels
+Date:      2023-11-22
+ID:        RUSTSEC-2023-0071
+URL:       https://rustsec.org/advisories/RUSTSEC-2023-0071
+Severity:  5.9 (medium)
+Solution:  Upgrade to >=0.10.0 (patched)
+
+Crate:     tracing-subscriber
+Version:   0.2.25
+Title:     Logging user input may result in poisoning logs with ANSI escape sequences
+Date:      2025-08-29
+ID:        RUSTSEC-2025-0055
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0055
+Solution:  Upgrade to >=0.3.20 (patched)
+
+Crate:     bincode
+Version:   1.3.3
+Warning:   unmaintained
+Title:     Bincode is unmaintained
+Date:      2025-12-16
+ID:        RUSTSEC-2025-0141
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0141
+Solution:  No fixed upgrade is available!
+
+Crate:     derivative
+Version:   2.2.0
+Warning:   unmaintained
+Title:     `derivative` is unmaintained; consider using an alternative
+Date:      2024-06-26
+ID:        RUSTSEC-2024-0388
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0388
+Solution:  No fixed upgrade is available!
+
+Crate:     paste
+Version:   1.0.15
+Warning:   unmaintained
+Title:     paste - no longer maintained
+Date:      2024-10-07
+ID:        RUSTSEC-2024-0436
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0436
+Solution:  No fixed upgrade is available!
+
+error: 2 vulnerabilities found!
+warning: 3 allowed warnings found
+=== bench/exec/Cargo.lock
+      Loaded 1458 security advisories (from ~/.cargo/advisory-db)
+    Scanning bench/exec/Cargo.lock for vulnerabilities (300 crate dependencies)
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ahash
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-bn254
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-crypto-primitives
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-crypto-primitives-macros
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-ec
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-groth16
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-poly
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-r1cs-std
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-relations
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-snark
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: arraydeque
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: bincode
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: bit-vec
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: blake2
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: block
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: bytemuck
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: bytemuck_derive
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: cargo-platform
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: cargo_metadata
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: cobs
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: core-graphics-types
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: derive_builder
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: derive_builder_core
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: derive_builder_macro
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: dirs
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: dirs-sys
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: docker-generate
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: downcast-rs
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: elf
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: embedded-io
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: embedded-io
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: foreign-types
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: foreign-types-macros
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: foreign-types-shared
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: hashlink
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: hex-literal
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: include_bytes_aligned
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: lazy-regex
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: lazy-regex-proc_macros
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: libredox
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: malloc_buf
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: merlin
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: metal
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: no_std_strings
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: num-bigint-dig
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: num-iter
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: num_enum
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: num_enum_derive
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: objc
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: option-ext
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: pem-rfc7468
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: pkcs1
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: postcard
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: prost
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: prost-derive
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: redox_users
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-binfmt
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-build
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-circuit-keccak
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-circuit-recursion
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-circuit-rv32im
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-core
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-groth16
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-zkos-v1compat
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-zkp
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-zkvm
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-zkvm-platform
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: rrs-lib
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: rsa
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: rzup
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: spin
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: stability
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: toml_write
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: yaml-rust2
+Crate:     rsa
+Version:   0.9.10
+Title:     Marvin Attack: potential key recovery through timing sidechannels
+Date:      2023-11-22
+ID:        RUSTSEC-2023-0071
+URL:       https://rustsec.org/advisories/RUSTSEC-2023-0071
+Severity:  5.9 (medium)
+Solution:  Upgrade to >=0.10.0 (patched)
+
+Crate:     tracing-subscriber
+Version:   0.2.25
+Title:     Logging user input may result in poisoning logs with ANSI escape sequences
+Date:      2025-08-29
+ID:        RUSTSEC-2025-0055
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0055
+Solution:  Upgrade to >=0.3.20 (patched)
+
+Crate:     bincode
+Version:   1.3.3
+Warning:   unmaintained
+Title:     Bincode is unmaintained
+Date:      2025-12-16
+ID:        RUSTSEC-2025-0141
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0141
+Solution:  No fixed upgrade is available!
+
+Crate:     derivative
+Version:   2.2.0
+Warning:   unmaintained
+Title:     `derivative` is unmaintained; consider using an alternative
+Date:      2024-06-26
+ID:        RUSTSEC-2024-0388
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0388
+Solution:  No fixed upgrade is available!
+
+Crate:     paste
+Version:   1.0.15
+Warning:   unmaintained
+Title:     paste - no longer maintained
+Date:      2024-10-07
+ID:        RUSTSEC-2024-0436
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0436
+Solution:  No fixed upgrade is available!
+
+Crate:     unsafe-libyaml
+Version:   0.2.11
+Warning:   unmaintained
+Title:     unsafe-libyaml is unmaintained
+Date:      2024-03-25
+ID:        RUSTSEC-2024-0449
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0449
+Solution:  No fixed upgrade is available!
+
+error: 2 vulnerabilities found!
+warning: 4 allowed warnings found
+=== bench/exec/guests/keccak-accel/Cargo.lock
+      Loaded 1458 security advisories (from ~/.cargo/advisory-db)
+warning: directory ~/.cargo/advisory-db is locked, waiting for up to 300 seconds for it to become available
+    Scanning bench/exec/guests/keccak-accel/Cargo.lock for vulnerabilities (158 crate dependencies)
+Crate:     ruint
+Version:   1.17.2
+Title:     Uint shift operations: incorrect overflow flags and truncated shift amounts
+Date:      2026-07-08
+ID:        RUSTSEC-2026-0220
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0220
+Solution:  Upgrade to >=1.20.0 (patched)
+
+Crate:     tracing-subscriber
+Version:   0.2.25
+Title:     Logging user input may result in poisoning logs with ANSI escape sequences
+Date:      2025-08-29
+ID:        RUSTSEC-2025-0055
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0055
+Solution:  Upgrade to >=0.3.20 (patched)
+
+Crate:     derivative
+Version:   2.2.0
+Warning:   unmaintained
+Title:     `derivative` is unmaintained; consider using an alternative
+Date:      2024-06-26
+ID:        RUSTSEC-2024-0388
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0388
+Solution:  No fixed upgrade is available!
+
+Crate:     paste
+Version:   1.0.15
+Warning:   unmaintained
+Title:     paste - no longer maintained
+Date:      2024-10-07
+ID:        RUSTSEC-2024-0436
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0436
+Solution:  No fixed upgrade is available!
+
+error: 2 vulnerabilities found!
+warning: 2 allowed warnings found
+=== bench/exec/guests/keccak-plain/Cargo.lock
+      Loaded 1458 security advisories (from ~/.cargo/advisory-db)
+warning: directory ~/.cargo/advisory-db is locked, waiting for up to 300 seconds for it to become available
+    Scanning bench/exec/guests/keccak-plain/Cargo.lock for vulnerabilities (158 crate dependencies)
+Crate:     ruint
+Version:   1.17.2
+Title:     Uint shift operations: incorrect overflow flags and truncated shift amounts
+Date:      2026-07-08
+ID:        RUSTSEC-2026-0220
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0220
+Solution:  Upgrade to >=1.20.0 (patched)
+
+Crate:     tracing-subscriber
+Version:   0.2.25
+Title:     Logging user input may result in poisoning logs with ANSI escape sequences
+Date:      2025-08-29
+ID:        RUSTSEC-2025-0055
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0055
+Solution:  Upgrade to >=0.3.20 (patched)
+
+Crate:     derivative
+Version:   2.2.0
+Warning:   unmaintained
+Title:     `derivative` is unmaintained; consider using an alternative
+Date:      2024-06-26
+ID:        RUSTSEC-2024-0388
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0388
+Solution:  No fixed upgrade is available!
+
+Crate:     paste
+Version:   1.0.15
+Warning:   unmaintained
+Title:     paste - no longer maintained
+Date:      2024-10-07
+ID:        RUSTSEC-2024-0436
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0436
+Solution:  No fixed upgrade is available!
+
+error: 2 vulnerabilities found!
+warning: 2 allowed warnings found
+=== bench/guests/blst-accel-v0314/Cargo.lock
+      Loaded 1458 security advisories (from ~/.cargo/advisory-db)
+    Scanning bench/guests/blst-accel-v0314/Cargo.lock for vulnerabilities (164 crate dependencies)
+Crate:     ruint
+Version:   1.17.2
+Title:     Uint shift operations: incorrect overflow flags and truncated shift amounts
+Date:      2026-07-08
+ID:        RUSTSEC-2026-0220
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0220
+Solution:  Upgrade to >=1.20.0 (patched)
+
+Crate:     tracing-subscriber
+Version:   0.2.25
+Title:     Logging user input may result in poisoning logs with ANSI escape sequences
+Date:      2025-08-29
+ID:        RUSTSEC-2025-0055
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0055
+Solution:  Upgrade to >=0.3.20 (patched)
+
+Crate:     derivative
+Version:   2.2.0
+Warning:   unmaintained
+Title:     `derivative` is unmaintained; consider using an alternative
+Date:      2024-06-26
+ID:        RUSTSEC-2024-0388
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0388
+Solution:  No fixed upgrade is available!
+
+Crate:     paste
+Version:   1.0.15
+Warning:   unmaintained
+Title:     paste - no longer maintained
+Date:      2024-10-07
+ID:        RUSTSEC-2024-0436
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0436
+Solution:  No fixed upgrade is available!
+
+error: 2 vulnerabilities found!
+warning: 2 allowed warnings found
+=== bench/guests/blst-accel/Cargo.lock
+      Loaded 1458 security advisories (from ~/.cargo/advisory-db)
+    Scanning bench/guests/blst-accel/Cargo.lock for vulnerabilities (165 crate dependencies)
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-bigint2
+Crate:     ruint
+Version:   1.17.2
+Title:     Uint shift operations: incorrect overflow flags and truncated shift amounts
+Date:      2026-07-08
+ID:        RUSTSEC-2026-0220
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0220
+Solution:  Upgrade to >=1.20.0 (patched)
+
+Crate:     tracing-subscriber
+Version:   0.2.25
+Title:     Logging user input may result in poisoning logs with ANSI escape sequences
+Date:      2025-08-29
+ID:        RUSTSEC-2025-0055
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0055
+Solution:  Upgrade to >=0.3.20 (patched)
+
+Crate:     derivative
+Version:   2.2.0
+Warning:   unmaintained
+Title:     `derivative` is unmaintained; consider using an alternative
+Date:      2024-06-26
+ID:        RUSTSEC-2024-0388
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0388
+Solution:  No fixed upgrade is available!
+
+Crate:     paste
+Version:   1.0.15
+Warning:   unmaintained
+Title:     paste - no longer maintained
+Date:      2024-10-07
+ID:        RUSTSEC-2024-0436
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0436
+Solution:  No fixed upgrade is available!
+
+error: 2 vulnerabilities found!
+warning: 2 allowed warnings found
+=== bench/guests/blst-plain/Cargo.lock
+      Loaded 1458 security advisories (from ~/.cargo/advisory-db)
+    Scanning bench/guests/blst-plain/Cargo.lock for vulnerabilities (164 crate dependencies)
+Crate:     ruint
+Version:   1.17.2
+Title:     Uint shift operations: incorrect overflow flags and truncated shift amounts
+Date:      2026-07-08
+ID:        RUSTSEC-2026-0220
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0220
+Solution:  Upgrade to >=1.20.0 (patched)
+
+Crate:     tracing-subscriber
+Version:   0.2.25
+Title:     Logging user input may result in poisoning logs with ANSI escape sequences
+Date:      2025-08-29
+ID:        RUSTSEC-2025-0055
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0055
+Solution:  Upgrade to >=0.3.20 (patched)
+
+Crate:     derivative
+Version:   2.2.0
+Warning:   unmaintained
+Title:     `derivative` is unmaintained; consider using an alternative
+Date:      2024-06-26
+ID:        RUSTSEC-2024-0388
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0388
+Solution:  No fixed upgrade is available!
+
+Crate:     paste
+Version:   1.0.15
+Warning:   unmaintained
+Title:     paste - no longer maintained
+Date:      2024-10-07
+ID:        RUSTSEC-2024-0436
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0436
+Solution:  No fixed upgrade is available!
+
+error: 2 vulnerabilities found!
+warning: 2 allowed warnings found
+=== bench/guests/nopatch/Cargo.lock
+      Loaded 1458 security advisories (from ~/.cargo/advisory-db)
+warning: directory ~/.cargo/advisory-db is locked, waiting for up to 300 seconds for it to become available
+    Scanning bench/guests/nopatch/Cargo.lock for vulnerabilities (164 crate dependencies)
+Crate:     ruint
+Version:   1.17.2
+Title:     Uint shift operations: incorrect overflow flags and truncated shift amounts
+Date:      2026-07-08
+ID:        RUSTSEC-2026-0220
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0220
+Solution:  Upgrade to >=1.20.0 (patched)
+
+Crate:     tracing-subscriber
+Version:   0.2.25
+Title:     Logging user input may result in poisoning logs with ANSI escape sequences
+Date:      2025-08-29
+ID:        RUSTSEC-2025-0055
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0055
+Solution:  Upgrade to >=0.3.20 (patched)
+
+Crate:     derivative
+Version:   2.2.0
+Warning:   unmaintained
+Title:     `derivative` is unmaintained; consider using an alternative
+Date:      2024-06-26
+ID:        RUSTSEC-2024-0388
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0388
+Solution:  No fixed upgrade is available!
+
+Crate:     paste
+Version:   1.0.15
+Warning:   unmaintained
+Title:     paste - no longer maintained
+Date:      2024-10-07
+ID:        RUSTSEC-2024-0436
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0436
+Solution:  No fixed upgrade is available!
+
+error: 2 vulnerabilities found!
+warning: 2 allowed warnings found
+=== bench/guests/zkcrypto-accel/Cargo.lock
+      Loaded 1458 security advisories (from ~/.cargo/advisory-db)
+warning: directory ~/.cargo/advisory-db is locked, waiting for up to 300 seconds for it to become available
+    Scanning bench/guests/zkcrypto-accel/Cargo.lock for vulnerabilities (165 crate dependencies)
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-bigint2
+Crate:     ruint
+Version:   1.17.2
+Title:     Uint shift operations: incorrect overflow flags and truncated shift amounts
+Date:      2026-07-08
+ID:        RUSTSEC-2026-0220
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0220
+Solution:  Upgrade to >=1.20.0 (patched)
+
+Crate:     tracing-subscriber
+Version:   0.2.25
+Title:     Logging user input may result in poisoning logs with ANSI escape sequences
+Date:      2025-08-29
+ID:        RUSTSEC-2025-0055
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0055
+Solution:  Upgrade to >=0.3.20 (patched)
+
+Crate:     derivative
+Version:   2.2.0
+Warning:   unmaintained
+Title:     `derivative` is unmaintained; consider using an alternative
+Date:      2024-06-26
+ID:        RUSTSEC-2024-0388
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0388
+Solution:  No fixed upgrade is available!
+
+Crate:     paste
+Version:   1.0.15
+Warning:   unmaintained
+Title:     paste - no longer maintained
+Date:      2024-10-07
+ID:        RUSTSEC-2024-0436
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0436
+Solution:  No fixed upgrade is available!
+
+error: 2 vulnerabilities found!
+warning: 2 allowed warnings found
+=== bench/guests/zkcrypto-plain/Cargo.lock
+      Loaded 1458 security advisories (from ~/.cargo/advisory-db)
+warning: directory ~/.cargo/advisory-db is locked, waiting for up to 300 seconds for it to become available
+    Scanning bench/guests/zkcrypto-plain/Cargo.lock for vulnerabilities (164 crate dependencies)
+Crate:     ruint
+Version:   1.17.2
+Title:     Uint shift operations: incorrect overflow flags and truncated shift amounts
+Date:      2026-07-08
+ID:        RUSTSEC-2026-0220
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0220
+Solution:  Upgrade to >=1.20.0 (patched)
+
+Crate:     tracing-subscriber
+Version:   0.2.25
+Title:     Logging user input may result in poisoning logs with ANSI escape sequences
+Date:      2025-08-29
+ID:        RUSTSEC-2025-0055
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0055
+Solution:  Upgrade to >=0.3.20 (patched)
+
+Crate:     derivative
+Version:   2.2.0
+Warning:   unmaintained
+Title:     `derivative` is unmaintained; consider using an alternative
+Date:      2024-06-26
+ID:        RUSTSEC-2024-0388
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0388
+Solution:  No fixed upgrade is available!
+
+Crate:     paste
+Version:   1.0.15
+Warning:   unmaintained
+Title:     paste - no longer maintained
+Date:      2024-10-07
+ID:        RUSTSEC-2024-0436
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0436
+Solution:  No fixed upgrade is available!
+
+error: 2 vulnerabilities found!
+warning: 2 allowed warnings found
+=== bridge/Cargo.lock
+      Loaded 1458 security advisories (from ~/.cargo/advisory-db)
+warning: directory ~/.cargo/advisory-db is locked, waiting for up to 300 seconds for it to become available
+    Scanning bridge/Cargo.lock for vulnerabilities (313 crate dependencies)
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: addchain
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: bit-set
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: directories
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ff_derive
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: matrixmultiply
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ndarray
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: num-complex
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: nvtx
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: puffin
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: quick-error
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: rawpointer
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-build-kernel
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-sys
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: rusty-fork
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: wait-timeout
+Crate:     rsa
+Version:   0.9.10
+Title:     Marvin Attack: potential key recovery through timing sidechannels
+Date:      2023-11-22
+ID:        RUSTSEC-2023-0071
+URL:       https://rustsec.org/advisories/RUSTSEC-2023-0071
+Severity:  5.9 (medium)
+Solution:  Upgrade to >=0.10.0 (patched)
+
+Crate:     tracing-subscriber
+Version:   0.2.25
+Title:     Logging user input may result in poisoning logs with ANSI escape sequences
+Date:      2025-08-29
+ID:        RUSTSEC-2025-0055
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0055
+Solution:  Upgrade to >=0.3.20 (patched)
+
+Crate:     bincode
+Version:   1.3.3
+Warning:   unmaintained
+Title:     Bincode is unmaintained
+Date:      2025-12-16
+ID:        RUSTSEC-2025-0141
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0141
+Solution:  No fixed upgrade is available!
+
+Crate:     derivative
+Version:   2.2.0
+Warning:   unmaintained
+Title:     `derivative` is unmaintained; consider using an alternative
+Date:      2024-06-26
+ID:        RUSTSEC-2024-0388
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0388
+Solution:  No fixed upgrade is available!
+
+Crate:     paste
+Version:   1.0.15
+Warning:   unmaintained
+Title:     paste - no longer maintained
+Date:      2024-10-07
+ID:        RUSTSEC-2024-0436
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0436
+Solution:  No fixed upgrade is available!
+
+error: 2 vulnerabilities found!
+warning: 3 allowed warnings found
+=== bridge/guests/Cargo.lock
+      Loaded 1458 security advisories (from ~/.cargo/advisory-db)
+warning: directory ~/.cargo/advisory-db is locked, waiting for up to 300 seconds for it to become available
+    Scanning bridge/guests/Cargo.lock for vulnerabilities (156 crate dependencies)
+Crate:     ruint
+Version:   1.17.2
+Title:     Uint shift operations: incorrect overflow flags and truncated shift amounts
+Date:      2026-07-08
+ID:        RUSTSEC-2026-0220
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0220
+Solution:  Upgrade to >=1.20.0 (patched)
+
+Crate:     tracing-subscriber
+Version:   0.2.25
+Title:     Logging user input may result in poisoning logs with ANSI escape sequences
+Date:      2025-08-29
+ID:        RUSTSEC-2025-0055
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0055
+Solution:  Upgrade to >=0.3.20 (patched)
+
+Crate:     derivative
+Version:   2.2.0
+Warning:   unmaintained
+Title:     `derivative` is unmaintained; consider using an alternative
+Date:      2024-06-26
+ID:        RUSTSEC-2024-0388
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0388
+Solution:  No fixed upgrade is available!
+
+Crate:     paste
+Version:   1.0.15
+Warning:   unmaintained
+Title:     paste - no longer maintained
+Date:      2024-10-07
+ID:        RUSTSEC-2024-0436
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0436
+Solution:  No fixed upgrade is available!
+
+error: 2 vulnerabilities found!
+warning: 2 allowed warnings found
+=== checkpoint/Cargo.lock
+      Loaded 1458 security advisories (from ~/.cargo/advisory-db)
+warning: directory ~/.cargo/advisory-db is locked, waiting for up to 300 seconds for it to become available
+    Scanning checkpoint/Cargo.lock for vulnerabilities (734 crate dependencies)
+Crate:     crypto-bigint
+Version:   0.5.5
+Title:     Multiple timing variability issues in operations intended to be constant-time
+Date:      2026-10-23
+ID:        RUSTSEC-2026-0387
+URL:       https://github.com/RustCrypto/crypto-bigint/pull/1365
+Solution:  Upgrade to >=0.7.6 (patched)
+
+Crate:     ctutils
+Version:   0.4.2
+Title:     Non-constant-time mask generation and `u128` comparisons
+Date:      2026-10-23
+ID:        RUSTSEC-2026-0385
+URL:       https://github.com/RustCrypto/utils/pull/1569
+Solution:  Upgrade to >=0.4.4 (patched)
+
+Crate:     hickory-proto
+Version:   0.25.2
+Title:     NSEC3 closest-encloser proof validation enters unbounded loop on cross-zone responses
+Date:      2026-05-01
+ID:        RUSTSEC-2026-0118
+URL:       https://github.com/hickory-dns/hickory-dns/pull/3597
+Solution:  Upgrade to >=0.26.0-beta.1 (unaffected)
+
+Crate:     hickory-proto
+Version:   0.25.2
+Title:     CPU exhaustion during message encoding due to O(n²) name compression
+Date:      2026-05-01
+ID:        RUSTSEC-2026-0119
+URL:       https://github.com/hickory-dns/hickory-dns/pull/3613
+Solution:  Upgrade to >=0.26.1 (patched)
+
+Crate:     hickory-proto
+Version:   0.25.2
+Title:     Panic on a malformed `alpn` value when parsing SVCB or HTTPS records from text
+Date:      2026-09-03
+ID:        RUSTSEC-2026-0487
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0487
+Solution:  Upgrade to >=0.26.2 (patched)
+
+Crate:     hickory-proto
+Version:   0.25.2
+Title:     Panic when an SVCB or HTTPS parameter value is a single quote character
+Date:      2026-09-03
+ID:        RUSTSEC-2026-0489
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0489
+Solution:  Upgrade to >=0.26.2 (patched)
+
+Crate:     hickory-proto
+Version:   0.25.2
+Title:     Zone file lexer panics on a token of 4096 or more characters
+Date:      2026-09-03
+ID:        RUSTSEC-2026-0490
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0490
+Solution:  Upgrade to >=0.26.2 (patched)
+
+Crate:     hickory-proto
+Version:   0.25.2
+Title:     Memory amplification from record counts in the DNS message header
+Date:      2026-09-03
+ID:        RUSTSEC-2026-0491
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0491
+Solution:  Upgrade to >=0.26.2 (patched)
+
+Crate:     libz-sys
+Version:   1.1.29
+Title:     libz-sys build script leaks environment variables in the build directory
+Date:      2026-10-28
+ID:        RUSTSEC-2026-0418
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0418
+Solution:  Upgrade to >=1.1.31 (patched)
+
+Crate:     rsa
+Version:   0.9.10
+Title:     Marvin Attack: potential key recovery through timing sidechannels
+Date:      2023-11-22
+ID:        RUSTSEC-2023-0071
+URL:       https://rustsec.org/advisories/RUSTSEC-2023-0071
+Severity:  5.9 (medium)
+Solution:  Upgrade to >=0.10.0 (patched)
+
+Crate:     tracing-subscriber
+Version:   0.2.25
+Title:     Logging user input may result in poisoning logs with ANSI escape sequences
+Date:      2025-08-29
+ID:        RUSTSEC-2025-0055
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0055
+Solution:  Upgrade to >=0.3.20 (patched)
+
+Crate:     zstd
+Version:   0.13.3
+Title:     Data from an abandoned stream leaks into the next stream on a reused context
+Date:      2026-10-16
+ID:        RUSTSEC-2026-0391
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0391
+Solution:  Upgrade to ^0.13.4 OR >=0.14.3 (patched)
+
+Crate:     zstd-safe
+Version:   7.2.4
+Title:     `Seekable::decompress` sets a `Vec` length beyond its capacity for offsets past the end
+Date:      2026-10-16
+ID:        RUSTSEC-2026-0398
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0398
+Solution:  Upgrade to ^7.4.0 OR >=8.2.0 (patched)
+
+Crate:     zstd-safe
+Version:   7.2.4
+Title:     Uninitialized memory exposed when streaming decompression of a legacy frame fails
+Date:      2026-10-16
+ID:        RUSTSEC-2026-0403
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0403
+Solution:  Upgrade to ^7.4.0 OR >=8.2.0 (patched)
+
+Crate:     zstd-sys
+Version:   2.0.16+zstd.1.5.7
+Title:     WebAssembly allocator shim corrupts memory on allocation failure
+Date:      2026-10-16
+ID:        RUSTSEC-2026-0410
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0410
+Solution:  Upgrade to >=2.1.2 (patched)
+
+Crate:     bincode
+Version:   1.3.3
+Warning:   unmaintained
+Title:     Bincode is unmaintained
+Date:      2025-12-16
+ID:        RUSTSEC-2025-0141
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0141
+Solution:  No fixed upgrade is available!
+
+Crate:     derivative
+Version:   2.2.0
+Warning:   unmaintained
+Title:     `derivative` is unmaintained; consider using an alternative
+Date:      2024-06-26
+ID:        RUSTSEC-2024-0388
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0388
+Solution:  No fixed upgrade is available!
+
+Crate:     paste
+Version:   1.0.15
+Warning:   unmaintained
+Title:     paste - no longer maintained
+Date:      2024-10-07
+ID:        RUSTSEC-2024-0436
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0436
+Solution:  No fixed upgrade is available!
+
+Crate:     proc-macro-error2
+Version:   2.0.1
+Warning:   unmaintained
+Title:     proc-macro-error2 is unmaintained
+Date:      2026-06-07
+ID:        RUSTSEC-2026-0173
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0173
+Solution:  No fixed upgrade is available!
+
+Crate:     unsafe-libyaml
+Version:   0.2.11
+Warning:   unmaintained
+Title:     unsafe-libyaml is unmaintained
+Date:      2024-03-25
+ID:        RUSTSEC-2024-0449
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0449
+Solution:  No fixed upgrade is available!
+
+Crate:     event-listener
+Version:   5.4.1
+Warning:   unsound
+Title:     `event-listener` allows `!Send` tags to cross thread boundaries via `StackSlot`
+Date:      2026-07-13
+ID:        RUSTSEC-2026-0221
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0221
+Solution:  Upgrade to >=5.4.2 (patched)
+
+Crate:     rustix
+Version:   1.1.4
+Warning:   unsound
+Title:     xattr functions mark unwritten bytes as initialized when given a zero-length buffer
+Date:      2026-10-27
+ID:        RUSTSEC-2026-0486
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0486
+Solution:  Upgrade to >=1.1.6 (patched)
+
+Crate:     zstd-safe
+Version:   7.2.4
+Warning:   unsound
+Title:     Use-after-free when changing a multithreaded context with an unfinished frame
+Date:      2026-10-16
+ID:        RUSTSEC-2026-0406
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0406
+Solution:  Upgrade to ^7.4.0 OR >=8.2.0 (patched)
+
+Crate:     zstd-safe
+Version:   7.2.4
+Warning:   unsound
+Title:     Use-after-free with `CParameter::StableInBuffer`
+Date:      2026-10-16
+ID:        RUSTSEC-2026-0395
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0395
+Solution:  Upgrade to ^7.4.0 OR >=8.2.0 (patched)
+
+Crate:     zstd-safe
+Version:   7.2.4
+Warning:   unsound
+Title:     `Seekable` reads a NULL or out-of-bounds seek table
+Date:      2026-10-16
+ID:        RUSTSEC-2026-0396
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0396
+Solution:  Upgrade to ^7.4.0 OR >=8.2.0 (patched)
+
+Crate:     zstd-safe
+Version:   7.2.4
+Warning:   unsound
+Title:     `OutBuffer::around_pos` exposes uninitialized memory
+Date:      2026-10-16
+ID:        RUSTSEC-2026-0397
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0397
+Solution:  Upgrade to ^7.4.0 OR >=8.2.0 (patched)
+
+Crate:     zstd-safe
+Version:   7.2.4
+Warning:   unsound
+Title:     Use-after-free through `init_using_cdict` and `init_using_ddict`
+Date:      2026-10-16
+ID:        RUSTSEC-2026-0399
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0399
+Solution:  Upgrade to ^7.4.0 OR >=8.2.0 (patched)
+
+Crate:     zstd-safe
+Version:   7.2.4
+Warning:   unsound
+Title:     Use-after-free of a dictionary after a one-shot call on a context with an open stream
+Date:      2026-10-16
+ID:        RUSTSEC-2026-0400
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0400
+Solution:  Upgrade to ^7.4.0 OR >=8.2.0 (patched)
+
+Crate:     zstd-safe
+Version:   7.2.4
+Warning:   unsound
+Title:     Out-of-bounds read in `train_from_buffer` when sample sizes overflow
+Date:      2026-10-16
+ID:        RUSTSEC-2026-0401
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0401
+Solution:  Upgrade to ^7.4.0 OR >=8.2.0 (patched)
+
+Crate:     zstd-safe
+Version:   7.2.4
+Warning:   unsound
+Title:     Heap buffer overflow in `CCtx::try_clone` on a multithreaded context
+Date:      2026-10-16
+ID:        RUSTSEC-2026-0402
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0402
+Solution:  Upgrade to ^7.4.0 OR >=8.2.0 (patched)
+
+Crate:     zstd-safe
+Version:   7.2.4
+Warning:   unsound
+Title:     Double free in `DCtx::try_clone`
+Date:      2026-10-16
+ID:        RUSTSEC-2026-0404
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0404
+Solution:  Upgrade to ^7.4.0 OR >=8.2.0 (patched)
+
+Crate:     zstd-safe
+Version:   7.2.4
+Warning:   unsound
+Title:     Out-of-bounds read with an out-of-range `InBuffer::pos`
+Date:      2026-10-16
+ID:        RUSTSEC-2026-0405
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0405
+Solution:  Upgrade to ^7.4.0 OR >=8.2.0 (patched)
+
+error: 15 vulnerabilities found!
+warning: 17 allowed warnings found
+=== checkpoint/guests-plain/Cargo.lock
+      Loaded 1458 security advisories (from ~/.cargo/advisory-db)
+warning: directory ~/.cargo/advisory-db is locked, waiting for up to 300 seconds for it to become available
+    Scanning checkpoint/guests-plain/Cargo.lock for vulnerabilities (162 crate dependencies)
+Crate:     ruint
+Version:   1.17.2
+Title:     Uint shift operations: incorrect overflow flags and truncated shift amounts
+Date:      2026-07-08
+ID:        RUSTSEC-2026-0220
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0220
+Solution:  Upgrade to >=1.20.0 (patched)
+
+Crate:     tracing-subscriber
+Version:   0.2.25
+Title:     Logging user input may result in poisoning logs with ANSI escape sequences
+Date:      2025-08-29
+ID:        RUSTSEC-2025-0055
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0055
+Solution:  Upgrade to >=0.3.20 (patched)
+
+Crate:     derivative
+Version:   2.2.0
+Warning:   unmaintained
+Title:     `derivative` is unmaintained; consider using an alternative
+Date:      2024-06-26
+ID:        RUSTSEC-2024-0388
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0388
+Solution:  No fixed upgrade is available!
+
+Crate:     paste
+Version:   1.0.15
+Warning:   unmaintained
+Title:     paste - no longer maintained
+Date:      2024-10-07
+ID:        RUSTSEC-2024-0436
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0436
+Solution:  No fixed upgrade is available!
+
+error: 2 vulnerabilities found!
+warning: 2 allowed warnings found
+=== checkpoint/guests/Cargo.lock
+      Loaded 1458 security advisories (from ~/.cargo/advisory-db)
+warning: directory ~/.cargo/advisory-db is locked, waiting for up to 300 seconds for it to become available
+    Scanning checkpoint/guests/Cargo.lock for vulnerabilities (166 crate dependencies)
+Crate:     ruint
+Version:   1.17.2
+Title:     Uint shift operations: incorrect overflow flags and truncated shift amounts
+Date:      2026-07-08
+ID:        RUSTSEC-2026-0220
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0220
+Solution:  Upgrade to >=1.20.0 (patched)
+
+Crate:     tracing-subscriber
+Version:   0.2.25
+Title:     Logging user input may result in poisoning logs with ANSI escape sequences
+Date:      2025-08-29
+ID:        RUSTSEC-2025-0055
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0055
+Solution:  Upgrade to >=0.3.20 (patched)
+
+Crate:     derivative
+Version:   2.2.0
+Warning:   unmaintained
+Title:     `derivative` is unmaintained; consider using an alternative
+Date:      2024-06-26
+ID:        RUSTSEC-2024-0388
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0388
+Solution:  No fixed upgrade is available!
+
+Crate:     paste
+Version:   1.0.15
+Warning:   unmaintained
+Title:     paste - no longer maintained
+Date:      2024-10-07
+ID:        RUSTSEC-2024-0436
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0436
+Solution:  No fixed upgrade is available!
+
+error: 2 vulnerabilities found!
+warning: 2 allowed warnings found
+=== cli/Cargo.lock
+      Loaded 1458 security advisories (from ~/.cargo/advisory-db)
+    Scanning cli/Cargo.lock for vulnerabilities (971 crate dependencies)
+Crate:     crypto-bigint
+Version:   0.5.5
+Title:     Multiple timing variability issues in operations intended to be constant-time
+Date:      2026-10-23
+ID:        RUSTSEC-2026-0387
+URL:       https://github.com/RustCrypto/crypto-bigint/pull/1365
+Solution:  Upgrade to >=0.7.6 (patched)
+
+Crate:     crypto-bigint
+Version:   0.7.5
+Title:     Multiple timing variability issues in operations intended to be constant-time
+Date:      2026-10-23
+ID:        RUSTSEC-2026-0387
+URL:       https://github.com/RustCrypto/crypto-bigint/pull/1365
+Solution:  Upgrade to >=0.7.6 (patched)
+
+Crate:     ctutils
+Version:   0.4.2
+Title:     Non-constant-time mask generation and `u128` comparisons
+Date:      2026-10-23
+ID:        RUSTSEC-2026-0385
+URL:       https://github.com/RustCrypto/utils/pull/1569
+Solution:  Upgrade to >=0.4.4 (patched)
+
+Crate:     hickory-proto
+Version:   0.25.2
+Title:     NSEC3 closest-encloser proof validation enters unbounded loop on cross-zone responses
+Date:      2026-05-01
+ID:        RUSTSEC-2026-0118
+URL:       https://github.com/hickory-dns/hickory-dns/pull/3597
+Solution:  Upgrade to >=0.26.0-beta.1 (unaffected)
+
+Crate:     hickory-proto
+Version:   0.25.2
+Title:     CPU exhaustion during message encoding due to O(n²) name compression
+Date:      2026-05-01
+ID:        RUSTSEC-2026-0119
+URL:       https://github.com/hickory-dns/hickory-dns/pull/3613
+Solution:  Upgrade to >=0.26.1 (patched)
+
+Crate:     hickory-proto
+Version:   0.25.2
+Title:     Panic on a malformed `alpn` value when parsing SVCB or HTTPS records from text
+Date:      2026-09-03
+ID:        RUSTSEC-2026-0487
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0487
+Solution:  Upgrade to >=0.26.2 (patched)
+
+Crate:     hickory-proto
+Version:   0.25.2
+Title:     Panic when an SVCB or HTTPS parameter value is a single quote character
+Date:      2026-09-03
+ID:        RUSTSEC-2026-0489
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0489
+Solution:  Upgrade to >=0.26.2 (patched)
+
+Crate:     hickory-proto
+Version:   0.25.2
+Title:     Zone file lexer panics on a token of 4096 or more characters
+Date:      2026-09-03
+ID:        RUSTSEC-2026-0490
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0490
+Solution:  Upgrade to >=0.26.2 (patched)
+
+Crate:     hickory-proto
+Version:   0.25.2
+Title:     Memory amplification from record counts in the DNS message header
+Date:      2026-09-03
+ID:        RUSTSEC-2026-0491
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0491
+Solution:  Upgrade to >=0.26.2 (patched)
+
+Crate:     libz-sys
+Version:   1.1.29
+Title:     libz-sys build script leaks environment variables in the build directory
+Date:      2026-10-28
+ID:        RUSTSEC-2026-0418
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0418
+Solution:  Upgrade to >=1.1.31 (patched)
+
+Crate:     rsa
+Version:   0.9.10
+Title:     Marvin Attack: potential key recovery through timing sidechannels
+Date:      2023-11-22
+ID:        RUSTSEC-2023-0071
+URL:       https://rustsec.org/advisories/RUSTSEC-2023-0071
+Severity:  5.9 (medium)
+Solution:  Upgrade to >=0.10.0 (patched)
+
+Crate:     tracing-subscriber
+Version:   0.2.25
+Title:     Logging user input may result in poisoning logs with ANSI escape sequences
+Date:      2025-08-29
+ID:        RUSTSEC-2025-0055
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0055
+Solution:  Upgrade to >=0.3.20 (patched)
+
+Crate:     bincode
+Version:   1.3.3
+Warning:   unmaintained
+Title:     Bincode is unmaintained
+Date:      2025-12-16
+ID:        RUSTSEC-2025-0141
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0141
+Solution:  No fixed upgrade is available!
+
+Crate:     derivative
+Version:   2.2.0
+Warning:   unmaintained
+Title:     `derivative` is unmaintained; consider using an alternative
+Date:      2024-06-26
+ID:        RUSTSEC-2024-0388
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0388
+Solution:  No fixed upgrade is available!
+
+Crate:     paste
+Version:   1.0.15
+Warning:   unmaintained
+Title:     paste - no longer maintained
+Date:      2024-10-07
+ID:        RUSTSEC-2024-0436
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0436
+Solution:  No fixed upgrade is available!
+
+Crate:     proc-macro-error2
+Version:   2.0.1
+Warning:   unmaintained
+Title:     proc-macro-error2 is unmaintained
+Date:      2026-06-07
+ID:        RUSTSEC-2026-0173
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0173
+Solution:  No fixed upgrade is available!
+
+Crate:     unsafe-libyaml
+Version:   0.2.11
+Warning:   unmaintained
+Title:     unsafe-libyaml is unmaintained
+Date:      2024-03-25
+ID:        RUSTSEC-2024-0449
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0449
+Solution:  No fixed upgrade is available!
+
+Crate:     event-listener
+Version:   5.4.1
+Warning:   unsound
+Title:     `event-listener` allows `!Send` tags to cross thread boundaries via `StackSlot`
+Date:      2026-07-13
+ID:        RUSTSEC-2026-0221
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0221
+Solution:  Upgrade to >=5.4.2 (patched)
+
+Crate:     lru
+Version:   0.16.4
+Warning:   unsound
+Title:     Potential use-after-free due to lack of panic safety in `LruCache::pop()`
+Date:      2026-05-12
+ID:        RUSTSEC-2026-0253
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0253
+Solution:  Upgrade to >=0.18.2 (patched)
+
+Crate:     rustix
+Version:   1.1.4
+Warning:   unsound
+Title:     xattr functions mark unwritten bytes as initialized when given a zero-length buffer
+Date:      2026-10-27
+ID:        RUSTSEC-2026-0486
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0486
+Solution:  Upgrade to >=1.1.6 (patched)
+
+Crate:     crypto-bigint
+Version:   0.7.5
+Warning:   yanked
+
+error: 12 vulnerabilities found!
+warning: 9 allowed warnings found
+=== gpu-prover/prover/Cargo.lock
+      Loaded 1458 security advisories (from ~/.cargo/advisory-db)
+    Scanning gpu-prover/prover/Cargo.lock for vulnerabilities (523 crate dependencies)
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: addr2line
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: approx
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: arbitrary
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: atomic-polyfill
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: circom-witnesscalc
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: cpp_demangle
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: cust
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: cust_core
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: cust_derive
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: cust_raw
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: derive_arbitrary
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: downloader
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: enum-map
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: enum-map-derive
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: erased-serde
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: fallible-iterator
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: find_cuda_helper
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: gdbstub
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: gdbstub_arch
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: gimli
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: glam
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: inventory
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: liblzma
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: liblzma-sys
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: malachite
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: malachite-base
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: malachite-float
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: malachite-nz
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: malachite-q
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: managed
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: mint
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: multimap
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: num-derive
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: number_prefix
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: pastey
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: prost-build
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ringbuffer
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-circuit-keccak-sys
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-circuit-recursion-sys
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-circuit-rv32im-sys
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-groth16-sys
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ruzstd
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: safe_arch
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: sppark
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: typed-arena
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: typeid
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: typetag
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: typetag-impl
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: utf_types
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: vek
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: which
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: wide
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: wtns-file
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: zip
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: zopfli
+Crate:     rsa
+Version:   0.9.10
+Title:     Marvin Attack: potential key recovery through timing sidechannels
+Date:      2023-11-22
+ID:        RUSTSEC-2023-0071
+URL:       https://rustsec.org/advisories/RUSTSEC-2023-0071
+Severity:  5.9 (medium)
+Solution:  Upgrade to >=0.10.0 (patched)
+
+Crate:     ruint
+Version:   1.17.2
+Title:     Uint shift operations: incorrect overflow flags and truncated shift amounts
+Date:      2026-07-08
+ID:        RUSTSEC-2026-0220
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0220
+Solution:  Upgrade to >=1.20.0 (patched)
+
+Crate:     ruzstd
+Version:   0.7.3
+Title:     Decompression bomb in `ruzstd`: a tiny input can exhaust memory (OOM)
+Date:      2026-10-11
+ID:        RUSTSEC-2026-0344
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0344
+Severity:  7.5 (high)
+Solution:  Upgrade to >=0.9.1 (patched)
+
+Crate:     tracing-subscriber
+Version:   0.2.25
+Title:     Logging user input may result in poisoning logs with ANSI escape sequences
+Date:      2025-08-29
+ID:        RUSTSEC-2025-0055
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0055
+Solution:  Upgrade to >=0.3.20 (patched)
+
+Crate:     zip
+Version:   2.6.1
+Title:      Insecure Preservation of SUID/SGID Bits during ZIP Extraction Leading to Potential Privilege Escalation
+Date:      2026-10-09
+ID:        RUSTSEC-2026-0367
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0367
+Severity:  7.3 (high)
+Solution:  Upgrade to >=9.0.0 (patched)
+
+Crate:     zip
+Version:   2.6.1
+Title:     zip: `ZipArchive::extract` creates symbolic links whose attacker-controlled targets are outside the destination directory
+Date:      2026-10-09
+ID:        RUSTSEC-2026-0368
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0368
+Solution:  Upgrade to >=9.0.0 (patched)
+
+Crate:     zip
+Version:   2.6.1
+Title:     ZipStreamReader::extract() and ZipArchive::extract() apply Unix permissions through symlinks without confining the target
+Date:      2026-10-10
+ID:        RUSTSEC-2026-0369
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0369
+Severity:  9.1 (critical)
+Solution:  Upgrade to >=9.0.0 (patched)
+
+Crate:     zip
+Version:   2.6.1
+Title:     zip: `ZipArchive::extract` aborts the process on a symlink entry with a large declared size
+Date:      2026-10-22
+ID:        RUSTSEC-2026-0429
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0429
+Severity:  7.5 (high)
+Solution:  Upgrade to >=9.0.0 (patched)
+
+Crate:     atomic-polyfill
+Version:   1.0.3
+Warning:   unmaintained
+Title:     atomic-polyfill is unmaintained
+Date:      2023-07-11
+ID:        RUSTSEC-2023-0089
+URL:       https://rustsec.org/advisories/RUSTSEC-2023-0089
+Solution:  No fixed upgrade is available!
+
+Crate:     bincode
+Version:   1.3.3
+Warning:   unmaintained
+Title:     Bincode is unmaintained
+Date:      2025-12-16
+ID:        RUSTSEC-2025-0141
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0141
+Solution:  No fixed upgrade is available!
+
+Crate:     derivative
+Version:   2.2.0
+Warning:   unmaintained
+Title:     `derivative` is unmaintained; consider using an alternative
+Date:      2024-06-26
+ID:        RUSTSEC-2024-0388
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0388
+Solution:  No fixed upgrade is available!
+
+Crate:     number_prefix
+Version:   0.4.0
+Warning:   unmaintained
+Title:     number_prefix crate is unmaintained
+Date:      2025-11-17
+ID:        RUSTSEC-2025-0119
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0119
+Solution:  No fixed upgrade is available!
+
+Crate:     paste
+Version:   1.0.15
+Warning:   unmaintained
+Title:     paste - no longer maintained
+Date:      2024-10-07
+ID:        RUSTSEC-2024-0436
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0436
+Solution:  No fixed upgrade is available!
+
+error: 8 vulnerabilities found!
+warning: 5 allowed warnings found
+=== lez/Cargo.lock
+      Loaded 1458 security advisories (from ~/.cargo/advisory-db)
+    Scanning lez/Cargo.lock for vulnerabilities (358 crate dependencies)
+Crate:     crypto-bigint
+Version:   0.5.5
+Title:     Multiple timing variability issues in operations intended to be constant-time
+Date:      2026-10-23
+ID:        RUSTSEC-2026-0387
+URL:       https://github.com/RustCrypto/crypto-bigint/pull/1365
+Solution:  Upgrade to >=0.7.6 (patched)
+
+Crate:     ctutils
+Version:   0.4.2
+Title:     Non-constant-time mask generation and `u128` comparisons
+Date:      2026-10-23
+ID:        RUSTSEC-2026-0385
+URL:       https://github.com/RustCrypto/utils/pull/1569
+Solution:  Upgrade to >=0.4.4 (patched)
+
+Crate:     rsa
+Version:   0.9.10
+Title:     Marvin Attack: potential key recovery through timing sidechannels
+Date:      2023-11-22
+ID:        RUSTSEC-2023-0071
+URL:       https://rustsec.org/advisories/RUSTSEC-2023-0071
+Severity:  5.9 (medium)
+Solution:  Upgrade to >=0.10.0 (patched)
+
+Crate:     tracing-subscriber
+Version:   0.2.25
+Title:     Logging user input may result in poisoning logs with ANSI escape sequences
+Date:      2025-08-29
+ID:        RUSTSEC-2025-0055
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0055
+Solution:  Upgrade to >=0.3.20 (patched)
+
+Crate:     bincode
+Version:   1.3.3
+Warning:   unmaintained
+Title:     Bincode is unmaintained
+Date:      2025-12-16
+ID:        RUSTSEC-2025-0141
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0141
+Solution:  No fixed upgrade is available!
+
+Crate:     derivative
+Version:   2.2.0
+Warning:   unmaintained
+Title:     `derivative` is unmaintained; consider using an alternative
+Date:      2024-06-26
+ID:        RUSTSEC-2024-0388
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0388
+Solution:  No fixed upgrade is available!
+
+Crate:     paste
+Version:   1.0.15
+Warning:   unmaintained
+Title:     paste - no longer maintained
+Date:      2024-10-07
+ID:        RUSTSEC-2024-0436
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0436
+Solution:  No fixed upgrade is available!
+
+Crate:     unsafe-libyaml
+Version:   0.2.11
+Warning:   unmaintained
+Title:     unsafe-libyaml is unmaintained
+Date:      2024-03-25
+ID:        RUSTSEC-2024-0449
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0449
+Solution:  No fixed upgrade is available!
+
+Crate:     rustix
+Version:   1.1.4
+Warning:   unsound
+Title:     xattr functions mark unwritten bytes as initialized when given a zero-length buffer
+Date:      2026-10-27
+ID:        RUSTSEC-2026-0486
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0486
+Solution:  Upgrade to >=1.1.6 (patched)
+
+error: 4 vulnerabilities found!
+warning: 5 allowed warnings found
+=== lez/crown/driver/Cargo.lock
+      Loaded 1458 security advisories (from ~/.cargo/advisory-db)
+    Scanning lez/crown/driver/Cargo.lock for vulnerabilities (846 crate dependencies)
+Crate:     crypto-bigint
+Version:   0.5.5
+Title:     Multiple timing variability issues in operations intended to be constant-time
+Date:      2026-10-23
+ID:        RUSTSEC-2026-0387
+URL:       https://github.com/RustCrypto/crypto-bigint/pull/1365
+Solution:  Upgrade to >=0.7.6 (patched)
+
+Crate:     crypto-bigint
+Version:   0.7.5
+Title:     Multiple timing variability issues in operations intended to be constant-time
+Date:      2026-10-23
+ID:        RUSTSEC-2026-0387
+URL:       https://github.com/RustCrypto/crypto-bigint/pull/1365
+Solution:  Upgrade to >=0.7.6 (patched)
+
+Crate:     ctutils
+Version:   0.4.2
+Title:     Non-constant-time mask generation and `u128` comparisons
+Date:      2026-10-23
+ID:        RUSTSEC-2026-0385
+URL:       https://github.com/RustCrypto/utils/pull/1569
+Solution:  Upgrade to >=0.4.4 (patched)
+
+Crate:     hickory-proto
+Version:   0.25.2
+Title:     NSEC3 closest-encloser proof validation enters unbounded loop on cross-zone responses
+Date:      2026-05-01
+ID:        RUSTSEC-2026-0118
+URL:       https://github.com/hickory-dns/hickory-dns/pull/3597
+Solution:  Upgrade to >=0.26.0-beta.1 (unaffected)
+
+Crate:     hickory-proto
+Version:   0.25.2
+Title:     CPU exhaustion during message encoding due to O(n²) name compression
+Date:      2026-05-01
+ID:        RUSTSEC-2026-0119
+URL:       https://github.com/hickory-dns/hickory-dns/pull/3613
+Solution:  Upgrade to >=0.26.1 (patched)
+
+Crate:     hickory-proto
+Version:   0.25.2
+Title:     Panic on a malformed `alpn` value when parsing SVCB or HTTPS records from text
+Date:      2026-09-03
+ID:        RUSTSEC-2026-0487
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0487
+Solution:  Upgrade to >=0.26.2 (patched)
+
+Crate:     hickory-proto
+Version:   0.25.2
+Title:     Panic when an SVCB or HTTPS parameter value is a single quote character
+Date:      2026-09-03
+ID:        RUSTSEC-2026-0489
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0489
+Solution:  Upgrade to >=0.26.2 (patched)
+
+Crate:     hickory-proto
+Version:   0.25.2
+Title:     Zone file lexer panics on a token of 4096 or more characters
+Date:      2026-09-03
+ID:        RUSTSEC-2026-0490
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0490
+Solution:  Upgrade to >=0.26.2 (patched)
+
+Crate:     hickory-proto
+Version:   0.25.2
+Title:     Memory amplification from record counts in the DNS message header
+Date:      2026-09-03
+ID:        RUSTSEC-2026-0491
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0491
+Solution:  Upgrade to >=0.26.2 (patched)
+
+Crate:     libz-sys
+Version:   1.1.29
+Title:     libz-sys build script leaks environment variables in the build directory
+Date:      2026-10-28
+ID:        RUSTSEC-2026-0418
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0418
+Solution:  Upgrade to >=1.1.31 (patched)
+
+Crate:     rsa
+Version:   0.9.10
+Title:     Marvin Attack: potential key recovery through timing sidechannels
+Date:      2023-11-22
+ID:        RUSTSEC-2023-0071
+URL:       https://rustsec.org/advisories/RUSTSEC-2023-0071
+Severity:  5.9 (medium)
+Solution:  Upgrade to >=0.10.0 (patched)
+
+Crate:     tracing-subscriber
+Version:   0.2.25
+Title:     Logging user input may result in poisoning logs with ANSI escape sequences
+Date:      2025-08-29
+ID:        RUSTSEC-2025-0055
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0055
+Solution:  Upgrade to >=0.3.20 (patched)
+
+Crate:     bincode
+Version:   1.3.3
+Warning:   unmaintained
+Title:     Bincode is unmaintained
+Date:      2025-12-16
+ID:        RUSTSEC-2025-0141
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0141
+Solution:  No fixed upgrade is available!
+
+Crate:     derivative
+Version:   2.2.0
+Warning:   unmaintained
+Title:     `derivative` is unmaintained; consider using an alternative
+Date:      2024-06-26
+ID:        RUSTSEC-2024-0388
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0388
+Solution:  No fixed upgrade is available!
+
+Crate:     paste
+Version:   1.0.15
+Warning:   unmaintained
+Title:     paste - no longer maintained
+Date:      2024-10-07
+ID:        RUSTSEC-2024-0436
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0436
+Solution:  No fixed upgrade is available!
+
+Crate:     proc-macro-error2
+Version:   2.0.1
+Warning:   unmaintained
+Title:     proc-macro-error2 is unmaintained
+Date:      2026-06-07
+ID:        RUSTSEC-2026-0173
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0173
+Solution:  No fixed upgrade is available!
+
+Crate:     unsafe-libyaml
+Version:   0.2.11
+Warning:   unmaintained
+Title:     unsafe-libyaml is unmaintained
+Date:      2024-03-25
+ID:        RUSTSEC-2024-0449
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0449
+Solution:  No fixed upgrade is available!
+
+Crate:     event-listener
+Version:   5.4.1
+Warning:   unsound
+Title:     `event-listener` allows `!Send` tags to cross thread boundaries via `StackSlot`
+Date:      2026-07-13
+ID:        RUSTSEC-2026-0221
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0221
+Solution:  Upgrade to >=5.4.2 (patched)
+
+Crate:     rustix
+Version:   1.1.4
+Warning:   unsound
+Title:     xattr functions mark unwritten bytes as initialized when given a zero-length buffer
+Date:      2026-10-27
+ID:        RUSTSEC-2026-0486
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0486
+Solution:  Upgrade to >=1.1.6 (patched)
+
+Crate:     crypto-bigint
+Version:   0.7.5
+Warning:   yanked
+
+error: 12 vulnerabilities found!
+warning: 8 allowed warnings found
+=== lez/guests/bridge/Cargo.lock
+      Loaded 1458 security advisories (from ~/.cargo/advisory-db)
+    Scanning lez/guests/bridge/Cargo.lock for vulnerabilities (242 crate dependencies)
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: shake
+Crate:     tracing-subscriber
+Version:   0.2.25
+Title:     Logging user input may result in poisoning logs with ANSI escape sequences
+Date:      2025-08-29
+ID:        RUSTSEC-2025-0055
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0055
+Solution:  Upgrade to >=0.3.20 (patched)
+
+Crate:     derivative
+Version:   2.2.0
+Warning:   unmaintained
+Title:     `derivative` is unmaintained; consider using an alternative
+Date:      2024-06-26
+ID:        RUSTSEC-2024-0388
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0388
+Solution:  No fixed upgrade is available!
+
+Crate:     paste
+Version:   1.0.15
+Warning:   unmaintained
+Title:     paste - no longer maintained
+Date:      2024-10-07
+ID:        RUSTSEC-2024-0436
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0436
+Solution:  No fixed upgrade is available!
+
+error: 1 vulnerability found!
+warning: 2 allowed warnings found
+=== lez/guests/consumer-keccak-accel/Cargo.lock
+      Loaded 1458 security advisories (from ~/.cargo/advisory-db)
+    Scanning lez/guests/consumer-keccak-accel/Cargo.lock for vulnerabilities (239 crate dependencies)
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: shake
+Crate:     tracing-subscriber
+Version:   0.2.25
+Title:     Logging user input may result in poisoning logs with ANSI escape sequences
+Date:      2025-08-29
+ID:        RUSTSEC-2025-0055
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0055
+Solution:  Upgrade to >=0.3.20 (patched)
+
+Crate:     derivative
+Version:   2.2.0
+Warning:   unmaintained
+Title:     `derivative` is unmaintained; consider using an alternative
+Date:      2024-06-26
+ID:        RUSTSEC-2024-0388
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0388
+Solution:  No fixed upgrade is available!
+
+Crate:     paste
+Version:   1.0.15
+Warning:   unmaintained
+Title:     paste - no longer maintained
+Date:      2024-10-07
+ID:        RUSTSEC-2024-0436
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0436
+Solution:  No fixed upgrade is available!
+
+error: 1 vulnerability found!
+warning: 2 allowed warnings found
+=== lez/guests/consumer/Cargo.lock
+      Loaded 1458 security advisories (from ~/.cargo/advisory-db)
+    Scanning lez/guests/consumer/Cargo.lock for vulnerabilities (239 crate dependencies)
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: shake
+Crate:     tracing-subscriber
+Version:   0.2.25
+Title:     Logging user input may result in poisoning logs with ANSI escape sequences
+Date:      2025-08-29
+ID:        RUSTSEC-2025-0055
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0055
+Solution:  Upgrade to >=0.3.20 (patched)
+
+Crate:     derivative
+Version:   2.2.0
+Warning:   unmaintained
+Title:     `derivative` is unmaintained; consider using an alternative
+Date:      2024-06-26
+ID:        RUSTSEC-2024-0388
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0388
+Solution:  No fixed upgrade is available!
+
+Crate:     paste
+Version:   1.0.15
+Warning:   unmaintained
+Title:     paste - no longer maintained
+Date:      2024-10-07
+ID:        RUSTSEC-2024-0436
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0436
+Solution:  No fixed upgrade is available!
+
+error: 1 vulnerability found!
+warning: 2 allowed warnings found
+=== lez/guests/program-keccak-soft/Cargo.lock
+      Loaded 1458 security advisories (from ~/.cargo/advisory-db)
+    Scanning lez/guests/program-keccak-soft/Cargo.lock for vulnerabilities (245 crate dependencies)
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-bigint2
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: shake
+Crate:     tracing-subscriber
+Version:   0.2.25
+Title:     Logging user input may result in poisoning logs with ANSI escape sequences
+Date:      2025-08-29
+ID:        RUSTSEC-2025-0055
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0055
+Solution:  Upgrade to >=0.3.20 (patched)
+
+Crate:     derivative
+Version:   2.2.0
+Warning:   unmaintained
+Title:     `derivative` is unmaintained; consider using an alternative
+Date:      2024-06-26
+ID:        RUSTSEC-2024-0388
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0388
+Solution:  No fixed upgrade is available!
+
+Crate:     paste
+Version:   1.0.15
+Warning:   unmaintained
+Title:     paste - no longer maintained
+Date:      2024-10-07
+ID:        RUSTSEC-2024-0436
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0436
+Solution:  No fixed upgrade is available!
+
+error: 1 vulnerability found!
+warning: 2 allowed warnings found
+=== lez/guests/program/Cargo.lock
+      Loaded 1458 security advisories (from ~/.cargo/advisory-db)
+    Scanning lez/guests/program/Cargo.lock for vulnerabilities (245 crate dependencies)
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-bigint2
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: shake
+Crate:     tracing-subscriber
+Version:   0.2.25
+Title:     Logging user input may result in poisoning logs with ANSI escape sequences
+Date:      2025-08-29
+ID:        RUSTSEC-2025-0055
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0055
+Solution:  Upgrade to >=0.3.20 (patched)
+
+Crate:     derivative
+Version:   2.2.0
+Warning:   unmaintained
+Title:     `derivative` is unmaintained; consider using an alternative
+Date:      2024-06-26
+ID:        RUSTSEC-2024-0388
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0388
+Solution:  No fixed upgrade is available!
+
+Crate:     paste
+Version:   1.0.15
+Warning:   unmaintained
+Title:     paste - no longer maintained
+Date:      2024-10-07
+ID:        RUSTSEC-2024-0436
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0436
+Solution:  No fixed upgrade is available!
+
+error: 1 vulnerability found!
+warning: 2 allowed warnings found
+=== lez/guests/scripted/Cargo.lock
+      Loaded 1458 security advisories (from ~/.cargo/advisory-db)
+    Scanning lez/guests/scripted/Cargo.lock for vulnerabilities (236 crate dependencies)
+error: couldn't check if the package is yanked: not found: No such crate in crates.io index: shake
+Crate:     tracing-subscriber
+Version:   0.2.25
+Title:     Logging user input may result in poisoning logs with ANSI escape sequences
+Date:      2025-08-29
+ID:        RUSTSEC-2025-0055
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0055
+Solution:  Upgrade to >=0.3.20 (patched)
+
+Crate:     derivative
+Version:   2.2.0
+Warning:   unmaintained
+Title:     `derivative` is unmaintained; consider using an alternative
+Date:      2024-06-26
+ID:        RUSTSEC-2024-0388
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0388
+Solution:  No fixed upgrade is available!
+
+Crate:     paste
+Version:   1.0.15
+Warning:   unmaintained
+Title:     paste - no longer maintained
+Date:      2024-10-07
+ID:        RUSTSEC-2024-0436
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0436
+Solution:  No fixed upgrade is available!
+
+error: 1 vulnerability found!
+warning: 2 allowed warnings found
+=== lez/lab/driver/Cargo.lock
+      Loaded 1458 security advisories (from ~/.cargo/advisory-db)
+    Scanning lez/lab/driver/Cargo.lock for vulnerabilities (838 crate dependencies)
+Crate:     crypto-bigint
+Version:   0.5.5
+Title:     Multiple timing variability issues in operations intended to be constant-time
+Date:      2026-10-23
+ID:        RUSTSEC-2026-0387
+URL:       https://github.com/RustCrypto/crypto-bigint/pull/1365
+Solution:  Upgrade to >=0.7.6 (patched)
+
+Crate:     crypto-bigint
+Version:   0.7.5
+Title:     Multiple timing variability issues in operations intended to be constant-time
+Date:      2026-10-23
+ID:        RUSTSEC-2026-0387
+URL:       https://github.com/RustCrypto/crypto-bigint/pull/1365
+Solution:  Upgrade to >=0.7.6 (patched)
+
+Crate:     ctutils
+Version:   0.4.2
+Title:     Non-constant-time mask generation and `u128` comparisons
+Date:      2026-10-23
+ID:        RUSTSEC-2026-0385
+URL:       https://github.com/RustCrypto/utils/pull/1569
+Solution:  Upgrade to >=0.4.4 (patched)
+
+Crate:     hickory-proto
+Version:   0.25.2
+Title:     NSEC3 closest-encloser proof validation enters unbounded loop on cross-zone responses
+Date:      2026-05-01
+ID:        RUSTSEC-2026-0118
+URL:       https://github.com/hickory-dns/hickory-dns/pull/3597
+Solution:  Upgrade to >=0.26.0-beta.1 (unaffected)
+
+Crate:     hickory-proto
+Version:   0.25.2
+Title:     CPU exhaustion during message encoding due to O(n²) name compression
+Date:      2026-05-01
+ID:        RUSTSEC-2026-0119
+URL:       https://github.com/hickory-dns/hickory-dns/pull/3613
+Solution:  Upgrade to >=0.26.1 (patched)
+
+Crate:     hickory-proto
+Version:   0.25.2
+Title:     Panic on a malformed `alpn` value when parsing SVCB or HTTPS records from text
+Date:      2026-09-03
+ID:        RUSTSEC-2026-0487
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0487
+Solution:  Upgrade to >=0.26.2 (patched)
+
+Crate:     hickory-proto
+Version:   0.25.2
+Title:     Panic when an SVCB or HTTPS parameter value is a single quote character
+Date:      2026-09-03
+ID:        RUSTSEC-2026-0489
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0489
+Solution:  Upgrade to >=0.26.2 (patched)
+
+Crate:     hickory-proto
+Version:   0.25.2
+Title:     Zone file lexer panics on a token of 4096 or more characters
+Date:      2026-09-03
+ID:        RUSTSEC-2026-0490
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0490
+Solution:  Upgrade to >=0.26.2 (patched)
+
+Crate:     hickory-proto
+Version:   0.25.2
+Title:     Memory amplification from record counts in the DNS message header
+Date:      2026-09-03
+ID:        RUSTSEC-2026-0491
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0491
+Solution:  Upgrade to >=0.26.2 (patched)
+
+Crate:     libz-sys
+Version:   1.1.29
+Title:     libz-sys build script leaks environment variables in the build directory
+Date:      2026-10-28
+ID:        RUSTSEC-2026-0418
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0418
+Solution:  Upgrade to >=1.1.31 (patched)
+
+Crate:     rsa
+Version:   0.9.10
+Title:     Marvin Attack: potential key recovery through timing sidechannels
+Date:      2023-11-22
+ID:        RUSTSEC-2023-0071
+URL:       https://rustsec.org/advisories/RUSTSEC-2023-0071
+Severity:  5.9 (medium)
+Solution:  Upgrade to >=0.10.0 (patched)
+
+Crate:     tracing-subscriber
+Version:   0.2.25
+Title:     Logging user input may result in poisoning logs with ANSI escape sequences
+Date:      2025-08-29
+ID:        RUSTSEC-2025-0055
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0055
+Solution:  Upgrade to >=0.3.20 (patched)
+
+Crate:     bincode
+Version:   1.3.3
+Warning:   unmaintained
+Title:     Bincode is unmaintained
+Date:      2025-12-16
+ID:        RUSTSEC-2025-0141
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0141
+Solution:  No fixed upgrade is available!
+
+Crate:     derivative
+Version:   2.2.0
+Warning:   unmaintained
+Title:     `derivative` is unmaintained; consider using an alternative
+Date:      2024-06-26
+ID:        RUSTSEC-2024-0388
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0388
+Solution:  No fixed upgrade is available!
+
+Crate:     paste
+Version:   1.0.15
+Warning:   unmaintained
+Title:     paste - no longer maintained
+Date:      2024-10-07
+ID:        RUSTSEC-2024-0436
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0436
+Solution:  No fixed upgrade is available!
+
+Crate:     proc-macro-error2
+Version:   2.0.1
+Warning:   unmaintained
+Title:     proc-macro-error2 is unmaintained
+Date:      2026-06-07
+ID:        RUSTSEC-2026-0173
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0173
+Solution:  No fixed upgrade is available!
+
+Crate:     unsafe-libyaml
+Version:   0.2.11
+Warning:   unmaintained
+Title:     unsafe-libyaml is unmaintained
+Date:      2024-03-25
+ID:        RUSTSEC-2024-0449
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0449
+Solution:  No fixed upgrade is available!
+
+Crate:     event-listener
+Version:   5.4.1
+Warning:   unsound
+Title:     `event-listener` allows `!Send` tags to cross thread boundaries via `StackSlot`
+Date:      2026-07-13
+ID:        RUSTSEC-2026-0221
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0221
+Solution:  Upgrade to >=5.4.2 (patched)
+
+Crate:     rustix
+Version:   1.1.4
+Warning:   unsound
+Title:     xattr functions mark unwritten bytes as initialized when given a zero-length buffer
+Date:      2026-10-27
+ID:        RUSTSEC-2026-0486
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0486
+Solution:  Upgrade to >=1.1.6 (patched)
+
+Crate:     crypto-bigint
+Version:   0.7.5
+Warning:   yanked
+
+error: 12 vulnerabilities found!
+warning: 8 allowed warnings found
+=== lez/live/driver/Cargo.lock
+      Loaded 1458 security advisories (from ~/.cargo/advisory-db)
+    Scanning lez/live/driver/Cargo.lock for vulnerabilities (846 crate dependencies)
+Crate:     crypto-bigint
+Version:   0.5.5
+Title:     Multiple timing variability issues in operations intended to be constant-time
+Date:      2026-10-23
+ID:        RUSTSEC-2026-0387
+URL:       https://github.com/RustCrypto/crypto-bigint/pull/1365
+Solution:  Upgrade to >=0.7.6 (patched)
+
+Crate:     crypto-bigint
+Version:   0.7.5
+Title:     Multiple timing variability issues in operations intended to be constant-time
+Date:      2026-10-23
+ID:        RUSTSEC-2026-0387
+URL:       https://github.com/RustCrypto/crypto-bigint/pull/1365
+Solution:  Upgrade to >=0.7.6 (patched)
+
+Crate:     ctutils
+Version:   0.4.2
+Title:     Non-constant-time mask generation and `u128` comparisons
+Date:      2026-10-23
+ID:        RUSTSEC-2026-0385
+URL:       https://github.com/RustCrypto/utils/pull/1569
+Solution:  Upgrade to >=0.4.4 (patched)
+
+Crate:     hickory-proto
+Version:   0.25.2
+Title:     NSEC3 closest-encloser proof validation enters unbounded loop on cross-zone responses
+Date:      2026-05-01
+ID:        RUSTSEC-2026-0118
+URL:       https://github.com/hickory-dns/hickory-dns/pull/3597
+Solution:  Upgrade to >=0.26.0-beta.1 (unaffected)
+
+Crate:     hickory-proto
+Version:   0.25.2
+Title:     CPU exhaustion during message encoding due to O(n²) name compression
+Date:      2026-05-01
+ID:        RUSTSEC-2026-0119
+URL:       https://github.com/hickory-dns/hickory-dns/pull/3613
+Solution:  Upgrade to >=0.26.1 (patched)
+
+Crate:     hickory-proto
+Version:   0.25.2
+Title:     Panic on a malformed `alpn` value when parsing SVCB or HTTPS records from text
+Date:      2026-09-03
+ID:        RUSTSEC-2026-0487
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0487
+Solution:  Upgrade to >=0.26.2 (patched)
+
+Crate:     hickory-proto
+Version:   0.25.2
+Title:     Panic when an SVCB or HTTPS parameter value is a single quote character
+Date:      2026-09-03
+ID:        RUSTSEC-2026-0489
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0489
+Solution:  Upgrade to >=0.26.2 (patched)
+
+Crate:     hickory-proto
+Version:   0.25.2
+Title:     Zone file lexer panics on a token of 4096 or more characters
+Date:      2026-09-03
+ID:        RUSTSEC-2026-0490
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0490
+Solution:  Upgrade to >=0.26.2 (patched)
+
+Crate:     hickory-proto
+Version:   0.25.2
+Title:     Memory amplification from record counts in the DNS message header
+Date:      2026-09-03
+ID:        RUSTSEC-2026-0491
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0491
+Solution:  Upgrade to >=0.26.2 (patched)
+
+Crate:     libz-sys
+Version:   1.1.29
+Title:     libz-sys build script leaks environment variables in the build directory
+Date:      2026-10-28
+ID:        RUSTSEC-2026-0418
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0418
+Solution:  Upgrade to >=1.1.31 (patched)
+
+Crate:     rsa
+Version:   0.9.10
+Title:     Marvin Attack: potential key recovery through timing sidechannels
+Date:      2023-11-22
+ID:        RUSTSEC-2023-0071
+URL:       https://rustsec.org/advisories/RUSTSEC-2023-0071
+Severity:  5.9 (medium)
+Solution:  Upgrade to >=0.10.0 (patched)
+
+Crate:     tracing-subscriber
+Version:   0.2.25
+Title:     Logging user input may result in poisoning logs with ANSI escape sequences
+Date:      2025-08-29
+ID:        RUSTSEC-2025-0055
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0055
+Solution:  Upgrade to >=0.3.20 (patched)
+
+Crate:     bincode
+Version:   1.3.3
+Warning:   unmaintained
+Title:     Bincode is unmaintained
+Date:      2025-12-16
+ID:        RUSTSEC-2025-0141
+URL:       https://rustsec.org/advisories/RUSTSEC-2025-0141
+Solution:  No fixed upgrade is available!
+
+Crate:     derivative
+Version:   2.2.0
+Warning:   unmaintained
+Title:     `derivative` is unmaintained; consider using an alternative
+Date:      2024-06-26
+ID:        RUSTSEC-2024-0388
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0388
+Solution:  No fixed upgrade is available!
+
+Crate:     paste
+Version:   1.0.15
+Warning:   unmaintained
+Title:     paste - no longer maintained
+Date:      2024-10-07
+ID:        RUSTSEC-2024-0436
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0436
+Solution:  No fixed upgrade is available!
+
+Crate:     proc-macro-error2
+Version:   2.0.1
+Warning:   unmaintained
+Title:     proc-macro-error2 is unmaintained
+Date:      2026-06-07
+ID:        RUSTSEC-2026-0173
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0173
+Solution:  No fixed upgrade is available!
+
+Crate:     unsafe-libyaml
+Version:   0.2.11
+Warning:   unmaintained
+Title:     unsafe-libyaml is unmaintained
+Date:      2024-03-25
+ID:        RUSTSEC-2024-0449
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0449
+Solution:  No fixed upgrade is available!
+
+Crate:     event-listener
+Version:   5.4.1
+Warning:   unsound
+Title:     `event-listener` allows `!Send` tags to cross thread boundaries via `StackSlot`
+Date:      2026-07-13
+ID:        RUSTSEC-2026-0221
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0221
+Solution:  Upgrade to >=5.4.2 (patched)
+
+Crate:     rustix
+Version:   1.1.4
+Warning:   unsound
+Title:     xattr functions mark unwritten bytes as initialized when given a zero-length buffer
+Date:      2026-10-27
+ID:        RUSTSEC-2026-0486
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0486
+Solution:  Upgrade to >=1.1.6 (patched)
+
+Crate:     crypto-bigint
+Version:   0.7.5
+Warning:   yanked
+
+error: 12 vulnerabilities found!
+warning: 8 allowed warnings found
+=== modules/ferrata_attest_module/rust-lib/Cargo.lock
+      Loaded 1458 security advisories (from ~/.cargo/advisory-db)
+    Scanning modules/ferrata_attest_module/rust-lib/Cargo.lock for vulnerabilities (48 crate dependencies)
