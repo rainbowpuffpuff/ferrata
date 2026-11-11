@@ -252,6 +252,8 @@ pub struct Config {
     pub seconds_per_slot: u64,
     pub store_fork: u8,
     pub adoption_parts: u8,
+    /// The weak-subjectivity period of the finalized header, in epochs (nonzero; part of the instance id).
+    pub ws_period_epochs: u64,
 }
 
 impl Config {
@@ -284,6 +286,7 @@ impl Config {
             seconds_per_slot: uint(&c["seconds_per_slot"], "config.seconds_per_slot")?,
             store_fork: narrow(uint(&c["store_fork"], "config.store_fork")?, "store_fork", 255)? as u8,
             adoption_parts: narrow(uint(&c["adoption_parts"], "config.adoption_parts")?, "adoption_parts", 255)? as u8,
+            ws_period_epochs: uint(&c["ws_period_epochs"], "config.ws_period_epochs")?,
         })
     }
 
@@ -307,6 +310,7 @@ impl Config {
         out.extend_from_slice(&self.seconds_per_slot.to_le_bytes());
         out.push(self.store_fork);
         out.push(self.adoption_parts);
+        out.extend_from_slice(&self.ws_period_epochs.to_le_bytes());
         out
     }
 
@@ -338,6 +342,7 @@ impl Config {
             seconds_per_slot: r.u64()?,
             store_fork: r.u8()?,
             adoption_parts: r.u8()?,
+            ws_period_epochs: r.u64()?,
         })
     }
 
@@ -356,6 +361,7 @@ impl Config {
             "seconds_per_slot": self.seconds_per_slot,
             "store_fork": self.store_fork,
             "adoption_parts": self.adoption_parts,
+            "ws_period_epochs": self.ws_period_epochs,
         })
     }
 
@@ -715,7 +721,7 @@ impl<'a> Bytes<'a> {
 fn instance(request: &str) -> Result<Value, String> {
     let req: Value = serde_json::from_str(request).map_err(|e| format!("request is not JSON: {e}"))?;
     let bytes = unhex(text(&req["state"], "state")?).map_err(|e| format!("state: {e}"))?;
-    // `InstanceState { id, config, active, store: Vec<u8>, applied }`.
+    // `InstanceState { id, config, active, store: Vec<u8>, applied, root_id, parent_id }`.
     let mut r = Bytes { b: &bytes, at: 0 };
     let id: Root = r.array::<32>()?;
     let config = Config::read(&mut r)?;
@@ -727,6 +733,8 @@ fn instance(request: &str) -> Result<Value, String> {
     let store_len = r.u32()? as usize;
     let store_bytes = r.take(store_len)?;
     let applied = r.u64()?;
+    let root_id: Root = r.array::<32>()?;
+    let parent_id: Root = r.array::<32>()?;
     if r.at != bytes.len() {
         return Err(format!("state: {} bytes after InstanceState", bytes.len() - r.at));
     }
@@ -736,6 +744,8 @@ fn instance(request: &str) -> Result<Value, String> {
         "config": config.to_json(),
         "active": active,
         "applied": applied,
+        "root_id": hex(&root_id),
+        "parent_id": hex(&parent_id),
     });
     out["store"] = match witness::CompactStore::decode(store_bytes) {
         Ok(st) => json!({
@@ -848,6 +858,9 @@ mod tests {
     use super::*;
 
     /// `mainnet_config(2)` of `lez/harness/src/lib.rs`.
+    /// The harness's weak-subjectivity period (`lez/harness` `test_ws_period_epochs()`).
+    const WS_PERIOD_EPOCHS: u64 = 3_532;
+
     fn mainnet(parts: u8) -> Config {
         let mut fork_versions = [[0u8; 4]; 9];
         for (i, v) in fork_versions.iter_mut().enumerate() {
@@ -866,12 +879,13 @@ mod tests {
             seconds_per_slot: 12,
             store_fork: 3,
             adoption_parts: parts,
+            ws_period_epochs: WS_PERIOD_EPOCHS,
         }
     }
 
     #[test]
-    fn config_borsh_is_194_bytes() {
-        assert_eq!(mainnet(2).borsh().len(), 8 + 4 + 8 + 8 + 8 + 36 + 72 + 32 + 8 + 8 + 1 + 1);
+    fn config_borsh_is_202_bytes() {
+        assert_eq!(mainnet(2).borsh().len(), 8 + 4 + 8 + 8 + 8 + 36 + 72 + 32 + 8 + 8 + 1 + 1 + 8);
     }
 
     /// The instance of `lez/harness` `World::new(2)` (mainnet periods 1899–1903), whose id the
@@ -882,7 +896,10 @@ mod tests {
         let checkpoint = fixed(&json!("0x64b56a372f8c4ccc274d9f42c9b4a1d9a18966a20188992bcac15b1c6e7d91ac"), "c").unwrap();
         assert_eq!(
             hex(&instance_id(&mainnet(2), &checkpoint)),
-            "0xce624027489c721108da1cbaeb5eb16990111f6908282949e05108e7cb2afdfb"
+            // With lc-a1's ws_period_epochs (3,532, the harness's) in the configuration: this encoding gives the merged
+            // program's own id for the Stage 4 instance (module_e2e info, read_instance id_matches_config at integration7);
+            // before it, at integration6, the id was 0xce624027…afdfb.
+            "0x39860f39c97574b5eed493bdfce3429de1b8ff1b1f2a2452e72292460953b79c"
         );
     }
 

@@ -43,6 +43,7 @@ def mainnet_config(parts):
         "seconds_per_slot": 12,
         "store_fork": 3,
         "adoption_parts": parts,
+        "ws_period_epochs": 3532,  # the harness's test_ws_period_epochs() (part of the instance id since lc-a1)
     }
 
 
