@@ -1,0 +1,22 @@
+warning: lee@0.1.0: Generated module at lez/target/debug/build/lee-946ef43b73a11943/out/lee/privacy_preserving_circuit/mod.rs
+warning: programs@0.1.0: Generated module at lez/target/debug/build/programs-64ee1b9189a8bf3b/out/lez/programs/mod.rs
+   Compiling methods v0.1.0 (lez/methods)
+   Compiling ferrata-lez-holdings-wire v0.1.0 (lez/holdings-wire)
+   Compiling harness v0.1.0 (lez/harness)
+    Finished `test` profile [optimized + debuginfo] target(s) in 16.45s
+  Executable tests/exit_codes.rs (target/debug/deps/exit_codes-3186a1002784db4a)
+  Executable tests/holdings.rs (target/debug/deps/holdings-89e735e98fb1b37d)
+
+real	0m16.525s
+user	1m11.410s
+sys	0m29.090s
+warning: lee@0.1.0: Generated module at lez/target/debug/build/lee-946ef43b73a11943/out/lee/privacy_preserving_circuit/mod.rs
+warning: programs@0.1.0: Generated module at lez/target/debug/build/programs-64ee1b9189a8bf3b/out/lez/programs/mod.rs
+   Compiling methods v0.1.0 (lez/methods)
+   Compiling ferrata-lez-holdings-wire v0.1.0 (lez/holdings-wire)
+   Compiling harness v0.1.0 (lez/harness)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 6.19s
+
+real	0m6.262s
+user	0m6.670s
+sys	0m8.510s

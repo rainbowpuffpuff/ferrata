@@ -1,0 +1,87 @@
+warning: lee@0.1.0: Generated module at lez/target/debug/build/lee-946ef43b73a11943/out/lee/privacy_preserving_circuit/mod.rs
+warning: programs@0.1.0: Generated module at lez/target/debug/build/programs-64ee1b9189a8bf3b/out/lez/programs/mod.rs
+   Compiling methods v0.1.0 (lez/methods)
+   Compiling harness v0.1.0 (lez/harness)
+    Finished `test` profile [optimized + debuginfo] target(s) in 7.62s
+     Running tests/exit_codes.rs (target/debug/deps/exit_codes-3186a1002784db4a)
+
+running 3 tests
+test the_blocks_do_not_overlap ... ok
+test every_code_lies_in_a_block_of_its_owner ... ok
+test the_tables_name_every_core_code ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/holdings.rs (target/debug/deps/holdings-89e735e98fb1b37d)
+
+running 1 test
+holder 0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc held 0x0000000000000000000000000000000000000000000000f22ca9b4cc5d0f3d61 wei of WETH at block 26384851
+refused as expected: wrong chain (a gate for Sepolia) → exit 140 (ChainMismatch)
+refused as expected: unfinalized block (the attested, not finalized, header) → exit 213 (NoRecord)
+refused as expected: unknown block (no record at this slot) → exit 213 (NoRecord)
+refused as expected: proof of another block (the bootstrap's record) → exit 110 (ProofNodeMismatch)
+refused as expected: bad proof (a storage-proof byte flipped) → exit 110 (ProofNodeMismatch)
+refused as expected: bad proof (an account-proof byte flipped) → exit 110 (ProofNodeMismatch)
+refused as expected: mismatched value (minimum = balance + 1 wei) → exit 130 (PredicateFailed)
+refused as expected: mismatched holder (the pair's proofs for another address) → exit 110 (ProofNodeMismatch)
+refused as expected: wrong actor (a check sent to another holder's actor) → exit 232 (holdings: WrongReceiver)
+accepted: Holding { gate_id: [175, 71, 98, 65, 173, 228, 116, 128, 84, 110, 36, 94, 235, 89, 170, 123, 227, 4, 106, 247, 103, 206, 213, 43, 82, 34, 94, 227, 0, 49, 58, 12], holder: [180, 225, 109, 1, 104, 229, 45, 53, 202, 205, 44, 97, 133, 180, 66, 129, 236, 40, 201, 220], balance: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 242, 44, 169, 180, 204, 93, 15, 61, 97], beacon_slot: 15624480, block_number: 26384851, block_hash: [62, 2, 229, 186, 168, 27, 241, 96, 75, 100, 71, 233, 202, 1, 74, 28, 168, 94, 60, 119, 133, 202, 107, 154, 84, 48, 182, 201, 60, 186, 123, 206], statement_id: [171, 193, 17, 78, 92, 8, 155, 82, 233, 75, 9, 128, 148, 27, 23, 167, 208, 129, 194, 68, 79, 83, 65, 179, 130, 63, 220, 77, 58, 29, 250, 83] }
+refused as expected: stale: the same block again → exit 239 (holdings: Stale)
+# ferrata_holdings on the Stage 4 chain (dev mode, in-process harness)
+
+Written by `RISC0_DEV_MODE=1 cargo test -p harness --locked --test holdings -- --nocapture`.
+Holder 0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc (Uniswap v2 USDC/WETH), WETH 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2, block 26384851, record `header(id, 15624480)`,
+balance 0x0000000000000000000000000000000000000000000000f22ca9b4cc5d0f3d61 wei.
+
+## Transactions
+
+| # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | wrong chain (a gate for Sepolia) | holdings Check 111,198 → Attest 38,360 | 149,558 | 3% | 7,493 | 1,256,408 | refused: exit 140 (ChainMismatch) |
+| 2 | unfinalized block (the attested, not finalized, header) | holdings Check 111,198 → Attest 31,114 | 142,312 | 3% | 7,558 | 1,198,960 | refused: exit 213 (NoRecord) |
+| 3 | unknown block (no record at this slot) | holdings Check 111,198 → Attest 31,114 | 142,312 | 3% | 7,558 | 1,198,960 | refused: exit 213 (NoRecord) |
+| 4 | proof of another block (the bootstrap's record) | holdings Check 111,198 → Attest 51,915 | 163,113 | 3% | 7,493 | 1,364,848 | refused: exit 110 (ProofNodeMismatch) |
+| 5 | bad proof (a storage-proof byte flipped) | holdings Check 111,198 → Attest 247,937 | 359,135 | 7% | 7,493 | 2,933,024 | refused: exit 110 (ProofNodeMismatch) |
+| 6 | bad proof (an account-proof byte flipped) | holdings Check 111,198 → Attest 51,915 | 163,113 | 3% | 7,493 | 1,364,848 | refused: exit 110 (ProofNodeMismatch) |
+| 7 | mismatched value (minimum = balance + 1 wei) | holdings Check 111,198 → Attest 253,744 | 364,942 | 7% | 7,493 | 2,979,480 | refused: exit 130 (PredicateFailed) |
+| 8 | mismatched holder (the pair's proofs for another address) | holdings Check 111,198 → Attest 186,406 | 297,604 | 6% | 7,493 | 2,440,776 | refused: exit 110 (ProofNodeMismatch) |
+| 9 | wrong actor (a check sent to another holder's actor) | holdings Check 36,232 | 36,232 | 1% | 7,493 | 349,800 | refused: exit 232 (holdings: WrongReceiver) |
+| 10 | accepted: the pair held ≥ 1,000 WETH | holdings Check 111,198 → Attest 278,002 → holdings (reply) 41,910 | 431,110 | 9% | 7,493 | 3,508,824 | applied |
+| 11 | accepted: minimum = the balance exactly | holdings Check 111,198 → Attest 278,062 → holdings (reply) 41,970 | 431,230 | 9% | 7,493 | 3,509,784 | applied |
+| 12 | stale: the same block again | holdings Check 109,706 → Attest 278,002 → holdings (reply) 38,126 | 425,834 | 9% | 7,493 | 3,466,616 | refused: exit 239 (holdings: Stale) |
+
+## Handlers
+
+| transaction | handler | cycles | segments | input bytes (ReceiveInput) | of which message | of which pre-state | journal bytes | post-state bytes | exit |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| wrong chain (a gate for Sepolia) | holdings Check | 111,198 | 1 | 7,040 | 6,966 | 0 | 14,319 | 242 | 0 |
+| wrong chain (a gate for Sepolia) | Attest | 38,360 | 1 | 7,411 | 6,940 | 333 | 0 | – | 140 |
+| unfinalized block (the attested, not finalized, header) | holdings Check | 111,198 | 1 | 7,040 | 6,966 | 0 | 14,319 | 242 | 0 |
+| unfinalized block (the attested, not finalized, header) | Attest | 31,114 | 1 | 7,078 | 6,940 | 0 | 0 | – | 213 |
+| unknown block (no record at this slot) | holdings Check | 111,198 | 1 | 7,040 | 6,966 | 0 | 14,319 | 242 | 0 |
+| unknown block (no record at this slot) | Attest | 31,114 | 1 | 7,078 | 6,940 | 0 | 0 | – | 213 |
+| proof of another block (the bootstrap's record) | holdings Check | 111,198 | 1 | 7,040 | 6,966 | 0 | 14,319 | 242 | 0 |
+| proof of another block (the bootstrap's record) | Attest | 51,915 | 1 | 7,411 | 6,940 | 333 | 0 | – | 110 |
+| bad proof (a storage-proof byte flipped) | holdings Check | 111,198 | 1 | 7,040 | 6,966 | 0 | 14,319 | 242 | 0 |
+| bad proof (a storage-proof byte flipped) | Attest | 247,937 | 1 | 7,411 | 6,940 | 333 | 0 | – | 110 |
+| bad proof (an account-proof byte flipped) | holdings Check | 111,198 | 1 | 7,040 | 6,966 | 0 | 14,319 | 242 | 0 |
+| bad proof (an account-proof byte flipped) | Attest | 51,915 | 1 | 7,411 | 6,940 | 333 | 0 | – | 110 |
+| mismatched value (minimum = balance + 1 wei) | holdings Check | 111,198 | 1 | 7,040 | 6,966 | 0 | 14,319 | 242 | 0 |
+| mismatched value (minimum = balance + 1 wei) | Attest | 253,744 | 1 | 7,411 | 6,940 | 333 | 0 | – | 130 |
+| mismatched holder (the pair's proofs for another address) | holdings Check | 111,198 | 1 | 7,040 | 6,966 | 0 | 14,319 | 242 | 0 |
+| mismatched holder (the pair's proofs for another address) | Attest | 186,406 | 1 | 7,411 | 6,940 | 333 | 0 | – | 110 |
+| wrong actor (a check sent to another holder's actor) | holdings Check | 36,232 | 1 | 7,040 | 6,966 | 0 | 0 | – | 232 |
+| accepted: the pair held ≥ 1,000 WETH | holdings Check | 111,198 | 1 | 7,040 | 6,966 | 0 | 14,319 | 242 | 0 |
+| accepted: the pair held ≥ 1,000 WETH | Attest | 278,002 | 1 | 7,411 | 6,940 | 333 | 7,874 | – | 0 |
+| accepted: the pair held ≥ 1,000 WETH | holdings (reply) | 41,910 | 1 | 750 | 370 | 242 | 940 | 165 | 0 |
+| accepted: minimum = the balance exactly | holdings Check | 111,198 | 1 | 7,040 | 6,966 | 0 | 14,319 | 242 | 0 |
+| accepted: minimum = the balance exactly | Attest | 278,062 | 1 | 7,411 | 6,940 | 333 | 7,874 | – | 0 |
+| accepted: minimum = the balance exactly | holdings (reply) | 41,970 | 1 | 750 | 370 | 242 | 940 | 165 | 0 |
+| stale: the same block again | holdings Check | 109,706 | 1 | 7,205 | 6,966 | 165 | 14,492 | 250 | 0 |
+| stale: the same block again | Attest | 278,002 | 1 | 7,411 | 6,940 | 333 | 7,874 | – | 0 |
+| stale: the same block again | holdings (reply) | 38,126 | 1 | 758 | 370 | 250 | 0 | – | 239 |
+
+test holdings_consumer ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.94s
+
