@@ -141,7 +141,9 @@ fn bridge(message_hex: &str) -> Value {
             "relayer": relayer.map(|r| h(&r)),
             "range_covers_leaf": range.covers(witness.leaf_index).is_ok(),
         }),
-        other => json!({ "variant": format!("{other:?}").split(|c: char| c == ' ' || c == '{' || c == '(').next().unwrap_or("?").to_string() }),
+        other => {
+            json!({ "variant": format!("{other:?}").split(|c: char| c == ' ' || c == '{' || c == '(').next().unwrap_or("?").to_string() })
+        }
     };
     json!({ "decoded": true, "canonical": canonical, "message_bytes": bytes.len(), "fields": fields })
 }
