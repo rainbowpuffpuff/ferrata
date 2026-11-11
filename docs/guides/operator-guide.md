@@ -36,7 +36,7 @@ Sources: [`attestation.md`](../design/attestation.md) §8–§11; [`bridge.md`](
 
 ## 2. The reference deployment: the lab
 
-The lab (`lab:lez/lab/README.md`, branch `lab`, not merged into this branch) keeps LEZ v0.4.0-rc1's own
+The lab ([`lez/lab/README.md`](../../lez/lab/README.md)) keeps LEZ v0.4.0-rc1's own
 sequencer chain, with its Logos Blockchain node, alive on a cloud container, and two instances of the
 light-client program on it, one following Sepolia (through Gloas) and one following mainnet, fed over
 the public job path:
@@ -59,7 +59,7 @@ the finalized checkpoint of slot 15,625,920, 4 updates. A scheduled session rest
 minutes stopped. Program transactions used 208,951 (`Init`) to 3,731,712 (`Finish`) execution gas, none
 over the 5M target. **Cost:** the scheduled session of 20:17 UTC billed 0.0064 USD; at twelve such
 sessions a day, about 0.08 USD a day (derived). Seven consecutive days end on 17 November, 19:22 UTC
-(`lab:lez/lab/README.md`, "Results so far", "The claim that can be made today").
+([`lez/lab/README.md`](../../lez/lab/README.md), "Results so far", "The claim that can be made today").
 
 **Not in the lab**: the proven path, the bridge, a multi-validator network.
 
@@ -111,7 +111,7 @@ two-hour cadence (§2).
   `NotNewer`, 205 `NO_JOB`).
 - **Deferral.** Each daemon waits a random share of a window `W`, re-checks the chain, then sends. The
   design note gives the duplicate probability as `1 − (1 − Δ/W)^n` for block interval Δ and `n` daemons
-  ([`attestation.md`](../design/attestation.md) §9). With LEZ's 10-s blocks (`lab:lez/lab/README.md`):
+  ([`attestation.md`](../design/attestation.md) §9). With LEZ's 10-s blocks ([`lez/lab/README.md`](../../lez/lab/README.md)):
 
   | `W` | mean added latency (`W/2`) | `n` = 2 | 3 | 5 | 10 |
   |---:|---:|---:|---:|---:|---:|
@@ -132,7 +132,7 @@ two-hour cadence (§2).
 Compare the instance's finalized slot and root with the chain's: the lab's `lab.sh status` puts both
 instances against the chains' clocks, and each session's fetch record holds the root a second provider
 reports for the newest finalized slot, which must equal the instance's `finalized_root`
-(`lab:lez/lab/README.md`, "Re-check"). In the design `monitor` compares records with several providers'
+([`lez/lab/README.md`](../../lez/lab/README.md), "Re-check"). In the design `monitor` compares records with several providers'
 canonical roots and alarms at half the weak-subjectivity bound (**not built**,
 [`attestation.md`](../design/attestation.md) §3.6, §8). An instance lags by the cadence plus finality;
 it catches up when anyone sends the missing updates, as long as its store knows the signing committee.
@@ -216,7 +216,7 @@ Executor (r0vm 3.0.5; user cycles are deterministic), `n = 4`, `t = 3`, 360 bloc
 | **rule (B) checkpoint** | **542,969** | not measured |
 
 Sources: [`vault/GAS.md`](../../vault/GAS.md), "v5 with the real verifier";
-`sepolia-cloud:e2e/README.md`, "What the round trip costs on today's Sepolia" (each transaction priced
+[`e2e/README.md`](../../e2e/README.md), "What the round trip costs on today's Sepolia" (each transaction priced
 by Sepolia's node on a fork's state; first candidate and first checkpoint of a fresh v3 vault). One
 checkpoint is paid per finalised LEZ state, not per burn. The **checkpoint fee**, a fixed amount per
 token and denomination kept from each release, is credited to whoever finalised the root the release
@@ -237,7 +237,7 @@ again and waits a full `W` again ([`vault/README.md`](../../vault/README.md), "L
 Rehearsed end to end: `e2e/sepolia-live.sh` and, on `sepolia-cloud`, `e2e/sepolia-cloud.sh` (deployment,
 deposits, candidate, the 40-min wait, beacon, the finalisation proven on a GPU during the run, the release
 delay, releases); its fork rehearsal reached ALL CHECKS PASSED with 16 transactions. A real run takes
-about an hour and three quarters plus the wait for a GPU (`sepolia-cloud:e2e/README.md`, "Running it in
+about an hour and three quarters plus the wait for a GPU ([`e2e/README.md`](../../e2e/README.md), "Running it in
 the cloud").
 
 ## 6. The relayer and the wrapper
@@ -254,7 +254,7 @@ the cloud").
   **not built** (milestone M0 tests it).
 - Release gas: 373,657 (ETH) and 403,523 (ERC-20 with the relayer's fee) on Foundry's rules, v5 vault, real
   verifier; 619,477 and 648,447 on Sepolia's node prices, v3 vault ([`vault/GAS.md`](../../vault/GAS.md);
-  `sepolia-cloud:e2e/README.md`).
+  [`e2e/README.md`](../../e2e/README.md)).
 
 ## 7. Watchers (`monitor`)
 
@@ -293,11 +293,11 @@ Sources: [`bridge.md`](../design/bridge.md) §8.3, §14; [`vault/README.md`](../
 
 | Component | CPU | Memory | Time | Source |
 |---|---|---|---|---|
-| Updater, public path | light (fetch, encode, send) | — | one session of the lab: 123–133 s for 6–11 transactions | `lab:lez/lab/README.md` |
+| Updater, public path | light (fetch, encode, send) | — | one session of the lab: 123–133 s for 6–11 transactions | [`lez/lab/README.md`](../../lez/lab/README.md) |
 | Updater, proven path | 9.0M-cycle proof | 9.18 GiB peak (laptop CPU) | 54 min laptop CPU; 49.5 s one L4 | [`attestation.md`](../design/attestation.md) §4.2; [`lez/RESULTS.md`](../../lez/RESULTS.md) §9 |
 | Checkpoint prover | GPU advised | ~10.9 GiB GPU, ≤ 1.08 GiB host | 24.1 s per idle hour, 219.3 s per busy hour on one L4 | [`gpu-prover/RESULTS.md`](../../gpu-prover/RESULTS.md) |
 | Groth16 wrap | x86 | ~7.3 GiB | 195–215 s per checkpoint seal, 78–80 s per release seal (laptop) | [`checkpoint/RESULTS.md`](../../checkpoint/RESULTS.md); [`bridge.md`](../design/bridge.md) §18.2 |
-| The whole lab zone (sequencer, node, driver) | 2 physical cores requested | state 20–31 MB compressed per generation, growing with write-ahead logs | 0.08 USD a day at a two-hour cadence | `lab:lez/lab/README.md` |
+| The whole lab zone (sequencer, node, driver) | 2 physical cores requested | state 20–31 MB compressed per generation, growing with write-ahead logs | 0.08 USD a day at a two-hour cadence | [`lez/lab/README.md`](../../lez/lab/README.md) |
 
 Daemon CPU, memory and bandwidth for the real modules are **not measured** (they do not exist).
 
@@ -305,8 +305,8 @@ Daemon CPU, memory and bandwidth for the real modules are **not measured** (they
 
 | Failure | Effect | What to do | Source |
 |---|---|---|---|
-| Beacon or execution RPC unreachable | nothing sent | the next session fetches again and continues from what the chain holds; a session that cannot finish changes nothing it cannot redo | `lab:lez/lab/README.md`, "The two instances" |
-| Sequencer or node restart | — | the zone survives being stopped (the lab restarted it after 54 min); start the sequencer so that its blocks fall 1–6 s after a Bedrock epoch second | `lab:lez/lab/README.md`, "Survival" |
+| Beacon or execution RPC unreachable | nothing sent | the next session fetches again and continues from what the chain holds; a session that cannot finish changes nothing it cannot redo | [`lez/lab/README.md`](../../lez/lab/README.md), "The two instances" |
+| Sequencer or node restart | — | the zone survives being stopped (the lab restarted it after 54 min); start the sequencer so that its blocks fall 1–6 s after a Bedrock epoch second | [`lez/lab/README.md`](../../lez/lab/README.md), "Survival" |
 | Transaction outside its LEZ validity window | charged the **whole declared gas limit** | declare tight limits (the lab: 4.8M per job step) | [`attestation.md`](../design/attestation.md) §4.4 |
 | Duplicate update step | 2.2M wasted (first step) | deferral (§3.4) | [`attestation.md`](../design/attestation.md) §4.4 |
 | Ethereum finalizes nothing for a whole period | the instance stops safely and must be replaced from a fresh checkpoint (a new trust decision) | consumers move under the replacement recipe | [`attestation.md`](../design/attestation.md) §4.1; [`consumer-guide.md`](consumer-guide.md) §9 |

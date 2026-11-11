@@ -13,9 +13,9 @@ evidence with its commands.
 |---|---|---|
 | **executor** | RISC Zero zkVM 3.0.5's executor: user cycles, deterministic, no proof | [`checkpoint/RESULTS.md`](../checkpoint/RESULTS.md); [`attestation.md`](design/attestation.md) §5.1 |
 | **in-process harness** | LEZ v0.4.0-rc1's own state transition functions, called in-process with LEZ's fee settlement copied; one transaction per block, genesis base fees, no base-fee movement; private parts in dev mode (executed, not proven) unless a real proof is named | [`lez/RESULTS.md`](../lez/RESULTS.md) §1; [`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md) |
-| **live sequencer** | LEZ's own `sequencer_service` at `v0.4.0-rc1` with a Logos Blockchain node (one validator, leader proofs in dev mode) on a cloud container; charges re-checked by replaying the chain through LEZ's `chain_state` | [`lez/RESULTS.md`](../lez/RESULTS.md) §9; [`lez/live/inbound/README.md`](../lez/live/inbound/README.md); `lab:lez/lab/README.md` |
+| **live sequencer** | LEZ's own `sequencer_service` at `v0.4.0-rc1` with a Logos Blockchain node (one validator, leader proofs in dev mode) on a cloud container; charges re-checked by replaying the chain through LEZ's `chain_state` | [`lez/RESULTS.md`](../lez/RESULTS.md) §9; [`lez/live/inbound/README.md`](../lez/live/inbound/README.md); [`lez/lab/README.md`](../lez/lab/README.md) |
 | **local EVM** | Foundry (forge 1.3.6, solc 0.8.26, 200 runs, cancun), `forge test --isolate`: whole transactions under today's mainnet gas rules | [`vault/GAS.md`](../vault/GAS.md) |
-| **Sepolia node** | each transaction priced by a public Sepolia node (reth 2.10.0) with `eth_estimateGas` / `eth_simulateV1` on a fork's state: Glamsterdam's gas rules, nothing sent | `sepolia-cloud:e2e/README.md`; [`vault/GAS.md`](../vault/GAS.md), "Creating the contracts on today's Sepolia" |
+| **Sepolia node** | each transaction priced by a public Sepolia node (reth 2.10.0) with `eth_estimateGas` / `eth_simulateV1` on a fork's state: Glamsterdam's gas rules, nothing sent | [`e2e/README.md`](../e2e/README.md); [`vault/GAS.md`](../vault/GAS.md), "Creating the contracts on today's Sepolia" |
 | **laptop CPU** | AMD Ryzen 9 7940HS, 8 cores, 16 threads, no GPU; shared with other jobs, so wall times state the load | [`docs/design/bridge.md`](design/bridge.md) §18 |
 | **cloud GPU** | one NVIDIA L4 (24 GB) on Modal, 4 CPU cores, 32 GiB; r0vm 3.0.5 built with CUDA | [`gpu-prover/RESULTS.md`](../gpu-prover/RESULTS.md) |
 | **simulation** | the Python model of the v0.4 sequencer and Logos Blockchain code | `docs/design/finality-rule/RESULTS.md` |
@@ -109,7 +109,7 @@ sync-committee period, plus one per hour while roots are imported; derived):
 
 Per attestation: the interval's cost divided by the attestations its records serve. **Measured in
 operation:** the lab followed Sepolia and mainnet on a live sequencer every two hours; its program
-transactions used 208,951 to 3,731,712 execution gas (`lab:lez/lab/README.md`). **Gap:** the figure at the
+transactions used 208,951 to 3,731,712 execution gas ([`lez/lab/README.md`](../lez/lab/README.md)). **Gap:** the figure at the
 recommended cadence with real proving and recorded hardware (milestone A4).
 
 ### P.4 User proving (RFP-021)
@@ -125,7 +125,7 @@ is estimated at about 58M accelerated user cycles).
 | Component | Figure | Basis |
 |---|---|---|
 | Ethereum finality wait | about 13–19 minutes | design ([`attestation.md`](design/attestation.md) §13) |
-| update availability | the operator's cadence: hourly in the design while importing; every two hours in the lab | design; `lab:lez/lab/README.md` |
+| update availability | the operator's cadence: hourly in the design while importing; every two hours in the lab | design; [`lez/lab/README.md`](../lez/lab/README.md) |
 | the job on LEZ | 3 transactions (5 at a handoff); one block each at the target; 10-s blocks | [`attestation.md`](design/attestation.md) §4.2; lab |
 | on-chain verification | one transaction, same block as the action (P.1) | measured |
 
@@ -135,7 +135,7 @@ is estimated at about 58M accelerated user cycles).
 
 | Component | Resources measured | Source |
 |---|---|---|
-| the lab zone (sequencer, Bedrock node, driver) | two physical cores requested; a session of 6–11 transactions 123–133 s; state 20–31 MB compressed per generation; 0.0064 USD per scheduled session, about 0.08 USD a day (derived) | `lab:lez/lab/README.md` |
+| the lab zone (sequencer, Bedrock node, driver) | two physical cores requested; a session of 6–11 transactions 123–133 s; state 20–31 MB compressed per generation; 0.0064 USD per scheduled session, about 0.08 USD a day (derived) | [`lez/lab/README.md`](../lez/lab/README.md) |
 | proven updater | 9.18 GiB, 54 min laptop CPU; 49.5 s one L4 | P.2 |
 
 **Gap:** the updater daemon and `monitor` (not built): CPU, memory, bandwidth.
@@ -167,7 +167,7 @@ transactions**: the proven path, which runs in a private actor, would not benefi
 By construction: no action reads a variable-length collection; records, roots and nullifiers are addressed
 by key; committees are fixed-size summaries ([`attestation.md`](design/attestation.md) §5.6). The lab's
 program transactions used 208,951 to 3,731,712 execution gas over its first 202 blocks
-(`lab:lez/lab/README.md`), not analysed against state size. **Gap:** no measurement of cost against state
+([`lez/lab/README.md`](../lez/lab/README.md)), not analysed against state size. **Gap:** no measurement of cost against state
 size.
 
 ---
@@ -229,12 +229,12 @@ root (estimated at roughly 275k cycles of attestation plus one slot proof; not m
 | `refund` ETH / ERC-20 | 179,155 / 205,540 | not measured |
 
 Sources: [`vault/GAS.md`](../vault/GAS.md) ("Results with the mock verifier", "v5 with the real
-verifier"); `sepolia-cloud:e2e/README.md` ("What the round trip costs on today's Sepolia": all 16
+verifier"); [`e2e/README.md`](../e2e/README.md) ("What the round trip costs on today's Sepolia": all 16
 transactions 62,096,366 gas on Sepolia against 11,030,062 on Foundry, ×5.63). Checkpoint costs are paid
 once per finalised LEZ state, not per burn. Against the M0 thresholds (release ≤ 450k, candidate and
 finalisation ≤ 500k, [`docs/traceability.md`](traceability.md) P.3) every v5 row is under them on Foundry's
 rules; on Sepolia's state-gas rules none of the proof-verifying calls is. Mainnet has not scheduled
-Glamsterdam, so it still charges the Foundry column (`sepolia-cloud:e2e/README.md`). **Gaps:** the v5
+Glamsterdam, so it still charges the Foundry column ([`e2e/README.md`](../e2e/README.md)). **Gaps:** the v5
 vault on Sepolia's rules; a later (not first) candidate with the real verifier.
 
 ### P.4 User proving (RFP-022)
@@ -275,7 +275,7 @@ and both claims; its duration is not a latency figure (stand-in beacon chain)
 
 The rehearsed testnet round trip (wait 40 min, release delay 120 s) runs in about 55 minutes plus the queue
 for a GPU (`e2e/sepolia-live.sh`, [`vault/README.md`](../vault/README.md)); the cloud run, with the
-deposits' finality waits, in about an hour and three quarters (`sepolia-cloud:e2e/README.md`).
+deposits' finality waits, in about an hour and three quarters ([`e2e/README.md`](../e2e/README.md)).
 
 ### P.6 Off-chain compute (RFP-022)
 

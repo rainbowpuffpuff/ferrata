@@ -50,7 +50,7 @@ hash of its configuration and checkpoint, so an instance cannot be reconfigured 
 the id pins the checkpoint ([`attestation.md`](design/attestation.md) §3.4). In the lab, the Sepolia
 instance starts from the period-1378 bootstrap of a pinned fixture, and the mainnet instance from the
 finalized checkpoint a public beacon API reported, which a second provider reported canonical
-(`lab:lez/lab/README.md`, "The two instances").
+([`lez/lab/README.md`](../lez/lab/README.md), "The two instances").
 
 **How a verifier confirms it independently.** By comparing the checkpoint's block root with several
 independent beacon providers and with its own node, and checking that the chain id and

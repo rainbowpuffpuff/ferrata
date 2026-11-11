@@ -66,7 +66,7 @@ by an address and 159,285 for a later one; 197,762 for a first ERC-20 deposit
 ([`vault/GAS.md`](../../vault/GAS.md), mock-verifier table; deposits do not verify proofs). On
 Sepolia, which runs Glamsterdam's state-gas pricing since 6 October 2026, the node charged the v3
 vault 552,152 for the first ETH deposit of the tree, 260,526 for a later one and 375,237 for an
-ERC-20 deposit (`sepolia-cloud:e2e/README.md`, "What the round trip costs on today's Sepolia";
+ERC-20 deposit ([`e2e/README.md`](../../e2e/README.md), "What the round trip costs on today's Sepolia";
 priced by Sepolia's node on a fork's state, not sent). Gas paid on Ethereum is visible like any
 transaction's.
 
@@ -200,7 +200,7 @@ wrap your succinct receipt and learns only what the release publishes.
 **Gas** (measured): v5 vault with the real verifier on Foundry's rules, 373,657 for ETH and 403,523 for
 an ERC-20 with a relayer's fee ([`vault/GAS.md`](../../vault/GAS.md), "v5 with the real verifier");
 on Sepolia, priced by its node for the v3 vault, 619,477 and 648,447
-(`sepolia-cloud:e2e/README.md`). Paid by whoever submits, normally the relayer.
+([`e2e/README.md`](../../e2e/README.md)). Paid by whoever submits, normally the relayer.
 
 **Public:** recipient, token, denomination, time, `NOut`, the root, the relayer. **Hidden:** which
 burn. **Reverts you may meet:** `BurnRootNotAccepted`, `ReleaseDelayNotElapsed`,

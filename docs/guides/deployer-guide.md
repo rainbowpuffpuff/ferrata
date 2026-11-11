@@ -7,12 +7,13 @@ set on a chain with Glamsterdam's state gas, how tokens, fees, the admin and fre
 the finality depth are configured, and how to rehearse. Every statement cites its source; paths are
 relative to the repository root.
 
-**Status.** Nothing has been deployed for production or for public use. What was run: the vault's
-deployment script, on local forks of Sepolia (one transaction per run, limits from the node); the
-whole return leg, on forks and as a cloud rehearsal; the LEZ programs, through LEZ's own program
-loader on a local LEZ v0.4.0-rc1 sequencer. One transaction was sent to public Sepolia, the first of
-a first attempt, and it ran out of gas (§4). The second run is prepared and not sent
-(`sepolia-cloud:e2e/runs/sepolia-live-2/README.md`). The code is not audited
+**Status.** Nothing has been deployed for production. What was run: the vault's deployment script, on
+local forks of Sepolia (one transaction per run, limits from the node); the whole return leg, on forks
+and as a cloud rehearsal; the LEZ programs, through LEZ's own program loader on a local LEZ v0.4.0-rc1
+sequencer. Sent to public Sepolia: the first attempt's first transaction, which ran out of gas (§4); then,
+on 11 November 2026, the second run's deployment of the v3 vault of the end-to-end fixture and its
+deposit 0, and nothing after it ([`e2e/runs/sepolia-live-2/README.md`](../../e2e/runs/sepolia-live-2/README.md);
+the hashes in [`lez/live/inbound/README.md`](../../lez/live/inbound/README.md), "On Sepolia"). The code is not audited
 ([`vault/README.md`](../../vault/README.md); [`README.md`](../../README.md), "Not audited").
 
 ## 1. What a deployment consists of
@@ -79,7 +80,7 @@ vault's storage holds that same id, so the order is fixed (D2; [`bridge.md`](../
 1. **LEZ: deploy the attestation program and the bridge program** through LEZ's `program_loader`,
    immutable. Measured on a local v0.4.0-rc1 sequencer: 6 transactions per 508 KB image (storage gas
    479,496, execution gas 0), the loader recomputing the image id ([`lez/RESULTS.md`](../../lez/RESULTS.md)
-   §9); the lab deployed its 602,888-byte image in 7 (`lab:lez/lab/README.md`). **Image ids depend on
+   §9); the lab deployed its 602,888-byte image in 7 ([`lez/lab/README.md`](../../lez/lab/README.md)). **Image ids depend on
    the build path** (a guest embeds its build paths), so the ids are not reproducible across machines
    yet; the live crossing therefore deploys frozen binaries and refuses any other file
    ([`lez/live/inbound/README.md`](../../lez/live/inbound/README.md); [`bridge.md`](../design/bridge.md)
@@ -151,7 +152,7 @@ Foundry's EVM: 1,530 gas per byte of new code, 183,600 per new account, 97,920 p
 EIP-7825's per-transaction cap of 2^24 = 16,777,216 now bounds **execution** gas only; the whole limit is
 capped at 2^32 − 1 and by the block gas limit. The first live attempt sent the Groth16 verifier's
 creation with forge's limit of 1,533,981 and it **ran out of gas**; Sepolia's node asks 7,795,331 for it
-(`sepolia-cloud:vault/GAS.md`, "On Sepolia since Glamsterdam"; [`vault/GAS.md`](../../vault/GAS.md),
+([`vault/GAS.md`](../../vault/GAS.md), "On Sepolia since Glamsterdam" and
 "Creating the contracts on today's Sepolia").
 
 So before it sends, a run asks the node for `eth_estimateGas` of that transaction on the chain as the
@@ -183,7 +184,7 @@ and the vault and library together (35,848 bytes) would have to become at least 
 [`vault/GAS.md`](../../vault/GAS.md)).
 
 **Registrations on Sepolia** were priced by the node only for the v3 vault: `registerToken` 2,136,791
-(ETH) and 2,138,129 (token), against 472,211 and 473,049 on Foundry (`sepolia-cloud:e2e/README.md`,
+(ETH) and 2,138,129 (token), against 472,211 and 473,049 on Foundry ([`e2e/README.md`](../../e2e/README.md),
 "What the round trip costs on today's Sepolia"). The v5 vault's registration also stores fee schedule 0
 and publishes the registry and schedule hashes (647,208 on Foundry, [`vault/GAS.md`](../../vault/GAS.md));
 its Sepolia figure was not measured, and since it writes new slots at 97,920 each it will be higher than
@@ -268,11 +269,12 @@ execution target.
   against a deposit ([`bridge.md`](../design/bridge.md) §3).
 - Measured refusals: `Init` of another configuration of the same vault (246); a vault-A deposit under a
   vault-B root (249); vault B's proofs for configuration A (110) ([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §2).
-- **Not run:** `Init` against a vault actually deployed on Sepolia. In the measured runs slot 2 sat in a
-  synthetic block, because a vault built in Foundry cannot hold a `configId` that depends on the bridge
-  program's image ([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §8a, §11). The prepared Sepolia
-  run's vault pins the `configId` of the frozen LEZ binaries
-  (`sepolia-cloud:e2e/runs/sepolia-live-2/README.md`).
+- **Run once against Sepolia:** `Init` against the vault deployed there, which pins the `configId` of the
+  frozen LEZ binaries: slot 2 attested at block 12,107,997, 355,935 execution gas, after the refusal
+  without the block's header (215) ([`lez/live/inbound/README.md`](../../lez/live/inbound/README.md),
+  "The real session"). This tree's bridge program has run `Init` only with slot 2 in a synthetic block,
+  because a vault built in Foundry cannot hold a `configId` that depends on the bridge program's image
+  ([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §8a, §11).
 
 ## 7. Tenants (F.16)
 
@@ -295,11 +297,11 @@ row F.16).
   ([`vault/README.md`](../../vault/README.md), "Sepolia round trip").
 - **Unattended**: `e2e/sepolia-live.sh`, resumable (a stage interrupted while sending is finished with
   forge's own record, never sent anew), stopping at the first thing not as planned
-  ([`vault/README.md`](../../vault/README.md)). On the `sepolia-cloud` branch the same driver runs on a
+  ([`vault/README.md`](../../vault/README.md)). The same driver also runs on a
   cloud runner with a GPU function and a Groth16-wrap function (`e2e/sepolia-cloud.sh setup | start |
   status | fetch | stop`; the key lives in a cloud secret only during the run and must be a throwaway
   testnet key), and its rehearsal on a fork reached ALL CHECKS PASSED with 16 transactions
-  (`sepolia-cloud:e2e/README.md`, "Running it in the cloud"; commit `f7b1aa7` there).
+  ([`e2e/README.md`](../../e2e/README.md), "Running it in the cloud"; commit `f7b1aa7`).
 - **Source verification** (`script/sourcify.sh`) is a separate step and was **not run**; `vault` mode
   publishes this repository's vault sources for good and runs only with `FERRATA_PUBLISH_SOURCES=yes`.
 
@@ -317,7 +319,8 @@ The attestation side's migration (successor and replacement instances) is in
 
 ## 10. What is not built or not run
 
-- a deployment on public Sepolia (prepared, not sent) and on LEZ testnet 0.4 (which did not exist);
+- the v5 vault on public Sepolia (the v3 vault of the end-to-end fixture is there, with one deposit) and a
+  round trip there; a deployment on LEZ testnet 0.4 (which did not exist);
 - reproducible builds of the guests (image ids depend on the build path);
 - `verify_checkpoint`; the `ferrata_attestor` module (rule (B)'s sequencer side);
 - on LEZ: multisig roles, the 14-day freeze-authority replacement, watchers, permissionless `Sunset`;
