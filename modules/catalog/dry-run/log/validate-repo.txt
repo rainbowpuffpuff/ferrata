@@ -1,0 +1,1 @@
+spike/ferrata-wt-modules/modules/catalog/logos-repo.json: OK

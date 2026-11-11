@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 2,
+  "repositoryName": "ferrata-modules",
+  "generatedAt": "2026-11-11T19:24:21Z",
+  "packages": [
+    {
+      "name": "ferrata_attest_module",
+      "versions": [
+        {
+          "releasedAt": "2026-11-11T19:23:28Z",
+          "publisherRef": "ferrata_attest_module-v0.1.0",
+          "url": "http://127.0.0.1:18546/ferrata_attest_module-v0.1.0/ferrata_attest_module-0.1.0.lgx",
+          "size": 5273229,
+          "sha256": "833b736b48a9f4a147bdb64bcd2420082c74578ba5f77f6df9b81f334e7d846b",
+          "rootHash": "c6297d08d051ffbd8fd5265ae36eaa1beb1b42418c1c69a81f14263e896bd27c",
+          "manifest": {
+            "author": "",
+            "category": "ethereum",
+            "dependencies": [],
+            "description": "Ferrata (prototype): dry-run an Ethereum attestation against a header record and verify a light-client checkpoint, with the program's verification core",
+            "display_name": "Ferrata attestation",
+            "hashes": {
+              "assets": "e05f0a5058d1971e9951f7711948e729e60a885582bbffaa2ce9c01b4afc6cd5",
+              "root": "c6297d08d051ffbd8fd5265ae36eaa1beb1b42418c1c69a81f14263e896bd27c",
+              "variants": "21afb8c51f5997239f2b3a426178b844b995657093ceda7d9bd794cfd76fc0e6",
+              "variants/linux-amd64": "1c0b15e5b95d6775e6f9f14d5b730a30548683c1208dfdd88797bdd0d01d335f"
+            },
+            "icon": "",
+            "main": {
+              "linux-amd64": "ferrata_attest_module_plugin.so"
+            },
+            "manifestVersion": "0.7.0",
+            "name": "ferrata_attest_module",
+            "type": "core",
+            "version": "0.1.0"
+          },
+          "urls": [
+            "http://127.0.0.1:18546/ferrata_attest_module-v0.1.0/ferrata_attest_module-0.1.0.lgx"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ferrata_bridge_module",
+      "versions": [
+        {
+          "releasedAt": "2026-11-11T19:24:20Z",
+          "publisherRef": "ferrata_bridge_module-v0.1.0",
+          "url": "http://127.0.0.1:18546/ferrata_bridge_module-v0.1.0/ferrata_bridge_module-0.1.0.lgx",
+          "size": 5180063,
+          "sha256": "b90d8ecf994eb6d39a4538c59025d672a513d63cedc762d2e04e61dd3058a335",
+          "rootHash": "56b218f9377759311f15b00c3ff421f8af53e23016c1b5a50d70fc9d56fc04fa",
+          "manifest": {
+            "author": "",
+            "category": "bridge",
+            "dependencies": [],
+            "description": "Ferrata (prototype): the user side of the Ferrata bridge between Ethereum and LEZ: deposit commitments and vault calls, claims, burns, release witnesses and journals, recovery and status, with the bridge core",
+            "display_name": "Ferrata bridge",
+            "hashes": {
+              "assets": "bef8a791e8d3eea97d4039b10ed182e1e0b366b551e2b8ffae6087557753e686",
+              "root": "56b218f9377759311f15b00c3ff421f8af53e23016c1b5a50d70fc9d56fc04fa",
+              "variants": "859fb85edb010fe8f20d382a2179339979fc7d86ec69569e4425e4f5cb5fdbc1",
+              "variants/linux-amd64": "bc405683ff6fb7a71904e0a77518d3ad1c1eab45aa8823d2e3330615190a6533"
+            },
+            "icon": "",
+            "main": {
+              "linux-amd64": "ferrata_bridge_module_plugin.so"
+            },
+            "manifestVersion": "0.7.0",
+            "name": "ferrata_bridge_module",
+            "type": "core",
+            "version": "0.1.0"
+          },
+          "urls": [
+            "http://127.0.0.1:18546/ferrata_bridge_module-v0.1.0/ferrata_bridge_module-0.1.0.lgx"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,2 @@
+Package structure is valid: spike/tmp/modules/release/dist/ferrata_bridge_module-v0.1.0/ferrata_bridge_module-0.1.0.lgx
+Package is unsigned

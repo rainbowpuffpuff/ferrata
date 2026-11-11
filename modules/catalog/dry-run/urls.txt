@@ -1,0 +1,2 @@
+http://127.0.0.1:18546/ferrata_attest_module-v0.1.0/ferrata_attest_module-0.1.0.lgx
+http://127.0.0.1:18546/ferrata_bridge_module-v0.1.0/ferrata_bridge_module-0.1.0.lgx
