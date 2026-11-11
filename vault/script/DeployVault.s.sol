@@ -133,7 +133,13 @@ contract DeployVault is Script {
     // ---- configuration --------------------------------------------------------------------------------------------
 
     function _init() internal {
-        require(block.chainid != 1, "DeployVault: a test deployment (open-minting token, short timers): not on chain 1");
+        // A test deployment (open-minting token, short timers, single-key committees allowed): testnets only, not
+        // chain 1 nor any other mainnet (review I-2).
+        uint256 id = block.chainid;
+        require(
+            id == 31_337 || id == 11_155_111 || id == 560_048 || id == 17_000,
+            "DeployVault: a test deployment: anvil, Sepolia, Hoodi or Holesky only"
+        );
         deployer = msg.sender;
         require(
             deployer != DEFAULT_SENDER, "DeployVault: no deployer: --sender with a keystore, or --unlocked on a fork"

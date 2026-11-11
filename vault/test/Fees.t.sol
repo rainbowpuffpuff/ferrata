@@ -13,7 +13,7 @@ import {VaultTestBase} from "./utils/VaultTestBase.sol";
 
 /// @notice v5, D13 fees (proposal §B4): a deposit escrows its denomination plus the mint and relay fees of the
 ///         schedule in force; a release pays the denomination less the relay, burn and checkpoint fees, the burn fee
-///         credited to the fee recipient and the checkpoint fee to the root's finaliser; protocol fees start at zero
+///         credited to the fee recipient and the checkpoint fee to the root's prover; protocol fees start at zero
 ///         under a 1% ceiling and change seven days after they are announced; a deposit keeps the schedule of its leaf
 ///         index. Expected amounts and published hashes are worked out here from the written rules (and the hashes
 ///         from bridge-wire's byte layout), not read back from the vault.
@@ -583,12 +583,15 @@ contract FeesTest is VaultTestBase {
         assertEq(t.balanceOf(recipient), D0);
     }
 
-    /// @notice The checkpoint fee goes to whoever sent the finalisation, never pushed: a finaliser that refuses
-    ///         every payment (here a contract) is credited and cannot block or tax a release.
-    function test_release_checkpointFeeIsCreditedToTheFinaliserNeverPushed() public {
-        ToggleRecipient finaliser = new ToggleRecipient(); // refuses ETH while closed
+    /// @notice The checkpoint fee goes to the checkpoint's prover (the sender of its candidate, review M-2), never
+    ///         pushed: a prover that refuses every payment (here a contract) is credited and cannot block or tax a
+    ///         release.
+    function test_release_checkpointFeeIsCreditedToTheProverNeverPushed() public {
+        ToggleRecipient prover = new ToggleRecipient(); // refuses ETH while closed
         FerrataVault.Checkpoint memory c = _nextCheckpoint(ROOT);
-        _submit(c);
+        _proveCheckpoint(_checkpointJournal(c));
+        vm.prank(address(prover));
+        vault.submitCandidate(c, SEAL);
         (uint256 submittedAt, uint256 wait) = _waitOf(vault, c.newState);
         vm.warp(submittedAt + wait);
         vm.roll(block.number + 1);
@@ -596,7 +599,7 @@ contract FeesTest is VaultTestBase {
         (, bytes32 beaconNonce) = vault.beacons(beaconIndex);
         c.echoNonce = beaconNonce;
         _proveCheckpoint(_checkpointJournal(c));
-        vm.prank(address(finaliser));
+        vm.prank(relayer); // the finalisation's sender is not paid
         vault.finalize(beaconIndex, c, SEAL);
 
         _deposit(alice, ETH, 1, keccak256("eth"));
@@ -606,11 +609,12 @@ contract FeesTest is VaultTestBase {
         vm.warp(block.timestamp + FEE_NOTICE);
         _release(_request(ETH, 1, recipient, ROOT, keccak256("n1")));
         assertEq(recipient.balance, 1 ether - checkpointFee);
-        assertEq(vault.owed(address(finaliser), ETH), checkpointFee);
-        assertEq(address(finaliser).balance, 0);
-        finaliser.setOpen(true);
-        finaliser.claim(address(vault), ETH);
-        assertEq(address(finaliser).balance, checkpointFee);
+        assertEq(vault.owed(address(prover), ETH), checkpointFee);
+        assertEq(vault.owed(relayer, ETH), 0);
+        assertEq(address(prover).balance, 0);
+        prover.setOpen(true);
+        prover.claim(address(vault), ETH);
+        assertEq(address(prover).balance, checkpointFee);
     }
 
     function _three(uint256 v) internal pure returns (uint256[] memory x) {
@@ -623,14 +627,18 @@ contract FeesTest is VaultTestBase {
         x[1] = v;
     }
 
-    /// @notice Rule (B): the checkpoint fee goes to the sender of finalizeAttested (spec: whoever finalised).
-    function test_release_ruleB_checkpointFeeToTheSenderOfFinalizeAttested() public {
+    /// @notice Rule (B): the checkpoint fee goes to the candidate's prover, not to the sender of finalizeAttested,
+    ///         which needs no proof (review M-2).
+    function test_release_ruleB_checkpointFeeToTheProverNotToTheSenderOfFinalizeAttested() public {
+        address prover = makeAddr("prover");
         FerrataVault vb = new FerrataVault(_deploymentB(IRiscZeroVerifier(address(estop)), LEZ_CONFIG_ID));
         vm.prank(admin);
         vb.registerToken(FEE_TOKEN, _feeTokenParams());
         _depositInto(vb, alice, FEE_TOKEN, 1, keccak256("b"));
         FerrataVault.Checkpoint memory c = _nextCheckpoint(vb, ROOT, 0, false);
-        _submit(vb, LEZ_CONFIG_ID, c);
+        _proveCheckpoint(_checkpointJournal(vb, LEZ_CONFIG_ID, c));
+        vm.prank(prover);
+        vb.submitCandidate(c, SEAL);
         (uint256 submittedAt, uint256 wait) = _waitOf(vb, c.newState);
         vm.warp(submittedAt + wait);
         vm.prank(bob);
@@ -643,7 +651,8 @@ contract FeesTest is VaultTestBase {
         vm.prank(relayer);
         vb.release(r, SEAL);
         assertEq(t.balanceOf(recipient), D1 - CHECKPOINT1); // schedule 0: no burn fee, its checkpoint fee
-        assertEq(vb.owed(bob, FEE_TOKEN), CHECKPOINT1);
+        assertEq(vb.owed(prover, FEE_TOKEN), CHECKPOINT1);
+        assertEq(vb.owed(bob, FEE_TOKEN), 0);
         assertEq(vb.owed(feeRecipient, FEE_TOKEN), 0);
     }
 

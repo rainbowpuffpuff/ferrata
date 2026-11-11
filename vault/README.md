@@ -91,7 +91,9 @@ is `address(0)`.
 - The leaf binds the depositor (`msg.sender`) and its 64-bit index.
 - Leaf indices stay below 2^32 (D9): once the tree holds 2^32 leaves, both deposit functions revert, and a refund
   for an index of 2^32 or more is refused. Indices `i` and `i + 2^32` would otherwise share a path.
-- After `retire()`, deposits revert forever.
+- After `retire()`, deposits revert forever. They also revert (`VaultRetired`) while a finalised sunset checkpoint
+  is in force: LEZ imports nothing after `Sunset`, so such a deposit could be neither claimed nor refunded until
+  retirement (review 2026-11-11 L-3).
 
 ### LEZ checkpoints: the finality rules in plain words
 
@@ -150,9 +152,18 @@ pending candidate; a finalisation does not. The assumptions are stated below.
   counting. It restores `finalState`, and that state's imported leaf count and sunset flag, to those `index` was
   built on. If a revoked checkpoint set the refund boundary, the boundary is cleared. Used nullifiers stay used. It
   accepts nothing: the restored state needs a fresh candidate and a full wait.
-- **`retire()`**, one-way: the freeze authority at any time; anyone once no checkpoint has been finalised for 30 days
-  (counted from deployment before the first), so that refunds never depend on the freeze key (D13). It stops
-  deposits forever. It cannot touch escrow, checkpoints or releases.
+- **`retire()`**, one-way: the freeze authority at any time; anyone from `retireOpensAt()` on, so that refunds never
+  depend on the freeze key (D13). It stops deposits forever. It cannot touch escrow, checkpoints or releases.
+  `retireOpensAt()` is the earlier of two moments (review 2026-11-11 M-1, L-3):
+  - **keyless**: 30 days after the first moment a checkpoint could be finalised since the clock last started. The
+    clock (`keylessFrom`) starts at deployment and restarts at every candidate submission (a verified proof on
+    `finalState`) and every finalisation; the shortest wait `delta + (tMin − 1) × turnSeconds` (today's `delta`) is
+    added. A checkpoint freeze or a watcher pause in force moves the start to its end, and a freeze the freeze
+    authority lifts or cuts short restarts the clock when it ends. So no time under a freeze or pause counts, a
+    watcher cannot run the clock out (pauses stop it; cancelled candidates are resubmitted, which restarts it), and
+    operators must submit or finalise a checkpoint at least every 30 days, from deployment on (a heartbeat);
+  - **sunset**: the second after the first non-revoked sunset checkpoint stops being revocable
+    (`sunsetFinalizedAt + revokeWindow + 1`, when refunds open: D11's first item).
 
 ### Refunds
 
@@ -199,13 +210,14 @@ fee on its own), in the token itself:
   pays it to the relayer; a release pays it to its relayer when the proof names it (0 or exactly the registered fee);
 - the **mint fee** (protocol), escrowed by a deposit beside the denomination, in whole LEZ units;
 - the **burn fee** (protocol), kept from a release and credited to the immutable `feeRecipient`;
-- the **checkpoint fee**, kept from a release and credited to whoever finalised the root the release is proven
-  against (the sender of `finalize` under rule (A), of `finalizeAttested` under rule (B)).
+- the **checkpoint fee**, kept from a release and credited to the prover of the checkpoint that accepted the root
+  the release is proven against: the sender of its candidate (`submitCandidate`, whose proof the vault verified),
+  under both rules, not the sender of the finalisation (review 2026-11-11 M-2).
 
 A deposit escrows the denomination plus the mint and relay fees of the schedule in force; its leaf and its `Deposit`
 event keep the denomination. A release pays the denomination less the relay fee its proof names and the burn and
 checkpoint fees of the schedule in force at the release. Burn and checkpoint fees are credited to `owed` and claimed
-with `claimOwed`, never pushed, so no finaliser can make releases costly. A refund returns the leaf's whole escrow:
+with `claimOwed`, never pushed, so no prover can make releases costly. A refund returns the leaf's whole escrow:
 the denomination and the mint and relay fees of the schedule of its leaf index. The caps count what moves: a
 deposit's total, a release's denomination, a refund's total.
 
@@ -261,8 +273,8 @@ layout (`forge inspect FerrataVault storageLayout`):
 - 35–37: the roles, with `retired` packed beside the freeze authority;
 - 38–40: the deposit, release and checkpoint freeze deadlines;
 - 41–52: checkpoint state (`finalState`, `delta`, `revocationEpoch`, beacons, candidates, history, burn-root index,
-  refund boundary and its finalisation time, and the imported leaf count, sunset flag and finalisation time of
-  `finalState` in one slot);
+  refund boundary and its finalisation time, and the imported leaf count and sunset flag of `finalState` with the
+  keyless-retirement clock `keylessFrom` in one slot);
 - 53–64: registry, per-token freezes, delay history, escrow, owed, counters, nullifiers, refunded leaves, per-token
   buckets;
 - 65–68 and 69–72: the global buckets;
@@ -376,9 +388,12 @@ has to agree on each):
   force withdraws it.
 - **A release pays the fees in force at the release**, not those of the root's checkpoint. Rejected: the root's
   schedule, inexact in time under lazy activation and a search on the hot path.
-- **"Whoever finalised the root used"** is the sender of `finalize` (A) or `finalizeAttested` (B), recorded in the
-  checkpoint's history entry; under rule (B) anyone may finalise after the wait, so finalisers race for the fee.
-  Rejected: the candidate's submitter (one more slot per candidate, about 22k gas).
+- **"Whoever finalised the root used"** is read as the candidate's prover: the sender of `submitCandidate`, stored
+  in the candidate (one more slot, measured in GAS.md) and copied into the checkpoint's history entry. v5 credited
+  the sender of `finalize` (A) or `finalizeAttested` (B): under rule (B) that call needs no proof, so anyone took the
+  fee without proving, and under (A) a copied seal redirected it (review 2026-11-11 M-2). Still open: copying a
+  pending `submitCandidate` from the mempool takes the credit; closing it needs the prover's address in the checkpoint
+  journal (a new checkpoint program).
 - **Who receives the burn fee**: an immutable `feeRecipient` set at deployment. Burn and checkpoint fees are
   credited, never pushed.
 - **Relay fee**: a release's stays 0 or the registered fee (v4); a deposit always escrows it, since the claim on LEZ
@@ -403,7 +418,11 @@ Kept from v3:
   breaks it can be submitted, but never finalised.
 - **Only the global release freeze stops refunds**, as D5 words it. A per-token release freeze stops that token's
   releases, not its refunds.
-- **Constructor bounds:** `minReleaseDelay ≤ revokeWindow` and `≤ 30 days`.
+- **Constructor bounds:** `minReleaseDelay ≤ revokeWindow` and `≤ 30 days`; `revokeWindow / deltaFloor ≤ 1,000`, so
+  `revokeFrom` marks at most 1,001 checkpoints (two finalisations are at least `deltaFloor` apart; review I-7).
+- **Stale candidates** (submitted before a finalisation or a revocation, so built on an earlier `finalState`) are
+  dead: they cannot be finalised and a new submission of the same `newState` replaces them (review L-1). A candidate
+  records `epoch = revocationEpoch + checkpointCount()` at submission and is live only while that sum is unchanged.
 - **`cancelCandidate`** refuses a state that was never submitted and one already finalised alike
   (`UnknownCandidate`). It also deletes a stale candidate, which is harmless. It works under the checkpoint freeze
   and after a verifier stop, since it needs no proof. Every candidate keeps its tip for `CandidateCancelled`.
@@ -449,8 +468,12 @@ New in v4:
   authority and remove the watchers; the public proposal is the warning.
 - **A watcher can delay checkpoints** by cancelling every candidate and renewing 12-hour pauses, until the admin
   replaces it 14 days after proposing to. Under rule (A) the watchers are also trusted for safety outside F1–F4.
-- **Keyless retirement follows any 30 days without a finalisation**, including 30 days of checkpoint freezes or
-  watcher pauses: a long pause lets anyone retire the vault, which stops deposits for good.
+- **Keyless retirement follows 30 days without checkpoint progress** (after one shortest wait; freezes and pauses do
+  not count). A quiet month with no prover, from deployment on, lets anyone retire the vault, which stops deposits
+  for good: operators must submit or finalise a checkpoint at least every 30 days. A watcher cannot cause it, but a
+  rogue watcher can delay it (renewing pauses, or submitting and cancelling candidates) until the admin replaces it;
+  it can already stop checkpoints, and with them refunds, for as long. Anyone with a valid proof can delay it too,
+  by submitting a heartbeat candidate (as a finalisation always could).
 - **An unrevoked wrong checkpoint older than `revokeWindow` halts the vault for good** (D13): every later candidate
   descends from it.
 - **A payee that can never receive** (a contract without `receive`, a permanently blacklisted address) keeps an
@@ -706,10 +729,11 @@ the table above and drives real candidate → beacon → finalisation sequences 
 | `Freeze.t.sol` | All 32 combinations of the five freezes; every freeze lapses after `maxFreeze`; renewal; a lost key cannot lock the vault |
 | `Admin.t.sol` | Constructor checks, including `turnSeconds` and `minReleaseDelay`; the v3 domain tag; write-once registry; relay-fee ceiling (fuzzed); role separation; two-step handovers (v4: the admin's own; the freeze authority changes only through `proposeRoles`) |
 | `Caps.t.sol`, `Merkle.t.sol`, `Privacy.t.sol`, `TreeVectors.t.sol`, `GasScenarios.t.sol` | Rate limits; slots 0, 1 and 2 and tree algebra; LEZ-side data never appears in calldata, events or storage writes; vectors; gas |
-| `Fees.t.sol` (v5) | D13's fees, 22 tests: registration publishes the registry entry and schedule 0 at their slots (known answers, recomputed byte by byte) and emits them; the fee rules (1% ceiling, LEZ units, schedule 0 without mint or burn fee, twice the largest denomination in 128 bits); `announceFees` only by the admin and only for a registered token (fuzzed ceiling); a change in force seven days after its announcement and not a second earlier, a deposit after it sending the new total, a new announcement replacing the pending one, announcing the fees in force withdrawing it, a due change taking effect before the next announcement; `applyFees` permissionless, acting only when due; a refund returning the escrow of its leaf's schedule; releases paying the denomination less the relay, burn and checkpoint fees, with and without a relay fee, putting a due change in force, crediting nothing for zero fees, the checkpoint fee credited to the finaliser and never pushed, under rule (B) to the sender of `finalizeAttested`; deposit buckets counting the whole escrow; fuzzed fee arithmetic |
+| `Fees.t.sol` (v5) | D13's fees, 22 tests: registration publishes the registry entry and schedule 0 at their slots (known answers, recomputed byte by byte) and emits them; the fee rules (1% ceiling, LEZ units, schedule 0 without mint or burn fee, twice the largest denomination in 128 bits); `announceFees` only by the admin and only for a registered token (fuzzed ceiling); a change in force seven days after its announcement and not a second earlier, a deposit after it sending the new total, a new announcement replacing the pending one, announcing the fees in force withdrawing it, a due change taking effect before the next announcement; `applyFees` permissionless, acting only when due; a refund returning the escrow of its leaf's schedule; releases paying the denomination less the relay, burn and checkpoint fees, with and without a relay fee, putting a due change in force, crediting nothing for zero fees, the checkpoint fee credited to the candidate's prover and never pushed, under rule (B) to the prover and not to the sender of `finalizeAttested` (review 2026-11-11 M-2); deposit buckets counting the whole escrow; fuzzed fee arithmetic |
 | `invariant/` | 14 invariants over 256 runs × 100 calls, on a rule (A) vault (`VaultInvariants`) and on a rule (B) vault (`VaultInvariantsB`), listed below |
 | `ModeB.t.sol` (v4) | Rule (B): the constructor (turnSeconds 0 under B, non-zero under A); a candidate records no beacon and keeps its journal digest; final at its wait and not a second before, whatever its t; every journal word (the 11 the caller can change, and echoNonce) must be the candidate's; `recordBeacon` and `finalize` are rule (A) only, `finalizeAttested` rule (B) only; a watcher cancels within the wait and the same proof waits again in full; revocation, a competing finalisation, a pending duplicate, the checkpoint freeze, the verifier stop; monotonicity and the leaf bound; a Δ raise only for later candidates; the program's image id pinned; a release against a rule (B) root |
 | `Roles.t.sol` (v4) | Watchers: a 12-hour pause that never shortens a freeze and that the freeze authority can lift, renewable only from now, no other power, every slot counts, nobody else pauses. The admin's role change: admin only, applied by anyone 14 days later and not a second earlier, the old roles holding until then, nothing to apply, address(0) keeping the freeze authority, an empty set removing the watchers, a new proposal restarting the clock, the admin never becoming freeze authority. Keyless retirement 30 days after deployment or the last finalisation, the freeze authority at any time. The release floor: the deployment's global bucket, the global and the per-token bucket in value units, saturation, registration, a fuzz test against hand-worked thresholds; deposits not floored. A verifier that is not an untripped stop refused; a renounced stop owner cannot stop it, a proof of exploit still can |
+| `SecurityReview.t.sol` | The vault findings of the security review of 11 November 2026, 12 tests that fail on `integration4`'s vault (1bb20d5) and pass here: keyless retirement counted from the first finalisable moment, not shortened by a checkpoint freeze (lifted early or run to its end), not caused by one watcher pausing or cancelling (M-1); the checkpoint fee to the candidate's prover under both rules, nothing to a copied or proof-less finalisation (M-2); a stale candidate replaced (L-1); no deposit after a finalised sunset checkpoint, anyone retiring once it is irrevocable (L-3); the constructor's bound on `revokeWindow / deltaFloor` (I-7); the deployment script refusing mainnets (I-2) |
 | `real/ReturnLeg.t.sol` | No mock: RISC Zero's Groth16 verifier behind its emergency stop, the vault at the addresses the proofs bind, the design's default timers. Before any proof: the checkpoint program's two journals and the release program's two journals are byte for byte the vault's encodings, and the deposit root is the one the bridge core computed. The run: deposits, `submitCandidate` with the real checkpoint seal, the wait, `recordBeacon`, `finalize` with the seal that echoes that beacon, the release delay, `release` of ETH and of the token to recipients that held nothing. Refused: one flipped byte in each of the four seals (selector and each proof word), a valid seal of another statement, each journal field changed under its real seal (candidate, finalisation, release), a replayed release, a release against a root that is not finalised or still delayed, a finalisation one second early with the right nonce, any proof after the stop. `ReturnLegGas` measures every step. v4 runs it unchanged except where v4 refuses earlier (a finalisation journal with another tip, n or t is refused by the vault before the proof, D11). |
 | `real/RuleBReal.t.sol` (v4) | No mock, rule (B): the real `checkpoint_b` proof of `gpu-prover/results/ruleb-l4b/` wrapped to Groth16 (fixture `test/real/fixtures/rule-b.json`), RISC Zero's verifier behind its stop, a rule (B) vault constructed at the address the journal binds on chain id 1. Accepted; its journal digest kept; final after one hour and not a second earlier; refused with one flipped byte in the selector or any proof word, with each journal field changed, and by a rule (A) vault (rule (A)'s image id); a watcher cancels it. `RuleBRealGas` measures it |
 | `real/RealBlocks.t.sol` (v5) | No mock, rule (B), **real LEZ blocks**: the `checkpoint_b` proof of blocks 8..=202 of the lab's LEZ v0.4.0-rc1 sequencer chain (one validator, dev-mode leader proofs), tip 202 attested by a key the lab's channel key certified (n = 1, t = 1), proven on one NVIDIA L4 (`gpu-prover/results/realblocks-l4/`) and wrapped to Groth16 (fixture `test/real/fixtures/real-blocks.json`). The vault's genesis state is recomputed from the lab channel's key and equals the proof's parent. Accepted; final after one hour and not at once or a second earlier; refused with one flipped byte in the selector or any proof word, with another tip, tip id, state or `n`, by vaults of another key set (`ParentNotFinal`), with larger floors (`WrongCommitteeFloor`) and of rule (A). `RealBlocksGas`: 347,832 + 195,149 gas (`checkpoint/RESULTS.md`, "Real LEZ blocks") |
@@ -771,7 +795,12 @@ because a test contract (`VaultHandler`, 37,928 bytes) is above EIP-170, which f
 in tests. On branches `integration3` and `integration4` (the same `src/`, plus `test/real/RealBlocks.t.sol`,
 the real-block checkpoint's 10 tests, and `test/PrivacySuite.t.sol`, the privacy suite's Ethereum half):
 `forge test` 35 suites, 407 tests passed, 31 of them in `test/real/`; coverage of both files as above
-(`../docs/evidence-suites.txt`).
+(`../docs/evidence-suites.txt`). With the fixes of the security review of 11 November 2026 (branch
+`secfix-vault`, on the build box): `forge test` 36 suites, 421 tests passed, 1 skipped (`PrivacySuite`, which needs
+its LEZ half's output), 0 failed; the 12 tests of `test/SecurityReview.t.sol` fail on `integration4`'s vault;
+`forge coverage` 100% of lines, statements, branches and functions of both files (vault 431, 537, 102, 82; library
+245, 338, 45, 33); `tools/mutation_spotcheck.py` 254/254 mutants killed, every one by the unit suites (the tool now
+lets the privacy suite skip in its workspaces; before, it failed there and would have hidden a survivor).
 
 The deployment and rehearsal scripts (`script/DeployVault.s.sol`, `script/ForkRehearsal.s.sol`) are not run by
 `forge test`; `forge coverage` lists them at 0%. `script/fork-rehearsal.sh` runs every step of the first under both

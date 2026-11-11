@@ -84,10 +84,10 @@ contract HandlerCodec {
         return 0;
     }
 
-    /// @dev The checkpoint fee's payee for releases against `burnRoot`: the finaliser of its checkpoint.
-    function finalizerOf(FerrataVault vault, bytes32 burnRoot) external view returns (address finalizer) {
+    /// @dev The checkpoint fee's payee for releases against `burnRoot`: its checkpoint's prover (M-2).
+    function proverOf(FerrataVault vault, bytes32 burnRoot) external view returns (address prover) {
         uint256 entry = vault.burnRootCheckpoint(burnRoot);
-        if (entry != 0) (,,,,,,,,,, finalizer) = vault.checkpoints(entry - 1);
+        if (entry != 0) (,,,,,,,,,, prover) = vault.checkpoints(entry - 1);
     }
 
     /// @dev bridge-wire `fee_slot`: sha256("ferrata/vault/fees/v1" || token || index:u64).
@@ -630,9 +630,9 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         verifier.accept(vault.releaseImageId(), _codec.releaseDigest(vault, r, amount));
         _applyDue(b.token);
         uint256[3] memory expected = _expectedReleasePayouts(r, amount); // recipient, fee recipient, finaliser
-        address finalizer = _codec.finalizerOf(vault, r.burnRoot);
+        address prover = _codec.proverOf(vault, r.burnRoot);
         uint256[3] memory before =
-            [_valueOf(b.token, r.recipient), vault.owed(feeRecipient, b.token), vault.owed(finalizer, b.token)];
+            [_valueOf(b.token, r.recipient), vault.owed(feeRecipient, b.token), vault.owed(prover, b.token)];
 
         vm.prank(relayer);
         vault.release(r, "");
@@ -640,7 +640,7 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         if (
             _valueOf(b.token, r.recipient) - before[0] != expected[0]
                 || vault.owed(feeRecipient, b.token) - before[1] != expected[1]
-                || vault.owed(finalizer, b.token) - before[2] != expected[2]
+                || vault.owed(prover, b.token) - before[2] != expected[2]
         ) ghostFeeMismatches++;
         ghostReleased[b.token] += amount;
         ghostUnreleased[b.token] -= amount;
@@ -812,7 +812,11 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         else vault.setCheckpointsFrozen(frozen);
         vm.stopPrank();
         if (kind == 1) _releasesFrozenUntil = until;
-        if (kind == 4) _checkpointsFrozenUntil = until;
+        // A lifted checkpoint freeze keeps when it ended (review M-1: keyless retirement counts from there).
+        if (kind == 4) {
+            uint256 ended = _checkpointsFrozenUntil < block.timestamp ? _checkpointsFrozenUntil : block.timestamp;
+            _checkpointsFrozenUntil = frozen ? until : ended;
+        }
     }
 
     function setCap(uint256 tokenSeed, bool isDeposit, bool isGlobal, uint256 capacitySeed, uint256 refillSeed)

@@ -167,7 +167,7 @@ contract RealBlocksTest is RealBlocksFixture {
         vm.prank(makeAddr("anyone"));
         vault.submitCandidate(c, seal);
         uint256 at = block.timestamp;
-        (bytes32 digest,,,,,,) = vault.candidates(c.newState);
+        (bytes32 digest,,,,,,,) = vault.candidates(c.newState);
         assertEq(digest, sha256(journal), "the vault keeps the digest the real seal was verified against");
         assertEq(vault.finalState(), c.parentState, "nothing final before the wait");
 
@@ -210,7 +210,7 @@ contract RealBlocksTest is RealBlocksFixture {
             vault.submitCandidate{gas: TAMPERED_CALL_GAS}(c, bad);
         }
         vault.submitCandidate(c, seal); // control
-        (bytes32 digest,,,,,,) = vault.candidates(c.newState);
+        (bytes32 digest,,,,,,,) = vault.candidates(c.newState);
         assertEq(digest, sha256(journal));
     }
 

@@ -1,37 +1,44 @@
 No files changed, compilation skipped
 
-Ran 2 tests for test/Release.t.sol:VerifierSeparationTest
-[PASS] test_rejectingVerifier_rejectsCheckpointsAndReleases() (gas: 7509040)
-[PASS] test_releaseProgramCannotStandInForTheCheckpointProgram() (gas: 178230)
-Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 5.83ms (2.23ms CPU time)
-
 Ran 6 tests for test/Admin.t.sol:RolesTest
-[PASS] test_roles_adminCannotFreezeOrUnfreeze() (gas: 338240)
-[PASS] test_roles_freezeAuthorityCannotAdminister() (gas: 197492)
-[PASS] test_roles_strangerHasNoPowers() (gas: 473206)
+[PASS] test_roles_adminCannotFreezeOrUnfreeze() (gas: 344607)
+[PASS] test_roles_freezeAuthorityCannotAdminister() (gas: 197558)
+[PASS] test_roles_strangerHasNoPowers() (gas: 479706)
 [PASS] test_transferAdmin_canBeCancelledOrReplaced() (gas: 170859)
 [PASS] test_transferAdmin_cannotBeAcceptedByFreezeAuthority() (gas: 87260)
-[PASS] test_transferAdmin_isTwoStep() (gas: 410409)
-Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 5.91ms (1.93ms CPU time)
+[PASS] test_transferAdmin_isTwoStep() (gas: 410541)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 6.46ms (1.64ms CPU time)
 
-Ran 1 test for test/real/RuleBReal.t.sol:RuleBRealOnRuleAVaultTest
-[PASS] test_ruleB_realProof_refusedByARuleAVault() (gas: 344731)
-Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 8.52ms (3.44ms CPU time)
+Ran 2 tests for test/Release.t.sol:VerifierSeparationTest
+[PASS] test_rejectingVerifier_rejectsCheckpointsAndReleases() (gas: 7546586)
+[PASS] test_releaseProgramCannotStandInForTheCheckpointProgram() (gas: 182424)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 6.55ms (2.29ms CPU time)
 
 Ran 3 tests for test/EmergencyStop.t.sol:EmergencyStopTest
 [PASS] test_estop_cannotBeUndone() (gas: 109001)
 [PASS] test_estop_onlyGuardianOrAProofOfExploit() (gas: 164216)
-[PASS] test_estop_stopsCandidatesFinalisationReleasesAndRefunds_notCancellationClaimsOrRoles() (gas: 3894530)
-Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 8.59ms (4.98ms CPU time)
+[PASS] test_estop_stopsCandidatesFinalisationReleasesAndRefunds_notCancellationClaimsOrRoles() (gas: 3987699)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 9.67ms (5.28ms CPU time)
+
+Ran 1 test for test/real/RuleBReal.t.sol:RuleBRealOnRuleAVaultTest
+[PASS] test_ruleB_realProof_refusedByARuleAVault() (gas: 348991)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 10.99ms (3.43ms CPU time)
+
+Ran 4 tests for test/real/RealBlocks.t.sol:RealBlocksWrongVaultTest
+[PASS] test_realBlocks_aRuleAVaultRefusesIt() (gas: 2528141)
+[PASS] test_realBlocks_aVaultOfALargerKeySetRefusesIt() (gas: 2287036)
+[PASS] test_realBlocks_aVaultOfAnotherKeyRefusesIt() (gas: 2284542)
+[PASS] test_realBlocks_aVaultWithLargerFloorsRefusesIt() (gas: 2284750)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 12.02ms (7.93ms CPU time)
 
 Ran 1 test for test/real/RuleBReal.t.sol:RuleBRealGas
-[PASS] test_gas_ruleB_withTheRealVerifier() (gas: 613581)
-Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 10.00ms (4.83ms CPU time)
+[PASS] test_gas_ruleB_withTheRealVerifier() (gas: 636742)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 15.38ms (3.73ms CPU time)
 
 Ran 16 tests for test/JournalBinding.t.sol:ReleaseJournalBindingTest
-[PASS] test_attack_proofCannotBeReplayedAcrossLezConfigurations() (gas: 9395039)
+[PASS] test_attack_proofCannotBeReplayedAcrossLezConfigurations() (gas: 9437378)
 [PASS] test_attack_proofCannotBeReplayedOnAnotherChain() (gas: 361809)
-[PASS] test_attack_proofCannotBeReplayedOnAnotherVault() (gas: 9589068)
+[PASS] test_attack_proofCannotBeReplayedOnAnotherVault() (gas: 9631407)
 [PASS] test_attack_relayerCannotAddAFee() (gas: 170977)
 [PASS] test_attack_relayerCannotRedirectFunds() (gas: 171430)
 [PASS] test_attack_relayerCannotRedirectTheFee() (gas: 171431)
@@ -44,412 +51,450 @@ Ran 16 tests for test/JournalBinding.t.sol:ReleaseJournalBindingTest
 [PASS] test_releaseJournal_bindsRelayFee() (gas: 447952)
 [PASS] test_releaseJournal_bindsRelayer() (gas: 447953)
 [PASS] test_releaseJournal_bindsToken() (gas: 450049)
-[PASS] test_releaseJournal_bindsVault() (gas: 451846)
-Suite result: ok. 16 passed; 0 failed; 0 skipped; finished in 14.00ms (14.11ms CPU time)
+[PASS] test_releaseJournal_bindsVault() (gas: 451881)
+Suite result: ok. 16 passed; 0 failed; 0 skipped; finished in 18.15ms (11.73ms CPU time)
+
+Ran 12 tests for test/SecurityReview.t.sol:SecurityReviewTest
+[PASS] test_I2_theTestDeploymentRefusesEveryMainnet() (gas: 28317575)
+[PASS] test_I7_theConstructorBoundsRevokeWindowOverDeltaFloor() (gas: 6297678)
+[PASS] test_L1_aStaleCandidateNoLongerBlocksItsState() (gas: 1468565)
+[PASS] test_L3_anyoneRetiresOnceTheSunsetCheckpointIsIrrevocable() (gas: 1110618)
+[PASS] test_L3_noDepositAfterAFinalisedSunsetCheckpoint() (gas: 1095759)
+[PASS] test_M1_aCheckpointFreezeLiftedEarlyStillStopsTheClock() (gas: 201758)
+[PASS] test_M1_aFullCheckpointFreezeStopsTheClock() (gas: 170113)
+[PASS] test_M1_keylessRetirementCountsFromTheFirstFinalisableMoment() (gas: 118881)
+[PASS] test_M1_oneWatcherCancellingCannotCauseIt() (gas: 2006863)
+[PASS] test_M1_oneWatcherPausingCannotCauseIt() (gas: 2718441)
+[PASS] test_M2_ruleA_aCopiedFinalisationEarnsNothing() (gas: 1556461)
+[PASS] test_M2_ruleB_theCheckpointFeeGoesToTheProverNotToTheFinaliser() (gas: 9594166)
+Suite result: ok. 12 passed; 0 failed; 0 skipped; finished in 18.00ms (12.88ms CPU time)
+
+Ran 1 test for test/real/RealBlocks.t.sol:RealBlocksGas
+[PASS] test_gas_realBlocks_ruleB() (gas: 637080)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 22.48ms (7.53ms CPU time)
+
+Ran 32 tests for test/JournalBinding.t.sol:CheckpointJournalBindingTest
+[PASS] test_checkpointJournal_finalize_bindsBurnCount() (gas: 855224)
+[PASS] test_checkpointJournal_finalize_bindsBurnRoot() (gas: 855085)
+[PASS] test_checkpointJournal_finalize_bindsChainId() (gas: 854987)
+[PASS] test_checkpointJournal_finalize_bindsEchoNonce() (gas: 855199)
+[PASS] test_checkpointJournal_finalize_bindsImportedLeafCount() (gas: 855260)
+[PASS] test_checkpointJournal_finalize_bindsLezConfigId() (gas: 854968)
+[PASS] test_checkpointJournal_finalize_bindsN() (gas: 855394)
+[PASS] test_checkpointJournal_finalize_bindsNMin() (gas: 855130)
+[PASS] test_checkpointJournal_finalize_bindsNewState() (gas: 855061)
+[PASS] test_checkpointJournal_finalize_bindsParentState() (gas: 855059)
+[PASS] test_checkpointJournal_finalize_bindsSunset() (gas: 855192)
+[PASS] test_checkpointJournal_finalize_bindsT() (gas: 855419)
+[PASS] test_checkpointJournal_finalize_bindsTMin() (gas: 855130)
+[PASS] test_checkpointJournal_finalize_bindsTipHash() (gas: 855290)
+[PASS] test_checkpointJournal_finalize_bindsTipId() (gas: 855415)
+[PASS] test_checkpointJournal_finalize_bindsVault() (gas: 854925)
+[PASS] test_checkpointJournal_submit_bindsBurnCount() (gas: 482152)
+[PASS] test_checkpointJournal_submit_bindsBurnRoot() (gas: 482019)
+[PASS] test_checkpointJournal_submit_bindsChainId() (gas: 481859)
+[PASS] test_checkpointJournal_submit_bindsEchoNonce() (gas: 482090)
+[PASS] test_checkpointJournal_submit_bindsImportedLeafCount() (gas: 482217)
+[PASS] test_checkpointJournal_submit_bindsLezConfigId() (gas: 481915)
+[PASS] test_checkpointJournal_submit_bindsN() (gas: 482200)
+[PASS] test_checkpointJournal_submit_bindsNMin() (gas: 482021)
+[PASS] test_checkpointJournal_submit_bindsNewState() (gas: 481953)
+[PASS] test_checkpointJournal_submit_bindsParentState() (gas: 481887)
+[PASS] test_checkpointJournal_submit_bindsSunset() (gas: 482063)
+[PASS] test_checkpointJournal_submit_bindsT() (gas: 482187)
+[PASS] test_checkpointJournal_submit_bindsTMin() (gas: 482033)
+[PASS] test_checkpointJournal_submit_bindsTipHash() (gas: 482093)
+[PASS] test_checkpointJournal_submit_bindsTipId() (gas: 482221)
+[PASS] test_checkpointJournal_submit_bindsVault() (gas: 481794)
+Suite result: ok. 32 passed; 0 failed; 0 skipped; finished in 21.31ms (15.93ms CPU time)
 
 Ran 22 tests for test/Deposit.t.sol:DepositTest
-[PASS] test_depositETH_disabledReverts() (gas: 83362)
-[PASS] test_depositETH_escrowsAndAppendsLeaf() (gas: 331325)
-[PASS] test_depositETH_wrongValueReverts() (gas: 252355)
-[PASS] test_deposit_disabledTokenRevertsAndReenableWorks() (gas: 493289)
-[PASS] test_deposit_eighteenDecimalToken() (gas: 496023)
+[PASS] test_depositETH_disabledReverts() (gas: 85529)
+[PASS] test_depositETH_escrowsAndAppendsLeaf() (gas: 333403)
+[PASS] test_depositETH_wrongValueReverts() (gas: 260957)
+[PASS] test_deposit_disabledTokenRevertsAndReenableWorks() (gas: 497522)
+[PASS] test_deposit_eighteenDecimalToken() (gas: 498067)
 [PASS] test_deposit_erc20PathIsNotPayable() (gas: 164076)
 [PASS] test_deposit_ethSentinelThroughErc20PathReverts() (gas: 33801)
-[PASS] test_deposit_falseReturningTokenReverts() (gas: 1227476)
-[PASS] test_deposit_feeOnTransferTokenReverts() (gas: 1414744)
-[PASS] test_deposit_indexIsPerDepositor() (gas: 584440)
-[PASS] test_deposit_repeatedCommitmentIsAllowed() (gas: 1101800)
-[PASS] test_deposit_revertsWhenTreeIsFull() (gas: 263467)
-[PASS] test_deposit_sixDecimalToken() (gas: 495935)
-[PASS] test_deposit_unregisteredTokenReverts() (gas: 554816)
-[PASS] test_deposit_usdtStyleTokenWithoutReturnValue() (gas: 495916)
-[PASS] test_deposit_wrongDenominationIndexReverts() (gas: 244131)
-[PASS] test_deposit_wrongIndexReverts() (gas: 542771)
-[PASS] test_deposit_zeroCommitmentReverts() (gas: 207466)
+[PASS] test_deposit_falseReturningTokenReverts() (gas: 1231849)
+[PASS] test_deposit_feeOnTransferTokenReverts() (gas: 1419139)
+[PASS] test_deposit_indexIsPerDepositor() (gas: 590897)
+[PASS] test_deposit_repeatedCommitmentIsAllowed() (gas: 1108221)
+[PASS] test_deposit_revertsWhenTreeIsFull() (gas: 267623)
+[PASS] test_deposit_sixDecimalToken() (gas: 497979)
+[PASS] test_deposit_unregisteredTokenReverts() (gas: 556961)
+[PASS] test_deposit_usdtStyleTokenWithoutReturnValue() (gas: 497960)
+[PASS] test_deposit_wrongDenominationIndexReverts() (gas: 250566)
+[PASS] test_deposit_wrongIndexReverts() (gas: 553518)
+[PASS] test_deposit_zeroCommitmentReverts() (gas: 211756)
 [PASS] test_fallback_rejectsUnknownCalls() (gas: 62568)
 [PASS] test_leafHash_matchesSpec() (gas: 11760)
 [PASS] test_receive_rejectsPlainEth() (gas: 47515)
 [PASS] test_usdtMock_hasNoReturnValue() (gas: 174943)
-Suite result: ok. 22 passed; 0 failed; 0 skipped; finished in 15.99ms (17.83ms CPU time)
+Suite result: ok. 22 passed; 0 failed; 0 skipped; finished in 29.25ms (14.71ms CPU time)
 
-Ran 15 tests for test/ModeB.t.sol:ModeBTest
-[PASS] test_modeB_aCompetingCandidateGoesStaleOnceOneIsFinal() (gas: 678634)
-[PASS] test_modeB_aDeltaRaiseAppliesToLaterCandidatesOnly() (gas: 1106059)
-[PASS] test_modeB_aProofOfTheOtherRulesProgramIsRefused() (gas: 6068194)
-[PASS] test_modeB_aWatcherCancelsWithinTheWait() (gas: 705627)
-[PASS] test_modeB_beaconsAndTheSecondProofAreRuleAOnly() (gas: 657148)
-[PASS] test_modeB_checkpointFreezeStopsSubmissionAndFinalisation() (gas: 626135)
-[PASS] test_modeB_constructor_turnSecondsZeroUnderBNonZeroUnderA() (gas: 1105098)
-[PASS] test_modeB_everyJournalWordMustBeTheCandidates() (gas: 962468)
-[PASS] test_modeB_finalisesAtItsWaitNotASecondBefore() (gas: 550197)
-[PASS] test_modeB_monotonicityAndTheTreeBound() (gas: 3139711)
-[PASS] test_modeB_nothingIsFinalisedAfterTheStop() (gas: 462263)
-[PASS] test_modeB_releaseAgainstARuleBRoot() (gas: 663699)
-[PASS] test_modeB_revocationInvalidatesPendingCandidates() (gas: 760573)
-[PASS] test_modeB_samePendingStateCannotRestartItsWait() (gas: 269773)
-[PASS] test_modeB_submitRecordsNoBeaconAndKeepsTheJournalDigest() (gas: 264969)
-Suite result: ok. 15 passed; 0 failed; 0 skipped; finished in 23.51ms (13.78ms CPU time)
-
-Ran 1 test for test/real/ReturnLeg.t.sol:ReturnLegGas
-[PASS] test_gas_everyStepWithTheRealVerifier() (gas: 13616686)
-Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 25.59ms (18.09ms CPU time)
-
-Ran 32 tests for test/JournalBinding.t.sol:CheckpointJournalBindingTest
-[PASS] test_checkpointJournal_finalize_bindsBurnCount() (gas: 833960)
-[PASS] test_checkpointJournal_finalize_bindsBurnRoot() (gas: 833821)
-[PASS] test_checkpointJournal_finalize_bindsChainId() (gas: 833723)
-[PASS] test_checkpointJournal_finalize_bindsEchoNonce() (gas: 833935)
-[PASS] test_checkpointJournal_finalize_bindsImportedLeafCount() (gas: 833996)
-[PASS] test_checkpointJournal_finalize_bindsLezConfigId() (gas: 833704)
-[PASS] test_checkpointJournal_finalize_bindsN() (gas: 834130)
-[PASS] test_checkpointJournal_finalize_bindsNMin() (gas: 833866)
-[PASS] test_checkpointJournal_finalize_bindsNewState() (gas: 833797)
-[PASS] test_checkpointJournal_finalize_bindsParentState() (gas: 833795)
-[PASS] test_checkpointJournal_finalize_bindsSunset() (gas: 833928)
-[PASS] test_checkpointJournal_finalize_bindsT() (gas: 834155)
-[PASS] test_checkpointJournal_finalize_bindsTMin() (gas: 833866)
-[PASS] test_checkpointJournal_finalize_bindsTipHash() (gas: 834026)
-[PASS] test_checkpointJournal_finalize_bindsTipId() (gas: 834151)
-[PASS] test_checkpointJournal_finalize_bindsVault() (gas: 833661)
-[PASS] test_checkpointJournal_submit_bindsBurnCount() (gas: 450936)
-[PASS] test_checkpointJournal_submit_bindsBurnRoot() (gas: 450803)
-[PASS] test_checkpointJournal_submit_bindsChainId() (gas: 450643)
-[PASS] test_checkpointJournal_submit_bindsEchoNonce() (gas: 450874)
-[PASS] test_checkpointJournal_submit_bindsImportedLeafCount() (gas: 451001)
-[PASS] test_checkpointJournal_submit_bindsLezConfigId() (gas: 450699)
-[PASS] test_checkpointJournal_submit_bindsN() (gas: 450984)
-[PASS] test_checkpointJournal_submit_bindsNMin() (gas: 450805)
-[PASS] test_checkpointJournal_submit_bindsNewState() (gas: 450737)
-[PASS] test_checkpointJournal_submit_bindsParentState() (gas: 450671)
-[PASS] test_checkpointJournal_submit_bindsSunset() (gas: 450847)
-[PASS] test_checkpointJournal_submit_bindsT() (gas: 450971)
-[PASS] test_checkpointJournal_submit_bindsTMin() (gas: 450817)
-[PASS] test_checkpointJournal_submit_bindsTipHash() (gas: 450877)
-[PASS] test_checkpointJournal_submit_bindsTipId() (gas: 451005)
-[PASS] test_checkpointJournal_submit_bindsVault() (gas: 450578)
-Suite result: ok. 32 passed; 0 failed; 0 skipped; finished in 26.71ms (20.91ms CPU time)
+Ran 5 tests for test/real/RealBlocks.t.sol:RealBlocksTest
+[PASS] test_realBlocks_aFlippedByteInTheSealIsRefused() (gas: 15805971)
+[PASS] test_realBlocks_anotherJournalUnderTheRealSealIsRefused() (gas: 1200154)
+[PASS] test_realBlocks_candidateThenFinalAfterTheWait() (gas: 706133)
+[PASS] test_realBlocks_earlyFinalisationIsRefused() (gas: 718070)
+[PASS] test_realBlocks_theProvenParentIsTheLabChannelsKeySet() (gas: 51425)
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 31.40ms (30.56ms CPU time)
 
 Ran 24 tests for test/Release.t.sol:ReleaseTest
-[PASS] test_deposit_reentrantTokenIsBlocked() (gas: 2034045)
-[PASS] test_release_cannotExceedEscrow() (gas: 1515421)
-[PASS] test_release_delayIsPerToken() (gas: 1269076)
-[PASS] test_release_eighteenDecimalToken() (gas: 1377025)
-[PASS] test_release_erc20FeeSplit() (gas: 1398546)
-[PASS] test_release_escrowIsPerToken() (gas: 1313858)
-[PASS] test_release_eth() (gas: 1210144)
-[PASS] test_release_feeGoesToBoundRelayer() (gas: 1249332)
-[PASS] test_release_feeGoesToMsgSenderWhenRelayerIsUnset() (gas: 1220219)
-[PASS] test_release_invalidDenominationIndexReverts() (gas: 754710)
-[PASS] test_release_nonZeroFeeRejectedWhenNoStandardFeeIsSet() (gas: 1105261)
-[PASS] test_release_reentrantRecipientCannotDeposit() (gas: 1806249)
-[PASS] test_release_reentrantRecipientIsBlocked() (gas: 2375797)
-[PASS] test_release_reentrantTokenIsBlocked() (gas: 3515326)
-[PASS] test_release_relayFeeMustBeZeroOrStandard() (gas: 2437022)
-[PASS] test_release_rootProgramCannotStandInForReleaseProgram() (gas: 1116187)
-[PASS] test_release_sameNullifierTwiceReverts() (gas: 2186262)
-[PASS] test_release_sixDecimalToken() (gas: 1376949)
-[PASS] test_release_unknownRootReverts() (gas: 373672)
-[PASS] test_release_unregisteredTokenReverts() (gas: 1264284)
-[PASS] test_release_usdtStyleTokenWithoutReturnValue() (gas: 1376967)
-[PASS] test_release_waitsForReleaseDelay() (gas: 1387038)
-[PASS] test_release_worksForDelistedToken() (gas: 1514260)
-[PASS] test_release_zeroRecipientReverts() (gas: 1078951)
-Suite result: ok. 24 passed; 0 failed; 0 skipped; finished in 32.25ms (31.92ms CPU time)
+[PASS] test_deposit_reentrantTokenIsBlocked() (gas: 2038351)
+[PASS] test_release_cannotExceedEscrow() (gas: 1545030)
+[PASS] test_release_delayIsPerToken() (gas: 1298832)
+[PASS] test_release_eighteenDecimalToken() (gas: 1404432)
+[PASS] test_release_erc20FeeSplit() (gas: 1426065)
+[PASS] test_release_escrowIsPerToken() (gas: 1341355)
+[PASS] test_release_eth() (gas: 1237585)
+[PASS] test_release_feeGoesToBoundRelayer() (gas: 1276919)
+[PASS] test_release_feeGoesToMsgSenderWhenRelayerIsUnset() (gas: 1247806)
+[PASS] test_release_invalidDenominationIndexReverts() (gas: 780073)
+[PASS] test_release_nonZeroFeeRejectedWhenNoStandardFeeIsSet() (gas: 1132791)
+[PASS] test_release_reentrantRecipientCannotDeposit() (gas: 1833779)
+[PASS] test_release_reentrantRecipientIsBlocked() (gas: 2405406)
+[PASS] test_release_reentrantTokenIsBlocked() (gas: 3547129)
+[PASS] test_release_relayFeeMustBeZeroOrStandard() (gas: 2471076)
+[PASS] test_release_rootProgramCannotStandInForReleaseProgram() (gas: 1143717)
+[PASS] test_release_sameNullifierTwiceReverts() (gas: 2241232)
+[PASS] test_release_sixDecimalToken() (gas: 1404356)
+[PASS] test_release_unknownRootReverts() (gas: 375839)
+[PASS] test_release_unregisteredTokenReverts() (gas: 1289647)
+[PASS] test_release_usdtStyleTokenWithoutReturnValue() (gas: 1404374)
+[PASS] test_release_waitsForReleaseDelay() (gas: 1416816)
+[PASS] test_release_worksForDelistedToken() (gas: 1543923)
+[PASS] test_release_zeroRecipientReverts() (gas: 1106481)
+Suite result: ok. 24 passed; 0 failed; 0 skipped; finished in 33.63ms (40.16ms CPU time)
 
-Ran 1 test for test/TreeVectors.t.sol:TreeVectorsTest
-[PASS] test_treeVectors_matchCommittedFile() (gas: 11263048)
-Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 34.20ms (30.16ms CPU time)
+Ran 1 test for test/real/ReturnLeg.t.sol:ReturnLegGas
+[PASS] test_gas_everyStepWithTheRealVerifier() (gas: 13654286)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 32.36ms (19.97ms CPU time)
+
+Ran 15 tests for test/ModeB.t.sol:ModeBTest
+[PASS] test_modeB_aCompetingCandidateGoesStaleOnceOneIsFinal() (gas: 721183)
+[PASS] test_modeB_aDeltaRaiseAppliesToLaterCandidatesOnly() (gas: 1176997)
+[PASS] test_modeB_aProofOfTheOtherRulesProgramIsRefused() (gas: 6102890)
+[PASS] test_modeB_aWatcherCancelsWithinTheWait() (gas: 759365)
+[PASS] test_modeB_beaconsAndTheSecondProofAreRuleAOnly() (gas: 709052)
+[PASS] test_modeB_checkpointFreezeStopsSubmissionAndFinalisation() (gas: 649077)
+[PASS] test_modeB_constructor_turnSecondsZeroUnderBNonZeroUnderA() (gas: 1111352)
+[PASS] test_modeB_everyJournalWordMustBeTheCandidates() (gas: 1012907)
+[PASS] test_modeB_finalisesAtItsWaitNotASecondBefore() (gas: 575678)
+[PASS] test_modeB_monotonicityAndTheTreeBound() (gas: 3315617)
+[PASS] test_modeB_nothingIsFinalisedAfterTheStop() (gas: 489183)
+[PASS] test_modeB_releaseAgainstARuleBRoot() (gas: 689057)
+[PASS] test_modeB_revocationInvalidatesPendingCandidates() (gas: 812878)
+[PASS] test_modeB_samePendingStateCannotRestartItsWait() (gas: 296516)
+[PASS] test_modeB_submitRecordsNoBeaconAndKeepsTheJournalDigest() (gas: 291882)
+Suite result: ok. 15 passed; 0 failed; 0 skipped; finished in 32.13ms (20.94ms CPU time)
 
 Ran 12 tests for test/Revocation.t.sol:RevocationTest
-[PASS] test_nullifiersUsedBeforeARevocationStayUsed() (gas: 1479591)
-[PASS] test_releaseAgainstARevokedRootReverts() (gas: 1164392)
-[PASS] test_reprovenCheckpointIsAcceptedAgain_butANullifierPaysOnce() (gas: 2358897)
-[PASS] test_revokeFrom_acceptsNothing() (gas: 1395428)
-[PASS] test_revokeFrom_insideTheWindow() (gas: 1426783)
-[PASS] test_revokeFrom_invalidatesPendingCandidates() (gas: 1187350)
-[PASS] test_revokeFrom_keepsTheSunsetOfTheRestoredState() (gas: 4927173)
-[PASS] test_revokeFrom_marksEveryLaterCheckpoint() (gas: 2011955)
-[PASS] test_revokeFrom_onlyTheFreezeAuthority() (gas: 799248)
-[PASS] test_revokeFrom_onlyWithinTheWindow() (gas: 879251)
-[PASS] test_revokeFrom_restoresTheMonotonicityState() (gas: 5721175)
-[PASS] test_revokeFrom_unknownOrAlreadyRevoked() (gas: 1433703)
-Suite result: ok. 12 passed; 0 failed; 0 skipped; finished in 37.58ms (34.41ms CPU time)
+[PASS] test_nullifiersUsedBeforeARevocationStayUsed() (gas: 1509199)
+[PASS] test_releaseAgainstARevokedRootReverts() (gas: 1191922)
+[PASS] test_reprovenCheckpointIsAcceptedAgain_butANullifierPaysOnce() (gas: 2414089)
+[PASS] test_revokeFrom_acceptsNothing() (gas: 1446240)
+[PASS] test_revokeFrom_insideTheWindow() (gas: 1477815)
+[PASS] test_revokeFrom_invalidatesPendingCandidates() (gas: 1239485)
+[PASS] test_revokeFrom_keepsTheSunsetOfTheRestoredState() (gas: 5037723)
+[PASS] test_revokeFrom_marksEveryLaterCheckpoint() (gas: 2088439)
+[PASS] test_revokeFrom_onlyTheFreezeAuthority() (gas: 824611)
+[PASS] test_revokeFrom_onlyWithinTheWindow() (gas: 904856)
+[PASS] test_revokeFrom_restoresTheMonotonicityState() (gas: 5857305)
+[PASS] test_revokeFrom_unknownOrAlreadyRevoked() (gas: 1484427)
+Suite result: ok. 12 passed; 0 failed; 0 skipped; finished in 40.40ms (36.71ms CPU time)
 
-Ran 9 tests for test/PullPayment.t.sol:PullPaymentTest
-[PASS] test_aRecipientThatCannotReceiveBlocksNobody() (gas: 1210115)
-[PASS] test_blacklistedRecipient_isCreditedAndClaimsOnceUnblacklisted() (gas: 560677)
-[PASS] test_claimOwed_cannotBeReenteredFromAPayout() (gas: 1315135)
-[PASS] test_claimOwed_onlyByThePayeeAndOnlyWhatIsOwed() (gas: 653300)
-[PASS] test_ethRecipientThatRejects_isCreditedAndClaimsLater() (gas: 659837)
-[PASS] test_gasBurningRecipient_isCreditedGivenEnoughGas() (gas: 8165679)
-[PASS] test_refundToADepositorThatCannotReceive_isCredited() (gas: 1573206)
-[PASS] test_relayerThatCannotReceive_isCredited() (gas: 664772)
-[PASS] test_revertBombRecipient_isCreditedWithinAnOrdinaryGasLimit() (gas: 1103207)
-Suite result: ok. 9 passed; 0 failed; 0 skipped; finished in 42.84ms (33.89ms CPU time)
+Ran 1 test for test/PrivacySuite.t.sol:PrivacySuiteTest
+[SKIP] test_privacySuite_ethereumHalf() (gas: 0)
+Suite result: ok. 0 passed; 0 failed; 1 skipped; finished in 4.10ms (738.63µs CPU time)
 
-Ran 7 tests for test/Freeze.t.sol:FreezeTest
-[PASS] test_freeze_aLostFreezeKeyCannotLockTheVaultForever() (gas: 711486)
-[PASS] test_freeze_delaysButNeverInvalidatesAClaim() (gas: 335714)
-[PASS] test_freeze_everyCombination() (gas: 34401308)
-[PASS] test_freeze_everyKindExpiresAfterMaxFreeze() (gas: 1442981)
-[PASS] test_freeze_perTokenRequiresRegisteredToken() (gas: 579359)
-[PASS] test_freeze_renewingRestartsTheClock() (gas: 788314)
-[PASS] test_freeze_settersEmitAndSetFlags() (gas: 341834)
-Suite result: ok. 7 passed; 0 failed; 0 skipped; finished in 43.62ms (37.95ms CPU time)
+Ran 1 test for test/TreeVectors.t.sol:TreeVectorsTest
+[PASS] test_treeVectors_matchCommittedFile() (gas: 11287374)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 43.03ms (39.14ms CPU time)
 
 Ran 4 tests for test/real/RuleBReal.t.sol:RuleBRealTest
-[PASS] test_ruleB_realProof_aFlippedByteInTheSealIsRefused() (gas: 15772224)
-[PASS] test_ruleB_realProof_aWatcherCancels() (gas: 484219)
-[PASS] test_ruleB_realProof_candidateThenFinalAfterTheWait() (gas: 723090)
-[PASS] test_ruleB_realProof_eachJournalFieldIsBound() (gas: 3053535)
-Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 57.20ms (51.41ms CPU time)
+[PASS] test_ruleB_realProof_aFlippedByteInTheSealIsRefused() (gas: 15805514)
+[PASS] test_ruleB_realProof_aWatcherCancels() (gas: 511941)
+[PASS] test_ruleB_realProof_candidateThenFinalAfterTheWait() (gas: 748766)
+[PASS] test_ruleB_realProof_eachJournalFieldIsBound() (gas: 3116197)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 53.23ms (49.22ms CPU time)
+
+Ran 9 tests for test/PullPayment.t.sol:PullPaymentTest
+[PASS] test_aRecipientThatCannotReceiveBlocksNobody() (gas: 1209870)
+[PASS] test_blacklistedRecipient_isCreditedAndClaimsOnceUnblacklisted() (gas: 567353)
+[PASS] test_claimOwed_cannotBeReenteredFromAPayout() (gas: 1315046)
+[PASS] test_claimOwed_onlyByThePayeeAndOnlyWhatIsOwed() (gas: 663035)
+[PASS] test_ethRecipientThatRejects_isCreditedAndClaimsLater() (gas: 665951)
+[PASS] test_gasBurningRecipient_isCreditedGivenEnoughGas() (gas: 8165590)
+[PASS] test_refundToADepositorThatCannotReceive_isCredited() (gas: 1603854)
+[PASS] test_relayerThatCannotReceive_isCredited() (gas: 667740)
+[PASS] test_revertBombRecipient_isCreditedWithinAnOrdinaryGasLimit() (gas: 1103118)
+Suite result: ok. 9 passed; 0 failed; 0 skipped; finished in 43.41ms (42.23ms CPU time)
+
+Ran 7 tests for test/Freeze.t.sol:FreezeTest
+[PASS] test_freeze_aLostFreezeKeyCannotLockTheVaultForever() (gas: 713610)
+[PASS] test_freeze_delaysButNeverInvalidatesAClaim() (gas: 335758)
+[PASS] test_freeze_everyCombination() (gas: 34928892)
+[PASS] test_freeze_everyKindExpiresAfterMaxFreeze() (gas: 1474423)
+[PASS] test_freeze_perTokenRequiresRegisteredToken() (gas: 579271)
+[PASS] test_freeze_renewingRestartsTheClock() (gas: 788232)
+[PASS] test_freeze_settersEmitAndSetFlags() (gas: 341856)
+Suite result: ok. 7 passed; 0 failed; 0 skipped; finished in 80.30ms (51.23ms CPU time)
+
+Ran 1 test for test/RegistryStorage.t.sol:RegistryStorageTest
+[PASS] test_registryStorage_matchesTheCommittedVectors() (gas: 77942231)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 87.28ms (81.39ms CPU time)
 
 Ran 16 tests for test/Admin.t.sol:RegistryTest
-[PASS] testFuzz_registerToken_lezUnitPowersOfTenAccepted(uint8) (runs: 259, μ: 519148, ~: 518763)
-[PASS] testFuzz_registerToken_nonPowersOfTenRejected(uint256) (runs: 259, μ: 58832, ~: 58744)
-[PASS] testFuzz_registerToken_relayFeeCeiling(uint256,uint256) (runs: 259, μ: 202277, ~: 64287)
-[PASS] test_registerToken_denominationRules() (gas: 1276677)
-[PASS] test_registerToken_denominationsMustBeMultiplesOfLezUnit() (gas: 1902302)
-[PASS] test_registerToken_isWriteOnce() (gas: 833642)
-[PASS] test_registerToken_lezUnitMustBePowerOfTen() (gas: 281204)
-[PASS] test_registerToken_oneRelayFeePerDenomination() (gas: 667303)
-[PASS] test_registerToken_onlyAdmin() (gas: 84098)
-[PASS] test_registerToken_rejectsAddressWithoutCode() (gas: 56834)
-[PASS] test_registerToken_relayFeeAtMostOnePercent() (gas: 829262)
-[PASS] test_registerToken_storesConfigAndEmits() (gas: 784053)
-[PASS] test_registerToken_unitWeightBounds() (gas: 107015)
-[PASS] test_setCaps_emitAndRequireRegistration() (gas: 191018)
-[PASS] test_setDepositsEnabled() (gas: 99931)
-[PASS] test_setReleaseDelay() (gas: 169241)
-Suite result: ok. 16 passed; 0 failed; 0 skipped; finished in 72.23ms (147.18ms CPU time)
+[PASS] testFuzz_registerToken_lezUnitPowersOfTenAccepted(uint8) (runs: 256, μ: 521483, ~: 521379)
+[PASS] testFuzz_registerToken_nonPowersOfTenRejected(uint256) (runs: 256, μ: 61078, ~: 61004)
+[PASS] testFuzz_registerToken_relayFeeCeiling(uint256,uint256) (runs: 256, μ: 198654, ~: 66523)
+[PASS] test_registerToken_denominationRules() (gas: 1294762)
+[PASS] test_registerToken_denominationsMustBeMultiplesOfLezUnit() (gas: 1911346)
+[PASS] test_registerToken_isWriteOnce() (gas: 838142)
+[PASS] test_registerToken_lezUnitMustBePowerOfTen() (gas: 294764)
+[PASS] test_registerToken_oneRelayFeePerDenomination() (gas: 674085)
+[PASS] test_registerToken_onlyAdmin() (gas: 84142)
+[PASS] test_registerToken_rejectsAddressWithoutCode() (gas: 59094)
+[PASS] test_registerToken_relayFeeAtMostOnePercent() (gas: 836110)
+[PASS] test_registerToken_storesConfigAndEmits() (gas: 786403)
+[PASS] test_registerToken_unitWeightBounds() (gas: 111535)
+[PASS] test_setCaps_emitAndRequireRegistration() (gas: 191846)
+[PASS] test_setDepositsEnabled() (gas: 99975)
+[PASS] test_setReleaseDelay() (gas: 173105)
+Suite result: ok. 16 passed; 0 failed; 0 skipped; finished in 89.99ms (166.03ms CPU time)
 
 Ran 3 tests for test/Privacy.t.sol:PrivacyTest
-[PASS] test_privacy_depositRevealsNothingBeyondTheCommitment() (gas: 3873841)
-[PASS] test_privacy_failuresCarryOnlyASelector() (gas: 1846712)
-[PASS] test_privacy_releaseRevealsNoLezAccount() (gas: 8902794)
-Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 74.43ms (116.37ms CPU time)
-
-Ran 42 tests for test/Checkpoint.t.sol:CheckpointTest
-[PASS] test_cancelCandidate_aCancelledCandidateCannotBeFinalised() (gas: 588754)
-[PASS] test_cancelCandidate_deletesAPendingCandidate() (gas: 994291)
-[PASS] test_cancelCandidate_onlyAWatcherOrTheFreezeAuthority() (gas: 497559)
-[PASS] test_cancelCandidate_resubmissionWorksAndRestartsTheWait() (gas: 1172235)
-[PASS] test_cancelCandidate_unknownOrFinalisedCandidateRefused() (gas: 807750)
-[PASS] test_cancelCandidate_worksUnderTheCheckpointFreeze() (gas: 428987)
-[PASS] test_finalize_aChainOfCheckpoints() (gas: 2467946)
-[PASS] test_finalize_aNoOpCheckpointDoesNotInvalidatePendingCandidates() (gas: 1294798)
-[PASS] test_finalize_aRootFinalisedTwiceKeepsItsFirstTime() (gas: 1294294)
-[PASS] test_finalize_acceptsTheBurnRoot() (gas: 775582)
-[PASS] test_finalize_candidateWhoseParentIsNoLongerFinal() (gas: 1130518)
-[PASS] test_finalize_committeeSizedWait_t2() (gas: 919733)
-[PASS] test_finalize_committeeSizedWait_t3() (gas: 919776)
-[PASS] test_finalize_committeeSizedWait_t5() (gas: 919777)
-[PASS] test_finalize_committeeSizedWait_t7() (gas: 919741)
-[PASS] test_finalize_competingCandidates_theLoserNeverFinalizes() (gas: 1730653)
-[PASS] test_finalize_deltaRaiseAppliesToLaterCandidates() (gas: 952596)
-[PASS] test_finalize_deltaRaiseDoesNotAffectASubmittedCandidate() (gas: 745415)
-[PASS] test_finalize_echoNonceMustMatchTheNamedBeacon() (gas: 1004475)
-[PASS] test_finalize_fieldsMustEqualTheCandidates() (gas: 1929041)
-[PASS] test_finalize_importedLeafCountAboveTheTreeIsRefused() (gas: 1392902)
-[PASS] test_finalize_impossibleBeforeDelta_noBeaconIsOldEnough() (gas: 1024743)
-[PASS] test_finalize_needsItsOwnProof() (gas: 503089)
-[PASS] test_finalize_rejectsABeaconRecordedBeforeTheCandidate() (gas: 490592)
-[PASS] test_finalize_stoppedByTheCheckpointFreezeUntilItLapses() (gas: 833480)
-[PASS] test_finalize_sunsetCheckpointSetsTheRefundBoundary() (gas: 1779232)
-[PASS] test_finalize_theWaitIsTheCandidates() (gas: 813996)
-[PASS] test_finalize_unknownBeaconOrCandidate() (gas: 420756)
-[PASS] test_keySetMustMeetTheFloors_atFinalisation() (gas: 911211)
-[PASS] test_keySetMustMeetTheFloors_atSubmission() (gas: 254725)
-[PASS] test_monotonicity_importedLeafCountCannotDecrease() (gas: 5295345)
-[PASS] test_monotonicity_sunsetCannotGoBackToFalse() (gas: 5204950)
-[PASS] test_raiseDelta_onlyUpAndBelowTheCeiling() (gas: 133947)
-[PASS] test_recordBeacon_onePerBlock_nonceFromPrevrandao() (gas: 249070)
-[PASS] test_submitCandidate_committeeFloorMustBeTheDeployedOne() (gas: 254075)
-[PASS] test_submitCandidate_echoNonceMustBeZero() (gas: 161180)
-[PASS] test_submitCandidate_needsAValidProof() (gas: 119986)
-[PASS] test_submitCandidate_parentMustBeTheFinalState() (gas: 160791)
-[PASS] test_submitCandidate_resubmittingDoesNotRestartTheWait() (gas: 398482)
-[PASS] test_submitCandidate_stoppedByTheCheckpointFreeze() (gas: 444543)
-[PASS] test_submitCandidate_storesTheCandidateAndRecordsABeacon() (gas: 383157)
-[PASS] test_sunsetBoundary_aLaterSunsetCheckpointCannotLowerIt() (gas: 4808183)
-Suite result: ok. 42 passed; 0 failed; 0 skipped; finished in 81.85ms (57.30ms CPU time)
+[PASS] test_privacy_depositRevealsNothingBeyondTheCommitment() (gas: 3875306)
+[PASS] test_privacy_failuresCarryOnlyASelector() (gas: 1882908)
+[PASS] test_privacy_releaseRevealsNoLezAccount() (gas: 8930061)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 110.98ms (107.88ms CPU time)
 
 Ran 14 tests for test/real/ReturnLeg.t.sol:ReturnLegTest
 [PASS] test_checkpointJournals_areTheVaultsEncoding() (gas: 123654)
-[PASS] test_negative_afterTheStop_aRealProofIsRefused() (gas: 1305979)
-[PASS] test_negative_candidateSeal_oneByteFlipped() (gas: 23396730)
-[PASS] test_negative_candidate_oneJournalFieldChanged() (gas: 3466634)
-[PASS] test_negative_finalizeSeal_oneByteFlipped() (gas: 24183671)
-[PASS] test_negative_finalize_oneJournalFieldChanged() (gas: 1427062)
-[PASS] test_negative_finalizingEarly() (gas: 1347294)
-[PASS] test_negative_releaseAgainstARootNotFinalised() (gas: 1758265)
-[PASS] test_negative_releaseReplayed() (gas: 2350851)
-[PASS] test_negative_releaseSeal_oneByteFlipped() (gas: 48890221)
-[PASS] test_negative_release_oneJournalFieldChanged() (gas: 4199926)
+[PASS] test_negative_afterTheStop_aRealProofIsRefused() (gas: 1329034)
+[PASS] test_negative_candidateSeal_oneByteFlipped() (gas: 23427722)
+[PASS] test_negative_candidate_oneJournalFieldChanged() (gas: 3533559)
+[PASS] test_negative_finalizeSeal_oneByteFlipped() (gas: 24203957)
+[PASS] test_negative_finalize_oneJournalFieldChanged() (gas: 1461635)
+[PASS] test_negative_finalizingEarly() (gas: 1370548)
+[PASS] test_negative_releaseAgainstARootNotFinalised() (gas: 1781320)
+[PASS] test_negative_releaseReplayed() (gas: 2373906)
+[PASS] test_negative_releaseSeal_oneByteFlipped() (gas: 48913276)
+[PASS] test_negative_release_oneJournalFieldChanged() (gas: 4225148)
 [PASS] test_releaseJournals_areTheVaultsEncoding() (gas: 240763)
-[PASS] test_returnLeg_endToEnd() (gas: 2301606)
-[PASS] test_theDeploymentIsTheOneTheProofsBind() (gas: 74807)
-Suite result: ok. 14 passed; 0 failed; 0 skipped; finished in 82.04ms (206.98ms CPU time)
+[PASS] test_returnLeg_endToEnd() (gas: 2326747)
+[PASS] test_theDeploymentIsTheOneTheProofsBind() (gas: 74895)
+Suite result: ok. 14 passed; 0 failed; 0 skipped; finished in 144.01ms (211.40ms CPU time)
 
-Ran 9 tests for test/Admin.t.sol:ConstructorTest
-[PASS] test_constructor_deltaRules() (gas: 2685198)
-[PASS] test_constructor_globalCapsStartFull() (gas: 5818694)
-[PASS] test_constructor_rejectsBadImageIds() (gas: 1616139)
-[PASS] test_constructor_rejectsVerifierWithoutCode() (gas: 551629)
-[PASS] test_constructor_rejectsZeroCommitteeFloor() (gas: 1083858)
-[PASS] test_constructor_rejectsZeroConfigOrGenesis() (gas: 1082956)
-[PASS] test_constructor_rejectsZeroOrSharedRoles() (gas: 2152454)
-[PASS] test_constructor_setsImmutablesStateAndRoles() (gas: 158852)
-[PASS] test_constructor_turnSecondsAndMinReleaseDelay() (gas: 7895773)
-Suite result: ok. 9 passed; 0 failed; 0 skipped; finished in 97.88ms (8.22ms CPU time)
+Ran 42 tests for test/Checkpoint.t.sol:CheckpointTest
+[PASS] test_cancelCandidate_aCancelledCandidateCannotBeFinalised() (gas: 616348)
+[PASS] test_cancelCandidate_deletesAPendingCandidate() (gas: 1049636)
+[PASS] test_cancelCandidate_onlyAWatcherOrTheFreezeAuthority() (gas: 529811)
+[PASS] test_cancelCandidate_resubmissionWorksAndRestartsTheWait() (gas: 1228092)
+[PASS] test_cancelCandidate_unknownOrFinalisedCandidateRefused() (gas: 833201)
+[PASS] test_cancelCandidate_worksUnderTheCheckpointFreeze() (gas: 458885)
+[PASS] test_finalize_aChainOfCheckpoints() (gas: 2569509)
+[PASS] test_finalize_aNoOpCheckpointDoesNotInvalidatePendingCandidates() (gas: 1347714)
+[PASS] test_finalize_aRootFinalisedTwiceKeepsItsFirstTime() (gas: 1347863)
+[PASS] test_finalize_acceptsTheBurnRoot() (gas: 798952)
+[PASS] test_finalize_candidateWhoseParentIsNoLongerFinal() (gas: 1175271)
+[PASS] test_finalize_committeeSizedWait_t2() (gas: 945108)
+[PASS] test_finalize_committeeSizedWait_t3() (gas: 945151)
+[PASS] test_finalize_committeeSizedWait_t5() (gas: 945152)
+[PASS] test_finalize_committeeSizedWait_t7() (gas: 945116)
+[PASS] test_finalize_competingCandidates_theLoserNeverFinalizes() (gas: 1788218)
+[PASS] test_finalize_deltaRaiseAppliesToLaterCandidates() (gas: 977971)
+[PASS] test_finalize_deltaRaiseDoesNotAffectASubmittedCandidate() (gas: 768470)
+[PASS] test_finalize_echoNonceMustMatchTheNamedBeacon() (gas: 1027707)
+[PASS] test_finalize_fieldsMustEqualTheCandidates() (gas: 1977099)
+[PASS] test_finalize_importedLeafCountAboveTheTreeIsRefused() (gas: 1420535)
+[PASS] test_finalize_impossibleBeforeDelta_noBeaconIsOldEnough() (gas: 1047997)
+[PASS] test_finalize_needsItsOwnProof() (gas: 525731)
+[PASS] test_finalize_rejectsABeaconRecordedBeforeTheCandidate() (gas: 518031)
+[PASS] test_finalize_stoppedByTheCheckpointFreezeUntilItLapses() (gas: 856580)
+[PASS] test_finalize_sunsetCheckpointSetsTheRefundBoundary() (gas: 1813210)
+[PASS] test_finalize_theWaitIsTheCandidates() (gas: 839304)
+[PASS] test_finalize_unknownBeaconOrCandidate() (gas: 445507)
+[PASS] test_keySetMustMeetTheFloors_atFinalisation() (gas: 938772)
+[PASS] test_keySetMustMeetTheFloors_atSubmission() (gas: 254441)
+[PASS] test_monotonicity_importedLeafCountCannotDecrease() (gas: 5431682)
+[PASS] test_monotonicity_sunsetCannotGoBackToFalse() (gas: 5341627)
+[PASS] test_raiseDelta_onlyUpAndBelowTheCeiling() (gas: 134057)
+[PASS] test_recordBeacon_onePerBlock_nonceFromPrevrandao() (gas: 248787)
+[PASS] test_submitCandidate_committeeFloorMustBeTheDeployedOne() (gas: 253791)
+[PASS] test_submitCandidate_echoNonceMustBeZero() (gas: 161005)
+[PASS] test_submitCandidate_needsAValidProof() (gas: 124180)
+[PASS] test_submitCandidate_parentMustBeTheFinalState() (gas: 160616)
+[PASS] test_submitCandidate_resubmittingDoesNotRestartTheWait() (gas: 429796)
+[PASS] test_submitCandidate_stoppedByTheCheckpointFreeze() (gas: 478627)
+[PASS] test_submitCandidate_storesTheCandidateAndRecordsABeacon() (gas: 410095)
+[PASS] test_sunsetBoundary_aLaterSunsetCheckpointCannotLowerIt() (gas: 4919354)
+Suite result: ok. 42 passed; 0 failed; 0 skipped; finished in 144.08ms (68.53ms CPU time)
 
 Ran 33 tests for test/GasScenarios.t.sol:GasScenarios
-[PASS] test_gas_announceFees() (gas: 264449)
-[PASS] test_gas_applyFees() (gas: 348254)
+[PASS] test_gas_announceFees() (gas: 264471)
+[PASS] test_gas_applyFees() (gas: 348276)
 [PASS] test_gas_baselinePlainTransfer() (gas: 67557)
-[PASS] test_gas_cancelCandidate() (gas: 256055)
-[PASS] test_gas_cancelCandidate_byWatcher() (gas: 257345)
-[PASS] test_gas_claimOwedERC20() (gas: 403740)
-[PASS] test_gas_claimOwedETH_viaContractPayee() (gas: 604066)
-[PASS] test_gas_depositERC20_firstByAddress() (gas: 344730)
-[PASS] test_gas_depositERC20_laterByAddress() (gas: 528717)
-[PASS] test_gas_depositETH_firstByAddress() (gas: 262080)
-[PASS] test_gas_depositETH_laterByAddress() (gas: 463059)
-[PASS] test_gas_depositETH_laterByAddress_capsUnlimited() (gas: 509532)
-[PASS] test_gas_depositETH_laterByAddress_mintFeeInForce() (gas: 736771)
-[PASS] test_gas_depositETH_putsDueFeeChangeInForce() (gas: 539380)
-[PASS] test_gas_depositETH_rangeOver128Leaves() (gas: 26122739)
-[PASS] test_gas_depositUsdtStyle_firstByAddress() (gas: 344770)
-[PASS] test_gas_finalize() (gas: 580934)
-[PASS] test_gas_finalize_firstSunset() (gas: 641099)
+[PASS] test_gas_cancelCandidate() (gas: 283667)
+[PASS] test_gas_cancelCandidate_byWatcher() (gas: 284957)
+[PASS] test_gas_claimOwedERC20() (gas: 407082)
+[PASS] test_gas_claimOwedETH_viaContractPayee() (gas: 607079)
+[PASS] test_gas_depositERC20_firstByAddress() (gas: 346863)
+[PASS] test_gas_depositERC20_laterByAddress() (gas: 532961)
+[PASS] test_gas_depositETH_firstByAddress() (gas: 264269)
+[PASS] test_gas_depositETH_laterByAddress() (gas: 467415)
+[PASS] test_gas_depositETH_laterByAddress_capsUnlimited() (gas: 512506)
+[PASS] test_gas_depositETH_laterByAddress_mintFeeInForce() (gas: 741105)
+[PASS] test_gas_depositETH_putsDueFeeChangeInForce() (gas: 541569)
+[PASS] test_gas_depositETH_rangeOver128Leaves() (gas: 26402282)
+[PASS] test_gas_depositUsdtStyle_firstByAddress() (gas: 346903)
+[PASS] test_gas_finalize() (gas: 603942)
+[PASS] test_gas_finalize_firstSunset() (gas: 664195)
 [PASS] test_gas_mockVerifierExecution() (gas: 184092)
 [PASS] test_gas_pauseCheckpoints_byWatcher() (gas: 61681)
-[PASS] test_gas_proposeAndApplyRoles() (gas: 205304)
-[PASS] test_gas_recordBeacon() (gas: 92767)
-[PASS] test_gas_refundERC20() (gas: 1152352)
-[PASS] test_gas_refundETH() (gas: 1124018)
-[PASS] test_gas_releaseERC20_withFee() (gas: 308432)
+[PASS] test_gas_proposeAndApplyRoles() (gas: 205395)
+[PASS] test_gas_recordBeacon() (gas: 92658)
+[PASS] test_gas_refundERC20() (gas: 1177936)
+[PASS] test_gas_refundETH() (gas: 1149602)
+[PASS] test_gas_releaseERC20_withFee() (gas: 308454)
 [PASS] test_gas_releaseETH_noFee() (gas: 265838)
 [PASS] test_gas_releaseETH_recipientCannotReceive_credited() (gas: 528793)
-[PASS] test_gas_releaseETH_releaseFees_firstCredits() (gas: 696158)
-[PASS] test_gas_releaseETH_releaseFees_laterCredits() (gas: 978685)
-[PASS] test_gas_releaseETH_withFee() (gas: 285427)
-[PASS] test_gas_ruleB_finalizeAttested() (gas: 25348172)
-[PASS] test_gas_ruleB_submitCandidate() (gas: 25163713)
-[PASS] test_gas_submitCandidate() (gas: 281801)
-Suite result: ok. 33 passed; 0 failed; 0 skipped; finished in 95.54ms (170.99ms CPU time)
+[PASS] test_gas_releaseETH_releaseFees_firstCredits() (gas: 696202)
+[PASS] test_gas_releaseETH_releaseFees_laterCredits() (gas: 978764)
+[PASS] test_gas_releaseETH_withFee() (gas: 285449)
+[PASS] test_gas_ruleB_finalizeAttested() (gas: 25511352)
+[PASS] test_gas_ruleB_submitCandidate() (gas: 25328381)
+[PASS] test_gas_submitCandidate() (gas: 306387)
+Suite result: ok. 33 passed; 0 failed; 0 skipped; finished in 143.59ms (197.79ms CPU time)
+
+Ran 24 tests for test/Roles.t.sol:RolesTest
+[PASS] testFuzz_capFloor_tokenBucketMatchesHandWorkedThresholds(uint256,uint256) (runs: 256, μ: 8386074, ~: 8375618)
+[PASS] test_applyRoles_fourteenDaysLaterByAnyone() (gas: 547406)
+[PASS] test_applyRoles_nothingProposed() (gas: 39250)
+[PASS] test_capFloor_globalReleaseBucket() (gas: 8526820)
+[PASS] test_capFloor_theDeploymentsGlobalReleaseBucket() (gas: 6858761)
+[PASS] test_capFloor_tokenReleaseBucketInValueUnits() (gas: 9825575)
+[PASS] test_constructor_refusesAVerifierThatIsNotAnUntrippedStop() (gas: 1624920)
+[PASS] test_pauseCheckpoints_onlyWatchers() (gas: 146645)
+[PASS] test_proposeRoles_aNewProposalRestartsTheClock() (gas: 247628)
+[PASS] test_proposeRoles_onlyTheAdmin() (gas: 98562)
+[PASS] test_proposeRoles_theAdminNeverBecomesTheFreezeAuthority() (gas: 284531)
+[PASS] test_proposeRoles_zeroKeepsTheFreezeAuthority_andAnEmptySetRemovesTheWatchers() (gas: 533742)
+[PASS] test_retireOpensAt_aSubmissionRestartsTheClock_andTheWaitIsTodays() (gas: 415911)
+[PASS] test_retireOpensAt_liftingAnOldFreezeNeverMovesTheClockBack() (gas: 852872)
+[PASS] test_retireOpensAt_theEarlierOfKeylessAndSunset() (gas: 9343705)
+[PASS] test_retire_aFinalisationRestartsTheClock() (gas: 813944)
+[PASS] test_retire_anyoneThirtyDaysAfterTheFirstFinalisableMomentWithoutACheckpoint() (gas: 143695)
+[PASS] test_retire_theFreezeAuthorityAtAnyTime() (gas: 72407)
+[PASS] test_stop_renouncedOwnerCannotStop_aProofOfExploitStill() (gas: 172068)
+[PASS] test_watcher_hasNoOtherPower() (gas: 195795)
+[PASS] test_watcher_pauseNeverShortensALongerFreeze_andTheFreezeAuthorityCanLiftIt() (gas: 212844)
+[PASS] test_watcher_pausesCheckpointsForTwelveHours() (gas: 481260)
+[PASS] test_watcher_renewsItsPauseOnlyFromNow() (gas: 92280)
+[PASS] test_watchers_everySlotCounts() (gas: 438701)
+Suite result: ok. 24 passed; 0 failed; 0 skipped; finished in 423.43ms (430.66ms CPU time)
+
+Ran 9 tests for test/Admin.t.sol:ConstructorTest
+[PASS] test_constructor_deltaRules() (gas: 2700213)
+[PASS] test_constructor_globalCapsStartFull() (gas: 5824459)
+[PASS] test_constructor_rejectsBadImageIds() (gas: 1625083)
+[PASS] test_constructor_rejectsVerifierWithoutCode() (gas: 554628)
+[PASS] test_constructor_rejectsZeroCommitteeFloor() (gas: 1089829)
+[PASS] test_constructor_rejectsZeroConfigOrGenesis() (gas: 1088927)
+[PASS] test_constructor_rejectsZeroOrSharedRoles() (gas: 2164806)
+[PASS] test_constructor_setsImmutablesStateAndRoles() (gas: 158895)
+[PASS] test_constructor_turnSecondsAndMinReleaseDelay() (gas: 7913886)
+Suite result: ok. 9 passed; 0 failed; 0 skipped; finished in 433.09ms (7.20ms CPU time)
 
 Ran 22 tests for test/Fees.t.sol:FeesTest
-[PASS] testFuzz_announce_eachFeeAtMostOnePercent(uint256,uint256,uint256) (runs: 259, μ: 106189, ~: 60879)
-[PASS] testFuzz_feeArithmetic(uint256,uint256,uint256,bool) (runs: 259, μ: 1803746, ~: 1791100)
-[PASS] test_announce_feeRules() (gas: 594120)
-[PASS] test_announce_onlyAdminAndOnlyARegisteredToken() (gas: 77062)
-[PASS] test_applyFees_isPermissionlessAndActsOnlyWhenDue() (gas: 358525)
-[PASS] test_caps_depositBucketsCountTheWholeEscrow() (gas: 877519)
-[PASS] test_feeChange_aDepositAfterTheChangeMustSendTheNewTotal() (gas: 448209)
-[PASS] test_feeChange_aDueChangeTakesEffectBeforeTheNextAnnouncement() (gas: 913524)
-[PASS] test_feeChange_aNewAnnouncementReplacesThePendingOne() (gas: 1208614)
-[PASS] test_feeChange_aRefundReturnsTheEscrowOfItsLeafsSchedule() (gas: 4398716)
-[PASS] test_feeChange_announcingTheFeesInForceWithdrawsIt() (gas: 856820)
-[PASS] test_feeChange_takesEffectSevenDaysAfterTheAnnouncement() (gas: 1083511)
-[PASS] test_registration_emitsTheEntryAndScheduleZero() (gas: 1405924)
-[PASS] test_registration_feeRules() (gas: 2117093)
+[PASS] testFuzz_announce_eachFeeAtMostOnePercent(uint256,uint256,uint256) (runs: 256, μ: 107814, ~: 60901)
+[PASS] testFuzz_feeArithmetic(uint256,uint256,uint256,bool) (runs: 256, μ: 1833698, ~: 1821129)
+[PASS] test_announce_feeRules() (gas: 594296)
+[PASS] test_announce_onlyAdminAndOnlyARegisteredToken() (gas: 77106)
+[PASS] test_applyFees_isPermissionlessAndActsOnlyWhenDue() (gas: 358547)
+[PASS] test_caps_depositBucketsCountTheWholeEscrow() (gas: 879728)
+[PASS] test_feeChange_aDepositAfterTheChangeMustSendTheNewTotal() (gas: 452487)
+[PASS] test_feeChange_aDueChangeTakesEffectBeforeTheNextAnnouncement() (gas: 915657)
+[PASS] test_feeChange_aNewAnnouncementReplacesThePendingOne() (gas: 1212880)
+[PASS] test_feeChange_aRefundReturnsTheEscrowOfItsLeafsSchedule() (gas: 4437943)
+[PASS] test_feeChange_announcingTheFeesInForceWithdrawsIt() (gas: 858975)
+[PASS] test_feeChange_takesEffectSevenDaysAfterTheAnnouncement() (gas: 1087777)
+[PASS] test_registration_emitsTheEntryAndScheduleZero() (gas: 1410354)
+[PASS] test_registration_feeRules() (gas: 2128491)
 [PASS] test_registration_publishesTheEntryAndScheduleZeroAtTheirSlots() (gas: 34697)
-[PASS] test_registration_twiceTheLargestDenominationInValueUnitsFits128Bits() (gas: 1528534)
-[PASS] test_release_checkpointFeeIsCreditedToTheFinaliserNeverPushed() (gas: 1832795)
-[PASS] test_release_paysTheDenominationLessItsFees() (gas: 1977523)
-[PASS] test_release_putsADueChangeInForce() (gas: 1772512)
-[PASS] test_release_ruleB_checkpointFeeToTheSenderOfFinalizeAttested() (gas: 7469074)
-[PASS] test_release_withoutRelayFee() (gas: 1764267)
-[PASS] test_release_zeroFeesCreditNothing() (gas: 1676186)
-Suite result: ok. 22 passed; 0 failed; 0 skipped; finished in 359.58ms (401.28ms CPU time)
-
-Ran 21 tests for test/Roles.t.sol:RolesTest
-[PASS] testFuzz_capFloor_tokenBucketMatchesHandWorkedThresholds(uint256,uint256) (runs: 259, μ: 8366945, ~: 8358472)
-[PASS] test_applyRoles_fourteenDaysLaterByAnyone() (gas: 554668)
-[PASS] test_applyRoles_nothingProposed() (gas: 39228)
-[PASS] test_capFloor_globalReleaseBucket() (gas: 8503880)
-[PASS] test_capFloor_theDeploymentsGlobalReleaseBucket() (gas: 6846834)
-[PASS] test_capFloor_tokenReleaseBucketInValueUnits() (gas: 9798434)
-[PASS] test_constructor_refusesAVerifierThatIsNotAnUntrippedStop() (gas: 1618731)
-[PASS] test_pauseCheckpoints_onlyWatchers() (gas: 146579)
-[PASS] test_proposeRoles_aNewProposalRestartsTheClock() (gas: 247474)
-[PASS] test_proposeRoles_onlyTheAdmin() (gas: 98496)
-[PASS] test_proposeRoles_theAdminNeverBecomesTheFreezeAuthority() (gas: 284421)
-[PASS] test_proposeRoles_zeroKeepsTheFreezeAuthority_andAnEmptySetRemovesTheWatchers() (gas: 503194)
-[PASS] test_retire_aFinalisationRestartsTheClock() (gas: 772121)
-[PASS] test_retire_anyoneThirtyDaysAfterDeploymentWithoutACheckpoint() (gas: 111606)
-[PASS] test_retire_theFreezeAuthorityAtAnyTime() (gas: 72306)
-[PASS] test_stop_renouncedOwnerCannotStop_aProofOfExploitStill() (gas: 172011)
-[PASS] test_watcher_hasNoOtherPower() (gas: 189207)
-[PASS] test_watcher_pauseNeverShortensALongerFreeze_andTheFreezeAuthorityCanLiftIt() (gas: 210643)
-[PASS] test_watcher_pausesCheckpointsForTwelveHours() (gas: 454070)
-[PASS] test_watcher_renewsItsPauseOnlyFromNow() (gas: 92258)
-[PASS] test_watchers_everySlotCounts() (gas: 453555)
-Suite result: ok. 21 passed; 0 failed; 0 skipped; finished in 408.16ms (412.86ms CPU time)
-
-Ran 8 tests for test/ReleaseDelay.t.sol:ReleaseDelayTest
-[PASS] testFuzz_delayLookupMatchesALinearScan(uint256) (runs: 259, μ: 10214410, ~: 10284637)
-[PASS] test_delayIsPerToken() (gas: 1010809)
-[PASS] test_everyDelaySettingIsBetweenTheMinimumAndTheRevokeWindow() (gas: 7127896)
-[PASS] test_loweringTheDelayDoesNotShortenExistingRoots() (gas: 1928272)
-[PASS] test_raisingTheDelayAppliesOnlyToLaterRoots() (gas: 1945988)
-[PASS] test_registrationSetsTheInitialDelay() (gas: 1774419)
-[PASS] test_releaseDelay_equalToRevokeWindowOpensAfterTheLastRevocableSecond() (gas: 2442803)
-[PASS] test_severalChangesBeforeOneCheckpoint_lastOneWins() (gas: 859754)
-Suite result: ok. 8 passed; 0 failed; 0 skipped; finished in 1.77s (1.77s CPU time)
+[PASS] test_registration_twiceTheLargestDenominationInValueUnitsFits128Bits() (gas: 1533056)
+[PASS] test_release_checkpointFeeIsCreditedToTheProverNeverPushed() (gas: 1876185)
+[PASS] test_release_paysTheDenominationLessItsFees() (gas: 2014280)
+[PASS] test_release_putsADueChangeInForce() (gas: 1800008)
+[PASS] test_release_ruleB_checkpointFeeToTheProverNotToTheSenderOfFinalizeAttested() (gas: 7512175)
+[PASS] test_release_withoutRelayFee() (gas: 1794563)
+[PASS] test_release_zeroFeesCreditNothing() (gas: 1706505)
+Suite result: ok. 22 passed; 0 failed; 0 skipped; finished in 433.05ms (465.66ms CPU time)
 
 Ran 22 tests for test/Refund.t.sol:RefundTest
-[PASS] test_refund_drawsOnTheReleaseBuckets() (gas: 3576014)
-[PASS] test_refund_escrowRefundedIsNoLongerReleasable() (gas: 2188652)
-[PASS] test_refund_forgedSunsetRevokedInsideTheWindowPaysNothing() (gas: 6373088)
-[PASS] test_refund_impossibleBeforeSunset() (gas: 2756255)
-[PASS] test_refund_impossibleBelowTheSunsetLeafCount() (gas: 2815551)
-[PASS] test_refund_indexAtOrAbove2To32IsRefused() (gas: 3000076)
-[PASS] test_refund_noSecondAllowsBothRefundAndRevocation() (gas: 3024108)
-[PASS] test_refund_onlyOnce() (gas: 2921839)
-[PASS] test_refund_onlyToTheLeafsDepositor() (gas: 2842310)
-[PASS] test_refund_opensRevokeWindowAfterTheSunsetCheckpoint() (gas: 3312928)
-[PASS] test_refund_paysTheDepositorAndReducesEscrow() (gas: 3078224)
-[PASS] test_refund_refusedBeforeRetirement() (gas: 1969390)
-[PASS] test_refund_refusedUnderTheReleaseFreeze() (gas: 3502860)
-[PASS] test_refund_refusedWhenReleasesTookTheEscrow() (gas: 2805067)
-[PASS] test_refund_revokingOnlyLaterCheckpointsKeepsRefunds() (gas: 3384446)
-[PASS] test_refund_revokingTheSunsetCheckpointDisablesRefunds() (gas: 3828416)
-[PASS] test_refund_theFirstSunsetCheckpointFixesTheBoundaryAndTheOpening() (gas: 3530543)
-[PASS] test_refund_unknownLeafOrToken() (gas: 2772395)
-[PASS] test_refund_wrongPathReverts() (gas: 3319406)
-[PASS] test_retire_isOneWayAndStopsDepositsForever() (gas: 256858)
-[PASS] test_retire_leavesCheckpointsAndReleasesWorking() (gas: 1230722)
-[PASS] test_retire_othersOnlyAfterThirtyDaysWithoutACheckpoint() (gas: 36380)
-Suite result: ok. 22 passed; 0 failed; 0 skipped; finished in 2.32s (110.54ms CPU time)
+[PASS] test_refund_drawsOnTheReleaseBuckets() (gas: 3623505)
+[PASS] test_refund_escrowRefundedIsNoLongerReleasable() (gas: 2244503)
+[PASS] test_refund_forgedSunsetRevokedInsideTheWindowPaysNothing() (gas: 6436317)
+[PASS] test_refund_impossibleBeforeSunset() (gas: 2790244)
+[PASS] test_refund_impossibleBelowTheSunsetLeafCount() (gas: 2849650)
+[PASS] test_refund_indexAtOrAbove2To32IsRefused() (gas: 3034533)
+[PASS] test_refund_noSecondAllowsBothRefundAndRevocation() (gas: 3058431)
+[PASS] test_refund_onlyOnce() (gas: 2956073)
+[PASS] test_refund_onlyToTheLeafsDepositor() (gas: 2876631)
+[PASS] test_refund_opensRevokeWindowAfterTheSunsetCheckpoint() (gas: 3347615)
+[PASS] test_refund_paysTheDepositorAndReducesEscrow() (gas: 3112435)
+[PASS] test_refund_refusedBeforeRetirement() (gas: 1999335)
+[PASS] test_refund_refusedUnderTheReleaseFreeze() (gas: 3537099)
+[PASS] test_refund_refusedWhenReleasesTookTheEscrow() (gas: 2860374)
+[PASS] test_refund_revokingOnlyLaterCheckpointsKeepsRefunds() (gas: 3444041)
+[PASS] test_refund_revokingTheSunsetCheckpointDisablesRefunds() (gas: 3891041)
+[PASS] test_refund_theFirstSunsetCheckpointFixesTheBoundaryAndTheOpening() (gas: 3593073)
+[PASS] test_refund_unknownLeafOrToken() (gas: 2806828)
+[PASS] test_refund_wrongPathReverts() (gas: 3354067)
+[PASS] test_retire_isOneWayAndStopsDepositsForever() (gas: 256958)
+[PASS] test_retire_leavesCheckpointsAndReleasesWorking() (gas: 1258185)
+[PASS] test_retire_othersOnlyAfterThirtyDaysWithoutACheckpoint() (gas: 42880)
+Suite result: ok. 22 passed; 0 failed; 0 skipped; finished in 430.68ms (123.55ms CPU time)
+
+Ran 8 tests for test/ReleaseDelay.t.sol:ReleaseDelayTest
+[PASS] testFuzz_delayLookupMatchesALinearScan(uint256) (runs: 256, μ: 10809574, ~: 10737061)
+[PASS] test_delayIsPerToken() (gas: 1038397)
+[PASS] test_everyDelaySettingIsBetweenTheMinimumAndTheRevokeWindow() (gas: 7144958)
+[PASS] test_loweringTheDelayDoesNotShortenExistingRoots() (gas: 1983469)
+[PASS] test_raisingTheDelayAppliesOnlyToLaterRoots() (gas: 1998982)
+[PASS] test_registrationSetsTheInitialDelay() (gas: 1779007)
+[PASS] test_releaseDelay_equalToRevokeWindowOpensAfterTheLastRevocableSecond() (gas: 2505113)
+[PASS] test_severalChangesBeforeOneCheckpoint_lastOneWins() (gas: 889590)
+Suite result: ok. 8 passed; 0 failed; 0 skipped; finished in 1.92s (1.93s CPU time)
 
 Ran 13 tests for test/Caps.t.sol:CapsTest
-[PASS] testFuzz_tokenDepositCap_boundsThroughput(uint256) (runs: 259, μ: 8416306, ~: 8433272)
-[PASS] test_capUpdate_fromUnlimitedStartsFull() (gas: 71600)
-[PASS] test_capUpdate_loweringTakesEffectAtOnce() (gas: 735396)
-[PASS] test_capUpdate_raisingAddsNoInstantHeadroom() (gas: 854551)
-[PASS] test_capUpdate_settlesRefillEarnedUnderOldRate() (gas: 868270)
-[PASS] test_globalDepositCapRejection_leavesTokenBucketUntouched() (gas: 417840)
-[PASS] test_globalDepositCap_countsValueAcrossTokens() (gas: 1398948)
-[PASS] test_globalReleaseCap_countsValueAcrossTokens() (gas: 2519186)
-[PASS] test_refillSaturatesWithoutOverflow() (gas: 1240761)
-[PASS] test_tokenDepositCap_exhaustsAndRefillsOverTime() (gas: 1529937)
-[PASS] test_tokenDepositCap_rejectionConsumesNothing() (gas: 702516)
-[PASS] test_tokenReleaseCap_exhaustsAndRefillsOverTime() (gas: 2442213)
-[PASS] test_unlimitedCapacityDisablesTheCap() (gas: 2447260)
-Suite result: ok. 13 passed; 0 failed; 0 skipped; finished in 2.73s (2.75s CPU time)
+[PASS] testFuzz_tokenDepositCap_boundsThroughput(uint256) (runs: 256, μ: 8491837, ~: 8504488)
+[PASS] test_capUpdate_fromUnlimitedStartsFull() (gas: 70967)
+[PASS] test_capUpdate_loweringTakesEffectAtOnce() (gas: 738352)
+[PASS] test_capUpdate_raisingAddsNoInstantHeadroom() (gas: 857551)
+[PASS] test_capUpdate_settlesRefillEarnedUnderOldRate() (gas: 871270)
+[PASS] test_globalDepositCapRejection_leavesTokenBucketUntouched() (gas: 418502)
+[PASS] test_globalDepositCap_countsValueAcrossTokens() (gas: 1408910)
+[PASS] test_globalReleaseCap_countsValueAcrossTokens() (gas: 2555323)
+[PASS] test_refillSaturatesWithoutOverflow() (gas: 1245916)
+[PASS] test_tokenDepositCap_exhaustsAndRefillsOverTime() (gas: 1539991)
+[PASS] test_tokenDepositCap_rejectionConsumesNothing() (gas: 706149)
+[PASS] test_tokenReleaseCap_exhaustsAndRefillsOverTime() (gas: 2476171)
+[PASS] test_unlimitedCapacityDisablesTheCap() (gas: 2462090)
+Suite result: ok. 13 passed; 0 failed; 0 skipped; finished in 2.75s (2.77s CPU time)
 
 Ran 8 tests for test/Merkle.t.sol:MerkleTest
-[PASS] testFuzz_incrementalRootMatchesReference(uint256,uint8) (runs: 259, μ: 7255158, ~: 5657056)
-[PASS] testFuzz_merklePathVerifiesAgainstDepositRoot(uint256,uint8,uint256) (runs: 259, μ: 4755567, ~: 3864749)
-[PASS] test_emptyTreeRoot() (gas: 99718)
-[PASS] test_highIndex_usesStoredBranchAtTopLevel() (gas: 324561)
-[PASS] test_incrementalRootMatchesReference_130Deposits() (gas: 104905506)
-[PASS] test_insertion_writesExactlyOneBranchSlot() (gas: 13721008)
-[PASS] test_lastLeafCompletesTheTree() (gas: 573940)
-[PASS] test_storageSlots_root0_leafCount1_configId2() (gas: 3863512)
-Suite result: ok. 8 passed; 0 failed; 0 skipped; finished in 4.48s (7.04s CPU time)
+[PASS] testFuzz_incrementalRootMatchesReference(uint256,uint8) (runs: 256, μ: 7312859, ~: 5732397)
+[PASS] testFuzz_merklePathVerifiesAgainstDepositRoot(uint256,uint8,uint256) (runs: 256, μ: 4760431, ~: 3787431)
+[PASS] test_emptyTreeRoot() (gas: 99740)
+[PASS] test_highIndex_usesStoredBranchAtTopLevel() (gas: 326750)
+[PASS] test_incrementalRootMatchesReference_130Deposits() (gas: 105186608)
+[PASS] test_insertion_writesExactlyOneBranchSlot() (gas: 13811763)
+[PASS] test_lastLeafCompletesTheTree() (gas: 578274)
+[PASS] test_storageSlots_root0_leafCount1_configId2() (gas: 3901966)
+Suite result: ok. 8 passed; 0 failed; 0 skipped; finished in 4.51s (6.88s CPU time)
 
 ╭-----------------------------------------------------------------------------------------------------------+-----------------+-------+--------+---------+---------╮
 | lib/risc0-ethereum/contracts/src/RiscZeroVerifierEmergencyStop.sol:RiscZeroVerifierEmergencyStop Contract |                 |       |        |         |         |
@@ -468,13 +513,13 @@ Suite result: ok. 8 passed; 0 failed; 0 skipped; finished in 4.48s (7.04s CPU ti
 |-----------------------------------------------------------------------------------------------------------+-----------------+-------+--------+---------+---------|
 | owner                                                                                                     | 2318            | 2318  | 2318   | 2318    | 3       |
 |-----------------------------------------------------------------------------------------------------------+-----------------+-------+--------+---------+---------|
-| paused                                                                                                    | 2353            | 2353  | 2353   | 2353    | 741     |
+| paused                                                                                                    | 2353            | 2353  | 2353   | 2353    | 775     |
 |-----------------------------------------------------------------------------------------------------------+-----------------+-------+--------+---------+---------|
 | renounceOwnership                                                                                         | 25524           | 25524 | 25524  | 25524   | 1       |
 |-----------------------------------------------------------------------------------------------------------+-----------------+-------+--------+---------+---------|
 | verifier                                                                                                  | 227             | 227   | 227    | 227     | 2       |
 |-----------------------------------------------------------------------------------------------------------+-----------------+-------+--------+---------+---------|
-| verify                                                                                                    | 2004            | 20752 | 8504   | 2797602 | 9714    |
+| verify                                                                                                    | 2004            | 22153 | 8504   | 2793602 | 9942    |
 ╰-----------------------------------------------------------------------------------------------------------+-----------------+-------+--------+---------+---------╯
 
 ╭-------------------------------------------------------------------------------------------------------+-----------------+---------+--------+---------+---------╮
@@ -490,10 +535,24 @@ Suite result: ok. 8 passed; 0 failed; 0 skipped; finished in 4.48s (7.04s CPU ti
 |-------------------------------------------------------------------------------------------------------+-----------------+---------+--------+---------+---------|
 | SELECTOR                                                                                              | 208             | 208     | 208    | 208     | 2       |
 |-------------------------------------------------------------------------------------------------------+-----------------+---------+--------+---------+---------|
-| verify                                                                                                | 4096            | 1065452 | 224324 | 2791824 | 112     |
+| verify                                                                                                | 4096            | 1046880 | 224324 | 2787824 | 130     |
 |-------------------------------------------------------------------------------------------------------+-----------------+---------+--------+---------+---------|
-| verifyProof                                                                                           | 215601          | 1076027 | 215601 | 2783101 | 110     |
+| verifyProof                                                                                           | 215601          | 1062791 | 215601 | 2779101 | 127     |
 ╰-------------------------------------------------------------------------------------------------------+-----------------+---------+--------+---------+---------╯
+
+╭-----------------------------------------------+-----------------+-------+--------+-------+---------╮
+| script/DeployVault.s.sol:DeployVault Contract |                 |       |        |       |         |
++====================================================================================================+
+| Deployment Cost                               | Deployment Size |       |        |       |         |
+|-----------------------------------------------+-----------------+-------+--------+-------+---------|
+| 9373906                                       | 43081           |       |        |       |         |
+|-----------------------------------------------+-----------------+-------+--------+-------+---------|
+|                                               |                 |       |        |       |         |
+|-----------------------------------------------+-----------------+-------+--------+-------+---------|
+| Function Name                                 | Min             | Avg   | Median | Max   | # Calls |
+|-----------------------------------------------+-----------------+-------+--------+-------+---------|
+| run                                           | 21458           | 21458 | 21458  | 21458 | 3       |
+╰-----------------------------------------------+-----------------+-------+--------+-------+---------╯
 
 ╭-----------------------------------------+-----------------+-------+--------+-------+---------╮
 | script/TestToken.sol:TestToken Contract |                 |       |        |       |         |
@@ -518,7 +577,7 @@ Suite result: ok. 8 passed; 0 failed; 0 skipped; finished in 4.48s (7.04s CPU ti
 +====================================================================================================+
 | Deployment Cost                            | Deployment Size |        |        |         |         |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| 5701184                                    | 28467           |        |        |         |         |
+| 5706902                                    | 28605           |        |        |         |         |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
 |                                            |                 |        |        |         |         |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
@@ -528,183 +587,185 @@ Suite result: ok. 8 passed; 0 failed; 0 skipped; finished in 4.48s (7.04s CPU ti
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
 | admin                                      | 2468            | 2468   | 2468   | 2468    | 5       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| announceFees                               | 26189           | 132719 | 177255 | 248450  | 544     |
+| announceFees                               | 26211           | 134506 | 177277 | 248496  | 547     |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
 | applyFees                                  | 23995           | 61837  | 77887  | 82892   | 9       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| applyRoles                                 | 30984           | 49604  | 46452  | 85052   | 11      |
+| applyRoles                                 | 31006           | 49624  | 46474  | 85074   | 11      |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| beaconCount                                | 2447            | 2447   | 2447   | 2447    | 3       |
+| beaconCount                                | 2469            | 2469   | 2469   | 2469    | 3       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| beacons                                    | 6840            | 6840   | 6840   | 6840    | 4567    |
+| beacons                                    | 6862            | 6862   | 6862   | 6862    | 4665    |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
 | burnRootCheckpoint                         | 2502            | 2502   | 2502   | 2502    | 3       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| burnRootStatus                             | 2652            | 8547   | 9516   | 9516    | 22      |
+| burnRootStatus                             | 2674            | 8569   | 9538   | 9538    | 22      |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| cancelCandidate                            | 29596           | 34621  | 35663  | 37438   | 20      |
+| cancelCandidate                            | 29618           | 38703  | 41477  | 41477   | 29      |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| candidates                                 | 7121            | 7121   | 7121   | 7121    | 4551    |
+| candidates                                 | 9302            | 9302   | 9302   | 9302    | 4650    |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| checkpointCount                            | 2382            | 2382   | 2382   | 2382    | 6613    |
+| checkpointCount                            | 2404            | 2404   | 2404   | 2404    | 6619    |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
 | checkpointImageId                          | 286             | 286    | 286    | 286     | 2       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| checkpoints                                | 13591           | 13591  | 13591  | 13591   | 11      |
+| checkpoints                                | 13701           | 13701  | 13701  | 13701   | 11      |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| checkpointsFrozenUntil                     | 2363            | 2363   | 2363   | 2363    | 12      |
+| checkpointsFrozenUntil                     | 2385            | 2385   | 2385   | 2385    | 13      |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| claimOwed                                  | 24278           | 53688  | 62686  | 65193   | 6       |
+| claimOwed                                  | 27639           | 57032  | 66028  | 68535   | 6       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
 | delta                                      | 2385            | 2385   | 2385   | 2385    | 4       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| deltaFloor                                 | 328             | 328    | 328    | 328     | 2       |
+| deltaFloor                                 | 350             | 350    | 350    | 350     | 2       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| deposit                                    | 22434           | 150228 | 155356 | 292153  | 14845   |
+| deposit                                    | 22434           | 152535 | 157467 | 294264  | 14835   |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| depositCount                               | 626             | 2625   | 2626   | 2626    | 17514   |
+| depositCount                               | 626             | 2625   | 2626   | 2626    | 17499   |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| depositETH                                 | 24853           | 149604 | 149249 | 232182  | 2875    |
+| depositETH                                 | 24870           | 151871 | 151394 | 250691  | 2871    |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| depositRoot                                | 2383            | 2383   | 2383   | 2383    | 4284    |
+| depositRoot                                | 2405            | 2405   | 2405   | 2405    | 4258    |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| depositsFrozenUntil                        | 2362            | 2362   | 2362   | 2362    | 5       |
+| depositsFrozenUntil                        | 2384            | 2384   | 2384   | 2384    | 5       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| escrowed                                   | 666             | 2644   | 2666   | 2666    | 553     |
+| escrowed                                   | 577             | 2555   | 2577   | 2577    | 553     |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| fallback                                   | 21398           | 22104  | 21895  | 23830   | 5       |
+| fallback                                   | 21398           | 22100  | 21873  | 23830   | 5       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| feeRecipient                               | 372             | 372    | 372    | 372     | 1       |
+| feeRecipient                               | 283             | 283    | 283    | 283     | 1       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| feeState                                   | 2738            | 2738   | 2738   | 2738    | 9706    |
+| feeState                                   | 2738            | 2738   | 2738   | 2738    | 9692    |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| fees                                       | 5196            | 5196   | 5196   | 5196    | 9718    |
+| fees                                       | 5218            | 5218   | 5218   | 5218    | 9704    |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| finalImportedLeafCount                     | 2503            | 2503   | 2503   | 2503    | 4578    |
+| finalImportedLeafCount                     | 2393            | 2393   | 2393   | 2393    | 4675    |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| finalState                                 | 2407            | 2407   | 2407   | 2407    | 4705    |
+| finalState                                 | 2429            | 2429   | 2429   | 2429    | 4807    |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| finalSunset                                | 2417            | 2417   | 2417   | 2417    | 4575    |
+| finalSunset                                | 2439            | 2439   | 2439   | 2439    | 4674    |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| finalize                                   | 25667           | 220646 | 215130 | 2841848 | 4630    |
+| finalize                                   | 25689           | 223841 | 218442 | 2841734 | 4728    |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| finalizeAttested                           | 24803           | 100823 | 39697  | 266503  | 42      |
+| finalizeAttested                           | 24825           | 105077 | 39840  | 269815  | 43      |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
 | freezeAuthority                            | 2471            | 2471   | 2471   | 2471    | 6       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| genesisState                               | 283             | 283    | 283    | 283     | 1       |
+| genesisState                               | 305             | 305    | 305    | 305     | 1       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
 | globalCap                                  | 4980            | 9594   | 10064  | 10251   | 10      |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| lastFinalizedAt                            | 2519            | 2519   | 2519   | 2519    | 3       |
+| keylessFrom                                | 2411            | 2411   | 2411   | 2411    | 4       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| lezConfigId                                | 307             | 307    | 307    | 307     | 2       |
+| lezConfigId                                | 329             | 329    | 329    | 329     | 2       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
 | maxFreeze                                  | 327             | 327    | 327    | 327     | 1       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| minReleaseDelay                            | 305             | 305    | 305    | 305     | 2       |
+| minReleaseDelay                            | 327             | 327    | 327    | 327     | 5952    |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| mode                                       | 360             | 360    | 360    | 360     | 4516    |
+| mode                                       | 382             | 382    | 382    | 382     | 4613    |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
 | nMin                                       | 317             | 317    | 317    | 317     | 1       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| nextLeafIndex                              | 2461            | 2461   | 2461   | 2461    | 9817    |
+| nextLeafIndex                              | 2461            | 2461   | 2461   | 2461    | 9804    |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
 | nullifierUsed                              | 538             | 2413   | 2538   | 2538    | 48      |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| owed                                       | 2840            | 2840   | 2840   | 2840    | 527     |
+| owed                                       | 2751            | 2751   | 2751   | 2751    | 533     |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| pauseCheckpoints                           | 27251           | 39190  | 47260  | 51530   | 18      |
+| pauseCheckpoints                           | 27251           | 31443  | 30160  | 47260   | 100     |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| pendingAdmin                               | 2471            | 2471   | 2471   | 2471    | 2       |
+| pendingAdmin                               | 2493            | 2493   | 2493   | 2493    | 2       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| proposeRoles                               | 24756           | 70603  | 62971  | 123391  | 13      |
+| proposeRoles                               | 24778           | 70641  | 63015  | 123435  | 13      |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| raiseDelta                                 | 23764           | 27173  | 27900  | 29864   | 12      |
+| raiseDelta                                 | 23786           | 27402  | 29886  | 29898   | 13      |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
 | receive                                    | 0               | 10553  | 10553  | 21106   | 2       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| recordBeacon                               | 21476           | 77928  | 77937  | 112127  | 4579    |
+| recordBeacon                               | 21367           | 77819  | 77828  | 112018  | 4677    |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| refund                                     | 41866           | 96647  | 62237  | 205540  | 68      |
+| refund                                     | 41866           | 96731  | 62349  | 205652  | 68      |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| refunded                                   | 2666            | 2666   | 2666   | 2666    | 9       |
+| refunded                                   | 2688            | 2688   | 2688   | 2688    | 9       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| registerToken                              | 28490           | 532188 | 628482 | 877497  | 3413    |
+| registerToken                              | 28512           | 536021 | 630744 | 879762  | 3490    |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| release                                    | 26529           | 286505 | 220295 | 7944477 | 502     |
+| release                                    | 26529           | 286078 | 220295 | 7944477 | 504     |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| releaseCapFloor                            | 283             | 283    | 283    | 283     | 258     |
+| releaseCapFloor                            | 283             | 283    | 283    | 283     | 6208    |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| releaseDelayFor                            | 7811            | 13524  | 12911  | 17847   | 4314    |
+| releaseDelayFor                            | 7833            | 13384  | 12933  | 15606   | 4405    |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
 | releaseImageId                             | 263             | 263    | 263    | 263     | 2       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| releaseRefillFloor                         | 262             | 262    | 262    | 262     | 258     |
+| releaseRefillFloor                         | 284             | 284    | 284    | 284     | 6208    |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| releasesFrozenUntil                        | 2450            | 2450   | 2450   | 2450    | 4       |
+| releasesFrozenUntil                        | 2361            | 2361   | 2361   | 2361    | 4       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| retire                                     | 23625           | 26999  | 27387  | 29610   | 38      |
+| retire                                     | 23647           | 30212  | 27409  | 38443   | 55      |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| retired                                    | 2460            | 2460   | 2460   | 2460    | 5       |
+| retireOpensAt                              | 8938            | 9285   | 8938   | 11263   | 7       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| revocationEpoch                            | 2384            | 2384   | 2384   | 2384    | 3       |
+| retired                                    | 2482            | 2482   | 2482   | 2482    | 11      |
+|--------------------------------------------+-----------------+--------+--------+---------+---------|
+| revocationEpoch                            | 2406            | 2406   | 2406   | 2406    | 3       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
 | revokeFrom                                 | 23786           | 59479  | 73420  | 84052   | 32      |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| revokeWindow                               | 351             | 351    | 351    | 351     | 1       |
+| revokeWindow                               | 351             | 351    | 351    | 351     | 5951    |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| roleProposal                               | 4600            | 4600   | 4600   | 4600    | 2       |
+| roleProposal                               | 4622            | 4622   | 4622   | 4622    | 2       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| setCheckpointsFrozen                       | 23804           | 36415  | 27407  | 47380   | 51      |
+| setCheckpointsFrozen                       | 23826           | 37064  | 30213  | 47381   | 55      |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| setDepositsEnabled                         | 24011           | 28170  | 30810  | 31062   | 9       |
+| setDepositsEnabled                         | 24033           | 28192  | 30832  | 31084   | 9       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| setDepositsFrozen                          | 23782           | 36487  | 28821  | 47358   | 46      |
+| setDepositsFrozen                          | 23804           | 36509  | 28843  | 47380   | 46      |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| setGlobalCap                               | 24133           | 59406  | 64689  | 65437   | 92      |
+| setGlobalCap                               | 24133           | 60051  | 63962  | 67573   | 92      |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| setReleaseDelay                            | 24020           | 82011  | 83761  | 83761   | 2110    |
+| setReleaseDelay                            | 24020           | 84331  | 85987  | 85987   | 2019    |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| setReleasesFrozen                          | 23760           | 36967  | 38775  | 47325   | 46      |
+| setReleasesFrozen                          | 23782           | 36989  | 38797  | 47347   | 46      |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| setTokenCap                                | 24250           | 60693  | 67841  | 75433   | 827     |
+| setTokenCap                                | 24250           | 62116  | 67186  | 77641   | 827     |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| setTokenDepositsFrozen                     | 24011           | 39420  | 31997  | 50534   | 42      |
+| setTokenDepositsFrozen                     | 24033           | 39442  | 32019  | 50556   | 42      |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| setTokenReleasesFrozen                     | 24077           | 39744  | 33500  | 50600   | 43      |
+| setTokenReleasesFrozen                     | 23967           | 39634  | 33390  | 50490   | 43      |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
 | storedLezConfigId                          | 2429            | 2429   | 2429   | 2429    | 2       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| submitCandidate                            | 27709           | 144312 | 126476 | 2840654 | 4716    |
+| submitCandidate                            | 27600           | 168505 | 151125 | 2840914 | 4826    |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| sunsetFinalizedAt                          | 2362            | 2362   | 2362   | 2362    | 20      |
+| sunsetFinalizedAt                          | 2384            | 2384   | 2384   | 2384    | 21      |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
 | sunsetLeafCount                            | 2406            | 2406   | 2406   | 2406    | 5       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| sunsetLeafCountSet                         | 2465            | 2465   | 2465   | 2465    | 7       |
+| sunsetLeafCountSet                         | 2487            | 2487   | 2487   | 2487    | 7       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| sunsetSetAt                                | 2429            | 2429   | 2429   | 2429    | 3       |
+| sunsetSetAt                                | 2451            | 2451   | 2451   | 2451    | 3       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
 | tMin                                       | 316             | 316    | 316    | 316     | 1       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| tokenCap                                   | 5175            | 10296  | 10435  | 10461   | 7701    |
+| tokenCap                                   | 5197            | 10320  | 10457  | 10483   | 7701    |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| tokenConfig                                | 11827           | 16253  | 16303  | 27494   | 34907   |
+| tokenConfig                                | 11827           | 16253  | 16303  | 27494   | 34869   |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| tokenDepositsFrozenUntil                   | 2577            | 2577   | 2577   | 2577    | 3       |
+| tokenDepositsFrozenUntil                   | 2599            | 2599   | 2599   | 2599    | 3       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
 | tokenReleasesFrozenUntil                   | 2665            | 2665   | 2665   | 2665    | 2       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| totalOwed                                  | 2665            | 2665   | 2665   | 2665    | 7       |
+| totalOwed                                  | 2687            | 2687   | 2687   | 2687    | 7       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
 | transferAdmin                              | 24011           | 36724  | 39229  | 47779   | 10      |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| turnSeconds                                | 261             | 261    | 261    | 261     | 4520    |
+| turnSeconds                                | 283             | 283    | 283    | 283     | 4619    |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| verifier                                   | 327             | 327    | 327    | 327     | 3       |
+| verifier                                   | 349             | 349    | 349    | 349     | 3       |
 |--------------------------------------------+-----------------+--------+--------+---------+---------|
-| watchers                                   | 2545            | 2545   | 2545   | 2545    | 6       |
+| watchers                                   | 2567            | 2567   | 2567   | 2567    | 6       |
 ╰--------------------------------------------+-----------------+--------+--------+---------+---------╯
 
 ╭-----------------------------------------------------------+-----------------+--------+--------+--------+---------╮
@@ -738,9 +799,9 @@ Suite result: ok. 8 passed; 0 failed; 0 skipped; finished in 4.48s (7.04s CPU ti
 |--------------------------------------------------------+-----------------+--------+--------+--------+---------|
 | Function Name                                          | Min             | Avg    | Median | Max    | # Calls |
 |--------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| claim                                                  | 27898           | 37701  | 37761  | 47087  | 9       |
+| claim                                                  | 31259           | 40912  | 40934  | 50411  | 9       |
 |--------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| depositETH                                             | 159668          | 159668 | 159668 | 159668 | 1       |
+| depositETH                                             | 161813          | 161813 | 161813 | 161813 | 1       |
 |--------------------------------------------------------+-----------------+--------+--------+--------+---------|
 | setOpen                                                | 43605           | 43605  | 43605  | 43605  | 7       |
 ╰--------------------------------------------------------+-----------------+--------+--------+--------+---------╯
@@ -776,11 +837,11 @@ Suite result: ok. 8 passed; 0 failed; 0 skipped; finished in 4.48s (7.04s CPU ti
 |----------------------------------------------+-----------------+-------+--------+-------+---------|
 | Function Name                                | Min             | Avg   | Median | Max   | # Calls |
 |----------------------------------------------+-----------------+-------+--------+-------+---------|
-| approve                                      | 26216           | 40478 | 46116  | 46464 | 12242   |
+| approve                                      | 26216           | 40540 | 46116  | 46464 | 12235   |
 |----------------------------------------------+-----------------+-------+--------+-------+---------|
-| balanceOf                                    | 538             | 1538  | 2538   | 2538  | 24441   |
+| balanceOf                                    | 538             | 1538  | 2538   | 2538  | 24427   |
 |----------------------------------------------+-----------------+-------+--------+-------+---------|
-| mint                                         | 34045           | 42837 | 34057  | 68305 | 12243   |
+| mint                                         | 34045           | 42857 | 34057  | 68305 | 12236   |
 ╰----------------------------------------------+-----------------+-------+--------+-------+---------╯
 
 ╭---------------------------------------------------------+-----------------+-------+--------+-------+---------╮
@@ -856,11 +917,11 @@ Suite result: ok. 8 passed; 0 failed; 0 skipped; finished in 4.48s (7.04s CPU ti
 |---------------------------------------------+-----------------+-------+--------+-------+---------|
 | Function Name                               | Min             | Avg   | Median | Max   | # Calls |
 |---------------------------------------------+-----------------+-------+--------+-------+---------|
-| approve                                     | 46092           | 46128 | 46128  | 46464 | 2228    |
+| approve                                     | 46092           | 46128 | 46128  | 46464 | 2225    |
 |---------------------------------------------+-----------------+-------+--------+-------+---------|
-| balanceOf                                   | 538             | 1538  | 2538   | 2538  | 4458    |
+| balanceOf                                   | 538             | 1538  | 2538   | 2538  | 4452    |
 |---------------------------------------------+-----------------+-------+--------+-------+---------|
-| mint                                        | 51145           | 54393 | 51157  | 68257 | 2228    |
+| mint                                        | 51145           | 54390 | 51157  | 68257 | 2225    |
 |---------------------------------------------+-----------------+-------+--------+-------+---------|
 | transfer                                    | 49139           | 49139 | 49139  | 49139 | 1       |
 ╰---------------------------------------------+-----------------+-------+--------+-------+---------╯
@@ -876,13 +937,13 @@ Suite result: ok. 8 passed; 0 failed; 0 skipped; finished in 4.48s (7.04s CPU ti
 |------------------------------------------------------------+-----------------+-------+--------+-------+---------|
 | Function Name                                              | Min             | Avg   | Median | Max   | # Calls |
 |------------------------------------------------------------+-----------------+-------+--------+-------+---------|
-| accept                                                     | 24720           | 44595 | 44620  | 44620 | 9712    |
+| accept                                                     | 24720           | 44595 | 44620  | 44620 | 9914    |
 |------------------------------------------------------------+-----------------+-------+--------+-------+---------|
 | acceptClaim                                                | 43600           | 43600 | 43600  | 43600 | 2       |
 |------------------------------------------------------------+-----------------+-------+--------+-------+---------|
 | paused                                                     | 212             | 212   | 212    | 212   | 1       |
 |------------------------------------------------------------+-----------------+-------+--------+-------+---------|
-| verify                                                     | 454             | 2767  | 2765   | 25309 | 9597    |
+| verify                                                     | 454             | 2767  | 2765   | 25309 | 9807    |
 |------------------------------------------------------------+-----------------+-------+--------+-------+---------|
 | verifyIntegrity                                            | 2474            | 2474  | 2474   | 2474  | 2       |
 ╰------------------------------------------------------------+-----------------+-------+--------+-------+---------╯
@@ -902,4 +963,4 @@ Suite result: ok. 8 passed; 0 failed; 0 skipped; finished in 4.48s (7.04s CPU ti
 ╰---------------------------------------------------------+-----------------+-----+--------+-----+---------╯
 
 
-Ran 28 test suites in 4.97s (12.96s CPU time): 367 tests passed, 0 failed, 0 skipped (367 total tests)
+Ran 34 test suites in 5.00s (12.19s CPU time): 393 tests passed, 0 failed, 1 skipped (394 total tests)

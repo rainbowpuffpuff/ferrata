@@ -92,9 +92,10 @@ contract FerrataVault is ReentrancyGuardTransient {
         uint32 t; // its signing threshold
     }
 
-    /// @dev A submitted, not yet finalised checkpoint, keyed by its `newState`. It is valid only while no revocation
-    ///      has happened since it was submitted (`revocationEpoch` unchanged). Finalisation re-presents the journal
-    ///      and must match `journalDigest` word for word, so the other journal fields need not be stored.
+    /// @dev A submitted, not yet finalised checkpoint, keyed by its `newState`. It is valid only while `finalState` has
+    ///      not changed and nothing was revoked since it was submitted (`epoch` unchanged), i.e. while its parent is
+    ///      still `finalState`; a stale one no longer blocks its `newState` (review L-1). Finalisation re-presents the
+    ///      journal and must match `journalDigest` word for word, so the other journal fields need not be stored.
     struct Candidate {
         bytes32 journalDigest; // sha256 of the 17-word journal the candidate's proof was verified against
         bytes32 tipHash; // the candidate's tip, reported if it is cancelled
@@ -102,7 +103,8 @@ contract FerrataVault is ReentrancyGuardTransient {
         uint32 t; // from the candidate's journal; sizes its wait (v3 D4)
         uint48 submittedAt; // 0 means no candidate
         uint32 deltaAtSubmit; // delta <= MAX_DELTA < 2**32
-        uint64 revocationEpoch;
+        uint64 epoch; // _epoch() at submission
+        address prover; // sent the candidate with its verified proof; credited the checkpoint fee once it is final
     }
 
     /// @dev History entry of a finalised checkpoint (spec §4.3, needed by §4.4).
@@ -117,7 +119,7 @@ contract FerrataVault is ReentrancyGuardTransient {
         uint64 parentImportedLeafCount; // of the state it was built on, restored if it is revoked
         bool parentSunset;
         uint64 finalizedAt;
-        address finalizer; // sent the finalisation; credited the checkpoint fee of every release against it (D13)
+        address prover; // submitted its candidate; credited the checkpoint fee of every release against it (D13)
     }
 
     struct Beacon {
@@ -225,8 +227,11 @@ contract FerrataVault is ReentrancyGuardTransient {
     uint256 internal constant ROLE_TIMELOCK = 14 days;
     /// @notice The longest checkpoint pause a watcher can set (D13).
     uint256 internal constant WATCHER_PAUSE = 12 hours;
-    /// @notice After this long without a finalisation anyone may retire the vault (D13).
+    /// @notice After this long without checkpoint progress anyone may retire the vault (D13); see `retireOpensAt`.
     uint256 internal constant KEYLESS_RETIREMENT = 30 days;
+    /// @notice `revokeWindow / deltaFloor` is at most this, which bounds the loop of `revokeFrom` (two finalisations
+    ///         are at least `deltaFloor` apart): at most 1,001 checkpoints marked, about 5 M gas.
+    uint256 internal constant MAX_REVOKE_SPAN = 1000;
     uint256 internal constant UNLIMITED = type(uint256).max;
     /// @notice Sentinel token address for native ETH.
     address internal constant ETH = address(0);
@@ -263,6 +268,8 @@ contract FerrataVault is ReentrancyGuardTransient {
     uint256 public immutable releaseRefillFloor;
     /// @notice Credited the burn fee of every release (D13).
     address public immutable feeRecipient;
+    /// @dev (tMin - 1) * turnSeconds + KEYLESS_RETIREMENT: the keyless period after `delta` (see `retireOpensAt`).
+    uint256 internal immutable _keylessSpan;
 
     // ------------------------------------------------------------------------------------------------------------
     // Storage. The first three variables are part of the cross-chain interface: the LEZ side reads `depositRoot`
@@ -317,9 +324,12 @@ contract FerrataVault is ReentrancyGuardTransient {
     ///         checks of v3 D4.
     uint64 public finalImportedLeafCount;
     bool public finalSunset;
-    /// @notice When the last checkpoint was finalised (deployment time before the first). Keyless retirement opens
-    ///         KEYLESS_RETIREMENT later (D13). Shares a slot with the two fields above, which finalisation writes too.
-    uint64 public lastFinalizedAt;
+    /// @notice Start of the keyless-retirement clock (D13): the deployment, the last candidate submission or the last
+    ///         finalisation; see `retireOpensAt`. Shares a slot with the two fields above, which finalisation writes.
+    uint64 public keylessFrom;
+    /// @dev How many finalisations changed `finalState` (a no-op checkpoint, newState == parentState, does not); with
+    ///      `revocationEpoch` it dates candidates (`_epoch`). In the same slot.
+    uint64 internal _stateChanges;
 
     mapping(address token => TokenConfig) private _tokens;
     mapping(address token => uint256) public tokenDepositsFrozenUntil;
@@ -575,7 +585,7 @@ contract FerrataVault is ReentrancyGuardTransient {
         if (d.genesisState == bytes32(0)) revert InvalidGenesisState();
         if (d.nMin == 0 || d.tMin == 0) revert InvalidCommitteeFloor();
         if (d.deltaFloor == 0 || d.initialDelta < d.deltaFloor || d.initialDelta > MAX_DELTA) revert InvalidDelta();
-        if (d.revokeWindow == 0) revert InvalidRevokeWindow();
+        if (d.revokeWindow == 0 || d.revokeWindow / d.deltaFloor > MAX_REVOKE_SPAN) revert InvalidRevokeWindow();
         if (d.maxFreeze == 0) revert InvalidMaxFreeze();
         // Rule (A) waits (t - 1) turns more; rule (B) has no turn term, so its turnSeconds is 0 (the one wait formula).
         if (d.mode == Mode.A ? d.turnSeconds == 0 || d.turnSeconds > MAX_DELTA : d.turnSeconds != 0) {
@@ -620,6 +630,7 @@ contract FerrataVault is ReentrancyGuardTransient {
         releaseCapFloor = d.releaseCapFloor.capacity;
         releaseRefillFloor = d.releaseCapFloor.refillPerSecond;
         feeRecipient = d.feeRecipient;
+        _keylessSpan = (uint256(d.tMin) - 1) * d.turnSeconds + KEYLESS_RETIREMENT;
 
         // The root of the empty tree, so that `depositRoot` is always the root of the current tree.
         bytes32 emptySubtree = bytes32(0);
@@ -633,7 +644,7 @@ contract FerrataVault is ReentrancyGuardTransient {
         admin = d.admin;
         freezeAuthority = d.freezeAuthority;
         watchers = d.watchers;
-        lastFinalizedAt = uint64(block.timestamp);
+        keylessFrom = uint64(block.timestamp);
         FerrataRegistry.initBucket(_globalDepositCap, d.globalDepositCap.capacity, d.globalDepositCap.refillPerSecond);
         FerrataRegistry.initBucket(_globalReleaseCap, d.globalReleaseCap.capacity, d.globalReleaseCap.refillPerSecond);
 
@@ -705,7 +716,7 @@ contract FerrataVault is ReentrancyGuardTransient {
         if (_frozen(releasesFrozenUntil)) revert ReleasesAreFrozen();
         if (_stopped()) revert VerifierStopped();
         if (!sunsetLeafCountSet || leafIndex < sunsetLeafCount) revert NotRefundable();
-        if (block.timestamp <= sunsetFinalizedAt + revokeWindow) revert RefundNotYetOpen();
+        if (block.timestamp < _refundsOpenAt()) revert RefundNotYetOpen();
         if (refunded[leafIndex]) revert AlreadyRefunded();
         // The leaf's checks (known leaf, registered token and denomination, Merkle path to `depositRoot`) and its
         // escrow, in the library.
@@ -734,17 +745,18 @@ contract FerrataVault is ReentrancyGuardTransient {
 
     /// @notice Submits a candidate checkpoint built on `finalState`. Permissionless; starts its wait
     ///         W = delta + (t - 1) * turnSeconds (turnSeconds is 0 under rule (B)). The proof is of the deployment's
-    ///         rule; under (A) the candidate also records a beacon.
+    ///         rule; under (A) the candidate also records a beacon. The sender is the candidate's prover, credited the
+    ///         checkpoint fee if it is finalised; the submission restarts the keyless-retirement clock.
     function submitCandidate(Checkpoint calldata c, bytes calldata seal) external {
         if (_frozen(checkpointsFrozenUntil)) revert CheckpointsAreFrozen();
         if (c.parentState != finalState) revert ParentNotFinal();
         if (c.echoNonce != bytes32(0)) revert EchoNonceNotZero();
         _checkCommittee(c);
+        uint256 epoch = _epoch();
+        // Resubmitting a live candidate must not restart its wait; a stale one (built on an earlier finalState) is
+        // replaced.
         Candidate storage existing = candidates[c.newState];
-        // Resubmitting a live candidate must not restart its wait.
-        if (existing.submittedAt != 0 && existing.revocationEpoch == revocationEpoch) {
-            revert CandidateAlreadySubmitted();
-        }
+        if (existing.submittedAt != 0 && existing.epoch == epoch) revert CandidateAlreadySubmitted();
         bytes32 digest = _checkpointDigest(c, bytes32(0));
         verifier.verify(seal, checkpointImageId, digest);
 
@@ -755,8 +767,10 @@ contract FerrataVault is ReentrancyGuardTransient {
             t: c.t,
             submittedAt: uint48(block.timestamp),
             deltaAtSubmit: uint32(delta),
-            revocationEpoch: uint64(revocationEpoch)
+            epoch: uint64(epoch),
+            prover: msg.sender
         });
+        keylessFrom = uint64(block.timestamp);
         if (mode == Mode.A) _recordBeacon();
         _emitCandidateSubmitted(c);
     }
@@ -776,7 +790,7 @@ contract FerrataVault is ReentrancyGuardTransient {
         if (c.echoNonce != beacon.nonce) revert EchoNonceMismatch();
         _checkMonotone(c);
         verifier.verify(seal, checkpointImageId, _checkpointDigest(c, c.echoNonce));
-        _finalize(c);
+        _finalize(c, cand.prover);
     }
 
     /// @notice Rule (B): finalises a candidate once its wait W = deltaAtSubmit has passed (D13), unless it was
@@ -789,11 +803,12 @@ contract FerrataVault is ReentrancyGuardTransient {
         _checkMonotone(c);
         // Nothing proven is accepted after a stop, under either rule (under (A) the second proof cannot verify).
         if (_stopped()) revert VerifierStopped();
-        _finalize(c);
+        _finalize(c, cand.prover);
     }
 
-    /// @dev The effects of a finalisation, shared by both rules.
-    function _finalize(Checkpoint calldata c) internal {
+    /// @dev The effects of a finalisation, shared by both rules. `prover` submitted the candidate (M-2: the fee goes
+    ///      to the proof, not to whoever sends the finalisation).
+    function _finalize(Checkpoint calldata c, address prover) internal {
         uint256 index = checkpoints.length;
         checkpoints.push(
             FinalizedCheckpoint({
@@ -807,13 +822,14 @@ contract FerrataVault is ReentrancyGuardTransient {
                 parentImportedLeafCount: finalImportedLeafCount,
                 parentSunset: finalSunset,
                 finalizedAt: uint64(block.timestamp),
-                finalizer: msg.sender
+                prover: prover
             })
         );
         finalState = c.newState;
         finalImportedLeafCount = c.importedLeafCount;
         finalSunset = c.sunset;
-        lastFinalizedAt = uint64(block.timestamp);
+        keylessFrom = uint64(block.timestamp);
+        if (c.newState != c.parentState) _stateChanges += 1;
         delete candidates[c.newState];
 
         uint256 previous = burnRootCheckpoint[c.burnRoot];
@@ -835,12 +851,13 @@ contract FerrataVault is ReentrancyGuardTransient {
 
     /// @notice Releases one denomination against a proof of a LEZ burn. Permissionless. `r.recipient` receives it less
     ///         the relay fee (if the proof names one) and the burn and checkpoint fees of the fee schedule in force; the
-    ///         burn fee is credited to `feeRecipient` and the checkpoint fee to whoever finalised `r.burnRoot` (D13).
+    ///         burn fee is credited to `feeRecipient` and the checkpoint fee to the prover of `r.burnRoot`'s checkpoint
+    ///         (D13), the sender of its candidate.
     /// @dev Checks, then the proof, then all state changes, then the payouts. A payout that fails is credited to
     ///      `owed` instead (spec §5.4): the release completes, the nullifier is used, and only the payee can claim.
-    ///      The burn and checkpoint fees are always credited, never pushed, so no finaliser can make releases costly.
+    ///      The burn and checkpoint fees are always credited, never pushed, so no prover can make releases costly.
     function release(ReleaseRequest calldata r, bytes calldata seal) external nonReentrant {
-        (uint256 amount, address finalizer) = _checkRelease(r);
+        (uint256 amount, address prover) = _checkRelease(r);
         verifier.verify(seal, releaseImageId, _releaseJournalDigest(r, amount));
 
         nullifierUsed[r.nullifier] = true;
@@ -850,7 +867,7 @@ contract FerrataVault is ReentrancyGuardTransient {
         address feePayee = r.relayer == address(0) ? msg.sender : r.relayer;
         emit Release(r.nullifier, r.token, r.recipient, amount, feePayee, r.relayFee, r.burnRoot);
 
-        uint256 deducted = _creditReleaseFees(r.token, r.denomIndex, finalizer);
+        uint256 deducted = _creditReleaseFees(r.token, r.denomIndex, prover);
         _payOrCredit(r.token, r.recipient, amount - r.relayFee - deducted);
         if (r.relayFee != 0) _payOrCredit(r.token, feePayee, r.relayFee);
     }
@@ -858,16 +875,7 @@ contract FerrataVault is ReentrancyGuardTransient {
     /// @notice Withdraws what the vault owes the caller in `token` after a failed push payment. Only the payee can
     ///         withdraw, and only to itself.
     function claimOwed(address token) external nonReentrant {
-        uint256 amount = owed[msg.sender][token];
-        if (amount == 0) revert NothingOwed();
-        owed[msg.sender][token] = 0;
-        totalOwed[token] -= amount;
-        emit OwedClaimed(msg.sender, token, amount);
-        if (token == ETH) {
-            if (!_trySendEth(msg.sender, amount)) revert EthTransferFailed();
-        } else {
-            IERC20(token).safeTransfer(msg.sender, amount);
-        }
+        FerrataRegistry.claimOwed(owed, totalOwed, token);
     }
 
     // ------------------------------------------------------------------------------------------------------------
@@ -883,7 +891,7 @@ contract FerrataVault is ReentrancyGuardTransient {
     ///         registry entry and the schedule for the LEZ side (D13).
     function registerToken(address token, TokenParams calldata p) external onlyAdmin {
         FerrataRegistry.registerToken(
-            _tokens, _tokenDepositCap, _tokenReleaseCap, _releaseDelays, feeSchedules, token, p, _limits()
+            _tokens, _tokenDepositCap, _tokenReleaseCap, _releaseDelays, feeSchedules, token, p
         );
     }
 
@@ -921,21 +929,19 @@ contract FerrataVault is ReentrancyGuardTransient {
         onlyAdmin
     {
         FerrataRegistry.setTokenCap(
-            _tokens, _tokenDepositCap, _tokenReleaseCap, token, direction, capacity, refillPerSecond, _limits()
+            _tokens, _tokenDepositCap, _tokenReleaseCap, token, direction, capacity, refillPerSecond
         );
     }
 
     /// @notice Updates a global bucket (value units), with the same rules as `setTokenCap`.
     function setGlobalCap(Direction direction, uint256 capacity, uint256 refillPerSecond) external onlyAdmin {
-        FerrataRegistry.setGlobalCap(
-            _globalDepositCap, _globalReleaseCap, direction, capacity, refillPerSecond, _limits()
-        );
+        FerrataRegistry.setGlobalCap(_globalDepositCap, _globalReleaseCap, direction, capacity, refillPerSecond);
     }
 
     /// @notice Sets the per-token delay between a burn root's finalisation and releases against it, for roots
     ///         finalised after this call; roots already finalised keep the delay they were finalised under (§5.3).
     function setReleaseDelay(address token, uint256 delay) external onlyAdmin {
-        FerrataRegistry.setReleaseDelay(_tokens, _releaseDelays, token, delay, _limits(), checkpoints.length);
+        FerrataRegistry.setReleaseDelay(_tokens, _releaseDelays, token, delay, checkpoints.length);
     }
 
     /// @notice Raises `delta`. It can never go down; candidates already submitted keep the delta they started with.
@@ -962,9 +968,12 @@ contract FerrataVault is ReentrancyGuardTransient {
         emit ReleasesFrozenSet(frozen, releasesFrozenUntil);
     }
 
-    /// @notice Stops both `submitCandidate` and `finalize` (v3 D4); lapses like every other freeze.
+    /// @notice Stops both `submitCandidate` and `finalize` (v3 D4); lapses like every other freeze. Lifting it keeps
+    ///         the time the freeze or pause ended (now, or when it lapsed), from which keyless retirement counts (M-1).
     function setCheckpointsFrozen(bool frozen) external onlyFreezeAuthority {
-        checkpointsFrozenUntil = _freezeUntil(frozen);
+        uint256 until = checkpointsFrozenUntil;
+        if (until > block.timestamp) until = block.timestamp;
+        checkpointsFrozenUntil = frozen ? block.timestamp + maxFreeze : until;
         emit CheckpointsFrozenSet(frozen, checkpointsFrozenUntil);
     }
 
@@ -981,15 +990,33 @@ contract FerrataVault is ReentrancyGuardTransient {
     }
 
     /// @notice Stops deposits forever (spec §4.5). It cannot touch escrow, checkpoints or releases. The freeze
-    ///         authority may retire at any time; anyone may once no checkpoint has been finalised for
-    ///         KEYLESS_RETIREMENT (D13), so refunds never depend on the freeze key.
+    ///         authority may retire at any time; anyone may from `retireOpensAt()` on (D13), so refunds never depend on
+    ///         the freeze key.
     function retire() external {
-        if (msg.sender != freezeAuthority && block.timestamp < uint256(lastFinalizedAt) + KEYLESS_RETIREMENT) {
-            revert RetireNotOpen();
-        }
+        if (msg.sender != freezeAuthority && block.timestamp < retireOpensAt()) revert RetireNotOpen();
         if (retired) revert AlreadyRetired();
         retired = true;
         emit Retired();
+    }
+
+    /// @notice When anyone may retire the vault: KEYLESS_RETIREMENT after the first moment a checkpoint could be
+    ///         finalised since the clock last started (`keylessFrom`, or the end of the last checkpoint freeze or
+    ///         watcher pause: no freeze time counts), that is after the shortest wait delta + (tMin - 1) * turnSeconds;
+    ///         or, if earlier, once the first sunset checkpoint can no longer be revoked (D11; refunds open then too).
+    ///         A checkpoint must therefore be submitted or finalised at least every 30 days, from deployment on.
+    function retireOpensAt() public view returns (uint256 opensAt) {
+        uint256 from = keylessFrom;
+        if (checkpointsFrozenUntil > from) from = checkpointsFrozenUntil;
+        opensAt = from + delta + _keylessSpan;
+        if (sunsetLeafCountSet) {
+            uint256 sunsetOpens = _refundsOpenAt();
+            if (sunsetOpens < opensAt) opensAt = sunsetOpens;
+        }
+    }
+
+    /// @dev The second after the last one in which the sunset checkpoint can be revoked (v3 D5, D11).
+    function _refundsOpenAt() internal view returns (uint256) {
+        return sunsetFinalizedAt + revokeWindow + 1;
     }
 
     /// @notice Reject-only: deletes a pending (not yet finalised) candidate, so it can never be finalised. Finalised
@@ -1164,7 +1191,8 @@ contract FerrataVault is ReentrancyGuardTransient {
         internal
         returns (uint256 amount, uint256 total)
     {
-        if (retired) revert VaultRetired();
+        // A finalised sunset checkpoint ends deposits like retirement: LEZ imports nothing after `Sunset` (L-3).
+        if (retired || finalSunset) revert VaultRetired();
         if (_frozen(depositsFrozenUntil)) revert DepositsAreFrozen();
         TokenConfig storage cfg = _tokens[token];
         if (!cfg.registered) revert TokenNotRegistered();
@@ -1296,16 +1324,21 @@ contract FerrataVault is ReentrancyGuardTransient {
     }
 
     /// @dev The candidate `c` names, if it can be finalised now under either rule: no checkpoint freeze, submitted,
-    ///      no revocation since, `c` is word for word its journal, and it builds on `finalState`. `echoNonce` is the
-    ///      word hashed in place of c.echoNonce: 0 under (A), whose second proof echoes a beacon; c.echoNonce under
-    ///      (B), so that it too must be the candidate's 0.
+    ///      `finalState` unchanged and nothing revoked since (so it still builds on `finalState`), and `c` is
+    ///      word for word its journal. `echoNonce` is the word hashed in place of c.echoNonce: 0 under (A), whose
+    ///      second proof echoes a beacon; c.echoNonce under (B), so that it too must be the candidate's 0.
     function _liveCandidate(Checkpoint calldata c, bytes32 echoNonce) internal view returns (Candidate storage cand) {
         if (_frozen(checkpointsFrozenUntil)) revert CheckpointsAreFrozen();
         cand = candidates[c.newState];
         if (cand.submittedAt == 0) revert UnknownCandidate();
-        if (cand.revocationEpoch != revocationEpoch) revert StaleCandidate();
+        if (cand.epoch != _epoch()) revert StaleCandidate();
         if (_checkpointDigest(c, echoNonce) != cand.journalDigest) revert CandidateMismatch();
-        if (c.parentState != finalState) revert StaleCandidate();
+    }
+
+    /// @dev Changes with every finalisation that moves `finalState` and with every revocation (review L-1): a candidate
+    ///      is live only in the epoch it was submitted in. A no-op checkpoint leaves pending candidates live.
+    function _epoch() internal view returns (uint256) {
+        return revocationEpoch + _stateChanges;
     }
 
     /// @dev v3 D4: the imported leaf count never decreases, and after a sunset checkpoint every later one is a sunset
@@ -1320,8 +1353,8 @@ contract FerrataVault is ReentrancyGuardTransient {
     // Internal: releases and journals
     // ------------------------------------------------------------------------------------------------------------
 
-    /// @dev Returns the denomination and the finaliser of the root's checkpoint (credited the checkpoint fee).
-    function _checkRelease(ReleaseRequest calldata r) internal view returns (uint256 amount, address finalizer) {
+    /// @dev Returns the denomination and the prover of the root's checkpoint (credited the checkpoint fee).
+    function _checkRelease(ReleaseRequest calldata r) internal view returns (uint256 amount, address prover) {
         if (_frozen(releasesFrozenUntil)) revert ReleasesAreFrozen();
         TokenConfig storage cfg = _tokens[r.token];
         if (!cfg.registered) revert TokenNotRegistered();
@@ -1333,7 +1366,7 @@ contract FerrataVault is ReentrancyGuardTransient {
         uint256 entry = burnRootCheckpoint[r.burnRoot];
         if (entry == 0 || checkpoints[entry - 1].revoked) revert BurnRootNotAccepted();
         uint256 delay = _releaseDelayFor(r.token, entry - 1);
-        finalizer = checkpoints[entry - 1].finalizer;
+        prover = checkpoints[entry - 1].prover;
         uint256 opensAt = checkpoints[entry - 1].finalizedAt + delay;
         // D11: the last second in which the root's checkpoint can be revoked is never a release second.
         if (delay == revokeWindow) opensAt += 1;
@@ -1392,14 +1425,14 @@ contract FerrataVault is ReentrancyGuardTransient {
         emit OwedCredited(payee, token, amount);
     }
 
-    /// @dev Credits a release's burn fee to `feeRecipient` and its checkpoint fee to the root's finaliser, under the
-    ///      fee schedule in force (a due change first), and returns their sum. Each is at most 1% of the denomination.
-    function _creditReleaseFees(address token, uint8 denomIndex, address finalizer) internal returns (uint256) {
+    /// @dev Credits a release's burn fee to `feeRecipient` and its checkpoint fee to the root's prover, under the fee
+    ///      schedule in force (a due change first), and returns their sum. Each is at most 1% of the denomination.
+    function _creditReleaseFees(address token, uint8 denomIndex, address prover) internal returns (uint256) {
         uint256 outbound = feeSchedules[token][_feesInForce(token)].outbound[denomIndex];
         uint256 burnFee = outbound >> 128;
         uint256 checkpointFee = uint128(outbound);
         if (burnFee != 0) _credit(feeRecipient, token, burnFee);
-        if (checkpointFee != 0) _credit(finalizer, token, checkpointFee);
+        if (checkpointFee != 0) _credit(prover, token, checkpointFee);
         return burnFee + checkpointFee;
     }
 
@@ -1484,10 +1517,6 @@ contract FerrataVault is ReentrancyGuardTransient {
 
     function _checkFreezeAuthority() internal view {
         if (msg.sender != freezeAuthority) revert NotFreezeAuthority();
-    }
-
-    function _limits() internal view returns (FerrataRegistry.Limits memory) {
-        return FerrataRegistry.Limits(minReleaseDelay, revokeWindow, releaseCapFloor, releaseRefillFloor);
     }
 
     function _isWatcher(address who) internal view returns (bool) {

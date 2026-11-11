@@ -17,7 +17,7 @@ contract CheckpointTest is VaultTestBase {
         view
         returns (bytes32 digest, uint256 submittedAt, uint256 deltaAtSubmit, uint256 epoch)
     {
-        (digest,,,, submittedAt, deltaAtSubmit, epoch) = vault.candidates(c.newState);
+        (digest,,,, submittedAt, deltaAtSubmit, epoch,) = vault.candidates(c.newState);
     }
 
     /// @dev Records a beacon in a new block at time `at` and returns its index and nonce.
@@ -178,7 +178,8 @@ contract CheckpointTest is VaultTestBase {
         assertEq(h.parentImportedLeafCount, 0); // genesis carries no imported leaves and no sunset
         assertFalse(h.parentSunset);
         assertEq(h.finalizedAt, block.timestamp);
-        assertEq(h.finalizer, relayer); // the finalize call's sender (D13: credited the checkpoint fee of its releases)
+        // The candidate's sender (this test), not the finalize call's (relayer): credited the checkpoint fee (M-2).
+        assertEq(h.prover, address(this));
     }
 
     function test_finalize_impossibleBeforeDelta_noBeaconIsOldEnough() public {
@@ -413,7 +414,7 @@ contract CheckpointTest is VaultTestBase {
         c.t = t;
         _submit(c);
         uint256 submittedAt = block.timestamp;
-        (,,, uint32 storedT,,,) = vault.candidates(c.newState);
+        (,,, uint32 storedT,,,,) = vault.candidates(c.newState);
         assertEq(storedT, t);
         uint256 wait = DELTA + (uint256(t) - 1) * TURN_SECONDS;
 

@@ -17,6 +17,7 @@ opening sections).
 | You trust | For | If it fails | What bounds the loss | Section |
 |---|---|---|---|---|
 | The starting checkpoint of an attestation instance | that the instance follows the real Ethereum | a false chain from the start | anyone can compare the checkpoint root with public Ethereum before relying on the instance | §2.1 |
+| The vault's deployment parameters: `genesisState` (the starting key set, turn length and tip), `lezConfigId`, the image ids, `turnSeconds`, `nMin`/`tMin` | that the vault follows the real LEZ channel from the right state with the right programs | a false LEZ history or program accepted from the start | anyone can check them before depositing: the channel's public state, `configId`'s preimage (it binds the vault's address), reproducible builds of the guests; the deployment script checks none of them and accepts `nMin = tMin = 1` (testnets only: it refuses every chain but anvil, Sepolia, Hoodi and Holesky) | §3.2, §4 |
 | Two thirds of each 512-member sync committee | that every recorded header was finalized | forged records: facts about blocks that never existed are attested | consumer caps and freezes; `monitor`'s alarm (not built) | §2.2 |
 | Fewer than `t` of the LEZ channel's accredited keys are an attacker's, in every key set the checkpoint program used | validity of every burn root the vault accepts (both rules) | `t` keys can forge a burn root | the public wait, watchers, the release delay and revocation, release caps | §3.2 |
 | Logos Blockchain: no reorganisation deeper than `k` on the attestors' nodes | finality of accepted burn roots under rule (B) | a released burn is later undone on LEZ | the same | §3.3 |
@@ -260,10 +261,10 @@ From [`vault/README.md`](../vault/README.md), "Roles"; [`bridge.md`](design/brid
 | Role | Can | Cannot | If its key is lost | If its key is stolen |
 |---|---|---|---|---|
 | **Admin** (multisig) | register a token once; enable or disable deposits per token; set caps above the immutable floor; set release delays within `[minReleaseDelay, revokeWindow]` for later roots; raise Δ; propose watchers and a new freeze authority, applied 14 days later; announce fee schedules (in force 7 days later, ≤ 1% each) | move escrow; change a registered token; lower Δ; cut a cap below the floor; freeze, unfreeze, cancel, revoke, retire; change any immutable (verifier, `mode`, image ids, `lezConfigId`, timers, floors) | no new tokens or caps; everything else keeps working | registry and cap churn within bounds; a public 14-day window before a role change |
-| **Freeze authority** (multisig) | freeze deposits, releases, checkpoints (vault) and mints, burns (LEZ), globally or per token, each for at most `maxFreeze` (30 days; on LEZ, of attested Ethereum time, so a LEZ freeze holds while the light client stalls) unless renewed; `cancelCandidate`; `revokeFrom` within the window; `retire()`; LEZ `Sunset` | touch the registry, caps, delays, Δ or escrow; accept anything; undo a stop or a retirement; hand itself over | freezes lapse; anyone retires after 30 days without a checkpoint; the admin replaces it in 14 days | **denial of service, not theft**: renew freezes, revoke honest checkpoints within the window, retire the vault |
+| **Freeze authority** (multisig) | freeze deposits, releases, checkpoints (vault) and mints, burns (LEZ), globally or per token, each for at most `maxFreeze` (30 days; on LEZ, of attested Ethereum time, so a LEZ freeze holds while the light client stalls) unless renewed; `cancelCandidate`; `revokeFrom` within the window; `retire()`; LEZ `Sunset` | touch the registry, caps, delays, Δ or escrow; accept anything; undo a stop or a retirement; hand itself over | freezes lapse; anyone retires after 30 days without checkpoint progress (time under a freeze does not count); the admin replaces it in 14 days | **denial of service, not theft**: renew freezes, revoke honest checkpoints within the window, retire the vault |
 | **Watchers** (up to three hot keys) | cancel a pending candidate; pause checkpoints for at most 12 h | anything else | — (others watch) | delay finalisation until the admin replaces them |
 | **Emergency stop** (RISC Zero's `RiscZeroVerifierEmergencyStop`) | stop every proof-gated call for good | be tripped by anyone holding a key: its owner is renounced at deployment, so only `estop(receipt)`, RISC Zero's proof of unsoundness, trips it | — | — |
-| **Anyone** | deposit; submit and finalise checkpoints with proofs; record beacons; release with a proof; refund once allowed; apply a role proposal after 14 days; retire after 30 days without a checkpoint | — | — | — |
+| **Anyone** | deposit; submit and finalise checkpoints with proofs; record beacons; release with a proof; refund once allowed; apply a role proposal after 14 days; retire after 30 days without checkpoint progress (no submission or finalisation; freezes and pauses do not count), or once a sunset checkpoint can no longer be revoked | — | — | — |
 
 On LEZ, the roles are accounts fixed in the configuration; the 14-day replacement, watchers and the
 permissionless `Sunset` are **not built** there, and neither is a multisig freeze authority
@@ -321,7 +322,7 @@ verification logic, which Security #8 forbids. The failsafe is stop-only
 | A wrong checkpoint not revoked within 7 days | the vault halts for good | every position not yet released | caps bound what the error itself released |
 | A LEZ change the configuration cannot follow | retirement before it; unimported deposits refunded | tokens never burned before the change stay backed in the vault but cannot be released | notice period asked of Logos (M0) |
 | Admin or freeze key compromised | denial of service within the bounds of §4 | none directly | lapsing freezes, 14-day public replacement, keyless retirement |
-| Every operator stops | no imports, checkpoints or relays | none: anyone can resume; claims never expire | keyless retirement and refunds after 30 days without a checkpoint |
+| Every operator stops | no imports, checkpoints or relays | none: anyone can resume; claims never expire | keyless retirement and refunds after 30 days without checkpoint progress, from deployment on (operators keep a heartbeat checkpoint) |
 | A recipient that can never receive | its `owed` balance stays forever | that payee's amount | pull payments isolate it from everyone else |
 
 Sources: [`bridge.md`](design/bridge.md) §13 ("Supply"), §15, §16, §20; [`vault/README.md`](../vault/README.md).
@@ -338,12 +339,12 @@ Nothing runs itself; every state change is a transaction someone pays for
 |---|---|---|---|
 | light-client update | anyone running the updater | they need fresh records (consumers, the bridge's importers); the bridge can pay a fixed rebate from its protocol fee (soft #5) | updates yes; the rebate is design only |
 | `ImportRoot` | anyone, as a top-level call or private root (the bridge refuses a nested or asynchronous import, which the checkpoint could not count; security review H-1) | depositors want to claim; relayers earn relay fees on claims | yes |
-| `submitCandidate`, `finalize` / `finalizeAttested` | anyone with a prover | the **checkpoint fee** of every release against that root goes to the finaliser | yes (vault v5) |
+| `submitCandidate`, `finalize` / `finalizeAttested` | anyone with a prover | the **checkpoint fee** of every release against that root goes to the candidate's prover, the sender of `submitCandidate` (not of the finalisation, which under rule (B) needs no proof) | yes (vault v5; prover since the security fixes of 11 November) |
 | `recordBeacon` (rule (A)) | anyone, typically the finaliser | needed for its finalisation | yes |
 | relaying claims and releases | relayers | the registered relay fee, bound by the proof (a plaintext claim's relayer is a free field: whoever gets a copy of it included first takes its relay fee, at most 1% of the denomination; the private claim binds the relayer inside the proof; security review L-4, not changed) | fee yes; relayer service no |
 | `cancelCandidate`, `pauseCheckpoints` | watchers | appointed by the admin; no fee | vault side yes; `monitor` no |
 | `refund` after retirement | anyone, typically the depositor | it pays the depositor named in the leaf | yes |
-| `retire()` after 30 days without a checkpoint | anyone | to open refunds | yes (vault); LEZ `Sunset` by the freeze authority only |
+| `retire()` after 30 days without checkpoint progress, or after an irrevocable sunset checkpoint | anyone | to open refunds | yes (vault); LEZ `Sunset` by the freeze authority only |
 
 Whether the fees cover the callers' gas at the deployer's chosen levels is **not measured**; the fee
 levels are the deployer's choice ([`deployer-guide.md`](guides/deployer-guide.md) §2).

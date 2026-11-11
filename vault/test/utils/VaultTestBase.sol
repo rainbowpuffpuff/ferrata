@@ -466,7 +466,7 @@ abstract contract VaultTestBase is Test {
         uint32 t;
         uint32 deltaAtSubmit;
         uint48 at;
-        (,,, t, at, deltaAtSubmit,) = v.candidates(newState);
+        (,,, t, at, deltaAtSubmit,,) = v.candidates(newState);
         submittedAt = at;
         wait = uint256(deltaAtSubmit) + (uint256(t) - 1) * v.turnSeconds();
     }

@@ -186,7 +186,7 @@ contract RoundTrip is Script {
 
     /// @dev When the candidate's wait is over: submittedAt + deltaAtSubmit + (t - 1) * turnSeconds.
     function _waitOver(bytes32 newState) internal view returns (uint256) {
-        (,,, uint32 t, uint48 submittedAt, uint32 deltaAtSubmit,) = vault.candidates(newState);
+        (,,, uint32 t, uint48 submittedAt, uint32 deltaAtSubmit,,) = vault.candidates(newState);
         require(submittedAt != 0, "no such candidate");
         return uint256(submittedAt) + deltaAtSubmit + (uint256(t) - 1) * vault.turnSeconds();
     }
