@@ -10,6 +10,7 @@
 //! * [`policy::FinalizedStore`]: Ferrata's on-chain policy, which accepts only finality
 //!   updates signed by a two-thirds supermajority and never forces a header.
 //! * [`bls::BlsBackend`]: BLS12-381 behind a trait, with `blst` and zkcrypto backends.
+//! * [`ws`]: the weak-subjectivity period and the bound a store is advanced within.
 
 #![no_std]
 #![deny(unsafe_code)]
@@ -40,6 +41,7 @@ pub mod types;
 pub mod upgrade;
 pub mod validate;
 pub mod witness;
+pub mod ws;
 
 pub use error::Error;
 
