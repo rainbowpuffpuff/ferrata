@@ -862,7 +862,10 @@ fn privacy_suite_lez_half() {
     label(bw::root_actor(w.program, &cid, n).account_id, "root(cid, 20)");
     for user in &users {
         label(user.public_dest, "a public destination (plaintext universe)");
-        label(bw::holder_actor(w.program, user.public_dest).account_id, "holder(a public destination) (plaintext universe)");
+        label(
+            bw::holder_actor(w.program, user.public_dest).account_id,
+            "holder(a public destination) (plaintext universe)",
+        );
     }
     let lez = json!({
         "accounts": labels,
