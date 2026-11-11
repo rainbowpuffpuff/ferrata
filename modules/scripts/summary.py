@@ -23,9 +23,12 @@ def load(path):
 def get(reply, dotted):
     value = reply
     for key in dotted.split("."):
-        if not isinstance(value, dict) or key not in value:
+        if isinstance(value, list) and key.isdigit() and int(key) < len(value):
+            value = value[int(key)]
+        elif isinstance(value, dict) and key in value:
+            value = value[key]
+        else:
             return "<missing>"
-        value = value[key]
     return value
 
 
@@ -42,8 +45,8 @@ def main():
 
     failures = 0
     lines = ["# check.sh summary", "", "## Steps", "", (rep / "steps.md").read_text(), "## Calls", ""]
-    head = "| call | method | native verdict | code | expectations |"
-    rule = "|---|---|---|---:|---|"
+    head = "| call | module | method | native verdict | code | expectations |"
+    rule = "|---|---|---|---|---:|---|"
     for f in flavours:
         head += f" {f}: equal to native | {f}: seconds |"
         rule += "---|---:|"
@@ -53,13 +56,13 @@ def main():
         native = load(rep / "replies/native" / f"{name}.json")
         if native is None:
             failures += 1
-            lines.append(f"| {name} | {call['method']} | no native reply | | |")
+            lines.append(f"| {name} | {call.get('module', 'ferrata_attest_module')} | {call['method']} | no native reply | | |")
             continue
         missed = [f"{k}={get(native, k)!r}" for k, v in expect.get(name, {}).items() if get(native, k) != v]
         failures += bool(missed)
         verdict = native.get("verdict", native.get("module", ""))
         code = native.get("code", get(native, "bootstrap.code") if native.get("bootstrap") else "")
-        row = f"| {name} | {call['method']} | {verdict} | {code} | {'met' if not missed else 'MISSED: ' + ', '.join(missed)} |"
+        row = f"| {name} | {call.get('module', 'ferrata_attest_module')} | {call['method']} | {verdict} | {code} | {'met' if not missed else 'MISSED: ' + ', '.join(missed)} |"
         for f in flavours:
             reply = load(rep / "replies" / f / f"{name}.json")
             same = reply == native
@@ -67,6 +70,18 @@ def main():
             seconds, rc = (timings[f].get(name) or ["", ""])[:2]
             row += f" {'yes' if same else 'NO (exit ' + rc + ')'} | {seconds} |"
         lines.append(row)
+
+    # e2e.sh through Logos Core (check.sh runs it in each flavour's daemon).
+    for f in flavours:
+        e2e = load(rep / f"e2e-{f}" / "e2e.json")
+        if e2e is None:
+            lines += ["", f"## End to end through Logos Core ({f})", "", "not run or no result", ""]
+            failures += 1
+            continue
+        failures += e2e["failed"]
+        lines += ["", f"## End to end through Logos Core ({f}): {e2e['checks']} checks, {e2e['failed']} failed", ""]
+        lines += ["| group | check | passed | detail |", "|---|---|---|---|"]
+        lines += [f"| {r['group']} | {r['check']} | {r['passed']} | {r['detail']} |" for r in e2e["rows"]]
 
     lines += ["", "## Replies (native)", ""]
     for call in calls:
