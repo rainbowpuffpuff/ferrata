@@ -1,41 +1,60 @@
-Suites of branch `integration`, second integration pass, 10 Nov 2026 (docs/EVIDENCE.md, last section).
-Code as of commit d134a3a (the commits after it change documents only). Every command ran on the Modal
-build box of this worktree through spike/modal-build/mrun: 2 threads reported by nproc, 64 GiB, gVisor,
-glibc 2.39. Counts are the sums of the "test result" lines of each log.
+Suites of branch `integration3`, third integration pass, 11 Nov 2026 (docs/EVIDENCE.md, last section).
+Code as of commit 4637a16 (the commits after it change documents only). Every command ran on the Modal
+build box of this worktree through spike/modal-build/mrun (workspace deeferentleeg; 2 threads reported by
+nproc, 64 GiB, gVisor, glibc 2.39), except the link checker (laptop: it reads `git ls-files`, and the box
+has no git database). Counts are the sums of the "test result" / "Suite result" lines of each log. Image
+ids are those of the integration3 worktree's path (guest sources unchanged since the second pass).
 
-Run "suite" (22:09-22:18 UTC, at 99682b8):
+Run "suite" (10 Nov 23:47 - 11 Nov 00:07 UTC, at 6d52aa1, the four merges, with the lez-select fix):
   root workspace, CI job `test` as written (toolchain 1.98.1 for `stable`)
     scripts/fetch-vectors.sh                                           ok
     cargo test --workspace --locked                                    142 passed, 0 failed (21 test binaries)
     cargo fmt --all -- --check                                         ok
     cargo clippy --workspace --all-targets --locked -- -D warnings     ok
     no_std build of ferrata-core for riscv32im-unknown-none-elf        ok
-  checkpoint (cargo +1.98.1 test -p fidelity)                          17 passed, 0 failed (6 binaries)
-  checkpoint host build (cargo +1.93.0), host ids                      checkpoint 0xcfcbe41e..., checkpoint_b 0xe1820528...,
-                                                                       segment 0x073db467..., micro 0xe42a76fa...
-  attestor vectors (python3 -I scripts/check-attestor-vectors.py)     ok
-  live driver (lez/live/driver): cargo metadata --locked               ok; ferrata-lez-bridge-wire resolves to lez/live/frozen/bridge-wire
-  vault (forge 1.3.6, solc 0.8.26)
-    forge test                                                         396 passed, 0 failed (31 suites)
-    forge coverage --report summary                                    FerrataVault 426/426 lines, 522/522 statements, 102/102 branches,
-                                                                       80/80 functions; FerrataRegistry 227/227, 316/316, 41/41, 31/31
-    tools/mutation_spotcheck.py, 8 slices                              223/223 mutants killed (447 s)
-    forge build --sizes                                                FerrataVault 24,242 B runtime (334 under EIP-170),
-                                                                       FerrataRegistry 11,606 B; exit 1 because the test contract
-                                                                       VaultHandler (37,928 B) is above EIP-170
-Run "fix" (22:21-22:27 UTC, after rustfmt/forge fmt, the code of the formatting commit):
-  lez harness, RISC0_DEV_MODE=1 cargo test -p harness --locked        35 passed, 0 failed (20 binaries)
-  prove_bridge --image-ids                                             bridge image f11b1aba...58eb (507,088 ELF bytes)
+  lez harness, RISC0_DEV_MODE=1 cargo test -p harness --locked        36 passed, 0 failed (21 binaries; 924 s)
+  prove_bridge --image-ids                                             bridge image 5943b750...42f3 (507,096 ELF bytes)
   prove_bridge dry run (fake receipts), then --settle                  claim and burn settled
-  cargo clippy (lez wire, bridge-wire, harness, methods) -D warnings   ok
-  cargo fmt --check (the same crates)                                  ok
-  vault: forge test --match-contract RegistryStorageTest; fmt --check  1 passed; ok
-Run "fix2" (22:33 UTC, at d134a3a):
-  checkpoint (cargo +1.88): test -p checkpoint-core -p attestor-core   33 passed, 0 failed (8 binaries)
-  clippy -D warnings; fmt --check (both crates)                        ok; ok
-Laptop (reads files only):
-  python3 -I scripts/check-links.py                                    13 files, 278 links, 0 broken
-
-Not re-run in this pass: bridge/scripts/check.sh (bridge/ unchanged since the first pass, whose run of it
-passed every step but the last, which fails off the original build path), modules/scripts/check.sh (about
-47 min and Nix from source on a fresh box), bench/, the finality simulator, any proof on a GPU or CPU.
+  cargo clippy (lez wire, bridge-wire, harness, methods) -D warnings   ok;  cargo fmt --check  ok
+  live driver: cargo check --locked --all-targets (rc1)                ok
+  checkpoint: cargo +1.88 test -p checkpoint-core -p attestor-core     33 passed, 0 failed (8 binaries); clippy, fmt ok
+  attestor vectors (python3 -I scripts/check-attestor-vectors.py)     ok
+  checkpoint host build (cargo +1.93.0), host ids                      checkpoint 0x0111be33..., checkpoint_b 0xa8d6ca2d...,
+                                                                       segment 0xd0311e5f..., micro 0x98cac744...
+  checkpoint fidelity (cargo +1.98.1 test -p fidelity)                 17 passed, 0 failed (6 binaries)
+  bridge: cargo clippy -p ferrata-e2e --all-targets -D warnings        ok
+  realblocks: build ok; clippy -D warnings                             FAILED (3 lints, pre-existing; fixed in 8a04634)
+  vault (forge 1.3.6, solc 0.8.26): forge build --sizes                FerrataVault 24,242 B, FerrataRegistry 11,606 B; exit 1
+                                                                       because the test contract VaultHandler (37,928 B) is above
+                                                                       EIP-170 (pre-existing)
+    forge test / coverage                                              406 passed; PrivacySuite failed on this run's own
+                                                                       FERRATA_PRIVACY_DIR override (not permitted by fs_permissions)
+  scripts/privacy/run.sh                                               LEZ half ok; Ethereum half FAILED: v5 refuses a deposit
+                                                                       without its fees (fixed in 9ce350d)
+  lez-select.sh v0.4.0-rc2 as merged, then cargo metadata (driver)     FAILED: package collision, lee_core from rc1 and rc2
+                                                                       (the frozen wire stayed on rc1; fixed in e3638d0)
+  the same with the fix, cargo metadata --locked (lez/, driver)        FAILED: lockfiles/v0.4.0-rc2.patch stale against the merged
+                                                                       lockfiles (regenerated in e3638d0)
+  scripts/check-links.py on the box                                    not applicable (no git on the box)
+Run "run2" (11 Nov 00:13-00:18 UTC, at 11d8fb2 with the fixes):
+  scripts/privacy/run.sh                                               ok (83 s): LEZ half 1 passed; Foundry half 1 passed
+  diff with the committed docs/privacy/generated                       ids, v5 gas and storage slots, claim-to-burn 4.5% -> 4.8%
+                                                                       (committed as that run's output in 9ce350d)
+  vault forge test                                                     407 passed, 0 failed (35 suites)
+  vault forge coverage --report summary                                FerrataVault 426/426 lines, 522/522 statements, 102/102
+                                                                       branches, 80/80 functions; FerrataRegistry 227/227,
+                                                                       316/316, 41/41, 31/31
+  realblocks clippy -D warnings                                        ok
+  rc2: lez-select.sh v0.4.0-rc2 (regenerated patch)                    ok; cargo metadata --locked lez/ and driver ok; clippy
+                                                                       -D warnings (wire, bridge-wire, harness, methods) ok; driver
+                                                                       cargo check --locked ok; back to rc1: manifests and
+                                                                       lockfiles byte-identical
+Run "run3" (11 Nov 00:22 UTC, at 8a04634):
+  realblocks: cargo fmt (applied, 4637a16), fmt --check, clippy, build ok
+  vault forge fmt --check                                              ok
+  vault forge test                                                     407 passed, 0 failed (35 suites); 28 invariant campaigns
+                                                                       (14 invariants x rule (A) and rule (B) vaults), 256 runs x 100 calls
+Laptop (11 Nov 01:20 local): python3 -I scripts/check-links.py         18 files, 305 links, 0 broken
+Not run: bridge/scripts/check.sh beyond the e2e clippy, modules/scripts/check.sh, bench/, the simulator, lab.sh
+verify, mutation (vault/src unchanged since the second pass, 223/223), any proof. mrun's estimates: 0.28 + 0.08 +
+0.01 USD.
