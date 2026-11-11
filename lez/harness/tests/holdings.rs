@@ -9,7 +9,9 @@
 use std::fs;
 
 use ferrata_core::Error;
-use ferrata_lez_holdings_wire::{code as holdings_code, holding_actor, holding_seed, mapping_key, HoldingsMessage, HoldingsState};
+use ferrata_lez_holdings_wire::{
+    code as holdings_code, holding_actor, holding_seed, mapping_key, HoldingsMessage, HoldingsState,
+};
 use ferrata_lez_wire::{code, header_actor};
 use harness::{
     attest::{storage_statement_id, u256},
@@ -36,7 +38,13 @@ fn plus_one(word: &[u8; 32]) -> [u8; 32] {
 
 /// A refusal: the transaction exits with `expected`, the native evaluation of the same request
 /// (when Ferrata refuses) agrees, and the holding actor is left as it was.
-fn refused(h: &Holdings, report: &TxReport, expected: u8, before: &Option<HoldingsState>, gate: &ferrata_lez_holdings_wire::Gate) {
+fn refused(
+    h: &Holdings,
+    report: &TxReport,
+    expected: u8,
+    before: &Option<HoldingsState>,
+    gate: &ferrata_lez_holdings_wire::Gate,
+) {
     assert_eq!(
         report.exit_code,
         Some(u32::from(expected)),
@@ -113,7 +121,7 @@ fn holdings_consumer() {
 
     // A record of another block (the bootstrap's): the proofs do not hash to its state root.
     let other_block = h.s.fx.bootstrap_slot;
-    let native = h.s.expected(other_block, &request).err().expect("refused natively");
+    let native = h.s.expected(other_block, &request).expect_err("refused natively");
     let r = h.check("proof of another block (the bootstrap's record)", &gate, other_block);
     refused(&h, &r, native, &before, &gate);
     reports.push(r);
@@ -123,34 +131,44 @@ fn holdings_consumer() {
     let last = bad.last_mut().unwrap();
     let at = last.len() - 1;
     last[at] ^= 0x01;
-    let native = h
-        .s
-        .expected(slot, &gate.request(&h.holder, account_proof.clone(), bad.clone(), None))
-        .err()
-        .expect("refused natively");
-    let r = h.check_with("bad proof (a storage-proof byte flipped)", &gate, slot, &holder, account_proof.clone(), bad, vec![]);
+    let native =
+        h.s.expected(slot, &gate.request(&h.holder, account_proof.clone(), bad.clone(), None))
+            .expect_err("refused natively");
+    let r = h.check_with(
+        "bad proof (a storage-proof byte flipped)",
+        &gate,
+        slot,
+        &holder,
+        account_proof.clone(),
+        bad,
+        vec![],
+    );
     refused(&h, &r, native, &before, &gate);
     reports.push(r);
 
     // A bad proof: one byte of the account proof's root node changed.
     let mut bad = account_proof.clone();
     bad[0][5] ^= 0x01;
-    let native = h
-        .s
-        .expected(slot, &gate.request(&h.holder, bad.clone(), storage_proof.clone(), None))
-        .err()
-        .expect("refused natively");
-    let r = h.check_with("bad proof (an account-proof byte flipped)", &gate, slot, &holder, bad, storage_proof.clone(), vec![]);
+    let native =
+        h.s.expected(slot, &gate.request(&h.holder, bad.clone(), storage_proof.clone(), None))
+            .expect_err("refused natively");
+    let r = h.check_with(
+        "bad proof (an account-proof byte flipped)",
+        &gate,
+        slot,
+        &holder,
+        bad,
+        storage_proof.clone(),
+        vec![],
+    );
     refused(&h, &r, native, &before, &gate);
     reports.push(r);
 
     // A mismatched value: a minimum one wei above the balance.
     let above = h.gate(plus_one(&balance));
-    let native = h
-        .s
-        .expected(slot, &above.request(&h.holder, account_proof.clone(), storage_proof.clone(), None))
-        .err()
-        .expect("refused natively");
+    let native =
+        h.s.expected(slot, &above.request(&h.holder, account_proof.clone(), storage_proof.clone(), None))
+            .expect_err("refused natively");
     let before_above = h.holding(&above, &h.holder);
     let r = h.check("mismatched value (minimum = balance + 1 wei)", &above, slot);
     refused(&h, &r, native, &before_above, &above);
@@ -158,11 +176,9 @@ fn holdings_consumer() {
 
     // A mismatched holder: the pair's proofs, claimed for another address.
     let other = h.s.fx.transfer.to;
-    let native = h
-        .s
-        .expected(slot, &gate.request(&other, account_proof.clone(), storage_proof.clone(), None))
-        .err()
-        .expect("refused natively");
+    let native =
+        h.s.expected(slot, &gate.request(&other, account_proof.clone(), storage_proof.clone(), None))
+            .expect_err("refused natively");
     let r = h.check_with(
         "mismatched holder (the pair's proofs for another address)",
         &gate,

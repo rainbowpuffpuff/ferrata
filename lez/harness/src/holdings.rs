@@ -14,7 +14,9 @@ use ferrata_lez_wire::{
     header_actor, header_seed,
 };
 use ferrata_spectests::execkit::AccountProof;
-use lee::{program::load_program, program::Program, AccountId, Actor, PublicAccountEvidence, PublicTransaction, V03State};
+use lee::{
+    program::load_program, program::Program, AccountId, Actor, PublicAccountEvidence, PublicTransaction, V03State,
+};
 use lee_core::{
     account::ActorState,
     execution_state::{ExecutionEnvironment, ExecutionError, TransactionEntry, TransitionView, WholeExecution},
@@ -65,10 +67,8 @@ impl Holdings {
         let state = std::mem::replace(&mut s.w.chain.state, V03State::new());
         s.w.chain.state = state.with_genesis_programs([(holdings_program(), true)]);
         let manifest: Value = serde_json::from_slice(&fixture_file("fixture.json")).unwrap();
-        let holder: Address = hex::decode(manifest["holder"].as_str().unwrap().trim_start_matches("0x"))
-            .unwrap()
-            .try_into()
-            .unwrap();
+        let holder: Address =
+            hex::decode(manifest["holder"].as_str().unwrap().trim_start_matches("0x")).unwrap().try_into().unwrap();
         let proof = s.fx.weth_proof();
         Self { s, holder, proof }
     }
@@ -125,10 +125,23 @@ impl Holdings {
         let gate_id = gate.id();
         let actor = holding_actor(program, &gate_id, holder);
         let record = header_actor(gate.ferrata, &gate.instance_id, slot);
-        let message =
-            HoldingsMessage::Check { gate: gate.clone(), slot, holder: *holder, account_proof, storage_proof, header: None };
+        let message = HoldingsMessage::Check {
+            gate: gate.clone(),
+            slot,
+            holder: *holder,
+            account_proof,
+            storage_proof,
+            header: None,
+        };
         evidence.insert(0, PublicAccountEvidence::Pda { program, seed: holding_seed(&gate_id, holder) });
-        self.s.w.chain.submit(label, actor, borsh::to_vec(&message).unwrap(), vec![actor, record], evidence, self.s.time)
+        self.s.w.chain.submit(
+            label,
+            actor,
+            borsh::to_vec(&message).unwrap(),
+            vec![actor, record],
+            evidence,
+            self.s.time,
+        )
     }
 
     /// Evidence that admits `header(id, slot)` of the gate's program when it holds no record.
