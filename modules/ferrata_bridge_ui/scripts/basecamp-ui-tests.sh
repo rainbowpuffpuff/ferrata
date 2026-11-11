@@ -30,4 +30,5 @@ for attempt in 1 2 3; do
 done
 grep -E -i 'pass|fail|✓|✗|ok |not ok|error' results/basecamp-ui-tests.txt | tail -n 40
 [ -n "${devnet:-}" ] && { curl -s -d '{"method":"shutdown","params":{}}' http://127.0.0.1:18600/rpc >/dev/null; wait $devnet 2>/dev/null; }
+sed -i "s|$(cd "$here/../../.." && pwd)/|<spike>/|g" results/basecamp-ui-tests.txt 2>/dev/null  # no machine paths in committed logs
 exit $code

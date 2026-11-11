@@ -43,4 +43,5 @@ rpc shutdown >/dev/null; wait $devnet 2>/dev/null
 cp "$repo/../tmp/miniapp/devnet/calls.jsonl" "$out/calls.jsonl" 2>/dev/null || true
 jq -c '{method, ms, ok: .reply.ok, error: .reply.error}' "$out/calls.jsonl" > "$out/calls-summary.jsonl" 2>/dev/null
 ls "$out/screenshots" | wc -l | xargs echo screenshots:
+sed -i "s|$(cd "$here/../../.." && pwd)/|<spike>/|g" "$out/qmltest.txt" 2>/dev/null  # no machine paths in committed logs
 exit $qt
