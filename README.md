@@ -1,24 +1,136 @@
 # Ferrata
 
-Ferrata is one codebase, from a finalized Ethereum header to a wrapped token and back, written as the
-evidence for a proposal to [Logos RFP-022](https://github.com/logos-co/rfp) (a privacy-preserving
-wrapped ERC-20 and ETH bridge for LEZ) that also covers RFP-021 (trustless Ethereum state attestation
-for LEZ). Its attestation primitive is a LEZ program that checks Ethereum sync-committee signatures
-itself and keeps a write-once record of every finalized header it accepts, so that any LEZ program can
-prove an account, a storage slot or an event log against such a record inside its own transaction. Its
-bridge is an Ethereum vault that escrows ERC-20s and ETH in fixed denominations: LEZ mints the wrapped
-token against a deposit verified through the primitive, and the vault releases against a LEZ burn
-verified by a zero-knowledge proof on Ethereum. On the default path nothing public on either chain
-links a deposit to its mint or a burn to its release, beyond token, denomination, time and the
-residual correlations the design lists.
+Ferrata lets programs on the Logos Execution Zone (LEZ) act on Ethereum facts without a trusted relayer,
+and moves ETH and ERC-20 tokens between Ethereum and LEZ without linking the two sides. It has two parts:
+
+- **An attestation primitive** (RFP-021): a LEZ program that checks Ethereum sync-committee signatures
+  itself and keeps a write-once record of every finalized header it accepts, so that any LEZ program can
+  prove an account, a storage slot or an event log against such a record inside its own transaction.
+- **A bridge** (RFP-022): an Ethereum vault that escrows ERC-20s and ETH in fixed denominations. LEZ mints
+  the wrapped token against a deposit verified through the primitive, and the vault releases against a LEZ
+  burn verified by a zero-knowledge proof on Ethereum. On the default path nothing public on either chain
+  links a deposit to its mint or a burn to its release, beyond token, denomination, time and the residual
+  correlations the design lists.
+
+This repository is one codebase, from a finalized Ethereum header to a wrapped token and back, written as
+the evidence for a proposal to [Logos RFP-022](https://github.com/logos-co/rfp) (a privacy-preserving wrapped
+ERC-20 and ETH bridge for LEZ) that also covers RFP-021 (trustless Ethereum state attestation for LEZ).
 
 What is here are prototypes and their measurements. **Not audited. Not for production.**
 
-**Start with [docs/EVIDENCE.md](docs/EVIDENCE.md)**: one page with every piece of evidence, its
-numbers, where it ran, whether its proofs were real or in dev mode, what is stand-in data, and the
-command that re-checks it.
+## Who it is for
 
-## Components
+- **LEZ program developers** who need an Ethereum fact (an account, a storage slot, an event log) inside
+  their own transaction, by a public call or a private read: the
+  [consumer guide](docs/guides/consumer-guide.md).
+- **People moving ETH or a registered ERC-20** from Ethereum to LEZ and back without linking the two sides,
+  and developers wiring those flows into a Logos module: the [user guide](docs/guides/user-guide.md).
+- **Operators** of the services around it (the updater, the root importer, the checkpoint prover and
+  relayer, watchers): the [operator guide](docs/guides/operator-guide.md).
+- **Deployers** standing up their own, independently configured deployment, the programs on LEZ and the
+  vault on an EVM chain: the [deployer guide](docs/guides/deployer-guide.md).
+
+The guides are first drafts of 11 November 2026; every statement cites the file it rests on, and each says
+what is not built.
+
+## Quickstart
+
+Commands run from the repository root. The first two need only Rust and Python 3.
+
+The light-client core on the official consensus vectors and real mainnet and Sepolia data (native tests,
+a laptop is enough):
+
+```sh
+scripts/fetch-vectors.sh && cargo test --workspace --locked
+```
+
+The live Sepolia round trip, checked from its committed records, read-only (Python's standard library
+only; it asks a public endpoint unless you give your own with `--rpc URL` or `SEPOLIA_RPC_URL`):
+
+```sh
+python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-1
+```
+
+The rest needs RISC Zero's toolchain (`rzup`, r0vm 3.0.5), Foundry (forge 1.3.6, solc 0.8.26) and, for
+the Groth16 wraps, Docker on x86-64. The vault's suite (install the pinned dependencies first:
+[`vault/README.md`](vault/README.md)):
+
+```sh
+cd vault && forge test
+```
+
+The attestation and bridge programs on LEZ v0.4.0-rc1's own state machine, in process, with RISC Zero in
+dev mode (setup: [`lez/RESULTS.md`](lez/RESULTS.md) §8):
+
+```sh
+scripts/fetch-upstream.sh
+cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked -- --test-threads 1
+```
+
+The larger jobs have one command each (`just m0`, `just bench`, `just release`:
+[docs/release-engineering.md](docs/release-engineering.md)); every component's re-check command is in
+[the table below](#components-and-their-status).
+
+## Architecture in brief
+
+```text
+Ethereum                                                 LEZ
+beacon chain: finality updates ---- anyone submits ----> attestation program: checks the sync
+                                                         committee's signatures, writes a record
+                                                         of each finalized header
+                                                           | accounts, storage slots, event logs,
+                                                           v proven against a record
+FerrataVault: a deposit, in a ----- deposit root ------> bridge program: ImportRoot, then a claim
+fixed denomination, with a                               mints the wrapped token (private by
+commitment                                               default, a write-once nullifier)
+
+FerrataVault: a candidate <-------- checkpoint proof --- a burn (a write-once note) in a LEZ block;
+checkpoint, final after a           (Groth16)            the checkpoint program re-hashes the
+wait; releases against the                               blocks, collects the burns, checks
+checkpoint's burn root                                   finality by rule (B) or rule (A)
+```
+
+**Ethereum to LEZ** rests on Ethereum's sync committee and nothing else. The attestation program is the
+light client of `crates/ferrata-core` running as a LEZ program: anyone can submit updates, and they stand or
+fall on their signatures. Any LEZ program, the bridge among them, proves an Ethereum fact against one of its
+records inside its own transaction ([design note](docs/design/attestation.md)). A deposit puts ETH or an
+ERC-20 into the vault in a fixed denomination, with a commitment; the bridge program imports the vault's
+deposit root through the attestation program (`ImportRoot`), and a claim against that root mints the
+wrapped token, privately by default.
+
+**LEZ to Ethereum** rests on the honesty of the zone's sequencers, because LEZ v0.4 offers an outside
+verifier nothing stronger. The checkpoint program, a RISC Zero guest, re-hashes LEZ blocks, collects their
+burns and checks finality by rule (B), final-tier attestations by t of n of the zone's sequencers (the
+proposed rule), or by rule (A), inferred support with a beacon and a wait (the fallback). The vault verifies
+its proof, wrapped to Groth16, holds the checkpoint as a candidate that watchers can cancel, and finalises it
+after a wait; each release is proven against the checkpoint's burn root ([design note](docs/design/bridge.md);
+who is trusted for what: [docs/trust.md](docs/trust.md)).
+
+Around the programs: `ferrata`, the users' and relayers' command-line tool; the relayer
+`ferrata-relayer`; the watchers' `monitor`; the rule (B) attestor a sequencer runs; two Logos modules and a
+Logos mini-app; a read-only admin view. Each is in the table of components below, with its status.
+
+## Live on Sepolia, and how to check it yourself
+
+On 11 November 2026 (EVIDENCE rows 41–42) the whole round trip ran on these programs, Sepolia to LEZ and back. FerrataVault v5 deployed in mode (B) at
+[`0xfE3199fa2634413CbAC317371076Cae3EB2d9E54`](https://sepolia.etherscan.io/address/0xfE3199fa2634413CbAC317371076Cae3EB2d9E54); a public and a private deposit, final on Sepolia, imported by the
+bridge program on a LEZ v0.4.0-rc1 devnet from Sepolia's own finality updates and claimed, the private one with a
+real proof; a public and a private burn; a rule (B) checkpoint over the devnet's blocks proven on a GPU, its Groth16
+seal verified on Sepolia; both releases paid. 13 transactions, 74.9M gas, four starts (three stops on the RPC
+endpoint's lagging reads, each resumed), verify 14 of 14 ([`e2e/runs/crown-live-1/`](e2e/runs/crown-live-1/README.md)).
+The LEZ side was a devnet we ran (one validator): no public LEZ network runs any of it
+("Not audited. Not for production.", below).
+
+Anyone can re-check it from the committed records against a JSON-RPC endpoint of their choice:
+`python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-1` (13 passed on two public endpoints). It checks
+every recorded transaction, the deployment's CREATE addresses, the vault's immutables (image ids, configId,
+genesisState, rule (B), verifier, linked registry), the deposits' commitments, the vault storage LEZ imported
+(Merkle proofs against Sepolia's final headers), the checkpoint journal against the LEZ records and its seal
+through the vault's own verifier, finalization and releases (EVIDENCE row 42).
+[docs/guides/verify.md](docs/guides/verify.md) says what each check proves and what it still trusts, and how
+to rebuild the run's programs to their image ids.
+
+## Components and their status
 
 Commands run from the repository root. Each directory's README gives the toolchains, the versions and
 every other command.
@@ -48,11 +160,27 @@ every other command.
 | [Privacy suite](docs/privacy/RESULTS.md), `scripts/privacy/` | Milestone B2's privacy gate measured: 20 users' round trip (deposit, private claim, private burn, release) through the bridge program and the vault; every public byte collected on both chains; a differential gate, an adversary that tries to pair each claim with its deposit and each release with its burn, the field table against the proposal's §B6, and seed-only recovery | Cloud container (Modal, 2 vCPU): the LEZ harness in RISC Zero dev mode with synthetic records, Foundry with the mock verifier | Measured: the adversary at chance (5.0%) on both private paths and at 100% on the plaintext claim and the naive nullifiers; private claims, burns and releases identical once nullifiers, fresh randomness, own addresses and time are cut; 10 of 10 unclaimed deposits and 10 of 10 unreleased burns recovered from the seed; seven public fields §B6 as first drafted did not list (now listed) | `scripts/privacy/run.sh` (with `RISC0_HOME` as for `lez/`) |
 | [Finality-rule analysis](docs/design/finality-rule/LEMMA.md), `docs/design/finality-rule/` | A model of LEZ v0.4 sequencer and Logos Blockchain behaviour cited to source lines, a written proof, and a discrete-event simulator | Simulator (Python, standard library), not a network | Broke the earlier rule (A); the repaired rule shows no violation in 500 adversarial runs within its conditions | `cd docs/design/finality-rule/sim && python3 experiments.py` (12,000 runs, 25 min on 14 processes; `python3 test_sim.py` checks the model) |
 
+The guests need RISC Zero's toolchain (`rzup`, r0vm 3.0.5), the vault Foundry (forge 1.3.6, solc
+0.8.26), and the Groth16 wraps Docker on x86-64. `lez/` and the checkpoint's fidelity tests read LEZ
+v0.4.0-rc1 and Logos Blockchain from `upstream/` beside the repository; `lez/scripts/lez-select.sh v0.4.0-rc2`
+points `lez/` at LEZ v0.4.0-rc2 instead (what changed: [docs/design/lez-rc2-changes.md](docs/design/lez-rc2-changes.md)).
+`scripts/fetch-upstream.sh` fetches all three at the pinned commits. Scripts keep their scratch in
+`tmp/` beside the repository, not in `/tmp`.
+
+`vault/`, `bridge/`, `checkpoint/` and `docs/design/finality-rule/` were separate repositories,
+imported with their history: their earlier commits keep their original paths.
+
+## Evidence
+
+[docs/EVIDENCE.md](docs/EVIDENCE.md) is the index: one page with every piece of evidence, its numbers, where
+it ran, whether its proofs were real or in dev mode, what is stand-in data, and the command that re-checks it.
+The latest additions, all of 11 November 2026:
+
 **Since 11 November 2026** (EVIDENCE rows 28-30): the bridge program's freezes and caps run on time it reads from
 its own attestation program's records, never on a caller's time ([`lez/BRIDGE.md`](lez/BRIDGE.md) §6); rule (B)
 also checks the tip's producer inscription, so a forged history needs one channel key besides `t` attestation keys
-([`checkpoint/RESULTS.md`](checkpoint/RESULTS.md) §4a); and the findings of a security review in a separate agent
-context are fixed on both sides (LEZ: public balances at `holder(account)` PDAs, `ImportRoot` only as a visible
+([`checkpoint/RESULTS.md`](checkpoint/RESULTS.md) §4a); and the findings of the security review of 11 November
+([`notes/reviews/security/review-2026-11-11.md`](notes/reviews/security/review-2026-11-11.md)) are fixed on both sides (LEZ: public balances at `holder(account)` PDAs, `ImportRoot` only as a visible
 call, one `NOut` per burn, a MAC over the memo; vault: the keyless-retirement clock, the checkpoint fee to the
 prover, stale candidates, no deposit after a final sunset, test chains only, a bound on `revokeWindow`), with tests
 that fail on the code before the fixes ([`lez/BRIDGE-RESULTS.md`](lez/BRIDGE-RESULTS.md) §13,
@@ -60,15 +188,6 @@ that fail on the code before the fixes ([`lez/BRIDGE-RESULTS.md`](lez/BRIDGE-RES
 row 27 and the real proofs before it used the earlier programs; the crown run uses these, rehearsed on a fork of
 Sepolia with a LEZ devnet and real proofs (row 31, [`e2e/crown/README.md`](e2e/crown/README.md)) and then run live on
 Sepolia to DONE on 11 November (row 41).
-
-**Live on Sepolia** (11 November 2026, EVIDENCE rows 41–42): the whole round trip on these programs, Sepolia to LEZ
-and back. FerrataVault v5 deployed in mode (B); a public and a private deposit, final on Sepolia, imported by the
-bridge program on a LEZ v0.4.0-rc1 devnet from Sepolia's own finality updates and claimed, the private one with a
-real proof; a public and a private burn; a rule (B) checkpoint over the devnet's blocks proven on a GPU, its Groth16
-seal verified on Sepolia; both releases paid. 13 transactions, 74.9M gas, four starts (three stops on the RPC
-endpoint's lagging reads, each resumed), verify 14 of 14 ([`e2e/runs/crown-live-1/`](e2e/runs/crown-live-1/README.md)).
-Anyone can re-check it from the committed records against a JSON-RPC endpoint of their choice:
-`python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-1` (13 passed on two public endpoints).
 
 **Merged on 11 November 2026** (EVIDENCE rows 43–75; the ten branches of `integration7`): besides the rows
 above, the weak-subjectivity bound in the core and the program, and successors with the root id (`Succeed`/`Spawn`:
@@ -92,16 +211,6 @@ pads every private transaction and proven at 8 and 16 CPUs, 10.6 minutes at most
 `ferrata_holdings`, which accepts an ERC-20 balance at a finalized block (consumer guide §12); seven fuzz targets
 over the core, 1.79 billion executions ([`fuzz/RESULTS.md`](fuzz/RESULTS.md)); and an independent review of the
 core against the specifications, with 24 more mutants, all killed ([`docs/REVIEW-core.md`](docs/REVIEW-core.md)).
-
-The guests need RISC Zero's toolchain (`rzup`, r0vm 3.0.5), the vault Foundry (forge 1.3.6, solc
-0.8.26), and the Groth16 wraps Docker on x86-64. `lez/` and the checkpoint's fidelity tests read LEZ
-v0.4.0-rc1 and Logos Blockchain from `upstream/` beside the repository; `lez/scripts/lez-select.sh v0.4.0-rc2`
-points `lez/` at LEZ v0.4.0-rc2 instead (what changed: [docs/design/lez-rc2-changes.md](docs/design/lez-rc2-changes.md)).
-`scripts/fetch-upstream.sh` fetches all three at the pinned commits. Scripts keep their scratch in
-`tmp/` beside the repository, not in `/tmp`.
-
-`vault/`, `bridge/`, `checkpoint/` and `docs/design/finality-rule/` were separate repositories,
-imported with their history: their earlier commits keep their original paths.
 
 ## Design notes
 
@@ -210,21 +319,14 @@ is planned for the code the proposal would deliver. A security review by an agen
 of the real session predates them and the time fix. Slither, Aderyn, Halmos, cargo-audit, cargo-deny and fuzzing
 (EVIDENCE rows 35, 36 and 40) are tooling, not an audit.
 
-## How it was built
-
-The code and the documents were drafted with coding agents (Claude Code) under the author's design,
-review and acceptance tests; every commit was made this way. Not every commit says so: 185 of the 418
-commits up to `0b135f7` carry an `Assisted-by` trailer (`git log --grep=Assisted-by`), every commit made
-after 04:37 CET on 11 November among them; the others, most of those of 10 and 11 November, should be read
-the same way. The author owns the
-design, the decisions and the acceptance tests: the specification and BLS vectors, the real-chain
-replays, the differential oracles, the adversarial and mutation suites and the measurements each
-directory documents. [docs/REVIEW-core.md](docs/REVIEW-core.md) maps each function of the core to its
-specification section for the author's line-by-line review; its sign-off column is not filled in yet,
-and the bridge prototypes have no such map. Agent reviews in a separate context were part of the work;
-none of them is an audit.
-
 ## Licence
 
 MIT OR Apache-2.0, at your option ([LICENSE-MIT](LICENSE-MIT), [LICENSE-APACHE](LICENSE-APACHE)), for
 every directory, the imported ones included.
+
+## How it was built
+
+The code, the tests and the documents were drafted with coding agents (Claude Code) under the author's
+design, decision log and acceptance tests; every commit was made with them.
+[docs/how-it-was-built.md](docs/how-it-was-built.md) tells how, and what the commit trailers, the agents'
+reviews and the author's own review do and do not cover.
