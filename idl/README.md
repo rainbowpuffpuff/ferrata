@@ -57,7 +57,12 @@ For each program it checks, and prints one line per check:
 5. the IDL's errors equal the program's `code::ALL` (and the core's and step API's codes);
 6. each vector with a byte removed, a byte appended or an out-of-range variant index is refused;
 7. IDL mutants (two fields swapped, a field renamed, a u64 read as u32, a variant removed, an
-   `Option` read as plain) are each rejected by check 3.
+   `Option` read as plain) are each rejected by check 3;
+8. PDAs: the account of every actor kind (`instance`, `job`, `header`; `config`, `token`, `root`,
+   `nullifier`, `burn`, `holder`), written by the wire's own functions, and two real `header`
+   accounts printed by `ferrata-attest`, are derived again from what the IDL documents alone (the
+   domain in its `docs`, the tag and arguments of the account's `pda.seeds`, the encodings) and
+   LEZ v0.4's `AccountId::for_public_pda` (`SHA-256("/LEE/v0.2/AccountId/PDA/" ‖ 0⁸ ‖ program ‖ seed)`).
 
 The decoder follows SPEL's own (`spel-framework-core/src/decode.rs`).
 
@@ -128,3 +133,5 @@ Measured on the Modal build box (`mrun`, 11 November 2026) and in CI's command:
 - `spel-check` ([`results/spel-check.txt`](results/spel-check.txt)): both files parsed as SPEL's
   `SpelIdl`; SPEL's decoder decoded 19 of 19 and 37 of 37 committed vectors and 317 of 317 recorded
   messages exactly.
+- check 8: 11 accounts derived from the IDL's documented seeds equal the wire's and the CLI's
+  (`vectors/pda.vectors.json`, `vectors/pda-recorded.json`).

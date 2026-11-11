@@ -661,3 +661,108 @@ fn bridge_program_vectors() {
     assert!(vectors.len() >= 30);
     check_or_write("ferrata_bridge.vectors.json", &render("ferrata_bridge", &vectors, bw::code::ALL));
 }
+
+// ------------------------------------------------------------------------------------------
+// PDA vectors: every actor kind's account id from the wire's own functions, for `check.py` to
+// recompute from the seeds the IDL documents (domain, tag, inputs and their encodings).
+// ------------------------------------------------------------------------------------------
+
+fn pda_entry(
+    program: &str,
+    actor: &str,
+    program_id: &AccountId,
+    inputs: &[(&str, &str, String)],
+    account: &lee_core::account::Actor,
+) -> String {
+    let inputs: Vec<String> = inputs
+        .iter()
+        .map(|(name, enc, value)| format!("{{\"name\": \"{name}\", \"encoding\": \"{enc}\", \"value\": \"{value}\"}}"))
+        .collect();
+    format!(
+        "    {{\"program\": \"{program}\", \"actor\": \"{actor}\", \"program_id\": \"{}\", \"inputs\": [{}], \"account\": \"{}\"}}",
+        hex(program_id.value()),
+        inputs.join(", "),
+        hex(account.account_id.value())
+    )
+}
+
+#[test]
+fn pda_vectors() {
+    let program = AccountId::new(r(90));
+    let (id, job, cid, token, vault, nullifier, note) = (r(1), r(91), r(60), a(40), a(49), r(68), r(92));
+    let holder = AccountId::new(r(93));
+    let entries = [
+        pda_entry(
+            "ferrata_attestation",
+            "instance",
+            &program,
+            &[("instance_id", "bytes", hex(&id))],
+            &aw::instance_actor(program, &id),
+        ),
+        pda_entry(
+            "ferrata_attestation",
+            "job",
+            &program,
+            &[("instance_id", "bytes", hex(&id)), ("job_id", "bytes", hex(&job))],
+            &aw::job_actor(program, &id, &job),
+        ),
+        pda_entry(
+            "ferrata_attestation",
+            "header",
+            &program,
+            &[("instance_id", "bytes", hex(&id)), ("slot", "u64le", 11_549_664u64.to_string())],
+            &aw::header_actor(program, &id, 11_549_664),
+        ),
+        pda_entry(
+            "ferrata_bridge",
+            "config",
+            &program,
+            &[("config_id", "bytes", hex(&cid))],
+            &bw::config_actor(program, &cid),
+        ),
+        pda_entry(
+            "ferrata_bridge",
+            "token_actor",
+            &program,
+            &[("config_id", "bytes", hex(&cid)), ("token", "bytes", hex(&token))],
+            &bw::token_actor(program, &cid, &token),
+        ),
+        pda_entry(
+            "ferrata_bridge",
+            "root",
+            &program,
+            &[("config_id", "bytes", hex(&cid)), ("leaf_count", "u64le", 16u64.to_string())],
+            &bw::root_actor(program, &cid, 16),
+        ),
+        pda_entry(
+            "ferrata_bridge",
+            "nullifier",
+            &program,
+            &[
+                ("evm_chain_id", "u256be", 11_155_111u64.to_string()),
+                ("vault", "bytes", hex(&vault)),
+                ("nullifier", "bytes", hex(&nullifier)),
+            ],
+            &bw::nullifier_actor(program, 11_155_111, &vault, &nullifier),
+        ),
+        pda_entry(
+            "ferrata_bridge",
+            "burn",
+            &program,
+            &[("config_id", "bytes", hex(&cid)), ("note_hash", "bytes", hex(&note))],
+            &bw::burn_actor(program, &cid, &note),
+        ),
+        pda_entry(
+            "ferrata_bridge",
+            "holder",
+            &program,
+            &[("holder", "bytes", hex(holder.value()))],
+            &bw::holder_actor(program, holder),
+        ),
+    ];
+    let text = format!(
+        "{{\n  \"generator\": \"lez/bridge-wire/tests/idl_vectors.rs (FERRATA_IDL_WRITE=1 to rewrite)\",\n  \"pdas\": [\n{}\n  ]\n}}\n",
+        entries.join(",\n")
+    );
+    check_or_write("pda.vectors.json", &text);
+}

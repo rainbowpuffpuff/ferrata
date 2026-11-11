@@ -20,13 +20,19 @@ For each program (`idl/<name>.idl.json` with `idl/vectors/<name>.vectors.json`):
    is refused.
 7. Mutants: copies of the IDL with one fault each (two fields swapped, a field renamed, a width
    changed, a variant removed, an Option made plain) must each fail check 3.
+8. PDAs: every actor kind's account id, written by the wire's own functions
+   (`vectors/pda.vectors.json`) and printed by the CLI on real runs (`vectors/pda-recorded.json`), is
+   recomputed from what the IDL documents: the domain in its `docs`, the tag and the arguments of the
+   account's `pda.seeds`, then LEZ v0.4's `AccountId::for_public_pda`.
 
 The decoder follows SPEL's own (`spel-framework-core/src/decode.rs`): borsh, enums as a one-byte
 variant index, `vec` and `string` with a u32 length, `option` with a 0/1 tag, arrays fixed.
 Standard library only.
 """
 import copy
+import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -404,6 +410,68 @@ def check_errors(name, idl, vfile):
     return errs
 
 
+# --- 8. PDAs --------------------------------------------------------------------------------
+
+# LEZ v0.4.0-rc1, lee/state_machine/core/src/program/mod.rs, `AccountId::for_public_pda`:
+# SHA-256(prefix || program account id || seed), the prefix padded to 32 bytes.
+LEZ_PDA_PREFIX = b"/LEE/v0.2/AccountId/PDA/" + bytes(8)
+
+
+def b58decode(text: str) -> bytes:
+    n = 0
+    for ch in text:
+        n = n * 58 + B58.index(ch)
+    body = n.to_bytes((n.bit_length() + 7) // 8, "big") if n else b""
+    return bytes(len(text) - len(text.lstrip("1"))) + body
+
+
+def encode_input(inp) -> bytes:
+    enc, value = inp["encoding"], inp["value"]
+    if enc == "bytes":
+        return bytes.fromhex(value)
+    if enc == "u64le":
+        return int(value).to_bytes(8, "little")
+    if enc == "u256be":
+        return int(value).to_bytes(32, "big")
+    raise ValueError(enc)
+
+
+def check_pdas(idls):
+    """Check 8. Returns (errors, number checked)."""
+    errs, n = [], 0
+    files = [HERE / "vectors" / "pda.vectors.json", HERE / "vectors" / "pda-recorded.json"]
+    for path in files:
+        for e in json.loads(path.read_text())["pdas"]:
+            n += 1
+            idl = idls[e["program"]]
+            where = f"{path.name}: {e['program']} {e['actor']}"
+            domains = {m for d in idl.get("docs", []) for m in re.findall(r'SHA-256\("(ferrata-lez/v1/[a-z/]*)" \|\| tag', d)}
+            if len(domains) != 1:
+                errs.append(f"{where}: the IDL's docs name {len(domains)} PDA domains")
+                continue
+            seeds = next(
+                (a["pda"]["seeds"] for ins in idl["instructions"] for a in ins["accounts"] if a["name"] == e["actor"] and a.get("pda")),
+                None,
+            )
+            if seeds is None:
+                errs.append(f"{where}: no account of that name with a pda in the IDL")
+                continue
+            if seeds[0]["kind"] != "const" or any(sd["kind"] != "arg" for sd in seeds[1:]):
+                errs.append(f"{where}: seeds are not a tag and arguments")
+                continue
+            names = [sd["path"].split(" ")[0] for sd in seeds[1:]]
+            if names != [i["name"] for i in e["inputs"]]:
+                errs.append(f"{where}: the IDL's seed arguments {names} are not the wire's {[i['name'] for i in e['inputs']]}")
+                continue
+            seed = hashlib.sha256(domains.pop().encode() + seeds[0]["value"].encode() + b"".join(encode_input(i) for i in e["inputs"])).digest()
+            program = bytes.fromhex(e["program_id"]) if "program_id" in e else b58decode(e["program_id_base58"])
+            account = hashlib.sha256(LEZ_PDA_PREFIX + program + seed).digest()
+            want = bytes.fromhex(e["account"]) if "account" in e else b58decode(e["account_base58"])
+            if account != want:
+                errs.append(f"{where}: derived {account.hex()} but the account is {want.hex()}")
+    return errs, n
+
+
 # --- 7. mutants -----------------------------------------------------------------------------
 
 
@@ -456,8 +524,10 @@ def mutants(idl):
 
 def main():
     failures = 0
+    idls = {}
     for name in PROGRAMS:
         idl = json.loads((HERE / f"{name}.idl.json").read_text())
+        idls[name] = idl
         vfile = json.loads((HERE / "vectors" / f"{name}.vectors.json").read_text())
         results = []
         errs = check_shape(idl)
@@ -481,6 +551,12 @@ def main():
             for e in errs[:12]:
                 print(f"       {e}")
             failures += bool(errs)
+    perrs, pn = check_pdas(idls)
+    print(f"== PDAs ({pn} accounts: every actor kind from the wire, and real ones from the CLI's runs)")
+    print(f"  {'ok  ' if not perrs else 'FAIL'} 8 derived from the IDL's documented seeds and LEZ's for_public_pda")
+    for e in perrs[:12]:
+        print(f"       {e}")
+    failures += bool(perrs)
     print("IDL check:", "passed" if not failures else f"{failures} check(s) failed")
     return 1 if failures else 0
 
