@@ -37,7 +37,9 @@ fn fixed<const N: usize>(buf: &mut &[u8]) -> Option<[u8; N]> {
 }
 
 /// (nonce, balance, storage root, code hash), alloy-rlp's reading.
-fn ref_account(enc: &[u8]) -> Option<(u64, [u8; 32], [u8; 32], [u8; 32])> {
+type RefAccount = (u64, [u8; 32], [u8; 32], [u8; 32]);
+
+fn ref_account(enc: &[u8]) -> Option<RefAccount> {
     let mut buf = enc;
     let mut p = list(&mut buf)?;
     let out = (exact::<u64>(&mut p)?, exact::<U256>(&mut p)?.to_be_bytes::<32>(), fixed(&mut p)?, fixed(&mut p)?);

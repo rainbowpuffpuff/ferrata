@@ -70,11 +70,8 @@ fn a_relation_on_a_missing_log_topic_or_data_word_is_predicate_failed() {
     let logs = [LogQuery { tx_index: 3, log_index: 0, proof: proof.as_slice(), conditions: &[] }];
     let none: [AccountQuery<'_, Vec<u8>>; 0] = [];
     let run = |l: Field, r_fact: usize, r: Field| {
-        let relations = [Relation {
-            left: Operand { fact: 0, field: l },
-            cmp: Cmp::Eq,
-            right: Operand { fact: r_fact, field: r },
-        }];
+        let relations =
+            [Relation { left: Operand { fact: 0, field: l }, cmp: Cmp::Eq, right: Operand { fact: r_fact, field: r } }];
         attest_batch(&record, 1, &Batch { accounts: &none, logs: &logs, relations: &relations }).map(|f| f.len())
     };
     assert_eq!(run(Field::Topic(0), 0, Field::Topic(0)), Ok(1));
@@ -129,8 +126,7 @@ fn an_empty_finalized_header_of_another_layout_is_refused() {
     };
     use ferrata_spectests::{load_sync_case, vectors_dir};
     static BLST: Blst = Blst::new(Aggregation::Auto);
-    let case =
-        load_sync_case(&vectors_dir().join("electra/light_client/sync/pyspec_tests/light_client_sync")).unwrap();
+    let case = load_sync_case(&vectors_dir().join("electra/light_client/sync/pyspec_tests/light_client_sync")).unwrap();
     let spec = &case.config.spec;
     let ctx = Context { spec, genesis_validators_root: case.genesis_validators_root, bls: &BLST };
     let store = LightClientStore::initialize(&case.trusted_block_root, &case.bootstrap, case.store_fork, spec).unwrap();
@@ -197,8 +193,7 @@ fn the_compact_validation_agrees_with_row_1_on_the_guard_cases() {
         vectors_dir,
     };
     static BLST: Blst = Blst::new(Aggregation::Auto);
-    let case =
-        load_sync_case(&vectors_dir().join("electra/light_client/sync/pyspec_tests/light_client_sync")).unwrap();
+    let case = load_sync_case(&vectors_dir().join("electra/light_client/sync/pyspec_tests/light_client_sync")).unwrap();
     let spec = &case.config.spec;
     let gvr = case.genesis_validators_root;
     let ctx = Context { spec, genesis_validators_root: gvr, bls: &BLST };
@@ -218,7 +213,7 @@ fn the_compact_validation_agrees_with_row_1_on_the_guard_cases() {
     let mut conflicting = u0.clone();
     conflicting.next_sync_committee.pubkeys[3][7] ^= 1;
     let want = Err(Error::NextCommitteeMismatch);
-    assert_eq!(both(policy.core(), &conflicting), (want.clone(), want), "conflicting next committee");
+    assert_eq!(both(policy.core(), &conflicting), (want, want), "conflicting next committee");
 
     // M17 / S02: a stale update (attested at the store's finalized slot, nothing supplied).
     let fake = fake_committee(32, 0x44);
@@ -238,7 +233,7 @@ fn the_compact_validation_agrees_with_row_1_on_the_guard_cases() {
         &ctx,
     );
     let want = Err(Error::UpdateIrrelevant);
-    assert_eq!(both(&spec_store.core, &stale), (want.clone(), want), "stale update");
+    assert_eq!(both(&spec_store.core, &stale), (want, want), "stale update");
 
     // M04 / S09: the attested slot may equal the finalized slot.
     let fake = fake_committee(32, 0x33);

@@ -206,28 +206,53 @@ contract VaultHalmos is VaultTestBase {
         internal
     {
         bytes memory data;
-        if (fn == 0) data = abi.encodeCall(FerrataVault.setDepositsEnabled, (token, flag));
-        else if (fn == 1) data = abi.encodeCall(FerrataVault.setTokenCap, (token, FerrataVault.Direction(a % 2), a, b));
-        else if (fn == 2) data = abi.encodeCall(FerrataVault.setGlobalCap, (FerrataVault.Direction(b % 2), a, b));
-        else if (fn == 3) data = abi.encodeCall(FerrataVault.setReleaseDelay, (token, a));
-        else if (fn == 4) data = abi.encodeCall(FerrataVault.raiseDelta, (a));
-        else if (fn == 5) data = abi.encodeCall(FerrataVault.setDepositsFrozen, (flag));
-        else if (fn == 6) data = abi.encodeCall(FerrataVault.setReleasesFrozen, (flag));
-        else if (fn == 7) data = abi.encodeCall(FerrataVault.setCheckpointsFrozen, (flag));
-        else if (fn == 8) data = abi.encodeCall(FerrataVault.setTokenDepositsFrozen, (token, flag));
-        else if (fn == 9) data = abi.encodeCall(FerrataVault.setTokenReleasesFrozen, (token, flag));
-        else if (fn == 10) data = abi.encodeCall(FerrataVault.retire, ());
-        else if (fn == 11) data = abi.encodeCall(FerrataVault.cancelCandidate, (bytes32(a)));
-        else if (fn == 12) data = abi.encodeCall(FerrataVault.pauseCheckpoints, ());
-        else if (fn == 13) data = abi.encodeCall(FerrataVault.revokeFrom, (a % 2));
-        else if (fn == 14) data = abi.encodeCall(FerrataVault.transferAdmin, (who));
-        else if (fn == 15) data = abi.encodeCall(FerrataVault.acceptAdmin, ());
-        else if (fn == 16) data = abi.encodeCall(FerrataVault.proposeRoles, ([who, address(0), address(0)], who));
-        else if (fn == 17) data = abi.encodeCall(FerrataVault.applyRoles, ());
-        else if (fn == 18) data = abi.encodeCall(FerrataVault.announceFees, (token, _three(0, a, 0), _three(b, 0, 0), _three(0, 0, a)));
-        else if (fn == 19) data = abi.encodeCall(FerrataVault.applyFees, (token));
-        else if (fn == 20) data = abi.encodeCall(FerrataVault.claimOwed, (token));
-        else data = abi.encodeCall(FerrataVault.registerToken, (token, _params(_three(1e18, 2e18, 3e18), 1e12, a % 1e6 + 1)));
+        if (fn == 0) {
+            data = abi.encodeCall(FerrataVault.setDepositsEnabled, (token, flag));
+        } else if (fn == 1) {
+            data = abi.encodeCall(FerrataVault.setTokenCap, (token, FerrataVault.Direction(a % 2), a, b));
+        } else if (fn == 2) {
+            data = abi.encodeCall(FerrataVault.setGlobalCap, (FerrataVault.Direction(b % 2), a, b));
+        } else if (fn == 3) {
+            data = abi.encodeCall(FerrataVault.setReleaseDelay, (token, a));
+        } else if (fn == 4) {
+            data = abi.encodeCall(FerrataVault.raiseDelta, (a));
+        } else if (fn == 5) {
+            data = abi.encodeCall(FerrataVault.setDepositsFrozen, (flag));
+        } else if (fn == 6) {
+            data = abi.encodeCall(FerrataVault.setReleasesFrozen, (flag));
+        } else if (fn == 7) {
+            data = abi.encodeCall(FerrataVault.setCheckpointsFrozen, (flag));
+        } else if (fn == 8) {
+            data = abi.encodeCall(FerrataVault.setTokenDepositsFrozen, (token, flag));
+        } else if (fn == 9) {
+            data = abi.encodeCall(FerrataVault.setTokenReleasesFrozen, (token, flag));
+        } else if (fn == 10) {
+            data = abi.encodeCall(FerrataVault.retire, ());
+        } else if (fn == 11) {
+            data = abi.encodeCall(FerrataVault.cancelCandidate, (bytes32(a)));
+        } else if (fn == 12) {
+            data = abi.encodeCall(FerrataVault.pauseCheckpoints, ());
+        } else if (fn == 13) {
+            data = abi.encodeCall(FerrataVault.revokeFrom, (a % 2));
+        } else if (fn == 14) {
+            data = abi.encodeCall(FerrataVault.transferAdmin, (who));
+        } else if (fn == 15) {
+            data = abi.encodeCall(FerrataVault.acceptAdmin, ());
+        } else if (fn == 16) {
+            data = abi.encodeCall(FerrataVault.proposeRoles, ([who, address(0), address(0)], who));
+        } else if (fn == 17) {
+            data = abi.encodeCall(FerrataVault.applyRoles, ());
+        } else if (fn == 18) {
+            data = abi.encodeCall(FerrataVault.announceFees, (token, _three(0, a, 0), _three(b, 0, 0), _three(0, 0, a)));
+        } else if (fn == 19) {
+            data = abi.encodeCall(FerrataVault.applyFees, (token));
+        } else if (fn == 20) {
+            data = abi.encodeCall(FerrataVault.claimOwed, (token));
+        } else {
+            data = abi.encodeCall(
+                FerrataVault.registerToken, (token, _params(_three(1e18, 2e18, 3e18), 1e12, a % 1e6 + 1))
+            );
+        }
         vm.prank(caller);
         (bool ok,) = address(vault).call(data);
         ok;
