@@ -13,6 +13,9 @@ box := env_var_or_default("FERRATA_BOX", "")
 fetch := env_var_or_default("FERRATA_BOX_FETCH", "")
 stamp := `date -u +%Y%m%dT%H%MZ`
 commit := `git rev-parse --short=12 HEAD 2>/dev/null || echo unknown`
+# The full commit, passed to a build machine whose copy of the tree has no .git (FERRATA_COMMIT); "+dirty" when
+# tracked files differ from it.
+commit_full := `c=$(git rev-parse --verify -q HEAD) && { git diff --quiet HEAD -- . && echo $c || echo $c+dirty; } || echo unknown`
 
 # List the recipes.
 default:
@@ -37,8 +40,8 @@ m0 *args:
 
 # A versioned release (programs and image ids, vault bytecode, CLI, MANIFEST.json, SHA256SUMS), recorded in releases/.
 release version out=(justfile_directory() + "/../tmp/releases"):
-    {{box}} scripts/release.sh build {{out}}
-    {{box}} scripts/release.sh package {{out}} {{version}}
+    {{box}} env FERRATA_COMMIT={{commit_full}} scripts/release.sh build {{out}}
+    {{box}} env FERRATA_COMMIT={{commit_full}} scripts/release.sh package {{out}} {{version}}
     {{box}} scripts/release.sh verify {{out}}/ferrata-{{version}}
     {{box}} scripts/release.sh record {{out}}/ferrata-{{version}}
     if [ -n "{{fetch}}" ]; then {{fetch}} {{out}}/ferrata-{{version}}-x86_64-linux.tar.gz -- true; fi

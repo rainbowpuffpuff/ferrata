@@ -22,12 +22,19 @@ ROOT=$(cd "$(dirname "$0")/.." && pwd)
 mode=${1:-}; shift || true
 
 sha() { sha256sum "$1" | cut -c1-64; }
+# The commit built: FERRATA_COMMIT where the tree is a copy without .git (the build box), else git's HEAD, with
+# "+dirty" when tracked files differ from it.
+commit_() {
+  if [ -n "${FERRATA_COMMIT:-}" ]; then echo "$FERRATA_COMMIT"; return; fi
+  local c; c=$(git -C "$ROOT" rev-parse --verify -q HEAD) || { echo unknown; return; }
+  if git -C "$ROOT" diff --quiet HEAD -- . 2>/dev/null; then echo "$c"; else echo "$c+dirty"; fi
+}
 
 build_() {
   local out=$1
   mkdir -p "$out/build/logs"; out=$(cd "$out" && pwd)
   local log=$out/build/logs/steps.txt
-  echo "$(date -u +%FT%TZ) release build of $(git -C "$ROOT" rev-parse HEAD 2>/dev/null || echo unknown)" > "$log"
+  echo "$(date -u +%FT%TZ) release build of $(commit_)" > "$log"
   # 1. The guests, at the crown build path (writes out/build/guests/{programs,r0bf,ids.txt}).
   ( "$ROOT/scripts/reproduce-image-ids.sh" build --out "$out/build/guests" > "$out/build/logs/guests.log" 2>&1 ) & local g=$!
   # 2. The vault: forge build (solc 0.8.26, offline, vault/foundry.toml) into an output directory of the release's own
@@ -79,7 +86,7 @@ package_() {
   cp "$b/cli/ferrata" "$b/cli/Cargo.lock" "$d/cli/"
   cp "$ROOT/scripts/deploy-testnet.sh" "$d/" 2>/dev/null || true
   cp "$b/toolchains.txt" "$d/"
-  python3 -I "$ROOT/scripts/release_manifest.py" make "$d" "$ver" "$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || echo unknown)" \
+  python3 -I "$ROOT/scripts/release_manifest.py" make "$d" "$ver" "$(commit_)" \
     || return 1
   ( cd "$d" && find . -type f ! -name SHA256SUMS | LC_ALL=C sort | sed 's|^\./||' | xargs sha256sum > SHA256SUMS )
   tar -C "$out" --sort=name --owner=0 --group=0 --numeric-owner --mtime='2026-11-17 00:00Z' \
