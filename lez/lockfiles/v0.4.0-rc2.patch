@@ -1,6 +1,6 @@
 --- a/Cargo.lock
 +++ b/Cargo.lock
-@@ -442,6 +442,7 @@
+@@ -450,6 +450,7 @@
  version = "0.1.0"
  dependencies = [
   "borsh",
@@ -8,7 +8,7 @@
   "lee_core",
   "risc0-zkvm",
  ]
-@@ -691,10 +692,19 @@
+@@ -700,10 +701,19 @@
  ]
  
  [[package]]
@@ -28,7 +28,7 @@
   "cross_zone_marker_core",
   "lee_core",
   "risc0-zkvm",
-@@ -706,6 +716,7 @@
+@@ -715,6 +725,7 @@
  version = "0.1.0"
  dependencies = [
   "borsh",
@@ -36,7 +36,7 @@
   "lee_core",
   "risc0-zkvm",
  ]
-@@ -715,6 +726,7 @@
+@@ -724,6 +735,7 @@
  version = "0.1.0"
  dependencies = [
   "borsh",
@@ -44,7 +44,7 @@
   "lee_core",
   "risc0-zkvm",
  ]
-@@ -1974,6 +1986,7 @@
+@@ -1983,6 +1995,7 @@
  version = "0.1.0"
  dependencies = [
   "borsh",
@@ -52,7 +52,7 @@
   "lee_core",
  ]
  
-@@ -2071,6 +2084,7 @@
+@@ -2080,6 +2093,7 @@
   "lee_core",
   "risc0-binfmt",
   "risc0-zkos-v1compat",
@@ -60,7 +60,7 @@
  ]
  
  [[package]]
-@@ -3536,6 +3550,7 @@
+@@ -3545,6 +3559,7 @@
  version = "0.1.0"
  dependencies = [
   "borsh",
@@ -70,7 +70,7 @@
  ]
 --- a/live/driver/Cargo.lock
 +++ b/live/driver/Cargo.lock
-@@ -860,6 +860,7 @@
+@@ -883,6 +883,7 @@
  version = "0.1.0"
  dependencies = [
   "borsh",
@@ -78,7 +78,7 @@
   "lee_core",
   "risc0-zkvm",
  ]
-@@ -1041,6 +1042,7 @@
+@@ -1064,6 +1065,7 @@
  version = "0.1.0"
  dependencies = [
   "anyhow",
@@ -86,7 +86,7 @@
   "borsh",
   "common",
   "fee_core",
-@@ -1205,7 +1207,6 @@
+@@ -1228,7 +1230,6 @@
   "lee_core",
   "log",
   "logos-blockchain-common-http-client",
@@ -94,7 +94,7 @@
   "programs",
   "serde",
   "serde_with",
-@@ -1360,10 +1361,19 @@
+@@ -1383,10 +1384,19 @@
  checksum = "790eea4361631c5e7d22598ecd5723ff611904e3344ce8720784c93e3d83d40b"
  
  [[package]]
@@ -114,7 +114,7 @@
   "cross_zone_marker_core",
   "lee_core",
   "risc0-zkvm",
-@@ -1375,6 +1385,7 @@
+@@ -1398,6 +1408,7 @@
  version = "0.1.0"
  dependencies = [
   "borsh",
@@ -122,7 +122,7 @@
   "lee_core",
   "risc0-zkvm",
  ]
-@@ -1384,6 +1395,7 @@
+@@ -1407,6 +1418,7 @@
  version = "0.1.0"
  dependencies = [
   "borsh",
@@ -130,7 +130,7 @@
   "lee_core",
   "risc0-zkvm",
  ]
-@@ -5840,6 +5852,7 @@
+@@ -5920,6 +5932,7 @@
  version = "0.1.0"
  dependencies = [
   "borsh",
@@ -138,7 +138,7 @@
   "lee_core",
  ]
  
-@@ -6052,6 +6065,7 @@
+@@ -6132,6 +6145,7 @@
   "lee_core",
   "risc0-binfmt",
   "risc0-zkos-v1compat",
@@ -146,7 +146,7 @@
  ]
  
  [[package]]
-@@ -9300,6 +9314,7 @@
+@@ -9393,6 +9407,7 @@
  version = "0.1.0"
  dependencies = [
   "borsh",
