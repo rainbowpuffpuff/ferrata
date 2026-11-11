@@ -1,0 +1,1 @@
+consumer image 0af0739130e4f794eb7284e146dd6b672f28484574affb072310f6637eae2347 (419472 ELF bytes); program image cefed220138e6f6be692ffa042b571a5522f36e3401395b304f4c497940eee21 (602908 ELF bytes); RISC0_DEV_MODE off; shape wallet

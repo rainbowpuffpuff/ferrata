@@ -1,0 +1,69 @@
+{
+ "run": 1,
+ "exit_code": 0,
+ "wall_s": 640.62,
+ "gnu_time": {
+  "user_s": "9353.26",
+  "sys_s": "39.37",
+  "cpu_percent": "1466%",
+  "wall": "10:40.58",
+  "max_rss_kib": "9677272",
+  "exit_status": "0"
+ },
+ "proof_lines": [
+  "REAL PROOF: execute_and_prove 636.7 s (prove + settle 636.9 s); receipt (succinct InnerReceipt, borsh) 239214 bytes; transaction 255302 bytes"
+ ],
+ "sampled": {
+  "max": {
+   "cgroup_current_bytes": 9911218176,
+   "meminfo_used_kib": 9679124,
+   "rss_sum_kib": 9782992,
+   "r0vm_rss_kib": 9677272
+  },
+  "samples": 1275,
+  "period_s": 0.5,
+  "cpu_s_by_process_name": {
+   "prove_attest": 0.3,
+   "r0vm": 9383.3
+  }
+ },
+ "cgroup_after": {
+  "cgroup.controllers": null,
+  "cpu.max": null,
+  "cpu.weight": null,
+  "cpuset.cpus.effective": null,
+  "memory.max": null,
+  "memory.high": null,
+  "memory.current": null,
+  "memory.peak": null,
+  "memory.swap.max": null,
+  "memory.events": null,
+  "memory/memory.limit_in_bytes": "17179869184",
+  "memory/memory.max_usage_in_bytes": null,
+  "memory/memory.usage_in_bytes": "69222400",
+  "cpu/cpu.cfs_quota_us": "1600000",
+  "cpu/cpu.cfs_period_us": "100000",
+  "cpuset/cpuset.cpus": "0-15"
+ },
+ "txs": {
+  "tx-attest.borsh": {
+   "bytes": 255302,
+   "sha256": "0469006b715e8f3faaa8fe529c9e8786262c5fd1b7b2790998a9afbcad89e415"
+  }
+ },
+ "settle_exit": 0,
+ "settle_wall_s": 3.61,
+ "settle_lines": [
+  "SETTLED FROM tx-attest.borsh (receipt verified): receipt 239214 bytes, transaction 255302 bytes, settled in 0.2 s",
+  "settled: execution gas 421,641 (PRIVATE_VERIFY_GAS 409,764 + public part 11,877 cycles), storage gas 224,063, base fee 5,165,632"
+ ],
+ "tamper": [
+  {
+   "tx": "tx-attest.borsh",
+   "flipped_bit0_of_byte": 127651,
+   "settle_exit": 101,
+   "log_tail": "header(id, 15624480) of instance c112f29279d8, mainnet block 26384851; fact: Transfer of token a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 in transaction 0, log 0\n\nthread 'main' (398) panicked at harness/src/bin/prove_attest.rs:198:14:\nsettlement accepts the transaction: \"Invalid privacy preserving execution circuit proof\"\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n"
+  }
+ ],
+ "finished_at_utc": "2026-11-11T13:26:50Z"
+}

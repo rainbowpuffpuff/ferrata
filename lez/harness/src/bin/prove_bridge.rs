@@ -4,9 +4,13 @@
 //! Each is proven by `r0vm` (`RISC0_DEV_MODE` unset or 0; on the CPU, or on a GPU with a CUDA build
 //! of r0vm 3.0.5) and settled through LEZ's private settlement with the receipt verified.
 //!
-//! * `prove_bridge [--claim-out FILE] [--burn-out FILE]`: prove and settle the claim, then the
-//!   burn. The `-out` options write the proven transactions (borsh `LeeTransaction`, receipt
-//!   included).
+//! * `prove_bridge [--shape wallet|bare] [--claim-out FILE] [--burn-out FILE]`: prove and settle
+//!   the claim, then the burn. The `-out` options write the proven transactions (borsh
+//!   `LeeTransaction`, receipt included). `--shape wallet` (the default) pads both as LEZ
+//!   v0.4.0-rc1's wallet pads every private transaction (seven private actions, 512-byte notes, the
+//!   fee's recovery note: [`harness::private::Shape::Wallet`]); `--shape bare` builds them as this
+//!   binary did before 11 November 2026 (one private action, no padding, the refund to a public
+//!   account).
 //! * `prove_bridge --settle CLAIM BURN`: rebuild the same state and settle the two transactions,
 //!   in that order, without proving. Each must claim this binary's bridge image, and LEZ's
 //!   settlement verifies its receipt (a fake one only passes in dev mode).
@@ -32,7 +36,7 @@ use ferrata_lez_bridge_wire::{
 use harness::{
     bridge::{bridge_account, catalog, private_keys, private_post_state, World, CHAIN_ID, DENOMINATIONS, ETH},
     grouped, image_id_hex,
-    private::{PrivateAccount, PrivateRun},
+    private::{PrivateAccount, PrivateRun, Shape},
     settle::{classify, opening_fee_state, settle_private_transaction, LeeTransaction},
 };
 use lee::Actor;
@@ -42,7 +46,10 @@ use lee_core::{execution_state::BoundaryStep, ProgramImageClaim};
 const RESERVE: u128 = 100_000_000;
 
 fn usage() -> ! {
-    eprintln!("usage: prove_bridge [--claim-out FILE] [--burn-out FILE] [--allow-dev-mode] | --settle CLAIM BURN | --image-ids");
+    eprintln!(
+        "usage: prove_bridge [--shape wallet|bare] [--claim-out FILE] [--burn-out FILE] [--allow-dev-mode] \
+         | --settle CLAIM BURN | --image-ids"
+    );
     std::process::exit(2)
 }
 
@@ -54,10 +61,12 @@ fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let (mut claim_out, mut burn_out, mut settle_from, mut allow_dev_mode, mut only_ids) =
         (None, None, None, false, false);
+    let mut shape = Shape::Wallet;
     let mut it = args.iter();
     while let Some(a) = it.next() {
         match a.as_str() {
             "--claim-out" => claim_out = Some(it.next().unwrap_or_else(|| usage()).clone()),
+            "--shape" => shape = Shape::parse(it.next().unwrap_or_else(|| usage())).unwrap_or_else(|| usage()),
             "--burn-out" => burn_out = Some(it.next().unwrap_or_else(|| usage()).clone()),
             "--settle" => {
                 let claim = it.next().unwrap_or_else(|| usage()).clone();
@@ -72,9 +81,10 @@ fn main() {
     let dev = dev_mode();
     let bridge_image = image_id_hex(methods::FERRATA_BRIDGE_ID);
     println!(
-        "bridge image {bridge_image} ({} ELF bytes); RISC0_DEV_MODE {}",
+        "bridge image {bridge_image} ({} ELF bytes); RISC0_DEV_MODE {}; shape {}",
         methods::FERRATA_BRIDGE_ELF.len(),
-        if dev { "on" } else { "off" }
+        if dev { "on" } else { "off" },
+        shape.name()
     );
     if only_ids {
         return;
@@ -112,7 +122,7 @@ fn main() {
     let claim_actors = w.private_claim_actors(&cid, 8, &vault, &deposit);
     let claim = match &settle_from {
         Some((path, _)) => settle(&mut w, path, "private claim"),
-        None => prove(&mut w, "private claim", &account, me, &claim_message, claim_actors, claim_out.as_deref()),
+        None => prove(&mut w, "private claim", &account, me, &claim_message, claim_actors, claim_out.as_deref(), shape),
     };
     assert!(claim.charge.revert.is_none(), "the claim's public part reverted: {:?}", claim.charge.revert);
     assert!(w.nullifier(&vault, &n).is_some(), "the nullifier account is written");
@@ -158,7 +168,7 @@ fn main() {
         Some((_, path)) => settle(&mut w, path, "private burn"),
         None => {
             let publics = w.burn_actors(me, &cid, &note)[1..].to_vec();
-            prove(&mut w, "private burn", &holder, me, &burn_message, publics, burn_out.as_deref())
+            prove(&mut w, "private burn", &holder, me, &burn_message, publics, burn_out.as_deref(), shape)
         }
     };
     assert!(burn.charge.revert.is_none(), "the burn's public part reverted: {:?}", burn.charge.revert);
@@ -210,7 +220,8 @@ fn wallet_note(keys: &BridgeKeys, cid: &Hash, vault: &[u8; 20], i: u64, token: [
 }
 
 /// Prove (for real unless dev mode) and settle one private transaction of `sender` whose root is
-/// `message` at `root`, with `actors` public; optionally write it to `out`.
+/// `message` at `root`, with `actors` public, in `shape`; optionally write it to `out`.
+#[allow(clippy::too_many_arguments)]
 fn prove(
     w: &mut World,
     what: &str,
@@ -219,12 +230,22 @@ fn prove(
     message: &BridgeMessage,
     actors: Vec<Actor>,
     out: Option<&str>,
+    shape: Shape,
 ) -> PrivateRun {
     let started = Instant::now();
     let time = w.time;
     let run = w
         .chain
-        .prove_and_settle_private(sender, root, borsh::to_vec(message).unwrap(), actors, &catalog(), RESERVE, time)
+        .prove_and_settle_private_as(
+            sender,
+            root,
+            borsh::to_vec(message).unwrap(),
+            actors,
+            &catalog(),
+            RESERVE,
+            time,
+            shape,
+        )
         .unwrap_or_else(|e| panic!("{what}: {e}"));
     let total = started.elapsed();
     let (label, receipt) = if dev_mode() {

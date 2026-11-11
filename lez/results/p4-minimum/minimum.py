@@ -64,6 +64,18 @@ JOBS = {
         "prove": ["--claim-out", "tx-claim.borsh", "--burn-out", "tx-burn.borsh"],
         "txs": ["tx-claim.borsh", "tx-burn.borsh"],
     },
+    # the padded pass: the same transactions padded as LEZ's wallet pads every private transaction
+    # (harness/src/private.rs, Shape::Wallet: seven private actions, 512-byte notes, the fee's recovery note)
+    "attest-pad": {
+        "binary": "prove_attest",
+        "prove": ["--shape", "wallet", "--tx-out", "tx-attest.borsh"],
+        "txs": ["tx-attest.borsh"],
+    },
+    "bridge-pad": {
+        "binary": "prove_bridge",
+        "prove": ["--shape", "wallet", "--claim-out", "tx-claim.borsh", "--burn-out", "tx-burn.borsh"],
+        "txs": ["tx-claim.borsh", "tx-burn.borsh"],
+    },
     # LEZ's yardstick: the cheapest private transaction of LEZ's own wallet, a deshielded native transfer
     # padded as the wallet pads it (harness/src/bin/prove_native_transfer.rs)
     "transfer": {
@@ -301,11 +313,11 @@ def prove(job: str, runs: int, tag: str, declared: dict, affinity: int = 0) -> d
     os.makedirs(f"{work}/tmp", exist_ok=True)
     env = {**os.environ, "RISC0_DEV_MODE": "0", "RISC0_SERVER_PATH": r0vm, "RISC0_INFO": "1", "RUST_LOG": "info",
            "TMPDIR": f"{work}/tmp"}
-    if job == "attest":
+    if job in ("attest", "attest-pad"):
         fixture = pathlib.PurePosixPath(manifest["fixtures_from"]).name
         env["FERRATA_EXPECT_CONSUMER_IMAGE_ID"] = manifest["expected_consumer_image_id"]
         env["FERRATA_ATTEST_FIXTURE_DIR"] = f"{work}/{fixture}"
-    elif job == "bridge":
+    elif job in ("bridge", "bridge-pad"):
         env["FERRATA_EXPECT_BRIDGE_IMAGE_ID"] = manifest["expected_bridge_image_id"]
     pin = ["taskset", "-c", f"0-{affinity - 1}"] if affinity else []
     facts = _facts(declared)
