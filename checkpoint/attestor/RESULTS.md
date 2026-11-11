@@ -23,7 +23,7 @@ A zone of three running LEZ sequencers is not shown here (last section).
 ## 1. Tests
 
 `cargo +1.88 test -p ferrata-attestor -p attestor-core -p checkpoint-core` (box, `runs/devnet-n3/devnet.log`
-was the same session): **11 of 11** `ferrata-attestor` tests pass (6 `attestor-core`, 28 `checkpoint-core`
+was the same session): **12 of 12** `ferrata-attestor` tests pass (6 `attestor-core`, 28 `checkpoint-core`
 unchanged); `cargo +1.88 clippy -p ferrata-attestor --all-targets` clean; `cargo +1.88 fmt --check` clean.
 
 | Test | What it checks |
@@ -38,6 +38,7 @@ unchanged); `cargo +1.88 clippy -p ferrata-attestor --all-targets` clean; `cargo
 | `refused_a_repeated_key_and_a_signature_over_another_key_set` | the same attestation twice: `DuplicateAttestor`; a signature over the one-key set: `BadAttestation` |
 | `the_attestor_never_signs_two_histories` | with its state, the attestor refuses another hash at a height it signed and a tip below the one it signed |
 | `a_dropped_reason_for_each_bad_attestation` | the collector drops, with the reason, a bad certificate, an outsider, a repeat and a bad signature, and keeps the two valid ones |
+| `a_rotation_by_two_of_three_and_attestations_under_the_new_set` | with a stand-in posting timeframe of 20, a rotation `{lab, k1, k2} -> {lab, k1, k3}` signed by k1 and k2 is applied in the proof and attestations under the new set are accepted; refused: k2's attestation (`NotAccredited`, removed by the rotation; its attestor refuses to sign), the rotation signed by k1 alone (`ConfigThresholdUnmet { have: 1, need: 2 }`), attestations over the old set (`BadAttestation`) |
 | `attestations_of_a_descendant_of_t_count_and_an_attestor_behind_t_is_refused` | `T = 200` with attestations of 202 is accepted (path after `T` = 2); an attestation of 201 for `T = 202`: `NotADescendant { tip_id: 201 }`; the same one supports `T = 200` |
 
 ## 2. The devnet run (`attestor/devnet.sh`, `runs/devnet-n3/`)
@@ -54,6 +55,7 @@ attestor/runs/devnet-n3` (answers: `realblocks/extract.sh`'s output of 10 Novemb
 | Check | `verify`: all three verify |
 | Collect | lab attestor + attestor 1 (sequencer 2 silent): **kept 2 of 2, n = 3, t = 2**, accepted natively (`rbm-lab-n3-t2`); all three: kept 3 of 3 (`rbm-lab-n3-all`); one alone: refused (`too few attestations: 1 valid, t(n = 3) = 2 needed`) |
 | Descendant | `T = 200`, attestations of 202 (`retip`): accepted (`rbm-lab-n3-t200`); attestor 2 with its node behind (LIB below 202's slot) signs 201 (`att-2-behind.json`): refused for `T = 202` (`rbm-refuse-behind`) |
+| Rotation | stand-in posting timeframe 20 (a rotation needs a non-zero turn, SPEC-v3 D3; the lab's channel has 0): parent state `8ef5578a…5194` over `{lab, k1, k2}`; `rotate` adds a configuration transaction (the core's `ChannelConfigOp` encoding) to `{lab, k1, k3}`, threshold 2, signed by k1 and k2; the node's channel answer gives the new set; the lab's attestor and attestor 1 sign under it (`att-rot-0/1.json`), attestor 2 refuses (its key left the set); collected: accepted (`rbm-lab-rot`); refusal inputs: k2's earlier attestation (`removed-key`), the rotation signed by k1 alone (`rotation-one-signer`), attestations over the old set (`old-set`) |
 | Refusal inputs | `attestor-refusals`: too-few, none, uncertified, other-vault, other-chain, outsider, duplicate |
 
 ## 3. The checkpoint program in r0vm (`runs/devnet-n3/executor.log`, `executor.jsonl`)
@@ -65,13 +67,15 @@ attestor/runs/devnet-n3` (answers: `realblocks/extract.sh`'s output of 10 Novemb
 | `rbm-lab-n3-t2` (n = 3, t = 2) | 17 | 2 | 4,750,279 | 6 (1×2^17 + 5×2^20) |
 | `rbm-lab-n3-all` | 17 | 3 | 6,444,846 | 7 (7×2^20) |
 | `rbm-lab-n3-t200` (T = 200) | 17 | 2 | 4,918,159 | 6 (1×2^19 + 5×2^20) |
+| `rbm-lab-rot` (a rotation, 2 of 3 under the new set) | 17 | 2 | 6,539,536 | 7 (7×2^20) |
 
 Derived: an attestation costs about 1.69 M cycles (6,444,846 − 4,750,279), two `verify_strict` signatures.
 
 Refused in the guest (`Guest panicked: checkpoint refused: …`, no receipt): `rbm-refuse-too-few`
 `InsufficientAttestations { have: 1, need: 2 }`; `-none` `{ have: 0, need: 2 }`; `-uncertified` `BadCertificate`;
 `-other-vault` `BadCertificate`; `-other-chain` `BadCertificate`; `-outsider` `NotAccredited`; `-duplicate`
-`DuplicateAttestor`; `-behind` `NotADescendant { tip_id: 201 }`.
+`DuplicateAttestor`; `-behind` `NotADescendant { tip_id: 201 }`; `-removed-key` `NotAccredited`;
+`-rotation-one-signer` `ConfigThresholdUnmet { have: 1, need: 2 }`; `-old-set` `BadAttestation`.
 
 ## 4. The proof (`runs/devnet-n3/prove.jsonl`, `proof/`)
 
@@ -81,6 +85,7 @@ Refused in the guest (`Guest panicked: checkpoint refused: …`, no receipt): `r
 | `ferrata-e2e p254` (identity_p254, bridge/) | build box, r0vm | 18.4 s, seal 222,668 B |
 | Groth16 prover image (`groth16_wrap`, carl) | Modal | 20 s, about 0.01 USD |
 | `ferrata-e2e groth16` | build box | Groth16 receipt verified; on-chain seal 260 B, selector `0x73c457ba`; journal sha256 `498dd53d…0f09` |
+| the rotation checkpoint `rbm-lab-rot`: `host prove`, p254, Groth16, receipt | build box CPU; Modal | **517.77 s**, 7 segments, 6,539,536 user cycles, receipt sha256 `662306e0…be53`; p254 19.1 s; Groth16 16 s; journal sha256 `b399dc40…8ccf`, parent `8ef5578a…5194`, new state `926b9292…1d75` (`runs/devnet-n3/proof-rotation/`) |
 
 Image ids of this build (`host ids`; guests unchanged on this branch, ids differ from other builds through
 the paths they embed): `checkpoint_b` `0x82dec3b8c242297e236d6862f74c4b29428e961bb539c84058fd0922b188e464`,
@@ -94,7 +99,8 @@ n = 3, t = 2, no burns (no bridge program runs in the lab), `echoNonce` 0.
 
 `python3 -I attestor/vault-fixture.py` then `forge test --match-path test/real/RuleBMulti.t.sol -vv` (Foundry,
 local EVM; FerrataVault v5 in mode (B), nMin 3, tMin 2, genesis = the parent state over `K`, behind RISC Zero's
-`RiscZeroGroth16Verifier` and emergency stop): **10 of 10 pass**.
+`RiscZeroGroth16Verifier` and emergency stop): **14 of 14 pass** (10 for the 2-of-3 checkpoint, 4 for the
+rotation checkpoint, `RuleBRotationTest`, fixture `rule-b-rotation.json`).
 
 | Test | Result |
 |---|---|
@@ -106,6 +112,11 @@ local EVM; FerrataVault v5 in mode (B), nMin 3, tMin 2, genesis = the parent sta
 | a vault with floors (1, 1) or (4, 3) | `WrongCommitteeFloor` |
 | a vault pinning another image | `VerificationFailed` |
 | gas (`RuleBMultiGas`) | `submitCandidate` **343,581**, `finalizeAttested` **161,437** |
+| rotation: the parent is the old set, the journal 2 of 3; candidate then final; a vault whose genesis is the rotated set | accepted, `finalState` = the new state (its key set the rotated one); `ParentNotFinal`; gas 343,581 + 161,437 |
+
+The whole vault suite on the box (`forge test`, before the rotation contract): 443 of 444; the one failure,
+`test_privacySuite_ethereumHalf`, reads `../target/privacy/scenario.json`, which a separate privacy-suite run
+writes (absent on this box), and is untouched by this branch.
 
 The checkpoint's gas does not depend on n or t (the journal has a fixed size): the one-key real-blocks
 checkpoint costs 347,832 + 195,149 (`vault/GAS.md`).
@@ -137,4 +148,5 @@ the same node: refused, its channel key is not in the live set.
   gossip, `integration_tests/tests/channel_config_threshold.rs`). Founding stakes at genesis instead need
   `sequencer_core::sign_genesis_stake`.
 - `ferrata_attestor` as a Logos module (README).
-- Key rotations inside the collected proof; the monitor's watcher reading attestations.
+- Rotations proposed and inscribed by a running committee (the rotation here is built from the core's own
+  encoding and signed with the stand-in keys); the monitor's watcher reading attestations.
