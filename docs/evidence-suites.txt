@@ -55,7 +55,7 @@ Run "run2" (11 Nov 02:51-02:53 UTC, at 489fc71 with b792f7c's change applied on 
   vault forge coverage --report summary                                FerrataVault 426/426 lines, 522/522 statements, 102/102
                                                                        branches, 80/80 functions; FerrataRegistry 227/227,
                                                                        316/316, 41/41, 31/31
-Laptop (11 Nov 03:54 local): python3 -I scripts/check-links.py         24 files, 813 links, 0 broken
+Laptop (11 Nov 04:00 local, at 3278e46): python3 -I scripts/check-links.py  24 files, 815 links, 0 broken
 Not run: the LEZ v0.4.0-rc2 selection (no manifest or lockfile of lez/ changed since the third pass),
 bridge/scripts/check.sh, modules/scripts/check.sh, bench/, the simulator, lab.sh verify, mutation (vault/src
 unchanged since the second pass, 223/223), any proof. mrun's estimates: 0.42 + 0.02 USD.

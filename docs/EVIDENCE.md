@@ -95,7 +95,7 @@ worktree's path.
 | Command-line tool (`cli/`) | 4 unit tests passed; the end-to-end test (anvil, the harness in dev mode, the mock verifier) passed, recovering 10 of 10 unclaimed deposits and 10 of 10 unreleased burns from the seed; fmt clean |
 | Privacy suite (`scripts/privacy/run.sh`) | both halves pass; gate, rates, hidden column and recovery as in row 23 (the informational claim-to-burn rate, which depends on the build's ids, 5.0% at this path) |
 | Vault: `forge test`, coverage, invariants | 407 passed in 35 suites, 31 of them with real proofs (`test/real/`), among them the 14 invariants on a rule (A) and on a rule (B) vault; coverage 100% (lines, statements, branches, functions) of both files; `forge fmt --check` clean after formatting the CLI's script; mutation not re-run (`vault/src` unchanged since the second pass: 223/223) |
-| Link checker (`scripts/check-links.py`, laptop: it needs git) | 24 files, 813 links, 0 broken |
+| Link checker (`scripts/check-links.py`, laptop: it needs git) | 24 files, 815 links, 0 broken |
 
 Not re-run here: the LEZ v0.4.0-rc2 selection (no manifest or lockfile of `lez/` changed since the third pass),
 `bridge/scripts/check.sh`, `modules/scripts/check.sh` (about 47 min, Nix from source), `bench/`, the finality
