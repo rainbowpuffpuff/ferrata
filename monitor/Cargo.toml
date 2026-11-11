@@ -7,7 +7,7 @@ name = "ferrata-monitor"
 description = "monitor: checks each candidate checkpoint submitted to a Ferrata vault against its own node's view and cancels or escalates within the window"
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.88"
+rust-version = "1.89" # std::fs::File::try_lock
 license = "MIT OR Apache-2.0"
 publish = false
 

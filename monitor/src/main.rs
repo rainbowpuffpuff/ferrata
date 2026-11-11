@@ -122,6 +122,9 @@ struct RunArgs {
     /// Rule (B): the channel id, to audit the attestors' published final-tier messages and certificates.
     #[arg(long)]
     channel_id: Option<H32>,
+    /// Seconds a sent transaction may stay unmined before the poll gives up on it (alerted; retried).
+    #[arg(long, default_value_t = 180)]
+    tx_timeout: u64,
     /// Decide and alert; send no transaction.
     #[arg(long)]
     dry_run: bool,
@@ -162,7 +165,8 @@ fn signer(a: &RunArgs) -> Result<Option<PrivateKeySigner>> {
 async fn main() -> Result<()> {
     match Cli::parse().cmd {
         Cmd::Run(a) => {
-            let chain = Chain::connect(&a.rpc, a.vault, signer(&a)?)?;
+            let mut chain = Chain::connect(&a.rpc, a.vault, signer(&a)?)?;
+            chain.tx_timeout = Duration::from_secs(a.tx_timeout);
             let chain_id = {
                 use alloy::providers::Provider as _;
                 chain.p.get_chain_id().await?

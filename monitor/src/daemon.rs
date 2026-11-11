@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use alloy::primitives::Address;
-use anyhow::Result;
+use anyhow::{bail, Result};
 use attestor_core::Deployment;
 use serde_json::json;
 
@@ -459,6 +459,12 @@ pub async fn run(cfg: Config, chain: Chain, alerts: Alerts) -> Result<()> {
         None => None,
     };
     let vault_label = format!("{:#x}", cfg.vault);
+    // One monitor per state file (and so per key): an OS lock, released when the process ends, even by SIGKILL.
+    let lock_path = cfg.state.with_extension("lock");
+    let lock = std::fs::OpenOptions::new().create(true).truncate(false).write(true).open(&lock_path)?;
+    if let Err(e) = lock.try_lock() {
+        bail!("{} is held by another monitor ({e:?})", lock_path.display());
+    }
     let (mut store, resumed) = Store::load_or_new(&cfg.state, &vault_label, cfg.start_block)?;
     if resumed {
         store.next_block = store.next_block.saturating_sub(cfg.reorg_margin).max(cfg.start_block);
@@ -521,5 +527,7 @@ pub async fn run(cfg: Config, chain: Chain, alerts: Alerts) -> Result<()> {
     }
     let (_, now) = ctx.chain.head().await.unwrap_or((0, 0));
     ctx.alerts.emit(Level::Info, "stopped", now, json!({ "polls": polls, "nextBlock": ctx.store.next_block }));
-    ctx.save()
+    let saved = ctx.save();
+    drop(lock);
+    saved
 }

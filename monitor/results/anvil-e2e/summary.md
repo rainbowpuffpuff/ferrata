@@ -1,6 +1,6 @@
-# monitor on a local anvil chain: 2026-11-11T18:30:36Z
+# monitor on a local anvil chain: 2026-11-11T18:32:20Z
 
-anvil Version: 1.3.6-v1.3.6, chain id 31337; vault 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 (rule B, wait 1 h), watcher 0xbF5e6412F9E2c155c6478BD0b37099Df22D55e05, freeze authority 0xfe28eba1A976d98fD55c453CF4DEC8570b76762B.
+anvil Version: 1.3.6-v1.3.6, chain id 31337; vault 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 (rule B, wait 1 h), watcher 0x4e1b0Ab982D1A8bdd8E59D07C0E883CA01B39F3a, freeze authority 0xc284F4C031c0D3CCCA69AD4877d43768bB9b2bfB.
 
 - PASS S1 honest candidate still pending after 3 polls
 - PASS S1 monitor passed it
@@ -13,6 +13,7 @@ anvil Version: 1.3.6-v1.3.6, chain id 31337; vault 0x9fE46736679d2D9a65F0992F227
 - PASS S4 wrong one cancelled
 - PASS S4 honest one untouched
 - PASS S4 honest one finalised
+- PASS S5 a second monitor on the same state file is refused while the first runs
 - PASS S5 monitor saw it and was killed while waiting (node lag allowance)
 - PASS S5 its state file survived the kill and names the candidate
 - PASS S5 restarted monitor cancelled it before the deadline
@@ -47,13 +48,13 @@ anvil Version: 1.3.6-v1.3.6, chain id 31337; vault 0x9fE46736679d2D9a65F0992F227
 | S2 | tipConflict | 0 | 3600 | 41477 |
 | S3 | keySetNotLive | 0 | 3600 | 41477 |
 | S4 | tipConflict | 0 | 3600 | 41477 |
-| S5 | tipNotFinal | 600 | 3000 | 41468 |
+| S5 | tipNotFinal | 601 | 2999 | 41468 |
 | S6 | tipConflict | 0 | 3600 | 41477 |
 | S8 | tipConflict | 0 | 3600 | 41477 |
 | A2 | keySetNotLive | 0 | 11760 | 41477 |
-| A3 | tipNotFinal | 7203 | 5457 | 41477 |
+| A3 | tipNotFinal | 7202 | 5458 | 41477 |
 
-S7: checkpoint 2 (tipConflict) finalised at 1794436850, revoked at 1794436851, revocable until 1794523250.
+S7: checkpoint 2 (tipConflict) finalised at 1794436953, revoked at 1794436954, revocable until 1794523353.
 
 Alerts: "cancelled 9, candidate-passed 3, candidate-resubmitted 1, candidate-waiting 2, checkpoints-revoked 2, final-tier-stalled 1, finalized-wrong 2, paused 2, persistent-candidate 1, revoked 1, started 17, stopped 16".
 

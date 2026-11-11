@@ -133,6 +133,9 @@ pub struct Chain {
     pub vault: Address,
     /// The monitor's own address, when it holds a key.
     pub me: Option<Address>,
+    /// How long a sent transaction may stay unmined before the monitor gives up on it for this poll
+    /// (alerted; the next poll looks at the vault again), so a stuck transaction never stops the loop.
+    pub tx_timeout: std::time::Duration,
 }
 
 fn h(b: B256) -> H32 {
@@ -146,7 +149,7 @@ impl Chain {
             Some(s) => ProviderBuilder::new().wallet(EthereumWallet::from(s)).connect_http(url.parse()?).erased(),
             None => ProviderBuilder::new().connect_http(url.parse()?).erased(),
         };
-        Ok(Self { p, vault, me })
+        Ok(Self { p, vault, me, tx_timeout: std::time::Duration::from_secs(180) })
     }
 
     pub async fn view<C: SolCall>(&self, call: C) -> Result<C::Return> {
@@ -304,7 +307,13 @@ impl Chain {
         let from = self.me.context("the monitor holds no key")?;
         let tx = TransactionRequest::default().with_from(from).with_to(self.vault).with_input(input);
         self.p.call(tx.clone()).await.map_err(|e| anyhow!("the vault would revert: {e}"))?;
-        let receipt = self.p.send_transaction(tx).await.map_err(|e| anyhow!("sending: {e}"))?.get_receipt().await?;
+        let pending = self.p.send_transaction(tx).await.map_err(|e| anyhow!("sending: {e}"))?;
+        let hash = *pending.tx_hash();
+        let receipt = pending
+            .with_timeout(Some(self.tx_timeout))
+            .get_receipt()
+            .await
+            .map_err(|e| anyhow!("{hash:#x} not mined within {:?}: {e}", self.tx_timeout))?;
         if !receipt.status() {
             bail!("the transaction {} reverted", receipt.transaction_hash);
         }

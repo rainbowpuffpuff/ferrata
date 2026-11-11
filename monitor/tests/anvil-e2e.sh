@@ -8,6 +8,7 @@
 #   S3  a candidate whose key set is not the live one (n = 3, t = 2 against four keys) is cancelled
 #   S4  an honest and a wrong candidate pending together: only the wrong one is cancelled
 #   S5  the monitor is killed (SIGKILL) mid-window and restarted from its state file: it still cancels
+#       (and while it runs, a second monitor on the same state file is refused)
 #   S6  the state file is lost: a fresh monitor rescans the vault and still cancels, nothing else
 #   S7  a wrong checkpoint finalised while no monitor ran: the watcher alerts, the freeze authority's
 #       monitor revokes it within the window
@@ -164,6 +165,7 @@ for _ in $(seq 1 100); do
   jq -e --arg s "$n6" 'select(.kind=="candidate-waiting" and .newState==$s)' "$alerts" > /dev/null 2>&1 && break
   sleep 0.2
 done
+check "S5 a second monitor on the same state file is refused while the first runs" '! "$mon" "${margs[@]}" --max-polls 1 2> "$run/second.err" && grep -q "held by another monitor" "$run/second.err"'
 kill -9 "$mon_pid"; wait "$mon_pid" 2>/dev/null || true; mon_pid=
 check "S5 monitor saw it and was killed while waiting (node lag allowance)" '[ -n "$(jq -c --arg s "$n6" "select(.kind==\"candidate-waiting\" and .newState==\$s)" "$alerts")" ] && [ "$(submitted_at "$n6")" != 0 ]'
 check "S5 its state file survived the kill and names the candidate" 'jq -e --arg s "$n6" ".candidates[\$s].status == \"pending\"" "$state" > /dev/null'
