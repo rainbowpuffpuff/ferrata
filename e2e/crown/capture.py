@@ -83,21 +83,35 @@ def verify_capture(d: str, vault: str) -> dict:
         return x.get("result", x) if isinstance(x, dict) else x
     block = answer("block.json")
     header = open(os.path.join(d, "header.rlp"), "rb").read()
-    if "0x" + mpt.keccak256(header).hex() != block["hash"].lower():
-        raise ValueError("header.rlp does not hash to block.json's hash")
     n = int(block["number"], 16)
     if fx.get("block") is not None and int(fx["block"]) != n:
         raise ValueError(f"fixture.json's block {fx['block']} is not block.json's {n}")
-    if fx.get("block_hash") and fx["block_hash"].lower().removeprefix("0x") != block["hash"].lower().removeprefix("0x"):
-        raise ValueError("fixture.json's block hash is not block.json's")
-    proof = answer(f"proof_{vault}_{n}.json")
+    own = "0x" + mpt.keccak256(header).hex()
+    if fx.get("state_root_patched"):
+        # lez/crown/capture-anvil.py (fork rehearsals): anvil reports a zero state root, so the stand-in header carries
+        # the proofs' trie root instead and hashes to fixture.json's block_hash; every other field is anvil's block's.
+        fields = mpt.rlp_decode(header)
+        if own != fx["block_hash"].lower() or "0x" + fields[3].hex() != fx["state_root"].lower():
+            raise ValueError("the stand-in header is not fixture.json's block_hash / state_root")
+        if "0x" + fields[0].hex() != block["parentHash"].lower() or int.from_bytes(fields[8], "big") != n \
+                or int.from_bytes(fields[11], "big") != int(block["timestamp"], 16):
+            raise ValueError("the stand-in header's parent, number or time is not anvil's block's")
+    else:
+        if own != block["hash"].lower():
+            raise ValueError("header.rlp does not hash to block.json's hash")
+        if fx.get("block_hash") and fx["block_hash"].lower().removeprefix("0x") != block["hash"].lower().removeprefix("0x"):
+            raise ValueError("fixture.json's block hash is not block.json's")
+    names = [f for f in os.listdir(d) if f.lower() == f"proof_{vault}_{n}.json"]
+    if not names:
+        raise ValueError(f"no proof_{vault}_{n}.json")
+    proof = answer(names[0])
     got = mpt.check_account_and_slots(mpt.header_state_root(header), proof)
     rows = {r["slot"].lower(): int(r["value"], 16) for e in fx.get("storage", []) if e["address"].lower() == vault
             for r in e["slots"]}
     for s, name, _ in crown_slots():
         if s not in got["slots"] or got["slots"][s] != rows.get(s):
             raise ValueError(f"{name} ({s}): proven {got['slots'].get(s)}, fixture {rows.get(s)}")
-    return {"block": n, "hash": block["hash"], "stateRoot": "0x" + mpt.header_state_root(header).hex(),
+    return {"block": n, "hash": own, "standIn": bool(fx.get("state_root_patched")), "stateRoot": "0x" + mpt.header_state_root(header).hex(),
             "codeHash": got["codeHash"], "slots_proven": len(got["slots"])}
 
 

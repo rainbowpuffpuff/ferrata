@@ -193,7 +193,9 @@ def main() -> int:
             if rj["mode"] == "live":
                 chain_hash = cast("block", str(num), "--field", "hash")
                 need(chain_hash.lower() == h(mpt.keccak256(hdr)), f"capture {n}: header is not block {num} of the chain")
-            proof = json.load(open(f"{d}/proof_{vault.lower()}_{num}.json"))
+            pf = [f for f in os.listdir(d) if f.lower() == f"proof_{vault.lower()}_{num}.json"]
+            need(len(pf) == 1, f"capture {n}: no proof file of the vault")
+            proof = json.load(open(f"{d}/{pf[0]}"))
             got = mpt.check_account_and_slots(mpt.header_state_root(hdr), proof.get("result", proof))["slots"]
             need(got.get("0x" + "00" * 31 + "01") == n, f"capture {n}: slot 1 = {got.get('0x' + '00' * 31 + '01')}")
             need(h(got.get("0x" + "00" * 31 + "02", 0).to_bytes(32, "big")) == idn["configId"].lower(), f"capture {n}: slot 2")
