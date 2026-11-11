@@ -32,6 +32,7 @@
 //! hash, the balance and the statement identifier. A later check may replace it with a newer block
 //! only. A refusal of the attestation program ends the whole transaction with that program's exit
 //! code, so nothing is written on a statement that was not proven.
+
 use borsh::{BorshDeserialize, BorshSerialize};
 use ferrata_core::{keccak::keccak256, Root};
 use ferrata_lez_wire::attest::{
