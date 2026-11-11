@@ -110,6 +110,17 @@ files are left as they were on `integration6` and the rewrite is kept in the age
 reads a record 32 bytes longer and compares the root id, about 1,000 cycles more (the bridge's `Init`
 168,776 → 169,841 execution gas; `ferrata_holdings`' refused `Attest` 38,360 → 39,317).
 
+## Mutants
+
+`scripts/mutants.py` (115: the 107 of before, M01's snippet moved with the new field, and M108–M115 on
+the bound) and `scripts/review-mutants.py` (24), run whole on the build box in five shards at once
+(each a scratch copy and the whole workspace's tests, as the scripts do): **139 killed, 0 survived, none
+skipped or failing to compile** (2,193 s, 7.5 core-hours). The new ones: M108 (no bound in
+`process_update`), M109 (`with_weak_subjectivity_period` sets nothing), M110 (the last epoch outside),
+M111 (an end past `u64` reached), M112 (the end slot an epoch early), M113 (the churn not rounded to an
+increment), M114 (Electra's factor 2 dropped), M115 (phase 0's top-ups term dropped; killed by the test of
+the branches the specification's table does not reach).
+
 ## Image ids (built in this worktree on the build box; they embed the build path)
 
 Of the final source (after `rustfmt`; the program's id before it was `7d495478…115e`, same size), from
