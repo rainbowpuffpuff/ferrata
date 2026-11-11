@@ -1,0 +1,13 @@
+Compiling 1 files with Solc 0.8.26
+Solc 0.8.26 finished in 4.44s
+Compiler run successful!
+
+Ran 5 tests for test/real/CrownR1.t.sol:CrownR1Test
+[PASS] test_crownR1_aFlippedSealByteIsRefused() (gas: 1952178)
+[PASS] test_crownR1_aVaultOfTheEarlierImageRefusesIt() (gas: 1881055)
+[PASS] test_crownR1_candidateThenFinalAfterTheWait() (gas: 503962)
+[PASS] test_crownR1_theProvenParentIsTheVaultsGenesis() (gas: 50923)
+[PASS] test_crownR1_theReleaseSealVerifiesForTheCrownReleaseImage() (gas: 1522917)
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 9.39ms (15.65ms CPU time)
+
+Ran 1 test suite in 12.21ms (9.39ms CPU time): 5 tests passed, 0 failed, 0 skipped (5 total tests)

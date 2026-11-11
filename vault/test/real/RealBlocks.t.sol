@@ -92,6 +92,11 @@ abstract contract RealBlocksFixture is Test {
         k[0] = a;
     }
 
+    /// @dev The release image the vault pins (none is proven in the real-blocks run).
+    function _releaseImageId() internal view virtual returns (bytes32) {
+        return keccak256("ferrata test: no release in this run");
+    }
+
     /// @dev RISC Zero's verifier and stop, then a vault of `mode` at the address the journal binds, on its chain.
     function _deploy(FerrataVault.Mode mode, bytes32 imageId, bytes32 genesisState, uint32 nMin_, uint32 tMin_)
         internal
@@ -105,7 +110,7 @@ abstract contract RealBlocksFixture is Test {
         FerrataVault.Deployment memory d = FerrataVault.Deployment({
             verifier: IRiscZeroVerifier(address(estop)),
             checkpointImageId: imageId,
-            releaseImageId: keccak256("ferrata test: no release in this run"),
+            releaseImageId: _releaseImageId(),
             lezConfigId: lezConfigId,
             genesisState: genesisState,
             nMin: nMin_,
