@@ -17,15 +17,23 @@ is part of the audit packet.
 | `apply_core` (store.rs) | `apply_light_client_update` | the optimistic and participation bookkeeping moved to the spec store; reports `adopted` | sync vectors; M29 | |
 | `LightClientStore::process_update` (store.rs) | `process_light_client_update` | atomic on error (the spec mutates before a late assert) | sync vectors; M23 | |
 | `LightClientStore::process_force_update` (store.rs) | `process_light_client_store_force_update` | atomic on error | sync vectors; M27 | |
-| `FinalizedStore::process_update` (policy.rs) | (Ferrata policy) | finality only, ≥ 2/3, no optimistic header, no forcing; `check_committee` on adoption | policy-vs-spec comparison; adversarial; M01, M02, M30, M39, M40 | |
+| `FinalizedStore::process_update` (policy.rs) | (Ferrata policy) | finality only, ≥ 2/3, no optimistic header, no forcing; an update that advances nothing is `NotNewer`; `check_committee` on adoption (and on both committees in `from_core`) | policy-vs-spec comparison; adversarial; M01, M02, M30, M39, M40 | |
 | `upgrade_header`, `upgrade_bootstrap`, `upgrade_update` (upgrade.rs) | capella, deneb, electra, gloas `fork.md` | composed step by step | sync fork-transition vectors; Sepolia through its Gloas fork (`sepolia_gloas`); M26 | |
 | `is_valid_normalized_merkle_branch`, `normalize_merkle_branch` (merkle.rs) | altair helpers, electra `normalize_merkle_branch` | none | unit tests; M36 | |
 | `split_container`, container decoders (ssz.rs, types.rs) | SSZ specification | strict: exact consumption, first offset equals fixed size, monotone offsets | SSZ guard tests; M05, M06 | |
 | `Blst::fast_aggregate_verify`, `Zkcrypto::fast_aggregate_verify` (bls/) | `FastAggregateVerify` (IETF BLS, proof-of-possession suite) | pairing computed as two Miller loops and one final exponentiation | BLS vectors; M33 | |
 | `check_committee` (bls/) | `KeyValidate` per key, `eth_aggregate_pubkeys` | refuses an empty committee | `eth_aggregate_pubkeys` vectors; M35 | |
-| `check_committee_onchain` (bls/) | (the program's adoption check) | no per-key subgroup check; relies on deposit-time `KeyValidate` | on-chain adoption guards; M41 | |
-| `Blst::miller_half`, `Blst::final_half` (bls/) | split of the pairing check | canonical big-endian Fp12 encoding | split round-trip test; M43 | |
+| `check_committee_onchain` (bls/) | (the program's adoption check) | no per-key subgroup check; every key of a genuine committee passed `KeyValidate` when `get_next_sync_committee` aggregated it (`eth_aggregate_pubkeys`), and at deposit | on-chain adoption guards; M41 | |
+| `Blst::miller_half`, `Blst::final_half` (bls/) | split of the pairing check | `miller_half` writes the canonical big-endian Fp12 encoding; `final_half` reads each coefficient modulo p, so the caller refuses non-canonical bytes (`steps::Job::step3`, `canonical_fp12`) | split round-trip test; M43 | |
 | `verify_checked` (bls/) | (equivalent to `FastAggregateVerify` for checked committees) | subtractive composition; identity check only | BLS vectors (both paths agree); M34 | |
+
+**Not covered by the rows above.** The on-chain program does not call `validate_light_client_update`,
+`apply_core` or `FinalizedStore::process_update` directly: it runs their transcription over the
+compact store, `steps.rs` (`validate_compact`, `update_advances`, `apply_core_compact`,
+`store_for_update`, `step1`, `Job::step2`, `Job::step3`, `apply`, the non-signer witness) and
+`witness.rs` (compact encodings, committee adoption from uncompressed keys). Those functions need
+rows of their own, each naming the row it mirrors and the equivalence tests that pin it
+(`steps.rs` tests; `review_core::the_compact_validation_agrees_with_row_1_on_the_guard_cases`).
 
 ## Execution layer
 
@@ -51,7 +59,7 @@ Test files are under `crates/ferrata-spectests/tests/`; mutant ids refer to `scr
 | `account_id`, `storage_id`, `log_hash`, `log_id` (attest.rs) | (Ferrata; RFP F.6) | state identifiers leave out the block, by design | `exec_objects::identifiers_are_pinned_and_depend_only_on_the_fact` (independent Python values); M92, M93 | |
 | `account_id_at_block`, `storage_id_at_block`, `Attested::id_at_block` (attest.rs) | (Ferrata; the block-bound variant) | kinds 0x11 and 0x12, so no preimage is shared with the default identifiers | `exec_objects::block_bound_identifiers` (independent Python values); mainnet e2e; M105, M106 | |
 | `Predicate::holds`, `Fact::field`, `Fact::check`, `attest_batch` (attest.rs) | (Ferrata; RFP F.4, soft #2 and #4) | an empty batch is refused | `exec_objects::predicates_compare_unsigned_256_bit_words`, `fact_fields_and_conditions`, `a_batch_is_one_compound_statement`; M88–M91 | |
-| `Relation`, `Operand` in `attest_batch` (attest.rs) | (Ferrata; RFP soft #4: two attested values under one record) | a relation naming a fact or field that is not there is `QueryInvalid` | `exec_objects::relations_compare_two_attested_values`; mainnet e2e; M104 | |
+| `Relation`, `Operand` in `attest_batch` (attest.rs) | (Ferrata; RFP soft #4: two attested values under one record) | a relation naming a fact that is not there, or a field of another kind of fact, is `QueryInvalid`; a topic or data word the log lacks is `PredicateFailed` | `exec_objects::relations_compare_two_attested_values`; mainnet e2e; M104 | |
 | `history_hop` (attest.rs) | EIP-2935 (`HISTORY_STORAGE_ADDRESS`, `HISTORY_SERVE_WINDOW` = 8191, slot `n mod 8191`) | `n` from the header only; the contract's code hash must be the specified one | `exec_adversarial::history_hops_and_their_refusals`; mainnet e2e (three real hops); M79–M84 | |
 | `locate_log`, `block_log_index` (exec.rs) | JSON-RPC `logIndex` (block-wide) against the receipt position `attest_log` takes | query helpers for clients, not checks | `mainnet_e2e::block_wide_log_indices_convert_to_receipt_positions` (all 870 logs); M102, M103 | |
 | `accumulator_node`, `accumulator_root_of` (accumulator.rs) | the Ferrata bridge specification v2, §3.2 (deposit tree): depth 32, `SHA-256(0x01 ‖ l ‖ r)`, empty leaf zero | an index of 2^32 or more is refused (it would share a path with its low 32 bits) | `accumulator` (vectors from an independent Python implementation, every sibling and index bit); M94–M97 | |
