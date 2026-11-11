@@ -1,0 +1,17 @@
+crown run crown-rehearsal-4 (fork: FORK, the chain is anvil), vault 0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c, deployer 0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07
+PASS chain: chain id 11155111, head 12114921
+PASS configId from session A's fields: 0xbba1596ca3f13857c0dacc0ddd2a262968f0c239c28468027831667b1cf7c51e = the vault's storedLezConfigId
+PASS bedrockGenesisId = sha256(deployment settings): 0x19383c41772ed9e87c929c6985a69b5c33894e347a89de255879acd37ff7d2ed
+PASS genesisState from T0 and the channel: 0xdb3e0d07e9ccfabe8091402b95b9eae442666a9a08758904c2a5b6c722b55c6f (T0 = 19) = the vault's
+PASS vault: code, CREATE address, rule (B): CREATE(deployer, nonce 25), mode B
+PASS every recorded transaction succeeded, sent by the deployer: 6 transactions of 6 stages (deposit-0, deposit-1, submit, finalizeAttested, release-0, release-1)
+PASS deposits: two logs, commitments recomputed: j0 leaf 0 1000000000000000 wei public; j1 leaf 1 1000000000000000 wei private
+PASS captures: headers are the chain's blocks; every slot proven: capture 1: block 12114914, 6 slots; capture 2: block 12114915, 6 slots (FORK: headers are the fork's, not checked against Sepolia)
+PASS LEZ session records: T0 19 -> T1 86, 9 steps, claims ['private', 'public'], 2 burn notes
+PASS checkpoint journal fields: parent = genesisState, tip T1 86, burns 2, imported leaves 2
+FAIL checkpoint final on the vault, its seal verified by RISC Zero's verifier (eth_call): AssertionError: the verifier rejects the seal
+FAIL releases: paid once, seals verified on chain, events: AssertionError: release 0: the verifier rejects the seal
+PASS checkpoint input rebuilt from the node's recorded blocks = the proven input; guest re-executed: input sha256 7d206d3f19655b14... = proven; executed again: ,"journal_equals_native":true,"padded_cycles":20447232,"po2":[20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,19],"segments":20,"user_cycles":18465623}
+FAIL Groth16 receipts verify locally (ferrata-e2e verify): AssertionError: checkpoint/receipt/receipt-groth16.bin: used by:
+    claim digest does not match the expected digest df4cb22bf6af6e92925cdf13e9c84c4982dfffa67b4949969cf253472c109b76; expected 23614afc886771fc8d19059bf87a9c0ec032512d6ee3be24658d491ec47a1842
+11 of 14 checks passed; FAILED: checkpoint final on the vault, its seal verified by RISC Zero's verifier (eth_call), releases: paid once, seals verified on chain, events, Groth16 receipts verify locally (ferrata-e2e verify)

@@ -1,0 +1,190 @@
+{
+  "ok": true,
+  "name": "crown-19-86",
+  "job": "crown-crown-rehearsal-4",
+  "exit_code": 0,
+  "timed_out": false,
+  "gpu": "NVIDIA L40S, 49140 MiB, 610.57.04, 8.9",
+  "image_ids_here": {
+    "checkpoint-b": "0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e",
+    "checkpoint": "0xb9c1e6a834879f6be79d09d728523565846018629b82f66986eb58fab4f52c84",
+    "segment": "0x11e888e94b9520b08477ba5c5c29cc46bdffc7b1e7c5fe822eb0776f40c54592"
+  },
+  "image_ids_local": {
+    "checkpoint": "0xb9c1e6a834879f6be79d09d728523565846018629b82f66986eb58fab4f52c84",
+    "checkpoint-b": "0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e",
+    "segment": "0x11e888e94b9520b08477ba5c5c29cc46bdffc7b1e7c5fe822eb0776f40c54592"
+  },
+  "image_ids_equal": true,
+  "input_hashes_equal_manifest": true,
+  "source_commit": "9d26a1be23e1a357ed7d656049d0c81f52569770",
+  "prover_wall_s": 30.919151067733765,
+  "container_s_until_done": 31.139158010482788,
+  "prove": {
+    "execute_s": 0.396228842,
+    "image_id": "0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e",
+    "input_bytes": 594476,
+    "input_sha256": "7d206d3f19655b14304f50870a10ce3357bf4b37ac9a4d59daabc30078466e5c",
+    "journal_equals_native": true,
+    "name": "crown-19-86",
+    "paging_cycles": 1365473,
+    "program_bytes": 445120,
+    "program_sha256": "7b5c3735635ff116ea2f2a0a1eae8929dd716ce57a7839368df683b5ad500e3b",
+    "prove_session_s": 30.391857709,
+    "prover": "in-process (LocalProver path), risc0-zkvm feature cuda",
+    "receipt_bytes": 224314,
+    "receipt_kind": "succinct",
+    "receipt_sha256": "9df05d68d4e38407f5115f0f02a74c04ceb76460a47b9292a88f84777877834c",
+    "recursion_s": 11.596970351,
+    "reserved_cycles": 616136,
+    "risc0_zkvm": "3.0.5",
+    "segment_proofs_s": 18.794887358,
+    "segment_times": [
+      {
+        "index": 0,
+        "po2": 20,
+        "prove_s": 1.4378631259999999
+      },
+      {
+        "index": 1,
+        "po2": 20,
+        "prove_s": 1.097074262
+      },
+      {
+        "index": 2,
+        "po2": 20,
+        "prove_s": 1.154042102
+      },
+      {
+        "index": 3,
+        "po2": 20,
+        "prove_s": 1.070533404
+      },
+      {
+        "index": 4,
+        "po2": 20,
+        "prove_s": 0.937548689
+      },
+      {
+        "index": 5,
+        "po2": 20,
+        "prove_s": 0.892706233
+      },
+      {
+        "index": 6,
+        "po2": 20,
+        "prove_s": 0.881876355
+      },
+      {
+        "index": 7,
+        "po2": 20,
+        "prove_s": 0.897538866
+      },
+      {
+        "index": 8,
+        "po2": 20,
+        "prove_s": 0.895602934
+      },
+      {
+        "index": 9,
+        "po2": 20,
+        "prove_s": 0.889407377
+      },
+      {
+        "index": 10,
+        "po2": 20,
+        "prove_s": 0.881671006
+      },
+      {
+        "index": 11,
+        "po2": 20,
+        "prove_s": 0.925135256
+      },
+      {
+        "index": 12,
+        "po2": 20,
+        "prove_s": 0.888675203
+      },
+      {
+        "index": 13,
+        "po2": 20,
+        "prove_s": 0.888264173
+      },
+      {
+        "index": 14,
+        "po2": 20,
+        "prove_s": 0.888451693
+      },
+      {
+        "index": 15,
+        "po2": 20,
+        "prove_s": 0.88161952
+      },
+      {
+        "index": 16,
+        "po2": 20,
+        "prove_s": 0.869709551
+      },
+      {
+        "index": 17,
+        "po2": 20,
+        "prove_s": 0.87715645
+      },
+      {
+        "index": 18,
+        "po2": 20,
+        "prove_s": 0.979659327
+      },
+      {
+        "index": 19,
+        "po2": 19,
+        "prove_s": 0.560351831
+      }
+    ],
+    "segments": 20,
+    "total_cycles": 20447232,
+    "total_s": 30.788126667,
+    "user_cycles": 18465623,
+    "verifies": true
+  },
+  "build_info": {
+    "cuda_base_image": "nvidia/cuda:12.8.0-devel-ubuntu24.04",
+    "nvcc": [
+      "Cuda compilation tools, release 12.8, V12.8.61",
+      "Build cuda_12.8.r12.8/compiler.35404655_0"
+    ],
+    "rustc": "rustc 1.89.0 (29483883e 2025-08-04)",
+    "cargo": "cargo 1.89.0 (c24e10642 2025-06-23)",
+    "gcc": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+    "nvcc_append_flags": "--generate-code arch=compute_89,code=sm_89",
+    "build_container": {
+      "cpu_cores": 16.0,
+      "memory_mib": 65536
+    },
+    "binary": "ferrata-modal-cuda",
+    "source_key": "31ecd5fd46131b5faf35653b8c03c6ddd4bf25435cca8ff17a83a24866c17a1a",
+    "cargo_args": [
+      "build",
+      "--release",
+      "--locked",
+      "--features",
+      "cuda"
+    ],
+    "build_seconds": 1503.7,
+    "built_at_utc": "2026-11-10T09:17:14Z",
+    "sha256": "085c9bf990e6b0134dac862ec419184f7ec6dc9f5683d59e14e9604c21185c64",
+    "bytes": 119441352,
+    "ldd": [
+      "linux-vdso.so.1 (0x00002b236c20e000)",
+      "\tlibstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x00002b2373200000)",
+      "\tlibcuda.so.1 => not found",
+      "\tlibgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00002b237347e000)",
+      "\tlibm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00002b23734ac000)",
+      "\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00002b2373595000)",
+      "\t/lib64/ld-linux-x86-64.so.2 (0x00005644328cb000)"
+    ]
+  },
+  "prover_binary_sha256_here": "085c9bf990e6b0134dac862ec419184f7ec6dc9f5683d59e14e9604c21185c64",
+  "task": "ta-01M76F3F9N86ER9GHGEA7GB5GR",
+  "finished_at_utc": "2026-11-11T23:29:50Z"
+}
