@@ -660,8 +660,9 @@ configurations (both ticked to block 102's record, ETH registered on both, `root
 schedule 1, `root(B, 8)`, the payer's claim of A's leaf 6: 10 ETH) and runs every accepted path and
 every refusal below; a refusal reverts its whole transaction, and the test checks the states after
 each step (balances, the live roles, the gates' freezes, `sunset`). Image
-`25b3cc900f38579ad530335b994e3ae327ac600afe335b734bd00af78309e776` at this worktree's path (the
-unchanged program builds to `0d3552601f93…70ed` there; `cf41b7e5…5390` at `integration5`'s path).
+`43615dc48098b3731990de7700204d2a1bea0e9f963ee7c4dd629048dd5ef19c` (591,084 ELF bytes) at this
+worktree's path (the unchanged program builds to `0d3552601f93…70ed` there; `cf41b7e5…5390` at
+`integration5`'s path); every `results/bridge-*.md` is of it.
 
 **Design, in short** (the reasons are in `BRIDGE.md` §5):
 - *Keyless `Sunset`.* Anyone sends `AttestRetired`: `config(cid)` attests the vault's slot 37 (the
@@ -703,15 +704,15 @@ unchanged program builds to `0d3552601f93…70ed` there; `cf41b7e5…5390` at `i
 | `ApplyRoles` at the proposal's own record; with a record 13 days later | 242 `FROZEN` | 75,605; 75,604 |
 | `ApplyRoles` with a record 14 days later (anyone); again | applied; 245 | 83,932; 22,897 |
 | **Multisig (2 of 3).** `Freeze` by the replaced key; by one member alone | 253 | 39,926; 39,926 |
-| `Cosigned` by one member; naming two, signed by one; with a non-member | 253 | 42,480; 26,805; 60,369 |
-| `Cosigned` freeze of A's mints for an hour; of ETH (A) burns (through `config(A)` to the token); unfreeze of A | applied | 120,635; 168,397; 120,657 |
-| `Cosigned` freeze for 31 days | 240 | 111,841 |
+| `Cosigned` by one member; naming two, signed by one; with a non-member | 253 | 42,480; 26,798; 60,369 |
+| `Cosigned` freeze of A's mints for an hour; of ETH (A) burns (through `config(A)` to the token); unfreeze of A | applied | 120,628; 168,390; 120,650 |
+| `Cosigned` freeze for 31 days | 240 | 111,834 |
 | **Watchers.** `Pause` by a signer with no role; by a member of the freeze authority; of neither mints nor burns | 253; 253; 240 | 39,741; 39,741; 90,394 |
 | `Pause` of A's mints and burns (12 h); of ETH (A) mints; again under a two-day freeze (kept: 2 days) | applied | 99,034; 148,985; 99,037 |
 | an unfreeze by the watcher | 253 | 40,143 |
 | `SetCap` ETH (A) by the admin, through `config(A)`; below the floor | applied; 240 | 92,984; 80,834 |
-| **Sunset of A (multisig).** Sent at `config(A)` by anyone before approval; by the replaced key; by one member alone; `Cosigned` by one member | 253 | 24,224; 38,847; 38,847; 41,786 |
-| `Cosigned` approval by two members; again | applied; 244 `ALREADY_WRITTEN` | 67,298; 59,455 |
+| **Sunset of A (multisig).** Sent at `config(A)` by anyone before approval; by the replaced key; by one member alone; `Cosigned` by one member | 253 | 24,224; 38,847; 38,847; 41,779 |
+| `Cosigned` approval by two members; again | applied; 244 `ALREADY_WRITTEN` | 67,291; 59,448 |
 | `Sunset` sent at `config(A)` by anyone, approved; again; `ImportRoot` A afterwards | applied; 244; 242 | 31,151; 24,224; 29,544 |
 | **Keyless Sunset of B.** `Sunset` at `config(B)` by anyone, vault live | 253 | 22,818 |
 | `AttestRetired` with slot 37 empty (block 100); with a freeze authority there but `retired` 0 | 247 `IMPORT_MISMATCH` | 162,907; 174,205 |
@@ -733,6 +734,14 @@ token, amount, recipient) and the fee; the private account's id occurs nowhere i
 0.9 ETH is found only in its new commitment. A private recipient is not credited privately (not
 built: the recipient's private state would have to be in the same private execution).
 
-**Effect on the earlier suites.** A token's `Freeze`, `SetCap` (and now `Pause`) pass `config(cid)`
-first, one more handler; refusal codes are unchanged. The whole harness passes on the new program
-(the figures of `results/bridge-*.md` are of it).
+**Effect on the earlier suites.** Every bridge suite passes on the new program (`bridge_roles` 2,
+`bridge_controls` 1, `bridge_burn` 1, `bridge_private` 2, `bridge_inbound` 3, `bridge_time` 1,
+`bridge_secfix` 8, `bridge_vault_storage` 1; the whole harness, 49 tests, passed on the image before
+`rustfmt`, `25b3cc90…e776`), and `results/bridge-*.md` are of it. `bridge_controls.rs`'s 78
+transactions keep every label and every result (applied or refused, with the same code) of
+integration6's table; only gas moves. A token's `Freeze`, `SetCap` (and now `Pause`) pass
+`config(cid)` first, one more handler: `SetCap` ETH (A) 55,805 → 91,019, `Freeze` ETH (B) for an hour
+104,176 → 139,607, a refused one below the floor 43,720 → 79,206. Everything that reads or writes
+`config(cid)` carries its `Roles`: `Init` 168,776 → 169,962, `Tick` at a configuration 76,845 →
+79,627, `Register` 327,269 → 330,744, the claim of leaf 6 283,221 → 286,625, a global `Freeze`
+93,426 → 95,102, `Sunset` by the freeze authority 44,002 → 44,193.

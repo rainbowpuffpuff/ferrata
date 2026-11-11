@@ -1,6 +1,6 @@
 # Transfers, the handover, the multisig, watchers and the keyless Sunset (`harness/tests/bridge_roles.rs`)
 
-Bridge program image `25b3cc900f38579ad530335b994e3ae327ac600afe335b734bd00af78309e776`; every transaction settled by LEZ's own functions in a block of its own.
+Bridge program image `43615dc48098b3731990de7700204d2a1bea0e9f963ee7c4dd629048dd5ef19c`; every transaction settled by LEZ's own functions in a block of its own.
 
 | # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
 |---|---|---|---:|---:|---:|---:|---|
@@ -47,11 +47,11 @@ Bridge program image `25b3cc900f38579ad530335b994e3ae327ac600afe335b734bd00af783
 | 41 | Freeze by the replaced freeze authority | bridge Freeze 13,251 → bridge Freeze 26,675 | 39,926 | 1% | 755 | 325,448 | refused: exit 253 (NOT_AUTHORIZED) |
 | 42 | Freeze by one member alone (2 of 3) | bridge Freeze 13,251 → bridge Freeze 26,675 | 39,926 | 1% | 755 | 325,448 | refused: exit 253 (NOT_AUTHORIZED) |
 | 43 | Cosigned freeze by one member | bridge Cosigned 13,723 → bridge Cosigned 28,757 | 42,480 | 1% | 792 | 346,176 | refused: exit 253 (NOT_AUTHORIZED) |
-| 44 | Cosigned freeze naming M1, M2, signed by M1 only | bridge Cosigned 14,546 → bridge Cosigned 12,259 | 26,805 | 1% | 888 | 221,544 | refused: exit 253 (NOT_AUTHORIZED) |
+| 44 | Cosigned freeze naming M1, M2, signed by M1 only | bridge Cosigned 14,546 → bridge Cosigned 12,252 | 26,798 | 1% | 888 | 221,488 | refused: exit 253 (NOT_AUTHORIZED) |
 | 45 | Cosigned freeze by M1 and a non-member | bridge Cosigned 14,546 → bridge Cosigned 16,289 → bridge Cosigned 29,534 | 60,369 | 1% | 1,064 | 491,464 | refused: exit 253 (NOT_AUTHORIZED) |
-| 46 | Cosigned freeze of A's mints for an hour by M1 and M2 | bridge Cosigned 14,546 → bridge Cosigned 16,296 → bridge Cosigned 42,270 → Read 11,877 → bridge (reply) 35,646 | 120,635 | 2% | 1,064 | 973,592 | applied |
-| 47 | Cosigned freeze of ETH (A) burns by M3 and M2 | bridge Cosigned 15,055 → bridge Cosigned 16,805 → bridge Cosigned 37,416 → bridge Freeze 46,445 → Read 11,877 → bridge (reply) 40,799 | 168,397 | 3% | 1,148 | 1,356,360 | applied |
-| 48 | Cosigned freeze for 31 days | bridge Cosigned 14,546 → bridge Cosigned 16,296 → bridge Cosigned 42,270 → Read 11,877 → bridge (reply) 26,852 | 111,841 | 2% | 1,064 | 903,240 | refused: exit 240 (BAD_MESSAGE) |
+| 46 | Cosigned freeze of A's mints for an hour by M1 and M2 | bridge Cosigned 14,546 → bridge Cosigned 16,289 → bridge Cosigned 42,270 → Read 11,877 → bridge (reply) 35,646 | 120,628 | 2% | 1,064 | 973,536 | applied |
+| 47 | Cosigned freeze of ETH (A) burns by M3 and M2 | bridge Cosigned 15,055 → bridge Cosigned 16,798 → bridge Cosigned 37,416 → bridge Freeze 46,445 → Read 11,877 → bridge (reply) 40,799 | 168,390 | 3% | 1,148 | 1,356,304 | applied |
+| 48 | Cosigned freeze for 31 days | bridge Cosigned 14,546 → bridge Cosigned 16,289 → bridge Cosigned 42,270 → Read 11,877 → bridge (reply) 26,852 | 111,834 | 2% | 1,064 | 903,184 | refused: exit 240 (BAD_MESSAGE) |
 | 49 | Pause by a signer with no role | bridge Pause 13,143 → bridge Pause 26,598 | 39,741 | 1% | 747 | 323,904 | refused: exit 253 (NOT_AUTHORIZED) |
 | 50 | Pause by a member of the freeze authority | bridge Pause 13,143 → bridge Pause 26,598 | 39,741 | 1% | 747 | 323,904 | refused: exit 253 (NOT_AUTHORIZED) |
 | 51 | Pause of neither mints nor burns | bridge Pause 13,145 → bridge Pause 38,569 → Read 11,877 → bridge (reply) 26,803 | 90,394 | 2% | 747 | 729,128 | refused: exit 240 (BAD_MESSAGE) |
@@ -60,15 +60,15 @@ Bridge program image `25b3cc900f38579ad530335b994e3ae327ac600afe335b734bd00af783
 | 54 | Cosigned freeze of A's mints for two days by M1 and M3 | bridge Cosigned 14,546 → bridge Cosigned 16,289 → bridge Cosigned 42,286 → Read 11,877 → bridge (reply) 35,646 | 120,644 | 2% | 1,064 | 973,664 | applied |
 | 55 | Pause A's mints again (the watcher) | bridge Pause 13,143 → bridge Pause 38,567 → Read 11,877 → bridge (reply) 35,450 | 99,037 | 2% | 747 | 798,272 | applied |
 | 56 | Unfreeze by the watcher | bridge Freeze 13,250 → bridge Freeze 26,893 | 40,143 | 1% | 755 | 327,184 | refused: exit 253 (NOT_AUTHORIZED) |
-| 57 | Cosigned unfreeze of A by M2 and M3 | bridge Cosigned 14,553 → bridge Cosigned 16,289 → bridge Cosigned 42,302 → Read 11,877 → bridge (reply) 35,636 | 120,657 | 2% | 1,064 | 973,768 | applied |
+| 57 | Cosigned unfreeze of A by M2 and M3 | bridge Cosigned 14,546 → bridge Cosigned 16,289 → bridge Cosigned 42,302 → Read 11,877 → bridge (reply) 35,636 | 120,650 | 2% | 1,064 | 973,712 | applied |
 | 58 | SetCap ETH (A) by the admin, through config(A) | bridge SetCap 16,279 → bridge SetCap 34,311 → bridge SetCap 42,394 | 92,984 | 2% | 789 | 750,184 | applied |
 | 59 | SetCap ETH (A) below the floor | bridge SetCap 16,279 → bridge SetCap 34,311 → bridge SetCap 30,244 | 80,834 | 2% | 789 | 652,984 | refused: exit 240 (BAD_MESSAGE) |
 | 60 | Sunset sent to config(A) by anyone, not approved | bridge Sunset 24,224 | 24,224 | 0% | 431 | 197,240 | refused: exit 253 (NOT_AUTHORIZED) |
 | 61 | Sunset A by the replaced freeze authority | bridge Sunset 12,611 → bridge Sunset 26,236 | 38,847 | 1% | 671 | 316,144 | refused: exit 253 (NOT_AUTHORIZED) |
 | 62 | Sunset A by one member alone | bridge Sunset 12,611 → bridge Sunset 26,236 | 38,847 | 1% | 671 | 316,144 | refused: exit 253 (NOT_AUTHORIZED) |
-| 63 | Cosigned Sunset by one member | bridge Cosigned 13,262 → bridge Cosigned 28,524 | 41,786 | 1% | 708 | 339,952 | refused: exit 253 (NOT_AUTHORIZED) |
-| 64 | Cosigned Sunset approval by M1 and M2 | bridge Cosigned 14,078 → bridge Cosigned 15,828 → bridge Cosigned 37,392 | 67,298 | 1% | 980 | 546,224 | applied |
-| 65 | Cosigned Sunset approval again | bridge Cosigned 14,085 → bridge Cosigned 15,821 → bridge Cosigned 29,549 | 59,455 | 1% | 980 | 483,480 | refused: exit 244 (ALREADY_WRITTEN) |
+| 63 | Cosigned Sunset by one member | bridge Cosigned 13,255 → bridge Cosigned 28,524 | 41,779 | 1% | 708 | 339,896 | refused: exit 253 (NOT_AUTHORIZED) |
+| 64 | Cosigned Sunset approval by M1 and M2 | bridge Cosigned 14,078 → bridge Cosigned 15,821 → bridge Cosigned 37,392 | 67,291 | 1% | 980 | 546,168 | applied |
+| 65 | Cosigned Sunset approval again | bridge Cosigned 14,078 → bridge Cosigned 15,821 → bridge Cosigned 29,549 | 59,448 | 1% | 980 | 483,424 | refused: exit 244 (ALREADY_WRITTEN) |
 | 66 | Sunset A sent to config(A) by anyone, approved | bridge Sunset 31,151 | 31,151 | 1% | 431 | 252,656 | applied |
 | 67 | Sunset A again | bridge Sunset 24,224 | 24,224 | 0% | 431 | 197,240 | refused: exit 244 (ALREADY_WRITTEN) |
 | 68 | ImportRoot A after Sunset | bridge ImportRoot 29,544 | 29,544 | 1% | 2,025 | 252,552 | refused: exit 242 (FROZEN) |
@@ -201,23 +201,23 @@ Bridge program image `25b3cc900f38579ad530335b994e3ae327ac600afe335b734bd00af783
 | Cosigned freeze by one member | bridge Cosigned | 13,723 | 1 | 164 | 90 | 0 | 347 | – | 0 |
 | Cosigned freeze by one member | bridge Cosigned | 28,757 | 1 | 888 | 90 | 660 | 0 | – | 253 |
 | Cosigned freeze naming M1, M2, signed by M1 only | bridge Cosigned | 14,546 | 1 | 196 | 122 | 0 | 411 | – | 0 |
-| Cosigned freeze naming M1, M2, signed by M1 only | bridge Cosigned | 12,259 | 1 | 260 | 122 | 0 | 0 | – | 253 |
+| Cosigned freeze naming M1, M2, signed by M1 only | bridge Cosigned | 12,252 | 1 | 260 | 122 | 0 | 0 | – | 253 |
 | Cosigned freeze by M1 and a non-member | bridge Cosigned | 14,546 | 1 | 196 | 122 | 0 | 411 | – | 0 |
 | Cosigned freeze by M1 and a non-member | bridge Cosigned | 16,289 | 1 | 260 | 122 | 0 | 475 | – | 0 |
 | Cosigned freeze by M1 and a non-member | bridge Cosigned | 29,534 | 1 | 920 | 122 | 660 | 0 | – | 253 |
 | Cosigned freeze of A's mints for an hour by M1 and M2 | bridge Cosigned | 14,546 | 1 | 196 | 122 | 0 | 411 | – | 0 |
-| Cosigned freeze of A's mints for an hour by M1 and M2 | bridge Cosigned | 16,296 | 1 | 260 | 122 | 0 | 475 | – | 0 |
+| Cosigned freeze of A's mints for an hour by M1 and M2 | bridge Cosigned | 16,289 | 1 | 260 | 122 | 0 | 475 | – | 0 |
 | Cosigned freeze of A's mints for an hour by M1 and M2 | bridge Cosigned | 42,270 | 1 | 920 | 122 | 660 | 1,699 | 681 | 0 |
 | Cosigned freeze of A's mints for an hour by M1 and M2 | Read | 11,877 | 1 | 472 | 1 | 333 | 902 | – | 0 |
 | Cosigned freeze of A's mints for an hour by M1 and M2 | bridge (reply) | 35,646 | 1 | 1,156 | 337 | 681 | 1,849 | 660 | 0 |
 | Cosigned freeze of ETH (A) burns by M3 and M2 | bridge Cosigned | 15,055 | 1 | 216 | 142 | 0 | 451 | – | 0 |
-| Cosigned freeze of ETH (A) burns by M3 and M2 | bridge Cosigned | 16,805 | 1 | 280 | 142 | 0 | 515 | – | 0 |
+| Cosigned freeze of ETH (A) burns by M3 and M2 | bridge Cosigned | 16,798 | 1 | 280 | 142 | 0 | 515 | – | 0 |
 | Cosigned freeze of ETH (A) burns by M3 and M2 | bridge Cosigned | 37,416 | 1 | 940 | 142 | 660 | 1,106 | – | 0 |
 | Cosigned freeze of ETH (A) burns by M3 and M2 | bridge Freeze | 46,445 | 1 | 1,242 | 73 | 1,031 | 2,391 | 1,051 | 0 |
 | Cosigned freeze of ETH (A) burns by M3 and M2 | Read | 11,877 | 1 | 472 | 1 | 333 | 902 | – | 0 |
 | Cosigned freeze of ETH (A) burns by M3 and M2 | bridge (reply) | 40,799 | 1 | 1,526 | 337 | 1,051 | 2,590 | 1,031 | 0 |
 | Cosigned freeze for 31 days | bridge Cosigned | 14,546 | 1 | 196 | 122 | 0 | 411 | – | 0 |
-| Cosigned freeze for 31 days | bridge Cosigned | 16,296 | 1 | 260 | 122 | 0 | 475 | – | 0 |
+| Cosigned freeze for 31 days | bridge Cosigned | 16,289 | 1 | 260 | 122 | 0 | 475 | – | 0 |
 | Cosigned freeze for 31 days | bridge Cosigned | 42,270 | 1 | 920 | 122 | 660 | 1,699 | 681 | 0 |
 | Cosigned freeze for 31 days | Read | 11,877 | 1 | 472 | 1 | 333 | 902 | – | 0 |
 | Cosigned freeze for 31 days | bridge (reply) | 26,852 | 1 | 1,156 | 337 | 681 | 0 | – | 240 |
@@ -249,7 +249,7 @@ Bridge program image `25b3cc900f38579ad530335b994e3ae327ac600afe335b734bd00af783
 | Pause A's mints again (the watcher) | bridge (reply) | 35,450 | 1 | 1,148 | 337 | 673 | 1,841 | 660 | 0 |
 | Unfreeze by the watcher | bridge Freeze | 13,250 | 1 | 127 | 53 | 0 | 273 | – | 0 |
 | Unfreeze by the watcher | bridge Freeze | 26,893 | 1 | 851 | 53 | 660 | 0 | – | 253 |
-| Cosigned unfreeze of A by M2 and M3 | bridge Cosigned | 14,553 | 1 | 196 | 122 | 0 | 411 | – | 0 |
+| Cosigned unfreeze of A by M2 and M3 | bridge Cosigned | 14,546 | 1 | 196 | 122 | 0 | 411 | – | 0 |
 | Cosigned unfreeze of A by M2 and M3 | bridge Cosigned | 16,289 | 1 | 260 | 122 | 0 | 475 | – | 0 |
 | Cosigned unfreeze of A by M2 and M3 | bridge Cosigned | 42,302 | 1 | 920 | 122 | 660 | 1,699 | 681 | 0 |
 | Cosigned unfreeze of A by M2 and M3 | Read | 11,877 | 1 | 472 | 1 | 333 | 902 | – | 0 |
@@ -265,12 +265,12 @@ Bridge program image `25b3cc900f38579ad530335b994e3ae327ac600afe335b734bd00af783
 | Sunset A by the replaced freeze authority | bridge Sunset | 26,236 | 1 | 831 | 33 | 660 | 0 | – | 253 |
 | Sunset A by one member alone | bridge Sunset | 12,611 | 1 | 107 | 33 | 0 | 233 | – | 0 |
 | Sunset A by one member alone | bridge Sunset | 26,236 | 1 | 831 | 33 | 660 | 0 | – | 253 |
-| Cosigned Sunset by one member | bridge Cosigned | 13,262 | 1 | 144 | 70 | 0 | 307 | – | 0 |
+| Cosigned Sunset by one member | bridge Cosigned | 13,255 | 1 | 144 | 70 | 0 | 307 | – | 0 |
 | Cosigned Sunset by one member | bridge Cosigned | 28,524 | 1 | 868 | 70 | 660 | 0 | – | 253 |
 | Cosigned Sunset approval by M1 and M2 | bridge Cosigned | 14,078 | 1 | 176 | 102 | 0 | 371 | – | 0 |
-| Cosigned Sunset approval by M1 and M2 | bridge Cosigned | 15,828 | 1 | 240 | 102 | 0 | 435 | – | 0 |
+| Cosigned Sunset approval by M1 and M2 | bridge Cosigned | 15,821 | 1 | 240 | 102 | 0 | 435 | – | 0 |
 | Cosigned Sunset approval by M1 and M2 | bridge Cosigned | 37,392 | 1 | 900 | 102 | 660 | 1,585 | 660 | 0 |
-| Cosigned Sunset approval again | bridge Cosigned | 14,085 | 1 | 176 | 102 | 0 | 371 | – | 0 |
+| Cosigned Sunset approval again | bridge Cosigned | 14,078 | 1 | 176 | 102 | 0 | 371 | – | 0 |
 | Cosigned Sunset approval again | bridge Cosigned | 15,821 | 1 | 240 | 102 | 0 | 435 | – | 0 |
 | Cosigned Sunset approval again | bridge Cosigned | 29,549 | 1 | 900 | 102 | 660 | 0 | – | 244 |
 | Sunset A sent to config(A) by anyone, approved | bridge Sunset | 31,151 | 1 | 767 | 33 | 660 | 1,452 | 660 | 0 |
