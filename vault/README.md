@@ -556,6 +556,10 @@ block 12,107,296 with Foundry's gas rules, accounts impersonated):
 
 ## Sepolia round trip (rehearsed end to end on forks; the first attempt ran out of gas)
 
+**Which vault.** The rehearsals below and the owner's run deploy the v3 vault of the end-to-end fixture,
+from the tree of the branch `sepolia-cloud`. In this tree `script/RoundTrip.s.sol` constructs the v5 vault
+(the v5 constructor, with that branch's stages); that combination has not been rehearsed.
+
 `script/RoundTrip.s.sol` and `script/roundtrip.sh` run the return leg on Sepolia in stages:
 RISC Zero's Groth16 verifier, its emergency stop, a test token and the vault are created and both
 assets registered; the deposits follow one stage each (after each of the two that LEZ claims, the run

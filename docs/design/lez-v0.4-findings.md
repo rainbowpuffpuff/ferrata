@@ -183,6 +183,50 @@ Not verified: B's execution, B's revert list, any proof. The message is "valid o
 8. When will a token program, a freeze library and SPEL support v0.4, and when do `lez_core` #72/#74 land?
 9. Which module will carry verified light-client APIs, and will `eth_getProof` be available through the verified path?
 
+## 11. Observed since: real blocks, and v0.4.0-rc2
+
+Added 11 November 2026. Unlike §§1–10, these come from running the code, not from reading it.
+
+**On real blocks.** The lab's chain (`lez/lab/`: LEZ v0.4.0-rc1's sequencer with one Logos Blockchain
+node at `d480efc6`, one validator, leader proofs in dev mode; one sequencer, not a network) was read back
+from its record and from a copy of the node's state, 202 LEZ blocks and their 202 inscriptions
+([`checkpoint/RESULTS.md`](../../checkpoint/RESULTS.md), "Real LEZ blocks"; outputs in
+`checkpoint/realblocks/out/`, record in `lez/lab/results/record/`):
+
+- **Blocks are inscribed `Pending` and served `Finalized` [M].** All 202 blocks carry
+  `bedrock_status = Pending` (0) in the bytes inscribed on Bedrock, and the sequencer's RPC serves them
+  with `Finalized` (2). The block hash leaves the byte out (finding 3), so hashes agree; but an
+  inscription signs the inscribed bytes, so a prover that checks the inscription's signature must take
+  the block's bytes from the inscription, not from the RPC.
+- **The channel's posting timeframe is 0 on Bedrock, against LEZ's configured 300 [M].** The node
+  reports channel `0x01…01` with `posting_timeframe` 0, `posting_timeout` 0 and `config_tip_hash` 0:
+  `sequencer_service setup --create-channel` created it without a configuration op, although the
+  sequencer's configuration says 300. Under SPEC-v3 D3 (a rotation's timeframe must equal the bound one
+  and must not be 0) no key rotation of such a channel could be accepted, and a rule (A) vault needs a
+  non-zero turn: a bridge's channel must be created with a configuration op.
+- **Every inscription is `[ChannelInscribe, Transfer]` of the sequencer's own block [M]**, as read from
+  the code (§4, O1); observed on this one-sequencer devnet only.
+
+**v0.4.0-rc2** (`e3edf474`, tagged 9 November 2026, 59 commits after rc1;
+[`lez-rc2-changes.md`](lez-rc2-changes.md), measured in [`lez/RESULTS.md`](../../lez/RESULTS.md) §10,
+`lez/results/v0.4.0-rc2/`, `lez/live/results/v0.4.0-rc2/`):
+
+- Program loader (#943): loader state is a tagged `LoaderEntry` (`ProgramHeader::from_bytes` became
+  `from_loader_actor_state`); `WriteSegment` needs an authorised target; the loader is charged one cycle
+  per byte of loader state it reads, so deployment, free of execution gas on rc1, now pays it [M]: 373,910
+  for LEZ's `scripted` (4 transactions), 1,022,658 for the program (7 transactions); genesis checks a
+  builtin's image id.
+- The privacy circuit refuses two program-image witnesses for one account, and its image changed: no rc1
+  receipt verifies on rc2.
+- Wallet (#1035 and others): every public send is simulated; the declared gas limit becomes the
+  measurement plus 25 % unless pinned; a send whose simulation reverts is refused unless
+  `set_allow_revert(true)`; `DryRun` carries a report; `private_fee_headroom_blocks` was renamed.
+- Bedrock test chain (#1063): 4 s slots (was 1 s) and depth 3 (was 5), epochs of 240 s; blocks were final
+  14–25 s after publication on the rc2 sequencer, 5–6 s on rc1 [M].
+- Unchanged: `lee_core`'s program-facing API, `chain_state`'s block application, the RPC, risc0 3.0.5,
+  the Bedrock pin `d480efc6`. Ferrata's guests built against rc2 unchanged, and every harness table row
+  (438) equals rc1's [M]; no real proof has been made on rc2.
+
 ## Unconfirmed
 
 - Live testnet-0.4 parameters, endpoints and ids. No LEZ testnet 0.4 exists yet: rc1 is not Latest, roadmap v0.4 milestones are unchecked, and [spel#291](https://github.com/logos-co/spel/issues/291) says "Testnet 0.3 has been live since 1 Oct".

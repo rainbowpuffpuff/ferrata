@@ -33,7 +33,7 @@ checkpoint rows use the test committee, n = 4 and t = 3.
 
 ## On Sepolia since Glamsterdam: what the round trip really costs
 
-**Every figure below this section is Foundry's** (forge 1.3.6's EVM, which knows Ethereum's gas schedule up to
+**Every figure below this section is Foundry's** but those of "Creating the contracts on today's Sepolia" (forge 1.3.6's EVM, which knows Ethereum's gas schedule up to
 Prague/Osaka: today's mainnet). Sepolia has run **Glamsterdam** since 6 October 2026 13:53:36 UTC (epoch 353,024,
 timestamp 1,791,294,816: the activation table of [EIP-7773](https://eips.ethereum.org/EIPS/eip-7773), equal to the
 `activationTime` the node reports in `eth_config`; reth v2.7.0, 28 September 2026: "prepares Sepolia for the
@@ -59,7 +59,8 @@ What changed (the specifications, and the constants as the node itself charges t
   [EIP-7954](https://eips.ethereum.org/EIPS/eip-7954): code up to 64 KiB.
 
 **The fifteen transactions of the rehearsed round trip, priced by Sepolia's node** (10 November 2026, about 21:00
-UTC). The transactions are exactly those of the cloud rehearsal ([`../e2e/runs/cloud-fork/`](../e2e/runs/cloud-fork/)
+UTC). The round trip deploys the v3 vault of the end-to-end fixture (`e2e/`, branch `sepolia-cloud`), not v5; v5's
+creations on Sepolia are in "Creating the contracts on today's Sepolia" below. The transactions are exactly those of the cloud rehearsal ([`../e2e/runs/cloud-fork/`](../e2e/runs/cloud-fork/)
 `plan.json`, from forge's records of it), played in order on a local anvil fork of Sepolia; before each, the node
 (reth 2.10.0 at a public endpoint, block 12,107,143) was asked with that fork's state as overrides: `eth_estimateGas`,
 and `eth_simulateV1` of the transaction alone for the gas it uses. The finalisation echoes the rehearsal's beacon,

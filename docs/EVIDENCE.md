@@ -5,10 +5,10 @@ its proofs were real, how to re-check it, and the file with the details (every n
 taken from that file, or from the suite run of this commit for the last section). Words used for
 where it ran: **in-process harness** (LEZ v0.4.0-rc1's own state machine and a copy of its fee
 settlement, no sequencer), **live rc1 sequencer** (LEZ's unmodified v0.4.0-rc1 sequencer with a
-Logos Blockchain node), **local EVM** (Foundry), **fork of Sepolia** (anvil), **Sepolia** (read-only
-calls), **one L4 GPU** (one NVIDIA L4 on Modal), **build box** (a Modal CPU container), **laptop
-CPU**, **simulator**. **Stand-in** marks data we made ourselves where real data would go. Nothing
-here is audited or deployed; no transaction was sent to Sepolia or any public network.
+Logos Blockchain node), **live rc2 sequencer** (the same at v0.4.0-rc2), **local EVM** (Foundry), **fork of Sepolia** (anvil), **Sepolia** (read-only
+calls, but row 26's one transaction), **one L4 GPU** (one NVIDIA L4 on Modal), **build box** (a Modal CPU container), **laptop
+CPU**, **simulator**. **Stand-in** marks data we made ourselves where real data would go. Rows are numbered in the order they were added. Nothing here is audited; the only transaction sent to a public network
+is the owner's first Sepolia attempt (row 26), which ran out of gas; the owner's second run is under way.
 
 ## Ethereum state on LEZ (RFP-021)
 
@@ -21,6 +21,8 @@ here is audited or deployed; no transaction was sent to Sepolia or any public ne
 | 5 | A private attestation: a privately executed consumer reads a record, only the read is public | 380,577 user cycles; proven in 16.1 s, a 227,170-byte receipt, settled with the receipt verified | one L4 GPU; settlement in the in-process harness | **real** | `gpu-prover/README.md`, job `lez-attest` | [`gpu-prover/RESULTS.md`](../gpu-prover/RESULTS.md), [`lez/RESULTS.md`](../lez/RESULTS.md) §5 |
 | 6 | The program on a running sequencer | the 65 harness transactions of image `cec0bc68…` (before the attestation existed): same outcome, 64 at the same execution gas; a real proof of a private finality update, made on a CPU against the live instance, verified and applied | live rc1 sequencer, one validator (leader proofs in dev mode), rented Linux container | **real** (one update), the rest public | `lez/live/README.md` | [`lez/live/README.md`](../lez/live/README.md), [`lez/RESULTS.md`](../lez/RESULTS.md) §9 |
 | 7 | The attestation as a Logos module | `ferrata_attest_module` built (dev and portable `.lgx`), loaded under a headless Logos Core: 11 calls, each equal to the native call | build box (Nix, Logos from source) | none | `modules/scripts/check.sh` (Linux x86-64 with Nix, about 47 min from a fresh container) | [`modules/RESULTS.md`](../modules/RESULTS.md) |
+| 21 | The light client kept running: two instances following Sepolia and mainnet on a LEZ zone, unattended (the lab) | Sepolia: 36 updates (33 period, 3 finality), 32 committee handoffs (one live, into period 1,410), finalized slot 11,551,200; mainnet: 4 updates, finalized slot 15,627,008; 201 transactions, all applied; 202 blocks, all final on Bedrock; 4 sessions (1 failed to start); the record replays offline to LEZ's charges and both stores; as of the session of 10 Nov, 22:17 UTC | live rc1 sequencer, one validator (leader proofs in dev mode), on Modal, a session every 2 h; replay on the build box | none (public job path); the image is a rebuild of this tree's program source at the lab's path (`61b7b70d…`) | `lez/lab/lab.sh verify` | [`lez/lab/README.md`](../lez/lab/README.md) |
+| 22 | LEZ v0.4.0-rc2: the programs rebuilt unchanged, the same charges; a session on rc2's sequencer | harness: 27 of 27 tests, all 438 table rows (13 files) equal to rc1's on the same box, only image ids move; sequencer: 302 blocks, 98 sent (74 applied, 19 refused, 2 reverted, 2 dropped, 1 unfinished), the 65 with a harness row the same outcome, 64 the same execution gas; deployment now pays execution gas (`scripted` 373,910, the program 1,022,658); blocks final 14–25 s after publication (5–6 s on rc1) | in-process harness on rc2 (build box); live rc2 sequencer, one validator, on the build box | none on rc2: the one real proof was stopped at its 1,200 s cap | `lez/scripts/lez-select.sh v0.4.0-rc2`, then `lez/RESULTS.md` §10 | [`lez/RESULTS.md`](../lez/RESULTS.md) §10, [`docs/design/lez-rc2-changes.md`](design/lez-rc2-changes.md) |
 
 ## The bridge (RFP-022)
 
@@ -39,27 +41,36 @@ here is audited or deployed; no transaction was sent to Sepolia or any public ne
 | 18 | The return leg end to end: burn on a **stand-in** zone, checkpoint and release proofs, the v3 vault pays | every proof accepted with no mock on the Ethereum side, every negative case refused; the LEZ side is a stand-in (test keys, no node, no bridge program) | 16-core cloud machine and one L4 GPU (proofs); local EVM with the real verifier; fork of Sepolia | **real**, with the checkpoint before its `ImportRoot` fix (the fixed program refuses this fixture's import) | `cd vault && forge test --match-path 'test/real/*'` | [`e2e/README.md`](../e2e/README.md) |
 | 19 | The release statement and the v2 vault | the release guest takes 80,501 cycles whatever the witness, proven in 37.1–48.6 s; an ETH release costs 367,988 gas (checkpoint mocked) | laptop CPU; local EVM with the real verifier | **real** | `cd bridge && scripts/check.sh` | [`bridge/RESULTS.md`](../bridge/RESULTS.md) |
 | 20 | The finality rule (A) analysis | broke the earlier rule; the repaired rule shows no violation in 500 adversarial runs within its conditions (12,000 runs in all) | simulator (Python), not a network | none | `cd docs/design/finality-rule/sim && python3 experiments.py` | [`docs/design/finality-rule/RESULTS.md`](design/finality-rule/RESULTS.md) |
+| 23 | The privacy gate (B3): 20 users' round trip, every public byte of both chains, an adversary pairing each side | adversary at chance (5.0%) on private claims and private burns, 100% on the plaintext claim and on the naive nullifiers (`N = fid`, `NOut = burnId`); private claims (8,953 B), burns (7,857 B) and releases (324 B of calldata) identical once nullifiers, fresh randomness, own addresses and time are cut; 0 of 320 hidden values found in public bytes; from the seed alone 10 of 10 unclaimed deposits and 10 of 10 unreleased burns recovered; seven public fields §B6 does not list | in-process harness (dev mode) and local EVM (mock verifier), build box; **stand-in** Ethereum records on LEZ | none (dev mode, mock verifier) | `scripts/privacy/run.sh` | [`docs/privacy/RESULTS.md`](privacy/RESULTS.md) |
+| 24 | The return leg's checkpoint over **real** LEZ blocks: rule (B) over the lab's sequencer chain, accepted by the v5 vault | 202 of 202 blocks and inscriptions parsed and re-hashed as the sequencer made them; blocks 8..=202 (195 blocks, 585 transactions) in 7,659,550 user cycles, proven in 39.5 s; Groth16 seal 260 bytes; `submitCandidate` 347,832 and `finalizeAttested` 195,149 gas; 10 of 10 vault tests (acceptance at the hour, refusals of a flipped seal byte, another tip, key set, floors, rule (A)) | the lab's live rc1 sequencer chain (one validator, n = 1, t = 1); build box; one L4 GPU; local EVM | **real** checkpoint proof and Groth16 wrap, RISC Zero's verifier; the image is from before the `ImportRoot` fix (`checkpoint_b` `0xd3597543…`); no bridge program, no burns, attestation key and bridge fields are labels | `cd vault && forge test --match-path test/real/RealBlocks.t.sol` | [`checkpoint/RESULTS.md`](../checkpoint/RESULTS.md), "Real LEZ blocks" |
+| 25 | What the round trip costs on Sepolia today (Glamsterdam, EIP-8037 state gas), against Foundry's figures | the 16 transactions of the re-planned run: Foundry 11,030,062 gas, Sepolia's node 62,096,366 (5.63×); the v3 vault's creation 38,474,447 (over 2^24 and valid: state gas), the Groth16 verifier's 7,795,331 against Foundry's 1,179,986; v5 creations: vault 39,538,106, library 18,301,151 | Sepolia, read-only (`eth_estimateGas` and `eth_simulateV1` on the state of a fork of Sepolia) | n/a | `e2e/gasplan.py` (`vault/GAS.md`) | [`vault/GAS.md`](../vault/GAS.md), "On Sepolia since Glamsterdam"; [`gas-sepolia.json`](../e2e/runs/cloud-fork-2/gas-sepolia.json) |
+| 26 | The Sepolia round trip: the failed first attempt, the re-planned run and its rehearsals | attempt of 10 Nov: the Groth16 verifier's creation sent with forge's limit of 1,533,981 ran out of gas (tx `0x673cdb72…c7c1`, block 12,106,853, status 0); re-planned as `sepolia-live-2` from the deployer's nonce 1, every limit the node's estimate × 1.25; rehearsed in the cloud on forks of Sepolia, `ALL CHECKS PASSED`, 16 transactions (11,030,062 and 11,030,050 Foundry gas); the owner's live run: its hashes are added when it ends | Sepolia (one transaction, failed); fork of Sepolia (cloud runner on Modal); the v3 vault of the end-to-end fixture, not v5 | **real** in the rehearsals (candidate on one L40S, releases on the build box, all wrapped and verified) | `vault/script/verify-sepolia.sh` against a run's `manifest.json` | [`sepolia-live`](../e2e/runs/sepolia-live/README.md), [`sepolia-live-2`](../e2e/runs/sepolia-live-2/README.md), [`cloud-fork-3`](../e2e/runs/cloud-fork-3/README.md) |
 
 ## What the evidence does not show yet
 
-- **No crossing with Ethereum itself.** The vault is not deployed on Sepolia; the inbound crossing
-  on a live sequencer (row 11) ran on a stand-in beacon chain and a stand-in vault. The Sepolia
+- **No crossing with Ethereum itself.** No vault is deployed on Sepolia: the first attempt died at its first
+  transaction, and the owner's second run (row 26, the v3 vault of the end-to-end fixture) is under way; the
+  inbound crossing on a live sequencer (row 11) ran on a stand-in beacon chain and a stand-in vault. The Sepolia
   session waits for the owner's deposits into a new vault, and will deploy the programs frozen for it
   (bridge image `66722fc7…f4fa`), not the bridge program of this tree.
 - **The bridge program of this tree** (registry, fees, caps, freezes, `Sunset`, the Gloas header;
   image `f11b1aba…58eb` at the integration worktree's path) has run only in the in-process harness,
   in dev mode: no real proof of it (row 10's are of the earlier `25dfd9b2…`) and no sequencer.
 - **The return leg and every checkpoint proof are of images from before the `ImportRoot` fix**
-  (rows 15–18): the fixed checkpoint refuses the return leg's import, and re-making that fixture and
+  (rows 15–18 and 24, the real-block proof included): the fixed checkpoint refuses the return leg's import, and re-making that fixture and
   its proofs is not done. The images after the merge of rule (B) (`checkpoint/RESULTS.md`) have no
   proof or bench.
 - **Shallow state.** The bridge's imports and registrations ran under synthetic state tries of about
   40 accounts (row 9: the vault's own storage, under a synthetic state trie); a mainnet-depth
   attestation was measured for the attestation program (row 3: 274,842 cycles for one slot).
-- **On the light-client side**, the program's only sequencer run (row 6) is of an image from before
-  the attestation existed.
-- **Not measured**: proving on the declared user minimum (4 cores, macOS); the vault's
-  registrations, deposits and releases under Sepolia's pricing.
+- **On the light-client side**, the program's only real proof on a sequencer (row 6) is of an image from
+  before the attestation existed; the current source has run on sequencers without proofs (rows 21, 22).
+- **The checkpoint over real blocks** (row 24) is of a one-validator devnet with one channel key (n = 1)
+  and no bridge program; the attestor ran after the fact from a copy of the node's state, not as a module.
+- **Not measured**: proving on the declared user minimum (4 cores, macOS); v5's registrations, deposits
+  and releases under Sepolia's pricing (row 25 prices the v3 round trip and v5's creations only).
+- **Privacy** (row 23) is measured in dev mode with a mock verifier on synthetic records; timing and
+  amount residuals, network metadata and LEZ's own anonymity set are outside it.
 - **Not built** (README, "Specified but not built"): among them `ferrata_attestor`, the bridge Logos
   module, the gas drop, watchers' software, a permissionless `Sunset` on LEZ. Nothing is audited.
 
