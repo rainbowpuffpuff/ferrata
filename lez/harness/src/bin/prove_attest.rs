@@ -7,8 +7,12 @@
 //!
 //! The same commands as `prove_private` (see `RESULTS.md`, §3 and §5):
 //!
-//! * `prove_attest [--tx-out FILE]`: prove, then settle. With `--tx-out`, the proven transaction
-//!   (borsh `LeeTransaction`, the receipt included) is also written to FILE.
+//! * `prove_attest [--shape wallet|bare] [--tx-out FILE]`: prove, then settle. With `--tx-out`,
+//!   the proven transaction (borsh `LeeTransaction`, the receipt included) is also written to FILE.
+//!   `--shape wallet` (the default) pads the transaction as LEZ v0.4.0-rc1's wallet pads every
+//!   private transaction (seven private actions, 512-byte notes, the fee's recovery note:
+//!   [`harness::private::Shape::Wallet`]); `--shape bare` builds it as this binary did before
+//!   11 November 2026 (one private action, no padding, the refund to a public account).
 //! * `prove_attest --settle FILE`: settle a transaction written by `--tx-out`, without proving.
 //!   The same state is rebuilt from the fixture, the transaction must claim this binary's
 //!   consumer image, and LEZ's settlement verifies its receipt (a fake one only passes in dev
@@ -39,17 +43,19 @@ use lee::{Actor, PrivacyPreservingTransaction};
 use lee_core::{execution_state::BoundaryStep, ProgramImageClaim};
 
 fn usage() -> ! {
-    eprintln!("usage: prove_attest [--tx-out FILE] [--allow-dev-mode] | --settle FILE | --image-ids");
+    eprintln!("usage: prove_attest [--shape wallet|bare] [--tx-out FILE] [--allow-dev-mode] | --settle FILE | --image-ids");
     std::process::exit(2)
 }
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let (mut tx_out, mut settle_from, mut allow_dev_mode, mut only_ids) = (None, None, false, false);
+    let mut shape = Shape::Wallet;
     let mut it = args.iter();
     while let Some(arg) = it.next() {
         match arg.as_str() {
             "--tx-out" => tx_out = Some(it.next().unwrap_or_else(|| usage()).clone()),
+            "--shape" => shape = Shape::parse(it.next().unwrap_or_else(|| usage())).unwrap_or_else(|| usage()),
             "--settle" => settle_from = Some(it.next().unwrap_or_else(|| usage()).clone()),
             "--allow-dev-mode" => allow_dev_mode = true,
             "--image-ids" => only_ids = true,
@@ -62,11 +68,12 @@ fn main() {
     let dev_mode = matches!(std::env::var("RISC0_DEV_MODE").as_deref(), Ok("1") | Ok("true"));
     let consumer_image = image_id_hex(methods::FERRATA_CONSUMER_ID);
     println!(
-        "consumer image {consumer_image} ({} ELF bytes); program image {} ({} ELF bytes); RISC0_DEV_MODE {}",
+        "consumer image {consumer_image} ({} ELF bytes); program image {} ({} ELF bytes); RISC0_DEV_MODE {}; shape {}",
         methods::FERRATA_CONSUMER_ELF.len(),
         image_id_hex(methods::FERRATA_LEZ_ID),
         methods::FERRATA_LEZ_ELF.len(),
-        if dev_mode { "on" } else { "off" }
+        if dev_mode { "on" } else { "off" },
+        shape.name()
     );
     if only_ids {
         return;
@@ -117,7 +124,7 @@ fn main() {
             let started = Instant::now();
             let run =
                 s.w.chain
-                    .prove_and_settle_private(
+                    .prove_and_settle_private_as(
                         &account,
                         root,
                         borsh::to_vec(&message).unwrap(),
@@ -125,6 +132,7 @@ fn main() {
                         &catalog(),
                         100_000_000,
                         s.time,
+                        shape,
                     )
                     .expect("proves and settles");
             let total = started.elapsed();
