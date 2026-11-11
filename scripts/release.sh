@@ -30,17 +30,24 @@ build_() {
   echo "$(date -u +%FT%TZ) release build of $(git -C "$ROOT" rev-parse HEAD 2>/dev/null || echo unknown)" > "$log"
   # 1. The guests, at the crown build path (writes out/build/guests/{programs,r0bf,ids.txt}).
   ( "$ROOT/scripts/reproduce-image-ids.sh" build --out "$out/build/guests" > "$out/build/logs/guests.log" 2>&1 ) & local g=$!
-  # 2. The vault: forge build (solc 0.8.26, offline, vault/foundry.toml).
-  ( cd "$ROOT/vault" && forge build --sizes > "$out/build/logs/vault.log" 2>&1 ) & local v=$!
-  # 3. The CLI: its own workspace, Rust 1.98.1 (cli/rust-toolchain.toml), LEZ beside the repository.
-  ( cd "$ROOT/cli" && CARGO_BUILD_JOBS=8 cargo build --release --locked > "$out/build/logs/cli.log" 2>&1 ) & local c=$!
+  # 2. The vault: forge build (solc 0.8.26, offline, vault/foundry.toml) into an output directory of the release's own
+  #    (the sources' contracts only: test and script contracts are not part of a release; EIP-170 is checked on the
+  #    release's two contracts by release_manifest.py).
+  ( cd "$ROOT/vault" && forge build --skip test --skip script --out "$out/build/vault-out" \
+      --cache-path "$out/build/vault-cache" > "$out/build/logs/vault.log" 2>&1 ) & local v=$!
+  # 3. The CLI: its own workspace, Rust 1.98.1 (cli/rust-toolchain.toml), LEZ beside the repository, as cli/README.md
+  #    builds it. Not --locked: cli/Cargo.lock does not match cli/Cargo.toml at integration6 (cargo refuses --locked);
+  #    the lock cargo writes is copied into the release (cli/Cargo.lock) and its difference is logged.
+  ( cd "$ROOT/cli" && CARGO_BUILD_JOBS=8 cargo build --release > "$out/build/logs/cli.log" 2>&1;
+    r=$?; git -C "$ROOT" diff --stat -- cli/Cargo.lock >> "$out/build/logs/cli.log" 2>&1; exit $r ) & local c=$!
   local fail=0
   if wait $g; then echo "$(date -u +%T) guests ok" >> "$log"; else echo "$(date -u +%T) guests FAILED" >> "$log"; fail=1; fi
   if wait $v; then echo "$(date -u +%T) vault ok" >> "$log"; else echo "$(date -u +%T) vault FAILED" >> "$log"; fail=1; fi
   if wait $c; then echo "$(date -u +%T) cli ok" >> "$log"; else echo "$(date -u +%T) cli FAILED" >> "$log"; fail=1; fi
   mkdir -p "$out/build/vault" "$out/build/cli"
-  for a in FerrataVault FerrataRegistry; do cp "$ROOT/vault/out/$a.sol/$a.json" "$out/build/vault/" 2>/dev/null || fail=1; done
+  for a in FerrataVault FerrataRegistry; do cp "$out/build/vault-out/$a.sol/$a.json" "$out/build/vault/" 2>/dev/null || fail=1; done
   cp "$ROOT/cli/target/release/ferrata" "$out/build/cli/ferrata" 2>/dev/null || fail=1
+  cp "$ROOT/cli/Cargo.lock" "$out/build/cli/Cargo.lock" 2>/dev/null || fail=1
   {
     echo "rustc_host $(rustc --version)"
     echo "rustc_cli $(cd "$ROOT/cli" && rustc --version)"
@@ -69,7 +76,7 @@ package_() {
   mkdir -p "$d/vault/script/params"
   cp "$ROOT/vault/script/DeployVault.s.sol" "$ROOT/vault/script/deploy.sh" "$d/vault/script/"
   cp "$ROOT/vault/script/params/"*.json "$d/vault/script/params/"
-  cp "$b/cli/ferrata" "$d/cli/ferrata"
+  cp "$b/cli/ferrata" "$b/cli/Cargo.lock" "$d/cli/"
   cp "$ROOT/scripts/deploy-testnet.sh" "$d/" 2>/dev/null || true
   cp "$b/toolchains.txt" "$d/"
   python3 -I "$ROOT/scripts/release_manifest.py" make "$d" "$ver" "$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || echo unknown)" \

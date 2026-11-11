@@ -70,6 +70,8 @@ def vault_entry(d, name):
     if isinstance(meta, str):
         meta = json.loads(meta)
     settings = meta.get("settings", {})
+    if (len(runtime) - 2) // 2 > 24576:
+        sys.exit(f"make: {name}'s runtime is {(len(runtime) - 2) // 2} bytes, over EIP-170's 24,576")
     return entry(
         d, rel, f"{name}: ABI, creation and runtime bytecode (forge artifact)",
         compiler=(meta.get("compiler") or {}).get("version"),
@@ -115,6 +117,7 @@ def make(d, version, commit):
         "programs": programs,
         "vault": {n: vault_entry(d, n) for n in ("FerrataVault", "FerrataRegistry")},
         "cli": entry(d, "cli/ferrata", "the ferrata command-line tool, x86_64-unknown-linux-gnu"),
+        "cli_lock": entry(d, "cli/Cargo.lock", "the lockfile the CLI was built with"),
         "deploy": {
             "script": "deploy-testnet.sh" if os.path.exists(os.path.join(d, "deploy-testnet.sh")) else None,
             "vault_script": "vault/script/deploy.sh",
@@ -133,6 +136,8 @@ def files_of(m):
     for e in m["vault"].values():
         yield e
     yield m["cli"]
+    if "cli_lock" in m:
+        yield m["cli_lock"]
 
 
 def check(d):
