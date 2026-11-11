@@ -454,9 +454,11 @@ New in v4:
   make a release revert whenever a newer root matured between proving and inclusion.
 - **The stop's owner is renounced by the deployment, not checked by the vault**; the vault checks only that the
   stop answers `paused()` and is not tripped.
-- **Not built: D13's fees** (deposits escrowing the mint and relay fees, releases less the burn, relay and
-  checkpoint fees, the checkpoint fee to whoever finalised the root, fee schedules announced seven days ahead).
-  They change the deposit leaf, the registry and the LEZ claim together.
+- **D13's fees are built** as "Fees (v5, D13)" above describes: deposits escrow the mint and relay fees,
+  releases pay less the relay, burn and checkpoint fees, the checkpoint fee goes to the candidate's prover (review
+  M-2), schedules take effect seven days after announcement. As D13 specifies, a release pays the outbound fees in
+  force at the release, so a fee announced after a burn applies to it (review L-2, not fixed:
+  `../notes/reviews/security/fixes-2026-11-11.md`).
 
 ## Known limits (SPEC-v3 D8, kept) and residual risks
 
@@ -800,7 +802,11 @@ the real-block checkpoint's 10 tests, and `test/PrivacySuite.t.sol`, the privacy
 its LEZ half's output), 0 failed; the 12 tests of `test/SecurityReview.t.sol` fail on `integration4`'s vault;
 `forge coverage` 100% of lines, statements, branches and functions of both files (vault 431, 537, 102, 82; library
 245, 338, 45, 33); `tools/mutation_spotcheck.py` 254/254 mutants killed, every one by the unit suites (the tool now
-lets the privacy suite skip in its workspaces; before, it failed there and would have hidden a survivor).
+lets the privacy suite skip in its workspaces; before, it failed there and would have hidden a survivor). On
+`integration5`, the merged tree (the same `src/`, build box, 11 November 2026): `forge test` 38 suites, 433 passed,
+1 skipped (`PrivacySuite`, run by `scripts/privacy/run.sh`), 43 of them in `test/real/` (10 suites); invariants 28
+passed; coverage 100% as above; FerrataVault runtime 24,254 bytes (322 under EIP-170), FerrataRegistry 12,504
+(`../docs/evidence-suites.txt`).
 
 The deployment and rehearsal scripts (`script/DeployVault.s.sol`, `script/ForkRehearsal.s.sol`) are not run by
 `forge test`; `forge coverage` lists them at 0%. `script/fork-rehearsal.sh` runs every step of the first under both
