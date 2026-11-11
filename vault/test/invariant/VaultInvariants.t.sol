@@ -20,7 +20,7 @@ contract VaultInvariants is VaultTestBase {
         uint64 parentImportedLeafCount;
         bool parentSunset;
         uint64 finalizedAt;
-        address finalizer;
+        address prover;
     }
 
     VaultHandler internal handler;
@@ -298,7 +298,7 @@ contract VaultInvariants is VaultTestBase {
             c.parentImportedLeafCount,
             c.parentSunset,
             c.finalizedAt,
-            c.finalizer
+            c.prover
         );
     }
 }

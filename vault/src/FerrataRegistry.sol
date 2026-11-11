@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 pragma solidity ^0.8.26;
 
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
 import {FerrataVault} from "./FerrataVault.sol";
 
 /// @title FerrataRegistry
@@ -13,6 +16,8 @@ import {FerrataVault} from "./FerrataVault.sol";
 ///      the LEZ side attests (D13; layout of bridge-wire `registry_slot` and `fee_slot`): a slot address that does
 ///      not depend on the vault's Solidity layout, and a hash the LEZ guest can recompute without keccak.
 library FerrataRegistry {
+    using SafeERC20 for IERC20;
+
     // FerrataVault's constants of the same names (a contract's constants are not reachable from a library); the
     // registration and cap tests pin each against the vault's public value.
     uint256 private constant MAX_DENOMINATIONS = 8;
@@ -53,9 +58,9 @@ library FerrataRegistry {
         mapping(address token => FerrataVault.DelayChange[]) storage delays,
         mapping(address token => mapping(uint256 index => FerrataVault.FeeSchedule)) storage schedules,
         address token,
-        FerrataVault.TokenParams calldata p,
-        Limits memory limits
+        FerrataVault.TokenParams calldata p
     ) external {
+        Limits memory limits = _limits();
         FerrataVault.TokenConfig storage cfg = tokens[token];
         if (cfg.registered) revert FerrataVault.TokenAlreadyRegistered();
         if (token != address(0) && token.code.length == 0) revert FerrataVault.TokenHasNoCode();
@@ -197,12 +202,12 @@ library FerrataRegistry {
         address token,
         FerrataVault.Direction direction,
         uint256 capacity,
-        uint256 refillPerSecond,
-        Limits memory limits
+        uint256 refillPerSecond
     ) external {
         FerrataVault.TokenConfig storage cfg = tokens[token];
         if (!cfg.registered) revert FerrataVault.TokenNotRegistered();
         if (direction == FerrataVault.Direction.Release) {
+            Limits memory limits = _limits();
             checkReleaseFloor(
                 capacity,
                 refillPerSecond,
@@ -226,10 +231,10 @@ library FerrataRegistry {
         FerrataVault.Bucket storage releaseCap,
         FerrataVault.Direction direction,
         uint256 capacity,
-        uint256 refillPerSecond,
-        Limits memory limits
+        uint256 refillPerSecond
     ) external {
         if (direction == FerrataVault.Direction.Release) {
+            Limits memory limits = _limits();
             checkReleaseFloor(capacity, refillPerSecond, 1, 1, limits.releaseCapFloor, limits.releaseRefillFloor);
         }
         _updateBucket(direction == FerrataVault.Direction.Deposit ? depositCap : releaseCap, capacity, refillPerSecond);
@@ -243,10 +248,10 @@ library FerrataRegistry {
         mapping(address token => FerrataVault.DelayChange[]) storage delays,
         address token,
         uint256 delay,
-        Limits memory limits,
         uint256 fromCheckpoint
     ) external {
         if (!tokens[token].registered) revert FerrataVault.TokenNotRegistered();
+        Limits memory limits = _limits();
         checkReleaseDelay(delay, limits.minReleaseDelay, limits.revokeWindow);
         delays[token].push(FerrataVault.DelayChange({fromCheckpoint: fromCheckpoint, delay: delay}));
         emit FerrataVault.ReleaseDelaySet(token, delay, fromCheckpoint);
@@ -263,6 +268,29 @@ library FerrataRegistry {
         bytes32 tipHash = cand.tipHash;
         delete candidates[newState];
         emit FerrataVault.CandidateCancelled(newState, tipId, tipHash);
+    }
+
+    /// @notice The vault's `claimOwed` (documented there; the vault holds the reentrancy guard): pays the caller what it is
+    ///         owed in `token`, to itself only. ETH is sent without copying return data, as the vault's own payments are.
+    function claimOwed(
+        mapping(address payee => mapping(address token => uint256)) storage owed,
+        mapping(address token => uint256) storage totalOwed,
+        address token
+    ) external {
+        uint256 amount = owed[msg.sender][token];
+        if (amount == 0) revert FerrataVault.NothingOwed();
+        owed[msg.sender][token] = 0;
+        totalOwed[token] -= amount;
+        emit FerrataVault.OwedClaimed(msg.sender, token, amount);
+        if (token == address(0)) {
+            bool ok;
+            assembly ("memory-safe") {
+                ok := call(gas(), caller(), amount, 0, 0, 0, 0)
+            }
+            if (!ok) revert FerrataVault.EthTransferFailed();
+        } else {
+            IERC20(token).safeTransfer(msg.sender, amount);
+        }
     }
 
     /// @notice Records the admin's role proposal; the vault's section on timelocked role changes documents it.
@@ -321,6 +349,14 @@ library FerrataRegistry {
             checkpoints[i].revoked = true;
         }
         emit FerrataVault.CheckpointsRevoked(index, end - 1, first.parentState);
+    }
+
+    /// @dev The deployment's bounds, read from the vault's own immutables: this library runs in the vault's context, so
+    ///      `address(this)` is the vault. Read here rather than passed by the vault, which keeps the vault's runtime
+    ///      under EIP-170 (admin calls only).
+    function _limits() private view returns (Limits memory) {
+        FerrataVault v = FerrataVault(payable(address(this)));
+        return Limits(v.minReleaseDelay(), v.revokeWindow(), v.releaseCapFloor(), v.releaseRefillFloor());
     }
 
     /// @dev Stored level plus the refill since `lastUpdate`, saturating at capacity without overflowing:

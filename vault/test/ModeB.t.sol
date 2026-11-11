@@ -64,7 +64,7 @@ contract ModeBTest is VaultTestBase {
         vb.submitCandidate(c, SEAL);
         uint256 at = block.timestamp;
         assertEq(vb.beaconCount(), 0);
-        (bytes32 digest, bytes32 tipHash, uint64 tipId, uint32 t, uint48 submittedAt, uint32 deltaAtSubmit,) =
+        (bytes32 digest, bytes32 tipHash, uint64 tipId, uint32 t, uint48 submittedAt, uint32 deltaAtSubmit,,) =
             vb.candidates(c.newState);
         assertEq(digest, sha256(_checkpointJournalBytes(_checkpointJournal(vb, LEZ_CONFIG_ID, c))));
         assertEq(tipHash, c.tipHash);
@@ -92,11 +92,11 @@ contract ModeBTest is VaultTestBase {
         vm.prank(relayer); // permissionless
         vb.finalizeAttested(c);
         assertEq(vb.finalState(), c.newState);
-        assertEq(vb.lastFinalizedAt(), block.timestamp);
+        assertEq(vb.keylessFrom(), block.timestamp); // the keyless-retirement clock restarts
         (bool accepted, uint256 finalizedAt) = vb.burnRootStatus(ROOT);
         assertTrue(accepted);
         assertEq(finalizedAt, block.timestamp);
-        (,,,, uint48 submittedAt,,) = vb.candidates(c.newState);
+        (,,,, uint48 submittedAt,,,) = vb.candidates(c.newState);
         assertEq(submittedAt, 0); // consumed
         vm.expectRevert(FerrataVault.UnknownCandidate.selector);
         vb.finalizeAttested(c); // once only

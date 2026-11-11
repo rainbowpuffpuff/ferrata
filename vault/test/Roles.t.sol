@@ -20,6 +20,8 @@ contract RolesTest is VaultTestBase {
     uint256 internal constant TIMELOCK = 14 days;
     uint256 internal constant PAUSE = 12 hours;
     uint256 internal constant KEYLESS = 30 days;
+    /// The shortest candidate wait: delta + (tMin - 1) turns. Keyless retirement counts from one such wait (M-1).
+    uint256 internal constant MIN_WAIT = DELTA + (uint256(T_MIN) - 1) * TURN_SECONDS;
 
     address internal watcher2 = makeAddr("watcher2");
     address internal newFreezer = makeAddr("newFreezer");
@@ -238,14 +240,15 @@ contract RolesTest is VaultTestBase {
 
     // ---- keyless retirement -----------------------------------------------------------------------------------------
 
-    function test_retire_anyoneThirtyDaysAfterDeploymentWithoutACheckpoint() public {
-        uint256 deployedAt = vault.lastFinalizedAt();
+    function test_retire_anyoneThirtyDaysAfterTheFirstFinalisableMomentWithoutACheckpoint() public {
+        uint256 deployedAt = vault.keylessFrom();
         assertEq(deployedAt, block.timestamp); // the clock starts at deployment (setUp ran in this block)
-        vm.warp(deployedAt + KEYLESS - 1);
+        assertEq(vault.retireOpensAt(), deployedAt + MIN_WAIT + KEYLESS);
+        vm.warp(deployedAt + MIN_WAIT + KEYLESS - 1);
         vm.prank(alice);
         vm.expectRevert(FerrataVault.RetireNotOpen.selector);
         vault.retire();
-        vm.warp(deployedAt + KEYLESS);
+        vm.warp(deployedAt + MIN_WAIT + KEYLESS);
         vm.expectEmit(true, true, true, true, address(vault));
         emit FerrataVault.Retired();
         vm.prank(alice);
@@ -260,15 +263,58 @@ contract RolesTest is VaultTestBase {
         vm.warp(block.timestamp + 20 days);
         _acceptRoot(ROOT);
         uint256 finalizedAt = block.timestamp;
-        assertEq(vault.lastFinalizedAt(), finalizedAt);
-        vm.warp(finalizedAt + KEYLESS - 1);
+        assertEq(vault.keylessFrom(), finalizedAt);
+        vm.warp(finalizedAt + MIN_WAIT + KEYLESS - 1);
         vm.prank(alice);
         vm.expectRevert(FerrataVault.RetireNotOpen.selector);
         vault.retire();
-        vm.warp(finalizedAt + KEYLESS);
+        vm.warp(finalizedAt + MIN_WAIT + KEYLESS);
         vm.prank(alice);
         vault.retire();
         assertTrue(vault.retired());
+    }
+
+    /// @notice A submission restarts the clock (M-1); a raised delta lengthens the shortest wait it adds.
+    function test_retireOpensAt_aSubmissionRestartsTheClock_andTheWaitIsTodays() public {
+        vm.warp(block.timestamp + 10 days);
+        FerrataVault.Checkpoint memory c = _nextCheckpoint(ROOT);
+        _submit(c);
+        assertEq(vault.keylessFrom(), block.timestamp);
+        assertEq(vault.retireOpensAt(), block.timestamp + MIN_WAIT + KEYLESS);
+        vm.prank(admin);
+        vault.raiseDelta(DELTA + 1 days);
+        assertEq(vault.retireOpensAt(), block.timestamp + MIN_WAIT + 1 days + KEYLESS);
+    }
+
+    /// @notice Lifting a freeze that is not in force, or one that lapsed before the clock last restarted, never moves
+    ///         the clock back; a watcher pause in force delays the opening to its end.
+    function test_retireOpensAt_liftingAnOldFreezeNeverMovesTheClockBack() public {
+        vm.prank(watcher);
+        vault.pauseCheckpoints();
+        uint256 pauseEnd = vault.checkpointsFrozenUntil();
+        assertEq(vault.retireOpensAt(), pauseEnd + MIN_WAIT + KEYLESS);
+        vm.warp(block.timestamp + 20 days);
+        _acceptRoot(ROOT);
+        uint256 opens = vault.retireOpensAt();
+        assertEq(opens, block.timestamp + MIN_WAIT + KEYLESS);
+        vm.prank(freezer);
+        vault.setCheckpointsFrozen(false);
+        assertEq(vault.retireOpensAt(), opens);
+    }
+
+    /// @notice With a revocation window longer than the keyless period, the keyless opening comes first even after a
+    ///         sunset checkpoint: the earlier of the two applies.
+    function test_retireOpensAt_theEarlierOfKeylessAndSunset() public {
+        FerrataVault.Deployment memory d = _deployment(IRiscZeroVerifier(address(estop)), LEZ_CONFIG_ID);
+        d.revokeWindow = 40 days;
+        FerrataVault v = new FerrataVault(d);
+        _registerDefaultTokens(v);
+        _depositInto(v, alice, ETH, 0, keccak256("leaf"));
+        FerrataVault.Checkpoint memory c = _nextCheckpoint(v, ROOT, 1, true);
+        _submit(v, LEZ_CONFIG_ID, c);
+        _finalizeAfterDelta(v, LEZ_CONFIG_ID, c);
+        assertEq(v.retireOpensAt(), block.timestamp + MIN_WAIT + KEYLESS);
+        assertEq(v.sunsetFinalizedAt(), block.timestamp);
     }
 
     function test_retire_theFreezeAuthorityAtAnyTime() public {

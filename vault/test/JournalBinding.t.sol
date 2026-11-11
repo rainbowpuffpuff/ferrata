@@ -231,7 +231,7 @@ contract CheckpointJournalBindingTest is VaultTestBase {
 
         _proveCheckpoint(_checkpointJournal(c)); // control
         vault.submitCandidate(c, SEAL);
-        (,,,, uint48 submittedAt,,) = vault.candidates(c.newState);
+        (,,,, uint48 submittedAt,,,) = vault.candidates(c.newState);
         assertEq(submittedAt, block.timestamp);
     }
 

@@ -109,7 +109,7 @@ contract ReturnLegTest is ReturnLegFixture {
 
         // Candidate: the real checkpoint seal, through the stop, into the Groth16 verifier.
         uint256 submittedAt = _submit();
-        (bytes32 digest,,,, uint48 at,,) = vault.candidates(c.newState);
+        (bytes32 digest,,,, uint48 at,,,) = vault.candidates(c.newState);
         // v4 keeps the digest of the journal the real seal was verified against.
         assertEq(digest, sha256(candidate.journal));
         assertEq(c.parentState, genesisState);
