@@ -224,7 +224,7 @@ Rectangle {
             TabButton { objectName: "tab.registry"; text: "Registry" }
             TabButton { objectName: "tab.admin"; text: "Admin" }
             TabButton { objectName: "tab.privacy"; text: "Privacy" }
-            TabButton { objectName: "tab.settings"; text: "Settings" }
+            TabButton { objectName: "tab.settings"; text: "Endpoints" }
         }
 
         StackLayout {

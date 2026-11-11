@@ -13,7 +13,7 @@ Not audited; a prototype. `RESULTS.md` records what ran.
 | Registry | per token: registration, denominations, mint, relay, burn and checkpoint fees, escrow, the vault's deposit and release caps and the bridge program's mint and burn caps with their utilisation, freezes | U.02 (registry view) |
 | Admin | roles and the cap floor; `SetCap` as the admin; `Freeze` as the freeze authority; what each role can and cannot do | U.02 (admin UI) |
 | Privacy | what is public on Ethereum, public on LEZ and private, for deposit, claim, burn and release, and the residual correlations | U.07 |
-| Settings | the Ethereum RPC address and the LEZ sequencer or zone, applied and tested in place; the backend (devnet or the Logos core module) | U.09 |
+| Endpoints | the Ethereum RPC address and the LEZ sequencer or zone, applied and tested in place; the backend (devnet or the Logos core module) | U.09 |
 
 Errors are mapped from the program's and the vault's codes to an action (U.08: unsupported token or
 amount, cap exceeded, verification failed, not final yet, already claimed or released, frozen,

@@ -1,0 +1,2 @@
+miniapp devnet: http://127.0.0.1:18600/rpc (anvil http://127.0.0.1:18545, vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9, configId 0x1ad18176a1e703390dc39e9f6e492bb82b998e873841d201d8c9007faa230b62)
+miniapp devnet: stopped

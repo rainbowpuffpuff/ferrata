@@ -14,7 +14,7 @@ const screens = [
   ["Registry", ["Token registry: amounts, caps and utilisation"]],
   ["Admin", ["SetCap (admin)", "Freeze (freeze authority)"]],
   ["Privacy", ["What is public and what is private"]],
-  ["Settings", ["Ethereum RPC", "LEZ sequencer or zone"]],
+  ["Endpoints", ["Ethereum RPC", "LEZ sequencer or zone"]],
 ];
 
 test("ferrata_bridge_ui: loads in Basecamp", async (app) => {
@@ -34,7 +34,7 @@ for (const [tab, texts] of screens) {
 // switches the view to it in Settings, connects the wallet and makes a deposit through the approval prompt.
 if (process.env.FERRATA_DEVNET === "1") {
   test("ferrata_bridge_ui: a private deposit through the devnet, inside Basecamp", async (app) => {
-    await app.click("Settings");
+    await app.click("Endpoints");
     await app.click("devnet backend (HTTP)");
     await app.click("Apply and test");
     await app.waitFor(async () => { await app.expectTexts(["Connected: chain 1"]); },
