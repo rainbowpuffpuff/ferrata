@@ -1,0 +1,14 @@
+{
+ "label": "STAND-IN (crown-proofs rehearsal R1 on the lab's real blocks: bridge header, attestation root, salt are labels; vault = the crown plan's predicted address; no bridge program in these blocks)",
+ "bedrockGenesisId": "0x19383c41772ed9e87c929c6985a69b5c33894e347a89de255879acd37ff7d2ed",
+ "channelId": "0x0101010101010101010101010101010101010101010101010101010101010101",
+ "bridgeHeader": "0x438de7e03157f5274f553b4a2b974ecd86f9fcab2cc02dbbee15bcb40304a0d7",
+ "bridgeImageId": "0x0be480908f95ca3d73e22f6325cf1267ffa1050b56ea574d9e0bcb7adadd25df",
+ "chainId": 11155111,
+ "vault": "0x57b437F0BE9f312f0a3bbc784C2F12a831aEce6E",
+ "attestationRootId": "0x228ec1a60c64bd10baec3000ba9be9a57575bdba5551743e3ad3cdf728009c86",
+ "salt": "0x7bbd3a584e63703619f74ee5235ce0c3d32302d281f36462c6b8657ff4f95d00",
+ "nMin": 1,
+ "tMin": 1,
+ "configId": null
+}
