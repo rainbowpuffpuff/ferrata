@@ -12,13 +12,17 @@
 //!    tip, which must be `T` or a block after `T` on the path. The attestation key must have signed
 //!    the final-tier message v2 over this deployment, `keySetHash(K)` and that tip
 //!    ([`attestor_core`]). A channel key or an attestation key that appears twice refuses the
-//!    input. At least `t(n)` entries are needed. No producer inscription, no exclusion, no beacon:
-//!    `echoNonce` is 0.
-//! 6. The 17-word journal of SPEC-v3 D3 item 5, word for word rule (A)'s candidate journal over the
+//!    input. At least `t(n)` entries are needed. No exclusion, no beacon: `echoNonce` is 0.
+//! 6. The producer: one inscription of `T` is checked exactly as rule (A) checks it (a well-framed
+//!    Mantle transaction inscribing `T`'s bytes on this channel, its signer's `verify_strict` over
+//!    the transaction hash), and its signer must be in `K`. So the attestation keys alone cannot
+//!    certify a history: one channel key of `K` must also have signed an inscription of `T`.
+//! 7. The 17-word journal of SPEC-v3 D3 item 5, word for word rule (A)'s candidate journal over the
 //!    same blocks and key set. The vault tells the rules apart by the guest's image id.
 //!
-//! Checks run cheapest first (membership, repetition, the path, then the two signatures), and the
-//! first failure refuses the input.
+//! Checks run cheapest first (membership, repetition, the path, then the two signatures of each
+//! attestation, the count, then `T`'s inscription, which hashes `T` whole), and the first failure
+//! refuses the input.
 
 use alloc::vec::Vec;
 
@@ -36,6 +40,8 @@ use crate::{Error, Hash};
 pub struct OutcomeB {
     pub journal: CheckpointJournal,
     pub new_state: State,
+    /// The channel key that inscribed `T`.
+    pub producer: Hash,
     /// Attestations counted (all of them: every entry is checked and none may repeat a key).
     pub attestors: u32,
     /// The threshold they had to meet.
@@ -104,6 +110,12 @@ pub fn run_checkpoint_b(input: &CheckpointInputB<'_>) -> Result<OutcomeB, Error>
         return Err(Error::InsufficientAttestations { have, need });
     }
 
+    // The producer: one checked inscription of T, by a key of K (rule (A)'s check).
+    let producer = input.producer.check(input.blocks[t_index], &config.channel_id)?;
+    if !state.keys.contains(&producer.signer) {
+        return Err(Error::NotAccredited);
+    }
+
     let journal = CheckpointJournal {
         evm_chain_id: config.evm_chain_id,
         vault: config.vault,
@@ -123,5 +135,5 @@ pub fn run_checkpoint_b(input: &CheckpointInputB<'_>) -> Result<OutcomeB, Error>
         t: need,
     };
     let path_after_tip = u32::try_from(path.len() - 1).unwrap_or(u32::MAX);
-    Ok(OutcomeB { journal, new_state: state, attestors: have, threshold: need, path_after_tip })
+    Ok(OutcomeB { journal, new_state: state, producer: producer.signer, attestors: have, threshold: need, path_after_tip })
 }

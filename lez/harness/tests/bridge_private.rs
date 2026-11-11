@@ -92,10 +92,9 @@ fn a_private_claim_publishes_only_the_nullifier_the_denomination_and_the_root_re
             leaf_count: 8,
             mint_to: None,
             relayer: Some(*relayer().value()),
-            time_ms: w.time,
         },
         "Issue carries N, the token, the denomination, the root read, the fee schedule's range (not the leaf \
-         index), the relayer and the time; no destination"
+         index) and the relayer; no destination and no time"
     );
     assert_eq!(outgoing[2].0, fee_inbox, "the fee transfer");
     assert!(matches!(borsh::from_slice(&outgoing[2].1), Ok(native_token::Message::Credit(_))));

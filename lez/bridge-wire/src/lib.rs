@@ -33,7 +33,11 @@ use ferrata_bridge_core::{
     inbound, sha256,
     tree::{MerklePath, TREE_DEPTH},
 };
-use ferrata_lez_wire::attest::{AccountQuery, Attestation, Fact, Request, SlotQuery, Statement};
+use ferrata_core::{attest::HeaderRecord as ExecutionRecord, witness::ExecutionSummary};
+use ferrata_lez_wire::{
+    attest::{AccountQuery, Attestation, Fact, Request, SlotQuery, Statement},
+    RecordState,
+};
 use lee_core::{
     account::{AccountId, Actor},
     program::PdaSeed,
@@ -133,11 +137,8 @@ pub const MAX_DENOMINATIONS: usize = 8;
 pub const FEE_CEILING_DIVISOR: u128 = 100;
 /// The notice of a fee change in Ethereum seconds: seven days.
 pub const FEE_NOTICE_SECONDS: u64 = 7 * 24 * 3600;
-/// The longest freeze, in LEZ milliseconds: 30 days, unless renewed.
+/// The longest freeze, in milliseconds of attested Ethereum time: 30 days, unless renewed.
 pub const MAX_FREEZE_MS: u64 = 30 * 24 * 3600 * 1000;
-/// The validity window of a caller-supplied time: the block's timestamp must lie in
-/// `[t, t + TIME_WINDOW_MS)`, so `t` is at most the block time and at most this much behind it.
-pub const TIME_WINDOW_MS: u64 = 10 * 60 * 1000;
 /// A bucket of this capacity never refuses.
 pub const UNLIMITED: u128 = u128::MAX;
 
@@ -345,8 +346,13 @@ impl Bucket {
         Self { capacity: p.capacity, refill_per_second: p.refill_per_second, level: p.capacity, last_ms: 0 }
     }
 
+    /// Refill for the time from `last_ms` to `now_ms`. A bucket that has not seen a clock yet
+    /// (`last_ms` 0: its gate has read no record) starts counting at the first time it sees,
+    /// rather than refilling for the decades since 1970.
     fn refill(&mut self, now_ms: u64) {
-        if now_ms > self.last_ms {
+        if self.last_ms == 0 {
+            self.last_ms = now_ms;
+        } else if now_ms > self.last_ms {
             let add = u128::from(now_ms - self.last_ms).saturating_mul(self.refill_per_second) / 1000;
             self.level = self.capacity.min(self.level.saturating_add(add));
             self.last_ms = now_ms;
@@ -373,8 +379,13 @@ impl Bucket {
     }
 }
 
-/// Freezes and caps of one scope (a token, or the configuration as a whole), with the latest
-/// caller-supplied time it has accepted (monotone).
+/// Freezes and caps of one scope (a token, or the configuration as a whole), and its clock.
+///
+/// `now_ms` is attested Ethereum time: the newest execution timestamp (in milliseconds) this
+/// gate has read from a record of the configuration's attestation instance ([`record_time`]),
+/// moved only by `Tick` and `Freeze`, each of which reads such a record, and only forward. No
+/// message carries a caller's time, so neither a caller nor the producer of the block (whose
+/// timestamp LEZ v0.4.0-rc1 neither bounds nor orders) can move it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub struct Gate {
     pub now_ms: u64,
@@ -386,12 +397,13 @@ pub struct Gate {
 }
 
 impl Gate {
-    pub fn new(cap: CapParams) -> Self {
-        Self { now_ms: 0, mints_until: 0, burns_until: 0, mint: Bucket::full(cap), burn: Bucket::full(cap) }
+    /// Full buckets of `cap`, at attested time `now_ms` (a token starts at its configuration's).
+    pub fn new(cap: CapParams, now_ms: u64) -> Self {
+        let bucket = Bucket { last_ms: now_ms, ..Bucket::full(cap) };
+        Self { now_ms, mints_until: 0, burns_until: 0, mint: bucket, burn: bucket }
     }
 
-    /// Advance the stored time to `t` if it is later (v0.4 programs cannot read the clock: `t` is
-    /// the caller's, bounded by the transaction's validity window).
+    /// Advance the clock to `t`, the time of an attested record, if it is later: monotone.
     pub fn advance(&mut self, t: u64) {
         self.now_ms = self.now_ms.max(t);
     }
@@ -408,13 +420,14 @@ impl Gate {
         bucket.take(value, now)
     }
 
-    /// Freeze (or, with `until_ms = 0`, unfreeze) mints and/or burns at time `t`: at most
-    /// `MAX_FREEZE_MS` ahead.
-    pub fn freeze(&mut self, mints: bool, burns: bool, until_ms: u64, t: u64) -> Result<(), u8> {
-        if until_ms != 0 && (until_ms <= t || until_ms - t > MAX_FREEZE_MS) {
+    /// Freeze (or, with `until_ms = 0`, unfreeze) mints and/or burns until `until_ms`, which must
+    /// lie after the gate's attested time and at most `MAX_FREEZE_MS` after it. The handler first
+    /// advances the clock to the record the `Freeze` names.
+    pub fn freeze(&mut self, mints: bool, burns: bool, until_ms: u64) -> Result<(), u8> {
+        let now = self.now_ms;
+        if until_ms != 0 && (until_ms <= now || until_ms - now > MAX_FREEZE_MS) {
             return Err(code::BAD_MESSAGE);
         }
-        self.advance(t);
         if mints {
             self.mints_until = until_ms;
         }
@@ -423,6 +436,61 @@ impl Gate {
         }
         Ok(())
     }
+}
+
+/// The record a gate reads its time from: the attestation program's `header(instance,
+/// record_slot)` of the configuration's own instance, and, for a record in the Gloas layout (which
+/// binds the execution block's hash only), that block's RLP header, which must hash to it.
+#[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub struct TimeRecord {
+    pub record_slot: u64,
+    pub header: Option<Vec<u8>>,
+}
+
+/// What a gate does once the record it asked for has replied.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub enum Timed {
+    /// Advance the clock only.
+    Tick,
+    /// Advance the clock, then the freeze authority's freeze (checked before the record was asked).
+    Freeze { mints: bool, burns: bool, until_ms: u64 },
+}
+
+/// A gate between its `Read` of a record and the reply (within one transaction).
+#[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub struct PendingTime {
+    pub record: TimeRecord,
+    pub then: Timed,
+}
+
+/// The attested time a record gives: the timestamp of its execution block, in milliseconds.
+/// `state` is the record actor's state as its reply carries it (`StateReply::state`), from
+/// `header(instance_id, slot)` of the configuration's attestation program (the caller checks the
+/// sender); `header` is the block's RLP header for a record in the Gloas layout, `None` for one
+/// that holds the payload's fields.
+///
+/// Refused: an empty actor (`NOT_FOUND`, no record at that slot); a record of another instance or
+/// chain, one without an execution block, a header given for a payload record or missing for a
+/// Gloas one, or a header that does not hash to the recorded block hash (`IMPORT_MISMATCH`);
+/// bytes that are not a record (`BAD_STATE`).
+pub fn record_time(instance_id: &Root, evm_chain_id: u64, state: &[u8], header: Option<&[u8]>) -> Result<u64, u8> {
+    if state.is_empty() {
+        return Err(code::NOT_FOUND);
+    }
+    let record: RecordState = borsh::from_slice(state).map_err(|_| code::BAD_STATE)?;
+    if record.instance_id != *instance_id || record.chain_id != evm_chain_id {
+        return Err(code::IMPORT_MISMATCH);
+    }
+    let recorded = record.header().map_err(|_| code::BAD_STATE)?;
+    let execution = match (&recorded.execution, header) {
+        (ExecutionSummary::Payload { .. }, None) => ExecutionRecord::from_recorded(&recorded, record.chain_id),
+        (ExecutionSummary::BlockHash(_), Some(header)) => {
+            ExecutionRecord::from_recorded_block_hash(&recorded, record.chain_id, header)
+        }
+        _ => return Err(code::IMPORT_MISMATCH),
+    }
+    .map_err(|_| code::IMPORT_MISMATCH)?;
+    execution.timestamp().checked_mul(1000).ok_or(code::IMPORT_MISMATCH)
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -668,15 +736,9 @@ pub enum BridgeMessage {
     /// write the configuration if it holds `cid` (the reciprocal pairing, B5).
     Init { config: BridgeConfig, record_slot: u64, proof: PairingProof },
     /// Variant 5. At `root(cid, n)`: the plaintext claim, for a public destination. `relayer`
-    /// receives the relay fee (`None`: the fee recipient); `time_ms` is the caller's time.
-    Claim {
-        config_id: Root,
-        leaf_count: u64,
-        witness: ClaimWitness,
-        range: ScheduleRange,
-        relayer: Option<Root>,
-        time_ms: u64,
-    },
+    /// receives the relay fee (`None`: the fee recipient). It carries no time: the token's and the
+    /// configuration's attested clocks apply.
+    Claim { config_id: Root, leaf_count: u64, witness: ClaimWitness, range: ScheduleRange, relayer: Option<Root> },
     /// Variant 6. At the claimant's own actor, meant to run privately: read `root(cid, n)`, verify
     /// the claim inside this execution, then `Issue`; a private destination must be this account.
     ClaimPrivately {
@@ -685,7 +747,6 @@ pub enum BridgeMessage {
         witness: ClaimWitness,
         range: ScheduleRange,
         relayer: Option<Root>,
-        time_ms: u64,
     },
     /// Variant 7. Reply with this actor's state (`StateReply`), LEZ v0.4's read idiom.
     Read,
@@ -736,20 +797,21 @@ pub enum BridgeMessage {
         leaf_count: u64,
         mint_to: Option<Root>,
         relayer: Option<Root>,
-        time_ms: u64,
     },
     /// Variant 16. `token(cid, token)` → `config(cid)`: the global freeze and bucket of a mint or a
-    /// burn of `value` units, at `time_ms` (a claim's) or the stored time (a burn's).
-    Admit { config_id: Root, token: Address, mints: bool, value: u128, time_ms: Option<u64> },
+    /// burn of `value` units, at the configuration's attested time.
+    Admit { config_id: Root, token: Address, mints: bool, value: u128 },
     /// Variant 17. The freeze authority, like `Sunset`: freeze mints and/or burns of `token` (or of
-    /// the whole configuration) until `until_ms` (≤ 30 days after `time_ms`; 0 unfreezes).
-    Freeze { config_id: Root, token: Option<Address>, mints: bool, burns: bool, until_ms: u64, time_ms: u64 },
+    /// the whole configuration) until `until_ms` (0 unfreezes). The target first reads `record`
+    /// (as `Tick` does); `until_ms` must lie after that attested time and at most 30 days after it.
+    Freeze { config_id: Root, token: Option<Address>, mints: bool, burns: bool, until_ms: u64, record: TimeRecord },
     /// Variant 18. The admin, like `Sunset`: set the mint (or burn) bucket of `token` (or the
-    /// global one), never below the floor.
-    SetCap { config_id: Root, token: Option<Address>, mints: bool, cap: CapParams, time_ms: u64 },
-    /// Variant 19. Anyone, at `config(cid)` or `token(cid, token)`: advance its stored time (for
-    /// burns, which carry none).
-    Tick { config_id: Root, token: Option<Address>, time_ms: u64 },
+    /// global one), never below the floor; refilled at the target's attested time first.
+    SetCap { config_id: Root, token: Option<Address>, mints: bool, cap: CapParams },
+    /// Variant 19. Anyone, at `config(cid)` or `token(cid, token)`: read the attestation
+    /// program's `record` and advance the target's clock to its execution timestamp; the
+    /// transaction is valid only in a block stamped at or after that time.
+    Tick { config_id: Root, token: Option<Address>, record: TimeRecord },
 }
 
 impl BridgeMessage {
@@ -820,8 +882,19 @@ impl ConfigState {
 #[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub enum Pending {
     Import(PendingImport),
-    Register { entry: TokenEntry, schedule: FeeSchedule, record_slot: u64 },
-    Fees { token: Address, index: u64, schedule: Option<FeeSchedule>, record_slot: u64 },
+    Register {
+        entry: TokenEntry,
+        schedule: FeeSchedule,
+        record_slot: u64,
+    },
+    Fees {
+        token: Address,
+        index: u64,
+        schedule: Option<FeeSchedule>,
+        record_slot: u64,
+    },
+    /// A `Read` of a record for the global gate's clock (`Tick`, `Freeze`).
+    Time(PendingTime),
 }
 
 impl Pending {
@@ -829,6 +902,7 @@ impl Pending {
         match self {
             Pending::Import(p) => p.record_slot,
             Pending::Register { record_slot, .. } | Pending::Fees { record_slot, .. } => *record_slot,
+            Pending::Time(p) => p.record.record_slot,
         }
     }
 }
@@ -860,6 +934,10 @@ pub struct TokenState {
     pub config_id: Root,
     pub evm_chain_id: u64,
     pub vault: Address,
+    /// The attestation program and instance the configuration reads Ethereum through (copied at
+    /// registration): the token's clock reads their records.
+    pub attestation: AccountId,
+    pub instance_id: Root,
     pub entry: TokenEntry,
     /// By index; `from_leaf` non-decreasing.
     pub schedules: Vec<FeeSchedule>,
@@ -868,9 +946,18 @@ pub struct TokenState {
     /// The configuration's roles and floor (copied at registration; immutable).
     pub controls: Controls,
     pub gate: Gate,
+    /// A `Read` of a record for the gate's clock, outstanding within one transaction (`None`
+    /// between transactions).
+    pub pending: Option<PendingTime>,
 }
 
 impl TokenState {
+    /// The record actor whose reply this token waits for.
+    pub fn awaiting(&self) -> Option<Actor> {
+        let pending = self.pending.as_ref()?;
+        Some(ferrata_lez_wire::header_actor(self.attestation, &self.instance_id, pending.record.record_slot))
+    }
+
     /// The denomination index and the mint and relay fees of a claim of `amount` whose leaf lies in
     /// `range`: `range` must start at its schedule's `from_leaf` and end no later than the next
     /// schedule's, or than `known_until` for the last one.
@@ -938,7 +1025,6 @@ pub struct PendingClaim {
     pub witness: ClaimWitness,
     pub range: ScheduleRange,
     pub relayer: Option<Root>,
-    pub time_ms: u64,
 }
 
 /// `burn(cid, H(note))`.
@@ -1078,7 +1164,8 @@ pub fn check_pairing(
 
 /// Check the reply to `Register`: the vault holds `entry`'s hash and schedule 0's; the token's
 /// state, whose schedules cover the leaves up to the attested count if schedule 1 does not exist
-/// yet (else up to schedule 0's start: `ImportFees` extends it).
+/// yet (else up to schedule 0's start: `ImportFees` extends it), and whose clock starts at the
+/// configuration's attested time `now_ms`.
 pub fn check_register(
     config: &BridgeConfig,
     config_id: &Root,
@@ -1086,6 +1173,7 @@ pub fn check_register(
     schedule: &FeeSchedule,
     record_slot: u64,
     attestation: &Attestation,
+    now_ms: u64,
 ) -> Result<TokenState, u8> {
     let [held_entry, held_fees, next_fees, count] =
         vault_slots(config, record_slot, attestation, register_slots(&entry.token)).ok_or(code::IMPORT_MISMATCH)?;
@@ -1098,11 +1186,14 @@ pub fn check_register(
         config_id: *config_id,
         evm_chain_id: config.evm_chain_id,
         vault: config.vault,
+        attestation: config.attestation,
+        instance_id: config.instance_id,
         entry: entry.clone(),
         schedules: alloc::vec![schedule.clone()],
         known_until,
         controls: config.controls,
-        gate: Gate::new(config.controls.token_cap),
+        gate: Gate::new(config.controls.token_cap, now_ms),
+        pending: None,
     })
 }
 

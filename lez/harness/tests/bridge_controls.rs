@@ -2,6 +2,10 @@
 //! `Sunset` (retirement) of the bridge program, through LEZ's state machine on the synthetic vaults
 //! of `harness::bridge`, every refusal with its code; then what the checkpoint program collects
 //! of a `Sunset` (`checkpoint-core`'s own parser and decoder). Writes `results/bridge-controls.md`.
+//!
+//! Caps and freezes run on attested Ethereum time: time moves here only when a later block's
+//! record exists (`World::finalize`) and a `Tick` or `Freeze` has read it. What a block's producer
+//! can and cannot do to that clock is `bridge_time.rs`'s.
 
 use std::{fs, path::PathBuf};
 
@@ -97,11 +101,20 @@ fn registry_fees_caps_freezes_and_sunset() {
     for (r, c) in [(w.init("Init A", &a, 0), None), (w.init("Init B", &b, 0), None)] {
         run(&mut reports, r, c);
     }
+    // The configurations' clocks read the newest record (block 102's); every token registered
+    // below starts at its configuration's attested time.
+    let t0 = w.blocks[2].time_ms();
+    for (label, cid) in [("Tick A: block 102's record", cid_a), ("Tick B: block 102's record", cid_b)] {
+        let r = w.tick(label, &cid, None, 2);
+        run(&mut reports, r, None);
+    }
+    assert!(matches!(w.config_state(&cid_a), Some(ConfigState::Ready { gate, .. }) if gate.now_ms == t0));
 
     // --- Registry (F.8, F.10) -------------------------------------------------------------------
     let r = w.register("Register ETH (A): entry, schedules 0 and 1, count at block 100", &cid_a, 0, &eth_entry(), &va);
     run(&mut reports, r, None);
     let eth_a = w.token_state(&cid_a, &ETH).expect("token(A, ETH)");
+    assert_eq!(eth_a.gate.now_ms, t0, "a token starts at its configuration's attested time");
     assert_eq!(
         (eth_a.entry, eth_a.schedules.len(), eth_a.known_until),
         (eth_entry(), 1, 5),
@@ -165,7 +178,6 @@ fn registry_fees_caps_freezes_and_sunset() {
     let leaf6 = w.vault_a.witness(&w.payer_deposit.clone(), 8);
     let vector = w.vault_a.witness(&w.vector.clone(), 5);
     let me = Some(*relayer().value());
-    let t = w.time;
     let range = |index, from_leaf, until_leaf| ScheduleRange { index, from_leaf, until_leaf };
     let r = w.claim_with(
         "Claim leaf 6 before its schedule is known: range [0, 8)",
@@ -175,7 +187,6 @@ fn registry_fees_caps_freezes_and_sunset() {
         leaf6.clone(),
         range(0, 0, 8),
         me,
-        t,
     );
     run(&mut reports, r, Some(code::LEAF_NOT_IMPORTED));
     let r = w.import_fees(
@@ -204,7 +215,6 @@ fn registry_fees_caps_freezes_and_sunset() {
         leaf6.clone(),
         range(1, 6, 8),
         me,
-        t,
     );
     run(&mut reports, r, Some(code::LEAF_NOT_IMPORTED));
     let r = w.import_fees("ImportFees ETH (A): no schedule 2 at block 101 (8 leaves)", &cid_a, 1, ETH, 2, None, &va);
@@ -215,16 +225,8 @@ fn registry_fees_caps_freezes_and_sunset() {
     run(&mut reports, r, Some(code::BAD_MESSAGE));
     let r = w.import_fees("ImportFees T3 (A) schedule 1: a 2% mint fee", &cid_a, 2, T3, 1, Some(high), &va);
     run(&mut reports, r, Some(code::BAD_MESSAGE));
-    let r = w.claim_with(
-        "Claim leaf 6 under schedule 0's range [0, 6)",
-        &cid_a,
-        8,
-        &va,
-        leaf6.clone(),
-        range(0, 0, 6),
-        me,
-        t,
-    );
+    let r =
+        w.claim_with("Claim leaf 6 under schedule 0's range [0, 6)", &cid_a, 8, &va, leaf6.clone(), range(0, 0, 6), me);
     run(&mut reports, r, Some(code::LEAF_NOT_IMPORTED));
     let r = w.claim_with(
         "Claim leaf 2 under schedule 1's range [6, 8)",
@@ -234,40 +236,33 @@ fn registry_fees_caps_freezes_and_sunset() {
         vector.clone(),
         range(1, 6, 8),
         me,
-        t,
     );
     run(&mut reports, r, Some(code::LEAF_NOT_IMPORTED));
 
-    // --- Caps (F.11): token and global, mints and burns, a caller time under a window ---------
+    // --- Caps (F.11): token and global, mints and burns, on attested time ----------------------
     let eth_a_actor = token_actor(program, &cid_a, &ETH);
-    let set_cap =
-        |cid, token, mints, cap: CapParams, t| BridgeMessage::SetCap { config_id: cid, token, mints, cap, time_ms: t };
+    let set_cap = |cid, token, mints, cap: CapParams| BridgeMessage::SetCap { config_id: cid, token, mints, cap };
     let eleven = CapParams { capacity: 11_000_000_000, refill_per_second: 10_000_000 };
     let r = w.role(
         "SetCap (admin): ETH (A) mints 11 ETH, 0.01 ETH/s",
         ADMIN_SEED,
-        &set_cap(cid_a, Some(ETH), true, eleven, t),
+        &set_cap(cid_a, Some(ETH), true, eleven),
         eth_a_actor,
     );
     run(&mut reports, r, None);
     let below = CapParams { capacity: FLOOR.capacity - 1, ..FLOOR };
-    let r =
-        w.role("SetCap (admin) below the floor", ADMIN_SEED, &set_cap(cid_a, Some(ETH), true, below, t), eth_a_actor);
+    let r = w.role("SetCap (admin) below the floor", ADMIN_SEED, &set_cap(cid_a, Some(ETH), true, below), eth_a_actor);
     run(&mut reports, r, Some(code::BAD_MESSAGE));
     let r =
-        w.role("SetCap by the freeze authority", FREEZE_SEED, &set_cap(cid_a, Some(ETH), true, eleven, t), eth_a_actor);
+        w.role("SetCap by the freeze authority", FREEZE_SEED, &set_cap(cid_a, Some(ETH), true, eleven), eth_a_actor);
     run(&mut reports, r, Some(code::NOT_AUTHORIZED));
-    let r = w.role(
-        "SetCap by a signer with no role",
-        OUTSIDER_SEED,
-        &set_cap(cid_a, Some(ETH), true, eleven, t),
-        eth_a_actor,
-    );
+    let r =
+        w.role("SetCap by a signer with no role", OUTSIDER_SEED, &set_cap(cid_a, Some(ETH), true, eleven), eth_a_actor);
     run(&mut reports, r, Some(code::NOT_AUTHORIZED));
     let r = w.send(
         "SetCap sent to the token's account itself",
         eth_a_actor,
-        &set_cap(cid_a, Some(ETH), true, eleven, t),
+        &set_cap(cid_a, Some(ETH), true, eleven),
         vec![eth_a_actor],
     );
     run(&mut reports, r, Some(code::NOT_AUTHORIZED));
@@ -285,17 +280,21 @@ fn registry_fees_caps_freezes_and_sunset() {
     let r = w.claim("Claim leaf 2 (1.001 ETH) with 0.94 ETH left in the bucket", &cid_a, 5, &va, vector.clone());
     run(&mut reports, r, Some(code::CAPPED));
     assert!(w.nullifier(&va, &w.vector_n).is_none(), "a capped claim leaves its deposit claimable");
-    w.time += 10_000;
-    let r = w.claim("Claim leaf 2 ten seconds later (0.1 ETH refilled)", &cid_a, 5, &va, vector);
+    let ten_s = w.finalize(t0 / 1000 + 10);
+    let r =
+        w.claim("Claim leaf 2 once a record 10 s later exists, no Tick: not refilled", &cid_a, 5, &va, vector.clone());
+    run(&mut reports, r, Some(code::CAPPED));
+    let r = w.tick("Tick ETH (A): the record 10 s later", &cid_a, Some(ETH), ten_s);
+    run(&mut reports, r, None);
+    let r = w.claim("Claim leaf 2 after the Tick (0.1 ETH refilled)", &cid_a, 5, &va, vector);
     run(&mut reports, r, None);
     assert_eq!(w.balance(w.vector_dest, &cid_a), DENOMINATIONS[1]);
-    let t = w.time;
     let a_actor = config_actor(program, &cid_a);
     let b_actor = config_actor(program, &cid_b);
     let r = w.role(
         "SetCap (admin): global mints of B at the floor (1 ETH)",
         ADMIN_SEED,
-        &set_cap(cid_b, None, true, FLOOR, t),
+        &set_cap(cid_b, None, true, FLOOR),
         b_actor,
     );
     run(&mut reports, r, None);
@@ -309,36 +308,18 @@ fn registry_fees_caps_freezes_and_sunset() {
     );
     run(&mut reports, r, Some(code::CAPPED));
     let t2 = w.vault_b.witness(&w.deposit_t2.clone(), 8);
-    let range_t2 = w.range(&cid_b, &T2, 5);
-    let report = w.claim_with(
-        "Claim B's T2 with a time one hour ahead of the block",
-        &cid_b,
-        8,
-        &VAULT_B,
-        t2.clone(),
-        range_t2,
-        me,
-        w.time + HOUR_MS,
-    );
-    assert!(!report.ok() && report.exit_code.is_none(), "{:?}", report.charge.revert);
-    assert!(
-        report.charge.revert.as_deref().is_some_and(|e| e.contains("validity window")),
-        "{:?}",
-        report.charge.revert
-    );
-    reports.push(report);
     let r = w.claim("Claim B's 1,000 T2 (1 ETH of value units) under the same global cap", &cid_b, 8, &VAULT_B, t2);
     run(&mut reports, r, None);
     assert_eq!(w.balance_of(payer, &cid_b, &T2), T2_DENOMINATIONS[1]);
     let r = w.role(
         "SetCap (admin): global mints of B back to 200 ETH",
         ADMIN_SEED,
-        &set_cap(cid_b, None, true, GLOBAL_CAP, t),
+        &set_cap(cid_b, None, true, GLOBAL_CAP),
         b_actor,
     );
     run(&mut reports, r, None);
 
-    // Burns carry no time: the token's stored time refills its bucket, advanced by `Tick`.
+    // Burns: the token's attested clock refills its bucket, as for claims.
     let holder = holder_actor(program, payer);
     let burn = |w: &mut World, label: &str, cid: [u8; 32], note: &Note| -> TxReport {
         let actors = w.burn_actors(holder, &cid, note);
@@ -348,7 +329,7 @@ fn registry_fees_caps_freezes_and_sunset() {
     let r = w.role(
         "SetCap (admin): ETH (A) burns 1 ETH, 0.01 ETH/s",
         ADMIN_SEED,
-        &set_cap(cid_a, Some(ETH), false, one_eth, t),
+        &set_cap(cid_a, Some(ETH), false, one_eth),
         eth_a_actor,
     );
     run(&mut reports, r, None);
@@ -356,72 +337,85 @@ fn registry_fees_caps_freezes_and_sunset() {
     run(&mut reports, r, None);
     let r = burn(&mut w, "Burn 1 ETH (A) again: the burn bucket is empty", cid_a, &note(2, ETH, DENOMINATIONS[1]));
     run(&mut reports, r, Some(code::CAPPED));
-    w.time += 100_000;
+    let later = w.finalize(t0 / 1000 + 110);
     let r = burn(
         &mut w,
-        "Burn 1 ETH (A) 100 s later, no Tick: the stored time has not moved",
+        "Burn 1 ETH (A) once a record 100 s later exists, no Tick: the token's clock has not read it",
         cid_a,
         &note(2, ETH, DENOMINATIONS[1]),
     );
     run(&mut reports, r, Some(code::CAPPED));
-    let r = w.tick("Tick ETH (A)", &cid_a, Some(ETH));
+    let r = w.tick("Tick ETH (A): the record 100 s later", &cid_a, Some(ETH), later);
     run(&mut reports, r, None);
     let r = burn(&mut w, "Burn 1 ETH (A) after the Tick", cid_a, &note(2, ETH, DENOMINATIONS[1]));
     run(&mut reports, r, None);
 
     // --- Freezes and roles (F.14) ---------------------------------------------------------------
-    w.time += 100_000;
-    let t = w.time;
+    let newest = w.finalize(t0 / 1000 + 210);
+    let r = w.tick("Tick ETH (A): a record 100 s later again", &cid_a, Some(ETH), newest);
+    run(&mut reports, r, None);
     let r = w.role(
         "SetCap (admin): ETH (A) burns back to 100 ETH (refilled to 1 ETH first)",
         ADMIN_SEED,
-        &set_cap(cid_a, Some(ETH), false, harness::bridge::TOKEN_CAP, t),
+        &set_cap(cid_a, Some(ETH), false, harness::bridge::TOKEN_CAP),
         eth_a_actor,
     );
     run(&mut reports, r, None);
-    let freeze = |cid, token, mints, burns, until_ms, t| BridgeMessage::Freeze {
+    assert_eq!(w.token_state(&cid_a, &ETH).unwrap().gate.burn.level, DENOMINATIONS[1] / LEZ_UNIT);
+    // Every freeze names the newest record; its bound is against the attested time it gives.
+    let t = w.blocks[newest].time_ms();
+    let record = w.blocks[newest].time_record();
+    let freeze = |cid, token, mints, burns, until_ms| BridgeMessage::Freeze {
         config_id: cid,
         token,
         mints,
         burns,
         until_ms,
-        time_ms: t,
+        record: record.clone(),
     };
     let eth_b_actor = token_actor(program, &cid_b, &ETH);
     let r = w.role(
         "Freeze (freeze authority): ETH (B) mints for one hour",
         FREEZE_SEED,
-        &freeze(cid_b, Some(ETH), true, false, t + HOUR_MS, t),
+        &freeze(cid_b, Some(ETH), true, false, t + HOUR_MS),
         eth_b_actor,
     );
     run(&mut reports, r, None);
+    assert_eq!(w.token_state(&cid_b, &ETH).unwrap().gate.now_ms, t, "the freeze read the record");
     let r = w.claim("Claim B's 1 ETH while its mints are frozen", &cid_b, 8, &VAULT_B, deposit_b.clone());
     run(&mut reports, r, Some(code::FROZEN));
     let r = w.role(
         "Freeze by the admin: unfreeze ETH (B)",
         ADMIN_SEED,
-        &freeze(cid_b, Some(ETH), true, false, 0, t),
+        &freeze(cid_b, Some(ETH), true, false, 0),
         eth_b_actor,
     );
     run(&mut reports, r, Some(code::NOT_AUTHORIZED));
     let r = w.role(
-        "Freeze for 30 days and 1 ms",
+        "Freeze for 30 days and 1 ms after the record's time",
         FREEZE_SEED,
-        &freeze(cid_b, Some(ETH), true, false, t + MAX_FREEZE_MS + 1, t),
+        &freeze(cid_b, Some(ETH), true, false, t + MAX_FREEZE_MS + 1),
+        eth_b_actor,
+    );
+    run(&mut reports, r, Some(code::BAD_MESSAGE));
+    let r = w.role(
+        "Freeze until the record's time itself (already past)",
+        FREEZE_SEED,
+        &freeze(cid_b, Some(ETH), true, false, t),
         eth_b_actor,
     );
     run(&mut reports, r, Some(code::BAD_MESSAGE));
     let r = w.role(
         "Freeze (freeze authority): unfreeze ETH (B)",
         FREEZE_SEED,
-        &freeze(cid_b, Some(ETH), true, false, 0, t),
+        &freeze(cid_b, Some(ETH), true, false, 0),
         eth_b_actor,
     );
     run(&mut reports, r, None);
     let r = w.role(
         "Freeze (freeze authority): all mints of B for 30 days",
         FREEZE_SEED,
-        &freeze(cid_b, None, true, false, t + MAX_FREEZE_MS, t),
+        &freeze(cid_b, None, true, false, t + MAX_FREEZE_MS),
         b_actor,
     );
     run(&mut reports, r, None);
@@ -430,7 +424,7 @@ fn registry_fees_caps_freezes_and_sunset() {
     let r = w.role(
         "Freeze (freeze authority): ETH (A) burns for one hour",
         FREEZE_SEED,
-        &freeze(cid_a, Some(ETH), false, true, t + HOUR_MS, t),
+        &freeze(cid_a, Some(ETH), false, true, t + HOUR_MS),
         eth_a_actor,
     );
     run(&mut reports, r, None);
@@ -439,28 +433,28 @@ fn registry_fees_caps_freezes_and_sunset() {
     let r = w.role(
         "Freeze (freeze authority): unfreeze ETH (A) burns",
         FREEZE_SEED,
-        &freeze(cid_a, Some(ETH), false, true, 0, t),
+        &freeze(cid_a, Some(ETH), false, true, 0),
         eth_a_actor,
     );
     run(&mut reports, r, None);
     let r = w.role(
         "Freeze (freeze authority): all burns of A for one hour",
         FREEZE_SEED,
-        &freeze(cid_a, None, false, true, t + HOUR_MS, t),
+        &freeze(cid_a, None, false, true, t + HOUR_MS),
         a_actor,
     );
     run(&mut reports, r, None);
     let r = burn(&mut w, "Burn 1 ETH (A) under the global burn freeze", cid_a, &note(3, ETH, DENOMINATIONS[1]));
     run(&mut reports, r, Some(code::FROZEN));
-    w.time += HOUR_MS;
+    let hour = w.finalize(t / 1000 + 3600);
     let r = burn(
         &mut w,
-        "Burn 1 ETH (A) an hour later, no Tick: still frozen by the stored time",
+        "Burn 1 ETH (A) once a record an hour later exists, no Tick: still frozen by the attested clock",
         cid_a,
         &note(3, ETH, DENOMINATIONS[1]),
     );
     run(&mut reports, r, Some(code::FROZEN));
-    let r = w.tick("Tick A", &cid_a, None);
+    let r = w.tick("Tick A: the record an hour later", &cid_a, None, hour);
     run(&mut reports, r, None);
     let r =
         burn(&mut w, "Burn 1 ETH (A) after the Tick: the freeze has lapsed", cid_a, &note(3, ETH, DENOMINATIONS[1]));
@@ -481,7 +475,9 @@ fn registry_fees_caps_freezes_and_sunset() {
     run(&mut reports, r, Some(code::ALREADY_WRITTEN));
     let r = w.import("ImportRoot B after Sunset", &cid_b, 1, w.vault_b.root(8), 8, &VAULT_B);
     run(&mut reports, r, Some(code::FROZEN));
-    w.time += MAX_FREEZE_MS;
+    let month = w.finalize((t + MAX_FREEZE_MS) / 1000);
+    let r = w.tick("Tick B: the record 30 days later", &cid_b, None, month);
+    run(&mut reports, r, None);
     let r = w.claim(
         "Claim B's 1 ETH after Sunset, the global freeze lapsed: claims continue",
         &cid_b,

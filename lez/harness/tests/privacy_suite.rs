@@ -303,7 +303,7 @@ fn commitment_root(w: &World) -> Vec<u8> {
 fn bridge_fields(prefix: &str, message: &BridgeMessage, f: &mut Vec<(String, Vec<u8>)>) {
     let mut push = |name: &str, v: Vec<u8>| f.push((format!("{prefix}.{name}"), v));
     match message {
-        BridgeMessage::Issue { config_id, token, nullifier, amount, range, leaf_count, mint_to, relayer, time_ms } => {
+        BridgeMessage::Issue { config_id, token, nullifier, amount, range, leaf_count, mint_to, relayer } => {
             push("Issue.config_id", config_id.to_vec());
             push("Issue.token", token.to_vec());
             push("Issue.nullifier", nullifier.to_vec());
@@ -316,7 +316,6 @@ fn bridge_fields(prefix: &str, message: &BridgeMessage, f: &mut Vec<(String, Vec
             if let Some(r) = relayer {
                 push("Issue.relayer", r.to_vec());
             }
-            push("Issue.time_ms", time_ms.to_le_bytes().to_vec());
         }
         BridgeMessage::Burn { config_id, r, memo, mac, token, amount, c_out } => {
             push("Burn.config_id", config_id.to_vec());
@@ -327,7 +326,7 @@ fn bridge_fields(prefix: &str, message: &BridgeMessage, f: &mut Vec<(String, Vec
             push("Burn.amount", amount.to_vec());
             push("Burn.c_out", c_out.to_vec());
         }
-        BridgeMessage::Claim { config_id, leaf_count, witness, range, relayer, time_ms } => {
+        BridgeMessage::Claim { config_id, leaf_count, witness, range, relayer } => {
             push("Claim.config_id", config_id.to_vec());
             push("Claim.leaf_count", leaf_count.to_le_bytes().to_vec());
             push("Claim.witness.depositor", witness.depositor.to_vec());
@@ -344,7 +343,6 @@ fn bridge_fields(prefix: &str, message: &BridgeMessage, f: &mut Vec<(String, Vec
             if let Some(r) = relayer {
                 push("Claim.relayer", r.to_vec());
             }
-            push("Claim.time_ms", time_ms.to_le_bytes().to_vec());
         }
         BridgeMessage::ImportRoot { config_id, record_slot, root, leaf_count, .. } => {
             push("ImportRoot.config_id", config_id.to_vec());
@@ -795,10 +793,9 @@ fn privacy_suite_lez_half() {
         let nf = nullifier_actor(wb.program, CHAIN_ID, &VAULT_P, &d.nullifier(CHAIN_ID, &VAULT_P));
         let mut actors = vec![bw::root_actor(wb.program, &cid, n)];
         actors.extend(wb.claim_actors(&cid, &ETH, nf, Some(user_account(&users[u])), Some(*relayer().value())));
-        let time = wb.time;
         let mut r =
             collect_public(&mut wb, format!("lez:claim:plaintext:{k:02}"), "claim", "plaintext", k, &actors, |w| {
-                w.claim_with("plaintext claim", &cid, n, &VAULT_P, witness, range, Some(*relayer().value()), time)
+                w.claim_with("plaintext claim", &cid, n, &VAULT_P, witness, range, Some(*relayer().value()))
             });
         r.fields.push(("derived.nullifier_account".into(), nf.account_id.value().to_vec()));
         records.push(r);

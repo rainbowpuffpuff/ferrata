@@ -3,12 +3,13 @@
 //! format. Every input goes through its byte encoding first, as the guest receives it.
 //!
 //! The standard case: `n = 4` channel keys (`t = 3`), the parent at block 1, blocks 2..=6, `T` is
-//! block 4 (index 2), so blocks 5 and 6 descend from `T`. Keys 4 and 5 are outside the set.
+//! block 4 (index 2), so blocks 5 and 6 descend from `T`; channel key 0 inscribed `T`. Keys 4 and 5
+//! are outside the set.
 mod common;
 
 use attestor_core::{sign_attestation, sign_certificate, Deployment, FinalTip, SignedAttestation};
 use checkpoint_core::input::{CheckpointInput, CheckpointInputB, Support};
-use checkpoint_core::mantle::{tx_hash, ConfigChange, OP_CHANNEL_CONFIG};
+use checkpoint_core::mantle::{tx_hash, ConfigChange, ElidedInscription, OP_CHANNEL_CONFIG};
 use checkpoint_core::rule::run_checkpoint;
 use checkpoint_core::rule_b::{run_checkpoint_b, OutcomeB};
 use checkpoint_core::state::{key_set_hash, Config, State};
@@ -115,11 +116,17 @@ fn rotation(c: &Config, parent_tip: &Hash, keys: &[Hash], signers: &[(u16, Signi
     (ops, sigs)
 }
 
+/// An inscription transaction of block `T` (index 2 of `blocks`) on `c`'s channel by `key`.
+fn inscribe_t(c: &Config, blocks: &[Vec<u8>], key: &SigningKey) -> (Vec<u8>, [u8; 64]) {
+    inscription_tx(key, &c.channel_id, &blocks[T as usize], &[6; 32])
+}
+
 fn input<'a>(
     c: &Config,
     p: &State,
     blocks: &'a [Vec<u8>],
     rotations: &'a [Rotation],
+    producer: ElidedInscription<'a>,
     attestations: Vec<SignedAttestation>,
 ) -> CheckpointInputB<'a> {
     CheckpointInputB {
@@ -135,6 +142,7 @@ fn input<'a>(
             .collect(),
         blocks: blocks.iter().map(Vec::as_slice).collect(),
         t_index: T,
+        producer,
         attestations,
         segments: Vec::new(),
     }
@@ -156,6 +164,8 @@ struct World {
     blocks: Vec<Vec<u8>>,
     hashes: Vec<Hash>,
     ksh: Hash,
+    /// `T`'s inscription by channel key 0.
+    producer: (Vec<u8>, [u8; 64]),
 }
 
 fn world() -> World {
@@ -163,16 +173,20 @@ fn world() -> World {
     let p = parent(&(0..4).map(|i| pk(&channel(i))).collect::<Vec<_>>());
     let (blocks, hashes) = chain(5);
     let ksh = key_set_hash(&p.keys, TIMEFRAME);
-    World { d: deployment(&c), c, p, blocks, hashes, ksh }
+    let producer = inscribe_t(&c, &blocks, &channel(0));
+    World { d: deployment(&c), c, p, blocks, hashes, ksh, producer }
 }
 
 impl World {
+    fn producer(&self) -> ElidedInscription<'_> {
+        elide(&self.producer.0, &self.producer.1)
+    }
     /// Attestor `i` (channel key `i`, attestation key `i`) over block `index`.
     fn by(&self, i: u8, index: usize) -> SignedAttestation {
         attest(&self.d, &channel(i), &att(i), &self.ksh, tip(&self.hashes, index))
     }
     fn run(&self, attestations: Vec<SignedAttestation>) -> Result<OutcomeB, Error> {
-        run_b(&input(&self.c, &self.p, &self.blocks, &[], attestations))
+        run_b(&input(&self.c, &self.p, &self.blocks, &[], self.producer(), attestations))
     }
 }
 
@@ -219,6 +233,37 @@ fn journal_is_rule_a_candidate_journal_over_the_same_blocks() {
     let a = run_checkpoint(&a).unwrap();
     assert_eq!(a.journal.encode(), b.journal.encode());
     assert_eq!(a.new_state, b.new_state);
+}
+
+#[test]
+fn checks_the_producer_inscription_of_t() {
+    let w = world();
+    let atts = || vec![w.by(0, 2), w.by(1, 3), w.by(2, 4)];
+    let out = w.run(atts()).unwrap();
+    assert_eq!(out.producer, pk(&channel(0)));
+    let run_with = |producer: (Vec<u8>, [u8; 64])| {
+        run_b(&input(&w.c, &w.p, &w.blocks, &[], elide(&producer.0, &producer.1), atts()))
+    };
+    // Inscribed by a key outside the live set: t attestation keys are not enough on their own.
+    assert_eq!(run_with(inscribe_t(&w.c, &w.blocks, &channel(4))).unwrap_err(), Error::NotAccredited);
+    // A signature that does not verify over the transaction.
+    let (ops, mut sig) = inscribe_t(&w.c, &w.blocks, &channel(1));
+    sig[0] ^= 1;
+    assert_eq!(run_with((ops, sig)).unwrap_err(), Error::BadSignature);
+    // An inscription on another channel.
+    let other = Config { channel_id: [0x2f; 32], ..w.c.clone() };
+    assert_eq!(run_with(inscribe_t(&other, &w.blocks, &channel(1))).unwrap_err(), Error::WrongChannel);
+    // The inscription of another block (block 5, after T) in T's place: its signature is over other bytes.
+    let (ops, sig) = inscription_tx(&channel(1), &w.c.channel_id, &w.blocks[3], &[6; 32]);
+    assert!(matches!(run_with((ops, sig)).unwrap_err(), Error::BadSignature | Error::PayloadMismatch));
+    // A rotation that removes T's producer from K refuses T, as rule (A) does.
+    let new_keys: Vec<Hash> = [1u8, 2, 3, 4].iter().map(|i| pk(&channel(*i))).collect();
+    let rot =
+        vec![rotation(&w.c, &w.p.config_tip_hash, &new_keys, &[(0, channel(0)), (1, channel(1)), (2, channel(2))])];
+    let live = key_set_hash(&new_keys, TIMEFRAME);
+    let by = |i: u8, index: usize| attest(&w.d, &channel(i), &att(i), &live, tip(&w.hashes, index));
+    let gone = input(&w.c, &w.p, &w.blocks, &rot, w.producer(), vec![by(1, 2), by(2, 3), by(3, 4)]);
+    assert_eq!(run_b(&gone).unwrap_err(), Error::NotAccredited);
 }
 
 #[test]
@@ -299,10 +344,10 @@ fn a_key_removed_by_a_rotation_is_refused_and_a_key_added_counts() {
     let live = key_set_hash(&new_keys, TIMEFRAME);
     let by = |i: u8, index: usize| attest(&w.d, &channel(i), &att(i), &live, tip(&w.hashes, index));
 
-    let removed = input(&w.c, &w.p, &w.blocks, &rot, vec![by(0, 2), by(1, 3), by(3, 4)]);
+    let removed = input(&w.c, &w.p, &w.blocks, &rot, w.producer(), vec![by(0, 2), by(1, 3), by(3, 4)]);
     assert_eq!(run_b(&removed).unwrap_err(), Error::NotAccredited);
 
-    let out = run_b(&input(&w.c, &w.p, &w.blocks, &rot, vec![by(0, 2), by(1, 3), by(4, 4)])).unwrap();
+    let out = run_b(&input(&w.c, &w.p, &w.blocks, &rot, w.producer(), vec![by(0, 2), by(1, 3), by(4, 4)])).unwrap();
     assert_eq!(out.new_state.keys, new_keys);
     assert_eq!((out.journal.n, out.journal.t), (4, 3));
 }
@@ -314,7 +359,7 @@ fn refuses_a_wrong_key_set_hash() {
     let new_keys: Vec<Hash> = [0u8, 1, 2, 4].iter().map(|i| pk(&channel(*i))).collect();
     let rot =
         vec![rotation(&w.c, &w.p.config_tip_hash, &new_keys, &[(0, channel(0)), (1, channel(1)), (2, channel(2))])];
-    let stale = input(&w.c, &w.p, &w.blocks, &rot, vec![w.by(0, 2), w.by(1, 3), w.by(2, 4)]);
+    let stale = input(&w.c, &w.p, &w.blocks, &rot, w.producer(), vec![w.by(0, 2), w.by(1, 3), w.by(2, 4)]);
     assert_eq!(run_b(&stale).unwrap_err(), Error::BadAttestation);
     // Without a rotation: the same keys under another turn length.
     let other = key_set_hash(&w.p.keys, TIMEFRAME + 1);
@@ -384,7 +429,7 @@ fn blocks_after_the_tip_are_linked() {
     let w = world();
     let mut blocks = w.blocks.clone();
     blocks[3][72] ^= 1; // block 5's timestamp: hashed, so its stored hash no longer matches
-    let tampered = input(&w.c, &w.p, &blocks, &[], vec![w.by(0, 2), w.by(1, 2), w.by(2, 2)]);
+    let tampered = input(&w.c, &w.p, &blocks, &[], w.producer(), vec![w.by(0, 2), w.by(1, 2), w.by(2, 2)]);
     assert_eq!(run_b(&tampered).unwrap_err(), Error::HashMismatch { index: 3 });
 }
 
@@ -395,10 +440,15 @@ fn single_key_only_where_the_floor_allows_it() {
     let (blocks, hashes) = chain(5);
     let ksh = key_set_hash(&p.keys, TIMEFRAME);
     let one = attest(&deployment(&c), &channel(0), &att(0), &ksh, tip(&hashes, 2));
-    let out = run_b(&input(&c, &p, &blocks, &[], vec![one])).unwrap();
+    let (ops, sig) = inscribe_t(&c, &blocks, &channel(0));
+    let out = run_b(&input(&c, &p, &blocks, &[], elide(&ops, &sig), vec![one])).unwrap();
     assert_eq!((out.journal.n, out.journal.t), (1, 1));
     // The same set under the production floors is refused before any attestation is read.
     let c3 = config(3, 2);
     let one = attest(&deployment(&c3), &channel(0), &att(0), &ksh, tip(&hashes, 2));
-    assert_eq!(run_b(&input(&c3, &p, &blocks, &[], vec![one])).unwrap_err(), Error::KeySetTooSmall { n: 1, n_min: 3 });
+    let (ops, sig) = inscribe_t(&c3, &blocks, &channel(0));
+    assert_eq!(
+        run_b(&input(&c3, &p, &blocks, &[], elide(&ops, &sig), vec![one])).unwrap_err(),
+        Error::KeySetTooSmall { n: 1, n_min: 3 }
+    );
 }

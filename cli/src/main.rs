@@ -1,7 +1,7 @@
 //! `ferrata`: keys, deposit, scan, recover, claim, burn, release and status for the Ferrata bridge.
 //! See `../README.md` for every command, an example of each and what each makes public.
 
-use std::{collections::HashSet, path::PathBuf, time::SystemTime};
+use std::{collections::HashSet, path::PathBuf};
 
 use alloy::primitives::{Address, Bytes, B256, U256};
 use anyhow::{anyhow, bail, ensure, Context as _, Result};
@@ -212,10 +212,6 @@ enum Command {
 
 fn need<T: Clone>(v: &Option<T>, what: &str) -> Result<T> {
     v.clone().ok_or_else(|| anyhow!("{what} is needed for this command"))
-}
-
-fn now_ms() -> u64 {
-    SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0)
 }
 
 struct Env {
@@ -481,8 +477,7 @@ async fn main() -> Result<()> {
                 .find(|a| *a.id.value() == row.owned.dest)
                 .map(|a| lee::PublicKey::new_from_private_key(&a.key));
             let plan =
-                lez::plan_claim(&ledger, &ctx, &leaves, &row.owned, &history, !plaintext, relayer, now_ms(), dest_key)
-                    .await?;
+                lez::plan_claim(&ledger, &ctx, &leaves, &row.owned, &history, !plaintext, relayer, dest_key).await?;
             println!("{}: N {}", plan.call.what, hx(&plan.nullifier));
             println!("public: {}", lez::reveals(&plan.call));
             if plaintext && !i_accept_plaintext_links_deposit {

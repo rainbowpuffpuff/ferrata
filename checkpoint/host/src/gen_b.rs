@@ -8,9 +8,9 @@
 //!   inscriptions by keys 1..=t over the three blocks after `T`, in turn. Each is the source's own
 //!   inscription transaction (made with `logos-blockchain-core`) with only the signer field and the
 //!   signature changed, so every inscription check hashes the same bytes as in the source.
-//! - `rb-<source>-n<n>` (rule (B)): keys 0..t certify seeded attestation keys, which attest final
-//!   tips `T`, `T + 1`, `T + 2`, `T + 3`, `T`, … in turn; `finalMsgId` is the message id of the
-//!   source's inscription of that block.
+//! - `rb-<source>-n<n>` (rule (B)): `T`'s inscription re-signed by key 0, as for rule (A); keys
+//!   0..t certify seeded attestation keys, which attest final tips `T`, `T + 1`, `T + 2`, `T + 3`,
+//!   `T`, … in turn; `finalMsgId` is the message id of the source's inscription of that block.
 //! - `rb-tonly-n<n>` (rule (B)): `T` alone (the first source's one block up to `T`), every
 //!   attestation on `T`.
 //!
@@ -156,6 +156,7 @@ pub fn cmd_gen_b(dir: &Path) -> Result<()> {
                 config_changes: Vec::new(),
                 blocks: src.blocks.clone(),
                 t_index,
+                producer: elided(&producer),
                 attestations: attestations.clone(),
                 segments: Vec::new(),
             };

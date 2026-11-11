@@ -20,6 +20,10 @@
 //! * **Roles.** `Sunset`, `Freeze` and `SetCap` are top-level calls at the role's own actor, which
 //!   forwards them to `config(cid)` or `token(cid, token)`; those accept them only from the
 //!   configured freeze authority (`Sunset`, `Freeze`) or admin (`SetCap`).
+//! * **Clock.** Freezes and buckets run on attested Ethereum time: `Tick` (anyone) and `Freeze`
+//!   make the target `Read` a record of the configuration's attestation instance and advance its
+//!   clock to that record's execution timestamp, never backwards, in a transaction valid only in a
+//!   block stamped at or after it. No message carries a caller's time.
 //!
 //! A reply is accepted only from the actor this one waits for. Refusals exit with a code
 //! (`ferrata_lez_bridge_wire::code`, 240–255); a refusal of the attestation program ends the whole
@@ -27,15 +31,15 @@
 
 use ferrata_lez_bridge_wire::{
     burn_actor, burn_seed, check_fees, check_import, check_pairing, check_register, code, config_actor, fees_slots,
-    holder_actor, import_request, nullifier_actor, nullifier_seed, pairing_request, register_slots, root_actor,
-    root_seed, token_actor, token_seed, u128_of, vault_request, verify_claim, Address, BridgeConfig, BridgeMessage,
-    BridgeState, BurnRecord, CapParams, ClaimWitness, Claimed, ConfigState, DestKind, FeeSchedule, Gate, HolderState,
-    ImportProof, Note, NullifierState, PairingProof, Pending, PendingClaim, PendingImport, Root, RootState,
-    ScheduleRange, TokenEntry, TokenState, VaultProof, TIME_WINDOW_MS,
+    holder_actor, import_request, nullifier_actor, nullifier_seed, pairing_request, record_time, register_slots,
+    root_actor, root_seed, token_actor, token_seed, u128_of, vault_request, verify_claim, Address, BridgeConfig,
+    BridgeMessage, BridgeState, BurnRecord, CapParams, ClaimWitness, Claimed, ConfigState, Controls, DestKind,
+    FeeSchedule, Gate, HolderState, ImportProof, Note, NullifierState, PairingProof, Pending, PendingClaim,
+    PendingImport, PendingTime, Root, RootState, ScheduleRange, TimeRecord, Timed, TokenEntry, TokenState, VaultProof,
 };
 use ferrata_lez_wire::{attest::Attestation, header_actor, Message as AttestMessage};
 use lee_core::{
-    account::AccountId,
+    account::{AccountId, Actor},
     program::{read_input_frame, ReceiveInput, Response, StateReply, SyncMessage},
 };
 use risc0_zkvm::guest::env;
@@ -61,11 +65,12 @@ fn set(state: BridgeState) -> Response {
     Response::set_state(encode(&state))
 }
 
-/// v0.4 programs cannot read the clock: a caller's time `t` is accepted only in a block whose
-/// timestamp lies in `[t, t + TIME_WINDOW_MS)`, so it is never ahead of the block.
-fn timed(response: Response, t: u64) -> Result<Response, Refusal> {
-    let end = t.checked_add(TIME_WINDOW_MS).ok_or(code::BAD_MESSAGE)?;
-    response.try_timestamp_window(t..end).map_err(|_| code::BAD_MESSAGE)
+/// A clock moved to the attested time `t` is valid only in a block stamped at or after `t`. An
+/// honest record is always behind the block (finality takes minutes); a record ahead of it, which
+/// only a captured sync committee could write, then moves no clock unless the block's producer
+/// also stamps its block that far ahead.
+fn not_before(response: Response, t: u64) -> Response {
+    response.timestamp_window(t..)
 }
 
 fn ready(config: BridgeConfig, pending: Option<Pending>, gate: Gate, sunset: bool) -> BridgeState {
@@ -83,10 +88,11 @@ fn ready_config(state: Option<BridgeState>) -> Result<(BridgeConfig, Gate, bool)
     }
 }
 
+/// `token(cid, token)` between transactions.
 fn token_state(state: Option<BridgeState>) -> Result<TokenState, Refusal> {
     match state {
         None => Err(code::NOT_REGISTERED),
-        Some(BridgeState::Token(token)) => Ok(token),
+        Some(BridgeState::Token(token)) if token.pending.is_none() => Ok(token),
         Some(_) => Err(code::BAD_STATE),
     }
 }
@@ -103,6 +109,9 @@ fn handle(input: &ReceiveInput) -> Result<Response, Refusal> {
         match waiting {
             BridgeState::Config(config) if config.awaiting() == Some(from) => {
                 return config_reply(input, program, config);
+            }
+            BridgeState::Token(token) if token.awaiting() == Some(from) => {
+                return token_time_reply(input, token);
             }
             BridgeState::Holder(HolderState { pending: Some(pending), .. })
                 if from == root_actor(program, &pending.config_id, pending.leaf_count) =>
@@ -122,11 +131,11 @@ fn handle(input: &ReceiveInput) -> Result<Response, Refusal> {
         }
         BridgeMessage::Echo { .. } => Ok(Response::keep_state()),
         BridgeMessage::Init { config, record_slot, proof } => init(input, program, state, config, record_slot, &proof),
-        BridgeMessage::Claim { config_id, leaf_count, witness, range, relayer, time_ms } => {
-            claim(input, program, state, config_id, leaf_count, witness, range, relayer, time_ms)
+        BridgeMessage::Claim { config_id, leaf_count, witness, range, relayer } => {
+            claim(input, program, state, config_id, leaf_count, witness, range, relayer)
         }
-        BridgeMessage::ClaimPrivately { config_id, leaf_count, witness, range, relayer, time_ms } => {
-            let pending = PendingClaim { config_id, leaf_count, witness, range, relayer, time_ms };
+        BridgeMessage::ClaimPrivately { config_id, leaf_count, witness, range, relayer } => {
+            let pending = PendingClaim { config_id, leaf_count, witness, range, relayer };
             claim_privately(input, program, state, pending)
         }
         BridgeMessage::Read => {
@@ -181,14 +190,14 @@ fn handle(input: &ReceiveInput) -> Result<Response, Refusal> {
         BridgeMessage::ExtendFees { config_id, token, index, schedule, count } => {
             extend_fees(input, program, state, config_id, token, index, schedule, count)
         }
-        BridgeMessage::Issue { config_id, token, nullifier, amount, range, leaf_count, mint_to, relayer, time_ms } => {
-            let claim = Issued { config_id, token, nullifier, amount, leaf_count, mint_to, relayer, time_ms };
+        BridgeMessage::Issue { config_id, token, nullifier, amount, range, leaf_count, mint_to, relayer } => {
+            let claim = Issued { config_id, token, nullifier, amount, leaf_count, mint_to, relayer };
             issue(input, program, state, claim, range)
         }
-        BridgeMessage::Admit { config_id, token, mints, value, time_ms } => {
-            admit(input, program, state, config_id, token, mints, value, time_ms)
+        BridgeMessage::Admit { config_id, token, mints, value } => {
+            admit(input, program, state, config_id, token, mints, value)
         }
-        BridgeMessage::Tick { config_id, token, time_ms } => tick(input, program, state, config_id, token, time_ms),
+        BridgeMessage::Tick { config_id, token, record } => tick(input, program, state, config_id, token, record),
         control @ (BridgeMessage::Sunset { .. } | BridgeMessage::Freeze { .. } | BridgeMessage::SetCap { .. }) => {
             role_message(input, program, state, control)
         }
@@ -297,15 +306,23 @@ fn import_fees(
         .send_sync(header, &AttestMessage::Attest { request }))
 }
 
-/// The attestation program's reply to `Init`, `ImportRoot`, `Register` or `ImportFees`.
+/// The attestation program's reply to `Init`, `ImportRoot`, `Register` or `ImportFees` (an
+/// attestation), or to the `Read` of a record for the global clock (`Tick`, `Freeze`).
 fn config_reply(input: &ReceiveInput, program: AccountId, state: &ConfigState) -> Result<Response, Refusal> {
+    if let ConfigState::Ready { config, pending: Some(Pending::Time(pending)), gate, sunset } = state {
+        let mut gate = *gate;
+        let t = apply_time(input, &config.instance_id, config.evm_chain_id, pending, &mut gate)?;
+        return Ok(not_before(set(ready(config.clone(), None, gate, *sunset)), t));
+    }
     let attestation: Attestation = borsh::from_slice(&input.message).map_err(|_| code::BAD_MESSAGE)?;
     let config = state.config().clone();
     let config_id = config.id(program);
     let (pending, gate, sunset) = match state {
         ConfigState::Pairing { record_slot, .. } => {
             check_pairing(&config, &config_id, *record_slot, &attestation)?;
-            let gate = Gate::new(config.controls.global_cap);
+            // No record read yet: the clock starts at 0 and the buckets start counting at the
+            // first attested time a `Tick` or `Freeze` brings (`Bucket::refill`).
+            let gate = Gate::new(config.controls.global_cap, 0);
             return Ok(set(ready(config, None, gate, false)));
         }
         ConfigState::Ready { pending: Some(pending), gate, sunset, .. } => (pending, *gate, *sunset),
@@ -319,7 +336,8 @@ fn config_reply(input: &ReceiveInput, program: AccountId, state: &ConfigState) -
             SyncMessage::new(to, &BridgeMessage::WriteRoot { root }).with_pda_seeds([seed])
         }
         Pending::Register { entry, schedule, record_slot } => {
-            let token = check_register(&config, &config_id, entry, schedule, *record_slot, &attestation)?;
+            let token =
+                check_register(&config, &config_id, entry, schedule, *record_slot, &attestation, gate.now_ms)?;
             let to = token_actor(program, &config_id, &entry.token);
             SyncMessage::new(to, &BridgeMessage::WriteToken { state: token })
                 .with_pda_seeds([token_seed(&config_id, &entry.token)])
@@ -336,6 +354,7 @@ fn config_reply(input: &ReceiveInput, program: AccountId, state: &ConfigState) -
             SyncMessage::new(token_actor(program, &config_id, token), &extend)
                 .with_pda_seeds([token_seed(&config_id, token)])
         }
+        Pending::Time(_) => return Err(code::BAD_STATE),
     };
     Ok(set(ready(config, None, gate, sunset)).send(message))
 }
@@ -422,11 +441,9 @@ struct Issued {
     leaf_count: u64,
     mint_to: Option<Root>,
     relayer: Option<Root>,
-    time_ms: u64,
 }
 
 /// The `Issue` of a verified claim, to `token(cid, token)`.
-#[allow(clippy::too_many_arguments)]
 fn issue_message(
     program: AccountId,
     root: &RootState,
@@ -435,7 +452,6 @@ fn issue_message(
     range: ScheduleRange,
     mint_to: Option<Root>,
     relayer: Option<Root>,
-    time_ms: u64,
 ) -> SyncMessage {
     let message = BridgeMessage::Issue {
         config_id: root.config_id,
@@ -446,7 +462,6 @@ fn issue_message(
         leaf_count: root.leaf_count,
         mint_to,
         relayer,
-        time_ms,
     };
     SyncMessage::new(token_actor(program, &root.config_id, &token), &message)
 }
@@ -463,7 +478,6 @@ fn claim(
     witness: ClaimWitness,
     range: ScheduleRange,
     relayer: Option<Root>,
-    time_ms: u64,
 ) -> Result<Response, Refusal> {
     if input.receiver != root_actor(program, &config_id, leaf_count) {
         return Err(code::WRONG_SENDER);
@@ -477,7 +491,7 @@ fn claim(
     if claimed.kind != DestKind::Public {
         return Err(code::WRONG_DESTINATION);
     }
-    let issue = issue_message(program, &root, witness.token, &claimed, range, Some(witness.dest), relayer, time_ms);
+    let issue = issue_message(program, &root, witness.token, &claimed, range, Some(witness.dest), relayer);
     Ok(Response::keep_state().send(issue))
 }
 
@@ -529,16 +543,7 @@ fn claim_reply(input: &ReceiveInput, program: AccountId, state: &BridgeState) ->
         }
         DestKind::Public => Some(witness.dest),
     };
-    let issue = issue_message(
-        program,
-        &root,
-        witness.token,
-        &claimed,
-        pending.range,
-        mint_to,
-        pending.relayer,
-        pending.time_ms,
-    );
+    let issue = issue_message(program, &root, witness.token, &claimed, pending.range, mint_to, pending.relayer);
     Ok(set(BridgeState::Holder(holder)).send(issue))
 }
 
@@ -555,7 +560,7 @@ fn issue(
     if !input.from_own_program() {
         return Err(code::WRONG_SENDER);
     }
-    let (config_id, token, time_ms) = (claim.config_id, claim.token, claim.time_ms);
+    let (config_id, token) = (claim.config_id, claim.token);
     if input.receiver != token_actor(program, &config_id, &token) {
         return Err(code::WRONG_SENDER);
     }
@@ -563,7 +568,6 @@ fn issue(
     let (mint_fee, relay_fee) = state.fees_for(claim.amount, &range)?;
     let minted = claim.amount.checked_add(mint_fee).and_then(|m| m.checked_add(relay_fee)).ok_or(code::BAD_STATE)?;
     let value = state.entry.value(minted).ok_or(code::BAD_STATE)?;
-    state.gate.advance(time_ms);
     state.gate.admit(true, value)?;
     let fee_recipient = state.controls.fee_recipient;
     let mut fees = Vec::new();
@@ -587,15 +591,14 @@ fn issue(
         mint_to: claim.mint_to,
         fees,
     };
-    let admit = BridgeMessage::Admit { config_id, token, mints: true, value, time_ms: Some(time_ms) };
-    let response = set(BridgeState::Token(state))
+    let admit = BridgeMessage::Admit { config_id, token, mints: true, value };
+    Ok(set(BridgeState::Token(state))
         .send_sync(config_actor(program, &config_id), &admit)
-        .send(SyncMessage::new(to, &spend).with_pda_seeds([seed]));
-    timed(response, time_ms)
+        .send(SyncMessage::new(to, &spend).with_pda_seeds([seed])))
 }
 
-/// At `config(cid)`, from `token(cid, token)`: the global freeze and bucket of a mint or a burn.
-#[allow(clippy::too_many_arguments)]
+/// At `config(cid)`, from `token(cid, token)`: the global freeze and bucket of a mint or a burn, at
+/// the configuration's attested time.
 fn admit(
     input: &ReceiveInput,
     program: AccountId,
@@ -604,7 +607,6 @@ fn admit(
     token: Address,
     mints: bool,
     value: u128,
-    time_ms: Option<u64>,
 ) -> Result<Response, Refusal> {
     if input.from != Some(token_actor(program, &config_id, &token)) {
         return Err(code::WRONG_SENDER);
@@ -613,15 +615,8 @@ fn admit(
         return Err(code::WRONG_SENDER);
     }
     let (config, mut gate, sunset) = ready_config(state)?;
-    if let Some(t) = time_ms {
-        gate.advance(t);
-    }
     gate.admit(mints, value)?;
-    let response = set(ready(config, None, gate, sunset));
-    match time_ms {
-        Some(t) => timed(response, t),
-        None => Ok(response),
-    }
+    Ok(set(ready(config, None, gate, sunset)))
 }
 
 /// At `nullifier(chain, vault, N)`, from `token(cid, token)` after a verified, admitted claim:
@@ -700,9 +695,9 @@ fn burn(
         let amount = u128_of(&note.amount).ok_or(code::NOT_REGISTERED)?;
         state.entry.index_of(amount).ok_or(code::NOT_REGISTERED)?;
         let value = state.entry.value(amount).ok_or(code::BAD_STATE)?;
-        // Burns carry no time (the note is the checkpoint's 185 bytes): the stored time applies.
+        // The token's attested clock applies, as for a claim.
         state.gate.admit(false, value)?;
-        let admit = BridgeMessage::Admit { config_id, token: note.token, mints: false, value, time_ms: None };
+        let admit = BridgeMessage::Admit { config_id, token: note.token, mints: false, value };
         let publish = SyncMessage::new(record, &BridgeMessage::burn(config_id, &note))
             .with_pda_seeds([burn_seed(&config_id, &note_hash)]);
         return Ok(set(BridgeState::Token(state)).send_sync(config_actor(program, &config_id), &admit).send(publish));
@@ -733,13 +728,22 @@ fn burn(
 }
 
 // ---------------------------------------------------------------------------------------------
-// Roles: Sunset, Freeze, SetCap; and Tick
+// Roles: Sunset, Freeze, SetCap; and the clock (Tick)
 // ---------------------------------------------------------------------------------------------
+
+/// The gate a role message or a `Tick` addresses: `config(cid)`, or `token(cid, token)`.
+fn gate_actor(program: AccountId, config_id: &Root, token: &Option<Address>) -> Actor {
+    match token {
+        None => config_actor(program, config_id),
+        Some(token) => token_actor(program, config_id, token),
+    }
+}
 
 /// `Sunset`, `Freeze` or `SetCap`. At the role's own actor (any actor that is not the target),
 /// a top-level call or private root the role signed is forwarded to the target; the target
 /// (`config(cid)`, or `token(cid, token)`) accepts it only from the configured role's actor.
-/// `Sunset` must be such a visible call (D10): the checkpoint sees only those.
+/// `Sunset` must be such a visible call (D10): the checkpoint sees only those. A `Freeze` is
+/// applied once the record it names has replied, against the attested time it gives.
 fn role_message(
     input: &ReceiveInput,
     program: AccountId,
@@ -753,10 +757,7 @@ fn role_message(
         }
         _ => return Err(code::BAD_MESSAGE),
     };
-    let target = match &token {
-        None => config_actor(program, &config_id),
-        Some(token) => token_actor(program, &config_id, token),
-    };
+    let target = gate_actor(program, &config_id, &token);
     if input.receiver != target {
         if input.from.is_some() || !input.is_authorized {
             return Err(code::NOT_AUTHORIZED);
@@ -764,18 +765,8 @@ fn role_message(
         return Ok(Response::keep_state().send_sync(target, &message));
     }
     let from_role = |role: &Root| input.from == Some(holder_actor(program, AccountId::new(*role)));
-    // The target's roles and gate.
-    let (controls, mut gate, scope) = match (&token, state) {
-        (None, state) => {
-            let (config, gate, sunset) = ready_config(state)?;
-            (config.controls, gate, Scope::Config(config, sunset))
-        }
-        (Some(_), state) => {
-            let token = token_state(state)?;
-            (token.controls, token.gate, Scope::Token(token))
-        }
-    };
-    let time = match message {
+    let (controls, mut gate, scope) = load_scope(&token, state)?;
+    match message {
         BridgeMessage::Sunset { .. } => {
             if !from_role(&controls.freeze_authority) {
                 return Err(code::NOT_AUTHORIZED);
@@ -784,31 +775,43 @@ fn role_message(
             if sunset {
                 return Err(code::ALREADY_WRITTEN);
             }
-            return Ok(set(ready(config, None, gate, true)));
+            Ok(set(ready(config, None, gate, true)))
         }
-        BridgeMessage::Freeze { mints, burns, until_ms, time_ms, .. } => {
+        BridgeMessage::Freeze { mints, burns, until_ms, record, .. } => {
             if !from_role(&controls.freeze_authority) {
                 return Err(code::NOT_AUTHORIZED);
             }
-            gate.freeze(mints, burns, until_ms, time_ms)?;
-            time_ms
+            Ok(scope.ask_time(gate, PendingTime { record, then: Timed::Freeze { mints, burns, until_ms } }))
         }
-        BridgeMessage::SetCap { mints, cap, time_ms, .. } => {
+        BridgeMessage::SetCap { mints, cap, .. } => {
             if !from_role(&controls.admin) {
                 return Err(code::NOT_AUTHORIZED);
             }
-            set_cap(&mut gate, mints, cap, &controls.floor, time_ms)?;
-            time_ms
+            set_cap(&mut gate, mints, cap, &controls.floor)?;
+            Ok(set(scope.with_gate(gate)))
         }
-        _ => return Err(code::BAD_MESSAGE),
-    };
-    timed(set(scope.with_gate(gate)), time)
+        _ => Err(code::BAD_MESSAGE),
+    }
 }
 
-/// A role message's target, with what it keeps besides its gate.
+/// A gate's actor state, with what it keeps besides its gate.
 enum Scope {
     Config(BridgeConfig, bool),
     Token(TokenState),
+}
+
+/// The target's roles, gate and scope, between transactions.
+fn load_scope(token: &Option<Address>, state: Option<BridgeState>) -> Result<(Controls, Gate, Scope), Refusal> {
+    match token {
+        None => {
+            let (config, gate, sunset) = ready_config(state)?;
+            Ok((config.controls, gate, Scope::Config(config, sunset)))
+        }
+        Some(_) => {
+            let token = token_state(state)?;
+            Ok((token.controls, token.gate, Scope::Token(token)))
+        }
+    }
 }
 
 impl Scope {
@@ -818,46 +821,75 @@ impl Scope {
             Scope::Token(token) => BridgeState::Token(TokenState { gate, ..token }),
         }
     }
+
+    /// Wait for the record `pending` names: `Read` it from the configuration's attestation
+    /// program (the reply is accepted only from that record's actor, within this transaction).
+    fn ask_time(self, gate: Gate, pending: PendingTime) -> Response {
+        let slot = pending.record.record_slot;
+        let (state, record) = match self {
+            Scope::Config(config, sunset) => {
+                let record = header_actor(config.attestation, &config.instance_id, slot);
+                (ready(config, Some(Pending::Time(pending)), gate, sunset), record)
+            }
+            Scope::Token(token) => {
+                let record = header_actor(token.attestation, &token.instance_id, slot);
+                (BridgeState::Token(TokenState { gate, pending: Some(pending), ..token }), record)
+            }
+        };
+        set(state).send_sync(record, &AttestMessage::Read)
+    }
 }
 
-/// The admin's new mint (or burn) bucket: never below the floor.
-fn set_cap(gate: &mut Gate, mints: bool, cap: CapParams, floor: &CapParams, t: u64) -> Result<(), Refusal> {
+/// The admin's new mint (or burn) bucket, refilled at the gate's attested time under the old
+/// parameters first: never below the floor.
+fn set_cap(gate: &mut Gate, mints: bool, cap: CapParams, floor: &CapParams) -> Result<(), Refusal> {
     if !cap.at_least(floor) {
         return Err(code::BAD_MESSAGE);
     }
-    gate.advance(t);
     let now = gate.now_ms;
     let bucket = if mints { &mut gate.mint } else { &mut gate.burn };
     bucket.set(cap, now);
     Ok(())
 }
 
-/// Anyone, at `config(cid)` or `token(cid, token)`: advance the stored time (burns carry none).
+/// Anyone, at `config(cid)` or `token(cid, token)`: read `record` and advance the clock to it.
 fn tick(
     input: &ReceiveInput,
     program: AccountId,
     state: Option<BridgeState>,
     config_id: Root,
     token: Option<Address>,
-    time_ms: u64,
+    record: TimeRecord,
 ) -> Result<Response, Refusal> {
-    let next = match token {
-        None => {
-            if input.receiver != config_actor(program, &config_id) {
-                return Err(code::WRONG_SENDER);
-            }
-            let (config, mut gate, sunset) = ready_config(state)?;
-            gate.advance(time_ms);
-            ready(config, None, gate, sunset)
-        }
-        Some(token) => {
-            if input.receiver != token_actor(program, &config_id, &token) {
-                return Err(code::WRONG_SENDER);
-            }
-            let mut token = token_state(state)?;
-            token.gate.advance(time_ms);
-            BridgeState::Token(token)
-        }
-    };
-    timed(set(next), time_ms)
+    if input.receiver != gate_actor(program, &config_id, &token) {
+        return Err(code::WRONG_SENDER);
+    }
+    let (_, gate, scope) = load_scope(&token, state)?;
+    Ok(scope.ask_time(gate, PendingTime { record, then: Timed::Tick }))
+}
+
+/// The record's reply to a gate's `Read`: its attested time ([`record_time`]); the clock advanced
+/// to it (never back), then the freeze the gate was waiting to apply, if any.
+fn apply_time(
+    input: &ReceiveInput,
+    instance_id: &Root,
+    evm_chain_id: u64,
+    pending: &PendingTime,
+    gate: &mut Gate,
+) -> Result<u64, Refusal> {
+    let reply: StateReply = borsh::from_slice(&input.message).map_err(|_| code::BAD_MESSAGE)?;
+    let t = record_time(instance_id, evm_chain_id, &reply.state, pending.record.header.as_deref())?;
+    gate.advance(t);
+    if let Timed::Freeze { mints, burns, until_ms } = pending.then {
+        gate.freeze(mints, burns, until_ms)?;
+    }
+    Ok(t)
+}
+
+/// At `token(cid, token)`: the reply of the record it asked for.
+fn token_time_reply(input: &ReceiveInput, token: &TokenState) -> Result<Response, Refusal> {
+    let mut token = token.clone();
+    let pending = token.pending.take().ok_or(code::BAD_STATE)?;
+    let t = apply_time(input, &token.instance_id, token.evm_chain_id, &pending, &mut token.gate)?;
+    Ok(not_before(set(BridgeState::Token(token)), t))
 }

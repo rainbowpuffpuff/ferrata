@@ -217,7 +217,6 @@ pub async fn plan_claim<L: Ledger>(
     history: &History,
     private: bool,
     relayer: Option<Hash>,
-    time_ms: u64,
     dest_key: Option<lee::PublicKey>,
 ) -> Result<ClaimPlan> {
     let d = &owned.deposit;
@@ -284,10 +283,10 @@ pub async fn plan_claim<L: Ledger>(
             bail!("a public-kind deposit is claimed in plaintext or by its own account's private execution; use the plaintext path");
         }
         mentions.push(Mention::Pda { actor: root, seed: root_seed(&ctx.cid, n) });
-        BridgeMessage::ClaimPrivately { config_id: ctx.cid, leaf_count: n, witness, range, relayer, time_ms }
+        BridgeMessage::ClaimPrivately { config_id: ctx.cid, leaf_count: n, witness, range, relayer }
     } else {
         mentions.push(Mention::Pda { actor: root, seed: root_seed(&ctx.cid, n) });
-        BridgeMessage::Claim { config_id: ctx.cid, leaf_count: n, witness, range, relayer, time_ms }
+        BridgeMessage::Claim { config_id: ctx.cid, leaf_count: n, witness, range, relayer }
     };
     mentions.push(Mention::Pda {
         actor: token_actor(ctx.program, &ctx.cid, &d.token),
@@ -642,7 +641,7 @@ pub fn reveals(call: &LezCall) -> &'static str {
              anyone can link this mint to the Ethereum deposit"
         }
         BridgeMessage::ClaimPrivately { .. } => {
-            "private claim: N, the token, the denomination, the fee schedule's range, the root read, the relayer, the time; \
+            "private claim: N, the token, the denomination, the fee schedule's range, the root read, the relayer, when (its block); \
              not the deposit, the path, s or the private destination"
         }
         BridgeMessage::Burn { .. } => {
