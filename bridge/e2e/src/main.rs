@@ -899,7 +899,11 @@ fn cmd_crown_release(opts: &BTreeMap<String, String>) -> Result<()> {
             .iter()
             .map(|n| {
                 let mut m = n.clone();
-                m["name"] = json!(format!("{}-{}", n["kind"].as_str().unwrap_or("burn"), n["i"]));
+                // `i` and `denomIndex` may be numbers or decimal strings.
+                let num = |v: &Value| v.as_u64().or_else(|| v.as_str().and_then(|t| t.parse().ok()));
+                let i = num(&n["i"]).map_or_else(|| "x".to_string(), |v| v.to_string());
+                m["name"] = json!(format!("{}-{i}", n["kind"].as_str().unwrap_or("burn")));
+                m["denomIndex"] = num(&n["denomIndex"]).map_or(Value::Null, |v| json!(v));
                 m["s_out"] = n["sOut"].clone();
                 m["c_out"] = n["cOut"].clone();
                 m["amount"] = match n["amount"].as_str() {
