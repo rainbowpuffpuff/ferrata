@@ -162,6 +162,47 @@ impl NodeView {
         }
     }
 
+    /// A view from a LEZ v0.4 sequencer's block record in the lab driver's `chain.tsv` format
+    /// (`lez/lab/driver`: per block, `getBlock`'s id, hash and `bedrock_status`): the final tier is the
+    /// run of `Finalized` blocks from the first line (a `Safe` or `Pending` block ends it). Ids must be
+    /// consecutive. Key sets come from elsewhere (the channel's answer on the Logos Blockchain node).
+    pub fn from_chain_tsv(node: &str, text: &str, key_sets: Vec<KeySet>) -> Result<Self> {
+        let mut lines = text.lines().filter(|l| !l.trim().is_empty());
+        let header: Vec<&str> = lines.next().context("an empty chain.tsv")?.split('\t').collect();
+        let col = |name: &str| header.iter().position(|c| *c == name).with_context(|| format!("chain.tsv has no {name} column"));
+        let (ib, ih, is) = (col("block")?, col("hash")?, col("bedrock_status")?);
+        let mut final_blocks = BTreeMap::new();
+        let mut final_height = 0u64;
+        let mut in_final_run = true;
+        let mut next: Option<u64> = None;
+        for line in lines {
+            let f: Vec<&str> = line.split('\t').collect();
+            let field = |i: usize| f.get(i).copied().with_context(|| format!("a short chain.tsv line: {line}"));
+            let id: u64 = field(ib)?.parse().with_context(|| format!("a block id: {line}"))?;
+            if let Some(n) = next {
+                ensure!(id == n, "chain.tsv jumps from block {} to {id}", n - 1);
+            }
+            next = Some(id + 1);
+            let hash: H32 = field(ih)?.parse()?;
+            if in_final_run && field(is)? == "Finalized" {
+                final_blocks.insert(id, hash);
+                final_height = id;
+            } else {
+                in_final_run = false;
+            }
+        }
+        let v = Self {
+            node: node.to_owned(),
+            final_height,
+            final_blocks,
+            key_sets,
+            states: BTreeMap::new(),
+            attestations: Vec::new(),
+        };
+        v.validate()?;
+        Ok(v)
+    }
+
     /// The key set live at block `at` (the last one whose `from_block <= at`).
     pub fn live_key_set(&self, at: u64) -> Option<&KeySet> {
         self.key_sets.iter().rev().find(|k| k.from_block <= at)

@@ -240,6 +240,19 @@ check "A1 finalised with a beacon recorded after its wait" 'cast send --unlocked
 monitor_polls "$state_a" WATCHER_KEY 1
 check "A1 audited as good after finalisation" '[ "$(jq -r ".finalized[\"0\"]" "$state_a")" = ok ]'
 
+# R: the node view from a real LEZ v0.4.0-rc1 sequencer's record (lez/lab/results/record/chain.tsv), offline.
+"$mon" node-view --chain-tsv "$here/../lez/lab/results/record/chain.tsv" --label lab-devnet > "$out/node-view-lab.json"
+real_tip=$(jq -r '.finalBlocks["258"]' "$out/node-view-lab.json")
+rcand() { # TIPID TIPHASH
+  jq -n --arg z "$zero" --argjson id "$1" --arg h "$2" '{newState: $z, parentState: $z, burnRoot: $z, burnCount: 0,
+    importedLeafCount: 0, sunset: false, deltaAtSubmit: 3600, tipId: $id, tipHash: $h, n: 1, t: 1, submittedAt: 1000}' > "$run/rcand.json"
+  "$mon" check --rule B --candidate "$run/rcand.json" --node "file:$out/node-view-lab.json" --now 1000 | jq -c . | tee -a "$out/real-record-verdicts.jsonl" | jq -r '.verdict + "/" + (.reason.kind // "")'
+}
+check "R1 the lab record's final tier: 258 blocks" '[ "$(jq .finalHeight "$out/node-view-lab.json")" = 258 ]'
+check "R2 a candidate at the real tip 258 passes" '[ "$(rcand 258 "$real_tip")" = "pass/" ]'
+check "R3 the same id with another hash is cancelled" '[ "$(rcand 258 "$(label forged/258)")" = "cancel/tipConflict" ]'
+check "R4 a tip above the final tier waits" '[ "$(rcand 259 "$(label block/259)")" = "wait/" ]'
+
 # Alerting: every critical alert reached the operator's command.
 crit=$(jq -s '[.[] | select(.level=="critical")] | length' "$alerts")
 paged=$(grep -c . "$pager" || true)

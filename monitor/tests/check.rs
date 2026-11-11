@@ -286,3 +286,44 @@ fn state_file_round_trip_and_vault_guard() {
     assert!(Store::load_or_new(&path, "0xdef", 0).is_err());
     assert!(!path.with_extension("tmp").exists());
 }
+
+/// The node view from a real LEZ v0.4.0-rc1 sequencer's record (the lab's devnet, `lez/lab/results/record`).
+#[test]
+fn a_real_sequencer_record_as_the_node_view() {
+    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../lez/lab/results/record/chain.tsv");
+    let text = std::fs::read_to_string(path).unwrap();
+    let v = NodeView::from_chain_tsv("lab", &text, Vec::new()).unwrap();
+    assert_eq!(v.final_height, 258);
+    assert_eq!(v.final_blocks.len(), 258);
+    let tip: H32 = "0xad17ee54bb76f415fb16862d9d09c328424fa10d481ea507662335658e3a9db2".parse().unwrap();
+    assert_eq!(v.final_blocks[&258], tip);
+    // No key sets in the record: the key-set check is skipped, the tip checks apply.
+    assert_eq!(evaluate(&B, &cand(258, tip, 1, 1, T0), &[v.clone()], T0), Verdict::Pass);
+    assert!(matches!(
+        evaluate(&B, &cand(258, hb("forged", 258), 1, 1, T0), &[v.clone()], T0),
+        Verdict::Cancel { reason: Reason::TipConflict { .. } }
+    ));
+    assert!(matches!(evaluate(&B, &cand(259, hb("x", 259), 1, 1, T0), &[v], T0), Verdict::Wait { .. }));
+
+    // The same record with blocks 257 and 258 only Safe and Pending: the final tier ends at 256.
+    let partial: String = text
+        .lines()
+        .map(|l| {
+            let mut f: Vec<String> = l.split('\t').map(str::to_owned).collect();
+            match f[0].as_str() {
+                "257" => *f.last_mut().unwrap() = "Safe".into(),
+                "258" => *f.last_mut().unwrap() = "Pending".into(),
+                _ => {}
+            }
+            f.join("\t") + "\n"
+        })
+        .collect();
+    let p = NodeView::from_chain_tsv("lab", &partial, Vec::new()).unwrap();
+    assert_eq!(p.final_height, 256);
+    let c = cand(258, tip, 1, 1, T0);
+    assert!(matches!(evaluate(&B, &c, &[p.clone()], T0 + 299), Verdict::Wait { .. }));
+    assert!(matches!(evaluate(&B, &c, &[p], T0 + 300), Verdict::Cancel { reason: Reason::TipNotFinal { final_height: 256, .. } }));
+    // A gap in the record is refused.
+    let gap: String = text.lines().filter(|l| !l.starts_with("100\t")).map(|l| format!("{l}\n")).collect();
+    assert!(NodeView::from_chain_tsv("lab", &gap, Vec::new()).is_err());
+}

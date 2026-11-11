@@ -1,6 +1,6 @@
-# monitor on a local anvil chain: 2026-11-11T16:38:12Z
+# monitor on a local anvil chain: 2026-11-11T18:28:50Z
 
-anvil anvil Version: 1.3.6-v1.3.6, chain id 31337; vault 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 (rule B, wait 1 h), watcher 0x1Ff0980aBC46a21Ad0B7CEcd4f2d151914665978, freeze authority 0x66188f5FFb27Ab0cc2cf1002cef008069B2B28BC.
+anvil Version: 1.3.6-v1.3.6, chain id 31337; vault 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 (rule B, wait 1 h), watcher 0x107189D1B569bb00D27702f69bc95a9741525115, freeze authority 0x9539c86255B528F0A191A9f4d01Bfaf96B316b69.
 
 - PASS S1 honest candidate still pending after 3 polls
 - PASS S1 monitor passed it
@@ -33,6 +33,10 @@ anvil anvil Version: 1.3.6-v1.3.6, chain id 31337; vault 0x9fE46736679d2D9a65F09
 - PASS A3 cancelled after delta_g, before its deadline (tipNotFinal)
 - PASS A1 finalised with a beacon recorded after its wait
 - PASS A1 audited as good after finalisation
+- PASS R1 the lab record's final tier: 258 blocks
+- PASS R2 a candidate at the real tip 258 passes
+- PASS R3 the same id with another hash is cancelled
+- PASS R4 a tip above the final tier waits
 - PASS alerts: all 14 critical alerts reached the pager command
 
 ## Cancellations and the revocation (chain time, seconds)
@@ -48,7 +52,7 @@ anvil anvil Version: 1.3.6-v1.3.6, chain id 31337; vault 0x9fE46736679d2D9a65F09
 | A2 | keySetNotLive | 0 | 11760 | 41477 |
 | A3 | tipNotFinal | 7202 | 5458 | 41477 |
 
-S7: checkpoint 2 (tipConflict) finalised at 1794430107, revoked at 1794430108, revocable until 1794516507.
+S7: checkpoint 2 (tipConflict) finalised at 1794436745, revoked at 1794436746, revocable until 1794523145.
 
 Alerts: "cancelled 9, candidate-passed 3, candidate-resubmitted 1, candidate-waiting 2, checkpoints-revoked 2, finalized-wrong 2, paused 1, persistent-candidate 1, revoked 1, started 16, stopped 15".
 
