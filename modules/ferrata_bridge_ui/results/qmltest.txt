@@ -11,12 +11,11 @@ PASS   : qmltestrunner::FerrataMiniApp::test_06_positions_from_the_seed()
 PASS   : qmltestrunner::FerrataMiniApp::test_07_private_claim()
 PASS   : qmltestrunner::FerrataMiniApp::test_08_plaintext_claim()
 PASS   : qmltestrunner::FerrataMiniApp::test_09_error_messages()
-FAIL!  : qmltestrunner::FerrataMiniApp::test_10_burn() 'burn.submit enabled' returned FALSE. ()
-   Loc: [/home/q/Downloads/software_i_built/logos-rfp/spike/ferrata-wt-miniapp/modules/ferrata_bridge_ui/qmltest/tst_miniapp.qml(26)]
-FAIL!  : qmltestrunner::FerrataMiniApp::test_11_checkpoint_and_release() 'found release.pick.0' returned FALSE. ()
-   Loc: [/home/q/Downloads/software_i_built/logos-rfp/spike/ferrata-wt-miniapp/modules/ferrata_bridge_ui/qmltest/tst_miniapp.qml(24)]
+PASS   : qmltestrunner::FerrataMiniApp::test_10_burn()
+FAIL!  : qmltestrunner::FerrataMiniApp::test_11_checkpoint_and_release() 'paid to the fresh recipient' returned FALSE. ()
+   Loc: [/home/q/Downloads/software_i_built/logos-rfp/spike/ferrata-wt-miniapp/modules/ferrata_bridge_ui/qmltest/tst_miniapp.qml(187)]
 PASS   : qmltestrunner::FerrataMiniApp::test_12_admin()
 PASS   : qmltestrunner::FerrataMiniApp::test_13_privacy()
 PASS   : qmltestrunner::FerrataMiniApp::cleanupTestCase()
-Totals: 13 passed, 2 failed, 0 skipped, 0 blacklisted, 18756ms
+Totals: 14 passed, 1 failed, 0 skipped, 0 blacklisted, 30863ms
 ********* Finished testing of qmltestrunner *********

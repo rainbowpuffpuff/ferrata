@@ -1,44 +1,49 @@
 {"method":"info","ms":9,"ok":true,"error":null}
 {"method":"registry","ms":9,"ok":true,"error":null}
 {"method":"price","ms":3,"ok":true,"error":null}
+{"method":"registry","ms":9,"ok":true,"error":null}
 {"method":"info","ms":9,"ok":true,"error":null}
-{"method":"registry","ms":8,"ok":true,"error":null}
-{"method":"price","ms":2,"ok":true,"error":null}
-{"method":"info","ms":9,"ok":true,"error":null}
+{"method":"price","ms":3,"ok":true,"error":null}
+{"method":"info","ms":11,"ok":true,"error":null}
 {"method":"scan","ms":17,"ok":true,"error":null}
-{"method":"set_endpoints","ms":42,"ok":true,"error":null}
+{"method":"set_endpoints","ms":187,"ok":true,"error":null}
 {"method":"info","ms":7,"ok":false,"error":"error sending request for url (http://127.0.0.1:18999/): error sending request for url (http://127.0.0.1:18999/): client error (Connect): tcp connect error: Connection refused (os error 111)"}
 {"method":"set_endpoints","ms":0,"ok":false,"error":"sequencer http://127.0.0.1:3040: this devnet's zone is the in-process LEZ harness, which has no RPC; a sequencer endpoint is used by ferrata_bridge_module and by the CLI's --sequencer"}
-{"method":"set_endpoints","ms":34,"ok":true,"error":null}
-{"method":"info","ms":8,"ok":true,"error":null}
+{"method":"set_endpoints","ms":163,"ok":true,"error":null}
+{"method":"info","ms":11,"ok":true,"error":null}
 {"method":"registry","ms":8,"ok":true,"error":null}
-{"method":"price","ms":3,"ok":true,"error":null}
-{"method":"deposit","ms":84,"ok":true,"error":null}
-{"method":"scan","ms":15,"ok":true,"error":null}
-{"method":"price","ms":4,"ok":true,"error":null}
-{"method":"price","ms":3,"ok":true,"error":null}
-{"method":"deposit","ms":85,"ok":true,"error":null}
-{"method":"scan","ms":15,"ok":true,"error":null}
-{"method":"scan","ms":17,"ok":true,"error":null}
-{"method":"relay","ms":1645,"ok":true,"error":null}
+{"method":"price","ms":2,"ok":true,"error":null}
+{"method":"deposit","ms":198,"ok":true,"error":null}
 {"method":"scan","ms":16,"ok":true,"error":null}
-{"method":"claim","ms":12,"ok":true,"error":null}
-{"method":"scan","ms":17,"ok":true,"error":null}
-{"method":"claim","ms":1231,"ok":true,"error":null}
-{"method":"scan","ms":15,"ok":true,"error":null}
-{"method":"claim","ms":11,"ok":false,"error":"refused: LEZ bridge program exit code 250 ALREADY_CLAIMED (checked before sending): the deposit's nullifier is spent: it was claimed already"}
+{"method":"price","ms":3,"ok":true,"error":null}
+{"method":"price","ms":2,"ok":true,"error":null}
+{"method":"deposit","ms":250,"ok":true,"error":null}
+{"method":"scan","ms":19,"ok":true,"error":null}
+{"method":"scan","ms":19,"ok":true,"error":null}
+{"method":"relay","ms":2918,"ok":true,"error":null}
+{"method":"scan","ms":19,"ok":true,"error":null}
+{"method":"claim","ms":13,"ok":true,"error":null}
+{"method":"scan","ms":19,"ok":true,"error":null}
+{"method":"claim","ms":1381,"ok":true,"error":null}
+{"method":"scan","ms":18,"ok":true,"error":null}
+{"method":"claim","ms":13,"ok":false,"error":"refused: LEZ bridge program exit code 250 ALREADY_CLAIMED (checked before sending): the deposit's nullifier is spent: it was claimed already"}
 {"method":"burn","ms":4,"ok":false,"error":"refused: LEZ bridge program exit code 254 INSUFFICIENT_BALANCE (checked before sending: the holding is 100000000000000000 base units): the holding is smaller than the denomination burned"}
 {"method":"burn","ms":0,"ok":true,"error":null}
 {"method":"scan","ms":17,"ok":true,"error":null}
-{"method":"checkpoint","ms":0,"ok":false,"error":"no burn to checkpoint yet"}
+{"method":"burn","ms":1141,"ok":true,"error":null}
+{"method":"scan","ms":16,"ok":true,"error":null}
+{"method":"checkpoint","ms":26,"ok":true,"error":null}
+{"method":"scan","ms":18,"ok":true,"error":null}
+{"method":"scan","ms":16,"ok":true,"error":null}
+{"method":"release","ms":156,"ok":true,"error":null}
 {"method":"scan","ms":17,"ok":true,"error":null}
-{"method":"admin.status","ms":9,"ok":true,"error":null}
-{"method":"admin.set_cap","ms":478,"ok":false,"error":"refused: LEZ bridge program exit code 240 BAD_MESSAGE (SetCap, returned by the program): a message that does not decode or that this actor does not take, or values outside the specified bounds"}
-{"method":"admin.set_cap","ms":442,"ok":true,"error":null}
+{"method":"admin.status","ms":11,"ok":true,"error":null}
+{"method":"admin.set_cap","ms":459,"ok":false,"error":"refused: LEZ bridge program exit code 240 BAD_MESSAGE (SetCap, returned by the program): a message that does not decode or that this actor does not take, or values outside the specified bounds"}
+{"method":"admin.set_cap","ms":524,"ok":true,"error":null}
+{"method":"registry","ms":11,"ok":true,"error":null}
+{"method":"admin.freeze","ms":1103,"ok":true,"error":null}
 {"method":"registry","ms":9,"ok":true,"error":null}
-{"method":"admin.freeze","ms":1063,"ok":true,"error":null}
-{"method":"registry","ms":9,"ok":true,"error":null}
-{"method":"deposit","ms":83,"ok":true,"error":null}
-{"method":"relay","ms":1788,"ok":true,"error":null}
-{"method":"claim","ms":457,"ok":false,"error":"refused: LEZ bridge program exit code 242 FROZEN (returned by the program in the harness): mints or burns are frozen (of the token or of the whole configuration), or an import after Sunset"}
-{"method":"registry","ms":9,"ok":true,"error":null}
+{"method":"deposit","ms":108,"ok":true,"error":null}
+{"method":"relay","ms":2298,"ok":true,"error":null}
+{"method":"claim","ms":507,"ok":false,"error":"refused: LEZ bridge program exit code 242 FROZEN (returned by the program in the harness): mints or burns are frozen (of the token or of the whole configuration), or an import after Sunset"}
+{"method":"registry","ms":8,"ok":true,"error":null}

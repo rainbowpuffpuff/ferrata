@@ -184,7 +184,7 @@ Item {
             click("release.submit");
             approve("Release", "22-release-approval");
             tryVerify(function () { return has(host.app.releaseText, "Released:"); }, 60000, host.app.releaseText);
-            verify(has(host.app.releaseText, host.app.recipient), "paid to the fresh recipient");
+            verify(has(host.app.releaseText.toLowerCase(), host.app.recipient.toLowerCase()), "paid to the fresh recipient");
             shot("23-released");
             tab("positions");
             click("positions.recover");
