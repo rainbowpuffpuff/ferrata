@@ -277,10 +277,15 @@ def start_anvil() -> None:
     """anvil forking Sepolia at a block fixed at the run's first start; its state dumped into the run directory every
     30 s (and on exit) and loaded again at the next start, so a stopped rehearsal continues."""
     global ANVIL
-    up = os.environ["CROWN_FORK_UPSTREAM"]
+    # The upstream must serve state at the fork block for as long as the rehearsal runs: anvil reads every storage slot
+    # it has not seen (also of contracts made on the fork, once their state was reloaded) at the fork block. A node that
+    # prunes after 128 blocks fails ~25 min in ("failed to get storage", crown-rehearsal-2); publicnode served state
+    # 2,000 blocks old (11 Nov 2026). CROWN_FORK_ARCHIVE overrides it.
+    up = os.environ.get("CROWN_FORK_ARCHIVE") or "https://ethereum-sepolia-rpc.publicnode.com"
     rj = runj()
     if not rj.get("fork_block"):
         head = int(out(["cast", "block-number"], env={**os.environ, "ETH_RPC_URL": up}))
+        rj["fork_upstream"] = up
         rj["fork_block"] = head - 5  # five behind the head: a load-balanced endpoint may lag (anvil then exits)
         jsave(f"{RUN}/run.json", rj)
     os.makedirs(f"{RUN}/anvil", exist_ok=True)
@@ -289,7 +294,7 @@ def start_anvil() -> None:
     for attempt in (1, 2, 3):
         log = open(f"{RUN}/logs/anvil-{attempt}.log", "a")
         cmd = ["anvil", "--fork-url", up, "--fork-block-number", str(rj["fork_block"]), "--auto-impersonate",
-               "--host", "127.0.0.1", "--port", "8545", "--state", statef, "--state-interval", "30"]
+               "--host", "127.0.0.1", "--port", "8545", "--state", statef, "--state-interval", "30", "--retries", "10"]
         ANVIL = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT)
         for _ in range(90):
             time.sleep(2)
