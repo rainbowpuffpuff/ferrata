@@ -70,12 +70,79 @@ parameters, a notice period, an engineer's check of the finality conditions, aud
 
 ## 3. Releases
 
+`just release VERSION` (`scripts/release.sh build`, `package`, `verify`, `record`) makes one bundle,
+`ferrata-VERSION/` and `ferrata-VERSION-x86_64-linux.tar.gz` with its `.sha256`:
+
+| Part | Files | What the manifest says of each |
+|---|---|---|
+| `programs/` | `ferrata_lez.bin` (attestation program) and `ferrata_bridge.bin` (bridge program): LEZ program ELFs, deployed with LEZ's program loader; `checkpoint.bin`, `checkpoint_b.bin`, `segment.bin`, `release.bin`: R0BF binaries (`ferrata-e2e program-binary`); `ids.txt`, `ids.jsonl` as the build wrote them | bytes, sha256, image id, role (which vault immutable it is) |
+| `vault/` | `FerrataVault.json`, `FerrataRegistry.json` (forge artifacts: ABI, creation and runtime bytecode, the vault's with solc's link placeholder for the library); `script/DeployVault.s.sol`, `script/deploy.sh`, `script/params/*.json` | compiler, EVM version, optimizer, creation and runtime sizes, sha256 of each bytecode, link references; EIP-170 checked |
+| `cli/` | `ferrata` (x86_64-unknown-linux-gnu) and the `Cargo.lock` it was built with | bytes, sha256 |
+| top | `deploy-testnet.sh`, `toolchains.txt` (rustc, r0vm, forge, solc, LEZ commit, build host), `MANIFEST.json`, `SHA256SUMS` | version, commit, creation time, targets, status ("prototype, unaudited: for testnets only") |
+
+How the build is made reproducible: a RISC Zero guest built without Docker embeds the absolute paths of its sources,
+so its image id depends on where it was built (`scripts/reproduce-image-ids.sh`). The release builds the guests
+with that script, at the crown build path (`spike/ferrata-wt-crown`, LEZ v0.4.0-rc1 at `spike/upstream/lez-v0.4.0-rc1`,
+`RISC0_HOME=spike/risc0-home-lez` for `lez/`), so anyone can rebuild them with
+`scripts/reproduce-image-ids.sh docker` and compare. The tarball is made with fixed owner, order and modification
+time. The vault is built from its sources alone into the release's own output directory; the deployment script
+deploys only a tree whose forge build is byte-identical to the release's bytecode.
+
+What is committed: `releases/VERSION/MANIFEST.json` and `releases/VERSION/SHA256SUMS`. The binaries are not
+(their size, and they are build products); a release is published by attaching the tarball to a repository release,
+which nothing here does (no publishing without the owner).
+
+`scripts/release.sh verify DIR` (and `just release-verify DIR`) checks every line of `SHA256SUMS`, every file of
+the manifest (size and sha256) and, where `r0vm` 3.0.5 is installed, recomputes the two LEZ programs' image ids
+(`r0vm --elf F --id`).
+
 <!-- results: section 3 -->
 
 ## 4. Deployment on testnet 0.4: one command
 
+```sh
+scripts/deploy-testnet.sh --release ferrata-0.1.0-rc.1 --lez <testnet 0.4 sequencer URL> \
+  --evm-rpc <EVM JSON-RPC URL> --chain-id <id> --mode B --params <the testnet's parameters> \
+  --wallet-home <LEZ wallet home> --payer <funded LEZ account> [--gas-rule eip8037] --send
+```
+
+Without `--send` it prints every command and sends nothing. In order:
+
+1. **The release.** `release.sh verify`: every checksum, the manifest; the image ids it will deploy are printed.
+2. **LEZ.** The endpoint must answer. With `--send`: LEZ's own `wallet` (the testnet's version), whose
+   `wallet_config.json` must name the same sequencer (the script refuses another, and never edits a wallet's
+   configuration), creates one public account per 96 KiB segment of each program (`MAX_SEGMENT_DATA_LEN`; LEZ allows
+   at most 20) and its header, then `wallet program-loader deploy --elf ... --immutable` for the attestation program
+   and the bridge program.
+3. **The EVM chain.** The endpoint must report `--chain-id`; chain id 1 is always refused (prototype, unaudited).
+   The vault's parameters are the release's image ids plus `--params` (the testnet's `lezConfigId`, genesis state,
+   `nMin`, `tMin`, posting timeframe, LEZ token definitions). The vault is deployed only if forge's build of this
+   tree is byte-identical to the release's bytecode (creation and runtime, both contracts); then
+   `vault/script/deploy.sh` deploys the library, the Groth16 verifier behind RISC Zero's emergency stop and the
+   vault, one transaction per forge run, each gas limit from the node's estimate, the key through Foundry's own
+   variables (never on a command line). Afterwards the script reads the vault's `checkpointImageId` and
+   `releaseImageId` back from the chain and refuses unless they are the release's.
+4. **The record**: `vault/deployments/NAME/` (`deploy.log`, `params.json`, the forge logs, `vault-deployment.json`,
+   `deployment.json`).
+
+Not automated yet, and printed as the next step: the attestation program's `Init` from a bootstrap and the bridge
+program's configuration for the new vault on LEZ (today `lez/live/driver` and the `ferrata` CLI do these in the
+rehearsals), the token registrations, and the hand-over of the emergency stop's ownership (`deploy.sh` renounces
+it). On the day testnet 0.4 opens, its parameters (`k`, slot time, committee, posting timeframe) go into `--params`
+and the wallet's configuration, and the command above is the deployment.
+
 <!-- results: section 4 -->
 
 ## 5. The four Halmos properties, with a longer budget
+
+Four properties of `vault/test/halmos/VaultHalmos.t.sol` did not finish in the 900 s bound of the run of 11 November
+(`notes/reviews/security/tools-2026-11-11.md` §3.1): `check_after_stop_only_owed_leaves` (default layout; the
+generic layout gave 63 counterexamples, all `registerToken` calls that a concrete replay shows harmless),
+`check_no_role_call_moves_funds`, `check_no_role_call_moves_funds_after_retire` (neither layout finished) and
+`check_role_entry_points_move_no_funds`. `scripts/halmos-long.sh` runs them again with the same tool, pins, local
+fixes and bounds (`scripts/security-tools.sh halmos`: Halmos 0.3.3, z3 4.12.6, arrays of length 1, byte strings of
+4 bytes, loops unrolled twice), one process per property and storage layout (six), in parallel on the build box,
+each bounded by `HALMOS_LONG_TIMEOUT` (4,800 s here, 5.3 times the earlier bound). Logs:
+`notes/reviews/security/tools-out/halmos-long/<run>/halmos.log`.
 
 <!-- results: section 5 -->
