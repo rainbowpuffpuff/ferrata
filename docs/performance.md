@@ -114,9 +114,9 @@ recommended cadence with real proving and recorded hardware (milestone A4).
 
 ### P.4 User proving (RFP-021)
 
-Declared minimum for user-side proving: **8 GB of memory and 4 cores, x86-64 or Apple Silicon**
+Declared minimum for user-side proving: **16 GB of memory and 8 cores, x86-64 or Apple Silicon**
 ([`attestation.md`](design/attestation.md) §13). Measured: the private attestation on one L4, 16.1 s,
-0.76 GiB host memory (P.2). The update proof is not a user proof (9.18 GiB peak). **Gaps:** the private
+0.76 GiB host memory (P.2). The update proof is an updater's, not a user's (9.18 GiB peak). **Gaps:** the private
 attestation on a mid-range laptop CPU and at the declared minimum; macOS; a chain of hops (a 320-hop claim
 is estimated at about 58M accelerated user cycles).
 
@@ -176,23 +176,23 @@ size.
 
 ### P.1 Claim and mint in one LEZ public transaction
 
-**Met.** In-process harness, the merged bridge program (image `f11b1aba…`), synthetic vault storage
-([`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md) §1):
+**Met.** In-process harness, the merged bridge program (time fix and security fixes; image `cf41b7e5…` at the
+fifth integration pass's path), synthetic vault storage (tables `lez/results/bridge-*.md`, regenerated at b93a945):
 
 | Claim | Handlers (cycles each) | Execution gas | Storage gas |
 |---|---|---:|---:|
-| plaintext, 1 ETH, fee schedule 0 | Claim 107,526 → Issue 47,239 → Admit 34,291 → Spend 21,901 → Mint 14,237 → Mint 14,237 | 239,431 | 2,061 |
-| plaintext, 10 ETH, mint and relay fees | as above, three Mints (14,237; 14,237; 19,181) | 260,579 | 2,061 |
-| plaintext, under a Gloas record | — | 236,572 | 2,061 |
-| plaintext, on the v5 vault's real storage | — | 236,493–266,875 | — |
+| plaintext, 1 ETH, fee schedule 0 | Claim 107,479 → Issue 52,100 → Admit 33,886 → Spend 30,300 → Mint 17,560 → Mint 17,560 | 258,885 | 2,053 |
+| plaintext, 10 ETH, mint and relay fees | as above, three Mints (17,560; 17,560; 22,280) | 287,943 | 2,053 |
+| plaintext, under a Gloas record | — | 254,999 | 2,053 |
+| plaintext, on the v5 vault's real storage | — | 254,920–294,144 | — |
 | plaintext on a live sequencer (the frozen earlier program, stand-in beacon chain) | — | 142,432 | — |
-| private, to a private destination | private: ClaimPrivately 41,133 + reply 111,838 user cycles; public: Read, Issue, Admit, Spend, Mint | 539,060 (409,764 + 129,296) | 224,063 |
-| private, to a public destination | the same private part; public part with three Mints | 573,154 | 224,063 |
+| private, to a private destination | private: ClaimPrivately 41,160 + reply 111,596 user cycles; public: Read, Issue, Admit, Spend, Mint | 551,502 (409,764 + 141,738) | 224,063 |
+| private, to a public destination | the same private part; public part with three Mints | 600,607 (the test's output: `bridge_private.rs`, `a_private_claim_to_a_public_destination_and_the_refusals`) | 224,063 |
 
 Breakdown by component: the claim statement (path, opening of `C`, nullifier) runs in `Claim`; the
 controls in `Issue` (denomination, fee schedule, token freeze and bucket) and `Admit` (global freeze and
-bucket); `Spend` writes the nullifier; one `Mint` per payee. The controls cost +96,987 against the program
-without them (×1.68). The bridge's own claim statement in a bare guest is 74,379 user cycles, constant
+bucket); `Spend` writes the nullifier; one `Mint` per payee. The controls, attested time and the security fixes
+cost +116,441 against the program without them (×1.82). The bridge's own claim statement in a bare guest is 74,379 user cycles, constant
 over 64 witnesses ([`bridge.md`](design/bridge.md) §18.3). Sources: [`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md)
 §1–§3, §8a, §11.
 
@@ -202,9 +202,9 @@ The root import is the only additional verification (the claim needs no Ethereum
 
 | `ImportRoot` | Execution gas | Storage gas | Where |
 |---|---:|---:|---|
-| 8 leaves, synthetic storage | 231,558 | 2,025 | in-process harness |
-| the v5 vault's real storage, 3 and 6 leaves | 277,456; 278,292 | — | in-process harness |
-| under a Gloas record, with the header | 262,195 | 2,612 | in-process harness |
+| 8 leaves, synthetic storage | 231,365 | 2,025 | in-process harness |
+| the v5 vault's real storage, 3 and 6 leaves | 277,263; 278,099 | — | in-process harness |
+| under a Gloas record, with the header | 262,007 | 2,612 | in-process harness |
 | live sequencer, stand-in beacon chain | 232,278 | 2,460 | live sequencer |
 | Sepolia's real state: the live vault, one leaf, capture 1 (the frozen program) | 426,479 | 6,646 | live sequencer ([`lez/live/inbound/README.md`](../lez/live/inbound/README.md)) |
 
@@ -242,18 +242,20 @@ vault on Sepolia's rules; a later (not first) candidate with the real verifier.
 
 | Proof | Figure | Where | Source |
 |---|---|---|---|
-| release (succinct) | 80,501 user cycles, constant over 64 witnesses; **37.1–48.6 s**, peak 1.46 GB, receipt 223,930 B (up to 150 s under load) | laptop CPU | [`bridge.md`](design/bridge.md) §18.2 |
+| release (succinct), earlier image | 80,501 user cycles, constant over 64 witnesses; **37.1–48.6 s**, peak 1.46 GB, receipt 223,930 B (up to 150 s under load) | laptop CPU | [`bridge.md`](design/bridge.md) §18.2 |
+| release, current image (`NOut` v2, review M-3) | 77,736 user cycles, constant over 64 witnesses (executor); proven and wrapped in the crown rehearsal | build box (executor); cloud | [`evidence-suites.txt`](evidence-suites.txt); [`crown-rehearsal-3`](../e2e/runs/crown-rehearsal-3/README.md) |
 | release, end-to-end run | 15.1 s and 14.7 s | 16 cores | [`bridge.md`](design/bridge.md) §18.7 |
 | Groth16 wrap of a release | 77.5–79.9 s; about 7.3 GiB; seal 260 B; **x86 only** | laptop CPU | [`bridge.md`](design/bridge.md) §18.2 |
 | claim statement (the bridge's part) | 74,379 user cycles; 38.90 s | laptop CPU | [`bridge.md`](design/bridge.md) §18.3 |
 | full LEZ private claim (earlier image) | **15.3 s**; receipt 227,477 B; 0.78 GiB host for claim and burn | one L4 | [`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md) §7 |
-| full LEZ private claim, LEZ's wallet | **254.8 s**; transaction 252,185 B | a cloud build box's CPU | [`lez/live/inbound/README.md`](../lez/live/inbound/README.md) |
+| full LEZ private claim, LEZ's wallet (earlier program) | **254.8 s**; transaction 252,185 B | a cloud build box's CPU | [`lez/live/inbound/README.md`](../lez/live/inbound/README.md) |
+| private claim and private burn of the merged program, LEZ's wallet on a devnet | **276.8 s** and **336.0 s**, proving and sending | a cloud CPU container, 16 cores reserved, up to 32 | [`crown-rehearsal-3`](../e2e/runs/crown-rehearsal-3/README.md) |
 | private burn (earlier image) | **12.4 s**; receipt 226,978 B | one L4 | [`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md) §7 |
 | recovery scan | median 128.9 ms per 100,000 deposits, 1,308.6 ms per 1,000,000 | laptop CPU, one thread | [`bridge.md`](design/bridge.md) §18.3 |
 
-Declared minimum: 8 GB and 4 cores, x86-64 or Apple Silicon. **Gaps:** the full private claim and burn on a
-mid-range laptop and at the declared minimum; macOS; real proofs of the current program image; the wrap
-on Apple Silicon (not supported today).
+Declared minimum: 16 GB and 8 cores, x86-64 or Apple Silicon. **Gaps:** the full private claim and burn on a
+mid-range laptop and at the declared minimum; macOS; real proofs of the current program image on a laptop or a
+GPU (the crown rehearsal proved it on a cloud CPU); the wrap on Apple Silicon (not supported today).
 
 ### P.5 Latency: deposit to mint, burn to release
 
@@ -327,7 +329,7 @@ over one and five years with real traffic (milestone B4).
 ## Gaps, in one list
 
 `just bench`; any user-side proof at the declared minimum or on macOS; a CPU proof of the private
-attestation, claim and burn of the current images; latency measured end to end on either leg; the
+attestation, and laptop proofs of the claim and burn of the current images; latency measured end to end on either leg; the
 recommended-cadence tracking cost with real proving; daemon resources; the BLS precompile delta; cost
 against state size; the v5 vault on Sepolia's gas rules; an import under a mainnet state root; LEZ account
 overhead. Every one is a milestone deliverable ([`attestation.md`](design/attestation.md) §13;
