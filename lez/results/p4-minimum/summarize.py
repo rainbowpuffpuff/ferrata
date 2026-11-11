@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Tables of the p4-minimum runs, from the files `minimum.py` wrote (container.json, run-<i>/run.json,
-run-<i>/prove.log). usage: python3 -I summarize.py [RESULTS_DIR]   (default: runs/ beside this file)
+run-<i>/prove.log). usage: python3 -I summarize.py [RESULTS_DIR [JSON_OUT]]  |  python3 -I summarize.py --log PROVE_LOG
+(defaults: runs/ and summary.json beside this file). Writes the JSON, prints two Markdown tables.
 
 Which r0vm sessions were proven: r0vm logs every session it executes (RISC0_INFO=1, RUST_LOG=info),
 the dev-mode executions the binaries make for their tables and checks as well as the proven ones.
@@ -78,6 +79,13 @@ def parse_log(text: str) -> dict:
 
 
 def main() -> None:
+    if len(sys.argv) == 3 and sys.argv[1] == "--log":  # one prove.log, e.g. of a laptop run
+        for p in parse_log(open(sys.argv[2], errors="replace").read())["proofs"]:
+            print(f"{p['label']}: execute_and_prove {p['execute_and_prove_s']} s, {p['user_cycles']:,} user cycles in "
+                  f"{p['segments']} segments ({p['total_cycles']:,} with padding); receipt {p['receipt_bytes']:,} B")
+            for s in p["proven_sessions"]:
+                print(f"  session: {s['user_cycles']:,} user cycles, {s['segments']} segment(s), proven in {s['gap_s']} s")
+        return
     here = pathlib.Path(__file__).resolve().parent
     root = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else here / "runs"
     out = {}
@@ -95,7 +103,8 @@ def main() -> None:
             "declared", "nproc", "sched_getaffinity", "cpuinfo_processors", "cpuinfo_model_names", "cpuinfo_ids",
             "cpu_flags", "cgroup", "meminfo_kib", "kernel", "os", "glibc", "env", "r0vm_version", "r0vm_sha256",
             "input_hashes_equal_manifest", "image_ids")}, "manifest_commit": c["manifest"]["ferrata_commit"], "runs": runs}
-    print(json.dumps(out, indent=1))
+    json_out = pathlib.Path(sys.argv[2]) if len(sys.argv) > 2 else here / "summary.json"
+    json_out.write_text(json.dumps(out, indent=1) + "\n")
     # the table
     gib = 1 << 30
     rows = []
@@ -108,15 +117,31 @@ def main() -> None:
             cg = [r["sampled_max"]["cgroup_current_bytes"] for r in d["runs"]]
             ok = all(r["settle_exit"] == 0 for r in d["runs"])
             p0 = ps[0]
+            uc = sorted({p["user_cycles"] for p in ps})
+            ucell = f"{uc[0]:,}" if len(uc) == 1 else f"{uc[0]:,}–{uc[-1]:,}"
             rows.append(
                 f"| {label} | {len(ps)} | {' / '.join(f'{x:.1f}' for x in t)} | {statistics.median(t):.1f} | "
-                f"{p0['user_cycles']:,} | {p0['segments']} ({p0['total_cycles']:,}) | "
+                f"{ucell} | {p0['segments']} ({p0['total_cycles']:,}) | "
                 f"{max(rss) / gib:.2f} / {max(cg) / gib:.2f} | {p0['receipt_bytes']:,} | {p0['tx_bytes']:,} | "
                 f"{'yes, ' + str(len(d['runs'])) + ' of ' + str(len(d['runs'])) if ok else 'NO'} |")
     print("\n| proof | runs | `execute_and_prove`, each run (s) | median (s) | user cycles proven | segments (cycles with padding) "
           "| peak memory, GiB: r0vm RSS / container (whole run, max of the runs) | receipt (B) | transaction (B) | receipt verified |")
     print("|---|---:|---|---:|---:|---:|---:|---:|---:|---|")
     print("\n".join(rows))
+    # the proven sessions: the program's transitions, then LEZ's circuit (the last session of each proof)
+    print("\n| proof | proven session | user cycles | segments (cycles with padding) | proving time, each run (s) | share of `execute_and_prove` (run 1) |")
+    print("|---|---|---:|---:|---|---:|")
+    for job, d in out.items():
+        runs = d["runs"]
+        for k, p0 in enumerate(runs[0]["proofs"] if runs else []):
+            n = len(p0["proven_sessions"])
+            for j, s0 in enumerate(p0["proven_sessions"]):
+                name = "LEZ's privacy-preserving circuit" if j == n - 1 else f"the program's private transition {j + 1}"
+                gaps = [r["proofs"][k]["proven_sessions"][j]["gap_s"] for r in runs if len(r["proofs"]) > k]
+                users = sorted({r["proofs"][k]["proven_sessions"][j]["user_cycles"] for r in runs if len(r["proofs"]) > k})
+                ucell = f"{users[0]:,}" if len(users) == 1 else f"{users[0]:,}–{users[-1]:,}"
+                print(f"| {p0['label'] if j == 0 else ''} | {name} | {ucell} | {s0['segments']} ({s0['total_cycles']:,}) | "
+                      f"{' / '.join(f'{g:.1f}' for g in gaps)} | {100 * s0['gap_s'] / p0['execute_and_prove_s']:.0f} % |")
 
 
 if __name__ == "__main__":
