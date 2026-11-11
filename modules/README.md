@@ -1,11 +1,17 @@
 # Logos modules
 
-The proposal (§B7) puts everything off chain in Logos modules. This directory holds the first one, a
-prototype of `ferrata_attest_module`: three methods, built the way Logos modules are built, loaded by a
-headless Logos Core and called there. `RESULTS.md` records what ran.
+The proposal (§B7) puts everything off chain in Logos modules. This directory holds two, prototypes,
+built the way Logos modules are built, loaded together by a headless Logos Core and called there:
+`ferrata_attest_module` (six methods: dry runs, checkpoint checks, and a log or storage slot attested end
+to end: fetched over JSON-RPC, its `Attest` transaction built, the program's event read back) and
+`ferrata_bridge_module` (seven: deposit, claim, burn, release, recover, status). `catalog/` lays out
+the catalog that would release them with `logos-modules-release-action`. `RESULTS.md` records what ran.
 
 ```sh
-modules/scripts/check.sh      # on a Linux x86-64 box with Nix: stage, test, build, package, load, call
+modules/scripts/native.sh     # any Linux with cargo: stage, unit tests, the native call examples
+modules/scripts/e2e.sh OUT    # + the lez/ harness: a log end to end (methods called natively)
+modules/scripts/check.sh      # Linux x86-64 with Nix: the above, then build, package, load and call both
+                              # modules in Logos Core (dev and portable), and e2e.sh through the daemon
 ```
 
 ## How a Logos module is built and loaded
