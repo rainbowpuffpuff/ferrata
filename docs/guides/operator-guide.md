@@ -272,8 +272,8 @@ one round every `--poll-secs` (default 12 s, one Ethereum slot):
 
 Logs are one JSON object per line (`start`, `job-done`, `job-refused`, `candidate-waiting`, `finalized`,
 `fees-collected`, `checkpoint-needed`, `job-deferred`, `round-failed`, `stop`). The state directory is all
-it keeps between rounds: the drop book (`drops.json`), the done and refused jobs. Stopping it between rounds
-loses nothing; a gas drop is recorded before its credit is sent, so a crash cannot cause a second drop for
+it keeps between rounds: the drop book (`drops.json`), the done and refused jobs. SIGTERM or SIGINT stops it
+after the round in progress (a `stop` line names the signal), so a service manager can restart it at will; a gas drop is recorded before its credit is sent, so a crash cannot cause a second drop for
 the same `N` (a failed credit stays recorded as failed: remove the entry only knowing it was not sent).
 
 ### 6.2 Starting a relayer
@@ -341,14 +341,17 @@ seal in the release job; wrapping inside the daemon is not built.
 
 ### 6.6 Tested, and the numbers
 
-- `cli/tests/relayer.sh` on the build box: (1) the gas-drop checks on a real receipt (one drop per `N`;
+- `cli/tests/relayer.sh` on the build box: (0) the library's unit tests (the recorded crown checkpoint journal
+  decoded and re-encoded byte for byte, the burn watch, which failures are retried, imported roots); (1) the
+  gas-drop checks on a real receipt (one drop per `N`;
   another relayer, another configuration, an unimported root, a claimed deposit, another image id and a
   changed journal refused, also after a restart); (2) **the daemon on an anvil fork of Sepolia** at the
   block before `crown-live-1`'s `submitCandidate`, with that run's real checkpoint and release proofs:
   candidate 375,281 gas, `finalizeAttested` 218,385 after W = 3,600 s, releases 358,908 and 393,108, the
   checkpoint fees (2 × 10¹² wei) collected with `claimOwed` (the same transactions and gas in every run); a
   new real release proof of the same burn naming a relayer with the registered fee, sent by the daemon as that
-  relayer (407,052 gas, 2 × 10¹² wei received), its copy naming another relayer refused;
+  relayer (407,052 gas, 2 × 10¹² wei received), its copy naming another relayer refused; `status`, and a
+  daemon without a round limit stopped cleanly by SIGTERM;
   the early release deferred and released once the root was final; a second candidate, another relayer's
   daemon, an unpaid release and a replay refused ([`e2e/runs/relayer-fork/`](../../e2e/runs/relayer-fork/results.json));
   (3) **the LEZ harness** (`cli/tests/e2e.rs` with `FERRATA_GASDROP_ELF`): a real gas-drop receipt for a
