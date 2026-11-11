@@ -96,7 +96,7 @@ logs under `runs/<tag>/<job>/`.
 | private attestation | 904.6 / 904.3 / 902.2 | 904.3 | 497.3 / 474.3 / 501.0 | 497.3 | 1.82× | 2,355,666 (5) | 9.25 / 9.23 | 6 of 6 |
 | private claim | 902.5 / 905.4 / 909.8 | 905.4 | 371.4ᴵ / 469.3 / 463.7 | 463.7 | 1.95× | 2,136,957 (5) | 9.24 / 9.22 | 6 of 6 |
 | private burn | 756.3 / 770.0 / 754.2 | 756.3 | 310.6ᴵ / 389.0 / 392.3 | 389.0 | 1.94× | 1,913,488 (4) | 9.24 / 9.22 | 6 of 6 |
-| release, succinct (the holder's proof) | 46.0 / 46.0 | 46.0 | 26.4 / 27.0 | 26.7 | 1.72× | 77,736 (1) | 1.48 / 1.42 | 4 of 4 |
+| release, succinct (the holder's proof) | 46.0 / 46.0 | 46.0 | 26.4 / 27.0 | 26.7 | 1.72× | 77,736 (1) | 1.49 / 1.42 | 4 of 4 |
 | LEZ's wallet: a deshielded native transfer (yardstick) | 999.2 / 984.1 | 991.7 | 490.4 / 486.9 | 488.6 | 2.03× | 2,851,842 (4) | 9.24 / 9.22 | 4 of 4 |
 
 ᴵ an Intel Xeon (family 6, model 85, AVX-512) on AWS; every other run on AMD Zen 3 servers. The 8-CPU
