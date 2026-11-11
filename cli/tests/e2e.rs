@@ -39,7 +39,7 @@ use ferrata_cli::{
     flow, hx,
     lez::{self, Applied, BurnFrom, Context, Ledger, LezCall, Mention},
     release, scan,
-    seed::Seed,
+    seed::{PrivateSecrets, Seed},
 };
 use ferrata_lez_bridge_wire::{fee_slot, registry_slot, BridgeMessage, BridgeState, FeeSchedule, HolderState, Holding};
 use harness::{bridge as hb, private::PrivateAccount, TxReport};
@@ -64,6 +64,7 @@ sol! {
         function finalize(uint256 beaconIndex, Checkpoint c, bytes seal) external;
         function finalState() external view returns (bytes32);
         function checkpointImageId() external view returns (bytes32);
+        function setTokenCap(address token, uint8 direction, uint256 capacity, uint256 refillPerSecond) external;
         function releaseImageId() external view returns (bytes32);
     }
 }
@@ -88,12 +89,12 @@ struct HarnessLedger {
     /// The wallet's private accounts: their secret keys (ask, d, z) and their state as LEZ's wallet
     /// holds it after decrypting it from the zone (stand-in: the harness keeps the state the chain
     /// committed, checked against the commitment after every private transaction).
-    private: HashMap<AccountId, (([u8; 32], [u8; 32], [u8; 32]), lee::Account)>,
+    private: HashMap<AccountId, (PrivateSecrets, lee::Account)>,
     /// Public accounts named by applied privacy-preserving transactions.
     touched: HashSet<AccountId>,
 }
 
-fn test_keys(s: &([u8; 32], [u8; 32], [u8; 32])) -> TestPrivateKeys {
+fn test_keys(s: &PrivateSecrets) -> TestPrivateKeys {
     TestPrivateKeys { ask: lee_core::AuthorizationSecretKey(s.0), d: s.1, z: s.2 }
 }
 
@@ -131,38 +132,53 @@ impl HarnessLedger {
     /// and the account's new state (checked against the chain's commitment).
     fn settle_private(&mut self, call: &LezCall, me: Actor) -> Result<String> {
         let program = self.world.program;
-        let (secrets, before) =
-            self.private.get(&me.account_id).cloned().ok_or_else(|| anyhow!("not one of the wallet's private accounts"))?;
+        let (secrets, before) = self
+            .private
+            .get(&me.account_id)
+            .cloned()
+            .ok_or_else(|| anyhow!("not one of the wallet's private accounts"))?;
         let sender = PrivateAccount { keys: test_keys(&secrets), account: before.clone() };
         let publics: Vec<Actor> = call.mentions[1..].iter().map(Mention::actor).collect();
         let time = self.world.time;
         let run = self
             .world
             .chain
-            .prove_and_settle_private(&sender, me, borsh::to_vec(&call.message)?, publics, &hb::catalog(), RESERVE, time)
+            .prove_and_settle_private(
+                &sender,
+                me,
+                borsh::to_vec(&call.message)?,
+                publics,
+                &hb::catalog(),
+                RESERVE,
+                time,
+            )
             .map_err(|e| anyhow!("the private transaction does not prove (the program refuses it): {e}"))?;
         ensure!(run.charge.revert.is_none(), "the private transaction reverted: {:?}", run.charge.revert);
         self.applied.extend(lez::visible_calls(&run.tx, program));
         self.touched.extend(run.tx.message.public_account_ids());
-        let mut holder = match BridgeState::try_from_slice(&before.data.actor_state(program).to_vec()) {
+        let mut holder = match BridgeState::try_from_slice(before.data.actor_state(program)) {
             Ok(BridgeState::Holder(h)) => h,
             _ => HolderState::default(),
         };
-        let mut change = |cid: [u8; 32], token: [u8; 20], delta: i128| {
-            match holder.holdings.iter().position(|h| h.config_id == cid && h.token == token) {
-                Some(k) => {
-                    let left = (holder.holdings[k].amount as i128 + delta) as u128;
-                    if left == 0 {
-                        holder.holdings.remove(k);
-                    } else {
-                        holder.holdings[k].amount = left;
-                    }
+        let mut change = |cid: [u8; 32], token: [u8; 20], delta: i128| match holder
+            .holdings
+            .iter()
+            .position(|h| h.config_id == cid && h.token == token)
+        {
+            Some(k) => {
+                let left = (holder.holdings[k].amount as i128 + delta) as u128;
+                if left == 0 {
+                    holder.holdings.remove(k);
+                } else {
+                    holder.holdings[k].amount = left;
                 }
-                None => holder.holdings.push(Holding { config_id: cid, token, amount: delta as u128 }),
             }
+            None => holder.holdings.push(Holding { config_id: cid, token, amount: delta as u128 }),
         };
         match &call.message {
-            BridgeMessage::ClaimPrivately { config_id, witness, .. } if AccountId::new(witness.dest) == me.account_id => {
+            BridgeMessage::ClaimPrivately { config_id, witness, .. }
+                if AccountId::new(witness.dest) == me.account_id =>
+            {
                 change(*config_id, witness.token, ferrata_cli::units::word_to_u128(&witness.amount)? as i128)
             }
             BridgeMessage::Burn { config_id, token, amount, .. } => {
@@ -557,6 +573,63 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     println!("stale j: {refused}");
     ensure!(refused.to_string().contains("WrongDepositIndex"), "the vault's error is named");
 
+    // Errors through the binary (RFP-022 U.08), each naming its cause and what to do: an unsupported
+    // token, an invalid amount, a cap the deposit would exceed (eth_call, before signing), an RPC that
+    // does not answer, an RPC of another chain, no vault at the address.
+    let user_addr = keystores[0].1.to_string();
+    let dry_deposit = |extra: &[&str]| -> Result<String> {
+        let mut a = common(&seed_user);
+        a.extend(["deposit".to_string(), "--from".into(), user_addr.clone()]);
+        a.extend(extra.iter().map(|x| x.to_string()));
+        ferrata(&a.iter().map(String::as_str).collect::<Vec<_>>())
+    };
+    let unsupported = dry_deposit(&["--token", "0x000000000000000000000000000000000000dEaD", "--denomination", "0"])
+        .expect_err("an unregistered token");
+    ensure!(unsupported.to_string().contains("TokenNotRegistered"), "{unsupported}");
+    let invalid = dry_deposit(&["--denomination", "7"]).expect_err("no such denomination");
+    ensure!(invalid.to_string().contains("InvalidDenominationIndex"), "{invalid}");
+    let set_cap = |capacity: U256| ICheckpoints::setTokenCapCall {
+        token: Address::ZERO,
+        direction: 0,
+        capacity,
+        refillPerSecond: U256::ZERO,
+    };
+    anvil_send(&p, vault, set_cap(U256::from(1u64)).abi_encode(), U256::ZERO).await?;
+    let capped = dry_deposit(&["--denomination", "0"])?;
+    ensure!(
+        capped.contains("TokenDepositCapExceeded") && capped.contains("not sent"),
+        "the cap, from eth_call: {capped}"
+    );
+    anvil_send(&p, vault, set_cap(U256::MAX).abi_encode(), U256::ZERO).await?;
+    let seed_arg = seed_user.display().to_string();
+    let vault_arg = vault.to_string();
+    let no_rpc = ferrata(&["--seed", &seed_arg, "--eth-rpc", "http://127.0.0.1:9", "--vault", &vault_arg, "scan"])
+        .expect_err("no RPC");
+    let other_chain =
+        ferrata(&["--seed", &seed_arg, "--eth-rpc", &rpc, "--vault", &vault_arg, "--chain-id", "11155111", "scan"])
+            .expect_err("another chain");
+    let no_vault = ferrata(&[
+        "--seed",
+        &seed_arg,
+        "--eth-rpc",
+        &rpc,
+        "--vault",
+        "0x000000000000000000000000000000000000dEaD",
+        "scan",
+    ])
+    .expect_err("no vault");
+    for (e, want) in [
+        (&unsupported, "TokenNotRegistered"),
+        (&invalid, "InvalidDenominationIndex"),
+        (&no_rpc, "does not answer"),
+        (&other_chain, "serves chain 1, not 11155111"),
+        (&no_vault, "no contract at"),
+    ] {
+        let line = e.to_string().lines().find(|l| l.contains("error:")).unwrap_or_default().to_string();
+        println!("refused ({want}): {line}");
+        ensure!(e.to_string().contains(want), "{e}");
+    }
+
     // Scan through the binary, Ethereum only (deposit list checked against depositRoot).
     let scan_out =
         ferrata(&[common(&seed_user), vec!["scan".into()]].concat().iter().map(String::as_str).collect::<Vec<_>>())?;
@@ -785,7 +858,9 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         .context("a public burn needs its acknowledgement")?;
     ensure!(
         unacked.to_string().contains("refusing to burn from a public account")
-            && out.text().contains("Burn from a public account: the holder, its balance and the burn are public on LEZ.")
+            && out
+                .text()
+                .contains("Burn from a public account: the holder, its balance and the burn are public on LEZ.")
             && out.text().contains("The recipient is an address you used before"),
         "the public burn warns and is refused without its acknowledgement: {unacked}"
     );
@@ -931,7 +1006,10 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     .await
     .err()
     .context("a released burn")?;
-    ensure!(again.to_string().contains("NullifierAlreadyUsed") && again.to_string().contains("checked before sending"), "{again}");
+    ensure!(
+        again.to_string().contains("NullifierAlreadyUsed") && again.to_string().contains("checked before sending"),
+        "{again}"
+    );
     let twice =
         eth::send(&sp, keystores[1].1, vault, release::calldata(&rplan, Bytes::from(SEAL.to_vec())), U256::ZERO, 1)
             .await
@@ -985,7 +1063,8 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     let r = zone.world.import("ImportRoot 17 (relayer)", &cid, b2, root2.0, n2, &vault.into_array());
     ensure!(r.ok(), "ImportRoot 17: {:?}", r.exit_code);
     zone.record(&r);
-    let r = zone.world.import_fees("ImportFees ETH 1 = none (relayer)", &cid, b2, [0; 20], 1, None, &vault.into_array());
+    let r =
+        zone.world.import_fees("ImportFees ETH 1 = none (relayer)", &cid, b2, [0; 20], 1, None, &vault.into_array());
     ensure!(r.ok(), "ImportFees at 17: {:?}", r.exit_code);
     zone.record(&r);
     // 3. The claim on the defaults: held by the deposit's claim delay; past it, private.
@@ -1006,7 +1085,8 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     ensure!(held.to_string().contains("held by your claim delay"), "{held}");
     let list = eth::deposit_list(&p, vault, 0, 10_000).await?;
     let mine = scan::deposits(&user, &ctx, &list, 8, &lez::History::default(), &HashSet::new())?;
-    let n_p = mine.iter().find(|r| r.owned.deposit.leaf_index == leaf_p).context("leaf 16 is the user's")?.owned.nullifier;
+    let n_p =
+        mine.iter().find(|r| r.owned.deposit.leaf_index == leaf_p).context("leaf 16 is the user's")?.owned.nullifier;
     let opens = flow::claimable_from(list.blocks[leaf_p as usize], user.claim_delay_hours(&n_p));
     let blocks = opens - list.block;
     p.raw_request::<_, serde_json::Value>("anvil_mine".into(), (format!("0x{blocks:x}"),)).await?;
@@ -1040,7 +1120,9 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         .err()
         .context("claimed")?;
     ensure!(again.to_string().contains("250 ALREADY_CLAIMED"), "{again}");
-    let Some(Mention::PrivateSelf(me)) = claimed_p.plan.call.mentions.first().cloned() else { bail!("a private claim") };
+    let Some(Mention::PrivateSelf(me)) = claimed_p.plan.call.mentions.first().cloned() else {
+        bail!("a private claim")
+    };
     let replay = zone.settle_private(&claimed_p.plan.call, me).expect_err("a replayed private claim");
     ensure!(replay.to_string().contains("250"), "the program refuses the replay: {replay}");
     // 4. The burn on the defaults: from private /0, to a fresh recipient; a dry run, then sent.
@@ -1069,9 +1151,14 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     let burned = flow::burn(&eth_side, &user, &mut zone, &ctx, &bopts, &mut flow::Out::new(true)).await?;
     ensure!(flow::private_holding(&mut zone, &ctx, private0, &[0; 20]).await? == 0, "the private holding is burned");
     // Refusals: more than the holding (254), not a denomination (251), more decimals than the token's.
-    for (amount, want) in [("1", "254 INSUFFICIENT_BALANCE"), ("0.5", "251 NOT_REGISTERED"), ("0.1000000000000000001", "decimal")] {
+    for (amount, want) in
+        [("1", "254 INSUFFICIENT_BALANCE"), ("0.5", "251 NOT_REGISTERED"), ("0.1000000000000000001", "decimal")]
+    {
         let o = flow::BurnOpts { amount: amount.into(), ..bopts.clone() };
-        let e = flow::burn(&eth_side, &user, &mut zone, &ctx, &o, &mut flow::Out::new(false)).await.err().context("refused")?;
+        let e = flow::burn(&eth_side, &user, &mut zone, &ctx, &o, &mut flow::Out::new(false))
+            .await
+            .err()
+            .context("refused")?;
         println!("burn {amount}: {e:#}");
         ensure!(format!("{e:#}").contains(want), "burn {amount}: {e:#}");
     }
@@ -1100,23 +1187,43 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         yes: false,
         confirmations: 1,
     };
-    let early = flow::release_burn(&eth_side, &user, &mut zone, &ctx, None, &ropts(burned.plan.i, None, None), &mut flow::Out::new(true))
-        .await
-        .err()
-        .context("in its release delay")?;
+    let early = flow::release_burn(
+        &eth_side,
+        &user,
+        &mut zone,
+        &ctx,
+        None,
+        &ropts(burned.plan.i, None, None),
+        &mut flow::Out::new(true),
+    )
+    .await
+    .err()
+    .context("in its release delay")?;
     println!("release in the delay: {early}");
     ensure!(early.to_string().contains("ReleaseDelayNotElapsed"), "{early}");
-    let older = flow::release_burn(&eth_side, &user, &mut zone, &ctx, None, &ropts(1, None, None), &mut flow::Out::new(true)).await?;
+    let older =
+        flow::release_burn(&eth_side, &user, &mut zone, &ctx, None, &ropts(1, None, None), &mut flow::Out::new(true))
+            .await?;
     ensure!(older.root.count == 11, "burn 1 goes against the older root while the newer is in its delay");
     pass_release_delay(&p).await?;
     // 6. The release on the defaults: through any relayer, paid the registered relay fee; the tool
     //    writes the relayer's job (the journal and the proof, nothing secret).
-    let planned = flow::release_burn(&eth_side, &user, &mut zone, &ctx, None, &ropts(burned.plan.i, None, None), &mut flow::Out::new(true)).await?;
+    let planned = flow::release_burn(
+        &eth_side,
+        &user,
+        &mut zone,
+        &ctx,
+        None,
+        &ropts(burned.plan.i, None, None),
+        &mut flow::Out::new(true),
+    )
+    .await?;
     ensure!(planned.root.count == 12, "the newest root, once its delay has passed");
     anvil_send(
         &p,
         verifier,
-        IMock::acceptCall { imageId: release_image, journalDigest: B256::from(sha256(&planned.plan.journal)) }.abi_encode(),
+        IMock::acceptCall { imageId: release_image, journalDigest: B256::from(sha256(&planned.plan.journal)) }
+            .abi_encode(),
         U256::ZERO,
     )
     .await?;

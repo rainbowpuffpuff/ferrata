@@ -116,14 +116,19 @@ pub fn deposit_leaks(c: &DepositChoice) -> Vec<Leak> {
         ));
     }
     match c.delay_hours {
-        Some(h) => out.push(leak(0, format!("Delayed claim: held for {h} h, so the claim's time does not point at your deposit."))),
+        Some(h) => out.push(leak(
+            0,
+            format!("Delayed claim: held for {h} h, so the claim's time does not point at your deposit."),
+        )),
         None => out.push(leak(
             1,
             "No delay: a claim minutes after a deposit narrows the deposits it could be to those made just before.",
         )),
     }
     if c.relayer {
-        out.push(leak(0, "Permissionless relayer: a relayer submits and pays the LEZ fee; no fee payment ties the claim to you."));
+        // privacy.js: "Permissionless relayer: a relayer submits and pays the LEZ fee; …". The tool's
+        // private claim pays its fee inside its proof, which hides the payer the same way.
+        out.push(leak(0, "Private fee path: the claim's LEZ fee is paid inside its proof (or by a relayer); no fee payment ties the claim to you."));
     } else {
         out.push(leak(1, "Self-submitted: the account paying the LEZ fee is linked to the claim."));
     }
@@ -157,7 +162,10 @@ pub struct ClaimChoice {
 pub fn claim_leaks(c: &ClaimChoice) -> Vec<Leak> {
     let mut out = Vec::new();
     if c.private_claim {
-        out.push(leak(0, "Private claim: proven without saying which deposit it spends (no leaf index, no depositor)."));
+        out.push(leak(
+            0,
+            "Private claim: proven without saying which deposit it spends (no leaf index, no depositor).",
+        ));
     } else {
         out.push(leak(2, "Plaintext claim: names on LEZ which deposit paid which account."));
     }
@@ -167,12 +175,18 @@ pub fn claim_leaks(c: &ClaimChoice) -> Vec<Leak> {
         None => {}
     }
     if c.held && c.skip_delay {
-        out.push(leak(1, "Claiming before your random delay ends: the claim's time narrows which deposits it could be."));
+        out.push(leak(
+            1,
+            "Claiming before your random delay ends: the claim's time narrows which deposits it could be.",
+        ));
     } else if c.held {
         out.push(leak(0, "Held by your random delay: the claim will not follow the deposit closely in time."));
     }
     if c.fee_hidden {
-        out.push(leak(0, "The LEZ fee is paid inside the proof (or by a relayer): no public fee payment ties the claim to you."));
+        out.push(leak(
+            0,
+            "The LEZ fee is paid inside the proof (or by a relayer): no public fee payment ties the claim to you.",
+        ));
     } else {
         out.push(leak(1, "Self-submitted: the account paying the LEZ fee is linked to the claim."));
     }
@@ -270,7 +284,13 @@ mod tests {
         let lines = render(&DEPOSIT, &deposit_leaks(&public));
         assert!(lines.iter().any(|l| l.starts_with("WARNING")));
         assert!(lines.iter().any(|l| l.contains("High: a direct link is public")));
-        let claim = ClaimChoice { private_claim: true, dest_private: Some(true), held: true, skip_delay: false, fee_hidden: true };
+        let claim = ClaimChoice {
+            private_claim: true,
+            dest_private: Some(true),
+            held: true,
+            skip_delay: false,
+            fee_hidden: true,
+        };
         assert_eq!(claim_leaks(&claim).iter().map(|l| l.level).max(), Some(0));
         let skipped = ClaimChoice { skip_delay: true, ..claim };
         assert_eq!(exposure(&claim_leaks(&skipped)), "Elevated: a timing or fee-payer correlation");

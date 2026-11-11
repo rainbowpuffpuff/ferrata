@@ -318,7 +318,9 @@ pub async fn plan_claim<L: Ledger>(
         let root_account = match owned.kind {
             DestKind::Private => AccountId::new(owned.dest),
             DestKind::Public => prover.ok_or_else(|| {
-                anyhow!("a private claim of a public-kind deposit is proven by a private account of the wallet; none given")
+                anyhow!(
+                    "a private claim of a public-kind deposit is proven by a private account of the wallet; none given"
+                )
             })?,
         };
         mentions.push(Mention::PrivateSelf(own_actor(ctx.program, root_account)));

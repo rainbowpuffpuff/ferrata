@@ -233,14 +233,17 @@ pub async fn deposit_list(p: &DynProvider, vault: Address, from_block: u64, chun
                 .map_err(|e| anyhow!("a Deposit log does not decode: {e}"))?
                 .inner
                 .data;
-            deposits.push((at, VaultDeposit {
-                depositor: event.depositor.into_array(),
-                j: event.index,
-                leaf_index: event.leafIndex,
-                token: event.token.into_array(),
-                amount: event.amount.to_be_bytes::<32>(),
-                commitment: event.commitment.0,
-            }));
+            deposits.push((
+                at,
+                VaultDeposit {
+                    depositor: event.depositor.into_array(),
+                    j: event.index,
+                    leaf_index: event.leafIndex,
+                    token: event.token.into_array(),
+                    amount: event.amount.to_be_bytes::<32>(),
+                    commitment: event.commitment.0,
+                },
+            ));
         }
         start = end + 1;
     }

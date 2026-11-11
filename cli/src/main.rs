@@ -241,7 +241,10 @@ async fn eth_side(c: &Common) -> Result<flow::Eth> {
         .await
         .with_context(|| format!("the Ethereum RPC {url} does not answer"))?;
     if let Some(want) = c.chain_id {
-        ensure!(chain_id == want, "the Ethereum RPC {url} serves chain {chain_id}, not {want} (--chain-id): refusing to go on");
+        ensure!(
+            chain_id == want,
+            "the Ethereum RPC {url} serves chain {chain_id}, not {want} (--chain-id): refusing to go on"
+        );
     }
     ensure!(
         !alloy::providers::Provider::get_code_at(&p, vault).await?.is_empty(),
@@ -504,6 +507,20 @@ async fn run() -> Result<()> {
                         show(f.checkpointFee)
                     );
                 }
+                let dep_frozen =
+                    eth::view(&eth_p, vault, IVault::tokenDepositsFrozenUntilCall { token: t }, None).await?;
+                let rel_frozen =
+                    eth::view(&eth_p, vault, IVault::tokenReleasesFrozenUntilCall { token: t }, None).await?;
+                let delay = eth::view(
+                    &eth_p,
+                    vault,
+                    IVault::releaseDelayForCall { token: t, checkpointIndex: U256::from(checkpoints) },
+                    None,
+                )
+                .await?;
+                println!(
+                    "  deposits frozen until {dep_frozen}; releases frozen until {rel_frozen}; release delay {delay} s after a checkpoint"
+                );
                 for (dir, name) in [(0u8, "deposit"), (1u8, "release")] {
                     let cap = eth::view(&eth_p, vault, IVault::tokenCapCall { token: t, direction: dir }, None).await?;
                     let show = |x: U256| match u128::try_from(x) {

@@ -29,6 +29,10 @@ pub const BRIDGE_SEED_LABEL: &[u8] = b"ferrata/bridge-seed/v1";
 /// How many accounts of each kind a deposit's destination is searched among, by default.
 pub const DEFAULT_GAP: u32 = 8;
 
+/// A private account's secret keys as LEZ's `KeyChain` holds them: the authorization secret key and
+/// the viewing key's seed `(d, z)`.
+pub type PrivateSecrets = ([u8; 32], [u8; 32], [u8; 32]);
+
 /// The label of a deposit's claim delay under the bridge seed.
 pub const CLAIM_DELAY_LABEL: &[u8] = b"ferrata/claim-delay/v1";
 
@@ -134,7 +138,7 @@ impl Seed {
     /// The secret keys of private accounts `/0 … /n-1` as LEZ's `KeyChain` holds them: the
     /// authorization secret key and the viewing key's seed `(d, z)`. The LEZ wallet proves with
     /// them; the end-to-end test hands them to the harness, which proves as the wallet does.
-    pub fn private_account_secrets(&self, n: u32) -> Result<Vec<([u8; 32], [u8; 32], [u8; 32])>> {
+    pub fn private_account_secrets(&self, n: u32) -> Result<Vec<PrivateSecrets>> {
         let mut tree = KeyTreePrivate::new(&self.holder());
         let mut out = Vec::new();
         for index in 0..n {
@@ -144,11 +148,7 @@ impl Seed {
             let node =
                 tree.key_map.get(&chain_index).ok_or_else(|| anyhow!("private account /{index} is not in the tree"))?;
             let holder = &node.value.0.private_key_holder;
-            out.push((
-                holder.authorization_secret_key.0,
-                holder.viewing_secret_key.d,
-                holder.viewing_secret_key.z,
-            ));
+            out.push((holder.authorization_secret_key.0, holder.viewing_secret_key.d, holder.viewing_secret_key.z));
         }
         Ok(out)
     }

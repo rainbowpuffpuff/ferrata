@@ -149,7 +149,13 @@ pub struct Deposited {
 }
 
 /// `ferrata deposit`.
-pub async fn deposit(eth: &Eth, seed: &Seed, signer: Option<&Signer>, o: &DepositOpts, out: &mut Out) -> Result<Deposited> {
+pub async fn deposit(
+    eth: &Eth,
+    seed: &Seed,
+    signer: Option<&Signer>,
+    o: &DepositOpts,
+    out: &mut Out,
+) -> Result<Deposited> {
     let depositor = match (signer, o.from) {
         (Some(s), _) => s.address,
         (None, Some(f)) => f,
@@ -176,7 +182,13 @@ pub async fn deposit(eth: &Eth, seed: &Seed, signer: Option<&Signer>, o: &Deposi
     // The claim delay this deposit will get: it depends on N, which depends on the leaf index the
     // vault assigns; the leaf is the next one unless another deposit lands first.
     let next_leaf = eth::view(&eth.p, eth.vault, IVault::nextLeafIndexCall {}, None).await?;
-    let leaf = inbound::deposit_leaf(next_leaf, &depositor.into_array(), &o.token.into_array(), &U256::from(price.denomination).to_be_bytes::<32>(), &commitment);
+    let leaf = inbound::deposit_leaf(
+        next_leaf,
+        &depositor.into_array(),
+        &o.token.into_array(),
+        &U256::from(price.denomination).to_be_bytes::<32>(),
+        &commitment,
+    );
     let fid = inbound::deposit_id(&chain, &eth.vault.into_array(), next_leaf, &leaf);
     let nullifier = inbound::nullifier(&s, &fid);
     let delay = seed.claim_delay_hours(&nullifier);
@@ -191,13 +203,9 @@ pub async fn deposit(eth: &Eth, seed: &Seed, signer: Option<&Signer>, o: &Deposi
     out.line(format!("  commitment C  {}", hx(&commitment)));
     out.line(format!("  claim delay   {delay} h after the deposit (from your seed; `ferrata claim` waits for it)"));
     if o.token != eth::ETH {
-        let allowance = eth::view(
-            &eth.p,
-            o.token,
-            eth::IERC20Meta::allowanceCall { owner: depositor, spender: eth.vault },
-            None,
-        )
-        .await?;
+        let allowance =
+            eth::view(&eth.p, o.token, eth::IERC20Meta::allowanceCall { owner: depositor, spender: eth.vault }, None)
+                .await?;
         out.line(format!(
             "  allowance     {} of {} needed for the vault (approve it first; ETH needs none)",
             u128::try_from(allowance).map(show).unwrap_or_else(|_| allowance.to_string()),
@@ -214,7 +222,9 @@ pub async fn deposit(eth: &Eth, seed: &Seed, signer: Option<&Signer>, o: &Deposi
             f.gas_price
         )),
         Err(e) if signer.is_some() && o.send => return Err(e),
-        Err(e) => out.line(format!("cost: {} to the vault; the call does not pass eth_call now: {e}", show(price.total))),
+        Err(e) => {
+            out.line(format!("cost: {} to the vault; the call does not pass eth_call now: {e}", show(price.total)))
+        }
     }
     let leaks = privacy::deposit_leaks(&privacy::DepositChoice {
         private: !o.public,
@@ -291,7 +301,8 @@ pub async fn claim<L: Ledger>(
             .ok_or_else(|| anyhow!("leaf {l} is not a deposit of this seed (`ferrata scan` lists them)"))?,
         None => {
             let claimable: Vec<_> = rows.iter().filter(|r| matches!(r.state, DepositState::Claimable { .. })).collect();
-            let ready = claimable.iter().find(|r| o.no_delay || !hold(r.owned.deposit.leaf_index, &r.owned.nullifier).2);
+            let ready =
+                claimable.iter().find(|r| o.no_delay || !hold(r.owned.deposit.leaf_index, &r.owned.nullifier).2);
             match ready.or(claimable.first()) {
                 Some(r) => *r,
                 None => rows.iter().find(|r| r.state == DepositState::NotImported).ok_or_else(|| {
@@ -398,11 +409,16 @@ pub struct Burned {
 }
 
 /// The holding of private account `id` under `ctx`, as the wallet sees it.
-pub async fn private_holding<L: Ledger>(ledger: &mut L, ctx: &Context, id: AccountId, token: &[u8; 20]) -> Result<u128> {
+pub async fn private_holding<L: Ledger>(
+    ledger: &mut L,
+    ctx: &Context,
+    id: AccountId,
+    token: &[u8; 20],
+) -> Result<u128> {
     Ok(ledger
         .private_account(id)
         .await?
-        .map(|a| lez::holding_in(&a.data.actor_state(ctx.program).to_vec(), ctx, token))
+        .map(|a| lez::holding_in(a.data.actor_state(ctx.program), ctx, token))
         .unwrap_or(0))
 }
 
@@ -421,11 +437,14 @@ pub async fn burn<L: Ledger>(
     ensure!(o.recipient != Address::ZERO, vault_refusal("ZeroRecipient", "checked before sending"));
     let token = o.token.into_array();
     let (from, label) = if o.public {
-        let a = seed.public_accounts(o.account + 1)?.pop().ok_or_else(|| anyhow!("no public account /{}", o.account))?;
+        let a =
+            seed.public_accounts(o.account + 1)?.pop().ok_or_else(|| anyhow!("no public account /{}", o.account))?;
         (BurnFrom::Public(a.id), format!("public account /{} ({})", o.account, hx(a.id.value())))
     } else {
-        let id =
-            seed.private_account_ids(o.account + 1)?.pop().ok_or_else(|| anyhow!("no private account /{}", o.account))?;
+        let id = seed
+            .private_account_ids(o.account + 1)?
+            .pop()
+            .ok_or_else(|| anyhow!("no private account /{}", o.account))?;
         let held = private_holding(ledger, ctx, id, &token).await?;
         (BurnFrom::Private { account: id, held }, format!("private account /{}", o.account))
     };
@@ -564,17 +583,26 @@ pub async fn release_burn<L: Ledger>(
             .iter()
             .find(|r| r.owned.i == i)
             .ok_or_else(|| anyhow!("no burn with counter {i} of this seed (`ferrata recover` lists them)"))?,
-        None => rows.iter().find(|r| !r.released).ok_or_else(|| anyhow!("nothing to release: every burn of this seed is released"))?,
+        None => rows
+            .iter()
+            .find(|r| !r.released)
+            .ok_or_else(|| anyhow!("nothing to release: every burn of this seed is released"))?,
     };
     if row.released {
-        return Err(vault_refusal("NullifierAlreadyUsed", "checked before sending: the vault's Release events show it released"));
+        return Err(vault_refusal(
+            "NullifierAlreadyUsed",
+            "checked before sending: the vault's Release events show it released",
+        ));
     }
     let token = Address::from(row.owned.burn.note.token);
     let amount = units::word_to_u128(&row.owned.burn.note.amount)?;
     let now = eth::now(&eth.p).await?;
     for (until, name) in [
         (eth::view(&eth.p, eth.vault, IVault::releasesFrozenUntilCall {}, None).await?, "ReleasesAreFrozen"),
-        (eth::view(&eth.p, eth.vault, IVault::tokenReleasesFrozenUntilCall { token }, None).await?, "TokenReleasesAreFrozen"),
+        (
+            eth::view(&eth.p, eth.vault, IVault::tokenReleasesFrozenUntilCall { token }, None).await?,
+            "TokenReleasesAreFrozen",
+        ),
     ] {
         if until > U256::from(now) {
             return Err(vault_refusal(name, &format!("checked before sending: frozen until Ethereum time {until}")));
@@ -612,7 +640,8 @@ pub async fn release_burn<L: Ledger>(
     }
     let mut succinct: Option<Vec<u8>> = None;
     if o.prove {
-        let program = o.program.as_ref().ok_or_else(|| anyhow!("--prove needs --program (the release guest's .bin)"))?;
+        let program =
+            o.program.as_ref().ok_or_else(|| anyhow!("--prove needs --program (the release guest's .bin)"))?;
         let proven = release::prove(program, &plan)?;
         out.line(format!(
             "release guest {}: journal equal to the native one{}",
@@ -672,7 +701,8 @@ pub async fn release_burn<L: Ledger>(
                 }),
                 (None, None) => bail!("a relayer's job needs the proof: --seal (Groth16), or --prove --program for a succinct receipt the relayer wraps"),
             };
-            std::fs::write(path, serde_json::to_vec_pretty(&body)?).with_context(|| format!("writing {}", path.display()))?;
+            std::fs::write(path, serde_json::to_vec_pretty(&body)?)
+                .with_context(|| format!("writing {}", path.display()))?;
             out.line(format!(
                 "relayer job written to {}: the journal and the proof, nothing secret (hand it to a relayer's inbox)",
                 path.display()
@@ -681,7 +711,10 @@ pub async fn release_burn<L: Ledger>(
         } else {
             out.line("not sent: hand it to a relayer with --job-out FILE (or send it yourself with --self-send)");
         }
-        ensure!(!o.send, "a relayer sends this release: write its job with --job-out, or use --self-send to send it yourself");
+        ensure!(
+            !o.send,
+            "a relayer sends this release: write its job with --job-out, or use --self-send to send it yourself"
+        );
         return Ok(Released { plan, root, input, job, sent: None });
     }
     if !confirm(out, o.send, o.yes)? {
@@ -733,7 +766,12 @@ pub async fn recover<L: Ledger>(
     let (ctx, history) = match &zone {
         Some((ledger, ctx)) => ((*ctx).clone(), lez::history_of(&**ledger, ctx).await?),
         None => (
-            Context { program: AccountId::new([0; 32]), cid: cid.0, chain_id: eth.chain_id, vault: eth.vault.into_array() },
+            Context {
+                program: AccountId::new([0; 32]),
+                cid: cid.0,
+                chain_id: eth.chain_id,
+                vault: eth.vault.into_array(),
+            },
             lez::History::default(),
         ),
     };
@@ -762,7 +800,9 @@ pub async fn recover<L: Ledger>(
             (DepositState::Claimable { root_leaf_count }, _) if list.block < from => {
                 format!("unclaimed, claimable under root({root_leaf_count}) from block {from} (your delay)")
             }
-            (DepositState::Claimable { root_leaf_count }, _) => format!("unclaimed, claimable under root({root_leaf_count})"),
+            (DepositState::Claimable { root_leaf_count }, _) => {
+                format!("unclaimed, claimable under root({root_leaf_count})")
+            }
             (DepositState::NotImported, _) => "unclaimed, not yet imported".to_string(),
         };
         if !matches!(row.state, DepositState::Claimed | DepositState::Refunded) {
