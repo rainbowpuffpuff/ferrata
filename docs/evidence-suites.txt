@@ -86,3 +86,34 @@ plus lez/results/p4-minimum and lez/harness/src/bin/prove_native_transfer.rs, wh
 ran clean on the build box with RISC0_SKIP_BUILD=1 before the merge):
   link checker on the laptop (it reads `git ls-files`)                24 files, 859 links, 0 broken
   python3 -I scripts/check-links.py lez/results/p4-minimum/README.md   1 file, 11 links, 0 broken
+
+Seventh pass (branch integration6, 11 Nov 2026): the merges of review-core 0d53068, sectools a5a5ee0, verify-anyone
+90ce55b, p4-pad 17b7854, consumer-example 189ac4d and fuzz-core 0fcfc0c (EVIDENCE rows 35-40), what they touched.
+Build box of this worktree through spike/modal-build/mrun (workspace ws-5), Rust 1.93.0 (the box's default).
+Run "checks" at e029602 (15:28 - 15:45 CET, 1,030 s, four groups in parallel):
+  root: cargo test --workspace --locked                                150 passed, 0 failed (24 test binaries)
+  lez:  RISC0_DEV_MODE=1 cargo test -p harness -p ferrata-lez-holdings-wire --locked -- --test-threads 8
+                                                                       47 passed, 0 failed (harness 27 binaries;
+                                                                       holdings 1, wallet_padding 1 among them; 932 s)
+        cargo fmt (wire, bridge-wire, holdings-wire, harness, methods) --check; rustfmt --check of the holdings guest   ok; ok
+        RISC0_SKIP_BUILD=1 cargo clippy (the same five) --all-targets --locked -D warnings                ok
+  fuzz: cargo build --release --locked --bins (the seven targets)      ok
+  found here, fixed in 31ea9c7 (layout and lint only): rustfmt of crates/ferrata-spectests/tests/review_core.rs,
+  clippy clone_on_copy there (2) and type_complexity in fuzz/fuzz_targets/exec.rs, forge fmt of
+  vault/test/halmos/VaultHalmos.t.sol. The vault suite failed only test_privacySuite_ethereumHalf (target/privacy
+  not yet written: it ran beside the LEZ half). The harness run rewrote 14 path-dependent files under lez/results
+  (bridge image 3f068b79... at this path); restored, not committed.
+Run "checks2" at 31ea9c7 (15:47 CET, 51 s, the box warm):
+  root: cargo fmt --all --check; cargo clippy --workspace --all-targets --locked -D warnings   ok; ok
+        cargo test --workspace --locked                                150 passed, 0 failed (24 test binaries)
+  fuzz: cargo fmt --all --check; cargo clippy --all-targets --keep-going -D warnings; build   ok; ok; ok
+  vault: forge fmt --check; forge test                                 ok; 434 passed, 0 failed, 0 skipped (38 suites;
+                                                                       the privacy suite's Ethereum half on the LEZ
+                                                                       half's output of run "checks")
+  links: a fresh git repository of the non-ignored files, python3 -I scripts/check-links.py
+                                                                       25 files, 906 links, 0 broken
+  link checker on the laptop at the branch's tip (it reads `git ls-files`)   25 files, 906 links, 0 broken
+Image ids (run "idcheck", 15:18 - 15:27 CET, 499 s): scripts/reproduce-image-ids.sh build at the crown build path on
+the merged tree with fuzz-core's store.rs: the six ids of e2e/crown/README.md, ids.txt and r0bf/ids.jsonl equal to
+e2e/runs/verify-anyone/reproduce-box/, the six user ELFs byte-identical; the lab's attestation program rebuilt at the
+lab's path: 61b7b70d...2f9a, 602,888 B, sha256 c00d927f..., as lez/lab/results/record/programs.tsv.
