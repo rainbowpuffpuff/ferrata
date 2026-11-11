@@ -99,18 +99,31 @@ carries `s` as the program's public claim does. The chain is `chain_id` (a numbe
 | `recover(request)` | seed, chain, `vault`, `gap`, `destinations` (`{kind, index, dest}`: the wallet's candidate accounts), `deposits` (the vault's `Deposit` events: `depositor`, `j`, `leaf_index`, `token`, `amount`, `commitment`); optionally `config_id`, `burns` (published notes with `burn_index`) and `gap_limit` | the wallet's own deposits (with `kind`, `account_index`, `leaf`, `nullifier`) and burns (with `i`, `recipient`, `leaf`, `nullifier`), `next_i` |
 | `status(request)` | `deposits` (`leaf_index`, `nullifier`), `imported_leaf_count` (of the newest root imported on LEZ), `spent_nullifiers` (on LEZ); `burns` (`burn_index`, `nullifier`), `checkpointed_burn_count` (of the newest checkpoint the vault accepted), `released_nullifiers` (on the vault) | each deposit `awaiting_root`, `claimable` or `claimed`; each burn `awaiting_checkpoint`, `releasable` or `released` |
 
-### Left out of this prototype
+### Tests
 
-- **No network.** Proofs, records, bootstraps and providers' roots come in the call. The full module reads
-  them through `eth_rpc_module`, `beacon_api_module` and `verified_proxy_module`, and reads records
-  from the program through `lez_core`.
-- **No transactions.** Producing and submitting an attestation, advancing an instance and reading its
-  configuration from LEZ (the rest of §B7's list) are not here, nor is the updater daemon.
-- **No program-only checks.** The dry run checks a proof against a record; the program first checks
-  the request's instance (`WRONG_INSTANCE`), which needs an instance. Requests with history hops,
-  several facts, conditions and relations (`attest_batch`) and accumulator leaves are not accepted yet.
-- **No `KeyValidate`** on the committee (§11.4 of the attestation note): it needs the BLS backend.
-- **No catalog release**: the package is built as a catalog would build it, not published.
-- **Logs end to end.** `dry_run_attest` accepts a log with its receipt proof, but no request in
-  `check.sh` has one (the fixture holds the block's receipts, not a proof).
+| Script | What it runs | Where |
+|---|---|---|
+| `scripts/native.sh` | stages both modules' crates, the calls crates' unit tests (`cargo test`), builds the `call` examples | any Linux with cargo |
+| `scripts/check.sh [OUT_DIR]` | the above, then both modules built and packaged by logos-module-builder (dev `.lgx` and `.lgx-portable`), installed and loaded together in a headless Logos Core (`logosctl`, dev and portable builds), every method called (`requests.py`: 10 attest requests from the attestation fixtures; `bridge_requests.py`: 13 bridge requests from `bridge/vectors/*-v2.json`), each reply compared with the native reply and with what the request must produce; then `e2e.sh` through the same daemon | Linux x86-64 with Nix |
+| `scripts/e2e.sh OUT_DIR` | a log end to end: `recorded_rpc.py` serves the recorded mainnet block 26,384,851 over JSON-RPC; `fetch_log_proof` → `dry_run_attest` on the record read from the chain → `build_attest_tx` → `lez/harness`'s `module_e2e` decodes the bytes with the program's types and executes them in LEZ v0.4.0-rc1's state machine → `read_attestation`; two logs, two refusals (a tampered proof, another instance), and the bridge module's `Burn` and `Claim` decoded by the bridge program's types (`CALL=logosctl` runs it through a Logos Core daemon) | Linux with cargo (and `logosctl`) |
+| `scripts/release-local.sh OUT_DIR` | `logos-modules-release-action`'s steps for `linux-amd64`, locally, nothing published (`catalog/README.md`) | Linux x86-64 with Nix |
+
+### Left out
+
+- **Logos Core's own network and keys.** The modules read Ethereum over plain `http://` JSON-RPC
+  (a local node or `recorded_rpc.py`), not through `eth_rpc_module`, `verified_proxy_module` or
+  `beacon_api_module`; LEZ state (a record, an event, nullifiers, counts) comes in the request. They
+  build each program message and name the account it goes to, but do not sign or submit: no
+  `keystore_module`, `tx_sender_module`, `lez_core` or LEZ wallet. In the end-to-end test the
+  harness wraps the message in a LEZ transaction and executes it in LEZ's state machine in-process,
+  not on a networked sequencer.
+- **`ferrata_attest_module`:** no `advance` (the update's `Open`/`Miller`/`Adopt`/`Finish` messages)
+  and no configuration reads; the dry run still lacks the program-only checks (`WRONG_INSTANCE` is
+  shown by the program in `e2e.sh`); no history hops, batches, conditions or relations, no accumulator
+  leaves; no `KeyValidate` on the committee (§11.4 of the attestation note: it needs the BLS backend).
+- **`ferrata_bridge_module`:** no private claim (`ClaimPrivately` runs in a private execution of the
+  LEZ wallet), no `ImportRoot`, registry or fee-schedule reads, no release guest input or proof (the
+  module gives the journal and the witness; proving is the CLI's `release --prove`); the vault's
+  `Deposit` events and the program's burn records come in the request.
+- **Catalog:** laid out and dry-run (`catalog/`); nothing published, one variant (`linux-amd64`).
 - **Linux x86-64 only** was tried.
