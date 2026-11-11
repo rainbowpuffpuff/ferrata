@@ -192,6 +192,7 @@ Item {
             verify(has(el("burn.leaks.summary").text, "Minimal"), el("burn.leaks.summary").text);
             verify(has(el("burn.holding").text, "Private holding /0: 0.1 ETH"), el("burn.holding").text);
             shot("20-burn-private-defaults");
+            idle();
             click("burn.submit");
             approve("Burn", "20b-burn-approval");
             tryVerify(function () { return has(host.app.burnText, "Burned privately"); }, 60000, host.app.burnText);
@@ -212,6 +213,7 @@ Item {
             host.publicRecipient = host.app.recipient;
             click("burn.delay");
             verify(!host.app.releaseDelayOn, "release delay off for this one");
+            idle();
             click("burn.submit");
             approve("Burn", null);
             tryVerify(function () { return has(host.app.burnText, "Burned 0.1 ETH"); }, 60000, host.app.burnText);
@@ -241,6 +243,7 @@ Item {
             verify(has(host.app.releaseText, "0.1 ETH paid"), host.app.releaseText);
             shot("23-released-private-round-trip");
             click("release.pick.1");
+            idle();
             click("release.submit");
             approve("Release", null);
             tryVerify(function () { return has(host.app.releaseText.toLowerCase(), host.publicRecipient.toLowerCase()); }, 60000, host.app.releaseText);
@@ -318,6 +321,7 @@ Item {
             verify(!host.app.selecting, "the built-in selection was not shown");
             click("deposit.kind.private");
             host.app.depositText = "";
+            idle();
             click("deposit.review");
             tryVerify(function () { return has(host.app.depositText, "Deposited"); }, 60000, "a deposit approved by the provider");
             verify(host.app.approval === null, "the built-in prompt was not used");
