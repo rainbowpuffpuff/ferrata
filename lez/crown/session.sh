@@ -6,7 +6,9 @@
 #                  (LEZ's local configuration, dev-mode leader proofs, `setup --create-channel`); crown-driver crown-a
 #                  (deploy, the Sepolia instance and its catch-up); stop cleanly; save generation 1; session-a/
 #   session.sh b   restore the newest generation; crown-driver crown-b over the captures (the bridge's pairing,
-#                  registration, imports, claims and burns, with two real private proofs); stop; save; session-b/
+#                  registration, imports, claims and burns, with two real private proofs); the node's final blocks
+#                  (session-b/node/, for the checkpoint); stop; save; session-b/
+#   session.sh dump  restore the newest generation, start the node alone, write session-b/node/ again; saves nothing
 #
 # Environment: CROWN_LEZ_VOL (default /vol/lez), CROWN_LEZ_WORK (default /root/crown-lez, wiped), CROWN_CHAIN
 # (sepolia | stand-in), CROWN_VAULT (a: optional), CROWN_CAPTURES (b: capture dirs in order; default
@@ -26,11 +28,11 @@ TICK_MIN=1; TICK_MAX=6; TICK_AFTER=3          # where its blocks fall after an e
 MAX_STARTS="${CROWN_MAX_STARTS:-4}"
 BEDROCK_FUNDING_PUBLIC_KEY=2e03b2eff5a45478e7e79668d2a146cf2c5c7925bce927f2b1c67f2ab4fc0d26
 CHANNEL=0101010101010101010101010101010101010101010101010101010101010101
-case "$STEP" in a|b) ;; *) echo "session.sh a | b"; exit 2 ;; esac
+case "$STEP" in a|b|dump) ;; *) echo "session.sh a | b | dump"; exit 2 ;; esac
 case "$CHAIN" in sepolia|stand-in) ;; *) echo "CROWN_CHAIN: sepolia or stand-in"; exit 2 ;; esac
 
-OUT="$VOL/session-$STEP"
-rm -rf "$WORK"; mkdir -p "$WORK" "$VOL/state" "$OUT/logs"
+OUT="$VOL/session-$STEP"; [ "$STEP" = dump ] && OUT="$VOL/session-b"
+rm -rf "$WORK"; mkdir -p "$WORK" "$VOL/state" "$OUT"
 LOG="$WORK/logs"; mkdir -p "$LOG"
 say() { echo "[$(date -u +%H:%M:%S)] $*" | tee -a "$LOG/session.log"; }
 NODE_PID=""; SEQ_PID=""
@@ -45,13 +47,14 @@ stop_pid() { # pid name: SIGTERM, wait up to 60 s
 }
 scrub() { sed -e "s#$WORK/#work/#g" -e "s#$VOL/#vol/#g" -e "s#$HOME/#~/#g"; }
 records() { # copy the logs to the Volume
-  local f n
+  local f n L="$OUT/logs"; [ "$STEP" = dump ] && L="$OUT/logs-dump"
+  mkdir -p "$L"
   for f in "$LOG"/*.log; do
     [ -f "$f" ] || continue; n="$(basename "$f")"
     case "$n" in
-      sequencer.log) scrub < "$f" | gzip -c > "$OUT/logs/sequencer.log.gz" ;;
-      bedrock.log) { sed -e 's/\x1b\[[0-9;]*m//g' "$f" | sed -n '1,60p'; echo "[...]"; sed -e 's/\x1b\[[0-9;]*m//g' "$f" | tail -n 60; } | scrub > "$OUT/logs/bedrock-excerpt.log" ;;
-      *) scrub < "$f" > "$OUT/logs/$n" ;;
+      sequencer.log) scrub < "$f" | gzip -c > "$L/sequencer.log.gz" ;;
+      bedrock.log) { sed -e 's/\x1b\[[0-9;]*m//g' "$f" | sed -n '1,60p'; echo "[...]"; sed -e 's/\x1b\[[0-9;]*m//g' "$f" | tail -n 60; } | scrub > "$L/bedrock-excerpt.log" ;;
+      *) scrub < "$f" > "$L/$n" ;;
     esac
   done
 }
@@ -99,6 +102,29 @@ EOF
     || fail "sequencer setup"
 fi
 
+# The node's own final blocks, for the checkpoint (crown-proofs' realblocks-crown reads them; the layout of their
+# checkpoint/realblocks/crown-extract.sh): /cryptarchia/info, /channel, /chain/id and /cryptarchia/blocks in 500-slot
+# windows up to the LIB slot, from 3000 slots before the channel's tip slot when session A first read it (the node's
+# slot clock starts long before this devnet: LEZ's local deployment settings).
+node_dump() {
+  local N="$OUT/node" api="http://127.0.0.1:$BEDROCK_PORT" from lib to
+  rm -rf "$N"; mkdir -p "$N/blocks"
+  from="$(python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1]))["tip_slot"])' "$VOL/session-a/channel.json" 2>/dev/null)"
+  [ -n "$from" ] || { say "node dump: no tip_slot in session-a/channel.json"; return 1; }
+  from=$(( from > 3000 ? from - 3000 : 0 ))
+  curl -fsS -m 10 -o "$N/info.json" "$api/cryptarchia/info" && curl -fsS -m 10 -o "$N/channel.json" "$api/channel/$CHANNEL" \
+    || { say "node dump: no info/channel"; return 1; }
+  curl -fsS -m 10 -o "$N/chain-id.json" "$api/chain/id" || say "node dump: no chain id"
+  lib="$(sed -n 's/.*"lib_slot":\([0-9]*\).*/\1/p' "$N/info.json")"
+  echo "$from" > "$N/slot-from.txt"
+  while [ -n "$lib" ] && [ "$from" -le "$lib" ]; do
+    to=$((from + 499)); [ "$to" -gt "$lib" ] && to="$lib"
+    curl -fsS -m 60 -o "$N/blocks/$from-$to.json" "$api/cryptarchia/blocks?slot_from=$from&slot_to=$to" || { say "node dump: window $from-$to failed"; return 1; }
+    from=$((to + 1))
+  done
+  say "node dump: slots $(cat "$N/slot-from.txt")..=${lib:-?}, $(ls "$N/blocks" | wc -l) windows, $(du -sb "$N/blocks" | cut -f1) bytes"
+}
+
 rpc() { curl -fsS -m 10 -H 'content-type: application/json' -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"$1\",\"params\":${2:-[]}}" "http://127.0.0.1:$RPC_PORT"; }
 head_block() { rpc getLastBlockId 2>/dev/null | sed -n 's/.*"result":\([0-9]*\).*/\1/p'; }
 
@@ -124,6 +150,12 @@ for i in $(seq 1 900); do
 done
 [ -n "$ORIGIN" ] || fail "could not read the node's slot clock"
 say "node slot 0 is unix second $ORIGIN"
+if [ "$STEP" = dump ]; then
+  for i in $(seq 1 120); do grep -q '"state":"Online"' <(curl -fsS -m 3 "http://127.0.0.1:$BEDROCK_PORT/cryptarchia/info" 2>/dev/null) && break; sleep 1; done
+  node_dump; rc=$?
+  stop_pid "$NODE_PID" node
+  records; say "dump: exit $rc (nothing saved)"; exit "$rc"
+fi
 
 # ---- The sequencer, started until its blocks keep clear of an epoch's last seconds ----------
 STARTS=0; AFTER=-1; DELAY=""
@@ -187,22 +219,7 @@ else
   DRIVER_RC=$?
 fi
 say "driver exit $DRIVER_RC"; tail -n 12 "$LOG/driver.log" | tee -a "$LOG/session.log"
-if [ "$DRIVER_RC" = 0 ] && [ "$STEP" = b ]; then
-  # The node's own final blocks, for the checkpoint (crown-proofs' realblocks-crown; the layout of their
-  # checkpoint/realblocks/crown-extract.sh), while the node still runs: from the slot session A started at.
-  N="$OUT/node"; rm -rf "$N"; mkdir -p "$N/blocks"
-  from="$(sed -n 's/.*"slot":\([0-9]*\).*/\1/p' "$VOL/session-a/cryptarchia-info-start.json" 2>/dev/null)"; from=$(( ${from:-0} > 100 ? ${from:-0} - 100 : 0 ))
-  api="http://127.0.0.1:$BEDROCK_PORT"
-  curl -fsS -m 10 -o "$N/info.json" "$api/cryptarchia/info" && curl -fsS -m 10 -o "$N/channel.json" "$api/channel/$CHANNEL" || say "node dump: no info/channel"
-  curl -fsS -m 10 -o "$N/chain-id.json" "$api/chain/id" || say "node dump: no chain id"
-  lib="$(sed -n 's/.*"lib_slot":\([0-9]*\).*/\1/p' "$N/info.json" 2>/dev/null)"
-  while [ -n "$lib" ] && [ "$from" -le "$lib" ]; do
-    to=$((from + 499)); [ "$to" -gt "$lib" ] && to="$lib"
-    curl -fsS -m 60 -o "$N/blocks/$from-$to.json" "$api/cryptarchia/blocks?slot_from=$from&slot_to=$to" || { say "node dump: window $from-$to failed"; break; }
-    from=$((to + 1))
-  done
-  say "node dump: lib_slot ${lib:-?}, $(ls "$N/blocks" | wc -l) windows, $(cat "$N"/blocks/*.json 2>/dev/null | wc -c) bytes"
-fi
+if [ "$DRIVER_RC" = 0 ] && [ "$STEP" = b ]; then node_dump; fi
 if [ "$DRIVER_RC" = 0 ]; then
   "$BIN/crown-driver" export "${D[@]}" --out "$WORK/export" > "$LOG/export.log" 2>&1 || say "export failed ($?)"
 fi
