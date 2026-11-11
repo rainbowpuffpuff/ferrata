@@ -1,0 +1,91 @@
+[package]
+name = "ferrata-fuzz-programs"
+version = "0.0.0"
+publish = false
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "cargo-fuzz targets for the LEZ-side programs: the bridge program's input decoding and handler, the checkpoint programs' LEZ block and inscription parsers and inputs, the release and claim guests' inputs and the journals' Rust decoders"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+# The programs' own crates, as the guests use them.
+ferrata-lez-bridge-wire = { path = "../../lez/bridge-wire" }
+ferrata-lez-wire = { path = "../../lez/wire" }
+ferrata-bridge-core = { path = "../../bridge/crates/ferrata-bridge-core" }
+checkpoint-core = { path = "../../checkpoint/crates/checkpoint-core", features = ["std"] }
+# LEZ v0.4.0-rc1 (read-only clone beside the repository), as checkpoint/fidelity uses it: the
+# runtime types of the bridge program and LEZ's own `Block` decoder, the differential reference.
+lee_core = { path = "../../../upstream/lez-v0.4.0-rc1/lee/state_machine/core", features = ["host"] }
+common = { path = "../../../upstream/lez-v0.4.0-rc1/lez/common" }
+borsh = { version = "=1.6.1", features = ["derive"] }
+# The bridge guest's source is compiled into this crate (build.rs); it names `risc0_zkvm`.
+risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["std"] }
+ed25519-dalek = { version = "2.2.0", default-features = false }
+sha2 = "0.10"
+
+[dev-dependencies]
+# Seed maker only (examples/seeds.rs).
+hex = "0.4"
+serde_json = "1"
+
+# Its own workspace, as cargo-fuzz expects (Cargo.lock started from checkpoint/Cargo.lock, so the
+# upstream crates resolve to the versions the fidelity tests use).
+[workspace]
+members = ["."]
+
+[profile.release]
+debug = 1
+
+# As checkpoint/Cargo.toml: LEZ's git dependency on Logos Blockchain points at the pinned clone.
+[patch."https://github.com/logos-blockchain/logos-blockchain.git"]
+logos-blockchain-common-http-client = { path = "../../../upstream/logos-blockchain-d480efc6/nodes/node/http-client" }
+logos-blockchain-core = { path = "../../../upstream/logos-blockchain-d480efc6/core" }
+logos-blockchain-zone-sdk = { path = "../../../upstream/logos-blockchain-d480efc6/zone-sdk" }
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "bridge_wire"
+path = "fuzz_targets/bridge_wire.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "bridge_handle"
+path = "fuzz_targets/bridge_handle.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "lez_block"
+path = "fuzz_targets/lez_block.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "checkpoint_input"
+path = "fuzz_targets/checkpoint_input.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "mantle"
+path = "fuzz_targets/mantle.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "release"
+path = "fuzz_targets/release.rs"
+test = false
+doc = false
+bench = false
