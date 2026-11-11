@@ -11,7 +11,7 @@
     "The attestation program of Ferrata on LEZ v0.4 (RFP-021). Hand-written IDL in SPEL's format: SPEL's stable release targets LEZ v0.2.4, so the program is written against LEZ v0.4 directly, and this IDL describes its borsh interface.",
     "Each instruction is a variant of the borsh enum named by instruction_type; discriminator is its one-byte variant index, followed by args in order.",
     "PDA seeds: an actor's seed is SHA-256(\"ferrata-lez/v1/\" || tag || parts), with u64 parts little-endian; its account is LEZ v0.4's AccountId::for_public_pda(program, seed). instance_id = SHA-256(\"ferrata-lez/v1/instance-id\" || borsh(Config) || checkpoint).",
-    "Refusals exit with one byte: 1-79 and 100-199 the core's, 80-99 the step API's, 200-219 this program's (lez/wire CODE_BLOCKS). A refusal reverts the whole transaction on v0.4.",
+    "Refusals exit with one byte: 1-79 and 100-199 the core's, 80-99 the step API's, 200-217 this program's (lez/wire CODE_BLOCKS). A refusal reverts the whole transaction on v0.4.",
     "Events: FRT-FIN1 (finalized header advanced), FRT-UPG1 (store moved to a later fork's layout), FRT-ATT1 (Attest as a transaction's root: instance id, chain id, block number LE, then each statement id)."
   ],
   "instructions": [
@@ -881,6 +881,15 @@
           "type": {
             "vec": "u8"
           }
+        },
+        {
+          "name": "root_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
         }
       ],
       "execution": {
@@ -888,7 +897,170 @@
         "private_owned": false
       },
       "docs": [
-        "Internal: the record to write once (HeaderRecord encoding), with the instance's chain id."
+        "Internal: the record to write once (HeaderRecord encoding), with the instance's chain id and root id."
+      ],
+      "internal": true
+    },
+    {
+      "name": "succeed",
+      "variant": "Succeed",
+      "discriminator": [
+        13
+      ],
+      "accounts": [
+        {
+          "name": "instance",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "instance"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              }
+            ]
+          },
+          "docs": [
+            "instance(parent): checks the successor's config against its own and that checkpoint is its finalized header; sends Spawn"
+          ]
+        },
+        {
+          "name": "successor",
+          "writable": true,
+          "signer": false,
+          "init": true,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "instance"
+              },
+              {
+                "kind": "arg",
+                "path": "successor_id"
+              }
+            ]
+          },
+          "docs": [
+            "instance(successor_id), successor_id = SHA-256(\"successor-id\" || root_id || parent || config || checkpoint), created by Spawn"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "config",
+          "type": {
+            "defined": "Config"
+          }
+        },
+        {
+          "name": "checkpoint",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Spawn a successor of this instance with a new fork schedule, from its finalized header, inside its weak-subjectivity period; emits FRT-SUC1. Anyone may call."
+      ]
+    },
+    {
+      "name": "spawn",
+      "variant": "Spawn",
+      "discriminator": [
+        14
+      ],
+      "accounts": [
+        {
+          "name": "instance",
+          "writable": true,
+          "signer": false,
+          "init": true,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "instance"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              }
+            ]
+          },
+          "docs": [
+            "instance(successor_id): from the parent instance only; created active with the parent's store"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "root_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "parent_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "checkpoint",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "config",
+          "type": {
+            "defined": "Config"
+          }
+        },
+        {
+          "name": "store",
+          "type": {
+            "vec": "u8"
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Internal: the parent instance -> the successor it spawns."
       ],
       "internal": true
     }
@@ -928,10 +1100,28 @@
           {
             "name": "applied",
             "type": "u64"
+          },
+          {
+            "name": "root_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "parent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
           }
         ],
         "docs": [
-          "instance(id): store is the CompactStore encoding; active once the initial committee is adopted."
+          "instance(id): store is the CompactStore encoding; active once the initial committee is adopted. root_id: the id of the first instance of its line (its own id for an Init); parent_id: the instance a successor was spawned from (zero for an Init)."
         ]
       }
     },
@@ -999,10 +1189,19 @@
             "type": {
               "vec": "u8"
             }
+          },
+          {
+            "name": "root_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
           }
         ],
         "docs": [
-          "header(id, slot), written once: record is ferrata_core::witness::HeaderRecord's encoding."
+          "header(id, slot), written once: record is ferrata_core::witness::HeaderRecord's encoding; root_id: the instance line's root id, which an Attest request may name instead of the instance."
         ]
       }
     }
@@ -1079,10 +1278,14 @@
         {
           "name": "adoption_parts",
           "type": "u8"
+        },
+        {
+          "name": "ws_period_epochs",
+          "type": "u64"
         }
       ],
       "docs": [
-        "The chain an instance follows. Fixed at Init; part of the instance id. store_fork: 0 Altair, 1 Capella, 2 Deneb, 3 Electra, 4 Gloas."
+        "The chain an instance follows. Fixed at Init; part of the instance id. store_fork: 0 Altair, 1 Capella, 2 Deneb, 3 Electra, 4 Gloas. ws_period_epochs: the weak-subjectivity period of the finalized header (nonzero); Init, Open, VerifyAll and Succeed are valid only before it ends."
       ]
     },
     {
@@ -1336,6 +1539,79 @@
             },
             {
               "name": "record",
+              "type": {
+                "vec": "u8"
+              }
+            },
+            {
+              "name": "root_id",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Succeed",
+          "fields": [
+            {
+              "name": "config",
+              "type": {
+                "defined": "Config"
+              }
+            },
+            {
+              "name": "checkpoint",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Spawn",
+          "fields": [
+            {
+              "name": "root_id",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "parent_id",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "checkpoint",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "config",
+              "type": {
+                "defined": "Config"
+              }
+            },
+            {
+              "name": "store",
               "type": {
                 "vec": "u8"
               }
@@ -2097,6 +2373,11 @@
       "msg": "Ferrata policy: the update does not advance the finalized header (duplicate or stale)."
     },
     {
+      "code": 53,
+      "name": "OutsideWeakSubjectivityPeriod",
+      "msg": "Ferrata policy: the store's finalized header is older than its weak-subjectivity period at the current slot (`crate::ws`); recover from a new bootstrap."
+    },
+    {
       "code": 60,
       "name": "CommitteeUnknown",
       "msg": "Store invariant: next committee unknown and the update finalizes outside the store period."
@@ -2325,6 +2606,16 @@
       "code": 215,
       "name": "HEADER_REQUIRED",
       "msg": "An attestation asked, without the block's header, of a record that binds a block hash only (a finalized header in the Gloas layout): `Request::header` must carry the RLP header that hashes to it."
+    },
+    {
+      "code": 216,
+      "name": "BAD_SUCCESSOR",
+      "msg": "A successor whose configuration is not its parent's with another fork schedule: an immutable field changed (the chain, the preset, the genesis, the weak-subjectivity period, the adoption parts), a fork at or before the checkpoint's epoch changed, a store layout other than the parent store's, a schedule that is not in order, or no change at all."
+    },
+    {
+      "code": 217,
+      "name": "STALE_CHECKPOINT",
+      "msg": "A successor from a checkpoint that is not the parent's latest record."
     }
   ]
 }

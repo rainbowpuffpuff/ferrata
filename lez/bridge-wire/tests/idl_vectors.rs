@@ -68,6 +68,8 @@ fn message_label(m: &aw::Message) -> &'static str {
         Apply { .. } => "Apply",
         ApplyVerified { .. } => "ApplyVerified",
         Record { .. } => "Record",
+        Succeed { .. } => "Succeed",
+        Spawn { .. } => "Spawn",
     }
 }
 
@@ -121,6 +123,7 @@ fn config() -> aw::Config {
         seconds_per_slot: 12,
         store_fork: 4,
         adoption_parts: 2,
+        ws_period_epochs: 3_532,
     }
 }
 
@@ -227,7 +230,9 @@ fn attestation_vectors() -> Vec<Vector> {
         JobOpen { instance_id: r(1), job_id: r(32), committee_size: 512, job: vec![14] },
         Apply { instance_id: r(1), job_id: r(33), job: vec![15, 16] },
         ApplyVerified { instance_id: r(1), job: vec![17] },
-        Record { instance_id: r(1), slot: 11_547_104, chain_id: 11_155_111, record: vec![18, 19, 20] },
+        Record { instance_id: r(1), slot: 11_547_104, chain_id: 11_155_111, record: vec![18, 19, 20], root_id: r(1) },
+        Succeed { config: config(), checkpoint: r(35) },
+        Spawn { root_id: r(1), parent_id: r(1), checkpoint: r(35), config: config(), store: vec![27, 28] },
     ];
     let mut out: Vec<Vector> = Vec::new();
     let mut seen = std::collections::BTreeMap::<&str, u32>::new();
@@ -240,7 +245,15 @@ fn attestation_vectors() -> Vec<Vector> {
     out.push(vector(
         "InstanceState",
         "InstanceState",
-        &aw::InstanceState { id: r(1), config: config(), active: true, store: vec![21, 22], applied: 1909 },
+        &aw::InstanceState {
+            id: r(1),
+            config: config(),
+            active: true,
+            store: vec![21, 22],
+            applied: 1909,
+            root_id: r(1),
+            parent_id: r(0),
+        },
     ));
     out.push(vector(
         "JobState",
@@ -250,7 +263,7 @@ fn attestation_vectors() -> Vec<Vector> {
     out.push(vector(
         "RecordState",
         "RecordState",
-        &aw::RecordState { instance_id: r(1), chain_id: 11_155_111, record: vec![24, 25, 26] },
+        &aw::RecordState { instance_id: r(1), chain_id: 11_155_111, record: vec![24, 25, 26], root_id: r(1) },
     ));
     out.push(vector("Attestation", "Attestation", &attestation()));
     out.push(vector("Request", "Request", &request()));
@@ -284,6 +297,14 @@ fn bridge_label(m: &bw::BridgeMessage) -> &'static str {
         Freeze { .. } => "Freeze",
         SetCap { .. } => "SetCap",
         Tick { .. } => "Tick",
+        AttestRetired { .. } => "AttestRetired",
+        ProposeRoles { .. } => "ProposeRoles",
+        ApplyRoles { .. } => "ApplyRoles",
+        CancelRoles { .. } => "CancelRoles",
+        Pause { .. } => "Pause",
+        Cosigned { .. } => "Cosigned",
+        Transfer { .. } => "Transfer",
+        Credit { .. } => "Credit",
     }
 }
 
@@ -298,7 +319,11 @@ fn state_label(s: &bw::BridgeState) -> &'static str {
             bw::Pending::Time(t) => match t.then {
                 bw::Timed::Tick => "Config.Ready.Time.Tick",
                 bw::Timed::Freeze { .. } => "Config.Ready.Time.Freeze",
+                bw::Timed::Pause { .. } => "Config.Ready.Time.Pause",
+                bw::Timed::Propose { .. } => "Config.Ready.Time.Propose",
+                bw::Timed::Apply => "Config.Ready.Time.Apply",
             },
+            bw::Pending::Retired { .. } => "Config.Ready.Retired",
         },
         bw::BridgeState::Root(_) => "Root",
         bw::BridgeState::Nullifier(_) => "Nullifier",
@@ -381,6 +406,24 @@ fn witness() -> bw::ClaimWitness {
 
 fn range() -> bw::ScheduleRange {
     bw::ScheduleRange { index: 1, from_leaf: 10, until_leaf: 20 }
+}
+
+fn freeze_authority(n: u8) -> bw::FreezeAuthority {
+    bw::FreezeAuthority { members: vec![r(n), r(n + 1)], threshold: 2 }
+}
+
+fn roles(proposal: bool) -> bw::Roles {
+    bw::Roles {
+        freeze_authority: freeze_authority(70),
+        watchers: vec![r(72)],
+        proposal: proposal.then(|| bw::RoleProposal {
+            freeze_authority: freeze_authority(73),
+            watchers: vec![],
+            effective_ms: 1_764_000_000_000,
+        }),
+        vault_retired: false,
+        sunset_approved: proposal,
+    }
 }
 
 fn time_record(header: bool) -> bw::TimeRecord {
@@ -522,6 +565,34 @@ fn bridge_vectors() -> Vec<Vector> {
             cap: bw::CapParams { capacity: 5, refill_per_second: 6 },
         },
         Tick { config_id: r(60), token: None, record: time_record(false) },
+        AttestRetired {
+            config_id: r(60),
+            record_slot: 11_547_300,
+            proof: bw::VaultProof { account: vec![vec![13]], slots: vec![vec![vec![14]]] },
+        },
+        ProposeRoles {
+            config_id: r(60),
+            freeze_authority: freeze_authority(70),
+            watchers: vec![r(72), r(73)],
+            record: time_record(true),
+        },
+        ApplyRoles { config_id: r(60), record: time_record(false) },
+        CancelRoles { config_id: r(60) },
+        Pause { config_id: r(60), token: Some(a(40)), mints: true, burns: false, record: time_record(false) },
+        Cosigned { config_id: r(60), signers: vec![r(70), r(71)], action: bw::CosignedAction::Sunset },
+        Cosigned {
+            config_id: r(60),
+            signers: vec![r(70), r(71)],
+            action: bw::CosignedAction::Freeze {
+                token: None,
+                mints: true,
+                burns: true,
+                until_ms: 1_763_000_000_002,
+                record: time_record(false),
+            },
+        },
+        Transfer { config_id: r(60), token: a(40), amount: 900_000_000_000_000_000, to: r(74) },
+        Credit { config_id: r(60), token: a(40), amount: 900_000_000_000_000_000, to: r(74) },
     ];
     let mut out: Vec<Vector> = Vec::new();
     let mut seen = std::collections::BTreeMap::<&str, u32>::new();
@@ -531,7 +602,13 @@ fn bridge_vectors() -> Vec<Vector> {
         *n += 1;
         out.push(vector(&format!("BridgeMessage::{label}#{n}"), "BridgeMessage", m));
     }
-    let ready = |pending| bw::ConfigState::Ready { config: bridge_config(), pending, gate: gate(), sunset: false };
+    let ready = |pending| bw::ConfigState::Ready {
+        config: bridge_config(),
+        pending,
+        gate: gate(),
+        sunset: false,
+        roles: roles(false),
+    };
     let states = vec![
         bw::BridgeState::Config(bw::ConfigState::Pairing { config: bridge_config(), record_slot: 11_547_100 }),
         bw::BridgeState::Config(ready(None)),
@@ -563,7 +640,21 @@ fn bridge_vectors() -> Vec<Vector> {
             })),
             gate: gate(),
             sunset: true,
+            roles: roles(true),
         }),
+        bw::BridgeState::Config(ready(Some(bw::Pending::Time(bw::PendingTime {
+            record: time_record(false),
+            then: bw::Timed::Pause { mints: true, burns: true },
+        })))),
+        bw::BridgeState::Config(ready(Some(bw::Pending::Time(bw::PendingTime {
+            record: time_record(false),
+            then: bw::Timed::Propose { freeze_authority: freeze_authority(73), watchers: vec![r(74)] },
+        })))),
+        bw::BridgeState::Config(ready(Some(bw::Pending::Time(bw::PendingTime {
+            record: time_record(true),
+            then: bw::Timed::Apply,
+        })))),
+        bw::BridgeState::Config(ready(Some(bw::Pending::Retired { record_slot: 11_547_310 }))),
         bw::BridgeState::Root(root_state()),
         bw::BridgeState::Nullifier(bw::NullifierState {
             config_id: r(60),
