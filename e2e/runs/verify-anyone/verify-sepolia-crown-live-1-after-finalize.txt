@@ -1,5 +1,5 @@
 run crown-live-1 (live), vault 0xfE3199fa2634413CbAC317371076Cae3EB2d9E54, deployer 0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07, rpc https://ethereum-sepolia-rpc.publicnode.com
-PASS     chain: Sepolia (chain id 11155111), head 12112087, finalized 12112025
+PASS     chain: Sepolia (chain id 11155111), head 12112102, finalized 12112025
 PASS     image ids: e2e/crown/README.md's table = the ids pinned here = the run's records: README table equal, params.json equal, LEZ session A's deployed programs equal, programs/ids.jsonl equal
 PASS     deployment: every CREATE address from the deployer's nonces, code where a contract was created: emergency stop 0x2ea64575… nonce 10 (1698 B); FerrataRegistry library 0xe5d797c9… nonce 11 (12504 B); FerrataVault 0xfe3199fa… nonce 12 (24254 B); test token 0x8e1140d7… nonce 13 (1862 B); nonces N+4..N+6 are calls (no code)
 PASS     vault immutables (eth_call) = README ids, configId, genesisState, rule (B), verifier, registry library: code 24254 B; checkpointImageId = checkpoint_b 0xa475e8f9…; releaseImageId = release 0x17257f91…; mode B; lezConfigId = slot 2 = 0x0c71ff13…; genesisState 0xa696b3c8…; verifier = emergency stop 0x2ea64575… over RISC Zero's Groth16 verifier; FerrataRegistry linked

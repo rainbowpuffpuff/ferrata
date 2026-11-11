@@ -274,9 +274,11 @@ class Rpc:
         out, lo, step = [], from_block, 20000
         while lo <= to_block:
             hi = min(lo + step - 1, to_block)
+            # The last window ends at "latest": a load-balanced endpoint may answer from a node a block behind the
+            # head it reported a moment ago, and refuse a range that ends past its own head.
             try:
-                out += self("eth_getLogs", {"address": address, "topics": [topic0],
-                                            "fromBlock": hex(lo), "toBlock": hex(hi)})
+                out += self("eth_getLogs", {"address": address, "topics": [topic0], "fromBlock": hex(lo),
+                                            "toBlock": "latest" if hi == to_block else hex(hi)})
                 lo = hi + 1
             except RpcError:
                 if step <= 500:
@@ -644,6 +646,8 @@ def main() -> int:
             raise Pending("no checkpoint candidate recorded")
         if "submit" not in man:
             raise Pending("submitCandidate not recorded yet")
+        if "submit" not in state.get("tx", {}):
+            raise Failed("the submit transaction was not found on chain (see the transactions check)")
         rc, _tx = state["tx"]["submit"]
         t0 = topic("CandidateSubmitted(bytes32,bytes32,bytes32,uint64,uint64,bool,uint256,uint64,bytes32,uint32,uint32)")
         ev = [lg for lg in rc["logs"] if lg["address"].lower() == vault and lg["topics"][0] == t0]
@@ -670,6 +674,8 @@ def main() -> int:
         count = int(word("checkpointCount()"), 16)
         acc = words(vcall("burnRootStatus(bytes32)", jw[8]))
         if fs != jw[7]:
+            if "submit" in man and "submit" not in state.get("tx", {}):
+                raise Failed("the recorded submit transaction is not on chain")
             if "submit" in man:
                 blk = rpc("eth_getBlockByNumber", hex(int(man["submit"][0]["blockNumber"], 16)), False)
                 delta = int(idn.get("delta") or 0)
@@ -686,6 +692,8 @@ def main() -> int:
         rels = crown.get("releases") or []
         if not rels:
             raise Pending("no releases recorded")
+        if "submit" in man and "submit" not in state.get("tx", {}):
+            raise Failed("the run's checkpoint (its submit transaction) is not on chain")
         t0 = topic("Release(bytes32,address,address,uint256,address,uint256,bytes32)")
         logs = rpc.logs(vault, t0, from_block, state.get("head") or int(rpc("eth_blockNumber"), 16))
         by_null = {lg["topics"][1].lower(): lg for lg in logs}

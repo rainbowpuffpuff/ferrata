@@ -49,6 +49,12 @@ run uses). Files: `ids.txt` (r0vm's ids of the LEZ programs), `r0bf/ids.jsonl` (
 - `verify-sepolia-crown-live-1-tampered-capture.txt`: one byte of a node of capture 1's account proof changed (and
   a slot value of capture 2): the captures' check fails ("proof node 1 does not hash to its parent's reference"),
   exit status 1.
+- `verify-sepolia-crown-rehearsal-3-against-sepolia.txt`: the fork rehearsal's committed records (an anvil fork; the
+  same deployer, nonces and vault address as the live run) against real Sepolia: **6 failed**, exit 1 (the vault's
+  configId and genesisState are the live run's, the rehearsal's transactions and checkpoint are not on chain). Its
+  first try also showed the public endpoint answering head 12,112,098 and, a moment later, refusing an `eth_getLogs`
+  to 12,112,098 with "head 12,112,097": a load-balanced endpoint can answer from a node one block behind, the likely
+  cause of the runner's stop after release 0. The script's last log window now ends at `latest`.
 - `verify-sepolia-crown-live-1-tampered.txt`: the same records with one deposit commitment, one byte of the
   checkpoint seal and the genesis state changed: **5 failed**, exit status 1.
 
