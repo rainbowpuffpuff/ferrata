@@ -187,6 +187,22 @@ else
   DRIVER_RC=$?
 fi
 say "driver exit $DRIVER_RC"; tail -n 12 "$LOG/driver.log" | tee -a "$LOG/session.log"
+if [ "$DRIVER_RC" = 0 ] && [ "$STEP" = b ]; then
+  # The node's own final blocks, for the checkpoint (crown-proofs' realblocks-crown; the layout of their
+  # checkpoint/realblocks/crown-extract.sh), while the node still runs: from the slot session A started at.
+  N="$OUT/node"; rm -rf "$N"; mkdir -p "$N/blocks"
+  from="$(sed -n 's/.*"slot":\([0-9]*\).*/\1/p' "$VOL/session-a/cryptarchia-info-start.json" 2>/dev/null)"; from=$(( ${from:-0} > 100 ? ${from:-0} - 100 : 0 ))
+  api="http://127.0.0.1:$BEDROCK_PORT"
+  curl -fsS -m 10 -o "$N/info.json" "$api/cryptarchia/info" && curl -fsS -m 10 -o "$N/channel.json" "$api/channel/$CHANNEL" || say "node dump: no info/channel"
+  curl -fsS -m 10 -o "$N/chain-id.json" "$api/chain/id" || say "node dump: no chain id"
+  lib="$(sed -n 's/.*"lib_slot":\([0-9]*\).*/\1/p' "$N/info.json" 2>/dev/null)"
+  while [ -n "$lib" ] && [ "$from" -le "$lib" ]; do
+    to=$((from + 499)); [ "$to" -gt "$lib" ] && to="$lib"
+    curl -fsS -m 60 -o "$N/blocks/$from-$to.json" "$api/cryptarchia/blocks?slot_from=$from&slot_to=$to" || { say "node dump: window $from-$to failed"; break; }
+    from=$((to + 1))
+  done
+  say "node dump: lib_slot ${lib:-?}, $(ls "$N/blocks" | wc -l) windows, $(cat "$N"/blocks/*.json 2>/dev/null | wc -c) bytes"
+fi
 if [ "$DRIVER_RC" = 0 ]; then
   "$BIN/crown-driver" export "${D[@]}" --out "$WORK/export" > "$LOG/export.log" 2>&1 || say "export failed ($?)"
 fi
