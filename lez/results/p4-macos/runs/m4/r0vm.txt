@@ -1,0 +1,16 @@
+r0vm /Users/ec2-user/.risc0/extensions/v3.0.5-cargo-risczero-aarch64-apple-darwin/r0vm
+risc0-r0vm 3.0.5
+e57ef8a01d97d1b87ca7f1fb7ab55eb636d478d7e5a8e498bbe985120c3e81f9  /Users/ec2-user/.risc0/extensions/v3.0.5-cargo-risczero-aarch64-apple-darwin/r0vm
+== otool -L
+/Users/ec2-user/.risc0/extensions/v3.0.5-cargo-risczero-aarch64-apple-darwin/r0vm:
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 1700.255.5)
+	/System/Library/Frameworks/Metal.framework/Versions/A/Metal (compatibility version 1.0.0, current version 343.19.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1345.120.2)
+	/System/Library/Frameworks/CoreGraphics.framework/Versions/A/CoreGraphics (compatibility version 64.0.0, current version 1774.5.3)
+	/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation (compatibility version 150.0.0, current version 2503.1.0)
+	/usr/lib/libobjc.A.dylib (compatibility version 1.0.0, current version 228.0.0)
+	/usr/lib/libiconv.2.dylib (compatibility version 7.0.0, current version 7.0.0)
+== rustc +risc0 --version
+rustc 1.91.1-dev (30e2186d0 2025-11-25)
+== cargo risczero --version
+cargo-risczero 3.0.5

@@ -1,0 +1,1 @@
+bridge image af14e3b5c7b5771e6df5d1ec239ab00c86649a37452e542a9aaf361347af3a9a (541732 ELF bytes); RISC0_DEV_MODE off; shape wallet

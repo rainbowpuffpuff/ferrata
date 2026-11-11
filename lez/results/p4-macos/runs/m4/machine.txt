@@ -1,0 +1,41 @@
+2026-11-11T21:56:45Z
+== sysctl -n machdep.cpu.brand_string hw.ncpu hw.perflevel0.physicalcpu hw.memsize
+Apple M4
+10
+4
+25769803776
+== sysctl (more)
+hw.model: Mac16,10
+hw.nperflevels: 2
+hw.physicalcpu: 10
+hw.logicalcpu: 10
+hw.perflevel0.name: Performance
+hw.perflevel1.name: Efficiency
+hw.perflevel1.physicalcpu: 6
+hw.pagesize: 16384
+== sw_vers
+ProductName:		macOS
+ProductVersion:		15.8
+BuildVersion:		24H23
+== uname -a
+Darwin ip-172-31-28-45.us-west-2.compute.internal 24.6.0 Darwin Kernel Version 24.6.0: Sun Aug 23 20:37:17 PDT 2026; root:xnu-11417.140.69.712.69~1/RELEASE_ARM64_T8132 arm64
+== xcode-select -p
+/Library/Developer/CommandLineTools
+package-id: com.apple.pkg.CLTools_Executables
+version: 26.3.0.0.1.1769666919
+== clang --version
+Apple clang version 17.0.0 (clang-1700.6.4.2)
+== git --version
+git version 2.50.1 (Apple Git-155)
+== perl -v
+v5.34.1
+== df -h $HOME
+/dev/disk6s1   200Gi   3.8Gi   178Gi     3%    160k  1.9G    0%   /System/Volumes/Data
+== GPU (system_profiler SPDisplaysDataType)
+      Chipset Model: Apple M4
+      Total Number of Cores: 10
+      Metal Support: Metal 3
+== sudo -n true
+sudo ok
+== uptime
+21:56  up 5 mins, 0 users, load averages: 1.36 1.00 0.49

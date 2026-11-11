@@ -1,0 +1,3 @@
+prove exit 0 wall_s 477 start 2026-11-11T22:00:19Z
+settle exit 0
+tampered tx-attest.borsh (bit 0 of byte 127651) settle exit 101

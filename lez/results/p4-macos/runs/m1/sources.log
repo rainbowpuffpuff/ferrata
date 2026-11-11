@@ -1,0 +1,20 @@
+Note: switching to '1806e873ea2ac0e1b608aa7cf2f9b6e1fb12db21'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+/Users/ec2-user/w/ferrata 0523f7725da26262a59e469690bad22de287da2c 0 changes
+/Users/ec2-user/w/upstream/lez-v0.4.0-rc1 1806e873ea2ac0e1b608aa7cf2f9b6e1fb12db21 0 changes
+/Users/ec2-user/w/upstream/logos-blockchain-d480efc6 d480efc6bbb48fb493c10fe9afefd84c18a04f02 0 changes

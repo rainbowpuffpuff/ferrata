@@ -1,0 +1,102 @@
+info: downloading installer
+info: profile set to minimal
+info: default host tuple is aarch64-apple-darwin
+info: skipping toolchain installation
+
+
+Rust is installed now. Great!
+
+To get started you need Cargo's bin directory ($HOME/.cargo/bin) in your PATH
+environment variable. This has not been done automatically.
+
+To configure your current shell, you need to source
+the corresponding env file under $HOME/.cargo.
+
+Consider running the right command for your shell (note the leading DOT):
+. "$HOME/.cargo/env"           # For sh/ash/dash/pdksh/zsh
+source "$HOME/.cargo/env.tcsh" # For tcsh
+info: syncing channel updates for 1.98.1-aarch64-apple-darwin
+info: latest update on 2026-09-03 for version 1.98.1 (48a229cea 2026-09-01)
+info: downloading 3 components
+
+  1.98.1-aarch64-apple-darwin installed - rustc 1.98.1 (48a229cea 2026-09-01)
+
+info: default toolchain set to 1.98.1-aarch64-apple-darwin
+info: checking for self-update (current version: 1.29.3)
+[0;34m→[0m Starting rzup installation...
+[0;34m→[0m Downloading rzup...
+#                                                                          1.8%#######################################################                   76.5%######################################################################## 100.0%
+[0;34m→[0m Configuring shell...
+/Users/ec2-user/w/rzup-install.sh: line 172: /Users/ec2-user/.zshrc: Permission denied
+[0;32m✓[0m Updated shell profile
+[0;32m✓[0m Installation complete! rzup is installed in /Users/ec2-user/.risc0/bin
+
+[0;32mTo get started:[0m
+1. Restart your shell or run:
+   [1msource "/Users/ec2-user/.zshrc"[0m
+2. Verify the installation:
+   [1mrzup --help[0m
+
+rzup 0.6.0
+Installing rust version 1.91.1
+Downloading rust version 1.91.1
+✓ Downloaded rust version 1.91.1
+Installing rust version 1.91.1
+✓ Installed rust version 1.91.1
+✓ Setting rust version 1.91.1 as default
+Installing cpp version 2024.1.5
+Downloading cpp version 2024.1.5
+✓ Downloaded cpp version 2024.1.5
+Installing cpp version 2024.1.5
+✓ Installed cpp version 2024.1.5
+✓ Setting cpp version 2024.1.5 as default
+Installing r0vm version 3.0.5
+Downloading cargo-risczero version 3.0.5
+✓ Downloaded cargo-risczero version 3.0.5
+Installing cargo-risczero version 3.0.5
+✓ Installed r0vm version 3.0.5
+✓ Setting r0vm version 3.0.5 as default
+! Version 3.0.5 of cargo-risczero is already installed
+✓ Setting cargo-risczero version 3.0.5 as default
+Installed components:
+--------------------
+
+cargo-risczero
+* 3.0.5
+
+cpp
+* 2024.1.5
+
+r0vm
+* 3.0.5
+
+rust
+* 1.91.1
+
+rzup home: /Users/ec2-user/.risc0
+/Users/ec2-user/.cargo/bin:
+total 22288
+drwxr-xr-x  18 ec2-user  staff       576 Nov 11 21:57 .
+drwxr-xr-x   5 ec2-user  staff       160 Nov 11 21:56 ..
+lrwxr-xr-x   1 ec2-user  staff         6 Nov 11 21:56 cargo -> rustup
+lrwxr-xr-x   1 ec2-user  staff         6 Nov 11 21:56 cargo-clippy -> rustup
+lrwxr-xr-x   1 ec2-user  staff         6 Nov 11 21:56 cargo-fmt -> rustup
+lrwxr-xr-x   1 ec2-user  staff         6 Nov 11 21:56 cargo-miri -> rustup
+lrwxr-xr-x   1 ec2-user  staff        91 Nov 11 21:57 cargo-risczero -> /Users/ec2-user/.risc0/extensions/v3.0.5-cargo-risczero-aarch64-apple-darwin/cargo-risczero
+lrwxr-xr-x   1 ec2-user  staff         6 Nov 11 21:56 clippy-driver -> rustup
+lrwxr-xr-x   1 ec2-user  staff        81 Nov 11 21:57 r0vm -> /Users/ec2-user/.risc0/extensions/v3.0.5-cargo-risczero-aarch64-apple-darwin/r0vm
+lrwxr-xr-x   1 ec2-user  staff         6 Nov 11 21:56 rls -> rustup
+lrwxr-xr-x   1 ec2-user  staff         6 Nov 11 21:56 rust-analyzer -> rustup
+lrwxr-xr-x   1 ec2-user  staff         6 Nov 11 21:56 rust-gdb -> rustup
+lrwxr-xr-x   1 ec2-user  staff         6 Nov 11 21:56 rust-gdbgui -> rustup
+lrwxr-xr-x   1 ec2-user  staff         6 Nov 11 21:56 rust-lldb -> rustup
+lrwxr-xr-x   1 ec2-user  staff         6 Nov 11 21:56 rustc -> rustup
+lrwxr-xr-x   1 ec2-user  staff         6 Nov 11 21:56 rustdoc -> rustup
+lrwxr-xr-x   1 ec2-user  staff         6 Nov 11 21:56 rustfmt -> rustup
+-rwxr-xr-x   1 ec2-user  staff  11408656 Nov 11 21:56 rustup
+
+/Users/ec2-user/.risc0/extensions:
+total 0
+drwxr-xr-x  3 ec2-user  staff   96 Nov 11 21:57 .
+drwxr-xr-x  9 ec2-user  staff  288 Nov 11 21:57 ..
+drwxr-xr-x  4 ec2-user  staff  128 Nov 11 21:57 v3.0.5-cargo-risczero-aarch64-apple-darwin

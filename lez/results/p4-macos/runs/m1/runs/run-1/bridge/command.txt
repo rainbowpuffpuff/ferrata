@@ -1,0 +1,1 @@
+RISC0_DEV_MODE=0 RISC0_INFO=1 RUST_LOG=info RISC0_SERVER_PATH=/Users/ec2-user/.risc0/extensions/v3.0.5-cargo-risczero-aarch64-apple-darwin/r0vm /usr/bin/time -l target/debug/prove_bridge --shape wallet --claim-out /Users/ec2-user/w/out/runs/run-1/bridge/tx-claim.borsh --burn-out /Users/ec2-user/w/out/runs/run-1/bridge/tx-burn.borsh
