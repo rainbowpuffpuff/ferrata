@@ -1824,10 +1824,12 @@ name = "fidelity"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "attestor-core",
  "borsh",
  "chain_state",
  "checkpoint-core",
  "common",
+ "ed25519-dalek",
  "fee_core",
  "hex",
  "lee",
