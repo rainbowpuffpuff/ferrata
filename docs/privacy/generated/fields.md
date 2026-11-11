@@ -22,8 +22,8 @@ Every field the collectors can name, across the 20 records of each step: constan
 | `block.number` | 32 | 20 distinct | time / order | time | time |
 | `block.timestamp` | 32 | 20 distinct | time / order | time | time |
 | `receipt.gasUsed.deposit` | 32 | 8 distinct | time / order | gas used: depends on the leaf position (order), see the summary | - |
-| `storage: mapping@61[per-sender]` | 32 | written in 20 of 20 records | the user's own public address | per-depositor counter | - |
-| `storage: mapping@58[per-token]` | 32 | written in 20 of 20 records, values vary | time / order | tree state, counters, escrow (order) | - |
+| `storage: mapping@60[per-sender]` | 32 | written in 20 of 20 records | the user's own public address | per-depositor counter | - |
+| `storage: mapping@57[per-token]` | 32 | written in 20 of 20 records, values vary | time / order | tree state, counters, escrow (order) | - |
 | `storage: _branch[level]` | 32 | written in 20 of 20 records, values vary | time / order | tree state, counters, escrow (order) | - |
 | `storage: depositRoot` | 32 | written in 20 of 20 records, values vary | time / order | tree state, counters, escrow (order) | - |
 | `storage: nextLeafIndex` | 32 | written in 20 of 20 records, values vary | time / order | tree state, counters, escrow (order) | - |
@@ -75,10 +75,10 @@ Every field the collectors can name, across the 20 records of each step: constan
 | `block.timestamp` | 8 | 20 distinct | time / order | time | time |
 | `commitment_root.before` | 32 | 20 distinct | time / order | LEZ: the commitment-set root (state the proof read) | - |
 | `commitment_root.after` | 32 | 20 distinct | time / order | LEZ: the commitment-set root (state the proof read) | - |
-| `state: the harness's fee payer (refund_to)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 | `state: token(cid, ETH) (token gate, time)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
-| `state: LEZ fee inbox` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
+| `state: the harness's fee payer (refund_to)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 | `state: the account in `derived.nullifier_account`` | 0 | one per record (20 distinct) | nullifier | created or changed by this record only | N |
+| `state: LEZ fee inbox` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 | `state: config(cid) (global gate, time)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 | `state: the relayer (its wrapped balance: relay fees)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 
@@ -115,11 +115,11 @@ Every field the collectors can name, across the 20 records of each step: constan
 | `block.timestamp` | 8 | 20 distinct | time / order | time | - |
 | `commitment_root.before` | 32 | constant | constant | LEZ: the commitment-set root (state the proof read) | - |
 | `commitment_root.after` | 32 | constant | constant | LEZ: the commitment-set root (state the proof read) | - |
-| `state: the harness's fee payer (refund_to)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 | `state: token(cid, ETH) (token gate, time)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
+| `state: the harness's fee payer (refund_to)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 | `state: LEZ fee inbox` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
-| `state: the account in `derived.nullifier_account`` | 0 | one per record (20 distinct) | nullifier | created or changed by this record only | - |
 | `state: a public destination (plaintext universe)` | 0 | one per record (20 distinct) | UNCLASSIFIED | created or changed by this record only | - |
+| `state: the account in `derived.nullifier_account`` | 0 | one per record (20 distinct) | nullifier | created or changed by this record only | - |
 | `state: config(cid) (global gate, time)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 | `state: the relayer (its wrapped balance: relay fees)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 
@@ -164,11 +164,11 @@ Every field the collectors can name, across the 20 records of each step: constan
 | `block.timestamp` | 8 | 20 distinct | time / order | time | time |
 | `commitment_root.before` | 32 | 20 distinct | time / order | LEZ: the commitment-set root (state the proof read) | - |
 | `commitment_root.after` | 32 | 20 distinct | time / order | LEZ: the commitment-set root (state the proof read) | - |
-| `state: the harness's fee payer (refund_to)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 | `state: token(cid, ETH) (token gate, time)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
+| `state: the harness's fee payer (refund_to)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 | `state: LEZ fee inbox` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
-| `state: config(cid) (global gate, time)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 | `state: the account in `derived.burn_record_account`` | 0 | one per record (20 distinct) | fresh randomness | created or changed by this record only | the burn note |
+| `state: config(cid) (global gate, time)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 
 ## release, NOut of the release statement
 
@@ -198,8 +198,8 @@ Every field the collectors can name, across the 20 records of each step: constan
 | `block.number` | 32 | 20 distinct | time / order | time | time |
 | `block.timestamp` | 32 | 20 distinct | time / order | time | time |
 | `receipt.gasUsed` | 32 | 2 distinct | time / order | gas used: the first release's relay fee creates the relayer's account | - |
-| `storage: mapping@62[per-nullifier]` | 32 | written in 20 of 20 records | nullifier | nullifierUsed[NOut] | - |
-| `storage: mapping@58[per-token]` | 32 | written in 20 of 20 records, values vary | time / order | tree state, counters, escrow (order) | - |
+| `storage: mapping@61[per-nullifier]` | 32 | written in 20 of 20 records | nullifier | nullifierUsed[NOut] | - |
+| `storage: mapping@57[per-token]` | 32 | written in 20 of 20 records, values vary | time / order | tree state, counters, escrow (order) | - |
 | `balance: vault` | 32 | changed in 20 of 20 records | time / order | cumulative (order) | - |
 | `balance: per record` | 32 | changed in 20 of 20 records | the user's own public address | the recipient's own address | - |
 | `balance: relayer` | 32 | changed in 20 of 20 records | time / order | cumulative (order) | - |
@@ -225,7 +225,7 @@ Every field the collectors can name, across the 20 records of each step: constan
 | `block.timestamp` | 8 | constant | constant | time | - |
 | `commitment_root.before` | 32 | constant | constant | LEZ: the commitment-set root (state the proof read) | - |
 | `commitment_root.after` | 32 | constant | constant | LEZ: the commitment-set root (state the proof read) | - |
-| `state: root(cid, 20)` | 0 | changed in every record | constant |  | - |
 | `state: the harness's fee payer (refund_to)` | 0 | changed in every record | constant |  | - |
 | `state: LEZ fee inbox` | 0 | changed in every record | constant |  | - |
+| `state: root(cid, 20)` | 0 | changed in every record | constant |  | - |
 

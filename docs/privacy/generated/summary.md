@@ -1,6 +1,6 @@
 # Privacy suite: generated results
 
-Bridge program image `23cc502547f9f0a57b1a46f0bde18e48e6a84fdedae3f7d83edfb03ffe739132` (built at this worktree's path); vault `0xa0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0` on chain 1; configuration `0x4bec031cc3356fc3dfd865548e4e4d42199f70edc6363e1bc31f2d211a69b492`; 20 users per direction. Written by `scripts/privacy/adversary.py`.
+Bridge program image `5943b7507806e38df8955c2a0e9e851024f6a9c864f9c1d49ebc29d94caa42f3` (built at this worktree's path); vault `0xa0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0` on chain 1; configuration `0xdecd7c6f2ed60a728ea8b2610c7186c19f63495d5e7e3a182176bb2f255c5a7f`; 20 users per direction. Written by `scripts/privacy/adversary.py`.
 
 ## The differential gate
 
@@ -10,7 +10,7 @@ Bridge program image `23cc502547f9f0a57b1a46f0bde18e48e6a84fdedae3f7d83edfb03ffe
 | deposit (B: public destinations) | 100-100 | yes |
 | claim, private (default) | 8,953-8,953 | yes |
 | claim, naive nullifier N = fid | 8,953-8,953 | yes |
-| claim, plaintext | 2,061-2,061 | NO: lez:claim:plaintext:01 vs lez:claim:plaintext:00: part tx differs at byte 5 of 1837/1837 after the cut (00070000003461fb6c10ff2a3297878f0c14c97c8853d10a15c6b59ef7 / 000700000046ffca34eae608130be303a685bafc3fb616fd90d4ea077c) |
+| claim, plaintext | 2,061-2,061 | NO: lez:claim:plaintext:01 vs lez:claim:plaintext:00: part tx differs at byte 5 of 1837/1837 after the cut (00070000003461fb6c10ff2a3297878f0c14c97c8853d10a15c6b59ef7 / 000700000041a2c36cd9bef1e8910e169fa802d053dff965c4c14b38cc) |
 | burn, private holding | 7,857-7,857 | yes |
 | release, NOut of the release statement | 324-324 | yes |
 | release, naive NOut = burnId | 324-324 | yes |
@@ -27,7 +27,7 @@ Chance is 1/20 = 5.0%. Success = mean over the right-hand records of 1/|best can
 | outbound, private (default) | 5.0% | 0 of 20 | 20: 20 | 5.0% | 5.0% | 5.0% |
 | outbound, naive NOut = burnId | 100.0% | 20 of 20 | 1: 20 | 5.0% | 100.0% | 5.0% |
 | round trip: deposit to release (informational) | 5.0% | 0 of 20 | 20: 20 | 5.0% | 5.0% | 5.0% |
-| on LEZ: claim to burn (informational) | 4.5% | 0 of 20 | 1: 1, 2: 1, 20: 18 | 4.5% | 4.5% | 5.0% |
+| on LEZ: claim to burn (informational) | 4.8% | 0 of 20 | 1: 1, 20: 19 | 4.8% | 4.8% | 5.0% |
 
 ## Recovery from the seed alone (after 10 claims and 10 releases)
 
@@ -40,8 +40,8 @@ Private actions proven against the newest commitment-set root: 80 of 80.
 
 ## Receipts
 
-- Ethereum gas used, deposits by leaf index (universe A): [138240, 98562, 78662, 98684, 78662, 78784, 78784, 98806, 78662, 78784, 78784, 78906, 78784, 78906, 78906, 98928, 78662, 78784, 78784, 78906]; the same in universe B (other commitments, public destinations): True
-- Ethereum gas used, releases: distinct values [78781, 103781] (NOut of the release statement), [78781, 103781] (naive)
+- Ethereum gas used, deposits by leaf index (universe A): [139595, 99917, 80017, 100039, 80017, 80139, 80139, 100161, 80017, 80139, 80139, 80261, 80139, 80261, 80261, 100283, 80017, 80139, 80139, 80261]; the same in universe B (other commitments, public destinations): True
+- Ethereum gas used, releases: distinct values [80461, 105461] (NOut of the release statement), [80461, 105461] (naive)
 - execution gas by position, minus the first: private claims [0, 5188, 5189, 5189, 5187, 5188, 5188, 5186, 5186, 5186, 5186, 5186, 5186, 5187, 5186, 5186, 5187, 5186, 5186, 5186]; plaintext claims [0, 5188, 5189, 5189, 5187, 5188, 5188, 5186, 5186, 5186, 5186, 5186, 5186, 5187, 5186, 5186, 5187, 5186, 5186, 5186]; burns [0, -578, -578, -578, -578, -578, -578, -578, -578, -578, -578, -578, -578, -578, -578, -578, -578, -578, -578, -578]; releases (Ethereum) [0, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000, -25000]
 - LEZ claims: the same gas steps by position in both universes (users in different orders): yes
 - LEZ burns: only the first differs: yes

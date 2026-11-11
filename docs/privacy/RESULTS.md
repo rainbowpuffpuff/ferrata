@@ -16,6 +16,16 @@ and `FerrataVault` v3 (Foundry, mock verifier).
 program's image in this build is `23cc5025…9132` (built at this worktree's path; the ELF holds its
 build paths, so it differs from `BRIDGE-RESULTS.md`'s `b5d177bb…`; no guest source changed).
 
+**Re-run on the integrated tree (11 November 2026).** On branch `integration3` the suite runs against the
+merged bridge program (registry, fees, the Gloas header; image `5943b750…42f3` at that worktree's path) and
+`FerrataVault` v5, whose deposits must carry the denomination plus the mint and relay fees in force (the test
+now sends that total). `scripts/privacy/run.sh` ran there on the build box (83 s) and the files in
+[`generated/`](generated/) are that run's. Unchanged: the gate, the adversary's rates on both private paths
+and on the plaintext and naive variants, the hidden column, the recovery. Changed: the Ethereum gas (v5:
+deposits 1,355 more, releases 1,680 more, below), v5's storage slots in the field table, and the
+informational claim → burn rate, 4.5% → 4.8% (its candidate sets depend on the build's ids). The figures
+below are the re-run's where they differ.
+
 ## Results in brief
 
 | check | default private path | linkable variants |
@@ -27,7 +37,7 @@ build paths, so it differs from `BRIDGE-RESULTS.md`'s `b5d177bb…`; no guest so
 | recovery from the seed alone, after 10 claims and 10 releases | unclaimed deposits **10 of 10**, unreleased burns **10 of 10**; claimed and released ones seen as such, 10 and 10; no other user's item taken; recovered `NOut` equal to the vault's for 20 of 20 | – |
 
 Informational: deposit → release over the round trip, 5.0%; claim → burn on LEZ (the same private
-accounts), 4.5%. Including the order-bearing state the main adversary leaves out (below) changes none of
+accounts), 4.8%. Including the order-bearing state the main adversary leaves out (below) changes none of
 the rates.
 
 ## Method
@@ -121,7 +131,7 @@ memo, checks `COut` and computes `NOut` (v1, the release guest's).
 | outbound, private (default) | 5.0% | 0 of 20 | 20: 20 | 5.0% | 5.0% | 5.0% |
 | outbound, naive NOut = burnId | 100.0% | 20 of 20 | 1: 20 | 5.0% | 100.0% | 5.0% |
 | round trip: deposit to release | 5.0% | 0 of 20 | 20: 20 | 5.0% | 5.0% | 5.0% |
-| on LEZ: claim to burn | 4.5% | 0 of 20 | 1: 1, 2: 1, 20: 18 | 4.5% | 4.5% | 5.0% |
+| on LEZ: claim to burn | 4.8% | 0 of 20 | 1: 1, 20: 19 | 4.8% | 4.8% | 5.0% |
 
 "Order only" pairs the k-th of each side in time order: what the client's delay has to defeat, at
 chance here because the orders are random by construction. The naive variants are found only through a
@@ -137,11 +147,11 @@ Gas is public, and it varies; every variation follows the operation's position, 
   the state the claims before it left; the cause of the 5,186 was not isolated. Storage gas is constant
   (224,063 private, 2,061 plaintext).
 - **LEZ burns.** The first burn costs 578 gas more than the 19 others, which cost the same.
-- **Ethereum releases.** The first costs 103,781 gas, the 19 others 78,781: 25,000 more, the EVM's charge
+- **Ethereum releases.** The first costs 105,461 gas, the 19 others 80,461: 25,000 more, the EVM's charge
   for a value transfer that creates an account, here the relayer's (a fresh address) on its first relay
   fee. The naive releases show the same.
-- **Ethereum deposits.** Gas follows the leaf index: 138,240 for leaf 0; 98,562 to 98,928 for leaves 1, 3,
-  7 and 15, which write a level of the tree's frontier for the first time; 78,662 to 78,906 otherwise. The
+- **Ethereum deposits.** Gas follows the leaf index: 139,595 for leaf 0; 99,917 to 100,283 for leaves 1, 3,
+  7 and 15, which write a level of the tree's frontier for the first time; 80,017 to 80,261 otherwise. The
   sequence is the same in both universes, whose commitments and destinations differ.
 
 So the receipts carry order, as the base fee does (it moves with the chain's history), and nothing that

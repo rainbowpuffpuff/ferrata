@@ -82,16 +82,12 @@ contract PrivacySuiteTest is VaultTestBase {
             string memory at = string.concat(key, "[", vm.toString(u), "]");
             address depositor = vm.parseJsonAddress(scenario, string.concat(at, ".depositor"));
             bytes32 commitment = vm.parseJsonBytes32(scenario, string.concat(at, ".commitment"));
-            vm.deal(depositor, 1 ether);
+            // v5 (D13): the denomination plus the mint and relay fees in force, exactly.
+            uint256 value = _depositTotal(vault, ETH, 1);
+            vm.deal(depositor, value);
             bytes memory callData = abi.encodeCall(FerrataVault.depositETH, (1, commitment, 0));
             _record(
-                string.concat("eth:deposit:", variant, ":", _two(u)),
-                "deposit",
-                variant,
-                u,
-                depositor,
-                1 ether,
-                callData
+                string.concat("eth:deposit:", variant, ":", _two(u)), "deposit", variant, u, depositor, value, callData
             );
         }
         assertEq(vault.nextLeafIndex(), users, "leaf count");

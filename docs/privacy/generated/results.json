@@ -18,7 +18,7 @@
   },
   "claim, plaintext": {
    "pass": false,
-   "detail": "lez:claim:plaintext:01 vs lez:claim:plaintext:00: part tx differs at byte 5 of 1837/1837 after the cut (00070000003461fb6c10ff2a3297878f0c14c97c8853d10a15c6b59ef7 / 000700000046ffca34eae608130be303a685bafc3fb616fd90d4ea077c)"
+   "detail": "lez:claim:plaintext:01 vs lez:claim:plaintext:00: part tx differs at byte 5 of 1837/1837 after the cut (00070000003461fb6c10ff2a3297878f0c14c97c8853d10a15c6b59ef7 / 000700000041a2c36cd9bef1e8910e169fa802d053dff965c4c14b38cc)"
   },
   "burn, private holding": {
    "pass": true,
@@ -119,7 +119,7 @@
    "with_order_state": 0.05000000000000001
   },
   "on LEZ: claim to burn (informational)": {
-   "success": 0.04500000000000001,
+   "success": 0.047500000000000014,
    "chance": 0.05,
    "exactly_identified": 0,
    "candidate_set_sizes": [
@@ -128,17 +128,13 @@
      1
     ],
     [
-     2,
-     1
-    ],
-    [
      20,
-     18
+     19
     ]
    ],
    "max_score": 2.995732273553991,
-   "without_derived_identifiers": 0.04500000000000001,
-   "with_order_state": 0.04500000000000001
+   "without_derived_identifiers": 0.047500000000000014,
+   "with_order_state": 0.047500000000000014
   }
  },
  "order_only": {
@@ -415,7 +411,7 @@
     "B6": null
    },
    {
-    "field": "storage: mapping@61[per-sender]",
+    "field": "storage: mapping@60[per-sender]",
     "bytes": 32,
     "across records": "written in 20 of 20 records",
     "class": "the user's own public address",
@@ -423,7 +419,7 @@
     "B6": null
    },
    {
-    "field": "storage: mapping@58[per-token]",
+    "field": "storage: mapping@57[per-token]",
     "bytes": 32,
     "across records": "written in 20 of 20 records, values vary",
     "class": "time / order",
@@ -801,14 +797,6 @@
     "B6": null
    },
    {
-    "field": "state: the harness's fee payer (refund_to)",
-    "bytes": 0,
-    "across records": "changed in every record, contents vary",
-    "class": "time / order",
-    "what": "cumulative state (order)",
-    "B6": null
-   },
-   {
     "field": "state: token(cid, ETH) (token gate, time)",
     "bytes": 0,
     "across records": "changed in every record, contents vary",
@@ -817,7 +805,7 @@
     "B6": null
    },
    {
-    "field": "state: LEZ fee inbox",
+    "field": "state: the harness's fee payer (refund_to)",
     "bytes": 0,
     "across records": "changed in every record, contents vary",
     "class": "time / order",
@@ -831,6 +819,14 @@
     "class": "nullifier",
     "what": "created or changed by this record only",
     "B6": "N"
+   },
+   {
+    "field": "state: LEZ fee inbox",
+    "bytes": 0,
+    "across records": "changed in every record, contents vary",
+    "class": "time / order",
+    "what": "cumulative state (order)",
+    "B6": null
    },
    {
     "field": "state: config(cid) (global gate, time)",
@@ -1083,7 +1079,7 @@
     "B6": null
    },
    {
-    "field": "state: the harness's fee payer (refund_to)",
+    "field": "state: token(cid, ETH) (token gate, time)",
     "bytes": 0,
     "across records": "changed in every record, contents vary",
     "class": "time / order",
@@ -1091,7 +1087,7 @@
     "B6": null
    },
    {
-    "field": "state: token(cid, ETH) (token gate, time)",
+    "field": "state: the harness's fee payer (refund_to)",
     "bytes": 0,
     "across records": "changed in every record, contents vary",
     "class": "time / order",
@@ -1107,18 +1103,18 @@
     "B6": null
    },
    {
-    "field": "state: the account in `derived.nullifier_account`",
-    "bytes": 0,
-    "across records": "one per record (20 distinct)",
-    "class": "nullifier",
-    "what": "created or changed by this record only",
-    "B6": null
-   },
-   {
     "field": "state: a public destination (plaintext universe)",
     "bytes": 0,
     "across records": "one per record (20 distinct)",
     "class": "UNCLASSIFIED",
+    "what": "created or changed by this record only",
+    "B6": null
+   },
+   {
+    "field": "state: the account in `derived.nullifier_account`",
+    "bytes": 0,
+    "across records": "one per record (20 distinct)",
+    "class": "nullifier",
     "what": "created or changed by this record only",
     "B6": null
    },
@@ -1437,7 +1433,7 @@
     "B6": null
    },
    {
-    "field": "state: the harness's fee payer (refund_to)",
+    "field": "state: token(cid, ETH) (token gate, time)",
     "bytes": 0,
     "across records": "changed in every record, contents vary",
     "class": "time / order",
@@ -1445,7 +1441,7 @@
     "B6": null
    },
    {
-    "field": "state: token(cid, ETH) (token gate, time)",
+    "field": "state: the harness's fee payer (refund_to)",
     "bytes": 0,
     "across records": "changed in every record, contents vary",
     "class": "time / order",
@@ -1461,20 +1457,20 @@
     "B6": null
    },
    {
-    "field": "state: config(cid) (global gate, time)",
-    "bytes": 0,
-    "across records": "changed in every record, contents vary",
-    "class": "time / order",
-    "what": "cumulative state (order)",
-    "B6": null
-   },
-   {
     "field": "state: the account in `derived.burn_record_account`",
     "bytes": 0,
     "across records": "one per record (20 distinct)",
     "class": "fresh randomness",
     "what": "created or changed by this record only",
     "B6": "the burn note"
+   },
+   {
+    "field": "state: config(cid) (global gate, time)",
+    "bytes": 0,
+    "across records": "changed in every record, contents vary",
+    "class": "time / order",
+    "what": "cumulative state (order)",
+    "B6": null
    }
   ],
   "release, NOut of the release statement": [
@@ -1671,7 +1667,7 @@
     "B6": null
    },
    {
-    "field": "storage: mapping@62[per-nullifier]",
+    "field": "storage: mapping@61[per-nullifier]",
     "bytes": 32,
     "across records": "written in 20 of 20 records",
     "class": "nullifier",
@@ -1679,7 +1675,7 @@
     "B6": null
    },
    {
-    "field": "storage: mapping@58[per-token]",
+    "field": "storage: mapping@57[per-token]",
     "bytes": 32,
     "across records": "written in 20 of 20 records, values vary",
     "class": "time / order",
@@ -1849,14 +1845,6 @@
     "B6": null
    },
    {
-    "field": "state: root(cid, 20)",
-    "bytes": 0,
-    "across records": "changed in every record",
-    "class": "constant",
-    "what": "",
-    "B6": null
-   },
-   {
     "field": "state: the harness's fee payer (refund_to)",
     "bytes": 0,
     "across records": "changed in every record",
@@ -1866,6 +1854,14 @@
    },
    {
     "field": "state: LEZ fee inbox",
+    "bytes": 0,
+    "across records": "changed in every record",
+    "class": "constant",
+    "what": "",
+    "B6": null
+   },
+   {
+    "field": "state: root(cid, 20)",
     "bytes": 0,
     "across records": "changed in every record",
     "class": "constant",
@@ -2027,57 +2023,57 @@
  ],
  "gas": {
   "deposit A by leaf index": [
-   138240,
-   98562,
-   78662,
-   98684,
-   78662,
-   78784,
-   78784,
-   98806,
-   78662,
-   78784,
-   78784,
-   78906,
-   78784,
-   78906,
-   78906,
-   98928,
-   78662,
-   78784,
-   78784,
-   78906
+   139595,
+   99917,
+   80017,
+   100039,
+   80017,
+   80139,
+   80139,
+   100161,
+   80017,
+   80139,
+   80139,
+   80261,
+   80139,
+   80261,
+   80261,
+   100283,
+   80017,
+   80139,
+   80139,
+   80261
   ],
   "deposit B by leaf index": [
-   138240,
-   98562,
-   78662,
-   98684,
-   78662,
-   78784,
-   78784,
-   98806,
-   78662,
-   78784,
-   78784,
-   78906,
-   78784,
-   78906,
-   78906,
-   98928,
-   78662,
-   78784,
-   78784,
-   78906
+   139595,
+   99917,
+   80017,
+   100039,
+   80017,
+   80139,
+   80139,
+   100161,
+   80017,
+   80139,
+   80139,
+   80261,
+   80139,
+   80261,
+   80261,
+   100283,
+   80017,
+   80139,
+   80139,
+   80261
   ],
   "deposit A equals B": true,
   "release distinct values": [
-   78781,
-   103781
+   80461,
+   105461
   ],
   "release naive distinct values": [
-   78781,
-   103781
+   80461,
+   105461
   ]
  },
  "lez_receipts": {
