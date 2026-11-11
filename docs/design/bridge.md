@@ -644,7 +644,7 @@ Components: BLAKE2b 55.9 cycles/B (no accelerator), SHA-256 2.59 cycles/B, Ed255
 
 ### 18.6 Simulation, and what is not measured
 
-The rule (A) simulation is a Python model of the v0.4 code (`docs/design/finality-rule/MODEL.md`), 12,000 runs for experiments (a) to (h) plus (i) to (k), deterministic per seed (§11). Not built or not measured: `ferrata_attestor` as a Logos module and the vault's rule (B) path; the LEZ bridge program, claims and imports on LEZ; the gas drop; composed real proofs; latency on a network; phones and the 4-core minimum.
+The rule (A) simulation is a Python model of the v0.4 code (`docs/design/finality-rule/MODEL.md`), 12,000 runs for experiments (a) to (h) plus (i) to (k), deterministic per seed (§11). Not built or not measured: `ferrata_attestor` as a Logos module and the vault's rule (B) path; the LEZ bridge program, claims and imports on LEZ; the gas drop; composed real proofs; latency on a network; phones and the declared minimum (8 cores, 16 GB).
 
 ### 18.7 The return leg end to end: measured (real verifier, v3 vault; stand-in zone)
 
