@@ -333,6 +333,10 @@ Rectangle {
                         onClicked: reviewClaim()
                     }
                 }
+                LeakList {
+                    objectName: "claim.leaks"; summaryName: "claim.leaks.summary"
+                    items: Privacy.claimLeaks({ mode: claimMode, kind: depositOf(claimLeaf) ? depositOf(claimLeaf).kind : "", held: claimLeaf >= 0 && held(claimLeaf), skipDelay: skipDelay, relayer: relayerOn })
+                }
                 Label { objectName: "claim.result"; text: claimText; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                 StepTable { step: "claim" }
                 Item { Layout.fillHeight: true }

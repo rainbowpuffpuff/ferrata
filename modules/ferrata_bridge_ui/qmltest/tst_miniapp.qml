@@ -125,6 +125,7 @@ Item {
             tryVerify(function () { return host.app.positions && host.app.positions.deposits[0].state === "claimable"; }, 60000, "imported");
             click("claim.pick.0");
             verify(!el("claim.submit").enabled, "held by the random delay");
+            verify(has(el("claim.leaks.summary").text, "Minimal"), el("claim.leaks.summary").text);
             verify(el("claim.delay").visible, "the delay is explained");
             shot("14-claim-held-by-delay");
             click("claim.skipDelay");
@@ -138,6 +139,7 @@ Item {
             click("claim.pick.1");
             click("claim.mode.plain");
             verify(!el("claim.submit").enabled, "plaintext needs the acknowledgement");
+            verify(has(el("claim.leaks.summary").text, "High"), el("claim.leaks.summary").text);
             click("claim.plain.ack");
             click("claim.submit");
             approve("Plaintext claim", null);

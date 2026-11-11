@@ -75,3 +75,22 @@ function burnLeaks(c) {
         out.push({ level: 1, text: "You send the release yourself: your gas payer is linked to the recipient." });
     return out;
 }
+
+function claimLeaks(c) {
+    var out = [];
+    if (c.mode === "private")
+        out.push({ level: 0, text: "Private claim: proven without saying which deposit it spends (no leaf index, no depositor)." });
+    else
+        out.push({ level: 2, text: "Plaintext claim: names on LEZ which deposit paid which account." });
+    if (c.kind === "public")
+        out.push({ level: 2, text: "Public destination: the account and its new balance are public." });
+    else if (c.kind === "private")
+        out.push({ level: 0, text: "Private destination: the account and its balance stay private." });
+    if (c.held && c.skipDelay)
+        out.push({ level: 1, text: "Claiming before your random delay ends: the claim's time narrows which deposits it could be." });
+    else if (c.held)
+        out.push({ level: 0, text: "Held by your random delay: the claim will not follow the deposit closely in time." });
+    if (c.relayer)
+        out.push({ level: 0, text: "Submitted by a permissionless relayer: no fee payment ties the claim to you." });
+    return out;
+}
