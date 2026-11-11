@@ -22,6 +22,10 @@
 //!                                              inscription, with T's inscription from the node's answers
 //! retip   --base IN --answers DIR --tip N --out IN2   T moved to block N of the input (its inscription
 //!                                              from the node); the later blocks become the path after T
+//! tier    --answers DIR [--channel HEX]        the node's final tier: tip, key set, blocks per signer
+//! base    --answers DIR --genesis FILE --from A --to T --n-min N --t-min T --out IN
+//!                                              devnet set-up: an input over final blocks A..=T from the
+//!                                              node's answers alone (bridge values are stand-ins)
 //! rekey   --base IN --keys HEX,HEX,... --n-min N --t-min T [--posting-timeframe P] --out IN2
 //! rotate  --base IN --keys HEX,HEX,... --threshold C --signer I:KEY... --out IN2
 //!                                              devnet set-up: one rotation of the base's set, signed
@@ -250,6 +254,58 @@ fn cmd_retip(a: &Args) -> Result<()> {
     Ok(())
 }
 
+const DEFAULT_CHANNEL: &str = "0101010101010101010101010101010101010101010101010101010101010101";
+
+fn cmd_tier(a: &Args) -> Result<()> {
+    let answers = NodeAnswers::load(Path::new(a.get("answers")?))?;
+    let channel: Hash = hex_str(a.opt("channel").unwrap_or(DEFAULT_CHANNEL), "channel")?;
+    let tier = final_tier(&answers, &channel)?;
+    let signers = ferrata_attestor::signers(&answers, &channel)?;
+    let mut per: std::collections::BTreeMap<String, Vec<u64>> = std::collections::BTreeMap::new();
+    for (id, k) in &signers {
+        per.entry(hex::encode(k)).or_default().push(*id);
+    }
+    let v = json!({
+        "tip_id": tier.tip.tip_id, "tip_hash": hex::encode(tier.tip.tip_hash),
+        "final_msg_id": hex::encode(tier.tip.final_msg_id), "tip_signer": hex::encode(tier.tip_signer),
+        "first_block": tier.first_block, "blocks_checked": tier.hashes.len(), "lib_slot": tier.lib_slot,
+        "keys": tier.keys.iter().map(hex::encode).collect::<Vec<_>>(), "posting_timeframe": tier.posting_timeframe,
+        "blocks_per_signer": per.iter().map(|(k, ids)| (k.clone(), json!({"count": ids.len(),
+            "first": ids.first(), "last": ids.last()}))).collect::<serde_json::Map<_, _>>(),
+    });
+    match a.opt("out") {
+        Some(p) => write_json(p, &v)?,
+        None => println!("{}", serde_json::to_string_pretty(&v)?),
+    }
+    Ok(())
+}
+
+fn cmd_base(a: &Args) -> Result<()> {
+    let answers = NodeAnswers::load(Path::new(a.get("answers")?))?;
+    let channel: Hash = hex_str(a.opt("channel").unwrap_or(DEFAULT_CHANNEL), "channel")?;
+    let genesis_id = sha256_parts(&[fs::read(a.get("genesis")?)?.as_slice()]);
+    let bytes = ferrata_attestor::base_from_answers(
+        &answers,
+        &channel,
+        genesis_id,
+        a.get("from")?.parse()?,
+        a.get("to")?.parse()?,
+        a.get("n-min")?.parse()?,
+        a.get("t-min")?.parse()?,
+    )?;
+    fs::write(a.get("out")?, &bytes)?;
+    let input = CheckpointInputB::decode(&bytes).map_err(|e| anyhow!("{e:?}"))?;
+    println!(
+        "base: blocks {}..={}, n = {}, configId {}, parent state {}",
+        input.parent.tip_id + 1,
+        input.parent.tip_id + input.blocks.len() as u64,
+        input.parent.keys.len(),
+        hex::encode(input.config.config_id()),
+        hex::encode(input.parent.digest())
+    );
+    Ok(())
+}
+
 fn cmd_rotate(a: &Args) -> Result<()> {
     let base = fs::read(a.get("base")?)?;
     let input = CheckpointInputB::decode(&base).map_err(|e| anyhow!("{e:?}"))?;
@@ -318,6 +374,8 @@ fn main() -> Result<()> {
         "upgrade" => cmd_upgrade(&a),
         "retip" => cmd_retip(&a),
         "rotate" => cmd_rotate(&a),
+        "tier" => cmd_tier(&a),
+        "base" => cmd_base(&a),
         other => bail!("unknown command {other}"),
     }
 }

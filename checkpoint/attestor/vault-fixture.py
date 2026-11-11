@@ -7,13 +7,19 @@ import hashlib, json, pathlib, shutil, sys
 
 name, fixture, proof_dir = (sys.argv[1:4] if len(sys.argv) == 4 else ["rbm-lab-n3-t2", "rule-b-multi.json", "proof"])
 here = pathlib.Path.cwd()
-run = here / "attestor/runs/devnet-n3"
+run = here / ("attestor/runs/zone" if name.startswith("rbz-") else "attestor/runs/devnet-n3")
 art = here / "artifacts" / name
 meta = json.loads((run / f"{name}.json").read_text())
 journal = (art / "groth16/journal.hex").read_text().strip().removeprefix("0x")
 assert journal == meta["journal"], "the wrapped journal is not the native one"
 sha = lambda p: "0x" + hashlib.sha256(p.read_bytes()).hexdigest()
-DESCRIPTIONS = {"rbm-lab-rot": "Rule (B) checkpoint with t of n and a key rotation: the lab's real LEZ blocks 186..=202 "
+DESCRIPTIONS = {"rbz-zone-n4-t3": "Rule (B) checkpoint over a real four-sequencer LEZ v0.4.0-rc1 zone: upstream's own "
+    "devnet configuration (one genesis staking the four channel keys of lez/configs/docker-all-in-one/devnet), run "
+    "with the lab bundle's sequencer_service and Logos Blockchain node on the build box (round-robin turns, gossip on "
+    "loopback); final blocks from 2 to the tip, n = 4, t = 3; attestations of sequencers 0, 1 and 2 collected by "
+    "ferrata_attestor (sequencer 3 silent); bridge values of the configuration are stand-ins (no bridge program runs); "
+    "guest checkpoint_b proven on the build box's CPU, wrapped to Groth16. checkpoint/attestor/RESULTS.md",
+    "rbm-lab-rot": "Rule (B) checkpoint with t of n and a key rotation: the lab's real LEZ blocks 186..=202 "
     "(LEZ v0.4.0-rc1, one sequencer); stand-in parent key set {the lab sequencer's key (producer of T = 202), k1, k2} "
     "with a stand-in posting timeframe of 20, rotated in the proof to {lab, k1, k3} by a configuration transaction "
     "signed by k1 and k2 (2 of 3); nMin 3, tMin 2; two attestations under the new set collected by ferrata_attestor; "

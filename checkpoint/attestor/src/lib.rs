@@ -616,6 +616,75 @@ pub fn rotate_base(base: &[u8], ops: &[u8], signers: &[(u16, &SigningKey)]) -> R
     Ok(input.encode())
 }
 
+/// Devnet set-up: a `checkpoint_b` input over the node's final blocks `from..=to` (`T = to`) built from the
+/// node's answers alone. The parent state is block `from - 1` as inscribed, with the channel's key set,
+/// posting timeframe and configuration tip as the node reports them; the configuration's bridge values are
+/// stand-ins (SHA-256 of labels, chain 31337, a label-derived vault), `bedrockGenesisId` is `genesis_id`.
+pub fn base_from_answers(
+    answers: &NodeAnswers,
+    channel_id: &Hash,
+    genesis_id: Hash,
+    from: u64,
+    to: u64,
+    n_min: u32,
+    t_min: u32,
+) -> Result<Vec<u8>> {
+    let tier = final_tier(answers, channel_id)?;
+    ensure!(from >= 2 && from <= to && to <= tier.tip.tip_id, "span {from}..={to} not within 2..={}", tier.tip.tip_id);
+    let ins = final_inscriptions(answers, channel_id)?;
+    let payload = |k: u64| -> Result<&[u8]> { ins.get(&k).with_context(|| format!("no final inscription of block {k}"))?.payload() };
+    let parent_header =
+        parse_block(payload(from - 1)?, &mut NoVisitor).map_err(|e| anyhow!("block {}: {e:?}", from - 1))?.header;
+    let label = |s: &str| sha256_parts(&[b"ferrata/attestor/zone/stand-in/", s.as_bytes()]);
+    let mut evm_chain_id = [0u8; 32];
+    evm_chain_id[24..].copy_from_slice(&31337u64.to_be_bytes());
+    let config = Config {
+        bedrock_genesis_id: genesis_id,
+        channel_id: *channel_id,
+        bridge_header: label("bridge header"),
+        bridge_image_id: label("bridge image id"),
+        evm_chain_id,
+        vault: label("vault")[..20].try_into()?,
+        attestation_root_id: label("attestation root id"),
+        salt: label("salt"),
+        n_min,
+        t_min,
+    };
+    let parent = checkpoint_core::state::State {
+        tip_id: from - 1,
+        tip_hash: parent_header.hash,
+        keys: tier.keys.clone(),
+        posting_timeframe: tier.posting_timeframe,
+        config_tip_hash: hexa(&answers.channel["config_tip_hash"], "config_tip_hash")?,
+        burns: Default::default(),
+        imported_leaf_count: 0,
+        sunset: false,
+    };
+    let blocks: Vec<&[u8]> = (from..=to).map(payload).collect::<Result<_>>()?;
+    let input = CheckpointInputB {
+        config,
+        parent,
+        config_changes: Vec::new(),
+        blocks,
+        t_index: u32::try_from(to - from)?,
+        producer: ins[&to].elided()?,
+        attestations: Vec::new(),
+        segments: Vec::new(),
+    };
+    Ok(input.encode())
+}
+
+/// Which channel key inscribed each final block (the checked signer of its inscription).
+pub fn signers(answers: &NodeAnswers, channel_id: &Hash) -> Result<BTreeMap<u64, Hash>> {
+    final_inscriptions(answers, channel_id)?
+        .iter()
+        .map(|(id, i)| {
+            let c = i.elided()?.check(i.payload()?, channel_id).map_err(|e| anyhow!("block {id}: {e:?}"))?;
+            Ok((*id, c.signer))
+        })
+        .collect()
+}
+
 // ---- fixtures for the checkpoint host ---------------------------------------------------------------
 
 /// The native run of the rule and the fixture meta the checkpoint host reads (`host bench`, `prove`):

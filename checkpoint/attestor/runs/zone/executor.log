@@ -1,0 +1,5 @@
+rbz-zone-n4-t3: accepted: n = 4, t = 3, 3 attestations counted, producer fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096
+rbz-zone-n4-all: accepted: n = 4, t = 3, 4 attestations counted, producer fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096
+rbz-zone-n4-t3         blocks 28 (23492 B) | user cycles     6261183 | segments   7 (7x2^20) padded     7340032 |   0.46 s | journal == native
+rbz-zone-n4-all        blocks 28 (23492 B) | user cycles     7950701 | segments   9 (1x2^19+8x2^20) padded     8912896 |   0.30 s | journal == native
+rbz-refuse-two-of-four: Guest panicked: checkpoint refused: InsufficientAttestations { have: 2, need: 3 }
