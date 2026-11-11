@@ -99,8 +99,9 @@ runner ~4 h of 2 cores (~1 USD at the nonpreemptible rate), GPU session ~1 h (~1
 
 The cloud app (`e2e/crown/cloud/`, Modal app `ferrata-crown` on workspace ws-3) runs the whole round trip from
 one `start`; it needs this machine only to start, to look and to fetch. Rehearsed to DONE on an anvil fork of Sepolia
-on 11 Nov 2026 (`e2e/runs/crown-rehearsal-1/README.md`: 19 stages in ~29 min, verify 14 of 14, about 0.6 USD of
-Modal, estimated from the container times).
+on 11 Nov 2026, twice: `e2e/runs/crown-rehearsal-1/` (19 stages in ~29 min, verify 14 of 14) and
+`e2e/runs/crown-rehearsal-2/` (stopped on purpose during LEZ session B and resumed, DONE, verify 14 of 14); Modal
+billed 0.45 USD to `ferrata-crown` for both and a selftest (mcost, 04:36 CET; the report may lag its last hour).
 
 Before the first start:
 - a tree with all three parts: crown-cloud, crown-lez and crown-proofs merged (the rehearsal ran from branch
@@ -130,7 +131,8 @@ e2e/crown.sh stop                               # cancels the runner (and a queu
 A stop, a timeout or a crash anywhere is resumed by `start` with the same run name: every stage asks the chain or the
 Volume first (deploy.sh resumes from its record; a deposit, submit, finalize or release already on chain is not sent
 again; a LEZ session whose generation is saved is not run again, and once the vault's deployment has begun no new
-devnet can be made). `--halt-after <stage>` stops cleanly after a stage.
+devnet can be made). A stop during a LEZ session loses that session's work: it runs again from the last saved
+generation (session B: ~15 min). `--halt-after <stage>` stops cleanly after a stage.
 
 Expected duration of the live run (derived: the rehearsal's measured stage times plus Sepolia's own clock): build ~2
 min; session A ~30 min (crown-lez's rehearsal 2 on the real Sepolia path: 176 transactions, 29.5 min); deployment ~3 min (7
