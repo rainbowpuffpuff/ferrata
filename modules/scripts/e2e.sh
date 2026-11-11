@@ -88,6 +88,21 @@ log_case() {
 log_case transfer '{tx_index: 0, log_index: 0}'
 log_case largest_receipt '{block_log_index: 7}'
 
+# A storage slot: WETH's balance slot of the fixture's holder, with the eth_getProof response the
+# fixture recorded for the block (the storage path of build_attest_tx: one account, one slot).
+weth_slot=$(jq -r .weth_balance_slot "$FIXTURE/fixture.json")
+jq -n --argjson i "$(rep info)" --slurpfile p "$FIXTURE/proof_weth_$block.json" --arg slot "$weth_slot" \
+  '{chain_id: $i.chain_id, record: $i.record, storage: {get_proof: ($p[0].result // $p[0]), slot: $slot}}' | req dry_storage
+call ferrata_attest_module dry_run_attest dry_storage
+jq -n --argjson i "$(rep info)" --slurpfile p "$FIXTURE/proof_weth_$block.json" --arg slot "$weth_slot" \
+  '{program_id: $i.program_id, instance_id: $i.instance_id, chain_id: $i.chain_id, slot: $i.finalized_slot,
+    storage: {get_proof: ($p[0].result // $p[0]), slot: $slot}}' | req tx_storage
+call ferrata_attest_module build_attest_tx tx_storage
+harness attest "$(jq -r .message "$out/rep/tx_storage.json")" "$(jq -r .account "$out/rep/tx_storage.json")" > "$out/rep/exec_storage.json"
+jq -n --argjson i "$(rep info)" --argjson d "$(rep dry_storage)" --argjson e "$(rep exec_storage)" \
+  '{selector: "0x4652542d41545431", event_data: $e.event_data, expected_ids: [$d.id], expected_instance_id: $i.instance_id}' | req read_storage
+call ferrata_attest_module read_attestation read_storage
+
 # Refusal 1: the transfer's proof with the last byte of its receipt node changed.
 jq '.log.receipt_proof[-1] |= (.[0:-2] + (if .[-2:] == "00" then "01" else "00" end))' "$out/rep/fetch_transfer.json" > "$out/rep/fetch_tampered.json"
 jq -n --argjson i "$(rep info)" --argjson f "$(rep fetch_tampered)" '{chain_id: $i.chain_id, record: $i.record, log: $f.log}' | req dry_tampered

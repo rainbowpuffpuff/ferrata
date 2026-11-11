@@ -58,6 +58,16 @@ for name, want in cases.items():
     check(g, "read_attestation: event matches the dry run and the instance", r.get("matches_expected") is True and r.get("instance_matches") is True
           and r.get("block_number") == info.get("block"), f"block {r.get('block_number')}")
 
+d, t, e, r = rep("dry_storage"), rep("tx_storage"), rep("exec_storage"), rep("read_storage")
+g = "storage slot (WETH balance)"
+check(g, "dry_run_attest: attested, the provider's value", d.get("verdict") == "attested" and d.get("code") == 0 and d.get("provider_value_matches") is True,
+      f"value {d.get('fact', {}).get('value', '')[:20]}…")
+check(g, "build_attest_tx names header(id, slot)", t.get("account") == info.get("header_account") and t.get("facts") == 1, f"message {t.get('message_bytes')} bytes")
+check(g, "decoded (canonical), applied, event = native = dry-run id", e.get("decoded") is True and e.get("canonical") is True and e.get("applied") is True
+      and e.get("event_matches_native") is True and e.get("native", {}).get("ids") == [d.get("id")],
+      f"gas_exec {e.get('gas_exec')}, gas_stor {e.get('gas_stor')}")
+check(g, "read_attestation matches", r.get("matches_expected") is True and r.get("instance_matches") is True)
+
 d, e = rep("dry_tampered"), rep("exec_tampered")
 check("refusal: tampered receipt proof", "dry run refuses", d.get("verdict") == "refused", f"code {d.get('code')} {d.get('error')}")
 check("refusal: tampered receipt proof", "the program refuses with the predicted code", e.get("applied") is False and e.get("exit_code") == d.get("code"),
