@@ -480,7 +480,7 @@ any of them reverts the transaction (§8.1), so the holding is written only on a
 **Step 7. Test the refusals with real data.** One chain, every case
 (`RISC0_DEV_MODE=1 cargo test -p harness --locked --test holdings -- --nocapture`; the table is
 [`lez/results/holdings.md`](../../lez/results/holdings.md)); each refusal leaves the holding as it
-was, and for the attestation program's refusals the native `attest::evaluate` gives the same code:
+was, and wherever a record exists the native `attest::evaluate` on it gives the same code:
 
 | Case | Refused by | Exit |
 |---|---|---|
