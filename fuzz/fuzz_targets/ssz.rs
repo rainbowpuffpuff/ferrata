@@ -11,10 +11,16 @@
 #![no_main]
 use ferrata_core::{
     fork::{ChainSpec, Preset},
-    types::{BeaconBlockHeader, ExecutionPayloadHeader, LightClientBootstrap, LightClientHeader, LightClientUpdate, SyncAggregate, SyncCommittee},
+    types::{
+        BeaconBlockHeader, ExecutionPayloadHeader, LightClientBootstrap, LightClientHeader, LightClientUpdate,
+        SyncAggregate, SyncCommittee,
+    },
     upgrade::{upgrade_bootstrap, upgrade_header, upgrade_update},
     validate::{get_lc_execution_root, is_finality_update, is_sync_committee_update, is_valid_light_client_header},
-    witness::{encode_beacon_header, encode_light_client_header, encode_payload_header, encode_sync_aggregate, CompactBootstrap, CompactUpdate, HeaderRecord},
+    witness::{
+        encode_beacon_header, encode_light_client_header, encode_payload_header, encode_sync_aggregate,
+        CompactBootstrap, CompactUpdate, HeaderRecord,
+    },
 };
 use ferrata_fuzz::{committee_size, lc_fork, Input};
 use libfuzzer_sys::fuzz_target;

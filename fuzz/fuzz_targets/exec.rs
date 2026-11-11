@@ -13,7 +13,9 @@
 use alloy_primitives::U256;
 use alloy_rlp::{Decodable, Header};
 use ferrata_core::{
-    exec::{block_log_index, decode_header, decode_header_with_hash, decode_storage_value, locate_log, Account, Receipt},
+    exec::{
+        block_log_index, decode_header, decode_header_with_hash, decode_storage_value, locate_log, Account, Receipt,
+    },
     keccak::keccak256,
 };
 use libfuzzer_sys::fuzz_target;
@@ -112,7 +114,10 @@ fuzz_target!(|data: &[u8]| {
     let theirs = ref_receipt(data);
     match (&ours, &theirs) {
         (Ok(r), Some(t)) => {
-            assert_eq!((r.tx_type, r.status, r.cumulative_gas_used, r.logs_bloom.to_vec()), (t.0, t.1, t.2, t.3.clone()));
+            assert_eq!(
+                (r.tx_type, r.status, r.cumulative_gas_used, r.logs_bloom.to_vec()),
+                (t.0, t.1, t.2, t.3.clone())
+            );
             assert_eq!(r.log_count(), t.4.len());
             for (k, (address, topics, d)) in t.4.iter().enumerate() {
                 let log = r.log(k as u64).expect("a counted log is readable");
@@ -122,7 +127,9 @@ fuzz_target!(|data: &[u8]| {
             assert!(r.log(u64::MAX).is_err());
         }
         (Err(_), None) => {}
-        (Err(e), Some(t)) => assert!(ferrata_refuses_on_purpose(data, t), "ferrata refuses a receipt alloy reads: {e:?}"),
+        (Err(e), Some(t)) => {
+            assert!(ferrata_refuses_on_purpose(data, t), "ferrata refuses a receipt alloy reads: {e:?}")
+        }
         (Ok(r), None) => panic!("ferrata reads a receipt alloy refuses: {r:?}"),
     }
 
@@ -137,7 +144,11 @@ fuzz_target!(|data: &[u8]| {
     if let Some(g) = block_log_index(&counts, tx, pos) {
         assert_eq!(locate_log(&counts, g), Some((tx, pos)));
     }
-    let big: Vec<u64> = data.chunks(8).take(8).map(|c| u64::from_le_bytes(core::array::from_fn(|i| c.get(i).copied().unwrap_or(0)))).collect();
+    let big: Vec<u64> = data
+        .chunks(8)
+        .take(8)
+        .map(|c| u64::from_le_bytes(core::array::from_fn(|i| c.get(i).copied().unwrap_or(0))))
+        .collect();
     let _ = locate_log(&big, g.wrapping_mul(0x0101_0101_0101_0101));
     let _ = block_log_index(&big, tx, u64::MAX - pos);
 });

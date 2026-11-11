@@ -7,7 +7,9 @@
 #![no_main]
 use ferrata_core::{
     attest,
-    witness::{AdoptionProgress, CommitteeSummary, CompactBootstrap, CompactStore, CompactUpdate, HeaderRecord, SignerWitness},
+    witness::{
+        AdoptionProgress, CommitteeSummary, CompactBootstrap, CompactStore, CompactUpdate, HeaderRecord, SignerWitness,
+    },
 };
 use ferrata_fuzz::{committee_size, lc_fork, Input};
 use libfuzzer_sys::fuzz_target;

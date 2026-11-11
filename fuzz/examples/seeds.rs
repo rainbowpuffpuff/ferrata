@@ -35,25 +35,52 @@ fn main() {
         let case = load_sync_case(&dir).expect("case");
         let spec = &case.config.spec;
         let n = spec.preset.sync_committee_size;
-        let tag = format!("{}-{}", dir.parent().unwrap().parent().unwrap().parent().unwrap().parent().unwrap().file_name().unwrap().to_string_lossy(), dir.file_name().unwrap().to_string_lossy());
+        let tag = format!(
+            "{}-{}",
+            dir.parent()
+                .unwrap()
+                .parent()
+                .unwrap()
+                .parent()
+                .unwrap()
+                .parent()
+                .unwrap()
+                .file_name()
+                .unwrap()
+                .to_string_lossy(),
+            dir.file_name().unwrap().to_string_lossy()
+        );
         let raw_bootstrap = read_ssz_snappy(&dir.join("bootstrap.ssz_snappy")).unwrap();
         let bootstrap_fork = FORKS
             .into_iter()
             .find(|&f| {
-                LightClientBootstrap::decode(&raw_bootstrap, f, n)
-                    .ok()
-                    .and_then(|b| if f == case.store_fork { Some(b) } else { upgrade_bootstrap(b, f, case.store_fork, spec).ok() })
-                    == Some(case.bootstrap.clone())
+                LightClientBootstrap::decode(&raw_bootstrap, f, n).ok().and_then(|b| {
+                    if f == case.store_fork {
+                        Some(b)
+                    } else {
+                        upgrade_bootstrap(b, f, case.store_fork, spec).ok()
+                    }
+                }) == Some(case.bootstrap.clone())
             })
             .expect("bootstrap fork");
         let nb = [lc_fork_byte(case.store_fork), u8::from(n != 32)];
-        put(out, "ssz", &format!("{tag}-bootstrap"), &[&[lc_fork_byte(bootstrap_fork), nb[1]][..], &raw_bootstrap].concat());
+        put(
+            out,
+            "ssz",
+            &format!("{tag}-bootstrap"),
+            &[&[lc_fork_byte(bootstrap_fork), nb[1]][..], &raw_bootstrap].concat(),
+        );
         let cb = CompactBootstrap::of(&case.bootstrap);
         put(out, "witness", &format!("{tag}-cbootstrap"), &[&nb[..], &cb.encode(case.store_fork)].concat());
         if let Ok(core) = StoreCore::from_bootstrap(&case.trusted_block_root, &case.bootstrap, case.store_fork, spec) {
             put(out, "witness", &format!("{tag}-cstore"), &[&nb[..], &CompactStore::of(&core).encode()].concat());
         }
-        put(out, "witness", &format!("{tag}-record"), &[&nb[..], &HeaderRecord::of(&case.bootstrap.header, case.store_fork, spec).encode()].concat());
+        put(
+            out,
+            "witness",
+            &format!("{tag}-record"),
+            &[&nb[..], &HeaderRecord::of(&case.bootstrap.header, case.store_fork, spec).encode()].concat(),
+        );
         let mut files: Vec<_> = fs::read_dir(&dir).unwrap().filter_map(|e| e.ok().map(|e| e.path())).collect();
         files.sort();
         for path in files {
@@ -135,7 +162,12 @@ fn main() {
                 let account = execkit::account_rlp(p.nonce, 0, p.storage_hash, p.code_hash);
                 put(out, "exec", &format!("{tag}-account"), &account);
                 for (s, sp) in p.storage.iter().enumerate() {
-                    put(out, "mpt", &format!("{tag}-storage{s}"), &encode_raw_proof(&execkit::keccak(&sp.key), &sp.proof));
+                    put(
+                        out,
+                        "mpt",
+                        &format!("{tag}-storage{s}"),
+                        &encode_raw_proof(&execkit::keccak(&sp.key), &sp.proof),
+                    );
                 }
             }
         }

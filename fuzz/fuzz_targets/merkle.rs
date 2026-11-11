@@ -2,7 +2,9 @@
 //! transcribed independently here: `is_valid_merkle_branch`, `is_valid_normalized_merkle_branch`
 //! and `normalize_merkle_branch`, for any depth, index, generalized index and branch length.
 #![no_main]
-use ferrata_core::merkle::{compute_merkle_branch_root, is_valid_merkle_branch, is_valid_normalized_merkle_branch, normalize_merkle_branch};
+use ferrata_core::merkle::{
+    compute_merkle_branch_root, is_valid_merkle_branch, is_valid_normalized_merkle_branch, normalize_merkle_branch,
+};
 use ferrata_fuzz::Input;
 use libfuzzer_sys::fuzz_target;
 use sha2_ref::hash_pair;
@@ -62,10 +64,13 @@ fuzz_target!(|data: &[u8]| {
             .then(|| reference_root(&leaf, &branch[branch.len() - d..], d, sub))
             .flatten();
         let root = expected.unwrap_or(leaf);
-        assert_eq!(is_valid_normalized_merkle_branch(&leaf, &branch, gindex, &root), expected.is_some() || {
-            // Not a valid branch: ferrata must refuse it for every root, the leaf included.
-            false
-        });
+        assert_eq!(
+            is_valid_normalized_merkle_branch(&leaf, &branch, gindex, &root),
+            expected.is_some() || {
+                // Not a valid branch: ferrata must refuse it for every root, the leaf included.
+                false
+            }
+        );
         let normalized = normalize_merkle_branch(&branch, gindex);
         assert_eq!(normalized.len(), branch.len().max(d));
         assert!(normalized.ends_with(&branch));

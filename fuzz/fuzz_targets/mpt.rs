@@ -13,7 +13,8 @@
 //! Documented differences (crates/ferrata-spectests/tests/mpt_proofs.rs,
 //! `documented_differences_from_alloy`) are excluded: a root node shorter than 32 bytes, and
 //! the empty trie proven by `[0x80]`; and one this fuzzer found (finding P1,
-//! tests/fuzz_regressions.rs): an exclusion proof padded below a diverging extension.
+//! tests/fuzz_regressions.rs): an exclusion proof padded below a diverging extension (P1), and
+//! branch nodes with a value (P2), which alloy-trie does not support.
 #![no_main]
 use std::collections::BTreeMap;
 
@@ -22,7 +23,12 @@ use alloy_trie::{
     proof::{verify_proof, ProofRetainer},
     HashBuilder, Nibbles,
 };
-use ferrata_core::{keccak::keccak256, mpt::verify, rlp::encode_u64, Error};
+use ferrata_core::{
+    keccak::keccak256,
+    mpt::verify,
+    rlp::{self, encode_u64},
+    Error,
+};
 use ferrata_fuzz::{parse_raw_proof, Input};
 use libfuzzer_sys::fuzz_target;
 
@@ -155,12 +161,28 @@ fn structured(i: &mut Input<'_>) {
     }
 }
 
+/// True if a node (or a node embedded in it) is a branch with a value: alloy-trie 0.9.9 refuses
+/// every such node ("branch node values are not supported"), ferrata follows the Yellow Paper
+/// (finding P2; Ethereum's tries, with fixed-length or prefix-free keys, never have one).
+fn has_branch_value(node: &[u8]) -> bool {
+    let mut stack = vec![node];
+    while let Some(n) = stack.pop() {
+        let Ok(list) = rlp::decode(n).and_then(|i| i.list()) else { continue };
+        let items: Vec<_> = list.filter_map(Result::ok).collect();
+        if items.len() == 17 && !items[16].is_list && !items[16].payload.is_empty() {
+            return true;
+        }
+        stack.extend(items.iter().filter(|i| i.is_list).map(|i| i.raw));
+    }
+    false
+}
+
 fn raw(i: &mut Input<'_>) {
     let (key, nodes) = parse_raw_proof(i);
     let Some(first) = nodes.first() else { return };
     let root = keccak256(first);
     if let Ok(v) = verify(&root, &key, &nodes) {
-        if first.len() >= 32 {
+        if first.len() >= 32 && !nodes.iter().any(|n| has_branch_value(n)) {
             assert!(alloy_accepts(&root, &key, v, &nodes), "ferrata accepts a proof alloy refuses");
         }
         // The value is a part of a proof node, never invented.
