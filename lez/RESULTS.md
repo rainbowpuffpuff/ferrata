@@ -1193,16 +1193,25 @@ checks both openings against the commitments on chain.
   claimed by an account that is not its destination (224), a byte that is no kind (219), a wrong
   secret (218), the private-kind deposit opened as public-kind (218), a forged receipt (110), a mainnet
   pool (140), a pool of another token (130).
-- **Not shown**: an accepted private claim of a private-kind deposit on real data. Deposit 1 is
-  private-kind, to LEZ's testnet private account 0, whose keys this harness does not hold (the bridge
-  program claimed it privately in the live run, with LEZ's wallet). Nor the F.8 test (§6.5 of the
-  design note).
+- **The private-kind deposit claimed by its destination** (`results/stage5-consumer-private-kind.md`):
+  deposit 1 is to LEZ's testnet private account 0, whose keys are a published test constant of LEZ
+  v0.4.0-rc1 (`testnet_initial_state`); the harness derives them as LEE's key protocol does
+  (`vault::lez_testnet_private_account_0`; the test checks the account id against the destination
+  the commitment opens to). Its private claim: 112,040 and 1,408,918 user cycles, proven in dev mode
+  and settled, 8,473 transaction bytes, 433,747 execution gas; the credit stays in the claimant's
+  private state; what is public is `Read` to the record, `Spend` of `N` with no credit, and the fee;
+  the transaction holds none of the secret, the statement identifier, the commitment, the depositor,
+  the destination, the deposit block's header or the receipt proof. The same claim again cannot be
+  proven (223). Not built: the F.8 test (§6.5 of the design note).
 - **The private claim with a real proof** (`results/prove-vault-claim.log`,
   `harness/src/bin/prove_vault_claim.rs`): the same transaction, the consumer's two transitions, the
   fee transfer and LEZ's privacy-preserving circuit proven by r0vm 3.0.5 on the build box's CPU (16
   cores): `execute_and_prove` 361.7 s, a 227,370-byte receipt in a 231,614-byte transaction, settled
   with the receipt verified (456,439 execution gas, 224,063 storage gas); 7 min 39 s and 9.8 GB of
-  memory for the whole binary, which first follows the chain to the record.
+  memory for the whole binary, which first follows the chain to the record. The private-kind deposit
+  by its destination (`--deposit 1`, `results/prove-vault-claim-private-kind.log`): `execute_and_prove`
+  401.6 s, a 227,306-byte receipt in a 231,486-byte transaction, settled with the receipt verified
+  (433,747 execution gas); 8 min 24 s for the binary.
 - **Images.** This work changes the consumer (`be7c7710…`, 469,808 ELF bytes; it was `f883e6a4…`), and,
   through the wire crate, the program (`8fe18f74…`; it was `9f3eb00f…`) and the bridge program
   (`944b7100…`): `prove_vault_claim --image-ids` lists all seven. The consumer's Stage 4 private
@@ -1222,9 +1231,8 @@ checks both openings against the commitments on chain.
    the design note), which is not built.
 4. **Not covered:** a bootstrap of a Gloas-era checkpoint (no public node serves one; the
    instance starts one period before the fork); a chain of several hops under a Gloas record (one
-   hop is attested, above); the private path under a Gloas record for a private-kind deposit (the
-   public-kind claim is above); Gloas on mainnet (no date yet). The vault on real data, a hop and
-   the private path under a Gloas record are above (milestone A2).
+   hop is attested, above); Gloas on mainnet (no date yet). The vault on real data, a hop and the
+   private path under a Gloas record are above (milestone A2).
 
 ## 7. What did not work, what is missing, what is weaker than asked
 
@@ -1357,6 +1365,7 @@ RISC0_DEV_MODE=0 target/debug/prove_vault > results/prove-vault.log   # a real p
 cargo build -p harness --locked --bin prove_vault_claim
 RISC0_DEV_MODE=0 target/debug/prove_vault_claim > results/prove-vault-claim.log   # the consumer's private
                                                      # claim of the vault's deposit 0, proven and settled (§6)
+RISC0_DEV_MODE=0 target/debug/prove_vault_claim --deposit 1 > results/prove-vault-claim-private-kind.log
 scripts/stage-prove-attest.sh OUTDIR                 # the input of a real proof of the private attestation (§5);
                                                      # ../gpu-prover/README.md has the commands of the GPU run
 RISC0_DEV_MODE=0 target/debug/prove_attest --settle results/stage4-private-attest-tx.borsh \

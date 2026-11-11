@@ -55,22 +55,35 @@ fn main() {
         }
         return;
     }
+    // `--deposit 1`: the private-kind deposit, claimed by its destination (LEZ's testnet private
+    // account 0); otherwise deposit 0, public-kind, claimed by a fresh private account.
+    let i = match std::env::args().position(|a| a == "--deposit") {
+        Some(at) => std::env::args().nth(at + 1).and_then(|n| n.parse().ok()).expect("--deposit 0|1"),
+        None => 0usize,
+    };
     let mut v = RealVault::load();
-    let (s0, kind0, dest0) = crown_openings(&v)[0];
+    let (s, kind, dest) = crown_openings(&v)[i];
     let pool = eth_pool(&v);
-    let n0 = secret_nullifier(&s0, &v.deposit_id(0));
-    let account = v.w.chain.add_private_account(0x92, 1_000_000_000_000);
+    let n0 = secret_nullifier(&s, &v.deposit_id(i));
+    let account = if i == 1 {
+        v.w.chain.add_private_account_with_keys(harness::vault::lez_testnet_private_account_0(), 1_000_000_000_000)
+    } else {
+        v.w.chain.add_private_account(0x92, 1_000_000_000_000)
+    };
     let message = ConsumerMessage::ClaimDepositPrivately {
         pool: pool.clone(),
         slot: v.slot,
-        deposit: v.deposit_proof(0),
-        s: s0,
-        kind: kind0,
-        dest: dest0,
+        deposit: v.deposit_proof(i),
+        s,
+        kind,
+        dest,
     };
     let program = consumer_account();
-    let publics = vec![v.actor(), claim_actor(program, &pool.id(), &n0), holder_actor(program, &pool.id(), &dest0)];
-    println!("record: finalized slot {}, block {}; deposit 0 in block {}", v.slot, v.block, v.deposits[0].block);
+    let mut publics = vec![v.actor(), claim_actor(program, &pool.id(), &n0)];
+    if i == 0 {
+        publics.push(holder_actor(program, &pool.id(), &dest));
+    }
+    println!("record: finalized slot {}, block {}; deposit {i} in block {}", v.slot, v.block, v.deposits[i].block);
     let started = Instant::now();
     let run =
         v.w.chain
