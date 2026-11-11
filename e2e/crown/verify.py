@@ -35,8 +35,15 @@ _spec.loader.exec_module(ident)
 
 CHAIN_ID = 11155111
 CHECKPOINT_DOMAIN = "0xbdb3b52df781536a6bcce7088d156b3951a00a45ec8bcf2805ba8406fbeb5ec7"
-IDS = {"checkpoint_b": "0xa475e8f9aaa41d0ae3bf9a20ae7d937ebc637a961808765f0ff175158760d3b2",
-       "release": "0x17257f91bca70abf7a5476b498d687e95b6fb4d59e75b6bca1d46877ac9bf5cd"}
+# The vault-side programs a run must have used: crown-live-1 and its rehearsal crown-rehearsal-3 ran programs built at the
+# maintainer's checkout path (before guest builds were path-independent); later runs the final programs
+# (e2e/crown/README.md's first table, docs/image-ids.md), as cloud/drive.py pins them.
+RUN_IDS = {run: {"checkpoint_b": "0xa475e8f9aaa41d0ae3bf9a20ae7d937ebc637a961808765f0ff175158760d3b2",
+                 "release": "0x17257f91bca70abf7a5476b498d687e95b6fb4d59e75b6bca1d46877ac9bf5cd"}
+           for run in ("crown-live-1", "crown-rehearsal-3")}
+FINAL_IDS = {"checkpoint_b": "0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e",
+             "release": "0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9"}
+IDS = FINAL_IDS  # set per run in main()
 RESULTS = []
 
 
@@ -101,6 +108,8 @@ def main() -> int:
     ap.add_argument("--e2e")
     ap.add_argument("--realblocks")
     a = ap.parse_args()
+    global IDS
+    IDS = RUN_IDS.get(os.path.basename(a.run.rstrip("/")), FINAL_IDS)
     R, L = a.run, a.lez
     rj, idn, crown = jl(f"{R}/run.json"), jl(f"{R}/identity.json"), jl(f"{R}/crown.json")
     sa, sb = jl(f"{L}/session-a/session-a.json"), jl(f"{L}/session-b/session-b.json")
