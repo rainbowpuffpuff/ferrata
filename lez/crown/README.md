@@ -30,9 +30,10 @@ second's: `ImportFees` (schedule 1 absent at n=2), `ImportRoot` n=2, `ClaimPriva
 account 0, proven by LEZ's wallet), `Burn` of 0.001 ETH from public account 0 (note 0) and from private account 0
 (note 1, proven). Writes `session-b.json` (T1, the block range T0+1..=T1, every step) and `burn-notes.json`.
 
-Private transactions are proven by LEZ's wallet inside the session (r0vm as LEZ's prover; `CROWN_R0VM` may name a
-CUDA r0vm). A claim's time must lie within ten minutes before its block, so a proof must finish within about nine
-minutes, or `CROWN_CLAIM_TIME_OFFSET_S` must move the claim's time forward by about the proof time less three minutes.
+Private transactions are proven by LEZ's wallet inside the session (r0vm as LEZ's prover, on the session's CPU;
+`CROWN_R0VM` may name a CUDA r0vm, and the cloud runner sets none). Since the time fix a claim carries no time (the
+program reads attested Ethereum time), so a proof has no deadline from the claim; `CROWN_CLAIM_TIME_OFFSET_S` is
+still parsed by the driver and has no effect.
 
 ## Interface
 `spike/tmp/crown/interfaces/lez.md` (beside the repository) fixes the environment, the Volume layout and the files.

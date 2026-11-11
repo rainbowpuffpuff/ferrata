@@ -13,8 +13,8 @@
 # Environment: CROWN_LEZ_VOL (default /vol/lez), CROWN_LEZ_WORK (default /root/crown-lez, wiped), CROWN_CHAIN
 # (sepolia | stand-in), CROWN_VAULT (a: optional), CROWN_CAPTURES (b: capture dirs in order; default
 # $CROWN_LEZ_VOL/inputs/capture-1 and -2), CROWN_ETH_FEES_AT, CROWN_RECIPIENT, CROWN_PRIVATE (real | fake),
-# CROWN_R0VM (the prover's r0vm; default the bundle's), CROWN_CLAIM_TIME_OFFSET_S (b: a claim's time = now + this,
-# default -30; a prover slower than ~9 min per proof needs about its proof time minus 3 min), CROWN_DEADLINE_MIN (120),
+# CROWN_R0VM (the prover's r0vm; default the bundle's), CROWN_CLAIM_TIME_OFFSET_S (no effect
+# since the time fix: a claim carries no time), CROWN_DEADLINE_MIN (120),
 # CROWN_SAMPLE=1 (peak RSS and busy cores while the driver runs -> session-X/resources.txt).
 # Layout of $CROWN_LEZ_VOL: bundle.tar.zst (input), state/gen-N.tar.zst + state/current, inputs/, session-a/, session-b/.
 set -uo pipefail

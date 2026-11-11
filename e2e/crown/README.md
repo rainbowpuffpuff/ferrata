@@ -12,7 +12,7 @@ proofs everywhere, and a verify script that re-checks every step from public dat
 | Program | Source | Role |
 |---|---|---|
 | attestation program | `lez/guests/program` (as `integration` 5a94634) | Sepolia light client on LEZ (Gloas) |
-| merged bridge program | `lez/guests/bridge`, `lez/bridge-wire` (as `integration`; `f11b1aba…` at that worktree's path) | registry, fees, caps, freezes, Sunset, Gloas header |
+| merged bridge program | `lez/guests/bridge`, `lez/bridge-wire` (as `integration5`: the time fix and the security fixes; `0x0e9dcd79…bbb6` at the crown build path) | registry, fees, caps and freezes on attested time, Sunset, Gloas header, holder PDAs |
 | `checkpoint_b` | `checkpoint/` (after the `ImportRoot` fix 12d17e3) | rule (B) checkpoint over the session's blocks |
 | release | `bridge/` | one release per burn |
 | FerrataVault v5 + FerrataRegistry | `vault/src` | mode (B), RISC Zero's Groth16 verifier behind an emergency stop |
@@ -48,7 +48,7 @@ the build box (`mrun --profile ws-4`). The laptop only starts, reads status and 
 | 3 | Sepolia deploy (script/deploy.sh, FERRATA_MODE=B, eip8037, verifier reused): stop N, library N+1, vault N+2, token N+3, register ETH N+4 (relay 0.2 %, checkpoint 0.1 %), register token N+5, renounce N+6 | runner | `deploy.json`, manifest |
 | 4 | deposit j0: 0.001 ETH (+ 0.000002 relay fee) public to LEZ public test account 0; wait finality; capture 1 (vault slots 0,1,2 + the ETH registry and fee slots, deposits, updates) | runner | `lez-capture-1/` |
 | 5 | deposit j1: 0.001 ETH private to LEZ private test account 0; wait finality; capture 2 | runner | `lez-capture-2/` |
-| 6 | LEZ session B: restore gen-1; catch-up + finality updates of captures 1, 2; bridge Init (pairing: slot 2), Register ETH, ImportRoot n=1, n=2; Claim j0 (public), ClaimPrivately j1 (real proof); Burn public (account 0), Burn private (private account 0, real proof); wait Bedrock finality of the tip T1; stop; save | GPU function (L4, L40S fallback): `r0vm` 3.0.5 with CUDA as LEZ's prover, so both private proofs are GPU proofs against the live sequencer | `lez/gen-2.tar.zst`, `lez/session-b/` (driver export: blocks, txs, receipts) |
+| 6 | LEZ session B: restore gen-1; catch-up + finality updates of captures 1, 2; bridge Init (pairing: slot 2), Register ETH, ImportRoot n=1, n=2; Claim j0 (public), ClaimPrivately j1 (real proof); Burn public (account 0), Burn private (private account 0, real proof); wait Bedrock finality of the tip T1; stop; save | CPU function (`lez_session` in `cloud/app.py`: 16 cores reserved, up to 32; 16 to 64 GiB): LEZ's wallet proves both private transactions with the bundle's `r0vm` 3.0.5 on the CPU against the live sequencer (`CROWN_R0VM` may name a CUDA r0vm; the runner sets none) | `lez/gen-2.tar.zst`, `lez/session-b/` (driver export: blocks, txs, receipts) |
 | 7 | attestor + checkpoint: the channel key certifies the attestation key (attestor-core), which signs FinalTip(T1); `checkpoint_b` input over T0+1..=T1 from the node's blocks and the driver's record; real proof (GPU), identity_p254 (runner CPU), Groth16 (prover image) | GPU function + runner + wrap function | `checkpoint/` |
 | 8 | submitCandidate (N+9); wait W = 3600 s; finalizeAttested (N+10) | runner | manifest |
 | 9 | release proofs for both burns (release program, CPU, during W) + wraps; after the release delay (120 s) release ETH twice (N+11, N+12) | runner + wrap | `releases/` |
