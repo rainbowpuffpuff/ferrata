@@ -1,0 +1,88 @@
+cli/tests/relayer.sh on the build box, 11 Nov 2026
+     Running unittests src/lib.rs (target/debug/deps/ferrata_cli-88bb2167dddedff4)
+
+running 5 tests
+test relayer::tests::checkpoint_journal_round_trips_and_refuses_others ... ok
+test relayer::tests::temporary_failures_are_retried_and_refusals_are_not ... ok
+test relayer::tests::imported_roots_are_the_tree_roots_at_the_imported_counts ... ok
+test relayer::tests::the_burn_watch_asks_for_a_checkpoint_only_when_needed ... ok
+test relayer::tests::the_recorded_crown_checkpoint_decodes ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s
+
+warning: lee@0.1.0: Generated module at <spike>/ferrata-wt-relayer/cli/target/debug/build/lee-1a6347cc3e4b4c67/out/lee/privacy_preserving_circuit/mod.rs
+warning: programs@0.1.0: Generated module at <spike>/ferrata-wt-relayer/cli/target/debug/build/programs-a8fc2b826bb00327/out/lez/programs/mod.rs
+   Compiling methods v0.1.0 (<spike>/ferrata-wt-relayer/lez/methods)
+   Compiling ferrata-cli v0.1.0 (<spike>/ferrata-wt-relayer/cli)
+   Compiling harness v0.1.0 (<spike>/ferrata-wt-relayer/lez/harness)
+    Finished `test` profile [optimized + debuginfo] target(s) in 22.53s
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+     Running tests/gasdrop.rs (target/debug/deps/gasdrop-b27bde835e8d1898)
+
+running 1 test
+drop sent: N 0x166a0391b6c22cdf02c38c8fff9c28617cf560457a13f729449b33196739982d -> 0xbb4d1f512a422d4a6f23f0a3f418ef31ca25b4678a88a56dc8b3e2c9fd0bd9d2 (credit 1)
+gas drop: 1 credit for N; refused: other relayer, other configuration, root not imported, claimed, wrong image, changed journal, second drop (also after restart)
+test one_drop_per_n_on_a_real_receipt ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.41s
+
+warning: lee@0.1.0: Generated module at <spike>/ferrata-wt-relayer/cli/target/debug/build/lee-1a6347cc3e4b4c67/out/lee/privacy_preserving_circuit/mod.rs
+warning: programs@0.1.0: Generated module at <spike>/ferrata-wt-relayer/cli/target/debug/build/programs-a8fc2b826bb00327/out/lez/programs/mod.rs
+   Compiling methods v0.1.0 (<spike>/ferrata-wt-relayer/lez/methods)
+   Compiling harness v0.1.0 (<spike>/ferrata-wt-relayer/lez/harness)
+   Compiling ferrata-cli v0.1.0 (<spike>/ferrata-wt-relayer/cli)
+    Finished `test` profile [optimized + debuginfo] target(s) in 9.98s
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+     Running tests/relayer_fork.rs (target/debug/deps/relayer_fork-c471d598a3557fa0)
+
+running 1 test
+fork: https://rpc.sepolia.ethpandaops.io at block 12111745
+forged checkpoint: refused (status 0); eth_call: server returned an error response: error code 3: execution reverted: custom error 0x439cc0cd, data: "0x439cc0cd"
+daemon {"chainId":11155111,"configId":"0x0c71ff13ed7e84bb5367f2ce0cee0ce9039b6f7b541a489438a1ec8fade83854","event":"start","finalState":"0xa696b3c8deaa881c962e3d768e8ee28c9b08ce60b709c058ea21db82c541bef9","gasDrops":false,"relayer":"0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07","t":1794423458,"vault":"0xfe3199fa2634413cbac317371076cae3eb2d9e54"}
+daemon {"event":"job-done","job":"01-checkpoint.json","result":{"burnCount":2,"burnRoot":"0xbefcd570e779294d22eac9ca5a5299631f124b46b09e415c65bba012694b0151","gasUsed":375281,"kind":"candidate","newState":"0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd","tx":"0xbf9bbec2761ccac73f9f167181874e8820a2efb6e4ef136ca48323649b140468"},"t":1794423461}
+daemon {"event":"candidate-waiting","newState":"0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd","now":1794400062,"readyAt":1794403662,"t":1794423462}
+daemon {"event":"stop","reason":"rounds","rounds":1,"t":1794423463}
+daemon {"chainId":11155111,"configId":"0x0c71ff13ed7e84bb5367f2ce0cee0ce9039b6f7b541a489438a1ec8fade83854","event":"start","finalState":"0xa696b3c8deaa881c962e3d768e8ee28c9b08ce60b709c058ea21db82c541bef9","gasDrops":false,"relayer":"0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07","t":1794423463,"vault":"0xfe3199fa2634413cbac317371076cae3eb2d9e54"}
+daemon {"event":"job-refused","job":"02-checkpoint-again.json","reason":"skipped: 0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd is already a candidate","t":1794423463}
+daemon {"event":"candidate-waiting","newState":"0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd","now":1794400062,"readyAt":1794403662,"t":1794423463}
+daemon {"event":"stop","reason":"rounds","rounds":1,"t":1794423463}
+daemon {"chainId":11155111,"configId":"0x0c71ff13ed7e84bb5367f2ce0cee0ce9039b6f7b541a489438a1ec8fade83854","event":"start","finalState":"0xa696b3c8deaa881c962e3d768e8ee28c9b08ce60b709c058ea21db82c541bef9","gasDrops":false,"relayer":"0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07","t":1794423463,"vault":"0xfe3199fa2634413cbac317371076cae3eb2d9e54"}
+daemon {"ageSecs":1,"event":"job-deferred","job":"03-release-public-0-early.json","reason":"refused: vault error BurnRootNotAccepted() (eth_call before sending): the burn root is not one of a finalized, unrevoked checkpoint","t":1794423464}
+daemon {"event":"candidate-waiting","newState":"0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd","now":1794400062,"readyAt":1794403662,"t":1794423464}
+daemon {"event":"stop","reason":"rounds","rounds":1,"t":1794423464}
+early release: deferred, "refused: vault error BurnRootNotAccepted() (eth_call before sending): the burn root is not one of a finalized, unrevoked checkpoint"
+daemon {"chainId":11155111,"configId":"0x0c71ff13ed7e84bb5367f2ce0cee0ce9039b6f7b541a489438a1ec8fade83854","event":"start","finalState":"0xa696b3c8deaa881c962e3d768e8ee28c9b08ce60b709c058ea21db82c541bef9","gasDrops":false,"relayer":"0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07","t":1794423464,"vault":"0xfe3199fa2634413cbac317371076cae3eb2d9e54"}
+daemon {"ageSecs":1,"event":"job-deferred","job":"03-release-public-0-early.json","reason":"refused: vault error BurnRootNotAccepted() (eth_call before sending): the burn root is not one of a finalized, unrevoked checkpoint","t":1794423464}
+daemon {"burnCount":2,"burnRoot":"0xbefcd570e779294d22eac9ca5a5299631f124b46b09e415c65bba012694b0151","event":"finalized","gasUsed":218385,"newState":"0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd","t":1794423467,"tx":"0x4dcf1f566df7270cd8b074803aae7e809636a8018e3dc5b93a02e5fdd44d224f"}
+daemon {"event":"stop","reason":"rounds","rounds":1,"t":1794423467}
+tampered release (relayer and fee redirected to the misbehaving relayer): refused; eth_call: server returned an error response: error code 3: execution reverted: custom error 0x439cc0cd, data: "0x439cc0cd"
+tampered release (recipient redirected): refused; eth_call: server returned an error response: error code 3: execution reverted: custom error 0x439cc0cd, data: "0x439cc0cd"
+tampered release (fee raised): refused; eth_call: server returned an error response: error code 3: execution reverted: custom error 0x439cc0cd, data: "0x439cc0cd"
+daemon {"chainId":11155111,"configId":"0x0c71ff13ed7e84bb5367f2ce0cee0ce9039b6f7b541a489438a1ec8fade83854","event":"start","finalState":"0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd","gasDrops":false,"relayer":"0x00000000000000000000000000000000000bad01","t":1794423475,"vault":"0xfe3199fa2634413cbac317371076cae3eb2d9e54"}
+daemon {"event":"job-refused","job":"01-release.json","reason":"refused: the proof names relayer 0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07; only it can be paid for this release (this relayer is 0x00000000000000000000000000000000000bAD01)","t":1794423475}
+daemon {"event":"stop","reason":"rounds","rounds":1,"t":1794423475}
+daemon {"chainId":11155111,"configId":"0x0c71ff13ed7e84bb5367f2ce0cee0ce9039b6f7b541a489438a1ec8fade83854","event":"start","finalState":"0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd","gasDrops":false,"relayer":"0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07","t":1794423475,"vault":"0xfe3199fa2634413cbac317371076cae3eb2d9e54"}
+daemon {"event":"job-refused","job":"01-release.json","reason":"refused: the proof pays no relay fee","t":1794423475}
+daemon {"event":"stop","reason":"rounds","rounds":1,"t":1794423475}
+daemon {"chainId":11155111,"configId":"0x0c71ff13ed7e84bb5367f2ce0cee0ce9039b6f7b541a489438a1ec8fade83854","event":"start","finalState":"0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd","gasDrops":false,"relayer":"0x0000000000000000000000000000000000c0ffee","t":1794423478,"vault":"0xfe3199fa2634413cbac317371076cae3eb2d9e54"}
+daemon {"event":"job-done","job":"01-release-paid.json","result":{"gasUsed":407052,"kind":"release","nullifier":"0x6b5ec36ee357ba03fad0f9bb4afe4ef32c424722cd6c52131f48beffe1886414","paid":"2000000000000","paidTo":"0x0000000000000000000000000000000000c0ffee","recipient":"0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07","relayFee":"2000000000000","token":"0x0000000000000000000000000000000000000000","tx":"0x244b4f91f3bf5610745592e022ac408cafad56645204c93333b936289f784de8","wrapSecs":19.930073085,"wrapped":true},"t":1794423500}
+daemon {"event":"stop","reason":"rounds","rounds":1,"t":1794423501}
+paid release: relay fee 2000000000000 wei to 0x0000000000000000000000000000000000C0FFEE (407052 gas); the redirected copy refused
+daemon {"chainId":11155111,"configId":"0x0c71ff13ed7e84bb5367f2ce0cee0ce9039b6f7b541a489438a1ec8fade83854","event":"start","finalState":"0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd","gasDrops":false,"relayer":"0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07","t":1794423501,"vault":"0xfe3199fa2634413cbac317371076cae3eb2d9e54"}
+daemon {"event":"job-refused","job":"03-release-public-0-early.json","reason":"refused: NOut 0x6b5ec36ee357ba03fad0f9bb4afe4ef32c424722cd6c52131f48beffe1886414 is already released","t":1794423501}
+daemon {"event":"job-done","job":"04-release-private-1.json","result":{"gasUsed":358908,"kind":"release","nullifier":"0x324dbfffe264185b60518bc4340a9172258498dfca519a6a015afefe67f67c4a","paid":"0","paidTo":"0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07","recipient":"0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07","relayFee":"0","token":"0x0000000000000000000000000000000000000000","tx":"0xff54c957d336b2054c48e6c769f67dff5bf2588849e1ed35552115e2fdfaf42e"},"t":1794423503}
+daemon {"event":"job-refused","job":"04-release-public-0.json","reason":"refused: NOut 0x6b5ec36ee357ba03fad0f9bb4afe4ef32c424722cd6c52131f48beffe1886414 is already released","t":1794423503}
+daemon {"amount":"2000000000000","event":"fees-collected","t":1794423503,"token":"0x0000000000000000000000000000000000000000","tx":"0xb4b99277b9bc7e3e33ebce903d5091eaf5dcceb16cfa6dbcb3f9bef026d72f4e"}
+daemon {"event":"stop","reason":"rounds","rounds":1,"t":1794423503}
+daemon {"chainId":11155111,"configId":"0x0c71ff13ed7e84bb5367f2ce0cee0ce9039b6f7b541a489438a1ec8fade83854","event":"start","finalState":"0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd","gasDrops":false,"relayer":"0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07","t":1794423503,"vault":"0xfe3199fa2634413cbac317371076cae3eb2d9e54"}
+daemon {"event":"job-refused","job":"05-release-again.json","reason":"refused: NOut 0x6b5ec36ee357ba03fad0f9bb4afe4ef32c424722cd6c52131f48beffe1886414 is already released","t":1794423503}
+daemon {"event":"stop","reason":"rounds","rounds":1,"t":1794423503}
+status: {"balanceWei":"100001997999936065760","candidates":[],"checkpoints":"1","drops":0,"event":"status","finalState":"0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd","owedWei":"0","t":1794423503}
+clean stop: {"event":"stop","reason":"SIGTERM","rounds":5,"t":1794423508}
+results: <spike>/ferrata-wt-relayer/cli/../e2e/runs/relayer-fork/results.json
+test relayer_on_a_sepolia_fork_with_crown_live_1_proofs ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 56.78s
+

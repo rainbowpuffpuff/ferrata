@@ -27,6 +27,7 @@ use ferrata_bridge_core::checkpoint::{burn_frontier_hash, key_set_hash, LezState
 use ferrata_bridge_core::encoding::{
     claim_journal, config_id_preimage, u256_from_u128, ClaimInput, ConfigIdentity, ReleaseInput, ReleaseJournal,
 };
+use ferrata_bridge_core::gasdrop::{verify_gas_drop, GasDropInput};
 use ferrata_bridge_core::inbound::{self, ClaimWitness, DestKind};
 use ferrata_bridge_core::outbound::{
     burn_commitment, burn_leaf, recover_burns, release_journal, verify_release, BurnNote, PublishedBurn, ReleasePublic,
@@ -34,7 +35,7 @@ use ferrata_bridge_core::outbound::{
 };
 use ferrata_bridge_core::tree::{root_from_path, IncrementalTree, MerklePath, Tree};
 use ferrata_bridge_core::{chain_id_u256, sha256, Address, BridgeKeys, Hash, U256};
-use methods::{CLAIM_ELF, CLAIM_ID, RELEASE_ELF, RELEASE_ID};
+use methods::{CLAIM_ELF, CLAIM_ID, GASDROP_ELF, GASDROP_ID, RELEASE_ELF, RELEASE_ID};
 use risc0_zkvm::{
     default_executor, default_prover, ApiClient, Asset, AssetRequest, Bytes, Digest, ExecutorEnv,
     Groth16ReceiptVerifierParameters, InnerReceipt, ProverOpts, Receipt, SessionInfo, SuccinctReceipt,
@@ -731,6 +732,60 @@ fn cmd_reindex() -> Result<()> {
     Ok(())
 }
 
+/// The gas-drop receipt (bridge.md §6, v3 D13): its image id; the journal equal to the native
+/// statement's, binding `(N, oneTimeAddress, relayer)`; the cycle counts of `n` random witnesses (one
+/// count, so the proving time names no deposit); a bad witness refused; with `prove`, a real succinct
+/// receipt verified against the image id and written to `artifacts/gasdrop/` (JSON, for the relayer).
+fn cmd_gasdrop(n: u64, prove: bool) -> Result<()> {
+    println!("gasdrop image id {}", image_id_hex(GASDROP_ID));
+    let input = |i: u64| GasDropInput {
+        claim: random_claim_input(i),
+        one_time_address: rnd("gasdrop one-time address", i),
+        relayer: rnd("gasdrop relayer", i),
+    };
+    let mut counts = BTreeSet::new();
+    for i in 0..n {
+        let x = input(i);
+        let native = verify_gas_drop(&x).map_err(|e| anyhow::anyhow!("native statement: {e:?}"))?;
+        let info = default_executor().execute(env_with(&x.encode())?, GASDROP_ELF)?;
+        ensure!(info.journal.bytes == native.encode(), "journal differs from the native statement");
+        counts.insert(shape(&info));
+    }
+    println!("[gasdrop] {n} random witnesses: journal == native for all; distinct (user cycles, po2s): {counts:?}");
+    let mut bad = input(0);
+    bad.claim.witness.s[0] ^= 1;
+    match default_executor().execute(env_with(&bad.encode())?, GASDROP_ELF) {
+        Ok(info) => bail!("bad witness executed with exit {:?}", info.exit_code),
+        Err(e) => {
+            println!("[gasdrop bad s] execution fails as it must: {}", e.to_string().lines().next().unwrap_or(""))
+        }
+    }
+    if prove {
+        refuse_dev_mode()?;
+        let x = input(0);
+        let start = Instant::now();
+        let info = default_prover().prove_with_opts(env_with(&x.encode())?, GASDROP_ELF, &ProverOpts::succinct())?;
+        let secs = start.elapsed().as_secs_f64();
+        let receipt = info.receipt;
+        ensure!(matches!(receipt.inner, InnerReceipt::Succinct(_)), "expected a succinct receipt");
+        receipt.verify(GASDROP_ID).context("the gas-drop receipt does not verify")?;
+        ensure!(receipt.journal.bytes == verify_gas_drop(&x).unwrap().encode().to_vec(), "journal differs");
+        let json_bytes = serde_json::to_vec(&receipt)?;
+        println!(
+            "[gasdrop] succinct proof: wall {secs:.2} s | user cycles {} | total cycles {} | receipt {} bytes JSON; verifies",
+            info.stats.user_cycles,
+            info.stats.total_cycles,
+            json_bytes.len()
+        );
+        let dir = artifacts().join("gasdrop");
+        fs::create_dir_all(&dir)?;
+        fs::write(dir.join("receipt-succinct.json"), &json_bytes)?;
+        fs::write(dir.join("journal.hex"), hx(&receipt.journal.bytes))?;
+        fs::write(dir.join("image-id.txt"), image_id_hex(GASDROP_ID))?;
+    }
+    Ok(())
+}
+
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let arg = |i: usize| args.get(i).map(String::as_str).context("missing argument");
@@ -748,6 +803,8 @@ fn main() -> Result<()> {
         Some("claim-check") => cmd_claim_check(num(1, 16)?),
         Some("prove-claim") => cmd_prove_claim(),
         Some("reindex") => cmd_reindex(),
-        _ => bail!("usage: host scenario | execute | invariance [n] | prove <case> | p254 <case> | groth16 <case> | verify <case> | fixtures | claim-check [n] | prove-claim | reindex"),
+        Some("gasdrop") => cmd_gasdrop(num(1, 16)?, false),
+        Some("prove-gasdrop") => cmd_gasdrop(num(1, 4)?, true),
+        _ => bail!("usage: host scenario | execute | invariance [n] | prove <case> | p254 <case> | groth16 <case> | verify <case> | fixtures | claim-check [n] | prove-claim | reindex | gasdrop [n] | prove-gasdrop [n]"),
     }
 }

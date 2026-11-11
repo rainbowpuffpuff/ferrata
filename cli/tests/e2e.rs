@@ -480,12 +480,118 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         })
         .collect();
 
+    // The gas drop (bridge.md §6, v3 D13), with `FERRATA_GASDROP_ELF` (cli/tests/relayer.sh): the user
+    // proves, for real (not dev mode), a receipt that leaf 0 has nullifier N under the imported root,
+    // bound to a one-time address and the relayer's LEZ account; the relayer checks it against the zone
+    // (imported roots, claimed nullifiers) and the vault's deposit list and sends one credit per N; a
+    // replay to another relayer and a second drop are refused; the claim below names the relayer.
+    let mut gas_drop: Option<(Vec<u8>, ferrata_cli::relayer::DropContext<'static>, [u8; 32])> = None;
+    if let Ok(elf_path) = std::env::var("FERRATA_GASDROP_ELF") {
+        use ferrata_bridge_core::encoding::ClaimInput;
+        use ferrata_bridge_core::gasdrop::GasDropInput;
+        use ferrata_bridge_core::inbound::ClaimWitness;
+        use ferrata_cli::relayer::{self as rl, DropBook, DropContext, DropRefusal};
+        struct Credits(Vec<([u8; 32], u128)>);
+        impl rl::Credit for Credits {
+            async fn credit(&mut self, to: [u8; 32], amount: u128) -> Result<String> {
+                // Stand-in: the harness does not model LEZ's native token program; the sequencer
+                // implementation (`impl Credit for lez::Sequencer`) sends a native transfer.
+                self.0.push((to, amount));
+                Ok(format!("native credit {} (harness stand-in)", self.0.len()))
+            }
+        }
+        let relayer_lez = *Seed::from_phrase(OTHER)?.public_accounts(1)?[0].id.value();
+        let d = &big.owned.deposit;
+        let tree = Tree::from_leaves(leaves.clone()).map_err(|_| anyhow!("tree"))?;
+        let input = GasDropInput {
+            claim: ClaimInput {
+                root: tree.root(),
+                chain_id: word(1),
+                vault: vault.into_array(),
+                witness: ClaimWitness {
+                    depositor: d.depositor,
+                    token: d.token,
+                    amount: d.amount,
+                    leaf_index: d.leaf_index,
+                    path: tree.path(d.leaf_index).context("a path")?,
+                    s: big.owned.s,
+                    kind: big.owned.kind,
+                    dest: big.owned.dest,
+                },
+            },
+            one_time_address: sha256(b"cli e2e: the claim's one-time address"),
+            relayer: relayer_lez,
+        };
+        let elf = std::fs::read(&elf_path).with_context(|| elf_path.clone())?;
+        let image = risc0_zkvm::compute_image_id(&elf).map_err(|e| anyhow!("{e}"))?;
+        let env =
+            risc0_zkvm::ExecutorEnv::builder().write_slice(&input.encode()).build().map_err(|e| anyhow!("{e}"))?;
+        // The zone's guests run in dev mode; this receipt is a real one.
+        std::env::remove_var("RISC0_DEV_MODE");
+        let started = std::time::Instant::now();
+        let proven = risc0_zkvm::default_prover().prove_with_opts(env, &elf, &risc0_zkvm::ProverOpts::succinct());
+        std::env::set_var("RISC0_DEV_MODE", "1");
+        let info = proven.map_err(|e| anyhow!("r0vm: {e}"))?;
+        println!(
+            "gas-drop receipt: real succinct proof in {:.1} s ({} user cycles)",
+            started.elapsed().as_secs_f64(),
+            info.stats.user_cycles
+        );
+        let receipt_json = serde_json::to_vec(&info.receipt)?;
+        let history = lez::history_of(&zone, &ctx).await?;
+        let roots: &'static HashSet<Hash> = Box::leak(Box::new(rl::imported_roots(&list.deposits, &history.roots)?));
+        ensure!(roots.contains(&tree.root()), "the receipt's root is the zone's imported root");
+        let mut image_id = [0u8; 32];
+        image_id.copy_from_slice(image.as_bytes());
+        let dctx = DropContext {
+            image_id,
+            me: relayer_lez,
+            chain_id: word(1),
+            vault: vault.into_array(),
+            imported_roots: roots,
+        };
+        let book_path = dir.join("relayer-drops.json");
+        let _ = std::fs::remove_file(&book_path);
+        let mut book = DropBook::load(&book_path)?;
+        let mut credits = Credits(Vec::new());
+        let claimed = |n: &Hash| lez::is_claimed(&ctx, &history, n);
+        let replay = rl::check_gas_drop(&receipt_json, &DropContext { me: [0x77; 32], ..dctx }, claimed, &book);
+        ensure!(replay == Err(DropRefusal::OtherRelayer), "a receipt replayed to another relayer: {replay:?}");
+        let (j, tx) =
+            rl::gas_drop(&receipt_json, &dctx, claimed, &mut book, &book_path, &mut credits, 1_000_000, 0).await?;
+        ensure!(j.nullifier == big.owned.nullifier, "the receipt's N is leaf 0's");
+        let second =
+            rl::gas_drop(&receipt_json, &dctx, claimed, &mut book, &book_path, &mut credits, 1_000_000, 1).await;
+        ensure!(second.is_err() && credits.0.len() == 1, "one drop per N");
+        println!(
+            "GAS DROP: N {} -> one-time address {} ({tx}); replay to another relayer and a second drop refused",
+            hx(&j.nullifier),
+            hx(&j.one_time_address)
+        );
+        gas_drop = Some((receipt_json, dctx, relayer_lez));
+    }
+
     // Claim leaf 0 (plaintext: a public destination, no proof).
-    let plan = lez::plan_claim(&zone, &ctx, &leaves, &big.owned, &history, false, None).await?;
+    let plan =
+        lez::plan_claim(&zone, &ctx, &leaves, &big.owned, &history, false, gas_drop.as_ref().map(|g| g.2)).await?;
     let sent = zone.submit(&plan.call).await?;
     println!("claim: {sent}; N {}", hx(&plan.nullifier));
     let holder = AccountId::new(big.owned.dest);
     ensure!(zone.world.balance(holder, &cid) == 10_000_000_000_000_000_000, "the holder holds 10 ETH on LEZ");
+    if let Some((receipt_json, dctx, relayer_lez)) = &gas_drop {
+        use ferrata_cli::relayer::{self as rl, DropBook, DropRefusal};
+        let fee = zone.world.balance(AccountId::new(*relayer_lez), &cid);
+        ensure!(
+            fee == plan.relay_fee && fee > 0,
+            "the claim minted the relay fee to the relayer: {fee} of {}",
+            plan.relay_fee
+        );
+        let history = lez::history_of(&zone, &ctx).await?;
+        let after =
+            rl::check_gas_drop(receipt_json, dctx, |n| lez::is_claimed(&ctx, &history, n), &DropBook::default());
+        ensure!(after == Err(DropRefusal::AlreadyClaimed), "a relayer with no record refuses a claimed N: {after:?}");
+        println!("GAS DROP: the claim named the relayer, minted it the relay fee {fee}; afterwards any relayer refuses the receipt (claimed)");
+    }
 
     // A second claim of the same deposit: the tool refuses it with the program's code, and the
     // program, sent the same call without the tool's check, exits with that code.
@@ -543,7 +649,23 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         .map(|b| burn_leaf(&cid, b.burn_index, &b.note.token, &b.note.amount, &b.note.c_out, &b.note.r))
         .collect();
     let burn_root = Tree::from_leaves(burn_leaves).map_err(|_| anyhow!("tree"))?.root();
+    // The relayer's burn watch (with FERRATA_GASDROP_ELF): 11 burns on the zone, none accepted, no candidate
+    // live: a checkpoint is needed; once the root of all 11 is accepted, none is.
+    let watch = ferrata_cli::relayer::Relayer { vault, me: ANVIL0, accept_unpaid: false };
+    if gas_drop.is_some() {
+        let accepted = eth::accepted_burn_roots(&p, vault, 0, 10_000).await?;
+        let live = watch.candidates(&p, 0).await?.len();
+        let need = ferrata_cli::relayer::checkpoint_needed(history.burns.len() as u64, &accepted, live);
+        ensure!(need == Some((11, 0)), "the burn watch asks for a checkpoint of 11 burns: {need:?}");
+    }
     accept_burn_root(&p, vault, B256::from(cid), burn_root, 11).await?;
+    if gas_drop.is_some() {
+        let accepted = eth::accepted_burn_roots(&p, vault, 0, 10_000).await?;
+        let live = watch.candidates(&p, 0).await?.len();
+        let need = ferrata_cli::relayer::checkpoint_needed(history.burns.len() as u64, &accepted, live);
+        ensure!(need.is_none() && live == 0, "no checkpoint needed once 11 burns are accepted: {need:?}, {live} live");
+        println!("BURN WATCH: 11 burns on the zone -> checkpoint needed (0 accepted); after acceptance -> none");
+    }
     let released = eth::released_nullifiers(&p, vault, 0, 10_000).await?;
     let (burn_rows, next_i) = scan::burns(&user, &ctx, &history, &released);
     ensure!(burn_rows.len() == 11 && next_i == 11, "11 burns of the user, next counter 11");
@@ -642,5 +764,57 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     );
     ensure!(claimed2 == 2, "the nullifier account named privately marks its deposit claimed");
     ensure!(claimed == 1 && unreleased == 10 && burns.len() == 11, "recovery");
+
+    // The relayer's release (cli/src/relayer.rs), with `FERRATA_GASDROP_ELF`: the holder of burn 1 opts in
+    // with a release that pays the relayer the registered relay fee; the relayer checks and sends it
+    // and is paid; its own changed calls (recipient redirected) are refused by the vault, and another
+    // relayer refuses the job.
+    if gas_drop.is_some() {
+        use ferrata_cli::relayer::{self as rl, Relayer};
+        let relayer_eth = keystores[1].1;
+        let fee = eth::deposit_price(&p, vault, eth::ETH, 0).await?.relay_fee;
+        let plan1 =
+            release::plan(&ctx, &history, &burn_rows[1].owned, root_b.0, count, 0, relayer_eth.into_array(), fee)?;
+        let verifier: Address = std::env::var("FERRATA_E2E_VERIFIER")?.parse()?;
+        anvil_send(
+            &p,
+            verifier,
+            IMock::acceptCall { imageId: release_image, journalDigest: B256::from(sha256(&plan1.journal)) }
+                .abi_encode(),
+            U256::ZERO,
+        )
+        .await?;
+        let sp = eth::signing_provider(&rpc, eth::keystore_signer(other_ks, &password)?)?;
+        let r = Relayer { vault, me: relayer_eth, accept_unpaid: false };
+        let view = r.view(&sp).await?;
+        let (req, input) = r.plan_release(&sp, &view, &plan1.journal, Bytes::from(SEAL.to_vec())).await?;
+        let mut redirected = req.clone();
+        redirected.recipient = relayer_eth;
+        let refused = eth::send(
+            &sp,
+            relayer_eth,
+            vault,
+            eth::release_calldata(redirected, Bytes::from(SEAL.to_vec())),
+            U256::ZERO,
+            1,
+        )
+        .await
+        .expect_err("a redirected release");
+        let other = Relayer { vault, me: ANVIL0, accept_unpaid: false };
+        let not_ours = other
+            .plan_release(&p, &view, &plan1.journal, Bytes::from(SEAL.to_vec()))
+            .await
+            .expect_err("another relayer's");
+        let before = p.get_balance(relayer_eth).await?;
+        let rc = r.submit(&sp, input).await?;
+        let (_, paid) = rl::relay_fee_paid(&rc, relayer_eth).context("a Release paying the relayer")?;
+        let gas = U256::from(rc.gas_used) * U256::from(rc.effective_gas_price);
+        let gained = p.get_balance(relayer_eth).await? + gas - before;
+        ensure!(
+            fee > 0 && paid == U256::from(fee) && gained == U256::from(fee),
+            "the relayer was paid {gained}, the fee is {fee}"
+        );
+        println!("RELAYER: burn 1 released by the relayer ({} gas), relay fee {fee} wei paid to it; redirected recipient refused: {refused}; another relayer: {not_ours}", rc.gas_used);
+    }
     Ok(())
 }

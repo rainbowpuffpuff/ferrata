@@ -14,10 +14,11 @@ year. Every role below is permissionless except the watchers', and none can make
 vault accept something false ([`docs/design/attestation.md`](../design/attestation.md) §9, §11.5;
 [`docs/design/bridge.md`](../design/bridge.md) §14).
 
-**Status.** The daemons are **not built**, except `monitor` (§7). The updater and the bridge relayer
-(root imports, checkpoint proofs, gas drops, wrapping and submission) are designed as Logos modules
-run under `logosctl daemon`, with structured logs, clean shutdown and configurable endpoints and depths.
-`monitor` is a standalone program ([`monitor/`](../../monitor/README.md)), not yet a module
+**Status.** Two daemons are built as prototypes, outside Logos modules: `monitor` (§7), a standalone program
+([`monitor/`](../../monitor/README.md)), and the relayer, the binary `ferrata-relayer` (§6: rule (B) checkpoints,
+releases, wrapping, fee collection and the gas drop; tested on an anvil fork of Sepolia with real proofs and
+in the LEZ harness). The updater and the relayer's root imports are **not built**. All three daemons are designed
+as Logos modules run under `logosctl daemon`, with structured logs, clean shutdown and configurable endpoints and depths
 ([`attestation.md`](../design/attestation.md) §8; [`bridge.md`](../design/bridge.md) §1). What runs
 today, and what this guide describes from measurement, is the **lab** (§2), the harness and live
 drivers, the checkpoint prover's host, and the end-to-end scripts.
@@ -244,19 +245,133 @@ the cloud").
 
 ## 6. The relayer and the wrapper
 
-- **Submission.** A relayer submits users' claims (on LEZ) and releases (on Ethereum) and is paid the
-  registered relay fee, which the proof binds, so it can neither redirect nor overcharge; a user can pick
-  another relayer per operation, or submit directly ([`bridge.md`](../design/bridge.md) §14).
-- **Wrapping.** A release needs a Groth16 seal; the wrap runs only on x86 (Docker, about 7.3 GiB,
-  77.5–79.9 s on the laptop for a release). Any relayer can wrap a user's succinct receipt and learns only
-  what the release publishes ([`bridge.md`](../design/bridge.md) §12.3, §18.2).
-- **What a relayer learns**: a time, a one-time address and the transaction it submits; never which
-  deposit or burn ([`bridge.md`](../design/bridge.md) §6, §14).
-- **The gas drop** (a relayer funding a user's private LEZ fee through a sealed credit per nullifier) is
-  **not built** (milestone M0 tests it).
-- Release gas: 373,657 (ETH) and 403,523 (ERC-20 with the relayer's fee) on Foundry's rules, v5 vault, real
-  verifier; 619,477 and 648,447 on Sepolia's node prices, v3 vault ([`vault/GAS.md`](../../vault/GAS.md);
-  [`e2e/README.md`](../../e2e/README.md)).
+### 6.1 What `ferrata-relayer` does
+
+`ferrata-relayer` (`cli/src/bin/relayer.rs`, its checks in `cli/src/relayer.rs`; prototype, unaudited) runs
+one round every `--poll-secs` (default 12 s, one Ethereum slot):
+
+1. **Inbox.** Each `<inbox>/*.json` job is checked, then sent; the file moves to `<state>/done/` or
+   `<state>/refused/` and one JSON line on stdout says what happened and why. A job that fails for a
+   temporary reason (the root not final yet, the release delay, a freeze, a cap, the endpoint unreachable)
+   stays in the inbox and is retried every round (`job-deferred`) until it is older than `--max-job-age`
+   (default 7 days). Jobs:
+   `{"kind":"release","journal":"0x…","seal":"0x…"}` from a holder who opts in (the release journal
+   and its Groth16 seal), `{"kind":"release-succinct","receipt":{…}}` from a holder who cannot wrap (the
+   succinct receipt; the relayer wraps it, §6.5), `{"kind":"checkpoint","journal":"0x…","seal":"0x…"}` from the checkpoint
+   prover (§5.4), `{"kind":"gas-drop","receipt":{…}}` from a claimant (§6.4).
+2. **Candidates.** Every live candidate on the vault, anyone's, is rebuilt from its `CandidateSubmitted`
+   event and the vault's `nMin`/`tMin`, checked against the journal digest the vault stored, and finalised
+   with `finalizeAttested` once its wait W has passed (rule (B); anyone may finalise, the checkpoint fee
+   goes to the candidate's submitter).
+3. **Fees.** Whatever the vault credited the relayer (`owed`: every checkpoint fee, and a relay fee whose
+   push failed) is withdrawn with `claimOwed`, for ETH and every token it released.
+4. **Burns** (with `--sequencer`): the configuration's burns on LEZ past the newest accepted burn count; if
+   there are any and no live candidate, `<state>/needs-checkpoint.json` asks the checkpoint prover (§5,
+   a separate process) for a checkpoint, which comes back as a checkpoint job (`relayer::checkpoint_needed`;
+   tested against the harness zone: 11 burns and none accepted ask for one, none once they are accepted).
+   On a rule (A) vault the daemon does not finalise (that needs the beacon proof, the prover's job).
+
+Logs are one JSON object per line (`start`, `job-done`, `job-refused`, `candidate-waiting`, `finalized`,
+`fees-collected`, `checkpoint-needed`, `job-deferred`, `round-failed`, `stop`). The state directory is all
+it keeps between rounds: the drop book (`drops.json`), the done and refused jobs. SIGTERM or SIGINT stops it
+after the round in progress (a `stop` line names the signal), so a service manager can restart it at will; a gas drop is recorded before its credit is sent, so a crash cannot cause a second drop for
+the same `N` (a failed credit stays recorded as failed: remove the entry only knowing it was not sent).
+
+### 6.2 Starting a relayer
+
+```sh
+cd cli && cargo build --release --bin ferrata-relayer      # LEZ's toolchain as for the CLI (cli/README.md)
+target/release/ferrata-relayer \
+  --eth-rpc "$SEPOLIA_RPC" --vault 0x… --chain-id 11155111 --from-block <the vault's deployment block> \
+  --keystore relayer.json --password-file relayer.pass \
+  --state /var/lib/ferrata-relayer \
+  run --inbox /var/lib/ferrata-relayer/inbox
+target/release/ferrata-relayer --eth-rpc … --vault 0x… --keystore … --password-file … status
+```
+
+For gas drops and the burn watch add the LEZ side: `--sequencer <url> --seed <the relayer's own seed file>
+--lez-wallet <dir> --lez-password-file <file> --bridge-account <program id> --lez-account <its public
+account, which pays the drops> --gasdrop-image-id 0x… --drop-amount <native LEZ per drop>`. The Ethereum
+account needs gas money only; it is paid relay fees by the releases that name it and checkpoint fees through
+`owed`. `--accept-unpaid` also submits releases that pay no relay fee (off by default). `--wrap-command
+<prover>` makes it wrap succinct receipts (§6.5); jobs must be written atomically (write `x.json.tmp`, then
+rename it to `x.json`: the daemon reads only `*.json`). `--unlocked <address>`
+lets a local anvil sign (tests and rehearsals only; refused unless the endpoint answers `anvil_nodeInfo`).
+
+### 6.3 What it holds, and what it refuses
+
+It holds its own keys and nothing of a user's: a release job is what the vault call publishes anyway
+(never `sOut`, `r`, the burn index or a seed: the holder proves, any wrapper wraps), a checkpoint job is
+public, a gas-drop receipt shows `N`, a root, a one-time address and the relayer. Before spending gas it
+refuses a job for another vault, chain or configuration; a release whose proof names another relayer
+(only that one can be paid, and the proof cannot be changed); an unpaid release (by default); a used
+nullifier; a checkpoint not built on the vault's final state, or already a candidate. Everything else the
+vault would refuse (root not accepted, delay, fee, caps, freezes, the proof) is caught by an `eth_call`
+before signing and reported with the vault's error. Whatever a relayer sends anyway, the vault refuses:
+on the Sepolia fork below, a forged checkpoint root and releases with the relayer, the recipient or the
+fee changed were all refused by RISC Zero's verifier (`VerificationFailed`, `0x439cc0cd`), and a replay by
+`NullifierAlreadyUsed`.
+
+### 6.4 The gas drop (bridge.md §6; v3 D13)
+
+A first private claim needs native LEZ for its fee. The claimant proves the **gas-drop receipt**
+(`bridge/guests/src/bin/gasdrop.rs`, statement `ferrata_bridge_core::gasdrop`): the claim statement over
+its deposit under an imported root, with the journal `DROP_DOMAIN ‖ root ‖ evmChainId ‖ vault ‖ N ‖
+oneTimeAddress ‖ relayer` (212 bytes), so the receipt cannot be replayed to another relayer or redirected
+to another address. The relayer verifies it against the gas-drop image id (fake receipts verify only in
+RISC Zero's dev mode), checks that the receipt names it and its configuration, that the root is one LEZ
+imported (recomputed from the vault's verified deposit list at each imported leaf count), that `N` is not
+claimed on LEZ and has not had a drop from it (`drops.json`, kept across restarts), then sends one native
+credit to the one-time address (LEZ wallet's native transfer, `CreditDelivery::Automatic`). The claim names
+the relayer and mints it the token's relay fee. It learns a time, the one-time address and `N` (the claim
+publishes `N`), never which deposit, its depositor or amount.
+
+Measured (build box, CPU, 16 cores): 76,230 user cycles for every one of 16 random witnesses (one count),
+a real succinct proof in 14.6 s and 14.9 s, 584,106 bytes as JSON; image id at this branch's build path
+`0xe10554850874c952eae7a7a939cc832be97bcd9f4426214269360d736ce0d207` (path-dependent; rebuild and record it
+for a deployment).
+
+Not built: the sealed variant (a credit to a private one-time account); the sweep of the credit inside the
+private claim by LEZ's wallet; a run against a live sequencer (the harness does not model LEZ's native
+token program, so its credit is a recorded stand-in).
+
+### 6.5 Wrapping
+
+A release needs a Groth16 seal; RISC Zero's prover image runs only on x86 (Docker, about 7.3 GiB, 77.5–79.9 s
+on the laptop for a release; 55–93 s on the build box). Any relayer can wrap a user's succinct receipt and
+learns only what the release publishes ([`bridge.md`](../design/bridge.md) §12.3, §18.2). With
+`--wrap-command <prover>` the daemon takes `release-succinct` jobs: it checks the release as for a sealed job
+(before any work), verifies the receipt against the vault's `releaseImageId`, runs identity_p254 through
+r0vm, calls `<prover> <input.json> <proof.json>` (RISC Zero's prover image, e.g. `docker run` of
+`risczero/risc0-groth16-prover:v2025-04-03.1` as risc0-groth16 3.0.5 starts it, or a remote prover such as the
+build box's `groth16_wrap` function), builds the Groth16 receipt as risc0's `succinct_to_groth16` does,
+verifies it, and sends the release. Measured on the build box: 18.6 s from the succinct receipt to the seal
+with the prover stood in by the proof it had produced on Modal (15 s there), identity_p254 21.1 s on its own.
+
+### 6.6 Tested, and the numbers
+
+- `cli/tests/relayer.sh` on the build box: (0) the library's unit tests (the recorded crown checkpoint journal
+  decoded and re-encoded byte for byte, the burn watch, which failures are retried, imported roots); (1) the
+  gas-drop checks on a real receipt (one drop per `N`;
+  another relayer, another configuration, an unimported root, a claimed deposit, another image id and a
+  changed journal refused, also after a restart); (2) **the daemon on an anvil fork of Sepolia** at the
+  block before `crown-live-1`'s `submitCandidate`, with that run's real checkpoint and release proofs:
+  candidate 375,281 gas, `finalizeAttested` 218,385 after W = 3,600 s, releases 358,908 and 393,108, the
+  checkpoint fees (2 × 10¹² wei) collected with `claimOwed` (the same transactions and gas in every run); a
+  new real release proof of the same burn naming a relayer with the registered fee, handed to the daemon as a
+  succinct receipt, wrapped by it and sent as that relayer (407,052 gas, 2 × 10¹² wei received), its copy
+  naming another relayer refused; `status`, and a
+  daemon without a round limit stopped cleanly by SIGTERM;
+  the early release deferred and released once the root was final; a second candidate, another relayer's
+  daemon, an unpaid release and a replay refused ([`e2e/runs/relayer-fork/`](../../e2e/runs/relayer-fork/results.json));
+  (3) **the LEZ harness** (`cli/tests/e2e.rs` with `FERRATA_GASDROP_ELF`): a real gas-drop receipt for a
+  vault deposit checked against the zone's imported roots and nullifiers, the claim naming the relayer
+  (relay fee 10¹⁶ wei minted to it on LEZ), the receipt refused afterwards as claimed, the burn watch on the
+  zone's 11 burns, and a release that pays the relayer 10¹⁴ wei (134,973–134,985 gas with the mock
+  verifier), its redirected copy refused ([`e2e/runs/relayer-harness/`](../../e2e/runs/relayer-harness/test.log)).
+- Release gas on the v5 vault with the real verifier: 373,657 (ETH) and 403,523 (ERC-20 with the relayer's
+  fee) on Foundry's rules; 619,477 and 648,447 on Sepolia's node prices, v3 vault
+  ([`vault/GAS.md`](../../vault/GAS.md); [`e2e/README.md`](../../e2e/README.md)).
 
 ## 7. Watchers (`monitor`)
 
@@ -386,9 +501,10 @@ checkpoints after a sunset until holders have released ([`bridge.md`](../design/
 
 ## 12. What is not built
 
-The updater and relayer daemons, and the Logos modules of all three daemons (`monitor` is built as a
-standalone program, §7); `verify_checkpoint`; the rule (B)
-attestor module; the gas drop; joining an open job and job clean-up; the weak-subjectivity bound; the
+The updater daemon, and the Logos modules of all three daemons (`monitor` is built as a standalone program, §7;
+`ferrata-relayer` is a plain binary, §6); the relayer's root imports and its run against a live sequencer, the sealed
+gas drop to a private one-time account and its sweep inside the private claim (§6.4); `verify_checkpoint`;
+the rule (B) attestor module; joining an open job and job clean-up; the weak-subjectivity bound; the
 duplicate-rate acceptance run; daemon resource measurements; the amortised costs at the recommended
 cadence with real proving (milestones A4, B4); a deployment on a public LEZ network. Sources:
 [`attestation.md`](../design/attestation.md) §15; [`bridge.md`](../design/bridge.md) §1, §18.6, §19;

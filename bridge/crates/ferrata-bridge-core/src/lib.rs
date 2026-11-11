@@ -10,6 +10,8 @@
 //!   canonical frontier, path verification with direction bits; path creation with `std`).
 //! * [`inbound`]: `s`, `C` (with the destination kind), deposit leaf, `fid`, `N`, the claim
 //!   statement, the nullifier registry, wallet recovery over candidate destinations.
+//! * [`gasdrop`]: the gas drop's receipt, the claim statement with a journal binding
+//!   `(N, oneTimeAddress, relayer)` (v3 D13).
 //! * [`outbound`]: `r_i`, `sOut`, memo, MAC, `COut`, burn leaf, `burnId`, `NOut`, the release
 //!   statement and journal, the burn-tag registry, burn recovery.
 //! * [`checkpoint`]: the LEZ checkpoint state `S`, `keySetHash`, `burnFrontierHash`, `t(n)`, the
@@ -23,6 +25,7 @@
 
 pub mod checkpoint;
 pub mod encoding;
+pub mod gasdrop;
 pub mod inbound;
 pub mod outbound;
 pub mod tree;
