@@ -112,7 +112,7 @@ Run "checks2" at 31ea9c7 (15:47 CET, 51 s, the box warm):
                                                                        half's output of run "checks")
   links: a fresh git repository of the non-ignored files, python3 -I scripts/check-links.py
                                                                        25 files, 906 links, 0 broken
-  link checker on the laptop at the branch's tip (it reads `git ls-files`)   25 files, 906 links, 0 broken
+  link checker on the laptop (it reads `git ls-files`), after these suites were written up   25 files, 907 links, 0 broken
 Image ids (run "idcheck", 15:18 - 15:27 CET, 499 s): scripts/reproduce-image-ids.sh build at the crown build path on
 the merged tree with fuzz-core's store.rs: the six ids of e2e/crown/README.md, ids.txt and r0bf/ids.jsonl equal to
 e2e/runs/verify-anyone/reproduce-box/, the six user ELFs byte-identical; the lab's attestation program rebuilt at the
