@@ -50,6 +50,7 @@ RISC0_DEV_MODE=1 target/debug/ferrata-attest [--follow-to P] [--message-out DIR]
 | Command | Attests |
 |---|---|
 | `status` | nothing: the instance, its store, the newest record, what following cost |
+| `config` | nothing: the instance's configuration as the zone holds it (chain id, committee, genesis, the fork schedule, the layout at `Init`), with the instance id derived again from it and the checkpoint |
 | `advance --period P` / `advance --finality` | the update of period P (1378–1409) or the attestation fixture's finality update, as the public job: `Open`, `Miller`, `Adopt` in `adoption_parts` parts when it adopts a committee, `Finish`. The dry run settles the whole job on one scratch state, step after step, and gives each step's cost and the verdict of step 1 (`ferrata_core::steps::step1`, the program's function) with the job's planned outcome |
 | `slot [--address A] [--slot S] [--expect-eq V]` | a storage slot (default: USDC's `totalSupply_`, slot 11); `--expect-eq` adds the condition `value == V` |
 | `account [--address A] [--expect-code-hash H]` | an account's nonce, balance, storage root and code hash (default: Multicall3) |
@@ -100,6 +101,11 @@ gas in all, 100.9 s; the record `header(id, 11,549,664)` binds block 12,105,936.
 | `advance --finality` | `Open` 2,127,275; `Miller` 3,305,289; `Finish` 3,718,605 | advances to slot 11,549,664 (block 12,105,936) | 9,151,169 | 5,129 | yes, 3 applied |
 
 Then `log --send` attested the first `Transfer` under the new record, as in the first run (95,412).
+
+`config` ([`results/attest-cli/config.txt`](results/attest-cli/config.txt)): the instance's state on
+the zone, chain 11,155,111, 512 keys, Sepolia's fork schedule (Gloas from epoch 353,024), layout at
+`Init` Electra, 34 jobs applied; its id derived again from the configuration and the checkpoint
+equals the instance id. `config --send` is refused as a usage error (exit 2).
 
 Every dry run's verdict (the program's function, natively) equalled the zone's execution (exit
 code; the `FRT-ATT1` event's identifiers); every sent transaction (7 of the 13 commands) equalled its dry run in exit

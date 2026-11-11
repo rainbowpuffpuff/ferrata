@@ -1,0 +1,19 @@
+config (instance(id)'s state on the zone)
+  instance actor     8TcVk4GyCRSorjjD9RTfrEQ4fdo8NUNJ7TVukCJhCKBq of program FhXQNXifS3nitELmi18yyb7R7QcgauZHgXbWuQTK2pqn
+  instance id        0x6d65e4ef2af67eed1ce3a5c2d7b04fa02517707d2dff044869389f310b69f6b4 (SHA-256 of the domain, borsh(config) and the checkpoint: derived again, equal)
+  checkpoint         0x5f71d7f650f9252b48749b5f062c0c234e01afd69f364ab600e2b6051494b20d (the trusted beacon block root of Init)
+  chain id           11155111
+  sync committee     512 keys, at least 1 signing; 32 slots per epoch, 256 epochs per period
+  genesis            time 1655733600, 12 s per slot, validators root 0xd8ea171f3c94aea21ebc42a1ed61052acf3f9209c00e4efbaaddac09ed9b8078
+  fork 0             version 0x90000069, from epoch 0
+  fork 1             version 0x90000070, from epoch 50
+  fork 2             version 0x90000071, from epoch 100
+  fork 3             version 0x90000072, from epoch 56832
+  fork 4             version 0x90000073, from epoch 132608
+  fork 5             version 0x90000074, from epoch 222464
+  fork 6             version 0x90000075, from epoch 272640
+  fork 7             version 0x90000076, from epoch 353024
+  fork 8             version 0x00000000, not scheduled
+  layout at Init     3 (Some(Electra); the store upgrades itself at later forks); a committee adopted in 2 parts
+  state              active true, 34 jobs applied, store 274 bytes
+

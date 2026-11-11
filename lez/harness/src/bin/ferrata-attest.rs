@@ -16,6 +16,7 @@
 //! ```text
 //! RISC0_DEV_MODE=1 ferrata-attest [--follow-to P] [--message-out DIR] COMMAND [ARGS] [--send] [--then COMMAND ...]
 //!   status                                  the instance, its record, what following cost
+//!   config                                  the instance's configuration, read from the zone
 //!   advance [--period P | --finality]       submit a light-client update (Open, Miller, Adopt, Finish)
 //!   slot    [--address A] [--slot S] [--expect-eq V]   a storage slot (default: USDC totalSupply_)
 //!   account [--address A] [--expect-code-hash H]       an account (default: Multicall3)
@@ -58,6 +59,7 @@ type Address = [u8; 20];
 #[derive(Debug)]
 enum Op {
     Status,
+    Config,
     Slot {
         address: Option<Address>,
         slot: Option<Word>,
@@ -90,7 +92,7 @@ struct Command {
 fn usage() -> ExitCode {
     eprintln!(
         "usage: ferrata-attest [--follow-to P] [--message-out DIR] COMMAND [ARGS] [--send] [--then COMMAND ...]\n\
-         commands: status | advance [--period P | --finality] | slot [--address A] [--slot S] [--expect-eq V]\n\
+         commands: status | config | advance [--period P | --finality] | slot [--address A] [--slot S] [--expect-eq V]\n\
          \x20         | account [--address A] [--expect-code-hash H] | log [--tx I --log J | --block-log-index K] | receipt --tx I\n\
          Without --send nothing is sent: the dry run prints the message, the program's verdict and LEZ's charge."
     );
@@ -168,7 +170,7 @@ fn parse(args: &[String]) -> Result<(Globals, Vec<Command>), String> {
         }
         let get = |k: &str| opts.get(k).copied();
         let allowed: &[&str] = match name.as_str() {
-            "status" => &[],
+            "status" | "config" => &[],
             "slot" => &["--address", "--slot", "--expect-eq"],
             "account" => &["--address", "--expect-code-hash"],
             "log" => &["--tx", "--log", "--block-log-index"],
@@ -184,6 +186,7 @@ fn parse(args: &[String]) -> Result<(Globals, Vec<Command>), String> {
         }
         let op = match name.as_str() {
             "status" => Op::Status,
+            "config" => Op::Config,
             "slot" => Op::Slot {
                 address: get("--address").map(address_arg).transpose()?,
                 slot: get("--slot").map(word_arg).transpose()?,
@@ -216,8 +219,8 @@ fn parse(args: &[String]) -> Result<(Globals, Vec<Command>), String> {
             }
             _ => unreachable!(),
         };
-        if send && matches!(op, Op::Status) {
-            return Err("status sends nothing".into());
+        if send && matches!(op, Op::Status | Op::Config) {
+            return Err(format!("{name} sends nothing"));
         }
         commands.push(Command { op, send });
     }
@@ -314,7 +317,7 @@ fn request(s: &Stage5, op: &Op) -> Result<(Request, String), String> {
         ..Request::default()
     };
     match op {
-        Op::Status | Op::Advance { .. } => unreachable!(),
+        Op::Status | Op::Config | Op::Advance { .. } => unreachable!(),
         Op::Slot { address, slot, expect_eq } => {
             let address = address.unwrap_or(s.fx.contract);
             let slot = slot.unwrap_or(s.fx.slot);
@@ -719,6 +722,54 @@ fn status(s: &Stage5) {
     }
 }
 
+/// The module's "read its configuration": the instance's state as the zone holds it, and its id
+/// derived again from the configuration and the checkpoint (`ferrata_lez_wire::instance_id`).
+fn config(s: &Stage5) -> Result<u8, String> {
+    let inst = &s.w.inst;
+    let state = inst.state(&s.w.chain).ok_or("no instance at the instance's actor")?;
+    let c = &state.config;
+    let derived = ferrata_lez_wire::instance_id(c, &inst.checkpoint);
+    println!("config (instance(id)'s state on the zone)");
+    println!("  instance actor     {} of program {}", inst.actor().account_id, inst.program);
+    println!(
+        "  instance id        {} (SHA-256 of the domain, borsh(config) and the checkpoint: {})",
+        h(&state.id),
+        if derived == state.id { "derived again, equal" } else { "DIFFERS" }
+    );
+    println!("  checkpoint         {} (the trusted beacon block root of Init)", h(&inst.checkpoint));
+    println!("  chain id           {}", c.chain_id);
+    println!(
+        "  sync committee     {} keys, at least {} signing; {} slots per epoch, {} epochs per period",
+        c.sync_committee_size, c.min_sync_committee_participants, c.slots_per_epoch, c.epochs_per_sync_committee_period
+    );
+    println!(
+        "  genesis            time {}, {} s per slot, validators root {}",
+        c.genesis_time,
+        c.seconds_per_slot,
+        h(&c.genesis_validators_root)
+    );
+    for (i, (version, epoch)) in c.fork_versions.iter().zip(c.fork_epochs).enumerate() {
+        let at = if epoch == u64::MAX { "not scheduled".to_string() } else { format!("from epoch {epoch}") };
+        println!("  fork {i}             version {}, {at}", h(version));
+    }
+    println!(
+        "  layout at Init     {} ({:?}; the store upgrades itself at later forks); a committee adopted in {} parts",
+        c.store_fork,
+        c.fork(),
+        c.adoption_parts
+    );
+    println!(
+        "  state              active {}, {} jobs applied, store {} bytes",
+        state.active,
+        state.applied,
+        state.store.len()
+    );
+    if derived != state.id {
+        return Err("the instance id is not derived from its configuration".into());
+    }
+    Ok(0)
+}
+
 fn run(
     s: &mut Stage5,
     cmd: &Command,
@@ -729,6 +780,9 @@ fn run(
     if let Op::Status = cmd.op {
         status(s);
         return Ok(0);
+    }
+    if let Op::Config = cmd.op {
+        return config(s);
     }
     if let Op::Advance { period } = cmd.op {
         return advance(s, period, cmd.send, names);

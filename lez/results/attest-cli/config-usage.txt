@@ -1,0 +1,5 @@
+ferrata-attest: config sends nothing
+usage: ferrata-attest [--follow-to P] [--message-out DIR] COMMAND [ARGS] [--send] [--then COMMAND ...]
+commands: status | config | advance [--period P | --finality] | slot [--address A] [--slot S] [--expect-eq V]
+          | account [--address A] [--expect-code-hash H] | log [--tx I --log J | --block-log-index K] | receipt --tx I
+Without --send nothing is sent: the dry run prints the message, the program's verdict and LEZ's charge.

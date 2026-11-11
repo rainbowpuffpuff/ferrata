@@ -27,3 +27,6 @@ RISC0_DEV_MODE=1 target/debug/ferrata-attest --follow-to 1408 status --then adva
 
 `advance-exit.txt`: exit status 3 (the second submission of period 1409's update was refused with 52
 `NotNewer`, as its dry run predicted); `advance-stderr.txt`: the following took 93.5 s.
+
+`config.txt` (exit 0) is `ferrata-attest config` after following to period 1409 and the finality
+update; `config-usage.txt` shows `config --send` refused as a usage error (exit 2).
