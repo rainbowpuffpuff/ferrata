@@ -17,7 +17,7 @@
 //! Needs what `cli/tests/e2e.sh` needs: anvil and forge on the path, `vault/lib` installed and built.
 
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     io::{BufRead as _, BufReader, Read as _, Write as _},
     net::{TcpListener, TcpStream},
     path::{Path, PathBuf},
