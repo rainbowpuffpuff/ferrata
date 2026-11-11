@@ -3,6 +3,7 @@
 | group | check | passed | detail |
 |---|---|---|---|
 | chain | harness info read | yes | instance 0xc112f29279d8b73e…, block 26384851, slot 15624480 |
+| chain | read_instance decodes the instance's state; the id recomputed from its config and checkpoint | yes | chain 1, finalized slot 15624480, 2 jobs applied, store Electra |
 | log transfer | fetch_log_proof over JSON-RPC: receipts rebuild the block's receiptsRoot | yes | 531 receipts, 3 proof nodes, 2 RPC calls |
 | log transfer | the log located is the fixture's | yes | tx 0, log 0, token 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 |
 | log transfer | dry_run_attest on the record read from the chain: attested, code 0 | yes | id 0x4910a599ca62fab4… |
@@ -38,4 +39,4 @@
 | bridge Claim | the bridge program decodes the message (canonical) to the same witness | yes | 1271 bytes |
 | JSON-RPC | every read went over the network to the recorded-data server | yes | eth_getBlockByNumber x2, eth_getBlockReceipts x2, 3,301,898 bytes served |
 
-Checks: 35, failed: 0.
+Checks: 36, failed: 0.

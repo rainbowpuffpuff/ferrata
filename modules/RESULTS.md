@@ -1,13 +1,13 @@
 # Logos modules: results
 
 **Two modules, built, packaged, loaded and called; a log attested end to end through them.** On
-11 November 2026, `modules/scripts/check.sh` (repository at commit `8104361`) built
-`ferrata_attest_module` (six methods) and `ferrata_bridge_module` (seven) with logos-module-builder,
+11 November 2026, `modules/scripts/check.sh` (repository at commit `2f91c14`) built
+`ferrata_attest_module` (seven methods) and `ferrata_bridge_module` (seven) with logos-module-builder,
 packaged each as a dev and a portable `.lgx`, installed and loaded both together in a headless Logos
 Core (`logosctl`, dev and portable builds), and called every method: 24 calls, each reply equal to the
 native call and meeting its expectations, in both. Then `e2e.sh` ran through each daemon: logs and a
 storage slot of a finalized mainnet block, fetched over JSON-RPC, attested on LEZ by transactions the
-module built, 35 of 35 checks each. Step failures 0, check failures 0
+module built, and the instance's state read back, 36 of 36 checks each. Step failures 0, check failures 0
 ([`results/check-2026-11-11/summary.md`](results/check-2026-11-11/summary.md)). The release action's
 steps ran locally for both packages ([`catalog/`](catalog/README.md)).
 
@@ -24,7 +24,7 @@ output, files under `results/check-2026-11-11/`, `e2e/native/` and `catalog/dry-
 
 | Module | Methods (`logosctl module show`: the trait's methods with their descriptions) |
 |---|---|
-| `ferrata_attest_module` | `version()`, `dry_run_attest`, `verify_checkpoint`, `fetch_log_proof`, `build_attest_tx`, `read_attestation` (each `(QString)` but `version`) |
+| `ferrata_attest_module` | `version()`, `dry_run_attest`, `verify_checkpoint`, `fetch_log_proof`, `build_attest_tx`, `read_attestation`, `read_instance` (each `(QString)` but `version`) |
 | `ferrata_bridge_module` | `version()`, `deposit`, `claim`, `burn`, `release`, `recover`, `status` |
 
 Interfaces: [`README.md`](README.md).
@@ -39,7 +39,7 @@ Interfaces: [`README.md`](README.md).
 Every reply through the dev and the portable Logos Core equals the native reply (JSON, key order
 ignored). Calls take 0.0–0.1 s (`logosctl call` wall clock, process start included).
 
-## A log end to end (`e2e.sh`, 35 checks; native, dev and portable: each 35 of 35)
+## A log end to end (`e2e.sh`, 36 checks; native, dev and portable: each 36 of 36)
 
 `recorded_rpc.py` serves the recorded block 26,384,851 (`eth_getBlockByNumber`,
 `eth_getBlockReceipts`) on 127.0.0.1; the chain is the `lez/` harness's Stage 4 (the mainnet instance
@@ -50,6 +50,7 @@ built.
 
 | Case | What the module did | What the program did |
 |---|---|---|
+| the instance's state, read at `instance(id)` | `read_instance`: chain 1, store `Electra`, finalized slot 15,624,480, 2 jobs applied (activation and the update); the id recomputed from the decoded `Config` and the checkpoint equals the instance's | — |
 | USDC transfer (tx 0, log 0) | 2 JSON-RPC calls; the 531 receipts rebuild the block's `receiptsRoot`; 3-node proof; dry run on the record read from the chain: attested, code 0; `Attest` message 2,121 bytes at `header(id, slot)` = `0xc9d33e28…cce5` | decoded the bytes (canonical Borsh), applied: 92,295 execution gas, 2,519 storage gas; its event = its native evaluation; statement id = the dry run's |
 | WETH transfer in the block's largest receipt (306 logs; by block-wide `logIndex` 7) | as above; message 58,310 bytes | applied: 1,614,747 execution gas, 58,708 storage gas; ids equal |
 | WETH balance slot (the fixture's `eth_getProof`) | dry run: attested, the provider's value; the program's two statement ids (the account, then the slot); message 6,906 bytes | applied: 273,546 execution gas, 7,304 storage gas; ids equal |
@@ -61,28 +62,30 @@ built.
 `read_attestation` decodes each event and matches it with the dry run's ids and the instance.
 The harness's instance id equals the id `verify_checkpoint` computes for the attestation fixture's
 checkpoint (`checkpoint_attest_fixture`), which the first run could not confirm. The recorded server
-answered 4 requests per run (3,301,898 bytes). The e2e took 52 s through each daemon; each module
-call 0.04–0.10 s.
+answered 4 requests per run (3,301,898 bytes). The e2e took 55.7 s (dev) and 51.9 s (portable), most
+of it the harness rebuilding the Stage 4 chain for each transaction; each module call 0.04–0.10 s.
 
 ## Packages and the release action's steps
 
 | Artefact | Bytes |
 |---|---:|
-| `ferrata_attest_module` dev / portable `.lgx` | 2,116,091 / 5,273,170 |
-| `ferrata_bridge_module` dev / portable `.lgx` | 2,021,347 / 5,179,992 |
-| Nix closure of each dev package | 667,804,688 / 667,481,848 |
+| `ferrata_attest_module` dev / portable `.lgx` | 2,123,682 / 5,280,230 |
+| `ferrata_bridge_module` dev / portable `.lgx` | 2,021,508 / 5,180,044 |
+| Nix closure of each dev package | 667,834,808 / 667,482,016 |
+| Nix closure of the dev `logosctl` | 907,405,600 |
 
-`release-local.sh` (commit `d7e6dab`, the same module code): each module exported as its own
-repository (39 and 20 files), `nix build .#lgx-portable` (53 s and 51 s, dependencies cached),
+`release-local.sh` (commit `2f91c14`): each module exported as its own repository (39 and 20 files),
+`nix build .#lgx-portable` (47 s and 49 s, dependencies cached; the same packages as `check.sh`'s, 5,280,230
+and 5,180,044 bytes),
 `lgx verify` (`logos-package` `4bdd904`, `lgx 0.1.0`): "Package structure is valid", unsigned; the
-sidecars (sha256 `833b736b…` and `b90d8ecf…`, root hashes, manifests); `index.json` built by
+sidecars (sha256 `dce2086a…` and `35ed5eb1…`, root hashes, manifests); `index.json` built by
 `logos-modules-release-tool` `v1.3` (`94462e6`) `index.py`: schema 2, repository `ferrata-modules`,
 2 packages; `index.py validate-repo` on `catalog/logos-repo.json`: OK. Nothing was published.
 
 ## Steps (final run, seconds)
 
-Everything cached by the earlier runs on the same box: `build-lgx` (both modules) 91.8, `build-lgx-portable`
-19.7, daemon start, install and load under 1 each, `dev-e2e` 52.0, `portable-e2e` 52.5; whole run 280 s.
+Everything cached by the earlier runs on the same box: `build-lgx` (both modules) 94.7, `build-lgx-portable`
+21.2, daemon start, install and load under 1 each, `dev-e2e` 55.7, `portable-e2e` 51.9; whole run 286 s.
 From the cold box, the first command re-ran the first run's `check.sh` (the prototype at `0523f77`):
 SDK source 53.7 s, `build-lgx` (the module and every Logos dependency) 511.5 s, `logosctl` (dev) 1,573.0 s,
 portable package 11.2 s, portable `logosctl` 518.3 s; its 11 calls again equal to native in dev and
@@ -104,8 +107,7 @@ which that script did not run). The harness's test build: 456 s.
 
 What `README.md` lists under "Left out": the modules do not go through Logos Core's Ethereum, key and
 transaction modules (plain `http://` JSON-RPC; messages built, not signed or sent; the harness executes
-them in-process, not a networked sequencer); no `advance` or configuration reads in the attestation
-module; no private claim, `ImportRoot`, registry reads or release proof in the bridge module; the
+them in-process, not a networked sequencer); no `advance` in the attestation module; no private claim, `ImportRoot`, registry reads or release proof in the bridge module; the
 catalog is laid out and dry-run, not published; Linux x86-64 only.
 
 ## First run, 10 November 2026: the prototype (`ferrata_attest_module`, three methods)

@@ -1,9 +1,9 @@
 {
   "publisherRef": "ferrata_attest_module-v0.1.0",
-  "releasedAt": "2026-11-11T19:23:28Z",
-  "sha256": "833b736b48a9f4a147bdb64bcd2420082c74578ba5f77f6df9b81f334e7d846b",
-  "size": 5273229,
-  "rootHash": "c6297d08d051ffbd8fd5265ae36eaa1beb1b42418c1c69a81f14263e896bd27c",
+  "releasedAt": "2026-11-11T19:41:25Z",
+  "sha256": "dce2086a721780a8868b2dfe76b9e9abe3b6f30852ee396ec575aba4f7f4b1ed",
+  "size": 5280230,
+  "rootHash": "5fa7854878aaf91f1fe20a51251b88f7809ee4df7d5b7afbf6858b36a4f7b75c",
   "builtVariants": [
     "linux-amd64"
   ],
@@ -15,10 +15,10 @@
     "description": "Ferrata (prototype): dry-run an Ethereum attestation against a header record and verify a light-client checkpoint, with the program's verification core",
     "display_name": "Ferrata attestation",
     "hashes": {
-      "assets": "e05f0a5058d1971e9951f7711948e729e60a885582bbffaa2ce9c01b4afc6cd5",
-      "root": "c6297d08d051ffbd8fd5265ae36eaa1beb1b42418c1c69a81f14263e896bd27c",
-      "variants": "21afb8c51f5997239f2b3a426178b844b995657093ceda7d9bd794cfd76fc0e6",
-      "variants/linux-amd64": "1c0b15e5b95d6775e6f9f14d5b730a30548683c1208dfdd88797bdd0d01d335f"
+      "assets": "d6e49f23a1ca657ac538401e509bdfa345b96e4dc72e8ad843867f2a1e73bc87",
+      "root": "5fa7854878aaf91f1fe20a51251b88f7809ee4df7d5b7afbf6858b36a4f7b75c",
+      "variants": "d4a752023410d2bc86878ee220e33adb16cfe748a9ecb45516c53116ea511c26",
+      "variants/linux-amd64": "16751e7f1c7057b8594bd0e0786484e00e898117984b2b82db074a593c033d59"
     },
     "icon": "",
     "main": {

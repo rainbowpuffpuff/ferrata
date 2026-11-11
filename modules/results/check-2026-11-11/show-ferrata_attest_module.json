@@ -76,6 +76,19 @@
       "signature": "read_attestation(QString)"
     },
     {
+      "description": "Decode an instance's state as LEZ holds it at `instance(id)`: id, configuration, activation,\nstore (finalized header, committees) and jobs applied. JSON in and out (modules/README.md).",
+      "isInvokable": true,
+      "name": "read_instance",
+      "parameters": [
+        {
+          "name": "request",
+          "type": "QString"
+        }
+      ],
+      "returnType": "QString",
+      "signature": "read_instance(QString)"
+    },
+    {
       "description": "The module's name, as declared in its metadata.",
       "isInvokable": true,
       "name": "name",

@@ -1,20 +1,20 @@
-lgx-ferrata_attest_module/logos-ferrata_attest_module-module-lib.lgx	2116091 bytes
-lgx-ferrata_bridge_module/logos-ferrata_bridge_module-module-lib.lgx	2021347 bytes
-lgx-portable-ferrata_attest_module/logos-ferrata_attest_module-module-lib.lgx	5273170 bytes
-lgx-portable-ferrata_bridge_module/logos-ferrata_bridge_module-module-lib.lgx	5179992 bytes
-lgx-portable-ferrata_attest_module/logos-ferrata_attest_module-module-lib.lgx	5273170 bytes
-lgx-portable-ferrata_bridge_module/logos-ferrata_bridge_module-module-lib.lgx	5179992 bytes
-ferrata_attest_module dev package closure	667804688
-ferrata_bridge_module dev package closure	667481848
+lgx-ferrata_attest_module/logos-ferrata_attest_module-module-lib.lgx	2123682 bytes
+lgx-ferrata_bridge_module/logos-ferrata_bridge_module-module-lib.lgx	2021508 bytes
+lgx-portable-ferrata_attest_module/logos-ferrata_attest_module-module-lib.lgx	5280230 bytes
+lgx-portable-ferrata_bridge_module/logos-ferrata_bridge_module-module-lib.lgx	5180044 bytes
+lgx-portable-ferrata_attest_module/logos-ferrata_attest_module-module-lib.lgx	5280230 bytes
+lgx-portable-ferrata_bridge_module/logos-ferrata_bridge_module-module-lib.lgx	5180044 bytes
+ferrata_attest_module dev package closure	667834808
+ferrata_bridge_module dev package closure	667482016
 logosctl (dev) closure	907405600
 contents of lgx-ferrata_attest_module/logos-ferrata_attest_module-module-lib.lgx:
 drwxr-xr-x 0/0               0 1970-01-01 00:00 assets/
 drwxr-xr-x 0/0               0 1970-01-01 00:00 assets/lidl/
--rw-r--r-- 0/0            1437 1970-01-01 00:00 assets/lidl/ferrata_attest_module.lidl
+-rw-r--r-- 0/0            1683 1970-01-01 00:00 assets/lidl/ferrata_attest_module.lidl
 -rw-r--r-- 0/0             836 1970-01-01 00:00 manifest.json
 drwxr-xr-x 0/0               0 1970-01-01 00:00 variants/
 drwxr-xr-x 0/0               0 1970-01-01 00:00 variants/linux-amd64-dev/
--rwxr-xr-x 0/0         5885216 1970-01-01 00:00 variants/linux-amd64-dev/ferrata_attest_module_plugin.so
+-rwxr-xr-x 0/0         5907496 1970-01-01 00:00 variants/linux-amd64-dev/ferrata_attest_module_plugin.so
 contents of lgx-ferrata_bridge_module/logos-ferrata_bridge_module-module-lib.lgx:
 drwxr-xr-x 0/0               0 1970-01-01 00:00 assets/
 drwxr-xr-x 0/0               0 1970-01-01 00:00 assets/lidl/
@@ -22,15 +22,15 @@ drwxr-xr-x 0/0               0 1970-01-01 00:00 assets/lidl/
 -rw-r--r-- 0/0             886 1970-01-01 00:00 manifest.json
 drwxr-xr-x 0/0               0 1970-01-01 00:00 variants/
 drwxr-xr-x 0/0               0 1970-01-01 00:00 variants/linux-amd64-dev/
--rwxr-xr-x 0/0         5657080 1970-01-01 00:00 variants/linux-amd64-dev/ferrata_bridge_module_plugin.so
+-rwxr-xr-x 0/0         5657088 1970-01-01 00:00 variants/linux-amd64-dev/ferrata_bridge_module_plugin.so
 contents of lgx-portable-ferrata_attest_module/logos-ferrata_attest_module-module-lib.lgx:
 drwxr-xr-x 0/0               0 1970-01-01 00:00 assets/
 drwxr-xr-x 0/0               0 1970-01-01 00:00 assets/lidl/
--rw-r--r-- 0/0            1437 1970-01-01 00:00 assets/lidl/ferrata_attest_module.lidl
+-rw-r--r-- 0/0            1683 1970-01-01 00:00 assets/lidl/ferrata_attest_module.lidl
 -rw-r--r-- 0/0             828 1970-01-01 00:00 manifest.json
 drwxr-xr-x 0/0               0 1970-01-01 00:00 variants/
 drwxr-xr-x 0/0               0 1970-01-01 00:00 variants/linux-amd64/
--rwxr-xr-x 0/0         5885216 1970-01-01 00:00 variants/linux-amd64/ferrata_attest_module_plugin.so
+-rwxr-xr-x 0/0         5907496 1970-01-01 00:00 variants/linux-amd64/ferrata_attest_module_plugin.so
 -rwxr-xr-x 0/0           15088 1970-01-01 00:00 variants/linux-amd64/libboost_system.so.1.87.0
 -rwxr-xr-x 0/0         7486752 1970-01-01 00:00 variants/linux-amd64/libcrypto.so.3
 -rwxr-xr-x 0/0         1302424 1970-01-01 00:00 variants/linux-amd64/libssl.so.3
@@ -41,18 +41,18 @@ drwxr-xr-x 0/0               0 1970-01-01 00:00 assets/lidl/
 -rw-r--r-- 0/0             878 1970-01-01 00:00 manifest.json
 drwxr-xr-x 0/0               0 1970-01-01 00:00 variants/
 drwxr-xr-x 0/0               0 1970-01-01 00:00 variants/linux-amd64/
--rwxr-xr-x 0/0         5657080 1970-01-01 00:00 variants/linux-amd64/ferrata_bridge_module_plugin.so
+-rwxr-xr-x 0/0         5657088 1970-01-01 00:00 variants/linux-amd64/ferrata_bridge_module_plugin.so
 -rwxr-xr-x 0/0           15088 1970-01-01 00:00 variants/linux-amd64/libboost_system.so.1.87.0
 -rwxr-xr-x 0/0         7486752 1970-01-01 00:00 variants/linux-amd64/libcrypto.so.3
 -rwxr-xr-x 0/0         1302424 1970-01-01 00:00 variants/linux-amd64/libssl.so.3
 contents of lgx-portable-ferrata_attest_module/logos-ferrata_attest_module-module-lib.lgx:
 drwxr-xr-x 0/0               0 1970-01-01 00:00 assets/
 drwxr-xr-x 0/0               0 1970-01-01 00:00 assets/lidl/
--rw-r--r-- 0/0            1437 1970-01-01 00:00 assets/lidl/ferrata_attest_module.lidl
+-rw-r--r-- 0/0            1683 1970-01-01 00:00 assets/lidl/ferrata_attest_module.lidl
 -rw-r--r-- 0/0             828 1970-01-01 00:00 manifest.json
 drwxr-xr-x 0/0               0 1970-01-01 00:00 variants/
 drwxr-xr-x 0/0               0 1970-01-01 00:00 variants/linux-amd64/
--rwxr-xr-x 0/0         5885216 1970-01-01 00:00 variants/linux-amd64/ferrata_attest_module_plugin.so
+-rwxr-xr-x 0/0         5907496 1970-01-01 00:00 variants/linux-amd64/ferrata_attest_module_plugin.so
 -rwxr-xr-x 0/0           15088 1970-01-01 00:00 variants/linux-amd64/libboost_system.so.1.87.0
 -rwxr-xr-x 0/0         7486752 1970-01-01 00:00 variants/linux-amd64/libcrypto.so.3
 -rwxr-xr-x 0/0         1302424 1970-01-01 00:00 variants/linux-amd64/libssl.so.3
@@ -63,7 +63,7 @@ drwxr-xr-x 0/0               0 1970-01-01 00:00 assets/lidl/
 -rw-r--r-- 0/0             878 1970-01-01 00:00 manifest.json
 drwxr-xr-x 0/0               0 1970-01-01 00:00 variants/
 drwxr-xr-x 0/0               0 1970-01-01 00:00 variants/linux-amd64/
--rwxr-xr-x 0/0         5657080 1970-01-01 00:00 variants/linux-amd64/ferrata_bridge_module_plugin.so
+-rwxr-xr-x 0/0         5657088 1970-01-01 00:00 variants/linux-amd64/ferrata_bridge_module_plugin.so
 -rwxr-xr-x 0/0           15088 1970-01-01 00:00 variants/linux-amd64/libboost_system.so.1.87.0
 -rwxr-xr-x 0/0         7486752 1970-01-01 00:00 variants/linux-amd64/libcrypto.so.3
 -rwxr-xr-x 0/0         1302424 1970-01-01 00:00 variants/linux-amd64/libssl.so.3
@@ -174,6 +174,7 @@ module ferrata_attest_module {
   method fetch_log_proof(request: tstr) -> tstr description "Read a block and its receipts from a JSON-RPC endpoint (`rpc_url`), rebuild the receipts\ntrie, check it against the block's receipts root, and return one log's receipt proof.\n`request` and the reply are JSON (modules/README.md)."
   method build_attest_tx(request: tstr) -> tstr description "Build the attestation program's `Attest` message for a log or a storage slot at\n`header(id, slot)`, and name the account it is sent to. JSON in and out (modules/README.md)."
   method read_attestation(request: tstr) -> tstr description "Decode the program's `Attested` event and compare its statement ids with a dry run's.\nJSON in and out (modules/README.md)."
+  method read_instance(request: tstr) -> tstr description "Decode an instance's state as LEZ holds it at `instance(id)`: id, configuration, activation,\nstore (finalized header, committees) and jobs applied. JSON in and out (modules/README.md)."
 }
 logos-cpp-sdk	3bf5365c5412f89bbbf30e3f46237cd68cff0599
 logos-cpp-sdk_2	3bf5365c5412f89bbbf30e3f46237cd68cff0599

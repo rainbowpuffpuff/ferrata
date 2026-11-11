@@ -1,2 +1,2 @@
-build ferrata_attest_module 53 s
-build ferrata_bridge_module 51 s
+build ferrata_attest_module 47 s
+build ferrata_bridge_module 49 s
