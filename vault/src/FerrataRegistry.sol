@@ -7,11 +7,11 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {FerrataVault} from "./FerrataVault.sol";
 
 /// @title FerrataRegistry
-/// @notice Token registration, fee schedules, cap settings and role proposals for FerrataVault, as a linked library:
-///         with the v4 and v5 features the vault's runtime would exceed EIP-170's 24,576 bytes (SPEC-v3-delta D11). Its
-///         external functions run by DELEGATECALL in the vault's storage and are reached only through the vault's
-///         functions of the same names (`applyFees` also from deposits and releases); the library has no state. The
-///         internal functions are compiled into whichever contract calls them.
+/// @notice Token registration, fee schedules, cap settings, role proposals and owed claims for FerrataVault, as a
+///         linked library: with the v4 and v5 features the vault's runtime would exceed EIP-170's 24,576 bytes
+///         (SPEC-v3-delta D11). Its external functions run by DELEGATECALL in the vault's storage and are reached only
+///         through the vault's functions of the same names (`applyFees` also from deposits and releases); the library
+///         has no state. The internal functions are compiled into whichever contract calls them.
 /// @dev The registry entry and every fee schedule in force are also published, hashed, at SHA-256 storage slots
 ///      the LEZ side attests (D13; layout of bridge-wire `registry_slot` and `fee_slot`): a slot address that does
 ///      not depend on the vault's Solidity layout, and a hash the LEZ guest can recompute without keccak.
@@ -270,8 +270,9 @@ library FerrataRegistry {
         emit FerrataVault.CandidateCancelled(newState, tipId, tipHash);
     }
 
-    /// @notice The vault's `claimOwed` (documented there; the vault holds the reentrancy guard): pays the caller what it is
-    ///         owed in `token`, to itself only. ETH is sent without copying return data, as the vault's own payments are.
+    /// @notice The vault's `claimOwed` (documented there; the vault holds the reentrancy guard): pays the caller what
+    ///         it is owed in `token`, to itself only. ETH is sent without copying return data, as the vault's own
+    ///         payments are.
     function claimOwed(
         mapping(address payee => mapping(address token => uint256)) storage owed,
         mapping(address token => uint256) storage totalOwed,

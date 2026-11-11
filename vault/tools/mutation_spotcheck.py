@@ -223,7 +223,11 @@ MUTANTS = [
     ('roles: timelock 1 day', 'ROLE_TIMELOCK = 14 days; // D13', 'ROLE_TIMELOCK = 1 days; // D13', 'src/FerrataRegistry.sol'),
     ('roles: the new freeze authority not installed', '        if (newAuthority != address(0)) freezeAuthority = newAuthority;\n', ''),
     ('floor: global release bucket not floored', '            checkReleaseFloor(capacity, refillPerSecond, 1, 1, limits.releaseCapFloor, limits.releaseRefillFloor);\n', '', 'src/FerrataRegistry.sol'),
-    ('floor: token release bucket not floored', '        if (direction == FerrataVault.Direction.Release) {\n            checkReleaseFloor(\n                capacity,', '        if (direction != direction) {\n            checkReleaseFloor(\n                capacity,', 'src/FerrataRegistry.sol'),
+    ('floor: token release bucket not floored', '        if (direction == FerrataVault.Direction.Release) {\n            Limits memory limits = _limits();\n            checkReleaseFloor(\n                capacity,', '        if (direction != direction) {\n            Limits memory limits = _limits();\n            checkReleaseFloor(\n                capacity,', 'src/FerrataRegistry.sol'),
+    ('limits: the release floor read as zero', 'return Limits(v.minReleaseDelay(), v.revokeWindow(), v.releaseCapFloor(), v.releaseRefillFloor());', 'return Limits(v.minReleaseDelay(), v.revokeWindow(), 0, v.releaseRefillFloor());', 'src/FerrataRegistry.sol'),
+    ('limits: the refill floor read as zero', 'return Limits(v.minReleaseDelay(), v.revokeWindow(), v.releaseCapFloor(), v.releaseRefillFloor());', 'return Limits(v.minReleaseDelay(), v.revokeWindow(), v.releaseCapFloor(), 0);', 'src/FerrataRegistry.sol'),
+    ('limits: minReleaseDelay read as zero', 'return Limits(v.minReleaseDelay(), v.revokeWindow(), v.releaseCapFloor(), v.releaseRefillFloor());', 'return Limits(0, v.revokeWindow(), v.releaseCapFloor(), v.releaseRefillFloor());', 'src/FerrataRegistry.sol'),
+    ('limits: revokeWindow read as 30 days', 'return Limits(v.minReleaseDelay(), v.revokeWindow(), v.releaseCapFloor(), v.releaseRefillFloor());', 'return Limits(v.minReleaseDelay(), 30 days, v.releaseCapFloor(), v.releaseRefillFloor());', 'src/FerrataRegistry.sol'),
     ('floor: refill not floored', ' || _toValue(refillPerSecond, weight, unit) < refillFloor', '', 'src/FerrataRegistry.sol'),
     ('floor: registration not floored', '        _checkRegisteredFloor(p, limits);\n', '', 'src/FerrataRegistry.sol'),
     ('floor: overflow instead of saturation', '        if (amount > type(uint256).max / weight) return type(uint256).max;\n', '', 'src/FerrataRegistry.sol'),
@@ -301,6 +305,9 @@ def prepare_workspace(work: str) -> None:
     shutil.copytree(os.path.join(ROOT, "test"), os.path.join(work, "test"))
     shutil.copytree(os.path.join(ROOT, "script"), os.path.join(work, "script"))  # test/real imports script/TestToken.sol
     os.symlink(os.path.join(ROOT, "lib"), os.path.join(work, "lib"))
+    # test/PrivacySuite.t.sol reads ../target/privacy (relative to the workspace) and skips when no scenario exists
+    # there; the directory must exist for the read permission, or the suite fails and every mutant looks killed.
+    os.makedirs(os.path.join(os.path.dirname(work), "target", "privacy"), exist_ok=True)
 
 
 def _forge_test(work: str, extra: list) -> tuple:

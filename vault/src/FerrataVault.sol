@@ -94,8 +94,8 @@ contract FerrataVault is ReentrancyGuardTransient {
 
     /// @dev A submitted, not yet finalised checkpoint, keyed by its `newState`. It is valid only while `finalState` has
     ///      not changed and nothing was revoked since it was submitted (`epoch` unchanged), i.e. while its parent is
-    ///      still `finalState`; a stale one no longer blocks its `newState` (review L-1). Finalisation re-presents the journal and must
-    ///      match `journalDigest` word for word, so the other journal fields need not be stored.
+    ///      still `finalState`; a stale one no longer blocks its `newState` (review L-1). Finalisation re-presents the
+    ///      journal and must match `journalDigest` word for word, so the other journal fields need not be stored.
     struct Candidate {
         bytes32 journalDigest; // sha256 of the 17-word journal the candidate's proof was verified against
         bytes32 tipHash; // the candidate's tip, reported if it is cancelled
@@ -324,9 +324,8 @@ contract FerrataVault is ReentrancyGuardTransient {
     ///         checks of v3 D4.
     uint64 public finalImportedLeafCount;
     bool public finalSunset;
-    /// @notice Start of the keyless-retirement clock (D13): the deployment, the last candidate submission or
-    ///         finalisation, or the end of a checkpoint freeze that was lifted early; see `retireOpensAt`. Shares a slot
-    ///         with the two fields above, which finalisation writes too.
+    /// @notice Start of the keyless-retirement clock (D13): the deployment, the last candidate submission or the last
+    ///         finalisation; see `retireOpensAt`. Shares a slot with the two fields above, which finalisation writes.
     uint64 public keylessFrom;
     /// @dev How many finalisations changed `finalState` (a no-op checkpoint, newState == parentState, does not); with
     ///      `revocationEpoch` it dates candidates (`_epoch`). In the same slot.
@@ -969,8 +968,8 @@ contract FerrataVault is ReentrancyGuardTransient {
         emit ReleasesFrozenSet(frozen, releasesFrozenUntil);
     }
 
-    /// @notice Stops both `submitCandidate` and `finalize` (v3 D4); lapses like every other freeze. Lifting it keeps the
-    ///         time the freeze or pause ended (now, or when it lapsed), from which keyless retirement counts (M-1).
+    /// @notice Stops both `submitCandidate` and `finalize` (v3 D4); lapses like every other freeze. Lifting it keeps
+    ///         the time the freeze or pause ended (now, or when it lapsed), from which keyless retirement counts (M-1).
     function setCheckpointsFrozen(bool frozen) external onlyFreezeAuthority {
         uint256 until = checkpointsFrozenUntil;
         if (until > block.timestamp) until = block.timestamp;
@@ -1001,8 +1000,8 @@ contract FerrataVault is ReentrancyGuardTransient {
     }
 
     /// @notice When anyone may retire the vault: KEYLESS_RETIREMENT after the first moment a checkpoint could be
-    ///         finalised since the clock last started (`keylessFrom`, or the end of a checkpoint freeze or watcher
-    ///         pause in force: no freeze time counts), that is after the shortest wait delta + (tMin - 1) * turnSeconds;
+    ///         finalised since the clock last started (`keylessFrom`, or the end of the last checkpoint freeze or
+    ///         watcher pause: no freeze time counts), that is after the shortest wait delta + (tMin - 1) * turnSeconds;
     ///         or, if earlier, once the first sunset checkpoint can no longer be revoked (D11; refunds open then too).
     ///         A checkpoint must therefore be submitted or finalised at least every 30 days, from deployment on.
     function retireOpensAt() public view returns (uint256 opensAt) {

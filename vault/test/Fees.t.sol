@@ -584,7 +584,8 @@ contract FeesTest is VaultTestBase {
     }
 
     /// @notice The checkpoint fee goes to the checkpoint's prover (the sender of its candidate, review M-2), never
-    ///         pushed: a prover that refuses every payment (here a contract) is credited and cannot block or tax a release.
+    ///         pushed: a prover that refuses every payment (here a contract) is credited and cannot block or tax a
+    ///         release.
     function test_release_checkpointFeeIsCreditedToTheProverNeverPushed() public {
         ToggleRecipient prover = new ToggleRecipient(); // refuses ETH while closed
         FerrataVault.Checkpoint memory c = _nextCheckpoint(ROOT);
@@ -626,8 +627,8 @@ contract FeesTest is VaultTestBase {
         x[1] = v;
     }
 
-    /// @notice Rule (B): the checkpoint fee goes to the candidate's prover, not to the sender of finalizeAttested, which
-    ///         needs no proof (review M-2).
+    /// @notice Rule (B): the checkpoint fee goes to the candidate's prover, not to the sender of finalizeAttested,
+    ///         which needs no proof (review M-2).
     function test_release_ruleB_checkpointFeeToTheProverNotToTheSenderOfFinalizeAttested() public {
         address prover = makeAddr("prover");
         FerrataVault vb = new FerrataVault(_deploymentB(IRiscZeroVerifier(address(estop)), LEZ_CONFIG_ID));
