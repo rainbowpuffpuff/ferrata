@@ -759,7 +759,7 @@ impl Devnet {
         let released = eth::released_nullifiers(&self.p, self.vault, 0, 10_000).await?;
         let (rows, _) = scan::burns(&self.user, &self.ctx, &history, &released);
         let row = rows.iter().find(|b| b.owned.burn.burn_index == burn_index).context("not a burn of this wallet")?;
-        ensure!(!row.released, "{}", codes::program_refusal(250, "already released: the vault spent this burn's nullifier"));
+        ensure!(!row.released, "already released: the vault's NullifierAlreadyUsed for this burn's NOut (checked before sending)");
         let roots = eth::accepted_burn_roots(&self.p, self.vault, 0, 10_000).await?;
         let (root_b, count) = *roots
             .iter()

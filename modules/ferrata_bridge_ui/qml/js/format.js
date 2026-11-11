@@ -28,8 +28,10 @@ function pct(used, capacity) {
 var MESSAGES = [
     [/Rejected in the wallet/, "Rejected in the wallet: nothing was signed or sent."],
     [/private burn|harness settles public/i, "Not available on this devnet: private transactions are proven by the LEZ wallet on a sequencer."],
-    [/ALREADY_CLAIMED|250 /, "Already claimed: this position was claimed before. Nothing was spent; refresh your positions."],
     [/NullifierAlreadyUsed|already released/, "Already released: this burn was paid out before. Nothing was sent."],
+    [/no burn to checkpoint/, "Nothing to checkpoint yet: a checkpoint covers burns, and there is none."],
+    [/ALREADY_CLAIMED|250 /, "Already claimed: this position was claimed before. Nothing was spent; refresh your positions."],
+
     [/INSUFFICIENT_BALANCE|254 /, "Insufficient balance: the account holds less than this denomination. Choose a smaller one or another account."],
     [/FROZEN|frozen/i, "Frozen: the bridge or this token is frozen by its freeze authority until the time shown in the registry. Try again after it."],
     [/CAP|cap exceeded|CapExceeded/i, "Cap exceeded: the rate limit for this token is used up. It refills over time (see the registry); try later or a smaller amount."],

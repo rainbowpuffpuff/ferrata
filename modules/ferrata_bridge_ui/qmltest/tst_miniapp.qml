@@ -188,6 +188,10 @@ Item {
             tryVerify(function () { return has(host.app.releaseText, "Released:"); }, 60000, host.app.releaseText);
             verify(has(host.app.releaseText.toLowerCase(), host.app.recipient.toLowerCase()), "paid to the fresh recipient");
             shot("23-released");
+            host.app.call("release", { burn_index: host.app.releaseBurn });
+            idle();
+            verify(has(el("error.message").text, "Already released"), "a second release: " + el("error.message").text);
+            shot("23b-error-already-released");
             tab("positions");
             click("positions.recover");
             idle();
