@@ -167,6 +167,12 @@ so "0 s after submission" means the cancellation landed in the first poll after 
 
 - A client for the LEZ sequencer's RPC and the Logos Blockchain node's channel answer, to read the
   key sets live; today they come through the node-view adapter.
+  - What it would read: `getLastBlockId`, then `getBlock(id)`. In LEZ v0.4.0-rc1 the block arrives as
+    base64 of its borsh encoding (`lez/common/src/block.rs`, `borsh_base64`): the header first, with
+    `block_id` (u64) at bytes 0..8 and the block hash at 40..72, as the checkpoint program's header
+    parser reads them; `bedrock_status` (0 Pending, 1 Safe, 2 Finalized) is the last byte.
+  - It is not built because no recorded `getBlock` response exists to test a decoder against. The lab
+    driver's `chain.tsv` is the tested path.
 - The computation of `states` from the node's own blocks (the checkpoint program's state at a tip).
 - The Logos module packaging (`logosctl daemon`).
 - Fee bumping of a stuck transaction (today: the receipt timeout and an alert).
