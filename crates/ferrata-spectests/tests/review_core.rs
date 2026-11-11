@@ -112,3 +112,38 @@ fn execution_root_follows_the_store_layout_after_deneb() {
     assert_eq!(get_lc_execution_root(&header, LcFork::Deneb, &spec), payload.hash_tree_root_deneb());
     assert_eq!(get_lc_execution_root(&header, LcFork::Electra, &spec), payload.hash_tree_root_deneb());
 }
+
+/// Row "`validate_light_client_update`": its shape checks include the finalized header's layout.
+/// An update without finality must carry the empty finalized header *of the store's layout*; the
+/// all-zero header of another layout is `ForkMismatch`, though `is_empty` holds for it. Review
+/// mutant R12 (dropping that layout check) survived every test before this one. (Decoded updates
+/// always have the store's layout, so this guards in-memory callers only.)
+#[test]
+fn an_empty_finalized_header_of_another_layout_is_refused() {
+    use ferrata_core::{
+        bls::{Aggregation, Blst},
+        merkle::ZERO,
+        store::LightClientStore,
+        types::{BeaconBlockHeader, Execution, LightClientHeader},
+        validate::{validate_light_client_update, Context, SignaturePath},
+    };
+    use ferrata_spectests::{load_sync_case, vectors_dir};
+    static BLST: Blst = Blst::new(Aggregation::Auto);
+    let case =
+        load_sync_case(&vectors_dir().join("electra/light_client/sync/pyspec_tests/light_client_sync")).unwrap();
+    let spec = &case.config.spec;
+    let ctx = Context { spec, genesis_validators_root: case.genesis_validators_root, bls: &BLST };
+    let store = LightClientStore::initialize(&case.trusted_block_root, &case.bootstrap, case.store_fork, spec).unwrap();
+    let (u, current) = &case.updates[0];
+    let mut plain = u.clone();
+    plain.finality_branch = vec![ZERO; u.finality_branch.len()];
+    plain.finalized_header = LightClientHeader::empty(case.store_fork);
+    assert_eq!(validate_light_client_update(&store.core, &plain, *current, &ctx, SignaturePath::Spec), Ok(()));
+    let mut other = plain.clone();
+    other.finalized_header = LightClientHeader { beacon: BeaconBlockHeader::default(), execution: Execution::None };
+    assert!(other.finalized_header.is_empty());
+    assert_eq!(
+        validate_light_client_update(&store.core, &other, *current, &ctx, SignaturePath::Spec),
+        Err(Error::ForkMismatch)
+    );
+}
