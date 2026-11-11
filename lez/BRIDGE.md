@@ -227,7 +227,7 @@ it signs at its own actor of `B`, which forwards the message to `config(cid)` (g
 only sets caps, so it cannot unfreeze. `Sunset` is the freeze authority's, one-way; `ImportRoot`
 refuses afterwards (`FROZEN`), everything else goes on.
 
-## 6. Time: attested Ethereum time (B2)
+## 6. Time: attested Ethereum time (milestone B2; review r3, attack A)
 
 **The flaw this replaces** (review r3, `notes/reviews/draft6/r3-engineer.md` §2 A). LEZ
 v0.4.0-rc1 neither bounds nor orders block timestamps, and the program took its time from the

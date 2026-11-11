@@ -26,6 +26,18 @@ deposits 1,355 more, releases 1,680 more, below), v5's storage slots in the fiel
 informational claim → burn rate, 4.5% → 4.8% (its candidate sets depend on the build's ids). The figures
 below are the re-run's where they differ.
 
+**Re-run with attested time (branch `lez-time-fix`, 11 November 2026).** The bridge program's freezes and
+caps now run on attested Ethereum time and no message carries a caller's time (`../../lez/BRIDGE.md` §6;
+image `d0c11833…23cd` at that worktree's path). `scripts/privacy/run.sh` ran on that worktree's build box
+(89 s) into a scratch directory; [`generated/`](generated/) was **not** replaced and is still the
+`integration3` run's. Against it: the gate's verdicts, the inbound and outbound rates and the recovery are
+unchanged; the private claim is 16 bytes shorter (8,937) and the plaintext claim 8 (2,053); the fields
+`Issue.time_ms` (in every private claim's boundary message) and `Claim.time_ms` are gone, so the private
+claim no longer publishes a caller's time (its block still dates it); claims' execution gas by position is
+now `[0, 4937, 4937, …]` (the `5,186`–`5,189` wobble is gone) and burns' is constant (it was `[0, -578, …]`);
+and the informational claim → burn rate is 5.0%, chance, with every candidate set of size 20 (it was 4.8%,
+one record with a set of size 1; that rate also moves with the build's ids, above).
+
 ## Results in brief
 
 | check | default private path | linkable variants |
