@@ -136,7 +136,8 @@ def main() -> None:
         for k, p0 in enumerate(runs[0]["proofs"] if runs else []):
             n = len(p0["proven_sessions"])
             for j, s0 in enumerate(p0["proven_sessions"]):
-                name = "LEZ's privacy-preserving circuit" if j == n - 1 else f"the program's private transition {j + 1}"
+                who = {"attest": "the consumer's", "bridge": "the bridge program's"}.get(job, "the program's")
+                name = "LEZ's privacy-preserving circuit" if j == n - 1 else f"{who} private transition {j + 1}"
                 gaps = [r["proofs"][k]["proven_sessions"][j]["gap_s"] for r in runs if len(r["proofs"]) > k]
                 users = sorted({r["proofs"][k]["proven_sessions"][j]["user_cycles"] for r in runs if len(r["proofs"]) > k})
                 ucell = f"{users[0]:,}" if len(users) == 1 else f"{users[0]:,}–{users[-1]:,}"
