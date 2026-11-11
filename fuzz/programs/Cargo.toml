@@ -16,10 +16,12 @@ ferrata-lez-bridge-wire = { path = "../../lez/bridge-wire" }
 ferrata-lez-wire = { path = "../../lez/wire" }
 ferrata-bridge-core = { path = "../../bridge/crates/ferrata-bridge-core" }
 checkpoint-core = { path = "../../checkpoint/crates/checkpoint-core", features = ["std"] }
+attestor-core = { path = "../../checkpoint/crates/attestor-core" }
 # LEZ v0.4.0-rc1 (read-only clone beside the repository), as checkpoint/fidelity uses it: the
 # runtime types of the bridge program and LEZ's own `Block` decoder, the differential reference.
 lee_core = { path = "../../../upstream/lez-v0.4.0-rc1/lee/state_machine/core", features = ["host"] }
 common = { path = "../../../upstream/lez-v0.4.0-rc1/lez/common" }
+lee = { path = "../../../upstream/lez-v0.4.0-rc1/lee/state_machine" }
 borsh = { version = "=1.6.1", features = ["derive"] }
 # The bridge guest's source is compiled into this crate (build.rs); it names `risc0_zkvm`.
 risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["std"] }
