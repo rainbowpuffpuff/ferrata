@@ -58,10 +58,10 @@ CHAIN_ID = 11155111
 VERIFIER = "0x8f0Af3Bf302C64d57f840127F94d9c123a8Fa2A0"  # RISC Zero's Groth16 verifier of sepolia-live-2 (reused)
 DELTA = 3600
 # The programs at the crown path (spike/tmp/crown/build/ids-methods-hex.txt; R0BF files of crown-proofs, ids.jsonl)
-IDS = {"checkpoint_b": "0x7e51065ffd0a8004fbdd0452871c4a77da7b59e6499365f43d61363fd4307754",
-       "checkpoint": "0x117384b6322ee8563e147eddb61341699fb3edfd3672c3cb39bc44a49d72086d",
-       "segment": "0xdad887eb1bc97fb6901d6b0f92779a18ebf4d70bc425405dc1de8265cfadeb78",
-       "release": "0x20595dc54bbd80cf487e4666286db9aab7a048e2e0d7646b42ec6d3c90ca2625"}
+IDS = {"checkpoint_b": "0xa475e8f9aaa41d0ae3bf9a20ae7d937ebc637a961808765f0ff175158760d3b2",
+       "checkpoint": "0xcf38b945a70b66d9132fb493b4baf1db308de73ccb8b1108e1c1f8a4363525e6",
+       "segment": "0xd2b30667292418ccf3cf68ee4fa2dc9ed7873de4034fcf1fb2ed3a6305a61cca",
+       "release": "0x17257f91bca70abf7a5476b498d687e95b6fb4d59e75b6bca1d46877ac9bf5cd"}
 ZERO32 = "0x" + "00" * 32
 GPU_WAIT_S = int(os.environ.get("CROWN_GPU_WAIT_S", "7200"))
 CAPTURE_ATTEMPTS = 12

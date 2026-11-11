@@ -35,8 +35,8 @@ _spec.loader.exec_module(ident)
 
 CHAIN_ID = 11155111
 CHECKPOINT_DOMAIN = "0xbdb3b52df781536a6bcce7088d156b3951a00a45ec8bcf2805ba8406fbeb5ec7"
-IDS = {"checkpoint_b": "0x7e51065ffd0a8004fbdd0452871c4a77da7b59e6499365f43d61363fd4307754",
-       "release": "0x20595dc54bbd80cf487e4666286db9aab7a048e2e0d7646b42ec6d3c90ca2625"}
+IDS = {"checkpoint_b": "0xa475e8f9aaa41d0ae3bf9a20ae7d937ebc637a961808765f0ff175158760d3b2",
+       "release": "0x17257f91bca70abf7a5476b498d687e95b6fb4d59e75b6bca1d46877ac9bf5cd"}
 RESULTS = []
 
 
