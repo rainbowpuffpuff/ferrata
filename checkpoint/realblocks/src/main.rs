@@ -38,7 +38,7 @@ const STATUS: [&str; 3] = ["Pending", "Safe", "Finalized"];
 
 fn args() -> Result<BTreeMap<String, String>> {
     let v: Vec<String> = std::env::args().skip(1).collect();
-    ensure!(v.len() % 2 == 0, "arguments come in --key value pairs");
+    ensure!(v.len().is_multiple_of(2), "arguments come in --key value pairs");
     v.chunks(2)
         .map(|p| Ok((p[0].strip_prefix("--").context("expected --key")?.to_string(), p[1].clone())))
         .collect()
@@ -312,7 +312,7 @@ fn main() -> Result<()> {
         config_changes: Vec::new(),
         blocks: blocks.clone(),
         t_index: u32::try_from(to - from)?,
-        attestations: vec![attestation.clone()],
+        attestations: vec![attestation],
         segments: Vec::new(),
     };
     let outcome = run_checkpoint_b(&input).map_err(|e| anyhow!("run_checkpoint_b refused the real span: {e:?}"))?;
@@ -326,7 +326,7 @@ fn main() -> Result<()> {
     let meta = json!({
         "kind": "checkpoint-b",
         "description": format!("rule (B) over the lab's real LEZ blocks {from}..={to} (parent tip {}), T = {to}, one certified attestation (n = 1, t = 1)", from - 1),
-        "journal": hex::encode(&journal),
+        "journal": hex::encode(journal.as_slice()),
         "journal_sha256": hex::encode(sha256_parts(&[journal.as_slice()])),
         "blocks": blocks.len(), "transactions": txs, "block_bytes": bytes, "input_bytes": encoded.len(),
         "first_block": from, "tip": to, "tip_hash": hex::encode(tip.tip_hash), "final_msg_id": hex::encode(tip.final_msg_id),
