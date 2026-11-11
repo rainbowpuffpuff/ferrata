@@ -121,6 +121,7 @@ pub struct Action {
 
 /// What a round decided.
 #[derive(Clone, Debug)]
+#[allow(clippy::large_enum_variant)] // one per round; boxing it buys nothing
 pub enum Plan {
     /// The instance holds the best verified update every source serves.
     UpToDate,
@@ -355,7 +356,7 @@ impl Updater {
 
     fn usable(&self, i: usize) -> bool {
         let name = self.sources[i].name();
-        self.metrics.sources.get(name).map_or(true, |s| s.demoted_until <= self.round)
+        self.metrics.sources.get(name).is_none_or(|s| s.demoted_until <= self.round)
     }
 
     fn stats(&mut self, i: usize) -> &mut SourceStats {
@@ -421,8 +422,8 @@ impl Updater {
     /// The full committees the store summarises, from the cache, the bootstrap, or the sources'
     /// period updates (accepted only when they match the summaries on chain).
     fn ensure_committees(&mut self, store: &CompactStore) -> Result<()> {
-        let mut needed = vec![store.current.clone()];
-        needed.extend(store.next.clone());
+        let mut needed = vec![store.current];
+        needed.extend(store.next);
         let missing = |me: &Self| needed.iter().filter(|s| !me.committees.contains_key(&s.pubkeys_root)).count();
         if missing(self) == 0 {
             return Ok(());
@@ -927,7 +928,7 @@ impl Updater {
             (_, None) => true,
             (Step::Miller, Some(j)) => !matches!(j.phase, Phase::Miller { .. }),
             (Step::Adopt(p), Some(j)) => {
-                j.adoption.as_ref().map_or(true, |a| a.complete || a.chunk_roots.len() as u8 > p)
+                j.adoption.as_ref().is_none_or(|a| a.complete || a.chunk_roots.len() as u8 > p)
             }
             (Step::Finish, Some(_)) | (Step::Init, Some(_)) => false,
         })

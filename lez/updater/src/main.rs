@@ -31,6 +31,28 @@ fn usage() -> ! {
     std::process::exit(2)
 }
 
+/// The chain to write to, and the Ferrata program's account on it.
+fn open_ledger(kind: &str, payer: &PrivateKey) -> Result<(Box<dyn Ledger>, AccountId)> {
+    match kind {
+        #[cfg(feature = "harness")]
+        "harness" => {
+            let l = ferrata_updater::ledger::HarnessLedger::new(std::slice::from_ref(payer));
+            Ok((Box::new(l), ferrata_updater::ledger::HarnessLedger::program()))
+        }
+        #[cfg(not(feature = "harness"))]
+        "harness" => {
+            let _ = payer;
+            bail!("daemon.ledger = \"harness\" needs a build with --features harness")
+        }
+        "sequencer" => {
+            bail!(
+                "daemon.ledger = \"sequencer\": the LEZ sequencer backend is not in this build (lez/updater/README.md)"
+            )
+        }
+        other => bail!("daemon.ledger = {other:?}: harness or sequencer"),
+    }
+}
+
 fn main() -> Result<()> {
     let mut args = std::env::args().skip(1);
     let (mut config, mut rounds, mut verbose) = (None, None, true);
@@ -53,19 +75,7 @@ fn main() -> Result<()> {
         .map_err(|_| anyhow!("the payer key is not 32 bytes"))?;
     let payer = PrivateKey::try_new(key_bytes).map_err(|e| anyhow!("payer key: {e:?}"))?;
 
-    let (mut ledger, program): (Box<dyn Ledger>, AccountId) = match file.daemon.ledger.as_str() {
-        #[cfg(feature = "harness")]
-        "harness" => {
-            let l = ferrata_updater::ledger::HarnessLedger::new(std::slice::from_ref(&payer));
-            (Box::new(l), ferrata_updater::ledger::HarnessLedger::program())
-        }
-        #[cfg(not(feature = "harness"))]
-        "harness" => bail!("daemon.ledger = \"harness\" needs a build with --features harness"),
-        "sequencer" => bail!(
-            "daemon.ledger = \"sequencer\": the LEZ sequencer backend is not in this build (lez/updater/README.md)"
-        ),
-        other => bail!("daemon.ledger = {other:?}: harness or sequencer"),
-    };
+    let (mut ledger, program) = open_ledger(&file.daemon.ledger, &payer)?;
 
     let state_dir = at(&file.daemon.state_dir);
     fs::create_dir_all(&state_dir)?;
@@ -110,7 +120,7 @@ fn main() -> Result<()> {
         eprintln!("[{}] /health and /metrics on http://{bound}", file.daemon.name);
     }
     let mut round = 0u64;
-    while !STOP.load(Ordering::SeqCst) && rounds.map_or(true, |n| round < n) {
+    while !STOP.load(Ordering::SeqCst) && rounds.is_none_or(|n| round < n) {
         round += 1;
         for u in updaters.iter_mut() {
             match u.tick(ledger.as_mut()) {

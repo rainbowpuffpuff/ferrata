@@ -244,7 +244,7 @@ pub fn encode_committee(c: &SyncCommittee) -> Vec<u8> {
 }
 
 pub fn decode_committee(b: &[u8]) -> Result<SyncCommittee> {
-    ensure!(!b.is_empty() && b.len() % 48 == 0, "a committee file of {} bytes", b.len());
+    ensure!(!b.is_empty() && b.len().is_multiple_of(48), "a committee file of {} bytes", b.len());
     let mut keys: Vec<[u8; 48]> = b.chunks(48).map(|c| c.try_into().expect("48")).collect();
     let aggregate_pubkey = keys.pop().expect("non-empty");
     Ok(SyncCommittee { pubkeys: keys, aggregate_pubkey })

@@ -337,7 +337,9 @@ fn gate_two_honest_one_adversary() {
             ]
         })
         .collect();
-    let mut rng = Rng(0x9e37_79b9_7f4a_7c15);
+    // GATE_SEED: another order of every block's transactions (and of the adversary's races).
+    let seed = std::env::var("GATE_SEED").ok().and_then(|v| v.parse::<u64>().ok());
+    let mut rng = Rng(seed.unwrap_or(0x9e37_79b9_7f4a_7c15));
     let mut junk_due = vec![false; recs.len()];
     let mut rounds = 0;
     loop {
@@ -360,7 +362,7 @@ fn gate_two_honest_one_adversary() {
                             idle[c] = false;
                         }
                         // The adversary races a third of the time.
-                        if d < 2 || rng.next() % 3 == 0 {
+                        if d < 2 || rng.next().is_multiple_of(3) {
                             block.push((c, d, Some(a), None));
                         }
                     }
@@ -428,7 +430,7 @@ fn gate_two_honest_one_adversary() {
         }
     }
     // Every recorded update applied exactly once, and the instance where the lab's ended.
-    let mut lines = vec![format!("gate\trounds\t{rounds}")];
+    let mut lines = vec![format!("gate\trounds\t{rounds}\tseed\t{}", seed.map_or("default".into(), |s| s.to_string()))];
     let mut total_updates = 0;
     for (c, r) in recs.iter().enumerate() {
         let s = store(&ups[c][0], &l);
@@ -476,7 +478,105 @@ fn gate_two_honest_one_adversary() {
     println!("{text}");
     let out = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("results");
     fs::create_dir_all(&out).unwrap();
-    fs::write(out.join("gate.txt"), &text).unwrap();
+    let name = seed.map_or("gate.txt".to_string(), |s| format!("gate-seed-{s}.txt"));
+    fs::write(out.join(name), &text).unwrap();
     assert!(ratio <= 0.10, "honest refused gas {ratio:.4} of applied");
     assert!((0.35..=0.65).contains(&share1) && (0.35..=0.65).contains(&share2), "shares {share1:.3} {share2:.3}");
+}
+
+/// A beacon node on loopback serving a recorded chain over the beacon API (SSZ, the `updates`
+/// endpoint's length-prefixed chunks), or failing every request with `status`.
+fn mock_beacon(rec: Recorded, fail_status: Option<u16>) -> String {
+    use std::{
+        io::{BufRead, BufReader, Write},
+        net::TcpListener,
+        sync::{Arc, Mutex},
+    };
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    let rec = Arc::new(Mutex::new(rec));
+    std::thread::spawn(move || {
+        for stream in listener.incoming() {
+            let Ok(mut stream) = stream else { continue };
+            let mut reader = BufReader::new(stream.try_clone().unwrap());
+            let mut line = String::new();
+            if reader.read_line(&mut line).is_err() {
+                continue;
+            }
+            // Drain the headers.
+            loop {
+                let mut h = String::new();
+                if reader.read_line(&mut h).is_err() || h == "\r\n" || h.is_empty() {
+                    break;
+                }
+            }
+            let path = line.split_whitespace().nth(1).unwrap_or("/").to_string();
+            let mut r = rec.lock().unwrap();
+            let body: Result<Vec<u8>, ()> = if fail_status.is_some() {
+                Err(())
+            } else if let Some(root) = path.strip_prefix("/eth/v1/beacon/light_client/bootstrap/0x") {
+                r.bootstrap(&root_of(root)).map_err(|_| ())
+            } else if path == "/eth/v1/beacon/light_client/finality_update" {
+                r.finality_update().map_err(|_| ())
+            } else if let Some(q) = path.strip_prefix("/eth/v1/beacon/light_client/updates?") {
+                let arg = |k: &str| {
+                    q.split('&').find_map(|kv| kv.strip_prefix(k)).and_then(|v| v.parse::<u64>().ok()).unwrap()
+                };
+                let list = r.updates(arg("start_period="), arg("count=")).unwrap();
+                let mut out = Vec::new();
+                for u in list {
+                    // length (fork digest + payload), fork digest, payload
+                    out.extend_from_slice(&((u.len() + 4) as u64).to_le_bytes());
+                    out.extend_from_slice(&[0xab, 0xcd, 0xef, 0x01]);
+                    out.extend_from_slice(&u);
+                }
+                Ok(out)
+            } else {
+                Err(())
+            };
+            let (status, body) = match body {
+                Ok(b) => ("200 OK".to_string(), b),
+                Err(()) => (format!("{} Error", fail_status.unwrap_or(404)), b"{\"code\":404}".to_vec()),
+            };
+            let _ = write!(stream, "HTTP/1.1 {status}\r\nContent-Type: application/octet-stream\r\nContent-Length: {}\r\nConnection: close\r\n\r\n", body.len());
+            let _ = stream.write_all(&body);
+        }
+    });
+    format!("http://{addr}")
+}
+
+fn root_of(hex_str: &str) -> Root {
+    root(hex_str).unwrap()
+}
+
+/// The HTTP path: `BeaconApi` (curl, SSZ, the `updates` endpoint's chunks) against two beacon
+/// nodes on loopback, one serving the recorded mainnet chain and one answering 503 to everything.
+#[test]
+fn beacon_api_sources_over_http() {
+    use ferrata_updater::source::BeaconApi;
+    let r = rec("mainnet");
+    let clock = Clock::new(r.entries.len());
+    let good = mock_beacon(r.source("node", &clock, 0), None);
+    let bad = mock_beacon(r.source("node", &clock, 0), Some(503));
+    let payer = key(0x27);
+    let mut l = HarnessLedger::new(std::slice::from_ref(&payer));
+    let sources: Vec<Box<dyn Source>> = vec![
+        Box::new(BeaconApi { name: "down".into(), base: bad, timeout_secs: 5 }),
+        Box::new(BeaconApi { name: "up".into(), base: good, timeout_secs: 5 }),
+    ];
+    let mut u = r.updater("http", payer, sources, None, policy(1));
+    settle(&mut u, &mut l, 100);
+    assert_eq!(store(&u, &l).finalized.slot, r.last_finalized().0);
+    assert_eq!(refused_total(&l), 0);
+    assert!(u.metrics.sources["down"].errors > 0 && !u.metrics.sources["down"].available);
+    assert!(u.metrics.sources["up"].available);
+    let (status, why) = u.health();
+    assert_eq!(status, "degraded");
+    assert!(why.iter().any(|w| w.contains("down unavailable")), "{why:?}");
+    println!(
+        "http: finalized {} via {} requests to `up`, {} errors from `down`",
+        store(&u, &l).finalized.slot,
+        u.metrics.sources["up"].requests,
+        u.metrics.sources["down"].errors
+    );
 }
