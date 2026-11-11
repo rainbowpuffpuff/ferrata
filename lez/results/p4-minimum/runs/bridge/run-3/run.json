@@ -1,0 +1,69 @@
+{
+ "run": 3,
+ "exit_code": 0,
+ "wall_s": 1673.31,
+ "gnu_time": {
+  "user_s": "12604.22",
+  "sys_s": "13.52",
+  "cpu_percent": "754%",
+  "wall": "27:53.27",
+  "max_rss_kib": "9652160",
+  "exit_status": "0"
+ },
+ "proof_lines": [
+  "private claim: REAL PROOF: execute_and_prove 909.8 s (prove + settle 910.4 s); receipt (succinct InnerReceipt, borsh) 227538 bytes; transaction 231950 bytes",
+  "private burn: REAL PROOF: execute_and_prove 754.2 s (prove + settle 754.5 s); receipt (succinct InnerReceipt, borsh) 226998 bytes; transaction 230870 bytes"
+ ],
+ "sampled": {
+  "max": {
+   "cgroup_current_bytes": 9904160768,
+   "meminfo_used_kib": 9672228,
+   "rss_sum_kib": 9758692,
+   "r0vm_rss_kib": 9652160
+  },
+  "samples": 3322,
+  "period_s": 0.5,
+  "cpu_s_by_process_name": {
+   "prove_bridge": 0.9,
+   "r0vm": 12604.6
+  }
+ },
+ "cgroup_after": {
+  "cgroup.controllers": null,
+  "cpu.max": null,
+  "cpu.weight": null,
+  "cpuset.cpus.effective": null,
+  "memory.max": null,
+  "memory.high": null,
+  "memory.current": null,
+  "memory.peak": null,
+  "memory.swap.max": null,
+  "memory.events": null,
+  "memory/memory.limit_in_bytes": "17179869184",
+  "memory/memory.max_usage_in_bytes": null,
+  "memory/memory.usage_in_bytes": "69345280",
+  "cpu/cpu.cfs_quota_us": "800000",
+  "cpu/cpu.cfs_period_us": "100000",
+  "cpuset/cpuset.cpus": "0-7"
+ },
+ "txs": {
+  "tx-claim.borsh": {
+   "bytes": 231950,
+   "sha256": "e03e3904f31c058fba2f855a709d5e8ac6a6839d7ec8273d92d88303547aac21"
+  },
+  "tx-burn.borsh": {
+   "bytes": 230870,
+   "sha256": "e8e53d8c58fef0192d1f7359b984c22940f0b2f4f0e01e27af2bcde639e1ef92"
+  }
+ },
+ "settle_exit": 0,
+ "settle_wall_s": 8.72,
+ "settle_lines": [
+  "private claim: SETTLED FROM tx-claim.borsh (receipt verified): receipt 227538 bytes, transaction 231950 bytes, settled in 0.5 s",
+  "private claim: settled: execution gas 551,502 (PRIVATE_VERIFY_GAS 409,764 + public part 141,738 cycles), storage gas 224,063, base fee 6,204,520; receipt at bytes 4,412..231,950 of 231,950",
+  "private burn: SETTLED FROM tx-burn.borsh (receipt verified): receipt 226998 bytes, transaction 230870 bytes, settled in 0.3 s",
+  "private burn: settled: execution gas 518,358 (PRIVATE_VERIFY_GAS 409,764 + public part 108,594 cycles), storage gas 224,063, base fee 5,939,368; receipt at bytes 3,872..230,870 of 230,870"
+ ],
+ "tamper": [],
+ "finished_at_utc": "2026-11-11T08:45:42Z"
+}

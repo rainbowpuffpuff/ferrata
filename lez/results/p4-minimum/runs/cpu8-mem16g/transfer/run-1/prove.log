@@ -1,0 +1,86 @@
+LEZ privacy-preserving circuit image 8fc948d117c11d55f2036748013b3dc599d6995545f0b020d090f544081cf257 (853552 ELF bytes); RISC0_DEV_MODE off
+native Transfer of 5000 from a private account to a public one; shape wallet: 1 private account, 6 dummy inputs, ciphertext padding Some(512), 1 recovery note(s), refund to the payer's alias
+[2m2026-11-11T09:42:21.477214Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::exec::executor[0m[2m:[0m execution time: 85.029818ms
+[2m2026-11-11T09:42:21.477299Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m number of segments: 4
+[2m2026-11-11T09:42:21.477335Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 3407872 total cycles
+[2m2026-11-11T09:42:21.477340Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 2851595 user cycles (83.68%)
+[2m2026-11-11T09:42:21.477345Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 373526 paging cycles (10.96%)
+[2m2026-11-11T09:42:21.477350Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 182751 reserved cycles (5.36%)
+[2m2026-11-11T09:42:21.477355Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m ecalls
+[2m2026-11-11T09:42:21.477360Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	1666 Sha2 calls, 148376 cycles, (4.35%)
+[2m2026-11-11T09:42:21.477364Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	415 Read calls, 4335 cycles, (0.13%)
+[2m2026-11-11T09:42:21.477369Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	1 Terminate calls, 2 cycles, (0.00%)
+[2m2026-11-11T09:42:21.477374Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 Write calls, 0 cycles, (0.00%)
+[2m2026-11-11T09:42:21.477378Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 User calls, 0 cycles, (0.00%)
+[2m2026-11-11T09:42:21.477385Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 Poseidon2 calls, 0 cycles, (0.00%)
+[2m2026-11-11T09:42:21.477389Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 BigInt calls, 0 cycles, (0.00%)
+[2m2026-11-11T09:42:21.477393Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m syscalls
+[2m2026-11-11T09:42:21.477400Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	189 Keccak calls
+[2m2026-11-11T09:42:21.477404Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	15 Read calls
+[2m2026-11-11T09:42:21.477408Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	1 Write calls
+[2m2026-11-11T09:42:21.477412Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	1 VerifyIntegrity2 calls
+[2m2026-11-11T09:42:21.477419Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	1 ProveKeccak calls
+[2m2026-11-11T09:42:21.477423Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 VerifyIntegrity calls
+REAL PROOF: execute_and_prove 999.2 s; receipt (succinct InnerReceipt, borsh) 238685 bytes; transaction 254244 bytes; 7 private actions
+wrote the proven transaction to tx-transfer.borsh (254244 bytes)
+[2m2026-11-11T09:59:00.577029Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::exec::executor[0m[2m:[0m execution time: 6.265539ms
+[2m2026-11-11T09:59:00.577064Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m number of segments: 1
+[2m2026-11-11T09:59:00.577072Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 65536 total cycles
+[2m2026-11-11T09:59:00.577079Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 15670 user cycles (23.91%)
+[2m2026-11-11T09:59:00.577085Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 36250 paging cycles (55.31%)
+[2m2026-11-11T09:59:00.577090Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 13616 reserved cycles (20.78%)
+[2m2026-11-11T09:59:00.577095Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m ecalls
+[2m2026-11-11T09:59:00.577486Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	10 Sha2 calls, 1760 cycles, (2.69%)
+[2m2026-11-11T09:59:00.577493Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	10 Read calls, 87 cycles, (0.13%)
+[2m2026-11-11T09:59:00.577498Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	1 Terminate calls, 2 cycles, (0.00%)
+[2m2026-11-11T09:59:00.577503Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 Write calls, 0 cycles, (0.00%)
+[2m2026-11-11T09:59:00.577507Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 User calls, 0 cycles, (0.00%)
+[2m2026-11-11T09:59:00.577512Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 Poseidon2 calls, 0 cycles, (0.00%)
+[2m2026-11-11T09:59:00.577516Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 BigInt calls, 0 cycles, (0.00%)
+[2m2026-11-11T09:59:00.577521Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m syscalls
+[2m2026-11-11T09:59:00.577525Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	2 Read calls
+[2m2026-11-11T09:59:00.577530Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	1 Write calls
+[2m2026-11-11T09:59:00.577534Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 VerifyIntegrity2 calls
+[2m2026-11-11T09:59:00.577539Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 VerifyIntegrity calls
+[2m2026-11-11T09:59:00.577544Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 ProveKeccak calls
+[2m2026-11-11T09:59:00.577548Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 Keccak calls
+public_context.actors (2): native@5TeWSsjg2gbxCyWVniXeCmwM7UtHTCK7svzJr5xYJzHf, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq
+public_context.authorized_accounts: {}
+execution.public_root: None
+execution.boundary (4 steps):
+  - PrivateToPublic from native@DE45EopJRCtGVru97pc6Q7zaP3jLSbemsPEGm4gBavJD to native@5TeWSsjg2gbxCyWVniXeCmwM7UtHTCK7svzJr5xYJzHf: Some(Credit(5000)) (17 bytes)
+  - EndPublicSubtree
+  - PrivateToPublic from native@DE45EopJRCtGVru97pc6Q7zaP3jLSbemsPEGm4gBavJD to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
+  - EndPublicSubtree
+execution.program_image_claims (0):
+execution.private_actions (7): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (11256 bytes)
+execution.async_messages: 0
+execution.recovery_bindings: 1
+execution.validity: ValidityWindows { blocks: ValidityWindow { from: None, to: None }, timestamps: ValidityWindow { from: None, to: None } }
+execution.fee: Some("refund_to None, fallback true")
+nonces: 0, admission evidence: 0
+
+settled: execution gas 409,764 (PRIVATE_VERIFY_GAS 409,764 + public part 0 cycles), storage gas 224,063, base fee 5,070,616
+	Command being timed: "/root/p4/transfer/prove_native_transfer --shape wallet --tx-out tx-transfer.borsh"
+	User time (seconds): 7592.09
+	System time (seconds): 5.43
+	Percent of CPU this job got: 760%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 16:39.32
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 9654172
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 0
+	Voluntary context switches: 369107
+	Involuntary context switches: 0
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 0
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

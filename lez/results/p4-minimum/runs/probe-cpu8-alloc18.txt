@@ -1,0 +1,18 @@
+# modal run minimum.py::probe_main --alloc-gib 18, P4_CPU=8 P4_MEM_MIB=16384 (output lines of the container and of Modal, counted)
+      8 P4-ALLOC GiB touched 1
+      8 P4-ALLOC GiB touched 2
+      8 P4-ALLOC GiB touched 3
+      8 P4-ALLOC GiB touched 4
+      8 P4-ALLOC GiB touched 5
+      8 P4-ALLOC GiB touched 6
+      8 P4-ALLOC GiB touched 7
+      8 P4-ALLOC GiB touched 8
+      8 P4-ALLOC GiB touched 9
+      8 P4-ALLOC GiB touched 10
+      8 P4-ALLOC GiB touched 11
+      8 P4-ALLOC GiB touched 12
+      8 P4-ALLOC GiB touched 13
+      8 P4-ALLOC GiB touched 14
+      8 P4-ALLOC GiB touched 15
+      8 Runner killed (SIGKILL), exit code: 137. Most often this happens when the process runs out of memory. Consider raising the memory limit to avoid unexpected termination
+      8 P4-ALLOC limit_in_bytes 17179869184

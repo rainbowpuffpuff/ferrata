@@ -1,0 +1,23 @@
+consumer image 3f357bae4537eafd9a922befade5275e7cf3453deb91c93d1698631ff9feee6d (419456 ELF bytes); program image e517399a94269f1a65b50c53c6187cd630c1f8f6d91f9617619ef94a3cba7177 (602872 ELF bytes); RISC0_DEV_MODE off
+record: header(id, 15624480) of instance c112f29279d8, mainnet block 26384851; fact: Transfer of token a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 in transaction 0, log 0
+SETTLED FROM tx-attest.borsh (receipt verified): receipt 227170 bytes, transaction 231214 bytes, settled in 0.2 s
+public_context.actors (2): ferrata@86EgeXxq1nN4eAQbZ2JmjcvXgEr8kETixDsJPCjDZFSK, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq
+public_context.authorized_accounts: {}
+execution.public_root: None
+execution.boundary (6 steps):
+  - PrivateToPublic from consumer@2Zg2ZpSuJvUqoUGyxFu2mY7rwV7JnWEQLGfc2rNDzDSV to ferrata@86EgeXxq1nN4eAQbZ2JmjcvXgEr8kETixDsJPCjDZFSK: Read (1 bytes)
+  - PublicToPrivate from ferrata@86EgeXxq1nN4eAQbZ2JmjcvXgEr8kETixDsJPCjDZFSK to consumer@2Zg2ZpSuJvUqoUGyxFu2mY7rwV7JnWEQLGfc2rNDzDSV: StateReply { state: 333 bytes } (337 bytes)
+  - EndPrivateSubtree
+  - EndPublicSubtree
+  - PrivateToPublic from native@2Zg2ZpSuJvUqoUGyxFu2mY7rwV7JnWEQLGfc2rNDzDSV to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
+  - EndPublicSubtree
+execution.program_image_claims (1):
+  - Disclosed { program: consumer, image_id: 3f357bae4537eafd9a922befade5275e7cf3453deb91c93d1698631ff9feee6d }
+execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1389 bytes)
+execution.async_messages: 0
+execution.recovery_bindings: 0
+execution.validity: ValidityWindows { blocks: ValidityWindow { from: None, to: None }, timestamps: ValidityWindow { from: None, to: None } }
+execution.fee: Some("refund_to Some(78Skt7EQTvVwfWVYnA1XMjghv3aUR1V5wgQAfVLKJZG5), fallback true")
+nonces: 0, admission evidence: 0
+
+settled: execution gas 421,641 (PRIVATE_VERIFY_GAS 409,764 + public part 11,877 cycles), storage gas 224,063, base fee 5,165,632

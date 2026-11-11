@@ -1,0 +1,133 @@
+{
+ "declared": {
+  "modal_cpu_request_and_limit": 8.0,
+  "modal_memory_mib_request_and_limit": 16384
+ },
+ "nproc": "8",
+ "nproc_all": "8",
+ "os_cpu_count": 8,
+ "sched_getaffinity": 8,
+ "cpuinfo_processors": 8,
+ "cpuinfo_model_names": [
+  "unknown"
+ ],
+ "cpuinfo_ids": [
+  [
+   "bogomips",
+   "3025.69"
+  ],
+  [
+   "cache size",
+   "8192 KB"
+  ],
+  [
+   "cpu family",
+   "25"
+  ],
+  [
+   "model",
+   "1"
+  ],
+  [
+   "stepping",
+   "unknown"
+  ],
+  [
+   "vendor_id",
+   "AuthenticAMD"
+  ]
+ ],
+ "cpuinfo_siblings": [
+  "8"
+ ],
+ "cpuinfo_cpu_cores": [
+  "8"
+ ],
+ "cpu_flags": [
+  "adx",
+  "avx2",
+  "bmi2",
+  "ht",
+  "sha_ni"
+ ],
+ "cgroup": {
+  "cgroup.controllers": null,
+  "cpu.max": null,
+  "cpu.weight": null,
+  "cpuset.cpus.effective": null,
+  "memory.max": null,
+  "memory.high": null,
+  "memory.current": null,
+  "memory.peak": null,
+  "memory.swap.max": null,
+  "memory.events": null,
+  "memory/memory.limit_in_bytes": "17179869184",
+  "memory/memory.max_usage_in_bytes": null,
+  "memory/memory.usage_in_bytes": "67330048",
+  "cpu/cpu.cfs_quota_us": "800000",
+  "cpu/cpu.cfs_period_us": "100000",
+  "cpuset/cpuset.cpus": "0-7"
+ },
+ "meminfo_kib": {
+  "MemTotal": 16777216,
+  "MemFree": 16711388,
+  "MemAvailable": 16711388,
+  "Cached": 30844,
+  "SwapTotal": 0,
+  "SwapFree": 0,
+  "Shmem": 0
+ },
+ "kernel": "Linux version 4.19.0-gvisor #1 SMP Sun Jan 10 15:06:54 PST 2016",
+ "os": "Ubuntu 24.04.5 LTS",
+ "glibc": "ldd (Ubuntu GLIBC 2.39-0ubuntu8.9) 2.39",
+ "env": {
+  "MODAL_REGION": "us-west",
+  "MODAL_CLOUD_PROVIDER": "CLOUD_PROVIDER_AZURE"
+ },
+ "spin": [
+  {
+   "procs": 4,
+   "wall_s": 5.04,
+   "cpu_s": 19.78,
+   "cpus_used": 3.93
+  },
+  {
+   "procs": 8,
+   "wall_s": 5.05,
+   "cpu_s": 39.55,
+   "cpus_used": 7.83
+  },
+  {
+   "procs": 16,
+   "wall_s": 5.12,
+   "cpu_s": 35.97,
+   "cpus_used": 7.02
+  }
+ ],
+ "file_1gib_written": {
+  "before": [
+   "100573184",
+   {
+    "MemTotal": 16777216,
+    "MemFree": 16680580,
+    "MemAvailable": 16680580,
+    "Cached": 30844,
+    "SwapTotal": 0,
+    "SwapFree": 0,
+    "Shmem": 0
+   }
+  ],
+  "after": [
+   "67788800",
+   {
+    "MemTotal": 16777216,
+    "MemFree": 16710940,
+    "MemAvailable": 16710940,
+    "Cached": 30844,
+    "SwapTotal": 0,
+    "SwapFree": 0,
+    "Shmem": 0
+   }
+  ]
+ }
+}

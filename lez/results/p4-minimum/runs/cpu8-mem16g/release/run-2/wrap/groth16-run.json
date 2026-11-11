@@ -1,0 +1,111 @@
+{
+ "run": 2,
+ "exit_code": 0,
+ "seconds": 18.77,
+ "cpu_s": 79.8,
+ "max_rss_kib": 7598788,
+ "sampled": {
+  "max": {
+   "cgroup_current_bytes": 7846326272,
+   "meminfo_used_kib": 7662516,
+   "rss_sum_kib": 7673168,
+   "r0vm_rss_kib": 0
+  },
+  "samples": 38,
+  "period_s": 0.5,
+  "cpu_s_by_process_name": {
+   "prover": 74.7
+  }
+ },
+ "proof_json": true,
+ "container": {
+  "declared": {
+   "modal_cpu_request_and_limit": 8.0,
+   "modal_memory_mib_request_and_limit": 16384
+  },
+  "nproc": "8",
+  "nproc_all": "8",
+  "os_cpu_count": 8,
+  "sched_getaffinity": 8,
+  "cpuinfo_processors": 8,
+  "cpuinfo_model_names": [
+   "unknown"
+  ],
+  "cpuinfo_ids": [
+   [
+    "bogomips",
+    "3679.78"
+   ],
+   [
+    "cache size",
+    "8192 KB"
+   ],
+   [
+    "cpu family",
+    "25"
+   ],
+   [
+    "model",
+    "17"
+   ],
+   [
+    "stepping",
+    "unknown"
+   ],
+   [
+    "vendor_id",
+    "AuthenticAMD"
+   ]
+  ],
+  "cpuinfo_siblings": [
+   "8"
+  ],
+  "cpuinfo_cpu_cores": [
+   "8"
+  ],
+  "cpu_flags": [
+   "adx",
+   "avx2",
+   "avx512f",
+   "bmi2",
+   "ht",
+   "sha_ni"
+  ],
+  "cgroup": {
+   "cgroup.controllers": null,
+   "cpu.max": null,
+   "cpu.weight": null,
+   "cpuset.cpus.effective": null,
+   "memory.max": null,
+   "memory.high": null,
+   "memory.current": null,
+   "memory.peak": null,
+   "memory.swap.max": null,
+   "memory.events": null,
+   "memory/memory.limit_in_bytes": "17179869184",
+   "memory/memory.max_usage_in_bytes": null,
+   "memory/memory.usage_in_bytes": "66924544",
+   "cpu/cpu.cfs_quota_us": "800000",
+   "cpu/cpu.cfs_period_us": "100000",
+   "cpuset/cpuset.cpus": "0-7"
+  },
+  "proc_self_cgroup": "7:pids:/ta-01M74ZFADVCTZZXBAVN5FGXTDR\n6:memory:/ta-01M74ZFADVCTZZXBAVN5FGXTDR\n5:job:/ta-01M74ZFADVCTZZXBAVN5FGXTDR\n4:devices:/ta-01M74ZFADVCTZZXBAVN5FGXTDR\n3:cpuset:/ta-01M74ZFADVCTZZXBAVN5FGXTDR\n2:cpuacct:/ta-01M74ZFADVCTZZXBAVN5FGXTDR\n1:cpu:/ta-01M74ZFADVCTZZXBAVN5FGXTDR",
+  "meminfo_kib": {
+   "MemTotal": 16777216,
+   "MemFree": 16711784,
+   "MemAvailable": 16711784,
+   "Cached": 30128,
+   "SwapTotal": 0,
+   "SwapFree": 0,
+   "Shmem": 0
+  },
+  "kernel": "Linux version 4.19.0-gvisor #1 SMP Sun Jan 10 15:06:54 PST 2016",
+  "os": "Debian GNU/Linux 12 (bookworm)",
+  "glibc": "ldd (Debian GLIBC 2.36-9+deb12u10) 2.36",
+  "env": {
+   "MODAL_REGION": "us-east",
+   "MODAL_CLOUD_PROVIDER": "CLOUD_PROVIDER_AZURE"
+  }
+ },
+ "finished_at_utc": "2026-11-11T09:37:14Z"
+}

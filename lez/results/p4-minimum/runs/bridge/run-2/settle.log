@@ -1,0 +1,8 @@
+bridge image 1156918fdfee530b4fc9cb1eae2078d161d21cb11e26ffbfc7f75aa427de9773 (541456 ELF bytes); RISC0_DEV_MODE off
+private claim: vault A leaf 5 (1 ETH, private kind) under root n = 8, configuration 38d10f3de3d8; N = 1dbba1cacb2c3b88480a9f252a16cac0d96c2685524509f4b2165d1a6df068c2
+private claim: SETTLED FROM tx-claim.borsh (receipt verified): receipt 227538 bytes, transaction 231950 bytes, settled in 0.5 s
+private claim: of its 231950 transaction bytes, none holds the destination, s, C, the leaf, the depositor, the witness or any of 32 path siblings; N, configId and the root read are present
+private claim: settled: execution gas 551,502 (PRIVATE_VERIFY_GAS 409,764 + public part 141,738 cycles), storage gas 224,063, base fee 6,204,520; receipt at bytes 4,412..231,950 of 231,950
+private burn: SETTLED FROM tx-burn.borsh (receipt verified): receipt 226998 bytes, transaction 230870 bytes, settled in 0.4 s
+private burn: one private-to-public delivery of the 185-byte Burn to the token's account, from an alias
+private burn: settled: execution gas 518,358 (PRIVATE_VERIFY_GAS 409,764 + public part 108,594 cycles), storage gas 224,063, base fee 5,939,368; receipt at bytes 3,872..230,870 of 230,870

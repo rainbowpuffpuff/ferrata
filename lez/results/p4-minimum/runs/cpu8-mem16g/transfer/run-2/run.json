@@ -1,0 +1,61 @@
+{
+ "run": 2,
+ "exit_code": 0,
+ "wall_s": 984.23,
+ "gnu_time": {
+  "user_s": "7485.47",
+  "sys_s": "5.27",
+  "cpu_percent": "761%",
+  "wall": "16:24.20",
+  "max_rss_kib": "9646316",
+  "exit_status": "0"
+ },
+ "proof_lines": [
+  "REAL PROOF: execute_and_prove 984.1 s; receipt (succinct InnerReceipt, borsh) 238685 bytes; transaction 254244 bytes; 7 private actions"
+ ],
+ "sampled": {
+  "max": {
+   "cgroup_current_bytes": 9898242048,
+   "meminfo_used_kib": 9666440,
+   "rss_sum_kib": 9746868,
+   "r0vm_rss_kib": 9646316
+  },
+  "samples": 1960,
+  "period_s": 0.5,
+  "cpu_s_by_process_name": {
+   "prove_native_tr": 0.0,
+   "r0vm": 7489.1
+  }
+ },
+ "cgroup_after": {
+  "cgroup.controllers": null,
+  "cpu.max": null,
+  "cpu.weight": null,
+  "cpuset.cpus.effective": null,
+  "memory.max": null,
+  "memory.high": null,
+  "memory.current": null,
+  "memory.peak": null,
+  "memory.swap.max": null,
+  "memory.events": null,
+  "memory/memory.limit_in_bytes": "17179869184",
+  "memory/memory.max_usage_in_bytes": null,
+  "memory/memory.usage_in_bytes": "69226496",
+  "cpu/cpu.cfs_quota_us": "800000",
+  "cpu/cpu.cfs_period_us": "100000",
+  "cpuset/cpuset.cpus": "0-7"
+ },
+ "txs": {
+  "tx-transfer.borsh": {
+   "bytes": 254244,
+   "sha256": "ec50436dfaf6970beca70537f6ee5ba8cd9084119fb71bda2f67b1d4d5a6aa4a"
+  }
+ },
+ "settle_exit": 0,
+ "settle_wall_s": 0.17,
+ "settle_lines": [
+  "SETTLED FROM tx-transfer.borsh (receipt verified): receipt 238685 bytes, transaction 254244 bytes, settled in 0.1 s"
+ ],
+ "tamper": [],
+ "finished_at_utc": "2026-11-11T10:15:26Z"
+}

@@ -1,0 +1,5 @@
+LEZ privacy-preserving circuit image 8fc948d117c11d55f2036748013b3dc599d6995545f0b020d090f544081cf257 (853552 ELF bytes); RISC0_DEV_MODE off
+
+thread 'main' (58) panicked at harness/src/bin/prove_native_transfer.rs:291:14:
+settlement accepts the transaction: "Invalid privacy preserving execution circuit proof"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

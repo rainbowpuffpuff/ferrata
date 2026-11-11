@@ -1,0 +1,88 @@
+{
+ "run": 2,
+ "prove": {
+  "exit_code": 0,
+  "wall_s": 27.06,
+  "gnu_time": {
+   "user_s": "388.09",
+   "sys_s": "3.20",
+   "cpu_percent": "1448%",
+   "wall": "0:27.01",
+   "max_rss_kib": "1539708",
+   "exit_status": "0"
+  },
+  "sampled": {
+   "max": {
+    "cgroup_current_bytes": 1520943104,
+    "meminfo_used_kib": 1485464,
+    "rss_sum_kib": 1602764,
+    "r0vm_rss_kib": 1515132
+   },
+   "samples": 54,
+   "period_s": 0.5,
+   "cpu_s_by_process_name": {
+    "ferrata-e2e": 0.0,
+    "r0vm": 389.1
+   }
+  },
+  "record": {
+   "image_id": "0x17257f91bca70abf7a5476b498d687e95b6fb4d59e75b6bca1d46877ac9bf5cd",
+   "input_sha256": "2b1210e90d4da82a9749f469d3c2e1fc414576219aaa11287318486de2be3b8e",
+   "journal_equals_native": true,
+   "loadavg_after": "0.00 0.00 0.00 0/0 0",
+   "loadavg_before": "0.00 0.00 0.00 0/0 0",
+   "paging_cycles": 21767,
+   "program_sha256": "a6abe992cada41db6af2b2934cc214a3fbbaf3d3d1d7e326186b5af70024668e",
+   "prover": "r0vm, CPU",
+   "rayon_num_threads": null,
+   "receipt_bytes": 223930,
+   "receipt_kind": "succinct",
+   "receipt_sha256": "9d7c84b70930b7cbb10f437aa09bda46b20299e801f36448a99ccbfb80d27dcc",
+   "reserved_cycles": 31569,
+   "risc0_zkvm": "3.0.5",
+   "segments": 1,
+   "threads": 16,
+   "total_cycles": 131072,
+   "user_cycles": 77736,
+   "verifies": true,
+   "wall_s": 26.962042154
+  }
+ },
+ "p254": {
+  "exit_code": 0,
+  "wall_s": 39.34,
+  "gnu_time": {
+   "user_s": "594.23",
+   "sys_s": "1.17",
+   "cpu_percent": "1515%",
+   "wall": "0:39.29",
+   "max_rss_kib": "1526532",
+   "exit_status": "0"
+  },
+  "sampled": {
+   "max": {
+    "cgroup_current_bytes": 1535705088,
+    "meminfo_used_kib": 1499876,
+    "rss_sum_kib": 1611652,
+    "r0vm_rss_kib": 1525836
+   },
+   "samples": 79,
+   "period_s": 0.5,
+   "cpu_s_by_process_name": {
+    "ferrata-e2e": 0.0,
+    "r0vm": 594.6
+   }
+  },
+  "record": {
+   "image_id": "0x17257f91bca70abf7a5476b498d687e95b6fb4d59e75b6bca1d46877ac9bf5cd",
+   "loadavg_after": "0.00 0.00 0.00 0/0 0",
+   "loadavg_before": "0.00 0.00 0.00 0/0 0",
+   "p254_seal_bytes": 222668,
+   "step": "identity_p254",
+   "threads": 16,
+   "wall_s": 39.253940911
+  }
+ },
+ "succinct_verified": true,
+ "finished_at_utc": "2026-11-11T09:35:10Z"
+}

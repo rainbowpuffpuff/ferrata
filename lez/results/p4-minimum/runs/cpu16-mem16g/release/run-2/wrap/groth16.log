@@ -1,0 +1,13 @@
+[90m09:36:40[0m DBG constraint system loaded [36mtook=[0m778.623215
+[90m09:36:41[0m DBG proving key loaded [36mtook=[0m1094.438858
+[90m09:36:47[0m DBG WTNS header [36mnInputs=[0m5635930 [36mnWitnesses=[0m5635930
+[90m09:36:47[0m DBG witness data loaded [36mtook=[0m5717.677019
+[90m09:36:47[0m DBG constraint system solver done [36mnbConstraints=[0m5676573 [36mtook=[0m360.136861
+[90m09:36:56[0m DBG prover done [36macceleration=[0mnone [36mbackend=[0mgroth16 [36mcurve=[0mbn254 [36mnbConstraints=[0m5676573 [36mtook=[0m8653.938479
++ WITNESS_FILE=/tmp/output.wtns
++ ulimit -s 16384
++ mkfifo /tmp/output.wtns
++ prover stark_verify.cs stark_verify_final.pk.dmp /tmp/output.wtns /mnt/proof.json
++ stark_verify /mnt/input.json /tmp/output.wtns
++ wait
++ rm /tmp/output.wtns
