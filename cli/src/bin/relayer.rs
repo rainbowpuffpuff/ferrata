@@ -374,7 +374,7 @@ async fn main() -> Result<()> {
                 account(cli.bridge_account.as_deref().ok_or_else(|| anyhow!("--bridge-account is required"))?)?;
             let payer = cli.lez_account.as_deref().map(account).transpose()?;
             let ctx = Context { program, cid: v.cid.0, chain_id: v.chain_id, vault: vault.into_array() };
-            Some((Sequencer { wallet, payer, bridge_program: None }, ctx))
+            Some((Sequencer { wallet, payer, bridge_program: None, synced: false }, ctx))
         }
         None => None,
     };

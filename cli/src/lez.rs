@@ -442,8 +442,10 @@ pub struct Sequencer {
     pub wallet: WalletCore<SequencerClient>,
     /// The account that pays the fee (it must be in the wallet).
     pub payer: Option<AccountId>,
-    /// The bridge program's binary, for private execution (`ClaimPrivately`).
+    /// The bridge program's binary, for private execution (`ClaimPrivately`, a private `Burn`).
     pub bridge_program: Option<PathBuf>,
+    /// Whether the wallet has synced its private accounts with the zone since it last sent.
+    pub synced: bool,
 }
 
 fn wallet_config_json(rpc: &str) -> String {
@@ -546,6 +548,7 @@ impl Ledger for Sequencer {
     }
 
     async fn submit(&mut self, call: &LezCall) -> Result<String> {
+        self.synced = false;
         let mentions: Vec<AccountMention> = call.mentions.iter().map(mention).collect();
         let message = borsh::to_vec(&call.message)?;
         if matches!(call.mentions.first(), Some(Mention::PrivateSelf(_))) {
@@ -577,7 +580,13 @@ impl Ledger for Sequencer {
     }
 
     async fn private_account(&mut self, id: AccountId) -> Result<Option<lee::Account>> {
-        self.wallet.sync_to_latest_block().await.map_err(|e| anyhow!("syncing the LEZ wallet with the zone: {e}"))?;
+        if !self.synced {
+            self.wallet
+                .sync_to_latest_block()
+                .await
+                .map_err(|e| anyhow!("syncing the LEZ wallet with the zone: {e}"))?;
+            self.synced = true;
+        }
         Ok(self.wallet.get_account_private(id))
     }
 }

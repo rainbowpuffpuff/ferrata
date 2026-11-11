@@ -53,6 +53,7 @@ options: nothing is built in.
 | `--lez-password-file FILE` | `FERRATA_LEZ_PASSWORD_FILE` | The LEZ wallet's password. |
 | `--bridge-account HEX` | `FERRATA_BRIDGE_ACCOUNT` | The bridge program's account id on LEZ. |
 | `--gap N` | | Accounts of each kind searched for deposit destinations (default 8). |
+| `--json` | | Print one JSON object instead of the report (see [For integrators](#for-integrators)). |
 
 `claim` and `burn` also take `--bridge-program FILE` (`FERRATA_BRIDGE_PROGRAM`): the bridge program's
 binary, which LEZ's wallet runs privately and proves locally for a private claim or burn.
@@ -102,6 +103,30 @@ example `0.1 ETH (100000000000000000 base units, 18 decimals)`. Decimals and the
 the token contract (18 and `ETH` for ETH). Amounts typed by the user (`burn --amount 0.1`) are parsed
 exactly; extra decimal places are refused.
 
+## For integrators
+
+`--json` makes every command print one JSON object on stdout and nothing else: the command, the report's lines
+(the same text, so what becomes public is still there) and a structured result. An error prints
+`{"error": …, "report": […]}` and exits with status 1. From the end-to-end test of 12 November 2026 (shortened, the lists elided):
+
+```text
+$ ferrata --json … scan
+{"command":"scan","report":["vault 0xCf7E…0Fc9: 16 deposits at block 22, root 0x9e1b…8936 (equal to depositRoot: checked)", …],
+ "result":{"deposits":11,"claimed":0,"refunded":0,"unclaimed":[{"kind":"public","account":0}, …],"burns":0,"released":0,"next_burn_counter":0,"holdings":[]}}
+$ ferrata --json … deposit --denomination 0 --from 0x…
+{"command":"deposit","report":[…, "privacy of these choices: Minimal: only the residual correlations (token, denomination, time)", …],
+ "result":{"commitment":"0xdd40b17e…61a4","nullifier":"0x…","j":11,"sent":null}}
+$ ferrata --json … --vault 0x000000000000000000000000000000000000dEaD scan
+{"error":"no contract at 0x000000000000000000000000000000000000dEaD on chain 1: check --vault and --eth-rpc","report":[]}
+```
+
+The results: `deposit` {commitment, nullifier, j, sent {tx, leaf}}; `scan` and `recover` {deposits, claimed,
+refunded, unclaimed [{kind, account}], burns, released, next_burn_counter, holdings [{kind, account, token,
+amount}]}; `claim` {nullifier, root_leaf_count, private, sent}; `burn` {burn_counter, r, c_out, sent}; `release`
+{nullifier, burn_root, checkpoint, calldata, job, sent}. A Rust program can call the same functions as the
+binary (`ferrata_cli::flow`), over any zone that implements `lez::Ledger`: the binary's is LEZ's wallet on a
+sequencer, the test's is the LEZ harness.
+
 ## Refusals
 
 A command checks what the program or the vault would refuse before it signs:
@@ -133,7 +158,7 @@ library function the binary calls (output of the run of 12 November 2026, below)
 ## Commands
 
 The outputs below come from the end-to-end test's run on the build box (local anvil, chain id 1; LEZ
-harness; 12 November 2026, `spike/tmp/bridge-cli/logs/e2e3.log` outside the repository), shortened where
+harness; 12 November 2026), shortened where
 marked `…`. The `keys` output comes from an earlier run of the binary on the same box. Addresses and
 hashes are those runs'.
 
@@ -493,9 +518,10 @@ fees (the gas drop's credit) is placed at genesis; the private accounts' states 
 decrypt are kept by the harness, checked against the chain's commitment after every private transaction.
 No real proof is made in this test.
 
-Measured on the Modal build box (CPU), 12 November 2026, at this branch's tip (three runs, after each
-change): 10 of 10 unit tests and 1 of 1 end-to-end test passed, the end-to-end test in 24.98 s, 27.33 s
-and 24.59 s. From the last run:
+Measured on the Modal build box (CPU), 12 November 2026 (five runs, one after each change; the last at
+this branch's tip): 10 of 10 unit tests and 1 of 1 end-to-end test passed every time, the end-to-end test in
+24.59 to 27.33 s; `cargo fmt --check` clean; `cargo clippy --all-targets` with no finding in the files this
+work changed. From the last run:
 
 ```text
 PRIVATE ROUND TRIP: 1 ETH deposited to private /0, claimed privately after its delay, burned from private /0, released by a relayer to a fresh address (999000000000000000 wei; relay fee 1000000000000000)

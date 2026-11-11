@@ -279,7 +279,7 @@ async fn zone(
     let cid = eth::view(&e.p, e.vault, IVault::lezConfigIdCall {}, None).await?;
     let payer = payer.map(account).transpose()?;
     let ctx = Context { program, cid: cid.0, chain_id: e.chain_id, vault: e.vault.into_array() };
-    let seq = Sequencer { wallet, payer, bridge_program };
+    let seq = Sequencer { wallet, payer, bridge_program, synced: false };
     // Reach the sequencer once, so that a wrong endpoint fails here with its address.
     seq.actor_state(lee_core::account::Actor::new(program, program))
         .await
