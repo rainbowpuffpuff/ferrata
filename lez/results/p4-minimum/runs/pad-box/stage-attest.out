@@ -1,0 +1,35 @@
+{
+  "binary_from": "lez/target/debug/prove_attest",
+  "ferrata_commit": "9bec9fe9514c5574d297b099d9d6ba701dc31969",
+  "ferrata_uncommitted_changes": 0,
+  "fixtures_from": "crates/ferrata-spectests/fixtures/mainnet-attest-2026-11-10",
+  "expected_consumer_image_id": "0af0739130e4f794eb7284e146dd6b672f28484574affb072310f6637eae2347",
+  "program_image_id": "cefed220138e6f6be692ffa042b571a5522f36e3401395b304f4c497940eee21",
+  "prove_command": "FERRATA_EXPECT_CONSUMER_IMAGE_ID=<expected_consumer_image_id> FERRATA_ATTEST_FIXTURE_DIR=<this directory>/mainnet-attest-2026-11-10 RISC0_DEV_MODE=0 RISC0_SERVER_PATH=<r0vm 3.0.5 built with CUDA> /usr/bin/time -v ./prove_attest --tx-out stage4-private-attest-tx.borsh > prove-attest.log 2>&1",
+  "files": {
+    "mainnet-attest-2026-11-10/SHA256SUMS": {
+      "bytes": 1726,
+      "sha256": "b3dc1cd99692007f22226720e83c6922a58b3194b5872f78929eb2f1c34f4cc2"
+    },
+    "mainnet-attest-2026-11-10/bootstrap.ssz": {
+      "bytes": 25672,
+      "sha256": "39c7dc83d265b3cfb61efbdf29d9c1673e018281d62970bb11469ae609a37143"
+    },
+    "mainnet-attest-2026-11-10/finality_update.ssz": {
+      "bytes": 2097,
+      "sha256": "7f12dfcc5b2e22faba2eb68d9161f2fedd6cc6a9ffd0e8fcd8111839cd403055"
+    },
+    "mainnet-attest-2026-11-10/fixture.json": {
+      "bytes": 2792,
+      "sha256": "5ca51e4312e38d01a1a88937e5f8fc767df49b1ded2d97c51b92eacc911bc40d"
+    },
+    "mainnet-attest-2026-11-10/receipts_26384851.json": {
+      "bytes": 1563122,
+      "sha256": "5602e32302d32d42efb98943a14a455d50c40817e95bb970ac7247040e52ca01"
+    },
+    "prove_attest": {
+      "bytes": 11582504,
+      "sha256": "4cf9db2f99e7b29ab8555684899736e1302fe61f135dbb11bb6caea849eec985"
+    }
+  }
+}

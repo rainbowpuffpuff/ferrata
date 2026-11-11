@@ -1,0 +1,40 @@
+warning: lee@0.1.0: Generated module at /home/q/Downloads/software_i_built/logos-rfp/spike/ferrata-wt-p4-pad/lez/target/debug/build/lee-946ef43b73a11943/out/lee/privacy_preserving_circuit/mod.rs
+warning: programs@0.1.0: Generated module at /home/q/Downloads/software_i_built/logos-rfp/spike/ferrata-wt-p4-pad/lez/target/debug/build/programs-64ee1b9189a8bf3b/out/lez/programs/mod.rs
+   Compiling methods v0.1.0 (/home/q/Downloads/software_i_built/logos-rfp/spike/ferrata-wt-p4-pad/lez/methods)
+   Compiling harness v0.1.0 (/home/q/Downloads/software_i_built/logos-rfp/spike/ferrata-wt-p4-pad/lez/harness)
+    Finished `test` profile [optimized + debuginfo] target(s) in 8.35s
+     Running tests/wallet_padding.rs (target/debug/deps/wallet_padding-0bc1e3b31040a221)
+
+running 1 test
+the wallet's transfer: PublicShape { private_actions: 7, action_bytes: [1704, 1704, 1704, 1704, 1704, 1704, 1704], ciphertext_bytes: [516, 516, 516, 516, 516, 516, 516], epk_bytes: [1092, 1092, 1092, 1092, 1092, 1092, 1092], recovery_bindings: [1258], async_messages: 0, refund_named: false, fee_fallback_bytes: Some(1868), public_root: false, nonces: 0 }
+private attestation: PublicShape { private_actions: 7, action_bytes: [1704, 1704, 1704, 1704, 1704, 1704, 1704], ciphertext_bytes: [516, 516, 516, 516, 516, 516, 516], epk_bytes: [1092, 1092, 1092, 1092, 1092, 1092, 1092], recovery_bindings: [1258], async_messages: 0, refund_named: false, fee_fallback_bytes: Some(1868), public_root: false, nonces: 0 }
+private claim: PublicShape { private_actions: 7, action_bytes: [1704, 1704, 1704, 1704, 1704, 1704, 1704], ciphertext_bytes: [516, 516, 516, 516, 516, 516, 516], epk_bytes: [1092, 1092, 1092, 1092, 1092, 1092, 1092], recovery_bindings: [1258], async_messages: 0, refund_named: false, fee_fallback_bytes: Some(1868), public_root: false, nonces: 0 }
+private burn: PublicShape { private_actions: 7, action_bytes: [1704, 1704, 1704, 1704, 1704, 1704, 1704], ciphertext_bytes: [516, 516, 516, 516, 516, 516, 516], epk_bytes: [1092, 1092, 1092, 1092, 1092, 1092, 1092], recovery_bindings: [1258], async_messages: 0, refund_named: false, fee_fallback_bytes: Some(1868), public_root: false, nonces: 0 }
+private attestation, bare: PublicShape { private_actions: 1, action_bytes: [1485], ciphertext_bytes: [297], epk_bytes: [1092], recovery_bindings: [], async_messages: 0, refund_named: true, fee_fallback_bytes: Some(1493), public_root: false, nonces: 0 }
+test padded_attestation_claim_and_burn_have_the_wallets_public_shape_and_settle ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 30.16s
+
+	Command being timed: "cargo test -p harness --locked --test wallet_padding -- --nocapture"
+	User time (seconds): 71.66
+	System time (seconds): 30.57
+	Percent of CPU this job got: 264%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:38.58
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 1235736
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 0
+	Voluntary context switches: 20
+	Involuntary context switches: 0
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 0
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
