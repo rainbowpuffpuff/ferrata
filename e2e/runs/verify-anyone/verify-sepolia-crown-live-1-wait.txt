@@ -1,0 +1,14 @@
+run crown-live-1 (live), vault 0xfE3199fa2634413CbAC317371076Cae3EB2d9E54, deployer 0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07, rpc https://ethereum-sepolia-rpc.publicnode.com
+PASS     chain: Sepolia (chain id 11155111), head 12111958, finalized 12111877
+PASS     image ids: e2e/crown/README.md's table = the ids pinned here = the run's records: README table equal, params.json equal, LEZ session A's deployed programs equal, programs/ids.jsonl equal
+PASS     deployment: every CREATE address from the deployer's nonces, code where a contract was created: emergency stop 0x2ea64575… nonce 10 (1698 B); FerrataRegistry library 0xe5d797c9… nonce 11 (12504 B); FerrataVault 0xfe3199fa… nonce 12 (24254 B); test token 0x8e1140d7… nonce 13 (1862 B); nonces N+4..N+6 are calls (no code)
+PASS     vault immutables (eth_call) = README ids, configId, genesisState, rule (B), verifier, registry library: code 24254 B; checkpointImageId = checkpoint_b 0xa475e8f9…; releaseImageId = release 0x17257f91…; mode B; lezConfigId = slot 2 = 0x0c71ff13…; genesisState 0xa696b3c8…; verifier = emergency stop 0x2ea64575… over RISC Zero's Groth16 verifier; FerrataRegistry linked
+PASS     configId and genesisState recomputed from LEZ session A's records: configId 0x0c71ff13… (bridge image 0x0e9dcd79…), genesisState at T0 = 178; bedrockGenesisId = sha256(deployment-settings.yaml)
+PASS     every recorded transaction: status, block, sender, target, gas used: 3 transactions: deposit-0 block 12111477 gas 559,652; deposit-1 block 12111574 gas 268,014; submit block 12111746 gas 729,361
+PASS     deployer's nonce = first nonce + 7 deployment transactions + the recorded ones: nonce 20 = 10 + 7 + 3
+PASS     deposits: Deposit events, commitments recomputed, leaf count, escrow: j0 leaf 0 1000000000000000 wei public (tx value 1002000000000000); j1 leaf 1 1000000000000000 wei private (tx value 1002000000000000); nextLeafIndex 2; deposits sent 2004000000000000 wei; vault balance 2004000000000000 wei
+PASS     checkpoint journal fields = the vault, the identity and the LEZ records: parent = genesisState, new state 0xe7a78c0f…, tip T1 = 252 (0xe5597702…), LEZ blocks 179..=252, burns 2, imported leaves 2, burn root 0xbefcd570…
+PASS     checkpoint submitted: CandidateSubmitted event = the journal; seal verified by the vault's verifier (eth_call): event = journal (tip 252, delta 3600 s); seal accepted for the vault's checkpointImageId, a changed seal refused
+PENDING  checkpoint final on the vault (finalizeAttested after the wait): finalState is still 0xa696b3c8…; finalize opens at 2026-11-11 13:27:48Z (submit block time + delta 3600 s)
+PENDING  releases: recipients, amounts, nullifiers spent, seals verified: not released yet: public-0 (1000000000000000 wei to 0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07; seal verifies); private-1 (1000000000000000 wei to 0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07; seal verifies)
+10 passed, 2 pending, 0 failed (48 RPC calls)

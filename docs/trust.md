@@ -301,9 +301,11 @@ safety role of §3.4.
   more is released or refunded, owed balances stay claimable, and whatever escrow remains stays in the
   vault (vault v5; [`vault/README.md`](../vault/README.md), "Verifier and stop", "Refunds"). Before the stop
   trips, an unsound proof system breaks everything a proof gates; caps and freezes bound it.
-- **Image ids are not reproducible yet** (a guest embeds its build paths): an immutable deployment needs
-  that fixed, so that anyone can check the pinned ids against the source ([`bridge.md`](design/bridge.md) §20;
-  [`lez/live/inbound/README.md`](../lez/live/inbound/README.md)).
+- **Image ids are reproducible only at a fixed, published build path** (a guest embeds its build paths): the
+  crown run's six programs rebuild to the deployed ids at the crown build path with the pinned toolchains
+  (`scripts/reproduce-image-ids.sh`, [`guides/verify.md`](guides/verify.md): 6 of 6 on the build box, the programs
+  byte-identical), and another path gives other ids. An immutable production deployment needs a build independent of
+  the path ([`bridge.md`](design/bridge.md) §20; [`lez/live/inbound/README.md`](../lez/live/inbound/README.md)).
 
 ## 6. Failure classes, what is lost, what bounds it (Security #9)
 

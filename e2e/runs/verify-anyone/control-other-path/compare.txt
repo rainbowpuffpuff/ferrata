@@ -1,0 +1,8 @@
+vault 0xfE3199fa2634413CbAC317371076Cae3EB2d9E54 (mode B): checkpointImageId is checkpoint_b's id, releaseImageId release's
+DIFFER attestation   rebuilt 0xcebccdeef28c2f454833bd4cd47d0474287eb3ca35db8a79034c8486464fc4dc  README 0x2228bb462b83032ade1c5de62d381b8dcffe9d10d9e977dce9e9fc8da31467cf  vault -  (sha256 3abe4e26c2ce0327…)
+DIFFER bridge        rebuilt 0xcf41b7e5c0583686a273b5114368f4873bbd614249647f43604a6caf8e675390  README 0x0e9dcd79482f9e0b83762b965d7e1d4319ffeba8a4bdfbdff148bbeaba79bbb6  vault -  (sha256 d4098ab238983225…)
+DIFFER checkpoint_b  rebuilt 0xcd33614662954e1ee39d174a872cbb7960e88e8b681620a29c9fad1ae4304ca8  README 0xa475e8f9aaa41d0ae3bf9a20ae7d937ebc637a961808765f0ff175158760d3b2  vault 0xa475e8f9aaa41d0ae3bf9a20ae7d937ebc637a961808765f0ff175158760d3b2  risc0-build = rebuilt  (sha256 9b6e6f796be03aa4…)
+DIFFER checkpoint    rebuilt 0xd82f6d4c223fb84d51492bed231b3eaa14814e3432a5defa1a8a2e6ab3cf2c36  README 0xcf38b945a70b66d9132fb493b4baf1db308de73ccb8b1108e1c1f8a4363525e6  vault -  risc0-build = rebuilt  (sha256 d1f381c6b6aa9a93…)
+DIFFER segment       rebuilt 0x7c71ecb8f1a5293ade1aa89614771736960d4a189d0372a69d7660806c730ebf  README 0xd2b30667292418ccf3cf68ee4fa2dc9ed7873de4034fcf1fb2ed3a6305a61cca  vault -  risc0-build = rebuilt  (sha256 058e27541284d4cb…)
+DIFFER release       rebuilt 0x7609f7b2ac71764ab2bf0f4d8f2b7a699a66fb5b581ee06b65e70106cef4c82f  README 0x17257f91bca70abf7a5476b498d687e95b6fb4d59e75b6bca1d46877ac9bf5cd  vault 0x17257f91bca70abf7a5476b498d687e95b6fb4d59e75b6bca1d46877ac9bf5cd  risc0-build = rebuilt  (sha256 3a0e21f761e9d188…)
+0 of 6 ids equal the deployed ones

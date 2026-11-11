@@ -81,8 +81,9 @@ vault's storage holds that same id, so the order is fixed (D2; [`bridge.md`](../
    immutable. Measured on a local v0.4.0-rc1 sequencer: 6 transactions per 508 KB image (storage gas
    479,496, execution gas 0), the loader recomputing the image id ([`lez/RESULTS.md`](../../lez/RESULTS.md)
    §9); the lab deployed its 602,888-byte image in 7 ([`lez/lab/README.md`](../../lez/lab/README.md)). **Image ids depend on
-   the build path** (a guest embeds its build paths), so the ids are not reproducible across machines
-   yet; the live crossing therefore deploys frozen binaries and refuses any other file
+   the build path** (a guest embeds its build paths), so the ids are reproducible only at the same path with the
+   same toolchains (the crown run's are: `scripts/reproduce-image-ids.sh`, [`verify.md`](verify.md)); the live
+   crossing therefore deploys frozen binaries and refuses any other file
    ([`lez/live/inbound/README.md`](../../lez/live/inbound/README.md); [`bridge.md`](../design/bridge.md)
    §20). A reproducible build is a precondition of an immutable production deployment.
 2. **LEZ: initialise an attestation instance** from a checkpoint you verified (`Init`, three
@@ -324,7 +325,8 @@ The attestation side's migration (successor and replacement instances) is in
 
 - the v5 vault on public Sepolia (the v3 vault of the end-to-end fixture is there, with one deposit) and a
   round trip there; a deployment on LEZ testnet 0.4 (which did not exist);
-- reproducible builds of the guests (image ids depend on the build path);
+- builds of the guests independent of the build path (today the ids reproduce at the published crown build path
+  only: `scripts/reproduce-image-ids.sh`);
 - `verify_checkpoint`; the `ferrata_attestor` module (rule (B)'s sequencer side);
 - on LEZ: multisig roles, the 14-day freeze-authority replacement, watchers, permissionless `Sunset`;
 - deeper inbound finality settings; the malicious-tenant test;
