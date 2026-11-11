@@ -1,0 +1,107 @@
+Cargo.toml | warning[unmatched-source]: allowed source was not encountered |  | 
+Cargo.toml | warning[unmatched-source]: allowed source was not encountered |  | 
+Cargo.toml | warning[unmatched-source]: allowed source was not encountered |  | 
+Cargo.toml | warning[unmatched-source]: allowed source was not encountered |  | 
+Cargo.toml | warning[unmatched-organization]: allowed 'github.com' organization was not encountered |  | 
+Cargo.toml | warning[unmatched-organization]: allowed 'github.com' organization was not encountered |  | 
+Cargo.toml | warning[license-exception-not-encountered]: license exception was not encountered |  | 
+Cargo.toml | warning[license-exception-not-encountered]: license exception was not encountered |  | 
+Cargo.toml | warning[license-not-encountered]: license was not encountered |  | 
+Cargo.toml | warning[license-not-encountered]: license was not encountered |  | 
+Cargo.toml | warning[license-not-encountered]: license was not encountered |  | 
+Cargo.toml | warning[license-not-encountered]: license was not encountered |  | 
+Cargo.toml | warning[license-not-encountered]: license was not encountered |  | 
+Cargo.toml | warning[license-not-encountered]: license was not encountered |  | 
+Cargo.toml | warning[license-not-encountered]: license was not encountered |  | 
+Cargo.toml | error[vulnerability]: Multiple timing variability issues in operations intended to be constant-time | crypto-bigint 0.5.5 | RUSTSEC-2026-0387
+Cargo.toml | error[unmaintained]: paste - no longer maintained | paste 1.0.15 | RUSTSEC-2024-0436
+cli/Cargo.toml | error[unmaintained]: unsafe-libyaml is unmaintained | unsafe-libyaml 0.2.11 | RUSTSEC-2024-0449
+cli/Cargo.toml | warning[unmatched-source]: allowed source was not encountered |  | 
+cli/Cargo.toml | warning[unmatched-source]: allowed source was not encountered |  | 
+cli/Cargo.toml | warning[license-not-encountered]: license was not encountered |  | 
+cli/Cargo.toml | warning[license-not-encountered]: license was not encountered |  | 
+cli/Cargo.toml | error[unmaintained]: Bincode is unmaintained | bincode 1.3.3 | RUSTSEC-2025-0141
+cli/Cargo.toml | error[vulnerability]: Multiple timing variability issues in operations intended to be constant-time | crypto-bigint 0.5.5 | RUSTSEC-2026-0387
+cli/Cargo.toml | error[vulnerability]: Multiple timing variability issues in operations intended to be constant-time | crypto-bigint 0.7.5 | RUSTSEC-2026-0387
+cli/Cargo.toml | error[vulnerability]: Non-constant-time mask generation and `u128` comparisons | ctutils 0.4.2 | RUSTSEC-2026-0385
+cli/Cargo.toml | error[unmaintained]: `derivative` is unmaintained; consider using an alternative | derivative 2.2.0 | RUSTSEC-2024-0388
+cli/Cargo.toml | error[vulnerability]: NSEC3 closest-encloser proof validation enters unbounded loop on cross-zone responses | hickory-proto 0.25.2 | RUSTSEC-2026-0118
+cli/Cargo.toml | error[vulnerability]: CPU exhaustion during message encoding due to O(n²) name compression | hickory-proto 0.25.2 | RUSTSEC-2026-0119
+cli/Cargo.toml | error[vulnerability]: Panic on a malformed `alpn` value when parsing SVCB or HTTPS records from text | hickory-proto 0.25.2 | RUSTSEC-2026-0487
+cli/Cargo.toml | error[vulnerability]: Panic when an SVCB or HTTPS parameter value is a single quote character | hickory-proto 0.25.2 | RUSTSEC-2026-0489
+cli/Cargo.toml | error[vulnerability]: Zone file lexer panics on a token of 4096 or more characters | hickory-proto 0.25.2 | RUSTSEC-2026-0490
+cli/Cargo.toml | error[vulnerability]: Memory amplification from record counts in the DNS message header | hickory-proto 0.25.2 | RUSTSEC-2026-0491
+cli/Cargo.toml | error[unmaintained]: paste - no longer maintained | paste 1.0.15 | RUSTSEC-2024-0436
+cli/Cargo.toml | error[unmaintained]: proc-macro-error2 is unmaintained | proc-macro-error2 2.0.1 | RUSTSEC-2026-0173
+cli/Cargo.toml | error[vulnerability]: Marvin Attack: potential key recovery through timing sidechannels | rsa 0.9.10 | RUSTSEC-2023-0071
+cli/Cargo.toml | error[vulnerability]: Logging user input may result in poisoning logs with ANSI escape sequences | tracing-subscriber 0.2.25 | RUSTSEC-2025-0055
+cli/Cargo.toml | error[unmaintained]: unsafe-libyaml is unmaintained | unsafe-libyaml 0.2.11 | RUSTSEC-2024-0449
+lez/Cargo.toml | warning[yanked]: detected yanked crate (try `cargo update -p crypto-bigint`) | crypto-bigint 0.7.5 | 
+lez/Cargo.toml | warning[unmatched-source]: allowed source was not encountered |  | 
+lez/Cargo.toml | warning[unmatched-source]: allowed source was not encountered |  | 
+lez/Cargo.toml | warning[unmatched-source]: allowed source was not encountered |  | 
+lez/Cargo.toml | warning[unmatched-source]: allowed source was not encountered |  | 
+lez/Cargo.toml | warning[unmatched-source]: allowed source was not encountered |  | 
+lez/Cargo.toml | warning[unmatched-organization]: allowed 'github.com' organization was not encountered |  | 
+lez/Cargo.toml | warning[unmatched-organization]: allowed 'github.com' organization was not encountered |  | 
+lez/Cargo.toml | warning[license-exception-not-encountered]: license exception was not encountered |  | 
+lez/Cargo.toml | warning[license-not-encountered]: license was not encountered |  | 
+lez/Cargo.toml | warning[license-not-encountered]: license was not encountered |  | 
+lez/Cargo.toml | warning[license-not-encountered]: license was not encountered |  | 
+lez/Cargo.toml | warning[license-not-encountered]: license was not encountered |  | 
+lez/Cargo.toml | warning[license-not-encountered]: license was not encountered |  | 
+lez/Cargo.toml | warning[license-not-encountered]: license was not encountered |  | 
+lez/Cargo.toml | error[unmaintained]: Bincode is unmaintained | bincode 1.3.3 | RUSTSEC-2025-0141
+lez/Cargo.toml | error[vulnerability]: Multiple timing variability issues in operations intended to be constant-time | crypto-bigint 0.5.5 | RUSTSEC-2026-0387
+lez/Cargo.toml | error[vulnerability]: Non-constant-time mask generation and `u128` comparisons | ctutils 0.4.2 | RUSTSEC-2026-0385
+lez/Cargo.toml | error[unmaintained]: `derivative` is unmaintained; consider using an alternative | derivative 2.2.0 | RUSTSEC-2024-0388
+lez/Cargo.toml | error[unmaintained]: paste - no longer maintained | paste 1.0.15 | RUSTSEC-2024-0436
+lez/Cargo.toml | error[vulnerability]: Marvin Attack: potential key recovery through timing sidechannels | rsa 0.9.10 | RUSTSEC-2023-0071
+lez/Cargo.toml | error[vulnerability]: Logging user input may result in poisoning logs with ANSI escape sequences | tracing-subscriber 0.2.25 | RUSTSEC-2025-0055
+bridge/Cargo.toml | error[unmaintained]: unsafe-libyaml is unmaintained | unsafe-libyaml 0.2.11 | RUSTSEC-2024-0449
+bridge/Cargo.toml | warning[unmatched-source]: allowed source was not encountered |  | 
+bridge/Cargo.toml | warning[unmatched-source]: allowed source was not encountered |  | 
+bridge/Cargo.toml | warning[unmatched-source]: allowed source was not encountered |  | 
+bridge/Cargo.toml | warning[unmatched-source]: allowed source was not encountered |  | 
+bridge/Cargo.toml | warning[unmatched-source]: allowed source was not encountered |  | 
+bridge/Cargo.toml | warning[unmatched-organization]: allowed 'github.com' organization was not encountered |  | 
+bridge/Cargo.toml | warning[unmatched-organization]: allowed 'github.com' organization was not encountered |  | 
+bridge/Cargo.toml | warning[license-exception-not-encountered]: license exception was not encountered |  | 
+bridge/Cargo.toml | warning[license-not-encountered]: license was not encountered |  | 
+bridge/Cargo.toml | warning[license-not-encountered]: license was not encountered |  | 
+bridge/Cargo.toml | warning[license-not-encountered]: license was not encountered |  | 
+bridge/Cargo.toml | warning[license-not-encountered]: license was not encountered |  | 
+bridge/Cargo.toml | warning[license-not-encountered]: license was not encountered |  | 
+bridge/Cargo.toml | warning[license-not-encountered]: license was not encountered |  | 
+bridge/Cargo.toml | warning[license-not-encountered]: license was not encountered |  | 
+bridge/Cargo.toml | warning[license-not-encountered]: license was not encountered |  | 
+bridge/Cargo.toml | error[unmaintained]: Bincode is unmaintained | bincode 1.3.3 | RUSTSEC-2025-0141
+bridge/Cargo.toml | error[unmaintained]: `derivative` is unmaintained; consider using an alternative | derivative 2.2.0 | RUSTSEC-2024-0388
+bridge/Cargo.toml | error[unmaintained]: paste - no longer maintained | paste 1.0.15 | RUSTSEC-2024-0436
+bridge/Cargo.toml | error[vulnerability]: Marvin Attack: potential key recovery through timing sidechannels | rsa 0.9.10 | RUSTSEC-2023-0071
+checkpoint/Cargo.toml | error[vulnerability]: Logging user input may result in poisoning logs with ANSI escape sequences | tracing-subscriber 0.2.25 | RUSTSEC-2025-0055
+checkpoint/Cargo.toml | warning[unmatched-source]: allowed source was not encountered |  | 
+checkpoint/Cargo.toml | warning[unmatched-source]: allowed source was not encountered |  | 
+checkpoint/Cargo.toml | warning[unmatched-source]: allowed source was not encountered |  | 
+checkpoint/Cargo.toml | warning[license-not-encountered]: license was not encountered |  | 
+checkpoint/Cargo.toml | warning[license-not-encountered]: license was not encountered |  | 
+checkpoint/Cargo.toml | warning[license-not-encountered]: license was not encountered |  | 
+checkpoint/Cargo.toml | error[unmaintained]: Bincode is unmaintained | bincode 1.3.3 | RUSTSEC-2025-0141
+checkpoint/Cargo.toml | error[vulnerability]: Multiple timing variability issues in operations intended to be constant-time | crypto-bigint 0.5.5 | RUSTSEC-2026-0387
+checkpoint/Cargo.toml | error[vulnerability]: Non-constant-time mask generation and `u128` comparisons | ctutils 0.4.2 | RUSTSEC-2026-0385
+checkpoint/Cargo.toml | error[unmaintained]: `derivative` is unmaintained; consider using an alternative | derivative 2.2.0 | RUSTSEC-2024-0388
+checkpoint/Cargo.toml | error[vulnerability]: NSEC3 closest-encloser proof validation enters unbounded loop on cross-zone responses | hickory-proto 0.25.2 | RUSTSEC-2026-0118
+checkpoint/Cargo.toml | error[vulnerability]: CPU exhaustion during message encoding due to O(n²) name compression | hickory-proto 0.25.2 | RUSTSEC-2026-0119
+checkpoint/Cargo.toml | error[vulnerability]: Panic on a malformed `alpn` value when parsing SVCB or HTTPS records from text | hickory-proto 0.25.2 | RUSTSEC-2026-0487
+checkpoint/Cargo.toml | error[vulnerability]: Panic when an SVCB or HTTPS parameter value is a single quote character | hickory-proto 0.25.2 | RUSTSEC-2026-0489
+checkpoint/Cargo.toml | error[vulnerability]: Zone file lexer panics on a token of 4096 or more characters | hickory-proto 0.25.2 | RUSTSEC-2026-0490
+checkpoint/Cargo.toml | error[vulnerability]: Memory amplification from record counts in the DNS message header | hickory-proto 0.25.2 | RUSTSEC-2026-0491
+checkpoint/Cargo.toml | error[unmaintained]: paste - no longer maintained | paste 1.0.15 | RUSTSEC-2024-0436
+checkpoint/Cargo.toml | error[unmaintained]: proc-macro-error2 is unmaintained | proc-macro-error2 2.0.1 | RUSTSEC-2026-0173
+checkpoint/Cargo.toml | error[vulnerability]: Marvin Attack: potential key recovery through timing sidechannels | rsa 0.9.10 | RUSTSEC-2023-0071
+checkpoint/Cargo.toml | error[vulnerability]: Logging user input may result in poisoning logs with ANSI escape sequences | tracing-subscriber 0.2.25 | RUSTSEC-2025-0055
+checkpoint/Cargo.toml | error[unmaintained]: unsafe-libyaml is unmaintained | unsafe-libyaml 0.2.11 | RUSTSEC-2024-0449
+checkpoint/Cargo.toml | error[vulnerability]: Data from an abandoned stream leaks into the next stream on a reused context | zstd 0.13.3 | RUSTSEC-2026-0391
+checkpoint/Cargo.toml | error[vulnerability]: `Seekable::decompress` sets a `Vec` length beyond its capacity for offsets past the end | zstd-safe 7.2.4 | RUSTSEC-2026-0398
+checkpoint/Cargo.toml | error[vulnerability]: Uninitialized memory exposed when streaming decompression of a legacy frame fails | zstd-safe 7.2.4 | RUSTSEC-2026-0403
+checkpoint/Cargo.toml | error[vulnerability]: WebAssembly allocator shim corrupts memory on allocation failure | zstd-sys 2.0.16+zstd.1.5.7 | RUSTSEC-2026-0410

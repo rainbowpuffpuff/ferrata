@@ -28,10 +28,7 @@ CARGO_DENY_VERSION=${CARGO_DENY_VERSION:-0.20.2}
 scrub() { for f in "$@"; do [ -f "$f" ] && sed -i -e "s|$ROOT/|./|g" -e "s|$ROOT|.|g" -e "s|$HOME|~|g" "$f"; done; }
 
 pin() { [ -n "$2" ] && printf '%s==%s' "$1" "$2" || printf '%s' "$1"; }
-c# Reports name paths relative to the repository and the home directory as ~, so they carry no machine paths.
-scrub() { for f in "$@"; do [ -f "$f" ] && sed -i -e "s|$ROOT/|./|g" -e "s|$ROOT|.|g" -e "s|$HOME|~|g" "$f"; done; }
-
-pin() { [ -n "$2" ] && printf -- '--version %s' "$2"; }
+cpin() { [ -n "$2" ] && printf -- '--version %s' "$2"; }
 
 install() {
   mkdir -p "$TOOLS/bin"
@@ -102,9 +99,19 @@ aderyn_() {
 halmos_() {
   mkdir -p "$OUT"
   cd "$ROOT/vault" || return 1
-  # The symbolic properties live in test/halmos/ (contracts named *Halmos*, functions check_*).
+  # halmos 0.3.3 declares its sha256 (and ripemd160) function over arg_size bits for an arg_size-byte input, so any
+  # sha256 it meets (the vault's Merkle tree, journals) stops it with a Z3 sort mismatch. The one-line fix (bits =
+  # bytes * 8), applied idempotently to the installed copy:
+  local sevm
+  for sevm in "$TOOLS"/venv/lib/python3*/site-packages/halmos/sevm.py; do
+    [ -f "$sevm" ] && sed -i -e 's/BitVecSorts\[arg_size\], BitVecSort256/BitVecSorts[arg_size * 8], BitVecSort256/' \
+      -e 's/BitVecSorts\[arg_size\], BitVecSort160/BitVecSorts[arg_size * 8], BitVecSort160/' "$sevm"
+  done
+  # The symbolic properties live in test/halmos/ (contract VaultHalmos, functions check_*).
   # Bounds: dynamic arrays of length 1 and byte strings of 4 bytes in generated calldata (see the triage note).
-  halmos --contract VaultHalmos --function check_ --default-array-lengths 1 --default-bytes-lengths 4 \
+  # HALMOS_TIMEOUT (seconds) bounds one run; HALMOS_ARGS adds options, e.g. --function check_reach.
+  ${HALMOS_TIMEOUT:+timeout --kill-after=30 $HALMOS_TIMEOUT} \
+    halmos --contract VaultHalmos --function check_ --default-array-lengths 1 --default-bytes-lengths 4 \
     ${HALMOS_ARGS:-} > "$OUT/halmos.log" 2>&1
   echo "halmos exit $?"
   scrub "$OUT/halmos.log"

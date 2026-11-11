@@ -19,7 +19,7 @@ interface SVM {
 ///         The verifier stands for RISC Zero's: `verify` returns only for a statement it was given, the soundness
 ///         assumption every proof system check rests on. Run: scripts/security-tools.sh halmos.
 contract VaultHalmos is VaultTestBase {
-    SVM internal constant svm = SVM(address(uint160(uint256(keccak256("svm cheat code")))));
+    SVM internal constant SYM = SVM(address(uint160(uint256(keccak256("svm cheat code")))));
 
     bytes32 internal constant R1 = keccak256("halmos: accepted burn root");
     bytes32 internal constant R2 = keccak256("halmos: revoked burn root");
@@ -69,6 +69,7 @@ contract VaultHalmos is VaultTestBase {
     ) public {
         address token = useEth ? ETH : address(usdc);
         vm.assume(denomIndex < 3);
+        denomIndex = _index(denomIndex);
         vm.assume(to != address(vault) && relayerAddr != address(vault) && caller != address(vault));
         FerrataVault.ReleaseRequest memory r = FerrataVault.ReleaseRequest({
             token: token,
@@ -159,7 +160,7 @@ contract VaultHalmos is VaultTestBase {
 
     function check_no_role_call_moves_funds(uint8 role) public {
         address caller = _role(role);
-        bytes memory data = svm.createCalldata("FerrataVault");
+        bytes memory data = SYM.createCalldata("FerrataVault");
         Books memory s0 = _books();
         vm.prank(caller);
         (bool ok,) = address(vault).call(data);
@@ -172,7 +173,7 @@ contract VaultHalmos is VaultTestBase {
         vm.prank(freezer);
         vault.retire();
         address caller = _role(role);
-        bytes memory data = svm.createCalldata("FerrataVault");
+        bytes memory data = SYM.createCalldata("FerrataVault");
         Books memory s0 = _books();
         vm.prank(caller);
         (bool ok,) = address(vault).call(data);
@@ -188,7 +189,7 @@ contract VaultHalmos is VaultTestBase {
     function check_after_stop_only_owed_leaves(address caller) public {
         vm.prank(freezer);
         estop.estop();
-        bytes memory data = svm.createCalldata("FerrataVault");
+        bytes memory data = SYM.createCalldata("FerrataVault");
         Books memory s0 = _books();
         uint256 count0 = vault.checkpointCount();
         vm.prank(caller);
@@ -210,6 +211,7 @@ contract VaultHalmos is VaultTestBase {
         address caller
     ) public {
         vm.assume(denomIndex < 3);
+        denomIndex = _index(denomIndex);
         vm.prank(freezer);
         estop.estop();
         FerrataVault.ReleaseRequest memory r = _request(useEth ? ETH : address(usdc), denomIndex, to, R1, nullifier);
@@ -354,8 +356,93 @@ contract VaultHalmos is VaultTestBase {
     }
 
     // --------------------------------------------------------------------------------------------------------
+    // 6. Reachability checks (`check_reach_*`): each asserts that a success the checks above rely on is
+    //    impossible, and Halmos must refute it with a counterexample (an expected FAIL). They show that the PASS
+    //    results above are not vacuous: the guarded calls do succeed on some paths.
+    // --------------------------------------------------------------------------------------------------------
+
+    function check_reach_release(bool useEth, uint8 denomIndex, address to, bytes32 nullifier) public {
+        vm.assume(denomIndex < 3);
+        denomIndex = _index(denomIndex);
+        FerrataVault.ReleaseRequest memory r = _request(useEth ? ETH : address(usdc), denomIndex, to, R1, nullifier);
+        _proveRelease(_releaseJournal(r));
+        (bool ok,) = address(vault).call(abi.encodeCall(FerrataVault.release, (r, SEAL)));
+        assert(!ok); // expected FAIL: a proven release on R1 with a fresh nullifier pays
+    }
+
+    function check_reach_role_call(uint8 role) public {
+        bytes memory data = SYM.createCalldata("FerrataVault");
+        vm.prank(_role(role));
+        (bool ok,) = address(vault).call(data);
+        assert(!ok); // expected FAIL: some role call succeeds
+    }
+
+    function check_reach_after_stop(address caller) public {
+        vm.prank(freezer);
+        estop.estop();
+        bytes memory data = SYM.createCalldata("FerrataVault");
+        vm.prank(caller);
+        (bool ok,) = address(vault).call(data);
+        assert(!ok); // expected FAIL: some call still succeeds after the stop
+    }
+
+    function check_reach_announce(uint256 m1) public {
+        uint256[] memory z = _three(0, 0, 0);
+        vm.prank(admin);
+        (bool ok,) = address(vault).call(abi.encodeCall(FerrataVault.announceFees, (ETH, _three(0, m1, 0), z, z)));
+        assert(!ok); // expected FAIL
+    }
+
+    function check_reach_register(uint256 d0) public {
+        address token = address(new FreshToken());
+        uint256[] memory denoms = new uint256[](1);
+        denoms[0] = d0;
+        FerrataVault.TokenParams memory p = _params(denoms, 1e12, 1);
+        vm.prank(admin);
+        (bool ok,) = address(vault).call(abi.encodeCall(FerrataVault.registerToken, (token, p)));
+        assert(!ok); // expected FAIL
+    }
+
+    function check_reach_deposit(bytes32 commitment) public {
+        vm.assume(commitment != bytes32(0));
+        vm.deal(bob, 10 ether);
+        uint256 total = _depositTotal(vault, ETH, 0);
+        vm.prank(bob);
+        (bool ok,) = address(vault).call{value: total}(
+            abi.encodeCall(FerrataVault.depositETH, (0, commitment, vault.depositCount(bob)))
+        );
+        assert(!ok); // expected FAIL: before the sunset, deposits are open
+    }
+
+    function check_reach_sunset_checkpoint(bytes32 newState) public {
+        _sunset();
+        FerrataVault.Checkpoint memory c = _nextCheckpoint(vault, R1, 2, true);
+        c.newState = newState;
+        uint256 count0 = vault.checkpointCount();
+        _submit(c);
+        _finalizeAfterDelta(c);
+        assert(vault.checkpointCount() == count0); // expected FAIL: a later sunset checkpoint is finalised
+    }
+
+    function check_reach_refund(bytes32[32] calldata path, address caller) public {
+        _sunsetRetireAndWait(REVOKE_WINDOW + 1, false);
+        vm.assume(caller != address(vault));
+        vm.prank(caller);
+        bool ok = _callRefund(RefundArgs(2, alice, address(usdc), 1, keccak256("halmos: c3")), path);
+        assert(!ok); // expected FAIL: leaf 2 (not imported) is refunded once the window has passed
+    }
+
+    // --------------------------------------------------------------------------------------------------------
     // Helpers
     // --------------------------------------------------------------------------------------------------------
+
+    /// @dev The same index, made concrete on each path (the fixture's helpers index memory arrays with it, and
+    ///      Halmos needs concrete memory offsets). Callers assume i < 3.
+    function _index(uint8 i) internal pure returns (uint8) {
+        if (i == 0) return 0;
+        if (i == 1) return 1;
+        return 2;
+    }
 
     function _role(uint8 role) internal view returns (address) {
         return role == 0 ? admin : role == 1 ? freezer : watcher;
