@@ -24,8 +24,7 @@ bench out=("bench/report/" + stamp + "-" + commit):
     {{box}} scripts/bench.sh box {{out}}
     python3 -I scripts/bench_report.py {{out}}
 
-# The user-side proofs (attestation, claim, burn, padded as LEZ's wallet pads) for real on Modal containers held to
-# BENCH_CPUS CPUs (default 16, the declared minimum) and 16 GiB; needs BENCH_MODAL_PROFILE.
+# The user-side proofs (attestation, claim, burn, padded like LEZ's wallet) proven on Modal at BENCH_CPUS CPUs, 16 GiB.
 bench-user out=("bench/report/" + stamp + "-" + commit) stage=(justfile_directory() + "/../tmp/bench-stage/" + commit):
     {{box}} scripts/bench.sh user-stage {{stage}}
     if [ -n "{{fetch}}" ]; then {{fetch}} {{stage}}/stage/bundles -- true; fi
@@ -37,9 +36,7 @@ bench-user out=("bench/report/" + stamp + "-" + commit) stage=(justfile_director
 m0 *args:
     python3 -I scripts/m0.py {{args}}
 
-# A versioned release: programs with image ids and sha256, the vault's bytecode, the CLI, MANIFEST.json, SHA256SUMS.
-# The bundle stays where it was built (on the box: fetch it with FERRATA_BOX_FETCH); releases/VERSION/ gets its
-# MANIFEST.json and SHA256SUMS.
+# A versioned release (programs and image ids, vault bytecode, CLI, MANIFEST.json, SHA256SUMS), recorded in releases/.
 release version out=(justfile_directory() + "/../tmp/releases"):
     {{box}} scripts/release.sh build {{out}}
     {{box}} scripts/release.sh package {{out}} {{version}}

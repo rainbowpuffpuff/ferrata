@@ -135,6 +135,16 @@ PY
   if [ "$SEND" = 1 ]; then
     [ -n "${ETH_FROM:-}" ] || die "ETH_FROM: the deployer's address"
     run "$ROOT/vault/script/deploy.sh" || die "vault deployment failed (its record: $FERRATA_OUT)"
+    # The deployed vault must carry the release's programs: read its immutables back from the chain.
+    vault=$(python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1]))["vault"])' "$FERRATA_OUT")
+    ck=$( [ "$MODE" = B ] && echo checkpoint_b || echo checkpoint )
+    for pair in "checkpointImageId:$ck" "releaseImageId:release"; do
+      got=$(cast call --rpc-url "$RPC" "$vault" "${pair%%:*}()(bytes32)")
+      want=$(python3 -I "$ROOT/scripts/release_manifest.py" id "$REL" "${pair#*:}")
+      [ "$got" = "$want" ] || die "vault $vault: ${pair%%:*} $got, the release's ${pair#*:} is $want"
+      say "  vault $vault: ${pair%%:*} = the release's ${pair#*:} ($got)"
+    done
+    [ -n "$(cast code --rpc-url "$RPC" "$vault")" ] || die "no code at $vault"
   else
     say "+ FERRATA_MODE=$MODE FERRATA_RPC_URL=$RPC FERRATA_PARAMS=$OUTD/params.json FERRATA_GAS_RULE=$GAS_RULE vault/script/deploy.sh"
   fi
