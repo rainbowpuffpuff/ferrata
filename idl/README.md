@@ -22,8 +22,12 @@ macros. It uses SPEL's fields as SPEL defines them:
   instruction enum. Each instruction's `variant` is its variant, its `discriminator` the one-byte
   borsh variant index that starts the message, and its `args` the variant's fields in order.
   The message is borsh: what `discriminator ++ borsh(args)` gives is exactly what the program decodes.
-- `accounts` of an instruction: the actor that receives the message (LEZ v0.4 delivers each message
-  to one actor) and the actors it writes through the messages it sends. `pda.seeds` lists the
+- `accounts` of an instruction: the actors a transaction sending it lists, as the harness's
+  transactions list them (`lez/harness/src/lib.rs`, `bridge.rs`): the receiver first (LEZ v0.4
+  delivers each message to one actor), then the actors it reaches through the messages it sends.
+  A bridge message that reads an attestation record lists it as `attestation_record`, with `owner`
+  `ferrata_attestation` (that program's `header(instance, slot)`). Optional actors say when they
+  are listed. `pda.seeds` lists the
   derivation's inputs; the hash is Ferrata's, not SPEL's: `SHA-256(domain || tag || parts)` with
   domain `ferrata-lez/v1/` (attestation) or `ferrata-lez/v1/bridge/` (bridge), then LEZ's
   `AccountId::for_public_pda(program, seed)`. A tool that derives SPEL's own PDAs from these seeds

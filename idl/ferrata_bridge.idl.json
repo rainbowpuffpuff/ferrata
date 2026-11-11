@@ -54,7 +54,7 @@
             ]
           },
           "docs": [
-            "debited when the own actor holds too little"
+            "the root instead of the own actor when the denomination is debited from holder(account)"
           ]
         },
         {
@@ -83,6 +83,30 @@
           },
           "docs": [
             "admits the note: denomination, burn freezes and caps"
+          ]
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "config"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              }
+            ]
+          },
+          "docs": [
+            "Admit: the global burn freeze and bucket"
           ]
         },
         {
@@ -214,6 +238,35 @@
               }
             ]
           }
+        },
+        {
+          "name": "attestation_record",
+          "writable": false,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "header"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              },
+              {
+                "kind": "arg",
+                "path": "record_slot"
+              }
+            ]
+          },
+          "docs": [
+            "the record the message reads; the attestation program's account (its PDA domain is ferrata-lez/v1/, see ferrata_attestation.idl.json)"
+          ],
+          "owner": "ferrata_attestation"
         },
         {
           "name": "root",
@@ -413,8 +466,37 @@
             ]
           },
           "docs": [
-            "cid computed from config"
+            "cid computed from config; created: the transaction carries LEZ's PDA evidence for its seed"
           ]
+        },
+        {
+          "name": "attestation_record",
+          "writable": false,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "header"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              },
+              {
+                "kind": "arg",
+                "path": "record_slot"
+              }
+            ]
+          },
+          "docs": [
+            "the record the message reads; the attestation program's account (its PDA domain is ferrata-lez/v1/, see ferrata_attestation.idl.json)"
+          ],
+          "owner": "ferrata_attestation"
         }
       ],
       "args": [
@@ -475,7 +557,7 @@
             ]
           },
           "docs": [
-            "the imported root"
+            "the imported root, the transaction's root actor"
           ]
         },
         {
@@ -580,7 +662,7 @@
             ]
           },
           "docs": [
-            "credited by Mint, for a public destination"
+            "holder(account) of each account credited (the destination, the fee recipient, the relayer), each listed once"
           ]
         }
       ],
@@ -753,6 +835,30 @@
           },
           "docs": [
             "written once: a second Spend refuses with 250 ALREADY_CLAIMED"
+          ]
+        },
+        {
+          "name": "holder",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "holder"
+              },
+              {
+                "kind": "arg",
+                "path": "holder"
+              }
+            ]
+          },
+          "docs": [
+            "holder(account) of each account credited (the destination, the fee recipient, the relayer), each listed once"
           ]
         }
       ],
@@ -1127,6 +1233,35 @@
           }
         },
         {
+          "name": "attestation_record",
+          "writable": false,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "header"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              },
+              {
+                "kind": "arg",
+                "path": "record_slot"
+              }
+            ]
+          },
+          "docs": [
+            "the record the message reads; the attestation program's account (its PDA domain is ferrata-lez/v1/, see ferrata_attestation.idl.json)"
+          ],
+          "owner": "ferrata_attestation"
+        },
+        {
           "name": "token_actor",
           "writable": true,
           "signer": false,
@@ -1220,6 +1355,35 @@
               }
             ]
           }
+        },
+        {
+          "name": "attestation_record",
+          "writable": false,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "header"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              },
+              {
+                "kind": "arg",
+                "path": "record_slot"
+              }
+            ]
+          },
+          "docs": [
+            "the record the message reads; the attestation program's account (its PDA domain is ferrata-lez/v1/, see ferrata_attestation.idl.json)"
+          ],
+          "owner": "ferrata_attestation"
         },
         {
           "name": "token_actor",
@@ -1732,6 +1896,35 @@
           "docs": [
             "target when token is Some"
           ]
+        },
+        {
+          "name": "attestation_record",
+          "writable": false,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "header"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              },
+              {
+                "kind": "arg",
+                "path": "record_slot"
+              }
+            ]
+          },
+          "docs": [
+            "the record whose execution time the target reads first; the attestation program's account (its PDA domain is ferrata-lez/v1/, see ferrata_attestation.idl.json)"
+          ],
+          "owner": "ferrata_attestation"
         }
       ],
       "args": [
@@ -1952,6 +2145,35 @@
           "docs": [
             "target when token is Some"
           ]
+        },
+        {
+          "name": "attestation_record",
+          "writable": false,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "header"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              },
+              {
+                "kind": "arg",
+                "path": "record_slot"
+              }
+            ]
+          },
+          "docs": [
+            "the record whose execution time the target advances to; the attestation program's account (its PDA domain is ferrata-lez/v1/, see ferrata_attestation.idl.json)"
+          ],
+          "owner": "ferrata_attestation"
         }
       ],
       "args": [

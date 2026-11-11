@@ -43,7 +43,35 @@
             ]
           },
           "docs": [
-            "instance(instance_id(config, checkpoint)); Init also opens the adoption job and writes header(id, slot) of the bootstrap's header"
+            "instance(instance_id(config, checkpoint)), created: the transaction carries LEZ's PDA evidence for its seed"
+          ]
+        },
+        {
+          "name": "job",
+          "writable": true,
+          "signer": false,
+          "init": true,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "job"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              },
+              {
+                "kind": "arg",
+                "path": "job_id"
+              }
+            ]
+          },
+          "docs": [
+            "the job that adopts the bootstrap's committee"
           ]
         }
       ],
@@ -105,6 +133,34 @@
               }
             ]
           }
+        },
+        {
+          "name": "job",
+          "writable": true,
+          "signer": false,
+          "init": true,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "job"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              },
+              {
+                "kind": "arg",
+                "path": "job_id"
+              }
+            ]
+          },
+          "docs": [
+            "job(id, job_id): job_id hashes the instance, its store digest and the update"
+          ]
         }
       ],
       "args": [
@@ -202,6 +258,58 @@
               }
             ]
           }
+        },
+        {
+          "name": "instance",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "instance"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              }
+            ]
+          },
+          "docs": [
+            "the last part of Init's adoption only: activates the instance"
+          ]
+        },
+        {
+          "name": "header",
+          "writable": true,
+          "signer": false,
+          "init": true,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "header"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              },
+              {
+                "kind": "arg",
+                "path": "slot"
+              }
+            ]
+          },
+          "docs": [
+            "the last part of Init's adoption only: the bootstrap header's record"
+          ]
         }
       ],
       "args": [

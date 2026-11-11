@@ -333,10 +333,10 @@ def attestation_idl():
     variants = A_TYPES[1]["variants"]
     I = lambda *a, **k: instr(variants, *a, **k)
     instructions = [
-        I(0, "init", [INSTANCE(init=True, docs="instance(instance_id(config, checkpoint)); Init also opens the adoption job and writes header(id, slot) of the bootstrap's header")], "Create an instance from a bootstrap matching checkpoint, and open the job that adopts its committee. Anyone may call."),
-        I(1, "open", [INSTANCE()], "Step 1 of an update (CompactUpdate, SignerWitness encodings): opens job(id, job_id). Anyone may call; no step checks a sender."),
+        I(0, "init", [INSTANCE(init=True, docs="instance(instance_id(config, checkpoint)), created: the transaction carries LEZ's PDA evidence for its seed"), JOB(init=True, docs="the job that adopts the bootstrap's committee")], "Create an instance from a bootstrap matching checkpoint, and open the job that adopts its committee. Anyone may call."),
+        I(1, "open", [INSTANCE(), JOB(init=True, docs="job(id, job_id): job_id hashes the instance, its store digest and the update")], "Step 1 of an update (CompactUpdate, SignerWitness encodings): opens job(id, job_id). Anyone may call; no step checks a sender."),
         I(2, "miller", [JOB()], "Step 2, at the job: the Miller loops."),
-        I(3, "adopt", [JOB()], "One part of the job's committee adoption: n / parts uncompressed keys."),
+        I(3, "adopt", [JOB(), INSTANCE(docs="the last part of Init's adoption only: activates the instance"), HEADER(init=True, docs="the last part of Init's adoption only: the bootstrap header's record")], "One part of the job's committee adoption: n / parts uncompressed keys."),
         I(4, "finish", [JOB(), INSTANCE(docs="receives Apply"), HEADER(init=True, docs="receives Record when a new header is finalized")], "Step 3, at the job: the final exponentiation, then Apply to the instance."),
         I(5, "read", [ANY("any actor of this program; replies StateReply with its state")], "Reply with this actor's state (LEZ v0.4's read idiom)."),
         I(6, "read_padded", [ANY("any actor of this program")], "As Read, carrying bytes the program ignores (cost measurement)."),
@@ -579,27 +579,35 @@ def bridge_idl():
     BURN = lambda: acct("burn", pda("burn", "config_id", "note_hash"), init=True, docs="burn(cid, H(note)), written once")
     OWN = lambda who: acct("own", None, signer=True, docs=f"{who}'s own account (the program's actor at it); signed")
     ANY = lambda docs: acct("receiver", None, writable=False, docs=docs)
+
+    def RECORD(docs="the record the message reads"):
+        """The attestation program's header(instance, slot): another program's actor, read only."""
+        a = acct("attestation_record", pda("header", "instance_id", "record_slot"), writable=False, docs=docs + "; the attestation program's account (its PDA domain is ferrata-lez/v1/, see ferrata_attestation.idl.json)")
+        a["owner"] = "ferrata_attestation"
+        return a
+
+    HOLDERS = lambda: acct("holder", pda("holder", "holder"), docs="holder(account) of each account credited (the destination, the fee recipient, the relayer), each listed once")
     instructions = [
-        I(0, "burn", [OWN("the holder"), HOLDER("debited when the own actor holds too little"), TOKEN(docs="admits the note: denomination, burn freezes and caps"), BURN()], "Debit one denomination and record the note once at burn(cid, H(note)); a top-level call or the root of a private execution."),
-        I(1, "import_root", [CONFIG(), ROOTA(init=True, docs="written once at the attested leaf count")], "Attest the vault's slots 0 and 1 under the record at record_slot and write root(cid, leaf_count). Anyone may call; refused after Sunset."),
+        I(0, "burn", [OWN("the holder"), HOLDER("the root instead of the own actor when the denomination is debited from holder(account)"), TOKEN(docs="admits the note: denomination, burn freezes and caps"), CONFIG(docs="Admit: the global burn freeze and bucket"), BURN()], "Debit one denomination and record the note once at burn(cid, H(note)); a top-level call or the root of a private execution."),
+        I(1, "import_root", [CONFIG(), RECORD(), ROOTA(init=True, docs="written once at the attested leaf count")], "Attest the vault's slots 0 and 1 under the record at record_slot and write root(cid, leaf_count). Anyone may call; refused after Sunset."),
         I(2, "sunset", [OWN("the freeze authority"), CONFIG()], "The configuration's one-way Sunset: stops ImportRoot for good."),
         I(3, "echo", [ANY("any actor")], "Rule (A)'s echo nonce: accepted anywhere, changes nothing."),
-        I(4, "init", [CONFIG(init=True, docs="cid computed from config")], "Attest the vault's slot 2 and write the configuration if it holds cid (the reciprocal pairing). Anyone may call."),
-        I(5, "claim", [ROOTA(writable=False, docs="the imported root"), TOKEN(), CONFIG(docs="Admit"), NULL(), HOLDER("credited by Mint, for a public destination")], "The plaintext claim, for a public destination; relayer receives the relay fee (None: the fee recipient)."),
-        I(6, "claim_privately", [OWN("the claimant (meant to run privately)"), ROOTA(writable=False), TOKEN(), CONFIG(docs="Admit"), NULL()], "Read root(cid, n), verify the claim inside this execution, then Issue; a private destination must be this account.", public=False, private_owned=True),
+        I(4, "init", [CONFIG(init=True, docs="cid computed from config; created: the transaction carries LEZ's PDA evidence for its seed"), RECORD()], "Attest the vault's slot 2 and write the configuration if it holds cid (the reciprocal pairing). Anyone may call."),
+        I(5, "claim", [ROOTA(writable=False, docs="the imported root, the transaction's root actor"), TOKEN(), CONFIG(docs="Admit"), NULL(), HOLDERS()], "The plaintext claim, for a public destination; relayer receives the relay fee (None: the fee recipient)."),
+        I(6, "claim_privately", [OWN("the claimant (meant to run privately)"), ROOTA(writable=False), TOKEN(), CONFIG(docs="Admit"), NULL(), HOLDERS()], "Read root(cid, n), verify the claim inside this execution, then Issue; a private destination must be this account.", public=False, private_owned=True),
         I(7, "read", [ANY("any actor of this program; replies StateReply")], "Reply with this actor's state."),
         I(8, "write_root", [ROOTA(init=True, docs="from config(cid) only")], "Internal: config(cid) -> root(cid, n), the verified root, written once.", internal=True),
         I(9, "spend", [NULL()], "Internal: token(cid, token) -> nullifier(chain, vault, N): spend N once; mint to mint_to and each fee to its account.", internal=True),
         I(10, "mint", [HOLDER("from nullifier(chain, vault, N) only")], "Internal: credit amount of token to holder.", internal=True),
-        I(11, "register", [CONFIG(), TOKEN(init=True)], "Attest the vault's registry entry of entry.token, its fee schedules 0 and 1 and its leaf count under one record, and write token(cid, token)."),
-        I(12, "import_fees", [CONFIG(), TOKEN()], "Attest the vault's fee schedule index of token (or its absence) and its leaf count, and extend token(cid, token)."),
+        I(11, "register", [CONFIG(), RECORD(), TOKEN(init=True)], "Attest the vault's registry entry of entry.token, its fee schedules 0 and 1 and its leaf count under one record, and write token(cid, token)."),
+        I(12, "import_fees", [CONFIG(), RECORD(), TOKEN()], "Attest the vault's fee schedule index of token (or its absence) and its leaf count, and extend token(cid, token)."),
         I(13, "write_token", [TOKEN(init=True, docs="from config(cid) only")], "Internal: the attested entry, written once.", internal=True),
         I(14, "extend_fees", [TOKEN(docs="from config(cid) only")], "Internal: an attested fee schedule (appended), or the attested absence of schedule index at a leaf count.", internal=True),
         I(15, "issue", [TOKEN(), CONFIG(docs="Admit"), NULL()], "A claimant -> token(cid, token) after verifying the deposit: the denomination, the fee schedule of the range, the mint freezes and caps; then Admit and Spend."),
         I(16, "admit", [CONFIG(docs="from token(cid, token) only")], "Internal: the global freeze and bucket of a mint or a burn of value units, at the configuration's attested time.", internal=True),
-        I(17, "freeze", [OWN("the freeze authority"), CONFIG(docs="target when token is None"), TOKEN(docs="target when token is Some")], "Freeze mints and/or burns of token (or the whole configuration) until until_ms (0 unfreezes), at most 30 days after the attested time."),
+        I(17, "freeze", [OWN("the freeze authority"), CONFIG(docs="target when token is None"), TOKEN(docs="target when token is Some"), RECORD("the record whose execution time the target reads first")], "Freeze mints and/or burns of token (or the whole configuration) until until_ms (0 unfreezes), at most 30 days after the attested time."),
         I(18, "set_cap", [OWN("the admin"), CONFIG(docs="target when token is None"), TOKEN(docs="target when token is Some")], "Set the mint (or burn) bucket of token (or the global one), never below the floor."),
-        I(19, "tick", [CONFIG(docs="target when token is None"), TOKEN(docs="target when token is Some")], "Anyone: read the attestation program's record and advance the target's clock to its execution timestamp."),
+        I(19, "tick", [CONFIG(docs="target when token is None"), TOKEN(docs="target when token is Some"), RECORD("the record whose execution time the target advances to")], "Anyone: read the attestation program's record and advance the target's clock to its execution timestamp."),
     ]
     return {
         "version": "0.1.0",
