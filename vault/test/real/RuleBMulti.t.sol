@@ -103,7 +103,8 @@ abstract contract RuleBMultiFixture is Test {
         (, uint256 chainId, address at, bytes32 lezConfigId,) =
             abi.decode(journal, (bytes32, uint256, address, bytes32, FerrataVault.Checkpoint));
         vm.chainId(chainId);
-        RiscZeroGroth16Verifier groth16 = new RiscZeroGroth16Verifier(ControlID.CONTROL_ROOT, ControlID.BN254_CONTROL_ID);
+        RiscZeroGroth16Verifier groth16 =
+            new RiscZeroGroth16Verifier(ControlID.CONTROL_ROOT, ControlID.BN254_CONTROL_ID);
         RiscZeroVerifierEmergencyStop estop = new RiscZeroVerifierEmergencyStop(groth16, freezer);
         FerrataVault.Deployment memory d = FerrataVault.Deployment({
             verifier: IRiscZeroVerifier(address(estop)),

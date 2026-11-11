@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 pragma solidity ^0.8.26;
 
-import {Script} from "forge-std/Script.sol";
 import {FerrataVault} from "../src/FerrataVault.sol";
 import {IRiscZeroVerifier} from "../src/interfaces/IRiscZeroVerifier.sol";
+import {Script} from "forge-std/Script.sol";
 
 /// @notice Accepts every seal and reports an emergency stop that is never tripped. For the watchers'
 ///         rehearsal on a local anvil chain only (`monitor/tests/anvil-e2e.sh`): `monitor` never looks
@@ -23,7 +23,8 @@ contract AcceptAllStop is IRiscZeroVerifier {
 ///         default floor of 3 h 01 min (v3 D4). Roles come from the environment (FIXTURE_*).
 contract MonitorFixture is Script {
     function run() external returns (FerrataVault vault) {
-        FerrataVault.CapParams memory unlimited = FerrataVault.CapParams({capacity: type(uint256).max, refillPerSecond: 0});
+        FerrataVault.CapParams memory unlimited =
+            FerrataVault.CapParams({capacity: type(uint256).max, refillPerSecond: 0});
         bool ruleA = vm.envOr("FIXTURE_MODE_A", false);
         uint256 delta = ruleA ? 3 hours + 1 minutes : 1 hours;
         vm.startBroadcast();
