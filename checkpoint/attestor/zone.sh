@@ -8,6 +8,9 @@
 # are saved for the attestors. Run from checkpoint/ on the build box:
 #
 #   attestor/zone.sh <bundle.tar.zst> <out dir> [seconds]
+#
+# With SILENT=i SILENT_AFTER=s in the environment, sequencer i is stopped s seconds into the run (a silent
+# sequencer: its turns come and nobody of its key posts).
 set -euo pipefail
 bundle="$(realpath "$1")"; out="$(realpath -m "$2")"; secs="${3:-300}"
 lez="$(realpath ../../upstream/lez-v0.4.0-rc1)"; dev="$lez/lez/configs/docker-all-in-one/devnet"
@@ -62,11 +65,14 @@ for i in 0 1 2 3; do
   [ "$i" = 0 ] && sleep 15
 done
 rpc() { curl -fsS -m 5 -H 'content-type: application/json' -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"$2\",\"params\":[]}" "http://127.0.0.1:$((19300 + $1))" 2>/dev/null | sed -n 's/.*"result":\([0-9]*\).*/\1/p'; }
-end=$(( $(date +%s) + secs )); FIRST=""
+start=$(date +%s); end=$(( start + secs )); FIRST=""; SILENCED=""
 while [ "$(date +%s)" -lt "$end" ]; do
   ch="$(curl -fsS -m 5 "$api/channel/$CHANNEL" 2>/dev/null || echo '{}')"
   keys=$(echo "$ch" | python3 -I -c 'import json,sys; c=json.load(sys.stdin); print(len(c.get("accredited_keys",[])), c.get("tip_sequencer"), c.get("tip_slot"))' 2>/dev/null || echo "-")
   ts=$(echo "$ch" | sed -n 's/.*"tip_slot":\([0-9]*\).*/\1/p'); [ -z "$FIRST" ] && [ -n "$ts" ] && FIRST="$ts"
+  if [ -n "${SILENT:-}" ] && [ -z "$SILENCED" ] && [ $(( $(date +%s) - start )) -ge "${SILENT_AFTER:-60}" ]; then
+    kill -TERM "${SEQ_PIDS[$SILENT]}" 2>/dev/null || true; SILENCED=1; log "seq-$SILENT stopped (silent from now on)"
+  fi
   alive=0; for p in "${SEQ_PIDS[@]}"; do kill -0 "$p" 2>/dev/null && alive=$((alive + 1)); done
   log "channel keys/tip_sequencer/tip_slot: $keys | heights: $(rpc 0 getLastBlockId)/$(rpc 1 getLastBlockId)/$(rpc 2 getLastBlockId)/$(rpc 3 getLastBlockId) | alive $alive | lib $(curl -fsS -m 3 "$api/cryptarchia/info" | sed -n 's/.*"lib_slot":\([0-9]*\).*/\1/p')"
   sleep 20

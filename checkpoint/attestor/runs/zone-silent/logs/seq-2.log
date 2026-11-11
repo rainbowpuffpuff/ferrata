@@ -1,0 +1,160 @@
+[2026-11-11T19:22:56Z INFO  sequencer_service] Config: {"home":"spike/tmp/attestor/attestor-zone/seq-2","max_num_tx_in_block":20,"mempool_max_size":10000,"block_create_timeout":"10s","retry_pending_blocks_timeout":"7s","bedrock_config":{"channel_id":"0101010101010101010101010101010101010101010101010101010101010101","node_url":"http://127.0.0.1:18080/","auth":null,"priority_fee_percent":12,"stale_refund_slots":300},"cross_zone":null,"metrics_listen_address":"127.0.0.1:19202","gossip":{"listen_addr":"/ip4/127.0.0.1/udp/19102/quic-v1","bootstrap_peers":["/ip4/127.0.0.1/udp/19100/quic-v1","/ip4/127.0.0.1/udp/19101/quic-v1","/ip4/127.0.0.1/udp/19103/quic-v1"]}}, channel signing key file: spike/tmp/attestor/attestor-zone/seq-2/channel_signing_key, funding public key: "2e03b2eff5a45478e7e79668d2a146cf2c5c7925bce927f2b1c67f2ab4fc0d26"
+[2026-11-11T19:22:56Z INFO  sequencer_service] Storage Actor spawned
+[2026-11-11T19:22:56Z INFO  sequencer_service] Bedrock Broker Actor spawned
+[2026-11-11T19:22:56Z INFO  sequencer_service] Channel signing public key: 6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac
+[2026-11-11T19:22:56Z INFO  logos_blockchain::zone_sdk::sequencer] Starting fresh (no checkpoint)
+[2026-11-11T19:22:56Z INFO  logos_blockchain::zone_sdk::sequencer] Sequencer connected: tip=HeaderId(1d462d8621c773786d3d383f213aff361a2681018cbacfe19b52f7cbb605701a), lib=HeaderId(a354b19798beb4d8dc9c937452c283a06522905af2bf19014d117bc9c1767537)
+[2026-11-11T19:22:56Z INFO  sequencer_bedrock_actor::actor] Turn update: our_turn=false, starting_slot=Some(8931938), ends_at_slot=Some(8931998)
+[2026-11-11T19:23:26Z INFO  sequencer_service] Bedrock Actor spawned
+[2026-11-11T19:23:26Z INFO  sequencer_core] Channel signing public key: 6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac
+[2026-11-11T19:23:26Z INFO  sequencer_core] Channel already exists; joining as a non channel creator
+[2026-11-11T19:23:26Z INFO  sequencer_core] Genesis fingerprint: 28b3b7c36e661ebab9d6eb245c6bb7265925a4277bdb4f543e08e6c7151fc68b
+[2026-11-11T19:23:27Z INFO  sequencer_core] Genesis fingerprint: 28b3b7c36e661ebab9d6eb245c6bb7265925a4277bdb4f543e08e6c7151fc68b
+[2026-11-11T19:23:27Z INFO  sequencer_core] No stored channel view; starting on the final tier
+[2026-11-11T19:23:45Z INFO  sequencer_bedrock_actor::actor] Turn update: our_turn=true, starting_slot=Some(8931998), ends_at_slot=Some(8932058)
+[2026-11-11T19:23:56Z INFO  sequencer_service] Executor Actor spawned
+[2026-11-11T19:23:56Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 1..=1 (1), head Some(1)
+[2026-11-11T19:23:56Z INFO  sequencer_core::logging] Channel update: adopted 2..=2 (1), finalized none, head Some(1)
+[2026-11-11T19:23:56Z INFO  libp2p_swarm] local_peer_id=12D3KooWGaERptnpn53ncmyKiHnRgebXZpo2tUCsNSCnvsgJG7ET
+[2026-11-11T19:23:56Z INFO  sequencer_gossip_actor::actor] Gossip listening on [/ip4/127.0.0.1/udp/19102/quic-v1] as 12D3KooWGaERptnpn53ncmyKiHnRgebXZpo2tUCsNSCnvsgJG7ET
+[2026-11-11T19:23:56Z INFO  sequencer_service] Gossip network started as 12D3KooWGaERptnpn53ncmyKiHnRgebXZpo2tUCsNSCnvsgJG7ET
+[2026-11-11T19:23:56Z INFO  sequencer_service] Gossip Actor spawned
+[2026-11-11T19:23:56Z INFO  sequencer_rpc_server_actor::actor] Starting RPC Server on 127.0.0.1:19302
+[2026-11-11T19:23:56Z INFO  sequencer_service] RPC Server Actor spawned
+[2026-11-11T19:23:56Z INFO  sequencer_service] Block production scheduler started
+[2026-11-11T19:23:56Z INFO  sequencer_core] Channel pin moved to b920d6bc97f6671ef40824ebcfe11839a610a87525f2d94ccf242e5a51d45110
+[2026-11-11T19:23:56Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 2..=2 (1), head Some(2)
+[2026-11-11T19:23:56Z INFO  sequencer_core::logging] Channel update: adopted 3..=3 (1), finalized none, head Some(2)
+[2026-11-11T19:23:56Z INFO  sequencer_core] Channel pin moved to 7db3ff42fe1d3ce309c0b27518db282788e72836da168e32e45587aa1d281755
+[2026-11-11T19:23:56Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 3..=3 (1), head Some(3)
+[2026-11-11T19:23:56Z INFO  sequencer_core::logging] Channel update: adopted 4..=4 (1), finalized none, head Some(3)
+[2026-11-11T19:23:56Z INFO  sequencer_core] Channel pin moved to 0aa618aac94fe1eca4e9731b7500cf0347b0e2038656d7f855cb5279797a36e6
+[2026-11-11T19:23:56Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 4..=4 (1), head Some(4)
+[2026-11-11T19:23:56Z INFO  sequencer_core::logging] Channel update: adopted 5..=5 (1), finalized none, head Some(4)
+[2026-11-11T19:23:57Z INFO  sequencer_core] Channel pin moved to 253243cbff90a88ebf820ea0d601675129f5aa54a080e09b651382c19403edf4
+[2026-11-11T19:23:57Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 5..=5 (1), head Some(5)
+[2026-11-11T19:23:57Z INFO  sequencer_core::logging] Channel update: adopted 6..=6 (1), finalized none, head Some(5)
+[2026-11-11T19:23:57Z INFO  sequencer_core] Channel pin moved to 78768b33c3084fad01d7003ab44aef1fed8b26061adaafe49489324ff2262f17
+[2026-11-11T19:23:57Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 6..=6 (1), head Some(6)
+[2026-11-11T19:23:57Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:49590 conn_id=0
+[2026-11-11T19:24:01Z INFO  sequencer_bedrock_actor::actor] Turn update: our_turn=true, starting_slot=Some(8932014), ends_at_slot=Some(8932074)
+[2026-11-11T19:24:06Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-11T19:24:06Z INFO  sequencer_core] Publishing block 7 on pin 78768b33c3084fad01d7003ab44aef1fed8b26061adaafe49489324ff2262f17
+[2026-11-11T19:24:06Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([104, 225, 211, 237, 52, 66, 133, 26, 254, 128, 19, 18, 105, 149, 62, 92, 145, 42, 78, 177, 0, 3, 160, 78, 187, 213, 87, 172, 235, 229, 126, 117])
+[2026-11-11T19:24:06Z INFO  sequencer_bedrock_actor::actor] Published block 7 with the size of 839 bytes
+[2026-11-11T19:24:06Z INFO  sequencer_executor_actor::actor] Block with id 7 created by 6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac
+[2026-11-11T19:24:12Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 7..=7 (1), head Some(7)
+[2026-11-11T19:24:16Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-11T19:24:16Z INFO  sequencer_core] Publishing block 8 on pin 4451c65ed632f30a7e425c01687d3813b6007f7488da8edb907acdb3dfaa5ad9
+[2026-11-11T19:24:16Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([84, 4, 39, 115, 101, 77, 79, 60, 125, 30, 141, 25, 124, 189, 142, 203, 103, 25, 87, 114, 248, 180, 121, 182, 108, 246, 172, 157, 249, 114, 99, 158])
+[2026-11-11T19:24:16Z INFO  sequencer_bedrock_actor::actor] Published block 8 with the size of 839 bytes
+[2026-11-11T19:24:16Z INFO  sequencer_executor_actor::actor] Block with id 8 created by 6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac
+[2026-11-11T19:24:18Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:58695 conn_id=1
+[2026-11-11T19:24:22Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 8..=8 (1), head Some(8)
+[2026-11-11T19:24:26Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-11T19:24:26Z INFO  sequencer_core] Publishing block 9 on pin 83d5b9b9b10e02598cec7f00596d3b782b05d9f55db48be6fdd2ef52dd893fc5
+[2026-11-11T19:24:26Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([168, 210, 178, 109, 96, 220, 26, 128, 45, 179, 201, 44, 201, 36, 175, 15, 156, 228, 127, 27, 134, 166, 224, 229, 59, 62, 174, 106, 0, 157, 85, 15])
+[2026-11-11T19:24:26Z INFO  sequencer_bedrock_actor::actor] Published block 9 with the size of 839 bytes
+[2026-11-11T19:24:26Z INFO  sequencer_executor_actor::actor] Block with id 9 created by 6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac
+[2026-11-11T19:24:32Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 9..=9 (1), head Some(9)
+[2026-11-11T19:24:36Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-11T19:24:36Z INFO  sequencer_core] Publishing block 10 on pin 7a5af49350c20be93865df7362871e7e867586f4adb7d98dfe5d7ecacbf5889d
+[2026-11-11T19:24:36Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([63, 171, 137, 70, 208, 178, 186, 245, 169, 98, 219, 89, 188, 251, 101, 17, 20, 19, 156, 99, 71, 112, 166, 35, 186, 217, 192, 85, 55, 224, 10, 210])
+[2026-11-11T19:24:36Z INFO  sequencer_bedrock_actor::actor] Published block 10 with the size of 839 bytes
+[2026-11-11T19:24:36Z INFO  sequencer_executor_actor::actor] Block with id 10 created by 6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac
+[2026-11-11T19:24:38Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:62151 conn_id=2
+[2026-11-11T19:24:42Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 10..=10 (1), head Some(10)
+[2026-11-11T19:24:46Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-11T19:24:46Z INFO  sequencer_core] Publishing block 11 on pin 68aa58960286ea87338fe2f26ad8441d0ac0714270f20c81a5703ca2a22e630c
+[2026-11-11T19:24:46Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([52, 165, 64, 142, 24, 130, 23, 105, 84, 20, 97, 239, 8, 55, 141, 203, 51, 20, 8, 56, 248, 156, 5, 25, 71, 33, 52, 137, 12, 197, 24, 95])
+[2026-11-11T19:24:46Z INFO  sequencer_bedrock_actor::actor] Published block 11 with the size of 839 bytes
+[2026-11-11T19:24:46Z INFO  sequencer_executor_actor::actor] Block with id 11 created by 6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac
+[2026-11-11T19:24:52Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 11..=11 (1), head Some(11)
+[2026-11-11T19:24:56Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-11T19:24:56Z INFO  sequencer_core] Publishing block 12 on pin 169e3dc1b203387f10df6cb7d6d9b95662b3f7aaf66a958120eb5126a28fcbf0
+[2026-11-11T19:24:56Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([126, 4, 234, 114, 49, 205, 185, 254, 198, 123, 28, 204, 1, 17, 122, 154, 251, 157, 16, 68, 132, 55, 205, 17, 109, 27, 169, 113, 225, 191, 87, 101])
+[2026-11-11T19:24:56Z INFO  sequencer_bedrock_actor::actor] Published block 12 with the size of 839 bytes
+[2026-11-11T19:24:56Z INFO  sequencer_executor_actor::actor] Block with id 12 created by 6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac
+[2026-11-11T19:24:58Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:40525 conn_id=3
+[2026-11-11T19:25:01Z INFO  sequencer_bedrock_actor::actor] Turn update: our_turn=false, starting_slot=Some(8932074), ends_at_slot=Some(8932134)
+[2026-11-11T19:25:02Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 12..=12 (1), head Some(12)
+[2026-11-11T19:25:18Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:48266 conn_id=4
+[2026-11-11T19:25:22Z INFO  sequencer_bedrock_actor::actor] Turn update: our_turn=false, starting_slot=Some(8932095), ends_at_slot=Some(8932155)
+[2026-11-11T19:25:38Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:17185 conn_id=5
+[2026-11-11T19:25:47Z INFO  sequencer_bedrock_actor::actor] Turn update: our_turn=false, starting_slot=Some(8932120), ends_at_slot=Some(8932180)
+[2026-11-11T19:25:48Z INFO  sequencer_core::logging] Channel update: adopted 13..=13 (1), finalized none, head Some(12)
+[2026-11-11T19:25:48Z INFO  sequencer_core] Channel pin moved to a8ec54beb549e664a1245d43ca9d33df674ac39fd96550317a89741fa4015322
+[2026-11-11T19:25:53Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 13..=13 (1), head Some(13)
+[2026-11-11T19:25:58Z INFO  sequencer_core::logging] Channel update: adopted 14..=14 (1), finalized none, head Some(13)
+[2026-11-11T19:25:58Z INFO  sequencer_core] Channel pin moved to 3cc6a48b1ae856e3c14a80620c6279b6b88b81215ef6f4e51f6cc6c1a433d972
+[2026-11-11T19:25:58Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:61101 conn_id=6
+[2026-11-11T19:26:03Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 14..=14 (1), head Some(14)
+[2026-11-11T19:26:08Z INFO  sequencer_core::logging] Channel update: adopted 15..=15 (1), finalized none, head Some(14)
+[2026-11-11T19:26:08Z INFO  sequencer_core] Channel pin moved to 189f8e972e74fb4859d708c5363c7eb7e88aba91ab1ccead7d05b5c1f7d628e8
+[2026-11-11T19:26:13Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 15..=15 (1), head Some(15)
+[2026-11-11T19:26:18Z INFO  sequencer_core::logging] Channel update: adopted 16..=16 (1), finalized none, head Some(15)
+[2026-11-11T19:26:18Z INFO  sequencer_core] Channel pin moved to 90fcd24b649f2f617ac3656735abe482803e90355cdb34b748a8f90560637a08
+[2026-11-11T19:26:19Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:27032 conn_id=7
+[2026-11-11T19:26:24Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 16..=16 (1), head Some(16)
+[2026-11-11T19:26:28Z INFO  sequencer_core::logging] Channel update: adopted 17..=17 (1), finalized none, head Some(16)
+[2026-11-11T19:26:28Z INFO  sequencer_core] Channel pin moved to 350429ad755d1ff3cb44e6d2581117a8d2100066d9e3b392b69a1ac7edde7e83
+[2026-11-11T19:26:33Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 17..=17 (1), head Some(17)
+[2026-11-11T19:26:38Z INFO  sequencer_core::logging] Channel update: adopted 18..=18 (1), finalized none, head Some(17)
+[2026-11-11T19:26:38Z INFO  sequencer_core] Channel pin moved to 65c63e25708fd92c54880ca897853713e62b755c8c0b0badff87983b48c5af34
+[2026-11-11T19:26:39Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:48269 conn_id=8
+[2026-11-11T19:26:43Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 18..=18 (1), head Some(18)
+[2026-11-11T19:26:47Z INFO  sequencer_bedrock_actor::actor] Turn update: our_turn=false, starting_slot=Some(8932180), ends_at_slot=Some(8932240)
+[2026-11-11T19:26:56Z INFO  sequencer_core::logging] Channel update: adopted 19..=19 (1), finalized none, head Some(18)
+[2026-11-11T19:26:56Z INFO  sequencer_core] Channel pin moved to 7cde2cac4fe470267bf25e6c076798734ac1be6f27587d61d941c138ccd5411e
+[2026-11-11T19:26:59Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:40564 conn_id=9
+[2026-11-11T19:27:01Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 19..=19 (1), head Some(19)
+[2026-11-11T19:27:06Z INFO  sequencer_core::logging] Channel update: adopted 20..=20 (1), finalized none, head Some(19)
+[2026-11-11T19:27:06Z INFO  sequencer_core] Channel pin moved to 5814e7478f484da09f73a0e8cc844a8d6a5ee2594c4a954f5b35136a6fc28d54
+[2026-11-11T19:27:11Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 20..=20 (1), head Some(20)
+[2026-11-11T19:27:16Z INFO  sequencer_core::logging] Channel update: adopted 21..=21 (1), finalized none, head Some(20)
+[2026-11-11T19:27:16Z INFO  sequencer_core] Channel pin moved to b63a3a16c69429eaf0acf75352808419f9b1f8ee5ae1604fa33d89c4e815f994
+[2026-11-11T19:27:19Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:54808 conn_id=10
+[2026-11-11T19:27:21Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 21..=21 (1), head Some(21)
+[2026-11-11T19:27:26Z INFO  sequencer_core::logging] Channel update: adopted 22..=22 (1), finalized none, head Some(21)
+[2026-11-11T19:27:26Z INFO  sequencer_core] Channel pin moved to 82fde060eb7946ef9891469cdb7ce2c451196f6c973fc8f05f2f0e318a0ae8c4
+[2026-11-11T19:27:31Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 22..=22 (1), head Some(22)
+[2026-11-11T19:27:36Z INFO  sequencer_core::logging] Channel update: adopted 23..=23 (1), finalized none, head Some(22)
+[2026-11-11T19:27:36Z INFO  sequencer_core] Channel pin moved to bdf938ee61a0184a39c53f9d08ad157473d0db5f342ad71c8b7ee758a7ef3fa5
+[2026-11-11T19:27:39Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:55954 conn_id=11
+[2026-11-11T19:27:41Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 23..=23 (1), head Some(23)
+[2026-11-11T19:27:46Z INFO  sequencer_core::logging] Channel update: adopted 24..=24 (1), finalized none, head Some(23)
+[2026-11-11T19:27:46Z INFO  sequencer_core] Channel pin moved to 52c8b479cc3768f1b9dc2de7db25c3573126b74cd2ed62fb49812450669dd6a7
+[2026-11-11T19:27:47Z INFO  sequencer_bedrock_actor::actor] Turn update: our_turn=true, starting_slot=Some(8932240), ends_at_slot=Some(8932300)
+[2026-11-11T19:27:51Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 24..=24 (1), head Some(24)
+[2026-11-11T19:27:56Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-11T19:27:56Z INFO  sequencer_core] Publishing block 25 on pin 52c8b479cc3768f1b9dc2de7db25c3573126b74cd2ed62fb49812450669dd6a7
+[2026-11-11T19:27:56Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([143, 91, 96, 100, 124, 99, 231, 110, 45, 254, 54, 140, 5, 239, 156, 185, 181, 115, 102, 77, 119, 189, 201, 154, 23, 200, 123, 171, 63, 45, 77, 52])
+[2026-11-11T19:27:56Z INFO  sequencer_bedrock_actor::actor] Published block 25 with the size of 839 bytes
+[2026-11-11T19:27:56Z INFO  sequencer_executor_actor::actor] Block with id 25 created by 6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac
+[2026-11-11T19:27:59Z INFO  sequencer_service] Received SIGTERM
+[2026-11-11T19:27:59Z INFO  sequencer_service] Shutting down sequencer...
+[2026-11-11T19:27:59Z INFO  sequencer_service::actor_handle] Stopping kameo_actors::scheduler::Scheduler#6 actor...
+[2026-11-11T19:27:59Z INFO  sequencer_service::actor_handle] kameo_actors::scheduler::Scheduler#6 actor stopped
+[2026-11-11T19:27:59Z INFO  sequencer_service::actor_handle] Killing kameo_actors::scheduler::Scheduler#6 actor
+[2026-11-11T19:27:59Z INFO  sequencer_service::actor_handle] Stopping Broker#2 actor...
+[2026-11-11T19:27:59Z INFO  sequencer_service::actor_handle] Broker#2 actor stopped
+[2026-11-11T19:27:59Z INFO  sequencer_service::actor_handle] Killing Broker#2 actor
+[2026-11-11T19:27:59Z INFO  sequencer_service::actor_handle] Stopping sequencer_rpc_server_actor::actor::RpcServerActor#8 actor...
+[2026-11-11T19:27:59Z INFO  sequencer_service::actor_handle] sequencer_rpc_server_actor::actor::RpcServerActor#8 actor stopped
+[2026-11-11T19:27:59Z INFO  sequencer_service::actor_handle] Killing sequencer_rpc_server_actor::actor::RpcServerActor#8 actor
+[2026-11-11T19:27:59Z INFO  sequencer_service::actor_handle] Stopping sequencer_gossip_actor::actor::GossipActor#7 actor...
+[2026-11-11T19:27:59Z INFO  sequencer_service::actor_handle] sequencer_gossip_actor::actor::GossipActor#7 actor stopped
+[2026-11-11T19:27:59Z INFO  sequencer_service::actor_handle] Killing sequencer_gossip_actor::actor::GossipActor#7 actor
+[2026-11-11T19:27:59Z INFO  sequencer_service::actor_handle] Stopping sequencer_executor_actor::actor::ExecutorActor<sequencer_storage_actor::actor::StorageActor, sequencer_bedrock_actor::actor::BedrockActor>#1 actor...
+[2026-11-11T19:27:59Z INFO  sequencer_service::actor_handle] sequencer_executor_actor::actor::ExecutorActor<sequencer_storage_actor::actor::StorageActor, sequencer_bedrock_actor::actor::BedrockActor>#1 actor stopped
+[2026-11-11T19:27:59Z INFO  sequencer_service::actor_handle] Killing sequencer_executor_actor::actor::ExecutorActor<sequencer_storage_actor::actor::StorageActor, sequencer_bedrock_actor::actor::BedrockActor>#1 actor
+[2026-11-11T19:27:59Z INFO  sequencer_service::actor_handle] Stopping sequencer_slasher_actor::actor::SlasherActor#4 actor...
+[2026-11-11T19:27:59Z INFO  sequencer_service::actor_handle] sequencer_slasher_actor::actor::SlasherActor#4 actor stopped
+[2026-11-11T19:27:59Z INFO  sequencer_service::actor_handle] Killing sequencer_slasher_actor::actor::SlasherActor#4 actor
+[2026-11-11T19:27:59Z INFO  sequencer_service::actor_handle] Stopping sequencer_bedrock_actor::actor::BedrockActor#3 actor...
+[2026-11-11T19:27:59Z INFO  sequencer_service::actor_handle] sequencer_bedrock_actor::actor::BedrockActor#3 actor stopped
+[2026-11-11T19:27:59Z INFO  sequencer_service::actor_handle] Killing sequencer_bedrock_actor::actor::BedrockActor#3 actor
+[2026-11-11T19:27:59Z INFO  sequencer_service::actor_handle] Stopping sequencer_storage_actor::actor::StorageActor#0 actor...
+[2026-11-11T19:27:59Z INFO  sequencer_service::actor_handle] sequencer_storage_actor::actor::StorageActor#0 actor stopped
+[2026-11-11T19:27:59Z INFO  sequencer_service::actor_handle] Killing sequencer_storage_actor::actor::StorageActor#0 actor
+[2026-11-11T19:27:59Z INFO  sequencer_service] Sequencer shutdown complete

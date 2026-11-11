@@ -1,0 +1,9 @@
+rbz-zone-n4-t3         blocks 23 (19297 B) | user cycles     6214564 | segments   7 (1x2^19+6x2^20) padded     6815744 |   0.29 s | journal == native
+tip 25 keys 4 checked 24
+  6462ecf103d4074b {'count': 7, 'first': 7, 'last': 25}
+  99273f3e47ddce77 {'count': 6, 'first': 13, 'last': 18}
+  fce0d0fadf637a62 {'count': 11, 'first': 2, 'last': 24}
+== the collector: 3 of 4 (sequencer 3 silent), 4 of 4; 2 of 4 refused
+rbz-zone-n4-t3: accepted: n = 4, t = 3, 3 attestations counted, producer 6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac
+rbz-zone-n4-all: accepted: n = 4, t = 3, 4 attestations counted, producer 6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac
+rbz-refuse-two-of-four: refused: InsufficientAttestations { have: 2, need: 3 }
