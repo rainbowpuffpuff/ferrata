@@ -31,6 +31,7 @@ CHANNEL=0101010101010101010101010101010101010101010101010101010101010101
 case "$STEP" in a|b|dump) ;; *) echo "session.sh a | b | dump"; exit 2 ;; esac
 case "$CHAIN" in sepolia|stand-in) ;; *) echo "CROWN_CHAIN: sepolia or stand-in"; exit 2 ;; esac
 
+VOL="$(realpath -m "$VOL")"; WORK="$(realpath -m "$WORK")"
 OUT="$VOL/session-$STEP"; [ "$STEP" = dump ] && OUT="$VOL/session-b"
 rm -rf "$WORK"; mkdir -p "$WORK" "$VOL/state" "$OUT"
 LOG="$WORK/logs"; mkdir -p "$LOG"
