@@ -1,0 +1,1420 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src http: https:">
+<meta name="referrer" content="no-referrer">
+<title>Ferrata vault: admin view (read-only)</title>
+<style>
+  :root { color-scheme: light dark; --fg:#1b1f24; --bg:#fbfbfa; --muted:#5f6b76; --line:#d9dde1; --bad:#b3261e; --ok:#1e6b35; --warn:#8a5a00; --code:#f1f2f3; }
+  @media (prefers-color-scheme: dark) { :root { --fg:#e6e8ea; --bg:#15181b; --muted:#9aa5ae; --line:#30363c; --bad:#ff8a80; --ok:#7bd88f; --warn:#ffcc66; --code:#1f2428; } }
+  body { font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--fg); background: var(--bg); margin: 0 auto; max-width: 1280px; padding: 16px 20px 60px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 28px 0 8px; border-bottom: 1px solid var(--line); padding-bottom: 4px; }
+  h3 { font-size: 14px; margin: 14px 0 4px; }
+  p.lead { color: var(--muted); margin: 0 0 10px; max-width: 900px; }
+  form { display: grid; grid-template-columns: max-content 1fr; gap: 6px 10px; align-items: center; margin: 14px 0; max-width: 900px; }
+  form label { color: var(--muted); }
+  input[type=text] { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; padding: 5px 7px; width: 100%; box-sizing: border-box; }
+  button { font-size: 14px; padding: 6px 22px; }
+  table { border-collapse: collapse; margin: 4px 0 10px; font-size: 13px; }
+  td, th { border-bottom: 1px solid var(--line); padding: 3px 12px 3px 0; text-align: left; vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; white-space: nowrap; }
+  td.k { color: var(--muted); white-space: nowrap; }
+  td.v, td.c { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; }
+  td.c { font-size: 12px; }
+  td.src { color: var(--muted); font-size: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .err { color: var(--bad); font-weight: 600; } .ok { color: var(--ok); } .warn { color: var(--warn); } .note { color: var(--muted); }
+  p.err, p.ok, p.warn, p.note { margin: 3px 0; max-width: 1000px; }
+  pre { background: var(--code); padding: 10px; overflow-x: auto; font-size: 12px; }
+  #status { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); min-height: 1.4em; }
+  #fatal { color: var(--bad); font-weight: 600; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<h1>Ferrata vault: admin view</h1>
+<p class="lead">Reads a deployed FerrataVault (v5) through the JSON-RPC endpoint you type and shows its state, from the chain only.
+Read-only: it sends <code>eth_chainId</code>, <code>eth_blockNumber</code>, <code>eth_call</code>, <code>eth_getLogs</code>,
+<code>eth_getBalance</code>, <code>eth_getCode</code> and <code>eth_getStorageAt</code> to that endpoint and nothing anywhere else.
+It never signs or sends a transaction. Every read is pinned to one block.</p>
+<form id="f" autocomplete="off">
+  <label for="rpc">RPC URL</label>
+  <input type="text" id="rpc" value="" placeholder="https://ethereum-sepolia-rpc.publicnode.com (any Ethereum JSON-RPC endpoint)">
+  <label for="vault">Vault address</label>
+  <input type="text" id="vault" value="">
+  <label for="from">Events from block</label>
+  <input type="text" id="from" value="" placeholder="the vault's creation block (empty: search for it with eth_getCode, needs an archive node)">
+  <span></span>
+  <div><button type="submit" id="go">Read</button></div>
+</form>
+<div id="status"></div>
+<div id="fatal"></div>
+<main id="out"></main>
+<details id="textbox" hidden><summary>The same report as plain text</summary><pre id="text"></pre></details>
+
+<script id="ferrata-admin">
+(function () {
+'use strict';
+
+// =====================================================================================================
+// Defaults (from the repository: README.md, "Not audited. Not for production.": FerrataVault v5 on Sepolia,
+// created by transaction 0xee91c261..., block 12,111,048).
+// =====================================================================================================
+const DEFAULT_VAULT = '0xfE3199fa2634413CbAC317371076Cae3EB2d9E54';
+const DEFAULT_FROM_BLOCK = 12111048;
+const VERSION = 'ferrata-admin 1';
+const CHAINS = { 1: 'Ethereum mainnet', 11155111: 'Sepolia', 17000: 'Holesky', 560048: 'Hoodi', 31337: 'local dev chain' };
+const UNLIMITED = (1n << 256n) - 1n;
+const ZERO_ADDR = '0x0000000000000000000000000000000000000000';
+const ZERO32 = '0x' + '0'.repeat(64);
+const DAY = 86400;
+
+// =====================================================================================================
+// Bytes, hex, UTF-8
+// =====================================================================================================
+function strip0x(h) { return (h.startsWith('0x') || h.startsWith('0X')) ? h.slice(2) : h; }
+function fromHex(h) {
+  if (typeof h !== 'string') throw new Error('expected a hex string, got ' + typeof h);
+  const s = strip0x(h);
+  if (s.length % 2) throw new Error('odd-length hex: ' + h.slice(0, 24));
+  if (!/^[0-9a-fA-F]*$/.test(s)) throw new Error('not hex: ' + h.slice(0, 24));
+  const out = new Uint8Array(s.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(s.substr(2 * i, 2), 16);
+  return out;
+}
+function toHex(b) { let s = '0x'; for (let i = 0; i < b.length; i++) s += (b[i] < 16 ? '0' : '') + b[i].toString(16); return s; }
+function concatBytes(parts) {
+  let n = 0; for (const p of parts) n += p.length;
+  const out = new Uint8Array(n); let o = 0;
+  for (const p of parts) { out.set(p, o); o += p.length; }
+  return out;
+}
+function uintBytes(v, n) {
+  let x = BigInt(v);
+  if (x < 0n) throw new Error('negative value where unsigned expected');
+  const out = new Uint8Array(n);
+  for (let i = n - 1; i >= 0; i--) { out[i] = Number(x & 0xffn); x >>= 8n; }
+  if (x !== 0n) throw new Error('value does not fit in ' + n + ' bytes');
+  return out;
+}
+function addrBytes(a) { const b = fromHex(a); if (b.length !== 20) throw new Error('not a 20-byte address: ' + a); return b; }
+function b32Bytes(h) { const b = fromHex(h); if (b.length !== 32) throw new Error('not 32 bytes: ' + h); return b; }
+function hexToBig(h) { const s = strip0x(h); return s.length ? BigInt('0x' + s) : 0n; }
+function hx(n) { return '0x' + BigInt(n).toString(16); }
+function utf8Encode(s) {
+  const out = [];
+  for (let i = 0; i < s.length; i++) {
+    let c = s.charCodeAt(i);
+    if (c >= 0xd800 && c <= 0xdbff && i + 1 < s.length) {
+      const d = s.charCodeAt(i + 1);
+      if (d >= 0xdc00 && d <= 0xdfff) { c = 0x10000 + ((c - 0xd800) << 10) + (d - 0xdc00); i++; }
+    }
+    if (c < 0x80) out.push(c);
+    else if (c < 0x800) out.push(0xc0 | (c >> 6), 0x80 | (c & 63));
+    else if (c < 0x10000) out.push(0xe0 | (c >> 12), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+    else out.push(0xf0 | (c >> 18), 0x80 | ((c >> 12) & 63), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+  }
+  return Uint8Array.from(out);
+}
+function utf8Decode(b) {
+  let s = '';
+  for (let i = 0; i < b.length;) {
+    const x = b[i]; let c, n;
+    if (x < 0x80) { c = x; n = 1; } else if ((x & 0xe0) === 0xc0) { c = x & 0x1f; n = 2; }
+    else if ((x & 0xf0) === 0xe0) { c = x & 0x0f; n = 3; } else if ((x & 0xf8) === 0xf0) { c = x & 0x07; n = 4; }
+    else { s += '�'; i++; continue; }
+    if (i + n > b.length) { s += '�'; break; }
+    for (let k = 1; k < n; k++) c = (c << 6) | (b[i + k] & 0x3f);
+    try { s += String.fromCodePoint(c); } catch (e) { s += '�'; }
+    i += n;
+  }
+  return s;
+}
+function asBytes(x) { return typeof x === 'string' ? utf8Encode(x) : x; }
+
+// =====================================================================================================
+// Keccak-256 (the original Keccak padding 0x01, as Ethereum uses; not FIPS-202 SHA3-256), 64-bit lanes as BigInt
+// =====================================================================================================
+const MASK64 = 0xffffffffffffffffn;
+const KECCAK_RC = [
+  0x0000000000000001n, 0x0000000000008082n, 0x800000000000808an, 0x8000000080008000n,
+  0x000000000000808bn, 0x0000000080000001n, 0x8000000080008081n, 0x8000000000008009n,
+  0x000000000000008an, 0x0000000000000088n, 0x0000000080008009n, 0x000000008000000an,
+  0x000000008000808bn, 0x800000000000008bn, 0x8000000000008089n, 0x8000000000008003n,
+  0x8000000000008002n, 0x8000000000000080n, 0x000000000000800an, 0x800000008000000an,
+  0x8000000080008081n, 0x8000000000008080n, 0x0000000080000001n, 0x8000000080008008n];
+// Rotation offsets r[x + 5y].
+const KECCAK_ROT = [0, 1, 62, 28, 27, 36, 44, 6, 55, 20, 3, 10, 43, 25, 39, 41, 45, 15, 21, 8, 18, 2, 61, 56, 14].map(BigInt);
+function rotl64(x, n) { return n === 0n ? x : ((x << n) | (x >> (64n - n))) & MASK64; }
+function keccakF1600(A) {
+  const C = new Array(5), B = new Array(25);
+  for (let round = 0; round < 24; round++) {
+    for (let x = 0; x < 5; x++) C[x] = A[x] ^ A[x + 5] ^ A[x + 10] ^ A[x + 15] ^ A[x + 20];
+    for (let x = 0; x < 5; x++) {
+      const D = C[(x + 4) % 5] ^ rotl64(C[(x + 1) % 5], 1n);
+      for (let y = 0; y < 25; y += 5) A[y + x] ^= D;
+    }
+    for (let x = 0; x < 5; x++) for (let y = 0; y < 5; y++) B[y + 5 * ((2 * x + 3 * y) % 5)] = rotl64(A[x + 5 * y], KECCAK_ROT[x + 5 * y]);
+    for (let y = 0; y < 25; y += 5) for (let x = 0; x < 5; x++) A[y + x] = B[y + x] ^ ((B[y + (x + 1) % 5] ^ MASK64) & B[y + (x + 2) % 5]);
+    A[0] ^= KECCAK_RC[round];
+  }
+}
+function keccak256(input) {
+  const bytes = asBytes(input);
+  const rate = 136;
+  const total = (Math.floor(bytes.length / rate) + 1) * rate;
+  const p = new Uint8Array(total);
+  p.set(bytes);
+  p[bytes.length] ^= 0x01;
+  p[total - 1] ^= 0x80;
+  const A = new Array(25).fill(0n);
+  for (let off = 0; off < total; off += rate) {
+    for (let i = 0; i < rate / 8; i++) {
+      let lane = 0n;
+      for (let k = 7; k >= 0; k--) lane = (lane << 8n) | BigInt(p[off + 8 * i + k]);
+      A[i] ^= lane;
+    }
+    keccakF1600(A);
+  }
+  const out = new Uint8Array(32);
+  for (let i = 0; i < 4; i++) { let lane = A[i]; for (let k = 0; k < 8; k++) { out[8 * i + k] = Number(lane & 0xffn); lane >>= 8n; } }
+  return out;
+}
+function keccak256Hex(input) { return toHex(keccak256(input)); }
+const _selCache = new Map();
+function selector(sig) {
+  let s = _selCache.get(sig);
+  if (!s) { s = toHex(keccak256(sig).slice(0, 4)); _selCache.set(sig, s); }
+  return s;
+}
+function eventTopic(sig) { return keccak256Hex(sig); }
+function toChecksumAddress(a) {
+  const s = strip0x(a).toLowerCase();
+  if (!/^[0-9a-f]{40}$/.test(s)) throw new Error('not an address: ' + a);
+  const h = toHex(keccak256(s)).slice(2);
+  let out = '0x';
+  for (let i = 0; i < 40; i++) out += parseInt(h[i], 16) >= 8 ? s[i].toUpperCase() : s[i];
+  return out;
+}
+
+// =====================================================================================================
+// SHA-256 (the vault's tree, published registry entries and fee schedules use SHA-256)
+// =====================================================================================================
+const SHA256_K = [
+  0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+  0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+  0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+  0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+  0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+  0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+  0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+  0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2];
+function rotr32(x, n) { return (x >>> n) | (x << (32 - n)); }
+function sha256(input) {
+  const msg = asBytes(input);
+  const l = msg.length;
+  const total = Math.ceil((l + 9) / 64) * 64;
+  const p = new Uint8Array(total);
+  p.set(msg); p[l] = 0x80;
+  const bitLen = BigInt(l) * 8n;
+  for (let i = 0; i < 8; i++) p[total - 1 - i] = Number((bitLen >> BigInt(8 * i)) & 0xffn);
+  const H = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
+  const W = new Array(64);
+  for (let off = 0; off < total; off += 64) {
+    for (let t = 0; t < 16; t++) W[t] = ((p[off + 4 * t] << 24) | (p[off + 4 * t + 1] << 16) | (p[off + 4 * t + 2] << 8) | p[off + 4 * t + 3]) >>> 0;
+    for (let t = 16; t < 64; t++) {
+      const s0 = rotr32(W[t - 15], 7) ^ rotr32(W[t - 15], 18) ^ (W[t - 15] >>> 3);
+      const s1 = rotr32(W[t - 2], 17) ^ rotr32(W[t - 2], 19) ^ (W[t - 2] >>> 10);
+      W[t] = (W[t - 16] + s0 + W[t - 7] + s1) >>> 0;
+    }
+    let a = H[0], b = H[1], c = H[2], d = H[3], e = H[4], f = H[5], g = H[6], h = H[7];
+    for (let t = 0; t < 64; t++) {
+      const S1 = rotr32(e, 6) ^ rotr32(e, 11) ^ rotr32(e, 25);
+      const ch = (e & f) ^ (~e & g);
+      const t1 = (h + S1 + ch + SHA256_K[t] + W[t]) >>> 0;
+      const S0 = rotr32(a, 2) ^ rotr32(a, 13) ^ rotr32(a, 22);
+      const maj = (a & b) ^ (a & c) ^ (b & c);
+      const t2 = (S0 + maj) >>> 0;
+      h = g; g = f; f = e; e = (d + t1) >>> 0; d = c; c = b; b = a; a = (t1 + t2) >>> 0;
+    }
+    H[0] = (H[0] + a) >>> 0; H[1] = (H[1] + b) >>> 0; H[2] = (H[2] + c) >>> 0; H[3] = (H[3] + d) >>> 0;
+    H[4] = (H[4] + e) >>> 0; H[5] = (H[5] + f) >>> 0; H[6] = (H[6] + g) >>> 0; H[7] = (H[7] + h) >>> 0;
+  }
+  const out = new Uint8Array(32);
+  for (let i = 0; i < 8; i++) { out[4 * i] = H[i] >>> 24; out[4 * i + 1] = (H[i] >>> 16) & 255; out[4 * i + 2] = (H[i] >>> 8) & 255; out[4 * i + 3] = H[i] & 255; }
+  return out;
+}
+function sha256Hex(input) { return toHex(sha256(input)); }
+
+// The vault's SHA-256 encodings (vault/README.md "Encodings" and "Fees"; FerrataRegistry._publishEntry/_publishSchedule).
+const LEAF_TAG = '0x17b9508a0d0cbf61207c0fcb66f06ed92a6aeec110a54860479f0bf3cd6aff0b';
+function leafHash(leafIndex, depositor, token, amount, commitment) {
+  return sha256(concatBytes([Uint8Array.of(0), b32Bytes(LEAF_TAG), uintBytes(leafIndex, 8), addrBytes(depositor), addrBytes(token), uintBytes(amount, 32), b32Bytes(commitment)]));
+}
+function nodeHash(l, r) { return sha256(concatBytes([Uint8Array.of(1), l, r])); }
+function zeroHashes() { const z = [new Uint8Array(32)]; for (let h = 0; h < 32; h++) z.push(nodeHash(z[h], z[h])); return z; }
+/** Root of the deposit tree holding `leaves` (Uint8Array(32) each, in leaf-index order), as the vault's _insertLeaf builds it. */
+function depositTreeRoot(leaves) {
+  const zero = zeroHashes();
+  if (!leaves.length) return toHex(zero[32]);
+  const branch = new Array(32);
+  let root = null;
+  for (let i = 0; i < leaves.length; i++) {
+    let node = leaves[i], saved = false;
+    for (let h = 0; h < 32; h++) {
+      if (Math.floor(i / 2 ** h) % 2 === 1) node = nodeHash(branch[h], node);
+      else { if (!saved) { branch[h] = node; saved = true; } node = nodeHash(node, zero[h]); }
+    }
+    root = node;
+  }
+  return toHex(root);
+}
+function registrySlot(token) { return sha256Hex(concatBytes([utf8Encode('ferrata/vault/registry/v1'), addrBytes(token)])); }
+function feeSlot(token, index) { return sha256Hex(concatBytes([utf8Encode('ferrata/vault/fees/v1'), addrBytes(token), uintBytes(index, 8)])); }
+function registryEntryHash(token, lezDefinition, decimals, lezUnit, unitWeight, denominations, relayFees) {
+  return sha256Hex(concatBytes([utf8Encode('ferrata/registry/v1'), addrBytes(token), b32Bytes(lezDefinition), uintBytes(decimals, 1),
+    uintBytes(lezUnit, 32), uintBytes(unitWeight, 32), uintBytes(denominations.length, 1)]
+    .concat(denominations.map((d) => uintBytes(d, 32)), relayFees.map((f) => uintBytes(f, 32)))));
+}
+function feeScheduleHash(token, index, fromLeaf, announcedAt, effectiveAt, mintFees, burnFees, checkpointFees) {
+  return sha256Hex(concatBytes([utf8Encode('ferrata/fees/v1'), addrBytes(token), uintBytes(index, 8), uintBytes(fromLeaf, 8),
+    uintBytes(announcedAt, 8), uintBytes(effectiveAt, 8), uintBytes(mintFees.length, 1)]
+    .concat(mintFees.map((x) => uintBytes(x, 32)), burnFees.map((x) => uintBytes(x, 32)), checkpointFees.map((x) => uintBytes(x, 32)))));
+}
+
+// =====================================================================================================
+// Minimal ABI: static arguments for calls; decoding of static types, string/bytes, T[] and T[k] of static T
+// =====================================================================================================
+function parseSig(sig) {
+  const m = /^([A-Za-z_$][A-Za-z0-9_$]*)\((.*)\)$/.exec(sig.replace(/\s+/g, ''));
+  if (!m) throw new Error('bad signature: ' + sig);
+  return { name: m[1], types: m[2] ? m[2].split(',') : [] };
+}
+function isDynamic(t) {
+  if (t === 'string' || t === 'bytes' || t.endsWith('[]')) return true;
+  const m = /^(.*)\[(\d+)\]$/.exec(t);
+  return m ? isDynamic(m[1]) : false;
+}
+function headSize(t) {
+  if (isDynamic(t)) return 32;
+  const m = /^(.*)\[(\d+)\]$/.exec(t);
+  return m ? Number(m[2]) * headSize(m[1]) : 32;
+}
+function encodeWord(t, v) {
+  let m;
+  if (t === 'address') { const b = new Uint8Array(32); b.set(addrBytes(v), 12); return b; }
+  if (t === 'bool') return uintBytes(v ? 1 : 0, 32);
+  if ((m = /^uint(\d*)$/.exec(t))) {
+    const bits = BigInt(m[1] || 256), x = BigInt(v);
+    if (x < 0n || x >= (1n << bits)) throw new Error(t + ' out of range: ' + v);
+    return uintBytes(x, 32);
+  }
+  if ((m = /^int(\d*)$/.exec(t))) {
+    const bits = BigInt(m[1] || 256), x = BigInt(v);
+    if (x < -(1n << (bits - 1n)) || x >= (1n << (bits - 1n))) throw new Error(t + ' out of range: ' + v);
+    return uintBytes(x < 0n ? (1n << 256n) + x : x, 32);
+  }
+  if ((m = /^bytes(\d+)$/.exec(t))) {
+    const n = Number(m[1]), b = fromHex(v);
+    if (b.length !== n) throw new Error(t + ' needs ' + n + ' bytes: ' + v);
+    const w = new Uint8Array(32); w.set(b, 0); return w;
+  }
+  throw new Error('encoding of ' + t + ' is not supported here');
+}
+/** Call data for `sig` with static arguments: selector || one word per argument. */
+function encodeCall(sig, args) {
+  const { types } = parseSig(sig);
+  if (types.length !== (args || []).length) throw new Error(sig + ': ' + types.length + ' arguments expected');
+  return toHex(concatBytes([fromHex(selector(sig))].concat(types.map((t, i) => encodeWord(t, args[i])))));
+}
+function readWord(b, pos) {
+  if (pos < 0 || pos + 32 > b.length) throw new Error('ABI data too short: word at ' + pos + ' of ' + b.length + ' bytes');
+  let x = 0n;
+  for (let i = 0; i < 32; i++) x = (x << 8n) | BigInt(b[pos + i]);
+  return x;
+}
+function readOffset(b, pos) {
+  const x = readWord(b, pos);
+  if (x > BigInt(b.length)) throw new Error('ABI offset/length out of range: ' + x);
+  return Number(x);
+}
+function decodeStatic(t, b, pos) {
+  let m;
+  if ((m = /^(.*)\[(\d+)\]$/.exec(t))) {
+    const out = [], k = Number(m[2]), es = headSize(m[1]);
+    for (let i = 0; i < k; i++) out.push(decodeStatic(m[1], b, pos + i * es));
+    return out;
+  }
+  const w = readWord(b, pos);
+  if (t === 'address') { if (w >> 160n) throw new Error('address word has high bits set'); return '0x' + w.toString(16).padStart(40, '0'); }
+  if (t === 'bool') { if (w > 1n) throw new Error('bool word is ' + w); return w === 1n; }
+  if ((m = /^uint(\d*)$/.exec(t))) { const bits = BigInt(m[1] || 256); if (bits < 256n && (w >> bits)) throw new Error(t + ' word out of range'); return w; }
+  if ((m = /^int(\d*)$/.exec(t))) { const x = w >= (1n << 255n) ? w - (1n << 256n) : w; const bits = BigInt(m[1] || 256); if (x < -(1n << (bits - 1n)) || x >= (1n << (bits - 1n))) throw new Error(t + ' word out of range'); return x; }
+  if ((m = /^bytes(\d+)$/.exec(t))) { const n = Number(m[1]); return toHex(b.slice(pos, pos + n)); }
+  throw new Error('decoding of ' + t + ' is not supported here');
+}
+function decodeAt(t, b, pos, base) {
+  if (!isDynamic(t)) return decodeStatic(t, b, pos);
+  const at = base + readOffset(b, pos);
+  if (t === 'string' || t === 'bytes') {
+    const n = readOffset(b, at);
+    if (at + 32 + n > b.length) throw new Error('ABI ' + t + ' runs past the data');
+    const data = b.slice(at + 32, at + 32 + n);
+    return t === 'string' ? utf8Decode(data) : toHex(data);
+  }
+  if (t.endsWith('[]')) {
+    const et = t.slice(0, -2), n = readOffset(b, at), start = at + 32, out = [];
+    for (let i = 0; i < n; i++) out.push(decodeAt(et, b, start + i * headSize(et), start));
+    return out;
+  }
+  throw new Error('decoding of ' + t + ' is not supported here');
+}
+/** Decodes ABI data (hex or bytes) of the tuple `types`; returns an array of values (BigInt for integers). */
+function decodeAbi(types, data) {
+  const b = typeof data === 'string' ? fromHex(data) : data;
+  const out = []; let pos = 0;
+  for (const t of types) { out.push(decodeAt(t, b, pos, 0)); pos += headSize(t); }
+  return out;
+}
+
+// The vault's custom errors (vault/src/FerrataVault.sol; none has parameters) and a few OpenZeppelin ones.
+const VAULT_ERRORS = ('NotAdmin NotFreezeAuthority NotPendingAdmin ZeroAddress RolesMustDiffer VerifierHasNoCode InvalidImageIds ' +
+  'InvalidLezConfigId InvalidGenesisState InvalidCommitteeFloor InvalidDelta InvalidRevokeWindow InvalidMaxFreeze InvalidTurnSeconds ' +
+  'InvalidMinReleaseDelay VerifierNotStop TokenAlreadyRegistered TokenNotRegistered TokenHasNoCode InvalidDenominations InvalidLezUnit ' +
+  'DenominationNotMultipleOfLezUnit InvalidUnitWeight RelayFeeTooHigh RelayFeeCountMismatch FeeTooHigh FeeCountMismatch ' +
+  'FeeNotMultipleOfLezUnit ReleaseDelayOutOfRange CapBelowFloor DeltaCanOnlyRise DeltaTooLong VaultRetired AlreadyRetired RetireNotOpen ' +
+  'DepositsAreFrozen TokenDepositsAreFrozen DepositsDisabled UseDepositETH InvalidDenominationIndex ZeroCommitment WrongDepositIndex ' +
+  'WrongEthAmount TransferAmountMismatch TreeFull TokenDepositCapExceeded GlobalDepositCapExceeded CheckpointsAreFrozen WrongMode ' +
+  'WaitNotOver ImportedLeafCountTooHigh VerifierStopped NotWatcher NoProposal TimelockNotOver ParentNotFinal EchoNonceNotZero ' +
+  'WrongCommitteeFloor KeySetBelowFloor ImportedLeafCountDecreased SunsetIsFinal CandidateAlreadySubmitted UnknownCandidate ' +
+  'StaleCandidate CandidateMismatch UnknownBeacon BeaconTooEarly EchoNonceMismatch UnknownCheckpoint CheckpointAlreadyRevoked ' +
+  'RevokeWindowPassed NotRetired NotRefundable RefundNotYetOpen UnknownLeaf AlreadyRefunded InvalidMerklePath ReleasesAreFrozen ' +
+  'TokenReleasesAreFrozen BurnRootNotAccepted ReleaseDelayNotElapsed NullifierAlreadyUsed InvalidRelayFee ZeroRecipient ' +
+  'InsufficientEscrow TokenReleaseCapExceeded GlobalReleaseCapExceeded EthTransferFailed NothingOwed DirectEthNotAccepted FunctionNotFound')
+  .split(/\s+/).map((n) => n + '()')
+  .concat(['EnforcedPause()', 'ExpectedPause()', 'ReentrancyGuardReentrantCall()', 'OwnableUnauthorizedAccount(address)', 'SafeERC20FailedOperation(address)']);
+let _errBySel = null;
+function decodeRevert(data) {
+  if (!data || data === '0x') return 'reverted without data';
+  if (!_errBySel) { _errBySel = new Map(); for (const e of VAULT_ERRORS) _errBySel.set(selector(e), e); }
+  const sel = data.slice(0, 10).toLowerCase(), rest = '0x' + data.slice(10);
+  try {
+    if (sel === '0x08c379a0') return 'Error("' + decodeAbi(['string'], rest)[0] + '")';
+    if (sel === '0x4e487b71') return 'Panic(0x' + decodeAbi(['uint256'], rest)[0].toString(16) + ')';
+  } catch (e) { /* fall through to the raw selector */ }
+  const known = _errBySel.get(sel);
+  return known ? 'reverted with ' + known : 'reverted with unknown error ' + sel + ' (' + ((data.length - 2) / 2) + ' bytes)';
+}
+
+// Event definitions of FerrataVault v5 (the library's events are emitted from the vault's address, by DELEGATECALL).
+const EVENT_DEFS = [
+  'Deposit(address indexed depositor, uint64 index, uint64 leafIndex, address indexed token, uint256 amount, bytes32 commitment)',
+  'BeaconRecorded(uint256 indexed index, uint256 timestamp, bytes32 nonce)',
+  'CandidateSubmitted(bytes32 indexed newState, bytes32 indexed parentState, bytes32 burnRoot, uint64 burnCount, uint64 importedLeafCount, bool sunset, uint256 deltaAtSubmit, uint64 tipId, bytes32 tipHash, uint32 n, uint32 t)',
+  'CheckpointFinalized(uint256 indexed index, bytes32 indexed newState, bytes32 parentState, bytes32 burnRoot, uint64 burnCount, uint64 importedLeafCount, bool sunset, uint64 tipId, bytes32 tipHash, uint32 n, uint32 t)',
+  'CandidateCancelled(bytes32 indexed newState, uint64 tipId, bytes32 tipHash)',
+  'CheckpointsRevoked(uint256 indexed fromIndex, uint256 toIndex, bytes32 restoredState)',
+  'SunsetLeafCountSet(uint256 indexed checkpointIndex, uint64 sunsetLeafCount)',
+  'SunsetLeafCountCleared()',
+  'Release(bytes32 indexed nullifier, address indexed token, address indexed recipient, uint256 amount, address relayer, uint256 relayFee, bytes32 burnRoot)',
+  'Refund(uint64 indexed leafIndex, address indexed depositor, address indexed token, uint256 amount)',
+  'OwedCredited(address indexed payee, address indexed token, uint256 amount)',
+  'OwedClaimed(address indexed payee, address indexed token, uint256 amount)',
+  'Retired()',
+  'TokenRegistered(address indexed token, uint256[] denominations, uint256[] relayFees, uint256 lezUnit, uint256 unitWeight)',
+  'DepositsEnabledSet(address indexed token, bool enabled)',
+  'TokenCapSet(address indexed token, uint8 indexed direction, uint256 capacity, uint256 refillPerSecond)',
+  'GlobalCapSet(uint8 indexed direction, uint256 capacity, uint256 refillPerSecond)',
+  'ReleaseDelaySet(address indexed token, uint256 delay, uint256 fromCheckpoint)',
+  'DeltaSet(uint256 delta)',
+  'AdminTransferStarted(address indexed currentAdmin, address indexed pendingAdmin)',
+  'AdminTransferred(address indexed previousAdmin, address indexed newAdmin)',
+  'FreezeAuthorityTransferred(address indexed previousAuthority, address indexed newAuthority)',
+  'DepositsFrozenSet(bool frozen, uint256 until)',
+  'ReleasesFrozenSet(bool frozen, uint256 until)',
+  'CheckpointsFrozenSet(bool frozen, uint256 until)',
+  'TokenDepositsFrozenSet(address indexed token, bool frozen, uint256 until)',
+  'TokenReleasesFrozenSet(address indexed token, bool frozen, uint256 until)',
+  'CheckpointsPaused(address indexed watcher, uint256 until)',
+  'RolesProposed(address[3] watchers, address indexed freezeAuthority, uint256 effectiveAt)',
+  'WatchersSet(address[3] watchers)',
+  'RegistryEntryPublished(address indexed token, bytes32 lezDefinition, uint8 decimals, bytes32 entryHash)',
+  'FeesAnnounced(address indexed token, uint256 indexed index, uint64 announcedAt, uint64 effectiveAt, uint256[] mintFees, uint256[] burnFees, uint256[] checkpointFees)',
+  'FeesInForce(address indexed token, uint256 indexed index, uint64 fromLeaf, uint64 effectiveAt, bytes32 scheduleHash)'];
+function parseEventDef(def) {
+  const m = /^([A-Za-z_]\w*)\((.*)\)$/.exec(def.trim());
+  const params = m[2].trim() ? m[2].split(',').map((p) => {
+    const w = p.trim().split(/\s+/);
+    return { type: w[0], indexed: w.length === 3 && w[1] === 'indexed', name: w[w.length - 1] };
+  }) : [];
+  const signature = m[1] + '(' + params.map((p) => p.type).join(',') + ')';
+  return { name: m[1], params, signature, topic: eventTopic(signature) };
+}
+let _events = null;
+function eventTable() {
+  if (!_events) { _events = new Map(); for (const d of EVENT_DEFS) { const e = parseEventDef(d); _events.set(e.topic, e); } }
+  return _events;
+}
+/** Decodes a log of the vault; returns null for a topic that is not one of the vault's events. */
+function decodeLog(log) {
+  const ev = eventTable().get((log.topics[0] || '').toLowerCase());
+  if (!ev) return null;
+  const args = {}; let ti = 1;
+  const dataTypes = ev.params.filter((p) => !p.indexed).map((p) => p.type);
+  const dataVals = decodeAbi(dataTypes, log.data);
+  let di = 0;
+  for (const p of ev.params) {
+    if (p.indexed) {
+      const topic = log.topics[ti++];
+      if (!topic) throw new Error(ev.name + ': missing topic for ' + p.name);
+      args[p.name] = decodeStatic(p.type, fromHex(topic), 0);
+    } else args[p.name] = dataVals[di++];
+  }
+  return { event: ev.name, args, block: Number(hexToBig(log.blockNumber)), logIndex: Number(hexToBig(log.logIndex || '0x0')), tx: log.transactionHash };
+}
+
+// =====================================================================================================
+// JSON-RPC client: read-only methods only, a few requests in flight, retries on rate limits, every error kept
+// =====================================================================================================
+const READ_ONLY = new Set(['eth_chainId', 'eth_blockNumber', 'eth_call', 'eth_getLogs', 'eth_getBalance', 'eth_getCode', 'eth_getStorageAt']);
+function errText(e) { return e && e.message ? e.message : String(e); }
+function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+function redactUrl(u) {
+  try {
+    const m = /^(https?:\/\/[^/?#]+)([^?#]*)(\?[^#]*)?/i.exec(u);
+    if (!m) return '(not an http(s) URL)';
+    const host = m[1].replace(/\/\/[^@/]*@/, '//<credentials>@');
+    return host + (m[2] && m[2] !== '/' ? '/<path hidden>' : '') + (m[3] ? '?<query hidden>' : '');
+  } catch (e) { return '(unparsable URL)'; }
+}
+function makeRpc(url, opts) {
+  const max = Math.max(1, opts.concurrency || 6);
+  const timeoutMs = opts.timeoutMs || 30000;
+  const stats = { requests: 0, byMethod: {}, retries: 0, retryReasons: [], failures: 0 };
+  let id = 0, active = 0;
+  const waiting = [];
+  async function slot(fn) {
+    if (active >= max) await new Promise((r) => waiting.push(r));
+    active++;
+    try { return await fn(); } finally { active--; const next = waiting.shift(); if (next) next(); }
+  }
+  async function once(method, params) {
+    const body = JSON.stringify({ jsonrpc: '2.0', id: ++id, method, params });
+    const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timer = ctl ? setTimeout(() => ctl.abort(), timeoutMs) : null;
+    let res, text;
+    try {
+      res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body, signal: ctl ? ctl.signal : undefined });
+      text = await res.text();
+    } catch (e) {
+      const why = e && e.name === 'AbortError' ? 'timed out after ' + timeoutMs + ' ms' : errText(e);
+      const err = new Error(method + ': network error: ' + why + (typeof document !== 'undefined' ? ' (in a browser this is also what a CORS refusal looks like)' : ''));
+      err.retryable = true; throw err;
+    } finally { if (timer) clearTimeout(timer); }
+    if (res.status === 429 || res.status >= 500) {
+      const err = new Error(method + ': HTTP ' + res.status + ' ' + (text || '').slice(0, 160).replace(/\s+/g, ' '));
+      err.retryable = true; throw err;
+    }
+    if (!res.ok) throw new Error(method + ': HTTP ' + res.status + ' ' + (text || '').slice(0, 200).replace(/\s+/g, ' '));
+    let j;
+    try { j = JSON.parse(text); } catch (e) { throw new Error(method + ': response is not JSON: ' + (text || '').slice(0, 160).replace(/\s+/g, ' ')); }
+    if (Array.isArray(j)) j = j[0];
+    if (j && j.error) {
+      const e = j.error;
+      const data = typeof e.data === 'string' ? e.data : (e.data && typeof e.data.data === 'string' ? e.data.data : null);
+      const reverted = data && /^0x[0-9a-fA-F]*$/.test(data) && (e.code === 3 || /revert/i.test(e.message || ''));
+      const msg = reverted ? decodeRevert(data) : ('JSON-RPC error ' + e.code + ': ' + (e.message || '') + (data ? ' data ' + data.slice(0, 80) : ''));
+      const err = new Error(msg);
+      err.rpcCode = e.code; err.reverted = !!reverted || /execution reverted/i.test(e.message || '');
+      err.retryable = !err.reverted && /rate|too many requests|capacity|busy|temporar/i.test(e.message || '');
+      throw err;
+    }
+    if (!j || !('result' in j)) throw new Error(method + ': response has neither result nor error');
+    return j.result;
+  }
+  async function send(method, params) {
+    if (!READ_ONLY.has(method)) throw new Error('refused: ' + method + ' is not one of the read-only methods this page uses');
+    return slot(async () => {
+      for (let attempt = 0; ; attempt++) {
+        stats.requests++; stats.byMethod[method] = (stats.byMethod[method] || 0) + 1;
+        try { return await once(method, params); } catch (e) {
+          if (e.retryable && attempt < 4) {
+            stats.retries++;
+            if (stats.retryReasons.length < 8) stats.retryReasons.push(errText(e).slice(0, 160));
+            await sleep(400 * 2 ** attempt);
+            continue;
+          }
+          stats.failures++;
+          throw e;
+        }
+      }
+    });
+  }
+  return { send, stats };
+}
+
+// Runtime creation code that returns (block.timestamp, block.number): TIMESTAMP PUSH1 0 MSTORE NUMBER PUSH1 32 MSTORE
+// PUSH1 64 PUSH1 0 RETURN. Run with eth_call and no `to` (a creation that is never mined), it reads the block time
+// without eth_getBlockByNumber.
+const BLOCK_INFO_CODE = '0x426000524360205260406000f3';
+
+function isErr(x) { return x !== null && typeof x === 'object' && !Array.isArray(x) && Object.prototype.hasOwnProperty.call(x, 'error'); }
+function ok(x) { return x !== undefined && !isErr(x); }
+
+/** PUSH20 constants in runtime code (walks opcodes so PUSH data is not read as code). */
+function push20Constants(code) {
+  const b = fromHex(code), found = new Set();
+  for (let i = 0; i < b.length; i++) {
+    const op = b[i];
+    if (op >= 0x60 && op <= 0x7f) {
+      const n = op - 0x5f;
+      if (op === 0x73 && i + 20 < b.length) {
+        const a = toHex(b.slice(i + 1, i + 21));
+        if (!/^0x(0{40}|f{40})$/.test(a)) found.add(a);
+      }
+      i += n;
+    }
+  }
+  return Array.from(found);
+}
+
+// =====================================================================================================
+// The reader: readVault(rpcUrl, vault, fromBlock, opts) -> state (plain data; BigInt for integers)
+// =====================================================================================================
+async function readVault(rpcUrl, vault, fromBlock, opts) {
+  opts = opts || {};
+  const progress = typeof opts.onProgress === 'function' ? opts.onProgress : function () {};
+  const st = { version: VERSION, input: {}, chain: {}, errors: [], notes: [], fatal: null, readStartedAt: new Date().toISOString() };
+  const fail = (where, e, severity) => { const m = errText(e); st.errors.push({ where, message: m, severity: severity || 'error' }); return { error: m }; };
+  rpcUrl = String(rpcUrl || '').trim();
+  vault = String(vault || '').trim();
+  st.input = { endpoint: redactUrl(rpcUrl), vault, fromBlock: fromBlock === undefined || fromBlock === null ? '' : String(fromBlock).trim() };
+  if (!/^https?:\/\/\S+$/i.test(rpcUrl)) { st.fatal = 'the RPC URL must start with http:// or https://'; return st; }
+  if (!/^0x[0-9a-fA-F]{40}$/.test(vault)) { st.fatal = 'the vault address must be 0x and 40 hex digits'; return st; }
+  vault = vault.toLowerCase();
+  const rpc = makeRpc(rpcUrl, opts);
+  st.rpcStats = rpc.stats;
+
+  // ---- chain and block -------------------------------------------------------------------------------
+  progress('chain id and latest block');
+  try {
+    st.chain.chainId = Number(hexToBig(await rpc.send('eth_chainId', [])));
+    st.chain.head = Number(hexToBig(await rpc.send('eth_blockNumber', [])));
+  } catch (e) { st.fatal = 'cannot read the chain id / latest block: ' + errText(e); fail('chain', e); return st; }
+  st.chain.name = CHAINS[st.chain.chainId] || 'unknown chain';
+  let block = st.chain.head, code = null;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try { code = await rpc.send('eth_getCode', [vault, hx(block)]); break; } catch (e) {
+      if (attempt < 3 && /header|block|not found|unknown|missing/i.test(errText(e))) { st.notes.push('block ' + block + ' not served yet (' + errText(e) + '); reading one block earlier'); block -= 1; continue; }
+      st.fatal = 'eth_getCode of the vault failed: ' + errText(e); fail('vault code', e); return st;
+    }
+  }
+  const tag = hx(block);
+  st.chain.block = block;
+  try {
+    const r = decodeAbi(['uint256', 'uint256'], await rpc.send('eth_call', [{ data: BLOCK_INFO_CODE }, tag]));
+    st.chain.timestamp = r[0];
+    if (Number(r[1]) !== block) st.notes.push('the block-time call ran in block ' + r[1] + ', not ' + block);
+  } catch (e) { st.chain.timestamp = fail('block timestamp (eth_call of TIMESTAMP code, no `to`)', e); }
+  const now = ok(st.chain.timestamp) ? st.chain.timestamp : null;
+  st.chain.now = now;
+  st.code = { size: (code.length - 2) / 2, hash: code.length > 2 ? keccak256Hex(fromHex(code)) : null };
+  if (st.code.size === 0) { st.fatal = 'no contract code at ' + vault + ' on chain ' + st.chain.chainId + ' at block ' + block; return st; }
+
+  const call = async (sig, args, outTypes, opt) => {
+    opt = opt || {};
+    try {
+      const ret = await rpc.send('eth_call', [{ to: opt.to || vault, data: encodeCall(sig, args || []) }, tag]);
+      if (opt.raw) return ret;
+      if (outTypes.length && (!ret || ret === '0x')) throw new Error('empty return data (no such function at this address?)');
+      const v = decodeAbi(outTypes, ret);
+      return outTypes.length === 1 ? v[0] : v;
+    } catch (e) { return fail((opt.label ? opt.label + ': ' : '') + sig + (args && args.length ? ' [' + args.map(String).join(', ') + ']' : '') + (opt.to && opt.to !== vault ? ' at ' + opt.to : ''), e, opt.optional ? 'info' : 'error'); }
+  };
+  const storageAt = async (slot, label) => {
+    try { return await rpc.send('eth_getStorageAt', [vault, typeof slot === 'number' ? hx(slot) : slot, tag]); }
+    catch (e) { return fail('eth_getStorageAt ' + (label || slot), e); }
+  };
+  const codeSize = async (addr) => {
+    try { const c = await rpc.send('eth_getCode', [addr, tag]); return (c.length - 2) / 2; } catch (e) { return fail('eth_getCode ' + addr, e); }
+  };
+
+  // ---- event scan --------------------------------------------------------------------------------------
+  let from = null, fromSource = '';
+  const fb = st.input.fromBlock;
+  if (fb !== '') {
+    if (!/^(0x[0-9a-fA-F]+|\d+)$/.test(fb)) { st.fatal = 'from-block must be a block number'; return st; }
+    from = Number(BigInt(fb)); fromSource = 'given';
+  } else if (vault === DEFAULT_VAULT.toLowerCase() && st.chain.chainId === 11155111) {
+    from = DEFAULT_FROM_BLOCK; fromSource = 'the live vault\'s creation block (README.md)';
+  } else {
+    progress('searching the creation block (eth_getCode over history)');
+    try {
+      let lo = 0, hi = block;
+      while (lo < hi) {
+        const mid = Math.floor((lo + hi) / 2);
+        const c = await rpc.send('eth_getCode', [vault, hx(mid)]);
+        if (c && c.length > 2) hi = mid; else lo = mid + 1;
+      }
+      from = lo; fromSource = 'creation block found by bisecting eth_getCode';
+    } catch (e) {
+      from = Math.max(0, block - 50000);
+      fromSource = 'last 50,000 blocks only (the endpoint refused historical eth_getCode: ' + errText(e) + ')';
+      fail('creation-block search', e);
+      st.notes.push('events before block ' + from + ' were not scanned: give the creation block to see them');
+    }
+  }
+  st.logs = await scanLogs(rpc, vault, from, block, opts, progress);
+  st.logs.fromSource = fromSource;
+  if (!st.logs.complete) fail('eth_getLogs', new Error('the event scan stopped at block ' + st.logs.stoppedAt + ': ' + st.logs.error));
+  const E = {}; let unknown = 0;
+  for (const l of st.logs.raw) {
+    if (l.removed) continue;
+    let d = null;
+    try { d = decodeLog(l); } catch (e) { fail('decoding a log in tx ' + l.transactionHash, e); continue; }
+    if (!d) { unknown++; continue; }
+    (E[d.event] = E[d.event] || []).push(d);
+  }
+  delete st.logs.raw;
+  st.logs.unknown = unknown;
+  st.logs.counts = {};
+  for (const k of Object.keys(E)) st.logs.counts[k] = E[k].length;
+  st.events = E;
+  const ev = (name) => E[name] || [];
+
+  // ---- configuration, roles, global state (getters) ----------------------------------------------------
+  progress('getters');
+  const GETTERS = [
+    ['verifier()', 'address'], ['checkpointImageId()', 'bytes32'], ['releaseImageId()', 'bytes32'], ['lezConfigId()', 'bytes32'],
+    ['storedLezConfigId()', 'bytes32'], ['genesisState()', 'bytes32'], ['nMin()', 'uint32'], ['tMin()', 'uint32'],
+    ['deltaFloor()', 'uint256'], ['revokeWindow()', 'uint256'], ['maxFreeze()', 'uint256'], ['turnSeconds()', 'uint256'],
+    ['minReleaseDelay()', 'uint256'], ['mode()', 'uint8'], ['releaseCapFloor()', 'uint256'], ['releaseRefillFloor()', 'uint256'],
+    ['feeRecipient()', 'address'], ['admin()', 'address'], ['pendingAdmin()', 'address'], ['freezeAuthority()', 'address'],
+    ['finalState()', 'bytes32'], ['delta()', 'uint256'], ['revocationEpoch()', 'uint256'], ['beaconCount()', 'uint256'],
+    ['checkpointCount()', 'uint256'], ['finalImportedLeafCount()', 'uint64'], ['finalSunset()', 'bool'], ['keylessFrom()', 'uint64'],
+    ['depositsFrozenUntil()', 'uint256'], ['releasesFrozenUntil()', 'uint256'], ['checkpointsFrozenUntil()', 'uint256'],
+    ['retired()', 'bool'], ['retireOpensAt()', 'uint256'], ['sunsetLeafCountSet()', 'bool'], ['sunsetLeafCount()', 'uint64'],
+    ['sunsetSetAt()', 'uint256'], ['sunsetFinalizedAt()', 'uint256'], ['depositRoot()', 'bytes32'], ['nextLeafIndex()', 'uint64']];
+  const g = {};
+  await Promise.all(GETTERS.map(async ([sig, t]) => { g[sig.slice(0, -2)] = await call(sig, [], [t]); }));
+  const rp = await call('roleProposal()', [], ['address', 'uint256']);
+  g.roleProposal = ok(rp) ? { freezeAuthority: rp[0], effectiveAt: rp[1] } : rp;
+  g.watchers = await Promise.all([0, 1, 2].map((i) => call('watchers(uint256)', [i], ['address'])));
+  const gc = await Promise.all([0, 1].map((d) => call('globalCap(uint8)', [d], ['uint256', 'uint256', 'uint256'])));
+  g.globalCap = { deposit: capObj(gc[0]), release: capObj(gc[1]) };
+  st.g = g;
+
+  // Storage slots: 0-2 are the cross-chain interface; 43-45 and 52 give two internal counters, with the layout
+  // (vault/README.md "Storage-slot contract") checked against the public getters that share or neighbour them.
+  const slots = {};
+  await Promise.all([0, 1, 2, 43, 44, 45, 52].map(async (n) => { slots[n] = await storageAt(n, 'slot ' + n); }));
+  st.slots = slots;
+  st.internal = {};
+  if (ok(slots[52]) && ok(g.finalImportedLeafCount) && ok(g.finalSunset) && ok(g.keylessFrom)) {
+    const v = hexToBig(slots[52]);
+    const m64 = (1n << 64n) - 1n;
+    const fil = v & m64, fs = (v >> 64n) & 0xffn, kf = (v >> 72n) & m64, sc = (v >> 136n) & m64, high = v >> 200n;
+    const layoutOk = fil === g.finalImportedLeafCount && fs === (g.finalSunset ? 1n : 0n) && kf === g.keylessFrom && high === 0n;
+    st.internal.slot52 = { layoutOk, stateChanges: sc };
+    if (layoutOk && ok(g.revocationEpoch)) st.internal.epoch = g.revocationEpoch + sc;
+  }
+  if (ok(slots[43]) && ok(slots[44]) && ok(slots[45]) && ok(g.revocationEpoch) && ok(g.beaconCount)) {
+    const layoutOk = hexToBig(slots[43]) === g.revocationEpoch && hexToBig(slots[45]) === g.beaconCount;
+    st.internal.lastBeaconBlock = { layoutOk, value: hexToBig(slots[44]) };
+  }
+
+  // ---- linked library, role addresses, verifier stop ----------------------------------------------------
+  progress('linked library, roles, verifier stop');
+  const libs = push20Constants(code).slice(0, 8);
+  st.code.push20 = await Promise.all(libs.map(async (a) => ({ address: a, codeSize: await codeSize(a) })));
+  const roleAddrs = new Set();
+  for (const a of [g.admin, g.pendingAdmin, g.freezeAuthority, g.feeRecipient].concat(g.watchers, ok(g.roleProposal) ? [g.roleProposal.freezeAuthority] : [])) {
+    if (ok(a) && a !== ZERO_ADDR) roleAddrs.add(a);
+  }
+  st.codeSizes = {};
+  await Promise.all(Array.from(roleAddrs).map(async (a) => { st.codeSizes[a] = await codeSize(a); }));
+  const lastRP = ev('RolesProposed').slice(-1)[0];
+  st.proposedWatchers = lastRP ? lastRP.args.watchers : null;
+  st.stop = {};
+  if (ok(g.verifier)) {
+    const v = g.verifier;
+    const [paused, owner, pendingOwner, inner, size] = await Promise.all([
+      call('paused()', [], ['bool'], { to: v, label: 'verifier stop' }),
+      call('owner()', [], ['address'], { to: v, label: 'verifier stop', optional: true }),
+      call('pendingOwner()', [], ['address'], { to: v, label: 'verifier stop', optional: true }),
+      call('verifier()', [], ['address'], { to: v, label: 'verifier stop', optional: true }),
+      codeSize(v)]);
+    Object.assign(st.stop, { address: v, paused, owner, pendingOwner, inner, codeSize: size });
+    if (ok(inner)) {
+      const [ver, sel, isize] = await Promise.all([
+        call('VERSION()', [], ['string'], { to: inner, label: 'inner verifier', optional: true }),
+        call('SELECTOR()', [], ['bytes4'], { to: inner, label: 'inner verifier', optional: true }),
+        codeSize(inner)]);
+      Object.assign(st.stop, { innerVersion: ver, innerSelector: sel, innerCodeSize: isize });
+    }
+  }
+
+  // ---- tokens ---------------------------------------------------------------------------------------------
+  progress('tokens');
+  const tokenSet = new Set([ZERO_ADDR]);
+  for (const e of ev('TokenRegistered')) tokenSet.add(e.args.token);
+  const cpCount = ok(g.checkpointCount) ? g.checkpointCount : 0n;
+  st.tokens = [];
+  for (const token of tokenSet) {
+    const t = { address: token, isEth: token === ZERO_ADDR };
+    const cfg = await call('tokenConfig(address)', [token], ['bool', 'bool', 'uint256', 'uint256', 'uint256[]']);
+    t.config = ok(cfg) ? { registered: cfg[0], depositsEnabled: cfg[1], lezUnit: cfg[2], unitWeight: cfg[3], denominations: cfg[4] } : cfg;
+    if (ok(t.config) && !t.config.registered) {
+      if (!t.isEth) fail('token ' + token, new Error('TokenRegistered was emitted but tokenConfig says not registered'));
+      if (t.isEth) continue; // ETH probed and not registered: not listed
+    }
+    st.tokens.push(t);
+  }
+  await Promise.all(st.tokens.map(async (t) => {
+    const token = t.address;
+    const jobs = {
+      capDeposit: call('tokenCap(address,uint8)', [token, 0], ['uint256', 'uint256', 'uint256']),
+      capRelease: call('tokenCap(address,uint8)', [token, 1], ['uint256', 'uint256', 'uint256']),
+      escrowed: call('escrowed(address)', [token], ['uint256']),
+      totalOwed: call('totalOwed(address)', [token], ['uint256']),
+      feeState: call('feeState(address)', [token], ['uint64', 'uint64']),
+      depFrozen: call('tokenDepositsFrozenUntil(address)', [token], ['uint256']),
+      relFrozen: call('tokenReleasesFrozenUntil(address)', [token], ['uint256']),
+      delayNext: call('releaseDelayFor(address,uint256)', [token, cpCount], ['uint256']),
+      entrySlot: storageAt(registrySlot(token), 'registry entry of ' + token)};
+    if (t.isEth) {
+      t.meta = { symbol: 'ETH', decimals: 18, name: 'Ether', source: 'native' };
+      jobs.balance = rpc.send('eth_getBalance', [vault, tag]).then(hexToBig, (e) => fail('eth_getBalance of the vault', e));
+    } else {
+      jobs.decimals = call('decimals()', [], ['uint8'], { to: token, label: 'token' });
+      jobs.symbol = call('symbol()', [], [], { to: token, label: 'token', raw: true, optional: true });
+      jobs.name = call('name()', [], [], { to: token, label: 'token', raw: true, optional: true });
+      jobs.balance = call('balanceOf(address)', [vault], ['uint256'], { to: token, label: 'token' });
+      jobs.tokenCode = codeSize(token);
+    }
+    const r = {};
+    await Promise.all(Object.keys(jobs).map(async (k) => { r[k] = await jobs[k]; }));
+    if (!t.isEth) t.meta = { symbol: textResult(r.symbol), name: textResult(r.name), decimals: ok(r.decimals) ? Number(r.decimals) : r.decimals, codeSize: r.tokenCode, source: 'token contract' };
+    t.caps = { deposit: capObj(r.capDeposit), release: capObj(r.capRelease) };
+    t.escrowed = r.escrowed; t.totalOwed = r.totalOwed; t.balance = r.balance;
+    t.feeState = ok(r.feeState) ? { current: r.feeState[0], pendingAt: r.feeState[1] } : r.feeState;
+    t.frozen = { deposits: r.depFrozen, releases: r.relFrozen };
+    t.releaseDelayNext = r.delayNext;
+    // Fees of the schedule in force, and of the announced one.
+    const k = ok(t.config) ? t.config.denominations.length : 0;
+    const feeRows = async (index) => Promise.all(Array.from({ length: k }, (_, d) => call('fees(address,uint256,uint8)', [token, index, d], ['uint256', 'uint256', 'uint256', 'uint256'])));
+    if (ok(t.feeState)) {
+      t.feesCurrent = await feeRows(t.feeState.current);
+      if (t.feeState.pendingAt !== 0n) t.feesPending = await feeRows(t.feeState.current + 1n);
+    }
+    // Published registry entry: slot value, event hash, and the hash recomputed from the events.
+    const reg = ev('TokenRegistered').filter((e) => e.args.token === token).slice(-1)[0];
+    const pub = ev('RegistryEntryPublished').filter((e) => e.args.token === token).slice(-1)[0];
+    t.registry = { slot: registrySlot(token), slotValue: r.entrySlot, eventHash: pub ? pub.args.entryHash : null, lezDefinition: pub ? pub.args.lezDefinition : null, entryDecimals: pub ? Number(pub.args.decimals) : null, registeredAt: reg ? reg.block : null, relayFees: reg ? reg.args.relayFees : null };
+    if (reg && pub) {
+      try { t.registry.recomputed = registryEntryHash(token, pub.args.lezDefinition, pub.args.decimals, reg.args.lezUnit, reg.args.unitWeight, reg.args.denominations, reg.args.relayFees); }
+      catch (e) { t.registry.recomputed = fail('recomputing the registry entry of ' + token, e); }
+    }
+    // Fee schedules in force, each published at its slot.
+    t.schedules = [];
+    if (ok(t.feeState)) {
+      const cur = Number(t.feeState.current);
+      for (let i = Math.max(0, cur - 9); i <= cur; i++) {
+        const inForce = ev('FeesInForce').filter((e) => e.args.token === token && Number(e.args.index) === i).slice(-1)[0];
+        const ann = inForce ? ev('FeesAnnounced').filter((e) => e.args.token === token && Number(e.args.index) === i && (e.block < inForce.block || (e.block === inForce.block && e.logIndex < inForce.logIndex))).slice(-1)[0] : null;
+        const s = { index: i, slot: feeSlot(token, i), slotValue: await storageAt(feeSlot(token, i), 'fee schedule ' + i + ' of ' + token), eventHash: inForce ? inForce.args.scheduleHash : null, fromLeaf: inForce ? inForce.args.fromLeaf : null, effectiveAt: inForce ? inForce.args.effectiveAt : null, announcedAt: ann ? ann.args.announcedAt : null };
+        if (inForce && ann) {
+          try { s.recomputed = feeScheduleHash(token, i, inForce.args.fromLeaf, ann.args.announcedAt, inForce.args.effectiveAt, ann.args.mintFees, ann.args.burnFees, ann.args.checkpointFees); }
+          catch (e) { s.recomputed = fail('recomputing fee schedule ' + i + ' of ' + token, e); }
+        }
+        t.schedules.push(s);
+      }
+    }
+    const pendingAnn = ok(t.feeState) && t.feeState.pendingAt !== 0n ? ev('FeesAnnounced').filter((e) => e.args.token === token && e.args.index === t.feeState.current + 1n).slice(-1)[0] : null;
+    t.pendingAnnouncement = pendingAnn ? { announcedAt: pendingAnn.args.announcedAt, effectiveAt: pendingAnn.args.effectiveAt, block: pendingAnn.block } : null;
+    t.delayHistory = ev('ReleaseDelaySet').filter((e) => e.args.token === token).map((e) => ({ delay: e.args.delay, fromCheckpoint: e.args.fromCheckpoint, block: e.block }));
+    t.deposits = ev('Deposit').filter((e) => e.args.token === token);
+    t.releases = ev('Release').filter((e) => e.args.token === token);
+    t.refunds = ev('Refund').filter((e) => e.args.token === token);
+  }));
+
+  // ---- checkpoints, candidates, beacons -----------------------------------------------------------------------
+  progress('checkpoints and candidates');
+  const n = Number(cpCount);
+  const first = Math.max(0, n - 50);
+  st.checkpoints = await Promise.all(Array.from({ length: n - first }, async (_, j) => {
+    const i = first + j;
+    const c = await call('checkpoints(uint256)', [i], ['bytes32', 'bytes32', 'bytes32', 'uint64', 'uint64', 'bool', 'bool', 'uint64', 'bool', 'uint64', 'address']);
+    if (!ok(c)) return { index: i, error: c.error };
+    const cp = { index: i, parentState: c[0], newState: c[1], burnRoot: c[2], burnCount: c[3], importedLeafCount: c[4], sunset: c[5], revoked: c[6], parentImportedLeafCount: c[7], parentSunset: c[8], finalizedAt: c[9], prover: c[10] };
+    const [status, entry] = await Promise.all([
+      call('burnRootStatus(bytes32)', [cp.burnRoot], ['bool', 'uint256']),
+      call('burnRootCheckpoint(bytes32)', [cp.burnRoot], ['uint256'])]);
+    cp.burnRootStatus = ok(status) ? { accepted: status[0], finalizedAt: status[1] } : status;
+    cp.burnRootEntry = entry;
+    cp.releaseDelays = {};
+    if (i >= n - 10) await Promise.all(st.tokens.map(async (t) => { cp.releaseDelays[t.address] = await call('releaseDelayFor(address,uint256)', [t.address, i], ['uint256']); }));
+    const fin = ev('CheckpointFinalized').filter((e) => Number(e.args.index) === i).slice(-1)[0];
+    if (fin) { cp.tipId = fin.args.tipId; cp.tipHash = fin.args.tipHash; cp.n = fin.args.n; cp.t = fin.args.t; cp.block = fin.block; cp.tx = fin.tx; }
+    return cp;
+  }));
+  st.checkpointsShownFrom = first;
+
+  const subs = ev('CandidateSubmitted');
+  const states = [];
+  for (const e of subs) { const i = states.indexOf(e.args.newState); if (i >= 0) states.splice(i, 1); states.push(e.args.newState); }
+  const shown = states.slice(-40);
+  st.candidates = await Promise.all(shown.map(async (s) => {
+    const c = await call('candidates(bytes32)', [s], ['bytes32', 'bytes32', 'uint64', 'uint32', 'uint48', 'uint32', 'uint64', 'address']);
+    const hist = [];
+    for (const e of subs) if (e.args.newState === s) hist.push({ what: 'submitted', block: e.block, tx: e.tx, args: e.args });
+    for (const e of ev('CandidateCancelled')) if (e.args.newState === s) hist.push({ what: 'cancelled', block: e.block, tx: e.tx, logIndex: e.logIndex });
+    for (const e of ev('CheckpointFinalized')) if (e.args.newState === s) hist.push({ what: 'finalized as checkpoint ' + e.args.index, block: e.block, tx: e.tx, logIndex: e.logIndex });
+    hist.sort((a, b) => a.block - b.block || (a.logIndex || 0) - (b.logIndex || 0));
+    const out = { newState: s, history: hist, lastSubmitted: subs.filter((e) => e.args.newState === s).slice(-1)[0] };
+    out.getter = ok(c) ? { journalDigest: c[0], tipHash: c[1], tipId: c[2], t: c[3], submittedAt: c[4], deltaAtSubmit: c[5], epoch: c[6], prover: c[7] } : c;
+    return out;
+  }));
+  st.candidatesTotal = states.length;
+  st.beacons = [];
+  if (ok(g.beaconCount) && g.beaconCount > 0n) {
+    const bc = Number(g.beaconCount);
+    st.beacons = await Promise.all(Array.from({ length: Math.min(10, bc) }, async (_, j) => {
+      const i = bc - Math.min(10, bc) + j;
+      const b = await call('beacons(uint256)', [i], ['uint256', 'bytes32']);
+      return ok(b) ? { index: i, timestamp: b[0], nonce: b[1] } : { index: i, error: b.error };
+    }));
+  }
+
+  // ---- deposits, releases, refunds, owed ------------------------------------------------------------------------------
+  progress('deposits, releases, owed');
+  const deps = ev('Deposit').slice().sort((a, b) => Number(a.args.leafIndex - b.args.leafIndex));
+  st.depositCheck = { events: deps.length };
+  if (ok(g.nextLeafIndex)) {
+    const contiguous = deps.length === Number(g.nextLeafIndex) && deps.every((d, i) => Number(d.args.leafIndex) === i);
+    st.depositCheck.contiguous = contiguous;
+    if (contiguous) {
+      try { st.depositCheck.recomputedRoot = depositTreeRoot(deps.map((d) => leafHash(d.args.leafIndex, d.args.depositor, d.args.token, d.args.amount, d.args.commitment))); }
+      catch (e) { st.depositCheck.recomputedRoot = fail('recomputing the deposit root', e); }
+    }
+  }
+  const depositors = Array.from(new Set(deps.map((d) => d.args.depositor))).slice(0, 100);
+  st.depositors = await Promise.all(depositors.map(async (a) => ({ address: a, events: deps.filter((d) => d.args.depositor === a).length, depositCount: await call('depositCount(address)', [a], ['uint64']) })));
+  const rels = ev('Release');
+  st.nullifiers = await Promise.all(rels.slice(-200).map(async (r) => ({ nullifier: r.args.nullifier, used: await call('nullifierUsed(bytes32)', [r.args.nullifier], ['bool']) })));
+  st.refunded = await Promise.all(ev('Refund').slice(-100).map(async (r) => ({ leafIndex: r.args.leafIndex, refunded: await call('refunded(uint64)', [r.args.leafIndex], ['bool']) })));
+  const pairs = new Map();
+  const addPair = (payee, token) => { if (ok(payee) && payee !== ZERO_ADDR) pairs.set(payee + '|' + token, { payee, token }); };
+  for (const e of ev('OwedCredited').concat(ev('OwedClaimed'))) addPair(e.args.payee, e.args.token);
+  for (const t of st.tokens) { addPair(g.feeRecipient, t.address); for (const cp of st.checkpoints) if (cp.prover) addPair(cp.prover, t.address); }
+  st.owed = await Promise.all(Array.from(pairs.values()).slice(0, 200).map(async ({ payee, token }) => {
+    const credited = ev('OwedCredited').filter((e) => e.args.payee === payee && e.args.token === token);
+    const claimed = ev('OwedClaimed').filter((e) => e.args.payee === payee && e.args.token === token);
+    return { payee, token, owed: await call('owed(address,address)', [payee, token], ['uint256']), credited: sum(credited.map((e) => e.args.amount)), creditedCount: credited.length, claimed: sum(claimed.map((e) => e.args.amount)), claimedCount: claimed.length };
+  }));
+  st.readFinishedAt = new Date().toISOString();
+  progress('done');
+  return st;
+}
+
+function capObj(c) { return ok(c) ? { capacity: c[0], refillPerSecond: c[1], available: c[2] } : c; }
+function sum(xs) { return xs.reduce((a, b) => a + b, 0n); }
+function textResult(ret) {
+  if (!ok(ret)) return ret;
+  try { return decodeAbi(['string'], ret)[0]; } catch (e) { /* not an ABI string */ }
+  try { const b = fromHex(ret); if (b.length === 32) return utf8Decode(b.filter((x) => x !== 0)); } catch (e) { /* fall through */ }
+  return { error: 'undecodable return data ' + String(ret).slice(0, 40) };
+}
+
+async function scanLogs(rpc, vault, from, to, opts, progress) {
+  const res = { from, to, chunks: 0, rangeErrors: [], complete: false, raw: [] };
+  const MAX = Math.max(1, opts.logChunk || 50000), MIN = 16;
+  let size = MAX, start = from;
+  while (start <= to) {
+    const end = Math.min(to, start + size - 1);
+    try {
+      const logs = await rpc.send('eth_getLogs', [{ address: vault, fromBlock: hx(start), toBlock: hx(end) }]);
+      if (!Array.isArray(logs)) throw new Error('eth_getLogs returned ' + typeof logs);
+      res.chunks++;
+      for (const l of logs) res.raw.push(l);
+      start = end + 1;
+      progress('events: ' + res.raw.length + ' logs up to block ' + end + ' of ' + to);
+    } catch (e) {
+      if (size > MIN) {
+        res.rangeErrors.push('blocks ' + start + '-' + end + ' (' + (end - start + 1) + '): ' + errText(e).slice(0, 200));
+        size = Math.max(MIN, Math.floor(size / 4));
+        continue;
+      }
+      res.error = errText(e); res.stoppedAt = start;
+      break;
+    }
+  }
+  res.complete = start > to;
+  res.chunkSize = size;
+  res.raw.sort((a, b) => Number(hexToBig(a.blockNumber) - hexToBig(b.blockNumber)) || Number(hexToBig(a.logIndex || '0x0') - hexToBig(b.logIndex || '0x0')));
+  return res;
+}
+
+// =====================================================================================================
+// The report: buildReport(state) -> sections; renderText(state) -> string; renderHtml(state) -> HTML string
+// =====================================================================================================
+function human(sec) {
+  let s = Math.abs(Number(sec));
+  const parts = [];
+  const d = Math.floor(s / DAY); s -= d * DAY;
+  const h = Math.floor(s / 3600); s -= h * 3600;
+  const m = Math.floor(s / 60); s -= m * 60;
+  if (d) parts.push(d + 'd'); if (h) parts.push(h + 'h'); if (m) parts.push(m + 'm'); if (s || !parts.length) parts.push(s + 's');
+  return parts.slice(0, 2).join(' ');
+}
+function iso(ts) { try { return new Date(Number(ts) * 1000).toISOString().replace('.000Z', 'Z'); } catch (e) { return String(ts); } }
+function rel(ts, now) { if (now === null || now === undefined) return ''; const d = Number(BigInt(ts) - BigInt(now)); return d === 0 ? 'now' : d > 0 ? 'in ' + human(d) : human(-d) + ' ago'; }
+function fTime(ts, now) { if (!ok(ts)) return errV(ts); if (BigInt(ts) === 0n) return '0 (never set)'; const r = rel(ts, now); return iso(ts) + ' (' + String(ts) + (r ? ', ' + r : '') + ')'; }
+function fDur(s) { if (!ok(s)) return errV(s); const n = BigInt(s); return n.toString() + ' s' + (n >= 60n ? ' (' + human(n) + ')' : ''); }
+function errV(x) { return 'ERROR: ' + (x && x.error ? x.error : 'not read'); }
+function fAddr(a) { if (!ok(a)) return errV(a); if (a === ZERO_ADDR) return ZERO_ADDR + ' (none)'; try { return toChecksumAddress(a); } catch (e) { return String(a); } }
+function units(raw, dec) {
+  const neg = raw < 0n, x = neg ? -raw : raw;
+  if (dec === null || dec === undefined || !Number.isInteger(dec)) return raw.toString();
+  const d = 10n ** BigInt(dec), i = x / d, f = x % d;
+  const fs = dec > 0 ? f.toString().padStart(dec, '0').replace(/0+$/, '') : '';
+  return (neg ? '-' : '') + i.toString() + (fs ? '.' + fs : '');
+}
+function tokLabel(t) { if (!t) return '?'; const sym = ok(t.meta.symbol) ? t.meta.symbol : '?'; return t.isEth ? 'ETH' : sym + ' ' + fAddr(t.address); }
+function fAmt(raw, t) {
+  if (!ok(raw)) return errV(raw);
+  if (raw === UNLIMITED) return 'UNLIMITED';
+  const dec = t && ok(t.meta.decimals) ? t.meta.decimals : null;
+  const sym = t ? (t.isEth ? 'ETH' : (ok(t.meta.symbol) ? t.meta.symbol : 'units')) : '';
+  return (dec === null ? raw.toString() + ' base units' : units(raw, dec) + ' ' + sym) + ' [' + raw.toString() + ']';
+}
+function fBool(b) { return ok(b) ? (b ? 'yes' : 'no') : errV(b); }
+function fRaw(x) { return ok(x) ? String(x) : errV(x); }
+function frozenText(until, now) {
+  if (!ok(until)) return errV(until);
+  if (until === 0n) return 'not frozen';
+  if (now === null) return 'until ' + fTime(until, now) + ' (block time unknown)';
+  return (now < until ? 'FROZEN until ' : 'not frozen (lapsed at ') + fTime(until, now) + (now < until ? '' : ')');
+}
+function capText(c, t, unitsLabel) {
+  if (!ok(c)) return errV(c);
+  if (c.capacity === UNLIMITED) return 'no bucket (UNLIMITED)';
+  const fmt = (x) => (t ? fAmt(x, t) : x.toString() + ' ' + unitsLabel);
+  const used = c.capacity - c.available;
+  const pct = c.capacity > 0n ? Number(used * 10000n / c.capacity) / 100 : 0;
+  let s = 'available ' + fmt(c.available) + ' of ' + fmt(c.capacity) + ' (' + pct + '% used), refill ' + fmt(c.refillPerSecond) + '/s';
+  if (used > 0n && c.refillPerSecond > 0n) s += ', full again in ' + human((used + c.refillPerSecond - 1n) / c.refillPerSecond);
+  return s;
+}
+function matchText(a, b) { return ok(a) && ok(b) && a && b ? (a.toLowerCase() === b.toLowerCase() ? 'match' : 'MISMATCH') : 'n/a'; }
+
+function buildReport(st) {
+  const S = [];
+  const sec = (title) => { const s = { title, items: [] }; S.push(s); return s; };
+  const kv = (s, k, v, src, cls) => s.items.push({ k, v, src: src || '', cls: cls || (typeof v === 'string' && /^ERROR|MISMATCH|FROZEN|TRIPPED/.test(v) ? 'err' : '') });
+  const note = (s, text, cls) => s.items.push({ note: text, cls: cls || 'note' });
+  const table = (s, head, rows, caption) => s.items.push({ table: { head, rows }, caption });
+  const g = st.g || {}, now = st.chain ? st.chain.now : null;
+
+  const r = sec('Read');
+  kv(r, 'tool', st.version);
+  kv(r, 'endpoint', st.input.endpoint);
+  kv(r, 'vault', st.input.vault ? fAddr(st.input.vault.toLowerCase()) : '');
+  if (st.fatal) { kv(r, 'FATAL', st.fatal, '', 'err'); }
+  if (st.chain && st.chain.chainId !== undefined) {
+    kv(r, 'chain id', st.chain.chainId + ' (' + st.chain.name + ')', 'eth_chainId');
+    kv(r, 'latest block', String(st.chain.head), 'eth_blockNumber');
+    if (st.chain.block !== undefined) kv(r, 'every read pinned to block', String(st.chain.block), 'block tag of each call');
+    if (st.chain.timestamp !== undefined) kv(r, 'block time', ok(st.chain.timestamp) ? iso(st.chain.timestamp) + ' (' + st.chain.timestamp + ')' : errV(st.chain.timestamp), 'eth_call of TIMESTAMP code');
+  }
+  kv(r, 'read at (local clock, UTC)', st.readStartedAt + (st.readFinishedAt ? ' to ' + st.readFinishedAt : ''));
+  if (st.code) {
+    kv(r, 'vault runtime code', st.code.size + ' bytes, keccak256 ' + st.code.hash, 'eth_getCode');
+    if (st.code.push20) {
+      const libs = st.code.push20.filter((x) => ok(x.codeSize) && x.codeSize > 0);
+      kv(r, 'linked library (FerrataRegistry)', libs.length ? libs.map((x) => fAddr(x.address) + ' (' + x.codeSize + ' bytes of code)').join('; ') : 'none found', 'PUSH20 constants in the code that have code');
+    }
+  }
+  if (st.logs) {
+    kv(r, 'events scanned', 'blocks ' + st.logs.from + '-' + st.logs.to + ' (' + st.logs.fromSource + '): ' + Object.values(st.logs.counts || {}).reduce((a, b) => a + b, 0) + ' vault events in ' + st.logs.chunks + ' eth_getLogs calls' + (st.logs.unknown ? ', ' + st.logs.unknown + ' logs with unknown topics' : ''), 'eth_getLogs');
+    kv(r, 'event scan complete', st.logs.complete ? 'yes' : 'ERROR: NO, stopped at block ' + st.logs.stoppedAt + ': ' + st.logs.error);
+    if (st.logs.rangeErrors.length) kv(r, 'range errors handled', st.logs.rangeErrors.length + ' (chunk shrunk to ' + st.logs.chunkSize + ' blocks); first: ' + st.logs.rangeErrors[0], 'eth_getLogs', 'warn');
+    const counts = Object.keys(st.logs.counts || {}).sort().map((k) => k + ' ' + st.logs.counts[k]).join(', ');
+    kv(r, 'events by name', counts || 'none');
+  }
+  if (st.rpcStats) kv(r, 'RPC requests', st.rpcStats.requests + ' (' + Object.keys(st.rpcStats.byMethod).map((m) => m + ' ' + st.rpcStats.byMethod[m]).join(', ') + '); retries ' + st.rpcStats.retries + (st.rpcStats.retryReasons.length ? ' (' + st.rpcStats.retryReasons[0] + ')' : '') + '; errors ' + st.errors.length);
+  for (const n of st.notes) note(r, n, 'warn');
+  if (st.fatal || !st.g) { appendErrors(S, st); return S; }
+
+  // ---- Summary
+  const sum1 = sec('Summary');
+  const modeName = ok(g.mode) ? (g.mode === 0n ? 'A (candidate, beacon, echo proof)' : g.mode === 1n ? 'B (attested, final after the wait unless cancelled)' : 'unknown ' + g.mode) : errV(g.mode);
+  kv(sum1, 'finality rule', modeName, 'mode()');
+  kv(sum1, 'retired', ok(g.retired) ? (g.retired ? 'YES: deposits stopped for good' : 'no') : errV(g.retired), 'retired()');
+  kv(sum1, 'verifier emergency stop', st.stop && ok(st.stop.paused) ? (st.stop.paused ? 'TRIPPED: nothing proven is accepted any more' : 'not tripped') : errV(st.stop ? st.stop.paused : undefined), 'verifier.paused()');
+  const frozenNow = [];
+  for (const [k, n] of [['depositsFrozenUntil', 'deposits'], ['releasesFrozenUntil', 'releases'], ['checkpointsFrozenUntil', 'checkpoints']]) if (ok(g[k]) && now !== null && now < g[k]) frozenNow.push(n);
+  for (const t of st.tokens || []) { if (ok(t.frozen.deposits) && now !== null && now < t.frozen.deposits) frozenNow.push(tokLabel(t) + ' deposits'); if (ok(t.frozen.releases) && now !== null && now < t.frozen.releases) frozenNow.push(tokLabel(t) + ' releases'); }
+  kv(sum1, 'freezes in force', frozenNow.length ? 'FROZEN: ' + frozenNow.join(', ') : (now === null ? 'unknown (no block time)' : 'none'), '*FrozenUntil()');
+  kv(sum1, 'deposits', fRaw(g.nextLeafIndex) + ' (leaf count)', 'nextLeafIndex()');
+  kv(sum1, 'checkpoints finalised', fRaw(g.checkpointCount), 'checkpointCount()');
+  const pend = (st.candidates || []).filter((c) => ok(c.getter) && c.getter.submittedAt !== 0n);
+  kv(sum1, 'pending candidates', String(pend.length) + ' (of ' + (st.candidatesTotal || 0) + ' states ever submitted)', 'CandidateSubmitted + candidates()');
+  kv(sum1, 'releases', String((st.events.Release || []).length), 'Release events');
+  kv(sum1, 'registered tokens', (st.tokens || []).map(tokLabel).join('; ') || 'none', 'TokenRegistered + tokenConfig()');
+
+  // ---- Configuration
+  const c = sec('Configuration (immutable)');
+  kv(c, 'verifier', fAddr(g.verifier), 'verifier()');
+  kv(c, 'checkpointImageId', fRaw(g.checkpointImageId), 'checkpointImageId()');
+  kv(c, 'releaseImageId', fRaw(g.releaseImageId), 'releaseImageId()');
+  kv(c, 'lezConfigId', fRaw(g.lezConfigId), 'lezConfigId()');
+  kv(c, 'storedLezConfigId (slot 2)', fRaw(g.storedLezConfigId) + '; slot 2 ' + matchText(g.storedLezConfigId, st.slots[2]) + '; = lezConfigId: ' + matchText(g.storedLezConfigId, g.lezConfigId), 'storedLezConfigId(), eth_getStorageAt 2');
+  kv(c, 'genesisState', fRaw(g.genesisState), 'genesisState()');
+  kv(c, 'mode', modeName, 'mode()');
+  kv(c, 'nMin / tMin', fRaw(g.nMin) + ' / ' + fRaw(g.tMin), 'nMin(), tMin()');
+  kv(c, 'deltaFloor', fDur(g.deltaFloor), 'deltaFloor()');
+  kv(c, 'turnSeconds', fDur(g.turnSeconds), 'turnSeconds()');
+  kv(c, 'revokeWindow', fDur(g.revokeWindow), 'revokeWindow()');
+  kv(c, 'maxFreeze', fDur(g.maxFreeze), 'maxFreeze()');
+  kv(c, 'minReleaseDelay', fDur(g.minReleaseDelay), 'minReleaseDelay()');
+  kv(c, 'release cap floor', ok(g.releaseCapFloor) && ok(g.releaseRefillFloor) ? 'capacity ' + g.releaseCapFloor + ', refill ' + g.releaseRefillFloor + '/s (value units; 0 = no floor)' : errV(isErr(g.releaseCapFloor) ? g.releaseCapFloor : g.releaseRefillFloor), 'releaseCapFloor(), releaseRefillFloor()');
+  kv(c, 'feeRecipient (burn fees)', fAddr(g.feeRecipient), 'feeRecipient()');
+  if (ok(g.tMin) && ok(g.turnSeconds)) kv(c, 'keyless span (derived)', fDur((g.tMin - 1n) * g.turnSeconds + 30n * 86400n), '(tMin - 1) * turnSeconds + 30 days, as the constructor sets _keylessSpan');
+  note(c, 'Not settable after deployment: the vault has no upgrade path, no settable verifier and no token rescue (contract source).');
+
+  // ---- Roles
+  const ro = sec('Roles');
+  const withCode = (a) => { if (!ok(a)) return errV(a); if (a === ZERO_ADDR) return fAddr(a); const cs = st.codeSizes[a]; return fAddr(a) + (cs === undefined ? '' : ok(cs) ? (cs ? ' (contract, ' + cs + ' bytes)' : ' (no code: an EOA)') : ' (code: ' + errV(cs) + ')'); };
+  kv(ro, 'admin', withCode(g.admin), 'admin()');
+  kv(ro, 'pendingAdmin', withCode(g.pendingAdmin), 'pendingAdmin()');
+  kv(ro, 'freezeAuthority', withCode(g.freezeAuthority), 'freezeAuthority()');
+  (g.watchers || []).forEach((w, i) => kv(ro, 'watchers[' + i + ']', withCode(w), 'watchers(' + i + ')'));
+  kv(ro, 'feeRecipient', withCode(g.feeRecipient), 'feeRecipient()');
+  if (ok(g.roleProposal)) {
+    if (g.roleProposal.effectiveAt === 0n) kv(ro, 'role proposal', 'none pending', 'roleProposal()');
+    else {
+      kv(ro, 'role proposal: effective at', fTime(g.roleProposal.effectiveAt, now) + (now !== null && now >= g.roleProposal.effectiveAt ? ': anyone can applyRoles() now' : ''), 'roleProposal()');
+      kv(ro, 'role proposal: freeze authority', g.roleProposal.freezeAuthority === ZERO_ADDR ? 'unchanged' : withCode(g.roleProposal.freezeAuthority), 'roleProposal()');
+      kv(ro, 'role proposal: watchers', st.proposedWatchers ? st.proposedWatchers.map(fAddr).join(', ') : 'not found in the scanned events', 'last RolesProposed event (the getter omits the array)');
+    }
+  } else kv(ro, 'role proposal', errV(g.roleProposal), 'roleProposal()');
+  note(ro, 'Powers (contract source): admin registers tokens, sets caps, delays, deposit enablement, raises delta, announces fees, proposes roles (14-day timelock), hands over admin in two steps. Freeze authority freezes and unfreezes, cancels candidates, revokes within revokeWindow, retires at any time. Watchers cancel candidates and pause checkpoints for 12 h. Code size shows only whether an address is a contract; who holds the keys is not on chain.');
+
+  // ---- Emergency stop
+  const es = sec('Verifier emergency stop');
+  const so = st.stop || {};
+  kv(es, 'stop (the vault\'s verifier)', so.address ? fAddr(so.address) + (ok(so.codeSize) ? ' (' + so.codeSize + ' bytes)' : '') : 'not read', 'verifier()');
+  kv(es, 'tripped', ok(so.paused) ? (so.paused ? 'TRIPPED (one-way): verify, rule (B) finalisation and refunds revert' : 'no') : errV(so.paused), 'paused()');
+  kv(es, 'owner (may call estop())', ok(so.owner) ? (so.owner === ZERO_ADDR ? ZERO_ADDR + ' (renounced: no key can trip it)' : withCode(so.owner)) : errV(so.owner), 'owner()');
+  kv(es, 'pending owner', ok(so.pendingOwner) ? fAddr(so.pendingOwner) : errV(so.pendingOwner), 'pendingOwner()');
+  kv(es, 'wrapped verifier', ok(so.inner) ? fAddr(so.inner) + (ok(so.innerCodeSize) ? ' (' + so.innerCodeSize + ' bytes)' : '') : errV(so.inner), 'verifier() on the stop');
+  if (ok(so.inner)) kv(es, 'wrapped verifier VERSION / SELECTOR', fRaw(so.innerVersion) + ' / ' + fRaw(so.innerSelector), 'VERSION(), SELECTOR()');
+  note(es, 'Who can trip it: the owner with estop() while there is one, and anyone with estop(receipt), a verifying RISC Zero receipt of the all-zero claim (proof of a soundness bug). This rule is from RISC Zero\'s RiscZeroVerifierEmergencyStop source, not read from chain.');
+
+  // ---- Freezes
+  const fz = sec('Freezes');
+  kv(fz, 'deposits (all tokens)', frozenText(g.depositsFrozenUntil, now), 'depositsFrozenUntil()');
+  kv(fz, 'releases and refunds (all tokens)', frozenText(g.releasesFrozenUntil, now), 'releasesFrozenUntil()');
+  kv(fz, 'checkpoints (freeze or watcher pause)', frozenText(g.checkpointsFrozenUntil, now), 'checkpointsFrozenUntil()');
+  for (const t of st.tokens || []) {
+    kv(fz, tokLabel(t) + ' deposits', frozenText(t.frozen.deposits, now), 'tokenDepositsFrozenUntil(token)');
+    kv(fz, tokLabel(t) + ' releases', frozenText(t.frozen.releases, now), 'tokenReleasesFrozenUntil(token)');
+  }
+  const pauses = (st.events.CheckpointsPaused || []).slice(-10);
+  if (pauses.length) table(fz, ['block', 'watcher', 'paused until'], pauses.map((e) => [e.block, fAddr(e.args.watcher), fTime(e.args.until, now)]), 'Watcher pauses (CheckpointsPaused events, last 10)');
+
+  // ---- Checkpoints
+  const cs = sec('Checkpoints, burn roots and candidates');
+  kv(cs, 'finalState', fRaw(g.finalState) + (ok(g.finalState) && ok(g.genesisState) && g.finalState === g.genesisState ? ' (= genesisState)' : ''), 'finalState()');
+  kv(cs, 'finalImportedLeafCount / finalSunset', fRaw(g.finalImportedLeafCount) + ' / ' + fBool(g.finalSunset), 'finalImportedLeafCount(), finalSunset()');
+  kv(cs, 'delta (base of the wait)', fDur(g.delta), 'delta()');
+  if (ok(g.delta) && ok(g.tMin) && ok(g.turnSeconds)) kv(cs, 'shortest wait W now (derived)', fDur(g.delta + (g.tMin - 1n) * g.turnSeconds), 'delta + (tMin - 1) * turnSeconds');
+  kv(cs, 'revocationEpoch', fRaw(g.revocationEpoch), 'revocationEpoch()');
+  const s52 = st.internal.slot52;
+  kv(cs, '_stateChanges (internal)', s52 ? (s52.layoutOk ? String(s52.stateChanges) + '; candidate epoch now = ' + st.internal.epoch : 'ERROR: slot 52 does not match the getters sharing it; not shown') : 'not read', 'eth_getStorageAt 52, checked against finalImportedLeafCount/finalSunset/keylessFrom');
+  kv(cs, 'checkpointCount', fRaw(g.checkpointCount), 'checkpointCount()');
+  kv(cs, 'beaconCount', fRaw(g.beaconCount), 'beaconCount()');
+  if (st.internal.lastBeaconBlock && ok(g.mode) && g.mode === 0n) kv(cs, '_lastBeaconBlock (internal)', st.internal.lastBeaconBlock.layoutOk ? String(st.internal.lastBeaconBlock.value) : 'ERROR: slots 43/45 do not match the getters; not shown', 'eth_getStorageAt 44');
+  const cps = st.checkpoints || [];
+  if (cps.length) {
+    table(cs, ['#', 'state', 'newState', 'parentState', 'burnRoot', 'burns', 'imported leaves', 'sunset', 'finalised', 'revocable until', 'burn root', 'prover', 'tip (event)'],
+      cps.map((cp) => cp.error ? [cp.index, 'ERROR: ' + cp.error] : [cp.index, cp.revoked ? 'REVOKED' : 'final', cp.newState, cp.parentState, cp.burnRoot, String(cp.burnCount), String(cp.importedLeafCount), cp.sunset ? 'yes' : 'no',
+        fTime(cp.finalizedAt, now), ok(st.g.revokeWindow) ? fTime(cp.finalizedAt + st.g.revokeWindow, now) + (now !== null && !cp.revoked && now <= cp.finalizedAt + st.g.revokeWindow ? ' (still revocable)' : '') : '?',
+        ok(cp.burnRootStatus) ? (cp.burnRootStatus.accepted ? 'accepted' : 'NOT accepted') + (ok(cp.burnRootEntry) && cp.burnRootEntry !== BigInt(cp.index + 1) ? ' (via checkpoint ' + (cp.burnRootEntry - 1n) + ')' : '') : errV(cp.burnRootStatus),
+        fAddr(cp.prover), cp.tipId !== undefined ? 'tipId ' + cp.tipId + ', n ' + cp.n + ', t ' + cp.t + ', block ' + cp.block : 'no event in range']),
+      'Finalised checkpoints (checkpoints(i), burnRootStatus(burnRoot); ' + (st.checkpointsShownFrom ? 'the last 50, from #' + st.checkpointsShownFrom : 'all') + ')');
+    const delayRows = [];
+    for (const cp of cps.slice(-10)) for (const t of st.tokens) {
+      const d = cp.releaseDelays && cp.releaseDelays[t.address];
+      if (d === undefined) continue;
+      const opens = ok(d) && !cp.error ? cp.finalizedAt + d + (ok(st.g.revokeWindow) && d === st.g.revokeWindow ? 1n : 0n) : null;
+      delayRows.push([cp.index, tokLabel(t), fDur(d), opens === null ? '?' : fTime(opens, now)]);
+    }
+    if (delayRows.length) table(cs, ['checkpoint', 'token', 'release delay', 'releases open at'], delayRows, 'Release delay per checkpoint (releaseDelayFor(token, i); opens at finalizedAt + delay, +1 s when delay = revokeWindow)');
+  } else note(cs, 'No checkpoint finalised yet.');
+  const cands = st.candidates || [];
+  if (cands.length) {
+    table(cs, ['newState', 'status', 'submitted', 'wait ends', 'tip', 't', 'prover', 'history'], cands.map((cd) => {
+      const gt = cd.getter;
+      if (!ok(gt)) return [cd.newState, errV(gt)];
+      const lastWhat = cd.history.length ? cd.history[cd.history.length - 1].what : '';
+      let status, wait = '';
+      if (gt.submittedAt !== 0n) {
+        const live = st.internal.epoch !== undefined ? gt.epoch === st.internal.epoch : null;
+        const ends = gt.submittedAt + BigInt(gt.deltaAtSubmit) + (BigInt(gt.t) - 1n) * (ok(st.g.turnSeconds) ? st.g.turnSeconds : 0n);
+        wait = fTime(ends, now);
+        status = live === false ? 'STALE (built on a superseded final state; epoch ' + gt.epoch + ')' : 'PENDING' + (live === null ? ' (liveness unknown)' : '') + (now !== null ? (now >= ends ? ', wait over' + (ok(st.g.mode) && st.g.mode === 1n ? ': finalizeAttested possible unless frozen' : ': needs a beacon proof') : ', waiting') : '');
+      } else status = /^finalized/.test(lastWhat) ? lastWhat : lastWhat === 'cancelled' ? 'cancelled' : 'not pending (no matching event in range)';
+      const sub = cd.lastSubmitted;
+      return [cd.newState, status, gt.submittedAt !== 0n ? fTime(gt.submittedAt, now) : sub ? 'block ' + sub.block : '', wait,
+        gt.submittedAt !== 0n ? 'tipId ' + gt.tipId + ' ' + gt.tipHash : sub ? 'tipId ' + sub.args.tipId + ' ' + sub.args.tipHash : '',
+        gt.submittedAt !== 0n ? String(gt.t) : sub ? String(sub.args.t) : '', gt.submittedAt !== 0n ? fAddr(gt.prover) : '',
+        cd.history.map((h) => h.what + ' @' + h.block).join('; ')];
+    }), 'Candidates (states from CandidateSubmitted events, each read with candidates(newState); the mapping cannot be enumerated' + (st.candidatesTotal > cands.length ? '; the last 40 of ' + st.candidatesTotal : '') + ')');
+  } else note(cs, 'No candidate submitted in the scanned range.');
+  const revs = st.events.CheckpointsRevoked || [];
+  if (revs.length) table(cs, ['block', 'from #', 'to #', 'restored state'], revs.map((e) => [e.block, String(e.args.fromIndex), String(e.args.toIndex), e.args.restoredState]), 'Revocations (CheckpointsRevoked)');
+  else note(cs, 'No revocation in the scanned range.');
+  if ((st.beacons || []).length) table(cs, ['#', 'time', 'nonce'], st.beacons.map((b) => b.error ? [b.index, 'ERROR: ' + b.error] : [b.index, fTime(b.timestamp, now), b.nonce]), 'Beacons (rule A; beacons(i), last 10)');
+
+  // ---- Tokens
+  for (const t of st.tokens || []) {
+    const ts = sec('Token ' + tokLabel(t));
+    kv(ts, 'token', t.isEth ? ZERO_ADDR + ' (native ETH, 18 decimals)' : fAddr(t.address) + (ok(t.meta.codeSize) ? ' (' + t.meta.codeSize + ' bytes of code)' : ''), t.isEth ? '' : 'eth_getCode');
+    if (!t.isEth) kv(ts, 'name / symbol / decimals', fRaw(t.meta.name) + ' / ' + fRaw(t.meta.symbol) + ' / ' + fRaw(t.meta.decimals), 'name(), symbol(), decimals() on the token');
+    if (!ok(t.config)) { kv(ts, 'registration', errV(t.config), 'tokenConfig(token)'); continue; }
+    kv(ts, 'registered / deposits enabled', fBool(t.config.registered) + ' / ' + (t.config.depositsEnabled ? 'yes' : 'NO (delisted: releases unaffected)'), 'tokenConfig(token)');
+    kv(ts, 'registered in block', t.registry.registeredAt === null ? 'no TokenRegistered event in range' : String(t.registry.registeredAt), 'TokenRegistered');
+    kv(ts, 'lezUnit / unitWeight', String(t.config.lezUnit) + ' base units per LEZ unit / ' + String(t.config.unitWeight) + ' value units per lezUnit', 'tokenConfig(token)');
+    kv(ts, 'denominations', t.config.denominations.map((d) => fAmt(d, t)).join('; '), 'tokenConfig(token)');
+    kv(ts, 'LEZ definition / decimals (registry entry)', t.registry.lezDefinition ? t.registry.lezDefinition + ' / ' + t.registry.entryDecimals : 'no RegistryEntryPublished event in range', 'RegistryEntryPublished (no getter)');
+    const rs = t.registry;
+    kv(ts, 'published registry entry', 'slot ' + rs.slot + ' holds ' + fRaw(rs.slotValue) + '; event hash ' + (rs.eventHash ? matchText(rs.slotValue, rs.eventHash) : 'n/a') + '; recomputed ' + (rs.recomputed ? (ok(rs.recomputed) ? matchText(rs.slotValue, rs.recomputed) : errV(rs.recomputed)) : 'n/a'), 'eth_getStorageAt sha256("ferrata/vault/registry/v1" || token)');
+    kv(ts, 'deposit cap', capText(t.caps.deposit, t), 'tokenCap(token, Deposit)');
+    kv(ts, 'release cap', capText(t.caps.release, t), 'tokenCap(token, Release)');
+    kv(ts, 'release delay for the next root', fDur(t.releaseDelayNext), 'releaseDelayFor(token, checkpointCount)');
+    if (t.delayHistory.length) kv(ts, 'release delay settings', t.delayHistory.map((d) => fDur(d.delay) + ' from checkpoint ' + d.fromCheckpoint + ' (block ' + d.block + ')').join('; '), 'ReleaseDelaySet events');
+    kv(ts, 'escrowed', fAmt(t.escrowed, t), 'escrowed(token)');
+    kv(ts, 'owed (all payees)', fAmt(t.totalOwed, t), 'totalOwed(token)');
+    kv(ts, 'vault balance', fAmt(t.balance, t), t.isEth ? 'eth_getBalance' : 'balanceOf(vault)');
+    if (ok(t.balance) && ok(t.escrowed) && ok(t.totalOwed)) {
+      const need = t.escrowed + t.totalOwed, diff = t.balance - need;
+      kv(ts, 'balance - (escrowed + owed)', fAmt(diff < 0n ? -diff : diff, t).replace(/^/, diff < 0n ? '-' : '') + (diff === 0n ? ' (exactly covered)' : diff > 0n ? ' (surplus: sent outside deposits)' : ' SHORTFALL'), 'derived', diff < 0n ? 'err' : 'ok');
+    }
+    if (ok(t.feeState)) {
+      kv(ts, 'fee schedule in force', '#' + t.feeState.current + (t.feeState.pendingAt !== 0n ? '; #' + (t.feeState.current + 1n) + ' announced, takes effect at ' + fTime(t.feeState.pendingAt, now) : '; none announced'), 'feeState(token)');
+      const feeTable = (rows, title) => table(ts, ['denomination', 'mint fee', 'relay fee', 'burn fee', 'checkpoint fee'], rows.map((f, d) => ok(f) ? [fAmt(t.config.denominations[d], t), fAmt(f[0], t), fAmt(f[1], t), fAmt(f[2], t), fAmt(f[3], t)] : [d, errV(f)]), title);
+      if (t.feesCurrent) feeTable(t.feesCurrent, 'Fees in force, schedule #' + t.feeState.current + ' (fees(token, index, d))');
+      if (t.feesPending) feeTable(t.feesPending, 'Announced fees, schedule #' + (t.feeState.current + 1n) + (t.pendingAnnouncement ? ' (announced ' + fTime(t.pendingAnnouncement.announcedAt, now) + ')' : ''));
+      if (t.schedules.length) table(ts, ['#', 'from leaf', 'announced', 'effective', 'published hash (slot)', 'event hash', 'recomputed'], t.schedules.map((s) => [s.index, s.fromLeaf === null ? '?' : String(s.fromLeaf), s.announcedAt === null ? '?' : fTime(s.announcedAt, now), s.effectiveAt === null ? '?' : fTime(s.effectiveAt, now), fRaw(s.slotValue), s.eventHash ? matchText(s.slotValue, s.eventHash) : 'no event', s.recomputed ? (ok(s.recomputed) ? matchText(s.slotValue, s.recomputed) : errV(s.recomputed)) : 'n/a']), 'Schedules in force, published at sha256("ferrata/vault/fees/v1" || token || index) (FeesInForce/FeesAnnounced give from leaf and times: no getter)');
+    } else kv(ts, 'fee state', errV(t.feeState), 'feeState(token)');
+    kv(ts, 'deposits / releases / refunds (events)', t.deposits.length + ' (' + fAmt(sum(t.deposits.map((e) => e.args.amount)), t) + ') / ' + t.releases.length + ' (' + fAmt(sum(t.releases.map((e) => e.args.amount)), t) + ') / ' + t.refunds.length, 'Deposit, Release, Refund events');
+  }
+
+  // ---- Global caps
+  const gcs = sec('Global caps (value units)');
+  kv(gcs, 'deposit bucket', capText(g.globalCap.deposit, null, 'value units'), 'globalCap(Deposit)');
+  kv(gcs, 'release bucket', capText(g.globalCap.release, null, 'value units'), 'globalCap(Release)');
+  note(gcs, 'Value units of an amount = amount / lezUnit * unitWeight of its token.');
+
+  // ---- Deposits
+  const dp = sec('Deposits');
+  kv(dp, 'nextLeafIndex (leaf count)', fRaw(g.nextLeafIndex) + '; slot 1 ' + (ok(st.slots[1]) && ok(g.nextLeafIndex) ? (hexToBig(st.slots[1]) === g.nextLeafIndex ? 'match' : 'MISMATCH') : 'n/a'), 'nextLeafIndex(), eth_getStorageAt 1');
+  kv(dp, 'depositRoot', fRaw(g.depositRoot) + '; slot 0 ' + matchText(g.depositRoot, st.slots[0]), 'depositRoot(), eth_getStorageAt 0');
+  const dc = st.depositCheck || {};
+  kv(dp, 'root recomputed from Deposit events', dc.recomputedRoot ? (ok(dc.recomputedRoot) ? dc.recomputedRoot + ' (' + matchText(dc.recomputedRoot, g.depositRoot) + ' with depositRoot)' : errV(dc.recomputedRoot)) : 'not possible: ' + dc.events + ' Deposit events in range for ' + fRaw(g.nextLeafIndex) + ' leaves', 'SHA-256 tree of the leaves (vault/README.md "Encodings")');
+  const deps = (st.events.Deposit || []);
+  if (deps.length) {
+    const tokOf = (a) => (st.tokens || []).find((t) => t.address === a);
+    table(dp, ['leaf', 'block', 'depositor', 'j', 'token', 'amount', 'commitment', 'tx'], deps.slice(-20).reverse().map((e) => [String(e.args.leafIndex), e.block, fAddr(e.args.depositor), String(e.args.index), tokOf(e.args.token) ? tokLabel(tokOf(e.args.token)) : fAddr(e.args.token), fAmt(e.args.amount, tokOf(e.args.token)), e.args.commitment, e.tx]), 'Recent deposits (Deposit events, newest first, last 20 of ' + deps.length + ')');
+    table(dp, ['depositor', 'Deposit events', 'depositCount()'], (st.depositors || []).map((d) => [fAddr(d.address), d.events, fRaw(d.depositCount) + (ok(d.depositCount) && Number(d.depositCount) !== d.events ? ' (differs: events out of range?)' : '')]), 'Depositors (depositCount(depositor))');
+  } else note(dp, 'No Deposit event in the scanned range.');
+
+  // ---- Releases
+  const rl = sec('Releases and refunds');
+  const rels = st.events.Release || [];
+  kv(rl, 'releases', String(rels.length) + ' Release events', 'Release events');
+  const nf = st.nullifiers || [];
+  const used = nf.filter((x) => x.used === true).length;
+  kv(rl, 'nullifiers used', rels.length ? used + ' of ' + nf.length + ' checked with nullifierUsed()' + (used === nf.length ? ' (all spent)' : ': MISMATCH') : 'none released', 'nullifierUsed(nullifier)');
+  if (rels.length) {
+    const tokOf = (a) => (st.tokens || []).find((t) => t.address === a);
+    table(rl, ['block', 'nullifier', 'token', 'recipient', 'amount', 'relayer', 'relay fee', 'burnRoot', 'used', 'tx'], rels.slice(-20).reverse().map((e) => {
+      const n = nf.find((x) => x.nullifier === e.args.nullifier);
+      return [e.block, e.args.nullifier, tokOf(e.args.token) ? tokLabel(tokOf(e.args.token)) : fAddr(e.args.token), fAddr(e.args.recipient), fAmt(e.args.amount, tokOf(e.args.token)), fAddr(e.args.relayer), fAmt(e.args.relayFee, tokOf(e.args.token)), e.args.burnRoot, n ? fBool(n.used) : '?', e.tx];
+    }), 'Recent releases (Release events, newest first, last 20 of ' + rels.length + ')');
+  }
+  const refs = st.events.Refund || [];
+  if (refs.length) table(rl, ['block', 'leaf', 'depositor', 'token', 'amount', 'refunded()'], refs.slice(-20).reverse().map((e) => { const rf = (st.refunded || []).find((x) => x.leafIndex === e.args.leafIndex); return [e.block, String(e.args.leafIndex), fAddr(e.args.depositor), fAddr(e.args.token), String(e.args.amount), rf ? fBool(rf.refunded) : '?']; }), 'Refunds (Refund events)');
+  else note(rl, 'No refund in the scanned range.');
+
+  // ---- Owed / fees
+  const ow = sec('Fees and payments owed');
+  const tokOf = (a) => (st.tokens || []).find((t) => t.address === a);
+  const provers = new Set((st.checkpoints || []).map((cp) => cp.prover).filter(Boolean));
+  const rows = (st.owed || []).filter((o) => !(ok(o.owed) && o.owed === 0n && o.creditedCount === 0 && o.claimedCount === 0)).map((o) => {
+    const roles = [];
+    if (o.payee === g.feeRecipient) roles.push('feeRecipient (burn fees)');
+    if (provers.has(o.payee)) roles.push('checkpoint prover (checkpoint fees)');
+    return [fAddr(o.payee), roles.join(', ') || 'payee of a failed push', tokOf(o.token) ? tokLabel(tokOf(o.token)) : fAddr(o.token), fAmt(o.owed, tokOf(o.token)), o.creditedCount + ' x, ' + fAmt(o.credited, tokOf(o.token)), o.claimedCount + ' x, ' + fAmt(o.claimed, tokOf(o.token))];
+  });
+  if (rows.length) table(ow, ['payee', 'role', 'token', 'owed now', 'credited (events)', 'claimed (events)'], rows, 'owed(payee, token); payees from OwedCredited/OwedClaimed events, the feeRecipient and the checkpoint provers');
+  else note(ow, 'Nothing owed to anyone and no OwedCredited event in range.');
+  for (const t of st.tokens || []) {
+    const listed = (st.owed || []).filter((o) => o.token === t.address && ok(o.owed)).reduce((a, o) => a + o.owed, 0n);
+    if (ok(t.totalOwed)) kv(ow, 'totalOwed ' + tokLabel(t), fAmt(t.totalOwed, t) + (listed === t.totalOwed ? ' (= sum over the payees above)' : ' (payees above sum to ' + fAmt(listed, t) + ': some payee is outside the scanned events)'), 'totalOwed(token)');
+  }
+  note(ow, 'Burn fees are credited to feeRecipient and checkpoint fees to the prover of the root\'s checkpoint, never pushed; a payout that fails is credited too. Claimed with claimOwed(token) by the payee only.');
+
+  // ---- Retirement and sunset
+  const rt = sec('Retirement and sunset');
+  kv(rt, 'retired', ok(g.retired) ? (g.retired ? 'YES' : 'no') : errV(g.retired), 'retired()');
+  const retEv = (st.events.Retired || [])[0];
+  if (retEv) kv(rt, 'retired in block', String(retEv.block) + ' tx ' + retEv.tx, 'Retired event');
+  kv(rt, 'anyone may retire from', fTime(g.retireOpensAt, now) + (ok(g.retireOpensAt) && now !== null ? (now >= g.retireOpensAt ? ': OPEN now (keyless retirement)' : ': until then only the freeze authority') : ''), 'retireOpensAt()');
+  kv(rt, 'keyless clock started', fTime(g.keylessFrom, now), 'keylessFrom()');
+  kv(rt, 'sunset boundary set', fBool(g.sunsetLeafCountSet), 'sunsetLeafCountSet()');
+  if (ok(g.sunsetLeafCountSet) && g.sunsetLeafCountSet) {
+    kv(rt, 'sunsetLeafCount (refundable from leaf)', fRaw(g.sunsetLeafCount), 'sunsetLeafCount()');
+    kv(rt, 'set by checkpoint', fRaw(g.sunsetSetAt), 'sunsetSetAt()');
+    kv(rt, 'sunset finalised at', fTime(g.sunsetFinalizedAt, now), 'sunsetFinalizedAt()');
+    if (ok(g.sunsetFinalizedAt) && ok(g.revokeWindow)) kv(rt, 'refunds open at (derived)', fTime(g.sunsetFinalizedAt + g.revokeWindow + 1n, now), 'sunsetFinalizedAt + revokeWindow + 1, as _refundsOpenAt');
+  }
+  kv(rt, 'deposits possible', ok(g.retired) && ok(g.finalSunset) ? (g.retired || g.finalSunset ? 'NO (' + (g.retired ? 'retired' : 'final state is a sunset') + ')' : 'yes, unless frozen, disabled or capped') : 'unknown', 'retired(), finalSunset()');
+
+  // ---- Control history
+  const ch = sec('Control history (events, newest first)');
+  const CONTROL = ['AdminTransferStarted', 'AdminTransferred', 'FreezeAuthorityTransferred', 'WatchersSet', 'RolesProposed', 'DeltaSet', 'GlobalCapSet', 'TokenCapSet', 'ReleaseDelaySet', 'DepositsEnabledSet', 'DepositsFrozenSet', 'ReleasesFrozenSet', 'CheckpointsFrozenSet', 'TokenDepositsFrozenSet', 'TokenReleasesFrozenSet', 'CheckpointsPaused', 'TokenRegistered', 'RegistryEntryPublished', 'FeesAnnounced', 'FeesInForce', 'CheckpointsRevoked', 'SunsetLeafCountSet', 'SunsetLeafCountCleared', 'Retired'];
+  const all = [];
+  for (const n of CONTROL) for (const e of st.events[n] || []) all.push(e);
+  all.sort((a, b) => b.block - a.block || b.logIndex - a.logIndex);
+  if (all.length) table(ch, ['block', 'event', 'fields'], all.slice(0, 40).map((e) => [e.block, e.event, Object.keys(e.args).map((k) => k + '=' + fArg(e.args[k])).join(' ')]), 'Last ' + Math.min(40, all.length) + ' of ' + all.length);
+  else note(ch, 'No control event in the scanned range.');
+
+  // ---- Not exposed
+  const ne = sec('What the contract does not expose');
+  for (const line of [
+    'Registered tokens: no enumeration getter. Listed from TokenRegistered events (and native ETH probed with tokenConfig(0x0)).',
+    'Pending candidates: a mapping keyed by newState. Listed from CandidateSubmitted events, each read with candidates(newState).',
+    'Whether a pending candidate is live: needs the internal counter _stateChanges (epoch = revocationEpoch + _stateChanges); read from storage slot 52, shown only if the three public getters sharing that slot match.',
+    'Relay fees: tokenConfig() does not return them; shown from fees(token, index, d) (the schedule\'s copy) and TokenRegistered.',
+    'The registry entry\'s lezDefinition and decimals: only in RegistryEntryPublished events and, hashed, at the entry slot.',
+    'Fee schedules\' fromLeaf, announcedAt and effectiveAt: no getter; from FeesInForce and FeesAnnounced events (the fees themselves from fees()).',
+    'Release-delay history: no getter for the list; releaseDelayFor(token, i) per checkpoint and ReleaseDelaySet events.',
+    'Proposed watchers: roleProposal() omits the array; from the last RolesProposed event.',
+    'Cap buckets\' stored level and last update: only `available` (tokenCap/globalCap); utilisation = capacity - available.',
+    'Payees owed and depositors: no enumeration; from OwedCredited/OwedClaimed and Deposit events, then owed()/depositCount().',
+    'The linked FerrataRegistry library: no getter; found as a PUSH20 constant of the vault\'s code that has code itself.',
+    'Who holds the admin, freeze-authority and watcher keys (or that a key holder exists): not on chain; only whether each address has code.',
+    'The stop\'s circuit-breaker rule (estop with a receipt of the zero claim): from RISC Zero\'s source; the chain shows paused() and owner().',
+    'Which deposit a claim on LEZ used, which burn a release spends, the burns behind a burn root: on LEZ or hidden by design, not on Ethereum.',
+    'Rule (A) _lastBeaconBlock: internal (slot 44), shown for rule (A) vaults only.']) note(ne, line);
+
+  appendErrors(S, st);
+  return S;
+}
+function fArg(v) {
+  if (Array.isArray(v)) return '[' + v.map(fArg).join(',') + ']';
+  if (typeof v === 'bigint') return v === UNLIMITED ? 'UNLIMITED' : v.toString();
+  if (typeof v === 'string' && /^0x[0-9a-f]{40}$/.test(v)) return v === ZERO_ADDR ? '0x0' : toChecksumAddress(v);
+  return String(v);
+}
+function appendErrors(S, st) {
+  const s = { title: 'RPC and decoding errors', items: [] };
+  if (!st.errors.length) s.items.push({ note: 'none', cls: 'ok' });
+  for (const e of st.errors) s.items.push({ k: e.severity === 'info' ? 'optional read' : 'ERROR', v: e.where + ': ' + e.message, src: '', cls: e.severity === 'info' ? 'warn' : 'err' });
+  S.push(s);
+}
+
+function renderText(st) {
+  const S = buildReport(st);
+  const out = [];
+  out.push('Ferrata vault admin view: ' + (st.input.vault || '') + ' (read-only)');
+  S.forEach((s, i) => {
+    out.push('');
+    out.push('== ' + (i + 1) + '. ' + s.title + ' ' + '='.repeat(Math.max(3, 100 - s.title.length)));
+    for (const it of s.items) {
+      if (it.table) {
+        if (it.caption) out.push('  ' + it.caption + ':');
+        const head = it.table.head, rows = it.table.rows.map((r) => r.map((x) => String(x)));
+        const w = head.map((h, j) => Math.max(String(h).length, ...rows.map((r) => (r[j] || '').length)));
+        out.push('    ' + head.map((h, j) => String(h).padEnd(w[j])).join('  ').trimEnd());
+        out.push('    ' + w.map((x) => '-'.repeat(x)).join('  '));
+        for (const r of rows) out.push('    ' + r.map((x, j) => (x || '').padEnd(w[j] || 0)).join('  ').trimEnd());
+      } else if (it.note !== undefined) out.push('  ' + (it.cls === 'warn' ? 'WARNING: ' : it.cls === 'err' ? 'ERROR: ' : '- ') + it.note);
+      else {
+        const lab = it.k + ' ';
+        out.push('  ' + (lab.length >= 39 ? lab + '.. ' : lab.padEnd(40, '.') + ' ') + it.v + (it.src ? '   [' + it.src + ']' : ''));
+      }
+    }
+  });
+  out.push('');
+  return out.join('\n');
+}
+function esc(s) { return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function cellClass(x) { return /^(ERROR|MISMATCH|FROZEN|TRIPPED|REVOKED|STALE|NOT accepted)|SHORTFALL|MISMATCH/.test(String(x)) ? ' class="c err"' : ' class="c"'; }
+function renderHtml(st) {
+  const S = buildReport(st);
+  let h = '';
+  for (const s of S) {
+    h += '<section><h2>' + esc(s.title) + '</h2>';
+    let open = false;
+    for (const it of s.items) {
+      if (it.k !== undefined) {
+        if (!open) { h += '<table>'; open = true; }
+        h += '<tr><td class="k">' + esc(it.k) + '</td><td class="v' + (it.cls ? ' ' + it.cls : '') + '">' + esc(it.v) + '</td><td class="src">' + esc(it.src) + '</td></tr>';
+        continue;
+      }
+      if (open) { h += '</table>'; open = false; }
+      if (it.table) {
+        h += (it.caption ? '<h3>' + esc(it.caption) + '</h3>' : '') + '<div style="overflow-x:auto"><table><tr>' + it.table.head.map((x) => '<th>' + esc(x) + '</th>').join('') + '</tr>';
+        for (const r of it.table.rows) h += '<tr>' + r.map((x) => '<td' + cellClass(x) + '>' + esc(x) + '</td>').join('') + '</tr>';
+        h += '</table></div>';
+      } else if (it.note !== undefined) h += '<p class="' + esc(it.cls || 'note') + '">' + esc(it.note) + '</p>';
+    }
+    if (open) h += '</table>';
+    h += '</section>';
+  }
+  return h;
+}
+
+globalThis.FerrataAdmin = {
+  VERSION, DEFAULT_VAULT, DEFAULT_FROM_BLOCK,
+  keccak256, keccak256Hex, sha256, sha256Hex, selector, eventTopic, toChecksumAddress,
+  encodeCall, decodeAbi, decodeRevert, decodeLog, parseEventDef, EVENT_DEFS, VAULT_ERRORS,
+  leafHash: (i, d, t, a, c) => toHex(leafHash(i, d, t, a, c)), depositTreeRoot, registrySlot, feeSlot, registryEntryHash, feeScheduleHash,
+  push20Constants, redactUrl, fromHex, toHex,
+  readVault, buildReport, renderText, renderHtml};
+
+// =====================================================================================================
+// The page (only in a browser)
+// =====================================================================================================
+if (typeof document !== 'undefined') {
+  const $ = (id) => document.getElementById(id);
+  $('vault').value = DEFAULT_VAULT;
+  $('from').value = String(DEFAULT_FROM_BLOCK);
+  $('f').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = $('go');
+    btn.disabled = true;
+    $('fatal').textContent = ''; $('out').innerHTML = ''; $('textbox').hidden = true;
+    const t0 = Date.now();
+    try {
+      const st = await readVault($('rpc').value, $('vault').value, $('from').value, { onProgress: (m) => { $('status').textContent = 'reading: ' + m + ' (' + ((Date.now() - t0) / 1000).toFixed(1) + ' s)'; } });
+      if (st.fatal) $('fatal').textContent = 'Could not read the vault: ' + st.fatal;
+      $('out').innerHTML = renderHtml(st);
+      $('text').textContent = renderText(st);
+      $('textbox').hidden = false;
+      $('status').textContent = 'read ' + (st.chain && st.chain.block !== undefined ? 'at block ' + st.chain.block + ' ' : '') + 'in ' + ((Date.now() - t0) / 1000).toFixed(1) + ' s; ' + st.errors.length + ' error(s)' + (st.rpcStats ? ', ' + st.rpcStats.requests + ' RPC requests' : '');
+    } catch (err) {
+      $('fatal').textContent = 'Unexpected failure: ' + (err && err.stack ? err.stack : err);
+      $('status').textContent = '';
+    } finally { btn.disabled = false; }
+  });
+}
+})();
+</script>
+</body>
+</html>
