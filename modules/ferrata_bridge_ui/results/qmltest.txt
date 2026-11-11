@@ -16,5 +16,5 @@ PASS   : qmltestrunner::FerrataMiniApp::test_11_checkpoint_and_release()
 PASS   : qmltestrunner::FerrataMiniApp::test_12_admin()
 PASS   : qmltestrunner::FerrataMiniApp::test_13_privacy()
 PASS   : qmltestrunner::FerrataMiniApp::cleanupTestCase()
-Totals: 15 passed, 0 failed, 0 skipped, 0 blacklisted, 28608ms
+Totals: 15 passed, 0 failed, 0 skipped, 0 blacklisted, 28369ms
 ********* Finished testing of qmltestrunner *********

@@ -30,29 +30,18 @@ for (const [tab, texts] of screens) {
   });
 }
 
-// With the devnet backend running beside Basecamp (scripts/basecamp-ui-tests.sh starts it): the user
-// switches the view to it in Settings, connects the wallet and makes a deposit through the approval prompt.
-if (process.env.FERRATA_DEVNET === "1") {
-  test("ferrata_bridge_ui: a private deposit through the devnet, inside Basecamp", async (app) => {
-    await app.click("Endpoints");
-    await app.click("devnet backend (HTTP)");
-    await app.click("Apply and test");
-    await app.waitFor(async () => { await app.expectTexts(["Connected: chain 1"]); },
-      { timeout: 30000, interval: 500, description: "the devnet to answer" });
-    await app.click("Deposit");
-    await app.click("Connect wallet");
-    await app.waitFor(async () => { await app.expectTexts(["Ferrata Bridge asks to connect"]); },
-      { timeout: 15000, interval: 300, description: "the account selection" });
-    await app.click("Ethereum 0x");
-    await app.waitFor(async () => { await app.expectTexts(["Private account (recommended)", "Exposure: Minimal"]); },
-      { timeout: 15000, interval: 300, description: "the deposit form with its defaults" });
-    await app.click("Review deposit");
-    await app.waitFor(async () => { await app.expectTexts(["Deposit to the Ferrata vault", "What it does"]); },
-      { timeout: 15000, interval: 300, description: "the approval prompt" });
-    await app.click("Approve");
-    await app.waitFor(async () => { await app.expectTexts(["Deposited 0.1 ETH to a private account"]); },
-      { timeout: 60000, interval: 500, description: "the deposit's transaction" });
-  });
-}
+// Inside Basecamp a ui_qml module may not use the network: the sandbox refuses the view's HTTP call to the
+// devnet backend (Basecamp logs "Blocked network POST ... sandboxed ui_qml modules may not use the
+// network"), and the view says it was not switched. The flows run through ferrata_bridge_module in Logos,
+// and against the devnet outside it (qmltest/tst_miniapp.qml).
+test("ferrata_bridge_ui: the sandbox keeps the view off the network inside Basecamp", async (app) => {
+  await app.click("Endpoints");
+  await app.waitFor(async () => { await app.expectTexts(["Inside Logos a ui module may not use the network"]); },
+    { timeout: 10000, interval: 300, description: "the sandbox note" });
+  await app.click("devnet backend (HTTP)");
+  await app.click("Apply and test");
+  await app.waitFor(async () => { await app.expectTexts(["Not switched: Endpoint unreachable"]); },
+    { timeout: 30000, interval: 500, description: "the refused call to be reported" });
+});
 
 run();

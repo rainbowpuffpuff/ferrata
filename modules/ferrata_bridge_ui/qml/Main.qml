@@ -572,6 +572,12 @@ Rectangle {
                     }
                     Label { objectName: "settings.status"; text: endpointStatus; wrapMode: Text.WordWrap; Layout.fillWidth: true; font.bold: true }
                 }
+                Note {
+                    objectName: "settings.sandboxNote"
+                    visible: inLogos
+                    color: "#8a6d00"
+                    text: "Inside Logos a ui module may not use the network (Basecamp's sandbox refuses it): the devnet backend is for running this view outside Logos; here the calls go to ferrata_bridge_module."
+                }
                 Note { text: "The devnet backend is anvil (chain id 1, local) and the LEZ harness; in Logos the same calls go to ferrata_bridge_module, which reads Ethereum through eth_rpc_module and LEZ through lez_core at the endpoints set here." }
                 Item { Layout.fillHeight: true }
             }
