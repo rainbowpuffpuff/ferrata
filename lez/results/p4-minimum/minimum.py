@@ -13,6 +13,8 @@ r0vm. Nothing is built here: the binaries, the fixture and r0vm come through the
     P4_CPU=4 modal run minimum.py::probe_main                      # what the container reports
     P4_CPU=4 modal run --detach minimum.py::main --job attest --runs 3 --tag <run>
     P4_CPU=4 modal run --detach minimum.py::main --job bridge --runs 3 --tag <run>
+    P4_CPU=4 modal run --detach minimum.py::main --job transfer --runs 2 --tag <run>   # LEZ's wallet yardstick
+    P4_CPU=4 modal run --detach minimum.py::release_main --runs 2 --tag <run>          # release: succinct, wrap
     modal volume get p4-minimum /results/<run> <local directory>
 
 Each run: `/usr/bin/time -v <binary> <prove args>` with RISC0_DEV_MODE=0 (real proofs), RISC0_INFO=1
@@ -62,7 +64,19 @@ JOBS = {
         "prove": ["--claim-out", "tx-claim.borsh", "--burn-out", "tx-burn.borsh"],
         "txs": ["tx-claim.borsh", "tx-burn.borsh"],
     },
+    # LEZ's yardstick: the cheapest private transaction of LEZ's own wallet, a deshielded native transfer
+    # padded as the wallet pads it (harness/src/bin/prove_native_transfer.rs)
+    "transfer": {
+        "binary": "prove_native_transfer",
+        "prove": ["--shape", "wallet", "--tx-out", "tx-transfer.borsh"],
+        "txs": ["tx-transfer.borsh"],
+    },
 }
+
+# The release program of the final programs (e2e/crown/README.md) and the Groth16 prover image that
+# risc0-groth16 3.0.5 starts with Docker, run here as a plain function as e2e/crown/cloud/app.py does.
+RELEASE_IMAGE_ID = "0x17257f91bca70abf7a5476b498d687e95b6fb4d59e75b6bca1d46877ac9bf5cd"
+wrap_image = modal.Image.from_registry("risczero/risc0-groth16-prover:v2025-04-03.1", add_python="3.12").entrypoint([])
 
 
 def _read(path: str):
@@ -74,7 +88,10 @@ def _read(path: str):
 
 
 def _sh(*cmd: str) -> str:
-    r = subprocess.run(list(cmd), capture_output=True, text=True)
+    try:
+        r = subprocess.run(list(cmd), capture_output=True, text=True)
+    except OSError as e:
+        return f"({cmd[0]}: {e})"
     return (r.stdout + r.stderr).strip()
 
 
@@ -288,7 +305,7 @@ def prove(job: str, runs: int, tag: str, declared: dict, affinity: int = 0) -> d
         fixture = pathlib.PurePosixPath(manifest["fixtures_from"]).name
         env["FERRATA_EXPECT_CONSUMER_IMAGE_ID"] = manifest["expected_consumer_image_id"]
         env["FERRATA_ATTEST_FIXTURE_DIR"] = f"{work}/{fixture}"
-    else:
+    elif job == "bridge":
         env["FERRATA_EXPECT_BRIDGE_IMAGE_ID"] = manifest["expected_bridge_image_id"]
     pin = ["taskset", "-c", f"0-{affinity - 1}"] if affinity else []
     facts = _facts(declared)
@@ -349,6 +366,140 @@ def prove(job: str, runs: int, tag: str, declared: dict, affinity: int = 0) -> d
     return {"job": job, "tag": tag, "runs": records, "nproc": facts["nproc"], "models": facts["cpuinfo_model_names"]}
 
 
+def _bundle(name: str) -> tuple[dict, bool, str]:
+    """Copy /vol/bundle/<name> to the container's disk, check it against its MANIFEST.json, install r0vm."""
+    src, work = f"/vol/bundle/{name}", f"/root/p4/{name}"
+    manifest = json.load(open(f"{src}/MANIFEST.json"))
+    hashes_ok = all(_sha256(f"{src}/{p}") == v["sha256"] for p, v in manifest["files"].items())
+    _copy(src, work)
+    for p in manifest["files"]:
+        if "/" not in p and not p.endswith((".bin", ".json")):
+            os.chmod(f"{work}/{p}", 0o755)
+    return manifest, hashes_ok, work
+
+
+def _r0vm() -> str:
+    r0vm = _copy("/vol/bundle/r0vm/r0vm", "/root/p4/bin/r0vm")
+    os.chmod(r0vm, 0o755)
+    return r0vm
+
+
+@app.function(**FUNCTION)
+def release_prove(runs: int, tag: str, declared: dict, witness: str = "private-1") -> dict:
+    """The release program's succinct proof (`ferrata-e2e prove`, the user's part) and the first step
+    of the wrap (`ferrata-e2e p254`: identity_p254 in r0vm, then the Groth16 prover's input.json),
+    each timed apart, `runs` times in this container."""
+    manifest, hashes_ok, work = _bundle("release")
+    r0vm = _r0vm()
+    out = f"/vol/results/{tag}/release"
+    os.makedirs(out, exist_ok=True)
+    os.makedirs(f"{work}/tmp", exist_ok=True)
+    env = {**os.environ, "RISC0_DEV_MODE": "0", "RISC0_SERVER_PATH": r0vm, "RISC0_INFO": "1", "RUST_LOG": "info",
+           "TMPDIR": f"{work}/tmp"}
+    e2e, prog = f"{work}/ferrata-e2e", f"{work}/release.bin"
+    inp, meta = f"{work}/witness/release-{witness}.input", f"{work}/witness/release-{witness}.json"
+    facts = _facts(declared)
+    facts.update({"job": "release", "tag": tag, "witness": witness, "manifest": manifest,
+                  "input_hashes_equal_manifest": hashes_ok, "r0vm_version": _sh(r0vm, "--version"),
+                  "r0vm_sha256": _sha256(r0vm), "image_id": _sh(e2e, "image-id", prog)})
+    json.dump(facts, open(f"{out}/container.json", "w"), indent=1)
+    rc, _ = _run([e2e, "exec", "--program", prog, "--input", inp, "--meta", meta], work, env, f"{work}/exec.log", 600)
+    _copy(f"{work}/exec.log", f"{out}/exec.log")
+    vol.commit()
+    records = []
+    for i in range(1, runs + 1):
+        rd = f"{work}/run-{i}"
+        os.makedirs(rd, exist_ok=True)
+        rec = {"run": i}
+        for step, cmd in (("prove", [e2e, "prove", "--program", prog, "--input", inp, "--meta", meta, "--out-dir", f"{rd}/prove"]),
+                          ("p254", [e2e, "p254", "--receipt", f"{rd}/prove/receipt-succinct.bin", "--image-id",
+                                    RELEASE_IMAGE_ID, "--out-dir", f"{rd}/wrap"])):
+            sampler = _Sampler(f"{rd}/samples-{step}.csv", "ferrata-e2e")
+            sampler.start()
+            rc, wall = _run(["/usr/bin/time", "-v", *cmd], rd, env, f"{rd}/{step}.log", RUN_LIMIT_S)
+            sampled = sampler.finish()
+            log = open(f"{rd}/{step}.log").read()
+            last = [l for l in log.splitlines() if l.startswith("{")]
+            rec[step] = {"exit_code": rc, "wall_s": round(wall, 2), "gnu_time": _gnu_time(log), "sampled": sampled,
+                         "record": json.loads(last[-1]) if last else None}
+            if rc != 0:
+                break
+        if rec.get("prove", {}).get("exit_code") == 0:
+            v_rc, _ = _run([e2e, "verify", "--receipt", f"{rd}/prove/receipt-succinct.bin", "--image-id", RELEASE_IMAGE_ID,
+                            "--meta", meta], rd, env, f"{rd}/verify-succinct.log", 600)
+            rec["succinct_verified"] = v_rc == 0
+        rec["finished_at_utc"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        json.dump(rec, open(f"{rd}/run.json", "w"), indent=1)
+        _copy(rd, f"{out}/run-{i}")
+        vol.commit()
+        records.append({"run": i, **{k: {kk: rec[k].get(kk) for kk in ("exit_code", "wall_s")} for k in ("prove", "p254") if k in rec},
+                        "succinct_verified": rec.get("succinct_verified")})
+        print(json.dumps(records[-1]), flush=True)
+    return {"job": "release", "tag": tag, "runs": records, "nproc": facts["nproc"]}
+
+
+@app.function(image=wrap_image, cpu=(CPU, CPU), memory=(MEM_MIB, MEM_MIB), volumes={"/vol": vol}, timeout=3600,
+              max_containers=2, single_use_containers=True, retries=0)
+def release_wrap(tag: str, run: int, declared: dict) -> dict:
+    """The Groth16 step of the wrap: RISC Zero's prover image (/app/prover.sh: /mnt/input.json -> proof.json),
+    on the run's input.json, in a container of the same shape."""
+    import resource
+
+    vol.reload()  # the input.json release_prove committed
+    d = f"/vol/results/{tag}/release/run-{run}/wrap"
+    facts = _facts(declared)
+    os.makedirs("/mnt", exist_ok=True)
+    for stale in ("/mnt/proof.json", "/tmp/output.wtns"):
+        if os.path.lexists(stale):
+            os.remove(stale)
+    _copy(f"{d}/input.json", "/mnt/input.json")
+    os.makedirs("/root/p4/wrap", exist_ok=True)
+    sampler = _Sampler("/root/p4/wrap/samples-groth16.csv", "prover")
+    sampler.start()
+    t0 = time.time()
+    p = subprocess.run(["bash", "/app/prover.sh"], cwd="/app", capture_output=True)
+    seconds = time.time() - t0
+    sampled = sampler.finish()
+    ru = resource.getrusage(resource.RUSAGE_CHILDREN)
+    ok = p.returncode == 0 and os.path.exists("/mnt/proof.json")
+    if ok:
+        _copy("/mnt/proof.json", f"{d}/proof.json")
+    rec = {"run": run, "exit_code": p.returncode, "seconds": round(seconds, 2), "cpu_s": round(ru.ru_utime + ru.ru_stime, 1),
+           "max_rss_kib": ru.ru_maxrss, "sampled": sampled, "proof_json": ok, "container": facts,
+           "finished_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+    open(f"{d}/groth16.log", "wb").write((p.stdout + p.stderr)[-20000:])
+    _copy("/root/p4/wrap/samples-groth16.csv", f"{d}/samples-groth16.csv")
+    json.dump(rec, open(f"{d}/groth16-run.json", "w"), indent=1)
+    vol.commit()
+    return {k: rec[k] for k in ("run", "exit_code", "seconds", "cpu_s", "max_rss_kib", "proof_json")} | {
+        "nproc": facts["nproc"], "sampled_max": sampled["max"]}
+
+
+@app.function(image=image, cpu=2.0, memory=4096, volumes={"/vol": vol}, timeout=900, retries=0)
+def release_finish(tag: str, run: int, witness: str = "private-1") -> dict:
+    """The Groth16 receipt from proof.json (`ferrata-e2e groth16`, verified there), then verified again with the
+    native journal (`ferrata-e2e verify`): what the vault's verifier receives (seal, journal)."""
+    vol.reload()  # the proof.json release_wrap committed
+    _, hashes_ok, work = _bundle("release")
+    rd = f"/vol/results/{tag}/release/run-{run}"
+    e2e, meta = f"{work}/ferrata-e2e", f"{work}/witness/release-{witness}.json"
+    env = {**os.environ, "RISC0_DEV_MODE": "0"}
+    g_rc, _ = _run([e2e, "groth16", "--receipt", f"{rd}/prove/receipt-succinct.bin", "--image-id", RELEASE_IMAGE_ID,
+                    "--proof", f"{rd}/wrap/proof.json", "--out-dir", f"{rd}/groth16"], work, env, f"{work}/groth16.log", 600)
+    v_rc, _ = _run([e2e, "verify", "--receipt", f"{rd}/groth16/receipt-groth16.bin", "--image-id", RELEASE_IMAGE_ID,
+                    "--meta", meta], work, env, f"{work}/verify-groth16.log", 600)
+    seal = open(f"{rd}/groth16/seal.hex").read().strip() if g_rc == 0 else ""
+    journal = open(f"{rd}/groth16/journal.hex").read().strip().removeprefix("0x") if g_rc == 0 else ""
+    native = json.load(open(meta))["journal"].removeprefix("0x")
+    rec = {"run": run, "inputs_equal_manifest": hashes_ok, "groth16_exit": g_rc, "verify_exit": v_rc,
+           "seal_bytes": (len(seal) - 2) // 2 if seal else 0, "selector": seal[:10], "journal_equals_native": journal == native}
+    _copy(f"{work}/groth16.log", f"{rd}/groth16.log")
+    _copy(f"{work}/verify-groth16.log", f"{rd}/verify-groth16.log")
+    json.dump(rec, open(f"{rd}/finish.json", "w"), indent=1)
+    vol.commit()
+    return rec
+
+
 def _declared() -> dict:
     return {"modal_cpu_request_and_limit": CPU, "modal_memory_mib_request_and_limit": MEM_MIB}
 
@@ -356,6 +507,20 @@ def _declared() -> dict:
 @app.local_entrypoint()
 def probe_main(alloc_gib: int = 0):
     print("P4-PROBE " + json.dumps(probe.remote(_declared(), alloc_gib)), flush=True)
+    print("P4-DONE", flush=True)
+
+
+@app.local_entrypoint()
+def release_main(runs: int = 2, tag: str = "minimum"):
+    r = release_prove.remote(runs, tag, _declared())
+    print("P4-RELEASE-PROVE " + json.dumps(r), flush=True)
+    for rec in r["runs"]:
+        if rec.get("p254", {}).get("exit_code") != 0:
+            continue
+        w = release_wrap.remote(tag, rec["run"], _declared())
+        print("P4-RELEASE-WRAP " + json.dumps(w), flush=True)
+        if w["proof_json"]:
+            print("P4-RELEASE-FINISH " + json.dumps(release_finish.remote(tag, rec["run"])), flush=True)
     print("P4-DONE", flush=True)
 
 
