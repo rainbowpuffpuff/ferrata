@@ -19,7 +19,7 @@ import sys
 
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 TS = re.compile(r"^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d+)Z\s+INFO\s+(\S+):\s+(.*)$")
-PROOF = re.compile(r"^(?:(private claim|private burn): )?REAL PROOF: execute_and_prove ([\d.]+) s \(prove \+ settle ([\d.]+) s\); "
+PROOF = re.compile(r"^(?:(private claim|private burn): )?REAL PROOF: execute_and_prove ([\d.]+) s(?: \(prove \+ settle ([\d.]+) s\))?; "
                    r"receipt \(succinct InnerReceipt, borsh\) (\d+) bytes; transaction (\d+) bytes")
 TABLE_ROW = re.compile(r"^\| (AttestPrivately \(sends Read\)|the record's reply \(verifies the fact\)) \|.*?\| ([\d,]+) \| (\d+) \| ([\d,]+) \| (\d+) \|$")
 
@@ -28,7 +28,7 @@ def ts(s: str) -> float:
     return datetime.datetime.fromisoformat(s).replace(tzinfo=datetime.timezone.utc).timestamp()
 
 
-def parse_log(text: str) -> dict:
+def parse_log(text: str, default_label: str = "private attestation") -> dict:
     lines = [ANSI.sub("", l) for l in text.splitlines()]
     events = []  # ("session", t, dict) | ("line", t or None, text)
     cur = None
@@ -64,8 +64,9 @@ def parse_log(text: str) -> dict:
         elif e[0] == "proof":
             m = e[2]
             proofs.append({
-                "label": m.group(1) or "private attestation", "execute_and_prove_s": float(m.group(2)),
-                "prove_and_settle_s": float(m.group(3)), "receipt_bytes": int(m.group(4)), "tx_bytes": int(m.group(5)),
+                "label": m.group(1) or default_label, "execute_and_prove_s": float(m.group(2)),
+                "prove_and_settle_s": float(m.group(3)) if m.group(3) else None, "receipt_bytes": int(m.group(4)),
+                "tx_bytes": int(m.group(5)),
                 "proven_sessions": [{k: s[k] for k in ("segments", "total_cycles", "user_cycles", "gap_s")} for s in pending],
             })
             pending = []
@@ -89,7 +90,8 @@ def main() -> None:
     here = pathlib.Path(__file__).resolve().parent
     root = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else here / "runs"
     out = {}
-    for job_dir in sorted(p for p in root.iterdir() if p.is_dir()):
+    # the first pass's jobs (runs/attest, runs/bridge); the second pass's runs/<tag>/<job> are summarize_scale.py's
+    for job_dir in sorted(p for p in root.iterdir() if (p / "container.json").is_file()):
         c = json.load(open(job_dir / "container.json"))
         runs = []
         for rd in sorted(job_dir.glob("run-*"), key=lambda p: int(p.name.split("-")[1])):

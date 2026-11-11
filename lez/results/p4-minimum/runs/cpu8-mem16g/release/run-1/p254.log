@@ -1,0 +1,24 @@
+{"image_id":"0x17257f91bca70abf7a5476b498d687e95b6fb4d59e75b6bca1d46877ac9bf5cd","loadavg_after":"0.00 0.00 0.00 0/0 0","loadavg_before":"0.00 0.00 0.00 0/0 0","p254_seal_bytes":222668,"step":"identity_p254","threads":8,"wall_s":68.769243896}
+	Command being timed: "/root/p4/release/ferrata-e2e p254 --receipt /root/p4/release/run-1/prove/receipt-succinct.bin --image-id 0x17257f91bca70abf7a5476b498d687e95b6fb4d59e75b6bca1d46877ac9bf5cd --out-dir /root/p4/release/run-1/wrap"
+	User time (seconds): 530.52
+	System time (seconds): 0.64
+	Percent of CPU this job got: 771%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 1:08.80
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 1519660
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 0
+	Voluntary context switches: 27922
+	Involuntary context switches: 0
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 0
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

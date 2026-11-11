@@ -1,0 +1,9 @@
+{
+ "run": 2,
+ "inputs_equal_manifest": true,
+ "groth16_exit": 0,
+ "verify_exit": 0,
+ "seal_bytes": 260,
+ "selector": "0x73c457ba",
+ "journal_equals_native": true
+}
