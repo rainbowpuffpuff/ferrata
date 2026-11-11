@@ -455,26 +455,37 @@ def main() -> int:
             raise Pending("no deposits recorded")
         dep_logs.extend(rpc.logs(vault, topic("Deposit(address,uint64,uint64,address,uint256,bytes32)"), from_block,
                                  state.get("head") or int(rpc("eth_blockNumber"), 16)))
-        need(len(dep_logs) == len(want), f"{len(dep_logs)} Deposit events, {len(want)} recorded")
-        out, total_value = [], 0
-        for lg, d in zip(dep_logs, want):
-            w = words(lg["data"])
-            j, leaf, amount, c = int(w[0], 16), int(w[1], 16), int(w[2], 16), w[3]
-            need("0x" + lg["topics"][1][-40:] == deployer, f"deposit {j}: depositor")
-            need("0x" + lg["topics"][2][-40:] == "0x" + "00" * 20, f"deposit {j}: not ETH")
+        # The vault is public: anyone may deposit. The run's deposits are found by their recomputed commitments;
+        # other deposits are counted, not failed.
+        by_c: dict = {}
+        for lg in dep_logs:
+            by_c.setdefault(words(lg["data"])[3], []).append(lg)
+        out, total_value, ours = [], 0, set()
+        for d in want:
+            j = int(d["j"])
             kind = 2 if d["kind"] == "public" else 1
             mine = h(commitment(CHAIN_ID, b(vault), b(deployer), j, kind, b(d["dest"])))
-            need(c == mine == d["commitment"].lower(), f"deposit {j}: event {c}, recomputed {mine}, record {d['commitment']}")
-            need(j == d["j"] and leaf == j, f"deposit {j}: leaf {leaf}")
-            tx = rpc("eth_getTransactionByHash", lg["transactionHash"])
-            total_value += int(tx["value"], 16)
-            out.append(f"j{j} leaf {leaf} {amount} wei {d['kind']} (tx value {int(tx['value'], 16)})")
+            need(mine == d["commitment"].lower(), f"deposit {j}: recomputed {mine}, record {d['commitment']}")
+            hits = by_c.get(mine, [])
+            need(len(hits) == 1, f"deposit {j}: {len(hits)} Deposit events carry the commitment {mine}")
+            lg = hits[0]
+            w = words(lg["data"])
+            jj, leaf, amount = int(w[0], 16), int(w[1], 16), int(w[2], 16)
+            need("0x" + lg["topics"][1][-40:] == deployer, f"deposit {j}: depositor 0x{lg['topics'][1][-40:]}")
+            need("0x" + lg["topics"][2][-40:] == "0x" + "00" * 20, f"deposit {j}: not ETH")
+            need(jj == j, f"deposit {j}: the event's index is {jj}")
+            ours.add(lg["transactionHash"])
+            out.append(f"j{j} leaf {leaf} {amount} wei {d['kind']}, commitment recomputed")
+        for lg in dep_logs:  # every deposit's ETH, the run's and anyone else's
+            total_value += int(rpc("eth_getTransactionByHash", lg["transactionHash"])["value"], 16)
+        others = len(dep_logs) - len(ours)
         n = int(word("nextLeafIndex()"), 16)
-        need(n == len(want), f"nextLeafIndex {n}")
+        need(n == len(dep_logs), f"nextLeafIndex {n}, {len(dep_logs)} Deposit events")
         state["deposited"] = total_value
         bal = int(rpc("eth_getBalance", vault, "latest"), 16)
         state["balance"] = bal
-        return "; ".join(out) + f"; nextLeafIndex {n}; deposits sent {total_value} wei; vault balance {bal} wei"
+        return ("; ".join(out) + (f"; {others} other deposit(s) by others" if others else "")
+                + f"; nextLeafIndex {n}; ETH sent by the deposit transactions {total_value} wei; vault balance {bal} wei")
 
     jw = words(crown["candidate"]["journal"]) if crown.get("candidate") else []
 
@@ -577,7 +588,9 @@ def main() -> int:
             need(int(w[0], 16) == amount and w[3] == jw[8], f"{r['name']}: amount {int(w[0], 16)} or burn root")
             paid += int(w[0], 16)
             out.append(f"{r['name']}: {int(w[0], 16)} wei to {r['recipient']}, nullifier spent (block {int(lg['blockNumber'], 16)})")
-        need(len(logs) == len(out), f"{len(logs)} Release events, {len(out)} spent nullifiers")
+        mine = {r["nullifier"].lower() for r in rels}
+        ours = [lg for lg in logs if lg["topics"][1].lower() in mine]  # others may release their own burns
+        need(len(ours) == len(out), f"{len(ours)} Release events of the run's nullifiers, {len(out)} spent")
         if waiting and not out:
             raise Pending("not released yet: " + "; ".join(waiting))
         if waiting:
