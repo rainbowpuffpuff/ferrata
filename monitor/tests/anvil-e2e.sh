@@ -12,6 +12,7 @@
 #   S6  the state file is lost: a fresh monitor rescans the vault and still cancels, nothing else
 #   S7  a wrong checkpoint finalised while no monitor ran: the watcher alerts, the freeze authority's
 #       monitor revokes it within the window
+#   S9  failure paths: a dry run only alerts; a watcher without gas money alerts, then cancels once funded
 #   S8  a cancelled state submitted again: cancelled again, and the watcher pauses checkpoints (12 h)
 #   Rule (A), a second vault (turnSeconds 900, delta 3 h 01 min, so W = 3 h 31 min for t = 3), Δ_g = 2 h:
 #   A1  an honest candidate passes untouched and is finalised with a beacon recorded after its wait
@@ -211,6 +212,21 @@ check "S7 the freeze authority's monitor revoked checkpoint 2" '[ "$revoked" = t
 jq -c '{scenario: "S7", index, reason: .reason.kind, finalizedAt, revokeBy, revokedAt, tx}' \
   <(jq -c 'select(.kind=="revoked")' "$alerts" | tail -1) >> "$scen"
 
+# S9: the failure paths: a dry run only alerts; a watcher without gas money fails, alerts, and cancels at the next
+# poll once funded.
+n10=$(label state/10); j10=$(journal "$n4" "$n10" 19 "$(label forged/19)" 4 3)
+submit "$j10"
+mon_cmd "$state" WATCHER_KEY
+"$mon" "${margs[@]}" --dry-run --max-polls 1 2>> "$run/monitor-stderr.log"
+check "S9 a dry run raises would-cancel and leaves the candidate" '[ -n "$(jq -c --arg s "$n10" "select(.kind==\"would-cancel\" and .newState==\$s)" "$alerts")" ] && [ "$(submitted_at "$n10")" != 0 ]'
+cast rpc --rpc-url "$rpc" anvil_setBalance "$watcher" 0x0 > /dev/null
+monitor_polls "$state" WATCHER_KEY 1
+check "S9 without gas money: cancel-failed (critical), candidate still pending" '[ -n "$(jq -c --arg s "$n10" "select(.kind==\"cancel-failed\" and .level==\"critical\" and .newState==\$s)" "$alerts")" ] && [ "$(submitted_at "$n10")" != 0 ]'
+cast rpc --rpc-url "$rpc" anvil_setBalance "$watcher" 0x56bc75e2d63100000 > /dev/null
+monitor_polls "$state" WATCHER_KEY 1
+check "S9 funded again: cancelled at the next poll, before the deadline" '[ "$(submitted_at "$n10")" = 0 ] && [ "$(cancelled_alert "$n10" | jq .secondsBeforeDeadline)" -gt 0 ]'
+record S9 "$n10"
+
 # S8: a cancelled state submitted again: cancelled again, then the 12 h pause.
 n9=$(label state/9); j9=$(journal "$n4" "$n9" 18 "$(label forged/18)" 4 3)
 submit "$j9"
@@ -220,7 +236,7 @@ submit "$j9"
 monitor_polls "$state" WATCHER_KEY 2
 frozen=$(cast call --rpc-url "$rpc" "$vault" "checkpointsFrozenUntil()(uint256)" | awk '{print $1}')
 check "S8 second cancellation and the watcher's pause (about 12 h)" '[ "$(submitted_at "$n9")" = 0 ] && [ $((frozen - $(now))) -gt 43000 ]'
-check "S8 a submission is refused during the pause" '! submit "$(journal "$n4" "$(label state/10)" 19 "$(label block/19)" 4 3)" 2>/dev/null'
+check "S8 a submission is refused during the pause" '! submit "$(journal "$n4" "$(label state/11)" 19 "$(label block/19)" 4 3)" 2>/dev/null'
 record S8 "$n9"
 
 # Rule (A): a second vault; the same watcher key, its own state file, the node view without the attestations

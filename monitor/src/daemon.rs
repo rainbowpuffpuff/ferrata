@@ -363,8 +363,15 @@ impl Ctx {
                                 t.status = Status::Gone;
                             }
                             Err(e) => {
+                                // Retried at every poll; paged once per 5 minutes of chain time.
                                 f["error"] = json!(format!("{e:#}"));
-                                self.alerts.emit(Level::Critical, "cancel-failed", now, f);
+                                self.alert_once(
+                                    format!("cancel-failed:{k}:{}", now / 300),
+                                    Level::Critical,
+                                    "cancel-failed",
+                                    now,
+                                    f,
+                                );
                             }
                         }
                     }
@@ -423,7 +430,8 @@ impl Ctx {
                     self.store.to_audit.remove(&index);
                     self.store.finalized.insert(index, "revoked".into());
                 }
-                Err(e) => self.alerts.emit(
+                Err(e) => self.alert_once(
+                    format!("revoke-failed:{index}:{}", now / 300),
                     Level::Critical,
                     "revoke-failed",
                     now,
