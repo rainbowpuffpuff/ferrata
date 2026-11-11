@@ -4,9 +4,11 @@
 //! `burnLeaf(configId, burnIndex, token, amount, COut, r)` to the configuration's burn tree. Tags,
 //! memo pads and MACs come from `kView`; the release secret `sOut` from `kAuth`. A wallet finds its
 //! burns by regenerating `r_0, r_1, …`, keeps only notes whose MAC it can verify (so a copied tag on
-//! someone else's burn is ignored), decrypts the recipient and authenticates it against `COut`. The
-//! release proof shows, under an accepted burn root, a burn leaf of this configuration with this
-//! token and amount whose `COut` the prover opens to the journal's chain, vault and recipient.
+//! someone else's burn, or a copied note with another memo, is ignored: D12's MAC covers the memo),
+//! decrypts the recipient and authenticates it against `COut`. The release proof shows, under an
+//! accepted burn root, a burn leaf of this configuration with this token and amount whose `COut` the
+//! prover opens to the journal's chain, vault and recipient, and publishes D13's `NOut`, which does
+//! not depend on the burn's index.
 
 use crate::encoding::{
     burn_commitment_preimage, burn_id_preimage, burn_leaf_preimage, burn_mac_message, burn_nullifier_preimage,
@@ -49,9 +51,9 @@ pub fn burn_commitment(s_out: &Hash, chain_id: &U256, vault: &Address, recipient
     sha256(&burn_commitment_preimage(s_out, chain_id, vault, recipient))
 }
 
-/// `mac = HMAC(kView, "ferrata/burn-mac/v1" ‖ r ‖ token ‖ amount ‖ COut)[0..16]`.
-pub fn burn_mac(view: &BridgeKey, r: &Hash, token: &Address, amount: &U256, c_out: &Hash) -> Mac {
-    let full = view.prf(&burn_mac_message(r, token, amount, c_out));
+/// D12: `mac = HMAC(kView, "ferrata/burn-mac/v2" ‖ r ‖ memo ‖ token ‖ amount ‖ COut)[0..16]`.
+pub fn burn_mac(view: &BridgeKey, r: &Hash, memo: &Address, token: &Address, amount: &U256, c_out: &Hash) -> Mac {
+    let full = view.prf(&burn_mac_message(r, memo, token, amount, c_out));
     let mut mac = [0u8; 16];
     mac.copy_from_slice(&full[..16]);
     mac
@@ -62,14 +64,17 @@ pub fn burn_leaf(config_id: &Hash, burn_index: u64, token: &Address, amount: &U2
     sha256(&burn_leaf_preimage(config_id, burn_index, token, amount, c_out, r))
 }
 
-/// `burnId = sha256("ferrata/burn/v1" ‖ configId ‖ burnIndex ‖ burnLeaf)`.
+/// `burnId = sha256("ferrata/burn/v1" ‖ configId ‖ burnIndex ‖ burnLeaf)` (SPEC-v2; not in `NOut`
+/// since D13).
 pub fn burn_id(config_id: &Hash, burn_index: u64, leaf: &Hash) -> Hash {
     sha256(&burn_id_preimage(config_id, burn_index, leaf))
 }
 
-/// `NOut = sha256("ferrata/nf-out/v1" ‖ sOut ‖ burnId)`.
-pub fn burn_nullifier(s_out: &Hash, burn_id: &Hash) -> Hash {
-    sha256(&burn_nullifier_preimage(s_out, burn_id))
+/// D13: `NOut = sha256("ferrata/nf-out/v2" ‖ sOut)`. `sOut` is unique per burn (it is derived from
+/// the burn's tag), and the vault keys replay protection on `NOut` alone: a burn that two checkpoints
+/// collected at different indices (one of them revoked) is released once.
+pub fn burn_nullifier(s_out: &Hash) -> Hash {
+    sha256(&burn_nullifier_preimage(s_out))
 }
 
 /// Where a burn can be released: bound into `COut` at burn time.
@@ -90,7 +95,7 @@ pub struct BurnNote {
     pub r: Hash,
     /// Recipient XOR memo pad.
     pub memo: Address,
-    /// MAC over `(r, token, amount, COut)` under `kView`.
+    /// MAC over `(r, memo, token, amount, COut)` under `kView` (D12).
     pub mac: Mac,
     /// Ethereum token to release (`0x00…00` = native ETH).
     pub token: Address,
@@ -113,19 +118,13 @@ impl BurnNote {
         let r = burn_tag(&keys.view, config_id, i);
         let s_out = burn_secret(&keys.auth, config_id, &r);
         let c_out = burn_commitment(&s_out, &target.chain_id, &target.vault, &target.recipient);
-        Self {
-            r,
-            memo: xor_memo(&keys.view, &r, &target.recipient),
-            mac: burn_mac(&keys.view, &r, &token, &amount, &c_out),
-            token,
-            amount,
-            c_out,
-        }
+        let memo = xor_memo(&keys.view, &r, &target.recipient);
+        Self { r, memo, mac: burn_mac(&keys.view, &r, &memo, &token, &amount, &c_out), token, amount, c_out }
     }
 
     /// Whether this note's MAC verifies under `view` (constant-time comparison).
     pub fn mac_verifies(&self, view: &BridgeKey) -> bool {
-        let want = burn_mac(view, &self.r, &self.token, &self.amount, &self.c_out);
+        let want = burn_mac(view, &self.r, &self.memo, &self.token, &self.amount, &self.c_out);
         want.iter().zip(self.mac.iter()).fold(0u8, |acc, (a, b)| acc | (a ^ b)) == 0
     }
 }
@@ -180,13 +179,14 @@ pub struct ReleasePublic {
 
 /// The release statement (§5.2): recomputes `COut` from the witness secret and the public chain,
 /// vault and recipient, the burn leaf from the configuration, index, token, amount, `COut` and `r`,
-/// checks the path (direction bits = `burnIndex`) to `burn_root`, and returns `NOut`. `relayer` and
-/// `relay_fee` are not checked here: the prover chooses them and the journal binds them.
+/// checks the path (direction bits = `burnIndex`) to `burn_root`, and returns D13's `NOut`, which
+/// does not depend on the index. `relayer` and `relay_fee` are not checked here: the prover chooses
+/// them and the journal binds them.
 pub fn verify_release(burn_root: &Hash, w: &ReleaseWitness, p: &ReleasePublic) -> Result<Hash, VerifyError> {
     let c_out = burn_commitment(&w.s_out, &p.chain_id, &p.vault, &p.recipient);
     let leaf = burn_leaf(&p.config_id, w.burn_index, &p.token, &p.amount, &c_out, &w.r);
     verify_path(burn_root, &leaf, w.burn_index, &w.path)?;
-    Ok(burn_nullifier(&w.s_out, &burn_id(&p.config_id, w.burn_index, &leaf)))
+    Ok(burn_nullifier(&w.s_out))
 }
 
 /// The release journal bytes for a verified release (layout: [`ReleaseJournal`]).
@@ -222,7 +222,8 @@ pub struct ViewedBurn {
     pub i: u64,
     /// The published burn.
     pub burn: PublishedBurn,
-    /// The recipient decrypted from the memo (not authenticated by the MAC, which omits the memo).
+    /// The recipient decrypted from the memo (the MAC covers the memo; `COut` authenticates the
+    /// recipient for the owner).
     pub recipient: Address,
 }
 
@@ -307,7 +308,7 @@ pub fn recover_burns(
                 return None;
             }
             let leaf = burn_leaf(config_id, v.burn.burn_index, &note.token, &note.amount, &note.c_out, &note.r);
-            let nullifier = burn_nullifier(&s_out, &burn_id(config_id, v.burn.burn_index, &leaf));
+            let nullifier = burn_nullifier(&s_out);
             Some(OwnedBurn { i: v.i, burn: v.burn, recipient: v.recipient, s_out, leaf, nullifier })
         })
         .collect();

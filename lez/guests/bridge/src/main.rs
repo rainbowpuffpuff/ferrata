@@ -13,10 +13,13 @@
 //!   the denomination and the fee schedule, applies the token's mint freeze and bucket, has
 //!   `config(cid)` apply the global ones (`Admit`), and sends `Spend` to
 //!   `nullifier(chain, vault, N)`: it spends `N` once and mints the denomination to a public
-//!   destination (a private destination credits itself) and the fees to their accounts.
-//! * **Burn.** `Burn` at a holder's actor, as a top-level call or a private root only, debits one
-//!   denomination and sends the note to `token(cid, token)`, which applies the burn freezes and
-//!   buckets and records the note once at `burn(cid, H(note))`.
+//!   destination (a private destination credits itself) and the fees to their accounts. A mint
+//!   writes only at `holder(account)`, a PDA whose seed names the account: never at the account a
+//!   claim names, which could be another actor's address (security review C-1).
+//! * **Burn.** `Burn` at the holder's own actor, as a top-level call or a private root only, debits
+//!   one denomination (its own state first, else its `holder(account)`, to which it forwards the
+//!   note) and sends the note to `token(cid, token)`, which applies the burn freezes and buckets
+//!   and records the note once at `burn(cid, H(note))`.
 //! * **Roles.** `Sunset`, `Freeze` and `SetCap` are top-level calls at the role's own actor, which
 //!   forwards them to `config(cid)` or `token(cid, token)`; those accept them only from the
 //!   configured freeze authority (`Sunset`, `Freeze`) or admin (`SetCap`).
@@ -27,11 +30,11 @@
 
 use ferrata_lez_bridge_wire::{
     burn_actor, burn_seed, check_fees, check_import, check_pairing, check_register, code, config_actor, fees_slots,
-    holder_actor, import_request, nullifier_actor, nullifier_seed, pairing_request, register_slots, root_actor,
-    root_seed, token_actor, token_seed, u128_of, vault_request, verify_claim, Address, BridgeConfig, BridgeMessage,
-    BridgeState, BurnRecord, CapParams, ClaimWitness, Claimed, ConfigState, DestKind, FeeSchedule, Gate, HolderState,
-    ImportProof, Note, NullifierState, PairingProof, Pending, PendingClaim, PendingImport, Root, RootState,
-    ScheduleRange, TokenEntry, TokenState, VaultProof, TIME_WINDOW_MS,
+    holder_actor, holder_seed, import_request, nullifier_actor, nullifier_seed, own_actor, pairing_request,
+    register_slots, root_actor, root_seed, token_actor, token_seed, u128_of, vault_request, verify_claim, Address,
+    BridgeConfig, BridgeMessage, BridgeState, BurnRecord, CapParams, ClaimWitness, Claimed, ConfigState, DestKind,
+    FeeSchedule, Gate, HolderState, ImportProof, Note, NullifierState, PairingProof, Pending, PendingClaim,
+    PendingImport, Root, RootState, ScheduleRange, TokenEntry, TokenState, VaultProof, TIME_WINDOW_MS,
 };
 use ferrata_lez_wire::{attest::Attestation, header_actor, Message as AttestMessage};
 use lee_core::{
@@ -148,8 +151,12 @@ fn handle(input: &ReceiveInput) -> Result<Response, Refusal> {
             let spent = Spent { nullifier, config_id, evm_chain_id, vault, token, leaf_count, amount };
             spend(input, program, state, spent, mint_to, fees)
         }
-        BridgeMessage::Mint { nullifier, config_id, evm_chain_id, vault, token, amount } => {
+        BridgeMessage::Mint { nullifier, config_id, evm_chain_id, vault, token, holder, amount } => {
             if input.from != Some(nullifier_actor(program, evm_chain_id, &vault, &nullifier)) {
+                return Err(code::WRONG_SENDER);
+            }
+            // C-1: credits land at `holder(account)` only, never at an address another role uses.
+            if input.receiver != holder_actor(program, AccountId::new(holder)) {
                 return Err(code::WRONG_SENDER);
             }
             let mut holder = match state {
@@ -233,6 +240,12 @@ fn import_root(
 ) -> Result<Response, Refusal> {
     if input.receiver != config_actor(program, &config_id) {
         return Err(code::WRONG_SENDER);
+    }
+    // D10, security review H-1: the checkpoint counts only the imports it sees, a top-level call or
+    // a private root. A nested call or an asynchronous message carries a sender and is refused, so
+    // no executed import is missing from the checkpoint's imported count (the refund boundary).
+    if input.from.is_some() {
+        return Err(code::NOT_AUTHORIZED);
     }
     let (config, gate, sunset) = ready_config(state)?;
     // Sunset is one-way: no root is imported after it (SPEC-v2 §4.5).
@@ -625,7 +638,8 @@ fn admit(
 }
 
 /// At `nullifier(chain, vault, N)`, from `token(cid, token)` after a verified, admitted claim:
-/// spend `N` once; mint the denomination to a public destination and each fee to its account.
+/// spend `N` once; mint the denomination to a public destination and each fee to its account, at
+/// the account's `holder(account)` PDA (seeded, so LEZ admits it the first time).
 fn spend(
     input: &ReceiveInput,
     program: AccountId,
@@ -649,18 +663,20 @@ fn spend(
         leaf_count: spent.leaf_count,
         amount: spent.amount,
     };
-    let mint = |amount: u128| BridgeMessage::Mint {
+    let mint = |holder: Root, amount: u128| BridgeMessage::Mint {
         nullifier: spent.nullifier,
         config_id: spent.config_id,
         evm_chain_id: spent.evm_chain_id,
         vault: spent.vault,
         token: spent.token,
+        holder,
         amount,
     };
     let mut response = set(BridgeState::Nullifier(record));
     let mints = mint_to.map(|dest| (dest, spent.amount)).into_iter().chain(fees);
     for (account, amount) in mints {
-        response = response.send_sync(holder_actor(program, AccountId::new(account)), &mint(amount));
+        let to = holder_actor(program, AccountId::new(account));
+        response = response.send(SyncMessage::new(to, &mint(account, amount)).with_pda_seeds([holder_seed(&account)]));
     }
     Ok(response)
 }
@@ -669,8 +685,9 @@ fn spend(
 // Burn
 // ---------------------------------------------------------------------------------------------
 
-/// `Burn` at a holder's actor (debit, then send to the token), at `token(cid, token)` (admit, then
-/// record), or at `burn(cid, H(note))` (record once).
+/// `Burn` at a holder's own actor (debit its own state, or forward to its `holder(account)`), at
+/// `holder(account)` from that own actor (debit), at `token(cid, token)` (admit, then record), or
+/// at `burn(cid, H(note))` (record once). A debit sends the note to the token.
 fn burn(
     input: &ReceiveInput,
     program: AccountId,
@@ -707,29 +724,45 @@ fn burn(
             .with_pda_seeds([burn_seed(&config_id, &note_hash)]);
         return Ok(set(BridgeState::Token(state)).send_sync(config_actor(program, &config_id), &admit).send(publish));
     }
-    // D10: only a top-level call (or a private execution's root) is visible to the checkpoint; a
-    // nested call or an asynchronous message carries a sender and is refused.
-    if input.from.is_some() || !input.is_authorized {
-        return Err(code::NOT_AUTHORIZED);
-    }
-    let mut holder = match state {
-        None => return Err(code::INSUFFICIENT_BALANCE),
-        Some(BridgeState::Holder(holder)) if holder.pending.is_none() => holder,
-        Some(_) => return Err(code::BAD_STATE),
+    let holder = |state: Option<BridgeState>| match state {
+        None => Ok(HolderState::default()),
+        Some(BridgeState::Holder(holder)) if holder.pending.is_none() => Ok(holder),
+        Some(_) => Err(code::BAD_STATE),
     };
-    let index = holder
-        .holdings
-        .iter()
-        .position(|h| h.config_id == config_id && h.token == note.token)
-        .ok_or(code::INSUFFICIENT_BALANCE)?;
-    let amount = u128_of(&note.amount).ok_or(code::NOT_REGISTERED)?;
-    let left = holder.holdings[index].amount.checked_sub(amount).ok_or(code::INSUFFICIENT_BALANCE)?;
-    if left == 0 {
-        holder.holdings.remove(index);
-    } else {
-        holder.holdings[index].amount = left;
+    let burn = BridgeMessage::burn(config_id, &note);
+    let account = input.receiver.account_id;
+    match input.from {
+        // D10: only a top-level call (or a private execution's root) is visible to the checkpoint.
+        None => {
+            if !input.is_authorized {
+                return Err(code::NOT_AUTHORIZED);
+            }
+            let amount = u128_of(&note.amount).ok_or(code::NOT_REGISTERED)?;
+            // The account's own state first (its own private claims; a private holder's balance).
+            let mut own = holder(state)?;
+            if own.debit(&config_id, &note.token, amount).is_some() {
+                return Ok(set(BridgeState::Holder(own)).send_sync(token, &burn));
+            }
+            // Else its public holdings, at `holder(account)`: a nested call, which the checkpoint
+            // does not see and need not see, since this root call is the burn it collects.
+            let forward =
+                SyncMessage::new(holder_actor(program, account), &burn).with_pda_seeds([holder_seed(account.value())]);
+            Ok(Response::keep_state().send(forward))
+        }
+        // At `holder(owner)`: the forward from the owner's own actor (only this program's code runs
+        // there, and it forwards only after the checks above).
+        Some(from)
+            if from == own_actor(program, from.account_id)
+                && input.receiver == holder_actor(program, from.account_id) =>
+        {
+            let amount = u128_of(&note.amount).ok_or(code::NOT_REGISTERED)?;
+            let mut held = holder(state)?;
+            held.debit(&config_id, &note.token, amount).ok_or(code::INSUFFICIENT_BALANCE)?;
+            Ok(set(BridgeState::Holder(held)).send_sync(token, &burn))
+        }
+        // D10: a nested call from any other actor, or an asynchronous message, is refused.
+        Some(_) => Err(code::NOT_AUTHORIZED),
     }
-    Ok(set(BridgeState::Holder(holder)).send_sync(token, &BridgeMessage::burn(config_id, &note)))
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -763,7 +796,7 @@ fn role_message(
         }
         return Ok(Response::keep_state().send_sync(target, &message));
     }
-    let from_role = |role: &Root| input.from == Some(holder_actor(program, AccountId::new(*role)));
+    let from_role = |role: &Root| input.from == Some(own_actor(program, AccountId::new(*role)));
     // The target's roles and gate.
     let (controls, mut gate, scope) = match (&token, state) {
         (None, state) => {

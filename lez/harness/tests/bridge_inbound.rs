@@ -11,7 +11,7 @@ use ferrata_bridge_core::{
     BridgeKeys,
 };
 use ferrata_lez_bridge_wire::{
-    code, config_actor, holder_actor, BridgeMessage, BridgeState, ConfigState, NullifierState, CODE_BLOCK,
+    code, config_actor, holder_actor, holder_seed, BridgeMessage, BridgeState, ConfigState, NullifierState, CODE_BLOCK,
 };
 use ferrata_lez_wire::{attest::evaluate, RecordState, CODE_BLOCKS};
 use harness::{
@@ -182,10 +182,12 @@ fn inbound_configuration_import_and_plaintext_claim() {
         evm_chain_id: CHAIN_ID,
         vault: va,
         token: ETH,
+        holder: *payer.value(),
         amount: DENOMINATIONS[2],
     };
     let holder = holder_actor(w.program, payer);
-    let r = w.send("Mint sent directly to a holder", holder, &mint, vec![holder]);
+    let evidence = vec![lee::PublicAccountEvidence::Pda { program: w.program, seed: holder_seed(payer.value()) }];
+    let r = w.submit("Mint sent directly to a holder", holder, &mint, vec![holder], evidence);
     run(r, Some(code::WRONG_SENDER));
     assert_eq!(w.balance(payer, &cid_a), 0, "no refusal minted");
 

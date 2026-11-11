@@ -39,8 +39,7 @@ proptest! {
     fn release_verifies_and_commits_the_vault_journal(case in release_case()) {
         let (w, p) = (&case.witness, &case.public);
         let n = verify_release(&case.burn_root, w, p).unwrap();
-        let leaf = burn_leaf(&p.config_id, w.burn_index, &p.token, &p.amount, &burn_commitment(&w.s_out, &p.chain_id, &p.vault, &p.recipient), &w.r);
-        prop_assert_eq!(n, burn_nullifier(&w.s_out, &burn_id(&p.config_id, w.burn_index, &leaf)));
+        prop_assert_eq!(n, burn_nullifier(&w.s_out), "D13: NOut depends on sOut alone");
         let j = ReleaseJournal::decode(&release_journal(&case.burn_root, &n, p)).unwrap();
         prop_assert_eq!((j.burn_root, j.nullifier, j.chain_id, j.vault, j.lez_config_id), (case.burn_root, n, p.chain_id, p.vault, p.config_id));
         prop_assert_eq!((j.token, j.amount, j.recipient, j.relayer, j.relay_fee), (p.token, p.amount, p.recipient, p.relayer, p.relay_fee));
@@ -194,15 +193,18 @@ proptest! {
         prop_assert_ne!(c_out, burn_commitment(&s_out, &chain_id, &vault2, &recipient));
         prop_assert_ne!(c_out, burn_commitment(&s_out, &chain_id, &vault, &recipient2));
 
-        let mac = burn_mac(&view, &r, &token, &amount, &c_out);
+        let memo = recipient;
+        let mac = burn_mac(&view, &r, &memo, &token, &amount, &c_out);
+        let mut memo2 = memo; memo2[at % 20] ^= mask;
         let mut token2 = token; token2[at % 20] ^= mask;
         let mut amount2 = amount; amount2[at] ^= mask;
         let mut c2 = c_out; c2[at] ^= mask;
-        prop_assert_ne!(mac, burn_mac(&view2, &r, &token, &amount, &c_out));
-        prop_assert_ne!(mac, burn_mac(&view, &r2, &token, &amount, &c_out));
-        prop_assert_ne!(mac, burn_mac(&view, &r, &token2, &amount, &c_out));
-        prop_assert_ne!(mac, burn_mac(&view, &r, &token, &amount2, &c_out));
-        prop_assert_ne!(mac, burn_mac(&view, &r, &token, &amount, &c2));
+        prop_assert_ne!(mac, burn_mac(&view2, &r, &memo, &token, &amount, &c_out));
+        prop_assert_ne!(mac, burn_mac(&view, &r2, &memo, &token, &amount, &c_out));
+        prop_assert_ne!(mac, burn_mac(&view, &r, &memo2, &token, &amount, &c_out)); // D12: the memo is covered
+        prop_assert_ne!(mac, burn_mac(&view, &r, &memo, &token2, &amount, &c_out));
+        prop_assert_ne!(mac, burn_mac(&view, &r, &memo, &token, &amount2, &c_out));
+        prop_assert_ne!(mac, burn_mac(&view, &r, &memo, &token, &amount, &c2));
 
         let leaf = burn_leaf(&config, burn_index, &token, &amount, &c_out, &r);
         prop_assert_ne!(leaf, burn_leaf(&config2, burn_index, &token, &amount, &c_out, &r));
@@ -218,10 +220,8 @@ proptest! {
         prop_assert_ne!(bid, burn_id(&config, burn_index ^ bump, &leaf));
         prop_assert_ne!(bid, burn_id(&config, burn_index, &leaf2));
 
-        let n = burn_nullifier(&s_out, &bid);
-        let mut bid2 = bid; bid2[at] ^= mask;
-        prop_assert_ne!(n, burn_nullifier(&s2, &bid));
-        prop_assert_ne!(n, burn_nullifier(&s_out, &bid2));
+        let n = burn_nullifier(&s_out);
+        prop_assert_ne!(n, burn_nullifier(&s2));
     }
 
     #[test]
@@ -276,9 +276,9 @@ fn recover_burns_follows_the_gap_limit_and_ignores_notes_it_did_not_author() {
     let mut copy = BurnNote::create(&k, &config, 3, &to("erin"), addr("USDC"), amount);
     copy.token = addr("rare token");
     push(copy);
-    // A copy of r_1 with an identical token, amount, COut and MAC but a tampered memo: the MAC still
-    // verifies (it omits the memo), the view-only scan reports a wrong recipient, and the full scan
-    // drops it because COut does not open to that recipient.
+    // A copy of r_1 with an identical token, amount, COut and MAC but a tampered memo: D12's MAC
+    // covers the memo, so even the view-only scan drops it (under SPEC-v2's MAC it verified, the
+    // view-only scan reported a wrong recipient, and only the full scan dropped it on COut).
     let mut tampered = BurnNote::create(&k, &config, 1, &to("bob"), addr("USDC"), amount);
     tampered.memo[0] ^= 1;
     push(tampered);
@@ -291,7 +291,7 @@ fn recover_burns_follows_the_gap_limit_and_ignores_notes_it_did_not_author() {
 
     let (viewed, next) = view_burns(&k.view, &config, &notes, 3);
     assert_eq!(next, 6);
-    assert_eq!(viewed.len(), 5, "4 own + the tampered-memo copy (its MAC verifies)");
+    assert_eq!(viewed.len(), 4, "4 own; the tampered-memo copy's MAC does not verify (D12)");
     assert!(viewed.iter().all(|v| v.burn.note.token == addr("USDC")), "the rare-token copy is not viewed");
 
     // Each recovered burn releases with the recovered nullifier.

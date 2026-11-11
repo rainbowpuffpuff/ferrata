@@ -19,7 +19,7 @@ use ferrata_bridge_core::{
     BridgeKeys, Hash,
 };
 use ferrata_lez_bridge_wire::{
-    burn_actor, burn_mac_v2, burn_seed, code, config_actor, holder_actor, nf_out_v2, token_actor, BridgeMessage,
+    burn_actor, burn_mac_v2, burn_seed, code, config_actor, nf_out_v2, own_actor, token_actor, BridgeMessage,
     BridgeState, BurnRecord, HolderState, Holding, Note,
 };
 use harness::{
@@ -130,7 +130,7 @@ fn burns_and_what_the_checkpoint_collects() {
     let deposit = w.private_deposit.clone();
     let claim_message = w.claim_privately(&cid_a, 8, w.vault_a.witness(&deposit, 8));
     let claim_publics = w.private_claim_actors(&cid_a, 8, &vault_a, &deposit);
-    let me = holder_actor(program, account.id());
+    let me = own_actor(program, account.id());
     let private_claim = w
         .chain
         .prove_and_settle_private(
@@ -153,10 +153,10 @@ fn burns_and_what_the_checkpoint_collects() {
     // --- Public burns, signed by the holder (the payer) --------------------------------------
     let keys = BridgeKeys::from_bridge_seed(&[0x77; 32]);
     let (n1, s_out1) = note(&keys, &cid_a, &vault_a, 0, ETH, DENOMINATIONS[1]);
-    let holder = holder_actor(program, payer);
+    let holder = own_actor(program, payer);
     let record1 = burn_actor(program, &cid_a, &n1.hash());
     let burn = |w: &mut World, label: &str, at: Actor, cid: Hash, note: &Note, code: Option<u8>| -> TxReport {
-        let actors = w.burn_actors(at, &cid, note);
+        let actors = w.public_burn_actors(at.account_id, &cid, note);
         let r = w.send(label, at, &BridgeMessage::burn(cid, note), actors);
         expect(&r, code);
         r
@@ -183,7 +183,7 @@ fn burns_and_what_the_checkpoint_collects() {
     let (too_much, _) = note(&keys, &cid_a, &vault_a, 3, ETH, DENOMINATIONS[2]);
     reports.push(burn(&mut w, "Burn 10 ETH with 9 held", holder, cid_a, &too_much, Some(code::INSUFFICIENT_BALANCE)));
     let (n2, _) = note(&keys, &cid_a, &vault_a, 4, ETH, DENOMINATIONS[1]);
-    let vector_holder = holder_actor(program, w.vector_dest);
+    let vector_holder = own_actor(program, w.vector_dest);
     reports.push(burn(
         &mut w,
         "Burn at the vector's destination, not signed by it",
@@ -306,12 +306,19 @@ fn burns_and_what_the_checkpoint_collects() {
     private_post_state(&w.chain, &private_keys(seed), &claimed, RESERVE, &emptied).expect("the holding is gone");
 
     // --- The wallet side: D12's mac covers memo, D13's NOut ignores the burn index -----------
-    assert_ne!(n1.mac, burn_mac(&keys.view, &n1.r, &n1.token, &n1.amount, &n1.c_out), "mac v2 is not v1");
+    assert_eq!(
+        n1.mac,
+        burn_mac(&keys.view, &n1.r, &n1.memo, &n1.token, &n1.amount, &n1.c_out),
+        "the core's MAC is D12's"
+    );
     let leaf_at = |i: u64| burn_leaf(&cid_a, i, &n1.token, &n1.amount, &n1.c_out, &n1.r);
-    let v1 = |i: u64| burn_nullifier(&s_out1, &burn_id(&cid_a, i, &leaf_at(i)));
-    assert_ne!(v1(0), v1(1), "NOut v1 changes with the index a burn is collected at");
+    let v1 = |i: u64| {
+        ferrata_bridge_core::sha256(&[&b"ferrata/nf-out/v1"[..], &s_out1, &burn_id(&cid_a, i, &leaf_at(i))].concat())
+    };
+    assert_ne!(v1(0), v1(1), "SPEC-v2's NOut changed with the index a burn is collected at");
     let nout = nf_out_v2(&s_out1);
     assert_eq!(nout, ferrata_bridge_core::sha256(&[&b"ferrata/nf-out/v2"[..], &s_out1].concat()));
+    assert_eq!(nout, burn_nullifier(&s_out1), "the release guest's NOut (the bridge core's) is D13's");
 
     // --- What the checkpoint program collects ------------------------------------------------
     let tx = |label: &str| -> Vec<u8> {

@@ -373,10 +373,10 @@ fn outbound_derivations() {
             "recipient": hx(&recipient), "memo": hx(&note.memo), "evm_chain_id": hx(&chain_id), "vault": hx(&vault),
             "C_out_preimage": hx(&burn_commitment_preimage(&s_out, &chain_id, &vault, &recipient)), "C_out": hx(&note.c_out),
             "token": hx(&token), "amount": hx(&amount),
-            "mac_message": hx(&burn_mac_message(&note.r, &token, &amount, &note.c_out)), "mac": hx(&note.mac),
+            "mac_message": hx(&burn_mac_message(&note.r, &note.memo, &token, &amount, &note.c_out)), "mac": hx(&note.mac),
             "burn_index": burn_index, "burn_leaf_preimage": hx(&burn_leaf_preimage(&config_id, burn_index, &token, &amount, &note.c_out, &note.r)),
             "burn_leaf": hx(&leaf), "burn_id_preimage": hx(&burn_id_preimage(&config_id, burn_index, &leaf)), "burn_id": hx(&bid),
-            "N_out_preimage": hx(&burn_nullifier_preimage(&s_out, &bid)), "N_out": hx(&outbound::burn_nullifier(&s_out, &bid)),
+            "N_out_preimage": hx(&burn_nullifier_preimage(&s_out)), "N_out": hx(&outbound::burn_nullifier(&s_out)),
         }));
     }
     // One complete release: our burn at index 3 of a 6-leaf burn tree, with a relayer and fee.
@@ -429,7 +429,7 @@ fn outbound_derivations() {
     write_or_check(
         "outbound-v2.json",
         json!({
-            "description": "Burn -> release (SPEC-v2 §5). r = HMAC(kView, r_message); sOut = HMAC(kAuth, s_out_message); memo_pad = HMAC(kView, memo_message)[0..20]; memo = recipient XOR memo_pad; COut = sha256(C_out_preimage); mac = HMAC(kView, mac_message)[0..16]; burn_leaf = burn leaf v2; burn_id = sha256(burn_id_preimage); N_out = sha256(N_out_preimage). 'release': a complete release under a 6-leaf burn tree, with the vault journal and the release guest's 1340-byte input. i is a decimal string (u64).",
+            "description": "Burn -> release (SPEC-v2 §5). r = HMAC(kView, r_message); sOut = HMAC(kAuth, s_out_message); memo_pad = HMAC(kView, memo_message)[0..20]; memo = recipient XOR memo_pad; COut = sha256(C_out_preimage); mac = HMAC(kView, mac_message)[0..16] with D12's mac_message ('ferrata/burn-mac/v2' || r || memo || token || amount || COut); burn_leaf = burn leaf v2; burn_id = sha256(burn_id_preimage) (SPEC-v2's, no longer in N_out); N_out = sha256(N_out_preimage) with D13's preimage ('ferrata/nf-out/v2' || sOut), which does not depend on the burn index. 'release': a complete release under a 6-leaf burn tree, with the vault journal and the release guest's 1340-byte input. i is a decimal string (u64).",
             "cases": cases, "release": release,
         }),
     );

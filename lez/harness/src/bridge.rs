@@ -26,7 +26,7 @@ use ferrata_core::{
     Root,
 };
 use ferrata_lez_bridge_wire::{
-    self as bw, code, config_actor, config_seed, fee_slot, holder_actor, nullifier_actor, register_slots,
+    self as bw, code, config_actor, config_seed, fee_slot, holder_actor, nullifier_actor, own_actor, register_slots,
     registry_slot, root_actor, root_seed, token_actor, BridgeConfig, BridgeMessage, BridgeState, CapParams,
     ClaimWitness, Controls, FeeSchedule, HolderState, ImportProof, NullifierState, PairingProof, RootState,
     ScheduleRange, TokenEntry, TokenState, VaultProof, Word, SLOT_CONFIG_ID, SLOT_COUNT, SLOT_ROOT,
@@ -724,6 +724,7 @@ impl World {
         }
     }
 
+    /// The public holdings of `account`, at `holder(account)`.
     pub fn holder(&self, account: AccountId) -> Option<HolderState> {
         match self.state(holder_actor(self.program, account)) {
             Some(BridgeState::Holder(holder)) => Some(holder),
@@ -967,6 +968,14 @@ impl World {
         actors
     }
 
+    /// The actors of a public holder's burn of `note` under `cid`: its own actor (the root it
+    /// signs), its `holder(account)`, the token, the configuration, the record.
+    pub fn public_burn_actors(&self, account: AccountId, cid: &Hash, note: &bw::Note) -> Vec<Actor> {
+        let mut actors = self.burn_actors(own_actor(self.program, account), cid, note);
+        actors.insert(1, holder_actor(self.program, account));
+        actors
+    }
+
     /// The actors of a burn of `note` under `cid` at `holder`: the holder, the token, the
     /// configuration, the record.
     pub fn burn_actors(&self, holder: Actor, cid: &Hash, note: &bw::Note) -> Vec<Actor> {
@@ -986,7 +995,7 @@ impl World {
     /// A role message (`Sunset`, `Freeze`, `SetCap`) as a top-level call at the actor of the
     /// account of `seed`, signed by it, forwarded to `target`.
     pub fn role(&mut self, label: &str, seed: u8, message: &BridgeMessage, target: Actor) -> TxReport {
-        let root = holder_actor(self.program, role_account(seed));
+        let root = own_actor(self.program, role_account(seed));
         let key = role_key(seed);
         self.submit_signed(label, root, message, vec![root, target], vec![], &[&key])
     }
@@ -1122,7 +1131,7 @@ pub fn private_claim_transitions(
     cid: &Hash,
     n: u64,
 ) -> Vec<crate::attest::Executed> {
-    let actor = holder_actor(w.program, account);
+    let actor = own_actor(w.program, account);
     let call = ReceiveInput {
         receiver: actor,
         from: None,
@@ -1153,7 +1162,7 @@ pub fn private_burn_transition(
     message: &BridgeMessage,
 ) -> crate::attest::Executed {
     let call = ReceiveInput {
-        receiver: holder_actor(w.program, account),
+        receiver: own_actor(w.program, account),
         from: None,
         is_authorized: true,
         pre_state,

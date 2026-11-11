@@ -474,15 +474,8 @@ async fn main() -> Result<()> {
                 .map(|d| inbound::deposit_leaf(d.leaf_index, &d.depositor, &d.token, &d.amount, &d.commitment))
                 .collect();
             let relayer = relayer.as_deref().map(ferrata_cli::h32).transpose()?;
-            let dest_key = e
-                .seed
-                .public_accounts(c.gap)?
-                .into_iter()
-                .find(|a| *a.id.value() == row.owned.dest)
-                .map(|a| lee::PublicKey::new_from_private_key(&a.key));
             let plan =
-                lez::plan_claim(&ledger, &ctx, &leaves, &row.owned, &history, !plaintext, relayer, now_ms(), dest_key)
-                    .await?;
+                lez::plan_claim(&ledger, &ctx, &leaves, &row.owned, &history, !plaintext, relayer, now_ms()).await?;
             println!("{}: N {}", plan.call.what, hx(&plan.nullifier));
             println!("public: {}", lez::reveals(&plan.call));
             if plaintext && !i_accept_plaintext_links_deposit {

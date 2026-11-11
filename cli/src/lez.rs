@@ -19,9 +19,9 @@ use ferrata_bridge_core::{
     BridgeKeys, Hash,
 };
 use ferrata_lez_bridge_wire::{
-    self as bw, burn_actor, burn_seed, config_actor, config_seed, holder_actor, nullifier_actor, nullifier_seed,
-    root_actor, root_seed, token_actor, token_seed, BridgeMessage, BridgeState, HolderState, RootState, ScheduleRange,
-    TokenState,
+    self as bw, burn_actor, burn_seed, config_actor, config_seed, holder_actor, holder_seed, nullifier_actor,
+    nullifier_seed, own_actor, root_actor, root_seed, token_actor, token_seed, BridgeMessage, BridgeState, HolderState,
+    RootState, ScheduleRange, TokenState,
 };
 use lee::AccountId;
 use lee_core::{account::Actor, program::PdaSeed};
@@ -56,8 +56,8 @@ pub enum Mention {
     Pda { actor: Actor, seed: PdaSeed },
     /// A public account that signs the call (a burn's holder).
     Signer(Actor),
-    /// A public account's bridge state the call credits (destination, fee recipient, relayer); with
-    /// its public key when the account may not exist yet (LEZ admits a new account on evidence).
+    /// A public account named with its public key when it may not exist yet (LEZ admits a new
+    /// account on evidence). A claim credits `holder(account)` PDAs, named as [`Mention::Pda`].
     Other(Actor, Option<lee::PublicKey>),
     /// The claimant's own private account, the root of a private claim.
     PrivateSelf(Actor),
@@ -218,7 +218,6 @@ pub async fn plan_claim<L: Ledger>(
     private: bool,
     relayer: Option<Hash>,
     time_ms: u64,
-    dest_key: Option<lee::PublicKey>,
 ) -> Result<ClaimPlan> {
     let d = &owned.deposit;
     let Some(&n) = history.roots.iter().rev().find(|&&n| n > d.leaf_index) else {
@@ -277,7 +276,7 @@ pub async fn plan_claim<L: Ledger>(
     let root = root_actor(ctx.program, &ctx.cid, n);
     let mut mentions = Vec::new();
     let message = if private {
-        let me = holder_actor(ctx.program, AccountId::new(owned.dest));
+        let me = own_actor(ctx.program, AccountId::new(owned.dest));
         if owned.kind == DestKind::Private {
             mentions.push(Mention::PrivateSelf(me));
         } else {
@@ -296,11 +295,11 @@ pub async fn plan_claim<L: Ledger>(
     mentions.push(Mention::Pda { actor: config_actor(ctx.program, &ctx.cid), seed: config_seed(&ctx.cid) });
     mentions.push(Mention::Pda { actor: n_actor, seed: nullifier_seed(ctx.chain_id, &ctx.vault, &owned.nullifier) });
     let dest = (owned.kind == DestKind::Public).then(|| AccountId::new(owned.dest));
+    // Mints land at `holder(account)` PDAs (security review C-1); the mint's seed admits a new one.
     for account in dest.into_iter().chain([fee_recipient, relayer_account]) {
         let actor = holder_actor(ctx.program, account);
         if !mentions.iter().any(|m| m.actor() == actor) {
-            let key = if Some(account) == dest { dest_key.clone() } else { None };
-            mentions.push(Mention::Other(actor, key));
+            mentions.push(Mention::Pda { actor, seed: holder_seed(account.value()) });
         }
     }
     let what = format!(
@@ -358,8 +357,10 @@ pub async fn plan_burn<L: Ledger>(
     let note = BurnNote::create(keys, &ctx.cid, next_i, &target, token, u128_to_word(amount));
     let wire = bw::Note { r: note.r, memo: note.memo, mac: note.mac, token, amount: note.amount, c_out: note.c_out };
     let note_hash = wire.hash();
+    // Signed at the holder's own actor, which forwards the note to its `holder(account)`.
     let mentions = vec![
-        Mention::Signer(holder_actor(ctx.program, holder)),
+        Mention::Signer(own_actor(ctx.program, holder)),
+        Mention::Pda { actor: holder_actor(ctx.program, holder), seed: holder_seed(holder.value()) },
         Mention::Pda { actor: token_actor(ctx.program, &ctx.cid, &token), seed: token_seed(&ctx.cid, &token) },
         Mention::Pda { actor: config_actor(ctx.program, &ctx.cid), seed: config_seed(&ctx.cid) },
         Mention::Pda { actor: burn_actor(ctx.program, &ctx.cid, &note_hash), seed: burn_seed(&ctx.cid, &note_hash) },

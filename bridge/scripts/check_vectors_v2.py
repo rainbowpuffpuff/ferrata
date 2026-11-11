@@ -255,7 +255,7 @@ def check_outbound(v):
         eq("COut preimage", cpre, b(c["C_out_preimage"]))
         c_out = sha(cpre)
         eq("COut", c_out, b(c["C_out"]))
-        mmsg = b"ferrata/burn-mac/v1" + r + b(c["token"]) + b(c["amount"]) + c_out
+        mmsg = b"ferrata/burn-mac/v2" + r + b(c["memo"]) + b(c["token"]) + b(c["amount"]) + c_out  # D12
         eq("mac message", mmsg, b(c["mac_message"]))
         eq("mac", prf(kv, mmsg)[:16], b(c["mac"]))
         lpre = b"\x02" + BURN_TAG + cfg + u64(c["burn_index"]) + b(c["token"]) + b(c["amount"]) + c_out + r
@@ -265,7 +265,7 @@ def check_outbound(v):
         bpre = b"ferrata/burn/v1" + cfg + u64(c["burn_index"]) + lf
         eq("burnId preimage", bpre, b(c["burn_id_preimage"]))
         eq("burnId", sha(bpre), b(c["burn_id"]))
-        npre = b"ferrata/nf-out/v1" + s_out + sha(bpre)
+        npre = b"ferrata/nf-out/v2" + s_out  # D13: no burnId, so no burn index
         eq("NOut preimage", npre, b(c["N_out_preimage"]))
         eq("NOut", sha(npre), b(c["N_out"]))
     c = v["release"]
@@ -279,13 +279,13 @@ def check_outbound(v):
     eq("release recipient from memo", recipient, b(c["recipient"]))
     c_out = sha(b"ferrata/Cout/v1" + s_out + chain + vault + recipient)
     eq("release COut", c_out, b(c["C_out"]))
-    eq("release mac", prf(kv, b"ferrata/burn-mac/v1" + r + token + amount + c_out)[:16], b(c["mac"]))
+    eq("release mac", prf(kv, b"ferrata/burn-mac/v2" + r + b(c["memo"]) + token + amount + c_out)[:16], b(c["mac"]))
     lf = burn_leaf(cfg, c["burn_index"], token, amount, c_out, r)
     leaves = [b(x) for x in c["leaves"]]
     eq("release leaf in tree", leaves[c["burn_index"]], lf)
     eq("burn root", root_of(leaves), b(c["burn_root"]))
     eq("release path", root_from_path(lf, c["burn_index"], c["path"]), b(c["burn_root"]))
-    n_out = sha(b"ferrata/nf-out/v1" + s_out + sha(b"ferrata/burn/v1" + cfg + u64(c["burn_index"]) + lf))
+    n_out = sha(b"ferrata/nf-out/v2" + s_out)
     eq("release NOut", n_out, b(c["N_out"]))
     journal = (RELEASE_DOMAIN + chain + addr_word(vault) + cfg + b(c["burn_root"]) + n_out + addr_word(token) + amount
                + addr_word(recipient) + addr_word(b(c["relayer"])) + b(c["relay_fee"]))

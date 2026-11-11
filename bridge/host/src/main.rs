@@ -678,6 +678,59 @@ fn cmd_prove_claim() -> Result<()> {
     Ok(())
 }
 
+/// The security review's M-3 in the guest: one burn collected at index 1 under a checkpoint that is
+/// later revoked and at index 3 on the canonical branch. Both executions of the release guest must
+/// commit the same `NOut`, D13's `H("ferrata/nf-out/v2" ‖ sOut)`, so the vault (replay keyed on
+/// `NOut`) releases the burn once.
+fn cmd_reindex() -> Result<()> {
+    println!("release image id {}", image_id_hex(RELEASE_ID));
+    let keys = BridgeKeys::from_bridge_seed(&label("reindex: seed"));
+    let config_id = label("reindex: configuration");
+    let target = ReleaseTarget {
+        chain_id: chain_id_u256(11_155_111),
+        vault: label_addr("reindex: vault"),
+        recipient: label_addr("reindex: recipient"),
+    };
+    let (token, amount) = ([0u8; 20], u256_from_u128(1_000_000_000_000_000_000));
+    let note = BurnNote::create(&keys, &config_id, 0, &target, token, amount);
+    let s_out = ferrata_bridge_core::outbound::burn_secret(&keys.auth, &config_id, &note.r);
+    let want = sha256(&[&b"ferrata/nf-out/v2"[..], &s_out].concat());
+    let public = ReleasePublic {
+        chain_id: target.chain_id,
+        vault: target.vault,
+        config_id,
+        token,
+        amount,
+        recipient: target.recipient,
+        relayer: [0; 20],
+        relay_fee: [0; 32],
+    };
+    let mut seen = Vec::new();
+    for (branch, before) in [("revoked branch", 1u64), ("canonical branch", 3u64)] {
+        let mut tree = Tree::new();
+        for i in 0..before {
+            tree.append(burn_leaf(&config_id, i, &token, &amount, &rnd(branch, i), &rnd("reindex: r", i)))
+                .map_err(|_| anyhow::anyhow!("tree full"))?;
+        }
+        tree.append(burn_leaf(&config_id, before, &token, &amount, &note.c_out, &note.r))
+            .map_err(|_| anyhow::anyhow!("tree full"))?;
+        let path = tree.path(before).context("our burn is in the tree")?;
+        let input = ReleaseInput {
+            burn_root: tree.root(),
+            witness: ReleaseWitness { burn_index: before, path, s_out, r: note.r },
+            public: public.clone(),
+        };
+        let info = default_executor().execute(env_with(&input.encode())?, RELEASE_ELF)?;
+        let journal = ReleaseJournal::decode(&info.journal.bytes).context("a release journal")?;
+        println!("[{branch}] burn index {before} | burn root {} | NOut {}", hx(&tree.root()), hx(&journal.nullifier));
+        ensure!(journal.nullifier == want, "{branch}: the guest's NOut is not D13's H(nf-out/v2 ‖ sOut)");
+        seen.push(journal.nullifier);
+    }
+    ensure!(seen[0] == seen[1], "one burn released twice: the NOut depends on the burn index");
+    println!("one burn, one NOut on both branches: the vault refuses the second release");
+    Ok(())
+}
+
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let arg = |i: usize| args.get(i).map(String::as_str).context("missing argument");
@@ -694,6 +747,7 @@ fn main() -> Result<()> {
         Some("fixtures") => cmd_fixtures(),
         Some("claim-check") => cmd_claim_check(num(1, 16)?),
         Some("prove-claim") => cmd_prove_claim(),
-        _ => bail!("usage: host scenario | execute | invariance [n] | prove <case> | p254 <case> | groth16 <case> | verify <case> | fixtures | claim-check [n] | prove-claim"),
+        Some("reindex") => cmd_reindex(),
+        _ => bail!("usage: host scenario | execute | invariance [n] | prove <case> | p254 <case> | groth16 <case> | verify <case> | fixtures | claim-check [n] | prove-claim | reindex"),
     }
 }
