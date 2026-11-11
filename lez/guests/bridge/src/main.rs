@@ -336,8 +336,7 @@ fn config_reply(input: &ReceiveInput, program: AccountId, state: &ConfigState) -
             SyncMessage::new(to, &BridgeMessage::WriteRoot { root }).with_pda_seeds([seed])
         }
         Pending::Register { entry, schedule, record_slot } => {
-            let token =
-                check_register(&config, &config_id, entry, schedule, *record_slot, &attestation, gate.now_ms)?;
+            let token = check_register(&config, &config_id, entry, schedule, *record_slot, &attestation, gate.now_ms)?;
             let to = token_actor(program, &config_id, &entry.token);
             SyncMessage::new(to, &BridgeMessage::WriteToken { state: token })
                 .with_pda_seeds([token_seed(&config_id, &entry.token)])

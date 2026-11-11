@@ -94,7 +94,10 @@ the forger put in their state. For the bridge, a forged record whose vault slot 
 lets `ImportRoot` accept them and claims mint wrapped tokens with no escrow behind them. **What bounds it:**
 the bridge's mint caps (per token and global, on LEZ) until the freeze authority freezes mints; wrapped
 supply then exceeds escrow by at most what the caps let through ([`bridge.md`](design/bridge.md) §13,
-"Supply"). `monitor`, which compares records with several providers' canonical roots and feeds consumers'
+"Supply"). Those caps and freezes run on attested Ethereum time, the execution timestamp of a record,
+and a record moves a clock only in a LEZ block stamped at or after it: a captured committee's
+far-future record refills no bucket and ends no freeze unless a block producer also stamps its block
+that far ahead ([`lez/BRIDGE.md`](../lez/BRIDGE.md) §6). `monitor`, which compares records with several providers' canonical roots and feeds consumers'
 freeze authorities, is **not built** ([`attestation.md`](design/attestation.md) §11.3). A deeper inbound
 finality setting would not help: it delays honest claimants, not a captured committee
 ([`bridge.md`](design/bridge.md) §5.4).
@@ -137,7 +140,7 @@ the chain id in its identifier ([`attestation.md`](design/attestation.md) §2, �
 | Any submitter or prover | updates | liveness only | refused: signatures are checked | anyone else submits | public data |
 | Beacon and execution providers | light-client data, proofs, receipts | liveness only | refused: checked against signatures and records | another provider, or your own node | which blocks are fetched |
 | Checkpoint source | each fresh checkpoint | **safety**, until checked | a false root; `verify_checkpoint` (not built) or a manual comparison catches it | nothing to stop | nothing |
-| LEZ sequencers | inclusion, timestamps | liveness; timestamps within their limits | cannot forge a record | the zone stops | public transactions |
+| LEZ sequencers | inclusion, block timestamps | liveness only: the bridge's LEZ-side clock is attested Ethereum time, which a producer can delay (by leaving out a `Tick`) but not move ([`lez/BRIDGE.md`](../lez/BRIDGE.md) §6) | cannot forge a record | the zone stops | public transactions |
 | Deployer | the immutable deployment | nothing after deployment | — | — | nothing |
 
 From [`attestation.md`](design/attestation.md) §11.5. An update is accepted on validity alone, never on
@@ -178,15 +181,18 @@ history (200 of 200 simulated runs); with the producer's inscription checked, an
 ### 3.3 Finality under rule (B), the proposed rule
 
 Each sequencer runs `ferrata_attestor`, which signs its node's final tip with an attestation key that its
-channel key certified once for this deployment; the channel key never signs bridge data. The proof needs
-`t` such signatures over the tip or its descendants ([`bridge.md`](design/bridge.md) §8.3). Beyond V1–V3,
-finality then needs only **no Logos Blockchain reorganisation deeper than `k` on the attestors' nodes**,
-which every LEZ full node assumes. It is beaten by `t` keys, or by eclipsing enough attestors' nodes for as
-long as it takes to show them `k` private blocks. It tolerates `n − t` silent sequencers, needs no beacon,
+channel key certified once for this deployment (the certificate binds chain, vault and configuration). The
+proof needs `t` such signatures over the tip or its descendants ([`bridge.md`](design/bridge.md) §8.3), and
+checks the tip's own inscription as rule (A) does: a channel key of the live set must have inscribed it.
+Beyond V1–V3, finality then needs only **no Logos Blockchain reorganisation deeper than `k` on the
+attestors' nodes**, which every LEZ full node assumes. It is beaten by `t` attestation keys together with
+one channel key of the live set (to inscribe a forged tip; `t` attestation keys alone no longer suffice),
+or by eclipsing enough attestors' nodes for as long as it takes to show them `k` private blocks. It tolerates `n − t` silent sequencers, needs no beacon,
 and works on any EVM chain; off-chain roles are liveness-only ([`bridge.md`](design/bridge.md) §9).
 **Status:** the rule is built and measured in the checkpoint program and the vault, and one real proof was
 verified on a rule (B) vault ([`checkpoint/RESULTS.md`](../checkpoint/RESULTS.md) §4;
-[`vault/README.md`](../vault/README.md)); the attestor as a Logos module is **not built**, and whether the
+[`vault/README.md`](../vault/README.md)), of the guest before the tip-inscription check (that check is
+built, tested and measured, §4a there, not proven for real); the attestor as a Logos module is **not built**, and whether the
 zone's sequencers will run it is the decision the proposal asks of Logos ([`bridge.md`](design/bridge.md) §9).
 
 ### 3.4 Finality under rule (A), the fallback
@@ -245,7 +251,7 @@ From [`vault/README.md`](../vault/README.md), "Roles"; [`bridge.md`](design/brid
 | Role | Can | Cannot | If its key is lost | If its key is stolen |
 |---|---|---|---|---|
 | **Admin** (multisig) | register a token once; enable or disable deposits per token; set caps above the immutable floor; set release delays within `[minReleaseDelay, revokeWindow]` for later roots; raise Δ; propose watchers and a new freeze authority, applied 14 days later; announce fee schedules (in force 7 days later, ≤ 1% each) | move escrow; change a registered token; lower Δ; cut a cap below the floor; freeze, unfreeze, cancel, revoke, retire; change any immutable (verifier, `mode`, image ids, `lezConfigId`, timers, floors) | no new tokens or caps; everything else keeps working | registry and cap churn within bounds; a public 14-day window before a role change |
-| **Freeze authority** (multisig) | freeze deposits, releases, checkpoints (vault) and mints, burns (LEZ), globally or per token, each for at most `maxFreeze` (30 days) unless renewed; `cancelCandidate`; `revokeFrom` within the window; `retire()`; LEZ `Sunset` | touch the registry, caps, delays, Δ or escrow; accept anything; undo a stop or a retirement; hand itself over | freezes lapse; anyone retires after 30 days without a checkpoint; the admin replaces it in 14 days | **denial of service, not theft**: renew freezes, revoke honest checkpoints within the window, retire the vault |
+| **Freeze authority** (multisig) | freeze deposits, releases, checkpoints (vault) and mints, burns (LEZ), globally or per token, each for at most `maxFreeze` (30 days; on LEZ, of attested Ethereum time, so a LEZ freeze holds while the light client stalls) unless renewed; `cancelCandidate`; `revokeFrom` within the window; `retire()`; LEZ `Sunset` | touch the registry, caps, delays, Δ or escrow; accept anything; undo a stop or a retirement; hand itself over | freezes lapse; anyone retires after 30 days without a checkpoint; the admin replaces it in 14 days | **denial of service, not theft**: renew freezes, revoke honest checkpoints within the window, retire the vault |
 | **Watchers** (up to three hot keys) | cancel a pending candidate; pause checkpoints for at most 12 h | anything else | — (others watch) | delay finalisation until the admin replaces them |
 | **Emergency stop** (RISC Zero's `RiscZeroVerifierEmergencyStop`) | stop every proof-gated call for good | be tripped by anyone holding a key: its owner is renounced at deployment, so only `estop(receipt)`, RISC Zero's proof of unsoundness, trips it | — | — |
 | **Anyone** | deposit; submit and finalise checkpoints with proofs; record beacons; release with a proof; refund once allowed; apply a role proposal after 14 days; retire after 30 days without a checkpoint | — | — | — |

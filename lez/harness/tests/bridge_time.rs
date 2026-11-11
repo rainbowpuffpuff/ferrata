@@ -197,7 +197,8 @@ fn freezes_and_caps_follow_attested_time_only() {
     run(&mut reports, r, None);
     let r = burn(&mut w, "Burn 1 ETH (A): A's burns still frozen", &note(1, DENOMINATIONS[1]));
     run(&mut reports, r, Some(code::FROZEN));
-    let unfreeze = BridgeMessage::Freeze { until_ms: 0, ..freeze_a };
+    let BridgeMessage::Freeze { config_id, token, mints, burns, record, .. } = freeze_a else { unreachable!() };
+    let unfreeze = BridgeMessage::Freeze { config_id, token, mints, burns, until_ms: 0, record };
     let r = w.role("Unfreeze A's burns (freeze authority), still no newer record", FREEZE_SEED, &unfreeze, a_actor);
     run(&mut reports, r, None);
     let r = burn(&mut w, "Burn 1 ETH (A)", &note(1, DENOMINATIONS[1]));

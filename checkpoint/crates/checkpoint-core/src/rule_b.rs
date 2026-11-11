@@ -135,5 +135,12 @@ pub fn run_checkpoint_b(input: &CheckpointInputB<'_>) -> Result<OutcomeB, Error>
         t: need,
     };
     let path_after_tip = u32::try_from(path.len() - 1).unwrap_or(u32::MAX);
-    Ok(OutcomeB { journal, new_state: state, producer: producer.signer, attestors: have, threshold: need, path_after_tip })
+    Ok(OutcomeB {
+        journal,
+        new_state: state,
+        producer: producer.signer,
+        attestors: have,
+        threshold: need,
+        path_after_tip,
+    })
 }

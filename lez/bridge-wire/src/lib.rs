@@ -716,7 +716,10 @@ pub struct ClaimWitness {
 }
 
 /// Every message of the bridge program. The order of the variants is the encoding: 0–3 are the
-/// checkpoint's (module docs).
+/// checkpoint's (module docs). One message is decoded per handler execution, so the variants' size
+/// difference (`WriteToken` carries a whole token state) costs nothing; boxing would only
+/// complicate the handlers' patterns.
+#[allow(clippy::large_enum_variant)]
 #[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub enum BridgeMessage {
     /// Variant 0. At a holder's actor, as a top-level call or the root of a private execution:
