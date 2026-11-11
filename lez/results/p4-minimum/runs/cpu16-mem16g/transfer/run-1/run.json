@@ -1,0 +1,68 @@
+{
+ "run": 1,
+ "exit_code": 0,
+ "wall_s": 490.6,
+ "gnu_time": {
+  "user_s": "6894.86",
+  "sys_s": "27.10",
+  "cpu_percent": "1411%",
+  "wall": "8:10.55",
+  "max_rss_kib": "9656936",
+  "exit_status": "0"
+ },
+ "proof_lines": [
+  "REAL PROOF: execute_and_prove 490.4 s; receipt (succinct InnerReceipt, borsh) 238685 bytes; transaction 254244 bytes; 7 private actions"
+ ],
+ "sampled": {
+  "max": {
+   "cgroup_current_bytes": 9899880448,
+   "meminfo_used_kib": 9668040,
+   "rss_sum_kib": 9756484,
+   "r0vm_rss_kib": 9656804
+  },
+  "samples": 974,
+  "period_s": 0.5,
+  "cpu_s_by_process_name": {
+   "prove_native_tr": 0.0,
+   "r0vm": 6921.8
+  }
+ },
+ "cgroup_after": {
+  "cgroup.controllers": null,
+  "cpu.max": null,
+  "cpu.weight": null,
+  "cpuset.cpus.effective": null,
+  "memory.max": null,
+  "memory.high": null,
+  "memory.current": null,
+  "memory.peak": null,
+  "memory.swap.max": null,
+  "memory.events": null,
+  "memory/memory.limit_in_bytes": "17179869184",
+  "memory/memory.max_usage_in_bytes": null,
+  "memory/memory.usage_in_bytes": "69197824",
+  "cpu/cpu.cfs_quota_us": "1600000",
+  "cpu/cpu.cfs_period_us": "100000",
+  "cpuset/cpuset.cpus": "0-15"
+ },
+ "txs": {
+  "tx-transfer.borsh": {
+   "bytes": 254244,
+   "sha256": "ee1d6a123e0c6aa6ceffff6d28ffe44c953562dbb90a099c3c8698d9eef64e71"
+  }
+ },
+ "settle_exit": 0,
+ "settle_wall_s": 0.12,
+ "settle_lines": [
+  "SETTLED FROM tx-transfer.borsh (receipt verified): receipt 238685 bytes, transaction 254244 bytes, settled in 0.1 s"
+ ],
+ "tamper": [
+  {
+   "tx": "tx-transfer.borsh",
+   "flipped_bit0_of_byte": 127122,
+   "settle_exit": 101,
+   "log_tail": "LEZ privacy-preserving circuit image 8fc948d117c11d55f2036748013b3dc599d6995545f0b020d090f544081cf257 (853552 ELF bytes); RISC0_DEV_MODE off\n\nthread 'main' (58) panicked at harness/src/bin/prove_native_transfer.rs:291:14:\nsettlement accepts the transaction: \"Invalid privacy preserving execution circuit proof\"\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n"
+  }
+ ],
+ "finished_at_utc": "2026-11-11T09:40:46Z"
+}

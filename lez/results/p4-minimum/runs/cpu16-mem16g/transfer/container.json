@@ -1,0 +1,114 @@
+{
+ "declared": {
+  "modal_cpu_request_and_limit": 16.0,
+  "modal_memory_mib_request_and_limit": 16384
+ },
+ "nproc": "16",
+ "nproc_all": "16",
+ "os_cpu_count": 16,
+ "sched_getaffinity": 16,
+ "cpuinfo_processors": 16,
+ "cpuinfo_model_names": [
+  "unknown"
+ ],
+ "cpuinfo_ids": [
+  [
+   "bogomips",
+   "2450.00"
+  ],
+  [
+   "cache size",
+   "8192 KB"
+  ],
+  [
+   "cpu family",
+   "25"
+  ],
+  [
+   "model",
+   "1"
+  ],
+  [
+   "stepping",
+   "unknown"
+  ],
+  [
+   "vendor_id",
+   "AuthenticAMD"
+  ]
+ ],
+ "cpuinfo_siblings": [
+  "16"
+ ],
+ "cpuinfo_cpu_cores": [
+  "16"
+ ],
+ "cpu_flags": [
+  "adx",
+  "avx2",
+  "bmi2",
+  "ht",
+  "sha_ni"
+ ],
+ "cgroup": {
+  "cgroup.controllers": null,
+  "cpu.max": null,
+  "cpu.weight": null,
+  "cpuset.cpus.effective": null,
+  "memory.max": null,
+  "memory.high": null,
+  "memory.current": null,
+  "memory.peak": null,
+  "memory.swap.max": null,
+  "memory.events": null,
+  "memory/memory.limit_in_bytes": "17179869184",
+  "memory/memory.max_usage_in_bytes": null,
+  "memory/memory.usage_in_bytes": "69103616",
+  "cpu/cpu.cfs_quota_us": "1600000",
+  "cpu/cpu.cfs_period_us": "100000",
+  "cpuset/cpuset.cpus": "0-15"
+ },
+ "proc_self_cgroup": "7:pids:/ta-01M74Z7B6KQT36T2HBVXCT2RGR\n6:memory:/ta-01M74Z7B6KQT36T2HBVXCT2RGR\n5:job:/ta-01M74Z7B6KQT36T2HBVXCT2RGR\n4:devices:/ta-01M74Z7B6KQT36T2HBVXCT2RGR\n3:cpuset:/ta-01M74Z7B6KQT36T2HBVXCT2RGR\n2:cpuacct:/ta-01M74Z7B6KQT36T2HBVXCT2RGR\n1:cpu:/ta-01M74Z7B6KQT36T2HBVXCT2RGR",
+ "meminfo_kib": {
+  "MemTotal": 16777216,
+  "MemFree": 16709656,
+  "MemAvailable": 16709656,
+  "Cached": 30844,
+  "SwapTotal": 0,
+  "SwapFree": 0,
+  "Shmem": 0
+ },
+ "kernel": "Linux version 4.19.0-gvisor #1 SMP Sun Jan 10 15:06:54 PST 2016",
+ "os": "Ubuntu 24.04.5 LTS",
+ "glibc": "ldd (Ubuntu GLIBC 2.39-0ubuntu8.9) 2.39",
+ "env": {
+  "MODAL_REGION": "us-central",
+  "MODAL_CLOUD_PROVIDER": "CLOUD_PROVIDER_GCP"
+ },
+ "job": "transfer",
+ "tag": "cpu16-mem16g",
+ "affinity": 0,
+ "manifest": {
+  "files": {
+   "prove_native_transfer": {
+    "sha256": "2420c17d1373ecee69a2617f9ea1d278acb35a470a22322796278a6acef72189",
+    "bytes": 11393944
+   }
+  },
+  "stripped_from": {
+   "path": "lez/target/debug/prove_native_transfer",
+   "sha256": "bd59b32baccbead5cf993d183dbc1666d2fb53395e5737529b855731e61745dc"
+  },
+  "ferrata_head": "2b4aa703b69ab0267c5f6fe231ca37961a305ae0",
+  "ferrata_dirty": "0"
+ },
+ "input_hashes_equal_manifest": true,
+ "r0vm_version": "risc0-r0vm 3.0.5",
+ "r0vm_sha256": "36c016a5bb2ded5bd1f8f92cc487e6ffaeb1e95ec05850c983081a0f716b515b",
+ "image_ids": "LEZ privacy-preserving circuit image 8fc948d117c11d55f2036748013b3dc599d6995545f0b020d090f544081cf257 (853552 ELF bytes); RISC0_DEV_MODE off",
+ "env_set": {
+  "RISC0_DEV_MODE": "0",
+  "RISC0_INFO": "1",
+  "RUST_LOG": "info"
+ }
+}

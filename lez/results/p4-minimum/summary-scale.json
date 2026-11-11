@@ -834,6 +834,325 @@
       "total_cycles": 2490368
      }
     ]
+   },
+   {
+    "container": "runs/cpu16-mem16g-2/bridge",
+    "machine": {
+     "nproc": "16",
+     "cfs_quota_us": "1600000",
+     "memory_limit_bytes": "17179869184",
+     "vendor": "AuthenticAMD",
+     "family": "25",
+     "model": "1",
+     "bogomips": "3095.82",
+     "flags": [
+      "adx",
+      "avx2",
+      "bmi2",
+      "ht",
+      "sha_ni"
+     ],
+     "cloud": "AZURE",
+     "region": "us-west"
+    },
+    "run": 1,
+    "exit_code": 0,
+    "wall_s": 867.14,
+    "gnu_time": {
+     "user_s": "12565.93",
+     "sys_s": "46.36",
+     "cpu_percent": "1454%",
+     "wall": "14:27.12",
+     "max_rss_kib": "9686480",
+     "exit_status": "0"
+    },
+    "sampled_max": {
+     "cgroup_current_bytes": 9905086464,
+     "meminfo_used_kib": 9673168,
+     "rss_sum_kib": 9789196,
+     "r0vm_rss_kib": 9686480
+    },
+    "settle_exit": 0,
+    "tamper": [
+     101,
+     101
+    ],
+    "proofs": [
+     {
+      "label": "private claim",
+      "execute_and_prove_s": 469.3,
+      "prove_and_settle_s": 469.8,
+      "receipt_bytes": 227538,
+      "tx_bytes": 231950,
+      "proven_sessions": [
+       {
+        "segments": 1,
+        "total_cycles": 131072,
+        "user_cycles": 41160,
+        "gap_s": 14.5
+       },
+       {
+        "segments": 1,
+        "total_cycles": 262144,
+        "user_cycles": 111596,
+        "gap_s": 28.9
+       },
+       {
+        "segments": 3,
+        "total_cycles": 2621440,
+        "user_cycles": 1984085,
+        "gap_s": 425.3
+       }
+      ],
+      "user_cycles": 2136841,
+      "segments": 5,
+      "total_cycles": 3014656
+     },
+     {
+      "label": "private burn",
+      "execute_and_prove_s": 389.0,
+      "prove_and_settle_s": 389.3,
+      "receipt_bytes": 226998,
+      "tx_bytes": 230870,
+      "proven_sessions": [
+       {
+        "segments": 1,
+        "total_cycles": 131072,
+        "user_cycles": 25377,
+        "gap_s": 14.5
+       },
+       {
+        "segments": 3,
+        "total_cycles": 2359296,
+        "user_cycles": 1888045,
+        "gap_s": 374.2
+       }
+      ],
+      "user_cycles": 1913422,
+      "segments": 4,
+      "total_cycles": 2490368
+     }
+    ]
+   },
+   {
+    "container": "runs/cpu16-mem16g-2/bridge",
+    "machine": {
+     "nproc": "16",
+     "cfs_quota_us": "1600000",
+     "memory_limit_bytes": "17179869184",
+     "vendor": "AuthenticAMD",
+     "family": "25",
+     "model": "1",
+     "bogomips": "3095.82",
+     "flags": [
+      "adx",
+      "avx2",
+      "bmi2",
+      "ht",
+      "sha_ni"
+     ],
+     "cloud": "AZURE",
+     "region": "us-west"
+    },
+    "run": 2,
+    "exit_code": 0,
+    "wall_s": 864.63,
+    "gnu_time": {
+     "user_s": "12529.08",
+     "sys_s": "49.86",
+     "cpu_percent": "1454%",
+     "wall": "14:24.62",
+     "max_rss_kib": "9656436",
+     "exit_status": "0"
+    },
+    "sampled_max": {
+     "cgroup_current_bytes": 9904517120,
+     "meminfo_used_kib": 9672612,
+     "rss_sum_kib": 9758400,
+     "r0vm_rss_kib": 9656436
+    },
+    "settle_exit": 0,
+    "tamper": [],
+    "proofs": [
+     {
+      "label": "private claim",
+      "execute_and_prove_s": 463.7,
+      "prove_and_settle_s": 464.2,
+      "receipt_bytes": 227538,
+      "tx_bytes": 231950,
+      "proven_sessions": [
+       {
+        "segments": 1,
+        "total_cycles": 131072,
+        "user_cycles": 41160,
+        "gap_s": 14.3
+       },
+       {
+        "segments": 1,
+        "total_cycles": 262144,
+        "user_cycles": 111596,
+        "gap_s": 28.4
+       },
+       {
+        "segments": 3,
+        "total_cycles": 2621440,
+        "user_cycles": 1984085,
+        "gap_s": 420.5
+       }
+      ],
+      "user_cycles": 2136841,
+      "segments": 5,
+      "total_cycles": 3014656
+     },
+     {
+      "label": "private burn",
+      "execute_and_prove_s": 392.3,
+      "prove_and_settle_s": 392.7,
+      "receipt_bytes": 226998,
+      "tx_bytes": 230870,
+      "proven_sessions": [
+       {
+        "segments": 1,
+        "total_cycles": 131072,
+        "user_cycles": 25377,
+        "gap_s": 14.4
+       },
+       {
+        "segments": 3,
+        "total_cycles": 2359296,
+        "user_cycles": 1888045,
+        "gap_s": 377.7
+       }
+      ],
+      "user_cycles": 1913422,
+      "segments": 4,
+      "total_cycles": 2490368
+     }
+    ]
+   }
+  ],
+  "16/transfer": [
+   {
+    "container": "runs/cpu16-mem16g/transfer",
+    "machine": {
+     "nproc": "16",
+     "cfs_quota_us": "1600000",
+     "memory_limit_bytes": "17179869184",
+     "vendor": "AuthenticAMD",
+     "family": "25",
+     "model": "1",
+     "bogomips": "2450.00",
+     "flags": [
+      "adx",
+      "avx2",
+      "bmi2",
+      "ht",
+      "sha_ni"
+     ],
+     "cloud": "GCP",
+     "region": "us-central"
+    },
+    "run": 1,
+    "exit_code": 0,
+    "wall_s": 490.6,
+    "gnu_time": {
+     "user_s": "6894.86",
+     "sys_s": "27.10",
+     "cpu_percent": "1411%",
+     "wall": "8:10.55",
+     "max_rss_kib": "9656936",
+     "exit_status": "0"
+    },
+    "sampled_max": {
+     "cgroup_current_bytes": 9899880448,
+     "meminfo_used_kib": 9668040,
+     "rss_sum_kib": 9756484,
+     "r0vm_rss_kib": 9656804
+    },
+    "settle_exit": 0,
+    "tamper": [
+     101
+    ],
+    "proofs": [
+     {
+      "label": "LEZ wallet's deshielded native transfer",
+      "execute_and_prove_s": 490.4,
+      "prove_and_settle_s": null,
+      "receipt_bytes": 238685,
+      "tx_bytes": 254244,
+      "proven_sessions": [
+       {
+        "segments": 4,
+        "total_cycles": 3407872,
+        "user_cycles": 2851842,
+        "gap_s": 490.4
+       }
+      ],
+      "user_cycles": 2851842,
+      "segments": 4,
+      "total_cycles": 3407872
+     }
+    ]
+   },
+   {
+    "container": "runs/cpu16-mem16g/transfer",
+    "machine": {
+     "nproc": "16",
+     "cfs_quota_us": "1600000",
+     "memory_limit_bytes": "17179869184",
+     "vendor": "AuthenticAMD",
+     "family": "25",
+     "model": "1",
+     "bogomips": "2450.00",
+     "flags": [
+      "adx",
+      "avx2",
+      "bmi2",
+      "ht",
+      "sha_ni"
+     ],
+     "cloud": "GCP",
+     "region": "us-central"
+    },
+    "run": 2,
+    "exit_code": 0,
+    "wall_s": 487.08,
+    "gnu_time": {
+     "user_s": "6875.03",
+     "sys_s": "26.10",
+     "cpu_percent": "1416%",
+     "wall": "8:07.05",
+     "max_rss_kib": "9691344",
+     "exit_status": "0"
+    },
+    "sampled_max": {
+     "cgroup_current_bytes": 9898496000,
+     "meminfo_used_kib": 9666688,
+     "rss_sum_kib": 9789644,
+     "r0vm_rss_kib": 9691344
+    },
+    "settle_exit": 0,
+    "tamper": [],
+    "proofs": [
+     {
+      "label": "LEZ wallet's deshielded native transfer",
+      "execute_and_prove_s": 486.9,
+      "prove_and_settle_s": null,
+      "receipt_bytes": 238685,
+      "tx_bytes": 254244,
+      "proven_sessions": [
+       {
+        "segments": 4,
+        "total_cycles": 3407872,
+        "user_cycles": 2851614,
+        "gap_s": 486.9
+       }
+      ],
+      "user_cycles": 2851614,
+      "segments": 4,
+      "total_cycles": 3407872
+     }
+    ]
    }
   ]
  },
