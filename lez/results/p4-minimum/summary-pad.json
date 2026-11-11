@@ -1,0 +1,917 @@
+{
+ "runs": [
+  {
+   "cpus": 8,
+   "job": "attest-pad",
+   "container": "runs/pad-cpu8-a/attest-pad",
+   "machine": {
+    "nproc": "8",
+    "cfs_quota_us": "800000",
+    "memory_limit_bytes": "17179869184",
+    "vendor": "AuthenticAMD",
+    "family": "25",
+    "model": "1",
+    "bogomips": "3032.68",
+    "flags": [
+     "adx",
+     "avx2",
+     "bmi2",
+     "ht",
+     "sha_ni"
+    ],
+    "cloud": "AZURE",
+    "region": "us-east"
+   },
+   "run": 1,
+   "exit_code": 0,
+   "wall_s": 1253.43,
+   "gnu_time": {
+    "user_s": "9439.27",
+    "sys_s": "9.14",
+    "cpu_percent": "753%",
+    "wall": "20:53.37",
+    "max_rss_kib": "9655008",
+    "exit_status": "0"
+   },
+   "sampled_max": {
+    "cgroup_current_bytes": 9909325824,
+    "meminfo_used_kib": 9677276,
+    "rss_sum_kib": 9763016,
+    "r0vm_rss_kib": 9655008
+   },
+   "settle_exit": 0,
+   "tamper": [
+    101
+   ],
+   "proofs": [
+    {
+     "label": "private attestation",
+     "execute_and_prove_s": 1249.5,
+     "prove_and_settle_s": 1249.7,
+     "receipt_bytes": 239214,
+     "tx_bytes": 255302,
+     "proven_sessions": [
+      {
+       "segments": 1,
+       "total_cycles": 131072,
+       "user_cycles": 34337,
+       "gap_s": 28.9
+      },
+      {
+       "segments": 1,
+       "total_cycles": 524288,
+       "user_cycles": 346240,
+       "gap_s": 114.2
+      },
+      {
+       "segments": 4,
+       "total_cycles": 3670016,
+       "user_cycles": 2955964,
+       "gap_s": 1106.2
+      }
+     ],
+     "user_cycles": 3336541,
+     "segments": 6,
+     "total_cycles": 4325376
+    }
+   ]
+  },
+  {
+   "cpus": 8,
+   "job": "attest-pad",
+   "container": "runs/pad-cpu8-b/attest-pad",
+   "machine": {
+    "nproc": "8",
+    "cfs_quota_us": "800000",
+    "memory_limit_bytes": "17179869184",
+    "vendor": "AuthenticAMD",
+    "family": "25",
+    "model": "1",
+    "bogomips": "3097.04",
+    "flags": [
+     "adx",
+     "avx2",
+     "bmi2",
+     "ht",
+     "sha_ni"
+    ],
+    "cloud": "AZURE",
+    "region": "us-west"
+   },
+   "run": 1,
+   "exit_code": 0,
+   "wall_s": 1228.04,
+   "gnu_time": {
+    "user_s": "9284.70",
+    "sys_s": "10.01",
+    "cpu_percent": "756%",
+    "wall": "20:27.98",
+    "max_rss_kib": "9636700",
+    "exit_status": "0"
+   },
+   "sampled_max": {
+    "cgroup_current_bytes": 9909309440,
+    "meminfo_used_kib": 9677260,
+    "rss_sum_kib": 9744620,
+    "r0vm_rss_kib": 9636700
+   },
+   "settle_exit": 0,
+   "tamper": [
+    101
+   ],
+   "proofs": [
+    {
+     "label": "private attestation",
+     "execute_and_prove_s": 1224.1,
+     "prove_and_settle_s": 1224.3,
+     "receipt_bytes": 239214,
+     "tx_bytes": 255302,
+     "proven_sessions": [
+      {
+       "segments": 1,
+       "total_cycles": 131072,
+       "user_cycles": 34337,
+       "gap_s": 27.8
+      },
+      {
+       "segments": 1,
+       "total_cycles": 524288,
+       "user_cycles": 346240,
+       "gap_s": 112.4
+      },
+      {
+       "segments": 4,
+       "total_cycles": 3670016,
+       "user_cycles": 2955589,
+       "gap_s": 1083.7
+      }
+     ],
+     "user_cycles": 3336166,
+     "segments": 6,
+     "total_cycles": 4325376
+    }
+   ]
+  },
+  {
+   "cpus": 8,
+   "job": "bridge-pad",
+   "container": "runs/pad-cpu8-a/bridge-pad",
+   "machine": {
+    "nproc": "8",
+    "cfs_quota_us": "800000",
+    "memory_limit_bytes": "17179869184",
+    "vendor": "AuthenticAMD",
+    "family": "25",
+    "model": "1",
+    "bogomips": "2450.00",
+    "flags": [
+     "adx",
+     "avx2",
+     "bmi2",
+     "ht",
+     "sha_ni"
+    ],
+    "cloud": "GCP",
+    "region": "ca"
+   },
+   "run": 1,
+   "exit_code": 0,
+   "wall_s": 2070.53,
+   "gnu_time": {
+    "user_s": "15550.38",
+    "sys_s": "18.14",
+    "cpu_percent": "751%",
+    "wall": "34:30.49",
+    "max_rss_kib": "9656148",
+    "exit_status": "0"
+   },
+   "sampled_max": {
+    "cgroup_current_bytes": 9906098176,
+    "meminfo_used_kib": 9674120,
+    "rss_sum_kib": 9759944,
+    "r0vm_rss_kib": 9656148
+   },
+   "settle_exit": 0,
+   "tamper": [
+    101,
+    101
+   ],
+   "proofs": [
+    {
+     "label": "private claim",
+     "execute_and_prove_s": 1105.4,
+     "prove_and_settle_s": 1105.9,
+     "receipt_bytes": 239628,
+     "tx_bytes": 256130,
+     "proven_sessions": [
+      {
+       "segments": 1,
+       "total_cycles": 131072,
+       "user_cycles": 41160,
+       "gap_s": 26.8
+      },
+      {
+       "segments": 1,
+       "total_cycles": 262144,
+       "user_cycles": 111596,
+       "gap_s": 53.5
+      },
+      {
+       "segments": 4,
+       "total_cycles": 3670016,
+       "user_cycles": 2970148,
+       "gap_s": 1024.6
+      }
+     ],
+     "user_cycles": 3122904,
+     "segments": 6,
+     "total_cycles": 4063232
+    },
+    {
+     "label": "private burn",
+     "execute_and_prove_s": 956.2,
+     "prove_and_settle_s": 956.6,
+     "receipt_bytes": 239046,
+     "tx_bytes": 254966,
+     "proven_sessions": [
+      {
+       "segments": 1,
+       "total_cycles": 131072,
+       "user_cycles": 25377,
+       "gap_s": 26.3
+      },
+      {
+       "segments": 4,
+       "total_cycles": 3407872,
+       "user_cycles": 2878382,
+       "gap_s": 929.6
+      }
+     ],
+     "user_cycles": 2903759,
+     "segments": 5,
+     "total_cycles": 3538944
+    }
+   ]
+  },
+  {
+   "cpus": 8,
+   "job": "bridge-pad",
+   "container": "runs/pad-cpu8-b/bridge-pad",
+   "machine": {
+    "nproc": "8",
+    "cfs_quota_us": "800000",
+    "memory_limit_bytes": "17179869184",
+    "vendor": "AuthenticAMD",
+    "family": "25",
+    "model": "1",
+    "bogomips": "3085.69",
+    "flags": [
+     "adx",
+     "avx2",
+     "bmi2",
+     "ht",
+     "sha_ni"
+    ],
+    "cloud": "AZURE",
+    "region": "us-east"
+   },
+   "run": 1,
+   "exit_code": 0,
+   "wall_s": 2217.1,
+   "gnu_time": {
+    "user_s": "16747.96",
+    "sys_s": "15.20",
+    "cpu_percent": "756%",
+    "wall": "36:57.05",
+    "max_rss_kib": "9654160",
+    "exit_status": "0"
+   },
+   "sampled_max": {
+    "cgroup_current_bytes": 9906110464,
+    "meminfo_used_kib": 9674132,
+    "rss_sum_kib": 9757380,
+    "r0vm_rss_kib": 9654160
+   },
+   "settle_exit": 0,
+   "tamper": [
+    101,
+    101
+   ],
+   "proofs": [
+    {
+     "label": "private claim",
+     "execute_and_prove_s": 1186.6,
+     "prove_and_settle_s": 1187.1,
+     "receipt_bytes": 239628,
+     "tx_bytes": 256130,
+     "proven_sessions": [
+      {
+       "segments": 1,
+       "total_cycles": 131072,
+       "user_cycles": 41160,
+       "gap_s": 28.0
+      },
+      {
+       "segments": 1,
+       "total_cycles": 262144,
+       "user_cycles": 111596,
+       "gap_s": 55.9
+      },
+      {
+       "segments": 4,
+       "total_cycles": 3670016,
+       "user_cycles": 2971193,
+       "gap_s": 1102.2
+      }
+     ],
+     "user_cycles": 3123949,
+     "segments": 6,
+     "total_cycles": 4063232
+    },
+    {
+     "label": "private burn",
+     "execute_and_prove_s": 1021.6,
+     "prove_and_settle_s": 1022.0,
+     "receipt_bytes": 239046,
+     "tx_bytes": 254966,
+     "proven_sessions": [
+      {
+       "segments": 1,
+       "total_cycles": 131072,
+       "user_cycles": 25377,
+       "gap_s": 27.7
+      },
+      {
+       "segments": 4,
+       "total_cycles": 3407872,
+       "user_cycles": 2877437,
+       "gap_s": 993.6
+      }
+     ],
+     "user_cycles": 2902814,
+     "segments": 5,
+     "total_cycles": 3538944
+    }
+   ]
+  },
+  {
+   "cpus": 16,
+   "job": "attest-pad",
+   "container": "runs/pad-cpu16-a/attest-pad",
+   "machine": {
+    "nproc": "16",
+    "cfs_quota_us": "1600000",
+    "memory_limit_bytes": "17179869184",
+    "vendor": "AuthenticAMD",
+    "family": "25",
+    "model": "1",
+    "bogomips": "3095.35",
+    "flags": [
+     "adx",
+     "avx2",
+     "bmi2",
+     "ht",
+     "sha_ni"
+    ],
+    "cloud": "AZURE",
+    "region": "us-west"
+   },
+   "run": 1,
+   "exit_code": 0,
+   "wall_s": 640.62,
+   "gnu_time": {
+    "user_s": "9353.26",
+    "sys_s": "39.37",
+    "cpu_percent": "1466%",
+    "wall": "10:40.58",
+    "max_rss_kib": "9677272",
+    "exit_status": "0"
+   },
+   "sampled_max": {
+    "cgroup_current_bytes": 9911218176,
+    "meminfo_used_kib": 9679124,
+    "rss_sum_kib": 9782992,
+    "r0vm_rss_kib": 9677272
+   },
+   "settle_exit": 0,
+   "tamper": [
+    101
+   ],
+   "proofs": [
+    {
+     "label": "private attestation",
+     "execute_and_prove_s": 636.7,
+     "prove_and_settle_s": 636.9,
+     "receipt_bytes": 239214,
+     "tx_bytes": 255302,
+     "proven_sessions": [
+      {
+       "segments": 1,
+       "total_cycles": 131072,
+       "user_cycles": 34337,
+       "gap_s": 14.5
+      },
+      {
+       "segments": 1,
+       "total_cycles": 524288,
+       "user_cycles": 346240,
+       "gap_s": 58.9
+      },
+      {
+       "segments": 4,
+       "total_cycles": 3670016,
+       "user_cycles": 2954893,
+       "gap_s": 563.1
+      }
+     ],
+     "user_cycles": 3335470,
+     "segments": 6,
+     "total_cycles": 4325376
+    }
+   ]
+  },
+  {
+   "cpus": 16,
+   "job": "attest-pad",
+   "container": "runs/pad-cpu16-b/attest-pad",
+   "machine": {
+    "nproc": "16",
+    "cfs_quota_us": "1600000",
+    "memory_limit_bytes": "17179869184",
+    "vendor": "AuthenticAMD",
+    "family": "25",
+    "model": "1",
+    "bogomips": "3097.15",
+    "flags": [
+     "adx",
+     "avx2",
+     "bmi2",
+     "ht",
+     "sha_ni"
+    ],
+    "cloud": "AZURE",
+    "region": "eu-west"
+   },
+   "run": 1,
+   "exit_code": 0,
+   "wall_s": 633.61,
+   "gnu_time": {
+    "user_s": "9259.65",
+    "sys_s": "38.48",
+    "cpu_percent": "1467%",
+    "wall": "10:33.59",
+    "max_rss_kib": "9681860",
+    "exit_status": "0"
+   },
+   "sampled_max": {
+    "cgroup_current_bytes": 9910419456,
+    "meminfo_used_kib": 9678300,
+    "rss_sum_kib": 9790520,
+    "r0vm_rss_kib": 9681860
+   },
+   "settle_exit": 0,
+   "tamper": [
+    101
+   ],
+   "proofs": [
+    {
+     "label": "private attestation",
+     "execute_and_prove_s": 629.9,
+     "prove_and_settle_s": 630.0,
+     "receipt_bytes": 239214,
+     "tx_bytes": 255302,
+     "proven_sessions": [
+      {
+       "segments": 1,
+       "total_cycles": 131072,
+       "user_cycles": 34337,
+       "gap_s": 14.5
+      },
+      {
+       "segments": 1,
+       "total_cycles": 524288,
+       "user_cycles": 346240,
+       "gap_s": 57.4
+      },
+      {
+       "segments": 4,
+       "total_cycles": 3670016,
+       "user_cycles": 2954451,
+       "gap_s": 557.8
+      }
+     ],
+     "user_cycles": 3335028,
+     "segments": 6,
+     "total_cycles": 4325376
+    }
+   ]
+  },
+  {
+   "cpus": 16,
+   "job": "bridge-pad",
+   "container": "runs/pad-cpu16-a/bridge-pad",
+   "machine": {
+    "nproc": "16",
+    "cfs_quota_us": "1600000",
+    "memory_limit_bytes": "17179869184",
+    "vendor": "AuthenticAMD",
+    "family": "25",
+    "model": "1",
+    "bogomips": "2450.00",
+    "flags": [
+     "adx",
+     "avx2",
+     "bmi2",
+     "ht",
+     "sha_ni"
+    ],
+    "cloud": "GCP",
+    "region": "ca"
+   },
+   "run": 1,
+   "exit_code": 0,
+   "wall_s": 1080.55,
+   "gnu_time": {
+    "user_s": "15646.50",
+    "sys_s": "69.26",
+    "cpu_percent": "1454%",
+    "wall": "18:00.51",
+    "max_rss_kib": "9691080",
+    "exit_status": "0"
+   },
+   "sampled_max": {
+    "cgroup_current_bytes": 9907081216,
+    "meminfo_used_kib": 9675080,
+    "rss_sum_kib": 9796704,
+    "r0vm_rss_kib": 9691080
+   },
+   "settle_exit": 0,
+   "tamper": [
+    101,
+    101
+   ],
+   "proofs": [
+    {
+     "label": "private claim",
+     "execute_and_prove_s": 571.7,
+     "prove_and_settle_s": 572.2,
+     "receipt_bytes": 239628,
+     "tx_bytes": 256130,
+     "proven_sessions": [
+      {
+       "segments": 1,
+       "total_cycles": 131072,
+       "user_cycles": 41160,
+       "gap_s": 13.7
+      },
+      {
+       "segments": 1,
+       "total_cycles": 262144,
+       "user_cycles": 111596,
+       "gap_s": 27.2
+      },
+      {
+       "segments": 4,
+       "total_cycles": 3670016,
+       "user_cycles": 2971375,
+       "gap_s": 530.2
+      }
+     ],
+     "user_cycles": 3124131,
+     "segments": 6,
+     "total_cycles": 4063232
+    },
+    {
+     "label": "private burn",
+     "execute_and_prove_s": 500.2,
+     "prove_and_settle_s": 500.5,
+     "receipt_bytes": 239046,
+     "tx_bytes": 254966,
+     "proven_sessions": [
+      {
+       "segments": 1,
+       "total_cycles": 131072,
+       "user_cycles": 25377,
+       "gap_s": 13.8
+      },
+      {
+       "segments": 4,
+       "total_cycles": 3407872,
+       "user_cycles": 2877487,
+       "gap_s": 486.1
+      }
+     ],
+     "user_cycles": 2902864,
+     "segments": 5,
+     "total_cycles": 3538944
+    }
+   ]
+  },
+  {
+   "cpus": 16,
+   "job": "bridge-pad",
+   "container": "runs/pad-cpu16-b/bridge-pad",
+   "machine": {
+    "nproc": "16",
+    "cfs_quota_us": "1600000",
+    "memory_limit_bytes": "17179869184",
+    "vendor": "AuthenticAMD",
+    "family": "25",
+    "model": "1",
+    "bogomips": "3101.86",
+    "flags": [
+     "adx",
+     "avx2",
+     "bmi2",
+     "ht",
+     "sha_ni"
+    ],
+    "cloud": "AZURE",
+    "region": "uk"
+   },
+   "run": 1,
+   "exit_code": 0,
+   "wall_s": 1190.08,
+   "gnu_time": {
+    "user_s": "17013.29",
+    "sys_s": "56.48",
+    "cpu_percent": "1434%",
+    "wall": "19:50.04",
+    "max_rss_kib": "9695276",
+    "exit_status": "0"
+   },
+   "sampled_max": {
+    "cgroup_current_bytes": 9907224576,
+    "meminfo_used_kib": 9675220,
+    "rss_sum_kib": 9802876,
+    "r0vm_rss_kib": 9695276
+   },
+   "settle_exit": 0,
+   "tamper": [
+    101,
+    101
+   ],
+   "proofs": [
+    {
+     "label": "private claim",
+     "execute_and_prove_s": 629.7,
+     "prove_and_settle_s": 630.2,
+     "receipt_bytes": 239628,
+     "tx_bytes": 256130,
+     "proven_sessions": [
+      {
+       "segments": 1,
+       "total_cycles": 131072,
+       "user_cycles": 41160,
+       "gap_s": 14.6
+      },
+      {
+       "segments": 1,
+       "total_cycles": 262144,
+       "user_cycles": 111596,
+       "gap_s": 29.2
+      },
+      {
+       "segments": 4,
+       "total_cycles": 3670016,
+       "user_cycles": 2970885,
+       "gap_s": 585.3
+      }
+     ],
+     "user_cycles": 3123641,
+     "segments": 6,
+     "total_cycles": 4063232
+    },
+    {
+     "label": "private burn",
+     "execute_and_prove_s": 551.6,
+     "prove_and_settle_s": 551.9,
+     "receipt_bytes": 239046,
+     "tx_bytes": 254966,
+     "proven_sessions": [
+      {
+       "segments": 1,
+       "total_cycles": 131072,
+       "user_cycles": 25377,
+       "gap_s": 14.5
+      },
+      {
+       "segments": 4,
+       "total_cycles": 3407872,
+       "user_cycles": 2876742,
+       "gap_s": 536.8
+      }
+     ],
+     "user_cycles": 2902119,
+     "segments": 5,
+     "total_cycles": 3538944
+    }
+   ]
+  }
+ ],
+ "proofs": {
+  "private attestation": {
+   "execute_and_prove_s": {
+    "8": [
+     1249.5,
+     1224.1
+    ],
+    "16": [
+     636.7,
+     629.9
+    ]
+   },
+   "median_s": {
+    "8": 1236.8,
+    "16": 633.3
+   },
+   "user_cycles": [
+    3335028,
+    3335470,
+    3336166,
+    3336541
+   ],
+   "segments": [
+    6
+   ],
+   "circuit_user_cycles": [
+    2954451,
+    2954893,
+    2955589,
+    2955964
+   ],
+   "circuit_segments_total_cycles": [
+    [
+     4,
+     3670016
+    ]
+   ],
+   "peak_rss_gib": 9.23,
+   "peak_container_gib": 9.23,
+   "receipt_bytes": [
+    239214
+   ],
+   "tx_bytes": [
+    255302
+   ],
+   "settled_with_receipt_verified": 4,
+   "of": 4,
+   "tamper_settle_exits": [
+    101,
+    101,
+    101,
+    101
+   ],
+   "unpadded_median_s": [
+    904.3,
+    497.3
+   ],
+   "padded_over_unpadded": {
+    "8": 1.37,
+    "16": 1.27
+   },
+   "padded_over_wallet_transfer": {
+    "8": 1.25,
+    "16": 1.3
+   }
+  },
+  "private claim": {
+   "execute_and_prove_s": {
+    "8": [
+     1105.4,
+     1186.6
+    ],
+    "16": [
+     571.7,
+     629.7
+    ]
+   },
+   "median_s": {
+    "8": 1146.0,
+    "16": 600.7
+   },
+   "user_cycles": [
+    3122904,
+    3123641,
+    3123949,
+    3124131
+   ],
+   "segments": [
+    6
+   ],
+   "circuit_user_cycles": [
+    2970148,
+    2970885,
+    2971193,
+    2971375
+   ],
+   "circuit_segments_total_cycles": [
+    [
+     4,
+     3670016
+    ]
+   ],
+   "peak_rss_gib": 9.25,
+   "peak_container_gib": 9.23,
+   "receipt_bytes": [
+    239628
+   ],
+   "tx_bytes": [
+    256130
+   ],
+   "settled_with_receipt_verified": 4,
+   "of": 4,
+   "tamper_settle_exits": [
+    101,
+    101,
+    101,
+    101,
+    101,
+    101,
+    101,
+    101
+   ],
+   "unpadded_median_s": [
+    905.4,
+    463.7
+   ],
+   "padded_over_unpadded": {
+    "8": 1.27,
+    "16": 1.3
+   },
+   "padded_over_wallet_transfer": {
+    "8": 1.16,
+    "16": 1.23
+   }
+  },
+  "private burn": {
+   "execute_and_prove_s": {
+    "8": [
+     956.2,
+     1021.6
+    ],
+    "16": [
+     500.2,
+     551.6
+    ]
+   },
+   "median_s": {
+    "8": 988.9,
+    "16": 525.9
+   },
+   "user_cycles": [
+    2902119,
+    2902814,
+    2902864,
+    2903759
+   ],
+   "segments": [
+    5
+   ],
+   "circuit_user_cycles": [
+    2876742,
+    2877437,
+    2877487,
+    2878382
+   ],
+   "circuit_segments_total_cycles": [
+    [
+     4,
+     3407872
+    ]
+   ],
+   "peak_rss_gib": 9.25,
+   "peak_container_gib": 9.23,
+   "receipt_bytes": [
+    239046
+   ],
+   "tx_bytes": [
+    254966
+   ],
+   "settled_with_receipt_verified": 4,
+   "of": 4,
+   "tamper_settle_exits": [
+    101,
+    101,
+    101,
+    101,
+    101,
+    101,
+    101,
+    101
+   ],
+   "unpadded_median_s": [
+    756.3,
+    389.0
+   ],
+   "padded_over_unpadded": {
+    "8": 1.31,
+    "16": 1.35
+   },
+   "padded_over_wallet_transfer": {
+    "8": 1.0,
+    "16": 1.08
+   }
+  }
+ }
+}
