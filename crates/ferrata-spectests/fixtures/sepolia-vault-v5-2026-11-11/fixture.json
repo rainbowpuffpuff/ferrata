@@ -1,0 +1,86 @@
+{
+  "network": "sepolia",
+  "chain_id": 11155111,
+  "period": 1410,
+  "attested_slot": 11556672,
+  "signature_slot": 11556673,
+  "participants": 509,
+  "finalized_slot": 11556608,
+  "finalized_root": "0x04246d06b2b0a00b4bf23ea2e637f8f5e9512d910439503e737141ed623a2b6a",
+  "block": 12112773,
+  "block_hash": "0xa267d3df04f31713cf7f42d15362d3ea1b12bc3626d0ed537b7bfb67ead2e126",
+  "state_root": "0xbf810e0a587ef6c5c977c069ee132008c7ef93a6cc1dfdcb76d895a3f62deda8",
+  "receipts_root": "0x711fbca356a1df8364d03fc483d4f2089577598c94ead93f7f611dcdde6ad19b",
+  "receipts": 160,
+  "head_when_fetched": 12112847,
+  "storage": [
+    {
+      "address": "0xfe3199fa2634413cbac317371076cae3eb2d9e54",
+      "slots": [
+        {
+          "slot": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "value": "0xfaad123258a78fc60cfa12c793a7d68bab13c2d319d68e847a1bd3f2e140579d",
+          "getter": "depositRoot()"
+        },
+        {
+          "slot": "0x0000000000000000000000000000000000000000000000000000000000000001",
+          "value": "0x0000000000000000000000000000000000000000000000000000000000000002",
+          "getter": "nextLeafIndex()"
+        }
+      ]
+    }
+  ],
+  "same_address": {
+    "address": "0xca11bde05977b3631167028862be2a173976ca11",
+    "code_hash": "0xd5c15df687b16f2ff992fc8d767b4216323184a2bbc6ee2f9c398c318e770891",
+    "mainnet_block": 26392819,
+    "mainnet_code_hash": "0xd5c15df687b16f2ff992fc8d767b4216323184a2bbc6ee2f9c398c318e770891"
+  },
+  "transfer": {
+    "tx_index": 1,
+    "log_index": 2,
+    "block_log_index": 3,
+    "logs_in_receipt": 5,
+    "token": "0xfffffffffffffffffffffffffffffffffffffffe",
+    "from": "0x31027ed37f740ae6b3880e68dc465d45fe45c9a8",
+    "to": "0xdfd8302f44727a6348f702ff7b594f127de3a902",
+    "value": "0x0000000000000000000000000000000000000000000000000000000000000001"
+  },
+  "deposits": {
+    "vault": "0xfe3199fa2634413cbac317371076cae3eb2d9e54",
+    "from_block": 12111048,
+    "event": "Deposit(address,uint64,uint64,address,uint256,bytes32)",
+    "topic": "0x83d2d1c34c8825843c9af84bec80378e997084e8c1d6d5a3c2a6e758fe05538e",
+    "count": 2,
+    "file": "deposits_12112773.json"
+  },
+  "updates": [],
+  "hops": {
+    "history": "0x0000f90827f1c53a10cb7a02335b175320002935",
+    "file": "proof_history_12112773.json",
+    "blocks": [
+      {
+        "block": 12111477,
+        "hash": "0x60d2f893c196a6089554dfe86e40b8648a88104296fdca735e81c74048ac8095",
+        "slot": "0x000000000000000000000000000000000000000000000000000000000000143b",
+        "receipts_root": "0xc76cac0c41c7eaa0d3e8eae2150778bde287ed0c648ae6042376dc24838bbc3a",
+        "receipts": 479,
+        "header": "header_12111477.rlp",
+        "receipts_file": "receipts_12111477.json"
+      },
+      {
+        "block": 12111574,
+        "hash": "0xe65a7a4f401c77c451feaafb3449733e457a14cd3bea540d5f6f38c3ea013b36",
+        "slot": "0x000000000000000000000000000000000000000000000000000000000000149c",
+        "receipts_root": "0x5ceda58128e7866554997b1306830ac54d5691bb9ef9c02852c76a903edc0ba5",
+        "receipts": 117,
+        "header": "header_12111574.rlp",
+        "receipts_file": "receipts_12111574.json"
+      }
+    ]
+  },
+  "absent": {
+    "address": "0x3e05d7d15f0d45265117bcd6e6682f138ee60e60",
+    "file": "proof_absent_12112773.json"
+  }
+}

@@ -23,7 +23,7 @@
 
 use std::{
     fs,
-    path::{Path, PathBuf},
+    path::PathBuf,
 };
 
 use ferrata_core::{
@@ -33,12 +33,16 @@ use ferrata_core::{
     witness::{ExecutionSummary, HeaderRecord},
     Root,
 };
+use ferrata_core::rlp::encode_u64;
 use ferrata_lez_wire::{
-    attest::{evaluate, AccountQuery, Address, Attestation, Cmp, Fact, Field, LeafQuery, Request, SlotQuery, Word},
+    attest::{
+        evaluate, AccountQuery, Address, Attestation, Cmp, Fact, Field, Hop, LeafQuery, LogQuery, Request, SlotQuery, Word,
+    },
+    consumer::DepositProof,
     header_actor, Message, RecordState, ATTESTED_SELECTOR,
 };
 use ferrata_spectests::execkit::{
-    account_proof, account_rlp, enc, header_rlp, hexb, keccak, word, AccountProof, StorageProof, Trie,
+    account_proof, account_rlp, enc, header_rlp, hexb, keccak, receipt_rlp, word, AccountProof, StorageProof, Trie,
 };
 use lee::{Account, Actor};
 use lee_core::account::ActorState;
@@ -394,81 +398,286 @@ pub fn synthetic_attestations() -> (Vec<TxReport>, Vec<TxReport>) {
 }
 
 // ---------------------------------------------------------------------------------------------
-// The vault on Sepolia
+// The vault on Sepolia: FerrataVault v5 of the live round trip (`e2e/runs/crown-live-1`)
 // ---------------------------------------------------------------------------------------------
 
-/// The vault fixture: `FERRATA_VAULT_FIXTURE_DIR`, else `fixtures/sepolia-vault` of this checkout,
-/// if it exists.
-pub fn vault_fixture_dir() -> Option<PathBuf> {
-    let dir = std::env::var_os("FERRATA_VAULT_FIXTURE_DIR").map(PathBuf::from).unwrap_or_else(|| {
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../crates/ferrata-spectests/fixtures/sepolia-vault")
-    });
-    dir.is_dir().then_some(dir)
+/// FerrataVault v5 on Sepolia (`e2e/runs/crown-live-1`: deployed in block 12,111,048, two ETH
+/// deposits, in blocks 12,111,477 and 12,111,574).
+pub const VAULT_V5: &str = "fe3199fa2634413cbac317371076cae3eb2d9e54";
+/// The fixture of `lez/scripts/fetch-attest-fixture.py --network sepolia --storage
+/// VAULT_V5:0=depositRoot(),1=nextLeafIndex() --deposits VAULT_V5:12111048 --updates-from 1410
+/// --hops --absent`, fetched on 11 November 2026: finalized slot 11,556,608 binds block
+/// 12,112,773.
+pub const VAULT_FIXTURE: &str = "sepolia-vault-v5-2026-11-11";
+const VAULT_SUMS: &str =
+    include_str!("../../../crates/ferrata-spectests/fixtures/sepolia-vault-v5-2026-11-11/SHA256SUMS");
+
+/// `FERRATA_VAULT_FIXTURE_DIR` if set, else the fixture of this checkout.
+pub fn vault_fixture_dir() -> PathBuf {
+    std::env::var_os("FERRATA_VAULT_FIXTURE_DIR").map(PathBuf::from).unwrap_or_else(|| {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../crates/ferrata-spectests/fixtures").join(VAULT_FIXTURE)
+    })
 }
 
-/// A file of the vault fixture, checked against the fixture's own `SHA256SUMS`.
-fn vault_file(dir: &Path, name: &str) -> Vec<u8> {
-    let sums = String::from_utf8(fs::read(dir.join("SHA256SUMS")).expect("SHA256SUMS")).unwrap();
-    sepolia::pinned(dir.to_path_buf(), &sums, name)
+/// A file of the vault fixture, checked against its SHA-256 sum compiled into the harness.
+pub fn vault_file(name: &str) -> Vec<u8> {
+    sepolia::pinned(vault_fixture_dir(), VAULT_SUMS, name)
 }
 
-/// The vault's slots 0 and 1 and its newest deposit leaf, under the record of the fixture's
-/// finalized header, through the program: the Sepolia instance follows the chain from the
-/// period-1378 bootstrap through the replay fixture, the fixture's own updates and its finality
-/// update. Returns the reports of the attestation.
-pub fn real(dir: &Path) -> Vec<TxReport> {
-    let m: Value = serde_json::from_slice(&vault_file(dir, "fixture.json")).unwrap();
-    let vault = vault_address();
-    let storage = &m["storage"][0];
-    assert_eq!(hexb(storage["address"].as_str().unwrap()), vault.to_vec(), "the fixture is the vault's");
-    let block = m["block"].as_u64().unwrap();
-    let mut w = sepolia::replay(2, sepolia::LAST_PERIOD);
-    for p in m["updates"].as_array().unwrap() {
-        let p = p.as_u64().unwrap();
-        let update =
-            LightClientUpdate::decode(&vault_file(dir, &format!("update_{p}.ssz")), LcFork::Gloas, 512).unwrap();
-        w.apply(&update, &format!("period {p}"));
-    }
-    let finality = sepolia::gloas_finality_update(&vault_file(dir, "finality_update.ssz"));
-    let run_ = w.apply(&finality, "finality update (vault fixture)");
-    assert_eq!(run_.outcome.map(|o| o.advanced), Some(true));
-    let slot = m["finalized_slot"].as_u64().unwrap();
-    let state = w.inst.record(&w.chain, slot).expect("the record");
-    let record = state.header().unwrap();
+/// One deposit's log as `eth_getLogs` reports it, and where it sits.
+#[derive(Clone, Debug)]
+pub struct DepositLog {
+    pub deposit: Deposit,
+    pub block: u64,
+    pub tx_index: u64,
+    /// The log's position in its receipt (JSON-RPC's `logIndex` is block-wide).
+    pub log_index: u64,
+    pub json: Value,
+}
 
-    let proof = account_proof(&vault_file(dir, &format!("proof_0x{VAULT}_{block}.json")));
-    let value = |n: u8| proof.storage.iter().find(|s| s.key == slot_word(n)).expect("slot").value;
-    let (root, count) = (value(0), value(1));
-    let logs: Vec<Value> = serde_json::from_slice(&vault_file(dir, &format!("deposits_{block}.json"))).unwrap();
-    let deposits: Vec<Deposit> = logs.iter().map(Deposit::from_log).collect();
-    for (i, d) in deposits.iter().enumerate() {
-        assert_eq!(d.leaf_index, i as u64, "the deposits in leaf order, none missing");
+/// The vault on Sepolia under the record of the fixture's finalized block, which the Sepolia
+/// instance wrote itself: it follows the chain from the period-1378 bootstrap through the replay
+/// fixture and the fixture's finality update.
+pub struct RealVault {
+    pub w: crate::scenarios::World,
+    pub vault: Address,
+    pub block: u64,
+    pub slot: u64,
+    pub record: HeaderRecord,
+    pub header: Vec<u8>,
+    pub proof: AccountProof,
+    pub root: Root,
+    pub count: u64,
+    pub deposits: Vec<DepositLog>,
+    pub leaves: Vec<Root>,
+    pub time: u64,
+    pub m: Value,
+}
+
+impl RealVault {
+    pub fn load() -> Self {
+        let m: Value = serde_json::from_slice(&vault_file("fixture.json")).unwrap();
+        assert_eq!(m["chain_id"].as_u64(), Some(SEPOLIA_CHAIN_ID));
+        let vault: Address = hexb(VAULT_V5).try_into().unwrap();
+        let storage = &m["storage"][0];
+        assert_eq!(hexb(storage["address"].as_str().unwrap()), vault.to_vec(), "the fixture is the vault's");
+        assert_eq!(m["deposits"]["vault"].as_str().map(hexb), Some(vault.to_vec()));
+        let block = m["block"].as_u64().unwrap();
+        let mut w = sepolia::replay(2, sepolia::LAST_PERIOD);
+        for p in m["updates"].as_array().unwrap() {
+            let p = p.as_u64().unwrap();
+            let update = LightClientUpdate::decode(&vault_file(&format!("update_{p}.ssz")), LcFork::Gloas, 512).unwrap();
+            w.apply(&update, &format!("period {p}"));
+        }
+        let finality = sepolia::gloas_finality_update(&vault_file("finality_update.ssz"));
+        let run_ = w.apply(&finality, "finality update (vault fixture)");
+        assert_eq!(run_.outcome.map(|o| o.advanced), Some(true));
+        let slot = m["finalized_slot"].as_u64().unwrap();
+        let record = w.inst.record(&w.chain, slot).expect("the record").header().unwrap();
+        let header = vault_file("header.rlp");
+        let proof = account_proof(&vault_file(&format!("proof_0x{VAULT_V5}_{block}.json")));
+        let value = |n: u8| proof.storage.iter().find(|s| s.key == slot_word(n)).expect("slot").value;
+        let (root, count) = (value(0), value(1));
+        let logs: Vec<Value> = serde_json::from_slice(&vault_file(&format!("deposits_{block}.json"))).unwrap();
+        let deposits: Vec<DepositLog> = logs
+            .iter()
+            .map(|l| {
+                let block = u64::from_str_radix(l["blockNumber"].as_str().unwrap().trim_start_matches("0x"), 16).unwrap();
+                let tx_index =
+                    u64::from_str_radix(l["transactionIndex"].as_str().unwrap().trim_start_matches("0x"), 16).unwrap();
+                let receipts = receipts_of(block);
+                let receipt = &receipts[tx_index as usize];
+                let log_index = receipt["logs"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .position(|x| x["logIndex"] == l["logIndex"])
+                    .expect("the log is in its receipt") as u64;
+                DepositLog { deposit: Deposit::from_log(l), block, tx_index, log_index, json: l.clone() }
+            })
+            .collect();
+        for (i, d) in deposits.iter().enumerate() {
+            assert_eq!(d.deposit.leaf_index, i as u64, "the deposits in leaf order, none missing");
+        }
+        assert_eq!(u256(deposits.len() as u128), count, "slot 1 counts the deposits");
+        let leaves: Vec<Root> = deposits.iter().map(|d| d.deposit.leaf()).collect();
+        assert_eq!(tree(&leaves, 0).0, root, "slot 0 is the root of the deposits' leaves");
+        let time = w.inst.config.slot_start_ms(finality.signature_slot) + 12_000;
+        let count = deposits.len() as u64;
+        Self { w, vault, block, slot, record, header, proof, root, count, deposits, leaves, time, m }
     }
-    assert_eq!(u256(deposits.len() as u128), count, "slot 1 counts the deposits");
-    assert!(!deposits.is_empty(), "the vault has a deposit");
-    let leaves: Vec<Root> = deposits.iter().map(Deposit::leaf).collect();
-    let newest = leaves.len() - 1;
-    let (computed, path) = tree(&leaves, newest);
-    assert_eq!(computed, root, "slot 0 is the root of the deposits' leaves");
-    let leaf = [(newest as u64, leaves[newest], path)];
-    let base = Request {
-        instance_id: w.inst.id,
-        chain_id: SEPOLIA_CHAIN_ID,
-        header: Some(vault_file(dir, "header.rlp")),
-        ..Request::default()
+
+    /// Leaf `i` with its path.
+    pub fn leaf(&self, i: usize) -> (u64, Root, Vec<Root>) {
+        (i as u64, self.leaves[i], tree(&self.leaves, i).1)
+    }
+
+    /// A request to the record: its instance, Sepolia, and the record block's RLP header.
+    pub fn base(&self) -> Request {
+        Request {
+            instance_id: self.w.inst.id,
+            chain_id: SEPOLIA_CHAIN_ID,
+            header: Some(self.header.clone()),
+            ..Request::default()
+        }
+    }
+
+    /// `header(id, slot)` of the record.
+    pub fn actor(&self) -> Actor {
+        header_actor(self.w.inst.program, &self.w.inst.id, self.slot)
+    }
+
+    /// The EIP-2935 hop from the record's block to `block`.
+    pub fn hop(&self, block: u64) -> Hop {
+        let history = account_proof(&vault_file(&format!("proof_history_{}.json", self.block)));
+        let key = u256(u128::from(block % 8191));
+        let slot = history.storage.iter().find(|s| s.key == key).expect("the history slot of the block");
+        Hop {
+            account_proof: history.proof.clone(),
+            storage_proof: slot.proof.clone(),
+            header: vault_file(&format!("header_{block}.rlp")),
+        }
+    }
+
+    /// The proof of transaction `tx_index`'s receipt in `block`.
+    pub fn receipt_proof(&self, block: u64, tx_index: u64) -> Vec<Vec<u8>> {
+        let receipts = receipts_of(block);
+        let trie = Trie::new(receipts.iter().enumerate().map(|(i, r)| {
+            let (key, len) = encode_u64(i as u64);
+            (key[..len].to_vec(), receipt_rlp(r))
+        }));
+        let (key, len) = encode_u64(tx_index);
+        trie.proof(&key[..len])
+    }
+
+    /// Deposit `i`'s log, one hop back from the record's block.
+    pub fn deposit_proof(&self, i: usize) -> DepositProof {
+        let d = &self.deposits[i];
+        DepositProof {
+            header: Some(self.header.clone()),
+            hops: vec![self.hop(d.block)],
+            tx_index: d.tx_index,
+            log_index: d.log_index,
+            proof: self.receipt_proof(d.block, d.tx_index),
+        }
+    }
+
+    /// Deposit `i`'s statement identifier, from the JSON-RPC fields alone.
+    pub fn deposit_id(&self, i: usize) -> Root {
+        let d = &self.deposits[i];
+        crate::attest::log_statement_id(SEPOLIA_CHAIN_ID, d.block, d.tx_index, d.log_index, &d.json)
+    }
+
+    /// One attestation at the record, checked against the native evaluation.
+    pub fn run(&mut self, label: &str, request: &Request) -> (TxReport, Result<Attestation, u8>) {
+        let (id, record, actor, time) = (self.w.inst.id, self.record.clone(), self.actor(), self.time);
+        run(&mut self.w.chain, (&id, SEPOLIA_CHAIN_ID, &record), label, actor, request, time)
+    }
+}
+
+/// `header(id, slot)` of the program and instance `pool` is bound to.
+pub fn header_of(pool: &ferrata_lez_wire::consumer::VaultPool, slot: u64) -> Actor {
+    header_actor(pool.ferrata, &pool.instance_id, slot)
+}
+
+/// `eth_getBlockReceipts` of `block` from the vault fixture.
+fn receipts_of(block: u64) -> Vec<Value> {
+    let served: Value = serde_json::from_slice(&vault_file(&format!("receipts_{block}.json"))).unwrap();
+    served["result"].as_array().expect("receipts").clone()
+}
+
+/// The vault's leaves on real data, through the program, under the record the instance wrote:
+/// slots 0 and 1 and each deposit leaf; an address without an account (exclusion); each
+/// deposit's `Deposit` log one EIP-2935 hop back; then the refusals. Returns the vault (for
+/// more) and the accepted and refused reports.
+pub fn real() -> (RealVault, Vec<TxReport>, Vec<TxReport>) {
+    let mut v = RealVault::load();
+    let (root, count) = (v.root, v.count);
+    let mut accepted = Vec::new();
+    for (label, leaves) in [
+        ("the vault v5: slots 0 and 1 and deposit leaf 0 (real Sepolia state)", vec![v.leaf(0)]),
+        ("the vault v5: slots 0 and 1 and deposit leaf 1", vec![v.leaf(1)]),
+        ("the vault v5: slots 0 and 1 and both deposit leaves", vec![v.leaf(0), v.leaf(1)]),
+    ] {
+        let request = vault_request(v.base(), &v.proof, &root, &leaves);
+        let (report, a) = v.run(label, &request);
+        check_vault_attestation(&a.expect("accepted"), &root, count, &leaves);
+        accepted.push(report);
+    }
+    // Exclusion under the Gloas record: an address without an account.
+    let absent = account_proof(&vault_file(&format!("proof_absent_{}.json", v.block)));
+    let request = Request {
+        accounts: vec![AccountQuery {
+            address: absent.address,
+            proof: absent.proof.clone(),
+            conditions: vec![condition(Field::Nonce, Cmp::Eq, [0; 32])],
+            slots: vec![],
+        }],
+        ..v.base()
     };
-    let request = vault_request(base, &proof, &root, &leaf);
-    let actor = header_actor(w.inst.program, &w.inst.id, slot);
-    let time = w.inst.config.slot_start_ms(finality.signature_slot) + 12_000;
-    let id = w.inst.id;
-    let (report, a) = run(
-        &mut w.chain,
-        (&id, SEPOLIA_CHAIN_ID, &record),
-        "the vault: slots 0, 1 and its newest deposit leaf",
-        actor,
-        &request,
-        time,
+    let (report, a) = v.run("an address without an account (exclusion), under the Gloas record", &request);
+    let a = a.expect("accepted");
+    assert_eq!(
+        a.statements[0].fact,
+        Fact::Account { address: absent.address, nonce: 0, balance: [0; 32], storage_root: [0; 32], code_hash: [0; 32] }
     );
-    check_vault_attestation(&a.expect("accepted"), &root, deposits.len() as u64, &leaf);
-    vec![report]
+    accepted.push(report);
+    // Each deposit's event, one EIP-2935 hop back from the record's block.
+    for i in 0..v.deposits.len() {
+        let p = v.deposit_proof(i);
+        let request = Request {
+            hops: p.hops.clone(),
+            logs: vec![LogQuery { tx_index: p.tx_index, log_index: p.log_index, proof: p.proof.clone(), conditions: vec![] }],
+            ..v.base()
+        };
+        let label = format!("deposit {i}'s Deposit log, block {}, one EIP-2935 hop under the Gloas record", v.deposits[i].block);
+        let (report, a) = v.run(&label, &request);
+        let a = a.expect("accepted");
+        assert_eq!((a.block_number, a.hops), (v.deposits[i].block, 1));
+        assert_eq!(a.statements[0].id, v.deposit_id(i), "the identifier from the JSON-RPC fields alone");
+        accepted.push(report);
+    }
+
+    let one = vault_request(v.base(), &v.proof, &root, &[v.leaf(1)]);
+    let mut refused = Vec::new();
+    let mut wrong_leaf = one.clone();
+    wrong_leaf.leaves[0].leaf = v.leaves[0];
+    let mut wrong_index = one.clone();
+    wrong_index.leaves[0].leaf_index = 0;
+    let mut against_count = one.clone();
+    against_count.leaves[0].root = 2;
+    let past_count = vault_request(v.base(), &v.proof, &root, &[(2, [0; 32], tree(&v.leaves, 2).1)]);
+    let mut tampered_sibling = one.clone();
+    tampered_sibling.leaves[0].path[0][0] ^= 1;
+    let p0 = v.deposit_proof(0);
+    let hop_log = |hops: Vec<Hop>| Request {
+        hops,
+        logs: vec![LogQuery { tx_index: p0.tx_index, log_index: p0.log_index, proof: p0.proof.clone(), conditions: vec![] }],
+        ..v.base()
+    };
+    let other_header = Hop { header: vault_file(&format!("header_{}.rlp", v.deposits[1].block)), ..p0.hops[0].clone() };
+    let false_predicate = Request {
+        logs: vec![LogQuery {
+            conditions: vec![condition(Field::Topic(2), Cmp::Eq, ferrata_lez_wire::consumer::address_word(&[0x11; 20]))],
+            ..hop_log(p0.hops.clone()).logs[0].clone()
+        }],
+        ..hop_log(p0.hops.clone())
+    };
+    for (label, request) in [
+        ("a leaf that is not at its index", wrong_leaf),
+        ("a leaf proven at another index", wrong_index),
+        ("a leaf against slot 1 (the count, not the root)", against_count),
+        ("an empty position past the count (slot 1 condition)", past_count),
+        ("a leaf with one sibling changed", tampered_sibling),
+        ("the vault's facts asked as mainnet statements", Request { chain_id: 1, ..one.clone() }),
+        ("the vault's facts without the block header", Request { header: None, ..one.clone() }),
+        ("deposit 0's log through a hop that carries deposit 1's block header", hop_log(vec![other_header])),
+        ("deposit 0's log without the hop (proof against the record's block)", hop_log(vec![])),
+        ("deposit 0's log with a false predicate (token topic = 0x11…11)", false_predicate),
+    ] {
+        let (report, result) = v.run(label, &request);
+        assert!(result.is_err(), "{label}: refused");
+        refused.push(report);
+    }
+    (v, accepted, refused)
 }
