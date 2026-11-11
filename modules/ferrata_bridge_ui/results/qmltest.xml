@@ -1,23 +1,23 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<testsuite name="qmltestrunner" timestamp="2026&#x002D;11&#x002D;11T19:16:37" hostname="modal" tests="15" failures="0" errors="0" skipped="0" time="28.760">
+<testsuite name="qmltestrunner" timestamp="2026&#x002D;11&#x002D;11T19:18:14" hostname="modal" tests="15" failures="0" errors="0" skipped="0" time="29.420">
   <properties>
     <property name="QTestVersion" value="6.4.2"/>
     <property name="QtVersion" value="6.4.2"/>
     <property name="QtBuild" value="Qt 6.4.2 (x86_64&#x002D;little_endian&#x002D;lp64 shared (dynamic) release build; by GCC 13.2.0)"/>
   </properties>
-  <testcase name="FerrataMiniApp::initTestCase" classname="qmltestrunner" time="0.243"/>
-  <testcase name="FerrataMiniApp::test_01_connect" classname="qmltestrunner" time="0.857"/>
-  <testcase name="FerrataMiniApp::test_02_endpoints" classname="qmltestrunner" time="1.616"/>
-  <testcase name="FerrataMiniApp::test_03_registry" classname="qmltestrunner" time="0.658"/>
-  <testcase name="FerrataMiniApp::test_04_deposit_private_by_default" classname="qmltestrunner" time="1.466"/>
-  <testcase name="FerrataMiniApp::test_05_public_needs_an_explicit_action" classname="qmltestrunner" time="1.646"/>
-  <testcase name="FerrataMiniApp::test_06_positions_from_the_seed" classname="qmltestrunner" time="0.659"/>
-  <testcase name="FerrataMiniApp::test_07_private_claim" classname="qmltestrunner" time="3.275"/>
-  <testcase name="FerrataMiniApp::test_08_plaintext_claim" classname="qmltestrunner" time="1.970"/>
-  <testcase name="FerrataMiniApp::test_09_error_messages" classname="qmltestrunner" time="1.328"/>
-  <testcase name="FerrataMiniApp::test_10_burn" classname="qmltestrunner" time="2.405"/>
-  <testcase name="FerrataMiniApp::test_11_checkpoint_and_release" classname="qmltestrunner" time="1.967"/>
-  <testcase name="FerrataMiniApp::test_12_admin" classname="qmltestrunner" time="10.138"/>
-  <testcase name="FerrataMiniApp::test_13_privacy" classname="qmltestrunner" time="0.509"/>
+  <testcase name="FerrataMiniApp::initTestCase" classname="qmltestrunner" time="0.256"/>
+  <testcase name="FerrataMiniApp::test_01_connect" classname="qmltestrunner" time="0.837"/>
+  <testcase name="FerrataMiniApp::test_02_endpoints" classname="qmltestrunner" time="1.600"/>
+  <testcase name="FerrataMiniApp::test_03_registry" classname="qmltestrunner" time="0.652"/>
+  <testcase name="FerrataMiniApp::test_04_deposit_private_by_default" classname="qmltestrunner" time="1.476"/>
+  <testcase name="FerrataMiniApp::test_05_public_needs_an_explicit_action" classname="qmltestrunner" time="1.710"/>
+  <testcase name="FerrataMiniApp::test_06_positions_from_the_seed" classname="qmltestrunner" time="0.648"/>
+  <testcase name="FerrataMiniApp::test_07_private_claim" classname="qmltestrunner" time="3.407"/>
+  <testcase name="FerrataMiniApp::test_08_plaintext_claim" classname="qmltestrunner" time="2.027"/>
+  <testcase name="FerrataMiniApp::test_09_error_messages" classname="qmltestrunner" time="1.318"/>
+  <testcase name="FerrataMiniApp::test_10_burn" classname="qmltestrunner" time="2.460"/>
+  <testcase name="FerrataMiniApp::test_11_checkpoint_and_release" classname="qmltestrunner" time="1.953"/>
+  <testcase name="FerrataMiniApp::test_12_admin" classname="qmltestrunner" time="10.527"/>
+  <testcase name="FerrataMiniApp::test_13_privacy" classname="qmltestrunner" time="0.524"/>
   <testcase name="FerrataMiniApp::cleanupTestCase" classname="qmltestrunner" time="0.000"/>
 </testsuite>

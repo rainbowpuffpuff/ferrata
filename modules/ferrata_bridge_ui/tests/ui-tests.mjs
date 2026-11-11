@@ -6,6 +6,16 @@ import { resolve } from "node:path";
 const root = process.env.LOGOS_QT_MCP || new URL("../result-mcp", import.meta.url).pathname;
 const { test, run } = await import(resolve(root, "test-framework/framework.mjs"));
 
+// One property of the object named `name`, through the QML inspector (primitives only), as Basecamp's own
+// tests read them.
+async function prop(app, name, expression) {
+  const id = ((await app.findByProperty("objectName", name)).matches ?? [])[0]?.id;
+  if (!id) throw new Error(`no object named ${name}`);
+  const res = await app.inspector.send("evaluate", { objectId: id, expression });
+  if (res.error) throw new Error(`${name}: ${expression}: ${res.error}`);
+  return res.result;
+}
+
 const screens = [
   ["Deposit", ["Deposit: Ethereum to LEZ", "Private account (recommended)"]],
   ["Claim", ["Claim on LEZ", "Private claim (recommended)"]],
@@ -36,13 +46,12 @@ for (const [tab, texts] of screens) {
 // and against the devnet outside it (qmltest/tst_miniapp.qml).
 test("ferrata_bridge_ui: the sandbox keeps the view off the network inside Basecamp", async (app) => {
   await app.click("Endpoints");
-  const note = await app.json("settings.sandboxNote", "({ visible: visible })");
-  if (!note || note.visible !== true) throw new Error(`the sandbox note is not shown inside Logos: ${JSON.stringify(note)}`);
+  if (await prop(app, "settings.sandboxNote", "visible") !== true) throw new Error("the sandbox note is not shown inside Logos");
   await app.click("devnet backend (HTTP)");
   await app.click("Apply and test");
   await app.waitFor(async () => {
-    const s = await app.json("settings.status", "({ text: text })");
-    if (!String(s && s.text).startsWith("Not switched: Endpoint unreachable")) throw new Error(`status: ${JSON.stringify(s)}`);
+    const s = await prop(app, "settings.status", "text");
+    if (!String(s).startsWith("Not switched: Endpoint unreachable")) throw new Error(`status: ${s}`);
   }, { timeout: 30000, interval: 500, description: "the refused call to be reported" });
 });
 
