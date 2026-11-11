@@ -136,7 +136,10 @@ Rectangle {
     function approve() { var a = approval; approval = null; if (a && a.go) a.go(); }
     function reject() { approval = null; lastError = "Rejected in the wallet: nothing was signed or sent."; lastOk = false; }
 
-    Component.onCompleted: { refreshInfo(); refreshRegistry(); }
+    // On the devnet the view loads its data at once. Inside Logos it calls ferrata_bridge_module on the
+    // user's first action instead: a synchronous call to a core module that is not installed must not
+    // hold the view before it is drawn.
+    Component.onCompleted: if (transport === "devnet") { refreshInfo(); refreshRegistry(); }
 
     // ---- reusable pieces -----------------------------------------------------------------------
     component Heading: Label { font.pixelSize: 18; font.bold: true; color: "#1d2733"; Layout.topMargin: 6 }
