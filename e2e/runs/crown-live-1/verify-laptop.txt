@@ -1,0 +1,15 @@
+crown run crown-live-1 (live), vault 0xfE3199fa2634413CbAC317371076Cae3EB2d9E54, deployer 0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07
+PASS chain: chain id 11155111, head 12112574
+PASS configId from session A's fields: 0x0c71ff13ed7e84bb5367f2ce0cee0ce9039b6f7b541a489438a1ec8fade83854 = the vault's storedLezConfigId
+PASS bedrockGenesisId = sha256(deployment settings): 0x19383c41772ed9e87c929c6985a69b5c33894e347a89de255879acd37ff7d2ed
+PASS genesisState from T0 and the channel: 0xa696b3c8deaa881c962e3d768e8ee28c9b08ce60b709c058ea21db82c541bef9 (T0 = 178) = the vault's
+PASS vault: code, CREATE address, rule (B): CREATE(deployer, nonce 12), mode B
+PASS every recorded transaction succeeded, sent by the deployer: 6 transactions of 6 stages (deposit-0, deposit-1, submit, finalizeAttested, release-0, release-1)
+PASS deposits: two logs, commitments recomputed: j0 leaf 0 1000000000000000 wei public; j1 leaf 1 1000000000000000 wei private
+PASS captures: headers are the chain's blocks; every slot proven: capture 1: block 12111509, 6 slots; capture 2: block 12111602, 6 slots
+PASS LEZ session records: T0 178 -> T1 252, 9 steps, claims ['private', 'public'], 2 burn notes
+PASS checkpoint journal fields: parent = genesisState, tip T1 252, burns 2, imported leaves 2
+PASS checkpoint final on the vault, its seal verified by RISC Zero's verifier (eth_call): final state 0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd, seal accepted (a changed seal refused), burn root 0xbefcd570e779294d22eac9ca5a5299631f124b46b09e415c65bba012694b0151 accepted
+PASS releases: paid once, seals verified on chain, events: public-0: 1000000000000000 wei to 0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07; private-1: 1000000000000000 wei to 0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07; vault balance now 6000000000000 wei
+SKIP the rebuild of the checkpoint input and the local receipt checks (they need --e2e, --realblocks and the channel key: the cloud runner's verify stage does them)
+12 of 12 checks passed
