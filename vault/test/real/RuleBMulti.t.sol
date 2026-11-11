@@ -25,6 +25,7 @@ abstract contract RuleBMultiFixture is Test {
     bytes internal seal;
     bytes32 internal imageId;
     bytes32[] internal keys;
+    bytes32[] internal rotatedKeys;
     uint32 internal postingTimeframe;
     bytes32 internal configTipHash;
     uint64 internal parentTipId;
@@ -37,8 +38,12 @@ abstract contract RuleBMultiFixture is Test {
     address internal freezer = makeAddr("multi freeze authority");
     address internal watcher = makeAddr("multi watcher");
 
+    function _path() internal view virtual returns (string memory) {
+        return "test/real/fixtures/rule-b-multi.json";
+    }
+
     function _load() internal {
-        string memory json = vm.readFile("test/real/fixtures/rule-b-multi.json");
+        string memory json = vm.readFile(_path());
         journal = vm.parseJsonBytes(json, ".journal");
         seal = vm.parseJsonBytes(json, ".seal");
         imageId = vm.parseJsonBytes32(json, ".imageId");
@@ -53,6 +58,12 @@ abstract contract RuleBMultiFixture is Test {
         tipId = uint64(vm.parseJsonUint(json, ".tipId"));
         tipHash = vm.parseJsonBytes32(json, ".tipHash");
         require(sha256(journal) == vm.parseJsonBytes32(json, ".journalSha256"), "journal digest");
+        if (vm.keyExistsJson(json, ".rotatedKeys")) {
+            bytes32[] memory r = vm.parseJsonBytes32Array(json, ".rotatedKeys");
+            for (uint256 i = 0; i < r.length; i++) {
+                rotatedKeys.push(r[i]);
+            }
+        }
     }
 
     function _checkpoint() internal view returns (FerrataVault.Checkpoint memory c) {
@@ -250,5 +261,59 @@ contract RuleBMultiGas is RuleBMultiFixture {
         vm.warp(block.timestamp + WAIT);
         vault.finalizeAttested(c);
         console2.log("rule (B) n=3 t=2: finalizeAttested after the wait", vm.lastCallGas().gasTotalUsed);
+    }
+}
+
+/// The rotation checkpoint: the parent's set {lab, k1, k2} (stand-in posting timeframe 20) rotated in the
+/// proof to {lab, k1, k3} by a configuration transaction signed by k1 and k2; two attestations under the
+/// new set. The vault's genesis is the parent over the old set; after finalisation its state is the
+/// proof's new state, whose key set is the rotated one.
+contract RuleBRotationTest is RuleBMultiFixture {
+    function _path() internal pure override returns (string memory) {
+        return "test/real/fixtures/rule-b-rotation.json";
+    }
+
+    function setUp() public {
+        _load();
+        _deploy(FerrataVault.Mode.B, imageId, _state(keys), 3, 2);
+    }
+
+    function test_ruleBRotation_theParentIsTheOldSetAndTheJournalTwoOfThree() public view {
+        FerrataVault.Checkpoint memory c = _checkpoint();
+        assertEq(rotatedKeys.length, 3);
+        assertTrue(rotatedKeys[2] != keys[2], "the third key was rotated");
+        assertEq(c.parentState, vault.genesisState());
+        assertEq((c.n), 3);
+        assertEq((c.t), 2);
+        assertEq(c.tipId, tipId);
+        assertEq(c.tipHash, tipHash);
+    }
+
+    function test_ruleBRotation_candidateThenFinalAfterTheWait() public {
+        FerrataVault.Checkpoint memory c = _checkpoint();
+        vault.submitCandidate(c, seal);
+        uint256 at = block.timestamp;
+        vm.warp(at + WAIT);
+        vault.finalizeAttested(c);
+        assertEq(vault.finalState(), c.newState);
+    }
+
+    function test_ruleBRotation_aVaultWhoseGenesisIsTheRotatedSetRefusesIt() public {
+        bytes32[] memory r = new bytes32[](rotatedKeys.length);
+        for (uint256 i = 0; i < r.length; i++) {
+            r[i] = rotatedKeys[i];
+        }
+        _deploy(FerrataVault.Mode.B, imageId, _state(r), 3, 2);
+        vm.expectRevert(FerrataVault.ParentNotFinal.selector);
+        vault.submitCandidate(_checkpoint(), seal);
+    }
+
+    function test_gas_ruleBRotation() public {
+        FerrataVault.Checkpoint memory c = _checkpoint();
+        vault.submitCandidate(c, seal);
+        console2.log("rule (B) n=3 t=2 with a rotation: submitCandidate", vm.lastCallGas().gasTotalUsed);
+        vm.warp(block.timestamp + WAIT);
+        vault.finalizeAttested(c);
+        console2.log("rule (B) n=3 t=2 with a rotation: finalizeAttested", vm.lastCallGas().gasTotalUsed);
     }
 }
