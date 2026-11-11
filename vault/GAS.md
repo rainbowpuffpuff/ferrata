@@ -100,6 +100,37 @@ of which the deployment is 0.057 ETH. Mainnet has not scheduled Glamsterdam (EIP
 figures of the following sections are still what mainnet charges today; once it ships, a deposit costs about
 0.47M to 0.55M gas instead of 0.19M, and deploying the vault about 38M instead of 5.5M.
 
+## The security fixes of 11 November 2026 (branch `secfix-vault`)
+
+The fixes of the vault findings of `notes/reviews/security/review-2026-11-11.md` change these rows; everything else
+in this file is unchanged (all rows below were re-measured; the release rows, the hot path, did not move). Measured
+on the build box with Foundry 1.3.6, `forge test --isolate --match-contract 'GasScenarios|ReturnLegGas' -vv`, on
+`integration4` (1bb20d5) and on this branch, in one run (logs kept outside the repository):
+
+| Operation (whole transaction) | 1bb20d5 | with the fixes | change | why |
+|---|---:|---:|---:|---|
+| `submitCandidate`, including its beacon ¹ | 178,555 | 203,207 | +24,652 | M-2: the candidate stores its prover (one new slot); M-1: the submission restarts the keyless clock |
+| `submitCandidate`, real checkpoint seal (records a beacon) | 438,444 | 463,096 | +24,652 | the same |
+| rule (B): `submitCandidate`, no beacon ¹ | 122,109 | 146,758 | +24,649 | the same |
+| `finalize` ¹ | 215,130 | 218,442 | +3,312 | reads the candidate's prover; counts a change of `finalState` (L-1) |
+| `finalize`, the first sunset checkpoint ¹ | 283,672 | 286,984 | +3,312 | the same |
+| `finalize`, real checkpoint seal echoing the beacon | 457,965 | 461,277 | +3,312 | the same |
+| rule (B): `finalizeAttested` | 197,961 | 201,273 | +3,312 | the same |
+| `cancelCandidate` (freeze authority / watcher) | 35,663 / 37,438 | 39,702 / 41,477 | +4,039 | clears the prover's slot too |
+| `depositETH`, first / later deposit by the address | 179,275 / 159,285 | 181,420 / 161,430 | +2,145 | L-3: reads `finalSunset` (no deposits after a finalised sunset checkpoint) |
+| `deposit` ERC-20, first / later deposit by the address | 197,762 / 177,772 | 199,873 / 179,883 | +2,111 | the same |
+| `claimOwed` ERC-20 / ETH | 64,992 / 37,761 | 68,334 / 40,934 | +3,342 / +3,173 | its body moved into `FerrataRegistry` (one DELEGATECALL), for EIP-170 |
+| `registerToken`, three denominations (ETH / ERC-20) | 647,208 / 648,046 | 649,470 / 650,308 | +2,262 | the library reads the four deployment bounds from the vault's getters, for EIP-170 |
+| `refund` ETH / ERC-20 | 179,155 / 205,540 | 179,267 / 205,652 | +112 | |
+| `release` (every row, mock and real verifier) | | | 0 | |
+
+`retire()` by anyone now evaluates `retireOpensAt()` (8,938 to 11,263 gas for the view in `gas-report.txt`); the
+freeze authority's `retire()` is unchanged. `setTokenCap`, `setGlobalCap` and `setReleaseDelay` cost about 2.2k more
+(the bounds, as `registerToken`). Sizes (`forge build --sizes`, box): FerrataVault runtime 24,254 bytes (base 24,242;
+322 under EIP-170's 24,576), FerrataRegistry 12,504 (base 11,606). Deployment of the vault: 5,706,902 gas in
+`gas-report.txt` (base 5,701,184). Under Sepolia's pricing since Glamsterdam (section above) the new candidate slot
+costs more than on mainnet; not measured on the fork.
+
 ## Results with the mock verifier
 
 These are the vault's own scenarios. Rows marked ¹ go through RISC Zero's emergency stop into a **mock**
