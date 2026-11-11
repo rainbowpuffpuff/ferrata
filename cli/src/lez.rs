@@ -54,8 +54,9 @@ pub enum Mention {
     Pda { actor: Actor, seed: PdaSeed },
     /// A public account that signs the call (a burn's holder).
     Signer(Actor),
-    /// A public account's bridge state the call credits (destination, fee recipient, relayer).
-    Other(Actor),
+    /// A public account's bridge state the call credits (destination, fee recipient, relayer); with
+    /// its public key when the account may not exist yet (LEZ admits a new account on evidence).
+    Other(Actor, Option<lee::PublicKey>),
     /// The claimant's own private account, the root of a private claim.
     PrivateSelf(Actor),
 }
@@ -63,7 +64,7 @@ pub enum Mention {
 impl Mention {
     pub fn actor(&self) -> Actor {
         match self {
-            Mention::Pda { actor, .. } | Mention::Signer(actor) | Mention::Other(actor) | Mention::PrivateSelf(actor) => *actor,
+            Mention::Pda { actor, .. } | Mention::Signer(actor) | Mention::Other(actor, _) | Mention::PrivateSelf(actor) => *actor,
         }
     }
 }
@@ -183,6 +184,7 @@ pub async fn plan_claim<L: Ledger>(
     private: bool,
     relayer: Option<Hash>,
     time_ms: u64,
+    dest_key: Option<lee::PublicKey>,
 ) -> Result<ClaimPlan> {
     let d = &owned.deposit;
     let Some(&n) = history.roots.iter().rev().find(|&&n| n > d.leaf_index) else {
@@ -252,7 +254,8 @@ pub async fn plan_claim<L: Ledger>(
     for account in dest.into_iter().chain([fee_recipient, relayer_account]) {
         let actor = holder_actor(ctx.program, account);
         if !mentions.iter().any(|m| m.actor() == actor) {
-            mentions.push(Mention::Other(actor));
+            let key = if Some(account) == dest { dest_key.clone() } else { None };
+            mentions.push(Mention::Other(actor, key));
         }
     }
     let what = format!("{} claim of leaf {} under root(cid, {n})", if private { "private" } else { "plaintext" }, d.leaf_index);
@@ -368,7 +371,8 @@ fn mention(m: &Mention) -> AccountMention {
     match m {
         Mention::Pda { seed, .. } => AccountIdentity::PublicPda { program, seed: *seed }.select_program_actor_state(program),
         Mention::Signer(_) => AccountIdentity::Public(actor.account_id).select_program_actor_state(program),
-        Mention::Other(_) => AccountIdentity::PublicNoSign(actor.account_id).select_program_actor_state(program),
+        Mention::Other(_, Some(key)) => AccountIdentity::PublicForeign(key.clone()).select_program_actor_state(program),
+        Mention::Other(_, None) => AccountIdentity::PublicNoSign(actor.account_id).select_program_actor_state(program),
         Mention::PrivateSelf(_) => AccountIdentity::PrivateOwned(actor.account_id).select_program_actor_state(program),
     }
 }
