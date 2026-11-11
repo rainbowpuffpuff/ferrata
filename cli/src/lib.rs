@@ -6,6 +6,8 @@
 //!   submission through LEZ's wallet library.
 //! * [`scan`]: recovery from the seed alone.
 //! * [`release`]: the release witness, journal, guest run and vault call.
+//! * [`relayer`]: the relayer daemon's checks and calls: releases and rule (B) checkpoints on the
+//!   vault, the gas drop on LEZ (`ferrata-relayer`).
 //! * [`codes`], [`units`]: refusals with their codes and meanings; amounts with decimals.
 
 #![forbid(unsafe_code)]
@@ -13,6 +15,7 @@
 pub mod codes;
 pub mod eth;
 pub mod lez;
+pub mod relayer;
 pub mod release;
 pub mod scan;
 pub mod seed;
