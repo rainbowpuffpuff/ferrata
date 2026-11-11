@@ -1,0 +1,7 @@
+node up: {"cryptarchia_info":{"lib":"1fe1a265f518e00db5d133b2e75ec2938b34054f372098fcd927d3310dc867cd","lib_slot":8856126,"tip":"98612debf04d365db3aff5907ff982bb052af280402c8ab104d60f3019e786d6","slot":8856131,"height":2108,"state":"Bootstrapping"},"phase":"InitialBlockDownload"}
+== the lab sequencer's attestor asks its node and signs
+attested: channel key 3b14e3980d05dd3651ff5956758dd4cfecc33b837775c9e3d90279d34d3fb0a2 | attestation key b707f1eedbcf1ed8ea4b7e06677eb1c1925117a021edf5d782452abc305fbc6a | final tip 202 774780c60182852a283544372f21f24d9f532953bbdd8d71823a012edb322bbb (final message cc5ae8ce6324d1be95406175c3ba3934914e8ff91fac717ae3d95eb568cca79e) | node lib slot 8856126, blocks 1..=202 checked | key set n = 1 hash 868b734d7ac5b0604f203fed7f95f24497a37299b50ad9fb0ab7093ae3bc8b14
+checkpoint/attestor/runs/live-node/live-att-0.json: verifies (channel key 3b14e3980d05dd3651ff5956758dd4cfecc33b837775c9e3d90279d34d3fb0a2, tip 202)
+== a stand-in sequencer's attestor asks the same node: its channel key is not in the live set
+Error: refused: channel key e3db11180792a86624197292eb8e6bbbe6dc11b504f0e66016724bf267d06813 is not in the channel's live key set (its certificate is dead)
+windows saved: 27, bytes: 7400280

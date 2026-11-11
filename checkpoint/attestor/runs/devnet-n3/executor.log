@@ -1,0 +1,26 @@
+== executor: accepted inputs
+load before: 0.00 0.00 0.00 0/0 0
+rbm-lab-n3-t2          blocks 17 (87349 B) | user cycles     4750279 | segments   6 (1x2^17+5x2^20) padded     5373952 |   0.32 s | journal == native
+rbm-lab-n3-all         blocks 17 (87349 B) | user cycles     6444846 | segments   7 (7x2^20) padded     7340032 |   0.34 s | journal == native
+== executor: inputs the guest must refuse
+-- rbm-refuse-too-few
+checkpoint refused: InsufficientAttestations { have: 1, need: 2 }
+Error: Guest panicked: checkpoint refused: InsufficientAttestations { have: 1, need: 2 }
+-- rbm-refuse-none
+checkpoint refused: InsufficientAttestations { have: 0, need: 2 }
+Error: Guest panicked: checkpoint refused: InsufficientAttestations { have: 0, need: 2 }
+-- rbm-refuse-uncertified
+checkpoint refused: BadCertificate
+Error: Guest panicked: checkpoint refused: BadCertificate
+-- rbm-refuse-other-vault
+checkpoint refused: BadCertificate
+Error: Guest panicked: checkpoint refused: BadCertificate
+-- rbm-refuse-other-chain
+checkpoint refused: BadCertificate
+Error: Guest panicked: checkpoint refused: BadCertificate
+-- rbm-refuse-outsider
+checkpoint refused: NotAccredited
+Error: Guest panicked: checkpoint refused: NotAccredited
+-- rbm-refuse-duplicate
+checkpoint refused: DuplicateAttestor
+Error: Guest panicked: checkpoint refused: DuplicateAttestor
