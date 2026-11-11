@@ -132,7 +132,7 @@ user_stage_() {
   grep -E 'Elapsed \(wall' "$S/build.log"
   local b
   for b in prove_attest prove_bridge; do strip -o "$S/stripped/$b" "$ROOT/lez/target/debug/$b"; done
-  ( cd "$ROOT/lez" && FERRATA_HEAD=$(git -C "$ROOT" rev-parse HEAD 2>/dev/null) \
+  ( cd "$ROOT/lez" && FERRATA_HEAD=${FERRATA_HEAD:-$(git -C "$ROOT" rev-parse --verify -q HEAD || echo unknown)} \
       scripts/stage-prove-attest.sh "$S/bundles/attest-pad" "$S/stripped/prove_attest" > "$S/stage-attest.log" 2>&1 &&
     scripts/stage-prove-bridge.sh "$S/bundles/bridge-pad" "$S/stripped/prove_bridge" > "$S/stage-bridge.log" 2>&1 ) ||
     { echo "user-stage: staging failed"; tail -n 5 "$S"/stage-*.log; return 1; }
@@ -144,11 +144,12 @@ user_stage_() {
 user_prove_() {
   local P=${BENCH_MODAL_PROFILE:?BENCH_MODAL_PROFILE: the Modal workspace for the proving containers}
   local tag=${BENCH_TAG:-bench-$(basename "$OUT")} cpus=${BENCH_CPUS:-16} vol=${BENCH_VOLUME:-p4-minimum}
-  local B=$OUT/stage/bundles M=$ROOT/lez/results/p4-minimum
-  [ -d "$B/attest-pad" ] || { echo "user-prove: no $B (run user-stage on the box and fetch it)"; return 1; }
+  local B=${BENCH_BUNDLES:-$OUT/stage/bundles} M=$ROOT/lez/results/p4-minimum
+  [ -d "$B/attest-pad" ] || { echo "user-prove: no $B (run user-stage on the box and fetch it; BENCH_BUNDLES)"; return 1; }
   mkdir -p "$OUT/user"
   export MODAL_PROFILE=$P P4_VOLUME=$vol P4_CPU=$cpus P4_MEM_MIB=16384 P4_APP=ferrata-bench
   local j
+  modal volume create "$vol" > /dev/null 2>&1 || true   # exists already, or created now
   for j in attest-pad bridge-pad r0vm; do modal volume put -f "$vol" "$B/$j" "/bundle/$j" > /dev/null || return 1; done
   ( cd "$M" && modal run minimum.py::main --job attest-pad --runs 1 --tag "$tag" > "$OUT/user/attest-pad.log" 2>&1 ) & local a=$!
   ( cd "$M" && modal run minimum.py::main --job bridge-pad --runs 1 --tag "$tag" > "$OUT/user/bridge-pad.log" 2>&1 ) & local c=$!

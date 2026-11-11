@@ -28,8 +28,7 @@ bench out=("bench/report/" + stamp + "-" + commit):
 bench-user out=("bench/report/" + stamp + "-" + commit) stage=(justfile_directory() + "/../tmp/bench-stage/" + commit):
     {{box}} scripts/bench.sh user-stage {{stage}}
     if [ -n "{{fetch}}" ]; then {{fetch}} {{stage}}/stage/bundles -- true; fi
-    mkdir -p {{out}}/stage && ln -sfn {{stage}}/stage/bundles {{out}}/stage/bundles
-    scripts/bench.sh user-prove {{out}}
+    BENCH_BUNDLES={{stage}}/stage/bundles scripts/bench.sh user-prove {{out}}
     python3 -I scripts/bench_report.py {{out}}
 
 # Every M0 check of the proposal with its measured value and GO / NO-GO (--online re-reads upstream tags).
