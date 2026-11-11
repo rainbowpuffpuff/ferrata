@@ -950,7 +950,7 @@ segments) was not proven at all.
    the log says who on LEZ may claim it. The consumer therefore has a public claim, which
    credits the Ethereum sender, and a private attestation, which publishes nothing, but no
    private claim. The secret-keyed nullifier needs a deposit event that carries a commitment,
-   which is the bridge's vault.
+   which is the bridge's vault: the consumer's `VaultPool` (§6) has it.
 8. **The identifier returned for a state fact is the default one** (§5.2); the block-bound
    variant can be derived from the reply's fields and is not returned.
 9. **The old `Attest { query }`**, which ignored its query and replied with the record, is now
@@ -958,12 +958,13 @@ segments) was not proven at all.
 
 ### What is not built, or weaker than the design says
 
-- **Rules 5 to 7 of the consumer pattern and a private claim** (decision 7); the second U.6
-  reference consumer (a native ETH transfer to a contract); the F.8 test of §6.5 of the design
+- **Rules 5 to 7 of the consumer pattern and a private claim** (decision 7) are built since
+  milestone A2 on the vault's `Deposit` event, with the native-ETH pool (§6, "The reference consumer
+  with the Recommended Consumer Pattern"); still missing: the F.8 test of §6.5 of the design
   note (two deposits whose transactions must be indistinguishable).
-- **Accumulator leaves on real data.** They run in the guest since Stage 5 (§6), on a synthetic
-  state holding the vault's own deposits under a record placed in LEZ's state, not written by
-  the program; no deployed contract kept such a root when this ran (the vault is not deployed).
+- **Accumulator leaves on real data** are attested since milestone A2 (§6, "The vault on Sepolia,
+  on real data"); before that they ran on a synthetic state holding the vault's own deposits under
+  a record placed in LEZ's state.
   `harness/tests/attest_native.rs` also runs the shared vectors (`../vectors/acc-leaf.json`: 14
   leaves, 7 refusals) through `evaluate` on the host.
 - **Gloas records** are attested since Stage 5 (§6), on Sepolia; this section's mainnet block is
@@ -1115,22 +1116,82 @@ against slot 1 (163 `AccumulatorRootMismatch`, 172,634 to 172,637 cycles); an em
 (130 `PredicateFailed`: slot 1's condition); the facts as mainnet statements (140); without the
 header (215).
 
-**The vault on Sepolia** (deployed on 11 November 2026 at block 12,107,894). One command captures its fixture, and one test attests
-slots 0 and 1 and its newest deposit leaf through the program under the record of the captured
-block, after following the chain from the period-1378 bootstrap through the replay fixture and the
-captured updates:
+**The vault on Sepolia, on real data** (`results/stage5-vault-v5.md`; milestone A2). FerrataVault v5
+of the live round trip (`0xfE3199fa2634413CbAC317371076Cae3EB2d9E54`, `../e2e/runs/crown-live-1`:
+deployed in block 12,111,048; two ETH deposits, leaf 0 in block 12,111,477 and leaf 1 in 12,111,574)
+was read on 11 November 2026 at Sepolia's finalized slot 11,556,608, which binds execution block
+12,112,773: the finality update, the block, `eth_getProof` of slots 0 and 1 (checked against
+`depositRoot()` and `nextLeafIndex()`), the `Deposit` logs, the EIP-2935 slots of both deposit blocks
+with their headers and receipts, and an address without an account, read-only from public endpoints
+without a key, the block and the beacon root also from a second provider
+(`crates/ferrata-spectests/fixtures/sepolia-vault-v5-2026-11-11/SOURCE.md`):
 
 ```sh
-lez/scripts/fetch-attest-fixture.py --network sepolia \
-  --storage 0xd0B5fcC0B47D8E6f514f9D246Bb0b416b2048AF7:0=depositRoot(),1=nextLeafIndex() \
-  --deposits 0xd0B5fcC0B47D8E6f514f9D246Bb0b416b2048AF7:12107894 --updates-from 1410 \
-  crates/ferrata-spectests/fixtures/sepolia-vault
-cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test vault -- --nocapture
+V=0xfE3199fa2634413CbAC317371076Cae3EB2d9E54
+lez/scripts/fetch-attest-fixture.py --network sepolia --storage "$V:0=depositRoot(),1=nextLeafIndex()" \
+  --deposits $V:12111048 --updates-from 1410 --hops --absent \
+  crates/ferrata-spectests/fixtures/sepolia-vault-v5-2026-11-11
+cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test vault --test vault_consumer -- --nocapture
 ```
 
-Until that directory exists, `the_vault_on_sepolia` says so and passes; it has not run on real
-vault data. (The bridge's crossing took its own capture of the vault's slots 0 to 2 and deposit 0,
-`crates/ferrata-spectests/fixtures/sepolia-inbound-2026-11-11-1`, `live/inbound/README.md`.)
+The Sepolia instance follows the chain from the period-1378 bootstrap through the replay fixture to
+that finality update and **writes the record itself** (nothing is placed with
+`force_insert_account`); every request goes to that record with the block's RLP header. The harness
+recomputes both leaves from the vault's events; their root is slot 0.
+
+| request, under the record of block 12,112,773 (Gloas layout) | execution gas (cycles) | storage gas (bytes) |
+|---|---:|---:|
+| the vault's slots 0 and 1 and deposit leaf 0 | 326,000 | 7,659 |
+| slots 0 and 1 and deposit leaf 1 | 326,001 | 7,659 |
+| slots 0 and 1 and both leaves | 391,291 | 8,731 |
+| an address without an account (exclusion) | 175,127 | 4,890 |
+| deposit 0's `Deposit` log, one EIP-2935 hop back (block 12,111,477, 479 receipts) | 324,408 | 8,787 |
+| deposit 1's `Deposit` log, one hop back (block 12,111,574, 117 receipts) | 324,934 | 8,832 |
+
+A leaf costs 65,290 cycles on the real state (391,291 − 326,001), as on the synthetic one. The leaf
+facts carry the core's identifiers, the log facts the identifiers derived from the JSON-RPC fields
+alone. Refused (10): a leaf not at its index, a leaf proven at another index, a leaf against slot 1,
+a sibling changed (163 `AccumulatorRootMismatch`); an empty position past the count (130, slot 1's
+condition); the facts as mainnet statements (140); without the header (215); deposit 0's log through
+a hop that carries deposit 1's header, or without the hop (110 `ProofNodeMismatch`); a false
+predicate on the log's token topic (130). With a real proof: PROVE_VAULT_PLACEHOLDER
+
+**The reference consumer with the Recommended Consumer Pattern, on these deposits**
+(`results/stage5-consumer-public.md`, `results/stage5-consumer-private.md`, `harness/tests/vault_consumer.rs`;
+milestone A2). A `VaultPool` (the attestation program's account, the instance, the chain id, the
+vault, the token) accepts one kind of fact as a deposit, the vault's `Deposit` log (rule 7), reached
+from the newest record by an EIP-2935 hop. The log carries the depositor's commitment
+`C = sha256("ferrata/C/v1" ‖ s ‖ kind ‖ dest)` (rule 5; the bridge's encoding, so the vault's real
+deposits open), and the nullifier is `N = H("…/consumer/nf" ‖ s ‖ statement identifier)` (rule 6),
+spent at `claim(pool, N)` on both paths. With token `0x00…00` the pool is the native-ETH consumer of
+U.6 (an ETH transfer to a contract, as the contract's event reports it); with a token address, the
+ERC-20 one. The run's secrets come from its public test seed (`../e2e/crown/identity.py`); the test
+checks both openings against the commitments on chain.
+
+- **Public claim** of deposit 0 (public kind, to LEZ's public test account 0): `ClaimDeposit` at
+  `claim(pool, N)` → `Attest` → the reply opens `C` and checks that `N` names this actor →
+  `CreditHolder` at `holder(pool, dest)`: 499,296 execution gas (114,235 + 332,160 + 36,995 + 15,906
+  cycles). Refused before it, nothing spent: a wrong secret, another destination (218
+  `CommitmentMismatch`); the right opening at another claim actor (229); the private-kind deposit
+  claimed publicly (219 `WrongKind`) or opened as public-kind (218); a pool of another token (130, a
+  false predicate); a mainnet pool (140). After it: the replay (223), and the same deposit claimed
+  privately, which cannot be proven (its public part exits 223).
+- **Private claim** of deposit 0 at a private account (`ClaimDepositPrivately`): two private
+  transitions of 112,598 and 1,391,795 user cycles (the second verifies the hop, the receipt and the
+  opening inside the consumer's execution), proven in dev mode with LEZ's privacy-preserving circuit
+  and settled: 8,601 transaction bytes, 456,439 execution gas. The transaction holds none of the
+  secret, the statement identifier, the commitment, the depositor, the deposit block's header or the
+  receipt proof; it holds `N` (spent publicly) and, deposit 0 being public-kind, its destination and
+  amount (`holder(pool, dest)` is credited publicly). After it, the public claim (223) and a second
+  private claim (223, not provable) are refused.
+- **Private claims that do not verify** have no receipt (the executor's exits): a private-kind deposit
+  claimed by an account that is not its destination (224), a byte that is no kind (219), a wrong
+  secret (218), the private-kind deposit opened as public-kind (218), a forged receipt (110), a mainnet
+  pool (140), a pool of another token (130).
+- **Not shown**: an accepted private claim of a private-kind deposit on real data. Deposit 1 is
+  private-kind, to LEZ's testnet private account 0, whose keys this harness does not hold (the bridge
+  program claimed it privately in the live run, with LEZ's wallet). Nor the F.8 test (§6.5 of the
+  design note), nor a real proof of the private claim.
 
 ### Departures from the design note, and what Stage 5 does not cover
 
@@ -1144,9 +1205,10 @@ vault data. (The bridge's crossing took its own capture of the vault's slots 0 t
 3. **Upgrade only within the schedule.** A fork added after `Init` is still a successor's (§3.5 of
    the design note), which is not built.
 4. **Not covered:** a bootstrap of a Gloas-era checkpoint (no public node serves one; the
-   instance starts one period before the fork); history hops under a Gloas record; the private
-   path under a Gloas record (the consumer carries the header through, unmeasured); the vault on
-   real data; Gloas on mainnet (no date yet).
+   instance starts one period before the fork); a chain of several hops under a Gloas record (one
+   hop is attested, above); the private path under a Gloas record for a private-kind deposit (the
+   public-kind claim is above); Gloas on mainnet (no date yet). The vault on real data, a hop and
+   the private path under a Gloas record are above (milestone A2).
 
 ## 7. What did not work, what is missing, what is weaker than asked
 
@@ -1273,6 +1335,9 @@ RISC0_DEV_MODE=0 /usr/bin/time -v target/debug/prove_private --tx-out results/st
   > results/prove-private.log 2>&1                   # a real proof of §3 for this image, then its settlement
                                                      # (about an hour on a laptop CPU; not made for this image)
 RISC0_DEV_MODE=0 target/debug/prove_private --settle FILE     # settle a proven transaction again
+cargo build -p harness --locked --bin prove_vault
+RISC0_DEV_MODE=0 target/debug/prove_vault > results/prove-vault.log   # a real proof of the vault's leaf
+                                                     # request on real Sepolia data (§6)
 scripts/stage-prove-attest.sh OUTDIR                 # the input of a real proof of the private attestation (§5);
                                                      # ../gpu-prover/README.md has the commands of the GPU run
 RISC0_DEV_MODE=0 target/debug/prove_attest --settle results/stage4-private-attest-tx.borsh \

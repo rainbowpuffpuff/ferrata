@@ -53,14 +53,22 @@ block's RLP header. The script then fetches, in this order:
    update's (the replay fixture ends at period 1409; an instance needs these to reach the record);
 7. the canonical root of the finalized beacon block from a second beacon provider.
 
+With `--hops` (needs `--deposits`), at once with step 3: the deposits' logs, `eth_getProof` of the
+EIP-2935 history contract at the block for the slot of each deposit's block (`m mod 8191`), and each
+such block's RLP header (rebuilt, checked against its hash) and receipts, so that each deposit's
+event can be attested one hop back from the record. With `--absent`: `eth_getProof` at the block for
+an address without an account (`keccak256("ferrata/absent-account")[12..]`).
+
   lez/scripts/fetch-attest-fixture.py --network sepolia [--storage ADDR:SLOT[=getter()][,SLOT...]]...
-      [--log-token ADDR] [--same-address ADDR] [--deposits VAULT:FROM_BLOCK] [--updates-from P] OUTDIR
+      [--log-token ADDR] [--same-address ADDR] [--deposits VAULT:FROM_BLOCK] [--updates-from P]
+      [--hops] [--absent] OUTDIR
 
 SLOT is a decimal or 0x-hex slot number. Without `--storage`, Sepolia USDC's `totalSupply_`
-(slot 11, checked against `totalSupply()`). Ferrata's vault, once deployed:
-`--storage 0xdfedf9A73Cfb337277b95a9a1C941c3496A4385F:0=depositRoot(),1=nextLeafIndex()
- --deposits 0xdfedf9A73Cfb337277b95a9a1C941c3496A4385F:DEPLOY_BLOCK --updates-from 1410`
-into `crates/ferrata-spectests/fixtures/sepolia-vault` (read by `lez/harness/tests/vault.rs`).
+(slot 11, checked against `totalSupply()`). Ferrata's vault v5 (`e2e/runs/crown-live-1`):
+`--storage 0xfE3199fa2634413CbAC317371076Cae3EB2d9E54:0=depositRoot(),1=nextLeafIndex()
+ --deposits 0xfE3199fa2634413CbAC317371076Cae3EB2d9E54:12111048 --updates-from 1410 --hops --absent`
+into `crates/ferrata-spectests/fixtures/sepolia-vault-v5-2026-11-11` (read by
+`lez/harness/tests/vault.rs` and `vault_consumer.rs`).
 """
 import argparse
 import hashlib
