@@ -1,7 +1,7 @@
 [package]
 name = "ferrata-guests"
 version = "0.1.0"
-description = "RISC Zero zkVM 3.0.5 guests (SPEC-v2): release (the release proof) and claim (measurement only)"
+description = "RISC Zero zkVM 3.0.5 guests (SPEC-v2): release (the release proof), gasdrop (the gas-drop receipt) and claim (measurement only)"
 edition = "2021"
 rust-version = "1.88"
 license = "MIT OR Apache-2.0"
@@ -17,6 +17,10 @@ path = "src/bin/release.rs"
 [[bin]]
 name = "claim"
 path = "src/bin/claim.rs"
+
+[[bin]]
+name = "gasdrop"
+path = "src/bin/gasdrop.rs"
 
 [dependencies]
 ferrata-bridge-core = { path = "../crates/ferrata-bridge-core", default-features = false }
