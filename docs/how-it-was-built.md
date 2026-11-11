@@ -8,14 +8,15 @@ one place in the repository that tells this; the [README](../README.md) is about
 ## Agents draft, the author decides
 
 The code, the tests and the documents were drafted with coding agents (Claude Code) under the author's
-design, decision log and acceptance tests; every commit was made this way. Read each commit as
-agent-drafted, whether or not it carries an `Assisted-by` trailer.
+design, review and acceptance tests, and the author's decision log; every commit was made this way. Read
+each commit as agent-drafted, whether or not it carries an `Assisted-by` trailer.
 
 The author owns the design, the decisions and the acceptance tests: the specification and BLS vectors, the
 real-chain replays, the differential oracles, the adversarial and mutation suites and the measurements each
-directory documents. Acceptance is mechanical: a change is accepted when those tests pass, and every result
-in [EVIDENCE.md](EVIDENCE.md) names where it ran, whether its proofs were real or in dev mode, and the
-command that re-checks it, so that no result rests on who or what wrote a line.
+directory documents. For the core, acceptance is mechanical (its
+[README](../crates/ferrata-core/README.md#how-this-was-built) lists the tests); and every result in
+[EVIDENCE.md](EVIDENCE.md) names where it ran, whether its proofs were real or in dev mode, and the command
+that re-checks it, so that each result can be checked without trusting who or what wrote the code.
 
 Most pieces were built on a branch of their own, each by an agent in its own git worktree, and merged into an
 integration branch (`integration`, then `integration3` to `integration7`); the merge commits name the
