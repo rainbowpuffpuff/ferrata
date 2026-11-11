@@ -17,8 +17,8 @@ settlement by the harness (`harness/src/bridge.rs`, `harness/tests/bridge_*.rs`)
 | root import | B1, D13 inbound | `ImportRoot` attests slots 0 and 1 under one record in its own transaction, writes a write-once `root(cid, n)`; refused after `Sunset` |
 | registry | F.8, F.10, §B4 | `Register` attests a token's entry hash and fee schedules 0 and 1 from the vault's storage and writes a write-once `token(cid, token)`: at most eight denominations, each an exact multiple of a power-of-ten LEZ unit (§5) |
 | fees | F.13, D13, §B4 | the claim mints the denomination to the user, the mint fee of the deposit's leaf-index schedule to the fee recipient, the relay fee to the relayer the claim names; `ImportFees` imports later schedules; 1% ceiling and seven-day notice re-checked (§5) |
-| caps | F.11, §B4 | token buckets per token and global, for mints and for burns, in the vault's value units; a caller time under a validity window; an immutable floor (§5) |
-| freezes and roles | F.14, §B4 | the freeze authority freezes mints or burns, per token or globally, for at most 30 days; the admin sets caps (never below the floor) and cannot unfreeze (§5) |
+| caps | F.11, §B4 | token buckets per token and global, for mints and for burns, in the vault's value units, on attested Ethereum time (§6); an immutable floor (§5) |
+| freezes and roles | F.14, §B4 | the freeze authority freezes mints or burns, per token or globally, for at most 30 days of attested Ethereum time; the admin sets caps (never below the floor) and cannot unfreeze (§5, §6) |
 | retirement | SPEC-v2 §4.5, §B5 | `Sunset` by the freeze authority, one-way: no `ImportRoot` after it; claims and burns go on; the checkpoint collects it (§5) |
 | claim, plaintext | §3.3, B1 | `Claim` at `root(cid, n)`: the deposit leaf's path, the opening of `C`, `N`; then `Issue` at `token(cid, token)`, `Spend` at the nullifier, the mints |
 | claim, private | B1, B6 | `ClaimPrivately` at the destination's own private account: reads `root(cid, n)`, verifies inside its own execution, sends only `Issue` (the fee schedule's range, not the leaf index) |
@@ -26,8 +26,8 @@ settlement by the harness (`harness/src/bridge.rs`, `harness/tests/bridge_*.rs`)
 | wrapped balances | (M0 fallback, §3 below) | the bridge program's own actor state at the holder's account, per configuration and token |
 | burn | §5.1, D13 outbound, D10 | `Burn` (the checkpoint's variant 0, byte for byte) at the holder's actor, top-level or private root only; admitted by `token(cid, token)`; a write-once `burn(cid, H(note))` |
 
-Left out: permissionless `Sunset` (30 days without a finalised checkpoint: the attestation carries
-no block timestamp and the vault no such slot), the replacement of the freeze authority after a
+Left out: permissionless `Sunset` (30 days without a finalised checkpoint: the program has an
+attested clock (§6), but the vault keeps no slot with the time of its last finalised checkpoint), the replacement of the freeze authority after a
 14-day timelock and the 12-hour watchers (vault-side roles; on LEZ the roles are fixed per
 configuration), the gas drop (B2), transfers between holders, off-chain software (importer,
 wallet, prover daemons) and mode (A)/(B) finality (that is the checkpoint's and the vault's). The
@@ -53,8 +53,8 @@ header account is `bridgeHeader`). PDAs are public PDAs of `B`; seeds are
 
 | actor | address | state (write-once unless said) | written by |
 |---|---|---|---|
-| `config(cid)` | PDA `config ‖ cid` | `Config { config }`; mutable: the global gate (freezes, mint and burn buckets, the latest accepted time), `sunset` (one-way); transiently a pending attestation inside one transaction | `Init`; attestation replies; `Admit`; `Freeze`, `SetCap`, `Tick`, `Sunset` |
-| `token(cid, token)` | PDA `token ‖ cid ‖ token` | `Token { entry, schedules, known_until, roles, gate }`; mutable: schedules (appended), `known_until` (grows), the gate | `WriteToken` and `ExtendFees` from `config(cid)` only; `Issue`, `Burn`, `Freeze`, `SetCap`, `Tick` |
+| `config(cid)` | PDA `config ‖ cid` | `Config { config }`; mutable: the global gate (freezes, mint and burn buckets, the attested clock, §6), `sunset` (one-way); transiently a pending attestation or record read inside one transaction | `Init`; attestation and record replies; `Admit`; `Freeze`, `SetCap`, `Tick`, `Sunset` |
+| `token(cid, token)` | PDA `token ‖ cid ‖ token` | `Token { entry, schedules, known_until, roles, attestation program and instance, gate }`; mutable: schedules (appended), `known_until` (grows), the gate; transiently a pending record read | `WriteToken` and `ExtendFees` from `config(cid)` only; `Issue`, `Burn`, `Freeze`, `SetCap`, `Tick`; record replies |
 | `root(cid, n)` | PDA `root ‖ cid ‖ n` | `Root { cid, chain, vault, n, root, record_slot, block_number }` | `WriteRoot` from `config(cid)` only |
 | `nullifier(chain, vault, N)` | PDA `nullifier ‖ chain:u256 ‖ vault ‖ N` (no `cid`) | `Spent { cid, token, n, amount }` | `Spend` from `token(cid, token)` only |
 | holder | the holder's own account, program `B` | `Holder { holdings: [(cid, token, amount)] }` (mutable) | `Mint` from the nullifier actor; the holder's `Burn`; its own private claim |
@@ -77,8 +77,8 @@ bytes on chain.
 | 2 | `Sunset { cid }` | the freeze authority's own actor; then `config(cid)` | top-level, signed by it | one-way: no `ImportRoot` after it |
 | 3 | `Echo { nonce }` | any | anyone | no-op (rule (A)'s echo nonce) |
 | 4 | `Init { config, record_slot, proof }` | `config(cid)` | anyone | `Attest` (vault account, slot 2); on the reply, writes the configuration if slot 2 = `cid` |
-| 5 | `Claim { cid, n, witness, range, relayer, time }` | `root(cid, n)` | anyone | the plaintext claim: verify, then `Issue` with `mint_to = dest` |
-| 6 | `ClaimPrivately { cid, n, witness, range, relayer, time }` | the claimant's (private) holder actor | its owner | `Read` of `root(cid, n)`; on the reply verify, then `Issue` (and credit itself) |
+| 5 | `Claim { cid, n, witness, range, relayer }` | `root(cid, n)` | anyone | the plaintext claim: verify, then `Issue` with `mint_to = dest` |
+| 6 | `ClaimPrivately { cid, n, witness, range, relayer }` | the claimant's (private) holder actor | its owner | `Read` of `root(cid, n)`; on the reply verify, then `Issue` (and credit itself) |
 | 7 | `Read` | any | an actor | replies `StateReply` (LEZ v0.4's read idiom) |
 | 8 | `WriteRoot { root }` | `root(cid, n)` | `config(cid)` only | writes the root once |
 | 9 | `Spend { N, cid, chain, vault, token, n, amount, mint_to, fees }` | `nullifier(chain, vault, N)` | `token(cid, token)` only | spends `N` once; mints the denomination to a public `mint_to` and each fee to its account |
@@ -87,11 +87,11 @@ bytes on chain.
 | 12 | `ImportFees { cid, token, index, schedule?, record_slot, proof }` | `config(cid)` | anyone | `Attest` (fee slot `index`, slot 1); on the reply, `ExtendFees` |
 | 13 | `WriteToken { state }` | `token(cid, token)` | `config(cid)` only | writes the token once |
 | 14 | `ExtendFees { cid, token, index, schedule?, count }` | `token(cid, token)` | `config(cid)` only | appends a schedule (in order, bounds), or extends `known_until` to `count` |
-| 15 | `Issue { cid, token, N, amount, range, n, mint_to, relayer, time }` | `token(cid, token)` | an actor of `B` (a claimant) | denomination, the range against the schedules, the fees; mint freeze and bucket; then `Admit` and `Spend` |
-| 16 | `Admit { cid, token, mints, value, time? }` | `config(cid)` | `token(cid, token)` only | the global freeze and bucket of a mint or a burn |
-| 17 | `Freeze { cid, token?, mints, burns, until, time }` | the freeze authority's actor; then the target | top-level, signed by it | freezes until `until` (≤ 30 days after `time`; 0 unfreezes) |
-| 18 | `SetCap { cid, token?, mints, cap, time }` | the admin's actor; then the target | top-level, signed by it | a bucket's capacity and refill, never below the floor |
-| 19 | `Tick { cid, token?, time }` | `config(cid)` or `token(cid, token)` | anyone | advances the stored time (for burns, which carry none) |
+| 15 | `Issue { cid, token, N, amount, range, n, mint_to, relayer }` | `token(cid, token)` | an actor of `B` (a claimant) | denomination, the range against the schedules, the fees; mint freeze and bucket at the token's clock; then `Admit` and `Spend` |
+| 16 | `Admit { cid, token, mints, value }` | `config(cid)` | `token(cid, token)` only | the global freeze and bucket of a mint or a burn, at the configuration's clock |
+| 17 | `Freeze { cid, token?, mints, burns, until, record }` | the freeze authority's actor; then the target | top-level, signed by it | the target reads `record` (as `Tick`), then freezes until `until` (after that attested time and ≤ 30 days after it; 0 unfreezes) |
+| 18 | `SetCap { cid, token?, mints, cap }` | the admin's actor; then the target | top-level, signed by it | a bucket's capacity and refill, never below the floor, refilled at the target's clock first |
+| 19 | `Tick { cid, token?, record }` | `config(cid)` or `token(cid, token)` | anyone | `Read` of the attestation program's `header(instance, record.slot)`; on the reply, the clock moves to that record's execution timestamp if later (§6) |
 
 Every handler checks that its receiver is the actor the message names. Replies are accepted only
 from the actor the receiver is waiting for (the consumer's rule, `guests/consumer`).
@@ -173,10 +173,11 @@ roots, burn notes, every encoding the checkpoint reads and every refusal stay as
    `lez/wire/src/lib.rs` is not edited: its line numbers are in the attestation guest's ELF.
 7. The vault's registry and fee slots are defined here (§5), with SHA-256 slot keys rather than
    Solidity mappings; FerrataVault v5 writes them in this encoding (`BRIDGE-RESULTS.md` §8a).
-8. Burns carry no time (the 185-byte `Burn` is the checkpoint's): their freezes and buckets use the
-   latest time the token and configuration actors have accepted, which claims, role messages and
-   `Tick` advance. Conservative: a burn bucket never refills beyond a validated time, and a lapsed
-   freeze still holds until something advances the time.
+8. No message carries a time. Freezes and buckets use each actor's attested clock, which only
+   `Tick` and `Freeze` move, by reading a record of the configuration's attestation instance (§6).
+   Conservative: a bucket never refills beyond attested Ethereum time, and a lapsed freeze still
+   holds until something reads a record past it. (Until the fix of §6 a caller's time under a
+   validity window was used; one block producer could move it, review r3's attack A.)
 9. Roles are LEZ accounts fixed in the configuration; the 14-day replacement of the freeze
    authority, the watchers and permissionless `Sunset` are not built (§1).
 
@@ -213,17 +214,70 @@ checkpoint) are deducted from the release on Ethereum (D13); the LEZ burn debits
 
 **Caps.** A gate per token and one per configuration: a mint and a burn token bucket each, in the
 vault's value units (`amount / lezUnit × unitWeight`), counting what a claim mints (denomination
-and fees) and what a burn destroys. Claims, `Freeze`, `SetCap` and `Tick` carry the caller's time
-`t`; their handler sets the timestamp validity window `[t, t + 10 min)`, so LEZ refuses the
-transaction unless the block's time lies in it (`t` is never ahead of the block; the sequencer
-chooses the block time within its own limits, which is the stretch §B4 admits); the stored time is
-the maximum accepted. The admin's `SetCap` refills under the old parameters, then sets the new
-ones, never below the configuration's immutable floor; raising a capacity does not refill. A
-refused claim reverts the whole transaction, so the deposit stays claimable.
+and fees) and what a burn destroys, at the actor's attested clock (§6). The admin's `SetCap`
+refills under the old parameters at that clock, then sets the new ones, never below the
+configuration's immutable floor; raising a capacity does not refill. A refused claim reverts the
+whole transaction, so the deposit stays claimable.
 
 **Freezes and roles.** Each role is a LEZ account in the configuration and acts by a top-level call
 it signs at its own actor of `B`, which forwards the message to `config(cid)` (global) or
 `token(cid, token)`; the target accepts it only from the role's actor. The freeze authority sets
-`mints_until` and/or `burns_until` (at most 30 days after its time; 0 unfreezes); the admin only
-sets caps, so it cannot unfreeze. `Sunset` is the freeze authority's, one-way; `ImportRoot` refuses
-afterwards (`FROZEN`), everything else goes on.
+`mints_until` and/or `burns_until`: the target first reads the record the `Freeze` names, and
+`until` must lie after that attested time and at most 30 days after it (0 unfreezes); the admin
+only sets caps, so it cannot unfreeze. `Sunset` is the freeze authority's, one-way; `ImportRoot`
+refuses afterwards (`FROZEN`), everything else goes on.
+
+## 6. Time: attested Ethereum time (milestone B2; review r3, attack A)
+
+**The flaw this replaces** (the draft-6 engineering review r3, §2 A). LEZ
+v0.4.0-rc1 neither bounds nor orders block timestamps, and the program took its time from the
+caller, kept monotone and advanced by a `Tick` anyone could send, each under a validity window
+around the block's timestamp. So the producer whose turn it was could stamp a block a year ahead
+and carry its own `Tick`: every freeze of the configuration ended, every bucket refilled, and the
+freeze authority could not freeze again (a new `until` had to lie within 30 days of an honest time,
+which was already in the program's past). One producer is fewer than `t`.
+
+**Where time comes from now.** Each gate (`config(cid)`, `token(cid, token)`) keeps a clock: the
+newest execution timestamp, in milliseconds, it has read from a record of the configuration's own
+attestation program and instance (`header(instance, slot)`, written by the light client after it
+verified a finality update; the record of a payload-layout header holds the execution block's
+timestamp, and one in the Gloas layout binds the block's hash, so the reader supplies the RLP header,
+which must hash to it). It only moves forward (`max`), so it is monotone by construction, and an old
+record moves nothing. No message carries a caller's time: `Claim`, `ClaimPrivately`, `Issue`,
+`Admit` and `SetCap` lost their time fields; claims and burns use the clocks as they stand.
+
+**`Tick` reads the record.** `Tick { cid, token?, record }`, still open to anyone: the gate sends
+`Read` to the record's actor, waits for the reply within the transaction (accepted only from that
+actor), checks the record's instance and chain, and advances its clock to the record's timestamp. A
+`Freeze` does the same before it applies, so a freeze's 30-day bound is measured from attested time,
+whatever the gate's clock was, and in one transaction (a separate `Tick` first could be ordered
+after the `Freeze` by the producer). A token's clock starts at its configuration's at registration;
+a gate that has read no record yet starts its buckets counting at the first time it reads.
+
+**Not ahead of the block.** The reply also sets the transaction's validity window to blocks stamped
+at or after the record's time. An honest record is always behind the block (finality takes about
+two epochs, 13 minutes, before a record can be written), so honest blocks always pass. Without it, a
+captured sync committee, the case LEZ's caps exist for, could have a far-future record written and
+lift freezes and refill caps on its own; with it, that needs a captured committee **and** a producer
+stamping its block that far ahead. A producer alone can only delay a `Tick` (other producers include
+it), which holds freezes longer and refills later: it fails safe.
+
+**When Ethereum finality stalls** (no newer record): every clock stops. Buckets stop refilling, so
+claims and burns stop once their buckets are spent, and LEZ-side burns wait for the light client
+too. No freeze can lapse, however long LEZ runs. The freeze authority can still freeze (a new
+`until` lies after the stopped clock, so it holds at once and until records pass it), unfreeze
+(`until` 0) and `Sunset`; the admin can still set caps, but no bucket refills. The vault side is
+unchanged: its caps and freezes run on Ethereum's own clock.
+
+**What stays.** A captured sync committee together with one producer that stamps a far-future
+block can still move the clock; the vault's caps, on Ethereum time, still bound the escrow. Tested in
+`harness/tests/bridge_time.rs` (results in `results/bridge-time.md`, `BRIDGE-RESULTS.md` §12):
+a block stamped a year ahead with the newest record lifts no freeze and refills nothing, the freeze
+authority can still freeze in it; newer records refill exactly and end freezes; an older record moves
+nothing; a record an hour ahead of the block is refused by LEZ unless the block is stamped that far
+ahead too; with no newer record a year of LEZ blocks changes nothing; Gloas records with and without
+the right header; a slot without a record. A `Tick` costs 76,899 execution gas at a configuration
+and 94,979 at a token, a `Freeze` 93,524 to 104,274; a `Tick` refused for a record ahead of its block
+is charged LEZ's whole gas limit, as any uncoded failure is. The real crossing on Sepolia and every run recorded
+before this change used the earlier program (its caller time); `BRIDGE-RESULTS.md` §12 has the image
+ids.

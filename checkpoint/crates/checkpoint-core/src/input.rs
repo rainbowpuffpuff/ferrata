@@ -17,7 +17,7 @@
 //! Attestation   = channel_key ‖ att_key ‖ certificate(64) ‖ tip_id u64 ‖ tip_hash ‖ final_msg_id ‖
 //!                 signature(64)                       (264 bytes, attestor_core::SignedAttestation)
 //! CheckpointInputB = Config ‖ State ‖ vec<ConfigChange> ‖ vec<bytes(block)> ‖ t_index u32 ‖
-//!                    vec<Attestation> ‖ vec<SegmentJournal(125)>            (rule (B))
+//!                    Inscription (of T) ‖ vec<Attestation> ‖ vec<SegmentJournal(125)>   (rule (B))
 //! SegmentInput  = Config ‖ State ‖ vec<bytes(block)>
 //! ```
 
@@ -58,8 +58,9 @@ pub struct CheckpointInput<'a> {
 }
 
 /// Rule (B) (SPEC-v3 D7, D13): as [`CheckpointInput`], with final-tier attestations in place of the
-/// echo nonce (always 0), `T`'s inscription and the support inscriptions. `blocks` run from
-/// `parent.tip_id + 1` to the furthest attested tip; `blocks[t_index]` is `T`.
+/// echo nonce (always 0) and the support inscriptions. `T`'s inscription is kept: its signer must be
+/// a key of the live set, as in rule (A). `blocks` run from `parent.tip_id + 1` to the furthest
+/// attested tip; `blocks[t_index]` is `T`.
 #[derive(Clone, Debug)]
 pub struct CheckpointInputB<'a> {
     pub config: Config,
@@ -67,6 +68,8 @@ pub struct CheckpointInputB<'a> {
     pub config_changes: Vec<ConfigChange<'a>>,
     pub blocks: Vec<&'a [u8]>,
     pub t_index: u32,
+    /// `T`'s inscription, which names the channel key that inscribed `T`.
+    pub producer: ElidedInscription<'a>,
     pub attestations: Vec<SignedAttestation>,
     pub segments: Vec<SegmentJournal>,
 }
@@ -184,7 +187,7 @@ impl CheckpointInputB<'_> {
     pub fn encode(&self) -> Vec<u8> {
         let mut w = Writer::default();
         w.config(&self.config).state(&self.parent).config_changes(&self.config_changes);
-        w.blocks(&self.blocks).u32(self.t_index).len(self.attestations.len());
+        w.blocks(&self.blocks).u32(self.t_index).inscription(&self.producer).len(self.attestations.len());
         for a in &self.attestations {
             w.raw(&a.encode());
         }
@@ -314,6 +317,7 @@ impl<'a> CheckpointInputB<'a> {
         let config_changes = config_changes(&mut r)?;
         let blocks = blocks(&mut r)?;
         let t_index = r.u32_le()?;
+        let producer = inscription(&mut r)?;
         let n = r.len_u32("attestations", SIGNED_ATTESTATION_LEN)?;
         let mut attestations = Vec::with_capacity(n);
         for _ in 0..n {
@@ -321,7 +325,7 @@ impl<'a> CheckpointInputB<'a> {
         }
         let segments = segments(&mut r)?;
         r.finish()?;
-        Ok(Self { config, parent, config_changes, blocks, t_index, attestations, segments })
+        Ok(Self { config, parent, config_changes, blocks, t_index, producer, attestations, segments })
     }
 }
 

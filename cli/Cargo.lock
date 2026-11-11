@@ -3217,6 +3217,7 @@ version = "0.1.0"
 dependencies = [
  "borsh",
  "ferrata-bridge-core",
+ "ferrata-core",
  "ferrata-lez-wire",
  "lee_core",
  "sha2 0.10.9",

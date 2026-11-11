@@ -29,7 +29,7 @@ use ferrata_lez_bridge_wire::{
     self as bw, code, config_actor, config_seed, fee_slot, holder_actor, nullifier_actor, register_slots,
     registry_slot, root_actor, root_seed, token_actor, BridgeConfig, BridgeMessage, BridgeState, CapParams,
     ClaimWitness, Controls, FeeSchedule, HolderState, ImportProof, NullifierState, PairingProof, RootState,
-    ScheduleRange, TokenEntry, TokenState, VaultProof, Word, SLOT_CONFIG_ID, SLOT_COUNT, SLOT_ROOT,
+    ScheduleRange, TimeRecord, TokenEntry, TokenState, VaultProof, Word, SLOT_CONFIG_ID, SLOT_COUNT, SLOT_ROOT,
 };
 use ferrata_lez_wire::{header_actor, RecordState};
 use ferrata_spectests::execkit::{account_rlp, enc, header_rlp, keccak, Trie};
@@ -400,10 +400,36 @@ impl Block {
                 parent_hash: keccak(&(number - 1).to_be_bytes()),
                 state_root: state.root(),
                 receipts_root: [7; 32],
-                timestamp: 1_700_000_000 + 12 * number,
+                timestamp: RECORD_TIME_BASE + 12 * number,
             },
         };
         Self { slot, record, state, storage, header: None }
+    }
+
+    /// The same block with its execution timestamp set to `seconds` (a payload record).
+    pub fn at(mut self, seconds: u64) -> Self {
+        let ExecutionSummary::Payload { timestamp, .. } = &mut self.record.execution else {
+            panic!("only a payload record carries its timestamp");
+        };
+        *timestamp = seconds;
+        self
+    }
+
+    /// The execution block's timestamp in milliseconds: the attested time a `Tick` reading this
+    /// block's record moves a gate to (a Gloas record's, from its header).
+    pub fn time_ms(&self) -> u64 {
+        match (&self.record.execution, &self.header) {
+            (ExecutionSummary::Payload { timestamp, .. }, _) => timestamp * 1000,
+            (ExecutionSummary::BlockHash(_), Some(header)) => {
+                ferrata_core::exec::decode_header(header).expect("a header").timestamp * 1000
+            }
+            _ => panic!("a record without an execution block"),
+        }
+    }
+
+    /// What a `Tick` or `Freeze` names to read this block's record.
+    pub fn time_record(&self) -> TimeRecord {
+        TimeRecord { record_slot: self.slot, header: self.header.clone() }
     }
 
     /// A block at beacon slot `slot` holding `vaults`, under a record in the Gloas layout: a real
@@ -474,6 +500,13 @@ impl Block {
 // ---------------------------------------------------------------------------------------------
 // The world
 // ---------------------------------------------------------------------------------------------
+
+/// Execution timestamps of the synthetic blocks: block `number` is at `RECORD_TIME_BASE + 12 ×
+/// number` seconds, so blocks 100–102 are 40 minutes behind the world's LEZ clock (a record reaches
+/// LEZ only after its block is final, minutes later).
+pub const RECORD_TIME_BASE: u64 = 1_699_996_400;
+/// How far the world's LEZ clock runs ahead of a record that [`World::finalize`] adds: two epochs.
+pub const FINALITY_LAG_MS: u64 = 2 * 32 * 12 * 1000;
 
 /// The roles and caps of this world's configurations.
 pub fn controls() -> Controls {
@@ -684,6 +717,33 @@ impl World {
             time: 1_700_000_000_000,
             txs: Vec::new(),
         }
+    }
+
+    /// A later finalized block at Ethereum time `seconds` (no vault in its state), its record
+    /// placed as the attestation program writes it, and the world's LEZ clock moved to
+    /// [`FINALITY_LAG_MS`] after it if it was behind. Returns its index in `blocks`.
+    pub fn finalize(&mut self, seconds: u64) -> usize {
+        let index = self.record_at(seconds);
+        self.time = self.time.max(seconds * 1000 + FINALITY_LAG_MS);
+        index
+    }
+
+    /// A record of a later block at Ethereum time `seconds`, the LEZ clock left where it is (a
+    /// record ahead of it is one only a captured sync committee could have had written).
+    pub fn record_at(&mut self, seconds: u64) -> usize {
+        let slot = self.next_slot();
+        let number = 1_000 + self.blocks.len() as u64;
+        self.add_block(Block::new(slot, number, &[]).at(seconds))
+    }
+
+    /// A beacon slot after every recorded one.
+    pub fn next_slot(&self) -> u64 {
+        self.blocks.iter().map(|b| b.slot).max().unwrap_or(9_000_000) + 32
+    }
+
+    /// The newest execution timestamp among the recorded blocks, in seconds.
+    pub fn newest_record_seconds(&self) -> u64 {
+        self.blocks.iter().map(|b| b.time_ms() / 1000).max().expect("a record")
     }
 
     /// Add `block` after genesis: its record placed at `header(INSTANCE, slot)` as the
@@ -922,10 +982,10 @@ impl World {
     }
 
     /// The plaintext `Claim` of `witness` at `root(cid, n)` (the nullifier of `vault`'s deposit),
-    /// with the wallet's range, the world's relayer and time.
+    /// with the wallet's range and the world's relayer.
     pub fn claim(&mut self, label: &str, cid: &Hash, n: u64, vault: &[u8; 20], witness: ClaimWitness) -> TxReport {
         let range = self.range(cid, &witness.token, witness.leaf_index);
-        self.claim_with(label, cid, n, vault, witness, range, Some(*relayer().value()), self.time)
+        self.claim_with(label, cid, n, vault, witness, range, Some(*relayer().value()))
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -938,7 +998,6 @@ impl World {
         witness: ClaimWitness,
         range: ScheduleRange,
         relayer: Option<Hash>,
-        time_ms: u64,
     ) -> TxReport {
         let root = root_actor(self.program, cid, n);
         let n_d = Deposit::of(&witness).nullifier(CHAIN_ID, vault);
@@ -946,16 +1005,16 @@ impl World {
         let mut actors = vec![root];
         actors.extend(self.claim_actors(cid, &witness.token, nullifier, Some(AccountId::new(witness.dest)), relayer));
         let evidence = self.evidence(root, root_seed(cid, n));
-        let message = BridgeMessage::Claim { config_id: *cid, leaf_count: n, witness, range, relayer, time_ms };
+        let message = BridgeMessage::Claim { config_id: *cid, leaf_count: n, witness, range, relayer };
         self.submit(label, root, &message, actors, evidence)
     }
 
-    /// A `ClaimPrivately` of `witness` under `root(cid, n)`, with the wallet's range, the world's
-    /// relayer and time.
+    /// A `ClaimPrivately` of `witness` under `root(cid, n)`, with the wallet's range and the
+    /// world's relayer.
     pub fn claim_privately(&self, cid: &Hash, n: u64, witness: ClaimWitness) -> BridgeMessage {
         let range = self.range(cid, &witness.token, witness.leaf_index);
         let relayer = Some(*relayer().value());
-        BridgeMessage::ClaimPrivately { config_id: *cid, leaf_count: n, witness, range, relayer, time_ms: self.time }
+        BridgeMessage::ClaimPrivately { config_id: *cid, leaf_count: n, witness, range, relayer }
     }
 
     /// The public actors of a private claim of `deposit` (of `vault`) under `root(cid, n)`.
@@ -984,21 +1043,29 @@ impl World {
     }
 
     /// A role message (`Sunset`, `Freeze`, `SetCap`) as a top-level call at the actor of the
-    /// account of `seed`, signed by it, forwarded to `target`.
+    /// account of `seed`, signed by it, forwarded to `target` (a `Freeze` also mentions the record
+    /// it names).
     pub fn role(&mut self, label: &str, seed: u8, message: &BridgeMessage, target: Actor) -> TxReport {
         let root = holder_actor(self.program, role_account(seed));
         let key = role_key(seed);
-        self.submit_signed(label, root, message, vec![root, target], vec![], &[&key])
+        let mut actors = vec![root, target];
+        if let BridgeMessage::Freeze { record, .. } = message {
+            actors.push(header_actor(ferrata_account(), &INSTANCE, record.record_slot));
+        }
+        self.submit_signed(label, root, message, actors, vec![], &[&key])
     }
 
-    /// `Tick` at `config(cid)` or `token(cid, token)` at the world's time.
-    pub fn tick(&mut self, label: &str, cid: &Hash, token: Option<[u8; 20]>) -> TxReport {
+    /// `Tick` at `config(cid)` or `token(cid, token)`, reading the record of block `block`, in a
+    /// block stamped with the world's LEZ time.
+    pub fn tick(&mut self, label: &str, cid: &Hash, token: Option<[u8; 20]>, block: usize) -> TxReport {
         let at = match &token {
             None => config_actor(self.program, cid),
             Some(t) => token_actor(self.program, cid, t),
         };
-        let message = BridgeMessage::Tick { config_id: *cid, token, time_ms: self.time };
-        self.send(label, at, &message, vec![at])
+        let b = &self.blocks[block];
+        let record = header_actor(ferrata_account(), &INSTANCE, b.slot);
+        let message = BridgeMessage::Tick { config_id: *cid, token, record: b.time_record() };
+        self.send(label, at, &message, vec![at, record])
     }
 
     /// Another vault, before any transaction (its address outside `0x40…40`–`0x67…67`, the filler

@@ -9,6 +9,9 @@ publish = false
 [dependencies]
 # The attestation program's interface (`attest::Request`, `Attestation`, `header_actor`, `Message::Attest`).
 ferrata-lez-wire = { path = "../wire" }
+# The light client's record of a finalized header and its execution view (`witness::HeaderRecord`,
+# `attest::HeaderRecord`): the bridge's clock is the execution timestamp of an attested record.
+ferrata-core = { path = "../../crates/ferrata-core", default-features = false }
 # The bridge core (SPEC-v2): commitments, leaves, the claim statement, configId. no_std here.
 ferrata-bridge-core = { path = "../../bridge/crates/ferrata-bridge-core", default-features = false }
 # LEZ v0.4.0-rc1 by path (see ../wire/Cargo.toml).
