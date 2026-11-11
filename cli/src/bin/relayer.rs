@@ -135,7 +135,10 @@ impl Daemon {
         let v = self.r.view(&self.p).await?;
         // 1. The inbox, in name order.
         let mut files: Vec<PathBuf> = match std::fs::read_dir(inbox) {
-            Ok(dir) => dir.filter_map(|e| e.ok().map(|e| e.path())).filter(|p| p.extension().is_some_and(|x| x == "json")).collect(),
+            Ok(dir) => dir
+                .filter_map(|e| e.ok().map(|e| e.path()))
+                .filter(|p| p.extension().is_some_and(|x| x == "json"))
+                .collect(),
             Err(_) => Vec::new(),
         };
         files.sort();
@@ -168,13 +171,17 @@ impl Daemon {
         }
         // 3. Fees credited to this relayer (checkpoint fees always; a relay fee whose push failed).
         for token in self.tokens.clone() {
-            let owed = eth::view(&self.p, self.r.vault, IRelayVault::owedCall { payee: self.r.me, token }, None).await?;
+            let owed =
+                eth::view(&self.p, self.r.vault, IRelayVault::owedCall { payee: self.r.me, token }, None).await?;
             if owed.is_zero() {
                 continue;
             }
             let input: Bytes = IRelayVault::claimOwedCall { token }.abi_encode().into();
             match self.r.submit(&self.p, input).await {
-                Ok(rc) => log("fees-collected", json!({ "token": token, "amount": owed.to_string(), "tx": rc.transaction_hash })),
+                Ok(rc) => log(
+                    "fees-collected",
+                    json!({ "token": token, "amount": owed.to_string(), "tx": rc.transaction_hash }),
+                ),
                 Err(e) => log("fees-refused", json!({ "token": token, "reason": format!("{e:#}") })),
             }
         }
@@ -187,7 +194,12 @@ impl Daemon {
             let live = self.r.candidates(&self.p, self.from_block).await?;
             let path = self.state.join("needs-checkpoint.json");
             if burns > covered && live.is_empty() {
-                std::fs::write(&path, serde_json::to_vec_pretty(&json!({ "burns": burns, "accepted": covered, "finalState": v.final_state }))?)?;
+                std::fs::write(
+                    &path,
+                    serde_json::to_vec_pretty(
+                        &json!({ "burns": burns, "accepted": covered, "finalState": v.final_state }),
+                    )?,
+                )?;
                 log("checkpoint-needed", json!({ "burns": burns, "accepted": covered }));
             } else if path.exists() {
                 std::fs::remove_file(&path)?;
@@ -200,7 +212,8 @@ impl Daemon {
         let job: Job = serde_json::from_slice(&std::fs::read(file)?).context("not a relayer job")?;
         match job {
             Job::Release { journal, seal } => {
-                let (req, input) = self.r.plan_release(&self.p, v, &relayer::unhex(&journal)?, relayer::unhex(&seal)?.into()).await?;
+                let (req, input) =
+                    self.r.plan_release(&self.p, v, &relayer::unhex(&journal)?, relayer::unhex(&seal)?.into()).await?;
                 let rc = self.r.submit(&self.p, input).await?;
                 self.tokens.insert(req.token);
                 let paid = relayer::relay_fee_paid(&rc, self.r.me);
@@ -215,11 +228,17 @@ impl Daemon {
                 let input = self.r.plan_candidate(&self.p, v, &journal, relayer::unhex(&seal)?.into()).await?;
                 let rc = self.r.submit(&self.p, input).await?;
                 let c = relayer::checkpoint_from_journal(&journal)?.checkpoint;
-                Ok(json!({ "kind": "candidate", "newState": c.newState, "burnRoot": c.burnRoot, "burnCount": c.burnCount, "tx": rc.transaction_hash, "gasUsed": rc.gas_used }))
+                Ok(
+                    json!({ "kind": "candidate", "newState": c.newState, "burnRoot": c.burnRoot, "burnCount": c.burnCount, "tx": rc.transaction_hash, "gasUsed": rc.gas_used }),
+                )
             }
             Job::GasDrop { receipt } => {
-                let (Some((seq, ctx)), Some(image_id), Some(me)) = (self.zone.as_mut(), self.gasdrop_image_id, self.lez_me) else {
-                    bail!("refused: this relayer runs no gas drops (no --sequencer, --gasdrop-image-id or --lez-account)");
+                let (Some((seq, ctx)), Some(image_id), Some(me)) =
+                    (self.zone.as_mut(), self.gasdrop_image_id, self.lez_me)
+                else {
+                    bail!(
+                        "refused: this relayer runs no gas drops (no --sequencer, --gasdrop-image-id or --lez-account)"
+                    );
                 };
                 let history = lez::history_of(&*seq, ctx).await?;
                 let list = eth::deposit_list(&self.p, self.r.vault, self.from_block, 10_000).await?;
@@ -231,8 +250,20 @@ impl Daemon {
                 let mut book = DropBook::load(&book_path)?;
                 let ctx2 = ctx.clone();
                 let claimed = |n: &[u8; 32]| lez::is_claimed(&ctx2, &history, n);
-                let (j, tx) = relayer::gas_drop(&serde_json::to_vec(&receipt)?, &dctx, claimed, &mut book, &book_path, seq, self.drop_amount, v.now).await?;
-                Ok(json!({ "kind": "gas-drop", "nullifier": hx(&j.nullifier), "oneTimeAddress": hx(&j.one_time_address), "amount": self.drop_amount.to_string(), "tx": tx }))
+                let (j, tx) = relayer::gas_drop(
+                    &serde_json::to_vec(&receipt)?,
+                    &dctx,
+                    claimed,
+                    &mut book,
+                    &book_path,
+                    seq,
+                    self.drop_amount,
+                    v.now,
+                )
+                .await?;
+                Ok(
+                    json!({ "kind": "gas-drop", "nullifier": hx(&j.nullifier), "oneTimeAddress": hx(&j.one_time_address), "amount": self.drop_amount.to_string(), "tx": tx }),
+                )
             }
         }
     }
@@ -269,10 +300,17 @@ async fn main() -> Result<()> {
 
     let zone = match &cli.sequencer {
         Some(rpc) => {
-            let need = |o: &Option<PathBuf>, f: &str| o.clone().ok_or_else(|| anyhow!("{f} is required with --sequencer"));
+            let need =
+                |o: &Option<PathBuf>, f: &str| o.clone().ok_or_else(|| anyhow!("{f} is required with --sequencer"));
             let seed = Seed::from_file(&need(&cli.seed, "--seed")?)?;
-            let wallet = lez::open_wallet(&need(&cli.lez_wallet, "--lez-wallet")?, rpc, &need(&cli.lez_password_file, "--lez-password-file")?, &seed)?;
-            let program = account(cli.bridge_account.as_deref().ok_or_else(|| anyhow!("--bridge-account is required"))?)?;
+            let wallet = lez::open_wallet(
+                &need(&cli.lez_wallet, "--lez-wallet")?,
+                rpc,
+                &need(&cli.lez_password_file, "--lez-password-file")?,
+                &seed,
+            )?;
+            let program =
+                account(cli.bridge_account.as_deref().ok_or_else(|| anyhow!("--bridge-account is required"))?)?;
             let payer = cli.lez_account.as_deref().map(account).transpose()?;
             let ctx = Context { program, cid: v.cid.0, chain_id: v.chain_id, vault: vault.into_array() };
             Some((Sequencer { wallet, payer, bridge_program: None }, ctx))
@@ -290,7 +328,10 @@ async fn main() -> Result<()> {
         drop_amount: cli.drop_amount,
         tokens: [Address::ZERO].into_iter().collect(),
     };
-    log("start", json!({ "vault": vault, "relayer": me, "chainId": v.chain_id, "configId": v.cid, "finalState": v.final_state, "gasDrops": d.zone.is_some() }));
+    log(
+        "start",
+        json!({ "vault": vault, "relayer": me, "chainId": v.chain_id, "configId": v.cid, "finalState": v.final_state, "gasDrops": d.zone.is_some() }),
+    );
 
     match cli.command {
         Command::Status => {

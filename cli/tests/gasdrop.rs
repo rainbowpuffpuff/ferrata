@@ -48,7 +48,10 @@ async fn one_drop_per_n_on_a_real_receipt() -> Result<()> {
     assert_eq!(relayer::check_gas_drop(&receipt, &other, |_| false, &book).unwrap_err(), DropRefusal::OtherRelayer);
     // Another configuration, a root LEZ has not imported, a claimed deposit.
     let other = DropContext { vault: [0x22; 20], ..DropContext { imported_roots: &roots, ..ctx } };
-    assert_eq!(relayer::check_gas_drop(&receipt, &other, |_| false, &book).unwrap_err(), DropRefusal::OtherConfiguration);
+    assert_eq!(
+        relayer::check_gas_drop(&receipt, &other, |_| false, &book).unwrap_err(),
+        DropRefusal::OtherConfiguration
+    );
     let none = HashSet::new();
     let other = DropContext { imported_roots: &none, ..ctx };
     assert_eq!(relayer::check_gas_drop(&receipt, &other, |_| false, &book).unwrap_err(), DropRefusal::RootNotImported);

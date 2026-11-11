@@ -27,6 +27,7 @@ use ferrata_bridge_core::checkpoint::{burn_frontier_hash, key_set_hash, LezState
 use ferrata_bridge_core::encoding::{
     claim_journal, config_id_preimage, u256_from_u128, ClaimInput, ConfigIdentity, ReleaseInput, ReleaseJournal,
 };
+use ferrata_bridge_core::gasdrop::{verify_gas_drop, GasDropInput};
 use ferrata_bridge_core::inbound::{self, ClaimWitness, DestKind};
 use ferrata_bridge_core::outbound::{
     burn_commitment, burn_leaf, recover_burns, release_journal, verify_release, BurnNote, PublishedBurn, ReleasePublic,
@@ -34,7 +35,6 @@ use ferrata_bridge_core::outbound::{
 };
 use ferrata_bridge_core::tree::{root_from_path, IncrementalTree, MerklePath, Tree};
 use ferrata_bridge_core::{chain_id_u256, sha256, Address, BridgeKeys, Hash, U256};
-use ferrata_bridge_core::gasdrop::{verify_gas_drop, GasDropInput};
 use methods::{CLAIM_ELF, CLAIM_ID, GASDROP_ELF, GASDROP_ID, RELEASE_ELF, RELEASE_ID};
 use risc0_zkvm::{
     default_executor, default_prover, ApiClient, Asset, AssetRequest, Bytes, Digest, ExecutorEnv,
@@ -756,7 +756,9 @@ fn cmd_gasdrop(n: u64, prove: bool) -> Result<()> {
     bad.claim.witness.s[0] ^= 1;
     match default_executor().execute(env_with(&bad.encode())?, GASDROP_ELF) {
         Ok(info) => bail!("bad witness executed with exit {:?}", info.exit_code),
-        Err(e) => println!("[gasdrop bad s] execution fails as it must: {}", e.to_string().lines().next().unwrap_or("")),
+        Err(e) => {
+            println!("[gasdrop bad s] execution fails as it must: {}", e.to_string().lines().next().unwrap_or(""))
+        }
     }
     if prove {
         refuse_dev_mode()?;

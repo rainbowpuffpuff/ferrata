@@ -492,7 +492,10 @@ pub async fn gas_drop<C: Credit>(
 ) -> Result<(GasDropJournal, String)> {
     let j = check_gas_drop(receipt_json, ctx, claimed, book).map_err(|r| anyhow!("{r}"))?;
     let tx = credit.credit(j.one_time_address, amount).await?;
-    book.record(&j.nullifier, DropRecord { one_time_address: hx(&j.one_time_address), amount, at: now, tx: tx.clone() });
+    book.record(
+        &j.nullifier,
+        DropRecord { one_time_address: hx(&j.one_time_address), amount, at: now, tx: tx.clone() },
+    );
     book.save(book_path)?;
     Ok((j, tx))
 }

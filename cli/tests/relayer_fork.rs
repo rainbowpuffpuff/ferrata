@@ -36,7 +36,8 @@ const MALLORY: Address = address!("00000000000000000000000000000000000bad01");
 const SUBMIT_BLOCK: u64 = 0xb8cf82;
 /// Public endpoints that served Sepolia's state at the fork block on 11 Nov 2026 (probed with
 /// eth_getStorageAt; publicnode and drpc's free plan did not).
-const ENDPOINTS: [&str; 3] = ["https://rpc.sepolia.ethpandaops.io", "https://1rpc.io/sepolia", "https://sepolia.rpc.thirdweb.com"];
+const ENDPOINTS: [&str; 3] =
+    ["https://rpc.sepolia.ethpandaops.io", "https://1rpc.io/sepolia", "https://sepolia.rpc.thirdweb.com"];
 
 struct Anvil(Child);
 impl Drop for Anvil {
@@ -74,8 +75,16 @@ fn daemon(url: &str, state: &Path, inbox: &Path, from: Address, extra: &[&str]) 
     let from_block = (SUBMIT_BLOCK - 1).to_string();
     let from_s = from.to_string();
     let mut args = vec![
-        "--eth-rpc", url, "--vault", "0xfe3199fa2634413cbac317371076cae3eb2d9e54", "--chain-id", "11155111",
-        "--from-block", &from_block, "--unlocked", &from_s,
+        "--eth-rpc",
+        url,
+        "--vault",
+        "0xfe3199fa2634413cbac317371076cae3eb2d9e54",
+        "--chain-id",
+        "11155111",
+        "--from-block",
+        &from_block,
+        "--unlocked",
+        &from_s,
     ];
     let state_s = state.display().to_string();
     let inbox_s = inbox.display().to_string();
@@ -130,7 +139,11 @@ async fn relayer_on_a_sepolia_fork_with_crown_live_1_proofs() -> Result<()> {
                 chosen = Some(e.clone());
                 break;
             }
-            (s, b) => println!("endpoint {e}: no state at {fork_block} ({:?} / {:?})", s.err().map(|x| x.to_string()), b.err().map(|x| x.to_string())),
+            (s, b) => println!(
+                "endpoint {e}: no state at {fork_block} ({:?} / {:?})",
+                s.err().map(|x| x.to_string()),
+                b.err().map(|x| x.to_string())
+            ),
         }
     }
     let fork_url = chosen.context("no endpoint serves Sepolia state at the fork block")?;
@@ -231,9 +244,13 @@ async fn relayer_on_a_sepolia_fork_with_crown_live_1_proofs() -> Result<()> {
     let view = v.view(&p).await?;
     let (req0, _) = v.plan_release(&p, &view, &relayer::unhex(j0)?, relayer::unhex(s0)?.into()).await?;
     let fee_now = eth::view(&p, VAULT, IVault::feeStateCall { token: req0.token }, None).await?;
-    let fees =
-        eth::view(&p, VAULT, IVault::feesCall { token: req0.token, index: U256::from(fee_now.current), denomIndex: 0 }, None)
-            .await?;
+    let fees = eth::view(
+        &p,
+        VAULT,
+        IVault::feesCall { token: req0.token, index: U256::from(fee_now.current), denomIndex: 0 },
+        None,
+    )
+    .await?;
     let mut tampered = Vec::new();
     for (what, mut r) in [
         ("relayer and fee redirected to the misbehaving relayer", req0.clone()),

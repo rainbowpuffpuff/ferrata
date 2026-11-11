@@ -524,21 +524,32 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         };
         let elf = std::fs::read(&elf_path).with_context(|| elf_path.clone())?;
         let image = risc0_zkvm::compute_image_id(&elf).map_err(|e| anyhow!("{e}"))?;
-        let env = risc0_zkvm::ExecutorEnv::builder().write_slice(&input.encode()).build().map_err(|e| anyhow!("{e}"))?;
+        let env =
+            risc0_zkvm::ExecutorEnv::builder().write_slice(&input.encode()).build().map_err(|e| anyhow!("{e}"))?;
         // The zone's guests run in dev mode; this receipt is a real one.
         std::env::remove_var("RISC0_DEV_MODE");
         let started = std::time::Instant::now();
         let proven = risc0_zkvm::default_prover().prove_with_opts(env, &elf, &risc0_zkvm::ProverOpts::succinct());
         std::env::set_var("RISC0_DEV_MODE", "1");
         let info = proven.map_err(|e| anyhow!("r0vm: {e}"))?;
-        println!("gas-drop receipt: real succinct proof in {:.1} s ({} user cycles)", started.elapsed().as_secs_f64(), info.stats.user_cycles);
+        println!(
+            "gas-drop receipt: real succinct proof in {:.1} s ({} user cycles)",
+            started.elapsed().as_secs_f64(),
+            info.stats.user_cycles
+        );
         let receipt_json = serde_json::to_vec(&info.receipt)?;
         let history = lez::history_of(&zone, &ctx).await?;
         let roots: &'static HashSet<Hash> = Box::leak(Box::new(rl::imported_roots(&list.deposits, &history.roots)?));
         ensure!(roots.contains(&tree.root()), "the receipt's root is the zone's imported root");
         let mut image_id = [0u8; 32];
         image_id.copy_from_slice(image.as_bytes());
-        let dctx = DropContext { image_id, me: relayer_lez, chain_id: word(1), vault: vault.into_array(), imported_roots: roots };
+        let dctx = DropContext {
+            image_id,
+            me: relayer_lez,
+            chain_id: word(1),
+            vault: vault.into_array(),
+            imported_roots: roots,
+        };
         let book_path = dir.join("relayer-drops.json");
         let _ = std::fs::remove_file(&book_path);
         let mut book = DropBook::load(&book_path)?;
@@ -546,16 +557,23 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         let claimed = |n: &Hash| lez::is_claimed(&ctx, &history, n);
         let replay = rl::check_gas_drop(&receipt_json, &DropContext { me: [0x77; 32], ..dctx }, claimed, &book);
         ensure!(replay == Err(DropRefusal::OtherRelayer), "a receipt replayed to another relayer: {replay:?}");
-        let (j, tx) = rl::gas_drop(&receipt_json, &dctx, claimed, &mut book, &book_path, &mut credits, 1_000_000, 0).await?;
+        let (j, tx) =
+            rl::gas_drop(&receipt_json, &dctx, claimed, &mut book, &book_path, &mut credits, 1_000_000, 0).await?;
         ensure!(j.nullifier == big.owned.nullifier, "the receipt's N is leaf 0's");
-        let second = rl::gas_drop(&receipt_json, &dctx, claimed, &mut book, &book_path, &mut credits, 1_000_000, 1).await;
+        let second =
+            rl::gas_drop(&receipt_json, &dctx, claimed, &mut book, &book_path, &mut credits, 1_000_000, 1).await;
         ensure!(second.is_err() && credits.0.len() == 1, "one drop per N");
-        println!("GAS DROP: N {} -> one-time address {} ({tx}); replay to another relayer and a second drop refused", hx(&j.nullifier), hx(&j.one_time_address));
+        println!(
+            "GAS DROP: N {} -> one-time address {} ({tx}); replay to another relayer and a second drop refused",
+            hx(&j.nullifier),
+            hx(&j.one_time_address)
+        );
         gas_drop = Some((receipt_json, dctx, relayer_lez));
     }
 
     // Claim leaf 0 (plaintext: a public destination, no proof).
-    let plan = lez::plan_claim(&zone, &ctx, &leaves, &big.owned, &history, false, gas_drop.as_ref().map(|g| g.2)).await?;
+    let plan =
+        lez::plan_claim(&zone, &ctx, &leaves, &big.owned, &history, false, gas_drop.as_ref().map(|g| g.2)).await?;
     let sent = zone.submit(&plan.call).await?;
     println!("claim: {sent}; N {}", hx(&plan.nullifier));
     let holder = AccountId::new(big.owned.dest);
@@ -563,9 +581,14 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     if let Some((receipt_json, dctx, relayer_lez)) = &gas_drop {
         use ferrata_cli::relayer::{self as rl, DropBook, DropRefusal};
         let fee = zone.world.balance(AccountId::new(*relayer_lez), &cid);
-        ensure!(fee == plan.relay_fee && fee > 0, "the claim minted the relay fee to the relayer: {fee} of {}", plan.relay_fee);
+        ensure!(
+            fee == plan.relay_fee && fee > 0,
+            "the claim minted the relay fee to the relayer: {fee} of {}",
+            plan.relay_fee
+        );
         let history = lez::history_of(&zone, &ctx).await?;
-        let after = rl::check_gas_drop(receipt_json, dctx, |n| lez::is_claimed(&ctx, &history, n), &DropBook::default());
+        let after =
+            rl::check_gas_drop(receipt_json, dctx, |n| lez::is_claimed(&ctx, &history, n), &DropBook::default());
         ensure!(after == Err(DropRefusal::AlreadyClaimed), "a relayer with no record refuses a claimed N: {after:?}");
         println!("GAS DROP: the claim named the relayer, minted it the relay fee {fee}; afterwards any relayer refuses the receipt (claimed)");
     }
@@ -734,26 +757,47 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         use ferrata_cli::relayer::{self as rl, Relayer};
         let relayer_eth = keystores[1].1;
         let fee = eth::deposit_price(&p, vault, eth::ETH, 0).await?.relay_fee;
-        let plan1 = release::plan(&ctx, &history, &burn_rows[1].owned, root_b.0, count, 0, relayer_eth.into_array(), fee)?;
+        let plan1 =
+            release::plan(&ctx, &history, &burn_rows[1].owned, root_b.0, count, 0, relayer_eth.into_array(), fee)?;
         let verifier: Address = std::env::var("FERRATA_E2E_VERIFIER")?.parse()?;
-        anvil_send(&p, verifier, IMock::acceptCall { imageId: release_image, journalDigest: B256::from(sha256(&plan1.journal)) }.abi_encode(), U256::ZERO).await?;
+        anvil_send(
+            &p,
+            verifier,
+            IMock::acceptCall { imageId: release_image, journalDigest: B256::from(sha256(&plan1.journal)) }
+                .abi_encode(),
+            U256::ZERO,
+        )
+        .await?;
         let sp = eth::signing_provider(&rpc, eth::keystore_signer(other_ks, &password)?)?;
         let r = Relayer { vault, me: relayer_eth, accept_unpaid: false };
         let view = r.view(&sp).await?;
         let (req, input) = r.plan_release(&sp, &view, &plan1.journal, Bytes::from(SEAL.to_vec())).await?;
         let mut redirected = req.clone();
         redirected.recipient = relayer_eth;
-        let refused = eth::send(&sp, relayer_eth, vault, eth::release_calldata(redirected, Bytes::from(SEAL.to_vec())), U256::ZERO, 1)
-            .await
-            .expect_err("a redirected release");
+        let refused = eth::send(
+            &sp,
+            relayer_eth,
+            vault,
+            eth::release_calldata(redirected, Bytes::from(SEAL.to_vec())),
+            U256::ZERO,
+            1,
+        )
+        .await
+        .expect_err("a redirected release");
         let other = Relayer { vault, me: ANVIL0, accept_unpaid: false };
-        let not_ours = other.plan_release(&p, &view, &plan1.journal, Bytes::from(SEAL.to_vec())).await.expect_err("another relayer's");
+        let not_ours = other
+            .plan_release(&p, &view, &plan1.journal, Bytes::from(SEAL.to_vec()))
+            .await
+            .expect_err("another relayer's");
         let before = p.get_balance(relayer_eth).await?;
         let rc = r.submit(&sp, input).await?;
         let (_, paid) = rl::relay_fee_paid(&rc, relayer_eth).context("a Release paying the relayer")?;
         let gas = U256::from(rc.gas_used) * U256::from(rc.effective_gas_price);
         let gained = p.get_balance(relayer_eth).await? + gas - before;
-        ensure!(fee > 0 && paid == U256::from(fee) && gained == U256::from(fee), "the relayer was paid {gained}, the fee is {fee}");
+        ensure!(
+            fee > 0 && paid == U256::from(fee) && gained == U256::from(fee),
+            "the relayer was paid {gained}, the fee is {fee}"
+        );
         println!("RELAYER: burn 1 released by the relayer ({} gas), relay fee {fee} wei paid to it; redirected recipient refused: {refused}; another relayer: {not_ours}", rc.gas_used);
     }
     Ok(())
