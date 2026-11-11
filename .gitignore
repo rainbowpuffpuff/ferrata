@@ -77,3 +77,7 @@ __pycache__/
 /gpu-prover/inputs-lez-bridge/prove_bridge
 # forge's dry runs of the gas check name local paths
 /e2e/runs/*/gas/*.forge.log
+/vault/deployments/crown-*
+/e2e/runs/crown-*/logs/
+/e2e/runs/crown-*/anvil.log
+/e2e/runs/crown-*/verifier.log
