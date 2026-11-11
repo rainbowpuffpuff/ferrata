@@ -1,0 +1,4 @@
+static: 186 blocks (1..=186), chain links hold; 176 block hashes recomputed, 10 blocks hold elided program bytecode; 185 manifest rows: 185 included at the recorded block and position with the recorded revert flag (185 alone in their block: gas and fee equal the totals in the block's fee transaction), 0 not included
+binary ferrata_lez.bin: image 650e3c907c6a16aacf64506e96935cec0711763ffe3fa514a4e5926f14d42e4c, sha256 f99871e715f63a206bd17720b01373a0fc865d7e803be04e9b19e7a0aa4e82bb
+binary ferrata_bridge.bin: image 66722fc7681beaeaacdfce978ae95ba9ba9f2b576b87791d523d6cd10815f4fa, sha256 aff2205a55c6f496881019f8f25b8d754d2c83d623e86abcad504c7f2969605d
+full replay: program bytecode restored (10 chunks), every block hash holds; 186 blocks applied by LEZ's chain_state from the pre-genesis state; 185 manifest rows equal what LEZ's settlement charges; 2 program image(s) as recorded

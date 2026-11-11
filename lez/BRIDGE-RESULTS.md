@@ -480,7 +480,7 @@ On the integration worktree they ran through `../../modal-build/mrun` (a cloud c
 with `--locked` and `RISC0_BUILD_LOCKED=1`: the whole harness (35 tests) in 290 s, `prove_bridge`'s
 dry run (claim and burn settled with fake receipts), rustfmt and clippy (`-D warnings`) clean.
 
-## 11. On a live sequencer: the inbound crossing (stand-in)
+## 11. On a live sequencer: the inbound crossing (stand-in, then Sepolia)
 
 [`live/inbound/README.md`](live/inbound/README.md): the same operations on a running LEZ
 v0.4.0-rc1 sequencer and Logos Blockchain node (the Modal build box, 10 Nov 2026), on a stand-in
@@ -493,5 +493,13 @@ each); the plaintext claim (142,432), its replay and the same deposit under the 
 real proof made by LEZ's wallet on the box's CPU in 254.8 s, 252,185 bytes, 439,815 execution gas
 and 224,063 storage gas, included by the sequencer, which verifies receipts. Measured (the
 sequencer's own charges, re-checked by replaying the recorded chain through LEZ's `chain_state`).
-The session on public Sepolia waits for the deposits into the new vault.
+On public Sepolia (11 Nov 2026, [`live/inbound/README.md`](live/inbound/README.md) "The real
+session"): deposit 0 into the live vault `0xd0B5fcC0B47D8E6f514f9D246Bb0b416b2048AF7` (creation tx
+`0x0a5c3a64…9f12`, deposit tx `0xf3235de7…89a0`), captured after its finality, claimed on the same
+kind of zone: the instance from the period-1378 bootstrap through Gloas (32 period updates, 160
+transactions) to finalized slot 11551744 (block 12107997); `Init` on `configId` `a2e880cb…d3b8` (=
+the vault's `storedLezConfigId`, 355,935 execution gas) after the refusal without the header (215);
+`ImportRoot` n = 1 (426,479); a leaf index at the count refused (248), another destination refused
+(249), the plaintext claim to LEZ's public test account 0 (142,432), its replay refused (250). 186
+blocks, re-checked by the full replay. Deposit 1 (private kind, real proof) waits for capture 2.
 

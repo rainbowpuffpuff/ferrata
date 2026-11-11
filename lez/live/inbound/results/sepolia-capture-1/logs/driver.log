@@ -1,0 +1,232 @@
+sequencer http://127.0.0.1:3040: head block 1, followed to block 0 (the last one final on Bedrock)
+fee state at height 1: base fee exec 8 / stor 8; block caps exec 10000000 / stor 1000000
+LEZ constants: wallet default gas limit 2000000, TARGET_GAS_EXEC 5000000, MAX_GAS_EXEC 10000000, TARGET_GAS_STOR 500000, MAX_GAS_STOR 1000000, PRIVATE_VERIFY_GAS 409764, PRIVATE_GAS_STOR 224063
+program: image 650e3c907c6a16aacf64506e96935cec0711763ffe3fa514a4e5926f14d42e4c, 602920 bytes (sha256 f99871e715f63a206bd17720b01373a0fc865d7e803be04e9b19e7a0aa4e82bb), user ELF 570496 bytes in 6 segment(s)
+scripted: image 4b597adb3f1a43db85829c411a987234cc84584d8bcd947f0774b852adf0da2b, 268468 bytes (sha256 94b0f2ab3a87406f9e684fdf4a64b1c9f2c35f1b24e0bb9132097840b42755a5), user ELF 236044 bytes in 3 segment(s)
+deployments: main CXnzhRVkXzwZaDFcvchMvz28iVTy9f8tmesDGpLcGSs, twin DVcubqr9iDMUwCPdL5sDo5WXLkLFB2dgnc2vdi5bsd57, scripted FeoLrnY94gX4NJQ8duSL11vmFM2r5zGkhiQgJasMKY3K
+payer 0: 6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV holds 10000000000000
+payer 1: 7wHg9sbJwc6h3NP1S9bekfAzB8CHifEcxKswCKUt3YQo holds 20000000000000
+payer 2: CbgR6tj5kWx5oziiFptM7jMvrQeYY3Mzaao6ciuhSr2r holds 10000000000000
+payer 3: 2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2 holds 20000000000000
+harness tables: 55 rows from ../ferrata-wt-inbound/lez/results
+Transaction hash is 3dbb64d73639242f265fc9a7f7136bb9df5780ac85ba719f38043dd735156bdb
+Transaction is included in block 2
+Transaction hash is eb0c705c233da713c09587e5794db1fede4b022c3be3092994549baed91363ab
+Transaction is included in block 3
+Transaction hash is 67e64cc4997677e98d9c6f6ae6a4e504d189afc3e7542fa08c5c0e43d26de537
+Transaction is included in block 4
+Transaction hash is f14f501ac761a24e1b9a55eaa0721a26055accbe8468499da36ad6228c2dda33
+Transaction is included in block 5
+Transaction hash is 0ab3a708125d73a1012aef5a48bc961a4b4cd54d0ef6bab8770d7f11b2e7e1dc
+Transaction is included in block 6
+Transaction hash is 034e769ea6222de6af885a51fa92f38276bd8ca9919e70c62a0aaa22705ec1a3
+Transaction is included in block 7
+Transaction hash is 3a1d13442f0dd54293358f3595cb3ec5c8d451f00ecfd9546b147857038085c2
+Transaction is included in block 8
+[inbound-deploy] deploy attest: WriteSegment 6 of 6 (78976 bytes)           applied   gas         0 +   79556 bytes, block    2
+[inbound-deploy] deploy attest: WriteSegment 5 of 6 (98304 bytes)           applied   gas         0 +   98916 bytes, block    3
+[inbound-deploy] deploy attest: WriteSegment 4 of 6 (98304 bytes)           applied   gas         0 +   98916 bytes, block    4
+[inbound-deploy] deploy attest: WriteSegment 3 of 6 (98304 bytes)           applied   gas         0 +   98916 bytes, block    5
+[inbound-deploy] deploy attest: WriteSegment 2 of 6 (98304 bytes)           applied   gas         0 +   98916 bytes, block    6
+[inbound-deploy] deploy attest: WriteSegment 1 of 6 (98304 bytes)           applied   gas         0 +   98916 bytes, block    7
+[inbound-deploy] deploy attest: CreateHeader (immutable) at A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX applied   gas         0 +     608 bytes, block    8
+[deploy] attest: image 650e3c907c6a16aacf64506e96935cec0711763ffe3fa514a4e5926f14d42e4c at A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX (computed by the sequencer's loader), immutable
+Transaction hash is 2ec47acc2c42cdb04e4d10933e92cb70b01a05975662a8ea8a5c8f3ce6ca2ebd
+Transaction is included in block 9
+Transaction hash is 41b4103fe4958ed7c582aefee021416a0b875eaedecb92569a75f62449292ad9
+Transaction is included in block 10
+Transaction hash is effeab2e174688ccafdce50df42c84caf2c2efdeb858ea3444f6155adc66b7f8
+Transaction is included in block 11
+Transaction hash is ab46a25c158979ef7ff1e068086edac21e5d4fc86ef81a430cd26eb9c799e434
+Transaction is included in block 12
+Transaction hash is adc2f87500c4cbc15f3da01ad5a2d040d8bdb7a110d340ac1da84ff2f86c01c5
+Transaction is included in block 13
+[inbound-deploy] deploy bridge: WriteSegment 4 of 4 (65900 bytes)           applied   gas         0 +   66480 bytes, block    9
+[inbound-deploy] deploy bridge: WriteSegment 3 of 4 (98304 bytes)           applied   gas         0 +   98916 bytes, block   10
+[inbound-deploy] deploy bridge: WriteSegment 2 of 4 (98304 bytes)           applied   gas         0 +   98916 bytes, block   11
+[inbound-deploy] deploy bridge: WriteSegment 1 of 4 (98304 bytes)           applied   gas         0 +   98916 bytes, block   12
+[inbound-deploy] deploy bridge: CreateHeader (immutable) at AfrE4T3U17eZYUH3KMGDgeE6A4jnpDGum151T3VtddCp applied   gas         0 +     608 bytes, block   13
+[deploy] bridge: image 66722fc7681beaeaacdfce978ae95ba9ba9f2b576b87791d523d6cd10815f4fa at AfrE4T3U17eZYUH3KMGDgeE6A4jnpDGum151T3VtddCp (computed by the sequencer's loader), immutable
+[inbound] sepolia chain: instance 6d65e4ef2af67eed1ce3a5c2d7b04fa02517707d2dff044869389f310b69f6b4 of the attestation program at A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX; bridge at AfrE4T3U17eZYUH3KMGDgeE6A4jnpDGum151T3VtddCp (image 66722fc7681beaeaacdfce978ae95ba9ba9f2b576b87791d523d6cd10815f4fa); vault 0xd0b5fcc0b47d8e6f514f9d246bb0b416b2048af7; configId 0xa2e880cb8da77b08dad9833be7a4c9aa08dd856f4648da5486937c798611d3b8
+[inbound] sepolia Init Init                                          applied        gas    208995 block   14 +  9.9s b19dfb9e9cae39d0beee9227814e1b52ba54d565bc63dcd15141418db9916731
+[inbound] sepolia Init adopt 1/2                                     applied        gas   3399050 block   15 + 10.0s 5722970cca4cdd6bd0c9e790d0c0f488f7b5f2c61cc07a3003cdfcbffabdb22d
+[inbound] sepolia Init adopt 2/2                                     applied        gas   3482647 block   16 + 11.5s 51c07a5515ed0f62a297f31d10063c2cabe14987f5a81b0c8e6a15d8c3526a80
+[inbound] period 1378 Open (step 1)                                  applied        gas   2154717 block   17 +  8.8s f159d0abf4ed43141a1b040d7382f75e8352eb23b15a6cd7ac53e16c7fe85d14
+[inbound] period 1378 Miller (step 2)                                applied        gas   3313287 block   18 +  9.8s 61d53ca979314a2157470f480886a8ece16893fd8b8292ce9174cf6c6ec29e5f
+[inbound] period 1378 adopt 1/2                                      applied        gas   3410904 block   19 +  9.9s 5f9bd9a84ef21cdf7384e4099d5d65667560f05cdd4934060a667c09a3e23780
+[inbound] period 1378 adopt 2/2                                      applied        gas   3418098 block   20 + 10.1s 7ea84636072f3b33c96f260f0228978563fb456018a9a77c7b0352022c701aab
+[inbound] period 1378 Finish (step 3)                                applied        gas   3731712 block   21 + 11.5s ec88a0b209175887f49ee35013214268fd6ac90d1eb39d5deb95597ac3862e33
+[inbound] period 1379 Open (step 1)                                  applied        gas   2013730 block   22 +  8.6s 92ee9b931859d6e3bc76c449c7112f371dc2f8b25c474b718ac932866313b59d
+[inbound] period 1379 Miller (step 2)                                applied        gas   3310385 block   23 +  9.9s 9660b5242c24a3aec900e93e32f9e6af569c3eecf05e5d9654755a1ba1edcb42
+[inbound] period 1379 adopt 1/2                                      applied        gas   3408020 block   24 +  9.9s 8f3d6470bbb490afb89f6874b1440aa1cf24dfd7b6a1b1f900dac7ac24d35157
+[inbound] period 1379 adopt 2/2                                      applied        gas   3415212 block   25 + 10.0s 1520a102ba70d5902034214b046c39003b20f941dc4467eab60597e962420d4d
+[inbound] period 1379 Finish (step 3)                                applied        gas   3731686 block   26 + 11.6s c10a22bdc52e75e6d543968fa7814d31ad638d9f195489a9d9ab39e7f371bc5d
+[inbound] period 1380 Open (step 1)                                  applied        gas   2013742 block   27 +  8.6s 7915aae063cb765441598f95576e1b3dec54c5387f701fa39d1616ff8e2d0052
+[inbound] period 1380 Miller (step 2)                                applied        gas   3310385 block   28 +  9.8s edc0f061557c7ae4fb1c49efcd820039b5ef4a4ebb2fcef89aa9192182d62180
+[inbound] period 1380 adopt 1/2                                      applied        gas   3408020 block   29 +  9.9s e7cbc3305b951501e0b390243d4570ae88542118bbd8222c419272e0bd5b752e
+[inbound] period 1380 adopt 2/2                                      applied        gas   3415212 block   30 + 10.1s 74ad8ca37f0552ef109923a4f20242df25be8c78f86cbab23b7d774c8e4149be
+[inbound] period 1380 Finish (step 3)                                applied        gas   3728633 block   31 + 11.4s ccfc89267cba4cf71d543ef4a62e3dbf312134908c126e4142b1a1de21606732
+[inbound] period 1381 Open (step 1)                                  applied        gas   2013617 block   32 +  8.6s 2f7d42071f2542c81d0e91f6df9cf677db8a4850878823e0b68ea24cce3d0e7a
+[inbound] period 1381 Miller (step 2)                                applied        gas   3310385 block   33 +  9.8s fc84cc4259344cfabe9e3ebf18f9765a54f4b4a35b8dde1fe2c25233344b0fd0
+[inbound] period 1381 adopt 1/2                                      applied        gas   3408020 block   34 +  9.9s 7bb52535bc12520c291e8dad18bf15c072f97f9b775528a8edf27da4335fa382
+[inbound] period 1381 adopt 2/2                                      applied        gas   3415212 block   35 + 10.0s 5129d91ef308d384d0fb1259abe567b229b4f8fd6f4d4d939fcaf2058cd0ad6b
+[inbound] period 1381 Finish (step 3)                                applied        gas   3728633 block   36 + 11.6s e56c83439b5d6df65018af7efff10e64a177f49b06dab7e64147c387e9e2f59e
+[inbound] period 1382 Open (step 1)                                  applied        gas   2013315 block   37 +  8.6s 1da84b7d5e941d93a6933bc2cb63b1f64b7d0b819435f824782b8a7ff1a79467
+[inbound] period 1382 Miller (step 2)                                applied        gas   3310385 block   38 +  9.9s 75bfad029471e726719edcfd11d158c178d8afc0cb07d90405b01767b954096d
+[inbound] period 1382 adopt 1/2                                      applied        gas   3408020 block   39 +  9.9s 59062be42f30bcbde5a3a09a6472b6b89eb5eb8ae9953c555e5ec8a5828f81a4
+[inbound] period 1382 adopt 2/2                                      applied        gas   3415212 block   40 + 10.1s 6418410e5b033a19cede57e1b40bc76f0368c530db6087ca019ba4cfa3018386
+[inbound] period 1382 Finish (step 3)                                applied        gas   3728633 block   41 + 11.4s 2864c54d8fec11963e89bbbee2e03a203e06af3b20a03dd7ff20331731103963
+[inbound] period 1383 Open (step 1)                                  applied        gas   2013566 block   42 +  8.6s b0f6673c301efd056dcb4bb95c3347033695e60e81c1a98479c127e767ff7025
+[inbound] period 1383 Miller (step 2)                                applied        gas   3310385 block   43 +  9.9s 009c9b874ec1b011fe9a72a12190ce74a42b685eb879d49f990456c0e106ff4f
+[inbound] period 1383 adopt 1/2                                      applied        gas   3408020 block   44 +  9.9s a12136723dfc5ee072cceaee8f0a43f14b411e3ff1b2b8545e67f12c82972574
+[inbound] period 1383 adopt 2/2                                      applied        gas   3415212 block   45 + 10.0s 7f94a347a77e6d969be44c41614f1bb48b99e6772dd6156670ca0656bf628664
+[inbound] period 1383 Finish (step 3)                                applied        gas   3728633 block   46 + 11.6s 99682d6ddbdfcff2780d0258f77df173be8a8cab6c10ed2bc4e4cd5eb5e51468
+[inbound] period 1384 Open (step 1)                                  applied        gas   2013728 block   47 +  8.6s 02b7b93b4640e93d4818ad19d21840af21a1918c4f50b3317669566510356041
+[inbound] period 1384 Miller (step 2)                                applied        gas   3310385 block   48 +  9.9s 88f9552981116f39ca3ec5e78b390aa959dcfb67a28872a6635e3a015b0a240f
+[inbound] period 1384 adopt 1/2                                      applied        gas   3408020 block   49 +  9.9s 7c26889d13dd4110ab05b1df6bf2dc02ea7ed8a73e59debace41cbc94f4af0c8
+[inbound] period 1384 adopt 2/2                                      applied        gas   3415212 block   50 + 11.2s da530de86c51c6314b9a6e9fb8388ffce73ba2ce54eae5eccf7b7280d5c424d7
+[inbound] period 1384 Finish (step 3)                                applied        gas   3728633 block   51 + 10.4s 99c366592dad4b3756a5750a3ed8db3e0f02b79676d86f1805a3fb89af756133
+[inbound] period 1385 Open (step 1)                                  applied        gas   2013505 block   52 +  8.6s 1f605752e4f75f9870d1d739965fa586f784f57ae0af960a89e7f8ac0bfdef16
+[inbound] period 1385 Miller (step 2)                                applied        gas   3310385 block   53 +  9.8s 3eb0f095fb97c796851ca6782d74345804144fcc380d4cfce5f66ba40a6b3418
+[inbound] period 1385 adopt 1/2                                      applied        gas   3408020 block   54 +  9.9s c875f6e297925c5de18cedba4e46abe7a1bbbdfba74096cae705ca17275e6f0b
+[inbound] period 1385 adopt 2/2                                      applied        gas   3415212 block   55 + 10.0s c3fcfc438638aa2d95ef1b48fd8b0804bddca49fc61545f6aecfccb653e61d0f
+[inbound] period 1385 Finish (step 3)                                applied        gas   3728633 block   56 + 11.6s 29a9da5b091029796e752aad3d3f22e7a51a4e117df91facdb927bd38fbc60a8
+[inbound] period 1386 Open (step 1)                                  applied        gas   2042135 block   57 +  8.6s 765623a9a6dff8b44e11b5938bc925be19c8a15c8550f81b04e927d02a3ea97f
+[inbound] period 1386 Miller (step 2)                                applied        gas   3310385 block   58 +  9.9s b54959212121a2ca2505b8a0cb33799b867b9296d91543942dd284e9c990f9dc
+[inbound] period 1386 adopt 1/2                                      applied        gas   3408020 block   59 +  9.9s e9d64052488a321cde74027d5e43c4a45a6784c70453e187a1bda9f1aa88ff36
+[inbound] period 1386 adopt 2/2                                      applied        gas   3415212 block   60 + 10.1s ab46b6eeece43d12cb8c01f355e362cdeb3913e6c7d2bc1ad61ed4b7a5aa476f
+[inbound] period 1386 Finish (step 3)                                applied        gas   3728633 block   61 + 11.5s b0dd0721935c57cf21acec76628f09e016b9c35850980b8dfc8157a60c4fe87a
+[inbound] period 1387 Open (step 1)                                  applied        gas   2013678 block   62 +  8.5s 3b6c464cac6f0a6f18a30cb1f077007d7e74f8f403b5622552f9f3333fd4dd98
+[inbound] period 1387 Miller (step 2)                                applied        gas   3310385 block   63 +  9.9s 640e5578b48b588a43b8c1df1a612e9a7075795d683bc0a9f0da1fe80ba2c476
+[inbound] period 1387 adopt 1/2                                      applied        gas   3408020 block   64 +  9.9s cf4133cd8d0b21f28ae2812d59385535f203dff9c048bcd8e0bbc26021870c1e
+[inbound] period 1387 adopt 2/2                                      applied        gas   3415212 block   65 + 10.0s cbad96396feeeadb020c2467355ba4c7dc87aa6583798b6ec8c475d1144930d9
+[inbound] period 1387 Finish (step 3)                                applied        gas   3728633 block   66 + 11.6s 8a332c6c9e4398cce8587bb4d0f83e58f7ea1d39237ab106986218b50a9535a2
+[inbound] period 1388 Open (step 1)                                  applied        gas   2013681 block   67 +  8.5s 3dbcda8901273a829777b6ec00b21caec6ee8352a0ebe4c01bd0930e071ecd70
+[inbound] period 1388 Miller (step 2)                                applied        gas   3310385 block   68 +  9.9s 113ae35265346b58714726a8dc02255c89c96b1b36e44908fef30c1a29696af1
+[inbound] period 1388 adopt 1/2                                      applied        gas   3408020 block   69 +  9.9s f292746318429e2f5cf74be2d7e62e0be9ce5e9e14f89958daca6b532d86c661
+[inbound] period 1388 adopt 2/2                                      applied        gas   3415212 block   70 + 10.1s 8c626ac3559cde53c2ed0ad3af30f8baf13e85fbc41dd2d1534a9e622f92491a
+[inbound] period 1388 Finish (step 3)                                applied        gas   3728633 block   71 + 11.5s ff188e5a58710fc0eb50f497b5e4eb0b574e3cc1643480482467e8efc4ad765f
+[inbound] period 1389 Open (step 1)                                  applied        gas   2013441 block   72 +  8.6s 728757b1590861e3e8e6c95b0980b9602be79de180b72aa8d3c002d68b1ba0cb
+[inbound] period 1389 Miller (step 2)                                applied        gas   3310385 block   73 +  9.8s 04655c33a95ef63be9727fbd10f04d8986dc3fdfdf79fc4132d2840a375f2f60
+[inbound] period 1389 adopt 1/2                                      applied        gas   3408020 block   74 +  9.9s 088a6a736992b55625e0126ec494fec7e8011c76dd881353820adeea411d98d3
+[inbound] period 1389 adopt 2/2                                      applied        gas   3415212 block   75 + 10.0s 9acf224d53b42f4f85d41444a6dc6b493bf40ea8b2ed3f5510dbb88f29bd96ea
+[inbound] period 1389 Finish (step 3)                                applied        gas   3728633 block   76 + 11.6s 28158d15a8f442907164d2941e9f9aa394510f61e8c89d0a2bb3b76aa4be6fe0
+[inbound] period 1390 Open (step 1)                                  applied        gas   2013807 block   77 +  8.6s 27640e206e5704880897af625172c8a1ad8531d85dd17ade2dbdbff7389f0f46
+[inbound] period 1390 Miller (step 2)                                applied        gas   3310385 block   78 +  9.8s e17526b562ebaf1af64737b847c8d36a95f65ae1f8a7daf644bc31ee59ad5260
+[inbound] period 1390 adopt 1/2                                      applied        gas   3408020 block   79 +  9.9s 2b2d0ca57f7813d92173e17b06993784ba81ce1f9814410fd2c213cef4f42cbb
+[inbound] period 1390 adopt 2/2                                      applied        gas   3415212 block   80 + 10.1s f1abde1cc9c6183786a8b4f1f32160a40bd343754dd6221f6590ec2011233cf5
+[inbound] period 1390 Finish (step 3)                                applied        gas   3728633 block   81 + 11.4s 9876cf75e296c4f8ab4d738f14eb772b50caf9cb0c03fb9d8b47cfc324348457
+[inbound] period 1391 Open (step 1)                                  applied        gas   2041781 block   82 +  8.6s 058601ca03b0915664d2c3ed3d81298f15402dd5b3dafcd4fd9a36463dd70f1f
+[inbound] period 1391 Miller (step 2)                                applied        gas   3310385 block   83 +  9.9s 736fade80652d184eb5ec65820df77bcf7d16693e12324cb79af406b2b1c8fd7
+[inbound] period 1391 adopt 1/2                                      applied        gas   3408020 block   84 +  9.9s c311951f8907aaffa8d729933791c7c6bf7633ec706fa7505da04e2deb6420e6
+[inbound] period 1391 adopt 2/2                                      applied        gas   3415212 block   85 + 10.0s 13a0617f08a4f908e4593d599d09fe408ffd619067f9c045ad6f716cd976a92d
+[inbound] period 1391 Finish (step 3)                                applied        gas   3728633 block   86 + 11.7s 06bafa8f886b7912b5c4065f4cd85e06995f24b1e4feacd17a870d45a8f9d269
+[inbound] period 1392 Open (step 1)                                  applied        gas   2013681 block   87 +  8.6s dcaa4a0f968f20f692fe584c140fa5d9160fa59ac3700a5c6b80221cba32f7cb
+[inbound] period 1392 Miller (step 2)                                applied        gas   3310385 block   88 +  9.8s 699f31b620e8f8bb8913a3228b9cd51f21f366ad1bdf15990ff348efb068fa38
+[inbound] period 1392 adopt 1/2                                      applied        gas   3408020 block   89 +  9.9s c542740fed7cd07f203d3aa39fca6e7497bb4090dcd89ccfb8a5996c29fbbfcd
+[inbound] period 1392 adopt 2/2                                      applied        gas   3415212 block   90 + 10.1s aaa7c25b8a2c21387eee0fc14e085eb42800d304660261c0a566d798d3c3cf00
+[inbound] period 1392 Finish (step 3)                                applied        gas   3728633 block   91 + 11.5s 8f17d59e3bc40cba37947aa4c05809cc015b8f1f7dd3d4a8a62292de4399b9db
+[inbound] period 1393 Open (step 1)                                  applied        gas   2041898 block   92 +  8.6s be41adbe9fddf9d6b91a4c61cbabfbc05349513139886d94c94b8aceefbd3be7
+[inbound] period 1393 Miller (step 2)                                applied        gas   3310385 block   93 +  9.8s c702c92180ef3a4faad2d74851e219ddf1df29e4092d1845688ac4a2ef41b2d1
+[inbound] period 1393 adopt 1/2                                      applied        gas   3408020 block   94 +  9.9s 0a904527cfa655b0a7bbdb1caf0d5d5025027a3f0d845993c4407311efbc62c6
+[inbound] period 1393 adopt 2/2                                      applied        gas   3415212 block   95 + 10.0s aec3baf13b54509135bd70465a8f3f2c39f9bd6548cb62a46f4bef1ac84603bc
+[inbound] period 1393 Finish (step 3)                                applied        gas   3728633 block   96 + 11.6s d620be24de62fc2d561f01ea7fa2f7f40d2c87895e66ba1d26ccacfcf9ca3cb2
+[inbound] period 1394 Open (step 1)                                  applied        gas   2013868 block   97 +  8.6s 1e17f7f196df91cee4e7848754a10fd16ecabfc59d1e5815698b5bc8a70a22a2
+[inbound] period 1394 Miller (step 2)                                applied        gas   3310385 block   98 +  9.9s 60f5c154b709ee56ccb16dbe8ea1701dc071e5da6a85118eade9f5d6700e0cd5
+[inbound] period 1394 adopt 1/2                                      applied        gas   3408020 block   99 +  9.9s d86096e5f26c1aafd53b1d6e2b3b55d025816f561aa6e98b45988c7175358f53
+[inbound] period 1394 adopt 2/2                                      applied        gas   3415212 block  100 + 11.1s bcb4ff980a487cd16b6b2c1cf95d6d154f012ac36d8eb6af9ed72ffa214dc4f1
+[inbound] period 1394 Finish (step 3)                                applied        gas   3728633 block  101 + 10.4s 56398f667c7de41282bf3688920393cd96cf6bc336cfcef451c4b5b6ed8f8c7e
+[inbound] period 1395 Open (step 1)                                  applied        gas   2150159 block  102 +  8.7s c26d3a2f9892c68e522d5067ac43f04f6868f35bde08e42e5be99598c095bbd5
+[inbound] period 1395 Miller (step 2)                                applied        gas   3310385 block  103 +  9.8s dc49676731f0394a3fc2a81ea7863fc26dc84a136913df3829c93b7682919fe4
+[inbound] period 1395 adopt 1/2                                      applied        gas   3408020 block  104 +  9.9s a5a48704b46a3faacfeef528f1adb0b0483fdc4acebf8904e1fd7ef3a7d740a3
+[inbound] period 1395 adopt 2/2                                      applied        gas   3415212 block  105 + 10.0s 50ce2b7bcfe239ba4dddf9cf69a7dab589115c7ee220bdb587b66014342c8154
+[inbound] period 1395 Finish (step 3)                                applied        gas   3728633 block  106 + 11.6s 97458c7704c5c362b34c44b8747ce068c81a8d32ce5f4fb97d721892f16cc8b6
+[inbound] period 1396 Open (step 1)                                  applied        gas   2041640 block  107 +  8.6s 65bbb114c0d60551dfb4cc0cd222d1c6a6cf6f847bae306c8b17053198a4dfc5
+[inbound] period 1396 Miller (step 2)                                applied        gas   3310385 block  108 +  9.9s ecea64428e8f60d9502e9d51e7fd3b8c2913feba6db812d2539397f87f5a1941
+[inbound] period 1396 adopt 1/2                                      applied        gas   3408020 block  109 +  9.9s 8807e8c10e7e087e2b93cbae7739650c7e656229afb455cd9e02098eea9dffde
+[inbound] period 1396 adopt 2/2                                      applied        gas   3415212 block  110 + 10.2s 8cf932e2d8280285f11f1c2397eb2ffd9bb4bec7a394ff82c677b2aaea415416
+[inbound] period 1396 Finish (step 3)                                applied        gas   3728633 block  111 + 11.4s 93650a3673422fb758931c5c39be51fa0c313784ad145b8a199b14fad90db450
+[inbound] period 1397 Open (step 1)                                  applied        gas   2013617 block  112 +  8.6s 203f0bc9bbdf895ab77e91cee005c63226ad4562003da31b99e09d48917e78b6
+[inbound] period 1397 Miller (step 2)                                applied        gas   3310385 block  113 +  9.9s 3422f9334e7884813772e9f0366da6e466ba4e66f9db54d9a7bee0e4d9a47733
+[inbound] period 1397 adopt 1/2                                      applied        gas   3408020 block  114 +  9.9s 5a21907fed543c98e4b1eb5d50ce109901ba1764f798b6e5ed879c0ad41b58d7
+[inbound] period 1397 adopt 2/2                                      applied        gas   3415212 block  115 + 10.0s 148bc9b608f4982b9deba949b7a129da68d9d5e8e9a4d6df492cbb02decfe5de
+[inbound] period 1397 Finish (step 3)                                applied        gas   3728633 block  116 + 11.6s bd7e7bbb260b3150bdc2b12ef45872379bfd556b1a6c089eb10acffadc8b7a96
+[inbound] period 1398 Open (step 1)                                  applied        gas   2013516 block  117 +  8.6s d701454ae3c024458bf81092afe21d519c090e77cf4f4120105f82fff5862613
+[inbound] period 1398 Miller (step 2)                                applied        gas   3310385 block  118 +  9.9s 68b9cd47a81db4e43304d7eb7f6f824043a518ba23c80dd5034212695e979288
+[inbound] period 1398 adopt 1/2                                      applied        gas   3408020 block  119 +  9.9s 6c27476174743d6fec480d327a3617a817ed71d41d21e98e1bdafda8f299f751
+[inbound] period 1398 adopt 2/2                                      applied        gas   3415212 block  120 + 10.1s 093498a52c1d68e088a9f7a1595d4786128b52118711fdffcc7b2bb0b386e4ea
+[inbound] period 1398 Finish (step 3)                                applied        gas   3728633 block  121 + 11.5s b649f73d6d8ea3d3f798f988a5ae6fa7e0730afd7e789b7d2ec16f5c99337e95
+[inbound] period 1399 Open (step 1)                                  applied        gas   2013631 block  122 +  8.6s 212ecbcc8e80c973eba6e78eb68d95dbf8983f0ad56506442e9d5387f63f1885
+[inbound] period 1399 Miller (step 2)                                applied        gas   3310385 block  123 +  9.9s d3493b721d15840b96f5490e311b5bba98e03f1fdb2e7fc912e1201c85dfd183
+[inbound] period 1399 adopt 1/2                                      applied        gas   3408020 block  124 +  9.9s 082c67e2363f56bc931486825e7ee6d3350d22e4069b170be17c16179b7e30bb
+[inbound] period 1399 adopt 2/2                                      applied        gas   3415212 block  125 + 10.0s 2a494c219722a768f844dd35bf91a4ebaa4d019df6922512c69b74b3c7ae36cd
+[inbound] period 1399 Finish (step 3)                                applied        gas   3728633 block  126 + 11.6s 8733ce49a58abbeafad992b278dbf5c9373e39217405ce34db04e453c11c312d
+[inbound] period 1400 Open (step 1)                                  applied        gas   2013631 block  127 +  8.6s f7119a4b62f5c062a1aa06de143af69dcc72c30cc4ccba7eb4b113813568037c
+[inbound] period 1400 Miller (step 2)                                applied        gas   3310385 block  128 +  9.8s 2fa31422b71b720fa0ccdcfd4c37fc9a67ddde6f7b02bffe65f2085ad6b8bda1
+[inbound] period 1400 adopt 1/2                                      applied        gas   3408020 block  129 +  9.9s 423421c21d91753209f66436f4f185a6c837ebca38cbcacb379dd8ee1fb4f7f4
+[inbound] period 1400 adopt 2/2                                      applied        gas   3415212 block  130 + 10.1s e4e09d1ed4e621186bbf92029473555307aaebe0a27fb604acb6df88f89edc44
+[inbound] period 1400 Finish (step 3)                                applied        gas   3728633 block  131 + 11.5s af6a9af57da93bc176388b1bb7336e3dea81c6d282ed12be1d661ca791cddcfb
+[inbound] period 1401 Open (step 1)                                  applied        gas   2013505 block  132 +  8.6s feebbec4a12cbe1444551a879438827a54eac977012884b2a482e8251946430a
+[inbound] period 1401 Miller (step 2)                                applied        gas   3310385 block  133 +  9.9s f069942373093760c55d8abde3e366cf14fa82d5200e0a5709e450b4f7a6c316
+[inbound] period 1401 adopt 1/2                                      applied        gas   3408020 block  134 +  9.9s 4e28ff08a9f8d72b3de9fc04582fc9feaa1881d656f6dce194d67cc44ac2015a
+[inbound] period 1401 adopt 2/2                                      applied        gas   3415212 block  135 + 10.0s ff496b57316e5711b13d220478dc9affd5a0ebaccf3ce3aa4222cf48a490a1aa
+[inbound] period 1401 Finish (step 3)                                applied        gas   3728633 block  136 + 11.7s 8abdb824248f70a7173450e3e05f5158520f1f78c7df555d3fe4ecf582b8ac8e
+[inbound] period 1402 Open (step 1)                                  applied        gas   2013455 block  137 +  8.5s 2ba21b32638bbc7dd93d290285357f4211323ec5e699247f3ec40e6aca72a75b
+[inbound] period 1402 Miller (step 2)                                applied        gas   3310385 block  138 +  9.9s 82ca227220c11971784de2edb92574e5a70176dd1c1df302b9edc330af002468
+[inbound] period 1402 adopt 1/2                                      applied        gas   3408020 block  139 +  9.9s c37852d9714552a694535fb8d445d86ea3f57c18dacdef3b5ffc24c87992d6d7
+[inbound] period 1402 adopt 2/2                                      applied        gas   3415212 block  140 + 10.2s 4605141ba9f9f1a709bce05b66a7ad670b39ddda0b9d5dbd5632c20a0b71330b
+[inbound] period 1402 Finish (step 3)                                applied        gas   3728633 block  141 + 11.4s 458f2c5d5ff2422ce3cb31fff04e8d7cb8c10d723b2eaf8a481f010bc53e788e
+[inbound] period 1403 Open (step 1)                                  applied        gas   2177153 block  142 +  8.6s c487c579ef8c251df2f6a0f7a9d23f648ef7c844ad8c523a68b8f7611dbb1dea
+[inbound] period 1403 Miller (step 2)                                applied        gas   3310385 block  143 +  9.8s 1163626944c533eaded6597b9159ec69f82aea46483dc2cd862f9bfae690a84b
+[inbound] period 1403 adopt 1/2                                      applied        gas   3408020 block  144 +  9.9s b3d2876f75aec5134e70ffd42fcf0dc254867a21a0478dc5ef3eed428986ecef
+[inbound] period 1403 adopt 2/2                                      applied        gas   3415212 block  145 + 10.0s d1f2388ee8d8ce424bf0d81eeefab990711c1a083e0c8084352344cc8115b40f
+[inbound] period 1403 Finish (step 3)                                applied        gas   3728633 block  146 + 11.6s 16951216dad671d0441932dc82002ecf92d56e4a8812859f770ae9d8c19aff65
+[inbound] period 1404 Open (step 1)                                  applied        gas   2068729 block  147 +  8.6s 620f9ac39fbe54b109852e1a146efa702ea513fc48a3bdd219eb2ffcd4a79950
+[inbound] period 1404 Miller (step 2)                                applied        gas   3310385 block  148 +  9.9s bd2b4ac2dab9daec3f2ad3c1407845e99465b8ce0f177b9a1c91a6df0d3e5640
+[inbound] period 1404 adopt 1/2                                      applied        gas   3408020 block  149 +  9.9s a5658a30194b89ca37e1c64878e63b2dad72cd3bbcbec8fa72c5ae6681858e0b
+[inbound] period 1404 adopt 2/2                                      applied        gas   3415212 block  150 + 10.3s bad4ecfdf5ec573ea3855cf246d87f5216e7020cda149f8033d7792a9f0201e0
+[inbound] period 1404 Finish (step 3)                                applied        gas   3728633 block  151 + 11.2s 1e46a189a6858577cc047a1e0ad63203cb7fdc13b1115077299279f5f443fd56
+[inbound] period 1405 Open (step 1)                                  applied        gas   2176910 block  152 +  8.6s aeb9e8838dcb1ebec1ea0166dd6006b745f987c51d88703de695e883b1ef0028
+[inbound] period 1405 Miller (step 2)                                applied        gas   3310385 block  153 +  9.9s b150b8bfc8418e61b00602a5bd7018b90ae6db84a436eb2577cc26ed2d67ea76
+[inbound] period 1405 adopt 1/2                                      applied        gas   3408020 block  154 +  9.9s b4ac7d4b196d565c08650c9bdbb1c49542507b997bdfe6f9457252cd37b3ae93
+[inbound] period 1405 adopt 2/2                                      applied        gas   3415212 block  155 + 10.0s 7856d426b417dcf84fa95c00f1be90ffa80daf65a434ab4c58b904c376125318
+[inbound] period 1405 Finish (step 3)                                applied        gas   3728633 block  156 + 11.6s c19e0ae27c4aa34441ddb67d3d8b191b8bf93814f1d894e9a979091018e26d04
+[inbound] period 1406 Open (step 1)                                  applied        gas   2041595 block  157 +  8.6s ca5202566e4bdc6a7e4b85bdf69b6156f3ec7c4fc982691b1ff37d1a012dc9a0
+[inbound] period 1406 Miller (step 2)                                applied        gas   3310385 block  158 +  9.9s 0ad4cfbb8e3d3311b6b6e6030e29c3e397c54ecd1edfa9f0ad8f198ed4aa227c
+[inbound] period 1406 adopt 1/2                                      applied        gas   3408020 block  159 +  9.9s 300f509fa4d41cfb5190954712334c81e3d3e77b466dd478110a1a438a76707f
+[inbound] period 1406 adopt 2/2                                      applied        gas   3415212 block  160 + 10.2s 48a7b0f6366fd04f2723c945f30411a9b126e4a651ea28c3e97c2e9012aa32ce
+[inbound] period 1406 Finish (step 3)                                applied        gas   3728633 block  161 + 11.5s 54067bc25515b44201b73b5c009aaac8f34789254757005d966bc86512d89d5a
+[inbound] period 1407 Open (step 1)                                  applied        gas   2177331 block  162 +  8.6s 1f67a8e61839905d42a8585d4fad086d5eaa23b7f1703159a6013b5b3755ce4a
+[inbound] period 1407 Miller (step 2)                                applied        gas   3310385 block  163 +  9.8s 41ee3b047624ed82f7424a2a6c713ed02a51447f842a4ebb30b95e9f3c85b71f
+[inbound] period 1407 adopt 1/2                                      applied        gas   3408020 block  164 +  9.9s b10e4d7fa72760d377cc8e37db2df5a1a2e71084ceb13e1c71f4c6137d90c3c7
+[inbound] period 1407 adopt 2/2                                      applied        gas   3415212 block  165 + 10.0s 82c4a8cd3f0c81d7107aead4147421c22579de4c6c985f3a8a0ac4f61b336a65
+[inbound] period 1407 Finish (step 3)                                applied        gas   3728633 block  166 + 11.6s 88c2ea1933ec3d9e71e961222a6bc44c07e7e26699d4d8b31e5348cae61bbc65
+[inbound] period 1408 Open (step 1)                                  applied        gas   2149847 block  167 +  8.6s e42106b23223586f6d7c7eb0fe047b646a701aeace527c8eca078d42d945854f
+[inbound] period 1408 Miller (step 2)                                applied        gas   3310385 block  168 +  9.9s 497edb4b4b6861520e72881ee97c20345edb202b42e02c5911178873efa8cd13
+[inbound] period 1408 adopt 1/2                                      applied        gas   3408020 block  169 +  9.9s a4be3b31afb6dfb1a24c5b6bfff8e4b1dff6487c3c0e5732b84a764eebfe5e43
+[inbound] period 1408 adopt 2/2                                      applied        gas   3415212 block  170 + 10.1s 1481bf81fb7c01505bc95009f3cab32014349e27689ff260c691a29024aa9017
+[inbound] period 1408 Finish (step 3)                                applied        gas   3728633 block  171 + 11.5s 9050ed3325d516b476156256d5fb8adef279ff5afc8613d8124dc84038e78389
+[inbound] period 1409 Open (step 1)                                  applied        gas   2123138 block  172 +  8.6s 1b0bf70bb8f13b3045c1dfc93dfe98212c449818c0f1249ecdd3bed8b36c7dd6
+[inbound] period 1409 Miller (step 2)                                applied        gas   3310385 block  173 +  9.9s 34d3ddb76fc42bcac897fdb97702a464678f18dd5266cb627f90b40dfe4b2f54
+[inbound] period 1409 adopt 1/2                                      applied        gas   3408020 block  174 +  9.9s 9fddf94424777e1ec89e2969c7de443996472c2d24d4b82ade333ab972fb07fa
+[inbound] period 1409 adopt 2/2                                      applied        gas   3415212 block  175 + 10.0s 15355d574b8ae3ade20e744b8fd00505f5c4b5fdb091080772ee87449b60d0b0
+[inbound] period 1409 Finish (step 3)                                applied        gas   3728633 block  176 + 11.6s 42fd4e51d45aa096109628d229f2e3a4b8953bba5c882f0894d25d0198242a0c
+[inbound] stage 1 finality update Open (step 1)                      applied        gas   2073229 block  177 +  8.6s c20519995849511f2dc00f083c1543c8166114ddeffbe13af9083cc829cb120c
+[inbound] stage 1 finality update Miller (step 2)                    applied        gas   3305289 block  178 +  9.9s e3fc122988924a48c15282c5685f1dfc3206ae40c7d52efda84d259d18dda7b9
+[inbound] stage 1 finality update Finish (step 3)                    applied        gas   3718075 block  179 + 11.5s 45cc69573649d1ec94a77b206139beb788f190687896f534bf8ff42f3f7e9dbc
+[inbound] bridge Init without the block's header (Gloas record)      refused   215 (code 215) gas    115415 block  180 +  8.5s 00a5d8c028175c964aabda3260a76fd378036dc8ae025e59e61c838ae4b7c3b3
+[inbound] bridge Init (configId in the vault's slot 2)               applied        gas    355935 block  181 + 11.0s cfdf1f94f54ec8b111427c2bd1d4c61dd636eaa9f2d7aadcf092ab29c285d5eb
+[inbound] bridge ImportRoot n=1 (stage 1, block 12107997)            applied        gas    426479 block  182 + 10.2s 5b2d41dd10fb695a1716005bb4832f9aaf366ebadbccec1271df67327843aa38
+[inbound] root(cid, 1): Some(Root(RootState { config_id: [162, 232, 128, 203, 141, 167, 123, 8, 218, 217, 131, 59, 231, 164, 201, 170, 8, 221, 133, 111, 70, 72, 218, 84, 134, 147, 124, 121, 134, 17, 211, 184], terms: Terms { evm_chain_id: 11155111, vault: [208, 181, 252, 192, 180, 125, 142, 111, 81, 79, 157, 36, 107, 176, 180, 22, 178, 4, 138, 247], token: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], denominations: [1000000000000000, 10000000000000000, 100000000000000000] }, leaf_count: 1, root: [165, 181, 196, 63, 234, 129, 35, 234, 88, 77, 229, 128, 235, 159, 25, 222, 148, 95, 14, 67, 92, 169, 239, 33, 242, 95, 216, 120, 68, 167, 72, 117], record_slot: 11551744, block_number: 12107997 }))
+[inbound] bridge Claim: deposit 0 at leaf index 1 under root(cid, 1) (a leaf index at the count) refused   248 (code 248) gas     30946 block  183 +  8.7s 15b878cacfef57c551ff8749d4cf6c8dab08ed0cbcf9db56a835aaf900b9a2d6
+[inbound] bridge Claim: deposit 0 redirected to another public account (a wrong opening) refused   249 (code 249) gas     93764 block  184 + 10.0s 1d48c72a837cfc19204a9535fe9948a74d1ef3d65c30934860285457078e1a87
+[inbound] bridge Claim: deposit 0 (public) under root(cid, 1)        applied        gas    142432 block  185 + 10.0s d863fd8e86c9b9919c99635c39ef23ced843aa76057f98549fd491034115002f
+[inbound] deposit 0 claimed: public test account 0 holds 1000000000000000 wei of configuration 0xa2e880cb8da77b08dad9833be7a4c9aa08dd856f4648da5486937c798611d3b8; nullifier 0xf89da0ad51b38cc6b810497fae227297e6cd440b80843d982d6658286036ecb4 spent
+[inbound] bridge Claim: deposit 0 again (replay)                     refused   250 (code 250) gas    124481 block  186 + 10.3s 308fb677fd8c09a3b8ade91d9d3612d2869b0e0fd18368c8eeb048bca8b2718e
+[inbound] public test account 0's holding: Some(Holder(HolderState { holdings: [Holding { config_id: [162, 232, 128, 203, 141, 167, 123, 8, 218, 217, 131, 59, 231, 164, 201, 170, 8, 221, 133, 111, 70, 72, 218, 84, 134, 147, 124, 121, 134, 17, 211, 184], terms: Terms { evm_chain_id: 11155111, vault: [208, 181, 252, 192, 180, 125, 142, 111, 81, 79, 157, 36, 107, 176, 180, 22, 178, 4, 138, 247], token: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], denominations: [1000000000000000, 10000000000000000, 100000000000000000] }, amount: 1000000000000000 }], pending: None }))
+blocks: 1..=186
+transactions: 185 sent; 181 applied, 4 refused with an exit code, 0 reverted otherwise, 0 dropped by the sequencer, 0 rejected at its RPC, 0 unfinished
+charged in all: execution gas 526729288, storage gas 2743846, base fees 4235785072
+against the harness tables: 0 transactions have a harness row; execution gas equal in 0, different in 0
+base fee exec over the blocks: min 8, max 8; blocks finalized on Bedrock at export: 186 of 186
+records written to ../tmp/sequencer/run/export

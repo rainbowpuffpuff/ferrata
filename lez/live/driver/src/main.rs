@@ -7,7 +7,7 @@
 //! Commands (in the order `../run.sh run` calls them):
 //!   info            the guest binaries, the accounts of the run, the sequencer's head
 //!   inbound-deploy  deploy the attestation program (attest) and the bridge (bridge, --bridge-bin)
-//!   inbound         the inbound crossing (--chain stand-in | sepolia --capture DIR --capture DIR
+//!   inbound         the inbound crossing (--chain stand-in | sepolia --capture DIR [--capture DIR]
 //!                   [--vault ADDR]; --private real | fake | skip): ../inbound/README.md
 //!   deploy          deploy the program twice (main, twin) and LEZ's scripted test program
 //!   replay          instance A on the main deployment: Init and the five mainnet updates
