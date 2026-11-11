@@ -15,9 +15,9 @@ vault accept something false ([`docs/design/attestation.md`](../design/attestati
 [`docs/design/bridge.md`](../design/bridge.md) §14).
 
 **Status.** The relayer is built as a prototype binary, `ferrata-relayer` (§6: rule (B) checkpoints,
-releases, fee collection and the gas drop; tested on an anvil fork of Sepolia with real proofs and in the
-LEZ harness). The other daemons are **not built**: the updater, the relayer's root imports and wrapping,
-and `monitor` are designed as Logos modules run under
+releases, wrapping, fee collection and the gas drop; tested on an anvil fork of Sepolia with real proofs and
+in the LEZ harness). The other daemons are **not built**: the updater, the relayer's root imports and
+`monitor` are designed as Logos modules run under
 `logosctl daemon`, with structured logs, clean shutdown and configurable endpoints and depths
 ([`attestation.md`](../design/attestation.md) §8; [`bridge.md`](../design/bridge.md) §1). What runs
 today, and what this guide describes from measurement, is the **lab** (§2), the harness and live
@@ -256,7 +256,8 @@ one round every `--poll-secs` (default 12 s, one Ethereum slot):
    stays in the inbox and is retried every round (`job-deferred`) until it is older than `--max-job-age`
    (default 7 days). Jobs:
    `{"kind":"release","journal":"0x…","seal":"0x…"}` from a holder who opts in (the release journal
-   and its Groth16 seal), `{"kind":"checkpoint","journal":"0x…","seal":"0x…"}` from the checkpoint
+   and its Groth16 seal), `{"kind":"release-succinct","receipt":{…}}` from a holder who cannot wrap (the
+   succinct receipt; the relayer wraps it, §6.5), `{"kind":"checkpoint","journal":"0x…","seal":"0x…"}` from the checkpoint
    prover (§5.4), `{"kind":"gas-drop","receipt":{…}}` from a claimant (§6.4).
 2. **Candidates.** Every live candidate on the vault, anyone's, is rebuilt from its `CandidateSubmitted`
    event and the vault's `nMin`/`tMin`, checked against the journal digest the vault stored, and finalised
@@ -292,7 +293,9 @@ For gas drops and the burn watch add the LEZ side: `--sequencer <url> --seed <th
 --lez-wallet <dir> --lez-password-file <file> --bridge-account <program id> --lez-account <its public
 account, which pays the drops> --gasdrop-image-id 0x… --drop-amount <native LEZ per drop>`. The Ethereum
 account needs gas money only; it is paid relay fees by the releases that name it and checkpoint fees through
-`owed`. `--accept-unpaid` also submits releases that pay no relay fee (off by default). `--unlocked <address>`
+`owed`. `--accept-unpaid` also submits releases that pay no relay fee (off by default). `--wrap-command
+<prover>` makes it wrap succinct receipts (§6.5); jobs must be written atomically (write `x.json.tmp`, then
+rename it to `x.json`: the daemon reads only `*.json`). `--unlocked <address>`
 lets a local anvil sign (tests and rehearsals only; refused unless the endpoint answers `anvil_nodeInfo`).
 
 ### 6.3 What it holds, and what it refuses
@@ -334,10 +337,16 @@ token program, so its credit is a recorded stand-in).
 
 ### 6.5 Wrapping
 
-A release needs a Groth16 seal; the wrap runs only on x86 (Docker, about 7.3 GiB, 77.5–79.9 s on the laptop
-for a release; 55–93 s on the build box). Any relayer can wrap a user's succinct receipt and learns only
-what the release publishes ([`bridge.md`](../design/bridge.md) §12.3, §18.2). The daemon takes the wrapped
-seal in the release job; wrapping inside the daemon is not built.
+A release needs a Groth16 seal; RISC Zero's prover image runs only on x86 (Docker, about 7.3 GiB, 77.5–79.9 s
+on the laptop for a release; 55–93 s on the build box). Any relayer can wrap a user's succinct receipt and
+learns only what the release publishes ([`bridge.md`](../design/bridge.md) §12.3, §18.2). With
+`--wrap-command <prover>` the daemon takes `release-succinct` jobs: it checks the release as for a sealed job
+(before any work), verifies the receipt against the vault's `releaseImageId`, runs identity_p254 through
+r0vm, calls `<prover> <input.json> <proof.json>` (RISC Zero's prover image, e.g. `docker run` of
+`risczero/risc0-groth16-prover:v2025-04-03.1` as risc0-groth16 3.0.5 starts it, or a remote prover such as the
+build box's `groth16_wrap` function), builds the Groth16 receipt as risc0's `succinct_to_groth16` does,
+verifies it, and sends the release. Measured on the build box: 18.6 s from the succinct receipt to the seal
+with the prover stood in by the proof it had produced on Modal (15 s there), identity_p254 21.1 s on its own.
 
 ### 6.6 Tested, and the numbers
 
@@ -349,8 +358,9 @@ seal in the release job; wrapping inside the daemon is not built.
   block before `crown-live-1`'s `submitCandidate`, with that run's real checkpoint and release proofs:
   candidate 375,281 gas, `finalizeAttested` 218,385 after W = 3,600 s, releases 358,908 and 393,108, the
   checkpoint fees (2 × 10¹² wei) collected with `claimOwed` (the same transactions and gas in every run); a
-  new real release proof of the same burn naming a relayer with the registered fee, sent by the daemon as that
-  relayer (407,052 gas, 2 × 10¹² wei received), its copy naming another relayer refused; `status`, and a
+  new real release proof of the same burn naming a relayer with the registered fee, handed to the daemon as a
+  succinct receipt, wrapped by it and sent as that relayer (407,052 gas, 2 × 10¹² wei received), its copy
+  naming another relayer refused; `status`, and a
   daemon without a round limit stopped cleanly by SIGTERM;
   the early release deferred and released once the root was final; a second candidate, another relayer's
   daemon, an unpaid release and a replay refused ([`e2e/runs/relayer-fork/`](../../e2e/runs/relayer-fork/results.json));
@@ -442,7 +452,7 @@ checkpoints after a sunset until holders have released ([`bridge.md`](../design/
 ## 12. What is not built
 
 The updater and `monitor` daemons, the Logos modules of all three daemons (`ferrata-relayer` is a
-plain binary); the relayer's root imports and wrapping, its run against a live sequencer, the sealed
+plain binary); the relayer's root imports and its run against a live sequencer, the sealed
 gas drop to a private one-time account and its sweep inside the private claim (§6.4); `verify_checkpoint`;
 the rule (B) attestor module; joining an open job and job clean-up; the weak-subjectivity bound; the
 duplicate-rate acceptance run; daemon resource measurements; the amortised costs at the recommended
