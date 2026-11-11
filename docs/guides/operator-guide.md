@@ -251,7 +251,10 @@ the cloud").
 one round every `--poll-secs` (default 12 s, one Ethereum slot):
 
 1. **Inbox.** Each `<inbox>/*.json` job is checked, then sent; the file moves to `<state>/done/` or
-   `<state>/refused/` and one JSON line on stdout says what happened and why. Jobs:
+   `<state>/refused/` and one JSON line on stdout says what happened and why. A job that fails for a
+   temporary reason (the root not final yet, the release delay, a freeze, a cap, the endpoint unreachable)
+   stays in the inbox and is retried every round (`job-deferred`) until it is older than `--max-job-age`
+   (default 7 days). Jobs:
    `{"kind":"release","journal":"0x…","seal":"0x…"}` from a holder who opts in (the release journal
    and its Groth16 seal), `{"kind":"checkpoint","journal":"0x…","seal":"0x…"}` from the checkpoint
    prover (§5.4), `{"kind":"gas-drop","receipt":{…}}` from a claimant (§6.4).
@@ -263,11 +266,15 @@ one round every `--poll-secs` (default 12 s, one Ethereum slot):
    push failed) is withdrawn with `claimOwed`, for ETH and every token it released.
 4. **Burns** (with `--sequencer`): the configuration's burns on LEZ past the newest accepted burn count; if
    there are any and no live candidate, `<state>/needs-checkpoint.json` asks the checkpoint prover (§5,
-   a separate process) for a checkpoint, which comes back as a checkpoint job.
+   a separate process) for a checkpoint, which comes back as a checkpoint job (`relayer::checkpoint_needed`;
+   tested against the harness zone: 11 burns and none accepted ask for one, none once they are accepted).
+   On a rule (A) vault the daemon does not finalise (that needs the beacon proof, the prover's job).
 
 Logs are one JSON object per line (`start`, `job-done`, `job-refused`, `candidate-waiting`, `finalized`,
-`fees-collected`, `checkpoint-needed`, `round-failed`, `stop`). The state directory is all it keeps between
-rounds: the drop book (`drops.json`), the done and refused jobs. Stopping it between rounds loses nothing.
+`fees-collected`, `checkpoint-needed`, `job-deferred`, `round-failed`, `stop`). The state directory is all
+it keeps between rounds: the drop book (`drops.json`), the done and refused jobs. Stopping it between rounds
+loses nothing; a gas drop is recorded before its credit is sent, so a crash cannot cause a second drop for
+the same `N` (a failed credit stays recorded as failed: remove the entry only knowing it was not sent).
 
 ### 6.2 Starting a relayer
 
@@ -339,12 +346,14 @@ seal in the release job; wrapping inside the daemon is not built.
   changed journal refused, also after a restart); (2) **the daemon on an anvil fork of Sepolia** at the
   block before `crown-live-1`'s `submitCandidate`, with that run's real checkpoint and release proofs:
   candidate 375,281 gas, `finalizeAttested` 218,385 after W = 3,600 s, releases 358,908 and 393,108, the
-  checkpoint fees (2 × 10¹² wei) collected with `claimOwed`; early release, second candidate, another
-  relayer's daemon, an unpaid release and a replay refused ([`e2e/runs/relayer-fork/`](../../e2e/runs/relayer-fork/results.json));
+  checkpoint fees (2 × 10¹² wei) collected with `claimOwed` (the same transactions and gas in four runs);
+  the early release deferred and released once the root was final; a second candidate, another relayer's
+  daemon, an unpaid release and a replay refused ([`e2e/runs/relayer-fork/`](../../e2e/runs/relayer-fork/results.json));
   (3) **the LEZ harness** (`cli/tests/e2e.rs` with `FERRATA_GASDROP_ELF`): a real gas-drop receipt for a
   vault deposit checked against the zone's imported roots and nullifiers, the claim naming the relayer
-  (relay fee 10¹⁶ wei minted to it on LEZ), the receipt refused afterwards as claimed, and a release that
-  pays the relayer 10¹⁴ wei, its redirected copy refused ([`e2e/runs/relayer-harness/`](../../e2e/runs/relayer-harness/test.log)).
+  (relay fee 10¹⁶ wei minted to it on LEZ), the receipt refused afterwards as claimed, the burn watch on the
+  zone's 11 burns, and a release that pays the relayer 10¹⁴ wei (134,973–134,985 gas with the mock
+  verifier), its redirected copy refused ([`e2e/runs/relayer-harness/`](../../e2e/runs/relayer-harness/test.log)).
 - Release gas on the v5 vault with the real verifier: 373,657 (ETH) and 403,523 (ERC-20 with the relayer's
   fee) on Foundry's rules; 619,477 and 648,447 on Sepolia's node prices, v3 vault
   ([`vault/GAS.md`](../../vault/GAS.md); [`e2e/README.md`](../../e2e/README.md)).
