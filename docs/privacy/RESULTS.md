@@ -1,6 +1,6 @@
-# Privacy suite: results (proposal B3; RFP-022 Privacy #1–#7, F.9, R.5)
+# Privacy suite: results (proposal milestone B2; RFP-022 Privacy #1–#7, F.9, R.5)
 
-The B3 gate asks that, for 20 deposit and claim pairs and 20 burn and release pairs, the public
+Milestone B2's gate asks that, for 20 deposit and claim pairs and 20 burn and release pairs, the public
 transaction bytes, block bodies, events and state diffs differ only in fresh randomness and nullifiers,
 that a deliberately linkable variant fail the same test, and that a wiped client recover its unclaimed
 deposits and unreleased burns from the seed alone. This suite measures that against what exists: the

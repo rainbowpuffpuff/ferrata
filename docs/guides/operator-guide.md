@@ -156,7 +156,7 @@ and a slot proof cost about 275k cycles in the attestation alone (Stage 4), so a
 roughly that plus one more slot proof (estimated, [`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §1).
 **Amortised per deposit**: one import serves every deposit under its root, so the cost per deposit is the
 import's cost divided by the deposits it newly covers (the measurement at the recommended cadence is a
-milestone B5 deliverable). Failure: an import at a count already imported is refused (244, after the
+milestone B4 deliverable). Failure: an import at a count already imported is refused (244, after the
 attestation: 233,436 gas wasted); an import after `Sunset` is refused before it (242).
 
 ## 5. The checkpoint prover (the return leg)
@@ -337,6 +337,6 @@ checkpoints after a sunset until holders have released ([`bridge.md`](../design/
 The updater, relayer and `monitor` daemons and their Logos modules; `verify_checkpoint`; the rule (B)
 attestor module; the gas drop; joining an open job and job clean-up; the weak-subjectivity bound; the
 duplicate-rate acceptance run; daemon resource measurements; the amortised costs at the recommended
-cadence with real proving (milestones A4, B5); a deployment on a public LEZ network. Sources:
+cadence with real proving (milestones A4, B4); a deployment on a public LEZ network. Sources:
 [`attestation.md`](../design/attestation.md) §15; [`bridge.md`](../design/bridge.md) §1, §18.6, §19;
 [`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §9.

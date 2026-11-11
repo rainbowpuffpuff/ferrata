@@ -319,7 +319,7 @@ Roots grow with the import cadence, not with deposits: 8,760 a year at one an ho
 On Sepolia's Glamsterdam rules each new Ethereum slot costs 97,920 state gas, already inside the release
 and deposit figures of P.3. LEZ's own private-state commitments and nullifiers for each private
 transaction are LEZ's and not counted. **Gaps:** measured LEZ account sizes and overhead; the projections
-over one and five years with real traffic (milestone B5).
+over one and five years with real traffic (milestone B4).
 
 ---
 

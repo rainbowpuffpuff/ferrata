@@ -283,7 +283,7 @@ from another tenant's vault ([`bridge.md`](../design/bridge.md) §12.1, §15). A
 configuration by its id. Evidence today: the release test
 `attack_burn_from_another_config_cannot_satisfy_a_release` (native), and two configurations with their
 own vaults side by side in the harness ([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §2, §8).
-The malicious-tenant test (milestone B3 gate) is **not built** ([`docs/traceability.md`](../traceability.md),
+The malicious-tenant test (milestone B2's gate) is **not built** ([`docs/traceability.md`](../traceability.md),
 row F.16).
 
 ## 8. Rehearse the whole round trip
