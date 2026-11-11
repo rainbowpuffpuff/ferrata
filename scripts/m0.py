@@ -56,7 +56,13 @@ def check_user_proving(p4):
     rows, verdicts = [], []
     if not os.path.exists(pad_f):
         return dict(verdict="OPEN", value=f"no {rel(pad_f)}: run `just bench prove`", rows=[], sources=[rel(pad_f)])
-    pad = load(pad_f)["proofs"]
+    pad_all = load(pad_f)
+    pad = pad_all["proofs"]
+    cpus_seen = set()
+    for r in pad_all.get("runs", []):
+        m = r.get("machine") or {}
+        cpus_seen.add(f"{m.get('vendor', '?')} family {m.get('family', '?')} model {m.get('model', '?')}"
+                      f" ({m.get('cloud', '?')} {m.get('region', '?')})")
     for label in ("private attestation", "private claim", "private burn"):
         p = pad.get(label)
         if not p:
@@ -95,7 +101,8 @@ def check_user_proving(p4):
     rows.append(("a laptop (not a cloud container)", "not measured at the minimum", "OPEN"))
     linux = "GO" if verdicts and all(v == "GO" for v in verdicts) else ("NO-GO" if "NO-GO" in verdicts or "STOP" in verdicts else "OPEN")
     return dict(verdict=linux if linux != "GO" else "GO (Linux); macOS OPEN",
-                value="Linux x86-64 cloud containers held to 8 and 16 CPUs and 16 GiB (AMD Zen 3)",
+                value="Linux x86-64 Modal containers whose CPU and memory request equals their limit (16 GiB); CPUs: "
+                      + ("; ".join(sorted(cpus_seen)) or "not recorded"),
                 rows=rows, sources=[rel(pad_f), rel(scale_f), "lez/results/p4-minimum/README.md"])
 
 
