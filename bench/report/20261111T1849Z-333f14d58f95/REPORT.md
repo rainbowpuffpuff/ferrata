@@ -110,3 +110,5 @@ Container of `attest-pad`: CPU and memory request = limit {"modal_cpu_request_an
 
 Container of `bridge-pad`: CPU and memory request = limit {"modal_cpu_request_and_limit": 16.0, "modal_memory_mib_request_and_limit": 16384}, nproc 16, AuthenticAMD family 25 model 17, Ubuntu 24.04.5 LTS, risc0-r0vm 3.0.5, CLOUD_PROVIDER_AZURE us-east.
 
+Container of `release`: CPU and memory request = limit {"modal_cpu_request_and_limit": 16.0, "modal_memory_mib_request_and_limit": 16384}, nproc 16, AuthenticAMD family 25 model 1, Ubuntu 24.04.5 LTS, risc0-r0vm 3.0.5, CLOUD_PROVIDER_AZURE us-east.
+

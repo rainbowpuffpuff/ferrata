@@ -1,0 +1,71 @@
+{
+ "release": {
+  "16": [
+   {
+    "machine": {
+     "nproc": "16",
+     "cfs_quota_us": "1600000",
+     "memory_limit_bytes": "17179869184",
+     "vendor": "AuthenticAMD",
+     "family": "25",
+     "model": "1",
+     "bogomips": "3086.31",
+     "flags": [
+      "adx",
+      "avx2",
+      "bmi2",
+      "ht",
+      "sha_ni"
+     ],
+     "cloud": "AZURE",
+     "region": "us-east"
+    },
+    "run": 1,
+    "succinct_verified": true,
+    "prove": {
+     "s": 26.096847689,
+     "gnu_time": {
+      "user_s": "377.25",
+      "sys_s": "2.22",
+      "cpu_percent": "1451%",
+      "wall": "0:26.14",
+      "max_rss_kib": "1567400",
+      "exit_status": "0"
+     },
+     "sampled_max": {
+      "cgroup_current_bytes": 1520975872,
+      "meminfo_used_kib": 1485492,
+      "rss_sum_kib": 1633600,
+      "r0vm_rss_kib": 1542824
+     },
+     "record": {
+      "image_id": "0x17257f91bca70abf7a5476b498d687e95b6fb4d59e75b6bca1d46877ac9bf5cd",
+      "input_sha256": "2b1210e90d4da82a9749f469d3c2e1fc414576219aaa11287318486de2be3b8e",
+      "journal_equals_native": true,
+      "loadavg_after": "0.00 0.00 0.00 0/0 0",
+      "loadavg_before": "0.00 0.00 0.00 0/0 0",
+      "paging_cycles": 21767,
+      "program_sha256": "a6abe992cada41db6af2b2934cc214a3fbbaf3d3d1d7e326186b5af70024668e",
+      "prover": "r0vm, CPU",
+      "rayon_num_threads": null,
+      "receipt_bytes": 223930,
+      "receipt_kind": "succinct",
+      "receipt_sha256": "5a9a90f56967b99af74efc6c937e07f7b82944685a5a88c09923e93166162dfc",
+      "reserved_cycles": 31569,
+      "risc0_zkvm": "3.0.5",
+      "segments": 1,
+      "threads": 16,
+      "total_cycles": 131072,
+      "user_cycles": 77736,
+      "verifies": true,
+      "wall_s": 26.096847689
+     }
+    },
+    "p254": {
+     "exit_code": 0,
+     "wall_s": 37.02
+    }
+   }
+  ]
+ }
+}

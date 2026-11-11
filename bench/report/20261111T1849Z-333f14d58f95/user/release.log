@@ -1,0 +1,19 @@
+✓ Initialized. View run at 
+https://modal.com/apps/ws-1/main/ap-XfIEII2I8HoFy3zzmiPVs2
+✓ Created objects.
+├── 🔨 Created mount 
+│   ./le
+│   z/results/p4-minimum/minimum.py
+├── 🔨 Created function release_wrap.
+├── 🔨 Created function probe.
+├── 🔨 Created function prove.
+├── 🔨 Created function release_prove.
+└── 🔨 Created function release_finish.
+P4-RELEASE-PROVE {"job": "release", "tag": "bench-20261111T1849Z-333f14d58f95", "runs": [{"run": 1, "prove": {"exit_code": 0, "wall_s": 26.16}, "p254": {"exit_code": 0, "wall_s": 37.02}, "succinct_verified": true}], "nproc": "16"}
+{"run": 1, "prove": {"exit_code": 0, "wall_s": 26.16}, "p254": {"exit_code": 0, "wall_s": 37.02}, "succinct_verified": true}
+P4-RELEASE-WRAP {"run": 1, "exit_code": 0, "seconds": 16.86, "cpu_s": 106.8, "max_rss_kib": 7948404, "proof_json": true, "nproc": "16", "sampled_max": {"cgroup_current_bytes": 8203251712, "meminfo_used_kib": 8011076, "rss_sum_kib": 8026844, "r0vm_rss_kib": 0}}
+P4-RELEASE-FINISH {"run": 1, "inputs_equal_manifest": true, "groth16_exit": 0, "verify_exit": 0, "seal_bytes": 260, "selector": "0x73c457ba", "journal_equals_native": true}
+P4-DONE
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/ws-1/main/ap-XfIEII2I8HoFy3zzmiPVs2

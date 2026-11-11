@@ -1,0 +1,43 @@
+M0: open checks (proposal, milestone M0). Values from the files named; GO / NO-GO / OPEN.
+
+[GO (Linux); macOS OPEN] M0.1 A full LEZ private claim and a private attestation, padded as LEZ's wallet pads, and a release receipt on the declared minimum (8 cores, 16 threads, 16 GB), Linux and macOS
+    GO when: <= 20 min and <= 16 GB each
+    measured: Linux x86-64 Modal containers whose CPU and memory request equals their limit (16 GiB); CPUs: AuthenticAMD family 25 model 1 (AZURE eu-west); AuthenticAMD family 25 model 1 (AZURE uk); AuthenticAMD family 25 model 1 (AZURE us-east); AuthenticAMD family 25 model 1 (AZURE us-west); AuthenticAMD family 25 model 1 (GCP ca)
+      - private attestation, padded, 16 threads (the declared minimum): median 633.3 s (10.6 min), peak 9.23 GiB; 4/4 settled with the receipt verified  [GO]
+      - private attestation, padded, 8 threads (below it): median 1,236.8 s (20.6 min), peak 9.23 GiB; 4/4 settled with the receipt verified  [NO-GO]
+      - private claim, padded, 16 threads (the declared minimum): median 600.7 s (10.0 min), peak 9.25 GiB; 4/4 settled with the receipt verified  [GO]
+      - private claim, padded, 8 threads (below it): median 1,146.0 s (19.1 min), peak 9.25 GiB; 4/4 settled with the receipt verified  [GO]
+      - private burn, padded, 16 threads (the declared minimum): median 525.9 s (8.8 min), peak 9.25 GiB; 4/4 settled with the receipt verified  [GO]
+      - private burn, padded, 8 threads (below it): median 988.9 s (16.5 min), peak 9.25 GiB; 4/4 settled with the receipt verified  [GO]
+      - release receipt (succinct), 16 threads (the declared minimum): 26.4, 27.0 s, peak 1.49 GiB  [GO]
+      - release receipt (succinct), 8 threads (below it): 46.0, 46.0 s, peak 1.48 GiB  [GO]
+      - macOS (Apple Silicon): not measured: no macOS machine in the measurements  [OPEN]
+      - a laptop (not a cloud container): not measured at the minimum  [OPEN]
+    sources: lez/results/p4-minimum/summary-pad.json; lez/results/p4-minimum/summary-scale.json; lez/results/p4-minimum/README.md
+
+[NO-GO (not built)] M0.2 The gas drop: a private claim that sweeps a sealed native credit and pays its fee from it
+    GO when: passes
+    measured: no test of the gas drop in the repository (specified in the proposal §B2, not built)
+      - otherwise: first claims are faucet-funded, the correlation disclosed, Logos decides
+    sources: grep: fn *gas_drop* in lez/, bridge/, cli/, e2e/
+
+[OPEN (not pinned upstream: the B2 port)] M0.3 Token program on v0.4: immutable; the bridge's mint authority; burns only through synchronous messages; ATA-compatible accounts
+    GO when: pinned, or ported by me in B2
+    measured: released for v0.2.4; the v0.4 port is an unmerged branch
+      - otherwise: balances stay in the bridge's accounts, not transferable; Logos chooses
+    sources: proposal §B9 and README.md (state of 11 Nov 2026, spike/upstream/lez-programs at 6674d78)
+
+[NO-GO (open on the newest tag)] M0.4 Real proofs on the newest LEZ tag of the private update, attestation, claim and burn, settled by its sequencer
+    GO when: pass
+    measured: newest tag v0.4.0-rc2: real proofs pass on v0.4.0-rc1, not yet on v0.4.0-rc2
+      - v0.4.0-rc1: the private claim and burn proven by LEZ's wallet and settled by a devnet sequencer (EVIDENCE row 31; live round trip row 41); the proven update verified and applied by a live sequencer (docs/performance.md P.2); the private attestation proven and settled with its receipt verified in the harness (row 5), not on a sequencer  [partly]
+      - v0.4.0-rc2: programs rebuilt unchanged, the same charges; the one real proof stopped at its 1,200 s cap (EVIDENCE row 22)  [not passed]
+      - otherwise: the tag's change is traced and fixed in A1
+    sources: docs/design/lez-rc2-changes.md (tagged 9 Nov 2026, commit e3edf47); docs/EVIDENCE.md rows 22, 27, 31, 41; lez/RESULTS.md §10
+
+Also in M0 (answers and parameters from Logos, not measurable here): OPEN
+  - Logos's answer on ferrata_attestor by day 5: pending: asked in the proposal's review, due by day 5 of M0
+  - testnet 0.4's k, slot time, turn length, committee size, threshold, minimum stake, posting timeframe
+  - a notice period and burn freeze for breaking LEZ changes; a Logos LEZ engineer's check of the finality conditions; audit quotes requested
+
+Summary: 1 of 4 checks GO.
