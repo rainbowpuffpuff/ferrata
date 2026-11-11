@@ -1,0 +1,48 @@
+{
+  "burn_count": 2,
+  "burn_root": "0x5912a1693c1cca446a67b487e607a3a56b5e6df79ba985a2b684038a155046f5",
+  "burns": [
+    {
+      "amount": "0x00000000000000000000000000000000000000000000000000038d7ea4c68000",
+      "block": 60,
+      "burn_index": 0,
+      "c_out": "0x2de53532668ad9ebf90010d125e083fde3d68a501a6e2ccd89a97fecc97d04c7",
+      "leaf": "0x15c09f6ca988bed8d1133d9965ac37a3b9baaf6939e411044fb787f201095362",
+      "mac": "0xc85e50c170aee0c44ce2b51d9130b366",
+      "memo": "0xcf6662fc2edc73a502bc14652845897f5ce3aa3f",
+      "origin": "PublicRoot",
+      "r": "0xfb01d775f9aca41d0561d50af1360f689ef7c197fefc65c4323c7f71d65b8f93",
+      "token": "0x0000000000000000000000000000000000000000",
+      "tx": 0
+    },
+    {
+      "amount": "0x00000000000000000000000000000000000000000000000000038d7ea4c68000",
+      "block": 95,
+      "burn_index": 1,
+      "c_out": "0xb0fc78f96dff299fd72f10ae0d19d462c3411dce1dd6f3a3f32ab0cdb38adb31",
+      "leaf": "0x67972bf83d53da91c4105a2e5f8024868ec1123aee521b8463ae7f301e2aea2c",
+      "mac": "0x6e5cf1ff921fa247bca203c2a3337393",
+      "memo": "0xe7a9b1742be7d8037aa0ff5c5e1bc8f4c0b10b9c",
+      "origin": "PrivateToPublic",
+      "r": "0x64aa39ec18c050a7df22b6702c4484441fbb077eb9731beb50d9c6751fb986a2",
+      "token": "0x0000000000000000000000000000000000000000",
+      "tx": 0
+    }
+  ],
+  "config_id": "0x4e8a604732af48407d6c3270f4f5a43a18fd773738c3ff44df47c1b7e3de103b",
+  "imports": [
+    {
+      "block": 24,
+      "leaf_count": 1,
+      "tx": 0
+    },
+    {
+      "block": 30,
+      "leaf_count": 2,
+      "tx": 0
+    }
+  ],
+  "parent_tip": 18,
+  "sunset": false,
+  "tip": 95
+}

@@ -1,0 +1,127 @@
+{
+  "execute_s": 0.391210645,
+  "image_id": "0xa475e8f9aaa41d0ae3bf9a20ae7d937ebc637a961808765f0ff175158760d3b2",
+  "input_bytes": 602779,
+  "input_sha256": "37bf45ba2403406ca898b9ff7ec2072ca32ed187f209b9979d620dd8315a7c3c",
+  "journal_equals_native": true,
+  "name": "crown-18-95",
+  "paging_cycles": 1353348,
+  "program_bytes": 445564,
+  "program_sha256": "2bcda6f114eb9d4868f81bceb78b24ba27eddf8efc0bf20f43b55438a2bd05c3",
+  "prove_session_s": 32.728233531,
+  "prover": "in-process (LocalProver path), risc0-zkvm feature cuda",
+  "receipt_bytes": 224314,
+  "receipt_kind": "succinct",
+  "receipt_sha256": "69ccf134ed7033f3d7ece1e867f2cb6572f838774f6dd50a7fb8d5439162d32f",
+  "recursion_s": 12.017776585999997,
+  "reserved_cycles": 581370,
+  "risc0_zkvm": "3.0.5",
+  "segment_proofs_s": 20.710456945000004,
+  "segment_times": [
+    {
+      "index": 0,
+      "po2": 20,
+      "prove_s": 1.461165582
+    },
+    {
+      "index": 1,
+      "po2": 20,
+      "prove_s": 1.234595559
+    },
+    {
+      "index": 2,
+      "po2": 20,
+      "prove_s": 1.29558978
+    },
+    {
+      "index": 3,
+      "po2": 20,
+      "prove_s": 1.175694093
+    },
+    {
+      "index": 4,
+      "po2": 20,
+      "prove_s": 1.032330942
+    },
+    {
+      "index": 5,
+      "po2": 20,
+      "prove_s": 0.975491906
+    },
+    {
+      "index": 6,
+      "po2": 20,
+      "prove_s": 0.979836488
+    },
+    {
+      "index": 7,
+      "po2": 20,
+      "prove_s": 1.001662767
+    },
+    {
+      "index": 8,
+      "po2": 20,
+      "prove_s": 0.989247
+    },
+    {
+      "index": 9,
+      "po2": 20,
+      "prove_s": 0.989581989
+    },
+    {
+      "index": 10,
+      "po2": 20,
+      "prove_s": 0.972486652
+    },
+    {
+      "index": 11,
+      "po2": 20,
+      "prove_s": 0.981955187
+    },
+    {
+      "index": 12,
+      "po2": 20,
+      "prove_s": 0.970762869
+    },
+    {
+      "index": 13,
+      "po2": 20,
+      "prove_s": 0.985194994
+    },
+    {
+      "index": 14,
+      "po2": 20,
+      "prove_s": 0.977858439
+    },
+    {
+      "index": 15,
+      "po2": 20,
+      "prove_s": 0.981802383
+    },
+    {
+      "index": 16,
+      "po2": 20,
+      "prove_s": 1.045454572
+    },
+    {
+      "index": 17,
+      "po2": 20,
+      "prove_s": 0.961488529
+    },
+    {
+      "index": 18,
+      "po2": 20,
+      "prove_s": 1.073077346
+    },
+    {
+      "index": 19,
+      "po2": 19,
+      "prove_s": 0.625179868
+    }
+  ],
+  "segments": 20,
+  "total_cycles": 20447232,
+  "total_s": 33.119493663,
+  "user_cycles": 18512514,
+  "verifies": true
+}
