@@ -41,6 +41,25 @@ the checkpoint proofs in 14.0-219.3 s on one L4) need a GPU workspace and its CU
 network; LEZ execution gas and state growth come from the in-process harness (`lez/`, `cargo test -p harness`),
 which `just bench` does not wrap yet; latency is a sum of measured parts (docs/performance.md P.5).
 
+### The run of 11 November 2026 (`bench/report/20261111T1849Z-333f14d58f95/`)
+
+**Measured** on the Modal build box (gVisor; the CPU reports its model as "unknown": AMD or Intel is not shown;
+32 logical CPUs visible, a cgroup limit of 32 CPUs and 64 GiB; Azure us-west), `scripts/bench.sh box`, then
+`scripts/bench_report.py`; the box was shared with this branch's other jobs (six Halmos processes and two builds),
+so the wall clock below is an upper bound for that machine.
+
+| Figure | This run | The proposal (§B8) |
+|---|---|---|
+| Release receipt, real succinct proof (`RISC0_DEV_MODE=0`), crown rehearsal's private burn | **24.75 s** wall at 1,110 % CPU, peak 1.57 GiB, receipt 223,930 B, verified; image id `0x17257f91…f5cd`; 77,736 user cycles | 46 s at 8 CPUs, 26.4-27.0 s at 16 (peak 1.5 GiB) |
+| Release, ETH / ERC-20, with RISC Zero's real Groth16 verifier | **373,657** / **403,523** gas | 373,657 / 403,523 |
+| Deposit, first of the tree (real-verifier suite) / later ETH deposit | **200,572** / **161,430** gas | 159,285-198,427 before the fixes, which add 2.1k per deposit: 200,572 and 161,430 exactly |
+| Checkpoint under (A) with the real verifier: submit + recordBeacon + finalize | **1,002,201** gas (derived: 463,096 + 77,828 + 461,277) | 974,346 + 28.0k with the fixes = 1,002,346 (derived; 0.01 % apart) |
+| Finality update, `process_update`; the three steps | **10.21 M**; 2.31 M, 4.20 M, 3.60 M user cycles | "an update's 9.2M" public execution gas, steps of 2.3M, 4.2M and 3.6M (EVIDENCE row 2) |
+| Every other figure of `bench/results/` in these modes | equal to the committed `bench/results/blst-accel.all.txt` (the executor is deterministic) | |
+| Gas suite | 34 of 34 tests passed (`GasScenarios`, `ReturnLegGas`) | |
+
+The user-side proofs at the declared minimum (`just bench-user`) are in the next subsection.
+
 <!-- results: section 1 -->
 
 ## 2. `just m0`: the open checks with their values
@@ -96,6 +115,32 @@ which nothing here does (no publishing without the owner).
 the manifest (size and sha256) and, where `r0vm` 3.0.5 is installed, recomputes the two LEZ programs' image ids
 (`r0vm --elf F --id`).
 
+### Release 0.1.0-rc.1 (`releases/0.1.0-rc.1/`)
+
+**Built and tested** on the build box on 11 November 2026 at 19:01 UTC from commit `7eb40b6`, with
+`just release 0.1.0-rc.1` (`releases/0.1.0-rc.1/TESTS.md` has the transcript). Tarball 10.9 MB, sha256
+`617c0117400aa1422c5d6c120b17d5ff7ce70b87253316d32137dca0a9a5fcd7`.
+
+| Program | Image id | Size (B) |
+|---|---|---:|
+| attestation program `ferrata_lez.bin` | `0x2228bb462b83032ade1c5de62d381b8dcffe9d10d9e977dce9e9fc8da31467cf` | 602,904 |
+| bridge program `ferrata_bridge.bin` | `0x0e9dcd79482f9e0b83762b965d7e1d4319ffeba8a4bdfbdff148bbeaba79bbb6` | 541,464 |
+| `checkpoint` (rule (A)) | `0xcf38b945a70b66d9132fb493b4baf1db308de73ccb8b1108e1c1f8a4363525e6` | 443,604 |
+| `checkpoint_b` (rule (B)) | `0xa475e8f9aaa41d0ae3bf9a20ae7d937ebc637a961808765f0ff175158760d3b2` | 445,564 |
+| `segment` | `0xd2b30667292418ccf3cf68ee4fa2dc9ed7873de4034fcf1fb2ed3a6305a61cca` | 269,960 |
+| release | `0x17257f91bca70abf7a5476b498d687e95b6fb4d59e75b6bca1d46877ac9bf5cd` | 230,480 |
+
+All six image ids equal the crown run's table (`e2e/crown/README.md`), the programs live on Sepolia since
+`crown-live-1`: this branch changes no guest, and the release reproduces them. FerrataVault's runtime is 24,254 bytes
+and FerrataRegistry's 12,504 (EIP-170: 24,576). The CLI binary is 28,965,912 bytes. `release.sh verify` on the box
+and, after fetching the tarball, on the laptop: 10 of 10 files, every checksum, both LEZ programs' image ids
+recomputed with `r0vm`: equal.
+
+Found on the way: at `integration6` `cli/Cargo.lock` and the lockfiles of `bench/` and its six guests lacked
+entries that cargo then added (`ferrata-lez-holdings-wire`; `tiny-keccak`, `crunchy`), so `cargo build --locked`
+of the CLI refused; the completed lockfiles are committed on this branch. The CLI needs `libpcsclite-dev` to build
+(LEZ's wallet links it); the build box installs it in the command.
+
 <!-- results: section 3 -->
 
 ## 4. Deployment on testnet 0.4: one command
@@ -130,6 +175,23 @@ program's configuration for the new vault on LEZ (today `lez/live/driver` and th
 rehearsals), the token registrations, and the hand-over of the emergency stop's ownership (`deploy.sh` renounces
 it). On the day testnet 0.4 opens, its parameters (`k`, slot time, committee, posting timeframe) go into `--params`
 and the wallet's configuration, and the command above is the deployment.
+
+### Tested on a local chain (`scripts/test-deploy-local.sh`)
+
+On the build box, with anvil (chain id 31337), release 0.1.0-rc.1, nothing sent anywhere else: 5 of 5 checks pass.
+
+| Check | Result |
+|---|---|
+| Plan only (LEZ and EVM) | exit 0; the chain's block number still 0: nothing sent |
+| `--send`, mode B | exit 0: library, Groth16 verifier, emergency stop and vault deployed (vault `0xCf7E…0Fc9`); its bytecode first found byte-identical to the release's; `checkpointImageId` = `checkpoint_b`'s and `releaseImageId` = release's, read back from the chain |
+| A release with one bit of `release.bin` flipped | refused before anything is sent (`programs/release.bin: FAILED`), exit 1 |
+| A wrong `--chain-id` | refused (the endpoint reports 31337, not 11155111), exit 1 |
+| `--chain-id 1` | refused (Ethereum mainnet; prototype), exit 1 |
+
+**Not tested:** the LEZ side with `--send` (no LEZ sequencer or wallet binary ran in this test; the wallet commands
+were printed only), and a public testnet (nothing here sends to one). The wallet's `program-loader deploy`
+arguments follow LEZ v0.4.0-rc1's CLI (`lez/wallet/src/cli/programs/program_loader.rs`); testnet 0.4's wallet may
+differ, which the plan output makes visible before anything is sent.
 
 <!-- results: section 4 -->
 
