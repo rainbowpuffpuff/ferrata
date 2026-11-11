@@ -59,7 +59,7 @@ Build commits:
   - nix-bundle-dir 66d7f61792c4be0b7e3e6b9890dc1d58f52a4beb
   - nix-bundle-appimage 677e6fce32369016a405d4129d2d0598d35d03ba
   - nix-bundle-macos-app 3cf5c5941a791c1935acecfb4761f42941115b90
-Base data directory: /home/q/Downloads/software_i_built/logos-rfp/spike/tmp/miniapp/tmp.VUmbOpz7Ob/user-dir-1
+Base data directory: <spike>/tmp/miniapp/tmp.VUmbOpz7Ob/user-dir-1
 [app:out] [2026-11-11 19:27:31.446] [info] [logos] Granting host services to 'capability_module': token_registry,token_delivery
 [app:out] [2026-11-11 19:27:31.499] [out] [capability_module] [2026-11-11 19:27:31.499] [info] Granting host services to capability_module: ["token_registry","token_delivery"]
 [app:out] [2026-11-11 19:27:31.500] [info] [logos] Module loaded: capability_module

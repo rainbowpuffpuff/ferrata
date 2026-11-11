@@ -1,4 +1,4 @@
-QStandardPaths: XDG_RUNTIME_DIR not set, defaulting to '/home/q/Downloads/software_i_built/logos-rfp/spike/tmp/miniapp/runtime-root'
+QStandardPaths: XDG_RUNTIME_DIR not set, defaulting to '<spike>/tmp/miniapp/runtime-root'
 ********* Start testing of qmltestrunner *********
 Config: Using QtTest library 6.4.2, Qt 6.4.2 (x86_64-little_endian-lp64 shared (dynamic) release build; by GCC 13.2.0), ubuntu 24.04
 PASS   : qmltestrunner::FerrataMiniApp::initTestCase()
