@@ -340,6 +340,8 @@ fn gate_two_honest_one_adversary() {
     // GATE_SEED: another order of every block's transactions (and of the adversary's races).
     let seed = std::env::var("GATE_SEED").ok().and_then(|v| v.parse::<u64>().ok());
     let mut rng = Rng(seed.unwrap_or(0x9e37_79b9_7f4a_7c15));
+    // GATE_ADVERSARY=0: the two honest updaters alone (a baseline for what deferral costs).
+    let adversary = std::env::var("GATE_ADVERSARY").ok().as_deref() != Some("0");
     let mut junk_due = vec![false; recs.len()];
     let mut rounds = 0;
     loop {
@@ -362,7 +364,7 @@ fn gate_two_honest_one_adversary() {
                             idle[c] = false;
                         }
                         // The adversary races a third of the time.
-                        if d < 2 || rng.next().is_multiple_of(3) {
+                        if d < 2 || (adversary && rng.next().is_multiple_of(3)) {
                             block.push((c, d, Some(a), None));
                         }
                     }
@@ -373,7 +375,7 @@ fn gate_two_honest_one_adversary() {
             }
             // The adversary's junk, once per new update: a forged update's Open, an applied
             // update's Open again.
-            if junk_due[c] && chain[2].inst.store(&l).unwrap().is_some() {
+            if adversary && junk_due[c] && chain[2].inst.store(&l).unwrap().is_some() {
                 junk_due[c] = false;
                 let r = &recs[c];
                 let t = clocks[c].now();
@@ -430,7 +432,10 @@ fn gate_two_honest_one_adversary() {
         }
     }
     // Every recorded update applied exactly once, and the instance where the lab's ended.
-    let mut lines = vec![format!("gate\trounds\t{rounds}\tseed\t{}", seed.map_or("default".into(), |s| s.to_string()))];
+    let mut lines = vec![format!(
+        "gate\trounds\t{rounds}\tseed\t{}\tadversary\t{adversary}",
+        seed.map_or("default".into(), |s| s.to_string())
+    )];
     let mut total_updates = 0;
     for (c, r) in recs.iter().enumerate() {
         let s = store(&ups[c][0], &l);
@@ -478,7 +483,11 @@ fn gate_two_honest_one_adversary() {
     println!("{text}");
     let out = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("results");
     fs::create_dir_all(&out).unwrap();
-    let name = seed.map_or("gate.txt".to_string(), |s| format!("gate-seed-{s}.txt"));
+    let name = match (seed, adversary) {
+        (_, false) => "gate-no-adversary.txt".to_string(),
+        (None, true) => "gate.txt".to_string(),
+        (Some(s), true) => format!("gate-seed-{s}.txt"),
+    };
     fs::write(out.join(name), &text).unwrap();
     assert!(ratio <= 0.10, "honest refused gas {ratio:.4} of applied");
     assert!((0.35..=0.65).contains(&share1) && (0.35..=0.65).contains(&share2), "shares {share1:.3} {share2:.3}");
@@ -579,4 +588,43 @@ fn beacon_api_sources_over_http() {
         u.metrics.sources["up"].requests,
         u.metrics.sources["down"].errors
     );
+}
+
+/// Fee limits are declared in every transaction and enforced: a maximum fee below what a step costs
+/// gets the transaction rejected by LEZ's settlement (nothing charged); the budget stops sending.
+#[test]
+fn fee_limits_are_declared_and_enforced() {
+    let r = rec("mainnet");
+    let clock = Clock::new(r.entries.len());
+    let payer = key(0x28);
+    let mut l = HarnessLedger::new(std::slice::from_ref(&payer));
+    let mut u = r.updater("cheap", payer.clone(), vec![r.honest("a", &clock)], None, policy(1));
+    u.fees.max_fee_per_tx = 1_000;
+    let before = l.balance(&payer);
+    let plan = u.tick(&mut l).unwrap();
+    assert!(matches!(plan, Plan::Send(_)));
+    let (_, label, out) = l.log.last().unwrap();
+    assert!(out.rejected, "{label}: a max fee of 1,000 is below the step's cost: {out:?}");
+    assert_eq!(l.balance(&payer), before, "nothing charged");
+    assert!(u.inst.state(&l).unwrap().is_none(), "nothing applied");
+    assert_eq!(u.metrics.count("rejected"), 1);
+
+    // A budget of two transactions' maximum fees: the third is not sent.
+    let payer2 = key(0x29);
+    let mut l2 = HarnessLedger::new(std::slice::from_ref(&payer2));
+    let mut u2 = r.updater("budget", payer2, vec![r.honest("a", &clock)], None, policy(1));
+    u2.fees.max_fee_per_tx = 100_000_000;
+    u2.fees.budget = 250_000_000;
+    let mut sent = 0;
+    let err = loop {
+        match u2.tick(&mut l2) {
+            Ok(Plan::Send(_)) => sent += 1,
+            Ok(_) => {}
+            Err(e) => break e,
+        }
+        assert!(sent < 10, "the budget must stop it");
+    };
+    assert!(format!("{err:#}").contains("budget reached"), "{err:#}");
+    assert!(u2.health().1.iter().any(|w| w == "budget reached"));
+    println!("budget: {sent} sent ({} charged) before the stop", u2.metrics.spent());
 }

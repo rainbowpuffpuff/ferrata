@@ -1,4 +1,4 @@
-gate	rounds	447
+gate	rounds	447	seed	default
 mainnet	updates applied	14	jobs (with Init)	15	finalized slot	15631808
 sepolia	updates applied	44	jobs (with Init)	45	finalized slot	11556000
 honest-1	applied tx	62	refused tx	18	gas applied	207246954	gas refused	13070491	fee	1762539560	deferrals	423
