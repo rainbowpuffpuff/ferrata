@@ -36,12 +36,14 @@ for (const [tab, texts] of screens) {
 // and against the devnet outside it (qmltest/tst_miniapp.qml).
 test("ferrata_bridge_ui: the sandbox keeps the view off the network inside Basecamp", async (app) => {
   await app.click("Endpoints");
-  await app.waitFor(async () => { await app.expectTexts(["Inside Logos a ui module may not use the network"]); },
-    { timeout: 10000, interval: 300, description: "the sandbox note" });
+  const note = await app.json("settings.sandboxNote", "({ visible: visible })");
+  if (!note || note.visible !== true) throw new Error(`the sandbox note is not shown inside Logos: ${JSON.stringify(note)}`);
   await app.click("devnet backend (HTTP)");
   await app.click("Apply and test");
-  await app.waitFor(async () => { await app.expectTexts(["Not switched: Endpoint unreachable"]); },
-    { timeout: 30000, interval: 500, description: "the refused call to be reported" });
+  await app.waitFor(async () => {
+    const s = await app.json("settings.status", "({ text: text })");
+    if (!String(s && s.text).startsWith("Not switched: Endpoint unreachable")) throw new Error(`status: ${JSON.stringify(s)}`);
+  }, { timeout: 30000, interval: 500, description: "the refused call to be reported" });
 });
 
 run();

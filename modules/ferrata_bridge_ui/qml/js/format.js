@@ -37,8 +37,8 @@ var MESSAGES = [
     [/LEAF_NOT_IMPORTED|245 |248 |no imported root/, "Not final yet: the deposit is not covered by an imported root. Wait for the relayer's next import, then claim."],
     [/no accepted burn root|wait for the next checkpoint/, "Not final yet: no checkpoint covers this burn. Wait for the next checkpoint, then release."],
     [/WrongDepositIndex/, "Out of date: your deposit counter changed (another deposit was sent). Review the deposit again."],
-    [/verif|proof|seal/i, "Verification failed: a proof or record did not check. Nothing was changed; retry, or switch endpoints in Settings."],
-    [/error sending request|connect|Connection refused|unreachable|tcp/i, "Endpoint unreachable: the Ethereum RPC or backend in Settings does not answer. Check the address in Settings."]
+    [/verif|proof|seal/i, "Verification failed: a proof or record did not check. Nothing was changed; retry, or switch endpoints under Endpoints."],
+    [/error sending request|connect|Connection refused|unreachable|tcp/i, "Endpoint unreachable: the Ethereum RPC or the backend under Endpoints does not answer. Check the address there."]
 ];
 
 function friendly(raw) {
