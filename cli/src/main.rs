@@ -1,19 +1,17 @@
 //! `ferrata`: keys, deposit, scan, recover, claim, burn, release and status for the Ferrata bridge.
-//! See `../README.md` for every command, an example of each and what each makes public.
+//! See `../README.md` for every command, an example of each and what each makes public. The
+//! commands' logic is in `ferrata_cli::flow`, which the end-to-end test drives too.
 
-use std::{collections::HashSet, path::PathBuf};
+use std::path::PathBuf;
 
-use alloy::primitives::{Address, Bytes, B256, U256};
+use alloy::primitives::{Address, Bytes, U256};
 use anyhow::{anyhow, bail, ensure, Context as _, Result};
 use clap::{Args, Parser, Subcommand, ValueEnum};
-use ferrata_bridge_core::{chain_id_u256, inbound};
 use ferrata_cli::{
     account, eth,
     eth::IVault,
-    hx,
+    flow, hx,
     lez::{self, Context, Ledger as _, Sequencer},
-    release, scan,
-    scan::DepositState,
     seed::{Seed, DEFAULT_GAP},
     units,
 };
@@ -42,6 +40,9 @@ struct Common {
     /// The vault's address.
     #[arg(long, env = "FERRATA_VAULT", global = true)]
     vault: Option<Address>,
+    /// Refuse to run unless the Ethereum RPC serves this chain id (1 mainnet, 11155111 Sepolia).
+    #[arg(long, env = "FERRATA_CHAIN_ID", global = true)]
+    chain_id: Option<u64>,
     /// First block of the vault's events (its deployment block).
     #[arg(long, env = "FERRATA_FROM_BLOCK", default_value_t = 0, global = true)]
     from_block: u64,
@@ -65,7 +66,7 @@ struct Common {
     gap: u32,
 }
 
-#[derive(Clone, Copy, ValueEnum)]
+#[derive(Clone, Copy, PartialEq, Eq, ValueEnum)]
 enum Kind {
     Private,
     Public,
@@ -79,7 +80,7 @@ struct Send {
     /// A file holding the keystore's password.
     #[arg(long, env = "FERRATA_PASSWORD_FILE")]
     password_file: Option<PathBuf>,
-    /// Sign and send (without it the call is only printed).
+    /// Sign and send (without it the command is a dry run: it prints what it would send, what becomes public and the cost).
     #[arg(long)]
     send: bool,
     /// Confirm sending after reading what becomes public.
@@ -101,17 +102,20 @@ enum Command {
         #[arg(long)]
         show_secrets: bool,
     },
-    /// Build the vault deposit for a destination of the seed; print it, or send it through a keystore.
+    /// Deposit one denomination to a LEZ account of the seed (private by default); a dry run without --send.
     Deposit {
         /// Token address (0x000…0 for ETH).
         #[arg(long, default_value_t = Address::ZERO)]
         token: Address,
-        /// Index of the denomination in the token's registry entry.
+        /// Index of the denomination in the token's registry entry (`ferrata status` lists them).
         #[arg(long)]
         denomination: u8,
-        /// Destination kind: private (default) or public (visible when claimed).
+        /// Destination kind: private (default) or public (its account and balance become public when claimed).
         #[arg(long, value_enum, default_value_t = Kind::Private)]
         kind: Kind,
+        /// Confirms a public destination after reading what it makes public.
+        #[arg(long)]
+        i_accept_public_account: bool,
         /// Destination account index /a in the LEZ wallet.
         #[arg(long, default_value_t = 0)]
         account: u32,
@@ -123,68 +127,89 @@ enum Command {
     },
     /// Download the vault's deposit list (checked against depositRoot) and list this seed's deposits.
     Scan,
-    /// Recover everything from the seed: deposits and their state, burns and whether released.
+    /// Recover everything from the seed alone: deposits and their state, burns and whether released, holdings.
     Recover,
-    /// Claim a deposit on LEZ: private by default; plaintext only with --plaintext and its confirmation.
+    /// Claim a deposit on LEZ: private and after the deposit's claim delay by default.
     Claim {
-        /// Leaf index of the deposit (default: the oldest claimable one).
+        /// Leaf index of the deposit (default: the oldest claimable one whose delay has passed).
         #[arg(long)]
         leaf: Option<u64>,
+        /// Claim before the deposit's claim delay ends (less private: the claim's time points at the deposit).
+        #[arg(long)]
+        no_delay: bool,
         /// The plaintext path: links this mint to its deposit publicly.
         #[arg(long)]
         plaintext: bool,
         /// Confirms the plaintext path after reading what it makes public.
         #[arg(long)]
         i_accept_plaintext_links_deposit: bool,
-        /// The relayer's LEZ account (32-byte hex), paid the registered relay fee.
+        /// A LEZ relayer account (32-byte hex) paid the registered relay fee in wrapped tokens.
         #[arg(long)]
         relayer: Option<String>,
-        /// The LEZ account in the wallet that pays the fee (public claims).
+        /// The LEZ account in the wallet that pays the fee (plaintext claims; a private claim pays inside its proof).
         #[arg(long)]
         payer: Option<String>,
-        /// The bridge program's binary (private claims prove its execution locally).
-        #[arg(long)]
+        /// The bridge program's binary (a private claim proves its execution locally).
+        #[arg(long, env = "FERRATA_BRIDGE_PROGRAM")]
         bridge_program: Option<PathBuf>,
-        /// Sign and submit to the sequencer (without it the claim is only checked and printed).
+        /// Sign and submit to the sequencer (without it the command is a dry run).
         #[arg(long)]
         send: bool,
         /// Confirm submitting after reading what becomes public.
         #[arg(long)]
         yes: bool,
     },
-    /// Burn one denomination held by public account /a, releasable to an Ethereum recipient.
+    /// Burn one denomination on LEZ, releasable to an Ethereum recipient: from a private account by default.
     Burn {
-        /// The public account /a that holds the wrapped tokens.
+        /// Burn from account /a of this kind: private (default) or public (the holder and the burn become public).
+        #[arg(long, value_enum, default_value_t = Kind::Private)]
+        from: Kind,
+        /// Confirms burning from a public account after reading what it makes public.
+        #[arg(long)]
+        i_accept_public_account: bool,
+        /// The account /a that holds the wrapped tokens.
         #[arg(long, default_value_t = 0)]
         account: u32,
         /// The token's Ethereum address (0x000…0 for ETH).
         #[arg(long, default_value_t = Address::ZERO)]
         token: Address,
-        /// Amount in the token's units (one denomination), e.g. 0.001.
+        /// Amount in the token's units (one denomination), e.g. 0.1.
         #[arg(long)]
         amount: String,
-        /// The Ethereum recipient (bound into COut, encrypted in the memo).
+        /// The Ethereum recipient (bound into COut, encrypted in the memo); a fresh address is best.
         #[arg(long)]
         recipient: Address,
-        /// The LEZ account in the wallet that pays the fee.
+        /// The LEZ account in the wallet that pays the fee (public burns).
         #[arg(long)]
         payer: Option<String>,
-        /// Sign and submit to the sequencer (without it the burn is only checked and printed).
+        /// The bridge program's binary (a private burn proves its execution locally).
+        #[arg(long, env = "FERRATA_BRIDGE_PROGRAM")]
+        bridge_program: Option<PathBuf>,
+        /// Sign and submit to the sequencer (without it the command is a dry run).
         #[arg(long)]
         send: bool,
         /// Confirm submitting after reading what becomes public.
         #[arg(long)]
         yes: bool,
     },
-    /// Prove the release of a burn of this seed and build (or send) the vault call.
+    /// Release a burn of this seed on Ethereum, against the newest accepted root whose release delay has passed.
     Release {
         /// Burn counter i of the burn (default: the oldest unreleased one).
         #[arg(long)]
         burn: Option<u64>,
+        /// Send the release yourself from --keystore (no relay fee; your gas payer is linked to the recipient).
+        #[arg(long)]
+        self_send: bool,
+        /// The relayer named in the proof (default: any relayer, paid the registered relay fee by the vault).
+        #[arg(long)]
+        relayer: Option<Address>,
+        /// Write the relayer's job (journal and proof, nothing secret) to this file, for its inbox.
+        #[arg(long)]
+        job_out: Option<PathBuf>,
         /// The release guest program (.bin); with --prove, r0vm executes or proves it on the input.
         #[arg(long)]
         program: Option<PathBuf>,
-        /// Run the release guest (--program) on the input in r0vm: executed under RISC0_DEV_MODE=1, else proven locally.
+        /// Run the release guest (--program) in r0vm: executed under RISC0_DEV_MODE=1, else proven locally (succinct).
         #[arg(long)]
         prove: bool,
         /// Write the guest's input (for a remote prover) to this file.
@@ -193,12 +218,6 @@ enum Command {
         /// The Groth16 seal (hex file) for the vault call.
         #[arg(long)]
         seal: Option<PathBuf>,
-        /// Relayer address named in the proof (0: the sender).
-        #[arg(long, default_value_t = Address::ZERO)]
-        relayer: Address,
-        /// Claim the registered relay fee for the relayer.
-        #[arg(long)]
-        relay_fee: bool,
         #[command(flatten)]
         send: Send,
     },
@@ -214,56 +233,81 @@ fn need<T: Clone>(v: &Option<T>, what: &str) -> Result<T> {
     v.clone().ok_or_else(|| anyhow!("{what} is needed for this command"))
 }
 
-struct Env {
-    seed: Seed,
-    eth: alloy::providers::DynProvider,
-    vault: Address,
-    chain_id: u64,
+async fn eth_side(c: &Common) -> Result<flow::Eth> {
+    let url = need(&c.eth_rpc, "--eth-rpc (or FERRATA_ETH_RPC: any Ethereum JSON-RPC endpoint)")?;
+    let p = eth::provider(&url)?;
+    let vault = need(&c.vault, "--vault (or FERRATA_VAULT: the vault's address)")?;
+    let chain_id = alloy::providers::Provider::get_chain_id(&p)
+        .await
+        .with_context(|| format!("the Ethereum RPC {url} does not answer"))?;
+    if let Some(want) = c.chain_id {
+        ensure!(chain_id == want, "the Ethereum RPC {url} serves chain {chain_id}, not {want} (--chain-id): refusing to go on");
+    }
+    ensure!(
+        !alloy::providers::Provider::get_code_at(&p, vault).await?.is_empty(),
+        "no contract at {vault} on chain {chain_id}: check --vault and --eth-rpc"
+    );
+    Ok(flow::Eth { p, vault, chain_id, from_block: c.from_block, chunk: c.chunk })
 }
 
-async fn env(c: &Common) -> Result<Env> {
-    let seed = Seed::from_file(&need(&c.seed, "--seed")?)?;
-    let eth = eth::provider(&need(&c.eth_rpc, "--eth-rpc")?)?;
-    let vault = need(&c.vault, "--vault")?;
-    let chain_id = alloy::providers::Provider::get_chain_id(&eth).await?;
-    Ok(Env { seed, eth, vault, chain_id })
+fn seed_of(c: &Common) -> Result<Seed> {
+    Seed::from_file(&need(&c.seed, "--seed (or FERRATA_SEED: the seed file)")?)
 }
 
 async fn zone(
     c: &Common,
-    e: &Env,
+    e: &flow::Eth,
+    seed: &Seed,
     payer: Option<&str>,
     bridge_program: Option<PathBuf>,
 ) -> Result<(Sequencer, Context)> {
+    let rpc = need(&c.sequencer, "--sequencer (or FERRATA_SEQUENCER: the LEZ sequencer's RPC endpoint)")?;
     let wallet = lez::open_wallet(
-        &need(&c.lez_wallet, "--lez-wallet")?,
-        &need(&c.sequencer, "--sequencer")?,
-        &need(&c.lez_password_file, "--lez-password-file")?,
-        &e.seed,
+        &need(&c.lez_wallet, "--lez-wallet (or FERRATA_LEZ_WALLET: the LEZ wallet's home)")?,
+        &rpc,
+        &need(&c.lez_password_file, "--lez-password-file (or FERRATA_LEZ_PASSWORD_FILE)")?,
+        seed,
     )?;
-    let program = account(&need(&c.bridge_account, "--bridge-account")?)?;
-    let cid = eth::view(&e.eth, e.vault, IVault::lezConfigIdCall {}, None).await?;
+    let program = account(&need(&c.bridge_account, "--bridge-account (or FERRATA_BRIDGE_ACCOUNT)")?)?;
+    let cid = eth::view(&e.p, e.vault, IVault::lezConfigIdCall {}, None).await?;
     let payer = payer.map(account).transpose()?;
     let ctx = Context { program, cid: cid.0, chain_id: e.chain_id, vault: e.vault.into_array() };
-    Ok((Sequencer { wallet, payer, bridge_program }, ctx))
+    let seq = Sequencer { wallet, payer, bridge_program };
+    // Reach the sequencer once, so that a wrong endpoint fails here with its address.
+    seq.actor_state(lee_core::account::Actor::new(program, program))
+        .await
+        .with_context(|| format!("the LEZ sequencer {rpc} does not answer"))?;
+    Ok((seq, ctx))
 }
 
-fn confirm(send: bool, yes: bool) -> Result<bool> {
-    if !send {
-        println!("\nnot sent (add --send --yes to sign and send)");
-        return Ok(false);
+fn signer_of(c: &Common, send: &Send) -> Result<Option<flow::Signer>> {
+    match (&send.keystore, &send.password_file) {
+        (Some(k), Some(p)) => {
+            let s = eth::keystore_signer(k, p)?;
+            let address = s.address();
+            let url = need(&c.eth_rpc, "--eth-rpc")?;
+            Ok(Some(flow::Signer { p: eth::signing_provider(&url, s)?, address }))
+        }
+        (None, None) => Ok(None),
+        _ => bail!("--keystore and --password-file go together"),
     }
-    ensure!(yes, "refusing to send without --yes: read what becomes public above, then add --yes");
-    Ok(true)
 }
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() {
+    if let Err(e) = run().await {
+        eprintln!("error: {e:#}");
+        std::process::exit(1);
+    }
+}
+
+async fn run() -> Result<()> {
     let cli = Cli::parse();
     let c = &cli.common;
+    let mut out = flow::Out::new(true);
     match cli.command {
         Command::Keys { accounts, show_secrets } => {
-            let seed = Seed::from_file(&need(&c.seed, "--seed")?)?;
+            let seed = seed_of(c)?;
             println!("LEZ public accounts (wallet key tree, /a):");
             for a in seed.public_accounts(accounts)? {
                 println!("  /{}  {}", a.index, hx(a.id.value()));
@@ -285,162 +329,40 @@ async fn main() -> Result<()> {
             }
         }
 
-        Command::Deposit { token, denomination, kind, account: a, from, send } => {
-            let e = env(c).await?;
-            let signer = match (&send.keystore, &send.password_file) {
-                (Some(k), Some(p)) => Some(eth::keystore_signer(k, p)?),
-                (None, None) => None,
-                _ => bail!("--keystore and --password-file go together"),
+        Command::Deposit { token, denomination, kind, i_accept_public_account, account: a, from, send } => {
+            let seed = seed_of(c)?;
+            let e = eth_side(c).await?;
+            let signer = signer_of(c, &send)?;
+            let o = flow::DepositOpts {
+                token,
+                denomination,
+                public: kind == Kind::Public,
+                accept_public: i_accept_public_account,
+                account: a,
+                gap: c.gap,
+                from,
+                send: send.send,
+                yes: send.yes,
+                confirmations: send.confirmations,
             };
-            let depositor = match (&signer, from) {
-                (Some(s), _) => s.address(),
-                (None, Some(f)) => f,
-                (None, None) => {
-                    bail!("--from (to print) or --keystore and --password-file (to send) name the depositor")
-                }
-            };
-            ensure!(
-                a < c.gap,
-                "account /{a} is outside the recovery window (--gap {}): a wallet would not find it",
-                c.gap
-            );
-            let price = eth::deposit_price(&e.eth, e.vault, token, denomination).await?;
-            let (decimals, symbol) = eth::token_meta(&e.eth, token).await?;
-            let j = eth::view(&e.eth, e.vault, IVault::depositCountCall { depositor }, None).await?;
-            let keys = e.seed.bridge_keys();
-            let dests = e.seed.destinations(c.gap)?;
-            let dk = match kind {
-                Kind::Private => inbound::DestKind::Private,
-                Kind::Public => inbound::DestKind::Public,
-            };
-            let s = inbound::deposit_secret(
-                &keys.auth,
-                &chain_id_u256(e.chain_id),
-                &e.vault.into_array(),
-                &depositor.into_array(),
-                j,
-            );
-            let commitment = inbound::commitment(&s, dk, &dests.of(dk, a));
-            let input = eth::deposit_calldata(token, denomination, B256::from(commitment), j);
-            println!("deposit to the vault {} on chain {}", e.vault, e.chain_id);
-            println!("  denomination  {}", units::show(price.denomination, decimals, &symbol));
-            println!(
-                "  mint fee      {}  (schedule {})",
-                units::show(price.mint_fee, decimals, &symbol),
-                price.schedule
-            );
-            println!("  relay fee     {}", units::show(price.relay_fee, decimals, &symbol));
-            println!("  total         {}", units::show(price.total, decimals, &symbol));
-            println!("  depositor     {depositor}   j = {j}");
-            println!("  commitment C  {}", hx(&commitment));
-            println!("public on Ethereum: the depositor, the token, the denomination and fees, the time, C.");
-            println!(
-                "hidden: the LEZ destination ({} account /{a}); C commits to it.",
-                if dk == inbound::DestKind::Private { "private" } else { "public" }
-            );
-            if dk == inbound::DestKind::Public {
-                println!("note: a public destination becomes visible when it is claimed (which deposit paid it stays hidden in a private claim).");
-            }
-            if token != eth::ETH {
-                println!(
-                    "an ERC-20 deposit needs an allowance of {} for the vault first",
-                    units::show(price.total, decimals, &symbol)
-                );
-            }
-            println!("call: to {}  value {}  data {}", e.vault, if token == eth::ETH { price.total } else { 0 }, input);
-            if !confirm(send.send, send.yes)? {
-                return Ok(());
-            }
-            let signer = signer.ok_or_else(|| anyhow!("--send needs --keystore and --password-file"))?;
-            let p = eth::signing_provider(&need(&c.eth_rpc, "--eth-rpc")?, signer)?;
-            let value = if token == eth::ETH { U256::from(price.total) } else { U256::ZERO };
-            let receipt = eth::send(&p, depositor, e.vault, input, value, send.confirmations).await?;
-            let leaf = eth::deposit_of_receipt(&receipt).map(|d| d.leafIndex);
-            println!(
-                "sent: {} in block {} (leaf {leaf:?})",
-                receipt.transaction_hash,
-                receipt.block_number.unwrap_or_default()
-            );
+            flow::deposit(&e, &seed, signer.as_ref(), &o, &mut out).await?;
         }
 
         Command::Scan | Command::Recover => {
             let recover = matches!(cli.command, Command::Recover);
-            let e = env(c).await?;
-            let list = eth::deposit_list(&e.eth, e.vault, c.from_block, c.chunk).await?;
-            println!(
-                "vault {}: {} deposits at block {}, root {} (equal to depositRoot: checked)",
-                e.vault,
-                list.deposits.len(),
-                list.block,
-                list.root
-            );
-            let refunded = eth::refunded_leaves(&e.eth, e.vault, c.from_block, c.chunk).await?;
-            let (ledger, ctx, history) = if c.sequencer.is_some() {
-                let (ledger, ctx) = zone(c, &e, None, None).await?;
-                let history = lez::history_of(&ledger, &ctx).await?;
-                (Some(ledger), ctx, history)
+            let seed = seed_of(c)?;
+            let e = eth_side(c).await?;
+            if c.sequencer.is_some() || recover {
+                let (mut ledger, ctx) = zone(c, &e, &seed, None, None).await?;
+                flow::recover(&e, &seed, c.gap, Some((&mut ledger, &ctx)), recover, &mut out).await?;
             } else {
-                let cid = eth::view(&e.eth, e.vault, IVault::lezConfigIdCall {}, None).await?;
-                let ctx = Context {
-                    program: lee::AccountId::new([0; 32]),
-                    cid: cid.0,
-                    chain_id: e.chain_id,
-                    vault: e.vault.into_array(),
-                };
-                (None, ctx, lez::History::default())
-            };
-            let rows = scan::deposits(&e.seed, &ctx, &list, c.gap, &history, &refunded)?;
-            println!("deposits of this seed: {}", rows.len());
-            for r in &rows {
-                let d = &r.owned.deposit;
-                let (decimals, symbol) = eth::token_meta(&e.eth, Address::from(d.token)).await?;
-                let state = match (&r.state, ledger.is_some()) {
-                    (DepositState::Claimed, _) => "claimed".to_string(),
-                    (DepositState::Refunded, _) => "refunded".to_string(),
-                    (_, false) => "claim state unknown (no --sequencer)".to_string(),
-                    (DepositState::Claimable { root_leaf_count }, _) => {
-                        format!("unclaimed, claimable under root({root_leaf_count})")
-                    }
-                    (DepositState::NotImported, _) => "unclaimed, not yet imported".to_string(),
-                };
-                println!(
-                    "  leaf {:>6}  j {:>4}  {}  to {} /{}  N {}  {state}",
-                    d.leaf_index,
-                    d.j,
-                    units::show(units::word_to_u128(&d.amount)?, decimals, &symbol),
-                    if r.owned.kind == inbound::DestKind::Private { "private" } else { "public" },
-                    r.owned.account_index,
-                    hx(&r.owned.nullifier[..8]),
-                );
-            }
-            if recover {
-                ensure!(
-                    ledger.is_some(),
-                    "recover needs the zone too (--sequencer, --lez-wallet, --lez-password-file, --bridge-account)"
-                );
-                let released = eth::released_nullifiers(&e.eth, e.vault, c.from_block, c.chunk).await?;
-                let (burns, next_i) = scan::burns(&e.seed, &ctx, &history, &released);
-                println!("burns of this seed: {} (next burn counter {next_i})", burns.len());
-                for b in &burns {
-                    let (decimals, symbol) = eth::token_meta(&e.eth, Address::from(b.owned.burn.note.token)).await?;
-                    println!(
-                        "  i {:>4}  burn {:>6}  {}  to {}  {}",
-                        b.owned.i,
-                        b.owned.burn.burn_index,
-                        units::show(units::word_to_u128(&b.owned.burn.note.amount)?, decimals, &symbol),
-                        Address::from(b.owned.recipient),
-                        if b.released { "released" } else { "not released" }
-                    );
-                }
-                let unclaimed =
-                    rows.iter().filter(|r| !matches!(r.state, DepositState::Claimed | DepositState::Refunded)).count();
-                let unreleased = burns.iter().filter(|b| !b.released).count();
-                println!("recovered: {unclaimed} unclaimed deposits, {unreleased} unreleased burns");
+                flow::recover::<Sequencer>(&e, &seed, c.gap, None, false, &mut out).await?;
             }
         }
 
         Command::Claim {
             leaf,
+            no_delay,
             plaintext,
             i_accept_plaintext_links_deposit,
             relayer,
@@ -449,175 +371,86 @@ async fn main() -> Result<()> {
             send,
             yes,
         } => {
-            let e = env(c).await?;
-            let (mut ledger, ctx) = zone(c, &e, payer.as_deref(), bridge_program).await?;
-            let list = eth::deposit_list(&e.eth, e.vault, c.from_block, c.chunk).await?;
-            let history = lez::history_of(&ledger, &ctx).await?;
-            let rows = scan::deposits(&e.seed, &ctx, &list, c.gap, &history, &HashSet::new())?;
-            let row = match leaf {
-                Some(l) => rows
-                    .iter()
-                    .find(|r| r.owned.deposit.leaf_index == l)
-                    .ok_or_else(|| anyhow!("leaf {l} is not a deposit of this seed"))?,
-                None => rows
-                    .iter()
-                    .find(|r| matches!(r.state, DepositState::Claimable { .. }))
-                    .ok_or_else(|| anyhow!("no claimable deposit of this seed"))?,
+            let seed = seed_of(c)?;
+            let e = eth_side(c).await?;
+            let (mut ledger, ctx) = zone(c, &e, &seed, payer.as_deref(), bridge_program).await?;
+            let o = flow::ClaimOpts {
+                leaf,
+                plaintext,
+                accept_plaintext: i_accept_plaintext_links_deposit,
+                no_delay,
+                relayer: relayer.as_deref().map(ferrata_cli::h32).transpose()?,
+                gap: c.gap,
+                send,
+                yes,
             };
-            let leaves: Vec<_> = list
-                .deposits
-                .iter()
-                .map(|d| inbound::deposit_leaf(d.leaf_index, &d.depositor, &d.token, &d.amount, &d.commitment))
-                .collect();
-            let relayer = relayer.as_deref().map(ferrata_cli::h32).transpose()?;
-            let plan = lez::plan_claim(&ledger, &ctx, &leaves, &row.owned, &history, !plaintext, relayer).await?;
-            println!("{}: N {}", plan.call.what, hx(&plan.nullifier));
-            println!("public: {}", lez::reveals(&plan.call));
-            if plaintext && !i_accept_plaintext_links_deposit {
-                bail!("the plaintext path links this mint to its deposit for everyone; add --i-accept-plaintext-links-deposit to use it, or claim privately");
-            }
-            if !confirm(send, yes)? {
-                return Ok(());
-            }
-            let hash = ledger.submit(&plan.call).await?;
-            println!("sent: {hash}");
+            flow::claim(&e, &seed, &mut ledger, &ctx, &o, &mut out).await?;
         }
 
-        Command::Burn { account: a, token, amount, recipient, payer, send, yes } => {
-            let e = env(c).await?;
-            let (mut ledger, ctx) = zone(c, &e, payer.as_deref(), None).await?;
-            let (decimals, symbol) = eth::token_meta(&e.eth, token).await?;
-            let amount = units::parse(&amount, decimals)?;
-            let holder = e.seed.public_accounts(a + 1)?.pop().ok_or_else(|| anyhow!("no account /{a}"))?;
-            let history = lez::history_of(&ledger, &ctx).await?;
-            let plan = lez::plan_burn(
-                &ledger,
-                &ctx,
-                &e.seed.bridge_keys(),
-                holder.id,
-                token.into_array(),
+        Command::Burn {
+            from,
+            i_accept_public_account,
+            account: a,
+            token,
+            amount,
+            recipient,
+            payer,
+            bridge_program,
+            send,
+            yes,
+        } => {
+            let seed = seed_of(c)?;
+            let e = eth_side(c).await?;
+            let (mut ledger, ctx) = zone(c, &e, &seed, payer.as_deref(), bridge_program).await?;
+            let o = flow::BurnOpts {
+                public: from == Kind::Public,
+                accept_public: i_accept_public_account,
+                account: a,
+                token,
                 amount,
-                recipient.into_array(),
-                &history,
-            )
-            .await?;
-            println!(
-                "burn {} from public account /{a} ({}), releasable to {recipient}",
-                units::show(amount, decimals, &symbol),
-                hx(holder.id.value())
-            );
-            println!("note: r {}  COut {}", hx(&plan.note.r), hx(&plan.note.c_out));
-            println!("public: {}", lez::reveals(&plan.call));
-            if !confirm(send, yes)? {
-                return Ok(());
-            }
-            let hash = ledger.submit(&plan.call).await?;
-            println!("sent: {hash}");
+                recipient,
+                send,
+                yes,
+            };
+            flow::burn(&e, &seed, &mut ledger, &ctx, &o, &mut out).await?;
         }
 
-        Command::Release { burn, program, prove, input_out, seal, relayer, relay_fee, send } => {
-            let e = env(c).await?;
-            let (ledger, ctx) = zone(c, &e, None, None).await?;
-            let history = lez::history_of(&ledger, &ctx).await?;
-            let released = eth::released_nullifiers(&e.eth, e.vault, c.from_block, c.chunk).await?;
-            let (rows, _) = scan::burns(&e.seed, &ctx, &history, &released);
-            let row = match burn {
-                Some(i) => rows
-                    .iter()
-                    .find(|r| r.owned.i == i)
-                    .ok_or_else(|| anyhow!("no burn with counter {i} of this seed"))?,
-                None => rows.iter().find(|r| !r.released).ok_or_else(|| anyhow!("no unreleased burn of this seed"))?,
-            };
-            if row.released {
-                bail!(ferrata_cli::codes::vault_refusal(
-                    &ferrata_cli::codes::selector("NullifierAlreadyUsed"),
-                    "checked before sending"
-                )
-                .expect("known"));
-            }
-            let roots = eth::accepted_burn_roots(&e.eth, e.vault, c.from_block, c.chunk).await?;
-            let (root, count) =
-                roots.iter().rev().find(|(_, n)| *n > row.owned.burn.burn_index).copied().ok_or_else(|| {
-                    anyhow!(ferrata_cli::codes::vault_refusal(
-                        &ferrata_cli::codes::selector("BurnRootNotAccepted"),
-                        "checked before sending: no finalized checkpoint covers this burn yet"
-                    )
-                    .expect("known"))
-                })?;
-            let token = Address::from(row.owned.burn.note.token);
-            let cfg = eth::view(&e.eth, e.vault, IVault::tokenConfigCall { token }, None).await?;
-            let amount = U256::from_be_bytes(row.owned.burn.note.amount);
-            let denom_index = cfg
-                .denominations_
-                .iter()
-                .position(|d| *d == amount)
-                .ok_or_else(|| anyhow!("the burned amount is not a denomination on the vault"))?
-                as u8;
-            let fee = if relay_fee {
-                let state = eth::view(&e.eth, e.vault, IVault::feeStateCall { token }, None).await?;
-                let f = eth::view(
-                    &e.eth,
-                    e.vault,
-                    IVault::feesCall { token, index: U256::from(state.current), denomIndex: denom_index },
-                    None,
-                )
-                .await?;
-                u128::try_from(f.relayFee)?
-            } else {
-                0
-            };
-            let plan =
-                release::plan(&ctx, &history, &row.owned, root.0, count, denom_index, relayer.into_array(), fee)?;
-            let (decimals, symbol) = eth::token_meta(&e.eth, token).await?;
-            println!(
-                "release of burn {} (i {}) under burn root {root} ({count} burns)",
-                row.owned.burn.burn_index, row.owned.i
-            );
-            println!("  amount     {}", units::show(u128::try_from(amount)?, decimals, &symbol));
-            println!("  recipient  {}", Address::from(row.owned.recipient));
-            println!("  NOut       {}", hx(&plan.nullifier));
-            println!("  journal    sha256 {}", hx(&ferrata_bridge_core::sha256(&plan.journal)));
-            println!("public on Ethereum: the recipient, the token, the denomination, the time, NOut, the burn root, the relayer; not which burn.");
-            if let Some(path) = &input_out {
-                std::fs::write(path, plan.input.encode()).with_context(|| format!("writing {}", path.display()))?;
-                println!("guest input written to {} (for a remote prover)", path.display());
-            }
-            if prove {
-                let program = program.ok_or_else(|| anyhow!("--prove needs --program (the release guest's .bin)"))?;
-                let proven = release::prove(&program, &plan)?;
-                println!(
-                    "release guest {}: journal equal to the native one{}",
-                    hx(&proven.image_id),
-                    if proven.dev_mode {
-                        " (RISC0_DEV_MODE: executed, receipt fake)"
-                    } else {
-                        "; succinct receipt verified (wrap it to Groth16 for the vault)"
-                    }
-                );
-            }
+        Command::Release { burn, self_send, relayer, job_out, program, prove, input_out, seal, send } => {
+            let seed = seed_of(c)?;
+            let e = eth_side(c).await?;
+            let (mut ledger, ctx) = zone(c, &e, &seed, None, None).await?;
+            ensure!(!(self_send && relayer.is_some()), "--self-send and --relayer exclude each other");
             let seal = match &seal {
-                Some(path) => Bytes::from(hex::decode(std::fs::read_to_string(path)?.trim().trim_start_matches("0x"))?),
-                None => Bytes::new(),
+                Some(path) => Some(Bytes::from(
+                    hex::decode(
+                        std::fs::read_to_string(path)
+                            .with_context(|| format!("reading the seal {}", path.display()))?
+                            .trim()
+                            .trim_start_matches("0x"),
+                    )
+                    .context("the seal file is not hex")?,
+                )),
+                None => None,
             };
-            let input = release::calldata(&plan, seal.clone());
-            println!("call: to {}  data {input}", e.vault);
-            if !confirm(send.send, send.yes)? {
-                return Ok(());
-            }
-            ensure!(!seal.is_empty(), "the vault verifies a Groth16 seal: pass --seal");
-            let signer = eth::keystore_signer(
-                &need(&send.keystore, "--keystore")?,
-                &need(&send.password_file, "--password-file")?,
-            )?;
-            let from = signer.address();
-            let p = eth::signing_provider(&need(&c.eth_rpc, "--eth-rpc")?, signer)?;
-            let receipt = eth::send(&p, from, e.vault, input, U256::ZERO, send.confirmations).await?;
-            println!("sent: {} in block {}", receipt.transaction_hash, receipt.block_number.unwrap_or_default());
+            let signer = signer_of(c, &send)?;
+            let o = flow::ReleaseOpts {
+                burn,
+                via: if self_send { flow::Via::Myself } else { flow::Via::Relayer(relayer) },
+                seal,
+                job_out,
+                input_out,
+                program,
+                prove,
+                send: send.send,
+                yes: send.yes,
+                confirmations: send.confirmations,
+            };
+            flow::release_burn(&e, &seed, &mut ledger, &ctx, signer.as_ref(), &o, &mut out).await?;
         }
 
         Command::Status { token } => {
-            let eth_p = eth::provider(&need(&c.eth_rpc, "--eth-rpc")?)?;
-            let vault = need(&c.vault, "--vault")?;
+            let eth_p = eth::provider(&need(&c.eth_rpc, "--eth-rpc (or FERRATA_ETH_RPC)")?)?;
+            let vault = need(&c.vault, "--vault (or FERRATA_VAULT)")?;
             let leaves = eth::view(&eth_p, vault, IVault::nextLeafIndexCall {}, None).await?;
             let root = eth::view(&eth_p, vault, IVault::depositRootCall {}, None).await?;
             let cid = eth::view(&eth_p, vault, IVault::lezConfigIdCall {}, None).await?;
@@ -687,8 +520,9 @@ async fn main() -> Result<()> {
                 }
             }
             if c.sequencer.is_some() {
-                let e = env(c).await?;
-                let (ledger, ctx) = zone(c, &e, None, None).await?;
+                let seed = seed_of(c)?;
+                let e = eth_side(c).await?;
+                let (ledger, ctx) = zone(c, &e, &seed, None, None).await?;
                 let history = lez::history_of(&ledger, &ctx).await?;
                 for line in lez::zone_status(&ledger, &ctx, &history).await? {
                     println!("{line}");
