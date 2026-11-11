@@ -1,0 +1,135 @@
+{
+ "declared": {
+  "modal_cpu_request_and_limit": 8.0,
+  "modal_memory_mib_request_and_limit": 16384
+ },
+ "nproc": "8",
+ "nproc_all": "8",
+ "os_cpu_count": 8,
+ "sched_getaffinity": 8,
+ "cpuinfo_processors": 8,
+ "cpuinfo_model_names": [
+  "unknown"
+ ],
+ "cpuinfo_ids": [
+  [
+   "bogomips",
+   "2450.00"
+  ],
+  [
+   "cache size",
+   "8192 KB"
+  ],
+  [
+   "cpu family",
+   "25"
+  ],
+  [
+   "model",
+   "1"
+  ],
+  [
+   "stepping",
+   "unknown"
+  ],
+  [
+   "vendor_id",
+   "AuthenticAMD"
+  ]
+ ],
+ "cpuinfo_siblings": [
+  "8"
+ ],
+ "cpuinfo_cpu_cores": [
+  "8"
+ ],
+ "cpu_flags": [
+  "adx",
+  "avx2",
+  "bmi2",
+  "ht",
+  "sha_ni"
+ ],
+ "cgroup": {
+  "cgroup.controllers": null,
+  "cpu.max": null,
+  "cpu.weight": null,
+  "cpuset.cpus.effective": null,
+  "memory.max": null,
+  "memory.high": null,
+  "memory.current": null,
+  "memory.peak": null,
+  "memory.swap.max": null,
+  "memory.events": null,
+  "memory/memory.limit_in_bytes": "17179869184",
+  "memory/memory.max_usage_in_bytes": null,
+  "memory/memory.usage_in_bytes": "68861952",
+  "cpu/cpu.cfs_quota_us": "800000",
+  "cpu/cpu.cfs_period_us": "100000",
+  "cpuset/cpuset.cpus": "0-7"
+ },
+ "proc_self_cgroup": "7:pids:/ta-01M74Q08VB4JJ5R846701NB7NR\n6:memory:/ta-01M74Q08VB4JJ5R846701NB7NR\n5:job:/ta-01M74Q08VB4JJ5R846701NB7NR\n4:devices:/ta-01M74Q08VB4JJ5R846701NB7NR\n3:cpuset:/ta-01M74Q08VB4JJ5R846701NB7NR\n2:cpuacct:/ta-01M74Q08VB4JJ5R846701NB7NR\n1:cpu:/ta-01M74Q08VB4JJ5R846701NB7NR",
+ "meminfo_kib": {
+  "MemTotal": 16777216,
+  "MemFree": 16709916,
+  "MemAvailable": 16709916,
+  "Cached": 30844,
+  "SwapTotal": 0,
+  "SwapFree": 0,
+  "Shmem": 0
+ },
+ "kernel": "Linux version 4.19.0-gvisor #1 SMP Sun Jan 10 15:06:54 PST 2016",
+ "os": "Ubuntu 24.04.5 LTS",
+ "glibc": "ldd (Ubuntu GLIBC 2.39-0ubuntu8.9) 2.39",
+ "env": {
+  "MODAL_REGION": "ap-northeast",
+  "MODAL_CLOUD_PROVIDER": "CLOUD_PROVIDER_GCP"
+ },
+ "job": "attest",
+ "tag": "cpu8-mem16g",
+ "affinity": 0,
+ "manifest": {
+  "binary_from": "lez/target/debug/prove_attest",
+  "ferrata_commit": "0b135f76ebd6e12787ca9ebf1f5b83c53519a69c",
+  "ferrata_uncommitted_changes": 0,
+  "fixtures_from": "crates/ferrata-spectests/fixtures/mainnet-attest-2026-11-10",
+  "expected_consumer_image_id": "3f357bae4537eafd9a922befade5275e7cf3453deb91c93d1698631ff9feee6d",
+  "program_image_id": "e517399a94269f1a65b50c53c6187cd630c1f8f6d91f9617619ef94a3cba7177",
+  "prove_command": "FERRATA_EXPECT_CONSUMER_IMAGE_ID=<expected_consumer_image_id> FERRATA_ATTEST_FIXTURE_DIR=<this directory>/mainnet-attest-2026-11-10 RISC0_DEV_MODE=0 RISC0_SERVER_PATH=<r0vm 3.0.5 built with CUDA> /usr/bin/time -v ./prove_attest --tx-out stage4-private-attest-tx.borsh > prove-attest.log 2>&1",
+  "files": {
+   "mainnet-attest-2026-11-10/SHA256SUMS": {
+    "bytes": 1726,
+    "sha256": "b3dc1cd99692007f22226720e83c6922a58b3194b5872f78929eb2f1c34f4cc2"
+   },
+   "mainnet-attest-2026-11-10/bootstrap.ssz": {
+    "bytes": 25672,
+    "sha256": "39c7dc83d265b3cfb61efbdf29d9c1673e018281d62970bb11469ae609a37143"
+   },
+   "mainnet-attest-2026-11-10/finality_update.ssz": {
+    "bytes": 2097,
+    "sha256": "7f12dfcc5b2e22faba2eb68d9161f2fedd6cc6a9ffd0e8fcd8111839cd403055"
+   },
+   "mainnet-attest-2026-11-10/fixture.json": {
+    "bytes": 2792,
+    "sha256": "5ca51e4312e38d01a1a88937e5f8fc767df49b1ded2d97c51b92eacc911bc40d"
+   },
+   "mainnet-attest-2026-11-10/receipts_26384851.json": {
+    "bytes": 1563122,
+    "sha256": "5602e32302d32d42efb98943a14a455d50c40817e95bb970ac7247040e52ca01"
+   },
+   "prove_attest": {
+    "bytes": 157634064,
+    "sha256": "7699c9d2567d5c48b8e3b3754a2957c87298de3fe9b9419477c0ff0656174e3a"
+   }
+  }
+ },
+ "input_hashes_equal_manifest": true,
+ "r0vm_version": "risc0-r0vm 3.0.5",
+ "r0vm_sha256": "36c016a5bb2ded5bd1f8f92cc487e6ffaeb1e95ec05850c983081a0f716b515b",
+ "image_ids": "consumer image 3f357bae4537eafd9a922befade5275e7cf3453deb91c93d1698631ff9feee6d (419456 ELF bytes); program image e517399a94269f1a65b50c53c6187cd630c1f8f6d91f9617619ef94a3cba7177 (602872 ELF bytes); RISC0_DEV_MODE off",
+ "env_set": {
+  "RISC0_DEV_MODE": "0",
+  "RISC0_INFO": "1",
+  "RUST_LOG": "info"
+ }
+}

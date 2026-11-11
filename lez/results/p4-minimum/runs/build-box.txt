@@ -1,0 +1,76 @@
+# The build box (mrun, Modal workspace ws-4, from spike/ferrata-wt-p4/lez): box-build.sh
+2026-11-11T06:58:43Z
+nproc 2
+model name	: unknown
+MemTotal:       67108864 kB
+rustc 1.98.1 (48a229cea 2026-09-01)
+cargo 1.98.1 (797e8a9bc 2026-08-05)
+risc0-r0vm 3.0.5
+ldd (Ubuntu GLIBC 2.39-0ubuntu8.9) 2.39
+r0vm <spike>/risc0-home-lez/extensions/v3.0.5-cargo-risczero-x86_64-unknown-linux-gnu/r0vm
+36c016a5bb2ded5bd1f8f92cc487e6ffaeb1e95ec05850c983081a0f716b515b  <spike>/risc0-home-lez/extensions/v3.0.5-cargo-risczero-x86_64-unknown-linux-gnu/r0vm
+FERRATA_HEAD=0b135f76ebd6e12787ca9ebf1f5b83c53519a69c FERRATA_DIRTY=0
+# cargo build -p harness --locked --bin prove_attest --bin prove_bridge (GNU time)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5m 10s
+	Percent of CPU this job got: 825%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 5:10.22
+	Maximum resident set size (kbytes): 1342228
+# --image-ids
+consumer image 3f357bae4537eafd9a922befade5275e7cf3453deb91c93d1698631ff9feee6d (419456 ELF bytes); program image e517399a94269f1a65b50c53c6187cd630c1f8f6d91f9617619ef94a3cba7177 (602872 ELF bytes); RISC0_DEV_MODE off
+bridge image 1156918fdfee530b4fc9cb1eae2078d161d21cb11e26ffbfc7f75aa427de9773 (541456 ELF bytes); RISC0_DEV_MODE off
+# dev-mode dry runs (fake receipts)
+private claim: DRY RUN, NOT A PROOF (RISC0_DEV_MODE=1): execute_and_prove 0.9 s (prove + settle 1.4 s); receipt (fake receipt) 4525 bytes; transaction 8937 bytes
+private claim: settled: execution gas 551,502 (PRIVATE_VERIFY_GAS 409,764 + public part 141,738 cycles), storage gas 224,063, base fee 6,204,520; receipt at bytes 4,412..8,937 of 8,937
+private burn: DRY RUN, NOT A PROOF (RISC0_DEV_MODE=1): execute_and_prove 0.6 s (prove + settle 0.9 s); receipt (fake receipt) 3985 bytes; transaction 7857 bytes
+private burn: settled: execution gas 518,358 (PRIVATE_VERIFY_GAS 409,764 + public part 108,594 cycles), storage gas 224,063, base fee 5,939,368; receipt at bytes 3,872..7,857 of 7,857
+DRY RUN, NOT A PROOF (RISC0_DEV_MODE=1): execute_and_prove 0.5 s (prove + settle 0.7 s); receipt (fake receipt) 4157 bytes; transaction 8201 bytes
+settled: execution gas 421,641 (PRIVATE_VERIFY_GAS 409,764 + public part 11,877 cycles), storage gas 224,063, base fee 5,165,632
+# stage manifests
+{
+  "binary_from": "lez/target/debug/prove_attest",
+  "ferrata_commit": "0b135f76ebd6e12787ca9ebf1f5b83c53519a69c",
+  "ferrata_uncommitted_changes": 0,
+  "fixtures_from": "crates/ferrata-spectests/fixtures/mainnet-attest-2026-11-10",
+  "expected_consumer_image_id": "3f357bae4537eafd9a922befade5275e7cf3453deb91c93d1698631ff9feee6d",
+  "program_image_id": "e517399a94269f1a65b50c53c6187cd630c1f8f6d91f9617619ef94a3cba7177",
+  "prove_command": "FERRATA_EXPECT_CONSUMER_IMAGE_ID=<expected_consumer_image_id> FERRATA_ATTEST_FIXTURE_DIR=<this directory>/mainnet-attest-2026-11-10 RISC0_DEV_MODE=0 RISC0_SERVER_PATH=<r0vm 3.0.5 built with CUDA> /usr/bin/time -v ./prove_attest --tx-out stage4-private-attest-tx.borsh > prove-attest.log 2>&1",
+  "files": {
+    "mainnet-attest-2026-11-10/SHA256SUMS": {
+      "bytes": 1726,
+      "sha256": "b3dc1cd99692007f22226720e83c6922a58b3194b5872f78929eb2f1c34f4cc2"
+    },
+    "mainnet-attest-2026-11-10/bootstrap.ssz": {
+      "bytes": 25672,
+      "sha256": "39c7dc83d265b3cfb61efbdf29d9c1673e018281d62970bb11469ae609a37143"
+    },
+    "mainnet-attest-2026-11-10/finality_update.ssz": {
+      "bytes": 2097,
+      "sha256": "7f12dfcc5b2e22faba2eb68d9161f2fedd6cc6a9ffd0e8fcd8111839cd403055"
+    },
+    "mainnet-attest-2026-11-10/fixture.json": {
+      "bytes": 2792,
+      "sha256": "5ca51e4312e38d01a1a88937e5f8fc767df49b1ded2d97c51b92eacc911bc40d"
+    },
+    "mainnet-attest-2026-11-10/receipts_26384851.json": {
+      "bytes": 1563122,
+      "sha256": "5602e32302d32d42efb98943a14a455d50c40817e95bb970ac7247040e52ca01"
+    },
+    "prove_attest": {
+      "bytes": 157634064,
+      "sha256": "7699c9d2567d5c48b8e3b3754a2957c87298de3fe9b9419477c0ff0656174e3a"
+    }
+  }
+}
+{
+  "binary_from": "lez/target/debug/prove_bridge",
+  "ferrata_commit": "0b135f76ebd6e12787ca9ebf1f5b83c53519a69c",
+  "ferrata_uncommitted_changes": 0,
+  "expected_bridge_image_id": "1156918fdfee530b4fc9cb1eae2078d161d21cb11e26ffbfc7f75aa427de9773",
+  "prove_command": "FERRATA_EXPECT_BRIDGE_IMAGE_ID=<expected_bridge_image_id> RISC0_DEV_MODE=0 RISC0_SERVER_PATH=<r0vm 3.0.5 built with CUDA> /usr/bin/time -v ./prove_bridge --claim-out bridge-private-claim-tx.borsh --burn-out bridge-private-burn-tx.borsh > prove-bridge.log 2>&1",
+  "files": {
+    "prove_bridge": {
+      "bytes": 158126064,
+      "sha256": "b92df59c2248afdb052cf51d8d87958cb4fde33d9d1c7feebf1e41d767780692"
+    }
+  }
+}
