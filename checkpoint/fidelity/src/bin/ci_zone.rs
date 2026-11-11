@@ -69,7 +69,8 @@ fn options(args: &[String]) -> Result<BTreeMap<String, String>> {
 }
 
 fn read_json(path: &str) -> Result<Value> {
-    serde_json::from_slice(&fs::read(path).with_context(|| format!("reading {path}"))?).with_context(|| path.to_string())
+    serde_json::from_slice(&fs::read(path).with_context(|| format!("reading {path}"))?)
+        .with_context(|| path.to_string())
 }
 
 /// The test deployment (n = 4, `nMin` = 3, `tMin` = 2) with the identity file's eight values.

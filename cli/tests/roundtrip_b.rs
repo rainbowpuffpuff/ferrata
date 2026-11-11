@@ -139,7 +139,9 @@ impl HarnessLedger {
             .mentions
             .iter()
             .filter_map(|m| match m {
-                Mention::Signer(a) => Some(self.keys.get(&a.account_id).expect("the holder's key is the seed's").clone()),
+                Mention::Signer(a) => {
+                    Some(self.keys.get(&a.account_id).expect("the holder's key is the seed's").clone())
+                }
                 _ => None,
             })
             .collect();
@@ -239,12 +241,12 @@ fn word(n: u64) -> [u8; 32] {
 }
 
 fn h32(v: &Value, key: &str) -> Result<B256> {
-    let s = v[key].as_str().with_context(|| format!("{key}"))?;
+    let s = v[key].as_str().with_context(|| key.to_string())?;
     Ok(B256::from_slice(&hex::decode(s.trim_start_matches("0x"))?))
 }
 
 fn num(v: &Value, key: &str) -> Result<u64> {
-    v[key].as_u64().with_context(|| format!("{key}"))
+    v[key].as_u64().with_context(|| key.to_string())
 }
 
 /// The checkpoint journal the vault rebuilds (VaultTestBase._checkpointJournalBytes).
@@ -320,7 +322,8 @@ async fn deposit_attest_claim_burn_checkpoint_b_release() -> Result<()> {
 
     // 1. The zone's configuration for the vault anvil's first account is about to deploy (its
     //    fourth contract: the linked FerrataRegistry library, the mock, its emergency stop, the vault).
-    let mut zone = HarnessLedger { world: hb::World::new(), applied: Vec::new(), keys: HashMap::new(), txs: Vec::new() };
+    let mut zone =
+        HarnessLedger { world: hb::World::new(), applied: Vec::new(), keys: HashMap::new(), txs: Vec::new() };
     let program = zone.world.program;
     let vault = ANVIL0.create(3);
     let config = hb::config(vault.into_array(), hb::controls());
@@ -413,7 +416,8 @@ async fn deposit_attest_claim_burn_checkpoint_b_release() -> Result<()> {
     step(t0, "3. deposit of 1 ETH on anvil");
 
     // 4. ImportRoot from the vault's storage after the deposit, ImportFees, the claim.
-    let storage2 = vec![(word(0), slot(&p, vault, word(0)).await?), (word(1), slot(&p, vault, word(1)).await?), (word(2), cid)];
+    let storage2 =
+        vec![(word(0), slot(&p, vault, word(0)).await?), (word(1), slot(&p, vault, word(1)).await?), (word(2), cid)];
     ensure!(storage2[0].1 == root.0, "slot 0 is depositRoot");
     let b1 = zone.world.add_block(hb::Block::with_storage(9_000_064, 9_000_064, vault.into_array(), &storage2));
     let r = zone.world.import("ImportRoot", &cid, b1, root.0, n, &vault.into_array());
@@ -443,7 +447,8 @@ async fn deposit_attest_claim_burn_checkpoint_b_release() -> Result<()> {
     // 5. The burn: 0.1 ETH to a fresh address.
     let recipient = Address::from_slice(&sha256(b"ferrata ci round trip: recipient")[12..]);
     let history = lez::history(&ctx, &zone.applied(program).await?);
-    let bplan = lez::plan_burn(&zone, &ctx, &keys, holder, [0; 20], TENTH_ETH, recipient.into_array(), &history).await?;
+    let bplan =
+        lez::plan_burn(&zone, &ctx, &keys, holder, [0; 20], TENTH_ETH, recipient.into_array(), &history).await?;
     zone.submit(&bplan.call).await?;
     ensure!(zone.world.balance(holder, &cid) == ONE_ETH - TENTH_ETH, "the burn debited 0.1 ETH");
     let history = lez::history(&ctx, &zone.applied(program).await?);
@@ -493,7 +498,8 @@ async fn deposit_attest_claim_burn_checkpoint_b_release() -> Result<()> {
     ensure!(c.burnCount == 1 && c.burnRoot.0 == wallet_root, "the checkpoint's burn root is the wallet's");
     ensure!(c.importedLeafCount == n, "the checkpoint saw the import of {n} leaves");
     println!("checkpoint: {} blocks, burn root {}, newState {}", num(&cp, "blocks")?, c.burnRoot, c.newState);
-    let accept = |image: B256, j: &[u8]| IMock::acceptCall { imageId: image, journalDigest: B256::from(sha256(j)) }.abi_encode();
+    let accept =
+        |image: B256, j: &[u8]| IMock::acceptCall { imageId: image, journalDigest: B256::from(sha256(j)) }.abi_encode();
     anvil_send(&p, ANVIL0, verifier, accept(checkpoint_image, &journal), U256::ZERO).await?;
     let submit = ICheckpointsB::submitCandidateCall { c: c.clone(), seal: Bytes::from(SEAL.to_vec()) }.abi_encode();
     anvil_send(&p, ANVIL0, vault, submit, U256::ZERO).await?;
