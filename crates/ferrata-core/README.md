@@ -110,6 +110,7 @@ a clone of LEZ v0.4.0-rc1 beside this repository. `lez/RESULTS.md` (§8) has the
 | `crates/ferrata-core/src/attest.rs` | `HeaderRecord`, the attestations consumers call, identifiers, conditions and relations, the EIP-2935 hop |
 | `crates/ferrata-core/src/accumulator.rs` | Accumulator-leaf facts: a root attested from a storage slot, a leaf proven against it by a SHA-256 path |
 | `crates/ferrata-core/src/witness.rs` | Compact forms of the store, bootstrap and update for a program's state and messages, with strict encodings; the record a store keeps of each finalized header; the signer witness (non-signers' keys with Merkle branches); the committee adoption from uncompressed keys, in parts |
+| `crates/ferrata-core/src/ws.rs` | The weak-subjectivity period (phase 0 and Electra) and the bound on a store's finalized header |
 | `crates/ferrata-core/src/steps.rs` | The job-step API: `process_update` split into steps of under 5M cycles (validation and hash-to-G2, the Miller loops, the final exponentiation), the adoption, and `apply` to the store the job started from |
 | `lez/` | The light client as a LEZ v0.4.0-rc1 program: wire types and guests, the harness that drives them through LEZ's settlement, the results (`lez/RESULTS.md`) |
 | `crates/ferrata-spectests/src/execkit.rs` | A reference trie (independent Keccak), synthetic blocks, JSON-RPC readers |
@@ -231,14 +232,21 @@ a clone of LEZ v0.4.0-rc1 beside this repository. `lez/RESULTS.md` (§8) has the
 
 ## Weak subjectivity
 
-The policy store enforces **no weak-subjectivity bound today**, and nothing configures one.
-`FinalizedStore::process_update` takes `current_slot` from its caller and checks only the spec's
-slot order (`current_slot ≥ signature_slot > attested_slot ≥ finalized_slot`) and period rule
-(an update must be signed in the store's period, or in the next once the next committee is
-known: `PeriodSkipped`). `ChainSpec` holds the preset and the fork schedule, and no bound. An
-instance can therefore be advanced from an old checkpoint, one period at a time, by any chain of
-handoffs its committees signed. The proposal's slot rule and clock rule (§2, "Weak subjectivity")
-are not implemented here.
+`ws.rs` transcribes the specification's weak-subjectivity period (`compute_weak_subjectivity_period`,
+phase 0 and Electra, consensus-specs v1.7.0-beta.4) and `is_within_weak_subjectivity_period`, with the
+store's finalized header standing for the weak-subjectivity state. A policy store given a period
+(`FinalizedStore::with_weak_subjectivity_period`) refuses every update once the caller's
+`current_slot` is past the period of its finalized header (`OutsideWeakSubjectivityPeriod`, 53),
+however validly signed; such a store is replaced by one from a new bootstrap of a trusted checkpoint
+inside the period. Without a period nothing is checked (the vectors run so). The period needs the
+checkpoint state's total active balance, so it is computed off chain and fixed per instance.
+
+A clock is needed: the spec's period rule keeps a valid update's signature slot within two
+sync-committee periods of the finalized slot (512 epochs on mainnet), and the period is at least 256
+epochs (3,532 on mainnet), so an update's own signature slot can never show a store to be stale on
+mainnet. Off chain the caller's clock gives `current_slot`; the LEZ program uses the sequencer's clock
+through each transaction's timestamp validity window (`lez/results/a1-successors-ws.md`). Tests:
+`tests/weak_subjectivity.rs`; rows: `docs/REVIEW-core.md`, last section.
 
 ## Differential oracle: Helios
 

@@ -60,6 +60,9 @@ pub enum Error {
     BelowSupermajority = 51,
     /// Ferrata policy: the update does not advance the finalized header (duplicate or stale).
     NotNewer = 52,
+    /// Ferrata policy: the store's finalized header is older than its weak-subjectivity period
+    /// at the current slot (`crate::ws`); recover from a new bootstrap.
+    OutsideWeakSubjectivityPeriod = 53,
 
     /// Store invariant: next committee unknown and the update finalizes outside the store period.
     CommitteeUnknown = 60,

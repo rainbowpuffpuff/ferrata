@@ -107,7 +107,12 @@ fn inbound_configuration_import_and_plaintext_claim() {
     // Vault B's proofs offered for configuration A: the request names vault A, so the
     // attestation program refuses the account proof with the core's code.
     let request = ferrata_lez_bridge_wire::import_request(&a, &w.blocks[1].import_proof(&VAULT_B));
-    let record = RecordState { instance_id: INSTANCE, chain_id: CHAIN_ID, record: w.blocks[1].record.encode() };
+    let record = RecordState {
+        instance_id: INSTANCE,
+        chain_id: CHAIN_ID,
+        record: w.blocks[1].record.encode(),
+        root_id: INSTANCE,
+    };
     let core_code = evaluate(&INSTANCE, CHAIN_ID, &record.header().unwrap(), &request).expect_err("refused natively");
     let r = w.import("ImportRoot A with vault B's proofs", &cid_a, 1, w.vault_b.root(8), 8, &VAULT_B);
     run(r, Some(core_code));

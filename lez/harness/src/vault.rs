@@ -188,7 +188,7 @@ pub fn attest_root(chain: &mut Chain, label: &str, actor: Actor, request: &Reque
 /// program writes it (`RecordState`).
 pub fn place_record(chain: &mut Chain, instance_id: Root, chain_id: u64, record: &HeaderRecord) -> Actor {
     let actor = header_actor(ferrata_account(), &instance_id, record.beacon.slot);
-    let state = RecordState { instance_id, chain_id, record: record.encode() };
+    let state = RecordState { instance_id, chain_id, record: record.encode(), root_id: instance_id };
     let account =
         Account::default().with_actor_state(actor.program_account_id, ActorState::from(borsh::to_vec(&state).unwrap()));
     chain.state.force_insert_account(actor.account_id, account);
