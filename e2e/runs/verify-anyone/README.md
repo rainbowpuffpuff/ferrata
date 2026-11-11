@@ -39,6 +39,10 @@ run uses). Files: `ids.txt` (r0vm's ids of the LEZ programs), `r0bf/ids.jsonl` (
   had succeeded (its read of `nullifierUsed` right after the transaction, `e2e/crown/cloud/drive.py` `st_release`,
   most likely reached a public-endpoint backend one block behind; the chain shows the nullifier spent). Release 1's seal
   already verifies for the vault's `releaseImageId`; `e2e/crown.sh start` resumes and skips release 0.
+- `verify-sepolia-crown-live-1-after-finalize-ethpandaops.txt`: the same records against a second, independent
+  endpoint (`rpc.sepolia.ethpandaops.io`): the same **11 passed, 1 pending, 0 failed**. (`sepolia.drpc.org` answered
+  HTTP 400 to every request; the script now stops after the chain check with exit status 2 when the endpoint does not
+  answer as Sepolia.)
 - `verify-sepolia-crown-live-1-tampered.txt`: the same records with one deposit commitment, one byte of the
   checkpoint seal and the genesis state changed: **5 failed**, exit status 1.
 

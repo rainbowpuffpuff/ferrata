@@ -10,7 +10,7 @@ eth_blockNumber, eth_getBlockByNumber, eth_getCode, eth_getBalance, eth_getTrans
 eth_getTransactionReceipt, eth_getLogs and eth_call). One line per check:
 
     PASS     the chain agrees with the record
-    FAIL     it does not (the exit status is then 1)
+    FAIL     it does not (the exit status is then 1; 2 if the endpoint does not answer as Sepolia)
     PENDING  the run has not reached that stage yet (on chain and in the records); not a failure
 
 The image ids the vault must hold are pinned below (EXPECTED_IDS, the table of e2e/crown/README.md, which the script
@@ -308,6 +308,10 @@ def main() -> int:
         fin = rpc("eth_getBlockByNumber", "finalized", False)
         state["head"], state["finalized"] = head, int(fin["number"], 16)
         return f"Sepolia (chain id {cid}), head {head}, finalized {state['finalized']}"
+
+    if RESULTS[-1] != "PASS":
+        print(f"the endpoint {a.rpc} does not answer as Sepolia; nothing else checked (try another --rpc)")
+        return 2
 
     @check("image ids: e2e/crown/README.md's table = the ids pinned here = the run's records")
     def _():
