@@ -15,7 +15,12 @@ build box before any change: image `64faa2e3…7267` at that path, every gas fig
 tables the integration branch committed for `25dfd9b2…8c49` (only the image and the ids derived
 from it differ). The inbound crossing on a live sequencer (§11) deploys neither: it uses the frozen
 program of `inbound-live` (`66722fc7…f4fa`). §7's real proofs are of `25dfd9b2…8c49`, the
-program before this extension. Every number below is LEZ's own accounting of a transaction that
+program before this extension. **Since branch `lez-time-fix`** (§12) the program's freezes and caps
+run on attested Ethereum time instead of a caller's: image
+`d0c11833f2944d1d928bb4a40ffe9300591561dba0c7ca20f1c66265258b23cd` at that worktree's path, and every
+`results/bridge-*.md` is now of it. §12 gives each operation before and after that change; the tables
+of §1–§5 and §8a keep the figures of the program before it (`f11b1aba…58eb`), and §8's rows on caps,
+freezes and `Sunset` are the new run's. Every number below is LEZ's own accounting of a transaction that
 ran: `lee`'s state transition functions and the copy of LEZ's fee settlement that Stages 1–4 use
 ([RESULTS.md](RESULTS.md) §1), each transaction in a block of its own, the attestation program
 answering the bridge's `Attest` calls. They ran on this worktree's Modal build box
@@ -316,14 +321,17 @@ now built; §8 shows the checkpoint collecting it once, from the freeze authorit
 9. **The vault's registry and fee slots are defined here** (`BRIDGE.md` §5): SHA-256 slot keys,
    so the guest needs no keccak and the slots do not depend on the vault's layout. FerrataVault v5
    writes them; §8a runs the program on the storage it wrote.
-10. **Burns carry no time.** The 185-byte `Burn` is the checkpoint's, with no room for one; a
-    burn's freezes and buckets use the latest time its token and configuration actors accepted
-    (from claims, role messages and `Tick`). Conservative: a burn bucket never refills beyond a
-    validated time and a lapsed freeze holds until the time advances (§8 shows both).
+10. **No message carries a time** (since §12). Freezes and buckets use each actor's clock: the
+    newest execution timestamp it has read from a record of the configuration's attestation
+    instance, moved only by `Tick` and `Freeze`. Conservative: a bucket never refills beyond
+    attested Ethereum time and a lapsed freeze holds until something reads a later record (§8 and
+    §12 show both). Before §12 claims and role messages carried a caller's time under a validity
+    window, which one block producer could move (review r3, attack A).
 11. **Roles fixed per configuration**: the freeze authority, the admin and the fee recipient are LEZ
     accounts in the configuration; replacing the freeze authority after a 14-day timelock, the
     watchers, and a permissionless `Sunset` after 30 days without a finalised checkpoint are not
-    built (the attestation carries no block timestamp, and the vault has no slot for it). The
+    built (the program now has an attested clock, §12, but the vault has no slot recording its last
+    finalised checkpoint). The
     freeze authority acts through one LEZ account's signature, not a multisig (no v0.4 multisig
     program was looked for).
 12. **Each fee is held to the 1% ceiling separately** (mint, burn, checkpoint, relay), and schedule 0
@@ -358,12 +366,17 @@ bit 0 of one byte inside either receipt flipped, settlement refuses it ("Invalid
 execution circuit proof"). The transactions: `results/bridge-private-claim-tx.borsh`,
 `results/bridge-private-burn-tx.borsh`; the GPU log `results/prove-bridge.log`.
 
-## 8. Registry, fees, caps, freezes and `Sunset` (`results/bridge-controls.md`, 72 transactions)
+## 8. Registry, fees, caps, freezes and `Sunset` (`results/bridge-controls.md`, 78 transactions)
 
 `bridge_controls.rs` starts from the two configurations, registers tokens from the vaults'
 storage, imports roots and fee schedules, then exercises the caps, the freezes and the roles, and
 retires configuration B. Every case below ran through LEZ; a refusal reverts its whole
-transaction (the test checks the balances, nullifiers and token states after them).
+transaction (the test checks the balances, nullifiers and token states after them). Since §12 time
+moves only when a later block's record exists and a `Tick` or `Freeze` reads it: the test ticks
+both configurations with block 102's record before registering (tokens start at their
+configuration's clock), and every "later" below is a record that much later. The registry and fee
+rows are the program before §12 (their figures moved by +90 to +3,500 gas, §12); the rows from
+**Caps** on are the new run's.
 
 | case | code | execution gas |
 |---|---|---:|
@@ -379,27 +392,26 @@ transaction (the test checks the balances, nullifiers and token states after the
 | leaf 6 in schedule 1's range `[6, 8)` before the range was closed at 8 | 248 `LEAF_NOT_IMPORTED` | 133,437 |
 | T3's schedule 1 as its vault wrote it: one day of notice; a 2% mint fee (refused by the token) | 240 `BAD_MESSAGE` | 252,281; 250,496 |
 | leaf 6 under schedule 0's range `[0, 6)`; leaf 2 under schedule 1's `[6, 8)` (refused by the claimant) | 248 `LEAF_NOT_IMPORTED` | 31,744; 31,741 |
-| **Caps.** `SetCap` by the admin: ETH (A) mints 11 ETH, 0.01 ETH/s | applied | 49,629 |
-| below the floor; by the freeze authority; by a signer with no role; sent to the token's account itself | 240; 253 `NOT_AUTHORIZED` (three) | 39,385; 38,917; 38,917; 25,079 |
-| leaf 6: 10 ETH to the payer, 0.05 to the fee recipient, 0.01 to the relayer (10.06 ETH of the bucket) | applied | 255,922 |
-| leaf 2 (1.001 ETH with its relay fee) with 0.94 ETH left; ten seconds later (0.1 ETH refilled) | 255 `CAPPED`; applied | 134,180; 244,554 |
-| B's global mint cap at the floor (1 ETH): B's 1 ETH (1.001 ETH with its fee); B's 1,000 T2 (1 ETH of value units) | 255 `CAPPED`; applied | 179,068; 222,998 |
-| the T2 claim with a time one hour ahead of the block (LEZ's validity window, no program code; charged the gas limit) | reverted | 10,000,000 |
-| ETH (A) burns capped at 1 ETH: a burn; a second; the second again 100 s later without `Tick`; after `Tick` | applied; 255; 255; applied | 130,578; 57,531; 57,531; 130,701 |
-| **Freezes and roles.** The freeze authority freezes ETH (B) mints for one hour; a claim of B's 1 ETH | applied; 242 `FROZEN` | 46,543; 132,706 |
-| the admin unfreezes it; a freeze of 30 days and 1 ms | 253 `NOT_AUTHORIZED`; 240 `BAD_MESSAGE` | 37,050; 37,524 |
-| the freeze authority unfreezes ETH (B), freezes all mints of B for 30 days; the claim | applied; 242 `FROZEN` (at `config(B)`) | 46,525, 43,251; 179,041 |
-| ETH (A) burns frozen: a burn; unfrozen, all burns of A frozen: a burn; an hour later without `Tick`; after `Tick A` | 242; 242; 242; applied | 57,504; 102,555; 102,555; 130,579 |
-| **`Sunset`.** By a signer with no role; by the admin; sent to `config(B)` itself | 253 `NOT_AUTHORIZED` | 34,908; 34,908; 22,584 |
-| by the freeze authority; again | applied; 244 `ALREADY_WRITTEN` | 41,984; 35,367 |
-| `ImportRoot` B afterwards (refused before the attestation) | 242 `FROZEN` | 26,764 |
-| B's 1 ETH claimed after `Sunset` (the 30-day freeze lapsed); 1 ETH (B) burned after it | applied | 248,683; 129,237 |
+| **Caps.** `SetCap` by the admin: ETH (A) mints 11 ETH, 0.01 ETH/s | applied | 55,903 |
+| below the floor; by the freeze authority; by a signer with no role; sent to the token's account itself | 240; 253 `NOT_AUTHORIZED` (three) | 43,818; 43,347; 43,347; 28,620 |
+| leaf 6: 10 ETH to the payer, 0.05 to the fee recipient, 0.01 to the relayer (10.06 ETH of the bucket) | applied | 262,601 |
+| leaf 2 (1.001 ETH with its relay fee) with 0.94 ETH left; again once a record 10 s later exists, before any `Tick`; `Tick` ETH (A) with that record; leaf 2 (0.1 ETH refilled) | 255 `CAPPED`; 255; applied; applied | 137,575; 137,575; 94,979; 250,645 |
+| B's global mint cap at the floor (1 ETH): B's 1 ETH (1.001 ETH with its fee); B's 1,000 T2 (1 ETH of value units) | 255 `CAPPED`; applied | 183,295; 227,692 |
+| ETH (A) burns capped at 1 ETH: a burn; a second; the second once a record 100 s later exists, before `Tick`; `Tick`; the burn | applied; 255; 255; applied; applied | 135,847; 61,110; 61,110; 94,979; 136,264 |
+| **Freezes and roles.** The freeze authority freezes ETH (B) mints for one hour (the target first reads the newest record); a claim of B's 1 ETH | applied; 242 `FROZEN` | 104,274; 136,099 |
+| the admin unfreezes it; a freeze of 30 days and 1 ms after the record's time; a freeze until the record's time itself | 253 `NOT_AUTHORIZED`; 240 `BAD_MESSAGE` (two) | 41,945; 94,141; 94,130 |
+| the freeze authority unfreezes ETH (B), freezes all mints of B for 30 days; the claim | applied; 242 `FROZEN` (at `config(B)`) | 104,262, 93,524; 183,680 |
+| ETH (A) burns frozen: a burn; unfrozen, all burns of A frozen: a burn; once a record an hour later exists, before `Tick`; `Tick A`; the burn | 242; 242; 242; applied; applied | 61,081; 107,958; 107,958; 76,898; 136,142 |
+| **`Sunset`.** By a signer with no role; by the admin; sent to `config(B)` itself | 253 `NOT_AUTHORIZED` | 37,029; 37,036; 23,861 |
+| by the freeze authority; again | applied; 244 `ALREADY_WRITTEN` | 44,104; 37,489 |
+| `ImportRoot` B afterwards (refused before the attestation) | 242 `FROZEN` | 27,040 |
+| `Tick B` with a record 30 days later; B's 1 ETH claimed after `Sunset` (the 30-day freeze lapsed); 1 ETH (B) burned after it | applied | 76,899; 254,248; 133,744 |
 
 The global cap counts value units across tokens (`amount / lezUnit × unitWeight`): B's T2 claim fit
 the 1-ETH global bucket that B's ETH claim (1.001 ETH with its relay fee) did not. A capped or frozen
 claim leaves its deposit claimable: leaf 2 and B's 1 ETH were each claimed once, later. The
-validity window is LEZ's: the program asks for `[t, t + 10 min)`, settlement refuses a block outside
-it, and LEZ charges an uncoded failure the whole gas limit.
+earlier row of a claim whose caller time lay an hour ahead of its block (refused by LEZ's validity
+window, charged the gas limit) is gone: no message carries a time now (§12).
 
 **What the checkpoint collects of a `Sunset`.** One LEZ block with five of the transactions above,
 the refused ones marked reverted, read with `checkpoint-core`'s `parse_block` and
@@ -503,3 +515,79 @@ the vault's `storedLezConfigId`, 355,935 execution gas) after the refusal withou
 (249), the plaintext claim to LEZ's public test account 0 (142,432), its replay refused (250). 186
 blocks, re-checked by the full replay. Deposit 1 (private kind, real proof) waits for capture 2.
 
+
+## 12. Attested time: the clock of freezes and caps (branch `lez-time-fix`)
+
+**Why.** Review r3 (attack A): LEZ v0.4.0-rc1 neither bounds nor orders block timestamps, and the
+program's time was the caller's, under a validity window around the block's timestamp and advanced
+by an open `Tick`. One block producer could stamp its block a year ahead, carry a `Tick`, end every
+freeze, refill every bucket and leave the freeze authority unable to freeze again. **What changed**
+(`BRIDGE.md` §6): each gate's clock is the newest execution timestamp it has read from a record of
+the configuration's attestation instance; `Tick` (still open) and `Freeze` read that record
+(`Read` of `header(instance, slot)`; a Gloas record with its block's RLP header); the clock only
+moves forward; the transaction is valid only in a block stamped at or after the record's time; no
+message carries a time (`Claim`, `ClaimPrivately`, `Issue`, `Admit`, `SetCap` lost theirs).
+
+**Where and what ran.** The ws-5 Modal build box through `mrun` (2 vCPU), 11 Nov 2026, this
+worktree at commit `e13a6ce` plus rustfmt: `RISC0_DEV_MODE=1 cargo test -p harness --locked`, 37
+tests, all pass (the 36 of `integration4` and `bridge_time.rs`); clippy `-D warnings` and rustfmt
+clean on the LEZ crates; `prove_bridge`'s dry run (claim and burn settled with fake receipts); the
+CLI's tests build and its unit tests pass. Image `d0c11833f2944d1d928bb4a40ffe9300591561dba0c7ca20f1c66265258b23cd`
+(535,576 ELF bytes) at this worktree's path (`prove_bridge --image-ids`). Not proven for real; no run
+on a sequencer.
+
+**`results/bridge-time.md`** (`harness/tests/bridge_time.rs`, 34 transactions):
+
+| case | result | execution gas |
+|---|---|---:|
+| `Tick` at a configuration; at a token (the newest record, 40 min behind the LEZ clock) | applied | 76,899; 94,980 |
+| freeze B's mints for one hour (reads the record) | applied | 93,525 |
+| a block stamped **a year ahead**: `Tick B` with the newest record (clock unchanged); B's claim in it | applied; 242 `FROZEN` | 76,900; 183,266 |
+| in that block, the freeze authority freezes B's mints for 30 days (bounded by attested time) | applied | 93,526 |
+| ETH (A) mints capped at 11 ETH, 10.06 taken; in a block a year ahead: `Tick` with the newest record, `Tick` with an older record (clock unchanged, monotone), leaf 2's claim | applied; applied; 255 `CAPPED` | 94,981; 94,981; 137,575 |
+| a record 10 s later: `Tick`, leaf 2's claim (exactly 0.1 ETH refilled: 0.039 ETH left, asserted) | applied | 94,979; 250,645 |
+| a record 30 days after the freeze's start: `Tick B`, B's claim (the freeze lapsed) | applied | 76,899; 251,894 |
+| **stalled light client** (no newer record, a year of LEZ blocks): `Tick A`; a burn under A's burn freeze; the freeze authority unfreezes; a burn; `Tick`; a second burn (bucket not refilled); the admin raises the burn cap to 100 ETH; a burn (raising refills nothing) | applied; 242; applied; applied; applied; 255; applied; 255 | 76,900; 108,251; 93,511; 136,140; 94,981; 61,110; 55,906; 61,110 |
+| a record **an hour ahead of the block** (what only a captured sync committee could have written): `Tick` | reverted by LEZ (validity window, no program code), clock unchanged | 10,000,000 (the gas limit) |
+| the same `Tick` in a block its producer also stamps an hour ahead | applied | 94,980 |
+| Gloas record: no header; a header that does not hash to it; its own header | 247; 247; applied | 67,124; 181,187; 194,197 |
+| a payload record with a header; a slot with no record | 247 `IMPORT_MISMATCH`; 245 `NOT_FOUND` | 78,779; 61,695 |
+
+The refused far-ahead `Tick` costs its sender LEZ's whole gas limit (an uncoded failure, as before for a
+caller time outside its window); an honest relayer never sends one, because an honest record is at
+least two epochs behind real time.
+
+**Each operation, before → after** (execution gas, storage gas in brackets; before = §1–§8's
+figures of `f11b1aba…58eb`, after = this run):
+
+| operation | before | after |
+|---|---:|---:|
+| `Tick` at the configuration | 27,213 (440) | 76,899 (505): `Tick` 32,485 → `Read` 11,877 → reply 32,537 |
+| `Tick` at a token | 32,821 (460) | 94,979 (525) |
+| `Tick` with a Gloas record (the header hashed in the guest, keccak in software) | — | 194,197 (1,196) |
+| `Freeze` (freeze authority): a token's mints; all mints of a configuration | 46,543 (710); 43,251 (690) | 104,274 (775); 93,524 (755) |
+| `SetCap` (admin), a token's mint bucket | 49,629 (733) | 55,903 (725) |
+| `Sunset` (freeze authority) | 41,984 (671) | 44,104 (671) |
+| plaintext claim, 1 ETH (schedule 0) | 239,431 (2,061) | 245,325 (2,053) |
+| plaintext claim, 10 ETH (schedule 1) | 260,579 (2,061) | 267,540 (2,053) |
+| private claim, private destination | 539,060 (224,063; 8,953 B) | 544,841 (224,063; 8,937 B) |
+| public burn, 1 ETH | 130,868 (775) | 135,849 (775) |
+| private burn | 513,593 (224,063) | 518,891 (224,063) |
+| `Register` a token | 324,748 (2,747) | 327,760 (2,747) |
+| `Init`; `ImportRoot` (8 leaves) | 168,607; 231,558 | 169,018; 231,648 |
+| `Echo` (runs no changed code) | 11,947 | 12,231 |
+
+Reading a record makes `Tick` and `Freeze` about 2.3 to 2.9 times dearer (one `Read` of the
+attestation program and a second handler of the bridge); claims gain 2.5–2.7% and burns 3.8%,
+without any time in their messages (claims 8 bytes shorter, private claims 16). Part of every
+difference is the new image's layout: `Echo`, which runs none of the changed code, moved by +284
+and the import by +90; the rest is the token state's 65 more bytes (its attestation program, instance
+and pending read), decoded and written by every claim and burn. The private claim's two transitions
+take 41,242 and 111,694 user cycles (before 41,133 and 111,838), the private burn's 24,654 (24,397).
+
+**What it does not change.** The vault (its caps and freezes run on Ethereum's clock), the checkpoint
+(variants 0–3 are byte for byte the same; `Tick` and `Freeze` are not among them) and the attestation
+program (not edited; its `Read` serves the record). **What ran before it used the earlier program.**
+The inbound crossing on a live sequencer and on Sepolia (§11) used the frozen program of
+`inbound-live` (`66722fc7…f4fa`, with a caller's time), §7's real proofs are of `25dfd9b2…8c49`, and
+every figure in §1–§5 and §8a of `f11b1aba…58eb`: none of them has this clock.

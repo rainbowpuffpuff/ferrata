@@ -271,11 +271,13 @@ unchanged: its caps and freezes run on Ethereum's own clock.
 
 **What stays.** A captured sync committee together with one producer that stamps a far-future
 block can still move the clock; the vault's caps, on Ethereum time, still bound the escrow. Tested in
-`harness/tests/bridge_time.rs` (results in `results/bridge-time.md`, `BRIDGE-RESULTS.md` §11):
+`harness/tests/bridge_time.rs` (results in `results/bridge-time.md`, `BRIDGE-RESULTS.md` §12):
 a block stamped a year ahead with the newest record lifts no freeze and refills nothing, the freeze
 authority can still freeze in it; newer records refill exactly and end freezes; an older record moves
 nothing; a record an hour ahead of the block is refused by LEZ unless the block is stamped that far
 ahead too; with no newer record a year of LEZ blocks changes nothing; Gloas records with and without
-the right header; a slot without a record. The real crossing on Sepolia and every run recorded
-before this change used the earlier program (its caller time); `BRIDGE-RESULTS.md` §11 has the image
+the right header; a slot without a record. A `Tick` costs 76,899 execution gas at a configuration
+and 94,979 at a token, a `Freeze` 93,524 to 104,274; a `Tick` refused for a record ahead of its block
+is charged LEZ's whole gas limit, as any uncoded failure is. The real crossing on Sepolia and every run recorded
+before this change used the earlier program (its caller time); `BRIDGE-RESULTS.md` §12 has the image
 ids.

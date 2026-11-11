@@ -271,7 +271,8 @@ block, 34.17M per hour with 50 private transactions). DERIVED examples at `n` = 
 2 × 5.98M + 1,266 blocks × 6,405 = 20.1M against rule (B) 7.5M; an hour with 50 private transactions
 throughout, rule (A) 2 × 37.88M + 3.52 h × 34.17M = 196.0M against rule (B) 39.4M. Rule (B) also does
 not grow with the support blocks: rule (A)'s inscription check is BLAKE2b over the whole block (54.1M
-for a block with 4 private transactions, §2), rule (B) hashes no inscription.
+for a block with 4 private transactions, §2), rule (B) hashed no inscription (since §4a it hashes one,
+`T`'s, 0.88–0.90M cycles for an empty `T`).
 
 **The estimate this replaces** (`t` × 854,264 + 6,405 per block walked: 2.56M at `t` = 3 to 5.98M at
 `t` = 7) counted the attestations only. The certificates, which D13 added after the estimate, double
@@ -291,7 +292,7 @@ No Groth16 wrap was made. Two earlier attempts got no L4 within 30 minutes; thei
 up ("Deadline exceeded") and nothing ran; the proof was then spawned without a waiting client
 (`modal_app.py::spawn`) and ran within two minutes.
 
-**Refusals** (`crates/checkpoint-core/tests/rule_b.rs`, 13 tests; every input goes through its byte
+**Refusals** (`crates/checkpoint-core/tests/rule_b.rs`, 13 tests at this build, 14 since §4a; every input goes through its byte
 encoding first): too few (`refuses_too_few`); a duplicate signer, as the same attestation twice, one
 channel key with two attestation keys, or one attestation key under two channel keys
 (`refuses_a_duplicate_signer`); an uncertified key (`refuses_an_uncertified_key`); a certificate for
@@ -306,6 +307,79 @@ an ancestor of `T`, a fork block, a block beyond the input, an id that does not 
 tests (`crates/attestor-core/tests/attestor.rs`, 6) bind every field of both messages, and its vectors
 (`crates/attestor-core/vectors/attestor-v1.json`) are reproduced by `scripts/check-attestor-vectors.py`,
 an RFC 8032 reference implementation in Python that shares no code with the crate.
+
+### 4a. Rule (B) checks `T`'s producer inscription (branch `lez-time-fix`)
+
+**Why.** Review r3 (§1.2, §2 C): rule (B) checked no inscription, so `t` attestation keys, a second
+key class no LEZ node trusts, could certify a fabricated history alone. **What changed.**
+`CheckpointInputB` carries `T`'s inscription after `t_index` (`Inscription (of T)`, the encoding of
+rule (A)'s producer field), and `run_checkpoint_b` checks it exactly as rule (A) does
+(`ElidedInscription::check`: a well-framed Mantle transaction inscribing `T`'s bytes on this channel,
+the signer's `verify_strict` over the transaction hash) and refuses unless its signer is in `K`, after
+the attestations and their count. A forged history now also needs one channel key of `K`. The journal
+is unchanged (still rule (A)'s candidate journal word for word, checked by every generated fixture
+pair); the honest path is unchanged except that `T`'s producer must still be in `K` after the proof's
+rotations, as under rule (A). `OutcomeB` names the producer. **Sound and small**, so built: one field,
+five lines in the rule, the generator and `realblocks` supply the inscription they already had.
+
+**Tests** (`crates/checkpoint-core/tests/rule_b.rs`, now 14, all pass on the build box with
+`cargo +1.88 test -p checkpoint-core -p attestor-core`; clippy and rustfmt clean):
+`checks_the_producer_inscription_of_t` refuses `T` inscribed by a key outside the live set
+(`NotAccredited`), a signature that does not verify (`BadSignature`), an inscription on another channel
+(`WrongChannel`), the inscription of another block in `T`'s place (`BadSignature` or
+`PayloadMismatch`), and a `T` whose producer a rotation in the same proof removed (`NotAccredited`);
+the other 13 tests run with `T`'s inscription by channel key 0.
+
+**Cycles.** Executor (r0vm 3.0.5) on the ws-5 build box through `mrun`, 11 Nov 2026: `fidelity`'s
+`gen empty` and `gen busy` (the four sources), `host gen-b`, then `host bench` over the four sources
+and every `ra-*`/`rb-*` fixture (`results/ruleb-producer-bench.log`; ids of that build,
+`results/ruleb-producer-ids.log`: checkpoint `0x0f2e2e695d61a4330a9a1cb4df127fe163ba4c11b8d3966c4afe3641a82a8158`,
+checkpoint_b `0xbda325a882db9e73fa6b9eeedc522b7e67360d0c2216d58989945a906e1d7dc2`, segment
+`0x9f6b9a6efc1b1e1ad9aa37ecc61e55f94173e4e5c88976770b7b46ef28d659ea`, micro
+`0xd2b2eeba0a6e1b1d2661109dbd3992a215bc20a9e2311ca01685cbed9d47a8dd`; ids embed the build path). Every
+journal equals the native run's. Rule (A) runs no changed code, so its move against §4 (+5 cycles on
+`T` + 3, +364 on the hours, from the new build's layout) is the drift subtracted below:
+
+| fixture | n | t | rule (B) before (§4) | rule (B) now | difference | rule (A) before → now (drift) | check alone (difference − drift) |
+|---|---|---|---:|---:|---:|---:|---:|
+| rb-tonly-n3 | 3 | 2 | 3,512,323 | 4,404,041 (5) | +891,718 | 2,839,418 → 2,839,423 (+5) | 891,713 |
+| rb-tonly-n4 | 4 | 3 | 5,204,341 | 6,096,510 (7) | +892,169 | 3,740,489 → 3,740,494 (+5) | 892,164 |
+| rb-tonly-n7 | 7 | 5 | 8,567,359 | 9,460,493 (10) | +893,134 | 5,528,554 → 5,528,559 (+5) | 893,129 |
+| rb-tonly-n10 | 10 | 7 | 11,926,488 | 12,820,588 (14) | +894,100 | 7,331,406 → 7,331,411 (+5) | 894,095 |
+| rb-tonly-n15 | 15 | 10 | 17,047,608 | 17,943,159 (19) | +895,551 | 10,017,922 → 10,017,927 (+5) | 895,546 |
+| rb-empty-1-n3 | 3 | 2 | 3,531,918 | 4,422,627 (5) | +890,709 | 2,839,418 → 2,839,423 (+5) | 890,704 |
+| rb-empty-1-n4 | 4 | 3 | 5,217,212 | 6,107,899 (7) | +890,687 | 3,740,489 → 3,740,494 (+5) | 890,682 |
+| rb-empty-1-n7 | 7 | 5 | 8,578,098 | 9,468,744 (10) | +890,646 | 5,528,554 → 5,528,559 (+5) | 890,641 |
+| rb-empty-1-n10 | 10 | 7 | 11,946,328 | 12,836,964 (14) | +890,636 | 7,331,406 → 7,331,411 (+5) | 890,631 |
+| rb-empty-1-n15 | 15 | 10 | 17,080,999 | 17,971,547 (19) | +890,548 | 10,017,922 → 10,017,927 (+5) | 890,543 |
+| rb-empty-360-n3 | 3 | 2 | 5,779,891 | 6,676,199 (8) | +896,308 | 5,093,496 → 5,093,860 (+364) | 895,944 |
+| rb-empty-360-n4 | 4 | 3 | 7,505,344 | 8,401,597 (10) | +896,253 | 5,984,291 → 5,984,655 (+364) | 895,889 |
+| rb-empty-360-n7 | 7 | 5 | 10,863,894 | 11,760,096 (13) | +896,202 | 7,771,007 → 7,771,371 (+364) | 895,838 |
+| rb-empty-360-n10 | 10 | 7 | 14,245,801 | 15,141,953 (17) | +896,152 | 9,543,975 → 9,544,339 (+364) | 895,788 |
+| rb-empty-360-n15 | 15 | 10 | 19,307,122 | 20,203,199 (22) | +896,077 | 12,202,341 → 12,202,705 (+364) | 895,713 |
+| rb-pp5-360-n3 | 3 | 2 | 8,645,883 | 9,527,431 (13) | +881,548 | 7,940,328 → 7,940,692 (+364) | 881,184 |
+| rb-pp5-360-n4 | 4 | 3 | 10,325,095 | 11,206,651 (14) | +881,556 | 8,833,632 → 8,833,996 (+364) | 881,192 |
+| rb-pp5-360-n7 | 7 | 5 | 13,672,957 | 14,554,442 (18) | +881,485 | 10,618,888 → 10,619,252 (+364) | 881,121 |
+| rb-pp5-360-n10 | 10 | 7 | 17,083,183 | 17,964,628 (21) | +881,445 | 12,399,755 → 12,400,119 (+364) | 881,081 |
+| rb-pp5-360-n15 | 15 | 10 | 22,180,769 | 23,062,156 (27) | +881,387 | 15,062,287 → 15,062,651 (+364) | 881,023 |
+| rb-pp50-360-n3 | 3 | 2 | 37,698,589 | 38,594,066 (61) | +895,477 | 36,995,607 → 36,995,971 (+364) | 895,113 |
+| rb-pp50-360-n4 | 4 | 3 | 39,389,729 | 40,285,719 (63) | +895,990 | 37,883,560 → 37,883,924 (+364) | 895,626 |
+| rb-pp50-360-n7 | 7 | 5 | 42,755,918 | 43,652,843 (66) | +896,925 | 39,658,893 → 39,659,257 (+364) | 896,561 |
+| rb-pp50-360-n10 | 10 | 7 | 46,143,502 | 47,041,393 (70) | +897,891 | 41,451,827 → 41,452,191 (+364) | 897,527 |
+| rb-pp50-360-n15 | 15 | 10 | 51,146,220 | 52,045,560 (75) | +899,340 | 44,132,718 → 44,133,082 (+364) | 898,976 |
+
+So the check costs **0.88–0.90M cycles** on these fixtures, whose `T` is an empty block (839 bytes),
+whatever `n`, and adds one segment in most cases: as rule (A)'s check of one inscription of an empty
+block (0.89M, §2). It is BLAKE2b over the whole of `T`'s inscription (55.9 cycles per byte, §2) plus
+one Ed25519 `verify_strict`, so for a busy `T` it grows as rule (A)'s does: about 54M cycles for a `T`
+with four private transactions [derived from §2's `cp-busytip-t3`, not measured for rule (B)]. A
+prover picks a small `T`. Rule (B) stays the cheaper per checkpoint (one proof, no wait to link): at
+`n` = 4, the idle hour is 8.40M against rule (A)'s 2 × 5.98M plus the wait's blocks.
+
+**What this leaves.** The real proof of §4 (`rb-empty-360-n4`), the v5 vault's real rule (B) proofs
+(`vault/test/real/fixtures/rule-b.json`, `real-blocks.json`, "Real LEZ blocks" below) and §18.8's
+lab chain are of the guest before this check (`0xd3597543…0d64` and its successors); they stay valid
+tests of the vault and of that guest, not of this one. No real proof of this guest was made.
 
 ## 5. Composition
 
@@ -519,7 +593,8 @@ Findings:
 2. **The status byte.** All 202 blocks are inscribed with `bedrock_status = Pending` (0) and served by the
    sequencer's RPC with `Finalized` (2). The block hash leaves the byte out (as `lez.rs` assumed), but an
    inscription signs the inscribed bytes: a rule (A) prover must take `T`'s bytes from the inscription, not from
-   the RPC, or the producer check fails. Rule (B) never re-checks an inscription.
+   the RPC, or the producer check fails. Rule (B) never re-checked an inscription at this build; since
+   §4a it checks `T`'s, so a rule (B) prover must also read `T` from its inscription.
 3. **The channel's turn length is 0 on Bedrock.** The node reports the channel with `posting_timeframe` 0,
    `posting_timeout` 0 and `config_tip_hash` 0 (made by `sequencer_service setup --create-channel`, no
    configuration op), although LEZ's sequencer configuration says 300. The proven key-set hash binds 0, as the
