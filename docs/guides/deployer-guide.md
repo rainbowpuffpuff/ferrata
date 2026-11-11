@@ -226,6 +226,13 @@ Foundry's gas rules, accounts impersonated ([`vault/README.md`](../../vault/READ
 - Fork gas per step: verifier 1,179,986; stop 451,756; library 2,563,131; vault 5,681,056 (A) /
   5,681,009 (B); token 508,036; `registerToken` 707,052 / 707,830; `renounceOwnership` 25,524.
 
+To check a deployment afterwards, open [`admin/index.html`](../../admin/index.html) (or run
+`node admin/dump.mjs <rpc> <vault> <deployment block>`): it reads the vault through any JSON-RPC
+endpoint, read-only, and shows its configuration and image ids, roles and watchers, the emergency
+stop and its owner (renounced or not), tokens with their caps and fee schedules, and freezes
+([`admin/README.md`](../../admin/README.md); a read of the live Sepolia vault is in
+[`admin/results/`](../../admin/results/)).
+
 ## 5. The LEZ configuration
 
 ([`lez/BRIDGE.md`](../../lez/BRIDGE.md) §2, §4, §5; [`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §2, §8)

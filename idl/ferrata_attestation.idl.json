@@ -1,0 +1,2330 @@
+{
+  "version": "0.1.0",
+  "name": "ferrata_attestation",
+  "spec": "logos-co/spel c6f73ce (spel-framework-core 0.7.0, docs/reference/idl.md)",
+  "metadata": {
+    "name": "ferrata_attestation",
+    "version": "0.1.0"
+  },
+  "instruction_type": "ferrata_lez_wire::Message",
+  "docs": [
+    "The attestation program of Ferrata on LEZ v0.4 (RFP-021). Hand-written IDL in SPEL's format: SPEL's stable release targets LEZ v0.2.4, so the program is written against LEZ v0.4 directly, and this IDL describes its borsh interface.",
+    "Each instruction is a variant of the borsh enum named by instruction_type; discriminator is its one-byte variant index, followed by args in order.",
+    "PDA seeds: an actor's seed is SHA-256(\"ferrata-lez/v1/\" || tag || parts), with u64 parts little-endian; its account is LEZ v0.4's AccountId::for_public_pda(program, seed). instance_id = SHA-256(\"ferrata-lez/v1/instance-id\" || borsh(Config) || checkpoint).",
+    "Refusals exit with one byte: 1-79 and 100-199 the core's, 80-99 the step API's, 200-219 this program's (lez/wire CODE_BLOCKS). A refusal reverts the whole transaction on v0.4.",
+    "Events: FRT-FIN1 (finalized header advanced), FRT-UPG1 (store moved to a later fork's layout), FRT-ATT1 (Attest as a transaction's root: instance id, chain id, block number LE, then each statement id)."
+  ],
+  "instructions": [
+    {
+      "name": "init",
+      "variant": "Init",
+      "discriminator": [
+        0
+      ],
+      "accounts": [
+        {
+          "name": "instance",
+          "writable": true,
+          "signer": false,
+          "init": true,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "instance"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              }
+            ]
+          },
+          "docs": [
+            "instance(instance_id(config, checkpoint)), created: the transaction carries LEZ's PDA evidence for its seed"
+          ]
+        },
+        {
+          "name": "job",
+          "writable": true,
+          "signer": false,
+          "init": true,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "job"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              },
+              {
+                "kind": "arg",
+                "path": "job_id"
+              }
+            ]
+          },
+          "docs": [
+            "the job that adopts the bootstrap's committee"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "config",
+          "type": {
+            "defined": "Config"
+          }
+        },
+        {
+          "name": "checkpoint",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "bootstrap",
+          "type": {
+            "vec": "u8"
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Create an instance from a bootstrap matching checkpoint, and open the job that adopts its committee. Anyone may call."
+      ]
+    },
+    {
+      "name": "open",
+      "variant": "Open",
+      "discriminator": [
+        1
+      ],
+      "accounts": [
+        {
+          "name": "instance",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "instance"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "job",
+          "writable": true,
+          "signer": false,
+          "init": true,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "job"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              },
+              {
+                "kind": "arg",
+                "path": "job_id"
+              }
+            ]
+          },
+          "docs": [
+            "job(id, job_id): job_id hashes the instance, its store digest and the update"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "update",
+          "type": {
+            "vec": "u8"
+          }
+        },
+        {
+          "name": "signers",
+          "type": {
+            "vec": "u8"
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Step 1 of an update (CompactUpdate, SignerWitness encodings): opens job(id, job_id). Anyone may call; no step checks a sender."
+      ]
+    },
+    {
+      "name": "miller",
+      "variant": "Miller",
+      "discriminator": [
+        2
+      ],
+      "accounts": [
+        {
+          "name": "job",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "job"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              },
+              {
+                "kind": "arg",
+                "path": "job_id"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Step 2, at the job: the Miller loops."
+      ]
+    },
+    {
+      "name": "adopt",
+      "variant": "Adopt",
+      "discriminator": [
+        3
+      ],
+      "accounts": [
+        {
+          "name": "job",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "job"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              },
+              {
+                "kind": "arg",
+                "path": "job_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "instance",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "instance"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              }
+            ]
+          },
+          "docs": [
+            "the last part of Init's adoption only: activates the instance"
+          ]
+        },
+        {
+          "name": "header",
+          "writable": true,
+          "signer": false,
+          "init": true,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "header"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              },
+              {
+                "kind": "arg",
+                "path": "slot"
+              }
+            ]
+          },
+          "docs": [
+            "the last part of Init's adoption only: the bootstrap header's record"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "part",
+          "type": "u8"
+        },
+        {
+          "name": "keys",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                96
+              ]
+            }
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "One part of the job's committee adoption: n / parts uncompressed keys."
+      ]
+    },
+    {
+      "name": "finish",
+      "variant": "Finish",
+      "discriminator": [
+        4
+      ],
+      "accounts": [
+        {
+          "name": "job",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "job"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              },
+              {
+                "kind": "arg",
+                "path": "job_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "instance",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "instance"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              }
+            ]
+          },
+          "docs": [
+            "receives Apply"
+          ]
+        },
+        {
+          "name": "header",
+          "writable": true,
+          "signer": false,
+          "init": true,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "header"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              },
+              {
+                "kind": "arg",
+                "path": "slot"
+              }
+            ]
+          },
+          "docs": [
+            "receives Record when a new header is finalized"
+          ]
+        }
+      ],
+      "args": [],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Step 3, at the job: the final exponentiation, then Apply to the instance."
+      ]
+    },
+    {
+      "name": "read",
+      "variant": "Read",
+      "discriminator": [
+        5
+      ],
+      "accounts": [
+        {
+          "name": "receiver",
+          "writable": false,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "any actor of this program; replies StateReply with its state"
+          ]
+        }
+      ],
+      "args": [],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Reply with this actor's state (LEZ v0.4's read idiom)."
+      ]
+    },
+    {
+      "name": "read_padded",
+      "variant": "ReadPadded",
+      "discriminator": [
+        6
+      ],
+      "accounts": [
+        {
+          "name": "receiver",
+          "writable": false,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "any actor of this program"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "padding",
+          "type": {
+            "vec": "u8"
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "As Read, carrying bytes the program ignores (cost measurement)."
+      ]
+    },
+    {
+      "name": "attest",
+      "variant": "Attest",
+      "discriminator": [
+        7
+      ],
+      "accounts": [
+        {
+          "name": "header",
+          "writable": false,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "header"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              },
+              {
+                "kind": "arg",
+                "path": "slot"
+              }
+            ]
+          },
+          "docs": [
+            "header(id, slot): the record the request is proven under"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "request",
+          "type": {
+            "defined": "Request"
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Prove the facts of request under this record; reply with an Attestation, or, as a transaction's root, emit the FRT-ATT1 event. Changes no state."
+      ]
+    },
+    {
+      "name": "verify_all",
+      "variant": "VerifyAll",
+      "discriminator": [
+        8
+      ],
+      "accounts": [
+        {
+          "name": "receiver",
+          "writable": false,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "any actor of this program, meant to run privately; sends ApplyVerified to instance(id)"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "config",
+          "type": {
+            "defined": "Config"
+          }
+        },
+        {
+          "name": "checkpoint",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "store",
+          "type": {
+            "vec": "u8"
+          }
+        },
+        {
+          "name": "update",
+          "type": {
+            "vec": "u8"
+          }
+        },
+        {
+          "name": "signers",
+          "type": {
+            "vec": "u8"
+          }
+        },
+        {
+          "name": "adoption",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                96
+              ]
+            }
+          }
+        }
+      ],
+      "execution": {
+        "public": false,
+        "private_owned": true
+      },
+      "docs": [
+        "The private placement: the whole verification of one update in one call."
+      ]
+    },
+    {
+      "name": "job_open",
+      "variant": "JobOpen",
+      "discriminator": [
+        9
+      ],
+      "accounts": [
+        {
+          "name": "job",
+          "writable": true,
+          "signer": false,
+          "init": true,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "job"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              },
+              {
+                "kind": "arg",
+                "path": "job_id"
+              }
+            ]
+          },
+          "docs": [
+            "from instance(id) only"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "instance_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "job_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "committee_size",
+          "type": "u32"
+        },
+        {
+          "name": "job",
+          "type": {
+            "vec": "u8"
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Internal: instance(id) -> job(id, job_id), the job step 1 produced."
+      ],
+      "internal": true
+    },
+    {
+      "name": "apply",
+      "variant": "Apply",
+      "discriminator": [
+        10
+      ],
+      "accounts": [
+        {
+          "name": "instance",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "instance"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              }
+            ]
+          },
+          "docs": [
+            "from job(id, job_id) only"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "instance_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "job_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "job",
+          "type": {
+            "vec": "u8"
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Internal: the verified job, applied to the instance (compare-and-swap on the store digest)."
+      ],
+      "internal": true
+    },
+    {
+      "name": "apply_verified",
+      "variant": "ApplyVerified",
+      "discriminator": [
+        11
+      ],
+      "accounts": [
+        {
+          "name": "instance",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "instance"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              }
+            ]
+          },
+          "docs": [
+            "from any actor of this program (authenticated by program)"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "instance_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "job",
+          "type": {
+            "vec": "u8"
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Internal: a job verified in one call by VerifyAll."
+      ],
+      "internal": true
+    },
+    {
+      "name": "record",
+      "variant": "Record",
+      "discriminator": [
+        12
+      ],
+      "accounts": [
+        {
+          "name": "header",
+          "writable": true,
+          "signer": false,
+          "init": true,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "header"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              },
+              {
+                "kind": "arg",
+                "path": "slot"
+              }
+            ]
+          },
+          "docs": [
+            "from instance(id) only; written once"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "instance_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "slot",
+          "type": "u64"
+        },
+        {
+          "name": "chain_id",
+          "type": "u64"
+        },
+        {
+          "name": "record",
+          "type": {
+            "vec": "u8"
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Internal: the record to write once (HeaderRecord encoding), with the instance's chain id."
+      ],
+      "internal": true
+    }
+  ],
+  "accounts": [
+    {
+      "name": "InstanceState",
+      "type": {
+        "name": "InstanceState",
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "config",
+            "type": {
+              "defined": "Config"
+            }
+          },
+          {
+            "name": "active",
+            "type": "bool"
+          },
+          {
+            "name": "store",
+            "type": {
+              "vec": "u8"
+            }
+          },
+          {
+            "name": "applied",
+            "type": "u64"
+          }
+        ],
+        "docs": [
+          "instance(id): store is the CompactStore encoding; active once the initial committee is adopted."
+        ]
+      }
+    },
+    {
+      "name": "JobState",
+      "type": {
+        "name": "JobState",
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "instance_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "job_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "committee_size",
+            "type": "u32"
+          },
+          {
+            "name": "job",
+            "type": {
+              "vec": "u8"
+            }
+          }
+        ],
+        "docs": [
+          "job(id, job_id)."
+        ]
+      }
+    },
+    {
+      "name": "RecordState",
+      "type": {
+        "name": "RecordState",
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "instance_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "chain_id",
+            "type": "u64"
+          },
+          {
+            "name": "record",
+            "type": {
+              "vec": "u8"
+            }
+          }
+        ],
+        "docs": [
+          "header(id, slot), written once: record is ferrata_core::witness::HeaderRecord's encoding."
+        ]
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "Config",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "chain_id",
+          "type": "u64"
+        },
+        {
+          "name": "sync_committee_size",
+          "type": "u32"
+        },
+        {
+          "name": "slots_per_epoch",
+          "type": "u64"
+        },
+        {
+          "name": "epochs_per_sync_committee_period",
+          "type": "u64"
+        },
+        {
+          "name": "min_sync_committee_participants",
+          "type": "u64"
+        },
+        {
+          "name": "fork_versions",
+          "type": {
+            "array": [
+              {
+                "array": [
+                  "u8",
+                  4
+                ]
+              },
+              9
+            ]
+          }
+        },
+        {
+          "name": "fork_epochs",
+          "type": {
+            "array": [
+              "u64",
+              9
+            ]
+          }
+        },
+        {
+          "name": "genesis_validators_root",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "genesis_time",
+          "type": "u64"
+        },
+        {
+          "name": "seconds_per_slot",
+          "type": "u64"
+        },
+        {
+          "name": "store_fork",
+          "type": "u8"
+        },
+        {
+          "name": "adoption_parts",
+          "type": "u8"
+        }
+      ],
+      "docs": [
+        "The chain an instance follows. Fixed at Init; part of the instance id. store_fork: 0 Altair, 1 Capella, 2 Deneb, 3 Electra, 4 Gloas."
+      ]
+    },
+    {
+      "name": "Message",
+      "kind": "enum",
+      "variants": [
+        {
+          "name": "Init",
+          "fields": [
+            {
+              "name": "config",
+              "type": {
+                "defined": "Config"
+              }
+            },
+            {
+              "name": "checkpoint",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "bootstrap",
+              "type": {
+                "vec": "u8"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Open",
+          "fields": [
+            {
+              "name": "update",
+              "type": {
+                "vec": "u8"
+              }
+            },
+            {
+              "name": "signers",
+              "type": {
+                "vec": "u8"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Miller"
+        },
+        {
+          "name": "Adopt",
+          "fields": [
+            {
+              "name": "part",
+              "type": "u8"
+            },
+            {
+              "name": "keys",
+              "type": {
+                "vec": {
+                  "array": [
+                    "u8",
+                    96
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Finish"
+        },
+        {
+          "name": "Read"
+        },
+        {
+          "name": "ReadPadded",
+          "fields": [
+            {
+              "name": "padding",
+              "type": {
+                "vec": "u8"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Attest",
+          "fields": [
+            {
+              "name": "request",
+              "type": {
+                "defined": "Request"
+              }
+            }
+          ]
+        },
+        {
+          "name": "VerifyAll",
+          "fields": [
+            {
+              "name": "config",
+              "type": {
+                "defined": "Config"
+              }
+            },
+            {
+              "name": "checkpoint",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "store",
+              "type": {
+                "vec": "u8"
+              }
+            },
+            {
+              "name": "update",
+              "type": {
+                "vec": "u8"
+              }
+            },
+            {
+              "name": "signers",
+              "type": {
+                "vec": "u8"
+              }
+            },
+            {
+              "name": "adoption",
+              "type": {
+                "vec": {
+                  "array": [
+                    "u8",
+                    96
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "JobOpen",
+          "fields": [
+            {
+              "name": "instance_id",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "job_id",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "committee_size",
+              "type": "u32"
+            },
+            {
+              "name": "job",
+              "type": {
+                "vec": "u8"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Apply",
+          "fields": [
+            {
+              "name": "instance_id",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "job_id",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "job",
+              "type": {
+                "vec": "u8"
+              }
+            }
+          ]
+        },
+        {
+          "name": "ApplyVerified",
+          "fields": [
+            {
+              "name": "instance_id",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "job",
+              "type": {
+                "vec": "u8"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Record",
+          "fields": [
+            {
+              "name": "instance_id",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "slot",
+              "type": "u64"
+            },
+            {
+              "name": "chain_id",
+              "type": "u64"
+            },
+            {
+              "name": "record",
+              "type": {
+                "vec": "u8"
+              }
+            }
+          ]
+        }
+      ],
+      "docs": [
+        "Every message the program handles (ferrata_lez_wire::Message): a borsh enum, one byte of variant index then the fields."
+      ]
+    },
+    {
+      "name": "Cmp",
+      "kind": "enum",
+      "variants": [
+        {
+          "name": "Eq"
+        },
+        {
+          "name": "Ne"
+        },
+        {
+          "name": "Lt"
+        },
+        {
+          "name": "Le"
+        },
+        {
+          "name": "Gt"
+        },
+        {
+          "name": "Ge"
+        }
+      ],
+      "docs": [
+        "A comparison of two 256-bit unsigned values."
+      ]
+    },
+    {
+      "name": "Field",
+      "kind": "enum",
+      "variants": [
+        {
+          "name": "Nonce"
+        },
+        {
+          "name": "Balance"
+        },
+        {
+          "name": "StorageRoot"
+        },
+        {
+          "name": "CodeHash"
+        },
+        {
+          "name": "Value"
+        },
+        {
+          "name": "Emitter"
+        },
+        {
+          "name": "Topic",
+          "fields": [
+            {
+              "name": "0",
+              "type": "u8"
+            }
+          ]
+        },
+        {
+          "name": "DataWord",
+          "fields": [
+            {
+              "name": "0",
+              "type": "u32"
+            }
+          ]
+        }
+      ],
+      "docs": [
+        "A field of a fact, as a 256-bit word. Topic(i): log topic i; DataWord(i): the i-th 32-byte word of a log's data."
+      ]
+    },
+    {
+      "name": "Condition",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "field",
+          "type": {
+            "defined": "Field"
+          }
+        },
+        {
+          "name": "cmp",
+          "type": {
+            "defined": "Cmp"
+          }
+        },
+        {
+          "name": "rhs",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ],
+      "docs": [
+        "field <cmp> rhs (rhs big-endian)."
+      ]
+    },
+    {
+      "name": "Operand",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "fact",
+          "type": "u32"
+        },
+        {
+          "name": "field",
+          "type": {
+            "defined": "Field"
+          }
+        }
+      ],
+      "docs": [
+        "A field of one of the request's facts, by the fact's position in the reply."
+      ]
+    },
+    {
+      "name": "Relation",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "left",
+          "type": {
+            "defined": "Operand"
+          }
+        },
+        {
+          "name": "cmp",
+          "type": {
+            "defined": "Cmp"
+          }
+        },
+        {
+          "name": "right",
+          "type": {
+            "defined": "Operand"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SlotQuery",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "slot",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "proof",
+          "type": {
+            "vec": {
+              "vec": "u8"
+            }
+          }
+        },
+        {
+          "name": "conditions",
+          "type": {
+            "vec": {
+              "defined": "Condition"
+            }
+          }
+        }
+      ],
+      "docs": [
+        "storageProof[i].proof of eth_getProof."
+      ]
+    },
+    {
+      "name": "AccountQuery",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "address",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "proof",
+          "type": {
+            "vec": {
+              "vec": "u8"
+            }
+          }
+        },
+        {
+          "name": "conditions",
+          "type": {
+            "vec": {
+              "defined": "Condition"
+            }
+          }
+        },
+        {
+          "name": "slots",
+          "type": {
+            "vec": {
+              "defined": "SlotQuery"
+            }
+          }
+        }
+      ],
+      "docs": [
+        "accountProof of eth_getProof, and slots of the account's storage."
+      ]
+    },
+    {
+      "name": "LogQuery",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "tx_index",
+          "type": "u64"
+        },
+        {
+          "name": "log_index",
+          "type": "u64"
+        },
+        {
+          "name": "proof",
+          "type": {
+            "vec": {
+              "vec": "u8"
+            }
+          }
+        },
+        {
+          "name": "conditions",
+          "type": {
+            "vec": {
+              "defined": "Condition"
+            }
+          }
+        }
+      ],
+      "docs": [
+        "The log at log_index (from zero within the receipt) of the receipt of transaction tx_index, with the receipt's proof in the receipts trie."
+      ]
+    },
+    {
+      "name": "LeafQuery",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "root",
+          "type": "u32"
+        },
+        {
+          "name": "leaf_index",
+          "type": "u64"
+        },
+        {
+          "name": "leaf",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "path",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        }
+      ],
+      "docs": [
+        "A leaf of the accumulator whose root is the value of the storage fact at position root of the reply, with its siblings."
+      ]
+    },
+    {
+      "name": "Hop",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "account_proof",
+          "type": {
+            "vec": {
+              "vec": "u8"
+            }
+          }
+        },
+        {
+          "name": "storage_proof",
+          "type": {
+            "vec": {
+              "vec": "u8"
+            }
+          }
+        },
+        {
+          "name": "header",
+          "type": {
+            "vec": "u8"
+          }
+        }
+      ],
+      "docs": [
+        "One EIP-2935 hop to an older block: proofs in the state of the block hopped from, and the older block's RLP header."
+      ]
+    },
+    {
+      "name": "Request",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "instance_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "chain_id",
+          "type": "u64"
+        },
+        {
+          "name": "header",
+          "type": {
+            "option": {
+              "vec": "u8"
+            }
+          }
+        },
+        {
+          "name": "hops",
+          "type": {
+            "vec": {
+              "defined": "Hop"
+            }
+          }
+        },
+        {
+          "name": "accounts",
+          "type": {
+            "vec": {
+              "defined": "AccountQuery"
+            }
+          }
+        },
+        {
+          "name": "logs",
+          "type": {
+            "vec": {
+              "defined": "LogQuery"
+            }
+          }
+        },
+        {
+          "name": "leaves",
+          "type": {
+            "vec": {
+              "defined": "LeafQuery"
+            }
+          }
+        },
+        {
+          "name": "relations",
+          "type": {
+            "vec": {
+              "defined": "Relation"
+            }
+          }
+        }
+      ],
+      "docs": [
+        "What a consumer asks of header(id, slot). header: the RLP header of the record's block when the record binds a block hash only (Gloas layout)."
+      ]
+    },
+    {
+      "name": "Fact",
+      "kind": "enum",
+      "variants": [
+        {
+          "name": "Account",
+          "fields": [
+            {
+              "name": "address",
+              "type": {
+                "array": [
+                  "u8",
+                  20
+                ]
+              }
+            },
+            {
+              "name": "nonce",
+              "type": "u64"
+            },
+            {
+              "name": "balance",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "storage_root",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "code_hash",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Storage",
+          "fields": [
+            {
+              "name": "address",
+              "type": {
+                "array": [
+                  "u8",
+                  20
+                ]
+              }
+            },
+            {
+              "name": "slot",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "value",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Log",
+          "fields": [
+            {
+              "name": "tx_index",
+              "type": "u64"
+            },
+            {
+              "name": "log_index",
+              "type": "u64"
+            },
+            {
+              "name": "address",
+              "type": {
+                "array": [
+                  "u8",
+                  20
+                ]
+              }
+            },
+            {
+              "name": "topics",
+              "type": {
+                "vec": {
+                  "array": [
+                    "u8",
+                    32
+                  ]
+                }
+              }
+            },
+            {
+              "name": "data",
+              "type": {
+                "vec": "u8"
+              }
+            }
+          ]
+        },
+        {
+          "name": "AccumulatorLeaf",
+          "fields": [
+            {
+              "name": "address",
+              "type": {
+                "array": [
+                  "u8",
+                  20
+                ]
+              }
+            },
+            {
+              "name": "slot",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "leaf_index",
+              "type": "u64"
+            },
+            {
+              "name": "leaf",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "root",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "docs": [
+        "A proven fact."
+      ]
+    },
+    {
+      "name": "Statement",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "fact",
+          "type": {
+            "defined": "Fact"
+          }
+        }
+      ],
+      "docs": [
+        "A fact with its statement identifier."
+      ]
+    },
+    {
+      "name": "Attestation",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "instance_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "chain_id",
+          "type": "u64"
+        },
+        {
+          "name": "slot",
+          "type": "u64"
+        },
+        {
+          "name": "block_number",
+          "type": "u64"
+        },
+        {
+          "name": "block_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "hops",
+          "type": "u32"
+        },
+        {
+          "name": "statements",
+          "type": {
+            "vec": {
+              "defined": "Statement"
+            }
+          }
+        }
+      ],
+      "docs": [
+        "The reply to Attest: facts in the order each account, then its slots, then the logs, then the leaves."
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 1,
+      "name": "Malformed",
+      "msg": "SSZ input is malformed: wrong length, bad offset, or wrong shape for the fork."
+    },
+    {
+      "code": 10,
+      "name": "CheckpointMismatch",
+      "msg": "Bootstrap header root differs from the trusted checkpoint root."
+    },
+    {
+      "code": 11,
+      "name": "BootstrapHeaderInvalid",
+      "msg": "Bootstrap header fails `is_valid_light_client_header`."
+    },
+    {
+      "code": 12,
+      "name": "CurrentCommitteeBranchInvalid",
+      "msg": "Bootstrap `current_sync_committee` branch does not verify against the state root."
+    },
+    {
+      "code": 20,
+      "name": "ParticipationLow",
+      "msg": "Fewer than `MIN_SYNC_COMMITTEE_PARTICIPANTS` signers."
+    },
+    {
+      "code": 21,
+      "name": "AttestedHeaderInvalid",
+      "msg": "Attested header fails `is_valid_light_client_header`."
+    },
+    {
+      "code": 22,
+      "name": "SlotOrderInvalid",
+      "msg": "Violates `current_slot >= signature_slot > attested_slot >= finalized_slot`."
+    },
+    {
+      "code": 23,
+      "name": "PeriodSkipped",
+      "msg": "Signature period is neither the store period nor (with a known next committee) the next."
+    },
+    {
+      "code": 24,
+      "name": "UpdateIrrelevant",
+      "msg": "Update neither advances the store nor supplies the missing next committee."
+    },
+    {
+      "code": 25,
+      "name": "FinalizedHeaderInvalid",
+      "msg": "Finalized header is invalid, or non-empty when it must be empty."
+    },
+    {
+      "code": 26,
+      "name": "FinalityBranchInvalid",
+      "msg": "Finality branch does not verify against the attested state root."
+    },
+    {
+      "code": 27,
+      "name": "NextCommitteeBranchInvalid",
+      "msg": "Next-sync-committee branch does not verify against the attested state root."
+    },
+    {
+      "code": 28,
+      "name": "NextCommitteeMismatch",
+      "msg": "Next committee contradicts the one the store already holds for that period."
+    },
+    {
+      "code": 29,
+      "name": "NextCommitteeUnexpected",
+      "msg": "A non-sync-committee update carries a non-empty next committee."
+    },
+    {
+      "code": 40,
+      "name": "SignatureInvalid",
+      "msg": "The aggregate signature does not verify."
+    },
+    {
+      "code": 41,
+      "name": "SignatureMalformed",
+      "msg": "The signature is not a valid compressed G2 point in the prime-order subgroup."
+    },
+    {
+      "code": 42,
+      "name": "PubkeyInvalid",
+      "msg": "A public key fails `KeyValidate`: not a curve point, the identity, or outside G1."
+    },
+    {
+      "code": 43,
+      "name": "SigningKeyIdentity",
+      "msg": "The signing key (aggregate of the signers) is the identity point."
+    },
+    {
+      "code": 45,
+      "name": "CommitteeInvalid",
+      "msg": "A committee key fails `KeyValidate`, or the keys do not sum to `aggregate_pubkey`."
+    },
+    {
+      "code": 50,
+      "name": "NotFinalized",
+      "msg": "Ferrata policy: only finality updates may advance an instance."
+    },
+    {
+      "code": 51,
+      "name": "BelowSupermajority",
+      "msg": "Ferrata policy: participation is below the supermajority (2/3) floor."
+    },
+    {
+      "code": 52,
+      "name": "NotNewer",
+      "msg": "Ferrata policy: the update does not advance the finalized header (duplicate or stale)."
+    },
+    {
+      "code": 60,
+      "name": "CommitteeUnknown",
+      "msg": "Store invariant: next committee unknown and the update finalizes outside the store period."
+    },
+    {
+      "code": 61,
+      "name": "ForkMismatch",
+      "msg": "Data of one fork was handed to a store of another (or a downgrade was requested)."
+    },
+    {
+      "code": 100,
+      "name": "RlpNonCanonical",
+      "msg": "RLP that is not the canonical encoding: a non-minimal length, a long-form length with a leading zero, a single byte below 0x80 wrapped as a string, or an integer with a leading zero byte."
+    },
+    {
+      "code": 101,
+      "name": "RlpMalformed",
+      "msg": "RLP that is truncated or does not have the expected shape: a length past the end of the input or of the enclosing list, bytes after the item, a list where a string belongs (or the reverse), a wrong item count or field size, or an integer too large for its field."
+    },
+    {
+      "code": 110,
+      "name": "ProofNodeMismatch",
+      "msg": "Inclusion proof: a node's Keccak-256 differs from the root or from its parent's reference."
+    },
+    {
+      "code": 111,
+      "name": "ProofIncomplete",
+      "msg": "Inclusion proof: the proof ends before the walk reaches a value or the key's absence."
+    },
+    {
+      "code": 112,
+      "name": "ProofTrailingNodes",
+      "msg": "Inclusion proof: elements remain after the walk ended."
+    },
+    {
+      "code": 113,
+      "name": "ProofNodeInvalid",
+      "msg": "Inclusion proof: a node is not a canonical trie node (item count, hex-prefix flag or padding, empty extension path, child reference, empty value, or a node shorter than 32 bytes referenced by hash)."
+    },
+    {
+      "code": 120,
+      "name": "HeaderHashMismatch",
+      "msg": "keccak256 of an RLP block header differs from the hash it must match."
+    },
+    {
+      "code": 121,
+      "name": "HeaderUnsupported",
+      "msg": "A block header that is not of the Cancun (20 fields), Prague/Osaka (21) or Amsterdam (23) layout."
+    },
+    {
+      "code": 122,
+      "name": "ReceiptNotIncluded",
+      "msg": "The receipts trie has no receipt at the requested transaction index."
+    },
+    {
+      "code": 123,
+      "name": "ReceiptUnsupported",
+      "msg": "A pre-Byzantium receipt (state root instead of status) or an unknown receipt type."
+    },
+    {
+      "code": 124,
+      "name": "ReceiptFailed",
+      "msg": "The transaction failed (receipt status 0)."
+    },
+    {
+      "code": 125,
+      "name": "LogIndexOutOfRange",
+      "msg": "The receipt has no log at the requested position."
+    },
+    {
+      "code": 130,
+      "name": "PredicateFailed",
+      "msg": "A condition of the statement does not hold."
+    },
+    {
+      "code": 131,
+      "name": "QueryInvalid",
+      "msg": "A condition names a field its fact does not have, or the query is empty."
+    },
+    {
+      "code": 140,
+      "name": "ChainMismatch",
+      "msg": "The record belongs to another chain than the consumer is configured for."
+    },
+    {
+      "code": 141,
+      "name": "BindingMismatch",
+      "msg": "The finalized header does not carry the execution binding the record constructor reads."
+    },
+    {
+      "code": 150,
+      "name": "HistoryOutOfWindow",
+      "msg": "EIP-2935: the older block is not among the 8191 blocks before the record's block."
+    },
+    {
+      "code": 151,
+      "name": "HistoryHashMismatch",
+      "msg": "EIP-2935: the history slot does not hold keccak256 of the supplied header."
+    },
+    {
+      "code": 152,
+      "name": "HistoryContractMissing",
+      "msg": "EIP-2935: no history contract with the specified code in the record's state."
+    },
+    {
+      "code": 160,
+      "name": "AccumulatorPathInvalid",
+      "msg": "Accumulator: the path does not have 32 siblings."
+    },
+    {
+      "code": 161,
+      "name": "AccumulatorIndexOutOfRange",
+      "msg": "Accumulator: the leaf index is 2^32 or more (it would share a path with its low 32 bits)."
+    },
+    {
+      "code": 162,
+      "name": "AccumulatorLeafEmpty",
+      "msg": "Accumulator: the leaf is the empty leaf (32 zero bytes)."
+    },
+    {
+      "code": 163,
+      "name": "AccumulatorRootMismatch",
+      "msg": "Accumulator: the path does not hash the leaf to the attested root."
+    },
+    {
+      "code": 80,
+      "name": "Witness",
+      "msg": "The signer witness does not fit the committee: wrong count, encoding, key or branch."
+    },
+    {
+      "code": 81,
+      "name": "Phase",
+      "msg": "The step does not follow the job's last one (skipped or replayed)."
+    },
+    {
+      "code": 82,
+      "name": "StoreChanged",
+      "msg": "The job was started on a store with another digest."
+    },
+    {
+      "code": 83,
+      "name": "AdoptionIncomplete",
+      "msg": "The update adopts a committee whose adoption is not complete."
+    },
+    {
+      "code": 84,
+      "name": "NoAdoption",
+      "msg": "The job adopts no committee, or its adoption is already complete."
+    },
+    {
+      "code": 200,
+      "name": "BAD_MESSAGE",
+      "msg": "The message does not decode."
+    },
+    {
+      "code": 201,
+      "name": "WRONG_RECEIVER",
+      "msg": "The receiver is not the actor the message is for."
+    },
+    {
+      "code": 202,
+      "name": "WRONG_SENDER",
+      "msg": "An internal message from an actor other than the expected one."
+    },
+    {
+      "code": 203,
+      "name": "ALREADY_INITIALIZED",
+      "msg": "`Init` on an instance that exists."
+    },
+    {
+      "code": 204,
+      "name": "NO_INSTANCE",
+      "msg": "No instance at the receiver."
+    },
+    {
+      "code": 205,
+      "name": "NO_JOB",
+      "msg": "No job at the receiver."
+    },
+    {
+      "code": 206,
+      "name": "INSTANCE_INACTIVE",
+      "msg": "An update for an instance whose initial committee is not adopted yet."
+    },
+    {
+      "code": 207,
+      "name": "JOB_EXISTS",
+      "msg": "A job that is already open."
+    },
+    {
+      "code": 208,
+      "name": "RECORD_CONFLICT",
+      "msg": "A record that already holds another header."
+    },
+    {
+      "code": 209,
+      "name": "BAD_STATE",
+      "msg": "Stored state that does not decode."
+    },
+    {
+      "code": 210,
+      "name": "UNROUTABLE",
+      "msg": "A read with no one to reply to."
+    },
+    {
+      "code": 211,
+      "name": "WRONG_INSTANCE",
+      "msg": "A message about another instance than the receiver's: an internal message, or an attestation asked of a record of another instance than the caller is bound to."
+    },
+    {
+      "code": 212,
+      "name": "BAD_CONFIG",
+      "msg": "An unknown store layout in a config."
+    },
+    {
+      "code": 213,
+      "name": "NO_RECORD",
+      "msg": "An attestation asked of an actor that holds no record."
+    },
+    {
+      "code": 214,
+      "name": "BAD_QUERY",
+      "msg": "An attestation request the program cannot serve: an accumulator leaf whose root is not a storage fact of the same request, or a block header sent for a record that holds the payload's fields and needs none."
+    },
+    {
+      "code": 215,
+      "name": "HEADER_REQUIRED",
+      "msg": "An attestation asked, without the block's header, of a record that binds a block hash only (a finalized header in the Gloas layout): `Request::header` must carry the RLP header that hashes to it."
+    }
+  ]
+}

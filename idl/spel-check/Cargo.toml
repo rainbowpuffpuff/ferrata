@@ -1,0 +1,15 @@
+# SPEL's own code reads Ferrata's IDL (idl/README.md): spel-framework-core 0.7.0 from logos-co/spel at c6f73ce,
+# cloned beside the repository at upstream/spel (as LEZ is at upstream/lez-v0.4.0-rc1).
+[package]
+name = "ferrata-idl-spel-check"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[workspace]
+
+[dependencies]
+spel-framework-core = { path = "../../../upstream/spel/spel-framework-core" }
+serde_json = "1"
+hex = "0.4"

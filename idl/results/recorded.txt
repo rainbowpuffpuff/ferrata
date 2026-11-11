@@ -1,0 +1,6 @@
+# idl/check.py --recorded: the attestation program's messages in recorded LEZ blocks, decoded with the IDL alone
+# Modal build box, 11 November 2026: lez/live/driver/src/bin/idl-recorded.rs wrote the vectors (17,375,311 bytes of JSON, not kept)
+# from lez/lab/results/record/blocks.borsh (the lab, image 61b7b70d…) and lez/live/results/blocks.borsh (the live run).
+  source: lab: 258 blocks, 780 public transactions, 250 to the attestation program decoded by today's wire (Adopt 74, Finish 58, Init 2, Miller 58, Open 58), 0 of an older wire, 530 to other programs
+  source: live: 191 blocks, 482 public transactions, 67 to the attestation program decoded by today's wire (Adopt 25, Finish 16, Miller 12, Open 14), 6 of an older wire (first: block 18 tx 0: Unexpected length of input), 409 to other programs
+../tmp/surfaces/recorded.json: 317 recorded messages, 2646210 bytes; decoded with ferrata_attestation.idl.json alone and equal to their Rust Debug text: 317 (Adopt 99, Finish 74, Init 2, Miller 70, Open 72)

@@ -1,0 +1,9 @@
+ferrata_attestation: parsed as SPEL's SpelIdl: 13 instructions, 3 account types, 16 types, 68 errors, instruction_type Some("ferrata_lez_wire::Message")
+  first: Message::Init#1 -> {"Init":{"bootstrap":"010203","checkpoint":"Public/FByxkktUkHenrZr4TsXckRckxtbsxyoyLMx3GCLGeM6g","config":{"adoption_parts":2,"chain_id":"11155111","epochs_per_
+  committed vectors: SPEL decoded 19 of 19 exactly
+  first: lab/block 9/tx 0: Init -> {"Init":{"bootstrap":"035b0300000040ac000000000070070000000000008d1ecdcdf3f4c064409dd4b810b11cdc445cc6fb3b6f6180c6a87b7eac7c18ab1d67d576fb6433c92b5fb006fdeb184e
+  recorded messages: SPEL decoded 317 of 317 exactly
+ferrata_bridge: parsed as SPEL's SpelIdl: 20 instructions, 1 account types, 28 types, 16 errors, instruction_type Some("ferrata_lez_bridge_wire::BridgeMessage")
+  first: BridgeMessage::Burn#1 -> {"Burn":{"amount":"Public/DySeBLWJ6vJiLwLvcVf5Wfj2a2pFqqTDH1xEDMXVCMHx","c_out":"Public/ESsiBSmNF1PJKa6UfawWYo8NH9HfZHFxBscpd1qgRgYu","config_id":"Public/C5iNAu
+  committed vectors: SPEL decoded 37 of 37 exactly
+SPEL check: passed

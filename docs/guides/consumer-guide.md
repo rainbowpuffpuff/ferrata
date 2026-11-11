@@ -308,9 +308,17 @@ which a consumer could act without one, the nullifier stays unspent and the clai
 The code is the transaction's outcome, which the submitting client reads
 ([`lez/RESULTS.md`](../../lez/RESULTS.md) §5, "Decisions" item 4). Rule 3 is therefore met by the
 client: it maps the code to a message and to retry or give up. A private consumer's refusal makes no
-receipt and no transaction; the client sees the code from its own prover (§4.2). The planned
-module's dry run will report the same codes off chain (U.2, **not built**,
-[`attestation.md`](../design/attestation.md) §8).
+receipt and no transaction; the client sees the code from its own prover (§4.2). The attestation
+side's CLI reports the same codes off chain before anything is sent: `ferrata-attest`'s dry run
+runs the program's own `evaluate` on the record and prices the transaction with LEZ's settlement on
+a scratch copy of the zone's state, and `--send` checks that the settled transaction equals it
+([`lez/ATTEST-CLI.md`](../../lez/ATTEST-CLI.md): on the harness and recorded Sepolia data, refusals
+124 `ReceiptFailed` and 130 `PredicateFailed` predicted and reproduced). The module's dry run
+against live endpoints (U.2) is **not built** ([`attestation.md`](../design/attestation.md) §8).
+Every code's name and meaning, and the borsh layout of `Attest`, its `Request` and the
+`Attestation` reply, are in the program's IDL
+([`idl/ferrata_attestation.idl.json`](../../idl/ferrata_attestation.idl.json), SPEL's format,
+checked in CI against vectors written by the program's wire crate: [`idl/README.md`](../../idl/README.md)).
 
 ### 8.2 Blocks
 

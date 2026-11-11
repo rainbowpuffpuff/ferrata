@@ -1,0 +1,4130 @@
+{
+  "version": "0.1.0",
+  "name": "ferrata_bridge",
+  "spec": "logos-co/spel c6f73ce (spel-framework-core 0.7.0, docs/reference/idl.md)",
+  "metadata": {
+    "name": "ferrata_bridge",
+    "version": "0.1.0"
+  },
+  "instruction_type": "ferrata_lez_bridge_wire::BridgeMessage",
+  "docs": [
+    "The bridge program of Ferrata on LEZ v0.4 (RFP-022). Hand-written IDL in SPEL's format (see ferrata_attestation.idl.json for why).",
+    "Each instruction is a variant of the borsh enum named by instruction_type; discriminator is its one-byte variant index, followed by args in order.",
+    "PDA seeds: SHA-256(\"ferrata-lez/v1/bridge/\" || tag || parts), u64 parts little-endian, the EVM chain id as a 32-byte big-endian word; the account is AccountId::for_public_pda(program, seed). holder(account) hashes the account's 32 bytes.",
+    "Refusals exit with one byte, 240-255 (below). The attestation program's codes (ferrata_attestation.idl.json) can surface through an attested import."
+  ],
+  "instructions": [
+    {
+      "name": "burn",
+      "variant": "Burn",
+      "discriminator": [
+        0
+      ],
+      "accounts": [
+        {
+          "name": "own",
+          "writable": true,
+          "signer": true,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "the holder's own account (the program's actor at it); signed"
+          ]
+        },
+        {
+          "name": "holder",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "holder"
+              },
+              {
+                "kind": "arg",
+                "path": "holder"
+              }
+            ]
+          },
+          "docs": [
+            "the root instead of the own actor when the denomination is debited from holder(account)"
+          ]
+        },
+        {
+          "name": "token_actor",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "token"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
+                "path": "token"
+              }
+            ]
+          },
+          "docs": [
+            "admits the note: denomination, burn freezes and caps"
+          ]
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "config"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              }
+            ]
+          },
+          "docs": [
+            "Admit: the global burn freeze and bucket"
+          ]
+        },
+        {
+          "name": "burn",
+          "writable": true,
+          "signer": false,
+          "init": true,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "burn"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
+                "path": "note_hash"
+              }
+            ]
+          },
+          "docs": [
+            "burn(cid, H(note)), written once"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "r",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "memo",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "mac",
+          "type": {
+            "array": [
+              "u8",
+              16
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "amount",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "c_out",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Debit one denomination and record the note once at burn(cid, H(note)); a top-level call or the root of a private execution."
+      ]
+    },
+    {
+      "name": "import_root",
+      "variant": "ImportRoot",
+      "discriminator": [
+        1
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "config"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "attestation_record",
+          "writable": false,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "header"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              },
+              {
+                "kind": "arg",
+                "path": "record_slot"
+              }
+            ]
+          },
+          "docs": [
+            "the record the message reads; the attestation program's account (its PDA domain is ferrata-lez/v1/, see ferrata_attestation.idl.json)"
+          ],
+          "owner": "ferrata_attestation"
+        },
+        {
+          "name": "root",
+          "writable": true,
+          "signer": false,
+          "init": true,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "root"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
+                "path": "leaf_count"
+              }
+            ]
+          },
+          "docs": [
+            "written once at the attested leaf count"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "record_slot",
+          "type": "u64"
+        },
+        {
+          "name": "root",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "leaf_count",
+          "type": "u64"
+        },
+        {
+          "name": "proof",
+          "type": {
+            "defined": "ImportProof"
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Attest the vault's slots 0 and 1 under the record at record_slot and write root(cid, leaf_count). Anyone may call; refused after Sunset."
+      ]
+    },
+    {
+      "name": "sunset",
+      "variant": "Sunset",
+      "discriminator": [
+        2
+      ],
+      "accounts": [
+        {
+          "name": "own",
+          "writable": true,
+          "signer": true,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "the freeze authority's own account (the program's actor at it); signed"
+          ]
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "config"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "The configuration's one-way Sunset: stops ImportRoot for good."
+      ]
+    },
+    {
+      "name": "echo",
+      "variant": "Echo",
+      "discriminator": [
+        3
+      ],
+      "accounts": [
+        {
+          "name": "receiver",
+          "writable": false,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "any actor"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "nonce",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Rule (A)'s echo nonce: accepted anywhere, changes nothing."
+      ]
+    },
+    {
+      "name": "init",
+      "variant": "Init",
+      "discriminator": [
+        4
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "signer": false,
+          "init": true,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "config"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              }
+            ]
+          },
+          "docs": [
+            "cid computed from config; created: the transaction carries LEZ's PDA evidence for its seed"
+          ]
+        },
+        {
+          "name": "attestation_record",
+          "writable": false,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "header"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              },
+              {
+                "kind": "arg",
+                "path": "record_slot"
+              }
+            ]
+          },
+          "docs": [
+            "the record the message reads; the attestation program's account (its PDA domain is ferrata-lez/v1/, see ferrata_attestation.idl.json)"
+          ],
+          "owner": "ferrata_attestation"
+        }
+      ],
+      "args": [
+        {
+          "name": "config",
+          "type": {
+            "defined": "BridgeConfig"
+          }
+        },
+        {
+          "name": "record_slot",
+          "type": "u64"
+        },
+        {
+          "name": "proof",
+          "type": {
+            "defined": "PairingProof"
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Attest the vault's slot 2 and write the configuration if it holds cid (the reciprocal pairing). Anyone may call."
+      ]
+    },
+    {
+      "name": "claim",
+      "variant": "Claim",
+      "discriminator": [
+        5
+      ],
+      "accounts": [
+        {
+          "name": "root",
+          "writable": false,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "root"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
+                "path": "leaf_count"
+              }
+            ]
+          },
+          "docs": [
+            "the imported root, the transaction's root actor"
+          ]
+        },
+        {
+          "name": "token_actor",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "token"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
+                "path": "token"
+              }
+            ]
+          }
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "config"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              }
+            ]
+          },
+          "docs": [
+            "Admit"
+          ]
+        },
+        {
+          "name": "nullifier",
+          "writable": true,
+          "signer": false,
+          "init": true,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "nullifier"
+              },
+              {
+                "kind": "arg",
+                "path": "evm_chain_id (u256 big-endian)"
+              },
+              {
+                "kind": "arg",
+                "path": "vault"
+              },
+              {
+                "kind": "arg",
+                "path": "nullifier"
+              }
+            ]
+          },
+          "docs": [
+            "written once: a second Spend refuses with 250 ALREADY_CLAIMED"
+          ]
+        },
+        {
+          "name": "holder",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "holder"
+              },
+              {
+                "kind": "arg",
+                "path": "holder"
+              }
+            ]
+          },
+          "docs": [
+            "holder(account) of each account credited (the destination, the fee recipient, the relayer), each listed once"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "leaf_count",
+          "type": "u64"
+        },
+        {
+          "name": "witness",
+          "type": {
+            "defined": "ClaimWitness"
+          }
+        },
+        {
+          "name": "range",
+          "type": {
+            "defined": "ScheduleRange"
+          }
+        },
+        {
+          "name": "relayer",
+          "type": {
+            "option": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "The plaintext claim, for a public destination; relayer receives the relay fee (None: the fee recipient)."
+      ]
+    },
+    {
+      "name": "claim_privately",
+      "variant": "ClaimPrivately",
+      "discriminator": [
+        6
+      ],
+      "accounts": [
+        {
+          "name": "own",
+          "writable": true,
+          "signer": true,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "the claimant (meant to run privately)'s own account (the program's actor at it); signed"
+          ]
+        },
+        {
+          "name": "root",
+          "writable": false,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "root"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
+                "path": "leaf_count"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_actor",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "token"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
+                "path": "token"
+              }
+            ]
+          }
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "config"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              }
+            ]
+          },
+          "docs": [
+            "Admit"
+          ]
+        },
+        {
+          "name": "nullifier",
+          "writable": true,
+          "signer": false,
+          "init": true,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "nullifier"
+              },
+              {
+                "kind": "arg",
+                "path": "evm_chain_id (u256 big-endian)"
+              },
+              {
+                "kind": "arg",
+                "path": "vault"
+              },
+              {
+                "kind": "arg",
+                "path": "nullifier"
+              }
+            ]
+          },
+          "docs": [
+            "written once: a second Spend refuses with 250 ALREADY_CLAIMED"
+          ]
+        },
+        {
+          "name": "holder",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "holder"
+              },
+              {
+                "kind": "arg",
+                "path": "holder"
+              }
+            ]
+          },
+          "docs": [
+            "holder(account) of each account credited (the destination, the fee recipient, the relayer), each listed once"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "leaf_count",
+          "type": "u64"
+        },
+        {
+          "name": "witness",
+          "type": {
+            "defined": "ClaimWitness"
+          }
+        },
+        {
+          "name": "range",
+          "type": {
+            "defined": "ScheduleRange"
+          }
+        },
+        {
+          "name": "relayer",
+          "type": {
+            "option": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        }
+      ],
+      "execution": {
+        "public": false,
+        "private_owned": true
+      },
+      "docs": [
+        "Read root(cid, n), verify the claim inside this execution, then Issue; a private destination must be this account."
+      ]
+    },
+    {
+      "name": "read",
+      "variant": "Read",
+      "discriminator": [
+        7
+      ],
+      "accounts": [
+        {
+          "name": "receiver",
+          "writable": false,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "any actor of this program; replies StateReply"
+          ]
+        }
+      ],
+      "args": [],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Reply with this actor's state."
+      ]
+    },
+    {
+      "name": "write_root",
+      "variant": "WriteRoot",
+      "discriminator": [
+        8
+      ],
+      "accounts": [
+        {
+          "name": "root",
+          "writable": true,
+          "signer": false,
+          "init": true,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "root"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
+                "path": "leaf_count"
+              }
+            ]
+          },
+          "docs": [
+            "from config(cid) only"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "root",
+          "type": {
+            "defined": "RootState"
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Internal: config(cid) -> root(cid, n), the verified root, written once."
+      ],
+      "internal": true
+    },
+    {
+      "name": "spend",
+      "variant": "Spend",
+      "discriminator": [
+        9
+      ],
+      "accounts": [
+        {
+          "name": "nullifier",
+          "writable": true,
+          "signer": false,
+          "init": true,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "nullifier"
+              },
+              {
+                "kind": "arg",
+                "path": "evm_chain_id (u256 big-endian)"
+              },
+              {
+                "kind": "arg",
+                "path": "vault"
+              },
+              {
+                "kind": "arg",
+                "path": "nullifier"
+              }
+            ]
+          },
+          "docs": [
+            "written once: a second Spend refuses with 250 ALREADY_CLAIMED"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "nullifier",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "evm_chain_id",
+          "type": "u64"
+        },
+        {
+          "name": "vault",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "leaf_count",
+          "type": "u64"
+        },
+        {
+          "name": "amount",
+          "type": "u128"
+        },
+        {
+          "name": "mint_to",
+          "type": {
+            "option": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        },
+        {
+          "name": "fees",
+          "type": {
+            "vec": {
+              "defined": "FeeShare"
+            }
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Internal: token(cid, token) -> nullifier(chain, vault, N): spend N once; mint to mint_to and each fee to its account."
+      ],
+      "internal": true
+    },
+    {
+      "name": "mint",
+      "variant": "Mint",
+      "discriminator": [
+        10
+      ],
+      "accounts": [
+        {
+          "name": "holder",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "holder"
+              },
+              {
+                "kind": "arg",
+                "path": "holder"
+              }
+            ]
+          },
+          "docs": [
+            "from nullifier(chain, vault, N) only"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "nullifier",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "evm_chain_id",
+          "type": "u64"
+        },
+        {
+          "name": "vault",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "holder",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "amount",
+          "type": "u128"
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Internal: credit amount of token to holder."
+      ],
+      "internal": true
+    },
+    {
+      "name": "register",
+      "variant": "Register",
+      "discriminator": [
+        11
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "config"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "attestation_record",
+          "writable": false,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "header"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              },
+              {
+                "kind": "arg",
+                "path": "record_slot"
+              }
+            ]
+          },
+          "docs": [
+            "the record the message reads; the attestation program's account (its PDA domain is ferrata-lez/v1/, see ferrata_attestation.idl.json)"
+          ],
+          "owner": "ferrata_attestation"
+        },
+        {
+          "name": "token_actor",
+          "writable": true,
+          "signer": false,
+          "init": true,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "token"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
+                "path": "token"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "entry",
+          "type": {
+            "defined": "TokenEntry"
+          }
+        },
+        {
+          "name": "schedule",
+          "type": {
+            "defined": "FeeSchedule"
+          }
+        },
+        {
+          "name": "record_slot",
+          "type": "u64"
+        },
+        {
+          "name": "proof",
+          "type": {
+            "defined": "VaultProof"
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Attest the vault's registry entry of entry.token, its fee schedules 0 and 1 and its leaf count under one record, and write token(cid, token)."
+      ]
+    },
+    {
+      "name": "import_fees",
+      "variant": "ImportFees",
+      "discriminator": [
+        12
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "config"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "attestation_record",
+          "writable": false,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "header"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              },
+              {
+                "kind": "arg",
+                "path": "record_slot"
+              }
+            ]
+          },
+          "docs": [
+            "the record the message reads; the attestation program's account (its PDA domain is ferrata-lez/v1/, see ferrata_attestation.idl.json)"
+          ],
+          "owner": "ferrata_attestation"
+        },
+        {
+          "name": "token_actor",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "token"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
+                "path": "token"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "index",
+          "type": "u64"
+        },
+        {
+          "name": "schedule",
+          "type": {
+            "option": {
+              "defined": "FeeSchedule"
+            }
+          }
+        },
+        {
+          "name": "record_slot",
+          "type": "u64"
+        },
+        {
+          "name": "proof",
+          "type": {
+            "defined": "VaultProof"
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Attest the vault's fee schedule index of token (or its absence) and its leaf count, and extend token(cid, token)."
+      ]
+    },
+    {
+      "name": "write_token",
+      "variant": "WriteToken",
+      "discriminator": [
+        13
+      ],
+      "accounts": [
+        {
+          "name": "token_actor",
+          "writable": true,
+          "signer": false,
+          "init": true,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "token"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
+                "path": "token"
+              }
+            ]
+          },
+          "docs": [
+            "from config(cid) only"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "state",
+          "type": {
+            "defined": "TokenState"
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Internal: the attested entry, written once."
+      ],
+      "internal": true
+    },
+    {
+      "name": "extend_fees",
+      "variant": "ExtendFees",
+      "discriminator": [
+        14
+      ],
+      "accounts": [
+        {
+          "name": "token_actor",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "token"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
+                "path": "token"
+              }
+            ]
+          },
+          "docs": [
+            "from config(cid) only"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "index",
+          "type": "u64"
+        },
+        {
+          "name": "schedule",
+          "type": {
+            "option": {
+              "defined": "FeeSchedule"
+            }
+          }
+        },
+        {
+          "name": "count",
+          "type": "u64"
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Internal: an attested fee schedule (appended), or the attested absence of schedule index at a leaf count."
+      ],
+      "internal": true
+    },
+    {
+      "name": "issue",
+      "variant": "Issue",
+      "discriminator": [
+        15
+      ],
+      "accounts": [
+        {
+          "name": "token_actor",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "token"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
+                "path": "token"
+              }
+            ]
+          }
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "config"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              }
+            ]
+          },
+          "docs": [
+            "Admit"
+          ]
+        },
+        {
+          "name": "nullifier",
+          "writable": true,
+          "signer": false,
+          "init": true,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "nullifier"
+              },
+              {
+                "kind": "arg",
+                "path": "evm_chain_id (u256 big-endian)"
+              },
+              {
+                "kind": "arg",
+                "path": "vault"
+              },
+              {
+                "kind": "arg",
+                "path": "nullifier"
+              }
+            ]
+          },
+          "docs": [
+            "written once: a second Spend refuses with 250 ALREADY_CLAIMED"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "nullifier",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "amount",
+          "type": "u128"
+        },
+        {
+          "name": "range",
+          "type": {
+            "defined": "ScheduleRange"
+          }
+        },
+        {
+          "name": "leaf_count",
+          "type": "u64"
+        },
+        {
+          "name": "mint_to",
+          "type": {
+            "option": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        },
+        {
+          "name": "relayer",
+          "type": {
+            "option": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "A claimant -> token(cid, token) after verifying the deposit: the denomination, the fee schedule of the range, the mint freezes and caps; then Admit and Spend."
+      ]
+    },
+    {
+      "name": "admit",
+      "variant": "Admit",
+      "discriminator": [
+        16
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "config"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              }
+            ]
+          },
+          "docs": [
+            "from token(cid, token) only"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "mints",
+          "type": "bool"
+        },
+        {
+          "name": "value",
+          "type": "u128"
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Internal: the global freeze and bucket of a mint or a burn of value units, at the configuration's attested time."
+      ],
+      "internal": true
+    },
+    {
+      "name": "freeze",
+      "variant": "Freeze",
+      "discriminator": [
+        17
+      ],
+      "accounts": [
+        {
+          "name": "own",
+          "writable": true,
+          "signer": true,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "the freeze authority's own account (the program's actor at it); signed"
+          ]
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "config"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              }
+            ]
+          },
+          "docs": [
+            "target when token is None"
+          ]
+        },
+        {
+          "name": "token_actor",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "token"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
+                "path": "token"
+              }
+            ]
+          },
+          "docs": [
+            "target when token is Some"
+          ]
+        },
+        {
+          "name": "attestation_record",
+          "writable": false,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "header"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              },
+              {
+                "kind": "arg",
+                "path": "record_slot"
+              }
+            ]
+          },
+          "docs": [
+            "the record whose execution time the target reads first; the attestation program's account (its PDA domain is ferrata-lez/v1/, see ferrata_attestation.idl.json)"
+          ],
+          "owner": "ferrata_attestation"
+        }
+      ],
+      "args": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "option": {
+              "array": [
+                "u8",
+                20
+              ]
+            }
+          }
+        },
+        {
+          "name": "mints",
+          "type": "bool"
+        },
+        {
+          "name": "burns",
+          "type": "bool"
+        },
+        {
+          "name": "until_ms",
+          "type": "u64"
+        },
+        {
+          "name": "record",
+          "type": {
+            "defined": "TimeRecord"
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Freeze mints and/or burns of token (or the whole configuration) until until_ms (0 unfreezes), at most 30 days after the attested time."
+      ]
+    },
+    {
+      "name": "set_cap",
+      "variant": "SetCap",
+      "discriminator": [
+        18
+      ],
+      "accounts": [
+        {
+          "name": "own",
+          "writable": true,
+          "signer": true,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "the admin's own account (the program's actor at it); signed"
+          ]
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "config"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              }
+            ]
+          },
+          "docs": [
+            "target when token is None"
+          ]
+        },
+        {
+          "name": "token_actor",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "token"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
+                "path": "token"
+              }
+            ]
+          },
+          "docs": [
+            "target when token is Some"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "option": {
+              "array": [
+                "u8",
+                20
+              ]
+            }
+          }
+        },
+        {
+          "name": "mints",
+          "type": "bool"
+        },
+        {
+          "name": "cap",
+          "type": {
+            "defined": "CapParams"
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Set the mint (or burn) bucket of token (or the global one), never below the floor."
+      ]
+    },
+    {
+      "name": "tick",
+      "variant": "Tick",
+      "discriminator": [
+        19
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "config"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              }
+            ]
+          },
+          "docs": [
+            "target when token is None"
+          ]
+        },
+        {
+          "name": "token_actor",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "token"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
+                "path": "token"
+              }
+            ]
+          },
+          "docs": [
+            "target when token is Some"
+          ]
+        },
+        {
+          "name": "attestation_record",
+          "writable": false,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "header"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              },
+              {
+                "kind": "arg",
+                "path": "record_slot"
+              }
+            ]
+          },
+          "docs": [
+            "the record whose execution time the target advances to; the attestation program's account (its PDA domain is ferrata-lez/v1/, see ferrata_attestation.idl.json)"
+          ],
+          "owner": "ferrata_attestation"
+        }
+      ],
+      "args": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "option": {
+              "array": [
+                "u8",
+                20
+              ]
+            }
+          }
+        },
+        {
+          "name": "record",
+          "type": {
+            "defined": "TimeRecord"
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Anyone: read the attestation program's record and advance the target's clock to its execution timestamp."
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "BridgeState",
+      "type": {
+        "name": "BridgeState",
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Config",
+            "fields": [
+              {
+                "name": "0",
+                "type": {
+                  "defined": "ConfigState"
+                }
+              }
+            ]
+          },
+          {
+            "name": "Root",
+            "fields": [
+              {
+                "name": "0",
+                "type": {
+                  "defined": "RootState"
+                }
+              }
+            ]
+          },
+          {
+            "name": "Nullifier",
+            "fields": [
+              {
+                "name": "0",
+                "type": {
+                  "defined": "NullifierState"
+                }
+              }
+            ]
+          },
+          {
+            "name": "Holder",
+            "fields": [
+              {
+                "name": "0",
+                "type": {
+                  "defined": "HolderState"
+                }
+              }
+            ]
+          },
+          {
+            "name": "Burn",
+            "fields": [
+              {
+                "name": "0",
+                "type": {
+                  "defined": "BurnRecord"
+                }
+              }
+            ]
+          },
+          {
+            "name": "Token",
+            "fields": [
+              {
+                "name": "0",
+                "type": {
+                  "defined": "TokenState"
+                }
+              }
+            ]
+          }
+        ],
+        "docs": [
+          "The state of every actor of the bridge program: config(cid), root(cid, n), nullifier(chain, vault, N), holder(account), burn(cid, H(note)), token(cid, token)."
+        ]
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "TokenEntry",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "lez_definition",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "decimals",
+          "type": "u8"
+        },
+        {
+          "name": "lez_unit",
+          "type": "u128"
+        },
+        {
+          "name": "unit_weight",
+          "type": "u128"
+        },
+        {
+          "name": "denominations",
+          "type": {
+            "vec": "u128"
+          }
+        },
+        {
+          "name": "relay_fees",
+          "type": {
+            "vec": "u128"
+          }
+        }
+      ],
+      "docs": [
+        "A token's registry entry, as the vault holds it (attested by Register)."
+      ]
+    },
+    {
+      "name": "FeeSchedule",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "index",
+          "type": "u64"
+        },
+        {
+          "name": "from_leaf",
+          "type": "u64"
+        },
+        {
+          "name": "announced_at",
+          "type": "u64"
+        },
+        {
+          "name": "effective_at",
+          "type": "u64"
+        },
+        {
+          "name": "mint_fees",
+          "type": {
+            "vec": "u128"
+          }
+        },
+        {
+          "name": "burn_fees",
+          "type": {
+            "vec": "u128"
+          }
+        },
+        {
+          "name": "checkpoint_fees",
+          "type": {
+            "vec": "u128"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ScheduleRange",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "index",
+          "type": "u64"
+        },
+        {
+          "name": "from_leaf",
+          "type": "u64"
+        },
+        {
+          "name": "until_leaf",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "CapParams",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "capacity",
+          "type": "u128"
+        },
+        {
+          "name": "refill_per_second",
+          "type": "u128"
+        }
+      ],
+      "docs": [
+        "A token bucket's parameters (u128::MAX: unlimited)."
+      ]
+    },
+    {
+      "name": "Bucket",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "capacity",
+          "type": "u128"
+        },
+        {
+          "name": "refill_per_second",
+          "type": "u128"
+        },
+        {
+          "name": "level",
+          "type": "u128"
+        },
+        {
+          "name": "last_ms",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "Gate",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "now_ms",
+          "type": "u64"
+        },
+        {
+          "name": "mints_until",
+          "type": "u64"
+        },
+        {
+          "name": "burns_until",
+          "type": "u64"
+        },
+        {
+          "name": "mint",
+          "type": {
+            "defined": "Bucket"
+          }
+        },
+        {
+          "name": "burn",
+          "type": {
+            "defined": "Bucket"
+          }
+        }
+      ],
+      "docs": [
+        "The attested clock, the freezes (until, in ms) and the mint and burn buckets."
+      ]
+    },
+    {
+      "name": "TimeRecord",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "record_slot",
+          "type": "u64"
+        },
+        {
+          "name": "header",
+          "type": {
+            "option": {
+              "vec": "u8"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Timed",
+      "kind": "enum",
+      "variants": [
+        {
+          "name": "Tick"
+        },
+        {
+          "name": "Freeze",
+          "fields": [
+            {
+              "name": "mints",
+              "type": "bool"
+            },
+            {
+              "name": "burns",
+              "type": "bool"
+            },
+            {
+              "name": "until_ms",
+              "type": "u64"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "PendingTime",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "record",
+          "type": {
+            "defined": "TimeRecord"
+          }
+        },
+        {
+          "name": "then",
+          "type": {
+            "defined": "Timed"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Controls",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "admin",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "freeze_authority",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "fee_recipient",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "floor",
+          "type": {
+            "defined": "CapParams"
+          }
+        },
+        {
+          "name": "token_cap",
+          "type": {
+            "defined": "CapParams"
+          }
+        },
+        {
+          "name": "global_cap",
+          "type": {
+            "defined": "CapParams"
+          }
+        }
+      ]
+    },
+    {
+      "name": "BridgeConfig",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "bedrock_genesis_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "channel_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "bridge_image_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "attestation",
+          "type": "account_id"
+        },
+        {
+          "name": "instance_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "evm_chain_id",
+          "type": "u64"
+        },
+        {
+          "name": "vault",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "controls",
+          "type": {
+            "defined": "Controls"
+          }
+        }
+      ],
+      "docs": [
+        "A configuration; its id (config_id) is what the vault's slot 2 holds (reciprocal pairing)."
+      ]
+    },
+    {
+      "name": "Note",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "r",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "memo",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "mac",
+          "type": {
+            "array": [
+              "u8",
+              16
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "amount",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "c_out",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "ImportProof",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "account",
+          "type": {
+            "vec": {
+              "vec": "u8"
+            }
+          }
+        },
+        {
+          "name": "root_slot",
+          "type": {
+            "vec": {
+              "vec": "u8"
+            }
+          }
+        },
+        {
+          "name": "count_slot",
+          "type": {
+            "vec": {
+              "vec": "u8"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "PairingProof",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "account",
+          "type": {
+            "vec": {
+              "vec": "u8"
+            }
+          }
+        },
+        {
+          "name": "config_slot",
+          "type": {
+            "vec": {
+              "vec": "u8"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "VaultProof",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "account",
+          "type": {
+            "vec": {
+              "vec": "u8"
+            }
+          }
+        },
+        {
+          "name": "slots",
+          "type": {
+            "vec": {
+              "vec": {
+                "vec": "u8"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ClaimWitness",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "depositor",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "amount",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "leaf_index",
+          "type": "u64"
+        },
+        {
+          "name": "path",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        },
+        {
+          "name": "s",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "kind",
+          "type": "u8"
+        },
+        {
+          "name": "dest",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ],
+      "docs": [
+        "The opening of a deposit leaf. kind: 1 private, 2 public destination."
+      ]
+    },
+    {
+      "name": "FeeShare",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "0",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "1",
+          "type": "u128"
+        }
+      ],
+      "docs": [
+        "A Rust tuple (account, amount): borsh writes the two values in order."
+      ],
+      "x-rust": "tuple"
+    },
+    {
+      "name": "BridgeMessage",
+      "kind": "enum",
+      "variants": [
+        {
+          "name": "Burn",
+          "fields": [
+            {
+              "name": "config_id",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "r",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "memo",
+              "type": {
+                "array": [
+                  "u8",
+                  20
+                ]
+              }
+            },
+            {
+              "name": "mac",
+              "type": {
+                "array": [
+                  "u8",
+                  16
+                ]
+              }
+            },
+            {
+              "name": "token",
+              "type": {
+                "array": [
+                  "u8",
+                  20
+                ]
+              }
+            },
+            {
+              "name": "amount",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "c_out",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ImportRoot",
+          "fields": [
+            {
+              "name": "config_id",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "record_slot",
+              "type": "u64"
+            },
+            {
+              "name": "root",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "leaf_count",
+              "type": "u64"
+            },
+            {
+              "name": "proof",
+              "type": {
+                "defined": "ImportProof"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sunset",
+          "fields": [
+            {
+              "name": "config_id",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Echo",
+          "fields": [
+            {
+              "name": "nonce",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Init",
+          "fields": [
+            {
+              "name": "config",
+              "type": {
+                "defined": "BridgeConfig"
+              }
+            },
+            {
+              "name": "record_slot",
+              "type": "u64"
+            },
+            {
+              "name": "proof",
+              "type": {
+                "defined": "PairingProof"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Claim",
+          "fields": [
+            {
+              "name": "config_id",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "leaf_count",
+              "type": "u64"
+            },
+            {
+              "name": "witness",
+              "type": {
+                "defined": "ClaimWitness"
+              }
+            },
+            {
+              "name": "range",
+              "type": {
+                "defined": "ScheduleRange"
+              }
+            },
+            {
+              "name": "relayer",
+              "type": {
+                "option": {
+                  "array": [
+                    "u8",
+                    32
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "ClaimPrivately",
+          "fields": [
+            {
+              "name": "config_id",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "leaf_count",
+              "type": "u64"
+            },
+            {
+              "name": "witness",
+              "type": {
+                "defined": "ClaimWitness"
+              }
+            },
+            {
+              "name": "range",
+              "type": {
+                "defined": "ScheduleRange"
+              }
+            },
+            {
+              "name": "relayer",
+              "type": {
+                "option": {
+                  "array": [
+                    "u8",
+                    32
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read"
+        },
+        {
+          "name": "WriteRoot",
+          "fields": [
+            {
+              "name": "root",
+              "type": {
+                "defined": "RootState"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Spend",
+          "fields": [
+            {
+              "name": "nullifier",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "config_id",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "evm_chain_id",
+              "type": "u64"
+            },
+            {
+              "name": "vault",
+              "type": {
+                "array": [
+                  "u8",
+                  20
+                ]
+              }
+            },
+            {
+              "name": "token",
+              "type": {
+                "array": [
+                  "u8",
+                  20
+                ]
+              }
+            },
+            {
+              "name": "leaf_count",
+              "type": "u64"
+            },
+            {
+              "name": "amount",
+              "type": "u128"
+            },
+            {
+              "name": "mint_to",
+              "type": {
+                "option": {
+                  "array": [
+                    "u8",
+                    32
+                  ]
+                }
+              }
+            },
+            {
+              "name": "fees",
+              "type": {
+                "vec": {
+                  "defined": "FeeShare"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mint",
+          "fields": [
+            {
+              "name": "nullifier",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "config_id",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "evm_chain_id",
+              "type": "u64"
+            },
+            {
+              "name": "vault",
+              "type": {
+                "array": [
+                  "u8",
+                  20
+                ]
+              }
+            },
+            {
+              "name": "token",
+              "type": {
+                "array": [
+                  "u8",
+                  20
+                ]
+              }
+            },
+            {
+              "name": "holder",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "amount",
+              "type": "u128"
+            }
+          ]
+        },
+        {
+          "name": "Register",
+          "fields": [
+            {
+              "name": "config_id",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "entry",
+              "type": {
+                "defined": "TokenEntry"
+              }
+            },
+            {
+              "name": "schedule",
+              "type": {
+                "defined": "FeeSchedule"
+              }
+            },
+            {
+              "name": "record_slot",
+              "type": "u64"
+            },
+            {
+              "name": "proof",
+              "type": {
+                "defined": "VaultProof"
+              }
+            }
+          ]
+        },
+        {
+          "name": "ImportFees",
+          "fields": [
+            {
+              "name": "config_id",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "token",
+              "type": {
+                "array": [
+                  "u8",
+                  20
+                ]
+              }
+            },
+            {
+              "name": "index",
+              "type": "u64"
+            },
+            {
+              "name": "schedule",
+              "type": {
+                "option": {
+                  "defined": "FeeSchedule"
+                }
+              }
+            },
+            {
+              "name": "record_slot",
+              "type": "u64"
+            },
+            {
+              "name": "proof",
+              "type": {
+                "defined": "VaultProof"
+              }
+            }
+          ]
+        },
+        {
+          "name": "WriteToken",
+          "fields": [
+            {
+              "name": "state",
+              "type": {
+                "defined": "TokenState"
+              }
+            }
+          ]
+        },
+        {
+          "name": "ExtendFees",
+          "fields": [
+            {
+              "name": "config_id",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "token",
+              "type": {
+                "array": [
+                  "u8",
+                  20
+                ]
+              }
+            },
+            {
+              "name": "index",
+              "type": "u64"
+            },
+            {
+              "name": "schedule",
+              "type": {
+                "option": {
+                  "defined": "FeeSchedule"
+                }
+              }
+            },
+            {
+              "name": "count",
+              "type": "u64"
+            }
+          ]
+        },
+        {
+          "name": "Issue",
+          "fields": [
+            {
+              "name": "config_id",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "token",
+              "type": {
+                "array": [
+                  "u8",
+                  20
+                ]
+              }
+            },
+            {
+              "name": "nullifier",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "amount",
+              "type": "u128"
+            },
+            {
+              "name": "range",
+              "type": {
+                "defined": "ScheduleRange"
+              }
+            },
+            {
+              "name": "leaf_count",
+              "type": "u64"
+            },
+            {
+              "name": "mint_to",
+              "type": {
+                "option": {
+                  "array": [
+                    "u8",
+                    32
+                  ]
+                }
+              }
+            },
+            {
+              "name": "relayer",
+              "type": {
+                "option": {
+                  "array": [
+                    "u8",
+                    32
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admit",
+          "fields": [
+            {
+              "name": "config_id",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "token",
+              "type": {
+                "array": [
+                  "u8",
+                  20
+                ]
+              }
+            },
+            {
+              "name": "mints",
+              "type": "bool"
+            },
+            {
+              "name": "value",
+              "type": "u128"
+            }
+          ]
+        },
+        {
+          "name": "Freeze",
+          "fields": [
+            {
+              "name": "config_id",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "token",
+              "type": {
+                "option": {
+                  "array": [
+                    "u8",
+                    20
+                  ]
+                }
+              }
+            },
+            {
+              "name": "mints",
+              "type": "bool"
+            },
+            {
+              "name": "burns",
+              "type": "bool"
+            },
+            {
+              "name": "until_ms",
+              "type": "u64"
+            },
+            {
+              "name": "record",
+              "type": {
+                "defined": "TimeRecord"
+              }
+            }
+          ]
+        },
+        {
+          "name": "SetCap",
+          "fields": [
+            {
+              "name": "config_id",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "token",
+              "type": {
+                "option": {
+                  "array": [
+                    "u8",
+                    20
+                  ]
+                }
+              }
+            },
+            {
+              "name": "mints",
+              "type": "bool"
+            },
+            {
+              "name": "cap",
+              "type": {
+                "defined": "CapParams"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tick",
+          "fields": [
+            {
+              "name": "config_id",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "token",
+              "type": {
+                "option": {
+                  "array": [
+                    "u8",
+                    20
+                  ]
+                }
+              }
+            },
+            {
+              "name": "record",
+              "type": {
+                "defined": "TimeRecord"
+              }
+            }
+          ]
+        }
+      ],
+      "docs": [
+        "Every message the bridge program handles (ferrata_lez_bridge_wire::BridgeMessage)."
+      ]
+    },
+    {
+      "name": "ConfigState",
+      "kind": "enum",
+      "variants": [
+        {
+          "name": "Pairing",
+          "fields": [
+            {
+              "name": "config",
+              "type": {
+                "defined": "BridgeConfig"
+              }
+            },
+            {
+              "name": "record_slot",
+              "type": "u64"
+            }
+          ]
+        },
+        {
+          "name": "Ready",
+          "fields": [
+            {
+              "name": "config",
+              "type": {
+                "defined": "BridgeConfig"
+              }
+            },
+            {
+              "name": "pending",
+              "type": {
+                "option": {
+                  "defined": "Pending"
+                }
+              }
+            },
+            {
+              "name": "gate",
+              "type": {
+                "defined": "Gate"
+              }
+            },
+            {
+              "name": "sunset",
+              "type": "bool"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Pending",
+      "kind": "enum",
+      "variants": [
+        {
+          "name": "Import",
+          "fields": [
+            {
+              "name": "0",
+              "type": {
+                "defined": "PendingImport"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register",
+          "fields": [
+            {
+              "name": "entry",
+              "type": {
+                "defined": "TokenEntry"
+              }
+            },
+            {
+              "name": "schedule",
+              "type": {
+                "defined": "FeeSchedule"
+              }
+            },
+            {
+              "name": "record_slot",
+              "type": "u64"
+            }
+          ]
+        },
+        {
+          "name": "Fees",
+          "fields": [
+            {
+              "name": "token",
+              "type": {
+                "array": [
+                  "u8",
+                  20
+                ]
+              }
+            },
+            {
+              "name": "index",
+              "type": "u64"
+            },
+            {
+              "name": "schedule",
+              "type": {
+                "option": {
+                  "defined": "FeeSchedule"
+                }
+              }
+            },
+            {
+              "name": "record_slot",
+              "type": "u64"
+            }
+          ]
+        },
+        {
+          "name": "Time",
+          "fields": [
+            {
+              "name": "0",
+              "type": {
+                "defined": "PendingTime"
+              }
+            }
+          ]
+        }
+      ],
+      "docs": [
+        "A transaction-internal step: an attestation asked and not yet answered."
+      ]
+    },
+    {
+      "name": "PendingImport",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "record_slot",
+          "type": "u64"
+        },
+        {
+          "name": "root",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "leaf_count",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "RootState",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "evm_chain_id",
+          "type": "u64"
+        },
+        {
+          "name": "vault",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "leaf_count",
+          "type": "u64"
+        },
+        {
+          "name": "root",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "record_slot",
+          "type": "u64"
+        },
+        {
+          "name": "block_number",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "TokenState",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "evm_chain_id",
+          "type": "u64"
+        },
+        {
+          "name": "vault",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "attestation",
+          "type": "account_id"
+        },
+        {
+          "name": "instance_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "entry",
+          "type": {
+            "defined": "TokenEntry"
+          }
+        },
+        {
+          "name": "schedules",
+          "type": {
+            "vec": {
+              "defined": "FeeSchedule"
+            }
+          }
+        },
+        {
+          "name": "known_until",
+          "type": "u64"
+        },
+        {
+          "name": "controls",
+          "type": {
+            "defined": "Controls"
+          }
+        },
+        {
+          "name": "gate",
+          "type": {
+            "defined": "Gate"
+          }
+        },
+        {
+          "name": "pending",
+          "type": {
+            "option": {
+              "defined": "PendingTime"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "NullifierState",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "leaf_count",
+          "type": "u64"
+        },
+        {
+          "name": "amount",
+          "type": "u128"
+        }
+      ]
+    },
+    {
+      "name": "Holding",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "amount",
+          "type": "u128"
+        }
+      ]
+    },
+    {
+      "name": "PendingClaim",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "leaf_count",
+          "type": "u64"
+        },
+        {
+          "name": "witness",
+          "type": {
+            "defined": "ClaimWitness"
+          }
+        },
+        {
+          "name": "range",
+          "type": {
+            "defined": "ScheduleRange"
+          }
+        },
+        {
+          "name": "relayer",
+          "type": {
+            "option": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolderState",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "holdings",
+          "type": {
+            "vec": {
+              "defined": "Holding"
+            }
+          }
+        },
+        {
+          "name": "pending",
+          "type": {
+            "option": {
+              "defined": "PendingClaim"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "BurnRecord",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "note",
+          "type": {
+            "defined": "Note"
+          }
+        }
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 240,
+      "name": "BAD_MESSAGE",
+      "msg": "A message that does not decode or that this actor does not take, or values outside the specified bounds: more than eight denominations, unsorted or zero, not multiples of a power-of-ten LEZ unit, a fee above 1% of its denomination, a protocol fee in schedule 0, a fee change with less than seven days' notice, a freeze beyond 30 days, a cap below the floor."
+    },
+    {
+      "code": 241,
+      "name": "BAD_STATE",
+      "msg": "Stored state that does not decode, or is another role's, or a transaction-internal step (a pending attestation or claim) found where none can be."
+    },
+    {
+      "code": 242,
+      "name": "FROZEN",
+      "msg": "Mints or burns frozen (of the token, or of the whole configuration), or an import after `Sunset`."
+    },
+    {
+      "code": 243,
+      "name": "WRONG_SENDER",
+      "msg": "An internal message from an actor other than the expected one, a read with nobody to reply to, or a receiver that is not the actor the message names."
+    },
+    {
+      "code": 244,
+      "name": "ALREADY_WRITTEN",
+      "msg": "A write-once account already written: the configuration, a root at the same leaf count, a token's entry, a burn note, the sunset."
+    },
+    {
+      "code": 245,
+      "name": "NOT_FOUND",
+      "msg": "No configuration (an import before `Init`), or no imported root (a claim)."
+    },
+    {
+      "code": 246,
+      "name": "PAIRING_MISMATCH",
+      "msg": "The vault's slot 2 does not hold the configuration's id."
+    },
+    {
+      "code": 247,
+      "name": "IMPORT_MISMATCH",
+      "msg": "The attested facts are not the vault's slots holding what the message says (the root and count, the registry entry, a fee schedule, a schedule out of order), or are of another instance, chain or record."
+    },
+    {
+      "code": 248,
+      "name": "LEAF_NOT_IMPORTED",
+      "msg": "A leaf index at or above the imported root's leaf count, or outside the fee schedule range the claim names, or beyond the leaves the imported fee schedules cover."
+    },
+    {
+      "code": 249,
+      "name": "CLAIM_INVALID",
+      "msg": "The opening, the leaf and the path do not hash to the root (a wrong leaf, path or destination), or an unknown kind."
+    },
+    {
+      "code": 250,
+      "name": "ALREADY_CLAIMED",
+      "msg": "The deposit's nullifier is spent."
+    },
+    {
+      "code": 251,
+      "name": "NOT_REGISTERED",
+      "msg": "A token with no registry entry in the configuration, or an amount that is not one of its denominations."
+    },
+    {
+      "code": 252,
+      "name": "WRONG_DESTINATION",
+      "msg": "A destination this path cannot credit: a plaintext claim of a private-kind deposit, or a private-kind claim not run as its destination."
+    },
+    {
+      "code": 253,
+      "name": "NOT_AUTHORIZED",
+      "msg": "A burn not authorised by its holder, or not a top-level call or private root (D10); an `ImportRoot` that is not a top-level call or private root (D10, security review H-1); a control message (`Sunset`, `Freeze`, `SetCap`) not from the configured role, or not a top-level call at its own actor."
+    },
+    {
+      "code": 254,
+      "name": "INSUFFICIENT_BALANCE",
+      "msg": "A holding smaller than the denomination burned."
+    },
+    {
+      "code": 255,
+      "name": "CAPPED",
+      "msg": "The token's or the global mint or burn bucket holds less than the amount."
+    }
+  ]
+}
