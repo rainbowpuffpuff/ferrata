@@ -35,7 +35,7 @@ provers: in `risc0-circuit-rv32im` 4.0.5 (`src/prove/mod.rs`, lines 45–53), `r
 macOS unconditionally. What the machines showed (`sudo powermetrics --samplers gpu_power,cpu_power`, six samples of
 10 s from 120 s into run 1 of each job, while LEZ's circuit was being proven: `powermetrics.txt` beside each run):
 both CPU clusters at 85–100 % active residency at their top frequencies, the GPU idle (active residency in the table
-above, 1.4–3.1 %), and r0vm's log names no GPU device. So these are CPU figures for Apple's cores (with NEON), and the
+above, 1.4–3.1 %), and r0vm's log names no GPU device. Idle, after the runs, the M4's GPU showed 1.97–2.28 % ([`runs/m4/powermetrics-idle.txt`](runs/m4/powermetrics-idle.txt)): during the proofs it did no more than idle. So these are CPU figures for Apple's cores (with NEON), and the
 brief's expectation that "the macOS build uses the Metal GPU" does not hold for r0vm 3.0.5. Enabling Metal would take a
 patched RISC Zero, so the proof would no longer be LEZ's pinned prover; not done.
 
@@ -76,7 +76,33 @@ differ from the build box's, as the stage script says they would (their ELFs hol
 (602,928; `cefed220…ee21`, 602,908), bridge program `af14e3b5…3a9a` (541,732). LEZ's privacy-preserving circuit is
 LEZ's prebuilt artifact, the same on every machine; it is 85–96 % of the proving time.
 
-@@RELEASE@@
+## The release receipt: the holder's proof
+
+The release guest builds natively on macOS: `bridge/methods` (risc0-build, RISC Zero's Rust 1.91.1) built
+`release.bin` and `claim.bin` on both Macs ([`runs/m4/release/ids.txt`](runs/m4/release/ids.txt); their image ids
+are this path's and this commit's, release `0xa4fc7331…`). What was proven is the program p4-minimum's second pass
+proved, the crown's release program (`release.bin`, 230,480 bytes, sha256 `a6abe992…668e`, image `0x17257f91…f5cd`,
+the live run's), on the same witness (`release-private-1`, the crown run's burn private-1), copied from the build box's
+stage: `ferrata-e2e prove` for the succinct receipt, then `ferrata-e2e verify` (the image id, and the journal against
+the witness's record), two runs on each Mac.
+
+@@TABLE3@@
+
+"succinct proof": `ferrata-e2e`'s own `wall_s` (`prove/prove.json`), as in the cloud: 46.0 / 46.0 s at 8 CPUs and
+26.4 / 27.0 s at 16 (p4-minimum, the same program and witness, 77,736 user cycles in one segment). The journal's
+SHA-256 is the cloud's, `7904cd1a…428e` (`verify-succinct.log`).
+
+`ferrata-e2e` needed one change to build on macOS. Its `risc0-groth16` dependency had the feature `prove` on, which
+builds `risc0-sys`'s GPU kernels; on macOS these are Metal kernels, compiled with `xcrun metal`, which comes with full
+Xcode and not with the Command Line Tools (`xcrun: error: unable to find utility "metal"`:
+[`runs/m4/release/build-default-features-failed.log`](runs/m4/release/build-default-features-failed.log)).
+`RISC0_SKIP_BUILD_KERNELS` skips the C++ and CUDA kernels only (`risc0-build-kernel` 2.0.1), so it does not help. The
+feature is used by one subcommand, `p254` (`prove::to_json`, the input of the Groth16 prover image: the wrap, which
+anyone can run for the holder, on Linux). The commit on this branch puts it behind a cargo feature `wrap`, on by
+default ([`e2e-wrap-feature.patch`](e2e-wrap-feature.patch): `bridge/e2e/Cargo.toml`, `bridge/e2e/src/main.rs`), so
+other builds are unchanged, and the Macs built `cargo build --release --locked -p methods`, then `-p ferrata-e2e
+--no-default-features` (`release.sh`). With `wrap`, the code is what it was, the call moved into a function; that
+build was not compiled here (on macOS it needs Xcode, and nothing is built on the laptop): **unchecked**.
 
 ## Commands
 
@@ -112,8 +138,9 @@ tampered settlements' logs. `progress.txt` has every phase's start and end.
 
 ## What macOS needed
 
-No source change. The repository, LEZ and RISC Zero built and ran unmodified on macOS 15.8 / arm64. What differed
-from the Linux runs is in the scripts only:
+For the three proofs, no source change: the repository, LEZ and RISC Zero built and ran unmodified on macOS 15.8 /
+arm64 with Apple's Command Line Tools. For the release driver `ferrata-e2e`, one (the feature `wrap`, above: full
+Xcode's Metal compiler is otherwise needed). The rest differs from the Linux runs in the scripts only:
 
 - `/usr/bin/time -l` (BSD) instead of GNU `time -v`: it reports the maximum resident set size in bytes, and on macOS
   that includes the children the binary waited for (r0vm), so it matches the sampled r0vm peak;

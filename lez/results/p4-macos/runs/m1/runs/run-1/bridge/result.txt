@@ -1,0 +1,4 @@
+prove exit 0 wall_s 1542 start 2026-11-11T22:16:20Z
+settle exit 0
+tampered tx-claim.borsh (bit 0 of byte 128065) settle exit 101
+tampered tx-burn.borsh (bit 0 of byte 127483) settle exit 101

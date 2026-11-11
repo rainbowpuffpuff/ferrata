@@ -12,3 +12,7 @@
 2026-11-11T22:01:55Z BEGIN run-1-attest
 2026-11-11T22:16:20Z END run-1-attest exit 0
 2026-11-11T22:16:20Z BEGIN run-1-bridge
+2026-11-11T22:42:17Z END run-1-bridge exit 0
+2026-11-11T22:42:17Z BEGIN run-2-attest
+2026-11-11T22:56:38Z END run-2-attest exit 0
+2026-11-11T22:56:38Z BEGIN run-2-bridge

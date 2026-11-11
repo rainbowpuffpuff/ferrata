@@ -113,7 +113,8 @@ def main() -> None:
             log = (rd / "prove.log").read_text(errors="replace") if (rd / "prove.log").exists() else ""
             r = result_txt(rd / "result.txt")
             v = (rd / "result.txt").read_text() if (rd / "result.txt").exists() else ""
-            rec["release"].append({"run": int(rd.name.split("-")[1]), **r, "time_l": time_l(log),
+            pj = json.loads((rd / "prove" / "prove.json").read_text()) if (rd / "prove" / "prove.json").exists() else {}
+            rec["release"].append({"run": int(rd.name.split("-")[1]), **r, "time_l": time_l(log), "prove_json": pj,
                                    "mem": mem_csv(rd / "mem.csv"),
                                    "verify_exit": int(m.group(1)) if (m := re.search(r"verify exit (\d+)", v)) else None})
         summary[mac.name] = rec
@@ -181,12 +182,13 @@ def tables(summary: dict) -> None:
                   + (f"{min(gpu):.2f}–{max(gpu):.2f} ({len(gpu)} samples of 10 s)" if gpu else "—")
                   + f" | {b.get('settle_exit', '—')} | {', '.join(str(t['settle_exit']) for t in b['tamper']) or '—'} |")
     print()
-    print("| Mac | run | succinct proof, `ferrata-e2e prove` (s) | `time -l` wall (s), max RSS (GiB) | r0vm RSS, sampled peak (GiB) | verified |")
-    print("|---|---:|---:|---|---:|---|")
+    print("| Mac | run | succinct proof, `ferrata-e2e prove` (s) | user cycles (segments) | `time -l` wall (s), max RSS (GiB) | r0vm RSS, sampled peak (GiB) | verified |")
+    print("|---|---:|---:|---:|---|---:|---|")
     for mac, rec in summary.items():
         for r in rec["release"]:
-            tl = r["time_l"]
-            print(f"| {mac} | {r['run']} | {r.get('wall_s', '—')} | "
+            tl, pj = r["time_l"], r["prove_json"]
+            print(f"| {mac} | {r['run']} | {round(pj['wall_s'], 1) if 'wall_s' in pj else '—'} | "
+                  f"{pj.get('user_cycles', 0):,} ({pj.get('segments', '—')}) | "
                   + (f"{tl['real_s']:.1f}, {tl['max_rss_bytes'] / GIB:.2f}" if 'real_s' in tl else "—")
                   + f" | {r['mem'].get('r0vm_rss_max_gib', '—')} | {'yes' if r.get('verify_exit') == 0 else r.get('verify_exit')} |")
 
