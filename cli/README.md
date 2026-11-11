@@ -158,9 +158,13 @@ ferrata scan --sequencer URL --lez-wallet DIR --lez-password-file FILE --bridge-
 3. For every `(depositor, j)` and every candidate destination, recomputes `C`. The matches are this
    seed's deposits.
 
-With the zone options it also reads the bridge program's public history from the sequencer's blocks.
-That history gives the imported roots and the plaintext claims, so each deposit can be marked:
-claimed, refunded, claimable under `root(n)`, or not yet imported.
+With the zone options it also reads the zone's blocks from the sequencer, in one pass. They give:
+- the imported roots and the plaintext claims, from the bridge program's public calls;
+- the public accounts that private transactions name. A private claim names its nullifier account
+  `nullifier(chain, vault, N)` there, and the tool matches those against its own deposits' `N`
+  locally.
+
+Each deposit is then marked claimed, refunded, claimable under `root(n)`, or not yet imported.
 
 ```text
 vault 0xCf7E…0Fc9: 16 deposits at block 21, root 0x2432…e0f5 (equal to depositRoot: checked)
@@ -341,6 +345,8 @@ The steps:
      second time.
 4. **Recovery**: a fresh client with only the seed file finds 10 of 10 unclaimed deposits and 10 of
    10 unreleased burns. The zone's `status` lines name the newest import and the record it read.
+   When the history names the nullifier account of one more deposit, as a private claim's public part
+   would, the scan marks that deposit claimed (2 claimed).
 
 The relayer's steps are stand-ins:
 - `Init`, `Register` and `ImportRoot` run through the harness, from a synthetic execution block that
@@ -349,7 +355,7 @@ The relayer's steps are stand-ins:
   No real proof is made in this test.
 
 Measured on the Modal build box (CPU), 11 November 2026: 4 of 4 unit tests and 1 of 1 end-to-end test
-passed, the end-to-end test in 15.8 s:
+passed, the end-to-end test in 15.6 s:
 
 ```text
 RECOVERY: 10 of 10 unclaimed deposits (1 claimed), 10 of 10 unreleased burns (1 released); 16 deposits in the vault
@@ -362,10 +368,10 @@ RECOVERY: 10 of 10 unclaimed deposits (1 claimed), 10 of 10 unreleased burns (1 
   wallet's derived keys.
 - **Remote proving of a claim.** The LEZ wallet proves locally. For a release, a remote prover is
   reached through files: `--input-out`, then `--seal`. There is no client for a proving service.
-- **Private claims in `scan` and `recover`.** These commands see plaintext claims only. A deposit
-  claimed privately still shows as claimable. A new claim of it is still refused with 250, because
-  `claim` reads its nullifier account first. Reading the nullifier accounts written by private
-  transactions from the blocks is not built.
+- **Private claims in `scan` and `recover` are only partly tested.** These commands find a private
+  claim through the nullifier account its public part names. The test checks this matching on a
+  history given that account, not on a private transaction the harness settled. Whatever `scan` shows,
+  `claim` reads the nullifier account before sending, and refuses a deposit already claimed with 250.
 - **The ERC-20 allowance.** `deposit` says how much allowance is needed but does not send the
   `approve`. ETH needs none.
 - **No live sequencer or public network.** `ferrata` has not been run against LEZ's sequencer or any

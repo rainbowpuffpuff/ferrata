@@ -640,6 +640,22 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         "status names the newest import and the record it read"
     );
     ensure!(zone_lines.iter().any(|l| l == "  burns published: 11"), "status counts the burns");
+
+    // A private claim names its nullifier account in its public part. The harness settles no private
+    // transaction here, so the history is given one such account: the scan then marks that deposit
+    // claimed, matched locally from the account id (no per-item query).
+    let target = unclaimed[0];
+    let mut seen = history.clone();
+    seen.touched_privately.insert(
+        ferrata_lez_bridge_wire::nullifier_actor(program, 1, &vault.into_array(), &target.owned.nullifier).account_id,
+    );
+    let rows2 = scan::deposits(&wiped, &ctx, &list, 8, &seen, &refunded)?;
+    let claimed2 = rows2.iter().filter(|r| r.state == scan::DepositState::Claimed).count();
+    println!(
+        "private claim seen: leaf {} marked claimed once a private transaction names its nullifier account ({claimed2} claimed)",
+        target.owned.deposit.leaf_index
+    );
+    ensure!(claimed2 == 2, "the nullifier account named privately marks its deposit claimed");
     ensure!(claimed == 1 && unreleased == 10 && burns.len() == 11, "recovery");
     Ok(())
 }

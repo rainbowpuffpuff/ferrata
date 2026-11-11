@@ -381,8 +381,7 @@ async fn main() -> Result<()> {
             let refunded = eth::refunded_leaves(&e.eth, e.vault, c.from_block, c.chunk).await?;
             let (ledger, ctx, history) = if c.sequencer.is_some() {
                 let (ledger, ctx) = zone(c, &e, None, None).await?;
-                let applied = ledger.applied(ctx.program).await?;
-                let history = lez::history(&ctx, &applied);
+                let history = lez::history_of(&ledger, &ctx).await?;
                 (Some(ledger), ctx, history)
             } else {
                 let cid = eth::view(&e.eth, e.vault, IVault::lezConfigIdCall {}, None).await?;
@@ -457,7 +456,7 @@ async fn main() -> Result<()> {
             let e = env(c).await?;
             let (mut ledger, ctx) = zone(c, &e, payer.as_deref(), bridge_program).await?;
             let list = eth::deposit_list(&e.eth, e.vault, c.from_block, c.chunk).await?;
-            let history = lez::history(&ctx, &ledger.applied(ctx.program).await?);
+            let history = lez::history_of(&ledger, &ctx).await?;
             let rows = scan::deposits(&e.seed, &ctx, &list, c.gap, &history, &HashSet::new())?;
             let row = match leaf {
                 Some(l) => rows
@@ -502,7 +501,7 @@ async fn main() -> Result<()> {
             let (decimals, symbol) = eth::token_meta(&e.eth, token).await?;
             let amount = units::parse(&amount, decimals)?;
             let holder = e.seed.public_accounts(a + 1)?.pop().ok_or_else(|| anyhow!("no account /{a}"))?;
-            let history = lez::history(&ctx, &ledger.applied(ctx.program).await?);
+            let history = lez::history_of(&ledger, &ctx).await?;
             let plan = lez::plan_burn(
                 &ledger,
                 &ctx,
@@ -531,7 +530,7 @@ async fn main() -> Result<()> {
         Command::Release { burn, program, prove, input_out, seal, relayer, relay_fee, send } => {
             let e = env(c).await?;
             let (ledger, ctx) = zone(c, &e, None, None).await?;
-            let history = lez::history(&ctx, &ledger.applied(ctx.program).await?);
+            let history = lez::history_of(&ledger, &ctx).await?;
             let released = eth::released_nullifiers(&e.eth, e.vault, c.from_block, c.chunk).await?;
             let (rows, _) = scan::burns(&e.seed, &ctx, &history, &released);
             let row = match burn {
@@ -702,7 +701,7 @@ async fn main() -> Result<()> {
             if c.sequencer.is_some() {
                 let e = env(c).await?;
                 let (ledger, ctx) = zone(c, &e, None, None).await?;
-                let history = lez::history(&ctx, &ledger.applied(ctx.program).await?);
+                let history = lez::history_of(&ledger, &ctx).await?;
                 for line in lez::zone_status(&ledger, &ctx, &history).await? {
                     println!("{line}");
                 }

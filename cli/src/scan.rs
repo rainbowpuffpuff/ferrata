@@ -55,7 +55,7 @@ pub fn deposits(
     Ok(owned
         .into_iter()
         .map(|owned| {
-            let state = if history.claimed.contains(&owned.nullifier) {
+            let state = if crate::lez::is_claimed(ctx, history, &owned.nullifier) {
                 DepositState::Claimed
             } else if refunded.contains(&owned.deposit.leaf_index) {
                 DepositState::Refunded

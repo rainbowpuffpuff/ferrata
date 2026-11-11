@@ -95,6 +95,12 @@ pub struct Applied {
 pub trait Ledger {
     /// Every applied (not reverted) public call whose root is an actor of `program`, in chain order.
     async fn applied(&self, program: AccountId) -> Result<Vec<Applied>>;
+    /// `applied`, and the public accounts named by applied privacy-preserving transactions (a
+    /// private claim names its nullifier account there), read in the same pass where the ledger can.
+    /// None by default.
+    async fn applied_with_private(&self, program: AccountId) -> Result<(Vec<Applied>, HashSet<AccountId>)> {
+        Ok((self.applied(program).await?, HashSet::new()))
+    }
     /// The bridge state of `actor` (empty if none).
     async fn actor_state(&self, actor: Actor) -> Result<Vec<u8>>;
     /// Sign and send `call`; returns the transaction hash (hex).
@@ -121,6 +127,9 @@ pub struct History {
     pub burns: Vec<PublishedBurn>,
     /// Nullifiers of plaintext claims against this vault.
     pub claimed: HashSet<Hash>,
+    /// Public accounts named by applied privacy-preserving transactions: the nullifier accounts of
+    /// private claims among them.
+    pub touched_privately: HashSet<AccountId>,
 }
 
 /// Reads the history of `ctx`'s configuration from `applied`.
@@ -151,6 +160,21 @@ pub fn history(ctx: &Context, applied: &[Applied]) -> History {
     h.roots.sort_unstable();
     h.roots.dedup();
     h
+}
+
+/// The history of `ctx`'s configuration, private claims included, from one pass over the zone.
+pub async fn history_of<L: Ledger>(ledger: &L, ctx: &Context) -> Result<History> {
+    let (applied, touched) = ledger.applied_with_private(ctx.program).await?;
+    let mut h = history(ctx, &applied);
+    h.touched_privately = touched;
+    Ok(h)
+}
+
+/// Whether the deposit with nullifier `n` is claimed in `history`: by a plaintext claim, or by a
+/// private one, whose public part names `nullifier(chain, vault, N)`. Matched locally: no per-item query.
+pub fn is_claimed(ctx: &Context, history: &History, n: &Hash) -> bool {
+    history.claimed.contains(n)
+        || history.touched_privately.contains(&nullifier_actor(ctx.program, ctx.chain_id, &ctx.vault, n).account_id)
 }
 
 /// The schedule range a wallet names for a claim of `leaf` (the widest its token state allows), as
@@ -417,7 +441,12 @@ fn mention(m: &Mention) -> AccountMention {
 
 impl Ledger for Sequencer {
     async fn applied(&self, program: AccountId) -> Result<Vec<Applied>> {
+        Ok(self.applied_with_private(program).await?.0)
+    }
+
+    async fn applied_with_private(&self, program: AccountId) -> Result<(Vec<Applied>, HashSet<AccountId>)> {
         let client = self.wallet.client();
+        let mut touched = HashSet::new();
         let last = client.get_last_block_id().await.map_err(|e| anyhow!("get_last_block_id: {e}"))?;
         let mut out = Vec::new();
         let mut start = 1;
@@ -430,17 +459,20 @@ impl Ledger for Sequencer {
                     if block.body.reverted.contains(&(i as u64)) {
                         continue;
                     }
-                    if let LeeTransaction::Public(tx) = tx {
-                        let root = &tx.message.execution.root;
-                        if root.to.program_account_id == program {
-                            out.push(Applied { to: root.to, message: root.message.clone() });
+                    match tx {
+                        LeeTransaction::Public(tx) => {
+                            let root = &tx.message.execution.root;
+                            if root.to.program_account_id == program {
+                                out.push(Applied { to: root.to, message: root.message.clone() });
+                            }
                         }
+                        LeeTransaction::PrivacyPreserving(tx) => touched.extend(tx.message.public_account_ids()),
                     }
                 }
             }
             start = end + 1;
         }
-        Ok(out)
+        Ok((out, touched))
     }
 
     async fn actor_state(&self, actor: Actor) -> Result<Vec<u8>> {
