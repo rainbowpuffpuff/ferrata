@@ -39,7 +39,7 @@ case "${1:-}" in
     ( cd "$HERE/driver" && CARGO_TARGET_DIR="$LIVE/target" CARGO_BUILD_JOBS="${CROWN_JOBS:-16}" cargo build --release )
     cp "$LIVE/target/release/crown-driver" "$CROWN_LEZ_TMP/bin/crown-driver"
     sha256sum "$CROWN_LEZ_TMP/bin/crown-driver"
-    [ "$1" = all ] && exec "$0" pack
+    if [ "$1" = all ]; then exec "$0" pack; fi
     ;;
   pack)
     b="$CROWN_LEZ_TMP/bundle"

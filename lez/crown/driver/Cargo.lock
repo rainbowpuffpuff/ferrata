@@ -1436,6 +1436,39 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0a5c400df2834b80a4c3327b3aad3a4c4cd4de0629063962b03235697506a28"
 
 [[package]]
+name = "crown-driver"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "borsh",
+ "chain_state",
+ "common",
+ "env_logger",
+ "fee_core",
+ "ferrata-bridge-core",
+ "ferrata-core",
+ "ferrata-lez-bridge-wire",
+ "ferrata-lez-wire",
+ "ferrata-spectests",
+ "hex",
+ "lee",
+ "lee_core",
+ "log",
+ "program_loader_core",
+ "risc0-binfmt",
+ "risc0-zkos-v1compat",
+ "sequencer_service_rpc",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "system_accounts",
+ "test_guest_core",
+ "testnet_initial_state",
+ "tokio",
+ "wallet",
+]
+
+[[package]]
 name = "crunchy"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4185,39 +4218,6 @@ name = "litemap"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "92daf443525c4cce67b150400bc2316076100ce0b3686209eb8cf3c31612e6f0"
-
-[[package]]
-name = "live-driver"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "borsh",
- "chain_state",
- "common",
- "env_logger",
- "fee_core",
- "ferrata-bridge-core",
- "ferrata-core",
- "ferrata-lez-bridge-wire",
- "ferrata-lez-wire",
- "ferrata-spectests",
- "hex",
- "lee",
- "lee_core",
- "log",
- "program_loader_core",
- "risc0-binfmt",
- "risc0-zkos-v1compat",
- "sequencer_service_rpc",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "system_accounts",
- "test_guest_core",
- "testnet_initial_state",
- "tokio",
- "wallet",
-]
 
 [[package]]
 name = "lock_api"
