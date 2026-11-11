@@ -109,6 +109,67 @@ fn main() {
         }
     }
 
+    // The recorded privacy-preserving transactions of lez/results (bridge claim and burn, attestation),
+    // each as the one transaction of a block: their visible calls, and the blocks themselves.
+    for name in ["bridge-private-claim-tx", "bridge-private-burn-tx", "stage2-private-tx", "stage4-private-attest-tx"] {
+        let tx = fs::read(repo.join(format!("lez/results/{name}.borsh"))).expect("recorded transaction");
+        for body in [tx.clone(), with(&[1], &tx)] {
+            let mut block = vec![0u8; 80];
+            block.extend_from_slice(&1u32.to_le_bytes());
+            block.extend_from_slice(&body);
+            block.extend_from_slice(&0u32.to_le_bytes());
+            block.push(0);
+            let mut calls = Calls(Vec::new());
+            if parse_block(&block, &mut calls).is_ok() {
+                println!("{name}: {} visible calls", calls.0.len());
+                messages.extend(calls.0);
+                seeds.entry("lez_block").or_default().insert(block);
+                break;
+            }
+        }
+    }
+
+    // Messages built from the program's own types, for the variants with plain fields, and
+    // sequences that carry a state from one delivery to the next.
+    let (cid, token, vault, holder, nf) = ([0xc1; 32], [0x7e; 20], [0x5a; 20], [0x4d; 32], [0x9f; 32]);
+    let empty_proof = ferrata_lez_bridge_wire::ImportProof { account: vec![], root_slot: vec![], count_slot: vec![] };
+    let mut amount = [0u8; 32];
+    amount[31] = 100;
+    let built = [
+        BridgeMessage::Mint { nullifier: nf, config_id: cid, evm_chain_id: 1, vault, token, holder, amount: 100 },
+        BridgeMessage::Spend {
+            nullifier: nf,
+            config_id: cid,
+            evm_chain_id: 1,
+            vault,
+            token,
+            leaf_count: 4,
+            amount: 100,
+            mint_to: Some(holder),
+            fees: vec![([0x22; 32], 1)],
+        },
+        BridgeMessage::Admit { config_id: cid, token, mints: true, value: 100 },
+        BridgeMessage::Burn { config_id: cid, r: [3; 32], memo: [0; 20], mac: [0; 16], token, amount, c_out: [4; 32] },
+        BridgeMessage::ImportRoot { config_id: cid, record_slot: 64, root: [6; 32], leaf_count: 4, proof: empty_proof },
+        BridgeMessage::Sunset { config_id: cid },
+        BridgeMessage::Echo { nonce: holder },
+        BridgeMessage::Read,
+        BridgeMessage::ExtendFees { config_id: cid, token, index: 0, schedule: None, count: 1 },
+    ];
+    let encoded: Vec<Vec<u8>> = built.iter().map(|m| borsh::to_vec(m).unwrap()).collect();
+    for m in &encoded {
+        messages.insert(m.clone());
+    }
+    let step = |flags: u8, m: &[u8]| [&[flags][..], &(m.len() as u16).to_le_bytes(), m].concat();
+    // Mint at holder(account) from the nullifier actor (mode 4, sender 5 = nullifier), then each message.
+    for m in &encoded {
+        let seed = [&[4u8][..], &step(8 | 5, &encoded[0]), &step(8 | 7, m), &step(8, m)].concat();
+        seeds.entry("bridge_handle").or_default().insert(seed);
+    }
+    // Spend at the nullifier actor from the token actor (mode 3, sender 3 = token actor), twice.
+    let seed = [&[3u8][..], &step(8 | 3, &encoded[1]), &step(8 | 3, &encoded[1])].concat();
+    seeds.entry("bridge_handle").or_default().insert(seed);
+
     for m in &messages {
         seeds.entry("bridge_wire").or_default().insert(with(&[0], m));
         let Ok(decoded) = borsh::from_slice::<BridgeMessage>(m) else { continue };
