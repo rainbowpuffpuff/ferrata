@@ -40,6 +40,17 @@ every other command.
 | [Privacy suite](docs/privacy/RESULTS.md), `scripts/privacy/` | Milestone B2's privacy gate measured: 20 users' round trip (deposit, private claim, private burn, release) through the bridge program and the vault; every public byte collected on both chains; a differential gate, an adversary that tries to pair each claim with its deposit and each release with its burn, the field table against the proposal's §B6, and seed-only recovery | Cloud container (Modal, 2 vCPU): the LEZ harness in RISC Zero dev mode with synthetic records, Foundry with the mock verifier | Measured: the adversary at chance (5.0%) on both private paths and at 100% on the plaintext claim and the naive nullifiers; private claims, burns and releases identical once nullifiers, fresh randomness, own addresses and time are cut; 10 of 10 unclaimed deposits and 10 of 10 unreleased burns recovered from the seed; seven public fields §B6 does not list | `scripts/privacy/run.sh` (with `RISC0_HOME` as for `lez/`) |
 | [Finality-rule analysis](docs/design/finality-rule/LEMMA.md), `docs/design/finality-rule/` | A model of LEZ v0.4 sequencer and Logos Blockchain behaviour cited to source lines, a written proof, and a discrete-event simulator | Simulator (Python, standard library), not a network | Broke the earlier rule (A); the repaired rule shows no violation in 500 adversarial runs within its conditions | `cd docs/design/finality-rule/sim && python3 experiments.py` (12,000 runs, 25 min on 14 processes; `python3 test_sim.py` checks the model) |
 
+**Since 11 November 2026** (EVIDENCE rows 28-30): the bridge program's freezes and caps run on time it reads from
+its own attestation program's records, never on a caller's time ([`lez/BRIDGE.md`](lez/BRIDGE.md) §6); rule (B)
+also checks the tip's producer inscription, so a forged history needs one channel key besides `t` attestation keys
+([`checkpoint/RESULTS.md`](checkpoint/RESULTS.md) §4a); and the findings of a security review in a separate agent
+context are fixed on both sides (LEZ: public balances at `holder(account)` PDAs, `ImportRoot` only as a visible
+call, one `NOut` per burn, a MAC over the memo; vault: the keyless-retirement clock, the checkpoint fee to the
+prover, stale candidates, no deposit after a final sunset, test chains only, a bound on `revokeWindow`), with tests
+that fail on the code before the fixes ([`lez/BRIDGE-RESULTS.md`](lez/BRIDGE-RESULTS.md) §13,
+[`vault/GAS.md`](vault/GAS.md)). These changed the bridge, `checkpoint_b` and release images: every real proof and
+the real crossing of row 27 used the earlier programs.
+
 The guests need RISC Zero's toolchain (`rzup`, r0vm 3.0.5), the vault Foundry (forge 1.3.6, solc
 0.8.26), and the Groth16 wraps Docker on x86-64. `lez/` and the checkpoint's fidelity tests read LEZ
 v0.4.0-rc1 and Logos Blockchain from `upstream/` beside the repository; `lez/scripts/lez-select.sh v0.4.0-rc2`
@@ -142,7 +153,9 @@ Deposit 0 was claimed on LEZ by the plaintext path: on a LEZ v0.4.0-rc1 sequence
 of Sepolia's finalized state, with the frozen bridge program, not this tree's
 ([`lez/live/inbound/README.md`](lez/live/inbound/README.md), "The real session"). No public LEZ network runs
 any of it: LEZ testnet 0.4 does not exist. The prototypes exist to measure and to test the design; the audit
-is planned for the code the proposal would deliver.
+is planned for the code the proposal would deliver. A security review by an agent in a separate context
+(11 November 2026) is not an audit; its fixes are in this tree (EVIDENCE row 30), and the frozen bridge program
+of the real session predates them and the time fix.
 
 ## How it was built
 
