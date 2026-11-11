@@ -368,7 +368,7 @@ Rectangle {
                     Label {
                         objectName: "claim.delay"
                         visible: claimLeaf >= 0 && held(claimLeaf)
-                        text: claimLeaf >= 0 && heldUntil[claimLeaf] ? "Held until " + new Date(heldUntil[claimLeaf] - clockOffset).toLocaleTimeString() + (clockOffset > 0 ? " (devnet clock)" : "") + " by the random delay you chose: a claim right after a deposit narrows which deposit it could be." : ""
+                        text: claimLeaf >= 0 && heldUntil[claimLeaf] ? "Held for another " + hoursLeft(heldUntil[claimLeaf]) + " h (until " + new Date(heldUntil[claimLeaf]).toLocaleTimeString() + (clockOffset > 0 ? " on the devnet's clock" : "") + ") by the random delay you chose: a claim right after a deposit narrows which deposit it could be." : ""
                         color: "#8a6d00"; wrapMode: Text.WordWrap; Layout.fillWidth: true
                     }
                     CheckBox { objectName: "claim.skipDelay"; visible: claimLeaf >= 0 && held(claimLeaf); text: "Claim now anyway (less private)"; checked: false; onClicked: skipDelay = checked }
@@ -444,7 +444,7 @@ Rectangle {
                     Label {
                         objectName: "release.delay"
                         visible: releaseBurn >= 0 && releaseHeld(releaseBurn)
-                        text: releaseBurn >= 0 && releaseHeldUntil[releaseBurn] ? "Held until " + new Date(releaseHeldUntil[releaseBurn] - clockOffset).toLocaleTimeString() + (clockOffset > 0 ? " (devnet clock)" : "") + " by the random delay you chose: a release right after a burn narrows which burn it could be." : ""
+                        text: releaseBurn >= 0 && releaseHeldUntil[releaseBurn] ? "Held for another " + hoursLeft(releaseHeldUntil[releaseBurn]) + " h (until " + new Date(releaseHeldUntil[releaseBurn]).toLocaleTimeString() + (clockOffset > 0 ? " on the devnet's clock" : "") + ") by the random delay you chose: a release right after a burn narrows which burn it could be." : ""
                         color: "#8a6d00"; wrapMode: Text.WordWrap; Layout.fillWidth: true
                     }
                     CheckBox { objectName: "release.skipDelay"; visible: releaseBurn >= 0 && releaseHeld(releaseBurn); text: "Release now anyway (less private)"; checked: false; onClicked: releaseSkipDelay = checked }

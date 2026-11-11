@@ -203,30 +203,14 @@ Item {
             compare(r.recipient.toLowerCase(), host.privateRecipient.toLowerCase(), "to the fresh recipient");
             console.log("PROOF burn " + JSON.stringify({ mode: r.proof.mode, prove_ms: r.proof.prove_ms, receipt_bytes: r.proof.receipt_bytes, tx_bytes: r.proof.tx_bytes }));
             shot("21-burn-private-settled");
-            // The public path keeps its warning.
-            click("burn.kind.public");
-            verify(!el("burn.submit").enabled, "a public burn needs the acknowledgement");
-            verify(has(el("burn.leaks.summary").text, "High"), el("burn.leaks.summary").text);
-            shot("21b-burn-public-needs-ack");
-            click("burn.public.ack");
-            click("burn.fresh");
-            host.publicRecipient = host.app.recipient;
-            click("burn.delay");
-            verify(!host.app.releaseDelayOn, "release delay off for this one");
-            idle();
-            click("burn.submit");
-            approve("Burn", null);
-            tryVerify(function () { return has(host.app.burnText, "Burned 0.1 ETH"); }, 60000, host.app.burnText);
-            compare(host.app.burnReply.burn_index, 1, "the second burn");
-            shot("21c-burn-public-sent");
         }
 
-        function test_11_checkpoint_and_release() {
+        function test_11_checkpoint_and_private_release() {
             click("redeem.checkpoint");
             idle();
             click("redeem.refresh");
             idle();
-            compare(host.app.positions.burns.length, 2, "both burns found from the seed");
+            compare(host.app.positions.burns.length, 1, "the private burn found from the seed");
             click("release.pick.0");
             verify(!el("release.submit").enabled, "the private burn's release is held by its random delay");
             verify(el("release.delay").visible, "the delay is explained");
@@ -242,6 +226,35 @@ Item {
             verify(has(host.app.releaseText.toLowerCase(), host.privateRecipient.toLowerCase()), "paid to the private burn's fresh recipient: " + host.app.releaseText);
             verify(has(host.app.releaseText, "0.1 ETH paid"), host.app.releaseText);
             shot("23-released-private-round-trip");
+            tab("positions");
+            click("positions.recover");
+            idle();
+            verify(has(el("positions.summary").text, "0 not released"), el("positions.summary").text);
+            shot("23c-positions-after-private-round-trip");
+            tab("redeem");
+        }
+
+        // The public path keeps its warning: a public burn needs the acknowledgement.
+        function test_11b_public_burn_and_release() {
+            click("burn.kind.public");
+            verify(!el("burn.submit").enabled, "a public burn needs the acknowledgement");
+            verify(has(el("burn.leaks.summary").text, "High"), el("burn.leaks.summary").text);
+            shot("21b-burn-public-needs-ack");
+            click("burn.public.ack");
+            click("burn.fresh");
+            host.publicRecipient = host.app.recipient;
+            click("burn.delay");
+            verify(!host.app.releaseDelayOn, "release delay off for this one");
+            idle();
+            click("burn.submit");
+            approve("Burn", null);
+            tryVerify(function () { return has(host.app.burnText, "Burned 0.1 ETH"); }, 60000, host.app.burnText);
+            compare(host.app.burnReply.burn_index, 1, "the second burn");
+            shot("21c-burn-public-sent");
+            click("redeem.checkpoint");
+            idle();
+            click("redeem.refresh");
+            idle();
             click("release.pick.1");
             idle();
             click("release.submit");
