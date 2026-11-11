@@ -76,7 +76,11 @@ http_pid=$!
 trap 'kill $http_pid 2>/dev/null || true' EXIT
 for _ in $(seq 1 100); do (echo > "/dev/tcp/127.0.0.1/$PORT") 2>/dev/null && break; sleep 0.1; done
 find "$out/dist" -name '*.lgx' | sort | sed "s#^$out/dist#http://127.0.0.1:$PORT#" > "$out/urls.txt"
+# index.py names the repository from logos-repo.json in its working directory, as in the catalog.
+cp "$repo/modules/catalog/logos-repo.json" "$out/logos-repo.json"
 (cd "$out" && python3 -I "$out/_tool/index.py" build "$out/urls.txt" -o "$out/index.json" --icons-dir "") > "$out/log/index.log" 2>&1
+# validate-repo.yml's check of the catalog's own file.
+python3 -I "$out/_tool/index.py" validate-repo "$repo/modules/catalog/logos-repo.json" > "$out/log/validate-repo.txt" 2>&1
 jq '{ schemaVersion, repositoryName, packageCount: (.packages | length) }' "$out/index.json" | tee "$out/log/index-summary.json"
 
 # The small results into the repository (no package binaries).
@@ -90,4 +94,7 @@ for m in $MODULES; do
   tag="$m-v$(jq -r .version "$out/src/$m/metadata.json")"
   cp "$out/dist/$tag/sidecar.json" "$dry/$tag.sidecar.json"
 done
+# No machine paths in the repository: name the directory above the repository `spike`.
+spike=$(cd "$repo/.." && pwd)
+grep -rl "$spike" "$dry" | xargs -r sed -i "s#$spike#spike#g"
 echo "release-local.sh: done; $(jq '.packages | length' "$out/index.json") packages in index.json"
