@@ -204,12 +204,22 @@ async fn wait_for(rpc: &str) -> Result<DynProvider> {
     bail!("anvil did not start")
 }
 
-/// An unlocked anvil account sends a transaction; Err if it reverts (with the node's message).
+/// An unlocked anvil account sends a transaction; Err if it reverts. Only for transactions that must
+/// succeed: the provider's nonce filler counts a transaction whose gas estimate fails as sent, and
+/// the next one would then wait forever behind the gap (an expected refusal goes through [`reverts`]).
 async fn anvil_send(p: &DynProvider, from: Address, to: Address, input: Vec<u8>, value: U256) -> Result<()> {
     let tx = TransactionRequest::default().with_from(from).with_to(to).with_input(input).with_value(value);
-    let receipt = p.send_transaction(tx).await?.get_receipt().await?;
+    let pending = p.send_transaction(tx).await?;
+    let receipt = tokio::time::timeout(std::time::Duration::from_secs(60), pending.get_receipt())
+        .await
+        .map_err(|_| anyhow!("no receipt within 60 s"))??;
     ensure!(receipt.status(), "the transaction reverted");
     Ok(())
+}
+
+/// Whether the call reverts on the current state (`eth_call` from `from`): an expected refusal.
+async fn reverts(p: &DynProvider, from: Address, to: Address, input: Vec<u8>) -> bool {
+    p.call(TransactionRequest::default().with_from(from).with_to(to).with_input(input)).await.is_err()
 }
 
 async fn slot(p: &DynProvider, vault: Address, key: [u8; 32]) -> Result<[u8; 32]> {
@@ -487,10 +497,10 @@ async fn deposit_attest_claim_burn_checkpoint_b_release() -> Result<()> {
     anvil_send(&p, ANVIL0, verifier, accept(checkpoint_image, &journal), U256::ZERO).await?;
     let submit = ICheckpointsB::submitCandidateCall { c: c.clone(), seal: Bytes::from(SEAL.to_vec()) }.abi_encode();
     anvil_send(&p, ANVIL0, vault, submit, U256::ZERO).await?;
-    let early = anvil_send(&p, ANVIL0, vault, ICheckpointsB::finalizeAttestedCall { c: c.clone() }.abi_encode(), U256::ZERO).await;
-    ensure!(early.is_err(), "finalisation before the wait W is refused");
+    let finalize = ICheckpointsB::finalizeAttestedCall { c: c.clone() }.abi_encode();
+    ensure!(reverts(&p, ANVIL0, vault, finalize.clone()).await, "finalisation before the wait W is refused");
     advance(&p, 601).await?; // W = delta (600 s) under rule (B)
-    anvil_send(&p, ANVIL0, vault, ICheckpointsB::finalizeAttestedCall { c: c.clone() }.abi_encode(), U256::ZERO).await?;
+    anvil_send(&p, ANVIL0, vault, finalize, U256::ZERO).await?;
     ensure!(eth::view(&p, vault, ICheckpointsB::finalStateCall {}, None).await? == c.newState, "finalState moved");
     let roots = eth::accepted_burn_roots(&p, vault, 0, 10_000).await?;
     let (root_b, count) = *roots.last().context("an accepted burn root")?;
@@ -514,7 +524,7 @@ async fn deposit_attest_claim_burn_checkpoint_b_release() -> Result<()> {
         eth::view(&p, vault, IVault::nullifierUsedCall { nullifier: B256::from(rplan.nullifier) }, None).await?,
         "NOut used"
     );
-    ensure!(anvil_send(&p, ANVIL0, vault, call.to_vec(), U256::ZERO).await.is_err(), "a replay is refused");
+    ensure!(reverts(&p, ANVIL0, vault, call.to_vec()).await, "a replay is refused");
     step(t0, "7. release of 0.1 ETH on anvil; replay refused");
     println!("round trip done in {:.1} s", t0.elapsed().as_secs_f64());
     Ok(())
