@@ -65,7 +65,8 @@ impl Source for BeaconApi {
         self.get(&format!("/eth/v1/beacon/light_client/bootstrap/0x{}", hex::encode(block_root)))
     }
     fn updates(&mut self, start_period: u64, count: u64) -> Result<Vec<Vec<u8>>> {
-        let raw = self.get(&format!("/eth/v1/beacon/light_client/updates?start_period={start_period}&count={count}"))?;
+        let raw =
+            self.get(&format!("/eth/v1/beacon/light_client/updates?start_period={start_period}&count={count}"))?;
         Ok(split_chunks(&raw))
     }
     fn finality_update(&mut self) -> Result<Vec<u8>> {
@@ -115,7 +116,8 @@ pub struct Recorded {
 
 impl Recorded {
     pub fn open(name: &str, dir: &Path, config: &Config, clock: Clock) -> Result<Self> {
-        let bootstrap = fs::read(dir.join("bootstrap.ssz")).with_context(|| format!("{}: bootstrap.ssz", dir.display()))?;
+        let bootstrap =
+            fs::read(dir.join("bootstrap.ssz")).with_context(|| format!("{}: bootstrap.ssz", dir.display()))?;
         let checkpoint = crate::chain::root(&fs::read_to_string(dir.join("checkpoint"))?)?;
         let entries = load_entries(&dir.join("updates"), config)?;
         Ok(Self { name: name.to_string(), bootstrap, checkpoint, entries, clock, lag: 0 })
@@ -139,7 +141,8 @@ pub fn load_entries(dir: &Path, config: &Config) -> Result<Vec<Entry>> {
     for (seq, name) in names.iter().enumerate() {
         let bytes = fs::read(dir.join(name))?;
         let period_update = name.contains(".period.");
-        let (update, _) = if period_update { decode_update(&bytes, config)? } else { decode_finality_update(&bytes, config)? };
+        let (update, _) =
+            if period_update { decode_update(&bytes, config)? } else { decode_finality_update(&bytes, config)? };
         entries.push(Entry {
             seq,
             period_update,
@@ -175,7 +178,11 @@ impl Source for Recorded {
         let seen = &self.entries[..self.visible()];
         // A beacon node's newest finality update; the record keeps period updates as served by
         // the `updates` endpoint, so the newest finality-kind entry stands for it.
-        seen.iter().rev().find(|e| !e.period_update).map(|e| e.bytes.clone()).ok_or_else(|| anyhow!("{}: no finality update yet (404)", self.name))
+        seen.iter()
+            .rev()
+            .find(|e| !e.period_update)
+            .map(|e| e.bytes.clone())
+            .ok_or_else(|| anyhow!("{}: no finality update yet (404)", self.name))
     }
 }
 
@@ -207,7 +214,8 @@ impl<S: Source> Faulty<S> {
 
     /// `bytes` with one byte of the update's sync-committee signature flipped.
     pub fn flip_signature(&self, bytes: Vec<u8>, period: bool) -> Vec<u8> {
-        let decoded = if period { decode_update(&bytes, &self.config) } else { decode_finality_update(&bytes, &self.config) };
+        let decoded =
+            if period { decode_update(&bytes, &self.config) } else { decode_finality_update(&bytes, &self.config) };
         let Ok((update, _)) = decoded else { return bytes };
         let sig = update.sync_aggregate.signature;
         let mut out = bytes;

@@ -1,0 +1,13 @@
+[
+  {
+    "chain": "mainnet",
+    "daemon": "dev",
+    "finalized_slot": 15631808,
+    "last_error": "",
+    "last_plan": "up-to-date",
+    "period": 1908,
+    "reasons": [],
+    "round": 37,
+    "status": "ok"
+  }
+]

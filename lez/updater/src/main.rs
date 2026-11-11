@@ -48,8 +48,9 @@ fn main() -> Result<()> {
     let at = |p: &str| if PathBuf::from(p).is_absolute() { PathBuf::from(p) } else { base.join(p) };
 
     let key_hex = fs::read_to_string(at(&file.keys.payer_key_file)).context("keys.payer_key_file")?;
-    let key_bytes: [u8; 32] =
-        hex::decode(key_hex.trim().trim_start_matches("0x"))?.try_into().map_err(|_| anyhow!("the payer key is not 32 bytes"))?;
+    let key_bytes: [u8; 32] = hex::decode(key_hex.trim().trim_start_matches("0x"))?
+        .try_into()
+        .map_err(|_| anyhow!("the payer key is not 32 bytes"))?;
     let payer = PrivateKey::try_new(key_bytes).map_err(|e| anyhow!("payer key: {e:?}"))?;
 
     let (mut ledger, program): (Box<dyn Ledger>, AccountId) = match file.daemon.ledger.as_str() {
@@ -60,7 +61,9 @@ fn main() -> Result<()> {
         }
         #[cfg(not(feature = "harness"))]
         "harness" => bail!("daemon.ledger = \"harness\" needs a build with --features harness"),
-        "sequencer" => bail!("daemon.ledger = \"sequencer\": the LEZ sequencer backend is not in this build (lez/updater/README.md)"),
+        "sequencer" => bail!(
+            "daemon.ledger = \"sequencer\": the LEZ sequencer backend is not in this build (lez/updater/README.md)"
+        ),
         other => bail!("daemon.ledger = {other:?}: harness or sequencer"),
     };
 
@@ -72,13 +75,27 @@ fn main() -> Result<()> {
         let mut sources: Vec<Box<dyn Source>> = Vec::new();
         for s in &c.sources {
             match (&s.url, &s.dir) {
-                (Some(url), _) => sources.push(Box::new(BeaconApi { name: s.name.clone(), base: url.clone(), timeout_secs: s.timeout_secs })),
-                (_, Some(dir)) => sources.push(Box::new(Recorded::open(&s.name, &at(dir), &config, Clock::new(usize::MAX))?)),
+                (Some(url), _) => sources.push(Box::new(BeaconApi {
+                    name: s.name.clone(),
+                    base: url.clone(),
+                    timeout_secs: s.timeout_secs,
+                })),
+                (_, Some(dir)) => {
+                    sources.push(Box::new(Recorded::open(&s.name, &at(dir), &config, Clock::new(usize::MAX))?))
+                }
                 _ => unreachable!("checked by config"),
             }
         }
         let inst = Instance::new(&c.name, program, config, root(&c.checkpoint)?);
-        let mut u = Updater::new(&file.daemon.name, inst, payer.clone(), file.fees.clone(), file.policy.clone(), sources, Some(state_dir.clone()))?;
+        let mut u = Updater::new(
+            &file.daemon.name,
+            inst,
+            payer.clone(),
+            file.fees.clone(),
+            file.policy.clone(),
+            sources,
+            Some(state_dir.clone()),
+        )?;
         u.verbose = verbose;
         updaters.push(u);
     }

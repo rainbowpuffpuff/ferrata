@@ -99,7 +99,11 @@ mod harness_ledger {
         }
 
         pub fn balance(&self, key: &PrivateKey) -> u128 {
-            self.state.get_account_by_id(AccountId::from(&PublicKey::new_from_private_key(key))).data.native_balance().unwrap_or(0)
+            self.state
+                .get_account_by_id(AccountId::from(&PublicKey::new_from_private_key(key)))
+                .data
+                .native_balance()
+                .unwrap_or(0)
         }
     }
 

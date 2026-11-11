@@ -51,7 +51,14 @@ impl Rec {
     fn faulty(&self, label: &str, clock: &Clock, fault: Fault) -> Box<dyn Source> {
         Box::new(Faulty::new(self.source(label, clock, 0), fault, self.config.clone()))
     }
-    fn updater(&self, label: &str, payer: PrivateKey, sources: Vec<Box<dyn Source>>, state: Option<PathBuf>, policy: Policy) -> Updater {
+    fn updater(
+        &self,
+        label: &str,
+        payer: PrivateKey,
+        sources: Vec<Box<dyn Source>>,
+        state: Option<PathBuf>,
+        policy: Policy,
+    ) -> Updater {
         let inst = Instance::new(self.name, HarnessLedger::program(), self.config.clone(), self.checkpoint);
         let mut u = Updater::new(label, inst, payer, Fees::default(), policy, sources, state).unwrap();
         u.sleep = no_sleep;
@@ -60,8 +67,12 @@ impl Rec {
     /// The finalized slot and header root the last recorded entry finalizes.
     fn last_finalized(&self) -> (u64, Root) {
         let e = self.entries.last().unwrap();
-        let (u, _) =
-            if e.period_update { decode_update(&e.bytes, &self.config) } else { decode_finality_update(&e.bytes, &self.config) }.unwrap();
+        let (u, _) = if e.period_update {
+            decode_update(&e.bytes, &self.config)
+        } else {
+            decode_finality_update(&e.bytes, &self.config)
+        }
+        .unwrap();
         (u.finalized_header.beacon.slot, u.finalized_header.beacon.hash_tree_root())
     }
 }
@@ -155,7 +166,9 @@ fn lying_source_is_refused_without_gas() {
     assert_eq!(status, "degraded");
     assert!(why.iter().any(|w| w.contains("liar-signature")), "{why:?}");
     let text = u.render_metrics();
-    assert!(text.contains("ferrata_updater_source_refused_total{daemon=\"u1\",chain=\"mainnet\",source=\"liar-signature(BadSignature)\"}"));
+    assert!(text.contains(
+        "ferrata_updater_source_refused_total{daemon=\"u1\",chain=\"mainnet\",source=\"liar-signature(BadSignature)\"}"
+    ));
     println!("{text}");
 }
 
@@ -194,7 +207,9 @@ fn stale_and_down_sources_fall_back() {
     let held = store(&u2, &l2).finalized.slot;
     let stale_head = r.entries[..n - 4 - 2].iter().map(|e| e.finalized_slot).max().unwrap();
     let fresh_head = r.entries[..n - 4].iter().map(|e| e.finalized_slot).max().unwrap();
-    println!("min_agreeing 2: held {held}, stale serves up to {stale_head}, fresh up to {fresh_head}; last plan {last:?}");
+    println!(
+        "min_agreeing 2: held {held}, stale serves up to {stale_head}, fresh up to {fresh_head}; last plan {last:?}"
+    );
     assert!(held <= stale_head, "never beyond what the stale source also serves");
     assert!(held < fresh_head);
 }
@@ -213,7 +228,13 @@ fn restart_mid_job_and_mid_period() {
     let payer = key(0x25);
     let mut l = HarnessLedger::new(std::slice::from_ref(&payer));
     let dir = scratch("restart");
-    let mut u1 = r.updater("u1", payer.clone(), vec![r.honest("a", &clock), r.honest("b", &clock)], Some(dir.clone()), policy(1));
+    let mut u1 = r.updater(
+        "u1",
+        payer.clone(),
+        vec![r.honest("a", &clock), r.honest("b", &clock)],
+        Some(dir.clone()),
+        policy(1),
+    );
     settle(&mut u1, &mut l, 400);
     let spec = r.config.spec();
     let before = store(&u1, &l);
@@ -232,7 +253,13 @@ fn restart_mid_job_and_mid_period() {
     assert_eq!(sent, vec![Step::Open, Step::Miller]);
     drop(u1);
     // Restart on the same state directory.
-    let mut u2 = r.updater("u1", payer.clone(), vec![r.honest("a", &clock), r.honest("b", &clock)], Some(dir.clone()), policy(1));
+    let mut u2 = r.updater(
+        "u1",
+        payer.clone(),
+        vec![r.honest("a", &clock), r.honest("b", &clock)],
+        Some(dir.clone()),
+        policy(1),
+    );
     let first = (0..20)
         .find_map(|_| match u2.plan(&l).unwrap() {
             Plan::Send(a) => Some(a),
@@ -292,8 +319,20 @@ fn gate_two_honest_one_adversary() {
         .zip(&clocks)
         .map(|(r, c)| {
             vec![
-                r.updater("honest-1", h1.clone(), vec![r.honest("a", c), r.honest("b", c), r.faulty("liar", c, Fault::BadSignature)], None, policy(8)),
-                r.updater("honest-2", h2.clone(), vec![r.honest("b", c), r.honest("c", c), Box::new(r.source("stale", c, 3))], None, policy(8)),
+                r.updater(
+                    "honest-1",
+                    h1.clone(),
+                    vec![r.honest("a", c), r.honest("b", c), r.faulty("liar", c, Fault::BadSignature)],
+                    None,
+                    policy(8),
+                ),
+                r.updater(
+                    "honest-2",
+                    h2.clone(),
+                    vec![r.honest("b", c), r.honest("c", c), Box::new(r.source("stale", c, 3))],
+                    None,
+                    policy(8),
+                ),
                 r.updater("adversary", adv.clone(), vec![r.honest("a", c)], None, policy(1)),
             ]
         })
@@ -305,7 +344,12 @@ fn gate_two_honest_one_adversary() {
         rounds += 1;
         assert!(rounds < 20_000, "the gate run did not finish");
         // Plan against the state the previous block left.
-        let mut block: Vec<(usize, usize, Option<ferrata_updater::updater::Action>, Option<ferrata_updater::ledger::Tx>)> = Vec::new();
+        let mut block: Vec<(
+            usize,
+            usize,
+            Option<ferrata_updater::updater::Action>,
+            Option<ferrata_updater::ledger::Tx>,
+        )> = Vec::new();
         let mut idle = vec![true; recs.len()];
         for (c, chain) in ups.iter_mut().enumerate() {
             for (d, u) in chain.iter_mut().enumerate() {
@@ -334,13 +378,21 @@ fn gate_two_honest_one_adversary() {
                 let liar = Faulty::new(r.source("x", &clocks[c], 0), Fault::BadSignature, r.config.clone());
                 let e = &r.entries[t - 1];
                 let bytes = liar.flip_signature(e.bytes.clone(), e.period_update);
-                let forged = if e.period_update { decode_update(&bytes, &r.config) } else { decode_finality_update(&bytes, &r.config) };
+                let forged = if e.period_update {
+                    decode_update(&bytes, &r.config)
+                } else {
+                    decode_finality_update(&bytes, &r.config)
+                };
                 if let Ok((forged, _)) = forged {
                     block.push((c, 2, None, Some(chain[2].open_unchecked(&l, &forged).unwrap())));
                 }
                 if t >= 3 {
                     let e = &r.entries[t - 3];
-                    let old = if e.period_update { decode_update(&e.bytes, &r.config) } else { decode_finality_update(&e.bytes, &r.config) };
+                    let old = if e.period_update {
+                        decode_update(&e.bytes, &r.config)
+                    } else {
+                        decode_finality_update(&e.bytes, &r.config)
+                    };
                     if let Ok((old, _)) = old {
                         block.push((c, 2, None, Some(chain[2].open_unchecked(&l, &old).unwrap())));
                     }
@@ -384,7 +436,12 @@ fn gate_two_honest_one_adversary() {
         assert_eq!(s.finalized.slot, r.last_finalized().0, "{}", r.name);
         assert_eq!(jobs, 1 + r.entries.len() as u64, "{}: the activation and every recorded update, each once", r.name);
         total_updates += r.entries.len();
-        lines.push(format!("{}\tupdates applied\t{}\tjobs (with Init)\t{jobs}\tfinalized slot\t{}", r.name, r.entries.len(), s.finalized.slot));
+        lines.push(format!(
+            "{}\tupdates applied\t{}\tjobs (with Init)\t{jobs}\tfinalized slot\t{}",
+            r.name,
+            r.entries.len(),
+            s.finalized.slot
+        ));
     }
     // Per daemon, across both chains.
     let sum = |d: usize, f: &dyn Fn(&Updater) -> u128| ups.iter().map(|chain| f(&chain[d])).sum::<u128>();
@@ -411,7 +468,10 @@ fn gate_two_honest_one_adversary() {
     let ratio = honest_bad as f64 / honest_ok as f64;
     lines.push(format!("honest refused gas / applied gas\t{ratio:.4}\t(gate <= 0.10)"));
     lines.push(format!("honest-1 share of honest fees\t{share1:.4}\thonest-2\t{share2:.4}\t(gate 0.35-0.65 each)"));
-    lines.push(format!("updates\t{total_updates}\tadversary junk Opens\t{adv_junk}\tledger transactions\t{}", l.log.len()));
+    lines.push(format!(
+        "updates\t{total_updates}\tadversary junk Opens\t{adv_junk}\tledger transactions\t{}",
+        l.log.len()
+    ));
     let text = lines.join("\n") + "\n";
     println!("{text}");
     let out = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("results");

@@ -52,10 +52,10 @@ pub struct Keys {
 pub struct Fees {
     /// The gas limit every step declares (the largest step measured is 3,731,712).
     pub gas_limit: u64,
-    /// The maximum fee every transaction declares.
-    pub max_fee_per_tx: u128,
+    /// The maximum fee every transaction declares (TOML integers are 64-bit).
+    pub max_fee_per_tx: u64,
     /// What the daemon may spend from its start; at the limit it stops sending and says so.
-    pub budget: u128,
+    pub budget: u64,
 }
 
 impl Default for Fees {

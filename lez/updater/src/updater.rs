@@ -6,13 +6,7 @@
 //! committees the program only summarises (the signer witness needs them), keyed by the
 //! summary's `pubkeys_root`, accepted only when they match the summaries on chain.
 
-use std::{
-    collections::BTreeMap,
-    fmt::Write as _,
-    fs,
-    io::Write as _,
-    path::PathBuf,
-};
+use std::{collections::BTreeMap, fmt::Write as _, fs, io::Write as _, path::PathBuf};
 
 use anyhow::{anyhow, bail, Context as _, Result};
 use ferrata_core::{
@@ -20,11 +14,12 @@ use ferrata_core::{
     steps::{self, Job, Phase},
     store::ApplyOutcome,
     types::{LightClientBootstrap, LightClientUpdate, SyncCommittee},
-    witness::{uncompressed_keys, CompactBootstrap, CompactStore, CompactUpdate, CommitteeSummary, SignerWitness},
+    witness::{uncompressed_keys, CommitteeSummary, CompactBootstrap, CompactStore, CompactUpdate, SignerWitness},
     Root,
 };
 use ferrata_lez_wire::{
-    header_actor, instance_actor, instance_id, instance_seed, job_actor, job_id, Config, InstanceState, JobState, Message,
+    header_actor, instance_actor, instance_id, instance_seed, job_actor, job_id, Config, InstanceState, JobState,
+    Message,
 };
 use lee::{AccountId, Actor, PrivateKey, PublicAccountEvidence, PublicKey};
 use sha2::{Digest, Sha256};
@@ -299,7 +294,8 @@ impl Updater {
         fs::create_dir_all(dir.join("committees"))?;
         if let Ok(b) = fs::read(dir.join("bootstrap.ssz")) {
             let fork = self.inst.config.fork().ok_or_else(|| anyhow!("config: no layout"))?;
-            if let Ok(bootstrap) = LightClientBootstrap::decode(&b, fork, self.inst.config.sync_committee_size as usize) {
+            if let Ok(bootstrap) = LightClientBootstrap::decode(&b, fork, self.inst.config.sync_committee_size as usize)
+            {
                 if self.bootstrap_verifies(&bootstrap) {
                     self.bootstrap = Some(bootstrap);
                 }
@@ -337,7 +333,13 @@ impl Updater {
             action.step.name(),
             hex::encode(action.job_id),
             action.finalized_slot,
-            if out.applied { "applied" } else if out.rejected { "rejected" } else { "refused" },
+            if out.applied {
+                "applied"
+            } else if out.rejected {
+                "rejected"
+            } else {
+                "refused"
+            },
             out.exit_code.map(|c| c.to_string()).unwrap_or_default(),
             out.gas_exec,
             out.gas_stor,
@@ -367,13 +369,17 @@ impl Updater {
         let s = self.stats(i);
         s.refused += 1;
         s.demoted_until = until;
-        self.log(&format!("source {name} served what the program would refuse ({why}); not asked for {} rounds", self.policy.demote_rounds));
+        self.log(&format!(
+            "source {name} served what the program would refuse ({why}); not asked for {} rounds",
+            self.policy.demote_rounds
+        ));
     }
 
     fn bootstrap_verifies(&self, b: &LightClientBootstrap) -> bool {
         let config = &self.inst.config;
         let Some(fork) = config.fork() else { return false };
-        steps::initialize(&self.inst.checkpoint, &CompactBootstrap::of(b), fork, &config.spec(), config.adoption_parts).is_ok()
+        steps::initialize(&self.inst.checkpoint, &CompactBootstrap::of(b), fork, &config.spec(), config.adoption_parts)
+            .is_ok()
     }
 
     /// The bootstrap of the instance's checkpoint: the first source's that the program's `Init`
@@ -441,7 +447,9 @@ impl Updater {
                 Ok(list) => {
                     for bytes in list {
                         if let Ok((u, _)) = decode_update(&bytes, &self.inst.config) {
-                            if !u.next_sync_committee.is_empty() && needed.contains(&CommitteeSummary::of(&u.next_sync_committee)) {
+                            if !u.next_sync_committee.is_empty()
+                                && needed.contains(&CommitteeSummary::of(&u.next_sync_committee))
+                            {
                                 self.keep_committee(&u.next_sync_committee)?;
                             }
                         }
@@ -616,7 +624,10 @@ impl Updater {
                         bootstrap: compact.encode(fork),
                     })?,
                     actors: vec![self.inst.actor(), job_actor],
-                    evidence: vec![PublicAccountEvidence::Pda { program: self.inst.program, seed: instance_seed(&self.inst.id) }],
+                    evidence: vec![PublicAccountEvidence::Pda {
+                        program: self.inst.program,
+                        seed: instance_seed(&self.inst.id),
+                    }],
                     time_ms,
                 },
                 Step::Adopt(p) => {
@@ -660,12 +671,16 @@ impl Updater {
                 Verdict::Unverifiable => {}
                 Verdict::Invalid(why) => {
                     let kind = if c.period_update { "period update" } else { "finality update" };
-                    self.demote(c.source, &format!("{kind} attested at {}: {why}", c.update.attested_header.beacon.slot));
+                    self.demote(
+                        c.source,
+                        &format!("{kind} attested at {}: {why}", c.update.attested_header.beacon.slot),
+                    );
                 }
             }
         }
         // Lag: a source whose newest verified finalized slot is far behind the best.
-        let best = useful.iter().map(|(_, p)| p.update.finalized_header.beacon.slot).max().unwrap_or(store.finalized.slot);
+        let best =
+            useful.iter().map(|(_, p)| p.update.finalized_header.beacon.slot).max().unwrap_or(store.finalized.slot);
         for i in 0..self.sources.len() {
             if !self.usable(i) {
                 continue;
@@ -749,7 +764,15 @@ impl Updater {
         Ok(Some(Job::decode(&js.job).map_err(|e| anyhow!("job: {e:?}"))?))
     }
 
-    fn adopt_tx(&self, job_actor: Actor, keys: &[[u8; 96]], p: u8, record_slot: Option<u64>, time_ms: u64, what: &str) -> Tx {
+    fn adopt_tx(
+        &self,
+        job_actor: Actor,
+        keys: &[[u8; 96]],
+        p: u8,
+        record_slot: Option<u64>,
+        time_ms: u64,
+        what: &str,
+    ) -> Tx {
         let parts = self.inst.config.adoption_parts;
         let chunk = keys.len() / parts as usize;
         let mut actors = vec![job_actor];
@@ -761,8 +784,11 @@ impl Updater {
         Tx {
             label: format!("{} {what} adopt {}/{parts}", self.inst.name, p + 1),
             root: job_actor,
-            message: borsh::to_vec(&Message::Adopt { part: p, keys: keys[p as usize * chunk..(p as usize + 1) * chunk].to_vec() })
-                .expect("borsh"),
+            message: borsh::to_vec(&Message::Adopt {
+                part: p,
+                keys: keys[p as usize * chunk..(p as usize + 1) * chunk].to_vec(),
+            })
+            .expect("borsh"),
             actors,
             evidence: vec![],
             time_ms,
@@ -778,7 +804,10 @@ impl Updater {
             Step::Open => Tx {
                 label: format!("{} {what} Open", self.inst.name),
                 root: self.inst.actor(),
-                message: borsh::to_vec(&Message::Open { update: p.compact.encode(p.layout), signers: p.witness.encode() })?,
+                message: borsh::to_vec(&Message::Open {
+                    update: p.compact.encode(p.layout),
+                    signers: p.witness.encode(),
+                })?,
                 actors: vec![self.inst.actor(), job_actor],
                 evidence: vec![],
                 time_ms,
@@ -819,11 +848,14 @@ impl Updater {
         let spec = config.spec();
         let store = self.inst.store(ledger)?.ok_or_else(|| anyhow!("no active instance"))?;
         let layout = layout_for(config, store.fork, update).unwrap_or(store.fork);
-        let store_u = steps::store_for_update(&store, layout, update.attested_header.beacon.slot, &spec).unwrap_or(store.clone());
+        let store_u =
+            steps::store_for_update(&store, layout, update.attested_header.beacon.slot, &spec).unwrap_or(store.clone());
         let compact = CompactUpdate::of(update);
         let current = self.committees.get(&store.current.pubkeys_root);
         let next = store.next.as_ref().and_then(|n| self.committees.get(&n.pubkeys_root));
-        let witness = signing_committee(&store, update, &spec, current, next).map(|c| signer_witness(c, update)).unwrap_or_default();
+        let witness = signing_committee(&store, update, &spec, current, next)
+            .map(|c| signer_witness(c, update))
+            .unwrap_or_default();
         let jid = job_id(&self.inst.id, &store_u.digest(), &compact.digest(layout));
         Ok(Tx {
             label: format!("{} unchecked Open", self.inst.name),
@@ -843,13 +875,13 @@ impl Updater {
             self.metrics.skipped_done += 1;
             return Ok(None);
         }
-        if self.metrics.spent() + self.fees.max_fee_per_tx > self.fees.budget {
+        if self.metrics.spent() + u128::from(self.fees.max_fee_per_tx) > u128::from(self.fees.budget) {
             self.metrics.budget_stops += 1;
             bail!("budget reached: spent {} of {}", self.metrics.spent(), self.fees.budget);
         }
         let mut attempt = 0u32;
         loop {
-            match ledger.submit(&self.payer, &action.tx, self.fees.gas_limit, self.fees.max_fee_per_tx) {
+            match ledger.submit(&self.payer, &action.tx, self.fees.gas_limit, u128::from(self.fees.max_fee_per_tx)) {
                 Ok(out) => {
                     self.record(action, &out);
                     return Ok(Some(out));
@@ -862,7 +894,11 @@ impl Updater {
                         bail!("{}: gave up after {attempt} attempts: {e:#}", action.tx.label);
                     }
                     self.metrics.retries += 1;
-                    let wait = self.policy.retry_base_ms.saturating_mul(1 << (attempt - 1).min(20)).min(self.policy.retry_max_ms);
+                    let wait = self
+                        .policy
+                        .retry_base_ms
+                        .saturating_mul(1 << (attempt - 1).min(20))
+                        .min(self.policy.retry_max_ms);
                     self.log(&format!("{}: {e:#}; retry {attempt} in {wait} ms", action.tx.label));
                     (self.sleep)(wait);
                     if self.step_done(ledger, action)? {
@@ -890,7 +926,9 @@ impl Updater {
             (Step::Open, j) => j.is_some(),
             (_, None) => true,
             (Step::Miller, Some(j)) => !matches!(j.phase, Phase::Miller { .. }),
-            (Step::Adopt(p), Some(j)) => j.adoption.as_ref().map_or(true, |a| a.complete || a.chunk_roots.len() as u8 > p),
+            (Step::Adopt(p), Some(j)) => {
+                j.adoption.as_ref().map_or(true, |a| a.complete || a.chunk_roots.len() as u8 > p)
+            }
             (Step::Finish, Some(_)) | (Step::Init, Some(_)) => false,
         })
     }
@@ -908,7 +946,8 @@ impl Updater {
         if out.applied {
             self.metrics.gas_applied += gas;
             self.metrics.fee_applied += out.fee;
-            let last_adopt = matches!(action.step, Step::Adopt(p) if p + 1 == self.inst.config.adoption_parts) && action.tx.actors.len() > 1;
+            let last_adopt = matches!(action.step, Step::Adopt(p) if p + 1 == self.inst.config.adoption_parts)
+                && action.tx.actors.len() > 1;
             if action.step == Step::Finish || last_adopt {
                 self.metrics.jobs_finished += 1;
             }
@@ -919,7 +958,10 @@ impl Updater {
                 *self.metrics.refused_codes.entry(c).or_default() += 1;
             }
         }
-        self.log(&format!("{} {result} (exit {:?}, gas {}, fee {}, block {})", action.tx.label, out.exit_code, gas, out.fee, out.block));
+        self.log(&format!(
+            "{} {result} (exit {:?}, gas {}, fee {}, block {})",
+            action.tx.label, out.exit_code, gas, out.fee, out.block
+        ));
         self.journal(action, out);
     }
 
@@ -948,7 +990,7 @@ impl Updater {
                 why.push(format!("source {name} unavailable"));
             }
         }
-        if self.metrics.spent() + self.fees.max_fee_per_tx > self.fees.budget {
+        if self.metrics.spent() + u128::from(self.fees.max_fee_per_tx) > u128::from(self.fees.budget) {
             why.push("budget reached".into());
         }
         if self.metrics.last_plan.starts_with("stuck") || self.metrics.last_plan.starts_with("error") {
@@ -980,7 +1022,11 @@ impl Updater {
         let _ = writeln!(o, "ferrata_updater_gas_total{{{l},result=\"refused\"}} {}", m.gas_refused);
         let _ = writeln!(o, "ferrata_updater_fee_total{{{l},result=\"applied\"}} {}", m.fee_applied);
         let _ = writeln!(o, "ferrata_updater_fee_total{{{l},result=\"refused\"}} {}", m.fee_refused);
-        let _ = writeln!(o, "ferrata_updater_budget_remaining{{{l}}} {}", self.fees.budget.saturating_sub(m.spent()));
+        let _ = writeln!(
+            o,
+            "ferrata_updater_budget_remaining{{{l}}} {}",
+            u128::from(self.fees.budget).saturating_sub(m.spent())
+        );
         let _ = writeln!(o, "ferrata_updater_transport_errors_total{{{l}}} {}", m.transport_errors);
         let _ = writeln!(o, "ferrata_updater_retries_total{{{l}}} {}", m.retries);
         let _ = writeln!(o, "ferrata_updater_deferrals_total{{{l}}} {}", m.deferrals);

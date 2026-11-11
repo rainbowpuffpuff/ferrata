@@ -114,7 +114,10 @@ pub fn decode_finality_update(b: &[u8], config: &Config) -> Result<(LightClientU
             sync_aggregate: SyncAggregate::decode(&b[2 * H + 288..2 * H + 448], n).map_err(|e| anyhow!("{e:?}"))?,
             signature_slot: u64_at(2 * H + 448),
         };
-        ensure!(served_layout(&spec, update.attested_header.beacon.slot) == Some(LcFork::Gloas), "a Gloas finality update before Gloas");
+        ensure!(
+            served_layout(&spec, update.attested_header.beacon.slot) == Some(LcFork::Gloas),
+            "a Gloas finality update before Gloas"
+        );
         return Ok((update, LcFork::Gloas));
     }
     ensure!(b.len() > 400, "a finality update of {} bytes", b.len());
@@ -130,7 +133,10 @@ pub fn decode_finality_update(b: &[u8], config: &Config) -> Result<(LightClientU
         sync_aggregate: SyncAggregate::decode(&b[232..392], n).map_err(|e| anyhow!("{e:?}"))?,
         signature_slot: u64_at(392),
     };
-    ensure!(served_layout(&spec, update.attested_header.beacon.slot) == Some(LcFork::Electra), "an Electra finality update under Gloas");
+    ensure!(
+        served_layout(&spec, update.attested_header.beacon.slot) == Some(LcFork::Electra),
+        "an Electra finality update under Gloas"
+    );
     Ok((update, LcFork::Electra))
 }
 
