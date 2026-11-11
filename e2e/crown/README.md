@@ -1,7 +1,10 @@
 # The crown run: the whole round trip on the final programs (design)
 
-Status: DESIGN (11 Nov 2026). Nothing here has run yet; `spike/tmp/crown/STATE.md` (outside the repository) tracks
-what is built. One cloud run, started once, that crosses Sepolia -> LEZ -> Sepolia with the final programs and real
+Status (11 Nov 2026, 01:45 CET): design done; the Sepolia stages rehearsed on a fork with stand-in values
+(`e2e/runs/crown-fork-3r/`); every guest built at this worktree's path; a fresh devnet deployed the crown programs.
+NOT READY TO RUN: the LEZ side's driver on the merged wire, the session save/restore, the attestor/checkpoint input
+from the session's blocks, the GPU session, the release inputs from real burns, the cloud app and the full rehearsal
+remain (the list below, "What remains"). `spike/tmp/crown/STATE.md` (outside the repository) tracks the work. One cloud run, started once, that crosses Sepolia -> LEZ -> Sepolia with the final programs and real
 proofs everywhere, and a verify script that re-checks every step from public data and the recorded blocks.
 
 ## Programs (all built on the build box at this worktree's path; image ids are path-dependent)
@@ -67,6 +70,30 @@ Same throwaway deployer as sepolia-live-2 (`0x79A95aE9A3f9000eb41F7CBAB6a6F97826
 Ether: 2 x 1,002,000,000,000,000 wei of deposits, returned by the releases less the checkpoint fees; gas ~100 M at
 Sepolia's price (~73 wei on 10 Nov: ~0.00001 ETH). Modal (ws-3, cap 20 USD; ~2.4 spent before this work):
 runner ~4 h of 2 cores (~1 USD at the nonpreemptible rate), GPU session ~1 h (~1 USD), wraps cents.
+
+## Built and measured so far (build box = Modal, workspace ws-4, through `mrun`)
+
+| What | Result |
+|---|---|
+| Guests at this path | attestation program `ferrata_lez.bin` image `0x2228bb46…67cf` (602,904 B); merged bridge `ferrata_bridge.bin` image `0x0be48090…25df` (507,088 B); `checkpoint_b` `0x7e51065f…7754`; release `0x20595dc5…2625` |
+| Fresh devnet (LEZ v0.4.0-rc1 sequencer + Logos Blockchain node, dev-mode leader proofs) | deployed both programs in 14 blocks, all Finalized on Bedrock, 147 s; channel key, tip, deployment settings readable (the vault's identity inputs) |
+| `identity.py` | genesisState reproduces the real-blocks proof's parent state; commitments reproduce sepolia-live-2's |
+| Sepolia stages on a fork (stand-in identity, accept-all verifier on the fork only) | `deploy.sh` mode B, 2 deposits with fees, submitCandidate, finalizeAttested after 3,601 s, 2 releases: `e2e/runs/crown-fork-3r/README.md` |
+
+## What remains (in order)
+
+1. A crown driver on the merged wire (`lez/live/crown/`: the live driver's wire-free modules by `#[path]`, a new
+   `crown.rs`): session A (deploy, instance Init, period updates of the repository fixture) and session B (the
+   captures' updates and finality updates, bridge Init, Register ETH, ImportRoot n=1, n=2, Claim, ClaimPrivately,
+   Burn public, Burn private), porting `lez/harness/src/bridge.rs`'s builders to the live sequencer.
+2. Session save/restore between A and B (lez/lab/session.sh's generations on a Volume).
+3. Attestor + `checkpoint_b` input from the session's own blocks (checkpoint/realblocks with the run's configuration
+   instead of labels and chain id 31337).
+4. The GPU session: LEZ proves through r0vm (risc0-zkvm `client` only), so r0vm 3.0.5 with CUDA as
+   RISC0_SERVER_PATH makes both private proofs GPU proofs against the live sequencer.
+5. Release inputs from real burns (bridge/e2e `release` uses the v1 burn MAC; the merged notes use v2).
+6. The capture with the ETH registry and fee slots (register_slots) beside slots 0-2.
+7. The cloud app (`ferrata-crown` on ws-3), `e2e/crown.sh`, the verify script, one full rehearsal to DONE.
 
 ## Commands (for the owner, once built and rehearsed)
 
