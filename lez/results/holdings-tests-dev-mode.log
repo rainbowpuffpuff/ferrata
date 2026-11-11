@@ -2,16 +2,7 @@ warning: lee@0.1.0: Generated module at lez/target/debug/build/lee-946ef43b73a11
 warning: programs@0.1.0: Generated module at lez/target/debug/build/programs-64ee1b9189a8bf3b/out/lez/programs/mod.rs
    Compiling methods v0.1.0 (lez/methods)
    Compiling harness v0.1.0 (lez/harness)
-    Finished `test` profile [optimized + debuginfo] target(s) in 7.62s
-     Running tests/exit_codes.rs (target/debug/deps/exit_codes-3186a1002784db4a)
-
-running 3 tests
-test the_blocks_do_not_overlap ... ok
-test every_code_lies_in_a_block_of_its_owner ... ok
-test the_tables_name_every_core_code ... ok
-
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-
+    Finished `test` profile [optimized + debuginfo] target(s) in 9.06s
      Running tests/holdings.rs (target/debug/deps/holdings-89e735e98fb1b37d)
 
 running 1 test
@@ -83,5 +74,5 @@ balance 0x0000000000000000000000000000000000000000000000f22ca9b4cc5d0f3d61 wei.
 
 test holdings_consumer ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.94s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.86s
 

@@ -525,13 +525,14 @@ program's image id and compares each journal with the executor's:
 
 | # | Program | Handler | User cycles | Padded cycles (segments) | Proving time | Receipt |
 |---|---|---|---:|---:|---:|---|
-| 1 | `ferrata_holdings` | `Check` | 111,198 | 262,144 (1) | 21.2 s | succinct, 251,813 bytes |
-| 2 | the attestation program | `Attest` | 278,002 | 524,288 (1) | 64.6 s | succinct, 238,923 bytes |
-| 3 | `ferrata_holdings` | reply | 41,910 | 131,072 (1) | 13.5 s | succinct, 225,055 bytes |
+| 1 | `ferrata_holdings` | `Check` | 111,198 | 262,144 (1) | 21.1 s | succinct, 251,813 bytes |
+| 2 | the attestation program | `Attest` | 278,002 | 524,288 (1) | 64.4 s | succinct, 238,923 bytes |
+| 3 | `ferrata_holdings` | reply | 41,910 | 131,072 (1) | 13.6 s | succinct, 225,055 bytes |
 
-99.3 s of proving in all; the whole run (settlement, replay, three proofs) took 1 min 43.64 s wall,
-2,615 s of CPU (2,616% of one core) and 4.94 GB peak memory (GNU `time -v`), on a Modal CPU container
-(32 processors listed, 64 GB, no GPU), 11 November 2026
+99.1 s of proving in all; the whole run (settlement, replay, three proofs) took 1 min 43.29 s wall,
+2,598 s of CPU (2,616% of one core) and 4.93 GB peak memory (GNU `time -v`), on a Modal CPU container
+(32 processors listed, 64 GB, no GPU), 11 November 2026; an earlier run of the same image took
+99.3 s
 ([`lez/results/prove-holdings.log`](../../lez/results/prove-holdings.log)). Image ids of that build:
 `ferrata_holdings` `4985868d…cd4f`, the attestation program `d2fb9aec…e600`; a guest's image id
 embeds the build's absolute paths, so another checkout gives other ids. To run it:
