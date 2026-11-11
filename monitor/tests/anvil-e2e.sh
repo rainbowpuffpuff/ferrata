@@ -72,9 +72,14 @@ deploy_vault false
 view="$out/node-view.json"
 blocks='{}'
 for i in $(seq 1 20); do blocks=$(jq -c --arg k "$i" --arg h "$(label "block/$i")" '. + {($k): $h}' <<< "$blocks"); done
-keys=$(for i in 1 2 3 4; do label "channel-key/$i"; done | jq -R . | jq -sc .)
-jq -n --argjson b "$blocks" --argjson k "$keys" \
-  '{node: "lez-honest", finalHeight: 20, finalBlocks: $b, keySets: [{fromBlock: 0, keys: $k, postingTimeframe: 900}]}' > "$view"
+# Its four channel keys and the attestors' published final-tier messages (examples/attestations.rs): keys 0-2
+# attest block 10, key 3 (certified, live: a corrupted attestor) attests a forged block 12.
+lez_config=$(cast call --rpc-url "$rpc" "$vault" "lezConfigId()(bytes32)")
+att=$(cargo run --release --locked --quiet --example attestations -- 31337 "$vault" "$lez_config" "$(label channel)" \
+  10 "$(label block/10)" 12 "$(label forged/12)")
+jq -n --argjson b "$blocks" --argjson k "$(jq -c .keys <<< "$att")" --argjson a "$(jq -c .attestations <<< "$att")" \
+  '{node: "lez-honest", finalHeight: 20, finalBlocks: $b, keySets: [{fromBlock: 0, keys: $k, postingTimeframe: 900}],
+    attestations: $a}' > "$view"
 
 cp_sig="(uint32,uint32,bytes32,bytes32,bytes32,uint64,uint64,bool,bytes32,uint64,bytes32,uint32,uint32)"
 # journal PARENT NEWSTATE TIPID TIPHASH N T
@@ -124,6 +129,8 @@ monitor_polls "$state" WATCHER_KEY 3
 check "S1 honest candidate still pending after 3 polls" '[ "$(submitted_at "$n1")" != 0 ]'
 check "S1 monitor passed it" '[ -n "$(jq -c --arg s "$n1" "select(.kind==\"candidate-passed\" and .newState==\$s)" "$alerts")" ]'
 check "S1 no cancellation of it" '[ -z "$(cancelled_alert "$n1")" ]'
+check "S1 its tip attested by 3 live certified keys (final-tier messages v2 checked with attestor-core)" '[ "$(jq -s --arg s "$n1" "[.[] | select(.kind==\"candidate-passed\" and .newState==\$s)][0].attestations[0].attestedBy" "$alerts")" = 3 ]'
+check "S1 the certified key that signed a forged tip raised a critical attestation-finding (conflictingTip)" '[ "$(jq -s "[.[] | select(.kind==\"attestation-finding\" and .level==\"critical\" and .finding.finding==\"conflictingTip\" and .finding.tipId==12)] | length" "$alerts")" = 1 ]'
 warp 3601
 check "S1 finalised after the wait" 'finalize "$j1" && [ "$(final_state)" = "$n1" ]'
 
@@ -165,6 +172,8 @@ for _ in $(seq 1 100); do
   jq -e --arg s "$n6" 'select(.kind=="candidate-waiting" and .newState==$s)' "$alerts" > /dev/null 2>&1 && break
   sleep 0.2
 done
+rss_kb=$(awk '/^VmRSS:/ {print $2}' "/proc/$mon_pid/status")
+polls_before_kill=$(jq .polls "$state")
 check "S5 a second monitor on the same state file is refused while the first runs" '! "$mon" "${margs[@]}" --max-polls 1 2> "$run/second.err" && grep -q "held by another monitor" "$run/second.err"'
 kill -9 "$mon_pid"; wait "$mon_pid" 2>/dev/null || true; mon_pid=
 check "S5 monitor saw it and was killed while waiting (node lag allowance)" '[ -n "$(jq -c --arg s "$n6" "select(.kind==\"candidate-waiting\" and .newState==\$s)" "$alerts")" ] && [ "$(submitted_at "$n6")" != 0 ]'
@@ -180,7 +189,8 @@ n7=$(label state/7); j7=$(journal "$n4" "$n7" 16 "$(label forged/16)" 4 3)
 submit "$j7"
 mv "$state" "$run/watcher-state-before-loss.json"
 before=$(jq -s '[.[] | select(.kind=="cancelled")] | length' "$alerts")
-monitor_polls "$state" WATCHER_KEY 2
+mon_cmd "$state" WATCHER_KEY
+/usr/bin/time -o "$out/time-s6.txt" -f "%M %e %U %S" "$mon" "${margs[@]}" --max-polls 2 2>> "$run/monitor-stderr.log"
 after=$(jq -s '[.[] | select(.kind=="cancelled")] | length' "$alerts")
 check "S6 fresh monitor cancelled the pending wrong candidate" '[ "$(submitted_at "$n7")" = 0 ] && [ -n "$(cancelled_alert "$n7")" ]'
 check "S6 and nothing else (one cancellation in that run)" '[ $((after - before)) -eq 1 ]'
@@ -213,9 +223,12 @@ check "S8 second cancellation and the watcher's pause (about 12 h)" '[ "$(submit
 check "S8 a submission is refused during the pause" '! submit "$(journal "$n4" "$(label state/10)" 19 "$(label block/19)" 4 3)" 2>/dev/null'
 record S8 "$n9"
 
-# Rule (A): a second vault; the same watcher key, its own state file.
+# Rule (A): a second vault; the same watcher key, its own state file, the node view without the attestations
+# (they were certified for the first vault's deployment).
 vault_b=$vault
 deploy_vault true
+jq 'del(.attestations)' "$view" > "$out/node-view-a.json"
+view="$out/node-view-a.json"
 state_a="$out/watcher-state-a.json"
 check "A0 the second vault is rule (A) (mode 0), turnSeconds 900" '[ "$(cast call --rpc-url "$rpc" "$vault" "mode()(uint8)")" = 0 ] && [ "$(cast call --rpc-url "$rpc" "$vault" "turnSeconds()(uint256)" | awk "{print \$1}")" = 900 ]'
 a1=$(label a-state/1); ja1=$(journal "$genesis" "$a1" 10 "$(label block/10)" 4 3)
@@ -278,6 +291,10 @@ check "alerts: all $crit critical alerts reached the pager command" '[ "$crit" -
   jq -r 'select(.scenario == "S7") | "\nS7: checkpoint \(.index) (\(.reason)) finalised at \(.finalizedAt), revoked at \(.revokedAt), revocable until \(.revokeBy)."' "$scen"
   echo
   echo "Alerts: $(jq -s 'group_by(.kind) | map("\(.[0].kind) \(length)") | join(", ")' "$alerts")."
+  echo
+  echo "Resources (measured, build box): the daemon of S5 held $rss_kb kB resident (VmRSS) when it was killed, after $polls_before_kill polls of its state file's life; the S6 run (2 polls, a full rescan from the deployment block, one cancellation) took $(awk '{print $1 " kB max RSS, " $2 " s wall, " $3 " s user + " $4 " s system CPU"}' "$out/time-s6.txt")."
+  echo
+  echo "Under the B wait of 1 h, $(jq -s '[.[] | select(.kind=="cancelled" and .secondsBeforeDeadline != null)] | map(.secondsBeforeDeadline) | min' "$alerts") s was the smallest margin left before a deadline by any cancellation (the restart case)."
   echo
   echo "Failures: $fails"
 } >> "$summary"

@@ -1,10 +1,12 @@
-# monitor on a local anvil chain: 2026-11-11T18:32:20Z
+# monitor on a local anvil chain: 2026-11-11T18:36:44Z
 
-anvil Version: 1.3.6-v1.3.6, chain id 31337; vault 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 (rule B, wait 1 h), watcher 0x4e1b0Ab982D1A8bdd8E59D07C0E883CA01B39F3a, freeze authority 0xc284F4C031c0D3CCCA69AD4877d43768bB9b2bfB.
+anvil Version: 1.3.6-v1.3.6, chain id 31337; vault 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 (rule B, wait 1 h), watcher 0xA08542E10A81A74311A91039Bc0Cb434999F4087, freeze authority 0x1bCfB224C81ce6358B6505A155d25D3F095b8A97.
 
 - PASS S1 honest candidate still pending after 3 polls
 - PASS S1 monitor passed it
 - PASS S1 no cancellation of it
+- PASS S1 its tip attested by 3 live certified keys (final-tier messages v2 checked with attestor-core)
+- PASS S1 the certified key that signed a forged tip raised a critical attestation-finding (conflictingTip)
 - PASS S1 finalised after the wait
 - PASS S2 conflicting candidate cancelled
 - PASS S2 cancelled before its deadline
@@ -39,7 +41,7 @@ anvil Version: 1.3.6-v1.3.6, chain id 31337; vault 0x9fE46736679d2D9a65F0992F227
 - PASS R2 a candidate at the real tip 258 passes
 - PASS R3 the same id with another hash is cancelled
 - PASS R4 a tip above the final tier waits
-- PASS alerts: all 16 critical alerts reached the pager command
+- PASS alerts: all 19 critical alerts reached the pager command
 
 ## Cancellations and the revocation (chain time, seconds)
 
@@ -48,14 +50,18 @@ anvil Version: 1.3.6-v1.3.6, chain id 31337; vault 0x9fE46736679d2D9a65F0992F227
 | S2 | tipConflict | 0 | 3600 | 41477 |
 | S3 | keySetNotLive | 0 | 3600 | 41477 |
 | S4 | tipConflict | 0 | 3600 | 41477 |
-| S5 | tipNotFinal | 601 | 2999 | 41468 |
+| S5 | tipNotFinal | 600 | 3000 | 41468 |
 | S6 | tipConflict | 0 | 3600 | 41477 |
 | S8 | tipConflict | 0 | 3600 | 41477 |
 | A2 | keySetNotLive | 0 | 11760 | 41477 |
 | A3 | tipNotFinal | 7202 | 5458 | 41477 |
 
-S7: checkpoint 2 (tipConflict) finalised at 1794436953, revoked at 1794436954, revocable until 1794523353.
+S7: checkpoint 2 (tipConflict) finalised at 1794437218, revoked at 1794437219, revocable until 1794523618.
 
-Alerts: "cancelled 9, candidate-passed 3, candidate-resubmitted 1, candidate-waiting 2, checkpoints-revoked 2, final-tier-stalled 1, finalized-wrong 2, paused 2, persistent-candidate 1, revoked 1, started 17, stopped 16".
+Alerts: "attestation-finding 3, cancelled 9, candidate-passed 3, candidate-resubmitted 1, candidate-waiting 2, checkpoints-revoked 2, final-tier-stalled 1, finalized-wrong 2, paused 2, persistent-candidate 1, revoked 1, started 17, stopped 16".
+
+Resources (measured, build box): the daemon of S5 held 42280 kB resident (VmRSS) when it was killed, after 10 polls of its state file's life; the S6 run (2 polls, a full rescan from the deployment block, one cancellation) took 26880 kB max RSS, 1.04 s wall, 0.00 s user + 0.04 s system CPU.
+
+Under the B wait of 1 h, 3000 s was the smallest margin left before a deadline by any cancellation (the restart case).
 
 Failures: 0
