@@ -317,3 +317,59 @@ contract RuleBRotationTest is RuleBMultiFixture {
         console2.log("rule (B) n=3 t=2 with a rotation: finalizeAttested", vm.lastCallGas().gasTotalUsed);
     }
 }
+
+/// A real four-sequencer zone (upstream's devnet configuration run with the lab bundle's binaries): the
+/// channel's four accredited keys, three attestations (sequencer 3 silent); nMin 4, tMin 3.
+contract RuleBZoneTest is RuleBMultiFixture {
+    function _path() internal pure override returns (string memory) {
+        return "test/real/fixtures/rule-b-zone.json";
+    }
+
+    function setUp() public {
+        _load();
+        _deploy(FerrataVault.Mode.B, imageId, _state(keys), 4, 3);
+    }
+
+    function test_ruleBZone_theJournalIsThreeOfFour() public view {
+        FerrataVault.Checkpoint memory c = _checkpoint();
+        assertEq(keys.length, 4);
+        assertEq(c.parentState, vault.genesisState());
+        assertEq(c.n, 4);
+        assertEq(c.t, 3);
+        assertEq(c.nMin, 4);
+        assertEq(c.tMin, 3);
+        assertEq(c.tipId, tipId);
+        assertEq(c.tipHash, tipHash);
+    }
+
+    function test_ruleBZone_candidateThenFinalAfterTheWait() public {
+        FerrataVault.Checkpoint memory c = _checkpoint();
+        vault.submitCandidate(c, seal);
+        uint256 at = block.timestamp;
+        vm.warp(at + WAIT - 1);
+        vm.expectRevert(FerrataVault.WaitNotOver.selector);
+        vault.finalizeAttested(c);
+        vm.warp(at + WAIT);
+        vault.finalizeAttested(c);
+        assertEq(vault.finalState(), c.newState);
+    }
+
+    function test_ruleBZone_fewerSignaturesOrOtherFloorsAreRefused() public {
+        FerrataVault.Checkpoint memory x = _checkpoint();
+        x.t = 2;
+        vm.expectRevert(FerrataVault.KeySetBelowFloor.selector);
+        vault.submitCandidate(x, seal);
+        _deploy(FerrataVault.Mode.B, imageId, _state(keys), 3, 2);
+        vm.expectRevert(FerrataVault.WrongCommitteeFloor.selector);
+        vault.submitCandidate(_checkpoint(), seal);
+    }
+
+    function test_gas_ruleBZone() public {
+        FerrataVault.Checkpoint memory c = _checkpoint();
+        vault.submitCandidate(c, seal);
+        console2.log("rule (B) zone n=4 t=3: submitCandidate", vm.lastCallGas().gasTotalUsed);
+        vm.warp(block.timestamp + WAIT);
+        vault.finalizeAttested(c);
+        console2.log("rule (B) zone n=4 t=3: finalizeAttested", vm.lastCallGas().gasTotalUsed);
+    }
+}
