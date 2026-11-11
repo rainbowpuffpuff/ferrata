@@ -1,0 +1,17 @@
+phase	step	tx_hash	block	position	status	exit	exec_gas	stor_gas	gas_limit	base_fee_exec	base_fee_stor	fee	payer_debit	block_txs	block_exec_gas	block_stor_gas	harness_exec_gas	harness_stor_gas	harness_result	note
+crown-a	deploy attest: WriteSegment 6 of 6 (78960 bytes)	461738b4124f8ad482b207173789ea03059e4a7041f63d7753c198198c9bd13d	2	0	applied	-	0	79540	2000000	8	8	636320	-	1	0	79540	-	-	-	-
+crown-a	deploy attest: WriteSegment 5 of 6 (98304 bytes)	6635de65444022a7e11bd8cf8eca1f04627ba921df1489e01c5079ee0a221227	3	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+crown-a	deploy attest: WriteSegment 4 of 6 (98304 bytes)	8b559ccd62d5b0677e46ea4db71670d4c15349532d225e933211c669d4817c99	4	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+crown-a	deploy attest: WriteSegment 3 of 6 (98304 bytes)	9518fe7b987d62d2d38d2d0e620da87bfc8bd6e18d511c6ba4d9fc9da1e9f919	5	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+crown-a	deploy attest: WriteSegment 2 of 6 (98304 bytes)	3638e52df1df37d3a51d1710f1d1b0ff19b459efa5221bccc3b367a46e8eda50	6	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+crown-a	deploy attest: WriteSegment 1 of 6 (98304 bytes)	f0f79709e66a52eb0c95062c8d6ba1920301bd853cf511557f891a86b10e174d	7	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+crown-a	deploy attest: CreateHeader (immutable) at A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX	3dc080feb5ad0461ba55ef1ae15d674454d148e04c0ba0975c6d38d554127ef5	8	0	applied	-	0	608	2000000	8	8	4864	4597824	1	0	608	-	-	-	payer_debit is for the whole deployment; its fees sum to 4597824
+crown-a	deploy bridge: WriteSegment 5 of 5 (81448 bytes)	778f057d69885f6ba31410102362ebb18fd037715d24a8a6acbfa810acbc3c78	9	0	applied	-	0	82028	2000000	8	8	656224	-	1	0	82028	-	-	-	-
+crown-a	deploy bridge: WriteSegment 4 of 5 (98304 bytes)	7821e3f7dfd6a7b91b636c4d9da62b1f4df989eafda59206283451b3ac909a3d	10	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+crown-a	deploy bridge: WriteSegment 3 of 5 (98304 bytes)	4babdb99ca515d31b571a92af1e8767def097b2fdeff5e253128dfea1ca21f1b	11	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+crown-a	deploy bridge: WriteSegment 2 of 5 (98304 bytes)	ae6efe891641634d44c25997d0da11d5bc347aafd71d7cec1eccd9434df54759	12	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+crown-a	deploy bridge: WriteSegment 1 of 5 (98304 bytes)	d32e8b7c83415dc47daa1729fe11eed299a25ff86b38327491f5e6b6862a447c	13	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+crown-a	deploy bridge: CreateHeader (immutable) at AfrE4T3U17eZYUH3KMGDgeE6A4jnpDGum151T3VtddCp	7fb9539deb720966d27aa626286662feecc7736f3ed7d81ad9d3bd78a457cbe1	14	0	applied	-	0	608	2000000	8	8	4864	3826400	1	0	608	-	-	-	payer_debit is for the whole deployment; its fees sum to 3826400
+crown-a	crown STAND-IN Init Init	fde742d24f97515239127ac141542671c8bb1ec304f5bf70f919542bedcf024e	15	0	applied	-	113477	1756	4000000	8	8	921864	921864	1	113477	1756	-	-	-	-
+crown-a	crown STAND-IN Init adopt 1/2	287e68358d3eadef5699114090b60d7755bac4cd2df6cafc243c59bdbae134ef	16	0	applied	-	3396985	24980	4000000	8	8	27375720	27375720	1	3396985	24980	-	-	-	-
+crown-a	crown STAND-IN Init adopt 2/2	8074213ede8d296bfcd6bea88b1dba01dcbfa384ff26a99ee991e7dff1459850	17	0	applied	-	3477181	25173	4000000	8	8	28018832	28018832	1	3477181	25173	-	-	-	-
