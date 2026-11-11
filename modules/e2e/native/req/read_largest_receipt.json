@@ -1,0 +1,8 @@
+{
+  "selector": "0x4652542d41545431",
+  "event_data": "0xc112f29279d8b73ec0f1bfc969123ac50bb06c3dbcd51bc33dfb1ef85d23bfe00100000000000000d399920100000000c76c6d570eeb6ccc43a29d5b507d2fe971565726e01a989ef7ceb4ae6227f0aa",
+  "expected_ids": [
+    "0xc76c6d570eeb6ccc43a29d5b507d2fe971565726e01a989ef7ceb4ae6227f0aa"
+  ],
+  "expected_instance_id": "0xc112f29279d8b73ec0f1bfc969123ac50bb06c3dbcd51bc33dfb1ef85d23bfe0"
+}

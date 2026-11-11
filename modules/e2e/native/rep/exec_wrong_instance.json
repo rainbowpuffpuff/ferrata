@@ -1,0 +1,1 @@
+{"account_matches":true,"applied":false,"canonical":true,"cycles":20932,"decoded":true,"event_data":null,"event_emitter_is_program":null,"event_matches_native":false,"exit_code":211,"facts":1,"gas_exec":20932,"gas_stor":2519,"message_bytes":2121,"native":{"code":211,"verdict":"refused"},"revert":"\"Program exited with non-zero code 211 after 20932 cycles\"","tx_bytes":2519}
