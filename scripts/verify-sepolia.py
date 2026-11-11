@@ -137,6 +137,100 @@ def enc_word(v) -> str:
     return (bytes(32 - len(raw)) + raw).hex() if len(raw) <= 32 else raw.hex()
 
 
+# Merkle-Patricia proofs (as e2e/crown/mpt.py): the vault's storage as LEZ imported it, checked against a block header.
+def rlp_decode(data: bytes):
+    item, end = _rlp_item(data, 0)
+    if end != len(data):
+        raise ValueError("trailing bytes after an RLP item")
+    return item
+
+
+def _rlp_item(bs: bytes, i: int):
+    p = bs[i]
+    if p < 0x80:
+        return bs[i:i + 1], i + 1
+    if p < 0xb8:
+        n = p - 0x80
+        return bs[i + 1:i + 1 + n], i + 1 + n
+    if p < 0xc0:
+        ln = p - 0xb7
+        n = int.from_bytes(bs[i + 1:i + 1 + ln], "big")
+        return bs[i + 1 + ln:i + 1 + ln + n], i + 1 + ln + n
+    if p < 0xf8:
+        n, start = p - 0xc0, i + 1
+    else:
+        ln = p - 0xf7
+        n, start = int.from_bytes(bs[i + 1:i + 1 + ln], "big"), i + 1 + ln
+    out, j = [], start
+    while j < start + n:
+        x, j = _rlp_item(bs, j)
+        out.append(x)
+    if j != start + n:
+        raise ValueError("RLP list length")
+    return out, j
+
+
+def _nibbles(bs: bytes) -> list:
+    return [x for c in bs for x in (c >> 4, c & 15)]
+
+
+def mpt_get(root: bytes, key: bytes, proof: list):
+    """The value stored under keccak(key) in the trie with this root, or None if the proof shows it absent."""
+    path = _nibbles(keccak256(key))
+    nodes = [b(x) for x in proof]
+    want, i, k, node = root, 0, 0, None
+    while True:
+        if node is None:
+            if k >= len(nodes):
+                raise ValueError("the proof ends before the key's path does")
+            raw = nodes[k]
+            k += 1
+            if keccak256(raw) != want:
+                raise ValueError(f"proof node {k - 1} does not hash to its parent's reference")
+            node = rlp_decode(raw)
+        if len(node) == 17:
+            if i == len(path):
+                return node[16] or None
+            child = node[path[i]]
+            i += 1
+        elif len(node) == 2:
+            n = _nibbles(node[0])
+            seg, leaf = (n[2:] if n[0] in (0, 2) else n[1:]), n[0] >= 2
+            if path[i:i + len(seg)] != seg:
+                return None
+            i += len(seg)
+            if leaf:
+                return node[1] if i == len(path) else None
+            child = node[1]
+        else:
+            raise ValueError("a trie node is neither a branch nor a short node")
+        if isinstance(child, list):  # an embedded node (its RLP is shorter than 32 bytes)
+            node = child
+        elif child == b"":
+            return None
+        else:
+            want, node = child, None
+
+
+def proven_account(state_root: bytes, proof: dict) -> dict:
+    """eth_getProof's answer checked against state_root: the account's code hash and every storage slot's value."""
+    acct = mpt_get(state_root, b(proof["address"]), proof["accountProof"])
+    if acct is None:
+        raise ValueError(f"{proof['address']} is absent from the state")
+    _nonce, _balance, storage_root, code_hash = rlp_decode(acct)
+    if h(storage_root) != proof["storageHash"].lower() or h(code_hash) != proof["codeHash"].lower():
+        raise ValueError("the account proof's storage root or code hash is not the answer's")
+    slots = {}
+    for sp in proof["storageProof"]:
+        key = int(sp["key"], 16).to_bytes(32, "big")
+        raw = mpt_get(storage_root, key, sp["proof"])
+        got = 0 if raw is None else int.from_bytes(rlp_decode(raw), "big")
+        if got != int(sp["value"], 16):
+            raise ValueError(f"slot {sp['key']}: the proof gives {got:#x}, the answer {sp['value']}")
+        slots[h(key)] = got
+    return {"codeHash": h(code_hash), "slots": slots}
+
+
 # ---------------------------------------------------------------------------------------------------------------
 # JSON-RPC
 # ---------------------------------------------------------------------------------------------------------------
@@ -486,6 +580,36 @@ def main() -> int:
         state["balance"] = bal
         return ("; ".join(out) + (f"; {others} other deposit(s) by others" if others else "")
                 + f"; nextLeafIndex {n}; ETH sent by the deposit transactions {total_value} wei; vault balance {bal} wei")
+
+    @check("captures: the vault storage LEZ imported is Sepolia's (header = the chain's final block; storage proofs checked)")
+    def _():
+        caps = sorted(f for f in os.listdir(os.path.join(R, "captures")) if re.fullmatch(r"capture-\d+\.json", f)) \
+            if os.path.isdir(os.path.join(R, "captures")) else []
+        if not caps:
+            raise Pending("no captures recorded")
+        code_hash = h(keccak256(b(rpc("eth_getCode", vault, "latest"))))
+        out = []
+        for f in caps:
+            c, d = load(os.path.join(R, "captures", f)), os.path.join(R, "captures", f[:-5])
+            num = int(c["block"])
+            with open(os.path.join(d, "header.rlp"), "rb") as fh:
+                hdr = fh.read()
+            blk = rpc("eth_getBlockByNumber", hex(num), False)
+            need(blk is not None and blk["hash"].lower() == h(keccak256(hdr)), f"{f}: header.rlp is not Sepolia's block {num}")
+            need(num <= state.get("finalized", -1), f"{f}: block {num} is not final")
+            pf = [x for x in os.listdir(d) if x.lower() == f"proof_{vault}_{num}.json"]
+            need(len(pf) == 1, f"{f}: no proof file of the vault")
+            proof = load(os.path.join(d, pf[0]))
+            got = proven_account(rlp_decode(hdr)[3], proof.get("result", proof))
+            need(got["codeHash"] == code_hash, f"{f}: the proven code hash is not the vault's code")
+            for sl in c["slots"]:
+                key = h(int(sl["slot"], 16).to_bytes(32, "big"))
+                need(got["slots"].get(key) == int(sl["value"], 16), f"{f}: {sl['what']} proven {got['slots'].get(key)}")
+            need(got["slots"].get(h((1).to_bytes(32, "big"))) == int(c["leaves"]), f"{f}: slot 1 is not {c['leaves']} leaves")
+            need(got["slots"].get(h((2).to_bytes(32, "big"))) == int(idn["configId"], 16), f"{f}: slot 2 is not the configId")
+            out.append(f"{f[:-5]}: final block {num}, {len(c['slots'])} slots proven (depositRoot "
+                       f"{h(got['slots'][h(bytes(32))].to_bytes(32, 'big'))[:10]}…, {c['leaves']} leaves, configId)")
+        return "; ".join(out)
 
     jw = words(crown["candidate"]["journal"]) if crown.get("candidate") else []
 

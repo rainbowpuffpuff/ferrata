@@ -35,6 +35,7 @@ whose id table it compares with the ids pinned in the script).
 | every recorded transaction | each transaction in `manifest.json` has a receipt with status 1, in the recorded block, from the deployer, to the vault, with the recorded gas used; says whether its block is finalized | |
 | deployer's nonce | the deployer sent exactly the seven deployment transactions plus the recorded ones (or reports how many later ones) | |
 | deposits | each recorded deposit's commitment, recomputed from the depositor, j, the kind and the destination, is in exactly one `Deposit` event, from the deployer, in ETH, with index j (deposits by anyone else are counted, not failed: the vault is public); `nextLeafIndex` = the number of `Deposit` events; the ETH every deposit transaction sent and the vault's balance | the commitments are recomputable only because this run used the **published test seed** of `bridge/e2e`; a real user's seed is secret |
+| captures | each capture's `header.rlp` hashes to the chain's block of that number, which is final; the recorded `eth_getProof` answer verifies against that header's state root by Merkle proof (checked here, not asked of the endpoint): the vault's code hash and every slot LEZ imported (deposit root, leaf count, configId, the ETH registry entry, fee schedules) | |
 | checkpoint journal fields | the 17-word journal names this chain, this vault, this configId, nMin = tMin = 1, parent = genesisState, as many imported leaves as deposits, as many burns as LEZ burn notes, and tip T1 = session B's last block (id and hash); session B starts at session A's tip | |
 | checkpoint submitted | the `CandidateSubmitted` event of the submit transaction carries the journal's new state, parent, burn root, counts and tip; **the recorded seal verifies for the vault's own `checkpointImageId` and sha256(journal) in the vault's own verifier** (`eth_call`), and a seal changed in one byte is refused | RISC Zero's proof system |
 | checkpoint final | after the wait W: `finalState` = the journal's new state, `checkpointCount` ≥ 1, the burn root accepted; before it, PENDING with the time finalization opens | |
@@ -43,8 +44,10 @@ whose id table it compares with the ids pinned in the script).
 Measured on 11 November 2026 against crown-live-1's records while the run waited W (submit at Sepolia block
 12,111,746; finalization opens 13:27:48Z): **10 passed, 2 pending, 0 failed**, 48 RPC calls to the public endpoint
 (publicnode).
-After the wait (records fetched again at 13:34Z): **11 passed, 1 pending, 0 failed**: finalization and release 0 on
-chain, release 1 not yet sent; the same 11 / 1 / 0 on a second, independent endpoint (`rpc.sepolia.ethpandaops.io`). The same records with one commitment, one byte of the seal and the genesis state
+After the wait (records fetched again at 13:34Z), with the captures' check: **12 passed, 1 pending, 0 failed**:
+finalization and release 0 on chain, release 1 not yet sent (before the captures' check: the same 11 / 1 / 0 on
+publicnode and on a second, independent endpoint, `rpc.sepolia.ethpandaops.io`). One byte of a capture's proof
+changed: the captures' check fails. The same records with one commitment, one byte of the seal and the genesis state
 changed: **5 failed**, exit status 1 ([`e2e/runs/verify-anyone/`](../../e2e/runs/verify-anyone/README.md)).
 
 ## 2. The programs: `scripts/reproduce-image-ids.sh`
