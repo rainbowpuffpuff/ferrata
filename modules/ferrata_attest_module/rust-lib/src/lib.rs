@@ -21,6 +21,23 @@ pub trait FerrataAttestModule: Send + 'static {
     /// `request` and the reply are JSON (modules/README.md).
     fn verify_checkpoint(&mut self, request: String) -> String;
 
+    /// Read a block and its receipts from a JSON-RPC endpoint (`rpc_url`), rebuild the receipts
+    /// trie, check it against the block's receipts root, and return one log's receipt proof.
+    /// `request` and the reply are JSON (modules/README.md).
+    fn fetch_log_proof(&mut self, request: String) -> String;
+
+    /// Build the attestation program's `Attest` message for a log or a storage slot at
+    /// `header(id, slot)`, and name the account it is sent to. JSON in and out (modules/README.md).
+    fn build_attest_tx(&mut self, request: String) -> String;
+
+    /// Decode the program's `Attested` event and compare its statement ids with a dry run's.
+    /// JSON in and out (modules/README.md).
+    fn read_attestation(&mut self, request: String) -> String;
+
+    /// Decode an instance's state as LEZ holds it at `instance(id)`: id, configuration, activation,
+    /// store (finalized header, committees) and jobs applied. JSON in and out (modules/README.md).
+    fn read_instance(&mut self, request: String) -> String;
+
     /// Called once the module is wired to the host.
     fn on_context_ready(&mut self, _ctx: &RustModuleContext) {}
 }
@@ -49,6 +66,22 @@ impl FerrataAttestModule for FerrataAttest {
 
     fn verify_checkpoint(&mut self, request: String) -> String {
         guarded("verify_checkpoint", || ferrata_attest_calls::verify_checkpoint(&request))
+    }
+
+    fn fetch_log_proof(&mut self, request: String) -> String {
+        guarded("fetch_log_proof", || ferrata_attest_calls::fetch_log_proof(&request))
+    }
+
+    fn build_attest_tx(&mut self, request: String) -> String {
+        guarded("build_attest_tx", || ferrata_attest_calls::build_attest_tx(&request))
+    }
+
+    fn read_attestation(&mut self, request: String) -> String {
+        guarded("read_attestation", || ferrata_attest_calls::read_attestation(&request))
+    }
+
+    fn read_instance(&mut self, request: String) -> String {
+        guarded("read_instance", || ferrata_attest_calls::read_instance(&request))
     }
 }
 

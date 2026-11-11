@@ -1,0 +1,290 @@
+lgx-ferrata_attest_module/logos-ferrata_attest_module-module-lib.lgx	2123682 bytes
+lgx-ferrata_bridge_module/logos-ferrata_bridge_module-module-lib.lgx	2021508 bytes
+lgx-portable-ferrata_attest_module/logos-ferrata_attest_module-module-lib.lgx	5280230 bytes
+lgx-portable-ferrata_bridge_module/logos-ferrata_bridge_module-module-lib.lgx	5180044 bytes
+lgx-portable-ferrata_attest_module/logos-ferrata_attest_module-module-lib.lgx	5280230 bytes
+lgx-portable-ferrata_bridge_module/logos-ferrata_bridge_module-module-lib.lgx	5180044 bytes
+ferrata_attest_module dev package closure	667834808
+ferrata_bridge_module dev package closure	667482016
+logosctl (dev) closure	907405600
+contents of lgx-ferrata_attest_module/logos-ferrata_attest_module-module-lib.lgx:
+drwxr-xr-x 0/0               0 1970-01-01 00:00 assets/
+drwxr-xr-x 0/0               0 1970-01-01 00:00 assets/lidl/
+-rw-r--r-- 0/0            1683 1970-01-01 00:00 assets/lidl/ferrata_attest_module.lidl
+-rw-r--r-- 0/0             836 1970-01-01 00:00 manifest.json
+drwxr-xr-x 0/0               0 1970-01-01 00:00 variants/
+drwxr-xr-x 0/0               0 1970-01-01 00:00 variants/linux-amd64-dev/
+-rwxr-xr-x 0/0         5907496 1970-01-01 00:00 variants/linux-amd64-dev/ferrata_attest_module_plugin.so
+contents of lgx-ferrata_bridge_module/logos-ferrata_bridge_module-module-lib.lgx:
+drwxr-xr-x 0/0               0 1970-01-01 00:00 assets/
+drwxr-xr-x 0/0               0 1970-01-01 00:00 assets/lidl/
+-rw-r--r-- 0/0            1478 1970-01-01 00:00 assets/lidl/ferrata_bridge_module.lidl
+-rw-r--r-- 0/0             886 1970-01-01 00:00 manifest.json
+drwxr-xr-x 0/0               0 1970-01-01 00:00 variants/
+drwxr-xr-x 0/0               0 1970-01-01 00:00 variants/linux-amd64-dev/
+-rwxr-xr-x 0/0         5657088 1970-01-01 00:00 variants/linux-amd64-dev/ferrata_bridge_module_plugin.so
+contents of lgx-portable-ferrata_attest_module/logos-ferrata_attest_module-module-lib.lgx:
+drwxr-xr-x 0/0               0 1970-01-01 00:00 assets/
+drwxr-xr-x 0/0               0 1970-01-01 00:00 assets/lidl/
+-rw-r--r-- 0/0            1683 1970-01-01 00:00 assets/lidl/ferrata_attest_module.lidl
+-rw-r--r-- 0/0             828 1970-01-01 00:00 manifest.json
+drwxr-xr-x 0/0               0 1970-01-01 00:00 variants/
+drwxr-xr-x 0/0               0 1970-01-01 00:00 variants/linux-amd64/
+-rwxr-xr-x 0/0         5907496 1970-01-01 00:00 variants/linux-amd64/ferrata_attest_module_plugin.so
+-rwxr-xr-x 0/0           15088 1970-01-01 00:00 variants/linux-amd64/libboost_system.so.1.87.0
+-rwxr-xr-x 0/0         7486752 1970-01-01 00:00 variants/linux-amd64/libcrypto.so.3
+-rwxr-xr-x 0/0         1302424 1970-01-01 00:00 variants/linux-amd64/libssl.so.3
+contents of lgx-portable-ferrata_bridge_module/logos-ferrata_bridge_module-module-lib.lgx:
+drwxr-xr-x 0/0               0 1970-01-01 00:00 assets/
+drwxr-xr-x 0/0               0 1970-01-01 00:00 assets/lidl/
+-rw-r--r-- 0/0            1478 1970-01-01 00:00 assets/lidl/ferrata_bridge_module.lidl
+-rw-r--r-- 0/0             878 1970-01-01 00:00 manifest.json
+drwxr-xr-x 0/0               0 1970-01-01 00:00 variants/
+drwxr-xr-x 0/0               0 1970-01-01 00:00 variants/linux-amd64/
+-rwxr-xr-x 0/0         5657088 1970-01-01 00:00 variants/linux-amd64/ferrata_bridge_module_plugin.so
+-rwxr-xr-x 0/0           15088 1970-01-01 00:00 variants/linux-amd64/libboost_system.so.1.87.0
+-rwxr-xr-x 0/0         7486752 1970-01-01 00:00 variants/linux-amd64/libcrypto.so.3
+-rwxr-xr-x 0/0         1302424 1970-01-01 00:00 variants/linux-amd64/libssl.so.3
+contents of lgx-portable-ferrata_attest_module/logos-ferrata_attest_module-module-lib.lgx:
+drwxr-xr-x 0/0               0 1970-01-01 00:00 assets/
+drwxr-xr-x 0/0               0 1970-01-01 00:00 assets/lidl/
+-rw-r--r-- 0/0            1683 1970-01-01 00:00 assets/lidl/ferrata_attest_module.lidl
+-rw-r--r-- 0/0             828 1970-01-01 00:00 manifest.json
+drwxr-xr-x 0/0               0 1970-01-01 00:00 variants/
+drwxr-xr-x 0/0               0 1970-01-01 00:00 variants/linux-amd64/
+-rwxr-xr-x 0/0         5907496 1970-01-01 00:00 variants/linux-amd64/ferrata_attest_module_plugin.so
+-rwxr-xr-x 0/0           15088 1970-01-01 00:00 variants/linux-amd64/libboost_system.so.1.87.0
+-rwxr-xr-x 0/0         7486752 1970-01-01 00:00 variants/linux-amd64/libcrypto.so.3
+-rwxr-xr-x 0/0         1302424 1970-01-01 00:00 variants/linux-amd64/libssl.so.3
+contents of lgx-portable-ferrata_bridge_module/logos-ferrata_bridge_module-module-lib.lgx:
+drwxr-xr-x 0/0               0 1970-01-01 00:00 assets/
+drwxr-xr-x 0/0               0 1970-01-01 00:00 assets/lidl/
+-rw-r--r-- 0/0            1478 1970-01-01 00:00 assets/lidl/ferrata_bridge_module.lidl
+-rw-r--r-- 0/0             878 1970-01-01 00:00 manifest.json
+drwxr-xr-x 0/0               0 1970-01-01 00:00 variants/
+drwxr-xr-x 0/0               0 1970-01-01 00:00 variants/linux-amd64/
+-rwxr-xr-x 0/0         5657088 1970-01-01 00:00 variants/linux-amd64/ferrata_bridge_module_plugin.so
+-rwxr-xr-x 0/0           15088 1970-01-01 00:00 variants/linux-amd64/libboost_system.so.1.87.0
+-rwxr-xr-x 0/0         7486752 1970-01-01 00:00 variants/linux-amd64/libcrypto.so.3
+-rwxr-xr-x 0/0         1302424 1970-01-01 00:00 variants/linux-amd64/libssl.so.3
+logos-cpp-sdk	3bf5365c5412f89bbbf30e3f46237cd68cff0599
+logos-cpp-sdk_2	3bf5365c5412f89bbbf30e3f46237cd68cff0599
+logos-lidl	9df8e00372a07e073a17096fd92a62d69c5a21cd
+logos-lidl_2	9df8e00372a07e073a17096fd92a62d69c5a21cd
+logos-lidl_3	9df8e00372a07e073a17096fd92a62d69c5a21cd
+logos-lidl_4	9df8e00372a07e073a17096fd92a62d69c5a21cd
+logos-lidl_5	9df8e00372a07e073a17096fd92a62d69c5a21cd
+logos-lidl_6	9df8e00372a07e073a17096fd92a62d69c5a21cd
+logos-lidl_7	9df8e00372a07e073a17096fd92a62d69c5a21cd
+logos-lidl_8	9df8e00372a07e073a17096fd92a62d69c5a21cd
+logos-lidl_9	9df8e00372a07e073a17096fd92a62d69c5a21cd
+logos-module	9812dc8c69cfbfed3eea06510a5c1ff33c1fcf7f
+logos-module-builder	5f74cdb3cecacde054c68d72fcc0d2cfe2195900
+logos-module_2	9812dc8c69cfbfed3eea06510a5c1ff33c1fcf7f
+logos-module_3	9812dc8c69cfbfed3eea06510a5c1ff33c1fcf7f
+logos-module_4	9812dc8c69cfbfed3eea06510a5c1ff33c1fcf7f
+logos-module_5	9812dc8c69cfbfed3eea06510a5c1ff33c1fcf7f
+logos-nix	6e0f4a7120fced10829b0b3a698ff619a11d4605
+logos-nix_10	6e0f4a7120fced10829b0b3a698ff619a11d4605
+logos-nix_11	6e0f4a7120fced10829b0b3a698ff619a11d4605
+logos-nix_12	6e0f4a7120fced10829b0b3a698ff619a11d4605
+logos-nix_13	6e0f4a7120fced10829b0b3a698ff619a11d4605
+logos-nix_14	7c1eb8bc390546f32aaf134866a1c7db8e9311cc
+logos-nix_15	f55bf91b8a723ee5c27c39c773b034255538d280
+logos-nix_16	6e0f4a7120fced10829b0b3a698ff619a11d4605
+logos-nix_17	e637a1f5e871244d1c2df1e3c52a067f2eb406f2
+logos-nix_18	0e9e6d66ab8eb34f59e45ed448f7dc29130feb88
+logos-nix_19	6e0f4a7120fced10829b0b3a698ff619a11d4605
+logos-nix_2	7c1eb8bc390546f32aaf134866a1c7db8e9311cc
+logos-nix_3	6e0f4a7120fced10829b0b3a698ff619a11d4605
+logos-nix_4	6e0f4a7120fced10829b0b3a698ff619a11d4605
+logos-nix_5	6e0f4a7120fced10829b0b3a698ff619a11d4605
+logos-nix_6	30285b1025f053b0adca39a6a5c94f93df0619e2
+logos-nix_7	7c1eb8bc390546f32aaf134866a1c7db8e9311cc
+logos-nix_8	6e0f4a7120fced10829b0b3a698ff619a11d4605
+logos-nix_9	6e0f4a7120fced10829b0b3a698ff619a11d4605
+logos-package	4099308fde589d300c5d378019d01cfbcdedf169
+logos-package-manager	1c8ea4a84a310773968c7b338320f84d182278c1
+logos-package_2	c25a1167578aef5cbd9a9b6f822ffe2ae4fd6a89
+logos-plugin-core	2d36a08819b8df36094036d02d130aa4bd3a6132
+logos-plugin-qt	2d36a08819b8df36094036d02d130aa4bd3a6132
+logos-plugin-qt_2	f9e969e7b62ffed543660024c62198b61894de9c
+logos-plugin-qt_3	f9e969e7b62ffed543660024c62198b61894de9c
+logos-protocol	9d59f5de526624b120d42f4c422a3d83c0b9d64f
+logos-protocol_2	4fc6973d6d10aa6ddf9a409f0a9d08eb582f46fc
+logos-protocol_3	d8389858fe4fc9a91113bc8dd66721bf99699173
+logos-protocol_4	d8389858fe4fc9a91113bc8dd66721bf99699173
+logos-qt-sdk	b0c57af85a9600bfe29be536696863f002eb6bdd
+logos-qt-sdk_2	b0c57af85a9600bfe29be536696863f002eb6bdd
+logos-rust-sdk	040e94e83873249dc5f27da8c2a01c3dcaaa630d
+logos-test-framework	d0e240f8a7a59e65fbea949b8cfb33f390a96f3a
+logos-view-module	4b5c41f591a22373d14b730f646aee6748c37cf2
+logos-view-module-runtime	fd902f8165c330426cb14ad779808d7475587e26
+nix-bundle-appimage	04a3cf89f8ba3dc20f08a8e2b6c337a672bceda7
+nix-bundle-dir	f843b8ec76974881ccf8619157ae63bfa2017a5e
+nix-bundle-dir_2	cb9afc8c8c8a0037cf27f7467132f9e01e476588
+nix-bundle-dir_3	ffc410b7f2bab32b1c2ceb347c56902e7321049c
+nix-bundle-lgx	55e4c99f67bf6ab0085eaea8243f5cf9b3354f5e
+nix-bundle-logos-module-install	4ebf721f3558919aa932ba250a93a7d62e932d47
+nixpkgs	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs-windows	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_10	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_11	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_12	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_13	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_14	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_15	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_16	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_17	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_2	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_3	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_4	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_5	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_6	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_7	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_8	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_9	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs_10	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_11	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_12	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_13	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_14	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_15	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_16	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_17	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_18	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_19	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_2	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_3	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_4	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_5	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_6	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_7	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_8	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_9	e9f00bd893984bc8ce46c895c3bf7cac95331127
+rust-overlay	494680f9ffa2b4bf9f2df0f442c7096e44adfa00
+== contract in lgx-ferrata_attest_module/logos-ferrata_attest_module-module-lib.lgx:
+module ferrata_attest_module {
+  version "0.1.0"
+  depends []
+
+  method version() -> tstr description "The module's version, the ferrata-core it was built from and its BLS backend, as JSON."
+  method dry_run_attest(request: tstr) -> tstr description "Prove one storage slot or one log against a header record as the attestation program\nwould, and return its verdict and code as JSON. `request` is JSON (modules/README.md)."
+  method verify_checkpoint(request: tstr) -> tstr description "Recompute an instance id from a configuration and checkpoint, check the checkpoint's\nbootstrap as the program's `Init` does, and compare the checkpoint with the roots given.\n`request` and the reply are JSON (modules/README.md)."
+  method fetch_log_proof(request: tstr) -> tstr description "Read a block and its receipts from a JSON-RPC endpoint (`rpc_url`), rebuild the receipts\ntrie, check it against the block's receipts root, and return one log's receipt proof.\n`request` and the reply are JSON (modules/README.md)."
+  method build_attest_tx(request: tstr) -> tstr description "Build the attestation program's `Attest` message for a log or a storage slot at\n`header(id, slot)`, and name the account it is sent to. JSON in and out (modules/README.md)."
+  method read_attestation(request: tstr) -> tstr description "Decode the program's `Attested` event and compare its statement ids with a dry run's.\nJSON in and out (modules/README.md)."
+  method read_instance(request: tstr) -> tstr description "Decode an instance's state as LEZ holds it at `instance(id)`: id, configuration, activation,\nstore (finalized header, committees) and jobs applied. JSON in and out (modules/README.md)."
+}
+logos-cpp-sdk	3bf5365c5412f89bbbf30e3f46237cd68cff0599
+logos-cpp-sdk_2	3bf5365c5412f89bbbf30e3f46237cd68cff0599
+logos-lidl	9df8e00372a07e073a17096fd92a62d69c5a21cd
+logos-lidl_2	9df8e00372a07e073a17096fd92a62d69c5a21cd
+logos-lidl_3	9df8e00372a07e073a17096fd92a62d69c5a21cd
+logos-lidl_4	9df8e00372a07e073a17096fd92a62d69c5a21cd
+logos-lidl_5	9df8e00372a07e073a17096fd92a62d69c5a21cd
+logos-lidl_6	9df8e00372a07e073a17096fd92a62d69c5a21cd
+logos-lidl_7	9df8e00372a07e073a17096fd92a62d69c5a21cd
+logos-lidl_8	9df8e00372a07e073a17096fd92a62d69c5a21cd
+logos-lidl_9	9df8e00372a07e073a17096fd92a62d69c5a21cd
+logos-module	9812dc8c69cfbfed3eea06510a5c1ff33c1fcf7f
+logos-module-builder	5f74cdb3cecacde054c68d72fcc0d2cfe2195900
+logos-module_2	9812dc8c69cfbfed3eea06510a5c1ff33c1fcf7f
+logos-module_3	9812dc8c69cfbfed3eea06510a5c1ff33c1fcf7f
+logos-module_4	9812dc8c69cfbfed3eea06510a5c1ff33c1fcf7f
+logos-module_5	9812dc8c69cfbfed3eea06510a5c1ff33c1fcf7f
+logos-nix	6e0f4a7120fced10829b0b3a698ff619a11d4605
+logos-nix_10	6e0f4a7120fced10829b0b3a698ff619a11d4605
+logos-nix_11	6e0f4a7120fced10829b0b3a698ff619a11d4605
+logos-nix_12	6e0f4a7120fced10829b0b3a698ff619a11d4605
+logos-nix_13	6e0f4a7120fced10829b0b3a698ff619a11d4605
+logos-nix_14	7c1eb8bc390546f32aaf134866a1c7db8e9311cc
+logos-nix_15	f55bf91b8a723ee5c27c39c773b034255538d280
+logos-nix_16	6e0f4a7120fced10829b0b3a698ff619a11d4605
+logos-nix_17	e637a1f5e871244d1c2df1e3c52a067f2eb406f2
+logos-nix_18	0e9e6d66ab8eb34f59e45ed448f7dc29130feb88
+logos-nix_19	6e0f4a7120fced10829b0b3a698ff619a11d4605
+logos-nix_2	7c1eb8bc390546f32aaf134866a1c7db8e9311cc
+logos-nix_3	6e0f4a7120fced10829b0b3a698ff619a11d4605
+logos-nix_4	6e0f4a7120fced10829b0b3a698ff619a11d4605
+logos-nix_5	6e0f4a7120fced10829b0b3a698ff619a11d4605
+logos-nix_6	30285b1025f053b0adca39a6a5c94f93df0619e2
+logos-nix_7	7c1eb8bc390546f32aaf134866a1c7db8e9311cc
+logos-nix_8	6e0f4a7120fced10829b0b3a698ff619a11d4605
+logos-nix_9	6e0f4a7120fced10829b0b3a698ff619a11d4605
+logos-package	4099308fde589d300c5d378019d01cfbcdedf169
+logos-package-manager	1c8ea4a84a310773968c7b338320f84d182278c1
+logos-package_2	c25a1167578aef5cbd9a9b6f822ffe2ae4fd6a89
+logos-plugin-core	2d36a08819b8df36094036d02d130aa4bd3a6132
+logos-plugin-qt	2d36a08819b8df36094036d02d130aa4bd3a6132
+logos-plugin-qt_2	f9e969e7b62ffed543660024c62198b61894de9c
+logos-plugin-qt_3	f9e969e7b62ffed543660024c62198b61894de9c
+logos-protocol	9d59f5de526624b120d42f4c422a3d83c0b9d64f
+logos-protocol_2	4fc6973d6d10aa6ddf9a409f0a9d08eb582f46fc
+logos-protocol_3	d8389858fe4fc9a91113bc8dd66721bf99699173
+logos-protocol_4	d8389858fe4fc9a91113bc8dd66721bf99699173
+logos-qt-sdk	b0c57af85a9600bfe29be536696863f002eb6bdd
+logos-qt-sdk_2	b0c57af85a9600bfe29be536696863f002eb6bdd
+logos-rust-sdk	040e94e83873249dc5f27da8c2a01c3dcaaa630d
+logos-test-framework	d0e240f8a7a59e65fbea949b8cfb33f390a96f3a
+logos-view-module	4b5c41f591a22373d14b730f646aee6748c37cf2
+logos-view-module-runtime	fd902f8165c330426cb14ad779808d7475587e26
+nix-bundle-appimage	04a3cf89f8ba3dc20f08a8e2b6c337a672bceda7
+nix-bundle-dir	f843b8ec76974881ccf8619157ae63bfa2017a5e
+nix-bundle-dir_2	cb9afc8c8c8a0037cf27f7467132f9e01e476588
+nix-bundle-dir_3	ffc410b7f2bab32b1c2ceb347c56902e7321049c
+nix-bundle-lgx	55e4c99f67bf6ab0085eaea8243f5cf9b3354f5e
+nix-bundle-logos-module-install	4ebf721f3558919aa932ba250a93a7d62e932d47
+nixpkgs	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs-windows	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_10	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_11	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_12	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_13	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_14	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_15	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_16	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_17	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_2	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_3	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_4	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_5	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_6	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_7	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_8	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_9	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs_10	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_11	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_12	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_13	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_14	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_15	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_16	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_17	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_18	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_19	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_2	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_3	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_4	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_5	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_6	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_7	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_8	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_9	e9f00bd893984bc8ce46c895c3bf7cac95331127
+rust-overlay	494680f9ffa2b4bf9f2df0f442c7096e44adfa00
+== contract in lgx-ferrata_bridge_module/logos-ferrata_bridge_module-module-lib.lgx:
+module ferrata_bridge_module {
+  version "0.1.0"
+  depends []
+
+  method version() -> tstr description "The module's version and the ferrata-bridge-core it was built from, as JSON."
+  method deposit(request: tstr) -> tstr description "A deposit's commitment and the vault call that makes it (`deposit` or `depositETH`), and,\nwith its leaf index, the leaf, deposit id and nullifier. JSON in and out (modules/README.md)."
+  method claim(request: tstr) -> tstr description "A claim of a deposit: its Merkle path in the deposit tree, the check the bridge program runs\n(`verify_claim`), its nullifier, and the program's `Claim` message. JSON in and out."
+  method burn(request: tstr) -> tstr description "A burn: the note (tag, memo, MAC, commitment) and the bridge program's `Burn` message, and,\nwith its index in the burn tree, the leaf, burn id and release nullifier. JSON in and out."
+  method release(request: tstr) -> tstr description "A release: the burn's path in the checkpointed burn tree, the release guest's check\n(`verify_release`), its nullifier and the journal the vault verifies. JSON in and out."
+  method recover(request: tstr) -> tstr description "The wallet's own deposits and burns among public ones, from its seed alone. JSON in and out."
+  method status(request: tstr) -> tstr description "Where each deposit and burn stands (awaiting root, claimable, claimed; awaiting checkpoint,\nreleasable, released), from the chains' public state. JSON in and out."
+}
+logosctl version pre-release-66d098d
+commit: 66d098d3af1367cf831b69c13a5aa8345edeb682
+dependency commits:

@@ -9,7 +9,7 @@
 use std::fmt::Write as _;
 
 use ferrata_core::{
-    attest::{attest_log, attest_storage, HeaderRecord},
+    attest::{attest_account, attest_storage, attest_log, HeaderRecord},
     exec::{Address, Word},
     fork::{ChainSpec, LcFork, Preset},
     merkle::ZERO,
@@ -21,6 +21,10 @@ use ferrata_core::{
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
+mod rpc;
+mod trie;
+mod tx;
+
 /// What `scripts/stage.sh` recorded about the ferrata-core copy this crate was built against.
 const STAGED: &str = include_str!("../../ferrata-core/STAGED.json");
 
@@ -31,7 +35,15 @@ pub fn version() -> String {
         "version": env!("CARGO_PKG_VERSION"),
         "ferrata_core": serde_json::from_str::<Value>(STAGED).unwrap_or(Value::Null),
         "bls_backend": "none",
-        "methods": ["version", "dry_run_attest", "verify_checkpoint"],
+        "methods": [
+            "version",
+            "dry_run_attest",
+            "verify_checkpoint",
+            "fetch_log_proof",
+            "build_attest_tx",
+            "read_attestation",
+            "read_instance"
+        ],
     })
     .to_string()
 }
@@ -44,6 +56,31 @@ pub fn dry_run_attest(request: &str) -> String {
 /// `verify_checkpoint(request)`: instance id, bootstrap and observed roots of a checkpoint.
 pub fn verify_checkpoint(request: &str) -> String {
     reply(checkpoint(request))
+}
+
+/// `fetch_log_proof(request)`: read a block and its receipts from a JSON-RPC endpoint, rebuild the
+/// receipts trie, check it against the block's `receiptsRoot`, and return one log's receipt proof
+/// in the form `dry_run_attest` and `build_attest_tx` take.
+pub fn fetch_log_proof(request: &str) -> String {
+    reply(fetch_log(request))
+}
+
+/// `build_attest_tx(request)`: the attestation program's `Attest` message for a log (or a storage
+/// slot) at `header(id, slot)`, and the account it is sent to.
+pub fn build_attest_tx(request: &str) -> String {
+    reply(build_tx(request))
+}
+
+/// `read_attestation(request)`: decode the program's `Attested` event and compare its statement
+/// ids with the ones a dry run predicted.
+pub fn read_attestation(request: &str) -> String {
+    reply(read_event(request))
+}
+
+/// `read_instance(request)`: an instance's state as LEZ holds it at `instance(id)` (the program's
+/// `InstanceState`, Borsh): its id, configuration, activation, store and jobs applied.
+pub fn read_instance(request: &str) -> String {
+    reply(instance(request))
 }
 
 fn reply(result: Result<Value, String>) -> String {
@@ -67,23 +104,16 @@ fn dry_run(request: &str) -> Result<Value, String> {
     // execution payload fields, so they are left zero.
     let r = &req["record"];
     let instance_chain_id = uint(&r["chain_id"], "record.chain_id")?;
-    let recorded = witness::HeaderRecord {
-        beacon: BeaconBlockHeader {
-            slot: uint(&r["anchor_slot"], "record.anchor_slot")?,
-            proposer_index: 0,
-            parent_root: ZERO,
-            state_root: ZERO,
-            body_root: ZERO,
-        },
-        execution_root: ZERO,
-        execution: ExecutionSummary::Payload {
-            block_number: uint(&r["block_number"], "record.block_number")?,
-            block_hash: fixed(&r["block_hash"], "record.block_hash")?,
-            parent_hash: fixed(&r["parent_hash"], "record.parent_hash")?,
-            state_root: fixed(&r["state_root"], "record.state_root")?,
-            receipts_root: fixed(&r["receipts_root"], "record.receipts_root")?,
-            timestamp: uint(&r["timestamp"], "record.timestamp")?,
-        },
+    // Either the record as the program stores it (`RecordState::record`, read from the chain), or
+    // its fields.
+    let recorded = if !r["encoded"].is_null() {
+        let bytes = unhex(text(&r["encoded"], "record.encoded")?).map_err(|e| format!("record.encoded: {e}"))?;
+        match witness::HeaderRecord::decode(&bytes) {
+            Ok(h) => h,
+            Err(e) => return Ok(refused(e, "record")),
+        }
+    } else {
+        record_from_fields(r)?
     };
     let record = match HeaderRecord::from_recorded(&recorded, instance_chain_id) {
         Ok(record) => record,
@@ -108,6 +138,28 @@ fn dry_run(request: &str) -> Result<Value, String> {
     Ok(out)
 }
 
+/// The record's fields as JSON (`chain_id` aside): the slot and the execution payload's fields.
+fn record_from_fields(r: &Value) -> Result<witness::HeaderRecord, String> {
+    Ok(witness::HeaderRecord {
+        beacon: BeaconBlockHeader {
+            slot: uint(&r["anchor_slot"], "record.anchor_slot")?,
+            proposer_index: 0,
+            parent_root: ZERO,
+            state_root: ZERO,
+            body_root: ZERO,
+        },
+        execution_root: ZERO,
+        execution: ExecutionSummary::Payload {
+            block_number: uint(&r["block_number"], "record.block_number")?,
+            block_hash: fixed(&r["block_hash"], "record.block_hash")?,
+            parent_hash: fixed(&r["parent_hash"], "record.parent_hash")?,
+            state_root: fixed(&r["state_root"], "record.state_root")?,
+            receipts_root: fixed(&r["receipts_root"], "record.receipts_root")?,
+            timestamp: uint(&r["timestamp"], "record.timestamp")?,
+        },
+    })
+}
+
 /// `storage`: an `eth_getProof` result (`get_proof`, or its fields directly) and the `slot`.
 fn storage(record: &HeaderRecord, chain_id: u64, s: &Value) -> Result<Value, String> {
     let p = if s["get_proof"].is_null() { s } else { &s["get_proof"] };
@@ -126,6 +178,9 @@ fn storage(record: &HeaderRecord, chain_id: u64, s: &Value) -> Result<Value, Str
     let storage_proof = nodes(&entry["proof"], "storage.storageProof[].proof")?;
     // What the provider said the value is; the reply says whether the proof agrees.
     let claimed = word(&entry["value"], "storage.storageProof[].value").ok();
+    // The program attests an account query's account as a fact of its own, before its slots: the
+    // statement ids it emits for this request are the account's, then the slot's.
+    let account = attest_account(record, chain_id, &address, &account_proof).ok();
 
     Ok(match attest_storage(record, chain_id, &address, &account_proof, &slot, &storage_proof) {
         Ok(a) => json!({
@@ -143,6 +198,8 @@ fn storage(record: &HeaderRecord, chain_id: u64, s: &Value) -> Result<Value, Str
             "block_hash": hex(&a.block_hash),
             "id": hex(&a.id),
             "id_at_block": hex(&a.id_at_block()),
+            "account_id": account.as_ref().map(|f| hex(&f.id)),
+            "ids": account.iter().map(|f| hex(&f.id)).chain(std::iter::once(hex(&a.id))).collect::<Vec<_>>(),
         }),
         Err(e) => refused(e, "proof"),
     })
@@ -170,6 +227,7 @@ fn log(record: &HeaderRecord, chain_id: u64, l: &Value) -> Result<Value, String>
             "block_number": a.block_number,
             "block_hash": hex(&a.block_hash),
             "id": hex(&a.id),
+            "ids": [hex(&a.id)],
         }),
         Err(e) => refused(e, "proof"),
     })
@@ -250,6 +308,55 @@ impl Config {
         out.push(self.store_fork);
         out.push(self.adoption_parts);
         out
+    }
+
+    /// The inverse of [`Config::borsh`].
+    fn read(r: &mut Bytes) -> Result<Self, String> {
+        let chain_id = r.u64()?;
+        let sync_committee_size = r.u32()?;
+        let slots_per_epoch = r.u64()?;
+        let epochs_per_sync_committee_period = r.u64()?;
+        let min_sync_committee_participants = r.u64()?;
+        let mut fork_versions = [[0u8; 4]; 9];
+        for v in fork_versions.iter_mut() {
+            *v = r.array::<4>()?;
+        }
+        let mut fork_epochs = [0u64; 9];
+        for e in fork_epochs.iter_mut() {
+            *e = r.u64()?;
+        }
+        Ok(Self {
+            chain_id,
+            sync_committee_size,
+            slots_per_epoch,
+            epochs_per_sync_committee_period,
+            min_sync_committee_participants,
+            fork_versions,
+            fork_epochs,
+            genesis_validators_root: r.array::<32>()?,
+            genesis_time: r.u64()?,
+            seconds_per_slot: r.u64()?,
+            store_fork: r.u8()?,
+            adoption_parts: r.u8()?,
+        })
+    }
+
+    /// The JSON object [`Config::from_json`] reads.
+    pub fn to_json(&self) -> Value {
+        json!({
+            "chain_id": self.chain_id,
+            "sync_committee_size": self.sync_committee_size,
+            "slots_per_epoch": self.slots_per_epoch,
+            "epochs_per_sync_committee_period": self.epochs_per_sync_committee_period,
+            "min_sync_committee_participants": self.min_sync_committee_participants,
+            "fork_versions": self.fork_versions.iter().map(|v| hex(v)).collect::<Vec<_>>(),
+            "fork_epochs": self.fork_epochs.to_vec(),
+            "genesis_validators_root": hex(&self.genesis_validators_root),
+            "genesis_time": self.genesis_time,
+            "seconds_per_slot": self.seconds_per_slot,
+            "store_fork": self.store_fork,
+            "adoption_parts": self.adoption_parts,
+        })
     }
 
     /// The core's chain configuration (`Config::spec` in the program).
@@ -397,6 +504,268 @@ fn checkpoint(request: &str) -> Result<Value, String> {
 // ---------------------------------------------------------------------------------------------
 // JSON and hex
 // ---------------------------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------------------------
+// fetch_log_proof, build_attest_tx, read_attestation
+// ---------------------------------------------------------------------------------------------
+
+fn fetch_log(request: &str) -> Result<Value, String> {
+    let req: Value = serde_json::from_str(request).map_err(|e| format!("request is not JSON: {e}"))?;
+    let url = text(&req["rpc_url"], "rpc_url")?;
+    let timeout = if req["timeout_ms"].is_null() { 20_000 } else { uint(&req["timeout_ms"], "timeout_ms")? };
+    let block = uint(&req["block"], "block")?;
+    let mut rpc = rpc::Rpc::new(url, timeout)?;
+    let tag = format!("0x{block:x}");
+    let header = rpc.call("eth_getBlockByNumber", json!([tag, false]))?;
+    if header.is_null() {
+        return Err(format!("block {block}: the node has no such block"));
+    }
+    let receipts_root: Root = fixed(&header["receiptsRoot"], "block.receiptsRoot")?;
+    let block_hash: Root = fixed(&header["hash"], "block.hash")?;
+    let receipts = rpc.call("eth_getBlockReceipts", json!([tag]))?;
+    let receipts = receipts.as_array().ok_or("eth_getBlockReceipts: not an array")?;
+    let trie = trie::receipts_trie(receipts)?;
+    let rebuilt = trie.root();
+    if rebuilt != receipts_root {
+        // The provider's receipts and its block disagree: nothing here would pass the program.
+        return Ok(json!({
+            "verdict": "inconsistent",
+            "error": "the receipts do not rebuild the block's receiptsRoot",
+            "receipts_root": hex(&receipts_root),
+            "rebuilt_root": hex(&rebuilt),
+            "rpc_calls": rpc.calls,
+        }));
+    }
+    // Which log: `tx_index` and `log_index` (within the receipt), or JSON-RPC's block-wide
+    // `logIndex` as `block_log_index`.
+    let (tx_index, log_index) = if !req["block_log_index"].is_null() {
+        locate(receipts, uint(&req["block_log_index"], "block_log_index")?)?
+    } else {
+        (uint(&req["tx_index"], "tx_index")?, uint(&req["log_index"], "log_index")?)
+    };
+    let receipt = receipts
+        .get(tx_index as usize)
+        .ok_or_else(|| format!("tx_index {tx_index}: the block has {} receipts", receipts.len()))?;
+    let logs = receipt["logs"].as_array().ok_or("receipt: no logs array")?;
+    let log = logs
+        .get(log_index as usize)
+        .ok_or_else(|| format!("log_index {log_index}: the receipt has {} logs", logs.len()))?;
+    let proof = trie.proof(&trie::receipt_key(tx_index));
+    Ok(json!({
+        "verdict": "fetched",
+        "block": block,
+        "block_hash": hex(&block_hash),
+        "receipts_root": hex(&receipts_root),
+        "receipts": receipts.len(),
+        "receipt_status": receipt["status"],
+        "log": {
+            "tx_index": tx_index,
+            "log_index": log_index,
+            "receipt_proof": proof.iter().map(|n| hex(n)).collect::<Vec<_>>(),
+        },
+        "provider_log": {
+            "address": log["address"],
+            "topics": log["topics"],
+            "data": log["data"],
+            "logIndex": log["logIndex"],
+            "transactionHash": receipt["transactionHash"],
+        },
+        "rpc_calls": rpc.calls,
+    }))
+}
+
+/// `(tx_index, log_index within the receipt)` of the log with block-wide index `want`.
+fn locate(receipts: &[Value], want: u64) -> Result<(u64, u64), String> {
+    for (i, r) in receipts.iter().enumerate() {
+        for (j, l) in r["logs"].as_array().into_iter().flatten().enumerate() {
+            if trie::quantity(&l["logIndex"], "logIndex")? == want {
+                return Ok((i as u64, j as u64));
+            }
+        }
+    }
+    Err(format!("block_log_index {want}: no such log in the block"))
+}
+
+fn build_tx(request: &str) -> Result<Value, String> {
+    let req: Value = serde_json::from_str(request).map_err(|e| format!("request is not JSON: {e}"))?;
+    let program: Root = fixed(&req["program_id"], "program_id")?;
+    let instance_id: Root = fixed(&req["instance_id"], "instance_id")?;
+    let chain_id = uint(&req["chain_id"], "chain_id")?;
+    let slot = uint(&req["slot"], "slot")?;
+    // `log` (one, as fetch_log_proof returns it) or `logs` (several); `storage` as dry_run_attest
+    // takes it.
+    let items: Vec<&Value> = match (&req["logs"], &req["log"]) {
+        (Value::Array(a), _) => a.iter().collect(),
+        (_, l) if !l.is_null() => vec![l],
+        _ => vec![],
+    };
+    let mut logs = Vec::with_capacity(items.len());
+    for (i, l) in items.iter().enumerate() {
+        logs.push(tx::LogQuery {
+            tx_index: uint(&l["tx_index"], &format!("logs[{i}].tx_index"))?,
+            log_index: uint(&l["log_index"], &format!("logs[{i}].log_index"))?,
+            proof: nodes(&l["receipt_proof"], &format!("logs[{i}].receipt_proof"))?,
+        });
+    }
+    let mut accounts = Vec::new();
+    if !req["storage"].is_null() {
+        accounts.push(account_query(&req["storage"])?);
+    }
+    if logs.is_empty() && accounts.is_empty() {
+        return Err("the request needs `log`, `logs` or `storage`".into());
+    }
+    // The program attests each account as a fact, then each of its slots, then each log.
+    let facts = logs.len() + accounts.iter().map(|a| 1 + a.slots.len()).sum::<usize>();
+    let message = tx::attest_message(&tx::Request { instance_id, chain_id, accounts, logs });
+    let account = tx::header_account(&program, &instance_id, slot);
+    Ok(json!({
+        "program_id": hex(&program),
+        "instance_id": hex(&instance_id),
+        "chain_id": chain_id,
+        "slot": slot,
+        "account": hex(&account),
+        "accounts": [hex(&account)],
+        "facts": facts,
+        "message": hex(&message),
+        "message_bytes": message.len(),
+        "message_sha256": hex(&Sha256::digest(&message)),
+    }))
+}
+
+/// One account and one slot from an `eth_getProof` result (`get_proof`, or its fields) and `slot`.
+fn account_query(s: &Value) -> Result<tx::AccountQuery, String> {
+    let p = if s["get_proof"].is_null() { s } else { &s["get_proof"] };
+    let address: Address = fixed(&p["address"], "storage.address")?;
+    let proof = nodes(&p["accountProof"], "storage.accountProof")?;
+    let slot = word(&s["slot"], "storage.slot")?;
+    let entries = p["storageProof"].as_array().ok_or("storage.storageProof: expected an array")?;
+    let mut entry = None;
+    for (i, e) in entries.iter().enumerate() {
+        if word(&e["key"], &format!("storage.storageProof[{i}].key"))? == slot {
+            entry = Some(e);
+            break;
+        }
+    }
+    let entry = entry.ok_or_else(|| format!("storage.storageProof has no entry for slot {}", hex(&slot)))?;
+    let slot_proof = nodes(&entry["proof"], "storage.storageProof[].proof")?;
+    Ok(tx::AccountQuery { address, proof, slots: vec![tx::SlotQuery { slot, proof: slot_proof }] })
+}
+
+fn read_event(request: &str) -> Result<Value, String> {
+    let req: Value = serde_json::from_str(request).map_err(|e| format!("request is not JSON: {e}"))?;
+    if !req["selector"].is_null() {
+        let selector = unhex(text(&req["selector"], "selector")?).map_err(|e| format!("selector: {e}"))?;
+        if selector != tx::ATTESTED_SELECTOR {
+            return Ok(json!({ "verdict": "not_an_attestation", "selector": hex(&selector) }));
+        }
+    }
+    let data = unhex(text(&req["event_data"], "event_data")?).map_err(|e| format!("event_data: {e}"))?;
+    let a = tx::decode_attested(&data)?;
+    let statements: Vec<String> = a.statements.iter().map(|s| hex(s)).collect();
+    let mut out = json!({
+        "verdict": "attested",
+        "instance_id": hex(&a.instance_id),
+        "chain_id": a.chain_id,
+        "block_number": a.block_number,
+        "statements": statements,
+    });
+    // `expected_ids`: what dry_run_attest returned as `id`, in the request's fact order.
+    if let Some(expected) = req["expected_ids"].as_array() {
+        let want: Vec<String> = expected.iter().map(|e| e.as_str().unwrap_or("").to_ascii_lowercase()).collect();
+        out["matches_expected"] = json!(want == statements);
+    }
+    if !req["expected_instance_id"].is_null() {
+        let want: Root = fixed(&req["expected_instance_id"], "expected_instance_id")?;
+        out["instance_matches"] = json!(want == a.instance_id);
+    }
+    Ok(out)
+}
+
+// ---------------------------------------------------------------------------------------------
+// read_instance
+// ---------------------------------------------------------------------------------------------
+
+/// A Borsh reader over a byte string.
+struct Bytes<'a> {
+    b: &'a [u8],
+    at: usize,
+}
+
+impl<'a> Bytes<'a> {
+    fn take(&mut self, n: usize) -> Result<&'a [u8], String> {
+        let end = self.at.checked_add(n).filter(|e| *e <= self.b.len()).ok_or("state: too short")?;
+        let out = &self.b[self.at..end];
+        self.at = end;
+        Ok(out)
+    }
+    fn array<const N: usize>(&mut self) -> Result<[u8; N], String> {
+        Ok(self.take(N)?.try_into().unwrap())
+    }
+    fn u8(&mut self) -> Result<u8, String> {
+        Ok(self.take(1)?[0])
+    }
+    fn u32(&mut self) -> Result<u32, String> {
+        Ok(u32::from_le_bytes(self.array::<4>()?))
+    }
+    fn u64(&mut self) -> Result<u64, String> {
+        Ok(u64::from_le_bytes(self.array::<8>()?))
+    }
+}
+
+fn instance(request: &str) -> Result<Value, String> {
+    let req: Value = serde_json::from_str(request).map_err(|e| format!("request is not JSON: {e}"))?;
+    let bytes = unhex(text(&req["state"], "state")?).map_err(|e| format!("state: {e}"))?;
+    // `InstanceState { id, config, active, store: Vec<u8>, applied }`.
+    let mut r = Bytes { b: &bytes, at: 0 };
+    let id: Root = r.array::<32>()?;
+    let config = Config::read(&mut r)?;
+    let active = match r.u8()? {
+        0 => false,
+        1 => true,
+        x => return Err(format!("state: `active` is not a bool ({x})")),
+    };
+    let store_len = r.u32()? as usize;
+    let store_bytes = r.take(store_len)?;
+    let applied = r.u64()?;
+    if r.at != bytes.len() {
+        return Err(format!("state: {} bytes after InstanceState", bytes.len() - r.at));
+    }
+    let mut out = json!({
+        "verdict": "ok",
+        "id": hex(&id),
+        "config": config.to_json(),
+        "active": active,
+        "applied": applied,
+    });
+    out["store"] = match witness::CompactStore::decode(store_bytes) {
+        Ok(st) => json!({
+            "fork": format!("{:?}", st.fork),
+            "finalized_slot": st.finalized.slot,
+            "finalized_header": {
+                "slot": st.finalized.slot,
+                "proposer_index": st.finalized.proposer_index,
+                "parent_root": hex(&st.finalized.parent_root),
+                "state_root": hex(&st.finalized.state_root),
+                "body_root": hex(&st.finalized.body_root),
+            },
+            "next_committee_known": st.next.is_some(),
+            "digest": hex(&st.digest()),
+        }),
+        Err(e) => json!({ "error": format!("{e:?}"), "code": e.code() }),
+    };
+    // With the checkpoint the instance was created from, the id as `Init` derives it.
+    if !req["checkpoint"].is_null() {
+        let checkpoint: Root = fixed(&req["checkpoint"], "checkpoint")?;
+        let recomputed = instance_id(&config, &checkpoint);
+        out["instance_id_recomputed"] = json!(hex(&recomputed));
+        out["id_matches_config"] = json!(recomputed == id);
+    }
+    if !req["expected_instance_id"].is_null() {
+        let want: Root = fixed(&req["expected_instance_id"], "expected_instance_id")?;
+        out["instance_matches"] = json!(want == id);
+    }
+    Ok(out)
+}
 
 pub fn hex(bytes: &[u8]) -> String {
     let mut s = String::with_capacity(2 + 2 * bytes.len());

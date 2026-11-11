@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "name": "ferrata-modules",
+  "displayName": "Ferrata modules",
+  "description": "Ferrata's Logos core modules (prototype, unaudited): ferrata_attest_module (Ethereum state attestation on LEZ) and ferrata_bridge_module (the user side of the ERC-20/ETH bridge).",
+  "homepage": "https://github.com/rainbowpuffpuff/ferrata",
+  "indexUrl": "https://github.com/rainbowpuffpuff/ferrata-modules/releases/download/index/index.json",
+  "trustedSigners": []
+}
