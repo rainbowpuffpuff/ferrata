@@ -8,7 +8,8 @@ identity.json, verify.txt (the full run directory stays on the Volume ferrata-cr
 
 What it showed, from crown.log:
 - `e2e/crown.sh stop` at 03:09:53Z, 5 min 47 s into session B (during the private claim's proof). The stop cancelled
-  the runner and, with it, the LEZ session it had called (Modal cancels the call too): no generation 2 was saved.
+  the runner; the LEZ session it had called did not save generation 2 either (inferred: the resumed call started at
+  once and ran B for the full 900 s, which max_containers=1 would not allow beside a live first session).
 - `start` again at 03:10:59Z resumed at lez-b: lez_session found generation 1 and ran B again (900 s, T1 = 94), then the
   checkpoint (input 602,328 B, parent = genesisState; an L40S: 9.0 s, 5 segments; wrap 54 s).
 - submit then stopped (03:27:27Z): anvil asked its upstream (the Secret's endpoint) for a storage slot at the fork block,
