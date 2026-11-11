@@ -63,15 +63,15 @@ def main() -> None:
         rng = lambda xs: f"{xs[0]:,}" if len(xs) == 1 else f"{xs[0]:,}–{xs[-1]:,}"  # noqa: E731
         rows.append(
             f"| {label} | {cell(times[8]) or '–'} | {med[8] if med[8] else '–'} | {cell(times[16]) or '–'} | "
-            f"{med[16] if med[16] else '–'} | {rng(cyc)} ({'/'.join(map(str, segs))}) | {rng(c_cyc)} "
-            f"({', '.join(f'{s} ({t:,})' for s, t in c_seg)}) | {rss:.2f} / {cg:.2f} | {rng(receipts)} | {rng(txs)} | "
+            f"{med[16] if med[16] else '–'} | {rng(cyc)} ({'/'.join(map(str, segs))}) | {rng(c_cyc)} | "
+            f"{', '.join(f'{s} ({t:,})' for s, t in c_seg)} | {rss:.2f} / {cg:.2f} | {rng(receipts)} | {rng(txs)} | "
             f"{verified} of {len(allp)} | {ratio[8] or '–'}× / {ratio[16] or '–'}× |"
         )
     print("| proof (padded) | 8 CPUs: `execute_and_prove` (s), each run | median | 16 CPUs: each run | median | "
-          "user cycles proven (segments) | LEZ's circuit: user cycles (segments, cycles with padding) | "
+          "user cycles proven (segments) | LEZ's circuit: user cycles | its segments (cycles with padding) | "
           "peak GiB, r0vm RSS / container | receipt (B) | transaction (B) | settled, receipt verified | "
           "padded / unpadded median, 8 / 16 CPUs |")
-    print("|---|---|---:|---|---:|---:|---:|---:|---:|---:|---|---:|")
+    print("|---|---|---:|---|---:|---:|---:|---:|---:|---:|---:|---|---:|")
     print("\n".join(rows))
     print()
     print("| container (tag / job) | CPUs | CPU, cloud region | runs: execute_and_prove (s) | tamper: settle exit |")
