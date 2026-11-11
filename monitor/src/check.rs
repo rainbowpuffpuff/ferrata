@@ -168,10 +168,7 @@ pub fn evaluate(p: &Policy, c: &Candidate, views: &[NodeView], now: u64) -> Verd
     if now < until {
         return Verdict::Wait {
             until,
-            why: format!(
-                "tip {} not yet final in {} (final height {})",
-                c.tip_id, lagging.node, lagging.final_height
-            ),
+            why: format!("tip {} not yet final in {} (final height {})", c.tip_id, lagging.node, lagging.final_height),
         };
     }
     Verdict::Cancel {

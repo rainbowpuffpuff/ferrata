@@ -14,7 +14,11 @@ use ferrata_monitor::daemon::{self, Config};
 use ferrata_monitor::node::{KeySet, NodeSource, NodeView, H32};
 
 #[derive(Parser)]
-#[command(name = "monitor", version, about = "Ferrata watcher: checks every candidate checkpoint against its own nodes and cancels a wrong one in time")]
+#[command(
+    name = "monitor",
+    version,
+    about = "Ferrata watcher: checks every candidate checkpoint against its own nodes and cancels a wrong one in time"
+)]
 struct Cli {
     #[command(subcommand)]
     cmd: Cmd,
@@ -186,7 +190,8 @@ async fn main() -> Result<()> {
             daemon::run(cfg, chain, alerts).await
         }
         Cmd::NodeView { chain_tsv, label, key_sets } => {
-            let text = std::fs::read_to_string(&chain_tsv).with_context(|| format!("reading {}", chain_tsv.display()))?;
+            let text =
+                std::fs::read_to_string(&chain_tsv).with_context(|| format!("reading {}", chain_tsv.display()))?;
             let sets: Vec<KeySet> = match key_sets {
                 Some(p) => serde_json::from_slice(&std::fs::read(&p)?).context("the key sets do not parse")?,
                 None => Vec::new(),
@@ -195,7 +200,8 @@ async fn main() -> Result<()> {
             Ok(())
         }
         Cmd::Check { rule, candidate, nodes, now, turn_seconds, b_lag_grace, delta_g, margin } => {
-            let c: Candidate = serde_json::from_slice(&std::fs::read(&candidate)?).context("the candidate does not parse")?;
+            let c: Candidate =
+                serde_json::from_slice(&std::fs::read(&candidate)?).context("the candidate does not parse")?;
             let views = nodes.iter().map(NodeSource::read).collect::<Result<Vec<_>>>()?;
             let p = Policy { rule, turn_seconds, b_lag_grace, delta_g, margin };
             println!("{}", serde_json::to_string_pretty(&evaluate(&p, &c, &views, now))?);

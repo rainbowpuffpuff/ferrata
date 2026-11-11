@@ -79,12 +79,7 @@ impl Store {
         }
         let bytes = fs::read(path).with_context(|| format!("reading {}", path.display()))?;
         let s: Self = serde_json::from_slice(&bytes).with_context(|| format!("{} does not parse", path.display()))?;
-        ensure!(
-            s.vault.eq_ignore_ascii_case(vault),
-            "{} belongs to vault {}, not {vault}",
-            path.display(),
-            s.vault
-        );
+        ensure!(s.vault.eq_ignore_ascii_case(vault), "{} belongs to vault {}, not {vault}", path.display(), s.vault);
         Ok((s, true))
     }
 

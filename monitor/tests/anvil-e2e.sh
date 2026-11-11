@@ -16,6 +16,8 @@
 #   A1  an honest candidate passes untouched and is finalised with a beacon recorded after its wait
 #   A2  a candidate on a stale, smaller key set (shorter wait) is cancelled at once (D13)
 #   A3  a tip not final by submittedAt + Δ_g: the monitor waits, then cancels before the deadline
+#   A4  the node's final tier stalls past --stall-pause-after: alert and the 12 h checkpoint pause
+#   R1-R4  offline: the node view from a real LEZ v0.4.0-rc1 sequencer's record (lez/lab), three verdicts
 #
 # Run from monitor/ (on the build box: mrun --put vault/lib -- 'bash tests/anvil-e2e.sh').
 # Results: results/anvil-e2e/ (summary.md, scenarios.json, alerts.jsonl, pager.jsonl, state files).
@@ -239,6 +241,12 @@ ja1e="(3,2,$genesis,$a1,$(label burn-root/10),10,0,false,$nonce,10,$(label block
 check "A1 finalised with a beacon recorded after its wait" 'cast send --unlocked --from "$anyone" --rpc-url "$rpc" "$vault" "finalize(uint256,$cp_sig,bytes)" "$bidx" "$ja1e" 0x > /dev/null && [ "$(final_state)" = "$a1" ]'
 monitor_polls "$state_a" WATCHER_KEY 1
 check "A1 audited as good after finalisation" '[ "$(jq -r ".finalized[\"0\"]" "$state_a")" = ok ]'
+
+# A4: the node's final tier has not advanced for longer than --stall-pause-after: under rule (A) the watcher pauses.
+mon_cmd "$state_a" WATCHER_KEY
+"$mon" "${margs[@]}" --stall-pause-after 600 --max-polls 2 2>> "$run/monitor-stderr.log"
+frozen_a=$(cast call --rpc-url "$rpc" "$vault" "checkpointsFrozenUntil()(uint256)" | awk '{print $1}')
+check "A4 final tier stalled: alert and the watcher's 12 h pause (rule A)" '[ -n "$(jq -c "select(.kind==\"final-tier-stalled\")" "$alerts")" ] && [ $((frozen_a - $(now))) -gt 43000 ]'
 
 # R: the node view from a real LEZ v0.4.0-rc1 sequencer's record (lez/lab/results/record/chain.tsv), offline.
 "$mon" node-view --chain-tsv "$here/../lez/lab/results/record/chain.tsv" --label lab-devnet > "$out/node-view-lab.json"

@@ -119,7 +119,9 @@ fn key_set_not_live_is_cancelled_under_both_rules() {
     for p in [B, A] {
         assert!(matches!(
             evaluate(&p, &c, &[v.clone()], T0),
-            Verdict::Cancel { reason: Reason::KeySetNotLive { live_n: 4, live_t: 3, candidate_n: 3, candidate_t: 2, .. } }
+            Verdict::Cancel {
+                reason: Reason::KeySetNotLive { live_n: 4, live_t: 3, candidate_n: 3, candidate_t: 2, .. }
+            }
         ));
     }
     // A rotation to five keys from block 15: a tip at 16 must carry n = 5, t = 4; a tip at 12 the old set.
@@ -136,9 +138,13 @@ fn a_tip_must_be_final_by_delta_g() {
     let c = cand(25, hb("block", 25), 4, 3, T0);
     // W = 3600 + 2 * 900 = 5400 < Δ_g here, so the deadline bounds the wait (the vault enforces W >= Δ_g + ...).
     assert_eq!(c.deadline(900), T0 + 5400);
-    assert!(matches!(evaluate(&A, &c, &[v.clone()], T0 + 1000), Verdict::Wait { until, .. } if until == T0 + 5400 - 120));
+    assert!(
+        matches!(evaluate(&A, &c, &[v.clone()], T0 + 1000), Verdict::Wait { until, .. } if until == T0 + 5400 - 120)
+    );
     let a_short = Policy { delta_g: 2000, ..A };
-    assert!(matches!(evaluate(&a_short, &c, &[v.clone()], T0 + 1999), Verdict::Wait { until, .. } if until == T0 + 2000));
+    assert!(
+        matches!(evaluate(&a_short, &c, &[v.clone()], T0 + 1999), Verdict::Wait { until, .. } if until == T0 + 2000)
+    );
     assert!(matches!(evaluate(&a_short, &c, &[v], T0 + 2000), Verdict::Cancel { reason: Reason::TipNotFinal { .. } }));
 }
 
@@ -148,7 +154,13 @@ fn state_fields_are_compared_when_the_node_computes_them() {
     let c = cand(10, hb("block", 10), 4, 3, T0);
     v.states.insert(
         10,
-        TipState { new_state: Some(c.new_state), burn_root: c.burn_root, burn_count: 10, imported_leaf_count: 2, sunset: false },
+        TipState {
+            new_state: Some(c.new_state),
+            burn_root: c.burn_root,
+            burn_count: 10,
+            imported_leaf_count: 2,
+            sunset: false,
+        },
     );
     assert_eq!(evaluate(&B, &c, &[v.clone()], T0), Verdict::Pass);
     v.states.get_mut(&10).unwrap().burn_root = hb("other root", 10);
@@ -182,8 +194,14 @@ fn several_nodes_must_all_agree() {
 fn a_finalised_wrong_checkpoint_is_reported_for_revocation() {
     let v = node("n1", 20);
     assert_eq!(audit_finalized(&cand(10, hb("block", 10), 4, 3, T0), &[v.clone()], T0), None);
-    assert!(matches!(audit_finalized(&cand(10, hb("forged", 10), 4, 3, T0), &[v.clone()], T0), Some(Reason::TipConflict { .. })));
-    assert!(matches!(audit_finalized(&cand(40, hb("block", 40), 4, 3, T0), &[v], T0), Some(Reason::TipNotFinal { .. })));
+    assert!(matches!(
+        audit_finalized(&cand(10, hb("forged", 10), 4, 3, T0), &[v.clone()], T0),
+        Some(Reason::TipConflict { .. })
+    ));
+    assert!(matches!(
+        audit_finalized(&cand(40, hb("block", 40), 4, 3, T0), &[v], T0),
+        Some(Reason::TipNotFinal { .. })
+    ));
 }
 
 fn deployment() -> Deployment {
@@ -273,7 +291,14 @@ fn state_file_round_trip_and_vault_guard() {
     let c = cand(10, hb("block", 10), 4, 3, T0);
     s.candidates.insert(
         c.new_state.to_string(),
-        Tracked { candidate: c.clone(), status: Status::Pending, verdict: Some(Verdict::Pass), first_seen_at: T0, cancel_tx: None, cancelled_at: None },
+        Tracked {
+            candidate: c.clone(),
+            status: Status::Pending,
+            verdict: Some(Verdict::Pass),
+            first_seen_at: T0,
+            cancel_tx: None,
+            cancelled_at: None,
+        },
     );
     s.cancel_events.entry("0x01".into()).or_default().insert("0xtx".into(), 9);
     assert_eq!(s.cancels_before("0x01", 9), 0);
@@ -322,7 +347,10 @@ fn a_real_sequencer_record_as_the_node_view() {
     assert_eq!(p.final_height, 256);
     let c = cand(258, tip, 1, 1, T0);
     assert!(matches!(evaluate(&B, &c, &[p.clone()], T0 + 299), Verdict::Wait { .. }));
-    assert!(matches!(evaluate(&B, &c, &[p], T0 + 300), Verdict::Cancel { reason: Reason::TipNotFinal { final_height: 256, .. } }));
+    assert!(matches!(
+        evaluate(&B, &c, &[p], T0 + 300),
+        Verdict::Cancel { reason: Reason::TipNotFinal { final_height: 256, .. } }
+    ));
     // A gap in the record is refused.
     let gap: String = text.lines().filter(|l| !l.starts_with("100\t")).map(|l| format!("{l}\n")).collect();
     assert!(NodeView::from_chain_tsv("lab", &gap, Vec::new()).is_err());

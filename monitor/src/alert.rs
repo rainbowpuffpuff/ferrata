@@ -38,10 +38,8 @@ impl Alerts {
     /// Emits `{ts, level, kind, chainTime, ...fields}`. Failures to deliver are reported on standard
     /// error and never stop the monitor.
     pub fn emit(&self, level: Level, kind: &str, chain_time: u64, fields: Value) {
-        let ts = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_secs())
-            .unwrap_or_default();
+        let ts =
+            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or_default();
         let mut line = json!({ "ts": ts, "level": level, "kind": kind, "chainTime": chain_time });
         if let (Some(obj), Value::Object(extra)) = (line.as_object_mut(), fields) {
             obj.extend(extra);
@@ -60,17 +58,12 @@ impl Alerts {
         }
         if let Some(cmd) = &self.cmd {
             if rank(level) >= rank(self.cmd_level.unwrap_or(Level::Warn)) {
-                let sent = Command::new("sh")
-                    .arg("-c")
-                    .arg(cmd)
-                    .stdin(Stdio::piped())
-                    .spawn()
-                    .and_then(|mut child| {
-                        if let Some(mut stdin) = child.stdin.take() {
-                            stdin.write_all(text.as_bytes())?;
-                        }
-                        child.wait()
-                    });
+                let sent = Command::new("sh").arg("-c").arg(cmd).stdin(Stdio::piped()).spawn().and_then(|mut child| {
+                    if let Some(mut stdin) = child.stdin.take() {
+                        stdin.write_all(text.as_bytes())?;
+                    }
+                    child.wait()
+                });
                 match sent {
                     Ok(s) if s.success() => {}
                     Ok(s) => eprintln!("monitor: alert command exited with {s}"),

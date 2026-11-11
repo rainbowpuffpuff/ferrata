@@ -14,6 +14,10 @@ use crate::check::{attested_by, audit_attestations, audit_finalized, evaluate, P
 use crate::node::{NodeSource, NodeView, H32};
 use crate::store::{Status, Store, Tracked};
 
+fn wall_secs() -> u64 {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or_default()
+}
+
 /// The watcher's 12-hour checkpoint pause (the vault's `WATCHER_PAUSE`).
 pub const WATCHER_PAUSE: u64 = 12 * 3600;
 
@@ -168,7 +172,9 @@ impl Ctx {
                 );
             }
             Ok(Sent::Moot) => {}
-            Err(e) => self.alerts.emit(Level::Critical, "pause-failed", now, json!({ "why": why, "error": e.to_string() })),
+            Err(e) => {
+                self.alerts.emit(Level::Critical, "pause-failed", now, json!({ "why": why, "error": e.to_string() }))
+            }
         }
         Ok(())
     }
@@ -186,16 +192,23 @@ impl Ctx {
         }
 
         let mut views: Vec<NodeView> = Vec::new();
+        let mut unreadable = Vec::new();
         for src in &self.cfg.nodes {
             match src.read() {
                 Ok(v) => views.push(v),
-                Err(e) => self.alerts.emit(
-                    Level::Warn,
-                    "node-unreadable",
-                    now,
-                    json!({ "node": src.label(), "error": format!("{e:#}") }),
-                ),
+                Err(e) => unreadable.push((src.label(), format!("{e:#}"))),
             }
+        }
+        // One alert per node and hour of chain time; a candidate checked meanwhile uses the other nodes,
+        // and with none the verdict is `Blind` (critical).
+        for (node, error) in unreadable {
+            self.alert_once(
+                format!("node-unreadable:{node}:{}", now / 3600),
+                Level::Warn,
+                "node-unreadable",
+                now,
+                json!({ "node": node, "error": error }),
+            );
         }
         self.watch_stall(&views, now).await?;
         self.audit_attestations(&views, now);
@@ -273,7 +286,10 @@ impl Ctx {
             match &verdict {
                 Verdict::Pass => {
                     let attested: Vec<_> = match self.deployment {
-                        Some(d) => views.iter().map(|v| json!({ "node": v.node, "attestedBy": attested_by(v, &d, c.tip_id, &c.tip_hash) })).collect(),
+                        Some(d) => views
+                            .iter()
+                            .map(|v| json!({ "node": v.node, "attestedBy": attested_by(v, &d, c.tip_id, &c.tip_hash) }))
+                            .collect(),
                         None => Vec::new(),
                     };
                     let mut f = base.clone();
@@ -287,16 +303,34 @@ impl Ctx {
                     self.alert_once(format!("wait:{k}:{}", c.submitted_at), Level::Info, "candidate-waiting", now, f);
                 }
                 Verdict::Blind => {
-                    self.alert_once(format!("blind:{k}:{}", c.submitted_at), Level::Critical, "blind", now, base.clone());
+                    self.alert_once(
+                        format!("blind:{k}:{}", c.submitted_at),
+                        Level::Critical,
+                        "blind",
+                        now,
+                        base.clone(),
+                    );
                 }
                 Verdict::Cancel { reason } => {
                     let mut f = base.clone();
                     f["reason"] = json!(reason);
                     if now >= deadline {
-                        self.alert_once(format!("late:{k}:{}", c.submitted_at), Level::Critical, "late", now, f.clone());
+                        self.alert_once(
+                            format!("late:{k}:{}", c.submitted_at),
+                            Level::Critical,
+                            "late",
+                            now,
+                            f.clone(),
+                        );
                     }
                     if !self.can_cancel() {
-                        self.alert_once(format!("would-cancel:{k}:{}", c.submitted_at), Level::Critical, "would-cancel", now, f);
+                        self.alert_once(
+                            format!("would-cancel:{k}:{}", c.submitted_at),
+                            Level::Critical,
+                            "would-cancel",
+                            now,
+                            f,
+                        );
                     } else {
                         let earlier = self.store.cancels_before(&k, u64::MAX);
                         match self.chain.cancel(c.new_state).await {
@@ -364,7 +398,13 @@ impl Ctx {
             let f = json!({ "index": index, "newState": key(&c.new_state), "tipId": c.tip_id, "tipHash": c.tip_hash,
                             "reason": reason, "finalizedAt": finalized_at, "revokeBy": revoke_by,
                             "action": format!("revokeFrom({index}) by the freeze authority before {revoke_by}") });
-            self.alert_once(format!("finalized-wrong:{index}:{finalized_at}"), Level::Critical, "finalized-wrong", now, f.clone());
+            self.alert_once(
+                format!("finalized-wrong:{index}:{finalized_at}"),
+                Level::Critical,
+                "finalized-wrong",
+                now,
+                f.clone(),
+            );
             if !self.is_freeze || self.cfg.dry_run {
                 continue; // the multisig acts on the alert; audited again next poll until revoked
             }
@@ -383,7 +423,12 @@ impl Ctx {
                     self.store.to_audit.remove(&index);
                     self.store.finalized.insert(index, "revoked".into());
                 }
-                Err(e) => self.alerts.emit(Level::Critical, "revoke-failed", now, json!({ "index": index, "error": format!("{e:#}") })),
+                Err(e) => self.alerts.emit(
+                    Level::Critical,
+                    "revoke-failed",
+                    now,
+                    json!({ "index": index, "error": format!("{e:#}") }),
+                ),
             }
         }
         Ok(())
@@ -418,13 +463,7 @@ pub async fn run(cfg: Config, chain: Chain, alerts: Alerts) -> Result<()> {
     if resumed {
         store.next_block = store.next_block.saturating_sub(cfg.reorg_margin).max(cfg.start_block);
     }
-    let policy = Policy {
-        rule,
-        turn_seconds,
-        b_lag_grace: cfg.b_lag_grace,
-        delta_g: cfg.delta_g,
-        margin: cfg.margin,
-    };
+    let policy = Policy { rule, turn_seconds, b_lag_grace: cfg.b_lag_grace, delta_g: cfg.delta_g, margin: cfg.margin };
     let (_, now) = chain.head().await?;
     alerts.emit(
         Level::Info,
@@ -448,10 +487,25 @@ pub async fn run(cfg: Config, chain: Chain, alerts: Alerts) -> Result<()> {
 
     let mut term = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;
     let mut polls = 0u64;
+    let mut failing_since: Option<u64> = None;
     loop {
-        if let Err(e) = ctx.poll().await {
-            let (_, now) = ctx.chain.head().await.unwrap_or((0, 0));
-            ctx.alerts.emit(Level::Warn, "poll-failed", now, json!({ "error": format!("{e:#}") }));
+        match ctx.poll().await {
+            Ok(()) => failing_since = None,
+            Err(e) => {
+                // Wall clock here: the chain may be what fails. One alert per 10 minutes; critical once
+                // the polls have failed for 5 minutes (the watcher cannot see new candidates).
+                let wall = wall_secs();
+                let since = *failing_since.get_or_insert(wall);
+                let level = if wall - since >= 300 { Level::Critical } else { Level::Warn };
+                let (_, now) = ctx.chain.head().await.unwrap_or((0, 0));
+                ctx.alert_once(
+                    format!("poll-failed:{}:{level:?}", wall / 600),
+                    level,
+                    "poll-failed",
+                    now,
+                    json!({ "error": format!("{e:#}"), "failingForSeconds": wall - since }),
+                );
+            }
         }
         ctx.store.polls += 1;
         ctx.save()?;

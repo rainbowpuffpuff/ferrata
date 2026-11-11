@@ -139,7 +139,12 @@ impl NodeView {
     pub fn validate(&self) -> Result<()> {
         ensure!(!self.node.is_empty(), "a node view needs a label");
         if let Some((&id, _)) = self.final_blocks.iter().next_back() {
-            ensure!(id <= self.final_height, "{}: block {id} given as final above finalHeight {}", self.node, self.final_height);
+            ensure!(
+                id <= self.final_height,
+                "{}: block {id} given as final above finalHeight {}",
+                self.node,
+                self.final_height
+            );
         }
         for w in self.key_sets.windows(2) {
             ensure!(w[0].from_block < w[1].from_block, "{}: keySets must ascend by fromBlock", self.node);
@@ -169,7 +174,9 @@ impl NodeView {
     pub fn from_chain_tsv(node: &str, text: &str, key_sets: Vec<KeySet>) -> Result<Self> {
         let mut lines = text.lines().filter(|l| !l.trim().is_empty());
         let header: Vec<&str> = lines.next().context("an empty chain.tsv")?.split('\t').collect();
-        let col = |name: &str| header.iter().position(|c| *c == name).with_context(|| format!("chain.tsv has no {name} column"));
+        let col = |name: &str| {
+            header.iter().position(|c| *c == name).with_context(|| format!("chain.tsv has no {name} column"))
+        };
         let (ib, ih, is) = (col("block")?, col("hash")?, col("bedrock_status")?);
         let mut final_blocks = BTreeMap::new();
         let mut final_height = 0u64;

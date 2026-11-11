@@ -1,7 +1,6 @@
 //! The Ethereum side: the vault's events, the views the monitor reads, and its three transactions
 //! (`cancelCandidate`, `pauseCheckpoints`, and `revokeFrom` when its key is the freeze authority).
 
-use anyhow::{anyhow, bail, Context, Result};
 use alloy::{
     eips::BlockId,
     network::{EthereumWallet, TransactionBuilder as _},
@@ -12,6 +11,7 @@ use alloy::{
     sol,
     sol_types::{SolCall, SolEvent},
 };
+use anyhow::{anyhow, bail, Context, Result};
 
 use crate::check::{Candidate, Rule};
 use crate::node::H32;
@@ -88,10 +88,25 @@ sol! {
 #[derive(Clone, Debug)]
 pub enum VaultEvent {
     /// `submitted_at` is filled from the vault's `candidates` when the monitor first checks it.
-    Submitted { candidate: Candidate, block: u64 },
-    Finalized { index: u64, candidate: Candidate, block: u64 },
-    Cancelled { new_state: H32, block: u64, tx: Option<B256> },
-    Revoked { from_index: u64, to_index: u64, block: u64 },
+    Submitted {
+        candidate: Candidate,
+        block: u64,
+    },
+    Finalized {
+        index: u64,
+        candidate: Candidate,
+        block: u64,
+    },
+    Cancelled {
+        new_state: H32,
+        block: u64,
+        tx: Option<B256>,
+    },
+    Revoked {
+        from_index: u64,
+        to_index: u64,
+        block: u64,
+    },
 }
 
 /// A candidate as the vault stores it.
