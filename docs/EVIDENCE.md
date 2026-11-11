@@ -81,20 +81,22 @@ claimed (row 27). Nothing after deposit 0 has been sent, and nothing runs on a p
 
 ## Suites at this commit
 
-Re-run in the third integration pass (11 Nov 2026) on the build box of branch `integration3`, code as of
-commit 4637a16 (the commits after it change documents only); every count and command is in
-[`evidence-suites.txt`](evidence-suites.txt). Image ids are those of that worktree's path.
+Re-run in the fourth integration pass (11 Nov 2026) on the build box of branch `integration4`, code as of
+commit 1ed19aa plus b792f7c (formatting of the CLI's vault script; the other commits after it change documents
+only); every count and command is in [`evidence-suites.txt`](evidence-suites.txt). Image ids are those of that
+worktree's path.
 
 | Suite | Result |
 |---|---|
 | Root workspace, CI job as written (vectors fetched on the box; `stable` as 1.98.1) | 142 tests passed in 21 binaries; fmt, clippy `-D warnings` and the `no_std` RISC-V build clean |
-| LEZ harness, every test (private paths in dev mode) | 36 passed in 21 binaries (the privacy suite's LEZ half is the 36th); clippy and fmt clean; `prove_bridge`'s dry run settles its claim and burn; the live driver checks (`cargo check --locked`) |
-| LEZ v0.4.0-rc2 selection (`lez/scripts/lez-select.sh`) | on rc2: `cargo metadata --locked` of `lez/` and the driver, clippy `-D warnings` of wire, bridge-wire, harness and methods, `cargo check --locked` of the driver; back on rc1 every manifest and lockfile byte-identical |
-| Checkpoint: `checkpoint-core` and `attestor-core` (rules (A) and (B)); fidelity; `realblocks` | 33 passed in 8 binaries, clippy and fmt clean, attestor vectors re-derived in Python; fidelity 17 passed in 6; the `realblocks` tool builds, clippy and fmt clean |
-| Privacy suite (`scripts/privacy/run.sh`) | both halves pass; gate, rates, hidden column and recovery as in row 23 |
-| Vault: `forge test`, coverage, invariants | 407 passed in 35 suites, among them the 14 invariants on a rule (A) and on a rule (B) vault (28 campaigns of 256 runs × 100 calls); coverage 100% (lines, statements, branches, functions) of both files; mutation not re-run (`vault/src` unchanged since the second pass: 223/223) |
-| Link checker (`scripts/check-links.py`, laptop: it needs git) | 18 files, 306 links, 0 broken |
+| LEZ harness, every test (private paths in dev mode) | 36 passed in 21 binaries (the privacy suite's LEZ half is the 36th); clippy and fmt clean; `prove_bridge`'s dry run settles its claim and burn |
+| Live driver (`lez/live/driver`, changed by the crossing's branch) | `cargo check --locked` clean; it has no tests; clippy `-D warnings` (4 lints) and rustfmt (8 files) are not clean, and were never part of CI |
+| Checkpoint: `checkpoint-core` and `attestor-core` (rules (A) and (B)); fidelity; `realblocks` | 33 passed in 8 binaries, clippy and fmt clean, attestor vectors re-derived in Python; fidelity 17 passed in 6; the `realblocks` tool builds, clippy clean |
+| Command-line tool (`cli/`) | 4 unit tests passed; the end-to-end test (anvil, the harness in dev mode, the mock verifier) passed, recovering 10 of 10 unclaimed deposits and 10 of 10 unreleased burns from the seed; fmt clean |
+| Privacy suite (`scripts/privacy/run.sh`) | both halves pass; gate, rates, hidden column and recovery as in row 23 (the informational claim-to-burn rate, which depends on the build's ids, 5.0% at this path) |
+| Vault: `forge test`, coverage, invariants | 407 passed in 35 suites, 31 of them with real proofs (`test/real/`), among them the 14 invariants on a rule (A) and on a rule (B) vault; coverage 100% (lines, statements, branches, functions) of both files; `forge fmt --check` clean after formatting the CLI's script; mutation not re-run (`vault/src` unchanged since the second pass: 223/223) |
+| Link checker (`scripts/check-links.py`, laptop: it needs git) | 24 files, 813 links, 0 broken |
 
-Not re-run here: `bridge/scripts/check.sh` (only `cargo clippy -p ferrata-e2e -D warnings` ran, clean),
-`modules/scripts/check.sh` (about 47 min, Nix from source), `bench/`, the finality simulator, the lab's
-`lab.sh verify`, and any proof.
+Not re-run here: the LEZ v0.4.0-rc2 selection (no manifest or lockfile of `lez/` changed since the third pass),
+`bridge/scripts/check.sh`, `modules/scripts/check.sh` (about 47 min, Nix from source), `bench/`, the finality
+simulator, the lab's `lab.sh verify`, and any proof.

@@ -37,7 +37,7 @@ a burn under a finalised, unrevoked burn root.
 
 Status: prototype evidence for a grant proposal. **Not audited.** This v5 vault is not deployed anywhere (its deployment
 script is rehearsed on a local fork of Sepolia only); the v3 vault of the end-to-end fixture is on Sepolia with one deposit
-(`../lez/live/inbound/README.md`, "On Sepolia"). In the vault's own 374 tests proofs are mocked: the base verifier accepts exactly the (image id, journal digest) pairs a test registers.
+(`../lez/live/inbound/README.md`, "On Sepolia"). In the vault's own tests (376 of the 407; the other 31, in `test/real/`, use real proofs) proofs are mocked: the base verifier accepts exactly the (image id, journal digest) pairs a test registers.
 It sits behind RISC Zero's unmodified `RiscZeroVerifierEmergencyStop`, as a deployment's would. `test/real/` runs
 the return leg once with no mock on the Ethereum side: RISC Zero's real Groth16 verifier behind the same stop, a
 real proof of the checkpoint program for the candidate, a second one for the finalisation, and real proofs of the
@@ -768,7 +768,10 @@ vault's own storage for the LEZ side's test, `../lez/BRIDGE-RESULTS.md` §8a), m
 box: `forge test` 31 suites, 396 tests passed; coverage of both files as above; the mutation run
 223/223 killed again; `forge fmt --check` ok. `forge build --sizes` gives the same sizes but exits 1,
 because a test contract (`VaultHandler`, 37,928 bytes) is above EIP-170, which forge does not enforce
-in tests.
+in tests. On branches `integration3` and `integration4` (the same `src/`, plus `test/real/RealBlocks.t.sol`,
+the real-block checkpoint's 10 tests, and `test/PrivacySuite.t.sol`, the privacy suite's Ethereum half):
+`forge test` 35 suites, 407 tests passed, 31 of them in `test/real/`; coverage of both files as above
+(`../docs/evidence-suites.txt`).
 
 The deployment and rehearsal scripts (`script/DeployVault.s.sol`, `script/ForkRehearsal.s.sol`) are not run by
 `forge test`; `forge coverage` lists them at 0%. `script/fork-rehearsal.sh` runs every step of the first under both
