@@ -1,0 +1,33 @@
+{
+  "blocks_checked": 24,
+  "blocks_per_signer": {
+    "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac": {
+      "count": 7,
+      "first": 7,
+      "last": 25
+    },
+    "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3": {
+      "count": 6,
+      "first": 13,
+      "last": 18
+    },
+    "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096": {
+      "count": 11,
+      "first": 2,
+      "last": 24
+    }
+  },
+  "final_msg_id": "3e118b4fdba4f0cebfac971ffeebf44da788995b8f6187766a67d6e7712b14a7",
+  "first_block": 2,
+  "keys": [
+    "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+    "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac",
+    "90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729",
+    "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3"
+  ],
+  "lib_slot": 8932252,
+  "posting_timeframe": 60,
+  "tip_hash": "2f80e8ef0a827acfea3b28ee7cdb0da5420918952874bb76b78f6376239cf383",
+  "tip_id": 25,
+  "tip_signer": "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac"
+}

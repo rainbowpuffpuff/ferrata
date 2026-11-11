@@ -1,0 +1,48 @@
+{
+  "attestations": [
+    {
+      "attestation_key": "c5e721a5205298125bb29075b3d912ea091f23e0ac098ff00ddb4f5ce8af02df",
+      "channel_key": "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+      "tip_id": 30
+    },
+    {
+      "attestation_key": "9c2d7b57e5915bb782173d30cb1e2316252cf46beccfdc0db0e184cbbb542d6c",
+      "channel_key": "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3",
+      "tip_id": 30
+    }
+  ],
+  "block_bytes": 23492,
+  "blocks": 28,
+  "blocks_to_t": 28,
+  "config_tip_hash": "e502602b81aa7b2ae5bca4f003303c26d00848b3d1339b56bc05fa5be654224c",
+  "deployment": {
+    "channel_id": "0101010101010101010101010101010101010101010101010101010101010101",
+    "evm_chain_id": "0000000000000000000000000000000000000000000000000000000000007a69",
+    "lez_config_id": "21effc46a860f3cbe66cacdd28fc11d4e0691ce7239e9ca330657d7ecc19523e",
+    "vault": "0xcc12f910bdbe58196fe071d29859119be398fc38"
+  },
+  "description": "must be refused: two attestations where n = 4 needs three",
+  "expect_refusal": "InsufficientAttestations { have: 2, need: 3 }",
+  "input_bytes": 25902,
+  "keys": [
+    "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+    "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac",
+    "90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729",
+    "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3"
+  ],
+  "kind": "checkpoint-b",
+  "n": 4,
+  "n_min": 4,
+  "name": "rbz-refuse-two-of-four",
+  "native": "refused: InsufficientAttestations { have: 2, need: 3 }",
+  "parent_state": "60dfe488fd852f604a80867af4bc50cb9ed3e746c81538e59a641777c903e559",
+  "parent_tip_hash": "1955b31b844d6f4ac38007d571f6e080da4d5c9047356d19b73e8ab74cb2a17a",
+  "parent_tip_id": 2,
+  "posting_timeframe": 60,
+  "segments": 0,
+  "t": 3,
+  "t_min": 3,
+  "tip": 30,
+  "tip_hash": "c7b81252e95f6fc30e36f9f3564e27c3660e1358089d062e55c489092765b01e",
+  "transactions": 56
+}

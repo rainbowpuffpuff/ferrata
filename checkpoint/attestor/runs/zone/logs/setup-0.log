@@ -1,0 +1,4 @@
+spike/tmp/attestor/attestor-zone/seq-0 is set up
+  channel signing public key  fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096
+`start` creates the channel if it does not exist yet.
+Creating the channel stakes that key at genesis.

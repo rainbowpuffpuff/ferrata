@@ -1,0 +1,22 @@
+[package]
+name = "ferrata-attestor"
+version = "0.1.0"
+description = "ferrata_attestor: the rule (B) signer a LEZ sequencer runs beside its Logos Blockchain node (SPEC-v3 D7, D13): reads the node's final tier, checks the channel's inscription chain, signs the final-tier message v2 with an attestation key its channel key certified; and the collector that puts t of n attestations into a checkpoint_b input"
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "ferrata_attestor"
+path = "src/main.rs"
+
+[dependencies]
+checkpoint-core = { path = "../crates/checkpoint-core", features = ["std"] }
+attestor-core = { path = "../crates/attestor-core" }
+ed25519-dalek = { version = "2.2.0", default-features = false }
+anyhow = "1"
+hex = "0.4"
+serde_json = "1"

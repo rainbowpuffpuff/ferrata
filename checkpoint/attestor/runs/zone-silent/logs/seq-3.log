@@ -1,0 +1,65 @@
+[2026-11-11T19:22:56Z INFO  sequencer_service] Config: {"home":"spike/tmp/attestor/attestor-zone/seq-3","max_num_tx_in_block":20,"mempool_max_size":10000,"block_create_timeout":"10s","retry_pending_blocks_timeout":"7s","bedrock_config":{"channel_id":"0101010101010101010101010101010101010101010101010101010101010101","node_url":"http://127.0.0.1:18080/","auth":null,"priority_fee_percent":12,"stale_refund_slots":300},"cross_zone":null,"metrics_listen_address":"127.0.0.1:19203","gossip":{"listen_addr":"/ip4/127.0.0.1/udp/19103/quic-v1","bootstrap_peers":["/ip4/127.0.0.1/udp/19100/quic-v1","/ip4/127.0.0.1/udp/19101/quic-v1","/ip4/127.0.0.1/udp/19102/quic-v1"]}}, channel signing key file: spike/tmp/attestor/attestor-zone/seq-3/channel_signing_key, funding public key: "2e03b2eff5a45478e7e79668d2a146cf2c5c7925bce927f2b1c67f2ab4fc0d26"
+[2026-11-11T19:22:56Z INFO  sequencer_service] Storage Actor spawned
+[2026-11-11T19:22:56Z INFO  sequencer_service] Bedrock Broker Actor spawned
+[2026-11-11T19:22:56Z INFO  sequencer_service] Channel signing public key: 90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729
+[2026-11-11T19:22:56Z INFO  logos_blockchain::zone_sdk::sequencer] Starting fresh (no checkpoint)
+[2026-11-11T19:22:56Z INFO  logos_blockchain::zone_sdk::sequencer] Sequencer connected: tip=HeaderId(1d462d8621c773786d3d383f213aff361a2681018cbacfe19b52f7cbb605701a), lib=HeaderId(a354b19798beb4d8dc9c937452c283a06522905af2bf19014d117bc9c1767537)
+[2026-11-11T19:22:56Z INFO  sequencer_bedrock_actor::actor] Turn update: our_turn=false, starting_slot=Some(8931938), ends_at_slot=Some(8931998)
+[2026-11-11T19:23:27Z INFO  sequencer_service] Bedrock Actor spawned
+[2026-11-11T19:23:27Z INFO  sequencer_core] Channel signing public key: 90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729
+[2026-11-11T19:23:27Z INFO  sequencer_core] Channel already exists; joining as a non channel creator
+[2026-11-11T19:23:27Z INFO  sequencer_core] Genesis fingerprint: 28b3b7c36e661ebab9d6eb245c6bb7265925a4277bdb4f543e08e6c7151fc68b
+[2026-11-11T19:23:27Z INFO  sequencer_core] Genesis fingerprint: 28b3b7c36e661ebab9d6eb245c6bb7265925a4277bdb4f543e08e6c7151fc68b
+[2026-11-11T19:23:27Z INFO  sequencer_core] No stored channel view; starting on the final tier
+[2026-11-11T19:23:45Z INFO  sequencer_bedrock_actor::actor] Turn update: our_turn=false, starting_slot=Some(8931998), ends_at_slot=Some(8932058)
+[2026-11-11T19:23:56Z INFO  sequencer_service] Executor Actor spawned
+[2026-11-11T19:23:56Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 1..=1 (1), head Some(1)
+[2026-11-11T19:23:56Z INFO  libp2p_swarm] local_peer_id=12D3KooWKZ14CHz277voF6mGT5ZEugmTsDY6tg9Qsp6XLXz7KVBe
+[2026-11-11T19:23:56Z INFO  sequencer_core::logging] Channel update: adopted 2..=2 (1), finalized none, head Some(1)
+[2026-11-11T19:23:56Z INFO  sequencer_gossip_actor::actor] Gossip listening on [/ip4/127.0.0.1/udp/19103/quic-v1] as 12D3KooWKZ14CHz277voF6mGT5ZEugmTsDY6tg9Qsp6XLXz7KVBe
+[2026-11-11T19:23:56Z INFO  sequencer_service] Gossip network started as 12D3KooWKZ14CHz277voF6mGT5ZEugmTsDY6tg9Qsp6XLXz7KVBe
+[2026-11-11T19:23:56Z INFO  sequencer_service] Gossip Actor spawned
+[2026-11-11T19:23:56Z INFO  sequencer_rpc_server_actor::actor] Starting RPC Server on 127.0.0.1:19303
+[2026-11-11T19:23:56Z INFO  sequencer_service] RPC Server Actor spawned
+[2026-11-11T19:23:56Z INFO  sequencer_service] Block production scheduler started
+[2026-11-11T19:23:56Z INFO  sequencer_core] Channel pin moved to b920d6bc97f6671ef40824ebcfe11839a610a87525f2d94ccf242e5a51d45110
+[2026-11-11T19:23:56Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 2..=2 (1), head Some(2)
+[2026-11-11T19:23:56Z INFO  sequencer_core::logging] Channel update: adopted 3..=3 (1), finalized none, head Some(2)
+[2026-11-11T19:23:57Z INFO  sequencer_core] Channel pin moved to 7db3ff42fe1d3ce309c0b27518db282788e72836da168e32e45587aa1d281755
+[2026-11-11T19:23:57Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 3..=3 (1), head Some(3)
+[2026-11-11T19:23:57Z INFO  sequencer_core::logging] Channel update: adopted 4..=4 (1), finalized none, head Some(3)
+[2026-11-11T19:23:57Z INFO  sequencer_core] Channel pin moved to 0aa618aac94fe1eca4e9731b7500cf0347b0e2038656d7f855cb5279797a36e6
+[2026-11-11T19:23:57Z INFO  sequencer_service] Received SIGTERM
+[2026-11-11T19:23:57Z INFO  sequencer_service] Shutting down sequencer...
+[2026-11-11T19:23:57Z INFO  sequencer_service::actor_handle] Stopping kameo_actors::scheduler::Scheduler#6 actor...
+[2026-11-11T19:23:57Z INFO  sequencer_service::actor_handle] kameo_actors::scheduler::Scheduler#6 actor stopped
+[2026-11-11T19:23:57Z INFO  sequencer_service::actor_handle] Killing kameo_actors::scheduler::Scheduler#6 actor
+[2026-11-11T19:23:57Z INFO  sequencer_service::actor_handle] Stopping Broker#2 actor...
+[2026-11-11T19:23:57Z INFO  sequencer_service::actor_handle] Broker#2 actor stopped
+[2026-11-11T19:23:57Z INFO  sequencer_service::actor_handle] Killing Broker#2 actor
+[2026-11-11T19:23:57Z INFO  sequencer_service::actor_handle] Stopping sequencer_rpc_server_actor::actor::RpcServerActor#8 actor...
+[2026-11-11T19:23:57Z INFO  sequencer_service::actor_handle] sequencer_rpc_server_actor::actor::RpcServerActor#8 actor stopped
+[2026-11-11T19:23:57Z INFO  sequencer_service::actor_handle] Killing sequencer_rpc_server_actor::actor::RpcServerActor#8 actor
+[2026-11-11T19:23:57Z INFO  sequencer_service::actor_handle] Stopping sequencer_gossip_actor::actor::GossipActor#7 actor...
+[2026-11-11T19:23:57Z INFO  sequencer_service::actor_handle] sequencer_gossip_actor::actor::GossipActor#7 actor stopped
+[2026-11-11T19:23:57Z INFO  sequencer_service::actor_handle] Killing sequencer_gossip_actor::actor::GossipActor#7 actor
+[2026-11-11T19:23:57Z INFO  sequencer_service::actor_handle] Stopping sequencer_executor_actor::actor::ExecutorActor<sequencer_storage_actor::actor::StorageActor, sequencer_bedrock_actor::actor::BedrockActor>#1 actor...
+[2026-11-11T19:23:57Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 4..=4 (1), head Some(4)
+[2026-11-11T19:23:57Z INFO  sequencer_core::logging] Channel update: adopted 5..=5 (1), finalized none, head Some(4)
+[2026-11-11T19:23:57Z INFO  sequencer_core] Channel pin moved to 253243cbff90a88ebf820ea0d601675129f5aa54a080e09b651382c19403edf4
+[2026-11-11T19:23:57Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 5..=5 (1), head Some(5)
+[2026-11-11T19:23:57Z INFO  sequencer_core::logging] Channel update: adopted 6..=6 (1), finalized none, head Some(5)
+[2026-11-11T19:23:57Z INFO  sequencer_core] Channel pin moved to 78768b33c3084fad01d7003ab44aef1fed8b26061adaafe49489324ff2262f17
+[2026-11-11T19:23:57Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 6..=6 (1), head Some(6)
+[2026-11-11T19:23:57Z INFO  sequencer_service::actor_handle] sequencer_executor_actor::actor::ExecutorActor<sequencer_storage_actor::actor::StorageActor, sequencer_bedrock_actor::actor::BedrockActor>#1 actor stopped
+[2026-11-11T19:23:57Z INFO  sequencer_service::actor_handle] Killing sequencer_executor_actor::actor::ExecutorActor<sequencer_storage_actor::actor::StorageActor, sequencer_bedrock_actor::actor::BedrockActor>#1 actor
+[2026-11-11T19:23:57Z INFO  sequencer_service::actor_handle] Stopping sequencer_slasher_actor::actor::SlasherActor#4 actor...
+[2026-11-11T19:23:57Z INFO  sequencer_service::actor_handle] sequencer_slasher_actor::actor::SlasherActor#4 actor stopped
+[2026-11-11T19:23:57Z INFO  sequencer_service::actor_handle] Killing sequencer_slasher_actor::actor::SlasherActor#4 actor
+[2026-11-11T19:23:57Z INFO  sequencer_service::actor_handle] Stopping sequencer_bedrock_actor::actor::BedrockActor#3 actor...
+[2026-11-11T19:23:57Z INFO  sequencer_service::actor_handle] sequencer_bedrock_actor::actor::BedrockActor#3 actor stopped
+[2026-11-11T19:23:57Z INFO  sequencer_service::actor_handle] Killing sequencer_bedrock_actor::actor::BedrockActor#3 actor
+[2026-11-11T19:23:57Z INFO  sequencer_service::actor_handle] Stopping sequencer_storage_actor::actor::StorageActor#0 actor...
+[2026-11-11T19:23:57Z INFO  sequencer_service::actor_handle] sequencer_storage_actor::actor::StorageActor#0 actor stopped
+[2026-11-11T19:23:57Z INFO  sequencer_service::actor_handle] Killing sequencer_storage_actor::actor::StorageActor#0 actor
+[2026-11-11T19:23:57Z INFO  sequencer_service] Sequencer shutdown complete

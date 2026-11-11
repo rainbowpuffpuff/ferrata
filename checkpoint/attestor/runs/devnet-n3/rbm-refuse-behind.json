@@ -1,0 +1,47 @@
+{
+  "attestations": [
+    {
+      "attestation_key": "b707f1eedbcf1ed8ea4b7e06677eb1c1925117a021edf5d782452abc305fbc6a",
+      "channel_key": "3b14e3980d05dd3651ff5956758dd4cfecc33b837775c9e3d90279d34d3fb0a2",
+      "tip_id": 202
+    },
+    {
+      "attestation_key": "9b065ce4e440e2a2c9ebfc0dca343392d071ec2e23f0d6be37b8a4589069917f",
+      "channel_key": "ee5875eb126e89d3d2179d8045d20f57376c0a8bf79b53c45929ae18ece6df42",
+      "tip_id": 201
+    }
+  ],
+  "block_bytes": 87349,
+  "blocks": 17,
+  "blocks_to_t": 17,
+  "config_tip_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "deployment": {
+    "channel_id": "0101010101010101010101010101010101010101010101010101010101010101",
+    "evm_chain_id": "0000000000000000000000000000000000000000000000000000000000007a69",
+    "lez_config_id": "da0edd60a6d1dd7209f00c890b1a6f0016c8ded14023b552fe82fac5422c9d40",
+    "vault": "0xdd2c90d0de9cfc2902490b0e84c46418b7cd6297"
+  },
+  "description": "must be refused: an attestation of 201 for T = 202 (its node was behind)",
+  "expect_refusal": "NotADescendant { tip_id: 201 }",
+  "input_bytes": 89683,
+  "keys": [
+    "3b14e3980d05dd3651ff5956758dd4cfecc33b837775c9e3d90279d34d3fb0a2",
+    "e3db11180792a86624197292eb8e6bbbe6dc11b504f0e66016724bf267d06813",
+    "ee5875eb126e89d3d2179d8045d20f57376c0a8bf79b53c45929ae18ece6df42"
+  ],
+  "kind": "checkpoint-b",
+  "n": 3,
+  "n_min": 3,
+  "name": "rbm-refuse-behind",
+  "native": "refused: NotADescendant { tip_id: 201 }",
+  "parent_state": "b8efe5c63b7afee60f00e3c1d2e92424899abc7980ce19b951fa406027734d13",
+  "parent_tip_hash": "1c73d4666c49db071efcd1bffad46c3cde7a353457548c5d7414907fbdf372ed",
+  "parent_tip_id": 185,
+  "posting_timeframe": 0,
+  "segments": 0,
+  "t": 2,
+  "t_min": 2,
+  "tip": 202,
+  "tip_hash": "774780c60182852a283544372f21f24d9f532953bbdd8d71823a012edb322bbb",
+  "transactions": 51
+}

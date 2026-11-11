@@ -1,0 +1,29 @@
+== the node's final tier
+tip 30 keys 4 checked 29
+  6462ecf103d4074b {'count': 6, 'first': 7, 'last': 12}
+  90a548e0db5eaf85 {'count': 6, 'first': 13, 'last': 18}
+  99273f3e47ddce77 {'count': 6, 'first': 19, 'last': 24}
+  fce0d0fadf637a62 {'count': 11, 'first': 2, 'last': 30}
+== the base: final blocks 3..=30, parent block 2, nMin 4, tMin 3
+base: blocks 3..=30, n = 4, configId 21effc46a860f3cbe66cacdd28fc11d4e0691ce7239e9ca330657d7ecc19523e, parent state 60dfe488fd852f604a80867af4bc50cb9ed3e746c81538e59a641777c903e559
+{"channel_id":"0101010101010101010101010101010101010101010101010101010101010101","evm_chain_id":"0000000000000000000000000000000000000000000000000000000000007a69","lez_config_id":"21effc46a860f3cbe66cacdd28fc11d4e0691ce7239e9ca330657d7ecc19523e","vault":"0xcc12f910bdbe58196fe071d29859119be398fc38"}
+== each sequencer's channel key certifies its attestor's key; the attestors sign
+certified c5e721a5205298125bb29075b3d912ea091f23e0ac098ff00ddb4f5ce8af02df by channel key fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096
+attested: channel key fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096 | attestation key c5e721a5205298125bb29075b3d912ea091f23e0ac098ff00ddb4f5ce8af02df | final tip 30 c7b81252e95f6fc30e36f9f3564e27c3660e1358089d062e55c489092765b01e (final message 1cf04ac650090ce1a0a329f6a50c97d7687
+certified 9c2d7b57e5915bb782173d30cb1e2316252cf46beccfdc0db0e184cbbb542d6c by channel key 99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3
+attested: channel key 99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3 | attestation key 9c2d7b57e5915bb782173d30cb1e2316252cf46beccfdc0db0e184cbbb542d6c | final tip 30 c7b81252e95f6fc30e36f9f3564e27c3660e1358089d062e55c489092765b01e (final message 1cf04ac650090ce1a0a329f6a50c97d7687
+certified c9de1a3f8f8497b0e7662b66fcf65cc1051f5a01d16974cfc288af86fe92c547 by channel key 6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac
+attested: channel key 6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac | attestation key c9de1a3f8f8497b0e7662b66fcf65cc1051f5a01d16974cfc288af86fe92c547 | final tip 30 c7b81252e95f6fc30e36f9f3564e27c3660e1358089d062e55c489092765b01e (final message 1cf04ac650090ce1a0a329f6a50c97d7687
+certified c629a57103242efa751d28f21508bbe54bd7f90f23ae6bdca590c130f0c4d513 by channel key 90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729
+attested: channel key 90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729 | attestation key c629a57103242efa751d28f21508bbe54bd7f90f23ae6bdca590c130f0c4d513 | final tip 30 c7b81252e95f6fc30e36f9f3564e27c3660e1358089d062e55c489092765b01e (final message 1cf04ac650090ce1a0a329f6a50c97d7687
+checkpoint/attestor/runs/zone/att-0.json: verifies (channel key fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096, tip 30)
+checkpoint/attestor/runs/zone/att-1.json: verifies (channel key 99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3, tip 30)
+checkpoint/attestor/runs/zone/att-2.json: verifies (channel key 6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac, tip 30)
+checkpoint/attestor/runs/zone/att-3.json: verifies (channel key 90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729, tip 30)
+== the collector: 3 of 4 (sequencer 3 silent), 4 of 4; 2 of 4 refused
+kept 3 of 3 (n = 4, t = 3)
+rbz-zone-n4-t3: accepted: n = 4, t = 3, 3 attestations counted, producer fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096
+kept 4 of 4 (n = 4, t = 3)
+rbz-zone-n4-all: accepted: n = 4, t = 3, 4 attestations counted, producer fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096
+rbz-refuse-two-of-four: refused: InsufficientAttestations { have: 2, need: 3 }
+zone attestation done

@@ -1,0 +1,24 @@
+[19:22:41] node up: {"cryptarchia_info":{"lib":"402255ecf1448ec5d136c293f7eb818cd6137af8175bdc72f06a99cf2eef8a52","lib_slot":0,"tip":"402255ecf1448ec5d136c293f7eb818cd6137af8175bdc72f06a99cf2eef8a52","slot":0,"height":0,"state":"Bootstrapping"},"phase":"InitialBlockDownload"}
+[19:22:41] seq-0 set up: fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096
+[19:22:41] seq-1 set up: 99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3
+[19:22:41] seq-2 set up: 6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac
+[19:22:41] seq-3 set up: 90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729
+[19:22:56] channel keys/tip_sequencer/tip_slot: 4 0 8931949 | heights: 2/// | alive 4 | lib 8931944
+[19:23:16] channel keys/tip_sequencer/tip_slot: 4 0 8931969 | heights: 4/// | alive 4 | lib 8931964
+[19:23:37] channel keys/tip_sequencer/tip_slot: 4 0 8931989 | heights: 6/// | alive 4 | lib 8931985
+[19:23:57] seq-3 stopped (silent from now on)
+[19:23:57] channel keys/tip_sequencer/tip_slot: 4 0 8931989 | heights: 6/6/6/ | alive 4 | lib 8932005
+[19:24:18] channel keys/tip_sequencer/tip_slot: 4 1 8932030 | heights: 8/8/8/ | alive 3 | lib 8932026
+[19:24:38] channel keys/tip_sequencer/tip_slot: 4 1 8932050 | heights: 10/10/10/ | alive 3 | lib 8932046
+[19:24:58] channel keys/tip_sequencer/tip_slot: 4 1 8932070 | heights: 12/12/12/ | alive 3 | lib 8932066
+[19:25:18] channel keys/tip_sequencer/tip_slot: 4 1 8932070 | heights: 12/12/12/ | alive 3 | lib 8932085
+[19:25:38] channel keys/tip_sequencer/tip_slot: 4 1 8932070 | heights: 12/12/12/ | alive 3 | lib 8932106
+[19:25:58] channel keys/tip_sequencer/tip_slot: 4 3 8932131 | heights: 14/14/14/ | alive 3 | lib 8932126
+[19:26:19] channel keys/tip_sequencer/tip_slot: 4 3 8932151 | heights: 16/16/16/ | alive 3 | lib 8932147
+[19:26:39] channel keys/tip_sequencer/tip_slot: 4 3 8932171 | heights: 18/18/18/ | alive 3 | lib 8932167
+[19:26:59] channel keys/tip_sequencer/tip_slot: 4 0 8932189 | heights: 19/19/19/ | alive 3 | lib 8932187
+[19:27:19] channel keys/tip_sequencer/tip_slot: 4 0 8932209 | heights: 21/21/21/ | alive 3 | lib 8932207
+[19:27:39] channel keys/tip_sequencer/tip_slot: 4 0 8932229 | heights: 23/23/23/ | alive 3 | lib 8932227
+[19:28:04] sequencers stopped; waiting for the LIB to pass the channel's tip
+[19:28:04] channel tip slot 8932250, lib 8932252
+[19:28:05] answers saved: 1 windows, 345205 bytes; channel: {"accredited_keys":["fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096","6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac","90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729","99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3"],"configuration_threshold":3,"tip_message":"3e118b4fdba4f0cebfac971ffeebf44da788995b8f6187766a67d6e7712b14a7","config_tip_hash":"e502602b81aa7b2ae5bca4f003303c26d00848b3d1339b56bc05fa5be654224c","tip_slot":8932250,"tip_sequencer":1,"tip_sequencer_starting_slot":8932240,"posting_timeframe":60,"posting_timeout":25,"transfer_threshold":3}
