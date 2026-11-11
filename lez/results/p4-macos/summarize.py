@@ -119,38 +119,76 @@ def main() -> None:
         summary[mac.name] = rec
     out_path.write_text(json.dumps(summary, indent=1) + "\n")
 
-    print("| Mac | proof | run | `execute_and_prove` (s) | user cycles proven (segments) | LEZ's circuit: user cycles (segments) "
-          "| r0vm RSS peak (GiB, sampled) | `time -l`: max RSS / peak footprint (GiB) | receipt / transaction (B) | settled | flipped bit refused |")
-    print("|---|---|---:|---:|---:|---:|---:|---:|---:|---|---|")
-    for mac, rec in summary.items():
-        for p in rec["proofs"]:
-            ss = p.get("proven_sessions", [])
-            circ = ss[-1] if ss else {}
-            tl = p["time_l"]
-            label = p.get("label", "?")
-            tx = {"private attestation": "tx-attest.borsh", "private claim": "tx-claim.borsh", "private burn": "tx-burn.borsh"}.get(label)
-            settled = [l for l in p["settle"] if tx and tx in l]
-            if label != "private attestation" and tx:  # prove_bridge's settle log names each transaction
-                settled = [l for l in p["settle"] if label in l and "SETTLED" in l] or settled
-            tam = [t for t in p["tamper"] if t["tx"] == tx]
-            print(f"| {mac} | {label} | {p['run']} | {p.get('execute_and_prove_s', '—')} | "
-                  f"{p.get('user_cycles', 0):,} ({p.get('segments', 0)}) | {circ.get('user_cycles', 0):,} ({circ.get('segments', 0)}) | "
-                  f"{p['mem'].get('r0vm_rss_max_gib', '—')} | "
-                  f"{round(tl.get('max_rss_bytes', 0) / GIB, 2)} / {round(tl.get('peak_footprint_bytes', 0) / GIB, 2)} | "
-                  f"{p.get('receipt_bytes', '—')} / {p.get('tx_bytes', '—')} | "
-                  f"{'yes' if p.get('settle_exit') == 0 and settled else ('exit ' + str(p.get('settle_exit')))} | "
-                  f"{', '.join('exit ' + str(t['settle_exit']) for t in tam) or '—'} |")
-    print()
-    for mac, rec in summary.items():
-        for p in rec["proofs"]:
-            ss = p.get("proven_sessions", [])
-            print(f"{mac} run {p['run']} {p.get('label')}: sessions "
-                  + "; ".join(f"{s['user_cycles']:,} user cycles, {s['segments']} seg ({s['total_cycles']:,}), {s['gap_s']} s" for s in ss)
-                  + f"; GPU active % {p['powermetrics'].get('gpu_active_pct')}; mem {p['mem']}")
-        for r in rec["release"]:
-            print(f"{mac} release run {r['run']}: prove exit {r.get('prove_exit')} wall {r.get('wall_s')} s; time -l {r['time_l']}; "
-                  f"mem {r['mem']}; verify exit {r.get('verify_exit')}")
+    tables(summary)
 
+
+MACS = {"m1": "M1 (8 cores, 16 GB)", "m4": "M4 (10 cores, 24 GB)"}
+# p4-minimum's padded pass, medians of 2 (`execute_and_prove`, s) at 8 and 16 cloud CPUs, 16 GiB; release: second pass
+CLOUD = {"private attestation": (1236.8, 633.3), "private claim": (1146.0, 600.7), "private burn": (988.9, 525.9)}
+CLOUD_RELEASE = (46.0, 26.7)
+TX = {"private attestation": "tx-attest.borsh", "private claim": "tx-claim.borsh", "private burn": "tx-burn.borsh"}
+
+
+def med(xs):
+    return round(statistics.median(xs), 1) if xs else None
+
+
+def tables(summary: dict) -> None:
+    labels = ["private attestation", "private claim", "private burn"]
+    by = {(mac, l): [p for p in rec["proofs"] if p.get("label") == l and p.get("execute_and_prove_s")]
+          for mac, rec in summary.items() for l in labels}
+    print("| proof | " + " | ".join(f"{MACS.get(m, m)}: each run (s) | median" for m in summary)
+          + " | cloud, 8 CPUs: median | cloud, 16 CPUs: median | " + " | ".join(f"{m.upper()} / 16 CPUs" for m in summary)
+          + " | user cycles proven (segments) | LEZ's circuit: user cycles (segments) | settled, receipt verified |")
+    print("|---|" + "---|---:|" * len(summary) + "---:|---:|" + "---:|" * len(summary) + "---:|---:|---|")
+    for l in labels:
+        row, ratios, cyc, circ, settled, total = [], [], [], [], 0, 0
+        for mac in summary:
+            ps = sorted(by[(mac, l)], key=lambda p: p["run"])
+            xs = [p["execute_and_prove_s"] for p in ps]
+            row += [" / ".join(f"{x:.1f}" for x in xs) or "—", f"{med(xs)}" if xs else "—"]
+            ratios.append(f"{med(xs) / CLOUD[l][1]:.2f}×" if xs else "—")
+            cyc += [p["user_cycles"] for p in ps]
+            circ += [(p["proven_sessions"][-1]["user_cycles"], p["proven_sessions"][-1]["segments"]) for p in ps if p.get("proven_sessions")]
+            for p in ps:
+                total += 1
+                if p.get("settle_exit") == 0 and any(TX[l] in x or l in x for x in p["settle"] if "SETTLED" in x):
+                    settled += 1
+        segs = {p["segments"] for mac in summary for p in by[(mac, l)]}
+        rng = lambda v: f"{min(v):,}" if min(v) == max(v) else f"{min(v):,}–{max(v):,}"
+        print(f"| {l} | " + " | ".join(row) + f" | {CLOUD[l][0]} | {CLOUD[l][1]} | " + " | ".join(ratios)
+              + f" | {rng(cyc) if cyc else '—'} ({'/'.join(map(str, sorted(segs)))}) | "
+              + (f"{rng([c for c, _ in circ])} ({'/'.join(map(str, sorted({s for _, s in circ})))})" if circ else "—")
+              + f" | {settled} of {total} |")
+    print()
+    print("| Mac | run | job | proofs: `execute_and_prove` (s) | the sessions proven: user cycles, segments, proving time (s) "
+          "| `time -l`: wall (s), user (s), max RSS (GiB) | r0vm RSS, sampled peak (GiB) | vm_stat: least free, most compressed (GiB); swapouts "
+          "| GPU active residency (powermetrics, %) | settle exit | one flipped bit: settle exit |")
+    print("|---|---:|---|---|---|---|---:|---|---|---:|---|")
+    for mac, rec in summary.items():
+        seen = {}
+        for p in rec["proofs"]:
+            seen.setdefault((p["run"], p["job"]), []).append(p)
+        for (run, job), ps in sorted(seen.items()):
+            b = ps[0]
+            tl, mem, pm = b["time_l"], b["mem"], b["powermetrics"]
+            proofs = "; ".join(f"{p.get('label')}: {p.get('execute_and_prove_s', '—')}" for p in ps)
+            sess = "; ".join(", ".join(f"{s['user_cycles']:,} / {s['segments']} / {s['gap_s']}" for s in p.get("proven_sessions", [])) for p in ps)
+            gpu = pm.get("gpu_active_pct")
+            print(f"| {mac} | {run} | {job} | {proofs} | {sess or '—'} | "
+                  + (f"{tl['real_s']:.1f}, {tl['user_s']:.0f}, {tl['max_rss_bytes'] / GIB:.2f}" if 'real_s' in tl else "—")
+                  + f" | {mem.get('r0vm_rss_max_gib', '—')} | {mem.get('free_min_gib', '—')}, {mem.get('compressor_max_gib', '—')}; {mem.get('swapouts_during', '—')} | "
+                  + (f"{min(gpu):.2f}–{max(gpu):.2f} ({len(gpu)} samples of 10 s)" if gpu else "—")
+                  + f" | {b.get('settle_exit', '—')} | {', '.join(str(t['settle_exit']) for t in b['tamper']) or '—'} |")
+    print()
+    print("| Mac | run | succinct proof, `ferrata-e2e prove` (s) | `time -l` wall (s), max RSS (GiB) | r0vm RSS, sampled peak (GiB) | verified |")
+    print("|---|---:|---:|---|---:|---|")
+    for mac, rec in summary.items():
+        for r in rec["release"]:
+            tl = r["time_l"]
+            print(f"| {mac} | {r['run']} | {r.get('wall_s', '—')} | "
+                  + (f"{tl['real_s']:.1f}, {tl['max_rss_bytes'] / GIB:.2f}" if 'real_s' in tl else "—")
+                  + f" | {r['mem'].get('r0vm_rss_max_gib', '—')} | {'yes' if r.get('verify_exit') == 0 else r.get('verify_exit')} |")
 
 if __name__ == "__main__":
     main()
