@@ -280,3 +280,17 @@ fn the_weak_subjectivity_bound_on_init_and_open() {
     refused_with(&run.reports[0], Error::OutsideWeakSubjectivityPeriod.code() as u8);
     println!("{}", render(&[late, last, run.reports[0].clone()]));
 }
+
+/// The image ids of the guests this branch builds (the program, its consumers and the bridge),
+/// for the record (`--nocapture`).
+#[test]
+fn prints_the_image_ids() {
+    for (name, id, elf) in [
+        ("program (guests/program)", methods::FERRATA_LEZ_ID, methods::FERRATA_LEZ_ELF.len()),
+        ("consumer (guests/consumer)", methods::FERRATA_CONSUMER_ID, methods::FERRATA_CONSUMER_ELF.len()),
+        ("holdings (guests/holdings)", methods::FERRATA_HOLDINGS_ID, methods::FERRATA_HOLDINGS_ELF.len()),
+        ("bridge (guests/bridge)", methods::FERRATA_BRIDGE_ID, methods::FERRATA_BRIDGE_ELF.len()),
+    ] {
+        println!("image {name}: {} ({elf} bytes)", harness::image_id_hex(id));
+    }
+}

@@ -146,6 +146,8 @@ pub fn handler_name(input: &ReceiveInput) -> String {
             Ok(M::Apply { .. }) => "Apply",
             Ok(M::ApplyVerified { .. }) => "ApplyVerified",
             Ok(M::Record { .. }) => "Record",
+            Ok(M::Succeed { .. }) => "Succeed",
+            Ok(M::Spawn { .. }) => "Spawn",
             Err(_) => "(undecodable)",
         };
         return name.to_string();
