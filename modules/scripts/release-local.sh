@@ -69,6 +69,7 @@ for m in $MODULES; do
 done
 
 # The index, as rebuild-index.yml builds it: index.py over every release's .lgx URL.
+rm -rf "$out/_tool"
 git clone -q --depth 1 --branch "$TOOL_REF" "$TOOL_REPO" "$out/_tool"
 git -C "$out/_tool" rev-parse HEAD > "$out/log/tool-rev.txt"
 python3 -m http.server "$PORT" --bind 127.0.0.1 --directory "$out/dist" > "$out/log/http.log" 2>&1 &
