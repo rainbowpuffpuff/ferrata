@@ -33,7 +33,86 @@ jobs:
         run: cargo build -p ferrata-core --no-default-features --features zkcrypto --target riscv32im-unknown-none-elf --release --locked
 
   # The other directories (bench/, lez/, vault/, bridge/, checkpoint/) need RISC Zero's toolchain,
-  # Foundry or upstream sources and are run by hand; their READMEs give the commands.
+  # Foundry or upstream sources; their READMEs give the commands. Two of their checks run here
+  # (docs/guides/ci.md): the bridge guests' witness independence and the end-to-end round trip.
+
+  # SPEC-v2 §5.2, the zkVM step of bridge/scripts/check.sh: 64 random valid witnesses per guest
+  # (release, claim), executed in r0vm; fails if a guest's cycle count depends on its witness.
+  witness-independence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.93.0
+      - name: Cache RISC Zero's toolchains
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.risc0
+            ~/risc0-home-lez
+          key: risc0-3.0.5-rust-1.88.0-1.91.1-cpp-2024.1.5-${{ hashFiles('scripts/ci/install-risc0.sh') }}
+      - name: RISC Zero toolchains (rzup)
+        run: scripts/ci/install-risc0.sh
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: bridge -> target
+          shared-key: witness
+      - name: Cycle counts independent of the witness (release and claim guests)
+        run: scripts/ci/witness-independence.sh 64
+
+  # One round trip, every step asserted (e2e/ci/README.md): the v5 vault under rule (B) on anvil with
+  # the vault tests' mock verifier; LEZ v0.4.0-rc1's state transition in the harness (dev mode);
+  # deposit, attestation, claim, burn, a rule (B) checkpoint by the guest over the zone's blocks,
+  # release. No secret, nothing sent to any public network.
+  roundtrip:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free disk space (the LEZ and Logos Blockchain builds need about 20 GB)
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL && df -h .
+      - name: System libraries (libpcsclite for LEZ's wallet crates, protoc)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq libpcsclite-dev protobuf-compiler
+      - uses: dtolnay/rust-toolchain@1.93.0
+      - name: Rust 1.98.1 (LEZ v0.4.0-rc1's toolchain; cli/ and checkpoint/fidelity)
+        run: rustup toolchain install 1.98.1 --profile minimal
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.3.6
+      - name: Cache RISC Zero's toolchains
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.risc0
+            ~/risc0-home-lez
+          key: risc0-3.0.5-rust-1.88.0-1.91.1-cpp-2024.1.5-${{ hashFiles('scripts/ci/install-risc0.sh') }}
+      - name: RISC Zero toolchains (rzup)
+        run: scripts/ci/install-risc0.sh
+      - name: Cache the upstream sources (LEZ v0.4.0-rc1 1806e87, Logos Blockchain d480efc6)
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/../upstream
+          key: upstream-lez-1806e87-e3edf47-logos-blockchain-d480efc6
+      - name: Fetch the upstream sources
+        run: scripts/fetch-upstream.sh
+      - name: Cache the vault's libraries
+        uses: actions/cache@v4
+        with:
+          path: vault/lib
+          key: vault-lib-forge-std-1.10.0-oz-5.4.0-risc0-ethereum-3.0.0
+      # The LEZ build: LEZ's and Logos Blockchain's crates compiled in cli/target and checkpoint/target.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            bridge -> target
+            checkpoint -> target
+            cli -> target
+          shared-key: roundtrip
+          cache-on-failure: true
+      - name: Build (vault, release and rule (B) guests, ci_zone, the test)
+        run: e2e/ci/run.sh build
+      - name: Round trip
+        run: e2e/ci/run.sh
   links:
     runs-on: ubuntu-latest
     steps:
