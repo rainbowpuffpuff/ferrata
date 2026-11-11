@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 
 use attestor_core::{key_set_hash, sign_certificate, Deployment, FinalTip, SignedAttestation};
 use ed25519_dalek::SigningKey;
+use ferrata_monitor::check::Candidate as Cand;
 use ferrata_monitor::check::{
     attested_by, audit_attestations, audit_finalized, evaluate, AttestationFinding, Candidate, Policy, Reason, Rule,
     Verdict,
@@ -354,4 +355,87 @@ fn a_real_sequencer_record_as_the_node_view() {
     // A gap in the record is refused.
     let gap: String = text.lines().filter(|l| !l.starts_with("100\t")).map(|l| format!("{l}\n")).collect();
     assert!(NodeView::from_chain_tsv("lab", &gap, Vec::new()).is_err());
+}
+
+/// The live round trip's rule (B) checkpoint (Sepolia, 11 Nov 2026, `e2e/runs/crown-live-1`): the real
+/// attestation its attestor published (the devnet sequencer's channel key certified the attestation key,
+/// which signed the final-tier message v2 for tip 252) and the 17-word journal the vault verified.
+#[test]
+fn the_live_round_trips_attestation_and_checkpoint() {
+    let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../e2e/runs/crown-live-1/checkpoint");
+    let a: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(format!("{dir}/input/attestor.json")).unwrap()).unwrap();
+    let h = |k: &str| -> H32 { a[k].as_str().unwrap().parse().unwrap() };
+    let sig = |k: &str| -> [u8; 64] { hex::decode(&a[k].as_str().unwrap()[2..]).unwrap().try_into().unwrap() };
+    let dep = &a["deployment"];
+    let dh = |k: &str| -> H32 { dep[k].as_str().unwrap().parse().unwrap() };
+    let mut evm_chain_id = [0u8; 32];
+    evm_chain_id[24..].copy_from_slice(&dep["evm_chain_id"].as_u64().unwrap().to_be_bytes());
+    let d = Deployment {
+        evm_chain_id,
+        vault: hex::decode(&dep["vault"].as_str().unwrap()[2..]).unwrap().try_into().unwrap(),
+        lez_config_id: dh("lez_config_id").0,
+        channel_id: dh("channel_id").0,
+    };
+    let (tip_id, tip_hash) = (a["tip_id"].as_u64().unwrap(), h("tip_hash"));
+    let ks = KeySet {
+        from_block: 0,
+        keys: vec![h("channel_key")],
+        posting_timeframe: a["posting_timeframe"].as_u64().unwrap() as u32,
+    };
+    assert_eq!(H32(ks.hash()), h("key_set_hash"), "the key-set hash the attestor signed");
+    let sa = SignedAttestation {
+        channel_key: h("channel_key").0,
+        att_key: h("attestation_key").0,
+        certificate: sig("certificate"),
+        tip: FinalTip { tip_id, tip_hash: tip_hash.0, final_msg_id: h("final_msg_id").0 },
+        signature: sig("signature"),
+    };
+    let mut view = NodeView {
+        node: "crown-devnet".into(),
+        final_height: tip_id,
+        final_blocks: [(tip_id, tip_hash)].into(),
+        key_sets: vec![ks],
+        states: BTreeMap::new(),
+        attestations: vec![format!("0x{}", hex::encode(sa.encode()))],
+    };
+    view.validate().unwrap();
+    let f = audit_attestations(&view, &d);
+    assert!(f[0].is_good(), "{f:?}");
+    assert_eq!(attested_by(&view, &d, tip_id, &tip_hash), 1);
+
+    // The journal the vault verified: the candidate the watcher would have seen.
+    let j = hex::decode(
+        std::fs::read_to_string(format!("{dir}/receipt/journal.hex")).unwrap().trim().trim_start_matches("0x"),
+    )
+    .unwrap();
+    assert_eq!(j.len(), 17 * 32);
+    let w = |i: usize| -> [u8; 32] { j[i * 32..(i + 1) * 32].try_into().unwrap() };
+    let u = |i: usize| -> u64 { u64::from_be_bytes(w(i)[24..].try_into().unwrap()) };
+    let c = Cand {
+        new_state: H32(w(7)),
+        parent_state: H32(w(6)),
+        burn_root: H32(w(8)),
+        burn_count: u(9),
+        imported_leaf_count: u(10),
+        sunset: u(11) == 1,
+        delta_at_submit: 3600,
+        tip_id: u(13),
+        tip_hash: H32(w(14)),
+        n: u(15) as u32,
+        t: u(16) as u32,
+        submitted_at: T0,
+    };
+    assert_eq!((c.tip_id, c.tip_hash, c.n, c.t), (tip_id, tip_hash, 1, 1));
+    assert_eq!(evaluate(&B, &c, &[view.clone()], T0), Verdict::Pass);
+    assert_eq!(audit_finalized(&c, &[view.clone()], T0), None);
+
+    // One flipped byte in the certificate, the signature or the signed tip, and the audit refuses it.
+    for (at, want) in [(64usize, "badCertificate"), (200, "badSignature"), (140, "badSignature")] {
+        let mut b = sa.encode();
+        b[at] ^= 1;
+        view.attestations = vec![format!("0x{}", hex::encode(b))];
+        let got = serde_json::to_value(&audit_attestations(&view, &d)[0]).unwrap();
+        assert_eq!(got["finding"], want, "byte {at}: {got}");
+    }
 }

@@ -68,7 +68,8 @@ pub struct KeySet {
     pub from_block: u64,
     /// Channel keys in `accredited_keys` order.
     pub keys: Vec<H32>,
-    /// The channel's `posting_timeframe`, bound into the key-set hash (SPEC-v3 D3).
+    /// The channel's `posting_timeframe`, bound into the key-set hash (SPEC-v3 D3), as the node reports it
+    /// (0 on the lab devnet of the live round trip; rule (B) has no turn term).
     pub posting_timeframe: u32,
 }
 
@@ -151,7 +152,6 @@ impl NodeView {
         }
         for ks in &self.key_sets {
             ensure!(!ks.keys.is_empty(), "{}: an empty key set", self.node);
-            ensure!(ks.posting_timeframe != 0, "{}: postingTimeframe 0", self.node);
         }
         Ok(())
     }
