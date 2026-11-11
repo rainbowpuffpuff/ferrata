@@ -7,6 +7,7 @@ anything we say: one reads the chain, the other rebuilds the programs. Neither s
 |---|---|---|
 | [`scripts/verify-sepolia.py`](../../scripts/verify-sepolia.py) | Python 3.9 or later (standard library only), any Sepolia JSON-RPC | Did the run's transactions, deposits, checkpoint and releases happen on Sepolia as its records say, on a vault configured as we say? |
 | [`scripts/reproduce-image-ids.sh`](../../scripts/reproduce-image-ids.sh) | Docker, ~30 GB of disk, an x86-64 machine | Are the programs the vault accepts proofs of really built from this repository's source? |
+| [`admin/index.html`](../../admin/index.html) (or `node admin/dump.mjs`) | a browser (or node 18+), any JSON-RPC endpoint | What state is a deployed vault in now: configuration, roles, the emergency stop, freezes, caps, fees owed, deposits, checkpoints, candidates, releases (§3)? |
 
 ## 1. The round trip: `scripts/verify-sepolia.py`
 
@@ -103,3 +104,15 @@ The same build at another path gives other ids: see the control in
 [`e2e/runs/verify-anyone/`](../../e2e/runs/verify-anyone/README.md), which is why the path is part of the recipe. A
 build independent of the path (RISC Zero's Docker guest build, `RISC0_USE_DOCKER`, or path remapping) would give new
 ids, and so a new deployment; until then the path is fixed and published here.
+
+## 3. A vault's state: the admin view
+
+[`admin/index.html`](../../admin/index.html) is one static page with its JavaScript inline: open it from disk, type
+any JSON-RPC endpoint and the vault's address, and it reads the vault with read-only methods only (it refuses any
+other) and shows its whole state, each value with the getter, event or storage slot it came from, and what the
+contract does not expose. It rebuilds the deposit root from the `Deposit` events and compares it with the vault's,
+and checks the published registry and fee hashes against the events. `node admin/dump.mjs <rpc> <vault>
+<from-block>` runs the same code without a browser; `node admin/dump.mjs --selftest` checks its keccak, SHA-256 and
+ABI code (232 checks). **Proven** on the live vault `0xfE3199fa…9E54` at Sepolia block 12,113,610 (node) and
+12,113,760 (headless Chromium from `file://`), and on a local anvil vault with freezes in force and a pending
+candidate ([`admin/README.md`](../../admin/README.md), [`admin/results/`](../../admin/results/)).
