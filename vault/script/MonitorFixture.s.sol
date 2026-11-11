@@ -17,12 +17,15 @@ contract AcceptAllStop is IRiscZeroVerifier {
     }
 }
 
-/// @notice A rule (B) FerrataVault v5 with the rehearsal's roles: one watcher (the monitor's key), a freeze
-///         authority (a second monitor's key, for the revocation scenario), the default wait of 1 h, a
-///         1-day revocation window, n >= 3, t >= 2. Roles come from the environment (FIXTURE_*).
+/// @notice A FerrataVault v5 with the rehearsal's roles: one watcher (the monitor's key), a freeze authority (a
+///         second monitor's key, for the revocation scenario), a 1-day revocation window, n >= 3, t >= 2. Rule (B)
+///         with the default wait of 1 h; with FIXTURE_MODE_A=true, rule (A) with turnSeconds 900 and delta at its
+///         default floor of 3 h 01 min (v3 D4). Roles come from the environment (FIXTURE_*).
 contract MonitorFixture is Script {
     function run() external returns (FerrataVault vault) {
         FerrataVault.CapParams memory unlimited = FerrataVault.CapParams({capacity: type(uint256).max, refillPerSecond: 0});
+        bool ruleA = vm.envOr("FIXTURE_MODE_A", false);
+        uint256 delta = ruleA ? 3 hours + 1 minutes : 1 hours;
         vm.startBroadcast();
         AcceptAllStop verifier = new AcceptAllStop();
         FerrataVault.Deployment memory d = FerrataVault.Deployment({
@@ -33,17 +36,17 @@ contract MonitorFixture is Script {
             genesisState: vm.envBytes32("FIXTURE_GENESIS"),
             nMin: 3,
             tMin: 2,
-            deltaFloor: 1 hours,
-            initialDelta: 1 hours,
+            deltaFloor: delta,
+            initialDelta: delta,
             revokeWindow: 1 days,
             maxFreeze: 30 days,
-            turnSeconds: 0,
+            turnSeconds: ruleA ? 900 : 0,
             minReleaseDelay: 0,
             admin: vm.envAddress("FIXTURE_ADMIN"),
             freezeAuthority: vm.envAddress("FIXTURE_FREEZER"),
             globalDepositCap: unlimited,
             globalReleaseCap: unlimited,
-            mode: FerrataVault.Mode.B,
+            mode: ruleA ? FerrataVault.Mode.A : FerrataVault.Mode.B,
             watchers: [vm.envAddress("FIXTURE_WATCHER"), address(0), address(0)],
             releaseCapFloor: FerrataVault.CapParams({capacity: 0, refillPerSecond: 0}),
             feeRecipient: vm.envAddress("FIXTURE_FEES")

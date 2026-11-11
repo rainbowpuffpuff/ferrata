@@ -80,7 +80,7 @@ impl Ctx {
         match ev {
             VaultEvent::Submitted { candidate, block } => {
                 let k = key(&candidate.new_state);
-                let earlier = self.store.cancel_events.get(&k).map_or(0, |s| s.len());
+                let earlier = self.store.cancels_before(&k, block);
                 if earlier > 0 {
                     self.alert_once(
                         format!("resubmitted:{k}:{block}"),
@@ -105,7 +105,7 @@ impl Ctx {
             VaultEvent::Cancelled { new_state, block, tx } => {
                 let k = key(&new_state);
                 let id = tx.map_or_else(|| format!("block-{block}"), |t| format!("{t:#x}"));
-                self.store.cancel_events.entry(k.clone()).or_default().insert(id.clone());
+                self.store.cancel_events.entry(k.clone()).or_default().insert(id.clone(), block);
                 if let Some(t) = self.store.candidates.get_mut(&k) {
                     if t.cancel_tx.as_deref() != Some(id.as_str()) && t.status == Status::Pending {
                         t.status = Status::Gone;
@@ -298,7 +298,7 @@ impl Ctx {
                     if !self.can_cancel() {
                         self.alert_once(format!("would-cancel:{k}:{}", c.submitted_at), Level::Critical, "would-cancel", now, f);
                     } else {
-                        let earlier = self.store.cancel_events.get(&k).map_or(0, |s| s.len());
+                        let earlier = self.store.cancels_before(&k, u64::MAX);
                         match self.chain.cancel(c.new_state).await {
                             Ok(Sent::Mined { tx, block, time }) => {
                                 t.status = Status::CancelledByUs;

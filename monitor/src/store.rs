@@ -53,9 +53,9 @@ pub struct Store {
     pub next_block: u64,
     /// Candidates by `newState`, keyed `0x…` (a resubmission after a cancellation replaces the entry).
     pub candidates: BTreeMap<String, Tracked>,
-    /// Cancellations seen on the vault (`CandidateCancelled`, by anyone), per `newState`: the
-    /// transactions, so that a rescan counts each once.
-    pub cancel_events: BTreeMap<String, BTreeSet<String>>,
+    /// Cancellations seen on the vault (`CandidateCancelled`, by anyone), per `newState`: transaction
+    /// -> block, so that a rescan counts each once and a replayed submission counts only earlier ones.
+    pub cancel_events: BTreeMap<String, BTreeMap<String, u64>>,
     /// Finalised checkpoints by index, with the `newState` and the audit's outcome.
     pub finalized: BTreeMap<u64, String>,
     /// Finalised checkpoints waiting for their audit: index -> the candidate (journal fields).
@@ -103,6 +103,11 @@ impl Store {
             }
         }
         Ok(())
+    }
+
+    /// Cancellations of `new_state` seen in blocks before `block`.
+    pub fn cancels_before(&self, new_state: &str, block: u64) -> usize {
+        self.cancel_events.get(new_state).map_or(0, |m| m.values().filter(|&&b| b < block).count())
     }
 
     /// Records an alert key; true if it is new.

@@ -275,7 +275,9 @@ fn state_file_round_trip_and_vault_guard() {
         c.new_state.to_string(),
         Tracked { candidate: c.clone(), status: Status::Pending, verdict: Some(Verdict::Pass), first_seen_at: T0, cancel_tx: None, cancelled_at: None },
     );
-    s.cancel_events.entry("0x01".into()).or_default().insert("0xtx".into());
+    s.cancel_events.entry("0x01".into()).or_default().insert("0xtx".into(), 9);
+    assert_eq!(s.cancels_before("0x01", 9), 0);
+    assert_eq!(s.cancels_before("0x01", 10), 1);
     s.next_block = 42;
     s.save(&path).unwrap();
     let (back, resumed) = Store::load_or_new(&path, "0xABC", 0).unwrap();
