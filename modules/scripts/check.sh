@@ -117,12 +117,13 @@ native_calls() {
   done
   "$repo/modules/ferrata_attest_module/rust-lib/target/release/examples/call" version > "$rep/replies/native/version.json"
   while IFS=$'\t' read -r name method file module; do
-    if [ -n "$file" ]; then
+    if [ "$file" != - ]; then
       "$repo/modules/$module/rust-lib/target/release/examples/call" "$method" "$rep/requests/$file" < /dev/null > "$rep/replies/native/$name.json"
     else
       "$repo/modules/$module/rust-lib/target/release/examples/call" "$method" < /dev/null > "$rep/replies/native/$name.json"
     fi
-  done < <(jq -r '.[] | [.name, .method, .request, (.module // "ferrata_attest_module")] | @tsv' "$rep/requests/calls.json")
+  done < <(jq -r '.[] | [.name, .method, (if .request == "" then "-" else .request end), (.module // "ferrata_attest_module")] | @tsv' \
+             "$rep/requests/calls.json")
 }
 
 # The flake sees only files git tracks, so each module is built from a copy in a fresh repository
@@ -167,7 +168,7 @@ core() {
   while IFS=$'\t' read -r name method file module; do
     raw="$rep/replies/$flavour/$name.out"
     t0=$(now)
-    if [ -n "$file" ]; then
+    if [ "$file" != - ]; then
       ctl call "$module" "$method" "@$rep/requests/$file" --json < /dev/null > "$raw" 2>&1 && rc=0 || rc=$?
     else
       ctl call "$module" "$method" --json < /dev/null > "$raw" 2>&1 && rc=0 || rc=$?
@@ -177,7 +178,8 @@ core() {
     jq -c 'if (.result | type) == "string" then (.result | fromjson? // .result) else .result end' \
       "$raw" > "$rep/replies/$flavour/$name.json" 2>/dev/null || true
   done < <(jq -r '[{name: "version", method: "version", request: "", module: "ferrata_attest_module"}] + . | .[]
-                  | [.name, .method, .request, (.module // "ferrata_attest_module")] | @tsv' "$rep/requests/calls.json")
+                  | [.name, .method, (if .request == "" then "-" else .request end), (.module // "ferrata_attest_module")] | @tsv' \
+             "$rep/requests/calls.json")
   if [ "$E2E" != 0 ]; then
     step 0 "$flavour-e2e" env CALL=logosctl LOGOSCTL="$LOGOSCTL" SESSION="$SESSION" "$here/e2e.sh" "$rep/e2e-$flavour" || true
   fi

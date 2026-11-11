@@ -27,7 +27,8 @@ out=$(cd "$1" && pwd)
 rm -rf "$out/req" "$out/rep"
 mkdir -p "$out/req" "$out/rep"
 CALL=${CALL:-native}
-PORT=${PORT:-18545}
+# A port of its own per run, so that two runs on one machine do not collide.
+PORT=${PORT:-$((20000 + $$ % 20000))}
 FIXTURE="$repo/crates/ferrata-spectests/fixtures/mainnet-attest-2026-11-10"
 VECTORS="$repo/bridge/vectors"
 export RISC0_HOME=${RISC0_HOME:-$repo/../risc0-home-lez} RISC0_DEV_MODE=1
