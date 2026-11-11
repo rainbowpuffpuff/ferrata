@@ -137,18 +137,19 @@ PY
 }
 
 # The run recorded in the triage note: one Halmos process per group of checks, in parallel, each bounded in time
-# (targeted checks 600 s; the checks over Halmos-generated calldata 1,500 s, under both storage layouts). Logs go to
-# $OUT/halmos/<group>/halmos.log. Needs about 20 cores to finish in ~25 minutes.
+# (targeted checks 600 s; the entry-point check and the checks over Halmos-generated calldata 900 s, the latter under
+# both storage layouts). Logs go to $OUT/halmos/<group>/halmos.log. Needs about 20 cores; ~15 minutes.
 halmos_groups() {
   local base=$OUT g f x t d
   for g in check_release check_after_stop_no_release check_announced_fees check_registered_fees check_refund_rules \
     check_sunset_closes_deposits check_sunset_is_final check_reach_re check_reach_an check_reach_d check_reach_s \
-    check_after_stop_only_owed_leaves check_no_role_call_moves_funds check_reach_ro check_reach_af \
+    check_role_entry_points check_after_stop_only_owed_leaves check_no_role_call_moves_funds check_reach_ro check_reach_af \
     check_after_stop_only_owed_leaves:sol check_no_role_call_moves_funds:sol check_reach_ro:sol check_reach_af:sol; do
     f=${g%%:*}
     case $g in
-      *:sol) x=""; t=1500; d=$f-solidity-layout ;;
-      check_no_role*|check_after_stop_only*|check_reach_ro|check_reach_af) x="--storage-layout generic"; t=1500; d=$f ;;
+      *:sol) x=""; t=900; d=$f-solidity-layout ;;
+      check_no_role*|check_after_stop_only*|check_reach_ro|check_reach_af) x="--storage-layout generic"; t=900; d=$f ;;
+      check_role_entry_points) x=""; t=900; d=$f ;;
       *) x=""; t=600; d=$f ;;
     esac
     ( OUT=$base/halmos/$d HALMOS_ARGS="--function $f $x" HALMOS_TIMEOUT=$t halmos_ > /dev/null 2>&1 ) &
