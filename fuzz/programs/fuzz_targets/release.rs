@@ -46,6 +46,11 @@ fuzz_target!(|data: &[u8]| {
         1 => {
             let Some(bytes) = bytes.get(..CLAIM_INPUT_LEN) else { return };
             let bytes: &[u8; CLAIM_INPUT_LEN] = bytes.try_into().unwrap();
+            // The measurement guest's decoder panics, by design, on a kind other than 0x01/0x02 and
+            // on non-zero padding (the guest's refusal): only its documented domain is decoded.
+            if !matches!(bytes[1224], 1 | 2) || bytes[1225..1228] != [0, 0, 0] {
+                return;
+            }
             let input = ClaimInput::decode(bytes);
             assert_eq!(&input.encode(), bytes, "claim input: a byte is ignored");
             let _ = verify_claim(&input.root, &input.witness, &input.chain_id, &input.vault);
