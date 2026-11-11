@@ -89,7 +89,7 @@ package_() {
   python3 -I "$ROOT/scripts/release_manifest.py" make "$d" "$ver" "$(commit_)" \
     || return 1
   ( cd "$d" && find . -type f ! -name SHA256SUMS | LC_ALL=C sort | sed 's|^\./||' | xargs sha256sum > SHA256SUMS )
-  tar -C "$out" --sort=name --owner=0 --group=0 --numeric-owner --mtime='2026-11-17 00:00Z' \
+  tar -C "$out" --sort=name --owner=0 --group=0 --numeric-owner --mtime='2026-01-01 00:00Z' \
     -czf "$out/ferrata-$ver-x86_64-linux.tar.gz" "ferrata-$ver"
   ( cd "$out" && sha256sum "ferrata-$ver-x86_64-linux.tar.gz" > "ferrata-$ver-x86_64-linux.tar.gz.sha256" )
   echo "release $d"; cat "$out/ferrata-$ver-x86_64-linux.tar.gz.sha256"
