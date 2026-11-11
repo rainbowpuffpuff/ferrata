@@ -149,6 +149,7 @@ response to a particular deposit ([`bridge.md`](../design/bridge.md) §5.4).
 | on the v5 vault's own storage, 3 and 6 leaves | 277,456; 278,292 | — |
 | under a Gloas record, with the block's RLP header (2 leaves) | 262,195 | 2,612 |
 | on a live LEZ sequencer, stand-in beacon chain | 232,278 | 2,460 |
+| on a live LEZ sequencer, Sepolia's real state: the live vault, one leaf (the frozen program; [`lez/live/inbound/README.md`](../../lez/live/inbound/README.md)) | 426,479 | 6,646 |
 
 Sources: [`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §1, §2a, §8a;
 [`lez/live/inbound/README.md`](../../lez/live/inbound/README.md). Under a mainnet state root an account

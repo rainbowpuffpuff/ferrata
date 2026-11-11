@@ -206,6 +206,7 @@ The root import is the only additional verification (the claim needs no Ethereum
 | the v5 vault's real storage, 3 and 6 leaves | 277,456; 278,292 | — | in-process harness |
 | under a Gloas record, with the header | 262,195 | 2,612 | in-process harness |
 | live sequencer, stand-in beacon chain | 232,278 | 2,460 | live sequencer |
+| Sepolia's real state: the live vault, one leaf, capture 1 (the frozen program) | 426,479 | 6,646 | live sequencer ([`lez/live/inbound/README.md`](../lez/live/inbound/README.md)) |
 
 **Amortised per deposit (derived)**: an import's cost divided by the deposits it newly covers, so with one
 import an hour: about 278k per deposit at one deposit an hour, 27.8k at ten, 2.8k at a hundred (from the
