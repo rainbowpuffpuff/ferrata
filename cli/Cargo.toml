@@ -41,6 +41,10 @@ key_protocol = { path = "../../upstream/lez-v0.4.0-rc1/lee/key_protocol" }
 alloy = { version = "1", features = ["contract", "provider-http", "rpc-types", "signer-local", "signer-keystore", "network"] }
 # Executes or proves the release guest in r0vm 3.0.5 (installed with rzup), over IPC, as bridge/e2e does.
 risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["client"] }
+# The relayer wraps a holder's succinct release receipt: identity_p254 through r0vm, the Groth16 step's
+# input and output (risc0-groth16's JSON), as bridge/e2e does.
+risc0-groth16 = { version = "=3.0.5", features = ["prove"] }
+bincode = "1.3"
 
 bip39 = "2.2"
 tokio = { version = "1.50", features = ["rt-multi-thread", "macros", "time", "signal"] }

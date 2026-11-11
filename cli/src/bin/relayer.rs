@@ -31,6 +31,7 @@ use ferrata_cli::relayer::{self, DropBook, DropContext, IRelayVault, Job, Relaye
 use ferrata_cli::seed::Seed;
 use ferrata_cli::{account, h32, hx};
 use serde_json::json;
+use sha2::Digest as _;
 
 #[derive(Parser)]
 #[command(name = "ferrata-relayer", version, about = "The Ferrata relayer daemon (prototype, unaudited)")]
@@ -86,6 +87,10 @@ struct Cli {
     /// Native LEZ sent per gas drop.
     #[arg(long, default_value_t = 0, global = true)]
     drop_amount: u128,
+    /// The Groth16 prover, run as `<command> <input.json> <proof.json>` (RISC Zero's prover image: Docker on
+    /// x86, or a remote prover); with it the relayer wraps holders' succinct release receipts.
+    #[arg(long, env = "FERRATA_WRAP_COMMAND", global = true)]
+    wrap_command: Option<PathBuf>,
     /// Seconds a job may wait in the inbox for a temporary condition (root not final, delay, freeze, cap).
     #[arg(long, default_value_t = 7 * 24 * 3600, global = true)]
     max_job_age: u64,
@@ -135,6 +140,8 @@ struct Daemon {
     rule_b: bool,
     /// A job deferred for longer than this (seconds) is refused.
     max_job_age: u64,
+    /// The Groth16 prover command (wrapping), if any.
+    wrap_command: Option<PathBuf>,
 }
 
 impl Daemon {
@@ -253,6 +260,30 @@ impl Daemon {
                     "tx": rc.transaction_hash, "gasUsed": rc.gas_used,
                 }))
             }
+            Job::ReleaseSuccinct { receipt } => {
+                let Some(cmd) = self.wrap_command.clone() else {
+                    bail!("refused: this relayer does not wrap receipts (no --wrap-command)");
+                };
+                let receipt: risc0_zkvm::Receipt = serde_json::from_value(receipt).context("not a receipt")?;
+                let journal = receipt.journal.bytes.clone();
+                // The relayer's own checks first: nothing is wrapped for a release it would not send.
+                self.r.plan_release(&self.p, v, &journal, Bytes::new()).await?;
+                let image = eth::view(&self.p, self.r.vault, IRelayVault::releaseImageIdCall {}, None).await?;
+                let work = self.state.join("wrap").join(hex::encode(&sha2::Sha256::digest(&journal)[..8]));
+                let started = std::time::Instant::now();
+                let seal = tokio::task::block_in_place(|| relayer::wrap_release(&receipt, image.0, &cmd, &work))?;
+                let wrap_s = started.elapsed().as_secs_f64();
+                let (req, input) = self.r.plan_release(&self.p, v, &journal, seal.into()).await?;
+                let rc = self.r.submit(&self.p, input).await?;
+                self.tokens.insert(req.token);
+                let paid = relayer::relay_fee_paid(&rc, self.r.me);
+                Ok(json!({
+                    "kind": "release", "wrapped": true, "wrapSecs": wrap_s, "nullifier": req.nullifier,
+                    "recipient": req.recipient, "token": req.token, "relayFee": req.relayFee.to_string(),
+                    "paidTo": self.r.me, "paid": paid.map(|(_, f)| f.to_string()), "tx": rc.transaction_hash,
+                    "gasUsed": rc.gas_used,
+                }))
+            }
             Job::Checkpoint { journal, seal } => {
                 let journal = relayer::unhex(&journal)?;
                 let input = self.r.plan_candidate(&self.p, v, &journal, relayer::unhex(&seal)?.into()).await?;
@@ -360,6 +391,7 @@ async fn main() -> Result<()> {
         tokens: [Address::ZERO].into_iter().collect(),
         rule_b: eth::view(&p_mode, vault, IRelayVault::modeCall {}, None).await? == 1,
         max_job_age: cli.max_job_age,
+        wrap_command: cli.wrap_command.clone(),
     };
     log(
         "start",

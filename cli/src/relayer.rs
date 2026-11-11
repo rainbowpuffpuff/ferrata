@@ -58,6 +58,7 @@ sol! {
         function mode() external view returns (uint8);
         function owed(address payee, address token) external view returns (uint256);
         function claimOwed(address token) external;
+        function releaseImageId() external view returns (bytes32);
     }
 }
 
@@ -337,6 +338,49 @@ pub fn checkpoint_needed(lez_burns: u64, accepted: &[(B256, u64)], live_candidat
     (lez_burns > covered && live_candidates == 0).then_some((lez_burns, covered))
 }
 
+/// Wraps a holder's succinct release receipt into the seal the vault's verifier takes (bridge.md §12.3: any
+/// relayer can wrap, and learns only what the release publishes): identity_p254 through r0vm, then RISC Zero's
+/// Groth16 prover image through `wrap_command <input.json> <proof.json>` (Docker on x86, or a remote prover),
+/// then the Groth16 receipt as risc0's `succinct_to_groth16` builds it, verified against the vault's release
+/// image before it is used. Returns `selector ‖ seal`.
+pub fn wrap_release(
+    receipt: &risc0_zkvm::Receipt,
+    release_image: [u8; 32],
+    wrap_command: &Path,
+    work: &Path,
+) -> Result<Vec<u8>> {
+    use risc0_zkvm::sha::{Digest, Digestible as _};
+    use risc0_zkvm::{
+        ApiClient, Asset, AssetRequest, Groth16Receipt, Groth16ReceiptVerifierParameters, InnerReceipt, ProverOpts,
+        Receipt,
+    };
+    let id = Digest::from_bytes(release_image);
+    receipt.verify(id).map_err(|e| anyhow!("refused: the receipt does not verify against the release image: {e}"))?;
+    let succinct = receipt.inner.succinct().map_err(|e| anyhow!("refused: not a succinct receipt: {e}"))?;
+    let asset = Asset::Inline(bincode::serialize(succinct)?.into());
+    let p254 = ApiClient::from_env()
+        .map_err(|e| anyhow!("r0vm: {e}"))?
+        .identity_p254(&ProverOpts::succinct(), asset, AssetRequest::Inline)
+        .map_err(|e| anyhow!("identity_p254: {e}"))?;
+    let seal_bytes = p254.get_seal_bytes();
+    std::fs::create_dir_all(work)?;
+    let (input, proof) = (work.join("input.json"), work.join("proof.json"));
+    std::fs::write(&input, risc0_groth16::prove::to_json(&seal_bytes).map_err(|e| anyhow!("input.json: {e}"))?)?;
+    let status = std::process::Command::new(wrap_command)
+        .arg(&input)
+        .arg(&proof)
+        .status()
+        .with_context(|| format!("running {}", wrap_command.display()))?;
+    ensure!(status.success(), "the Groth16 prover failed ({status})");
+    let pj: risc0_groth16::ProofJson = serde_json::from_str(&std::fs::read_to_string(&proof)?)?;
+    let seal: risc0_groth16::Seal = pj.try_into().map_err(|e| anyhow!("proof.json: {e:?}"))?;
+    let params = Groth16ReceiptVerifierParameters::default().digest();
+    let groth16 = Groth16Receipt::new(seal.to_vec(), succinct.claim.clone(), params);
+    let wrapped = Receipt::new(InnerReceipt::Groth16(groth16), receipt.journal.bytes.clone());
+    wrapped.verify(id).map_err(|e| anyhow!("the wrapped receipt does not verify: {e}"))?;
+    Ok([&params.as_bytes()[..4], seal.to_vec().as_slice()].concat())
+}
+
 /// What a `Release` event paid this relayer (the relay fee), if it is the payee.
 pub fn relay_fee_paid(receipt: &TransactionReceipt, me: Address) -> Option<(Address, U256)> {
     receipt.inner.logs().iter().find_map(|log| {
@@ -558,6 +602,8 @@ pub async fn gas_drop<C: Credit>(
 pub enum Job {
     /// A release: the release journal and the Groth16 seal (hex).
     Release { journal: String, seal: String },
+    /// A release as the holder's succinct receipt (JSON): the relayer wraps it (`--wrap-command`).
+    ReleaseSuccinct { receipt: serde_json::Value },
     /// A rule (B) checkpoint: the checkpoint journal and the Groth16 seal (hex).
     Checkpoint { journal: String, seal: String },
     /// A gas drop: the receipt (JSON).

@@ -305,11 +305,27 @@ async fn relayer_on_a_sepolia_fork_with_crown_live_1_proofs() -> Result<()> {
         let (ok, _) = mallory_sends(&p, eth::release_calldata(stolen, relayer::unhex(&ps)?.into()).to_vec()).await?;
         ensure!(!ok, "a paid release redirected to another relayer was accepted");
         let (state_p, inbox_p) = (work.join("state-paid"), work.join("inbox-paid"));
-        job(&inbox_p, "01-release-paid.json", json!({ "kind": "release", "journal": pj, "seal": ps }))?;
+        // The holder hands over the succinct receipt and the daemon wraps it (identity_p254 here, RISC Zero's
+        // prover image stood in by tests/wrap-stub.sh with the proof.json the image made for it on Modal);
+        // without the recorded receipt, the wrapped seal itself.
+        let succinct = paid_dir.join("receipt-succinct.bin");
+        let wrapped = succinct.exists() && paid_dir.join("proof.json").exists();
+        if wrapped {
+            let receipt: risc0_zkvm::Receipt = bincode::deserialize(&std::fs::read(&succinct)?)?;
+            ensure!(receipt.journal.bytes == relayer::unhex(&pj)?, "the succinct receipt is the paid release's");
+            let job_json = json!({ "kind": "release-succinct", "receipt": serde_json::to_value(&receipt)? });
+            job(&inbox_p, "01-release-paid.json", job_json)?;
+            std::env::set_var("FERRATA_WRAP_STUB_PROOF", paid_dir.join("proof.json"));
+        } else {
+            job(&inbox_p, "01-release-paid.json", json!({ "kind": "release", "journal": pj, "seal": ps }))?;
+        }
+        let stub = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/wrap-stub.sh").display().to_string();
+        let extra: Vec<&str> = if wrapped { vec!["--wrap-command", stub.as_str()] } else { Vec::new() };
         let before = p.get_balance(PAID).await?;
-        let log_p = daemon(&url, &state_p, &inbox_p, PAID, &[])?;
+        let log_p = daemon(&url, &state_p, &inbox_p, PAID, &extra)?;
         let done_p = events(&log_p, "job-done");
         ensure!(done_p.len() == 1, "the paid release was not sent: {log_p:?}");
+        ensure!(!wrapped || done_p[0]["result"]["wrapped"] == true, "the daemon did not wrap the receipt");
         let tx: B256 = serde_json::from_value(done_p[0]["result"]["tx"].clone())?;
         let rc = p.get_transaction_receipt(tx).await?.context("the paid release's receipt")?;
         let gas = U256::from(rc.gas_used) * U256::from(rc.effective_gas_price);

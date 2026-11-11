@@ -11,7 +11,7 @@
     "event": "stop",
     "reason": "SIGTERM",
     "rounds": 5,
-    "t": 1794422619
+    "t": 1794423221
   },
   "earlyRelease": "refused: vault error BurnRootNotAccepted() (eth_call before sending): the burn root is not one of a finalized, unrevoked checkpoint",
   "finalized": {
@@ -21,7 +21,7 @@
       "event": "finalized",
       "gasUsed": 218385,
       "newState": "0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd",
-      "t": 1794422598,
+      "t": 1794423181,
       "tx": "0x4dcf1f566df7270cd8b074803aae7e809636a8018e3dc5b93a02e5fdd44d224f"
     },
     "wait": 3600
@@ -50,7 +50,9 @@
       "recipient": "0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07",
       "relayFee": "2000000000000",
       "token": "0x0000000000000000000000000000000000000000",
-      "tx": "0x244b4f91f3bf5610745592e022ac408cafad56645204c93333b936289f784de8"
+      "tx": "0x244b4f91f3bf5610745592e022ac408cafad56645204c93333b936289f784de8",
+      "wrapSecs": 18.60312127,
+      "wrapped": true
     }
   },
   "releases": {
@@ -72,7 +74,7 @@
     "feesCollected": {
       "amount": "2000000000000",
       "event": "fees-collected",
-      "t": 1794422614,
+      "t": 1794423216,
       "token": "0x0000000000000000000000000000000000000000",
       "tx": "0xb4b99277b9bc7e3e33ebce903d5091eaf5dcceb16cfa6dbcb3f9bef026d72f4e"
     }
@@ -89,7 +91,7 @@
     "event": "status",
     "finalState": "0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd",
     "owedWei": "0",
-    "t": 1794422614
+    "t": 1794423216
   },
   "tamperedReleases": [
     {
