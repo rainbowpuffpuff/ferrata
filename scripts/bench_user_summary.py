@@ -68,6 +68,26 @@ def main(d: str) -> None:
         print(f"{label}: {q['median_s']} s (execute_and_prove), peak {max(q['peak_rss_gib'], q['peak_container_gib'])} GiB, "
               f"{q['settled_with_receipt_verified']}/{q['of']} settled with the receipt verified, tampered: {q['tamper_settle_exits']}")
     json.dump(out, open(base / "summary-pad.json", "w"), indent=1)
+    # The release receipt (minimum.py's release_prove): summary-scale.json's "release" part, as m0.py reads it.
+    rel = {}
+    for jd in sorted(base.glob("*/release")):
+        if not (jd / "container.json").exists():
+            continue
+        c = json.load(open(jd / "container.json"))
+        cpus = str(int(float(c.get("declared", {}).get("modal_cpu_request_and_limit", 0))))
+        for rd in sorted(jd.glob("run-*"), key=lambda p: int(p.name.split("-")[1])):
+            r = json.load(open(rd / "run.json"))
+            pr = r.get("prove") or {}
+            if pr.get("exit_code") != 0 or not pr.get("record"):
+                continue
+            rel.setdefault(cpus, []).append({"machine": machine(c), "run": r["run"], "succinct_verified": r.get("succinct_verified"),
+                                             "prove": {"s": pr["record"]["wall_s"], "gnu_time": pr["gnu_time"],
+                                                       "sampled_max": pr["sampled"]["max"], "record": pr["record"]},
+                                             "p254": {k: (r.get("p254") or {}).get(k) for k in ("exit_code", "wall_s")}})
+            print(f"release receipt at {cpus} CPUs: {pr['record']['wall_s']:.1f} s, verified {r.get('succinct_verified')}, "
+                  f"peak {int(pr['gnu_time'].get('max_rss_kib', 0)) / 2**20:.2f} GiB")
+    if rel:
+        json.dump({"release": rel}, open(base / "summary-scale.json", "w"), indent=1)
 
 
 if __name__ == "__main__":

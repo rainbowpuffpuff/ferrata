@@ -137,6 +137,27 @@ user_stage_() {
     scripts/stage-prove-bridge.sh "$S/bundles/bridge-pad" "$S/stripped/prove_bridge" > "$S/stage-bridge.log" 2>&1 ) ||
     { echo "user-stage: staging failed"; tail -n 5 "$S"/stage-*.log; return 1; }
   cp "$(readlink -f "$(command -v r0vm)")" "$S/bundles/r0vm/r0vm"
+  # The release receipt at the minimum: the bundle minimum.py's release_prove reads (ferrata-e2e, release.bin and the
+  # crown rehearsal's witnesses), from the release-proof stage's work directory (run that stage first).
+  local W=${BENCH_WORK:-$TMPDIR/bench-work}/release-proof E=${FERRATA_E2E:-$ROOT/bridge/target/release/ferrata-e2e}
+  if [ -f "$W/release.bin" ] && [ -d "$W/witness" ] && [ -x "$E" ]; then
+    mkdir -p "$S/bundles/release"
+    cp "$E" "$W/release.bin" "$S/bundles/release/"; cp -r "$W/witness" "$S/bundles/release/"
+    python3 -I - "$S/bundles/release" <<'PY'
+import hashlib, json, os, sys
+root = sys.argv[1]
+files = {}
+for dp, _, fs in os.walk(root):
+    for f in sorted(fs):
+        p = os.path.join(dp, f); rel = os.path.relpath(p, root)
+        if rel != "MANIFEST.json":
+            files[rel] = {"sha256": hashlib.sha256(open(p, "rb").read()).hexdigest(), "bytes": os.path.getsize(p)}
+json.dump({"files": files, "ferrata_head": os.environ.get("FERRATA_HEAD")}, open(os.path.join(root, "MANIFEST.json"), "w"), indent=1)
+print(root, len(files), "files")
+PY
+  else
+    echo "user-stage: no release bundle (run the release-proof stage first)"
+  fi
   "$S/bundles/attest-pad/prove_attest" --image-ids | head -2
   du -sh "$S/bundles"/*
 }
@@ -153,10 +174,17 @@ user_prove_() {
   for j in attest-pad bridge-pad r0vm; do modal volume put -f "$vol" "$B/$j" "/bundle/$j" > /dev/null || return 1; done
   ( cd "$M" && modal run minimum.py::main --job attest-pad --runs 1 --tag "$tag" > "$OUT/user/attest-pad.log" 2>&1 ) & local a=$!
   ( cd "$M" && modal run minimum.py::main --job bridge-pad --runs 1 --tag "$tag" > "$OUT/user/bridge-pad.log" 2>&1 ) & local c=$!
+  local r=""
+  if [ -d "$B/release" ]; then
+    modal volume put -f "$vol" "$B/release" /bundle/release > /dev/null || return 1
+    ( cd "$M" && modal run minimum.py::release_main --runs 1 --tag "$tag" > "$OUT/user/release.log" 2>&1 ) & r=$!
+  fi
   wait $a; echo "attest-pad exit $?"; wait $c; echo "bridge-pad exit $?"
+  if [ -n "$r" ]; then wait $r; echo "release exit $?"; fi
   # The Volume's paths take no leading slash here (modal volume get refuses "/results/...").
   mkdir -p "$OUT/user/$tag"
   for j in attest-pad bridge-pad; do modal volume get "$vol" "results/$tag/$j" "$OUT/user/$tag/" > /dev/null || return 1; done
+  [ -z "$r" ] || modal volume get "$vol" "results/$tag/release" "$OUT/user/$tag/" > /dev/null || true
   python3 -I "$ROOT/scripts/bench_user_summary.py" "$OUT/user"
   echo "results in $OUT/user/$tag; summary $OUT/user/summary-pad.json (just m0 --p4 $OUT/user)"
 }
