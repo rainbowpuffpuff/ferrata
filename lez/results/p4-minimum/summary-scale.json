@@ -1154,6 +1154,130 @@
      }
     ]
    }
+  ],
+  "8/transfer": [
+   {
+    "container": "runs/cpu8-mem16g/transfer",
+    "machine": {
+     "nproc": "8",
+     "cfs_quota_us": "800000",
+     "memory_limit_bytes": "17179869184",
+     "vendor": "AuthenticAMD",
+     "family": "25",
+     "model": "1",
+     "bogomips": "3090.84",
+     "flags": [
+      "adx",
+      "avx2",
+      "bmi2",
+      "ht",
+      "sha_ni"
+     ],
+     "cloud": "AZURE",
+     "region": "eu-west"
+    },
+    "run": 1,
+    "exit_code": 0,
+    "wall_s": 999.33,
+    "gnu_time": {
+     "user_s": "7592.09",
+     "sys_s": "5.43",
+     "cpu_percent": "760%",
+     "wall": "16:39.32",
+     "max_rss_kib": "9654172",
+     "exit_status": "0"
+    },
+    "sampled_max": {
+     "cgroup_current_bytes": 9898881024,
+     "meminfo_used_kib": 9667064,
+     "rss_sum_kib": 9754508,
+     "r0vm_rss_kib": 9654172
+    },
+    "settle_exit": 0,
+    "tamper": [
+     101
+    ],
+    "proofs": [
+     {
+      "label": "LEZ wallet's deshielded native transfer",
+      "execute_and_prove_s": 999.2,
+      "prove_and_settle_s": null,
+      "receipt_bytes": 238685,
+      "tx_bytes": 254244,
+      "proven_sessions": [
+       {
+        "segments": 4,
+        "total_cycles": 3407872,
+        "user_cycles": 2851595,
+        "gap_s": 999.1
+       }
+      ],
+      "user_cycles": 2851595,
+      "segments": 4,
+      "total_cycles": 3407872
+     }
+    ]
+   },
+   {
+    "container": "runs/cpu8-mem16g/transfer",
+    "machine": {
+     "nproc": "8",
+     "cfs_quota_us": "800000",
+     "memory_limit_bytes": "17179869184",
+     "vendor": "AuthenticAMD",
+     "family": "25",
+     "model": "1",
+     "bogomips": "3090.84",
+     "flags": [
+      "adx",
+      "avx2",
+      "bmi2",
+      "ht",
+      "sha_ni"
+     ],
+     "cloud": "AZURE",
+     "region": "eu-west"
+    },
+    "run": 2,
+    "exit_code": 0,
+    "wall_s": 984.23,
+    "gnu_time": {
+     "user_s": "7485.47",
+     "sys_s": "5.27",
+     "cpu_percent": "761%",
+     "wall": "16:24.20",
+     "max_rss_kib": "9646316",
+     "exit_status": "0"
+    },
+    "sampled_max": {
+     "cgroup_current_bytes": 9898242048,
+     "meminfo_used_kib": 9666440,
+     "rss_sum_kib": 9746868,
+     "r0vm_rss_kib": 9646316
+    },
+    "settle_exit": 0,
+    "tamper": [],
+    "proofs": [
+     {
+      "label": "LEZ wallet's deshielded native transfer",
+      "execute_and_prove_s": 984.1,
+      "prove_and_settle_s": null,
+      "receipt_bytes": 238685,
+      "tx_bytes": 254244,
+      "proven_sessions": [
+       {
+        "segments": 4,
+        "total_cycles": 3407872,
+        "user_cycles": 2851618,
+        "gap_s": 984.0
+       }
+      ],
+      "user_cycles": 2851618,
+      "segments": 4,
+      "total_cycles": 3407872
+     }
+    ]
+   }
   ]
  },
  "release": {
