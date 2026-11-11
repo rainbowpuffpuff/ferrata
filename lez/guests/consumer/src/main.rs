@@ -154,10 +154,10 @@ fn claim_deposit_privately(
     slot: u64,
 ) -> Result<Response, Refusal> {
     if !input.is_authorized {
-        return Err(code::WRONG_DESTINATION);
+        return Err(code::WRONG_RECEIVER);
     }
     match pending.kind {
-        KIND_PRIVATE if input.receiver.account_id.value() != &pending.dest => return Err(code::WRONG_DESTINATION),
+        KIND_PRIVATE if input.receiver.account_id.value() != &pending.dest => return Err(code::WRONG_RECEIVER),
         KIND_PRIVATE | KIND_PUBLIC => {}
         _ => return Err(code::WRONG_KIND),
     }

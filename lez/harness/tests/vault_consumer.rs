@@ -323,7 +323,7 @@ fn private_claims_that_do_not_verify_are_refused() {
     let other_token = ConsumerMessage::ClaimDepositPrivately { pool: VaultPool { token: [0x11; 20], ..p.clone() }, slot: v.slot, deposit: v.deposit_proof(0), s: s0, kind: kind0, dest: dest0 };
     // (what, message, exit codes of the two transitions; the second runs only after a zero)
     let cases: Vec<(&str, ConsumerMessage, Vec<u32>)> = vec![
-        ("a private-kind deposit claimed by an account that is not its destination", base(1, s1, kind1, dest1), vec![u32::from(code::WRONG_DESTINATION)]),
+        ("a private-kind deposit claimed by an account that is not its destination", base(1, s1, kind1, dest1), vec![u32::from(code::WRONG_RECEIVER)]),
         ("a byte that is no destination kind", base(0, s0, 0x03, dest0), vec![u32::from(code::WRONG_KIND)]),
         ("a wrong secret", base(0, [0x5a; 32], kind0, dest0), vec![0, u32::from(code::COMMITMENT_MISMATCH)]),
         ("a private-kind deposit opened as public-kind", base(1, s1, KIND_PUBLIC, dest1), vec![0, u32::from(code::COMMITMENT_MISMATCH)]),

@@ -271,13 +271,14 @@ pub enum CodeOwner {
 
 /// The blocks of refusal codes. The program exits with its own codes and with the core's and the
 /// step API's, so each code must have one owner: the blocks are disjoint, and every code lies in
-/// a block of its owner (`harness/tests/exit_codes.rs` checks both). 240–255 are unassigned.
+/// a block of its owner (`harness/tests/exit_codes.rs` checks both). 230–255 belong to programs of
+/// their own (`ferrata_holdings` 230–239, the bridge 240–255).
 pub const CODE_BLOCKS: [(CodeOwner, core::ops::RangeInclusive<u8>); 5] = [
     (CodeOwner::Core, 1..=79),        // the light client: 1–61 in use
     (CodeOwner::StepApi, 80..=99),    // 80–84 in use
     (CodeOwner::Core, 100..=199),     // the execution layer: 100–163 in use
-    (CodeOwner::Program, 200..=219),  // 200–215 in use
-    (CodeOwner::Consumer, 220..=239), // 220–232 in use
+    (CodeOwner::Program, 200..=217),  // 200–215 in use
+    (CodeOwner::Consumer, 218..=229), // 218–229 in use
 ];
 
 /// Defines exit codes and `ALL`, every one of them with its name.
@@ -1267,7 +1268,8 @@ pub mod consumer {
         }
     }
 
-    /// Refusal codes of the consumer: 220–232 (see [`crate::CODE_BLOCKS`]).
+    /// Refusal codes of the consumer: 218–229 (see [`crate::CODE_BLOCKS`]). 230–239 are
+    /// `ferrata_holdings`'s and 240–255 the bridge program's (programs of their own).
     pub mod code {
         exit_codes! {
             /// The message does not decode.
@@ -1279,7 +1281,9 @@ pub mod consumer {
             BAD_REPLY = 222;
             /// A claim of a deposit that was already credited: its nullifier is spent.
             ALREADY_CLAIMED = 223;
-            /// The receiver is not the actor the message is for.
+            /// The receiver is not the actor the message is for; also a private claim not run by
+            /// its account's owner, or a private-kind deposit claimed by an account other than its
+            /// destination.
             WRONG_RECEIVER = 224;
             /// An internal message from an actor other than the expected one.
             WRONG_SENDER = 225;
@@ -1293,13 +1297,10 @@ pub mod consumer {
             /// The claim actor is not the one the attested statement's nullifier names.
             NULLIFIER_MISMATCH = 229;
             /// The opening (`s`, `kind`, `dest`) does not hash to the deposit's commitment.
-            COMMITMENT_MISMATCH = 230;
+            COMMITMENT_MISMATCH = 218;
             /// A destination kind this path does not take: a public claim of a private-kind
             /// deposit, or a byte that is no kind.
-            WRONG_KIND = 231;
-            /// A private claim not run by its account's owner, or a private-kind deposit claimed
-            /// by an account other than its destination.
-            WRONG_DESTINATION = 232;
+            WRONG_KIND = 219;
         }
     }
 }
