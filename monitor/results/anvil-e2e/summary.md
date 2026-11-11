@@ -1,6 +1,6 @@
-# monitor on a local anvil chain: 2026-11-11T18:38:55Z
+# monitor on a local anvil chain: 2026-11-11T18:47:33Z
 
-anvil Version: 1.3.6-v1.3.6, chain id 31337; vault 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 (rule B, wait 1 h), watcher 0xbB042798B0c398bE0Cee2dAA0F187c47292dac40, freeze authority 0x70f81D40Dc80C093dA27A64c9b255D5CC69D0A2f.
+anvil Version: 1.3.6-v1.3.6, chain id 31337; vault 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 (rule B, wait 1 h), watcher 0xC0096BA72f7b737c29f3cb183D5eeBcEd9bfd7C7, freeze authority 0x0c0B16e1d2558533AA865393F22Eefe479e5B6d0.
 
 - PASS S1 honest candidate still pending after 3 polls
 - PASS S1 monitor passed it
@@ -55,16 +55,16 @@ anvil Version: 1.3.6-v1.3.6, chain id 31337; vault 0x9fE46736679d2D9a65F0992F227
 | S4 | tipConflict | 0 | 3600 | 41477 |
 | S5 | tipNotFinal | 600 | 3000 | 41468 |
 | S6 | tipConflict | 0 | 3600 | 41477 |
-| S9 | tipConflict | 1 | 3599 | 41477 |
+| S9 | tipConflict | 0 | 3600 | 41477 |
 | S8 | tipConflict | 0 | 3600 | 41477 |
 | A2 | keySetNotLive | 0 | 11760 | 41477 |
-| A3 | tipNotFinal | 7203 | 5457 | 41477 |
+| A3 | tipNotFinal | 7202 | 5458 | 41477 |
 
-S7: checkpoint 2 (tipConflict) finalised at 1794437349, revoked at 1794437350, revocable until 1794523749.
+S7: checkpoint 2 (tipConflict) finalised at 1794437867, revoked at 1794437868, revocable until 1794524267.
 
 Alerts: "attestation-finding 3, cancel-failed 1, cancelled 10, candidate-passed 3, candidate-resubmitted 1, candidate-waiting 2, checkpoints-revoked 2, final-tier-stalled 1, finalized-wrong 2, paused 2, persistent-candidate 1, revoked 1, started 20, stopped 19, would-cancel 1".
 
-Resources (measured, build box): the daemon of S5 held 42844 kB resident (VmRSS) when it was killed, after 10 polls of its state file's life; the S6 run (2 polls, a full rescan from the deployment block, one cancellation) took 33356 kB max RSS, 1.05 s wall, 0.01 s user + 0.14 s system CPU.
+Resources (measured, build box): the daemon of S5 held 29060 kB resident (VmRSS) when it was killed, after 10 polls of its state file's life; the S6 run (2 polls, a full rescan from the deployment block, one cancellation) took 31492 kB max RSS, 1.04 s wall, 0.02 s user + 0.08 s system CPU.
 
 Under the B wait of 1 h, 3000 s was the smallest margin left before a deadline by any cancellation (the restart case).
 

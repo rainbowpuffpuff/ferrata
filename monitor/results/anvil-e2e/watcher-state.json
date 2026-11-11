@@ -19,7 +19,7 @@
       },
       "status": "gone",
       "verdict": null,
-      "firstSeenAt": 1794437353,
+      "firstSeenAt": 1794437871,
       "cancelTx": null,
       "cancelledAt": null
     },
@@ -36,7 +36,7 @@
         "tipHash": "0x0f3938ef615521fd9ec4fc00300f9f25dd5dbca40fee5aacb2d562693aa7a9ff",
         "n": 4,
         "t": 3,
-        "submittedAt": 1794437353
+        "submittedAt": 1794437871
       },
       "status": "cancelledByUs",
       "verdict": {
@@ -48,9 +48,9 @@
           "finalHash": "0x1ba9f8fc2b02e5018dd1f31b05af04a00ffd09267be67d868bcceb842cabc0c4"
         }
       },
-      "firstSeenAt": 1794437353,
-      "cancelTx": "0xd86adf7f6c078302909a27d137218d2eb62823f3ecc6aec4614c6439cf6063f2",
-      "cancelledAt": 1794437353
+      "firstSeenAt": 1794437871,
+      "cancelTx": "0xb2f471a9178cccda657a24eeb7d9fa58bf43608424ff83e004dac217f1cb9e2f",
+      "cancelledAt": 1794437871
     },
     "0x6cd9b53bc170d758d505dea20141045264138e7b6d9af37a66e73657b9403fb0": {
       "candidate": {
@@ -69,7 +69,7 @@
       },
       "status": "gone",
       "verdict": null,
-      "firstSeenAt": 1794437353,
+      "firstSeenAt": 1794437871,
       "cancelTx": null,
       "cancelledAt": null
     },
@@ -90,7 +90,7 @@
       },
       "status": "gone",
       "verdict": null,
-      "firstSeenAt": 1794437353,
+      "firstSeenAt": 1794437871,
       "cancelTx": null,
       "cancelledAt": null
     },
@@ -111,7 +111,7 @@
       },
       "status": "gone",
       "verdict": null,
-      "firstSeenAt": 1794437353,
+      "firstSeenAt": 1794437871,
       "cancelTx": null,
       "cancelledAt": null
     },
@@ -132,7 +132,7 @@
       },
       "status": "gone",
       "verdict": null,
-      "firstSeenAt": 1794437353,
+      "firstSeenAt": 1794437871,
       "cancelTx": null,
       "cancelledAt": null
     },
@@ -153,7 +153,7 @@
       },
       "status": "gone",
       "verdict": null,
-      "firstSeenAt": 1794437353,
+      "firstSeenAt": 1794437871,
       "cancelTx": null,
       "cancelledAt": null
     },
@@ -174,7 +174,7 @@
       },
       "status": "gone",
       "verdict": null,
-      "firstSeenAt": 1794437353,
+      "firstSeenAt": 1794437871,
       "cancelTx": null,
       "cancelledAt": null
     },
@@ -195,7 +195,7 @@
       },
       "status": "gone",
       "verdict": null,
-      "firstSeenAt": 1794437353,
+      "firstSeenAt": 1794437871,
       "cancelTx": null,
       "cancelledAt": null
     },
@@ -216,33 +216,33 @@
       },
       "status": "gone",
       "verdict": null,
-      "firstSeenAt": 1794437353,
+      "firstSeenAt": 1794437871,
       "cancelTx": null,
       "cancelledAt": null
     }
   },
   "cancelEvents": {
     "0x24b771ad0d45b2301166947694b1ccdaf4c1d5f3273f51152687ab3c5cc09432": {
-      "0x185697b9086a2eb027a65f2ff9f45b114f8778612f506ef822125a85d539e23d": 10
+      "0xffd2bb8ca15003171f63536606721d85d4dc07667bf4f97ebcae4bb72b1ada96": 10
     },
     "0x2822b3eff34aae069517542b03ddaf284c0a524cda2613e0765adbd6443f1339": {
-      "0xd6b606ee2440df19fea88aa98b982a85ee2db479d04b311b11b560e8ef331803": 28,
-      "0xd86adf7f6c078302909a27d137218d2eb62823f3ecc6aec4614c6439cf6063f2": 30
+      "0xb2f471a9178cccda657a24eeb7d9fa58bf43608424ff83e004dac217f1cb9e2f": 30,
+      "0xf18e9ca0f5e6bac456d3d324bdd6fbf8c402e7b8765e19a4e282b7dd127cbcce": 28
     },
     "0x78e89a6117e89e3f303cf7008194f63d53b7c89e0dc0ee4f972d2bd4d789f608": {
-      "0x2d52229912e359045f4f102acc59837e59883b23cde7fefed726aed909f1a634": 18
+      "0x0fdbe96ffc0a114d4f61d9c574b2f5dc34089e8e4ebbcc8e9033a83d2f62466f": 18
     },
     "0x9abb56d2aa3b6ba37ddaa3fe01be0b78746e66fda534b759ff1e3fea8cd102d0": {
-      "0x95a4e0337e4560f5f0f190f2f06329b1a42c0d013d97f1bbcd965ec77137e99d": 20
+      "0xee5cf913b9c0145ca873770aad0d7d18b34f2e2c4bda152a7cc20e996c093f5a": 20
     },
     "0xdd87d29c26f5a60ee85314b63e04b7c0f7386b79de62f2a92b3b62f01b8b2b9c": {
-      "0xcea56bff9107792c6e9dddf370fa12fe8721aebace498fcc9e67f9745b7cee37": 13
+      "0x488eaa0393b17f593821e474e131633867010ce086c16077472d35940a8b86f9": 13
     },
     "0xf03db4cbe3ec75019f2d5bd152a4a38db1aa2475c29f93dd3abfcace14dd45a1": {
-      "0xb0991d5e70ec365745010a1ceedae5d4b315196b09a9420bb67e29177ec3ff88": 26
+      "0xcdb0f9dd94724888ae802f611f4484151ee853d88a7506483a6ca2fbe79f2fbb": 26
     },
     "0xf680a4173085cc84f4fb70f52b71e7747662a258e073e0dc8059389d7924cd09": {
-      "0x50792ba34e57acd235c66a0309a438ef784ff0d6811c9c2c9edf1ef331842eea": 7
+      "0xe761b78cb571c7df1026674040041b3e47a478695b815ca8dde7e81669955e7f": 7
     }
   },
   "finalized": {
@@ -253,14 +253,14 @@
   "toAudit": {},
   "alerted": [
     "attestation:lez-honest:{\"finding\":\"conflictingTip\",\"channelKey\":\"0xafd6dd1c7cebc5fffd6b133c4d7125fdb07f3b8ff9e21dccfa7c076d0d7dcb24\",\"attKey\":\"0x8ae92695f404d5ff11a95e339d638d6ba68cc001a160a3f907dfeb23f7faf456\",\"tipId\":12,\"signedHash\":\"0x97cc83aa3e837a692bebba0578aaf7becee800c9d7df4b4adaa6d2dbaa18a293\",\"finalHash\":\"0xaed56b0c928d218dbb33e648e235c287daf2d0d43db00891ed017aa0ae8e6c15\"}",
-    "cancel-failed:0xf03db4cbe3ec75019f2d5bd152a4a38db1aa2475c29f93dd3abfcace14dd45a1:5981457",
-    "finalized-wrong:2:1794437349",
+    "cancel-failed:0xf03db4cbe3ec75019f2d5bd152a4a38db1aa2475c29f93dd3abfcace14dd45a1:5981459",
+    "finalized-wrong:2:1794437867",
     "resubmitted:0x2822b3eff34aae069517542b03ddaf284c0a524cda2613e0765adbd6443f1339:29",
     "revoked:2:24",
-    "would-cancel:0xf03db4cbe3ec75019f2d5bd152a4a38db1aa2475c29f93dd3abfcace14dd45a1:1794437351"
+    "would-cancel:0xf03db4cbe3ec75019f2d5bd152a4a38db1aa2475c29f93dd3abfcace14dd45a1:1794437869"
   ],
   "finalHeight": 20,
-  "finalHeightSince": 1794433747,
-  "pausedAt": 1794437353,
+  "finalHeightSince": 1794434264,
+  "pausedAt": 1794437871,
   "polls": 11
 }

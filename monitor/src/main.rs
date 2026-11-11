@@ -24,6 +24,8 @@ struct Cli {
     cmd: Cmd,
 }
 
+// Parsed once at start; the size of the `run` variant does not matter.
+#[allow(clippy::large_enum_variant)]
 #[derive(Subcommand)]
 enum Cmd {
     /// Follow a vault: scan its candidates, check them against the node views, cancel, pause, alert.

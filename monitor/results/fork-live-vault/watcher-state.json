@@ -1,6 +1,6 @@
 {
   "vault": "0xfe3199fa2634413cbac317371076cae3eb2d9e54",
-  "nextBlock": 12113583,
+  "nextBlock": 12113600,
   "candidates": {
     "0x39131a22d104ebb04684e21377f34cbb2eee7027f339315d6e0b125f797c26e3": {
       "candidate": {
@@ -15,7 +15,7 @@
         "tipHash": "0x3d12099e043ce3bcbc213c77a3690496213ee6fc4c6da3dfbf0fd7eec2d47287",
         "n": 1,
         "t": 1,
-        "submittedAt": 1794422670
+        "submittedAt": 1794422874
       },
       "status": "cancelledByUs",
       "verdict": {
@@ -27,9 +27,9 @@
           "finalHash": "0xe55977023d6e1ae1bcfdb3625affcdca7acf061067922a1dacc052380dc76ecf"
         }
       },
-      "firstSeenAt": 1794422670,
-      "cancelTx": "0x03e291651f918d3943b78602586977ec952b50456e56d480c0f5af1210d67b3a",
-      "cancelledAt": 1794422671
+      "firstSeenAt": 1794422874,
+      "cancelTx": "0x30250ca6bdc3697eb922991a3e9e6e6d82c9aa5c9ea541e796a00218412477ea",
+      "cancelledAt": 1794422875
     },
     "0x4e0f5d113bf724886b9ecb1cc0f0055fc5c3be0f822d467e6833295cbf394e07": {
       "candidate": {
@@ -44,13 +44,13 @@
         "tipHash": "0xe55977023d6e1ae1bcfdb3625affcdca7acf061067922a1dacc052380dc76ecf",
         "n": 1,
         "t": 1,
-        "submittedAt": 1794422669
+        "submittedAt": 1794422872
       },
       "status": "pending",
       "verdict": {
         "verdict": "pass"
       },
-      "firstSeenAt": 1794422670,
+      "firstSeenAt": 1794422874,
       "cancelTx": null,
       "cancelledAt": null
     },
@@ -71,14 +71,14 @@
       },
       "status": "gone",
       "verdict": null,
-      "firstSeenAt": 1794422664,
+      "firstSeenAt": 1794422868,
       "cancelTx": null,
       "cancelledAt": null
     }
   },
   "cancelEvents": {
     "0x39131a22d104ebb04684e21377f34cbb2eee7027f339315d6e0b125f797c26e3": {
-      "0x03e291651f918d3943b78602586977ec952b50456e56d480c0f5af1210d67b3a": 12113582
+      "0x30250ca6bdc3697eb922991a3e9e6e6d82c9aa5c9ea541e796a00218412477ea": 12113599
     }
   },
   "finalized": {
@@ -86,10 +86,10 @@
   },
   "toAudit": {},
   "alerted": [
-    "pass:0x4e0f5d113bf724886b9ecb1cc0f0055fc5c3be0f822d467e6833295cbf394e07:1794422669"
+    "pass:0x4e0f5d113bf724886b9ecb1cc0f0055fc5c3be0f822d467e6833295cbf394e07:1794422872"
   ],
   "finalHeight": 252,
-  "finalHeightSince": 1794422664,
+  "finalHeightSince": 1794422868,
   "pausedAt": null,
   "polls": 4
 }

@@ -94,9 +94,11 @@ fn b_conflicting_tip_is_cancelled_at_once() {
 fn b_tip_not_final_waits_for_the_lag_allowance_then_cancels() {
     let v = node("n1", 20);
     let c = cand(25, hb("block", 25), 4, 3, T0);
-    assert!(matches!(evaluate(&B, &c, &[v.clone()], T0 + 10), Verdict::Wait { until, .. } if until == T0 + 300));
+    assert!(
+        matches!(evaluate(&B, &c, std::slice::from_ref(&v), T0 + 10), Verdict::Wait { until, .. } if until == T0 + 300)
+    );
     assert!(matches!(
-        evaluate(&B, &c, &[v.clone()], T0 + 300),
+        evaluate(&B, &c, std::slice::from_ref(&v), T0 + 300),
         Verdict::Cancel { reason: Reason::TipNotFinal { final_height: 20, .. } }
     ));
     // The node catches up in time: the same candidate passes.
@@ -108,7 +110,9 @@ fn a_wait_never_runs_past_the_deadline_minus_the_margin() {
     let v = node("n1", 20);
     let c = cand(25, hb("block", 25), 4, 3, T0);
     let long = Policy { b_lag_grace: 100_000, ..B };
-    assert!(matches!(evaluate(&long, &c, &[v.clone()], T0), Verdict::Wait { until, .. } if until == T0 + 3600 - 120));
+    assert!(
+        matches!(evaluate(&long, &c, std::slice::from_ref(&v), T0), Verdict::Wait { until, .. } if until == T0 + 3600 - 120)
+    );
     assert!(matches!(evaluate(&long, &c, &[v], T0 + 3480), Verdict::Cancel { .. }));
 }
 
@@ -119,7 +123,7 @@ fn key_set_not_live_is_cancelled_under_both_rules() {
     let c = cand(10, hb("block", 10), 3, 2, T0);
     for p in [B, A] {
         assert!(matches!(
-            evaluate(&p, &c, &[v.clone()], T0),
+            evaluate(&p, &c, std::slice::from_ref(&v), T0),
             Verdict::Cancel {
                 reason: Reason::KeySetNotLive { live_n: 4, live_t: 3, candidate_n: 3, candidate_t: 2, .. }
             }
@@ -128,8 +132,11 @@ fn key_set_not_live_is_cancelled_under_both_rules() {
     // A rotation to five keys from block 15: a tip at 16 must carry n = 5, t = 4; a tip at 12 the old set.
     let mut r = node("n1", 20);
     r.key_sets.push(KeySet { from_block: 15, keys: keys(5), posting_timeframe: 900 });
-    assert!(matches!(evaluate(&B, &cand(16, hb("block", 16), 4, 3, T0), &[r.clone()], T0), Verdict::Cancel { .. }));
-    assert_eq!(evaluate(&B, &cand(16, hb("block", 16), 5, 4, T0), &[r.clone()], T0), Verdict::Pass);
+    assert!(matches!(
+        evaluate(&B, &cand(16, hb("block", 16), 4, 3, T0), std::slice::from_ref(&r), T0),
+        Verdict::Cancel { .. }
+    ));
+    assert_eq!(evaluate(&B, &cand(16, hb("block", 16), 5, 4, T0), std::slice::from_ref(&r), T0), Verdict::Pass);
     assert_eq!(evaluate(&B, &cand(12, hb("block", 12), 4, 3, T0), &[r], T0), Verdict::Pass);
 }
 
@@ -140,11 +147,11 @@ fn a_tip_must_be_final_by_delta_g() {
     // W = 3600 + 2 * 900 = 5400 < Δ_g here, so the deadline bounds the wait (the vault enforces W >= Δ_g + ...).
     assert_eq!(c.deadline(900), T0 + 5400);
     assert!(
-        matches!(evaluate(&A, &c, &[v.clone()], T0 + 1000), Verdict::Wait { until, .. } if until == T0 + 5400 - 120)
+        matches!(evaluate(&A, &c, std::slice::from_ref(&v), T0 + 1000), Verdict::Wait { until, .. } if until == T0 + 5400 - 120)
     );
     let a_short = Policy { delta_g: 2000, ..A };
     assert!(
-        matches!(evaluate(&a_short, &c, &[v.clone()], T0 + 1999), Verdict::Wait { until, .. } if until == T0 + 2000)
+        matches!(evaluate(&a_short, &c, std::slice::from_ref(&v), T0 + 1999), Verdict::Wait { until, .. } if until == T0 + 2000)
     );
     assert!(matches!(evaluate(&a_short, &c, &[v], T0 + 2000), Verdict::Cancel { reason: Reason::TipNotFinal { .. } }));
 }
@@ -163,10 +170,10 @@ fn state_fields_are_compared_when_the_node_computes_them() {
             sunset: false,
         },
     );
-    assert_eq!(evaluate(&B, &c, &[v.clone()], T0), Verdict::Pass);
+    assert_eq!(evaluate(&B, &c, std::slice::from_ref(&v), T0), Verdict::Pass);
     v.states.get_mut(&10).unwrap().burn_root = hb("other root", 10);
     assert!(matches!(
-        evaluate(&B, &c, &[v.clone()], T0),
+        evaluate(&B, &c, std::slice::from_ref(&v), T0),
         Verdict::Cancel { reason: Reason::StateMismatch { ref field, .. } } if field == "burnRoot"
     ));
     v.states.get_mut(&10).unwrap().burn_root = c.burn_root;
@@ -194,9 +201,9 @@ fn several_nodes_must_all_agree() {
 #[test]
 fn a_finalised_wrong_checkpoint_is_reported_for_revocation() {
     let v = node("n1", 20);
-    assert_eq!(audit_finalized(&cand(10, hb("block", 10), 4, 3, T0), &[v.clone()], T0), None);
+    assert_eq!(audit_finalized(&cand(10, hb("block", 10), 4, 3, T0), std::slice::from_ref(&v), T0), None);
     assert!(matches!(
-        audit_finalized(&cand(10, hb("forged", 10), 4, 3, T0), &[v.clone()], T0),
+        audit_finalized(&cand(10, hb("forged", 10), 4, 3, T0), std::slice::from_ref(&v), T0),
         Some(Reason::TipConflict { .. })
     ));
     assert!(matches!(
@@ -324,9 +331,9 @@ fn a_real_sequencer_record_as_the_node_view() {
     let tip: H32 = "0xad17ee54bb76f415fb16862d9d09c328424fa10d481ea507662335658e3a9db2".parse().unwrap();
     assert_eq!(v.final_blocks[&258], tip);
     // No key sets in the record: the key-set check is skipped, the tip checks apply.
-    assert_eq!(evaluate(&B, &cand(258, tip, 1, 1, T0), &[v.clone()], T0), Verdict::Pass);
+    assert_eq!(evaluate(&B, &cand(258, tip, 1, 1, T0), std::slice::from_ref(&v), T0), Verdict::Pass);
     assert!(matches!(
-        evaluate(&B, &cand(258, hb("forged", 258), 1, 1, T0), &[v.clone()], T0),
+        evaluate(&B, &cand(258, hb("forged", 258), 1, 1, T0), std::slice::from_ref(&v), T0),
         Verdict::Cancel { reason: Reason::TipConflict { .. } }
     ));
     assert!(matches!(evaluate(&B, &cand(259, hb("x", 259), 1, 1, T0), &[v], T0), Verdict::Wait { .. }));
@@ -347,7 +354,7 @@ fn a_real_sequencer_record_as_the_node_view() {
     let p = NodeView::from_chain_tsv("lab", &partial, Vec::new()).unwrap();
     assert_eq!(p.final_height, 256);
     let c = cand(258, tip, 1, 1, T0);
-    assert!(matches!(evaluate(&B, &c, &[p.clone()], T0 + 299), Verdict::Wait { .. }));
+    assert!(matches!(evaluate(&B, &c, std::slice::from_ref(&p), T0 + 299), Verdict::Wait { .. }));
     assert!(matches!(
         evaluate(&B, &c, &[p], T0 + 300),
         Verdict::Cancel { reason: Reason::TipNotFinal { final_height: 256, .. } }
@@ -427,8 +434,8 @@ fn the_live_round_trips_attestation_and_checkpoint() {
         submitted_at: T0,
     };
     assert_eq!((c.tip_id, c.tip_hash, c.n, c.t), (tip_id, tip_hash, 1, 1));
-    assert_eq!(evaluate(&B, &c, &[view.clone()], T0), Verdict::Pass);
-    assert_eq!(audit_finalized(&c, &[view.clone()], T0), None);
+    assert_eq!(evaluate(&B, &c, std::slice::from_ref(&view), T0), Verdict::Pass);
+    assert_eq!(audit_finalized(&c, std::slice::from_ref(&view), T0), None);
 
     // One flipped byte in the certificate, the signature or the signed tip, and the audit refuses it.
     for (at, want) in [(64usize, "badCertificate"), (200, "badSignature"), (140, "badSignature")] {

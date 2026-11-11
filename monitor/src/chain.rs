@@ -1,6 +1,9 @@
 //! The Ethereum side: the vault's events, the views the monitor reads, and its three transactions
 //! (`cancelCandidate`, `pauseCheckpoints`, and `revokeFrom` when its key is the freeze authority).
 
+// The event constructors `sol!` generates take one argument per field.
+#![allow(clippy::too_many_arguments)]
+
 use alloy::{
     eips::BlockId,
     network::{EthereumWallet, TransactionBuilder as _},

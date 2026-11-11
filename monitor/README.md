@@ -151,16 +151,16 @@ The scenarios of the local-chain rehearsal:
 | S6 | state file lost | a fresh monitor rescans from the deployment block and makes exactly one cancellation (the pending wrong one); the two finalised checkpoints are audited as good |
 | S7 | wrong checkpoint finalised while no monitor ran | the watcher raises `finalized-wrong` with the deadline; the freeze authority's monitor revokes checkpoint 2, and `finalState` returns to its parent |
 | S8 | cancelled state submitted again | cancelled again, `persistent-candidate`, a 12 h pause; a submission during the pause is refused |
-| A1–A3 | rule (A) vault (turnSeconds 900, Δ 3 h 01 min) | honest candidate passed and finalised with a beacon after W = 12,660 s; stale key set cancelled at once; tip not final cancelled 7,203 s after the submission (Δ_g = 7,200 s), 5,457 s before the deadline |
+| A1–A3 | rule (A) vault (turnSeconds 900, Δ 3 h 01 min) | honest candidate passed and finalised with a beacon after W = 12,660 s; stale key set cancelled at once; tip not final cancelled 7,202 s after the submission (Δ_g = 7,200 s), 5,458 s before the deadline |
 | A4 | final tier stalled (rule A) | `final-tier-stalled` and the 12 h pause |
 | R1–R4 | the lab's real record as the node view | final tier 258; real tip passes, other hash cancelled, tip 259 waits |
-| S9 | failure paths | a `--dry-run` monitor raises `would-cancel` and leaves the candidate; a watcher without gas money raises `cancel-failed` and the candidate stays; funded again, the next poll cancels it 3,599 s before the deadline |
+| S9 | failure paths | a `--dry-run` monitor raises `would-cancel` and leaves the candidate; a watcher without gas money raises `cancel-failed` and the candidate stays; funded again, the next poll cancels it 3,600 s before the deadline |
 | | alerting | all 22 critical alerts reached the `--alert-cmd` pager |
-| | resources (build box) | the daemon held 42,844 kB resident (VmRSS) at its kill; a run of 2 polls with a full rescan took 33,356 kB max RSS and 1.05 s |
+| | resources (build box) | the daemon held 29,060 kB resident (VmRSS) at its kill; a run of 2 polls with a full rescan took 31,492 kB max RSS and 1.04 s |
 
 A `cancelCandidate` sent by the monitor used **41,477 gas** (41,468 in S5), from the receipts
 (measured, anvil). This includes the 21,000 base and the calldata. The vault's Foundry table gives
-37,438 ([`vault/GAS.md`](../vault/GAS.md)). On anvil the chain time moves only by the script's warps,
+37,438 ([`vault/GAS.md`](../vault/GAS.md)). Numbers are from the committed run; between runs the seconds differ by about 1 s and the memory by a few MB. On anvil the chain time moves only by the script's warps,
 so "0 s after submission" means the cancellation landed in the first poll after the submission.
 
 ## Not built
