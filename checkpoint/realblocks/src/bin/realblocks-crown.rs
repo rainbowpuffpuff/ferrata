@@ -59,7 +59,7 @@ const CHANNEL_ID: Hash = [1u8; 32];
 
 fn args() -> Result<BTreeMap<String, String>> {
     let v: Vec<String> = std::env::args().skip(1).collect();
-    ensure!(v.len() % 2 == 0, "arguments come in --key value pairs");
+    ensure!(v.len().is_multiple_of(2), "arguments come in --key value pairs");
     v.chunks(2)
         .map(|p| Ok((p[0].strip_prefix("--").context("expected --key")?.to_string(), p[1].clone())))
         .collect()
@@ -198,10 +198,13 @@ impl<'a> Visitor<'a> for Calls<'_, 'a> {
     }
 }
 
+/// The identity file, T0, T1 and the session's (block, hash) pairs.
+type Identity = (Value, u64, u64, Vec<(u64, Hash)>);
+
 /// The run's configuration and the span: `--identity` + `--parent` + `--tip`, or the LEZ side's
 /// `--session-a` (+ `--vault`, `--config-id`, `--genesis-state`) and `--session-b` (or `--tip`).
 /// Returns the identity in `--identity`'s shape, T0, T1 and the tip hashes the session files name.
-fn identity(a: &BTreeMap<String, String>) -> Result<(Value, u64, u64, Vec<(u64, Hash)>)> {
+fn identity(a: &BTreeMap<String, String>) -> Result<Identity> {
     let read = |k: &str| -> Result<Value> {
         let p = a.get(k).with_context(|| format!("--{k} is required"))?;
         serde_json::from_slice(&fs::read(p).with_context(|| p.clone())?).with_context(|| p.clone())
@@ -399,7 +402,7 @@ fn main() -> Result<()> {
         blocks: blocks.clone(),
         t_index: u32::try_from(t1 - t0 - 1)?,
         producer: tip_ins.elided()?,
-        attestations: vec![attestation.clone()],
+        attestations: vec![attestation],
         segments: Vec::new(),
     };
     let outcome = run_checkpoint_b(&input).map_err(|e| anyhow!("run_checkpoint_b refused the span: {e:?}"))?;
@@ -443,7 +446,7 @@ fn main() -> Result<()> {
     let meta = json!({
         "kind": "checkpoint-b",
         "description": format!("crown run: rule (B) over the devnet's blocks {}..={t1} (parent tip {t0}), T = {t1}, one certified attestation (n = 1, t = 1)", t0 + 1),
-        "journal": hex::encode(&journal),
+        "journal": hex::encode(journal),
         "journal_sha256": hex::encode(sha256_parts(&[journal.as_slice()])),
         "blocks": blocks.len(), "transactions": txs, "block_bytes": bytes, "input_bytes": encoded.len(),
         "first_block": t0 + 1, "tip": t1, "tip_hash": hx(&tip.tip_hash), "final_msg_id": hx(&tip.final_msg_id),

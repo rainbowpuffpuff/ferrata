@@ -17,7 +17,8 @@ import {RealBlocksFixture} from "./RealBlocks.t.sol";
 abstract contract CrownProofsFixture is RealBlocksFixture {
     bytes32 internal constant CROWN_CHECKPOINT_B_IMAGE_ID =
         0x7e51065ffd0a8004fbdd0452871c4a77da7b59e6499365f43d61363fd4307754;
-    bytes32 internal constant CROWN_RELEASE_IMAGE_ID = 0x20595dc54bbd80cf487e4666286db9aab7a048e2e0d7646b42ec6d3c90ca2625;
+    bytes32 internal constant CROWN_RELEASE_IMAGE_ID =
+        0x20595dc54bbd80cf487e4666286db9aab7a048e2e0d7646b42ec6d3c90ca2625;
 
     bytes internal releaseJournal;
     bytes internal releaseSeal;
@@ -57,7 +58,7 @@ abstract contract CrownProofsFixture is RealBlocksFixture {
     function test_crown_theProvenParentIsTheVaultsGenesis() public view {
         FerrataVault.Checkpoint memory c = _checkpoint();
         assertEq(c.parentState, vault.genesisState());
-        assertEq(block.chainid, 11155111);
+        assertEq(block.chainid, 11_155_111);
         assertEq(c.tipId, tipId);
         assertEq(c.tipHash, tipHash);
         assertEq(c.n, 1);
@@ -96,7 +97,8 @@ abstract contract CrownProofsFixture is RealBlocksFixture {
 
     /// @notice The release seal verifies for the crown release image and its journal, and for nothing else.
     function test_crown_theReleaseSealVerifiesForTheCrownReleaseImage() public {
-        RiscZeroGroth16Verifier groth16 = new RiscZeroGroth16Verifier(ControlID.CONTROL_ROOT, ControlID.BN254_CONTROL_ID);
+        RiscZeroGroth16Verifier groth16 =
+            new RiscZeroGroth16Verifier(ControlID.CONTROL_ROOT, ControlID.BN254_CONTROL_ID);
         bytes32 digest = sha256(releaseJournal); // before expectRevert: the precompile call would be the "next call"
         groth16.verify(releaseSeal, CROWN_RELEASE_IMAGE_ID, digest);
         vm.expectRevert(VerificationFailed.selector);
@@ -127,7 +129,8 @@ contract CrownR4Test is CrownProofsFixture {
     function _deposits() internal override {
         uint256[] memory d = new uint256[](3);
         (d[0], d[1], d[2]) = (0.001 ether, 0.01 ether, 0.1 ether);
-        FerrataVault.CapParams memory unlimited = FerrataVault.CapParams({capacity: type(uint256).max, refillPerSecond: 0});
+        FerrataVault.CapParams memory unlimited =
+            FerrataVault.CapParams({capacity: type(uint256).max, refillPerSecond: 0});
         vm.prank(admin);
         vault.registerToken(
             address(0),

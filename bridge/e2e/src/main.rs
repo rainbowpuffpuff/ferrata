@@ -871,7 +871,10 @@ fn cmd_crown_release(opts: &BTreeMap<String, String>) -> Result<()> {
     let vault: Address = field(&id, "vault")?;
     let config_id: Hash = field(&burns, "config_id")?;
     if !id["configId"].is_null() {
-        ensure!(config_id == field::<32>(&id, "configId")?, "burns.json is for another configuration than identity.json");
+        ensure!(
+            config_id == field::<32>(&id, "configId")?,
+            "burns.json is for another configuration than identity.json"
+        );
     }
 
     // 1. The burn tree: every leaf of the checkpoint's burns recomputed by the bridge core, both trees.
@@ -879,7 +882,14 @@ fn cmd_crown_release(opts: &BTreeMap<String, String>) -> Result<()> {
     let (mut leaves, mut frontier) = (Vec::with_capacity(all.len()), IncrementalTree::new());
     for (k, b) in all.iter().enumerate() {
         ensure!(number(b, "burn_index")? == k as u64, "burn {k}: burn_index");
-        let leaf = burn_leaf(&config_id, k as u64, &field(b, "token")?, &field(b, "amount")?, &field(b, "c_out")?, &field(b, "r")?);
+        let leaf = burn_leaf(
+            &config_id,
+            k as u64,
+            &field(b, "token")?,
+            &field(b, "amount")?,
+            &field(b, "c_out")?,
+            &field(b, "r")?,
+        );
         ensure!(leaf == field::<32>(b, "leaf")?, "burn {k}: the bridge core's leaf is not the checkpoint core's");
         frontier.append(leaf).map_err(|_| anyhow::anyhow!("burn tree full"))?;
         leaves.push(leaf);
@@ -924,7 +934,10 @@ fn cmd_crown_release(opts: &BTreeMap<String, String>) -> Result<()> {
             .find(|(_, b)| field::<32>(b, "r").ok() == Some(r))
             .with_context(|| format!("{name}: no burn with this r among the checkpoint's"))?;
         let (token, amount): (Address, U256) = (field(b, "token")?, field(b, "amount")?);
-        ensure!(field_or(note, "token", token)? == token && field_or(note, "amount", amount)? == amount, "{name}: token or amount");
+        ensure!(
+            field_or(note, "token", token)? == token && field_or(note, "amount", amount)? == amount,
+            "{name}: token or amount"
+        );
         ensure!(field_or(note, "c_out", field::<32>(b, "c_out")?)? == field::<32>(b, "c_out")?, "{name}: cOut");
         let s_out: Hash = field(note, "s_out")?;
         let recipient: Address = field(note, "recipient")?;
@@ -993,17 +1006,29 @@ fn cmd_crown_synthetic(opts: &BTreeMap<String, String>) -> Result<()> {
         Ok(())
     };
     for (i, name) in ["public", "private"].into_iter().enumerate() {
-        let target = ReleaseTarget { chain_id, vault, recipient: label_addr("crown-proofs: synthetic other recipient") };
+        let target =
+            ReleaseTarget { chain_id, vault, recipient: label_addr("crown-proofs: synthetic other recipient") };
         push(&BurnNote::create(&other, &config_id, i as u64, &target, token, amount), &mut burns)?;
         let recipient = label_addr(&format!("crown-proofs: synthetic recipient {name}"));
-        let note = BurnNote::create(&wallet, &config_id, i as u64, &ReleaseTarget { chain_id, vault, recipient }, token, amount);
+        let note = BurnNote::create(
+            &wallet,
+            &config_id,
+            i as u64,
+            &ReleaseTarget { chain_id, vault, recipient },
+            token,
+            amount,
+        );
         push(&note, &mut burns)?;
-        notes.push(json!({"name": name, "r": hx(&note.r), "s_out": hx(&burn_secret(&wallet.auth, &config_id, &note.r)),
+        notes
+            .push(json!({"name": name, "r": hx(&note.r), "s_out": hx(&burn_secret(&wallet.auth, &config_id, &note.r)),
             "recipient": hx(&recipient)}));
     }
     let label_text = "STAND-IN: synthetic burns of a test wallet (crown-proofs rehearsal), not from LEZ blocks";
-    write_json(&dir.join("burns.json"), &json!({"label": label_text, "config_id": hx(&config_id), "burn_count": burns.len(),
-        "burn_root": hx(&tree.root()), "burns": burns}))?;
+    write_json(
+        &dir.join("burns.json"),
+        &json!({"label": label_text, "config_id": hx(&config_id), "burn_count": burns.len(),
+        "burn_root": hx(&tree.root()), "burns": burns}),
+    )?;
     write_json(&dir.join("notes.json"), &json!({"label": label_text, "burns": notes}))?;
     println!("wrote {} synthetic burns (root {}) and 2 notes", burns.len(), hx(&tree.root()));
     Ok(())
