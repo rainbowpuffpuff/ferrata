@@ -9,6 +9,8 @@ cloud container held to the minimum, with `r0vm` 3.0.5 as the prover. Measured o
 A second pass the same day ran them at 16 CPUs (what an 8-core x86 laptop's 16 threads give), proved the
 release receipt and LEZ's own wallet's cheapest private transaction at 8 and 16 CPUs, and read what sets
 the cost of LEZ's circuit: [below](#second-pass-16-cpus-the-release-receipt-and-lezs-own-yardstick-11-november-2026).
+A third pass padded our three transactions as LEZ's wallet pads every private transaction and proved them again at 8
+and 16 CPUs: [Padded](#padded-our-three-transactions-as-lezs-wallet-pads-them-11-november-2026).
 
 All figures below are **measured** in that container unless marked otherwise; every one is in the
 logs under [`runs/`](runs/), and `summarize.py` recomputes the table from them.
@@ -285,6 +287,139 @@ ferrata-e2e groth16 --receipt run-<i>/prove/receipt-succinct.bin --image-id 0x17
 ferrata-e2e verify --receipt run-<i>/groth16/receipt-groth16.bin --image-id 0x17257f91…f5cd --meta <meta>
 ```
 
+## Padded: our three transactions as LEZ's wallet pads them (11 November 2026)
+
+LEZ v0.4.0-rc1's wallet pads every private transaction it sends; until this pass the harness built the private
+attestation, the private claim and the private burn unpadded, so their public shape differed from a wallet's and
+their padded proving time was only *estimated* (the second pass, "What sets the circuit's cycles"). The client now
+pads them as the wallet does: [`harness/src/private.rs`](../../harness/src/private.rs), `Shape::Wallet`, written from
+the wallet's source line by line (`lez/wallet/src/lib.rs` and `account_manager.rs` of LEZ `1806e87`, cited in its doc
+comments). `prove_attest` and `prove_bridge` build that shape by default; `--shape bare` builds the transactions of
+the passes above. Then the three proofs ran for real at 8 and at 16 CPUs, 16 GiB hard, two runs each, each run in its
+own container.
+
+### The padding, from LEZ's wallet
+
+| what the wallet does (`send_proven`, `lib.rs` from line 1484) | where (LEZ `1806e87`, `lez/wallet/src/`) | in the harness (`private.rs`) |
+|---|---|---|
+| dummy inputs up to `PADDED_PRIVATE_ACTIONS` = 7 private actions (one per private account, one per received message, one per claim): here one account, so six dummies, each against the commitment root the account is proven under | `account_manager.rs` 387, 644–652, 656–670; `lib.rs` 1584 | `PADDED_PRIVATE_ACTIONS`, `wallet_dummy_inputs` |
+| a dummy's note: 512 random bytes and a real ML-KEM-768 epk toward a throwaway key | `account_manager.rs` 1337–1356 | `wallet_dummy_output` |
+| every note's plaintext padded to `CIPHERTEXT_PAD_SIZE` = 512 bytes | `account_manager.rs` 35; `lib.rs` 1585 | `CIPHERTEXT_PAD_SIZE`, `ciphertext_padding` |
+| the fee paid in the proof with `refund_to: None`: the unspent reserve goes to the payer's alias, which a recovery note binds | `lib.rs` 510, 1681, 1692–1695, 1740; `account_manager.rs` 791–829 | `refund_to`, `wallet_fee_recovery` |
+| the payer's native actor presented under that alias, its other actors under a fresh alias each, public actors as they are | `account_manager.rs` 731–748 | the `presentation` closure |
+| fresh randomness for every transaction (the witness's seed, the alias's opening) | `account_manager.rs` 1151, 1318–1322; `lib.rs` 1692 | `Freshness::random`, `random_bytes` |
+
+### The wallet's public shape, and settled ([`tests/wallet_padding.rs`](../../harness/tests/wallet_padding.rs))
+
+The test builds LEZ's wallet's own transaction with `prove_native_transfer --shape wallet` (the yardstick above,
+written separately from `Shape::Wallet`) and ours with the binaries measured below, at their default shape; each
+settles through LEZ's private settlement when proven and again from its file on a rebuilt state (`--settle`); then
+it compares what the transactions show of their private part (dev mode, on the build box;
+[`runs/pad-box/test-wallet-padding.log`](runs/pad-box/test-wallet-padding.log), `test result: ok`):
+
+| transaction | private actions | each action (B) | each note's ciphertext / epk (B) | recovery notes (B) | the fee's fallback note (B) | refund to |
+|---|---:|---:|---:|---:|---:|---|
+| LEZ's wallet: deshielded native transfer | 7 | 1,704 | 516 / 1,092 | 1 (1,258) | 1,868 | the payer's alias |
+| ours, padded: the private attestation, the private claim, the private burn (each) | 7 | 1,704 | 516 / 1,092 | 1 (1,258) | 1,868 | the payer's alias |
+| ours as before (`--shape bare`): the private attestation | 1 | 1,485 | 297 / 1,092 | 0 | 1,493 | the public payer account |
+
+Equal, field for field. What still tells two wallet transactions apart is what they do, the same for any two
+programs: the boundary messages, the program image claims and the public actors.
+
+### Result: real proofs at 8 and at 16 CPUs, 16 GiB hard
+
+`execute_and_prove`, *measured*, one run per container (`python3 -I summarize_pad.py`, which writes
+[`summary-pad.json`](summary-pad.json); logs under `runs/pad-cpu<N>-<x>/<job>/`):
+
+| proof (padded) | 8 CPUs: `execute_and_prove` (s), each run | median | 16 CPUs: each run | median | user cycles proven (segments) | LEZ's circuit: user cycles | its segments (cycles with padding) | peak GiB, r0vm RSS / container | receipt (B) | transaction (B) | settled, receipt verified | padded / unpadded median, 8 / 16 CPUs |
+|---|---|---:|---|---:|---:|---:|---:|---:|---:|---:|---|---:|
+| private attestation | 1249.5 / 1224.1 | 1236.8 | 636.7 / 629.9 | 633.3 | 3,335,028–3,336,541 (6) | 2,954,451–2,955,964 | 4 (3,670,016) | 9.23 / 9.23 | 239,214 | 255,302 | 4 of 4 | 1.37× / 1.27× |
+| private claim | 1105.4 / 1186.6 | 1146.0 | 571.7 / 629.7 | 600.7 | 3,122,904–3,124,131 (6) | 2,970,148–2,971,375 | 4 (3,670,016) | 9.25 / 9.23 | 239,628 | 256,130 | 4 of 4 | 1.27× / 1.3× |
+| private burn | 956.2 / 1021.6 | 988.9 | 500.2 / 551.6 | 525.9 | 2,902,119–2,903,759 (5) | 2,876,742–2,878,382 | 4 (3,407,872) | 9.25 / 9.23 | 239,046 | 254,966 | 4 of 4 | 1.31× / 1.35× |
+
+"padded / unpadded": the median over the unpadded median of the same proof and CPU count (the second pass's table
+above; *derived*). Against LEZ's wallet's own transaction, proven the same way (991.7 s at 8 CPUs, 488.6 s at 16), the
+padded attestation takes 1.25× / 1.30×, the claim 1.16× / 1.23× and the burn 1.00× / 1.08× (*derived*).
+
+- **Every receipt verified.** Each run's transactions were settled from their files by LEZ's settlement in a fresh
+  process (`--settle`, "receipt verified"): 12 of 12 (4 attestations, 4 claims, 4 burns). After each run one flipped
+  bit in each transaction was refused, 12 of 12 (exit 101, "Invalid privacy preserving execution circuit proof").
+- **What the padding costs.** LEZ's circuit grew by 979,362–980,875 user cycles for the attestation (unpadded
+  1,975,089), 986,063–987,290 for the claim (1,984,085) and 988,697–990,337 for the burn (1,888,045): the +996,910 the
+  second pass *estimated* from the wallet's transfer, within 2 %. It went from 3 segments to 4 (2^20 each, the last
+  smaller); the programs' own transitions are unchanged. The estimate there for the attestation, about 3.35M user
+  cycles, 10 minutes at 16 CPUs and 20 at 8, measured 3.34M, 10.6 and 20.6 minutes.
+- **Memory did not grow**: 9.25 GiB peak r0vm RSS, 9.23 GiB for the whole container, as unpadded; segments of 2^20
+  cycles set it, not the transaction's size.
+- **Size**: the transactions are 254,966–256,130 bytes (unpadded: 230,870–231,950), the receipts 239,046–239,628
+  (226,998–227,538); LEZ's wallet's transfer is 254,244 and 238,685. Settlement charges what it charged unpadded:
+  execution gas 421,641 / 551,502 / 518,358, storage gas 224,063 each (`settle.log`).
+- **At the declared minimum** (8 cores with 16 threads: the 16-CPU column), the slowest, the attestation, took
+  10.6 minutes (629.9–636.7 s). On 8 threads it took 20.6 minutes (1224.1–1249.5 s), the claim 19.1 and the burn 16.5.
+
+### The machines as measured (padded pass)
+
+Every container reported the shape it was given, as in the second pass (`runs/pad-*/*/container.json`): `nproc`,
+affinity and `/proc/cpuinfo` 8 or 16, CFS quota 800,000 or 1,600,000 per 100,000, `memory.limit_in_bytes`
+17,179,869,184 (16 GiB), no swap, gVisor, Ubuntu 24.04.5, glibc 2.39, `r0vm` 3.0.5 (`36c016a5…515b`), every input
+equal to its manifest. All eight were AMD Zen 3 (family 25, model 1):
+
+| container (tag / job) | CPUs | CPU, cloud region | runs: execute_and_prove (s) | tamper: settle exit |
+|---|---:|---|---|---|
+| `pad-cpu8-a/attest-pad` | 8 | AMD Zen 3, AZURE us-east | private attestation 1249.5 | [101] |
+| `pad-cpu8-b/attest-pad` | 8 | AMD Zen 3, AZURE us-west | private attestation 1224.1 | [101] |
+| `pad-cpu8-a/bridge-pad` | 8 | AMD Zen 3, GCP ca | private claim 1105.4; private burn 956.2 | [101, 101] |
+| `pad-cpu8-b/bridge-pad` | 8 | AMD Zen 3, AZURE us-east | private claim 1186.6; private burn 1021.6 | [101, 101] |
+| `pad-cpu16-a/attest-pad` | 16 | AMD Zen 3, AZURE us-west | private attestation 636.7 | [101] |
+| `pad-cpu16-b/attest-pad` | 16 | AMD Zen 3, AZURE eu-west | private attestation 629.9 | [101] |
+| `pad-cpu16-a/bridge-pad` | 16 | AMD Zen 3, GCP ca | private claim 571.7; private burn 500.2 | [101, 101] |
+| `pad-cpu16-b/bridge-pad` | 16 | AMD Zen 3, AZURE uk | private claim 629.7; private burn 551.6 | [101, 101] |
+
+The container of `pad-cpu16-a/bridge-pad` was preempted (client: "Container terminated due to preemption"); Modal
+restarted the call from the start on GCP, and only the restarted call's run exists. The eight calls ran at the same
+time; whether some shared a host is not known.
+
+### Segment size: 2^20, and the host cannot choose another
+
+The brief was to try 2^21-cycle segments against r0vm's default 2^20 within 16 GiB, if the host chooses the size.
+It does not: LEZ builds every executor environment itself (`ExecutorEnv::builder()` in
+`lee/state_machine/src/privacy_preserving_transaction/circuit/mod.rs` lines 571 and 678, and in
+`lee/state_machine/src/program/mod.rs` line 109) and never sets `segment_limit_po2`, and `risc0-zkvm` 3.0.5 reads no
+environment variable for it (`host/client/env.rs` reads only `RISC0_KECCAK_PO2`, line 165; the executor falls back to
+`DEFAULT_SEGMENT_LIMIT_PO2`, 20: `host/server/exec/executor.rs` lines 186–189). Choosing it would take a patched LEZ,
+so the proof would no longer be LEZ's own `execute_and_prove`; not done. Every segment above is 2^20 or smaller, and
+peak memory stayed at 9.2–9.3 GiB, padded or not. Since a segment's proving memory grows with its size, 2^21 would
+roughly double that peak, past the 16 GiB the minimum declares (*estimated*, not measured).
+
+### Commands (padded pass)
+
+```sh
+# 1. On the build box, from lez/ of this worktree (commit 9bec9fe; 511d5ce after it is rustfmt only):
+M=<spike>/modal-build
+$M/mrun --profile ws-4 --get <spike>/tmp/p4-pad/box -- \
+  'FERRATA_HEAD=9bec9fe9514c5574d297b099d9d6ba701dc31969 FERRATA_DIRTY=0 bash results/p4-minimum/box-build-pad.sh'
+#    builds the three binaries, runs tests/wallet_padding.rs (dev mode), the dev-mode dry runs and settlements,
+#    strips prove_attest (158,359,704 -> 11,582,504 bytes) and prove_bridge (158,846,864 -> 11,914,096) and stages them
+#    (manifests: runs/pad-box/MANIFEST-*.json)
+# 2. From the laptop, in lez/results/p4-minimum, with MODAL_PROFILE=ws-4 P4_APP=p4-pad P4_MEM_MIB=16384:
+modal volume put p4-minimum <spike>/tmp/p4-pad/box/stage/attest-pad /bundle/attest-pad
+modal volume put p4-minimum <spike>/tmp/p4-pad/box/stage/bridge-pad /bundle/bridge-pad
+for c in 8 16; do for r in a b; do for j in bridge-pad attest-pad; do       # eight containers at once, one run each
+  P4_CPU=$c modal run --detach minimum.py::main --job $j --runs 1 --tag pad-cpu$c-$r &
+done; done; done; wait
+modal volume get p4-minimum /results/pad-cpu<N>-<x>/<job> runs/pad-cpu<N>-<x>/
+python3 -I summarize_pad.py           # the tables above; writes summary-pad.json
+```
+
+Inside each container, as in the passes above (`minimum.py`, `prove`), with the shape named:
+
+```sh
+RISC0_INFO=1 RUST_LOG=info /usr/bin/time -v ./prove_attest --shape wallet --tx-out tx-attest.borsh > prove.log 2>&1
+./prove_attest --settle tx-attest.borsh > settle.log 2>&1                  # LEZ's settlement, receipt verified
+RISC0_INFO=1 RUST_LOG=info /usr/bin/time -v ./prove_bridge --shape wallet --claim-out tx-claim.borsh --burn-out tx-burn.borsh > prove.log 2>&1
+./prove_bridge --settle tx-claim.borsh tx-burn.borsh > settle.log 2>&1
+```
+
 ## The machine as measured (first pass)
 
 A Modal container (a gVisor sandbox) of the function `prove` in [`minimum.py`](minimum.py), with
@@ -429,11 +564,12 @@ build box; on a laptop, longer): built at another path the image ids differ, so 
 
 - A laptop, or Apple Silicon. These are cloud servers held to the minimum's numbers (and to 16 CPUs); the
   owner's laptop run (above) is the other half of P.4.
-- Our transactions as a wallet that pads like LEZ's would make them: only *estimated* (second pass, last
-  paragraph of "What sets the circuit's cycles"), not proven.
+- Our transactions as a wallet that pads like LEZ's makes them: proven since, in the padded pass (two runs per CPU
+  count, each in its own container).
 - Other memory settings: 16 GiB was enough with r0vm's default segment size (2^20 cycles), so no
   smaller limit was tried. A smaller `segment_limit_po2` would lower the peak and lengthen the proof;
-  not measured.
+  not measured. LEZ does not let the host choose it (padded pass, "Segment size"), so neither 2^19 nor 2^21 was
+  tried.
 - Variance across machines: in the first pass three runs in one container per job (spreads of 2.4, 7.3
   and 15.8 s for the attestation, the claim and the burn), on one CPU generation; in the second, two
   containers for some jobs and one Intel container among the AMD ones (the tables name each run's machine).
@@ -453,4 +589,7 @@ build box; on a laptop, longer): built at another path the image ids differ, so 
 | `box-build-scale.sh` | The second pass's build-box script: `prove_native_transfer` and `ferrata-e2e`, the dev-mode cycle counts, the release witnesses, the stages |
 | [`../../harness/src/bin/prove_native_transfer.rs`](../../harness/src/bin/prove_native_transfer.rs) | LEZ's wallet yardstick: a deshielded native transfer built as the wallet builds it (`--shape wallet`) or as this harness builds its own (`--shape bare`) |
 | `runs/cpu16-mem16g/`, `runs/cpu16-mem16g-2/`, `runs/cpu8-mem16g/` | The second pass, per tag and job: `attest`, `bridge`, `transfer` as the first pass's; `release`: `container.json`, `exec.log`, per run `prove.log`, `p254.log`, `run.json`, `prove/` (receipt, `prove.json`), `wrap/` (`input.json`, `proof.json`, `groth16-run.json` with the prover container's machine, `groth16.log`), `groth16/` (the Groth16 receipt, `seal.hex`, `journal.hex`), `finish.json` |
+| `box-build-pad.sh`, `runs/pad-box/` | The padded pass's build-box script and its output: the build, the padding test's log, the dev-mode dry runs (gzipped) and settlements, the stage manifests |
+| `summarize_pad.py`, `summary-pad.json` | The padded pass's tables from `runs/pad-cpu<N>-<x>/<job>/`, with each run's machine |
+| `runs/pad-cpu8-a/` … `runs/pad-cpu16-b/` | The padded pass, one run per container: jobs `attest-pad` and `bridge-pad`, the files as the second pass's |
 | `runs/attest/`, `runs/bridge/` | `container.json` (the machine, the manifest, r0vm's hash, the image ids) and per run `prove.log` (the binary's output, r0vm's session log, GNU time), `settle.log`, `run.json`, `samples.csv` (memory every 0.5 s); run 1 also the transactions (`tx-*.borsh`, receipts inside) and the tamper checks |
