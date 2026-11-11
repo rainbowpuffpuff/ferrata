@@ -346,7 +346,9 @@ seal in the release job; wrapping inside the daemon is not built.
   changed journal refused, also after a restart); (2) **the daemon on an anvil fork of Sepolia** at the
   block before `crown-live-1`'s `submitCandidate`, with that run's real checkpoint and release proofs:
   candidate 375,281 gas, `finalizeAttested` 218,385 after W = 3,600 s, releases 358,908 and 393,108, the
-  checkpoint fees (2 × 10¹² wei) collected with `claimOwed` (the same transactions and gas in four runs);
+  checkpoint fees (2 × 10¹² wei) collected with `claimOwed` (the same transactions and gas in every run); a
+  new real release proof of the same burn naming a relayer with the registered fee, sent by the daemon as that
+  relayer (407,052 gas, 2 × 10¹² wei received), its copy naming another relayer refused;
   the early release deferred and released once the root was final; a second candidate, another relayer's
   daemon, an unpaid release and a replay refused ([`e2e/runs/relayer-fork/`](../../e2e/runs/relayer-fork/results.json));
   (3) **the LEZ harness** (`cli/tests/e2e.rs` with `FERRATA_GASDROP_ELF`): a real gas-drop receipt for a
