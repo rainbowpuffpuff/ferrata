@@ -21,7 +21,8 @@ contract CliLocal is Script {
         MockRiscZeroVerifier mock = new MockRiscZeroVerifier();
         address freezeAuthority = address(uint160(uint256(keccak256("ferrata cli e2e: freeze authority (no key)"))));
         RiscZeroVerifierEmergencyStop verifier = new RiscZeroVerifierEmergencyStop(mock, freezeAuthority);
-        FerrataVault.CapParams memory unlimited = FerrataVault.CapParams({capacity: type(uint256).max, refillPerSecond: 0});
+        FerrataVault.CapParams memory unlimited =
+            FerrataVault.CapParams({capacity: type(uint256).max, refillPerSecond: 0});
         FerrataVault vault = new FerrataVault(
             FerrataVault.Deployment({
                 verifier: IRiscZeroVerifier(address(verifier)),
