@@ -661,7 +661,8 @@ Rectangle {
         z: 50
         MouseArea { anchors.fill: parent }
         Rectangle {
-            anchors.centerIn: parent
+            anchors.horizontalCenter: parent.horizontalCenter
+            y: 110
             width: 620; height: selCol.implicitHeight + 30
             radius: 8; color: "white"
             ColumnLayout {
@@ -686,7 +687,8 @@ Rectangle {
         z: 60
         MouseArea { anchors.fill: parent }
         Rectangle {
-            anchors.centerIn: parent
+            anchors.horizontalCenter: parent.horizontalCenter
+            y: 110
             width: 700; height: apCol.implicitHeight + 30
             radius: 8; color: "white"
             ColumnLayout {

@@ -30,4 +30,29 @@ for (const [tab, texts] of screens) {
   });
 }
 
+// With the devnet backend running beside Basecamp (scripts/basecamp-ui-tests.sh starts it): the user
+// switches the view to it in Settings, connects the wallet and makes a deposit through the approval prompt.
+if (process.env.FERRATA_DEVNET === "1") {
+  test("ferrata_bridge_ui: a private deposit through the devnet, inside Basecamp", async (app) => {
+    await app.click("Settings");
+    await app.click("devnet backend (HTTP)");
+    await app.click("Apply and test");
+    await app.waitFor(async () => { await app.expectTexts(["Connected: chain 1"]); },
+      { timeout: 30000, interval: 500, description: "the devnet to answer" });
+    await app.click("Deposit");
+    await app.click("Connect wallet");
+    await app.waitFor(async () => { await app.expectTexts(["Ferrata Bridge asks to connect"]); },
+      { timeout: 15000, interval: 300, description: "the account selection" });
+    await app.click("Ethereum 0x");
+    await app.waitFor(async () => { await app.expectTexts(["Private account (recommended)", "Exposure: Minimal"]); },
+      { timeout: 15000, interval: 300, description: "the deposit form with its defaults" });
+    await app.click("Review deposit");
+    await app.waitFor(async () => { await app.expectTexts(["Deposit to the Ferrata vault", "What it does"]); },
+      { timeout: 15000, interval: 300, description: "the approval prompt" });
+    await app.click("Approve");
+    await app.waitFor(async () => { await app.expectTexts(["Deposited 0.1 ETH to a private account"]); },
+      { timeout: 60000, interval: 500, description: "the deposit's transaction" });
+  });
+}
+
 run();
