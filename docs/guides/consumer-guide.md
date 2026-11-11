@@ -5,7 +5,9 @@ LEZ program that must act on a fact about Ethereum: a storage slot, an account, 
 leaf of an accumulator kept in a contract. It says how to ask for an attestation on the public path
 and on the private path, what a statement identifier is and how to key a nullifier on it, the
 Recommended Consumer Pattern, every error code, chain binding, and how to move to a new version.
-Every statement cites the file it rests on; paths are relative to the repository root.
+Every statement cites the file it rests on; paths are relative to the repository root. §12 walks
+through a whole consumer, step by step: `ferrata_holdings`, which accepts an ERC-20 balance at a
+finalized block, with its tests on real data, its gas and cycles, and a real proof.
 
 Labels, as in [`docs/design/attestation.md`](../design/attestation.md) (opening section): **measured**
 (a run reproducible from the repository, with where it ran), **derived** (arithmetic on measured
@@ -323,6 +325,7 @@ Each code has one owner, and a test fails if two owners share one
 | 100–199 (100–163) | `ferrata-core`, execution layer and attestations | `error.rs` |
 | 200–219 (200–215) | the attestation program | `code` in [`lez/wire/src/lib.rs`](../../lez/wire/src/lib.rs) |
 | 220–239 (220–229) | the reference consumer | `consumer::code` in `lez/wire/src/lib.rs` |
+| 230–239 (all ten) | `ferrata_holdings`, the worked example of §12: in the consumers' block, unused by the reference consumer | `code` in [`lez/holdings-wire/src/lib.rs`](../../lez/holdings-wire/src/lib.rs) |
 | 240–255 | the bridge program | `code` in [`lez/bridge-wire/src/lib.rs`](../../lez/bridge-wire/src/lib.rs) |
 
 The program's own codes moved from 100–112 to 200–212; the refusal table of
@@ -417,3 +420,133 @@ From [`attestation.md`](../design/attestation.md) §15 and [`lez/RESULTS.md`](..
   an image before `Attest` ([`lez/RESULTS.md`](../../lez/RESULTS.md) §9); the bridge's `Init`
   and `ImportRoot`, which call `Attest`, ran on a live sequencer on a stand-in beacon chain
   ([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §11).
+
+## 12. Worked example, step by step: `ferrata_holdings`
+
+A second consumer, written against the public interface only, to show the attestation is a
+primitive and not the bridge's: a LEZ program that accepts **"`holder` held at least `minimum` of
+the ERC-20 `token` at a finalized Ethereum block"**. It is a storage-slot statement, where the
+reference consumer's is a log. Everything below is in four files:
+[`lez/holdings-wire/src/lib.rs`](../../lez/holdings-wire/src/lib.rs) (messages, state, the
+acceptance check), [`lez/guests/holdings/src/main.rs`](../../lez/guests/holdings/src/main.rs) (the
+program, 66 lines), [`lez/harness/src/holdings.rs`](../../lez/harness/src/holdings.rs) (the
+client's side) and [`lez/harness/tests/holdings.rs`](../../lez/harness/tests/holdings.rs) (the
+cases). It uses nothing of the bridge or the reference consumer; of Ferrata it uses
+`ferrata-lez-wire`'s `header_actor`, `Message::Attest`, `attest::Request` and `attest::Attestation`,
+and `ferrata_core::keccak::keccak256`.
+
+**Step 1. Write the statement as facts of one block.** An ERC-20 balance is an entry of the token's
+`mapping(address => uint256)`; Solidity stores entry `holder` of a mapping declared at slot `p` at
+`keccak256(pad32(holder) ‖ pad32(p))`. WETH9 declares `balanceOf` at slot 3. So the statement is two
+facts: the token's account (whose storage root the slot is proven under) and that slot, with the
+condition `value ≥ minimum` (`Gate::request`). The test checks the key against the fixture
+(`mapping_key(holder, 3)` is the slot `eth_getProof` was asked for).
+
+**Step 2. Pin what you trust, in a value you never store.** A `Gate` is the attestation program's
+account, the instance id, the chain id, the token, the mapping's slot and the minimum. Its hash
+names the program's only actor kind, `holding(gate, holder)` (a PDA of the gate id and the holder),
+so a check under another program, instance, chain, token or minimum lands in another actor (§2).
+
+**Step 3. Build the request in your program, not in the caller.** In `Check { gate, slot, holder,
+account_proof, storage_proof, header }` the caller names the gate, the record and the holder and
+supplies the proofs; the program derives the slot key and the condition from the gate itself, so a
+holding written under a gate always means that gate's statement. It then sends
+`Attest { request }` synchronously to `header(id, slot)`, derived from the gate (§2), and keeps
+`Pending { gate, holder, record }`.
+
+**Step 4. Accept the reply only from the record you asked, and check its shape.** In the reply
+handler: the sender must be `record` (233 otherwise); the reply must decode as an `Attestation`
+(234); its instance and chain id must be the gate's (235, 236); it must hold exactly the two facts
+asked, the token's account then the holder's slot, at the record's own block (237); the balance must
+be at least the minimum (238; the attestation program already checked the condition, and
+`Gate::accept` checks it again so that one function states what the program accepts). Then write
+a `Holding`: balance, beacon slot, block number and hash, and the storage fact's statement
+identifier (§5). A later check may replace it with a newer block only (239).
+
+**Step 5. Fetch the proofs off chain.** Pick a record: the beacon slot of a finalized header the
+instance recorded (the `FRT-FIN1` event, or `header(id, slot)`'s state), and its execution block
+number. Ask any Ethereum node `eth_getProof(token, [key], block)`: its `accountProof` and
+`storageProof[0].proof` are the two proofs. Under a Gloas record, also send the block's RLP header
+(§4.3). The test uses the committed response of 10 November 2026
+(`crates/ferrata-spectests/fixtures/mainnet-attest-2026-11-10/proof_weth_26384851.json`):
+Uniswap v2's USDC/WETH pair `0xb4e16d…c9dc` held 0xf22ca9b4cc5d0f3d61 wei (4,467.33 WETH) of WETH at
+block 26,384,851, the value the committed `eth_call balanceOf` gives too.
+
+**Step 6. Send one transaction.** Its root is `Check` at `holding(gate, holder)`, with the record
+actor in its actor list and PDA evidence for the holding actor (`Holdings::check_with`). LEZ runs
+three handlers depth-first: `Check`, the attestation program's `Attest`, the reply. A refusal of
+any of them reverts the transaction (§8.1), so the holding is written only on a proven statement.
+
+**Step 7. Test the refusals with real data.** One chain, every case
+(`RISC0_DEV_MODE=1 cargo test -p harness --locked --test holdings -- --nocapture`; the table is
+[`lez/results/holdings.md`](../../lez/results/holdings.md)); each refusal leaves the holding as it
+was, and for the attestation program's refusals the native `attest::evaluate` gives the same code:
+
+| Case | Refused by | Exit |
+|---|---|---|
+| a gate for Sepolia (chain id 11155111) against mainnet's records | the attestation program | 140 `ChainMismatch` |
+| an unfinalized block: the update's attested header (slot 15,624,544), which no record holds | the attestation program | 213 `NO_RECORD` |
+| an unknown block: no record at slot 15,624,481 | the attestation program | 213 `NO_RECORD` |
+| the right proofs against another block's record (the bootstrap's, slot 15,622,144) | the attestation program | 110 `ProofNodeMismatch` |
+| a bad proof: one byte of the storage proof's leaf flipped | the attestation program | 110 `ProofNodeMismatch` |
+| a bad proof: one byte of the account proof's root node flipped | the attestation program | 110 `ProofNodeMismatch` |
+| a mismatched value: a minimum of the balance plus 1 wei | the attestation program | 130 `PredicateFailed` |
+| a mismatched holder: the pair's proofs claimed for another address | the attestation program | 110 `ProofNodeMismatch` |
+| `Check` sent to another holder's actor | this program, before asking | 232 `WRONG_RECEIVER` |
+| a second check at the same block | this program, after the attestation | 239 `STALE` |
+
+Accepted: a minimum of 1,000 WETH, and a minimum equal to the balance to the wei. The holding then
+holds the balance `eth_call` gives, block 26,384,851, its hash, and the statement identifier
+`harness::attest::storage_statement_id` computes from the JSON alone.
+
+**Step 8. Measure.** In-process harness (LEZ v0.4.0-rc1's state machine and fee settlement), on the
+build box, 11 November 2026:
+
+| Transaction | Handlers (cycles each) | Execution gas | Of the 5M target | Storage gas (tx bytes) |
+|---|---|---:|---:|---:|
+| accepted, at least 1,000 WETH | `Check` 111,198 → `Attest` 278,002 → reply 41,910 | 431,110 | 9% | 7,493 |
+| refused by the condition (balance + 1 wei) | `Check` 111,198 → `Attest` 253,744 | 364,942 | 7% | 7,493 |
+| refused for another chain | `Check` 111,198 → `Attest` 38,360 | 149,558 | 3% | 7,493 |
+| refused before asking (wrong actor) | `Check` 36,232 | 36,232 | 1% | 7,493 |
+
+LEZ charges execution gas equal to the cycles it metered; the accepted check's base fee at genesis
+base fees is 3,508,824 ([`lez/results/holdings.md`](../../lez/results/holdings.md), every case and
+every handler's bytes). `Check` reads the proofs in its 6,966-byte message and writes them again into the
+`Attest` it sends (a 14,319-byte journal); refused before it builds the request, it costs 36,232
+cycles. The program adds 153,108 cycles to the attestation's 278,002 (derived: 431,110 − 278,002),
+36% of the transaction.
+
+**Step 9. Prove.** LEZ v0.4 does not prove a public transaction (a sequencer executes it); what a
+prover of this one would prove is its three handler executions. `prove_holdings`
+([`lez/harness/src/bin/prove_holdings.rs`](../../lez/harness/src/bin/prove_holdings.rs)) settles the
+accepted check, replays it with each handler's input recorded, proves each execution with `r0vm`
+3.0.5 on the CPU (`RISC0_DEV_MODE=0`, succinct receipts), verifies each receipt against its
+program's image id and compares each journal with the executor's:
+
+| # | Program | Handler | User cycles | Padded cycles (segments) | Proving time | Receipt |
+|---|---|---|---:|---:|---:|---|
+| 1 | `ferrata_holdings` | `Check` | 111,198 | 262,144 (1) | 21.2 s | succinct, 251,813 bytes |
+| 2 | the attestation program | `Attest` | 278,002 | 524,288 (1) | 64.6 s | succinct, 238,923 bytes |
+| 3 | `ferrata_holdings` | reply | 41,910 | 131,072 (1) | 13.5 s | succinct, 225,055 bytes |
+
+99.3 s of proving in all; the whole run (settlement, replay, three proofs) took 1 min 43.64 s wall,
+2,615 s of CPU (2,616% of one core) and 4.94 GB peak memory (GNU `time -v`), on a Modal CPU container
+(32 processors listed, 64 GB, no GPU), 11 November 2026
+([`lez/results/prove-holdings.log`](../../lez/results/prove-holdings.log)). Image ids of that build:
+`ferrata_holdings` `4985868d…cd4f`, the attestation program `d2fb9aec…e600`; a guest's image id
+embeds the build's absolute paths, so another checkout gives other ids. To run it:
+
+```sh
+cd lez                                     # toolchains and environment: lez/RESULTS.md §8
+RISC0_DEV_MODE=1 cargo test -p harness --locked --test holdings -- --nocapture   # writes results/holdings.md
+cargo build -p harness --locked --bin prove_holdings
+RISC0_DEV_MODE=0 target/debug/prove_holdings > results/prove-holdings.log 2>&1   # --composite: no lift and join
+```
+
+**What this example does not do.** It runs on the public path only: the request names the token
+and the holder, and the transaction shows them; a private balance check would read the record and
+run `attest::evaluate` itself (§4.2), which this program does not. No hops (the record's own block
+only), no Gloas record in its tests (`header: None`), no accumulator leaves. It ran in the
+in-process harness, not on a live sequencer. It was built and run on v0.4.0-rc1 only:
+`lez/scripts/lez-select.sh` switches its manifests to another tag, but
+`lez/lockfiles/v0.4.0-rc2.patch` does not cover its guest's lockfile. Not audited.
