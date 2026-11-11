@@ -695,6 +695,7 @@ def main() -> int:
         if "submit" in man and "submit" not in state.get("tx", {}):
             raise Failed("the run's checkpoint (its submit transaction) is not on chain")
         t0 = topic("Release(bytes32,address,address,uint256,address,uint256,bytes32)")
+        t_owed = topic("OwedCredited(address,address,uint256)")
         logs = rpc.logs(vault, t0, from_block, state.get("head") or int(rpc("eth_blockNumber"), 16))
         by_null = {lg["topics"][1].lower(): lg for lg in logs}
         out, waiting, paid = [], [], 0
@@ -718,8 +719,15 @@ def main() -> int:
             need("0x" + lg["topics"][3][-40:] == r["recipient"].lower(), f"{r['name']}: recipient")
             need("0x" + lg["topics"][2][-40:] == r["token"].lower(), f"{r['name']}: token")
             need(int(w[0], 16) == amount and w[3] == jw[8], f"{r['name']}: amount {int(w[0], 16)} or burn root")
-            paid += int(w[0], 16)
-            out.append(f"{r['name']}: {int(w[0], 16)} wei to {r['recipient']}, nullifier spent (block {int(lg['blockNumber'], 16)})")
+            # Release's amount is gross: the vault credits the burn and checkpoint fees (and any payout it could not
+            # push) to `owed` in the same transaction (OwedCredited), and that ETH stays in the vault until claimed.
+            rc = rpc("eth_getTransactionReceipt", lg["transactionHash"])
+            credited = sum(int(x["data"], 16) for x in rc["logs"] if x["address"].lower() == vault
+                           and x["topics"][0] == t_owed and "0x" + x["topics"][2][-40:] == r["token"].lower())
+            paid += int(w[0], 16) - credited
+            out.append(f"{r['name']}: {int(w[0], 16)} wei to {r['recipient']}"
+                       + (f" ({credited} of it credited to owed)" if credited else "")
+                       + f", nullifier spent (block {int(lg['blockNumber'], 16)})")
         mine = {r["nullifier"].lower() for r in rels}
         ours = [lg for lg in logs if lg["topics"][1].lower() in mine]  # others may release their own burns
         need(len(ours) == len(out), f"{len(ours)} Release events of the run's nullifiers, {len(out)} spent")
@@ -730,8 +738,12 @@ def main() -> int:
         bal = int(rpc("eth_getBalance", vault, "latest"), 16)
         dep_total = state.get("deposited")
         if dep_total is not None:
-            need(bal <= dep_total - paid, f"vault balance {bal} > deposits {dep_total} - released {paid}")
-        return "; ".join(out) + f"; vault balance now {bal} wei"
+            need(bal <= dep_total - paid, f"vault balance {bal} > deposits {dep_total} - paid out by the releases {paid}")
+        eth = "0x" + "00" * 20
+        esc, owed = int(word("escrowed(address)", eth), 16), int(word("totalOwed(address)", eth), 16)
+        need(bal >= esc + owed, f"vault balance {bal} < escrowed {esc} + owed {owed}")
+        return "; ".join(out) + f"; vault balance now {bal} wei = escrowed {esc} + owed {owed}" + \
+            ("" if bal == esc + owed else f" + {bal - esc - owed} unbooked")
 
     p, f, pe = RESULTS.count("PASS"), RESULTS.count("FAIL"), RESULTS.count("PENDING")
     print(f"{p} passed, {pe} pending, {f} failed ({rpc.n} RPC calls)")
