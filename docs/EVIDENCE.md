@@ -88,7 +88,7 @@ commit 4637a16 (the commits after it change documents only); every count and com
 | Checkpoint: `checkpoint-core` and `attestor-core` (rules (A) and (B)); fidelity; `realblocks` | 33 passed in 8 binaries, clippy and fmt clean, attestor vectors re-derived in Python; fidelity 17 passed in 6; the `realblocks` tool builds, clippy and fmt clean |
 | Privacy suite (`scripts/privacy/run.sh`) | both halves pass; gate, rates, hidden column and recovery as in row 23 |
 | Vault: `forge test`, coverage, invariants | 407 passed in 35 suites, among them the 14 invariants on a rule (A) and on a rule (B) vault (28 campaigns of 256 runs × 100 calls); coverage 100% (lines, statements, branches, functions) of both files; mutation not re-run (`vault/src` unchanged since the second pass: 223/223) |
-| Link checker (`scripts/check-links.py`, laptop: it needs git) | 18 files, 305 links, 0 broken |
+| Link checker (`scripts/check-links.py`, laptop: it needs git) | 18 files, 306 links, 0 broken |
 
 Not re-run here: `bridge/scripts/check.sh` (only `cargo clippy -p ferrata-e2e -D warnings` ran, clean),
 `modules/scripts/check.sh` (about 47 min, Nix from source), `bench/`, the finality simulator, the lab's

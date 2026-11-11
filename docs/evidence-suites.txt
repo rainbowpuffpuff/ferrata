@@ -54,7 +54,7 @@ Run "run3" (11 Nov 00:22 UTC, at 8a04634):
   vault forge fmt --check                                              ok
   vault forge test                                                     407 passed, 0 failed (35 suites); 28 invariant campaigns
                                                                        (14 invariants x rule (A) and rule (B) vaults), 256 runs x 100 calls
-Laptop (11 Nov 01:20 local): python3 -I scripts/check-links.py         18 files, 305 links, 0 broken
+Laptop (11 Nov 01:20 local): python3 -I scripts/check-links.py         18 files, 306 links, 0 broken
 Not run: bridge/scripts/check.sh beyond the e2e clippy, modules/scripts/check.sh, bench/, the simulator, lab.sh
 verify, mutation (vault/src unchanged since the second pass, 223/223), any proof. mrun's estimates: 0.28 + 0.08 +
 0.01 USD.
