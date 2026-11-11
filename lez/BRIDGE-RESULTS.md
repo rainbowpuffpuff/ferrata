@@ -740,7 +740,7 @@ built: the recipient's private state would have to be in the same private execut
 CPU of the build box (`RISC0_DEV_MODE=0`, wallet shape: seven private actions, 512-byte notes, as LEZ
 v0.4.0-rc1's wallet pads every private transaction) and settled through LEZ's private settlement with
 the receipt verified. Image `43615dc4…f19c`; the whole run 9 min 23 s wall clock, 9.8 GB peak memory,
-r0vm using about 27 of the box's 32 vCPUs:
+3.77 CPU-hours in the 649-s command (`mrun`'s accounting, build and settlement included):
 
 | transaction | `execute_and_prove` | receipt | transaction | execution gas | storage gas |
 |---|---:|---:|---:|---:|---:|
