@@ -471,9 +471,9 @@ admitted).
 Since branch `bridge-controls` (§14) the program has the keyless `Sunset`, the freeze authority's
 14-day handover, a multisig (M-of-N) freeze authority, the watchers on LEZ and transfers between
 holders. Not built: the gas drop; a transfer that credits a private recipient privately (a private
-holder's transfer reaches a public `holder(account)`, §14); the switch to a token program; real proofs
-of the extended program's claim and burn (§7 is of the earlier image) and of a private claim to a
-public destination; a run of this program on a sequencer (§11's crossing deploys the frozen earlier
+holder's transfer reaches a public `holder(account)`, §14); the switch to a token program; a real proof of
+the extended program's burn (§7 is of the earlier image; §14 proves this image's private claim and
+private transfer) and of a private claim to a public destination; a run of this program on a sequencer (§11's crossing deploys the frozen earlier
 program); a vault on Sepolia (§8a's vault ran in a local EVM) and records written by the light client
 in the same run; the checkpoint program running over these blocks end to end (only its parser and
 decoder ran); the off-chain importer, wallet and relayer; the admin's own handover on LEZ (the admin is
@@ -733,6 +733,28 @@ private-to-public deliveries from an alias, the 101-byte `Transfer` to `token(A,
 token, amount, recipient) and the fee; the private account's id occurs nowhere in its bytes, and its
 0.9 ETH is found only in its new commitment. A private recipient is not credited privately (not
 built: the recipient's private state would have to be in the same private execution).
+
+**Real proof of the private transfer** (`results/prove-bridge-transfer.log`,
+`results/prove-bridge-transfer-settle.log`). `prove_bridge --transfer` makes §3's private claim of leaf
+5 and then this transfer on the tests' state (`World::with_roots`), each proven by `r0vm` 3.0.5 on the
+CPU of the build box (`RISC0_DEV_MODE=0`, wallet shape: seven private actions, 512-byte notes, as LEZ
+v0.4.0-rc1's wallet pads every private transaction) and settled through LEZ's private settlement with
+the receipt verified. Image `43615dc4…f19c`; the whole run 9 min 23 s wall clock, 9.8 GB peak memory,
+r0vm using about 27 of the box's 32 vCPUs:
+
+| transaction | `execute_and_prove` | receipt | transaction | execution gas | storage gas |
+|---|---:|---:|---:|---:|---:|
+| private claim (leaf 5, 1 ETH) | 295.0 s | 239,628 B | 256,130 B | 553,641 | 224,063 |
+| private transfer (0.1 ETH to `holder(account)`) | 258.7 s | 238,898 B | 254,670 B | 463,434 | 224,063 |
+
+Settled again from the two files with the receipts verified (`prove_bridge --transfer --settle`): both
+settle (0.6 s and 0.3 s), the recipient's `holder(account)` holds 0.1 ETH, the holder's 0.9 ETH is found
+in its new commitment, and the transfer's 254,670 bytes hold the `Transfer` to the token's account from
+an alias and not the private account's id. With bit 0 of byte 253,670 flipped (inside the receipt,
+bytes 15,772–254,670), settlement refuses it: "Invalid privacy preserving execution circuit proof".
+An earlier attempt of the same run, beside the dev-mode suites on the same box, proved the claim in
+413.4 s before the box was recycled. The transactions: `results/bridge-transfer-claim-tx.borsh`,
+`results/bridge-private-transfer-tx.borsh` (they settle only against this image, built at this path).
 
 **Effect on the earlier suites.** Every bridge suite passes on the new program (`bridge_roles` 2,
 `bridge_controls` 1, `bridge_burn` 1, `bridge_private` 2, `bridge_inbound` 3, `bridge_time` 1,

@@ -1,0 +1,33 @@
+bridge image 43615dc48098b3731990de7700204d2a1bea0e9f963ee7c4dd629048dd5ef19c (591084 ELF bytes); RISC0_DEV_MODE off; shape wallet
+private claim: vault A leaf 5 (1 ETH, private kind) under root n = 8, configuration a701efe2e011; N = 1dbba1cacb2c3b88480a9f252a16cac0d96c2685524509f4b2165d1a6df068c2
+private claim: REAL PROOF: execute_and_prove 295.0 s (prove + settle 295.5 s); receipt (succinct InnerReceipt, borsh) 239628 bytes; transaction 256130 bytes
+private claim: wrote the proven transaction to results/bridge-transfer-claim-tx.borsh (256130 bytes)
+private claim: of its 256130 transaction bytes, none holds the destination, s, C, the leaf, the depositor, the witness or any of 32 path siblings; N, configId and the root read are present
+private claim: settled: execution gas 553,641 (PRIVATE_VERIFY_GAS 409,764 + public part 143,877 cycles), storage gas 224,063, base fee 6,221,632; receipt at bytes 16,502..256,130 of 256,130
+private transfer: REAL PROOF: execute_and_prove 258.7 s (prove + settle 259.0 s); receipt (succinct InnerReceipt, borsh) 238898 bytes; transaction 254670 bytes
+private transfer: wrote the proven transaction to results/bridge-private-transfer-tx.borsh (254670 bytes)
+private transfer: 2 private-to-public deliveries, the first the 101-byte Transfer to the token's account, from an alias; the private account's id is not in the 254670 bytes; 0.9 ETH left in its commitment
+private transfer: settled: execution gas 463,434 (PRIVATE_VERIFY_GAS 409,764 + public part 53,670 cycles), storage gas 224,063, base fee 5,499,976; receipt at bytes 15,772..254,670 of 254,670
+	Command being timed: "target/debug/prove_bridge --transfer --claim-out results/bridge-transfer-claim-tx.borsh --transfer-out results/bridge-private-transfer-tx.borsh"
+	User time (seconds): 13218.50
+	System time (seconds): 320.55
+	Percent of CPU this job got: 2404%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 9:23.12
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 9785608
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 0
+	Voluntary context switches: 7139148
+	Involuntary context switches: 0
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 0
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
