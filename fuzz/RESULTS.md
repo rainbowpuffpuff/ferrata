@@ -28,7 +28,34 @@ Seeds are written by `examples/seeds.rs` from the committed vectors (`fuzz/seeds
 
 ## Runs
 
-RUNS_PLACEHOLDER
+Measured on the box; executions, edges ("cov", libFuzzer's covered edges) and features
+("ft") are the fork-mode parent's last report, corpus the minimized result of `-merge=1`.
+
+**Long run** (`./run.sh 1560 5`: 26 minutes, the seven targets at once, five workers each,
+started from the smoke run's corpus and the seeds):
+
+| Target | Seeds | Executions | Edges | Features | Minimized corpus | Crashes |
+|---|---|---|---|---|---|---|
+| `rlp` | 211 | 180,040,704 | 246 | 1,193 | 155 files, 116 KB | 0 |
+| `mpt` | 70 | 32,302,447 | 1,005 | 4,305 | 424 files, 828 KB | 4 (P2) |
+| `exec` | 87 | 176,898,580 | 630 | 1,276 | 328 files, 1.4 MB | 0 |
+| `ssz` | 422 | 287,035,353 | 578 | 1,218 | 114 files, 498 KB | 0 |
+| `witness` | 296 | 700,179,021 | 476 | 1,043 | 166 files, 200 KB | 0 |
+| `merkle` | 0 | 392,616,140 | 113 | 343 | 65 files, 33 KB | 0 |
+| `lc` | 140 | 25,226,851 | 578 | 1,550 | 220 files, 1.3 MB | 0 |
+| total | 1,226 | 1,794,299,096 | | | 1,472 files, 3.7 MB | |
+
+**Smoke run** before it (`./run.sh 240 4`, four minutes): 164.6 million executions; it found L1
+(`lc`, 1 crash), P1 (`mpt`, 87) and M1/M2 (`merkle`, 2,665), all handled before the long run.
+
+**Re-runs after the last changes:** `mpt` with P2 excluded, 200 s on 24 workers: 17,636,940
+executions, 1,029 edges, no crash; the four P2 inputs replay clean. `merkle` on branch
+`fuzz-core-merkle-domain` with the whole domain (depth to 255, generalized index 0), 120 s on 24
+workers: 87,560,463 executions, 118 edges, no crash. `lc` ran the whole long run after the L1 fix
+without a crash.
+
+The minimized corpus is committed (`fuzz/corpus/`, 3.7 MB); the seeds (7.4 MB) are not, as
+`examples/seeds.rs` regenerates them and the corpus holds their features.
 
 ## Findings
 
@@ -36,8 +63,13 @@ RUNS_PLACEHOLDER
 |---|---|---|---|---|
 | L1 | `lc` | `LightClientStore::process_force_update` computed `finalized_slot + UPDATE_TIMEOUT` in u64: a panic with overflow checks, a wrapped (early) deadline without them, once the finalized slot is within a sync-committee period of 2^64 | only through a finalized header with such a slot (a bootstrap of the trusted block, or an update signed by the committee); the spec store only: Ferrata's on-chain policy never forces an update | fixed in `crates/ferrata-core/src/store.rs` (exact arithmetic: a deadline past `u64::MAX` is never reached); regression `crates/ferrata-core/tests/fuzz_regressions.rs`, which failed before the fix with `attempt to add with overflow` at `store.rs:222`; `lc` re-run in the long run with no crash |
 | P1 | `mpt` | a difference from alloy-trie 0.9.9: an exclusion proof ending at an extension whose path diverges from the key, padded with that extension's (correctly hashed) child. alloy keeps walking below the diverging extension and accepts; ferrata refuses the unused node (`ProofTrailingNodes`) | — (ferrata is the stricter side; both accept the unpadded proof, which is what `eth_getProof` returns) | intended: every statement has one proof. Pinned in `crates/ferrata-spectests/tests/fuzz_regressions.rs`; the harness checks that the padded proof's accepted prefix proves the same absence to both |
+| P2 | `mpt` | a difference from alloy-trie 0.9.9: a branch node with a value (a key that ends at the branch). alloy refuses every such node ("branch node values are not supported"); ferrata follows the Yellow Paper and walks it (already tested by `values_at_branch_slots_and_prefix_keys` in `mpt_proofs.rs`) | no: such a node can only appear in a trie whose keys are prefixes of one another, and Ethereum's state, storage and receipt tries have 32-byte or `RLP(i)` (prefix-free) keys; a proof must hash-link to the real root | intended. The harness's raw mode skips the alloy comparison for proofs holding such a node (found in the long run: 4 inputs) |
 | M1 | `merkle` | `floorlog2(0)` overflowed: generalized index 0 made `is_valid_normalized_merkle_branch` and `normalize_merkle_branch` panic (overflow checks) or, without overflow checks, compute a depth of 2^32 - 1 and allocate 2^32 roots | no: every caller passes a constant generalized index of at least 1 | fixed on branch `fuzz-core-merkle-domain` (not on `fuzz-core`: the fix changes code inside the guests, so their image ids) |
 | M2 | `merkle` | `compute_merkle_branch_root` shifted the index by the level: `index >> i` overflowed for a depth above 64 (a panic, or a wrapped shift reading bit `i % 64`) | no: every caller passes a constant depth of at most 9 | fixed with M1 on `fuzz-core-merkle-domain` |
+
+Fixes on branch `fuzz-core` change no code that the guests run except `store.rs`'s
+`process_force_update`, which only the spec store calls (Ferrata's programs use the policy
+store); image ids were not re-measured.
 
 One harness error of ours, found by the smoke run and corrected before the long run: `lc`
 first asserted that `process_update` succeeds exactly when validation does; the spec's
