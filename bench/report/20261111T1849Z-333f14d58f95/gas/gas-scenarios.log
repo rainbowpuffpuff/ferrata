@@ -1,0 +1,156 @@
+No files changed, compilation skipped
+
+Ran 1 test for test/real/ReturnLeg.t.sol:ReturnLegGas
+[PASS] test_gas_everyStepWithTheRealVerifier() (gas: 13654286)
+Logs:
+  registerToken ETH (3 denominations) 649470
+  registerToken ERC-20 (3 denominations) 650308
+  depositETH, first deposit of the tree and of the address 200572
+  deposit ERC-20, second deposit of the address 200056
+  submitCandidate, real checkpoint seal (records a beacon) 463096
+  recordBeacon 77828
+  finalize, real checkpoint seal echoing the beacon 461277
+  release eth, real release seal 373657
+  release erc20, real release seal 403523
+
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 22.53ms (17.67ms CPU time)
+
+Ran 33 tests for test/GasScenarios.t.sol:GasScenarios
+[PASS] test_gas_announceFees() (gas: 264471)
+Logs:
+  announceFees, 3 denominations 248472
+
+[PASS] test_gas_applyFees() (gas: 348276)
+Logs:
+  applyFees, puts a due fee change in force 82892
+
+[PASS] test_gas_baselinePlainTransfer() (gas: 67557)
+Logs:
+  baseline: plain ETH transfer (must be 21000 under --isolate) 21000
+
+[PASS] test_gas_cancelCandidate() (gas: 283667)
+Logs:
+  cancelCandidate (freeze authority) 39702
+
+[PASS] test_gas_cancelCandidate_byWatcher() (gas: 284957)
+Logs:
+  cancelCandidate (watcher) 41477
+
+[PASS] test_gas_claimOwedERC20() (gas: 407082)
+Logs:
+  claimOwed ERC-20 by the payee 68334
+
+[PASS] test_gas_claimOwedETH_viaContractPayee() (gas: 607079)
+Logs:
+  claimOwed ETH, called through the payee contract 40934
+
+[PASS] test_gas_depositERC20_firstByAddress() (gas: 346863)
+Logs:
+  deposit ERC-20 (18 dec, returns bool), first deposit by the address 199873
+
+[PASS] test_gas_depositERC20_laterByAddress() (gas: 532961)
+Logs:
+  deposit ERC-20 (18 dec, returns bool), later deposit by the address 179883
+
+[PASS] test_gas_depositETH_firstByAddress() (gas: 264269)
+Logs:
+  depositETH, first deposit by the address 181420
+
+[PASS] test_gas_depositETH_laterByAddress() (gas: 467415)
+Logs:
+  depositETH, later deposit by the address 161430
+
+[PASS] test_gas_depositETH_laterByAddress_capsUnlimited() (gas: 512506)
+Logs:
+  depositETH, later deposit by the address, caps UNLIMITED 140684
+
+[PASS] test_gas_depositETH_laterByAddress_mintFeeInForce() (gas: 741105)
+Logs:
+  depositETH, later deposit by the address, mint fee in force 161430
+
+[PASS] test_gas_depositETH_putsDueFeeChangeInForce() (gas: 541569)
+Logs:
+  depositETH, first by the address, puts a due fee change in force 234327
+
+[PASS] test_gas_depositETH_rangeOver128Leaves() (gas: 26402282)
+Logs:
+  depositETH later, 128 consecutive leaves: min 155064
+  depositETH later, 128 consecutive leaves: max 184896
+  depositETH later, 128 consecutive leaves: mean 161349
+
+[PASS] test_gas_depositUsdtStyle_firstByAddress() (gas: 346903)
+Logs:
+  deposit USDT-style (no return value), first deposit by the address 199905
+
+[PASS] test_gas_finalize() (gas: 603942)
+Logs:
+  finalize (incl. mock verifier) 218442
+
+[PASS] test_gas_finalize_firstSunset() (gas: 664195)
+Logs:
+  finalize, first sunset checkpoint: sets the refund boundary (incl. mock verifier) 286984
+
+[PASS] test_gas_mockVerifierExecution() (gas: 184092)
+Logs:
+  mock verifier execution (estimate) 2765
+
+[PASS] test_gas_pauseCheckpoints_byWatcher() (gas: 61681)
+Logs:
+  pauseCheckpoints (watcher) 47260
+
+[PASS] test_gas_proposeAndApplyRoles() (gas: 205395)
+Logs:
+  proposeRoles (admin; two watchers and a freeze authority) 123435
+  applyRoles (anyone, after 14 days) 69005
+
+[PASS] test_gas_recordBeacon() (gas: 92658)
+Logs:
+  recordBeacon 77828
+
+[PASS] test_gas_refundERC20() (gas: 1177936)
+Logs:
+  refund ERC-20 (18 dec) 205652
+
+[PASS] test_gas_refundETH() (gas: 1149602)
+Logs:
+  refund ETH (32-step path check against depositRoot) 179267
+
+[PASS] test_gas_releaseERC20_withFee() (gas: 308454)
+Logs:
+  release ERC-20 (18 dec), standard fee to msg.sender (incl. mock verifier) 206083
+
+[PASS] test_gas_releaseETH_noFee() (gas: 265838)
+Logs:
+  release ETH, no relay fee (incl. mock verifier) 173683
+
+[PASS] test_gas_releaseETH_recipientCannotReceive_credited() (gas: 528793)
+Logs:
+  release ETH, recipient cannot receive: credited to owed (incl. mock verifier) 197485
+
+[PASS] test_gas_releaseETH_releaseFees_firstCredits() (gas: 696202)
+Logs:
+  release ETH, relay + burn + checkpoint fees, first credits (incl. mock verifier) 256557
+
+[PASS] test_gas_releaseETH_releaseFees_laterCredits() (gas: 978764)
+Logs:
+  release ETH, relay + burn + checkpoint fees, later credits (incl. mock verifier) 200257
+
+[PASS] test_gas_releaseETH_withFee() (gas: 285449)
+Logs:
+  release ETH, standard fee to msg.sender (incl. mock verifier) 185343
+
+[PASS] test_gas_ruleB_finalizeAttested() (gas: 25511352)
+Logs:
+  rule (B): finalizeAttested (no proof; reads the stop) 201273
+
+[PASS] test_gas_ruleB_submitCandidate() (gas: 25328381)
+Logs:
+  rule (B): submitCandidate, no beacon (incl. mock verifier) 146758
+
+[PASS] test_gas_submitCandidate() (gas: 306387)
+Logs:
+  submitCandidate, incl. its beacon (incl. mock verifier) 203207
+
+Suite result: ok. 33 passed; 0 failed; 0 skipped; finished in 70.14ms (112.12ms CPU time)
+
+Ran 2 test suites in 76.72ms (92.68ms CPU time): 34 tests passed, 0 failed, 0 skipped (34 total tests)
