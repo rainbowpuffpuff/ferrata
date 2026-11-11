@@ -192,6 +192,17 @@ LIVE crown run on Sepolia (chain {chain}), signed in the cloud (Modal app {APP_N
 """)
     if nonce != pending:
         die("the deployer has pending transactions: nothing started")
+    # The same deployer signs e2e/sepolia-cloud.sh's runs (app ferrata-sepolia): one of them sending between this run's
+    # identity (vault = CREATE(deployer, N+2)) and its deployment would put the vault elsewhere. Read-only check.
+    try:
+        sv = modal.Volume.from_name("ferrata-sepolia")
+        for other in runs_on_volume(sv):
+            c = vjson(sv, f"cloud/{other}/call.json")
+            if c and call_state(c["call_id"])[0] == "active":
+                die(f"the ferrata-sepolia runner of {other} is active and signs with the same deployer: start the crown run"
+                    " after it has finished (or `e2e/sepolia-cloud.sh stop`)")
+    except NotFoundError:
+        pass
     if not sys.stdin.isatty():
         die("not a terminal: nothing started. Run it from a terminal, or add --yes")
     if input("Type yes to start it: ").strip() != "yes":

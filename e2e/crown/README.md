@@ -95,6 +95,54 @@ runner ~4 h of 2 cores (~1 USD at the nonpreemptible rate), GPU session ~1 h (~1
 6. The capture with the ETH registry and fee slots (register_slots) beside slots 0-2.
 7. The cloud app (`ferrata-crown` on ws-3), `e2e/crown.sh`, the verify script, one full rehearsal to DONE.
 
-## Commands (for the owner, once built and rehearsed)
+## Commands (for the owner)
 
-See the end of this file once piece 4 is done: `e2e/crown.sh setup | start [--fork] | status | fetch | stop`.
+The cloud app (`e2e/crown/cloud/`, Modal app `ferrata-crown` on workspace ws-3) runs the whole round trip from
+one `start`; it needs this machine only to start, to look and to fetch. Rehearsed to DONE on an anvil fork of Sepolia
+on 11 Nov 2026 (`e2e/runs/crown-rehearsal-1/README.md`: 19 stages in ~29 min, verify 14 of 14, about 0.6 USD of
+Modal, estimated from the container times).
+
+Before the first start:
+- a tree with all three parts: crown-cloud, crown-lez and crown-proofs merged (the rehearsal ran from branch
+  `crown-rehearsal` = crown-cloud + crown-lez 5815c6b + crown-proofs 4f2f0be); `vault/lib` present in it (forge-std
+  1.10.0, OpenZeppelin 5.4.0, risc0-ethereum 3.0.0, as in the other worktrees);
+- the Secret `ferrata-sepolia-key` on ws-3 (it exists: `e2e/sepolia-cloud.sh setup` made it; the crown run
+  signs with the same throwaway deployer);
+- the LEZ bundle (`lez/crown/build.sh seed` and `all` on the build box) and the R0BF programs
+  (`spike/tmp/crown-proofs/programs/`, ids checked against the crown build's);
+- no ferrata-sepolia runner active (`e2e/sepolia-cloud.sh status`): both runs use the deployer's nonces, and `start`
+  refuses while one is active.
+
+From that tree (`e2e/sepolia-live.env` is read for SEPOLIA_RPC_URL and ETH_FROM, used read-only by `start`):
+
+```
+e2e/crown.sh setup --bundle <bundle.tar.zst>    # deploy ferrata-crown, upload the bundle and the programs (~1 min)
+e2e/crown.sh start --fork crown-rehearsal-2     # optional: one more rehearsal on a fork (~30 min, nothing sent)
+e2e/crown.sh start                              # the live run crown-live-1: prints sender, nonce, vault address,
+                                                #   the 13 transactions, the gas price; type yes
+e2e/crown.sh status                             # any time: the stage, the stages done, the last lines of the log
+e2e/crown.sh fetch                              # e2e/runs/crown-live-1/ (identity, transactions, captures, the LEZ
+                                                #   sessions' records, checkpoint, releases, verify.txt)
+e2e/crown.sh verify                             # the chain checks again from this machine (read-only)
+e2e/crown.sh stop                               # cancels the runner (and a queued GPU proof); `start` resumes
+```
+
+A stop, a timeout or a crash anywhere is resumed by `start` with the same run name: every stage asks the chain or the
+Volume first (deploy.sh resumes from its record; a deposit, submit, finalize or release already on chain is not sent
+again; a LEZ session whose generation is saved is not run again, and once the vault's deployment has begun no new
+devnet can be made). `--halt-after <stage>` stops cleanly after a stage.
+
+Expected duration of the live run (derived: the rehearsal's measured stage times plus Sepolia's own clock): build ~2
+min; session A ~30 min (crown-lez's rehearsal 2 on the real Sepolia path: 176 transactions, 29.5 min); deployment ~3 min (7
+transactions, `--slow`); each deposit then waits for its block's finality (~13-20 min) and a light-client update that
+covers it (up to ~7 min more): ~40 min for both; session B ~14 min (827 s in the rehearsal: two private proofs of
+266 s and 323 s on 16-32 cores); the checkpoint ~5 min (GPU queue permitting: up to 2 h, then the CPU here); W = 60 min
+(the release proofs, ~3 min, run in it); finalize, the 120 s release delay and both releases ~4 min; verify ~1 min.
+About **2 h 40 min to 3 h 10 min** in all, longer if no GPU is free. Modal: about 1-2 USD on ws-3 (estimated).
+Sepolia: 13 transactions, ~50 M gas (the vault ~39.5 M under EIP-8037), 0.002004 ETH escrowed by the deposits and
+paid back by the releases less the fees.
+
+Not exercised by the fork rehearsal (exercised elsewhere, or simple): the live captures with their finality waits
+(`e2e/crown/capture.py`, tested read-only against Sepolia: block 12,108,569, 6 slots proven), signing with the
+keystore in the cloud (as ferrata-sepolia's runner does), LEZ's real Sepolia instance (crown-lez's rehearsal), the
+node's gas pricing on Sepolia (deploy.sh), a real hour of W.
