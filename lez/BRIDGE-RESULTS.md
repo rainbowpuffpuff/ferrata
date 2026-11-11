@@ -15,7 +15,9 @@ build box before any change: image `64faa2e3…7267` at that path, every gas fig
 tables the integration branch committed for `25dfd9b2…8c49` (only the image and the ids derived
 from it differ). The inbound crossing on a live sequencer (§11) deploys neither: it uses the frozen
 program of `inbound-live` (`66722fc7…f4fa`). §7's real proofs are of `25dfd9b2…8c49`, the
-program before this extension. Every number below is LEZ's own accounting of a transaction that
+program before this extension. Since the security fixes of 11 November (§12) the program is
+`fe2f248724ddbeada455f2f132ae178d84434db3f26ddce50e06d72cc7ae946d` at the `secfix-lez` worktree's path,
+and the tables in `results/` are that program's. Every number below is LEZ's own accounting of a transaction that
 ran: `lee`'s state transition functions and the copy of LEZ's fee settlement that Stages 1–4 use
 ([RESULTS.md](RESULTS.md) §1), each transaction in a block of its own, the attestation program
 answering the bridge's `Attest` calls. They ran on this worktree's Modal build box
@@ -502,4 +504,50 @@ the vault's `storedLezConfigId`, 355,935 execution gas) after the refusal withou
 `ImportRoot` n = 1 (426,479); a leaf index at the count refused (248), another destination refused
 (249), the plaintext claim to LEZ's public test account 0 (142,432), its replay refused (250). 186
 blocks, re-checked by the full replay. Deposit 1 (private kind, real proof) waits for capture 2.
+
+## 12. Security fixes of 11 November 2026 (branch `secfix-lez`)
+
+The review `notes/reviews/security/review-2026-11-11.md` (of integration4 at `1bb20d5`) found, on this
+side: **C-1** a claim could write a holder state at any bridge PDA not written yet (as its public
+destination, its relayer, or its configuration's fee recipient), blocking `Init`, `Register` or an import
+for good, destroying a pending claim (its nullifier) or blocking a burn (its record); **H-1** `ImportRoot`
+ran as a nested call or an asynchronous message, which the checkpoint cannot count. Fixes:
+
+- **C-1.** Public wrapped balances moved from the actor state at the holder's own account to
+  `holder(account)`, a PDA whose seed (`…/holder ‖ account`) names its role, so it can never be another
+  actor's address. `Mint` names its holder and is accepted only at `holder(holder)`, seeded by the
+  nullifier (LEZ admits a new holder PDA on the seed, no evidence needed). A public holder still burns by
+  a top-level call it signs at its own actor; that actor debits its own state if it holds the amount
+  (a private claimant's private balance) or forwards the note to `holder(account)`, which accepts it only
+  from that own actor. Roles act through their own actors as before. Every other write is at a PDA whose
+  handler checks its receiver, or at the own actor of an account that authorised the call.
+- **H-1.** `ImportRoot` is refused (253 `NOT_AUTHORIZED`) unless `from = None`, as `Burn` already was.
+
+**Tests** (`harness/tests/bridge_secfix.rs`, dev mode): (a) a claim whose destination is `config(H)` and
+whose relay fee goes to the attacker configuration's fee recipient `config(H2)`, then `Init` of both;
+(b) a claim with `relayer = token(H, ETH)`, then `Register`; (c) a claim to the nullifier account of a
+pending claim, then that claim; (d) a claim to `root(H, 1)`, then the import; (e) a claim with the pending
+burn's record as relayer, then the burn; (f) `Mint` delivered at `config(cid)` (refused) and at
+`holder(config(cid))` (accepted), in the executor; H-1: `ImportRoot` forwarded by LEZ's `scripted`
+program (refused, nothing written; the top-level import of the same count then succeeds), and
+delivered with a sender, as LEZ presents an asynchronous message (executor: refused; without a sender:
+accepted). **Before** (the new tests against `1bb20d5`'s program, build box, `RUN=baseline`): all seven
+of (a)–(e) and both H-1 tests fail, each because the attack worked: the claims wrote a holder state at
+`config(H)`, `token(H, ETH)`, the nullifier, `root(H, 1)` and the burn record; the nested import and the
+import with a sender were accepted. ((f) uses the new `Mint` field and has no before.) **After**
+(`RUN=after1`): 8 of 8 pass; the whole harness 44 passed, 0 failed (36 before the new file), including the
+checkpoint's collection in `bridge_burn.rs` (exactly the three burns, byte for byte); clippy clean.
+
+**Cost** (`results/`, execution gas): a public burn now runs one more handler (the forward):
+130,868 → 158,905 (`Burn 1 ETH (A) by the payer`), 775 → 839 transaction bytes (one more declared
+actor); a plaintext claim 239,431 → 252,941 (`the shared vector's deposit`: the seeded mints);
+`ImportRoot` 226,091 → 225,793; the private claim's two transitions 41,133 → 41,052 and
+111,838 → 111,740 cycles. Refusals before any write cost less or about the same.
+
+**Not changed here.** L-4 (the relay fee of a plaintext claim goes to whoever gets a copy included
+first): the review's fix, `relayer == from`, does not stop a copier that names itself; the private claim
+binds its relayer inside the proof (`docs/trust.md` §7). I-5 (time) is the `lez-time-fix` branch's.
+I-9 is recorded in `BRIDGE.md` §3 (one mint authority per `(cid, token)` when a token program exists).
+The live sequencer's frozen program (`live/frozen`) is not changed: it is what §11 ran, and it has C-1
+and H-1; a new deployment must use this program, whose new image changes every `configId`.
 

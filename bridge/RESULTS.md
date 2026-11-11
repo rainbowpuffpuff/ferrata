@@ -95,6 +95,34 @@ over every module, 49 killed, 1 survivor that is equivalent.**
 the 352-byte journal; an invalid witness panics. Image id
 `0xdda76672e6e05535117ed6880227a414420344cba9c47b6e112c7dabc5b027c5`.
 
+### Since 11 November 2026: D13's `NOut` and D12's MAC (security review M-3, I-4)
+
+The review of `1bb20d5` (`notes/reviews/security/review-2026-11-11.md`) found the guest still committing
+SPEC-v2's `NOut = H("ferrata/nf-out/v1" ‖ sOut ‖ burnId)`, which changes with the burn's index: a burn
+released against a checkpoint that is later revoked, and collected at another index on the canonical
+branch, could be released again (M-3). The core now gives D13's `NOut = H("ferrata/nf-out/v2" ‖ sOut)`
+(49-byte preimage) in `verify_release` and `recover_burns`, and D12's MAC
+`HMAC(kView, "ferrata/burn-mac/v2" ‖ r ‖ memo ‖ token ‖ amount ‖ COut)[0..16]` (155-byte message) in
+`BurnNote::create` and `mac_verifies` (I-4: v1 did not cover the memo). The journal's layout is unchanged.
+Measured on the `secfix-lez` worktree's Modal box (2 vCPU), guests built at that worktree's path:
+
+- **Image ids**: release `0xe1af95739ba24579fca2d1521f1857faea199ba718974d131a525c74c362461e` (the same
+  path before the change: `0x8ae5319ee40dc977d38b5c199332f0197e196e224342e1af84f5825da2aacafe`); claim
+  `0x12cd80d3d64d96fd2639098544bd04d2d37ba3bb7d906e4d0f31e8a7c1d1aae8`.
+- **Cycles** (`host execute`): 77,736 user cycles for each of the three cases, one 2^17 segment; journal ==
+  native. `host invariance 64`: one (cycles, po2) value for each guest, `(77736, [17])` and `(74379, [17])`.
+- **The double release** (`host reindex`): one burn at index 1 of a revoked branch's tree and at index 3 of
+  the canonical one; both executions of the guest commit `NOut 0xd8bab371…32a5` = D13's value, so the vault
+  (replay keyed on `NOut`) releases it once. The same command against `1bb20d5`'s guest committed
+  `0x869f497a…fab7` at index 1 and failed its check. Core tests: `tests/secfix.rs` (M-3, and I-4: a copied
+  note with another memo no longer verifies), both failing on `1bb20d5`'s core; the core's whole suite 56
+  passed, 0 failed; the vectors (`outbound-v2.json`, `tags-v2.json`) regenerated and re-checked by
+  `scripts/check_vectors_v2.py` (v1 vectors unchanged, still checked); clippy clean.
+- **Not redone**: the saved receipts in `artifacts/` and the evm-verify fixtures are proofs of earlier
+  images; `host verify eth` now fails by design ("claim digest does not match the expected digest
+  `58dcd205…f3b0`; expected `44085fdd…b3ee`").
+  Real proofs of this image (succinct and Groth16) are for the next proving run.
+
 **Cycles** (`artifacts/logs/execute-v2.log`): **80,501 user cycles, one segment (po2 17).** Bad `sOut`
 (`RootMismatch`) and bad direction bits (`DirectionsMismatch`) are refused inside the guest.
 
