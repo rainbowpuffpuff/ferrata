@@ -195,9 +195,10 @@ ferrata deposit --denomination 2 --kind public --i-accept-public-account …    
 It reads the denomination and the fees in force from the vault's registry and the depositor's
 `j = depositCount[depositor]`, derives `s = HMAC(kAuth, chain id ‖ vault ‖ depositor ‖ j)` and the
 commitment `C = H(s ‖ kind ‖ dest)` for account `/a` of the chosen kind, and builds `depositETH` (or
-`deposit` for an ERC-20, which needs an allowance first; the tool prints the allowance in place and the
-amount needed, but does not send the `approve`). It refuses an account at or above `--gap`, because a
-recovering wallet would not find it.
+`deposit` for an ERC-20). An ERC-20 deposit needs an allowance for the vault: the dry run prints the
+allowance in place and the amount needed, and `--approve` sends the `approve` first (the dry run then shows
+both calls, and the approve's gas). It refuses an account at or above `--gap`, because a recovering wallet
+would not find it.
 
 ```text
 deposit to the vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9 on chain 1
@@ -221,6 +222,19 @@ privacy of these choices: Minimal: only the residual correlations (token, denomi
   ok Delayed claim: held for 5 h, so the claim's time does not point at your deposit.
   ok Private fee path: the claim's LEZ fee is paid inside its proof (or by a relayer); no fee payment ties the claim to you.
 not sent: a dry run (add --send --yes to sign and send)
+```
+
+An ERC-20 shaped like USDT (its `transfer` and `transferFrom` return no boolean), with `--approve`:
+
+```text
+  denomination  1 USDT (1000000 base units, 6 decimals)
+  …
+  allowance     0 USDT (0 base units, 6 decimals) of 1.01 USDT (1010000 base units, 6 decimals) needed for the vault
+would send first: approve(0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9, 1010000) to the token 0x59b670e9fA9D0A427751Af201D676719a970857b  data 0x095ea7b3…
+would send: to 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9  value 0  data 0x7fde1952…
+cost: 1.01 USDT (…) to the vault; the approve's network fee about 0.000046116000322812 ETH (…) (46116 gas, eth_estimateGas); the deposit's is estimated once the allowance is in place
+…
+approved: 0x49bf4e9649f8a3a3f15d02042250b34ce583372fdb4b5b2eb692876ce29c27ad in block 346
 ```
 
 The public path, sent with its acknowledgement:
@@ -510,6 +524,10 @@ library functions in `src/flow.rs` that the binary calls (claim, burn, release, 
 6. **Recovery from the seed alone** (`recover`, a fresh `Seed` from the seed file): 12 deposits (2 claimed,
    one privately), the 10 unclaimed found with their kinds and accounts, 12 burns (2 released), the
    holding of 8.9 ETH at public `/0`; then the zone's `status` lines.
+7. **An ERC-20 shaped like USDT** (the vault tests' `MockUSDT`, registered on the vault at 6 decimals): the
+   deposit's dry run asks for the allowance; `--approve` sends the approve and the deposit through the binary;
+   the vault holds 1.01 USDT; `scan` finds the deposit (13 of this seed). `--json` is checked on `scan`, a
+   deposit's dry run and an error.
 
 Stand-ins, named in the test: `Init`, `Register`, `ImportRoot` and `ImportFees` run through the harness,
 from synthetic execution blocks that hold the anvil vault's real storage; the checkpoint and Groth16
@@ -518,9 +536,9 @@ fees (the gas drop's credit) is placed at genesis; the private accounts' states 
 decrypt are kept by the harness, checked against the chain's commitment after every private transaction.
 No real proof is made in this test.
 
-Measured on the Modal build box (CPU), 12 November 2026 (five runs, one after each change; the last at
-this branch's tip): 10 of 10 unit tests and 1 of 1 end-to-end test passed every time, the end-to-end test in
-24.59 to 27.33 s; `cargo fmt --check` clean; `cargo clippy --all-targets` with no finding in the files this
+Measured on the Modal build box (CPU), 12 November 2026 (eight runs, one after each change, two of them
+failing on test code that was then fixed; the last at this branch's tip): 10 of 10 unit tests and, in the
+six passing runs, 1 of 1 end-to-end test, in 24.59 to 27.33 s (26.06 s at the tip); `cargo fmt --check` clean; `cargo clippy --all-targets` with no finding in the files this
 work changed. From the last run:
 
 ```text
@@ -539,8 +557,8 @@ RECOVERY: 12 deposits (2 claimed, 10 unclaimed), 12 burns (2 released), holdings
   them from the zone. A recovery of private holdings by the wallet's own sync is not tested.
 - **Remote proving of a claim or a burn.** LEZ's wallet proves locally. For a release, a remote prover is
   reached through files: `--input-out`, then `--seal`, or a succinct receipt in the relayer's job.
-- **The ERC-20 `approve`.** `deposit` says how much allowance is needed but does not send the `approve`.
-  The tests use ETH only.
+- **ERC-20s on LEZ in the test.** The test deposits a USDT-shaped token on the vault, but registers only ETH
+  on the zone, so the token's claim, burn and release are not exercised (they are the same code as ETH's).
 - **Freezes** are checked before sending (releases) and decoded (all), but the test vault's freeze
   authority has no key, so no frozen state is exercised.
 - **The anonymity-set view** (how many deposits of the denomination a claim hides among) is not shown.

@@ -406,8 +406,7 @@ The integration surface today is the program messages and the derivations; the L
 §18.6, §19; [`vault/README.md`](../../vault/README.md), status paragraph)
 
 - a wallet integration and `ferrata_bridge_module`; the anonymity-set view; the `ferrata` tool's LEZ commands
-  against a live sequencer (its tests use the LEZ harness), and the ERC-20 `approve` (the tool says how much
-  allowance a deposit needs, but does not send it);
+  against a live sequencer (its tests use the LEZ harness);
 - the gas drop and the relayer and wrapper services;
 - a transfer of wrapped tokens between holders; the switch to LEZ's token program;
 - a real proof of a private claim to a public destination, and laptop or GPU proofs of the current program
