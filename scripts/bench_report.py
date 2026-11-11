@@ -145,8 +145,33 @@ def main(out):
     md += [head.strip() if head and head.strip() else "Not run.", ""]
 
     md += ["## User-side proofs at the declared minimum (Modal containers held to the CPUs and memory below)", ""]
+    summ = os.path.join(out, "user", "summary-pad.json")
     runs = sorted(glob.glob(os.path.join(out, "user", "**", "run.json"), recursive=True))
-    if runs:
+    if os.path.exists(summ):
+        sp = json.load(open(summ))
+        md += ["| Proof (padded as LEZ's wallet pads) | CPUs | execute_and_prove (s) | GO (<= 1,200 s, <= 16 GB) | Peak (GiB) | "
+               "Receipt / transaction (B) | Settled, receipt verified | One flipped bit | The proposal (§B8) |",
+               "|---|---:|---:|---|---:|---|---|---|---|"]
+        ref = {"private attestation": "20.6 / 10.6 min at 8 / 16", "private claim": "19.1 / 10.0 min",
+               "private burn": "16.5 / 8.8 min"}
+        for label, q in sp["proofs"].items():
+            for c, med in sorted(q["median_s"].items()):
+                peak = max(q["peak_rss_gib"], q["peak_container_gib"])
+                go = "GO" if med <= 1200 and peak <= 16 else "NO-GO"
+                md.append(f"| {label} | {c} | **{med:,.1f}** ({med / 60:.1f} min) | {go} | {peak:.2f} | "
+                          f"{'/'.join(map(str, q['receipt_bytes']))} / {'/'.join(map(str, q['tx_bytes']))} | "
+                          f"{q['settled_with_receipt_verified']} of {q['of']} | refused (exit {', '.join(map(str, q['tamper_settle_exits']))}) | {ref.get(label, '')} |")
+        cont = sorted(glob.glob(os.path.join(out, "user", "**", "container.json"), recursive=True))
+        for cf in cont:
+            c = json.load(open(cf))
+            ids = {k: v for k, v in (c.get("cpuinfo_ids") or [])}
+            md.append("")
+            md.append(f"Container of `{os.path.basename(os.path.dirname(cf))}`: CPU and memory request = limit "
+                      f"{json.dumps(c.get('declared'))}, nproc {c.get('nproc')}, {ids.get('vendor_id')} family "
+                      f"{ids.get('cpu family')} model {ids.get('model')}, {c.get('os')}, {c.get('r0vm_version')}, "
+                      f"{(c.get('env') or {}).get('MODAL_CLOUD_PROVIDER')} {(c.get('env') or {}).get('MODAL_REGION')}.")
+        md.append("")
+    elif runs:
         md += ["| Job | Run | Proofs (execute_and_prove, s) | Wall (s) | Peak RSS (GiB) | Settled |", "|---|---|---|---:|---:|---|"]
         for r in runs:
             j = json.load(open(r))

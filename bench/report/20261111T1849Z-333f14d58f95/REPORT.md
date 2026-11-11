@@ -100,5 +100,13 @@ Derived: a checkpoint under (A) with the real verifier, submit + recordBeacon + 
 
 ## User-side proofs at the declared minimum (Modal containers held to the CPUs and memory below)
 
-Not run (`just bench-user`).
+| Proof (padded as LEZ's wallet pads) | CPUs | execute_and_prove (s) | GO (<= 1,200 s, <= 16 GB) | Peak (GiB) | Receipt / transaction (B) | Settled, receipt verified | One flipped bit | The proposal (§B8) |
+|---|---:|---:|---|---:|---|---|---|---|
+| private attestation | 16 | **569.4** (9.5 min) | GO | 9.23 | 239214 / 255302 | 1 of 1 | refused (exit 101) | 20.6 / 10.6 min at 8 / 16 |
+| private claim | 16 | **556.9** (9.3 min) | GO | 9.23 | 239628 / 256130 | 1 of 1 | refused (exit 101, 101) | 19.1 / 10.0 min |
+| private burn | 16 | **484.0** (8.1 min) | GO | 9.23 | 239046 / 254966 | 1 of 1 | refused (exit 101, 101) | 16.5 / 8.8 min |
+
+Container of `attest-pad`: CPU and memory request = limit {"modal_cpu_request_and_limit": 16.0, "modal_memory_mib_request_and_limit": 16384}, nproc 16, AuthenticAMD family 25 model 17, Ubuntu 24.04.5 LTS, risc0-r0vm 3.0.5, CLOUD_PROVIDER_AZURE us-east.
+
+Container of `bridge-pad`: CPU and memory request = limit {"modal_cpu_request_and_limit": 16.0, "modal_memory_mib_request_and_limit": 16384}, nproc 16, AuthenticAMD family 25 model 17, Ubuntu 24.04.5 LTS, risc0-r0vm 3.0.5, CLOUD_PROVIDER_AZURE us-east.
 

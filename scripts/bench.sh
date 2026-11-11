@@ -154,7 +154,11 @@ user_prove_() {
   ( cd "$M" && modal run minimum.py::main --job attest-pad --runs 1 --tag "$tag" > "$OUT/user/attest-pad.log" 2>&1 ) & local a=$!
   ( cd "$M" && modal run minimum.py::main --job bridge-pad --runs 1 --tag "$tag" > "$OUT/user/bridge-pad.log" 2>&1 ) & local c=$!
   wait $a; echo "attest-pad exit $?"; wait $c; echo "bridge-pad exit $?"
-  modal volume get "$vol" "/results/$tag" "$OUT/user/" > /dev/null 2>&1; echo "results in $OUT/user/$tag"
+  # The Volume's paths take no leading slash here (modal volume get refuses "/results/...").
+  mkdir -p "$OUT/user/$tag"
+  for j in attest-pad bridge-pad; do modal volume get "$vol" "results/$tag/$j" "$OUT/user/$tag/" > /dev/null || return 1; done
+  python3 -I "$ROOT/scripts/bench_user_summary.py" "$OUT/user"
+  echo "results in $OUT/user/$tag; summary $OUT/user/summary-pad.json (just m0 --p4 $OUT/user)"
 }
 
 report_() { python3 -I "$ROOT/scripts/bench_report.py" "$OUT"; }

@@ -1,0 +1,23 @@
+consumer image effd2ac7a152be022bdc444ebf34f1eb191f8d53c454ff715d77bbdf5121e7cc (419488 ELF bytes); program image 3f700d6aca288252d494d9acad32d857110af480a7d224b9cf2a2dffac016e78 (602960 ELF bytes); RISC0_DEV_MODE off; shape wallet
+record: header(id, 15624480) of instance c112f29279d8, mainnet block 26384851; fact: Transfer of token a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 in transaction 0, log 0
+SETTLED FROM tx-attest.borsh (receipt verified): receipt 239214 bytes, transaction 255302 bytes, settled in 0.2 s
+public_context.actors (2): ferrata@2E7wnCFHuidUFfcHAA8qvzUqXiQgSesuifCSZqBjMH8Y, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq
+public_context.authorized_accounts: {}
+execution.public_root: None
+execution.boundary (6 steps):
+  - PrivateToPublic from consumer@GFuoPyNgJkF6uHXdAhHq8gTnroSkKCEyYDNfHbgiznUn to ferrata@2E7wnCFHuidUFfcHAA8qvzUqXiQgSesuifCSZqBjMH8Y: Read (1 bytes)
+  - PublicToPrivate from ferrata@2E7wnCFHuidUFfcHAA8qvzUqXiQgSesuifCSZqBjMH8Y to consumer@GFuoPyNgJkF6uHXdAhHq8gTnroSkKCEyYDNfHbgiznUn: StateReply { state: 333 bytes } (337 bytes)
+  - EndPrivateSubtree
+  - EndPublicSubtree
+  - PrivateToPublic from native@LD49LWuYTRakzdetks98BswH44KFJjuJqfw4qdL8eb4 to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
+  - EndPublicSubtree
+execution.program_image_claims (1):
+  - Disclosed { program: consumer, image_id: effd2ac7a152be022bdc444ebf34f1eb191f8d53c454ff715d77bbdf5121e7cc }
+execution.private_actions (7): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (11256 bytes)
+execution.async_messages: 0
+execution.recovery_bindings: 1
+execution.validity: ValidityWindows { blocks: ValidityWindow { from: None, to: None }, timestamps: ValidityWindow { from: None, to: None } }
+execution.fee: Some("refund_to None, fallback true")
+nonces: 0, admission evidence: 0
+
+settled: execution gas 421,641 (PRIVATE_VERIFY_GAS 409,764 + public part 11,877 cycles), storage gas 224,063, base fee 5,165,632
