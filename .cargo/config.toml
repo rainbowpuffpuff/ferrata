@@ -1,0 +1,5 @@
+# Every cargo build in this tree: RISC Zero guests built independent of where the tree, $HOME and the toolchains live
+# (scripts/guest-rustc.py: source paths remapped, cargo's path-dependent -C metadata replaced, for zkVM units only).
+# A RUSTC_WRAPPER in the environment overrides this; guests built that way embed their build paths again.
+[build]
+rustc-wrapper = "scripts/guest-rustc"

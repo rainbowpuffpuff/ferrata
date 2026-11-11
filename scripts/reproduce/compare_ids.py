@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Print the rebuilt image ids beside e2e/crown/README.md's table and the deployed vault's immutables.
 
-    python3 -I scripts/reproduce/compare_ids.py --out DIR [--readme e2e/crown/README.md] [--vault ADDR] [--rpc URL]
+    python3 -I scripts/reproduce/compare_ids.py --out DIR [--readme e2e/crown/README.md] [--table docs/image-ids.md]
+                                                [--vault ADDR] [--rpc URL]
 
-DIR is the output of `scripts/reproduce-image-ids.sh build` (ids.txt: the LEZ programs' ids from r0vm; r0bf/ids.jsonl:
+The crown run's six programs are compared with e2e/crown/README.md's table (and, with --vault, a crown vault's
+immutables); every guest of DIR/ids.tsv with docs/image-ids.md. DIR is the output of `scripts/reproduce-image-ids.sh build` (ids.txt: the LEZ programs' ids from r0vm; r0bf/ids.jsonl:
 the four R0BF programs' ids from ferrata-e2e program-binary; methods-ids.txt: the ids risc0-build computed). Standard
 library only; the vault is read with eth_call over public JSON-RPC (read-only). Exit 1 if any id differs.
 """
@@ -30,7 +32,8 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", required=True)
     ap.add_argument("--readme", default=os.path.join(HERE, "..", "..", "e2e", "crown", "README.md"))
-    ap.add_argument("--vault", default="0xfE3199fa2634413CbAC317371076Cae3EB2d9E54")
+    ap.add_argument("--table", default=os.path.join(HERE, "..", "..", "docs", "image-ids.md"))
+    ap.add_argument("--vault", default="")
     ap.add_argument("--rpc", default=os.environ.get("SEPOLIA_RPC_URL") or vs.DEFAULT_RPC)
     a = ap.parse_args()
     rebuilt, sha = {}, {}
@@ -55,9 +58,11 @@ def main() -> int:
                 words = [int(x.strip()) for x in m.group(2).split(",") if x.strip()]
                 methods[METHODS[m.group(1)]] = "0x" + b"".join(w.to_bytes(4, "little") for w in words).hex()
     table = vs.readme_ids(a.readme) if os.path.isfile(a.readme) else vs.EXPECTED_IDS
-    rpc = vs.Rpc(a.rpc)
-    onchain = {}
+    onchain, mode = {}, None
     try:
+        if not a.vault:
+            raise vs.RpcError("no --vault given")
+        rpc = vs.Rpc(a.rpc)
         onchain["checkpoint_b"] = vs.words(rpc.call(a.vault, "checkpointImageId()"))[0]
         onchain["release"] = vs.words(rpc.call(a.vault, "releaseImageId()"))[0]
         mode = int(vs.words(rpc.call(a.vault, "mode()"))[0], 16)
@@ -73,7 +78,18 @@ def main() -> int:
         print(f"{'MATCH' if ok else 'DIFFER':<7}{k:<13} rebuilt {r}  README {'= rebuilt' if t == r else t}  "
               f"vault {'-' if v is None else ('= rebuilt' if v == r else v)}"
               + (f"  risc0-build {'= rebuilt' if mth == r else mth}" if mth else "") + f"  (sha256 {(sha.get(k) or '?')[:16]}…)")
-    print(f"{len(ORDER) - bad} of {len(ORDER)} ids equal the deployed ones")
+    print(f"{len(ORDER) - bad} of {len(ORDER)} ids of the crown run's programs equal the recorded ones")
+    tsv = os.path.join(a.out, "ids.tsv")
+    if os.path.isfile(tsv) and os.path.isfile(a.table):
+        doc = dict(re.findall(r"`([a-z0-9_]+)` \| `(0x[0-9a-f]{64})`", open(a.table, encoding="utf-8").read()))
+        rows = [l.rstrip("\n").split("\t") for l in open(tsv, encoding="utf-8")][1:]
+        same = 0
+        for r in rows:
+            ok = doc.get(r[1]) == r[2]
+            same += ok
+            bad += not ok
+            print(f"{'MATCH' if ok else 'DIFFER':<7}{r[1]:<32} rebuilt {r[2]}  docs/image-ids.md {'= rebuilt' if ok else doc.get(r[1])}")
+        print(f"{same} of {len(rows)} guests equal docs/image-ids.md")
     return 1 if bad else 0
 
 
