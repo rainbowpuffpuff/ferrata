@@ -690,6 +690,32 @@ pub fn check(chain: &Chain, program: &GuestBinary, bridge: &GuestBinary, identit
             if entry_ok { "matches the vault" } else { "DOES NOT match the vault" },
             fees_at
         );
+        if identity.is_none() {
+            // Without session A's identity: the import request (the vault's account and slots 0 and 1 under
+            // this record) does not depend on the configuration's identity, only on the vault.
+            let placeholder = Identity {
+                label: String::new(),
+                chain: String::new(),
+                tip_id: 0,
+                tip_hash: [0; 32],
+                bedrock_genesis_id: [0; 32],
+                channel_id: CHANNEL_ID,
+                channel_keys: Vec::new(),
+                posting_timeframe: 0,
+                config_tip_hash: [0; 32],
+                attestation: attest,
+                attestation_image_id: image_bytes(program.image_id),
+                bridge_header,
+                bridge_image_id: image_bytes(bridge.image_id),
+                instance_id: inst_id,
+                checkpoint: chain.checkpoint,
+            };
+            let config = placeholder.bridge_config(stage.vault);
+            let account = with_header(stage.header_rlp.clone(), stage.account.clone());
+            let import = import_request(&config, &ImportProof { account, root_slot: stage.slot(&SLOT_ROOT)?.0, count_slot: stage.slot(&SLOT_COUNT)?.0 });
+            evaluate(&inst_id, chain.config.chain_id, &record, &import).map_err(|c| anyhow!("{}: import refused natively ({c})", stage.label))?;
+            println!("[check] {}: the import request (vault account, slots 0 and 1, header in front) accepted natively under this record", stage.label);
+        }
         if let Some(identity) = identity {
             ensure!(identity.instance_id == inst_id, "session A's instance is not this chain's");
             ensure!(identity.attestation == attest && identity.bridge_header == bridge_header, "session A's programs are not these");
@@ -813,6 +839,9 @@ pub async fn session_a(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
 
 pub struct SessionB {
     pub identity: Identity,
+    /// A claim's time is now + this (seconds; default -30): the including block's timestamp must lie in
+    /// [t, t + 10 min), so a slow prover needs a positive offset (about its proof time minus a few minutes).
+    pub claim_time_offset_s: i64,
     pub eth_fees_at: Option<u64>,
     pub recipient: [u8; 20],
     pub private: String,
@@ -854,6 +883,7 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
     let mut claims: Vec<Value> = Vec::new();
     let mut notes: Vec<Value> = Vec::new();
     let mut applied = chain.base_updates;
+    let claim_time = || -> u64 { (now_ms() as i64 + b.claim_time_offset_s * 1000) as u64 };
     for (k, stage) in chain.stages.iter().enumerate() {
         let period = stage.update.signature_slot / 8192;
         while applied < chain.catch_up.len() && chain.catch_up[applied].0 < period {
@@ -918,7 +948,7 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
             let range = range_for(live, token_pda, 0).await?;
             let n_pda = Pda { program: bridge, seed: nullifier_seed(chain_id, &vault, &nullifier) };
             let dest = AccountId::new(w.dest);
-            let message = BridgeMessage::Claim { config_id: cid, leaf_count: n, witness: w, range, relayer: None, time_ms: now_ms() - 30_000 };
+            let message = BridgeMessage::Claim { config_id: cid, leaf_count: n, witness: w, range, relayer: None, time_ms: claim_time() };
             let mentions = vec![mention(root_pda), mention(token_pda), mention(config_pda), mention(n_pda), holder(bridge, dest), holder(bridge, fee_recipient())];
             let o = send(live, &format!("bridge Claim: deposit 0 (public) under root(cid, {n})"), mentions, &message, payer).await?.expect_applied()?;
             steps.push(row_json(&o));
@@ -931,7 +961,7 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
             ensure!(kind == DestKind::Private && w.dest == *session.me.value(), "deposit 1 is the private one, to the wallet's private account");
             let range = range_for(live, token_pda, 1).await?;
             let n_pda = Pda { program: bridge, seed: nullifier_seed(chain_id, &vault, &nullifier) };
-            let message = BridgeMessage::ClaimPrivately { config_id: cid, leaf_count: n, witness: w, range, relayer: None, time_ms: now_ms() - 30_000 };
+            let message = BridgeMessage::ClaimPrivately { config_id: cid, leaf_count: n, witness: w, range, relayer: None, time_ms: claim_time() };
             let publics = vec![mention(root_pda), mention(token_pda), mention(config_pda), mention(n_pda), holder(bridge, fee_recipient())];
             let o = session.send(live, "bridge ClaimPrivately: deposit 1 at LEZ's private test account 0", publics, &message, "claim").await?;
             steps.push(row_json(&o));

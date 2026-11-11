@@ -13,7 +13,8 @@
 # Environment: CROWN_LEZ_VOL (default /vol/lez), CROWN_LEZ_WORK (default /root/crown-lez, wiped), CROWN_CHAIN
 # (sepolia | stand-in), CROWN_VAULT (a: optional), CROWN_CAPTURES (b: capture dirs in order; default
 # $CROWN_LEZ_VOL/inputs/capture-1 and -2), CROWN_ETH_FEES_AT, CROWN_RECIPIENT, CROWN_PRIVATE (real | fake),
-# CROWN_R0VM (the prover's r0vm; default the bundle's), CROWN_DEADLINE_MIN (default 120).
+# CROWN_R0VM (the prover's r0vm; default the bundle's), CROWN_CLAIM_TIME_OFFSET_S (b: a claim's time = now + this,
+# default -30; a prover slower than ~9 min per proof needs about its proof time minus 3 min), CROWN_DEADLINE_MIN (120).
 # Layout of $CROWN_LEZ_VOL: bundle.tar.zst (input), state/gen-N.tar.zst + state/current, inputs/, session-a/, session-b/.
 set -uo pipefail
 STEP="${1:?a or b}"
@@ -211,6 +212,7 @@ else
   caps=(); for c in ${CROWN_CAPTURES:-$VOL/inputs/capture-1 $VOL/inputs/capture-2}; do caps+=(--capture "$c"); done
   extra=(); [ -n "${CROWN_ETH_FEES_AT:-}" ] && extra+=(--eth-fees-at "$CROWN_ETH_FEES_AT")
   [ -n "${CROWN_RECIPIENT:-}" ] && extra+=(--recipient "$CROWN_RECIPIENT")
+  [ -n "${CROWN_CLAIM_TIME_OFFSET_S:-}" ] && extra+=(--claim-time-offset-s "$CROWN_CLAIM_TIME_OFFSET_S")
   prover="${CROWN_R0VM:-$BIN/r0vm}"
   privacy="${CROWN_PRIVATE:-real}"
   devmode=(env -u RISC0_DEV_MODE); [ "$privacy" = fake ] && devmode=(env RISC0_DEV_MODE=1)

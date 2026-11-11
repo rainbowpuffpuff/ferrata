@@ -25,7 +25,8 @@
 //! crown-a: --channel FILE (the node's /channel/<id> answer), --genesis FILE (deployment
 //! settings), --identity-out FILE, [--vault ADDR].
 //! crown-b: --identity FILE, --capture DIR (repeatable, in order), [--eth-fees-at UNIX_S],
-//! [--recipient ADDR], [--private real|fake], --session-out FILE, --notes-out FILE.
+//! [--recipient ADDR], [--private real|fake], [--claim-time-offset-s S (default -30)], --session-out FILE,
+//! --notes-out FILE.
 
 #![allow(dead_code)]
 
@@ -304,6 +305,7 @@ async fn run(args: Args) -> Result<()> {
             let chain = full_chain(&args)?;
             let b = crown::SessionB {
                 identity: crown::Identity::load(&args.path("identity")?)?,
+                claim_time_offset_s: args.get("claim-time-offset-s").map(str::parse).transpose()?.unwrap_or(-30),
                 eth_fees_at: args.get("eth-fees-at").map(str::parse).transpose()?,
                 recipient: crown::address(args.get("recipient").unwrap_or(crown::DEFAULT_RECIPIENT))?,
                 private: args.get("private").unwrap_or("real").to_string(),
