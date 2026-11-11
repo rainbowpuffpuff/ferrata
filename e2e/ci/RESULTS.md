@@ -56,6 +56,44 @@ box's times, not measured on GitHub); later runs restore the cargo caches.
   transaction then never gets a receipt. The test checks expected refusals with `eth_call` and times out every
   receipt at 60 s.
 
+A third run, with `run.sh` building as the job does (no debug info, no incremental artefacts), passed the same
+seven steps in 8.6 s (the rule (B) guest: 6,176,865 user cycles); its build step rebuilt the test's dependencies in
+184 s, its run step took 51 s.
+
 ## `witness-independence`
 
-`scripts/ci/witness-independence.sh 64`: see the section below, filled from the box's run.
+`scripts/ci/witness-independence.sh 64` (the job's last step):
+
+```
+[release] 64 random valid witnesses (leaf indices 0, 2^32-1, 0x55555555, 0xAAAAAAAA, then random; random siblings, secrets and public fields): distinct (user cycles, segment po2s): {(77736, [17])} (2.7 s)
+[claim] 64 random valid witnesses (leaf indices 0, 2^32-1, 0x55555555, 0xAAAAAAAA, then random; random siblings, secrets and public fields): distinct (user cycles, segment po2s): {(74379, [17])} (2.7 s)
+cycle counts are independent of the witness for both guests
+```
+
+Build 221 s cold (`host` and its guests), 3 s with `bridge/target` restored; the check itself 5 to 8 s.
+
+## The toolchain step (`scripts/ci/install-risc0.sh`)
+
+Run on the box with `HOME` set to an empty directory, as on a runner whose cache is empty (the box's own
+toolchains untouched; rustc on the path, as the workflow's `dtolnay/rust-toolchain` step puts it): rzup installed
+cargo-risczero and r0vm 3.0.5, C++ 2024.1.5, guest Rust 1.88.0 in `~/.risc0` and 1.91.1 in `~/risc0-home-lez`, in
+110 s; a second run installed nothing (0 s). Each home is 3.1 GB on disk, which the cache compresses.
+
+## Sizes, for the caches
+
+| Directory | On the box |
+|---|---|
+| `bridge/target` | 981 MB |
+| `checkpoint/target` | 3.9 GB |
+| `cli/target` | 13 GB built with debug info (15 GB after the rebuild without it, both builds' artefacts side by side); the job builds without, and `Swatinem/rust-cache` keeps only the dependencies |
+| `~/.cargo/registry` | 675 MB |
+| `~/.risc0`, `~/risc0-home-lez` | 3.1 GB each |
+
+GitHub keeps 10 GB of caches per repository (compressed); the first runs on GitHub will show whether the
+`roundtrip` cache stays under it. If it does not, the job still passes: it then builds from cold each time.
+
+## What was not run
+
+The workflow itself on GitHub (no push from this branch): the job steps were run on the box, one by one, by the
+same scripts, after the same toolchain versions were installed or present. `actions/checkout`, the caches and
+`dtolnay/rust-toolchain`/`foundry-toolchain` were not exercised; the workflow file parses as YAML (four jobs).

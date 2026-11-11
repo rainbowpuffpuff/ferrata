@@ -54,7 +54,7 @@ Results and timings: `e2e/ci/RESULTS.md`.
 
 | | GitHub `ubuntu-latest` | the build box |
 |---|---|---|
-| CPU, memory | 4 vCPUs, 16 GB | a Modal container, up to 16 cores and 64 GiB |
+| CPU, memory | 4 vCPUs, 16 GB (public repositories) | a Modal container (up to 16 cores and 64 GiB; `nproc` printed 2 during these runs) |
 | disk | about 14 GB free; the job deletes preinstalled SDKs first | ample |
 | toolchains | installed by the workflow (rustup, rzup, foundry-toolchain), restored from caches after the first run | preinstalled at the same versions (Rust 1.93.0 and 1.98.1, r0vm 3.0.5, guest Rust 1.88.0 and 1.91.1, Foundry 1.3.6) |
 | system packages | `libpcsclite-dev` and `protobuf-compiler` installed by the job | `libpcsclite-dev` installed by the box's setup script |
