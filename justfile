@@ -15,7 +15,7 @@ stamp := `date -u +%Y%m%dT%H%MZ`
 commit := `git rev-parse --short=12 HEAD 2>/dev/null || echo unknown`
 # The full commit, passed to a build machine whose copy of the tree has no .git (FERRATA_COMMIT); "+dirty" when
 # tracked files differ from it.
-commit_full := `c=$(git rev-parse --verify -q HEAD) && { git diff --quiet HEAD -- . && echo $c || echo $c+dirty; } || echo unknown`
+commit_full := `if [ -n "${FERRATA_COMMIT:-}" ]; then echo "$FERRATA_COMMIT"; elif c=$(git rev-parse --verify -q HEAD); then git diff --quiet HEAD -- . && echo $c || echo $c+dirty; else echo unknown; fi`
 
 # List the recipes.
 default:
