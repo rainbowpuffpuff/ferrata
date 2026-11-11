@@ -115,6 +115,7 @@ carries `s` as the program's public claim does. The chain is `chain_id` (a numbe
 | `scripts/check.sh [OUT_DIR]` | the above, then both modules built and packaged by logos-module-builder (dev `.lgx` and `.lgx-portable`), installed and loaded together in a headless Logos Core (`logosctl`, dev and portable builds), every method called (`requests.py`: 10 attest requests from the attestation fixtures; `bridge_requests.py`: 13 bridge requests from `bridge/vectors/*-v2.json`), each reply compared with the native reply and with what the request must produce; then `e2e.sh` through the same daemon | Linux x86-64 with Nix |
 | `scripts/e2e.sh OUT_DIR` | a log end to end: `recorded_rpc.py` serves the recorded mainnet block 26,384,851 over JSON-RPC; `fetch_log_proof` → `dry_run_attest` on the record read from the chain → `build_attest_tx` → `lez/harness`'s `module_e2e` decodes the bytes with the program's types and executes them in LEZ v0.4.0-rc1's state machine → `read_attestation`; two logs, two refusals (a tampered proof, another instance), and the bridge module's `Burn` and `Claim` decoded by the bridge program's types (`CALL=logosctl` runs it through a Logos Core daemon) | Linux with cargo (and `logosctl`) |
 | `scripts/release-local.sh OUT_DIR` | `logos-modules-release-action`'s steps for `linux-amd64`, locally, nothing published (`catalog/README.md`) | Linux x86-64 with Nix |
+| `scripts/catalog-install.sh RELEASE_DIR LOGOSCTL WORK_DIR` | a Logos Core installs both modules from that catalog, served over HTTPS on 127.0.0.1: `catalog add`, `search`, `install`, `module load`, `call` | Linux x86-64 with Nix |
 
 ### Left out
 
@@ -133,5 +134,6 @@ carries `s` as the program's public claim does. The chain is `chain_id` (a numbe
   LEZ wallet), no `ImportRoot`, registry or fee-schedule reads, no release guest input or proof (the
   module gives the journal and the witness; proving is the CLI's `release --prove`); the vault's
   `Deposit` events and the program's burn records come in the request.
-- **Catalog:** laid out and dry-run (`catalog/`); nothing published, one variant (`linux-amd64`).
+- **Catalog:** laid out, dry-run and installed from on 127.0.0.1 (`catalog/`); nothing published, one
+  variant (`linux-amd64`), unsigned.
 - **Linux x86-64 only** was tried.

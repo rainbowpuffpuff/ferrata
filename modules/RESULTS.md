@@ -82,6 +82,19 @@ sidecars (sha256 `dce2086a…` and `35ed5eb1…`, root hashes, manifests); `inde
 `logos-modules-release-tool` `v1.3` (`94462e6`) `index.py`: schema 2, repository `ferrata-modules`,
 2 packages; `index.py validate-repo` on `catalog/logos-repo.json`: OK. Nothing was published.
 
+## Installed from the catalog (`catalog-install.sh`)
+
+A headless Logos Core installed both modules *from the catalog* as a client does: the dry run's
+`index.json` and packages and `catalog/logos-repo.json` served on 127.0.0.1 over HTTPS (`logosctl`
+refuses a plain `http://` catalog: "unsupported URL scheme (https required in v1)") with a throwaway
+self-signed certificate given to the daemon as its CA bundle; portable `logosctl` of the final run.
+`catalog add` the catalog's `logos-repo.json`, `catalog source http`, `search ferrata` (both found),
+`install` each by name (downloaded over HTTPS, root hashes from the index), `module load`, `call version`
+(both answer, staged from commit `2f91c14`). The server logged the index and the two packages fetched.
+One command failed, for a reason outside this catalog: `catalog refresh` also fetches the daemon's
+built-in official catalog (GitHub), whose certificate cannot be verified with the throwaway CA bundle
+(curl error 60), even after `catalog disable`. Log: `catalog/install-test/log.txt`.
+
 ## Steps (final run, seconds)
 
 Everything cached by the earlier runs on the same box: `build-lgx` (both modules) 94.7, `build-lgx-portable`
@@ -108,7 +121,7 @@ which that script did not run). The harness's test build: 456 s.
 What `README.md` lists under "Left out": the modules do not go through Logos Core's Ethereum, key and
 transaction modules (plain `http://` JSON-RPC; messages built, not signed or sent; the harness executes
 them in-process, not a networked sequencer); no `advance` in the attestation module; no private claim, `ImportRoot`, registry reads or release proof in the bridge module; the
-catalog is laid out and dry-run, not published; Linux x86-64 only.
+catalog is laid out, dry-run and installed from locally, not published; Linux x86-64 only.
 
 ## First run, 10 November 2026: the prototype (`ferrata_attest_module`, three methods)
 

@@ -30,3 +30,10 @@ published (no push, no public network). The action itself has not run.
 `rebuild-index.yml` checks out) from the packages' URLs, served on 127.0.0.1. With one variant the
 action skips `lgx merge`. Its small outputs (sidecars, `index.json`, logs; no package binaries) are in
 `dry-run/`, and the run is described in `modules/RESULTS.md`.
+
+## Installed from the catalog
+
+`modules/scripts/catalog-install.sh RELEASE_DIR LOGOSCTL WORK_DIR` serves the dry run's catalog over
+HTTPS on 127.0.0.1 (a throwaway certificate; `logosctl` requires https) and has a headless Logos Core
+add it, search it, install both modules by name, load them and call them. Both installed and answered;
+its log is in `install-test/` (`modules/RESULTS.md`, "Installed from the catalog").
