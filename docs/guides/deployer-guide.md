@@ -69,7 +69,7 @@ submitted, or roots finalised, after it ([`vault/README.md`](../../vault/README.
 chain whose `prevrandao` or timestamp is constant or sequencer-chosen, deploy rule (B). Rule (B) also
 needs an attestor beside every sequencer (`ferrata_attestor`, **not built** as a module), tolerates
 `n − t` silent sequencers against `n − 1 − t` for (A), and costs one proof per checkpoint against two
-([`bridge.md`](../design/bridge.md) §3, §9). Trust consequences are in `docs/trust.md`.
+([`bridge.md`](../design/bridge.md) §3, §9). Trust consequences are in [`docs/trust.md`](../trust.md).
 
 ## 3. Order of deployment
 

@@ -271,7 +271,7 @@ Blockchain, LEZ and Ethereum nodes ([`bridge.md`](../design/bridge.md) §14; [`v
 
 A watcher that lies can only delay finalisation until the admin replaces it; one that stops lets a bad
 candidate through, which under rule (B) the release delay and revocation still catch, and under rule (A),
-outside its conditions, can lose funds ([`bridge.md`](../design/bridge.md) §11.8, §14; `docs/trust.md`).
+outside its conditions, can lose funds ([`bridge.md`](../design/bridge.md) §11.8, §14; [`docs/trust.md`](../trust.md)).
 `monitor` is **not built**; the vault side is.
 
 ## 8. Keys

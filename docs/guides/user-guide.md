@@ -324,7 +324,7 @@ client's messages for each code (the module).
   [`bridge.md`](../design/bridge.md) §15 that refunds still work after a stop describes an earlier
   prototype: in v5 `refund` requires no verifier stop, [`vault/README.md`](../../vault/README.md), "Refunds").
 - **A wrong checkpoint not revoked within 7 days halts the vault for good.** What bounds your loss is
-  in `docs/trust.md`.
+  in [`docs/trust.md`](../trust.md).
 
 ## 13. For developers: integrating both flows (R.12)
 

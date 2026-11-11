@@ -398,7 +398,7 @@ canonical chain, and your consumer would act on facts under it. The design bound
 attack's cost, because a bribe has no protocol floor: size what your caps let through before a
 freeze to what you can afford to lose, and wire `monitor`'s alarm (**not built**) to your freeze
 authority ([`attestation.md`](../design/attestation.md) §11.2–§11.3). The probabilities and the
-bridge's numbers are in `docs/trust.md`.
+bridge's numbers are in [`docs/trust.md`](../trust.md).
 
 ## 11. What is not built
 
