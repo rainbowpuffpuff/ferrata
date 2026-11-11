@@ -39,7 +39,7 @@ VOLUME = os.environ.get("P4_VOLUME", "p4-minimum")
 RUN_LIMIT_S = 2 * 3600  # one binary run
 HARD_TIMEOUT_S = 6 * 3600  # one function call
 
-app = modal.App("p4-minimum")
+app = modal.App(os.environ.get("P4_APP", "p4-minimum"))  # P4_APP: a separate name keeps a pass's spend apart in billing
 vol = modal.Volume.from_name(VOLUME, create_if_missing=True)
 image = modal.Image.from_registry("ubuntu:24.04", add_python="3.12").apt_install(
     "time", "procps", "file", "util-linux", "ca-certificates"
