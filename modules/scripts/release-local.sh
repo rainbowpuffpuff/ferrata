@@ -47,7 +47,8 @@ for m in $MODULES; do
   t0=$(date +%s)
   (cd "$out/src/$m" && nixb .#lgx-portable --print-out-paths --no-link > "$out/log/out-$m.txt") > "$out/log/build-$m.log" 2>&1
   echo "build $m $(( $(date +%s) - t0 )) s" >> "$out/log/times.txt"
-  built=$(find "$(head -n 1 "$out/log/out-$m.txt")" -maxdepth 2 -name '*.lgx' | head -n 1)
+  # nixb's output mixes Nix's progress with the printed out path: take the store path line.
+  built=$(find "$(grep -E '^/nix/store/[^ ]+$' "$out/log/out-$m.txt" | tail -n 1)" -maxdepth 2 -name '*.lgx' | head -n 1)
   mkdir -p "$out/dist/$tag"
   lgx_file="$out/dist/$tag/$m-$version.lgx"
   cp "$built" "$lgx_file"
