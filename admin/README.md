@@ -106,3 +106,26 @@ example "root recomputation not possible" or depositor counts that differ from `
 `results/live-sepolia-<UTC>.txt` is the text dump of the live Sepolia vault, read through
 `https://ethereum-sepolia-rpc.publicnode.com` (keyless, default headers, read-only). The file header gives the block
 and the time.
+
+## A local scenario: the states the live vault has not shown
+
+The live vault has no freeze in force, no watchers, no role proposal and no announced fee change.
+[`../vault/script/AdminScenario.s.sol`](../vault/script/AdminScenario.s.sol) makes a vault on a local
+anvil (the vault tests' mock verifier behind the emergency stop, rule (A)) with two deposits, fee
+schedule #1 announced (in force after the 7-day notice), a release delay changed, a global deposit
+cap, a role proposal naming three watchers and a new freeze authority, and, by the freeze authority,
+releases and ETH deposits frozen. Run on the Modal build box (11 November 2026):
+
+```sh
+cd vault
+anvil --port 8545 --silent &
+ADMIN_KEY=<anvil account 0's published key> FREEZE_KEY=<any key> \
+  forge script script/AdminScenario.s.sol --rpc-url http://127.0.0.1:8545 --broadcast
+node ../admin/dump.mjs http://127.0.0.1:8545 <the vault> 0
+```
+
+[`results/local-anvil-scenario.txt`](results/local-anvil-scenario.txt): 89 read-only requests;
+"FROZEN: releases, ETH deposits" (each until 30 days on, `maxFreeze`); the role proposal with its
+three watchers and new freeze authority, effective in 14 days; schedule #1 announced, in force in 7
+days; the release delay's history (120 s, then 600 s); 2 deposits. The two errors listed in its
+section 16 are optional reads (`VERSION()`, `SELECTOR()`) that the mock verifier does not have.

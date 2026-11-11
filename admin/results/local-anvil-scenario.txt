@@ -1,0 +1,212 @@
+# Ferrata vault admin view: text dump (admin/dump.mjs running admin/index.html's script; read-only)
+# endpoint:   http://127.0.0.1:8545
+# vault:      0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9
+# chain:      31337 (local dev chain)
+# read at:    block 14, block time 2026-11-11T19:11:15Z
+# UTC time:   2026-11-11T19:11:15.916Z (start of the read, local clock)
+Ferrata vault admin view: 0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9 (read-only)
+
+== 1. Read ================================================================================================
+  tool ................................... ferrata-admin 1
+  endpoint ............................... http://127.0.0.1:8545
+  vault .................................. 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9
+  chain id ............................... 31337 (local dev chain)   [eth_chainId]
+  latest block ........................... 14   [eth_blockNumber]
+  every read pinned to block ............. 14   [block tag of each call]
+  block time ............................. 2026-11-11T19:11:15Z (1794424275)   [eth_call of TIMESTAMP code]
+  read at (local clock, UTC) ............. 2026-11-11T19:11:15.918Z to 2026-11-11T19:11:16.417Z
+  vault runtime code ..................... 24254 bytes, keccak256 0xc51a0f75044741137c2581a17facd435e6aaed4feb8e65a71b6b5a0041d7b372   [eth_getCode]
+  linked library (FerrataRegistry) ....... 0x181E31d3138e7576B47a46B64EC2E1fb5d38675c (12504 bytes of code)   [PUSH20 constants in the code that have code]
+  events scanned ......................... blocks 0-14 (given): 21 vault events in 1 eth_getLogs calls   [eth_getLogs]
+  event scan complete .................... yes
+  events by name ......................... AdminTransferred 1, DeltaSet 1, Deposit 2, FeesAnnounced 2, FeesInForce 1, FreezeAuthorityTransferred 1, GlobalCapSet 3, RegistryEntryPublished 1, ReleaseDelaySet 2, ReleasesFrozenSet 1, RolesProposed 1, TokenCapSet 2, TokenDepositsFrozenSet 1, TokenRegistered 1, WatchersSet 1
+  RPC requests ........................... 89 (eth_chainId 1, eth_blockNumber 1, eth_getCode 7, eth_call 69, eth_getLogs 1, eth_getStorageAt 9, eth_getBalance 1); retries 0; errors 2
+
+== 2. Summary =============================================================================================
+  finality rule .......................... A (candidate, beacon, echo proof)   [mode()]
+  retired ................................ no   [retired()]
+  verifier emergency stop ................ not tripped   [verifier.paused()]
+  freezes in force ....................... FROZEN: releases, ETH deposits   [*FrozenUntil()]
+  deposits ............................... 2 (leaf count)   [nextLeafIndex()]
+  checkpoints finalised .................. 0   [checkpointCount()]
+  pending candidates ..................... 0 (of 0 states ever submitted)   [CandidateSubmitted + candidates()]
+  releases ............................... 0   [Release events]
+  registered tokens ...................... ETH   [TokenRegistered + tokenConfig()]
+
+== 3. Configuration (immutable) ===========================================================================
+  verifier ............................... 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0   [verifier()]
+  checkpointImageId ...................... 0xd480467a2536cf0af4f38b5a504cc7e0804aa135a6aa3e603d815f90a249b298   [checkpointImageId()]
+  releaseImageId ......................... 0xa5acbe8385ad1e97eec4bd96cccf783f672c9e621b88ac8bf3c66621c6547719   [releaseImageId()]
+  lezConfigId ............................ 0x54d4ec47b8c2bf3d1d309782b43691328f3223b0c7e99c32cfac8691f59b8dd0   [lezConfigId()]
+  storedLezConfigId (slot 2) ............. 0x54d4ec47b8c2bf3d1d309782b43691328f3223b0c7e99c32cfac8691f59b8dd0; slot 2 match; = lezConfigId: match   [storedLezConfigId(), eth_getStorageAt 2]
+  genesisState ........................... 0x568dcb539cdbb0a2473386fa783d9975d39afd5fbc9ed1c6c50d7a0a26c83473   [genesisState()]
+  mode ................................... A (candidate, beacon, echo proof)   [mode()]
+  nMin / tMin ............................ 3 / 2   [nMin(), tMin()]
+  deltaFloor ............................. 600 s (10m)   [deltaFloor()]
+  turnSeconds ............................ 2 s   [turnSeconds()]
+  revokeWindow ........................... 86400 s (1d)   [revokeWindow()]
+  maxFreeze .............................. 2592000 s (30d)   [maxFreeze()]
+  minReleaseDelay ........................ 0 s   [minReleaseDelay()]
+  release cap floor ...................... capacity 0, refill 0/s (value units; 0 = no floor)   [releaseCapFloor(), releaseRefillFloor()]
+  feeRecipient (burn fees) ............... 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266   [feeRecipient()]
+  keyless span (derived) ................. 2592002 s (30d 2s)   [(tMin - 1) * turnSeconds + 30 days, as the constructor sets _keylessSpan]
+  - Not settable after deployment: the vault has no upgrade path, no settable verifier and no token rescue (contract source).
+
+== 4. Roles ===============================================================================================
+  admin .................................. 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 (no code: an EOA)   [admin()]
+  pendingAdmin ........................... 0x0000000000000000000000000000000000000000 (none)   [pendingAdmin()]
+  freezeAuthority ........................ 0x34c12c034C40A6076Ee47C934aEc48D9a0f4e66a (no code: an EOA)   [freezeAuthority()]
+  watchers[0] ............................ 0x0000000000000000000000000000000000000000 (none)   [watchers(0)]
+  watchers[1] ............................ 0x0000000000000000000000000000000000000000 (none)   [watchers(1)]
+  watchers[2] ............................ 0x0000000000000000000000000000000000000000 (none)   [watchers(2)]
+  feeRecipient ........................... 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 (no code: an EOA)   [feeRecipient()]
+  role proposal: effective at ............ 2026-11-25T19:11:15Z (1795633875, in 14d)   [roleProposal()]
+  role proposal: freeze authority ........ 0x0d94075C619Fd10D7AD5eee2B7a68a9De5E6263F (no code: an EOA)   [roleProposal()]
+  role proposal: watchers ................ 0x0D8a66e21d5a51cC28B044f94446e00B6cb69ACb, 0x95FCA819e1F8d2685E1c2c93da3701A40489eF7c, 0x31C6D9fa339195b4Ea613c3319eF5120f6ac18EE   [last RolesProposed event (the getter omits the array)]
+  - Powers (contract source): admin registers tokens, sets caps, delays, deposit enablement, raises delta, announces fees, proposes roles (14-day timelock), hands over admin in two steps. Freeze authority freezes and unfreezes, cancels candidates, revokes within revokeWindow, retires at any time. Watchers cancel candidates and pause checkpoints for 12 h. Code size shows only whether an address is a contract; who holds the keys is not on chain.
+
+== 5. Verifier emergency stop =============================================================================
+  stop (the vault's verifier) ............ 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 (1698 bytes)   [verifier()]
+  tripped ................................ no   [paused()]
+  owner (may call estop()) ............... 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 (no code: an EOA)   [owner()]
+  pending owner .......................... 0x0000000000000000000000000000000000000000 (none)   [pendingOwner()]
+  wrapped verifier ....................... 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512 (737 bytes)   [verifier() on the stop]
+  wrapped verifier VERSION / SELECTOR .... ERROR: reverted without data / ERROR: reverted without data   [VERSION(), SELECTOR()]
+  - Who can trip it: the owner with estop() while there is one, and anyone with estop(receipt), a verifying RISC Zero receipt of the all-zero claim (proof of a soundness bug). This rule is from RISC Zero's RiscZeroVerifierEmergencyStop source, not read from chain.
+
+== 6. Freezes =============================================================================================
+  deposits (all tokens) .................. not frozen   [depositsFrozenUntil()]
+  releases and refunds (all tokens) ...... FROZEN until 2026-12-11T19:11:15Z (1797016275, in 30d)   [releasesFrozenUntil()]
+  checkpoints (freeze or watcher pause) .. not frozen   [checkpointsFrozenUntil()]
+  ETH deposits ........................... FROZEN until 2026-12-11T19:11:15Z (1797016275, in 30d)   [tokenDepositsFrozenUntil(token)]
+  ETH releases ........................... not frozen   [tokenReleasesFrozenUntil(token)]
+
+== 7. Checkpoints, burn roots and candidates ==============================================================
+  finalState ............................. 0x568dcb539cdbb0a2473386fa783d9975d39afd5fbc9ed1c6c50d7a0a26c83473 (= genesisState)   [finalState()]
+  finalImportedLeafCount / finalSunset ... 0 / no   [finalImportedLeafCount(), finalSunset()]
+  delta (base of the wait) ............... 600 s (10m)   [delta()]
+  shortest wait W now (derived) .......... 602 s (10m 2s)   [delta + (tMin - 1) * turnSeconds]
+  revocationEpoch ........................ 0   [revocationEpoch()]
+  _stateChanges (internal) ............... 0; candidate epoch now = 0   [eth_getStorageAt 52, checked against finalImportedLeafCount/finalSunset/keylessFrom]
+  checkpointCount ........................ 0   [checkpointCount()]
+  beaconCount ............................ 0   [beaconCount()]
+  _lastBeaconBlock (internal) ............ 0   [eth_getStorageAt 44]
+  - No checkpoint finalised yet.
+  - No candidate submitted in the scanned range.
+  - No revocation in the scanned range.
+
+== 8. Token ETH ===========================================================================================
+  token .................................. 0x0000000000000000000000000000000000000000 (native ETH, 18 decimals)
+  registered / deposits enabled .......... yes / yes   [tokenConfig(token)]
+  registered in block .................... 5   [TokenRegistered]
+  lezUnit / unitWeight ................... 1000000000 base units per LEZ unit / 1 value units per lezUnit   [tokenConfig(token)]
+  denominations .......................... 0.1 ETH [100000000000000000]; 1 ETH [1000000000000000000]; 10 ETH [10000000000000000000]   [tokenConfig(token)]
+  LEZ definition / decimals (registry entry) .. 0x0000000000000000000000000000000000000000000000000000000000000000 / 18   [RegistryEntryPublished (no getter)]
+  published registry entry ............... slot 0x2f7d2fc425649f0a2184f57eb1355c97d45240e80cf9b2fa1972b849a0d0433c holds 0x295dd897cfc1fbca161d7f941fae6de887aa03814453a1802539fdf25dfd5b31; event hash match; recomputed match   [eth_getStorageAt sha256("ferrata/vault/registry/v1" || token)]
+  deposit cap ............................ no bucket (UNLIMITED)   [tokenCap(token, Deposit)]
+  release cap ............................ no bucket (UNLIMITED)   [tokenCap(token, Release)]
+  release delay for the next root ........ 600 s (10m)   [releaseDelayFor(token, checkpointCount)]
+  release delay settings ................. 120 s (2m) from checkpoint 0 (block 5); 600 s (10m) from checkpoint 0 (block 9)   [ReleaseDelaySet events]
+  escrowed ............................... 1.1011 ETH [1101100000000000000]   [escrowed(token)]
+  owed (all payees) ...................... 0 ETH [0]   [totalOwed(token)]
+  vault balance .......................... 1.1011 ETH [1101100000000000000]   [eth_getBalance]
+  balance - (escrowed + owed) ............ 0 ETH [0] (exactly covered)   [derived]
+  fee schedule in force .................. #0; #1 announced, takes effect at 2026-11-18T19:11:15Z (1795029075, in 7d)   [feeState(token)]
+  Fees in force, schedule #0 (fees(token, index, d)):
+    denomination                   mint fee   relay fee                     burn fee   checkpoint fee
+    -----------------------------  ---------  ----------------------------  ---------  --------------
+    0.1 ETH [100000000000000000]   0 ETH [0]  0.0001 ETH [100000000000000]  0 ETH [0]  0 ETH [0]
+    1 ETH [1000000000000000000]    0 ETH [0]  0.001 ETH [1000000000000000]  0 ETH [0]  0 ETH [0]
+    10 ETH [10000000000000000000]  0 ETH [0]  0.01 ETH [10000000000000000]  0 ETH [0]  0 ETH [0]
+  Announced fees, schedule #1 (announced 2026-11-11T19:11:15Z (1794424275, now)):
+    denomination                   mint fee                      relay fee                     burn fee                      checkpoint fee
+    -----------------------------  ----------------------------  ----------------------------  ----------------------------  --------------
+    0.1 ETH [100000000000000000]   0.0005 ETH [500000000000000]  0.0001 ETH [100000000000000]  0.0005 ETH [500000000000000]  0 ETH [0]
+    1 ETH [1000000000000000000]    0.005 ETH [5000000000000000]  0.001 ETH [1000000000000000]  0.005 ETH [5000000000000000]  0 ETH [0]
+    10 ETH [10000000000000000000]  0.05 ETH [50000000000000000]  0.01 ETH [10000000000000000]  0.05 ETH [50000000000000000]  0 ETH [0]
+  Schedules in force, published at sha256("ferrata/vault/fees/v1" || token || index) (FeesInForce/FeesAnnounced give from leaf and times: no getter):
+    #  from leaf  announced                               effective                               published hash (slot)                                               event hash  recomputed
+    -  ---------  --------------------------------------  --------------------------------------  ------------------------------------------------------------------  ----------  ----------
+    0  0          2026-11-11T19:11:15Z (1794424275, now)  2026-11-11T19:11:15Z (1794424275, now)  0xb1a497240ba045a5a1e55a06c84007389fe023f05495cedf33104e8556cc06de  match       match
+  deposits / releases / refunds (events) .. 2 (1.1 ETH [1100000000000000000]) / 0 (0 ETH [0]) / 0   [Deposit, Release, Refund events]
+
+== 9. Global caps (value units) ===========================================================================
+  deposit bucket ......................... available 100000000000000000000 value units of 100000000000000000000 value units (0% used), refill 10000000000000000 value units/s   [globalCap(Deposit)]
+  release bucket ......................... no bucket (UNLIMITED)   [globalCap(Release)]
+  - Value units of an amount = amount / lezUnit * unitWeight of its token.
+
+== 10. Deposits ============================================================================================
+  nextLeafIndex (leaf count) ............. 2; slot 1 match   [nextLeafIndex(), eth_getStorageAt 1]
+  depositRoot ............................ 0x42e2cf9c22e2c480ac5f4f6a05a0b2df1d100e03ad75cb2dfe01a084d56d8944; slot 0 match   [depositRoot(), eth_getStorageAt 0]
+  root recomputed from Deposit events .... 0x42e2cf9c22e2c480ac5f4f6a05a0b2df1d100e03ad75cb2dfe01a084d56d8944 (match with depositRoot)   [SHA-256 tree of the leaves (vault/README.md "Encodings")]
+  Recent deposits (Deposit events, newest first, last 20 of 2):
+    leaf  block  depositor                                   j  token  amount                        commitment                                                          tx
+    ----  -----  ------------------------------------------  -  -----  ----------------------------  ------------------------------------------------------------------  ------------------------------------------------------------------
+    1     7      0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266  1  ETH    1 ETH [1000000000000000000]   0x0d26026b0d13887abd43c27383d1e34b3e27a881c74e46352200e448ae4765ec  0x864de61187e780c5ca6c5c8093859666530f7e567bb15b7efa6bf7864b0b8639
+    0     6      0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266  0  ETH    0.1 ETH [100000000000000000]  0x0d1c3c651ce4a0e334c14ec32bf6345538e078efa73f2136587c618444f78df7  0x0e305b02ec604da90836f5970f9ff124ccc3971815d94e2e50da7b08b1f2e0e7
+  Depositors (depositCount(depositor)):
+    depositor                                   Deposit events  depositCount()
+    ------------------------------------------  --------------  --------------
+    0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266  2               2
+
+== 11. Releases and refunds ================================================================================
+  releases ............................... 0 Release events   [Release events]
+  nullifiers used ........................ none released   [nullifierUsed(nullifier)]
+  - No refund in the scanned range.
+
+== 12. Fees and payments owed ==============================================================================
+  - Nothing owed to anyone and no OwedCredited event in range.
+  totalOwed ETH .......................... 0 ETH [0] (= sum over the payees above)   [totalOwed(token)]
+  - Burn fees are credited to feeRecipient and checkpoint fees to the prover of the root's checkpoint, never pushed; a payout that fails is credited too. Claimed with claimOwed(token) by the payee only.
+
+== 13. Retirement and sunset ===============================================================================
+  retired ................................ no   [retired()]
+  anyone may retire from ................. 2026-12-11T19:21:17Z (1797016877, in 30d 10m): until then only the freeze authority   [retireOpensAt()]
+  keyless clock started .................. 2026-11-11T19:11:15Z (1794424275, now)   [keylessFrom()]
+  sunset boundary set .................... no   [sunsetLeafCountSet()]
+  deposits possible ...................... yes, unless frozen, disabled or capped   [retired(), finalSunset()]
+
+== 14. Control history (events, newest first) ==============================================================
+  Last 19 of 19:
+    block  event                       fields
+    -----  --------------------------  -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    14     TokenDepositsFrozenSet      token=0x0 frozen=true until=1797016275
+    13     ReleasesFrozenSet           frozen=true until=1797016275
+    11     RolesProposed               watchers=[0x0D8a66e21d5a51cC28B044f94446e00B6cb69ACb,0x95FCA819e1F8d2685E1c2c93da3701A40489eF7c,0x31C6D9fa339195b4Ea613c3319eF5120f6ac18EE] freezeAuthority=0x0d94075C619Fd10D7AD5eee2B7a68a9De5E6263F effectiveAt=1795633875
+    10     GlobalCapSet                direction=0 capacity=100000000000000000000 refillPerSecond=10000000000000000
+    9      ReleaseDelaySet             token=0x0 delay=600 fromCheckpoint=0
+    8      FeesAnnounced               token=0x0 index=1 announcedAt=1794424275 effectiveAt=1795029075 mintFees=[500000000000000,5000000000000000,50000000000000000] burnFees=[500000000000000,5000000000000000,50000000000000000] checkpointFees=[0,0,0]
+    5      FeesInForce                 token=0x0 index=0 fromLeaf=0 effectiveAt=1794424275 scheduleHash=0xb1a497240ba045a5a1e55a06c84007389fe023f05495cedf33104e8556cc06de
+    5      FeesAnnounced               token=0x0 index=0 announcedAt=1794424275 effectiveAt=1794424275 mintFees=[0,0,0] burnFees=[0,0,0] checkpointFees=[0,0,0]
+    5      RegistryEntryPublished      token=0x0 lezDefinition=0x0000000000000000000000000000000000000000000000000000000000000000 decimals=18 entryHash=0x295dd897cfc1fbca161d7f941fae6de887aa03814453a1802539fdf25dfd5b31
+    5      ReleaseDelaySet             token=0x0 delay=120 fromCheckpoint=0
+    5      TokenCapSet                 token=0x0 direction=1 capacity=UNLIMITED refillPerSecond=0
+    5      TokenCapSet                 token=0x0 direction=0 capacity=UNLIMITED refillPerSecond=0
+    5      TokenRegistered             token=0x0 denominations=[100000000000000000,1000000000000000000,10000000000000000000] relayFees=[100000000000000,1000000000000000,10000000000000000] lezUnit=1000000000 unitWeight=1
+    4      WatchersSet                 watchers=[0x0,0x0,0x0]
+    4      GlobalCapSet                direction=1 capacity=UNLIMITED refillPerSecond=0
+    4      GlobalCapSet                direction=0 capacity=UNLIMITED refillPerSecond=0
+    4      DeltaSet                    delta=600
+    4      FreezeAuthorityTransferred  previousAuthority=0x0 newAuthority=0x34c12c034C40A6076Ee47C934aEc48D9a0f4e66a
+    4      AdminTransferred            previousAdmin=0x0 newAdmin=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+
+== 15. What the contract does not expose ===================================================================
+  - Registered tokens: no enumeration getter. Listed from TokenRegistered events (and native ETH probed with tokenConfig(0x0)).
+  - Pending candidates: a mapping keyed by newState. Listed from CandidateSubmitted events, each read with candidates(newState).
+  - Whether a pending candidate is live: needs the internal counter _stateChanges (epoch = revocationEpoch + _stateChanges); read from storage slot 52, shown only if the three public getters sharing that slot match.
+  - Relay fees: tokenConfig() does not return them; shown from fees(token, index, d) (the schedule's copy) and TokenRegistered.
+  - The registry entry's lezDefinition and decimals: only in RegistryEntryPublished events and, hashed, at the entry slot.
+  - Fee schedules' fromLeaf, announcedAt and effectiveAt: no getter; from FeesInForce and FeesAnnounced events (the fees themselves from fees()).
+  - Release-delay history: no getter for the list; releaseDelayFor(token, i) per checkpoint and ReleaseDelaySet events.
+  - Proposed watchers: roleProposal() omits the array; from the last RolesProposed event.
+  - Cap buckets' stored level and last update: only `available` (tokenCap/globalCap); utilisation = capacity - available.
+  - Payees owed and depositors: no enumeration; from OwedCredited/OwedClaimed and Deposit events, then owed()/depositCount().
+  - The linked FerrataRegistry library: no getter; found as a PUSH20 constant of the vault's code that has code itself.
+  - Who holds the admin, freeze-authority and watcher keys (or that a key holder exists): not on chain; only whether each address has code.
+  - The stop's circuit-breaker rule (estop with a receipt of the zero claim): from RISC Zero's source; the chain shows paused() and owner().
+  - Which deposit a claim on LEZ used, which burn a release spends, the burns behind a burn root: on LEZ or hidden by design, not on Ethereum.
+  - Rule (A) _lastBeaconBlock: internal (slot 44), shown for rule (A) vaults only.
+
+== 16. RPC and decoding errors =============================================================================
+  optional read .......................... inner verifier: VERSION() at 0xe7f1725e7734ce288f8367e1bb143e90bb3f0512: reverted without data
+  optional read .......................... inner verifier: SELECTOR() at 0xe7f1725e7734ce288f8367e1bb143e90bb3f0512: reverted without data
