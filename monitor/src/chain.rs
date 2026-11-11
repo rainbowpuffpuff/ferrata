@@ -1,0 +1,326 @@
+//! The Ethereum side: the vault's events, the views the monitor reads, and its three transactions
+//! (`cancelCandidate`, `pauseCheckpoints`, and `revokeFrom` when its key is the freeze authority).
+
+use anyhow::{anyhow, bail, Context, Result};
+use alloy::{
+    eips::BlockId,
+    network::{EthereumWallet, TransactionBuilder as _},
+    primitives::{Address, Bytes, B256, U256},
+    providers::{DynProvider, Provider, ProviderBuilder},
+    rpc::types::{Filter, TransactionRequest},
+    signers::local::PrivateKeySigner,
+    sol,
+    sol_types::{SolCall, SolEvent},
+};
+
+use crate::check::{Candidate, Rule};
+use crate::node::H32;
+
+sol! {
+    interface IFerrataVault {
+        event CandidateSubmitted(
+            bytes32 indexed newState,
+            bytes32 indexed parentState,
+            bytes32 burnRoot,
+            uint64 burnCount,
+            uint64 importedLeafCount,
+            bool sunset,
+            uint256 deltaAtSubmit,
+            uint64 tipId,
+            bytes32 tipHash,
+            uint32 n,
+            uint32 t
+        );
+        event CheckpointFinalized(
+            uint256 indexed index,
+            bytes32 indexed newState,
+            bytes32 parentState,
+            bytes32 burnRoot,
+            uint64 burnCount,
+            uint64 importedLeafCount,
+            bool sunset,
+            uint64 tipId,
+            bytes32 tipHash,
+            uint32 n,
+            uint32 t
+        );
+        event CandidateCancelled(bytes32 indexed newState, uint64 tipId, bytes32 tipHash);
+        event CheckpointsRevoked(uint256 indexed fromIndex, uint256 toIndex, bytes32 restoredState);
+
+        function mode() external view returns (uint8);
+        function turnSeconds() external view returns (uint256);
+        function finalState() external view returns (bytes32);
+        function freezeAuthority() external view returns (address);
+        function watchers(uint256 i) external view returns (address);
+        function candidates(bytes32 newState) external view returns (
+            bytes32 journalDigest,
+            bytes32 tipHash,
+            uint64 tipId,
+            uint32 t,
+            uint48 submittedAt,
+            uint32 deltaAtSubmit,
+            uint64 epoch,
+            address prover
+        );
+        function checkpoints(uint256 i) external view returns (
+            bytes32 parentState,
+            bytes32 newState,
+            bytes32 burnRoot,
+            uint64 burnCount,
+            uint64 importedLeafCount,
+            bool sunset,
+            bool revoked,
+            uint64 parentImportedLeafCount,
+            bool parentSunset,
+            uint64 finalizedAt,
+            address prover
+        );
+        function revokeWindow() external view returns (uint256);
+        function checkpointsFrozenUntil() external view returns (uint256);
+        function lezConfigId() external view returns (bytes32);
+        function cancelCandidate(bytes32 newState) external;
+        function pauseCheckpoints() external;
+        function revokeFrom(uint256 index) external;
+    }
+}
+
+/// A vault event the monitor follows, in log order.
+#[derive(Clone, Debug)]
+pub enum VaultEvent {
+    /// `submitted_at` is filled from the vault's `candidates` when the monitor first checks it.
+    Submitted { candidate: Candidate, block: u64 },
+    Finalized { index: u64, candidate: Candidate, block: u64 },
+    Cancelled { new_state: H32, block: u64, tx: Option<B256> },
+    Revoked { from_index: u64, to_index: u64, block: u64 },
+}
+
+/// A candidate as the vault stores it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct OnChain {
+    pub submitted_at: u64,
+    pub delta_at_submit: u64,
+    pub tip_id: u64,
+    pub tip_hash: H32,
+    pub t: u32,
+}
+
+/// What a transaction attempt came to.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Sent {
+    /// Mined and succeeded: transaction hash, block number, block time.
+    Mined { tx: B256, block: u64, time: u64 },
+    /// Not needed any more (the candidate is gone, the checkpoint already revoked).
+    Moot,
+}
+
+pub struct Chain {
+    pub p: DynProvider,
+    pub vault: Address,
+    /// The monitor's own address, when it holds a key.
+    pub me: Option<Address>,
+}
+
+fn h(b: B256) -> H32 {
+    H32(b.0)
+}
+
+impl Chain {
+    pub fn connect(url: &str, vault: Address, signer: Option<PrivateKeySigner>) -> Result<Self> {
+        let me = signer.as_ref().map(PrivateKeySigner::address);
+        let p = match signer {
+            Some(s) => ProviderBuilder::new().wallet(EthereumWallet::from(s)).connect_http(url.parse()?).erased(),
+            None => ProviderBuilder::new().connect_http(url.parse()?).erased(),
+        };
+        Ok(Self { p, vault, me })
+    }
+
+    pub async fn view<C: SolCall>(&self, call: C) -> Result<C::Return> {
+        let tx = TransactionRequest::default().with_to(self.vault).with_input(call.abi_encode());
+        let out = self.p.call(tx).await.map_err(|e| anyhow!("eth_call {}: {e}", C::SIGNATURE))?;
+        C::abi_decode_returns(&out).map_err(|e| anyhow!("{} returned something else: {e}", C::SIGNATURE))
+    }
+
+    /// The latest block's number and time (the monitor's clock is the chain's).
+    pub async fn head(&self) -> Result<(u64, u64)> {
+        let b = self.p.get_block(BlockId::latest()).await?.context("no latest block")?;
+        Ok((b.header.number, b.header.timestamp))
+    }
+
+    pub async fn rule(&self) -> Result<Rule> {
+        match self.view(IFerrataVault::modeCall {}).await? {
+            0 => Ok(Rule::A),
+            1 => Ok(Rule::B),
+            m => bail!("the vault reports mode {m}"),
+        }
+    }
+
+    pub async fn turn_seconds(&self) -> Result<u64> {
+        Ok(self.view(IFerrataVault::turnSecondsCall {}).await?.to::<u64>())
+    }
+
+    pub async fn revoke_window(&self) -> Result<u64> {
+        Ok(self.view(IFerrataVault::revokeWindowCall {}).await?.to::<u64>())
+    }
+
+    pub async fn final_state(&self) -> Result<H32> {
+        Ok(h(self.view(IFerrataVault::finalStateCall {}).await?))
+    }
+
+    pub async fn lez_config_id(&self) -> Result<H32> {
+        Ok(h(self.view(IFerrataVault::lezConfigIdCall {}).await?))
+    }
+
+    pub async fn freeze_authority(&self) -> Result<Address> {
+        self.view(IFerrataVault::freezeAuthorityCall {}).await
+    }
+
+    pub async fn watchers(&self) -> Result<Vec<Address>> {
+        let mut out = Vec::new();
+        for i in 0..3u64 {
+            out.push(self.view(IFerrataVault::watchersCall { i: U256::from(i) }).await?);
+        }
+        Ok(out)
+    }
+
+    pub async fn checkpoints_frozen_until(&self) -> Result<u64> {
+        Ok(self.view(IFerrataVault::checkpointsFrozenUntilCall {}).await?.to::<u64>())
+    }
+
+    /// The pending candidate at `new_state`, if any.
+    pub async fn pending(&self, new_state: H32) -> Result<Option<OnChain>> {
+        let r = self.view(IFerrataVault::candidatesCall { newState: B256::from(new_state.0) }).await?;
+        if r.submittedAt.to::<u64>() == 0 {
+            return Ok(None);
+        }
+        Ok(Some(OnChain {
+            submitted_at: r.submittedAt.to::<u64>(),
+            delta_at_submit: u64::from(r.deltaAtSubmit),
+            tip_id: r.tipId,
+            tip_hash: h(r.tipHash),
+            t: r.t,
+        }))
+    }
+
+    /// Whether checkpoint `index` is revoked, and when it was finalised.
+    pub async fn checkpoint(&self, index: u64) -> Result<(bool, u64)> {
+        let r = self.view(IFerrataVault::checkpointsCall { i: U256::from(index) }).await?;
+        Ok((r.revoked, r.finalizedAt))
+    }
+
+    /// The vault's events in blocks `from..=to`, in log order, in chunks of `chunk` blocks.
+    pub async fn events(&self, from: u64, to: u64, chunk: u64) -> Result<Vec<VaultEvent>> {
+        let mut out = Vec::new();
+        let mut start = from;
+        while start <= to {
+            let end = (start + chunk.max(1) - 1).min(to);
+            let filter = Filter::new()
+                .address(self.vault)
+                .event_signature(vec![
+                    IFerrataVault::CandidateSubmitted::SIGNATURE_HASH,
+                    IFerrataVault::CheckpointFinalized::SIGNATURE_HASH,
+                    IFerrataVault::CandidateCancelled::SIGNATURE_HASH,
+                    IFerrataVault::CheckpointsRevoked::SIGNATURE_HASH,
+                ])
+                .from_block(start)
+                .to_block(end);
+            let mut logs = self.p.get_logs(&filter).await.with_context(|| format!("eth_getLogs {start}..{end}"))?;
+            logs.sort_by_key(|l| (l.block_number, l.log_index));
+            for log in logs {
+                let block = log.block_number.unwrap_or(end);
+                let topic = log.topic0().copied().unwrap_or_default();
+                if topic == IFerrataVault::CandidateSubmitted::SIGNATURE_HASH {
+                    let e = log.log_decode::<IFerrataVault::CandidateSubmitted>()?.inner.data;
+                    out.push(VaultEvent::Submitted {
+                        candidate: Candidate {
+                            new_state: h(e.newState),
+                            parent_state: h(e.parentState),
+                            burn_root: h(e.burnRoot),
+                            burn_count: e.burnCount,
+                            imported_leaf_count: e.importedLeafCount,
+                            sunset: e.sunset,
+                            delta_at_submit: e.deltaAtSubmit.to::<u64>(),
+                            tip_id: e.tipId,
+                            tip_hash: h(e.tipHash),
+                            n: e.n,
+                            t: e.t,
+                            submitted_at: 0,
+                        },
+                        block,
+                    });
+                } else if topic == IFerrataVault::CheckpointFinalized::SIGNATURE_HASH {
+                    let e = log.log_decode::<IFerrataVault::CheckpointFinalized>()?.inner.data;
+                    out.push(VaultEvent::Finalized {
+                        index: e.index.to::<u64>(),
+                        candidate: Candidate {
+                            new_state: h(e.newState),
+                            parent_state: h(e.parentState),
+                            burn_root: h(e.burnRoot),
+                            burn_count: e.burnCount,
+                            imported_leaf_count: e.importedLeafCount,
+                            sunset: e.sunset,
+                            delta_at_submit: 0,
+                            tip_id: e.tipId,
+                            tip_hash: h(e.tipHash),
+                            n: e.n,
+                            t: e.t,
+                            submitted_at: 0,
+                        },
+                        block,
+                    });
+                } else if topic == IFerrataVault::CandidateCancelled::SIGNATURE_HASH {
+                    let e = log.log_decode::<IFerrataVault::CandidateCancelled>()?.inner.data;
+                    out.push(VaultEvent::Cancelled { new_state: h(e.newState), block, tx: log.transaction_hash });
+                } else if topic == IFerrataVault::CheckpointsRevoked::SIGNATURE_HASH {
+                    let e = log.log_decode::<IFerrataVault::CheckpointsRevoked>()?.inner.data;
+                    out.push(VaultEvent::Revoked {
+                        from_index: e.fromIndex.to::<u64>(),
+                        to_index: e.toIndex.to::<u64>(),
+                        block,
+                    });
+                }
+            }
+            start = end + 1;
+        }
+        Ok(out)
+    }
+
+    /// Simulates, then sends and waits for one confirmation. A revert in simulation is an error.
+    async fn send(&self, input: Bytes) -> Result<Sent> {
+        let from = self.me.context("the monitor holds no key")?;
+        let tx = TransactionRequest::default().with_from(from).with_to(self.vault).with_input(input);
+        self.p.call(tx.clone()).await.map_err(|e| anyhow!("the vault would revert: {e}"))?;
+        let receipt = self.p.send_transaction(tx).await.map_err(|e| anyhow!("sending: {e}"))?.get_receipt().await?;
+        if !receipt.status() {
+            bail!("the transaction {} reverted", receipt.transaction_hash);
+        }
+        let block = receipt.block_number.unwrap_or_default();
+        let time = self.p.get_block(BlockId::number(block)).await?.map(|b| b.header.timestamp).unwrap_or_default();
+        Ok(Sent::Mined { tx: receipt.transaction_hash, block, time })
+    }
+
+    /// `cancelCandidate(newState)`; `Moot` if nothing is pending there any more.
+    pub async fn cancel(&self, new_state: H32) -> Result<Sent> {
+        if self.pending(new_state).await?.is_none() {
+            return Ok(Sent::Moot);
+        }
+        let input = IFerrataVault::cancelCandidateCall { newState: B256::from(new_state.0) }.abi_encode().into();
+        match self.send(input).await {
+            Ok(s) => Ok(s),
+            // Finalised or cancelled by someone else between the check and the transaction.
+            Err(_) if self.pending(new_state).await?.is_none() => Ok(Sent::Moot),
+            Err(e) => Err(e),
+        }
+    }
+
+    pub async fn pause(&self) -> Result<Sent> {
+        self.send(IFerrataVault::pauseCheckpointsCall {}.abi_encode().into()).await
+    }
+
+    /// `revokeFrom(index)` (the freeze authority's power); `Moot` if already revoked.
+    pub async fn revoke_from(&self, index: u64) -> Result<Sent> {
+        if self.checkpoint(index).await?.0 {
+            return Ok(Sent::Moot);
+        }
+        self.send(IFerrataVault::revokeFromCall { index: U256::from(index) }.abi_encode().into()).await
+    }
+}
