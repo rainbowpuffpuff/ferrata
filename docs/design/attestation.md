@@ -394,7 +394,7 @@ The Helios departures, none produced by a genuine chain with an honest committee
 
 ## 13. Measurement plan (P.1–P.9)
 
-A `just bench` target will regenerate every number from a fresh checkout with real proving and record the hardware. It is a deliverable of milestone A4 and is not in the repository yet; today each number comes from the test or script named with it. The declared minimum for user-side proving is 8 GB of memory and 4 cores, x86-64 or Apple Silicon.
+A `just bench` target will regenerate every number from a fresh checkout with real proving and record the hardware. It is a deliverable of milestone A4 and is not in the repository yet; today each number comes from the test or script named with it. The declared minimum for user-side proving is 16 GB of memory and 8 cores, x86-64 or Apple Silicon.
 
 | Item | Measured today | Not yet measured |
 |---|---|---|
