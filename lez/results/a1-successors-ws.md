@@ -92,6 +92,7 @@ Every invariant refused (same test):
 | Attest bound to the root id, at the successor's record (empty request) | 14,225 | exit 215 `HeaderRequired`: past the binding |
 | Attest bound to the successor (empty request) | 14,006 | exit 215, the same |
 | Attest bound to another instance | 13,771 | exit 211 `WrongInstance` |
+| Succeed from the successor (Heze scheduled too; layout Gloas) | | applied: the second successor's root id is still the parent's, its parent the first successor |
 
 `the_weak_subjectivity_bound_on_init_and_open` (Sepolia, the harness's period of 3,532 epochs, and
 1 epoch for the last row):
@@ -111,9 +112,13 @@ reads a record 32 bytes longer and compares the root id, about 1,000 cycles more
 
 ## Image ids (built in this worktree on the build box; they embed the build path)
 
+Of the final source (after `rustfmt`; the program's id before it was `7d495478…115e`, same size), from
+`tests/successor.rs::prints_the_image_ids`. The tables above are of the run before `rustfmt`; the
+successor, Sepolia, exit-code and public-path tests were re-run on the final program, 14 passed.
+
 | guest | image id | ELF bytes |
 |---|---|---:|
-| program (`lez/guests/program`) | `7d495478db90e64b8edee475dcb46302ed9f91358968c4236e9ffa83e2fa115e` | 627,792 |
+| program (`lez/guests/program`) | `ae82d5c1d7a07b9ef02c6b86015680cf98a6cc34e5f2a78af1cdd7bf84d0e10d` | 627,792 |
 | consumer (`lez/guests/consumer`) | `fd3da60807de1fb9892bdde426fd24962df0fd8528db1f61f40cb8fbf522f862` | 422,488 |
 | holdings (`lez/guests/holdings`) | `1840dc022621f6e533e57f9e229ea50aa026095d0b2c904a15b359fa642f88e7` | 307,696 |
 | bridge (`lez/guests/bridge`) | `7a99ff33cee8a452bd93aba5d39e88566a1a86629bcdb95f12d9645bce195fb9` | 543,576 |

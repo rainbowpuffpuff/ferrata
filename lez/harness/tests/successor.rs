@@ -235,6 +235,25 @@ fn a_successor_crosses_a_fork_not_in_the_schedule_fixed_at_init() {
     assert_ne!(by_root.exit_code, Some(u32::from(code::WRONG_INSTANCE)), "{:?}", by_root.exit_code);
     assert_eq!(by_root.exit_code, by_instance.exit_code);
     println!("{}", render(&[by_root, by_instance, by_other]));
+
+    // A successor of the successor (another future fork scheduled) keeps the root id.
+    let store = s.inst.store(&s.chain);
+    let checkpoint2 = store.finalized.hash_tree_root();
+    let mut next = successor_config.clone();
+    next.fork_epochs[Fork::Heze as usize] = 400_000;
+    // It starts in the layout its parent's store is in now: Gloas (the first successor's
+    // configuration still names Electra, the layout it started in).
+    next.store_fork = 4;
+    let first = Instance { program: s.inst.program, config: s.inst.config.clone(), checkpoint, id: s.inst.id };
+    let time = first.config.slot_start_ms(store.finalized.slot) + 3_600_000;
+    let r = succeed(&mut s.chain, &first, &next, checkpoint2, time, "Succeed from the successor");
+    assert!(r.ok(), "{:?}", r.charge.revert);
+    let id2 = successor_id(&parent.id, &first.id, &next, &checkpoint2);
+    let second = Instance { program: first.program, config: next, checkpoint: checkpoint2, id: id2 };
+    let state = second.state(&s.chain).expect("the second successor exists");
+    assert_eq!(state.root_id, parent.id, "the root id is inherited through every successor");
+    assert_eq!(state.parent_id, first.id);
+    assert_eq!(state.store, first.state(&s.chain).unwrap().store);
 }
 
 #[test]
