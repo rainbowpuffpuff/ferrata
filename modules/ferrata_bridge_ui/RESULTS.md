@@ -23,17 +23,17 @@ below comes from those runs' logs; the commit that ran is the one that adds `res
 | Target | Seconds | `.lgx` bytes | SHA-256 |
 |---|---:|---:|---|
 | `nix build .#lgx` (first build, with the builder's Logos inputs) | 162 | — (skeleton view) | — |
-| `nix build .#lgx` (final view, commit `a610a2c`) | 7 | 15,941 | `477f41c00ca103d218deb2b72dbd7010fb0d384567f13b68ac87af4619016aab` |
-| `nix build .#lgx-portable` (final view) | 5 | 15,930 | `a84ace3d2628e7ca7db8663d276f3430e19cd8956de233e9a82d4e266921056a` |
+| `nix build .#lgx` (final view, commit `4127517`) | 4 | 16,120 | `eebfa58f1820833755fea1f6ce02e219694df24810c11681f3bc833ed26d5e18` |
+| `nix build .#lgx-portable` (final view) | 6 | 16,108 | `84fe671077c2a9685f5e6301bcc1a5bde97e4aabe6444d3ca2b30d757a3b38c1` |
 
 The package holds the view (`qml/`), the icon and the module's `metadata.json`; there is no compiled
 plugin (a QML-only `ui_qml` module).
 
 ## The headless run
 
-`scripts/box-test.sh`, the run committed here (on `a610a2c`, the last of eight passing runs): backend
-built in 11 s (warm), up 3 s later; the 15 test functions in 28.7 s; the whole script 43 s. The backend
-answered 54 calls in 10.2 s in total (the slowest 1.63 s, a root import: the harness executes the bridge
+`scripts/box-test.sh`, the run committed here (on `4127517`, the last of nine passing runs): backend
+built in 10 s (warm), up 2 s later; the 15 test functions in 28.7 s; the whole script 41 s. The backend
+answered 54 calls in 10.3 s in total (the slowest 1.74 s, a root import: the harness executes the bridge
 guest), 7 of them the refusals the test asks for.
 
 | Test | What it drives and checks | Screenshots |
@@ -48,7 +48,7 @@ guest), 7 of them the refusals the test asks for.
 | `test_08_plaintext_claim` | plaintext only after its acknowledgement; settled by the bridge program in the harness: 0.1 ETH at public `/0` | 17 |
 | `test_09_error_messages` | U.08: a second claim → "Already claimed" (code 250), with no hash in the message; a burn above the holding → "Insufficient balance" (254) | 18, 19 |
 | `test_10_burn` | the private burn (default) is answered "not settled here"; a public burn after its acknowledgement debits the holder | 20, 21 |
-| `test_11_checkpoint_and_release` | the checkpoint (stand-in prover: candidate, beacon, finalisation on the vault) and the release sent by a relayer: **0.1 ETH paid to the fresh recipient address** the view generated (block 16); a second release refused ("Already released"); positions show 0 not released | 22–24 |
+| `test_11_checkpoint_and_release` | the checkpoint (stand-in prover: candidate, beacon, finalisation on the vault) and the release sent by a relayer: **0.1 ETH paid to the fresh recipient address** the view generated (block 15); a second release refused ("Already released"); positions show 0 not released | 22–24 |
 | `test_12_admin` | roles and floor; `SetCap` below the floor refused by the program (240 `BAD_MESSAGE`); `SetCap` 11 ETH accepted; `Freeze` of mints for 1 h by the freeze authority; the next plaintext claim refused with 242 `FROZEN` ("Frozen: …"); the registry shows the freeze; the freeze authority lifts it and the same claim goes through (leaf 2, root of 3 leaves) | 25–30b |
 | `test_13_privacy` | the four steps' public/private tables | 31 |
 
