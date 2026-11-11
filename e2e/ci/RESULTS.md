@@ -64,6 +64,11 @@ The final run, on the branch's last code (after formatting), as the job runs it:
 the same seven steps passed in 9.2 s (the rule (B) guest: 6,196,016 user cycles); then the job's last step, `cli/tests/e2e.sh` (the `ferrata` tool's own end-to-end test,
 with the job's build settings and `RISC0_HOME` at the LEZ home): passed in 33 s (the test 18.4 s).
 
+With the two refusals added to the test (a checkpoint whose journal no guest committed, another burn root; the
+release redirected to another address), the round trip passed again: steps 1–7 in 8.5 s (the rule (B) guest:
+6,184,321 user cycles), build step 31 s, run step 50 s. The branch's tip (311a46b, comments changed since) once
+more: steps 1–7 in 9.8 s (6,188,682 user cycles), build step 32 s, run step 58 s; the witness check as above.
+
 ## `witness-independence`
 
 `scripts/ci/witness-independence.sh 64` (the job's last step):
