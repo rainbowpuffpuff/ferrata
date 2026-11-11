@@ -43,8 +43,7 @@ run uses). Files: `ids.txt` (r0vm's ids of the LEZ programs), `r0bf/ids.jsonl` (
   most likely reached a public-endpoint backend one block behind; the chain shows the nullifier spent). Release 1's seal
   already verifies for the vault's `releaseImageId`; `e2e/crown.sh start` resumes and skips release 0.
 - `verify-sepolia-crown-live-1-after-finalize-ethpandaops.txt`: the same records against a second, independent
-  endpoint (`rpc.sepolia.ethpandaops.io`), before the captures' check was added: the same **11 passed, 1 pending, 0
-  failed** as on publicnode then. (`sepolia.drpc.org` answered
+  endpoint (`rpc.sepolia.ethpandaops.io`): the same **12 passed, 1 pending, 0 failed**. (`sepolia.drpc.org` answered
   HTTP 400 to every request; the script now stops after the chain check with exit status 2 when the endpoint does not
   answer as Sepolia.)
 - `verify-sepolia-crown-live-1-tampered-capture.txt`: one byte of a node of capture 1's account proof changed (and

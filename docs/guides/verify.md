@@ -45,9 +45,8 @@ Measured on 11 November 2026 against crown-live-1's records while the run waited
 12,111,746; finalization opens 13:27:48Z): **10 passed, 2 pending, 0 failed**, 48 RPC calls to the public endpoint
 (publicnode).
 After the wait (records fetched again at 13:34Z), with the captures' check: **12 passed, 1 pending, 0 failed**:
-finalization and release 0 on chain, release 1 not yet sent (before the captures' check: the same 11 / 1 / 0 on
-publicnode and on a second, independent endpoint, `rpc.sepolia.ethpandaops.io`). One byte of a capture's proof
-changed: the captures' check fails. The same records with one commitment, one byte of the seal and the genesis state
+finalization and release 0 on chain, release 1 not yet sent; the same on a second, independent endpoint
+(`rpc.sepolia.ethpandaops.io`). One byte of a capture's proof changed: the captures' check fails. The same records with one commitment, one byte of the seal and the genesis state
 changed: **5 failed**, exit status 1 ([`e2e/runs/verify-anyone/`](../../e2e/runs/verify-anyone/README.md)).
 
 ## 2. The programs: `scripts/reproduce-image-ids.sh`
