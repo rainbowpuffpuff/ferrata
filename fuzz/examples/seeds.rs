@@ -35,7 +35,7 @@ fn main() {
         let case = load_sync_case(&dir).expect("case");
         let spec = &case.config.spec;
         let n = spec.preset.sync_committee_size;
-        let tag = format!("{}-{}", dir.parent().unwrap().parent().unwrap().parent().unwrap().file_name().unwrap().to_string_lossy(), dir.file_name().unwrap().to_string_lossy());
+        let tag = format!("{}-{}", dir.parent().unwrap().parent().unwrap().parent().unwrap().parent().unwrap().file_name().unwrap().to_string_lossy(), dir.file_name().unwrap().to_string_lossy());
         let raw_bootstrap = read_ssz_snappy(&dir.join("bootstrap.ssz_snappy")).unwrap();
         let bootstrap_fork = FORKS
             .into_iter()
@@ -107,7 +107,11 @@ fn main() {
                 }
             } else if name.starts_with("receipts_") && name.ends_with(".json") {
                 let v: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-                let receipts: Vec<Vec<u8>> = v.as_array().unwrap().iter().map(execkit::receipt_rlp).collect();
+                let Some(list) = v.get("result").unwrap_or(&v).as_array() else { continue };
+                let receipts: Vec<Vec<u8>> = list.iter().map(execkit::receipt_rlp).collect();
+                if receipts.is_empty() {
+                    continue;
+                }
                 for (k, r) in receipts.iter().enumerate().take(12) {
                     put(out, "exec", &format!("{tag}-{k}"), r);
                     put(out, "rlp", &format!("{tag}-{k}"), r);
@@ -122,7 +126,7 @@ fn main() {
                     put(out, "mpt", &format!("{tag}-receipt-{k}"), &encode_raw_proof(&b[..l], &proof));
                 }
             } else if name.starts_with("proof_") && name.ends_with(".json") {
-                let p = execkit::account_proof(&bytes);
+                let Ok(p) = std::panic::catch_unwind(|| execkit::account_proof(&bytes)) else { continue };
                 let key = execkit::keccak(&p.address);
                 put(out, "mpt", &format!("{tag}-account"), &encode_raw_proof(&key, &p.proof));
                 for (k, node) in p.proof.iter().enumerate() {
