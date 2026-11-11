@@ -1258,6 +1258,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "ferrata-updater"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "borsh",
+ "fee_core",
+ "ferrata-core",
+ "ferrata-lez-wire",
+ "harness",
+ "hex",
+ "lee",
+ "lee_core",
+ "libc",
+ "programs",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "system_accounts",
+ "toml",
+]
+
+[[package]]
 name = "ff"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
