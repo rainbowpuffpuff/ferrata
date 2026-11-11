@@ -56,8 +56,10 @@ step_fork() {
   say "configId $CID genesisState $GS"
   jq -n --arg v "$VAULT" --arg c "$CID" --arg g "$GS" --arg ver "$VERIFIER" '{label: "STAND-IN (crown-lez rehearsal: anvil fork, stand-in beacon committee)",
     chainId: 11155111, vault: $v, configId: $c, genesisState: $g, groth16Verifier: $ver, delta: 3600}' > "$RUN/identity.json"
-  id_of() { awk -v k="$1" '$1 == k {print $2}' "$IDS"; }
-  jq -n --arg c "$CID" --arg g "$GS" --arg a "$(id_of CHECKPOINT_ID)" --arg b "$(id_of CHECKPOINT_B_ID)" --arg r "$(id_of RELEASE_ID)" \
+  [ -s "$IDS" ] || { say "no $IDS (mrun --put it)"; exit 1; }
+  id_of() { local v; v="$(awk -v k="$1" '$1 == k {print $2}' "$IDS")"; [ -n "$v" ] || { say "no $1 in $IDS" >&2; exit 1; }; echo "$v"; }
+  local IA IB IR; IA="$(id_of CHECKPOINT_ID)"; IB="$(id_of CHECKPOINT_B_ID)"; IR="$(id_of RELEASE_ID)"
+  jq -n --arg c "$CID" --arg g "$GS" --arg a "$IA" --arg b "$IB" --arg r "$IR" \
     --arg z "$Z" '{_source: "crown-lez rehearsal (stand-in identity from a real devnet session A)", checkpointImageIdA: $a,
     checkpointImageIdB: $b, releaseImageId: $r, lezConfigId: $c, genesisState: $g, nMin: 1, tMin: 1, postingTimeframe: 0,
     ethLezDefinition: $z, tokenLezDefinition: $z}' > "$RUN/params.json"
