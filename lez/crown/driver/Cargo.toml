@@ -1,0 +1,55 @@
+# The crown run's LEZ driver (../README.md): the attestation program and the merged bridge program
+# on a LEZ v0.4 devnet, in two sessions. It reuses the live driver's wire-free modules by path
+# (../../live/driver/src: the wallet connection, the follower, the deployment, the attestation
+# jobs, the records) and speaks the merged bridge wire (../../bridge-wire), not the frozen one the
+# live driver keeps for the inbound run.
+[package]
+name = "crown-driver"
+description = "Drives the crown run's LEZ sessions (attestation program + merged bridge program) on a running LEZ sequencer"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[workspace]
+
+[[bin]]
+name = "crown-driver"
+path = "src/main.rs"
+
+[dependencies]
+ferrata-lez-wire = { path = "../../wire" }
+ferrata-core = { path = "../../../crates/ferrata-core", features = ["blst"] }
+ferrata-lez-bridge-wire = { path = "../../bridge-wire" }
+ferrata-bridge-core = { path = "../../../bridge/crates/ferrata-bridge-core" }
+ferrata-spectests = { path = "../../../crates/ferrata-spectests" }
+
+wallet = { path = "../../../../upstream/lez-v0.4.0-rc1/lez/wallet" }
+common = { path = "../../../../upstream/lez-v0.4.0-rc1/lez/common" }
+chain_state = { path = "../../../../upstream/lez-v0.4.0-rc1/lez/chain_state" }
+sequencer_service_rpc = { path = "../../../../upstream/lez-v0.4.0-rc1/lez/sequencer/service/rpc", features = ["client"] }
+testnet_initial_state = { path = "../../../../upstream/lez-v0.4.0-rc1/lez/testnet_initial_state" }
+lee = { path = "../../../../upstream/lez-v0.4.0-rc1/lee/state_machine" }
+lee_core = { path = "../../../../upstream/lez-v0.4.0-rc1/lee/state_machine/core", features = ["host"] }
+fee_core = { path = "../../../../upstream/lez-v0.4.0-rc1/lez/programs/fee/core" }
+system_accounts = { path = "../../../../upstream/lez-v0.4.0-rc1/lez/system_accounts" }
+program_loader_core = { path = "../../../../upstream/lez-v0.4.0-rc1/lez/programs/program_loader/core" }
+test_guest_core = { path = "../../../../upstream/lez-v0.4.0-rc1/test_guest_core" }
+
+risc0-binfmt = "3.0.2"
+risc0-zkos-v1compat = "=2.2.2"
+tokio = { version = "1.50", features = ["rt-multi-thread", "macros", "time"] }
+anyhow = "1"
+borsh = { version = "1.6", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["raw_value"] }
+hex = "0.4"
+sha2 = "0.10"
+log = "0.4"
+env_logger = "0.11"
+
+[patch.crates-io]
+keccak = { git = "https://github.com/logos-blockchain/sponges", rev = "3a56e99771beedf04946eab21a4a62adc2951377" }
+
+[profile.release]
+opt-level = 3
