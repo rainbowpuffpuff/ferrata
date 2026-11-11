@@ -21,9 +21,10 @@ run on attested Ethereum time instead of a caller's, and **since the security fi
 top-level call. The merged program (both changes) is image
 `cf41b7e5c0583686a273b5114368f4873bbd614249647f43604a6caf8e675390` (541,464 ELF bytes) at the `integration5` worktree's path, and every `results/bridge-*.md` is now of it.
 §12 gives each operation before and after the time fix (that branch alone: `d0c11833…23cd` at its
-worktree's path), §13 before and after the security fixes (that branch alone: `fe2f2487…946d`); the tables
-of §1–§5 and §8a keep the figures of the program before both (`f11b1aba…58eb`), and §8's rows on caps,
-freezes and `Sunset` are the time fix's run. Every number below is LEZ's own accounting of a transaction that
+worktree's path), §13 before and after the security fixes (that branch alone: `fe2f2487…946d`); the text
+of §1–§5 and §8a keeps the figures of the program before both (`f11b1aba…58eb`), and §8's rows on caps,
+freezes and `Sunset` are the time fix's run: both are superseded by the merged program's tables in `results/`,
+whose figures §1's last column gives (§12 and §13 keep each fix branch's own run as history). Every number below is LEZ's own accounting of a transaction that
 ran: `lee`'s state transition functions and the copy of LEZ's fee settlement that Stages 1–4 use
 ([RESULTS.md](RESULTS.md) §1), each transaction in a block of its own, the attestation program
 answering the bridge's `Attest` calls. They ran on this worktree's Modal build box
@@ -49,22 +50,22 @@ comes later.
 
 ## 1. The operations, before and after
 
-| operation | handlers run, after (cycles each) | execution gas, before → after | storage gas (tx bytes), before → after |
-|---|---|---:|---:|
-| `Init`: attest the vault's slot 2 = `configId`, write `config(cid)` | Init 43,668 → Attest 85,725 → reply 39,214 | 154,529 → 168,607 | 1,726 → 1,946 |
-| `ImportRoot` (8 leaves): attest slots 0 and 1, write `root(cid, n)` | ImportRoot 49,536 → Attest 112,749 → reply 52,945 → WriteRoot 16,328 | 203,620 → 231,558 | 1,703 → 2,025 |
-| `Register` a token: attest its entry, fee slots 0 and 1, the count | Register 72,084 → Attest 150,208 → reply 73,421 → WriteToken 29,035 | new: 324,748 | 2,747 |
-| `ImportFees`: a schedule; the absence of the next one | ImportFees 54,087 → Attest 112,749 → reply 57,503 → ExtendFees 38,134; 48,326 → 107,315 → 51,842 → 36,134 | new: 262,473; 243,617 | 2,206; 1,945 |
-| plaintext claim, 1 ETH under fee schedule 0 (relay fee only) | Claim 107,526 → Issue 47,239 → Admit 34,291 → Spend 21,901 → Mint 14,237 → Mint 14,237 | 142,444 → 239,431 | 1,740 → 2,061 |
-| plaintext claim, 10 ETH under schedule 1 (mint and relay fee) | Claim 107,526 → Issue 47,250 → Admit 34,003 → Spend 24,145 → three Mints (14,237; 14,237; 19,181) | 142,456 → 260,579 | 1,740 → 2,061 |
-| private claim, private destination (one privacy-preserving transaction) | private: ClaimPrivately 41,133, reply 111,838 (user cycles); public: Read, Issue, Admit, Spend, Mint (the relay fee) | 439,815 → 539,060 | 224,063 |
-| private claim, public destination | private: the same two; public: Read, Issue, Admit, Spend, three Mints | 457,925 → 573,154 | 224,063 |
-| public burn of one denomination, top-level, signed by the holder | Burn (holder) 26,461 → Burn (token) 49,322 → Admit 34,250 → Burn (record) 20,835 | 45,867 → 130,868 | 647 → 775 |
-| private burn of one denomination | private: Burn 24,397 (user cycles); public: Burn (token), Admit, Burn (record) | 427,959 → 513,593 | 224,063 |
-| `SetCap` (admin), a token's mint bucket | SetCap (admin's actor) 12,790 → SetCap (token) 36,839 | new: 49,629 | 733 |
-| `Freeze` (freeze authority): a token's mints; all mints | 12,483 → 34,060; 11,871 → 31,380 | new: 46,543; 43,251 | 710; 690 |
-| `Sunset` (freeze authority) | Sunset (its actor) 11,140 → Sunset (`config(cid)`) 30,844 | new: 41,984 | 671 |
-| `Tick` at a token; at the configuration | 32,821; 27,213 | new: 32,821; 27,213 | 460; 440 |
+| operation | handlers run, after (cycles each) | execution gas, before → after | storage gas (tx bytes), before → after | merged program (`results/`, b93a945): execution gas; storage gas |
+|---|---|---:|---:|---|
+| `Init`: attest the vault's slot 2 = `configId`, write `config(cid)` | Init 43,668 → Attest 85,725 → reply 39,214 | 154,529 → 168,607 | 1,726 → 1,946 | 168,776; 1,946 |
+| `ImportRoot` (8 leaves): attest slots 0 and 1, write `root(cid, n)` | ImportRoot 49,536 → Attest 112,749 → reply 52,945 → WriteRoot 16,328 | 203,620 → 231,558 | 1,703 → 2,025 | 231,365; 2,025 |
+| `Register` a token: attest its entry, fee slots 0 and 1, the count | Register 72,084 → Attest 150,208 → reply 73,421 → WriteToken 29,035 | new: 324,748 | 2,747 | 327,269; 2,747 |
+| `ImportFees`: a schedule; the absence of the next one | ImportFees 54,087 → Attest 112,749 → reply 57,503 → ExtendFees 38,134; 48,326 → 107,315 → 51,842 → 36,134 | new: 262,473; 243,617 | 2,206; 1,945 | 265,219 and 246,064; 2,206 and 1,945 |
+| plaintext claim, 1 ETH under fee schedule 0 (relay fee only) | Claim 107,526 → Issue 47,239 → Admit 34,291 → Spend 21,901 → Mint 14,237 → Mint 14,237 | 142,444 → 239,431 | 1,740 → 2,061 | 258,885; 2,053 |
+| plaintext claim, 10 ETH under schedule 1 (mint and relay fee) | Claim 107,526 → Issue 47,250 → Admit 34,003 → Spend 24,145 → three Mints (14,237; 14,237; 19,181) | 142,456 → 260,579 | 1,740 → 2,061 | 287,943; 2,053 |
+| private claim, private destination (one privacy-preserving transaction) | private: ClaimPrivately 41,133, reply 111,838 (user cycles); public: Read, Issue, Admit, Spend, Mint (the relay fee) | 439,815 → 539,060 | 224,063 | 551,502; 224,063 |
+| private claim, public destination | private: the same two; public: Read, Issue, Admit, Spend, three Mints | 457,925 → 573,154 | 224,063 | 600,607 (the test's output); 224,063 |
+| public burn of one denomination, top-level, signed by the holder | Burn (holder) 26,461 → Burn (token) 49,322 → Admit 34,250 → Burn (record) 20,835 | 45,867 → 130,868 | 647 → 775 | 164,153; 839 |
+| private burn of one denomination | private: Burn 24,397 (user cycles); public: Burn (token), Admit, Burn (record) | 427,959 → 513,593 | 224,063 | 518,358; 224,063 |
+| `SetCap` (admin), a token's mint bucket | SetCap (admin's actor) 12,790 → SetCap (token) 36,839 | new: 49,629 | 733 | 55,805; 725 (reads the newest record) |
+| `Freeze` (freeze authority): a token's mints; all mints | 12,483 → 34,060; 11,871 → 31,380 | new: 46,543; 43,251 | 710; 690 | 104,176 and 93,426; 775 and 755 (read the newest record) |
+| `Sunset` (freeze authority) | Sunset (its actor) 11,140 → Sunset (`config(cid)`) 30,844 | new: 41,984 | 671 | 44,002; 671 |
+| `Tick` at a token; at the configuration | 32,821; 27,213 | new: 32,821; 27,213 | 460; 440 | 94,926 and 76,845; 525 and 505 (read the newest record) |
 
 Every transaction is under `TARGET_GAS_EXEC` (5,000,000); the largest applied public one is a
 `Register` (360,698 in §8, 7.2%; 448,038 on the vault's own storage, §8a). **What the merge
@@ -521,6 +522,9 @@ blocks, re-checked by the full replay. Deposit 1 (private kind, real proof) wait
 
 ## 12. Attested time: the clock of freezes and caps (branch `lez-time-fix`)
 
+*History: the figures below are this branch's own run, before the merge; the merged program's (both fixes)
+are in `results/` and in §1's last column, and supersede them.*
+
 **Why.** Review r3 (attack A): LEZ v0.4.0-rc1 neither bounds nor orders block timestamps, and the
 program's time was the caller's, under a validity window around the block's timestamp and advanced
 by an open `Tick`. One block producer could stamp its block a year ahead, carry a `Tick`, end every
@@ -596,6 +600,9 @@ The inbound crossing on a live sequencer and on Sepolia (§11) used the frozen p
 every figure in §1–§5 and §8a of `f11b1aba…58eb`: none of them has this clock.
 
 ## 13. Security fixes of 11 November 2026 (branch `secfix-lez`)
+
+*History: the figures below are this branch's own run, before the merge; the merged program's (both fixes)
+are in `results/` and in §1's last column, and supersede them.*
 
 The review `notes/reviews/security/review-2026-11-11.md` (of integration4 at `1bb20d5`) found, on this
 side: **C-1** a claim could write a holder state at any bridge PDA not written yet (as its public
