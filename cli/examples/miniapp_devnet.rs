@@ -861,7 +861,7 @@ impl Devnet {
         let target = token_actor(self.ctx.program, &self.cid, &ETH_TOKEN);
         let r = self.zone.world.role("SetCap (admin view)", seed, &msg, target);
         self.zone.record(&r);
-        ensure!(r.ok(), "{}", codes::program_refusal(r.exit_code.unwrap_or(0), "SetCap, returned by the program"));
+        ensure!(r.ok(), "{}", refusal_of(&r, "SetCap"));
         Ok(json!({"settled": true, "what": "SetCap", "mints": mints, "capacity": capacity.to_string(), "refill_per_second": refill.to_string()}))
     }
 
@@ -872,7 +872,10 @@ impl Devnet {
         let seconds = params["seconds"].as_u64().unwrap_or(3600);
         let signer = params["signer"].as_str().unwrap_or("freeze_authority");
         let seed = if signer == "admin" { hb::ADMIN_SEED } else { hb::FREEZE_SEED };
-        let newest = self.zone.world.blocks.len() - 1;
+        // A record of Ethereum's current time (the stand-in relayer's newest finalized header), as the
+        // bridge program's own tests freeze against `World::finalize`.
+        let now = self.eth_time().await?;
+        let newest = self.zone.world.finalize(now);
         let t = self.zone.world.blocks[newest].time_ms();
         let record = self.zone.world.blocks[newest].time_record();
         let until_ms = t + seconds * 1000;
@@ -880,8 +883,16 @@ impl Devnet {
         let target = token_actor(self.ctx.program, &self.cid, &ETH_TOKEN);
         let r = self.zone.world.role("Freeze (admin view)", seed, &msg, target);
         self.zone.record(&r);
-        ensure!(r.ok(), "{}", codes::program_refusal(r.exit_code.unwrap_or(0), "Freeze, returned by the program"));
+        ensure!(r.ok(), "{}", refusal_of(&r, "Freeze"));
         Ok(json!({"settled": true, "what": "Freeze", "mints": mints, "burns": burns, "until_ms": until_ms}))
+    }
+}
+
+/// A failed report as the program's code, or the revert when there is no code.
+fn refusal_of(r: &TxReport, what: &str) -> String {
+    match r.exit_code {
+        Some(code) => codes::program_refusal(code, format!("{what}, returned by the program")).to_string(),
+        None => format!("{what} reverted without an exit code: {:?}", r.charge.revert),
     }
 }
 

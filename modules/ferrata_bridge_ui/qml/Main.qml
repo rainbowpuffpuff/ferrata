@@ -251,13 +251,14 @@ Rectangle {
                     }
                     Label { objectName: "deposit.price"; text: priceText; color: "#4a5563" }
                     Label { text: "Destination on LEZ" }
-                    RadioButton { objectName: "deposit.kind.private"; text: "Private account (recommended)"; checked: destKind === "private"; onClicked: { destKind = "private"; publicAcknowledged = false; } }
-                    RadioButton { objectName: "deposit.kind.public"; text: "Public account"; checked: destKind === "public"; onClicked: { destKind = "public"; publicAcknowledged = false; } }
+                    RadioButton { objectName: "deposit.kind.private"; text: "Private account (recommended)"; checked: destKind === "private"; onClicked: { destKind = "private"; publicAcknowledged = false; depAck.checked = false; } }
+                    RadioButton { objectName: "deposit.kind.public"; text: "Public account"; checked: destKind === "public"; onClicked: { destKind = "public"; publicAcknowledged = false; depAck.checked = false; } }
                     CheckBox {
+                        id: depAck
                         objectName: "deposit.public.ack"
                         visible: destKind === "public"
                         text: "I understand: the account and its balance become public on LEZ when the deposit is claimed"
-                        checked: publicAcknowledged
+                        checked: false
                         onClicked: publicAcknowledged = checked
                     }
                     RowLayout {
@@ -311,17 +312,17 @@ Rectangle {
                     }
                     Label { visible: !positions || positions.deposits.length === 0; text: "No deposits found for this wallet yet."; color: "#4a5563" }
                     RowLayout {
-                        RadioButton { objectName: "claim.mode.private"; text: "Private claim (recommended)"; checked: claimMode === "private"; onClicked: { claimMode = "private"; plainAcknowledged = false; } }
-                        RadioButton { objectName: "claim.mode.plain"; text: "Plaintext claim"; checked: claimMode === "plain"; onClicked: { claimMode = "plain"; plainAcknowledged = false; } }
+                        RadioButton { objectName: "claim.mode.private"; text: "Private claim (recommended)"; checked: claimMode === "private"; onClicked: { claimMode = "private"; plainAcknowledged = false; claimAck.checked = false; } }
+                        RadioButton { objectName: "claim.mode.plain"; text: "Plaintext claim"; checked: claimMode === "plain"; onClicked: { claimMode = "plain"; plainAcknowledged = false; claimAck.checked = false; } }
                     }
-                    CheckBox { objectName: "claim.plain.ack"; visible: claimMode === "plain"; text: "I understand: a plaintext claim shows on LEZ which deposit paid which account"; checked: plainAcknowledged; onClicked: plainAcknowledged = checked }
+                    CheckBox { id: claimAck; objectName: "claim.plain.ack"; visible: claimMode === "plain"; text: "I understand: a plaintext claim shows on LEZ which deposit paid which account"; checked: false; onClicked: plainAcknowledged = checked }
                     Label {
                         objectName: "claim.delay"
                         visible: claimLeaf >= 0 && held(claimLeaf)
                         text: claimLeaf >= 0 && heldUntil[claimLeaf] ? "Held until " + new Date(heldUntil[claimLeaf]).toLocaleTimeString() + " by the random delay you chose: a claim right after a deposit narrows which deposit it could be." : ""
                         color: "#8a6d00"; wrapMode: Text.WordWrap; Layout.fillWidth: true
                     }
-                    CheckBox { objectName: "claim.skipDelay"; visible: claimLeaf >= 0 && held(claimLeaf); text: "Claim now anyway (less private)"; checked: skipDelay; onClicked: skipDelay = checked }
+                    CheckBox { objectName: "claim.skipDelay"; visible: claimLeaf >= 0 && held(claimLeaf); text: "Claim now anyway (less private)"; checked: false; onClicked: skipDelay = checked }
                     Button {
                         objectName: "claim.submit"
                         text: claimMode === "private" ? "Claim privately" : "Claim in plaintext"
@@ -343,10 +344,10 @@ Rectangle {
                 Box {
                     Label { objectName: "burn.holding"; text: "Public holding /0: " + Fmt.eth(burnHolding()); font.bold: true }
                     RowLayout {
-                        RadioButton { objectName: "burn.kind.private"; text: "Burn from a private account (recommended)"; checked: burnKind === "private"; onClicked: { burnKind = "private"; burnPublicAcknowledged = false; } }
-                        RadioButton { objectName: "burn.kind.public"; text: "Burn from a public account"; checked: burnKind === "public"; onClicked: { burnKind = "public"; burnPublicAcknowledged = false; } }
+                        RadioButton { objectName: "burn.kind.private"; text: "Burn from a private account (recommended)"; checked: burnKind === "private"; onClicked: { burnKind = "private"; burnPublicAcknowledged = false; burnAck.checked = false; } }
+                        RadioButton { objectName: "burn.kind.public"; text: "Burn from a public account"; checked: burnKind === "public"; onClicked: { burnKind = "public"; burnPublicAcknowledged = false; burnAck.checked = false; } }
                     }
-                    CheckBox { objectName: "burn.public.ack"; visible: burnKind === "public"; text: "I understand: the holder, its balance and the burn are public on LEZ"; checked: burnPublicAcknowledged; onClicked: burnPublicAcknowledged = checked }
+                    CheckBox { id: burnAck; objectName: "burn.public.ack"; visible: burnKind === "public"; text: "I understand: the holder, its balance and the burn are public on LEZ"; checked: false; onClicked: burnPublicAcknowledged = checked }
                     RowLayout {
                         Repeater {
                             model: token() ? token().denominations : []

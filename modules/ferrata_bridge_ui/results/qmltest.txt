@@ -1,0 +1,23 @@
+QStandardPaths: XDG_RUNTIME_DIR not set, defaulting to '/home/q/Downloads/software_i_built/logos-rfp/spike/tmp/miniapp/runtime-root'
+********* Start testing of qmltestrunner *********
+Config: Using QtTest library 6.4.2, Qt 6.4.2 (x86_64-little_endian-lp64 shared (dynamic) release build; by GCC 13.2.0), ubuntu 24.04
+PASS   : qmltestrunner::FerrataMiniApp::initTestCase()
+PASS   : qmltestrunner::FerrataMiniApp::test_01_connect()
+PASS   : qmltestrunner::FerrataMiniApp::test_02_endpoints()
+PASS   : qmltestrunner::FerrataMiniApp::test_03_registry()
+PASS   : qmltestrunner::FerrataMiniApp::test_04_deposit_private_by_default()
+PASS   : qmltestrunner::FerrataMiniApp::test_05_public_needs_an_explicit_action()
+PASS   : qmltestrunner::FerrataMiniApp::test_06_positions_from_the_seed()
+PASS   : qmltestrunner::FerrataMiniApp::test_07_private_claim()
+PASS   : qmltestrunner::FerrataMiniApp::test_08_plaintext_claim()
+PASS   : qmltestrunner::FerrataMiniApp::test_09_error_messages()
+FAIL!  : qmltestrunner::FerrataMiniApp::test_10_burn() 'burn.submit enabled' returned FALSE. ()
+   Loc: [/home/q/Downloads/software_i_built/logos-rfp/spike/ferrata-wt-miniapp/modules/ferrata_bridge_ui/qmltest/tst_miniapp.qml(26)]
+FAIL!  : qmltestrunner::FerrataMiniApp::test_11_checkpoint_and_release() 'found release.pick.0' returned FALSE. ()
+   Loc: [/home/q/Downloads/software_i_built/logos-rfp/spike/ferrata-wt-miniapp/modules/ferrata_bridge_ui/qmltest/tst_miniapp.qml(24)]
+FAIL!  : qmltestrunner::FerrataMiniApp::test_12_admin() 'verify()' returned FALSE. ()
+   Loc: [/home/q/Downloads/software_i_built/logos-rfp/spike/ferrata-wt-miniapp/modules/ferrata_bridge_ui/qmltest/tst_miniapp.qml(213)]
+PASS   : qmltestrunner::FerrataMiniApp::test_13_privacy()
+PASS   : qmltestrunner::FerrataMiniApp::cleanupTestCase()
+Totals: 12 passed, 3 failed, 0 skipped, 0 blacklisted, 80885ms
+********* Finished testing of qmltestrunner *********
