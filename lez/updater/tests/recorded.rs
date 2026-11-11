@@ -313,6 +313,9 @@ fn gate_two_honest_one_adversary() {
     let (h1, h2, adv) = (key(0x31), key(0x32), key(0x33));
     let mut l = HarnessLedger::new(&[h1.clone(), h2.clone(), adv.clone()]);
     let clocks: Vec<Clock> = recs.iter().map(|_| Clock::new(1)).collect();
+    // GATE_SALT: other names for the honest updaters, so another draw of their deferral waits
+    // (a wait is a hash of the updater's name and key, the job and the step).
+    let salt = std::env::var("GATE_SALT").unwrap_or_default();
     // Per chain: [H1, H2, A].
     let mut ups: Vec<Vec<Updater>> = recs
         .iter()
@@ -320,14 +323,14 @@ fn gate_two_honest_one_adversary() {
         .map(|(r, c)| {
             vec![
                 r.updater(
-                    "honest-1",
+                    &format!("honest-1{salt}"),
                     h1.clone(),
                     vec![r.honest("a", c), r.honest("b", c), r.faulty("liar", c, Fault::BadSignature)],
                     None,
                     policy(8),
                 ),
                 r.updater(
-                    "honest-2",
+                    &format!("honest-2{salt}"),
                     h2.clone(),
                     vec![r.honest("b", c), r.honest("c", c), Box::new(r.source("stale", c, 3))],
                     None,
@@ -433,7 +436,7 @@ fn gate_two_honest_one_adversary() {
     }
     // Every recorded update applied exactly once, and the instance where the lab's ended.
     let mut lines = vec![format!(
-        "gate\trounds\t{rounds}\tseed\t{}\tadversary\t{adversary}",
+        "gate\trounds\t{rounds}\tseed\t{}\tadversary\t{adversary}\tsalt\t{salt}",
         seed.map_or("default".into(), |s| s.to_string())
     )];
     let mut total_updates = 0;
@@ -483,10 +486,11 @@ fn gate_two_honest_one_adversary() {
     println!("{text}");
     let out = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("results");
     fs::create_dir_all(&out).unwrap();
-    let name = match (seed, adversary) {
-        (_, false) => "gate-no-adversary.txt".to_string(),
-        (None, true) => "gate.txt".to_string(),
-        (Some(s), true) => format!("gate-seed-{s}.txt"),
+    let name = match (seed, adversary, salt.as_str()) {
+        (_, _, s) if !s.is_empty() => format!("gate-salt-{s}.txt"),
+        (_, false, _) => "gate-no-adversary.txt".to_string(),
+        (None, true, _) => "gate.txt".to_string(),
+        (Some(s), true, _) => format!("gate-seed-{s}.txt"),
     };
     fs::write(out.join(name), &text).unwrap();
     assert!(ratio <= 0.10, "honest refused gas {ratio:.4} of applied");

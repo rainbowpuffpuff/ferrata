@@ -98,7 +98,7 @@ slot and period, the last plan and error); HTTP 503 when an instance has no usab
 | `beacon_api_sources_over_http` | `BeaconApi` (curl, SSZ, the `updates` endpoint's length-prefixed chunks) against two beacon nodes on loopback: one serving the recorded mainnet chain, one answering 503 | catch-up to 15,631,808 through the first; the second flagged unavailable, `/health` degraded naming it |
 | `fee_limits_are_declared_and_enforced` | a maximum fee below a step's cost; a budget of 250,000,000 with a maximum fee of 100,000,000 | the first is rejected by LEZ's settlement (`MaxFeeBelowReserve`: nothing charged, nothing applied); the second stops after 7 transactions (156,173,360 charged), `/health` says "budget reached" |
 | `config.rs` (3 tests) | the shipped `ferrata-updater.example.toml` and `dev/dev.toml` parse; an unknown preset, a non-hex checkpoint, a zero deferral window, a source with both `url` and `dir`, an unknown field are refused; the `updates` stream splits under both length conventions | pass |
-| `gate_two_honest_one_adversary` | proposal A3's done gate (below) | passes, under four block orders |
+| `gate_two_honest_one_adversary` | proposal A3's done gate (below) | passes in all eight runs (seven with the adversary, one without) |
 
 **The A3 gate** (`results/gate.txt`). Two honest updaters (one with a lying source, one with a
 lagging one) and an adversarial updater follow mainnet and Sepolia on one chain while the record
@@ -106,26 +106,29 @@ replays one update at a time; each round is a block whose transactions settle in
 the adversary races due steps a third of the time without waiting and, at each new update, opens a
 job for a forged update and replays an applied one.
 
-| | |
-|---|---|
-| block order (`GATE_SEED`) | default | 1 | 2 | 3 |
-|---|---:|---:|---:|---:|
-| updates applied, each once (`InstanceState.applied` = 1 + updates, per instance) | 58 | 58 | 58 | 58 |
-| honest gas on refused steps / on applied steps (gate ≤ 0.10) | 0.0698 | 0.0364 | 0.0384 | 0.0646 |
-| honest-1 share of the honest fees (gate 0.35–0.65) | 0.6306 | 0.5465 | 0.5298 | 0.5377 |
-| honest-2 share | 0.3694 | 0.4535 | 0.4702 | 0.4623 |
-| honest-1 / honest-2 / adversary transactions applied | 62 / 38 / 150 | 59 / 52 / 139 | 56 / 52 / 142 | 58 / 50 / 142 |
-| honest-1 / honest-2 / adversary transactions refused | 18 / 28 / 25 | 15 / 13 / 28 | 18 / 11 / 19 | 16 / 18 / 23 |
-| rounds (blocks); ledger transactions | 447; 431 | 429; 416 | 437; 408 | 425; 417 |
+| run (`GATE_SEED`: block order; `GATE_SALT`: names, so deferral waits) | default | seed 1 | seed 2 | seed 3 | salt a | salt b | salt c |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| updates applied, each once (`InstanceState.applied` = 1 + updates, per instance) | 58 | 58 | 58 | 58 | 58 | 58 | 58 |
+| honest gas on refused steps / on applied steps (gate ≤ 0.10) | 0.0698 | 0.0364 | 0.0384 | 0.0646 | 0.0468 | 0.0932 | 0.0860 |
+| honest-1 share of the honest fees (gate 0.35–0.65) | 0.6306 | 0.5465 | 0.5298 | 0.5377 | 0.5393 | 0.4926 | 0.5117 |
+| honest-2 share | 0.3694 | 0.4535 | 0.4702 | 0.4623 | 0.4607 | 0.5074 | 0.4883 |
+| honest-1 / honest-2 / adversary transactions applied | 62 / 38 / 150 | 59 / 52 / 139 | 56 / 52 / 142 | 58 / 50 / 142 | 57 / 49 / 144 | 54 / 50 / 146 | 51 / 50 / 149 |
+| honest-1 / honest-2 / adversary transactions refused | 18 / 28 / 25 | 15 / 13 / 28 | 18 / 11 / 19 | 16 / 18 / 23 | 11 / 14 / 22 | 20 / 27 / 31 | 21 / 12 / 23 |
+| rounds (blocks); ledger transactions | 447; 431 | 429; 416 | 437; 408 | 425; 417 | 430; 407 | 462; 438 | 436; 416 |
 
 Without the adversary (`GATE_ADVERSARY=0`, `results/gate-no-adversary.txt`), the two honest
 updaters alone: 58 updates each applied once in 695 rounds, 132 and 118 transactions applied, 11 and
 17 refused (collisions of equal waits), refused gas 0.0172 of applied, fee shares 0.5404 / 0.4596.
 
 58 updates: 14 mainnet and 44 Sepolia, every update the lab recorded, not the gate's 100. The
-adversary also sent 110 junk `Open`s in each run, at its own cost. Files: `results/gate.txt`,
-`results/gate-seed-{1,2,3}.txt`. The default order's shares are near the band's edge: about 100
-honest transactions are split by a hash, so a share of 0.63 is about two standard deviations out.
+adversary also sent 110 junk `Open`s in each run, at its own cost. Files: `results/gate*.txt`.
+A wait is a hash of the updater's name and key, the job and the step, so the four `GATE_SEED` runs
+share one draw of waits (honest-1 drew the shorter ones: shares 0.53–0.63); other names draw
+others (`GATE_SALT`: 0.49–0.54). The refused share ranges 0.036–0.093 over the seven runs with the
+adversary: within the gate in all, with a thin margin in one (salt b). It comes from same-round
+collisions: two honest updaters with equal waits (1 in 8 per step), and an honest updater sending
+in the round the adversary races; a refused duplicate `Open` costs about 2.2M (step 1 runs before
+the job is found to exist), a refused later step at most about 24k.
 
 ## Not built, not tested
 
