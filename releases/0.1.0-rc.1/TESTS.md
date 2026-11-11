@@ -1,10 +1,10 @@
 # Release 0.1.0-rc.1: how it was built and tested
 
-Built on the Modal build box (`spike/modal-build/mrun`, workspace bcarol) on 11 November 2026, 19:00 UTC, from commit
-`6319a2006f8915704c54e282f2cde32ab947e5b3` with `just release 0.1.0-rc.1 <out>` (just 1.36.0): the six guests at the
+Built on the Modal build box (`spike/modal-build/mrun`, workspace bcarol) on 11 November 2026, 19:01 UTC, from commit
+`7eb40b64d73da7ab6ad0bbc205e9172f76f9f19c` with `just release 0.1.0-rc.1 <out>` (just 1.36.0): the six guests at the
 crown build path (`scripts/reproduce-image-ids.sh build`), the vault (forge 1.3.6, solc 0.8.26, sources only), the CLI
 (Rust 1.98.1). Tarball `ferrata-0.1.0-rc.1-x86_64-linux.tar.gz`, sha256
-`319004025c3cbe968685de87964c7cfd8d50b2ddf486d5f225f8fbef50356565` (not committed; on the box and in
+`617c0117400aa1422c5d6c120b17d5ff7ce70b87253316d32137dca0a9a5fcd7` (not committed; on the box and in
 `spike/tmp/release-eng/rel/` beside the repository).
 
 | Program | Image id | Equal to the crown run's (e2e/crown/README.md) |
@@ -19,9 +19,11 @@ crown build path (`scripts/reproduce-image-ids.sh build`), the vault (forge 1.3.
 FerrataVault runtime 24,254 bytes, FerrataRegistry 12,504 bytes (both under EIP-170's 24,576; MANIFEST.json).
 
 `scripts/release.sh verify`: 10 files of the manifest, 0 bad; every line of SHA256SUMS; the two LEZ programs' image ids
-recomputed with r0vm 3.0.5: equal.
+recomputed with r0vm 3.0.5: equal. The tarball fetched to the laptop: its .sha256 checks, and `release.sh verify` of
+the extracted directory there gives the same (10 files, 0 bad; image ids equal).
 
-`scripts/test-deploy-local.sh` (anvil, chain id 31337, on the build box; nothing left the box):
+`scripts/test-deploy-local.sh` (anvil, chain id 31337, on the build box; nothing left the box), run on this cut and on
+the earlier cut of the same commit's sources (identical output):
 
 ```
 PASS 1. plan only: exit 0, block number still 0

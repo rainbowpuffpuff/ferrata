@@ -1,8 +1,8 @@
 {
  "name": "ferrata",
  "version": "0.1.0-rc.1",
- "commit": "6319a2006f8915704c54e282f2cde32ab947e5b3",
- "created_utc": "2026-11-11T19:00:24Z",
+ "commit": "7eb40b64d73da7ab6ad0bbc205e9172f76f9f19c",
+ "created_utc": "2026-11-11T19:01:40Z",
  "status": "prototype, unaudited: for testnets only",
  "targets": {
   "lez": "LEZ v0.4 (built against v0.4.0-rc1, commit 1806e87); testnet 0.4 when it opens",
