@@ -14,7 +14,8 @@
 # (sepolia | stand-in), CROWN_VAULT (a: optional), CROWN_CAPTURES (b: capture dirs in order; default
 # $CROWN_LEZ_VOL/inputs/capture-1 and -2), CROWN_ETH_FEES_AT, CROWN_RECIPIENT, CROWN_PRIVATE (real | fake),
 # CROWN_R0VM (the prover's r0vm; default the bundle's), CROWN_CLAIM_TIME_OFFSET_S (b: a claim's time = now + this,
-# default -30; a prover slower than ~9 min per proof needs about its proof time minus 3 min), CROWN_DEADLINE_MIN (120).
+# default -30; a prover slower than ~9 min per proof needs about its proof time minus 3 min), CROWN_DEADLINE_MIN (120),
+# CROWN_SAMPLE=1 (peak RSS and busy cores while the driver runs -> session-X/resources.txt).
 # Layout of $CROWN_LEZ_VOL: bundle.tar.zst (input), state/gen-N.tar.zst + state/current, inputs/, session-a/, session-b/.
 set -uo pipefail
 STEP="${1:?a or b}"
@@ -103,6 +104,32 @@ EOF
     --funding-public-key "$BEDROCK_FUNDING_PUBLIC_KEY" --create-channel > "$LOG/sequencer-setup.log" 2>&1 \
     || fail "sequencer setup"
 fi
+
+# Resources while the driver runs (CROWN_SAMPLE=1): every 2 s the summed RSS of all processes and per command, and the
+# busy cores from /proc/stat; the peaks go to $OUT/resources.txt (sizing the cloud container).
+SAMPLER_PID=""
+sample_start() {
+  [ "${CROWN_SAMPLE:-0}" = 1 ] || return 0
+  ( prev=""; while :; do
+      # busy cores = the growth of all processes' summed CPU time over the wall time (nproc can understate a
+      # container's CPU limit, so /proc/stat is not used); an exited process makes the sum drop: clamped at 0.
+      now=$(date +%s.%N); cpu=$(ps -eo times= | awk '{t+=$1} END {print t+0}')
+      if [ -n "$prev" ]; then set -- $prev; busy=$(awk -v c="$cpu" -v pc="$1" -v t="$now" -v pt="$2" 'BEGIN {b=(c-pc)/(t-pt); if (b<0) b=0; printf "%d", b*100}'); else busy=0; fi
+      prev="$cpu $now"
+      echo "$(date +%s) $busy $(ps -eo rss=,comm= | awk '{t+=$1; m[$2]+=$1} END {printf "%d", t; for (k in m) printf " %s=%d", k, m[k]}')"
+      sleep 2
+    done ) > "$LOG/resources.tsv" 2>/dev/null &
+  SAMPLER_PID=$!
+}
+sample_stop() {
+  [ -n "$SAMPLER_PID" ] || return 0
+  kill "$SAMPLER_PID" 2>/dev/null; wait "$SAMPLER_PID" 2>/dev/null
+  awk -v cores="$(nproc)" '{ if ($2 > pc) pc = $2; sc += $2; n++; if ($3 > pr) pr = $3;
+      for (i = 4; i <= NF; i++) { split($i, kv, "="); if (kv[2] > mx[kv[1]]) mx[kv[1]] = kv[2] } }
+    END { printf "samples %d (2 s), cores visible %d\npeak busy cores %.1f, mean busy cores %.1f\npeak summed RSS %d MiB\n", n, cores, pc/100, (n ? sc/n/100 : 0), pr/1024;
+      for (k in mx) if (mx[k] > 102400) printf "  peak RSS %s %d MiB\n", k, mx[k]/1024 }' "$LOG/resources.tsv" > "$OUT/resources.txt"
+  cat "$OUT/resources.txt" | tee -a "$LOG/session.log"
+}
 
 # The node's own final blocks, for the checkpoint (crown-proofs' realblocks-crown reads them; the layout of their
 # checkpoint/realblocks/crown-extract.sh): /cryptarchia/info, /channel, /chain/id and /cryptarchia/blocks in 500-slot
@@ -195,6 +222,7 @@ say "sequencer up, head block ${h:-?}"
 D=(--rpc "http://127.0.0.1:$RPC_PORT" --run-dir "$S/driver" --program-bin "$B/program/ferrata_lez.bin"
    --bridge-bin "$B/program/ferrata_bridge.bin" --chain "$CHAIN" --fixture "$B/fixture" --sequencer-log "$LOG/sequencer.log")
 DRIVER_RC=1
+sample_start
 if [ "$STEP" = a ]; then
   # The channel's key set, once the channel's first inscription is on Bedrock.
   for i in $(seq 1 150); do
@@ -221,6 +249,7 @@ else
     --session-out "$WORK/session-b.json" --notes-out "$WORK/burn-notes.json" "${extra[@]}" > "$LOG/driver.log" 2>&1
   DRIVER_RC=$?
 fi
+sample_stop
 say "driver exit $DRIVER_RC"; tail -n 12 "$LOG/driver.log" | tee -a "$LOG/session.log"
 if [ "$DRIVER_RC" = 0 ] && [ "$STEP" = b ]; then node_dump; fi
 if [ "$DRIVER_RC" = 0 ]; then

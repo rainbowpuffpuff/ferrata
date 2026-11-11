@@ -31,7 +31,15 @@ account 0, proven by LEZ's wallet), `Burn` of 0.001 ETH from public account 0 (n
 (note 1, proven). Writes `session-b.json` (T1, the block range T0+1..=T1, every step) and `burn-notes.json`.
 
 Private transactions are proven by LEZ's wallet inside the session (r0vm as LEZ's prover; `CROWN_R0VM` may name a
-CUDA r0vm). A claim's time must lie within ten minutes before its block, so a proof must finish within about nine.
+CUDA r0vm). A claim's time must lie within ten minutes before its block, so a proof must finish within about nine
+minutes, or `CROWN_CLAIM_TIME_OFFSET_S` must move the claim's time forward by about the proof time less three minutes.
 
 ## Interface
 `spike/tmp/crown/interfaces/lez.md` (beside the repository) fixes the environment, the Volume layout and the files.
+
+## Rehearsed (results/README.md)
+On the build box: the whole of A and B against a STAND-IN (an anvil fork of Sepolia with the real v5 vault, a beacon
+committee held by the driver), with the zone saved after A and restored for B (every step applied, both private
+proofs real: 274 s and 321 s on the box's CPU; peak RSS 10.4 GiB, r0vm 9.2 GiB); and session A on the real Sepolia
+path (176 transactions, 29.5 min). To repeat on the box (from the worktree):
+`../modal-build/mrun --profile ws-4 --timeout 7200 --put ../tmp/crown/build/ids-methods-hex.txt -- 'bash lez/crown/build.sh seed && bash lez/crown/build.sh all && bash lez/crown/rehearse.sh all'`.
