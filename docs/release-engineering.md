@@ -244,7 +244,22 @@ that a concrete replay shows harmless (`notes/reviews/security/tools-2026-11-11.
 cannot model**: not a proof. (A first run of the same check in the six-process batch also finished, in 1,455 s, but
 its log was lost: see the trap below.)
 
-<!-- results: section 5 -->
+**The role properties, 4,800 s each, six processes in parallel on the build box** (logs rescued from the deleted
+files, see the trap below; `notes/reviews/security/tools-out/halmos-long-results/<run>/halmos.log`):
+
+| Property | Layout | Result |
+|---|---|---|
+| `check_no_role_call_moves_funds` | generic | **[PASS]**, 24,473 paths in 4,781.6 s (loops unrolled twice: Halmos warns that some paths stop at that bound). The run reached its 4,800 s bound while finishing: a `SystemExit: 143` (the bound's SIGTERM) is logged just before the PASS line. Read it as a PASS within the stated bounds, to be confirmed by one run with more time. |
+| `check_no_role_call_moves_funds` | default | not finished in 4,800 s (no result line) |
+| `check_no_role_call_moves_funds_after_retire` | generic, default | not finished in 4,800 s (no result line) |
+| `check_role_entry_points_move_no_funds` | default | not finished: stopped by its bound at 4,797.7 s (`[ERROR]`, `SystemExit: 143`) |
+
+So of the four properties: one (`check_no_role_call_moves_funds`, any call by the admin, the freeze authority or a
+watcher moves no funds) is now proven under the generic layout within the calldata and loop bounds; one
+(`check_after_stop_only_owed_leaves`) runs to the end of its paths on the default layout with no counterexample but
+140 paths Halmos cannot model; two (`…_after_retire`, `check_role_entry_points_move_no_funds`) did not finish in
+5.3 times the earlier bound. Next: the generic layout for the two unfinished ones with a bound of 3 hours or more, one
+process each on an otherwise idle box.
 
 **Trap met (for whoever re-runs this on the build box):** `mrun` syncs the worktree's untracked files to the box
 before every command, replacing them (unlink and create). Halmos logs written inside the worktree
