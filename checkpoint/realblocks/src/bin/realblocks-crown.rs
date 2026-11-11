@@ -398,6 +398,7 @@ fn main() -> Result<()> {
         config_changes: Vec::new(),
         blocks: blocks.clone(),
         t_index: u32::try_from(t1 - t0 - 1)?,
+        producer: tip_ins.elided()?,
         attestations: vec![attestation.clone()],
         segments: Vec::new(),
     };
