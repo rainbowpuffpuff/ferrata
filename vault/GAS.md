@@ -6,7 +6,7 @@ day, all with forge 1.3.6, solc 0.8.26, optimizer on (200 runs), EVM cancun. "v3
 gas rules (Prague). Sepolia has run Glamsterdam since 6 October 2026, which prices new state far higher (EIP-8037):
 creation costs there are in "Creating the contracts on today's Sepolia" below; calls that write new storage cost
 more there too: the v3 round trip's 16 transactions as Sepolia's own node prices them are in "On Sepolia since
-Glamsterdam" below, and v5's calls were not measured on Sepolia.
+Glamsterdam" below, with the receipts of the v5 round trip sent live on Sepolia (11 November 2026).
 
 ```
 forge test --isolate --match-contract GasScenarios -vv
@@ -99,6 +99,37 @@ the failed attempt (74 wei) the whole round trip costs about 0.0000000046 ETH; a
 of which the deployment is 0.057 ETH. Mainnet has not scheduled Glamsterdam (EIP-7773 leaves its row empty), so the
 figures of the following sections are still what mainnet charges today; once it ships, a deposit costs about
 0.47M to 0.55M gas instead of 0.19M, and deploying the vault about 38M instead of 5.5M.
+
+**The v5 round trip, live on Sepolia (11 November 2026): the receipts.** `gasUsed` of the 13 transactions of
+`crown-live-1` as Sepolia's receipts give them (read back with `cast receipt` on publicnode; records and hashes:
+[`../e2e/runs/crown-live-1/`](../e2e/runs/crown-live-1/README.md)), beside anvil's receipts of the same transactions
+in the fork rehearsal `crown-rehearsal-3` (Foundry's rules: the deployment from its deploy log, the rest from its
+`manifest.json`) and the node's `eth_estimateGas` that set each deployment limit (`deploy.json`; limit = 1.25 x).
+The vault is the secured v5 in mode (B), ETH registered with three denominations and fee schedules (relay 0.2 %,
+checkpoint 0.1 %).
+
+| Nonce | Transaction | Foundry (anvil receipt, crown-rehearsal-3) | **Sepolia receipt (live)** | Sepolia `eth_estimateGas` | Sepolia / Foundry |
+|---:|---|---:|---:|---:|---:|
+| 10 | create RiscZeroVerifierEmergencyStop | 451,744 | 2,953,028 | 2,977,632 | 6.54 |
+| 11 | create FerrataRegistry (the library) | 2,757,365 | 19,544,631 | 19,700,914 | 7.09 |
+| 12 | create FerrataVault, rule (B) | 5,686,715 | 39,247,243 | 39,559,896 | 6.90 |
+| 13 | create TestToken | 508,036 | 3,315,490 | 3,342,971 | 6.53 |
+| 14 | registerToken (ETH) | 709,314 | 3,165,774 | 3,218,360 | 4.46 |
+| 15 | registerToken (test token) | 710,092 | 3,167,052 | 3,219,659 | 4.46 |
+| 16 | the stop's owner renounced | 25,524 | 25,220 | 31,788 | 0.99 |
+| 17 | depositETH, the tree's first (public kind) | 200,572 | 559,652 | | 2.79 |
+| 18 | depositETH, the second (private kind) | 151,394 | 268,014 | | 1.77 |
+| 19 | rule (B) submitCandidate, real `checkpoint_b` seal | 375,293 | 729,361 | | 1.94 |
+| 20 | rule (B) finalizeAttested | 218,385 | 844,361 | | 3.87 |
+| 21 | release (ETH), real seal: the vault's first release and fee credits | 393,072 | 661,668 | | 1.68 |
+| 22 | release (ETH), real seal, the second | 358,908 | 465,828 | | 1.30 |
+| | **all 13** | **12,546,414** | **74,947,322** | | **5.97** |
+
+A rule (B) checkpoint on Sepolia costs 729,361 + 844,361 = **1,573,722** gas (the same two transactions on Foundry's
+rules: 593,678). On Sepolia's rules none of the proof-verifying calls is under the M0 thresholds (candidate and
+finalisation ≤ 500k, release ≤ 450k); on Foundry's all are. The node's estimates were 0.8 % (creations) and 1.7 %
+(registrations) above the gas used, 26 % for the renounce. One run on one state (a fresh vault, two deposits, the
+first checkpoint and releases), not a measurement over states.
 
 ## The security fixes of 11 November 2026 (branch `secfix-vault`)
 
@@ -280,8 +311,8 @@ v2.10.0, block 12,107,166, block gas limit 200,000,000), the vault's constructor
 runtime code by state override; beside them the receipts of the same creations on a local anvil fork (Foundry's
 rules) from `script/fork-rehearsal.sh`:
 
-v5 before the security fixes (the fixed vault's runtime is 24,254 bytes, its library's 12,504; not yet estimated on
-Sepolia):
+v5 before the security fixes (the fixed vault's runtime is 24,254 bytes, its library's 12,504: created on Sepolia
+by the live round trip with 39,247,243 and 19,544,631 gas, "The v5 round trip, live on Sepolia" above):
 
 | Creation | Runtime bytes | Sepolia (Glamsterdam) | Foundry / anvil |
 |---|---:|---:|---:|

@@ -16,6 +16,7 @@ evidence with its commands.
 | **live sequencer** | LEZ's own `sequencer_service` at `v0.4.0-rc1` with a Logos Blockchain node (one validator, leader proofs in dev mode) on a cloud container; charges re-checked by replaying the chain through LEZ's `chain_state` | [`lez/RESULTS.md`](../lez/RESULTS.md) §9; [`lez/live/inbound/README.md`](../lez/live/inbound/README.md); [`lez/lab/README.md`](../lez/lab/README.md) |
 | **local EVM** | Foundry (forge 1.3.6, solc 0.8.26, 200 runs, cancun), `forge test --isolate`: whole transactions under today's mainnet gas rules | [`vault/GAS.md`](../vault/GAS.md) |
 | **Sepolia node** | each transaction priced by a public Sepolia node (reth 2.10.0) with `eth_estimateGas` / `eth_simulateV1` on a fork's state: Glamsterdam's gas rules, nothing sent | [`e2e/README.md`](../e2e/README.md); [`vault/GAS.md`](../vault/GAS.md), "Creating the contracts on today's Sepolia" |
+| **Sepolia (live)** | receipts (`gasUsed`) of the transactions the live round trip `crown-live-1` sent on Sepolia, read back with `cast receipt` | [`e2e/runs/crown-live-1/README.md`](../e2e/runs/crown-live-1/README.md); [`vault/GAS.md`](../vault/GAS.md), "The v5 round trip, live on Sepolia" |
 | **laptop CPU** | AMD Ryzen 9 7940HS, 8 cores, 16 threads, no GPU; shared with other jobs, so wall times state the load | [`docs/design/bridge.md`](design/bridge.md) §18 |
 | **cloud GPU** | one NVIDIA L4 (24 GB) on Modal, 4 CPU cores, 32 GiB; r0vm 3.0.5 built with CUDA | [`gpu-prover/RESULTS.md`](../gpu-prover/RESULTS.md) |
 | **simulation** | the Python model of the v0.4 sequencer and Logos Blockchain code | `docs/design/finality-rule/RESULTS.md` |
@@ -214,6 +215,7 @@ The root import is the only additional verification (the claim needs no Ethereum
 | under a Gloas record, with the header | 262,007 | 2,612 | in-process harness |
 | live sequencer, stand-in beacon chain | 232,278 | 2,460 | live sequencer |
 | Sepolia's real state: the live vault, one leaf, capture 1 (the frozen program) | 426,479 | 6,646 | live sequencer ([`lez/live/inbound/README.md`](../lez/live/inbound/README.md)) |
+| Sepolia's real state: the v5 vault, one leaf then two, captures 1 and 2 (this tree's program, the live round trip) | 433,528; 429,805 | — | crown devnet, LEZ v0.4.0-rc1 ([`e2e/runs/crown-live-1/README.md`](../e2e/runs/crown-live-1/README.md)) |
 
 **Amortised per deposit (derived)**: an import's cost divided by the deposits it newly covers, so with one
 import an hour: about 278k per deposit at one deposit an hour, 27.8k at ten, 2.8k at a hundred (from the
@@ -224,26 +226,28 @@ root (estimated at roughly 275k cycles of attestation plus one slot proof; not m
 
 ### P.3 Ethereum gas: deposit, release, checkpoints
 
-| Transaction | Local EVM, v5 vault | Sepolia node, v3 vault |
-|---|---:|---:|
-| `depositETH`, first by an address | 179,275 (mock-verifier state); 198,427 (first of the tree) | 552,152 (first of the tree) |
-| `depositETH`, later | 159,285 | 260,526 |
-| `deposit` ERC-20, first by an address | 197,762 | 375,237 (the token's first deposit, the address's third) |
-| `release` ETH, real verifier | 373,657 | 619,477 |
-| `release` ERC-20 with a relayer's fee, real verifier | 403,523 | 648,447 |
-| rule (A) checkpoint: `submitCandidate` + `recordBeacon` + `finalize`, real verifier | 438,444 + 77,937 + 457,965 = **974,346** | 1,381,770 + 262,063 + 1,183,452 = **2,827,285** (derived sum) |
-| rule (B) checkpoint: `submitCandidate` + `finalizeAttested`, real verifier | 347,820 + 195,149 = **542,969** | not measured |
-| `registerToken`, three denominations | 647,208 | 2,136,791 (v3 vault: 472,211 on Foundry) |
-| `refund` ETH / ERC-20 | 179,155 / 205,540 | not measured |
+| Transaction | Local EVM, v5 vault | Sepolia node, v3 vault | **Sepolia (live) receipts, v5 vault** |
+|---|---:|---:|---:|
+| `depositETH`, first by an address | 179,275 (mock-verifier state); 198,427 (first of the tree) | 552,152 (first of the tree) | 559,652 (first of the tree) |
+| `depositETH`, later | 159,285 | 260,526 | 268,014 (the second) |
+| `deposit` ERC-20, first by an address | 197,762 | 375,237 (the token's first deposit, the address's third) | not sent |
+| `release` ETH, real verifier | 373,657 | 619,477 | 661,668 (the first, with the first fee credits); 465,828 (the second) |
+| `release` ERC-20 with a relayer's fee, real verifier | 403,523 | 648,447 | not sent |
+| rule (A) checkpoint: `submitCandidate` + `recordBeacon` + `finalize`, real verifier | 438,444 + 77,937 + 457,965 = **974,346** | 1,381,770 + 262,063 + 1,183,452 = **2,827,285** (derived sum) | — (a rule (B) vault) |
+| rule (B) checkpoint: `submitCandidate` + `finalizeAttested`, real verifier | 347,820 + 195,149 = **542,969** | not measured | 729,361 + 844,361 = **1,573,722** |
+| `registerToken`, three denominations | 647,208 | 2,136,791 (v3 vault: 472,211 on Foundry) | 3,165,774 (ETH, with fee schedules) |
+| `refund` ETH / ERC-20 | 179,155 / 205,540 | not measured | not sent |
 
 Sources: [`vault/GAS.md`](../vault/GAS.md) ("Results with the mock verifier", "v5 with the real
 verifier"); [`e2e/README.md`](../e2e/README.md) ("What the round trip costs on today's Sepolia": all 16
 transactions 62,096,366 gas on Sepolia against 11,030,062 on Foundry, ×5.63). Checkpoint costs are paid
 once per finalised LEZ state, not per burn. Against the M0 thresholds (release ≤ 450k, candidate and
 finalisation ≤ 500k, [`docs/traceability.md`](traceability.md) P.3) every v5 row is under them on Foundry's
-rules; on Sepolia's state-gas rules none of the proof-verifying calls is. Mainnet has not scheduled
-Glamsterdam, so it still charges the Foundry column ([`e2e/README.md`](../e2e/README.md)). **Gaps:** the v5
-vault on Sepolia's rules; a later (not first) candidate with the real verifier.
+rules; on Sepolia's state-gas rules none of the proof-verifying calls is (the live receipts: 1.3 to 3.9 times
+Foundry's for the same transactions, [`vault/GAS.md`](../vault/GAS.md)). Mainnet has not scheduled
+Glamsterdam, so it still charges the Foundry column ([`e2e/README.md`](../e2e/README.md)). **Gaps:** v5's
+ERC-20 calls and refunds on Sepolia (the live run sent ETH only); a later (not first) candidate with the real
+verifier.
 
 ### P.4 User proving (RFP-022)
 
@@ -274,7 +278,8 @@ wrap on Apple Silicon (not supported today).
 
 **Inbound** (deposit to mint): Ethereum finality (about 13–19 min) + the next light-client update and root
 import (the operators' cadence; hourly in the design) + the privacy delay the client proposes + one claim
-transaction. Not measured end to end. On the live sequencer the stand-in crossing ran `Init`, two imports
+transaction. Not measured end to end: in the live round trip a deposit's block to its capture took 19.7 and 19.1
+min, and both claims then ran in one later LEZ session. On the live sequencer the stand-in crossing ran `Init`, two imports
 and both claims; its duration is not a latency figure (stand-in beacon chain)
 ([`lez/live/inbound/README.md`](../lez/live/inbound/README.md)).
 
@@ -291,7 +296,10 @@ and both claims; its duration is not a latency figure (stand-in beacon chain)
 
 The rehearsed testnet round trip (wait 40 min, release delay 120 s) runs in about 55 minutes plus the queue
 for a GPU (`e2e/sepolia-live.sh`, [`vault/README.md`](../vault/README.md)); the cloud run, with the
-deposits' finality waits, in about an hour and three quarters ([`e2e/README.md`](../e2e/README.md)).
+deposits' finality waits, in about an hour and three quarters ([`e2e/README.md`](../e2e/README.md)). Measured live
+on Sepolia (`crown-live-1`; W = 1 h, release delay 120 s, a devnet with n = t = 1): from the end of the LEZ session
+with both burns to the first release's block, 64.7 min (checkpoint input, proof on an L40S and wrap 1.5 min, then
+`submitCandidate`, W, `finalizeAttested`, the delay) ([`e2e/runs/crown-live-1/README.md`](../e2e/runs/crown-live-1/README.md)).
 
 ### P.6 Off-chain compute (RFP-022)
 
@@ -342,8 +350,8 @@ over one and five years with real traffic (milestone B4).
 ## Gaps, in one list
 
 `just bench`; user-side proofs on a laptop and on macOS (cloud CPUs held to 8 and 16 CPUs, padded as LEZ's wallet
-pads: P.4); latency measured end to end on either leg; the
+pads: P.4); latency measured end to end on the inbound leg (the outbound once, on testnet parameters: P.5); the
 recommended-cadence tracking cost with real proving; daemon resources; the BLS precompile delta; cost
-against state size; the v5 vault on Sepolia's gas rules; an import under a mainnet state root; LEZ account
+against state size; v5's ERC-20 calls and refunds on Sepolia's gas rules; an import under a mainnet state root; LEZ account
 overhead. Every one is a milestone deliverable ([`attestation.md`](design/attestation.md) §13;
 [`bridge.md`](design/bridge.md) §18.6; [`docs/traceability.md`](traceability.md)).
