@@ -113,8 +113,9 @@ The live vault has no freeze in force, no watchers, no role proposal and no anno
 [`../vault/script/AdminScenario.s.sol`](../vault/script/AdminScenario.s.sol) makes a vault on a local
 anvil (the vault tests' mock verifier behind the emergency stop, rule (A)) with two deposits, fee
 schedule #1 announced (in force after the 7-day notice), a release delay changed, a global deposit
-cap, a role proposal naming three watchers and a new freeze authority, and, by the freeze authority,
-releases and ETH deposits frozen. Run on the Modal build box (11 November 2026):
+cap, a role proposal naming three watchers and a new freeze authority, a checkpoint candidate left
+pending (the mock verifier accepts its journal digest), and, by the freeze authority, releases and ETH
+deposits frozen. Run on the Modal build box (11 November 2026):
 
 ```sh
 cd vault
@@ -124,7 +125,9 @@ ADMIN_KEY=<anvil account 0's published key> FREEZE_KEY=<any key> \
 node ../admin/dump.mjs http://127.0.0.1:8545 <the vault> 0
 ```
 
-[`results/local-anvil-scenario.txt`](results/local-anvil-scenario.txt): 89 read-only requests;
+[`results/local-anvil-scenario.txt`](results/local-anvil-scenario.txt): 91 read-only requests; the
+candidate "PENDING, waiting", its wait ending 602 s after submission (delta 600 s plus (t − 1) turns of
+2 s), and the rule (A) beacon its submission recorded;
 "FROZEN: releases, ETH deposits" (each until 30 days on, `maxFreeze`); the role proposal with its
 three watchers and new freeze authority, effective in 14 days; schedule #1 announced, in force in 7
 days; the release delay's history (120 s, then 600 s); 2 deposits. The two errors listed in its

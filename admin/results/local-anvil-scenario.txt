@@ -2,8 +2,8 @@
 # endpoint:   http://127.0.0.1:8545
 # vault:      0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9
 # chain:      31337 (local dev chain)
-# read at:    block 14, block time 2026-11-11T19:11:15Z
-# UTC time:   2026-11-11T19:11:15.916Z (start of the read, local clock)
+# read at:    block 16, block time 2026-11-11T19:12:28Z
+# UTC time:   2026-11-11T19:12:28.523Z (start of the read, local clock)
 Ferrata vault admin view: 0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9 (read-only)
 
 == 1. Read ================================================================================================
@@ -11,16 +11,16 @@ Ferrata vault admin view: 0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9 (read-only)
   endpoint ............................... http://127.0.0.1:8545
   vault .................................. 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9
   chain id ............................... 31337 (local dev chain)   [eth_chainId]
-  latest block ........................... 14   [eth_blockNumber]
-  every read pinned to block ............. 14   [block tag of each call]
-  block time ............................. 2026-11-11T19:11:15Z (1794424275)   [eth_call of TIMESTAMP code]
-  read at (local clock, UTC) ............. 2026-11-11T19:11:15.918Z to 2026-11-11T19:11:16.417Z
+  latest block ........................... 16   [eth_blockNumber]
+  every read pinned to block ............. 16   [block tag of each call]
+  block time ............................. 2026-11-11T19:12:28Z (1794424348)   [eth_call of TIMESTAMP code]
+  read at (local clock, UTC) ............. 2026-11-11T19:12:28.525Z to 2026-11-11T19:12:29.050Z
   vault runtime code ..................... 24254 bytes, keccak256 0xc51a0f75044741137c2581a17facd435e6aaed4feb8e65a71b6b5a0041d7b372   [eth_getCode]
   linked library (FerrataRegistry) ....... 0x181E31d3138e7576B47a46B64EC2E1fb5d38675c (12504 bytes of code)   [PUSH20 constants in the code that have code]
-  events scanned ......................... blocks 0-14 (given): 21 vault events in 1 eth_getLogs calls   [eth_getLogs]
+  events scanned ......................... blocks 0-16 (given): 23 vault events in 1 eth_getLogs calls   [eth_getLogs]
   event scan complete .................... yes
-  events by name ......................... AdminTransferred 1, DeltaSet 1, Deposit 2, FeesAnnounced 2, FeesInForce 1, FreezeAuthorityTransferred 1, GlobalCapSet 3, RegistryEntryPublished 1, ReleaseDelaySet 2, ReleasesFrozenSet 1, RolesProposed 1, TokenCapSet 2, TokenDepositsFrozenSet 1, TokenRegistered 1, WatchersSet 1
-  RPC requests ........................... 89 (eth_chainId 1, eth_blockNumber 1, eth_getCode 7, eth_call 69, eth_getLogs 1, eth_getStorageAt 9, eth_getBalance 1); retries 0; errors 2
+  events by name ......................... AdminTransferred 1, BeaconRecorded 1, CandidateSubmitted 1, DeltaSet 1, Deposit 2, FeesAnnounced 2, FeesInForce 1, FreezeAuthorityTransferred 1, GlobalCapSet 3, RegistryEntryPublished 1, ReleaseDelaySet 2, ReleasesFrozenSet 1, RolesProposed 1, TokenCapSet 2, TokenDepositsFrozenSet 1, TokenRegistered 1, WatchersSet 1
+  RPC requests ........................... 91 (eth_chainId 1, eth_blockNumber 1, eth_getCode 7, eth_call 71, eth_getLogs 1, eth_getStorageAt 9, eth_getBalance 1); retries 0; errors 2
 
 == 2. Summary =============================================================================================
   finality rule .......................... A (candidate, beacon, echo proof)   [mode()]
@@ -29,7 +29,7 @@ Ferrata vault admin view: 0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9 (read-only)
   freezes in force ....................... FROZEN: releases, ETH deposits   [*FrozenUntil()]
   deposits ............................... 2 (leaf count)   [nextLeafIndex()]
   checkpoints finalised .................. 0   [checkpointCount()]
-  pending candidates ..................... 0 (of 0 states ever submitted)   [CandidateSubmitted + candidates()]
+  pending candidates ..................... 1 (of 1 states ever submitted)   [CandidateSubmitted + candidates()]
   releases ............................... 0   [Release events]
   registered tokens ...................... ETH   [TokenRegistered + tokenConfig()]
 
@@ -60,7 +60,7 @@ Ferrata vault admin view: 0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9 (read-only)
   watchers[1] ............................ 0x0000000000000000000000000000000000000000 (none)   [watchers(1)]
   watchers[2] ............................ 0x0000000000000000000000000000000000000000 (none)   [watchers(2)]
   feeRecipient ........................... 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 (no code: an EOA)   [feeRecipient()]
-  role proposal: effective at ............ 2026-11-25T19:11:15Z (1795633875, in 14d)   [roleProposal()]
+  role proposal: effective at ............ 2026-11-25T19:12:28Z (1795633948, in 14d)   [roleProposal()]
   role proposal: freeze authority ........ 0x0d94075C619Fd10D7AD5eee2B7a68a9De5E6263F (no code: an EOA)   [roleProposal()]
   role proposal: watchers ................ 0x0D8a66e21d5a51cC28B044f94446e00B6cb69ACb, 0x95FCA819e1F8d2685E1c2c93da3701A40489eF7c, 0x31C6D9fa339195b4Ea613c3319eF5120f6ac18EE   [last RolesProposed event (the getter omits the array)]
   - Powers (contract source): admin registers tokens, sets caps, delays, deposit enablement, raises delta, announces fees, proposes roles (14-day timelock), hands over admin in two steps. Freeze authority freezes and unfreezes, cancels candidates, revokes within revokeWindow, retires at any time. Watchers cancel candidates and pause checkpoints for 12 h. Code size shows only whether an address is a contract; who holds the keys is not on chain.
@@ -76,9 +76,9 @@ Ferrata vault admin view: 0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9 (read-only)
 
 == 6. Freezes =============================================================================================
   deposits (all tokens) .................. not frozen   [depositsFrozenUntil()]
-  releases and refunds (all tokens) ...... FROZEN until 2026-12-11T19:11:15Z (1797016275, in 30d)   [releasesFrozenUntil()]
+  releases and refunds (all tokens) ...... FROZEN until 2026-12-11T19:12:28Z (1797016348, in 30d)   [releasesFrozenUntil()]
   checkpoints (freeze or watcher pause) .. not frozen   [checkpointsFrozenUntil()]
-  ETH deposits ........................... FROZEN until 2026-12-11T19:11:15Z (1797016275, in 30d)   [tokenDepositsFrozenUntil(token)]
+  ETH deposits ........................... FROZEN until 2026-12-11T19:12:28Z (1797016348, in 30d)   [tokenDepositsFrozenUntil(token)]
   ETH releases ........................... not frozen   [tokenReleasesFrozenUntil(token)]
 
 == 7. Checkpoints, burn roots and candidates ==============================================================
@@ -89,11 +89,18 @@ Ferrata vault admin view: 0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9 (read-only)
   revocationEpoch ........................ 0   [revocationEpoch()]
   _stateChanges (internal) ............... 0; candidate epoch now = 0   [eth_getStorageAt 52, checked against finalImportedLeafCount/finalSunset/keylessFrom]
   checkpointCount ........................ 0   [checkpointCount()]
-  beaconCount ............................ 0   [beaconCount()]
-  _lastBeaconBlock (internal) ............ 0   [eth_getStorageAt 44]
+  beaconCount ............................ 1   [beaconCount()]
+  _lastBeaconBlock (internal) ............ 13   [eth_getStorageAt 44]
   - No checkpoint finalised yet.
-  - No candidate submitted in the scanned range.
+  Candidates (states from CandidateSubmitted events, each read with candidates(newState); the mapping cannot be enumerated):
+    newState                                                            status            submitted                               wait ends                                     tip                                                                          t  prover                                      history
+    ------------------------------------------------------------------  ----------------  --------------------------------------  --------------------------------------------  ---------------------------------------------------------------------------  -  ------------------------------------------  -------------
+    0xcec2c2798518353a0e8afdd039a26224d650f36a73f4cba26046196d71e8120b  PENDING, waiting  2026-11-11T19:12:28Z (1794424348, now)  2026-11-11T19:22:30Z (1794424950, in 10m 2s)  tipId 42 0xdde1f69211a01f8ab323472441248101a84b295cf24158cd2cba16077b3a44ae  2  0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266  submitted @13
   - No revocation in the scanned range.
+  Beacons (rule A; beacons(i), last 10):
+    #  time                                    nonce
+    -  --------------------------------------  ------------------------------------------------------------------
+    0  2026-11-11T19:12:28Z (1794424348, now)  0x91f0534c0b03786c94e99212668a1044458c1fd91de691a87b95425f0ba043fa
 
 == 8. Token ETH ===========================================================================================
   token .................................. 0x0000000000000000000000000000000000000000 (native ETH, 18 decimals)
@@ -111,14 +118,14 @@ Ferrata vault admin view: 0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9 (read-only)
   owed (all payees) ...................... 0 ETH [0]   [totalOwed(token)]
   vault balance .......................... 1.1011 ETH [1101100000000000000]   [eth_getBalance]
   balance - (escrowed + owed) ............ 0 ETH [0] (exactly covered)   [derived]
-  fee schedule in force .................. #0; #1 announced, takes effect at 2026-11-18T19:11:15Z (1795029075, in 7d)   [feeState(token)]
+  fee schedule in force .................. #0; #1 announced, takes effect at 2026-11-18T19:12:28Z (1795029148, in 7d)   [feeState(token)]
   Fees in force, schedule #0 (fees(token, index, d)):
     denomination                   mint fee   relay fee                     burn fee   checkpoint fee
     -----------------------------  ---------  ----------------------------  ---------  --------------
     0.1 ETH [100000000000000000]   0 ETH [0]  0.0001 ETH [100000000000000]  0 ETH [0]  0 ETH [0]
     1 ETH [1000000000000000000]    0 ETH [0]  0.001 ETH [1000000000000000]  0 ETH [0]  0 ETH [0]
     10 ETH [10000000000000000000]  0 ETH [0]  0.01 ETH [10000000000000000]  0 ETH [0]  0 ETH [0]
-  Announced fees, schedule #1 (announced 2026-11-11T19:11:15Z (1794424275, now)):
+  Announced fees, schedule #1 (announced 2026-11-11T19:12:28Z (1794424348, now)):
     denomination                   mint fee                      relay fee                     burn fee                      checkpoint fee
     -----------------------------  ----------------------------  ----------------------------  ----------------------------  --------------
     0.1 ETH [100000000000000000]   0.0005 ETH [500000000000000]  0.0001 ETH [100000000000000]  0.0005 ETH [500000000000000]  0 ETH [0]
@@ -127,7 +134,7 @@ Ferrata vault admin view: 0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9 (read-only)
   Schedules in force, published at sha256("ferrata/vault/fees/v1" || token || index) (FeesInForce/FeesAnnounced give from leaf and times: no getter):
     #  from leaf  announced                               effective                               published hash (slot)                                               event hash  recomputed
     -  ---------  --------------------------------------  --------------------------------------  ------------------------------------------------------------------  ----------  ----------
-    0  0          2026-11-11T19:11:15Z (1794424275, now)  2026-11-11T19:11:15Z (1794424275, now)  0xb1a497240ba045a5a1e55a06c84007389fe023f05495cedf33104e8556cc06de  match       match
+    0  0          2026-11-11T19:12:28Z (1794424348, now)  2026-11-11T19:12:28Z (1794424348, now)  0x11eb11ed73f404cbb66333cd6aade45fd5594f8f1e48b6413e7d4f6363e396aa  match       match
   deposits / releases / refunds (events) .. 2 (1.1 ETH [1100000000000000000]) / 0 (0 ETH [0]) / 0   [Deposit, Release, Refund events]
 
 == 9. Global caps (value units) ===========================================================================
@@ -161,8 +168,8 @@ Ferrata vault admin view: 0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9 (read-only)
 
 == 13. Retirement and sunset ===============================================================================
   retired ................................ no   [retired()]
-  anyone may retire from ................. 2026-12-11T19:21:17Z (1797016877, in 30d 10m): until then only the freeze authority   [retireOpensAt()]
-  keyless clock started .................. 2026-11-11T19:11:15Z (1794424275, now)   [keylessFrom()]
+  anyone may retire from ................. 2026-12-11T19:22:30Z (1797016950, in 30d 10m): until then only the freeze authority   [retireOpensAt()]
+  keyless clock started .................. 2026-11-11T19:12:28Z (1794424348, now)   [keylessFrom()]
   sunset boundary set .................... no   [sunsetLeafCountSet()]
   deposits possible ...................... yes, unless frozen, disabled or capped   [retired(), finalSunset()]
 
@@ -170,14 +177,14 @@ Ferrata vault admin view: 0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9 (read-only)
   Last 19 of 19:
     block  event                       fields
     -----  --------------------------  -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    14     TokenDepositsFrozenSet      token=0x0 frozen=true until=1797016275
-    13     ReleasesFrozenSet           frozen=true until=1797016275
-    11     RolesProposed               watchers=[0x0D8a66e21d5a51cC28B044f94446e00B6cb69ACb,0x95FCA819e1F8d2685E1c2c93da3701A40489eF7c,0x31C6D9fa339195b4Ea613c3319eF5120f6ac18EE] freezeAuthority=0x0d94075C619Fd10D7AD5eee2B7a68a9De5E6263F effectiveAt=1795633875
+    16     TokenDepositsFrozenSet      token=0x0 frozen=true until=1797016348
+    15     ReleasesFrozenSet           frozen=true until=1797016348
+    11     RolesProposed               watchers=[0x0D8a66e21d5a51cC28B044f94446e00B6cb69ACb,0x95FCA819e1F8d2685E1c2c93da3701A40489eF7c,0x31C6D9fa339195b4Ea613c3319eF5120f6ac18EE] freezeAuthority=0x0d94075C619Fd10D7AD5eee2B7a68a9De5E6263F effectiveAt=1795633948
     10     GlobalCapSet                direction=0 capacity=100000000000000000000 refillPerSecond=10000000000000000
     9      ReleaseDelaySet             token=0x0 delay=600 fromCheckpoint=0
-    8      FeesAnnounced               token=0x0 index=1 announcedAt=1794424275 effectiveAt=1795029075 mintFees=[500000000000000,5000000000000000,50000000000000000] burnFees=[500000000000000,5000000000000000,50000000000000000] checkpointFees=[0,0,0]
-    5      FeesInForce                 token=0x0 index=0 fromLeaf=0 effectiveAt=1794424275 scheduleHash=0xb1a497240ba045a5a1e55a06c84007389fe023f05495cedf33104e8556cc06de
-    5      FeesAnnounced               token=0x0 index=0 announcedAt=1794424275 effectiveAt=1794424275 mintFees=[0,0,0] burnFees=[0,0,0] checkpointFees=[0,0,0]
+    8      FeesAnnounced               token=0x0 index=1 announcedAt=1794424348 effectiveAt=1795029148 mintFees=[500000000000000,5000000000000000,50000000000000000] burnFees=[500000000000000,5000000000000000,50000000000000000] checkpointFees=[0,0,0]
+    5      FeesInForce                 token=0x0 index=0 fromLeaf=0 effectiveAt=1794424348 scheduleHash=0x11eb11ed73f404cbb66333cd6aade45fd5594f8f1e48b6413e7d4f6363e396aa
+    5      FeesAnnounced               token=0x0 index=0 announcedAt=1794424348 effectiveAt=1794424348 mintFees=[0,0,0] burnFees=[0,0,0] checkpointFees=[0,0,0]
     5      RegistryEntryPublished      token=0x0 lezDefinition=0x0000000000000000000000000000000000000000000000000000000000000000 decimals=18 entryHash=0x295dd897cfc1fbca161d7f941fae6de887aa03814453a1802539fdf25dfd5b31
     5      ReleaseDelaySet             token=0x0 delay=120 fromCheckpoint=0
     5      TokenCapSet                 token=0x0 direction=1 capacity=UNLIMITED refillPerSecond=0

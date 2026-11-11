@@ -11,9 +11,10 @@ import {RiscZeroVerifierEmergencyStop} from "risc0/RiscZeroVerifierEmergencyStop
 ///         Sepolia vault has never shown, for the admin view to read. The vault tests' MockRiscZeroVerifier behind
 ///         the emergency stop (no proof is verified here); rule (A); ETH registered as for the CLI's end-to-end test;
 ///         two deposits; a fee schedule announced (in force only after the 7-day notice); a release delay changed; a
-///         global deposit cap; a role proposal naming three watchers and a new freeze authority; and, by the freeze
-///         authority, releases frozen and ETH deposits frozen. Keys: `ADMIN_KEY` (anvil's published test account 0) and
-///         `FREEZE_KEY` (any key: the admin funds it); nothing here may reach a public network.
+///         global deposit cap; a role proposal naming three watchers and a new freeze authority; a checkpoint
+///         candidate left pending; and, by the freeze authority, releases frozen and ETH deposits frozen. Keys:
+///         `ADMIN_KEY` (anvil's published test account 0) and `FREEZE_KEY` (any key: the admin funds it); nothing
+///         here may reach a public network.
 contract AdminScenario is Script {
     function run() external {
         uint256 adminKey = vm.envUint("ADMIN_KEY");
@@ -88,6 +89,41 @@ contract AdminScenario is Script {
             ],
             address(uint160(uint256(keccak256("admin scenario: next freeze authority"))))
         );
+        // A checkpoint candidate, pending: the mock verifier accepts its journal digest (computed as the vault's
+        // `_checkpointDigest`, whose domain constant is internal: copied here), and nobody finalises it.
+        FerrataVault.Checkpoint memory c = FerrataVault.Checkpoint({
+            nMin: 3,
+            tMin: 2,
+            parentState: vault.finalState(),
+            newState: keccak256("admin scenario: state 1"),
+            burnRoot: keccak256("admin scenario: burn root"),
+            burnCount: 1,
+            importedLeafCount: 2,
+            sunset: false,
+            echoNonce: bytes32(0),
+            tipId: 42,
+            tipHash: keccak256("admin scenario: tip"),
+            n: 3,
+            t: 2
+        });
+        bytes32 digest = sha256(
+            bytes.concat(
+                abi.encode(
+                    bytes32(0xbdb3b52df781536a6bcce7088d156b3951a00a45ec8bcf2805ba8406fbeb5ec7),
+                    block.chainid,
+                    address(vault),
+                    vault.lezConfigId(),
+                    c.nMin,
+                    c.tMin
+                ),
+                abi.encode(
+                    c.parentState, c.newState, c.burnRoot, c.burnCount, c.importedLeafCount, c.sunset, bytes32(0)
+                ),
+                abi.encode(c.tipId, c.tipHash, c.n, c.t)
+            )
+        );
+        mock.accept(vault.checkpointImageId(), digest);
+        vault.submitCandidate(c, "");
         // The freeze authority's gas.
         payable(freezeAuthority).transfer(1 ether);
         vm.stopBroadcast();
