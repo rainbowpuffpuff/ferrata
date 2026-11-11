@@ -111,10 +111,12 @@ SAMPLER_PID=""
 sample_start() {
   [ "${CROWN_SAMPLE:-0}" = 1 ] || return 0
   ( prev=""; while :; do
-      read -r _ u n s i w q sq st _ < /proc/stat; busy=$((u + n + s + q + sq + st)); total=$((busy + i + w))
-      if [ -n "$prev" ]; then set -- $prev; db=$((busy - $1)); dt=$((total - $2)); else db=0; dt=1; fi
-      prev="$busy $total"
-      echo "$(date +%s) $(( db * $(nproc) * 100 / (dt > 0 ? dt : 1) )) $(ps -eo rss=,comm= | awk '{t+=$1; m[$2]+=$1} END {printf "%d", t; for (k in m) printf " %s=%d", k, m[k]}')"
+      # busy cores = the growth of all processes' summed CPU time over the wall time (nproc can understate a
+      # container's CPU limit, so /proc/stat is not used); an exited process makes the sum drop: clamped at 0.
+      now=$(date +%s.%N); cpu=$(ps -eo times= | awk '{t+=$1} END {print t+0}')
+      if [ -n "$prev" ]; then set -- $prev; busy=$(awk -v c="$cpu" -v pc="$1" -v t="$now" -v pt="$2" 'BEGIN {b=(c-pc)/(t-pt); if (b<0) b=0; printf "%d", b*100}'); else busy=0; fi
+      prev="$cpu $now"
+      echo "$(date +%s) $busy $(ps -eo rss=,comm= | awk '{t+=$1; m[$2]+=$1} END {printf "%d", t; for (k in m) printf " %s=%d", k, m[k]}')"
       sleep 2
     done ) > "$LOG/resources.tsv" 2>/dev/null &
   SAMPLER_PID=$!
