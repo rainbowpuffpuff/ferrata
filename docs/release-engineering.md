@@ -60,6 +60,26 @@ so the wall clock below is an upper bound for that machine.
 
 The user-side proofs at the declared minimum (`just bench-user`) are in the next subsection.
 
+### `just bench-user` of 11 November 2026 (`bench/report/20261111T1849Z-333f14d58f95/user/`)
+
+**Measured, real proofs** (`RISC0_DEV_MODE=0`, r0vm 3.0.5 as the prover): `prove_attest` and `prove_bridge` built on the
+build box from this branch (`scripts/bench.sh user-stage`: 9 min 14 s), staged with their fixtures, then run by
+`lez/results/p4-minimum/minimum.py` in two Modal containers whose CPU and memory request equals their limit: 16 CPUs
+(the declared minimum: an 8-core x86 laptop's 16 threads) and 16 GiB, AMD family 25 model 17, Azure us-east. One run
+each; the claim and burn container was preempted once by Modal (20:10) and the job restarted from the beginning.
+
+| Proof, padded as LEZ's wallet pads | `execute_and_prove` | Peak memory | Receipt / transaction | Settled with the receipt verified | One bit flipped | Earlier (`lez/results/p4-minimum`, medians of 2, AMD family 25 model 1) |
+|---|---:|---:|---|---|---|---:|
+| private attestation | **569.4 s** (9.5 min) | 9.23 GiB | 239,214 / 255,302 B | yes | refused (exit 101) | 633.3 s |
+| private claim | **556.9 s** (9.3 min) | 9.23 GiB | 239,628 / 256,130 B | yes | refused | 600.7 s |
+| private burn | **484.0 s** (8.1 min) | 9.23 GiB | 239,046 / 254,966 B | yes | refused | 525.9 s |
+
+All three are under M0's 20 min and 16 GB at the declared minimum; `just m0 --p4 <out>/user` reads this run and
+gives check 1 GO on Linux for all three (the release receipt is not part of this job; the box's own release proof
+is above, and the minimum-hardware one is the earlier 26.4-27.0 s). The new CPUs (model 17) are a later AMD
+generation than the earlier runs' (model 1), which is the likely reason for the 7-10 % shorter times; the peak
+memory is the same to 0.01 GiB.
+
 <!-- results: section 1 -->
 
 ## 2. `just m0`: the open checks with their values
