@@ -1,10 +1,9 @@
 status
   program            FhXQNXifS3nitELmi18yyb7R7QcgauZHgXbWuQTK2pqn
   instance           0x6d65e4ef2af67eed1ce3a5c2d7b04fa02517707d2dff044869389f310b69f6b4 (chain 11155111, store layout Gloas)
-  followed           Init, then the updates of periods 1378-1409 and the fixture's finality update: 166 transactions, all applied: true
+  followed           Init and 34 update job(s) submitted through the program: 166 transactions, all applied: true
                      execution gas 525494412 in all, storage gas 1776529 in all
-  finalized slot     11549664 (store), the record's: 11549664
-  record             header(id, 11549664) = GT2qsHtJhVSkWhniTDNobpKxVRhe5S7fZ2zifnPmGzSZ: block 12105936 execution BlockHash([90, 47, 86, 113, 212, 217, 61, 78, 154, 24, 142, 197, 87, 67, 174, 32, 168, 108, 206, 95, 145, 229, 112, 242, 229, 220, 34, 178, 179, 75, 39, 182])
+  record             header(id, 11549664) = GT2qsHtJhVSkWhniTDNobpKxVRhe5S7fZ2zifnPmGzSZ: BlockHash([90, 47, 86, 113, 212, 217, 61, 78, 154, 24, 142, 197, 87, 67, 174, 32, 168, 108, 206, 95, 145, 229, 112, 242, 229, 220, 34, 178, 179, 75, 39, 182])
 
 dry run: storage slot 0x000000000000000000000000000000000000000000000000000000000000000b of 0x1c7d4b196cb0c7b01d743fbc6116a902379c7238
   message            Attest (variant 7 of ferrata_lez_wire::Message), 7201 bytes borsh

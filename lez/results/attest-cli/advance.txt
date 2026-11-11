@@ -1,0 +1,77 @@
+status
+  program            FhXQNXifS3nitELmi18yyb7R7QcgauZHgXbWuQTK2pqn
+  instance           0x6d65e4ef2af67eed1ce3a5c2d7b04fa02517707d2dff044869389f310b69f6b4 (chain 11155111, store layout Gloas)
+  followed           Init and 32 update job(s) submitted through the program: 158 transactions, all applied: true
+                     execution gas 500357855 in all, storage gas 1716615 in all
+  record             header(id, 11537760) = G6PB3hVkgVp4sQN1LLkaipMU7Tz1UhAmyVoJqBn3U5Nq: BlockHash([158, 243, 116, 58, 100, 19, 177, 44, 8, 180, 196, 164, 111, 216, 246, 209, 90, 185, 132, 176, 91, 201, 115, 105, 13, 10, 101, 175, 1, 192, 135, 215])
+
+dry run: advance with the update of period 1409
+  instance           0x6d65e4ef2af67eed1ce3a5c2d7b04fa02517707d2dff044869389f310b69f6b4 (store layout Gloas, finalized slot 11537760), 32 update jobs submitted
+  update             attested slot 11542593, finalized slot 11542528, signature slot 11542594, next committee carried
+  verdict            step 1 accepts (ferrata_core::steps::step1, the program's own function); the job advances the finalized header, adopts the next committee, rotates to the next period
+  Open (step 1)      message    3437 bytes: execution gas   2123138 (cycles 2123138), storage gas   3899, base fee 17016296
+  Miller (step 2)    message       1 bytes: execution gas   3310385 (cycles 3310385), storage gas    399, base fee 26486272
+  Adopt 1/2          message   24582 bytes: execution gas   3408020 (cycles 3408020), storage gas  24980, base fee 27464000
+  Adopt 2/2          message   24582 bytes: execution gas   3415212 (cycles 3415212), storage gas  24980, base fee 27521536
+  Finish (step 3)    message       1 bytes: execution gas   3728633 (cycles 3728633), storage gas    527, base fee 29833280
+  cost               5 transaction(s): execution gas 15985388, storage gas 54785
+  nothing was sent (add --send to settle it in the harness's zone)
+
+send: advance with the update of period 1409
+  instance           0x6d65e4ef2af67eed1ce3a5c2d7b04fa02517707d2dff044869389f310b69f6b4 (store layout Gloas, finalized slot 11537760), 32 update jobs submitted
+  update             attested slot 11542593, finalized slot 11542528, signature slot 11542594, next committee carried
+  verdict            step 1 accepts (ferrata_core::steps::step1, the program's own function); the job advances the finalized header, adopts the next committee, rotates to the next period
+  Open (step 1)      message    3437 bytes: execution gas   2123138 (cycles 2123138), storage gas   3899, base fee 17016296
+  Miller (step 2)    message       1 bytes: execution gas   3310385 (cycles 3310385), storage gas    399, base fee 26486272
+  Adopt 1/2          message   24582 bytes: execution gas   3408020 (cycles 3408020), storage gas  24980, base fee 27464000
+  Adopt 2/2          message   24582 bytes: execution gas   3415212 (cycles 3415212), storage gas  24980, base fee 27521536
+  Finish (step 3)    message       1 bytes: execution gas   3728633 (cycles 3728633), storage gas    527, base fee 29833280
+  cost               5 transaction(s): execution gas 15985388, storage gas 54785
+  result             5 transaction(s) settled, all applied; finalized slot 11537760 -> 11542528; equal to the dry run: yes
+
+dry run: advance with the update of period 1409
+  instance           0x6d65e4ef2af67eed1ce3a5c2d7b04fa02517707d2dff044869389f310b69f6b4 (store layout Gloas, finalized slot 11542528), 33 update jobs submitted
+  update             attested slot 11542593, finalized slot 11542528, signature slot 11542594, next committee carried
+  verdict            refused at step 1 with exit code 52 NotNewer (the core): Ferrata policy: the update does not advance the finalized header (duplicate or stale).
+  Open (step 1)      message    3437 bytes: execution gas    144160 (cycles 144160), storage gas   3899, base fee 1184472; reverts with exit code 52 NotNewer (the core): Ferrata policy: the update does not advance the finalized header (duplicate or stale).
+  cost               1 transaction(s): execution gas 144160, storage gas 3899
+  nothing was sent (add --send to settle it in the harness's zone)
+
+send: advance with the update of period 1409
+  instance           0x6d65e4ef2af67eed1ce3a5c2d7b04fa02517707d2dff044869389f310b69f6b4 (store layout Gloas, finalized slot 11542528), 33 update jobs submitted
+  update             attested slot 11542593, finalized slot 11542528, signature slot 11542594, next committee carried
+  verdict            refused at step 1 with exit code 52 NotNewer (the core): Ferrata policy: the update does not advance the finalized header (duplicate or stale).
+  Open (step 1)      message    3437 bytes: execution gas    144160 (cycles 144160), storage gas   3899, base fee 1184472; reverts with exit code 52 NotNewer (the core): Ferrata policy: the update does not advance the finalized header (duplicate or stale).
+  cost               1 transaction(s): execution gas 144160, storage gas 3899
+  result             1 transaction(s) settled, refused; finalized slot 11542528 -> 11542528; equal to the dry run: yes
+
+send: advance with the finality update of the attestation fixture
+  instance           0x6d65e4ef2af67eed1ce3a5c2d7b04fa02517707d2dff044869389f310b69f6b4 (store layout Gloas, finalized slot 11542528), 34 update jobs submitted
+  update             attested slot 11549728, finalized slot 11549664, signature slot 11549729, next committee absent (a finality update)
+  verdict            step 1 accepts (ferrata_core::steps::step1, the program's own function); the job advances the finalized header
+  Open (step 1)      message    3741 bytes: execution gas   2127275 (cycles 2127275), storage gas   4203, base fee 17051824
+  Miller (step 2)    message       1 bytes: execution gas   3305289 (cycles 3305289), storage gas    399, base fee 26445504
+  Finish (step 3)    message       1 bytes: execution gas   3718605 (cycles 3718605), storage gas    527, base fee 29753056
+  cost               3 transaction(s): execution gas 9151169, storage gas 5129
+  result             3 transaction(s) settled, all applied; finalized slot 11542528 -> 11549664; equal to the dry run: yes
+
+status
+  program            FhXQNXifS3nitELmi18yyb7R7QcgauZHgXbWuQTK2pqn
+  instance           0x6d65e4ef2af67eed1ce3a5c2d7b04fa02517707d2dff044869389f310b69f6b4 (chain 11155111, store layout Gloas)
+  followed           Init and 35 update job(s) submitted through the program: 167 transactions, all applied: false
+                     execution gas 525638572 in all, storage gas 1780428 in all
+  record             header(id, 11549664) = GT2qsHtJhVSkWhniTDNobpKxVRhe5S7fZ2zifnPmGzSZ: BlockHash([90, 47, 86, 113, 212, 217, 61, 78, 154, 24, 142, 197, 87, 67, 174, 32, 168, 108, 206, 95, 145, 229, 112, 242, 229, 220, 34, 178, 179, 75, 39, 182])
+
+send: log 0 of transaction 0's receipt (the block's first ERC-20 Transfer: emitter and recipient checked)
+  message            Attest (variant 7 of ferrata_lez_wire::Message), 2153 bytes borsh
+  to                 header(instance, slot 11549664) = GT2qsHtJhVSkWhniTDNobpKxVRhe5S7fZ2zifnPmGzSZ of program FhXQNXifS3nitELmi18yyb7R7QcgauZHgXbWuQTK2pqn
+  request            chain 11155111, instance 0x6d65e4ef2af67eed1ce3a5c2d7b04fa02517707d2dff044869389f310b69f6b4, the block's RLP header (678 bytes: the Gloas record binds the hash only), 0 account(s), 0 slot(s), 1 log(s)
+  verdict            attested: 1 statement(s) (ferrata_lez_wire::attest::evaluate, the program's own function)
+    proven at block 12105936 (0x5a2f5671d4d93d4e9a188ec55743ae20a86cce5f91e570f2e5dc22b2b34b27b6), 0 hop(s), record slot 11549664, chain 11155111
+    [0] log tx 0 log 0 emitter 0x5543ca71ed8c88daf217488b1808994e080d925b topic0 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef (3 topics, 32 data bytes)
+        statement id 0x739825fa8019c7c2e23985e5f0a3b9a5b542d5dd76843919b3193a05445cdbad
+  cost               execution gas 95412 (cycles metered 95412), storage gas 2551 (the transaction's 2551 bytes), base fee 783704
+  events             FRT-ATT1 (80 bytes)
+  settled            execution gas 95412 (cycles metered 95412), storage gas 2551 (the transaction's 2551 bytes), base fee 783704
+  result             applied in block 169; exit None; 1 event(s); equal to the dry run: yes
+

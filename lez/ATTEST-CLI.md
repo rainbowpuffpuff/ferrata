@@ -3,9 +3,9 @@
 **Prototype, unaudited.** Milestone A3 ("the CLI with dry runs returning the program's codes").
 Source: [`harness/src/bin/ferrata-attest.rs`](harness/src/bin/ferrata-attest.rs).
 
-`ferrata-attest` attests a storage slot, an account, a log or a whole receipt of a finalized
-Ethereum block through the attestation program, end to end, and by default only says what it
-would do. Today it runs on the harness: LEZ v0.4.0-rc1's state transition in process, with the
+`ferrata-attest` advances an attestation instance with a light-client update, and attests a
+storage slot, an account, a log or a whole receipt of a finalized Ethereum block through the
+attestation program, end to end; by default it only says what it would do. Today it runs on the harness: LEZ v0.4.0-rc1's state transition in process, with the
 program's guest in RISC Zero dev mode, and real Sepolia data recorded in fixtures. The module and
 the daemons that will run it against a live sequencer and live Ethereum endpoints are separate
 deliverables (`modules/`, the updater).
@@ -44,18 +44,21 @@ deliverables (`modules/`, the updater).
 cd lez
 export RISC0_HOME=$PWD/../../risc0-home-lez RISC0_BUILD_LOCKED=1    # as for the harness (RESULTS.md §8)
 cargo build -p harness --locked --bin ferrata-attest
-RISC0_DEV_MODE=1 target/debug/ferrata-attest [--message-out DIR] COMMAND [ARGS] [--send] [--then COMMAND ...]
+RISC0_DEV_MODE=1 target/debug/ferrata-attest [--follow-to P] [--message-out DIR] COMMAND [ARGS] [--send] [--then COMMAND ...]
 ```
 
 | Command | Attests |
 |---|---|
-| `status` | nothing: the instance, its store, the record, what following cost |
+| `status` | nothing: the instance, its store, the newest record, what following cost |
+| `advance --period P` / `advance --finality` | the update of period P (1378–1409) or the attestation fixture's finality update, as the public job: `Open`, `Miller`, `Adopt` in `adoption_parts` parts when it adopts a committee, `Finish`. The dry run settles the whole job on one scratch state, step after step, and gives each step's cost and the verdict of step 1 (`ferrata_core::steps::step1`, the program's function) with the job's planned outcome |
 | `slot [--address A] [--slot S] [--expect-eq V]` | a storage slot (default: USDC's `totalSupply_`, slot 11); `--expect-eq` adds the condition `value == V` |
 | `account [--address A] [--expect-code-hash H]` | an account's nonce, balance, storage root and code hash (default: Multicall3) |
 | `log [--tx I --log J \| --block-log-index K]` | one log, by its position in its receipt or in the block (default: the block's first ERC-20 `Transfer`, with its emitter and recipient checked) |
 | `receipt --tx I` | every log of transaction I's receipt (the receipt must have status 1) |
 
-`--then` chains commands in one run (the zone is followed once). `--message-out DIR` writes each
+`--then` chains commands in one run (the zone is followed once). `--follow-to P` stops following at
+period P (default 1409, which also applies the attestation fixture's finality update), so that
+`advance` has updates left; the attestation commands need that record (`advance --finality --send`). `--message-out DIR` writes each
 message as `message-N.hex` (borsh) and `message-N.debug` (its Rust `Debug` text), which the IDL
 check decodes with the IDL alone:
 
@@ -88,8 +91,18 @@ gas in all, 100.9 s; the record `header(id, 11,549,664)` binds block 12,105,936.
 | `account` (Multicall3) | 4,291 | 1 statement | 168,116 | 4,689 | yes, applied |
 | `log --block-log-index 100` (tx 51, log 10) | 7,794 | 1 statement | 224,310 | 8,192 | yes, applied |
 
+`advance`, in a second run that followed only to period 1408 (93.5 s; [`results/attest-cli/advance.txt`](results/attest-cli/advance.txt)):
+
+| Command | Transactions | Verdict | Execution gas | Storage gas | Sent: equal to the dry run |
+|---|---|---|---:|---:|---|
+| `advance --period 1409` | `Open` 2,123,138; `Miller` 3,310,385; `Adopt` 3,408,020 and 3,415,212; `Finish` 3,728,633 | step 1 accepts; the job advances the finalized header (slot 11,537,760 → 11,542,528), adopts the next committee and rotates | 15,985,388 | 54,785 | yes, 5 applied |
+| `advance --period 1409` again | `Open` 144,160 | refused at step 1 with 52 `NotNewer` (duplicate or stale) | 144,160 | 3,899 | yes, reverted with 52 |
+| `advance --finality` | `Open` 2,127,275; `Miller` 3,305,289; `Finish` 3,718,605 | advances to slot 11,549,664 (block 12,105,936) | 9,151,169 | 5,129 | yes, 3 applied |
+
+Then `log --send` attested the first `Transfer` under the new record, as in the first run (95,412).
+
 Every dry run's verdict (the program's function, natively) equalled the zone's execution (exit
-code; the `FRT-ATT1` event's identifiers); every sent transaction equalled its dry run in exit
+code; the `FRT-ATT1` event's identifiers); every sent transaction (7 of the 13 commands) equalled its dry run in exit
 code, cycles, execution and storage gas, base fee, size and events. The IDL alone decoded messages
 2, 6 and 8 (7,201, 2,153 and 31,654 bytes) to their Rust `Debug` text.
 
@@ -101,7 +114,6 @@ The wire carries one receipt proof per log, so attesting a whole receipt repeats
 - Live endpoints: the tool reads recorded responses; fetching `eth_getProof`, receipts and
   light-client data from an endpoint, and sending to a sequencer, is the module's and the
   updater's work (it would replace `Stage5` and `Chain::submit` with RPC clients).
-- Advancing an instance from the tool (`Open`, `Miller`, `Adopt`, `Finish` with dry runs) is not a
-  command yet; following Sepolia runs those steps through the harness's scenario code.
+- The private placement (`VerifyAll`, the proven path) has no command; `advance` sends the public job.
 - Accumulator leaves and EIP-2935 hops are in the request format (and in the IDL) but have no
   command.

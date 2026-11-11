@@ -16,3 +16,14 @@ dry run and its execution disagreed) after 107 s, of which 100.9 s following Sep
 N counting the commands from 1 (`status`); message 9 (the 39-log receipt, 345,894 bytes) is not kept.
 `idl-decode.txt`: messages 2, 6 and 8 decoded with `idl/ferrata_attestation.idl.json` alone
 (`python3 -I idl/check.py --decode ...`), each equal to its Rust `Debug` text.
+
+`advance.txt` is the output of a second run, which followed Sepolia only to period 1408:
+
+```sh
+RISC0_DEV_MODE=1 target/debug/ferrata-attest --follow-to 1408 status --then advance --period 1409 \
+  --then advance --period 1409 --send --then advance --period 1409 --then advance --period 1409 --send \
+  --then advance --finality --send --then status --then log --send
+```
+
+`advance-exit.txt`: exit status 3 (the second submission of period 1409's update was refused with 52
+`NotNewer`, as its dry run predicted); `advance-stderr.txt`: the following took 93.5 s.
