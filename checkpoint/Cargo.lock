@@ -1792,6 +1792,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "ferrata-attestor"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "attestor-core",
+ "checkpoint-core",
+ "ed25519-dalek",
+ "hex",
+ "serde_json",
+]
+
+[[package]]
 name = "ff"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
