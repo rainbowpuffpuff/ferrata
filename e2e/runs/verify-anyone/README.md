@@ -31,6 +31,14 @@ run uses). Files: `ids.txt` (r0vm's ids of the LEZ programs), `r0bf/ids.jsonl` (
 
 - `verify-sepolia-crown-live-1-wait.txt` (14:13 CET): **10 passed, 2 pending, 0 failed**, 48 RPC calls; pending: the
   finalization (opens 13:27:48Z) and the two releases (their seals already verify for the vault's `releaseImageId`).
+- `verify-sepolia-crown-live-1-after-finalize.txt` (14:34 CET, records fetched again at 13:34Z): **11 passed, 1
+  pending, 0 failed**, 51 RPC calls: 5 recorded transactions (deposits, submit, `finalizeAttested` at block 12,112,027,
+  release 0 at 12,112,040), the checkpoint final (`finalState` = the journal's new state, `checkpointCount` 1, the burn
+  root accepted), release `public-0` paid (0.001 ETH to the recipient, nullifier spent); `private-1` pending: the
+  runner stopped itself at 13:30:49Z with "release 0: the nullifier is not used after the release" although release 0
+  had succeeded (its read of `nullifierUsed` right after the transaction, `e2e/crown/cloud/drive.py` `st_release`,
+  most likely reached a public-endpoint backend one block behind; the chain shows the nullifier spent). Release 1's seal
+  already verifies for the vault's `releaseImageId`; `e2e/crown.sh start` resumes and skips release 0.
 - `verify-sepolia-crown-live-1-tampered.txt`: the same records with one deposit commitment, one byte of the
   checkpoint seal and the genesis state changed: **5 failed**, exit status 1.
 
