@@ -82,6 +82,18 @@ fn phase0_period_matches_the_spec_table() {
 }
 
 #[test]
+fn phase0_period_in_the_branches_the_table_does_not_reach() {
+    // The table's rows all take the validator-churn term. Worked by hand from the formula:
+    // avg 27 ETH, N = 2^22: delta = 64, churn = N * 1280 // (600 * 64 * 86) = 1625, top-ups =
+    // N * 230 // (600 * 512) = 3140, so the top-ups term decides: 256 + 3140.
+    let n = 4_194_304u64;
+    assert_eq!(compute_weak_subjectivity_period_phase0(n, 27 * ETH_TO_GWEI * n, &WsConfig::MAINNET), Some(3_396));
+    // avg 23 ETH: t * 320 = T * 230 = 7360, so the second branch: 3 * N * 10 * 23 // (200 * 512 * 9).
+    let n = 32_768u64;
+    assert_eq!(compute_weak_subjectivity_period_phase0(n, 23 * ETH_TO_GWEI * n, &WsConfig::MAINNET), Some(256 + 24));
+}
+
+#[test]
 fn balance_churn_limit_is_the_spec_formula() {
     let c = WsConfig::MAINNET;
     // max(MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA, t // CHURN_LIMIT_QUOTIENT), down to a whole increment.

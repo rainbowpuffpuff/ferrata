@@ -96,6 +96,7 @@ pub fn sepolia_config(parts: u8) -> Config {
         seconds_per_slot: 12,
         store_fork: 3,
         adoption_parts: parts,
+        ws_period_epochs: crate::test_ws_period_epochs(),
     }
 }
 

@@ -341,7 +341,13 @@ pub fn refusals() -> Vec<Refusal> {
         assert_eq!(r.exit_code, Some(ferrata_lez_wire::code::WRONG_SENDER as u32));
         out.push(Refusal { case: "JobOpen from another program's actor", report: r });
         let header = header_actor(inst.program, &inst.id, 99_999_999);
-        let record = Message::Record { instance_id: inst.id, slot: 99_999_999, chain_id: 1, record: vec![1, 2, 3] };
+        let record = Message::Record {
+            instance_id: inst.id,
+            slot: 99_999_999,
+            chain_id: 1,
+            record: vec![1, 2, 3],
+            root_id: inst.id,
+        };
         let r = scripted(
             "Record from another program",
             header,

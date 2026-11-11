@@ -6,7 +6,8 @@ target/mutants/), runs the whole test suite and records whether a test fails (ki
 pass (survived). The repository itself is only read. M01-M32 were proposed by an independent
 review of the first version of this code; M33-M43 cover light-client code added since,
 M44-M93 the execution layer (RLP, Merkle-Patricia proofs, execution objects, attestations), and
-M94-M107 accumulator facts, log-index conversion, relations and block-bound identifiers.
+M94-M107 accumulator facts, log-index conversion, relations and block-bound identifiers, and
+M108-M115 the weak-subjectivity bound (milestone A1).
 
 Usage: scripts/mutants.py [ID ...]
 """
@@ -24,11 +25,12 @@ CORE = "crates/ferrata-core/src/"
 V, S, P, B, T, U, M = "validate.rs", "store.rs", "policy.rs", "bls/blst_backend.rs", "types.rs", "upgrade.rs", "merkle.rs"
 Z = "bls/zkcrypto_backend.rs"
 R, MP, X, A, ACC = "rlp.rs", "mpt.rs", "exec.rs", "attest.rs", "accumulator.rs"
+WS = "ws.rs"
 
 MUTANTS = [
     ("M01", P, "no committee check at initialisation",
-     "        let store = Self { core, adoption };\n        store.check(bls, &store.core.current_sync_committee)?;\n        Ok(store)",
-     "        let store = Self { core, adoption };\n        Ok(store)"),
+     "        let store = Self { core, adoption, ws_period: None };\n        store.check(bls, &store.core.current_sync_committee)?;\n        Ok(store)",
+     "        let store = Self { core, adoption, ws_period: None };\n        Ok(store)"),
     ("M02", P, "no committee check at adoption",
      "        if outcome.adopted {\n            self.check(ctx.bls, &next.next_sync_committee)?;\n        }\n", ""),
     ("M03", V, "no NextCommitteeMismatch check",
@@ -265,6 +267,26 @@ MUTANTS = [
      "const KIND_STORAGE_AT_BLOCK: u8 = 0x12;", "const KIND_STORAGE_AT_BLOCK: u8 = 2;"),
     ("M107", A, "a hop loses the anchor slot",
      "        anchor_slot: record.anchor_slot,", "        anchor_slot: 0,"),
+    ("M108", P, "the store checks no weak-subjectivity bound",
+     "        if let Some(period) = self.ws_period {\n            ws::check_within(self.core.finalized_header.beacon.slot, current_slot, period, ctx.spec)?;\n        }\n", ""),
+    ("M109", P, "with_weak_subjectivity_period sets nothing",
+     "        self.ws_period = Some(epochs);\n", ""),
+    ("M110", WS, "the last epoch of the period is outside",
+     "        Some(last_epoch) => spec.epoch_at_slot(current_slot) <= last_epoch,",
+     "        Some(last_epoch) => spec.epoch_at_slot(current_slot) < last_epoch,"),
+    ("M111", WS, "an end past u64 counts as reached",
+     "        Some(last_epoch) => spec.epoch_at_slot(current_slot) <= last_epoch,\n        None => true,",
+     "        Some(last_epoch) => spec.epoch_at_slot(current_slot) <= last_epoch,\n        None => false,"),
+    ("M112", WS, "the end slot one epoch early",
+     "    spec.epoch_at_slot(ws_slot).checked_add(ws_period)?.checked_add(1)?.checked_mul(spec.preset.slots_per_epoch)",
+     "    spec.epoch_at_slot(ws_slot).checked_add(ws_period)?.checked_mul(spec.preset.slots_per_epoch)"),
+    ("M113", WS, "the balance churn not rounded down to an increment",
+     "    churn.checked_sub(churn.checked_rem(c.effective_balance_increment)?)", "    Some(churn)"),
+    ("M114", WS, "Electra's period without the factor 2",
+     "        c.safety_decay.checked_mul(t)?.checked_div(delta.checked_mul(2)?.checked_mul(100)?)?;",
+     "        c.safety_decay.checked_mul(t)?.checked_div(delta.checked_mul(100)?)?;"),
+    ("M115", WS, "phase 0's period ignores the balance top-ups",
+     "        max(churn, top_ups)", "        churn"),
 ]
 
 

@@ -79,6 +79,9 @@ pub fn mainnet_config(parts: u8) -> Config {
         seconds_per_slot: 12,
         store_fork: 3,
         adoption_parts: parts,
+        // Electra's weak-subjectivity period for 33,554,432 ETH on the mainnet configuration (the
+        // specification's table); a stand-in for the period of the checkpoint state.
+        ws_period_epochs: 3_532,
     }
 }
 
@@ -117,6 +120,9 @@ pub fn sepolia_config(parts: u8) -> Config {
         seconds_per_slot: 12,
         store_fork: 3,
         adoption_parts: parts,
+        // Electra's weak-subjectivity period for 33,554,432 ETH on the mainnet configuration (the
+        // specification's table); a stand-in for the period of the checkpoint state.
+        ws_period_epochs: 3_532,
     }
 }
 

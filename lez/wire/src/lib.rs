@@ -26,7 +26,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use ferrata_core::{
     fork::{ChainSpec, LcFork, Preset},
     witness::HeaderRecord,
-    Root,
+    ws, Root,
 };
 use lee_core::{
     account::{AccountId, Actor},
@@ -75,6 +75,12 @@ pub struct Config {
     pub store_fork: u8,
     /// How many transactions a committee adoption is split into (1, 2, 4, …).
     pub adoption_parts: u8,
+    /// The weak-subjectivity period in epochs (`ferrata_core::ws`), computed off chain from the
+    /// checkpoint state's total active balance with `ws::compute_weak_subjectivity_period`; not
+    /// zero. Every transaction that creates or extends the instance is valid only before the
+    /// period of the instance's finalized header ends, by the sequencer's clock
+    /// ([`Config::ws_end_ms`]); a successor must keep it unchanged.
+    pub ws_period_epochs: u64,
 }
 
 impl Config {
@@ -108,11 +114,31 @@ impl Config {
     pub fn slot_start_ms(&self, slot: u64) -> u64 {
         self.genesis_time.saturating_add(slot.saturating_mul(self.seconds_per_slot)).saturating_mul(1000)
     }
+
+    /// The first slot outside the weak-subjectivity period of a finalized header at
+    /// `finalized_slot` (`ws::weak_subjectivity_end_slot`); `None` if the period never ends.
+    pub fn ws_end_slot(&self, finalized_slot: u64) -> Option<u64> {
+        ws::weak_subjectivity_end_slot(finalized_slot, self.ws_period_epochs, &self.spec())
+    }
+
+    /// Unix milliseconds at which that slot starts: the exclusive end of the timestamp validity
+    /// window of every transaction that creates or extends an instance whose finalized header is
+    /// at `finalized_slot`.
+    pub fn ws_end_ms(&self, finalized_slot: u64) -> Option<u64> {
+        self.ws_end_slot(finalized_slot).map(|slot| self.slot_start_ms(slot))
+    }
 }
 
 /// `H(config ‖ checkpoint)`: an instance's id.
 pub fn instance_id(config: &Config, checkpoint: &Root) -> Root {
     tagged_hash(b"instance-id", &[&borsh::to_vec(config).expect("borsh"), checkpoint])
+}
+
+/// `H(root id ‖ parent id ‖ config ‖ checkpoint)`: the id of a successor instance of `parent_id`
+/// whose checkpoint is the parent's latest record `checkpoint`. A domain of its own, so that no
+/// `Init` can take a successor's id.
+pub fn successor_id(root_id: &Root, parent_id: &Root, config: &Config, checkpoint: &Root) -> Root {
+    tagged_hash(b"successor-id", &[root_id, parent_id, &borsh::to_vec(config).expect("borsh"), checkpoint])
 }
 
 /// `H(id ‖ store digest ‖ update digest)`: a job's id.
@@ -200,8 +226,22 @@ pub enum Message {
     /// Any actor of this program → `instance(id)`: a job verified in one call by `VerifyAll`.
     ApplyVerified { instance_id: Root, job: Vec<u8> },
     /// `instance(id)` → `header(id, slot)`: the record to write once (`HeaderRecord` encoding),
-    /// with the instance's chain id.
-    Record { instance_id: Root, slot: u64, chain_id: u64, record: Vec<u8> },
+    /// with the instance's chain id and root id.
+    Record { instance_id: Root, slot: u64, chain_id: u64, record: Vec<u8>, root_id: Root },
+
+    // --- Successors (`docs/design/attestation.md` §3.5); appended, so earlier tags keep their bytes
+    /// At `instance(id)`, anyone: create a successor of this instance with `config`, whose
+    /// checkpoint is this instance's latest record `checkpoint` (its finalized header's root). The
+    /// instance checks the three invariants: `config` copies every immutable field of its own
+    /// configuration except the fork schedule, which must agree on every fork at or before the
+    /// checkpoint's epoch; `checkpoint` is its latest record; and that record is inside the
+    /// weak-subjectivity period (the transaction is valid only before the period ends). Then it
+    /// sends `Spawn` to `instance(successor_id(root id, id, config, checkpoint))` and emits
+    /// [`SUCCEEDED_SELECTOR`].
+    Succeed { config: Config, checkpoint: Root },
+    /// `instance(parent_id)` → `instance(successor_id(..))`: create the successor, active, with the
+    /// parent's store and root id.
+    Spawn { root_id: Root, parent_id: Root, checkpoint: Root, config: Config, store: Vec<u8> },
 }
 
 /// `instance(id)`'s state.
@@ -215,6 +255,11 @@ pub struct InstanceState {
     pub store: Vec<u8>,
     /// Jobs applied so far (including the activation).
     pub applied: u64,
+    /// The root instance id consumers bind to: the instance's own id for an instance `Init`
+    /// created, the parent's root id for a successor.
+    pub root_id: Root,
+    /// The instance this one succeeds; all zero for a root instance.
+    pub parent_id: Root,
 }
 
 /// `job(id, job_id)`'s state.
@@ -235,6 +280,9 @@ pub struct RecordState {
     pub chain_id: u64,
     /// `HeaderRecord` encoding (`ferrata_core::witness::HeaderRecord`).
     pub record: Vec<u8>,
+    /// The root id of the instance that wrote the record (`InstanceState::root_id`): a request
+    /// bound to it is served as well as one bound to `instance_id`.
+    pub root_id: Root,
 }
 
 impl RecordState {
@@ -250,6 +298,10 @@ pub const FINALIZED_SELECTOR: [u8; 8] = *b"FRT-FIN1";
 /// The event an instance emits when applying an update moves its store to a later fork's layout:
 /// the layout it left and the layout it is in now (one byte each, as `Config::store_fork`).
 pub const UPGRADED_SELECTOR: [u8; 8] = *b"FRT-UPG1";
+
+/// The event an instance emits when it creates a successor (`Succeed`): the successor's id, the
+/// root id, then the checkpoint's slot (little-endian).
+pub const SUCCEEDED_SELECTOR: [u8; 8] = *b"FRT-SUC1";
 
 /// The event `header(id, slot)` emits for an `Attest` sent as the root of a transaction: the
 /// instance id, the chain id and the block number (little-endian), then each statement
@@ -276,7 +328,7 @@ pub const CODE_BLOCKS: [(CodeOwner, core::ops::RangeInclusive<u8>); 5] = [
     (CodeOwner::Core, 1..=79),        // the light client: 1–61 in use
     (CodeOwner::StepApi, 80..=99),    // 80–84 in use
     (CodeOwner::Core, 100..=199),     // the execution layer: 100–163 in use
-    (CodeOwner::Program, 200..=219),  // 200–215 in use
+    (CodeOwner::Program, 200..=219),  // 200–215 and 218–219 in use
     (CodeOwner::Consumer, 220..=239), // 220–229 in use
 ];
 
@@ -289,7 +341,7 @@ macro_rules! exit_codes {
     };
 }
 
-/// Exit codes of the program's own refusals: 200–215 (see [`CODE_BLOCKS`]).
+/// Exit codes of the program's own refusals: 200–215 and 218–219 (see [`CODE_BLOCKS`]).
 pub mod code {
     exit_codes! {
         /// The message does not decode.
@@ -329,6 +381,14 @@ pub mod code {
         /// hash only (a finalized header in the Gloas layout): `Request::header` must carry the
         /// RLP header that hashes to it.
         HEADER_REQUIRED = 215;
+        /// A successor whose configuration is not its parent's with another fork schedule: an
+        /// immutable field changed (the chain, the preset, the genesis, the weak-subjectivity
+        /// period, the adoption parts), a fork at or before the checkpoint's epoch changed, a
+        /// store layout other than the parent store's, a schedule that is not in order, or no
+        /// change at all.
+        BAD_SUCCESSOR = 218;
+        /// A successor from a checkpoint that is not the parent's latest record.
+        STALE_CHECKPOINT = 219;
     }
 }
 

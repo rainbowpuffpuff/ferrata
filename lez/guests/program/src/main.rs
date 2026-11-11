@@ -15,17 +15,29 @@
 //! fork of the instance's own schedule with the first update attested under that fork
 //! (`ferrata_core::steps::store_for_update`): the job starts from the upgraded store, and applying
 //! the verified job writes the upgrade.
+//!
+//! **Weak subjectivity.** Every transaction that creates or extends an instance (`Init`, `Open`,
+//! `VerifyAll`, `Succeed`) is valid only before the weak-subjectivity period of the instance's
+//! finalized header ends (`Config::ws_end_ms`), by the sequencer's clock: a store older than its
+//! period is never advanced, and is replaced by a new `Init` from a trusted checkpoint (a new
+//! root id). An update signed at or after that end is refused in the guest (core code 53).
+//!
+//! **Successors.** A fork that is not in the schedule fixed at `Init` is crossed by a successor
+//! (`Succeed` at the parent, `Spawn` at the successor): the parent checks the three invariants of
+//! `docs/design/attestation.md` §3.5 and hands its store and root id to the successor, which
+//! follows the chain under the new schedule. Records carry the root id, and `Attest` serves a
+//! request bound to the root id as well as one bound to the instance.
 
 use ferrata_core::{
-    fork::ChainSpec,
+    fork::{ChainSpec, LcFork},
     steps::{self, Job, PendingApply, StepError},
     witness::{CompactBootstrap, CompactStore, CompactUpdate, SignerWitness},
     Error, Root,
 };
 use ferrata_lez_wire::{
-    attest, code, header_actor, header_seed, instance_actor, instance_id, job_actor, job_id, job_seed, Config,
-    InstanceState, JobState, Message, RecordState, UncompressedKey, ATTESTED_SELECTOR, FINALIZED_SELECTOR,
-    UPGRADED_SELECTOR,
+    attest, code, header_actor, header_seed, instance_actor, instance_id, instance_seed, job_actor, job_id, job_seed,
+    successor_id, Config, InstanceState, JobState, Message, RecordState, UncompressedKey, ATTESTED_SELECTOR,
+    FINALIZED_SELECTOR, SUCCEEDED_SELECTOR, UPGRADED_SELECTOR,
 };
 use lee_core::{
     account::{AccountId, ActorState},
@@ -73,8 +85,12 @@ fn handle(input: &ReceiveInput) -> Result<Response, Refusal> {
         }
         Message::Apply { instance_id, job_id, job } => apply(input, program, &instance_id, &job_id, &job),
         Message::ApplyVerified { instance_id, job } => apply_verified(input, program, &instance_id, &job),
-        Message::Record { instance_id, slot, chain_id, record } => {
-            write_record(input, program, instance_id, slot, chain_id, record)
+        Message::Record { instance_id, slot, chain_id, record, root_id } => {
+            write_record(input, program, instance_id, slot, chain_id, record, root_id)
+        }
+        Message::Succeed { config, checkpoint } => succeed(input, program, config, &checkpoint),
+        Message::Spawn { root_id, parent_id, checkpoint, config, store } => {
+            spawn(input, program, root_id, parent_id, &checkpoint, config, store)
         }
     }
 }
@@ -116,7 +132,35 @@ fn check_config(config: &Config) -> Result<(), Refusal> {
     if config.fork().is_none() || !n.is_power_of_two() || parts == 0 || !parts.is_power_of_two() || n % parts != 0 {
         return Err(code::BAD_CONFIG);
     }
+    // A weak-subjectivity period, and a clock to end it by.
+    if config.ws_period_epochs == 0 || config.seconds_per_slot == 0 || config.slots_per_epoch == 0 {
+        return Err(code::BAD_CONFIG);
+    }
     Ok(())
+}
+
+/// The timestamp validity window of a transaction that extends a store whose finalized header is
+/// at `finalized_slot` with an update signed at `signature_slot`: from the start of the signature
+/// slot (`current_slot >= signature_slot`) to the end of the weak-subjectivity period of the
+/// finalized header (`ferrata_core::ws`). An update signed at or after that end could only be
+/// applied outside the period: `OutsideWeakSubjectivityPeriod`, in the guest.
+fn update_window(response: Response, config: &Config, finalized_slot: u64, signature_slot: u64) -> Result<Response, Refusal> {
+    let start = config.slot_start_ms(signature_slot);
+    match config.ws_end_slot(finalized_slot) {
+        None => Ok(response.timestamp_window(start..)),
+        Some(end) if signature_slot >= end => Err(core(Error::OutsideWeakSubjectivityPeriod)),
+        Some(end) => response
+            .try_timestamp_window(start..config.slot_start_ms(end))
+            .map_err(|_| core(Error::OutsideWeakSubjectivityPeriod)),
+    }
+}
+
+/// The window of a transaction that only needs the store inside its period: up to its end.
+fn period_window(response: Response, config: &Config, finalized_slot: u64) -> Response {
+    match config.ws_end_ms(finalized_slot) {
+        None => response,
+        Some(end) => response.timestamp_window(..end),
+    }
 }
 
 /// An update decoded in the layout its encoding names, and the store it is verified against:
@@ -177,8 +221,12 @@ fn init(
     let bootstrap = CompactBootstrap::decode(bootstrap, fork).map_err(core)?;
     let (store, job) = steps::initialize(checkpoint, &bootstrap, fork, &spec, config.adoption_parts).map_err(step)?;
     let n = config.sync_committee_size;
-    let state = InstanceState { id, config, active: false, store: store.encode(), applied: 0 };
-    Ok(Response::set_state(encode(&state)).send(open_job(program, &id, n, &job)))
+    let checkpoint_slot = bootstrap.header.beacon.slot;
+    let window = config.clone();
+    let state =
+        InstanceState { id, config, active: false, store: store.encode(), applied: 0, root_id: id, parent_id: [0; 32] };
+    // The checkpoint must be inside its own weak-subjectivity period when the instance is created.
+    Ok(period_window(Response::set_state(encode(&state)).send(open_job(program, &id, n, &job)), &window, checkpoint_slot))
 }
 
 fn open(input: &ReceiveInput, program: AccountId, update: &[u8], signers: &[u8]) -> Result<Response, Refusal> {
@@ -193,7 +241,8 @@ fn open(input: &ReceiveInput, program: AccountId, update: &[u8], signers: &[u8])
     let (update, store) = update_and_store(&stored, update, n, &spec)?;
     let signers = SignerWitness::decode(signers, n).map_err(core)?;
     // `current_slot >= signature_slot` is enforced by the transaction's validity window: it is
-    // valid only from the start of the signature slot, by the sequencer's clock.
+    // valid only from the start of the signature slot, by the sequencer's clock, and only until
+    // the weak-subjectivity period of the stored finalized header ends.
     let job = steps::step1(
         &store,
         &update,
@@ -204,9 +253,8 @@ fn open(input: &ReceiveInput, program: AccountId, update: &[u8], signers: &[u8])
         config.adoption_parts,
     )
     .map_err(step)?;
-    Ok(Response::keep_state()
-        .send(open_job(program, &state.id, config.sync_committee_size, &job))
-        .timestamp_window(config.slot_start_ms(update.signature_slot)..))
+    let response = Response::keep_state().send(open_job(program, &state.id, config.sync_committee_size, &job));
+    update_window(response, config, stored.finalized.slot, update.signature_slot)
 }
 
 fn apply(
@@ -265,6 +313,7 @@ fn apply_job(program: AccountId, mut state: InstanceState, job: &Job) -> Result<
     state.active = true;
     let id = state.id;
     let chain_id = state.config.chain_id;
+    let root_id = state.root_id;
     let mut response = Response::set_state(encode(&state));
     if let (Some(was), Some(now)) = (was, now) {
         // The store's encoding starts with its layout.
@@ -281,7 +330,7 @@ fn apply_job(program: AccountId, mut state: InstanceState, job: &Job) -> Result<
             .send(
                 SyncMessage::new(
                     header_actor(program, &id, slot),
-                    &Message::Record { instance_id: id, slot, chain_id, record: record.encode() },
+                    &Message::Record { instance_id: id, slot, chain_id, record: record.encode(), root_id },
                 )
                 .with_pda_seeds([header_seed(&id, slot)]),
             )
@@ -351,6 +400,7 @@ fn write_record(
     slot: u64,
     chain_id: u64,
     record: Vec<u8>,
+    root_id: Root,
 ) -> Result<Response, Refusal> {
     if input.from != Some(instance_actor(program, &instance)) {
         return Err(code::WRONG_SENDER);
@@ -358,7 +408,7 @@ fn write_record(
     if input.receiver != header_actor(program, &instance, slot) {
         return Err(code::WRONG_RECEIVER);
     }
-    let state = encode(&RecordState { instance_id: instance, chain_id, record });
+    let state = encode(&RecordState { instance_id: instance, chain_id, record, root_id });
     if !input.pre_state.is_empty() && *input.pre_state != *state {
         return Err(code::RECORD_CONFLICT);
     }
@@ -382,7 +432,10 @@ fn attest(input: &ReceiveInput, program: AccountId, request: &attest::Request) -
     if input.receiver != header_actor(program, &state.instance_id, recorded.beacon.slot) {
         return Err(code::WRONG_RECEIVER);
     }
-    let attestation = attest::evaluate(&state.instance_id, state.chain_id, &recorded, request)?;
+    // A request is bound to the instance that wrote the record or to its root id: the root id
+    // stands for every successor of the root, which `Spawn` alone creates (from its parent).
+    let bound = if request.instance_id == state.root_id { &state.root_id } else { &state.instance_id };
+    let attestation = attest::evaluate(bound, state.chain_id, &recorded, request)?;
     Ok(match input.from {
         // A consumer called: the statements are its reply, in the same transaction.
         Some(caller) => Response::keep_state().send_sync(caller, &attestation),
@@ -429,10 +482,104 @@ fn verify_all(
     if job.adoption_pending() {
         job.adopt(0, adoption, n).map_err(step)?;
     }
-    Ok(Response::keep_state()
-        .send(SyncMessage::new(
-            instance_actor(program, &id),
-            &Message::ApplyVerified { instance_id: id, job: job.encode() },
-        ))
-        .timestamp_window(config.slot_start_ms(update.signature_slot)..))
+    let response = Response::keep_state().send(SyncMessage::new(
+        instance_actor(program, &id),
+        &Message::ApplyVerified { instance_id: id, job: job.encode() },
+    ));
+    update_window(response, config, stored.finalized.slot, update.signature_slot)
+}
+
+// ---------------------------------------------------------------------------------------------
+// Successors (docs/design/attestation.md §3.5)
+// ---------------------------------------------------------------------------------------------
+
+/// Invariant 1: `next` is `parent` with another fork schedule, which agrees with the parent's on
+/// every fork at or before `checkpoint_epoch`; the store layout is the parent store's `layout`;
+/// the schedule is in activation order.
+fn check_successor(parent: &Config, next: &Config, layout: LcFork, checkpoint_epoch: u64) -> Result<(), Refusal> {
+    let same = parent.chain_id == next.chain_id
+        && parent.sync_committee_size == next.sync_committee_size
+        && parent.slots_per_epoch == next.slots_per_epoch
+        && parent.epochs_per_sync_committee_period == next.epochs_per_sync_committee_period
+        && parent.min_sync_committee_participants == next.min_sync_committee_participants
+        && parent.genesis_validators_root == next.genesis_validators_root
+        && parent.genesis_time == next.genesis_time
+        && parent.seconds_per_slot == next.seconds_per_slot
+        && parent.adoption_parts == next.adoption_parts
+        && parent.ws_period_epochs == next.ws_period_epochs;
+    if !same || next.fork() != Some(layout) || next == parent {
+        return Err(code::BAD_SUCCESSOR);
+    }
+    // Phase 0 is at epoch 0 in both (it activates at genesis); every fork that either schedule
+    // puts at or before the checkpoint must be the same fork, at the same epoch, in both.
+    for i in 0..next.fork_epochs.len() {
+        let settled = parent.fork_epochs[i] <= checkpoint_epoch || next.fork_epochs[i] <= checkpoint_epoch;
+        if settled
+            && (parent.fork_epochs[i] != next.fork_epochs[i] || parent.fork_versions[i] != next.fork_versions[i])
+        {
+            return Err(code::BAD_SUCCESSOR);
+        }
+        if i > 0 && next.fork_epochs[i] < next.fork_epochs[i - 1] {
+            return Err(code::BAD_SUCCESSOR);
+        }
+    }
+    Ok(())
+}
+
+fn succeed(input: &ReceiveInput, program: AccountId, config: Config, checkpoint: &Root) -> Result<Response, Refusal> {
+    let state = instance_state(input, program)?;
+    if !state.active {
+        return Err(code::INSTANCE_INACTIVE);
+    }
+    check_config(&config)?;
+    let store = CompactStore::decode(&state.store).map_err(|_| code::BAD_STATE)?;
+    // Invariant 2: the successor's checkpoint is this instance's latest record.
+    let slot = store.finalized.slot;
+    if store.finalized.hash_tree_root() != *checkpoint {
+        return Err(code::STALE_CHECKPOINT);
+    }
+    // Invariant 1.
+    check_successor(&state.config, &config, store.fork, slot / state.config.slots_per_epoch)?;
+    let id = successor_id(&state.root_id, &state.id, &config, checkpoint);
+    let mut data = id.to_vec();
+    data.extend_from_slice(&state.root_id);
+    data.extend_from_slice(&slot.to_le_bytes());
+    let spawn = SyncMessage::new(
+        instance_actor(program, &id),
+        &Message::Spawn {
+            root_id: state.root_id,
+            parent_id: state.id,
+            checkpoint: *checkpoint,
+            config,
+            store: state.store.clone(),
+        },
+    )
+    .with_pda_seeds([instance_seed(&id)]);
+    let response = Response::keep_state().send(spawn).event(ProgramEvent { selector: SUCCEEDED_SELECTOR, data });
+    // Invariant 3: the checkpoint is inside its weak-subjectivity period, by the sequencer's clock.
+    Ok(period_window(response, &state.config, slot))
+}
+
+fn spawn(
+    input: &ReceiveInput,
+    program: AccountId,
+    root_id: Root,
+    parent_id: Root,
+    checkpoint: &Root,
+    config: Config,
+    store: Vec<u8>,
+) -> Result<Response, Refusal> {
+    // Only the parent instance of this program creates its successors, after checking them.
+    if input.from != Some(instance_actor(program, &parent_id)) {
+        return Err(code::WRONG_SENDER);
+    }
+    let id = successor_id(&root_id, &parent_id, &config, checkpoint);
+    if input.receiver != instance_actor(program, &id) {
+        return Err(code::WRONG_RECEIVER);
+    }
+    if !input.pre_state.is_empty() {
+        return Err(code::ALREADY_INITIALIZED);
+    }
+    let state = InstanceState { id, config, active: true, store, applied: 0, root_id, parent_id };
+    Ok(Response::set_state(encode(&state)))
 }

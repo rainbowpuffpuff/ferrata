@@ -184,7 +184,17 @@ pub fn mainnet_config(parts: u8) -> Config {
         seconds_per_slot: 12,
         store_fork: 3,
         adoption_parts: parts,
+        ws_period_epochs: test_ws_period_epochs(),
     }
+}
+
+/// The weak-subjectivity period of the harness's instances, in epochs: Electra's
+/// `compute_weak_subjectivity_period` on the mainnet configuration for a total active balance of
+/// 33,554,432 ETH, the last row of the specification's table (3,532). A stand-in: a deployment
+/// computes the period from its checkpoint state's total active balance.
+pub fn test_ws_period_epochs() -> u64 {
+    use ferrata_core::ws::{compute_weak_subjectivity_period, WsConfig, ETH_TO_GWEI};
+    compute_weak_subjectivity_period(33_554_432 * ETH_TO_GWEI, &WsConfig::MAINNET).expect("in range")
 }
 
 /// The mainnet fixtures: `FERRATA_FIXTURE_DIR` if set (to run a built binary elsewhere), else
@@ -692,6 +702,8 @@ pub fn exit_name(code: u32) -> String {
         c::NO_RECORD => "NoRecord",
         c::BAD_QUERY => "BadQuery",
         c::HEADER_REQUIRED => "HeaderRequired",
+        c::BAD_SUCCESSOR => "BadSuccessor",
+        c::STALE_CHECKPOINT => "StaleCheckpoint",
         k::BAD_MESSAGE => "consumer: BadMessage",
         k::BAD_STATE => "consumer: BadState",
         k::BAD_REPLY => "consumer: BadReply",
@@ -719,7 +731,7 @@ pub fn exit_name(code: u32) -> String {
 
 /// Every `ferrata_core::Error`, in the order of its declaration. The enum is `#[non_exhaustive]`,
 /// so `tests/exit_codes.rs` checks this list against the core's source.
-pub const CORE_ERRORS: [ferrata_core::Error; 47] = {
+pub const CORE_ERRORS: [ferrata_core::Error; 48] = {
     use ferrata_core::Error as E;
     [
         E::Malformed,
@@ -744,6 +756,7 @@ pub const CORE_ERRORS: [ferrata_core::Error; 47] = {
         E::NotFinalized,
         E::BelowSupermajority,
         E::NotNewer,
+        E::OutsideWeakSubjectivityPeriod,
         E::CommitteeUnknown,
         E::ForkMismatch,
         E::RlpNonCanonical,

@@ -489,7 +489,8 @@ impl Block {
 
     /// The attestation program's `header(INSTANCE, slot)` account holding this block's record.
     fn record_account(&self) -> (AccountId, Account) {
-        let state = RecordState { instance_id: INSTANCE, chain_id: CHAIN_ID, record: self.record.encode() };
+        let state =
+            RecordState { instance_id: INSTANCE, chain_id: CHAIN_ID, record: self.record.encode(), root_id: INSTANCE };
         let actor = header_actor(ferrata_account(), &INSTANCE, self.slot);
         let account =
             Account::default().with_actor_state(ferrata_account(), ActorState::from(borsh::to_vec(&state).unwrap()));
