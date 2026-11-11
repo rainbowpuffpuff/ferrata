@@ -251,7 +251,7 @@ Each honest signature rule (A) sees certifies "`T` was in my head at some time";
 
 Both rules fail equally to `t` colluding keys and to a Logos Blockchain safety failure; a false attestation is checkable but not slashable on v0.4. Under rule (B), F2, F3 and the chain-growth half of F1 drop out (D7), and off-chain roles are liveness-only (Security #7); under rule (A), outside its conditions, the watchers are trusted for safety.
 
-**The decision asked of Logos.** Will the testnet's accredited sequencers run `ferrata_attestor`? Yes: rule (B). No, or no answer by day 10 of M0: rule (A).
+**The decision asked of Logos.** Will the testnet's accredited sequencers run `ferrata_attestor`? Yes: rule (B). No, or no answer by day 5 of M0: rule (A).
 
 ## 10. Outbound, part 3: the vault side
 
@@ -674,7 +674,7 @@ The vault prototype (v5) implements D3 to D5, D9, the vault items of D11 and D13
 |---|---|---|
 | D11 | refunds, and releases whose delay equals `revokeWindow`, open only after the last revocable second | built (vault v4) |
 | D11 | `finalize` also compares `t` and the tip, and checks `importedLeafCount <= nextLeafIndex` | built (vault v4: the whole journal, by its digest) |
-| D11 | further logic in a linked library | built (`FerrataRegistry`; v5's runtime 24,242 bytes, 334 under EIP-170) |
+| D11 | further logic in a linked library | built (`FerrataRegistry`; v5's runtime with the security fixes 24,254 bytes, 322 under EIP-170) |
 | D12 | `mac` v2 covering `memo` | the core: MAC without `memo`; the bridge program's wire (`lez/bridge-wire`) has `mac` v2 |
 | D13 | rule (B): `final-tier/v2` message, attestation-key certificates, `ferrata_attestor`, program and vault path, immutable `mode`, 1 h wait | program and vault paths built and measured; `ferrata_attestor` module not built |
 | D13 | `submitCandidate` refuses a `newState` already pending | built (v3 and v4) |

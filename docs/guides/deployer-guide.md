@@ -176,7 +176,9 @@ receipts on a fork with Foundry's rules):
 | `FerrataVault`, rule (A) / (B) | 24,242 | 39,538,106 / 39,538,070 | 5,681,056 / 5,681,009 |
 | test token | 1,862 | 3,342,971 | 508,036 |
 
-The library and the vault exceed 2^24 in total but almost all of it is state gas (the vault's code alone
+These are v5 before the security fixes (11 November); the fixed vault's runtime is 24,254 bytes and the
+library's 12,504 (`vault/GAS.md`), not yet estimated on Sepolia. The library and the vault exceed 2^24 in
+total but almost all of it is state gas (the vault's code alone
 is 24,242 × 1,530 = 37,090,260); their execution gas fits the cap, and with the 1.25 margin their limits
 (22,876,438 and 49,422,632) are under the block gas limit: **both fit, no split is needed**. On a chain
 that capped the whole transaction at 2^24 at this price, a creation could deposit about 10.6 kB of code,
@@ -251,9 +253,10 @@ Foundry's gas rules, accounts impersonated ([`vault/README.md`](../../vault/READ
 - **Freezes.** The freeze authority sets mint and burn freezes, globally or per token, at most 30 days
   ahead; the admin cannot unfreeze. `Sunset` is the freeze authority's, one-way; imports stop after it.
 
-Measured costs of these steps (in-process harness): `Init` 168,607 execution gas; `Register` 324,748
-(424,496–448,038 on the vault's real storage); `ImportFees` 262,473; `SetCap` 49,629; `Freeze` 46,543;
-`Sunset` 41,984 ([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §1, §8a). All under LEZ's 5M
+Measured costs of these steps (in-process harness, the merged program): `Init` 168,776 execution gas;
+`Register` 327,269 (426,841–450,566 on the vault's real storage); `ImportFees` 265,219; `SetCap` 55,805;
+`Freeze` 104,176 (it reads the newest attested record); `Sunset` 44,002
+([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §1, last column; `lez/results/bridge-*.md`). All under LEZ's 5M
 execution target.
 
 ## 6. Pairing (F.15)

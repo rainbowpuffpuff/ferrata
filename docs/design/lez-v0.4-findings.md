@@ -142,7 +142,7 @@ Not verified: B's execution, B's revert list, any proof. The message is "valid o
 - v0.4 ports `lez-authority` @ `0f956f9` and `lez-admin-authority` @ `bb6cc4f` are alpha, without SPEL, pinned to LEZ dev rev `7e3f7f76` (an ancestor of the tag, lacking PR #985). Admin hand-over is nominate→accept; "Public admins only". No v0.4 freeze library is released.
 - Disagreement: one source describes `lez-authority` as this v0.4 port; another lists `lez-authority`, `Authority` and `Ownable` as names from the unmerged lez-programs PR #125. Unresolved.
 
-**SPEL** pins LEZ v0.2.5-rc2 (`spel-framework-core/Cargo.toml:17,25`) and emits APIs removed in v0.4. A v0.3 port exists only on a fork branch ([spel#291](https://github.com/logos-co/spel/issues/291)); no v0.4 work was found (UNCONFIRMED by absence).
+**SPEL**'s main branch pins LEZ v0.2.5-rc2 (`spel-framework-core/Cargo.toml:17,25`); its stable release line, as the authority libraries use it (spel v0.7.0 with LEZ v0.2.4, above), targets v0.2.4. Both emit APIs removed in v0.4. A v0.3 port exists only on a fork branch ([spel#291](https://github.com/logos-co/spel/issues/291)); no v0.4 work was found (UNCONFIRMED by absence).
 
 **Ethereum access**, three modules at 0.2.0:
 - [`eth_rpc_module`](https://github.com/logos-co/logos-evm-eth-rpc-module/tree/6965f32): no typed `eth_getLogs` or `eth_getProof` (use `raw_rpc`); verified mode routes all calls through the proxy and is off by default.

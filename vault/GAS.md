@@ -280,6 +280,9 @@ v2.10.0, block 12,107,166, block gas limit 200,000,000), the vault's constructor
 runtime code by state override; beside them the receipts of the same creations on a local anvil fork (Foundry's
 rules) from `script/fork-rehearsal.sh`:
 
+v5 before the security fixes (the fixed vault's runtime is 24,254 bytes, its library's 12,504; not yet estimated on
+Sepolia):
+
 | Creation | Runtime bytes | Sepolia (Glamsterdam) | Foundry / anvil |
 |---|---:|---:|---:|
 | `RiscZeroGroth16Verifier` | 4,810 | 7,795,331 | 1,179,986 |
