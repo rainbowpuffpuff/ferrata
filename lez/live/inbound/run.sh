@@ -54,7 +54,7 @@ export FERRATA_PROGRAM_BIN="$ATTEST_BIN"
 export FERRATA_SCRIPTED_BIN="${FERRATA_SCRIPTED_BIN:-$REPO/lez/target/riscv-guest/methods/scripted/riscv32im-risc0-zkvm-elf/release/scripted.bin}"
 export FERRATA_LIVE_DRIVER_EXTRA="--bridge-bin $BRIDGE_BIN $chain --private ${FERRATA_INBOUND_PRIVATE:-real}"
 export FERRATA_LIVE_PHASES="${FERRATA_INBOUND_PHASES:-info inbound-deploy inbound export}"
-export FERRATA_LIVE_OUT="$out"
+export FERRATA_LIVE_OUT="${FERRATA_INBOUND_OUT:-$out}"   # FERRATA_INBOUND_OUT: records elsewhere (a rehearsal)
 # Where the machine reports fewer CPUs than it may use (the build box: nproc 2), the prover's
 # thread count (RAYON_NUM_THREADS through FERRATA_LIVE_PROOF_THREADS; default 32).
 export FERRATA_LIVE_PROOF_THREADS="${FERRATA_LIVE_PROOF_THREADS:-32}"

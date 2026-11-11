@@ -653,10 +653,13 @@ pub async fn session(live: &mut Live, attest: AccountId, bridge_bin: &GuestBinar
             // The refusals that need one root, before the claim (the deposit is still claimable).
             let o = claim(live, format!("bridge Claim: deposit 0 at leaf index {n} under root(cid, {n}) (a leaf index at the count)"), (bridge, cid, terms, payer), &stage.deposits, 0, n, Tweak::LeafIndex(n)).await?;
             rows.push(o.expect_exit(code::LEAF_NOT_IMPORTED)?.row);
-            let public1 = *testnet_initial_state::initial_pub_accounts_private_keys()[1].account_id.value();
-            let o = claim(live, "bridge Claim: deposit 0 redirected to LEZ's public test account 1 (a wrong opening)".into(), (bridge, cid, terms, payer), &stage.deposits, 0, n, Tweak::Redirect(public1)).await?;
+            // Another funded public account whose key LEZ publishes (local.json's genesis), not the
+            // payer: LEZ's wallet refuses a transaction that mentions its fee payer as non-signing.
+            let elsewhere = *crate::keys::account_of(&crate::keys::lez_test_payers()?[2]).value();
+            ensure!(AccountId::new(elsewhere) != payer && elsewhere != destination(0)?.1, "the redirect must be another account");
+            let o = claim(live, "bridge Claim: deposit 0 redirected to another public account (a wrong opening)".into(), (bridge, cid, terms, payer), &stage.deposits, 0, n, Tweak::Redirect(elsewhere)).await?;
             rows.push(o.expect_exit(code::CLAIM_INVALID)?.row);
-            ensure!(holding(live, bridge, public1, &cid).await? == 0, "public test account 1 holds something after a refused claim");
+            ensure!(holding(live, bridge, elsewhere, &cid).await? == 0, "the other account holds something after a refused claim");
             let public0 = destination(0)?.1;
             let before = holding(live, bridge, public0, &cid).await?;
             let o = claim(live, format!("bridge Claim: deposit 0 (public) under root(cid, {n})"), (bridge, cid, terms, payer), &stage.deposits, 0, n, Tweak::None).await?;
