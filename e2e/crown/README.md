@@ -54,6 +54,12 @@ the build box (`mrun --profile ws-4`). The laptop only starts, reads status and 
 | 9 | release proofs for both burns (release program, CPU, during W) + wraps; after the release delay (120 s) release ETH twice (N+11, N+12) | runner + wrap | `releases/` |
 | 10 | verify (both chains, from public data and the recorded blocks), DONE | runner (re-runnable on the box) | `verify.txt` |
 
+**The vault's deployment parameters in this run** are `vault/script/deploy.sh`'s testnet defaults, except Δ (from
+`identity.json`): the runner (`e2e/crown/sepolia.sh deploy`) sets no other: revocation window 1 day, release delay
+120 s (minimum 0), maximum freeze 30 days, the freeze authority an address nobody holds a key for, no watchers, and
+no cap set. The proposal's production values differ (a 7-day window, caps, a multisig freeze authority and three
+watchers); this run shows the mechanism, not that configuration.
+
 Why the devnet comes first: the vault's `genesisState` is the checkpoint state at a real LEZ tip (tip id, tip hash,
 key set of the channel, configTipHash; vault/test/real/RealBlocks.t.sol `_state`), and `setup --create-channel`
 draws a random channel key (7 setups, 7 keys). So the devnet exists before the vault and survives the deposits and
