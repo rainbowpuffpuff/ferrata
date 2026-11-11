@@ -489,6 +489,12 @@ pub fn sepolia(repository: &Path, captures: &[PathBuf], vault: Option<&str>) -> 
         for (k, d) in deposits.iter().enumerate() {
             ensure!(d.leaf_index == k as u64, "capture {}: the deposits are not leaves 0..{}", i + 1, deposits.len());
         }
+        ensure!(
+            deposits.len() == i + 1,
+            "capture {}: {} deposit(s) of the vault up to block {block}; capture k of the plan holds k (sepolia-plan.json `timing`)",
+            i + 1,
+            deposits.len()
+        );
         stages.push(Stage {
             label: format!("stage {}", i + 1),
             update: gloas_finality_update(&read(dir, "finality_update.ssz")?)?,
@@ -511,6 +517,39 @@ pub fn sepolia(repository: &Path, captures: &[PathBuf], vault: Option<&str>) -> 
         catch_up,
         vault: vault_seen.expect("one capture"),
         stages,
+    })
+}
+
+/// What a stage's vault must hold before anything is sent: slot 2 the configuration's id `cid`,
+/// slot 1 (`nextLeafIndex`) the number of deposits read, slot 0 the root of their tree.
+pub fn stage_facts(stage: &Stage, cid: &Root) -> Result<()> {
+    ensure!(
+        stage.slot_values[2] == *cid,
+        "{}: the vault's slot 2 is 0x{}, not this configuration's id 0x{}",
+        stage.label,
+        hex::encode(stage.slot_values[2]),
+        hex::encode(cid)
+    );
+    let mut count = [0u8; 32];
+    count[24..].copy_from_slice(&(stage.deposits.len() as u64).to_be_bytes());
+    ensure!(
+        stage.slot_values[1] == count,
+        "{}: the vault's slot 1 is 0x{}, not the {} deposit(s) read",
+        stage.label,
+        hex::encode(stage.slot_values[1]),
+        stage.deposits.len()
+    );
+    let tree = Tree::from_leaves(stage.deposits.iter().map(DepositLog::leaf).collect()).map_err(|_| anyhow!("tree full"))?;
+    ensure!(tree.root() == stage.slot_values[0], "{}: slot 0 is not the root of the deposits", stage.label);
+    Ok(())
+}
+
+/// The holding of the bridge's actor at the public account `dest` in configuration `cid`.
+async fn holding(live: &Live, bridge: AccountId, dest: [u8; 32], cid: &Root) -> Result<u128> {
+    Ok(match bridge_state(live, Actor::new(AccountId::new(dest), bridge)).await? {
+        None => 0,
+        Some(BridgeState::Holder(h)) => h.holdings.iter().filter(|x| x.config_id == *cid).map(|x| x.amount).sum(),
+        Some(other) => bail!("the actor of 0x{} holds {other:?}, not a holding", hex::encode(dest)),
     })
 }
 
@@ -554,6 +593,11 @@ pub async fn session(live: &mut Live, attest: AccountId, bridge_bin: &GuestBinar
         "bridge_program": hex::encode(bridge.value()), "bridge_image_id": bridge_bin.image_hex(), "vault": hex::encode(chain.vault),
         "config_id": hex::encode(cid), "checkpoint": hex::encode(chain.checkpoint), "stages": [],
     });
+
+    // Every stage's vault before anything is sent (the catch-up alone takes half an hour).
+    for stage in &chain.stages {
+        stage_facts(stage, &cid)?;
+    }
 
     // The instance.
     if scenario::instance_state(live, &inst).await?.is_none() {
@@ -606,15 +650,32 @@ pub async fn session(live: &mut Live, attest: AccountId, bridge_bin: &GuestBinar
         println!("[inbound] root(cid, {n}): {root_state:?}");
 
         if stage.label == "stage 1" {
-            let o = claim(live, "bridge Claim: deposit 0 (public) under root(cid, 1)".into(), (bridge, cid, terms, payer), &stage.deposits, 0, n, None).await?;
+            // The refusals that need one root, before the claim (the deposit is still claimable).
+            let o = claim(live, format!("bridge Claim: deposit 0 at leaf index {n} under root(cid, {n}) (a leaf index at the count)"), (bridge, cid, terms, payer), &stage.deposits, 0, n, Tweak::LeafIndex(n)).await?;
+            rows.push(o.expect_exit(code::LEAF_NOT_IMPORTED)?.row);
+            let public1 = *testnet_initial_state::initial_pub_accounts_private_keys()[1].account_id.value();
+            let o = claim(live, "bridge Claim: deposit 0 redirected to LEZ's public test account 1 (a wrong opening)".into(), (bridge, cid, terms, payer), &stage.deposits, 0, n, Tweak::Redirect(public1)).await?;
+            rows.push(o.expect_exit(code::CLAIM_INVALID)?.row);
+            ensure!(holding(live, bridge, public1, &cid).await? == 0, "public test account 1 holds something after a refused claim");
+            let public0 = destination(0)?.1;
+            let before = holding(live, bridge, public0, &cid).await?;
+            let o = claim(live, format!("bridge Claim: deposit 0 (public) under root(cid, {n})"), (bridge, cid, terms, payer), &stage.deposits, 0, n, Tweak::None).await?;
             rows.push(o.expect_applied()?.row);
-            let o = claim(live, "bridge Claim: deposit 0 again (replay)".into(), (bridge, cid, terms, payer), &stage.deposits, 0, n, None).await?;
+            let (w0, n0, _) = witness(terms.evm_chain_id, &terms.vault, &stage.deposits, 0)?;
+            let amount = terms.denomination(&w0.amount).ok_or_else(|| anyhow!("deposit 0's amount is not a denomination"))?;
+            let after = holding(live, bridge, public0, &cid).await?;
+            ensure!(after == before + amount, "public test account 0 holds {after} after the claim, {before} before; the deposit is {amount}");
+            let spent = bridge_state(live, Pda { program: bridge, seed: nullifier_seed(terms.evm_chain_id, &terms.vault, &n0) }.actor()).await?;
+            ensure!(matches!(spent, Some(BridgeState::Nullifier(_))), "deposit 0's nullifier is not spent after its claim");
+            println!("[inbound] deposit 0 claimed: public test account 0 holds {after} wei of configuration 0x{}; nullifier 0x{} spent", hex::encode(cid), hex::encode(n0));
+            let o = claim(live, "bridge Claim: deposit 0 again (replay)".into(), (bridge, cid, terms, payer), &stage.deposits, 0, n, Tweak::None).await?;
             rows.push(o.expect_exit(code::ALREADY_CLAIMED)?.row);
+            ensure!(holding(live, bridge, public0, &cid).await? == after, "the replay changed public test account 0's holding");
         } else {
-            let o = claim(live, format!("bridge Claim: deposit 0 under root(cid, {n}) (a later root)"), (bridge, cid, terms, payer), &stage.deposits, 0, n, None).await?;
+            let o = claim(live, format!("bridge Claim: deposit 0 under root(cid, {n}) (a later root)"), (bridge, cid, terms, payer), &stage.deposits, 0, n, Tweak::None).await?;
             rows.push(o.expect_exit(code::ALREADY_CLAIMED)?.row);
             let public0 = destination(0)?.1;
-            let o = claim(live, "bridge Claim: deposit 1 redirected to a public destination (a wrong opening)".into(), (bridge, cid, terms, payer), &stage.deposits, 1, n, Some(public0)).await?;
+            let o = claim(live, "bridge Claim: deposit 1 redirected to a public destination (a wrong opening)".into(), (bridge, cid, terms, payer), &stage.deposits, 1, n, Tweak::Redirect(public0)).await?;
             rows.push(o.expect_exit(code::CLAIM_INVALID)?.row);
             if private != "skip" {
                 private_claim(live, bridge_bin, bridge, cid, n, &stage.deposits, terms, private).await?;
@@ -633,8 +694,27 @@ pub async fn session(live: &mut Live, attest: AccountId, bridge_bin: &GuestBinar
     live.save()
 }
 
-/// The plaintext `Claim` of the deposit at `leaf` under `root(cid, n)`; `redirect` names another
-/// (public) destination than the deposit's, which its commitment does not open to.
+/// How a refused claim departs from the deposit's own witness.
+#[derive(Clone, Copy, Debug)]
+enum Tweak {
+    None,
+    /// Another (public) destination than the deposit's, which its commitment does not open to.
+    Redirect([u8; 32]),
+    /// Another leaf index (at or above the root's count).
+    LeafIndex(u64),
+}
+
+/// The nullifier the bridge derives from a claim witness (`N = H(s ‖ fid)`, with `C` and the leaf
+/// recomputed from the witness), whether or not the witness opens a leaf of the root.
+fn witness_nullifier(w: &ClaimWitness, chain_id: u64, vault: &[u8; 20]) -> Result<Root> {
+    let kind = DestKind::from_byte(w.kind).ok_or_else(|| anyhow!("kind {}", w.kind))?;
+    let c = commitment(&w.s, kind, &w.dest);
+    let leaf = deposit_leaf(w.leaf_index, &w.depositor, &w.token, &w.amount, &c);
+    Ok(core_nullifier(&w.s, &deposit_id(&chain_id_u256(chain_id), vault, w.leaf_index, &leaf)))
+}
+
+/// The plaintext `Claim` of the deposit at `leaf` under `root(cid, n)`, its witness changed by
+/// `tweak`; the transaction mentions the nullifier the bridge would derive from what it is sent.
 #[allow(clippy::too_many_arguments)]
 async fn claim(
     live: &mut Live,
@@ -643,13 +723,19 @@ async fn claim(
     deposits: &[DepositLog],
     leaf: u64,
     n: u64,
-    redirect: Option<[u8; 32]>,
+    tweak: Tweak,
 ) -> Result<Outcome> {
-    let (mut w, nullifier, _) = witness(terms.evm_chain_id, &terms.vault, deposits, leaf)?;
-    if let Some(dest) = redirect {
-        w.dest = dest;
-        w.kind = DestKind::Public as u8;
+    let (mut w, own, _) = witness(terms.evm_chain_id, &terms.vault, deposits, leaf)?;
+    match tweak {
+        Tweak::None => {}
+        Tweak::Redirect(dest) => {
+            w.dest = dest;
+            w.kind = DestKind::Public as u8;
+        }
+        Tweak::LeafIndex(i) => w.leaf_index = i,
     }
+    let nullifier = witness_nullifier(&w, terms.evm_chain_id, &terms.vault)?;
+    ensure!(matches!(tweak, Tweak::None) == (nullifier == own), "the nullifier of the {tweak:?} witness");
     let root_pda = Pda { program: bridge, seed: root_seed(&cid, n) };
     let n_pda = Pda { program: bridge, seed: nullifier_seed(terms.evm_chain_id, &terms.vault, &nullifier) };
     let holder = AccountIdentity::PublicNoSign(AccountId::new(w.dest)).select_program_actor_state(bridge);
@@ -748,6 +834,7 @@ pub fn check(chain: &InboundChain, attest: AccountId, bridge_bin: &GuestBinary) 
     use ferrata_lez_wire::attest::evaluate;
     let inst_id = instance_id(&chain.config, &chain.checkpoint);
     let config = bridge_config(attest, image_bytes(bridge_bin.image_id), inst_id, chain.vault);
+    let cid = config.id(deployment_accounts(BRIDGE, bridge_bin).0);
     let mut native = crate::plan::Native::with_fork(&chain.config, &chain.checkpoint, &chain.bootstrap, chain.bootstrap_fork)?;
     let mut applied = 0;
     for stage in &chain.stages {
@@ -787,8 +874,7 @@ pub fn check(chain: &InboundChain, attest: AccountId, bridge_bin: &GuestBinary) 
         evaluate(&inst_id, chain.config.chain_id, &record, &pairing).map_err(|c| anyhow!("{}: the pairing request is refused natively ({c})", stage.label))?;
         let import = import_request(&config, &ImportProof { account, root_slot: stage.slots[0].clone(), count_slot: stage.slots[1].clone() });
         evaluate(&inst_id, chain.config.chain_id, &record, &import).map_err(|c| anyhow!("{}: the import request is refused natively ({c})", stage.label))?;
-        let tree = Tree::from_leaves(stage.deposits.iter().map(DepositLog::leaf).collect()).map_err(|_| anyhow!("tree"))?;
-        ensure!(tree.root() == stage.slot_values[0], "{}: slot 0 is not the root of the deposits", stage.label);
+        stage_facts(stage, &cid)?;
         for leaf in 0..stage.deposits.len() as u64 {
             witness(chain.config.chain_id, &chain.vault, &stage.deposits, leaf)?;
         }
@@ -797,12 +883,7 @@ pub fn check(chain: &InboundChain, attest: AccountId, bridge_bin: &GuestBinary) 
             stage.label, chain.name, core.finalized_header.beacon.slot, stage.block, stage.deposits.len()
         );
     }
-    println!(
-        "[inbound-check] {}: instance 0x{}, configId 0x{}",
-        chain.name,
-        hex::encode(inst_id),
-        hex::encode(config.id(deployment_accounts(BRIDGE, bridge_bin).0))
-    );
+    println!("[inbound-check] {}: instance 0x{}, configId 0x{}", chain.name, hex::encode(inst_id), hex::encode(cid));
     Ok(())
 }
 
