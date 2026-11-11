@@ -4,7 +4,9 @@
 #   Rust (every Cargo.lock in the repository): cargo-audit; the main workspaces: cargo-deny
 #   (advisories, licences, sources, bans) with the policy in deny.toml.
 #
-# Usage: scripts/security-tools.sh <step>...      steps: install versions slither aderyn halmos audit deny all
+# Usage: scripts/security-tools.sh <step>...
+#   steps: install versions slither aderyn halmos halmos-groups audit deny all
+#   (halmos runs every check in one process; halmos-groups is the parallel, time-bounded run the note records)
 #   SECTOOLS_DIR  where the tools are installed (default ~/.cache/ferrata-sectools)
 #   SECTOOLS_OUT  where the reports are written (default notes/reviews/security/tools-out)
 # Needs: Foundry (forge, with solc 0.8.26 available offline, as vault/foundry.toml pins), Rust/cargo, curl,
@@ -134,6 +136,32 @@ PY
   scrub "$OUT/halmos.log"
 }
 
+# The run recorded in the triage note: one Halmos process per group of checks, in parallel, each bounded in time
+# (targeted checks 600 s; the checks over Halmos-generated calldata 1,500 s, under both storage layouts). Logs go to
+# $OUT/halmos/<group>/halmos.log. Needs about 20 cores to finish in ~25 minutes.
+halmos_groups() {
+  local base=$OUT g f x t d
+  for g in check_release check_after_stop_no_release check_announced_fees check_registered_fees check_refund_rules \
+    check_sunset_closes_deposits check_sunset_is_final check_reach_re check_reach_an check_reach_d check_reach_s \
+    check_after_stop_only_owed_leaves check_no_role_call_moves_funds check_reach_ro check_reach_af \
+    check_after_stop_only_owed_leaves:sol check_no_role_call_moves_funds:sol check_reach_ro:sol check_reach_af:sol; do
+    f=${g%%:*}
+    case $g in
+      *:sol) x=""; t=1500; d=$f-solidity-layout ;;
+      check_no_role*|check_after_stop_only*|check_reach_ro|check_reach_af) x="--storage-layout generic"; t=1500; d=$f ;;
+      *) x=""; t=600; d=$f ;;
+    esac
+    ( OUT=$base/halmos/$d HALMOS_ARGS="--function $f $x" HALMOS_TIMEOUT=$t halmos_ > /dev/null 2>&1 ) &
+    sleep 2
+  done
+  wait
+  for d in "$base"/halmos/*/; do
+    printf '%s: ' "$(basename "$d")"
+    sed 's/\x1b\[[0-9;]*m//g' "$d/halmos.log" | grep -E '^\[(PASS|FAIL|TIMEOUT|ERROR)' | cut -c1-160 | tr '\n' ' '
+    echo
+  done
+}
+
 audit_() {
   mkdir -p "$OUT"
   cd "$ROOT" || return 1
@@ -181,6 +209,7 @@ for step in "$@"; do
     slither) slither_ ;;
     aderyn) aderyn_ ;;
     halmos) halmos_ ;;
+    halmos-groups) halmos_groups ;;
     audit) cargo-audit audit --version >/dev/null 2>&1; cargo-audit audit -f "$ROOT/Cargo.lock" -q >/dev/null 2>&1; audit_ ;;
     deny) deny_ ;;
     all) versions; slither_; aderyn_; halmos_; cargo-audit audit -f "$ROOT/Cargo.lock" -q >/dev/null 2>&1; audit_; deny_ ;;

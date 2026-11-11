@@ -1,6 +1,5 @@
 === Cargo.lock
       Loaded 1458 security advisories (from ~/.cargo/advisory-db)
-warning: directory ~/.cargo/advisory-db is locked, waiting for up to 300 seconds for it to become available
     Scanning Cargo.lock for vulnerabilities (370 crate dependencies)
 Crate:     crypto-bigint
 Version:   0.5.5
@@ -42,80 +41,6 @@ warning: 3 allowed warnings found
 === bench/Cargo.lock
       Loaded 1458 security advisories (from ~/.cargo/advisory-db)
     Scanning bench/Cargo.lock for vulnerabilities (284 crate dependencies)
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ahash
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-bn254
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-crypto-primitives
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-crypto-primitives-macros
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-ec
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-groth16
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-poly
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-r1cs-std
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-relations
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-snark
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: arraydeque
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: bincode
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: bit-vec
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: blake2
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: block
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: bytemuck
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: bytemuck_derive
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: cargo-platform
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: cargo_metadata
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: cobs
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: core-graphics-types
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: derive_builder
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: derive_builder_core
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: derive_builder_macro
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: dirs
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: dirs-sys
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: docker-generate
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: downcast-rs
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: elf
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: embedded-io
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: embedded-io
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: foreign-types
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: foreign-types-macros
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: foreign-types-shared
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: hashlink
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: hex-literal
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: include_bytes_aligned
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: lazy-regex
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: lazy-regex-proc_macros
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: libredox
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: malloc_buf
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: merlin
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: metal
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: no_std_strings
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: num-bigint-dig
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: num-iter
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: num_enum
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: num_enum_derive
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: objc
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: option-ext
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: pem-rfc7468
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: pkcs1
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: postcard
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: prost
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: prost-derive
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: redox_users
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-binfmt
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-build
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-circuit-keccak
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-circuit-recursion
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-circuit-rv32im
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-core
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-groth16
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-zkos-v1compat
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-zkp
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-zkvm
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-zkvm-platform
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: rrs-lib
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: rsa
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: rzup
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: spin
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: stability
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: toml_write
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: yaml-rust2
 Crate:     rsa
 Version:   0.9.10
 Title:     Marvin Attack: potential key recovery through timing sidechannels
@@ -165,80 +90,6 @@ warning: 3 allowed warnings found
 === bench/exec/Cargo.lock
       Loaded 1458 security advisories (from ~/.cargo/advisory-db)
     Scanning bench/exec/Cargo.lock for vulnerabilities (300 crate dependencies)
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ahash
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-bn254
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-crypto-primitives
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-crypto-primitives-macros
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-ec
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-groth16
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-poly
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-r1cs-std
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-relations
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ark-snark
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: arraydeque
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: bincode
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: bit-vec
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: blake2
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: block
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: bytemuck
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: bytemuck_derive
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: cargo-platform
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: cargo_metadata
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: cobs
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: core-graphics-types
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: derive_builder
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: derive_builder_core
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: derive_builder_macro
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: dirs
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: dirs-sys
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: docker-generate
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: downcast-rs
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: elf
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: embedded-io
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: embedded-io
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: foreign-types
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: foreign-types-macros
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: foreign-types-shared
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: hashlink
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: hex-literal
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: include_bytes_aligned
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: lazy-regex
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: lazy-regex-proc_macros
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: libredox
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: malloc_buf
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: merlin
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: metal
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: no_std_strings
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: num-bigint-dig
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: num-iter
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: num_enum
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: num_enum_derive
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: objc
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: option-ext
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: pem-rfc7468
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: pkcs1
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: postcard
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: prost
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: prost-derive
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: redox_users
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-binfmt
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-build
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-circuit-keccak
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-circuit-recursion
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-circuit-rv32im
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-core
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-groth16
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-zkos-v1compat
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-zkp
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-zkvm
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-zkvm-platform
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: rrs-lib
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: rsa
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: rzup
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: spin
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: stability
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: toml_write
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: yaml-rust2
 Crate:     rsa
 Version:   0.9.10
 Title:     Marvin Attack: potential key recovery through timing sidechannels
@@ -296,7 +147,6 @@ error: 2 vulnerabilities found!
 warning: 4 allowed warnings found
 === bench/exec/guests/keccak-accel/Cargo.lock
       Loaded 1458 security advisories (from ~/.cargo/advisory-db)
-warning: directory ~/.cargo/advisory-db is locked, waiting for up to 300 seconds for it to become available
     Scanning bench/exec/guests/keccak-accel/Cargo.lock for vulnerabilities (158 crate dependencies)
 Crate:     ruint
 Version:   1.17.2
@@ -336,7 +186,6 @@ error: 2 vulnerabilities found!
 warning: 2 allowed warnings found
 === bench/exec/guests/keccak-plain/Cargo.lock
       Loaded 1458 security advisories (from ~/.cargo/advisory-db)
-warning: directory ~/.cargo/advisory-db is locked, waiting for up to 300 seconds for it to become available
     Scanning bench/exec/guests/keccak-plain/Cargo.lock for vulnerabilities (158 crate dependencies)
 Crate:     ruint
 Version:   1.17.2
@@ -494,7 +343,6 @@ error: 2 vulnerabilities found!
 warning: 2 allowed warnings found
 === bench/guests/nopatch/Cargo.lock
       Loaded 1458 security advisories (from ~/.cargo/advisory-db)
-warning: directory ~/.cargo/advisory-db is locked, waiting for up to 300 seconds for it to become available
     Scanning bench/guests/nopatch/Cargo.lock for vulnerabilities (164 crate dependencies)
 Crate:     ruint
 Version:   1.17.2
@@ -534,7 +382,6 @@ error: 2 vulnerabilities found!
 warning: 2 allowed warnings found
 === bench/guests/zkcrypto-accel/Cargo.lock
       Loaded 1458 security advisories (from ~/.cargo/advisory-db)
-warning: directory ~/.cargo/advisory-db is locked, waiting for up to 300 seconds for it to become available
     Scanning bench/guests/zkcrypto-accel/Cargo.lock for vulnerabilities (165 crate dependencies)
 error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-bigint2
 Crate:     ruint
@@ -575,7 +422,6 @@ error: 2 vulnerabilities found!
 warning: 2 allowed warnings found
 === bench/guests/zkcrypto-plain/Cargo.lock
       Loaded 1458 security advisories (from ~/.cargo/advisory-db)
-warning: directory ~/.cargo/advisory-db is locked, waiting for up to 300 seconds for it to become available
     Scanning bench/guests/zkcrypto-plain/Cargo.lock for vulnerabilities (164 crate dependencies)
 Crate:     ruint
 Version:   1.17.2
@@ -615,23 +461,7 @@ error: 2 vulnerabilities found!
 warning: 2 allowed warnings found
 === bridge/Cargo.lock
       Loaded 1458 security advisories (from ~/.cargo/advisory-db)
-warning: directory ~/.cargo/advisory-db is locked, waiting for up to 300 seconds for it to become available
     Scanning bridge/Cargo.lock for vulnerabilities (313 crate dependencies)
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: addchain
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: bit-set
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: directories
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ff_derive
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: matrixmultiply
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: ndarray
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: num-complex
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: nvtx
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: puffin
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: quick-error
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: rawpointer
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-build-kernel
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: risc0-sys
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: rusty-fork
-error: couldn't check if the package is yanked: not found: No such crate in crates.io index: wait-timeout
 Crate:     rsa
 Version:   0.9.10
 Title:     Marvin Attack: potential key recovery through timing sidechannels
@@ -680,7 +510,6 @@ error: 2 vulnerabilities found!
 warning: 3 allowed warnings found
 === bridge/guests/Cargo.lock
       Loaded 1458 security advisories (from ~/.cargo/advisory-db)
-warning: directory ~/.cargo/advisory-db is locked, waiting for up to 300 seconds for it to become available
     Scanning bridge/guests/Cargo.lock for vulnerabilities (156 crate dependencies)
 Crate:     ruint
 Version:   1.17.2
@@ -720,7 +549,6 @@ error: 2 vulnerabilities found!
 warning: 2 allowed warnings found
 === checkpoint/Cargo.lock
       Loaded 1458 security advisories (from ~/.cargo/advisory-db)
-warning: directory ~/.cargo/advisory-db is locked, waiting for up to 300 seconds for it to become available
     Scanning checkpoint/Cargo.lock for vulnerabilities (734 crate dependencies)
 Crate:     crypto-bigint
 Version:   0.5.5
@@ -1000,7 +828,6 @@ error: 15 vulnerabilities found!
 warning: 17 allowed warnings found
 === checkpoint/guests-plain/Cargo.lock
       Loaded 1458 security advisories (from ~/.cargo/advisory-db)
-warning: directory ~/.cargo/advisory-db is locked, waiting for up to 300 seconds for it to become available
     Scanning checkpoint/guests-plain/Cargo.lock for vulnerabilities (162 crate dependencies)
 Crate:     ruint
 Version:   1.17.2
@@ -1040,7 +867,6 @@ error: 2 vulnerabilities found!
 warning: 2 allowed warnings found
 === checkpoint/guests/Cargo.lock
       Loaded 1458 security advisories (from ~/.cargo/advisory-db)
-warning: directory ~/.cargo/advisory-db is locked, waiting for up to 300 seconds for it to become available
     Scanning checkpoint/guests/Cargo.lock for vulnerabilities (166 crate dependencies)
 Crate:     ruint
 Version:   1.17.2
