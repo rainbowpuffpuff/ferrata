@@ -25,6 +25,10 @@ abstract contract CrownProofsFixture is RealBlocksFixture {
 
     function _fixture() internal pure virtual returns (string memory);
 
+    function _releaseImageId() internal pure override returns (bytes32) {
+        return CROWN_RELEASE_IMAGE_ID;
+    }
+
     function setUp() public {
         string memory json = vm.readFile(_fixture());
         require(vm.parseJsonBytes32(json, ".imageId") == CROWN_CHECKPOINT_B_IMAGE_ID, "image id");
@@ -147,6 +151,38 @@ contract CrownR4Test is CrownProofsFixture {
             vault.depositETH{value: 0.001 ether}(0, keccak256(abi.encode("crown R4 deposit", j)), j);
         }
         assertEq(vault.nextLeafIndex(), 2);
+    }
+
+    /// @notice The whole return leg with real proofs: the checkpoint final after the hour, then both burns (the public
+    ///         and the private one) released to the recipient the LEZ wallet bound in COut, each with its real seal; a
+    ///         second release of the same burn is refused.
+    function test_crownR4_bothBurnsAreReleasedWithTheirRealSeals() public {
+        FerrataVault.Checkpoint memory c = _checkpoint();
+        vault.submitCandidate(c, seal);
+        vm.warp(block.timestamp + WAIT);
+        vault.finalizeAttested(c);
+        string memory json = vm.readFile(_fixture());
+        for (uint256 i = 0; i < releaseCount; i++) {
+            string memory at = string.concat(".releases[", vm.toString(i), "]");
+            FerrataVault.ReleaseRequest memory r = FerrataVault.ReleaseRequest({
+                token: vm.parseJsonAddress(json, string.concat(at, ".token")),
+                denomIndex: uint8(vm.parseJsonUint(json, string.concat(at, ".denomIndex"))),
+                recipient: vm.parseJsonAddress(json, string.concat(at, ".recipient")),
+                relayer: vm.parseJsonAddress(json, string.concat(at, ".relayer")),
+                relayFee: vm.parseJsonUint(json, string.concat(at, ".relayFee")),
+                burnRoot: vm.parseJsonBytes32(json, string.concat(at, ".burnRoot")),
+                nullifier: vm.parseJsonBytes32(json, string.concat(at, ".nullifier"))
+            });
+            bytes memory releaseSealI = vm.parseJsonBytes(json, string.concat(at, ".seal"));
+            assertEq(r.burnRoot, c.burnRoot);
+            uint256 before = r.recipient.balance;
+            vault.release(r, releaseSealI);
+            assertEq(r.recipient.balance - before, 0.001 ether, "no fees registered here: the whole denomination");
+            assertTrue(vault.nullifierUsed(r.nullifier));
+            vm.expectRevert();
+            vault.release(r, releaseSealI);
+        }
+        assertEq(address(vault).balance, 0, "both deposits released");
     }
 
     function test_crownR4_theCheckpointCountsBothBurnsAndBothImports() public view {
