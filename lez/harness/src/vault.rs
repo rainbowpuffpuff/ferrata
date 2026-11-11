@@ -741,3 +741,35 @@ pub fn eth_pool(v: &RealVault) -> ferrata_lez_wire::consumer::VaultPool {
         token: [0; 20],
     }
 }
+
+/// The keys of LEZ v0.4.0-rc1's testnet private account 0 (`testnet_initial_state`, a published
+/// test constant), as the harness's `TestPrivateKeys`: `ask = sha256("/LEE-Keys/v1/Authorization/
+/// Secret" ‖ ssk ‖ 0u32)` and the viewing seed `d ‖ z = HMAC-SHA512(key "/LEE-Keys/v1/Viewing/Seed",
+/// "/LEE-Keys/v1/Viewing/Secret" ‖ ssk ‖ 0u32)` (`lee/key_protocol`, `SecretSpendingKey`). The live
+/// run's private deposit is to this account.
+pub fn lez_testnet_private_account_0() -> lee::test_utils::TestPrivateKeys {
+    use sha2::Sha512;
+    const SSK: [u8; 32] = [
+        93, 13, 190, 240, 250, 33, 108, 195, 176, 40, 144, 61, 4, 28, 58, 112, 53, 161, 42, 238, 155, 27, 23, 176, 208,
+        121, 15, 229, 165, 180, 99, 143,
+    ];
+    let ask: [u8; 32] = Sha256::new()
+        .chain_update(b"/LEE-Keys/v1/Authorization/Secret")
+        .chain_update(SSK)
+        .chain_update(0u32.to_be_bytes())
+        .finalize()
+        .into();
+    let message = [&b"/LEE-Keys/v1/Viewing/Secret"[..], &SSK, &0u32.to_be_bytes()].concat();
+    // HMAC-SHA512 (RFC 2104, 128-byte blocks) with a key shorter than a block.
+    let key = b"/LEE-Keys/v1/Viewing/Seed";
+    let mut block = [0u8; 128];
+    block[..key.len()].copy_from_slice(key);
+    let pad = |byte: u8| block.map(|b| b ^ byte);
+    let inner = Sha512::new().chain_update(pad(0x36)).chain_update(&message).finalize();
+    let seed = Sha512::new().chain_update(pad(0x5c)).chain_update(inner).finalize();
+    lee::test_utils::TestPrivateKeys {
+        ask: lee_core::AuthorizationSecretKey(ask),
+        d: seed[..32].try_into().unwrap(),
+        z: seed[32..].try_into().unwrap(),
+    }
+}

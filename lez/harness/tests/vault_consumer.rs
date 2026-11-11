@@ -489,3 +489,120 @@ fn private_claims_that_do_not_verify_are_refused() {
         assert_eq!(got, codes, "{what}");
     }
 }
+
+/// The private claim of the live run's private-kind deposit (deposit 1, block 12,111,574) by its
+/// destination, LEZ's testnet private account 0 (keys from its published test constant): proven in
+/// dev mode and settled. The credit stays in the private state; only `Read`, `Spend` (the nullifier,
+/// no credit) and the fee cross into public execution. Then the same claim again is refused.
+#[test]
+fn a_private_kind_deposit_is_claimed_privately_by_its_destination() {
+    require_dev_mode();
+    let mut v = RealVault::load();
+    let (s1, kind1, dest1) = openings(&v)[1];
+    assert_eq!(kind1, KIND_PRIVATE);
+    let keys = harness::vault::lez_testnet_private_account_0();
+    assert_eq!(keys.account_id().value(), &dest1, "the deposit's destination is LEZ's testnet private account 0");
+    let account = v.w.chain.add_private_account_with_keys(keys, 1_000_000_000_000);
+    let p = pool(&v);
+    let id1 = v.deposit_id(1);
+    let n1 = secret_nullifier(&s1, &id1);
+    let message = ConsumerMessage::ClaimDepositPrivately {
+        pool: p.clone(),
+        slot: v.slot,
+        deposit: v.deposit_proof(1),
+        s: s1,
+        kind: kind1,
+        dest: dest1,
+    };
+
+    let executed = private_transitions(&v, account.id(), &message, v.slot);
+    let table = render_executed(&executed);
+    println!("{table}");
+    assert_eq!(executed.iter().map(|e| e.exit_code).collect::<Vec<_>>(), [0, 0]);
+    let state = executed[1].transition.as_ref().unwrap().response.post_state.clone().unwrap();
+    let ConsumerState::Claimant(kept) = borsh::from_slice(&state).unwrap() else { panic!("a claimant's state") };
+    assert_eq!(
+        kept,
+        ClaimantState { awaiting: None, pending: None, holdings: vec![(p.id(), AMOUNT)], claims: 1 },
+        "credited in the private state, the claim not kept"
+    );
+
+    let program = consumer_account();
+    let publics = vec![v.actor(), claim_actor(program, &p.id(), &n1)];
+    let root = Actor::new(account.id(), program);
+    let run =
+        v.w.chain
+            .prove_and_settle_private(
+                &account,
+                root,
+                borsh::to_vec(&message).unwrap(),
+                publics.clone(),
+                &catalog(),
+                100_000_000,
+                v.time,
+            )
+            .expect("settles");
+    assert!(run.charge.revert.is_none(), "{:?}", run.charge.revert);
+    assert_eq!(nullifier_state(&v, &p, &n1), Some(NullifierState::Spent { pool_id: p.id() }));
+    assert!(holder_state(&v, &p, &dest1).is_none(), "nothing credited publicly");
+
+    // What crosses into public execution: Read, Spend without a credit, the fee.
+    let mut outgoing = Vec::new();
+    for step in &run.tx.message.execution.boundary {
+        if let lee_core::execution_state::BoundaryStep::PrivateToPublic(d) = step {
+            outgoing.push((d.envelope.to, d.envelope.message.clone()));
+        }
+    }
+    assert_eq!(outgoing.len(), 3, "Read, Spend and the fee");
+    assert_eq!(outgoing[0], (v.actor(), borsh::to_vec(&ferrata_lez_wire::Message::Read).unwrap()));
+    assert_eq!(outgoing[1].0, claim_actor(program, &p.id(), &n1));
+    assert_eq!(
+        borsh::from_slice::<ConsumerMessage>(&outgoing[1].1).unwrap(),
+        ConsumerMessage::Spend { pool_id: p.id(), nullifier: n1, credit: None }
+    );
+    let bytes = borsh::to_vec(&LeeTransaction::PrivacyPreserving(run.tx.clone())).unwrap();
+    let d = &v.deposits[1];
+    let proof = v.deposit_proof(1);
+    let mut report = format!("The {} serialized bytes of the transaction were searched:\n\n", bytes.len());
+    for (what, needle) in [
+        ("the secret s", s1.to_vec()),
+        ("the statement identifier", id1.to_vec()),
+        ("the commitment C", d.deposit.commitment.to_vec()),
+        ("the depositor", d.deposit.depositor.to_vec()),
+        ("the destination (the claimant's account id)", dest1.to_vec()),
+        ("the deposit block's header", proof.hops[0].header.clone()),
+        ("the receipt proof's last node", proof.proof.last().unwrap().clone()),
+    ] {
+        let found = occurs(&bytes, &needle);
+        report.push_str(&format!("- {what} ({} bytes): {}\n", needle.len(), if found { "FOUND" } else { "absent" }));
+        assert!(!found, "{what} is in the transaction");
+    }
+    println!("{report}");
+
+    // The same claim again: its Spend finds N spent, so it cannot be proven.
+    let err =
+        v.w.chain
+            .prove_and_settle_private(
+                &account,
+                root,
+                borsh::to_vec(&message).unwrap(),
+                publics,
+                &catalog(),
+                100_000_000,
+                v.time,
+            )
+            .map(|_| ())
+            .expect_err("a second claim cannot be proven");
+    assert!(err.contains(&code::ALREADY_CLAIMED.to_string()), "{err}");
+
+    let out = format!(
+        "# The reference consumer on FerrataVault v5's real deposits: the private claim of a private-kind deposit\n\n\
+         Generated by `RISC0_DEV_MODE=1 cargo test -p harness --locked --test vault_consumer` (see `../RESULTS.md`).\n\
+         Deposit 1 (block 12,111,574) under the record of block 12,112,773, one EIP-2935 hop, a Gloas record, claimed \
+         by its destination, LEZ's testnet private account 0; the consumer's two private transitions in the executor:\n\n{table}\n\
+         Proven in dev mode and settled: {} transaction bytes, {} proof bytes, execution gas {}. Public: `Read` to the record, \
+         `Spend` of N with no credit, the fee.\n\n{report}\nThen refused: the same claim again (`{err}`).\n",
+        run.tx_bytes, run.proof_bytes, run.charge.gas_exec,
+    );
+    std::fs::write(results_dir().join("stage5-consumer-private-kind.md"), out).unwrap();
+}
