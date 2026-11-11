@@ -12,7 +12,13 @@ the earlier programs. Commands: "Commands" below. One cloud run, resumed by the 
 crosses Sepolia -> LEZ -> Sepolia with the final programs and real proofs everywhere, and a verify script that
 re-checks every step from public data and the recorded blocks.
 
-## Programs (all built on the build box at this worktree's path; image ids are path-dependent)
+**Next: `crown-live-2`, the second live run, on the final programs** (branch `integration7`, commit 73e6712: the
+thirteen merged branches, guest builds independent of the build path): the programs of the first table below, which
+any checkout rebuilds to the same ids (`scripts/reproduce-image-ids.sh`, [`docs/image-ids.md`](../../docs/image-ids.md));
+rehearsed on an anvil fork of Sepolia as `crown-rehearsal-4` ([`e2e/runs/crown-rehearsal-4/`](../runs/crown-rehearsal-4/README.md));
+the owner's command: "Commands" below.
+
+## Programs (built on the build box; since `integration7` the ids do not depend on the build path)
 
 | Program | Source | Role |
 |---|---|---|
@@ -22,12 +28,26 @@ re-checks every step from public data and the recorded blocks.
 | release | `bridge/` | one release per burn |
 | FerrataVault v5 + FerrataRegistry | `vault/src` | mode (B), RISC Zero's Groth16 verifier behind an emergency stop |
 
-The ids at this path are measured in piece 2 and written into the run's `params.json`; nothing reuses an id of
-another worktree. **The programs of the live run** (`integration5`, built on the ws-4 build box at the crown build
-path `spike/ferrata-wt-crown` from commit db9f034, whose guest sources the later commits do not change; pinned in
-`cloud/ctl.py`, `cloud/drive.py` and `verify.py`; on the ws-3 Volume since `setup` at 06:19 CET):
+**The programs of `crown-live-2`** (the final programs: `integration7` at 73e6712, built on the Modal build box with
+`scripts/reproduce-image-ids.sh build`; the same commit built at two other paths with two other `$HOME`s gives
+byte-identical binaries and these ids, [`docs/image-ids.md`](../../docs/image-ids.md); pinned in `cloud/ctl.py` and
+`cloud/drive.py`; on the ws-3 Volume since `setup` on 12 Nov 2026; the LEZ bundle of these programs:
+139,304,302 bytes, sha256 `4dd813e28261ee96…`, with crown-driver rebuilt from this tree):
 
 | Program | Image id |
+|---|---|
+| attestation program `ferrata_lez.bin` (lc-a1: successors, root id, weak-subjectivity bound; attest-a2's wire) | `0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df` |
+| bridge program `ferrata_bridge.bin` (bridge-controls: B2 controls and roles; the merged wire) | `0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd` |
+| `checkpoint_b` (rule (B) with the tip's producer inscription; sources as crown-live-1's) | `0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e` |
+| `checkpoint` (rule (A), the vault's other immutable id) | `0xb9c1e6a834879f6be79d09d728523565846018629b82f66986eb58fab4f52c84` |
+| `segment` | `0x11e888e94b9520b08477ba5c5c29cc46bdffc7b1e7c5fe822eb0776f40c54592` |
+| release (`NOut` v2; sources as crown-live-1's) | `0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9` |
+
+**The programs of `crown-live-1`** (`integration5`, built on the ws-4 build box at the maintainer's checkout path,
+before guest builds were path-independent, from commit db9f034; their ids reproduce only at that path and commit,
+[`docs/guides/verify.md`](../../docs/guides/verify.md) §2; pinned for that run in `scripts/verify-sepolia.py`):
+
+| Program | Image id (crown-live-1) |
 |---|---|
 | attestation program `ferrata_lez.bin` (unchanged: byte-identical to the earlier crown build's) | `0x2228bb462b83032ade1c5de62d381b8dcffe9d10d9e977dce9e9fc8da31467cf` |
 | bridge program `ferrata_bridge.bin` (time fix + C-1, H-1, M-3, I-4) | `0x0e9dcd79482f9e0b83762b965d7e1d4319ffeba8a4bdfbdff148bbeaba79bbb6` |
@@ -130,32 +150,35 @@ three times: `e2e/runs/crown-rehearsal-1/` and `-2/` on the earlier programs (br
 purpose and resumed), and **`e2e/runs/crown-rehearsal-3/` on the programs of this tree** (branch `integration5`, commit
 fecd9c7; 19 stages in 24 min 19 s, no stop, verify 14 of 14).
 
-Before the live start (state at 06:50 CET, 11 Nov 2026):
-- this tree (branch `integration5`, or a branch that contains it); `vault/lib` present in it (forge-std 1.10.0,
-  OpenZeppelin 5.4.0, risc0-ethereum 3.0.0): `spike/ferrata-wt-integ5/vault/lib` has them (copied from the
-  crown-rehearsal worktree's);
-- the LEZ bundle and the R0BF programs of the table above are on the ws-3 Volume (`setup` at 06:19 CET, the
-  rehearsal used them); `setup` again only if they were replaced since: it checks every program's sha256 and image id
-  against the ids pinned in `cloud/ctl.py`;
-- the Secret `ferrata-sepolia-key` on ws-3 (it exists; the crown run signs with the same throwaway deployer);
+Before the second live start, `crown-live-2` (state at the end of `integration7`'s final build, 12 Nov 2026):
+- this tree (branch `integration7`, from its worktree); `vault/lib` present in it (forge-std 1.10.0, OpenZeppelin
+  5.4.0, risc0-ethereum 3.0.0; git ignores it and `start` packs it);
+- the LEZ bundle and the R0BF programs of the final programs are on the ws-3 Volume (`setup` on 12 Nov 2026, the
+  rehearsal `crown-rehearsal-4` used them); `setup` again only if they were replaced since: it checks every program's
+  sha256 and image id against the ids pinned in `cloud/ctl.py`;
+- the Secret `ferrata-sepolia-key` on ws-3 (it exists; the run signs with the same throwaway deployer, now at
+  nonce 23 after crown-live-1's 13 transactions: the gate prints the nonce, the vault address and the balance);
 - no ferrata-sepolia runner active (`e2e/sepolia-cloud.sh status`): both runs use the deployer's nonces, and `start`
-  refuses while one is active. The rehearsal found the deployer at nonce 10 (sepolia-live-2 stopped after deposit 0).
+  refuses while one is active.
 
 From the tree's root (`e2e/sepolia-live.env`, if present, is read for SEPOLIA_RPC_URL and ETH_FROM; without it the
 public endpoint and the known deployer are used, read-only, by `start`):
 
 ```
-cd spike/ferrata-wt-integ5
-e2e/crown.sh setup --bundle ../tmp/integ5/crown/lez/bundle.tar.zst --programs ../tmp/integ5/crown/r0bf
-                                                # only if the Volume's inputs changed (~20 s; done at 06:19 CET)
-e2e/crown.sh start                              # the live run crown-live-1: prints sender, nonce, vault address,
-                                                #   the 13 transactions, the gas price; type yes
-e2e/crown.sh status                             # any time: the stage, the stages done, the last lines of the log
-e2e/crown.sh fetch                              # e2e/runs/crown-live-1/ (identity, transactions, captures, the LEZ
+cd spike/ferrata-wt-integ7
+e2e/crown.sh start crown-live-2                 # the live run: prints sender, nonce, vault address, the 13
+                                                #   transactions, the gas price; type yes
+e2e/crown.sh status crown-live-2                # any time: the stage, the stages done, the last lines of the log
+e2e/crown.sh fetch crown-live-2                 # e2e/runs/crown-live-2/ (identity, transactions, captures, the LEZ
                                                 #   sessions' records, checkpoint, releases, verify.txt)
-e2e/crown.sh verify                             # the chain checks again from this machine (read-only)
+e2e/crown.sh verify crown-live-2                # the chain checks again from this machine (read-only)
 e2e/crown.sh stop                               # cancels the runner (and a queued GPU proof); `start` resumes
 ```
+
+The inputs, if they ever need uploading again (from the same root; nothing is sent to any chain):
+`e2e/crown.sh setup --bundle ../tmp/final-build/crown/bundle.tar.zst --programs ../tmp/final-build/repro-a/r0bf`
+(`scripts/reproduce-image-ids.sh build --out DIR` makes `DIR/r0bf` anywhere; the bundle is `spike/tmp/integ5`'s
+with the final `ferrata_lez.bin`, `ferrata_bridge.bin`, `crown-driver` and `session.sh`).
 
 A stop, a timeout or a crash anywhere is resumed by `start` with the same run name: every stage asks the chain or the
 Volume first (deploy.sh resumes from its record; a deposit, submit, finalize or release already on chain is not sent

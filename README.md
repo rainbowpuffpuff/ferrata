@@ -209,7 +209,8 @@ watchers pausing LEZ for 12 hours and transfers between holders, the private tra
 Halmos and the Rust dependencies through cargo-audit and cargo-deny, every finding triaged: no defect in the vault,
 7 Halmos properties proven and 4 not finished in their bound ([`notes/reviews/security/tools-2026-11-11.md`](notes/reviews/security/tools-2026-11-11.md));
 the crown run's six programs rebuilt to their image ids at the published crown build path
-([`docs/guides/verify.md`](docs/guides/verify.md)); the private attestation, claim and burn padded as LEZ's wallet
+([`docs/guides/verify.md`](docs/guides/verify.md); since `integration7` guest builds are independent of the path,
+[`docs/image-ids.md`](docs/image-ids.md)); the private attestation, claim and burn padded as LEZ's wallet
 pads every private transaction and proven at 8 and 16 CPUs, 10.6 minutes at most at 16
 ([`lez/results/p4-minimum/README.md`](lez/results/p4-minimum/README.md)); a second consumer of the attestation,
 `ferrata_holdings`, which accepts an ERC-20 balance at a finalized block (consumer guide §12); seven fuzz targets

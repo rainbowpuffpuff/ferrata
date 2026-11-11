@@ -84,7 +84,8 @@ fn block_bytes(blocks: &[&[u8]]) -> usize {
 
 pub fn cmd_gen_b(dir: &Path) -> Result<()> {
     for source in SOURCES {
-        let bytes = fs::read(dir.join(format!("{source}.input"))).with_context(|| format!("source fixture {source}"))?;
+        let bytes =
+            fs::read(dir.join(format!("{source}.input"))).with_context(|| format!("source fixture {source}"))?;
         let src = CheckpointInput::decode(&bytes).map_err(|e| anyhow::anyhow!("{source}: {e:?}"))?;
         ensure!(
             src.config_changes.is_empty() && src.segments.is_empty() && src.echo_nonce == [0; 32],
@@ -147,7 +148,14 @@ pub fn cmd_gen_b(dir: &Path) -> Result<()> {
                 .map(|i| {
                     let (ch, at) = (&channel[i as usize], &attest[i as usize]);
                     let cert = sign_certificate(ch, &d, &at.verifying_key().to_bytes());
-                    SignedAttestation::new(at, ch.verifying_key().to_bytes(), cert, &d, &ksh, tips[(i % after) as usize])
+                    SignedAttestation::new(
+                        at,
+                        ch.verifying_key().to_bytes(),
+                        cert,
+                        &d,
+                        &ksh,
+                        tips[(i % after) as usize],
+                    )
                 })
                 .collect();
             let b = CheckpointInputB {
@@ -174,13 +182,24 @@ pub fn cmd_gen_b(dir: &Path) -> Result<()> {
                 dir,
                 &format!("ra-{stem}-n{n}"),
                 &a.encode(),
-                &common("checkpoint", t, format!("rule (A) over {source}'s blocks: T's inscription and {t} support inscriptions, n = {n}")),
+                &common(
+                    "checkpoint",
+                    t,
+                    format!("rule (A) over {source}'s blocks: T's inscription and {t} support inscriptions, n = {n}"),
+                ),
             )?;
             write(
                 dir,
                 &format!("rb-{stem}-n{n}"),
                 &b.encode(),
-                &common("checkpoint-b", t, format!("rule (B) over {source}'s blocks: {t} certified attestations on T..T+{}, n = {n}", after - 1)),
+                &common(
+                    "checkpoint-b",
+                    t,
+                    format!(
+                        "rule (B) over {source}'s blocks: {t} certified attestations on T..T+{}, n = {n}",
+                        after - 1
+                    ),
+                ),
             )?;
 
             if source == SOURCES[0] {
@@ -197,7 +216,11 @@ pub fn cmd_gen_b(dir: &Path) -> Result<()> {
                 };
                 let out = run_checkpoint_b(&only).map_err(|e| anyhow::anyhow!("rb-tonly-n{n}: {e:?}"))?;
                 ensure!(out.journal.encode() == a_out.journal.encode(), "tonly n = {n}: journal differs");
-                let mut meta = common("checkpoint-b", t, format!("rule (B) over {source}'s T alone: {t} certified attestations on T, n = {n}"));
+                let mut meta = common(
+                    "checkpoint-b",
+                    t,
+                    format!("rule (B) over {source}'s T alone: {t} certified attestations on T, n = {n}"),
+                );
                 meta["blocks"] = json!(t_index + 1);
                 meta["block_bytes"] = json!(block_bytes(&src.blocks[..=t_index as usize]));
                 write(dir, &format!("rb-tonly-n{n}"), &only.encode(), &meta)?;

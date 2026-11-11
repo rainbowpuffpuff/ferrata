@@ -301,11 +301,12 @@ safety role of §3.4.
   more is released or refunded, owed balances stay claimable, and whatever escrow remains stays in the
   vault (vault v5; [`vault/README.md`](../vault/README.md), "Verifier and stop", "Refunds"). Before the stop
   trips, an unsound proof system breaks everything a proof gates; caps and freezes bound it.
-- **Image ids are reproducible only at a fixed, published build path** (a guest embeds its build paths): the
-  crown run's six programs rebuild to the deployed ids at the crown build path with the pinned toolchains
-  (`scripts/reproduce-image-ids.sh`, [`guides/verify.md`](guides/verify.md): 6 of 6 on the build box, the programs
-  byte-identical), and another path gives other ids. An immutable production deployment needs a build independent of
-  the path ([`bridge.md`](design/bridge.md) §20; [`lez/live/inbound/README.md`](../lez/live/inbound/README.md)).
+- **Image ids are reproducible at any build path** since `integration7` (`scripts/guest-rustc`: source paths
+  remapped and cargo's path-dependent `-C metadata` replaced in guest builds): the same commit built at two paths with
+  two `$HOME`s gives byte-identical guests and ids, 14 of 14 ([`image-ids.md`](image-ids.md),
+  [`guides/verify.md`](guides/verify.md) §2); what must match is the pinned toolchains. The first live run's programs
+  (`crown-live-1`) were built before this, at the maintainer's checkout path, and reproduce only there (6 of 6 on the
+  build box, [`guides/verify.md`](guides/verify.md)); the final programs are the ones a production deployment uses.
 
 ## 6. Failure classes, what is lost, what bounds it (Security #9)
 
@@ -386,8 +387,8 @@ publishes; RPC providers which blocks are fetched (recovery downloads whole list
   except watchers and the multisigs is permissionless; freezes lapse; claims never expire. User escape:
   submit directly; pick another relayer per operation; refunds after retirement, which anyone can trigger
   after 30 days without a checkpoint.
-- **Open.** Risk: guest image ids reproduce only at the published crown build path (§5), not at any path; the
-  daemons and modules do not exist yet.
+- **Open.** Risk: the daemons' Logos modules do not exist yet (guest image ids reproduce at any path since
+  `integration7`, §5).
   Mitigation: the whole stack is in this repository; the deployment is scripted and rehearsed. User
   escape: run your own updater, importer, prover and wrapper from the repository.
 - **Free.** The repository is licensed MIT OR Apache-2.0, at the user's option ([`README.md`](../README.md); [`LICENSE-APACHE`](../LICENSE-APACHE),
@@ -407,5 +408,5 @@ publishes; RPC providers which blocks are fetched (recovery downloads whole list
 
 `verify_checkpoint`; the weak-subjectivity bound; successors and root ids; `monitor`; the rule (B)
 attestor module; LEZ-side watchers, multisig roles, 14-day replacement and permissionless `Sunset`; the
-gas drop; guest builds independent of the build path (§5: today the ids reproduce at the crown build path only); the audit. Sources: [`attestation.md`](design/attestation.md) §15;
+gas drop; the audit. Sources: [`attestation.md`](design/attestation.md) §15;
 [`bridge.md`](design/bridge.md) §19; [`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md) §9.

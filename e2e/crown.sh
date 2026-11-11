@@ -4,8 +4,8 @@
 #
 #   e2e/crown.sh setup [--bundle FILE] [--programs DIR]   deploy the app; the LEZ bundle and the programs to its Volume
 #   e2e/crown.sh start [--fork] [--yes] [--halt-after STAGE] [run]
-#                                     live (default run crown-live-1): signs on Sepolia only after a typed yes;
-#                                     --fork (default run crown-rehearsal-1): an anvil fork of Sepolia, nothing sent
+#                                     live (default run crown-live-2; crown-live-1 is done): signs on Sepolia only after a typed yes;
+#                                     --fork (default run crown-rehearsal-4): an anvil fork of Sepolia, nothing sent
 #   e2e/crown.sh status [run]         the runner, the stage, the stages done, the last lines of the log
 #   e2e/crown.sh fetch [--lez] [run]  the run directory into e2e/runs/<run>/ (--lez: also the LEZ sessions' records)
 #   e2e/crown.sh stop [--app]         cancel the runner (and a queued GPU proof); `start` resumes; --app also stops the app
@@ -42,17 +42,17 @@ start)
     esac
     shift
   done
-  def=crown-live-1; [ "$mode" = live ] || def=crown-rehearsal-1
+  def=crown-live-2; [ "$mode" = live ] || def=crown-rehearsal-4
   ctl start "${1:-$def}" "$mode" "${opts[@]}"
   ;;
-status) ctl status "${1:-crown-live-1}" ;;
+status) ctl status "${1:-crown-live-2}" ;;
 fetch)
   lez=(); [ "${1:-}" = --lez ] && { lez=(--lez); shift; }
-  ctl fetch "${1:-crown-live-1}" "${lez[@]}"
+  ctl fetch "${1:-crown-live-2}" "${lez[@]}"
   ;;
 stop) ctl stop "$@" ;;
 verify)
-  run="$repo/e2e/runs/${1:-crown-live-1}"
+  run="$repo/e2e/runs/${1:-crown-live-2}"
   : "${SEPOLIA_RPC_URL:=https://ethereum-sepolia-rpc.publicnode.com}"
   SEPOLIA_RPC_URL="$SEPOLIA_RPC_URL" python3 -I "$here/crown/verify.py" "$run" --lez "$run/lez"
   ;;

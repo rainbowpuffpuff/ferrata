@@ -113,6 +113,21 @@ pub fn names(m: &w::BridgeMessage) -> Names {
             n.config_id = *config_id;
             n.token = token.unwrap_or_default();
         }
+        // bridge-controls' B2 controls
+        M::Pause { config_id, token, .. } => {
+            n.config_id = *config_id;
+            n.token = token.unwrap_or_default();
+        }
+        M::AttestRetired { config_id, .. }
+        | M::ProposeRoles { config_id, .. }
+        | M::ApplyRoles { config_id, .. }
+        | M::CancelRoles { config_id }
+        | M::Cosigned { config_id, .. } => n.config_id = *config_id,
+        M::Transfer { config_id, token, to, .. } | M::Credit { config_id, token, to, .. } => {
+            n.config_id = *config_id;
+            n.token = *token;
+            n.account = *to;
+        }
     }
     n
 }

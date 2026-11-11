@@ -1,31 +1,33 @@
 # Image ids of the guests at `integration7`
 
-Every guest program rebuilt on 11 November 2026 from the tree of `integration7` after its tenth merge (4b1713c; no later
-commit touches a guest) with `scripts/reproduce-image-ids.sh build`, at the crown build path
-(`<spike>/ferrata-wt-crown`, the path the deployed programs were built at, so the ids are comparable with
-[`e2e/crown/README.md`](../e2e/crown/README.md)), on the Modal build box (RISC Zero 3.0.5, LEZ guests with
-`RISC0_HOME=spike/risc0-home-lez`). A guest built without Docker embeds the absolute paths of its sources, so a
-build at another path gives other ids. The id is risc0-build's own (`*_ID` in the methods crate's `methods.rs`) and
-equals `r0vm --elf <binary> --id` for every row; sha256 and bytes are of the binary risc0-build embeds
-(`*_PATH`: the R0BF program, the user ELF with its kernel). Log: `spike/tmp/integ7/logs/post/ids.tsv`
-(outside the repository).
+Every guest program of this tree, built on 12 November 2026 from commit 4abfbf5 (`scripts/reproduce-image-ids.sh build`,
+on the Modal build box: RISC Zero 3.0.5, guest Rust 1.88.0 for `checkpoint/` and `bridge/`, 1.91.1 for `lez/`). Guest
+builds are **independent of the build path**: [`scripts/guest-rustc`](../scripts/guest-rustc) (cargo's
+`build.rustc-wrapper`, [`.cargo/config.toml`](../.cargo/config.toml)) remaps the tree, the upstream sources, the cargo
+home and the RISC Zero toolchains to fixed names and replaces cargo's path-dependent `-C metadata` for the zkVM target.
+**Proven**: the same commit built at two paths, with two `$HOME`s and two RISC Zero homes (one of them real copies),
+gives byte-identical user ELFs and R0BF binaries and equal image ids for all 14 guests (below: run on the Modal build box, 11 Nov 2026 23:03–23:09Z (`spike`-side script `twopath.sh`, logs outside the repository): build A with the tree at `/build/a/ferrata` and `HOME=/build/home-a`, build B with the tree at `/build/elsewhere/deeper/checkout-b`, `HOME=/build/users/other-home` and real copies of `~/.risc0` and of the LEZ RISC Zero home at other paths, both from a fresh target directory, in parallel (225 s and 227 s once the cargo registry was warm); their dep-info files show each compiled from its own paths (1,363 and 1,368 references to the tree, 17,190 and 17,322 to the cargo home), no binary names either build's tree, `HOME` or the box's own paths, and `ids.tsv` of A and B are identical: 14 of 14 guests with the same image id, R0BF binary and user ELF, byte for byte; the crown run's six programs and the four R0BF files compared with `cmp`, equal).
+The id is risc0-build's own (`*_ID` in the methods crate's `methods.rs`) and equals `r0vm --elf <binary> --id` for
+every row; sha256 and bytes are of the binary risc0-build embeds (`*_PATH`: the R0BF program, the user ELF with its
+kernel); the user ELF's sha256 beside it.
 
-EVIDENCE rows of earlier runs keep the ids they ran with; these ids are of the merged programs, which no run
-recorded in EVIDENCE has used yet (the branches' own rows name ids built at their worktrees' paths).
+EVIDENCE rows of earlier runs keep the ids they ran with (built at their worktrees' paths); the crown run's first
+live run, `crown-live-1`, ran programs built at the maintainer's checkout path ([`e2e/crown/README.md`](../e2e/crown/README.md),
+"The programs of crown-live-1"). These are the final programs: the second live run, `crown-live-2`, deploys them.
 
-| Program | Image id | sha256 of the binary | Bytes | State | What changed it |
-|---|---|---|---:|---|---|
-| attestation program (`lez/guests/program`): `ferrata_lez` | `0xe6e9bd0f786bbefa283f680e4194a4484aa68cbbc05ebbf43ff1a64b24f3b76f` | `8ae8acb44ac05e137467ce3be43c3a744a95b60d6ac88c39d8cc08be9bd5c80d` | 627,792 | **new** | lc-a1: `Succeed`/`Spawn`, the root id, the weak-subjectivity bound (program and `ferrata-core`, error 53); attest-a2: the shared wire crate (consumer module, `CODE_BLOCKS`); the merge: `BAD_SUCCESSOR` 216, `STALE_CHECKPOINT` 217. Was `0x2228bb46…67cf` (crown run) |
-| bridge program (`lez/guests/bridge`): `ferrata_bridge` | `0xc15840dbd33dca7eee38541fd373f7c742e246c371f1a462582905aa010c8850` | `c913375e4b596e9283a916ee6489faac105a7f4b38e42e5b857e1b0b5760072b` | 593,144 | **new** | bridge-controls: the B2 controls (messages 20–27, `Roles`); lc-a1 and attest-a2: the attestation wire it links (`RecordState.root_id`, codes). Was `0x0e9dcd79…bbb6` (crown run) |
-| reference consumer (`lez/guests/consumer`): `ferrata_consumer` | `0x1ef33ec6b6ff7a2ab80282dd6ccef90cf71e1f573b4e01fa803e2c4028c97510` | `6db8d57c4046613d0389067b1b34e142c394b87a462bce83aafbb0d2cb92dada` | 471,832 | **new** | attest-a2: rules 5–7, `ClaimDeposit`, `ClaimDepositPrivately`, `Spend`, `CreditHolder`, codes 218–229; lc-a1: the wire |
-| `ferrata_holdings` (second consumer, `lez/guests/holdings`): `ferrata_holdings` | `0xa1c96cf7c6d58b9cb941a60af23da8572ac6bddcbf34a7bf5fdddb57e1ec9e9d` | `247f08058405bae3f26498847669baf978668090465101c075fed0fac05497ed` | 307,696 | **new** | lc-a1 and attest-a2: the attestation wire it links (`RecordState.root_id`); its own source unchanged |
-| gas-drop receipt (`bridge/guests/src/bin/gasdrop.rs`): `gasdrop` | `0x8223792f78b5bc592384a09eafec759cb13dd9a3bc64a6b43f79ea7e3688db6e` | `0788d2c9601678609cc08a3a3170567d4d9a78fd1e472dc1910984d0a6138842` | 230,776 | **new guest** | relayer: the gas-drop claim statement, 212-byte journal binding `(N, oneTimeAddress, relayer)` |
-| attestation program, software Keccak (cycle comparison): `ferrata_lez_keccak_soft` | `0x5d2687152adcc56b2b256d14451d7907ed0f812a422315b839ea0b6768b2a67e` | `dc0380fb3a3e304b824f74a5716e6df89e1508f3b793a68eb5b04268959767de` | 631,020 | **new** | as the attestation program |
-| reference consumer, accelerated Keccak (cycle comparison): `ferrata_consumer_keccak_accel` | `0xdd8a2e4dddd719252f0035722155c7a76d95d91534d0374b1eb11b641a71b1cb` | `20c6a4f91ebc8e84741fedd4f687444654af00f1b0c43f919f521cad103b9a6c` | 468,832 | **new** | as the reference consumer |
-| scripted test program (`lez/guests/scripted`): `scripted` | `0x4b597adb3f1a43db85829c411a987234cc84584d8bcd947f0774b852adf0da2b` | `94b0f2ab3a87406f9e684fdf4a64b1c9f2c35f1b24e0bb9132097840b42755a5` | 268,468 | unchanged | no source change; the same id as attest-a2's build at another path (it embeds no path) |
-| checkpoint, rule (A) (`checkpoint/methods`): `checkpoint` | `0xcf38b945a70b66d9132fb493b4baf1db308de73ccb8b1108e1c1f8a4363525e6` | `9886faadaad3c6604633f9e036f7a1ed2d9c36b567283b491f368a0e63060fc9` | 443,604 | unchanged | equal to the crown run's (the vault's immutable) |
-| checkpoint, rule (B): `checkpoint_b` | `0xa475e8f9aaa41d0ae3bf9a20ae7d937ebc637a961808765f0ff175158760d3b2` | `2bcda6f114eb9d4868f81bceb78b24ba27eddf8efc0bf20f43b55438a2bd05c3` | 445,564 | unchanged | equal to the crown run's (the vault's immutable) |
-| checkpoint segment: `segment` | `0xd2b30667292418ccf3cf68ee4fa2dc9ed7873de4034fcf1fb2ed3a6305a61cca` | `565cb04955daee7d65a631262093d84ac9125ff8ead7e94cd5ba230b762761c3` | 269,960 | unchanged | equal to the crown run's |
-| checkpoint micro-benchmark guest: `micro` | `0x6ad39fe97799c33b286d2ceb245948d1f2de9533a50d7328be30b3935c0c1f06` | `351ef0255d71675b3ed7f02f98f25abc5c0a1e679186f26ffa7cb7a427007bdb` | 408,672 | unchanged sources | no earlier build at this path recorded |
-| release (`bridge/guests`): `release` | `0x17257f91bca70abf7a5476b498d687e95b6fb4d59e75b6bca1d46877ac9bf5cd` | `055e65011320c6dfd40c18f7fb8e7eba806b89fbe33c0039cb5031a266fc645a` | 230,480 | unchanged | equal to the crown run's (the vault's immutable) |
-| claim statement (`bridge/guests`): `claim` | `0x3b42cc69b1c29896203319e64f6934ffba0bbc9dffa3d2faab8fa456a190bc99` | `fa7f4ec1bd341484407c2ac42d50f089a91709f55b3bd48edf500801a3bdd6ba` | 229,536 | unchanged sources | the guest package gained the gasdrop bin; no earlier build of claim at this path recorded |
+| Program | Image id | sha256 of the binary | Bytes | sha256 of the user ELF |
+|---|---|---|---:|---|
+| attestation program (`lez/guests/program`): `ferrata_lez` | `0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df` | `ddfde69bea89a5b882f55266fcb4b7c887df7debc1c9d4972d8ebea5a72eaad9` | 627,064 | `468754dd15a24c73eaa256aecd1c683531b17286f5db2592590b804fb086bedc` |
+| bridge program (`lez/guests/bridge`): `ferrata_bridge` | `0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd` | `11d832482ff0a26c8f283edda1a35b262274c066734895c62f696394dcab6070` | 592,840 | `6d038fd3628c9ba97f8d1ec2c35326696dcb92867eab7894f6f703e901d8604b` |
+| reference consumer (`lez/guests/consumer`): `ferrata_consumer` | `0x8464603bcf9ea9c69c0eac100605deb9c8ef666a56f964cceba66947958e4b96` | `d02e4aa394f73702fec3e9983f32e8c9743dbaa1a41d2d705fc06f1b63e94ca5` | 471,408 | `a403d4b2eca1ae9c205cbb87222a57f381ec512810403cf899d9036560eed754` |
+| second consumer (`lez/guests/holdings`): `ferrata_holdings` | `0xa79e3f5c4496f2707ab6f55a980efb00dd80aaf562b51f5a504349e9a97c5591` | `504a67c071a103b5d99de10163ae97f925151b09b59c49048e50f3d315b710c5` | 307,504 | `74f7215ac2641e2772f78ac994b62bd52c9807970df947514a272e03505e4deb` |
+| attestation program, software Keccak (cycle comparison): `ferrata_lez_keccak_soft` | `0xefe9c58caa0eacd4c837815d7dbb3c003011b478f9cc5b85fca083b6f0a5cb3e` | `727c5cda08f88274128e873badafd441b9112a5885a407ca6e829f9b53bc1995` | 630,292 | `025acb90bc29fd32472a59a3aeb3eb1330d1e9b446b40e2e695f3e1db3cb6004` |
+| reference consumer, accelerated Keccak (cycle comparison): `ferrata_consumer_keccak_accel` | `0xfa9bef9049151bc92ef32de84e0fdc1153447f115b090b8b6414330ce9d243cc` | `bd8d296e0874fd911b3087789f8d57fb947e377242315ebdd9ce3617de5e36e2` | 468,408 | `e469df5cc5f0462abf0f270326f2eaa8dcaa4eeddf24ba85a08d95b91ee66e56` |
+| scripted test program (`lez/guests/scripted`): `scripted` | `0x8cb0e3f54dd11a2aea7551227c43e6416a6218e101cc7779c98f4f1a53d64e61` | `29249a3ac807ad3268ff5499ccee70a75b687d5fe5517fa5843b333c2c6c1bc0` | 268,228 | `95ab4dfc4a2e988e69ce1c45566028d5394dca447cce61d68dad504e6fa07e11` |
+| checkpoint, rule (A) (`checkpoint/guests/checkpoint`): `checkpoint` | `0xb9c1e6a834879f6be79d09d728523565846018629b82f66986eb58fab4f52c84` | `e9e800e9a8d823587ce4060ce1c0205277d31b02beebd6f9e398beb940b9a3ce` | 443,220 | `c173a69697be26ab254d87d6ac92d51e9c97f570839f1df03dea9c3a5dcbf1c1` |
+| checkpoint, rule (B) (`checkpoint/guests/checkpoint-b`): `checkpoint_b` | `0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e` | `7b5c3735635ff116ea2f2a0a1eae8929dd716ce57a7839368df683b5ad500e3b` | 445,120 | `e6c39a2e4ccbf065cb0da63de1d39df01d90ab1c171e9c4bdbc867049f690d0f` |
+| checkpoint micro-benchmark guest: `micro` | `0xcf7aa50c95fe0832ede59ebcef28c98020d83739c70cccb4d4687e1bf9dc5843` | `5aac454e68f929694a037019e7b508edd392756cf55c0784ef2140eab008ec81` | 408,408 | `1f1a19374b5e96bafce801d8a9f29f7b4a8fd7c712f41b5f2aef2a79a07943f5` |
+| checkpoint segment (`checkpoint/methods-segment`): `segment` | `0x11e888e94b9520b08477ba5c5c29cc46bdffc7b1e7c5fe822eb0776f40c54592` | `2beb911014fa9b83bb27a61dbb66c396b291fd98df835424c4a45e82624960ed` | 269,664 | `ae969858932085bcfe0c47e2af02a4be67545bea62686cc23b1bebe9aca9a1a0` |
+| release (`bridge/guests`): `release` | `0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9` | `7be1349cba34b670c0ef63e2093c76885e648d9f9875f5d378ce1706b73f11bf` | 230,360 | `235b2b8441eeb8036a9558932e751814b3c5f97da66cd46a80f958c790d6e714` |
+| claim statement (`bridge/guests`): `claim` | `0xde8d67a46e07254f2fc31202cbae5a35d26f6bfc96e6e436ba732281015965f4` | `ca2c25bf41c307355c0f917427b35469d880b374c3ae16ab26017c73ad78bd02` | 229,408 | `48ab6ae540f4a292eedb6edd0845b93fb166167eacd71953284882f38d48bd2e` |
+| gas-drop receipt (`bridge/guests`): `gasdrop` | `0x895804161df14b00e1cb02e5d27fe136efb82b178db511c7697c030676fc9eb4` | `c2119aee6f28359f383d8f1a2e14829f95bdc86e92d52790e442dd823cb43162` | 230,648 | `aa1f819bd46b25cac570db21b4abeb0d84b81c779dccbaad24e5a5fa50cb2114` |

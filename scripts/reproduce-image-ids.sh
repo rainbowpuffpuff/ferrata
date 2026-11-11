@@ -69,7 +69,7 @@ case "$mode" in
       for r in "$SRC/checkpoint/target/riscv-guest" "$SRC/bridge/target/riscv-guest"; do
         bin="$(find "$r" -path '*riscv32im-risc0-zkvm-elf/release/*' ! -path '*/release/deps/*' ! -path '*/release/build/*' \
           -name "$f" -type f 2>/dev/null | head -n 1)"
-        [ -n "$bin" ] && { cp "$bin" "$OUT/programs/$f.elf"; break; }
+        [ -n "$bin" ] && { cp "$bin" "$OUT/programs/$f.bin"; break; }  # the user ELF (named as before)
       done
     done
     # The LEZ programs are R0BF already (r0vm prints their id); the other four are user ELFs that
@@ -77,7 +77,7 @@ case "$mode" in
     ( cd "$OUT/programs" && for f in ferrata_lez.bin ferrata_bridge.bin; do
         printf '%s %s %s\n' "$f" "$(sha256sum "$f" | cut -c1-64)" "$(r0vm --elf "$f" --id 2>&1 | tail -n 1)"; done ) > "$OUT/ids.txt"
     E="$SRC/bridge/target/release/ferrata-e2e"
-    ( cd "$OUT/r0bf" && for f in checkpoint_b checkpoint segment release; do "$E" program-binary "../programs/$f.elf" "$f.bin"; done ) \
+    ( cd "$OUT/r0bf" && for f in checkpoint_b checkpoint segment release; do "$E" program-binary "../programs/$f.bin" "$f.bin"; done ) \
       > "$OUT/r0bf/ids.jsonl" 2> "$OUT/logs/program-binary.log"
     find "$SRC"/{lez,checkpoint,bridge}/target -path '*/build/methods*-*/out/methods.rs' 2>/dev/null \
       | xargs -r grep -h -E 'pub const [A-Z0-9_]+_ID: \[u32; 8\]' > "$OUT/methods-ids.txt" || true

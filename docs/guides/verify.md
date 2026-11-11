@@ -6,7 +6,7 @@ anything we say: one reads the chain, the other rebuilds the programs. Neither s
 | Script | Needs | Answers |
 |---|---|---|
 | [`scripts/verify-sepolia.py`](../../scripts/verify-sepolia.py) | Python 3.9 or later (standard library only), any Sepolia JSON-RPC | Did the run's transactions, deposits, checkpoint and releases happen on Sepolia as its records say, on a vault configured as we say? |
-| [`scripts/reproduce-image-ids.sh`](../../scripts/reproduce-image-ids.sh) | Docker, ~30 GB of disk, an x86-64 machine | Are the programs the vault accepts proofs of really built from this repository's source? |
+| [`scripts/reproduce-image-ids.sh`](../../scripts/reproduce-image-ids.sh) | the pinned toolchains (or Docker), ~30 GB of disk, an x86-64 machine | Are the programs the vault accepts proofs of really built from this repository's source? |
 | [`admin/index.html`](../../admin/index.html) (or `node admin/dump.mjs`) | a browser (or node 18+), any JSON-RPC endpoint | What state is a deployed vault in now: configuration, roles, the emergency stop, freezes, caps, fees owed, deposits, checkpoints, candidates, releases (§3)? |
 
 ## 1. The round trip: `scripts/verify-sepolia.py`
@@ -57,29 +57,35 @@ seal byte and the genesis state; a capture's proof node; a release's recipient).
 
 ## 2. The programs: `scripts/reproduce-image-ids.sh`
 
-A RISC Zero image id is a hash of the program, and a guest built outside RISC Zero's Docker build embeds the absolute
-paths of its sources (panic locations in path dependencies, the cargo registry and git checkouts). The programs of the
-live run were built on our build box (Ubuntu 24.04, `HOME=/home/q`) with the tree at the **crown build path**
-`/home/q/Downloads/software_i_built/logos-rfp/spike/ferrata-wt-crown` (11 Nov 05:08–05:17Z, commit db9f034; no
-guest source or lockfile changed between it and this branch; `build` below repeats that build's steps). To get the same ids anyone
-must build at that path with the same toolchains, which is what the Dockerfile provides:
+A RISC Zero image id is a hash of the program. A guest built outside RISC Zero's Docker build would embed where it was
+built: the absolute paths of its sources (panic locations in the tree's shared crates, the upstream LEZ sources and the
+cargo registry) and, through cargo's `-C metadata`, the paths of its path dependencies, which name every symbol and so
+order the code. This tree's guest builds do not: [`scripts/guest-rustc`](../../scripts/guest-rustc) (cargo's
+`build.rustc-wrapper`, set in [`.cargo/config.toml`](../../.cargo/config.toml)) remaps the tree, the upstream sources,
+the cargo home and the RISC Zero toolchains to fixed names and replaces cargo's path-dependent `-C metadata`, for the
+zkVM target only (every other rustc call is passed through). So any checkout, at any path and with any `$HOME`, builds
+the same guests to the same ids, given the same toolchains:
 
 ```sh
-scripts/reproduce-image-ids.sh docker          # builds scripts/reproduce/Dockerfile, then build + compare inside it
+scripts/reproduce-image-ids.sh build --out out    # in your checkout (toolchains and ../upstream as below)
+scripts/reproduce-image-ids.sh compare --out out [--vault 0x…]   # rebuilt ids beside the recorded ones
+scripts/reproduce-image-ids.sh docker            # the same inside scripts/reproduce/Dockerfile's pinned toolchains
 ```
 
-- `scripts/reproduce/Dockerfile`: the build box's image (Ubuntu 24.04, `HOME=/home/q`; host Rust 1.93.0, 1.98.1 for
-  `lez/`; RISC Zero 3.0.5 with guest Rust 1.88.0 for `checkpoint/` and `bridge/` and 1.91.1 under
-  `spike/risc0-home-lez` for `lez/`; LEZ v0.4.0-rc1 at commit 1806e87 and the Logos Blockchain revision d480efc6 at
-  `spike/upstream/`).
-- `build` (inside the container only; it refuses elsewhere): copies the tree to the crown build path without its
-  build outputs, runs the three `methods` builds exactly as the crown build did (`lez`: `RISC0_HOME=spike/risc0-home-lez
-  RISC0_BUILD_LOCKED=1 cargo build -p methods --locked`; `checkpoint`, `bridge`: `cargo build --release -p methods
-  --locked`), takes the six guests, prints the LEZ programs' ids with `r0vm --id` and turns the other four into R0BF
-  programs with `ferrata-e2e program-binary` (the v1compat kernel, as risc0-build 3.0.5 does), whose ids it prints.
-- `compare` ([`scripts/reproduce/compare_ids.py`](../../scripts/reproduce/compare_ids.py)): one line per program, the
-  rebuilt id beside the README's and, for `checkpoint_b` and release, the vault's immutable read over RPC; exit 1 if
-  one differs.
+- Toolchains: host Rust 1.93.0 (`checkpoint/`, `bridge/`) and 1.98.1 (`lez/`); RISC Zero 3.0.5 with guest Rust 1.88.0
+  (`~/.risc0`) for `checkpoint/` and `bridge/` and guest Rust 1.91.1 in its own RISC Zero home for `lez/`
+  (`RISC0_HOME_LEZ`, default `../risc0-home-lez`); LEZ v0.4.0-rc1 at commit 1806e87 and the Logos Blockchain revision
+  d480efc6 beside the tree in `../upstream/` (`scripts/fetch-upstream.sh`, `scripts/ci/install-risc0.sh`).
+  [`scripts/reproduce/Dockerfile`](../../scripts/reproduce/Dockerfile) installs exactly these.
+- `build`: the three `methods` builds in place (`lez`: `cargo build -p methods --locked` with the LEZ RISC Zero home;
+  `checkpoint`, `bridge`: `cargo build --release -p methods --locked`), with `RUSTC_WRAPPER` set to the wrapper (an
+  inherited one, such as sccache, would bring the paths back); `out/ids.tsv` lists all 14 guests (risc0-build's id,
+  the R0BF binary's sha256 and size, the user ELF's sha256, `r0vm --id` as a cross-check); the crown run's six are
+  also copied out, the LEZ programs' ids printed with `r0vm --id` and the other four turned into R0BF programs with
+  `ferrata-e2e program-binary` (the v1compat kernel, as risc0-build 3.0.5 does).
+- `compare` ([`scripts/reproduce/compare_ids.py`](../../scripts/reproduce/compare_ids.py)): the crown run's six
+  programs beside [`e2e/crown/README.md`](../../e2e/crown/README.md)'s table and, with `--vault`, a crown vault's
+  immutables read over RPC; every guest beside [`docs/image-ids.md`](../image-ids.md); exit 1 if one differs.
 
 | Program | Where its id is used |
 |---|---|
@@ -93,17 +99,14 @@ What equal ids prove: the vault accepts checkpoint and release proofs of exactly
 LEZ ran the bridge program this source builds, so reading the source is reading what runs. What they do not prove: that
 the source is correct (that is the tests', the reviews' and an audit's job).
 
-**Proven on our build box** (a Modal CPU container whose image the Dockerfile mirrors; it has no Docker, so the
-script's `build` step ran there directly, on a cold box, with the tree copied to the crown build path inside the box
-only): 7 min 27 s for the three builds, **6 of 6 ids equal** the README table, and `checkpoint_b` and release equal
-the vault's immutables read on Sepolia; the six user ELFs and four R0BF programs are byte-identical to the ones the
-live run uses ([`e2e/runs/verify-anyone/`](../../e2e/runs/verify-anyone/README.md)). The Dockerfile itself has not
-been built yet (no Docker on the box, and our laptop stays free); its steps are those of the build box's image.
+**Proven on our build box** (a Modal CPU container; it has no Docker, so `build` ran there directly; the Dockerfile
+itself has not been built): run on the Modal build box, 11 Nov 2026 23:03–23:09Z (`spike`-side script `twopath.sh`, logs outside the repository): build A with the tree at `/build/a/ferrata` and `HOME=/build/home-a`, build B with the tree at `/build/elsewhere/deeper/checkout-b`, `HOME=/build/users/other-home` and real copies of `~/.risc0` and of the LEZ RISC Zero home at other paths, both from a fresh target directory, in parallel (225 s and 227 s once the cargo registry was warm); their dep-info files show each compiled from its own paths (1,363 and 1,368 references to the tree, 17,190 and 17,322 to the cargo home), no binary names either build's tree, `HOME` or the box's own paths, and `ids.tsv` of A and B are identical: 14 of 14 guests with the same image id, R0BF binary and user ELF, byte for byte; the crown run's six programs and the four R0BF files compared with `cmp`, equal.
 
-The same build at another path gives other ids: see the control in
-[`e2e/runs/verify-anyone/`](../../e2e/runs/verify-anyone/README.md), which is why the path is part of the recipe. A
-build independent of the path (RISC Zero's Docker guest build, `RISC0_USE_DOCKER`, or path remapping) would give new
-ids, and so a new deployment; until then the path is fixed and published here.
+**The first live run, `crown-live-1`**, ran programs built before the wrapper existed, at the maintainer's checkout
+path on the build box: those ids (`e2e/crown/README.md`, "The programs of crown-live-1") reproduce only from that
+commit (db9f034) at that path, and did so on a cold box, 6 of 6 equal to the vault's immutables
+([`e2e/runs/verify-anyone/`](../../e2e/runs/verify-anyone/README.md)); the same build at another path gave 0 of 6 (the
+control there), which is what the wrapper removes. Runs from `crown-live-2` on use the path-independent programs.
 
 ## 3. A vault's state: the admin view
 
