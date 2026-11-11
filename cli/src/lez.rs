@@ -235,7 +235,10 @@ pub async fn plan_claim<L: Ledger>(
         bail!(program_refusal(u32::from(code), "checked before sending with the program's verify_claim"));
     }
     if !private && owned.kind != DestKind::Public {
-        bail!(program_refusal(252, "checked before sending: a private-kind deposit is claimed with --private"));
+        bail!(program_refusal(
+            252,
+            "checked before sending: a private-kind deposit is claimed privately (without --plaintext)"
+        ));
     }
     let n_actor = nullifier_actor(ctx.program, ctx.chain_id, &ctx.vault, &owned.nullifier);
     if history.claimed.contains(&owned.nullifier) || read(ledger, n_actor).await?.is_some() {
