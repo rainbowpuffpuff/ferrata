@@ -6,7 +6,7 @@ measured in M0; [p4-minimum](../p4-minimum/README.md) measured the x86-64 side i
 CPUs. Here the same three padded transactions (the private attestation, the private claim and the private burn, padded
 as LEZ v0.4.0-rc1's wallet pads every private transaction) were built natively on two Apple Silicon Macs and proven
 for real (`RISC0_DEV_MODE=0`), two runs each, with `r0vm` 3.0.5 as the prover, and every receipt was checked by
-LEZ's settlement. Measured on 11 November 2026, 22:00–@@END@@ UTC, on two Mac minis rented from AWS (EC2 Mac dedicated
+LEZ's settlement. Measured on 11 November 2026, 22:00–23:25 UTC, on two Mac minis rented from AWS (EC2 Mac dedicated
 hosts), the two machines at the same time, one proof at a time on each.
 
 All figures are **measured** on these two machines unless marked otherwise; every one is in the logs under
@@ -15,14 +15,53 @@ reads the r0vm session log with p4-minimum's parser). The cloud columns are p4-m
 
 ## Result
 
-@@TABLE1@@
+| proof | M1 (8 cores, 16 GB): each run (s) | median | M4 (10 cores, 24 GB): each run (s) | median | cloud, 8 CPUs: median | cloud, 16 CPUs: median | M1 / 16 CPUs | M4 / 16 CPUs | user cycles proven (segments) | LEZ's circuit: user cycles (segments) | settled, receipt verified |
+|---|---|---:|---|---:|---:|---:|---:|---:|---:|---:|---|
+| private attestation | 858.5 / 856.3 | 857.4 | 475.7 / 474.8 | 475.2 | 1236.8 | 633.3 | 1.35× | 0.75× | 3,334,152–3,335,792 (6) | 2,953,575–2,955,215 (4) | 4 of 4 |
+| private claim | 819.6 / 817.7 | 818.7 | 453.5 / 453.5 | 453.5 | 1146.0 | 600.7 | 1.36× | 0.75× | 3,123,093–3,124,558 (6) | 2,970,337–2,971,802 (4) | 4 of 4 |
+| private burn | 716.8 / 716.2 | 716.5 | 396.3 / 395.9 | 396.1 | 988.9 | 525.9 | 1.36× | 0.75× | 2,901,706–2,902,995 (5) | 2,876,329–2,877,618 (4) | 4 of 4 |
 
 "each run": `execute_and_prove`, as the binaries print it (`REAL PROOF: execute_and_prove … s`); "median" of two is
 their mean. "M1 / 16 CPUs": the Mac's median over the cloud median at 16 CPUs (*derived*). Receipts and transactions
 have the same sizes as in the cloud: 239,214 / 255,302 bytes (attestation), 239,628 / 256,130 (claim), 239,046 /
 254,966 (burn).
 
-@@SUMMARY@@
+- **At the Apple Silicon minimum** (the M1: 8 cores, 4 of them efficiency cores, 16 GB) the slowest proof, the
+  attestation, took 14.3 minutes (856.3–858.5 s), the claim 13.6 and the burn 11.9: inside the M0 check's 20 minutes
+  and 16 GB. That is 0.69–0.72× the 8-CPU cloud container's time and 1.35–1.36× the 16-CPU one's (*derived*).
+- **The M4** (10 cores: 4 performance, 6 efficiency) took 7.9, 7.6 and 6.6 minutes: 0.75× the 16-CPU container (what
+  an 8-core x86 laptop's 16 threads give) and 0.38–0.40× the 8-CPU one (*derived*).
+- **Memory**: r0vm's peak was 9.26–9.45 GiB (sampled RSS; `time -l` agrees), as in the cloud (9.23–9.25 GiB padded).
+  The M1's 16 GB held it: at most 0.04 GiB compressed by macOS and no swap-out in any run (`vm_stat`).
+- **Every receipt verified**: 12 of 12 transactions settled from their files by LEZ's settlement in a fresh process
+  (`--settle`, "receipt verified"), charged what the cloud's were (execution gas 421,641 / 551,502 / 518,358, storage
+  gas 224,063); after run 1 on each Mac one flipped bit in each transaction was refused, 6 of 6 (exit 101, "Invalid
+  privacy preserving execution circuit proof").
+- **The same work as in the cloud**: user cycles up to each transaction's fresh randomness (LEZ's circuit for the
+  attestation: 2,953,575–2,955,215 here, 2,954,451–2,955,964 there), the same segments (the circuit in 4, 3,670,016
+  cycles with padding, for the attestation and the claim), the same receipt and transaction sizes. LEZ's circuit is
+  89 % (attestation), 93–94 % (claim) and 97–98 % (burn) of the proving time on both Macs.
+- **Repeatable**: the two runs of a proof differ by 0.3 % or less on either Mac (bare metal, one proof at a time),
+  against up to 10 % between the cloud's containers.
+
+### Each run
+
+| Mac | run | job | proofs: `execute_and_prove` (s) | the sessions proven: user cycles, segments, proving time (s) | `time -l`: wall (s), user (s), max RSS (GiB) | r0vm RSS, sampled peak (GiB) | vm_stat: least free, most compressed (GiB); swapouts | GPU active residency (powermetrics, %) | settle exit | one flipped bit: settle exit |
+|---|---:|---|---|---|---|---:|---|---|---:|---|
+| m1 | 1 | attest | private attestation: 858.5 | 34,337 / 1 / 17.6, 346,240 / 1 / 73.7, 2,954,202 / 4 / 767.0 | 860.8, 6521, 9.29 | 9.29 | 0.05, 0.04; 0 | 2.60–3.09 (6 samples of 10 s) | 0 | 101 |
+| m1 | 1 | bridge | private claim: 819.6; private burn: 716.8 | 41,160 / 1 / 17.3, 111,596 / 1 / 34.9, 2,971,802 / 4 / 767.0; 25,377 / 1 / 17.3, 2,877,618 / 4 / 699.3 | 1541.8, 11797, 9.28 | 9.26 | 0.06, 0.04; 0 | 2.63–3.09 (6 samples of 10 s) | 0 | 101, 101 |
+| m1 | 2 | attest | private attestation: 856.3 | 34,337 / 1 / 17.2, 346,240 / 1 / 73.7, 2,955,215 / 4 / 765.3 | 858.7, 6577, 9.29 | 9.27 | 0.06, 0.04; 0 | — | 0 | — |
+| m1 | 2 | bridge | private claim: 817.7; private burn: 716.2 | 41,160 / 1 / 17.2, 111,596 / 1 / 35.0, 2,970,337 / 4 / 765.1; 25,377 / 1 / 17.3, 2,876,329 / 4 / 698.7 | 1539.2, 11790, 9.37 | 9.36 | 0.07, 0.04; 0 | — | 0 | — |
+| m4 | 1 | attest | private attestation: 475.7 | 34,337 / 1 / 10.0, 346,240 / 1 / 41.4, 2,953,575 / 4 / 424.1 | 477.3, 4424, 9.28 | 9.28 | 0.05, 0.0; 0 | 1.45–1.86 (6 samples of 10 s) | 0 | 101 |
+| m4 | 1 | bridge | private claim: 453.5; private burn: 396.3 | 41,160 / 1 / 9.8, 111,596 / 1 / 19.7, 2,971,387 / 4 / 423.8; 25,377 / 1 / 9.8, 2,876,427 / 4 / 386.4 | 853.6, 7957, 9.45 | 9.44 | 0.06, 0.0; 0 | 1.43–1.71 (6 samples of 10 s) | 0 | 101, 101 |
+| m4 | 2 | attest | private attestation: 474.8 | 34,337 / 1 / 9.8, 346,240 / 1 / 40.0, 2,954,924 / 4 / 424.9 | 476.4, 4428, 9.31 | 9.3 | 0.53, 0.0; 0 | — | 0 | — |
+| m4 | 2 | bridge | private claim: 453.5; private burn: 395.9 | 41,160 / 1 / 9.8, 111,596 / 1 / 19.7, 2,971,394 / 4 / 423.8; 25,377 / 1 / 9.8, 2,877,529 / 4 / 386.0 | 853.1, 7957, 9.44 | 9.43 | 0.38, 0.0; 0 | — | 0 | — |
+
+"the sessions proven": r0vm's sessions in the order proven (the program's transitions, then LEZ's circuit), each as
+user cycles / segments / seconds until r0vm's next log line (p4-minimum's parser). `time -l` covers the whole
+binary, both proofs for `bridge`; its maximum RSS includes r0vm (a waited-for child). "least free" is `vm_stat`'s free
+pages (macOS keeps the rest as cache), "most compressed" its compressor's pages, swapouts the count's growth during the
+run. GPU residency: six 10-s samples from 120 s into run 1 (`powermetrics.txt`).
 
 ## Metal: not used, by r0vm 3.0.5's own build
 
@@ -35,7 +74,7 @@ provers: in `risc0-circuit-rv32im` 4.0.5 (`src/prove/mod.rs`, lines 45–53), `r
 macOS unconditionally. What the machines showed (`sudo powermetrics --samplers gpu_power,cpu_power`, six samples of
 10 s from 120 s into run 1 of each job, while LEZ's circuit was being proven: `powermetrics.txt` beside each run):
 both CPU clusters at 85–100 % active residency at their top frequencies, the GPU idle (active residency in the table
-above, 1.4–3.1 %), and r0vm's log names no GPU device. Idle, after the runs, the M4's GPU showed 1.97–2.28 % ([`runs/m4/powermetrics-idle.txt`](runs/m4/powermetrics-idle.txt)): during the proofs it did no more than idle. So these are CPU figures for Apple's cores (with NEON), and the
+above, 1.43–3.09 %), and r0vm's log names no GPU device. Idle, after the runs, the GPUs showed 2.76–2.80 % (M1) and 1.97–2.28 % (M4) (`runs/<mac>/powermetrics-idle.txt`): during the proofs they did no more than idle. `pmset -g therm` recorded no thermal or performance warning on either Mac (`runs/<mac>/pmset-therm.txt`). So these are CPU figures for Apple's cores (with NEON), and the
 brief's expectation that "the macOS build uses the Metal GPU" does not hold for r0vm 3.0.5. Enabling Metal would take a
 patched RISC Zero, so the proof would no longer be LEZ's pinned prover; not done.
 
@@ -86,7 +125,12 @@ the live run's), on the same witness (`release-private-1`, the crown run's burn 
 stage: `ferrata-e2e prove` for the succinct receipt, then `ferrata-e2e verify` (the image id, and the journal against
 the witness's record), two runs on each Mac.
 
-@@TABLE3@@
+| Mac | run | succinct proof, `ferrata-e2e prove` (s) | user cycles (segments) | `time -l` wall (s), max RSS (GiB) | r0vm RSS, sampled peak (GiB) | verified |
+|---|---:|---:|---:|---|---:|---|
+| m1 | 1 | 31.8 | 77,736 (1) | 31.8, 1.62 | 1.62 | yes |
+| m1 | 2 | 31.6 | 77,736 (1) | 31.7, 1.63 | 1.61 | yes |
+| m4 | 1 | 18.6 | 77,736 (1) | 18.6, 1.63 | 1.61 | yes |
+| m4 | 2 | 18.3 | 77,736 (1) | 18.3, 1.63 | 1.61 | yes |
 
 "succinct proof": `ferrata-e2e`'s own `wall_s` (`prove/prove.json`), as in the cloud: 46.0 / 46.0 s at 8 CPUs and
 26.4 / 27.0 s at 16 (p4-minimum, the same program and witness, 77,736 user cycles in one segment). The journal's
@@ -155,4 +199,4 @@ Xcode's Metal compiler is otherwise needed). The rest differs from the Linux run
   proof.
 - The GPU: r0vm 3.0.5 cannot use Metal (above); a later RISC Zero with the Metal provers enabled is not LEZ v0.4.0-rc1's
   pin.
-- An 8 GB Mac: the proofs' r0vm peak is 9.3–9.4 GiB, so an 8 GB machine would swap (*derived*; not run).
+- An 8 GB Mac: the proofs' r0vm peak is 9.3–9.5 GiB, so an 8 GB machine would swap (*derived*; not run).

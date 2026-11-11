@@ -1,0 +1,2 @@
+prove exit 0 wall_s 31
+verify exit 0
