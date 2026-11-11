@@ -222,6 +222,9 @@ fn main() {
         seeds.entry("release").or_default().insert(with(&[3], &hex_field(&j["journal"])));
     }
 
+    // checkpoint_b edits the recorded rule (B) input itself: the empty edit list is that input.
+    seeds.entry("checkpoint_b").or_default().insert(Vec::new());
+
     for (target, set) in &seeds {
         let dir = out.join(target);
         fs::create_dir_all(&dir).unwrap();

@@ -143,3 +143,27 @@ pub fn awaited(state: &w::BridgeState) -> Option<Actor> {
         _ => None,
     }
 }
+
+/// The lab's recorded rule (B) input over blocks 186..=202 (`checkpoint/realblocks/out`), with T's
+/// producer inscription (recorded in `inscriptions.jsonl`) inserted where today's format has it: the
+/// file predates the field (commit 91c0df8). One attestation, no segments.
+pub fn recorded_rule_b_input() -> Vec<u8> {
+    let out = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../checkpoint/realblocks/out");
+    let recorded = std::fs::read(out.join("real-lab-186-202.input")).expect("the recorded input");
+    let rows = std::fs::read_to_string(out.join("inscriptions.jsonl")).expect("the recorded inscriptions");
+    let row = rows
+        .lines()
+        .map(|l| serde_json::from_str::<serde_json::Value>(l).expect("a json line"))
+        .find(|v| v["block"] == 202)
+        .expect("T's inscription");
+    let field = |k: &str| hex::decode(row[k].as_str().expect("hex").trim_start_matches("0x")).expect("hex");
+    let (prefix, suffix, signature) = (field("prefix"), field("suffix"), field("signature"));
+    let mut producer = Vec::new();
+    producer.extend_from_slice(&(prefix.len() as u32).to_le_bytes());
+    producer.extend_from_slice(&prefix);
+    producer.extend_from_slice(&(suffix.len() as u32).to_le_bytes());
+    producer.extend_from_slice(&suffix);
+    producer.extend_from_slice(&signature);
+    let at = recorded.len() - (4 + attestor_core::SIGNED_ATTESTATION_LEN + 4);
+    [&recorded[..at], &producer[..], &recorded[at..]].concat()
+}
