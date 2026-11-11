@@ -1,0 +1,9 @@
+gate	rounds	695	seed	default	adversary	false
+mainnet	updates applied	14	jobs (with Init)	15	finalized slot	15631808
+sepolia	updates applied	44	jobs (with Init)	45	finalized slot	11556000
+honest-1	applied tx	132	refused tx	11	gas applied	424306306	gas refused	7466223	fee	3454180232	deferrals	662
+honest-2	applied tx	118	refused tx	17	gas applied	361165687	gas refused	6038808	fee	2937635960	deferrals	670
+adversary	applied tx	0	refused tx	0	gas applied	0	gas refused	0	fee	0	deferrals	0
+honest refused gas / applied gas	0.0172	(gate <= 0.10)
+honest-1 share of honest fees	0.5404	honest-2	0.4596	(gate 0.35-0.65 each)
+updates	58	adversary junk Opens	0	ledger transactions	278

@@ -118,6 +118,10 @@ job for a forged update and replays an applied one.
 | honest-1 / honest-2 / adversary transactions refused | 18 / 28 / 25 | 15 / 13 / 28 | 18 / 11 / 19 | 16 / 18 / 23 |
 | rounds (blocks); ledger transactions | 447; 431 | 429; 416 | 437; 408 | 425; 417 |
 
+Without the adversary (`GATE_ADVERSARY=0`, `results/gate-no-adversary.txt`), the two honest
+updaters alone: 58 updates each applied once in 695 rounds, 132 and 118 transactions applied, 11 and
+17 refused (collisions of equal waits), refused gas 0.0172 of applied, fee shares 0.5404 / 0.4596.
+
 58 updates: 14 mainnet and 44 Sepolia, every update the lab recorded, not the gate's 100. The
 adversary also sent 110 junk `Open`s in each run, at its own cost. Files: `results/gate.txt`,
 `results/gate-seed-{1,2,3}.txt`. The default order's shares are near the band's edge: about 100
