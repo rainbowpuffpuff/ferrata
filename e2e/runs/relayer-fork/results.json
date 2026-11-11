@@ -15,7 +15,7 @@
       "event": "finalized",
       "gasUsed": 218385,
       "newState": "0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd",
-      "t": 1794422021,
+      "t": 1794422384,
       "tx": "0x4dcf1f566df7270cd8b074803aae7e809636a8018e3dc5b93a02e5fdd44d224f"
     },
     "wait": 3600
@@ -30,21 +30,27 @@
     "vault": "0xfe3199fa2634413cbac317371076cae3eb2d9e54"
   },
   "otherRelayerDaemon": "refused: the proof names relayer 0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07; only it can be paid for this release (this relayer is 0x00000000000000000000000000000000000bAD01)",
+  "paidRelease": {
+    "gained": "2000000000000",
+    "redirectedRefused": true,
+    "relayFee": "2000000000000",
+    "relayer": "0x0000000000000000000000000000000000c0ffee",
+    "result": {
+      "gasUsed": 407052,
+      "kind": "release",
+      "nullifier": "0x6b5ec36ee357ba03fad0f9bb4afe4ef32c424722cd6c52131f48beffe1886414",
+      "paid": "2000000000000",
+      "paidTo": "0x0000000000000000000000000000000000c0ffee",
+      "recipient": "0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07",
+      "relayFee": "2000000000000",
+      "token": "0x0000000000000000000000000000000000000000",
+      "tx": "0x244b4f91f3bf5610745592e022ac408cafad56645204c93333b936289f784de8"
+    }
+  },
   "releases": {
-    "balanceAfter": "100001999999911691478",
-    "balanceBefore": "99999999999959316920",
+    "balanceAfter": "100001997999936065760",
+    "balanceBefore": "100000996999959316920",
     "done": [
-      {
-        "gasUsed": 393108,
-        "kind": "release",
-        "nullifier": "0x6b5ec36ee357ba03fad0f9bb4afe4ef32c424722cd6c52131f48beffe1886414",
-        "paid": "0",
-        "paidTo": "0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07",
-        "recipient": "0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07",
-        "relayFee": "0",
-        "token": "0x0000000000000000000000000000000000000000",
-        "tx": "0x6112fab05b47ef793f14f7330f41a37c317f4085a4bbadbdd475d91ad7b1af0e"
-      },
       {
         "gasUsed": 358908,
         "kind": "release",
@@ -54,15 +60,15 @@
         "recipient": "0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07",
         "relayFee": "0",
         "token": "0x0000000000000000000000000000000000000000",
-        "tx": "0xc9bbd6ae4062a9c2d64be130d994f7bd6ab6f0b3019c3a2e55b887da72ec4b66"
+        "tx": "0xff54c957d336b2054c48e6c769f67dff5bf2588849e1ed35552115e2fdfaf42e"
       }
     ],
     "feesCollected": {
       "amount": "2000000000000",
       "event": "fees-collected",
-      "t": 1794422035,
+      "t": 1794422400,
       "token": "0x0000000000000000000000000000000000000000",
-      "tx": "0xc4852c14542a43b59409935c78088def4360e3efa5b33bf8116cb739960846c4"
+      "tx": "0xb4b99277b9bc7e3e33ebce903d5091eaf5dcceb16cfa6dbcb3f9bef026d72f4e"
     }
   },
   "replay": {

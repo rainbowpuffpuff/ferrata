@@ -32,6 +32,9 @@ const VAULT: Address = address!("fe3199fa2634413cbac317371076cae3eb2d9e54");
 const NAMED: Address = address!("79a95ae9a3f9000eb41f7cbab6a6f97826895c07");
 /// A relayer that misbehaves (any address; impersonated on the fork).
 const MALLORY: Address = address!("00000000000000000000000000000000000bad01");
+/// The relayer a real release proof names, with the registered relay fee (e2e/runs/relayer-fork/paid/: the
+/// holder of crown-live-1's burn public-0 proved it for this relayer; impersonated on the fork).
+const PAID: Address = address!("0000000000000000000000000000000000c0ffee");
 /// The block of crown-live-1's `submitCandidate` (0xb8cf82); the fork is the block before it.
 const SUBMIT_BLOCK: u64 = 0xb8cf82;
 /// Public endpoints that served Sepolia's state at the fork block on 11 Nov 2026 (probed with
@@ -169,7 +172,7 @@ async fn relayer_on_a_sepolia_fork_with_crown_live_1_proofs() -> Result<()> {
     }
     ensure!(up, "anvil did not start");
     ensure!(p.get_chain_id().await? == 11155111, "the fork is not Sepolia");
-    for who in [NAMED, MALLORY] {
+    for who in [NAMED, MALLORY, PAID] {
         rpc(&p, "anvil_setBalance", json!([who, "0x56BC75E2D63100000"])).await?;
     }
     let mut results = serde_json::Map::new();
@@ -286,6 +289,42 @@ async fn relayer_on_a_sepolia_fork_with_crown_live_1_proofs() -> Result<()> {
     let log_u = daemon(&url, &state_u, &inbox_u, NAMED, &[])?;
     ensure!(events(&log_u, "job-refused").len() == 1, "an unpaid release was taken without --accept-unpaid");
 
+    // 6b. A release proven for a relayer, with the registered fee (real proof): a misbehaving relayer that
+    //     names itself instead is refused; the daemon running as the named relayer sends it and is paid.
+    let paid_dir = repo().join("e2e/runs/relayer-fork/paid");
+    let paid = paid_dir.join("seal.hex").exists();
+    if paid {
+        let pj = read_hex(&paid_dir.join("journal.hex"))?;
+        let ps = read_hex(&paid_dir.join("seal.hex"))?;
+        let r = relayer::Relayer { vault: VAULT, me: PAID, accept_unpaid: false };
+        let view = r.view(&p).await?;
+        let (preq, _) = r.plan_release(&p, &view, &relayer::unhex(&pj)?, relayer::unhex(&ps)?.into()).await?;
+        ensure!(preq.relayer == PAID && !preq.relayFee.is_zero(), "the paid proof names PAID with a fee");
+        let mut stolen = preq.clone();
+        stolen.relayer = MALLORY;
+        let (ok, _) = mallory_sends(&p, eth::release_calldata(stolen, relayer::unhex(&ps)?.into()).to_vec()).await?;
+        ensure!(!ok, "a paid release redirected to another relayer was accepted");
+        let (state_p, inbox_p) = (work.join("state-paid"), work.join("inbox-paid"));
+        job(&inbox_p, "01-release-paid.json", json!({ "kind": "release", "journal": pj, "seal": ps }))?;
+        let before = p.get_balance(PAID).await?;
+        let log_p = daemon(&url, &state_p, &inbox_p, PAID, &[])?;
+        let done_p = events(&log_p, "job-done");
+        ensure!(done_p.len() == 1, "the paid release was not sent: {log_p:?}");
+        let tx: B256 = serde_json::from_value(done_p[0]["result"]["tx"].clone())?;
+        let rc = p.get_transaction_receipt(tx).await?.context("the paid release's receipt")?;
+        let gas = U256::from(rc.gas_used) * U256::from(rc.effective_gas_price);
+        let gained = p.get_balance(PAID).await? + gas - before;
+        ensure!(gained == preq.relayFee, "the relayer gained {gained}, the fee is {}", preq.relayFee);
+        println!(
+            "paid release: relay fee {} wei to {PAID} ({} gas); the redirected copy refused",
+            preq.relayFee, rc.gas_used
+        );
+        results.insert(
+            "paidRelease".into(),
+            json!({ "relayer": PAID, "relayFee": preq.relayFee.to_string(), "gained": gained.to_string(), "result": done_p[0]["result"], "redirectedRefused": true }),
+        );
+    }
+
     // 7. The honest daemon releases both burns with the real proofs, and collects the checkpoint fees.
     let before = p.get_balance(NAMED).await?;
     for (name, j, s) in &releases {
@@ -293,7 +332,13 @@ async fn relayer_on_a_sepolia_fork_with_crown_live_1_proofs() -> Result<()> {
     }
     let log5 = daemon(&url, &state, &inbox, NAMED, &["--accept-unpaid"])?;
     let done = events(&log5, "job-done");
-    ensure!(done.len() == 2, "both releases were not sent: {log5:?}");
+    // With the paid proof, public-0 is already released: its recorded (unpaid) proof is refused, whatever
+    // the proof, one burn is released once.
+    ensure!(done.len() == if paid { 1 } else { 2 }, "the releases were not sent: {log5:?}");
+    if paid {
+        let refused5 = events(&log5, "job-refused");
+        ensure!(refused5.iter().any(|r| r["reason"].as_str().unwrap_or("").contains("already released")));
+    }
     for (_, j, _) in &releases {
         let n = B256::from_slice(&relayer::unhex(j)?[160..192]);
         ensure!(eth::view(&p, VAULT, IVault::nullifierUsedCall { nullifier: n }, None).await?, "NOut not used");
