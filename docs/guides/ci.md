@@ -12,12 +12,14 @@ Prototype evidence for a grant proposal. **Not audited. Not for production.**
 | Job | Runs | Needs | Fails when |
 |---|---|---|---|
 | `test` | `cargo test --workspace --locked` at the repository root (vectors, Helios oracle, adversarial suites, mainnet and Sepolia replays, nullifier demo), `cargo fmt --check`, `cargo clippy -D warnings`, the `no_std` build of `ferrata-core` for `riscv32im-unknown-none-elf` | Rust stable, the pinned spec vectors (`scripts/fetch-vectors.sh`, cached) | a test, a format or lint finding, or the guest-ISA build fails |
+| `vault` | `forge test --no-match-contract PrivacySuite` in `vault/`: the vault's unit, fuzz and invariant suites with the mock verifier, and `test/real/` with RISC Zero's real Groth16 verifier and committed proofs | Foundry 1.3.6, the vault's libraries (cached) | a vault test fails. `PrivacySuite` is left out: it reads the file the LEZ half of the privacy suite writes (`lez/harness/tests/privacy_suite.rs`), and fails rather than skips without it |
 | `links` | `scripts/check-links.py` | Python | a relative link in `README.md` or `docs/` does not resolve to a tracked file |
 | `witness-independence` | [`scripts/ci/witness-independence.sh`](../../scripts/ci/witness-independence.sh): the bridge's `host invariance 64` | Rust 1.93, RISC Zero's toolchains ([`scripts/ci/install-risc0.sh`](../../scripts/ci/install-risc0.sh)) | the release or claim guest's cycle count (user cycles and segment sizes) differs between any two of 64 random valid witnesses (SPEC-v2 §5.2) |
 | `roundtrip` | [`e2e/ci/run.sh`](../../e2e/ci/run.sh): one deposit there and back, every step asserted ([`e2e/ci/README.md`](../../e2e/ci/README.md)); then the `ferrata` tool's own end-to-end test, [`cli/tests/e2e.sh`](../../cli/tests/e2e.sh) (deposits through the binary, scan, claim, eleven burns, a release, recovery from the seed phrase; its checkpoint is a journal the test builds) | Rust 1.93 and 1.98.1, RISC Zero's toolchains, Foundry 1.3.6, the upstream sources (`scripts/fetch-upstream.sh`), `libpcsclite-dev` | any step of the round trip, or the build |
 
-The two last jobs replace work that used to be done by hand: the witness-independence check was a step of
-`bridge/scripts/check.sh` only, and no end-to-end run was in CI.
+`witness-independence`, `roundtrip` and `vault` were added on 11 November 2026: the witness-independence check was
+a step of `bridge/scripts/check.sh` only, no end-to-end run was in CI, and the vault's suites ran by hand. On the
+build box, by the jobs' own commands: `vault` 37 suites, 433 tests passed in 20 s.
 
 ### `witness-independence`
 
