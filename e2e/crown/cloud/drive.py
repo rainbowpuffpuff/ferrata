@@ -158,6 +158,18 @@ def call(sig: str, *a: str) -> str:
     return cast("call", identity()["vault"], sig, *a)
 
 
+def call_until(want: str, sig: str, *a: str, tries: int = 8, gap: int = 10) -> bool:
+    """Reads until the answer is `want`: a load-balanced endpoint can answer from a node behind the block holding the
+    transaction just sent (crown-live-1, 11 Nov 2026: release 0's nullifier read false right after its receipt said
+    success, and true on publicnode a minute later)."""
+    for k in range(tries):
+        if call(sig, *a) == want:
+            return True
+        if k + 1 < tries:
+            time.sleep(gap)
+    return False
+
+
 def has_code(addr: str) -> bool:
     return cast("code", addr) not in ("0x", "")
 
@@ -856,8 +868,8 @@ def st_release(i: int) -> bool:
     delay = first_int(call("releaseDelayFor(address,uint256)(uint256)", r["token"], str(count - 1)))
     pass_time(first_int(rows[1]) + delay, f"release {i}'s delay")
     sepolia("release", str(i), log=f"sepolia-release-{i}.log")
-    if call("nullifierUsed(bytes32)(bool)", r["nullifier"]) != "true":
-        die(f"release {i}: the nullifier is not used after the release")
+    if not call_until("true", "nullifierUsed(bytes32)(bool)", r["nullifier"]):
+        die(f"release {i}: the nullifier is not used after the release (read 8 times over 70 s)")
     say(f"release {i} ({r['name']}): block {manifest_block(f'release-{i}')}")
     return True
 
@@ -865,10 +877,16 @@ def st_release(i: int) -> bool:
 def st_verify() -> bool:
     if os.path.isfile(f"{RUN}/DONE"):
         return False
-    rc = run(["python3", "-I", f"{REPO}/e2e/crown/verify.py", RUN, "--lez", LEZ, "--channel-key", KEY, "--e2e", E2E,
-              "--realblocks", RB],
-             log="verify.log", check=False)
-    with open(f"{RUN}/logs/verify.log") as src, open(f"{RUN}/verify.txt", "w") as dst:  # without the command line
+    cmd = ["python3", "-I", f"{REPO}/e2e/crown/verify.py", RUN, "--lez", LEZ, "--channel-key", KEY, "--e2e", E2E,
+           "--realblocks", RB]
+    log = "verify.log"
+    rc = run(cmd, log=log, check=False)
+    if rc != 0:  # the endpoint may answer from a node a few blocks behind the last release (see call_until)
+        say("verify: a check failed (logs/verify.log); reading everything again in 60 s")
+        time.sleep(60)
+        log = "verify-retry.log"
+        rc = run(cmd, log=log, check=False)
+    with open(f"{RUN}/logs/{log}") as src, open(f"{RUN}/verify.txt", "w") as dst:  # without the command line
         dst.writelines(l for l in src if not l.startswith("[") or "] $ " not in l)
     if rc != 0:
         die(f"verify.py found a failed check (verify.txt)")
