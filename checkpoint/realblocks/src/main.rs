@@ -39,9 +39,7 @@ const STATUS: [&str; 3] = ["Pending", "Safe", "Finalized"];
 fn args() -> Result<BTreeMap<String, String>> {
     let v: Vec<String> = std::env::args().skip(1).collect();
     ensure!(v.len().is_multiple_of(2), "arguments come in --key value pairs");
-    v.chunks(2)
-        .map(|p| Ok((p[0].strip_prefix("--").context("expected --key")?.to_string(), p[1].clone())))
-        .collect()
+    v.chunks(2).map(|p| Ok((p[0].strip_prefix("--").context("expected --key")?.to_string(), p[1].clone()))).collect()
 }
 
 fn hexa<const N: usize>(v: &Value, what: &str) -> Result<[u8; N]> {
@@ -115,7 +113,8 @@ impl Ins {
 
 fn load_inscriptions(dir: &Path, channel: &Hash) -> Result<(BTreeMap<u64, Ins>, usize)> {
     let mut files: Vec<PathBuf> = fs::read_dir(dir)?.map(|e| Ok(e?.path())).collect::<Result<_>>()?;
-    files.sort_by_key(|p| p.file_name().and_then(|n| n.to_str()).and_then(|n| n.split('-').next()?.parse::<u64>().ok()));
+    files
+        .sort_by_key(|p| p.file_name().and_then(|n| n.to_str()).and_then(|n| n.split('-').next()?.parse::<u64>().ok()));
     let (mut out, mut node_blocks) = (BTreeMap::new(), 0usize);
     for f in files {
         let blocks: Vec<Value> = serde_json::from_slice(&fs::read(&f)?).with_context(|| format!("{}", f.display()))?;
@@ -124,8 +123,11 @@ fn load_inscriptions(dir: &Path, channel: &Hash) -> Result<(BTreeMap<u64, Ins>, 
             for tx in b["transactions"].as_array().context("transactions")? {
                 let ops = tx["mantle_tx"]["ops"].as_array().context("ops")?;
                 let served: Hash = hexa(&tx["mantle_tx"]["hash"], "tx hash")?;
-                ensure!(ops.first().and_then(|o| o["opcode"].as_u64()) == Some(u64::from(OP_CHANNEL_INSCRIBE)),
-                    "node block {}: a transaction whose first op is not an inscription", b["header"]["id"]);
+                ensure!(
+                    ops.first().and_then(|o| o["opcode"].as_u64()) == Some(u64::from(OP_CHANNEL_INSCRIBE)),
+                    "node block {}: a transaction whose first op is not an inscription",
+                    b["header"]["id"]
+                );
                 ensure!(hexa::<32>(&ops[0]["payload"]["channel_id"], "channel")? == *channel, "another channel");
                 // The byte order of field elements: whichever reproduces the node's transaction hash.
                 let mut found = None;
@@ -136,7 +138,8 @@ fn load_inscriptions(dir: &Path, channel: &Hash) -> Result<(BTreeMap<u64, Ins>, 
                         break;
                     }
                 }
-                let (bytes, field_order) = found.with_context(|| format!("tx {}: no encoding reproduces its hash", hex::encode(served)))?;
+                let (bytes, field_order) =
+                    found.with_context(|| format!("tx {}: no encoding reproduces its hash", hex::encode(served)))?;
                 let sig: [u8; 64] = hexa(&tx["ops_proofs"][0]["Ed25519Sig"], "inscription signature")?;
                 let ins = Ins {
                     node_block: b["header"]["id"].as_str().context("header id")?.to_string(),
@@ -177,14 +180,19 @@ fn main() -> Result<()> {
     let logged: BTreeMap<String, String> =
         tsv(Path::new(get("txhashes")?))?.into_iter().map(|r| (r[2].clone(), r[0].clone())).collect();
     // The header line of txhashes.tsv is data (it has none): put it back.
-    let logged_all: Vec<String> = fs::read_to_string(get("txhashes")?)?.lines().map(|l| l.split('\t').nth(2).unwrap_or("").to_string()).collect();
+    let logged_all: Vec<String> =
+        fs::read_to_string(get("txhashes")?)?.lines().map(|l| l.split('\t').nth(2).unwrap_or("").to_string()).collect();
     let chain = tsv(&Path::new(get("record")?).join("chain.tsv"))?;
     let segments = tsv(&Path::new(get("record")?).join("segments.tsv"))?;
     let rec = fs::read(Path::new(get("record")?).join("blocks.borsh"))?;
     let n = u64::try_from(chain.len())?;
     ensure!(u32::from_le_bytes(rec[..4].try_into()?) as u64 == n, "blocks.borsh holds another number of blocks");
-    ensure!(ins.keys().copied().eq(1..=n), "the node holds inscriptions of blocks {:?}..{:?}, the record 1..={n}",
-        ins.keys().next(), ins.keys().last());
+    ensure!(
+        ins.keys().copied().eq(1..=n),
+        "the node holds inscriptions of blocks {:?}..{:?}, the record 1..={n}",
+        ins.keys().next(),
+        ins.keys().last()
+    );
 
     let mut rows = vec!["block\thash\tinscribed_bytes\ttransactions\tstatus_inscribed\tstatus_served\trecord\tnode_block\tnode_slot\ttx_hash\tlogged\tmsg_id\tparent_msg_id\tfield_order".to_string()];
     let mut lines = Vec::new();
@@ -201,7 +209,10 @@ fn main() -> Result<()> {
         let h = hash_parsed_block(payload).map_err(|e| anyhow!("{e:?}"))?;
         ensure!(h == s.header.hash, "block {k}: re-hash {} != carried {}", hex::encode(h), hex::encode(s.header.hash));
         ensure!(k == 1 || s.header.prev_block_hash == prev_hash, "block {k}: not linked to {}", k - 1);
-        ensure!(chain[(k - 1) as usize][0] == k.to_string() && chain[(k - 1) as usize][1] == hex::encode(h), "block {k}: chain.tsv");
+        ensure!(
+            chain[(k - 1) as usize][0] == k.to_string() && chain[(k - 1) as usize][1] == hex::encode(h),
+            "block {k}: chain.tsv"
+        );
         // The inscription: framing, BLAKE2b transaction hash, verify_strict by the signer it names.
         let c = e.check(payload, &channel_id).map_err(|e| anyhow!("block {k}: inscription refused: {e:?}"))?;
         ensure!(c.tx_hash == i.tx_hash, "block {k}: transaction hash");
@@ -220,8 +231,10 @@ fn main() -> Result<()> {
         let ss = parse_block(served, &mut NoVisitor).map_err(|e| anyhow!("record block {k}: {e:?}"))?;
         let chunks = segments.iter().filter(|r| r[0] == k.to_string()).count();
         let record = if chunks == 0 {
-            ensure!(served.len() == payload.len() && served[..served.len() - 1] == payload[..payload.len() - 1],
-                "block {k}: the served block differs from the inscribed one beyond the status byte");
+            ensure!(
+                served.len() == payload.len() && served[..served.len() - 1] == payload[..payload.len() - 1],
+                "block {k}: the served block differs from the inscribed one beyond the status byte"
+            );
             equal += 1;
             "equal but status"
         } else {
@@ -233,13 +246,26 @@ fn main() -> Result<()> {
         *statuses.entry(format!("{}->{}", st(s.status), st(ss.status))).or_default() += 1;
         let txh = hex::encode(c.tx_hash);
         let was_logged = if logged.contains_key(&txh) || logged_all.contains(&txh) { "yes" } else { "no" };
-        rows.push(format!("{k}\t{}\t{}\t{}\t{}\t{}\t{record}\t{}\t{}\t{txh}\t{was_logged}\t{}\t{}\t{}",
-            hex::encode(h), payload.len(), s.tx_count, st(s.status), st(ss.status), i.node_block, i.slot,
-            hex::encode(msg), hex::encode(c.parent), i.field_order));
+        rows.push(format!(
+            "{k}\t{}\t{}\t{}\t{}\t{}\t{record}\t{}\t{}\t{txh}\t{was_logged}\t{}\t{}\t{}",
+            hex::encode(h),
+            payload.len(),
+            s.tx_count,
+            st(s.status),
+            st(ss.status),
+            i.node_block,
+            i.slot,
+            hex::encode(msg),
+            hex::encode(c.parent),
+            i.field_order
+        ));
         lines.push(json!({"block": k, "node_block": i.node_block, "slot": i.slot, "tx_hash": txh,
             "prefix": hex::encode(e.prefix), "suffix": hex::encode(e.suffix), "signature": hex::encode(i.sig),
             "payload_bytes": payload.len(), "payload_sha256": hex::encode(sha256_parts(&[payload])), "msg_id": hex::encode(msg)}).to_string());
-        ensure!(c.signer == hexa::<32>(&channel_json["accredited_keys"][0], "key")?, "block {k}: signer is not the channel's key");
+        ensure!(
+            c.signer == hexa::<32>(&channel_json["accredited_keys"][0], "key")?,
+            "block {k}: signer is not the channel's key"
+        );
         msg_ids.insert(k, msg);
         prev_hash = h;
         prev_msg = msg;
@@ -260,10 +286,14 @@ fn main() -> Result<()> {
     let to: u64 = get("to")?.parse()?;
     ensure!(from >= 2 && from <= to && to <= n, "span");
     let parent_payload = ins[&(from - 1)].payload()?;
-    let channel_sk_bytes: [u8; 32] = fs::read(get("channel-key")?)?.try_into().map_err(|_| anyhow!("channel key: not 32 bytes"))?;
+    let channel_sk_bytes: [u8; 32] =
+        fs::read(get("channel-key")?)?.try_into().map_err(|_| anyhow!("channel key: not 32 bytes"))?;
     let channel_sk = SigningKey::from_bytes(&channel_sk_bytes);
     let channel_pk = channel_sk.verifying_key().to_bytes();
-    ensure!(channel_pk == hexa::<32>(&channel_json["accredited_keys"][0], "key")?, "the copied channel key is not the channel's accredited key");
+    ensure!(
+        channel_pk == hexa::<32>(&channel_json["accredited_keys"][0], "key")?,
+        "the copied channel key is not the channel's accredited key"
+    );
     ensure!(channel_json["accredited_keys"].as_array().map(Vec::len) == Some(1), "the channel holds more than one key");
     let posting_timeframe = u32::try_from(channel_json["posting_timeframe"].as_u64().context("posting_timeframe")?)?;
     let config_tip_hash: Hash = hexa(&channel_json["config_tip_hash"], "config_tip_hash")?;
@@ -321,7 +351,11 @@ fn main() -> Result<()> {
     ensure!(CheckpointInputB::decode(&encoded).is_ok(), "the input does not decode");
     let name = format!("real-lab-{from}-{to}");
     let bytes: usize = blocks.iter().map(|b| b.len()).sum();
-    let txs: u32 = blocks.iter().map(|b| parse_block(b, &mut NoVisitor).map(|s| s.tx_count)).sum::<Result<u32, _>>().map_err(|e| anyhow!("{e:?}"))?;
+    let txs: u32 = blocks
+        .iter()
+        .map(|b| parse_block(b, &mut NoVisitor).map(|s| s.tx_count))
+        .sum::<Result<u32, _>>()
+        .map_err(|e| anyhow!("{e:?}"))?;
     fs::write(out_dir.join(format!("{name}.input")), &encoded)?;
     let meta = json!({
         "kind": "checkpoint-b",
@@ -345,7 +379,12 @@ fn main() -> Result<()> {
         "deployment": {"evm_chain_id": 31337, "vault": format!("0x{}", hex::encode(vault)), "lez_config_id": hex::encode(config.config_id()), "channel_id": hex::encode(channel_id)},
     });
     fs::write(out_dir.join("attestor.json"), serde_json::to_string_pretty(&att)? + "\n")?;
-    println!("{name}: {} blocks, {txs} transactions, {bytes} B of blocks, input {} B; journal sha256 {}; parent state {}",
-        blocks.len(), encoded.len(), hex::encode(sha256_parts(&[journal.as_slice()])), hex::encode(parent.digest()));
+    println!(
+        "{name}: {} blocks, {txs} transactions, {bytes} B of blocks, input {} B; journal sha256 {}; parent state {}",
+        blocks.len(),
+        encoded.len(),
+        hex::encode(sha256_parts(&[journal.as_slice()])),
+        hex::encode(parent.digest())
+    );
     Ok(())
 }
