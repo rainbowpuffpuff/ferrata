@@ -18,7 +18,7 @@ const screens = [
 ];
 
 test("ferrata_bridge_ui: loads in Basecamp", async (app) => {
-  await app.waitFor(async () => { await app.expectTexts(["Ferrata Bridge"]); },
+  await app.waitFor(async () => { await app.expectTexts(["Ferrata Bridge", "Logos core: ferrata_bridge_module"]); },
     { timeout: 30000, interval: 500, description: "the mini-app to load" });
 });
 
