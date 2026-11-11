@@ -67,9 +67,19 @@ vault's mock verifier).
 | `test_11b_public_burn_and_release` | the public path keeps its warning: a public burn is refused until acknowledged (indicator "High"); then burned, checkpointed and released to another fresh address; a second release refused ("Already released") | 21b, 21c, 23b, 24 |
 | `test_14_wallet_provider_seam` | a stub provider set as `walletProvider` gets the connect (naming the dApp) and the approval of a deposit; the built-in prompts are not used; the deposit goes through | 32 |
 
-The other tests are those of the run below, unchanged. Not re-run on this branch: the packages
-(`nix-build.sh`) and Basecamp (`basecamp-ui-tests.sh`); their numbers below are the `miniapp` branch's, for
-the view before these changes.
+The other tests are those of the run below, unchanged.
+
+Packages of this view (`scripts/nix-build.sh` on the box, commit `dd813a7`'s view):
+
+| Target | Seconds | `.lgx` bytes | SHA-256 |
+|---|---:|---:|---|
+| `nix build .#lgx` (a fresh container: the builder's inputs fetched again) | 81 | 17,545 | `da228d7fd4624c39da16fcbb363c4475c0cd10c61d4e2e124ee095096871589d` |
+| `nix build .#lgx-portable` | 5 | 17,543 | `c771e82669e2fa25704599a53077f0d3a89bf53f186c37be2c97c7c5ed4da9eb` |
+
+Not re-run on this branch: Basecamp (`basecamp-ui-tests.sh`): it needs Basecamp's `#dev` built from source
+in the container first (1,656 s last time) and that command is not recorded in full; its 10 of 10 below is
+for the view before these changes (which add eight properties, seven functions, two buttons, two checkboxes
+and a label, and no import).
 
 ## 11 November 2026: the first runs (branch `miniapp`)
 
