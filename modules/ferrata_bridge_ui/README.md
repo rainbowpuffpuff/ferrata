@@ -45,7 +45,8 @@ Every call is `call(method, params)` with one JSON value in and one out:
   `RESULTS.md`), so inside Logos this is the only path, as the design has it.
 - **On the devnet**: HTTP to `cli/examples/miniapp_devnet.rs`, which serves the same methods (`info`,
   `registry`, `price`, `deposit`, `relay`, `scan`, `claim`, `burn`, `checkpoint`, `release`,
-  `set_endpoints`, `admin.status`, `admin.set_cap`, `admin.freeze`) from a local devnet: the v5 vault on
+  `set_endpoints`, `advance_time` (the devnet's clock, for letting a delay pass), `admin.status`,
+  `admin.set_cap`, `admin.freeze`) from a local devnet: the v5 vault on
   anvil (chain id 1, never a public network) with the vault tests' mock verifier, and the zone in the LEZ
   harness (LEZ's state transition with the bridge guest, RISC Zero dev mode). It is the `ferrata` CLI's
   library wired as `cli/tests/e2e.rs` wires it; the relayer's imports and the checkpoint prover are named
