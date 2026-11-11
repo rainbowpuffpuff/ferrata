@@ -1,0 +1,28 @@
+{
+ "label": "crown run",
+ "chainId": 11155111,
+ "vault": "0xfE3199fa2634413CbAC317371076Cae3EB2d9E54",
+ "configId": "0x0c71ff13ed7e84bb5367f2ce0cee0ce9039b6f7b541a489438a1ec8fade83854",
+ "genesisState": "0xa696b3c8deaa881c962e3d768e8ee28c9b08ce60b709c058ea21db82c541bef9",
+ "groth16Verifier": "0x8f0Af3Bf302C64d57f840127F94d9c123a8Fa2A0",
+ "delta": 3600,
+ "deployer": "0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07",
+ "firstNonce": 10,
+ "createAddresses": [
+  "0x2Ea6457503024bB8dD99764F1bB5C7aFf9726Ea9",
+  "0xe5D797C9f585a9c1b5e530814f9F25bED24a4B15",
+  "0xfE3199fa2634413CbAC317371076Cae3EB2d9E54",
+  "0x8E1140D771892abdbe6b0Ef03aDd081F2153B73b",
+  "0xCF74072940437B3d7124A2875b1dcc2328F12a1E",
+  "0x219378BfB8231836DF181e730A46d1b39216Ef48",
+  "0x4fB900A6AE789eE01520ceb8c842D7bAfA7Ad29e"
+ ],
+ "sessionA": {
+  "sha256": "b574e678b9cfb0c20454ee1bd6c645e24afc6b8fbf3305a5554218346bc5e1e6",
+  "tip": {
+   "hash": "0x5998dfbb72d522f26f6d6fcc8df396450d6bd1c7547e50203ddc964fe3138e0c",
+   "id": 178
+  },
+  "chain": "sepolia"
+ }
+}

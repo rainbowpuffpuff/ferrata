@@ -1,0 +1,26 @@
+{
+  "attestation_key": "0x66e871afd5334c1d8c6452399898e6c6fdba412c98eda4708a9b1379505cbc95",
+  "certificate": "0x4a04c80dce2ea3eccedacf5cb0e765265c361058fe96d57c2bd0ff766ce4d4f9faf613178179b8974095271f5fbaeda821c99d5a78e7da6152fc7f97a3831504",
+  "certificate_message": "0x666572726174612f6174746573742d6b65792f76310000000000000000000000000000000000000000000000000000000000aa36a7fe3199fa2634413cbac317371076cae3eb2d9e540c71ff13ed7e84bb5367f2ce0cee0ce9039b6f7b541a489438a1ec8fade83854010101010101010101010101010101010101010101010101010101010101010166e871afd5334c1d8c6452399898e6c6fdba412c98eda4708a9b1379505cbc95",
+  "channel_key": "0x80bb7b0ebc19af0577770a44adbde1606116f2a13d485cca679091ce2081e09b",
+  "channel_tip_is_last_final_block": true,
+  "config_tip_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "deployment": {
+    "channel_id": "0x0101010101010101010101010101010101010101010101010101010101010101",
+    "evm_chain_id": 11155111,
+    "lez_config_id": "0x0c71ff13ed7e84bb5367f2ce0cee0ce9039b6f7b541a489438a1ec8fade83854",
+    "vault": "0xfe3199fa2634413cbac317371076cae3eb2d9e54"
+  },
+  "final_msg_id": "0x5df7754482b9004fc4c9b7cffdbad4ff8013dc4b0ed3a8ea40d929db686b7fc5",
+  "key_set_hash": "0x7abe5e29ff7d207dcb0b3ac87b7b6d518533fdbb0661548a4e173ea66bcb787d",
+  "last_final_block": 252,
+  "lib_slot": 8906897,
+  "posting_timeframe": 0,
+  "signature": "0x886e21efcc154adb0a0ca1bcc0752304dba4f93eeeb89fce096ed8bdf769280377507cf9a831511242f903770483eb1fc56ac047390b888708c9a181a8064c03",
+  "tip_hash": "0xe55977023d6e1ae1bcfdb3625affcdca7acf061067922a1dacc052380dc76ecf",
+  "tip_id": 252,
+  "tip_node_block": "2ae9f0dc92eb10e195b839c415993f0783ec14cc3fbc651db60ae5a735c71631",
+  "tip_node_slot": 8906895,
+  "tip_status_inscribed": "Pending",
+  "what": "crown attestor: the devnet sequencer's channel key certifies an attestation key (secret = sha256(\"ferrata/crown/attestation-key/v1\" || channel secret), not written); the attestation key signs the final-tier message v2 for T1, final by the node's rule (inscription in an immutable node block, slot <= LIB)"
+}
