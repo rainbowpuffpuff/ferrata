@@ -225,6 +225,15 @@ Item {
             idle();
             verify(!has(el("registry.lez.0").text, "mints frozen until not frozen"), el("registry.lez.0").text);
             shot("30-registry-after-admin");
+            tab("admin");
+            click("admin.unfreeze");
+            approve("Lift the freeze", null);
+            tryVerify(function () { return has(el("admin.result").text, "Freeze lifted"); }, 60000, el("admin.result").text);
+            host.app.call("claim", { leaf_index: 2, private: false });
+            idle();
+            verify(host.app.lastOk, "the claim refused while frozen goes through once the freeze is lifted: " + host.app.lastError);
+            verify(has(host.app.lastResult.what, "plaintext claim of leaf 2"), host.app.lastResult.what);
+            shot("30b-admin-freeze-lifted");
         }
 
         function test_13_privacy() {

@@ -878,7 +878,8 @@ impl Devnet {
         let newest = self.zone.world.finalize(now);
         let t = self.zone.world.blocks[newest].time_ms();
         let record = self.zone.world.blocks[newest].time_record();
-        let until_ms = t + seconds * 1000;
+        // `lift`: until 0, the freeze authority's unfreeze.
+        let until_ms = if params["lift"].as_bool().unwrap_or(false) { 0 } else { t + seconds * 1000 };
         let msg = BridgeMessage::Freeze { config_id: self.cid, token: Some(ETH_TOKEN), mints, burns, until_ms, record };
         let target = token_actor(self.ctx.program, &self.cid, &ETH_TOKEN);
         let r = self.zone.world.role("Freeze (admin view)", seed, &msg, target);

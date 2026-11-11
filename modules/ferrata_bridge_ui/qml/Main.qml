@@ -511,6 +511,19 @@ Rectangle {
                         })
                     }
                 }
+                Box {
+                    Label { text: "Lift a freeze (freeze authority)"; font.bold: true }
+                    Button {
+                        objectName: "admin.unfreeze"; text: "Lift the freeze"; enabled: busy === 0
+                        onClicked: propose({
+                            title: "Lift the freeze on the bridge program (freeze authority)",
+                            rows: [["Requested by", "Ferrata Bridge (admin view)"], ["Account", "the configuration's freeze authority"], ["Asset", "ETH"], ["Lift", (frMints.checked ? "mints " : "") + (frBurns.checked ? "burns " : "") + "now"]],
+                            effects: ["Claims and/or burns of ETH are accepted again", "Moves no funds"]
+                        }, function () {
+                            call("admin.freeze", { mints: frMints.checked, burns: frBurns.checked, lift: true }, function (ok, v) { adminText = ok ? "Freeze lifted." : ""; if (ok) refreshRegistry(); });
+                        })
+                    }
+                }
                 Note { text: "On Ethereum the vault's own controls (fee changes announced seven days ahead, watchers, the 14-day role change, retirement) are listed in the registry and run from the operator's tools; this view sends the bridge program's." }
                 Label { objectName: "admin.result"; text: adminText; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                 Item { Layout.fillHeight: true }
