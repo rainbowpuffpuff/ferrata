@@ -1,0 +1,26 @@
+[02:17:04] session 20261111T021704Z
+[02:17:07] restored generation 4 (114M)
+[02:17:08] Bedrock node up: {"cryptarchia_info":{"lib":"cfc86b7fec3d6352c666b9144fe74c2448834b1ad18c0fdf7c95a443ee0c9c36","lib_slot":8863275,"tip":"94da9516c6ae45f1c98ee4b9deb57bf4870809eb5e5d8e7b198f5d6fc36527c8","slot":8863280,"height":2188,"state":"Bootstrapping"},"phase":"InitialBlockDownload"}
+[02:17:12] node slot 0 is unix second 1785493027
+[02:17:14] sequencer start 1: scheduler after 1 s; its blocks fall 6 s after an epoch second
+[02:17:14] sequencer up, head block 208
+sepolia: instance at slot 11551808, head period 1410, 1 update(s), finality update yes; 3 request(s)
+mainnet: instance at slot 15627616, head period 1907, 1 update(s), finality update yes; 3 request(s)
+[02:18:21] driver exit 0
+[mainnet] update 001907.ssz (attested 15622208, finalized 15622144): not applied, the native client refuses it: UpdateIrrelevant
+[20261111T021704Z] mainnet #6 finality p1907 fin 15628192 Open (step 1)       applied        gas   2194254 block  212 +  9.4s 1e4619e64ef2a867bb233b48b60eeef750c204d37d65e8b96e1a15af2b079a5e
+[20261111T021704Z] mainnet #6 finality p1907 fin 15628192 Miller (step 2)     applied        gas   3307963 block  213 + 10.3s 64fdd450235a34b591758c32884f00fc314175414b38febef8aecdeb7dfb0e57
+[20261111T021704Z] mainnet #6 finality p1907 fin 15628192 Finish (step 3)     applied        gas   3723564 block  214 + 10.4s d4577e711dc6926a249d76d029efa18a0ead108bd22f4ad80c75b43b4401e6bf
+[mainnet] mainnet #6 finality p1907 fin 15628192: applied (3 transactions, blocks 212-214); rotated false advanced true adopted false
+[mainnet] 1 job(s) applied this session, 0 committee handoff(s)
+blocks: 1..=214 (every one final on Bedrock)
+transactions: 213 sent; 213 applied, 0 refused with an exit code, 0 reverted otherwise, 0 dropped, 0 rejected at the RPC, 0 unfinished
+[02:18:21] sequencer stopped (exit 0)
+[02:18:30] node stopped (exit 143)
+state to save:
+35M	lab/state/bedrock
+2.0K	lab/state/config
+5.8M	lab/state/driver
+45M	lab/state/sequencer_home
+38554431 sequencer_home/rocksdb-0101010101010101010101010101010101010101010101010101010101010101/000104.log
+[02:18:30] saved generation 5 (18661933 bytes)

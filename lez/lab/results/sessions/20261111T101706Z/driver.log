@@ -1,0 +1,22 @@
+[session 20261111T101706Z] sequencer head 232, follower at block 232
+[deploy] already deployed at A21ic7TofHbrABepXwsDDU2U2E8E1RKcTiNn228gNNUs: image 61b7b70dee5a5020af54b3107cef5298861fadd301c9dc0b063c80d88ca42f9a
+[sepolia] update 001410.ssz (attested 11550784, finalized 11550720): not applied, the native client refuses it: UpdateIrrelevant
+[20261111T101706Z] sepolia #42 finality p1410 fin 11554816 Open (step 1)      applied        gas   2073204 block  233 + 13.5s f4c1df0bb6c73c220a6c0fb2d8efc08de64911e1e50528f3d95f97bc517cd1cf
+[20261111T101706Z] sepolia #42 finality p1410 fin 11554816 Miller (step 2)    applied        gas   3305289 block  234 + 10.2s 3357b16039d1042b8b5e6bdb7831432664bc949f1df5ff4c9f2d19c9255f718e
+[20261111T101706Z] sepolia #42 finality p1410 fin 11554816 Finish (step 3)    applied        gas   3718605 block  235 + 10.3s b23c5b204227260a0fd31bb26e9e1c3a9b4e792b297e3de5f2cdcfc0b6d23524
+[sepolia] sepolia #42 finality p1410 fin 11554816: applied (3 transactions, blocks 233-235); rotated false advanced true adopted false
+[sepolia] 1 job(s) applied this session, 0 committee handoff(s)
+[mainnet] update 001907.ssz (attested 15622208, finalized 15622144): not applied, the native client refuses it: UpdateIrrelevant
+[20261111T101706Z] mainnet #10 period p1908 fin 15630336 Open (step 1)        applied        gas   2211054 block  236 +  9.7s 07c14987efc7904bdfdbdb706beb4af1f89f7937493307766e33110cceb96131
+[20261111T101706Z] mainnet #10 period p1908 fin 15630336 Miller (step 2)      applied        gas   3313287 block  237 +  9.9s b0a588467decc1fc801b504a4fd62d81a82f4fd992737c0ad04393866bd9de99
+[20261111T101706Z] mainnet #10 period p1908 fin 15630336 adopt 1/2            applied        gas   3410904 block  238 +  9.9s 8efaea699e5a9159770bfb99a17c2f4f8bbfef7e586c7cc33cef500cf7b394ed
+[20261111T101706Z] mainnet #10 period p1908 fin 15630336 adopt 2/2            applied        gas   3418098 block  239 + 10.0s bf23091fe69a20b2b02c05a53153a33fc175c4161c7596e1fcc4d3a8e6ef3e54
+[20261111T101706Z] mainnet #10 period p1908 fin 15630336 Finish (step 3)      applied        gas   3733713 block  240 + 10.5s 63b06bf338b7aab91fa3033b37127cce8dcda7bd451133c19045683e308898b8
+[mainnet] mainnet #10 period p1908 fin 15630336: applied (5 transactions, blocks 236-240); rotated true advanced true adopted true
+[20261111T101706Z] mainnet #11 finality p1908 fin 15630592 Open (step 1)      applied        gas   2193960 block  241 +  9.8s 77caf3003f45d1fc078a75973439b4a5db021da678a2f99b4d2d5e505c83d2c0
+[20261111T101706Z] mainnet #11 finality p1908 fin 15630592 Miller (step 2)    applied        gas   3307963 block  242 +  9.8s d68c88ead1b45d89683eebd34fb7ca2e6ea25e75743926f5206cbe2fe5b21e76
+[20261111T101706Z] mainnet #11 finality p1908 fin 15630592 Finish (step 3)    applied        gas   3723564 block  243 + 10.3s ccfc1d09b880b95e3ed0a1484fe27a486b8ca8af1940313912814c5a9ef72d0b
+[mainnet] mainnet #11 finality p1908 fin 15630592: applied (3 transactions, blocks 241-243); rotated false advanced true adopted false
+[mainnet] 2 job(s) applied this session, 1 committee handoff(s)
+blocks: 1..=243 (every one final on Bedrock)
+transactions: 242 sent; 242 applied, 0 refused with an exit code, 0 reverted otherwise, 0 dropped, 0 rejected at the RPC, 0 unfinished

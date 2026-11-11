@@ -52,12 +52,12 @@ the public job path:
 | operate | `lez/lab/lab.sh deploy | run 60 | status | fetch | verify | stop` |
 | re-check | `lab.sh verify` replays every block through LEZ's `chain_state::apply_block` from the pre-genesis state, compares every charge, and rebuilds each instance's store natively from the kept bootstrap and updates |
 
-**Measured** (to the session of 10 November 2026, 22:17 UTC): 201 transactions, all applied, none
-refused, reverted, dropped or rejected; 202 blocks, all final; Sepolia from the period-1378 bootstrap
-through the Gloas fork, 36 updates and 32 committee handoffs (one live, into period 1,410); mainnet from
-the finalized checkpoint of slot 15,625,920, 4 updates. A scheduled session restarted the zone after 54
-minutes stopped. Program transactions used 208,951 (`Init`) to 3,731,712 (`Finish`) execution gas, none
-over the 5M target. **Cost:** the scheduled session of 20:17 UTC billed 0.0064 USD; at twelve such
+**Measured** (to the session of 11 November 2026, 14:17 UTC): 257 transactions, all applied, none
+refused, reverted, dropped or rejected; 258 blocks, all final; 12 sessions, 1 failed to start; Sepolia from
+the period-1378 bootstrap through the Gloas fork, 44 updates and 32 committee handoffs (one live, into period
+1,410); mainnet from the finalized checkpoint of slot 15,625,920, 14 updates and 1 committee handoff (live,
+into period 1,908). A scheduled session restarted the zone after 54 minutes stopped. Program transactions
+used 208,951 (`Init`) to 3,733,713 (`Finish`) execution gas, none over the 5M target. **Cost:** the scheduled session of 20:17 UTC billed 0.0064 USD; at twelve such
 sessions a day, about 0.08 USD a day (derived). Seven consecutive days end on 17 November, 19:22 UTC
 ([`lez/lab/README.md`](../../lez/lab/README.md), "Results so far", "The claim that can be made today").
 

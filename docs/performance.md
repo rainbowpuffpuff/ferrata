@@ -110,7 +110,7 @@ sync-committee period, plus one per hour while roots are imported; derived):
 
 Per attestation: the interval's cost divided by the attestations its records serve. **Measured in
 operation:** the lab followed Sepolia and mainnet on a live sequencer every two hours; its program
-transactions used 208,951 to 3,731,712 execution gas ([`lez/lab/README.md`](../lez/lab/README.md)). **Gap:** the figure at the
+transactions used 208,951 to 3,733,713 execution gas ([`lez/lab/README.md`](../lez/lab/README.md)). **Gap:** the figure at the
 recommended cadence with real proving and recorded hardware (milestone A4).
 
 ### P.4 User proving (RFP-021)
@@ -174,7 +174,7 @@ transactions**: the proven path, which runs in a private actor, would not benefi
 
 By construction: no action reads a variable-length collection; records, roots and nullifiers are addressed
 by key; committees are fixed-size summaries ([`attestation.md`](design/attestation.md) §5.6). The lab's
-program transactions used 208,951 to 3,731,712 execution gas over its first 202 blocks
+program transactions used 208,951 to 3,733,713 execution gas over its first 258 blocks
 ([`lez/lab/README.md`](../lez/lab/README.md)), not analysed against state size. **Gap:** no measurement of cost against state
 size.
 
