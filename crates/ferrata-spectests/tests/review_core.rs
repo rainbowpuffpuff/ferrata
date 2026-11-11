@@ -147,3 +147,29 @@ fn an_empty_finalized_header_of_another_layout_is_refused() {
         Err(Error::ForkMismatch)
     );
 }
+
+/// `FinalizedStore::from_core` (row 11's store): "Both committees are checked, as at adoption"
+/// (policy.rs:81-82). Review mutant R07 (no check of a known next committee) survived every test
+/// before this one.
+#[test]
+fn from_core_checks_a_known_next_committee() {
+    use ferrata_core::{
+        bls::{Aggregation, Blst},
+        fork::LcFork,
+        policy::FinalizedStore,
+        store::StoreCore,
+        types::{LightClientHeader, SyncCommittee},
+    };
+    use ferrata_spectests::testkit::with_wrong_aggregate;
+    let bls = Blst::new(Aggregation::Auto);
+    let core = |next: SyncCommittee| StoreCore {
+        fork: LcFork::Electra,
+        finalized_header: LightClientHeader::empty(LcFork::Electra),
+        current_sync_committee: fake_committee(32, 0x31).committee,
+        next_sync_committee: next,
+    };
+    assert!(FinalizedStore::from_core(core(SyncCommittee::empty(32)), &bls).is_ok(), "next unknown");
+    assert!(FinalizedStore::from_core(core(fake_committee(32, 0x32).committee), &bls).is_ok());
+    let bad = with_wrong_aggregate(&fake_committee(32, 0x33).committee);
+    assert_eq!(FinalizedStore::from_core(core(bad), &bls).err(), Some(Error::CommitteeInvalid));
+}
