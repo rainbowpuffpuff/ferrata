@@ -99,17 +99,24 @@ rustfmt of three files (committed as b369d65; the commits after it change docume
 in [`evidence-suites.txt`](evidence-suites.txt). Image ids are those of that worktree's path (bridge program
 `cf41b7e5…5390`).
 
+**Sixth pass (branch `integration6`, 11 Nov 2026).** The documents were brought to the merged code; the code changes
+are in the privacy suite (its seed-only wallet derives `NOut` as D13's v2, and it names the holder PDAs) and in
+`e2e/crown.sh`'s guard. Re-run on the build box at 96d3e1f (the rows below say which pass each result is from): the
+CI workflow's two jobs as written, `test` on the current stable Rust (1.99.1, with beta 1.101.0-beta.1 for fmt and
+clippy) and `links` in a fresh git checkout of the tracked files; the privacy suite, whose output is now
+[`privacy/generated/`](privacy/generated/); LEZ fmt and clippy.
+
 | Suite | Result |
 |---|---|
-| Root workspace, CI job as written (vectors fetched on the box; `stable` as 1.98.1) | 142 tests passed in 21 binaries; fmt, clippy `-D warnings` and the `no_std` RISC-V build clean |
+| Root workspace, CI job as written (vectors fetched on the box) | fifth pass (`stable` as 1.98.1) and sixth (stable 1.99.1; fmt and clippy also on beta 1.101.0-beta.1): 142 tests passed in 21 binaries; fmt, clippy `-D warnings` and the `no_std` RISC-V build clean |
 | LEZ harness, every test (private paths in dev mode) | 45 passed in 23 binaries (36 before, `bridge_time` 1, `bridge_secfix` 8); clippy and fmt clean; `prove_bridge`'s dry run settles its claim and burn |
 | Live driver and crown driver (`lez/live/driver`, `lez/crown/driver`) | both `cargo check --locked` clean (the crown driver on the merged wire); the live driver has no tests; clippy and rustfmt not run on them (the live driver was not clean in the fourth pass); not part of CI |
 | Checkpoint: `checkpoint-core` and `attestor-core` (rules (A) and (B), with the tip's producer inscription); fidelity; `realblocks` | 34 passed in 8 binaries, clippy and fmt clean, attestor vectors re-derived in Python; fidelity 17 passed in 6; `realblocks` and `realblocks-crown` build, clippy clean |
 | Bridge core and release guest (`bridge/`) | core 56 passed in 10 binaries, vectors v1 and v2 re-checked in Python; release guest in the executor: 77,736 user cycles, journal equal to native; `reindex` (one `NOut` on two branches), `invariance 64`, `claim-check 16` pass; clippy and fmt clean; `verify eth` fails by design (its saved receipt is of the earlier release image) |
 | Command-line tool (`cli/`) | 4 unit tests passed; the end-to-end test (anvil, the harness in dev mode, the mock verifier) passed; fmt clean |
-| Privacy suite (`scripts/privacy/run.sh`) | both halves pass; recovery 10 of 10 unclaimed deposits and 10 of 10 unreleased burns; its tables differ from the committed ones (`docs/privacy/generated/`, kept from the third pass) only by the image id and by claim transactions 16 and 8 bytes shorter (no caller time) |
+| Privacy suite (`scripts/privacy/run.sh`) | sixth pass, at the `integration5` path (image `cf41b7e5…5390`): both halves pass in 80 s; recovery 10 of 10 unclaimed deposits and 10 of 10 unreleased burns, the released ones recognised, recovered `NOut` equal to the vault's for 20 of 20; [`docs/privacy/generated/`](privacy/generated/) is this run's output, reproduced byte for byte |
 | Vault: `forge test`, invariants, coverage | 433 passed, 1 skipped (the privacy suite's Ethereum half, run above) in 38 suites, 43 of them with real proofs (`test/real/`, 10 suites); invariants 28 passed in 2 suites; coverage 100% (lines, statements, branches, functions) of both files; `forge fmt --check` clean; FerrataVault 24,254 B (322 B under EIP-170; `--sizes` exits 1 only for the test-only `VaultHandler`, as before) |
-| Link checker (`scripts/check-links.py`, laptop: it needs git) | 24 files, 833 links, 0 broken |
+| Link checker (`scripts/check-links.py`; it needs git) | sixth pass: the CI job `links` on the build box at 96d3e1f, 24 files, 841 links, 0 broken; on the laptop at this tree's tip, 24 files, 843 links, 0 broken |
 
 Not re-run here: the LEZ v0.4.0-rc2 selection, `bridge/scripts/check.sh`, `modules/scripts/check.sh`, `bench/`, the
 finality simulator, the lab's `lab.sh verify`, the vault's mutation run (254/254 killed on branch `secfix-vault`), and
