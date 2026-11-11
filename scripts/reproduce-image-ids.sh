@@ -67,7 +67,8 @@ case "$mode" in
     done
     for f in checkpoint_b checkpoint segment release; do
       for r in "$SRC/checkpoint/target/riscv-guest" "$SRC/bridge/target/riscv-guest"; do
-        bin="$(find "$r" -path '*riscv32im-risc0-zkvm-elf/release/*' -name "$f" -type f 2>/dev/null | grep -v '/deps/\|/build/' | head -n 1)"
+        bin="$(find "$r" -path '*riscv32im-risc0-zkvm-elf/release/*' ! -path '*/release/deps/*' ! -path '*/release/build/*' \
+          -name "$f" -type f 2>/dev/null | head -n 1)"
         [ -n "$bin" ] && { cp "$bin" "$OUT/programs/$f.elf"; break; }
       done
     done
@@ -81,6 +82,7 @@ case "$mode" in
     find "$SRC"/{lez,checkpoint,bridge}/target -path '*/build/methods*-*/out/methods.rs' 2>/dev/null \
       | xargs -r grep -h -E 'pub const [A-Z0-9_]+_ID: \[u32; 8\]' > "$OUT/methods-ids.txt" || true
     log "programs: $(ls "$OUT/programs" | tr '\n' ' ')"
+    [ "$(ls "$OUT"/r0bf/*.bin 2>/dev/null | wc -l)" = 4 ] || { log "not all four R0BF programs made"; cat "$OUT/logs/program-binary.log"; exit 1; }
     cat "$OUT/ids.tsv" "$OUT/ids.txt" "$OUT/r0bf/ids.jsonl"
     ;;
   compare)
