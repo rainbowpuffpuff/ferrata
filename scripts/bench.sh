@@ -63,7 +63,7 @@ PY
 
 gas_() {
   mkdir -p "$OUT/gas"
-  ( cd "$ROOT/vault" && forge test --isolate --match-contract GasScenarios -vv > "$OUT/gas/gas-scenarios.log" 2>&1 )
+  ( cd "$ROOT/vault" && forge test --isolate --match-contract 'GasScenarios|ReturnLegGas' -vv > "$OUT/gas/gas-scenarios.log" 2>&1 )
   echo "gas exit $? $(grep -E 'Suite result|passed|failed' "$OUT/gas/gas-scenarios.log" | tail -1)"
 }
 
