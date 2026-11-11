@@ -58,7 +58,7 @@ header account is `bridgeHeader`). PDAs are public PDAs of `B`; seeds are
 | `root(cid, n)` | PDA `root ‖ cid ‖ n` | `Root { cid, chain, vault, n, root, record_slot, block_number }` | `WriteRoot` from `config(cid)` only |
 | `nullifier(chain, vault, N)` | PDA `nullifier ‖ chain:u256 ‖ vault ‖ N` (no `cid`) | `Spent { cid, token, n, amount }` | `Spend` from `token(cid, token)` only |
 | `holder(account)` | PDA `holder ‖ account` | `Holder { holdings: [(cid, token, amount)] }` (mutable): public balances | `Mint` from the nullifier actor (naming `account`); `Burn` forwarded by the account's own actor |
-| the account's own actor | the account itself, program `B` | `Holder` of its own private claims (a private account's private state); none for a public account | its own `ClaimPrivately`; its `Burn`; role messages (forwarded, nothing stored) |
+| the account's own actor | the account itself, program `B` | `Holder` of its own private claims (a private account's private state; a public account has one only if it ran its own `ClaimPrivately` publicly) | its own `ClaimPrivately`; its `Burn`; role messages (forwarded, nothing stored) |
 | `burn(cid, H(note))` | PDA `burn ‖ cid ‖ H(r ‖ memo ‖ mac ‖ token ‖ amount ‖ COut)` | `Burn { cid, note }` | `Burn` from `token(cid, token)` only |
 
 `cid` is SPEC-v2 §1's `configId`, computed on chain with the bridge core
