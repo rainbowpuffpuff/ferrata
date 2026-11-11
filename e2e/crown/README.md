@@ -133,12 +133,12 @@ again; a LEZ session whose generation is saved is not run again, and once the va
 devnet can be made). `--halt-after <stage>` stops cleanly after a stage.
 
 Expected duration of the live run (derived: the rehearsal's measured stage times plus Sepolia's own clock): build ~2
-min; session A ~5-10 min (the real Sepolia instance: bootstrap and 32 period updates); deployment ~3 min (7
+min; session A ~30 min (crown-lez's rehearsal 2 on the real Sepolia path: 176 transactions, 29.5 min); deployment ~3 min (7
 transactions, `--slow`); each deposit then waits for its block's finality (~13-20 min) and a light-client update that
 covers it (up to ~7 min more): ~40 min for both; session B ~14 min (827 s in the rehearsal: two private proofs of
 266 s and 323 s on 16-32 cores); the checkpoint ~5 min (GPU queue permitting: up to 2 h, then the CPU here); W = 60 min
 (the release proofs, ~3 min, run in it); finalize, the 120 s release delay and both releases ~4 min; verify ~1 min.
-About **2 h 15 min to 2 h 45 min** in all, longer if no GPU is free. Modal: about 1-2 USD on ws-3 (estimated).
+About **2 h 40 min to 3 h 10 min** in all, longer if no GPU is free. Modal: about 1-2 USD on ws-3 (estimated).
 Sepolia: 13 transactions, ~50 M gas (the vault ~39.5 M under EIP-8037), 0.002004 ETH escrowed by the deposits and
 paid back by the releases less the fees.
 
