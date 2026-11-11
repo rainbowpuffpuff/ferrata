@@ -1,0 +1,259 @@
+status
+  program            FhXQNXifS3nitELmi18yyb7R7QcgauZHgXbWuQTK2pqn
+  instance           0x6d65e4ef2af67eed1ce3a5c2d7b04fa02517707d2dff044869389f310b69f6b4 (chain 11155111, store layout Gloas)
+  followed           Init, then the updates of periods 1378-1409 and the fixture's finality update: 166 transactions, all applied: true
+                     execution gas 525494412 in all, storage gas 1776529 in all
+  finalized slot     11549664 (store), the record's: 11549664
+  record             header(id, 11549664) = GT2qsHtJhVSkWhniTDNobpKxVRhe5S7fZ2zifnPmGzSZ: block 12105936 execution BlockHash([90, 47, 86, 113, 212, 217, 61, 78, 154, 24, 142, 197, 87, 67, 174, 32, 168, 108, 206, 95, 145, 229, 112, 242, 229, 220, 34, 178, 179, 75, 39, 182])
+
+dry run: storage slot 0x000000000000000000000000000000000000000000000000000000000000000b of 0x1c7d4b196cb0c7b01d743fbc6116a902379c7238
+  message            Attest (variant 7 of ferrata_lez_wire::Message), 7201 bytes borsh
+  to                 header(instance, slot 11549664) = GT2qsHtJhVSkWhniTDNobpKxVRhe5S7fZ2zifnPmGzSZ of program FhXQNXifS3nitELmi18yyb7R7QcgauZHgXbWuQTK2pqn
+  request            chain 11155111, instance 0x6d65e4ef2af67eed1ce3a5c2d7b04fa02517707d2dff044869389f310b69f6b4, the block's RLP header (678 bytes: the Gloas record binds the hash only), 1 account(s), 1 slot(s), 0 log(s)
+  written            results/attest-cli/messages/message-2.hex (borsh, hex) and results/attest-cli/messages/message-2.debug (its Rust Debug text)
+  verdict            attested: 2 statement(s) (ferrata_lez_wire::attest::evaluate, the program's own function)
+    proven at block 12105936 (0x5a2f5671d4d93d4e9a188ec55743ae20a86cce5f91e570f2e5dc22b2b34b27b6), 0 hop(s), record slot 11549664, chain 11155111
+    [0] account 0x1c7d4b196cb0c7b01d743fbc6116a902379c7238 nonce 1 balance 0x0000000000000000000000000000000000000000000000000000000000000000 storage root 0x4d959de7c4a8ad2ee46885228fc3e38d4eb350772e70ab50e5b06538a2768550 code hash 0xcd3f29e2ea9c61dadd48bfeaf8b2884b6de9dfee7bf45329452c4c33d0868ceb
+        statement id 0x93c3fdb51daff9abbd9b31d827b601e1a8e352f0099e3c18c7c5d5e82a4d8c42
+    [1] storage 0x1c7d4b196cb0c7b01d743fbc6116a902379c7238 slot 0x000000000000000000000000000000000000000000000000000000000000000b = 0x0000000000000000000000000000000000000000000000009513ef76177584ee
+        statement id 0xa9ffd7e80fcd3afc81e902546e226eb87a655a034099a02ec452274213b2704a
+  cost               execution gas 276607 (cycles metered 276607), storage gas 7599 (the transaction's 7599 bytes), base fee 2273648
+  events             FRT-ATT1 (112 bytes)
+  nothing was sent (add --send to settle it in the harness's zone)
+
+send: storage slot 0x000000000000000000000000000000000000000000000000000000000000000b of 0x1c7d4b196cb0c7b01d743fbc6116a902379c7238
+  message            Attest (variant 7 of ferrata_lez_wire::Message), 7201 bytes borsh
+  to                 header(instance, slot 11549664) = GT2qsHtJhVSkWhniTDNobpKxVRhe5S7fZ2zifnPmGzSZ of program FhXQNXifS3nitELmi18yyb7R7QcgauZHgXbWuQTK2pqn
+  request            chain 11155111, instance 0x6d65e4ef2af67eed1ce3a5c2d7b04fa02517707d2dff044869389f310b69f6b4, the block's RLP header (678 bytes: the Gloas record binds the hash only), 1 account(s), 1 slot(s), 0 log(s)
+  written            results/attest-cli/messages/message-3.hex (borsh, hex) and results/attest-cli/messages/message-3.debug (its Rust Debug text)
+  verdict            attested: 2 statement(s) (ferrata_lez_wire::attest::evaluate, the program's own function)
+    proven at block 12105936 (0x5a2f5671d4d93d4e9a188ec55743ae20a86cce5f91e570f2e5dc22b2b34b27b6), 0 hop(s), record slot 11549664, chain 11155111
+    [0] account 0x1c7d4b196cb0c7b01d743fbc6116a902379c7238 nonce 1 balance 0x0000000000000000000000000000000000000000000000000000000000000000 storage root 0x4d959de7c4a8ad2ee46885228fc3e38d4eb350772e70ab50e5b06538a2768550 code hash 0xcd3f29e2ea9c61dadd48bfeaf8b2884b6de9dfee7bf45329452c4c33d0868ceb
+        statement id 0x93c3fdb51daff9abbd9b31d827b601e1a8e352f0099e3c18c7c5d5e82a4d8c42
+    [1] storage 0x1c7d4b196cb0c7b01d743fbc6116a902379c7238 slot 0x000000000000000000000000000000000000000000000000000000000000000b = 0x0000000000000000000000000000000000000000000000009513ef76177584ee
+        statement id 0xa9ffd7e80fcd3afc81e902546e226eb87a655a034099a02ec452274213b2704a
+  cost               execution gas 276607 (cycles metered 276607), storage gas 7599 (the transaction's 7599 bytes), base fee 2273648
+  events             FRT-ATT1 (112 bytes)
+  settled            execution gas 276607 (cycles metered 276607), storage gas 7599 (the transaction's 7599 bytes), base fee 2273648
+  result             applied in block 168; exit None; 1 event(s); equal to the dry run: yes
+
+dry run: storage slot 0x000000000000000000000000000000000000000000000000000000000000000b of 0x1c7d4b196cb0c7b01d743fbc6116a902379c7238, condition value == 0x0000000000000000000000000000000000000000000000000000000000000001
+  message            Attest (variant 7 of ferrata_lez_wire::Message), 7235 bytes borsh
+  to                 header(instance, slot 11549664) = GT2qsHtJhVSkWhniTDNobpKxVRhe5S7fZ2zifnPmGzSZ of program FhXQNXifS3nitELmi18yyb7R7QcgauZHgXbWuQTK2pqn
+  request            chain 11155111, instance 0x6d65e4ef2af67eed1ce3a5c2d7b04fa02517707d2dff044869389f310b69f6b4, the block's RLP header (678 bytes: the Gloas record binds the hash only), 1 account(s), 1 slot(s), 0 log(s)
+  written            results/attest-cli/messages/message-4.hex (borsh, hex) and results/attest-cli/messages/message-4.debug (its Rust Debug text)
+  verdict            refused with exit code 130 PredicateFailed (the core): A condition of the statement does not hold.
+  cost               execution gas 255482 (cycles metered 255482), storage gas 7633 (the transaction's 7633 bytes), base fee 2104920
+  outcome            the transaction would revert with exit code 130 PredicateFailed (the core): A condition of the statement does not hold. (the fee is charged)
+  nothing was sent (add --send to settle it in the harness's zone)
+
+send: storage slot 0x000000000000000000000000000000000000000000000000000000000000000b of 0x1c7d4b196cb0c7b01d743fbc6116a902379c7238, condition value == 0x0000000000000000000000000000000000000000000000000000000000000001
+  message            Attest (variant 7 of ferrata_lez_wire::Message), 7235 bytes borsh
+  to                 header(instance, slot 11549664) = GT2qsHtJhVSkWhniTDNobpKxVRhe5S7fZ2zifnPmGzSZ of program FhXQNXifS3nitELmi18yyb7R7QcgauZHgXbWuQTK2pqn
+  request            chain 11155111, instance 0x6d65e4ef2af67eed1ce3a5c2d7b04fa02517707d2dff044869389f310b69f6b4, the block's RLP header (678 bytes: the Gloas record binds the hash only), 1 account(s), 1 slot(s), 0 log(s)
+  written            results/attest-cli/messages/message-5.hex (borsh, hex) and results/attest-cli/messages/message-5.debug (its Rust Debug text)
+  verdict            refused with exit code 130 PredicateFailed (the core): A condition of the statement does not hold.
+  cost               execution gas 255482 (cycles metered 255482), storage gas 7633 (the transaction's 7633 bytes), base fee 2104920
+  outcome            the transaction would revert with exit code 130 PredicateFailed (the core): A condition of the statement does not hold. (the fee is charged)
+  settled            execution gas 255482 (cycles metered 255482), storage gas 7633 (the transaction's 7633 bytes), base fee 2104920
+  result             reverted in block 169; exit Some(130); 0 event(s); equal to the dry run: yes
+
+dry run: log 0 of transaction 0's receipt (the block's first ERC-20 Transfer: emitter and recipient checked)
+  message            Attest (variant 7 of ferrata_lez_wire::Message), 2153 bytes borsh
+  to                 header(instance, slot 11549664) = GT2qsHtJhVSkWhniTDNobpKxVRhe5S7fZ2zifnPmGzSZ of program FhXQNXifS3nitELmi18yyb7R7QcgauZHgXbWuQTK2pqn
+  request            chain 11155111, instance 0x6d65e4ef2af67eed1ce3a5c2d7b04fa02517707d2dff044869389f310b69f6b4, the block's RLP header (678 bytes: the Gloas record binds the hash only), 0 account(s), 0 slot(s), 1 log(s)
+  written            results/attest-cli/messages/message-6.hex (borsh, hex) and results/attest-cli/messages/message-6.debug (its Rust Debug text)
+  verdict            attested: 1 statement(s) (ferrata_lez_wire::attest::evaluate, the program's own function)
+    proven at block 12105936 (0x5a2f5671d4d93d4e9a188ec55743ae20a86cce5f91e570f2e5dc22b2b34b27b6), 0 hop(s), record slot 11549664, chain 11155111
+    [0] log tx 0 log 0 emitter 0x5543ca71ed8c88daf217488b1808994e080d925b topic0 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef (3 topics, 32 data bytes)
+        statement id 0x739825fa8019c7c2e23985e5f0a3b9a5b542d5dd76843919b3193a05445cdbad
+  cost               execution gas 95412 (cycles metered 95412), storage gas 2551 (the transaction's 2551 bytes), base fee 783704
+  events             FRT-ATT1 (80 bytes)
+  nothing was sent (add --send to settle it in the harness's zone)
+
+send: log 0 of transaction 0's receipt (the block's first ERC-20 Transfer: emitter and recipient checked)
+  message            Attest (variant 7 of ferrata_lez_wire::Message), 2153 bytes borsh
+  to                 header(instance, slot 11549664) = GT2qsHtJhVSkWhniTDNobpKxVRhe5S7fZ2zifnPmGzSZ of program FhXQNXifS3nitELmi18yyb7R7QcgauZHgXbWuQTK2pqn
+  request            chain 11155111, instance 0x6d65e4ef2af67eed1ce3a5c2d7b04fa02517707d2dff044869389f310b69f6b4, the block's RLP header (678 bytes: the Gloas record binds the hash only), 0 account(s), 0 slot(s), 1 log(s)
+  written            results/attest-cli/messages/message-7.hex (borsh, hex) and results/attest-cli/messages/message-7.debug (its Rust Debug text)
+  verdict            attested: 1 statement(s) (ferrata_lez_wire::attest::evaluate, the program's own function)
+    proven at block 12105936 (0x5a2f5671d4d93d4e9a188ec55743ae20a86cce5f91e570f2e5dc22b2b34b27b6), 0 hop(s), record slot 11549664, chain 11155111
+    [0] log tx 0 log 0 emitter 0x5543ca71ed8c88daf217488b1808994e080d925b topic0 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef (3 topics, 32 data bytes)
+        statement id 0x739825fa8019c7c2e23985e5f0a3b9a5b542d5dd76843919b3193a05445cdbad
+  cost               execution gas 95412 (cycles metered 95412), storage gas 2551 (the transaction's 2551 bytes), base fee 783704
+  events             FRT-ATT1 (80 bytes)
+  settled            execution gas 95412 (cycles metered 95412), storage gas 2551 (the transaction's 2551 bytes), base fee 783704
+  result             applied in block 170; exit None; 1 event(s); equal to the dry run: yes
+
+send: every log of transaction 1's receipt (11 logs, status 1 required)
+  message            Attest (variant 7 of ferrata_lez_wire::Message), 31654 bytes borsh
+  to                 header(instance, slot 11549664) = GT2qsHtJhVSkWhniTDNobpKxVRhe5S7fZ2zifnPmGzSZ of program FhXQNXifS3nitELmi18yyb7R7QcgauZHgXbWuQTK2pqn
+  request            chain 11155111, instance 0x6d65e4ef2af67eed1ce3a5c2d7b04fa02517707d2dff044869389f310b69f6b4, the block's RLP header (678 bytes: the Gloas record binds the hash only), 0 account(s), 0 slot(s), 11 log(s)
+  written            results/attest-cli/messages/message-8.hex (borsh, hex) and results/attest-cli/messages/message-8.debug (its Rust Debug text)
+  verdict            attested: 11 statement(s) (ferrata_lez_wire::attest::evaluate, the program's own function)
+    proven at block 12105936 (0x5a2f5671d4d93d4e9a188ec55743ae20a86cce5f91e570f2e5dc22b2b34b27b6), 0 hop(s), record slot 11549664, chain 11155111
+    [0] log tx 1 log 0 emitter 0x899d225d779f41fa1ab422ab1b8a9408296dd5c6 topic0 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef (3 topics, 32 data bytes)
+        statement id 0x778f9931c1759b3edc985fb23af9650c4062b66dfb04a17c40f75999de3bee88
+    [1] log tx 1 log 1 emitter 0x899d225d779f41fa1ab422ab1b8a9408296dd5c6 topic0 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef (3 topics, 32 data bytes)
+        statement id 0x558fa8ab81f068a909ad45776997979ba1744061ec071cea544923d2dcf3a682
+    [2] log tx 1 log 2 emitter 0xbd59d16ef4fe70d869b301e34ee56a89ae39d5c9 topic0 0xce749457b74e10f393f2c6b1ce4261b78791376db5a3f501477a809f03f500d6 (1 topics, 64 data bytes)
+        statement id 0x311e06b2d60cf345999d1ff104f023b4f32d369ffbddbfafe4bb5ca19186022f
+    [3] log tx 1 log 3 emitter 0xbdc1fe97e787ae7f653ffbccd74ec49814fe6aa1 topic0 0xee7a383e300626a50beec9f430185e7e64048df3b00dbb645be16d48f8c5d5d1 (1 topics, 32 data bytes)
+        statement id 0xe54879f6ce730de00e1c34ae6124f2dcdd569102bec693c4574e4073d48db836
+    [4] log tx 1 log 4 emitter 0x133e695512bf7b11ad5f7c2739971e99ea5b0965 topic0 0x6ae8ee960d83517f7fa993ad7a0e16e33d9655a23ff41eefc62bdb289c7a8e5f (1 topics, 96 data bytes)
+        statement id 0xd9570abcbb2d68eea0db9a39d77fb2e329a2a2fb199ea6a0911aeab0435f9941
+    [5] log tx 1 log 5 emitter 0x07ea2ff889e6228cded329a09f66e370f12c705e topic0 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef (3 topics, 32 data bytes)
+        statement id 0xffcbbbc79bd08e0bb101e2dc513e32644652e64e7d6f41f9d4678ab7577a2553
+    [6] log tx 1 log 6 emitter 0x899d225d779f41fa1ab422ab1b8a9408296dd5c6 topic0 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef (3 topics, 32 data bytes)
+        statement id 0x3d2c6f4b79d1d89391f3f68f4f94e033294f602f6222f1b3ee4faaf38173f92e
+    [7] log tx 1 log 7 emitter 0x07ea2ff889e6228cded329a09f66e370f12c705e topic0 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef (3 topics, 32 data bytes)
+        statement id 0x9e03c8c622797c0b0a65ad2c423fd494e77df9a9acc5fbaac863bea8e7fd7167
+    [8] log tx 1 log 8 emitter 0x133e695512bf7b11ad5f7c2739971e99ea5b0965 topic0 0xe608df2ff20fac1a8191aeb2d98baf77fa05864911970aae3ff2afbdf6353cff (2 topics, 64 data bytes)
+        statement id 0xc99281ded682a3dc47e123b4fa439acebc92f3ca0e4fd3e4c0836189de898d48
+    [9] log tx 1 log 9 emitter 0x899d225d779f41fa1ab422ab1b8a9408296dd5c6 topic0 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef (3 topics, 32 data bytes)
+        statement id 0xd3d20d6153674f3301372cd0d592dbbde13905352ea0abc4fc295acc3268f9d8
+    [10] log tx 1 log 10 emitter 0xa03798ad2d5a51e23d3221e18ce89aacedd9fad1 topic0 0x19f5f791ee407773427bf7b970bbbc3375065c32edd1ab142e23a84f94b0719b (2 topics, 128 data bytes)
+        statement id 0x165189288f9c6287ec3da1297603199c5bb227f5329134b4557ca3b7dd58592e
+  cost               execution gas 1067000 (cycles metered 1067000), storage gas 32052 (the transaction's 32052 bytes), base fee 8792416
+  events             FRT-ATT1 (400 bytes)
+  settled            execution gas 1067000 (cycles metered 1067000), storage gas 32052 (the transaction's 32052 bytes), base fee 8792416
+  result             applied in block 171; exit None; 1 event(s); equal to the dry run: yes
+
+dry run: every log of transaction 56's receipt (39 logs, status 1 required)
+  message            Attest (variant 7 of ferrata_lez_wire::Message), 345894 bytes borsh
+  to                 header(instance, slot 11549664) = GT2qsHtJhVSkWhniTDNobpKxVRhe5S7fZ2zifnPmGzSZ of program FhXQNXifS3nitELmi18yyb7R7QcgauZHgXbWuQTK2pqn
+  request            chain 11155111, instance 0x6d65e4ef2af67eed1ce3a5c2d7b04fa02517707d2dff044869389f310b69f6b4, the block's RLP header (678 bytes: the Gloas record binds the hash only), 0 account(s), 0 slot(s), 39 log(s)
+  written            results/attest-cli/messages/message-9.hex (borsh, hex) and results/attest-cli/messages/message-9.debug (its Rust Debug text)
+  verdict            attested: 39 statement(s) (ferrata_lez_wire::attest::evaluate, the program's own function)
+    proven at block 12105936 (0x5a2f5671d4d93d4e9a188ec55743ae20a86cce5f91e570f2e5dc22b2b34b27b6), 0 hop(s), record slot 11549664, chain 11155111
+    [0] log tx 56 log 0 emitter 0x6588c789c6b6df8f8b6b92e6433f813cc2d1d4d0 topic0 0x614e4dc0454aa3dc8fe902ff7c1c7707d1a77b58bd0f0f1468eefbc413beb60c (3 topics, 96 data bytes)
+        statement id 0x9a0a40aaacb8b14f03a892d5d00d8534e3b24873be1b234933457a11d6fff939
+    [1] log tx 56 log 1 emitter 0x6588c789c6b6df8f8b6b92e6433f813cc2d1d4d0 topic0 0x614e4dc0454aa3dc8fe902ff7c1c7707d1a77b58bd0f0f1468eefbc413beb60c (3 topics, 96 data bytes)
+        statement id 0x89260858bd8a937231f8c027d3a4354ebc7de85dd9886683076e8a26015b2eef
+    [2] log tx 56 log 2 emitter 0x1c7d4b196cb0c7b01d743fbc6116a902379c7238 topic0 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef (3 topics, 32 data bytes)
+        statement id 0xe81d3b388f932619d9a22032a206eb67024b584265d3ed412e17fe897efa3fbf
+    [3] log tx 56 log 3 emitter 0x1c7d4b196cb0c7b01d743fbc6116a902379c7238 topic0 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef (3 topics, 32 data bytes)
+        statement id 0x338d9d333883ce41abda0bc413e0981d105597b4af422643cf4ce49f934a5016
+    [4] log tx 56 log 4 emitter 0x1c7d4b196cb0c7b01d743fbc6116a902379c7238 topic0 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925 (3 topics, 32 data bytes)
+        statement id 0x48a3fa2ae729676eaf3495dd50461b050f30b6033162eb50e6216a16e1ed68fc
+    [5] log tx 56 log 5 emitter 0xb62efc43c16b4e2bf1aaad33002368e55708538d topic0 0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62 (4 topics, 64 data bytes)
+        statement id 0x16c6c6a939fc119d25c1ec6ce31fb4bcb31fd15e236336b05dc9287aa26af78b
+    [6] log tx 56 log 6 emitter 0xb62efc43c16b4e2bf1aaad33002368e55708538d topic0 0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62 (4 topics, 64 data bytes)
+        statement id 0xe64b48279abc2ee31043a626d962f0684c4b2a1fa405b5a22472d003b34e621d
+    [7] log tx 56 log 7 emitter 0xb62efc43c16b4e2bf1aaad33002368e55708538d topic0 0xbbed930dbfb7907ae2d60ddf78345610214f26419a0128df39b6cc3d9e5df9b0 (3 topics, 32 data bytes)
+        statement id 0xb85549e877a968ea04dc5c208a5e9eddcb3a7bf792d406229f0172d8d9387ab0
+    [8] log tx 56 log 8 emitter 0x1c7d4b196cb0c7b01d743fbc6116a902379c7238 topic0 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef (3 topics, 32 data bytes)
+        statement id 0xabfc1a4bfb6d2e13815c3312a71bbae12162691ddc49158a02639c0be4290822
+    [9] log tx 56 log 9 emitter 0x1c7d4b196cb0c7b01d743fbc6116a902379c7238 topic0 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925 (3 topics, 32 data bytes)
+        statement id 0xdd98cd6d5626d928e07f0d44a10b70cbf6c09af1e86cbaa2c0cb158c087a4d65
+    [10] log tx 56 log 10 emitter 0xb62efc43c16b4e2bf1aaad33002368e55708538d topic0 0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62 (4 topics, 64 data bytes)
+        statement id 0xbf37125be83b8b8f30d31d1496fd85f6453585538c8d459a38dadf6c464da235
+    [11] log tx 56 log 11 emitter 0xb62efc43c16b4e2bf1aaad33002368e55708538d topic0 0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62 (4 topics, 64 data bytes)
+        statement id 0x3ee900a7574c1f4cfa99307bad19950e7644c84116a5def5b21fbc2342361ea1
+    [12] log tx 56 log 12 emitter 0x6588c789c6b6df8f8b6b92e6433f813cc2d1d4d0 topic0 0xf2c94df0ad73a3789bcfc36b3dbcbd230ad401a405c4b8b34acbbf58fb916692 (3 topics, 160 data bytes)
+        statement id 0xd924402b79ef1ccb647f35befa0899d016eb2ce6e34e6b60c67f37e676209c26
+    [13] log tx 56 log 13 emitter 0x6588c789c6b6df8f8b6b92e6433f813cc2d1d4d0 topic0 0x614e4dc0454aa3dc8fe902ff7c1c7707d1a77b58bd0f0f1468eefbc413beb60c (3 topics, 96 data bytes)
+        statement id 0xe9ee2d42aee78a43ff8eda9d7ecfa7b5cae37349020772a2eb3ab74b4729bb00
+    [14] log tx 56 log 14 emitter 0x6588c789c6b6df8f8b6b92e6433f813cc2d1d4d0 topic0 0x614e4dc0454aa3dc8fe902ff7c1c7707d1a77b58bd0f0f1468eefbc413beb60c (3 topics, 96 data bytes)
+        statement id 0x1bc82fc989429d866feb9070d318afcd9c24d4d5c75b5d0fdf9fbb8770aac352
+    [15] log tx 56 log 15 emitter 0x1c7d4b196cb0c7b01d743fbc6116a902379c7238 topic0 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef (3 topics, 32 data bytes)
+        statement id 0x8fa0f5d3e1b642d8a899cf1aea815578d3b15cc3a2ad629e8258259a740a123e
+    [16] log tx 56 log 16 emitter 0x1c7d4b196cb0c7b01d743fbc6116a902379c7238 topic0 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef (3 topics, 32 data bytes)
+        statement id 0x9b7ce0596c973c7d2b0cbd72bafc6b273061b796ec9e681b08c06d5ac9bc571f
+    [17] log tx 56 log 17 emitter 0x1c7d4b196cb0c7b01d743fbc6116a902379c7238 topic0 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925 (3 topics, 32 data bytes)
+        statement id 0xa0421b4c1470c653db7e644425f061336a190888f5c9ca26c37b1a5c197537da
+    [18] log tx 56 log 18 emitter 0xb62efc43c16b4e2bf1aaad33002368e55708538d topic0 0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62 (4 topics, 64 data bytes)
+        statement id 0xe0428d8cb28643e6528a1c8667c2f87a63a49a35c5941ca844a8c63f2f9080cc
+    [19] log tx 56 log 19 emitter 0xb62efc43c16b4e2bf1aaad33002368e55708538d topic0 0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62 (4 topics, 64 data bytes)
+        statement id 0x27a222850bc674f08e469c1d0ea02da439fb08798a238d5e55540296065b2979
+    [20] log tx 56 log 20 emitter 0xb62efc43c16b4e2bf1aaad33002368e55708538d topic0 0xbbed930dbfb7907ae2d60ddf78345610214f26419a0128df39b6cc3d9e5df9b0 (3 topics, 32 data bytes)
+        statement id 0xc90cec689e078f2beb184ffbbcba021a05cafd5e1d7ef66f4a75b8b0afcc02af
+    [21] log tx 56 log 21 emitter 0x1c7d4b196cb0c7b01d743fbc6116a902379c7238 topic0 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef (3 topics, 32 data bytes)
+        statement id 0x76a08243229130b9eb607b915dbb126d3b61f4bddfbea92ce4cee61c6c7dbdbf
+    [22] log tx 56 log 22 emitter 0x1c7d4b196cb0c7b01d743fbc6116a902379c7238 topic0 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925 (3 topics, 32 data bytes)
+        statement id 0x8d59ab56b0c5db6c243b88cfc4fe0c2e6189c845c569dacbbdc3e65e142255fb
+    [23] log tx 56 log 23 emitter 0xb62efc43c16b4e2bf1aaad33002368e55708538d topic0 0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62 (4 topics, 64 data bytes)
+        statement id 0x2f5a195b7fa8f794bfed1962631d22bc345e3797bce45d52c12bbeb1381c3e28
+    [24] log tx 56 log 24 emitter 0xb62efc43c16b4e2bf1aaad33002368e55708538d topic0 0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62 (4 topics, 64 data bytes)
+        statement id 0xb1146b1b88818b8ee75e2f85a571097ecc3f58ebdb615f7e69bdabdbb4f2e85b
+    [25] log tx 56 log 25 emitter 0x6588c789c6b6df8f8b6b92e6433f813cc2d1d4d0 topic0 0xf2c94df0ad73a3789bcfc36b3dbcbd230ad401a405c4b8b34acbbf58fb916692 (3 topics, 160 data bytes)
+        statement id 0x6948b34abe5a1994673e74324f8b42bf016ba5149b87510c85ca5f637c5a35f8
+    [26] log tx 56 log 26 emitter 0x6588c789c6b6df8f8b6b92e6433f813cc2d1d4d0 topic0 0x614e4dc0454aa3dc8fe902ff7c1c7707d1a77b58bd0f0f1468eefbc413beb60c (3 topics, 96 data bytes)
+        statement id 0xe5fcf7acf69be65ce8b6289402bfb7444083cebec1147c86ac29ff3b8742cf1b
+    [27] log tx 56 log 27 emitter 0x6588c789c6b6df8f8b6b92e6433f813cc2d1d4d0 topic0 0x614e4dc0454aa3dc8fe902ff7c1c7707d1a77b58bd0f0f1468eefbc413beb60c (3 topics, 96 data bytes)
+        statement id 0x54b5007592db3d323d7c6bce007feca0fa4b52aa78acada0d7a8e43d03c5319e
+    [28] log tx 56 log 28 emitter 0x1c7d4b196cb0c7b01d743fbc6116a902379c7238 topic0 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef (3 topics, 32 data bytes)
+        statement id 0x76dbd988673c4588c70dabd0ed36bd62b082a07678082d30ebcc427638b057e5
+    [29] log tx 56 log 29 emitter 0x1c7d4b196cb0c7b01d743fbc6116a902379c7238 topic0 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef (3 topics, 32 data bytes)
+        statement id 0x5ec6cb35477f8751ca250f4818900be7eadcebb51060a268a35da5738bc3cf3e
+    [30] log tx 56 log 30 emitter 0x1c7d4b196cb0c7b01d743fbc6116a902379c7238 topic0 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925 (3 topics, 32 data bytes)
+        statement id 0x4fd8f73bc0e4e7c34930e55f51d8ca38f66f4e00fff75ad24f1117bc105bb551
+    [31] log tx 56 log 31 emitter 0xb62efc43c16b4e2bf1aaad33002368e55708538d topic0 0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62 (4 topics, 64 data bytes)
+        statement id 0xf9ee2b93a3880995275f7a95133ddfb20178f1b524d94d5939e7cbd4d36c13c5
+    [32] log tx 56 log 32 emitter 0xb62efc43c16b4e2bf1aaad33002368e55708538d topic0 0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62 (4 topics, 64 data bytes)
+        statement id 0x397e2f6b2825187e9ac46140e9e1813552975146b662facde6dbdfd0aa8b11f6
+    [33] log tx 56 log 33 emitter 0xb62efc43c16b4e2bf1aaad33002368e55708538d topic0 0xbbed930dbfb7907ae2d60ddf78345610214f26419a0128df39b6cc3d9e5df9b0 (3 topics, 32 data bytes)
+        statement id 0x9ba75ba6714e96d0ba74f66a4141a1e0a911b3f83d02593a515bfee5ed4c7743
+    [34] log tx 56 log 34 emitter 0x1c7d4b196cb0c7b01d743fbc6116a902379c7238 topic0 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef (3 topics, 32 data bytes)
+        statement id 0xfe47671d6f1a84a27c48ee4f9a1ebbce9e1b864aa4e29904c4049bd333a7354c
+    [35] log tx 56 log 35 emitter 0x1c7d4b196cb0c7b01d743fbc6116a902379c7238 topic0 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925 (3 topics, 32 data bytes)
+        statement id 0x4b1475d55add10a17835f52be8fa40cbcff3880a401a3e06dc477ee8bd85416d
+    [36] log tx 56 log 36 emitter 0xb62efc43c16b4e2bf1aaad33002368e55708538d topic0 0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62 (4 topics, 64 data bytes)
+        statement id 0x6ed170bca25749f95c3c14a1c76bbd71739de61948919606f48dd850e9af2acc
+    [37] log tx 56 log 37 emitter 0xb62efc43c16b4e2bf1aaad33002368e55708538d topic0 0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62 (4 topics, 64 data bytes)
+        statement id 0xc98469089d13db3737b9e3646f316a2490c0b0a6bff3d00d9dbc1345f9072fa4
+    [38] log tx 56 log 38 emitter 0x6588c789c6b6df8f8b6b92e6433f813cc2d1d4d0 topic0 0xf2c94df0ad73a3789bcfc36b3dbcbd230ad401a405c4b8b34acbbf58fb916692 (3 topics, 160 data bytes)
+        statement id 0x583cffd5d5d809e575e44a120e687fb09b8dc1643f5860e4027b7f90a0097c09
+  cost               execution gas 9968157 (cycles metered 9968157), storage gas 346292 (the transaction's 346292 bytes), base fee 82515592
+  events             FRT-ATT1 (1296 bytes)
+  nothing was sent (add --send to settle it in the harness's zone)
+
+dry run: log 0 of transaction 84's receipt
+  message            Attest (variant 7 of ferrata_lez_wire::Message), 1897 bytes borsh
+  to                 header(instance, slot 11549664) = GT2qsHtJhVSkWhniTDNobpKxVRhe5S7fZ2zifnPmGzSZ of program FhXQNXifS3nitELmi18yyb7R7QcgauZHgXbWuQTK2pqn
+  request            chain 11155111, instance 0x6d65e4ef2af67eed1ce3a5c2d7b04fa02517707d2dff044869389f310b69f6b4, the block's RLP header (678 bytes: the Gloas record binds the hash only), 0 account(s), 0 slot(s), 1 log(s)
+  written            results/attest-cli/messages/message-10.hex (borsh, hex) and results/attest-cli/messages/message-10.debug (its Rust Debug text)
+  verdict            refused with exit code 124 ReceiptFailed (the core): The transaction failed (receipt status 0).
+  cost               execution gas 71660 (cycles metered 71660), storage gas 2295 (the transaction's 2295 bytes), base fee 591640
+  outcome            the transaction would revert with exit code 124 ReceiptFailed (the core): The transaction failed (receipt status 0). (the fee is charged)
+  nothing was sent (add --send to settle it in the harness's zone)
+
+send: log 0 of transaction 84's receipt
+  message            Attest (variant 7 of ferrata_lez_wire::Message), 1897 bytes borsh
+  to                 header(instance, slot 11549664) = GT2qsHtJhVSkWhniTDNobpKxVRhe5S7fZ2zifnPmGzSZ of program FhXQNXifS3nitELmi18yyb7R7QcgauZHgXbWuQTK2pqn
+  request            chain 11155111, instance 0x6d65e4ef2af67eed1ce3a5c2d7b04fa02517707d2dff044869389f310b69f6b4, the block's RLP header (678 bytes: the Gloas record binds the hash only), 0 account(s), 0 slot(s), 1 log(s)
+  written            results/attest-cli/messages/message-11.hex (borsh, hex) and results/attest-cli/messages/message-11.debug (its Rust Debug text)
+  verdict            refused with exit code 124 ReceiptFailed (the core): The transaction failed (receipt status 0).
+  cost               execution gas 71660 (cycles metered 71660), storage gas 2295 (the transaction's 2295 bytes), base fee 591640
+  outcome            the transaction would revert with exit code 124 ReceiptFailed (the core): The transaction failed (receipt status 0). (the fee is charged)
+  settled            execution gas 71660 (cycles metered 71660), storage gas 2295 (the transaction's 2295 bytes), base fee 591640
+  result             reverted in block 172; exit Some(124); 0 event(s); equal to the dry run: yes
+
+send: account 0xca11bde05977b3631167028862be2a173976ca11
+  message            Attest (variant 7 of ferrata_lez_wire::Message), 4291 bytes borsh
+  to                 header(instance, slot 11549664) = GT2qsHtJhVSkWhniTDNobpKxVRhe5S7fZ2zifnPmGzSZ of program FhXQNXifS3nitELmi18yyb7R7QcgauZHgXbWuQTK2pqn
+  request            chain 11155111, instance 0x6d65e4ef2af67eed1ce3a5c2d7b04fa02517707d2dff044869389f310b69f6b4, the block's RLP header (678 bytes: the Gloas record binds the hash only), 1 account(s), 0 slot(s), 0 log(s)
+  written            results/attest-cli/messages/message-12.hex (borsh, hex) and results/attest-cli/messages/message-12.debug (its Rust Debug text)
+  verdict            attested: 1 statement(s) (ferrata_lez_wire::attest::evaluate, the program's own function)
+    proven at block 12105936 (0x5a2f5671d4d93d4e9a188ec55743ae20a86cce5f91e570f2e5dc22b2b34b27b6), 0 hop(s), record slot 11549664, chain 11155111
+    [0] account 0xca11bde05977b3631167028862be2a173976ca11 nonce 1 balance 0x000000000000000000000000000000000000000000000000070bdd151c9dfe64 storage root 0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421 code hash 0xd5c15df687b16f2ff992fc8d767b4216323184a2bbc6ee2f9c398c318e770891
+        statement id 0x45818e214a6e456b1dbc1c1e7ec01811cbeb7ac99f80a28f73c9569bef258658
+  cost               execution gas 168116 (cycles metered 168116), storage gas 4689 (the transaction's 4689 bytes), base fee 1382440
+  events             FRT-ATT1 (80 bytes)
+  settled            execution gas 168116 (cycles metered 168116), storage gas 4689 (the transaction's 4689 bytes), base fee 1382440
+  result             applied in block 173; exit None; 1 event(s); equal to the dry run: yes
+
+send: log 10 of transaction 51's receipt
+  message            Attest (variant 7 of ferrata_lez_wire::Message), 7794 bytes borsh
+  to                 header(instance, slot 11549664) = GT2qsHtJhVSkWhniTDNobpKxVRhe5S7fZ2zifnPmGzSZ of program FhXQNXifS3nitELmi18yyb7R7QcgauZHgXbWuQTK2pqn
+  request            chain 11155111, instance 0x6d65e4ef2af67eed1ce3a5c2d7b04fa02517707d2dff044869389f310b69f6b4, the block's RLP header (678 bytes: the Gloas record binds the hash only), 0 account(s), 0 slot(s), 1 log(s)
+  written            results/attest-cli/messages/message-13.hex (borsh, hex) and results/attest-cli/messages/message-13.debug (its Rust Debug text)
+  verdict            attested: 1 statement(s) (ferrata_lez_wire::attest::evaluate, the program's own function)
+    proven at block 12105936 (0x5a2f5671d4d93d4e9a188ec55743ae20a86cce5f91e570f2e5dc22b2b34b27b6), 0 hop(s), record slot 11549664, chain 11155111
+    [0] log tx 51 log 10 emitter 0x5d4d2906c513ceea23cd0e94850018089a972457 topic0 0x1c411e9a96e071241c2f21f7726b17ae89e3cab4c78be50e062b03a9fffbbad1 (1 topics, 64 data bytes)
+        statement id 0x447ee05601bb98ddb65a30786eedb21158fb048234751244c067812527710e9d
+  cost               execution gas 224310 (cycles metered 224310), storage gas 8192 (the transaction's 8192 bytes), base fee 1860016
+  events             FRT-ATT1 (80 bytes)
+  settled            execution gas 224310 (cycles metered 224310), storage gas 8192 (the transaction's 8192 bytes), base fee 1860016
+  result             applied in block 174; exit None; 1 event(s); equal to the dry run: yes
+

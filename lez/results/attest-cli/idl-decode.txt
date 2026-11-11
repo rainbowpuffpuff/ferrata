@@ -1,0 +1,6 @@
+lez/results/attest-cli/messages/message-2.hex: 7201 bytes decode as Message::Attest with ferrata_attestation.idl.json alone
+  equal to the Rust Debug text in lez/results/attest-cli/messages/message-2.debug: yes (32638 characters)
+lez/results/attest-cli/messages/message-6.hex: 2153 bytes decode as Message::Attest with ferrata_attestation.idl.json alone
+  equal to the Rust Debug text in lez/results/attest-cli/messages/message-6.debug: yes (8888 characters)
+lez/results/attest-cli/messages/message-8.hex: 31654 bytes decode as Message::Attest with ferrata_attestation.idl.json alone
+  equal to the Rust Debug text in lez/results/attest-cli/messages/message-8.debug: yes (128652 characters)
