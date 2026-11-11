@@ -1,0 +1,19 @@
+{
+  "name": "ferrata_bridge_ui",
+  "display_name": "Ferrata Bridge",
+  "version": "0.1.0",
+  "type": "ui_qml",
+  "category": "wallet",
+  "description": "Ferrata: private ERC-20 and ETH bridge between Ethereum and LEZ. Deposit, claim, burn, release, recovery, the token registry, the admin functions and the endpoints (prototype, not audited).",
+  "author": "Ferrata",
+  "view": "qml/Main.qml",
+  "icon": "icons/ferrata.png",
+  "dependencies": [],
+  "provides": [],
+  "uses": [],
+  "nix": {
+    "packages": { "build": [], "runtime": ["qt6.qtdeclarative"] },
+    "external_libraries": [],
+    "cmake": { "find_packages": [], "extra_sources": [], "extra_include_dirs": [], "extra_link_libraries": [] }
+  }
+}
