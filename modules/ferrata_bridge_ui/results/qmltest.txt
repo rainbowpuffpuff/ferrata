@@ -12,10 +12,9 @@ PASS   : qmltestrunner::FerrataMiniApp::test_07_private_claim()
 PASS   : qmltestrunner::FerrataMiniApp::test_08_plaintext_claim()
 PASS   : qmltestrunner::FerrataMiniApp::test_09_error_messages()
 PASS   : qmltestrunner::FerrataMiniApp::test_10_burn()
-FAIL!  : qmltestrunner::FerrataMiniApp::test_11_checkpoint_and_release() 'paid to the fresh recipient' returned FALSE. ()
-   Loc: [/home/q/Downloads/software_i_built/logos-rfp/spike/ferrata-wt-miniapp/modules/ferrata_bridge_ui/qmltest/tst_miniapp.qml(187)]
+PASS   : qmltestrunner::FerrataMiniApp::test_11_checkpoint_and_release()
 PASS   : qmltestrunner::FerrataMiniApp::test_12_admin()
 PASS   : qmltestrunner::FerrataMiniApp::test_13_privacy()
 PASS   : qmltestrunner::FerrataMiniApp::cleanupTestCase()
-Totals: 14 passed, 1 failed, 0 skipped, 0 blacklisted, 30863ms
+Totals: 15 passed, 0 failed, 0 skipped, 0 blacklisted, 26973ms
 ********* Finished testing of qmltestrunner *********
