@@ -8,6 +8,7 @@
 
 pub mod attest;
 pub mod bridge;
+pub mod holdings;
 pub mod private;
 pub mod scenarios;
 pub mod sepolia;
