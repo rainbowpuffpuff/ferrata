@@ -84,22 +84,23 @@ claimed (row 27). Nothing after deposit 0 has been sent, and nothing runs on a p
 
 ## Suites at this commit
 
-Re-run in the fourth integration pass (11 Nov 2026) on the build box of branch `integration4`, code as of
-commit 1ed19aa plus b792f7c (formatting of the CLI's vault script; the other commits after it change documents
-only); every count and command is in [`evidence-suites.txt`](evidence-suites.txt). Image ids are those of that
-worktree's path.
+Re-run in the fifth integration pass (11 Nov 2026) on the build box of branch `integration5`, after the merges of
+`lez-time-fix`, `crown-rehearsal`, `secfix-lez` and `secfix-vault`: code as of commit b93a945 plus the run's own
+rustfmt of three files (committed as b369d65; the commits after it change documents only); every count and command is
+in [`evidence-suites.txt`](evidence-suites.txt). Image ids are those of that worktree's path (bridge program
+`cf41b7e5…5390`).
 
 | Suite | Result |
 |---|---|
 | Root workspace, CI job as written (vectors fetched on the box; `stable` as 1.98.1) | 142 tests passed in 21 binaries; fmt, clippy `-D warnings` and the `no_std` RISC-V build clean |
-| LEZ harness, every test (private paths in dev mode) | 36 passed in 21 binaries (the privacy suite's LEZ half is the 36th); clippy and fmt clean; `prove_bridge`'s dry run settles its claim and burn |
-| Live driver (`lez/live/driver`, changed by the crossing's branch) | `cargo check --locked` clean; it has no tests; clippy `-D warnings` (4 lints) and rustfmt (8 files) are not clean, and were never part of CI |
-| Checkpoint: `checkpoint-core` and `attestor-core` (rules (A) and (B)); fidelity; `realblocks` | 33 passed in 8 binaries, clippy and fmt clean, attestor vectors re-derived in Python; fidelity 17 passed in 6; the `realblocks` tool builds, clippy clean |
-| Command-line tool (`cli/`) | 4 unit tests passed; the end-to-end test (anvil, the harness in dev mode, the mock verifier) passed, recovering 10 of 10 unclaimed deposits and 10 of 10 unreleased burns from the seed; fmt clean |
-| Privacy suite (`scripts/privacy/run.sh`) | both halves pass; gate, rates, hidden column and recovery as in row 23 (the informational claim-to-burn rate, which depends on the build's ids, 5.0% at this path) |
-| Vault: `forge test`, coverage, invariants | 407 passed in 35 suites, 31 of them with real proofs (`test/real/`), among them the 14 invariants on a rule (A) and on a rule (B) vault; coverage 100% (lines, statements, branches, functions) of both files; `forge fmt --check` clean after formatting the CLI's script; mutation not re-run (`vault/src` unchanged since the second pass: 223/223) |
-| Link checker (`scripts/check-links.py`, laptop: it needs git) | 24 files, 815 links, 0 broken |
+| LEZ harness, every test (private paths in dev mode) | 45 passed in 23 binaries (36 before, `bridge_time` 1, `bridge_secfix` 8); clippy and fmt clean; `prove_bridge`'s dry run settles its claim and burn |
+| Live driver and crown driver (`lez/live/driver`, `lez/crown/driver`) | both `cargo check --locked` clean (the crown driver on the merged wire); the live driver has no tests; clippy and rustfmt not run on them (the live driver was not clean in the fourth pass); not part of CI |
+| Checkpoint: `checkpoint-core` and `attestor-core` (rules (A) and (B), with the tip's producer inscription); fidelity; `realblocks` | 34 passed in 8 binaries, clippy and fmt clean, attestor vectors re-derived in Python; fidelity 17 passed in 6; `realblocks` and `realblocks-crown` build, clippy clean |
+| Bridge core and release guest (`bridge/`) | core 56 passed in 10 binaries, vectors v1 and v2 re-checked in Python; release guest in the executor: 77,736 user cycles, journal equal to native; `reindex` (one `NOut` on two branches), `invariance 64`, `claim-check 16` pass; clippy and fmt clean; `verify eth` fails by design (its saved receipt is of the earlier release image) |
+| Command-line tool (`cli/`) | 4 unit tests passed; the end-to-end test (anvil, the harness in dev mode, the mock verifier) passed; fmt clean |
+| Privacy suite (`scripts/privacy/run.sh`) | both halves pass; recovery 10 of 10 unclaimed deposits and 10 of 10 unreleased burns; its tables differ from the committed ones (`docs/privacy/generated/`, kept from the third pass) only by the image id and by claim transactions 16 and 8 bytes shorter (no caller time) |
+| Vault: `forge test`, invariants, coverage | 433 passed, 1 skipped (the privacy suite's Ethereum half, run above) in 38 suites, 43 of them with real proofs (`test/real/`, 10 suites); invariants 28 passed in 2 suites; coverage 100% (lines, statements, branches, functions) of both files; `forge fmt --check` clean; FerrataVault 24,254 B (322 B under EIP-170; `--sizes` exits 1 only for the test-only `VaultHandler`, as before) |
 
-Not re-run here: the LEZ v0.4.0-rc2 selection (no manifest or lockfile of `lez/` changed since the third pass),
-`bridge/scripts/check.sh`, `modules/scripts/check.sh` (about 47 min, Nix from source), `bench/`, the finality
-simulator, the lab's `lab.sh verify`, and any proof.
+Not re-run here: the LEZ v0.4.0-rc2 selection, `bridge/scripts/check.sh`, `modules/scripts/check.sh`, `bench/`, the
+finality simulator, the lab's `lab.sh verify`, the vault's mutation run (254/254 killed on branch `secfix-vault`), the
+link checker, and any proof outside the crown rehearsal (row 31).

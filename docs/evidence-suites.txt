@@ -1,61 +1,56 @@
-Suites of branch `integration4`, fourth integration pass, 11 Nov 2026 (docs/EVIDENCE.md, last section).
-Code as of commit 1ed19aa (the three merges: docs-guides, ferrata-cli, inbound-live) plus b792f7c (forge fmt of
-vault/script/CliLocal.s.sol, formatting only); the other commits after 1ed19aa change documents only. Every
-command ran on the Modal build box of this worktree through spike/modal-build/mrun (workspace deeferentleeg; 2
-threads reported by nproc, 64 GiB, gVisor, glibc 2.39), except the link checker (laptop: it reads `git ls-files`,
-and the box has no git database). Counts are the sums of the "test result" / "Suite result" lines of each log.
-Image ids are those of the integration4 worktree's path (guest sources unchanged since the third pass).
+Suites of branch `integration5`, fifth integration pass, 11 Nov 2026 (docs/EVIDENCE.md, last section).
+Code as of commit b93a945 (merges of lez-time-fix, crown-rehearsal, secfix-lez, secfix-vault and the fixes after
+them) plus the run's own formatting step (cargo fmt of cli/ and lez/harness, forge fmt of vault/, cargo fmt of
+bridge/), committed as b369d65; later commits change documents only. Every command ran on the Modal build box of
+this worktree through spike/modal-build/mrun (workspace ws-5; 2 threads reported by nproc, 64 GiB, gVisor,
+glibc 2.39). Counts are the sums of the "test result" / "Suite result" lines of each log. Image ids are those of
+the integration5 worktree's path.
 
-Run "suite" (11 Nov 02:22 - 02:47 UTC, at 1ed19aa; 1,668 s):
+Run "final2" (11 Nov 05:21 - 05:31 UTC, on a box warmed by two earlier runs of the same script; 786 s):
   root workspace, CI job `test` as written (toolchain 1.98.1 for `stable`)
     scripts/fetch-vectors.sh                                           ok
     cargo test --workspace --locked                                    142 passed, 0 failed (21 test binaries)
     cargo fmt --all -- --check                                         ok
     cargo clippy --workspace --all-targets --locked -- -D warnings     ok
     no_std build of ferrata-core for riscv32im-unknown-none-elf        ok
-  lez harness, RISC0_DEV_MODE=1 cargo test -p harness --locked        36 passed, 0 failed (21 binaries; 1,069 s)
-  prove_bridge --image-ids                                             bridge image 26c5b34a...7cb8 (507,096 ELF bytes)
+  lez harness, RISC0_DEV_MODE=1 cargo test -p harness --locked        45 passed, 0 failed (23 binaries; 455 s)
+                                                                       (bridge_time 1 and bridge_secfix 8 among them)
+  prove_bridge --image-ids                                             bridge image cf41b7e5...5390 (541,464 ELF bytes)
   prove_bridge dry run (fake receipts), then --settle                  claim and burn settled
-  cargo clippy (lez wire, bridge-wire, harness, methods) -D warnings   ok;  cargo fmt --check  ok
-  live driver (changed by inbound-live): cargo check --locked          ok
-    cargo test --locked                                                0 tests (2 binaries: the driver has no tests)
-    cargo clippy --all-targets -D warnings                             FAILED: 4 lints (type_complexity and
-                                                                       chunks_exact in inbound.rs, collapsible_if in live.rs,
-                                                                       unnecessary to_string in verify.rs); never part of CI
-    cargo fmt --check                                                  FAILED: differences in 8 of its files; never part of CI
-  checkpoint: cargo +1.88 test -p checkpoint-core -p attestor-core     33 passed, 0 failed (8 binaries); clippy, fmt ok
+  cargo clippy (lez wire, bridge-wire, harness, methods) -D warnings   ok;  cargo fmt --check  ok (also the bridge guest)
+  live driver: cargo check --locked; cargo test --locked               ok; 0 tests (2 binaries: the driver has no tests)
+  crown driver (lez/crown/driver): cargo check --locked --all-targets  ok
+  checkpoint: cargo +1.88 test -p checkpoint-core -p attestor-core     34 passed, 0 failed (8 binaries); clippy, fmt ok
   attestor vectors (python3 -I scripts/check-attestor-vectors.py)     ok
-  checkpoint host build (cargo +1.93.0), host ids                      checkpoint 0x1e979e46..., checkpoint_b 0x7efd03f1...,
-                                                                       segment 0x1dbf40be..., micro 0x49dec37d...
+  checkpoint host build (cargo +1.93.0), host ids                      checkpoint 0xd82f6d4c..., checkpoint_b 0xcd336146...,
+                                                                       segment 0x7c71ecb8..., micro 0x4fac273f...
+  realblocks build, clippy -D warnings (both binaries)                 ok
   checkpoint fidelity (cargo +1.98.1 test -p fidelity)                 17 passed, 0 failed (6 binaries)
-  realblocks: build, clippy -D warnings                                ok
-  cli (ferrata): cargo fmt --check                                     ok
-    cargo test --locked --lib                                          4 passed, 0 failed
-    bash tests/e2e.sh (anvil + harness, dev mode, mock verifier)       1 passed, 0 failed; RECOVERY: 10 of 10 unclaimed
-                                                                       deposits, 10 of 10 unreleased burns, 16 deposits
-  vault (forge 1.3.6, solc 0.8.26): forge build --sizes                FerrataVault 24,242 B, FerrataRegistry 11,606 B; exit 1
-                                                                       because the test contract VaultHandler (37,928 B) is above
-                                                                       EIP-170 (pre-existing)
-    forge fmt --check                                                  FAILED: script/CliLocal.s.sol (from ferrata-cli; fixed in
-                                                                       b792f7c)
-    forge test / coverage                                              406 passed; PrivacySuite failed on this run's own
-                                                                       FERRATA_PRIVACY_DIR override (not permitted by
-                                                                       fs_permissions; the third pass's script, copied)
-  scripts/privacy/run.sh                                               ok (80 s): both halves pass
-  diff with the committed docs/privacy/generated                       path-dependent only: field order, the byte where two
-                                                                       plaintext claims first differ, the informational
-                                                                       claim-to-burn rate 5.0% (committed 4.8%); the gate, the
-                                                                       rates, the hidden column and recovery equal
-  lez/results/: 13 files rewritten with this path's ids (and Register's Attest 150,201 cycles against 150,208 through
-  id-derived data), restored to the committed versions.
-Run "run2" (11 Nov 02:51-02:53 UTC, at 489fc71 with b792f7c's change applied on the box):
-  vault forge fmt script/CliLocal.s.sol, then forge fmt --check        ok
-  vault forge test (the privacy run's scenario present)                407 passed, 0 failed (35 suites); 31 of them in
-                                                                       test/real/ (8 suites), with real proofs
-  vault forge coverage --report summary                                FerrataVault 426/426 lines, 522/522 statements, 102/102
-                                                                       branches, 80/80 functions; FerrataRegistry 227/227,
-                                                                       316/316, 41/41, 31/31
-Laptop (11 Nov 04:00 local, at 3278e46): python3 -I scripts/check-links.py  24 files, 815 links, 0 broken
-Not run: the LEZ v0.4.0-rc2 selection (no manifest or lockfile of lez/ changed since the third pass),
-bridge/scripts/check.sh, modules/scripts/check.sh, bench/, the simulator, lab.sh verify, mutation (vault/src
-unchanged since the second pass, 223/223), any proof. mrun's estimates: 0.42 + 0.02 USD.
+  bridge: cargo test -p ferrata-bridge-core                            56 passed, 0 failed (10 binaries)
+    check_vectors_v2.py, check_vectors_v1.py                           ok
+    host execute                                                       release eth/erc20: 77,736 user cycles, journal == native
+    host reindex                                                       one burn, one NOut on both branches
+    host invariance 64; host claim-check 16                            ok; ok
+    host verify eth                                                    FAILED by design: the saved receipt is of the earlier
+                                                                       release image (claim digest differs)
+    cargo clippy --workspace --all-targets -D warnings; cargo fmt      ok; ok
+  cli: cargo fmt --check; cargo test --locked --lib                    ok; 4 passed
+    tests/e2e.sh (anvil, harness zone in dev mode, mock verifier)      1 passed
+  privacy suite (scripts/privacy/run.sh into the run's directory)      both halves pass (LEZ half 1 test; vault
+                                                                       PrivacySuite 1 test); recovery 10/10 and 10/10
+    diff against docs/privacy/generated (third pass)                   differs: image id; private claim 8,937 B (was
+                                                                       8,953), plaintext claim 2,053 B (was 2,061)
+  vault (forge 1.3.6, solc 0.8.26)
+    forge build --sizes                                                FerrataVault 24,254 B (322 spare), FerrataRegistry
+                                                                       12,504 B; exits 1 for the test-only VaultHandler only
+    forge test (FERRATA_PRIVACY_DIR=../target/privacy/none)            433 passed, 0 failed, 1 skipped (38 suites);
+                                                                       test/real: 43 passed in 10 suites
+    forge test --match-path 'test/invariant/*'                         28 passed (2 suites)
+    forge coverage --report summary                                    FerrataVault 431/431 lines, 537/537 statements,
+                                                                       102/102 branches, 82/82 functions; FerrataRegistry
+                                                                       245/245, 338/338, 45/45, 33/33
+    forge fmt --check                                                  ok
+
+Earlier runs of the same script on this box: "warm" (at 998fff8, before the security merges) and "final" (at
+db9f034); their failures were fixed by b93a945 and b369d65 (realblocks-crown missing the producer inscription, then
+its clippy lints; the crown script's 7-field candidates() destructuring; formatting).
