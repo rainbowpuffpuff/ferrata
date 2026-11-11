@@ -1,5 +1,5 @@
 run tampered (live), vault 0xfE3199fa2634413CbAC317371076Cae3EB2d9E54, deployer 0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07, rpc https://ethereum-sepolia-rpc.publicnode.com
-PASS     chain: Sepolia (chain id 11155111), head 12112077, finalized 12111995
+PASS     chain: Sepolia (chain id 11155111), head 12112104, finalized 12112025
 PASS     image ids: e2e/crown/README.md's table = the ids pinned here = the run's records: README table equal, params.json equal, LEZ session A's deployed programs equal, programs/ids.jsonl equal
 PASS     deployment: every CREATE address from the deployer's nonces, code where a contract was created: emergency stop 0x2ea64575… nonce 10 (1698 B); FerrataRegistry library 0xe5d797c9… nonce 11 (12504 B); FerrataVault 0xfe3199fa… nonce 12 (24254 B); test token 0x8e1140d7… nonce 13 (1862 B); nonces N+4..N+6 are calls (no code)
 FAIL     vault immutables (eth_call) = README ids, configId, genesisState, rule (B), verifier, registry library: genesisState 0xa696b3c8deaa881c962e3d768e8ee28c9b08ce60b709c058ea21db82c541bef9, identity 0xa696b3c8deaa881c962e3d768e8ee28c9b08ce60b709c058ea21db82c541bef0
@@ -7,8 +7,9 @@ FAIL     configId and genesisState recomputed from LEZ session A's records: gene
 PASS     every recorded transaction: status, block, sender, target, gas used: 3 transactions: deposit-0 block 12111477 gas 559,652; deposit-1 block 12111574 gas 268,014; submit block 12111746 gas 729,361
 PASS     deployer's nonce = first nonce + 7 deployment transactions + the recorded ones: nonce 22 = 10 + 7 + 3 (+2 later, not in these records)
 FAIL     deposits: Deposit events, commitments recomputed, leaf count, escrow: deposit 0: recomputed 0xff2f84c3cf676d0e6f8b99387bd1a3afacc70c5a7cd0523ff4e6c8764d542779, record 0xff2f84c3cf676d0e6f8b99387bd1a3afacc70c5a7cd0523ff4e6c8764d542770
+PASS     captures: the vault storage LEZ imported is Sepolia's (header = the chain's final block; storage proofs checked): capture-1: final block 12111509, 6 slots proven (depositRoot 0x48d0b362…, 1 leaves, configId); capture-2: final block 12111602, 6 slots proven (depositRoot 0xfaad1232…, 2 leaves, configId)
 FAIL     checkpoint journal fields = the vault, the identity and the LEZ records: parent state is not genesisState
 FAIL     checkpoint submitted: CandidateSubmitted event = the journal; seal verified by the vault's verifier (eth_call): the verifier rejects the recorded seal: eth_call: {'code': 3, 'message': 'execution reverted', 'data': '0x439cc0cd'}
 PASS     checkpoint final on the vault (finalizeAttested after the wait): finalState = the journal's new state, checkpointCount 1, burn root accepted at 1794403692 (on chain; the records predate it)
 PENDING  releases: recipients, amounts, nullifiers spent, seals verified: public-0: 1000000000000000 wei to 0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07, nullifier spent (block 12112040); not released yet: private-1 (1000000000000000 wei to 0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07; seal verifies)
-6 passed, 1 pending, 5 failed (39 RPC calls)
+7 passed, 1 pending, 5 failed (42 RPC calls)
