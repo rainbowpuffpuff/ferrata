@@ -2,7 +2,7 @@
 # Release engineering (A4, B4): one versioned, checksummed bundle of everything a testnet deployment needs.
 #
 #   scripts/release.sh build   OUT            build the programs, the vault and the CLI into OUT/build (build box only:
-#                                              the guests are built at the crown build path, scripts/reproduce-image-ids.sh)
+#                                              the guests are built in place, path-independent ids, scripts/reproduce-image-ids.sh)
 #   scripts/release.sh package OUT VERSION    assemble OUT/ferrata-VERSION/ (programs, vault, cli, MANIFEST.json,
 #                                              SHA256SUMS) and OUT/ferrata-VERSION-x86_64-linux.tar.gz (+ .sha256)
 #   scripts/release.sh verify  DIR            check a release directory: every checksum, the manifest's sizes and
@@ -15,8 +15,8 @@
 #   vault/      FerrataVault and its linked library FerrataRegistry: ABI, creation and runtime bytecode (the vault's with
 #               solc's link placeholder), compiler settings; the deploy scripts and their parameters
 #   cli/        the `ferrata` binary (x86_64-unknown-linux-gnu)
-# Image ids of guests built without Docker depend on the build path (scripts/reproduce-image-ids.sh explains); the
-# build therefore runs at the crown build path, so the ids are comparable with e2e/crown/README.md's table.
+# Guest builds go through scripts/guest-rustc (.cargo/config.toml), so their image ids do not depend on where the tree
+# is (scripts/reproduce-image-ids.sh explains) and are comparable with e2e/crown/README.md's table and docs/image-ids.md.
 set -uo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 mode=${1:-}; shift || true
@@ -35,7 +35,7 @@ build_() {
   mkdir -p "$out/build/logs"; out=$(cd "$out" && pwd)
   local log=$out/build/logs/steps.txt
   echo "$(date -u +%FT%TZ) release build of $(commit_)" > "$log"
-  # 1. The guests, at the crown build path (writes out/build/guests/{programs,r0bf,ids.txt}).
+  # 1. The guests (writes out/build/guests/{programs,r0bf,ids.txt}).
   ( "$ROOT/scripts/reproduce-image-ids.sh" build --out "$out/build/guests" > "$out/build/logs/guests.log" 2>&1 ) & local g=$!
   # 2. The vault: forge build (solc 0.8.26, offline, vault/foundry.toml) into an output directory of the release's own
   #    (the sources' contracts only: test and script contracts are not part of a release; EIP-170 is checked on the

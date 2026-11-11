@@ -12,7 +12,7 @@ repository root. Labels as elsewhere: **measured** (a run, with where it ran), *
 | `just bench` | `scripts/bench.sh box`, `scripts/bench_report.py` | hardware record, the vault's gas, the light-client cycles, a real proof of the release program; `bench/report/<UTC time>-<commit>/REPORT.md` | the build machine (`FERRATA_BOX`) |
 | `just bench-user` | `scripts/bench.sh user-stage`, `user-prove` | the user-side proofs (private attestation, claim, burn, padded as LEZ's wallet pads) proven for real in containers held to `BENCH_CPUS` CPUs (default 16, the declared minimum) and 16 GiB | build machine, then Modal (`BENCH_MODAL_PROFILE`) |
 | `just m0` | `scripts/m0.py` | the four M0 checks with their measured values and GO / NO-GO / OPEN; `--online` re-reads the upstream tags; `--json FILE`; `--strict` | anywhere (Python standard library) |
-| `just release VERSION` | `scripts/release.sh`, `scripts/release_manifest.py` | builds the six guests (at the crown build path), the vault and the CLI; packages them with `MANIFEST.json` and `SHA256SUMS`; verifies; records the manifest in `releases/VERSION/` | the build machine |
+| `just release VERSION` | `scripts/release.sh`, `scripts/release_manifest.py` | builds the six guests (path-independent ids), the vault and the CLI; packages them with `MANIFEST.json` and `SHA256SUMS`; verifies; records the manifest in `releases/VERSION/` | the build machine |
 | `just release-verify DIR` | `scripts/release.sh verify` | every checksum, the manifest, the LEZ programs' image ids recomputed with `r0vm` | anywhere |
 | `just deploy-testnet ...` | `scripts/deploy-testnet.sh` | deploys a release on a LEZ testnet and an EVM chain; plan only unless `--send` | the deployer's machine |
 | `just halmos-long` | `scripts/halmos-long.sh` | the four Halmos properties that did not finish in 900 s, with a longer budget | the build machine |
@@ -121,11 +121,12 @@ parameters, a notice period, an engineer's check of the finality conditions, aud
 | `cli/` | `ferrata` (x86_64-unknown-linux-gnu) and the `Cargo.lock` it was built with | bytes, sha256 |
 | top | `deploy-testnet.sh`, `toolchains.txt` (rustc, r0vm, forge, solc, LEZ commit, build host), `MANIFEST.json`, `SHA256SUMS` | version, commit, creation time, targets, status ("prototype, unaudited: for testnets only") |
 
-How the build is made reproducible: a RISC Zero guest built without Docker embeds the absolute paths of its sources,
-so its image id depends on where it was built (`scripts/reproduce-image-ids.sh`). The release builds the guests
-with that script, at the crown build path (`spike/ferrata-wt-crown`, LEZ v0.4.0-rc1 at `spike/upstream/lez-v0.4.0-rc1`,
-`RISC0_HOME=spike/risc0-home-lez` for `lez/`), so anyone can rebuild them with
-`scripts/reproduce-image-ids.sh docker` and compare. The tarball is made with fixed owner, order and modification
+How the build is made reproducible: a RISC Zero guest built without Docker would embed the absolute paths of its
+sources; `scripts/guest-rustc` (cargo's `build.rustc-wrapper`) remaps them and replaces cargo's path-dependent
+`-C metadata` in guest builds, so the image ids do not depend on where the tree is ([`image-ids.md`](image-ids.md)).
+The release builds the guests with `scripts/reproduce-image-ids.sh` in place (LEZ v0.4.0-rc1 in `../upstream/` beside
+the tree, the LEZ guests with their own RISC Zero home), so anyone can rebuild them with that script, or
+`scripts/reproduce-image-ids.sh docker`, and compare. The tarball is made with fixed owner, order and modification
 time. The vault is built from its sources alone into the release's own output directory; the deployment script
 deploys only a tree whose forge build is byte-identical to the release's bytecode.
 
