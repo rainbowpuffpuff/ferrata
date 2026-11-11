@@ -861,7 +861,8 @@ def st_verify() -> bool:
     rc = run(["python3", "-I", f"{REPO}/e2e/crown/verify.py", RUN, "--lez", LEZ, "--channel-key", KEY, "--e2e", E2E,
               "--realblocks", RB],
              log="verify.log", check=False)
-    shutil.copy2(f"{RUN}/logs/verify.log", f"{RUN}/verify.txt")
+    with open(f"{RUN}/logs/verify.log") as src, open(f"{RUN}/verify.txt", "w") as dst:  # without the command line
+        dst.writelines(l for l in src if not l.startswith("[") or "] $ " not in l)
     if rc != 0:
         die(f"verify.py found a failed check (verify.txt)")
     with open(f"{RUN}/DONE", "w") as f:
