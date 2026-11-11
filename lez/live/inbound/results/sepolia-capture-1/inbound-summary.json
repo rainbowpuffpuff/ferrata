@@ -1,0 +1,29 @@
+{
+  "attestation_program": "86ce4d7f54bd68b4c7356398cfda192f791c83f6fa3c3102a18ac20fefdfa04c",
+  "bridge_image_id": "66722fc7681beaeaacdfce978ae95ba9ba9f2b576b87791d523d6cd10815f4fa",
+  "bridge_program": "8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d",
+  "chain": "sepolia",
+  "checkpoint": "5f71d7f650f9252b48749b5f062c0c234e01afd69f364ab600e2b6051494b20d",
+  "config_id": "a2e880cb8da77b08dad9833be7a4c9aa08dd856f4648da5486937c798611d3b8",
+  "instance_id": "6d65e4ef2af67eed1ce3a5c2d7b04fa02517707d2dff044869389f310b69f6b4",
+  "public_holder": "Some(Holder(HolderState { holdings: [Holding { config_id: [162, 232, 128, 203, 141, 167, 123, 8, 218, 217, 131, 59, 231, 164, 201, 170, 8, 221, 133, 111, 70, 72, 218, 84, 134, 147, 124, 121, 134, 17, 211, 184], terms: Terms { evm_chain_id: 11155111, vault: [208, 181, 252, 192, 180, 125, 142, 111, 81, 79, 157, 36, 107, 176, 180, 22, 178, 4, 138, 247], token: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], denominations: [1000000000000000, 10000000000000000, 100000000000000000] }, amount: 1000000000000000 }], pending: None }))",
+  "stages": [
+    {
+      "block": 12107997,
+      "finalized_slot": 11551744,
+      "label": "stage 1",
+      "leaves": 1,
+      "root": "a5b5c43fea8123ea584de580eb9f19de945f0e435ca9ef21f25fd87844a74875",
+      "rows": [
+        "bridge Init without the block's header (Gloas record) | refused | 215 (code 215)",
+        "bridge Init (configId in the vault's slot 2) | applied | ",
+        "bridge ImportRoot n=1 (stage 1, block 12107997) | applied | ",
+        "bridge Claim: deposit 0 at leaf index 1 under root(cid, 1) (a leaf index at the count) | refused | 248 (code 248)",
+        "bridge Claim: deposit 0 redirected to another public account (a wrong opening) | refused | 249 (code 249)",
+        "bridge Claim: deposit 0 (public) under root(cid, 1) | applied | ",
+        "bridge Claim: deposit 0 again (replay) | refused | 250 (code 250)"
+      ]
+    }
+  ],
+  "vault": "d0b5fcc0b47d8e6f514f9d246bb0b416b2048af7"
+}
