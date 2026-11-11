@@ -17,6 +17,10 @@ publish = false
 name = "ferrata"
 path = "src/main.rs"
 
+[[bin]]
+name = "ferrata-relayer"
+path = "src/bin/relayer.rs"
+
 [dependencies]
 ferrata-bridge-core = { path = "../bridge/crates/ferrata-bridge-core" }
 ferrata-lez-bridge-wire = { path = "../lez/bridge-wire" }

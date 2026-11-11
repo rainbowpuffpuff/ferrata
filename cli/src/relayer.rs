@@ -57,6 +57,7 @@ sol! {
         function tMin() external view returns (uint32);
         function mode() external view returns (uint8);
         function owed(address payee, address token) external view returns (uint256);
+        function claimOwed(address token) external;
     }
 }
 
@@ -388,6 +389,7 @@ impl std::fmt::Display for DropRefusal {
 }
 
 /// What a relayer checks a gas-drop receipt against.
+#[derive(Clone, Copy)]
 pub struct DropContext<'a> {
     /// The gas-drop guest's image id.
     pub image_id: [u8; 32],
