@@ -320,6 +320,19 @@ Daemon CPU, memory and bandwidth for the real modules are **not measured** (they
 | Verifier stop tripped (RISC Zero's proof of unsoundness) | no more releases or refunds | — | [`vault/README.md`](../../vault/README.md), "Verifier and stop" |
 | Ethereum gas mispriced (Glamsterdam state gas) | out-of-gas | take every limit from the node's estimate × 1.25 | [`deployer-guide.md`](deployer-guide.md) §4.1 |
 
+### 10.1 Reading a deployed vault: the admin view
+
+[`admin/index.html`](../../admin/index.html) is one static page (no build step, its JavaScript
+inline) that reads any Ethereum JSON-RPC endpoint you type, with read-only methods only, and shows a
+deployed vault: its configuration and roles, the watchers, the verifier's emergency stop, freezes,
+tokens with their caps and fee schedules, fees owed, deposits (the root rebuilt from the events and
+compared with the vault's), checkpoints and pending candidates with their windows, releases and
+refunds, and retirement. Whatever the contract does not expose is said on the page. `node
+admin/dump.mjs <rpc> <vault>` runs the same code without a browser and prints it as text;
+[`admin/results/`](../../admin/results/) holds a read of the live Sepolia vault (block 12,113,610:
+mode B, 2 deposits, checkpoint #0 final, 2 releases, the vault's ETH balance equal to escrow plus
+fees owed). See [`admin/README.md`](../../admin/README.md) for each value's getter or event.
+
 ## 11. Retirement and `Sunset`
 
 The vault and the checkpoint program parse LEZ v0.4 blocks; a LEZ change they cannot follow (including a
