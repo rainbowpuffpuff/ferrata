@@ -527,7 +527,8 @@ function makeRpc(url, opts) {
       const msg = reverted ? decodeRevert(data) : ('JSON-RPC error ' + e.code + ': ' + (e.message || '') + (data ? ' data ' + data.slice(0, 80) : ''));
       const err = new Error(msg);
       err.rpcCode = e.code; err.reverted = !!reverted || /execution reverted/i.test(e.message || '');
-      err.retryable = !err.reverted && /rate|too many requests|capacity|busy|temporar/i.test(e.message || '');
+      // A load-balanced endpoint may serve a backend that has not seen the pinned block yet.
+      err.retryable = !err.reverted && /rate|too many requests|capacity|busy|temporar|block not found|header not found|unknown block/i.test(e.message || '');
       throw err;
     }
     if (!j || !('result' in j)) throw new Error(method + ': response has neither result nor error');

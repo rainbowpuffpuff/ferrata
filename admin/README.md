@@ -145,4 +145,12 @@ page requested nothing but `file:` and the endpoint
 [`results/browser-anvil-scenario.jpg`](results/browser-anvil-scenario.jpg)). The page's
 Content-Security-Policy is enforced there: Playwright's `waitForFunction`, which evaluates a string in
 the page, was refused for want of `'unsafe-eval'`, so the check polls through locators instead.
-Not checked: a browser against the live Sepolia endpoint (CORS from `file://` depends on the endpoint).
+Against the live vault through `https://ethereum-sepolia-rpc.publicnode.com`, from `file://` (so
+with `Origin: null`; the endpoint allows it): "read at block 12113760 in 7.0 s; 0 error(s), 113 RPC
+requests", 0 script errors ([`results/browser-live-sepolia.txt`](results/browser-live-sepolia.txt),
+[`results/browser-live-sepolia.jpg`](results/browser-live-sepolia.jpg)). An earlier browser read
+there (block 12,113,757) listed two `eth_getCode` errors, "block not found" at the pinned block: the
+endpoint balances requests over nodes, one of which had not yet seen the newest block. Such errors
+("block not found", "header not found", "unknown block") are now retried with the client's backoff,
+like rate limits; the retry has not yet been seen to fire on a live endpoint. Other endpoints' CORS
+policies were not tried.
