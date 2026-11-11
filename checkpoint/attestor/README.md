@@ -64,8 +64,9 @@ bash attestor/zone-attest.sh attestor/runs/zone            # its four attestors,
 devnet configuration of LEZ v0.4.0-rc1 (one genesis staking the four channel keys), run with the lab bundle's
 `sequencer_service` and Logos Blockchain node on the build box without Docker (gossip by explicit loopback
 addresses). The channel accredits the four keys, the turn rotates among them and all four inscribe blocks; the
-four sequencers' attestors sign the final tip; `t(4) = 3` of 4 is collected (one sequencer silent) and
-accepted by the checkpoint program, 2 of 4 refused.
+four sequencers' attestors sign the final tip; `t(4) = 3` of 4 is collected (one sequencer silent), proven,
+and accepted by a v5 vault with nMin 4, tMin 3; 2 of 4 is refused. With `SILENT=3`, sequencer 3 stops during
+the run: the chain waits out its turn and goes on, and the other three attestors' 3 of 4 is accepted.
 
 **A stand-in key set over the lab's chain** (`devnet.sh`, `runs/devnet-n3/`): the lab's chain has one
 sequencer, so its run uses `K = {the lab's key (the real producer of T), k1, k2}` with seeded k1, k2 for

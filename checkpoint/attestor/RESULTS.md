@@ -154,6 +154,14 @@ Run of 11 November, 18:59:05–19:04:29 UTC, 300 s of sequencing (`zone.log`, th
 | Proof | `host prove rbz-zone-n4-t3` (box CPU): **513.54 s**, 7 segments, 6,261,183 user cycles, receipt sha256 `3293f702…0f6c`; identity_p254 18.2 s; Groth16 prover image (carl) 17 s; seal 260 bytes, journal sha256 `57d90e16…c985` (`runs/zone/proof/`, `prove.jsonl`) |
 | Vault | `RuleBZoneTest` (FerrataVault v5 in mode (B), nMin 4, tMin 3, genesis = the parent state over the four keys, RISC Zero's real Groth16 verifier): the journal is 3 of 4; candidate, then final after the wait and not before; a journal claiming t = 2 refused (`KeySetBelowFloor`); a vault with floors (3, 2) refuses it (`WrongCommitteeFloor`); **343,581 + 161,437 gas** |
 
+**A silent sequencer** (`SILENT=3 SILENT_AFTER=60 attestor/zone.sh …`, `runs/zone-silent/`, 19:22:41–19:28:05
+UTC): seq-3 (`90a548e0…`) was stopped 60 s into the run, before its first turn. The others went on: when its
+turn came the chain stood at height 12 for about 40 s (the turn's posting timeout), then the turn passed to the
+next key and blocks continued to 25; the final tier has no block by seq-3's key (`fce0d0fa…` 11 blocks,
+`6462ecf1…` 7, `99273f3e…` 6). The other three attestors' 3 of 4 over blocks 3..=25 (23 blocks) is accepted by
+the checkpoint program in r0vm (6,214,564 user cycles, `T` = 25 inscribed by `6462ecf1…`); 2 of 4 refused.
+(`zone-attest.sh` also signs with seq-3's attestor, which reads the same node; its 4-of-4 input is accepted too.)
+
 ## What failed on the way
 
 - The recorded `realblocks/out/real-lab-186-202.input` no longer decodes (`BadLength { what: "suffix" }`): it
@@ -161,11 +169,16 @@ Run of 11 November, 18:59:05–19:04:29 UTC, 300 s of sequencing (`zone.log`, th
 - The first test expectation that a journal claiming t = 1 fails verification was wrong: the vault refuses it
   earlier (`KeySetBelowFloor`).
 - The host needs Rust 1.93.0 (a dependency needs 1.90); the first build with 1.88 failed.
+- The zone: the bundle's `sequencer_service` needs `libpcsclite1`, absent from the box (first attempt stopped
+  at `setup`); the first full run (18:46–18:51 UTC) worked but its answers were lost (fetched from slot 0, about
+  17,800 windows, while the local `mrun` was stopped by a 10-minute limit and the container recycled); the next
+  runs fetch from the channel's first slot. The zone's block 1 has no inscription, so its spans start at 3.
+- One proof call returned nothing when its container was recycled mid-proof; it was redone on a new container.
 
 ## Not done
 
-- The zone of §7 with a bridge program, burns and a rotation proposed by its committee; a silent or
-  failing sequencer and a dropped inscription on it (B1's done gate); the zone's checkpoint on Sepolia.
+- The zone of §7 with a bridge program, burns and a rotation proposed by its committee; a dropped inscription
+  on it (B1's done gate; the silent sequencer is shown); the zone's checkpoint on Sepolia.
 - `ferrata_attestor` as a Logos module (README).
 - Rotations proposed and inscribed by a running committee (the rotation here is built from the core's own
   encoding and signed with the stand-in keys); the monitor's watcher reading attestations.
