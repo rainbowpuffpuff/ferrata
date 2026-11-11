@@ -48,8 +48,9 @@ context are fixed on both sides (LEZ: public balances at `holder(account)` PDAs,
 call, one `NOut` per burn, a MAC over the memo; vault: the keyless-retirement clock, the checkpoint fee to the
 prover, stale candidates, no deposit after a final sunset, test chains only, a bound on `revokeWindow`), with tests
 that fail on the code before the fixes ([`lez/BRIDGE-RESULTS.md`](lez/BRIDGE-RESULTS.md) §13,
-[`vault/GAS.md`](vault/GAS.md)). These changed the bridge, `checkpoint_b` and release images: every real proof and
-the real crossing of row 27 used the earlier programs.
+[`vault/GAS.md`](vault/GAS.md)). These changed the bridge, `checkpoint_b` and release images: the real crossing of
+row 27 and the real proofs before it used the earlier programs; the crown run, rehearsed on a fork of Sepolia with a
+LEZ devnet and real proofs (row 31, [`e2e/crown/README.md`](e2e/crown/README.md)), uses these.
 
 The guests need RISC Zero's toolchain (`rzup`, r0vm 3.0.5), the vault Foundry (forge 1.3.6, solc
 0.8.26), and the Groth16 wraps Docker on x86-64. `lez/` and the checkpoint's fidelity tests read LEZ
