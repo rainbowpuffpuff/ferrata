@@ -46,7 +46,11 @@ pub fn plan(
         "burn {} is not under the newest accepted burn root ({burn_count} burns): wait for the next checkpoint",
         owned.burn.burn_index
     );
-    ensure!(burn_count as usize <= history.burns.len(), "the zone shows {} burns, the burn root {burn_count}", history.burns.len());
+    ensure!(
+        burn_count as usize <= history.burns.len(),
+        "the zone shows {} burns, the burn root {burn_count}",
+        history.burns.len()
+    );
     let leaves: Vec<Hash> = history.burns[..burn_count as usize]
         .iter()
         .map(|b| burn_leaf(&ctx.cid, b.burn_index, &b.note.token, &b.note.amount, &b.note.c_out, &b.note.r))
@@ -56,7 +60,8 @@ pub fn plan(
         tree.root() == burn_root,
         "the zone's burns do not give the vault's accepted burn root at {burn_count} burns: the zone or the RPC serves another chain"
     );
-    let path = tree.path(owned.burn.burn_index).ok_or_else(|| anyhow!("burn {} is not in the tree", owned.burn.burn_index))?;
+    let path =
+        tree.path(owned.burn.burn_index).ok_or_else(|| anyhow!("burn {} is not in the tree", owned.burn.burn_index))?;
     let witness = ReleaseWitness { burn_index: owned.burn.burn_index, path, s_out: owned.s_out, r: owned.burn.note.r };
     let public = ReleasePublic {
         chain_id: chain_id_u256(ctx.chain_id),
@@ -68,7 +73,8 @@ pub fn plan(
         relayer,
         relay_fee: u128_to_word(relay_fee),
     };
-    let nullifier = verify_release(&burn_root, &witness, &public).map_err(|e| anyhow!("the release statement does not hold: {e:?}"))?;
+    let nullifier = verify_release(&burn_root, &witness, &public)
+        .map_err(|e| anyhow!("the release statement does not hold: {e:?}"))?;
     ensure!(nullifier == owned.nullifier, "the release nullifier is not the recovered one");
     let journal = release_journal(&burn_root, &nullifier, &public).to_vec();
     let request = IVault::ReleaseRequest {
@@ -101,7 +107,8 @@ pub fn prove(program: &Path, plan: &ReleasePlan) -> Result<Proven> {
     let image_id = compute_image_id(&elf).map_err(|e| anyhow!("not a guest program: {e}"))?;
     let input = plan.input.encode();
     let env = ExecutorEnv::builder().write_slice(&input).build().map_err(|e| anyhow!("{e}"))?;
-    let info = default_prover().prove_with_opts(env, &elf, &ProverOpts::succinct()).map_err(|e| anyhow!("r0vm: {e}"))?;
+    let info =
+        default_prover().prove_with_opts(env, &elf, &ProverOpts::succinct()).map_err(|e| anyhow!("r0vm: {e}"))?;
     ensure!(info.receipt.journal.bytes == plan.journal, "the guest's journal is not the native release journal");
     let dev_mode = std::env::var("RISC0_DEV_MODE").map(|v| v == "1" || v == "true").unwrap_or(false);
     if !dev_mode {

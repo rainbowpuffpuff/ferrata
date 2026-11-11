@@ -20,6 +20,10 @@ path = "src/main.rs"
 [dependencies]
 ferrata-bridge-core = { path = "../bridge/crates/ferrata-bridge-core" }
 ferrata-lez-bridge-wire = { path = "../lez/bridge-wire" }
+# The attestation program's interface and the core's store and record encodings (`status`: the
+# instance's finalized header and its newest record), as lez/bridge-wire links them.
+ferrata-lez-wire = { path = "../lez/wire" }
+ferrata-core = { path = "../crates/ferrata-core", default-features = false }
 
 # LEZ by path (v0.4.0-rc1, commit 1806e87), as lez/live/driver links it.
 wallet = { path = "../../upstream/lez-v0.4.0-rc1/lez/wallet" }

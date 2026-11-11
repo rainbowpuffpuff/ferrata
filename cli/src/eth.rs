@@ -139,15 +139,20 @@ pub struct DepositPrice {
 
 pub async fn deposit_price(p: &DynProvider, vault: Address, token: Address, denom_index: u8) -> Result<DepositPrice> {
     let cfg = view(p, vault, IVault::tokenConfigCall { token }, None).await?;
-    ensure!(cfg.registered, crate::codes::vault_refusal(&crate::codes::selector("TokenNotRegistered"), "checked before sending").expect("known"));
-    let denomination = cfg
-        .denominations_
-        .get(usize::from(denom_index))
-        .ok_or_else(|| anyhow!(vault_refusal(&crate::codes::selector("InvalidDenominationIndex"), "checked before sending").expect("known")))?;
+    ensure!(
+        cfg.registered,
+        crate::codes::vault_refusal(&crate::codes::selector("TokenNotRegistered"), "checked before sending")
+            .expect("known")
+    );
+    let denomination = cfg.denominations_.get(usize::from(denom_index)).ok_or_else(|| {
+        anyhow!(vault_refusal(&crate::codes::selector("InvalidDenominationIndex"), "checked before sending")
+            .expect("known"))
+    })?;
     let state = view(p, vault, IVault::feeStateCall { token }, None).await?;
     let now = p.get_block(BlockId::latest()).await?.map(|b| b.header.timestamp).unwrap_or(0);
     let schedule = if state.pendingAt != 0 && now >= state.pendingAt { state.current + 1 } else { state.current };
-    let fees = view(p, vault, IVault::feesCall { token, index: U256::from(schedule), denomIndex: denom_index }, None).await?;
+    let fees =
+        view(p, vault, IVault::feesCall { token, index: U256::from(schedule), denomIndex: denom_index }, None).await?;
     let denomination: u128 = (*denomination).try_into()?;
     let mint_fee: u128 = fees.mintFee.try_into()?;
     let relay_fee: u128 = fees.relayFee.try_into()?;
@@ -165,7 +170,14 @@ pub fn deposit_calldata(token: Address, denom_index: u8, commitment: B256, j: u6
 
 /// Sends `input` to `to` with `value` from the provider's signer, after an `eth_call` from the
 /// same sender: a revert is reported with the vault's error before anything is signed.
-pub async fn send(p: &DynProvider, from: Address, to: Address, input: Bytes, value: U256, confirmations: u64) -> Result<TransactionReceipt> {
+pub async fn send(
+    p: &DynProvider,
+    from: Address,
+    to: Address,
+    input: Bytes,
+    value: U256,
+    confirmations: u64,
+) -> Result<TransactionReceipt> {
     let tx = TransactionRequest::default().with_from(from).with_to(to).with_input(input).with_value(value);
     if let Err(e) = p.call(tx.clone()).await {
         match refusal_of(&e, "eth_call before sending") {
@@ -204,9 +216,17 @@ pub async fn deposit_list(p: &DynProvider, vault: Address, from_block: u64, chun
     let mut start = from_block;
     while start <= block {
         let end = (start + chunk.max(1) - 1).min(block);
-        let filter = Filter::new().address(vault).event_signature(IVault::Deposit::SIGNATURE_HASH).from_block(start).to_block(end);
+        let filter = Filter::new()
+            .address(vault)
+            .event_signature(IVault::Deposit::SIGNATURE_HASH)
+            .from_block(start)
+            .to_block(end);
         for log in p.get_logs(&filter).await.with_context(|| format!("eth_getLogs {start}..{end}"))? {
-            let event = log.log_decode::<IVault::Deposit>().map_err(|e| anyhow!("a Deposit log does not decode: {e}"))?.inner.data;
+            let event = log
+                .log_decode::<IVault::Deposit>()
+                .map_err(|e| anyhow!("a Deposit log does not decode: {e}"))?
+                .inner
+                .data;
             deposits.push(VaultDeposit {
                 depositor: event.depositor.into_array(),
                 j: event.index,
@@ -229,8 +249,14 @@ pub async fn deposit_list(p: &DynProvider, vault: Address, from_block: u64, chun
     let mut tree = IncrementalTree::new();
     for (i, d) in deposits.iter().enumerate() {
         ensure!(d.leaf_index == i as u64, "leaf {i} is missing from the provider's list");
-        tree.append(ferrata_bridge_core::inbound::deposit_leaf(d.leaf_index, &d.depositor, &d.token, &d.amount, &d.commitment))
-            .map_err(|_| anyhow!("more than 2^32 leaves"))?;
+        tree.append(ferrata_bridge_core::inbound::deposit_leaf(
+            d.leaf_index,
+            &d.depositor,
+            &d.token,
+            &d.amount,
+            &d.commitment,
+        ))
+        .map_err(|_| anyhow!("more than 2^32 leaves"))?;
     }
     ensure!(
         tree.root() == root.0,
@@ -241,15 +267,28 @@ pub async fn deposit_list(p: &DynProvider, vault: Address, from_block: u64, chun
 
 /// Every nullifier the vault has released, from its `Release` events (one download, matched
 /// locally).
-pub async fn released_nullifiers(p: &DynProvider, vault: Address, from_block: u64, chunk: u64) -> Result<std::collections::HashSet<[u8; 32]>> {
+pub async fn released_nullifiers(
+    p: &DynProvider,
+    vault: Address,
+    from_block: u64,
+    chunk: u64,
+) -> Result<std::collections::HashSet<[u8; 32]>> {
     let block = p.get_block_number().await?;
     let mut out = std::collections::HashSet::new();
     let mut start = from_block;
     while start <= block {
         let end = (start + chunk.max(1) - 1).min(block);
-        let filter = Filter::new().address(vault).event_signature(IVault::Release::SIGNATURE_HASH).from_block(start).to_block(end);
+        let filter = Filter::new()
+            .address(vault)
+            .event_signature(IVault::Release::SIGNATURE_HASH)
+            .from_block(start)
+            .to_block(end);
         for log in p.get_logs(&filter).await.with_context(|| format!("eth_getLogs {start}..{end}"))? {
-            let event = log.log_decode::<IVault::Release>().map_err(|e| anyhow!("a Release log does not decode: {e}"))?.inner.data;
+            let event = log
+                .log_decode::<IVault::Release>()
+                .map_err(|e| anyhow!("a Release log does not decode: {e}"))?
+                .inner
+                .data;
             out.insert(event.nullifier.0);
         }
         start = end + 1;
@@ -258,15 +297,28 @@ pub async fn released_nullifiers(p: &DynProvider, vault: Address, from_block: u6
 }
 
 /// Leaf indices the vault has refunded, from its `Refund` events.
-pub async fn refunded_leaves(p: &DynProvider, vault: Address, from_block: u64, chunk: u64) -> Result<std::collections::HashSet<u64>> {
+pub async fn refunded_leaves(
+    p: &DynProvider,
+    vault: Address,
+    from_block: u64,
+    chunk: u64,
+) -> Result<std::collections::HashSet<u64>> {
     let block = p.get_block_number().await?;
     let mut out = std::collections::HashSet::new();
     let mut start = from_block;
     while start <= block {
         let end = (start + chunk.max(1) - 1).min(block);
-        let filter = Filter::new().address(vault).event_signature(IVault::Refund::SIGNATURE_HASH).from_block(start).to_block(end);
+        let filter = Filter::new()
+            .address(vault)
+            .event_signature(IVault::Refund::SIGNATURE_HASH)
+            .from_block(start)
+            .to_block(end);
         for log in p.get_logs(&filter).await.with_context(|| format!("eth_getLogs {start}..{end}"))? {
-            let event = log.log_decode::<IVault::Refund>().map_err(|e| anyhow!("a Refund log does not decode: {e}"))?.inner.data;
+            let event = log
+                .log_decode::<IVault::Refund>()
+                .map_err(|e| anyhow!("a Refund log does not decode: {e}"))?
+                .inner
+                .data;
             out.insert(event.leafIndex);
         }
         start = end + 1;
@@ -276,16 +328,28 @@ pub async fn refunded_leaves(p: &DynProvider, vault: Address, from_block: u64, c
 
 /// Finalized checkpoints from the vault's `CheckpointFinalized` events: (burn root, burn count),
 /// oldest first, each still accepted (`burnRootStatus`: not revoked).
-pub async fn accepted_burn_roots(p: &DynProvider, vault: Address, from_block: u64, chunk: u64) -> Result<Vec<(B256, u64)>> {
+pub async fn accepted_burn_roots(
+    p: &DynProvider,
+    vault: Address,
+    from_block: u64,
+    chunk: u64,
+) -> Result<Vec<(B256, u64)>> {
     let block = p.get_block_number().await?;
     let mut out = Vec::new();
     let mut start = from_block;
     while start <= block {
         let end = (start + chunk.max(1) - 1).min(block);
-        let filter =
-            Filter::new().address(vault).event_signature(IVault::CheckpointFinalized::SIGNATURE_HASH).from_block(start).to_block(end);
+        let filter = Filter::new()
+            .address(vault)
+            .event_signature(IVault::CheckpointFinalized::SIGNATURE_HASH)
+            .from_block(start)
+            .to_block(end);
         for log in p.get_logs(&filter).await.with_context(|| format!("eth_getLogs {start}..{end}"))? {
-            let e = log.log_decode::<IVault::CheckpointFinalized>().map_err(|e| anyhow!("a CheckpointFinalized log does not decode: {e}"))?.inner.data;
+            let e = log
+                .log_decode::<IVault::CheckpointFinalized>()
+                .map_err(|e| anyhow!("a CheckpointFinalized log does not decode: {e}"))?
+                .inner
+                .data;
             let status = view(p, vault, IVault::burnRootStatusCall { burnRoot: e.burnRoot }, None).await?;
             if status.accepted {
                 out.push((e.burnRoot, e.burnCount));

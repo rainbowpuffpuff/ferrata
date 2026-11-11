@@ -19,8 +19,9 @@ use ferrata_bridge_core::{
     BridgeKeys, Hash,
 };
 use ferrata_lez_bridge_wire::{
-    self as bw, burn_actor, burn_seed, config_actor, config_seed, holder_actor, nullifier_actor, nullifier_seed, root_actor,
-    root_seed, token_actor, token_seed, BridgeMessage, BridgeState, HolderState, RootState, ScheduleRange, TokenState,
+    self as bw, burn_actor, burn_seed, config_actor, config_seed, holder_actor, nullifier_actor, nullifier_seed,
+    root_actor, root_seed, token_actor, token_seed, BridgeMessage, BridgeState, HolderState, RootState, ScheduleRange,
+    TokenState,
 };
 use lee::AccountId;
 use lee_core::{account::Actor, program::PdaSeed};
@@ -29,6 +30,7 @@ use wallet::{AccountIdentity, AccountMention, WalletCore, WalletSequencerClient 
 
 use crate::{
     codes::program_refusal,
+    hx,
     seed::{Seed, DEFAULT_GAP},
     units::{u128_to_word, word_to_u128},
 };
@@ -64,7 +66,10 @@ pub enum Mention {
 impl Mention {
     pub fn actor(&self) -> Actor {
         match self {
-            Mention::Pda { actor, .. } | Mention::Signer(actor) | Mention::Other(actor, _) | Mention::PrivateSelf(actor) => *actor,
+            Mention::Pda { actor, .. }
+            | Mention::Signer(actor)
+            | Mention::Other(actor, _)
+            | Mention::PrivateSelf(actor) => *actor,
         }
     }
 }
@@ -110,6 +115,8 @@ pub async fn read<L: Ledger>(ledger: &L, actor: Actor) -> Result<Option<BridgeSt
 pub struct History {
     /// Leaf counts of the imported roots of this configuration.
     pub roots: Vec<u64>,
+    /// Each import of this configuration in order of application: (leaf count, the record slot it read).
+    pub imports: Vec<(u64, u64)>,
     /// Published burn notes of this configuration, by burn index (order of application).
     pub burns: Vec<PublishedBurn>,
     /// Nullifiers of plaintext claims against this vault.
@@ -123,7 +130,10 @@ pub fn history(ctx: &Context, applied: &[Applied]) -> History {
     for call in applied.iter().filter(|c| c.to.program_account_id == ctx.program) {
         let Ok(message) = BridgeMessage::try_from_slice(&call.message) else { continue };
         match message {
-            BridgeMessage::ImportRoot { config_id, leaf_count, .. } if config_id == ctx.cid => h.roots.push(leaf_count),
+            BridgeMessage::ImportRoot { config_id, leaf_count, record_slot, .. } if config_id == ctx.cid => {
+                h.roots.push(leaf_count);
+                h.imports.push((leaf_count, record_slot));
+            }
             BridgeMessage::Burn { config_id, r, memo, mac, token, amount, c_out } if config_id == ctx.cid => {
                 let burn_index = h.burns.len() as u64;
                 h.burns.push(PublishedBurn { burn_index, note: BurnNote { r, memo, mac, token, amount, c_out } });
@@ -189,7 +199,10 @@ pub async fn plan_claim<L: Ledger>(
     let d = &owned.deposit;
     let Some(&n) = history.roots.iter().rev().find(|&&n| n > d.leaf_index) else {
         let code = if history.roots.is_empty() { 245 } else { 248 };
-        bail!(program_refusal(code, "checked before sending: no imported root covers this leaf yet; wait for the next root import"));
+        bail!(program_refusal(
+            code,
+            "checked before sending: no imported root covers this leaf yet; wait for the next root import"
+        ));
     };
     let root_state: RootState = match read(ledger, root_actor(ctx.program, &ctx.cid, n)).await? {
         Some(BridgeState::Root(r)) => r,
@@ -228,7 +241,9 @@ pub async fn plan_claim<L: Ledger>(
     if history.claimed.contains(&owned.nullifier) || read(ledger, n_actor).await?.is_some() {
         bail!(program_refusal(250, "checked before sending"));
     }
-    let (mint_fee, _) = token.fees_for(amount, &range).map_err(|code| anyhow!(program_refusal(u32::from(code), "checked before sending")))?;
+    let (mint_fee, _) = token
+        .fees_for(amount, &range)
+        .map_err(|code| anyhow!(program_refusal(u32::from(code), "checked before sending")))?;
     let relay_fee = token.entry.index_of(amount).map(|k| token.entry.relay_fees[k]).unwrap_or(0);
     let fee_recipient = AccountId::new(token.controls.fee_recipient);
     let relayer_account = relayer.map(AccountId::new).unwrap_or(fee_recipient);
@@ -247,7 +262,10 @@ pub async fn plan_claim<L: Ledger>(
         mentions.push(Mention::Pda { actor: root, seed: root_seed(&ctx.cid, n) });
         BridgeMessage::Claim { config_id: ctx.cid, leaf_count: n, witness, range, relayer, time_ms }
     };
-    mentions.push(Mention::Pda { actor: token_actor(ctx.program, &ctx.cid, &d.token), seed: token_seed(&ctx.cid, &d.token) });
+    mentions.push(Mention::Pda {
+        actor: token_actor(ctx.program, &ctx.cid, &d.token),
+        seed: token_seed(&ctx.cid, &d.token),
+    });
     mentions.push(Mention::Pda { actor: config_actor(ctx.program, &ctx.cid), seed: config_seed(&ctx.cid) });
     mentions.push(Mention::Pda { actor: n_actor, seed: nullifier_seed(ctx.chain_id, &ctx.vault, &owned.nullifier) });
     let dest = (owned.kind == DestKind::Public).then(|| AccountId::new(owned.dest));
@@ -258,8 +276,18 @@ pub async fn plan_claim<L: Ledger>(
             mentions.push(Mention::Other(actor, key));
         }
     }
-    let what = format!("{} claim of leaf {} under root(cid, {n})", if private { "private" } else { "plaintext" }, d.leaf_index);
-    Ok(ClaimPlan { call: LezCall { what, mentions, root_index: 0, message }, leaf_count: n, nullifier: owned.nullifier, mint_fee, relay_fee })
+    let what = format!(
+        "{} claim of leaf {} under root(cid, {n})",
+        if private { "private" } else { "plaintext" },
+        d.leaf_index
+    );
+    Ok(ClaimPlan {
+        call: LezCall { what, mentions, root_index: 0, message },
+        leaf_count: n,
+        nullifier: owned.nullifier,
+        mint_fee,
+        relay_fee,
+    })
 }
 
 /// A burn, built and checked.
@@ -309,7 +337,12 @@ pub async fn plan_burn<L: Ledger>(
         Mention::Pda { actor: config_actor(ctx.program, &ctx.cid), seed: config_seed(&ctx.cid) },
         Mention::Pda { actor: burn_actor(ctx.program, &ctx.cid, &note_hash), seed: burn_seed(&ctx.cid, &note_hash) },
     ];
-    let call = LezCall { what: format!("burn with tag counter {next_i}"), mentions, root_index: 0, message: BridgeMessage::burn(ctx.cid, &wire) };
+    let call = LezCall {
+        what: format!("burn with tag counter {next_i}"),
+        mentions,
+        root_index: 0,
+        message: BridgeMessage::burn(ctx.cid, &wire),
+    };
     Ok(BurnPlan { call, note, i: next_i })
 }
 
@@ -369,7 +402,9 @@ fn mention(m: &Mention) -> AccountMention {
     let actor = m.actor();
     let program = actor.program_account_id;
     match m {
-        Mention::Pda { seed, .. } => AccountIdentity::PublicPda { program, seed: *seed }.select_program_actor_state(program),
+        Mention::Pda { seed, .. } => {
+            AccountIdentity::PublicPda { program, seed: *seed }.select_program_actor_state(program)
+        }
         Mention::Signer(_) => AccountIdentity::Public(actor.account_id).select_program_actor_state(program),
         Mention::Other(_, Some(key)) => AccountIdentity::PublicForeign(key.clone()).select_program_actor_state(program),
         Mention::Other(_, None) => AccountIdentity::PublicNoSign(actor.account_id).select_program_actor_state(program),
@@ -385,7 +420,8 @@ impl Ledger for Sequencer {
         let mut start = 1;
         while start <= last {
             let end = (start + 99).min(last);
-            let blocks = client.get_block_range(start, end).await.map_err(|e| anyhow!("get_block_range {start}..{end}: {e}"))?;
+            let blocks =
+                client.get_block_range(start, end).await.map_err(|e| anyhow!("get_block_range {start}..{end}: {e}"))?;
             for block in blocks {
                 for (i, tx) in block.body.transactions.iter().enumerate() {
                     if block.body.reverted.contains(&(i as u64)) {
@@ -405,7 +441,8 @@ impl Ledger for Sequencer {
     }
 
     async fn actor_state(&self, actor: Actor) -> Result<Vec<u8>> {
-        let account = self.wallet.client().get_account(actor.account_id).await.map_err(|e| anyhow!("get_account: {e}"))?;
+        let account =
+            self.wallet.client().get_account(actor.account_id).await.map_err(|e| anyhow!("get_account: {e}"))?;
         Ok(account.map(|a| a.data.actor_state(actor.program_account_id).to_vec()).unwrap_or_default())
     }
 
@@ -413,16 +450,21 @@ impl Ledger for Sequencer {
         let mentions: Vec<AccountMention> = call.mentions.iter().map(mention).collect();
         let message = borsh::to_vec(&call.message)?;
         if matches!(call.mentions.first(), Some(Mention::PrivateSelf(_))) {
-            let path = self.bridge_program.as_ref().ok_or_else(|| anyhow!("a private claim needs --bridge-program (the bridge program's binary) to prove its execution"))?;
+            let path = self.bridge_program.as_ref().ok_or_else(|| {
+                anyhow!("a private claim needs --bridge-program (the bridge program's binary) to prove its execution")
+            })?;
             let bytes = std::fs::read(path).with_context(|| format!("reading {}", path.display()))?;
             let program = call.mentions[0].actor().program_account_id;
             let catalog = lee::privacy_preserving_transaction::circuit::ProgramCatalog::from([(
                 program,
-                lee::program::Program::new(std::borrow::Cow::Owned(bytes)).map_err(|e| anyhow!("the bridge program does not load: {e}"))?,
+                lee::program::Program::new(std::borrow::Cow::Owned(bytes))
+                    .map_err(|e| anyhow!("the bridge program does not load: {e}"))?,
             )]);
             let (hash, _) = self
                 .wallet
-                .send_privacy_preserving_tx_with_pre_check(mentions, call.root_index, message, &catalog, None, |_| Ok(()))
+                .send_privacy_preserving_tx_with_pre_check(mentions, call.root_index, message, &catalog, None, |_| {
+                    Ok(())
+                })
                 .await
                 .map_err(|e| anyhow!("the wallet did not send the private claim: {e}: {e:?}"))?;
             return Ok(hash.to_string());
@@ -434,6 +476,127 @@ impl Ledger for Sequencer {
             .map_err(|e| anyhow!("the wallet did not send it: {e}: {e:?}"))?;
         Ok(hash.to_string())
     }
+}
+
+// ---- the light-client instance a configuration reads ---------------------------------------------
+
+/// `instance(id)` of the attestation program, as the zone holds it.
+#[derive(Clone, Debug)]
+pub struct InstanceView {
+    pub active: bool,
+    /// Jobs applied (the activation included).
+    pub applied: u64,
+    /// `finalized_header.beacon.slot` of the instance's store.
+    pub finalized_slot: u64,
+}
+
+/// A `header(id, slot)` record: its beacon slot and what it binds of the execution block.
+#[derive(Clone, Debug)]
+pub struct RecordView {
+    pub slot: u64,
+    pub execution: ferrata_core::witness::ExecutionSummary,
+}
+
+impl RecordView {
+    pub fn show(&self) -> String {
+        use ferrata_core::witness::ExecutionSummary as E;
+        match &self.execution {
+            E::Payload { block_number, block_hash, timestamp, .. } => {
+                format!(
+                    "header(id, {}): execution block {block_number} {} (time {timestamp})",
+                    self.slot,
+                    hx(block_hash)
+                )
+            }
+            E::BlockHash(h) => format!("header(id, {}): Gloas record, bound block hash {}", self.slot, hx(h)),
+            E::None => format!("header(id, {}): Altair record, no execution data", self.slot),
+        }
+    }
+}
+
+/// `instance(id)`, if the zone holds it; its store's finalized slot read from the `CompactStore`.
+pub async fn instance<L: Ledger>(
+    ledger: &L,
+    attestation: AccountId,
+    instance_id: &Hash,
+) -> Result<Option<InstanceView>> {
+    let bytes = ledger.actor_state(ferrata_lez_wire::instance_actor(attestation, instance_id)).await?;
+    if bytes.is_empty() {
+        return Ok(None);
+    }
+    let state = ferrata_lez_wire::InstanceState::try_from_slice(&bytes)
+        .map_err(|e| anyhow!("instance(id) holds no instance state: {e}"))?;
+    let store = ferrata_core::witness::CompactStore::decode(&state.store)
+        .map_err(|e| anyhow!("instance(id)'s store does not decode: {e:?}"))?;
+    Ok(Some(InstanceView { active: state.active, applied: state.applied, finalized_slot: store.finalized.slot }))
+}
+
+/// `header(id, slot)`'s record, if written.
+pub async fn record<L: Ledger>(
+    ledger: &L,
+    attestation: AccountId,
+    instance_id: &Hash,
+    slot: u64,
+) -> Result<Option<RecordView>> {
+    let bytes = ledger.actor_state(ferrata_lez_wire::header_actor(attestation, instance_id, slot)).await?;
+    if bytes.is_empty() {
+        return Ok(None);
+    }
+    let state = ferrata_lez_wire::RecordState::try_from_slice(&bytes)
+        .map_err(|e| anyhow!("header(id, {slot}) holds no record: {e}"))?;
+    let header = state.header().map_err(|code| {
+        anyhow!("header(id, {slot})'s record does not decode (the attestation program's code {code})")
+    })?;
+    Ok(Some(RecordView { slot: header.beacon.slot, execution: header.execution }))
+}
+
+/// The zone's part of `status`: the configuration, its instance's newest record, the newest import
+/// and the record it read, the burns published.
+pub async fn zone_status<L: Ledger>(ledger: &L, ctx: &Context, history: &History) -> Result<Vec<String>> {
+    let mut out = Vec::new();
+    let config = match read(ledger, config_actor(ctx.program, &ctx.cid)).await? {
+        Some(BridgeState::Config(bw::ConfigState::Ready { config, gate, sunset, .. })) => {
+            out.push(format!(
+                "zone: configuration ready, sunset {sunset}; attestation program {}, instance {}",
+                hx(config.attestation.value()),
+                hx(&config.instance_id)
+            ));
+            out.push(format!("  gate {gate:?}"));
+            config
+        }
+        other => {
+            out.push(format!("zone: configuration {other:?}"));
+            return Ok(out);
+        }
+    };
+    match instance(ledger, config.attestation, &config.instance_id).await? {
+        Some(i) => {
+            out.push(format!(
+                "  instance: active {}, {} jobs applied, finalized slot {}",
+                i.active, i.applied, i.finalized_slot
+            ));
+            match record(ledger, config.attestation, &config.instance_id, i.finalized_slot).await? {
+                Some(r) => out.push(format!("  newest record: {}", r.show())),
+                None => out.push(format!("  newest record: header(id, {}) not written yet", i.finalized_slot)),
+            }
+        }
+        None => out.push("  instance(id) is not on this zone (its records are read where written)".to_string()),
+    }
+    match history.imports.iter().max_by_key(|(n, _)| *n) {
+        Some((n, slot)) => {
+            let read_from = match record(ledger, config.attestation, &config.instance_id, *slot).await? {
+                Some(r) => r.show(),
+                None => format!("header(id, {slot}), not readable"),
+            };
+            out.push(format!(
+                "  newest imported root: root(cid, {n}) ({} imports), from {read_from}",
+                history.roots.len()
+            ));
+        }
+        None => out.push("  no root imported yet".to_string()),
+    }
+    out.push(format!("  burns published: {}", history.burns.len()));
+    Ok(out)
 }
 
 /// A plain description of what `call` makes public.

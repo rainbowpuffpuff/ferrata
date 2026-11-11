@@ -61,7 +61,8 @@ impl Seed {
 
     /// From the mnemonic words.
     pub fn from_phrase(phrase: &str) -> Result<Self> {
-        let mnemonic: Mnemonic = phrase.parse().map_err(|e| anyhow!("the seed file does not hold a BIP-39 mnemonic: {e}"))?;
+        let mnemonic: Mnemonic =
+            phrase.parse().map_err(|e| anyhow!("the seed file does not hold a BIP-39 mnemonic: {e}"))?;
         let seed64 = mnemonic.to_seed("");
         Ok(Self { mnemonic, seed64 })
     }
@@ -113,9 +114,15 @@ impl Seed {
             let chain_index = tree
                 .create_private_accounts_key_node(&ChainIndex::root())
                 .ok_or_else(|| anyhow!("LEZ's key tree refused private account /{index}"))?;
-            let node = tree.key_map.get(&chain_index).ok_or_else(|| anyhow!("private account /{index} is not in the tree"))?;
-            let (kind, _) = node.value.1.first_key_value().ok_or_else(|| anyhow!("private account /{index} has no account"))?;
-            out.push(AccountId::for_private_account(&node.value.0.nullifier_public_key, &node.value.0.viewing_public_key, kind));
+            let node =
+                tree.key_map.get(&chain_index).ok_or_else(|| anyhow!("private account /{index} is not in the tree"))?;
+            let (kind, _) =
+                node.value.1.first_key_value().ok_or_else(|| anyhow!("private account /{index} has no account"))?;
+            out.push(AccountId::for_private_account(
+                &node.value.0.nullifier_public_key,
+                &node.value.0.viewing_public_key,
+                kind,
+            ));
         }
         Ok(out)
     }

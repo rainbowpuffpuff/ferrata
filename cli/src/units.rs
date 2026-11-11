@@ -37,17 +37,17 @@ pub fn parse(text: &str, decimals: u8) -> Result<u128> {
     let text = text.trim();
     ensure!(!text.is_empty(), "an empty amount");
     let (whole, frac) = text.split_once('.').unwrap_or((text, ""));
-    ensure!(whole.chars().all(|c| c.is_ascii_digit()) && frac.chars().all(|c| c.is_ascii_digit()), "not an amount: {text}");
+    ensure!(
+        whole.chars().all(|c| c.is_ascii_digit()) && frac.chars().all(|c| c.is_ascii_digit()),
+        "not an amount: {text}"
+    );
     if frac.len() > usize::from(decimals) {
         bail!("{text} has more than {decimals} decimals");
     }
     let scale = 10u128.checked_pow(u32::from(decimals)).ok_or_else(|| anyhow::anyhow!("too many decimals"))?;
     let whole: u128 = if whole.is_empty() { 0 } else { whole.parse()? };
-    let frac_value: u128 = if frac.is_empty() {
-        0
-    } else {
-        frac.parse::<u128>()? * 10u128.pow(u32::from(decimals) - frac.len() as u32)
-    };
+    let frac_value: u128 =
+        if frac.is_empty() { 0 } else { frac.parse::<u128>()? * 10u128.pow(u32::from(decimals) - frac.len() as u32) };
     whole
         .checked_mul(scale)
         .and_then(|w| w.checked_add(frac_value))

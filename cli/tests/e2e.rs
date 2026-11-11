@@ -89,7 +89,8 @@ impl HarnessLedger {
         if !report.ok() {
             return;
         }
-        let tx = common::transaction::LeeTransaction::try_from_slice(&self.world.chain.last_tx).expect("a LEZ transaction");
+        let tx =
+            common::transaction::LeeTransaction::try_from_slice(&self.world.chain.last_tx).expect("a LEZ transaction");
         if let common::transaction::LeeTransaction::Public(tx) = tx {
             let root = &tx.message.execution.root;
             self.applied.push(Applied { to: root.to, message: root.message.clone() });
@@ -159,9 +160,9 @@ impl Drop for Anvil {
 }
 
 fn scratch() -> PathBuf {
-    let dir = std::env::var("FERRATA_E2E_DIR").map(PathBuf::from).unwrap_or_else(|_| {
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tmp/cli/e2e")
-    });
+    let dir = std::env::var("FERRATA_E2E_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tmp/cli/e2e"));
     std::fs::create_dir_all(&dir).unwrap();
     dir
 }
@@ -247,9 +248,16 @@ async fn accept_burn_root(p: &DynProvider, vault: Address, cid: B256, burn_root:
         n: 4,
         t: 3,
     };
-    let accept = |j: &[u8]| IMock::acceptCall { imageId: mock_image, journalDigest: B256::from(sha256(j)) }.abi_encode();
+    let accept =
+        |j: &[u8]| IMock::acceptCall { imageId: mock_image, journalDigest: B256::from(sha256(j)) }.abi_encode();
     anvil_send(p, verifier, accept(&checkpoint_journal(chain_id, vault, cid, &c)), U256::ZERO).await?;
-    anvil_send(p, vault, ICheckpoints::submitCandidateCall { c: c.clone(), seal: Bytes::from(SEAL.to_vec()) }.abi_encode(), U256::ZERO).await?;
+    anvil_send(
+        p,
+        vault,
+        ICheckpoints::submitCandidateCall { c: c.clone(), seal: Bytes::from(SEAL.to_vec()) }.abi_encode(),
+        U256::ZERO,
+    )
+    .await?;
     // W = delta + (t - 1) * turnSeconds = 600 + 2 * 2.
     p.raw_request::<_, serde_json::Value>("evm_increaseTime".into(), (700u64,)).await?;
     p.raw_request::<_, serde_json::Value>("evm_mine".into(), Vec::<u64>::new()).await?;
@@ -258,8 +266,13 @@ async fn accept_burn_root(p: &DynProvider, vault: Address, cid: B256, burn_root:
     let beacon = eth::view(p, vault, ICheckpoints::beaconsCall { i: index }, None).await?;
     c.echoNonce = beacon.nonce;
     anvil_send(p, verifier, accept(&checkpoint_journal(chain_id, vault, cid, &c)), U256::ZERO).await?;
-    anvil_send(p, vault, ICheckpoints::finalizeCall { beaconIndex: index, c, seal: Bytes::from(SEAL.to_vec()) }.abi_encode(), U256::ZERO)
-        .await?;
+    anvil_send(
+        p,
+        vault,
+        ICheckpoints::finalizeCall { beaconIndex: index, c, seal: Bytes::from(SEAL.to_vec()) }.abi_encode(),
+        U256::ZERO,
+    )
+    .await?;
     // The token's release delay (120 s).
     p.raw_request::<_, serde_json::Value>("evm_increaseTime".into(), (200u64,)).await?;
     p.raw_request::<_, serde_json::Value>("evm_mine".into(), Vec::<u64>::new()).await?;
@@ -311,7 +324,12 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         storage.push((key, slot(&p, vault, key).await?));
     }
     let stored = eth::view(&p, vault, IVault::lezConfigIdCall {}, None).await?;
-    ensure!(storage[0].1 == cid, "the vault's slot 2 is not the configuration's id: slot 2 {} lezConfigId {stored} cid {}", hx(&storage[0].1), hx(&cid));
+    ensure!(
+        storage[0].1 == cid,
+        "the vault's slot 2 is not the configuration's id: slot 2 {} lezConfigId {stored} cid {}",
+        hx(&storage[0].1),
+        hx(&cid)
+    );
     let b0 = zone.world.add_block(hb::Block::with_storage(9_000_000, 9_000_000, vault.into_array(), &storage));
     let r = zone.world.init("Init (relayer)", &config, b0);
     ensure!(r.ok(), "Init: {:?}", r.exit_code);
@@ -338,7 +356,12 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     for name in ["user", "other"] {
         let path = dir.join(format!("keystore-{name}.json"));
         let _ = std::fs::remove_file(&path);
-        let (signer, _) = PrivateKeySigner::new_keystore(&dir, &mut rng, "e2e test password", Some(&format!("keystore-{name}.json")))?;
+        let (signer, _) = PrivateKeySigner::new_keystore(
+            &dir,
+            &mut rng,
+            "e2e test password",
+            Some(&format!("keystore-{name}.json")),
+        )?;
         anvil_send(&p, signer.address(), vec![], U256::from(100u64) * U256::from(10u64).pow(U256::from(18u64))).await?;
         keystores.push((path, signer.address()));
     }
@@ -347,14 +370,32 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     }
     let seed_user = dir.join("seed-user.txt");
     let common = |seed: &Path| -> Vec<String> {
-        vec!["--seed".into(), seed.display().to_string(), "--eth-rpc".into(), rpc.clone(), "--vault".into(), vault.to_string()]
+        vec![
+            "--seed".into(),
+            seed.display().to_string(),
+            "--eth-rpc".into(),
+            rpc.clone(),
+            "--vault".into(),
+            vault.to_string(),
+        ]
     };
     let deposit = |seed: &Path, keystore: &Path, denom: u8, kind: &str, account: u32| -> Result<String> {
         let mut args = common(seed);
         args.extend(
             [
-                "deposit", "--denomination", &denom.to_string(), "--kind", kind, "--account", &account.to_string(), "--keystore",
-                &keystore.display().to_string(), "--password-file", &password.display().to_string(), "--send", "--yes",
+                "deposit",
+                "--denomination",
+                &denom.to_string(),
+                "--kind",
+                kind,
+                "--account",
+                &account.to_string(),
+                "--keystore",
+                &keystore.display().to_string(),
+                "--password-file",
+                &password.display().to_string(),
+                "--send",
+                "--yes",
             ]
             .map(String::from),
         );
@@ -388,9 +429,19 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     ensure!(refused.to_string().contains("WrongDepositIndex"), "the vault's error is named");
 
     // Scan through the binary, Ethereum only (deposit list checked against depositRoot).
-    let scan_out = ferrata(&[common(&seed_user), vec!["scan".into()]].concat().iter().map(String::as_str).collect::<Vec<_>>())?;
+    let scan_out =
+        ferrata(&[common(&seed_user), vec!["scan".into()]].concat().iter().map(String::as_str).collect::<Vec<_>>())?;
     print!("{scan_out}");
     ensure!(scan_out.contains("deposits of this seed: 11"), "the binary's scan finds the user's 11 deposits");
+
+    // Status through the binary, Ethereum part: the registry, fees and caps in the token's units.
+    let status_out =
+        ferrata(&[common(&seed_user), vec!["status".into()]].concat().iter().map(String::as_str).collect::<Vec<_>>())?;
+    print!("{status_out}");
+    ensure!(
+        status_out.contains("registered true") && status_out.contains("16 deposits"),
+        "the binary's status reads the vault"
+    );
 
     // The relayer imports the vault's root (its storage after the deposits) on LEZ.
     let n = eth::view(&p, vault, IVault::nextLeafIndexCall {}, None).await?;
@@ -403,7 +454,8 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     ensure!(r.ok(), "ImportRoot: {:?}", r.exit_code);
     zone.record(&r);
     // The relayer attests that ETH has no fee schedule 1 at this count: the known range grows to it.
-    let r = zone.world.import_fees("ImportFees ETH 1 = none (relayer)", &cid, b1, [0; 20], 1, None, &vault.into_array());
+    let r =
+        zone.world.import_fees("ImportFees ETH 1 = none (relayer)", &cid, b1, [0; 20], 1, None, &vault.into_array());
     ensure!(r.ok(), "ImportFees: {:?}", r.exit_code);
     zone.record(&r);
     println!("zone: root({n}) imported; ETH fees known to leaf {n}");
@@ -423,12 +475,25 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     let leaves: Vec<Hash> = list
         .deposits
         .iter()
-        .map(|d| ferrata_bridge_core::inbound::deposit_leaf(d.leaf_index, &d.depositor, &d.token, &d.amount, &d.commitment))
+        .map(|d| {
+            ferrata_bridge_core::inbound::deposit_leaf(d.leaf_index, &d.depositor, &d.token, &d.amount, &d.commitment)
+        })
         .collect();
 
     // Claim leaf 0 (plaintext: a public destination, no proof).
     let dest_key = lee::PublicKey::new_from_private_key(&user.public_accounts(1)?[0].key);
-    let plan = lez::plan_claim(&zone, &ctx, &leaves, &big.owned, &history, false, None, zone.world.time, Some(dest_key.clone())).await?;
+    let plan = lez::plan_claim(
+        &zone,
+        &ctx,
+        &leaves,
+        &big.owned,
+        &history,
+        false,
+        None,
+        zone.world.time,
+        Some(dest_key.clone()),
+    )
+    .await?;
     let sent = zone.submit(&plan.call).await?;
     println!("claim: {sent}; N {}", hx(&plan.nullifier));
     let holder = AccountId::new(big.owned.dest);
@@ -438,7 +503,9 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     // program, sent the same call without the tool's check, exits with that code.
     let history = lez::history(&ctx, &zone.applied(program).await?);
     let again =
-        lez::plan_claim(&zone, &ctx, &leaves, &big.owned, &history, false, None, zone.world.time, Some(dest_key)).await.expect_err("claimed");
+        lez::plan_claim(&zone, &ctx, &leaves, &big.owned, &history, false, None, zone.world.time, Some(dest_key))
+            .await
+            .expect_err("claimed");
     println!("second claim: {again}");
     ensure!(again.to_string().contains("250 ALREADY_CLAIMED"), "the tool names 250");
     let report = zone.settle(&plan.call);
@@ -449,22 +516,47 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     let recipient = keystores[0].1;
     for _ in 0..11 {
         let history = lez::history(&ctx, &zone.applied(program).await?);
-        let plan = lez::plan_burn(&zone, &ctx, &keys, holder, [0; 20], 100_000_000_000_000_000, recipient.into_array(), &history).await?;
+        let plan = lez::plan_burn(
+            &zone,
+            &ctx,
+            &keys,
+            holder,
+            [0; 20],
+            100_000_000_000_000_000,
+            recipient.into_array(),
+            &history,
+        )
+        .await?;
         zone.submit(&plan.call).await?;
     }
-    ensure!(zone.world.balance(holder, &cid) == 10_000_000_000_000_000_000 - 1_100_000_000_000_000_000, "11 burns debited");
+    ensure!(
+        zone.world.balance(holder, &cid) == 10_000_000_000_000_000_000 - 1_100_000_000_000_000_000,
+        "11 burns debited"
+    );
     // More than the holding: refused before sending with 254.
     let history = lez::history(&ctx, &zone.applied(program).await?);
-    let too_much = lez::plan_burn(&zone, &ctx, &keys, holder, [0; 20], 10_000_000_000_000_000_000, recipient.into_array(), &history)
-        .await
-        .expect_err("more than held");
+    let too_much = lez::plan_burn(
+        &zone,
+        &ctx,
+        &keys,
+        holder,
+        [0; 20],
+        10_000_000_000_000_000_000,
+        recipient.into_array(),
+        &history,
+    )
+    .await
+    .expect_err("more than held");
     ensure!(too_much.to_string().contains("254 INSUFFICIENT_BALANCE"), "{too_much}");
 
     // The checkpoint of all eleven burns (stand-in), then the release of the first.
     let history = lez::history(&ctx, &zone.applied(program).await?);
     ensure!(history.burns.len() == 11, "11 burns published");
-    let burn_leaves: Vec<Hash> =
-        history.burns.iter().map(|b| burn_leaf(&cid, b.burn_index, &b.note.token, &b.note.amount, &b.note.c_out, &b.note.r)).collect();
+    let burn_leaves: Vec<Hash> = history
+        .burns
+        .iter()
+        .map(|b| burn_leaf(&cid, b.burn_index, &b.note.token, &b.note.amount, &b.note.c_out, &b.note.r))
+        .collect();
     let burn_root = Tree::from_leaves(burn_leaves).map_err(|_| anyhow!("tree"))?.root();
     accept_burn_root(&p, vault, B256::from(cid), burn_root, 11).await?;
     let released = eth::released_nullifiers(&p, vault, 0, 10_000).await?;
@@ -476,18 +568,32 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     let rplan = release::plan(&ctx, &history, &burn_rows[0].owned, root_b.0, count, 0, [0; 20], 0)?;
     let release_image = eth::view(&p, vault, ICheckpoints::releaseImageIdCall {}, None).await?;
     let verifier: Address = std::env::var("FERRATA_E2E_VERIFIER")?.parse()?;
-    anvil_send(&p, verifier, IMock::acceptCall { imageId: release_image, journalDigest: B256::from(sha256(&rplan.journal)) }.abi_encode(), U256::ZERO)
-        .await?;
+    anvil_send(
+        &p,
+        verifier,
+        IMock::acceptCall { imageId: release_image, journalDigest: B256::from(sha256(&rplan.journal)) }.abi_encode(),
+        U256::ZERO,
+    )
+    .await?;
     let before = p.get_balance(recipient).await?;
     let relayer_signer = eth::keystore_signer(other_ks, &password)?;
     let sp = eth::signing_provider(&rpc, relayer_signer)?;
-    let receipt = eth::send(&sp, keystores[1].1, vault, release::calldata(&rplan, Bytes::from(SEAL.to_vec())), U256::ZERO, 1).await?;
+    let receipt =
+        eth::send(&sp, keystores[1].1, vault, release::calldata(&rplan, Bytes::from(SEAL.to_vec())), U256::ZERO, 1)
+            .await?;
     println!("release: {} in block {:?}", receipt.transaction_hash, receipt.block_number);
-    ensure!(p.get_balance(recipient).await? - before == U256::from(100_000_000_000_000_000u128), "the recipient received 0.1 ETH");
-    ensure!(eth::view(&p, vault, IVault::nullifierUsedCall { nullifier: B256::from(rplan.nullifier) }, None).await?, "NOut used");
-    let twice = eth::send(&sp, keystores[1].1, vault, release::calldata(&rplan, Bytes::from(SEAL.to_vec())), U256::ZERO, 1)
-        .await
-        .expect_err("released");
+    ensure!(
+        p.get_balance(recipient).await? - before == U256::from(100_000_000_000_000_000u128),
+        "the recipient received 0.1 ETH"
+    );
+    ensure!(
+        eth::view(&p, vault, IVault::nullifierUsedCall { nullifier: B256::from(rplan.nullifier) }, None).await?,
+        "NOut used"
+    );
+    let twice =
+        eth::send(&sp, keystores[1].1, vault, release::calldata(&rplan, Bytes::from(SEAL.to_vec())), U256::ZERO, 1)
+            .await
+            .expect_err("released");
     ensure!(twice.to_string().contains("NullifierAlreadyUsed"), "{twice}");
 
     // Recovery: a wiped client with only the seed phrase.
@@ -496,14 +602,19 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     let history = lez::history(&ctx, &zone.applied(program).await?);
     let refunded = eth::refunded_leaves(&p, vault, 0, 10_000).await?;
     let rows = scan::deposits(&wiped, &ctx, &list, 8, &history, &refunded)?;
-    let unclaimed: Vec<_> = rows.iter().filter(|r| !matches!(r.state, scan::DepositState::Claimed | scan::DepositState::Refunded)).collect();
+    let unclaimed: Vec<_> = rows
+        .iter()
+        .filter(|r| !matches!(r.state, scan::DepositState::Claimed | scan::DepositState::Refunded))
+        .collect();
     let claimed = rows.iter().filter(|r| r.state == scan::DepositState::Claimed).count();
     let released = eth::released_nullifiers(&p, vault, 0, 10_000).await?;
     let (burns, _) = scan::burns(&wiped, &ctx, &history, &released);
     let unreleased = burns.iter().filter(|b| !b.released).count();
     let found: Vec<(String, u32)> = unclaimed
         .iter()
-        .map(|r| (if r.owned.kind == DestKind::Private { "private" } else { "public" }.to_string(), r.owned.account_index))
+        .map(|r| {
+            (if r.owned.kind == DestKind::Private { "private" } else { "public" }.to_string(), r.owned.account_index)
+        })
         .collect();
     let want: Vec<(String, u32)> = expected_unclaimed.iter().map(|(k, a)| (k.to_string(), *a)).collect();
     println!(
@@ -516,6 +627,19 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         list.deposits.len()
     );
     ensure!(found == want, "the unclaimed deposits found are the ten made: {found:?}");
+
+    // Status, the zone's part (the library function `ferrata status --sequencer` prints).
+    let zone_lines = lez::zone_status(&zone, &ctx, &history).await?;
+    for line in &zone_lines {
+        println!("{line}");
+    }
+    ensure!(
+        zone_lines
+            .iter()
+            .any(|l| l.contains(&format!("newest imported root: root(cid, {n})")) && l.contains("from header(id, ")),
+        "status names the newest import and the record it read"
+    );
+    ensure!(zone_lines.iter().any(|l| l == "  burns published: 11"), "status counts the burns");
     ensure!(claimed == 1 && unreleased == 10 && burns.len() == 11, "recovery");
     Ok(())
 }

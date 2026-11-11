@@ -38,11 +38,20 @@ pub struct DepositRow {
 }
 
 /// This seed's deposits among `list`, with their state.
-pub fn deposits(seed: &Seed, ctx: &Context, list: &DepositList, gap: u32, history: &History, refunded: &HashSet<u64>) -> Result<Vec<DepositRow>> {
+pub fn deposits(
+    seed: &Seed,
+    ctx: &Context,
+    list: &DepositList,
+    gap: u32,
+    history: &History,
+    refunded: &HashSet<u64>,
+) -> Result<Vec<DepositRow>> {
     let keys = seed.bridge_keys();
     let dests = seed.destinations(gap)?;
     let owned =
-        inbound::recover(&keys.auth, &chain_id_u256(ctx.chain_id), &ctx.vault, &list.deposits, gap, |kind, a| dests.of(kind, a));
+        inbound::recover(&keys.auth, &chain_id_u256(ctx.chain_id), &ctx.vault, &list.deposits, gap, |kind, a| {
+            dests.of(kind, a)
+        });
     Ok(owned
         .into_iter()
         .map(|owned| {
@@ -72,6 +81,7 @@ pub struct BurnRow {
 pub fn burns(seed: &Seed, ctx: &Context, history: &History, released: &HashSet<Hash>) -> (Vec<BurnRow>, u64) {
     let keys = seed.bridge_keys();
     let scan = recover_burns(&keys, &ctx.cid, &chain_id_u256(ctx.chain_id), &ctx.vault, &history.burns, BURN_GAP);
-    let rows = scan.owned.into_iter().map(|owned| BurnRow { released: released.contains(&owned.nullifier), owned }).collect();
+    let rows =
+        scan.owned.into_iter().map(|owned| BurnRow { released: released.contains(&owned.nullifier), owned }).collect();
     (rows, scan.next_i)
 }
