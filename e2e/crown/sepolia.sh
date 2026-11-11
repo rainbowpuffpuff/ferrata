@@ -13,6 +13,8 @@
 #
 # Environment: SEPOLIA_RPC_URL, ETH_FROM; the key through Foundry's own ETH_KEYSTORE + ETH_PASSWORD (files), or
 # FERRATA_UNLOCKED=1 on a local fork that impersonates ETH_FROM. FERRATA_GAS_MARGIN_PCT (default 125).
+# <run> must be under e2e/runs/ (forge reads params.json and crown.json there: vault/foundry.toml fs_permissions);
+# DeployVault's record is written to vault/deployments/crown-<run name>.json and copied to <run>/deploy.json.
 # Inputs in <run>: identity.json (vault, configId, genesisState, ...), params.json (DeployVault's), crown.json
 # (deposits, candidate, releases). Records: deploy.json, manifest.json (every transaction: stage, hash, nonce,
 # block, gasLimit, gasUsed, status), logs/.
@@ -49,7 +51,7 @@ record() {
 crown() { # crown <signature> [args]: one transaction of Crown.s.sol
   local sig="$1"; shift
   local name="${sig%%(*}${1:+-$1}" log="$run/logs/${sig%%(*}${1:+-$1}.log"
-  ( cd "$here/vault" && FERRATA_CROWN="$run/crown.json" forge script script/Crown.s.sol:Crown --sig "$sig" "$@" \
+  ( cd "$here/vault" && env -u ETH_FROM FERRATA_CROWN="$run/crown.json" forge script script/Crown.s.sol:Crown --sig "$sig" "$@" \
       "${rpc[@]}" --sender "$ETH_FROM" "${signer[@]}" --broadcast --skip-simulation --slow \
       --gas-estimate-multiplier "$margin" ) > "$log" 2>&1 || { tail -n 25 "$log" | sed "s,$SEPOLIA_RPC_URL,<endpoint>,g"; die "$name"; }
   local b="$here/vault/broadcast/Crown.s.sol/$chain/${sig%%(*}-latest.json"
@@ -71,10 +73,11 @@ case "$step" in
     [ "$(cast nonce "$ETH_FROM" "${rpc[@]}")" = "$(cast nonce "$ETH_FROM" --block pending "${rpc[@]}")" ] ||
       die "the deployer has pending transactions"
     ( cd "$here/vault" && FERRATA_MODE=B FERRATA_GAS_RULE=eip8037 FERRATA_GAS_MARGIN_PCT="$margin" \
-        FERRATA_RPC_URL="$SEPOLIA_RPC_URL" FERRATA_PARAMS="$run/params.json" FERRATA_OUT="$run/deploy.json" \
+        FERRATA_RPC_URL="$SEPOLIA_RPC_URL" FERRATA_PARAMS="$run/params.json" FERRATA_OUT="deployments/crown-$(basename "$run").json" \
         FERRATA_GROTH16_VERIFIER="$(jq -r .groth16Verifier "$id")" FERRATA_DELTA="$(jq -r .delta "$id")" \
         FERRATA_LOG_DIR="$run/logs/deploy" script/deploy.sh ) > "$run/logs/deploy.log" 2>&1 ||
       { tail -n 30 "$run/logs/deploy.log" | sed "s,$SEPOLIA_RPC_URL,<endpoint>,g"; die deploy; }
+    cp "$here/vault/deployments/crown-$(basename "$run").json" "$run/deploy.json"
     [ "$(jq -r .complete "$run/deploy.json")" = true ] || die "deploy.json is not complete"
     got="$(jq -r .vault "$run/deploy.json")"
     [ "${got,,}" = "${vault,,}" ] || die "the vault is at $got, the configuration names $vault"

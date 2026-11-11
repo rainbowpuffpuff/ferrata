@@ -1,0 +1,13 @@
+{
+  "_source": "STAND-IN (fork rehearsal 3)",
+  "checkpointImageIdA": "0x664a56058040cf04fa4c3487d5aa0ad5a47a107cf5925615a044878558d01b7e",
+  "checkpointImageIdB": "0xf7ba3c90895f4428b8dea56b10cc2fdfe0250aaddb3e07ba43dd18e153b73031",
+  "releaseImageId": "0x5fdd4f6fcd803f6e923bd2d64f5c08a4e377e24acff8f02510b4542f170daabf",
+  "lezConfigId": "0xd54cec56b834bb0f2cda45c70874d6e778e2c0d5ca2e28004bf8bcbc562a3fa2",
+  "genesisState": "0xabe8b0a1e06a513e83e75344312b8c76a8287830fc484f853f9855f946a66138",
+  "nMin": 1,
+  "tMin": 1,
+  "postingTimeframe": 0,
+  "ethLezDefinition": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "tokenLezDefinition": "0x0000000000000000000000000000000000000000000000000000000000000000"
+}
