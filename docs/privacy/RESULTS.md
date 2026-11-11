@@ -187,7 +187,7 @@ claim, is visible as such, which §B6's timing residual already covers.
 
 The full generated table, every field and state change with how it varies across the 20 records and its
 class, is [generated/fields.md](generated/fields.md); [generated/b6.md](generated/b6.md) lays it against
-§B6. Every item §B6 lists as public is found in the data (deposit: depositor, token, denomination, time,
+§B6. Every item §B6 as first drafted listed as public is found in the data (deposit: depositor, token, denomination, time,
 `C`; claim: `N`, token, denomination, time, the root read, the bridge program, the fee alias and its
 reserve, and no destination, all destinations being private; burn: token, denomination, time, the
 note; release: recipient, token, denomination, time, `NOut`, the root, the relayer; the root import). Every item §B6 lists as hidden was searched for in
@@ -196,29 +196,29 @@ randomness, a user's own address or time. The differences, each a finding:
 
 1. **The claim names its relayer, and the relay fee is minted to it publicly.** `Issue.relayer` and the
    relayer's wrapped balance, which grows by the relay fee in every claim's state diff. §B6's claim row
-   lists no relayer (the release row does). Constant across users here; a client that lets users pick
+   as first drafted listed no relayer (the release row did; now listed). Constant across users here; a client that lets users pick
    relayers splits the claim's anonymity set by relayer.
 2. **The claim names its fee schedule's leaf range** (`Issue.range`). Known (`BRIDGE.md` §2: the mint
-   fee already shows the schedule); constant here, since all 20 leaves are under schedule 0. §B6 omits it.
+   fee already shows the schedule); constant here, since all 20 leaves are under schedule 0. §B6 as first drafted did not list it (now listed).
 3. **The fee reserve's refund account is public, and so is the refund.** `fee.refund_to` in every
-   private claim and burn, and that account's balance in the state diff. §B6 omits both. In the harness
+   private claim and burn, and that account's balance in the state diff. §B6 as first drafted did not list either (now listed). In the harness
    it is one shared account; a wallet that named an account of its own would tie all its private
    transactions to that account (not to a deposit). The client must name none (LEZ then returns the
-   unspent reserve to the alias as presented) or a shared one, and §B6 should say so.
+   unspent reserve to the alias as presented) or a shared one, and §B6 as first drafted did not say so (now said).
 4. **The burn shows a fee alias with its fixed reserve too** (the `Credit` of 10^8 to the fee inbox,
-   from an alias). §B6's burn row lists only token, denomination, time and the note.
+   from an alias). §B6's burn row as first drafted listed only token, denomination, time and the note (now listed).
 5. **LEZ's own private-transaction fields.** Every private claim and burn carries two private actions
    (the main one and the fee fallback), each with a nullifier, a new commitment, an encrypted note (a
    ciphertext of 137 to 247 bytes and a 1,088-byte ephemeral public key) and the commitment-set root it was
-   proven against. They are nullifiers, fresh randomness and a state reference, and §B6 lists none of
-   them. The root shows which state the proof read: 80 of 80 private actions here were proven against
+   proven against. They are nullifiers, fresh randomness and a state reference, and §B6 as first drafted listed none of
+   them (now listed). The root shows which state the proof read: 80 of 80 private actions here were proven against
    the root just before their transaction, the newest. A wallet that proved a burn against an older root
    would point at the transaction that made the spent commitment, its own claim (inferred from the
    data's structure, not run).
 6. **The deposit's `j` and leaf index are public** (`Deposit.index`, `Deposit.leafIndex`, and the write
-   to `depositCount[depositor]`). §B1 says so; §B6's deposit row omits them. `j` is 0 for a fresh
+   to `depositCount[depositor]`). §B1 says so; §B6's deposit row as first drafted did not list them (now listed). `j` is 0 for a fresh
    depositor; a repeat depositor's `j` counts its deposits.
-7. **The release shows the registered relay fee** (constant per token and denomination). §B6 omits it.
+7. **The release shows the registered relay fee** (constant per token and denomination). §B6 as first drafted did not list it (now listed).
 
 Everything public about the root import is §B6's "the vault's root at a block" and the submitter.
 

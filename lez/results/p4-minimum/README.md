@@ -562,7 +562,7 @@ build box; on a laptop, longer): built at another path the image ids differ, so 
 
 ## What this does not show
 
-- A laptop, or Apple Silicon. These are cloud servers held to the minimum's numbers (and to 16 CPUs); the
+- A laptop, or Apple Silicon. These are cloud servers held to 16 CPUs (the declared minimum's threads) and to 8 (half of them), 16 GiB; the
   owner's laptop run (above) is the other half of P.4.
 - Our transactions as a wallet that pads like LEZ's makes them: proven since, in the padded pass (two runs per CPU
   count, each in its own container).

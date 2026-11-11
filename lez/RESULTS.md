@@ -30,7 +30,7 @@ job path, its store upgrading itself to the Gloas layout at the fork of its sche
 record of a Gloas-era block, which binds only the block hash, the program attests a storage slot,
 an ERC-20 `Transfer` and an account with the block's RLP header as witness, and refuses the same
 proofs asked as mainnet statements; the vault's deposit leaves are proven in the guest, on a
-synthetic state until the vault is deployed.
+synthetic state, measured before the vault was deployed.
 
 **Which image these numbers come from.** Every number in this file, except those of the real
 proofs and of the run on a sequencer (§9), was measured on the images built from this branch, which add the attestation, the store's
@@ -963,7 +963,7 @@ segments) was not proven at all.
   note (two deposits whose transactions must be indistinguishable).
 - **Accumulator leaves on real data.** They run in the guest since Stage 5 (§6), on a synthetic
   state holding the vault's own deposits under a record placed in LEZ's state, not written by
-  the program; no deployed contract kept such a root when this ran (the vault is not deployed).
+  the program; no deployed contract kept such a root when this ran (the vault was not yet deployed).
   `harness/tests/attest_native.rs` also runs the shared vectors (`../vectors/acc-leaf.json`: 14
   leaves, 7 refusals) through `evaluate` on the host.
 - **Gloas records** are attested since Stage 5 (§6), on Sepolia; this section's mainnet block is

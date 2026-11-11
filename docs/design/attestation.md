@@ -423,7 +423,7 @@ Everything new (the transcription, SSZ, Merkle-Patricia and RLP code, identifier
 
 ## 15. What is not built yet
 
-In the program: successors, the root id and the weak-subjectivity bound (§3.5, §4.6), and with them a fork that is not in the schedule fixed at `Init` (a scheduled fork is crossed in place, `lez/RESULTS.md` §6); accumulator leaves on real data (they run in the guest on a synthetic state; the vault is not deployed yet); a chain of several hops (one was measured); joining an open job and clean-up of failed jobs; deployment by `program_loader`; a run on a v0.4 sequencer. Attestation on the public call path and the private read path is built for accounts, storage slots, event logs, predicates, identifiers and one hop (§6, `lez/RESULTS.md` §5), on the public path also under Gloas records and for accumulator leaves (`lez/RESULTS.md` §6).
+In the program: successors, the root id and the weak-subjectivity bound (§3.5, §4.6), and with them a fork that is not in the schedule fixed at `Init` (a scheduled fork is crossed in place, `lez/RESULTS.md` §6); accumulator leaves on real data (they run in the guest on a synthetic state, measured before the vault was deployed); a chain of several hops (one was measured); joining an open job and clean-up of failed jobs; deployment by `program_loader`; a run on a v0.4 sequencer. Attestation on the public call path and the private read path is built for accounts, storage slots, event logs, predicates, identifiers and one hop (§6, `lez/RESULTS.md` §5), on the public path also under Gloas records and for accumulator leaves (`lez/RESULTS.md` §6).
 
 In the consumers: rules 5 to 7 of the pattern (the nullifier keyed on a depositor's secret) and with them a private claim; the native-ETH reference consumer.
 

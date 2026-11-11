@@ -122,7 +122,7 @@ sequencer, which verifies receipts, included it ([`lez/live/inbound/README.md`](
 [`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §11); the merged program's private claim was proven
 by LEZ's wallet on a cloud CPU (16 cores reserved, up to 32) and sent in 276.8 s on a LEZ devnet, in the
 crown rehearsal ([`e2e/runs/crown-rehearsal-3`](../../e2e/runs/crown-rehearsal-3/README.md)); as this repository's
-harness builds it, it was proven in 905.4 s on cloud CPUs held to 8 CPUs and 16 GiB (the declared minimum's numbers)
+harness builds it, it was proven in 905.4 s on cloud CPUs held to 8 CPUs and 16 GiB (half the declared minimum's threads)
 and in 463.7 s at 16 CPUs ([`lez/results/p4-minimum`](../../lez/results/p4-minimum/README.md)). **Not measured:** the private claim on a user's
 laptop or on macOS (declared minimum: 16 GB, 8 cores with 16 threads, x86-64 (Apple Silicon in M0), [`attestation.md`](../design/attestation.md) §13).
 
