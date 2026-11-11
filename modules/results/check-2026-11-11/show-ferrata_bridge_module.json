@@ -1,0 +1,110 @@
+{
+  "dependencies": [],
+  "dependents": [],
+  "events": [],
+  "methods": [
+    {
+      "description": "The module's version and the ferrata-bridge-core it was built from, as JSON.",
+      "isInvokable": true,
+      "name": "version",
+      "returnType": "QString",
+      "signature": "version()"
+    },
+    {
+      "description": "A deposit's commitment and the vault call that makes it (`deposit` or `depositETH`), and,\nwith its leaf index, the leaf, deposit id and nullifier. JSON in and out (modules/README.md).",
+      "isInvokable": true,
+      "name": "deposit",
+      "parameters": [
+        {
+          "name": "request",
+          "type": "QString"
+        }
+      ],
+      "returnType": "QString",
+      "signature": "deposit(QString)"
+    },
+    {
+      "description": "A claim of a deposit: its Merkle path in the deposit tree, the check the bridge program runs\n(`verify_claim`), its nullifier, and the program's `Claim` message. JSON in and out.",
+      "isInvokable": true,
+      "name": "claim",
+      "parameters": [
+        {
+          "name": "request",
+          "type": "QString"
+        }
+      ],
+      "returnType": "QString",
+      "signature": "claim(QString)"
+    },
+    {
+      "description": "A burn: the note (tag, memo, MAC, commitment) and the bridge program's `Burn` message, and,\nwith its index in the burn tree, the leaf, burn id and release nullifier. JSON in and out.",
+      "isInvokable": true,
+      "name": "burn",
+      "parameters": [
+        {
+          "name": "request",
+          "type": "QString"
+        }
+      ],
+      "returnType": "QString",
+      "signature": "burn(QString)"
+    },
+    {
+      "description": "A release: the burn's path in the checkpointed burn tree, the release guest's check\n(`verify_release`), its nullifier and the journal the vault verifies. JSON in and out.",
+      "isInvokable": true,
+      "name": "release",
+      "parameters": [
+        {
+          "name": "request",
+          "type": "QString"
+        }
+      ],
+      "returnType": "QString",
+      "signature": "release(QString)"
+    },
+    {
+      "description": "The wallet's own deposits and burns among public ones, from its seed alone. JSON in and out.",
+      "isInvokable": true,
+      "name": "recover",
+      "parameters": [
+        {
+          "name": "request",
+          "type": "QString"
+        }
+      ],
+      "returnType": "QString",
+      "signature": "recover(QString)"
+    },
+    {
+      "description": "Where each deposit and burn stands (awaiting root, claimable, claimed; awaiting checkpoint,\nreleasable, released), from the chains' public state. JSON in and out.",
+      "isInvokable": true,
+      "name": "status",
+      "parameters": [
+        {
+          "name": "request",
+          "type": "QString"
+        }
+      ],
+      "returnType": "QString",
+      "signature": "status(QString)"
+    },
+    {
+      "description": "The module's name, as declared in its metadata.",
+      "isInvokable": true,
+      "name": "name",
+      "returnType": "QString",
+      "signature": "name()"
+    },
+    {
+      "description": "The module's canonical LIDL interface document.",
+      "isInvokable": true,
+      "name": "lidl",
+      "returnType": "QString",
+      "signature": "lidl()"
+    }
+  ],
+  "name": "ferrata_bridge_module",
+  "status": "loaded",
+  "uptime_seconds": 0,
+  "version": "0.1.0"
+}
