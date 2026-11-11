@@ -1,0 +1,54 @@
+No files changed, compilation skipped
+warning: unknown lint id: 'unsafe-cheatcode'
+  --> ./vault/test/TreeVectors.t.sol:30:13
+   |
+30 |             // forge-lint: disable-next-line(unsafe-cheatcode)
+   |             --------------------------------------------------
+   |
+
+warning: unknown lint id: 'unsafe-cheatcode'
+  --> ./vault/test/TreeVectors.t.sol:33:9
+   |
+33 |         // forge-lint: disable-next-line(unsafe-cheatcode)
+   |         --------------------------------------------------
+   |
+
+warning: unknown lint id: 'unsafe-typecast'
+   --> ./vault/test/invariant/VaultHandler.sol:391:9
+    |
+391 |         // forge-lint: disable-next-line(unsafe-typecast)
+    |         -------------------------------------------------
+    |
+
+warning: unknown lint id: 'unsafe-typecast'
+   --> ./vault/test/invariant/VaultHandler.sol:526:13
+    |
+526 |             // forge-lint: disable-next-line(unsafe-typecast)
+    |             -------------------------------------------------
+    |
+
+warning: unknown lint id: 'unsafe-typecast'
+   --> ./vault/test/invariant/VaultHandler.sol:686:17
+    |
+686 |                 // forge-lint: disable-next-line(unsafe-typecast)
+    |                 -------------------------------------------------
+    |
+
+warning: unknown lint id: 'unsafe-typecast'
+   --> ./vault/test/invariant/VaultHandler.sol:761:13
+    |
+761 |             // forge-lint: disable-next-line(unsafe-typecast)
+    |             -------------------------------------------------
+    |
+
+warning: unknown lint id: 'unsafe-typecast'
+    --> ./vault/test/invariant/VaultHandler.sol:1012:9
+     |
+1012 |         // forge-lint: disable-next-line(unsafe-typecast)
+     |         -------------------------------------------------
+     |
+
+WARNING  Skipped HalmosDebug.json due to parsing failure: KeyError: 'ast'       
+         (see https://github.com/a16z/halmos/wiki/warnings#parsing-error)       
+
+Running 2 tests for test/halmos/VaultHalmos.t.sol:VaultHalmos

@@ -1,0 +1,184 @@
+No files changed, compilation skipped
+warning: unknown lint id: 'unsafe-cheatcode'
+  --> ./vault/test/TreeVectors.t.sol:30:13
+   |
+30 |             // forge-lint: disable-next-line(unsafe-cheatcode)
+   |             --------------------------------------------------
+   |
+
+warning: unknown lint id: 'unsafe-cheatcode'
+  --> ./vault/test/TreeVectors.t.sol:33:9
+   |
+33 |         // forge-lint: disable-next-line(unsafe-cheatcode)
+   |         --------------------------------------------------
+   |
+
+warning: unknown lint id: 'unsafe-typecast'
+   --> ./vault/test/invariant/VaultHandler.sol:391:9
+    |
+391 |         // forge-lint: disable-next-line(unsafe-typecast)
+    |         -------------------------------------------------
+    |
+
+warning: unknown lint id: 'unsafe-typecast'
+   --> ./vault/test/invariant/VaultHandler.sol:526:13
+    |
+526 |             // forge-lint: disable-next-line(unsafe-typecast)
+    |             -------------------------------------------------
+    |
+
+warning: unknown lint id: 'unsafe-typecast'
+   --> ./vault/test/invariant/VaultHandler.sol:686:17
+    |
+686 |                 // forge-lint: disable-next-line(unsafe-typecast)
+    |                 -------------------------------------------------
+    |
+
+warning: unknown lint id: 'unsafe-typecast'
+   --> ./vault/test/invariant/VaultHandler.sol:761:13
+    |
+761 |             // forge-lint: disable-next-line(unsafe-typecast)
+    |             -------------------------------------------------
+    |
+
+warning: unknown lint id: 'unsafe-typecast'
+    --> ./vault/test/invariant/VaultHandler.sol:1012:9
+     |
+1012 |         // forge-lint: disable-next-line(unsafe-typecast)
+     |         -------------------------------------------------
+     |
+
+WARNING  Skipped HalmosDebug.json due to parsing failure: KeyError: 'ast'       
+         (see https://github.com/a16z/halmos/wiki/warnings#parsing-error)       
+
+Running 3 tests for test/halmos/VaultHalmos.t.sol:VaultHalmos
+[31mCounterexample: 
+    p_caller_address_061f53d_00 = 0x00
+    p_path[0]_bytes32_fcfcab0_00 = 0x00
+    p_path[10]_bytes32_daf5825_00 = 0x00
+    p_path[11]_bytes32_cbccf04_00 = 0x00
+    p_path[12]_bytes32_d50ddc6_00 = 0x00
+    p_path[13]_bytes32_e71bc6d_00 = 0x00
+    p_path[14]_bytes32_805126e_00 = 0x00
+    p_path[15]_bytes32_0c56aec_00 = 0x00
+    p_path[16]_bytes32_c0c40e2_00 = 0x00
+    p_path[17]_bytes32_164f32a_00 = 0x00
+    p_path[18]_bytes32_f7d5026_00 = 0x00
+    p_path[19]_bytes32_fb3b6ea_00 = 0x00
+    p_path[1]_bytes32_e8c5c1a_00 = 0x00
+    p_path[20]_bytes32_6b2c9d5_00 = 0x00
+    p_path[21]_bytes32_8b13022_00 = 0x00
+    p_path[22]_bytes32_8ce125e_00 = 0x00
+    p_path[23]_bytes32_e5f6346_00 = 0x00
+    p_path[24]_bytes32_949127f_00 = 0x00
+    p_path[25]_bytes32_bdd96b2_00 = 0x00
+    p_path[26]_bytes32_17632d0_00 = 0x00
+    p_path[27]_bytes32_c6b14b3_00 = 0x00
+    p_path[28]_bytes32_2656b77_00 = 0x00
+    p_path[29]_bytes32_a064c90_00 = 0x00
+    p_path[2]_bytes32_ceac327_00 = 0x00
+    p_path[30]_bytes32_0e84e2f_00 = 0x00
+    p_path[31]_bytes32_9a55951_00 = 0x00
+    p_path[3]_bytes32_7370ba9_00 = 0x00
+    p_path[4]_bytes32_08d71e2_00 = 0x00
+    p_path[5]_bytes32_2de2ce3_00 = 0x00
+    p_path[6]_bytes32_d720e9d_00 = 0x00
+    p_path[7]_bytes32_8b28b80_00 = 0x00
+    p_path[8]_bytes32_781626b_00 = 0x00
+    p_path[9]_bytes32_b3fa755_00 = 0x00[0m
+[31m[FAIL][0m check_reach_refund(bytes32[32],address) (paths: 5, time: 1.93s, bounds: [])
+[31mCounterexample: 
+    p_d0_uint256_da1e0ff_00 = 0x746a5288000000000000000000000000[0m
+[31m[FAIL][0m check_reach_register(uint256) (paths: 8, time: 4.14s, bounds: [])
+[31mCounterexample: 
+    p_denomIndex_uint8_8e4b306_00 = 0x00
+    p_nullifier_bytes32_3f7d7c8_00 = 0x00
+    p_to_address_86f61df_00 = 0x8000000000000000000000000000000000000000
+    p_useEth_bool_4b79cdc_00 = 0x00[0m
+[31mCounterexample: 
+    p_denomIndex_uint8_8e4b306_00 = 0x00
+    p_nullifier_bytes32_3f7d7c8_00 = 0x00
+    p_to_address_86f61df_00 = 0xaaaa0002
+    p_useEth_bool_4b79cdc_00 = 0x01[0m
+[31mCounterexample: 
+    p_denomIndex_uint8_8e4b306_00 = 0x00
+    p_nullifier_bytes32_3f7d7c8_00 = 0x00
+    p_to_address_86f61df_00 = 0x8000000000000000000000000000000000000000
+    p_useEth_bool_4b79cdc_00 = 0x01[0m
+[31mCounterexample: 
+    p_denomIndex_uint8_8e4b306_00 = 0x00
+    p_nullifier_bytes32_3f7d7c8_00 = 0x00
+    p_to_address_86f61df_00 = 0xaaaa0008
+    p_useEth_bool_4b79cdc_00 = 0x01[0m
+[31mCounterexample: 
+    p_denomIndex_uint8_8e4b306_00 = 0x00
+    p_nullifier_bytes32_3f7d7c8_00 = 0x00
+    p_to_address_86f61df_00 = 0xaaaa0007
+    p_useEth_bool_4b79cdc_00 = 0x01[0m
+[31mCounterexample: 
+    p_denomIndex_uint8_8e4b306_00 = 0x00
+    p_nullifier_bytes32_3f7d7c8_00 = 0x00
+    p_to_address_86f61df_00 = 0xaaaa0006
+    p_useEth_bool_4b79cdc_00 = 0x01[0m
+[31mCounterexample: 
+    p_denomIndex_uint8_8e4b306_00 = 0x00
+    p_nullifier_bytes32_3f7d7c8_00 = 0x00
+    p_to_address_86f61df_00 = 0xaaaa0005
+    p_useEth_bool_4b79cdc_00 = 0x01[0m
+[31mCounterexample: 
+    p_denomIndex_uint8_8e4b306_00 = 0x00
+    p_nullifier_bytes32_3f7d7c8_00 = 0x00
+    p_to_address_86f61df_00 = 0xaaaa0004
+    p_useEth_bool_4b79cdc_00 = 0x01[0m
+[31mCounterexample: 
+    p_denomIndex_uint8_8e4b306_00 = 0x00
+    p_nullifier_bytes32_3f7d7c8_00 = 0x00
+    p_to_address_86f61df_00 = 0xaaaa0003
+    p_useEth_bool_4b79cdc_00 = 0x01[0m
+[31mCounterexample: 
+    p_denomIndex_uint8_8e4b306_00 = 0x01
+    p_nullifier_bytes32_3f7d7c8_00 = 0x00
+    p_to_address_86f61df_00 = 0x8000000000000000000000000000000000000000
+    p_useEth_bool_4b79cdc_00 = 0x00[0m
+[31mCounterexample: 
+    p_denomIndex_uint8_8e4b306_00 = 0x01
+    p_nullifier_bytes32_3f7d7c8_00 = 0x00
+    p_to_address_86f61df_00 = 0xaaaa0002
+    p_useEth_bool_4b79cdc_00 = 0x01[0m
+[31mCounterexample: 
+    p_denomIndex_uint8_8e4b306_00 = 0x01
+    p_nullifier_bytes32_3f7d7c8_00 = 0x00
+    p_to_address_86f61df_00 = 0x8000000000000000000000000000000000000000
+    p_useEth_bool_4b79cdc_00 = 0x01[0m
+[31mCounterexample: 
+    p_denomIndex_uint8_8e4b306_00 = 0x01
+    p_nullifier_bytes32_3f7d7c8_00 = 0x00
+    p_to_address_86f61df_00 = 0xaaaa0008
+    p_useEth_bool_4b79cdc_00 = 0x01[0m
+[31mCounterexample: 
+    p_denomIndex_uint8_8e4b306_00 = 0x01
+    p_nullifier_bytes32_3f7d7c8_00 = 0x00
+    p_to_address_86f61df_00 = 0xaaaa0007
+    p_useEth_bool_4b79cdc_00 = 0x01[0m
+[31mCounterexample: 
+    p_denomIndex_uint8_8e4b306_00 = 0x01
+    p_nullifier_bytes32_3f7d7c8_00 = 0x00
+    p_to_address_86f61df_00 = 0xaaaa0006
+    p_useEth_bool_4b79cdc_00 = 0x01[0m
+[31mCounterexample: 
+    p_denomIndex_uint8_8e4b306_00 = 0x01
+    p_nullifier_bytes32_3f7d7c8_00 = 0x00
+    p_to_address_86f61df_00 = 0xaaaa0005
+    p_useEth_bool_4b79cdc_00 = 0x01[0m
+[31mCounterexample: 
+    p_denomIndex_uint8_8e4b306_00 = 0x01
+    p_nullifier_bytes32_3f7d7c8_00 = 0x00
+    p_to_address_86f61df_00 = 0xaaaa0004
+    p_useEth_bool_4b79cdc_00 = 0x01[0m
+[31mCounterexample: 
+    p_denomIndex_uint8_8e4b306_00 = 0x01
+    p_nullifier_bytes32_3f7d7c8_00 = 0x00
+    p_to_address_86f61df_00 = 0xaaaa0003
+    p_useEth_bool_4b79cdc_00 = 0x01[0m
+[31m[FAIL][0m check_reach_release(bool,uint8,address,bytes32) (paths: 55, time: 5.87s, bounds: [])
+Symbolic test result: 0 passed; 3 failed; time: 25.50s

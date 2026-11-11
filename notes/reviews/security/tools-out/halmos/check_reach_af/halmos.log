@@ -1,0 +1,2574 @@
+No files changed, compilation skipped
+warning: unknown lint id: 'unsafe-cheatcode'
+  --> ./vault/test/TreeVectors.t.sol:30:13
+   |
+30 |             // forge-lint: disable-next-line(unsafe-cheatcode)
+   |             --------------------------------------------------
+   |
+
+warning: unknown lint id: 'unsafe-cheatcode'
+  --> ./vault/test/TreeVectors.t.sol:33:9
+   |
+33 |         // forge-lint: disable-next-line(unsafe-cheatcode)
+   |         --------------------------------------------------
+   |
+
+warning: unknown lint id: 'unsafe-typecast'
+   --> ./vault/test/invariant/VaultHandler.sol:391:9
+    |
+391 |         // forge-lint: disable-next-line(unsafe-typecast)
+    |         -------------------------------------------------
+    |
+
+warning: unknown lint id: 'unsafe-typecast'
+   --> ./vault/test/invariant/VaultHandler.sol:526:13
+    |
+526 |             // forge-lint: disable-next-line(unsafe-typecast)
+    |             -------------------------------------------------
+    |
+
+warning: unknown lint id: 'unsafe-typecast'
+   --> ./vault/test/invariant/VaultHandler.sol:686:17
+    |
+686 |                 // forge-lint: disable-next-line(unsafe-typecast)
+    |                 -------------------------------------------------
+    |
+
+warning: unknown lint id: 'unsafe-typecast'
+   --> ./vault/test/invariant/VaultHandler.sol:761:13
+    |
+761 |             // forge-lint: disable-next-line(unsafe-typecast)
+    |             -------------------------------------------------
+    |
+
+warning: unknown lint id: 'unsafe-typecast'
+    --> ./vault/test/invariant/VaultHandler.sol:1012:9
+     |
+1012 |         // forge-lint: disable-next-line(unsafe-typecast)
+     |         -------------------------------------------------
+     |
+
+WARNING  Skipped HalmosDebug.json due to parsing failure: KeyError: 'ast'       
+         (see https://github.com/a16z/halmos/wiki/warnings#parsing-error)       
+
+Running 1 tests for test/halmos/VaultHalmos.t.sol:VaultHalmos
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_newAdmin_address_d085642_150 = 0x00[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_frozen_bool_1a21914_134 = 0x00
+    p_token_address_26f8860_133 = 0x00[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_frozen_bool_1a21914_134 = 0x01
+    p_token_address_26f8860_133 = 0x00[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_frozen_bool_856cd4b_132 = 0x00
+    p_token_address_0454cdd_131 = 0x00[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_frozen_bool_856cd4b_132 = 0x01
+    p_token_address_0454cdd_131 = 0x00[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_capacity_uint256_c33a948_129 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_direction_uint8_44d1262_128 = 0x01
+    p_refillPerSecond_uint256_c96a8fa_130 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_token_address_56a5b0c_127 = 0x00[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_capacity_uint256_c33a948_129 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    p_direction_uint8_44d1262_128 = 0x01
+    p_refillPerSecond_uint256_c96a8fa_130 = 0x00
+    p_token_address_56a5b0c_127 = 0x00[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_capacity_uint256_c33a948_129 = 0x00
+    p_direction_uint8_44d1262_128 = 0x00
+    p_refillPerSecond_uint256_c96a8fa_130 = 0x00
+    p_token_address_56a5b0c_127 = 0x00[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_frozen_bool_6226fbf_126 = 0x00[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_frozen_bool_6226fbf_126 = 0x01[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_delay_uint256_f7cf913_125 = 0x00
+    p_token_address_a56343e_124 = 0x00[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_capacity_uint256_d9bc598_122 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    p_direction_uint8_38b5643_121 = 0x01
+    p_refillPerSecond_uint256_b06f8e0_123 = 0x00[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_capacity_uint256_d9bc598_122 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_direction_uint8_38b5643_121 = 0x01
+    p_refillPerSecond_uint256_b06f8e0_123 = 0x8000000000000000000000000000000000000000000000000000000000000000[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_capacity_uint256_d9bc598_122 = 0x00
+    p_direction_uint8_38b5643_121 = 0x00
+    p_refillPerSecond_uint256_b06f8e0_123 = 0x00[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_frozen_bool_7addf7c_120 = 0x00[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_frozen_bool_7addf7c_120 = 0x01[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_capacity_uint256_c33a948_129 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_direction_uint8_44d1262_128 = 0x01
+    p_refillPerSecond_uint256_c96a8fa_130 = 0x01
+    p_token_address_56a5b0c_127 = 0x00[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_enabled_bool_51d007e_119 = 0x01
+    p_token_address_944ffa0_118 = 0x00[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_frozen_bool_5492352_117 = 0x00[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_frozen_bool_5492352_117 = 0x01[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_index_uint256_34768fd_116 = 0x00[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_capacity_uint256_c33a948_129 = 0x01
+    p_direction_uint8_44d1262_128 = 0x01
+    p_refillPerSecond_uint256_c96a8fa_130 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_token_address_56a5b0c_127 = 0x00[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_capacity_uint256_c33a948_129 = 0x10000000000000000000000000000000000000000000000000000000000000
+    p_direction_uint8_44d1262_128 = 0x01
+    p_refillPerSecond_uint256_c96a8fa_130 = 0x10000000000000000000000000000000000000000000000000000000000000
+    p_token_address_56a5b0c_127 = 0x00[0m
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x64000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x64                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x40                           
+             p_token_address_ee7104a_91 = 0xaaaa0002                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x64000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x64                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x00          
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x40                           
+             p_token_address_ee7104a_91 = 0xaaaa0002                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x64000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x64                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x200000000000000000000000000000000000000000000000000000000000000      
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x40                           
+             p_token_address_ee7104a_91 = 0xaaaa0002                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x64000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x64
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x40
+    p_token_address_ee7104a_91 = 0xaaaa0002[0m
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x64000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x64                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x200000000000000000000000000000000000000000000000000000000000000      
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x40                           
+             p_token_address_ee7104a_91 = 0xaaaa0002                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x64000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x64
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x200000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x40
+    p_token_address_ee7104a_91 = 0xaaaa0002[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x64000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x64
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x00
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x40
+    p_token_address_ee7104a_91 = 0xaaaa0002[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x64000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x64
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x200000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x40
+    p_token_address_ee7104a_91 = 0xaaaa0002[0m
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x50000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x0a                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x08                           
+             p_token_address_ee7104a_91 = 0xaaaa0002                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x64000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x64
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x200000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x200000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x40
+    p_token_address_ee7104a_91 = 0xaaaa0002[0m
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x50000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x0a                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x00          
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x08                           
+             p_token_address_ee7104a_91 = 0xaaaa0002                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x50000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x0a                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x1000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x08                           
+             p_token_address_ee7104a_91 = 0xaaaa0002                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x50000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x0a
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x08
+    p_token_address_ee7104a_91 = 0xaaaa0002[0m
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x50000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x0a                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x1000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x08                           
+             p_token_address_ee7104a_91 = 0xaaaa0002                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x50000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x0a                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x1000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x1000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x08                           
+             p_token_address_ee7104a_91 = 0xaaaa0002                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x00
+    p_p.denominations[0]_uint256_72eca41_93 = 0x40000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x01
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x00
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x01
+    p_token_address_ee7104a_91 = 0xaaaa0002[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x50000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x0a
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x00
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x08
+    p_token_address_ee7104a_91 = 0xaaaa0002[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x50000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x0a
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x1000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x08
+    p_token_address_ee7104a_91 = 0xaaaa0002[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x50000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x0a
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x1000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x08
+    p_token_address_ee7104a_91 = 0xaaaa0002[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x00
+    p_p.denominations[0]_uint256_72eca41_93 = 0x40000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x01
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x01
+    p_token_address_ee7104a_91 = 0xaaaa0002[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x00
+    p_p.denominations[0]_uint256_72eca41_93 = 0x20000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x01
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x02
+    p_token_address_ee7104a_91 = 0xaaaa0002[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x50000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x0a
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x1000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x1000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x08
+    p_token_address_ee7104a_91 = 0xaaaa0002[0m
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x40000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x01                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x00          
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x01                           
+             p_token_address_ee7104a_91 = 0xaaaa0002                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x00
+    p_p.denominations[0]_uint256_72eca41_93 = 0x20000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x01
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x4000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x02
+    p_token_address_ee7104a_91 = 0xaaaa0002[0m
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x40000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x01                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x01                           
+             p_token_address_ee7104a_91 = 0xaaaa0002                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x20000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x01                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x02                           
+             p_token_address_ee7104a_91 = 0xaaaa0002                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x20000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x01                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x4000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x02                           
+             p_token_address_ee7104a_91 = 0xaaaa0002                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x40000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x01
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x00
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x01
+    p_token_address_ee7104a_91 = 0xaaaa0002[0m
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x20000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x01                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x4000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x02                           
+             p_token_address_ee7104a_91 = 0xaaaa0002                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x40000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x01
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x01
+    p_token_address_ee7104a_91 = 0xaaaa0002[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x20000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x01
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x02
+    p_token_address_ee7104a_91 = 0xaaaa0002[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x20000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x01
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x4000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x02
+    p_token_address_ee7104a_91 = 0xaaaa0002[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x20000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x01
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x4000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x02
+    p_token_address_ee7104a_91 = 0xaaaa0002[0m
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x64000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x64                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x40                           
+             p_token_address_ee7104a_91 = 0xaaaa0008                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x64000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x64                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x200000000000000000000000000000000000000000000000000000000000000      
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x40                           
+             p_token_address_ee7104a_91 = 0xaaaa0008                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x64000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x64                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x00          
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x40                           
+             p_token_address_ee7104a_91 = 0xaaaa0008                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x64000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x64
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x40
+    p_token_address_ee7104a_91 = 0xaaaa0008[0m
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x64000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x64                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x200000000000000000000000000000000000000000000000000000000000000      
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x40                           
+             p_token_address_ee7104a_91 = 0xaaaa0008                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x64000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x64                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x200000000000000000000000000000000000000000000000000000000000000      
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x200000000000000000000000000000000000000000000000000000000000000      
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x40                           
+             p_token_address_ee7104a_91 = 0xaaaa0008                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x64000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x64
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x00
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x40
+    p_token_address_ee7104a_91 = 0xaaaa0008[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x64000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x64
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x200000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x40
+    p_token_address_ee7104a_91 = 0xaaaa0008[0m
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x50000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x0a                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x08                           
+             p_token_address_ee7104a_91 = 0xaaaa0008                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x64000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x64
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x200000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x40
+    p_token_address_ee7104a_91 = 0xaaaa0008[0m
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x50000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x0a                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x00          
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x08                           
+             p_token_address_ee7104a_91 = 0xaaaa0008                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x50000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x0a                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x1000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x08                           
+             p_token_address_ee7104a_91 = 0xaaaa0008                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x50000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x0a                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x1000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x08                           
+             p_token_address_ee7104a_91 = 0xaaaa0008                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x50000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x0a
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x08
+    p_token_address_ee7104a_91 = 0xaaaa0008[0m
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x50000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x0a                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x1000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x1000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x08                           
+             p_token_address_ee7104a_91 = 0xaaaa0008                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x50000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x0a
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x00
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x08
+    p_token_address_ee7104a_91 = 0xaaaa0008[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x50000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x0a
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x1000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x08
+    p_token_address_ee7104a_91 = 0xaaaa0008[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x00
+    p_p.denominations[0]_uint256_72eca41_93 = 0x40000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x01
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x00
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x01
+    p_token_address_ee7104a_91 = 0xaaaa0008[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x50000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x0a
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x1000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x08
+    p_token_address_ee7104a_91 = 0xaaaa0008[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x00
+    p_p.denominations[0]_uint256_72eca41_93 = 0x40000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x01
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x01
+    p_token_address_ee7104a_91 = 0xaaaa0008[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x00
+    p_p.denominations[0]_uint256_72eca41_93 = 0x20000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x01
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x02
+    p_token_address_ee7104a_91 = 0xaaaa0008[0m
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x40000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x01                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x00          
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x01                           
+             p_token_address_ee7104a_91 = 0xaaaa0008                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x00
+    p_p.denominations[0]_uint256_72eca41_93 = 0x20000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x01
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x4000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x02
+    p_token_address_ee7104a_91 = 0xaaaa0008[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x00
+    p_p.denominations[0]_uint256_72eca41_93 = 0x20000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x01
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x4000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x02
+    p_token_address_ee7104a_91 = 0xaaaa0008[0m
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x40000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x01                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x01                           
+             p_token_address_ee7104a_91 = 0xaaaa0008                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x20000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x01                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x02                           
+             p_token_address_ee7104a_91 = 0xaaaa0008                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x40000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x01
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x00
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x01
+    p_token_address_ee7104a_91 = 0xaaaa0008[0m
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x20000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x01                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x4000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x02                           
+             p_token_address_ee7104a_91 = 0xaaaa0008                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x20000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x01                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x4000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x02                           
+             p_token_address_ee7104a_91 = 0xaaaa0008                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x40000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x01
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x01
+    p_token_address_ee7104a_91 = 0xaaaa0008[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x20000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x01
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x02
+    p_token_address_ee7104a_91 = 0xaaaa0008[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x20000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x01
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x4000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x02
+    p_token_address_ee7104a_91 = 0xaaaa0008[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x20000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x01
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x4000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x02
+    p_token_address_ee7104a_91 = 0xaaaa0008[0m
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x64000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x64                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x40                           
+             p_token_address_ee7104a_91 = 0xaaaa0004                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x64000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x64                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x200000000000000000000000000000000000000000000000000000000000000      
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x40                           
+             p_token_address_ee7104a_91 = 0xaaaa0004                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x64000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x64                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x00          
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x40                           
+             p_token_address_ee7104a_91 = 0xaaaa0004                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x64000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x64                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x200000000000000000000000000000000000000000000000000000000000000      
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x40                           
+             p_token_address_ee7104a_91 = 0xaaaa0004                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x64000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x64
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x40
+    p_token_address_ee7104a_91 = 0xaaaa0004[0m
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x64000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x64                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x200000000000000000000000000000000000000000000000000000000000000      
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x200000000000000000000000000000000000000000000000000000000000000      
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x40                           
+             p_token_address_ee7104a_91 = 0xaaaa0004                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x64000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x64
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x200000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x40
+    p_token_address_ee7104a_91 = 0xaaaa0004[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x64000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x64
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x00
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x40
+    p_token_address_ee7104a_91 = 0xaaaa0004[0m
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x50000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x0a                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x08                           
+             p_token_address_ee7104a_91 = 0xaaaa0004                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x64000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x64
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x200000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x40
+    p_token_address_ee7104a_91 = 0xaaaa0004[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x64000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x64
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x200000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x200000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x40
+    p_token_address_ee7104a_91 = 0xaaaa0004[0m
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x50000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x0a                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x00          
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x08                           
+             p_token_address_ee7104a_91 = 0xaaaa0004                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x50000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x0a                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x1000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x08                           
+             p_token_address_ee7104a_91 = 0xaaaa0004                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x50000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x0a                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x1000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x08                           
+             p_token_address_ee7104a_91 = 0xaaaa0004                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x50000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x0a
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x08
+    p_token_address_ee7104a_91 = 0xaaaa0004[0m
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x50000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x0a                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x1000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x1000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x08                           
+             p_token_address_ee7104a_91 = 0xaaaa0004                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x50000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x0a
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x00
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x08
+    p_token_address_ee7104a_91 = 0xaaaa0004[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x50000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x0a
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x1000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x08
+    p_token_address_ee7104a_91 = 0xaaaa0004[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x00
+    p_p.denominations[0]_uint256_72eca41_93 = 0x40000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x01
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x00
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x01
+    p_token_address_ee7104a_91 = 0xaaaa0004[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x50000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x0a
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x1000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x08
+    p_token_address_ee7104a_91 = 0xaaaa0004[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x00
+    p_p.denominations[0]_uint256_72eca41_93 = 0x20000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x01
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x02
+    p_token_address_ee7104a_91 = 0xaaaa0004[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x00
+    p_p.denominations[0]_uint256_72eca41_93 = 0x40000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x01
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x01
+    p_token_address_ee7104a_91 = 0xaaaa0004[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x50000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x0a
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x1000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x1000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x08
+    p_token_address_ee7104a_91 = 0xaaaa0004[0m
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x40000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x01                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x00          
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x01                           
+             p_token_address_ee7104a_91 = 0xaaaa0004                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x00
+    p_p.denominations[0]_uint256_72eca41_93 = 0x20000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x01
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x4000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x02
+    p_token_address_ee7104a_91 = 0xaaaa0004[0m
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x40000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x01                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x01                           
+             p_token_address_ee7104a_91 = 0xaaaa0004                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x00
+    p_p.denominations[0]_uint256_72eca41_93 = 0x20000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x01
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x4000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x02
+    p_token_address_ee7104a_91 = 0xaaaa0004[0m
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x20000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x01                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x02                           
+             p_token_address_ee7104a_91 = 0xaaaa0004                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x20000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x01                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x4000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x02                           
+             p_token_address_ee7104a_91 = 0xaaaa0004                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x40000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x01
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x00
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x01
+    p_token_address_ee7104a_91 = 0xaaaa0004[0m
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x20000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x01                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x4000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x02                           
+             p_token_address_ee7104a_91 = 0xaaaa0004                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x40000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x01
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x01
+    p_token_address_ee7104a_91 = 0xaaaa0004[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x20000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x01
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x02
+    p_token_address_ee7104a_91 = 0xaaaa0004[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x20000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x01
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x4000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x02
+    p_token_address_ee7104a_91 = 0xaaaa0004[0m
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x64000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x64                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x40                           
+             p_token_address_ee7104a_91 = 0xaaaa0003                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x20000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x01
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x4000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x02
+    p_token_address_ee7104a_91 = 0xaaaa0004[0m
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x64000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x64                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x00          
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x40                           
+             p_token_address_ee7104a_91 = 0xaaaa0003                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x64000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x64                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x200000000000000000000000000000000000000000000000000000000000000      
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x40                           
+             p_token_address_ee7104a_91 = 0xaaaa0003                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x64000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x64                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x200000000000000000000000000000000000000000000000000000000000000      
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x40                           
+             p_token_address_ee7104a_91 = 0xaaaa0003                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x64000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x64
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x40
+    p_token_address_ee7104a_91 = 0xaaaa0003[0m
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x64000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x64                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x200000000000000000000000000000000000000000000000000000000000000      
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x200000000000000000000000000000000000000000000000000000000000000      
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x40                           
+             p_token_address_ee7104a_91 = 0xaaaa0003                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x64000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x64
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x00
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x40
+    p_token_address_ee7104a_91 = 0xaaaa0003[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x64000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x64
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x200000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x40
+    p_token_address_ee7104a_91 = 0xaaaa0003[0m
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x64000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x64
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x200000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x40
+    p_token_address_ee7104a_91 = 0xaaaa0003[0m
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x50000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x0a                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x08                           
+             p_token_address_ee7104a_91 = 0xaaaa0003                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x50000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x0a                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x00          
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x08                           
+             p_token_address_ee7104a_91 = 0xaaaa0003                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x50000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x0a                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x1000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x08                           
+             p_token_address_ee7104a_91 = 0xaaaa0003                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x50000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x0a                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x1000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x8000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x08                           
+             p_token_address_ee7104a_91 = 0xaaaa0003                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+[31mCounterexample: 
+    p_caller_address_b858e29_00 = 0xc000000000000000000000000000000000000000
+    p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00
+    p_p.checkpointFees_length_f54a3e3_105 = 0x01
+    p_p.decimals_uint8_0623d1c_104 = 0x80
+    p_p.denominations[0]_uint256_72eca41_93 = 0x50000000000000000000000000000000
+    p_p.denominations_length_d2f9435_92 = 0x01
+    p_p.depositCap.capacity_uint256_cee0890_98 = 0x00
+    p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00
+    p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00
+    p_p.lezUnit_uint256_c3241c4_96 = 0x0a
+    p_p.relayFees[0]_uint256_e55d54c_95 = 0x00
+    p_p.relayFees_length_6c8573c_94 = 0x01
+    p_p.releaseCap.capacity_uint256_bc57d32_100 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseCap.refillPerSecond_uint256_80099f3_101 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_p.releaseDelay_uint256_b78082e_102 = 0x00
+    p_p.unitWeight_uint256_1ee31f4_97 = 0x08
+    p_token_address_ee7104a_91 = 0xaaaa0003[0m
+WARNING  Counterexample (potentially invalid):                                  
+             p_caller_address_b858e29_00 =                                      
+         0xc000000000000000000000000000000000000000                             
+             p_p.checkpointFees[0]_uint256_bf28e69_106 = 0x00                   
+             p_p.checkpointFees_length_f54a3e3_105 = 0x01                       
+             p_p.decimals_uint8_0623d1c_104 = 0x20                              
+             p_p.denominations[0]_uint256_72eca41_93 =                          
+         0x50000000000000000000000000000000                                     
+             p_p.denominations_length_d2f9435_92 = 0x01                         
+             p_p.depositCap.capacity_uint256_cee0890_98 = 0x00                  
+             p_p.depositCap.refillPerSecond_uint256_4c29df9_99 = 0x00           
+             p_p.lezDefinition_bytes32_d3f1d0e_103 = 0x00                       
+             p_p.lezUnit_uint256_c3241c4_96 = 0x0a                              
+             p_p.relayFees[0]_uint256_e55d54c_95 = 0x00                         
+             p_p.relayFees_length_6c8573c_94 = 0x01                             
+             p_p.releaseCap.capacity_uint256_bc57d32_100 =                      
+         0x1000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseCap.refillPerSecond_uint256_80099f3_101 =               
+         0x1000000000000000000000000000000000000000000000000000000000000000     
+             p_p.releaseDelay_uint256_b78082e_102 = 0x00                        
+             p_p.unitWeight_uint256_1ee31f4_97 = 0x08                           
+             p_token_address_ee7104a_91 = 0xaaaa0003                            
+         (see                                                                   
+         https://github.com/a16z/halmos/wiki/warnings#counterexample-invalid)   
+ERROR    solver_output.error='executor has been shutdown'                       
+         (solver_output.returncode=-1)                                          
+ERROR    solver_output.error='executor has been shutdown'                       
+         (solver_output.returncode=-1)                                          
+ERROR    solver_output.error='executor has been shutdown'                       
+         (solver_output.returncode=-1)                                          
+ERROR    solver_output.error='executor has been shutdown'                       
+         (solver_output.returncode=-1)                                          
+ERROR    solver_output.error='executor has been shutdown'                       
+         (solver_output.returncode=-1)                                          
+ERROR    solver_output.error='executor has been shutdown'                       
+         (solver_output.returncode=-1)                                          
+ERROR    solver_output.error='executor has been shutdown'                       
+         (solver_output.returncode=-1)                                          
+ERROR    solver_output.error='executor has been shutdown'                       
+         (solver_output.returncode=-1)                                          
+ERROR    solver_output.error='executor has been shutdown'                       
+         (solver_output.returncode=-1)                                          

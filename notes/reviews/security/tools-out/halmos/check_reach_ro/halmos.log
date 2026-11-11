@@ -1,0 +1,203 @@
+No files changed, compilation skipped
+warning: unknown lint id: 'unsafe-cheatcode'
+  --> ./vault/test/TreeVectors.t.sol:30:13
+   |
+30 |             // forge-lint: disable-next-line(unsafe-cheatcode)
+   |             --------------------------------------------------
+   |
+
+warning: unknown lint id: 'unsafe-cheatcode'
+  --> ./vault/test/TreeVectors.t.sol:33:9
+   |
+33 |         // forge-lint: disable-next-line(unsafe-cheatcode)
+   |         --------------------------------------------------
+   |
+
+warning: unknown lint id: 'unsafe-typecast'
+   --> ./vault/test/invariant/VaultHandler.sol:391:9
+    |
+391 |         // forge-lint: disable-next-line(unsafe-typecast)
+    |         -------------------------------------------------
+    |
+
+warning: unknown lint id: 'unsafe-typecast'
+   --> ./vault/test/invariant/VaultHandler.sol:526:13
+    |
+526 |             // forge-lint: disable-next-line(unsafe-typecast)
+    |             -------------------------------------------------
+    |
+
+warning: unknown lint id: 'unsafe-typecast'
+   --> ./vault/test/invariant/VaultHandler.sol:686:17
+    |
+686 |                 // forge-lint: disable-next-line(unsafe-typecast)
+    |                 -------------------------------------------------
+    |
+
+warning: unknown lint id: 'unsafe-typecast'
+   --> ./vault/test/invariant/VaultHandler.sol:761:13
+    |
+761 |             // forge-lint: disable-next-line(unsafe-typecast)
+    |             -------------------------------------------------
+    |
+
+warning: unknown lint id: 'unsafe-typecast'
+    --> ./vault/test/invariant/VaultHandler.sol:1012:9
+     |
+1012 |         // forge-lint: disable-next-line(unsafe-typecast)
+     |         -------------------------------------------------
+     |
+
+WARNING  Skipped HalmosDebug.json due to parsing failure: KeyError: 'ast'       
+         (see https://github.com/a16z/halmos/wiki/warnings#parsing-error)       
+
+Running 1 tests for test/halmos/VaultHalmos.t.sol:VaultHalmos
+[31mCounterexample: 
+    p_newAdmin_address_490d00c_150 = 0x00
+    p_role_uint8_fb2a59e_00 = 0x00[0m
+[31mCounterexample: 
+    p_c.burnCount_uint64_f2f7bdd_140 = 0x00
+    p_c.burnRoot_bytes32_d2a83a0_139 = 0x00
+    p_c.echoNonce_bytes32_f9b916b_143 = 0x00
+    p_c.importedLeafCount_uint64_3421043_141 = 0x00
+    p_c.nMin_uint32_f35bf26_135 = 0x03
+    p_c.n_uint32_6108769_146 = 0x80000000
+    p_c.newState_bytes32_9cf6642_138 = 0x00
+    p_c.parentState_bytes32_4ebbe8f_137 = 0xb3487f927f37abffc8dc663fd7cd8448fe931bd4ec9f660f71693e3e22e14d79
+    p_c.sunset_bool_938e89b_142 = 0x01
+    p_c.tMin_uint32_1ee2199_136 = 0x02
+    p_c.t_uint32_eb8f2d1_147 = 0x80000000
+    p_c.tipHash_bytes32_376be33_145 = 0x00
+    p_c.tipId_uint64_ea0eaa3_144 = 0x00
+    p_role_uint8_fb2a59e_00 = 0x80
+    p_seal_length_fa2f0e1_149 = 0x04[0m
+[31mCounterexample: 
+    p_c.burnCount_uint64_f2f7bdd_140 = 0x00
+    p_c.burnRoot_bytes32_d2a83a0_139 = 0x00
+    p_c.echoNonce_bytes32_f9b916b_143 = 0x00
+    p_c.importedLeafCount_uint64_3421043_141 = 0x00
+    p_c.nMin_uint32_f35bf26_135 = 0x03
+    p_c.n_uint32_6108769_146 = 0x80000000
+    p_c.newState_bytes32_9cf6642_138 = 0x00
+    p_c.parentState_bytes32_4ebbe8f_137 = 0xb3487f927f37abffc8dc663fd7cd8448fe931bd4ec9f660f71693e3e22e14d79
+    p_c.sunset_bool_938e89b_142 = 0x01
+    p_c.tMin_uint32_1ee2199_136 = 0x02
+    p_c.t_uint32_eb8f2d1_147 = 0x80000000
+    p_c.tipHash_bytes32_376be33_145 = 0x00
+    p_c.tipId_uint64_ea0eaa3_144 = 0x00
+    p_role_uint8_fb2a59e_00 = 0x01
+    p_seal_length_fa2f0e1_149 = 0x04[0m
+[31mCounterexample: 
+    p_c.burnCount_uint64_f2f7bdd_140 = 0x00
+    p_c.burnRoot_bytes32_d2a83a0_139 = 0x00
+    p_c.echoNonce_bytes32_f9b916b_143 = 0x00
+    p_c.importedLeafCount_uint64_3421043_141 = 0x00
+    p_c.nMin_uint32_f35bf26_135 = 0x03
+    p_c.n_uint32_6108769_146 = 0x80000000
+    p_c.newState_bytes32_9cf6642_138 = 0x00
+    p_c.parentState_bytes32_4ebbe8f_137 = 0xb3487f927f37abffc8dc663fd7cd8448fe931bd4ec9f660f71693e3e22e14d79
+    p_c.sunset_bool_938e89b_142 = 0x01
+    p_c.tMin_uint32_1ee2199_136 = 0x02
+    p_c.t_uint32_eb8f2d1_147 = 0x80000000
+    p_c.tipHash_bytes32_376be33_145 = 0x00
+    p_c.tipId_uint64_ea0eaa3_144 = 0x00
+    p_role_uint8_fb2a59e_00 = 0x00
+    p_seal_length_fa2f0e1_149 = 0x04[0m
+[31mCounterexample: 
+    p_frozen_bool_b621701_134 = 0x00
+    p_role_uint8_fb2a59e_00 = 0x01
+    p_token_address_7955906_133 = 0x00[0m
+[31mCounterexample: 
+    p_frozen_bool_b621701_134 = 0x01
+    p_role_uint8_fb2a59e_00 = 0x01
+    p_token_address_7955906_133 = 0x00[0m
+[31mCounterexample: 
+    p_frozen_bool_d2fbbec_132 = 0x00
+    p_role_uint8_fb2a59e_00 = 0x01
+    p_token_address_86e9510_131 = 0x00[0m
+[31mCounterexample: 
+    p_frozen_bool_d2fbbec_132 = 0x01
+    p_role_uint8_fb2a59e_00 = 0x01
+    p_token_address_86e9510_131 = 0x00[0m
+[31mCounterexample: 
+    p_capacity_uint256_0ea745d_129 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_direction_uint8_acb3397_128 = 0x01
+    p_refillPerSecond_uint256_07342b1_130 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_role_uint8_fb2a59e_00 = 0x00
+    p_token_address_44cfba3_127 = 0x00[0m
+[31mCounterexample: 
+    p_capacity_uint256_0ea745d_129 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    p_direction_uint8_acb3397_128 = 0x01
+    p_refillPerSecond_uint256_07342b1_130 = 0x00
+    p_role_uint8_fb2a59e_00 = 0x00
+    p_token_address_44cfba3_127 = 0x00[0m
+[31mCounterexample: 
+    p_capacity_uint256_0ea745d_129 = 0x00
+    p_direction_uint8_acb3397_128 = 0x00
+    p_refillPerSecond_uint256_07342b1_130 = 0x00
+    p_role_uint8_fb2a59e_00 = 0x00
+    p_token_address_44cfba3_127 = 0x00[0m
+[31mCounterexample: 
+    p_frozen_bool_4bbce79_126 = 0x00
+    p_role_uint8_fb2a59e_00 = 0x01[0m
+[31mCounterexample: 
+    p_frozen_bool_4bbce79_126 = 0x01
+    p_role_uint8_fb2a59e_00 = 0x01[0m
+[31mCounterexample: 
+    p_delay_uint256_f6414c2_125 = 0x00
+    p_role_uint8_fb2a59e_00 = 0x00
+    p_token_address_8291fe7_124 = 0x00[0m
+[31mCounterexample: 
+    p_capacity_uint256_0ea745d_129 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_direction_uint8_acb3397_128 = 0x01
+    p_refillPerSecond_uint256_07342b1_130 = 0x01
+    p_role_uint8_fb2a59e_00 = 0x00
+    p_token_address_44cfba3_127 = 0x00[0m
+[31mCounterexample: 
+    p_capacity_uint256_1d14678_122 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    p_direction_uint8_36164af_121 = 0x01
+    p_refillPerSecond_uint256_b163a03_123 = 0x00
+    p_role_uint8_fb2a59e_00 = 0x00[0m
+[31mCounterexample: 
+    p_capacity_uint256_1d14678_122 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_direction_uint8_36164af_121 = 0x01
+    p_refillPerSecond_uint256_b163a03_123 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_role_uint8_fb2a59e_00 = 0x00[0m
+[31mCounterexample: 
+    p_capacity_uint256_1d14678_122 = 0x00
+    p_direction_uint8_36164af_121 = 0x00
+    p_refillPerSecond_uint256_b163a03_123 = 0x00
+    p_role_uint8_fb2a59e_00 = 0x00[0m
+[31mCounterexample: 
+    p_frozen_bool_5dd2e96_120 = 0x00
+    p_role_uint8_fb2a59e_00 = 0x01[0m
+[31mCounterexample: 
+    p_frozen_bool_5dd2e96_120 = 0x01
+    p_role_uint8_fb2a59e_00 = 0x01[0m
+[31mCounterexample: 
+    p_capacity_uint256_0ea745d_129 = 0x01
+    p_direction_uint8_acb3397_128 = 0x01
+    p_refillPerSecond_uint256_07342b1_130 = 0x8000000000000000000000000000000000000000000000000000000000000000
+    p_role_uint8_fb2a59e_00 = 0x00
+    p_token_address_44cfba3_127 = 0x00[0m
+[31mCounterexample: 
+    p_enabled_bool_cee0b78_119 = 0x01
+    p_role_uint8_fb2a59e_00 = 0x00
+    p_token_address_3575183_118 = 0x00[0m
+[31mCounterexample: 
+    p_frozen_bool_9926683_117 = 0x00
+    p_role_uint8_fb2a59e_00 = 0x01[0m
+[31mCounterexample: 
+    p_frozen_bool_9926683_117 = 0x01
+    p_role_uint8_fb2a59e_00 = 0x01[0m
+[31mCounterexample: 
+    p_index_uint256_9179b68_116 = 0x00
+    p_role_uint8_fb2a59e_00 = 0x01[0m
+[31mCounterexample: 
+    p_role_uint8_fb2a59e_00 = 0x01[0m
+[31mCounterexample: 
+    p_capacity_uint256_0ea745d_129 = 0x10000000000000000000000000000000000000000000000000000000000000
+    p_direction_uint8_acb3397_128 = 0x01
+    p_refillPerSecond_uint256_07342b1_130 = 0x10000000000000000000000000000000000000000000000000000000000000
+    p_role_uint8_fb2a59e_00 = 0x00
+    p_token_address_44cfba3_127 = 0x00[0m
