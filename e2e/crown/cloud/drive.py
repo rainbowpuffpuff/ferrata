@@ -495,11 +495,13 @@ def st_capture(n: int) -> bool:
     if MODE == "fork":
         slots = [s["slot"] for s in json.loads(out(["python3", "-I", f"{REPO}/e2e/crown/capture.py", "slots", "--driver",
                                                     f"{BUNDLE_DIR}/bin/crown-driver"]))["slots"]]
-        shutil.rmtree(d, ignore_errors=True)
+        part = d + ".part"  # renamed only once checked: a capture that fails its check is never taken on a resume
+        shutil.rmtree(part, ignore_errors=True)
         args = [a for s in slots for a in ("--slot", s)]
         run(["python3", "-I", f"{REPO}/lez/crown/capture-anvil.py", "--rpc", LOCAL_RPC, "--vault", vault, "--from-block",
-             str(rj["fork_block"]), *args, d], log=f"capture-{n}.log")
-        chk = json.loads(out(["python3", "-I", f"{REPO}/e2e/crown/capture.py", "check", d, "--vault", vault.lower()]))
+             str(rj["fork_block"]), *args, part], log=f"capture-{n}.log")
+        chk = json.loads(out(["python3", "-I", f"{REPO}/e2e/crown/capture.py", "check", part, "--vault", vault.lower()]))
+        os.rename(part, d)
         say(f"capture {n}: FORK capture of block {chk['block']} (capture-anvil.py, stand-in header), {chk['slots_proven']}"
             f" slots proven against its state root")
     else:

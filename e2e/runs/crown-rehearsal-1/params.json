@@ -1,0 +1,13 @@
+{
+ "_source": "crown REHEARSAL on an anvil fork of Sepolia (stand-in beacon committee on LEZ): configId and genesisState of LEZ session A's devnet, image ids of the crown build",
+ "checkpointImageIdA": "0x117384b6322ee8563e147eddb61341699fb3edfd3672c3cb39bc44a49d72086d",
+ "checkpointImageIdB": "0x7e51065ffd0a8004fbdd0452871c4a77da7b59e6499365f43d61363fd4307754",
+ "releaseImageId": "0x20595dc54bbd80cf487e4666286db9aab7a048e2e0d7646b42ec6d3c90ca2625",
+ "lezConfigId": "0xdd0387ff43e4a7b2fca008603e1135dec63266d97a76b71ff71a6d5a3ee6206e",
+ "genesisState": "0x9d37597513c3c3e7c8293a05f0a402103b0f254a42555d4d62ab7f074294c83f",
+ "nMin": 1,
+ "tMin": 1,
+ "postingTimeframe": 0,
+ "ethLezDefinition": "0x0000000000000000000000000000000000000000000000000000000000000000",
+ "tokenLezDefinition": "0x0000000000000000000000000000000000000000000000000000000000000000"
+}
