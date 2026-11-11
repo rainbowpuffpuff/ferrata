@@ -20,6 +20,8 @@
 //! upgrade --old IN --answers DIR --channel HEX --tip N --out IN2
 //!                                             a checkpoint_b input recorded before inputs carried T's
 //!                                              inscription, with T's inscription from the node's answers
+//! retip   --base IN --answers DIR --tip N --out IN2   T moved to block N of the input (its inscription
+//!                                              from the node); the later blocks become the path after T
 //! rekey   --base IN --keys HEX,HEX,... --n-min N --t-min T --out IN2
 //!                                              devnet set-up: a stand-in key set and floors
 //! ```
@@ -172,7 +174,9 @@ fn cmd_verify(a: &Args) -> Result<()> {
         let att = attestation_from_json(&v)?;
         let ksh: Hash = hexa(&v["key_set_hash"], "key_set_hash")?;
         match att.verify(&d, &ksh) {
-            Ok(()) => println!("{path}: verifies (channel key {}, tip {})", hex::encode(att.channel_key), att.tip.tip_id),
+            Ok(()) => {
+                println!("{path}: verifies (channel key {}, tip {})", hex::encode(att.channel_key), att.tip.tip_id)
+            }
             Err(e) => {
                 bad += 1;
                 println!("{path}: REFUSED {e:?}");
@@ -208,7 +212,12 @@ fn cmd_assemble(a: &Args) -> Result<()> {
     let base = fs::read(a.get("base")?)?;
     let bytes = assemble_unchecked(&base, &load_atts(a)?)?;
     let name = a.get("name")?;
-    let meta = fixture_meta(name, &bytes, a.opt("description").unwrap_or("an input the program must refuse"), Some(a.get("expect")?))?;
+    let meta = fixture_meta(
+        name,
+        &bytes,
+        a.opt("description").unwrap_or("an input the program must refuse"),
+        Some(a.get("expect")?),
+    )?;
     fs::write(a.get("out")?, &bytes)?;
     write_json(a.get("meta")?, &meta)?;
     println!("{name}: {}", meta["native"].as_str().unwrap_or(""));
@@ -225,6 +234,16 @@ fn cmd_upgrade(a: &Args) -> Result<()> {
     let bytes = ferrata_attestor::upgrade_pre_producer_input(&old, &t.elided()?)?;
     fs::write(a.get("out")?, &bytes)?;
     println!("upgraded: T = {tip_id}, its inscription from node block {} (slot {})", t.node_block, t.slot);
+    Ok(())
+}
+
+fn cmd_retip(a: &Args) -> Result<()> {
+    let base = fs::read(a.get("base")?)?;
+    let answers = NodeAnswers::load(Path::new(a.get("answers")?))?;
+    let bytes = ferrata_attestor::retip(&base, &answers, a.get("tip")?.parse()?)?;
+    fs::write(a.get("out")?, &bytes)?;
+    let input = CheckpointInputB::decode(&bytes).map_err(|e| anyhow!("{e:?}"))?;
+    println!("T moved: tIndex {} of {} blocks", input.t_index, input.blocks.len());
     Ok(())
 }
 
@@ -261,6 +280,7 @@ fn main() -> Result<()> {
         "assemble" => cmd_assemble(&a),
         "rekey" => cmd_rekey(&a),
         "upgrade" => cmd_upgrade(&a),
+        "retip" => cmd_retip(&a),
         other => bail!("unknown command {other}"),
     }
 }

@@ -92,7 +92,26 @@ echo "-- below t: one attestation"
 if $bin collect --base "$work/base-n3.input" --att "$out/att-1.json" --out "$work/x.input" --meta "$work/x.json" \
     --name x 2> "$work/refusal.txt"; then echo "UNEXPECTED: collected"; exit 1; else tail -n 1 "$work/refusal.txt"; fi
 
+echo "-- T = 200: the attestations (of 202) are of a descendant of T, along the path 201, 202"
+$bin retip --base "$work/base-n3.input" --answers "$work/answers-n3" --tip 200 --out "$work/base-n3-t200.input"
+$bin collect --base "$work/base-n3-t200.input" --att "$out/att-0.json" --att "$out/att-1.json" \
+  --out fixtures/rbm-lab-n3-t200.input --meta fixtures/rbm-lab-n3-t200.json --name rbm-lab-n3-t200 \
+  --description "as rbm-lab-n3-t2 with T = 200; the two attestations are of block 202, a descendant of T"
+echo "-- an attestor whose node had finalised only up to 201 signs 201: it cannot support T = 202"
+cp -r "$work/answers-n3" "$work/answers-behind"
+python3 -I - "$work/answers-behind/info.json" "$work/answers-behind/info-start.json" <<'PY'
+import json, os, sys
+for p in sys.argv[1:]:
+    if os.path.exists(p):
+        i = json.load(open(p)); i["cryptarchia_info"]["lib_slot"] = 8856116; json.dump(i, open(p, "w"))
+PY
+$bin attest --deployment "$out/deployment.json" --cert "$out/cert-2.json" --att-key "$work/attestation-2.key" \
+  --answers "$work/answers-behind" --out "$out/att-2-behind.json"
+$bin assemble --base "$work/base-n3.input" --att "$out/att-0.json" --att "$out/att-2-behind.json" \
+  --out fixtures/rbm-refuse-behind.input --meta fixtures/rbm-refuse-behind.json --name rbm-refuse-behind \
+  --expect NotADescendant --description "must be refused: an attestation of 201 for T = 202 (its node was behind)"
+
 echo "== 7. inputs the program must refuse"
 $refusals --base "$work/base-n3.input" --answers "$work/answers-n3" --out-dir fixtures
-cp fixtures/rbm-lab-n3-t2.json fixtures/rbm-lab-n3-all.json fixtures/rbm-refuse-*.json fixtures/rbm-lab-n3-t2.input "$out/"
+cp fixtures/rbm-lab-n3-t2.json fixtures/rbm-lab-n3-all.json fixtures/rbm-lab-n3-t200.json fixtures/rbm-refuse-*.json fixtures/rbm-lab-n3-t2.input "$out/"
 echo "devnet run done: $out"

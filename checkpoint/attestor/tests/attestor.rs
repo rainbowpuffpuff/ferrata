@@ -15,9 +15,8 @@ use checkpoint_core::rule_b::run_checkpoint_b;
 use checkpoint_core::{Error, Hash};
 use ed25519_dalek::SigningKey;
 use ferrata_attestor::{
-    assemble_unchecked, collect, deployment_of, final_inscriptions, final_tier, hexa, rekey_base,
-    upgrade_pre_producer_input, Attestor, Dropped, FinalTier,
-    LastSigned, NodeAnswers,
+    assemble_unchecked, collect, deployment_of, final_inscriptions, final_tier, hexa, rekey_base, retip,
+    upgrade_pre_producer_input, Attestor, Dropped, FinalTier, LastSigned, NodeAnswers,
 };
 use serde_json::{json, Value};
 
@@ -74,14 +73,18 @@ fn tier_n3() -> FinalTier {
 fn attestor(i: u32, d: &Deployment) -> Attestor {
     let channel = key(&format!("channel-{i}"));
     let att = key(&format!("attestation-{i}"));
-    Attestor { deployment: *d, channel_key: pk(&channel), certificate: sign_certificate(&channel, d, &pk(&att)), att_key: att }
+    Attestor {
+        deployment: *d,
+        channel_key: pk(&channel),
+        certificate: sign_certificate(&channel, d, &pk(&att)),
+        att_key: att,
+    }
 }
 
 /// The lab sequencer's attestor of the real-blocks run: its attestation key (public label) and the
 /// certificate the lab's channel key gave it for the nMin = 1 deployment of that run.
 fn lab_attestor(d: &Deployment) -> Attestor {
-    let v: Value =
-        serde_json::from_slice(&fs::read(dir().join("../realblocks/out/attestor.json")).unwrap()).unwrap();
+    let v: Value = serde_json::from_slice(&fs::read(dir().join("../realblocks/out/attestor.json")).unwrap()).unwrap();
     Attestor {
         deployment: *d,
         channel_key: hexa(&v["channel_key"], "channel_key").unwrap(),
@@ -190,7 +193,10 @@ fn refused_too_few_signatures() {
     let bytes = assemble_unchecked(&base, &[a1]).unwrap();
     assert_eq!(run(&bytes).unwrap_err(), Error::InsufficientAttestations { have: 1, need: 2 });
     // None at all.
-    assert_eq!(run(&assemble_unchecked(&base, &[]).unwrap()).unwrap_err(), Error::InsufficientAttestations { have: 0, need: 2 });
+    assert_eq!(
+        run(&assemble_unchecked(&base, &[]).unwrap()).unwrap_err(),
+        Error::InsufficientAttestations { have: 0, need: 2 }
+    );
 }
 
 #[test]
@@ -203,13 +209,21 @@ fn refused_an_uncertified_key() {
     let mut rogue = attestor(2, &d);
     rogue.att_key = key("attestation-3");
     assert!(rogue.attest(&tier, None).unwrap_err().to_string().contains("does not certify"));
-    let forged = SignedAttestation::new(&rogue.att_key, rogue.channel_key, rogue.certificate, &d, &tier.key_set_hash, tier.tip);
+    let forged =
+        SignedAttestation::new(&rogue.att_key, rogue.channel_key, rogue.certificate, &d, &tier.key_set_hash, tier.tip);
     let c = collect(&base, &[a1, forged]);
     assert!(c.is_err(), "the collector keeps one, below t");
     assert_eq!(run(&assemble_unchecked(&base, &[a1, forged]).unwrap()).unwrap_err(), Error::BadCertificate);
     // A channel key outside K certifying its own attestation key.
     let outsider = attestor(3, &d);
-    let out = SignedAttestation::new(&outsider.att_key, outsider.channel_key, outsider.certificate, &d, &tier.key_set_hash, tier.tip);
+    let out = SignedAttestation::new(
+        &outsider.att_key,
+        outsider.channel_key,
+        outsider.certificate,
+        &d,
+        &tier.key_set_hash,
+        tier.tip,
+    );
     assert_eq!(run(&assemble_unchecked(&base, &[a1, out]).unwrap()).unwrap_err(), Error::NotAccredited);
     assert!(outsider.attest(&tier, None).unwrap_err().to_string().contains("not in the channel's live key set"));
 }
@@ -253,7 +267,8 @@ fn refused_a_repeated_key_and_a_signature_over_another_key_set() {
     let lab_tier =
         final_tier(&lab_answers(), &h("0101010101010101010101010101010101010101010101010101010101010101")).unwrap();
     let a2 = attestor(2, &d);
-    let stale = SignedAttestation::new(&a2.att_key, a2.channel_key, a2.certificate, &d, &lab_tier.key_set_hash, lab_tier.tip);
+    let stale =
+        SignedAttestation::new(&a2.att_key, a2.channel_key, a2.certificate, &d, &lab_tier.key_set_hash, lab_tier.tip);
     assert_eq!(run(&assemble_unchecked(&base, &[a1, stale]).unwrap()).unwrap_err(), Error::BadAttestation);
 }
 
@@ -282,9 +297,23 @@ fn a_dropped_reason_for_each_bad_attestation() {
     let ch0 = h(LAB_KEY);
     let lab = lab_attestor(&d);
     let cert_other = sign_certificate(&key("channel-2"), &other_vault(&d), &pk(&key("attestation-2")));
-    let bad_cert = SignedAttestation::new(&key("attestation-2"), pk(&key("channel-2")), cert_other, &d, &tier.key_set_hash, tier.tip);
+    let bad_cert = SignedAttestation::new(
+        &key("attestation-2"),
+        pk(&key("channel-2")),
+        cert_other,
+        &d,
+        &tier.key_set_hash,
+        tier.tip,
+    );
     let outsider = attestor(3, &d);
-    let out = SignedAttestation::new(&outsider.att_key, outsider.channel_key, outsider.certificate, &d, &tier.key_set_hash, tier.tip);
+    let out = SignedAttestation::new(
+        &outsider.att_key,
+        outsider.channel_key,
+        outsider.certificate,
+        &d,
+        &tier.key_set_hash,
+        tier.tip,
+    );
     let mut bad_sig = lab.attest(&tier, None).unwrap();
     bad_sig.signature[0] ^= 1;
     assert_eq!(bad_sig.channel_key, ch0);
@@ -295,4 +324,34 @@ fn a_dropped_reason_for_each_bad_attestation() {
         vec![(1, Dropped::Certificate), (2, Dropped::NotInKeySet), (3, Dropped::Repeated), (4, Dropped::Signature)]
     );
     assert_eq!(run(&c.input).unwrap().attestors, 2);
+}
+
+#[test]
+fn attestations_of_a_descendant_of_t_count_and_an_attestor_behind_t_is_refused() {
+    let base = base_n3();
+    let d = deployment(&base);
+    let tier = tier_n3();
+    let a0 = lab_attestor(&d).attest(&tier, None).unwrap();
+    let a1 = attestor(1, &d).attest(&tier, None).unwrap();
+    // T = 200: blocks 201 and 202 are the path after T; both attestations are of 202.
+    let mut answers = lab_answers();
+    answers.channel["accredited_keys"] =
+        json!([LAB_KEY, hex::encode(pk(&key("channel-1"))), hex::encode(pk(&key("channel-2")))]);
+    let base200 = retip(&base, &answers, 200).unwrap();
+    let c = collect(&base200, &[a0, a1]).unwrap();
+    let outcome = run(&c.input).unwrap();
+    assert_eq!((outcome.journal.tip_id, outcome.path_after_tip, outcome.attestors), (200, 2, 2));
+    assert_eq!(outcome.journal.tip_hash, tier.hashes[&200]);
+    // An attestor whose node had finalised only up to 201 cannot support T = 202.
+    answers.lib_slot = 8_856_116;
+    let behind = final_tier(&answers, &h(CHANNEL)).unwrap();
+    assert_eq!(behind.tip.tip_id, 201);
+    let a2_behind = attestor(2, &d).attest(&behind, None).unwrap();
+    assert_eq!(
+        run(&assemble_unchecked(&base, &[a0, a2_behind]).unwrap()).unwrap_err(),
+        Error::NotADescendant { tip_id: 201 }
+    );
+    // ... but it supports T = 200 (201 is on the path after 200).
+    let ok = run(&assemble_unchecked(&base200, &[a0, a2_behind]).unwrap()).unwrap();
+    assert_eq!(ok.attestors, 2);
 }

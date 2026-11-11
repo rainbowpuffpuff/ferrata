@@ -35,8 +35,8 @@ use attestor_core::{key_set_hash, verify_certificate, Deployment, FinalTip, Sign
 use checkpoint_core::hash::{sha256_parts, threshold};
 use checkpoint_core::input::CheckpointInputB;
 use checkpoint_core::lez::{hash_parsed_block, parse_block, NoVisitor};
-use checkpoint_core::rule_b::run_checkpoint_b;
 use checkpoint_core::mantle::{inscription_msg_id, tx_hash, ElidedInscription, OP_CHANNEL_INSCRIBE, OP_TRANSFER};
+use checkpoint_core::rule_b::run_checkpoint_b;
 use checkpoint_core::state::Config;
 use checkpoint_core::Hash;
 use ed25519_dalek::SigningKey;
@@ -112,7 +112,8 @@ impl NodeAnswers {
                 .with_context(|| format!("{}", p.display()))
         };
         let channel = read(dir.join("channel.json"))?;
-        let info_path = if dir.join("info.json").exists() { dir.join("info.json") } else { dir.join("info-start.json") };
+        let info_path =
+            if dir.join("info.json").exists() { dir.join("info.json") } else { dir.join("info-start.json") };
         let info = read(info_path)?;
         let lib_slot = info["cryptarchia_info"]["lib_slot"]
             .as_u64()
@@ -309,7 +310,8 @@ pub fn final_tier(answers: &NodeAnswers, channel_id: &Hash) -> Result<FinalTier>
             }
         }
         let payload = i.payload()?;
-        let c = i.elided()?.check(payload, channel_id).map_err(|e| anyhow!("block {id}: inscription refused: {e:?}"))?;
+        let c =
+            i.elided()?.check(payload, channel_id).map_err(|e| anyhow!("block {id}: inscription refused: {e:?}"))?;
         ensure!(c.tx_hash == i.tx_hash, "block {id}: the inscription's hash is not the node's");
         let s = parse_block(payload, &mut NoVisitor).map_err(|e| anyhow!("block {id}: parser refused it: {e:?}"))?;
         ensure!(s.header.block_id == id, "block {id}: carries id {}", s.header.block_id);
@@ -466,7 +468,10 @@ pub struct Collected {
 /// needs an input that applies no key rotation.
 pub fn collect(base: &[u8], attestations: &[SignedAttestation]) -> Result<Collected> {
     let mut input = CheckpointInputB::decode(base).map_err(|e| anyhow!("base input: {e:?}"))?;
-    ensure!(input.config_changes.is_empty(), "the base input rotates keys: the collector checks against the parent's set");
+    ensure!(
+        input.config_changes.is_empty(),
+        "the base input rotates keys: the collector checks against the parent's set"
+    );
     let deployment = deployment_of(&input.config);
     let keys = &input.parent.keys;
     let ksh = key_set_hash(keys, input.parent.posting_timeframe);
@@ -514,13 +519,31 @@ pub fn upgrade_pre_producer_input(old: &[u8], producer: &ElidedInscription<'_>) 
     let tail = 4 + attestor_core::SIGNED_ATTESTATION_LEN + 4;
     ensure!(old.len() > tail, "too short");
     let (head, rest) = old.split_at(old.len() - tail);
-    ensure!(rest[..4] == 1u32.to_le_bytes() && rest[tail - 4..] == 0u32.to_le_bytes(), "not the one-attestation layout");
+    ensure!(
+        rest[..4] == 1u32.to_le_bytes() && rest[tail - 4..] == 0u32.to_le_bytes(),
+        "not the one-attestation layout"
+    );
     let mut w = checkpoint_core::input::Writer::default();
     w.inscription(producer);
     let out = [head, w.0.as_slice(), rest].concat();
     let input = CheckpointInputB::decode(&out).map_err(|e| anyhow!("the upgraded input does not decode: {e:?}"))?;
     ensure!(input.attestations.len() == 1 && input.t_index as usize + 1 == input.blocks.len(), "unexpected shape");
     Ok(out)
+}
+
+/// `base` with another `T` among its blocks: `tIndex` moved to block `tip` and the producer's inscription
+/// replaced by the node's final inscription of that block. The blocks after `T` stay as the hash-linked
+/// path along which attestations of descendants of `T` are checked.
+pub fn retip(base: &[u8], answers: &NodeAnswers, tip: u64) -> Result<Vec<u8>> {
+    let mut input = CheckpointInputB::decode(base).map_err(|e| anyhow!("base input: {e:?}"))?;
+    let first = parse_block(input.blocks[0], &mut NoVisitor).map_err(|e| anyhow!("{e:?}"))?.header.block_id;
+    let index = tip.checked_sub(first).context("the tip is before the input's first block")?;
+    ensure!((index as usize) < input.blocks.len(), "the tip is after the input's last block");
+    let ins = final_inscriptions(answers, &input.config.channel_id)?;
+    let t = ins.get(&tip).with_context(|| format!("the node holds no final inscription of block {tip}"))?;
+    input.t_index = u32::try_from(index)?;
+    input.producer = t.elided()?;
+    Ok(input.encode())
 }
 
 /// Devnet set-up, not part of an attestor: `base` re-keyed to the stand-in key set `keys` (in this
@@ -592,4 +615,3 @@ pub fn fixture_meta(name: &str, bytes: &[u8], description: &str, expect: Option<
     }
     Ok(meta)
 }
-

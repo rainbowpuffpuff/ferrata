@@ -45,7 +45,14 @@ fn main() -> Result<()> {
     other_chain.evm_chain_id[31] ^= 1;
     // attestation-3 presents channel-2's certificate of attestation-2.
     let cert_of_2 = sign_certificate(&ch2, &d, &at2.verifying_key().to_bytes());
-    let uncertified = SignedAttestation::new(&key("attestation-3"), ch2.verifying_key().to_bytes(), cert_of_2, &d, &tier.key_set_hash, tier.tip);
+    let uncertified = SignedAttestation::new(
+        &key("attestation-3"),
+        ch2.verifying_key().to_bytes(),
+        cert_of_2,
+        &d,
+        &tier.key_set_hash,
+        tier.tip,
+    );
     let cases: Vec<(&str, Vec<SignedAttestation>, &str, &str)> = vec![
         ("too-few", vec![a1], "InsufficientAttestations", "one valid attestation of the t = 2 that n = 3 needs"),
         ("none", vec![], "InsufficientAttestations", "no attestation"),
