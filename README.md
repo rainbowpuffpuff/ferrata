@@ -66,6 +66,28 @@ imported with their history: their earlier commits keep their original paths.
 - [docs/REVIEW-core.md](docs/REVIEW-core.md): each function of the core against its specification
   section, with deviations and the tests that pin it.
 
+## Guides, trust and performance (first drafts, 11 November 2026)
+
+The documents the two RFPs ask for, drafted from the results and design notes above; every statement
+cites the file it rests on, and each says what is not built.
+
+- [docs/guides/consumer-guide.md](docs/guides/consumer-guide.md): consuming attestations from a LEZ
+  program (public call, private read), statement identifiers, the Recommended Consumer Pattern, error
+  codes, chain binding, migration (RFP-021 S.3, S.4).
+- [docs/guides/operator-guide.md](docs/guides/operator-guide.md): the updater, the lab, the root
+  importer, the checkpoint prover and relayer, watchers, keys, costs, failure modes, retirement
+  (RFP-021 S.5, S.7; RFP-022 R.13).
+- [docs/guides/deployer-guide.md](docs/guides/deployer-guide.md): deploying the programs on LEZ and the
+  vault on an EVM chain, gas limits under Glamsterdam's state gas, configuration and pairing
+  (RFP-022 R.14).
+- [docs/guides/user-guide.md](docs/guides/user-guide.md): deposit, claim, burn, release, recovery from
+  the seed, what each step reveals, defaults, and the developer integration journey (RFP-022 U.5–U.8,
+  R.12).
+- [docs/trust.md](docs/trust.md): who is trusted for what, what each failure does and what bounds the
+  loss, residual privacy correlations (RFP-021 S.6; RFP-022 Security).
+- [docs/performance.md](docs/performance.md): RFP-021 P.1–P.9 and RFP-022 P.1–P.7 with where each figure
+  was measured, and the gaps.
+
 ## Specified but not built
 
 The design notes specify these; there is no code for them here:
