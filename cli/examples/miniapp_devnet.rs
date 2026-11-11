@@ -269,7 +269,15 @@ impl Devnet {
         let cid = config.id(program);
         let out = Command::new("forge")
             .current_dir(Path::new(env!("CARGO_MANIFEST_DIR")).join("../vault"))
-            .args(["script", "script/CliLocal.s.sol:CliLocal", "--rpc-url", &rpc, "--broadcast", "--unlocked", "--sender"])
+            .args([
+                "script",
+                "script/CliLocal.s.sol:CliLocal",
+                "--rpc-url",
+                &rpc,
+                "--broadcast",
+                "--unlocked",
+                "--sender",
+            ])
             .arg(ANVIL0.to_string())
             .env("FERRATA_CID", hx(&cid))
             .output()?;
@@ -421,9 +429,7 @@ impl Devnet {
                 "checkpoint_fee": u256_str(f.checkpointFee),
             }));
         }
-        let cap = |c: IVault::tokenCapReturn| {
-            json!({"capacity": u256_str(c.capacity), "refill_per_second": u256_str(c.refillPerSecond), "available": u256_str(c.available)})
-        };
+        let cap = |c: IVault::tokenCapReturn| json!({"capacity": u256_str(c.capacity), "refill_per_second": u256_str(c.refillPerSecond), "available": u256_str(c.available)});
         let deposit_cap = eth::view(&self.p, self.vault, IVault::tokenCapCall { token, direction: 0 }, None).await?;
         let release_cap = eth::view(&self.p, self.vault, IVault::tokenCapCall { token, direction: 1 }, None).await?;
         let escrowed = eth::view(&self.p, self.vault, IVault::escrowedCall { token }, None).await?;
@@ -521,8 +527,10 @@ impl Devnet {
     async fn relay(&mut self) -> Result<Value> {
         let n = eth::view(&self.p, self.vault, IVault::nextLeafIndexCall {}, None).await?;
         let root = eth::view(&self.p, self.vault, IVault::depositRootCall {}, None).await?;
-        let mut storage =
-            vec![(word(0), slot(&self.p, self.vault, word(0)).await?), (word(1), slot(&self.p, self.vault, word(1)).await?)];
+        let mut storage = vec![
+            (word(0), slot(&self.p, self.vault, word(0)).await?),
+            (word(1), slot(&self.p, self.vault, word(1)).await?),
+        ];
         storage.push((word(2), self.cid));
         ensure!(storage[0].1 == root.0, "slot 0 is depositRoot");
         let at = 9_000_000 + 64 * self.eth_blocks;
@@ -759,7 +767,10 @@ impl Devnet {
         let released = eth::released_nullifiers(&self.p, self.vault, 0, 10_000).await?;
         let (rows, _) = scan::burns(&self.user, &self.ctx, &history, &released);
         let row = rows.iter().find(|b| b.owned.burn.burn_index == burn_index).context("not a burn of this wallet")?;
-        ensure!(!row.released, "already released: the vault's NullifierAlreadyUsed for this burn's NOut (checked before sending)");
+        ensure!(
+            !row.released,
+            "already released: the vault's NullifierAlreadyUsed for this burn's NOut (checked before sending)"
+        );
         let roots = eth::accepted_burn_roots(&self.p, self.vault, 0, 10_000).await?;
         let (root_b, count) = *roots
             .iter()
@@ -862,7 +873,9 @@ impl Devnet {
         let r = self.zone.world.role("SetCap (admin view)", seed, &msg, target);
         self.zone.record(&r);
         ensure!(r.ok(), "{}", refusal_of(&r, "SetCap"));
-        Ok(json!({"settled": true, "what": "SetCap", "mints": mints, "capacity": capacity.to_string(), "refill_per_second": refill.to_string()}))
+        Ok(
+            json!({"settled": true, "what": "SetCap", "mints": mints, "capacity": capacity.to_string(), "refill_per_second": refill.to_string()}),
+        )
     }
 
     /// `Freeze` from the freeze authority, bounded against the newest record's attested time.
@@ -945,7 +958,12 @@ fn main() -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     let mut devnet = rt.block_on(Devnet::start(&dir, anvil_port))?;
     let listener = TcpListener::bind(("127.0.0.1", port))?;
-    println!("miniapp devnet: http://127.0.0.1:{port}/rpc (anvil {}, vault {}, configId {})", devnet.rpc, devnet.vault, hx(&devnet.cid));
+    println!(
+        "miniapp devnet: http://127.0.0.1:{port}/rpc (anvil {}, vault {}, configId {})",
+        devnet.rpc,
+        devnet.vault,
+        hx(&devnet.cid)
+    );
     let mut log = std::fs::File::create(dir.join("calls.jsonl"))?;
     for stream in listener.incoming() {
         let mut stream = match stream {
@@ -964,7 +982,11 @@ fn main() -> Result<()> {
             continue;
         }
         if method == "GET" {
-            respond(&mut stream, "200 OK", &json!({"ok": true, "service": "ferrata miniapp devnet", "path": path}).to_string());
+            respond(
+                &mut stream,
+                "200 OK",
+                &json!({"ok": true, "service": "ferrata miniapp devnet", "path": path}).to_string(),
+            );
             continue;
         }
         let req: Value = serde_json::from_slice(&body).unwrap_or(Value::Null);
