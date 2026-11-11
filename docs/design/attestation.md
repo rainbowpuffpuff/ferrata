@@ -50,7 +50,7 @@ In LEZ v0.4 a handler sees only its own actor's state and communicates by messag
 |---|---|---|
 | `instance(id)` | configuration fixed at `Init` (chain id, `genesis_validators_root`, genesis time, slot duration, preset, fork schedule; in the design also the weak-subjectivity bound and root instance id, not built), an active flag, and the compact store: finalized beacon header, committees as 80-byte summaries (key root, aggregate key). 425–505 bytes | `Init`; `Apply` / `ApplyVerified` |
 | `job(id, job_id)` | one public-path update in progress: digests, signature-check phase, the 576-byte Miller product, adoption progress. 1,249–1,409 bytes | `JobOpen`, `Miller`, `Adopt`; cleared by `Finish` |
-| `header(id, slot)` | the record: beacon header, execution root, block number and hash, state and receipts roots, timestamp. Written once; 293 bytes | `Record`, sent by `instance(id)` at the last step of `Init` and of each update that finalizes a new header |
+| `header(id, slot)` | the record: beacon header, execution root, block number and hash, state and receipts roots, timestamp, the instance's chain id and the parent hash of the core's `attest::HeaderRecord`. Written once; 333 bytes of actor state (293 before those two, `lez/RESULTS.md` §5, Decisions 2) | `Record`, sent by `instance(id)` at the last step of `Init` and of each update that finalizes a new header |
 
 `id = H(config ‖ checkpoint)`; `job_id = H(id ‖ store digest ‖ update digest)`.
 
@@ -75,7 +75,7 @@ There is no committee actor. An earlier version of the design kept both committe
 
 Every handler checks that its receiver is the PDA the message implies, that is, that the message arrived at its own address. Only the four internal messages also check that the sender is this program's expected actor; the external steps are open to anyone and stand or fall on what they carry. The runtime sets `from`; a sender cannot claim it (findings note §6). Refusals exit with a code and never panic.
 
-`ApplyVerified` is authenticated by program, not by account. A private actor's message to a public actor carries the sending program's account id unblinded, and LEZ's circuit accepts a private transition only with a receipt of the image deployed at that program account, so `from.program_account_id == ferrata` means "produced by this program's code". Only `VerifyAll` sends `ApplyVerified`, after the whole verification, and the job carries the digest of the store it was verified against, so it applies once. The same message from a private actor of another program was refused (exit 102) and its transaction paid only its fee (in-process harness, dev mode).
+`ApplyVerified` is authenticated by program, not by account. A private actor's message to a public actor carries the sending program's account id unblinded, and LEZ's circuit accepts a private transition only with a receipt of the image deployed at that program account, so `from.program_account_id == ferrata` means "produced by this program's code". Only `VerifyAll` sends `ApplyVerified`, after the whole verification, and the job carries the digest of the store it was verified against, so it applies once. The same message from a private actor of another program was refused (exit 102, now 202 `WRONG_SENDER`) and its transaction paid only its fee (in-process harness, dev mode).
 
 ### 3.3 Immutability (VS.3)
 
@@ -151,12 +151,12 @@ A coded refusal pays only the cycles it used and changes no state. Eighteen refu
 | Forged signature, at `Finish` (steps 1 and 2 pass and are paid) | 3,635,478 | 40 `SignatureInvalid` |
 | Update for another chain's instance, at `Finish` | 3,637,696 | 40 `SignatureInvalid` |
 | Malformed signature, at `Open` | 353,214 | 41 `SignatureMalformed` |
-| Duplicate `Open` of the same job | 2,183,111 | 107 `JobExists` |
+| Duplicate `Open` of the same job | 2,183,111 | 207 `JobExists` (107 when measured) |
 | `Open` of an already applied update | 207,687 | 52 `NotNewer` |
 | `Finish` before `Miller`; `Miller` replayed | 23,420; 20,491 | 81 `StepError::Phase` |
-| `Finish` after the job applied; a job id sent to another instance | 5,731 | 105 `NoJob` |
-| Internal message from a wrong sender (five cases) | 17,325–31,350 | 102 `WrongSender` |
-| `Init` of an existing instance | 17,491 | 103 `AlreadyInitialized` |
+| `Finish` after the job applied; a job id sent to another instance | 5,731 | 205 `NoJob` (105 when measured) |
+| Internal message from a wrong sender (five cases) | 17,325–31,350 | 202 `WrongSender` (102 when measured) |
+| `Init` of an existing instance | 17,491 | 203 `AlreadyInitialized` (103 when measured) |
 | `Open` before its signature slot | 10,000,000 | LEZ: outside the validity window |
 
 Two kinds of refusal are not cheap:
@@ -239,7 +239,7 @@ EIP-2935 keeps the last 8,191 block hashes in a system contract. One hop proves 
 
 One enum of stable numeric codes is shared by the program and the dry run, covering the U.5 failure modes. Codes seen in the measured program runs are listed in §4.4.
 
-Each code has one owner: the core's are 1–79 and 100–199, the step API's 80–99, the program's own 200–214 and the reference consumer's 220–229, and a test fails if two owners share a code (`lez/harness/tests/exit_codes.rs`). The table of §4.4 was measured before the program's codes moved from 100–112 to 200–212 and shows the earlier numbers.
+Each code has one owner: the core's are 1–79 and 100–199, the step API's 80–99, the program's own 200–214 and the reference consumer's 220–229, and a test fails if two owners share a code (`lez/harness/tests/exit_codes.rs`). The table of §4.4 was measured before the program's codes moved from 100–112 to 200–212; it gives the current code with the one measured beside it.
 
 ### 5.6 No scan (P.9)
 
@@ -403,7 +403,7 @@ A `just bench` target will regenerate every number from a fresh checkout with re
 | P.3 tracking cost, apart from attestation cost | per-update costs in the in-process harness; amortised figures derived from them (§10) | the A4 report at the recommended cadence, with real proving |
 | P.4 user proving | no proof; the update proof is not a user proof (its 9.18 GiB peak exceeds the declared user minimum). A private attestation of a log: 380,577 user cycles for the consumer's two transitions (executor, software Keccak), LEZ's privacy circuit not counted | private read, attestation and claim proofs (time, memory); a 320-hop claim is estimated at about 58M accelerated user cycles |
 | P.5 latency; P.6 off-chain resources | — | finality wait (about 13–19 minutes), update availability, the job's blocks, deferral; daemon CPU, memory, bandwidth |
-| P.7 state growth | record 293 bytes, job 1,249–1,409, instance 425–505 (in-process harness); committee storage constant | projections over one and five years |
+| P.7 state growth | record 333 bytes (293 before the chain id and parent hash), job 1,249–1,409, instance 425–505 (in-process harness); committee storage constant | projections over one and five years |
 | P.8 BLS against a precompile | the two pairing steps (`Miller` 3.31M, `Finish` 3.65M) are 7.0M of an update's 9.2M (in-process harness); in the bare guest, Miller loops 40%, final exponentiation 35%, hash to G2 11% of 10.21M | the precompile delta; a precompile is reachable only from public transactions |
 | P.9 no scan | by construction (§5.6) | — |
 

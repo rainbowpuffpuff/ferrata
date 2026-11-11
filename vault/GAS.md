@@ -5,7 +5,8 @@ day, all with forge 1.3.6, solc 0.8.26, optimizer on (200 runs), EVM cancun. "v3
 [`docs/design/spec/bridge-spec-v3-changes.md`](../docs/design/spec/bridge-spec-v3-changes.md). These are Foundry's
 gas rules (Prague). Sepolia has run Glamsterdam since 6 October 2026, which prices new state far higher (EIP-8037):
 creation costs there are in "Creating the contracts on today's Sepolia" below; calls that write new storage cost
-more there too and were not measured on Sepolia.
+more there too: the v3 round trip's 16 transactions as Sepolia's own node prices them are in "On Sepolia since
+Glamsterdam" below, and v5's calls were not measured on Sepolia.
 
 ```
 forge test --isolate --match-contract GasScenarios -vv

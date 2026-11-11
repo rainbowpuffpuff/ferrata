@@ -21,14 +21,16 @@ The bridge moves registered ERC-20 tokens and ETH to LEZ and back in fixed denom
 
 | Component | State |
 |---|---|
-| Vault, specification v3 (vault v4) | Prototype: D3 to D5, D9, and the vault items of D11 and D13 (both rules behind an immutable `mode`, watchers, the 14-day role change, keyless retirement, the cap floor) with a linked library; its own suite mocks proofs behind RISC Zero's unmodified emergency-stop wrapper; the return leg (rule (A)) and a real rule (B) checkpoint proof were verified with RISC Zero's real Groth16 verifier (§10.3, §18.7); not audited or deployed; gas measured (§18.1, §18.7, `vault/GAS.md`). D13's fees not in it |
+| Vault, specification v3 (vault v5) | Prototype: D3 to D5, D9, and the vault items of D11 and D13 (both rules behind an immutable `mode`, watchers, the 14-day role change, keyless retirement, the cap floor, D13's fees) with a linked library; its own suite mocks proofs behind RISC Zero's unmodified emergency-stop wrapper; the return leg (rule (A)) and real rule (B) checkpoint proofs were verified with RISC Zero's real Groth16 verifier (§10.3, §18.7, §18.8); not audited; not deployed (the v3 vault of the end-to-end fixture is on Sepolia with one deposit, `lez/live/inbound/README.md`); gas measured (§18.1, §18.7, `vault/GAS.md`) |
 | Vault, specification v2 | Prototype built; the release proof v2 was verified against it with the real Groth16 verifier (§18.2) |
 | `ferrata-bridge-core` v2 (trees, commitments, nullifiers, statements, recovery) | Built and tested, SPEC-v2 encodings; without `mac` v2 and `NOut` v2 |
 | Release guest v2 | Built; proved on a laptop CPU, verified on a local EVM against the v2 vault with the real verifier and, unchanged, against the v3 vault under a burn root finalised by real checkpoint proofs (§18.7) |
 | Claim guest (the bridge's part of a claim) | Built for measurement; not LEZ's own claim circuit |
 | Checkpoint program | Prototype: SPEC-v2 §4.1–4.2 with D3, rule (A) with cycles measured; two real proofs of a small checkpoint (§18.4); a candidate and a finalisation proof of the end-to-end fixture accepted by the v3 vault (§18.7). Rule (B) of D7 and D13 built in its own guest, with the attestor's core; cycles measured against rule (A) on the same blocks (§18.5) |
 | Rule (A) analysis | Written proof and simulation (`docs/design/finality-rule/`) |
-| Bridge program on LEZ; `ferrata_attestor` as a Logos module (its core is built, §8.3); gas drop, relayer, wrapper, `monitor` watchers | Not built |
+| Bridge program on LEZ | Prototype (`lez/BRIDGE-RESULTS.md`): pairing, the registry attested from the vault, `ImportRoot`, plaintext and private claims, burns, fees by leaf index, caps, freezes, roles and `Sunset`, run in the in-process harness (private paths in dev mode); real proofs of a private claim and a private burn of an earlier image (§7 there); an earlier, frozen image ran on a live LEZ sequencer, on a stand-in chain and for deposit 0 of the Sepolia vault (§11 there) |
+| Command-line tool `ferrata` (`cli/`) | Prototype: keys, deposit, scan, recover, claim, burn, release, status; one end-to-end test against a local anvil vault (mock verifier) and the harness (dev mode) |
+| `ferrata_attestor` as a Logos module (its core is built, §8.3); gas drop, relayer daemon, wrapper, `monitor` watchers | Not built |
 
 ## 2. Overview
 
@@ -542,7 +544,7 @@ Off-chain roles are liveness-only under rule (B); under rule (A) the watchers ha
 
 **Stop-only failsafe (Security #9).** The `verifier` immutable is RISC Zero's unmodified `RiscZeroVerifierEmergencyStop` around the base verifier, with its owner renounced (§14), so only a proof that RISC Zero itself is unsound trips it. It has no unpause. After a stop, nothing more is released or refunded (D13). No function moves escrow or changes what the vault accepts: an escrow-moving recovery would need someone to choose new verification logic, which Security #8 forbids.
 
-In the prototype, refunds still work after a stop (§19).
+The vault prototype does this since v4: after a stop `refund` reverts (`vault/README.md`, `EmergencyStop.t.sol`).
 
 ## 16. Retirement and refunds: the migration mechanism
 
@@ -579,7 +581,7 @@ CPU figures come from one laptop, AMD Ryzen 9 7940HS (8 cores, 16 threads), 54 G
 
 ### 18.1 Vault v3 gas: measured (local EVM, mock verifier)
 
-Forge 1.3.6, solc 0.8.26 (200 runs, cancun), `forge test --isolate`: whole transactions, including base cost, calldata and cold access. State: 42 earlier deposits, escrow in every token, one finalised checkpoint, finite caps, relay fees registered; checkpoint rows use `n = 4`, `t = 3`. This is the rule (A) vault without D11 and D13.
+Forge 1.3.6, solc 0.8.26 (200 runs, cancun), `forge test --isolate`: whole transactions, including base cost, calldata and cold access. State: 42 earlier deposits, escrow in every token, one finalised checkpoint, finite caps, relay fees registered; checkpoint rows use `n = 4`, `t = 3`. This is the rule (A) vault without D11 and D13; the v5 vault's figures (both rules, D13's fees) are in `vault/GAS.md`.
 
 | Operation | Gas |
 |---|---:|
@@ -666,21 +668,21 @@ Rule (B) over blocks 8..=202 of the lab's chain (`lez/lab/`): LEZ v0.4.0-rc1's o
 
 ## 19. Specified but not yet in the prototypes
 
-The vault prototype (v4) implements D3 to D5, D9, the vault items of D11 and D13 except fees, and both rules; the checkpoint prototype implements D3 with rule (A), and rule (B) in its own guest; the core and the release guest implement SPEC-v2. Specified, and missing from them:
+The vault prototype (v5) implements D3 to D5, D9, the vault items of D11 and D13 with D13's fees, and both rules; the bridge program on LEZ (`lez/BRIDGE-RESULTS.md`) implements the LEZ side of D13's inbound items, fees, caps and freezes; the checkpoint prototype implements D3 with rule (A), and rule (B) in its own guest; the core and the release guest implement SPEC-v2. Specified, and missing from them:
 
 | Source | Item | Prototype today |
 |---|---|---|
 | D11 | refunds, and releases whose delay equals `revokeWindow`, open only after the last revocable second | built (vault v4) |
 | D11 | `finalize` also compares `t` and the tip, and checks `importedLeafCount <= nextLeafIndex` | built (vault v4: the whole journal, by its digest) |
-| D11 | further logic in a linked library | built (vault v4: `FerrataRegistry`; runtime 24,312 bytes, 264 under EIP-170) |
-| D12 | `mac` v2 covering `memo` | MAC without `memo` |
+| D11 | further logic in a linked library | built (`FerrataRegistry`; v5's runtime 24,242 bytes, 334 under EIP-170) |
+| D12 | `mac` v2 covering `memo` | the core: MAC without `memo`; the bridge program's wire (`lez/bridge-wire`) has `mac` v2 |
 | D13 | rule (B): `final-tier/v2` message, attestation-key certificates, `ferrata_attestor`, program and vault path, immutable `mode`, 1 h wait | program and vault paths built and measured; `ferrata_attestor` module not built |
 | D13 | `submitCandidate` refuses a `newState` already pending | built (v3 and v4) |
-| D13 | watchers; cancelling candidates whose key set lags | vault side built (v4: up to three watchers); `monitor` not built |
-| D13 | 14-day freeze-authority replacement; renounced stop owner; no refunds after a stop; keyless retirement after 30 days; cap floor | built (vault v4); the stop owner's renunciation is a deployment-script step, not run |
-| D13 | `ImportRoot` over slots 0 and 1; claim bound `leafIndex < count`; refunds on the release bucket; gas-drop receipt binding | refunds on the release bucket built (vault v4); no LEZ program yet |
-| D13 | `NOut` v2; burn account keyed on the whole note; newest root past its delay | SPEC-v2 `NOut` with `burnId` |
-| D13 | fees escrowed at deposit; checkpoint fee; default caps | v2/v3 fee and cap logic |
+| D13 | watchers; cancelling candidates whose key set lags | vault side built (since v4: up to three watchers); `monitor` not built |
+| D13 | 14-day freeze-authority replacement; renounced stop owner; no refunds after a stop; keyless retirement after 30 days; cap floor | built (since vault v4); the stop owner's renunciation is a step of the deployment script, run in its fork rehearsals only (`vault/README.md`, "Deployment") |
+| D13 | `ImportRoot` over slots 0 and 1; claim bound `leafIndex < count`; refunds on the release bucket; gas-drop receipt binding | refunds on the release bucket built (since vault v4); `ImportRoot` over slots 0 and 1 and the claim bound built in the bridge program; the gas-drop receipt not built |
+| D13 | `NOut` v2; burn account keyed on the whole note; newest root past its delay | the release guest: SPEC-v2 `NOut` with `burnId` (`NOut` v2 is in the bridge program's wire, wallet side only); the burn account keyed on the whole note built in the bridge program; the newest-root rule is a wallet rule, not built |
+| D13 | fees escrowed at deposit; checkpoint fee; default caps | fees escrowed at deposit and the checkpoint fee built (vault v5, `Fees.t.sol`); default caps: the rate-limit mechanism and the cap floor only |
 
 Built already, for reference: D12's tagged canonical `burnFrontierHash` and the 64-witness cycle-count gate.
 
