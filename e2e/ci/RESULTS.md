@@ -101,8 +101,15 @@ cargo-risczero and r0vm 3.0.5, C++ 2024.1.5, guest Rust 1.88.0 in `~/.risc0` and
 GitHub keeps 10 GB of caches per repository (compressed); the first runs on GitHub will show whether the
 `roundtrip` cache stays under it. If it does not, the job still passes: it then builds from cold each time.
 
+## `vault`
+
+`forge test --no-match-contract PrivacySuite` in `vault/` (the job's last step), Foundry 1.3.6: 37 suites, 433 tests
+passed, 0 failed, in 20 s. With `PrivacySuite`: 433 passed and 1 failed, `test_privacySuite_ethereumHalf`
+(`vm.exists: the path ../target/privacy/scenario.json is not allowed to be accessed for read operations`): it needs the
+file the LEZ half of the privacy suite writes, and fails instead of skipping without it.
+
 ## What was not run
 
 The workflow itself on GitHub (no push from this branch): the job steps were run on the box, one by one, by the
 same scripts, after the same toolchain versions were installed or present. `actions/checkout`, the caches and
-`dtolnay/rust-toolchain`/`foundry-toolchain` were not exercised; the workflow file parses as YAML (four jobs).
+`dtolnay/rust-toolchain`/`foundry-toolchain` were not exercised; the workflow file parses as YAML (five jobs: test, witness-independence, roundtrip, vault, links).
