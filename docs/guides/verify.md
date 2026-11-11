@@ -17,7 +17,9 @@ python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-1 --rpc http://localhos
 
 It reads the run's records (`identity.json`, `deploy.json`, `params.json`, `run.json`, `manifest.json`, `crown.json`,
 `releases/`, `lez/session-a/`, `lez/session-b/`), asks the chain, and prints one line per check: `PASS`, `FAIL`
-(exit status 1) or `PENDING` (the run has not reached that stage, on chain and in the records; not a failure). It
+(exit status 1) or `PENDING` (the run has not reached that stage, on chain and in the records; not a failure). An
+endpoint that does not answer as Sepolia stops it after the first check with exit status 2. A stage the chain has
+reached but the records predate (records fetched mid-run) is checked from the chain. It
 uses only read methods (`eth_chainId`, `eth_getCode`, `eth_getBalance`, `eth_getTransactionCount`,
 `eth_getTransactionByHash`, `eth_getTransactionReceipt`, `eth_getLogs`, `eth_getBlockByNumber`, `eth_call`), computes
 Keccak-256 itself, and needs nothing from this repository but the records (and, if present, `e2e/crown/README.md`,
@@ -32,14 +34,15 @@ whose id table it compares with the ids pinned in the script).
 | configId and genesisState recomputed | sha256 of the 261-byte configuration preimage from LEZ session A's records equals the configId the vault holds; `bedrockGenesisId` = sha256 of the deployment settings; the genesis state recomputed from the tip T0 and the channel's key set equals the vault's | the LEZ devnet's records (no public LEZ network exists to read them from): the proof in the next checks is what binds them |
 | every recorded transaction | each transaction in `manifest.json` has a receipt with status 1, in the recorded block, from the deployer, to the vault, with the recorded gas used; says whether its block is finalized | |
 | deployer's nonce | the deployer sent exactly the seven deployment transactions plus the recorded ones (or reports how many later ones) | |
-| deposits | the `Deposit` events: depositor, ETH, leaf index = j, amount; each commitment recomputed from the depositor, j, the kind and the destination equals the event's and the record's; `nextLeafIndex` = the number of deposits; the ETH the deposit transactions sent and the vault's balance | the commitments are recomputable only because this run used the **published test seed** of `bridge/e2e`; a real user's seed is secret |
+| deposits | each recorded deposit's commitment, recomputed from the depositor, j, the kind and the destination, is in exactly one `Deposit` event, from the deployer, in ETH, with index j (deposits by anyone else are counted, not failed: the vault is public); `nextLeafIndex` = the number of `Deposit` events; the ETH every deposit transaction sent and the vault's balance | the commitments are recomputable only because this run used the **published test seed** of `bridge/e2e`; a real user's seed is secret |
 | checkpoint journal fields | the 17-word journal names this chain, this vault, this configId, nMin = tMin = 1, parent = genesisState, as many imported leaves as deposits, as many burns as LEZ burn notes, and tip T1 = session B's last block (id and hash); session B starts at session A's tip | |
 | checkpoint submitted | the `CandidateSubmitted` event of the submit transaction carries the journal's new state, parent, burn root, counts and tip; **the recorded seal verifies for the vault's own `checkpointImageId` and sha256(journal) in the vault's own verifier** (`eth_call`), and a seal changed in one byte is refused | RISC Zero's proof system |
 | checkpoint final | after the wait W: `finalState` = the journal's new state, `checkpointCount` ≥ 1, the burn root accepted; before it, PENDING with the time finalization opens | |
 | releases | each release's journal verifies with its seal for the vault's `releaseImageId`; once paid: the nullifier is spent, the `Release` event names the recorded recipient, token, amount and the checkpoint's burn root, and the vault's balance is at most deposits minus releases | |
 
 Measured on 11 November 2026 against crown-live-1's records while the run waited W (submit at Sepolia block
-12,111,746; finalization opens 13:27:48Z): **10 passed, 2 pending, 0 failed**, 48 RPC calls to the public endpoint.
+12,111,746; finalization opens 13:27:48Z): **10 passed, 2 pending, 0 failed**, 48 RPC calls to the public endpoint
+(publicnode); the same result later on a second endpoint (`rpc.sepolia.ethpandaops.io`).
 After the wait (records fetched again at 13:34Z): **11 passed, 1 pending, 0 failed**: finalization and release 0 on
 chain, release 1 not yet sent. The same records with one commitment, one byte of the seal and the genesis state
 changed: **5 failed**, exit status 1 ([`e2e/runs/verify-anyone/`](../../e2e/runs/verify-anyone/README.md)).
