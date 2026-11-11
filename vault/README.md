@@ -795,7 +795,12 @@ because a test contract (`VaultHandler`, 37,928 bytes) is above EIP-170, which f
 in tests. On branches `integration3` and `integration4` (the same `src/`, plus `test/real/RealBlocks.t.sol`,
 the real-block checkpoint's 10 tests, and `test/PrivacySuite.t.sol`, the privacy suite's Ethereum half):
 `forge test` 35 suites, 407 tests passed, 31 of them in `test/real/`; coverage of both files as above
-(`../docs/evidence-suites.txt`).
+(`../docs/evidence-suites.txt`). With the fixes of the security review of 11 November 2026 (branch
+`secfix-vault`, on the build box): `forge test` 36 suites, 421 tests passed, 1 skipped (`PrivacySuite`, which needs
+its LEZ half's output), 0 failed; the 12 tests of `test/SecurityReview.t.sol` fail on `integration4`'s vault;
+`forge coverage` 100% of lines, statements, branches and functions of both files (vault 431, 537, 102, 82; library
+245, 338, 45, 33); `tools/mutation_spotcheck.py` 254/254 mutants killed, every one by the unit suites (the tool now
+lets the privacy suite skip in its workspaces; before, it failed there and would have hidden a survivor).
 
 The deployment and rehearsal scripts (`script/DeployVault.s.sol`, `script/ForkRehearsal.s.sol`) are not run by
 `forge test`; `forge coverage` lists them at 0%. `script/fork-rehearsal.sh` runs every step of the first under both
