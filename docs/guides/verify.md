@@ -47,8 +47,8 @@ The same records with one commitment, one byte of the seal and the genesis state
 A RISC Zero image id is a hash of the program, and a guest built outside RISC Zero's Docker build embeds the absolute
 paths of its sources (panic locations in path dependencies, the cargo registry and git checkouts). The programs of the
 live run were built on our build box (Ubuntu 24.04, `HOME=/home/q`) with the tree at the **crown build path**
-`/home/q/Downloads/software_i_built/logos-rfp/spike/ferrata-wt-crown` (`spike/tmp/integ5/bin/crown-build.sh`,
-11 Nov 05:08–05:17Z, commit db9f034; no guest source changed between it and this branch). To get the same ids anyone
+`/home/q/Downloads/software_i_built/logos-rfp/spike/ferrata-wt-crown` (11 Nov 05:08–05:17Z, commit db9f034; no
+guest source or lockfile changed between it and this branch; `build` below repeats that build's steps). To get the same ids anyone
 must build at that path with the same toolchains, which is what the Dockerfile provides:
 
 ```sh
@@ -80,4 +80,14 @@ What equal ids prove: the vault accepts checkpoint and release proofs of exactly
 LEZ ran the bridge program this source builds, so reading the source is reading what runs. What they do not prove: that
 the source is correct (that is the tests', the reviews' and an audit's job).
 
-Proven on the build box (no Docker there): see the box run below.
+**Proven on our build box** (a Modal CPU container whose image the Dockerfile mirrors; it has no Docker, so the
+script's `build` step ran there directly, on a cold box, with the tree copied to the crown build path inside the box
+only): 7 min 27 s for the three builds, **6 of 6 ids equal** the README table, and `checkpoint_b` and release equal
+the vault's immutables read on Sepolia; the six user ELFs and four R0BF programs are byte-identical to the ones the
+live run uses ([`e2e/runs/verify-anyone/`](../../e2e/runs/verify-anyone/README.md)). The Dockerfile itself has not
+been built yet (no Docker on the box, and our laptop stays free); its steps are those of the build box's image.
+
+The same build at another path gives other ids: see the control in
+[`e2e/runs/verify-anyone/`](../../e2e/runs/verify-anyone/README.md), which is why the path is part of the recipe. A
+build independent of the path (RISC Zero's Docker guest build, `RISC0_USE_DOCKER`, or path remapping) would give new
+ids, and so a new deployment; until then the path is fixed and published here.
