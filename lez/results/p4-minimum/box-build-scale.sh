@@ -15,7 +15,8 @@ export RISC0_HOME=$PWD/../../risc0-home-lez RISC0_BUILD_LOCKED=1
   echo "FERRATA_HEAD=${FERRATA_HEAD:-} FERRATA_DIRTY=${FERRATA_DIRTY:-}"
 } > "$OUT/box-env.txt" 2>&1
 cat "$OUT/box-env.txt"
-( cd ../bridge && /usr/bin/time -v cargo build --release --locked -p ferrata-e2e > "../$OUT/build-e2e.log" 2>&1; echo "e2e build exit $?" > "../$OUT/build-e2e.exit" ) &
+# bridge/ sits beside lez/, so $OUT is the same relative path from there
+( cd ../bridge && /usr/bin/time -v cargo build --release --locked -p ferrata-e2e > "$OUT/build-e2e.log" 2>&1; echo "e2e build exit $?" > "$OUT/build-e2e.exit" ) &
 /usr/bin/time -v cargo build -p harness --locked --bin prove_native_transfer > "$OUT/build-transfer.log" 2>&1
 echo "transfer build exit $?"; grep -E '^(error|warning: unused)|Finished|Elapsed \(wall' "$OUT/build-transfer.log" | tail -8
 grep -B2 -A12 '^error' "$OUT/build-transfer.log" | head -80
@@ -23,7 +24,7 @@ wait; cat "$OUT/build-e2e.exit"; grep -E '^error|Finished|Elapsed \(wall' "$OUT/
 T=target/debug/prove_native_transfer
 $T --image-ids
 # dev mode: the executor runs every session (r0vm logs its cycles), the receipts are fake
-for c in "wallet" "bare" "wallet --dummies 0" "wallet --dummies 3"; do
+for c in "wallet" "bare" "wallet --dummies 0" "wallet --dummies 3" "bare --recovery yes" "bare --padding 512"; do
   n=$(echo "$c" | tr ' ' '_' | tr -d '-')
   RISC0_DEV_MODE=1 RISC0_INFO=1 RUST_LOG=info $T --allow-dev-mode --shape $c --tx-out "$OUT/dry/$n.borsh" > "$OUT/dry/$n.log" 2>&1
   echo "dry $c exit $?: $(grep -E 'DRY RUN|shape' "$OUT/dry/$n.log" | cut -c1-220 | tr '\n' ' ')"

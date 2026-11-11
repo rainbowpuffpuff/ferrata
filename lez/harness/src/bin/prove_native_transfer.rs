@@ -17,7 +17,9 @@
 //!   private settlement. `wallet` (the default) is the wallet's transaction above; `bare` is the
 //!   same transfer as this repository's harness builds its private transactions
 //!   (`Chain::prove_and_settle_private_fresh`): no dummy inputs, no padding, no recovery note, the
-//!   refund to a public account. `--dummies N` overrides the number of dummy inputs.
+//!   refund to a public account. `--dummies N`, `--padding N|none` and `--recovery yes|no` override
+//!   the shape's number of dummy inputs, note padding and fee recovery note (to tell their costs
+//!   apart; the refund's destination stays the shape's).
 //! * `prove_native_transfer --settle FILE`: rebuild the same state and settle a transaction
 //!   written by `--tx-out`; LEZ's settlement verifies its receipt (a fake one only in dev mode).
 //! * `--image-ids`: print the circuit's image id and stop.
@@ -59,7 +61,8 @@ const TIME_MS: u64 = 1_762_819_200_000;
 
 fn usage() -> ! {
     eprintln!(
-        "usage: prove_native_transfer [--shape wallet|bare] [--dummies N] [--tx-out FILE] [--allow-dev-mode] \
+        "usage: prove_native_transfer [--shape wallet|bare] [--dummies N] [--padding N|none] [--recovery yes|no] \
+         [--tx-out FILE] [--allow-dev-mode] \
          | --settle FILE | --image-ids"
     );
     std::process::exit(2)
@@ -105,7 +108,7 @@ fn recipient_balance(chain: &Chain) -> u128 {
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let (mut tx_out, mut settle_from, mut allow_dev_mode, mut only_ids) = (None, None, false, false);
-    let (mut shape, mut dummies) = ("wallet".to_string(), None);
+    let (mut shape, mut dummies, mut padding, mut recovery) = ("wallet".to_string(), None, None, None);
     let mut it = args.iter();
     while let Some(arg) = it.next() {
         match arg.as_str() {
@@ -113,6 +116,19 @@ fn main() {
             "--settle" => settle_from = Some(it.next().unwrap_or_else(|| usage()).clone()),
             "--shape" => shape = it.next().unwrap_or_else(|| usage()).clone(),
             "--dummies" => dummies = Some(it.next().unwrap_or_else(|| usage()).parse::<usize>().unwrap_or_else(|_| usage())),
+            "--padding" => {
+                padding = Some(match it.next().unwrap_or_else(|| usage()).as_str() {
+                    "none" => None,
+                    n => Some(n.parse::<u32>().unwrap_or_else(|_| usage())),
+                })
+            }
+            "--recovery" => {
+                recovery = Some(match it.next().unwrap_or_else(|| usage()).as_str() {
+                    "yes" => true,
+                    "no" => false,
+                    _ => usage(),
+                })
+            }
             "--allow-dev-mode" => allow_dev_mode = true,
             "--image-ids" => only_ids = true,
             _ => usage(),
@@ -143,6 +159,8 @@ fn main() {
 
     let wallet = shape == "wallet";
     let dummies = dummies.unwrap_or(if wallet { PADDED_PRIVATE_ACTIONS - 1 } else { 0 });
+    let padding = padding.unwrap_or(wallet.then_some(CIPHERTEXT_PAD_SIZE));
+    let recovery = recovery.unwrap_or(wallet);
     let sender_actor = Actor::native_balance(sender.id());
     let inbox = system_accounts::fee_inbox_account_id();
     let public_actors = vec![Actor::native_balance(RECIPIENT), Actor::native_balance(inbox)];
@@ -173,8 +191,8 @@ fn main() {
         dummy_inputs: (0..dummies)
             .map(|_| DummyInput { nullifier_seed: random_bytes(), commitment_root, output: dummy_output() })
             .collect(),
-        ciphertext_padding: wallet.then_some(CIPHERTEXT_PAD_SIZE),
-        recoveries: if wallet {
+        ciphertext_padding: padding,
+        recoveries: if recovery {
             vec![RecipientEncryption {
                 recipient: Recipient {
                     npk: NullifierPublicKey::from(&NullifierSecretKey::from(&sender.keys.ask)),
