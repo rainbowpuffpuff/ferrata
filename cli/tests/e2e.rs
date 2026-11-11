@@ -310,6 +310,15 @@ fn ferrata(args: &[&str]) -> Result<String> {
     Ok(stdout)
 }
 
+/// Runs the `ferrata` binary with `--json`; returns whether it succeeded and the one JSON object it printed.
+fn ferrata_json(args: &[&str]) -> Result<(bool, serde_json::Value)> {
+    let out = Command::new(env!("CARGO_BIN_EXE_ferrata")).arg("--json").args(args).output()?;
+    let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+    let v: serde_json::Value =
+        serde_json::from_str(stdout.trim()).with_context(|| format!("not one JSON object: {stdout}"))?;
+    Ok((out.status.success(), v))
+}
+
 /// The checkpoint journal the vault rebuilds (VaultTestBase._checkpointJournalBytes).
 fn checkpoint_journal(chain_id: u64, vault: Address, cid: B256, c: &ICheckpoints::Checkpoint) -> Vec<u8> {
     let mut j = Vec::new();
@@ -635,6 +644,44 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         ferrata(&[common(&seed_user), vec!["scan".into()]].concat().iter().map(String::as_str).collect::<Vec<_>>())?;
     print!("{scan_out}");
     ensure!(scan_out.contains("deposits of this seed: 11"), "the binary's scan finds the user's 11 deposits");
+    // The same for scripts (`--json`): one object with the report's lines and a structured result.
+    let args = [common(&seed_user), vec!["scan".into()]].concat();
+    let (ok, scan_json) = ferrata_json(&args.iter().map(String::as_str).collect::<Vec<_>>())?;
+    ensure!(ok && scan_json["command"] == "scan" && scan_json["result"]["deposits"] == 11, "scan --json: {scan_json}");
+    let mut args = common(&seed_user);
+    args.extend([
+        "deposit".to_string(),
+        "--denomination".into(),
+        "0".into(),
+        "--from".into(),
+        keystores[0].1.to_string(),
+    ]);
+    let (ok, dep_json) = ferrata_json(&args.iter().map(String::as_str).collect::<Vec<_>>())?;
+    ensure!(
+        ok && dep_json["result"]["commitment"].as_str().is_some_and(|c| c.len() == 66)
+            && dep_json["result"]["sent"].is_null()
+            && dep_json["report"]
+                .as_array()
+                .is_some_and(|l| l.iter().any(|x| x.as_str() == Some("privacy of these choices: Minimal: only the residual correlations (token, denomination, time)"))),
+        "deposit --json, a dry run: {dep_json}"
+    );
+    let (ok, err_json) = ferrata_json(&[
+        "--seed",
+        &seed_user.display().to_string(),
+        "--eth-rpc",
+        &rpc,
+        "--vault",
+        "0x000000000000000000000000000000000000dEaD",
+        "scan",
+    ])?;
+    ensure!(
+        !ok && err_json["error"].as_str().is_some_and(|e| e.contains("no contract at")),
+        "an error as JSON: {err_json}"
+    );
+    println!(
+        "--json: scan {} deposits; deposit dry run C {}; error {}",
+        scan_json["result"]["deposits"], dep_json["result"]["commitment"], err_json["error"]
+    );
 
     // Status through the binary, Ethereum part: the registry, fees and caps in the token's units.
     let status_out =

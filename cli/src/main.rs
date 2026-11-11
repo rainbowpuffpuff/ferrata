@@ -64,6 +64,10 @@ struct Common {
     /// Accounts of each kind searched for deposit destinations.
     #[arg(long, default_value_t = DEFAULT_GAP, global = true)]
     gap: u32,
+    /// Print one JSON object instead of the report: {"command", "report" (its lines), "result"}; on an
+    /// error, {"error"}. For scripts and integrations.
+    #[arg(long, global = true)]
+    json: bool,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, ValueEnum)]
@@ -298,38 +302,60 @@ fn signer_of(c: &Common, send: &Send) -> Result<Option<flow::Signer>> {
 
 #[tokio::main]
 async fn main() {
-    if let Err(e) = run().await {
-        eprintln!("error: {e:#}");
-        std::process::exit(1);
+    let cli = Cli::parse();
+    let json = cli.common.json;
+    let mut out = flow::Out::new(!json);
+    match run(cli, &mut out).await {
+        Ok((command, result)) => {
+            if json {
+                println!("{}", serde_json::json!({ "command": command, "report": out.lines, "result": result }));
+            }
+        }
+        Err(e) => {
+            if json {
+                println!("{}", serde_json::json!({ "error": format!("{e:#}"), "report": out.lines }));
+            } else {
+                eprintln!("error: {e:#}");
+            }
+            std::process::exit(1);
+        }
     }
 }
 
-async fn run() -> Result<()> {
-    let cli = Cli::parse();
+fn kind_str(k: ferrata_bridge_core::inbound::DestKind) -> &'static str {
+    if k == ferrata_bridge_core::inbound::DestKind::Private {
+        "private"
+    } else {
+        "public"
+    }
+}
+
+async fn run(cli: Cli, out: &mut flow::Out) -> Result<(&'static str, serde_json::Value)> {
+    use serde_json::json;
     let c = &cli.common;
-    let mut out = flow::Out::new(true);
-    match cli.command {
+    let result = match cli.command {
         Command::Keys { accounts, show_secrets } => {
             let seed = seed_of(c)?;
-            println!("LEZ public accounts (wallet key tree, /a):");
+            out.line("LEZ public accounts (wallet key tree, /a):");
             for a in seed.public_accounts(accounts)? {
-                println!("  /{}  {}", a.index, hx(a.id.value()));
+                out.line(format!("  /{}  {}", a.index, hx(a.id.value())));
             }
-            println!("LEZ private accounts (wallet key tree, /a):");
+            out.line("LEZ private accounts (wallet key tree, /a):");
             for (a, id) in seed.private_account_ids(accounts)?.iter().enumerate() {
-                println!("  /{a}  {}", hx(id.value()));
+                out.line(format!("  /{a}  {}", hx(id.value())));
             }
             let (k_auth, k_view) = seed.bridge_key_bytes();
             if show_secrets {
-                println!("kAuth  {}  (authorises claims and releases: never share)", hx(&k_auth));
-                println!("kView  {}  (discloses burns and recipients, cannot claim or release)", hx(&k_view));
+                out.line(format!("kAuth  {}  (authorises claims and releases: never share)", hx(&k_auth)));
+                out.line(format!("kView  {}  (discloses burns and recipients, cannot claim or release)", hx(&k_view)));
             } else {
-                println!(
+                out.line(format!(
                     "kAuth  fingerprint {}  (sha256 of the key; --show-secrets prints it)",
                     hx(&ferrata_bridge_core::sha256(&k_auth)[..8])
-                );
-                println!("kView  fingerprint {}", hx(&ferrata_bridge_core::sha256(&k_view)[..8]));
+                ));
+                out.line(format!("kView  fingerprint {}", hx(&ferrata_bridge_core::sha256(&k_view)[..8])));
             }
+            ("keys", json!({}))
         }
 
         Command::Deposit { token, denomination, kind, i_accept_public_account, account: a, from, send } => {
@@ -348,19 +374,37 @@ async fn run() -> Result<()> {
                 yes: send.yes,
                 confirmations: send.confirmations,
             };
-            flow::deposit(&e, &seed, signer.as_ref(), &o, &mut out).await?;
+            let d = flow::deposit(&e, &seed, signer.as_ref(), &o, out).await?;
+            let result = json!({
+                "commitment": hx(&d.commitment),
+                "nullifier": hx(&d.nullifier),
+                "j": d.j,
+                "sent": d.sent.map(|(tx, leaf)| json!({ "tx": tx.to_string(), "leaf": leaf })),
+            });
+            ("deposit", result)
         }
 
         Command::Scan | Command::Recover => {
             let recover = matches!(cli.command, Command::Recover);
             let seed = seed_of(c)?;
             let e = eth_side(c).await?;
-            if c.sequencer.is_some() || recover {
+            let r = if c.sequencer.is_some() || recover {
                 let (mut ledger, ctx) = zone(c, &e, &seed, None, None).await?;
-                flow::recover(&e, &seed, c.gap, Some((&mut ledger, &ctx)), recover, &mut out).await?;
+                flow::recover(&e, &seed, c.gap, Some((&mut ledger, &ctx)), recover, out).await?
             } else {
-                flow::recover::<Sequencer>(&e, &seed, c.gap, None, false, &mut out).await?;
-            }
+                flow::recover::<Sequencer>(&e, &seed, c.gap, None, false, out).await?
+            };
+            let result = json!({
+                "deposits": r.deposits,
+                "claimed": r.claimed,
+                "refunded": r.refunded,
+                "unclaimed": r.unclaimed.iter().map(|(k, a)| json!({ "kind": kind_str(*k), "account": a })).collect::<Vec<_>>(),
+                "burns": r.burns,
+                "released": r.released,
+                "next_burn_counter": r.next_burn_counter,
+                "holdings": r.holdings.iter().map(|(k, a, t, n)| json!({ "kind": kind_str(*k), "account": a, "token": t.to_string(), "amount": n.to_string() })).collect::<Vec<_>>(),
+            });
+            (if recover { "recover" } else { "scan" }, result)
         }
 
         Command::Claim {
@@ -387,7 +431,14 @@ async fn run() -> Result<()> {
                 send,
                 yes,
             };
-            flow::claim(&e, &seed, &mut ledger, &ctx, &o, &mut out).await?;
+            let r = flow::claim(&e, &seed, &mut ledger, &ctx, &o, out).await?;
+            let result = json!({
+                "nullifier": hx(&r.plan.nullifier),
+                "root_leaf_count": r.plan.leaf_count,
+                "private": !o.plaintext,
+                "sent": r.sent,
+            });
+            ("claim", result)
         }
 
         Command::Burn {
@@ -415,7 +466,14 @@ async fn run() -> Result<()> {
                 send,
                 yes,
             };
-            flow::burn(&e, &seed, &mut ledger, &ctx, &o, &mut out).await?;
+            let r = flow::burn(&e, &seed, &mut ledger, &ctx, &o, out).await?;
+            let result = json!({
+                "burn_counter": r.plan.i,
+                "r": hx(&r.plan.note.r),
+                "c_out": hx(&r.plan.note.c_out),
+                "sent": r.sent,
+            });
+            ("burn", result)
         }
 
         Command::Release { burn, self_send, relayer, job_out, program, prove, input_out, seal, send } => {
@@ -448,7 +506,16 @@ async fn run() -> Result<()> {
                 yes: send.yes,
                 confirmations: send.confirmations,
             };
-            flow::release_burn(&e, &seed, &mut ledger, &ctx, signer.as_ref(), &o, &mut out).await?;
+            let r = flow::release_burn(&e, &seed, &mut ledger, &ctx, signer.as_ref(), &o, out).await?;
+            let result = json!({
+                "nullifier": hx(&r.plan.nullifier),
+                "burn_root": r.root.root.to_string(),
+                "checkpoint": r.root.index,
+                "calldata": r.input.to_string(),
+                "job": r.job.map(|p| p.display().to_string()),
+                "sent": r.sent.map(|h| h.to_string()),
+            });
+            ("release", result)
         }
 
         Command::Status { token } => {
@@ -462,18 +529,20 @@ async fn run() -> Result<()> {
             let rel_frozen = eth::view(&eth_p, vault, IVault::releasesFrozenUntilCall {}, None).await?;
             let checkpoints = eth::view(&eth_p, vault, IVault::checkpointCountCall {}, None).await?;
             let imported = eth::view(&eth_p, vault, IVault::finalImportedLeafCountCall {}, None).await?;
-            println!("vault {vault}: {leaves} deposits, root {root}, configId {cid}");
-            println!("  retired {retired}; deposits frozen until {dep_frozen}; releases frozen until {rel_frozen}");
-            println!("  checkpoints {checkpoints}; final imported leaf count {imported}");
+            out.line(format!("vault {vault}: {leaves} deposits, root {root}, configId {cid}"));
+            out.line(format!(
+                "  retired {retired}; deposits frozen until {dep_frozen}; releases frozen until {rel_frozen}"
+            ));
+            out.line(format!("  checkpoints {checkpoints}; final imported leaf count {imported}"));
             for (dir, name) in [(0u8, "deposit"), (1u8, "release")] {
                 let g = eth::view(&eth_p, vault, IVault::globalCapCall { direction: dir }, None).await?;
                 let show = |x: U256| if x == U256::MAX { "unlimited".to_string() } else { format!("{x} value units") };
-                println!(
+                out.line(format!(
                     "  global {name} cap: capacity {}, refill {}/s, available {}",
                     show(g.capacity),
                     show(g.refillPerSecond),
                     show(g.available)
-                );
+                ));
             }
             let mut tokens = token;
             if tokens.is_empty() {
@@ -482,10 +551,10 @@ async fn run() -> Result<()> {
             for t in tokens {
                 let cfg = eth::view(&eth_p, vault, IVault::tokenConfigCall { token: t }, None).await?;
                 let (decimals, symbol) = eth::token_meta(&eth_p, t).await?;
-                println!(
+                out.line(format!(
                     "token {t} ({symbol}): registered {}, deposits enabled {}, lezUnit {}",
                     cfg.registered, cfg.depositsEnabled, cfg.lezUnit
-                );
+                ));
                 let state = eth::view(&eth_p, vault, IVault::feeStateCall { token: t }, None).await?;
                 for (k, d) in cfg.denominations_.iter().enumerate() {
                     let f = eth::view(
@@ -498,14 +567,14 @@ async fn run() -> Result<()> {
                     let show = |x: U256| {
                         u128::try_from(x).map(|x| units::show(x, decimals, &symbol)).unwrap_or_else(|_| x.to_string())
                     };
-                    println!(
+                    out.line(format!(
                         "  [{k}] {}  mint fee {}  relay fee {}  burn fee {}  checkpoint fee {}",
                         show(*d),
                         show(f.mintFee),
                         show(f.relayFee),
                         show(f.burnFee),
                         show(f.checkpointFee)
-                    );
+                    ));
                 }
                 let dep_frozen =
                     eth::view(&eth_p, vault, IVault::tokenDepositsFrozenUntilCall { token: t }, None).await?;
@@ -518,9 +587,9 @@ async fn run() -> Result<()> {
                     None,
                 )
                 .await?;
-                println!(
+                out.line(format!(
                     "  deposits frozen until {dep_frozen}; releases frozen until {rel_frozen}; release delay {delay} s after a checkpoint"
-                );
+                ));
                 for (dir, name) in [(0u8, "deposit"), (1u8, "release")] {
                     let cap = eth::view(&eth_p, vault, IVault::tokenCapCall { token: t, direction: dir }, None).await?;
                     let show = |x: U256| match u128::try_from(x) {
@@ -528,12 +597,12 @@ async fn run() -> Result<()> {
                         Ok(x) => units::show(x, decimals, &symbol),
                         Err(_) => x.to_string(),
                     };
-                    println!(
+                    out.line(format!(
                         "  {name} cap: capacity {}, refill {}/s, available {}",
                         show(cap.capacity),
                         show(cap.refillPerSecond),
                         show(cap.available)
-                    );
+                    ));
                 }
             }
             if c.sequencer.is_some() {
@@ -542,10 +611,11 @@ async fn run() -> Result<()> {
                 let (ledger, ctx) = zone(c, &e, &seed, None, None).await?;
                 let history = lez::history_of(&ledger, &ctx).await?;
                 for line in lez::zone_status(&ledger, &ctx, &history).await? {
-                    println!("{line}");
+                    out.line(line);
                 }
             }
+            ("status", json!({}))
         }
-    }
-    Ok(())
+    };
+    Ok(result)
 }
