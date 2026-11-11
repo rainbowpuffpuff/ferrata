@@ -4,7 +4,7 @@
 # throwaway key funded only in the in-process chain. Paths are relative to this file.
 [daemon]
 name = "dev"
-state_dir = "../target/updater-dev-state"
+state_dir = "../../target/updater-dev-state"
 poll_secs = 1
 listen = "127.0.0.1:9464"
 ledger = "harness"
