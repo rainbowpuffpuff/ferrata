@@ -64,24 +64,41 @@ fn openings(v: &RealVault) -> Vec<([u8; 32], u8, [u8; 32])> {
 /// The core's code for deposit `i` asked of `pool` (the program's verdict, natively).
 fn native(v: &RealVault, pool: &VaultPool, deposit: &ferrata_lez_wire::consumer::DepositProof) -> u32 {
     let request = pool.request(deposit);
-    let code = ferrata_lez_wire::attest::evaluate(&v.w.inst.id, SEPOLIA_CHAIN_ID, &v.record, &request).err().expect("refused");
+    let code =
+        ferrata_lez_wire::attest::evaluate(&v.w.inst.id, SEPOLIA_CHAIN_ID, &v.record, &request).expect_err("refused");
     u32::from(code)
 }
 
 /// The native-ETH pool of the vault, bound to the instance.
 fn pool(v: &RealVault) -> VaultPool {
-    VaultPool { ferrata: v.w.inst.program, instance_id: v.w.inst.id, chain_id: SEPOLIA_CHAIN_ID, vault: v.vault, token: [0; 20] }
+    VaultPool {
+        ferrata: v.w.inst.program,
+        instance_id: v.w.inst.id,
+        chain_id: SEPOLIA_CHAIN_ID,
+        vault: v.vault,
+        token: [0; 20],
+    }
 }
 
 /// `ClaimDeposit` of deposit `i`, sent to `claim(pool, n)`.
 #[allow(clippy::too_many_arguments)]
-fn claim(v: &mut RealVault, label: &str, pool: &VaultPool, i: usize, s: [u8; 32], kind: u8, dest: [u8; 32], n: [u8; 32]) -> TxReport {
+fn claim(
+    v: &mut RealVault,
+    label: &str,
+    pool: &VaultPool,
+    i: usize,
+    s: [u8; 32],
+    kind: u8,
+    dest: [u8; 32],
+    n: [u8; 32],
+) -> TxReport {
     let program = consumer_account();
     let pool_id = pool.id();
     let at = claim_actor(program, &pool_id, &n);
     let holder = holder_actor(program, &pool_id, &dest);
     let header = harness::vault::header_of(pool, v.slot);
-    let message = ConsumerMessage::ClaimDeposit { pool: pool.clone(), slot: v.slot, deposit: v.deposit_proof(i), s, kind, dest };
+    let message =
+        ConsumerMessage::ClaimDeposit { pool: pool.clone(), slot: v.slot, deposit: v.deposit_proof(i), s, kind, dest };
     v.w.chain.submit(
         label,
         at,
@@ -157,22 +174,83 @@ fn a_real_deposit_is_claimed_publicly_once() {
     // Before the claim: each refusal consumes nothing.
     let wrong_s = [0x5a; 32];
     let n_wrong = secret_nullifier(&wrong_s, &v.deposit_id(0));
-    refuse(&mut v, "a wrong secret (the opening does not hash to C)", &p, 0, wrong_s, kind0, dest0, n_wrong, u32::from(code::COMMITMENT_MISMATCH));
-    refuse(&mut v, "another destination than C commits to", &p, 0, s0, kind0, [0x77; 32], n0, u32::from(code::COMMITMENT_MISMATCH));
-    refuse(&mut v, "the right opening at a claim actor its nullifier does not name", &p, 0, s0, kind0, dest0, [0x66; 32], u32::from(code::NULLIFIER_MISMATCH));
-    refuse(&mut v, "a private-kind deposit claimed publicly", &p, 1, s1, KIND_PRIVATE, dest1, n1, u32::from(code::WRONG_KIND));
-    refuse(&mut v, "a private-kind deposit opened as public-kind", &p, 1, s1, KIND_PUBLIC, dest1, n1, u32::from(code::COMMITMENT_MISMATCH));
+    refuse(
+        &mut v,
+        "a wrong secret (the opening does not hash to C)",
+        &p,
+        0,
+        wrong_s,
+        kind0,
+        dest0,
+        n_wrong,
+        u32::from(code::COMMITMENT_MISMATCH),
+    );
+    refuse(
+        &mut v,
+        "another destination than C commits to",
+        &p,
+        0,
+        s0,
+        kind0,
+        [0x77; 32],
+        n0,
+        u32::from(code::COMMITMENT_MISMATCH),
+    );
+    refuse(
+        &mut v,
+        "the right opening at a claim actor its nullifier does not name",
+        &p,
+        0,
+        s0,
+        kind0,
+        dest0,
+        [0x66; 32],
+        u32::from(code::NULLIFIER_MISMATCH),
+    );
+    refuse(
+        &mut v,
+        "a private-kind deposit claimed publicly",
+        &p,
+        1,
+        s1,
+        KIND_PRIVATE,
+        dest1,
+        n1,
+        u32::from(code::WRONG_KIND),
+    );
+    refuse(
+        &mut v,
+        "a private-kind deposit opened as public-kind",
+        &p,
+        1,
+        s1,
+        KIND_PUBLIC,
+        dest1,
+        n1,
+        u32::from(code::COMMITMENT_MISMATCH),
+    );
     let erc20 = VaultPool { token: [0x11; 20], ..p.clone() };
     let false_predicate = native(&v, &erc20, &v.deposit_proof(0));
     assert_eq!(false_predicate, 130, "PredicateFailed");
-    refuse(&mut v, "an ETH deposit claimed in a pool of another token (false predicate)", &erc20, 0, s0, kind0, dest0, n0, false_predicate);
+    refuse(
+        &mut v,
+        "an ETH deposit claimed in a pool of another token (false predicate)",
+        &erc20,
+        0,
+        s0,
+        kind0,
+        dest0,
+        n0,
+        false_predicate,
+    );
     let mainnet = VaultPool { chain_id: 1, ..p.clone() };
     let binding = native(&v, &mainnet, &v.deposit_proof(0));
     assert_eq!(binding, 140, "the chain binding");
     refuse(&mut v, "a pool configured for mainnet (chain binding)", &mainnet, 0, s0, kind0, dest0, n0, binding);
 
     // The claim.
-    let accepted = claim(&mut v, "the public claim of deposit 0 (block 12,111,477, one hop)", &p, 0, s0, kind0, dest0, n0);
+    let accepted =
+        claim(&mut v, "the public claim of deposit 0 (block 12,111,477, one hop)", &p, 0, s0, kind0, dest0, n0);
     assert!(accepted.ok(), "{:?} (exit {:?})", accepted.charge.revert, accepted.exit_code);
     assert_eq!(nullifier_state(&v, &p, &n0), Some(NullifierState::Spent { pool_id: p.id() }));
     let held = holder_state(&v, &p, &dest0).expect("credited");
@@ -185,15 +263,33 @@ fn a_real_deposit_is_claimed_publicly_once() {
     assert_eq!(holder_state(&v, &p, &dest0).map(|h| h.credits), Some(1), "credited once");
 
     let account = v.w.chain.add_private_account(0x91, 1_000_000_000_000);
-    let message = ConsumerMessage::ClaimDepositPrivately { pool: p.clone(), slot: v.slot, deposit: v.deposit_proof(0), s: s0, kind: kind0, dest: dest0 };
-    let publics = vec![v.actor(), claim_actor(consumer_account(), &p.id(), &n0), holder_actor(consumer_account(), &p.id(), &dest0)];
+    let message = ConsumerMessage::ClaimDepositPrivately {
+        pool: p.clone(),
+        slot: v.slot,
+        deposit: v.deposit_proof(0),
+        s: s0,
+        kind: kind0,
+        dest: dest0,
+    };
+    let publics = vec![
+        v.actor(),
+        claim_actor(consumer_account(), &p.id(), &n0),
+        holder_actor(consumer_account(), &p.id(), &dest0),
+    ];
     let root = Actor::new(account.id(), consumer_account());
-    let err = v
-        .w
-        .chain
-        .prove_and_settle_private(&account, root, borsh::to_vec(&message).unwrap(), publics, &catalog(), 100_000_000, v.time)
-        .err()
-        .expect("a deposit claimed publicly cannot be claimed privately");
+    let err =
+        v.w.chain
+            .prove_and_settle_private(
+                &account,
+                root,
+                borsh::to_vec(&message).unwrap(),
+                publics,
+                &catalog(),
+                100_000_000,
+                v.time,
+            )
+            .map(|_| ())
+            .expect_err("a deposit claimed publicly cannot be claimed privately");
     println!("the private claim after the public one: {err}");
     assert!(err.contains(&code::ALREADY_CLAIMED.to_string()), "{err}");
 
@@ -222,7 +318,14 @@ fn a_real_deposit_is_claimed_privately_once() {
     let id0 = v.deposit_id(0);
     let n0 = secret_nullifier(&s0, &id0);
     let account = v.w.chain.add_private_account(0x92, 1_000_000_000_000);
-    let message = ConsumerMessage::ClaimDepositPrivately { pool: p.clone(), slot: v.slot, deposit: v.deposit_proof(0), s: s0, kind: kind0, dest: dest0 };
+    let message = ConsumerMessage::ClaimDepositPrivately {
+        pool: p.clone(),
+        slot: v.slot,
+        deposit: v.deposit_proof(0),
+        s: s0,
+        kind: kind0,
+        dest: dest0,
+    };
 
     // The executor: what a prover has to prove for the consumer.
     let executed = private_transitions(&v, account.id(), &message, v.slot);
@@ -231,17 +334,28 @@ fn a_real_deposit_is_claimed_privately_once() {
     assert_eq!(executed.iter().map(|e| e.exit_code).collect::<Vec<_>>(), [0, 0]);
     let state = executed[1].transition.as_ref().unwrap().response.post_state.clone().unwrap();
     let ConsumerState::Claimant(kept) = borsh::from_slice(&state).unwrap() else { panic!("a claimant's state") };
-    assert_eq!(kept, ClaimantState { awaiting: None, pending: None, holdings: vec![], claims: 1 }, "the claim is not kept");
+    assert_eq!(
+        kept,
+        ClaimantState { awaiting: None, pending: None, holdings: vec![], claims: 1 },
+        "the claim is not kept"
+    );
 
     // Through LEZ: proven (dev mode) with the privacy-preserving circuit, settled.
     let program = consumer_account();
     let publics = vec![v.actor(), claim_actor(program, &p.id(), &n0), holder_actor(program, &p.id(), &dest0)];
     let root = Actor::new(account.id(), program);
-    let run = v
-        .w
-        .chain
-        .prove_and_settle_private(&account, root, borsh::to_vec(&message).unwrap(), publics.clone(), &catalog(), 100_000_000, v.time)
-        .expect("settles");
+    let run =
+        v.w.chain
+            .prove_and_settle_private(
+                &account,
+                root,
+                borsh::to_vec(&message).unwrap(),
+                publics.clone(),
+                &catalog(),
+                100_000_000,
+                v.time,
+            )
+            .expect("settles");
     assert!(run.charge.revert.is_none(), "{:?}", run.charge.revert);
     assert_eq!(nullifier_state(&v, &p, &n0), Some(NullifierState::Spent { pool_id: p.id() }));
     let held = holder_state(&v, &p, &dest0).expect("credited");
@@ -266,19 +380,30 @@ fn a_real_deposit_is_claimed_privately_once() {
         report.push_str(&format!("- {what} ({} bytes): {}\n", needle.len(), if found { "FOUND" } else { "absent" }));
         assert!(!found, "{what} is in the transaction");
     }
-    report.push_str(&format!("- the nullifier N ({} bytes): {}\n", n0.len(), if occurs(&bytes, &n0) { "present (spent publicly, by design)" } else { "absent" }));
+    report.push_str(&format!(
+        "- the nullifier N ({} bytes): {}\n",
+        n0.len(),
+        if occurs(&bytes, &n0) { "present (spent publicly, by design)" } else { "absent" }
+    ));
     println!("{report}");
 
     // Replays: the public claim of the same deposit, and the private claim again.
     let public = claim(&mut v, "the public claim after the private one", &p, 0, s0, kind0, dest0, n0);
     assert_eq!(public.exit_code, Some(u32::from(code::ALREADY_CLAIMED)), "{:?}", public.charge.revert);
     let account2 = v.w.chain.add_private_account(0x93, 1_000_000_000_000);
-    let err = v
-        .w
-        .chain
-        .prove_and_settle_private(&account2, Actor::new(account2.id(), program), borsh::to_vec(&message).unwrap(), publics, &catalog(), 100_000_000, v.time)
-        .err()
-        .expect("a second private claim cannot be proven");
+    let err =
+        v.w.chain
+            .prove_and_settle_private(
+                &account2,
+                Actor::new(account2.id(), program),
+                borsh::to_vec(&message).unwrap(),
+                publics,
+                &catalog(),
+                100_000_000,
+                v.time,
+            )
+            .map(|_| ())
+            .expect_err("a second private claim cannot be proven");
     assert!(err.contains(&code::ALREADY_CLAIMED.to_string()), "{err}");
     assert_eq!(holder_state(&v, &p, &dest0).map(|h| h.credits), Some(1), "credited once");
 
@@ -289,10 +414,7 @@ fn a_real_deposit_is_claimed_privately_once() {
          the consumer's two private transitions in the executor:\n\n{table}\n\
          Proven in dev mode and settled: {} transaction bytes, {} proof bytes, execution gas {}.\n\n{report}\n\
          Then refused: the public claim of the same deposit (`{:?}`), a second private claim (`{err}`).\n",
-        run.tx_bytes,
-        run.proof_bytes,
-        run.charge.gas_exec,
-        public.exit_code,
+        run.tx_bytes, run.proof_bytes, run.charge.gas_exec, public.exit_code,
     );
     std::fs::write(results_dir().join("stage5-consumer-private.md"), out).unwrap();
 }
@@ -308,7 +430,14 @@ fn private_claims_that_do_not_verify_are_refused() {
     let (s0, kind0, dest0) = open[0];
     let (s1, kind1, dest1) = open[1];
     let account = lee::AccountId::new([0x31; 32]);
-    let base = |i: usize, s, kind, dest| ConsumerMessage::ClaimDepositPrivately { pool: p.clone(), slot: v.slot, deposit: v.deposit_proof(i), s, kind, dest };
+    let base = |i: usize, s, kind, dest| ConsumerMessage::ClaimDepositPrivately {
+        pool: p.clone(),
+        slot: v.slot,
+        deposit: v.deposit_proof(i),
+        s,
+        kind,
+        dest,
+    };
     let mut forged = base(0, s0, kind0, dest0);
     if let ConsumerMessage::ClaimDepositPrivately { deposit, .. } = &mut forged {
         let last = deposit.proof.len() - 1;
@@ -319,14 +448,36 @@ fn private_claims_that_do_not_verify_are_refused() {
         ConsumerMessage::ClaimDepositPrivately { deposit, .. } => native(&v, &p, deposit),
         _ => unreachable!(),
     };
-    let other_chain = ConsumerMessage::ClaimDepositPrivately { pool: VaultPool { chain_id: 1, ..p.clone() }, slot: v.slot, deposit: v.deposit_proof(0), s: s0, kind: kind0, dest: dest0 };
-    let other_token = ConsumerMessage::ClaimDepositPrivately { pool: VaultPool { token: [0x11; 20], ..p.clone() }, slot: v.slot, deposit: v.deposit_proof(0), s: s0, kind: kind0, dest: dest0 };
+    let other_chain = ConsumerMessage::ClaimDepositPrivately {
+        pool: VaultPool { chain_id: 1, ..p.clone() },
+        slot: v.slot,
+        deposit: v.deposit_proof(0),
+        s: s0,
+        kind: kind0,
+        dest: dest0,
+    };
+    let other_token = ConsumerMessage::ClaimDepositPrivately {
+        pool: VaultPool { token: [0x11; 20], ..p.clone() },
+        slot: v.slot,
+        deposit: v.deposit_proof(0),
+        s: s0,
+        kind: kind0,
+        dest: dest0,
+    };
     // (what, message, exit codes of the two transitions; the second runs only after a zero)
     let cases: Vec<(&str, ConsumerMessage, Vec<u32>)> = vec![
-        ("a private-kind deposit claimed by an account that is not its destination", base(1, s1, kind1, dest1), vec![u32::from(code::WRONG_RECEIVER)]),
+        (
+            "a private-kind deposit claimed by an account that is not its destination",
+            base(1, s1, kind1, dest1),
+            vec![u32::from(code::WRONG_RECEIVER)],
+        ),
         ("a byte that is no destination kind", base(0, s0, 0x03, dest0), vec![u32::from(code::WRONG_KIND)]),
         ("a wrong secret", base(0, [0x5a; 32], kind0, dest0), vec![0, u32::from(code::COMMITMENT_MISMATCH)]),
-        ("a private-kind deposit opened as public-kind", base(1, s1, KIND_PUBLIC, dest1), vec![0, u32::from(code::COMMITMENT_MISMATCH)]),
+        (
+            "a private-kind deposit opened as public-kind",
+            base(1, s1, KIND_PUBLIC, dest1),
+            vec![0, u32::from(code::COMMITMENT_MISMATCH)],
+        ),
         ("a forged receipt", forged, vec![0, forged_code]),
         ("a pool configured for mainnet", other_chain, vec![0, 140]),
         ("a pool of another token (false predicate)", other_token, vec![0, 130]),

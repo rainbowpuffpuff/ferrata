@@ -1154,7 +1154,12 @@ alone. Refused (10): a leaf not at its index, a leaf proven at another index, a 
 a sibling changed (163 `AccumulatorRootMismatch`); an empty position past the count (130, slot 1's
 condition); the facts as mainnet statements (140); without the header (215); deposit 0's log through
 a hop that carries deposit 1's header, or without the hop (110 `ProofNodeMismatch`); a false
-predicate on the log's token topic (130). With a real proof: PROVE_VAULT_PLACEHOLDER
+predicate on the log's token topic (130). **With a real proof** (`results/prove-vault.log`,
+`harness/src/bin/prove_vault.rs`): the `Attest` handler execution of the request with slots 0 and 1
+and both leaves, replayed from the applied transaction with its input recorded, proven by r0vm 3.0.5
+on the build box's CPU (16 cores): 391,291 user cycles, 524,288 with padding, one segment, 67.2 s
+(69.1 s in a first run), a succinct receipt of 240,913 bytes verified against the program's image
+id, its journal equal to the executor's.
 
 **The reference consumer with the Recommended Consumer Pattern, on these deposits**
 (`results/stage5-consumer-public.md`, `results/stage5-consumer-private.md`, `harness/tests/vault_consumer.rs`;
@@ -1191,7 +1196,18 @@ checks both openings against the commitments on chain.
 - **Not shown**: an accepted private claim of a private-kind deposit on real data. Deposit 1 is
   private-kind, to LEZ's testnet private account 0, whose keys this harness does not hold (the bridge
   program claimed it privately in the live run, with LEZ's wallet). Nor the F.8 test (§6.5 of the
-  design note), nor a real proof of the private claim.
+  design note).
+- **The private claim with a real proof** (`results/prove-vault-claim.log`,
+  `harness/src/bin/prove_vault_claim.rs`): the same transaction, the consumer's two transitions, the
+  fee transfer and LEZ's privacy-preserving circuit proven by r0vm 3.0.5 on the build box's CPU (16
+  cores): `execute_and_prove` 361.7 s, a 227,370-byte receipt in a 231,614-byte transaction, settled
+  with the receipt verified (456,439 execution gas, 224,063 storage gas); 7 min 39 s and 9.8 GB of
+  memory for the whole binary, which first follows the chain to the record.
+- **Images.** This work changes the consumer (`be7c7710…`, 469,808 ELF bytes; it was `f883e6a4…`), and,
+  through the wire crate, the program (`8fe18f74…`; it was `9f3eb00f…`) and the bridge program
+  (`944b7100…`): `prove_vault_claim --image-ids` lists all seven. The consumer's Stage 4 private
+  attestation (§5) now takes 380,870 user cycles (34,718 + 346,152,
+  `results/stage4-attest-private-public-outputs.txt`); §5's GPU proof was of the earlier image.
 
 ### Departures from the design note, and what Stage 5 does not cover
 
@@ -1338,6 +1354,9 @@ RISC0_DEV_MODE=0 target/debug/prove_private --settle FILE     # settle a proven 
 cargo build -p harness --locked --bin prove_vault
 RISC0_DEV_MODE=0 target/debug/prove_vault > results/prove-vault.log   # a real proof of the vault's leaf
                                                      # request on real Sepolia data (§6)
+cargo build -p harness --locked --bin prove_vault_claim
+RISC0_DEV_MODE=0 target/debug/prove_vault_claim > results/prove-vault-claim.log   # the consumer's private
+                                                     # claim of the vault's deposit 0, proven and settled (§6)
 scripts/stage-prove-attest.sh OUTDIR                 # the input of a real proof of the private attestation (§5);
                                                      # ../gpu-prover/README.md has the commands of the GPU run
 RISC0_DEV_MODE=0 target/debug/prove_attest --settle results/stage4-private-attest-tx.borsh \

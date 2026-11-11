@@ -1151,7 +1151,10 @@ pub mod consumer {
         Claimant(ClaimantState),
     }
 
-    /// `claim(pool, N)` of a vault pool.
+    /// `claim(pool, N)` of a vault pool. `Pending` lives within one transaction and is decoded
+    /// once per handler execution, so its size beside `Spent` costs nothing; boxing would only
+    /// complicate the handlers' patterns.
+    #[allow(clippy::large_enum_variant)]
     #[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
     pub enum NullifierState {
         /// A public claim waits for its attestation (within a transaction only).

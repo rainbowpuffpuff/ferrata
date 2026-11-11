@@ -108,7 +108,9 @@ fn handle(input: &ReceiveInput) -> Result<Response, Refusal> {
         ConsumerMessage::ClaimDepositPrivately { pool, slot, deposit, s, kind, dest } => {
             claim_deposit_privately(input, state, PendingDeposit { pool, deposit, s, kind, dest }, slot)
         }
-        ConsumerMessage::Spend { pool_id, nullifier, credit } => spend(input, program, state, pool_id, nullifier, credit),
+        ConsumerMessage::Spend { pool_id, nullifier, credit } => {
+            spend(input, program, state, pool_id, nullifier, credit)
+        }
         ConsumerMessage::CreditHolder { pool_id, nullifier, dest, amount } => {
             credit_holder(input, program, state, pool_id, nullifier, dest, amount)
         }

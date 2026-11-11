@@ -1,0 +1,17 @@
+ferrata (attestation) image id: 8fe18f74c7cf6bfbc8d511a71e6843d0c637c6751904788db4ec5639cc694d66
+mode: real proofs (r0vm)
+record: finalized slot 11556608, block 12112773; vault 0xfe3199fa2634413cbac317371076cae3eb2d9e54 root 0xfaad123258a78fc60cfa12c793a7d68bab13c2d319d68e847a1bd3f2e140579d, 2 deposits
+
+| # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | the vault v5: slots 0 and 1 and both deposit leaves | Attest 391,291 | 391,291 | 8% | 8,731 | 3,200,176 | applied |
+
+| transaction | handler | cycles | segments | input bytes (ReceiveInput) | of which message | of which pre-state | journal bytes | post-state bytes | exit |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| the vault v5: slots 0 and 1 and both deposit leaves | Attest | 391,291 | 1 | 8,628 | 8,333 | 221 | 8,869 | – | 0 |
+
+| # | program | handler | user cycles | total cycles (padded) | segments | proving time (s) | receipt | receipt bytes |
+|---|---|---|---:|---:|---:|---:|---|---:|
+| 1 | ferrata (attestation) | Attest | 391,291 | 524,288 | 1 | 67.2 | succinct | 240,913 |
+
+all 1 handler executions proven and verified; proving time in total 67.2 s

@@ -21,11 +21,9 @@
 //! vault exists: the Sepolia instance follows the chain to the fixture's record, and the request
 //! goes to it.
 
-use std::{
-    fs,
-    path::PathBuf,
-};
+use std::{fs, path::PathBuf};
 
+use ferrata_core::rlp::encode_u64;
 use ferrata_core::{
     accumulator::{accumulator_leaf_id, accumulator_node},
     fork::LcFork,
@@ -33,10 +31,10 @@ use ferrata_core::{
     witness::{ExecutionSummary, HeaderRecord},
     Root,
 };
-use ferrata_core::rlp::encode_u64;
 use ferrata_lez_wire::{
     attest::{
-        evaluate, AccountQuery, Address, Attestation, Cmp, Fact, Field, Hop, LeafQuery, LogQuery, Request, SlotQuery, Word,
+        evaluate, AccountQuery, Address, Attestation, Cmp, Fact, Field, Hop, LeafQuery, LogQuery, Request, SlotQuery,
+        Word,
     },
     consumer::DepositProof,
     header_actor, Message, RecordState, ATTESTED_SELECTOR,
@@ -466,7 +464,8 @@ impl RealVault {
         let mut w = sepolia::replay(2, sepolia::LAST_PERIOD);
         for p in m["updates"].as_array().unwrap() {
             let p = p.as_u64().unwrap();
-            let update = LightClientUpdate::decode(&vault_file(&format!("update_{p}.ssz")), LcFork::Gloas, 512).unwrap();
+            let update =
+                LightClientUpdate::decode(&vault_file(&format!("update_{p}.ssz")), LcFork::Gloas, 512).unwrap();
             w.apply(&update, &format!("period {p}"));
         }
         let finality = sepolia::gloas_finality_update(&vault_file("finality_update.ssz"));
@@ -482,7 +481,8 @@ impl RealVault {
         let deposits: Vec<DepositLog> = logs
             .iter()
             .map(|l| {
-                let block = u64::from_str_radix(l["blockNumber"].as_str().unwrap().trim_start_matches("0x"), 16).unwrap();
+                let block =
+                    u64::from_str_radix(l["blockNumber"].as_str().unwrap().trim_start_matches("0x"), 16).unwrap();
                 let tx_index =
                     u64::from_str_radix(l["transactionIndex"].as_str().unwrap().trim_start_matches("0x"), 16).unwrap();
                 let receipts = receipts_of(block);
@@ -619,7 +619,13 @@ pub fn real() -> (RealVault, Vec<TxReport>, Vec<TxReport>) {
     let a = a.expect("accepted");
     assert_eq!(
         a.statements[0].fact,
-        Fact::Account { address: absent.address, nonce: 0, balance: [0; 32], storage_root: [0; 32], code_hash: [0; 32] }
+        Fact::Account {
+            address: absent.address,
+            nonce: 0,
+            balance: [0; 32],
+            storage_root: [0; 32],
+            code_hash: [0; 32]
+        }
     );
     accepted.push(report);
     // Each deposit's event, one EIP-2935 hop back from the record's block.
@@ -627,10 +633,18 @@ pub fn real() -> (RealVault, Vec<TxReport>, Vec<TxReport>) {
         let p = v.deposit_proof(i);
         let request = Request {
             hops: p.hops.clone(),
-            logs: vec![LogQuery { tx_index: p.tx_index, log_index: p.log_index, proof: p.proof.clone(), conditions: vec![] }],
+            logs: vec![LogQuery {
+                tx_index: p.tx_index,
+                log_index: p.log_index,
+                proof: p.proof.clone(),
+                conditions: vec![],
+            }],
             ..v.base()
         };
-        let label = format!("deposit {i}'s Deposit log, block {}, one EIP-2935 hop under the Gloas record", v.deposits[i].block);
+        let label = format!(
+            "deposit {i}'s Deposit log, block {}, one EIP-2935 hop under the Gloas record",
+            v.deposits[i].block
+        );
         let (report, a) = v.run(&label, &request);
         let a = a.expect("accepted");
         assert_eq!((a.block_number, a.hops), (v.deposits[i].block, 1));
@@ -652,13 +666,22 @@ pub fn real() -> (RealVault, Vec<TxReport>, Vec<TxReport>) {
     let p0 = v.deposit_proof(0);
     let hop_log = |hops: Vec<Hop>| Request {
         hops,
-        logs: vec![LogQuery { tx_index: p0.tx_index, log_index: p0.log_index, proof: p0.proof.clone(), conditions: vec![] }],
+        logs: vec![LogQuery {
+            tx_index: p0.tx_index,
+            log_index: p0.log_index,
+            proof: p0.proof.clone(),
+            conditions: vec![],
+        }],
         ..v.base()
     };
     let other_header = Hop { header: vault_file(&format!("header_{}.rlp", v.deposits[1].block)), ..p0.hops[0].clone() };
     let false_predicate = Request {
         logs: vec![LogQuery {
-            conditions: vec![condition(Field::Topic(2), Cmp::Eq, ferrata_lez_wire::consumer::address_word(&[0x11; 20]))],
+            conditions: vec![condition(
+                Field::Topic(2),
+                Cmp::Eq,
+                ferrata_lez_wire::consumer::address_word(&[0x11; 20]),
+            )],
             ..hop_log(p0.hops.clone()).logs[0].clone()
         }],
         ..hop_log(p0.hops.clone())
@@ -680,4 +703,41 @@ pub fn real() -> (RealVault, Vec<TxReport>, Vec<TxReport>) {
         refused.push(report);
     }
     (v, accepted, refused)
+}
+
+/// The live run's openings of its two deposits' commitments, `(s, kind, dest)`, checked against
+/// the commitments on chain. `s = HMAC(kAuth, "ferrata/s/v1" ‖ chain ‖ vault ‖ depositor ‖ j)` from
+/// the run's test seed `sha256("e2e: user bridge seed (test value)")` (`e2e/crown/identity.py`);
+/// deposit 0 is public-kind, to LEZ's public test account 0, deposit 1 private-kind, to LEZ's
+/// private test account 0.
+pub fn crown_openings(v: &RealVault) -> Vec<(Root, u8, Root)> {
+    use ferrata_bridge_core::{inbound::deposit_secret, sha256, BridgeKeys};
+    use ferrata_lez_wire::consumer::{commitment, KIND_PRIVATE, KIND_PUBLIC};
+    let keys = BridgeKeys::from_bridge_seed(&sha256(b"e2e: user bridge seed (test value)"));
+    let chain = ferrata_bridge_core::chain_id_u256(SEPOLIA_CHAIN_ID);
+    let dests = [
+        (KIND_PUBLIC, word("0x54d662b664519cb8aef608ae84a63e041cc16019e4a07c34828311996f0c817a")),
+        (KIND_PRIVATE, word("0x2d6cb849edc6d8b1599c558ecd87bc09b4420bdc60f1b3be85547a5834b153fc")),
+    ];
+    v.deposits
+        .iter()
+        .zip(dests)
+        .enumerate()
+        .map(|(j, (d, (kind, dest)))| {
+            let s = deposit_secret(&keys.auth, &chain, &v.vault, &d.deposit.depositor, j as u64);
+            assert_eq!(commitment(&s, kind, &dest), d.deposit.commitment, "deposit {j}: the run's opening of C");
+            (s, kind, dest)
+        })
+        .collect()
+}
+
+/// The native-ETH pool of the vault, bound to the instance.
+pub fn eth_pool(v: &RealVault) -> ferrata_lez_wire::consumer::VaultPool {
+    ferrata_lez_wire::consumer::VaultPool {
+        ferrata: v.w.inst.program,
+        instance_id: v.w.inst.id,
+        chain_id: SEPOLIA_CHAIN_ID,
+        vault: v.vault,
+        token: [0; 20],
+    }
 }
