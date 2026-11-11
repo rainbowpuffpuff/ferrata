@@ -23,18 +23,18 @@ below comes from those runs' logs; the commit that ran is the one that adds `res
 | Target | Seconds | `.lgx` bytes | SHA-256 |
 |---|---:|---:|---|
 | `nix build .#lgx` (first build, with the builder's Logos inputs) | 162 | — (skeleton view) | — |
-| `nix build .#lgx` (final view) | 12 | 15,381 | `35483210bb566ebc0932c357842ae52fc6772220b713445a7c850ef50224f08b` |
-| `nix build .#lgx-portable` (final view) | 15 | 15,375 | `4b726d52b1a5d14868ea5ce15fdab425c531069443b8355dc1703eddf2704ed1` |
+| `nix build .#lgx` (final view, commit `5588726`) | 5 | 15,923 | `46e19a5c47841cc0be7bc7df4c262bfe09e24389bab84e01641e3c27b3acdc07` |
+| `nix build .#lgx-portable` (final view) | 8 | 15,919 | `904f54338e780f012e57c1bca45b693592be0339b0c485082076e91f795a3429` |
 
 The package holds the view (`qml/`), the icon and the module's `metadata.json`; there is no compiled
 plugin (a QML-only `ui_qml` module).
 
 ## The headless run
 
-`scripts/box-test.sh`, the run committed here (the last of six passing runs): the 15 test functions in
-29.4 s; the backend answered 53 calls in 11.1 s in total (the slowest 1.81 s, a root import: the harness
-executes the bridge guest), 6 of them the refusals the test asks for. A warm run of the whole script: 80 s
-(backend built incrementally in 47 s, up 3 s later).
+`scripts/box-test.sh`, the run committed here (on `5588726`, the last of seven passing runs): backend
+built in 10 s (warm), up 2 s later; the 15 test functions in 28.6 s; the whole script 41 s. The backend
+answered 53 calls in 10.4 s in total (the slowest 1.62 s, a root import: the harness executes the bridge
+guest), 6 of them the refusals the test asks for.
 
 | Test | What it drives and checks | Screenshots |
 |---|---|---|
