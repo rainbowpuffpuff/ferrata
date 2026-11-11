@@ -3,3 +3,8 @@ artifacts
 coverage
 corpus-work
 seeds
+corpus-new
+runs
+# Regenerable from committed data (examples/seeds.rs): 3.9 and 16 MB
+programs/corpus/lez_block
+programs/corpus/checkpoint_input
