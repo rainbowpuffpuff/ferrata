@@ -152,8 +152,12 @@ def setup(bundle: str | None, programs: str | None) -> None:
             b.put_file(mp, "inputs/bundle.json")
         for p in progs:
             b.put_file(p, f"inputs/programs/{os.path.basename(p)}")
-    print(f"inputs: LEZ bundle {meta['source']} ({meta['bytes']} bytes, sha256 {meta['sha256'][:16]}...)"
-          f"{' already there' if have.get('sha256') == meta['sha256'] else ' uploaded'}; programs {', '.join(sorted(IDS))}")
+    if meta["sha256"]:
+        print(f"inputs: LEZ bundle {meta['source']} ({meta['bytes']} bytes, sha256 {meta['sha256'][:16]}...)"
+              f"{' already there' if have.get('sha256') == meta['sha256'] else ' uploaded'}")
+    else:
+        print(f"inputs: no LEZ bundle given (--bundle none); on the Volume: {have.get('source', 'none')}")
+    print(f"inputs: programs {', '.join(sorted(IDS))} (ids and sha256 as ids.jsonl)")
     print("ping:", modal.Function.from_name(APP_NAME, "ping").remote())
     print(f"setup done: {APP_NAME} deployed (idle until `start`)")
 
@@ -232,7 +236,7 @@ def start(run: str, mode: str, yes: bool, halt_after: str | None) -> None:
     except NotFoundError:
         die(f"the app {APP_NAME} is not deployed: `e2e/crown.sh setup` first")
     vol = volume()
-    if not vjson(vol, "inputs/bundle.json") or vread(vol, "inputs/programs/ids.jsonl") is None:
+    if mode != "selftest" and (not vjson(vol, "inputs/bundle.json") or vread(vol, "inputs/programs/ids.jsonl") is None):
         die("the Volume has no inputs: `e2e/crown.sh setup`")
     for other in runs_on_volume(vol):
         c = vjson(vol, f"cloud/{other}/call.json")
