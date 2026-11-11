@@ -650,8 +650,7 @@ def recover(user, meta, deposits, spent_n, notes, released, gap):
             s_out = prf(k_auth, b"ferrata/s-out/v1" + cid + r)
             if sha(b"ferrata/Cout/v1" + s_out + chain + vault + recipient) != note["c_out"]:
                 continue
-            leaf = burn_leaf(cid, note["index"], note["token"], note["amount"], note["c_out"], r)
-            n_out = sha(b"ferrata/nf-out/v1" + s_out + burn_id(cid, note["index"], leaf))
+            n_out = sha(b"ferrata/nf-out/v2" + s_out)  # D13 (review M-3): NOut no longer depends on the burn's index
             owned_burns.append({"burn_index": note["index"], "recipient": recipient.hex(), "NOut": n_out,
                                 "released": n_out in released})
             last = i
@@ -939,7 +938,7 @@ def write_markdown(out_dir, results, lez_json, scenario, n, half):
           f"as released: {r['released_seen_as_released']} of {n - r['unreleased_expected']}",
           f"- other users' items wrongly taken as own: {r['foreign_items']}; recipients decrypted and authenticated: "
           f"{r['recipients_decrypted_correctly']} of {n}; recovered NOut equal to the vault's: {r['nout_matches_vault']} of {n}",
-          f"- the bridge core's `recover_burns` (v1 mac) on the same notes: {r['rust_core']} found", "",
+          f"- the bridge core's `recover_burns` (D12's v2 mac, review I-4) on the same notes: {r['rust_core']} found", "",
           f"Private actions proven against the newest commitment-set root: {results['proof_roots_newest'][0]} of "
           f"{results['proof_roots_newest'][1]}.", "",
           "## Receipts", "",
