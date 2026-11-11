@@ -263,8 +263,8 @@ the cloud").
 Up to three hot addresses, set by the admin's proposal and applied 14 days later. Each watcher runs its
 own Logos Blockchain, LEZ and Ethereum nodes ([`bridge.md`](../design/bridge.md) §14;
 [`vault/README.md`](../../vault/README.md), "Roles"). The program is [`monitor/`](../../monitor/README.md):
-one process per watcher key, following one vault. It is **built and rehearsed on a local chain**;
-nothing more yet.
+one process per watcher key, following one vault. It is **built**, and rehearsed on a local chain and on a fork of
+Sepolia at the live v5 vault. It has not run with its transactions on a public network.
 
 What a watcher can do:
 
