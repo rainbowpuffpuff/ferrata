@@ -106,9 +106,10 @@ its proof, wrapped to Groth16, holds the checkpoint as a candidate that watchers
 after a wait; each release is proven against the checkpoint's burn root ([design note](docs/design/bridge.md);
 who is trusted for what: [docs/trust.md](docs/trust.md)).
 
-Around the programs: `ferrata`, the users' and relayers' command-line tool; the relayer
-`ferrata-relayer`; the watchers' `monitor`; the rule (B) attestor a sequencer runs; two Logos modules and a
-Logos mini-app; a read-only admin view. Each is in the table of components below, with its status.
+Around the programs: `ferrata`, the users' and relayers' command-line tool; the relayer `ferrata-relayer`;
+the updater `ferrata-updater`; the watchers' `monitor`; the rule (B) attestor a sequencer runs; two Logos
+modules and a Logos mini-app; a read-only admin view. Each is in the table of components below, with its
+status.
 
 ## Live on Sepolia, and how to check it yourself
 

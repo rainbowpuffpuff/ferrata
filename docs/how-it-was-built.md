@@ -54,7 +54,7 @@ repository has been audited; the audit is planned for the code the proposal woul
   `tests/review_core.rs` (EVIDENCE row 1; [REVIEW-core.md](REVIEW-core.md)). Where the repository calls this
   review independent, it means a separate agent context, not a second person.
 - **Security tooling and fuzzing**: Slither, Aderyn, Halmos, cargo-audit, cargo-deny and the fuzz targets
-  were run, and their findings triaged, on the agents' branches (EVIDENCE rows 35, 36 and 40;
+  were run, and their findings triaged, on the agents' branches (EVIDENCE rows 35, 36, 40 and 78;
   [`tools-2026-11-11.md`](../notes/reviews/security/tools-2026-11-11.md)). They are tooling, not an audit.
 
 ## The decision log
