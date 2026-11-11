@@ -1,5 +1,78 @@
 # `ferrata_bridge_ui`: results
 
+## 12 November 2026: the private round trip on the defaults (B3's done gate)
+
+**A user's private round trip runs through the mini-app on its defaults, headless, against the devnet.**
+Branch `miniapp-private`, Modal build box (profile ws-4, the same container image as below):
+`scripts/box-test.sh` drove the view through a private deposit with the defaults, the relayer's root
+import, the claim's random delay let pass on the devnet's clock (not overridden), a **private claim settled**,
+a **private burn settled** to the fresh address the view generated, with the release's random delay on, the
+checkpoint, the release's delay let pass, and the **release by a relayer paying 0.1 ETH to that fresh
+address**. No default was changed on that path. **17 of 17 test functions passed in 34.4 s**
+(`results/qmltest.txt`, `results/qmltest.xml`; the whole script 45 s), 40 screenshots
+(`results/screenshots/`), the backend's 66 calls in 12.5 s (`results/calls.jsonl`, 7 of them the refusals
+the test asks for).
+
+How the private transactions settle: the devnet gives the harness the wallet's own keys. LEZ's wallet
+derives private account `/0` from the seed's key tree as an authorization secret key and a viewing secret
+key `(d, z)`; those are the fields of the harness's `TestPrivateKeys`, and the account is of kind `Regular`,
+so the ids agree (checked at start against the CLI's derivation for `/0`–`/7`). The harness proves each
+transaction with `lee::execute_and_prove` (LEZ's privacy-preserving circuit; the witness is
+`RegularKey::Authorized(ask)`, as LEZ's wallet builds it for an authorizing private account) and settles it
+through LEZ's private settlement; the devnet then checks its own view of the account after it (balance less
+the fee reserve, the bridge state, the nonce) against the chain's commitments
+(`harness::bridge::private_post_state`).
+
+| Private transaction (dev mode run) | Call | `execute_and_prove` | Receipt | Transaction | Execution gas |
+|---|---:|---:|---:|---:|---:|
+| private claim of leaf 0 under `root(cid, 2)`, 0.1 ETH to private `/0` | 1,421 ms | 927 ms | 4,429 B (dev-mode receipt) | 8,745 B | 549,233 |
+| private burn of 0.1 ETH from private `/0`, note for a fresh recipient | 895 ms | 582 ms | 3,985 B (dev-mode receipt) | 7,857 B | 515,773 |
+
+What the two transactions make public (`proof.public_outputs` in `results/calls.jsonl`): neither names
+private account `/0` or any of the seed's sixteen accounts (`/0`–`/7` of each kind; searched in the
+transactions' public outputs): the sender appears as an alias, a different one in each (`FyS5gqh7…` in the
+claim, `F8Fp7CDT…` in the burn). The claim names its nullifier's account (so recovery from the seed shows
+the deposit as claimed, read the way the CLI reads a sequencer's blocks: the public accounts of private
+transactions); the burn delivers its note in the clear to `token(cid, ETH)`, where the checkpoint collects
+it; the release then pays the note's recipient.
+
+Proofs: in this run the private transactions' receipts are dev-mode ones (`RISC0_DEV_MODE=1`, as the
+harness's tests run). **The same test with the private claim and burn proven for real also passed, 17 of 17**
+(`FERRATA_DEVNET_PROOFS=real`, `results-real-proofs/`: `qmltest.txt`, `calls.jsonl`, four screenshots):
+dev mode off for those two calls, r0vm 3.0.5 on the box's CPU (about 28 cores busy, 9 GB resident during the
+claim's proof), each receipt verified by LEZ's settlement (`check_privacy_preserving_circuit_proof_is_valid`)
+before the state changed. The rest of the harness ran in dev mode, as its tests do.
+
+| Private transaction (real-proof run) | Call | `execute_and_prove` | Receipt | Transaction | Execution gas |
+|---|---:|---:|---:|---:|---:|
+| private claim of leaf 0, 0.1 ETH to private `/0` | 242,953 ms | 242.4 s | 227,442 B | 231,758 B | 549,233 |
+| private burn of 0.1 ETH from private `/0` | 209,738 ms | 209.4 s | 226,998 B | 230,870 B | 515,773 |
+
+The test functions took 484.9 s in all (the two proofs 451.8 s of it); the release paid 0.1 ETH to the
+private burn's fresh recipient in block 17; the box's estimate for the command: 540 s, 3.35 core-hours, about
+0.19 USD. The receipt sizes match the earlier real proofs of these two transactions on an L4 GPU (227,477 B
+and 226,978 B, `lez/BRIDGE-RESULTS.md` §7, an older image of the program).
+
+Stand-ins on this path (named in the backend's replies): the private account's native balance for LEZ fees
+is put in the state on its first private transaction (as the harness's tests fund theirs); the transactions
+have the harness's bare shape with fresh randomness (LEZ's wallet also pads with dummy inputs); the
+relayer's imports, the checkpoint prover and the release proof are the stand-ins of the run below (the
+vault's mock verifier).
+
+| Test (changed or new on this branch) | What it drives and checks | Screenshots |
+|---|---|---|
+| `test_07_private_claim` | private claim pre-selected; held by the deposit's random delay (12 h in this run); the devnet's "let the delay pass" (anvil's clock and the view's clock moved 43,197 s; no override); the private claim settled: private balance `/0` 0.1 ETH, the deposit shown as claimed by recovery | 14, 15, 15b, 16 |
+| `test_10_private_burn_on_defaults` | private holder, fresh recipient and the release's random delay on by default, indicator "Minimal"; the private burn settled: burn 0, private balance 0, the note for the fresh recipient | 20, 20b, 21 |
+| `test_11_checkpoint_and_private_release` | checkpoint; the release held by its delay (8 h in this run), let pass (28,800 s; no override); the relayer's release pays 0.1 ETH to the private burn's fresh recipient (block 17); positions: 0 not released | 22, 22b, 23, 23c |
+| `test_11b_public_burn_and_release` | the public path keeps its warning: a public burn is refused until acknowledged (indicator "High"); then burned, checkpointed and released to another fresh address; a second release refused ("Already released") | 21b, 21c, 23b, 24 |
+| `test_14_wallet_provider_seam` | a stub provider set as `walletProvider` gets the connect (naming the dApp) and the approval of a deposit; the built-in prompts are not used; the deposit goes through | 32 |
+
+The other tests are those of the run below, unchanged. Not re-run on this branch: the packages
+(`nix-build.sh`) and Basecamp (`basecamp-ui-tests.sh`); their numbers below are the `miniapp` branch's, for
+the view before these changes.
+
+## 11 November 2026: the first runs (branch `miniapp`)
+
 **Built as a Logos ui module, loaded in Logos Basecamp, and driven through every screen.** On 11
 November 2026, on the project's Modal build box (the same gVisor container as `modules/RESULTS.md`, Ubuntu
 24.04), the mini-app was packaged by logos-module-builder as a dev and a portable `.lgx`; Basecamp
@@ -100,12 +173,9 @@ dev-dependency); the first build added it (12 lines).
 
 ## Not done
 
-- **The private round trip on the devnet.** The harness proves and settles private transactions only for
-  its test keys (`TestPrivateKeys { ask, d, z }`, account ids from `for_regular_private_account`), while
-  the wallet's private accounts come from LEZ's key tree (`KeyChain { authorization_secret_key,
-  viewing_secret_key }`, ids from `for_private_account(npk, vpk, kind)`), so the seed's private claim
-  cannot be settled there. The view builds it and stops. B3's done gate (a new user completes a private
-  round trip on defaults alone) needs a LEZ sequencer devnet with the wallet's proving.
+- Superseded on 12 November (above): "the harness proves private transactions only for its test keys" was
+  a key-format mapping, not a missing feature: the wallet's keys are the harness's `TestPrivateKeys` fields.
+  The private round trip now settles on the devnet; on a LEZ sequencer it is not run (`README.md`).
 - What `README.md` lists under "Not done".
 
 ## Reproduce
@@ -113,5 +183,6 @@ dev-dependency); the first build added it (12 lines).
 ```sh
 modules/ferrata_bridge_ui/scripts/nix-build.sh      # the packages
 modules/ferrata_bridge_ui/scripts/box-test.sh       # the headless run; results/ is rewritten
+FERRATA_DEVNET_PROOFS=real QT_TIMEOUT=3600 modules/ferrata_bridge_ui/scripts/box-test.sh   # private transactions proven for real; results-real-proofs/
 python3 modules/ferrata_bridge_ui/scripts/shrink-screenshots.py modules/ferrata_bridge_ui/results/screenshots   # optional: crop, palette PNG
 ```
