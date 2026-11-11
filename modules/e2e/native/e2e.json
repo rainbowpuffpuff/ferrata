@@ -1,6 +1,6 @@
 {
  "mode": "call mode: native",
- "checks": 31,
+ "checks": 35,
  "failed": 0,
  "rows": [
   {
@@ -59,7 +59,7 @@
   },
   {
    "group": "log transfer",
-   "check": "the program's statement id = the module's dry-run id",
+   "check": "the program's statement ids = the module's dry-run ids",
    "passed": "yes",
    "detail": ""
   },
@@ -119,7 +119,7 @@
   },
   {
    "group": "log largest_receipt",
-   "check": "the program's statement id = the module's dry-run id",
+   "check": "the program's statement ids = the module's dry-run ids",
    "passed": "yes",
    "detail": ""
   },
@@ -128,6 +128,30 @@
    "check": "read_attestation: event matches the dry run and the instance",
    "passed": "yes",
    "detail": "block 26384851"
+  },
+  {
+   "group": "storage slot (WETH balance)",
+   "check": "dry_run_attest: attested, the provider's value",
+   "passed": "yes",
+   "detail": "value 0x000000000000000000\u2026"
+  },
+  {
+   "group": "storage slot (WETH balance)",
+   "check": "build_attest_tx names header(id, slot); two facts (the account, then the slot)",
+   "passed": "yes",
+   "detail": "message 6906 bytes"
+  },
+  {
+   "group": "storage slot (WETH balance)",
+   "check": "decoded (canonical), applied, event = native = dry-run ids (account, slot)",
+   "passed": "yes",
+   "detail": "gas_exec 273546, gas_stor 7304"
+  },
+  {
+   "group": "storage slot (WETH balance)",
+   "check": "read_attestation matches",
+   "passed": "yes",
+   "detail": ""
   },
   {
    "group": "refusal: tampered receipt proof",

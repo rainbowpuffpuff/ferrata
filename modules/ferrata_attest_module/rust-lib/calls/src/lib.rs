@@ -9,7 +9,7 @@
 use std::fmt::Write as _;
 
 use ferrata_core::{
-    attest::{attest_log, attest_storage, HeaderRecord},
+    attest::{attest_account, attest_storage, attest_log, HeaderRecord},
     exec::{Address, Word},
     fork::{ChainSpec, LcFork, Preset},
     merkle::ZERO,
@@ -171,6 +171,9 @@ fn storage(record: &HeaderRecord, chain_id: u64, s: &Value) -> Result<Value, Str
     let storage_proof = nodes(&entry["proof"], "storage.storageProof[].proof")?;
     // What the provider said the value is; the reply says whether the proof agrees.
     let claimed = word(&entry["value"], "storage.storageProof[].value").ok();
+    // The program attests an account query's account as a fact of its own, before its slots: the
+    // statement ids it emits for this request are the account's, then the slot's.
+    let account = attest_account(record, chain_id, &address, &account_proof).ok();
 
     Ok(match attest_storage(record, chain_id, &address, &account_proof, &slot, &storage_proof) {
         Ok(a) => json!({
@@ -188,6 +191,8 @@ fn storage(record: &HeaderRecord, chain_id: u64, s: &Value) -> Result<Value, Str
             "block_hash": hex(&a.block_hash),
             "id": hex(&a.id),
             "id_at_block": hex(&a.id_at_block()),
+            "account_id": account.as_ref().map(|f| hex(&f.id)),
+            "ids": account.iter().map(|f| hex(&f.id)).chain(std::iter::once(hex(&a.id))).collect::<Vec<_>>(),
         }),
         Err(e) => refused(e, "proof"),
     })
@@ -215,6 +220,7 @@ fn log(record: &HeaderRecord, chain_id: u64, l: &Value) -> Result<Value, String>
             "block_number": a.block_number,
             "block_hash": hex(&a.block_hash),
             "id": hex(&a.id),
+            "ids": [hex(&a.id)],
         }),
         Err(e) => refused(e, "proof"),
     })
@@ -552,7 +558,8 @@ fn build_tx(request: &str) -> Result<Value, String> {
     if logs.is_empty() && accounts.is_empty() {
         return Err("the request needs `log`, `logs` or `storage`".into());
     }
-    let facts = logs.len() + accounts.iter().map(|a| a.slots.len()).sum::<usize>();
+    // The program attests each account as a fact, then each of its slots, then each log.
+    let facts = logs.len() + accounts.iter().map(|a| 1 + a.slots.len()).sum::<usize>();
     let message = tx::attest_message(&tx::Request { instance_id, chain_id, accounts, logs });
     let account = tx::header_account(&program, &instance_id, slot);
     Ok(json!({

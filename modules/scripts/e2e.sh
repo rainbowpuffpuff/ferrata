@@ -79,7 +79,7 @@ log_case() {
   call ferrata_attest_module build_attest_tx "tx_$name"
   harness attest "$(jq -r .message "$out/rep/tx_$name.json")" "$(jq -r .account "$out/rep/tx_$name.json")" > "$out/rep/exec_$name.json"
   jq -n --argjson i "$(rep info)" --argjson d "$(rep "dry_$name")" --argjson e "$(rep "exec_$name")" \
-    '{selector: "0x4652542d41545431", event_data: $e.event_data, expected_ids: [$d.id], expected_instance_id: $i.instance_id}' | req "read_$name"
+    '{selector: "0x4652542d41545431", event_data: $e.event_data, expected_ids: $d.ids, expected_instance_id: $i.instance_id}' | req "read_$name"
   call ferrata_attest_module read_attestation "read_$name"
 }
 
@@ -100,7 +100,7 @@ jq -n --argjson i "$(rep info)" --slurpfile p "$FIXTURE/proof_weth_$block.json" 
 call ferrata_attest_module build_attest_tx tx_storage
 harness attest "$(jq -r .message "$out/rep/tx_storage.json")" "$(jq -r .account "$out/rep/tx_storage.json")" > "$out/rep/exec_storage.json"
 jq -n --argjson i "$(rep info)" --argjson d "$(rep dry_storage)" --argjson e "$(rep exec_storage)" \
-  '{selector: "0x4652542d41545431", event_data: $e.event_data, expected_ids: [$d.id], expected_instance_id: $i.instance_id}' | req read_storage
+  '{selector: "0x4652542d41545431", event_data: $e.event_data, expected_ids: $d.ids, expected_instance_id: $i.instance_id}' | req read_storage
 call ferrata_attest_module read_attestation read_storage
 
 # Refusal 1: the transfer's proof with the last byte of its receipt node changed.
