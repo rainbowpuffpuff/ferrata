@@ -14,8 +14,8 @@ use checkpoint_core::{
     wire::BridgeMessage as CpMessage,
 };
 use ferrata_lez_bridge_wire::{
-    self as bw, code, config_actor, holder_actor, token_actor, BridgeMessage, CapParams, ConfigState, FeeSchedule,
-    Note, ScheduleRange, TokenEntry, MAX_FREEZE_MS,
+    self as bw, code, config_actor, own_actor, token_actor, BridgeMessage, CapParams, ConfigState, FeeSchedule, Note,
+    ScheduleRange, TokenEntry, MAX_FREEZE_MS,
 };
 use harness::{
     bridge::{
@@ -320,9 +320,9 @@ fn registry_fees_caps_freezes_and_sunset() {
     run(&mut reports, r, None);
 
     // Burns: the token's attested clock refills its bucket, as for claims.
-    let holder = holder_actor(program, payer);
+    let holder = own_actor(program, payer);
     let burn = |w: &mut World, label: &str, cid: [u8; 32], note: &Note| -> TxReport {
-        let actors = w.burn_actors(holder, &cid, note);
+        let actors = w.public_burn_actors(payer, &cid, note);
         w.send(label, holder, &BridgeMessage::burn(cid, note), actors)
     };
     let one_eth = CapParams { capacity: DENOMINATIONS[1] / LEZ_UNIT, refill_per_second: 10_000_000 };

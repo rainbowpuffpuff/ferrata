@@ -16,11 +16,14 @@ tables the integration branch committed for `25dfd9b2…8c49` (only the image an
 from it differ). The inbound crossing on a live sequencer (§11) deploys neither: it uses the frozen
 program of `inbound-live` (`66722fc7…f4fa`). §7's real proofs are of `25dfd9b2…8c49`, the
 program before this extension. **Since branch `lez-time-fix`** (§12) the program's freezes and caps
-run on attested Ethereum time instead of a caller's: image
-`d0c11833f2944d1d928bb4a40ffe9300591561dba0c7ca20f1c66265258b23cd` at that worktree's path, and every
-`results/bridge-*.md` is now of it. §12 gives each operation before and after that change; the tables
-of §1–§5 and §8a keep the figures of the program before it (`f11b1aba…58eb`), and §8's rows on caps,
-freezes and `Sunset` are the new run's. Every number below is LEZ's own accounting of a transaction that
+run on attested Ethereum time instead of a caller's, and **since the security fixes of 11 November**
+(§13) public balances sit at `holder(account)` PDAs and `ImportRoot` is accepted only as a visible
+top-level call. The merged program (both changes) is image
+`IMAGE_INTEG5` at the `integration5` worktree's path, and every `results/bridge-*.md` is now of it.
+§12 gives each operation before and after the time fix (that branch alone: `d0c11833…23cd` at its
+worktree's path), §13 before and after the security fixes (that branch alone: `fe2f2487…946d`); the tables
+of §1–§5 and §8a keep the figures of the program before both (`f11b1aba…58eb`), and §8's rows on caps,
+freezes and `Sunset` are the time fix's run. Every number below is LEZ's own accounting of a transaction that
 ran: `lee`'s state transition functions and the copy of LEZ's fee settlement that Stages 1–4 use
 ([RESULTS.md](RESULTS.md) §1), each transaction in a block of its own, the attestation program
 answering the bridge's `Attest` calls. They ran on this worktree's Modal build box
@@ -591,3 +594,50 @@ program (not edited; its `Read` serves the record). **What ran before it used th
 The inbound crossing on a live sequencer and on Sepolia (§11) used the frozen program of
 `inbound-live` (`66722fc7…f4fa`, with a caller's time), §7's real proofs are of `25dfd9b2…8c49`, and
 every figure in §1–§5 and §8a of `f11b1aba…58eb`: none of them has this clock.
+
+## 13. Security fixes of 11 November 2026 (branch `secfix-lez`)
+
+The review `notes/reviews/security/review-2026-11-11.md` (of integration4 at `1bb20d5`) found, on this
+side: **C-1** a claim could write a holder state at any bridge PDA not written yet (as its public
+destination, its relayer, or its configuration's fee recipient), blocking `Init`, `Register` or an import
+for good, destroying a pending claim (its nullifier) or blocking a burn (its record); **H-1** `ImportRoot`
+ran as a nested call or an asynchronous message, which the checkpoint cannot count. Fixes:
+
+- **C-1.** Public wrapped balances moved from the actor state at the holder's own account to
+  `holder(account)`, a PDA whose seed (`…/holder ‖ account`) names its role, so it can never be another
+  actor's address. `Mint` names its holder and is accepted only at `holder(holder)`, seeded by the
+  nullifier (LEZ admits a new holder PDA on the seed, no evidence needed). A public holder still burns by
+  a top-level call it signs at its own actor; that actor debits its own state if it holds the amount
+  (a private claimant's private balance) or forwards the note to `holder(account)`, which accepts it only
+  from that own actor. Roles act through their own actors as before. Every other write is at a PDA whose
+  handler checks its receiver, or at the own actor of an account that authorised the call.
+- **H-1.** `ImportRoot` is refused (253 `NOT_AUTHORIZED`) unless `from = None`, as `Burn` already was.
+
+**Tests** (`harness/tests/bridge_secfix.rs`, dev mode): (a) a claim whose destination is `config(H)` and
+whose relay fee goes to the attacker configuration's fee recipient `config(H2)`, then `Init` of both;
+(b) a claim with `relayer = token(H, ETH)`, then `Register`; (c) a claim to the nullifier account of a
+pending claim, then that claim; (d) a claim to `root(H, 1)`, then the import; (e) a claim with the pending
+burn's record as relayer, then the burn; (f) `Mint` delivered at `config(cid)` (refused) and at
+`holder(config(cid))` (accepted), in the executor; H-1: `ImportRoot` forwarded by LEZ's `scripted`
+program (refused, nothing written; the top-level import of the same count then succeeds), and
+delivered with a sender, as LEZ presents an asynchronous message (executor: refused; without a sender:
+accepted). **Before** (the new tests against `1bb20d5`'s program, build box, `RUN=baseline`): all seven
+of (a)–(e) and both H-1 tests fail, each because the attack worked: the claims wrote a holder state at
+`config(H)`, `token(H, ETH)`, the nullifier, `root(H, 1)` and the burn record; the nested import and the
+import with a sender were accepted. ((f) uses the new `Mint` field and has no before.) **After**
+(`RUN=after1`): 8 of 8 pass; the whole harness 44 passed, 0 failed (36 before the new file), including the
+checkpoint's collection in `bridge_burn.rs` (exactly the three burns, byte for byte); clippy clean.
+
+**Cost** (`results/`, execution gas): a public burn now runs one more handler (the forward):
+130,868 → 158,905 (`Burn 1 ETH (A) by the payer`), 775 → 839 transaction bytes (one more declared
+actor); a plaintext claim 239,431 → 252,941 (`the shared vector's deposit`: the seeded mints);
+`ImportRoot` 226,091 → 225,793; the private claim's two transitions 41,133 → 41,052 and
+111,838 → 111,740 cycles. Refusals before any write cost less or about the same.
+
+**Not changed here.** L-4 (the relay fee of a plaintext claim goes to whoever gets a copy included
+first): the review's fix, `relayer == from`, does not stop a copier that names itself; the private claim
+binds its relayer inside the proof (`docs/trust.md` §7). I-5 (time) is the `lez-time-fix` branch's.
+I-9 is recorded in `BRIDGE.md` §3 (one mint authority per `(cid, token)` when a token program exists).
+The live sequencer's frozen program (`live/frozen`) is not changed: it is what §11 ran, and it has C-1
+and H-1; a new deployment must use this program, whose new image changes every `configId`.
+

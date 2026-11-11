@@ -75,9 +75,9 @@
       "tag": "ferrata/memo/v1"
     },
     {
-      "bytes": "0x666572726174612f6275726e2d6d61632f7631",
+      "bytes": "0x666572726174612f6275726e2d6d61632f7632",
       "length": 19,
-      "tag": "ferrata/burn-mac/v1"
+      "tag": "ferrata/burn-mac/v2"
     },
     {
       "bytes": "0x666572726174612f6275726e2f7631",
@@ -85,9 +85,9 @@
       "tag": "ferrata/burn/v1"
     },
     {
-      "bytes": "0x666572726174612f6e662d6f75742f7631",
+      "bytes": "0x666572726174612f6e662d6f75742f7632",
       "length": 17,
-      "tag": "ferrata/nf-out/v1"
+      "tag": "ferrata/nf-out/v2"
     },
     {
       "bytes": "0x666572726174612f6b65797365742f7631",

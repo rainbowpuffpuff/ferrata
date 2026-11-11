@@ -38,7 +38,7 @@ use ferrata_bridge_core::{
     BridgeKeys, Hash,
 };
 use ferrata_lez_bridge_wire::{
-    self as bw, burn_mac_v2, holder_actor, nullifier_actor, BridgeMessage, HolderState, Holding, Note,
+    self as bw, burn_mac_v2, nullifier_actor, own_actor, BridgeMessage, HolderState, Holding, Note,
 };
 use harness::{
     bridge::{
@@ -508,7 +508,7 @@ fn collect_private(
     let ids = touched(w, &[publics.clone(), vec![inbox]].concat());
     let before = snapshot(w, &ids);
     let root_before = commitment_root(w);
-    let me = holder_actor(w.program, sender.id());
+    let me = own_actor(w.program, sender.id());
     let time = w.time;
     let run = w
         .chain
@@ -650,7 +650,7 @@ fn privacy_suite_lez_half() {
         let (note, s_out) = users[u].note(&cid, 0);
         let message = BridgeMessage::burn(cid, &note);
         let holder = holders[u].as_ref().unwrap();
-        let me = holder_actor(w.program, holder.id());
+        let me = own_actor(w.program, holder.id());
         let publics = w.burn_actors(me, &cid, &note)[1..].to_vec();
         let fresh = Freshness {
             alias_opening: h("ferrata/privacy-suite/alias-opening", 2, k as u64),

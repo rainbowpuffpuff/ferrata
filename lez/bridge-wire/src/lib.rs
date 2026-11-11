@@ -9,11 +9,17 @@
 //! | `token(cid, token)` | PDA `H(…/token ‖ cid ‖ token)` | [`TokenState`]: a registry entry attested from the vault, its fee schedules, the token's freezes and caps |
 //! | `root(cid, n)` | PDA `H(…/root ‖ cid ‖ n)` | [`RootState`]: the vault's root at leaf count `n`, written once |
 //! | `nullifier(chain, vault, N)` | PDA `H(…/nullifier ‖ chain ‖ vault ‖ N)` | [`NullifierState`]: `N` spent, written once |
-//! | holder | the holder's own account | [`HolderState`]: wrapped balances (the M0 fallback: no v0.4 token program) |
+//! | `holder(account)` | PDA `H(…/holder ‖ account)` | [`HolderState`]: an account's public wrapped balances (the M0 fallback: no v0.4 token program); written only by `Mint` and the account's own `Burn` |
+//! | the account's own actor | the account itself | [`HolderState`] of its own private claims (in a private account, its private state); the entry point of its burns and of its role messages; runs only for its owner |
 //! | `burn(cid, H(note))` | PDA `H(…/burn ‖ cid ‖ H(note))` | [`BurnRecord`]: a burn note, written once |
 //!
 //! `cid` is SPEC-v2 §1's `configId`. The nullifier's address has no `cid`: one namespace for the
 //! whole program, so two configurations cannot both mint against one vault deposit.
+//!
+//! Every address a claim or a burn writes is a PDA whose seed names its role, or the own actor of an
+//! account that authorised the call. A mint names its holder and writes only at `holder(account)`,
+//! never at the account itself, so no destination, relayer or fee recipient a claim names can be
+//! another role's PDA (security review of 11 November 2026, C-1).
 //!
 //! Message variants 0–3 are the checkpoint's (`checkpoint/crates/checkpoint-core/src/wire.rs`):
 //! the checkpoint program decodes every call to this program that a LEZ block shows in the clear
@@ -595,6 +601,10 @@ pub fn burn_seed(config_id: &Root, note_hash: &Root) -> PdaSeed {
     PdaSeed::new(tagged_hash(b"burn", &[config_id, note_hash]))
 }
 
+pub fn holder_seed(account: &Root) -> PdaSeed {
+    PdaSeed::new(tagged_hash(b"holder", &[account]))
+}
+
 fn pda(program: AccountId, seed: &PdaSeed) -> Actor {
     Actor::new(AccountId::for_public_pda(&program, seed), program)
 }
@@ -619,9 +629,17 @@ pub fn burn_actor(program: AccountId, config_id: &Root, note_hash: &Root) -> Act
     pda(program, &burn_seed(config_id, note_hash))
 }
 
-/// The bridge program's actor at `account`: a holder's wrapped balances, and the actor through
-/// which a role (admin, freeze authority) acts.
+/// `holder(account)`: the PDA holding `account`'s public wrapped balances. Its seed carries the
+/// role, so it is never the address of another actor of the program, whatever account a claim names.
 pub fn holder_actor(program: AccountId, account: AccountId) -> Actor {
+    pda(program, &holder_seed(account.value()))
+}
+
+/// The bridge program's actor at `account` itself: where its owner burns (top-level call or private
+/// root), where a role (admin, freeze authority) acts, and where a private claimant claims and keeps
+/// its private-kind credit (in a private account, its private state). Every write there needs the
+/// owner's authorisation.
+pub fn own_actor(program: AccountId, account: AccountId) -> Actor {
     Actor::new(account, program)
 }
 
@@ -722,8 +740,9 @@ pub struct ClaimWitness {
 #[allow(clippy::large_enum_variant)]
 #[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub enum BridgeMessage {
-    /// Variant 0. At a holder's actor, as a top-level call or the root of a private execution:
-    /// debit one denomination and send the note to `token(cid, token)`, which admits it (the
+    /// Variant 0. At the holder's own actor, as a top-level call or the root of a private
+    /// execution: debit one denomination (from its own state, or else from `holder(account)`, to
+    /// which it forwards the note) and send the note to `token(cid, token)`, which admits it (the
     /// denomination, the burn freezes and caps) and records it once at `burn(cid, H(note))`.
     Burn { config_id: Root, r: Root, memo: Address, mac: [u8; 16], token: Address, amount: Word, c_out: Root },
     /// Variant 1. At `config(cid)`: attest the vault's slots 0 and 1 under the record at
@@ -768,8 +787,16 @@ pub enum BridgeMessage {
         mint_to: Option<Root>,
         fees: Vec<(Root, u128)>,
     },
-    /// Variant 10. `nullifier(chain, vault, N)` → a holder: credit `amount` of `token`.
-    Mint { nullifier: Root, config_id: Root, evm_chain_id: u64, vault: Address, token: Address, amount: u128 },
+    /// Variant 10. `nullifier(chain, vault, N)` → `holder(holder)`: credit `amount` of `token`.
+    Mint {
+        nullifier: Root,
+        config_id: Root,
+        evm_chain_id: u64,
+        vault: Address,
+        token: Address,
+        holder: Root,
+        amount: u128,
+    },
     /// Variant 11. At `config(cid)`: attest the vault's registry entry of `entry.token`, its fee
     /// schedules 0 and 1 and its leaf count under one record, and write `token(cid, token)`.
     Register { config_id: Root, entry: TokenEntry, schedule: FeeSchedule, record_slot: u64, proof: VaultProof },
@@ -996,7 +1023,7 @@ pub struct Holding {
     pub amount: u128,
 }
 
-/// The bridge program's actor at a holder's account.
+/// `holder(account)`, or an account's own actor (its own private claims).
 #[derive(Clone, Debug, Default, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub struct HolderState {
     pub holdings: Vec<Holding>,
@@ -1017,6 +1044,18 @@ impl HolderState {
     /// The holding of `token` under `config_id`.
     pub fn holding(&self, config_id: &Root, token: &Address) -> Option<&Holding> {
         self.holdings.iter().find(|h| h.config_id == *config_id && h.token == *token)
+    }
+
+    /// Take `amount` of `token` under `config_id`, if held (an emptied holding is removed).
+    pub fn debit(&mut self, config_id: &Root, token: &Address, amount: u128) -> Option<()> {
+        let index = self.holdings.iter().position(|h| h.config_id == *config_id && h.token == *token)?;
+        let left = self.holdings[index].amount.checked_sub(amount)?;
+        if left == 0 {
+            self.holdings.remove(index);
+        } else {
+            self.holdings[index].amount = left;
+        }
+        Some(())
     }
 }
 
@@ -1265,15 +1304,14 @@ pub fn verify_claim(root: &RootState, w: &ClaimWitness, range: &ScheduleRange) -
 // program never sees `sOut` or `kView`)
 // ---------------------------------------------------------------------------------------------
 
-/// D13: `NOut = H("ferrata/nf-out/v2" ‖ sOut)`, independent of the burn's index.
+/// D13: `NOut = H("ferrata/nf-out/v2" ‖ sOut)`, independent of the burn's index (the bridge core's,
+/// which the release guest commits).
 pub fn nf_out_v2(s_out: &Root) -> Root {
-    let mut preimage = Vec::with_capacity(17 + 32);
-    preimage.extend_from_slice(b"ferrata/nf-out/v2");
-    preimage.extend_from_slice(s_out);
-    sha256(&preimage)
+    ferrata_bridge_core::outbound::burn_nullifier(s_out)
 }
 
-/// D12: `mac = HMAC(kView, "ferrata/burn-mac/v2" ‖ r ‖ memo ‖ token ‖ amount ‖ COut)[0..16]`.
+/// D12: `mac = HMAC(kView, "ferrata/burn-mac/v2" ‖ r ‖ memo ‖ token ‖ amount ‖ COut)[0..16]` (the
+/// bridge core's, which wallets make and check).
 pub fn burn_mac_v2(
     k_view: &ferrata_bridge_core::BridgeKey,
     r: &Root,
@@ -1282,11 +1320,7 @@ pub fn burn_mac_v2(
     amount: &Word,
     c_out: &Root,
 ) -> [u8; 16] {
-    let mut m = Vec::with_capacity(19 + 32 + 20 + 20 + 32 + 32);
-    for part in [&b"ferrata/burn-mac/v2"[..], r, memo, token, amount, c_out] {
-        m.extend_from_slice(part);
-    }
-    k_view.prf(&m)[..16].try_into().expect("16 bytes")
+    ferrata_bridge_core::outbound::burn_mac(k_view, r, memo, token, amount, c_out)
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1348,7 +1382,8 @@ pub mod code {
         /// A destination this path cannot credit: a plaintext claim of a private-kind deposit, or
         /// a private-kind claim not run as its destination.
         WRONG_DESTINATION = 252;
-        /// A burn not authorised by its holder, or not a top-level call or private root (D10); a
+        /// A burn not authorised by its holder, or not a top-level call or private root (D10); an
+        /// `ImportRoot` that is not a top-level call or private root (D10, security review H-1); a
         /// control message (`Sunset`, `Freeze`, `SetCap`) not from the configured role, or not a
         /// top-level call at its own actor.
         NOT_AUTHORIZED = 253;

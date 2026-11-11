@@ -7,7 +7,7 @@
 use std::{fs, path::PathBuf};
 
 use ferrata_lez_bridge_wire::{
-    holder_actor, nullifier_actor, root_actor, token_actor, BridgeMessage, BridgeState, HolderState, Holding,
+    nullifier_actor, own_actor, root_actor, token_actor, BridgeMessage, BridgeState, HolderState, Holding,
     NullifierState, ScheduleRange,
 };
 use harness::{
@@ -60,7 +60,7 @@ fn a_private_claim_publishes_only_the_nullifier_the_denomination_and_the_root_re
     let token = token_actor(w.program, &cid, &ETH);
     let publics = w.private_claim_actors(&cid, 8, &va, &deposit);
     assert!(publics.contains(&nullifier_actor(w.program, CHAIN_ID, &va, &n)));
-    let me = holder_actor(w.program, account.id());
+    let me = own_actor(w.program, account.id());
     let run = w
         .chain
         .prove_and_settle_private(&account, me, borsh::to_vec(&message).unwrap(), publics, &catalog(), RESERVE, w.time)
@@ -192,7 +192,7 @@ fn a_private_claim_to_a_public_destination_and_the_refusals() {
     let deposit = w.payer_deposit.clone();
     let message = w.claim_privately(&cid, 8, w.vault_a.witness(&deposit, 8));
     let publics = w.private_claim_actors(&cid, 8, &va, &deposit);
-    let me = holder_actor(w.program, prover.id());
+    let me = own_actor(w.program, prover.id());
     let run = w
         .chain
         .prove_and_settle_private(
@@ -242,7 +242,7 @@ fn a_private_claim_to_a_public_destination_and_the_refusals() {
         .chain
         .prove_and_settle_private(
             &other,
-            holder_actor(w.program, other.id()),
+            own_actor(w.program, other.id()),
             borsh::to_vec(&message).unwrap(),
             publics,
             &catalog(),

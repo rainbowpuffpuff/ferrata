@@ -111,7 +111,12 @@ through the program are **not built** (milestone A2).
 
 **The policy's liveness limit.** A header enters only through a finality update; the program keeps no
 optimistic header. If Ethereum finalizes nothing through a whole sync-committee period, the instance stops
-safely and must be replaced ([`attestation.md`](design/attestation.md) §4.1).
+safely and must be replaced ([`attestation.md`](design/attestation.md) §4.1). The same follows if a third of
+one committee (171 of 512) withholds its signatures for a whole period: without force updates the instance
+cannot move to the next committee. The bridge pins the instance in `configId`, so replacing it is a full
+migration (`Sunset` by the freeze authority, then a new configuration and vault); the minority's cost is its
+sync rewards and penalties for about 27 hours (security review of 11 November 2026, I-6; not changed: force
+updates would admit headers on weaker evidence).
 
 ### 2.3 What an attestation proves, and what it does not
 
@@ -235,7 +240,11 @@ silent sequencer stalls releases for `n ≤ 5`; it needs an unpredictable `prevr
    nodes (rule (A): also if the key set lags the live one). A cancelled state waits again in full.
 2. **The release delay.** Once a root is final, releases against it wait the token's delay: at least
    24 h outside testnets, at most the 7-day revocation window. In it the freeze authority can
-   `revokeFrom` the checkpoint and every later one; used nullifiers stay used.
+   `revokeFrom` the checkpoint and every later one; used nullifiers stay used. The release nullifier is
+   D13's `NOut = H("ferrata/nf-out/v2" ‖ sOut)`, which does not depend on the burn's index, so a burn
+   that a revoked checkpoint collected at one index and the canonical branch at another is released
+   once (release guest since 11 November 2026; security review M-3: the guest had kept SPEC-v2's
+   index-dependent `NOut`, under which such a burn could be released twice).
 3. **Caps.** Release buckets per token and globally (refunds draw on them too).
 4. **The halt.** A wrong checkpoint not revoked within the revocation window halts the vault for good:
    every later candidate descends from it, so no honest checkpoint can follow.
@@ -328,10 +337,10 @@ Nothing runs itself; every state change is a transaction someone pays for
 | Transition | Who | Why they would | Built |
 |---|---|---|---|
 | light-client update | anyone running the updater | they need fresh records (consumers, the bridge's importers); the bridge can pay a fixed rebate from its protocol fee (soft #5) | updates yes; the rebate is design only |
-| `ImportRoot` | anyone | depositors want to claim; relayers earn relay fees on claims | yes |
+| `ImportRoot` | anyone, as a top-level call or private root (the bridge refuses a nested or asynchronous import, which the checkpoint could not count; security review H-1) | depositors want to claim; relayers earn relay fees on claims | yes |
 | `submitCandidate`, `finalize` / `finalizeAttested` | anyone with a prover | the **checkpoint fee** of every release against that root goes to the finaliser | yes (vault v5) |
 | `recordBeacon` (rule (A)) | anyone, typically the finaliser | needed for its finalisation | yes |
-| relaying claims and releases | relayers | the registered relay fee, bound by the proof | fee yes; relayer service no |
+| relaying claims and releases | relayers | the registered relay fee, bound by the proof (a plaintext claim's relayer is a free field: whoever gets a copy of it included first takes its relay fee, at most 1% of the denomination; the private claim binds the relayer inside the proof; security review L-4, not changed) | fee yes; relayer service no |
 | `cancelCandidate`, `pauseCheckpoints` | watchers | appointed by the admin; no fee | vault side yes; `monitor` no |
 | `refund` after retirement | anyone, typically the depositor | it pays the depositor named in the leaf | yes |
 | `retire()` after 30 days without a checkpoint | anyone | to open refunds | yes (vault); LEZ `Sunset` by the freeze authority only |

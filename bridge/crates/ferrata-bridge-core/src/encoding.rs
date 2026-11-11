@@ -28,10 +28,10 @@
 //! | `sOut` | HMAC(kAuth) | 80 | `"ferrata/s-out/v1" ‖ configId ‖ r` |
 //! | `COut` | SHA-256 | 119 | `"ferrata/Cout/v1" ‖ sOut ‖ evmChainId:u256 ‖ vault:20 ‖ recipient:20` |
 //! | memo pad | HMAC(kView)[0..20] | 47 | `"ferrata/memo/v1" ‖ r` |
-//! | `mac` | HMAC(kView)[0..16] | 135 | `"ferrata/burn-mac/v1" ‖ r ‖ token:20 ‖ amount:u256 ‖ COut` |
+//! | `mac` | HMAC(kView)[0..16] | 155 | `"ferrata/burn-mac/v2" ‖ r ‖ memo:20 ‖ token:20 ‖ amount:u256 ‖ COut` (D12; v1 omitted the memo) |
 //! | burn leaf | SHA-256 | 189 | `0x02 ‖ BURN_TAG ‖ configId ‖ burnIndex:u64 ‖ token:20 ‖ amount:u256 ‖ COut ‖ r` |
 //! | `burnId` | SHA-256 | 87 | `"ferrata/burn/v1" ‖ configId ‖ burnIndex:u64 ‖ burnLeaf` |
-//! | `NOut` | SHA-256 | 81 | `"ferrata/nf-out/v1" ‖ sOut ‖ burnId` |
+//! | `NOut` | SHA-256 | 49 | `"ferrata/nf-out/v2" ‖ sOut` (D13; v1 also hashed `burnId`, so it changed with the burn's index) |
 //! | `keySetHash` | SHA-256 | 21 + 32n | `"ferrata/keyset/v1" ‖ n:u32 ‖ key_1 ‖ … ‖ key_n` |
 //! | `burnFrontierHash` | SHA-256 | 1048 | `"ferrata/burn-frontier/v1" ‖ f_0 ‖ … ‖ f_31` (**not in SPEC-v2**: see [`burn_frontier_preimage`]) |
 //! | `S` | SHA-256 | 173 | `"ferrata/lez-state/v1" ‖ tipId:u64 ‖ tipHash ‖ keySetHash ‖ configTipHash ‖ burnCount:u64 ‖ burnFrontierHash ‖ importedLeafCount:u64 ‖ sunset:u8` |
@@ -105,11 +105,11 @@ pub const TAG_C_OUT: &[u8] = b"ferrata/Cout/v1";
 /// Prefix of the HMAC message for the memo pad.
 pub const TAG_MEMO: &[u8] = b"ferrata/memo/v1";
 /// Prefix of the HMAC message for the burn-note MAC.
-pub const TAG_BURN_MAC: &[u8] = b"ferrata/burn-mac/v1";
+pub const TAG_BURN_MAC: &[u8] = b"ferrata/burn-mac/v2";
 /// Prefix of the preimage of `burnId`.
 pub const TAG_BURN: &[u8] = b"ferrata/burn/v1";
 /// Prefix of the preimage of the burn nullifier `NOut`.
-pub const TAG_NF_OUT: &[u8] = b"ferrata/nf-out/v1";
+pub const TAG_NF_OUT: &[u8] = b"ferrata/nf-out/v2";
 /// Prefix of the preimage of `keySetHash`.
 pub const TAG_KEYSET: &[u8] = b"ferrata/keyset/v1";
 /// Prefix of the preimage of `burnFrontierHash` (this crate's choice; SPEC-v2 leaves it open).
@@ -313,23 +313,24 @@ pub fn memo_pad_message(r: &Hash) -> [u8; 47] {
     Concat::new().put(TAG_MEMO).put(r).finish()
 }
 
-/// HMAC message (key `kView`) for the burn-note MAC, 135 bytes: `"ferrata/burn-mac/v1"`(19) ‖ r(32) ‖
-/// token(20) ‖ amount(32) ‖ COut(32). The MAC is the first 16 bytes of the HMAC output. It does not
-/// cover the memo.
-pub fn burn_mac_message(r: &Hash, token: &Address, amount: &U256, c_out: &Hash) -> [u8; 135] {
-    Concat::new().put(TAG_BURN_MAC).put(r).put(token).put(amount).put(c_out).finish()
+/// HMAC message (key `kView`) for the burn-note MAC (D12), 155 bytes: `"ferrata/burn-mac/v2"`(19) ‖
+/// r(32) ‖ memo(20) ‖ token(20) ‖ amount(32) ‖ COut(32). The MAC is the first 16 bytes of the HMAC
+/// output. It covers the memo, so a `kView`-only viewer drops a copied note with another memo.
+pub fn burn_mac_message(r: &Hash, memo: &Address, token: &Address, amount: &U256, c_out: &Hash) -> [u8; 155] {
+    Concat::new().put(TAG_BURN_MAC).put(r).put(memo).put(token).put(amount).put(c_out).finish()
 }
 
 /// Preimage of `burnId`, 87 bytes: `"ferrata/burn/v1"`(15) ‖ configId(32) ‖ burnIndex:u64(8) ‖
-/// burnLeaf(32).
+/// burnLeaf(32). SPEC-v2's; no longer part of `NOut` (D13).
 pub fn burn_id_preimage(config_id: &Hash, burn_index: u64, leaf: &Hash) -> [u8; 87] {
     Concat::new().put(TAG_BURN).put(config_id).put(&burn_index.to_be_bytes()).put(leaf).finish()
 }
 
-/// Preimage of the burn nullifier `NOut`, 81 bytes: `"ferrata/nf-out/v1"`(17) ‖ sOut(32) ‖
-/// burnId(32).
-pub fn burn_nullifier_preimage(s_out: &Hash, burn_id: &Hash) -> [u8; 81] {
-    Concat::new().put(TAG_NF_OUT).put(s_out).put(burn_id).finish()
+/// Preimage of the burn nullifier `NOut` (D13), 49 bytes: `"ferrata/nf-out/v2"`(17) ‖ sOut(32). It
+/// does not depend on the burn's index, so a burn that a revoked checkpoint collected at one index
+/// and the canonical branch at another has one nullifier, and is released once.
+pub fn burn_nullifier_preimage(s_out: &Hash) -> [u8; 49] {
+    Concat::new().put(TAG_NF_OUT).put(s_out).finish()
 }
 
 // ------------------------------------------------------------------------------------------------

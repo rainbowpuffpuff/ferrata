@@ -26,8 +26,8 @@ use ferrata_bridge_core::{
     BridgeKeys, Hash,
 };
 use ferrata_lez_bridge_wire::{
-    burn_actor, burn_mac_v2, holder_actor, token_actor, word_of_u128, BridgeMessage, BridgeState, BurnRecord,
-    HolderState, Holding, Note,
+    burn_actor, burn_mac_v2, own_actor, token_actor, word_of_u128, BridgeMessage, BridgeState, BurnRecord, HolderState,
+    Holding, Note,
 };
 use harness::{
     bridge::{bridge_account, catalog, private_keys, private_post_state, World, CHAIN_ID, DENOMINATIONS, ETH},
@@ -98,7 +98,7 @@ fn main() {
     let deposit = w.private_deposit.clone();
     assert_eq!(account.id().value(), &deposit.dest, "the deposit is for this private account");
     let n = deposit.nullifier(CHAIN_ID, &vault);
-    let me = holder_actor(program, account.id());
+    let me = own_actor(program, account.id());
     let witness = w.vault_a.witness(&deposit, 8);
     let claim_message = w.claim_privately(&cid, 8, witness.clone());
     println!(

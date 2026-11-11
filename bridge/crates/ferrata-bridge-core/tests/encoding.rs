@@ -46,9 +46,9 @@ fn prefix_tags_are_exact_strings_and_prefix_free() {
         "ferrata/s-out/v1",
         "ferrata/Cout/v1",
         "ferrata/memo/v1",
-        "ferrata/burn-mac/v1",
+        "ferrata/burn-mac/v2",
         "ferrata/burn/v1",
-        "ferrata/nf-out/v1",
+        "ferrata/nf-out/v2",
         "ferrata/keyset/v1",
         "ferrata/burn-frontier/v1",
         "ferrata/lez-state/v1",
@@ -70,8 +70,7 @@ fn prefix_tags_are_exact_strings_and_prefix_free() {
 fn layouts_match_the_spec_field_by_field() {
     let (vault, depositor, token, recipient) = (addr("vault"), addr("depositor"), addr("token"), addr("recipient"));
     let (amount, c, s, dest, leaf, r, cfg) = (h("amount"), h("C"), h("s"), h("dest"), h("leaf"), h("r"), h("configId"));
-    let (fid, left, right, burn_id, c_out, s_out) =
-        (h("fid"), h("left"), h("right"), h("burnId"), h("COut"), h("sOut"));
+    let (fid, left, right, c_out, s_out) = (h("fid"), h("left"), h("right"), h("COut"), h("sOut"));
     let chain = h("a uint256 chain id");
     let (j, i, idx) = (7u64, 9u64, 0x1122_3344_5566_7788u64);
 
@@ -134,12 +133,12 @@ fn layouts_match_the_spec_field_by_field() {
         ),
         (memo_pad_message(&r).to_vec(), cat(&[b"ferrata/memo/v1", &r]), 47),
         (
-            burn_mac_message(&r, &token, &amount, &c_out).to_vec(),
-            cat(&[b"ferrata/burn-mac/v1", &r, &token, &amount, &c_out]),
-            135,
+            burn_mac_message(&r, &recipient, &token, &amount, &c_out).to_vec(),
+            cat(&[b"ferrata/burn-mac/v2", &r, &recipient, &token, &amount, &c_out]),
+            155,
         ),
         (burn_id_preimage(&cfg, idx, &leaf).to_vec(), cat(&[b"ferrata/burn/v1", &cfg, &idx.to_be_bytes(), &leaf]), 87),
-        (burn_nullifier_preimage(&s_out, &burn_id).to_vec(), cat(&[b"ferrata/nf-out/v1", &s_out, &burn_id]), 81),
+        (burn_nullifier_preimage(&s_out).to_vec(), cat(&[b"ferrata/nf-out/v2", &s_out]), 49),
     ];
     for (n, (got, want, len)) in cases.into_iter().enumerate() {
         assert_eq!(got, want, "case {n}");

@@ -10,7 +10,7 @@
 use std::{fs, path::PathBuf};
 
 use ferrata_lez_bridge_wire::{
-    code, config_actor, holder_actor, token_actor, BridgeMessage, CapParams, ConfigState, Note, TimeRecord,
+    code, config_actor, own_actor, token_actor, BridgeMessage, CapParams, ConfigState, Note, TimeRecord,
     MAX_FREEZE_MS,
 };
 use ferrata_lez_wire::{header_actor, header_seed};
@@ -187,9 +187,10 @@ fn freezes_and_caps_follow_attested_time_only() {
     };
     let r = w.role("Freeze A's burns for one hour", FREEZE_SEED, &freeze_a, a_actor);
     run(&mut reports, r, None);
-    let holder = holder_actor(program, w.chain.payer);
+    let payer = w.chain.payer;
+    let holder = own_actor(program, payer);
     let burn = |w: &mut World, label: &str, note: &Note| -> TxReport {
-        let actors = w.burn_actors(holder, &cid_a, note);
+        let actors = w.public_burn_actors(payer, &cid_a, note);
         w.send(label, holder, &BridgeMessage::burn(cid_a, note), actors)
     };
     w.time += YEAR_MS;
