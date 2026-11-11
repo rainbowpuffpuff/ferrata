@@ -1,0 +1,66 @@
+# ferrata: the user's and the relayer's command-line tool for the Ferrata bridge (prototype, unaudited).
+#
+# Its own workspace, like lez/live/driver: it links LEZ's wallet library (and with it LEZ's node-side
+# crates) and alloy, which the rest of the repository avoids. The LEZ clone sits at
+# upstream/lez-v0.4.0-rc1 beside the repository, as for lez/.
+[package]
+name = "ferrata-cli"
+description = "ferrata: keys, deposit, scan and recover, claim, burn, release and status for the Ferrata bridge"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[workspace]
+
+[[bin]]
+name = "ferrata"
+path = "src/main.rs"
+
+[dependencies]
+ferrata-bridge-core = { path = "../bridge/crates/ferrata-bridge-core" }
+ferrata-lez-bridge-wire = { path = "../lez/bridge-wire" }
+# The attestation program's interface and the core's store and record encodings (`status`: the
+# instance's finalized header and its newest record), as lez/bridge-wire links them.
+ferrata-lez-wire = { path = "../lez/wire" }
+ferrata-core = { path = "../crates/ferrata-core", default-features = false }
+
+# LEZ by path (v0.4.0-rc1, commit 1806e87), as lez/live/driver links it.
+wallet = { path = "../../upstream/lez-v0.4.0-rc1/lez/wallet" }
+common = { path = "../../upstream/lez-v0.4.0-rc1/lez/common" }
+sequencer_service_rpc = { path = "../../upstream/lez-v0.4.0-rc1/lez/sequencer/service/rpc", features = ["client"] }
+lee = { path = "../../upstream/lez-v0.4.0-rc1/lee/state_machine" }
+lee_core = { path = "../../upstream/lez-v0.4.0-rc1/lee/state_machine/core", features = ["host"] }
+key_protocol = { path = "../../upstream/lez-v0.4.0-rc1/lee/key_protocol" }
+
+# Ethereum: keystore, signing, JSON-RPC and ABI.
+alloy = { version = "1", features = ["contract", "provider-http", "rpc-types", "signer-local", "signer-keystore", "network"] }
+# Executes or proves the release guest in r0vm 3.0.5 (installed with rzup), over IPC, as bridge/e2e does.
+risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["client"] }
+
+bip39 = "2.2"
+tokio = { version = "1.50", features = ["rt-multi-thread", "macros", "time"] }
+clap = { version = "4.5", features = ["derive", "env"] }
+anyhow = "1"
+borsh = { version = "=1.6.1", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+hex = "0.4"
+sha2 = "0.10"
+hmac = "0.12"
+url = "2.5"
+
+[dev-dependencies]
+# The LEZ side of the end-to-end test: LEZ's state transition with the bridge guest (dev mode).
+harness = { path = "../lez/harness" }
+rand = "0.8"
+
+# As in LEZ's workspace, so that the wallet is built with the dependencies LEZ builds it with.
+[patch.crates-io]
+keccak = { git = "https://github.com/logos-blockchain/sponges", rev = "3a56e99771beedf04946eab21a4a62adc2951377" }
+
+[profile.dev.package."*"]
+opt-level = 2
+
+[profile.test]
+opt-level = 1
