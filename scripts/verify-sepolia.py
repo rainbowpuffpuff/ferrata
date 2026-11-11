@@ -33,15 +33,28 @@ import urllib.request
 
 DEFAULT_RPC = "https://ethereum-sepolia-rpc.publicnode.com"
 CHAIN_ID = 11155111
-# The programs of the live run (e2e/crown/README.md, "The programs of the live run"): built at the crown build path.
-EXPECTED_IDS = {
-    "attestation": "0x2228bb462b83032ade1c5de62d381b8dcffe9d10d9e977dce9e9fc8da31467cf",
-    "bridge": "0x0e9dcd79482f9e0b83762b965d7e1d4319ffeba8a4bdfbdff148bbeaba79bbb6",
-    "checkpoint_b": "0xa475e8f9aaa41d0ae3bf9a20ae7d937ebc637a961808765f0ff175158760d3b2",
-    "checkpoint": "0xcf38b945a70b66d9132fb493b4baf1db308de73ccb8b1108e1c1f8a4363525e6",
-    "segment": "0xd2b30667292418ccf3cf68ee4fa2dc9ed7873de4034fcf1fb2ed3a6305a61cca",
-    "release": "0x17257f91bca70abf7a5476b498d687e95b6fb4d59e75b6bca1d46877ac9bf5cd",
+# The programs a run must have used. crown-live-1 ran programs built at the maintainer's checkout path (before guest
+# builds were path-independent); every later run, the final programs of e2e/crown/README.md's first table, which any
+# checkout rebuilds to the same ids (scripts/reproduce-image-ids.sh, docs/image-ids.md).
+RUN_IDS = {
+    "crown-live-1": {
+        "attestation": "0x2228bb462b83032ade1c5de62d381b8dcffe9d10d9e977dce9e9fc8da31467cf",
+        "bridge": "0x0e9dcd79482f9e0b83762b965d7e1d4319ffeba8a4bdfbdff148bbeaba79bbb6",
+        "checkpoint_b": "0xa475e8f9aaa41d0ae3bf9a20ae7d937ebc637a961808765f0ff175158760d3b2",
+        "checkpoint": "0xcf38b945a70b66d9132fb493b4baf1db308de73ccb8b1108e1c1f8a4363525e6",
+        "segment": "0xd2b30667292418ccf3cf68ee4fa2dc9ed7873de4034fcf1fb2ed3a6305a61cca",
+        "release": "0x17257f91bca70abf7a5476b498d687e95b6fb4d59e75b6bca1d46877ac9bf5cd",
+    },
 }
+FINAL_IDS = {
+    "attestation": "0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df",
+    "bridge": "0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd",
+    "checkpoint_b": "0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e",
+    "checkpoint": "0xb9c1e6a834879f6be79d09d728523565846018629b82f66986eb58fab4f52c84",
+    "segment": "0x11e888e94b9520b08477ba5c5c29cc46bdffc7b1e7c5fe822eb0776f40c54592",
+    "release": "0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9",
+}
+EXPECTED_IDS = FINAL_IDS  # set per run in main()
 CHECKPOINT_DOMAIN = "0xbdb3b52df781536a6bcce7088d156b3951a00a45ec8bcf2805ba8406fbeb5ec7"
 # The order of deploy.sh's transactions from the deployer's first nonce N (identity.json createAddresses).
 DEPLOY_STEPS = ["emergency stop", "FerrataRegistry library", "FerrataVault", "test token", "register ETH",
@@ -378,6 +391,9 @@ def main() -> int:
     ap.add_argument("--readme", default=os.path.join(here, "..", "e2e", "crown", "README.md"))
     a = ap.parse_args()
     R = a.run.rstrip("/")
+    global EXPECTED_IDS
+    run_name = os.path.basename(R)
+    EXPECTED_IDS = RUN_IDS.get(run_name, FINAL_IDS)
     rpc = Rpc(a.rpc)
     opt = lambda p: load(os.path.join(R, p)) if os.path.isfile(os.path.join(R, p)) else None  # noqa: E731
     run, idn, dep, params = opt("run.json") or {}, load(os.path.join(R, "identity.json")), opt("deploy.json"), opt("params.json")
@@ -412,7 +428,9 @@ def main() -> int:
     @check("image ids: e2e/crown/README.md's table = the ids pinned here = the run's records")
     def _():
         notes_ = []
-        if os.path.isfile(a.readme):
+        if EXPECTED_IDS is not FINAL_IDS:
+            notes_.append(f"{run_name}: its own pinned ids (built at the maintainer's checkout path)")
+        elif os.path.isfile(a.readme):
             t = readme_ids(a.readme)
             need(t == EXPECTED_IDS, f"README table {t} differs from the pinned ids")
             notes_.append("README table equal")
