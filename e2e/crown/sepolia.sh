@@ -48,12 +48,30 @@ record() {
   mv "$manifest.tmp" "$manifest"
 }
 
+# The endpoint failed a read (a load-balanced node behind the block another announced; deploy.sh says more): the
+# stage runs again, at most 5 times, 24 s apart, only while the deployer's nonce (latest and pending) is unchanged.
+transient='-32001|block not found|header not found|failed to get account|failed to get storage|missing trie node'
+
 crown() { # crown <signature> [args]: one transaction of Crown.s.sol
   local sig="$1"; shift
-  local name="${sig%%(*}${1:+-$1}" log="$run/logs/${sig%%(*}${1:+-$1}.log"
-  ( cd "$here/vault" && env -u ETH_FROM FERRATA_CROWN="$run/crown.json" forge script script/Crown.s.sol:Crown --sig "$sig" "$@" \
-      "${rpc[@]}" --sender "$ETH_FROM" "${signer[@]}" --broadcast --skip-simulation --slow \
-      --gas-estimate-multiplier "$margin" ) > "$log" 2>&1 || { tail -n 25 "$log" | sed "s,$SEPOLIA_RPC_URL,<endpoint>,g"; die "$name"; }
+  local name="${sig%%(*}${1:+-$1}" log="$run/logs/${sig%%(*}${1:+-$1}.log" tries=0 n0
+  while :; do
+    n0="$(cast nonce "$ETH_FROM" "${rpc[@]}")"
+    ( cd "$here/vault" && env -u ETH_FROM FERRATA_CROWN="$run/crown.json" forge script script/Crown.s.sol:Crown --sig "$sig" "$@" \
+        "${rpc[@]}" --sender "$ETH_FROM" "${signer[@]}" --broadcast --skip-simulation --slow \
+        --gas-estimate-multiplier "$margin" ) > "$log" 2>&1 && break
+    tail -n 25 "$log" | sed "s,$SEPOLIA_RPC_URL,<endpoint>,g"
+    if [ "$tries" -lt 5 ] && grep -q -E -e "$transient" "$log" \
+        && [ "$(cast nonce "$ETH_FROM" "${rpc[@]}")" = "$n0" ] \
+        && [ "$(cast nonce "$ETH_FROM" --block pending "${rpc[@]}")" = "$n0" ]; then
+      tries=$((tries + 1))
+      mv "$log" "$log.transient-$tries"
+      say "$name: the endpoint failed a read and nothing was sent (nonce still $n0); again in 24 s ($tries of 5)"
+      sleep 24
+      continue
+    fi
+    die "$name"
+  done
   local b="$here/vault/broadcast/Crown.s.sol/$chain/${sig%%(*}-latest.json"
   if [ -f "$b" ] && [ "$(find "$b" -newer "$run/logs/.mark-$name" 2>/dev/null)" ]; then
     record "$name" "$b"
