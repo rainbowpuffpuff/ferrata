@@ -1,0 +1,8 @@
+13:26:11 source spike/ferrata-wt-verify-anyone (HEAD
+not a git tree) -> spike/ferrata-wt-integ5; nproc 2
+13:26:11 toolchains: cargo 1.93.0 (083ac5135 2025-12-15), risc0-r0vm 3.0.5, lez rust v1.91.1-rust-x86_64-unknown-linux-gnu v2024.1.5-cpp-x86_64-unknown-linux-gnu 
+13:26:13 tree copied: 60M
+13:33:02 build a ok
+13:33:02 build b ok
+13:33:02 build c ok
+13:33:03 user ELFs: checkpoint.bin checkpoint_b.bin ferrata_bridge.bin ferrata_lez.bin release.bin segment.bin 

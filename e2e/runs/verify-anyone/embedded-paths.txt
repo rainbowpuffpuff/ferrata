@@ -1,0 +1,6 @@
+ferrata_lez.bin crown-path:9 home-cargo:12 upstream:2 | control integ5-path:9
+ferrata_bridge.bin crown-path:2 home-cargo:11 upstream:2 | control integ5-path:2
+checkpoint_b.bin crown-path:6 home-cargo:11 upstream:0 | control integ5-path:6
+checkpoint.bin crown-path:5 home-cargo:11 upstream:0 | control integ5-path:5
+segment.bin crown-path:4 home-cargo:8 upstream:0 | control integ5-path:4
+release.bin crown-path:1 home-cargo:8 upstream:0 | control integ5-path:1

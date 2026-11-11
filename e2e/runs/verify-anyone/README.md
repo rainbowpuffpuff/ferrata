@@ -33,3 +33,16 @@ run uses). Files: `ids.txt` (r0vm's ids of the LEZ programs), `r0bf/ids.jsonl` (
   finalization (opens 13:27:48Z) and the two releases (their seals already verify for the vault's `releaseImageId`).
 - `verify-sepolia-crown-live-1-tampered.txt`: the same records with one deposit commitment, one byte of the
   checkpoint seal and the genesis state changed: **5 failed**, exit status 1.
+
+## Control: the same source at another path (`control-other-path/`)
+
+The same script, source and box, with `FERRATA_BUILD_PATH` set to `spike/ferrata-wt-integ5` (the path the brief
+named; inside the box only): the three builds done in 6 min 49 s (`mrun` 421 s, about 0.11 USD), and **0 of 6** ids
+equal the deployed ones (attestation `0xcebccdee…c4dc`, bridge `0xcf41b7e5…5390`, `checkpoint_b` `0xcd336146…4ca8`,
+`checkpoint` `0xd82f6d4c…2c36`, `segment` `0x7c71ecb8…0ebf`, release `0x7609f7b2…c82f`; `compare.txt`). Why
+(`embedded-paths.txt`, counted with `grep -a -o` in the rebuilt user ELFs): every guest holds its build path 1 to 9
+times (`spike/ferrata-wt-crown/…`, the panic locations of the tree's own crates), the cargo home 8 to 12 times
+(`/home/q/.cargo/…`, the registry and git checkouts) and the two LEZ programs the upstream LEZ tree twice
+(`spike/upstream/…`). The deployed programs were built at `spike/ferrata-wt-crown` (the crown build's own record:
+"tree copied to the crown path", then the builds; `e2e/crown/README.md`: "built … at the crown build path
+`spike/ferrata-wt-crown`"), so that is the path the recipe fixes.
