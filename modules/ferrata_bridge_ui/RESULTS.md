@@ -31,8 +31,8 @@ plugin (a QML-only `ui_qml` module).
 
 ## The headless run
 
-`scripts/box-test.sh`, the run committed here (on `4127517`, the last of nine passing runs): backend
-built in 10 s (warm), up 2 s later; the 15 test functions in 28.7 s; the whole script 41 s. The backend
+`scripts/box-test.sh`, the run committed here (on `063281a`, the last of ten passing runs; the packages
+below are from `4127517`, whose view is the same): the 15 test functions in 29.3 s; the whole script 43 s. The backend
 answered 54 calls in 10.3 s in total (the slowest 1.74 s, a root import: the harness executes the bridge
 guest), 7 of them the refusals the test asks for.
 
