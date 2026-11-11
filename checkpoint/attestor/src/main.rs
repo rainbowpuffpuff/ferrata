@@ -30,13 +30,11 @@ use std::path::Path;
 use anyhow::{anyhow, bail, ensure, Context as _, Result};
 use checkpoint_core::hash::sha256_parts;
 use checkpoint_core::input::CheckpointInputB;
-use checkpoint_core::lez::{parse_block, NoVisitor};
-use checkpoint_core::rule_b::run_checkpoint_b;
 use checkpoint_core::Hash;
 use ed25519_dalek::SigningKey;
 use ferrata_attestor::{
     assemble_unchecked, attestation_from_json, attestation_json, collect, deployment_from_json, deployment_json,
-    deployment_of, final_tier, hex_str, hexa, read_key, rekey_base, Attestor, LastSigned, NodeAnswers,
+    deployment_of, final_tier, fixture_meta, hex_str, hexa, read_key, rekey_base, Attestor, LastSigned, NodeAnswers,
 };
 use serde_json::{json, Value};
 
@@ -189,60 +187,6 @@ fn load_atts(a: &Args) -> Result<Vec<attestor_core::SignedAttestation>> {
     a.all("att").into_iter().map(|p| attestation_from_json(&read_json(p)?)).collect()
 }
 
-/// The native run of the rule and the fixture meta the checkpoint host reads (`host bench`, `prove`).
-fn meta_of(name: &str, bytes: &[u8], description: &str, expect: Option<&str>) -> Result<Value> {
-    let input = CheckpointInputB::decode(bytes).map_err(|e| anyhow!("input: {e:?}"))?;
-    let blocks = input.blocks.len();
-    let block_bytes: usize = input.blocks.iter().map(|b| b.len()).sum();
-    let txs: u32 = input
-        .blocks
-        .iter()
-        .map(|b| parse_block(b, &mut NoVisitor).map(|s| s.tx_count))
-        .sum::<Result<u32, _>>()
-        .map_err(|e| anyhow!("{e:?}"))?;
-    let t_index = input.t_index as usize;
-    let tip = parse_block(input.blocks[t_index], &mut NoVisitor).map_err(|e| anyhow!("{e:?}"))?.header;
-    let mut meta = json!({
-        "kind": "checkpoint-b", "name": name, "description": description,
-        "blocks": blocks, "block_bytes": block_bytes, "transactions": txs, "input_bytes": bytes.len(),
-        "blocks_to_t": t_index + 1, "segments": 0,
-        "n": input.parent.keys.len(), "t": checkpoint_core::hash::threshold(u32::try_from(input.parent.keys.len())?),
-        "n_min": input.config.n_min, "t_min": input.config.t_min,
-        "keys": input.parent.keys.iter().map(hex::encode).collect::<Vec<_>>(),
-        "posting_timeframe": input.parent.posting_timeframe,
-        "config_tip_hash": hex::encode(input.parent.config_tip_hash),
-        "parent_tip_id": input.parent.tip_id, "parent_tip_hash": hex::encode(input.parent.tip_hash),
-        "parent_state": hex::encode(input.parent.digest()),
-        "tip": tip.block_id, "tip_hash": hex::encode(tip.hash),
-        "attestations": input.attestations.iter().map(|x| json!({"channel_key": hex::encode(x.channel_key),
-            "attestation_key": hex::encode(x.att_key), "tip_id": x.tip.tip_id})).collect::<Vec<_>>(),
-        "deployment": deployment_json(&deployment_of(&input.config)),
-    });
-    match (run_checkpoint_b(&input), expect) {
-        (Ok(outcome), None) => {
-            let journal = outcome.journal.encode();
-            meta["journal"] = json!(hex::encode(journal.as_slice()));
-            meta["journal_sha256"] = json!(hex::encode(sha256_parts(&[journal.as_slice()])));
-            meta["native"] = json!(format!(
-                "accepted: n = {}, t = {}, {} attestations counted, producer {}",
-                outcome.journal.n,
-                outcome.threshold,
-                outcome.attestors,
-                hex::encode(outcome.producer)
-            ));
-        }
-        (Err(e), Some(want)) => {
-            let got = format!("{e:?}");
-            ensure!(got.starts_with(want), "{name}: native run refused with {got}, expected {want}");
-            meta["expect_refusal"] = json!(got);
-            meta["native"] = json!(format!("refused: {got}"));
-        }
-        (Ok(_), Some(want)) => bail!("{name}: native run accepted an input expected to be refused ({want})"),
-        (Err(e), None) => bail!("{name}: native run refused: {e:?}"),
-    }
-    Ok(meta)
-}
-
 fn cmd_collect(a: &Args) -> Result<()> {
     let base = fs::read(a.get("base")?)?;
     let atts = load_atts(a)?;
@@ -253,7 +197,7 @@ fn cmd_collect(a: &Args) -> Result<()> {
     println!("kept {} of {} (n = {}, t = {})", c.kept.len(), atts.len(), c.n, c.t);
     let name = a.get("name")?;
     let description = a.opt("description").unwrap_or("rule (B): t of n attestations collected by ferrata_attestor");
-    let meta = meta_of(name, &c.input, description, None)?;
+    let meta = fixture_meta(name, &c.input, description, None)?;
     fs::write(a.get("out")?, &c.input)?;
     write_json(a.get("meta")?, &meta)?;
     println!("{name}: {}", meta["native"].as_str().unwrap_or(""));
@@ -264,7 +208,7 @@ fn cmd_assemble(a: &Args) -> Result<()> {
     let base = fs::read(a.get("base")?)?;
     let bytes = assemble_unchecked(&base, &load_atts(a)?)?;
     let name = a.get("name")?;
-    let meta = meta_of(name, &bytes, a.opt("description").unwrap_or("an input the program must refuse"), Some(a.get("expect")?))?;
+    let meta = fixture_meta(name, &bytes, a.opt("description").unwrap_or("an input the program must refuse"), Some(a.get("expect")?))?;
     fs::write(a.get("out")?, &bytes)?;
     write_json(a.get("meta")?, &meta)?;
     println!("{name}: {}", meta["native"].as_str().unwrap_or(""));
