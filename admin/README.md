@@ -132,3 +132,17 @@ candidate "PENDING, waiting", its wait ending 602 s after submission (delta 600 
 three watchers and new freeze authority, effective in 14 days; schedule #1 announced, in force in 7
 days; the release delay's history (120 s, then 600 s); 2 deposits. The two errors listed in its
 section 16 are optional reads (`VERSION()`, `SELECTOR()`) that the mock verifier does not have.
+
+## In a real browser
+
+[`tools/browser-check.mjs`](tools/browser-check.mjs) opens `index.html` from `file://` in headless
+Chromium (Playwright, installed outside the repository), types the endpoint, the vault and the
+from-block into the page's own form, presses Read, and saves the rendered text and a screenshot. Run
+on the Modal build box against the local scenario (11 November 2026): Chromium 129.0.6668.29, "read at
+block 16 in 0.5 s; 2 error(s), 91 RPC requests", no fatal error, 0 script or console errors, and the
+page requested nothing but `file:` and the endpoint
+([`results/browser-anvil-scenario.txt`](results/browser-anvil-scenario.txt),
+[`results/browser-anvil-scenario.jpg`](results/browser-anvil-scenario.jpg)). The page's
+Content-Security-Policy is enforced there: Playwright's `waitForFunction`, which evaluates a string in
+the page, was refused for want of `'unsafe-eval'`, so the check polls through locators instead.
+Not checked: a browser against the live Sepolia endpoint (CORS from `file://` depends on the endpoint).
