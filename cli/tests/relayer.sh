@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # The relayer's tests (cli/src/relayer.rs, cli/src/bin/relayer.rs):
+#  - the library's unit tests (journals, the burn watch, temporary failures, imported roots);
 #  - tests/gasdrop.rs: the gas-drop checks on a real receipt (bridge/artifacts/gasdrop/), no dev mode;
 #  - tests/relayer_fork.rs: the ferrata-relayer daemon on an anvil fork of Sepolia at the block before
 #    crown-live-1's submitCandidate, with that run's real checkpoint and release proofs; a misbehaving
@@ -12,6 +13,7 @@ export PATH="$HOME/.foundry/bin:$PATH" FOUNDRY_DISABLE_NIGHTLY_WARNING=1
 if [ -z "${RISC0_HOME:-}" ] && [ -d "$here/../../risc0-home-lez" ]; then export RISC0_HOME="$(cd "$here/../../risc0-home-lez" && pwd)"; fi
 cd "$here"
 unset RISC0_DEV_MODE
+cargo test --lib relayer
 cargo test --test gasdrop -- --nocapture
 mkdir -p "$here/../e2e/runs/relayer-fork"
 FERRATA_RELAYER_FORK=1 FERRATA_RELAYER_RESULTS="${FERRATA_RELAYER_RESULTS:-$here/../e2e/runs/relayer-fork/results.json}" \

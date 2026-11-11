@@ -362,6 +362,51 @@ async fn relayer_on_a_sepolia_fork_with_crown_live_1_proofs() -> Result<()> {
     ensure!(again.len() == 1 && again[0]["reason"].as_str().unwrap_or("").contains("already released"));
     results.insert("replay".into(), json!({ "vault": call_err.lines().next(), "daemon": again[0]["reason"] }));
 
+    // 9. `status`; and a clean stop: the daemon without a round limit stops on SIGTERM after its round.
+    let bin = env!("CARGO_BIN_EXE_ferrata-relayer");
+    let (from_block, named) = ((SUBMIT_BLOCK - 1).to_string(), NAMED.to_string());
+    let (state_s, inbox_s) = (state.display().to_string(), inbox.display().to_string());
+    let base = [
+        "--eth-rpc",
+        url.as_str(),
+        "--vault",
+        "0xfe3199fa2634413cbac317371076cae3eb2d9e54",
+        "--chain-id",
+        "11155111",
+        "--from-block",
+        from_block.as_str(),
+        "--unlocked",
+        named.as_str(),
+        "--state",
+        state_s.as_str(),
+    ];
+    let out = Command::new(bin).args(base).arg("status").output()?;
+    ensure!(out.status.success(), "status failed");
+    let lines: Vec<Value> =
+        String::from_utf8_lossy(&out.stdout).lines().filter_map(|l| serde_json::from_str(l).ok()).collect();
+    let status = events(&lines, "status");
+    ensure!(
+        status.len() == 1
+            && status[0]["finalState"] == json!(cp.checkpoint.newState)
+            && status[0]["checkpoints"] == "1"
+    );
+    println!("status: {}", status[0]);
+    let child = Command::new(bin)
+        .args(base)
+        .args(["--accept-unpaid", "run", "--inbox", inbox_s.as_str(), "--poll-secs", "1"])
+        .stdout(Stdio::piped())
+        .spawn()?;
+    tokio::time::sleep(Duration::from_secs(5)).await;
+    ensure!(Command::new("kill").args(["-TERM", &child.id().to_string()]).status()?.success());
+    let out = child.wait_with_output()?;
+    let lines: Vec<Value> =
+        String::from_utf8_lossy(&out.stdout).lines().filter_map(|l| serde_json::from_str(l).ok()).collect();
+    let stop = events(&lines, "stop");
+    ensure!(out.status.success() && stop.len() == 1 && stop[0]["reason"] == "SIGTERM", "no clean stop: {lines:?}");
+    println!("clean stop: {}", stop[0]);
+    results.insert("status".into(), status[0].clone());
+    results.insert("cleanStop".into(), stop[0].clone());
+
     let out = std::env::var("FERRATA_RELAYER_RESULTS").map(PathBuf::from).unwrap_or_else(|_| work.join("results.json"));
     std::fs::write(&out, serde_json::to_vec_pretty(&Value::Object(results))?)?;
     println!("results: {}", out.display());

@@ -4,7 +4,7 @@ warning: programs@0.1.0: Generated module at <spike>/ferrata-wt-relayer/cli/targ
    Compiling methods v0.1.0 (<spike>/ferrata-wt-relayer/lez/methods)
    Compiling harness v0.1.0 (<spike>/ferrata-wt-relayer/lez/harness)
    Compiling ferrata-cli v0.1.0 (<spike>/ferrata-wt-relayer/cli)
-    Finished `test` profile [optimized + debuginfo] target(s) in 7.46s
+    Finished `test` profile [optimized + debuginfo] target(s) in 8.86s
 warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
 note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
      Running tests/e2e.rs (target/debug/deps/e2e-aee3ae58cf4b2605)
@@ -16,28 +16,28 @@ deposit to the vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9 on chain 1
   mint fee      0 ETH (0 base units, 18 decimals)  (schedule 0)
   relay fee     0.01 ETH (10000000000000000 base units, 18 decimals)
   total         10.01 ETH (10010000000000000000 base units, 18 decimals)
-  depositor     0xE5029eE2a668e6a6ef173961fB1834620A38D286   j = 0
-  commitment C  0xc8c27f370192eaf2fa69207621d5eec962154302561aaf8d344b0b14eb3181c1
+  depositor     0x0D49107d112192a6aA5C65d00F07429083D0C2Ce   j = 0
+  commitment C  0x9e34695b9b73f1dfedf69a2f677ffc4d1056ab42e7ebb83a00d270b149f234b1
 public on Ethereum: the depositor, the token, the denomination and fees, the time, C.
 hidden: the LEZ destination (public account /0); C commits to it.
 note: a public destination becomes visible when it is claimed (which deposit paid it stays hidden in a private claim).
-call: to 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9  value 10010000000000000000  data 0xf7edb8570000000000000000000000000000000000000000000000000000000000000002c8c27f370192eaf2fa69207621d5eec962154302561aaf8d344b0b14eb3181c10000000000000000000000000000000000000000000000000000000000000000
-sent: 0xc3459c5477b51a36faada1bab0441e27492cf3a618364a9cc64cff83077b5ca6 in block 5 (leaf Some(0))
+call: to 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9  value 10010000000000000000  data 0xf7edb85700000000000000000000000000000000000000000000000000000000000000029e34695b9b73f1dfedf69a2f677ffc4d1056ab42e7ebb83a00d270b149f234b10000000000000000000000000000000000000000000000000000000000000000
+sent: 0x3d0d4d539f2156bfb167664d2901b97ce778ac1883506377300fc8847266d9ee in block 5 (leaf Some(0))
 stale j: refused: vault error WrongDepositIndex() (eth_call before sending): the index j is not depositCount[sender]: another deposit from this address came first
-vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9: 16 deposits at block 20, root 0x4f9cc7207a30f8606c8c669a3453503f404da05c216062b159e90770316b44d0 (equal to depositRoot: checked)
+vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9: 16 deposits at block 20, root 0xd661fa28a27c41cb8c139c9415defa2966cc88e6dae40bae55f83fe2b2f5a098 (equal to depositRoot: checked)
 deposits of this seed: 11
-  leaf      0  j    0  10 ETH (10000000000000000000 base units, 18 decimals)  to public /0  N 0xaf06338f1fab6ca9  claim state unknown (no --sequencer)
-  leaf      2  j    1  0.1 ETH (100000000000000000 base units, 18 decimals)  to private /0  N 0xb1e69beeb1ac0d0e  claim state unknown (no --sequencer)
-  leaf      3  j    2  0.1 ETH (100000000000000000 base units, 18 decimals)  to public /1  N 0x9ab4452ce81d780f  claim state unknown (no --sequencer)
-  leaf      5  j    3  0.1 ETH (100000000000000000 base units, 18 decimals)  to private /2  N 0x9ad63d0bca2607b9  claim state unknown (no --sequencer)
-  leaf      6  j    4  0.1 ETH (100000000000000000 base units, 18 decimals)  to public /3  N 0x82fc80a3407d70a7  claim state unknown (no --sequencer)
-  leaf      8  j    5  0.1 ETH (100000000000000000 base units, 18 decimals)  to private /4  N 0xab2a58af4bc8c476  claim state unknown (no --sequencer)
-  leaf      9  j    6  0.1 ETH (100000000000000000 base units, 18 decimals)  to public /5  N 0xa90212ef2d58f905  claim state unknown (no --sequencer)
-  leaf     11  j    7  0.1 ETH (100000000000000000 base units, 18 decimals)  to private /6  N 0x2a4cd2db56467ccc  claim state unknown (no --sequencer)
-  leaf     12  j    8  0.1 ETH (100000000000000000 base units, 18 decimals)  to public /7  N 0x6b0a086091d7405c  claim state unknown (no --sequencer)
-  leaf     14  j    9  0.1 ETH (100000000000000000 base units, 18 decimals)  to private /0  N 0xc24cd3e82fea53ce  claim state unknown (no --sequencer)
-  leaf     15  j   10  0.1 ETH (100000000000000000 base units, 18 decimals)  to public /1  N 0x79b424a375aa1bf5  claim state unknown (no --sequencer)
-vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9: 16 deposits, root 0x4f9cc7207a30f8606c8c669a3453503f404da05c216062b159e90770316b44d0, configId 0xf8330a9c8a072dfebdcd231edf344da847b208398d6af0c1632282eac6394c3e
+  leaf      0  j    0  10 ETH (10000000000000000000 base units, 18 decimals)  to public /0  N 0x71935cae678e02f6  claim state unknown (no --sequencer)
+  leaf      2  j    1  0.1 ETH (100000000000000000 base units, 18 decimals)  to private /0  N 0x803edab2085433ff  claim state unknown (no --sequencer)
+  leaf      3  j    2  0.1 ETH (100000000000000000 base units, 18 decimals)  to public /1  N 0x3eea101311d7566c  claim state unknown (no --sequencer)
+  leaf      5  j    3  0.1 ETH (100000000000000000 base units, 18 decimals)  to private /2  N 0x6890bf2df6ec3316  claim state unknown (no --sequencer)
+  leaf      6  j    4  0.1 ETH (100000000000000000 base units, 18 decimals)  to public /3  N 0x7c073e1da99bbd3e  claim state unknown (no --sequencer)
+  leaf      8  j    5  0.1 ETH (100000000000000000 base units, 18 decimals)  to private /4  N 0x381fbb1d5ddb5541  claim state unknown (no --sequencer)
+  leaf      9  j    6  0.1 ETH (100000000000000000 base units, 18 decimals)  to public /5  N 0x153532fb4a062d44  claim state unknown (no --sequencer)
+  leaf     11  j    7  0.1 ETH (100000000000000000 base units, 18 decimals)  to private /6  N 0x85dd08cb03c40f6d  claim state unknown (no --sequencer)
+  leaf     12  j    8  0.1 ETH (100000000000000000 base units, 18 decimals)  to public /7  N 0xae214d65c82e11f0  claim state unknown (no --sequencer)
+  leaf     14  j    9  0.1 ETH (100000000000000000 base units, 18 decimals)  to private /0  N 0x1ac49afd1b199327  claim state unknown (no --sequencer)
+  leaf     15  j   10  0.1 ETH (100000000000000000 base units, 18 decimals)  to public /1  N 0xd6e7571a09d6c86b  claim state unknown (no --sequencer)
+vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9: 16 deposits, root 0xd661fa28a27c41cb8c139c9415defa2966cc88e6dae40bae55f83fe2b2f5a098, configId 0xf8330a9c8a072dfebdcd231edf344da847b208398d6af0c1632282eac6394c3e
   retired false; deposits frozen until 0; releases frozen until 0
   checkpoints 0; final imported leaf count 0
   global deposit cap: capacity unlimited, refill 0 value units/s, available unlimited
@@ -49,13 +49,13 @@ token 0x0000000000000000000000000000000000000000 (ETH): registered true, deposit
   deposit cap: capacity unlimited, refill 0 ETH (0 base units, 18 decimals)/s, available unlimited
   release cap: capacity unlimited, refill 0 ETH (0 base units, 18 decimals)/s, available unlimited
 zone: root(16) imported; ETH fees known to leaf 16
-gas-drop receipt: real succinct proof in 14.5 s (76230 user cycles)
-GAS DROP: N 0xaf06338f1fab6ca9a489c4dcf83aa5026dd67d1c316987504b951026ec5f2528 -> one-time address 0x2a945f1adfa57eead2357f36423f8de39e1248d1524fb05854ce5f4954f8d1b0 (native credit 1 (harness stand-in)); replay to another relayer and a second drop refused
-claim: plaintext claim of leaf 0 under root(cid, 16) (harness, block 6); N 0xaf06338f1fab6ca9a489c4dcf83aa5026dd67d1c316987504b951026ec5f2528
+gas-drop receipt: real succinct proof in 16.5 s (76230 user cycles)
+GAS DROP: N 0x71935cae678e02f63e9978a375e62f09bae5299b11006ba330637d140e22dd11 -> one-time address 0x2a945f1adfa57eead2357f36423f8de39e1248d1524fb05854ce5f4954f8d1b0 (native credit 1 (harness stand-in)); replay to another relayer and a second drop refused
+claim: plaintext claim of leaf 0 under root(cid, 16) (harness, block 6); N 0x71935cae678e02f63e9978a375e62f09bae5299b11006ba330637d140e22dd11
 GAS DROP: the claim named the relayer, minted it the relay fee 10000000000000000; afterwards any relayer refuses the receipt (claimed)
 second claim: refused: LEZ bridge program exit code 250 ALREADY_CLAIMED (checked before sending): the deposit's nullifier is spent: it was claimed already
 BURN WATCH: 11 burns on the zone -> checkpoint needed (0 accepted); after acceptance -> none
-release: 0x50a716be287b58a323b2b1ddbd9c2d4e803319abe26d8a460bade84cacde470b in block Some(29)
+release: 0xe8c6c4d74c6c11879463c3894fa68836f09d25f4c8692289ccb5ad93d23eaf3b in block Some(29)
 RECOVERY: 10 of 10 unclaimed deposits (1 claimed), 10 of 10 unreleased burns (1 released); 16 deposits in the vault
 zone: configuration ready, sunset false; attestation program 0xb300178cb9df05998924cc7ac855a6a9e9d39c551ff00c18fd6ed27e596dfb57, instance 0x1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d
   gate Gate { now_ms: 0, mints_until: 0, burns_until: 0, mint: Bucket { capacity: 200000000000, refill_per_second: 10000000, level: 189990000000, last_ms: 0 }, burn: Bucket { capacity: 200000000000, refill_per_second: 10000000, level: 198900000000, last_ms: 0 } }
@@ -63,11 +63,11 @@ zone: configuration ready, sunset false; attestation program 0xb300178cb9df05998
   newest imported root: root(cid, 16) (1 imports), from header(id, 9000064): execution block 9000064 0x07d646c9e59ee2c36669e352fa127e78b07794ed305b84db5f8d68dd9b7b6573 (time 1807997168)
   burns published: 11
 private claim seen: leaf 2 marked claimed once a private transaction names its nullifier account (2 claimed)
-RELAYER: burn 1 released by the relayer (134973 gas), relay fee 100000000000000 wei paid to it; redirected recipient refused: the vault would revert: server returned an error response: error code 3: execution reverted: custom error 0x439cc0cd, data: "0x439cc0cd"; another relayer: refused: the proof names relayer 0xd4ce9b8534480051AE541fe5E3Ad2F794474C1CE; only it can be paid for this release (this relayer is 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266)
+RELAYER: burn 1 released by the relayer (134985 gas), relay fee 100000000000000 wei paid to it; redirected recipient refused: the vault would revert: server returned an error response: error code 3: execution reverted: custom error 0x439cc0cd, data: "0x439cc0cd"; another relayer: refused: the proof names relayer 0xd04296a920210D3A923C2380e9d6D4a43C17a5D8; only it can be paid for this release (this relayer is 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266)
 test deposit_scan_claim_burn_release_and_recovery ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 30.55s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 33.05s
 
 RELAYER_SH_EXIT=0
-[mrun] 2 file(s) copied back: cli/tests/relayer_fork.rs, e2e/runs/relayer-fork/results.json
-[mrun] exit 0, 89 s, 0.13 core-hours, about 0.01 USD (ledger 0.37 of 20.00 USD)
+[mrun] 3 file(s) copied back: cli/src/relayer.rs, cli/tests/relayer_fork.rs, e2e/runs/relayer-fork/results.json
+[mrun] exit 0, 105 s, 0.16 core-hours, about 0.02 USD (ledger 0.39 of 20.00 USD)

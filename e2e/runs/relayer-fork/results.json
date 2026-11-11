@@ -7,6 +7,12 @@
     "newState": "0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd",
     "tx": "0xbf9bbec2761ccac73f9f167181874e8820a2efb6e4ef136ca48323649b140468"
   },
+  "cleanStop": {
+    "event": "stop",
+    "reason": "SIGTERM",
+    "rounds": 5,
+    "t": 1794422619
+  },
   "earlyRelease": "refused: vault error BurnRootNotAccepted() (eth_call before sending): the burn root is not one of a finalized, unrevoked checkpoint",
   "finalized": {
     "log": {
@@ -15,7 +21,7 @@
       "event": "finalized",
       "gasUsed": 218385,
       "newState": "0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd",
-      "t": 1794422384,
+      "t": 1794422598,
       "tx": "0x4dcf1f566df7270cd8b074803aae7e809636a8018e3dc5b93a02e5fdd44d224f"
     },
     "wait": 3600
@@ -66,7 +72,7 @@
     "feesCollected": {
       "amount": "2000000000000",
       "event": "fees-collected",
-      "t": 1794422400,
+      "t": 1794422614,
       "token": "0x0000000000000000000000000000000000000000",
       "tx": "0xb4b99277b9bc7e3e33ebce903d5091eaf5dcceb16cfa6dbcb3f9bef026d72f4e"
     }
@@ -74,6 +80,16 @@
   "replay": {
     "daemon": "refused: NOut 0x6b5ec36ee357ba03fad0f9bb4afe4ef32c424722cd6c52131f48beffe1886414 is already released",
     "vault": "server returned an error response: error code 3: execution reverted: custom error 0xcad2ae02, data: \"0xcad2ae02\""
+  },
+  "status": {
+    "balanceWei": "100001997999936065760",
+    "candidates": [],
+    "checkpoints": "1",
+    "drops": 0,
+    "event": "status",
+    "finalState": "0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd",
+    "owedWei": "0",
+    "t": 1794422614
   },
   "tamperedReleases": [
     {

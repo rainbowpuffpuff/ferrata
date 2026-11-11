@@ -578,3 +578,100 @@ pub fn require_chain(view: &VaultView, chain_id: Option<u64>) -> Result<()> {
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn checkpoint() -> IRelayVault::Checkpoint {
+        IRelayVault::Checkpoint {
+            nMin: 1,
+            tMin: 1,
+            parentState: B256::repeat_byte(1),
+            newState: B256::repeat_byte(2),
+            burnRoot: B256::repeat_byte(3),
+            burnCount: 2,
+            importedLeafCount: 2,
+            sunset: false,
+            echoNonce: B256::ZERO,
+            tipId: 252,
+            tipHash: B256::repeat_byte(4),
+            n: 1,
+            t: 1,
+        }
+    }
+
+    #[test]
+    fn checkpoint_journal_round_trips_and_refuses_others() {
+        let (vault, cid) = (Address::repeat_byte(9), B256::repeat_byte(7));
+        let j = checkpoint_journal(11155111, vault, cid, &checkpoint());
+        assert_eq!(j.len(), 17 * 32);
+        let job = checkpoint_from_journal(&j).unwrap();
+        assert_eq!((job.chain_id, job.vault, job.cid, job.checkpoint), (11155111, vault, cid, checkpoint()));
+        assert!(checkpoint_from_journal(&j[..16 * 32]).is_err(), "a short journal");
+        let mut other = j.clone();
+        other[0] ^= 1;
+        assert!(checkpoint_from_journal(&other).is_err(), "another domain");
+        let mut not_bool = j.clone();
+        not_bool[11 * 32 + 31] = 2;
+        assert!(checkpoint_from_journal(&not_bool).is_err(), "sunset is not a bool");
+    }
+
+    #[test]
+    fn the_recorded_crown_checkpoint_decodes() {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../e2e/runs/crown-live-1/checkpoint/receipt/journal.hex");
+        let j = unhex(&std::fs::read_to_string(path).unwrap()).unwrap();
+        let job = checkpoint_from_journal(&j).unwrap();
+        assert_eq!(job.chain_id, 11155111);
+        assert_eq!((job.checkpoint.burnCount, job.checkpoint.tipId, job.checkpoint.t), (2, 252, 1));
+        assert_eq!(
+            checkpoint_journal(job.chain_id, job.vault, job.cid, &job.checkpoint),
+            j,
+            "re-encodes byte for byte"
+        );
+    }
+
+    #[test]
+    fn temporary_failures_are_retried_and_refusals_are_not() {
+        assert!(temporary("refused: vault error BurnRootNotAccepted() (eth_call before sending): …"));
+        assert!(temporary("refused: vault error ReleaseDelayNotElapsed() …"));
+        assert!(temporary("eth_call: error sending request for url (http://…)"));
+        assert!(!temporary("refused: the proof names relayer 0x…; only it can be paid for this release"));
+        assert!(!temporary("refused: NOut 0x… is already released"));
+        assert!(!temporary("refused: vault error VerificationFailed() …"));
+    }
+
+    #[test]
+    fn the_burn_watch_asks_for_a_checkpoint_only_when_needed() {
+        let r = B256::repeat_byte(5);
+        assert_eq!(checkpoint_needed(11, &[], 0), Some((11, 0)));
+        assert_eq!(checkpoint_needed(11, &[(r, 11)], 0), None);
+        assert_eq!(checkpoint_needed(12, &[(r, 11)], 1), None, "a live candidate: wait for it");
+        assert_eq!(checkpoint_needed(12, &[(r, 4), (r, 11)], 0), Some((12, 11)));
+        assert_eq!(checkpoint_needed(0, &[], 0), None);
+    }
+
+    #[test]
+    fn imported_roots_are_the_tree_roots_at_the_imported_counts() {
+        let deposits: Vec<VaultDeposit> = (0..3u64)
+            .map(|i| VaultDeposit {
+                depositor: [i as u8 + 1; 20],
+                j: 0,
+                leaf_index: i,
+                token: [0; 20],
+                amount: [0x11; 32],
+                commitment: [i as u8 + 0x40; 32],
+            })
+            .collect();
+        let mut tree = IncrementalTree::new();
+        let mut at = Vec::new();
+        for d in &deposits {
+            tree.append(deposit_leaf(d.leaf_index, &d.depositor, &d.token, &d.amount, &d.commitment)).unwrap();
+            at.push(tree.root());
+        }
+        let roots = imported_roots(&deposits, &[1, 3]).unwrap();
+        assert_eq!(roots, [at[0], at[2]].into_iter().collect());
+        assert!(!roots.contains(&at[1]), "a count LEZ did not import gives no root");
+        assert!(imported_roots(&deposits, &[0]).unwrap().contains(&IncrementalTree::new().root()));
+    }
+}

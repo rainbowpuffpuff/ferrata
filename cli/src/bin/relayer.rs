@@ -384,7 +384,12 @@ async fn main() -> Result<()> {
         }
         Command::Run { inbox, poll_secs, rounds } => {
             std::fs::create_dir_all(&inbox)?;
+            // Clean shutdown: SIGTERM or SIGINT ends the daemon after the round in progress (installed before the
+            // first round, so a signal during a round waits for it to finish).
+            use tokio::signal::unix::{signal, SignalKind};
+            let (mut term, mut int) = (signal(SignalKind::terminate())?, signal(SignalKind::interrupt())?);
             let mut n = 0u64;
+            let mut reason = "rounds";
             loop {
                 if let Err(e) = d.round(&inbox).await {
                     log("round-failed", json!({ "reason": format!("{e:#}") }));
@@ -393,9 +398,13 @@ async fn main() -> Result<()> {
                 if rounds != 0 && n >= rounds {
                     break;
                 }
-                tokio::time::sleep(Duration::from_secs(poll_secs)).await;
+                tokio::select! {
+                    _ = tokio::time::sleep(Duration::from_secs(poll_secs)) => {}
+                    _ = term.recv() => { reason = "SIGTERM"; break; }
+                    _ = int.recv() => { reason = "SIGINT"; break; }
+                }
             }
-            log("stop", json!({ "rounds": n }));
+            log("stop", json!({ "rounds": n, "reason": reason }));
         }
     }
     Ok(())
