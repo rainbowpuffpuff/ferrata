@@ -73,10 +73,12 @@ each; the claim and burn container was preempted once by Modal (20:10) and the j
 | private attestation | **569.4 s** (9.5 min) | 9.23 GiB | 239,214 / 255,302 B | yes | refused (exit 101) | 633.3 s |
 | private claim | **556.9 s** (9.3 min) | 9.23 GiB | 239,628 / 256,130 B | yes | refused | 600.7 s |
 | private burn | **484.0 s** (8.1 min) | 9.23 GiB | 239,046 / 254,966 B | yes | refused | 525.9 s |
+| release receipt (succinct; `ferrata-e2e prove`, crown rehearsal's private burn) | **26.1 s** | 1.49 GiB | 223,930 B | verified | | 26.4-27.0 s |
+| its Groth16 wrap (`identity_p254` 37.0 s, then RISC Zero's prover image 16.9 s) | 53.9 s | 7.6 GiB | seal 260 B, selector `0x73c457ba` | verified (`verify_exit` 0) | | 39.3 s + 15.6-16.6 s |
 
-All three are under M0's 20 min and 16 GB at the declared minimum; `just m0 --p4 <out>/user` reads this run and
-gives check 1 GO on Linux for all three (the release receipt is not part of this job; the box's own release proof
-is above, and the minimum-hardware one is the earlier 26.4-27.0 s). The new CPUs (model 17) are a later AMD
+All are under M0's 20 min and 16 GB at the declared minimum. `just m0 --p4 bench/report/20261111T1849Z-333f14d58f95/user`
+reads only this run and gives check 1 **GO on Linux** from today's proofs (`bench/report/.../m0.txt`); macOS stays
+OPEN. The new CPUs (model 17) are a later AMD
 generation than the earlier runs' (model 1), which is the likely reason for the 7-10 % shorter times; the peak
 memory is the same to 0.01 GiB.
 
