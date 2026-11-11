@@ -47,27 +47,31 @@ set-up). `src/bin/attestor-refusals.rs` writes inputs the program must refuse; i
 From `checkpoint/`, on the build box (`spike/modal-build/mrun`):
 
 ```sh
-cargo +1.88 test -p ferrata-attestor                      # 10 tests over the lab node's real answers
+cargo +1.88 test -p ferrata-attestor                      # 12 tests over the lab node's real answers
 cargo +1.93.0 build --release -p host -p ferrata-attestor  # host builds the guests
 bash attestor/devnet.sh <lab node answers> attestor/runs/devnet-n3   # three attestors, t of n, refusals
 bash attestor/prove.sh                                     # executor, succinct proof, identity_p254
 bash attestor/live-node.sh <bundle> <gen> attestor/runs/live-node   # against a running copy of the lab node
+bash attestor/zone.sh <bundle> attestor/runs/zone 300      # a real four-sequencer LEZ zone (no Docker)
+bash attestor/zone-attest.sh attestor/runs/zone            # its four attestors, 3 of 4 collected
 ```
 
 `vectors/lab-node/` holds the lab node's answers trimmed to the node blocks that carry LEZ blocks 186..=202.
 
-## Several sequencers: what is real and what stands in
+## Several sequencers
 
-The lab's LEZ v0.4.0-rc1 chain has one sequencer (`n = 1`). LEZ v0.4.0-rc1 can run a committee
-(`integration_tests/tests/multi_sequencer.rs`, `channel_config_threshold.rs` upstream), but its fixtures
-start Bedrock under Docker and stake the sequencers at genesis with LEZ's own signing code; the build box
-has no Docker. The checkpoint program counts only distinct channel keys of `K`, and `t(3) = 2` needs
-`n >= 3`, so the devnet run uses a **stand-in key set** `K = {the lab's key, k1, k2}`: the lab's key is the
-real producer of `T` (its real inscription is checked in the proof); `k1`, `k2` are seeded throwaway
-channel keys of two sequencers that do not run, and the node's channel answer is given the same three keys.
-Real: the 17 blocks 186..=202 and `T`'s inscription as the node holds them, the whole final tier
-(blocks 1..=202) each attestor checks before signing, and the lab key's certificate (from the real-blocks
-run). A zone of three running sequencers with key rotation is still to do (proposal B1).
+**A real zone of four** (`zone.sh`, `runs/zone/`, [RESULTS.md](RESULTS.md) §7): upstream's own four-sequencer
+devnet configuration of LEZ v0.4.0-rc1 (one genesis staking the four channel keys), run with the lab bundle's
+`sequencer_service` and Logos Blockchain node on the build box without Docker (gossip by explicit loopback
+addresses). The channel accredits the four keys, the turn rotates among them and all four inscribe blocks; the
+four sequencers' attestors sign the final tip; `t(4) = 3` of 4 is collected (one sequencer silent) and
+accepted by the checkpoint program, 2 of 4 refused.
+
+**A stand-in key set over the lab's chain** (`devnet.sh`, `runs/devnet-n3/`): the lab's chain has one
+sequencer, so its run uses `K = {the lab's key (the real producer of T), k1, k2}` with seeded k1, k2 for
+sequencers that do not run, and gives the node's channel answer the same keys; it carries the cases a running
+zone did not produce here: another deployment's certificate, an uncertified key, an attestor behind `T`,
+attestations of a descendant of `T`, and a key rotation in the proof (with a stand-in posting timeframe).
 
 ## Not done here
 
