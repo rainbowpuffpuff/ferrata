@@ -42,9 +42,9 @@ whose id table it compares with the ids pinned in the script).
 
 Measured on 11 November 2026 against crown-live-1's records while the run waited W (submit at Sepolia block
 12,111,746; finalization opens 13:27:48Z): **10 passed, 2 pending, 0 failed**, 48 RPC calls to the public endpoint
-(publicnode); the same result later on a second endpoint (`rpc.sepolia.ethpandaops.io`).
+(publicnode).
 After the wait (records fetched again at 13:34Z): **11 passed, 1 pending, 0 failed**: finalization and release 0 on
-chain, release 1 not yet sent. The same records with one commitment, one byte of the seal and the genesis state
+chain, release 1 not yet sent; the same 11 / 1 / 0 on a second, independent endpoint (`rpc.sepolia.ethpandaops.io`). The same records with one commitment, one byte of the seal and the genesis state
 changed: **5 failed**, exit status 1 ([`e2e/runs/verify-anyone/`](../../e2e/runs/verify-anyone/README.md)).
 
 ## 2. The programs: `scripts/reproduce-image-ids.sh`
