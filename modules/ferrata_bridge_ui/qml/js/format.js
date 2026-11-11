@@ -13,12 +13,18 @@ function units(base, decimals, symbol) {
 
 function eth(wei) { return units(wei, 18, "ETH"); }
 
+// A cap: "unlimited" for the vault's no-cap value (2^256 - 1 and its neighbours), else the amount.
+function cap(base, decimals, symbol) {
+    return String(base || "0").length > 40 ? "unlimited" : units(base, decimals, symbol);
+}
+
 function short(h) {
     var s = String(h || "");
     return s.length > 14 ? s.substring(0, 8) + "…" + s.substring(s.length - 6) : s;
 }
 
 function pct(used, capacity) {
+    if (String(capacity || "0").length > 40) return "0 %";
     var c = Number(capacity), u = Number(used);
     if (!(c > 0)) return "–";
     return (100 * u / c).toFixed(1) + " %";

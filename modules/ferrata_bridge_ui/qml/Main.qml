@@ -449,13 +449,19 @@ Rectangle {
                             model: modelData.denominations
                             Label { text: "Denomination " + Fmt.eth(modelData.amount) + ": mint fee " + Fmt.eth(modelData.mint_fee) + ", relay fee " + Fmt.eth(modelData.relay_fee) + ", burn fee " + Fmt.eth(modelData.burn_fee) + ", checkpoint fee " + Fmt.eth(modelData.checkpoint_fee) }
                         }
-                        Label { text: "Ethereum, deposit cap: " + Fmt.eth(modelData.vault_deposit_cap.available) + " available of " + Fmt.eth(modelData.vault_deposit_cap.capacity) + " (used " + Fmt.pct(Number(modelData.vault_deposit_cap.capacity) - Number(modelData.vault_deposit_cap.available), modelData.vault_deposit_cap.capacity) + "), refill " + Fmt.eth(modelData.vault_deposit_cap.refill_per_second) + "/s" }
-                        Label { text: "Ethereum, release cap: " + Fmt.eth(modelData.vault_release_cap.available) + " available of " + Fmt.eth(modelData.vault_release_cap.capacity) + " (used " + Fmt.pct(Number(modelData.vault_release_cap.capacity) - Number(modelData.vault_release_cap.available), modelData.vault_release_cap.capacity) + ")" }
+                        Label {
+                            text: "Ethereum, deposit cap: " + Fmt.cap(modelData.vault_deposit_cap.available, 18, "ETH") + " available of " + Fmt.cap(modelData.vault_deposit_cap.capacity, 18, "ETH") + " (used " + Fmt.pct(Number(modelData.vault_deposit_cap.capacity) - Number(modelData.vault_deposit_cap.available), modelData.vault_deposit_cap.capacity) + "), refill " + Fmt.cap(modelData.vault_deposit_cap.refill_per_second, 18, "ETH") + "/s"
+                            wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.maximumWidth: 1120
+                        }
+                        Label {
+                            text: "Ethereum, release cap: " + Fmt.cap(modelData.vault_release_cap.available, 18, "ETH") + " available of " + Fmt.cap(modelData.vault_release_cap.capacity, 18, "ETH") + " (used " + Fmt.pct(Number(modelData.vault_release_cap.capacity) - Number(modelData.vault_release_cap.available), modelData.vault_release_cap.capacity) + ")"
+                            wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.maximumWidth: 1120
+                        }
                         Label {
                             objectName: "registry.lez." + index
                             visible: modelData.lez !== null
-                            text: modelData.lez ? "LEZ, mint cap: level " + modelData.lez.mint_cap.level + " of " + modelData.lez.mint_cap.capacity + " LEZ units (used " + Fmt.pct(Number(modelData.lez.mint_cap.capacity) - Number(modelData.lez.mint_cap.level), modelData.lez.mint_cap.capacity) + "); burn cap: level " + modelData.lez.burn_cap.level + " of " + modelData.lez.burn_cap.capacity + "; mints frozen until " + (modelData.lez.mints_frozen_until_ms > 0 ? new Date(modelData.lez.mints_frozen_until_ms).toISOString() : "not frozen") + "; burns frozen until " + (modelData.lez.burns_frozen_until_ms > 0 ? new Date(modelData.lez.burns_frozen_until_ms).toISOString() : "not frozen") : ""
-                            wrapMode: Text.WordWrap; Layout.fillWidth: true
+                            text: modelData.lez ? "LEZ, mint cap: level " + modelData.lez.mint_cap.level + " of " + modelData.lez.mint_cap.capacity + " LEZ units (used " + Fmt.pct(Number(modelData.lez.mint_cap.capacity) - Number(modelData.lez.mint_cap.level), modelData.lez.mint_cap.capacity) + "); burn cap: level " + modelData.lez.burn_cap.level + " of " + modelData.lez.burn_cap.capacity + " (used " + Fmt.pct(Number(modelData.lez.burn_cap.capacity) - Number(modelData.lez.burn_cap.level), modelData.lez.burn_cap.capacity) + ");\nmints frozen until " + (modelData.lez.mints_frozen_until_ms > 0 ? new Date(modelData.lez.mints_frozen_until_ms).toISOString() : "not frozen") + "; burns frozen until " + (modelData.lez.burns_frozen_until_ms > 0 ? new Date(modelData.lez.burns_frozen_until_ms).toISOString() : "not frozen") : ""
+                            wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.maximumWidth: 1120
                         }
                     }
                 }
