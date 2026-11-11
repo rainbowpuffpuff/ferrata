@@ -173,3 +173,92 @@ fn from_core_checks_a_known_next_committee() {
     let bad = with_wrong_aggregate(&fake_committee(32, 0x33).committee);
     assert_eq!(FinalizedStore::from_core(core(bad), &bls).err(), Some(Error::CommitteeInvalid));
 }
+
+/// The on-chain program validates through `steps::validate_compact`, a second transcription of row
+/// 1 that has no row of its own. Row 1's guards for M03 (conflicting next committee), M04 (attested
+/// slot equal to the finalized slot) and M17 (stale update) run on row 1 only; review mutants S03,
+/// S09 and S02 (the same changes in `steps.rs`) survived every test before this one. Here both
+/// transcriptions see the same inputs and must give the same verdict and code (row 1 also checks
+/// the signature, which `validate_compact` leaves to the later steps; these inputs are all signed).
+#[test]
+fn the_compact_validation_agrees_with_row_1_on_the_guard_cases() {
+    use ferrata_core::{
+        bls::{Aggregation, Blst},
+        policy::FinalizedStore,
+        steps,
+        store::{LightClientStore, StoreCore},
+        types::LightClientUpdate,
+        validate::{validate_light_client_update, Context, SignaturePath},
+        witness::{CompactStore, CompactUpdate},
+    };
+    use ferrata_spectests::{
+        load_sync_case,
+        testkit::{fabricated_update, Fabrication},
+        vectors_dir,
+    };
+    static BLST: Blst = Blst::new(Aggregation::Auto);
+    let case =
+        load_sync_case(&vectors_dir().join("electra/light_client/sync/pyspec_tests/light_client_sync")).unwrap();
+    let spec = &case.config.spec;
+    let gvr = case.genesis_validators_root;
+    let ctx = Context { spec, genesis_validators_root: gvr, bls: &BLST };
+    let (u0, current) = case.updates[0].clone();
+    let (attested, signature) = (u0.attested_header.beacon.slot, u0.signature_slot);
+    let both = |core: &StoreCore, update: &LightClientUpdate| {
+        let row1 = validate_light_client_update(core, update, current, &ctx, SignaturePath::Spec);
+        let compact = steps::validate_compact(&CompactStore::of(core), &CompactUpdate::of(update), current, spec, &gvr)
+            .map(|_| ());
+        (row1, compact)
+    };
+
+    // M03 / S03: a next committee that conflicts with the known one.
+    let mut policy =
+        FinalizedStore::initialize(&case.trusted_block_root, &case.bootstrap, case.store_fork, spec, &BLST).unwrap();
+    policy.process_update(&u0, current, &ctx).unwrap();
+    let mut conflicting = u0.clone();
+    conflicting.next_sync_committee.pubkeys[3][7] ^= 1;
+    let want = Err(Error::NextCommitteeMismatch);
+    assert_eq!(both(policy.core(), &conflicting), (want.clone(), want), "conflicting next committee");
+
+    // M17 / S02: a stale update (attested at the store's finalized slot, nothing supplied).
+    let fake = fake_committee(32, 0x44);
+    let mut spec_store =
+        LightClientStore::initialize(&case.trusted_block_root, &case.bootstrap, case.store_fork, spec).unwrap();
+    spec_store.core.current_sync_committee = fake.committee.clone();
+    let at = spec_store.core.finalized_header.beacon.slot;
+    let stale = fabricated_update(
+        &Fabrication {
+            finalized_slot: Some(at),
+            attested_slot: at,
+            signature_slot: signature,
+            signers: 32,
+            next_committee: None,
+        },
+        &fake,
+        &ctx,
+    );
+    let want = Err(Error::UpdateIrrelevant);
+    assert_eq!(both(&spec_store.core, &stale), (want.clone(), want), "stale update");
+
+    // M04 / S09: the attested slot may equal the finalized slot.
+    let fake = fake_committee(32, 0x33);
+    let equal = fabricated_update(
+        &Fabrication {
+            finalized_slot: Some(attested),
+            attested_slot: attested,
+            signature_slot: signature,
+            signers: 32,
+            next_committee: None,
+        },
+        &fake,
+        &ctx,
+    );
+    let initial = StoreCore {
+        current_sync_committee: fake.committee.clone(),
+        ..FinalizedStore::initialize(&case.trusted_block_root, &case.bootstrap, case.store_fork, spec, &BLST)
+            .unwrap()
+            .core()
+            .clone()
+    };
+    assert_eq!(both(&initial, &equal), (Ok(()), Ok(())), "attested slot equal to the finalized slot");
+}
