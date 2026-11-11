@@ -10,7 +10,8 @@
 //! program's block (240..=255), never 0, which would end the guest as a success with nothing
 //! committed; a written state decodes as a `BridgeState` and re-encodes to the same bytes (a state
 //! the program cannot read back would brick its actor); a sync message to the program's own
-//! actors decodes canonically as a `BridgeMessage` or a `StateReply`.
+//! actors decodes canonically as a `BridgeMessage`, a `StateReply` or (when a configuration names
+//! the bridge program as its attestation program) the attestation program's `Message`.
 #![no_main]
 
 use ferrata_fuzz_programs::{actor, awaited, bridge_guest, names, program, Names};
@@ -39,6 +40,12 @@ fn canonical<T: borsh::BorshDeserialize + borsh::BorshSerialize>(bytes: &[u8]) -
     let value = borsh::from_slice::<T>(bytes).ok()?;
     assert_eq!(borsh::to_vec(&value).unwrap(), bytes, "a non-canonical encoding decodes");
     Some(value)
+}
+
+/// `FERRATA_FUZZ_EXPLAIN=1`: say which type each own-program message decoded as (replays only).
+fn explain() -> bool {
+    static EXPLAIN: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *EXPLAIN.get_or_init(|| std::env::var_os("FERRATA_FUZZ_EXPLAIN").is_some())
 }
 
 fuzz_target!(|data: &[u8]| {
@@ -78,9 +85,23 @@ fuzz_target!(|data: &[u8]| {
             Ok(response) => {
                 for sync in &response.sync_messages {
                     if sync.to.program_account_id == program() {
-                        let ok = canonical::<BridgeMessage>(&sync.message).is_some()
-                            || canonical::<StateReply>(&sync.message).is_some();
-                        assert!(ok, "a message to the program's own actor does not decode");
+                        // The program also sends the attestation program's `Attest` and `Read` to the
+                        // account its configuration names as that program; a configuration may name
+                        // the bridge program itself (the fuzzer builds such ones), and then those
+                        // land on the program's own id.
+                        let kind = if canonical::<BridgeMessage>(&sync.message).is_some() {
+                            "bridge message"
+                        } else if canonical::<StateReply>(&sync.message).is_some() {
+                            "state reply"
+                        } else if canonical::<ferrata_lez_wire::Message>(&sync.message).is_some() {
+                            "attestation program's message"
+                        } else {
+                            panic!("a message to the program's own actor does not decode")
+                        };
+                        if explain() {
+                            let named = format!("{current:?} {decoded:?}").contains(&format!("{:?}", program()));
+                            eprintln!("explain: to the program's own id: {kind}; the program's id named in the state or message: {named}");
+                        }
                     }
                 }
                 if let Some(post) = &response.post_state {
