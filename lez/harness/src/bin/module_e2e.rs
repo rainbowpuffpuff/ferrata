@@ -5,7 +5,8 @@
 //! public job, all inside LEZ v0.4.0-rc1's state machine and fee settlement.
 //!
 //! ```text
-//! module_e2e info                          what a client needs: program, instance, slot, the record
+//! module_e2e info                          what a client needs: program, instance, slot, the record,
+//!                                          the instance's state
 //! module_e2e attest MESSAGE_HEX ACCOUNT    decode the module's Attest message with the program's
 //!                                          types, submit it at ACCOUNT, report the outcome
 //! module_e2e bridge MESSAGE_HEX            decode a bridge module message with the bridge
@@ -16,7 +17,7 @@
 use std::process::exit;
 
 use ferrata_lez_bridge_wire::BridgeMessage;
-use ferrata_lez_wire::{Message, ATTESTED_SELECTOR};
+use ferrata_lez_wire::{instance_actor, Message, ATTESTED_SELECTOR};
 use harness::attest::Stage4;
 use serde_json::{json, Value};
 
@@ -60,6 +61,8 @@ fn info() -> Value {
         // The record as the program stores it at header(id, slot): what a client reads from LEZ.
         "record": { "chain_id": record.chain_id, "encoded": h(&record.record) },
         "record_instance_id": h(&record.instance_id),
+        // The instance's state as the program stores it at instance(id) (`InstanceState`, Borsh).
+        "instance_state": h(&s.w.chain.actor_state(instance_actor(s.w.inst.program, &s.w.inst.id))),
     })
 }
 

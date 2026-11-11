@@ -18,8 +18,9 @@ fn main() {
         "fetch_log_proof" => ferrata_attest_calls::fetch_log_proof(&request),
         "build_attest_tx" => ferrata_attest_calls::build_attest_tx(&request),
         "read_attestation" => ferrata_attest_calls::read_attestation(&request),
+        "read_instance" => ferrata_attest_calls::read_instance(&request),
         _ => {
-            eprintln!("usage: call version|dry_run_attest|verify_checkpoint|fetch_log_proof|build_attest_tx|read_attestation [REQUEST_FILE]");
+            eprintln!("usage: call version|dry_run_attest|verify_checkpoint|fetch_log_proof|build_attest_tx|read_attestation|read_instance [REQUEST_FILE]");
             std::process::exit(2)
         }
     };

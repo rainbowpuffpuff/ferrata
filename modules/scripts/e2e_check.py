@@ -35,6 +35,14 @@ def check(group, what, ok, detail=""):
 info = rep("info")
 check("chain", "harness info read", bool(info.get("instance_id")), f"instance {info.get('instance_id', '')[:18]}…, block {info.get('block')}, slot {info.get('finalized_slot')}")
 
+ri = rep("read_instance")
+check("chain", "read_instance decodes the instance's state; the id recomputed from its config and checkpoint",
+      ri.get("verdict") == "ok" and ri.get("instance_matches") is True and ri.get("id_matches_config") is True
+      and ri.get("active") is True and ri.get("config", {}).get("chain_id") == info.get("chain_id")
+      and ri.get("store", {}).get("finalized_slot") == info.get("finalized_slot"),
+      f"chain {ri.get('config', {}).get('chain_id')}, finalized slot {ri.get('store', {}).get('finalized_slot')}, "
+      f"{ri.get('applied')} jobs applied, store {ri.get('store', {}).get('fork')}")
+
 cases = {"transfer": fixture["transfer"], "largest_receipt": fixture["transfer_in_largest_receipt"]}
 for name, want in cases.items():
     f, d, t, e, r = rep(f"fetch_{name}"), rep(f"dry_{name}"), rep(f"tx_{name}"), rep(f"exec_{name}"), rep(f"read_{name}")

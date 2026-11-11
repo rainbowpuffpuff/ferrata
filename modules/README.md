@@ -2,8 +2,9 @@
 
 The proposal (§B7) puts everything off chain in Logos modules. This directory holds two, prototypes,
 built the way Logos modules are built, loaded together by a headless Logos Core and called there:
-`ferrata_attest_module` (six methods: dry runs, checkpoint checks, and a log or storage slot attested end
-to end: fetched over JSON-RPC, its `Attest` transaction built, the program's event read back) and
+`ferrata_attest_module` (seven methods: dry runs, checkpoint checks, an instance's state read back, and a
+log or storage slot attested end to end: fetched over JSON-RPC, its `Attest` transaction built, the
+program's event read back) and
 `ferrata_bridge_module` (seven: deposit, claim, burn, release, recover, status). `catalog/` lays out
 the catalog that would release them with `logos-modules-release-action`. `RESULTS.md` records what ran.
 
@@ -34,7 +35,7 @@ A Python client (`logos-logoscore-py`, `import logosctl`) drives the same daemon
 
 | Module | Directory | Methods |
 |---|---|---|
-| `ferrata_attest_module` | `ferrata_attest_module/` | `version`, `dry_run_attest`, `verify_checkpoint`, `fetch_log_proof`, `build_attest_tx`, `read_attestation` |
+| `ferrata_attest_module` | `ferrata_attest_module/` | `version`, `dry_run_attest`, `verify_checkpoint`, `fetch_log_proof`, `build_attest_tx`, `read_attestation`, `read_instance` |
 | `ferrata_bridge_module` | `ferrata_bridge_module/` | `version`, `deposit`, `claim`, `burn`, `release`, `recover`, `status` |
 
 Both are laid out the same way:
@@ -72,6 +73,7 @@ method returns `{"verdict":"error",...}` instead of crossing into Logos Core. Ev
 | `fetch_log_proof(request)` | `rpc_url` (`http://` only: a local node or `scripts/recorded_rpc.py`), `block`, and `tx_index` + `log_index` (within the receipt) or `block_log_index` (JSON-RPC's `logIndex`); optional `timeout_ms` | `verdict` `fetched` (or `inconsistent` when the receipts do not rebuild the block's `receiptsRoot`), the block hash and receipts root, `log` = `{tx_index, log_index, receipt_proof}` ready for `dry_run_attest` and `build_attest_tx`, what the provider said the log is (`provider_log`), `rpc_calls` |
 | `build_attest_tx(request)` | `program_id` (the attestation program's account id), `instance_id`, `chain_id`, `slot` (of the record), and `log`, `logs` or `storage` | `account`: `header(id, slot)` (LEZ's public PDA of the program, seed SHA-256(`ferrata-lez/v1/header` ‖ id ‖ slot LE)), the account list, `message`: Borsh of `Message::Attest { request }` (variant 7), its size and SHA-256, the number of facts |
 | `read_attestation(request)` | `event_data` (the program's `FRT-ATT1` event data, hex), optionally `selector`, `expected_ids` (the dry run's `id`s), `expected_instance_id` | `instance_id`, `chain_id`, `block_number`, the `statements`, `matches_expected`, `instance_matches` |
+| `read_instance(request)` | `state`: the instance's state as LEZ holds it at `instance(id)` (the program's `InstanceState`, Borsh, hex); optionally `checkpoint` and `expected_instance_id` | `id`, `config` (the program's `Config`, as `verify_checkpoint` takes it), `active`, `applied` (jobs), `store` (fork, finalized header and slot, whether the next committee is known, the store digest); with `checkpoint`, the id recomputed and `id_matches_config`; `instance_matches` |
 
 The record is built the program's way (`witness::HeaderRecord`, then `attest::HeaderRecord::from_recorded`,
 as `evaluate` does), and the proof is checked by `attest_storage` or `attest_log`, so the verdict and
@@ -123,8 +125,8 @@ carries `s` as the program's public claim does. The chain is `chain_id` (a numbe
   `keystore_module`, `tx_sender_module`, `lez_core` or LEZ wallet. In the end-to-end test the
   harness wraps the message in a LEZ transaction and executes it in LEZ's state machine in-process,
   not on a networked sequencer.
-- **`ferrata_attest_module`:** no `advance` (the update's `Open`/`Miller`/`Adopt`/`Finish` messages)
-  and no configuration reads; the dry run still lacks the program-only checks (`WRONG_INSTANCE` is
+- **`ferrata_attest_module`:** no `advance` (the update's `Open`/`Miller`/`Adopt`/`Finish` messages);
+  the instance's configuration is read from its state (`read_instance`), which comes in the request; the dry run still lacks the program-only checks (`WRONG_INSTANCE` is
   shown by the program in `e2e.sh`); no history hops, batches, conditions or relations, no accumulator
   leaves; no `KeyValidate` on the committee (§11.4 of the attestation note: it needs the BLS backend).
 - **`ferrata_bridge_module`:** no private claim (`ClaimPrivately` runs in a private execution of the

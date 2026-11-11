@@ -41,7 +41,8 @@ pub fn version() -> String {
             "verify_checkpoint",
             "fetch_log_proof",
             "build_attest_tx",
-            "read_attestation"
+            "read_attestation",
+            "read_instance"
         ],
     })
     .to_string()
@@ -74,6 +75,12 @@ pub fn build_attest_tx(request: &str) -> String {
 /// ids with the ones a dry run predicted.
 pub fn read_attestation(request: &str) -> String {
     reply(read_event(request))
+}
+
+/// `read_instance(request)`: an instance's state as LEZ holds it at `instance(id)` (the program's
+/// `InstanceState`, Borsh): its id, configuration, activation, store and jobs applied.
+pub fn read_instance(request: &str) -> String {
+    reply(instance(request))
 }
 
 fn reply(result: Result<Value, String>) -> String {
@@ -301,6 +308,55 @@ impl Config {
         out.push(self.store_fork);
         out.push(self.adoption_parts);
         out
+    }
+
+    /// The inverse of [`Config::borsh`].
+    fn read(r: &mut Bytes) -> Result<Self, String> {
+        let chain_id = r.u64()?;
+        let sync_committee_size = r.u32()?;
+        let slots_per_epoch = r.u64()?;
+        let epochs_per_sync_committee_period = r.u64()?;
+        let min_sync_committee_participants = r.u64()?;
+        let mut fork_versions = [[0u8; 4]; 9];
+        for v in fork_versions.iter_mut() {
+            *v = r.array::<4>()?;
+        }
+        let mut fork_epochs = [0u64; 9];
+        for e in fork_epochs.iter_mut() {
+            *e = r.u64()?;
+        }
+        Ok(Self {
+            chain_id,
+            sync_committee_size,
+            slots_per_epoch,
+            epochs_per_sync_committee_period,
+            min_sync_committee_participants,
+            fork_versions,
+            fork_epochs,
+            genesis_validators_root: r.array::<32>()?,
+            genesis_time: r.u64()?,
+            seconds_per_slot: r.u64()?,
+            store_fork: r.u8()?,
+            adoption_parts: r.u8()?,
+        })
+    }
+
+    /// The JSON object [`Config::from_json`] reads.
+    pub fn to_json(&self) -> Value {
+        json!({
+            "chain_id": self.chain_id,
+            "sync_committee_size": self.sync_committee_size,
+            "slots_per_epoch": self.slots_per_epoch,
+            "epochs_per_sync_committee_period": self.epochs_per_sync_committee_period,
+            "min_sync_committee_participants": self.min_sync_committee_participants,
+            "fork_versions": self.fork_versions.iter().map(|v| hex(v)).collect::<Vec<_>>(),
+            "fork_epochs": self.fork_epochs.to_vec(),
+            "genesis_validators_root": hex(&self.genesis_validators_root),
+            "genesis_time": self.genesis_time,
+            "seconds_per_slot": self.seconds_per_slot,
+            "store_fork": self.store_fork,
+            "adoption_parts": self.adoption_parts,
+        })
     }
 
     /// The core's chain configuration (`Config::spec` in the program).
@@ -621,6 +677,92 @@ fn read_event(request: &str) -> Result<Value, String> {
     if !req["expected_instance_id"].is_null() {
         let want: Root = fixed(&req["expected_instance_id"], "expected_instance_id")?;
         out["instance_matches"] = json!(want == a.instance_id);
+    }
+    Ok(out)
+}
+
+// ---------------------------------------------------------------------------------------------
+// read_instance
+// ---------------------------------------------------------------------------------------------
+
+/// A Borsh reader over a byte string.
+struct Bytes<'a> {
+    b: &'a [u8],
+    at: usize,
+}
+
+impl<'a> Bytes<'a> {
+    fn take(&mut self, n: usize) -> Result<&'a [u8], String> {
+        let end = self.at.checked_add(n).filter(|e| *e <= self.b.len()).ok_or("state: too short")?;
+        let out = &self.b[self.at..end];
+        self.at = end;
+        Ok(out)
+    }
+    fn array<const N: usize>(&mut self) -> Result<[u8; N], String> {
+        Ok(self.take(N)?.try_into().unwrap())
+    }
+    fn u8(&mut self) -> Result<u8, String> {
+        Ok(self.take(1)?[0])
+    }
+    fn u32(&mut self) -> Result<u32, String> {
+        Ok(u32::from_le_bytes(self.array::<4>()?))
+    }
+    fn u64(&mut self) -> Result<u64, String> {
+        Ok(u64::from_le_bytes(self.array::<8>()?))
+    }
+}
+
+fn instance(request: &str) -> Result<Value, String> {
+    let req: Value = serde_json::from_str(request).map_err(|e| format!("request is not JSON: {e}"))?;
+    let bytes = unhex(text(&req["state"], "state")?).map_err(|e| format!("state: {e}"))?;
+    // `InstanceState { id, config, active, store: Vec<u8>, applied }`.
+    let mut r = Bytes { b: &bytes, at: 0 };
+    let id: Root = r.array::<32>()?;
+    let config = Config::read(&mut r)?;
+    let active = match r.u8()? {
+        0 => false,
+        1 => true,
+        x => return Err(format!("state: `active` is not a bool ({x})")),
+    };
+    let store_len = r.u32()? as usize;
+    let store_bytes = r.take(store_len)?;
+    let applied = r.u64()?;
+    if r.at != bytes.len() {
+        return Err(format!("state: {} bytes after InstanceState", bytes.len() - r.at));
+    }
+    let mut out = json!({
+        "verdict": "ok",
+        "id": hex(&id),
+        "config": config.to_json(),
+        "active": active,
+        "applied": applied,
+    });
+    out["store"] = match witness::CompactStore::decode(store_bytes) {
+        Ok(st) => json!({
+            "fork": format!("{:?}", st.fork),
+            "finalized_slot": st.finalized.slot,
+            "finalized_header": {
+                "slot": st.finalized.slot,
+                "proposer_index": st.finalized.proposer_index,
+                "parent_root": hex(&st.finalized.parent_root),
+                "state_root": hex(&st.finalized.state_root),
+                "body_root": hex(&st.finalized.body_root),
+            },
+            "next_committee_known": st.next.is_some(),
+            "digest": hex(&st.digest()),
+        }),
+        Err(e) => json!({ "error": format!("{e:?}"), "code": e.code() }),
+    };
+    // With the checkpoint the instance was created from, the id as `Init` derives it.
+    if !req["checkpoint"].is_null() {
+        let checkpoint: Root = fixed(&req["checkpoint"], "checkpoint")?;
+        let recomputed = instance_id(&config, &checkpoint);
+        out["instance_id_recomputed"] = json!(hex(&recomputed));
+        out["id_matches_config"] = json!(recomputed == id);
+    }
+    if !req["expected_instance_id"].is_null() {
+        let want: Root = fixed(&req["expected_instance_id"], "expected_instance_id")?;
+        out["instance_matches"] = json!(want == id);
     }
     Ok(out)
 }

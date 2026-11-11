@@ -34,6 +34,10 @@ pub trait FerrataAttestModule: Send + 'static {
     /// JSON in and out (modules/README.md).
     fn read_attestation(&mut self, request: String) -> String;
 
+    /// Decode an instance's state as LEZ holds it at `instance(id)`: id, configuration, activation,
+    /// store (finalized header, committees) and jobs applied. JSON in and out (modules/README.md).
+    fn read_instance(&mut self, request: String) -> String;
+
     /// Called once the module is wired to the host.
     fn on_context_ready(&mut self, _ctx: &RustModuleContext) {}
 }
@@ -74,6 +78,10 @@ impl FerrataAttestModule for FerrataAttest {
 
     fn read_attestation(&mut self, request: String) -> String {
         guarded("read_attestation", || ferrata_attest_calls::read_attestation(&request))
+    }
+
+    fn read_instance(&mut self, request: String) -> String {
+        guarded("read_instance", || ferrata_attest_calls::read_instance(&request))
     }
 }
 

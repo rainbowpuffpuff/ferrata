@@ -67,6 +67,10 @@ harness info > "$out/rep/info.json"
 info() { jq -c "$1" "$out/rep/info.json"; }
 block=$(info .block)
 
+# The instance's state as the program holds it, decoded by the module, its id recomputed.
+jq -n --argjson i "$(rep info)" '{state: $i.instance_state, checkpoint: $i.checkpoint, expected_instance_id: $i.instance_id}' | req read_instance
+call ferrata_attest_module read_instance read_instance
+
 # One log case: NAME and the fetch selector (JSON object members).
 log_case() {
   local name=$1 select=$2

@@ -1,6 +1,6 @@
 {
  "mode": "call mode: native",
- "checks": 35,
+ "checks": 36,
  "failed": 0,
  "rows": [
   {
@@ -8,6 +8,12 @@
    "check": "harness info read",
    "passed": "yes",
    "detail": "instance 0xc112f29279d8b73e\u2026, block 26384851, slot 15624480"
+  },
+  {
+   "group": "chain",
+   "check": "read_instance decodes the instance's state; the id recomputed from its config and checkpoint",
+   "passed": "yes",
+   "detail": "chain 1, finalized slot 15624480, 2 jobs applied, store Electra"
   },
   {
    "group": "log transfer",
