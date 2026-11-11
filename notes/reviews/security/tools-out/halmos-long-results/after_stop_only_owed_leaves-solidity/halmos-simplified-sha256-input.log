@@ -1,0 +1,617 @@
+No files changed, compilation skipped
+warning: unknown lint id: 'unsafe-cheatcode'
+  --> ./vault/test/TreeVectors.t.sol:30:13
+   |
+30 |             // forge-lint: disable-next-line(unsafe-cheatcode)
+   |             --------------------------------------------------
+   |
+
+warning: unknown lint id: 'unsafe-cheatcode'
+  --> ./vault/test/TreeVectors.t.sol:33:9
+   |
+33 |         // forge-lint: disable-next-line(unsafe-cheatcode)
+   |         --------------------------------------------------
+   |
+
+warning: unknown lint id: 'unsafe-typecast'
+   --> ./vault/test/invariant/VaultHandler.sol:391:9
+    |
+391 |         // forge-lint: disable-next-line(unsafe-typecast)
+    |         -------------------------------------------------
+    |
+
+warning: unknown lint id: 'unsafe-typecast'
+   --> ./vault/test/invariant/VaultHandler.sol:526:13
+    |
+526 |             // forge-lint: disable-next-line(unsafe-typecast)
+    |             -------------------------------------------------
+    |
+
+warning: unknown lint id: 'unsafe-typecast'
+   --> ./vault/test/invariant/VaultHandler.sol:686:17
+    |
+686 |                 // forge-lint: disable-next-line(unsafe-typecast)
+    |                 -------------------------------------------------
+    |
+
+warning: unknown lint id: 'unsafe-typecast'
+   --> ./vault/test/invariant/VaultHandler.sol:761:13
+    |
+761 |             // forge-lint: disable-next-line(unsafe-typecast)
+    |             -------------------------------------------------
+    |
+
+warning: unknown lint id: 'unsafe-typecast'
+    --> ./vault/test/invariant/VaultHandler.sol:1012:9
+     |
+1012 |         // forge-lint: disable-next-line(unsafe-typecast)
+     |         -------------------------------------------------
+     |
+
+
+Running 1 tests for test/halmos/VaultHalmos.t.sol:VaultHalmos
+[ERROR] check_after_stop_only_owed_leaves(address) (paths: 2703, time: 973.62s, bounds: [])
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0002)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0008)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0004)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  Encountered NotConcreteError: symbolic storage base slot:              
+         f_sha256_45(0x666572726174612f7661756c742f72656769737472792f76310000000
+         0000000000000000000000000aaaa0003)                                     
+         (see https://github.com/a16z/halmos/wiki/warnings#internal-error)      
+WARNING  check_after_stop_only_owed_leaves(address): paths have not been fully  
+         explored due to the loop unrolling bound: 2                            
+         (see https://github.com/a16z/halmos/wiki/warnings#loop-bound)          
+Symbolic test result: 0 passed; 1 failed; time: 984.68s

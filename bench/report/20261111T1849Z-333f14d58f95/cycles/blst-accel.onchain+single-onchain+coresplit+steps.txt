@@ -1,0 +1,102 @@
+## blst-accel (ELF 559576 bytes)
+
+### ONCHAIN: Adoption::OnChain store; update_1 with and without handoff; committee checks; restore paths
+config: blst
+         41313  O1 decode bootstrap (SSZ)
+      49935413  O2 initialize_with(Adoption::OnChain): bootstrap checks + check_committee_onchain
+         55816  O3 decode update_0 (SSZ)
+      60029131  O4 process_update(update_0), OnChain: adopts the period-1900 committee
+         55092  O5 decode update_1 (SSZ)
+      59673874  A1 process_update(update_1), OnChain: finality + handoff, check_committee_onchain on period 1901
+      10213137  A2 process_update(update_1 as finality update), OnChain store: no adoption
+      48696769  B1 check_committee_onchain(period-1901 committee) alone
+     229282241  B2 check_committee (Full: KeyValidate per key) alone, for comparison
+       1131299  B3 the rest of a handoff's extra work: committee hash_tree_root + next-committee branch
+         73803  R1 decode saved store state (finalized header + 2 committees, SSZ)
+     458603015  R2 FinalizedStore::from_core: the only constructor from saved state (Full check on both committees; adoption fixed to Full)
+      59673826  M1 OnChain policy on the decoded StoreCore (public building blocks, no re-check), update_1 as served
+      10213097  M2 OnChain policy on the decoded StoreCore, finality update
+     989341277  EXECUTION user cycles (SessionInfo::cycles)
+    1034944512  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 987 segments; po2 {20})
+         40.69  executor wall-clock seconds
+
+### SINGLE-ONCHAIN: one execution = decode saved state + update, OnChain policy, no re-check (update_1 as served, handoff)
+config: blst
+         73802  Q1 decode saved store state (SSZ)
+         55094  Q2 decode update (SSZ)
+      59673828  Q3 OnChain policy: validate (verify_checked), apply, check_committee_onchain if adopting
+      59811275  Q  sum Q1..Q3 + new root (one cycle_count delta)
+             1  info: adopted a committee (1 = yes)
+      59829912  EXECUTION user cycles (SessionInfo::cycles)
+      62914560  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 60 segments; po2 {20})
+          2.53  executor wall-clock seconds
+
+### SINGLE-ONCHAIN: one execution = decode saved state + update, OnChain policy, no re-check (update_1 as finality update)
+config: blst
+         73802  Q1 decode saved store state (SSZ)
+         55094  Q2 decode update (SSZ)
+      10213095  Q3 OnChain policy: validate (verify_checked), apply, check_committee_onchain if adopting
+      10350542  Q  sum Q1..Q3 + new root (one cycle_count delta)
+             0  info: adopted a committee (1 = yes)
+      10369179  EXECUTION user cycles (SessionInfo::cycles)
+      11534336  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 11 segments; po2 {20})
+          0.53  executor wall-clock seconds
+
+### CORESPLIT execution 1: finality checks + Blst::miller_half (commits 576 bytes)
+config: blst
+         55085  C1a decode update_1 (SSZ)
+         34013  C1b decode the signing committee from saved state (SSZ)
+        115334  C1c supermajority + header validity x2 + finality branch
+         10275  C1d signing root
+       6086126  C1e Blst::miller_half: signing key, signature checks, hash-to-G2, Miller loops, encode
+       6312970  C1 sum (one cycle_count delta, excl. input read and journal commit)
+       6406690  EXECUTION user cycles (SessionInfo::cycles)
+       7340032  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments; po2 {20})
+          0.34  executor wall-clock seconds
+
+Fp12 handed over: 576 bytes, equal to the native core's miller_half
+
+### CORESPLIT execution 2: Blst::final_half from the 576 bytes
+config: blst
+       3590418  C2 Blst::final_half: decode Fp12, final exponentiation, == 1
+       3591151  C2 sum (one cycle_count delta)
+       3597597  EXECUTION user cycles (SessionInfo::cycles)
+       4194304  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 4 segments; po2 {20})
+          0.22  executor wall-clock seconds
+
+### STEP 1 of 3: everything before the Miller loops (finality update; hands over 480 bytes)
+config: blst
+         55085  T1a decode update_1 (SSZ)
+         34013  T1b decode the signing committee from saved state (SSZ)
+        115334  T1c supermajority + header validity x2 + finality branch
+         10275  T1d signing root
+        286049  T1e signing key, subtractive + identity check
+        526791  T1f signature decompression + G2 subgroup check + not identity
+       1169099  T1g hash_to_G2 + to affine
+          1833  T1h negate key + to affine
+          7811  T1i serialize H(m), -key, signature (480 bytes)
+       2222387  T1 sum (one cycle_count delta, excl. input read and journal commit)
+       2305240  EXECUTION user cycles (SessionInfo::cycles)
+       2621440  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 3 segments; po2 {19, 20})
+          0.18  executor wall-clock seconds
+
+### STEP 2 of 3: Miller loops (hands over 576 bytes)
+config: blst
+         13935  T2a deserialize H(m), -key, signature (on-curve checks)
+       4087685  T2b Miller loops: ML(H(m),-key) + ML(sig,g1) + Fp12 mul
+          7809  T2c encode the product (576 bytes, the core's canonical encoding)
+       4110700  T2 sum (one cycle_count delta, excl. input read and journal commit)
+       4203683  EXECUTION user cycles (SessionInfo::cycles)
+       4456448  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 5 segments; po2 {18, 20})
+          0.26  executor wall-clock seconds
+
+Fp12 handed over: 576 bytes, equal to the native core's miller_half
+
+### STEP 3 of 3: Blst::final_half (final exponentiation + check)
+config: blst
+       3590418  C2 Blst::final_half: decode Fp12, final exponentiation, == 1
+       3591151  C2 sum (one cycle_count delta)
+       3597597  EXECUTION user cycles (SessionInfo::cycles)
+       4194304  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 4 segments; po2 {20})
+          0.22  executor wall-clock seconds
+

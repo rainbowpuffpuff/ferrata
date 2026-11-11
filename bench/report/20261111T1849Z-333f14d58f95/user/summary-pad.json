@@ -1,0 +1,272 @@
+{
+ "runs": [
+  {
+   "cpus": 16,
+   "job": "attest-pad",
+   "machine": {
+    "nproc": "16",
+    "cfs_quota_us": "1600000",
+    "memory_limit_bytes": "17179869184",
+    "vendor": "AuthenticAMD",
+    "family": "25",
+    "model": "17",
+    "bogomips": "3701.89",
+    "flags": [
+     "adx",
+     "avx2",
+     "avx512f",
+     "bmi2",
+     "ht",
+     "sha_ni"
+    ],
+    "cloud": "AZURE",
+    "region": "us-east"
+   },
+   "run": 1,
+   "exit_code": 0,
+   "wall_s": 572.76,
+   "gnu_time": {
+    "user_s": "8344.42",
+    "sys_s": "25.72",
+    "cpu_percent": "1461%",
+    "wall": "9:32.71",
+    "max_rss_kib": "9670796",
+    "exit_status": "0"
+   },
+   "sampled_max": {
+    "cgroup_current_bytes": 9910439936,
+    "meminfo_used_kib": 9678392,
+    "rss_sum_kib": 9777516,
+    "r0vm_rss_kib": 9670796
+   },
+   "settle_exit": 0,
+   "tamper": [
+    101
+   ],
+   "proofs": [
+    {
+     "label": "private attestation",
+     "execute_and_prove_s": 569.4,
+     "prove_and_settle_s": 569.6,
+     "receipt_bytes": 239214,
+     "tx_bytes": 255302,
+     "proven_sessions": [
+      {
+       "segments": 1,
+       "total_cycles": 131072,
+       "user_cycles": 34337,
+       "gap_s": 13.8
+      },
+      {
+       "segments": 1,
+       "total_cycles": 524288,
+       "user_cycles": 346240,
+       "gap_s": 54.2
+      },
+      {
+       "segments": 4,
+       "total_cycles": 3670016,
+       "user_cycles": 2954264,
+       "gap_s": 501.3
+      }
+     ],
+     "user_cycles": 3334841,
+     "segments": 6,
+     "total_cycles": 4325376
+    }
+   ]
+  },
+  {
+   "cpus": 16,
+   "job": "bridge-pad",
+   "machine": {
+    "nproc": "16",
+    "cfs_quota_us": "1600000",
+    "memory_limit_bytes": "17179869184",
+    "vendor": "AuthenticAMD",
+    "family": "25",
+    "model": "17",
+    "bogomips": "3699.39",
+    "flags": [
+     "adx",
+     "avx2",
+     "avx512f",
+     "bmi2",
+     "ht",
+     "sha_ni"
+    ],
+    "cloud": "AZURE",
+    "region": "us-east"
+   },
+   "run": 1,
+   "exit_code": 0,
+   "wall_s": 1049.58,
+   "gnu_time": {
+    "user_s": "14983.32",
+    "sys_s": "78.09",
+    "cpu_percent": "1435%",
+    "wall": "17:29.53",
+    "max_rss_kib": "9683572",
+    "exit_status": "0"
+   },
+   "sampled_max": {
+    "cgroup_current_bytes": 9907224576,
+    "meminfo_used_kib": 9675256,
+    "rss_sum_kib": 9785664,
+    "r0vm_rss_kib": 9681356
+   },
+   "settle_exit": 0,
+   "tamper": [
+    101,
+    101
+   ],
+   "proofs": [
+    {
+     "label": "private claim",
+     "execute_and_prove_s": 556.9,
+     "prove_and_settle_s": 557.4,
+     "receipt_bytes": 239628,
+     "tx_bytes": 256130,
+     "proven_sessions": [
+      {
+       "segments": 1,
+       "total_cycles": 131072,
+       "user_cycles": 41160,
+       "gap_s": 14.7
+      },
+      {
+       "segments": 1,
+       "total_cycles": 262144,
+       "user_cycles": 111596,
+       "gap_s": 27.1
+      },
+      {
+       "segments": 4,
+       "total_cycles": 3670016,
+       "user_cycles": 2970526,
+       "gap_s": 514.6
+      }
+     ],
+     "user_cycles": 3123282,
+     "segments": 6,
+     "total_cycles": 4063232
+    },
+    {
+     "label": "private burn",
+     "execute_and_prove_s": 484.0,
+     "prove_and_settle_s": 484.3,
+     "receipt_bytes": 239046,
+     "tx_bytes": 254966,
+     "proven_sessions": [
+      {
+       "segments": 1,
+       "total_cycles": 131072,
+       "user_cycles": 25377,
+       "gap_s": 15.4
+      },
+      {
+       "segments": 4,
+       "total_cycles": 3407872,
+       "user_cycles": 2878204,
+       "gap_s": 468.3
+      }
+     ],
+     "user_cycles": 2903581,
+     "segments": 5,
+     "total_cycles": 3538944
+    }
+   ]
+  }
+ ],
+ "proofs": {
+  "private attestation": {
+   "execute_and_prove_s": {
+    "16": [
+     569.4
+    ]
+   },
+   "median_s": {
+    "16": 569.4
+   },
+   "user_cycles": [
+    3334841
+   ],
+   "peak_rss_gib": 9.22,
+   "peak_container_gib": 9.23,
+   "receipt_bytes": [
+    239214
+   ],
+   "tx_bytes": [
+    255302
+   ],
+   "settled_with_receipt_verified": 1,
+   "of": 1,
+   "tamper_settle_exits": [
+    101
+   ],
+   "machines": [
+    "{\"bogomips\": \"3701.89\", \"cfs_quota_us\": \"1600000\", \"cloud\": \"AZURE\", \"family\": \"25\", \"flags\": [\"adx\", \"avx2\", \"avx512f\", \"bmi2\", \"ht\", \"sha_ni\"], \"memory_limit_bytes\": \"17179869184\", \"model\": \"17\", \"nproc\": \"16\", \"region\": \"us-east\", \"vendor\": \"AuthenticAMD\"}"
+   ]
+  },
+  "private claim": {
+   "execute_and_prove_s": {
+    "16": [
+     556.9
+    ]
+   },
+   "median_s": {
+    "16": 556.9
+   },
+   "user_cycles": [
+    3123282
+   ],
+   "peak_rss_gib": 9.23,
+   "peak_container_gib": 9.23,
+   "receipt_bytes": [
+    239628
+   ],
+   "tx_bytes": [
+    256130
+   ],
+   "settled_with_receipt_verified": 1,
+   "of": 1,
+   "tamper_settle_exits": [
+    101,
+    101
+   ],
+   "machines": [
+    "{\"bogomips\": \"3699.39\", \"cfs_quota_us\": \"1600000\", \"cloud\": \"AZURE\", \"family\": \"25\", \"flags\": [\"adx\", \"avx2\", \"avx512f\", \"bmi2\", \"ht\", \"sha_ni\"], \"memory_limit_bytes\": \"17179869184\", \"model\": \"17\", \"nproc\": \"16\", \"region\": \"us-east\", \"vendor\": \"AuthenticAMD\"}"
+   ]
+  },
+  "private burn": {
+   "execute_and_prove_s": {
+    "16": [
+     484.0
+    ]
+   },
+   "median_s": {
+    "16": 484.0
+   },
+   "user_cycles": [
+    2903581
+   ],
+   "peak_rss_gib": 9.23,
+   "peak_container_gib": 9.23,
+   "receipt_bytes": [
+    239046
+   ],
+   "tx_bytes": [
+    254966
+   ],
+   "settled_with_receipt_verified": 1,
+   "of": 1,
+   "tamper_settle_exits": [
+    101,
+    101
+   ],
+   "machines": [
+    "{\"bogomips\": \"3699.39\", \"cfs_quota_us\": \"1600000\", \"cloud\": \"AZURE\", \"family\": \"25\", \"flags\": [\"adx\", \"avx2\", \"avx512f\", \"bmi2\", \"ht\", \"sha_ni\"], \"memory_limit_bytes\": \"17179869184\", \"model\": \"17\", \"nproc\": \"16\", \"region\": \"us-east\", \"vendor\": \"AuthenticAMD\"}"
+   ]
+  }
+ }
+}

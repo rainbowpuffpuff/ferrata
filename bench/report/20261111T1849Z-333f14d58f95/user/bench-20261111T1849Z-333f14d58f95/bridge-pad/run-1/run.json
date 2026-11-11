@@ -1,0 +1,82 @@
+{
+ "run": 1,
+ "exit_code": 0,
+ "wall_s": 1049.58,
+ "gnu_time": {
+  "user_s": "14983.32",
+  "sys_s": "78.09",
+  "cpu_percent": "1435%",
+  "wall": "17:29.53",
+  "max_rss_kib": "9683572",
+  "exit_status": "0"
+ },
+ "proof_lines": [
+  "private claim: REAL PROOF: execute_and_prove 556.9 s (prove + settle 557.4 s); receipt (succinct InnerReceipt, borsh) 239628 bytes; transaction 256130 bytes",
+  "private burn: REAL PROOF: execute_and_prove 484.0 s (prove + settle 484.3 s); receipt (succinct InnerReceipt, borsh) 239046 bytes; transaction 254966 bytes"
+ ],
+ "sampled": {
+  "max": {
+   "cgroup_current_bytes": 9907224576,
+   "meminfo_used_kib": 9675256,
+   "rss_sum_kib": 9785664,
+   "r0vm_rss_kib": 9681356
+  },
+  "samples": 2087,
+  "period_s": 0.5,
+  "cpu_s_by_process_name": {
+   "prove_bridge": 1.0,
+   "r0vm": 15046.0
+  }
+ },
+ "cgroup_after": {
+  "cgroup.controllers": null,
+  "cpu.max": null,
+  "cpu.weight": null,
+  "cpuset.cpus.effective": null,
+  "memory.max": null,
+  "memory.high": null,
+  "memory.current": null,
+  "memory.peak": null,
+  "memory.swap.max": null,
+  "memory.events": null,
+  "memory/memory.limit_in_bytes": "17179869184",
+  "memory/memory.max_usage_in_bytes": null,
+  "memory/memory.usage_in_bytes": "69275648",
+  "cpu/cpu.cfs_quota_us": "1600000",
+  "cpu/cpu.cfs_period_us": "100000",
+  "cpuset/cpuset.cpus": "0-15"
+ },
+ "txs": {
+  "tx-claim.borsh": {
+   "bytes": 256130,
+   "sha256": "2ea26879e9db75d8e0a18abbb9eeb9b373961546d3fc564a46d8c749132d9ea7"
+  },
+  "tx-burn.borsh": {
+   "bytes": 254966,
+   "sha256": "d1816bc40517fc653750bdeb540c15eb149fea84ad3cbee52be641885d873b2d"
+  }
+ },
+ "settle_exit": 0,
+ "settle_wall_s": 7.56,
+ "settle_lines": [
+  "private claim: SETTLED FROM tx-claim.borsh (receipt verified): receipt 239628 bytes, transaction 256130 bytes, settled in 0.4 s",
+  "private claim: settled: execution gas 551,502 (PRIVATE_VERIFY_GAS 409,764 + public part 141,738 cycles), storage gas 224,063, base fee 6,204,520; receipt at bytes 16,502..256,130 of 256,130",
+  "private burn: SETTLED FROM tx-burn.borsh (receipt verified): receipt 239046 bytes, transaction 254966 bytes, settled in 0.3 s",
+  "private burn: settled: execution gas 518,358 (PRIVATE_VERIFY_GAS 409,764 + public part 108,594 cycles), storage gas 224,063, base fee 5,939,368; receipt at bytes 15,920..254,966 of 254,966"
+ ],
+ "tamper": [
+  {
+   "tx": "tx-claim.borsh",
+   "flipped_bit0_of_byte": 128065,
+   "settle_exit": 101,
+   "log_tail": "er root n = 8, configuration 14aa6e89de35; N = 1dbba1cacb2c3b88480a9f252a16cac0d96c2685524509f4b2165d1a6df068c2\n\nthread 'main' (1078) panicked at harness/src/bin/prove_bridge.rs:289:33:\nprivate claim: settlement refuses /root/p4/bridge-pad/run-1/tampered-tx-claim.borsh: Invalid privacy preserving execution circuit proof\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n"
+  },
+  {
+   "tx": "tx-burn.borsh",
+   "flipped_bit0_of_byte": 127483,
+   "settle_exit": 101,
+   "log_tail": "public part 141,738 cycles), storage gas 224,063, base fee 6,204,520; receipt at bytes 16,502..256,130 of 256,130\n\nthread 'main' (1459) panicked at harness/src/bin/prove_bridge.rs:289:33:\nprivate burn: settlement refuses /root/p4/bridge-pad/run-1/tampered-tx-burn.borsh: Invalid privacy preserving execution circuit proof\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n"
+  }
+ ],
+ "finished_at_utc": "2026-11-11T19:28:19Z"
+}

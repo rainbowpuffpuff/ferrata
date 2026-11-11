@@ -1,0 +1,9 @@
+bridge image 17c908c4e909c87b6b54ac8581d4fb46a77967e8faf63a2ee886704338b36179 (541472 ELF bytes); RISC0_DEV_MODE off; shape wallet
+private claim: vault A leaf 5 (1 ETH, private kind) under root n = 8, configuration 14aa6e89de35; N = 1dbba1cacb2c3b88480a9f252a16cac0d96c2685524509f4b2165d1a6df068c2
+private claim: SETTLED FROM /root/p4/bridge-pad/run-1/tx-claim.borsh (receipt verified): receipt 239628 bytes, transaction 256130 bytes, settled in 0.4 s
+private claim: of its 256130 transaction bytes, none holds the destination, s, C, the leaf, the depositor, the witness or any of 32 path siblings; N, configId and the root read are present
+private claim: settled: execution gas 551,502 (PRIVATE_VERIFY_GAS 409,764 + public part 141,738 cycles), storage gas 224,063, base fee 6,204,520; receipt at bytes 16,502..256,130 of 256,130
+
+thread 'main' (1459) panicked at harness/src/bin/prove_bridge.rs:289:33:
+private burn: settlement refuses /root/p4/bridge-pad/run-1/tampered-tx-burn.borsh: Invalid privacy preserving execution circuit proof
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

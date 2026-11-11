@@ -1,0 +1,119 @@
+{
+ "name": "ferrata",
+ "version": "0.1.0-rc.1",
+ "commit": "7eb40b64d73da7ab6ad0bbc205e9172f76f9f19c",
+ "created_utc": "2026-11-11T19:01:40Z",
+ "status": "prototype, unaudited: for testnets only",
+ "targets": {
+  "lez": "LEZ v0.4 (built against v0.4.0-rc1, commit 1806e87); testnet 0.4 when it opens",
+  "evm": "any EVM chain with the Cancun opcodes; Sepolia (Glamsterdam, EIP-8037) needs FERRATA_GAS_RULE=eip8037"
+ },
+ "image_ids_note": "guests built without Docker at the crown build path; the ids depend on that path (scripts/reproduce-image-ids.sh)",
+ "programs": {
+  "ferrata_lez": {
+   "file": "programs/ferrata_lez.bin",
+   "bytes": 602904,
+   "sha256": "8f685536c54b3bd6717ea48c8d8efb3bc7779466b4df698b4a90f079d150baa5",
+   "what": "attestation program (LEZ program ELF, deployed with LEZ's program loader)",
+   "image_id": "0x2228bb462b83032ade1c5de62d381b8dcffe9d10d9e977dce9e9fc8da31467cf"
+  },
+  "ferrata_bridge": {
+   "file": "programs/ferrata_bridge.bin",
+   "bytes": 541464,
+   "sha256": "f3f5b872579df9b73c4cd597ddf684ddd1c9bc8d1f1e3829cb1022c782e91abb",
+   "what": "bridge program (LEZ program ELF, deployed with LEZ's program loader)",
+   "image_id": "0x0e9dcd79482f9e0b83762b965d7e1d4319ffeba8a4bdfbdff148bbeaba79bbb6"
+  },
+  "checkpoint": {
+   "file": "programs/checkpoint.bin",
+   "bytes": 443604,
+   "sha256": "9886faadaad3c6604633f9e036f7a1ed2d9c36b567283b491f368a0e63060fc9",
+   "what": "rule (A) checkpoint guest (the vault's checkpointImageIdA)",
+   "image_id": "0xcf38b945a70b66d9132fb493b4baf1db308de73ccb8b1108e1c1f8a4363525e6"
+  },
+  "checkpoint_b": {
+   "file": "programs/checkpoint_b.bin",
+   "bytes": 445564,
+   "sha256": "2bcda6f114eb9d4868f81bceb78b24ba27eddf8efc0bf20f43b55438a2bd05c3",
+   "what": "rule (B) checkpoint guest (the vault's checkpointImageIdB)",
+   "image_id": "0xa475e8f9aaa41d0ae3bf9a20ae7d937ebc637a961808765f0ff175158760d3b2"
+  },
+  "segment": {
+   "file": "programs/segment.bin",
+   "bytes": 269960,
+   "sha256": "565cb04955daee7d65a631262093d84ac9125ff8ead7e94cd5ba230b762761c3",
+   "what": "rule (A) segment guest (composed into the checkpoint proof)",
+   "image_id": "0xd2b30667292418ccf3cf68ee4fa2dc9ed7873de4034fcf1fb2ed3a6305a61cca"
+  },
+  "release": {
+   "file": "programs/release.bin",
+   "bytes": 230480,
+   "sha256": "a6abe992cada41db6af2b2934cc214a3fbbaf3d3d1d7e326186b5af70024668e",
+   "what": "release guest (the vault's releaseImageId)",
+   "image_id": "0x17257f91bca70abf7a5476b498d687e95b6fb4d59e75b6bca1d46877ac9bf5cd"
+  }
+ },
+ "vault": {
+  "FerrataVault": {
+   "file": "vault/FerrataVault.json",
+   "bytes": 350745,
+   "sha256": "d5a5873004b1177333a244995693dc06b982f7e0cd30c788758ec931ad98bc24",
+   "what": "FerrataVault: ABI, creation and runtime bytecode (forge artifact)",
+   "compiler": "0.8.26+commit.8a97fa7a",
+   "evm_version": "cancun",
+   "optimizer": {
+    "enabled": true,
+    "runs": 200
+   },
+   "creation_bytes": 27773,
+   "runtime_bytes": 24254,
+   "creation_sha256": "4e55a173143f276ad84c54bce86d5d4256d04f5cc07575f5db8713abcbe5bb28",
+   "runtime_sha256": "f30f2b3f1987d2e4561ab346e7e52ef11629fe7f547f7a8576a8e0708882f72b",
+   "link_references": [
+    "src/FerrataRegistry.sol:FerrataRegistry"
+   ]
+  },
+  "FerrataRegistry": {
+   "file": "vault/FerrataRegistry.json",
+   "bytes": 127777,
+   "sha256": "de39366411badcb27d4b607ec4d20132d489a9f809f0025f34cc3dcd7069499c",
+   "what": "FerrataRegistry: ABI, creation and runtime bytecode (forge artifact)",
+   "compiler": "0.8.26+commit.8a97fa7a",
+   "evm_version": "cancun",
+   "optimizer": {
+    "enabled": true,
+    "runs": 200
+   },
+   "creation_bytes": 12556,
+   "runtime_bytes": 12504,
+   "creation_sha256": "38a8deb401c068a4961eebf90826044d30b51669d27b47b481aefb227127fc76",
+   "runtime_sha256": "ed514ab5256789e0c8356aee69ac3eb50d0a2debf073ca476b291583cf396055",
+   "link_references": []
+  }
+ },
+ "cli": {
+  "file": "cli/ferrata",
+  "bytes": 28965912,
+  "sha256": "d83876fdfcdad75e4a251f0d6273fd84e5d5deda41055dacae86edb9cab21bf1",
+  "what": "the ferrata command-line tool, x86_64-unknown-linux-gnu"
+ },
+ "cli_lock": {
+  "file": "cli/Cargo.lock",
+  "bytes": 265501,
+  "sha256": "035bc0da45e86cd68d28fa9884eb2ee30b0373b6644c9f10e1921e81a9f592ab",
+  "what": "the lockfile the CLI was built with"
+ },
+ "deploy": {
+  "script": "deploy-testnet.sh",
+  "vault_script": "vault/script/deploy.sh"
+ },
+ "toolchains": {
+  "rustc_host": "rustc 1.93.0 (254b59607 2026-01-19)",
+  "rustc_cli": "rustc 1.98.1 (48a229cea 2026-09-01)",
+  "r0vm": "risc0-r0vm 3.0.5",
+  "forge": "forge Version: 1.3.6-v1.3.6",
+  "solc": "0.8.26 (vault/foundry.toml)",
+  "lez": "1806e873ea2ac0e1b608aa7cf2f9b6e1fb12db21",
+  "host": "x86_64 2 threads unknown"
+ }
+}
