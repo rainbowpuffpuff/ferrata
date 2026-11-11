@@ -104,12 +104,12 @@ Three ways, the first preselected:
 
 | Path | How | Public | Hidden | Measured |
 |---|---|---|---|---|
-| **Private claim to a private account** (default) | `ClaimPrivately` runs as your destination account inside a privacy-preserving transaction; it reads `root(cid, n)` and credits its own private state | `N`, the configuration, the token, the denomination, which root was read (`n`), the fee schedule's range, the relayer, the time, the bridge program, a one-time fee alias | which deposit (leaf, depositor, `s`, `C`, path) and your account | 539,060 execution gas, 224,063 storage gas; the prover proves 41,133 + 111,838 user cycles (in-process harness, dev mode) |
-| Private claim to a public account | the same proof, from a private account of yours; the mint goes publicly to the destination | the above and the destination | which deposit | 573,154 execution gas |
-| **Plaintext claim** | the witness is transaction data; one public transaction, for users who cannot prove | **everything, including which deposit**: the client must say so before allowing it | nothing | 239,431 execution gas (1 ETH), 2,061 bytes |
+| **Private claim to a private account** (default) | `ClaimPrivately` runs as your destination account inside a privacy-preserving transaction; it reads `root(cid, n)` and credits its own private state | `N`, the configuration, the token, the denomination, which root was read (`n`), the fee schedule's range, the relayer, the time, the bridge program, a one-time fee alias | which deposit (leaf, depositor, `s`, `C`, path) and your account | 551,502 execution gas, 224,063 storage gas; the prover proves 41,160 + 111,596 user cycles (in-process harness, dev mode, the merged program) |
+| Private claim to a public account | the same proof, from a private account of yours; the mint goes publicly to the destination | the above and the destination | which deposit | 600,607 execution gas |
+| **Plaintext claim** | the witness is transaction data; one public transaction, for users who cannot prove | **everything, including which deposit**: the client must say so before allowing it | nothing | 258,885 execution gas (1 ETH), 2,053 bytes |
 
-Sources: [`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §1, §3; [`lez/BRIDGE.md`](../../lez/BRIDGE.md),
-"What each path makes public". The private claim's 8,953 bytes were searched for its private inputs
+Sources: [`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §1 (its last column: the merged program), §3;
+[`lez/BRIDGE.md`](../../lez/BRIDGE.md), "What each path makes public". The private claim's 8,937 bytes were searched for its private inputs
 (destination, `s`, `C`, the leaf, the depositor, the witness, the 32 siblings): all absent
 (`a_private_claim_publishes_only_the_nullifier_the_denomination_and_the_root_read` in
 [`lez/harness/tests/bridge_private.rs`](../../lez/harness/tests/bridge_private.rs)).
@@ -119,9 +119,11 @@ L4 in 15.3 s (227,477-byte receipt, 0.78 GiB peak host memory for the claim and 
 ([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §7); on a live LEZ sequencer, LEZ's own wallet
 proved a private claim on a Modal build box's CPU in 254.8 s (252,185-byte transaction), and the
 sequencer, which verifies receipts, included it ([`lez/live/inbound/README.md`](../../lez/live/inbound/README.md);
-[`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §11). **Not measured:** the private claim on a
-user's laptop or at the declared minimum (8 GB, 4 cores, [`attestation.md`](../design/attestation.md)
-§13), and a real proof of the current program image.
+[`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §11); the merged program's private claim was proven
+by LEZ's wallet on a cloud CPU (16 cores reserved, up to 32) and sent in 276.8 s on a LEZ devnet, in the
+crown rehearsal ([`e2e/runs/crown-rehearsal-3`](../../e2e/runs/crown-rehearsal-3/README.md)). **Not
+measured:** the private claim on a user's laptop or at the declared minimum (16 GB, 8 cores,
+[`attestation.md`](../design/attestation.md) §13).
 
 **Fees.** The claim mints your denomination to you and the escrowed fees to the fee recipient and to
 the relayer it names ([`bridge.md`](../design/bridge.md) §5.5, §13). The LEZ transaction fee of a
@@ -160,10 +162,10 @@ a copy cannot block it. The wallet advances `i` on every published burn, even a 
 never repeats.
 
 **Public:** token, denomination, time, the note; for a private holding the holder appears as an alias.
-**Hidden:** you and your recipient. **Measured** (in-process harness): a private burn 513,593 execution
-gas and 224,063 storage gas, 24,397 user cycles to prove; a public burn 130,868; the private burn of
-the earlier image proven on one L4 in 12.4 s ([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md)
-§1, §7).
+**Hidden:** you and your recipient. **Measured** (in-process harness, the merged program): a private burn
+518,358 execution gas and 224,063 storage gas, 25,377 user cycles to prove; a public burn 164,153; the private
+burn of the earlier image proven on one L4 in 12.4 s ([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md)
+§1, §7), the merged program's on a cloud CPU in 336.0 s with sending, in the crown rehearsal.
 
 ## 7. Checkpoint, wait, release (Ethereum)
 
@@ -370,9 +372,9 @@ The integration surface today is the program messages and the derivations; the L
   the proposed delays; position recovery as a client feature;
 - the gas drop and the relayer and wrapper services;
 - a transfer of wrapped tokens between holders; the switch to LEZ's token program;
-- real proofs of the current program image's private claim and burn, and of a private claim to a public
-  destination; any user-side proof at the declared 4-core, 8 GB minimum or on macOS;
-- the release guest with `NOut` v2 and `mac` v2;
+- a real proof of a private claim to a public destination, and laptop or GPU proofs of the current program
+  image's private claim and burn (the crown rehearsal proved them on a cloud CPU); any user-side proof at the
+  declared minimum (8 cores, 16 GB) or on macOS;
 - the v5 vault on public Sepolia, and a private claim of a Sepolia deposit: the v3 vault of the end-to-end
   fixture is on Sepolia with one deposit, deposit 0, which a LEZ sequencer we run claimed by the plaintext
   path; deposit 1, the private kind, waits for the owner's run
