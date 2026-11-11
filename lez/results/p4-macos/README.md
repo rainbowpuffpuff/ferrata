@@ -92,8 +92,8 @@ patched RISC Zero, so the proof would no longer be LEZ's pinned prover; not done
 
 Both are bare-metal Mac minis on EC2 dedicated hosts: the whole machine, no container and no memory limit but the
 machine's own (16 GB on the M1, 24 GB on the M4; macOS itself and the file cache take part of it). The M1 Mac mini is
-a reasonable stand-in for the lowest Apple Silicon a user may bring (8 cores, 16 GB, the first generation); the M4 is
-the current base Mac mini, the same chip as a current MacBook Air. Neither is a laptop: no battery, no thermal limit of
+a reasonable stand-in for the lowest Apple Silicon a user may bring (8 cores, 16 GB, the first generation); the M4 is a later generation (2024),
+the chip Apple also sells in MacBook Air laptops. Neither is a laptop: no battery, no thermal limit of
 a laptop chassis (a MacBook Air has no fan and may throttle under minutes of full load; *not measured*).
 
 Toolchains, the same on both (`runs/<mac>/toolchains.log`, `r0vm.txt`, `build-env.txt`): Apple clang 17.0.0
