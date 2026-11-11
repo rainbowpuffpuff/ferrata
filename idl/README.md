@@ -96,6 +96,20 @@ the attestation program (the programs named in `programs.tsv`, less LEZ's `scrip
 and writes the message's bytes and its `Debug` text from `ferrata_lez_wire::Message`. A message that
 today's wire cannot decode (a run recorded with an older image) is counted, not written.
 
+## SPEL's own code reads it
+
+[`spel-check/`](spel-check/) is a small crate on `spel-framework-core` 0.7.0 itself (the clone of
+logos-co/spel at `c6f73ce` beside the repository, at `upstream/spel`): it deserializes both files
+into SPEL's `SpelIdl` (so SPEL's parser accepts every field, including the extra `docs`) and decodes
+every vector, and every recorded message given as an argument, with SPEL's own borsh decoder,
+requiring every byte to be consumed (`decode_account_data_try_all` over an IDL whose `accounts` holds
+just the vector's type). SPEL renders 32-byte arrays as `Public/<base58>` account ids, which is a
+display choice; the bytes and the structure are what is checked.
+
+```sh
+cd idl/spel-check && cargo run --locked -- [RECORDED.json]      # exit status 1 on any failure
+```
+
 ## Results
 
 Measured on the Modal build box (`mrun`, 11 November 2026) and in CI's command:
@@ -111,3 +125,6 @@ Measured on the Modal build box (`mrun`, 11 November 2026) and in CI's command:
   `Adopt` 74, `Finish` 58) and the live run's (67), each decoded by the IDL alone to its `Debug`
   text. 6 more messages of the live run are of an older wire, which today's Rust wire does not
   decode either (the first: block 18, transaction 0).
+- `spel-check` ([`results/spel-check.txt`](results/spel-check.txt)): both files parsed as SPEL's
+  `SpelIdl`; SPEL's decoder decoded 19 of 19 and 37 of 37 committed vectors and 317 of 317 recorded
+  messages exactly.
