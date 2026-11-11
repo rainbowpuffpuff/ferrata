@@ -714,6 +714,8 @@ pub fn exit_name(code: u32) -> String {
         k::UNEXPECTED_FACT => "consumer: UnexpectedFact",
         k::AMOUNT_TOO_LARGE => "consumer: AmountTooLarge",
         k::NULLIFIER_MISMATCH => "consumer: NullifierMismatch",
+        k::COMMITMENT_MISMATCH => "consumer: CommitmentMismatch",
+        k::WRONG_KIND => "consumer: WrongKind",
         80 => "StepError::Witness",
         81 => "StepError::Phase",
         82 => "StepError::StoreChanged",

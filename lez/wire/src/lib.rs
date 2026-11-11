@@ -323,13 +323,14 @@ pub enum CodeOwner {
 
 /// The blocks of refusal codes. The program exits with its own codes and with the core's and the
 /// step API's, so each code must have one owner: the blocks are disjoint, and every code lies in
-/// a block of its owner (`harness/tests/exit_codes.rs` checks both). 240–255 are unassigned.
+/// a block of its owner (`harness/tests/exit_codes.rs` checks both). 230–255 belong to programs of
+/// their own (`ferrata_holdings` 230–239, the bridge 240–255).
 pub const CODE_BLOCKS: [(CodeOwner, core::ops::RangeInclusive<u8>); 5] = [
     (CodeOwner::Core, 1..=79),        // the light client: 1–61 in use
     (CodeOwner::StepApi, 80..=99),    // 80–84 in use
     (CodeOwner::Core, 100..=199),     // the execution layer: 100–163 in use
-    (CodeOwner::Program, 200..=219),  // 200–215 and 218–219 in use
-    (CodeOwner::Consumer, 220..=239), // 220–229 in use
+    (CodeOwner::Program, 200..=217),  // 200–217 in use
+    (CodeOwner::Consumer, 218..=229), // 218–229 in use
 ];
 
 /// Defines exit codes and `ALL`, every one of them with its name.
@@ -341,7 +342,7 @@ macro_rules! exit_codes {
     };
 }
 
-/// Exit codes of the program's own refusals: 200–215 and 218–219 (see [`CODE_BLOCKS`]).
+/// Exit codes of the program's own refusals: 200–217 (see [`CODE_BLOCKS`]).
 pub mod code {
     exit_codes! {
         /// The message does not decode.
@@ -386,9 +387,9 @@ pub mod code {
         /// period, the adoption parts), a fork at or before the checkpoint's epoch changed, a
         /// store layout other than the parent store's, a schedule that is not in order, or no
         /// change at all.
-        BAD_SUCCESSOR = 218;
+        BAD_SUCCESSOR = 216;
         /// A successor from a checkpoint that is not the parent's latest record.
-        STALE_CHECKPOINT = 219;
+        STALE_CHECKPOINT = 217;
     }
 }
 
@@ -841,9 +842,10 @@ pub mod consumer {
     };
 
     use crate::{
-        attest::{Address, Attestation, Cmp, Condition, Fact, Field, LogQuery, Request, Statement, Word},
+        attest::{Address, Attestation, Cmp, Condition, Fact, Field, Hop, LogQuery, Request, Statement, Word},
         tagged_hash,
     };
+    use sha2::{Digest, Sha256};
 
     /// `keccak256("Transfer(address,address,uint256)")`, the first topic of an ERC-20 `Transfer`.
     pub const TRANSFER_TOPIC: Root = [
@@ -960,7 +962,8 @@ pub mod consumer {
     /// It is a function of public data, so it names the deposit to anyone. That is right for a
     /// public claim and wrong for a private one: a private consumer that published it would link
     /// its transaction to the Ethereum log (`docs/design/attestation.md` §7). A plain `Transfer`
-    /// carries no commitment to a secret, so this consumer has no private claim.
+    /// carries no commitment to a secret, so a [`Pool`] has no private claim; a [`VaultPool`]
+    /// has one, with [`secret_nullifier`].
     pub fn nullifier(pool_id: &Root, statement_id: &Root) -> Root {
         tagged_hash(b"consumer/nullifier", &[pool_id, statement_id])
     }
@@ -981,6 +984,166 @@ pub mod consumer {
     /// `balance(pool, owner)` of the consumer deployed at `program`.
     pub fn balance_actor(program: AccountId, pool_id: &Root, owner: &Address) -> Actor {
         Actor::new(AccountId::for_public_pda(&program, &balance_seed(pool_id, owner)), program)
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Deposits of Ferrata's vault, claimed with the depositor's secret (design §7, rules 5 to 7)
+    // ---------------------------------------------------------------------------------------------
+
+    /// `keccak256("Deposit(address,uint64,uint64,address,uint256,bytes32)")`, the first topic of
+    /// FerrataVault's `Deposit(depositor indexed, index, leafIndex, token indexed, amount, C)`.
+    pub const DEPOSIT_TOPIC: Root = [
+        0x83, 0xd2, 0xd1, 0xc3, 0x4c, 0x88, 0x25, 0x84, 0x3c, 0x9a, 0xf8, 0x4b, 0xec, 0x80, 0x37, 0x8e, 0x99, 0x70,
+        0x84, 0xe8, 0xc1, 0xd6, 0xd5, 0xa3, 0xc2, 0xa6, 0xe7, 0x58, 0xfe, 0x05, 0x53, 0x8e,
+    ];
+    /// The destination kinds a commitment binds (the bridge's bytes, SPEC-v2 §3.3).
+    pub const KIND_PRIVATE: u8 = 0x01;
+    pub const KIND_PUBLIC: u8 = 0x02;
+
+    /// Rule 5's commitment, as the vault's depositors make it for the bridge:
+    /// `C = sha256("ferrata/C/v1" ‖ s ‖ kind ‖ dest)`, 77 fixed-width bytes, one opening.
+    pub fn commitment(s: &Root, kind: u8, dest: &Root) -> Root {
+        Sha256::new()
+            .chain_update(b"ferrata/C/v1")
+            .chain_update(s)
+            .chain_update([kind])
+            .chain_update(dest)
+            .finalize()
+            .into()
+    }
+
+    /// Rule 6's nullifier: `H("…/consumer/nf" ‖ s ‖ statement identifier)`. Keyed on the
+    /// identifier (S.4), unlinkable without the secret, and the same on the public and the private
+    /// path, so one deposit is claimed once whichever path is taken.
+    pub fn secret_nullifier(s: &Root, statement_id: &Root) -> Root {
+        tagged_hash(b"consumer/nf", &[s, statement_id])
+    }
+
+    pub fn holder_seed(pool_id: &Root, dest: &Root) -> PdaSeed {
+        PdaSeed::new(tagged_hash(b"consumer/holder", &[pool_id, dest]))
+    }
+
+    /// `holder(pool, dest)`: the public credit of a public-kind deposit's destination.
+    pub fn holder_actor(program: AccountId, pool_id: &Root, dest: &Root) -> Actor {
+        Actor::new(AccountId::for_public_pda(&program, &holder_seed(pool_id, dest)), program)
+    }
+
+    /// A pool of the vault's deposits of one token: the reference consumer of U.6 with the
+    /// Recommended Consumer Pattern. `token = 0x00…00` is the native-ETH consumer (an ETH
+    /// transfer to the vault contract), any other the ERC-20 consumer.
+    #[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+    pub struct VaultPool {
+        /// The attestation program's account, pinned as in [`Pool`].
+        pub ferrata: AccountId,
+        pub instance_id: Root,
+        pub chain_id: u64,
+        /// The vault whose `Deposit` events are the deposits (rule 7: the only fact accepted).
+        pub vault: Address,
+        /// The token deposited; `0x00…00` for native ETH.
+        pub token: Address,
+    }
+
+    /// Where a deposit's log is: the record block's RLP header (a Gloas record), the EIP-2935
+    /// hops from it to the deposit's block, and the log with its receipt's proof there.
+    #[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+    pub struct DepositProof {
+        pub header: Option<Vec<u8>>,
+        pub hops: Vec<Hop>,
+        pub tx_index: u64,
+        pub log_index: u64,
+        pub proof: Vec<Vec<u8>>,
+    }
+
+    /// A vault deposit a pool accepted.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+    pub struct VaultDeposit {
+        /// The log's statement identifier: what the nullifier is keyed on.
+        pub statement_id: Root,
+        pub block_number: u64,
+        pub depositor: Address,
+        pub leaf_index: u64,
+        pub amount: u128,
+        /// The commitment `C` the depositor made.
+        pub commitment: Root,
+    }
+
+    impl VaultPool {
+        /// `H("…/vault-pool" ‖ pool)`.
+        pub fn id(&self) -> Root {
+            tagged_hash(b"consumer/vault-pool", &[&borsh::to_vec(self).expect("borsh")])
+        }
+
+        /// The acceptance rule as the program's predicates: emitted by the vault, a `Deposit`, of
+        /// the pool's token.
+        pub fn conditions(&self) -> Vec<Condition> {
+            vec![
+                Condition { field: Field::Emitter, cmp: Cmp::Eq, rhs: address_word(&self.vault) },
+                Condition { field: Field::Topic(0), cmp: Cmp::Eq, rhs: DEPOSIT_TOPIC },
+                Condition { field: Field::Topic(2), cmp: Cmp::Eq, rhs: address_word(&self.token) },
+            ]
+        }
+
+        /// The request for one deposit log.
+        pub fn request(&self, deposit: &DepositProof) -> Request {
+            Request {
+                instance_id: self.instance_id,
+                chain_id: self.chain_id,
+                header: deposit.header.clone(),
+                hops: deposit.hops.clone(),
+                logs: vec![LogQuery {
+                    tx_index: deposit.tx_index,
+                    log_index: deposit.log_index,
+                    proof: deposit.proof.clone(),
+                    conditions: self.conditions(),
+                }],
+                ..Request::default()
+            }
+        }
+
+        /// Check an attestation against the pool and read the deposit from it: the binding
+        /// (`BINDING_MISMATCH`); exactly one statement, a `Deposit` log of the vault for the
+        /// token, three topics and four data words (`UNEXPECTED_FACT`, rule 7); an amount that fits
+        /// 128 bits (`AMOUNT_TOO_LARGE`).
+        pub fn accept(&self, attestation: &Attestation) -> Result<VaultDeposit, u8> {
+            if attestation.instance_id != self.instance_id || attestation.chain_id != self.chain_id {
+                return Err(code::BINDING_MISMATCH);
+            }
+            let [Statement { id, fact: Fact::Log { address, topics, data, .. } }] = attestation.statements.as_slice()
+            else {
+                return Err(code::UNEXPECTED_FACT);
+            };
+            let [event, depositor, token] = topics.as_slice() else {
+                return Err(code::UNEXPECTED_FACT);
+            };
+            if *address != self.vault
+                || *event != DEPOSIT_TOPIC
+                || *token != address_word(&self.token)
+                || depositor[..12] != [0u8; 12]
+                || data.len() != 4 * 32
+                || data[32..56] != [0u8; 24]
+            {
+                return Err(code::UNEXPECTED_FACT);
+            }
+            if data[64..80] != [0u8; 16] {
+                return Err(code::AMOUNT_TOO_LARGE);
+            }
+            let mut owner = [0u8; 20];
+            owner.copy_from_slice(&depositor[12..]);
+            let mut leaf_index = [0u8; 8];
+            leaf_index.copy_from_slice(&data[56..64]);
+            let mut amount = [0u8; 16];
+            amount.copy_from_slice(&data[80..96]);
+            let mut c = [0u8; 32];
+            c.copy_from_slice(&data[96..128]);
+            Ok(VaultDeposit {
+                statement_id: *id,
+                block_number: attestation.block_number,
+                depositor: owner,
+                leaf_index: u64::from_be_bytes(leaf_index),
+                amount: u128::from_be_bytes(amount),
+                commitment: c,
+            })
+        }
     }
 
     #[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
@@ -1015,6 +1178,22 @@ pub mod consumer {
         // --- Internal: accepted only from the expected actor of this program ---------------------
         /// `claim(pool, N)` → `balance(pool, owner)`: credit a claimed deposit.
         Credit { pool_id: Root, nullifier: Root, owner: Address, amount: u128 },
+
+        // --- Vault deposits with the Recommended Consumer Pattern (rules 5 to 7) ----------------
+        /// At `claim(pool, N)`, `N = secret_nullifier(s, statement id)`: the public claim of a
+        /// public-kind deposit. It opens the commitment (`s`, `kind`, `dest` are published) and
+        /// credits `holder(pool, dest)` once.
+        ClaimDeposit { pool: VaultPool, slot: u64, deposit: DepositProof, s: Root, kind: u8, dest: Root },
+        /// At the claimant's own actor, meant to run privately: read the record of `slot`, verify
+        /// the deposit inside this execution, open its commitment, and spend `N` at
+        /// `claim(pool, N)`. A private-kind deposit is credited to this account's own state (it
+        /// must be `dest`); a public-kind one to `holder(pool, dest)`. Sends `Read` and `Spend`.
+        ClaimDepositPrivately { pool: VaultPool, slot: u64, deposit: DepositProof, s: Root, kind: u8, dest: Root },
+        /// Internal, from an actor of this program after a verified claim → `claim(pool, N)`:
+        /// spend `N` once; then credit `holder(pool, dest)` if `credit` names it.
+        Spend { pool_id: Root, nullifier: Root, credit: Option<(Root, u128)> },
+        /// Internal, `claim(pool, N)` → `holder(pool, dest)`: credit a claimed deposit.
+        CreditHolder { pool_id: Root, nullifier: Root, dest: Root, amount: u128 },
     }
 
     /// The state of an actor of the consumer, by the actor's role.
@@ -1024,6 +1203,56 @@ pub mod consumer {
         Claim(ClaimState),
         Balance(BalanceState),
         Private(PrivateState),
+        /// `claim(pool, N)` of a vault pool.
+        Nullifier(NullifierState),
+        /// `holder(pool, dest)`.
+        Holder(HolderState),
+        /// A claimant's own actor (a private account's, when run privately).
+        Claimant(ClaimantState),
+    }
+
+    /// `claim(pool, N)` of a vault pool. `Pending` lives within one transaction and is decoded
+    /// once per handler execution, so its size beside `Spent` costs nothing; boxing would only
+    /// complicate the handlers' patterns.
+    #[allow(clippy::large_enum_variant)]
+    #[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+    pub enum NullifierState {
+        /// A public claim waits for its attestation (within a transaction only).
+        Pending { pool: VaultPool, header: Actor, s: Root, kind: u8, dest: Root },
+        /// `N` is spent. The same on both paths: nothing here says which path spent it.
+        Spent { pool_id: Root },
+    }
+
+    /// `holder(pool, dest)`.
+    #[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+    pub struct HolderState {
+        pub pool_id: Root,
+        pub dest: Root,
+        pub amount: u128,
+        pub credits: u64,
+    }
+
+    /// A claimant's own actor.
+    #[derive(Clone, Debug, Default, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+    pub struct ClaimantState {
+        /// The record actor whose reply this actor expects.
+        pub awaiting: Option<Actor>,
+        /// The claim waiting for that record; cleared when the reply arrives.
+        pub pending: Option<PendingDeposit>,
+        /// Private-kind credits: (pool id, amount), one entry per pool.
+        pub holdings: Vec<(Root, u128)>,
+        /// How many deposits this actor claimed.
+        pub claims: u64,
+    }
+
+    /// A private claim between its `Read` and the record's reply.
+    #[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+    pub struct PendingDeposit {
+        pub pool: VaultPool,
+        pub deposit: DepositProof,
+        pub s: Root,
+        pub kind: u8,
+        pub dest: Root,
     }
 
     /// A Stage 3 reader.
@@ -1092,12 +1321,18 @@ pub mod consumer {
                 ConsumerState::Reader(reader) => reader.awaiting,
                 ConsumerState::Claim(ClaimState::Pending { header, .. }) => Some(*header),
                 ConsumerState::Private(private) => private.awaiting,
-                ConsumerState::Claim(ClaimState::Spent(_)) | ConsumerState::Balance(_) => None,
+                ConsumerState::Nullifier(NullifierState::Pending { header, .. }) => Some(*header),
+                ConsumerState::Claimant(claimant) => claimant.awaiting,
+                ConsumerState::Claim(ClaimState::Spent(_))
+                | ConsumerState::Balance(_)
+                | ConsumerState::Nullifier(NullifierState::Spent { .. })
+                | ConsumerState::Holder(_) => None,
             }
         }
     }
 
-    /// Refusal codes of the consumer: 220–229 (see [`crate::CODE_BLOCKS`]).
+    /// Refusal codes of the consumer: 218–229 (see [`crate::CODE_BLOCKS`]). 230–239 are
+    /// `ferrata_holdings`'s and 240–255 the bridge program's (programs of their own).
     pub mod code {
         exit_codes! {
             /// The message does not decode.
@@ -1109,7 +1344,9 @@ pub mod consumer {
             BAD_REPLY = 222;
             /// A claim of a deposit that was already credited: its nullifier is spent.
             ALREADY_CLAIMED = 223;
-            /// The receiver is not the actor the message is for.
+            /// The receiver is not the actor the message is for; also a private claim not run by
+            /// its account's owner, or a private-kind deposit claimed by an account other than its
+            /// destination.
             WRONG_RECEIVER = 224;
             /// An internal message from an actor other than the expected one.
             WRONG_SENDER = 225;
@@ -1122,6 +1359,11 @@ pub mod consumer {
             AMOUNT_TOO_LARGE = 228;
             /// The claim actor is not the one the attested statement's nullifier names.
             NULLIFIER_MISMATCH = 229;
+            /// The opening (`s`, `kind`, `dest`) does not hash to the deposit's commitment.
+            COMMITMENT_MISMATCH = 218;
+            /// A destination kind this path does not take: a public claim of a private-kind
+            /// deposit, or a byte that is no kind.
+            WRONG_KIND = 219;
         }
     }
 }

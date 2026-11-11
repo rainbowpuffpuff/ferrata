@@ -188,6 +188,11 @@ impl Chain {
             d: [seed.wrapping_add(1); 32],
             z: [seed.wrapping_add(2); 32],
         };
+        self.add_private_account_with_keys(keys, balance)
+    }
+
+    /// [`Chain::add_private_account`] with given keys.
+    pub fn add_private_account_with_keys(&mut self, keys: TestPrivateKeys, balance: u128) -> PrivateAccount {
         let account = Account::funded(balance);
         let id = keys.account_id();
         let state = std::mem::take(&mut self.state);

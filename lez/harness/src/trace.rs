@@ -162,6 +162,10 @@ pub fn handler_name(input: &ReceiveInput) -> String {
             Ok(C::Claim { .. }) => "consumer Claim",
             Ok(C::AttestPrivately { .. }) => "consumer AttestPrivately",
             Ok(C::Credit { .. }) => "consumer Credit",
+            Ok(C::ClaimDeposit { .. }) => "consumer ClaimDeposit",
+            Ok(C::ClaimDepositPrivately { .. }) => "consumer ClaimDepositPrivately",
+            Ok(C::Spend { .. }) => "consumer Spend",
+            Ok(C::CreditHolder { .. }) => "consumer CreditHolder",
             Err(_) => "consumer (reply)",
         };
         return name.to_string();

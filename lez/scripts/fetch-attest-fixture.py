@@ -53,14 +53,22 @@ block's RLP header. The script then fetches, in this order:
    update's (the replay fixture ends at period 1409; an instance needs these to reach the record);
 7. the canonical root of the finalized beacon block from a second beacon provider.
 
+With `--hops` (needs `--deposits`), at once with step 3: the deposits' logs, `eth_getProof` of the
+EIP-2935 history contract at the block for the slot of each deposit's block (`m mod 8191`), and each
+such block's RLP header (rebuilt, checked against its hash) and receipts, so that each deposit's
+event can be attested one hop back from the record. With `--absent`: `eth_getProof` at the block for
+an address without an account (`keccak256("ferrata/absent-account")[12..]`).
+
   lez/scripts/fetch-attest-fixture.py --network sepolia [--storage ADDR:SLOT[=getter()][,SLOT...]]...
-      [--log-token ADDR] [--same-address ADDR] [--deposits VAULT:FROM_BLOCK] [--updates-from P] OUTDIR
+      [--log-token ADDR] [--same-address ADDR] [--deposits VAULT:FROM_BLOCK] [--updates-from P]
+      [--hops] [--absent] OUTDIR
 
 SLOT is a decimal or 0x-hex slot number. Without `--storage`, Sepolia USDC's `totalSupply_`
-(slot 11, checked against `totalSupply()`). Ferrata's vault, once deployed:
-`--storage 0xdfedf9A73Cfb337277b95a9a1C941c3496A4385F:0=depositRoot(),1=nextLeafIndex()
- --deposits 0xdfedf9A73Cfb337277b95a9a1C941c3496A4385F:DEPLOY_BLOCK --updates-from 1410`
-into `crates/ferrata-spectests/fixtures/sepolia-vault` (read by `lez/harness/tests/vault.rs`).
+(slot 11, checked against `totalSupply()`). Ferrata's vault v5 (`e2e/runs/crown-live-1`):
+`--storage 0xfE3199fa2634413CbAC317371076Cae3EB2d9E54:0=depositRoot(),1=nextLeafIndex()
+ --deposits 0xfE3199fa2634413CbAC317371076Cae3EB2d9E54:12111048 --updates-from 1410 --hops --absent`
+into `crates/ferrata-spectests/fixtures/sepolia-vault-v5-2026-11-11` (read by
+`lez/harness/tests/vault.rs` and `vault_consumer.rs`).
 """
 import argparse
 import hashlib
@@ -141,11 +149,15 @@ def main():
     p.add_argument("--same-address", default=MULTICALL3)
     p.add_argument("--deposits")
     p.add_argument("--updates-from", type=int)
+    p.add_argument("--hops", action="store_true")
+    p.add_argument("--absent", action="store_true")
     p.add_argument("out")
     a = p.parse_args()
-    if a.network == "mainnet" and (a.storage or a.log_token or a.deposits or a.updates_from
+    if a.network == "mainnet" and (a.storage or a.log_token or a.deposits or a.updates_from or a.hops or a.absent
                                    or a.same_address != MULTICALL3):
         p.error("mainnet fetches the fixed Stage 4 fixture; the other options are for a Gloas network")
+    if a.hops and not a.deposits:
+        p.error("--hops hops to the blocks of the --deposits logs")
     os.makedirs(a.out)
     try:
         if a.network == "mainnet":
@@ -222,6 +234,33 @@ def fetch_gloas(out, a):
             entry["slots"].append(row)
         facts.append(entry)
     same, _ = f.rpc_any("eth_getProof", [a.same_address, [], hex(n)], f"proof_{a.same_address}_{n}.json", state_n)
+    absent = None
+    if a.absent:
+        f.rpc_any("eth_getProof", [ABSENT, [e2e.word(0)], hex(n)], f"proof_absent_{n}.json", state_n)
+        absent = {"address": ABSENT, "file": f"proof_absent_{n}.json"}
+    deposit_logs = None
+    hops = None
+    if a.hops:
+        # The deposits' blocks, then EIP-2935's slots of them in the state of n, while it is served.
+        deposit_logs = vault_deposits(f, a.deposits, n, state_n)
+        blocks = sorted({int(x["blockNumber"], 16) for x in deposit_logs})
+        if not blocks or blocks[0] < n - HISTORY_SERVE_WINDOW:
+            raise SystemExit(f"deposit blocks {blocks} are not all within EIP-2935's window of {n}")
+        f.rpc_any("eth_getProof", [HISTORY, [e2e.word(m % HISTORY_SERVE_WINDOW) for m in blocks], hex(n)],
+                  f"proof_history_{n}.json", state_n)
+        hops = {"history": HISTORY, "file": f"proof_history_{n}.json", "blocks": []}
+        for m in blocks:
+            older, _ = f.rpc_any("eth_getBlockByNumber", [hex(m), False], f"block_{m}.json", state_n)
+            older_rlp = e2e.header_rlp(older)
+            if "0x" + e2e.keccak256(older_rlp).hex() != older["hash"]:
+                raise SystemExit(f"rebuilt header of block {m} does not hash to {older['hash']}")
+            f.save(f"header_{m}.rlp", older_rlp)
+            older_receipts, _ = f.rpc_any("eth_getBlockReceipts", [hex(m)], f"receipts_{m}.json", state_n)
+            if [int(r["transactionIndex"], 16) for r in older_receipts] != list(range(len(older_receipts))):
+                raise SystemExit(f"receipts of {m} are not in transaction order")
+            hops["blocks"].append({"block": m, "hash": older["hash"], "slot": e2e.word(m % HISTORY_SERVE_WINDOW),
+                                   "receipts_root": older["receiptsRoot"], "receipts": len(older_receipts),
+                                   "header": f"header_{m}.rlp", "receipts_file": f"receipts_{m}.json"})
     head, _ = f.rpc_any("eth_blockNumber", [], None, state_n)
     print(f"proofs at {n} served; head {int(head, 16)}", flush=True)
     mainnet_block, _ = f.rpc_any("eth_blockNumber", [], None, e2e.EXECUTION)
@@ -246,12 +285,7 @@ def fetch_gloas(out, a):
     if a.deposits:
         vault, _, start = a.deposits.partition(":")
         topic = "0x" + e2e.keccak256(DEPOSIT_EVENT.encode()).hex()
-        logs = []
-        for lo in range(int(start), n + 1, LOG_RANGE):
-            hi = min(lo + LOG_RANGE - 1, n)
-            got, _ = f.rpc_any("eth_getLogs", [{"address": vault, "topics": [topic], "fromBlock": hex(lo),
-                                                "toBlock": hex(hi)}], None, state_n)
-            logs += got
+        logs = deposit_logs if deposit_logs is not None else vault_deposits(f, a.deposits, n, state_n)
         f.save(f"deposits_{n}.json", (json.dumps(logs, indent=1) + "\n").encode())
         deposits = {"vault": vault.lower(), "from_block": int(start), "event": DEPOSIT_EVENT, "topic": topic,
                     "count": len(logs), "file": f"deposits_{n}.json"}
@@ -304,6 +338,8 @@ def fetch_gloas(out, a):
         "transfer": transfer,
         "deposits": deposits,
         "updates": updates,
+        "hops": hops,
+        "absent": absent,
     }
     f.save("fixture.json", (json.dumps(manifest, indent=2) + "\n").encode())
     files = sorted(x for x in os.listdir(out) if x not in ("SOURCE.md", "SHA256SUMS"))
@@ -343,11 +379,29 @@ def fetch_gloas(out, a):
     if deposits:
         lines.append(f"| vault deposits | {deposits['count']} `Deposit` logs of {deposits['vault']} from block "
                      f"{deposits['from_block']} to {n} |")
+    for h in (hops or {}).get("blocks", []):
+        lines.append(f"| EIP-2935 hop | block {h['block']} ({h['hash']}), slot {h['slot']} of {HISTORY} at {n}; "
+                     f"{h['receipts']} receipts, receipts root {h['receipts_root']} |")
+    if absent:
+        lines.append(f"| address without an account | {ABSENT} at {n} |")
     lines += ["", "## Requests", "", "| UTC | endpoint | request | file | note |", "|---|---|---|---|---|"]
     lines += [f"| {r['at']} | {r['endpoint']} | `{r['request']}` | {r['file'] or ''} | {r['note']} |" for r in e2e.LOG]
     with open(os.path.join(out, "SOURCE.md"), "w") as s:
         s.write("\n".join(lines) + "\n")
     print("done:", out)
+
+
+def vault_deposits(f, spec, n, providers):
+    """The vault's `Deposit` logs from FROM_BLOCK to `n` (`--deposits VAULT:FROM_BLOCK`)."""
+    vault, _, start = spec.partition(":")
+    topic = "0x" + e2e.keccak256(DEPOSIT_EVENT.encode()).hex()
+    logs = []
+    for lo in range(int(start), n + 1, LOG_RANGE):
+        hi = min(lo + LOG_RANGE - 1, n)
+        got, _ = f.rpc_any("eth_getLogs", [{"address": vault, "topics": [topic], "fromBlock": hex(lo),
+                                            "toBlock": hex(hi)}], None, providers)
+        logs += got
+    return logs
 
 
 def fetch(out):

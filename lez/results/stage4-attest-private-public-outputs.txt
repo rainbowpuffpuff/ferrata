@@ -2,18 +2,18 @@ Stage 4: a private consumer attests an ERC-20 Transfer of mainnet block 26384851
 
 Decoded public fields (harness::private::describe_public_outputs):
 
-public_context.actors (2): ferrata@5vbFPLbFBGw3UBdm67gVPzLj3DrKF4FNKFfS7aHPjAeT, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq
+public_context.actors (2): ferrata@68jJUsqGdoEAHYmtRVyKh2okk7SVhjCae25YJVV5XpJ2, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq
 public_context.authorized_accounts: {}
 execution.public_root: None
 execution.boundary (6 steps):
-  - PrivateToPublic from consumer@2Zg2ZpSuJvUqoUGyxFu2mY7rwV7JnWEQLGfc2rNDzDSV to ferrata@5vbFPLbFBGw3UBdm67gVPzLj3DrKF4FNKFfS7aHPjAeT: Read (1 bytes)
-  - PublicToPrivate from ferrata@5vbFPLbFBGw3UBdm67gVPzLj3DrKF4FNKFfS7aHPjAeT to consumer@2Zg2ZpSuJvUqoUGyxFu2mY7rwV7JnWEQLGfc2rNDzDSV: StateReply { state: 333 bytes } (337 bytes)
+  - PrivateToPublic from consumer@2Zg2ZpSuJvUqoUGyxFu2mY7rwV7JnWEQLGfc2rNDzDSV to ferrata@68jJUsqGdoEAHYmtRVyKh2okk7SVhjCae25YJVV5XpJ2: Read (1 bytes)
+  - PublicToPrivate from ferrata@68jJUsqGdoEAHYmtRVyKh2okk7SVhjCae25YJVV5XpJ2 to consumer@2Zg2ZpSuJvUqoUGyxFu2mY7rwV7JnWEQLGfc2rNDzDSV: StateReply { state: 333 bytes } (337 bytes)
   - EndPrivateSubtree
   - EndPublicSubtree
   - PrivateToPublic from native@2Zg2ZpSuJvUqoUGyxFu2mY7rwV7JnWEQLGfc2rNDzDSV to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
   - EndPublicSubtree
 execution.program_image_claims (1):
-  - Disclosed { program: consumer, image_id: f883e6a4dbd8e49439465f918884abe1379b02276ff88676f0a4bf958ee49068 }
+  - Disclosed { program: consumer, image_id: be7c7710ae833fce88c68c0f2f8c9901fa9d7091b47550174edab67899f1284a }
 execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1389 bytes)
 execution.async_messages: 0
 execution.recovery_bindings: 0
@@ -49,7 +49,7 @@ The consumer's private transitions, in the executor (no proof; software Keccak):
 
 | handler execution | input bytes (ReceiveInput) | journal bytes | user cycles | segments | cycles with padding (sum of 2^po2) | exit |
 |---|---:|---:|---:|---:|---:|---:|
-| AttestPrivately (sends Read) | 2,251 | 4,593 | 34,337 | 1 | 131,072 | 0 |
-| the record's reply (verifies the fact) | 2,719 | 2,864 | 346,240 | 1 | 524,288 | 0 |
+| AttestPrivately (sends Read) | 2,251 | 4,593 | 34,718 | 1 | 131,072 | 0 |
+| the record's reply (verifies the fact) | 2,719 | 2,864 | 346,152 | 1 | 524,288 | 0 |
 
-Together 380,577 user cycles. The private state the consumer keeps afterwards is 120 bytes, whatever the proof was.
+Together 380,870 user cycles. The private state the consumer keeps afterwards is 120 bytes, whatever the proof was.

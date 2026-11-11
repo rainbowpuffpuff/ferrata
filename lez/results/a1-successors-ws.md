@@ -30,7 +30,7 @@ invariants of §3.5 and sends `Spawn` to `instance(successor_id)`, with
 accepted only from the parent, creates the successor active with the parent's store and root id.
 `InstanceState` has `root_id` and `parent_id`; `RecordState` and the `Record` message carry the root
 id; `Attest` serves a request bound to the root id as well as one bound to the record's instance.
-New program codes: `BAD_SUCCESSOR` 218, `STALE_CHECKPOINT` 219. New event: `SUCCEEDED_SELECTOR`
+New program codes: `BAD_SUCCESSOR` 218, `STALE_CHECKPOINT` 219 as measured on branch `lc-a1`; renumbered 216 and 217 at the merge into `integration7`, because branch `attest-a2` gave 218–229 to the reference consumer (`CODE_BLOCKS`: the program 200–217, the consumer 218–229); the exits below read 216 for 218 and 217 for 219 on the merged program. New event: `SUCCEEDED_SELECTOR`
 (`FRT-SUC1`: successor id, root id, checkpoint slot).
 
 ## Why a clock
