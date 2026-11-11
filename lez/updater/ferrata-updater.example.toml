@@ -1,0 +1,55 @@
+# ferrata-updater: one file configures the daemon. Every field is shown with its default where it
+# has one. Paths are relative to this file.
+
+[daemon]
+name = "updater-1"                  # in logs and metrics
+state_dir = "state"                 # committee cache and journal, one subdirectory per chain
+poll_secs = 12                      # seconds between rounds (a beacon slot)
+listen = "127.0.0.1:9464"           # /health (JSON; 503 when no source is usable) and /metrics (Prometheus)
+ledger = "sequencer"                # "sequencer": a LEZ sequencer (not in this build); "harness": dev mode
+
+[keys]
+payer_key_file = "payer.key"        # 32-byte secret key, hex; signs and pays every transaction
+
+[fees]
+gas_limit = 4800000                 # declared by every step; the largest step measured is 3,731,712
+max_fee_per_tx = 1000000000         # declared maximum fee of every transaction
+budget = 1000000000000              # total the daemon may spend from its start; then it stops sending
+
+[policy]
+defer_window = 8                    # rounds over which updaters spread who sends each step (1: never wait)
+max_lag_slots = 64                  # a source this far behind the best verified update is "lagging"
+min_agreeing = 1                    # sources that must serve the chosen finalized header before it is sent
+retry_base_ms = 500                 # backoff after a transport failure: base * 2^attempt ...
+retry_max_ms = 30000                # ... capped here
+max_attempts = 5
+demote_rounds = 50                  # rounds a source that served something the program refuses is not asked
+max_periods_per_request = 16        # periods per `updates` request
+
+[[chain]]
+name = "sepolia"
+preset = "sepolia"                  # "mainnet" or "sepolia" (fork schedule, genesis, chain id)
+checkpoint = "5f71d7f650f9252b48749b5f062c0c234e01afd69f364ab600e2b6051494b20d"
+adoption_parts = 2                  # committee adoption in 2 transactions of 256 keys
+
+  [[chain.source]]
+  name = "lodestar"
+  url = "https://lodestar-sepolia.chainsafe.io"
+  timeout_secs = 30
+
+  [[chain.source]]
+  name = "publicnode"
+  url = "https://ethereum-sepolia-beacon-api.publicnode.com"
+
+[[chain]]
+name = "mainnet"
+preset = "mainnet"
+checkpoint = "4baa732e5dbdbe97932abcf62c7caccc1cba8e9c14118d153aea629e25a4abff"
+
+  [[chain.source]]
+  name = "lodestar"
+  url = "https://lodestar-mainnet.chainsafe.io"
+
+  [[chain.source]]
+  name = "publicnode"
+  url = "https://ethereum-beacon-api.publicnode.com"

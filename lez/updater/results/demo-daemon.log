@@ -1,0 +1,18 @@
+[dev] /health and /metrics on http://127.0.0.1:9464
+[dev mainnet] mainnet Init applied (exit None, gas 210841, fee 1686728, block 2)
+[dev mainnet] mainnet init adopt 1/2 applied (exit None, gas 3424030, fee 27392240, block 3)
+[dev mainnet] mainnet init adopt 2/2 applied (exit None, gas 3507755, fee 28062040, block 4)
+[dev mainnet] mainnet fin 15622144 Open applied (exit None, gas 2186396, fee 17491168, block 5)
+[dev mainnet] mainnet fin 15622144 Miller applied (exit None, gas 3313686, fee 26509488, block 6)
+[dev mainnet] mainnet fin 15622144 adopt 1/2 applied (exit None, gas 3435884, fee 27487072, block 7)
+[dev mainnet] mainnet fin 15622144 adopt 2/2 applied (exit None, gas 3443078, fee 27544624, block 8)
+[dev mainnet] mainnet fin 15622144 Finish applied (exit None, gas 3697501, fee 29580008, block 9)
+[dev mainnet] mainnet fin 15631808 Open applied (exit None, gas 2170495, fee 17363960, block 10)
+[dev mainnet] mainnet fin 15631808 Miller applied (exit None, gas 3308362, fee 26466896, block 11)
+[dev mainnet] mainnet fin 15631808 Finish applied (exit None, gas 3723577, fee 29788616, block 12)
+[dev mainnet] mainnet fin 15630720 Open applied (exit None, gas 2185156, fee 17481248, block 13)
+[dev mainnet] mainnet fin 15630720 Miller applied (exit None, gas 3313686, fee 26509488, block 14)
+[dev mainnet] mainnet fin 15630720 adopt 1/2 applied (exit None, gas 3435884, fee 27487072, block 15)
+[dev mainnet] mainnet fin 15630720 adopt 2/2 applied (exit None, gas 3443078, fee 27544624, block 16)
+[dev mainnet] mainnet fin 15630720 Finish applied (exit None, gas 3697501, fee 29580008, block 17)
+[dev mainnet] stopped at round 37: {"chain":"mainnet","daemon":"dev","finalized_slot":15631808,"last_error":"","last_plan":"up-to-date","period":1908,"reasons":[],"round":37,"status":"ok"}

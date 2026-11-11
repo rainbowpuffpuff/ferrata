@@ -1,0 +1,42 @@
+# Dev mode: the daemon against LEZ v0.4.0-rc1's state machine in process (`ledger = "harness"`,
+# build with `--features harness`, run with RISC0_DEV_MODE=1), fed the lab's recorded mainnet
+# light-client data from two "sources" (the same record, read twice). `dev/payer.key` is a
+# throwaway key funded only in the in-process chain. Paths are relative to this file.
+[daemon]
+name = "dev"
+state_dir = "../../target/updater-dev-state"
+poll_secs = 1
+listen = "127.0.0.1:9464"
+ledger = "harness"
+
+[keys]
+payer_key_file = "payer.key"
+
+[fees]
+gas_limit = 4800000
+max_fee_per_tx = 1000000000
+budget = 1000000000000
+
+[policy]
+defer_window = 1
+max_lag_slots = 64
+min_agreeing = 2
+retry_base_ms = 500
+retry_max_ms = 30000
+max_attempts = 5
+demote_rounds = 50
+max_periods_per_request = 16
+
+[[chain]]
+name = "mainnet"
+preset = "mainnet"
+checkpoint = "4baa732e5dbdbe97932abcf62c7caccc1cba8e9c14118d153aea629e25a4abff"
+adoption_parts = 2
+
+  [[chain.source]]
+  name = "record-a"
+  dir = "../../lab/results/record/net/mainnet"
+
+  [[chain.source]]
+  name = "record-b"
+  dir = "../../lab/results/record/net/mainnet"

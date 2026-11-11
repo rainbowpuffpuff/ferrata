@@ -14,10 +14,12 @@ year. Every role below is permissionless except the watchers', and none can make
 vault accept something false ([`docs/design/attestation.md`](../design/attestation.md) §9, §11.5;
 [`docs/design/bridge.md`](../design/bridge.md) §14).
 
-**Status.** Two daemons are built as prototypes, outside Logos modules: `monitor` (§7), a standalone program
-([`monitor/`](../../monitor/README.md)), and the relayer, the binary `ferrata-relayer` (§6: rule (B) checkpoints,
+**Status.** Three daemons are built as prototypes, outside Logos modules: `monitor` (§7), a standalone program
+([`monitor/`](../../monitor/README.md)); the relayer, the binary `ferrata-relayer` (§6: rule (B) checkpoints,
 releases, wrapping, fee collection and the gas drop; tested on an anvil fork of Sepolia with real proofs and
-in the LEZ harness). The updater and the relayer's root imports are **not built**. All three daemons are designed
+in the LEZ harness); and the **updater**, `ferrata-updater` ([`lez/updater/`](../../lez/updater/README.md), §3.6),
+tested against LEZ v0.4.0-rc1's state machine in process on the lab's recorded mainnet and Sepolia data. The
+relayer's root imports and the updater's backend for a running sequencer are **not built**. All three daemons are designed
 as Logos modules run under `logosctl daemon`, with structured logs, clean shutdown and configurable endpoints and depths
 ([`attestation.md`](../design/attestation.md) §8; [`bridge.md`](../design/bridge.md) §1). What runs
 today, and what this guide describes from measurement, is the **lab** (§2), the harness and live
@@ -123,10 +125,20 @@ two-hour cadence (§2).
   | 600 s | 300 s | 0.033 | 0.049 | 0.081 | 0.155 |
   | 1,800 s | 900 s | 0.011 | 0.017 | 0.027 | 0.054 |
 
-  Derived by arithmetic from that formula; not measured. A duplicate costs the 2.2M step above. The
-  planned acceptance run (two honest daemons and one adversarial, 100 updates, honest gas on refused
-  steps at most 10% of gas on applied steps) is **not done**.
-- **Not built**: joining another party's open job; clean-up of jobs whose final step fails (they stay,
+  Derived by arithmetic from that formula; not measured. A duplicate costs the 2.2M step above.
+  `ferrata-updater` defers per step rather than per update: each (job, step) waits
+  `H(key, job, step) mod W` rounds, and any updater continues any open job.
+- **The acceptance run (measured, dev mode).** Two honest `ferrata-updater`s and one adversarial
+  updater, on the lab's 58 recorded updates (14 mainnet, 44 Sepolia; not the 100 planned: that is all
+  the recorded data), each round a block settled in a shuffled order, `W` = 8 rounds: every update
+  applied once; the honest updaters' gas on refused steps was **0.036–0.093** of their gas on applied
+  steps (gate ≤ 0.10) and their shares of the honest fees **0.49–0.63** and **0.37–0.51** (gate
+  0.35–0.65 each), in seven runs (four orders of the blocks' transactions, three other draws of the
+  deferral waits); the adversary raced a third of the due steps and sent 110 junk `Open`s at its own
+  cost; without it, 0.0172 and 0.54 / 0.46
+  ([`lez/updater/README.md`](../../lez/updater/README.md), `lez/updater/results/gate.txt`).
+- **Joining another party's open job** is built in `ferrata-updater` (it reads the job's phase on
+  chain and sends its next step). **Not built**: clean-up of jobs whose final step fails (they stay,
   unapplied) ([`attestation.md`](../design/attestation.md) §4.5).
 
 ### 3.5 Detecting a stalled instance
@@ -138,6 +150,28 @@ reports for the newest finalized slot, which must equal the instance's `finalize
 canonical roots and alarms at half the weak-subjectivity bound (**not built**,
 [`attestation.md`](../design/attestation.md) §3.6, §8). An instance lags by the cadence plus finality;
 it catches up when anyone sends the missing updates, as long as its store knows the signing committee.
+
+### 3.6 Running `ferrata-updater`
+
+One TOML file ([`lez/updater/ferrata-updater.example.toml`](../../lez/updater/ferrata-updater.example.toml))
+sets the daemon (state directory, poll interval, `/health` and `/metrics` address, ledger), the payer
+key file, the fee limits (`gas_limit` per step, default 4,800,000; `max_fee_per_tx`; a `budget` at which
+it stops sending), the policy (deferral window, lag threshold, how many sources must agree, backoff,
+demotion) and, per instance, its preset, checkpoint and beacon sources. Per round it reads the instance
+from the chain, checks every candidate from every source with the program's own steps natively before
+paying for anything (a source serving what the program would refuse is demoted; one far behind is
+flagged lagging; one silent is flagged unavailable), and sends the next step of the best candidate's
+job. It keeps only the full sync committees (accepted when they hash to the summaries on chain) and a
+journal; a restart, in the middle of a job or of a period, reads the chain and sends the job's next
+step. SIGTERM finishes the round and exits. `/health` is `ok`, `degraded` (with the reasons) or `down`
+(HTTP 503); `/metrics` counts transactions by step and result, gas and fees applied and refused,
+retries, deferrals, steps done by others, and per source requests, errors, refusals, lag and
+availability. Tested in dev mode (RISC0_DEV_MODE, the in-process chain, recorded data): catch-up to the
+lab's final roots on both chains, a lying source, a stale and a down source, `min_agreeing = 2`, a
+restart mid-job and mid-period with dropped connections, and the acceptance run of §3.4
+([`lez/updater/README.md`](../../lez/updater/README.md)). Not built: the sequencer backend (the lab
+driver sends the same messages through LEZ's wallet today, §2), live beacon endpoints in a test, the
+proven path, the Logos module.
 
 ## 4. The root importer (RFP-022 P.2)
 
@@ -514,11 +548,12 @@ checkpoints after a sunset until holders have released ([`bridge.md`](../design/
 
 ## 12. What is not built
 
-The updater daemon, and the Logos modules of all three daemons (`monitor` is built as a standalone program, §7;
-`ferrata-relayer` is a plain binary, §6); the relayer's root imports and its run against a live sequencer, the sealed
-gas drop to a private one-time account and its sweep inside the private claim (§6.4); `verify_checkpoint`;
-the rule (B) attestor module; joining an open job and job clean-up; the weak-subjectivity bound; the
-duplicate-rate acceptance run; daemon resource measurements; the amortised costs at the recommended
+The Logos modules of all three daemons (`monitor` is built as a standalone program, §7; `ferrata-relayer` and
+`ferrata-updater` are plain binaries, §6, §3.6); the updater's backend for a running sequencer; the relayer's root
+imports and its run against a live sequencer, the sealed gas drop to a private one-time account and its sweep inside
+the private claim (§6.4); `verify_checkpoint`; the rule (B) attestor module; job clean-up; the weak-subjectivity
+bound; the acceptance run at 100 updates and on a sequencer (it ran on 58 recorded updates in process, §3.4);
+daemon resource measurements; the amortised costs at the recommended
 cadence with real proving (milestones A4, B4); a deployment on a public LEZ network. Sources:
 [`attestation.md`](../design/attestation.md) §15; [`bridge.md`](../design/bridge.md) §1, §18.6, §19;
 [`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §9.
