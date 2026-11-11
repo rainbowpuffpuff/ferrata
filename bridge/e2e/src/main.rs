@@ -891,7 +891,27 @@ fn cmd_crown_release(opts: &BTreeMap<String, String>) -> Result<()> {
 
     // 2. One release statement per own burn.
     let mut written = Vec::new();
-    for note in list(&notes, "burns")? {
+    let mut fragments = Vec::new();
+    // notes.json: {"burns": [{name, r, s_out, recipient, ...}]}, or the LEZ side's burn-notes.json: a list of
+    // {i, kind, r, sOut, recipient, token, amount (decimal), cOut, denomIndex, ...} (spike interface lez.md).
+    let entries: Vec<Value> = match notes.as_array() {
+        Some(l) => l
+            .iter()
+            .map(|n| {
+                let mut m = n.clone();
+                m["name"] = json!(format!("{}-{}", n["kind"].as_str().unwrap_or("burn"), n["i"]));
+                m["s_out"] = n["sOut"].clone();
+                m["c_out"] = n["cOut"].clone();
+                m["amount"] = match n["amount"].as_str() {
+                    Some(d) if !d.starts_with("0x") => json!(hx(&u256_from_u128(d.parse().unwrap_or(u128::MAX)))),
+                    _ => n["amount"].clone(),
+                };
+                m
+            })
+            .collect(),
+        None => list(&notes, "burns")?.clone(),
+    };
+    for note in &entries {
         let name = text(note, "name")?;
         let r: Hash = field(note, "r")?;
         let (k, b) = all
@@ -901,6 +921,7 @@ fn cmd_crown_release(opts: &BTreeMap<String, String>) -> Result<()> {
             .with_context(|| format!("{name}: no burn with this r among the checkpoint's"))?;
         let (token, amount): (Address, U256) = (field(b, "token")?, field(b, "amount")?);
         ensure!(field_or(note, "token", token)? == token && field_or(note, "amount", amount)? == amount, "{name}: token or amount");
+        ensure!(field_or(note, "c_out", field::<32>(b, "c_out")?)? == field::<32>(b, "c_out")?, "{name}: cOut");
         let s_out: Hash = field(note, "s_out")?;
         let recipient: Address = field(note, "recipient")?;
         ensure!(
@@ -932,8 +953,13 @@ fn cmd_crown_release(opts: &BTreeMap<String, String>) -> Result<()> {
             "relay_fee": hx(&public.relay_fee), "journal": hex::encode(journal),
         });
         write_json(&dir.join(format!("release-{name}.json")), &meta)?;
+        // The crown.json `releases[i]` entry (vault/script/Crown.s.sol) but its seal, added after the wrap.
+        fragments.push(json!({"name": name, "token": hx(&public.token), "denomIndex": note.get("denomIndex"),
+            "recipient": hx(&public.recipient), "relayer": hx(&public.relayer), "relayFee": hx(&public.relay_fee),
+            "burnRoot": hx(&burn_root), "nullifier": hx(&nullifier), "seal": null}));
         written.push(name.to_string());
     }
+    write_json(&dir.join("releases.json"), &json!(fragments))?;
     println!(
         "burn root {} over {} burns (bridge core = checkpoint core, leaf by leaf); release inputs for {:?}",
         hx(&burn_root),

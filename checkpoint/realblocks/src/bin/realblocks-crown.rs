@@ -16,6 +16,10 @@
 //!   `bridgeHeader`, `bridgeImageId`, `chainId` (number), `vault`, `attestationRootId`, `salt`, `nMin`,
 //!   `tMin`, `configId` (the bridge wire's `BridgeConfig::id`, checked against checkpoint-core's), and
 //!   optionally `genesisState` (the vault's, checked against the state at `T0`);
+//!   Instead of `--identity`, the LEZ side's own files (`lez/crown/session.sh`, spike interface lez.md):
+//!   `--session-a session-a.json` (configuration fields, `tip` = T0) with `--vault 0x… --config-id 0x…` (or
+//!   the file's own `vault`/`configId`) and optionally `--genesis-state 0x…`; `--session-b session-b.json`
+//!   gives `tipT1` = T1 (its hash is checked);
 //! - `--parent T0 --tip T1`: the parent tip (the vault's genesis state is the state at `T0`) and the
 //!   attested tip; the input holds blocks `T0+1..=T1` as inscribed;
 //! - `--record DIR`: optional `blocks.borsh` of the blocks as the sequencer served them (u32 count, then
@@ -194,6 +198,47 @@ impl<'a> Visitor<'a> for Calls<'_, 'a> {
     }
 }
 
+/// The run's configuration and the span: `--identity` + `--parent` + `--tip`, or the LEZ side's
+/// `--session-a` (+ `--vault`, `--config-id`, `--genesis-state`) and `--session-b` (or `--tip`).
+/// Returns the identity in `--identity`'s shape, T0, T1 and the tip hashes the session files name.
+fn identity(a: &BTreeMap<String, String>) -> Result<(Value, u64, u64, Vec<(u64, Hash)>)> {
+    let read = |k: &str| -> Result<Value> {
+        let p = a.get(k).with_context(|| format!("--{k} is required"))?;
+        serde_json::from_slice(&fs::read(p).with_context(|| p.clone())?).with_context(|| p.clone())
+    };
+    let Some(_) = a.get("session-a") else {
+        let id = read("identity")?;
+        let t0: u64 = a.get("parent").context("--parent")?.parse()?;
+        let t1: u64 = a.get("tip").context("--tip")?.parse()?;
+        return Ok((id, t0, t1, Vec::new()));
+    };
+    let sa = read("session-a")?;
+    let pick = |arg: &str, key: &str| -> Value {
+        a.get(arg).map(|v| json!(v)).unwrap_or_else(|| sa.get(key).cloned().unwrap_or(Value::Null))
+    };
+    let id = json!({
+        "label": sa.get("label"), "bedrockGenesisId": sa["bedrockGenesisId"], "channelId": sa["channel"]["id"],
+        "bridgeHeader": sa["bridge"]["header"], "bridgeImageId": sa["bridge"]["imageId"], "chainId": sa["evmChainId"],
+        "vault": pick("vault", "vault"), "attestationRootId": sa["attestationRootId"], "salt": sa["salt"],
+        "nMin": 1, "tMin": 1, "configId": pick("config-id", "configId"),
+        "genesisState": a.get("genesis-state").map(|v| json!(v)).unwrap_or(Value::Null),
+    });
+    ensure!(!id["configId"].is_null(), "--config-id (or session-a.json configId) is required with --session-a");
+    let t0 = sa["tip"]["id"].as_u64().context("session-a.json tip.id")?;
+    let mut hashes = vec![(t0, hexa::<32>(&sa["tip"]["hash"], "session-a tip.hash")?)];
+    let t1 = match a.get("session-b") {
+        Some(_) => {
+            let sb = read("session-b")?;
+            ensure!(sb["tipT0"]["id"].as_u64() == Some(t0), "session-b.json tipT0 is not session-a.json's tip");
+            let t1 = sb["tipT1"]["id"].as_u64().context("session-b.json tipT1.id")?;
+            hashes.push((t1, hexa::<32>(&sb["tipT1"]["hash"], "session-b tipT1.hash")?));
+            t1
+        }
+        None => a.get("tip").context("--tip or --session-b")?.parse()?,
+    };
+    Ok((id, t0, t1, hashes))
+}
+
 fn main() -> Result<()> {
     let a = args()?;
     let get = |k: &str| a.get(k).with_context(|| format!("--{k} is required"));
@@ -201,11 +246,10 @@ fn main() -> Result<()> {
     fs::create_dir_all(&out_dir)?;
     let node = PathBuf::from(get("node")?);
     let channel_json: Value = serde_json::from_slice(&fs::read(node.join("channel.json"))?).context("channel.json")?;
-    let info: Value = serde_json::from_slice(&fs::read(node.join("info.json"))?).context("info.json")?;
+    let info_path = if node.join("info.json").exists() { node.join("info.json") } else { node.join("info-start.json") };
+    let info: Value = serde_json::from_slice(&fs::read(info_path)?).context("info.json")?;
     let lib_slot = info["lib_slot"].as_u64().or(info["cryptarchia_info"]["lib_slot"].as_u64()).context("info.json: lib_slot")?;
-    let id: Value = serde_json::from_slice(&fs::read(get("identity")?)?).context("identity")?;
-    let t0: u64 = get("parent")?.parse()?;
-    let t1: u64 = get("tip")?.parse()?;
+    let (id, t0, t1, tip_hashes) = identity(&a)?;
     ensure!(t0 >= 1 && t1 > t0, "need 1 <= T0 < T1");
 
     // ---- the run's configuration, checked against the node and the bridge wire's configId ------------
@@ -304,6 +348,10 @@ fn main() -> Result<()> {
         &hex::encode(channel_key)[..8], last - first + 1, channel_tip == prev_msg);
     if record.is_some() {
         println!("record: {record_equal} blocks equal to the inscribed ones but the status byte");
+    }
+
+    for (k, h) in &tip_hashes {
+        ensure!(ins[k].payload()?[40..72] == h[..], "block {k}: its hash is not the one the session files name");
     }
 
     // ---- finality of T1 by the node's own rule ------------------------------------------------------
