@@ -107,6 +107,23 @@ halmos_() {
     [ -f "$sevm" ] && sed -i -e 's/BitVecSorts\[arg_size\], BitVecSort256/BitVecSorts[arg_size * 8], BitVecSort256/' \
       -e 's/BitVecSorts\[arg_size\], BitVecSort160/BitVecSorts[arg_size * 8], BitVecSort160/' "$sevm"
   done
+  # halmos 0.3.3 also leaves sha256 uninterpreted on concrete input, so a domain tag the test computes never equals the
+  # vault's precomputed literal and every release path is lost (the reachability checks caught it). Concrete input is
+  # hashed for real, as halmos does for keccak; symbolic input stays an uninterpreted function.
+  for sevm in "$TOOLS"/venv/lib/python3*/site-packages/halmos/sevm.py; do
+    [ -f "$sevm" ] && "$TOOLS/venv/bin/python" - "$sevm" <<'PY'
+import sys
+p = sys.argv[1]
+s = open(p).read()
+old = "                ret = ByteVec(f_sha256(wrapped))\n"
+new = ("                ret = ByteVec(f_sha256(wrapped))\n"
+       "                if not is_bv(unwrapped) or __import__('z3').is_bv_value(unwrapped):  # sectools: concrete sha256\n"
+       "                    data = bytes(unwrapped) if not is_bv(unwrapped) else unwrapped.as_long().to_bytes(arg_size, 'big')\n"
+       "                    ret = ByteVec(__import__('z3').BitVecVal(int.from_bytes(__import__('hashlib').sha256(data).digest(), 'big'), 256))\n")
+if "sectools: concrete sha256" not in s and old in s:
+    open(p, "w").write(s.replace(old, new, 1))
+PY
+  done
   # The symbolic properties live in test/halmos/ (contract VaultHalmos, functions check_*).
   # Bounds: dynamic arrays of length 1 and byte strings of 4 bytes in generated calldata (see the triage note).
   # HALMOS_TIMEOUT (seconds) bounds one run; HALMOS_ARGS adds options, e.g. --function check_reach.
