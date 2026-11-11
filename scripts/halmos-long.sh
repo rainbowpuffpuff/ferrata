@@ -13,6 +13,9 @@ ROOT=$(cd "$(dirname "$0")/.." && pwd)
 export SECTOOLS_DIR=${SECTOOLS_DIR:-$HOME/.cache/ferrata-sectools}
 BASE=${SECTOOLS_OUT:-$ROOT/notes/reviews/security/tools-out}/halmos-long
 T=${HALMOS_LONG_TIMEOUT:-4800}
+# Unbuffered: Halmos prints its results only at the end, and `timeout` stops Python without a flush, so a buffered
+# run that hits its bound leaves nothing; unbuffered, everything printed so far stays in the log.
+export PYTHONUNBUFFERED=1
 # name | Halmos --function regex | extra options. The function filter is a regex searched in the signature,
 # so "\(" after the name keeps check_no_role_call_moves_funds from also matching its _after_retire twin.
 RUNS=(
