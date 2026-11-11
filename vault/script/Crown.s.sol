@@ -64,7 +64,7 @@ contract Crown is Script {
 
     /// @notice When the candidate's wait is over (0 if it was not submitted).
     function waitOver() public view returns (uint256) {
-        (,,, uint32 t, uint48 submittedAt, uint32 deltaAtSubmit,) = vault.candidates(_checkpoint().newState);
+        (,,, uint32 t, uint48 submittedAt, uint32 deltaAtSubmit,,) = vault.candidates(_checkpoint().newState);
         if (submittedAt == 0) return 0;
         return uint256(submittedAt) + deltaAtSubmit + (uint256(t) - 1) * vault.turnSeconds();
     }

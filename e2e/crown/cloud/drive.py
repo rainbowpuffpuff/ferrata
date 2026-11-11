@@ -767,7 +767,7 @@ def final_state() -> str:
 
 def wait_over() -> int:
     """Crown.s.sol waitOver(): submittedAt + deltaAtSubmit + (t - 1) * turnSeconds, 0 if not submitted."""
-    rows = call("candidates(bytes32)(bytes32,bytes32,uint64,uint32,uint48,uint32,uint64)", new_state()).splitlines()
+    rows = call("candidates(bytes32)(bytes32,bytes32,uint64,uint32,uint48,uint32,uint64,address)", new_state()).splitlines()
     t, submitted, delta = first_int(rows[3]), first_int(rows[4]), first_int(rows[5])
     if submitted == 0:
         return 0
