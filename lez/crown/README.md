@@ -31,7 +31,8 @@ account 0, proven by LEZ's wallet), `Burn` of 0.001 ETH from public account 0 (n
 (note 1, proven). Writes `session-b.json` (T1, the block range T0+1..=T1, every step) and `burn-notes.json`.
 
 Private transactions are proven by LEZ's wallet inside the session (r0vm as LEZ's prover; `CROWN_R0VM` may name a
-CUDA r0vm). A claim's time must lie within ten minutes before its block, so a proof must finish within about nine.
+CUDA r0vm). A claim's time must lie within ten minutes before its block, so a proof must finish within about nine
+minutes, or `CROWN_CLAIM_TIME_OFFSET_S` must move the claim's time forward by about the proof time less three minutes.
 
 ## Interface
 `spike/tmp/crown/interfaces/lez.md` (beside the repository) fixes the environment, the Volume layout and the files.
