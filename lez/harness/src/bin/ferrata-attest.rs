@@ -464,6 +464,7 @@ struct Step {
 
 /// The job's transactions as `Instance::update_in` sends them, the native verdict of step 1 and
 /// the job's planned outcome, and the time the transactions are stamped with.
+#[allow(clippy::type_complexity)]
 fn job_plan(
     s: &Stage5,
     update: &ferrata_core::types::LightClientUpdate,
