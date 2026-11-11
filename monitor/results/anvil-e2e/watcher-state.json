@@ -1,6 +1,6 @@
 {
   "vault": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
-  "nextBlock": 32,
+  "nextBlock": 34,
   "candidates": {
     "0x24b771ad0d45b2301166947694b1ccdaf4c1d5f3273f51152687ab3c5cc09432": {
       "candidate": {
@@ -19,7 +19,7 @@
       },
       "status": "gone",
       "verdict": null,
-      "firstSeenAt": 1794437871,
+      "firstSeenAt": 1794438094,
       "cancelTx": null,
       "cancelledAt": null
     },
@@ -36,7 +36,7 @@
         "tipHash": "0x0f3938ef615521fd9ec4fc00300f9f25dd5dbca40fee5aacb2d562693aa7a9ff",
         "n": 4,
         "t": 3,
-        "submittedAt": 1794437871
+        "submittedAt": 1794438094
       },
       "status": "cancelledByUs",
       "verdict": {
@@ -48,9 +48,30 @@
           "finalHash": "0x1ba9f8fc2b02e5018dd1f31b05af04a00ffd09267be67d868bcceb842cabc0c4"
         }
       },
-      "firstSeenAt": 1794437871,
-      "cancelTx": "0xb2f471a9178cccda657a24eeb7d9fa58bf43608424ff83e004dac217f1cb9e2f",
-      "cancelledAt": 1794437871
+      "firstSeenAt": 1794438094,
+      "cancelTx": "0xd38a2196d47dbd09b1a630df682be307f22720978aa57426bd9ab47bb0bb2f8d",
+      "cancelledAt": 1794438094
+    },
+    "0x2ec3fab02b4dfb281bf77c1f740eb1c47b0d0a243943dffda8f9467b5a0ddc5e": {
+      "candidate": {
+        "newState": "0x2ec3fab02b4dfb281bf77c1f740eb1c47b0d0a243943dffda8f9467b5a0ddc5e",
+        "parentState": "0x87b7083c97ffc8993a33858027626428ea1f2f43ff38985abedbb7d798e7e2cf",
+        "burnRoot": "0x70805e650494f5b495ce8cb5f742928b15f196af63fbaa0df25011e4993aa74b",
+        "burnCount": 19,
+        "importedLeafCount": 0,
+        "sunset": false,
+        "deltaAtSubmit": 3600,
+        "tipId": 19,
+        "tipHash": "0x9eafc7eb9b8fbd86cca4ccbb3aa2b8952d290d6993257a40d519f99e6d882670",
+        "n": 4,
+        "t": 3,
+        "submittedAt": 0
+      },
+      "status": "gone",
+      "verdict": null,
+      "firstSeenAt": 1794438094,
+      "cancelTx": null,
+      "cancelledAt": null
     },
     "0x6cd9b53bc170d758d505dea20141045264138e7b6d9af37a66e73657b9403fb0": {
       "candidate": {
@@ -69,7 +90,7 @@
       },
       "status": "gone",
       "verdict": null,
-      "firstSeenAt": 1794437871,
+      "firstSeenAt": 1794438094,
       "cancelTx": null,
       "cancelledAt": null
     },
@@ -90,7 +111,7 @@
       },
       "status": "gone",
       "verdict": null,
-      "firstSeenAt": 1794437871,
+      "firstSeenAt": 1794438094,
       "cancelTx": null,
       "cancelledAt": null
     },
@@ -111,7 +132,7 @@
       },
       "status": "gone",
       "verdict": null,
-      "firstSeenAt": 1794437871,
+      "firstSeenAt": 1794438094,
       "cancelTx": null,
       "cancelledAt": null
     },
@@ -132,7 +153,7 @@
       },
       "status": "gone",
       "verdict": null,
-      "firstSeenAt": 1794437871,
+      "firstSeenAt": 1794438094,
       "cancelTx": null,
       "cancelledAt": null
     },
@@ -153,7 +174,7 @@
       },
       "status": "gone",
       "verdict": null,
-      "firstSeenAt": 1794437871,
+      "firstSeenAt": 1794438094,
       "cancelTx": null,
       "cancelledAt": null
     },
@@ -174,7 +195,7 @@
       },
       "status": "gone",
       "verdict": null,
-      "firstSeenAt": 1794437871,
+      "firstSeenAt": 1794438094,
       "cancelTx": null,
       "cancelledAt": null
     },
@@ -195,7 +216,7 @@
       },
       "status": "gone",
       "verdict": null,
-      "firstSeenAt": 1794437871,
+      "firstSeenAt": 1794438094,
       "cancelTx": null,
       "cancelledAt": null
     },
@@ -216,33 +237,36 @@
       },
       "status": "gone",
       "verdict": null,
-      "firstSeenAt": 1794437871,
+      "firstSeenAt": 1794438094,
       "cancelTx": null,
       "cancelledAt": null
     }
   },
   "cancelEvents": {
     "0x24b771ad0d45b2301166947694b1ccdaf4c1d5f3273f51152687ab3c5cc09432": {
-      "0xffd2bb8ca15003171f63536606721d85d4dc07667bf4f97ebcae4bb72b1ada96": 10
+      "0xb8228ec02ccf694cc4f131cefe695e3033406f464ce3910e031f698701d8dcb2": 10
     },
     "0x2822b3eff34aae069517542b03ddaf284c0a524cda2613e0765adbd6443f1339": {
-      "0xb2f471a9178cccda657a24eeb7d9fa58bf43608424ff83e004dac217f1cb9e2f": 30,
-      "0xf18e9ca0f5e6bac456d3d324bdd6fbf8c402e7b8765e19a4e282b7dd127cbcce": 28
+      "0x1e63303d2b8fe08c59516ac289acf4133d30ac526acd7c79dda5f5c48670335f": 30,
+      "0xd38a2196d47dbd09b1a630df682be307f22720978aa57426bd9ab47bb0bb2f8d": 32
+    },
+    "0x2ec3fab02b4dfb281bf77c1f740eb1c47b0d0a243943dffda8f9467b5a0ddc5e": {
+      "0xb4ee2ddbe785ae9fdc7b11cdc5c1ce38a75cecfa558703f0fcd0ebf1a01aa876": 28
     },
     "0x78e89a6117e89e3f303cf7008194f63d53b7c89e0dc0ee4f972d2bd4d789f608": {
-      "0x0fdbe96ffc0a114d4f61d9c574b2f5dc34089e8e4ebbcc8e9033a83d2f62466f": 18
+      "0x67bdd49c0b88b8a9c31c16fa2936bd9cd28105d3794271fc11cd04096b6a308a": 18
     },
     "0x9abb56d2aa3b6ba37ddaa3fe01be0b78746e66fda534b759ff1e3fea8cd102d0": {
-      "0xee5cf913b9c0145ca873770aad0d7d18b34f2e2c4bda152a7cc20e996c093f5a": 20
+      "0x073edbb3a18c1654ebe5a5b3b7ca44b27b27abe8d035f2459e0669b0c1e3a0cf": 20
     },
     "0xdd87d29c26f5a60ee85314b63e04b7c0f7386b79de62f2a92b3b62f01b8b2b9c": {
-      "0x488eaa0393b17f593821e474e131633867010ce086c16077472d35940a8b86f9": 13
+      "0xce1de5ae2a3d3c629ad859fed6dc6d5d048fd4edc24292176ef4c47fb5cb8922": 13
     },
     "0xf03db4cbe3ec75019f2d5bd152a4a38db1aa2475c29f93dd3abfcace14dd45a1": {
-      "0xcdb0f9dd94724888ae802f611f4484151ee853d88a7506483a6ca2fbe79f2fbb": 26
+      "0x554858ec84441cc9cd0871905d3cac040ab5d907cab84955835a4a040cc5f51a": 26
     },
     "0xf680a4173085cc84f4fb70f52b71e7747662a258e073e0dc8059389d7924cd09": {
-      "0xe761b78cb571c7df1026674040041b3e47a478695b815ca8dde7e81669955e7f": 7
+      "0x1d7cb4b2c166abcf04840db56f6da48bb3cbf460824405a8272ba3b80cc45b3b": 7
     }
   },
   "finalized": {
@@ -253,14 +277,14 @@
   "toAudit": {},
   "alerted": [
     "attestation:lez-honest:{\"finding\":\"conflictingTip\",\"channelKey\":\"0xafd6dd1c7cebc5fffd6b133c4d7125fdb07f3b8ff9e21dccfa7c076d0d7dcb24\",\"attKey\":\"0x8ae92695f404d5ff11a95e339d638d6ba68cc001a160a3f907dfeb23f7faf456\",\"tipId\":12,\"signedHash\":\"0x97cc83aa3e837a692bebba0578aaf7becee800c9d7df4b4adaa6d2dbaa18a293\",\"finalHash\":\"0xaed56b0c928d218dbb33e648e235c287daf2d0d43db00891ed017aa0ae8e6c15\"}",
-    "cancel-failed:0xf03db4cbe3ec75019f2d5bd152a4a38db1aa2475c29f93dd3abfcace14dd45a1:5981459",
-    "finalized-wrong:2:1794437867",
-    "resubmitted:0x2822b3eff34aae069517542b03ddaf284c0a524cda2613e0765adbd6443f1339:29",
+    "cancel-failed:0xf03db4cbe3ec75019f2d5bd152a4a38db1aa2475c29f93dd3abfcace14dd45a1:5981460",
+    "finalized-wrong:2:1794438087",
+    "resubmitted:0x2822b3eff34aae069517542b03ddaf284c0a524cda2613e0765adbd6443f1339:31",
     "revoked:2:24",
-    "would-cancel:0xf03db4cbe3ec75019f2d5bd152a4a38db1aa2475c29f93dd3abfcace14dd45a1:1794437869"
+    "would-cancel:0xf03db4cbe3ec75019f2d5bd152a4a38db1aa2475c29f93dd3abfcace14dd45a1:1794438089"
   ],
   "finalHeight": 20,
-  "finalHeightSince": 1794434264,
-  "pausedAt": 1794437871,
-  "polls": 11
+  "finalHeightSince": 1794434484,
+  "pausedAt": 1794438094,
+  "polls": 16
 }

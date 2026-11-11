@@ -123,7 +123,7 @@ All runs were on the Modal build box (`mrun --profile yasmeen`), never on the la
 - [`tests/anvil-e2e.sh`](tests/anvil-e2e.sh): a local anvil chain (chain id 31337, no fork, nothing
   sent to any public network). It deploys a v5 vault through
   [`vault/script/MonitorFixture.s.sol`](../vault/script/MonitorFixture.s.sol), with an accept-all
-  verifier (the monitor never reads proofs) and the monitor's fresh key as the watcher. All 43 checks
+  verifier (the monitor never reads proofs) and the monitor's fresh key as the watcher. All 46 checks
   pass ([`results/anvil-e2e/summary.md`](results/anvil-e2e/summary.md)).
 
 - [`tests/fork-live-vault.sh`](tests/fork-live-vault.sh): an anvil fork of Sepolia at the live v5 vault
@@ -154,9 +154,11 @@ The scenarios of the local-chain rehearsal:
 | A1–A3 | rule (A) vault (turnSeconds 900, Δ 3 h 01 min) | honest candidate passed and finalised with a beacon after W = 12,660 s; stale key set cancelled at once; tip not final cancelled 7,202 s after the submission (Δ_g = 7,200 s), 5,458 s before the deadline |
 | A4 | final tier stalled (rule A) | `final-tier-stalled` and the 12 h pause |
 | R1–R4 | the lab's real record as the node view | final tier 258; real tip passes, other hash cancelled, tip 259 waits |
-| S9 | failure paths | a `--dry-run` monitor raises `would-cancel` and leaves the candidate; a watcher without gas money raises `cancel-failed` and the candidate stays; funded again, the next poll cancels it 3,600 s before the deadline |
-| | alerting | all 22 critical alerts reached the `--alert-cmd` pager |
-| | resources (build box) | the daemon held 29,060 kB resident (VmRSS) at its kill; a run of 2 polls with a full rescan took 31,492 kB max RSS and 1.04 s |
+| S9 | failure paths | a `--dry-run` monitor raises `would-cancel` and leaves the candidate; a watcher without gas money raises `cancel-failed` and the candidate stays; funded again, the next poll cancels it 3,599 s before the deadline |
+| S10 | clean shutdown | SIGTERM: exit 0, a `stopped` alert, the state file saved; the next monitor takes the lock at once |
+| S11 | two node views in one monitor, the second forked at the candidate's tip | cancelled on the forked node's contradiction (`tipConflict` in `lez-forked`): any own node's contradiction cancels |
+| | alerting | all 23 critical alerts reached the `--alert-cmd` pager |
+| | resources (build box) | the daemon held 34,216 kB resident (VmRSS) at its kill; a run of 2 polls with a full rescan took 31,980 kB max RSS and 1.04 s |
 
 A `cancelCandidate` sent by the monitor used **41,477 gas** (41,468 in S5), from the receipts
 (measured, anvil). This includes the 21,000 base and the calldata. The vault's Foundry table gives

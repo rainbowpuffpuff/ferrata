@@ -1,6 +1,6 @@
-# monitor on a local anvil chain: 2026-11-11T18:47:33Z
+# monitor on a local anvil chain: 2026-11-11T18:51:13Z
 
-anvil Version: 1.3.6-v1.3.6, chain id 31337; vault 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 (rule B, wait 1 h), watcher 0xC0096BA72f7b737c29f3cb183D5eeBcEd9bfd7C7, freeze authority 0x0c0B16e1d2558533AA865393F22Eefe479e5B6d0.
+anvil Version: 1.3.6-v1.3.6, chain id 31337; vault 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 (rule B, wait 1 h), watcher 0x5DEE4C93Bba753365fC5cccE94FBAd38e97649F4, freeze authority 0x51Bb0Df34b146Bb5088FE2e19a15273a2E2049a0.
 
 - PASS S1 honest candidate still pending after 3 polls
 - PASS S1 monitor passed it
@@ -29,6 +29,9 @@ anvil Version: 1.3.6-v1.3.6, chain id 31337; vault 0x9fE46736679d2D9a65F0992F227
 - PASS S9 a dry run raises would-cancel and leaves the candidate
 - PASS S9 without gas money: cancel-failed (critical), candidate still pending
 - PASS S9 funded again: cancelled at the next poll, before the deadline
+- PASS S10 SIGTERM: exit 0, a stopped alert, the state file saved
+- PASS S10 the lock is free at once: the next monitor starts
+- PASS S11 cancelled on the forked node's contradiction (tipConflict in lez-forked)
 - PASS S8 first cancellation
 - PASS S8 second cancellation and the watcher's pause (about 12 h)
 - PASS S8 a submission is refused during the pause
@@ -44,27 +47,28 @@ anvil Version: 1.3.6-v1.3.6, chain id 31337; vault 0x9fE46736679d2D9a65F0992F227
 - PASS R2 a candidate at the real tip 258 passes
 - PASS R3 the same id with another hash is cancelled
 - PASS R4 a tip above the final tier waits
-- PASS alerts: all 22 critical alerts reached the pager command
+- PASS alerts: all 23 critical alerts reached the pager command
 
 ## Cancellations and the revocation (chain time, seconds)
 
 | Scenario | Reason | After submission | Before deadline | cancelCandidate gas |
 |---|---|---|---|---|
-| S2 | tipConflict | 0 | 3600 | 41477 |
+| S2 | tipConflict | 1 | 3599 | 41477 |
 | S3 | keySetNotLive | 0 | 3600 | 41477 |
 | S4 | tipConflict | 0 | 3600 | 41477 |
 | S5 | tipNotFinal | 600 | 3000 | 41468 |
-| S6 | tipConflict | 0 | 3600 | 41477 |
-| S9 | tipConflict | 0 | 3600 | 41477 |
+| S6 | tipConflict | 1 | 3599 | 41477 |
+| S9 | tipConflict | 1 | 3599 | 41477 |
+| S11 | tipConflict | 0 | 3600 | 41477 |
 | S8 | tipConflict | 0 | 3600 | 41477 |
 | A2 | keySetNotLive | 0 | 11760 | 41477 |
 | A3 | tipNotFinal | 7202 | 5458 | 41477 |
 
-S7: checkpoint 2 (tipConflict) finalised at 1794437867, revoked at 1794437868, revocable until 1794524267.
+S7: checkpoint 2 (tipConflict) finalised at 1794438087, revoked at 1794438088, revocable until 1794524487.
 
-Alerts: "attestation-finding 3, cancel-failed 1, cancelled 10, candidate-passed 3, candidate-resubmitted 1, candidate-waiting 2, checkpoints-revoked 2, final-tier-stalled 1, finalized-wrong 2, paused 2, persistent-candidate 1, revoked 1, started 20, stopped 19, would-cancel 1".
+Alerts: "attestation-finding 3, cancel-failed 1, cancelled 11, candidate-passed 3, candidate-resubmitted 1, candidate-waiting 2, checkpoints-revoked 2, final-tier-stalled 1, finalized-wrong 2, paused 2, persistent-candidate 1, revoked 1, started 23, stopped 22, would-cancel 1".
 
-Resources (measured, build box): the daemon of S5 held 29060 kB resident (VmRSS) when it was killed, after 10 polls of its state file's life; the S6 run (2 polls, a full rescan from the deployment block, one cancellation) took 31492 kB max RSS, 1.04 s wall, 0.02 s user + 0.08 s system CPU.
+Resources (measured, build box): the daemon of S5 held 34216 kB resident (VmRSS) when it was killed, after 10 polls of its state file's life; the S6 run (2 polls, a full rescan from the deployment block, one cancellation) took 31980 kB max RSS, 1.04 s wall, 0.02 s user + 0.01 s system CPU.
 
 Under the B wait of 1 h, 3000 s was the smallest margin left before a deadline by any cancellation (the restart case).
 

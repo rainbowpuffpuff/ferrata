@@ -303,14 +303,14 @@ Running it:
   re-reads every pending candidate before acting. A lost state file costs a rescan, never a missed
   cancellation. One process per state file is enforced by an OS lock. A stuck transaction times out,
   and the next poll retries.
-- **Rehearsal.** `monitor/tests/anvil-e2e.sh`, on a local anvil chain, makes 43 checks:
+- **Rehearsal.** `monitor/tests/anvil-e2e.sh`, on a local anvil chain, makes 46 checks:
   - an honest candidate passes untouched;
   - wrong ones are cancelled in time;
   - a monitor killed mid-window and restarted still cancels, 3,000 s before the deadline;
   - a lost state file is recovered from the chain;
   - a revocation by the freeze authority's monitor, the persistent-candidate pause, the rule (A)
-    cases, a corrupted attestor's final-tier message flagged, and a failed cancellation (no gas
-    money) retried at the next poll.
+    cases, a corrupted attestor's final-tier message flagged, a failed cancellation (no gas
+    money) retried at the next poll, a clean SIGTERM shutdown, and two node views of which one forked.
   `monitor/tests/fork-live-vault.sh` runs on an anvil fork of Sepolia at the live v5 vault (8 checks):
   - the monitor follows the vault's own history and audits the round trip's checkpoint and its real
     attestation as good;

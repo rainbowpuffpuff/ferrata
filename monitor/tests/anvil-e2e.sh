@@ -13,6 +13,8 @@
 #   S7  a wrong checkpoint finalised while no monitor ran: the watcher alerts, the freeze authority's
 #       monitor revokes it within the window
 #   S9  failure paths: a dry run only alerts; a watcher without gas money alerts, then cancels once funded
+#   S10 clean shutdown on SIGTERM (exit 0, `stopped`, state saved, lock released)
+#   S11 two node views in one monitor; the second has forked at the candidate's tip: cancelled
 #   S8  a cancelled state submitted again: cancelled again, and the watcher pauses checkpoints (12 h)
 #   Rule (A), a second vault (turnSeconds 900, delta 3 h 01 min, so W = 3 h 31 min for t = 3), Δ_g = 2 h:
 #   A1  an honest candidate passes untouched and is finalised with a beacon recorded after its wait
@@ -226,6 +228,32 @@ cast rpc --rpc-url "$rpc" anvil_setBalance "$watcher" 0x56bc75e2d63100000 > /dev
 monitor_polls "$state" WATCHER_KEY 1
 check "S9 funded again: cancelled at the next poll, before the deadline" '[ "$(submitted_at "$n10")" = 0 ] && [ "$(cancelled_alert "$n10" | jq .secondsBeforeDeadline)" -gt 0 ]'
 record S9 "$n10"
+
+# S10: clean shutdown: SIGTERM ends the daemon with exit 0, a `stopped` alert and its state saved; the lock is free.
+mon_cmd "$state" WATCHER_KEY
+"$mon" "${margs[@]}" 2>> "$run/monitor-stderr.log" &
+mon_pid=$!
+stopped_before=$(jq -s '[.[] | select(.kind=="stopped")] | length' "$alerts")
+started_before=$(jq -s '[.[] | select(.kind=="started")] | length' "$alerts")
+for _ in $(seq 1 100); do
+  [ "$(jq -s '[.[] | select(.kind=="started")] | length' "$alerts")" -gt "$started_before" ] && break
+  sleep 0.2
+done
+sleep 1.5
+kill -TERM "$mon_pid"
+term_exit=0; wait "$mon_pid" || term_exit=$?; mon_pid=
+check "S10 SIGTERM: exit 0, a stopped alert, the state file saved" '[ "$term_exit" = 0 ] && [ "$(jq -s "[.[] | select(.kind==\"stopped\")] | length" "$alerts")" -gt "$stopped_before" ] && jq -e ".polls > 0" "$state" > /dev/null'
+check "S10 the lock is free at once: the next monitor starts" 'monitor_polls "$state" WATCHER_KEY 1'
+
+# S11: two node views; the second has forked at the candidate's tip: a contradiction in any own node cancels.
+forked="$out/node-view-forked.json"
+jq '.node = "lez-forked" | .finalBlocks["19"] = "'"$(label fork/19)"'" | del(.attestations)' "$view" > "$forked"
+n11=$(label state/11b); j11=$(journal "$n4" "$n11" 19 "$(label block/19)" 4 3)
+submit "$j11"
+mon_cmd "$state" WATCHER_KEY
+"$mon" "${margs[@]}" --node "file:$forked" --max-polls 2 2>> "$run/monitor-stderr.log"
+check "S11 cancelled on the forked node's contradiction (tipConflict in lez-forked)" '[ "$(cancelled_alert "$n11" | jq -r ".reason.kind + \" \" + .reason.node")" = "tipConflict lez-forked" ]'
+record S11 "$n11"
 
 # S8: a cancelled state submitted again: cancelled again, then the 12 h pause.
 n9=$(label state/9); j9=$(journal "$n4" "$n9" 18 "$(label forged/18)" 4 3)
