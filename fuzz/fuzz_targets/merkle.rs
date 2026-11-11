@@ -31,7 +31,9 @@ fn reference_root(leaf: &[u8; 32], branch: &[[u8; 32]], depth: usize, index: u64
 fuzz_target!(|data: &[u8]| {
     let mut i = Input(data);
     let leaf: [u8; 32] = i.array();
-    let depth = usize::from(i.u8());
+    // Depth at most 64 and gindex at least 1: the domain every caller stays in (findings M1 and
+    // M2 of fuzz/RESULTS.md, fixed on branch fuzz-core-merkle-domain).
+    let depth = usize::from(i.u8() % 65);
     let index = i.u64();
     let gindex = i.u64();
     let zeros = usize::from(i.u8() % 4);

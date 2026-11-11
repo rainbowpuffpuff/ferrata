@@ -12,7 +12,8 @@
 //!
 //! Documented differences (crates/ferrata-spectests/tests/mpt_proofs.rs,
 //! `documented_differences_from_alloy`) are excluded: a root node shorter than 32 bytes, and
-//! the empty trie proven by `[0x80]`.
+//! the empty trie proven by `[0x80]`; and one this fuzzer found (finding P1,
+//! tests/fuzz_regressions.rs): an exclusion proof padded below a diverging extension.
 #![no_main]
 use std::collections::BTreeMap;
 
@@ -21,7 +22,7 @@ use alloy_trie::{
     proof::{verify_proof, ProofRetainer},
     HashBuilder, Nibbles,
 };
-use ferrata_core::{keccak::keccak256, mpt::verify, rlp::encode_u64};
+use ferrata_core::{keccak::keccak256, mpt::verify, rlp::encode_u64, Error};
 use ferrata_fuzz::{parse_raw_proof, Input};
 use libfuzzer_sys::fuzz_target;
 
@@ -95,6 +96,7 @@ fn structured(i: &mut Input<'_>) {
     assert!(alloy_accepts(&root, &target, truth, proof));
     // One mutation, chosen by the fuzzer.
     let mut p = proof.clone();
+    let kind = i.0.first().map_or(0, |b| b % 7);
     match i.u8() % 7 {
         0 if !p.is_empty() => {
             let a = usize::from(i.u8()) % p.len();
@@ -129,10 +131,25 @@ fn structured(i: &mut Input<'_>) {
             assert_eq!(v, truth, "a mutated proof proves something false");
             assert!(alloy_accepts(&root, &target, v, &p), "ferrata accepts a proof alloy refuses");
         }
-        Err(_) => {
+        Err(e) => {
+            let (t, n) = (alloy_accepts(&root, &target, truth, &p), alloy_accepts(&root, &target, None, &p));
+            // Finding P1 (intended): an exclusion proof padded below a diverging extension. alloy
+            // accepts it; ferrata refuses the unused nodes. The unpadded prefix must then prove
+            // the same absence to both.
+            if e == Error::ProofTrailingNodes && truth.is_none() && n {
+                let k = (1..p.len()).find(|&k| verify(&root, &target, &p[..k]).is_ok());
+                let k = k.expect("a padded exclusion proof has a prefix ferrata accepts");
+                assert_eq!(verify(&root, &target, &p[..k]), Ok(None));
+                assert!(alloy_accepts(&root, &target, None, &p[..k]));
+                return;
+            }
             assert!(
-                !alloy_accepts(&root, &target, truth, &p) && !alloy_accepts(&root, &target, None, &p),
-                "alloy accepts a proof ferrata refuses"
+                !t && !n,
+                "alloy accepts a proof ferrata refuses ({e:?}): mutation {kind}, key present {}, alloy truth {t} none {n}, honest {} nodes, mutated {} nodes {:?}",
+                truth.is_some(),
+                proof.len(),
+                p.len(),
+                p.iter().map(Vec::len).collect::<Vec<_>>()
             );
         }
     }

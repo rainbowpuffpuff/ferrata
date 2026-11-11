@@ -3,8 +3,8 @@
 //! current slot: the spec store (`LightClientStore`: process_update, process_force_update,
 //! upgrade) and Ferrata's policy store (`FinalizedStore`), with the blst backend.
 //!
-//! Properties: nothing panics; the policy store only advances on an update the spec's
-//! validation accepts; an accepted update never moves the finalized slot backwards.
+//! Properties: nothing panics; neither store applies an update the spec's validation refuses;
+//! an applied update never moves the finalized slot backwards.
 #![no_main]
 use ferrata_core::{
     bls::Blst,
@@ -41,8 +41,10 @@ fuzz_target!(|data: &[u8]| {
     let valid = validate_light_client_update(&store.core, &update, x.current_slot, &ctx, SignaturePath::Spec).is_ok();
     let before = store.core.finalized_header.beacon.slot;
     let processed = store.process_update(&update, x.current_slot, &ctx);
-    assert_eq!(processed.is_ok(), valid, "process_update and validate disagree");
+    // Application may still refuse a valid update (the spec's assert in
+    // apply_light_client_update), but nothing invalid is ever applied.
     if processed.is_ok() {
+        assert!(valid, "process_update accepted an update validate refuses");
         assert!(store.core.finalized_header.beacon.slot >= before, "finalized slot moved back");
     }
     let _ = store.process_force_update(x.current_slot, spec);
