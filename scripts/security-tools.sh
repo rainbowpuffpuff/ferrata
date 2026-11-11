@@ -126,6 +126,21 @@ if "sectools: concrete sha256" not in s and old in s:
     open(p, "w").write(s.replace(old, new, 1))
 PY
   done
+  # A concatenation of constants (abi.encodePacked of a literal and a concrete address, as the registry's namespaced
+  # storage slot is derived) is not a bit-vector *value* until it is simplified, so the fix above missed it and the slot
+  # stayed symbolic ("NotConcreteError: symbolic storage base slot", 140 times in the 11 November long run). Simplify
+  # first (release-eng, docs/release-engineering.md §5); idempotent like the fixes above.
+  for sevm in "$TOOLS"/venv/lib/python3*/site-packages/halmos/sevm.py; do
+    [ -f "$sevm" ] && "$TOOLS/venv/bin/python" - "$sevm" <<'PY'
+import sys
+p = sys.argv[1]
+s = open(p).read()
+old = "                if not is_bv(unwrapped) or __import__('z3').is_bv_value(unwrapped):  # sectools: concrete sha256\n"
+new = ("                unwrapped = __import__('z3').simplify(unwrapped) if is_bv(unwrapped) else unwrapped  # sectools: simplified sha256 input\n" + old)
+if "sectools: simplified sha256 input" not in s and old in s:
+    open(p, "w").write(s.replace(old, new, 1))
+PY
+  done
   # The symbolic properties live in test/halmos/ (contract VaultHalmos, functions check_*).
   # Bounds: dynamic arrays of length 1 and byte strings of 4 bytes in generated calldata (see the triage note).
   # HALMOS_TIMEOUT (seconds) bounds one run; HALMOS_ARGS adds options, e.g. --function check_reach.
