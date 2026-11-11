@@ -503,7 +503,37 @@ def decode_file(program, type_name, hex_path, debug_path=None):
     return 0 if same else 1
 
 
+def check_recorded(path):
+    """`--recorded`: the attestation program's messages taken from recorded LEZ blocks
+    (`lez/live/driver/src/bin/idl-recorded.rs`), each decoded with the IDL alone and compared with
+    the Rust Debug text written beside it."""
+    vfile = json.loads(Path(path).read_text())
+    idl = json.loads((HERE / f"{vfile['program']}.idl.json").read_text())
+    counts, failures, nbytes = {}, [], 0
+    for vec_ in vfile["vectors"]:
+        data = bytes.fromhex(vec_["hex"])
+        nbytes += len(data)
+        try:
+            value = Decoder(idl).decode(data, vec_["type"])
+        except (DecodeError, UnicodeDecodeError) as e:
+            failures.append(f"{vec_['name']}: {e}")
+            continue
+        if debug(value) != vec_["debug"]:
+            failures.append(f"{vec_['name']}: Debug text differs")
+            continue
+        counts[value[2]] = counts.get(value[2], 0) + 1
+    for source in vfile.get("sources", []):
+        print(f"  source: {source}")
+    print(f"{path}: {len(vfile['vectors'])} recorded messages, {nbytes} bytes; decoded with {vfile['program']}.idl.json alone "
+          f"and equal to their Rust Debug text: {sum(counts.values())} ({', '.join(f'{k} {v}' for k, v in sorted(counts.items()))})")
+    for f in failures[:12]:
+        print(f"  FAIL {f}")
+    return 1 if failures or not counts else 0
+
+
 if __name__ == "__main__":
+    if len(sys.argv) == 3 and sys.argv[1] == "--recorded":
+        sys.exit(check_recorded(sys.argv[2]))
     if len(sys.argv) > 1 and sys.argv[1] == "--decode":
         if len(sys.argv) not in (5, 6):
             sys.exit("usage: check.py --decode PROGRAM TYPE HEXFILE [DEBUGFILE]")

@@ -76,6 +76,26 @@ FERRATA_IDL_WRITE=1 cargo test --locked -p ferrata-lez-bridge-wire --test idl_ve
 When the programs change: rewrite the vectors, edit `tools/build_idl.py` (or the JSON), rerun it,
 and run `check.py` until it passes.
 
+## Real messages
+
+Two more modes decode real messages with the IDL alone and compare each with its Rust `Debug` text:
+
+```sh
+# one message, as ferrata-attest --message-out writes it (lez/ATTEST-CLI.md)
+python3 -I idl/check.py --decode ferrata_attestation Message message-2.hex message-2.debug
+# every attestation-program message in recorded LEZ blocks
+cd lez/live/driver && cargo build --locked --bin idl-recorded      # needs libpcsclite-dev, as the driver
+target/debug/idl-recorded OUT.json lab ../../lab/results/record/blocks.borsh ../../lab/results/record/programs.tsv \
+  live ../results/blocks.borsh ../results/programs.tsv
+python3 -I ../../../idl/check.py --recorded OUT.json
+```
+
+`idl-recorded` ([`lez/live/driver/src/bin/idl-recorded.rs`](../lez/live/driver/src/bin/idl-recorded.rs))
+reads each block log with LEZ's own types, takes every public transaction whose root message goes to
+the attestation program (the programs named in `programs.tsv`, less LEZ's `scripted` test program),
+and writes the message's bytes and its `Debug` text from `ferrata_lez_wire::Message`. A message that
+today's wire cannot decode (a run recorded with an older image) is counted, not written.
+
 ## Results
 
 Measured on the Modal build box (`mrun`, 11 November 2026) and in CI's command:
@@ -84,3 +104,10 @@ Measured on the Modal build box (`mrun`, 11 November 2026) and in CI's command:
 - `check.py`: attestation 19 vectors, 13 of 13 instructions, 19 types, 31 enum variants, 68 codes,
   5 of 5 mutants rejected; bridge 37 vectors, 20 of 20 instructions, 29 types, 34 enum variants,
   16 codes, 5 of 5 mutants rejected.
+- `--decode`: three of `ferrata-attest`'s messages (7,201, 2,153 and 31,654 bytes, built from real
+  Sepolia proofs) equal to their `Debug` text ([`lez/results/attest-cli/idl-decode.txt`](../lez/results/attest-cli/idl-decode.txt)).
+- `--recorded` ([`results/recorded.txt`](results/recorded.txt)): 317 messages of the attestation
+  program, 2,646,210 bytes, from the lab's blocks (250 of 250: `Init` 2, `Open` 58, `Miller` 58,
+  `Adopt` 74, `Finish` 58) and the live run's (67), each decoded by the IDL alone to its `Debug`
+  text. 6 more messages of the live run are of an older wire, which today's Rust wire does not
+  decode either (the first: block 18, transaction 0).
