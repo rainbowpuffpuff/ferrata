@@ -17,10 +17,11 @@
 //!    1 ETH minted on LEZ; a second claim refused (250).
 //! 5. A burn of 0.1 ETH to a fresh Ethereum address.
 //! 6. The rule (B) checkpoint over the zone's blocks: guest journal == native journal == the
-//!    vault's own journal layout; submitted, refused before its wait, finalised after it; the
-//!    vault's accepted burn root equals the root the wallet computes from the zone.
-//! 7. The release (guest in dev mode, journal == native): the recipient receives 0.1 ETH; a replay
-//!    is refused.
+//!    vault's own journal layout; a forged one (another burn root) refused; submitted, refused
+//!    before its wait, finalised after it; the vault's accepted burn root equals the root the
+//!    wallet computes from the zone.
+//! 7. The release (guest in dev mode, journal == native): redirected to another address, refused;
+//!    the recipient receives 0.1 ETH; a replay is refused.
 //!
 //! Runs only with `FERRATA_E2E=1` and the paths of the built tools in `FERRATA_CI_ZONE`,
 //! `FERRATA_CI_CHECKPOINT_B_ELF` and `FERRATA_CI_RELEASE_ELF` (`e2e/ci/run.sh` sets them).
@@ -501,6 +502,11 @@ async fn deposit_attest_claim_burn_checkpoint_b_release() -> Result<()> {
     let accept =
         |image: B256, j: &[u8]| IMock::acceptCall { imageId: image, journalDigest: B256::from(sha256(j)) }.abi_encode();
     anvil_send(&p, ANVIL0, verifier, accept(checkpoint_image, &journal), U256::ZERO).await?;
+    // A checkpoint whose journal the guest did not commit (another burn root) is refused by the verifier.
+    let mut forged = c.clone();
+    forged.burnRoot = B256::from(sha256(b"ferrata ci round trip: a burn root nobody proved"));
+    let forged = ICheckpointsB::submitCandidateCall { c: forged, seal: Bytes::from(SEAL.to_vec()) }.abi_encode();
+    ensure!(reverts(&p, ANVIL0, vault, forged).await, "a checkpoint the guest did not produce is refused");
     let submit = ICheckpointsB::submitCandidateCall { c: c.clone(), seal: Bytes::from(SEAL.to_vec()) }.abi_encode();
     anvil_send(&p, ANVIL0, vault, submit, U256::ZERO).await?;
     let finalize = ICheckpointsB::finalizeAttestedCall { c: c.clone() }.abi_encode();
@@ -511,7 +517,7 @@ async fn deposit_attest_claim_burn_checkpoint_b_release() -> Result<()> {
     let roots = eth::accepted_burn_roots(&p, vault, 0, 10_000).await?;
     let (root_b, count) = *roots.last().context("an accepted burn root")?;
     ensure!(root_b.0 == wallet_root && count == 1, "the vault accepted the zone's burn root");
-    step(t0, "6. rule (B) checkpoint: guest journal == native == vault layout; refused early; finalised after W");
+    step(t0, "6. rule (B) checkpoint: guest journal == native == vault layout; a forged one refused; refused early; finalised after W");
 
     // 7. The release, through the release guest (dev mode).
     advance(&p, 200).await?; // the token's release delay (120 s)
@@ -522,6 +528,11 @@ async fn deposit_attest_claim_burn_checkpoint_b_release() -> Result<()> {
     let proven = release::prove(&release_elf, &rplan)?;
     ensure!(B256::from(proven.image_id) == release_image && proven.dev_mode, "the release guest ran in dev mode");
     anvil_send(&p, ANVIL0, verifier, accept(release_image, &rplan.journal), U256::ZERO).await?;
+    // The same release paid to another address: not the journal the guest committed, refused.
+    let mut other = rplan.request.clone();
+    other.recipient = ANVIL0;
+    let redirected = eth::release_calldata(other, Bytes::from(SEAL.to_vec()));
+    ensure!(reverts(&p, ANVIL0, vault, redirected.to_vec()).await, "a release to another recipient is refused");
     let before = p.get_balance(recipient).await?;
     let call = release::calldata(&rplan, Bytes::from(SEAL.to_vec()));
     anvil_send(&p, ANVIL0, vault, call.to_vec(), U256::ZERO).await?;
@@ -531,7 +542,7 @@ async fn deposit_attest_claim_burn_checkpoint_b_release() -> Result<()> {
         "NOut used"
     );
     ensure!(reverts(&p, ANVIL0, vault, call.to_vec()).await, "a replay is refused");
-    step(t0, "7. release of 0.1 ETH on anvil; replay refused");
+    step(t0, "7. release of 0.1 ETH on anvil; redirected and replayed releases refused");
     println!("round trip done in {:.1} s", t0.elapsed().as_secs_f64());
     Ok(())
 }

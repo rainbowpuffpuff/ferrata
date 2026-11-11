@@ -30,11 +30,12 @@ Prototype evidence for a grant proposal. **Not audited. Not for production.**
 5. **Burn.** 0.1 ETH to a fresh Ethereum address; the holder is debited.
 6. **Rule (B) checkpoint.** The guest's journal equals the native rule's, equals the vault's own journal layout
    (`VaultTestBase._checkpointJournalBytes`), starts at the vault's genesis state, carries the wallet's burn root
-   (one burn) and the imported leaf count. The mock accepts that journal; `submitCandidate`; `finalizeAttested`
+   (one burn) and the imported leaf count. The mock accepts that journal; the same checkpoint with another burn root
+   (a journal no guest committed) is refused; `submitCandidate`; `finalizeAttested`
    before the wait W (600 s) is refused; after it, accepted: `finalState` moves and the vault's accepted burn
    root is the wallet's.
-7. **Release.** The release guest's journal equals the native one; the mock accepts it; the recipient receives
-   0.1 ETH; the nullifier is used; a replay is refused.
+7. **Release.** The release guest's journal equals the native one; the mock accepts it; the same release paid to
+   another address is refused; the recipient receives 0.1 ETH; the nullifier is used; a replay is refused.
 
 ## Running it
 
