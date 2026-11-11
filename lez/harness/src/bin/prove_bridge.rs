@@ -236,7 +236,16 @@ fn prove(
     let time = w.time;
     let run = w
         .chain
-        .prove_and_settle_private_as(sender, root, borsh::to_vec(message).unwrap(), actors, &catalog(), RESERVE, time, shape)
+        .prove_and_settle_private_as(
+            sender,
+            root,
+            borsh::to_vec(message).unwrap(),
+            actors,
+            &catalog(),
+            RESERVE,
+            time,
+            shape,
+        )
         .unwrap_or_else(|e| panic!("{what}: {e}"));
     let total = started.elapsed();
     let (label, receipt) = if dev_mode() {

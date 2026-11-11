@@ -43,7 +43,9 @@ use lee::{Actor, PrivacyPreservingTransaction};
 use lee_core::{execution_state::BoundaryStep, ProgramImageClaim};
 
 fn usage() -> ! {
-    eprintln!("usage: prove_attest [--shape wallet|bare] [--tx-out FILE] [--allow-dev-mode] | --settle FILE | --image-ids");
+    eprintln!(
+        "usage: prove_attest [--shape wallet|bare] [--tx-out FILE] [--allow-dev-mode] | --settle FILE | --image-ids"
+    );
     std::process::exit(2)
 }
 
