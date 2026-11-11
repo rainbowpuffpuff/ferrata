@@ -19,6 +19,10 @@ if [ -z "$lez_home" ]; then
 fi
 [ -n "$lez_home" ] || { echo "no RISC Zero home with guest Rust 1.91.1 for LEZ (set RISC0_HOME_LEZ)" >&2; exit 1; }
 export FERRATA_E2E_DIR="${FERRATA_E2E_DIR:-${RUNNER_TEMP:-$repo/../tmp}/ci-roundtrip}"
+# No debug info and no incremental artefacts: cli/target is 13 GB with them (measured on the build box), more than
+# GitHub's 10 GB of caches per repository; the caches then hold dependencies only.
+export CARGO_PROFILE_DEV_DEBUG="${CARGO_PROFILE_DEV_DEBUG:-0}" CARGO_PROFILE_TEST_DEBUG="${CARGO_PROFILE_TEST_DEBUG:-0}"
+export CARGO_INCREMENTAL="${CARGO_INCREMENTAL:-0}"
 mkdir -p "$FERRATA_E2E_DIR"
 t0=$(date +%s)
 stamp() { echo "[$(( $(date +%s) - t0 )) s] $*"; }
