@@ -35,7 +35,8 @@ what is not built.
 
 ## Quickstart
 
-Commands run from the repository root. The first two need only Rust and Python 3.
+Commands run from the repository root. The first two need only Rust (with curl and tar for the vectors)
+and Python 3.
 
 The light-client core on the official consensus vectors and real mainnet and Sepolia data (native tests,
 a laptop is enough):
