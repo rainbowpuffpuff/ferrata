@@ -12,6 +12,11 @@ Never `modal profile activate`: the profile is given per command.
                     Mode "live" signs with the keystore of the Secret; mode "fork" (runner_rehearsal) forks Sepolia
                     with anvil and impersonates the deployer: no key is read, nothing is sent to any public network.
   runner_rehearsal  the same, preemptible (cheaper), fork mode only.
+  lez_session       one LEZ session (lez/crown/session.sh a|b) on 16 guaranteed cores (up to 32): LEZ's wallet proves
+                    the two private transactions of B on this CPU inside a claim's ten-minute window (the box: 274 s and
+                    321 s). It alone writes lez/<run>/ on the Volume; it takes the captures as bytes and returns the
+                    session's records as bytes, so the runner never waits on a Volume reload. Idempotent: a session
+                    whose generation is saved is not run again, its records are returned.
   gpu_prove         one NVIDIA L4 (an L40S if no L4 is free): the succinct checkpoint_b proof of the staged inputs, with
                     the CUDA prover gpu-prover/modal_app.py::build put on the Volume ferrata-prover (read-only).
   groth16_wrap      RISC Zero's Groth16 prover image, run as a plain function (no Docker).
@@ -398,6 +403,80 @@ def runner_rehearsal(run: str, repo: str, mode: str, commit: str) -> dict:
     if mode == "live":
         raise ValueError("runner_rehearsal never runs a live run")
     return _runner(run, repo, mode, commit)
+
+
+# ---- the LEZ sessions ---------------------------------------------------------------------------------------
+LEZ_ENV = ("CROWN_VAULT", "CROWN_ETH_FEES_AT", "CROWN_RECIPIENT", "CROWN_PRIVATE", "CROWN_R0VM", "CROWN_DEADLINE_MIN",
+           "CROWN_CLAIM_TIME_OFFSET_S", "CROWN_MAX_STARTS")
+
+
+@app.function(image=runner_image, cpu=(16.0, 32.0), memory=(16384, 65536), timeout=3 * 3600, retries=0,
+              max_containers=1, single_use_containers=True, volumes={VOL: volume})
+def lez_session(run: str, step: str, chain: str, bundle_sha256: str, script: bytes, env: dict,
+                inputs_tar: bytes | None = None, may_start: bool = True) -> dict:
+    """lez/crown/session.sh <step> (the run's own copy, `script`) with CROWN_LEZ_VOL = lez/<run> on the Volume.
+    Session A runs only on an empty zone, B only on generation 1; a session whose generation exists returns its saved
+    records (may_start=False: never run, only return). Returns {ok, ran, rc, generation, records (tar of session-<step>/),
+    tail}."""
+    import io
+    import tarfile
+
+    lez = f"{VOL}/lez/{run}"
+    want = {"a": 1, "b": 2}[step]
+    os.makedirs(f"{lez}/state", exist_ok=True)
+    gen = lambda: int(open(f"{lez}/state/current").read().strip()) if os.path.isfile(f"{lez}/state/current") else 0
+    outlog = f"{lez}/session-{step}.out"
+    ran, rc = False, None
+    stop = threading.Event()
+
+    def committer():
+        while not stop.wait(60):
+            try:
+                volume.commit()
+            except Exception:
+                pass
+
+    if gen() < want:
+        if not may_start or gen() != want - 1:
+            return {"ok": False, "ran": False, "rc": None, "generation": gen(),
+                    "tail": f"session {step} needs generation {want - 1} and may_start; the zone is at {gen()}"}
+        if not os.path.isfile(f"{lez}/bundle.tar.zst"):
+            shutil.copy2(f"{VOL}/inputs/bundle.tar.zst", f"{lez}/bundle.tar.zst.part")
+            os.replace(f"{lez}/bundle.tar.zst.part", f"{lez}/bundle.tar.zst")
+        if _sha256(f"{lez}/bundle.tar.zst") != bundle_sha256:
+            return {"ok": False, "ran": False, "rc": None, "generation": gen(),
+                    "tail": f"lez/{run}/bundle.tar.zst is not the run's bundle {bundle_sha256}"}
+        if inputs_tar:
+            with tarfile.open(fileobj=io.BytesIO(inputs_tar), mode="r:*") as tf:
+                names = {n.split("/")[0] for n in tf.getnames()}
+                for n in names:
+                    shutil.rmtree(f"{lez}/inputs/{n}", ignore_errors=True)
+                tf.extractall(f"{lez}/inputs", filter="data")
+        with open("/root/session.sh", "wb") as f:
+            f.write(script)
+        e = {k: v for k, v in os.environ.items() if not k.startswith("CROWN_")}
+        e.update({k: str(v) for k, v in env.items() if k in LEZ_ENV and v is not None})
+        e.update(CROWN_LEZ_VOL=lez, CROWN_LEZ_WORK="/root/crown-lez", CROWN_CHAIN=chain)
+        e.pop("RISC0_DEV_MODE", None)
+        threading.Thread(target=committer, daemon=True).start()
+        with open(outlog, "a") as out:
+            out.write(f"[{_utc()}] session {step} (chain {chain}), {os.cpu_count()} CPUs visible\n")
+            out.flush()
+            rc = subprocess.run(["bash", "/root/session.sh", step], stdout=out, stderr=subprocess.STDOUT, env=e).returncode
+            out.write(f"[{_utc()}] session {step}: exit {rc}, generation {gen()}\n")
+        stop.set()
+        ran = True
+        volume.commit()
+    d = f"{lez}/session-{step}"
+    need = ["session-a.json", "channel_signing_key", "deployment-settings.yaml"] if step == "a" else \
+        ["session-b.json", "burn-notes.json", "node/info.json"]
+    ok = gen() >= want and all(os.path.isfile(f"{d}/{n}") for n in need)
+    buf = io.BytesIO()
+    if os.path.isdir(d):
+        with tarfile.open(fileobj=buf, mode="w:gz") as tf:
+            tf.add(d, arcname=f"session-{step}")
+    tail = open(outlog, errors="replace").read().splitlines()[-25:] if os.path.isfile(outlog) else []
+    return {"ok": ok, "ran": ran, "rc": rc, "generation": gen(), "records": buf.getvalue(), "tail": "\n".join(tail)}
 
 
 # ---- the GPU proof ------------------------------------------------------------------------------------------

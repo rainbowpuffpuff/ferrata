@@ -45,7 +45,10 @@ REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.a
 RUN_NAME, MODE = sys.argv[1], sys.argv[2]
 RUN = f"{REPO}/e2e/runs/{RUN_NAME}"
 INPUTS = os.environ.get("CROWN_INPUTS", "/vol/inputs")
-LEZ = os.environ.get("CROWN_LEZ_VOL", f"/vol/lez/{RUN_NAME}")
+VOL_LEZ = os.environ.get("CROWN_LEZ_VOL", f"/vol/lez/{RUN_NAME}")  # lez_session's alone; read here only at a start
+LEZ = f"{RUN}/lez"  # the sessions' records as lez_session returned them (without the channel key)
+CLOUD = os.environ.get("CROWN_CLOUD", f"/vol/cloud/{RUN_NAME}")
+KEY = f"{CLOUD}/secret/channel_signing_key"  # the devnet's channel key (attestor input): on the Volume, never fetched
 E2E = os.environ.get("CROWN_E2E", f"{REPO}/bridge/target/release/ferrata-e2e")
 RB = os.environ.get("CROWN_REALBLOCKS", f"{REPO}/checkpoint/target/release/realblocks-crown")
 APP = os.environ.get("CROWN_APP", "ferrata-crown")
@@ -225,9 +228,6 @@ def session_b() -> dict:
     return jload(f"{LEZ}/session-b/session-b.json")
 
 
-def lez_generation() -> int:
-    p = f"{LEZ}/state/current"
-    return int(open(p).read().strip()) if os.path.isfile(p) else 0
 
 
 def sepolia(*a: str, log: str) -> None:
@@ -239,19 +239,17 @@ def sepolia(*a: str, log: str) -> None:
 def prepare_inputs() -> None:
     """The run's own copies of the LEZ bundle and the R0BF programs (a later `setup` does not change a started run);
     their hashes and image ids checked; the bundle's binaries unpacked for crown-driver's offline commands."""
-    os.makedirs(f"{LEZ}/state", exist_ok=True)
-    if not os.path.isfile(f"{LEZ}/bundle.tar.zst"):
-        shutil.copy2(f"{INPUTS}/bundle.tar.zst", f"{LEZ}/bundle.tar.zst.part")
-        os.replace(f"{LEZ}/bundle.tar.zst.part", f"{LEZ}/bundle.tar.zst")
-    want = jload(f"{INPUTS}/bundle.json")["sha256"] if not os.path.isfile(f"{RUN}/bundle.json") else jload(f"{RUN}/bundle.json")["sha256"]
-    got = sha256(f"{LEZ}/bundle.tar.zst")
-    if got != want:
-        die(f"the run's LEZ bundle has sha256 {got}, recorded {want}")
     if not os.path.isfile(f"{RUN}/bundle.json"):
         jsave(f"{RUN}/bundle.json", {**jload(f"{INPUTS}/bundle.json"), "copied_at": utc()})
+    want = jload(f"{RUN}/bundle.json")["sha256"]
+    # lez_session copies the bundle into lez/<run>/ at session A; until then the Volume's inputs/ holds the same bytes
+    src = f"{VOL_LEZ}/bundle.tar.zst" if os.path.isfile(f"{VOL_LEZ}/bundle.tar.zst") else f"{INPUTS}/bundle.tar.zst"
+    got = sha256(src)
+    if got != want:
+        die(f"{src} has sha256 {got}, the run's bundle is {want} (a later `setup` changed inputs/?)")
     shutil.rmtree(BUNDLE_DIR, ignore_errors=True)
     os.makedirs(BUNDLE_DIR)
-    run(["bash", "-c", f"zstd -q -d -c {LEZ}/bundle.tar.zst | tar -C {BUNDLE_DIR} -xf - && cd {BUNDLE_DIR}"
+    run(["bash", "-c", f"zstd -q -d -c {src} | tar -C {BUNDLE_DIR} -xf - && cd {BUNDLE_DIR}"
                        " && sha256sum -c --quiet SHA256SUMS && chmod +x bin/* node/*"], log="inputs.log")
     if not os.path.isdir(PROG):
         shutil.copytree(f"{INPUTS}/programs", PROG + ".part")
@@ -321,44 +319,60 @@ def stop_anvil() -> None:
 
 
 # ---- LEZ sessions -------------------------------------------------------------------------------------------------
-def session(step: str, extra: dict) -> None:
-    script = f"{REPO}/lez/crown/session.sh"
-    if not os.path.isfile(script):
-        script = f"{BUNDLE_DIR}/crown/session.sh"
-    env = {**os.environ, "CROWN_LEZ_VOL": LEZ, "CROWN_LEZ_WORK": "/root/crown-lez", "CROWN_CHAIN": lez_chain(), **extra}
-    for k in ("SEPOLIA_RPC_URL", "ETH_KEYSTORE", "ETH_PASSWORD", "CROWN_FORK_UPSTREAM", "RISC0_DEV_MODE"):
-        env.pop(k, None)  # the LEZ side reads only its Volume directory
-    say(f"LEZ session {step.upper()}: {os.path.relpath(script, REPO) if script.startswith(REPO) else 'bundle crown/session.sh'}"
-        f" (chain {lez_chain()})")
-    t0 = time.time()
-    rc = run(["bash", script, step], log=f"lez-{step}.log", env=env, check=False)
-    say(f"LEZ session {step.upper()}: exit {rc} after {time.time() - t0:.0f} s; generation now {lez_generation()}")
-    if rc != 0:
-        tail = open(f"{RUN}/logs/lez-{step}.log", errors="replace").read().splitlines()[-15:]
-        die(f"LEZ session {step} failed (exit {rc}; the zone stays at generation {lez_generation()}):\n    " + "\n    ".join(tail))
+def session(step: str, extra: dict, inputs_tar: bytes | None = None, may_start: bool = True) -> None:
+    """lez_session (16 cores, its own container; app.py) runs or returns session <step>; its records are unpacked into
+    <run>/lez/session-<step>/, the channel key into the Volume's cloud/<run>/secret/. Up to three attempts (a preempted
+    container, a session that did not save: the zone stays at its last generation)."""
+    script_path = f"{REPO}/lez/crown/session.sh"
+    if not os.path.isfile(script_path):
+        script_path = f"{BUNDLE_DIR}/crown/session.sh"
+    script = open(script_path, "rb").read()
+    env = {"CROWN_CLAIM_TIME_OFFSET_S": os.environ.get("CROWN_CLAIM_TIME_OFFSET_S"), **extra}
+    fn = modal_fn("lez_session")
+    for attempt in (1, 2, 3):
+        where = os.path.relpath(script_path, REPO) if script_path.startswith(REPO) else "the bundle's crown/session.sh"
+        say(f"LEZ session {step.upper()} (attempt {attempt}): lez_session, {where} (sha256"
+            f" {hashlib.sha256(script).hexdigest()[:12]}), chain {lez_chain()}")
+        t0 = time.time()
+        try:
+            res = fn.remote(RUN_NAME, step, lez_chain(), jload(f"{RUN}/bundle.json")["sha256"], script, env, inputs_tar, may_start)
+        except Exception as e:
+            say(f"LEZ session {step.upper()}: the call failed after {time.time() - t0:.0f} s: {type(e).__name__}: {str(e)[:300]}")
+            time.sleep(30)
+            continue
+        say(f"LEZ session {step.upper()}: ok={res['ok']} ran={res['ran']} exit={res['rc']} generation={res['generation']}"
+            f" after {time.time() - t0:.0f} s")
+        if res["ok"]:
+            unpack_session(step, res["records"])
+            return
+        say("LEZ session tail:\n    " + res.get("tail", "").replace("\n", "\n    "))
+        if res["rc"] is None:  # refused before running: retrying changes nothing
+            break
+    die(f"LEZ session {step} did not complete (logs: the Volume's lez/{RUN_NAME}/session-{step}.out, session-{step}/logs/)")
 
 
-def copy_session(step: str) -> None:
-    """The session's records into the run directory (fetched with it), without the generations and the channel key."""
-    src, dst = f"{LEZ}/session-{step}", f"{RUN}/lez/session-{step}"
+def unpack_session(step: str, records: bytes) -> None:
+    dst = f"{LEZ}/session-{step}"
     shutil.rmtree(dst, ignore_errors=True)
-    shutil.copytree(src, dst, ignore=shutil.ignore_patterns("channel_signing_key"))
+    os.makedirs(LEZ, exist_ok=True)
+    with tarfile.open(fileobj=io.BytesIO(records), mode="r:*") as tf:
+        tf.extractall(LEZ, filter="data")
+    key = f"{dst}/channel_signing_key"
+    if os.path.isfile(key):
+        os.makedirs(os.path.dirname(KEY), mode=0o700, exist_ok=True)
+        shutil.move(key, KEY)
+
+
+def have_session(step: str) -> bool:
+    need = ["session-a.json", "deployment-settings.yaml"] if step == "a" else ["session-b.json", "burn-notes.json", "node/info.json"]
+    return all(os.path.isfile(f"{LEZ}/session-{step}/{n}") for n in need) and (step == "b" or os.path.isfile(KEY))
 
 
 def st_lez_a() -> bool:
-    gen = lez_generation()
-    if gen >= 1:
-        if not os.path.isfile(f"{LEZ}/session-a/session-a.json"):
-            die(f"the zone is at generation {gen} but session-a/session-a.json is missing")
-        if not os.path.isdir(f"{RUN}/lez/session-a"):
-            copy_session("a")
+    if have_session("a"):
         return False
-    if deploy_started():
-        die("the vault's deployment of this run has begun: session A cannot make a new zone now")
-    session("a", {})
-    if lez_generation() != 1 or not os.path.isfile(f"{LEZ}/session-a/session-a.json"):
-        die("session A did not save generation 1 with session-a.json")
-    copy_session("a")
+    # Once the vault's deployment has begun only the saved session may come back: never a new zone.
+    session("a", {}, may_start=not deploy_started())
     a = session_a()
     say(f"session A: T0 = {a['tip']['id']} {a['tip']['hash']}, channel keys {a['channel']['keys']}, bedrockGenesisId"
         f" {a['bedrockGenesisId']}, chain {a.get('chain')}")
@@ -453,20 +467,30 @@ def st_deposit(j: int) -> bool:
     return True
 
 
+def deposit_block(j: int) -> int:
+    """Deposit j's block: the manifest's row, or (a row lost with a stopped mirror) the vault's Deposit log."""
+    b = manifest_block(f"deposit-{j}")
+    if b is not None:
+        return b
+    topic = "0x" + "00" * 12 + identity()["deployer"].lower()[2:]
+    logs = json.loads(cast("logs", "--json", "--from-block", str(runj().get("deploy_from_block") or 0), "--address",
+                           identity()["vault"], "Deposit(address,uint64,uint64,address,uint256,bytes32)", topic))
+    for lg in logs:
+        if int(lg["data"][2:66], 16) == j:
+            return int(lg["blockNumber"], 16)
+    die(f"deposit {j}: neither the manifest nor the vault's logs have it")
+
+
 def capture_dir(n: int) -> str:
-    return f"{LEZ}/inputs/capture-{n}"
+    return f"{RUN}/captures/capture-{n}"
 
 
 def st_capture(n: int) -> bool:
     d, vault = capture_dir(n), identity()["vault"]
     if os.path.isfile(f"{d}/fixture.json"):
-        if not os.path.isdir(f"{RUN}/captures/capture-{n}"):
-            shutil.copytree(d, f"{RUN}/captures/capture-{n}")
         return False
     os.makedirs(os.path.dirname(d), exist_ok=True)
-    block = manifest_block(f"deposit-{n - 1}")
-    if block is None:
-        die(f"capture {n}: deposit {n - 1}'s block is not in manifest.json")
+    block = deposit_block(n - 1)
     rj = runj()
     if MODE == "fork":
         slots = [s["slot"] for s in json.loads(out(["python3", "-I", f"{REPO}/e2e/crown/capture.py", "slots", "--driver",
@@ -497,8 +521,6 @@ def st_capture(n: int) -> bool:
         c = jload(d + ".json")
         say(f"capture {n}: block {c['block']}, leaves {c['leaves']}, {c['proofs']['slots_proven']} slots proven;"
             f" registry {c['slots'][3]['value'][:18]}..., fees 0 {c['slots'][4]['value'][:18]}..., 1 {c['slots'][5]['value'][:18]}...")
-    shutil.rmtree(f"{RUN}/captures/capture-{n}", ignore_errors=True)
-    shutil.copytree(d, f"{RUN}/captures/capture-{n}")
     return True
 
 
@@ -518,16 +540,8 @@ def eth_fees_at() -> str | None:
 
 
 def st_lez_b() -> bool:
-    gen = lez_generation()
-    have = all(os.path.isfile(f"{LEZ}/session-b/{f}") for f in ("session-b.json", "burn-notes.json"))
-    if gen >= 2:
-        if not have:
-            die(f"the zone is at generation {gen} but session-b's records are missing")
-        if not os.path.isdir(f"{RUN}/lez/session-b"):
-            copy_session("b")
+    if have_session("b"):
         return False
-    if gen != 1:
-        die(f"session B needs generation 1; the zone is at {gen}")
     caps = [capture_dir(1), capture_dir(2)]
     chk = run([f"{BUNDLE_DIR}/bin/crown-driver", "check", "--chain", lez_chain(), "--program-bin",
                f"{BUNDLE_DIR}/program/ferrata_lez.bin", "--bridge-bin", f"{BUNDLE_DIR}/program/ferrata_bridge.bin",
@@ -538,10 +552,11 @@ def st_lez_b() -> bool:
     at = eth_fees_at()
     if at:
         extra["CROWN_ETH_FEES_AT"] = at
-    session("b", extra)
-    if lez_generation() != 2 or not all(os.path.isfile(f"{LEZ}/session-b/{f}") for f in ("session-b.json", "burn-notes.json")):
-        die("session B did not save generation 2 with session-b.json and burn-notes.json")
-    copy_session("b")
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w:gz") as tf:
+        for n, c in ((1, caps[0]), (2, caps[1])):
+            tf.add(c, arcname=f"capture-{n}")
+    session("b", extra, inputs_tar=buf.getvalue())
     b = session_b()
     say(f"session B: T1 = {b['tipT1']['id']} {b['tipT1']['hash']}, blocks {b['blocks']}, {len(b.get('claims', []))} claims,"
         f" {len(jload(f'{LEZ}/session-b/burn-notes.json'))} burns")
@@ -566,7 +581,7 @@ def st_checkpoint_input() -> bool:
         return False
     shutil.rmtree(f"{CP}/input", ignore_errors=True)
     idn = identity()
-    run([RB, "--node", f"{LEZ}/session-b/node", "--channel-key", f"{LEZ}/session-a/channel_signing_key", "--genesis",
+    run([RB, "--node", f"{LEZ}/session-b/node", "--channel-key", KEY, "--genesis",
          f"{LEZ}/session-a/deployment-settings.yaml", "--session-a", f"{LEZ}/session-a/session-a.json", "--session-b",
          f"{LEZ}/session-b/session-b.json", "--vault", idn["vault"], "--config-id", idn["configId"], "--genesis-state",
          idn["genesisState"], "--name", name, "--out", f"{CP}/input"], log="checkpoint-input.log")
@@ -580,7 +595,7 @@ def st_checkpoint_input() -> bool:
 
 
 def st_checkpoint_exec() -> bool:
-    if os.path.isfile(f"{CP}/exec.json"):
+    if os.path.isfile(f"{CP}/exec.txt"):
         return False
     name = cp_name()
     p = subprocess.run([E2E, "exec", "--program", f"{PROG}/checkpoint_b.bin", "--input", f"{CP}/input/{name}.input",
@@ -589,7 +604,7 @@ def st_checkpoint_exec() -> bool:
         f.write(p.stdout + p.stderr)
     if p.returncode != 0:
         die(f"checkpoint_b's executor run failed: {p.stderr.strip()[-400:]}")
-    with open(f"{CP}/exec.json", "w") as f:
+    with open(f"{CP}/exec.txt", "w") as f:
         f.write(p.stdout)
     say(f"checkpoint exec: {p.stdout.strip()[-300:]}")
     return True
@@ -843,7 +858,8 @@ def st_release(i: int) -> bool:
 def st_verify() -> bool:
     if os.path.isfile(f"{RUN}/DONE"):
         return False
-    rc = run(["python3", "-I", f"{REPO}/e2e/crown/verify.py", RUN, "--lez", LEZ, "--e2e", E2E, "--realblocks", RB],
+    rc = run(["python3", "-I", f"{REPO}/e2e/crown/verify.py", RUN, "--lez", LEZ, "--channel-key", KEY, "--e2e", E2E,
+              "--realblocks", RB],
              log="verify.log", check=False)
     shutil.copy2(f"{RUN}/logs/verify.log", f"{RUN}/verify.txt")
     if rc != 0:

@@ -310,6 +310,10 @@ def status(run: str) -> None:
     print(f"  done {len(done)}/{len(STAGES)}: {', '.join(done) or 'none'}")
     if vread(vol, f"runs/{run}/DONE"):
         print("  DONE: " + vread(vol, f"runs/{run}/DONE").decode().strip())
+    if ds.get("stage") in ("lez-a", "lez-b"):
+        lez = vread(vol, f"lez/{run}/session-{ds['stage'][-1]}.out")
+        if lez:
+            print(f"  LEZ session (committed every minute):\n    " + "\n    ".join(lez.decode(errors="replace").splitlines()[-8:]))
     log = vread(vol, f"runs/{run}/crown.log")
     name = "crown.log"
     if not log or st.get("phase") in ("preparing", "building"):
@@ -334,7 +338,7 @@ def fetch(run: str, lez: bool) -> None:
         for e in entries:
             rel = e.path.lstrip("/")
             rel = rel[len(prefix):].lstrip("/") if rel.startswith(prefix) else rel
-            skip = (prefix.startswith("cloud/") and rel.startswith(("src.", "broadcast/"))) or rel.endswith("channel_signing_key") \
+            skip = (prefix.startswith("cloud/") and rel.startswith(("src.", "broadcast/", "secret/"))) or rel.endswith("channel_signing_key") \
                 or rel.startswith("anvil/")
             if e.type != FileEntryType.FILE or skip:
                 continue

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Re-checks a crown run (e2e/crown/README.md) from public chain data and the recorded devnet blocks.
 
-  verify.py <run dir> --lez DIR [--e2e ferrata-e2e --realblocks realblocks-crown]
+  verify.py <run dir> --lez DIR [--channel-key FILE --e2e ferrata-e2e --realblocks realblocks-crown]
 
 <run dir> is e2e/runs/<run> (identity.json, params.json, crown.json, manifest.json, deploy.json, run.json, captures/,
-checkpoint/, releases/); --lez holds session-a/ and session-b/ (the run directory's lez/, or the Volume's lez/<run>,
-which also has the channel key). The chain is read through SEPOLIA_RPC_URL (read-only: eth_call, logs, receipts;
+checkpoint/, releases/); --lez holds session-a/ and session-b/ (the run directory's lez/); --channel-key the devnet's
+channel key (in the cloud only). The chain is read through SEPOLIA_RPC_URL (read-only: eth_call, logs, receipts;
 during a fork rehearsal it is the fork). With --e2e and --realblocks (the cloud runner: CPU work) the checkpoint's
 input is rebuilt from the node's recorded blocks and must be the proven one byte for byte, and the guest is executed
 on it again. Prints one line per check, PASS or FAIL; exit 0 only if every check passed.
@@ -97,6 +97,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("run")
     ap.add_argument("--lez", required=True)
+    ap.add_argument("--channel-key", help="the devnet's channel key (the runner's; never fetched)")
     ap.add_argument("--e2e")
     ap.add_argument("--realblocks")
     a = ap.parse_args()
@@ -258,12 +259,12 @@ def main() -> int:
         need(len(logs) == len(crown["releases"]) == 2, f"{len(logs)} Release logs")
         return "; ".join(out) + f"; vault balance now {cast('balance', vault)} wei"
 
-    if a.realblocks and a.e2e and os.path.isfile(f"{L}/session-a/channel_signing_key"):
+    if a.realblocks and a.e2e and a.channel_key and os.path.isfile(a.channel_key):
         @check("checkpoint input rebuilt from the node's recorded blocks = the proven input; guest re-executed")
         def _():
             name = f"crown-{sa['tip']['id']}-{sb['tipT1']['id']}"
             with tempfile.TemporaryDirectory(dir=R) as t:
-                p = subprocess.run([a.realblocks, "--node", f"{L}/session-b/node", "--channel-key", f"{L}/session-a/channel_signing_key",
+                p = subprocess.run([a.realblocks, "--node", f"{L}/session-b/node", "--channel-key", a.channel_key,
                                     "--genesis", f"{L}/session-a/deployment-settings.yaml", "--session-a", f"{L}/session-a/session-a.json",
                                     "--session-b", f"{L}/session-b/session-b.json", "--vault", vault, "--config-id", idn["configId"],
                                     "--genesis-state", idn["genesisState"], "--name", name, "--out", t], capture_output=True, text=True)
