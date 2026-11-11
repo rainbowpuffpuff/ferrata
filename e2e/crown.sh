@@ -20,7 +20,8 @@ repo="$(cd "$here/.." && pwd)"
 envfile="${FERRATA_ENV_FILE:-$here/sepolia-live.env}"
 if [ -f "$envfile" ]; then set -a; . "$envfile"; set +a; fi
 MODAL_PROFILE="${CROWN_MODAL_PROFILE:-ws-3}"
-[ "$MODAL_PROFILE" != ws-2 ] || { echo "crown: not on ws-2 (retired)" >&2; exit 1; }
+# A retired Modal workspace (named by the first 16 hex digits of its name's SHA-256) must not run the crown.
+[ "$(printf %s "$MODAL_PROFILE" | sha256sum | cut -c1-16)" != 5e810fe35ab057e2 ] || { echo "crown: not on the retired workspace" >&2; exit 1; }
 export MODAL_PROFILE FERRATA_REPO="$repo" TMPDIR="${TMPDIR:-$repo/../tmp}"
 mkdir -p "$TMPDIR/crown-cloud"
 ctl() { (cd "$repo" && python3 "$here/crown/cloud/ctl.py" "$@"); }
