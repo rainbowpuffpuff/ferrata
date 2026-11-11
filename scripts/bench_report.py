@@ -73,7 +73,7 @@ def main(out):
     if hw:
         h = json.loads(hw)
         md += [f"- Where: {h.get('where')}; measured {h.get('measured_utc')}",
-               f"- CPU: {', '.join(h.get('cpu_models') or ['unknown'])}; logical CPUs visible {h.get('logical_cpus_visible')}, "
+               f"- CPU: {', '.join(h.get('cpu_models') or ['unknown'])} ({', '.join(h.get('cpu_ids') or [])}); logical CPUs visible {h.get('logical_cpus_visible')}, "
                f"nproc {h.get('nproc')}, affinity {h.get('sched_affinity')}; flags {', '.join(h.get('flags_of_interest') or [])}",
                f"- cgroup CPU limit: {h.get('cgroup_cpu_max') or h.get('cgroup_cfs_quota_us')}; memory limit: "
                f"{h.get('cgroup_memory_max')}; {h.get('meminfo', {}).get('MemTotal')}",

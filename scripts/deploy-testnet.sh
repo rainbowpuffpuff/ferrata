@@ -19,7 +19,9 @@
 #                     account --payer pays the program deployments
 #   --payer LABEL     the LEZ account that pays (a label or id the wallet knows)
 #   --skip-lez | --skip-evm   one side only
-#   --out DIR         the deployment record (default deployments/<chain id>-<mode>-<release version>/)
+#   --name NAME       the deployment record's directory, vault/deployments/NAME/ (default <chain id>-<mode>-<release
+#                     version>; Foundry may write only under vault/deployments/, vault/foundry.toml fs_permissions;
+#                     names starting with fork- are ignored by git, for rehearsals)
 #   --send            send the transactions; without it nothing is sent and every command is printed
 # The EVM key: Foundry's own variables (ETH_FROM, ETH_KEYSTORE + ETH_PASSWORD), as vault/script/deploy.sh reads them;
 # FERRATA_UNLOCKED=1 for a local node that impersonates ETH_FROM (anvil --auto-impersonate). Never on a command line.
@@ -28,7 +30,7 @@
 # (vault/script/deploy.sh), and only if forge's build of it is byte-identical to the release's bytecode.
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
-REL="" LEZ="" RPC="" CHAIN="" MODE=B PARAMS="" GAS_RULE=eip7825 WHOME="${LEE_WALLET_HOME_DIR:-}" PAYER="" OUTD="" SEND=0
+REL="" LEZ="" RPC="" CHAIN="" MODE=B PARAMS="" GAS_RULE=eip7825 WHOME="${LEE_WALLET_HOME_DIR:-}" PAYER="" NAME="" SEND=0
 SKIP_LEZ=0 SKIP_EVM=0
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -41,7 +43,7 @@ while [ $# -gt 0 ]; do
     --gas-rule) GAS_RULE=$2; shift 2 ;;
     --wallet-home) WHOME=$2; shift 2 ;;
     --payer) PAYER=$2; shift 2 ;;
-    --out) OUTD=$2; shift 2 ;;
+    --name) NAME=$2; shift 2 ;;
     --skip-lez) SKIP_LEZ=1; shift ;;
     --skip-evm) SKIP_EVM=1; shift ;;
     --send) SEND=1; shift ;;
@@ -57,7 +59,8 @@ case "$MODE" in A|B) ;; *) die "--mode A|B" ;; esac
 [ "$CHAIN" != 1 ] || die "chain id 1 (Ethereum mainnet) is refused: the code is a prototype, unaudited"
 REL=$(cd "$REL" && pwd)
 VER=$(python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' "$REL/MANIFEST.json")
-OUTD=${OUTD:-$ROOT/vault/deployments/${CHAIN:-lez}-$MODE-$VER}
+case "${NAME:=${CHAIN:-lez}-$MODE-$VER}" in */*|.*) die "--name: a plain directory name" ;; esac
+OUTD=$ROOT/vault/deployments/$NAME
 mkdir -p "$OUTD"; OUTD=$(cd "$OUTD" && pwd)
 LOG=$OUTD/deploy.log
 say() { echo "$*" | tee -a "$LOG"; }

@@ -46,6 +46,10 @@ h = {
     "measured_utc": sh("date", "-u", "+%FT%TZ"),
     "where": "Modal build box (spike/modal-build/mrun)" if os.environ.get("MODAL_TASK_ID") else platform.node() and "local",
     "cpu_models": models, "logical_cpus_visible": os.cpu_count(), "nproc": sh("nproc"),
+    # gVisor (Modal) reports the model name as "unknown"; vendor, family and model still say which CPU it is.
+    "cpu_ids": sorted(set(re.findall(r"vendor_id\s*:\s*(.*)", cpu)) | {f"family {f}" for f in re.findall(r"cpu family\s*:\s*(.*)", cpu)}
+                      | {f"model {m}" for m in re.findall(r"\nmodel\s*:\s*(.*)", cpu)}),
+    "bogomips": sorted(set(re.findall(r"bogomips\s*:\s*(.*)", cpu)))[:2],
     "sched_affinity": len(os.sched_getaffinity(0)),
     "cgroup_cpu_max": read("/sys/fs/cgroup/cpu.max"), "cgroup_cfs_quota_us": read("/sys/fs/cgroup/cpu/cpu.cfs_quota_us"),
     "cgroup_memory_max": read("/sys/fs/cgroup/memory.max") or read("/sys/fs/cgroup/memory/memory.limit_in_bytes"),
