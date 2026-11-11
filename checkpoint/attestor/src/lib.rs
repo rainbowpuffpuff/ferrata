@@ -632,7 +632,9 @@ pub fn base_from_answers(
     let tier = final_tier(answers, channel_id)?;
     ensure!(from >= 2 && from <= to && to <= tier.tip.tip_id, "span {from}..={to} not within 2..={}", tier.tip.tip_id);
     let ins = final_inscriptions(answers, channel_id)?;
-    let payload = |k: u64| -> Result<&[u8]> { ins.get(&k).with_context(|| format!("no final inscription of block {k}"))?.payload() };
+    let payload = |k: u64| -> Result<&[u8]> {
+        ins.get(&k).with_context(|| format!("no final inscription of block {k}"))?.payload()
+    };
     let parent_header =
         parse_block(payload(from - 1)?, &mut NoVisitor).map_err(|e| anyhow!("block {}: {e:?}", from - 1))?.header;
     let label = |s: &str| sha256_parts(&[b"ferrata/attestor/zone/stand-in/", s.as_bytes()]);

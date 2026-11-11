@@ -18,12 +18,11 @@ attestors read is the node's own answer. Real: the 17 LEZ blocks 186..=202 (51 t
 `T = 202`'s inscription as the node holds it (node block `cfd9acd4…a1ee`, slot 8,856,117), the whole final tier
 each attestor checks before it signs (blocks 1..=202, 202 inscriptions, all at or below the LIB slot
 8,856,126), and the certificate the lab's channel key gave in the real-blocks run (`realblocks/out/attestor.json`).
-A zone of three running LEZ sequencers is not shown here (last section).
+A zone of four running LEZ sequencers, with no stand-in key, is in §7.
 
 ## 1. Tests
 
-`cargo +1.88 test -p ferrata-attestor -p attestor-core -p checkpoint-core` (box, `runs/devnet-n3/devnet.log`
-was the same session): **12 of 12** `ferrata-attestor` tests pass (6 `attestor-core`, 28 `checkpoint-core`
+`cargo +1.88 test -p ferrata-attestor -p attestor-core -p checkpoint-core` (box, last run 19:21 UTC): **12 of 12** `ferrata-attestor` tests pass (6 `attestor-core`, 28 `checkpoint-core`
 unchanged); `cargo +1.88 clippy -p ferrata-attestor --all-targets` clean; `cargo +1.88 fmt --check` clean.
 
 | Test | What it checks |
@@ -99,8 +98,9 @@ n = 3, t = 2, no burns (no bridge program runs in the lab), `echoNonce` 0.
 
 `python3 -I attestor/vault-fixture.py` then `forge test --match-path test/real/RuleBMulti.t.sol -vv` (Foundry,
 local EVM; FerrataVault v5 in mode (B), nMin 3, tMin 2, genesis = the parent state over `K`, behind RISC Zero's
-`RiscZeroGroth16Verifier` and emergency stop): **14 of 14 pass** (10 for the 2-of-3 checkpoint, 4 for the
-rotation checkpoint, `RuleBRotationTest`, fixture `rule-b-rotation.json`).
+`RiscZeroGroth16Verifier` and emergency stop): **18 of 18 pass** (10 for the 2-of-3 checkpoint, 4 for the
+rotation checkpoint, `RuleBRotationTest`, fixture `rule-b-rotation.json`, and 4 for the real zone's checkpoint,
+`RuleBZoneTest`, §7).
 
 | Test | Result |
 |---|---|
@@ -114,7 +114,7 @@ rotation checkpoint, `RuleBRotationTest`, fixture `rule-b-rotation.json`).
 | gas (`RuleBMultiGas`) | `submitCandidate` **343,581**, `finalizeAttested` **161,437** |
 | rotation: the parent is the old set, the journal 2 of 3; candidate then final; a vault whose genesis is the rotated set | accepted, `finalState` = the new state (its key set the rotated one); `ParentNotFinal`; gas 343,581 + 161,437 |
 
-The whole vault suite on the box (`forge test`, before the rotation contract): 443 of 444; the one failure,
+The whole vault suite on the box (`forge test`, with every new contract): 451 of 452; the one failure,
 `test_privacySuite_ethereumHalf`, reads `../target/privacy/scenario.json`, which a separate privacy-suite run
 writes (absent on this box), and is untouched by this branch.
 
@@ -130,6 +130,30 @@ A copy of the lab's saved generation 3 (`spike/tmp/realblocks/labcopy/gen-3.tar.
 node's one-key set (`keySetHash` `868b734d…8b14`); `verify` accepts it (`live-att-0.json`). Attestor 1 asked
 the same node: refused, its channel key is not in the live set.
 
+## 7. A real zone of four sequencers (`attestor/zone.sh`, `attestor/zone-attest.sh`, `runs/zone/`)
+
+Not a stand-in: upstream's own four-sequencer devnet (`lez/configs/docker-all-in-one/devnet` of LEZ v0.4.0-rc1
+`1806e87`: one configuration whose genesis stakes the four channel keys `seq-0..3/channel_signing_key`;
+posting timeframe 60 slots, timeout 25, a block every 10 s), run without Docker on the build box with the lab
+bundle's binaries (`sequencer_service`, `logos-blockchain-node`, `r0vm`; the box needs `libpcsclite1`):
+one Logos Blockchain node (upstream's `bedrock/node-config.yaml` and `deployment-settings.yaml`, sha256
+`19383c41…d2ed`, leader proofs in dev mode), four `sequencer_service` processes on loopback, gossip over QUIC
+with explicit bootstrap peers (upstream's compose uses mDNS). seq-0 creates the channel; the others wait for it.
+Run of 11 November, 18:59:05–19:04:29 UTC, 300 s of sequencing (`zone.log`, the processes' last log lines in
+`logs/`); a first run at 18:46–18:51 UTC behaved the same, but its answers were lost with its container.
+
+| What | Result |
+|---|---|
+| Channel | four accredited keys from the first poll; `configuration_threshold` 3; the turn (`tip_sequencer`) went 0 → 1 → 2 → 3 → 0, about 60 slots each (the sequencers log `Turn update: our_turn=…`) |
+| Chain | all four sequencers at the same height at every poll (7/7/7/7 … 28/28/28/28); final tip 30, LIB slot 8,930,837 after the sequencers stopped |
+| Who inscribed (the attestor's `tier`, checked inscriptions) | `fce0d0fa…` (seq-0) 11 blocks (2–6, 25–30), `6462ecf1…` (seq-2) 6 (7–12), `90a548e0…` (seq-3) 6 (13–18), `99273f3e…` (seq-1) 6 (19–24); block 1 has no inscription |
+| The node's answers | 358,770 bytes (`answers/`, the channel's final blocks) |
+| Attestors | each sequencer's channel key (the staked devnet key) certifies an attestation key (`cert-0..3.json`); the four attestors check blocks 2..=30 and sign tip 30 `c7b81252…b01e` (final message `1cf04ac6…e33d`, the channel's own `tip_message`); all four verify |
+| Input (`base`) | final blocks 3..=30 (28 blocks, 56 transactions, 23,492 bytes), parent block 2, `K` = the channel's four keys, posting timeframe 60, configuration tip `e502602b…224c`; nMin 4, tMin 3; bridge values of the configuration are stand-ins (no bridge program runs): `lezConfigId` `21effc46…523e`, parent state `60dfe488…e559` |
+| Collected | sequencers 0, 1, 2 (sequencer 3 silent): **n = 4, t = 3**, accepted, 6,261,183 user cycles (7 segments); all four: accepted, 7,950,701 (9 segments); two of four: refused in the guest, `InsufficientAttestations { have: 2, need: 3 }` |
+| Proof | `host prove rbz-zone-n4-t3` (box CPU): **513.54 s**, 7 segments, 6,261,183 user cycles, receipt sha256 `3293f702…0f6c`; identity_p254 18.2 s; Groth16 prover image (carl) 17 s; seal 260 bytes, journal sha256 `57d90e16…c985` (`runs/zone/proof/`, `prove.jsonl`) |
+| Vault | `RuleBZoneTest` (FerrataVault v5 in mode (B), nMin 4, tMin 3, genesis = the parent state over the four keys, RISC Zero's real Groth16 verifier): the journal is 3 of 4; candidate, then final after the wait and not before; a journal claiming t = 2 refused (`KeySetBelowFloor`); a vault with floors (3, 2) refuses it (`WrongCommitteeFloor`); **343,581 + 161,437 gas** |
+
 ## What failed on the way
 
 - The recorded `realblocks/out/real-lab-186-202.input` no longer decodes (`BadLength { what: "suffix" }`): it
@@ -140,13 +164,8 @@ the same node: refused, its channel key is not in the live set.
 
 ## Not done
 
-- A zone of three running LEZ sequencers. Route without Docker (not tried): the lab bundle's
-  `sequencer_service` has `setup` (joiners without `--create-channel`), `start --wait-for-channel
-  --gossip-listen … --bootstrap-peers …` and `stake --sequencer-key … --from <account>` through a LEE wallet
-  home; missing are a wallet home holding a genesis-funded account's key, and the committee update that
-  accredits the joiners (LEZ proposes it itself; it needs the configuration threshold's signatures over
-  gossip, `integration_tests/tests/channel_config_threshold.rs`). Founding stakes at genesis instead need
-  `sequencer_core::sign_genesis_stake`.
+- The zone of §7 with a bridge program, burns and a rotation proposed by its committee; a silent or
+  failing sequencer and a dropped inscription on it (B1's done gate); the zone's checkpoint on Sepolia.
 - `ferrata_attestor` as a Logos module (README).
 - Rotations proposed and inscribed by a running committee (the rotation here is built from the core's own
   encoding and signed with the stand-in keys); the monitor's watcher reading attestations.
