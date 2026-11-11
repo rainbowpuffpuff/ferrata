@@ -85,10 +85,7 @@ fn dummy_output() -> DummyOutput {
     let (_, epk) = SharedSecretKey::encapsulate(&throwaway);
     DummyOutput {
         commitment_seed: random_bytes(),
-        note: EncryptedNote {
-            ciphertext: Ciphertext::from_inner(random_vec(CIPHERTEXT_PAD_SIZE as usize)),
-            epk,
-        },
+        note: EncryptedNote { ciphertext: Ciphertext::from_inner(random_vec(CIPHERTEXT_PAD_SIZE as usize)), epk },
     }
 }
 
@@ -115,7 +112,9 @@ fn main() {
             "--tx-out" => tx_out = Some(it.next().unwrap_or_else(|| usage()).clone()),
             "--settle" => settle_from = Some(it.next().unwrap_or_else(|| usage()).clone()),
             "--shape" => shape = it.next().unwrap_or_else(|| usage()).clone(),
-            "--dummies" => dummies = Some(it.next().unwrap_or_else(|| usage()).parse::<usize>().unwrap_or_else(|_| usage())),
+            "--dummies" => {
+                dummies = Some(it.next().unwrap_or_else(|| usage()).parse::<usize>().unwrap_or_else(|_| usage()))
+            }
             "--padding" => {
                 padding = Some(match it.next().unwrap_or_else(|| usage()).as_str() {
                     "none" => None,
