@@ -67,6 +67,11 @@ jobs:
   roundtrip:
     runs-on: ubuntu-latest
     timeout-minutes: 240
+    env:
+      # No debug info, no incremental artefacts: cli/target is 13 GB with them, over the 10 GB of caches GitHub keeps.
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      CARGO_PROFILE_TEST_DEBUG: "0"
+      CARGO_INCREMENTAL: "0"
     steps:
       - uses: actions/checkout@v4
       - name: Free disk space (the LEZ and Logos Blockchain builds need about 20 GB)
@@ -113,6 +118,8 @@ jobs:
         run: e2e/ci/run.sh build
       - name: Round trip
         run: e2e/ci/run.sh
+      - name: The ferrata tool's own end-to-end test (cli/tests/e2e.sh)
+        run: RISC0_HOME="$HOME/risc0-home-lez" cli/tests/e2e.sh
   links:
     runs-on: ubuntu-latest
     steps:
