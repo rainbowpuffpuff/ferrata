@@ -13,7 +13,8 @@ on the lab's recorded mainnet and Sepolia data (`../lab/results/record/net/`). *
 backend that sends to a running LEZ sequencer (`daemon.ledger = "sequencer"` refuses to start); the
 lab driver (`../lab/driver/`) is what sends the same messages to a sequencer through LEZ's wallet
 today. Not run against live beacon endpoints (nothing is sent to a public network from this
-branch; `BeaconApi` reads with `curl` and is not exercised by the tests).
+branch); the HTTP path (`BeaconApi`, through `curl`) is tested against beacon nodes on loopback
+serving the recorded data.
 
 ## Run
 
@@ -94,7 +95,8 @@ slot and period, the last plan and error); HTTP 503 when an instance has no usab
 | `lying_source_is_refused_without_gas` | a source with forged signatures and one with a wrong bootstrap, before an honest one | both demoted, no transaction refused (nothing they served was sent), `/health` degraded naming the liar, `source_refused_total` counts it |
 | `stale_and_down_sources_fall_back` | a source 6 updates behind and one that is down, beside a fresh one; then `min_agreeing = 2` | the fresh source's newest update applied; stale flagged lagging; down counted; with two required, the updater holds at what both serve (11,550,720) and waits |
 | `restart_mid_job_and_mid_period` | killed after `Open` and `Miller` of a finality update inside Sepolia's period 1410; restarted on the same state directory; two dropped connections; then a start with no state directory | the restarted updater sends `Finish` (not a second `Open`), two retries, applied; the one without state refills its committees from the sources and reaches the end; no transaction refused |
-| `gate_two_honest_one_adversary` | proposal A3's done gate (below) | passes |
+| `beacon_api_sources_over_http` | `BeaconApi` (curl, SSZ, the `updates` endpoint's length-prefixed chunks) against two beacon nodes on loopback: one serving the recorded mainnet chain, one answering 503 | catch-up to 15,631,808 through the first; the second flagged unavailable, `/health` degraded naming it |
+| `gate_two_honest_one_adversary` | proposal A3's done gate (below) | passes, under four block orders |
 
 **The A3 gate** (`results/gate.txt`). Two honest updaters (one with a lying source, one with a
 lagging one) and an adversarial updater follow mainnet and Sepolia on one chain while the record
@@ -104,21 +106,28 @@ job for a forged update and replays an applied one.
 
 | | |
 |---|---|
-| updates | 58 (14 mainnet, 44 Sepolia: every update the lab recorded), each applied once (`InstanceState.applied` = 1 + 58 over the two instances) |
-| honest gas on refused steps / on applied steps | 0.0698 (gate ≤ 0.10) |
-| honest-1 / honest-2 share of the honest fees | 0.6306 / 0.3694 (gate 0.35–0.65 each) |
-| transactions | honest-1 62 applied, 18 refused; honest-2 38 applied, 28 refused; adversary 150 applied, 25 refused, and 110 junk `Open`s at its own cost; 431 in all, 447 rounds |
+| block order (`GATE_SEED`) | default | 1 | 2 | 3 |
+|---|---:|---:|---:|---:|
+| updates applied, each once (`InstanceState.applied` = 1 + updates, per instance) | 58 | 58 | 58 | 58 |
+| honest gas on refused steps / on applied steps (gate ≤ 0.10) | 0.0698 | 0.0364 | 0.0384 | 0.0646 |
+| honest-1 share of the honest fees (gate 0.35–0.65) | 0.6306 | 0.5465 | 0.5298 | 0.5377 |
+| honest-2 share | 0.3694 | 0.4535 | 0.4702 | 0.4623 |
+| honest-1 / honest-2 / adversary transactions applied | 62 / 38 / 150 | 59 / 52 / 139 | 56 / 52 / 142 | 58 / 50 / 142 |
+| honest-1 / honest-2 / adversary transactions refused | 18 / 28 / 25 | 15 / 13 / 28 | 18 / 11 / 19 | 16 / 18 / 23 |
+| rounds (blocks); ledger transactions | 447; 431 | 429; 416 | 437; 408 | 425; 417 |
 
-Limits of this run: 58 updates, not the gate's 100 (all the recorded data there is); one shuffled
-order (seed fixed in the test); the shares are near the band's edge, as expected for about 100
-honest transactions split by a hash.
+58 updates: 14 mainnet and 44 Sepolia, every update the lab recorded, not the gate's 100. The
+adversary also sent 110 junk `Open`s in each run, at its own cost. Files: `results/gate.txt`,
+`results/gate-seed-{1,2,3}.txt`. The default order's shares are near the band's edge: about 100
+honest transactions are split by a hash, so a share of 0.63 is about two standard deviations out.
 
 ## Not built, not tested
 
 - The sequencer backend (LEZ's wallet and `sequencer_service_rpc`, following blocks final on
   Bedrock, as `../live/driver/src/live.rs`); it would implement `ledger::Ledger` in a workspace of
   its own, as the lab driver does, since it links LEZ's node-side crates.
-- Live beacon endpoints (`BeaconApi`) and HTTPS without `curl`; JSON responses (only SSZ is read).
+- Live beacon endpoints (the HTTP path ran against loopback nodes only); HTTPS without `curl`; JSON
+  responses (only SSZ is read).
 - The proven path (`VerifyAll`): the daemon drives the public job only.
 - Running as a Logos module under `logosctl daemon` (the design: `docs/design/attestation.md` §8).
 - Jobs whose `Finish` fails stay open (the program has no clean-up step); the updater moves on.

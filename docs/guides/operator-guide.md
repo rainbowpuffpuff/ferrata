@@ -129,9 +129,10 @@ two-hour cadence (§2).
 - **The acceptance run (measured, dev mode).** Two honest `ferrata-updater`s and one adversarial
   updater, on the lab's 58 recorded updates (14 mainnet, 44 Sepolia; not the 100 planned: that is all
   the recorded data), each round a block settled in a shuffled order, `W` = 8 rounds: every update
-  applied once; the honest updaters' gas on refused steps was **0.0698** of their gas on applied steps
-  (gate ≤ 0.10); their shares of the honest fees **0.6306** and **0.3694** (gate 0.35–0.65 each); the
-  adversary raced a third of the due steps and sent 110 junk `Open`s at its own cost
+  applied once; the honest updaters' gas on refused steps was **0.036–0.070** of their gas on applied
+  steps (gate ≤ 0.10) and their shares of the honest fees **0.53–0.63** and **0.37–0.47** (gate
+  0.35–0.65 each), under four orders of the blocks' transactions; the adversary raced a third of the
+  due steps and sent 110 junk `Open`s at its own cost
   ([`lez/updater/README.md`](../../lez/updater/README.md), `lez/updater/results/gate.txt`).
 - **Joining another party's open job** is built in `ferrata-updater` (it reads the job's phase on
   chain and sends its next step). **Not built**: clean-up of jobs whose final step fails (they stay,
