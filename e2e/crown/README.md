@@ -1,11 +1,16 @@
 # The crown run: the whole round trip on the final programs (design)
 
-Status (11 Nov 2026, 06:50 CET): built, rehearsed and **ready for the live run on branch `integration5`**, whose
-programs carry the time fix (LEZ-side time from attested records; rule (B) checks the tip's producer inscription) and
-the security fixes (`secfix-lez`, `secfix-vault`). The guests were rebuilt from that tree at the crown build path and
-rehearsed to DONE on them (`e2e/runs/crown-rehearsal-3/`, verify 14 of 14); rehearsals 1 and 2 ran the earlier
-programs. Commands: "Commands" below. One cloud run, started once, that crosses Sepolia -> LEZ -> Sepolia with the final programs and real
-proofs everywhere, and a verify script that re-checks every step from public data and the recorded blocks.
+Status (11 Nov 2026, 15:14Z): **run live on Sepolia to DONE** as `crown-live-1`
+([`e2e/runs/crown-live-1/`](../runs/crown-live-1/README.md): the records, the four starts and what each of the 13
+transactions shows; EVIDENCE rows 41 and 42): FerrataVault v5 `0xfE3199fa2634413CbAC317371076Cae3EB2d9E54`, the
+programs of the table below, verify 14 of 14 on the runner and its 12 chain checks again from the laptop; three stops
+on the RPC endpoint's lagging reads, each resumed by the same `start`. Built on branch `integration5`, whose programs
+carry the time fix (LEZ-side time from attested records; rule (B) checks the tip's producer inscription) and the
+security fixes (`secfix-lez`, `secfix-vault`); the guests were rebuilt from that tree at the crown build path and
+rehearsed to DONE on them first (`e2e/runs/crown-rehearsal-3/`, on a fork, verify 14 of 14); rehearsals 1 and 2 ran
+the earlier programs. Commands: "Commands" below. One cloud run, resumed by the same `start` after a stop, that
+crosses Sepolia -> LEZ -> Sepolia with the final programs and real proofs everywhere, and a verify script that
+re-checks every step from public data and the recorded blocks.
 
 ## Programs (all built on the build box at this worktree's path; image ids are path-dependent)
 
@@ -82,13 +87,15 @@ The vault takes configId as `lezConfigId`; the LEZ Init proves slot 2 (`storedLe
 ## The deployer, its nonces and the money
 
 Same throwaway deployer as sepolia-live-2 (`0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07`, keystore in the Modal Secret
-`ferrata-sepolia-key`); after the owner's run it is at nonce 17. RISC Zero's Groth16 verifier of that run
-(`0x8f0Af3Bf302C64d57f840127F94d9c123a8Fa2A0`, nonce 1, SELECTOR 0x73c457ba, read 10 Nov 23:43Z) is reused
-(FERRATA_GROTH16_VERIFIER). With N = 17: stop `0xF1eD1125D6E4Bc1ecBE39792CE1EC14DeF986942`, library
-`0x86D919BBC31D3BEE94c2E1D078b3bC3c2b91C091`, vault `0x57b437F0BE9f312f0a3bbc784C2F12a831aEce6E`, then nonces 20-29
-(13 transactions). The run refuses to start unless latest = pending nonce and the CREATE addresses have no code.
-Ether: 2 x 1,002,000,000,000,000 wei of deposits, returned by the releases less the checkpoint fees; gas ~100 M at
-Sepolia's price (~73 wei on 10 Nov: ~0.00001 ETH). Modal (ws-3, cap 20 USD; ~2.4 spent before this work):
+`ferrata-sepolia-key`). RISC Zero's Groth16 verifier of that run (`0x8f0Af3Bf302C64d57f840127F94d9c123a8Fa2A0`,
+nonce 1, SELECTOR 0x73c457ba, read 10 Nov 23:43Z) is reused (FERRATA_GROTH16_VERIFIER). The plan assumed nonce 17
+(vault `0x57b4…Ece6E`); the live run found nonce 10 (sepolia-live-2 had stopped after deposit 0), so N = 10: stop
+`0x2Ea6457503024bB8dD99764F1bB5C7aFf9726Ea9`, library `0xe5D797C9f585a9c1b5e530814f9F25bED24a4B15`, vault
+`0xfE3199fa2634413CbAC317371076Cae3EB2d9E54`, then nonces 13-22 (13 transactions; the deployer is now at nonce 23).
+The run refuses to start unless latest = pending nonce and the CREATE addresses have no code. Ether: 2 x
+1,002,000,000,000,000 wei of deposits; each release paid back 0.000999 ETH (the 0.1 % checkpoint fee is credited to
+the prover's `owed`, the 0.2 % relay fees stay escrowed); gas 74,947,322 (measured; planned ~50-100 M), 0.0000165 ETH
+at the prices paid (65-72 wei per gas, release 0 25,000,044). Modal (ws-3, cap 20 USD; ~2.4 spent before this work):
 runner ~4 h of 2 cores (~1 USD at the nonpreemptible rate), GPU session ~1 h (~1 USD), wraps cents.
 
 ## Built and measured so far (build box = Modal, workspace ws-4, through `mrun`)
@@ -164,13 +171,20 @@ proven and sent in 276.8 s, the private burn in 336.0 s); the checkpoint ~2 min 
 33.3 s on an L40S, 41 s with the queue; GPU queue permitting: up to 2 h, then the CPU here); W = 60 min (the release
 proofs, ~3 min, run in it); finalize, the 120 s release delay and both releases ~4 min; verify ~1 min. About **2 h 40
 min to 3 h 10 min** in all, longer if no GPU is free. Modal: about 1-2 USD on ws-3 (estimated; the app `ferrata-crown`
-had been billed 1.08 USD in all, a selftest and three rehearsals, by 06:52 CET; `mcost ws-3`). Sepolia: 13 transactions, ~50 M gas (the vault ~39.5 M under
+had been billed 1.08 USD in all, a selftest and three rehearsals, by 06:52 CET; `mcost ws-3`; 3.38 USD by
+16:41 CET, so about 2.3 USD for the live run, derived). Sepolia: 13 transactions, ~50 M gas (the vault ~39.5 M under
 EIP-8037; the secured vault's `submitCandidate` costs ~24.7 k more), 0.002004 ETH escrowed by the deposits and paid
 back by the releases less the fees. With the secured vault the checkpoint fee goes to the sender of
 `submitCandidate` (the deployer here), and anyone may retire the vault 30 days plus one wait after the last
 checkpoint progress (`retireOpensAt()`).
 
+Measured in crown-live-1: 2 h 33 min of runner time over four starts (9 h 4 min of wall time with the owner's
+restarts): session A 30.1 min (177 transactions); the deployment's seven transactions about 1.5 min of sending in
+three parts; each deposit to its capture 19.7 and 19.1 min; session B 14.6 min (the private claim proven and sent in
+270.7 s, the private burn in 317.5 s, on the session's CPUs); the checkpoint 1.5 min (21 segments, 32.1 s on an L40S,
+no queue); W 58 min of runner time; finalize, the 120 s delay and the releases about 3 min; verify 3 s.
+
 Not exercised by the fork rehearsal (exercised elsewhere, or simple): the live captures with their finality waits
 (`e2e/crown/capture.py`, tested read-only against Sepolia: block 12,108,569, 6 slots proven), signing with the
 keystore in the cloud (as ferrata-sepolia's runner does), LEZ's real Sepolia instance (crown-lez's rehearsal), the
-node's gas pricing on Sepolia (deploy.sh), a real hour of W.
+node's gas pricing on Sepolia (deploy.sh), a real hour of W. All of them ran in crown-live-1.
