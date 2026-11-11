@@ -35,9 +35,10 @@ echoes an Ethereum beacon. Rule (B): one proof that `t` sequencers attested the 
 once `W = Δ` (1 h by default) has passed, unless a watcher cancels it. Releases pay out against a RISC Zero proof of
 a burn under a finalised, unrevoked burn root.
 
-Status: prototype evidence for a grant proposal. **Not audited.** This v5 vault is not deployed anywhere (its deployment
-script is rehearsed on a local fork of Sepolia only); the v3 vault of the end-to-end fixture is on Sepolia with one deposit
-(`../lez/live/inbound/README.md`, "On Sepolia"). In the vault's own tests (376 of the 407; the other 31, in `test/real/`, use real proofs) proofs are mocked: the base verifier accepts exactly the (image id, journal digest) pairs a test registers.
+Status: prototype evidence for a grant proposal. **Not audited.** This v5 vault is deployed on Sepolia at
+`0xfE3199fa2634413CbAC317371076Cae3EB2d9E54` (rule (B), testnet parameters) by the crown run, which made the whole round
+trip through it on 11 November 2026 ([`../e2e/runs/crown-live-1/`](../e2e/runs/crown-live-1/README.md)); the v3 vault of the end-to-end
+fixture is on Sepolia with one deposit (`../lez/live/inbound/README.md`, "On Sepolia"). In the vault's own tests (376 of the 407; the other 31, in `test/real/`, use real proofs) proofs are mocked: the base verifier accepts exactly the (image id, journal digest) pairs a test registers.
 It sits behind RISC Zero's unmodified `RiscZeroVerifierEmergencyStop`, as a deployment's would. `test/real/` runs
 the return leg once with no mock on the Ethereum side: RISC Zero's real Groth16 verifier behind the same stop, a
 real proof of the checkpoint program for the candidate, a second one for the finalisation, and real proofs of the
@@ -497,7 +498,7 @@ New in v4:
   except `RealBlocks.t.sol`'s: a rule (B) checkpoint over 195 real blocks of LEZ's sequencer, from the lab's devnet
   (one validator, dev-mode leader proofs, one channel key: n = 1), with no burns.
 
-## Deployment (v5): `script/deploy.sh` (rehearsed on a local fork of Sepolia; not broadcast)
+## Deployment (v5): `script/deploy.sh` (rehearsed on a local fork of Sepolia; run on Sepolia by the crown run)
 
 `script/DeployVault.s.sol` deploys a test vault under rule (A) or (B), **one transaction per run**; `script/deploy.sh`
 runs it until its record says complete and stops at the first run that fails. Each run reads the record
@@ -531,7 +532,8 @@ whose execution gas exceeds 2^24. `FERRATA_TX_GAS_CAP` lowers the cap further. f
 margin; `deploy.sh` reads the sent limit back from the node and stops if it differs. One transaction per run is what
 makes every estimate real: a transaction that depends on the previous one can only be estimated once that one is
 mined. On today's Sepolia the creations cost 7.80 M (verifier), 2.98 M (stop), 18.30 M (library), 39.54 M (vault) and
-3.34 M (token) gas: `GAS.md`, "Creating the contracts on today's Sepolia". The registrations were not measured there.
+3.34 M (token) gas: `GAS.md`, "Creating the contracts on today's Sepolia"; the receipts of the crown run's deployment
+(mode B, registrations included) are in `GAS.md`, "The v5 round trip, live on Sepolia".
 
 **Keys.** Neither the script nor the driver reads one. forge signs with Foundry's own keystore variables
 (`ETH_KEYSTORE`, `ETH_PASSWORD`: a keystore file and a file holding its password) or, against a local fork, with
@@ -540,7 +542,7 @@ public anvil accounts.
 
 ```
 cd vault && forge build
-# Sepolia (not run here; the owner's command):
+# Sepolia (the owner's command; the crown run ran it in mode B, e2e/runs/crown-live-1/):
 export ETH_KEYSTORE=<keystore file> ETH_PASSWORD=<file holding its password> ETH_FROM=<its address>
 FERRATA_MODE=A FERRATA_GAS_RULE=eip8037 FERRATA_RPC_URL=<Sepolia RPC> script/deploy.sh
 # the rehearsal on a local anvil fork of Sepolia (no key; nothing reaches Sepolia):
@@ -582,9 +584,11 @@ block 12,107,296 with Foundry's gas rules, accounts impersonated):
 
 ## Sepolia round trip (rehearsed end to end on forks; the first attempt ran out of gas)
 
-**Which vault.** The rehearsals below and the owner's run deploy the v3 vault of the end-to-end fixture,
-from the tree of the branch `sepolia-cloud`. In this tree `script/RoundTrip.s.sol` constructs the v5 vault
-(the v5 constructor, with that branch's stages); that combination has not been rehearsed.
+**Which vault.** The rehearsals below and the owner's run of them deploy the v3 vault of the end-to-end fixture,
+from the tree of the branch `sepolia-cloud` (that run stopped after deposit 0). In this tree `script/RoundTrip.s.sol`
+constructs the v5 vault (the v5 constructor, with that branch's stages); that combination has not been rehearsed. The
+v5 vault made the whole round trip on Sepolia through the crown run instead (`script/deploy.sh`, `script/Crown.s.sol`;
+[`../e2e/runs/crown-live-1/`](../e2e/runs/crown-live-1/README.md)).
 
 `script/RoundTrip.s.sol` and `script/roundtrip.sh` run the return leg on Sepolia in stages:
 RISC Zero's Groth16 verifier, its emergency stop, a test token and the vault are created and both

@@ -39,7 +39,7 @@ whose id table it compares with the ids pinned in the script).
 | checkpoint journal fields | the 17-word journal names this chain, this vault, this configId, nMin = tMin = 1, parent = genesisState, as many imported leaves as deposits, as many burns as LEZ burn notes, and tip T1 = session B's last block (id and hash); session B starts at session A's tip | |
 | checkpoint submitted | the `CandidateSubmitted` event of the submit transaction carries the journal's new state, parent, burn root, counts and tip; **the recorded seal verifies for the vault's own `checkpointImageId` and sha256(journal) in the vault's own verifier** (`eth_call`), and a seal changed in one byte is refused | RISC Zero's proof system |
 | checkpoint final | after the wait W: `finalState` = the journal's new state, `checkpointCount` ≥ 1, the burn root accepted; before it, PENDING with the time finalization opens | |
-| releases | each release's journal verifies with its seal for the vault's `releaseImageId`; once paid: the nullifier is spent, the `Release` event names the recorded recipient, token, amount and the checkpoint's burn root, and the vault's balance is at most deposits minus releases | |
+| releases | each release's journal verifies with its seal for the vault's `releaseImageId`; once paid: the nullifier is spent, the `Release` event names the recorded recipient, token, amount and the checkpoint's burn root, and the vault's balance is at most the deposits minus what the releases paid out (a release's fees are credited to `owed` and stay in the vault) and at least `escrowed` + `totalOwed` | |
 
 Measured on 11 November 2026 against crown-live-1's records while the run waited W (submit at Sepolia block
 12,111,746; finalization opens 13:27:48Z): **10 passed, 2 pending, 0 failed**, 48 RPC calls to the public endpoint
@@ -48,6 +48,11 @@ After the wait (records fetched again at 13:34Z), with the captures' check: **12
 finalization and release 0 on chain, release 1 not yet sent; the same on a second, independent endpoint
 (`rpc.sepolia.ethpandaops.io`). One byte of a capture's proof changed: the captures' check fails. The same records with one commitment, one byte of the seal and the genesis state
 changed: **5 failed**, exit status 1 ([`e2e/runs/verify-anyone/`](../../e2e/runs/verify-anyone/README.md)).
+After DONE, on the records committed in [`e2e/runs/crown-live-1/`](../../e2e/runs/crown-live-1/README.md): **13 passed, 0 pending, 0
+failed**, 61 RPC calls, on publicnode and on ethpandaops (release 1 final). The releases check had first failed there:
+it counted each `Release` event's gross amount as paid out, but the vault credits the checkpoint fee to the prover's
+`owed`; it now subtracts what each release credited. Controls on the final records: 5, 1 and 1 failed (a commitment, a
+seal byte and the genesis state; a capture's proof node; a release's recipient).
 
 ## 2. The programs: `scripts/reproduce-image-ids.sh`
 

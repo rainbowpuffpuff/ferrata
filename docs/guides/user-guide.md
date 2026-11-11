@@ -374,10 +374,11 @@ The integration surface today is the program messages and the derivations; the L
 - the gas drop and the relayer and wrapper services;
 - a transfer of wrapped tokens between holders; the switch to LEZ's token program;
 - a real proof of a private claim to a public destination, and laptop or GPU proofs of the current program
-  image's private claim and burn (the crown rehearsal and `lez/results/p4-minimum` proved them on cloud CPUs, the
-  latter held to 8 and 16 CPUs with 16 GiB); any user-side proof on a laptop or on macOS;
-- the v5 vault on public Sepolia, and a private claim of a Sepolia deposit: the v3 vault of the end-to-end
-  fixture is on Sepolia with one deposit, deposit 0, which a LEZ sequencer we run claimed by the plaintext
-  path; deposit 1, the private kind, waits for the owner's run
+  image's private claim and burn (the crown rehearsal, the live round trip and `lez/results/p4-minimum` proved
+  them on cloud CPUs, the latter held to 8 and 16 CPUs with 16 GiB); any user-side proof on a laptop or on macOS;
+- a public LEZ network under the round trip: the v5 vault made the whole round trip on Sepolia on 11 November
+  2026, a private claim of a Sepolia deposit and a private burn included, with LEZ as a devnet we ran (one
+  validator; [`e2e/runs/crown-live-1/`](../../e2e/runs/crown-live-1/README.md)); before it, the v3 vault of the end-to-end fixture
+  got one deposit on Sepolia, claimed by the plaintext path
   ([`lez/live/inbound/README.md`](../../lez/live/inbound/README.md); [`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §11);
 - LEZ testnet 0.4 itself, which did not exist when this was written.

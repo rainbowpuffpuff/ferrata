@@ -47,4 +47,5 @@ generation 1 = 408,744,174 B. Before it, `crown-driver check --chain sepolia` ra
 Sepolia capture (vault 0xd0b5…, block 12,108,569, period 1410, the 6 slots): the light client reaches its finality
 update, the deposit opens to the run's plan, and the import request (vault account with the header in front, slots 0
 and 1) is accepted by the attestation program's own evaluation under that real Gloas record. Session B on the real
-path needs captures of a vault paired with a session A's configId: not possible before the owner's run.
+path needs captures of a vault paired with a session A's configId: not possible before the owner's run, which did it
+([`e2e/runs/crown-live-1/`](../../../e2e/runs/crown-live-1/README.md)).

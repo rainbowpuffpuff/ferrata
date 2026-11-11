@@ -188,12 +188,13 @@ Bedrock at export; 185 transactions, 181 applied and 4 refused with the expected
   wallet refuses to build a transaction that mentions its fee payer as non-signing. Everything before
   it had gone as above (blocks 1–183); its records are not kept in the repository.
 
-What it does not show yet: deposit 1, the private kind, its `ClaimPrivately` with a real proof, and a
-second root (below).
+What it does not show: deposit 1, the private kind, its `ClaimPrivately` with a real proof, and a second
+root: the v3 run stopped after deposit 0, so the plan below never ran. The crown run showed all three on Sepolia
+with this tree's programs and the v5 vault ([`e2e/runs/crown-live-1/`](../../../e2e/runs/crown-live-1/README.md)).
 
-### Deposit 1 (waits for capture 2)
+### Deposit 1 (planned, never run)
 
-The owner's run makes deposit 1 (j 1, private kind, to LEZ's private test account 0) and capture 2
+The plan: the owner's run makes deposit 1 (j 1, private kind, to LEZ's private test account 0) and capture 2
 after its finality. Then the whole session runs again on a fresh zone with both captures: stage 1
 exactly as above, then capture 2's finality update, `ImportRoot` of `root(cid, 2)`, deposit 0 under
 the later root (250), deposit 1 redirected to a public destination (249) and deposit 1's

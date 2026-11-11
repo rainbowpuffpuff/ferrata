@@ -517,7 +517,8 @@ transactions) to finalized slot 11551744 (block 12107997); `Init` on `configId` 
 the vault's `storedLezConfigId`, 355,935 execution gas) after the refusal without the header (215);
 `ImportRoot` n = 1 (426,479); a leaf index at the count refused (248), another destination refused
 (249), the plaintext claim to LEZ's public test account 0 (142,432), its replay refused (250). 186
-blocks, re-checked by the full replay. Deposit 1 (private kind, real proof) waits for capture 2.
+blocks, re-checked by the full replay. That run's deposit 1 was never sent; the private claim of a real Sepolia
+deposit by this tree's program is the crown run's ([`e2e/runs/crown-live-1/`](../e2e/runs/crown-live-1/README.md)).
 
 
 ## 12. Attested time: the clock of freezes and caps (branch `lez-time-fix`)
