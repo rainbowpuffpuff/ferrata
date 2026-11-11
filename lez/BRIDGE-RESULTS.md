@@ -320,7 +320,7 @@ On this worktree they ran through `../../modal-build/mrun` (a cloud container), 
 without `RISC0_BUILD_LOCKED` because the new guest's lockfile had to be written; with the
 lockfiles committed, `--locked` and `RISC0_BUILD_LOCKED=1` apply as in `RESULTS.md` §8.
 
-## 10. On a live sequencer: the inbound crossing (stand-in)
+## 10. On a live sequencer: the inbound crossing (stand-in, then Sepolia)
 
 [`live/inbound/README.md`](live/inbound/README.md): the same operations on a running LEZ
 v0.4.0-rc1 sequencer and Logos Blockchain node (the Modal build box, 10 Nov 2026), on a stand-in
