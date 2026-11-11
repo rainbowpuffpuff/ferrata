@@ -19,7 +19,7 @@ program before this extension. **Since branch `lez-time-fix`** (§12) the progra
 run on attested Ethereum time instead of a caller's, and **since the security fixes of 11 November**
 (§13) public balances sit at `holder(account)` PDAs and `ImportRoot` is accepted only as a visible
 top-level call. The merged program (both changes) is image
-`IMAGE_INTEG5` at the `integration5` worktree's path, and every `results/bridge-*.md` is now of it.
+`cf41b7e5c0583686a273b5114368f4873bbd614249647f43604a6caf8e675390` (541,464 ELF bytes) at the `integration5` worktree's path, and every `results/bridge-*.md` is now of it.
 §12 gives each operation before and after the time fix (that branch alone: `d0c11833…23cd` at its
 worktree's path), §13 before and after the security fixes (that branch alone: `fe2f2487…946d`); the tables
 of §1–§5 and §8a keep the figures of the program before both (`f11b1aba…58eb`), and §8's rows on caps,

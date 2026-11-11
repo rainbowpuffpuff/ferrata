@@ -490,9 +490,7 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     // A second claim of the same deposit: the tool refuses it with the program's code, and the
     // program, sent the same call without the tool's check, exits with that code.
     let history = lez::history(&ctx, &zone.applied(program).await?);
-    let again = lez::plan_claim(&zone, &ctx, &leaves, &big.owned, &history, false, None)
-        .await
-        .expect_err("claimed");
+    let again = lez::plan_claim(&zone, &ctx, &leaves, &big.owned, &history, false, None).await.expect_err("claimed");
     println!("second claim: {again}");
     ensure!(again.to_string().contains("250 ALREADY_CLAIMED"), "the tool names 250");
     let report = zone.settle(&plan.call);

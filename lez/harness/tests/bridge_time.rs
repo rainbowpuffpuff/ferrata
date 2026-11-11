@@ -10,8 +10,7 @@
 use std::{fs, path::PathBuf};
 
 use ferrata_lez_bridge_wire::{
-    code, config_actor, own_actor, token_actor, BridgeMessage, CapParams, ConfigState, Note, TimeRecord,
-    MAX_FREEZE_MS,
+    code, config_actor, own_actor, token_actor, BridgeMessage, CapParams, ConfigState, Note, TimeRecord, MAX_FREEZE_MS,
 };
 use ferrata_lez_wire::{header_actor, header_seed};
 use harness::{
