@@ -32,7 +32,8 @@ modules/ferrata_bridge_ui/scripts/nix-build.sh [OUT_DIR]   # nix build .#lgx and
 - `qml/Main.qml` (the view), `qml/js/privacy.js` (the step tables and the leak indicator),
   `qml/js/format.js` (amounts and the error messages).
 - `nix run .` opens the module in Basecamp's standalone mode; `nix run .#ui-tests` runs `tests/ui-tests.mjs`
-  in Basecamp headless (pin Basecamp with `LOGOS_BASECAMP=github:logos-co/logos-basecamp/<rev>`).
+  in Basecamp headless (`scripts/basecamp-ui-tests.sh` pins Basecamp to `b642a9a`). Inside Logos the view
+  calls the core module on the user's first action, not at load.
 
 ## Where the calls go
 

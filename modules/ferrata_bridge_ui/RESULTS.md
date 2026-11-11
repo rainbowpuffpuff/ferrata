@@ -1,9 +1,10 @@
 # `ferrata_bridge_ui`: results
 
-**Built as a Logos ui module and driven through every screen.** On 11 November 2026, on the project's
-Modal build box (the same gVisor container as `modules/RESULTS.md`, Ubuntu 24.04), the mini-app was
-packaged by logos-module-builder as a dev and a portable `.lgx`, and its view was driven headless by
-Qt Quick Test against the devnet backend: **15 of 15 test functions passed** (`results/qmltest.txt`,
+**Built as a Logos ui module, loaded in Logos Basecamp, and driven through every screen.** On 11
+November 2026, on the project's Modal build box (the same gVisor container as `modules/RESULTS.md`, Ubuntu
+24.04), the mini-app was packaged by logos-module-builder as a dev and a portable `.lgx`; Basecamp
+(pinned, standalone mode, headless) installed and opened it and its own UI test passed 9 of 9; and its
+view was driven by Qt Quick Test against the devnet backend: **15 of 15 test functions passed** (`results/qmltest.txt`,
 `results/qmltest.xml`), with a screenshot of each state (`results/screenshots/`, 32 files). Every number
 below comes from those runs' logs; the commit that ran is the one that adds `results/`.
 
@@ -55,6 +56,19 @@ The settled round trip, public by explicit choice: deposit (anvil) → root impo
 claim (harness) → public burn (harness) → checkpoint (anvil, mock verifier) → release (anvil, paid to a
 fresh address by a relayer).
 
+## In Logos Basecamp
+
+`scripts/basecamp-ui-tests.sh` runs `nix run .#ui-tests` with Basecamp pinned to
+`b642a9aba732b80343a3a7b622dad8c65e534bdb` (it reports `LogosBasecamp version pre-release-b642a9a (dev
+build)`): Basecamp's standalone mode installs the module's `.lgx` (unsigned: a warning), opens the view in
+its sandbox and runs `tests/ui-tests.mjs` through its QML inspector (logos-qt-mcp), headless.
+**9 of 9 passed in 12 s** (`results/basecamp-ui-tests.txt`): the view loads, says that it calls the core
+module `ferrata_bridge_module` (the host injected `logos`, so the view chose that transport; the module
+is not built, so nothing is called), and each of the eight screens renders when its tab is clicked.
+Building Basecamp's `#dev` from source on the box first took 1,656 s (one command of 1,711 s, 11.9
+core-hours, about 0.65 USD by the box's estimate). A first run clicked the tabs by object name, which the
+inspector's `click` does not match (it matches text): 1 of 9.
+
 ## What failed on the way
 
 Four runs before the first passing one, all on the test or the view, none on the backend's methods:
@@ -80,8 +94,6 @@ dev-dependency); the first build added it (12 lines).
   viewing_secret_key }`, ids from `for_private_account(npk, vpk, kind)`), so the seed's private claim
   cannot be settled there. The view builds it and stops. B3's done gate (a new user completes a private
   round trip on defaults alone) needs a LEZ sequencer devnet with the wallet's proving.
-- **Basecamp.** `tests/ui-tests.mjs` (`nix run .#ui-tests`) is written for Basecamp's own headless
-  harness; whether it ran is in the report of this work (`spike/tmp/miniapp/REPORT.md`).
 - What `README.md` lists under "Not done".
 
 ## Reproduce
