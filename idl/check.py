@@ -485,5 +485,27 @@ def main():
     return 1 if failures else 0
 
 
+def decode_file(program, type_name, hex_path, debug_path=None):
+    """`--decode`: decode one borsh value (hex in a file) with the IDL alone and print its Debug
+    text; with a Debug file (as `ferrata-attest --message-out` writes), require the same text."""
+    idl = json.loads((HERE / f"{program}.idl.json").read_text())
+    data = bytes.fromhex(Path(hex_path).read_text().strip())
+    value = Decoder(idl).decode(data, type_name)
+    text = debug(value)
+    head = value[2] if value[0] == "enum" else type_name
+    print(f"{hex_path}: {len(data)} bytes decode as {type_name}::{head} with {program}.idl.json alone")
+    if debug_path is None:
+        print(text)
+        return 0
+    want = Path(debug_path).read_text().strip()
+    same = text == want
+    print(f"  equal to the Rust Debug text in {debug_path}: {'yes' if same else 'NO'} ({len(text)} characters)")
+    return 0 if same else 1
+
+
 if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1] == "--decode":
+        if len(sys.argv) not in (5, 6):
+            sys.exit("usage: check.py --decode PROGRAM TYPE HEXFILE [DEBUGFILE]")
+        sys.exit(decode_file(*sys.argv[2:]))
     sys.exit(main())
