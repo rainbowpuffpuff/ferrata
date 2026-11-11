@@ -468,14 +468,16 @@ admitted).
 
 ## 9. What is not built
 
-A permissionless `Sunset` (30 days without a finalised checkpoint), the 14-day
-replacement of the freeze authority and the watchers on LEZ; a multisig freeze authority; the gas
-drop; a transfer between holders; the switch to a token program; real proofs of the extended
-program (§7 is of the earlier image) and of a private claim to a public destination; a run of this
-program on a sequencer (§11's crossing deploys the frozen earlier program); a vault on Sepolia (§8a's
-vault ran in a local EVM) and records written by the light client in the same run; the checkpoint program running
-over these blocks end to end (only its parser and decoder ran); the off-chain importer, wallet and
-relayer.
+Since branch `bridge-controls` (§14) the program has the keyless `Sunset`, the freeze authority's
+14-day handover, a multisig (M-of-N) freeze authority, the watchers on LEZ and transfers between
+holders. Not built: the gas drop; a transfer that credits a private recipient privately (a private
+holder's transfer reaches a public `holder(account)`, §14); the switch to a token program; a real proof of
+the extended program's burn (§7 is of the earlier image; §14 proves this image's private claim and
+private transfer) and of a private claim to a public destination; a run of this program on a sequencer (§11's crossing deploys the frozen earlier
+program); a vault on Sepolia (§8a's vault ran in a local EVM) and records written by the light client
+in the same run; the checkpoint program running over these blocks end to end (only its parser and
+decoder ran); the off-chain importer, wallet and relayer; the admin's own handover on LEZ (the admin is
+fixed per configuration; the vault has `transferAdmin`).
 
 ## 10. Reproduce
 
@@ -649,3 +651,119 @@ I-9 is recorded in `BRIDGE.md` §3 (one mint authority per `(cid, token)` when a
 The live sequencer's frozen program (`live/frozen`) is not changed: it is what §11 ran, and it has C-1
 and H-1; a new deployment must use this program, whose new image changes every `configId`.
 
+## 14. The controls of milestone B2 (branch `bridge-controls`, `results/bridge-roles.md`, 78 transactions)
+
+The keyless `Sunset`, the freeze authority's 14-day handover, a multisig (M-of-N) freeze authority,
+watchers and transfers between holders, as `BRIDGE.md` §2 and §5 now specify them.
+`harness/tests/bridge_roles.rs` (dev mode, build box `stufflaters`, 16 cores) starts from the two
+configurations (both ticked to block 102's record, ETH registered on both, `root(A, 8)` with ETH's
+schedule 1, `root(B, 8)`, the payer's claim of A's leaf 6: 10 ETH) and runs every accepted path and
+every refusal below; a refusal reverts its whole transaction, and the test checks the states after
+each step (balances, the live roles, the gates' freezes, `sunset`). Image
+`43615dc48098b3731990de7700204d2a1bea0e9f963ee7c4dd629048dd5ef19c` (591,084 ELF bytes) at this
+worktree's path (the unchanged program builds to `0d3552601f93…70ed` there; `cf41b7e5…5390` at
+`integration5`'s path); every `results/bridge-*.md` is of it.
+
+**Design, in short** (the reasons are in `BRIDGE.md` §5):
+- *Keyless `Sunset`.* Anyone sends `AttestRetired`: `config(cid)` attests the vault's slot 37 (the
+  word FerrataVault v5 packs `freezeAuthority` and `retired` in; slot 35 is `admin`, as the vault's
+  own storage export `vault/test/vectors/registry-storage.json` shows) under a record and requires
+  byte 11, `retired`, to be 1. The vault sets it only in `retire()`, which anyone may call once D13's
+  30 days without checkpoint progress have passed (`retireOpensAt`), so the vault evaluates the
+  condition on Ethereum's own clock with the freeze time excluded, as designed. Afterwards anyone sends
+  the checkpoint's own 33-byte `Sunset` as a top-level call at `config(cid)`.
+- *Handover.* The live roles sit in `config(cid)` (`Roles`), not in `Controls` (which `configId`
+  commits to). The admin's `ProposeRoles` (freeze authority and up to three watchers) reads a record
+  and is valid only in a block stamped within a day after it; anyone's `ApplyRoles` applies it once a
+  record 14 days later has been read; the admin's `CancelRoles` withdraws it. Every role message now
+  passes `config(cid)`, which checks the live role and forwards a token's to `token(cid, token)`.
+- *Multisig.* `Cosigned { signers, action }` is one transaction all signers sign: a top-level call
+  at the first signer's own actor, forwarded along the signers' own actors (each checks that its
+  account signed: LEZ marks an account authorised for every call in a transaction it signed, nested
+  ones included) to `config(cid)`, which requires distinct members, at least the threshold. A
+  multisig cannot send the checkpoint's 33-byte `Sunset` as its root call, so its `Sunset` approves;
+  anyone then sends `Sunset` at `config(cid)`.
+- *Watchers.* `Pause` reads a record and freezes mints and/or burns until 12 hours after it, never
+  shortening a longer freeze; a watcher cannot unfreeze.
+- *Transfers.* `Transfer` at the holder's own actor (a call it authorised) debits its own state
+  (a private holder's balance) or forwards to its `holder(account)`, then `token(cid, token)` checks a
+  multiple of the LEZ unit and sends `Credit` to `holder(to)`, accepted only from that token actor.
+
+| case | code | execution gas |
+|---|---|---:|
+| **Transfers.** The payer moves 1 ETH (A) to a holder; the holder, signing, moves 0.1 ETH back; 1 ETH after `Sunset` | applied | 94,664; 99,086; 99,108 |
+| 0; 1.5 gwei (not a multiple of the LEZ unit) | 240 `BAD_MESSAGE` | 67,492; 67,668 |
+| 100 ETH (more than held); B's ETH (no holding) | 254 `INSUFFICIENT_BALANCE` | 37,024; 36,640 |
+| from the holder's actor without its signature; sent to `holder(recipient)` itself | 253 `NOT_AUTHORIZED` | 10,606; 14,220 |
+| sent to `token(A, ETH)` itself (a credit from nothing); `Credit` sent to `holder(payer)` itself | 243 `WRONG_SENDER` | 24,386; 14,059 |
+| **Handover.** `ProposeRoles` by a signer with no role, by the freeze authority, sent to `config(A)` itself | 253 | 43,265; 43,487; 24,975 |
+| threshold 0; 4 of 3; the admin as a member; a member twice; four watchers | 240 | 42,274; 42,275; 41,345; 41,383; 47,447 |
+| `ApplyRoles`, `CancelRoles` with nothing proposed | 245 `NOT_FOUND` | 21,491; 37,664 |
+| the admin proposes 2 of 3 and one watcher (block 102's record); cancels; proposes again | applied | 104,576; 47,216; 104,576 |
+| `CancelRoles` by the freeze authority; `Pause` by the proposed watcher before the handover | 253 | 39,716; 40,396 |
+| `ApplyRoles` at the proposal's own record; with a record 13 days later | 242 `FROZEN` | 75,605; 75,604 |
+| `ApplyRoles` with a record 14 days later (anyone); again | applied; 245 | 83,932; 22,897 |
+| **Multisig (2 of 3).** `Freeze` by the replaced key; by one member alone | 253 | 39,926; 39,926 |
+| `Cosigned` by one member; naming two, signed by one; with a non-member | 253 | 42,480; 26,798; 60,369 |
+| `Cosigned` freeze of A's mints for an hour; of ETH (A) burns (through `config(A)` to the token); unfreeze of A | applied | 120,628; 168,390; 120,650 |
+| `Cosigned` freeze for 31 days | 240 | 111,834 |
+| **Watchers.** `Pause` by a signer with no role; by a member of the freeze authority; of neither mints nor burns | 253; 253; 240 | 39,741; 39,741; 90,394 |
+| `Pause` of A's mints and burns (12 h); of ETH (A) mints; again under a two-day freeze (kept: 2 days) | applied | 99,034; 148,985; 99,037 |
+| an unfreeze by the watcher | 253 | 40,143 |
+| `SetCap` ETH (A) by the admin, through `config(A)`; below the floor | applied; 240 | 92,984; 80,834 |
+| **Sunset of A (multisig).** Sent at `config(A)` by anyone before approval; by the replaced key; by one member alone; `Cosigned` by one member | 253 | 24,224; 38,847; 38,847; 41,779 |
+| `Cosigned` approval by two members; again | applied; 244 `ALREADY_WRITTEN` | 67,291; 59,448 |
+| `Sunset` sent at `config(A)` by anyone, approved; again; `ImportRoot` A afterwards | applied; 244; 242 | 31,151; 24,224; 29,544 |
+| **Keyless Sunset of B.** `Sunset` at `config(B)` by anyone, vault live | 253 | 22,818 |
+| `AttestRetired` with slot 37 empty (block 100); with a freeze authority there but `retired` 0 | 247 `IMPORT_MISMATCH` | 162,907; 174,205 |
+| `AttestRetired` with `retired` set (anyone); again | applied; 244 | 181,381; 26,394 |
+| `Sunset` B forwarded by a signer's own actor (not a top-level call at `config(B)`) | 253 | 37,443 |
+| `Sunset` at `config(B)` by anyone; again; `ImportRoot` B afterwards | applied; 244; 242 | 29,079; 22,818; 28,339 |
+
+**What the checkpoint collects.** One LEZ block holding eight of the transactions above (the
+refused ones marked reverted), read with `checkpoint-core`'s `parse_block` and
+`BridgeMessage::decode`: it collects exactly the two `Sunset`s that executed, A's (after the
+multisig's approval) and B's (after `AttestRetired`), each the checkpoint's own 33 bytes at the root;
+the `Cosigned` approval, `AttestRetired` and `Transfer` decode as variants it ignores (20 and up).
+
+**A private holder's transfer** (`results/bridge-transfer-private.md`, dev mode). The holder of the
+private claim of A's leaf 5 (1 ETH) moves 0.1 ETH to a public holder in a private execution: one
+private transition (19,113 user cycles, one segment, 131,072 padded); the transaction shows two
+private-to-public deliveries from an alias, the 101-byte `Transfer` to `token(A, ETH)` (configuration,
+token, amount, recipient) and the fee; the private account's id occurs nowhere in its bytes, and its
+0.9 ETH is found only in its new commitment. A private recipient is not credited privately (not
+built: the recipient's private state would have to be in the same private execution).
+
+**Real proof of the private transfer** (`results/prove-bridge-transfer.log`,
+`results/prove-bridge-transfer-settle.log`). `prove_bridge --transfer` makes §3's private claim of leaf
+5 and then this transfer on the tests' state (`World::with_roots`), each proven by `r0vm` 3.0.5 on the
+CPU of the build box (`RISC0_DEV_MODE=0`, wallet shape: seven private actions, 512-byte notes, as LEZ
+v0.4.0-rc1's wallet pads every private transaction) and settled through LEZ's private settlement with
+the receipt verified. Image `43615dc4…f19c`; the whole run 9 min 23 s wall clock, 9.8 GB peak memory,
+3.77 CPU-hours in the 649-s command (`mrun`'s accounting, build and settlement included):
+
+| transaction | `execute_and_prove` | receipt | transaction | execution gas | storage gas |
+|---|---:|---:|---:|---:|---:|
+| private claim (leaf 5, 1 ETH) | 295.0 s | 239,628 B | 256,130 B | 553,641 | 224,063 |
+| private transfer (0.1 ETH to `holder(account)`) | 258.7 s | 238,898 B | 254,670 B | 463,434 | 224,063 |
+
+Settled again from the two files with the receipts verified (`prove_bridge --transfer --settle`): both
+settle (0.6 s and 0.3 s), the recipient's `holder(account)` holds 0.1 ETH, the holder's 0.9 ETH is found
+in its new commitment, and the transfer's 254,670 bytes hold the `Transfer` to the token's account from
+an alias and not the private account's id. With bit 0 of byte 253,670 flipped (inside the receipt,
+bytes 15,772–254,670), settlement refuses it: "Invalid privacy preserving execution circuit proof".
+An earlier attempt of the same run, beside the dev-mode suites on the same box, proved the claim in
+413.4 s before the box was recycled. The transactions: `results/bridge-transfer-claim-tx.borsh`,
+`results/bridge-private-transfer-tx.borsh` (they settle only against this image, built at this path).
+
+**Effect on the earlier suites.** Every bridge suite passes on the new program (`bridge_roles` 2,
+`bridge_controls` 1, `bridge_burn` 1, `bridge_private` 2, `bridge_inbound` 3, `bridge_time` 1,
+`bridge_secfix` 8, `bridge_vault_storage` 1; the whole harness, 49 tests, passed on the image before
+`rustfmt`, `25b3cc90…e776`), and `results/bridge-*.md` are of it. `bridge_controls.rs`'s 78
+transactions keep every label and every result (applied or refused, with the same code) of
+integration6's table; only gas moves. A token's `Freeze`, `SetCap` (and now `Pause`) pass
+`config(cid)` first, one more handler: `SetCap` ETH (A) 55,805 → 91,019, `Freeze` ETH (B) for an hour
+104,176 → 139,607, a refused one below the floor 43,720 → 79,206. Everything that reads or writes
+`config(cid)` carries its `Roles`: `Init` 168,776 → 169,962, `Tick` at a configuration 76,845 →
+79,627, `Register` 327,269 → 330,744, the claim of leaf 6 283,221 → 286,625, a global `Freeze`
+93,426 → 95,102, `Sunset` by the freeze authority 44,002 → 44,193.

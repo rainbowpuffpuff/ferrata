@@ -19,18 +19,21 @@ settlement by the harness (`harness/src/bridge.rs`, `harness/tests/bridge_*.rs`)
 | fees | F.13, D13, §B4 | the claim mints the denomination to the user, the mint fee of the deposit's leaf-index schedule to the fee recipient, the relay fee to the relayer the claim names; `ImportFees` imports later schedules; 1% ceiling and seven-day notice re-checked (§5) |
 | caps | F.11, §B4 | token buckets per token and global, for mints and for burns, in the vault's value units, on attested Ethereum time (§6); an immutable floor (§5) |
 | freezes and roles | F.14, §B4 | the freeze authority freezes mints or burns, per token or globally, for at most 30 days of attested Ethereum time; the admin sets caps (never below the floor) and cannot unfreeze (§5, §6) |
-| retirement | SPEC-v2 §4.5, §B5 | `Sunset` by the freeze authority, one-way: no `ImportRoot` after it; claims and burns go on; the checkpoint collects it (§5) |
+| retirement | SPEC-v2 §4.5, §B5, D13 | `Sunset` by the freeze authority, or by anyone once the vault is attested retired (`AttestRetired`, D13's keyless retirement) or a multisig authority approved it; one-way: no `ImportRoot` after it; claims, burns and transfers go on; the checkpoint collects it (§5) |
+| handover | D13 | the admin's `ProposeRoles` (a freeze authority, up to three watchers), applied by anyone after 14 days of attested time (`ApplyRoles`), withdrawn by the admin (`CancelRoles`); the live roles sit in `config(cid)` (§5) |
+| multisig, watchers | D13, F.14 | an M-of-N freeze authority acts by `Cosigned` (one transaction all M sign); watchers `Pause` mints or burns for 12 hours, never shorter than a freeze, never lifting one (§5) |
+| transfers | (M0 fallback, §3) | `Transfer` moves a claimed balance to another holder's `holder(account)` through the token (multiples of its LEZ unit); from a private holder only the delivery to the token is public (§5) |
 | claim, plaintext | §3.3, B1 | `Claim` at `root(cid, n)`: the deposit leaf's path, the opening of `C`, `N`; then `Issue` at `token(cid, token)`, `Spend` at the nullifier, the mints |
 | claim, private | B1, B6 | `ClaimPrivately` at the destination's own private account: reads `root(cid, n)`, verifies inside its own execution, sends only `Issue` (the fee schedule's range, not the leaf index) |
 | nullifier | §1, B1 | write-once `nullifier(chain, vault, N)`, one namespace for the whole program |
 | wrapped balances | (M0 fallback, §3 below) | public: `holder(account)`, a PDA of the program whose seed names the account; private: the claimant's own private state; per configuration and token |
 | burn | §5.1, D13 outbound, D10 | `Burn` (the checkpoint's variant 0, byte for byte) at the holder's own actor, top-level or private root only, which debits its own state or forwards to `holder(account)`; admitted by `token(cid, token)`; a write-once `burn(cid, H(note))` |
 
-Left out: permissionless `Sunset` (30 days without a finalised checkpoint: the program has an
-attested clock (§6), but the vault keeps no slot with the time of its last finalised checkpoint), the replacement of the freeze authority after a
-14-day timelock and the 12-hour watchers (vault-side roles; on LEZ the roles are fixed per
-configuration), the gas drop (B2), transfers between holders, off-chain software (importer,
-wallet, prover daemons) and mode (A)/(B) finality (that is the checkpoint's and the vault's). The
+Left out: the gas drop (B2), a transfer that credits a private recipient privately, the admin's own
+handover (the admin is fixed per configuration), off-chain software (importer, wallet, prover daemons)
+and mode (A)/(B) finality (that is the checkpoint's and the vault's). Built since branch
+`bridge-controls` (`BRIDGE-RESULTS.md` §14): the keyless `Sunset`, the 14-day handover of the freeze
+authority and the watchers, a multisig freeze authority, watchers on LEZ and transfers between holders. The
 vault side of the registry and fee schedules is FerrataVault v5's (`vault/`), which writes the slots
 of §5; the harness reads them both from its synthetic vault and from the storage v5 itself wrote
 (`harness/tests/bridge_vault_storage.rs`, `BRIDGE-RESULTS.md` §8a). Private execution runs in RISC Zero dev mode in the
@@ -53,11 +56,11 @@ header account is `bridgeHeader`). PDAs are public PDAs of `B`; seeds are
 
 | actor | address | state (write-once unless said) | written by |
 |---|---|---|---|
-| `config(cid)` | PDA `config ‖ cid` | `Config { config }`; mutable: the global gate (freezes, mint and burn buckets, the attested clock, §6), `sunset` (one-way); transiently a pending attestation or record read inside one transaction | `Init`; attestation and record replies; `Admit`; `Freeze`, `SetCap`, `Tick`, `Sunset` |
+| `config(cid)` | PDA `config ‖ cid` | `Config { config }`; mutable: the global gate (freezes, mint and burn buckets, the attested clock, §6), `sunset` (one-way), the live roles (`Roles`: freeze authority, watchers, a pending proposal, the vault attested retired, a multisig's `Sunset` approval); transiently a pending attestation or record read inside one transaction | `Init`; attestation and record replies; `Admit`; `Freeze`, `SetCap`, `Tick`, `Sunset`, `Pause`, `ProposeRoles`, `ApplyRoles`, `CancelRoles`, `Cosigned`, `AttestRetired` |
 | `token(cid, token)` | PDA `token ‖ cid ‖ token` | `Token { entry, schedules, known_until, roles, attestation program and instance, gate }`; mutable: schedules (appended), `known_until` (grows), the gate; transiently a pending record read | `WriteToken` and `ExtendFees` from `config(cid)` only; `Issue`, `Burn`, `Freeze`, `SetCap`, `Tick`; record replies |
 | `root(cid, n)` | PDA `root ‖ cid ‖ n` | `Root { cid, chain, vault, n, root, record_slot, block_number }` | `WriteRoot` from `config(cid)` only |
 | `nullifier(chain, vault, N)` | PDA `nullifier ‖ chain:u256 ‖ vault ‖ N` (no `cid`) | `Spent { cid, token, n, amount }` | `Spend` from `token(cid, token)` only |
-| `holder(account)` | PDA `holder ‖ account` | `Holder { holdings: [(cid, token, amount)] }` (mutable): public balances | `Mint` from the nullifier actor (naming `account`); `Burn` forwarded by the account's own actor |
+| `holder(account)` | PDA `holder ‖ account` | `Holder { holdings: [(cid, token, amount)] }` (mutable): public balances | `Mint` from the nullifier actor (naming `account`); `Credit` from `token(cid, token)`; `Burn` and `Transfer` forwarded by the account's own actor |
 | the account's own actor | the account itself, program `B` | `Holder` of its own private claims (a private account's private state; a public account has one only if it ran its own `ClaimPrivately` publicly) | its own `ClaimPrivately`; its `Burn`; role messages (forwarded, nothing stored) |
 | `burn(cid, H(note))` | PDA `burn ‖ cid ‖ H(r ‖ memo ‖ mac ‖ token ‖ amount ‖ COut)` | `Burn { cid, note }` | `Burn` from `token(cid, token)` only |
 
@@ -75,7 +78,7 @@ bytes on chain.
 |---|---|---|---|---|
 | 0 | `Burn { cid, r, memo, mac, token, amount, COut }` | the holder's own actor; then (if its own state lacks the amount) `holder(account)`; then `token(cid, token)`; then `burn(cid, H(note))` | top-level (public) or the private root; then `B` | debits one denomination of an authorised holder; the token admits it (denomination, burn freezes and buckets, `Admit`); the note is recorded once |
 | 1 | `ImportRoot { cid, record_slot, root, leaf_count, proof }` | `config(cid)` | anyone, top-level or private root only (D10) | `Attest` (vault account, slots 0 and 1) at `header(instance, record_slot)`; on the reply, `WriteRoot`. Refused after `Sunset` |
-| 2 | `Sunset { cid }` | the freeze authority's own actor; then `config(cid)` | top-level, signed by it | one-way: no `ImportRoot` after it |
+| 2 | `Sunset { cid }` | the freeze authority's own actor, then `config(cid)`; or `config(cid)` itself | top-level, signed by a single-key authority; or anyone, once `AttestRetired` or a multisig's approval opened it | one-way: no `ImportRoot` after it |
 | 3 | `Echo { nonce }` | any | anyone | no-op (rule (A)'s echo nonce) |
 | 4 | `Init { config, record_slot, proof }` | `config(cid)` | anyone | `Attest` (vault account, slot 2); on the reply, writes the configuration if slot 2 = `cid` |
 | 5 | `Claim { cid, n, witness, range, relayer }` | `root(cid, n)` | anyone | the plaintext claim: verify, then `Issue` with `mint_to = dest` |
@@ -90,9 +93,17 @@ bytes on chain.
 | 14 | `ExtendFees { cid, token, index, schedule?, count }` | `token(cid, token)` | `config(cid)` only | appends a schedule (in order, bounds), or extends `known_until` to `count` |
 | 15 | `Issue { cid, token, N, amount, range, n, mint_to, relayer }` | `token(cid, token)` | an actor of `B` (a claimant) | denomination, the range against the schedules, the fees; mint freeze and bucket at the token's clock; then `Admit` and `Spend` |
 | 16 | `Admit { cid, token, mints, value }` | `config(cid)` | `token(cid, token)` only | the global freeze and bucket of a mint or a burn, at the configuration's clock |
-| 17 | `Freeze { cid, token?, mints, burns, until, record }` | the freeze authority's actor; then the target | top-level, signed by it | the target reads `record` (as `Tick`), then freezes until `until` (after that attested time and ≤ 30 days after it; 0 unfreezes) |
-| 18 | `SetCap { cid, token?, mints, cap }` | the admin's actor; then the target | top-level, signed by it | a bucket's capacity and refill, never below the floor, refilled at the target's clock first |
+| 17 | `Freeze { cid, token?, mints, burns, until, record }` | the freeze authority's actor; then `config(cid)`; then the token, if one | top-level, signed by a single-key authority (a multisig: `Cosigned`) | the target reads `record` (as `Tick`), then freezes until `until` (after that attested time and ≤ 30 days after it; 0 unfreezes) |
+| 18 | `SetCap { cid, token?, mints, cap }` | the admin's actor; then `config(cid)`; then the token, if one | top-level, signed by it | a bucket's capacity and refill, never below the floor, refilled at the target's clock first |
 | 19 | `Tick { cid, token?, record }` | `config(cid)` or `token(cid, token)` | anyone | `Read` of the attestation program's `header(instance, record.slot)`; on the reply, the clock moves to that record's execution timestamp if later (§6) |
+| 20 | `AttestRetired { cid, record_slot, proof }` | `config(cid)` | anyone | `Attest` (vault slot 37); on the reply, if its byte 11 (`retired`) is 1, `Sunset` opens to anyone |
+| 21 | `ProposeRoles { cid, freeze_authority, watchers, record }` | the admin's actor; then `config(cid)` | top-level, signed by it | reads `record`; records the proposal, applicable 14 days after the clock; valid only in a block stamped within a day after the record |
+| 22 | `ApplyRoles { cid, record }` | `config(cid)` | anyone | reads `record`; applies the proposal if the clock is at or past its time |
+| 23 | `CancelRoles { cid }` | the admin's actor; then `config(cid)` | top-level, signed by it | withdraws the proposal |
+| 24 | `Pause { cid, token?, mints, burns, record }` | a watcher's actor; then `config(cid)`; then the token, if one | top-level, signed by it | reads `record`; freezes until 12 h after the clock, never shortening a longer freeze |
+| 25 | `Cosigned { cid, signers, action }` | each signer's own actor in turn; then `config(cid)` (then the token of a token freeze) | top-level at the first signer's actor; every signer signs the transaction | `action`: `Freeze` (as 17) or `Sunset` (an approval: anyone then sends 2 at `config(cid)`); at least the threshold of distinct members |
+| 26 | `Transfer { cid, token, amount, to }` | the holder's own actor; then (if its own state lacks the amount) `holder(account)`; then `token(cid, token)` | a call the holder authorised (top-level, private root, or nested) | debits the amount; the token checks a multiple of its LEZ unit; then `Credit` |
+| 27 | `Credit { cid, token, amount, to }` | `holder(to)` only | `token(cid, token)` only | credits the amount |
 
 Every handler checks that its receiver is the actor the message names. Replies are accepted only
 from the actor the receiver is waiting for (the consumer's rule, `guests/consumer`).
@@ -190,8 +201,18 @@ roots, burn notes, every encoding the checkpoint reads and every refusal stay as
    Conservative: a bucket never refills beyond attested Ethereum time, and a lapsed freeze still
    holds until something reads a record past it. (Until the fix of §6 a caller's time under a
    validity window was used; one block producer could move it, review r3's attack A.)
-9. Roles are LEZ accounts fixed in the configuration; the 14-day replacement of the freeze
-   authority, the watchers and permissionless `Sunset` are not built (§1).
+9. Roles start as the configuration's `Controls` (which `configId` commits to) and live in
+   `config(cid)`'s `Roles`, changed only by the 14-day handover (§5). The admin is fixed per
+   configuration (the vault's `transferAdmin` has no LEZ counterpart).
+10. The keyless `Sunset` attests the vault's `retired` flag rather than recomputing D13's 30 days on
+   LEZ: the vault's `retireOpensAt` uses an immutable (`(tMin − 1) × turnSeconds`) and the freeze time,
+   which storage does not hold in one place, and a LEZ `Sunset` that opened before the vault retired
+   would let deposits land after LEZ stopped importing them. One permissionless Ethereum call
+   (`retire()`) comes first; once the freeze authority retires the vault, anyone may also `Sunset` LEZ
+   at once (fail-safe: deposits have stopped, and every leaf stays claimable or refundable).
+11. A multisig's `Sunset` approves, and anyone then sends the checkpoint's 33-byte `Sunset` at
+   `config(cid)`: the checkpoint decodes exactly that message at the root (`r.finish()`), so neither a
+   `Cosigned` nor a proof can ride in it.
 
 ## 5. Registry, fees, caps, freezes and `Sunset`
 
@@ -231,13 +252,36 @@ refills under the old parameters at that clock, then sets the new ones, never be
 configuration's immutable floor; raising a capacity does not refill. A refused claim reverts the
 whole transaction, so the deposit stays claimable.
 
-**Freezes and roles.** Each role is a LEZ account in the configuration and acts by a top-level call
-it signs at its own actor of `B`, which forwards the message to `config(cid)` (global) or
-`token(cid, token)`; the target accepts it only from the role's actor. The freeze authority sets
+**Freezes and roles.** Each role is a LEZ account (the freeze authority: `threshold` of up to eight
+members) and acts by a top-level call it signs at its own actor of `B`, which forwards the message to
+`config(cid)`; `config(cid)` checks it against its live roles and applies it, or forwards a token's to
+`token(cid, token)`, which accepts role messages only from `config(cid)`. A multisig authority acts by
+`Cosigned`: one transaction every signer signs, forwarded along their own actors (each checks that its
+account signed; LEZ marks a signer's account authorised in every call of the transaction) to
+`config(cid)`, which counts distinct members against the threshold. The freeze authority sets
 `mints_until` and/or `burns_until`: the target first reads the record the `Freeze` names, and
 `until` must lie after that attested time and at most 30 days after it (0 unfreezes); the admin
-only sets caps, so it cannot unfreeze. `Sunset` is the freeze authority's, one-way; `ImportRoot`
-refuses afterwards (`FROZEN`), everything else goes on.
+only sets caps, so it cannot unfreeze. `Sunset` is one-way; `ImportRoot` refuses afterwards
+(`FROZEN`), everything else goes on. The freeze authority's single key sends it through its own
+actor; otherwise anyone sends it as a top-level call at `config(cid)` once the vault is attested
+retired (`AttestRetired`: slot 37's `retired` byte, set only by the vault's `retire()`, open to anyone
+after D13's 30 days without checkpoint progress) or a multisig authority approved it by `Cosigned`.
+
+**Handover and watchers (D13).** The admin proposes a freeze authority and up to three watchers
+(`ProposeRoles`); the proposal reads a record, is valid only in a block stamped within a day after it
+(so an old record cannot shorten the notice), and applies 14 days of attested time after the clock:
+anyone sends `ApplyRoles` with a record at least that late. A new proposal replaces a pending one; the
+admin's `CancelRoles` withdraws it; no member may be the admin. A watcher's `Pause` reads a record and
+freezes mints and/or burns until 12 hours after it; it never shortens a longer freeze, and only the
+freeze authority unfreezes.
+
+**Transfers.** A holder moves part of its claimed balance to another holder: `Transfer` at its own
+actor (authorised), debited from its own state (a private holder) or its `holder(account)`, checked by
+`token(cid, token)` (a multiple of the LEZ unit, so the token-program switch stays exact), credited at
+`holder(to)` by `Credit`, which that PDA accepts only from the token actor. Transfers are not gated by
+freezes or caps (nothing crosses the bridge) and continue after `Sunset`. From a private holder the
+debit runs privately: the transaction shows the `Transfer` to the token (configuration, token, amount,
+recipient) from an alias, not the sender.
 
 ## 6. Time: attested Ethereum time (milestone B2; review r3, attack A)
 

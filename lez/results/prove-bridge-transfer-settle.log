@@ -1,0 +1,19 @@
+bridge image 43615dc48098b3731990de7700204d2a1bea0e9f963ee7c4dd629048dd5ef19c (591084 ELF bytes); RISC0_DEV_MODE off; shape wallet
+private claim: vault A leaf 5 (1 ETH, private kind) under root n = 8, configuration a701efe2e011; N = 1dbba1cacb2c3b88480a9f252a16cac0d96c2685524509f4b2165d1a6df068c2
+private claim: SETTLED FROM results/bridge-transfer-claim-tx.borsh (receipt verified): receipt 239628 bytes, transaction 256130 bytes, settled in 0.5 s
+private claim: of its 256130 transaction bytes, none holds the destination, s, C, the leaf, the depositor, the witness or any of 32 path siblings; N, configId and the root read are present
+private claim: settled: execution gas 553,641 (PRIVATE_VERIFY_GAS 409,764 + public part 143,877 cycles), storage gas 224,063, base fee 6,221,632; receipt at bytes 16,502..256,130 of 256,130
+private transfer: SETTLED FROM results/bridge-private-transfer-tx.borsh (receipt verified): receipt 238898 bytes, transaction 254670 bytes, settled in 0.3 s
+private transfer: 2 private-to-public deliveries, the first the 101-byte Transfer to the token's account, from an alias; the private account's id is not in the 254670 bytes; 0.9 ETH left in its commitment
+private transfer: settled: execution gas 463,434 (PRIVATE_VERIFY_GAS 409,764 + public part 53,670 cycles), storage gas 224,063, base fee 5,499,976; receipt at bytes 15,772..254,670 of 254,670
+flipped bit 0 of byte 253670 of 254670
+bridge image 43615dc48098b3731990de7700204d2a1bea0e9f963ee7c4dd629048dd5ef19c (591084 ELF bytes); RISC0_DEV_MODE off; shape wallet
+private claim: vault A leaf 5 (1 ETH, private kind) under root n = 8, configuration a701efe2e011; N = 1dbba1cacb2c3b88480a9f252a16cac0d96c2685524509f4b2165d1a6df068c2
+private claim: SETTLED FROM results/bridge-transfer-claim-tx.borsh (receipt verified): receipt 239628 bytes, transaction 256130 bytes, settled in 0.6 s
+private claim: of its 256130 transaction bytes, none holds the destination, s, C, the leaf, the depositor, the witness or any of 32 path siblings; N, configId and the root read are present
+private claim: settled: execution gas 553,641 (PRIVATE_VERIFY_GAS 409,764 + public part 143,877 cycles), storage gas 224,063, base fee 6,221,632; receipt at bytes 16,502..256,130 of 256,130
+
+thread 'main' (2143) panicked at harness/src/bin/prove_bridge.rs:366:33:
+private transfer: settlement refuses $TMPDIR/flipped-transfer.borsh: Invalid privacy preserving execution circuit proof
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+FLIPPED_SETTLE=101

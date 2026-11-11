@@ -147,6 +147,22 @@ pub const FEE_NOTICE_SECONDS: u64 = 7 * 24 * 3600;
 pub const MAX_FREEZE_MS: u64 = 30 * 24 * 3600 * 1000;
 /// A bucket of this capacity never refuses.
 pub const UNLIMITED: u128 = u128::MAX;
+/// The vault's storage slot that holds `freezeAuthority` (bytes 12–31 of the big-endian word) and
+/// `retired` (byte 11): FerrataVault v5's layout, after `depositRoot`, `nextLeafIndex`,
+/// `storedLezConfigId` (0–2), `_branch[32]` (3–34), `admin` (35) and `pendingAdmin` (36).
+pub const SLOT_RETIRED: Word = word_of(37);
+/// The byte of [`SLOT_RETIRED`]'s word that holds `retired` (Solidity packs it at offset 20).
+pub const RETIRED_BYTE: usize = 11;
+/// The handover of the freeze authority and of the watchers (D13): 14 days of attested time.
+pub const ROLE_TIMELOCK_MS: u64 = 14 * 24 * 3600 * 1000;
+/// A watcher's pause (D13): 12 hours of attested time.
+pub const WATCHER_PAUSE_MS: u64 = 12 * 3600 * 1000;
+/// A role proposal is valid only in a block stamped within this long after the record it reads,
+/// so an old record cannot shorten the timelock's notice by more than this.
+pub const PROPOSAL_RECORD_AGE_MS: u64 = 24 * 3600 * 1000;
+/// At most three watchers (D13), at most eight members of a multisig freeze authority.
+pub const MAX_WATCHERS: usize = 3;
+pub const MAX_FREEZE_MEMBERS: usize = 8;
 
 // ---------------------------------------------------------------------------------------------
 // The registry (F.8, F.10) and fee schedules (F.13)
@@ -442,6 +458,22 @@ impl Gate {
         }
         Ok(())
     }
+
+    /// A watcher's pause: mints and/or burns frozen until [`WATCHER_PAUSE_MS`] after the gate's
+    /// attested time. It never shortens a longer freeze, and nothing a watcher sends unfreezes.
+    pub fn pause(&mut self, mints: bool, burns: bool) -> Result<(), u8> {
+        if !mints && !burns {
+            return Err(code::BAD_MESSAGE);
+        }
+        let until = self.now_ms.checked_add(WATCHER_PAUSE_MS).ok_or(code::BAD_STATE)?;
+        if mints {
+            self.mints_until = self.mints_until.max(until);
+        }
+        if burns {
+            self.burns_until = self.burns_until.max(until);
+        }
+        Ok(())
+    }
 }
 
 /// The record a gate reads its time from: the attestation program's `header(instance,
@@ -454,12 +486,19 @@ pub struct TimeRecord {
 }
 
 /// What a gate does once the record it asked for has replied.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub enum Timed {
     /// Advance the clock only.
     Tick,
     /// Advance the clock, then the freeze authority's freeze (checked before the record was asked).
     Freeze { mints: bool, burns: bool, until_ms: u64 },
+    /// Advance the clock, then a watcher's 12-hour pause (checked before the record was asked).
+    Pause { mints: bool, burns: bool },
+    /// At `config(cid)`: advance the clock, then record the admin's role proposal, applicable
+    /// [`ROLE_TIMELOCK_MS`] after the clock (checked before the record was asked).
+    Propose { freeze_authority: FreezeAuthority, watchers: Vec<Root> },
+    /// At `config(cid)`: advance the clock, then apply the pending proposal if its time has come.
+    Apply,
 }
 
 /// A gate between its `Read` of a record and the reply (within one transaction).
@@ -527,6 +566,98 @@ impl Controls {
         }
         Ok(())
     }
+}
+
+/// The freeze authority: `threshold` of `members` (one key, `threshold` 1, at `Init`: the
+/// configured `Controls::freeze_authority`; a multisig after a handover).
+#[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub struct FreezeAuthority {
+    pub members: Vec<Root>,
+    pub threshold: u8,
+}
+
+impl FreezeAuthority {
+    pub fn key(member: Root) -> Self {
+        Self { members: alloc::vec![member], threshold: 1 }
+    }
+
+    /// 1 ≤ `threshold` ≤ members ≤ [`MAX_FREEZE_MEMBERS`], no member twice, not the admin (no
+    /// account holds both roles, as on the vault).
+    pub fn check(&self, admin: &Root) -> Result<(), u8> {
+        let n = self.members.len();
+        if self.threshold == 0 || usize::from(self.threshold) > n || n > MAX_FREEZE_MEMBERS {
+            return Err(code::BAD_MESSAGE);
+        }
+        if self.members.contains(admin) || !distinct(&self.members) {
+            return Err(code::BAD_MESSAGE);
+        }
+        Ok(())
+    }
+
+    /// One key acting alone at its own actor: a single-key authority (threshold 1) of which it is a member.
+    pub fn single(&self, key: &Root) -> bool {
+        self.threshold == 1 && self.members.contains(key)
+    }
+
+    /// `signers`, each of which signed (the chain of their own actors checked it): distinct
+    /// members, at least `threshold` of them.
+    pub fn approves(&self, signers: &[Root]) -> bool {
+        distinct(signers)
+            && signers.len() >= usize::from(self.threshold)
+            && signers.iter().all(|s| self.members.contains(s))
+    }
+}
+
+fn distinct(keys: &[Root]) -> bool {
+    keys.iter().enumerate().all(|(i, k)| !keys[..i].contains(k))
+}
+
+/// A role change the admin proposed: applicable by anyone from `effective_ms` of attested time.
+#[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub struct RoleProposal {
+    pub freeze_authority: FreezeAuthority,
+    pub watchers: Vec<Root>,
+    pub effective_ms: u64,
+}
+
+/// `config(cid)`'s live roles (D13). `Controls` stays as `Init` wrote it (`configId` commits to
+/// it); these start from it and change only by the 14-day handover.
+#[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub struct Roles {
+    pub freeze_authority: FreezeAuthority,
+    /// Up to three; each may pause mints or burns for 12 hours. None until a handover sets them.
+    pub watchers: Vec<Root>,
+    pub proposal: Option<RoleProposal>,
+    /// The vault's `retired` flag was attested (`AttestRetired`): anyone may send `Sunset`.
+    pub vault_retired: bool,
+    /// The freeze authority approved `Sunset` by `Cosigned`; anyone may then send it.
+    pub sunset_approved: bool,
+}
+
+impl Roles {
+    pub fn new(controls: &Controls) -> Self {
+        Self {
+            freeze_authority: FreezeAuthority::key(controls.freeze_authority),
+            watchers: Vec::new(),
+            proposal: None,
+            vault_retired: false,
+            sunset_approved: false,
+        }
+    }
+
+    /// Whether a `Sunset` sent at `config(cid)` itself by anyone (a top-level call) may execute.
+    pub fn sunset_open(&self) -> bool {
+        self.vault_retired || self.sunset_approved
+    }
+}
+
+/// What a multisig freeze authority sends by `Cosigned`.
+#[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub enum CosignedAction {
+    /// Approves `Sunset`, which anyone then sends as the checkpoint's own 33-byte message.
+    Sunset,
+    /// As `Freeze`.
+    Freeze { token: Option<Address>, mints: bool, burns: bool, until_ms: u64, record: TimeRecord },
 }
 
 /// One configuration of the bridge (SPEC-v2 §1).
@@ -842,6 +973,34 @@ pub enum BridgeMessage {
     /// program's `record` and advance the target's clock to its execution timestamp; the
     /// transaction is valid only in a block stamped at or after that time.
     Tick { config_id: Root, token: Option<Address>, record: TimeRecord },
+    /// Anyone, at `config(cid)`: attest the vault's `retired` flag ([`SLOT_RETIRED`]) under the
+    /// record at `record_slot`. The vault sets it only by `retire()`, which anyone may call after
+    /// D13's 30 days without checkpoint progress; afterwards anyone may send `Sunset` at
+    /// `config(cid)` (keyless retirement).
+    AttestRetired { config_id: Root, record_slot: u64, proof: VaultProof },
+    /// The admin, at its own actor, then `config(cid)`: propose a new freeze authority and watcher
+    /// set, applicable [`ROLE_TIMELOCK_MS`] after the attested time of `record` (read first, in a
+    /// block stamped at most [`PROPOSAL_RECORD_AGE_MS`] after it). Replaces a pending proposal.
+    ProposeRoles { config_id: Root, freeze_authority: FreezeAuthority, watchers: Vec<Root>, record: TimeRecord },
+    /// Anyone, at `config(cid)`: read `record`, then apply the proposal if that time is at least
+    /// its `effective_ms` (the vault's `applyRoles`).
+    ApplyRoles { config_id: Root, record: TimeRecord },
+    /// The admin, at its own actor, then `config(cid)`: withdraw the pending proposal.
+    CancelRoles { config_id: Root },
+    /// A watcher, at its own actor, then `config(cid)` (and `token(cid, token)`): read `record`,
+    /// then pause mints and/or burns for 12 hours of attested time.
+    Pause { config_id: Root, token: Option<Address>, mints: bool, burns: bool, record: TimeRecord },
+    /// `signers`, members of a multisig freeze authority, in one transaction each of them signed:
+    /// a top-level call at the first one's own actor, forwarded along their own actors, each
+    /// checking its own signature, then to `config(cid)`, which checks the threshold.
+    Cosigned { config_id: Root, signers: Vec<Root>, action: CosignedAction },
+    /// A holder, at its own actor (a call it authorised): move `amount` of its claimed balance
+    /// (its own state first, else `holder(account)`) through `token(cid, token)` (a multiple of
+    /// the token's LEZ unit) to `holder(to)`. From a private account, only the boundary delivery
+    /// to the token is public: not the sender.
+    Transfer { config_id: Root, token: Address, amount: u128, to: Root },
+    /// `token(cid, token)` → `holder(to)` only: credit a transfer.
+    Credit { config_id: Root, token: Address, amount: u128, to: Root },
 }
 
 impl BridgeMessage {
@@ -886,7 +1045,7 @@ pub enum ConfigState {
     /// The configuration, paired with its vault. `pending` is an attestation outstanding within
     /// one transaction (`None` between transactions); `gate` the global freezes and caps;
     /// `sunset` the one-way retirement.
-    Ready { config: BridgeConfig, pending: Option<Pending>, gate: Gate, sunset: bool },
+    Ready { config: BridgeConfig, pending: Option<Pending>, gate: Gate, sunset: bool, roles: Roles },
 }
 
 impl ConfigState {
@@ -925,13 +1084,19 @@ pub enum Pending {
     },
     /// A `Read` of a record for the global gate's clock (`Tick`, `Freeze`).
     Time(PendingTime),
+    /// `AttestRetired`: the attestation of the vault's `retired` flag.
+    Retired {
+        record_slot: u64,
+    },
 }
 
 impl Pending {
     pub fn record_slot(&self) -> u64 {
         match self {
             Pending::Import(p) => p.record_slot,
-            Pending::Register { record_slot, .. } | Pending::Fees { record_slot, .. } => *record_slot,
+            Pending::Register { record_slot, .. }
+            | Pending::Fees { record_slot, .. }
+            | Pending::Retired { record_slot } => *record_slot,
             Pending::Time(p) => p.record.record_slot,
         }
     }
@@ -1263,6 +1428,16 @@ pub fn check_fees(
 }
 
 /// What a verified claim gives: the nullifier, the amount and the destination's kind.
+/// The reply to `AttestRetired`: the vault's [`SLOT_RETIRED`] under the record at `record_slot`
+/// must hold `retired` (`IMPORT_MISMATCH` otherwise, as for any attested fact that differs).
+pub fn check_retired(config: &BridgeConfig, record_slot: u64, attestation: &Attestation) -> Result<(), u8> {
+    let [word] = vault_slots(config, record_slot, attestation, [SLOT_RETIRED]).ok_or(code::IMPORT_MISMATCH)?;
+    if word[RETIRED_BYTE] != 1 {
+        return Err(code::IMPORT_MISMATCH);
+    }
+    Ok(())
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Claimed {
     pub nullifier: Root,
@@ -1346,13 +1521,15 @@ pub mod code {
         /// specified bounds: more than eight denominations, unsorted or zero, not multiples of a
         /// power-of-ten LEZ unit, a fee above 1% of its denomination, a protocol fee in schedule 0,
         /// a fee change with less than seven days' notice, a freeze beyond 30 days, a cap below the
-        /// floor.
+        /// floor; a freeze authority with a threshold outside 1 to its members, more than eight
+        /// members, a repeated member or the admin, more than three watchers; a transfer of zero or
+        /// of an amount that is not a multiple of the token's LEZ unit.
         BAD_MESSAGE = 240;
         /// Stored state that does not decode, or is another role's, or a transaction-internal
         /// step (a pending attestation or claim) found where none can be.
         BAD_STATE = 241;
         /// Mints or burns frozen (of the token, or of the whole configuration), or an import
-        /// after `Sunset`.
+        /// after `Sunset`, or a role proposal applied before its 14 days of attested time.
         FROZEN = 242;
         /// An internal message from an actor other than the expected one, a read with nobody to
         /// reply to, or a receiver that is not the actor the message names.
@@ -1360,13 +1537,14 @@ pub mod code {
         /// A write-once account already written: the configuration, a root at the same leaf
         /// count, a token's entry, a burn note, the sunset.
         ALREADY_WRITTEN = 244;
-        /// No configuration (an import before `Init`), or no imported root (a claim).
+        /// No configuration (an import before `Init`), or no imported root (a claim), or no
+        /// role proposal to apply or cancel.
         NOT_FOUND = 245;
         /// The vault's slot 2 does not hold the configuration's id.
         PAIRING_MISMATCH = 246;
         /// The attested facts are not the vault's slots holding what the message says (the root
         /// and count, the registry entry, a fee schedule, a schedule out of order), or are of
-        /// another instance, chain or record.
+        /// another instance, chain or record; a vault whose `retired` flag is not set.
         IMPORT_MISMATCH = 247;
         /// A leaf index at or above the imported root's leaf count, or outside the fee schedule
         /// range the claim names, or beyond the leaves the imported fee schedules cover.
@@ -1384,10 +1562,13 @@ pub mod code {
         WRONG_DESTINATION = 252;
         /// A burn not authorised by its holder, or not a top-level call or private root (D10); an
         /// `ImportRoot` that is not a top-level call or private root (D10, security review H-1); a
-        /// control message (`Sunset`, `Freeze`, `SetCap`) not from the configured role, or not a
-        /// top-level call at its own actor.
+        /// control message (`Sunset`, `Freeze`, `SetCap`, `ProposeRoles`, `CancelRoles`, `Pause`)
+        /// not from the configured role, or not a top-level call at its own actor; a `Cosigned`
+        /// message whose signers did not each sign, are not distinct members or are fewer than the
+        /// threshold; a `Sunset` at `config(cid)` itself before the vault is attested retired or
+        /// the multisig approved it; a `Transfer` its holder did not authorise.
         NOT_AUTHORIZED = 253;
-        /// A holding smaller than the denomination burned.
+        /// A holding smaller than the denomination burned or the amount transferred.
         INSUFFICIENT_BALANCE = 254;
         /// The token's or the global mint or burn bucket holds less than the amount.
         CAPPED = 255;

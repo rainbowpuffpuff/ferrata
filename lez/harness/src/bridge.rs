@@ -83,6 +83,14 @@ pub fn handler_name(input: &ReceiveInput) -> String {
         Ok(BridgeMessage::Freeze { .. }) => "Freeze",
         Ok(BridgeMessage::SetCap { .. }) => "SetCap",
         Ok(BridgeMessage::Tick { .. }) => "Tick",
+        Ok(BridgeMessage::AttestRetired { .. }) => "AttestRetired",
+        Ok(BridgeMessage::ProposeRoles { .. }) => "ProposeRoles",
+        Ok(BridgeMessage::ApplyRoles { .. }) => "ApplyRoles",
+        Ok(BridgeMessage::CancelRoles { .. }) => "CancelRoles",
+        Ok(BridgeMessage::Pause { .. }) => "Pause",
+        Ok(BridgeMessage::Cosigned { .. }) => "Cosigned",
+        Ok(BridgeMessage::Transfer { .. }) => "Transfer",
+        Ok(BridgeMessage::Credit { .. }) => "Credit",
         // Anything that is not one of the bridge's messages is a reply it waits for.
         Err(_) => "(reply)",
     };
@@ -1058,11 +1066,105 @@ impl World {
     pub fn role(&mut self, label: &str, seed: u8, message: &BridgeMessage, target: Actor) -> TxReport {
         let root = own_actor(self.program, role_account(seed));
         let key = role_key(seed);
-        let mut actors = vec![root, target];
-        if let BridgeMessage::Freeze { record, .. } = message {
+        let mut actors = vec![root];
+        // Every role message passes `config(cid)`, which checks the role against its live roles.
+        let config = match message {
+            BridgeMessage::Sunset { config_id }
+            | BridgeMessage::Freeze { config_id, .. }
+            | BridgeMessage::SetCap { config_id, .. }
+            | BridgeMessage::ProposeRoles { config_id, .. }
+            | BridgeMessage::CancelRoles { config_id }
+            | BridgeMessage::Pause { config_id, .. } => Some(config_actor(self.program, config_id)),
+            _ => None,
+        };
+        for actor in config.into_iter().chain([target]) {
+            if !actors.contains(&actor) {
+                actors.push(actor);
+            }
+        }
+        if let BridgeMessage::Freeze { record, .. }
+        | BridgeMessage::Pause { record, .. }
+        | BridgeMessage::ProposeRoles { record, .. } = message
+        {
             actors.push(header_actor(ferrata_account(), &INSTANCE, record.record_slot));
         }
         self.submit_signed(label, root, message, actors, vec![], &[&key])
+    }
+
+    /// A `Cosigned` message naming the accounts of `seeds` as its signers, signed by the accounts
+    /// of `signing` (the payer signs every transaction too): a top-level call at the first
+    /// signer's own actor, through the signers' own actors to `config(cid)` (and the token and the
+    /// record a freeze names).
+    pub fn cosign(
+        &mut self,
+        label: &str,
+        seeds: &[u8],
+        signing: &[u8],
+        cid: &Hash,
+        action: bw::CosignedAction,
+    ) -> TxReport {
+        let signers: Vec<Hash> = seeds.iter().map(|s| *role_account(*s).value()).collect();
+        let keys: Vec<PrivateKey> = signing.iter().map(|s| role_key(*s)).collect();
+        let mut actors: Vec<Actor> = Vec::new();
+        for actor in seeds.iter().map(|s| own_actor(self.program, role_account(*s))) {
+            if !actors.contains(&actor) {
+                actors.push(actor);
+            }
+        }
+        actors.push(config_actor(self.program, cid));
+        if let bw::CosignedAction::Freeze { token, record, .. } = &action {
+            if let Some(t) = token {
+                actors.push(token_actor(self.program, cid, t));
+            }
+            actors.push(header_actor(ferrata_account(), &INSTANCE, record.record_slot));
+        }
+        let root = actors[0];
+        let message = BridgeMessage::Cosigned { config_id: *cid, signers, action };
+        let key_refs: Vec<&PrivateKey> = keys.iter().collect();
+        self.submit_signed(label, root, &message, actors, vec![], &key_refs)
+    }
+
+    /// `AttestRetired` for `cid`: the vault's `retired` slot in block `block`.
+    pub fn attest_retired(&mut self, label: &str, cid: &Hash, block: usize, vault: &[u8; 20]) -> TxReport {
+        let b = &self.blocks[block];
+        let message = BridgeMessage::AttestRetired {
+            config_id: *cid,
+            record_slot: b.slot,
+            proof: b.vault_proof(vault, &[bw::SLOT_RETIRED]),
+        };
+        let root = config_actor(self.program, cid);
+        let header = header_actor(ferrata_account(), &INSTANCE, b.slot);
+        self.send(label, root, &message, vec![root, header])
+    }
+
+    /// `ApplyRoles` for `cid`, reading the record of block `block`.
+    pub fn apply_roles(&mut self, label: &str, cid: &Hash, block: usize) -> TxReport {
+        let b = &self.blocks[block];
+        let root = config_actor(self.program, cid);
+        let header = header_actor(ferrata_account(), &INSTANCE, b.slot);
+        let message = BridgeMessage::ApplyRoles { config_id: *cid, record: b.time_record() };
+        self.send(label, root, &message, vec![root, header])
+    }
+
+    /// The actors of a public holder's `Transfer`: its own actor, its `holder(account)`, the
+    /// token, the recipient's `holder(to)`.
+    pub fn transfer_actors(&self, account: AccountId, cid: &Hash, token: &[u8; 20], to: AccountId) -> Vec<Actor> {
+        let mut actors = vec![own_actor(self.program, account), holder_actor(self.program, account)];
+        for actor in [token_actor(self.program, cid, token), holder_actor(self.program, to)] {
+            if !actors.contains(&actor) {
+                actors.push(actor);
+            }
+        }
+        actors
+    }
+
+    /// The payer's `Transfer` of `amount` of `token` under `cid` to `to` (it signs every
+    /// transaction).
+    pub fn transfer(&mut self, label: &str, cid: &Hash, token: [u8; 20], amount: u128, to: AccountId) -> TxReport {
+        let payer = self.chain.payer;
+        let actors = self.transfer_actors(payer, cid, &token, to);
+        let message = BridgeMessage::Transfer { config_id: *cid, token, amount, to: *to.value() };
+        self.send(label, actors[0], &message, actors)
     }
 
     /// `Tick` at `config(cid)` or `token(cid, token)`, reading the record of block `block`, in a
