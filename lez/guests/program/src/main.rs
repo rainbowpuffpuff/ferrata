@@ -144,7 +144,12 @@ fn check_config(config: &Config) -> Result<(), Refusal> {
 /// slot (`current_slot >= signature_slot`) to the end of the weak-subjectivity period of the
 /// finalized header (`ferrata_core::ws`). An update signed at or after that end could only be
 /// applied outside the period: `OutsideWeakSubjectivityPeriod`, in the guest.
-fn update_window(response: Response, config: &Config, finalized_slot: u64, signature_slot: u64) -> Result<Response, Refusal> {
+fn update_window(
+    response: Response,
+    config: &Config,
+    finalized_slot: u64,
+    signature_slot: u64,
+) -> Result<Response, Refusal> {
     let start = config.slot_start_ms(signature_slot);
     match config.ws_end_slot(finalized_slot) {
         None => Ok(response.timestamp_window(start..)),
@@ -226,7 +231,11 @@ fn init(
     let state =
         InstanceState { id, config, active: false, store: store.encode(), applied: 0, root_id: id, parent_id: [0; 32] };
     // The checkpoint must be inside its own weak-subjectivity period when the instance is created.
-    Ok(period_window(Response::set_state(encode(&state)).send(open_job(program, &id, n, &job)), &window, checkpoint_slot))
+    Ok(period_window(
+        Response::set_state(encode(&state)).send(open_job(program, &id, n, &job)),
+        &window,
+        checkpoint_slot,
+    ))
 }
 
 fn open(input: &ReceiveInput, program: AccountId, update: &[u8], signers: &[u8]) -> Result<Response, Refusal> {
@@ -514,8 +523,7 @@ fn check_successor(parent: &Config, next: &Config, layout: LcFork, checkpoint_ep
     // puts at or before the checkpoint must be the same fork, at the same epoch, in both.
     for i in 0..next.fork_epochs.len() {
         let settled = parent.fork_epochs[i] <= checkpoint_epoch || next.fork_epochs[i] <= checkpoint_epoch;
-        if settled
-            && (parent.fork_epochs[i] != next.fork_epochs[i] || parent.fork_versions[i] != next.fork_versions[i])
+        if settled && (parent.fork_epochs[i] != next.fork_epochs[i] || parent.fork_versions[i] != next.fork_versions[i])
         {
             return Err(code::BAD_SUCCESSOR);
         }

@@ -122,7 +122,9 @@ impl FinalizedStore {
     pub fn is_within_weak_subjectivity_period(&self, current_slot: u64, spec: &crate::fork::ChainSpec) -> bool {
         match self.ws_period {
             None => true,
-            Some(p) => ws::is_within_weak_subjectivity_period(self.core.finalized_header.beacon.slot, current_slot, p, spec),
+            Some(p) => {
+                ws::is_within_weak_subjectivity_period(self.core.finalized_header.beacon.slot, current_slot, p, spec)
+            }
         }
     }
 

@@ -16,8 +16,7 @@ use ferrata_core::{
     validate::Context,
     ws::{
         check_within, compute_weak_subjectivity_period, compute_weak_subjectivity_period_phase0,
-        get_balance_churn_limit, is_within_weak_subjectivity_period, weak_subjectivity_end_slot, WsConfig,
-        ETH_TO_GWEI,
+        get_balance_churn_limit, is_within_weak_subjectivity_period, weak_subjectivity_end_slot, WsConfig, ETH_TO_GWEI,
     },
     Error,
 };

@@ -34,14 +34,28 @@ fn pre_gloas_config() -> Config {
     c
 }
 
-fn submit(chain: &mut Chain, label: &str, at: &Instance, message: &Message, extra: Vec<lee::Actor>, time: u64) -> TxReport {
+fn submit(
+    chain: &mut Chain,
+    label: &str,
+    at: &Instance,
+    message: &Message,
+    extra: Vec<lee::Actor>,
+    time: u64,
+) -> TxReport {
     let mut actors = vec![at.actor()];
     actors.extend(extra);
     chain.submit(label, at.actor(), borsh::to_vec(message).unwrap(), actors, vec![], time)
 }
 
 /// `Succeed` at `parent` for `config` and `checkpoint`, listing the successor it names.
-fn succeed(chain: &mut Chain, parent: &Instance, config: &Config, checkpoint: [u8; 32], time: u64, label: &str) -> TxReport {
+fn succeed(
+    chain: &mut Chain,
+    parent: &Instance,
+    config: &Config,
+    checkpoint: [u8; 32],
+    time: u64,
+    label: &str,
+) -> TxReport {
     let root_id = parent.state(chain).unwrap().root_id;
     let id = successor_id(&root_id, &parent.id, config, &checkpoint);
     let successor = instance_actor(parent.program, &id);
@@ -67,7 +81,12 @@ fn a_successor_crosses_a_fork_not_in_the_schedule_fixed_at_init() {
     let u1378 = sepolia::sepolia_update(FIRST_PERIOD);
     let run = w.apply(&u1378, &format!("parent: period {FIRST_PERIOD}"));
     assert!(run.reports.iter().all(TxReport::ok));
-    let parent = Instance { program: w.inst.program, config: w.inst.config.clone(), checkpoint: w.inst.checkpoint, id: w.inst.id };
+    let parent = Instance {
+        program: w.inst.program,
+        config: w.inst.config.clone(),
+        checkpoint: w.inst.checkpoint,
+        id: w.inst.id,
+    };
     let parent_state = parent.state(&w.chain).unwrap();
     assert_eq!(parent_state.root_id, parent.id, "an instance Init created is its own root");
     assert_eq!(parent_state.parent_id, [0; 32]);
@@ -76,7 +95,8 @@ fn a_successor_crosses_a_fork_not_in_the_schedule_fixed_at_init() {
     // schedule, so the parent refuses its layout.
     let u1379 = sepolia::sepolia_update(GLOAS_PERIOD);
     let before = w.native.core().clone();
-    let refused = parent.update_in(&mut w.chain, &u1379, LcFork::Gloas, &before, &format!("parent: period {GLOAS_PERIOD}"));
+    let refused =
+        parent.update_in(&mut w.chain, &u1379, LcFork::Gloas, &before, &format!("parent: period {GLOAS_PERIOD}"));
     assert_eq!(refused.reports.len(), 1);
     refused_with(&refused.reports[0], Error::ForkMismatch.code() as u8);
 
@@ -234,7 +254,14 @@ fn the_weak_subjectivity_bound_on_init_and_open() {
     let init = Message::Init { config: config.clone(), checkpoint, bootstrap: compact.encode(fork) };
     let evidence = || vec![PublicAccountEvidence::Pda { program: inst.program, seed: instance_seed(&inst.id) }];
     let actors = vec![inst.actor(), job_actor(inst.program, &inst.id, &jid)];
-    let late = chain.submit("Init after the period", inst.actor(), borsh::to_vec(&init).unwrap(), actors.clone(), evidence(), end);
+    let late = chain.submit(
+        "Init after the period",
+        inst.actor(),
+        borsh::to_vec(&init).unwrap(),
+        actors.clone(),
+        evidence(),
+        end,
+    );
     refused_by_window(&late);
     assert!(inst.state(&chain).is_none());
     let mut zero = config.clone();
@@ -261,7 +288,12 @@ fn the_weak_subjectivity_bound_on_init_and_open() {
     let jid = job_id(&w.inst.id, &stored.digest(), &compact.digest(LcFork::Electra));
     let open = Message::Open { update: compact.encode(LcFork::Electra), signers: witness.encode() };
     let job = job_actor(w.inst.program, &w.inst.id, &jid);
-    let inst = Instance { program: w.inst.program, config: w.inst.config.clone(), checkpoint: w.inst.checkpoint, id: w.inst.id };
+    let inst = Instance {
+        program: w.inst.program,
+        config: w.inst.config.clone(),
+        checkpoint: w.inst.checkpoint,
+        id: w.inst.id,
+    };
     let late = submit(&mut w.chain, "Open after the period", &inst, &open, vec![job], end);
     refused_by_window(&late);
     let last = submit(&mut w.chain, "Open in the period's last millisecond", &inst, &open, vec![job], end - 1);
