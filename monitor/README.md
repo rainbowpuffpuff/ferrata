@@ -113,20 +113,33 @@ MONITOR_KEY=… target/release/monitor run --rpc http://127.0.0.1:8545 --vault 0
 
 All runs were on the Modal build box (`mrun --profile yasmeen`), never on the laptop.
 
-- `cargo test --release`: 14 tests in [`tests/check.rs`](tests/check.rs). They cover the rule (B)
+- `cargo test --release`: 15 tests in [`tests/check.rs`](tests/check.rs). They cover the rule (B)
   and (A) verdicts, the margin before the deadline, key-set rotation, the state fields, several
   nodes, the audit of finalised checkpoints, the attestation audit with real Ed25519 certificates
   and final-tier messages (good, conflicting, stale key set, dead channel key, another deployment's
   certificate, malformed), the node-view JSON, the state file, and the node view built from the lab's
   real record (258 `Finalized` blocks of a LEZ v0.4.0-rc1 sequencer; the same record with blocks 257
-  and 258 made `Safe` and `Pending` ends the final tier at 256; a gap is refused).
+  and 258 made `Safe` and `Pending` ends the final tier at 256; a gap is refused). They also cover the live round trip's own rule (B) checkpoint (`e2e/runs/crown-live-1`): its real attestation passes the audit, with the certificate by the devnet sequencer's channel key and the final-tier message v2 over tip 252 and the live key set. Its 17-word journal passes as a candidate against the devnet's final tip. A flipped byte in the certificate, the signature or the signed tip is refused.
 - [`tests/anvil-e2e.sh`](tests/anvil-e2e.sh): a local anvil chain (chain id 31337, no fork, nothing
   sent to any public network). It deploys a v5 vault through
   [`vault/script/MonitorFixture.s.sol`](../vault/script/MonitorFixture.s.sol), with an accept-all
   verifier (the monitor never reads proofs) and the monitor's fresh key as the watcher. All 43 checks
   pass ([`results/anvil-e2e/summary.md`](results/anvil-e2e/summary.md)).
 
-The scenarios:
+- [`tests/fork-live-vault.sh`](tests/fork-live-vault.sh): an anvil fork of Sepolia at the live v5 vault
+  of the round trip. anvil reads Sepolia over a public RPC; nothing is sent to Sepolia. All 8 checks
+  pass ([`results/fork-live-vault/summary.md`](results/fork-live-vault/summary.md)). Two edits exist on
+  the fork only: the monitor's fresh key is written into `watchers[0]` (storage slot 73; the live vault
+  has no watchers), and for F1 and F2 the verifier's code is replaced by the accept-all stop.
+  - **F0.** The monitor scans the vault's own events from its deployment block 12,111,048. It audits
+    the live checkpoint as `ok` against the devnet's final tip, and finds the round trip's real
+    attestation good.
+  - **F1.** A forged candidate on the live final state (tip 252, another hash) is cancelled 1 s after its
+    submission, 3,599 s before its deadline.
+  - **F2.** A candidate on the real tip with the live key set (n = t = 1) passes untouched, attested
+    by the live key.
+
+The scenarios of the local-chain rehearsal:
 
 | | Scenario | Outcome |
 |---|---|---|
@@ -159,4 +172,4 @@ so "0 s after submission" means the cancellation landed in the first poll after 
 - Fee bumping of a stuck transaction (today: the receipt timeout and an alert).
 - The attestation side's `monitor` duties (comparing records with several providers; the
   weak-subjectivity alarm, `docs/design/attestation.md` §3.6).
-- A run against a public network.
+- A run against a public network (the fork reads Sepolia, but the monitor's transactions stay on the fork).

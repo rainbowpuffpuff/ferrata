@@ -311,6 +311,10 @@ Running it:
   - a revocation by the freeze authority's monitor, the persistent-candidate pause, the rule (A)
     cases, a corrupted attestor's final-tier message flagged, and a failed cancellation (no gas
     money) retried at the next poll.
+  `monitor/tests/fork-live-vault.sh` runs on an anvil fork of Sepolia at the live v5 vault (8 checks):
+  - the monitor follows the vault's own history and audits the round trip's checkpoint and its real
+    attestation as good;
+  - on the fork it cancels a forged candidate 3,599 s before its deadline and leaves an honest one.
 
 A watcher that lies can only delay finalisation until the admin replaces it. One that stops lets a bad
 candidate through: under rule (B) the release delay and revocation still catch it; under rule (A),
