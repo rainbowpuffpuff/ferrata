@@ -3,6 +3,8 @@
 # (cli/examples/miniapp_devnet.rs), starts it (anvil, chain id 1, local only; the LEZ harness in RISC Zero
 # dev mode), checks its methods with curl, drives the QML view through every screen with Qt Quick Test
 # (offscreen, software rendering) and stops it. Results: modules/ferrata_bridge_ui/results/.
+# FERRATA_DEVNET_PROOFS=real: the devnet proves its private transactions for real (r0vm, CPU; minutes
+# each); results then go to results-real-proofs/ and results/ is left as it was.
 # Needs: Foundry (anvil, forge) and vault/lib (cli/tests/e2e.sh installs it), RISC Zero's Rust 1.91.1 in
 # RISC0_HOME (lez/RESULTS.md §8), Qt 6 with qmltestrunner (QT_BIN), curl and jq.
 set -uo pipefail
@@ -12,6 +14,17 @@ out="$here/results"
 QT_BIN="${QT_BIN:-/usr/lib/qt6/bin}"
 export PATH="$HOME/.foundry/bin:$PATH" FOUNDRY_DISABLE_NIGHTLY_WARNING=1 RISC0_DEV_MODE=1
 if [ -z "${RISC0_HOME:-}" ] && [ -d "$repo/../risc0-home-lez" ]; then export RISC0_HOME="$(cd "$repo/../risc0-home-lez" && pwd)"; fi
+final="$out"
+if [ "${FERRATA_DEVNET_PROOFS:-}" = real ]; then
+  final="$here/results-real-proofs"
+  rm -rf "$here/results.keep"; [ -d "$out" ] && mv "$out" "$here/results.keep"
+  if [ -z "${RISC0_SERVER_PATH:-}" ]; then
+    RISC0_SERVER_PATH="$(command -v r0vm || find "${RISC0_HOME:-$HOME/.risc0}" "$HOME/.risc0" -name r0vm -type f 2>/dev/null | head -n 1)"
+    export RISC0_SERVER_PATH
+  fi
+  echo "real proofs: r0vm $("$RISC0_SERVER_PATH" --version 2>&1 | head -n 1), $(nproc) CPUs"
+fi
+devdir="$repo/../tmp/miniapp-private/devnet"
 rm -rf "$out"; mkdir -p "$out/screenshots"
 port=18600
 t0=$(date +%s)
@@ -20,7 +33,7 @@ t0=$(date +%s)
 bin="$repo/cli/target/debug/examples/miniapp_devnet"
 [ -x "$bin" ] || { echo "FAIL: no devnet binary"; exit 1; }
 echo "built in $(( $(date +%s) - t0 )) s"
-FERRATA_DEVNET_PORT=$port "$bin" > "$out/devnet.log" 2>&1 &
+FERRATA_DEVNET_DIR="$devdir" FERRATA_DEVNET_PORT=$port "$bin" > "$out/devnet.log" 2>&1 &
 devnet=$!
 for _ in $(seq 1 240); do curl -sf "http://127.0.0.1:$port/" >/dev/null && break; sleep 0.5; done
 curl -sf "http://127.0.0.1:$port/" >/dev/null || { echo "FAIL: devnet did not start"; tail -n 20 "$out/devnet.log"; exit 1; }
@@ -35,13 +48,17 @@ rpc() { curl -s -d "{\"method\":\"$1\",\"params\":${2:-{\}}}" "http://127.0.0.1:
 cat "$out/backend-contract.txt"
 cd "$here"
 QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software QML_IMPORT_PATH= \
-  timeout 900 "$QT_BIN/qmltestrunner" -input qmltest/tst_miniapp.qml -o "$out/qmltest.xml,junitxml" -o "-,txt" > "$out/qmltest.txt" 2>&1
+  timeout "${QT_TIMEOUT:-900}" "$QT_BIN/qmltestrunner" -input qmltest/tst_miniapp.qml -o "$out/qmltest.xml,junitxml" -o "-,txt" > "$out/qmltest.txt" 2>&1
 qt=$?
 echo "qmltestrunner exit $qt after $(( $(date +%s) - t0 )) s"
 grep -E '^(PASS|FAIL|XFAIL|SKIP|Totals)|Actual|Expected|Loc:|QWARN|qml:' "$out/qmltest.txt" | head -80
 rpc shutdown >/dev/null; wait $devnet 2>/dev/null
-cp "$repo/../tmp/miniapp/devnet/calls.jsonl" "$out/calls.jsonl" 2>/dev/null || true
+cp "$devdir/calls.jsonl" "$out/calls.jsonl" 2>/dev/null || true
 jq -c '{method, ms, ok: .reply.ok, error: .reply.error}' "$out/calls.jsonl" > "$out/calls-summary.jsonl" 2>/dev/null
 ls "$out/screenshots" | wc -l | xargs echo screenshots:
-sed -i "s|$(cd "$here/../../.." && pwd)/|<spike>/|g" "$out/qmltest.txt" 2>/dev/null  # no machine paths in committed logs
+sed -i "s|$(cd "$here/../../.." && pwd)/|<spike>/|g" "$out/qmltest.txt" "$out/devnet.log" 2>/dev/null  # no machine paths in committed logs
+if [ "$final" != "$out" ]; then
+  rm -rf "$final"; mv "$out" "$final"
+  [ -d "$here/results.keep" ] && mv "$here/results.keep" "$out"
+fi
 exit $qt

@@ -73,6 +73,10 @@ function burnLeaks(c) {
         out.push({ level: 0, text: "Released through a relayer: the recipient needs no ETH for gas." });
     else
         out.push({ level: 1, text: "You send the release yourself: your gas payer is linked to the recipient." });
+    if (c.delay === undefined || c.delay)
+        out.push({ level: 0, text: "Delayed release: held for " + (c.delayHours || "a random number of") + " h after the burn, so the release's time does not point at your burn." });
+    else
+        out.push({ level: 1, text: "No delay: a release right after a burn narrows the burns it could be to those made just before." });
     return out;
 }
 

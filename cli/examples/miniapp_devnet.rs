@@ -5,11 +5,21 @@
 //! transition with the bridge guest, `RISC0_DEV_MODE=1`). Everything is the `ferrata` tool's library,
 //! wired the way `cli/tests/e2e.rs` wires it; this file adds the methods and the HTTP loop.
 //!
+//! Private claims and burns are settled: the seed's private accounts carry the keys LEZ's wallet
+//! derives for them (its key tree: the authorization secret key and the viewing secret key `d`, `z`),
+//! which are exactly the fields of the harness's `TestPrivateKeys`, so the harness proves each private
+//! transaction with `lee::execute_and_prove` (the privacy-preserving circuit) and settles it through
+//! LEZ's private settlement, as `lez/harness/tests/bridge_burn.rs` does for its own keys. In dev mode
+//! (`RISC0_DEV_MODE=1`) the receipt is a fake one; with `FERRATA_DEVNET_PROOFS=real` dev mode is off
+//! for those calls and the receipt is a real one, verified at settlement (`RISC0_SERVER_PATH` names r0vm).
+//!
 //! Stand-ins, named in every reply that uses them (`"stand_in"`): the relayer's `Init`, `Register`,
 //! `ImportRoot` and `ImportFees` run through the harness's own calls from a synthetic execution block
 //! holding the anvil vault's real storage; the checkpoint prover and the Groth16 wrap are the mock
-//! verifier accepting the exact journals; the harness settles public LEZ transactions only, so a
-//! private claim or burn is planned (the call the LEZ wallet would prove) and not settled here.
+//! verifier accepting the exact journals; a private account's native balance for LEZ fees is put in
+//! the state on its first private transaction (as the harness's tests fund theirs); private
+//! transactions have the harness's bare shape (no dummy padding; LEZ's wallet pads them, measured in
+//! the harness as `Shape::Wallet`), with fresh randomness per transaction as the wallet draws it.
 //!
 //!   FERRATA_DEVNET_PORT=18600 RISC0_DEV_MODE=1 cargo run --example miniapp_devnet
 //!   curl -s -d '{"method":"info","params":{}}' http://127.0.0.1:18600/rpc
@@ -17,7 +27,7 @@
 //! Needs what `cli/tests/e2e.sh` needs: anvil and forge on the path, `vault/lib` installed and built.
 
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     io::{BufRead as _, BufReader, Read as _, Write as _},
     net::{TcpListener, TcpStream},
     path::{Path, PathBuf},
@@ -38,7 +48,7 @@ use borsh::BorshDeserialize as _;
 use ferrata_bridge_core::{
     chain_id_u256,
     inbound::{self, DestKind},
-    outbound::burn_leaf,
+    outbound::{burn_leaf, recover_burns, BurnNote, ReleaseTarget},
     sha256,
     tree::Tree,
     Hash,
@@ -50,11 +60,23 @@ use ferrata_cli::{
     lez::{self, Applied, Context, Ledger, LezCall, Mention},
     release, scan,
     seed::Seed,
+    units::u128_to_word,
 };
-use ferrata_lez_bridge_wire::{fee_slot, registry_slot, token_actor, BridgeMessage, CapParams, FeeSchedule};
-use harness::{bridge as hb, TxReport};
-use lee::{AccountId, PrivateKey, PublicAccountEvidence};
-use lee_core::account::Actor;
+use ferrata_lez_bridge_wire::{
+    self as bw, burn_actor, config_actor, fee_slot, own_actor, registry_slot, token_actor, BridgeMessage, CapParams,
+    FeeSchedule, HolderState,
+};
+use harness::{
+    bridge as hb,
+    private::{Freshness, PrivateAccount, PrivateRun},
+    TxReport,
+};
+use key_protocol::key_management::{
+    key_tree::{chain_index::ChainIndex, KeyTreePrivate},
+    secret_holders::SeedHolder,
+};
+use lee::{test_utils::TestPrivateKeys, Account, AccountId, PrivateKey, PublicAccountEvidence};
+use lee_core::{account::Actor, execution_state::BoundaryStep, AuthorizationSecretKey};
 use serde_json::{json, Value};
 
 sol! {
@@ -87,16 +109,40 @@ const SEAL: [u8; 4] = [0x5e, 0xa1, 0x5e, 0xa1];
 const ETH_TOKEN: [u8; 20] = [0; 20];
 /// The recovery window the mini-app scans (the CLI's default `--gap`).
 const GAP: u32 = 8;
+/// Native balance put in a private account on its first private transaction, for the LEZ fee its
+/// transactions pay inside the proof (stand-in: the harness's tests fund their private accounts so).
+const PRIVATE_FEE_FUNDS: u128 = 1_000_000_000_000;
+/// The fee reserve of each private transaction (the harness's bridge tests' `RESERVE`).
+const RESERVE: u128 = 100_000_000;
 
 // ---- the zone: the harness behind the tool's `Ledger` (as cli/tests/e2e.rs) ----------------------
 
 struct HarnessLedger {
     world: hb::World,
     applied: Vec<Applied>,
+    /// Public accounts named by settled privacy-preserving transactions (a private claim's nullifier
+    /// account among them), as `Sequencer::applied_with_private` reads them from blocks.
+    touched: HashSet<AccountId>,
     keys: HashMap<AccountId, PrivateKey>,
 }
 
 impl HarnessLedger {
+    /// Records a settled private transaction: the public accounts it names, and each delivery of its
+    /// private part to a public actor of the bridge (`BoundaryStep::PrivateToPublic`). A private burn's
+    /// note reaches `token(cid, token)` this way, in the clear, and the checkpoint program collects it
+    /// there (`lez/harness/tests/bridge_burn.rs`).
+    fn record_private(&mut self, run: &PrivateRun) {
+        let program = self.world.program;
+        self.touched.extend(run.tx.message.public_account_ids());
+        for step in &run.tx.message.execution.boundary {
+            if let BoundaryStep::PrivateToPublic(d) = step {
+                if d.envelope.to.program_account_id == program {
+                    self.applied.push(Applied { to: d.envelope.to, message: d.envelope.message.clone() });
+                }
+            }
+        }
+    }
+
     fn record(&mut self, report: &TxReport) {
         if !report.ok() {
             return;
@@ -143,6 +189,10 @@ impl HarnessLedger {
 impl Ledger for HarnessLedger {
     async fn applied(&self, program: AccountId) -> Result<Vec<Applied>> {
         Ok(self.applied.iter().filter(|a| a.to.program_account_id == program).cloned().collect())
+    }
+
+    async fn applied_with_private(&self, program: AccountId) -> Result<(Vec<Applied>, HashSet<AccountId>)> {
+        Ok((self.applied(program).await?, self.touched.clone()))
     }
 
     async fn actor_state(&self, actor: Actor) -> Result<Vec<u8>> {
@@ -228,6 +278,78 @@ fn checkpoint_journal(chain_id: u64, vault: Address, cid: B256, c: &ICheckpoints
     j
 }
 
+// ---- the user's private accounts ---------------------------------------------------------------------
+
+/// One private account of the seed: the keys LEZ's wallet derives for it, and the account as the
+/// wallet knows it (`None` until its first private transaction).
+struct PrivateSlot {
+    ask: [u8; 32],
+    d: [u8; 32],
+    z: [u8; 32],
+    id: AccountId,
+    account: Option<Account>,
+    holder: HolderState,
+}
+
+impl PrivateSlot {
+    fn keys(&self) -> TestPrivateKeys {
+        TestPrivateKeys { ask: AuthorizationSecretKey(self.ask), d: self.d, z: self.z }
+    }
+
+    fn held(&self, cid: &Hash, token: &[u8; 20]) -> u128 {
+        self.holder.holdings.iter().find(|h| h.config_id == *cid && h.token == *token).map_or(0, |h| h.amount)
+    }
+}
+
+/// The private accounts `/0` … `/(n-1)` of `seed` with the keys LEZ's wallet derives for them
+/// (`KeyTreePrivate`, walked as `Seed::private_account_ids` walks it): the authorization secret key and
+/// the viewing secret key's halves `d`, `z`. These are the fields of the harness's `TestPrivateKeys`;
+/// the id they give (`for_regular_private_account(npk, vpk)`) is checked against the wallet's
+/// (`for_private_account(npk, vpk, Regular)`, the tool's derivation).
+fn private_slots(seed: &Seed, n: u32) -> Result<Vec<PrivateSlot>> {
+    let ids = seed.private_account_ids(n)?;
+    let mut tree = KeyTreePrivate::new(&SeedHolder::from_mnemonic(seed.mnemonic(), ""));
+    let mut out = Vec::new();
+    for (index, want) in ids.into_iter().enumerate() {
+        let chain_index = tree
+            .create_private_accounts_key_node(&ChainIndex::root())
+            .ok_or_else(|| anyhow!("LEZ's key tree refused private account /{index}"))?;
+        let node =
+            tree.key_map.get(&chain_index).ok_or_else(|| anyhow!("private account /{index} is not in the tree"))?;
+        let keys = &node.value.0.private_key_holder;
+        let slot = PrivateSlot {
+            ask: keys.authorization_secret_key.0,
+            d: keys.viewing_secret_key.d,
+            z: keys.viewing_secret_key.z,
+            id: want,
+            account: None,
+            holder: HolderState::default(),
+        };
+        ensure!(
+            slot.keys().account_id() == want,
+            "private account /{index}: the wallet's keys give another account id than the tool's derivation"
+        );
+        out.push(slot);
+    }
+    Ok(out)
+}
+
+/// Runs `f` with RISC Zero's dev mode off when `real` (the harness then proves for real), and puts
+/// `RISC0_DEV_MODE` back after. The devnet serves one request at a time.
+fn with_proofs<T>(real: bool, f: impl FnOnce() -> T) -> T {
+    if !real {
+        return f();
+    }
+    let saved = std::env::var_os("RISC0_DEV_MODE");
+    std::env::set_var("RISC0_DEV_MODE", "0");
+    let out = f();
+    match saved {
+        Some(v) => std::env::set_var("RISC0_DEV_MODE", v),
+        None => std::env::remove_var("RISC0_DEV_MODE"),
+    }
+    out
+}
+
 // ---- the devnet ------------------------------------------------------------------------------------
 
 struct Devnet {
@@ -248,6 +370,10 @@ struct Devnet {
     /// Execution blocks added to the zone (the stand-in relayer's), for the next block's numbers.
     eth_blocks: u64,
     checkpoints: u64,
+    /// The seed's private accounts `/0` … `/(GAP-1)`.
+    private: Vec<PrivateSlot>,
+    /// `FERRATA_DEVNET_PROOFS=real`: private transactions proven for real.
+    real_proofs: bool,
 }
 
 impl Devnet {
@@ -262,7 +388,8 @@ impl Devnet {
                 .context("starting anvil")?,
         );
         let p = wait_for(&rpc).await?;
-        let mut zone = HarnessLedger { world: hb::World::new(), applied: Vec::new(), keys: HashMap::new() };
+        let mut zone =
+            HarnessLedger { world: hb::World::new(), applied: Vec::new(), touched: HashSet::new(), keys: HashMap::new() };
         let program = zone.world.program;
         let vault = ANVIL0.create(3);
         let config = hb::config(vault.into_array(), hb::controls());
@@ -333,6 +460,7 @@ impl Devnet {
         for a in user.public_accounts(GAP)? {
             zone.keys.insert(a.id, a.key.clone());
         }
+        let private = private_slots(&user, GAP)?;
         let ctx = Context { program, cid, chain_id: 1, vault: vault.into_array() };
         Ok(Self {
             _anvil: anvil,
@@ -351,11 +479,78 @@ impl Devnet {
             password,
             eth_blocks: 1,
             checkpoints: 0,
+            private,
+            real_proofs: std::env::var("FERRATA_DEVNET_PROOFS").is_ok_and(|v| v == "real"),
         })
     }
 
+    /// The zone's history in one pass, private transactions included (as `lez::history_of` reads it
+    /// from a sequencer's blocks).
     async fn history(&self) -> Result<lez::History> {
-        Ok(lez::history(&self.ctx, &self.zone.applied(self.ctx.program).await?))
+        lez::history_of(&self.zone, &self.ctx).await
+    }
+
+    fn proof_mode(&self) -> &'static str {
+        if self.real_proofs {
+            "real: proven by the harness (lee::execute_and_prove with RISC0_DEV_MODE off), receipt verified at settlement"
+        } else {
+            "dev mode: RISC0_DEV_MODE=1, the harness's lee::execute_and_prove made a fake receipt (accepted in dev mode only)"
+        }
+    }
+
+    /// Proves and settles in the harness a private transaction of the seed's private account `/a`
+    /// whose root is `message` at that account's own actor of the bridge, with the public actors
+    /// `publics`, as LEZ's wallet sends it; then checks the wallet's view of the account after it
+    /// (`holder`, the bridge state it computes) against the chain's commitments.
+    fn private_tx(&mut self, a: usize, message: &BridgeMessage, publics: Vec<Actor>, holder: HolderState) -> Result<PrivateRun> {
+        let program = self.ctx.program;
+        let real = self.real_proofs;
+        let slot = self.private.get_mut(a).ok_or_else(|| anyhow!("private account /{a} is outside the window"))?;
+        let before = match &slot.account {
+            Some(account) => account.clone(),
+            None => self.zone.world.chain.add_private_account_with_keys(slot.keys(), PRIVATE_FEE_FUNDS).account,
+        };
+        slot.account = Some(before.clone());
+        let sender = PrivateAccount { keys: slot.keys(), account: before.clone() };
+        let me = own_actor(program, slot.id);
+        let bytes = borsh::to_vec(message)?;
+        let time = self.zone.world.time;
+        let chain = &mut self.zone.world.chain;
+        let run = with_proofs(real, || {
+            chain.prove_and_settle_private_fresh(
+                &sender,
+                me,
+                bytes,
+                publics,
+                &hb::catalog(),
+                RESERVE,
+                time,
+                None,
+                Freshness::random(),
+            )
+        })
+        .map_err(|e| anyhow!("the private transaction was not settled: {e}"))?;
+        if let Some(why) = &run.charge.revert {
+            bail!("the private transaction reverted on LEZ (its fee is charged): {why}");
+        }
+        let after = hb::private_post_state(&self.zone.world.chain, &sender.keys, &before, RESERVE, &holder)
+            .ok_or_else(|| anyhow!("the account's state after the transaction, as the wallet computes it, is not committed on the zone"))?;
+        slot.account = Some(after);
+        slot.holder = holder;
+        self.zone.record_private(&run);
+        Ok(run)
+    }
+
+    fn proof_json(&self, run: &PrivateRun) -> Value {
+        json!({
+            "mode": if self.real_proofs { "real" } else { "dev" },
+            "what": self.proof_mode(),
+            "prove_ms": run.prove_time.as_millis() as u64,
+            "receipt_bytes": run.proof_bytes,
+            "tx_bytes": run.tx_bytes,
+            "execution_gas": run.charge.gas_exec,
+            "public_outputs": harness::private::describe_public_outputs(&run.tx),
+        })
     }
 
     async fn eth_time(&self) -> Result<u64> {
@@ -387,7 +582,8 @@ impl Devnet {
         let publics: Vec<String> = self.user.public_accounts(GAP)?.iter().map(|a| hx(a.id.value())).collect();
         let privates: Vec<String> = self.user.private_account_ids(GAP)?.iter().map(|a| hx(a.value())).collect();
         Ok(json!({
-            "network": "devnet: anvil (chain id 1, local) + the LEZ harness (in-process, RISC0_DEV_MODE)",
+            "network": "devnet: anvil (chain id 1, local) + the LEZ harness (in-process)",
+            "private_proofs": self.proof_mode(),
             "eth_rpc": self.rpc,
             "sequencer": "in-process LEZ harness (no sequencer RPC)",
             "chain_id": 1,
@@ -599,6 +795,12 @@ impl Devnet {
             })
             .collect();
         let mut holdings = Vec::new();
+        for (a, slot) in self.private.iter().enumerate() {
+            let bal = slot.held(&self.cid, &ETH_TOKEN);
+            if bal > 0 {
+                holdings.push(json!({"kind": "private", "account": a, "balance": bal.to_string()}));
+            }
+        }
         for a in self.user.public_accounts(GAP)? {
             let bal = self.zone.world.balance(a.id, &self.cid);
             if bal > 0 {
@@ -631,16 +833,30 @@ impl Devnet {
             .collect();
         let plan = lez::plan_claim(&self.zone, &self.ctx, &leaves, &row.owned, &history, private, None).await?;
         if private {
+            // The claim's root is the claimant's own actor (`Mention::PrivateSelf`); the rest are public.
+            let a = row.owned.account_index as usize;
+            let me = plan.call.mentions[0].actor();
+            ensure!(
+                self.private.get(a).map(|s| own_actor(self.ctx.program, s.id)) == Some(me),
+                "the claim's root is not private account /{a}'s own actor"
+            );
+            let publics: Vec<Actor> = plan.call.mentions[1..].iter().map(Mention::actor).collect();
+            let amount = u128_of(&row.owned.deposit.amount);
+            let mut holder = self.private[a].holder.clone();
+            holder.credit(&self.cid, &row.owned.deposit.token, amount).context("the holding would overflow")?;
+            let run = self.private_tx(a, &plan.call.message, publics, holder)?;
             return Ok(json!({
-                "settled": false,
-                "planned": true,
+                "settled": true,
                 "private": true,
-                "what": plan.call.what,
+                "what": format!("{} (harness, block {})", plan.call.what, self.zone.world.chain.block_id - 1),
+                "account": a,
                 "nullifier": hx(&plan.nullifier),
                 "root_leaf_count": plan.leaf_count,
-                "public_on_lez": ["the nullifier N (its account)", "the denomination", "the root read"],
-                "hidden": ["the destination account", "the leaf index", "the depositor"],
-                "not_settled_because": "this devnet's zone is the LEZ harness, which settles public transactions only: the private claim is the call the LEZ wallet proves and submits to a sequencer",
+                "balance": self.private[a].held(&self.cid, &row.owned.deposit.token).to_string(),
+                "proof": self.proof_json(&run),
+                "public_on_lez": ["the nullifier N (its account)", "the token and denomination", "the root read", "the fee schedule's range", "the relayer"],
+                "hidden": ["the destination account (an alias appears)", "the leaf index", "the depositor", "the private balance"],
+                "stand_in": "the private account's native balance for LEZ fees was put in the state by the devnet on its first private transaction",
             }));
         }
         let sent = self.zone.submit(&plan.call).await?;
@@ -657,20 +873,15 @@ impl Devnet {
     }
 
     async fn burn(&mut self, params: &Value) -> Result<Value> {
-        if params["private"].as_bool().unwrap_or(false) {
-            return Ok(json!({
-                "settled": false,
-                "planned": false,
-                "private": true,
-                "not_settled_because": "this devnet's holdings are public accounts (claimed in plaintext): the harness settles public transactions only, and a private holder's burn is proven by the LEZ wallet on a sequencer",
-            }));
-        }
         let a = params["account"].as_u64().unwrap_or(0) as u32;
         let amount: u128 = params["amount"].as_str().context("amount (base units, a string)")?.parse()?;
         let recipient: Address = match params["recipient"].as_str() {
             Some(s) if !s.is_empty() => s.parse().context("recipient: an Ethereum address")?,
             _ => self.user_addr,
         };
+        if params["private"].as_bool().unwrap_or(false) {
+            return self.burn_private(a as usize, amount, recipient).await;
+        }
         let holder = self.user.public_accounts(GAP)?.into_iter().find(|x| x.index == a).context("account")?.id;
         let history = self.history().await?;
         let plan = lez::plan_burn(
@@ -684,15 +895,63 @@ impl Devnet {
             &history,
         )
         .await?;
+        let burn_index = history.burns.len();
         let sent = self.zone.submit(&plan.call).await?;
         Ok(json!({
             "settled": true,
+            "private": false,
             "what": sent,
+            "burn_index": burn_index,
             "i": plan.i,
             "amount": amount.to_string(),
             "recipient": recipient.to_string(),
             "balance": self.zone.world.balance(holder, &self.cid).to_string(),
             "public_on_lez": ["the holder account (a public burn)", "the token and denomination", "the note: r, c_out (the recipient encrypted)"],
+        }))
+    }
+
+    /// A private holder's burn: the root of its own private execution at its actor, whose delivery of
+    /// the note to `token(cid, token)` is public (the token's account, the configuration and the
+    /// note's record are the public actors); the holder appears only as an alias.
+    async fn burn_private(&mut self, a: usize, amount: u128, recipient: Address) -> Result<Value> {
+        let slot = self.private.get(a).ok_or_else(|| anyhow!("private account /{a} is outside the window"))?;
+        let held = slot.held(&self.cid, &ETH_TOKEN);
+        if held < amount {
+            bail!(codes::program_refusal(
+                254,
+                format!("checked before sending: the private holding of /{a} is {held} base units")
+            ));
+        }
+        let history = self.history().await?;
+        let keys = self.user.bridge_keys();
+        let chain = chain_id_u256(self.ctx.chain_id);
+        let i = recover_burns(&keys, &self.cid, &chain, &self.ctx.vault, &history.burns, lez::BURN_GAP).next_i;
+        let target = ReleaseTarget { chain_id: chain, vault: self.ctx.vault, recipient: recipient.into_array() };
+        let note = BurnNote::create(&keys, &self.cid, i, &target, ETH_TOKEN, u128_to_word(amount));
+        let wire = bw::Note { r: note.r, memo: note.memo, mac: note.mac, token: ETH_TOKEN, amount: note.amount, c_out: note.c_out };
+        let program = self.ctx.program;
+        let publics = vec![
+            token_actor(program, &self.cid, &ETH_TOKEN),
+            config_actor(program, &self.cid),
+            burn_actor(program, &self.cid, &wire.hash()),
+        ];
+        let mut holder = slot.holder.clone();
+        holder.debit(&self.cid, &ETH_TOKEN, amount).context("the holding is smaller than the burn")?;
+        let burn_index = history.burns.len();
+        let run = self.private_tx(a, &BridgeMessage::burn(self.cid, &wire), publics, holder)?;
+        Ok(json!({
+            "settled": true,
+            "private": true,
+            "what": format!("private burn with tag counter {i} (harness, block {})", self.zone.world.chain.block_id - 1),
+            "burn_index": burn_index,
+            "i": i,
+            "account": a,
+            "amount": amount.to_string(),
+            "recipient": recipient.to_string(),
+            "balance": self.private[a].held(&self.cid, &ETH_TOKEN).to_string(),
+            "proof": self.proof_json(&run),
+            "public_on_lez": ["the note: r, memo, mac, the token and denomination, c_out (the recipient encrypted)", "an alias of the holder (not its account)"],
+            "hidden": ["the holder account", "its balance", "the recipient (inside c_out)"],
         }))
     }
 
