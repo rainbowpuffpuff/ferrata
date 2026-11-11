@@ -1,0 +1,6 @@
+consumer image 0af0739130e4f794eb7284e146dd6b672f28484574affb072310f6637eae2347 (419472 ELF bytes); program image cefed220138e6f6be692ffa042b571a5522f36e3401395b304f4c497940eee21 (602908 ELF bytes); RISC0_DEV_MODE off; shape wallet
+record: header(id, 15624480) of instance c112f29279d8, mainnet block 26384851; fact: Transfer of token a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 in transaction 0, log 0
+
+thread 'main' (350) panicked at harness/src/bin/prove_attest.rs:198:14:
+settlement accepts the transaction: "Invalid privacy preserving execution circuit proof"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
