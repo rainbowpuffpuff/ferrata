@@ -1,0 +1,20 @@
+QStandardPaths: XDG_RUNTIME_DIR not set, defaulting to '<spike>/tmp/miniapp/runtime-root'
+********* Start testing of qmltestrunner *********
+Config: Using QtTest library 6.4.2, Qt 6.4.2 (x86_64-little_endian-lp64 shared (dynamic) release build; by GCC 13.2.0), ubuntu 24.04
+PASS   : qmltestrunner::FerrataMiniApp::initTestCase()
+PASS   : qmltestrunner::FerrataMiniApp::test_01_connect()
+PASS   : qmltestrunner::FerrataMiniApp::test_02_endpoints()
+PASS   : qmltestrunner::FerrataMiniApp::test_03_registry()
+PASS   : qmltestrunner::FerrataMiniApp::test_04_deposit_private_by_default()
+PASS   : qmltestrunner::FerrataMiniApp::test_05_public_needs_an_explicit_action()
+PASS   : qmltestrunner::FerrataMiniApp::test_06_positions_from_the_seed()
+PASS   : qmltestrunner::FerrataMiniApp::test_07_private_claim()
+PASS   : qmltestrunner::FerrataMiniApp::test_08_plaintext_claim()
+PASS   : qmltestrunner::FerrataMiniApp::test_09_error_messages()
+PASS   : qmltestrunner::FerrataMiniApp::test_10_burn()
+PASS   : qmltestrunner::FerrataMiniApp::test_11_checkpoint_and_release()
+PASS   : qmltestrunner::FerrataMiniApp::test_12_admin()
+PASS   : qmltestrunner::FerrataMiniApp::test_13_privacy()
+PASS   : qmltestrunner::FerrataMiniApp::cleanupTestCase()
+Totals: 15 passed, 0 failed, 0 skipped, 0 blacklisted, 29259ms
+********* Finished testing of qmltestrunner *********
