@@ -6,6 +6,9 @@
 //! ```text
 //! ferrata-e2e image-id <program.bin>…
 //!     image id, size and sha256 of guest program binaries
+//! ferrata-e2e program-binary <user elf> <out.bin>
+//!     the program binary risc0-build 3.0.5 writes beside a guest's user ELF (the ELF with the v1compat
+//!     kernel), for a build whose `.bin` files were not kept; prints its image id
 //! ferrata-e2e notes --deployment <deployment.json> --params <params.json> --out <wallet.json>
 //!     the wallet's deposits (commitments, leaves, the deposit root the zone imports) and burn
 //!     notes, between other users' notes, in the order they are published; a deposit of the
@@ -29,6 +32,13 @@
 //!     both steps in one, through r0vm (which runs Docker itself)
 //! ferrata-e2e fixture --run-dir <dir> --checkpoint-program <bin> --release-program <bin> --out <fixture.json>
 //!     everything the vault's tests and scripts read, from the files of a run
+//! ferrata-e2e crown-release --identity <identity.json> --burns <burns.json> --notes <notes.json> --out-dir <dir>
+//!     the crown run (e2e/crown/README.md, stage 9): the burn tree from the burns the checkpoint counted
+//!     (checkpoint/realblocks `realblocks-crown`'s burns.json; every leaf recomputed by the bridge core),
+//!     one release statement per own burn of notes.json (r, s_out, recipient), release-<name>.{input,json}
+//! ferrata-e2e crown-synthetic --identity <identity.json> --out-dir <dir>
+//!     STAND-IN burns.json + notes.json (two burns of a test wallet between two of another user) for a
+//!     rehearsal of crown-release and the release proofs before the LEZ session has burned
 //! ```
 //!
 //! Guest programs are read from files (the `.bin` risc0-build writes), never built here, and their
@@ -47,8 +57,8 @@ use ferrata_bridge_core::checkpoint::{burn_frontier_hash, threshold, LezState};
 use ferrata_bridge_core::encoding::{config_id_preimage, u256_from_u128, ConfigIdentity, ReleaseInput};
 use ferrata_bridge_core::inbound::{commitment, deposit_leaf, deposit_secret, DestKind};
 use ferrata_bridge_core::outbound::{
-    burn_leaf, recover_burns, release_journal, verify_release, BurnNote, PublishedBurn, ReleasePublic, ReleaseTarget,
-    ReleaseWitness,
+    burn_commitment, burn_leaf, burn_secret, recover_burns, release_journal, verify_release, BurnNote, PublishedBurn,
+    ReleasePublic, ReleaseTarget, ReleaseWitness,
 };
 use ferrata_bridge_core::tree::{IncrementalTree, Tree};
 use ferrata_bridge_core::{chain_id_u256, sha256, Address, BridgeKeys, Hash, U256};
@@ -533,6 +543,15 @@ impl Job {
     }
 }
 
+fn cmd_program_binary(paths: &[String]) -> Result<()> {
+    ensure!(paths.len() == 2, "usage: ferrata-e2e program-binary <user elf> <out.bin>");
+    let user = fs::read(&paths[0]).with_context(|| paths[0].clone())?;
+    ensure!(user.starts_with(b"\x7fELF"), "{}: not an ELF", paths[0]);
+    let binary = risc0_binfmt::ProgramBinary::new(&user, risc0_zkos_v1compat::V1COMPAT_ELF).encode();
+    fs::write(&paths[1], &binary).with_context(|| paths[1].clone())?;
+    cmd_image_id(&paths[1..])
+}
+
 fn cmd_image_id(paths: &[String]) -> Result<()> {
     ensure!(!paths.is_empty(), "usage: ferrata-e2e image-id <program.bin>…");
     for path in paths {
@@ -831,11 +850,171 @@ fn cmd_fixture(opts: &BTreeMap<String, String>) -> Result<()> {
     Ok(())
 }
 
+// ---- the crown run's releases (e2e/crown/README.md, stage 9) ---------------------------------------------
+
+/// `field` when present, else `default`.
+fn field_or<const N: usize>(v: &Value, key: &str, default: [u8; N]) -> Result<[u8; N]> {
+    if v[key].is_null() {
+        Ok(default)
+    } else {
+        field(v, key)
+    }
+}
+
+fn cmd_crown_release(opts: &BTreeMap<String, String>) -> Result<()> {
+    let id = read_json(required(opts, "identity")?)?;
+    let burns = read_json(required(opts, "burns")?)?;
+    let notes = read_json(required(opts, "notes")?)?;
+    let dir = PathBuf::from(required(opts, "out-dir")?);
+    fs::create_dir_all(&dir)?;
+    let chain_id = chain_id_u256(number(&id, "chainId")?);
+    let vault: Address = field(&id, "vault")?;
+    let config_id: Hash = field(&burns, "config_id")?;
+    if !id["configId"].is_null() {
+        ensure!(config_id == field::<32>(&id, "configId")?, "burns.json is for another configuration than identity.json");
+    }
+
+    // 1. The burn tree: every leaf of the checkpoint's burns recomputed by the bridge core, both trees.
+    let all = list(&burns, "burns")?;
+    let (mut leaves, mut frontier) = (Vec::with_capacity(all.len()), IncrementalTree::new());
+    for (k, b) in all.iter().enumerate() {
+        ensure!(number(b, "burn_index")? == k as u64, "burn {k}: burn_index");
+        let leaf = burn_leaf(&config_id, k as u64, &field(b, "token")?, &field(b, "amount")?, &field(b, "c_out")?, &field(b, "r")?);
+        ensure!(leaf == field::<32>(b, "leaf")?, "burn {k}: the bridge core's leaf is not the checkpoint core's");
+        frontier.append(leaf).map_err(|_| anyhow::anyhow!("burn tree full"))?;
+        leaves.push(leaf);
+    }
+    let tree = Tree::from_leaves(leaves).map_err(|_| anyhow::anyhow!("burn tree full"))?;
+    let burn_root = tree.root();
+    ensure!(burn_root == frontier.root(), "full and incremental burn tree disagree");
+    ensure!(burn_root == field::<32>(&burns, "burn_root")?, "the bridge core's burn root is not the checkpoint's");
+
+    // 2. One release statement per own burn.
+    let mut written = Vec::new();
+    let mut fragments = Vec::new();
+    // notes.json: {"burns": [{name, r, s_out, recipient, ...}]}, or the LEZ side's burn-notes.json: a list of
+    // {i, kind, r, sOut, recipient, token, amount (decimal), cOut, denomIndex, ...} (spike interface lez.md).
+    let entries: Vec<Value> = match notes.as_array() {
+        Some(l) => l
+            .iter()
+            .map(|n| {
+                let mut m = n.clone();
+                // `i` and `denomIndex` may be numbers or decimal strings.
+                let num = |v: &Value| v.as_u64().or_else(|| v.as_str().and_then(|t| t.parse().ok()));
+                let i = num(&n["i"]).map_or_else(|| "x".to_string(), |v| v.to_string());
+                m["name"] = json!(format!("{}-{i}", n["kind"].as_str().unwrap_or("burn")));
+                m["denomIndex"] = num(&n["denomIndex"]).map_or(Value::Null, |v| json!(v));
+                m["s_out"] = n["sOut"].clone();
+                m["c_out"] = n["cOut"].clone();
+                m["amount"] = match n["amount"].as_str() {
+                    Some(d) if !d.starts_with("0x") => json!(hx(&u256_from_u128(d.parse().unwrap_or(u128::MAX)))),
+                    _ => n["amount"].clone(),
+                };
+                m
+            })
+            .collect(),
+        None => list(&notes, "burns")?.clone(),
+    };
+    for note in &entries {
+        let name = text(note, "name")?;
+        let r: Hash = field(note, "r")?;
+        let (k, b) = all
+            .iter()
+            .enumerate()
+            .find(|(_, b)| field::<32>(b, "r").ok() == Some(r))
+            .with_context(|| format!("{name}: no burn with this r among the checkpoint's"))?;
+        let (token, amount): (Address, U256) = (field(b, "token")?, field(b, "amount")?);
+        ensure!(field_or(note, "token", token)? == token && field_or(note, "amount", amount)? == amount, "{name}: token or amount");
+        ensure!(field_or(note, "c_out", field::<32>(b, "c_out")?)? == field::<32>(b, "c_out")?, "{name}: cOut");
+        let s_out: Hash = field(note, "s_out")?;
+        let recipient: Address = field(note, "recipient")?;
+        ensure!(
+            burn_commitment(&s_out, &chain_id, &vault, &recipient) == field::<32>(b, "c_out")?,
+            "{name}: COut from s_out, the chain id, the vault and the recipient is not the burn's"
+        );
+        let public = ReleasePublic {
+            chain_id,
+            vault,
+            config_id,
+            token,
+            amount,
+            recipient,
+            relayer: field_or(note, "relayer", recipient)?,
+            relay_fee: field_or(note, "relay_fee", [0u8; 32])?,
+        };
+        let witness = ReleaseWitness { burn_index: k as u64, path: tree.path(k as u64).context("path")?, s_out, r };
+        let nullifier =
+            verify_release(&burn_root, &witness, &public).map_err(|e| anyhow::anyhow!("{name}: release {e:?}"))?;
+        let journal = release_journal(&burn_root, &nullifier, &public);
+        let input = ReleaseInput { burn_root, witness, public: public.clone() };
+        fs::write(dir.join(format!("release-{name}.input")), input.encode())?;
+        let meta = json!({
+            "kind": "release",
+            "description": format!("crown run: release of the burn {name} (burn index {k}, LEZ block {})", b["block"]),
+            "name": name, "burn_index": k, "block": b["block"], "origin": b["origin"],
+            "burn_root": hx(&burn_root), "nullifier": hx(&nullifier), "token": hx(&public.token),
+            "amount": hx(&public.amount), "recipient": hx(&public.recipient), "relayer": hx(&public.relayer),
+            "relay_fee": hx(&public.relay_fee), "journal": hex::encode(journal),
+        });
+        write_json(&dir.join(format!("release-{name}.json")), &meta)?;
+        // The crown.json `releases[i]` entry (vault/script/Crown.s.sol) but its seal, added after the wrap.
+        fragments.push(json!({"name": name, "token": hx(&public.token), "denomIndex": note.get("denomIndex"),
+            "recipient": hx(&public.recipient), "relayer": hx(&public.relayer), "relayFee": hx(&public.relay_fee),
+            "burnRoot": hx(&burn_root), "nullifier": hx(&nullifier), "seal": null}));
+        written.push(name.to_string());
+    }
+    write_json(&dir.join("releases.json"), &json!(fragments))?;
+    println!(
+        "burn root {} over {} burns (bridge core = checkpoint core, leaf by leaf); release inputs for {:?}",
+        hx(&burn_root),
+        all.len(),
+        written
+    );
+    Ok(())
+}
+
+fn cmd_crown_synthetic(opts: &BTreeMap<String, String>) -> Result<()> {
+    let id = read_json(required(opts, "identity")?)?;
+    let dir = PathBuf::from(required(opts, "out-dir")?);
+    fs::create_dir_all(&dir)?;
+    let chain_id = chain_id_u256(number(&id, "chainId")?);
+    let vault: Address = field(&id, "vault")?;
+    let config_id: Hash = field(&id, "configId")?;
+    let wallet = BridgeKeys::from_bridge_seed(&label("crown-proofs: synthetic wallet (test value)"));
+    let other = BridgeKeys::from_bridge_seed(&label("crown-proofs: synthetic other user (test value)"));
+    let (token, amount) = ([0u8; 20], u256_from_u128(1_000_000_000_000_000));
+    let (mut burns, mut notes, mut tree) = (Vec::new(), Vec::new(), IncrementalTree::new());
+    let mut push = |note: &BurnNote, burns: &mut Vec<Value>| -> Result<()> {
+        let k = burns.len() as u64;
+        let leaf = burn_leaf(&config_id, k, &note.token, &note.amount, &note.c_out, &note.r);
+        tree.append(leaf).map_err(|_| anyhow::anyhow!("burn tree full"))?;
+        burns.push(json!({"burn_index": k, "block": null, "origin": "STAND-IN", "r": hx(&note.r), "memo": hx(&note.memo),
+            "mac": hx(&note.mac), "token": hx(&note.token), "amount": hx(&note.amount), "c_out": hx(&note.c_out), "leaf": hx(&leaf)}));
+        Ok(())
+    };
+    for (i, name) in ["public", "private"].into_iter().enumerate() {
+        let target = ReleaseTarget { chain_id, vault, recipient: label_addr("crown-proofs: synthetic other recipient") };
+        push(&BurnNote::create(&other, &config_id, i as u64, &target, token, amount), &mut burns)?;
+        let recipient = label_addr(&format!("crown-proofs: synthetic recipient {name}"));
+        let note = BurnNote::create(&wallet, &config_id, i as u64, &ReleaseTarget { chain_id, vault, recipient }, token, amount);
+        push(&note, &mut burns)?;
+        notes.push(json!({"name": name, "r": hx(&note.r), "s_out": hx(&burn_secret(&wallet.auth, &config_id, &note.r)),
+            "recipient": hx(&recipient)}));
+    }
+    let label_text = "STAND-IN: synthetic burns of a test wallet (crown-proofs rehearsal), not from LEZ blocks";
+    write_json(&dir.join("burns.json"), &json!({"label": label_text, "config_id": hx(&config_id), "burn_count": burns.len(),
+        "burn_root": hx(&tree.root()), "burns": burns}))?;
+    write_json(&dir.join("notes.json"), &json!({"label": label_text, "burns": notes}))?;
+    println!("wrote {} synthetic burns (root {}) and 2 notes", burns.len(), hx(&tree.root()));
+    Ok(())
+}
+
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let rest = args.get(1..).unwrap_or_default();
     match args.first().map(String::as_str) {
         Some("image-id") => cmd_image_id(rest),
+        Some("program-binary") => cmd_program_binary(rest),
         Some("notes") => cmd_notes(&options(rest)?),
         Some("release") => cmd_release(&options(rest)?),
         Some("exec") => cmd_exec(&options(rest)?),
@@ -845,6 +1024,8 @@ fn main() -> Result<()> {
         Some("groth16") => cmd_groth16(&options(rest)?),
         Some("wrap") => cmd_wrap(&options(rest)?),
         Some("fixture") => cmd_fixture(&options(rest)?),
+        Some("crown-release") => cmd_crown_release(&options(rest)?),
+        Some("crown-synthetic") => cmd_crown_synthetic(&options(rest)?),
         _ => bail!(
             "usage: ferrata-e2e image-id | notes | release | exec | prove | verify | p254 | groth16 | wrap | fixture \
              (see the module documentation for their options)"

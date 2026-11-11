@@ -959,7 +959,9 @@ dependencies = [
  "bincode",
  "ferrata-bridge-core",
  "hex",
+ "risc0-binfmt",
  "risc0-groth16",
+ "risc0-zkos-v1compat",
  "risc0-zkvm",
  "serde_json",
 ]

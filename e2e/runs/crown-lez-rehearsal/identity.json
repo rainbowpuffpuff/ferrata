@@ -1,0 +1,9 @@
+{
+  "label": "STAND-IN (crown-lez rehearsal: anvil fork, stand-in beacon committee)",
+  "chainId": 11155111,
+  "vault": "0xfE3199fa2634413CbAC317371076Cae3EB2d9E54",
+  "configId": "0xdd0387ff43e4a7b2fca008603e1135dec63266d97a76b71ff71a6d5a3ee6206e",
+  "genesisState": "0x9268f3471a3073d9baa1929dbc60ffc7b2bd5f86c3f84b10c3b5f31fed429320",
+  "groth16Verifier": "0x8f0Af3Bf302C64d57f840127F94d9c123a8Fa2A0",
+  "delta": 3600
+}

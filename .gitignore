@@ -77,3 +77,9 @@ __pycache__/
 
 # The bridge program's prover binary staged by lez/scripts/stage-prove-bridge.sh (its sha256 is in MANIFEST.json)
 /gpu-prover/inputs-lez-bridge/prove_bridge
+
+# The crown run's local deployment records and logs
+/vault/deployments/crown-*
+/e2e/runs/crown-*/logs/
+/e2e/runs/crown-*/anvil.log
+/e2e/runs/crown-*/verifier.log

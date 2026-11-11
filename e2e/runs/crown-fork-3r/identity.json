@@ -1,0 +1,9 @@
+{
+  "label": "STAND-IN (fork rehearsal 3)",
+  "chainId": 11155111,
+  "vault": "0xfE3199fa2634413CbAC317371076Cae3EB2d9E54",
+  "configId": "0xd54cec56b834bb0f2cda45c70874d6e778e2c0d5ca2e28004bf8bcbc562a3fa2",
+  "genesisState": "0xabe8b0a1e06a513e83e75344312b8c76a8287830fc484f853f9855f946a66138",
+  "groth16Verifier": "0xF86C3014989c39b64690F9Fa6927794B27B2E026",
+  "delta": 3600
+}

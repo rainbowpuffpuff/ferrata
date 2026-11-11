@@ -92,7 +92,10 @@ n_deploy=8
 o_submit=$((n_deploy + deposits)); o_beacon=$((o_submit + 1)); o_final=$((o_submit + 2)); o_rel=$((o_submit + 3))
 total=$((o_rel + releases))
 attest="${FERRATA_ATTEST_DEPOSITS-0 1}"
-capture_cmd="${FERRATA_CAPTURE_CMD:-python3 -I lez/scripts/fetch-attest-fixture.py --network sepolia --storage {vault}:0=depositRoot(),1=nextLeafIndex(),2=storedLezConfigId() --deposits {vault}:{from_block} --updates-from 1410 {out}}"
+# The default lives in its own variable: inside ${FERRATA_CAPTURE_CMD:-...} the '}' of '{vault}' would close the
+# expansion early (the command got '{vault:0=...' and every capture of the 10 Nov run failed).
+default_capture_cmd='python3 -I lez/scripts/fetch-attest-fixture.py --network sepolia --storage {vault}:0=depositRoot(),1=nextLeafIndex(),2=storedLezConfigId() --deposits {vault}:{from_block} --updates-from 1410 {out}'
+capture_cmd="${FERRATA_CAPTURE_CMD:-$default_capture_cmd}"
 call() { cast call "$vault" "$@" "${rpc[@]}"; }
 word() { awk 'NR==1 {print $1}'; }
 nonce() { cast nonce "$ETH_FROM" "${rpc[@]}"; }
