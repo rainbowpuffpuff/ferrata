@@ -1,4 +1,4 @@
-// Basecamp's headless UI test of the mini-app (`nix run .#ui-tests`, logos-qt-mcp's framework): the
+// Basecamp's headless UI test of the mini-app (tabs are clicked by their labels: app.click matches text) (`nix run .#ui-tests`, logos-qt-mcp's framework): the
 // module loads in Basecamp's standalone mode and every screen renders. The flows themselves are driven
 // by qmltest/tst_miniapp.qml against the devnet backend (scripts/box-test.sh).
 import { resolve } from "node:path";
@@ -7,14 +7,14 @@ const root = process.env.LOGOS_QT_MCP || new URL("../result-mcp", import.meta.ur
 const { test, run } = await import(resolve(root, "test-framework/framework.mjs"));
 
 const screens = [
-  ["tab.deposit", ["Deposit: Ethereum to LEZ", "Private account (recommended)"]],
-  ["tab.claim", ["Claim on LEZ", "Private claim (recommended)"]],
-  ["tab.redeem", ["Burn on LEZ, release on Ethereum"]],
-  ["tab.positions", ["Positions, recovered from the seed"]],
-  ["tab.registry", ["Token registry: amounts, caps and utilisation"]],
-  ["tab.admin", ["SetCap (admin)", "Freeze (freeze authority)"]],
-  ["tab.privacy", ["What is public and what is private"]],
-  ["tab.settings", ["Ethereum RPC", "LEZ sequencer or zone"]],
+  ["Deposit", ["Deposit: Ethereum to LEZ", "Private account (recommended)"]],
+  ["Claim", ["Claim on LEZ", "Private claim (recommended)"]],
+  ["Burn and release", ["Burn on LEZ, release on Ethereum"]],
+  ["Positions", ["Positions, recovered from the seed"]],
+  ["Registry", ["Token registry: amounts, caps and utilisation"]],
+  ["Admin", ["SetCap (admin)", "Freeze (freeze authority)"]],
+  ["Privacy", ["What is public and what is private"]],
+  ["Settings", ["Ethereum RPC", "LEZ sequencer or zone"]],
 ];
 
 test("ferrata_bridge_ui: loads in Basecamp", async (app) => {
