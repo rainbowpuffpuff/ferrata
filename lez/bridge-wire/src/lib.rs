@@ -1085,7 +1085,9 @@ pub enum Pending {
     /// A `Read` of a record for the global gate's clock (`Tick`, `Freeze`).
     Time(PendingTime),
     /// `AttestRetired`: the attestation of the vault's `retired` flag.
-    Retired { record_slot: u64 },
+    Retired {
+        record_slot: u64,
+    },
 }
 
 impl Pending {

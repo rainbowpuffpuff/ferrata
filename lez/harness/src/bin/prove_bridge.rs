@@ -17,6 +17,10 @@
 //! * `--allow-dev-mode`: let the proving run in RISC Zero dev mode (a fake receipt in seconds), to
 //!   try the commands; the output then says it is not a proof.
 //! * `prove_bridge --image-ids`: print the bridge image this binary holds, and stop.
+//! * `prove_bridge --transfer [--transfer-out FILE]` (milestone B2): prove and settle the claim,
+//!   then, instead of the burn, that holder's private `Transfer` of 0.1 ETH to a public holder
+//!   (`harness/tests/bridge_roles.rs` runs it in dev mode); `--settle CLAIM TRANSFER --transfer`
+//!   settles the two files.
 //!
 //! `FERRATA_EXPECT_BRIDGE_IMAGE_ID=<hex>` stops it before any work unless the bridge image compiled
 //! into this binary is that one.
@@ -30,11 +34,13 @@ use ferrata_bridge_core::{
     BridgeKeys, Hash,
 };
 use ferrata_lez_bridge_wire::{
-    burn_actor, burn_mac_v2, own_actor, token_actor, word_of_u128, BridgeMessage, BridgeState, BurnRecord, HolderState,
-    Holding, Note,
+    burn_actor, burn_mac_v2, holder_actor, own_actor, token_actor, word_of_u128, BridgeMessage, BridgeState,
+    BurnRecord, HolderState, Holding, Note,
 };
 use harness::{
-    bridge::{bridge_account, catalog, private_keys, private_post_state, World, CHAIN_ID, DENOMINATIONS, ETH},
+    bridge::{
+        bridge_account, catalog, private_keys, private_post_state, role_account, World, CHAIN_ID, DENOMINATIONS, ETH,
+    },
     grouped, image_id_hex,
     private::{PrivateAccount, PrivateRun, Shape},
     settle::{classify, opening_fee_state, settle_private_transaction, LeeTransaction},
@@ -47,7 +53,7 @@ const RESERVE: u128 = 100_000_000;
 
 fn usage() -> ! {
     eprintln!(
-        "usage: prove_bridge [--shape wallet|bare] [--claim-out FILE] [--burn-out FILE] [--allow-dev-mode] \
+        "usage: prove_bridge [--shape wallet|bare] [--claim-out FILE] [--burn-out FILE] [--transfer] [--transfer-out FILE] [--allow-dev-mode] \
          | --settle CLAIM BURN | --image-ids"
     );
     std::process::exit(2)
@@ -62,6 +68,7 @@ fn main() {
     let (mut claim_out, mut burn_out, mut settle_from, mut allow_dev_mode, mut only_ids) =
         (None, None, None, false, false);
     let mut shape = Shape::Wallet;
+    let (mut transfer, mut transfer_out) = (false, None);
     let mut it = args.iter();
     while let Some(a) = it.next() {
         match a.as_str() {
@@ -74,6 +81,8 @@ fn main() {
                 settle_from = Some((claim, burn));
             }
             "--allow-dev-mode" => allow_dev_mode = true,
+            "--transfer" => transfer = true,
+            "--transfer-out" => transfer_out = Some(it.next().unwrap_or_else(|| usage()).clone()),
             "--image-ids" => only_ids = true,
             _ => usage(),
         }
@@ -157,6 +166,10 @@ fn main() {
         secret.len() - 6
     );
     report("private claim", &claim, &bytes);
+    if transfer {
+        let path = settle_from.as_ref().map(|(_, second)| second.as_str());
+        return private_transfer(&mut w, &account, &claimed, path, transfer_out.as_deref(), shape);
+    }
 
     // --- The private burn of the claimed 1 ETH -----------------------------------------------
     let keys = BridgeKeys::from_bridge_seed(&[0x77; 32]);
@@ -200,6 +213,70 @@ fn main() {
     let bytes = borsh::to_vec(&LeeTransaction::PrivacyPreserving(burn.tx.clone())).unwrap();
     println!("private burn: one private-to-public delivery of the 185-byte Burn to the token's account, from an alias");
     report("private burn", &burn, &bytes);
+}
+
+/// B2: the private holder's `Transfer` of 0.1 ETH (of its claimed 1 ETH) to a public holder,
+/// proven (or settled from `settle_path`) and checked: one private-to-public delivery, the
+/// `Transfer` to the token's account from an alias; the recipient's `holder(account)` credited; the
+/// holder's 0.9 ETH found only in its new commitment; its account id nowhere in the bytes.
+fn private_transfer(
+    w: &mut World,
+    account: &PrivateAccount,
+    claimed: &lee::Account,
+    settle_path: Option<&str>,
+    out: Option<&str>,
+    shape: Shape,
+) {
+    let program = w.program;
+    let cid = w.cid_a;
+    let seed = w.private_seed;
+    let me = own_actor(program, account.id());
+    let recipient = role_account(0x46);
+    let tenth = DENOMINATIONS[0];
+    let message = BridgeMessage::Transfer { config_id: cid, token: ETH, amount: tenth, to: *recipient.value() };
+    let holder = PrivateAccount { keys: private_keys(seed), account: claimed.clone() };
+    let run = match settle_path {
+        Some(path) => settle(w, path, "private transfer"),
+        None => {
+            let publics = vec![token_actor(program, &cid, &ETH), holder_actor(program, recipient)];
+            prove(w, "private transfer", &holder, me, &message, publics, out, shape)
+        }
+    };
+    assert!(run.charge.revert.is_none(), "the transfer's public part reverted: {:?}", run.charge.revert);
+    let outgoing: Vec<_> = run
+        .tx
+        .message
+        .execution
+        .boundary
+        .iter()
+        .filter_map(|step| match step {
+            BoundaryStep::PrivateToPublic(d) => Some((d.envelope.to, d.envelope.from, d.envelope.message.clone())),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        (outgoing[0].0, &outgoing[0].2),
+        (token_actor(program, &cid, &ETH), &borsh::to_vec(&message).unwrap()),
+        "the transfer, in the clear, to the token's account"
+    );
+    assert_ne!(outgoing[0].1.account_id, account.id(), "the holder appears as an alias");
+    assert_eq!(w.balance(recipient, &cid), tenth, "holder(recipient) credited");
+    let left = HolderState {
+        holdings: vec![Holding { config_id: cid, token: ETH, amount: DENOMINATIONS[1] - tenth }],
+        pending: None,
+    };
+    private_post_state(&w.chain, &private_keys(seed), claimed, RESERVE, &left)
+        .expect("the chain holds the holder's commitment with 0.9 ETH");
+    let bytes = borsh::to_vec(&LeeTransaction::PrivacyPreserving(run.tx.clone())).unwrap();
+    assert!(!occurs(&bytes, account.id().value()), "the private account's id is in the transaction");
+    println!(
+        "private transfer: {} private-to-public deliveries, the first the {}-byte Transfer to the token's account, from \
+         an alias; the private account's id is not in the {} bytes; 0.9 ETH left in its commitment",
+        outgoing.len(),
+        outgoing[0].2.len(),
+        bytes.len()
+    );
+    report("private transfer", &run, &bytes);
 }
 
 fn occurs(haystack: &[u8], needle: &[u8]) -> bool {

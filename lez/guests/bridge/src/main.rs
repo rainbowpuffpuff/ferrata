@@ -34,13 +34,12 @@
 
 use ferrata_lez_bridge_wire::{
     burn_actor, burn_seed, check_fees, check_import, check_pairing, check_register, check_retired, code, config_actor,
-    fees_slots, holder_actor, holder_seed, import_request, nullifier_actor, nullifier_seed, own_actor,
-    pairing_request, record_time, register_slots, root_actor, root_seed, token_actor, token_seed, u128_of,
-    vault_request, verify_claim, Address, BridgeConfig, BridgeMessage, BridgeState, BurnRecord, CapParams,
-    ClaimWitness, Claimed, ConfigState, CosignedAction, DestKind, FeeSchedule, Gate, HolderState, ImportProof, Note,
-    NullifierState, PairingProof, Pending, PendingClaim, PendingImport, PendingTime, RoleProposal, Roles, Root,
-    RootState, ScheduleRange, TimeRecord, Timed, TokenEntry, TokenState, VaultProof, MAX_WATCHERS,
-    PROPOSAL_RECORD_AGE_MS, ROLE_TIMELOCK_MS, SLOT_RETIRED,
+    fees_slots, holder_actor, holder_seed, import_request, nullifier_actor, nullifier_seed, own_actor, pairing_request,
+    record_time, register_slots, root_actor, root_seed, token_actor, token_seed, u128_of, vault_request, verify_claim,
+    Address, BridgeConfig, BridgeMessage, BridgeState, BurnRecord, CapParams, ClaimWitness, Claimed, ConfigState,
+    CosignedAction, DestKind, FeeSchedule, Gate, HolderState, ImportProof, Note, NullifierState, PairingProof, Pending,
+    PendingClaim, PendingImport, PendingTime, RoleProposal, Roles, Root, RootState, ScheduleRange, TimeRecord, Timed,
+    TokenEntry, TokenState, VaultProof, MAX_WATCHERS, PROPOSAL_RECORD_AGE_MS, ROLE_TIMELOCK_MS, SLOT_RETIRED,
 };
 use ferrata_lez_wire::{attest::Attestation, header_actor, Message as AttestMessage};
 use lee_core::{
@@ -367,7 +366,9 @@ fn config_reply(input: &ReceiveInput, program: AccountId, state: &ConfigState) -
             let roles = Roles::new(&config.controls);
             return Ok(set(ready(config, None, gate, false, roles)));
         }
-        ConfigState::Ready { pending: Some(pending), gate, sunset, roles, .. } => (pending, *gate, *sunset, roles.clone()),
+        ConfigState::Ready { pending: Some(pending), gate, sunset, roles, .. } => {
+            (pending, *gate, *sunset, roles.clone())
+        }
         ConfigState::Ready { pending: None, .. } => return Err(code::BAD_STATE),
     };
     let message = match pending {
@@ -822,12 +823,10 @@ fn transfer(
         if amount == 0 || amount % state.entry.lez_unit != 0 {
             return Err(code::BAD_MESSAGE);
         }
-        let credit = SyncMessage::new(holder_actor(program, AccountId::new(to)), &BridgeMessage::Credit {
-            config_id,
-            token,
-            amount,
-            to,
-        })
+        let credit = SyncMessage::new(
+            holder_actor(program, AccountId::new(to)),
+            &BridgeMessage::Credit { config_id, token, amount, to },
+        )
         .with_pda_seeds([holder_seed(&to)]);
         return Ok(Response::keep_state().send(credit));
     }
@@ -925,7 +924,8 @@ fn role_message(
         let mut token = token_state(state)?;
         return match message {
             BridgeMessage::Freeze { mints, burns, until_ms, record, .. } => {
-                Ok(Scope::Token(token).ask_time_at(PendingTime { record, then: Timed::Freeze { mints, burns, until_ms } }))
+                Ok(Scope::Token(token)
+                    .ask_time_at(PendingTime { record, then: Timed::Freeze { mints, burns, until_ms } }))
             }
             BridgeMessage::Pause { mints, burns, record, .. } => {
                 Ok(Scope::Token(token).ask_time_at(PendingTime { record, then: Timed::Pause { mints, burns } }))

@@ -14,9 +14,8 @@ use checkpoint_core::{
     wire::BridgeMessage as CpMessage,
 };
 use ferrata_lez_bridge_wire::{
-    self as bw, code, config_actor, holder_actor, own_actor, token_actor, BridgeMessage, CapParams,
-    ConfigState, CosignedAction, FreezeAuthority, HolderState, Holding, Roles, ROLE_TIMELOCK_MS, SLOT_RETIRED,
-    WATCHER_PAUSE_MS,
+    self as bw, code, config_actor, holder_actor, own_actor, token_actor, BridgeMessage, CapParams, ConfigState,
+    CosignedAction, FreezeAuthority, HolderState, Holding, Roles, ROLE_TIMELOCK_MS, SLOT_RETIRED, WATCHER_PAUSE_MS,
 };
 use harness::{
     attest::render_executed,
@@ -181,9 +180,14 @@ fn transfers_handover_multisig_watchers_and_keyless_sunset() {
     let tenth = DENOMINATIONS[0];
     let onward = BridgeMessage::Transfer { config_id: cid_a, token: ETH, amount: tenth, to: *payer.value() };
     let rkey = role_key(RECIPIENT);
-    let r = w.submit_signed("Transfer 0.1 ETH (A): the holder, signed, to the payer", actors[0], &onward, actors, vec![], &[
-        &rkey,
-    ]);
+    let r = w.submit_signed(
+        "Transfer 0.1 ETH (A): the holder, signed, to the payer",
+        actors[0],
+        &onward,
+        actors,
+        vec![],
+        &[&rkey],
+    );
     run(&mut reports, r, None);
     assert_eq!(w.balance(recipient, &cid_a), one - tenth);
     assert_eq!(w.balance(payer, &cid_a), DENOMINATIONS[2] - one + tenth);
@@ -254,18 +258,21 @@ fn transfers_handover_multisig_watchers_and_keyless_sunset() {
     let r = w.apply_roles("ApplyRoles with a record 14 days later (anyone)", &cid_a, day14);
     run(&mut reports, r, None);
     let (_, live, _) = roles(&w, &cid_a);
-    assert_eq!((live.freeze_authority.clone(), live.watchers.clone(), live.proposal.clone()), (
-        multisig.clone(),
-        vec![key(WATCHER)],
-        None
-    ));
+    assert_eq!(
+        (live.freeze_authority.clone(), live.watchers.clone(), live.proposal.clone()),
+        (multisig.clone(), vec![key(WATCHER)], None)
+    );
     let r = w.apply_roles("ApplyRoles again", &cid_a, day14);
     run(&mut reports, r, Some(code::NOT_FOUND));
 
     // --- The multisig freeze authority -----------------------------------------------------------
     let t14 = w.blocks[day14].time_ms();
-    let freeze = |token: Option<[u8; 20]>, mints: bool, burns: bool, until_ms: u64, w: &World| {
-        CosignedAction::Freeze { token, mints, burns, until_ms, record: w.blocks[day14].time_record() }
+    let freeze = |token: Option<[u8; 20]>, mints: bool, burns: bool, until_ms: u64, w: &World| CosignedAction::Freeze {
+        token,
+        mints,
+        burns,
+        until_ms,
+        record: w.blocks[day14].time_record(),
     };
     let old = BridgeMessage::Freeze {
         config_id: cid_a,
@@ -284,7 +291,13 @@ fn transfers_handover_multisig_watchers_and_keyless_sunset() {
     run(&mut reports, r, Some(code::NOT_AUTHORIZED));
     let r = w.cosign("Cosigned freeze naming M1, M2, signed by M1 only", &[M1, M2], &[M1], &cid_a, f.clone());
     run(&mut reports, r, Some(code::NOT_AUTHORIZED));
-    let r = w.cosign("Cosigned freeze by M1 and a non-member", &[M1, OUTSIDER_SEED], &[M1, OUTSIDER_SEED], &cid_a, f.clone());
+    let r = w.cosign(
+        "Cosigned freeze by M1 and a non-member",
+        &[M1, OUTSIDER_SEED],
+        &[M1, OUTSIDER_SEED],
+        &cid_a,
+        f.clone(),
+    );
     run(&mut reports, r, Some(code::NOT_AUTHORIZED));
     let r = w.cosign("Cosigned freeze of A's mints for an hour by M1 and M2", &[M1, M2], &[M1, M2], &cid_a, f);
     run(&mut reports, r, None);
@@ -398,7 +411,12 @@ fn transfers_handover_multisig_watchers_and_keyless_sunset() {
     assert!(roles(&w, &cid_b).1.vault_retired);
     let r = w.attest_retired("AttestRetired B again", &cid_b, retired, &VAULT_B);
     run(&mut reports, r, Some(code::ALREADY_WRITTEN));
-    let r = w.role("Sunset B forwarded by a signer's own actor (not top-level at config(B))", OUTSIDER_SEED, &sunset_b, b_actor);
+    let r = w.role(
+        "Sunset B forwarded by a signer's own actor (not top-level at config(B))",
+        OUTSIDER_SEED,
+        &sunset_b,
+        b_actor,
+    );
     run(&mut reports, r, Some(code::NOT_AUTHORIZED));
     let r = w.send("Sunset B sent to config(B) by anyone, retired", b_actor, &sunset_b, vec![b_actor]);
     run(&mut reports, r, None);
@@ -525,8 +543,11 @@ fn a_private_holder_transfers() {
         pre_state: claimed.data.actor_state(program).clone(),
         message: borsh::to_vec(&message).unwrap(),
     };
-    let executed =
-        harness::attest::execute("Transfer at the private holder (debits, sends Transfer)", bridge_program().elf(), &call);
+    let executed = harness::attest::execute(
+        "Transfer at the private holder (debits, sends Transfer)",
+        bridge_program().elf(),
+        &call,
+    );
     assert_eq!(executed.exit_code, 0);
     let executed_table = render_executed(&[executed]);
     let token_a = token_actor(program, &cid_a, &ETH);
@@ -563,7 +584,14 @@ fn a_private_holder_transfers() {
     assert!(matches!(w.holder(recipient), Some(HolderState { pending: None, .. })));
     let boundary: String = outgoing
         .iter()
-        .map(|(to, from, m)| format!("| {} | alias {} | {} bytes |\n", hex::encode(to.account_id.value()), hex::encode(&from.account_id.value()[..4]), m.len()))
+        .map(|(to, from, m)| {
+            format!(
+                "| {} | alias {} | {} bytes |\n",
+                hex::encode(to.account_id.value()),
+                hex::encode(&from.account_id.value()[..4]),
+                m.len()
+            )
+        })
         .collect();
     std::fs::write(
         results_path("bridge-transfer-private.md"),
