@@ -6,6 +6,6 @@ rustc 1.98.1 (48a229cea 2026-09-01)
 cargo 1.98.1 (797e8a9bc 2026-08-05)
 risc0-r0vm 3.0.5
 ldd (Ubuntu GLIBC 2.39-0ubuntu8.9) 2.39
-r0vm /home/q/Downloads/software_i_built/logos-rfp/spike/risc0-home-lez/extensions/v3.0.5-cargo-risczero-x86_64-unknown-linux-gnu/r0vm
-36c016a5bb2ded5bd1f8f92cc487e6ffaeb1e95ec05850c983081a0f716b515b  /home/q/Downloads/software_i_built/logos-rfp/spike/risc0-home-lez/extensions/v3.0.5-cargo-risczero-x86_64-unknown-linux-gnu/r0vm
+r0vm <workspace>/spike/risc0-home-lez/extensions/v3.0.5-cargo-risczero-x86_64-unknown-linux-gnu/r0vm
+36c016a5bb2ded5bd1f8f92cc487e6ffaeb1e95ec05850c983081a0f716b515b  <workspace>/spike/risc0-home-lez/extensions/v3.0.5-cargo-risczero-x86_64-unknown-linux-gnu/r0vm
 FERRATA_HEAD=9bec9fe9514c5574d297b099d9d6ba701dc31969 FERRATA_DIRTY=0
