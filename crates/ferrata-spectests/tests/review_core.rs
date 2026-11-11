@@ -83,3 +83,32 @@ fn a_relation_on_a_missing_log_topic_or_data_word_is_predicate_failed() {
     assert_eq!(run(Field::Value, 0, Field::Topic(0)), Err(Error::QueryInvalid), "a field of another kind");
     assert_eq!(run(Field::Topic(0), 1, Field::Topic(0)), Err(Error::QueryInvalid), "a fact that is not there");
 }
+
+/// Row "`get_lc_execution_root`": the root depends on the store's layout, not only on the slot. A
+/// Capella store keeps hashing a header as `capella.ExecutionPayloadHeader` (15 fields) after
+/// the Deneb fork epoch, as the Capella spec does; only a Deneb-or-later store hashes the 17-field
+/// Deneb header. Review mutant R03 (dropping `fork >= LcFork::Deneb`) survived every test before
+/// this one.
+#[test]
+fn execution_root_follows_the_store_layout_after_deneb() {
+    use ferrata_core::{
+        fork::{ChainSpec, LcFork, Preset, FAR_FUTURE_EPOCH},
+        types::{BeaconBlockHeader, Execution, ExecutionPayloadHeader, LightClientHeader},
+        validate::get_lc_execution_root,
+    };
+    // Capella and Deneb from genesis; nothing later.
+    let mut epochs = [FAR_FUTURE_EPOCH; 9];
+    epochs[..5].copy_from_slice(&[0, 0, 0, 0, 0]);
+    let spec = ChainSpec { preset: Preset::MINIMAL, versions: [[0; 4]; 9], epochs };
+    let mut payload = ExecutionPayloadHeader::empty();
+    payload.block_number = 7;
+    payload.block_hash = [9; 32];
+    let header = LightClientHeader {
+        beacon: BeaconBlockHeader { slot: 100, ..Default::default() },
+        execution: Execution::Payload { header: payload.clone(), branch: vec![[0; 32]; 4] },
+    };
+    assert_ne!(payload.hash_tree_root_capella(), payload.hash_tree_root_deneb());
+    assert_eq!(get_lc_execution_root(&header, LcFork::Capella, &spec), payload.hash_tree_root_capella());
+    assert_eq!(get_lc_execution_root(&header, LcFork::Deneb, &spec), payload.hash_tree_root_deneb());
+    assert_eq!(get_lc_execution_root(&header, LcFork::Electra, &spec), payload.hash_tree_root_deneb());
+}
