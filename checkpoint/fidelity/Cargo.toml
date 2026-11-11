@@ -30,3 +30,6 @@ hex = "0.4"
 serde_json = "1"
 anyhow = "1"
 sha2 = "0.10"
+# ci_zone (CI's round trip): rule (B) certificates and attestations, as host's gen-b makes them.
+attestor-core = { path = "../crates/attestor-core" }
+ed25519-dalek = { version = "2.2.0", default-features = false }
