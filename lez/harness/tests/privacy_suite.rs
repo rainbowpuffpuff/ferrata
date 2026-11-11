@@ -849,13 +849,20 @@ fn privacy_suite_lez_half() {
     label(system_accounts::fee_escrow_account_id(), "LEZ fee escrow");
     label(system_accounts::fee_inbox_account_id(), "LEZ fee inbox");
     label(w.chain.payer, "the harness's fee payer (refund_to)");
-    label(relayer(), "the relayer (its wrapped balance: relay fees)");
-    label(harness::bridge::fee_recipient(), "the fee recipient (its wrapped balance: mint fees)");
+    label(relayer(), "the relayer");
+    label(harness::bridge::fee_recipient(), "the fee recipient");
+    // Wrapped balances sit at holder PDAs since the security fixes (review C-1).
+    label(bw::holder_actor(w.program, relayer()).account_id, "holder(the relayer) (its wrapped balance: relay fees)");
+    label(
+        bw::holder_actor(w.program, harness::bridge::fee_recipient()).account_id,
+        "holder(the fee recipient) (its wrapped balance: mint fees)",
+    );
     label(bw::config_actor(w.program, &cid).account_id, "config(cid) (global gate, time)");
     label(bw::token_actor(w.program, &cid, &ETH).account_id, "token(cid, ETH) (token gate, time)");
     label(bw::root_actor(w.program, &cid, n).account_id, "root(cid, 20)");
     for user in &users {
         label(user.public_dest, "a public destination (plaintext universe)");
+        label(bw::holder_actor(w.program, user.public_dest).account_id, "holder(a public destination) (plaintext universe)");
     }
     let lez = json!({
         "accounts": labels,
