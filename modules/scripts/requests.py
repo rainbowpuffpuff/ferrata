@@ -108,7 +108,10 @@ def main():
     requests["checkpoint_p1899"] = ("verify_checkpoint", {
         "config": mainnet_config(2),
         "checkpoint": p1899_root,
-        "expected_instance_id": "0xce624027489c721108da1cbaeb5eb16990111f6908282949e05108e7cb2afdfb",
+        # The id with lc-a1's ws_period_epochs in the configuration (e3ba34e updated the configuration and the
+        # calls crate's test, instance_id_equals_the_programs, but not this one); 0xce624027…afdfb was
+        # integration6's.
+        "expected_instance_id": "0x39860f39c97574b5eed493bdfce3429de1b8ff1b1f2a2452e72292460953b79c",
         "bootstrap": "0x" + (P1899 / "bootstrap.ssz").read_bytes().hex(),
         "observed": [{"source": "second beacon provider, slot 15556608 (lez/harness EXPECTED_FINALIZED)",
                       "root": p1899_root}],

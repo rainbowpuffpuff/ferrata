@@ -150,6 +150,8 @@ native_calls() {
   for m in $MODULES; do
     (cd "$repo/modules/$m/rust-lib" && $(cargo_for "$m") build --release --locked -p "$(calls_crate "$m")" --example call)
   done
+  # The daemons run with RISC0_DEV_MODE=1 (core() below), and the updater module's version() reports it.
+  export RISC0_DEV_MODE=1
   if has ferrata_attest_module; then
     "$repo/modules/ferrata_attest_module/rust-lib/target/release/examples/call" version > "$rep/replies/native/version.json"
   fi
