@@ -1,0 +1,20 @@
+{
+  "deposits": [],
+  "imported_leaf_count": 2,
+  "spent_nullifiers": [],
+  "burns": [
+    {
+      "burn_index": 0,
+      "nullifier": "0x610a8d719c82a6731dcdc3e6a4eacfdd7c29f726300ad24b90db6cb1268ff87e"
+    },
+    {
+      "burn_index": 1,
+      "nullifier": "0x86858e8b25eb6731bdce92219db24ef0d37ddea273be697c58396f89d77e475e"
+    }
+  ],
+  "checkpointed_burn_count": 2,
+  "released_nullifiers": [
+    "0x610a8d719c82a6731dcdc3e6a4eacfdd7c29f726300ad24b90db6cb1268ff87e",
+    "0x86858e8b25eb6731bdce92219db24ef0d37ddea273be697c58396f89d77e475e"
+  ]
+}

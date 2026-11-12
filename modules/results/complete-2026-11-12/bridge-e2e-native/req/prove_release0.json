@@ -1,0 +1,49 @@
+{
+  "bridge_seed": "0x43bff369e1a90a093a1955430058273ad3a5cfd943c8e6684bc33fe245dec340",
+  "chain_id": 1,
+  "vault": "0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9",
+  "config_id": "0x4b87fc2d51de184bb82f98a16e8cb06b328f39c7b1c084d8e633bddf167a9608",
+  "i": 0,
+  "burns": [
+    {
+      "burn_index": 0,
+      "note": {
+        "amount": "0x000000000000000000000000000000000000000000000000016345785d8a0000",
+        "c_out": "0x935bb8179282940d1aa4216b4828816ed61939900cc94864b6f822bf1ae0ca44",
+        "mac": "0x1f33b10c6fe1140373c9805b3c90cf9c",
+        "memo": "0x2f049039dc7a225ac1c8d68650dd55381d393f0e",
+        "r": "0xbfff9aef28a788fc5fe0041064c1480b39ac36b1e36a155d5c6f1c9a03c876ca",
+        "token": "0x0000000000000000000000000000000000000000"
+      }
+    },
+    {
+      "burn_index": 1,
+      "note": {
+        "amount": "0x000000000000000000000000000000000000000000000000016345785d8a0000",
+        "c_out": "0xdf981af6bd53a4fd94971994c6663e98158077631e100249bba786acc8deb523",
+        "mac": "0x67ae0a95e304fe3f07260ace4de52a9c",
+        "memo": "0xae40bcbac129b11715b38cbf392a4a8e261af2fb",
+        "r": "0xc156a53c37c6b18cb32eddb498b442f75f1c6b07efc9afe85adde407ef5f144b",
+        "token": "0x0000000000000000000000000000000000000000"
+      }
+    }
+  ],
+  "roots": [
+    {
+      "count": 1,
+      "delay": 120,
+      "finalized_at": 1794513089,
+      "index": 0,
+      "root": "0x89409baec579a74dc25e7d4e82783bd1e6f431eac37edfac064c058976e669f8"
+    },
+    {
+      "count": 2,
+      "delay": 120,
+      "finalized_at": 1794513990,
+      "index": 1,
+      "root": "0x112b1e1936447a13a56befe6dca18b736b7481042b864b577ce83905aac45650"
+    }
+  ],
+  "now": 1794513990,
+  "program": "<spike>/ferrata-wt-bridge-module-complete/bridge/target/riscv-guest/methods/ferrata-guests/riscv32im-risc0-zkvm-elf/release/release.bin"
+}
