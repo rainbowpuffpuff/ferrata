@@ -123,8 +123,11 @@ The ETH (read on Sepolia): the vault's balance went 0, 1,002,000,000,000,000 (de
   failed** (the pin, the vault's immutables, configId recomputed) (`verify-sepolia-tampered-ids.txt`); crown-live-1's
   records with the final programs' ids (`t3`), **3 failed** the same way (`verify-sepolia-crown-live-1-final-ids.txt`);
   exit status 1 each.
-- `scripts/reproduce-image-ids.sh compare --vault 0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c` after a `build` of this
-  tree: [`docs/guides/verify.md`](../../../docs/guides/verify.md) §2 gives the result.
+- `compare-vault.txt`: `scripts/reproduce-image-ids.sh compare --vault 0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c`
+  (publicnode, 16:57Z) after `scripts/reproduce-image-ids.sh build` of `integration8` (79b9bbc; the guests as of
+  4abfbf5) on the Modal build box (2 CPUs, 563 s): **6 of 6** ids of the crown run's programs equal the recorded ones,
+  the vault's `checkpointImageId` and `releaseImageId` equal to the rebuilt `checkpoint_b` and release, and **14 of 14**
+  guests equal [`docs/image-ids.md`](../../../docs/image-ids.md) ([`docs/guides/verify.md`](../../../docs/guides/verify.md) §2).
 - With `cast` (publicnode, 16:42Z): every transaction above (status, block, sender, nonce, gas used, value), the
   deployer's nonce, the vault's code, address and immutables, the stop's verifier, owner and pause flag, `finalState`,
   the burn root, both nullifiers, the balances at each block, `escrowed`, `totalOwed`, `owed` and the `Release` and
@@ -135,6 +138,6 @@ The ETH (read on Sepolia): the vault's balance went 0, 1,002,000,000,000,000 (de
 The 36 records of crown-live-1's pattern (the checkpoint input `crown-24-90`; `programs/ids.jsonl`; for
 `scripts/verify-sepolia.py` each capture's record, `header.rlp` and the vault's storage proof; for `e2e/crown.sh verify`
 session A's `deployment-settings.yaml`, the devnet's public genesis settings whose sha256 is `bedrockGenesisId`, and
-each capture's `block.json`), the verify outputs and the controls. Not committed: the logs and `crown.log` (local paths),
+each capture's `block.json`), the verify outputs, `compare-vault.txt` and the controls. Not committed: the logs and `crown.log` (local paths),
 the programs and receipts (binaries), the LEZ sessions' exports and node data, the captures' other RPC answers, forge's
 broadcast records; `e2e/crown.sh fetch --lez crown-live-3` brings them from the ws-3 Volume.
