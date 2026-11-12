@@ -56,11 +56,12 @@ scripts/fetch-vectors.sh && cargo test --workspace --locked
 
 (163 tests in 25 binaries; under two minutes on a 16-core machine with an empty cargo registry.)
 
-The live Sepolia round trip, checked from its committed records, read-only (Python's standard library
-only; it asks a public endpoint unless you give your own with `--rpc URL` or `SEPOLIA_RPC_URL`):
+The live Sepolia round trip on the final programs, checked from its committed records, read-only (Python's
+standard library only; it asks a public endpoint unless you give your own with `--rpc URL` or `SEPOLIA_RPC_URL`;
+`e2e/runs/crown-live-1` is the first live run, on earlier programs):
 
 ```sh
-python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-1
+python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-3
 ```
 
 The rest needs RISC Zero's toolchain (`rzup`, r0vm 3.0.5), Foundry (forge 1.3.6, solc 0.8.26) and, for
@@ -141,26 +142,33 @@ status.
 
 ## Live on Sepolia, and how to check it yourself
 
-On 11 November 2026 (EVIDENCE rows 41–42) the whole round trip ran on earlier versions of these programs, Sepolia
-to LEZ and back: the first live run, `crown-live-1`, ran `integration5`'s programs ([`e2e/crown/README.md`](e2e/crown/README.md),
-"The programs of crown-live-1"), not the final ones of [`docs/image-ids.md`](docs/image-ids.md), which the second
-live run, `crown-live-2`, deploys (its records are not in this tree yet). FerrataVault v5 deployed in mode (B) at
-[`0xfE3199fa2634413CbAC317371076Cae3EB2d9E54`](https://sepolia.etherscan.io/address/0xfE3199fa2634413CbAC317371076Cae3EB2d9E54); a public and a private deposit, final on Sepolia, imported by the
-bridge program on a LEZ v0.4.0-rc1 devnet from Sepolia's own finality updates and claimed, the private one with a
-real proof; a public and a private burn; a rule (B) checkpoint over the devnet's blocks proven on a GPU, its Groth16
-seal verified on Sepolia; both releases paid. 13 transactions, 74.9M gas, four starts (three stops on the RPC
-endpoint's lagging reads, each resumed), verify 14 of 14 ([`e2e/runs/crown-live-1/`](e2e/runs/crown-live-1/README.md)).
-The LEZ side was a devnet we ran (one validator): no public LEZ network runs any of it
-("Not audited. Not for production.", below).
+On 12 November 2026 (EVIDENCE rows 91–92) the whole round trip ran on the final programs of
+[`docs/image-ids.md`](docs/image-ids.md), Sepolia to LEZ and back, as `crown-live-3`: FerrataVault v5 deployed in
+mode (B) at [`0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c`](https://sepolia.etherscan.io/address/0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c),
+the vault reviewers should check; LEZ's light client started from a fresh Sepolia checkpoint, inside the programs'
+weak-subjectivity bound; a public and a private deposit, final on Sepolia, imported by the bridge program on a LEZ
+v0.4.0-rc1 devnet from Sepolia's own finality updates and claimed, the private one with a real proof; a public and a
+private burn; a rule (B) checkpoint over the devnet's blocks proven on a GPU, its Groth16 seal verified on Sepolia;
+both releases paid. 13 transactions, 74.9M gas, two starts (one stop on the RPC endpoint's lagging reads, before the
+vault, resumed), verify 14 of 14 ([`e2e/runs/crown-live-3/`](e2e/runs/crown-live-3/README.md)). The second live run,
+`crown-live-2`, stopped at its first stage with nothing sent: the bound refused its 38-day-old checkpoint
+([`e2e/runs/crown-live-2/`](e2e/runs/crown-live-2/README.md)). The first, `crown-live-1` (11 November, EVIDENCE rows
+41–42), made the same round trip on earlier versions of these programs (`integration5`'s, built before guest builds
+were path-independent) through the vault
+[`0xfE3199fa2634413CbAC317371076Cae3EB2d9E54`](https://sepolia.etherscan.io/address/0xfE3199fa2634413CbAC317371076Cae3EB2d9E54)
+([`e2e/runs/crown-live-1/`](e2e/runs/crown-live-1/README.md)). The LEZ side was a devnet we ran (one validator): no
+public LEZ network runs any of it ("Not audited. Not for production.", below).
 
 Anyone can re-check it from the committed records against a JSON-RPC endpoint of their choice:
-`python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-1` (13 passed on two public endpoints). It checks
-every recorded transaction, the deployment's CREATE addresses, the vault's immutables (image ids, configId,
-genesisState, rule (B), verifier, linked registry), the deposits' commitments, the vault storage LEZ imported
-(Merkle proofs against Sepolia's final headers), the checkpoint journal against the LEZ records and its seal
-through the vault's own verifier, finalization and releases (EVIDENCE row 42).
-[docs/guides/verify.md](docs/guides/verify.md) says what each check proves and what it still trusts, and how
-to rebuild the run's programs to their image ids.
+`python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-3` (13 passed on two public endpoints; `e2e/runs/crown-live-1`
+the same). It checks every recorded transaction, the deployment's CREATE addresses, the vault's immutables (image ids,
+configId, genesisState, rule (B), verifier, linked registry), the deposits' commitments, the vault storage LEZ imported
+(Merkle proofs against Sepolia's final headers), the checkpoint journal against the LEZ records and its seal through
+the vault's own verifier, finalization and releases (EVIDENCE row 92). The vault's programs rebuild from this tree:
+`scripts/reproduce-image-ids.sh build`, then `compare --vault 0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c` gives all
+of its ids (6 of 6 crown programs, the vault's two immutables among them, and 14 of 14 guests).
+[docs/guides/verify.md](docs/guides/verify.md) says what each check proves and what it still trusts, and how to
+rebuild the programs to their image ids.
 
 ## Components and their status
 
@@ -169,14 +177,14 @@ to rebuild the run's programs to their image ids.
 | [Light-client core](crates/ferrata-core/README.md), `crates/` | Ethereum sync-committee light client and execution-layer proofs, `no_std` Rust | built and tested | [1, 40, 69](docs/EVIDENCE.md) |
 | [Guest benchmarks](bench/README.md), `bench/` | The core inside a RISC Zero guest: cycle counts on real mainnet data | measured | [2](docs/EVIDENCE.md) |
 | [LEZ program](lez/RESULTS.md), `lez/` | The light client as a LEZ program; accounts, storage slots and logs attested under its records | prototype; on LEZ sequencers we run | [3–6, 21, 22, 32, 38, 39, 70–73, 88](docs/EVIDENCE.md) |
-| [Bridge program](lez/BRIDGE-RESULTS.md), `lez/` | The RFP-022 bridge on LEZ: `ImportRoot`, private claims and burns, fees, caps, freezes | prototype; real proofs, a LEZ devnet | [8–10, 28, 30, 31, 33, 38, 74, 75, 78, 88](docs/EVIDENCE.md) |
-| [Inbound crossing, live](lez/live/inbound/README.md), `lez/live/inbound/` | Ethereum to LEZ on a running LEZ sequencer and Logos Blockchain node | run: a Sepolia deposit claimed on LEZ | [11, 27, 41](docs/EVIDENCE.md) |
+| [Bridge program](lez/BRIDGE-RESULTS.md), `lez/` | The RFP-022 bridge on LEZ: `ImportRoot`, private claims and burns, fees, caps, freezes | prototype; real proofs, a LEZ devnet | [8–10, 28, 30, 31, 33, 38, 74, 75, 78, 88, 91](docs/EVIDENCE.md) |
+| [Inbound crossing, live](lez/live/inbound/README.md), `lez/live/inbound/` | Ethereum to LEZ on a running LEZ sequencer and Logos Blockchain node | run: a Sepolia deposit claimed on LEZ | [11, 27, 41, 91](docs/EVIDENCE.md) |
 | [GPU proving](gpu-prover/RESULTS.md), `gpu-prover/` | A Modal app proving checkpoints, the LEZ update and the private attestation, claim and burn on a GPU | measured | [5, 10, 16, 17, 24](docs/EVIDENCE.md) |
 | [Logos modules](modules/RESULTS.md), `modules/` | `ferrata_attest_module` and `ferrata_bridge_module`, and a catalog layout | built; run in a headless Logos Core | [7, 59–61](docs/EVIDENCE.md) |
-| [Vault](vault/README.md), `vault/` | `FerrataVault` v5, the immutable Ethereum vault (Solidity), and its linked library | prototype; deployed on Sepolia | [12–14, 25, 30, 35, 41, 54](docs/EVIDENCE.md) |
+| [Vault](vault/README.md), `vault/` | `FerrataVault` v5, the immutable Ethereum vault (Solidity), and its linked library | prototype; deployed on Sepolia | [12–14, 25, 30, 35, 41, 54, 91](docs/EVIDENCE.md) |
 | [Bridge core and release proof](bridge/README.md), `bridge/` | Commitments, trees, nullifiers; the release and claim guests | prototype; real proofs | [19, 30, 33, 77, 78, 88](docs/EVIDENCE.md) |
-| [Checkpoint program](checkpoint/README.md), `checkpoint/` | The LEZ to Ethereum checkpoint proof: re-hashes LEZ blocks, collects burns, checks rule (A) or (B) | prototype; proven on real LEZ blocks | [15, 16, 24, 29, 78](docs/EVIDENCE.md) |
-| [Return leg, end to end](e2e/README.md), `e2e/` | The checkpoint program, the release program and the v3 vault in one fixture | run; the LEZ side a stand-in | [18, 25, 26, 41](docs/EVIDENCE.md) |
+| [Checkpoint program](checkpoint/README.md), `checkpoint/` | The LEZ to Ethereum checkpoint proof: re-hashes LEZ blocks, collects burns, checks rule (A) or (B) | prototype; proven on real LEZ blocks | [15, 16, 24, 29, 78, 91](docs/EVIDENCE.md) |
+| [Return leg, end to end](e2e/README.md), `e2e/` | The checkpoint program, the release program and the v3 vault in one fixture | run; the LEZ side a stand-in | [18, 25, 26, 41, 91](docs/EVIDENCE.md) |
 | [Round trip in CI](e2e/ci/README.md), `e2e/ci/` | One deposit there and back on one machine, every step asserted, in GitHub Actions | tested on the build box; not yet on GitHub | [76, 77](docs/EVIDENCE.md) |
 | [Command-line tool](cli/README.md), `cli/` | `ferrata`, the user's tool: deposit, claim, burn, release, recover; private by default | prototype; anvil and the harness | [84, 85](docs/EVIDENCE.md) |
 | [Relayer](docs/guides/operator-guide.md#6-the-relayer-and-the-wrapper), `cli/` | `ferrata-relayer`: users' release jobs, rule (B) checkpoints, finalisation, the gas drop | prototype; a fork of Sepolia | [46–48](docs/EVIDENCE.md) |
@@ -200,6 +208,9 @@ it ran, whether its proofs were real or in dev mode, what is stand-in data, and 
 The latest additions, of 11 and 12 November 2026, one line each (in full:
 [EVIDENCE.md, "The latest additions"](docs/EVIDENCE.md#the-latest-additions-of-11-and-12-november-2026)):
 
+- **Live on 12 November 2026** (EVIDENCE rows 91–92, `crown-live-3`): the round trip on the final programs on
+  Sepolia, verify 14 of 14; anyone's check from the records 13 of 13 on two public endpoints; the vault's image ids
+  rebuilt from this tree.
 - **Merged on 12 November 2026** (EVIDENCE rows 84–88, `integration8`): the `ferrata` tool, private by default; the
   mini-app's private round trip on its devnet, also with real proofs; the padded private proofs on Apple Silicon.
 - **Since 11 November 2026** (EVIDENCE rows 28–30): the bridge program's freezes and caps on time from its own
@@ -303,14 +314,18 @@ implement yet:
 
 ## Not audited. Not for production.
 
-No part of this repository has been audited. Two vaults are deployed on a public network, both on Sepolia.
-FerrataVault v5 of `vault/` (rule (B)) is at
+No part of this repository has been audited. Three vaults are deployed on a public network, all on Sepolia.
+FerrataVault v5 of `vault/` (rule (B)) with the final programs is at
+[`0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c`](https://sepolia.etherscan.io/address/0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c)
+(created by transaction `0xa67bfa471825f0dad32e8243444700635a08f39d85b328672f5959b122c12822`, block 12,119,409), with
+its emergency stop (owner renounced) and library: the live round trip of 12 November 2026 made two deposits, a
+checkpoint and two releases through it ([`e2e/runs/crown-live-3/`](e2e/runs/crown-live-3/README.md), EVIDENCE row
+91). The same v5 vault with the first run's programs is at
 [`0xfE3199fa2634413CbAC317371076Cae3EB2d9E54`](https://sepolia.etherscan.io/address/0xfE3199fa2634413CbAC317371076Cae3EB2d9E54)
-(created by transaction `0xee91c261265ac3ada50b525edb35a1faa32bb5bb4ffa2b1d433f5a278d9808a3`, block 12,111,048), with
-its emergency stop (owner renounced) and library: the live round trip of 11 November 2026 made two deposits, a
-checkpoint and two releases through it ([`e2e/runs/crown-live-1/`](e2e/runs/crown-live-1/README.md), EVIDENCE row
-41), with testnet parameters (a 1-day revocation window, a 120 s release delay, no caps, no watchers, a freeze
-authority without a key holder). Before it, the v3 vault of the end-to-end fixture was deployed on Sepolia at
+(transaction `0xee91c261265ac3ada50b525edb35a1faa32bb5bb4ffa2b1d433f5a278d9808a3`, block 12,111,048): the live round
+trip of 11 November 2026 ([`e2e/runs/crown-live-1/`](e2e/runs/crown-live-1/README.md), EVIDENCE row 41). Both have
+testnet parameters (a 1-day revocation window, a 120 s release delay, no caps, no watchers, a freeze authority without
+a key holder). Before them, the v3 vault of the end-to-end fixture was deployed on Sepolia at
 [`0xd0B5fcC0B47D8E6f514f9D246Bb0b416b2048AF7`](https://sepolia.etherscan.io/address/0xd0B5fcC0B47D8E6f514f9D246Bb0b416b2048AF7) (created by
 transaction `0x0a5c3a64b6357c76e273f3ecd91ad58078f9c872f3ab90e68dba521de0589f12`, block 12,107,894), with one deposit, deposit 0
 (transaction `0xf3235de7115886851c2a92b6471e1cdce9c8aa9fa3c39558d60cade17a5789a0`, block 12,107,901, 0.001 ETH).
