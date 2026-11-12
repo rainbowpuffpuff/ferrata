@@ -1,26 +1,26 @@
 # The bridge program's inbound leg (`harness/tests/bridge_inbound.rs`)
 
-Bridge program image `43615dc48098b3731990de7700204d2a1bea0e9f963ee7c4dd629048dd5ef19c`; every transaction settled by LEZ's own functions in a block of its own.
+Bridge program image `ccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd`; every transaction settled by LEZ's own functions in a block of its own.
 
 | # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
 |---|---|---|---:|---:|---:|---:|---|
-| 1 | Init A: vault A's slot 2 holds configId(A) | bridge Init 44,818 → Attest 85,725 → bridge (reply) 39,419 | 169,962 | 3% | 1,946 | 1,375,264 | applied |
-| 2 | Init B (another configuration, vault B) | bridge Init 44,198 → Attest 83,634 → bridge (reply) 39,419 | 167,251 | 3% | 1,882 | 1,353,064 | applied |
-| 3 | Init A' (vault A, another fee recipient): slot 2 is configId(A) | bridge Init 44,818 → Attest 85,725 → bridge (reply) 32,198 | 162,741 | 3% | 1,946 | 1,317,496 | refused: exit 246 (PAIRING_MISMATCH) |
+| 1 | Init A: vault A's slot 2 holds configId(A) | bridge Init 44,818 → Attest 86,790 → bridge (reply) 39,419 | 171,027 | 3% | 1,946 | 1,383,784 | applied |
+| 2 | Init B (another configuration, vault B) | bridge Init 44,198 → Attest 84,699 → bridge (reply) 39,419 | 168,316 | 3% | 1,882 | 1,361,584 | applied |
+| 3 | Init A' (vault A, another fee recipient): slot 2 is configId(A) | bridge Init 44,818 → Attest 86,790 → bridge (reply) 32,198 | 163,806 | 3% | 1,946 | 1,326,016 | refused: exit 246 (PAIRING_MISMATCH) |
 | 4 | Init A again | bridge Init 39,401 | 39,401 | 1% | 1,946 | 330,776 | refused: exit 244 (ALREADY_WRITTEN) |
-| 5 | Register ETH (A): entry and schedule 0 attested at block 100 | bridge Register 73,920 → Attest 150,201 → bridge (reply) 74,476 → bridge WriteToken 32,147 | 330,744 | 7% | 2,747 | 2,667,928 | applied |
-| 6 | Register ETH (B) | bridge Register 76,864 → Attest 155,163 → bridge (reply) 74,476 → bridge WriteToken 32,147 | 338,650 | 7% | 2,770 | 2,731,360 | applied |
-| 7 | ImportRoot A: slots 0 and 1 at block 100 (5 leaves) | bridge ImportRoot 50,128 → Attest 108,849 → bridge (reply) 53,650 → bridge WriteRoot 17,083 | 229,710 | 5% | 1,895 | 1,852,840 | applied |
-| 8 | ImportRoot A: block 101 (8 leaves) | bridge ImportRoot 51,721 → Attest 112,749 → bridge (reply) 53,650 → bridge WriteRoot 17,083 | 235,203 | 5% | 2,025 | 1,897,824 | applied |
-| 9 | ImportRoot A: block 101 again (same count) | bridge ImportRoot 51,721 → Attest 112,749 → bridge (reply) 53,650 → bridge WriteRoot 18,567 | 236,687 | 5% | 2,025 | 1,909,696 | refused: exit 244 (ALREADY_WRITTEN) |
-| 10 | ImportRoot A: block 101, message claims count 7 | bridge ImportRoot 51,721 → Attest 112,749 → bridge (reply) 39,074 | 203,544 | 4% | 2,025 | 1,644,552 | refused: exit 247 (IMPORT_MISMATCH) |
-| 11 | ImportRoot A: block 101, message claims the 5-leaf root | bridge ImportRoot 51,721 → Attest 112,749 → bridge (reply) 38,594 | 203,064 | 4% | 2,025 | 1,640,712 | refused: exit 247 (IMPORT_MISMATCH) |
-| 12 | ImportRoot A with vault B's proofs | bridge ImportRoot 49,908 → Attest 43,057 | 92,965 | 2% | 1,918 | 759,064 | refused: exit 110 (ProofNodeMismatch) |
+| 5 | Register ETH (A): entry and schedule 0 attested at block 100 | bridge Register 73,920 → Attest 151,273 → bridge (reply) 74,476 → bridge WriteToken 32,147 | 331,816 | 7% | 2,747 | 2,676,504 | applied |
+| 6 | Register ETH (B) | bridge Register 76,864 → Attest 156,184 → bridge (reply) 74,476 → bridge WriteToken 32,147 | 339,671 | 7% | 2,770 | 2,739,528 | applied |
+| 7 | ImportRoot A: slots 0 and 1 at block 100 (5 leaves) | bridge ImportRoot 50,128 → Attest 109,870 → bridge (reply) 53,650 → bridge WriteRoot 17,083 | 230,731 | 5% | 1,895 | 1,861,008 | applied |
+| 8 | ImportRoot A: block 101 (8 leaves) | bridge ImportRoot 51,721 → Attest 113,770 → bridge (reply) 53,650 → bridge WriteRoot 17,083 | 236,224 | 5% | 2,025 | 1,905,992 | applied |
+| 9 | ImportRoot A: block 101 again (same count) | bridge ImportRoot 51,721 → Attest 113,770 → bridge (reply) 53,650 → bridge WriteRoot 18,567 | 237,708 | 5% | 2,025 | 1,917,864 | refused: exit 244 (ALREADY_WRITTEN) |
+| 10 | ImportRoot A: block 101, message claims count 7 | bridge ImportRoot 51,721 → Attest 113,770 → bridge (reply) 39,074 | 204,565 | 4% | 2,025 | 1,652,720 | refused: exit 247 (IMPORT_MISMATCH) |
+| 11 | ImportRoot A: block 101, message claims the 5-leaf root | bridge ImportRoot 51,721 → Attest 113,770 → bridge (reply) 38,594 | 204,085 | 4% | 2,025 | 1,648,880 | refused: exit 247 (IMPORT_MISMATCH) |
+| 12 | ImportRoot A with vault B's proofs | bridge ImportRoot 49,908 → Attest 44,014 | 93,922 | 2% | 1,918 | 766,720 | refused: exit 110 (ProofNodeMismatch) |
 | 13 | ImportRoot A': no configuration (never initialised) | bridge ImportRoot 16,143 | 16,143 | 0% | 2,090 | 145,864 | refused: exit 245 (NOT_FOUND) |
-| 14 | ImportRoot A: block 102, root of 8 leaves, count 6 (a lagging count) | bridge ImportRoot 51,721 → Attest 112,749 → bridge (reply) 53,650 → bridge WriteRoot 17,083 | 235,203 | 5% | 2,025 | 1,897,824 | applied |
-| 15 | ImportRoot B: block 100 (8 leaves) | bridge ImportRoot 49,908 → Attest 114,375 → bridge (reply) 53,650 → bridge WriteRoot 17,083 | 235,016 | 5% | 1,918 | 1,895,472 | applied |
-| 16 | ImportFees ETH (A): schedule 1 at block 101 | bridge ImportFees 55,929 → Attest 112,749 → bridge (reply) 58,259 → bridge ExtendFees 41,726 | 268,663 | 5% | 2,206 | 2,166,952 | applied |
-| 17 | ImportFees ETH (A): no schedule 2 at block 101 (8 leaves) | bridge ImportFees 50,198 → Attest 107,315 → bridge (reply) 52,487 → bridge ExtendFees 39,427 | 249,427 | 5% | 1,945 | 2,010,976 | applied |
+| 14 | ImportRoot A: block 102, root of 8 leaves, count 6 (a lagging count) | bridge ImportRoot 51,721 → Attest 113,770 → bridge (reply) 53,650 → bridge WriteRoot 17,083 | 236,224 | 5% | 2,025 | 1,905,992 | applied |
+| 15 | ImportRoot B: block 100 (8 leaves) | bridge ImportRoot 49,908 → Attest 115,561 → bridge (reply) 53,650 → bridge WriteRoot 17,083 | 236,202 | 5% | 1,918 | 1,904,960 | applied |
+| 16 | ImportFees ETH (A): schedule 1 at block 101 | bridge ImportFees 55,929 → Attest 113,770 → bridge (reply) 58,259 → bridge ExtendFees 41,726 | 269,684 | 5% | 2,206 | 2,175,120 | applied |
+| 17 | ImportFees ETH (A): no schedule 2 at block 101 (8 leaves) | bridge ImportFees 50,198 → Attest 108,223 → bridge (reply) 52,487 → bridge ExtendFees 39,427 | 250,335 | 5% | 1,945 | 2,018,240 | applied |
 | 18 | Claim: the shared vector's deposit (leaf 2) under root(A, 5) | bridge Claim 107,702 → bridge Issue 51,166 → bridge Admit 35,565 → bridge Spend 30,916 → bridge Mint 18,161 → bridge Mint 18,161 | 261,671 | 5% | 2,053 | 2,109,792 | applied |
 | 19 | Claim: the same again (replay) | bridge Claim 107,702 → bridge Issue 51,166 → bridge Admit 35,565 → bridge Spend 19,559 | 213,992 | 4% | 2,053 | 1,728,360 | refused: exit 250 (ALREADY_CLAIMED) |
 | 20 | Claim: the same deposit under root(A, 8) | bridge Claim 107,702 → bridge Issue 51,166 → bridge Admit 35,565 → bridge Spend 19,559 | 213,992 | 4% | 2,053 | 1,728,360 | refused: exit 250 (ALREADY_CLAIMED) |
@@ -42,58 +42,58 @@ Bridge program image `43615dc48098b3731990de7700204d2a1bea0e9f963ee7c4dd629048dd
 | transaction | handler | cycles | segments | input bytes (ReceiveInput) | of which message | of which pre-state | journal bytes | post-state bytes | exit |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|
 | Init A: vault A's slot 2 holds configId(A) | bridge Init | 44,818 | 1 | 1,493 | 1,419 | 0 | 3,136 | 390 | 0 |
-| Init A: vault A's slot 2 holds configId(A) | Attest | 85,725 | 1 | 1,627 | 1,156 | 333 | 2,090 | – | 0 |
+| Init A: vault A's slot 2 holds configId(A) | Attest | 86,790 | 1 | 1,659 | 1,156 | 365 | 2,122 | – | 0 |
 | Init A: vault A's slot 2 holds configId(A) | bridge (reply) | 39,419 | 1 | 898 | 370 | 390 | 1,487 | 564 | 0 |
 | Init B (another configuration, vault B) | bridge Init | 44,198 | 1 | 1,429 | 1,355 | 0 | 3,008 | 390 | 0 |
-| Init B (another configuration, vault B) | Attest | 83,634 | 1 | 1,563 | 1,092 | 333 | 2,026 | – | 0 |
+| Init B (another configuration, vault B) | Attest | 84,699 | 1 | 1,595 | 1,092 | 365 | 2,058 | – | 0 |
 | Init B (another configuration, vault B) | bridge (reply) | 39,419 | 1 | 898 | 370 | 390 | 1,487 | 564 | 0 |
 | Init A' (vault A, another fee recipient): slot 2 is configId(A) | bridge Init | 44,818 | 1 | 1,493 | 1,419 | 0 | 3,136 | 390 | 0 |
-| Init A' (vault A, another fee recipient): slot 2 is configId(A) | Attest | 85,725 | 1 | 1,627 | 1,156 | 333 | 2,090 | – | 0 |
+| Init A' (vault A, another fee recipient): slot 2 is configId(A) | Attest | 86,790 | 1 | 1,659 | 1,156 | 365 | 2,122 | – | 0 |
 | Init A' (vault A, another fee recipient): slot 2 is configId(A) | bridge (reply) | 32,198 | 1 | 898 | 370 | 390 | 0 | – | 246 |
 | Init A again | bridge Init | 39,401 | 1 | 2,122 | 1,484 | 564 | 0 | – | 244 |
 | Register ETH (A): entry and schedule 0 attested at block 100 | bridge Register | 73,920 | 1 | 2,859 | 2,221 | 564 | 5,939 | 950 | 0 |
-| Register ETH (A): entry and schedule 0 attested at block 100 | Attest | 150,201 | 1 | 2,504 | 2,033 | 333 | 3,318 | – | 0 |
+| Register ETH (A): entry and schedule 0 attested at block 100 | Attest | 151,273 | 1 | 2,536 | 2,033 | 365 | 3,350 | – | 0 |
 | Register ETH (A): entry and schedule 0 attested at block 100 | bridge (reply) | 74,476 | 1 | 1,809 | 721 | 950 | 3,345 | 564 | 0 |
 | Register ETH (A): entry and schedule 0 attested at block 100 | bridge WriteToken | 32,147 | 1 | 981 | 843 | 0 | 1,849 | 843 | 0 |
 | Register ETH (B) | bridge Register | 76,864 | 1 | 2,882 | 2,244 | 564 | 5,985 | 950 | 0 |
-| Register ETH (B) | Attest | 155,163 | 1 | 2,527 | 2,056 | 333 | 3,341 | – | 0 |
+| Register ETH (B) | Attest | 156,184 | 1 | 2,559 | 2,056 | 365 | 3,373 | – | 0 |
 | Register ETH (B) | bridge (reply) | 74,476 | 1 | 1,809 | 721 | 950 | 3,345 | 564 | 0 |
 | Register ETH (B) | bridge WriteToken | 32,147 | 1 | 981 | 843 | 0 | 1,849 | 843 | 0 |
 | ImportRoot A: slots 0 and 1 at block 100 (5 leaves) | bridge ImportRoot | 50,128 | 1 | 2,007 | 1,369 | 564 | 4,167 | 613 | 0 |
-| ImportRoot A: slots 0 and 1 at block 100 (5 leaves) | Attest | 108,849 | 1 | 1,921 | 1,450 | 333 | 2,501 | – | 0 |
+| ImportRoot A: slots 0 and 1 at block 100 (5 leaves) | Attest | 109,870 | 1 | 1,953 | 1,450 | 365 | 2,533 | – | 0 |
 | ImportRoot A: slots 0 and 1 at block 100 (5 leaves) | bridge (reply) | 53,650 | 1 | 1,238 | 487 | 613 | 2,048 | 564 | 0 |
 | ImportRoot A: slots 0 and 1 at block 100 (5 leaves) | bridge WriteRoot | 17,083 | 1 | 255 | 117 | 0 | 397 | 117 | 0 |
 | ImportRoot A: block 101 (8 leaves) | bridge ImportRoot | 51,721 | 1 | 2,137 | 1,499 | 564 | 4,427 | 613 | 0 |
-| ImportRoot A: block 101 (8 leaves) | Attest | 112,749 | 1 | 2,051 | 1,580 | 333 | 2,631 | – | 0 |
+| ImportRoot A: block 101 (8 leaves) | Attest | 113,770 | 1 | 2,083 | 1,580 | 365 | 2,663 | – | 0 |
 | ImportRoot A: block 101 (8 leaves) | bridge (reply) | 53,650 | 1 | 1,238 | 487 | 613 | 2,048 | 564 | 0 |
 | ImportRoot A: block 101 (8 leaves) | bridge WriteRoot | 17,083 | 1 | 255 | 117 | 0 | 397 | 117 | 0 |
 | ImportRoot A: block 101 again (same count) | bridge ImportRoot | 51,721 | 1 | 2,137 | 1,499 | 564 | 4,427 | 613 | 0 |
-| ImportRoot A: block 101 again (same count) | Attest | 112,749 | 1 | 2,051 | 1,580 | 333 | 2,631 | – | 0 |
+| ImportRoot A: block 101 again (same count) | Attest | 113,770 | 1 | 2,083 | 1,580 | 365 | 2,663 | – | 0 |
 | ImportRoot A: block 101 again (same count) | bridge (reply) | 53,650 | 1 | 1,238 | 487 | 613 | 2,048 | 564 | 0 |
 | ImportRoot A: block 101 again (same count) | bridge WriteRoot | 18,567 | 1 | 372 | 117 | 117 | 0 | – | 244 |
 | ImportRoot A: block 101, message claims count 7 | bridge ImportRoot | 51,721 | 1 | 2,137 | 1,499 | 564 | 4,427 | 613 | 0 |
-| ImportRoot A: block 101, message claims count 7 | Attest | 112,749 | 1 | 2,051 | 1,580 | 333 | 2,631 | – | 0 |
+| ImportRoot A: block 101, message claims count 7 | Attest | 113,770 | 1 | 2,083 | 1,580 | 365 | 2,663 | – | 0 |
 | ImportRoot A: block 101, message claims count 7 | bridge (reply) | 39,074 | 1 | 1,238 | 487 | 613 | 0 | – | 247 |
 | ImportRoot A: block 101, message claims the 5-leaf root | bridge ImportRoot | 51,721 | 1 | 2,137 | 1,499 | 564 | 4,427 | 613 | 0 |
-| ImportRoot A: block 101, message claims the 5-leaf root | Attest | 112,749 | 1 | 2,051 | 1,580 | 333 | 2,631 | – | 0 |
+| ImportRoot A: block 101, message claims the 5-leaf root | Attest | 113,770 | 1 | 2,083 | 1,580 | 365 | 2,663 | – | 0 |
 | ImportRoot A: block 101, message claims the 5-leaf root | bridge (reply) | 38,594 | 1 | 1,238 | 487 | 613 | 0 | – | 247 |
 | ImportRoot A with vault B's proofs | bridge ImportRoot | 49,908 | 1 | 2,030 | 1,392 | 564 | 4,213 | 613 | 0 |
-| ImportRoot A with vault B's proofs | Attest | 43,057 | 1 | 1,944 | 1,473 | 333 | 0 | – | 110 |
+| ImportRoot A with vault B's proofs | Attest | 44,014 | 1 | 1,976 | 1,473 | 365 | 0 | – | 110 |
 | ImportRoot A': no configuration (never initialised) | bridge ImportRoot | 16,143 | 1 | 1,573 | 1,499 | 0 | 0 | – | 245 |
 | ImportRoot A: block 102, root of 8 leaves, count 6 (a lagging count) | bridge ImportRoot | 51,721 | 1 | 2,137 | 1,499 | 564 | 4,427 | 613 | 0 |
-| ImportRoot A: block 102, root of 8 leaves, count 6 (a lagging count) | Attest | 112,749 | 1 | 2,051 | 1,580 | 333 | 2,631 | – | 0 |
+| ImportRoot A: block 102, root of 8 leaves, count 6 (a lagging count) | Attest | 113,770 | 1 | 2,083 | 1,580 | 365 | 2,663 | – | 0 |
 | ImportRoot A: block 102, root of 8 leaves, count 6 (a lagging count) | bridge (reply) | 53,650 | 1 | 1,238 | 487 | 613 | 2,048 | 564 | 0 |
 | ImportRoot A: block 102, root of 8 leaves, count 6 (a lagging count) | bridge WriteRoot | 17,083 | 1 | 255 | 117 | 0 | 397 | 117 | 0 |
 | ImportRoot B: block 100 (8 leaves) | bridge ImportRoot | 49,908 | 1 | 2,030 | 1,392 | 564 | 4,213 | 613 | 0 |
-| ImportRoot B: block 100 (8 leaves) | Attest | 114,375 | 1 | 1,944 | 1,473 | 333 | 2,524 | – | 0 |
+| ImportRoot B: block 100 (8 leaves) | Attest | 115,561 | 1 | 1,976 | 1,473 | 365 | 2,556 | – | 0 |
 | ImportRoot B: block 100 (8 leaves) | bridge (reply) | 53,650 | 1 | 1,238 | 487 | 613 | 2,048 | 564 | 0 |
 | ImportRoot B: block 100 (8 leaves) | bridge WriteRoot | 17,083 | 1 | 255 | 117 | 0 | 397 | 117 | 0 |
 | ImportFees ETH (A): schedule 1 at block 101 | bridge ImportFees | 55,929 | 1 | 2,318 | 1,680 | 564 | 4,785 | 790 | 0 |
-| ImportFees ETH (A): schedule 1 at block 101 | Attest | 112,749 | 1 | 2,051 | 1,580 | 333 | 2,631 | – | 0 |
+| ImportFees ETH (A): schedule 1 at block 101 | Attest | 113,770 | 1 | 2,083 | 1,580 | 365 | 2,663 | – | 0 |
 | ImportFees ETH (A): schedule 1 at block 101 | bridge (reply) | 58,259 | 1 | 1,415 | 487 | 790 | 2,366 | 564 | 0 |
 | ImportFees ETH (A): schedule 1 at block 101 | bridge ExtendFees | 41,726 | 1 | 1,239 | 258 | 843 | 2,295 | 1,031 | 0 |
 | ImportFees ETH (A): no schedule 2 at block 101 (8 leaves) | bridge ImportFees | 50,198 | 1 | 2,057 | 1,419 | 564 | 4,263 | 602 | 0 |
-| ImportFees ETH (A): no schedule 2 at block 101 (8 leaves) | Attest | 107,315 | 1 | 1,978 | 1,507 | 333 | 2,558 | – | 0 |
+| ImportFees ETH (A): no schedule 2 at block 101 (8 leaves) | Attest | 108,223 | 1 | 2,010 | 1,507 | 365 | 2,590 | – | 0 |
 | ImportFees ETH (A): no schedule 2 at block 101 (8 leaves) | bridge (reply) | 52,487 | 1 | 1,227 | 487 | 602 | 1,990 | 564 | 0 |
 | ImportFees ETH (A): no schedule 2 at block 101 (8 leaves) | bridge ExtendFees | 39,427 | 1 | 1,239 | 70 | 1,031 | 2,295 | 1,031 | 0 |
 | Claim: the shared vector's deposit (leaf 2) under root(A, 5) | bridge Claim | 107,702 | 1 | 1,462 | 1,271 | 117 | 1,754 | – | 0 |

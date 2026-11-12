@@ -7,24 +7,24 @@ Fixture `crates/ferrata-spectests/fixtures/sepolia-vault-v5-2026-11-11`: finaliz
 
 | # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
 |---|---|---|---:|---:|---:|---:|---|
-| 1 | the vault v5: slots 0 and 1 and deposit leaf 0 (real Sepolia state) | Attest 326,000 | 326,000 | 7% | 7,659 | 2,669,272 | applied |
-| 2 | the vault v5: slots 0 and 1 and deposit leaf 1 | Attest 326,001 | 326,001 | 7% | 7,659 | 2,669,280 | applied |
-| 3 | the vault v5: slots 0 and 1 and both deposit leaves | Attest 391,291 | 391,291 | 8% | 8,731 | 3,200,176 | applied |
-| 4 | an address without an account (exclusion), under the Gloas record | Attest 175,127 | 175,127 | 4% | 4,890 | 1,440,136 | applied |
-| 5 | deposit 0's Deposit log, block 12111477, one EIP-2935 hop under the Gloas record | Attest 324,408 | 324,408 | 6% | 8,787 | 2,665,560 | applied |
-| 6 | deposit 1's Deposit log, block 12111574, one EIP-2935 hop under the Gloas record | Attest 324,934 | 324,934 | 6% | 8,832 | 2,670,128 | applied |
+| 1 | the vault v5: slots 0 and 1 and deposit leaf 0 (real Sepolia state) | Attest 327,016 | 327,016 | 7% | 7,659 | 2,677,400 | applied |
+| 2 | the vault v5: slots 0 and 1 and deposit leaf 1 | Attest 327,017 | 327,017 | 7% | 7,659 | 2,677,408 | applied |
+| 3 | the vault v5: slots 0 and 1 and both deposit leaves | Attest 392,358 | 392,358 | 8% | 8,731 | 3,208,712 | applied |
+| 4 | an address without an account (exclusion), under the Gloas record | Attest 176,198 | 176,198 | 4% | 4,890 | 1,448,704 | applied |
+| 5 | deposit 0's Deposit log, block 12111477, one EIP-2935 hop under the Gloas record | Attest 325,595 | 325,595 | 7% | 8,787 | 2,675,056 | applied |
+| 6 | deposit 1's Deposit log, block 12111574, one EIP-2935 hop under the Gloas record | Attest 325,962 | 325,962 | 7% | 8,832 | 2,678,352 | applied |
 
 ## Refused
 
 | # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
 |---|---|---|---:|---:|---:|---:|---|
-| 1 | a leaf that is not at its index | Attest 300,841 | 300,841 | 6% | 7,659 | 2,468,000 | refused: exit 163 (AccumulatorRootMismatch) |
-| 2 | a leaf proven at another index | Attest 300,840 | 300,840 | 6% | 7,659 | 2,467,992 | refused: exit 163 (AccumulatorRootMismatch) |
-| 3 | a leaf against slot 1 (the count, not the root) | Attest 300,841 | 300,841 | 6% | 7,659 | 2,468,000 | refused: exit 163 (AccumulatorRootMismatch) |
-| 4 | an empty position past the count (slot 1 condition) | Attest 255,181 | 255,181 | 5% | 7,659 | 2,102,720 | refused: exit 130 (PredicateFailed) |
-| 5 | a leaf with one sibling changed | Attest 300,841 | 300,841 | 6% | 7,659 | 2,468,000 | refused: exit 163 (AccumulatorRootMismatch) |
-| 6 | the vault's facts asked as mainnet statements | Attest 53,086 | 53,086 | 1% | 7,659 | 485,960 | refused: exit 140 (ChainMismatch) |
-| 7 | the vault's facts without the block header | Attest 50,176 | 50,176 | 1% | 6,968 | 457,152 | refused: exit 215 (HeaderRequired) |
-| 8 | deposit 0's log through a hop that carries deposit 1's block header | Attest 217,198 | 217,198 | 4% | 8,800 | 1,807,984 | refused: exit 110 (ProofNodeMismatch) |
-| 9 | deposit 0's log without the hop (proof against the record's block) | Attest 47,613 | 47,613 | 1% | 2,717 | 402,640 | refused: exit 110 (ProofNodeMismatch) |
-| 10 | deposit 0's log with a false predicate (token topic = 0x11…11) | Attest 300,204 | 300,204 | 6% | 8,822 | 2,472,208 | refused: exit 130 (PredicateFailed) |
+| 1 | a leaf that is not at its index | Attest 301,798 | 301,798 | 6% | 7,659 | 2,475,656 | refused: exit 163 (AccumulatorRootMismatch) |
+| 2 | a leaf proven at another index | Attest 301,797 | 301,797 | 6% | 7,659 | 2,475,648 | refused: exit 163 (AccumulatorRootMismatch) |
+| 3 | a leaf against slot 1 (the count, not the root) | Attest 301,798 | 301,798 | 6% | 7,659 | 2,475,656 | refused: exit 163 (AccumulatorRootMismatch) |
+| 4 | an empty position past the count (slot 1 condition) | Attest 256,138 | 256,138 | 5% | 7,659 | 2,110,376 | refused: exit 130 (PredicateFailed) |
+| 5 | a leaf with one sibling changed | Attest 301,798 | 301,798 | 6% | 7,659 | 2,475,656 | refused: exit 163 (AccumulatorRootMismatch) |
+| 6 | the vault's facts asked as mainnet statements | Attest 54,043 | 54,043 | 1% | 7,659 | 493,616 | refused: exit 140 (ChainMismatch) |
+| 7 | the vault's facts without the block header | Attest 51,133 | 51,133 | 1% | 6,968 | 464,808 | refused: exit 215 (HeaderRequired) |
+| 8 | deposit 0's log through a hop that carries deposit 1's block header | Attest 218,160 | 218,160 | 4% | 8,800 | 1,815,680 | refused: exit 110 (ProofNodeMismatch) |
+| 9 | deposit 0's log without the hop (proof against the record's block) | Attest 48,569 | 48,569 | 1% | 2,717 | 410,288 | refused: exit 110 (ProofNodeMismatch) |
+| 10 | deposit 0's log with a false predicate (token topic = 0x11…11) | Attest 301,166 | 301,166 | 6% | 8,822 | 2,479,904 | refused: exit 130 (PredicateFailed) |
