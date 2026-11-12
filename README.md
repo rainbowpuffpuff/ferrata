@@ -242,6 +242,9 @@ The latest additions, of 11 and 12 November 2026, one line each (in full:
   the evidence that exists today and the milestone that would deliver it.
 - [docs/REVIEW-core.md](docs/REVIEW-core.md): each function of the core against its specification
   section, with deviations and the tests that pin it.
+- [docs/REVIEW-vault.md](docs/REVIEW-vault.md) and [docs/REVIEW-guests.md](docs/REVIEW-guests.md): the same for
+  the vault and its library (52 rows) and for every guest program's entry points and checks (55 rows); drafted on
+  12 November 2026 with an agent review, not yet signed.
 
 ## Guides, trust and performance (first drafts, 11 November 2026)
 
