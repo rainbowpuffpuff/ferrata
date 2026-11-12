@@ -97,10 +97,34 @@ def check_user_proving(p4):
                 verdicts.append(v)
     else:
         rows.append(("release receipt", "not measured", "OPEN")); verdicts.append("OPEN")
-    rows.append(("macOS (Apple Silicon)", "not measured: no macOS machine in the measurements", "OPEN"))
-    rows.append(("a laptop (not a cloud container)", "not measured at the minimum", "OPEN"))
+    mac_f = os.path.join(ROOT, "lez/results/p4-macos/summary.json")
+    mac_verdicts = []
+    if os.path.exists(mac_f):
+        mac = load(mac_f)
+        names = {"m1": "Apple M1 Mac mini, 8 cores, 16 GB (the declared minimum on macOS)",
+                 "m4": "Apple M4 Mac mini, 10 cores, 24 GB"}
+        for key in ("m1", "m4"):
+            by = {}
+            for r in (mac.get(key) or {}).get("proofs") or []:
+                if r.get("prove_exit") == 0 and r.get("settle_exit") == 0 and r.get("execute_and_prove_s") is not None:
+                    by.setdefault(r.get("label") or r.get("job"), []).append(r)
+            rel_ok = [r for r in (mac.get(key) or {}).get("release") or [] if r.get("prove_exit") == 0 and r.get("wall_s")]
+            if rel_ok:
+                by["release receipt (succinct)"] = [dict(r, execute_and_prove_s=r["wall_s"]) for r in rel_ok]
+            for label, rs in sorted(by.items()):
+                ts = sorted(x["execute_and_prove_s"] for x in rs)
+                med = ts[len(ts) // 2] if len(ts) % 2 else (ts[len(ts) // 2 - 1] + ts[len(ts) // 2]) / 2
+                peak = max((x.get("time_l") or {}).get("max_rss_bytes", 0) for x in rs) / 2**30
+                v = "GO" if max(ts) <= LIMIT_S and peak <= LIMIT_GIB else "NO-GO"
+                rows.append((f"{label}, {names[key]}", f"median {fmt_s(med)}, peak {peak:.2f} GiB; {len(rs)} runs, settled", v))
+                if key == "m1" and label != "private burn":
+                    mac_verdicts.append(v)
+    else:
+        rows.append(("macOS (Apple Silicon)", "not measured: no macOS machine in the measurements", "OPEN"))
+    rows.append(("a laptop (not a cloud container or a Mac mini)", "not measured at the minimum", "OPEN"))
     linux = "GO" if verdicts and all(v == "GO" for v in verdicts) else ("NO-GO" if "NO-GO" in verdicts or "STOP" in verdicts else "OPEN")
-    return dict(verdict=linux if linux != "GO" else "GO (Linux); macOS OPEN",
+    macos = "GO" if mac_verdicts and all(v == "GO" for v in mac_verdicts) else ("NO-GO" if "NO-GO" in mac_verdicts else "OPEN")
+    return dict(verdict=f"{linux} (Linux); {macos} (macOS, M1 16 GB)",
                 value="Linux x86-64 Modal containers whose CPU and memory request equals their limit (16 GiB); CPUs: "
                       + ("; ".join(sorted(cpus_seen)) or "not recorded"),
                 rows=rows, sources=[rel(pad_f), rel(scale_f), "lez/results/p4-minimum/README.md"])
@@ -124,8 +148,12 @@ def check_gas_drop():
                     value="no test of the gas drop in the repository (specified in the proposal §B2, not built)",
                     rows=[("otherwise", "first claims are faucet-funded, the correlation disclosed, Logos decides", "")],
                     sources=["grep: fn *gas_drop* in lez/, bridge/, cli/, e2e/"])
-    return dict(verdict="OPEN (built; run its tests)", value=f"{len(hits)} named test(s): " + ", ".join(hits[:6]),
-                rows=[], sources=hits[:6])
+    return dict(verdict="OPEN (the sweep of a sealed native credit by a private claim is not built)",
+                value=f"the gas drop's receipt binding (N, oneTimeAddress, relayer) and the relayer's side are built and tested "
+                      f"({len(hits)} named test(s): " + ", ".join(hits[:6]) + "); the claim that sweeps the sealed credit "
+                      "and pays its fee from it is not (README, Specified but not built)",
+                rows=[("otherwise", "first claims are faucet-funded, the correlation disclosed, Logos decides", "")],
+                sources=hits[:6] + ["README.md: Specified but not built"])
 
 
 def ls_remote(url, pattern):
