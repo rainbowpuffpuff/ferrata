@@ -182,7 +182,9 @@ contract PrivacySuiteTest is VaultTestBase {
                     bytes memory bad = bytes.concat(seal);
                     bad[100] = bad[100] ^ 0x01;
                     vm.prank(ethRelayer);
-                    (bool accepted,) = address(vault).call(abi.encodeCall(FerrataVault.release, (r, bad)));
+                    // Bounded gas, as test/real/ does: a byte flipped inside a curve point makes the pairing
+                    // precompile fail, which consumes all the gas it was given.
+                    (bool accepted,) = address(vault).call{gas: 5_000_000}(abi.encodeCall(FerrataVault.release, (r, bad)));
                     assertFalse(accepted, "a seal with one byte flipped is refused");
                 }
             } else {
