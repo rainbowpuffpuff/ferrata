@@ -577,13 +577,21 @@ impl Devnet {
             "scan" => self.scan().await,
             "claim" => self.claim(params).await,
             "burn" => self.burn(params).await,
-            "checkpoint" => self.checkpoint().await,
+            "checkpoint" => self.checkpoint(params).await,
             "release" => self.release(params).await,
             "advance_time" => self.advance_time(params).await,
             "set_endpoints" => self.set_endpoints(params).await,
             "admin.status" => self.admin_status().await,
             "admin.set_cap" => self.admin_set_cap(params).await,
             "admin.freeze" => self.admin_freeze(params).await,
+            // ferrata_bridge_module's end-to-end test (modules/scripts/bridge_e2e.sh): reads and
+            // submissions only; the module builds every call.
+            "module.inputs" => self.module_inputs(params).await,
+            "module.import_block" => self.module_import_block().await,
+            "module.import_fees" => self.module_import_fees(params).await,
+            "module.submit" => self.module_submit(params).await,
+            "module.vault_roots" => self.module_vault_roots(params).await,
+            "module.vault_release" => self.module_vault_release(params).await,
             other => bail!("unknown method {other}"),
         }
     }
@@ -975,7 +983,8 @@ impl Devnet {
 
     /// The stand-in checkpoint prover and relayer: candidate, wait, beacon, finalisation of a burn root
     /// over every published burn, then the token's release delay.
-    async fn checkpoint(&mut self) -> Result<Value> {
+    /// `pass_delay` (default true): move anvil's clock past the release delay after finalising.
+    async fn checkpoint(&mut self, params: &Value) -> Result<Value> {
         let history = self.history().await?;
         ensure!(!history.burns.is_empty(), "no burn to checkpoint yet");
         let burn_leaves: Vec<Hash> = history
@@ -1029,11 +1038,15 @@ impl Devnet {
             U256::ZERO,
         )
         .await?;
-        p.raw_request::<_, Value>("evm_increaseTime".into(), (200u64,)).await?;
+        let pass_delay = params["pass_delay"].as_bool().unwrap_or(true);
+        if pass_delay {
+            p.raw_request::<_, Value>("evm_increaseTime".into(), (200u64,)).await?;
+        }
         p.raw_request::<_, Value>("evm_mine".into(), Vec::<u64>::new()).await?;
         Ok(json!({
             "burn_root": hx(&burn_root),
             "burn_count": count,
+            "release_delay_passed": pass_delay,
             "stand_in": "the checkpoint proof and its Groth16 wrap: the mock verifier accepts the exact journal; anvil's clock is moved past the challenge window and the release delay",
         }))
     }
@@ -1180,6 +1193,277 @@ impl Devnet {
 }
 
 /// A failed report as the program's code, or the revert when there is no code.
+// ---- ferrata_bridge_module's path ------------------------------------------------------------------
+// The module builds each call from the chains' state given in its request. These methods are what a
+// wallet or a relayer reads from the two chains (the zone's states, the vault's leaves, burns and
+// accepted roots) and the submission of what the module built: nothing here plans a call.
+
+fn note_value(n: &BurnNote) -> Value {
+    json!({ "r": hx(&n.r), "memo": hx(&n.memo), "mac": hx(&n.mac), "token": hx(&n.token), "amount": hx(&n.amount), "c_out": hx(&n.c_out) })
+}
+
+fn hex_bytes(v: &Value, what: &str) -> Result<Vec<u8>> {
+    hex::decode(v.as_str().with_context(|| format!("{what}: a hex string"))?.trim_start_matches("0x"))
+        .with_context(|| format!("{what}: hex"))
+}
+
+fn actor_of(v: &Value) -> Result<Actor> {
+    let id = |k: &str| -> Result<AccountId> { Ok(AccountId::new(ferrata_cli::h32(v[k].as_str().context("an account id")?)?)) };
+    Ok(Actor::new(id("account")?, id("program")?))
+}
+
+impl Devnet {
+    fn state_hex(&self, actor: Actor) -> String {
+        hx(&self.zone.world.chain.actor_state(actor))
+    }
+
+    fn bridge_config(&self) -> Result<bw::BridgeConfig> {
+        match bw::BridgeState::try_from_slice(&self.zone.world.chain.actor_state(config_actor(self.ctx.program, &self.cid))) {
+            Ok(bw::BridgeState::Config(c)) => Ok(c.config().clone()),
+            _ => bail!("config(cid) holds no configuration"),
+        }
+    }
+
+    /// What the module's requests need from the chains: the zone's states (`config(cid)`,
+    /// `token(cid, token)`, `root(cid, n)` of the newest import or `leaf_count`, `nullifier(…)` of
+    /// `nullifier`), the imports' leaf counts and the published burns (the zone's history), the
+    /// vault's deposit leaves; and the devnet user's bridge seed (the published test phrase's).
+    async fn module_inputs(&self, params: &Value) -> Result<Value> {
+        let program = self.ctx.program;
+        let token = match params["token"].as_str() {
+            Some(t) => <[u8; 20]>::try_from(hex::decode(t.trim_start_matches("0x"))?.as_slice()).context("token: 20 bytes")?,
+            None => ETH_TOKEN,
+        };
+        let history = self.history().await?;
+        let list = eth::deposit_list(&self.p, self.vault, 0, 10_000).await?;
+        let leaves: Vec<String> = list
+            .deposits
+            .iter()
+            .map(|d| hx(&inbound::deposit_leaf(d.leaf_index, &d.depositor, &d.token, &d.amount, &d.commitment)))
+            .collect();
+        let deposits: Vec<Value> = list
+            .deposits
+            .iter()
+            .map(|d| {
+                json!({ "leaf_index": d.leaf_index, "depositor": hx(&d.depositor), "j": d.j, "token": hx(&d.token),
+                        "amount": hx(&d.amount), "commitment": hx(&d.commitment) })
+            })
+            .collect();
+        let mut out = json!({
+            "program": hx(program.value()),
+            "config_id": hx(&self.cid),
+            "chain_id": 1,
+            "vault": hx(&self.vault.into_array()),
+            "bridge_seed": hx(&self.user.bridge_seed()),
+            "depositor": hx(&self.user_addr.into_array()),
+            "private_accounts": self.user.private_account_ids(GAP)?.iter().map(|a| hx(a.value())).collect::<Vec<_>>(),
+            "config_state": self.state_hex(config_actor(program, &self.cid)),
+            "token_state": self.state_hex(token_actor(program, &self.cid, &token)),
+            "imported": history.roots,
+            "leaves": leaves,
+            "deposits": deposits,
+            "burns": history.burns.iter().map(|b| json!({ "burn_index": b.burn_index, "note": note_value(&b.note) })).collect::<Vec<_>>(),
+            "eth_time": self.eth_time().await?,
+            "released_nullifiers": eth::released_nullifiers(&self.p, self.vault, 0, 10_000)
+                .await?
+                .iter()
+                .map(|n| hx(n))
+                .collect::<Vec<_>>(),
+        });
+        let n = params["leaf_count"].as_u64().or_else(|| history.roots.last().copied());
+        if let Some(n) = n {
+            out["leaf_count"] = json!(n);
+            out["root_state"] = json!(self.state_hex(bw::root_actor(program, &self.cid, n)));
+        }
+        if let Some(nf) = params["nullifier"].as_str() {
+            let nf = ferrata_cli::h32(nf)?;
+            out["nullifier_state"] = json!(self.state_hex(bw::nullifier_actor(program, 1, &self.vault.into_array(), &nf)));
+        }
+        Ok(out)
+    }
+
+    /// A new execution block holding the vault's storage as anvil has it now (slots 0, 1 and 2),
+    /// recorded by the devnet's attestation instance (the stand-in: anvil's own state root is not
+    /// attested on the devnet); its record's state and the vault's proofs in `eth_getProof`'s shape.
+    async fn module_import_block(&mut self) -> Result<Value> {
+        let n = eth::view(&self.p, self.vault, IVault::nextLeafIndexCall {}, None).await?;
+        let root = eth::view(&self.p, self.vault, IVault::depositRootCall {}, None).await?;
+        let mut storage = vec![
+            (word(0), slot(&self.p, self.vault, word(0)).await?),
+            (word(1), slot(&self.p, self.vault, word(1)).await?),
+        ];
+        storage.push((word(2), self.cid));
+        ensure!(storage[0].1 == root.0, "slot 0 is depositRoot");
+        let at = 9_000_000 + 64 * self.eth_blocks;
+        self.eth_blocks += 1;
+        let b = self.zone.world.add_block(hb::Block::with_storage(at, at, self.vault.into_array(), &storage));
+        let config = self.bridge_config()?;
+        let block = &self.zone.world.blocks[b];
+        let proof = block.import_proof(&self.vault.into_array());
+        let (header, account) = bw::split_header(&proof.account);
+        let nodes = |v: &[Vec<u8>]| v.iter().map(|x| hx(x)).collect::<Vec<_>>();
+        let record = ferrata_lez_wire::header_actor(config.attestation, &config.instance_id, block.slot);
+        Ok(json!({
+            "block": b,
+            "record_slot": block.slot,
+            "record_state": self.state_hex(record),
+            "get_proof": {
+                "address": self.vault.to_string(),
+                "accountProof": nodes(&account),
+                "storageProof": [
+                    { "key": "0x0", "value": hx(&storage[0].1), "proof": nodes(&proof.root_slot) },
+                    { "key": "0x1", "value": hx(&storage[1].1), "proof": nodes(&proof.count_slot) },
+                ],
+            },
+            "header": header.map(|h| hx(&h)),
+            "root": hx(&root.0),
+            "leaf_count": n,
+            "stand_in": "a synthetic execution block holding the vault's real storage (slots 0, 1, 2 read from anvil) under a record of the devnet's attestation instance; its proofs in eth_getProof's shape",
+        }))
+    }
+
+    /// The relayer's `ImportFees` (ETH, schedule 1 absent) under block `block`, as `relay` runs it.
+    async fn module_import_fees(&mut self, params: &Value) -> Result<Value> {
+        let b = params["block"].as_u64().context("block")? as usize;
+        let f = self.zone.world.import_fees(
+            "ImportFees ETH 1 = none (relayer)",
+            &self.cid,
+            b,
+            ETH_TOKEN,
+            1,
+            None,
+            &self.vault.into_array(),
+        );
+        self.zone.record(&f);
+        Ok(json!({ "applied": f.ok(), "exit_code": f.exit_code, "stand_in": "the relayer's ImportFees through the harness's own call" }))
+    }
+
+    /// Submits a call the module built (`message`, `accounts`, `root_index`): public, signed and
+    /// settled as LEZ's wallet sends it; or, when its root is a private account of the devnet user
+    /// (`private_self`), proven (`FERRATA_DEVNET_PROOFS`) and settled privately with that account's
+    /// keys, as `claim` does for the tool's own private claim.
+    async fn module_submit(&mut self, params: &Value) -> Result<Value> {
+        let bytes = hex_bytes(&params["message"], "message")?;
+        let message = BridgeMessage::try_from_slice(&bytes).context("message: not a BridgeMessage")?;
+        let accounts = params["accounts"].as_array().context("accounts")?;
+        let root_index = params["root_index"].as_u64().unwrap_or(0) as usize;
+        let mut mentions = Vec::new();
+        for a in accounts {
+            let actor = actor_of(a)?;
+            mentions.push(match a["kind"].as_str().unwrap_or("") {
+                "pda" => Mention::Pda {
+                    actor,
+                    seed: lee_core::program::PdaSeed::new(ferrata_cli::h32(a["seed"].as_str().context("seed")?)?),
+                },
+                "signer" => Mention::Signer(actor),
+                "private_self" => Mention::PrivateSelf(actor),
+                "public" => Mention::Other(actor, None),
+                k => bail!("account kind {k}"),
+            });
+        }
+        let what = params["what"].as_str().unwrap_or("module call").to_string();
+        if let Some(Mention::PrivateSelf(me)) = mentions.get(root_index) {
+            let a = self
+                .private
+                .iter()
+                .position(|s| own_actor(self.ctx.program, s.id) == *me)
+                .context("the call's root is not a private account of the devnet user")?;
+            let publics: Vec<Actor> =
+                mentions.iter().enumerate().filter(|(i, _)| *i != root_index).map(|(_, m)| m.actor()).collect();
+            let mut holder = self.private[a].holder.clone();
+            if let BridgeMessage::ClaimPrivately { witness, .. } = &message {
+                holder.credit(&self.cid, &witness.token, u128_of(&witness.amount)).context("the holding would overflow")?;
+            }
+            let run = self.private_tx(a, &message, publics, holder)?;
+            return Ok(json!({
+                "settled": true,
+                "private": true,
+                "what": format!("{what} (harness, block {})", self.zone.world.chain.block_id - 1),
+                "account": a,
+                "balance": self.private[a].held(&self.cid, &ETH_TOKEN).to_string(),
+                "proof": self.proof_json(&run),
+            }));
+        }
+        let call = LezCall { what: what.clone(), mentions, root_index, message };
+        let report = self.zone.settle(&call);
+        Ok(json!({
+            "settled": report.ok(),
+            "private": false,
+            "what": what,
+            "exit_code": report.exit_code,
+            "gas_exec": report.charge.gas_exec,
+            "gas_stor": report.charge.gas_stor,
+            "revert": report.charge.revert.as_ref().map(|r| format!("{r:?}")),
+        }))
+    }
+
+    /// The vault's accepted burn roots with what the release rule needs (each checkpoint's
+    /// `finalizedAt` and its `releaseDelayFor(token, index)`), and anvil's time: the tool's own reads.
+    async fn module_vault_roots(&self, params: &Value) -> Result<Value> {
+        let token = match params["token"].as_str() {
+            Some(t) => t.parse::<Address>().context("token")?,
+            None => eth::address(ETH_TOKEN),
+        };
+        let roots = eth::accepted_roots(&self.p, self.vault, 0, 10_000).await?;
+        let mut out = Vec::new();
+        for r in &roots {
+            let delay = eth::view(
+                &self.p,
+                self.vault,
+                IVault::releaseDelayForCall { token, checkpointIndex: U256::from(r.index) },
+                None,
+            )
+            .await?;
+            out.push(json!({ "root": hx(&r.root.0), "count": r.count, "index": r.index, "finalized_at": r.finalized_at,
+                             "delay": u64::try_from(delay).unwrap_or(u64::MAX) }));
+        }
+        Ok(json!({ "roots": out, "now": eth::now(&self.p).await? }))
+    }
+
+    /// Sends the release the module planned (its `release` reply): the mock verifier accepts the
+    /// exact journal (the stand-in for the Groth16 proof), the relayer sends `release(r, seal)`.
+    async fn module_vault_release(&mut self, params: &Value) -> Result<Value> {
+        let rel = &params["release"];
+        let journal = hex_bytes(&rel["journal"], "release.journal")?;
+        let p = &rel["public"];
+        let a20 = |v: &Value, w: &str| -> Result<Address> { Ok(Address::from_slice(&hex_bytes(v, w)?)) };
+        let w256 = |v: &Value, w: &str| -> Result<B256> { Ok(B256::from(ferrata_cli::h32(v.as_str().context(w.to_string())?)?)) };
+        let request = IVault::ReleaseRequest {
+            token: a20(&p["token"], "token")?,
+            denomIndex: params["denom_index"].as_u64().unwrap_or(0) as u8,
+            recipient: a20(&p["recipient"], "recipient")?,
+            relayer: a20(&p["relayer"], "relayer")?,
+            relayFee: U256::from_be_bytes(w256(&p["relay_fee"], "relay_fee")?.0),
+            burnRoot: w256(&rel["burn_root"], "burn_root")?,
+            nullifier: w256(&rel["nullifier"], "nullifier")?,
+        };
+        let release_image = eth::view(&self.p, self.vault, ICheckpoints::releaseImageIdCall {}, None).await?;
+        anvil_send(
+            &self.p,
+            self.verifier,
+            IMock::acceptCall { imageId: release_image, journalDigest: B256::from(sha256(&journal)) }.abi_encode(),
+            U256::ZERO,
+        )
+        .await?;
+        let recipient = request.recipient;
+        let before = self.p.get_balance(recipient).await?;
+        let signer = eth::keystore_signer(&self.relayer_ks, &self.password)?;
+        let sp = eth::signing_provider(&self.rpc, signer)?;
+        let calldata = eth::release_calldata(request, Bytes::from(SEAL.to_vec()));
+        let receipt = eth::send(&sp, self.relayer_addr, self.vault, calldata, U256::ZERO, 1).await?;
+        let paid = self.p.get_balance(recipient).await? - before;
+        Ok(json!({
+            "tx_hash": receipt.transaction_hash.to_string(),
+            "status": receipt.status(),
+            "block": receipt.block_number,
+            "recipient": recipient.to_string(),
+            "paid_wei": u256_str(paid),
+            "release_image_id": release_image.to_string(),
+            "stand_in": "the release proof's Groth16 wrap: the mock verifier accepts the exact journal",
+        }))
+    }
+}
+
 fn refusal_of(r: &TxReport, what: &str) -> String {
     match r.exit_code {
         Some(code) => codes::program_refusal(code, format!("{what}, returned by the program")).to_string(),

@@ -11,14 +11,23 @@
 //!                                          types, submit it at ACCOUNT, report the outcome
 //! module_e2e bridge MESSAGE_HEX            decode a bridge module message with the bridge
 //!                                          program's types (BridgeMessage)
+//! module_e2e advance-info                  the same instance before its finality update: its state,
+//!                                          the update and the bootstrap (SSZ), for `advance`
+//! module_e2e advance REPLY_FILE            execute the steps of `advance`'s reply in order on that
+//!                                          chain; compare with the harness's own job for the update
 //! ```
 //! Each prints one JSON object. MESSAGE_HEX and ACCOUNT are hex, as the modules return them.
 
 use std::process::exit;
 
 use ferrata_lez_bridge_wire::BridgeMessage;
-use ferrata_lez_wire::{instance_actor, Message, ATTESTED_SELECTOR};
-use harness::attest::Stage4;
+use ferrata_lez_wire::{header_actor, instance_actor, Message, ATTESTED_SELECTOR};
+use harness::{
+    attest::{fixture_file, Fixture, Stage4},
+    mainnet_config,
+    scenarios::World,
+};
+use lee::{AccountId, Actor};
 use serde_json::{json, Value};
 
 fn unhex(s: &str) -> Vec<u8> {
@@ -38,8 +47,12 @@ fn main() {
         Some("info") => info(),
         Some("attest") if args.len() == 3 => attest(&args[1], &args[2]),
         Some("bridge") if args.len() == 2 => bridge(&args[1]),
+        Some("advance-info") => advance_info(),
+        Some("advance") if args.len() == 2 => advance(&args[1]),
         _ => {
-            eprintln!("usage: module_e2e info | attest MESSAGE_HEX ACCOUNT_HEX | bridge MESSAGE_HEX");
+            eprintln!(
+                "usage: module_e2e info | attest MESSAGE_HEX ACCOUNT_HEX | bridge MESSAGE_HEX | advance-info | advance REPLY_FILE"
+            );
             exit(2)
         }
     };
@@ -146,4 +159,96 @@ fn bridge(message_hex: &str) -> Value {
         }
     };
     json!({ "decoded": true, "canonical": canonical, "message_bytes": bytes.len(), "fields": fields })
+}
+
+/// Stage 4's instance before its finality update: initialized from the fixture's bootstrap, the
+/// committee adopted, no update applied.
+fn advance_world() -> (World, Fixture) {
+    let fx = Fixture::load();
+    let w = World::at(harness::ferrata_account(), mainnet_config(2), fx.checkpoint, fx.bootstrap.clone(), vec![fx.update.clone()]);
+    (w, fx)
+}
+
+fn advance_info() -> Value {
+    let (w, fx) = advance_world();
+    json!({
+        "program_id": h(w.inst.program.value()),
+        "instance_id": h(&w.inst.id),
+        "instance_state": h(&w.chain.actor_state(instance_actor(w.inst.program, &w.inst.id))),
+        // As a beacon node serves them (the fixture's recorded files).
+        "finality_update": h(&fixture_file("finality_update.ssz")),
+        "bootstrap": h(&fixture_file("bootstrap.ssz")),
+        "finalized_slot_before": w.inst.store(&w.chain).finalized.slot,
+        "expected_finalized_slot": fx.finalized_slot,
+    })
+}
+
+fn actor_of(v: &Value) -> Actor {
+    let id = |k: &str| AccountId::new(unhex(v[k].as_str().unwrap_or_default()).try_into().unwrap_or([0; 32]));
+    Actor::new(id("account"), id("program"))
+}
+
+/// The module's steps, executed in order on the chain before the update; then the same update run
+/// by the harness's own job on a second copy of that chain, and the two instances compared.
+fn advance(reply_file: &str) -> Value {
+    let reply: Value = serde_json::from_slice(&std::fs::read(reply_file).unwrap_or_else(|e| {
+        eprintln!("module_e2e: {reply_file}: {e}");
+        exit(2)
+    }))
+    .unwrap_or(Value::Null);
+    let (mut w, fx) = advance_world();
+    let program = w.inst.program;
+    let time = w.inst.config.slot_start_ms(fx.update.signature_slot) + 12_000;
+    let mut steps = Vec::new();
+    let mut all_applied = true;
+    for step in reply["steps"].as_array().cloned().unwrap_or_default() {
+        let bytes = unhex(step["message"].as_str().unwrap_or_default());
+        let decoded = borsh::from_slice::<Message>(&bytes);
+        let canonical = decoded.as_ref().map(|m| borsh::to_vec(m).unwrap() == bytes).unwrap_or(false);
+        let variant = match &decoded {
+            Ok(m) => format!("{m:?}").split([' ', '{', '(']).next().unwrap_or("?").to_string(),
+            Err(e) => format!("undecodable: {e}"),
+        };
+        let root = actor_of(&step["root"]);
+        let actors: Vec<Actor> = step["accounts"].as_array().map(|a| a.iter().map(actor_of).collect()).unwrap_or_default();
+        let label = format!("module advance {}", step["step"].as_str().unwrap_or("?"));
+        let report = w.chain.submit(&label, root, bytes.clone(), actors, vec![], time);
+        all_applied &= report.ok();
+        steps.push(json!({
+            "step": step["step"],
+            "variant": variant,
+            "canonical": canonical,
+            "root_is_program_actor": root.program_account_id == program,
+            "applied": report.ok(),
+            "exit_code": report.exit_code,
+            "gas_exec": report.charge.gas_exec,
+            "gas_stor": report.charge.gas_stor,
+            "cycles": report.charge.cycles,
+            "tx_bytes": report.tx_bytes,
+            "message_bytes": report.message_bytes,
+        }));
+        if !report.ok() {
+            break;
+        }
+    }
+    let store = w.inst.store(&w.chain);
+    let module_state = w.chain.actor_state(instance_actor(program, &w.inst.id)).to_vec();
+    let record = w.chain.actor_state(header_actor(program, &w.inst.id, store.finalized.slot)).to_vec();
+    // The harness's own job for the same update, on a second copy of the chain.
+    let (mut w2, _) = advance_world();
+    let run = w2.apply(&fx.update, "harness finality update");
+    let harness_state = w2.chain.actor_state(instance_actor(program, &w2.inst.id)).to_vec();
+    let harness_record = w2.chain.actor_state(header_actor(program, &w2.inst.id, store.finalized.slot)).to_vec();
+    json!({
+        "steps": steps,
+        "all_applied": all_applied,
+        "finalized_slot_after": store.finalized.slot,
+        "expected_finalized_slot": fx.finalized_slot,
+        "record_written": !record.is_empty(),
+        "instance_state_after": h(&module_state),
+        "harness_transactions": run.reports.len(),
+        "harness_job_id": h(&run.job_id),
+        "state_equals_harness_job": module_state == harness_state,
+        "record_equals_harness_job": record == harness_record,
+    })
 }
