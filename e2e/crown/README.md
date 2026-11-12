@@ -12,7 +12,7 @@ the earlier programs. Commands: "Commands" below. One cloud run, resumed by the 
 crosses Sepolia -> LEZ -> Sepolia with the final programs and real proofs everywhere, and a verify script that
 re-checks every step from public data and the recorded blocks.
 
-**Next: `crown-live-2`, the second live run, on the final programs** (branch `integration7`, commit 73e6712: the
+**Next: `crown-live-2`, the second live run, on the final programs** (branch `integration7`, the guests as of 4abfbf5 (no later commit changes a guest): the
 thirteen merged branches, guest builds independent of the build path): the programs of the first table below, which
 any checkout rebuilds to the same ids (`scripts/reproduce-image-ids.sh`, [`docs/image-ids.md`](../../docs/image-ids.md));
 rehearsed on an anvil fork of Sepolia to DONE as `crown-rehearsal-5` (19 stages in 23 min 20 s, verify 14 of 14,
@@ -30,7 +30,7 @@ the owner's command: "Commands" below.
 | release | `bridge/` | one release per burn |
 | FerrataVault v5 + FerrataRegistry | `vault/src` | mode (B), RISC Zero's Groth16 verifier behind an emergency stop |
 
-**The programs of `crown-live-2`** (the final programs: `integration7` at 73e6712, built on the Modal build box with
+**The programs of `crown-live-2`** (the final programs: `integration7`, guest sources as of 4abfbf5, built on the Modal build box with
 `scripts/reproduce-image-ids.sh build`; the same commit built at two other paths with two other `$HOME`s gives
 byte-identical binaries and these ids, [`docs/image-ids.md`](../../docs/image-ids.md); pinned in `cloud/ctl.py` and
 `cloud/drive.py`; on the ws-3 Volume since `setup` on 12 Nov 2026; the LEZ bundle of these programs:
