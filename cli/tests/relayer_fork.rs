@@ -49,6 +49,17 @@ impl Drop for Anvil {
     }
 }
 
+/// The `ferrata-relayer` binary cargo built for this test. `CARGO_BIN_EXE_ferrata-relayer` does not reach rustc
+/// through this tree's rustc wrapper (`scripts/guest-rustc`, a `/bin/sh` script: dash drops variables whose names hold
+/// a `-`), so the binary is found beside the test's own (`target/<profile>/deps/..` -> `target/<profile>/`).
+fn relayer_bin() -> PathBuf {
+    if let Some(p) = option_env!("CARGO_BIN_EXE_ferrata-relayer") {
+        return PathBuf::from(p);
+    }
+    let exe = std::env::current_exe().expect("the test binary's path");
+    exe.parent().and_then(Path::parent).expect("target/<profile>").join("ferrata-relayer")
+}
+
 fn repo() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..")
 }
@@ -94,7 +105,7 @@ fn daemon(url: &str, state: &Path, inbox: &Path, from: Address, extra: &[&str]) 
     args.extend_from_slice(&["--state", &state_s]);
     args.extend_from_slice(extra);
     args.extend_from_slice(&["run", "--inbox", &inbox_s, "--rounds", "1", "--poll-secs", "0"]);
-    let out = Command::new(env!("CARGO_BIN_EXE_ferrata-relayer")).args(&args).stderr(Stdio::inherit()).output()?;
+    let out = Command::new(relayer_bin()).args(&args).stderr(Stdio::inherit()).output()?;
     ensure!(out.status.success(), "the daemon failed: {}", String::from_utf8_lossy(&out.stdout));
     let lines: Vec<Value> =
         String::from_utf8_lossy(&out.stdout).lines().filter_map(|l| serde_json::from_str(l).ok()).collect();
@@ -379,7 +390,7 @@ async fn relayer_on_a_sepolia_fork_with_crown_live_1_proofs() -> Result<()> {
     results.insert("replay".into(), json!({ "vault": call_err.lines().next(), "daemon": again[0]["reason"] }));
 
     // 9. `status`; and a clean stop: the daemon without a round limit stops on SIGTERM after its round.
-    let bin = env!("CARGO_BIN_EXE_ferrata-relayer");
+    let bin = relayer_bin();
     let (from_block, named) = ((SUBMIT_BLOCK - 1).to_string(), NAMED.to_string());
     let (state_s, inbox_s) = (state.display().to_string(), inbox.display().to_string());
     let base = [
@@ -396,7 +407,7 @@ async fn relayer_on_a_sepolia_fork_with_crown_live_1_proofs() -> Result<()> {
         "--state",
         state_s.as_str(),
     ];
-    let out = Command::new(bin).args(base).arg("status").output()?;
+    let out = Command::new(&bin).args(base).arg("status").output()?;
     ensure!(out.status.success(), "status failed");
     let lines: Vec<Value> =
         String::from_utf8_lossy(&out.stdout).lines().filter_map(|l| serde_json::from_str(l).ok()).collect();
@@ -407,7 +418,7 @@ async fn relayer_on_a_sepolia_fork_with_crown_live_1_proofs() -> Result<()> {
             && status[0]["checkpoints"] == "1"
     );
     println!("status: {}", status[0]);
-    let child = Command::new(bin)
+    let child = Command::new(&bin)
         .args(base)
         .args(["--accept-unpaid", "run", "--inbox", inbox_s.as_str(), "--poll-secs", "1"])
         .stdout(Stdio::piped())

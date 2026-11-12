@@ -437,7 +437,7 @@ async fn deposit_attest_claim_burn_checkpoint_b_release() -> Result<()> {
         .iter()
         .map(|d| inbound::deposit_leaf(d.leaf_index, &d.depositor, &d.token, &d.amount, &d.commitment))
         .collect();
-    let plan = lez::plan_claim(&zone, &ctx, &leaves, &rows[0].owned, &history, false, None).await?;
+    let plan = lez::plan_claim(&zone, &ctx, &leaves, &rows[0].owned, &history, false, None, None).await?;
     zone.submit(&plan.call).await?;
     let holder = AccountId::new(dest);
     ensure!(zone.world.balance(holder, &cid) == ONE_ETH, "the holder holds 1 ETH on LEZ");
@@ -448,8 +448,8 @@ async fn deposit_attest_claim_burn_checkpoint_b_release() -> Result<()> {
     // 5. The burn: 0.1 ETH to a fresh address.
     let recipient = Address::from_slice(&sha256(b"ferrata ci round trip: recipient")[12..]);
     let history = lez::history(&ctx, &zone.applied(program).await?);
-    let bplan =
-        lez::plan_burn(&zone, &ctx, &keys, holder, [0; 20], TENTH_ETH, recipient.into_array(), &history).await?;
+    let from = lez::BurnFrom::Public(holder);
+    let bplan = lez::plan_burn(&zone, &ctx, &keys, from, [0; 20], TENTH_ETH, recipient.into_array(), &history).await?;
     zone.submit(&bplan.call).await?;
     ensure!(zone.world.balance(holder, &cid) == ONE_ETH - TENTH_ETH, "the burn debited 0.1 ETH");
     let history = lez::history(&ctx, &zone.applied(program).await?);

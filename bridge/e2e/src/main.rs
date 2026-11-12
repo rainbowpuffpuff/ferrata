@@ -712,7 +712,7 @@ fn cmd_p254(opts: &BTreeMap<String, String>) -> Result<()> {
 /// The JSON input of RISC Zero's Groth16 prover image (risc0-groth16's `prove::to_json`, feature `wrap`).
 #[cfg(feature = "wrap")]
 fn groth16_prover_input(seal_bytes: &[u8]) -> Result<String> {
-    Ok(risc0_groth16::prove::to_json(seal_bytes)?)
+    risc0_groth16::prove::to_json(seal_bytes)
 }
 
 #[cfg(not(feature = "wrap"))]
