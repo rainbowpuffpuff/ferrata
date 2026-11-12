@@ -25,35 +25,36 @@ runs on its own, on a copy of the checkout: it writes into the tree it runs in.
 
 ## Run on Modal, 12 November 2026
 
-`MODAL_PROFILE=… modal run scripts/reproduce/modal_app.py` from a checkout of commit 031b8c5 (the scripts as here,
-but for how the two cargo lines count their test runs). Its last lines:
+`MODAL_PROFILE=… modal run --detach scripts/reproduce/modal_app.py` from a checkout of commit 03f1a9b (the scripts as
+here). Its last lines (`/work/out` is in the container; the logs came back to `target/reproduce/`):
 
 ```text
-Ferrata reproduction check: commit 031b8c533685da1e36be2fd82645a79f51a7d1ce
-2026-11-12 14:27:01 UTC, 16 CPUs; rust 1.93.0 1.98.1 1.88.0 (default 1.93.0); RISC Zero r0vm 3.0.5, guest rust 1.88.0 (lez: 1.91.1); forge 1.3.6, solc 0.8.26; Python 3.12.3
+Ferrata reproduction check: commit 03f1a9b74c8d73c3a2d1b8822d83d1d612e8bc96
+2026-11-12 15:46:57 UTC, 16 CPUs; rust 1.93.0 1.98.1 1.88.0 (default 1.93.0); RISC Zero r0vm 3.0.5, guest rust 1.88.0 (lez: 1.91.1); forge 1.3.6, solc 0.8.26; Python 3.12.3
 
 check           result    time  detail
 verify-sepolia  PASS      0:05  13 passed, 0 pending, 0 failed (61 RPC calls)
-vault           PASS      1:15  451 tests passed, 0 failed, 1 skipped (452 total tests)
-core            PASS      1:56  163 passed, 0 failed, 0 ignored (23 test binaries, 2 doc-test runs)
-guest-ids       PASS      8:37  14 of 14 guests equal docs/image-ids.md; 6 of 6 ids of the crown run's programs equal the recorded ones
-lez-harness     PASS     24:05  56 passed, 0 failed, 0 ignored (33 test binaries, 1 doc-test runs)
+vault           PASS      0:55  451 tests passed, 0 failed, 1 skipped (452 total tests)
+core            PASS      1:25  163 passed, 0 failed, 0 ignored in 25 test runs
+guest-ids       PASS      6:22  14 of 14 guests equal docs/image-ids.md; 6 of 6 ids of the crown run's programs equal the recorded ones
+lez-harness     PASS     17:47  56 passed, 0 failed, 0 ignored in 34 test runs
 
 tree: 21 committed files rewritten (lez/results/ 21): tree-changed.txt
-VERDICT: PASS, 5 of 5 checks, 36:01 in all
+VERDICT: PASS, 5 of 5 checks, 26:36 in all
 logs: /work/out
 ```
 
 The image: 10.1 GiB on disk (10,770 MiB measured in the container, of which 451 MiB are Modal's own Python); Modal
-built it in 233 s, and later runs reuse it. The run: 16 CPUs and up to 64 GiB. Modal preempted the
-first container 20 minutes in, during the LEZ harness, and ran the function again from the start, so the call took
-57 minutes in all; the 36 minutes above are the attempt that finished (`/work/out` is in the container; the logs
-came back to `target/reproduce/`). The 21 rewritten files are the harness's
-tables in `lez/results/`, which the committed tables predate (the README's quick start says so). The Docker route,
-`run.sh`, builds the same Dockerfile and runs the same `check.sh`; we have not run it (no Docker on our machines).
+built it in 233 s, and later runs reuse it. The run: 16 CPUs and up to 64 GiB, 27 minutes from the call to the
+logs back here. An earlier full run of the same checks (commit 031b8c5) passed 5 of 5 in 36 minutes, the LEZ harness
+taking 24 of them; Modal had preempted its first container 20 minutes in and ran the function again from the start,
+so that call took 57 minutes. The 21 rewritten files are the harness's tables in `lez/results/`, which the committed
+tables predate (the README's quick start says so). The Docker route, `run.sh`, builds the same Dockerfile and runs
+the same `check.sh`; we have not run it (no Docker on our machines).
 
 The Modal route needs the `modal` client (`pip install modal`, then `modal setup`) and a Modal account; it sends the
-committed tree, about 41 MiB compressed.
+committed tree, about 41 MiB compressed. If the connection drops, Modal stops the run (one of ours ended that way);
+`modal run --detach scripts/reproduce/modal_app.py` keeps it going, and `modal app logs` then shows its output.
 
 ## What is pinned
 

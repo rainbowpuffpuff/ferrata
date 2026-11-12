@@ -37,7 +37,7 @@ what is not built.
 
 **In one command**, in a container with every toolchain pinned: the checks below and the rebuild of all 14 guest
 programs against [`docs/image-ids.md`](docs/image-ids.md), ending in one line per check and a verdict (with Docker; a
-10 GB image; 36 minutes on 16 CPUs). Without Docker, on a Modal account: `modal run scripts/reproduce/modal_app.py`.
+10 GB image; half an hour on 16 CPUs). Without Docker, on a Modal account: `modal run scripts/reproduce/modal_app.py`.
 What it pins and what it leaves out: [`scripts/reproduce/README.md`](scripts/reproduce/README.md).
 
 ```sh
