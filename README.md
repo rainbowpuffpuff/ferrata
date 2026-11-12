@@ -114,7 +114,10 @@ status.
 
 ## Live on Sepolia, and how to check it yourself
 
-On 11 November 2026 (EVIDENCE rows 41–42) the whole round trip ran on these programs, Sepolia to LEZ and back. FerrataVault v5 deployed in mode (B) at
+On 11 November 2026 (EVIDENCE rows 41–42) the whole round trip ran on earlier versions of these programs, Sepolia
+to LEZ and back: the first live run, `crown-live-1`, ran `integration5`'s programs ([`e2e/crown/README.md`](e2e/crown/README.md),
+"The programs of crown-live-1"), not the final ones of [`docs/image-ids.md`](docs/image-ids.md), which the second
+live run, `crown-live-2`, deploys (its records are not in this tree yet). FerrataVault v5 deployed in mode (B) at
 [`0xfE3199fa2634413CbAC317371076Cae3EB2d9E54`](https://sepolia.etherscan.io/address/0xfE3199fa2634413CbAC317371076Cae3EB2d9E54); a public and a private deposit, final on Sepolia, imported by the
 bridge program on a LEZ v0.4.0-rc1 devnet from Sepolia's own finality updates and claimed, the private one with a
 real proof; a public and a private burn; a rule (B) checkpoint over the devnet's blocks proven on a GPU, its Groth16
