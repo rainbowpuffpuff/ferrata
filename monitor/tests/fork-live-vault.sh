@@ -121,5 +121,7 @@ check "F2 the candidate on the real final tip passes untouched, attested by the 
   echo
   echo "Failures: $fails"
 } >> "$summary"
+# The alert log names the node file by its absolute path; the committed record names it from the checkout.
+sed -i 's#"file:[^"]*/monitor/results/#"file:<checkout>/monitor/results/#g' "$alerts"
 cat "$summary"
 [ "$fails" -eq 0 ]

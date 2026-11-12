@@ -343,5 +343,7 @@ check "alerts: all $crit critical alerts reached the pager command" '[ "$crit" -
   echo "Failures: $fails"
 } >> "$summary"
 cp "$state" "$out/watcher-state.json" 2>/dev/null || true
+# The alert log names the node file by its absolute path; the committed record names it from the checkout.
+sed -i 's#"file:[^"]*/monitor/results/#"file:<checkout>/monitor/results/#g' "$alerts"
 cat "$summary"
 [ "$fails" -eq 0 ]
