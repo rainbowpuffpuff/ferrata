@@ -18,12 +18,12 @@ program of `inbound-live` (`66722fc7…f4fa`). §7's real proofs are of `25dfd9b
 program before this extension. **Since branch `lez-time-fix`** (§12) the program's freezes and caps
 run on attested Ethereum time instead of a caller's, and **since the security fixes of 11 November**
 (§13) public balances sit at `holder(account)` PDAs and `ImportRoot` is accepted only as a visible
-top-level call. The merged program (both changes) is image
-`cf41b7e5c0583686a273b5114368f4873bbd614249647f43604a6caf8e675390` (541,464 ELF bytes) at the `integration5` worktree's path, and every `results/bridge-*.md` is now of it.
+top-level call. The merged program (both changes) was image
+`cf41b7e5c0583686a273b5114368f4873bbd614249647f43604a6caf8e675390` (541,464 ELF bytes) at the `integration5` worktree's path. Every `results/bridge-*.md` is now of this tree's program, `ccde6171…` (592,840 ELF bytes, the same built at any path: [`../docs/image-ids.md`](../docs/image-ids.md)), recorded on 12 November 2026; it adds §14's controls and answers through the attestation program of milestones A1 and A2.
 §12 gives each operation before and after the time fix (that branch alone: `d0c11833…23cd` at its
 worktree's path), §13 before and after the security fixes (that branch alone: `fe2f2487…946d`); the text
 of §1–§5 and §8a keeps the figures of the program before both (`f11b1aba…58eb`), and §8's rows on caps,
-freezes and `Sunset` are the time fix's run: both are superseded by the merged program's tables in `results/`,
+freezes and `Sunset` are the time fix's run: both are superseded by the tables in `results/`,
 whose figures §1's last column gives (§12 and §13 keep each fix branch's own run as history). Every number below is LEZ's own accounting of a transaction that
 ran: `lee`'s state transition functions and the copy of LEZ's fee settlement that Stages 1–4 use
 ([RESULTS.md](RESULTS.md) §1), each transaction in a block of its own, the attestation program
@@ -50,22 +50,22 @@ comes later.
 
 ## 1. The operations, before and after
 
-| operation | handlers run, after (cycles each) | execution gas, before → after | storage gas (tx bytes), before → after | merged program (`results/`, b93a945): execution gas; storage gas |
+| operation | handlers run, after (cycles each) | execution gas, before → after | storage gas (tx bytes), before → after | this tree's program as recorded now (`results/`, `ccde6171…`, 12 November): execution gas; storage gas |
 |---|---|---:|---:|---|
-| `Init`: attest the vault's slot 2 = `configId`, write `config(cid)` | Init 43,668 → Attest 85,725 → reply 39,214 | 154,529 → 168,607 | 1,726 → 1,946 | 168,776; 1,946 |
-| `ImportRoot` (8 leaves): attest slots 0 and 1, write `root(cid, n)` | ImportRoot 49,536 → Attest 112,749 → reply 52,945 → WriteRoot 16,328 | 203,620 → 231,558 | 1,703 → 2,025 | 231,365; 2,025 |
-| `Register` a token: attest its entry, fee slots 0 and 1, the count | Register 72,084 → Attest 150,208 → reply 73,421 → WriteToken 29,035 | new: 324,748 | 2,747 | 327,269; 2,747 |
-| `ImportFees`: a schedule; the absence of the next one | ImportFees 54,087 → Attest 112,749 → reply 57,503 → ExtendFees 38,134; 48,326 → 107,315 → 51,842 → 36,134 | new: 262,473; 243,617 | 2,206; 1,945 | 265,219 and 246,064; 2,206 and 1,945 |
-| plaintext claim, 1 ETH under fee schedule 0 (relay fee only) | Claim 107,526 → Issue 47,239 → Admit 34,291 → Spend 21,901 → Mint 14,237 → Mint 14,237 | 142,444 → 239,431 | 1,740 → 2,061 | 258,885; 2,053 |
-| plaintext claim, 10 ETH under schedule 1 (mint and relay fee) | Claim 107,526 → Issue 47,250 → Admit 34,003 → Spend 24,145 → three Mints (14,237; 14,237; 19,181) | 142,456 → 260,579 | 1,740 → 2,061 | 287,943; 2,053 |
-| private claim, private destination (one privacy-preserving transaction) | private: ClaimPrivately 41,133, reply 111,838 (user cycles); public: Read, Issue, Admit, Spend, Mint (the relay fee) | 439,815 → 539,060 | 224,063 | 551,502; 224,063 |
-| private claim, public destination | private: the same two; public: Read, Issue, Admit, Spend, three Mints | 457,925 → 573,154 | 224,063 | 600,607 (the test's output); 224,063 |
-| public burn of one denomination, top-level, signed by the holder | Burn (holder) 26,461 → Burn (token) 49,322 → Admit 34,250 → Burn (record) 20,835 | 45,867 → 130,868 | 647 → 775 | 164,153; 839 |
-| private burn of one denomination | private: Burn 24,397 (user cycles); public: Burn (token), Admit, Burn (record) | 427,959 → 513,593 | 224,063 | 518,358; 224,063 |
-| `SetCap` (admin), a token's mint bucket | SetCap (admin's actor) 12,790 → SetCap (token) 36,839 | new: 49,629 | 733 | 55,805; 725 (reads the newest record) |
-| `Freeze` (freeze authority): a token's mints; all mints | 12,483 → 34,060; 11,871 → 31,380 | new: 46,543; 43,251 | 710; 690 | 104,176 and 93,426; 775 and 755 (read the newest record) |
-| `Sunset` (freeze authority) | Sunset (its actor) 11,140 → Sunset (`config(cid)`) 30,844 | new: 41,984 | 671 | 44,002; 671 |
-| `Tick` at a token; at the configuration | 32,821; 27,213 | new: 32,821; 27,213 | 460; 440 | 94,926 and 76,845; 525 and 505 (read the newest record) |
+| `Init`: attest the vault's slot 2 = `configId`, write `config(cid)` | Init 43,668 → Attest 85,725 → reply 39,214 | 154,529 → 168,607 | 1,726 → 1,946 | 171,027; 1,946 |
+| `ImportRoot` (8 leaves): attest slots 0 and 1, write `root(cid, n)` | ImportRoot 49,536 → Attest 112,749 → reply 52,945 → WriteRoot 16,328 | 203,620 → 231,558 | 1,703 → 2,025 | 236,224; 2,025 |
+| `Register` a token: attest its entry, fee slots 0 and 1, the count | Register 72,084 → Attest 150,208 → reply 73,421 → WriteToken 29,035 | new: 324,748 | 2,747 | 331,816; 2,747 |
+| `ImportFees`: a schedule; the absence of the next one | ImportFees 54,087 → Attest 112,749 → reply 57,503 → ExtendFees 38,134; 48,326 → 107,315 → 51,842 → 36,134 | new: 262,473; 243,617 | 2,206; 1,945 | 269,684 and 250,335; 2,206 and 1,945 |
+| plaintext claim, 1 ETH under fee schedule 0 (relay fee only) | Claim 107,526 → Issue 47,239 → Admit 34,291 → Spend 21,901 → Mint 14,237 → Mint 14,237 | 142,444 → 239,431 | 1,740 → 2,061 | 261,671; 2,053 |
+| plaintext claim, 10 ETH under schedule 1 (mint and relay fee) | Claim 107,526 → Issue 47,250 → Admit 34,003 → Spend 24,145 → three Mints (14,237; 14,237; 19,181) | 142,456 → 260,579 | 1,740 → 2,061 | 290,962; 2,053 |
+| private claim, private destination (one privacy-preserving transaction) | private: ClaimPrivately 41,133, reply 111,838 (user cycles); public: Read, Issue, Admit, Spend, Mint (the relay fee) | 439,815 → 539,060 | 224,063 | 553,641; 224,063 |
+| private claim, public destination | private: the same two; public: Read, Issue, Admit, Spend, three Mints | 457,925 → 573,154 | 224,063 | 603,981 (the test's output, 12 November); 224,063 |
+| public burn of one denomination, top-level, signed by the holder | Burn (holder) 26,461 → Burn (token) 49,322 → Admit 34,250 → Burn (record) 20,835 | 45,867 → 130,868 | 647 → 775 | 166,477; 839 |
+| private burn of one denomination | private: Burn 24,397 (user cycles); public: Burn (token), Admit, Burn (record) | 427,959 → 513,593 | 224,063 | 519,678; 224,063 |
+| `SetCap` (admin), a token's mint bucket | SetCap (admin's actor) 12,790 → SetCap (token) 36,839 | new: 49,629 | 733 | 91,019; 789 (through `config(cid)`, §14) |
+| `Freeze` (freeze authority): a token's mints; all mints | 12,483 → 34,060; 11,871 → 31,380 | new: 46,543; 43,251 | 710; 690 | 140,609 and 95,939; 839 and 755 (read the newest record) |
+| `Sunset` (freeze authority) | Sunset (its actor) 11,140 → Sunset (`config(cid)`) 30,844 | new: 41,984 | 671 | 44,193; 671 |
+| `Tick` at a token; at the configuration | 32,821; 27,213 | new: 32,821; 27,213 | 460; 440 | 95,554 and 80,628; 525 and 505 (read the newest record) |
 
 Every transaction is under `TARGET_GAS_EXEC` (5,000,000); the largest applied public one is a
 `Register` (360,698 in §8, 7.2%; 448,038 on the vault's own storage, §8a). **What the merge
@@ -472,8 +472,8 @@ Since branch `bridge-controls` (§14) the program has the keyless `Sunset`, the 
 14-day handover, a multisig (M-of-N) freeze authority, the watchers on LEZ and transfers between
 holders. Not built: the gas drop; a transfer that credits a private recipient privately (a private
 holder's transfer reaches a public `holder(account)`, §14); the switch to a token program; a real proof of
-the extended program's burn (§7 is of the earlier image; §14 proves this image's private claim and
-private transfer) and of a private claim to a public destination; a run of this program on a sequencer (§11's crossing deploys the frozen earlier
+the extended program's burn (§7 is of the earlier image; §14 proves the private claim and
+private transfer of `bridge-controls`' image, `43615dc4…`) and of a private claim to a public destination; a run of this program on a sequencer (§11's crossing deploys the frozen earlier
 program); a vault on Sepolia (§8a's vault ran in a local EVM) and records written by the light client
 in the same run; the checkpoint program running over these blocks end to end (only its parser and
 decoder ran); the off-chain importer, wallet and relayer; the admin's own handover on LEZ (the admin is
@@ -662,7 +662,7 @@ every refusal below; a refusal reverts its whole transaction, and the test check
 each step (balances, the live roles, the gates' freezes, `sunset`). Image
 `43615dc48098b3731990de7700204d2a1bea0e9f963ee7c4dd629048dd5ef19c` (591,084 ELF bytes) at this
 worktree's path (the unchanged program builds to `0d3552601f93…70ed` there; `cf41b7e5…5390` at
-`integration5`'s path); every `results/bridge-*.md` is of it.
+`integration5`'s path). The table below is `results/bridge-roles.md` as re-recorded on 12 November 2026 with this tree's program (`ccde6171…`): every result and code as on `43615dc4…`; the steps that read or attest a record cost 837 to 1,117 more execution gas, the attestation program now being that of milestones A1 and A2.
 
 **Design, in short** (the reasons are in `BRIDGE.md` §5):
 - *Keyless `Sunset`.* Anyone sends `AttestRetired`: `config(cid)` attests the vault's slot 37 (the
@@ -699,24 +699,24 @@ worktree's path (the unchanged program builds to `0d3552601f93…70ed` there; `c
 | **Handover.** `ProposeRoles` by a signer with no role, by the freeze authority, sent to `config(A)` itself | 253 | 43,265; 43,487; 24,975 |
 | threshold 0; 4 of 3; the admin as a member; a member twice; four watchers | 240 | 42,274; 42,275; 41,345; 41,383; 47,447 |
 | `ApplyRoles`, `CancelRoles` with nothing proposed | 245 `NOT_FOUND` | 21,491; 37,664 |
-| the admin proposes 2 of 3 and one watcher (block 102's record); cancels; proposes again | applied | 104,576; 47,216; 104,576 |
+| the admin proposes 2 of 3 and one watcher (block 102's record); cancels; proposes again | applied | 105,533; 47,216; 105,533 |
 | `CancelRoles` by the freeze authority; `Pause` by the proposed watcher before the handover | 253 | 39,716; 40,396 |
-| `ApplyRoles` at the proposal's own record; with a record 13 days later | 242 `FROZEN` | 75,605; 75,604 |
-| `ApplyRoles` with a record 14 days later (anyone); again | applied; 245 | 83,932; 22,897 |
+| `ApplyRoles` at the proposal's own record; with a record 13 days later | 242 `FROZEN` | 76,502; 76,501 |
+| `ApplyRoles` with a record 14 days later (anyone); again | applied; 245 | 84,935; 22,897 |
 | **Multisig (2 of 3).** `Freeze` by the replaced key; by one member alone | 253 | 39,926; 39,926 |
 | `Cosigned` by one member; naming two, signed by one; with a non-member | 253 | 42,480; 26,798; 60,369 |
-| `Cosigned` freeze of A's mints for an hour; of ETH (A) burns (through `config(A)` to the token); unfreeze of A | applied | 120,628; 168,390; 120,650 |
-| `Cosigned` freeze for 31 days | 240 | 111,834 |
-| **Watchers.** `Pause` by a signer with no role; by a member of the freeze authority; of neither mints nor burns | 253; 253; 240 | 39,741; 39,741; 90,394 |
-| `Pause` of A's mints and burns (12 h); of ETH (A) mints; again under a two-day freeze (kept: 2 days) | applied | 99,034; 148,985; 99,037 |
+| `Cosigned` freeze of A's mints for an hour; of ETH (A) burns (through `config(A)` to the token); unfreeze of A | applied | 121,465; 169,507; 121,487 |
+| `Cosigned` freeze for 31 days | 240 | 112,732 |
+| **Watchers.** `Pause` by a signer with no role; by a member of the freeze authority; of neither mints nor burns | 253; 253; 240 | 39,741; 39,741; 91,292 |
+| `Pause` of A's mints and burns (12 h); of ETH (A) mints; again under a two-day freeze (kept: 2 days) | applied | 100,037; 149,936; 100,040 |
 | an unfreeze by the watcher | 253 | 40,143 |
 | `SetCap` ETH (A) by the admin, through `config(A)`; below the floor | applied; 240 | 92,984; 80,834 |
 | **Sunset of A (multisig).** Sent at `config(A)` by anyone before approval; by the replaced key; by one member alone; `Cosigned` by one member | 253 | 24,224; 38,847; 38,847; 41,779 |
 | `Cosigned` approval by two members; again | applied; 244 `ALREADY_WRITTEN` | 67,291; 59,448 |
 | `Sunset` sent at `config(A)` by anyone, approved; again; `ImportRoot` A afterwards | applied; 244; 242 | 31,151; 24,224; 29,544 |
 | **Keyless Sunset of B.** `Sunset` at `config(B)` by anyone, vault live | 253 | 22,818 |
-| `AttestRetired` with slot 37 empty (block 100); with a freeze authority there but `retired` 0 | 247 `IMPORT_MISMATCH` | 162,907; 174,205 |
-| `AttestRetired` with `retired` set (anyone); again | applied; 244 | 181,381; 26,394 |
+| `AttestRetired` with slot 37 empty (block 100); with a freeze authority there but `retired` 0 | 247 `IMPORT_MISMATCH` | 163,972; 175,105 |
+| `AttestRetired` with `retired` set (anyone); again | applied; 244 | 182,281; 26,394 |
 | `Sunset` B forwarded by a signer's own actor (not a top-level call at `config(B)`) | 253 | 37,443 |
 | `Sunset` at `config(B)` by anyone; again; `ImportRoot` B afterwards | applied; 244; 242 | 29,079; 22,818; 28,339 |
 
@@ -759,7 +759,7 @@ An earlier attempt of the same run, beside the dev-mode suites on the same box, 
 **Effect on the earlier suites.** Every bridge suite passes on the new program (`bridge_roles` 2,
 `bridge_controls` 1, `bridge_burn` 1, `bridge_private` 2, `bridge_inbound` 3, `bridge_time` 1,
 `bridge_secfix` 8, `bridge_vault_storage` 1; the whole harness, 49 tests, passed on the image before
-`rustfmt`, `25b3cc90…e776`), and `results/bridge-*.md` are of it. `bridge_controls.rs`'s 78
+`rustfmt`, `25b3cc90…e776`), and `results/bridge-*.md` were of it until their re-recording with this tree's program (§1's last column). `bridge_controls.rs`'s 78
 transactions keep every label and every result (applied or refused, with the same code) of
 integration6's table; only gas moves. A token's `Freeze`, `SetCap` (and now `Pause`) pass
 `config(cid)` first, one more handler: `SetCap` ETH (A) 55,805 → 91,019, `Freeze` ETH (B) for an hour
