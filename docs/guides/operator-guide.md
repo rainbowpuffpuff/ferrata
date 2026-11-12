@@ -269,7 +269,8 @@ records a beacon; post its nonce on LEZ (`Echo`); prove the finalisation over bl
 (1 h by default) anyone calls `finalizeAttested`. A candidate cancelled by a watcher can be submitted
 again and waits a full `W` again ([`vault/README.md`](../../vault/README.md), "LEZ checkpoints";
 [`bridge.md`](../design/bridge.md) §9). The attestor beside each sequencer (`ferrata_attestor`) is
-**not built** as a module; its core is (`checkpoint/crates/attestor-core`).
+**not built** as a Logos module; the program is (`checkpoint/attestor/`, EVIDENCE rows 63–66: a real zone of
+four sequencers), with its core in `checkpoint/crates/attestor-core`.
 
 Rehearsed end to end: `e2e/sepolia-live.sh` and, on `sepolia-cloud`, `e2e/sepolia-cloud.sh` (deployment,
 deposits, candidate, the 40-min wait, beacon, the finalisation proven on a GPU during the run, the release
