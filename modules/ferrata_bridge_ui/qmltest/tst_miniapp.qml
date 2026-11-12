@@ -1,6 +1,10 @@
 // The mini-app driven headless (Qt Quick Test, offscreen) against the devnet backend
 // (cli/examples/miniapp_devnet.rs: anvil + the LEZ harness), screen by screen, with a screenshot of
 // each state in results/screenshots/. Run by scripts/box-test.sh from the module's directory.
+// The B3 done gate is the private round trip on the defaults: private deposit (04), the claim's
+// random delay waited out and a private claim (07), a private burn to a fresh address (10), the
+// release's random delay waited out and the release by a relayer to that address (11). No default is
+// changed and no delay is overridden on that path; "waiting" is the devnet's clock moved on.
 import QtQuick
 import QtTest
 
@@ -9,6 +13,8 @@ Item {
     width: 1180
     height: 1500
     property var app: null
+    property string privateRecipient: ""
+    property string publicRecipient: ""
 
     TestCase {
         name: "FerrataMiniApp"
@@ -22,7 +28,8 @@ Item {
             tryVerify(function () { return host.app.info !== null && host.app.registry !== null; }, 120000, "info and registry loaded");
         }
         function el(name) { var it = findChild(host.app, name); verify(it !== null, "found " + name); return it; }
-        function idle() { tryVerify(function () { return host.app.busy === 0; }, 180000, "calls finished"); }
+        // Long enough for a private transaction proven for real on a CPU (FERRATA_DEVNET_PROOFS=real).
+        function idle() { tryVerify(function () { return host.app.busy === 0; }, 1800000, "calls finished"); }
         function click(name) { wait(80); var it = el(name); verify(it.visible, name + " visible"); verify(it.enabled, name + " enabled"); mouseClick(it); }
         function shot(name) { idle(); wait(200); var img = grabImage(host.app); img.save("results/screenshots/" + name + ".png"); }
         function tab(name) { click("tab." + name); wait(150); }
@@ -124,15 +131,27 @@ Item {
             idle();
             tryVerify(function () { return host.app.positions && host.app.positions.deposits[0].state === "claimable"; }, 60000, "imported");
             click("claim.pick.0");
+            verify(host.app.claimMode === "private" && el("claim.mode.private").checked, "private claim pre-selected");
             verify(!el("claim.submit").enabled, "held by the random delay");
             verify(has(el("claim.leaks.summary").text, "Minimal"), el("claim.leaks.summary").text);
             verify(el("claim.delay").visible, "the delay is explained");
             shot("14-claim-held-by-delay");
-            click("claim.skipDelay");
+            click("claim.wait");
+            idle();
+            tryVerify(function () { return !host.app.held(0); }, 10000, "the delay has passed on the devnet's clock");
+            verify(!host.app.skipDelay, "the delay was waited out, not overridden");
+            verify(el("claim.submit").enabled, "claimable once the delay has passed");
+            shot("15-claim-delay-passed");
             click("claim.submit");
-            approve("Private claim", "15-claim-approval");
-            tryVerify(function () { return has(host.app.claimText, "Private claim built"); }, 60000, host.app.claimText);
-            shot("16-claim-private-built");
+            approve("Private claim", "15b-claim-approval");
+            tryVerify(function () { return has(host.app.claimText, "Claimed privately"); }, 60000, host.app.claimText);
+            var r = host.app.claimReply;
+            verify(r.settled && r.private, "settled as a private transaction");
+            compare(r.balance, host.app.positions.deposits[0].amount, "the denomination is held privately by /0");
+            console.log("PROOF claim " + JSON.stringify({ mode: r.proof.mode, prove_ms: r.proof.prove_ms, receipt_bytes: r.proof.receipt_bytes, tx_bytes: r.proof.tx_bytes }));
+            tryVerify(function () { return host.app.positions.deposits[0].state === "claimed"; }, 60000, "the deposit shows as claimed (its nullifier's account, named by the private transaction)");
+            compare(host.app.holding("private"), r.balance, "the private holding /0");
+            shot("16-claim-private-settled");
         }
 
         function test_08_plaintext_claim() {
@@ -163,32 +182,85 @@ Item {
             shot("19-error-insufficient-balance");
         }
 
-        function test_10_burn() {
+        function test_10_private_burn_on_defaults() {
             click("burn.kind.private");
+            verify(host.app.burnKind === "private" && el("burn.kind.private").checked, "private holder selected (the default)");
             click("burn.denom.0");
+            verify(host.app.releaseDelayOn && el("burn.delay").checked, "the release's random delay on by default");
+            host.privateRecipient = host.app.recipient;
+            verify(host.privateRecipient.toLowerCase() !== String(host.app.info.user.depositor).toLowerCase(), "a fresh recipient generated");
+            verify(has(el("burn.leaks.summary").text, "Minimal"), el("burn.leaks.summary").text);
+            verify(has(el("burn.holding").text, "Private holding /0: 0.1 ETH"), el("burn.holding").text);
+            shot("20-burn-private-defaults");
+            idle();
             click("burn.submit");
-            approve("Burn", null);
-            verify(has(host.app.burnText, "Private burn not settled here"), host.app.burnText);
-            click("burn.kind.public");
-            click("burn.public.ack");
-            click("burn.submit");
-            approve("Burn", "20-burn-approval");
-            tryVerify(function () { return has(host.app.burnText, "Burned"); }, 60000, host.app.burnText);
-            shot("21-burn-sent");
+            approve("Burn", "20b-burn-approval");
+            tryVerify(function () { return has(host.app.burnText, "Burned privately"); }, 60000, host.app.burnText);
+            var r = host.app.burnReply;
+            verify(r.settled && r.private, "settled as a private transaction");
+            compare(r.burn_index, 0, "the first burn");
+            compare(r.balance, "0", "the private holding is spent");
+            compare(r.recipient.toLowerCase(), host.privateRecipient.toLowerCase(), "to the fresh recipient");
+            console.log("PROOF burn " + JSON.stringify({ mode: r.proof.mode, prove_ms: r.proof.prove_ms, receipt_bytes: r.proof.receipt_bytes, tx_bytes: r.proof.tx_bytes }));
+            shot("21-burn-private-settled");
         }
 
-        function test_11_checkpoint_and_release() {
+        function test_11_checkpoint_and_private_release() {
             click("redeem.checkpoint");
             idle();
             click("redeem.refresh");
             idle();
+            compare(host.app.positions.burns.length, 1, "the private burn found from the seed");
             click("release.pick.0");
+            verify(!el("release.submit").enabled, "the private burn's release is held by its random delay");
+            verify(el("release.delay").visible, "the delay is explained");
+            shot("22-release-held-by-delay");
+            click("release.wait");
+            idle();
+            tryVerify(function () { return !host.app.releaseHeld(0); }, 10000, "the delay has passed on the devnet's clock");
+            verify(!host.app.releaseSkipDelay, "the delay was waited out, not overridden");
+            verify(el("release.submit").enabled, "releasable once the delay has passed");
             click("release.submit");
-            approve("Release", "22-release-approval");
+            approve("Release", "22b-release-approval");
             tryVerify(function () { return has(host.app.releaseText, "Released:"); }, 60000, host.app.releaseText);
-            verify(has(host.app.releaseText.toLowerCase(), host.app.recipient.toLowerCase()), "paid to the fresh recipient");
-            shot("23-released");
-            host.app.call("release", { burn_index: host.app.releaseBurn });
+            verify(has(host.app.releaseText.toLowerCase(), host.privateRecipient.toLowerCase()), "paid to the private burn's fresh recipient: " + host.app.releaseText);
+            verify(has(host.app.releaseText, "0.1 ETH paid"), host.app.releaseText);
+            shot("23-released-private-round-trip");
+            tab("positions");
+            click("positions.recover");
+            idle();
+            verify(has(el("positions.summary").text, "0 not released"), el("positions.summary").text);
+            shot("23c-positions-after-private-round-trip");
+            tab("redeem");
+        }
+
+        // The public path keeps its warning: a public burn needs the acknowledgement.
+        function test_11b_public_burn_and_release() {
+            click("burn.kind.public");
+            verify(!el("burn.submit").enabled, "a public burn needs the acknowledgement");
+            verify(has(el("burn.leaks.summary").text, "High"), el("burn.leaks.summary").text);
+            shot("21b-burn-public-needs-ack");
+            click("burn.public.ack");
+            click("burn.fresh");
+            host.publicRecipient = host.app.recipient;
+            click("burn.delay");
+            verify(!host.app.releaseDelayOn, "release delay off for this one");
+            idle();
+            click("burn.submit");
+            approve("Burn", null);
+            tryVerify(function () { return has(host.app.burnText, "Burned 0.1 ETH"); }, 60000, host.app.burnText);
+            compare(host.app.burnReply.burn_index, 1, "the second burn");
+            shot("21c-burn-public-sent");
+            click("redeem.checkpoint");
+            idle();
+            click("redeem.refresh");
+            idle();
+            click("release.pick.1");
+            idle();
+            click("release.submit");
+            approve("Release", null);
+            tryVerify(function () { return has(host.app.releaseText.toLowerCase(), host.publicRecipient.toLowerCase()); }, 60000, host.app.releaseText);
+            host.app.call("release", { burn_index: 0 });
             idle();
             verify(has(el("error.message").text, "Already released"), "a second release: " + el("error.message").text);
             shot("23b-error-already-released");
@@ -245,6 +317,32 @@ Item {
         function test_13_privacy() {
             tab("privacy");
             shot("31-privacy");
+        }
+
+        // The wallet seam: an LP-0021-shaped provider set as walletProvider replaces the built-in
+        // account selection and approval prompt; nothing else in the view changes.
+        function test_14_wallet_provider_seam() {
+            var asked = [];
+            host.app.walletProvider = {
+                connect: function (dapp, accounts, done) { asked.push("connect: " + dapp); done(accounts[0]); },
+                approve: function (req, done) { asked.push("approve: " + req.title); done(true); }
+            };
+            host.app.connectedAccount = "";
+            tab("deposit");
+            click("wallet.connect");
+            tryVerify(function () { return host.app.connectedAccount !== ""; }, 5000, "connected through the provider");
+            verify(!host.app.selecting, "the built-in selection was not shown");
+            click("deposit.kind.private");
+            host.app.depositText = "";
+            idle();
+            click("deposit.review");
+            tryVerify(function () { return has(host.app.depositText, "Deposited"); }, 60000, "a deposit approved by the provider");
+            verify(host.app.approval === null, "the built-in prompt was not used");
+            compare(asked.length, 2, asked.join(" | "));
+            verify(has(asked[1], "Deposit"), asked[1]);
+            console.log("WALLET seam " + asked.join(" | "));
+            shot("32-wallet-provider-seam");
+            host.app.walletProvider = null;
         }
     }
 }

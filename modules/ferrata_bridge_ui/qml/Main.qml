@@ -5,8 +5,10 @@
 // Every call goes through call(): in Logos (a `logos` bridge is present) to the core module
 // ferrata_bridge_module, otherwise to the devnet backend over HTTP (cli/examples/miniapp_devnet.rs),
 // which serves the same methods from anvil and the LEZ harness. Every transaction is first shown in
-// the wallet's approval prompt (propose()), the flow of the LP-0021 Wallet Provider SDK: connect,
-// account selection, approval, transaction. LP-0021 has no released SDK yet; propose() is the seam.
+// the wallet's approval prompt, the flow of the LP-0021 Wallet Provider SDK: connect, account
+// selection, approval, transaction. LP-0021 has no released SDK yet: walletConnect() and propose()
+// are the only two places the wallet is reached, and a provider object set as `walletProvider`
+// replaces the built-in prompts there (see "wallet" below).
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -41,6 +43,13 @@ Rectangle {
     property int calls: 0
 
     // ---- wallet (LP-0021-shaped adapter) --------------------------------------------------------
+    // The one seam a Wallet Provider SDK replaces. LP-0021 (LEZ Wallet and Provider SDK) has no code
+    // yet, so the built-in prompts below play its two calls. Set `walletProvider` to an object with
+    //   connect(dapp, accounts, done)   account selection naming the dApp; done(account) or done("")
+    //   approve(request, done)          the approval prompt of one transaction; done(true | false)
+    // (request: { title, rows: [[label, value]], effects: [text] }) and those are used instead; nothing
+    // else in the view changes. The test injects such a provider (test_14).
+    property var walletProvider: null
     property string connectedAccount: ""
     property bool selecting: false
     property var approval: null
@@ -52,6 +61,9 @@ Rectangle {
     property int destAccount: 0
     property bool delayOn: true
     property int delayHours: 1 + Math.floor(Math.random() * 12)
+    // The clock the delays are held against: the wall clock, moved on by the devnet's "let the delay
+    // pass" (which also moves anvil's clock); in Logos it is the wall clock alone.
+    property real clockOffset: 0
     property bool relayerOn: true
     property var heldUntil: ({})
     property string depositText: ""
@@ -61,12 +73,18 @@ Rectangle {
     property bool plainAcknowledged: false
     property bool skipDelay: false
     property string claimText: ""
+    property var claimReply: null
 
     property string burnKind: "private"
     property bool burnPublicAcknowledged: false
     property int burnDenom: 0
     property string recipient: freshAddress()
     property string burnText: ""
+    property var burnReply: null
+    property bool releaseDelayOn: true
+    property int releaseDelayHours: 1 + Math.floor(Math.random() * 12)
+    property var releaseHeldUntil: ({})
+    property bool releaseSkipDelay: false
     property int releaseBurn: -1
     property string releaseText: ""
     property string adminText: ""
@@ -123,16 +141,44 @@ Rectangle {
         for (var i = 0; i < positions.deposits.length; i++) if (positions.deposits[i].leaf_index === leaf) return positions.deposits[i];
         return null;
     }
-    function held(leaf) { var t = heldUntil[leaf]; return t !== undefined && Date.now() < t; }
-    function burnHolding() {
+    function now() { return Date.now() + clockOffset; }
+    function held(leaf) { var t = heldUntil[leaf]; return t !== undefined && now() < t; }
+    function releaseHeld(i) { var t = releaseHeldUntil[i]; return t !== undefined && now() < t; }
+    function hoursLeft(t) { return t === undefined ? 0 : Math.max(0, Math.ceil((t - now()) / 3600000)); }
+    // Devnet only: lets a held delay pass by moving anvil's clock and the view's clock past it. A user
+    // of a real network waits instead.
+    function letTimePass(until) {
+        var ms = Math.max(0, until - now()) + 1000;
+        call("advance_time", { seconds: Math.ceil(ms / 1000) }, function (ok) { if (ok) clockOffset += ms; });
+    }
+    function holding(kind) {
         if (!positions || !positions.holdings) return "0";
-        for (var i = 0; i < positions.holdings.length; i++) if (positions.holdings[i].kind === "public") return positions.holdings[i].balance;
+        for (var i = 0; i < positions.holdings.length; i++) if (positions.holdings[i].kind === kind && positions.holdings[i].account === 0) return positions.holdings[i].balance;
         return "0";
     }
+    function burnHolding() { return holding(burnKind); }
+    function proofText(p) { return p ? (p.mode === "real" ? "real proof, " + p.receipt_bytes + "-byte receipt in " + (p.prove_ms / 1000).toFixed(1) + " s, verified at settlement" : "dev mode (RISC0_DEV_MODE=1: a fake receipt)") : ""; }
 
     // The wallet's approval prompt: who asks, which account, the asset, amount, destination, and what
     // the call does, before anything is signed or sent (LP-0021's selection and approval flow).
-    function propose(req, onApprove) { approval = { title: req.title, rows: req.rows, effects: req.effects, go: onApprove }; }
+    function propose(req, onApprove) {
+        if (walletProvider) {
+            walletProvider.approve({ title: req.title, rows: req.rows, effects: req.effects }, function (ok) { if (ok) onApprove(); else reject(); });
+            return;
+        }
+        approval = { title: req.title, rows: req.rows, effects: req.effects, go: onApprove };
+    }
+    // Connect: the provider's account selection, or the built-in one.
+    function walletConnect() {
+        if (walletProvider) {
+            walletProvider.connect("Ferrata Bridge (ferrata_bridge_ui)", info ? [info.user.depositor] : [], function (account) {
+                if (account) { connectedAccount = account; refreshPositions(); }
+            });
+            return;
+        }
+        refreshInfo();
+        selecting = true;
+    }
     function approve() { var a = approval; approval = null; if (a && a.go) a.go(); }
     function reject() { approval = null; lastError = "Rejected in the wallet: nothing was signed or sent."; lastOk = false; }
 
@@ -195,7 +241,7 @@ Rectangle {
                 Label { objectName: "header.endpoints"; text: "Ethereum RPC " + ethRpc + " · LEZ " + sequencer; color: "#4a5563"; font.pixelSize: 12 }
                 RowLayout {
                     Label { objectName: "wallet.status"; text: connectedAccount ? "Wallet: " + Fmt.short(connectedAccount) : "Wallet: not connected"; font.bold: true }
-                    Button { objectName: "wallet.connect"; text: connectedAccount ? "Switch account" : "Connect wallet"; onClicked: { refreshInfo(); selecting = true; } }
+                    Button { objectName: "wallet.connect"; text: connectedAccount ? "Switch account" : "Connect wallet"; onClicked: walletConnect() }
                     BusyIndicator { running: busy > 0; visible: busy > 0; implicitWidth: 24; implicitHeight: 24 }
                 }
             }
@@ -322,10 +368,11 @@ Rectangle {
                     Label {
                         objectName: "claim.delay"
                         visible: claimLeaf >= 0 && held(claimLeaf)
-                        text: claimLeaf >= 0 && heldUntil[claimLeaf] ? "Held until " + new Date(heldUntil[claimLeaf]).toLocaleTimeString() + " by the random delay you chose: a claim right after a deposit narrows which deposit it could be." : ""
+                        text: claimLeaf >= 0 && heldUntil[claimLeaf] ? "Held for another " + hoursLeft(heldUntil[claimLeaf]) + " h (until " + new Date(heldUntil[claimLeaf]).toLocaleTimeString() + (clockOffset > 0 ? " on the devnet's clock" : "") + ") by the random delay you chose: a claim right after a deposit narrows which deposit it could be." : ""
                         color: "#8a6d00"; wrapMode: Text.WordWrap; Layout.fillWidth: true
                     }
                     CheckBox { objectName: "claim.skipDelay"; visible: claimLeaf >= 0 && held(claimLeaf); text: "Claim now anyway (less private)"; checked: false; onClicked: skipDelay = checked }
+                    Button { objectName: "claim.wait"; visible: transport === "devnet" && claimLeaf >= 0 && held(claimLeaf); text: "Devnet: let the delay pass (moves the devnet clock " + hoursLeft(heldUntil[claimLeaf]) + " h on)"; onClicked: letTimePass(heldUntil[claimLeaf]) }
                     Button {
                         objectName: "claim.submit"
                         text: claimMode === "private" ? "Claim privately" : "Claim in plaintext"
@@ -349,7 +396,7 @@ Rectangle {
                 Heading { text: "Burn on LEZ, release on Ethereum" }
                 Note { text: "A burn publishes a note whose recipient is encrypted to you. After a checkpoint covers it, a relayer releases it on Ethereum: the release does not say which burn it pays." }
                 Box {
-                    Label { objectName: "burn.holding"; text: "Public holding /0: " + Fmt.eth(burnHolding()); font.bold: true }
+                    Label { objectName: "burn.holding"; text: "Private holding /0: " + Fmt.eth(holding("private")) + "  ·  public holding /0: " + Fmt.eth(holding("public")); font.bold: true }
                     RowLayout {
                         RadioButton { objectName: "burn.kind.private"; text: "Burn from a private account (recommended)"; checked: burnKind === "private"; onClicked: { burnKind = "private"; burnPublicAcknowledged = false; burnAck.checked = false; } }
                         RadioButton { objectName: "burn.kind.public"; text: "Burn from a public account"; checked: burnKind === "public"; onClicked: { burnKind = "public"; burnPublicAcknowledged = false; burnAck.checked = false; } }
@@ -366,6 +413,7 @@ Rectangle {
                         TextField { objectName: "burn.recipient"; text: recipient; Layout.preferredWidth: 420; onEditingFinished: recipient = text }
                         Button { objectName: "burn.fresh"; text: "New fresh address"; onClicked: recipient = freshAddress() }
                     }
+                    CheckBox { objectName: "burn.delay"; text: "Hold the release for a random delay (recommended): " + releaseDelayHours + " h"; checked: releaseDelayOn; onClicked: releaseDelayOn = checked }
                     Button {
                         objectName: "burn.submit"
                         text: "Burn " + denomText(burnDenom)
@@ -375,7 +423,7 @@ Rectangle {
                 }
                 LeakList {
                     objectName: "burn.leaks"; summaryName: "burn.leaks.summary"
-                    items: Privacy.burnLeaks({ kind: burnKind, freshRecipient: !info || recipient.toLowerCase() !== String(info.user.depositor).toLowerCase(), relayer: true })
+                    items: Privacy.burnLeaks({ kind: burnKind, freshRecipient: !info || recipient.toLowerCase() !== String(info.user.depositor).toLowerCase(), relayer: true, delay: releaseDelayOn, delayHours: releaseDelayHours })
                 }
                 Label { objectName: "burn.result"; text: burnText; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                 Box {
@@ -388,12 +436,20 @@ Rectangle {
                         RadioButton {
                             objectName: "release.pick." + modelData.burn_index
                             enabled: !modelData.released
-                            text: Fmt.eth(modelData.amount) + " to " + Fmt.short(modelData.recipient) + (modelData.released ? ": released" : ": not released")
+                            text: Fmt.eth(modelData.amount) + " to " + Fmt.short(modelData.recipient) + (modelData.released ? ": released" : ": not released") + (!modelData.released && releaseHeld(modelData.burn_index) ? " (held by your delay)" : "")
                             checked: releaseBurn === modelData.burn_index
                             onClicked: releaseBurn = modelData.burn_index
                         }
                     }
-                    Button { objectName: "release.submit"; text: "Release through a relayer"; enabled: busy === 0 && releaseBurn >= 0 && connectedAccount !== ""; onClicked: reviewRelease() }
+                    Label {
+                        objectName: "release.delay"
+                        visible: releaseBurn >= 0 && releaseHeld(releaseBurn)
+                        text: releaseBurn >= 0 && releaseHeldUntil[releaseBurn] ? "Held for another " + hoursLeft(releaseHeldUntil[releaseBurn]) + " h (until " + new Date(releaseHeldUntil[releaseBurn]).toLocaleTimeString() + (clockOffset > 0 ? " on the devnet's clock" : "") + ") by the random delay you chose: a release right after a burn narrows which burn it could be." : ""
+                        color: "#8a6d00"; wrapMode: Text.WordWrap; Layout.fillWidth: true
+                    }
+                    CheckBox { objectName: "release.skipDelay"; visible: releaseBurn >= 0 && releaseHeld(releaseBurn); text: "Release now anyway (less private)"; checked: false; onClicked: releaseSkipDelay = checked }
+                    Button { objectName: "release.wait"; visible: transport === "devnet" && releaseBurn >= 0 && releaseHeld(releaseBurn); text: "Devnet: let the delay pass (moves the devnet clock " + hoursLeft(releaseHeldUntil[releaseBurn]) + " h on)"; onClicked: letTimePass(releaseHeldUntil[releaseBurn]) }
+                    Button { objectName: "release.submit"; text: "Release through a relayer"; enabled: busy === 0 && releaseBurn >= 0 && connectedAccount !== "" && (!releaseHeld(releaseBurn) || releaseSkipDelay); onClicked: reviewRelease() }
                 }
                 Label { objectName: "release.result"; text: releaseText; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                 RowLayout {
@@ -614,7 +670,7 @@ Rectangle {
                 call("deposit", { denomination: denomIndex, kind: destKind, account: destAccount }, function (ok2, v) {
                     if (!ok2) { depositText = ""; return; }
                     var h = {}; for (var k in heldUntil) h[k] = heldUntil[k];
-                    if (delayOn) h[v.leaf_index] = Date.now() + delayHours * 3600 * 1000;
+                    if (delayOn) h[v.leaf_index] = now() + delayHours * 3600 * 1000;
                     heldUntil = h;
                     depositText = "Deposited " + Fmt.eth(v.amount) + " to a " + v.kind + " account (/" + v.account + "): transaction " + Fmt.short(v.tx_hash) + " in block " + v.block + ", position #" + v.leaf_index + ". Public on Ethereum: " + v.public_on_ethereum.join(", ") + ". Hidden: " + v.hidden.join(", ") + ".";
                     refreshPositions();
@@ -632,7 +688,9 @@ Rectangle {
         }, function () {
             call("claim", { leaf_index: claimLeaf, private: claimMode === "private" }, function (ok, v) {
                 if (!ok) { claimText = ""; return; }
-                if (v.settled) claimText = "Claimed: " + v.what + ". Balance " + Fmt.eth(v.balance) + ". Nullifier " + Fmt.short(v.nullifier) + ".";
+                claimReply = v;
+                if (v.settled && v.private) claimText = "Claimed privately: " + v.what + ". Private balance /" + v.account + ": " + Fmt.eth(v.balance) + ". Nullifier " + Fmt.short(v.nullifier) + ". Proof: " + proofText(v.proof) + ". Public on LEZ: " + v.public_on_lez.join(", ") + ". Hidden: " + v.hidden.join(", ") + ".";
+                else if (v.settled) claimText = "Claimed: " + v.what + ". Balance " + Fmt.eth(v.balance) + ". Nullifier " + Fmt.short(v.nullifier) + ".";
                 else claimText = "Private claim built (nullifier " + Fmt.short(v.nullifier) + ", root of " + v.root_leaf_count + " leaves). Public on LEZ once proven: " + v.public_on_lez.join(", ") + ". Not settled here: " + v.not_settled_because + ".";
                 refreshPositions();
             });
@@ -647,8 +705,14 @@ Rectangle {
         }, function () {
             call("burn", { account: 0, amount: denomAmount(burnDenom), recipient: recipient, private: burnKind === "private" }, function (ok, v) {
                 if (!ok) { burnText = ""; return; }
-                burnText = v.settled ? "Burned " + Fmt.eth(v.amount) + " (" + v.what + "); balance " + Fmt.eth(v.balance) + ". Release to " + Fmt.short(v.recipient) + " after the next checkpoint."
-                                     : "Private burn not settled here: " + v.not_settled_because + ".";
+                burnReply = v;
+                var h = {}; for (var k in releaseHeldUntil) h[k] = releaseHeldUntil[k];
+                if (v.settled && releaseDelayOn && v.burn_index !== undefined) h[v.burn_index] = now() + releaseDelayHours * 3600 * 1000;
+                releaseHeldUntil = h;
+                var after = " Release to " + Fmt.short(v.recipient) + " after the next checkpoint" + (releaseDelayOn ? " and your random delay (" + releaseDelayHours + " h)." : ".");
+                if (v.settled && v.private) burnText = "Burned privately " + Fmt.eth(v.amount) + " (" + v.what + "); private balance /" + v.account + " " + Fmt.eth(v.balance) + ". Proof: " + proofText(v.proof) + ". Public on LEZ: " + v.public_on_lez.join(", ") + "." + after;
+                else if (v.settled) burnText = "Burned " + Fmt.eth(v.amount) + " (" + v.what + "); balance " + Fmt.eth(v.balance) + "." + after;
+                else burnText = "Private burn not settled here: " + v.not_settled_because + ".";
                 refreshPositions();
             });
         });
