@@ -165,6 +165,62 @@ side is a devnet we ran (LEZ testnet 0.4 does not exist).
   one passed with 4,800 s in its generic layout and three did not finish
   ([`release-engineering.md`](release-engineering.md)).
 
+## The latest additions, of 11 and 12 November 2026
+
+Moved here from the README's Evidence section on 12 November 2026, unchanged (only the links are rewritten for
+this folder); the README keeps one line for each.
+
+**Merged on 12 November 2026** (EVIDENCE rows 84–88; the four branches of `integration8`): the `ferrata` tool
+complete for a user, private by default (deposit to a private account, the claim held by its delay and proven
+privately with the wallet's own keys, a private burn, the release through any relayer), every step a dry run that
+prints what becomes public, with recovery from the seed alone and 23 refusals and holds named before signing
+([`cli/README.md`](../cli/README.md)); the mini-app's private round trip on its defaults settled on its devnet,
+also with the private claim and burn proven for real, 242.4 s and 209.4 s on a CPU
+([`modules/ferrata_bridge_ui/RESULTS.md`](../modules/ferrata_bridge_ui/RESULTS.md)); the padded private attestation,
+claim and burn proven on Apple Silicon under macOS, 14.3 minutes at most on an M1 Mac mini with 16 GB and
+7.9 on an M4, on the CPU (r0vm 3.0.5 has no Metal prover)
+([`lez/results/p4-macos/README.md`](../lez/results/p4-macos/README.md)).
+
+**Since 11 November 2026** (EVIDENCE rows 28-30): the bridge program's freezes and caps run on time it reads from
+its own attestation program's records, never on a caller's time ([`lez/BRIDGE.md`](../lez/BRIDGE.md) §6); rule (B)
+also checks the tip's producer inscription, so a forged history needs one channel key besides `t` attestation keys
+([`checkpoint/RESULTS.md`](../checkpoint/RESULTS.md) §4a); and the findings of the security review of 11 November
+([`notes/reviews/security/review-2026-11-11.md`](../notes/reviews/security/review-2026-11-11.md)) are fixed on both sides (LEZ: public balances at `holder(account)` PDAs, `ImportRoot` only as a visible
+call, one `NOut` per burn, a MAC over the memo; vault: the keyless-retirement clock, the checkpoint fee to the
+prover, stale candidates, no deposit after a final sunset, test chains only, a bound on `revokeWindow`), with tests
+that fail on the code before the fixes ([`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md) §13,
+[`vault/GAS.md`](../vault/GAS.md)). These changed the bridge, `checkpoint_b` and release images: the real crossing of
+row 27 and the real proofs before it used the earlier programs; the crown run uses these, rehearsed on a fork of
+Sepolia with a LEZ devnet and real proofs (row 31, [`e2e/crown/README.md`](../e2e/crown/README.md)) and then run live on
+Sepolia to DONE on 11 November (row 41).
+
+**Merged on 11 November 2026** (EVIDENCE rows 43–75; the ten branches of `integration7`): besides the rows
+above, the weak-subjectivity bound in the core and the program, and successors with the root id (`Succeed`/`Spawn`:
+a fork not in the schedule fixed at `Init` crossed by a successor under the parent's root id;
+[`lez/results/a1-successors-ws.md`](../lez/results/a1-successors-ws.md)); the vault's deposit leaves on real Sepolia data
+through the attestation program's leaf requests, and the reference consumer's rules 5 to 7 with public and private
+claims of the vault's real deposits, proven for real on a CPU ([`lez/RESULTS.md`](../lez/RESULTS.md) §6); the bridge
+program's B2 controls: the keyless `Sunset`, the freeze authority's 14-day handover, an M-of-N freeze authority,
+watchers pausing LEZ for 12 hours and transfers between holders, the private transfer proven for real
+([`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md) §14); rule (B) with t of n attestors on a real four-sequencer zone
+([`checkpoint/attestor/RESULTS.md`](../checkpoint/attestor/RESULTS.md)). The guests these changed have new image ids
+([`docs/image-ids.md`](image-ids.md)); the rows of earlier runs keep the ids they ran.
+
+**Added in the seventh pass** (11 November 2026, EVIDENCE rows 35–40): the vault through Slither, Aderyn and
+Halmos and the Rust dependencies through cargo-audit and cargo-deny, every finding triaged: no defect in the vault,
+7 Halmos properties proven and 4 not finished in their bound ([`notes/reviews/security/tools-2026-11-11.md`](../notes/reviews/security/tools-2026-11-11.md));
+the crown run's six programs rebuilt to their image ids at the published crown build path
+([`docs/guides/verify.md`](guides/verify.md); since `integration7` guest builds are independent of the path,
+[`docs/image-ids.md`](image-ids.md)); the private attestation, claim and burn padded as LEZ's wallet
+pads every private transaction and proven at 8 and 16 CPUs, 10.6 minutes at most at 16
+([`lez/results/p4-minimum/README.md`](../lez/results/p4-minimum/README.md)); a second consumer of the attestation,
+`ferrata_holdings`, which accepts an ERC-20 balance at a finalized block (consumer guide §12); seven fuzz targets
+over the core, 1.79 billion executions, and seven more over the programs (the bridge program's decoding and
+handler, the checkpoint's LEZ block parser differential against LEZ's own decoder, rule (B) on edits of the lab's
+real input, the Mantle inscription parsers, the release and claim inputs and journals), 4.31 billion executions, no
+fault found ([`fuzz/RESULTS.md`](../fuzz/RESULTS.md), "The programs"); and an independent review of the
+core against the specifications, with 24 more mutants, all killed ([`docs/REVIEW-core.md`](REVIEW-core.md)).
+
 ## Suites at this commit
 
 Re-run in the fifth integration pass (11 Nov 2026) on the build box of branch `integration5`, after the merges of
