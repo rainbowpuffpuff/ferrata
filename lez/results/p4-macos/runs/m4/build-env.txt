@@ -1,0 +1,6 @@
+2026-11-11T21:57:17Z
+rustc 1.98.1 (48a229cea 2026-09-01)
+cargo 1.98.1 (797e8a9bc 2026-08-05)
+1.98.1-aarch64-apple-darwin (overridden by '/Users/ec2-user/w/ferrata/lez/rust-toolchain.toml')
+prove_attest 16057776 bytes 50382b42fcad80ca58eed63e40a3cfc722ce6bc76e19af1b1230582361fd1609
+prove_bridge 16427184 bytes e14a9a4eb5364668273ca11dc93f67be2be2f0260d7e92652de70a817b4b88d7

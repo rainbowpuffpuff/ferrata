@@ -1,0 +1,258 @@
+   Compiling getrandom v0.2.17
+   Compiling zerocopy v0.8.63
+   Compiling num-traits v0.2.19
+   Compiling base64ct v1.8.3
+   Compiling zeroize v1.9.1
+   Compiling thiserror v2.0.21
+   Compiling spin v0.9.9
+   Compiling core-foundation-sys v0.8.7
+   Compiling num_enum v0.7.6
+   Compiling borsh v1.8.1
+   Compiling lazy_static v1.5.1
+   Compiling malloc_buf v0.0.6
+   Compiling rand_core v0.6.4
+   Compiling log v0.4.35
+   Compiling core-foundation v0.9.4
+   Compiling pem-rfc7468 v0.7.0
+   Compiling bitflags v1.3.2
+   Compiling foreign-types-shared v0.3.1
+   Compiling foldhash v0.1.5
+   Compiling num-bigint-dig v0.8.6
+   Compiling anyhow v1.0.104
+   Compiling der v0.7.10
+   Compiling hashbrown v0.15.5
+   Compiling foreign-types v0.5.0
+   Compiling core-graphics-types v0.1.3
+   Compiling zmij v1.0.23
+   Compiling encoding_rs v0.8.44
+   Compiling sha2 v0.10.9
+   Compiling objc v0.2.7
+   Compiling spki v0.7.3
+   Compiling risc0-zkvm-platform v2.2.3
+   Compiling bytemuck v1.25.2
+   Compiling pkcs8 v0.10.2
+   Compiling toml_datetime v0.6.11
+   Compiling num-integer v0.1.47
+   Compiling serde_spanned v0.6.9
+   Compiling semver v1.0.28
+   Compiling tracing-core v0.1.36
+   Compiling scopeguard v1.2.0
+   Compiling pin-project-lite v0.2.17
+   Compiling num-iter v0.1.46
+   Compiling ruint v1.21.1
+   Compiling winnow v0.7.15
+   Compiling toml_write v0.1.2
+   Compiling rand_core v0.9.5
+   Compiling simdutf8 v0.1.5
+   Compiling risc0-zkp v3.0.5
+   Compiling block v0.1.6
+   Compiling smallvec v1.16.5
+   Compiling metal v0.29.0
+   Compiling serde_json v1.0.154
+   Compiling tracing v0.1.44
+   Compiling camino v1.2.6
+   Compiling pkcs1 v0.7.5
+   Compiling risc0-core v3.0.2
+   Compiling derive_builder_core v0.20.2
+   Compiling hashlink v0.10.0
+   Compiling cobs v0.3.0
+   Compiling signature v2.2.0
+   Compiling blake2 v0.10.6
+   Compiling arraydeque v0.5.1
+   Compiling hex-literal v0.4.1
+   Compiling toml_edit v0.22.27
+   Compiling itoa v1.0.19
+   Compiling ppv-lite86 v0.2.21
+   Compiling postcard v1.1.3
+   Compiling rand_chacha v0.3.1
+   Compiling derive_builder_macro v0.20.2
+   Compiling serde_with v3.24.0
+   Compiling strum v0.27.2
+   Compiling rand v0.8.8
+   Compiling derive_more v2.1.1
+   Compiling cargo-platform v0.1.9
+   Compiling elf v0.7.4
+   Compiling yaml-rust2 v0.10.4
+   Compiling no_std_strings v0.1.3
+   Compiling include_bytes_aligned v0.1.4
+   Compiling risc0-zkos-v1compat v2.2.3
+   Compiling cargo_metadata v0.19.2
+   Compiling derive_builder v0.20.2
+   Compiling dirs v6.0.0
+   Compiling docker-generate v0.1.3
+   Compiling toml v0.8.23
+   Compiling rsa v0.9.10
+   Compiling rzup v0.5.2
+   Compiling risc0-binfmt v3.0.5
+   Compiling risc0-build v3.0.5
+   Compiling methods v0.1.0 (/Users/ec2-user/w/ferrata/bridge/methods)
+    Finished `release` profile [optimized] target(s) in 16.11s
+warning: the following packages contain code that will be rejected by a future version of Rust: block v0.1.6
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+       16.12 real        69.59 user         7.64 sys
+           538116096  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+             2950358  page reclaims
+                4855  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                  19  messages sent
+                 189  messages received
+                 250  signals received
+                2386  voluntary context switches
+               81047  involuntary context switches
+          2322514800  instructions retired
+          1130052064  cycles elapsed
+            48743000  peak memory footprint
+   Compiling subtle v2.6.1
+   Compiling ppv-lite86 v0.2.21
+   Compiling num-traits v0.2.19
+   Compiling tracing v0.1.44
+   Compiling rand_core v0.9.5
+   Compiling itertools v0.13.0
+   Compiling borsh v1.8.1
+   Compiling ark-ff-asm v0.5.0
+   Compiling malloc_buf v0.0.6
+   Compiling foreign-types-shared v0.3.1
+   Compiling spin v0.9.9
+   Compiling bitflags v1.3.2
+   Compiling digest v0.10.7
+   Compiling core-graphics-types v0.1.3
+   Compiling lazy_static v1.5.1
+   Compiling foreign-types v0.5.0
+   Compiling rand_chacha v0.3.1
+   Compiling objc v0.2.7
+   Compiling risc0-zkvm-platform v2.2.3
+   Compiling bytemuck v1.25.2
+   Compiling sha2 v0.10.9
+   Compiling rand v0.8.8
+   Compiling blake2 v0.10.6
+   Compiling ahash v0.8.12
+   Compiling block v0.1.6
+   Compiling hex v0.4.3
+   Compiling base64ct v1.8.3
+   Compiling risc0-zkp v3.0.5
+   Compiling metal v0.29.0
+   Compiling pem-rfc7468 v0.7.0
+   Compiling ark-std v0.5.0
+   Compiling num-integer v0.1.47
+   Compiling ark-serialize v0.5.0
+   Compiling risc0-core v3.0.2
+   Compiling semver v1.0.28
+   Compiling num-bigint v0.4.8
+   Compiling ruint v1.21.1
+   Compiling memchr v2.8.3
+   Compiling hex-literal v0.4.1
+   Compiling der v0.7.10
+   Compiling rand v0.9.5
+   Compiling cobs v0.3.0
+   Compiling syn v1.0.109
+   Compiling derive_more v2.1.1
+   Compiling tracing-subscriber v0.2.25
+   Compiling postcard v1.1.3
+   Compiling elf v0.7.4
+   Compiling equivalent v1.0.3
+   Compiling hashbrown v0.17.1
+   Compiling num-bigint-dig v0.8.6
+   Compiling zmij v1.0.23
+   Compiling spki v0.7.3
+   Compiling ark-ff-macros v0.5.0
+   Compiling aho-corasick v1.1.5
+   Compiling pkcs8 v0.10.2
+   Compiling rustix v1.1.6
+   Compiling indexmap v2.14.2
+   Compiling getrandom v0.4.3
+   Compiling encoding_rs v0.8.44
+   Compiling toml_datetime v0.6.11
+   Compiling serde_spanned v0.6.9
+   Compiling ark-ff v0.5.0
+   Compiling num-iter v0.1.46
+   Compiling keccak v0.1.6
+   Compiling errno v0.3.14
+   Compiling byteorder v1.5.0
+   Compiling simdutf8 v0.1.5
+   Compiling winnow v0.7.15
+   Compiling toml_write v0.1.2
+   Compiling regex-syntax v0.8.11
+   Compiling merlin v3.0.0
+   Compiling risc0-circuit-recursion v4.0.5
+   Compiling camino v1.2.6
+   Compiling serde_json v1.0.154
+   Compiling derivative v2.2.0
+   Compiling pkcs1 v0.7.5
+   Compiling risc0-binfmt v3.0.5
+   Compiling toml_edit v0.22.27
+   Compiling regex-automata v0.4.18
+   Compiling signature v2.2.0
+   Compiling hashlink v0.10.0
+   Compiling ark-crypto-primitives-macros v0.5.0
+   Compiling fastrand v2.5.0
+   Compiling option-ext v0.2.0
+   Compiling itoa v1.0.19
+   Compiling arraydeque v0.5.1
+   Compiling yaml-rust2 v0.10.4
+   Compiling ark-poly v0.5.0
+   Compiling ark-relations v0.5.1
+   Compiling toml v0.8.23
+   Compiling ark-snark v0.5.1
+   Compiling regex v1.13.1
+   Compiling ark-ec v0.5.0
+   Compiling tempfile v3.27.0
+   Compiling dirs-sys v0.5.0
+   Compiling itertools v0.14.0
+   Compiling rsa v0.9.10
+   Compiling serde_with v3.24.0
+   Compiling strum v0.27.2
+   Compiling ark-crypto-primitives v0.5.0
+   Compiling cargo-platform v0.1.9
+   Compiling include_bytes_aligned v0.1.4
+   Compiling risc0-circuit-keccak v4.0.6
+   Compiling no_std_strings v0.1.3
+   Compiling risc0-zkos-v1compat v2.2.3
+   Compiling cargo_metadata v0.19.2
+   Compiling ark-bn254 v0.5.0
+   Compiling ark-groth16 v0.5.0
+   Compiling prost-derive v0.13.5
+   Compiling rzup v0.5.2
+   Compiling derive_builder v0.20.2
+   Compiling dirs v6.0.0
+   Compiling lazy-regex-proc_macros v3.6.2
+   Compiling bytes v1.12.1
+   Compiling docker-generate v0.1.3
+   Compiling downcast-rs v1.2.1
+   Compiling bit-vec v0.8.0
+   Compiling rrs-lib v0.1.0
+   Compiling lazy-regex v3.6.2
+   Compiling prost v0.13.5
+   Compiling risc0-circuit-rv32im v4.0.5
+   Compiling risc0-build v3.0.5
+   Compiling risc0-groth16 v3.0.5
+   Compiling hmac v0.12.1
+   Compiling bincode v1.3.3
+   Compiling ferrata-bridge-core v0.2.0 (/Users/ec2-user/w/ferrata/bridge/crates/ferrata-bridge-core)
+   Compiling risc0-zkvm v3.0.5
+   Compiling ferrata-e2e v0.1.0 (/Users/ec2-user/w/ferrata/bridge/e2e)
+    Finished `release` profile [optimized] target(s) in 16.49s
+warning: the following packages contain code that will be rejected by a future version of Rust: block v0.1.6
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+       16.50 real       129.57 user         6.04 sys
+           591298560  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+             2050136  page reclaims
+                1428  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                   0  messages sent
+                   0  messages received
+                 259  signals received
+                1605  voluntary context switches
+               75798  involuntary context switches
+          3345410123  instructions retired
+          1764044553  cycles elapsed
+            59081328  peak memory footprint

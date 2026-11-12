@@ -1,0 +1,40 @@
+[2m2026-11-11T23:23:55.379928Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::exec::executor[0m[2m:[0m execution time: 2.635291ms
+[2m2026-11-11T23:23:55.379951Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m number of segments: 1
+[2m2026-11-11T23:23:55.379955Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 131072 total cycles
+[2m2026-11-11T23:23:55.379959Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 77736 user cycles (59.31%)
+[2m2026-11-11T23:23:55.379964Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 21767 paging cycles (16.61%)
+[2m2026-11-11T23:23:55.379967Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 31569 reserved cycles (24.09%)
+[2m2026-11-11T23:23:55.379970Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m ecalls
+[2m2026-11-11T23:23:55.379974Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	75 Sha2 calls, 5890 cycles, (4.49%)
+[2m2026-11-11T23:23:55.379977Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	10 Read calls, 109 cycles, (0.08%)
+[2m2026-11-11T23:23:55.379980Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	1 Terminate calls, 2 cycles, (0.00%)
+[2m2026-11-11T23:23:55.379982Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 Write calls, 0 cycles, (0.00%)
+[2m2026-11-11T23:23:55.379985Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 User calls, 0 cycles, (0.00%)
+[2m2026-11-11T23:23:55.379988Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 Poseidon2 calls, 0 cycles, (0.00%)
+[2m2026-11-11T23:23:55.379990Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 BigInt calls, 0 cycles, (0.00%)
+[2m2026-11-11T23:23:55.379993Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m syscalls
+[2m2026-11-11T23:23:55.379996Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	2 Read calls
+[2m2026-11-11T23:23:55.379999Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	1 Write calls
+[2m2026-11-11T23:23:55.380002Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 VerifyIntegrity2 calls
+[2m2026-11-11T23:23:55.380005Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 VerifyIntegrity calls
+[2m2026-11-11T23:23:55.380007Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 ProveKeccak calls
+[2m2026-11-11T23:23:55.380010Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 Keccak calls
+{"image_id":"0x17257f91bca70abf7a5476b498d687e95b6fb4d59e75b6bca1d46877ac9bf5cd","input_sha256":"2b1210e90d4da82a9749f469d3c2e1fc414576219aaa11287318486de2be3b8e","journal_equals_native":true,"loadavg_after":"","loadavg_before":"","paging_cycles":21767,"program_sha256":"a6abe992cada41db6af2b2934cc214a3fbbaf3d3d1d7e326186b5af70024668e","prover":"r0vm, CPU","rayon_num_threads":null,"receipt_bytes":223930,"receipt_kind":"succinct","receipt_sha256":"f2d1116df3878c1b51d9dd5606a0441f63eeedd8dd81b16e9ce18b789240109a","reserved_cycles":31569,"risc0_zkvm":"3.0.5","segments":1,"threads":8,"total_cycles":131072,"user_cycles":77736,"verifies":true,"wall_s":31.780923542}
+       31.80 real       239.21 user         0.65 sys
+          1735344128  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+              149647  page reclaims
+                   0  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                   6  messages sent
+                  16  messages received
+                   0  signals received
+                  11  voluntary context switches
+               71249  involuntary context switches
+           429962515  instructions retired
+           136863173  cycles elapsed
+             4080512  peak memory footprint

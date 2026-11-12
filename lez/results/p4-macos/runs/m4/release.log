@@ -1,0 +1,2 @@
+/Users/ec2-user/w/release.sh: line 47: 27688 Terminated: 15          sampler "$rd/mem.csv"
+/Users/ec2-user/w/release.sh: line 47: 27877 Terminated: 15          sampler "$rd/mem.csv"

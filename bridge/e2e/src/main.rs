@@ -684,6 +684,7 @@ fn write_groth16(dir: &Path, receipt: &Receipt, id: Digest, record: Value) -> Re
 /// Groth16 prover.
 fn cmd_p254(opts: &BTreeMap<String, String>) -> Result<()> {
     refuse_dev_mode()?;
+    ensure!(cfg!(feature = "wrap"), "p254 needs the feature `wrap` (default): rebuild without --no-default-features");
     let receipt = load_receipt(required(opts, "receipt")?)?;
     let id = image_id(opts)?;
     receipt.verify(id).context("the succinct receipt does not verify")?;
@@ -697,7 +698,7 @@ fn cmd_p254(opts: &BTreeMap<String, String>) -> Result<()> {
     let secs = start.elapsed().as_secs_f64();
     let seal_bytes = p254.get_seal_bytes();
     fs::write(dir.join("seal.r0"), &seal_bytes)?;
-    fs::write(dir.join("input.json"), risc0_groth16::prove::to_json(&seal_bytes)?)?;
+    fs::write(dir.join("input.json"), groth16_prover_input(&seal_bytes)?)?;
     let record = json!({
         "step": "identity_p254", "image_id": hx(id.as_bytes()), "wall_s": secs, "loadavg_before": load_before,
         "loadavg_after": loadavg(), "p254_seal_bytes": seal_bytes.len(),
@@ -706,6 +707,17 @@ fn cmd_p254(opts: &BTreeMap<String, String>) -> Result<()> {
     write_json(&dir.join("p254.json"), &record)?;
     println!("{record}");
     Ok(())
+}
+
+/// The JSON input of RISC Zero's Groth16 prover image (risc0-groth16's `prove::to_json`, feature `wrap`).
+#[cfg(feature = "wrap")]
+fn groth16_prover_input(seal_bytes: &[u8]) -> Result<String> {
+    Ok(risc0_groth16::prove::to_json(seal_bytes)?)
+}
+
+#[cfg(not(feature = "wrap"))]
+fn groth16_prover_input(_seal_bytes: &[u8]) -> Result<String> {
+    bail!("built without the feature `wrap`")
 }
 
 /// Step 2, after the prover image wrote `proof.json`: the Groth16 receipt exactly as

@@ -1,0 +1,256 @@
+    Updating crates.io index
+ Downloading crates ...
+  Downloaded funty v2.0.0
+  Downloaded num-iter v0.1.46
+  Downloaded radium v0.7.0
+  Downloaded rawpointer v0.2.1
+  Downloaded ff_derive v0.13.1
+  Downloaded lazy-regex v3.6.2
+  Downloaded multiversion_no_op v1.0.0
+  Downloaded tap v1.0.1
+  Downloaded addchain v0.2.1
+  Downloaded risc0-build-kernel v2.0.1
+  Downloaded fastrand v2.5.0
+  Downloaded scopeguard v1.2.0
+  Downloaded num-complex v0.4.6
+  Downloaded crossbeam-deque v0.8.8
+  Downloaded directories v6.0.0
+  Downloaded lazy-regex-proc_macros v3.6.2
+  Downloaded lock_api v0.4.14
+  Downloaded puffin v0.19.1
+  Downloaded wyz v0.5.1
+  Downloaded crossbeam-utils v0.8.23
+  Downloaded jobserver v0.1.35
+  Downloaded crossbeam-epoch v0.9.21
+  Downloaded parking_lot v0.12.5
+  Downloaded parking_lot_core v0.9.12
+  Downloaded simdutf8 v0.1.5
+  Downloaded smallvec v1.16.5
+  Downloaded bitvec v1.1.1
+  Downloaded borsh-derive v1.8.1
+  Downloaded camino v1.2.6
+  Downloaded matrixmultiply v0.3.11
+  Downloaded nvtx v1.3.0
+  Downloaded getrandom v0.4.3
+  Downloaded rayon-core v1.13.0
+  Downloaded rzup v0.5.2
+  Downloaded num-bigint v0.3.3
+  Downloaded regex v1.13.1
+  Downloaded borsh v1.8.1
+  Downloaded itertools v0.10.5
+  Downloaded risc0-sys v1.5.0
+  Downloaded itertools v0.14.0
+  Downloaded aho-corasick v1.1.5
+  Downloaded rayon v1.12.0
+  Downloaded ndarray v0.16.1
+  Downloaded regex-syntax v0.8.11
+  Downloaded encoding_rs v0.8.44
+  Downloaded rustix v1.1.6
+  Downloaded regex-automata v0.4.18
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.27
+   Compiling libc v0.2.191
+   Compiling version_check v0.9.5
+   Compiling autocfg v1.5.1
+   Compiling libm v0.2.16
+   Compiling cfg-if v1.0.5
+   Compiling zerocopy v0.8.63
+   Compiling paste v1.0.15
+   Compiling rustversion v1.0.23
+   Compiling const-oid v0.9.6
+   Compiling generic-array v0.14.7
+   Compiling num-traits v0.2.19
+   Compiling typenum v1.20.1
+   Compiling once_cell v1.21.4
+   Compiling getrandom v0.2.17
+   Compiling syn v3.0.10
+   Compiling syn v2.0.119
+   Compiling serde_core v1.0.229
+   Compiling rand_core v0.6.4
+   Compiling num-integer v0.1.47
+   Compiling crossbeam-utils v0.8.23
+   Compiling subtle v2.6.1
+   Compiling crypto-common v0.1.7
+   Compiling block-buffer v0.10.4
+   Compiling getrandom v0.4.3
+   Compiling equivalent v1.0.3
+   Compiling rustix v1.1.6
+   Compiling hashbrown v0.17.1
+   Compiling digest v0.10.7
+   Compiling crossbeam-epoch v0.9.21
+   Compiling bitflags v2.13.2
+   Compiling anyhow v1.0.104
+   Compiling indexmap v2.14.2
+   Compiling thiserror v2.0.21
+   Compiling either v1.19.0
+   Compiling ident_case v1.0.1
+   Compiling crossbeam-deque v0.8.8
+   Compiling hex v0.4.3
+   Compiling strsim v0.11.1
+   Compiling winnow v1.0.5
+   Compiling cpufeatures v0.2.17
+   Compiling toml_datetime v1.1.3+spec-1.1.0
+   Compiling cfg_aliases v0.2.2
+   Compiling serde v1.0.229
+   Compiling borsh v1.8.1
+   Compiling sha2 v0.10.9
+   Compiling errno v0.3.14
+   Compiling rayon-core v1.13.0
+   Compiling option-ext v0.2.0
+   Compiling dirs-sys v0.5.0
+   Compiling fastrand v2.5.0
+   Compiling jobserver v0.1.35
+   Compiling find-msvc-tools v0.1.15
+   Compiling shlex v2.0.1
+   Compiling toml_parser v1.1.5+spec-1.1.0
+   Compiling cc v1.11.1
+   Compiling toml_edit v0.25.19+spec-1.1.0
+   Compiling tempfile v3.27.0
+   Compiling encoding_rs v0.8.44
+   Compiling ppv-lite86 v0.2.21
+   Compiling getrandom v0.3.4
+   Compiling rand_chacha v0.3.1
+   Compiling syn v1.0.109
+   Compiling scopeguard v1.2.0
+   Compiling rand v0.8.8
+   Compiling proc-macro-crate v3.5.0
+   Compiling zmij v1.0.23
+   Compiling num-bigint-dig v0.8.6
+   Compiling zeroize_derive v1.5.0
+   Compiling num_enum_derive v0.7.6
+   Compiling tracing-attributes v0.1.31
+   Compiling stability v0.2.1
+   Compiling serde_derive v1.0.229
+   Compiling thiserror-impl v2.0.21
+   Compiling borsh-derive v1.8.1
+   Compiling bytemuck_derive v1.12.1
+   Compiling foreign-types-macros v0.2.4
+   Compiling smallvec v1.16.5
+   Compiling zeroize v1.9.1
+   Compiling darling_core v0.24.1
+   Compiling tracing-core v0.1.36
+   Compiling byteorder v1.5.0
+   Compiling unicode-xid v0.2.6
+   Compiling log v0.4.35
+   Compiling derive_more-impl v2.1.1
+   Compiling rayon v1.12.0
+   Compiling directories v6.0.0
+   Compiling num-bigint v0.3.3
+   Compiling pin-project-lite v0.2.17
+   Compiling multiversion_no_op v1.0.0
+   Compiling ruint-macro v1.2.1
+   Compiling fnv v1.0.7
+   Compiling serde_json v1.0.154
+   Compiling parking_lot_core v0.9.12
+   Compiling darling_core v0.20.11
+   Compiling tracing v0.1.44
+   Compiling rand_core v0.9.5
+   Compiling enum-ordinalize-derive v4.4.2
+   Compiling foldhash v0.1.5
+   Compiling allocator-api2 v0.2.21
+   Compiling radium v0.7.0
+   Compiling memchr v2.8.3
+   Compiling risc0-build-kernel v2.0.1
+   Compiling camino v1.2.6
+   Compiling heck v0.5.0
+   Compiling strum_macros v0.27.2
+   Compiling risc0-sys v1.5.0
+   Compiling hashbrown v0.15.5
+   Compiling enum-ordinalize v4.4.2
+   Compiling darling_macro v0.24.1
+   Compiling nvtx v1.3.0
+   Compiling ark-std v0.5.0
+   Compiling darling v0.24.1
+   Compiling ark-serialize-derive v0.5.0
+   Compiling lock_api v0.4.14
+   Compiling num-bigint v0.4.8
+   Compiling darling_macro v0.20.11
+   Compiling serde_with_macros v3.24.0
+   Compiling matrixmultiply v0.3.11
+   Compiling arrayvec v0.7.8
+   Compiling tap v1.0.1
+   Compiling core-foundation-sys v0.8.7
+   Compiling wyz v0.5.1
+   Compiling darling v0.20.11
+   Compiling core-foundation v0.9.4
+   Compiling addchain v0.2.1
+   Compiling parking_lot v0.12.5
+   Compiling educe v0.6.0
+   Compiling rand_chacha v0.9.0
+   Compiling num_enum v0.7.6
+   Compiling ark-ff-macros v0.5.0
+   Compiling ark-serialize v0.5.0
+error: failed to run custom build command for `risc0-sys v1.5.0`
+
+Caused by:
+  process didn't exit successfully: `/Users/ec2-user/w/ferrata/bridge/target/release/build/risc0-sys-0ae66c5df6f62372/build-script-build` (exit status: 101)
+  --- stdout
+  cargo:cxx_root=/Users/ec2-user/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/risc0-sys-1.5.0/cxx
+  cargo:metal_root=/Users/ec2-user/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/risc0-sys-1.5.0/kernels/zkp/metal
+  cargo:rerun-if-env-changed=RISC0_SKIP_BUILD_KERNELS
+  cargo:rerun-if-changed=kernels/zkp/metal/eltwise.metal
+  cargo:rerun-if-changed=kernels/zkp/metal/fri.metal
+  cargo:rerun-if-changed=kernels/zkp/metal/mix.metal
+  cargo:rerun-if-changed=kernels/zkp/metal/ntt.metal
+  cargo:rerun-if-changed=kernels/zkp/metal/poseidon2.metal
+  cargo:rerun-if-changed=kernels/zkp/metal/sha.metal
+  cargo:rerun-if-changed=kernels/zkp/metal/zk.metal
+  cargo:rerun-if-changed=kernels/zkp/metal/sha256.h
+  Running: "xcrun" "--sdk" "macosx" "metal" "-o" "/Users/ec2-user/Library/Caches/com.risczero.RISC-Zero.risc0/.tmp5qXmf7/kernels/zkp/metal/sha.air" "-c" "kernels/zkp/metal/sha.metal" "-I" "/Users/ec2-user/w/ferrata/bridge/target/release/build/risc0-sys-4ebefd4b70c7d153/out/_sys_" "-Wno-unused-variable" "-I" "kernels/zkp/metal"
+  Running: "xcrun" "--sdk" "macosx" "metal" "-o" "/Users/ec2-user/Library/Caches/com.risczero.RISC-Zero.risc0/.tmp5qXmf7/kernels/zkp/metal/eltwise.air" "-c" "kernels/zkp/metal/eltwise.metal" "-I" "/Users/ec2-user/w/ferrata/bridge/target/release/build/risc0-sys-4ebefd4b70c7d153/out/_sys_" "-Wno-unused-variable" "-I" "kernels/zkp/metal"
+  Running: "xcrun" "--sdk" "macosx" "metal" "-o" "/Users/ec2-user/Library/Caches/com.risczero.RISC-Zero.risc0/.tmp5qXmf7/kernels/zkp/metal/ntt.air" "-c" "kernels/zkp/metal/ntt.metal" "-I" "/Users/ec2-user/w/ferrata/bridge/target/release/build/risc0-sys-4ebefd4b70c7d153/out/_sys_" "-Wno-unused-variable" "-I" "kernels/zkp/metal"
+  Running: "xcrun" "--sdk" "macosx" "metal" "-o" "/Users/ec2-user/Library/Caches/com.risczero.RISC-Zero.risc0/.tmp5qXmf7/kernels/zkp/metal/fri.air" "-c" "kernels/zkp/metal/fri.metal" "-I" "/Users/ec2-user/w/ferrata/bridge/target/release/build/risc0-sys-4ebefd4b70c7d153/out/_sys_" "-Wno-unused-variable" "-I" "kernels/zkp/metal"
+  Running: "xcrun" "--sdk" "macosx" "metal" "-o" "/Users/ec2-user/Library/Caches/com.risczero.RISC-Zero.risc0/.tmp5qXmf7/kernels/zkp/metal/poseidon2.air" "-c" "kernels/zkp/metal/poseidon2.metal" "-I" "/Users/ec2-user/w/ferrata/bridge/target/release/build/risc0-sys-4ebefd4b70c7d153/out/_sys_" "-Wno-unused-variable" "-I" "kernels/zkp/metal"
+  Running: "xcrun" "--sdk" "macosx" "metal" "-o" "/Users/ec2-user/Library/Caches/com.risczero.RISC-Zero.risc0/.tmp5qXmf7/kernels/zkp/metal/zk.air" "-c" "kernels/zkp/metal/zk.metal" "-I" "/Users/ec2-user/w/ferrata/bridge/target/release/build/risc0-sys-4ebefd4b70c7d153/out/_sys_" "-Wno-unused-variable" "-I" "kernels/zkp/metal"
+  Running: "xcrun" "--sdk" "macosx" "metal" "-o" "/Users/ec2-user/Library/Caches/com.risczero.RISC-Zero.risc0/.tmp5qXmf7/kernels/zkp/metal/mix.air" "-c" "kernels/zkp/metal/mix.metal" "-I" "/Users/ec2-user/w/ferrata/bridge/target/release/build/risc0-sys-4ebefd4b70c7d153/out/_sys_" "-Wno-unused-variable" "-I" "kernels/zkp/metal"
+
+  --- stderr
+  xcrun: error: unable to find utility "metal", not a developer tool or in PATH
+  xcrun: error: unable to find utility "metal", not a developer tool or in PATH
+
+  thread '<unnamed>' (102385) panicked at /Users/ec2-user/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/risc0-build-kernel-2.0.1/src/lib.rs:253:29:
+  Could not build metal kernels
+  note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+  thread '<unnamed>' (102390) panicked at /Users/ec2-user/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/risc0-build-kernel-2.0.1/src/lib.rs:253:29:
+  Could not build metal kernels
+  xcrun: error: unable to find utility "metal", not a developer tool or in PATH
+  xcrun: error: unable to find utility "metal", not a developer tool or in PATH
+
+  thread '<unnamed>' (102387) panicked at /Users/ec2-user/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/risc0-build-kernel-2.0.1/src/lib.rs:253:29:
+  Could not build metal kernels
+
+  thread '<unnamed>' (102386) panicked at /Users/ec2-user/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/risc0-build-kernel-2.0.1/src/lib.rs:253:29:
+  Could not build metal kernels
+  xcrun: error: unable to find utility "metal", not a developer tool or in PATH
+  xcrun: error: unable to find utility "metal", not a developer tool or in PATH
+
+  thread '<unnamed>' (102389) panicked at /Users/ec2-user/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/risc0-build-kernel-2.0.1/src/lib.rs:253:29:
+  Could not build metal kernels
+
+  thread '<unnamed>' (102388) panicked at /Users/ec2-user/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/risc0-build-kernel-2.0.1/src/lib.rs:253:29:
+  Could not build metal kernels
+  xcrun: error: unable to find utility "metal", not a developer tool or in PATH
+
+  thread '<unnamed>' (102391) panicked at /Users/ec2-user/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/risc0-build-kernel-2.0.1/src/lib.rs:253:29:
+  Could not build metal kernels
+warning: build failed, waiting for other jobs to finish...
+        9.52 real        60.52 user         7.55 sys
+           450019328  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+             2621307  page reclaims
+                6536  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                 103  messages sent
+                 882  messages received
+                 252  signals received
+                2089  voluntary context switches
+               80509  involuntary context switches
+          8238494015  instructions retired
+          3494916130  cycles elapsed
+            81478520  peak memory footprint

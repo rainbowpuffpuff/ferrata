@@ -1,0 +1,4 @@
+/Users/ec2-user/w/pipeline.sh: line 129:  8567 Terminated: 15          sampler "$rd/mem.csv"
+/Users/ec2-user/w/pipeline.sh: line 129: 13498 Terminated: 15          sampler "$rd/mem.csv"
+/Users/ec2-user/w/pipeline.sh: line 129: 22627 Terminated: 15          sampler "$rd/mem.csv"
+/Users/ec2-user/w/pipeline.sh: line 129: 27467 Terminated: 15          sampler "$rd/mem.csv"

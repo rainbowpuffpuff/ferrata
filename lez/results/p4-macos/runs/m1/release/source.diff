@@ -1,0 +1,66 @@
+diff --git a/bridge/e2e/Cargo.toml b/bridge/e2e/Cargo.toml
+index ef61a2b..da87985 100644
+--- a/bridge/e2e/Cargo.toml
++++ b/bridge/e2e/Cargo.toml
+@@ -10,8 +10,9 @@ publish = false
+ ferrata-bridge-core = { path = "../crates/ferrata-bridge-core" }
+ # Client only: execution and proving run in r0vm 3.0.5 (installed with rzup), over IPC.
+ risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["client"] }
+-# `prove` exposes `prove::to_json`, which writes the input of RISC Zero's Groth16 prover image.
+-risc0-groth16 = { version = "=3.0.5", features = ["prove"] }
++# `prove` (through the feature `wrap` below) exposes `prove::to_json`, which writes the input of RISC Zero's Groth16
++# prover image.
++risc0-groth16 = { version = "=3.0.5" }
+ # `program-binary`: a user ELF combined with the v1compat kernel exactly as risc0-build 3.0.5 does (its
+ # `GuestBuilder::build`: ProgramBinary::new(user_elf, V1COMPAT_ELF).encode()), the versions of bridge/Cargo.lock.
+ risc0-binfmt = "=3.0.5"
+@@ -20,3 +21,10 @@ anyhow = "1"
+ bincode = "1.3"
+ hex = "0.4"
+ serde_json = "1"
++
++[features]
++# `wrap`, on by default: `p254` writes the Groth16 prover's input with risc0-groth16's `prove`, which also builds
++# risc0-sys's GPU kernels; on macOS those are Metal kernels, compiled with full Xcode's `metal`, which the Command Line
++# Tools lack. `--no-default-features` builds every other subcommand, the release's succinct `prove` included.
++default = ["wrap"]
++wrap = ["risc0-groth16/prove"]
+diff --git a/bridge/e2e/src/main.rs b/bridge/e2e/src/main.rs
+index 436aca6..2947a8a 100644
+--- a/bridge/e2e/src/main.rs
++++ b/bridge/e2e/src/main.rs
+@@ -684,6 +684,7 @@ fn write_groth16(dir: &Path, receipt: &Receipt, id: Digest, record: Value) -> Re
+ /// Groth16 prover.
+ fn cmd_p254(opts: &BTreeMap<String, String>) -> Result<()> {
+     refuse_dev_mode()?;
++    ensure!(cfg!(feature = "wrap"), "p254 needs the feature `wrap` (default): rebuild without --no-default-features");
+     let receipt = load_receipt(required(opts, "receipt")?)?;
+     let id = image_id(opts)?;
+     receipt.verify(id).context("the succinct receipt does not verify")?;
+@@ -697,7 +698,7 @@ fn cmd_p254(opts: &BTreeMap<String, String>) -> Result<()> {
+     let secs = start.elapsed().as_secs_f64();
+     let seal_bytes = p254.get_seal_bytes();
+     fs::write(dir.join("seal.r0"), &seal_bytes)?;
+-    fs::write(dir.join("input.json"), risc0_groth16::prove::to_json(&seal_bytes)?)?;
++    fs::write(dir.join("input.json"), groth16_prover_input(&seal_bytes)?)?;
+     let record = json!({
+         "step": "identity_p254", "image_id": hx(id.as_bytes()), "wall_s": secs, "loadavg_before": load_before,
+         "loadavg_after": loadavg(), "p254_seal_bytes": seal_bytes.len(),
+@@ -708,6 +709,17 @@ fn cmd_p254(opts: &BTreeMap<String, String>) -> Result<()> {
+     Ok(())
+ }
+ 
++/// The JSON input of RISC Zero's Groth16 prover image (risc0-groth16's `prove::to_json`, feature `wrap`).
++#[cfg(feature = "wrap")]
++fn groth16_prover_input(seal_bytes: &[u8]) -> Result<String> {
++    Ok(risc0_groth16::prove::to_json(seal_bytes)?)
++}
++
++#[cfg(not(feature = "wrap"))]
++fn groth16_prover_input(_seal_bytes: &[u8]) -> Result<String> {
++    bail!("built without the feature `wrap`")
++}
++
+ /// Step 2, after the prover image wrote `proof.json`: the Groth16 receipt exactly as
+ /// `succinct_to_groth16` builds it (the proof, the succinct receipt's claim, the default verifier
+ /// parameters), verified here before anything is written.
