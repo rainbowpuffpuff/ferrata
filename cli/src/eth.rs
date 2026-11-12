@@ -58,6 +58,9 @@ sol! {
         function checkpointCount() external view returns (uint256);
         function finalImportedLeafCount() external view returns (uint64);
         function burnRootStatus(bytes32 burnRoot) external view returns (bool accepted, uint256 finalizedAt);
+        function releaseDelayFor(address token, uint256 checkpointIndex) external view returns (uint256);
+        function tokenReleasesFrozenUntil(address token) external view returns (uint256);
+        function tokenDepositsFrozenUntil(address token) external view returns (uint256);
         function tokenCap(address token, uint8 direction) external view returns (uint256 capacity, uint256 refillPerSecond, uint256 available);
         function globalCap(uint8 direction) external view returns (uint256 capacity, uint256 refillPerSecond, uint256 available);
     }
@@ -67,6 +70,7 @@ sol! {
         function decimals() external view returns (uint8);
         function symbol() external view returns (string);
         function allowance(address owner, address spender) external view returns (uint256);
+        function approve(address spender, uint256 amount) external returns (bool);
     }
 }
 
@@ -200,6 +204,8 @@ pub struct DepositList {
     pub block: u64,
     pub chain_id: u64,
     pub deposits: Vec<VaultDeposit>,
+    /// The block of each deposit, by leaf index (from the same logs: no per-deposit query).
+    pub blocks: Vec<u64>,
     /// The vault's `depositRoot` at `block`, equal to the root of `deposits` (checked).
     pub root: B256,
 }
@@ -222,23 +228,28 @@ pub async fn deposit_list(p: &DynProvider, vault: Address, from_block: u64, chun
             .from_block(start)
             .to_block(end);
         for log in p.get_logs(&filter).await.with_context(|| format!("eth_getLogs {start}..{end}"))? {
+            let at = log.block_number.unwrap_or(end);
             let event = log
                 .log_decode::<IVault::Deposit>()
                 .map_err(|e| anyhow!("a Deposit log does not decode: {e}"))?
                 .inner
                 .data;
-            deposits.push(VaultDeposit {
-                depositor: event.depositor.into_array(),
-                j: event.index,
-                leaf_index: event.leafIndex,
-                token: event.token.into_array(),
-                amount: event.amount.to_be_bytes::<32>(),
-                commitment: event.commitment.0,
-            });
+            deposits.push((
+                at,
+                VaultDeposit {
+                    depositor: event.depositor.into_array(),
+                    j: event.index,
+                    leaf_index: event.leafIndex,
+                    token: event.token.into_array(),
+                    amount: event.amount.to_be_bytes::<32>(),
+                    commitment: event.commitment.0,
+                },
+            ));
         }
         start = end + 1;
     }
-    deposits.sort_by_key(|d| d.leaf_index);
+    deposits.sort_by_key(|(_, d)| d.leaf_index);
+    let (blocks, deposits): (Vec<u64>, Vec<VaultDeposit>) = deposits.into_iter().unzip();
     let count = view(p, vault, IVault::nextLeafIndexCall {}, Some(block)).await?;
     let root = view(p, vault, IVault::depositRootCall {}, Some(block)).await?;
     ensure!(
@@ -262,7 +273,86 @@ pub async fn deposit_list(p: &DynProvider, vault: Address, from_block: u64, chun
         tree.root() == root.0,
         "the deposits the provider returned do not hash to the vault's depositRoot at block {block}: a changed or forged list"
     );
-    Ok(DepositList { block, chain_id, deposits, root })
+    Ok(DepositList { block, chain_id, deposits, blocks, root })
+}
+
+/// A burn root the vault accepts, with what the wallet's release rule needs.
+#[derive(Clone, Copy, Debug)]
+pub struct AcceptedRoot {
+    pub root: B256,
+    /// Burns it covers (burn indices below it).
+    pub count: u64,
+    /// Its checkpoint index.
+    pub index: u64,
+    /// When its checkpoint was finalised (Ethereum time).
+    pub finalized_at: u64,
+}
+
+/// Every accepted (finalised, not revoked) burn root, oldest first, from the vault's
+/// `CheckpointFinalized` events (one download; the vault's `burnRootStatus` confirms each).
+pub async fn accepted_roots(p: &DynProvider, vault: Address, from_block: u64, chunk: u64) -> Result<Vec<AcceptedRoot>> {
+    let block = p.get_block_number().await?;
+    let mut out = Vec::new();
+    let mut start = from_block;
+    while start <= block {
+        let end = (start + chunk.max(1) - 1).min(block);
+        let filter = Filter::new()
+            .address(vault)
+            .event_signature(IVault::CheckpointFinalized::SIGNATURE_HASH)
+            .from_block(start)
+            .to_block(end);
+        for log in p.get_logs(&filter).await.with_context(|| format!("eth_getLogs {start}..{end}"))? {
+            let e = log
+                .log_decode::<IVault::CheckpointFinalized>()
+                .map_err(|e| anyhow!("a CheckpointFinalized log does not decode: {e}"))?
+                .inner
+                .data;
+            let status = view(p, vault, IVault::burnRootStatusCall { burnRoot: e.burnRoot }, None).await?;
+            if status.accepted {
+                out.push(AcceptedRoot {
+                    root: e.burnRoot,
+                    count: e.burnCount,
+                    index: u64::try_from(e.index).unwrap_or(u64::MAX),
+                    finalized_at: u64::try_from(status.finalizedAt).unwrap_or(u64::MAX),
+                });
+            }
+        }
+        start = end + 1;
+    }
+    Ok(out)
+}
+
+/// What a call would cost, checked with `eth_call` first: a refusal is reported with the vault's error.
+#[derive(Clone, Copy, Debug)]
+pub struct Preflight {
+    pub gas: u64,
+    pub gas_price: u128,
+}
+
+impl Preflight {
+    /// The network fee in wei at the current gas price.
+    pub fn fee(&self) -> u128 {
+        u128::from(self.gas) * self.gas_price
+    }
+}
+
+/// `eth_call`, then `eth_estimateGas` and `eth_gasPrice`, for a call from `from`; nothing is signed.
+pub async fn preflight(p: &DynProvider, from: Address, to: Address, input: Bytes, value: U256) -> Result<Preflight> {
+    let tx = TransactionRequest::default().with_from(from).with_to(to).with_input(input).with_value(value);
+    if let Err(e) = p.call(tx.clone()).await {
+        match refusal_of(&e, "eth_call, nothing sent") {
+            Some(r) => bail!(r),
+            None => bail!("the vault would revert: {e}"),
+        }
+    }
+    let gas = p.estimate_gas(tx).await.context("eth_estimateGas")?;
+    let gas_price = p.get_gas_price().await.context("eth_gasPrice")?;
+    Ok(Preflight { gas, gas_price })
+}
+
+/// The latest block's time.
+pub async fn now(p: &DynProvider) -> Result<u64> {
+    Ok(p.get_block(BlockId::latest()).await?.ok_or_else(|| anyhow!("no latest block"))?.header.timestamp)
 }
 
 /// Every nullifier the vault has released, from its `Release` events (one download, matched

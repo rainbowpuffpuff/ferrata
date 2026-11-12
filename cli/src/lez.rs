@@ -105,6 +105,42 @@ pub trait Ledger {
     async fn actor_state(&self, actor: Actor) -> Result<Vec<u8>>;
     /// Sign and send `call`; returns the transaction hash (hex).
     async fn submit(&mut self, call: &LezCall) -> Result<String>;
+    /// The wallet's own view of its private account `id`, decrypted from the zone (LEZ's wallet
+    /// syncs and decrypts it); `None` if the wallet does not know it.
+    async fn private_account(&mut self, _id: AccountId) -> Result<Option<lee::Account>> {
+        Ok(None)
+    }
+}
+
+/// The bridge program's calls a privacy-preserving transaction makes in the clear: its public root,
+/// if any, and its `PrivateToPublic` deliveries to the program's actors (a private burn's note
+/// reaches `token(cid, token)` this way; the checkpoint counts the same calls).
+pub fn visible_calls(tx: &lee::PrivacyPreservingTransaction, program: AccountId) -> Vec<Applied> {
+    let execution = &tx.message.execution;
+    let mut out = Vec::new();
+    if let Some(root) = &execution.public_root {
+        if root.to.program_account_id == program {
+            out.push(Applied { to: root.to, message: root.message.clone() });
+        }
+    }
+    for step in &execution.boundary {
+        if let lee_core::execution_state::BoundaryStep::PrivateToPublic(d) = step {
+            if d.envelope.to.program_account_id == program {
+                out.push(Applied { to: d.envelope.to, message: d.envelope.message.clone() });
+            }
+        }
+    }
+    out
+}
+
+/// The amount of `token` under `ctx`'s configuration in a holder's bridge state (0 if none).
+pub fn holding_in(state: &[u8], ctx: &Context, token: &[u8; 20]) -> u128 {
+    match BridgeState::try_from_slice(state) {
+        Ok(BridgeState::Holder(HolderState { holdings, .. })) => {
+            holdings.iter().find(|h| h.config_id == ctx.cid && h.token == *token).map_or(0, |h| h.amount)
+        }
+        _ => 0,
+    }
 }
 
 /// The bridge state of `actor`, if any.
@@ -217,6 +253,7 @@ pub async fn plan_claim<L: Ledger>(
     history: &History,
     private: bool,
     relayer: Option<Hash>,
+    prover: Option<AccountId>,
 ) -> Result<ClaimPlan> {
     let d = &owned.deposit;
     let Some(&n) = history.roots.iter().rev().find(|&&n| n > d.leaf_index) else {
@@ -275,12 +312,18 @@ pub async fn plan_claim<L: Ledger>(
     let root = root_actor(ctx.program, &ctx.cid, n);
     let mut mentions = Vec::new();
     let message = if private {
-        let me = own_actor(ctx.program, AccountId::new(owned.dest));
-        if owned.kind == DestKind::Private {
-            mentions.push(Mention::PrivateSelf(me));
-        } else {
-            bail!("a public-kind deposit is claimed in plaintext or by its own account's private execution; use the plaintext path");
-        }
+        // A private-kind deposit is proven by its destination; a public-kind one by any private
+        // account of the wallet (the mint still lands at the public destination, which becomes public;
+        // which deposit paid it does not).
+        let root_account = match owned.kind {
+            DestKind::Private => AccountId::new(owned.dest),
+            DestKind::Public => prover.ok_or_else(|| {
+                anyhow!(
+                    "a private claim of a public-kind deposit is proven by a private account of the wallet; none given"
+                )
+            })?,
+        };
+        mentions.push(Mention::PrivateSelf(own_actor(ctx.program, root_account)));
         mentions.push(Mention::Pda { actor: root, seed: root_seed(&ctx.cid, n) });
         BridgeMessage::ClaimPrivately { config_id: ctx.cid, leaf_count: n, witness, range, relayer }
     } else {
@@ -324,6 +367,14 @@ pub struct BurnPlan {
     pub i: u64,
 }
 
+/// Who burns: a public account (it signs; its holding is read from the zone) or a private account
+/// of the wallet (it proves; its holding is the wallet's own view of it).
+#[derive(Clone, Copy, Debug)]
+pub enum BurnFrom {
+    Public(AccountId),
+    Private { account: AccountId, held: u128 },
+}
+
 /// Builds the burn of one denomination `amount` of `token` held by `holder` under `ctx`, to be
 /// released to `recipient` on `ctx`'s vault.
 #[allow(clippy::too_many_arguments)]
@@ -331,7 +382,7 @@ pub async fn plan_burn<L: Ledger>(
     ledger: &L,
     ctx: &Context,
     keys: &BridgeKeys,
-    holder: AccountId,
+    holder: BurnFrom,
     token: [u8; 20],
     amount: u128,
     recipient: [u8; 20],
@@ -341,11 +392,14 @@ pub async fn plan_burn<L: Ledger>(
     if t.entry.index_of(amount).is_none() {
         bail!(program_refusal(251, "checked before sending: the amount is not one of the token's denominations"));
     }
-    let held = match read(ledger, holder_actor(ctx.program, holder)).await? {
-        Some(BridgeState::Holder(HolderState { holdings, .. })) => {
-            holdings.iter().find(|h| h.config_id == ctx.cid && h.token == token).map_or(0, |h| h.amount)
-        }
-        _ => 0,
+    let held = match holder {
+        BurnFrom::Public(account) => match read(ledger, holder_actor(ctx.program, account)).await? {
+            Some(BridgeState::Holder(HolderState { holdings, .. })) => {
+                holdings.iter().find(|h| h.config_id == ctx.cid && h.token == token).map_or(0, |h| h.amount)
+            }
+            _ => 0,
+        },
+        BurnFrom::Private { held, .. } => held,
     };
     if held < amount {
         bail!(program_refusal(254, format!("checked before sending: the holding is {held} base units")));
@@ -356,14 +410,21 @@ pub async fn plan_burn<L: Ledger>(
     let note = BurnNote::create(keys, &ctx.cid, next_i, &target, token, u128_to_word(amount));
     let wire = bw::Note { r: note.r, memo: note.memo, mac: note.mac, token, amount: note.amount, c_out: note.c_out };
     let note_hash = wire.hash();
-    // Signed at the holder's own actor, which forwards the note to its `holder(account)`.
-    let mentions = vec![
-        Mention::Signer(own_actor(ctx.program, holder)),
-        Mention::Pda { actor: holder_actor(ctx.program, holder), seed: holder_seed(holder.value()) },
+    let mut mentions = match holder {
+        // Signed at the holder's own actor, which forwards the note to its `holder(account)`.
+        BurnFrom::Public(account) => vec![
+            Mention::Signer(own_actor(ctx.program, account)),
+            Mention::Pda { actor: holder_actor(ctx.program, account), seed: holder_seed(account.value()) },
+        ],
+        // Proven at the private account's own actor, which debits its private holding and sends the
+        // note to the token's account in the clear.
+        BurnFrom::Private { account, .. } => vec![Mention::PrivateSelf(own_actor(ctx.program, account))],
+    };
+    mentions.extend([
         Mention::Pda { actor: token_actor(ctx.program, &ctx.cid, &token), seed: token_seed(&ctx.cid, &token) },
         Mention::Pda { actor: config_actor(ctx.program, &ctx.cid), seed: config_seed(&ctx.cid) },
         Mention::Pda { actor: burn_actor(ctx.program, &ctx.cid, &note_hash), seed: burn_seed(&ctx.cid, &note_hash) },
-    ];
+    ]);
     let call = LezCall {
         what: format!("burn with tag counter {next_i}"),
         mentions,
@@ -381,8 +442,10 @@ pub struct Sequencer {
     pub wallet: WalletCore<SequencerClient>,
     /// The account that pays the fee (it must be in the wallet).
     pub payer: Option<AccountId>,
-    /// The bridge program's binary, for private execution (`ClaimPrivately`).
+    /// The bridge program's binary, for private execution (`ClaimPrivately`, a private `Burn`).
     pub bridge_program: Option<PathBuf>,
+    /// Whether the wallet has synced its private accounts with the zone since it last sent.
+    pub synced: bool,
 }
 
 fn wallet_config_json(rpc: &str) -> String {
@@ -466,7 +529,10 @@ impl Ledger for Sequencer {
                                 out.push(Applied { to: root.to, message: root.message.clone() });
                             }
                         }
-                        LeeTransaction::PrivacyPreserving(tx) => touched.extend(tx.message.public_account_ids()),
+                        LeeTransaction::PrivacyPreserving(tx) => {
+                            touched.extend(tx.message.public_account_ids());
+                            out.extend(visible_calls(tx, program));
+                        }
                     }
                 }
             }
@@ -482,11 +548,12 @@ impl Ledger for Sequencer {
     }
 
     async fn submit(&mut self, call: &LezCall) -> Result<String> {
+        self.synced = false;
         let mentions: Vec<AccountMention> = call.mentions.iter().map(mention).collect();
         let message = borsh::to_vec(&call.message)?;
         if matches!(call.mentions.first(), Some(Mention::PrivateSelf(_))) {
             let path = self.bridge_program.as_ref().ok_or_else(|| {
-                anyhow!("a private claim needs --bridge-program (the bridge program's binary) to prove its execution")
+                anyhow!("a private claim or burn needs --bridge-program (the bridge program's binary) to prove its execution")
             })?;
             let bytes = std::fs::read(path).with_context(|| format!("reading {}", path.display()))?;
             let program = call.mentions[0].actor().program_account_id;
@@ -501,7 +568,7 @@ impl Ledger for Sequencer {
                     Ok(())
                 })
                 .await
-                .map_err(|e| anyhow!("the wallet did not send the private claim: {e}: {e:?}"))?;
+                .map_err(|e| anyhow!("the wallet did not send the private transaction: {e}: {e:?}"))?;
             return Ok(hash.to_string());
         }
         let hash = self
@@ -510,6 +577,17 @@ impl Ledger for Sequencer {
             .await
             .map_err(|e| anyhow!("the wallet did not send it: {e}: {e:?}"))?;
         Ok(hash.to_string())
+    }
+
+    async fn private_account(&mut self, id: AccountId) -> Result<Option<lee::Account>> {
+        if !self.synced {
+            self.wallet
+                .sync_to_latest_block()
+                .await
+                .map_err(|e| anyhow!("syncing the LEZ wallet with the zone: {e}"))?;
+            self.synced = true;
+        }
+        Ok(self.wallet.get_account_private(id))
     }
 }
 
@@ -644,6 +722,10 @@ pub fn reveals(call: &LezCall) -> &'static str {
         BridgeMessage::ClaimPrivately { .. } => {
             "private claim: N, the token, the denomination, the fee schedule's range, the root read, the relayer, when (its block); \
              not the deposit, the path, s or the private destination"
+        }
+        BridgeMessage::Burn { .. } if matches!(call.mentions.first(), Some(Mention::PrivateSelf(_))) => {
+            "private burn: the note (r, memo, mac, COut), the token, the denomination and the time; \
+             not the holder (a private account, shown as an alias) or the Ethereum recipient (encrypted in the memo)"
         }
         BridgeMessage::Burn { .. } => {
             "burn: the holder's account (a public holding), the token, the denomination, the time and the note (r, memo, mac, COut); \

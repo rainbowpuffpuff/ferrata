@@ -9,8 +9,11 @@ relative to the repository root.
 
 **Status.** Nothing here is deployed for public use. The vault (FerrataVault v5) and the LEZ bridge
 program are prototypes, not audited ([`vault/README.md`](../../vault/README.md);
-[`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md)). There is **no wallet, mini-app or CLI yet**:
-the steps below were exercised by tests, harnesses and scripts, and each section says where. Labels:
+[`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md)). The user's steps exist as a command-line tool,
+`ferrata` ([`cli/README.md`](../../cli/README.md); prototype, run only against a local chain or a test
+deployment), and as a mini-app on a devnet ([`modules/ferrata_bridge_ui`](../../modules/ferrata_bridge_ui/README.md));
+there is no wallet integration yet. The steps below were exercised by tests, harnesses and scripts, and each
+section says where. Labels:
 **measured** (a run in the repository, with where it ran), **derived**, **estimated**, **not built**
 ([`docs/design/bridge.md`](../design/bridge.md), opening section).
 
@@ -27,6 +30,26 @@ the steps below were exercised by tests, harnesses and scripts, and each section
 
 You act at steps 1, 3, 5 and 7. Steps 2 and 6 are done by anyone (importers and checkpoint provers)
 and need nothing from you ([`bridge.md`](../design/bridge.md) §2, §5.4, §8).
+
+**With the `ferrata` tool, on the defaults** ([`cli/README.md`](../../cli/README.md) has every option and
+output). Every command that sends is a dry run until `--send --yes`: it prints what it would send, what
+becomes public on each chain with the exposure of your choices, and what it costs. The defaults are the
+private ones; each weaker choice needs its own option and, for a public path, an acknowledgement.
+
+```sh
+export FERRATA_SEED=seed.txt FERRATA_ETH_RPC=… FERRATA_VAULT=0x… FERRATA_CHAIN_ID=…    # endpoints: flags or variables
+export FERRATA_SEQUENCER=… FERRATA_LEZ_WALLET=lez-wallet FERRATA_LEZ_PASSWORD_FILE=… FERRATA_BRIDGE_ACCOUNT=0x…
+ferrata deposit --denomination 1 --keystore me.json --password-file me.pass --send --yes   # 1: to private /0
+ferrata claim --bridge-program bridge.bin --send --yes      # 3: private; waits for the deposit's claim delay
+ferrata burn --amount 1 --recipient 0xFresh… --bridge-program bridge.bin --send --yes     # 5: from private /0
+ferrata release --seal seal.hex --job-out job.json          # 7: newest root past its delay; any relayer sends it
+#   (or --prove --program release.bin: a succinct receipt in the job, which the relayer wraps to Groth16)
+ferrata recover                                             # everything, from the seed alone
+```
+
+This sequence on these defaults is the tool's end-to-end test, on a local anvil chain and the LEZ harness
+(the private claim and burn proven in RISC Zero dev mode with the wallet's own keys; measured on the build
+box, 12 November 2026: [`cli/README.md`](../../cli/README.md), "Tests").
 
 ## 2. Your keys
 
@@ -237,20 +260,30 @@ A wallet restored from the seed, with no local state, finds everything
   "Refunds"; [`bridge.md`](../design/bridge.md) §16). Every leaf is either claimable on LEZ or
   refundable on Ethereum, never both.
 
-The recovery client itself (in the module) is **not built**; the scan is measured in the bridge core.
+`ferrata recover` does all of this from the seed file and the endpoints, with no earlier local state, and adds
+the holdings: public ones read from the zone, private ones as the LEZ wallet decrypts them. Its end-to-end test
+recovers 12 deposits (2 claimed, one of them privately), 12 burns (one private; 2 released) and the holdings
+(measured, build box, 12 November 2026; [`cli/README.md`](../../cli/README.md)). In the test the harness stands
+in for the LEZ wallet's sync of its private accounts. The recovery in the module (`ferrata_bridge_module`) is
+**not built**; the scan's speed is measured in the bridge core.
 
 ## 9. Defaults, and what each weaker choice reveals (Privacy #7, U.5, U.6)
 
 The design preselects the private choice everywhere; each weaker one needs an explicit confirmation,
-and the client names what it would reveal ([`bridge.md`](../design/bridge.md) §17). **Not built:** the
-mini-app and CLI that implement these defaults and the leak indicator.
+and the client names what it would reveal ([`bridge.md`](../design/bridge.md) §17). The `ferrata` tool and the
+mini-app implement these defaults and the same leak indicator (`cli/src/privacy.rs` is the mini-app's
+`qml/js/privacy.js`): before sending, each command prints "privacy of these choices: Minimal / Elevated / High",
+with a line per choice and a WARNING when a direct link would become public. The tool's options for the weaker
+choices: `deposit --kind public --i-accept-public-account`; `claim --plaintext
+--i-accept-plaintext-links-deposit`; `claim --no-delay`; `burn --from public --i-accept-public-account`;
+`release --self-send`.
 
 | Choice | Default | If you change it |
 |---|---|---|
 | Claim | private (privacy-preserving transaction) | plaintext: links your mint to your deposit, publicly and for good |
 | Destination | a private account | public: the destination is visible (not which deposit paid it) |
 | Amount | a fixed denomination | — (only denominations exist; choosing a rare one shrinks your anonymity set) |
-| Submission | delayed: the client proposes a delay before claiming and before releasing | immediate: timing links deposit to claim, or burn to release |
+| Submission | delayed: the client proposes a delay before claiming and before releasing (the tool holds a claim 1–12 h after its deposit, a delay derived from the seed per deposit; a release waits for the vault's release delay and uses the newest root past it) | immediate: timing links deposit to claim, or burn to release |
 | Who submits | a relayer (any; you may pick another per operation) | yourself: your fee payer's identity and timing join the transaction |
 | Burn from | a private holding | a public holding: the holder is visible |
 | Root read | the newest imported root | an older root dates your deposit (it shows the deposit is at least that old) |
@@ -308,8 +341,11 @@ module `code`; [`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §2–§4,
 
 On Ethereum the vault reverts with named custom errors (§3, §7). A rejected, a repeated and a capped
 claim are indistinguishable in what they reveal about the deposit, because a private claim that
-fails is never published, and a plaintext one already published everything. **Not built:** the
-client's messages for each code (the module).
+fails is never published, and a plaintext one already published everything. The `ferrata` tool runs the
+program's own checks and an `eth_call` before it signs, and names each refusal with its source, code, meaning
+and where it was found (`checked before sending`, or `returned by` the program or the vault); its messages do
+not name the deposit or burn ([`cli/README.md`](../../cli/README.md), "Refusals"). **Not built:** the module's
+messages for each code.
 
 ## 12. If the bridge is frozen, retired or stopped
 
@@ -369,8 +405,8 @@ The integration surface today is the program messages and the derivations; the L
 ([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §9; [`bridge.md`](../design/bridge.md) §1,
 §18.6, §19; [`vault/README.md`](../../vault/README.md), status paragraph)
 
-- the wallet, mini-app, CLI and `ferrata_bridge_module`; the leak indicator; the anonymity-set view;
-  the proposed delays; position recovery as a client feature;
+- a wallet integration and `ferrata_bridge_module`; the anonymity-set view; the `ferrata` tool's LEZ commands
+  against a live sequencer (its tests use the LEZ harness);
 - the gas drop and the relayer and wrapper services;
 - a transfer of wrapped tokens between holders; the switch to LEZ's token program;
 - a real proof of a private claim to a public destination, and laptop or GPU proofs of the current program

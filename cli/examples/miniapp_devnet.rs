@@ -629,7 +629,8 @@ impl Devnet {
             .iter()
             .map(|d| inbound::deposit_leaf(d.leaf_index, &d.depositor, &d.token, &d.amount, &d.commitment))
             .collect();
-        let plan = lez::plan_claim(&self.zone, &self.ctx, &leaves, &row.owned, &history, private, None).await?;
+        let prover = self.user.private_account_ids(1)?.first().copied();
+        let plan = lez::plan_claim(&self.zone, &self.ctx, &leaves, &row.owned, &history, private, None, prover).await?;
         if private {
             return Ok(json!({
                 "settled": false,
@@ -677,7 +678,7 @@ impl Devnet {
             &self.zone,
             &self.ctx,
             &self.user.bridge_keys(),
-            holder,
+            lez::BurnFrom::Public(holder),
             ETH_TOKEN,
             amount,
             recipient.into_array(),

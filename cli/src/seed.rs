@@ -29,6 +29,13 @@ pub const BRIDGE_SEED_LABEL: &[u8] = b"ferrata/bridge-seed/v1";
 /// How many accounts of each kind a deposit's destination is searched among, by default.
 pub const DEFAULT_GAP: u32 = 8;
 
+/// A private account's secret keys as LEZ's `KeyChain` holds them: the authorization secret key and
+/// the viewing key's seed `(d, z)`.
+pub type PrivateSecrets = ([u8; 32], [u8; 32], [u8; 32]);
+
+/// The label of a deposit's claim delay under the bridge seed.
+pub const CLAIM_DELAY_LABEL: &[u8] = b"ferrata/claim-delay/v1";
+
 /// One public LEZ account of the wallet.
 #[derive(Clone)]
 pub struct PublicAccount {
@@ -128,6 +135,35 @@ impl Seed {
     }
 
     /// The candidate destinations of recovery: `(kind, a) -> account id`, `a < gap`.
+    /// The secret keys of private accounts `/0 … /n-1` as LEZ's `KeyChain` holds them: the
+    /// authorization secret key and the viewing key's seed `(d, z)`. The LEZ wallet proves with
+    /// them; the end-to-end test hands them to the harness, which proves as the wallet does.
+    pub fn private_account_secrets(&self, n: u32) -> Result<Vec<PrivateSecrets>> {
+        let mut tree = KeyTreePrivate::new(&self.holder());
+        let mut out = Vec::new();
+        for index in 0..n {
+            let chain_index = tree
+                .create_private_accounts_key_node(&ChainIndex::root())
+                .ok_or_else(|| anyhow!("LEZ's key tree refused private account /{index}"))?;
+            let node =
+                tree.key_map.get(&chain_index).ok_or_else(|| anyhow!("private account /{index} is not in the tree"))?;
+            let holder = &node.value.0.private_key_holder;
+            out.push((holder.authorization_secret_key.0, holder.viewing_secret_key.d, holder.viewing_secret_key.z));
+        }
+        Ok(out)
+    }
+
+    /// How long a claim of the deposit with nullifier `n` is held after the deposit, in hours (1 to
+    /// 12; RFP-022 U.05, "delayed submission"). The mini-app draws it at random per deposit; the tool
+    /// derives it from the bridge seed, so it is the same on every run and after a restore, and no
+    /// one without the seed can predict it.
+    pub fn claim_delay_hours(&self, n: &Hash) -> u64 {
+        let h = hmac_sha256(&self.bridge_seed(), &[CLAIM_DELAY_LABEL, n.as_slice()].concat());
+        let mut first = [0u8; 8];
+        first.copy_from_slice(&h[..8]);
+        1 + u64::from_be_bytes(first) % 12
+    }
+
     pub fn destinations(&self, gap: u32) -> Result<Destinations> {
         let public = self.public_accounts(gap)?.into_iter().map(|a| *a.id.value()).collect();
         let private = self.private_account_ids(gap)?.into_iter().map(|id| *id.value()).collect();
