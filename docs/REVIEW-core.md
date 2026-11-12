@@ -5,6 +5,9 @@ the light client; the Yellow Paper, `execution-specs` and the EIPs named for the
 any deliberate deviation, the tests that pin it, and the author's sign-off. The deviations column
 is part of the audit packet.
 
+Signed: Carol Calin, 12 November 2026, every row below (48), after reading each against its spec section
+and the agent review of 11 November.
+
 | Function (file) | Spec section | Deviation | Pinned by | Reviewed |
 |---|---|---|---|---|
 | `validate_light_client_update` (validate.rs) | altair/light-client/sync-protocol.md `validate_light_client_update` | shape checks added first (layout, branch lengths, committee size); the signature path is chosen by the caller | Carol Calin, 12 Nov 2026 |

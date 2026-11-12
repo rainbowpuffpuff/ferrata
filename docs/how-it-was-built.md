@@ -71,8 +71,8 @@ reproducible builds and a re-check command for every result.
 ## What the author reviews
 
 [REVIEW-core.md](REVIEW-core.md) maps each function of the core to its specification section for the
-author's line-by-line review; its sign-off column is not filled in yet, and the bridge prototypes have no
-such map. Under the proposal, consensus-critical and fund-holding code ships only after its vectors, its
+author's line-by-line review; the author signed every row on 12 November 2026 (Carol Calin, after the agent
+review of 11 November), and the bridge prototypes have no such map yet. Under the proposal, consensus-critical and fund-holding code ships only after its vectors, its
 adversarial and mutation suites and the author's line-by-line review, signed function by function in that
 file: the core first, the vault and the guests by milestones A1 and B1; agent reviews in a separate context
 are kept with each milestone and never called an audit.
