@@ -1,0 +1,11 @@
+result
+result-*
+lib/
+rust-lib/target/
+rust-lib/generated/
+logos-rust-sdk-src
+# Copies of checkpoint/attestor and checkpoint/crates/{checkpoint-core,attestor-core}, made by scripts/stage.sh before a build.
+rust-lib/attestor/
+rust-lib/crates/
+# check.sh output (default OUT_DIR)
+out/

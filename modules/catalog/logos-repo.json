@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "ferrata-modules",
   "displayName": "Ferrata modules",
-  "description": "Ferrata's Logos core modules (prototype, unaudited): ferrata_attest_module (Ethereum state attestation on LEZ) and ferrata_bridge_module (the user side of the ERC-20/ETH bridge).",
+  "description": "Ferrata's Logos core modules (prototype, unaudited): ferrata_attest_module (Ethereum state attestation on LEZ), ferrata_bridge_module (the user side of the ERC-20/ETH bridge), and the daemons as modules: ferrata_attestor_module (rule (B)'s attestor beside a sequencer), ferrata_monitor_module (the watchers' monitor), ferrata_updater_module (the light-client updater).",
   "homepage": "https://github.com/rainbowpuffpuff/ferrata",
   "indexUrl": "https://github.com/rainbowpuffpuff/ferrata-modules/releases/download/index/index.json",
   "trustedSigners": []

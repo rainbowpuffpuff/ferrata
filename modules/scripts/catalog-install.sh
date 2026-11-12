@@ -53,7 +53,7 @@ run catalog source http
 run catalog refresh
 run catalog ls
 run search ferrata
-for m in ferrata_attest_module ferrata_bridge_module; do
+for m in ${MODULES:-ferrata_attest_module ferrata_bridge_module ferrata_attestor_module ferrata_monitor_module ferrata_updater_module}; do
   run install "$m" -y
   run module load "$m"
   run call "$m" version --json

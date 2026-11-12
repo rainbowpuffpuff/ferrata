@@ -1,0 +1,10 @@
+result
+result-*
+lib/
+rust-lib/target/
+rust-lib/generated/
+logos-rust-sdk-src
+# The updater, the lez/ harness, the crates they need and the LEZ tree, made by scripts/stage-updater.sh before a build.
+rust-lib/vendor/
+# check.sh output (default OUT_DIR)
+out/

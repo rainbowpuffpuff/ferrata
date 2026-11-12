@@ -1,24 +1,32 @@
 #!/usr/bin/env bash
-# Build ferrata_attest_module and ferrata_bridge_module the way Logos modules are built (dev and
-# portable packages, what logos-modules-release-action builds), install both into a headless Logos
-# Core (logosctl), load them and call each method. Every reply is compared with the same call made
-# natively (the methods' crates, without Logos Core) and with what the request must produce
-# (requests.py, bridge_requests.py). Then e2e.sh runs through the same daemon: a log fetched over
-# JSON-RPC, attested by a transaction the module built and the LEZ harness executed.
-# Needs Linux x86-64, Nix with flakes, cargo, python3 and jq.
+# Build Ferrata's Logos modules the way Logos modules are built (dev and portable packages, what
+# logos-modules-release-action builds), install them into a headless Logos Core (logosctl), load them
+# and call each method. Every reply is compared with the same call made natively (the methods' crates,
+# without Logos Core) and with what the request must produce (requests.py, bridge_requests.py,
+# daemon_requests.py). Then, through the same daemon: e2e.sh (a log fetched over JSON-RPC, attested by
+# a transaction the module built and the LEZ harness executed) and the three daemons doing their jobs
+# as modules: attestor-e2e.sh (the zone of four's records), updater-e2e.sh (the in-process LEZ chain
+# with the lab's recorded beacon data), monitor/tests/anvil-e2e.sh (an anvil chain with a v5 vault),
+# each first run natively (the calls crate, or the monitor binary) as the reference.
+# Needs Linux x86-64, Nix with flakes, cargo, python3 and jq; for the daemons also the RISC Zero
+# toolchain of lez/ (the guests the updater module embeds), r0vm, and Foundry (anvil, forge, cast) with
+# vault/lib.
 #
 #   modules/scripts/check.sh [OUT_DIR]     default modules/out (ignored by git)
 #
-# PORTABLE=0 skips the portable packages and the portable logosctl (built and run by default).
-# E2E=0 skips e2e.sh through Logos Core.
+# MODULES="..." restricts the modules (default all five). PORTABLE=0 skips the portable packages and
+# the portable logosctl (built and run by default). E2E=0 skips the end-to-end runs through Logos Core;
+# DAEMONS_E2E_IN="dev portable" names the flavours the daemons' runs go through (default both).
 # Writes OUT_DIR/report/: summary.md, the requests, every reply and one log per step.
 set -euo pipefail
 
 BUILDER=github:logos-co/logos-module-builder/5f74cdb3cecacde054c68d72fcc0d2cfe2195900
 CLI=github:logos-co/logos-logoscore-cli/66d098d3af1367cf831b69c13a5aa8345edeb682
-MODULES="ferrata_attest_module ferrata_bridge_module"
+MODULES=${MODULES:-"ferrata_attest_module ferrata_bridge_module ferrata_attestor_module ferrata_monitor_module ferrata_updater_module"}
 PORTABLE=${PORTABLE:-1}
 E2E=${E2E:-1}
+DAEMONS_E2E_IN=${DAEMONS_E2E_IN:-"dev portable"}
+has() { case " $MODULES " in *" $1 "*) return 0 ;; esac; return 1; }
 
 # On the build box (a container) the stack limit is "unlimited": Nix's evaluation of the module's flake
 # overflowed its stack, and local builds failed below 1 GiB. With a finite 1 GiB limit both work.
@@ -63,7 +71,7 @@ trap stop_daemon EXIT
 
 finish() {
   stop_daemon
-  python3 -I "$here/summary.py" "$rep" "$failures" || failures=$((failures + 1))
+  MODULES="$MODULES" E2E="$E2E" DAEMONS_E2E_IN="$DAEMONS_E2E_IN" python3 -I "$here/summary.py" "$rep" "$failures" || failures=$((failures + 1))
   exit $(( failures > 0 ? 1 : 0 ))
 }
 
@@ -77,7 +85,9 @@ versions() {
   jq --version
 }
 
-stage() { FERRATA_COMMIT=${FERRATA_COMMIT:-} "$here/stage.sh"; }
+# The guests risc0-build makes for lez/methods: the updater module embeds them (stage-updater.sh).
+guests() { (cd "$repo/lez" && RISC0_HOME=${RISC0_HOME:-$repo/../risc0-home-lez} cargo build --locked -p methods); }
+stage() { FERRATA_COMMIT=${FERRATA_COMMIT:-} "$here/stage.sh" $MODULES; }
 # nix build, retried on the two failures the Modal build box (a gVisor container, builds as root
 # without a sandbox) causes: a builder whose terminal output is lost ("reading a line: Input/output
 # error", "unexpected EOF reading a line"), and /homeless-shelter left behind by a build that wrote
@@ -99,31 +109,59 @@ sdk() {
   local m
   for m in $MODULES; do nixb "$BUILDER#rust-sdk-src" -o "$repo/modules/$m/logos-rust-sdk-src"; done
 }
+# A missing lockfile is written from the daemon's own (the versions it is tested with), else fresh.
+lock_seed() { case "$1" in ferrata_attestor_module) echo checkpoint/Cargo.lock ;; ferrata_monitor_module) echo monitor/Cargo.lock ;;
+  ferrata_updater_module) echo lez/Cargo.lock ;; esac; }
 lockfiles() {
-  local m
+  local m seed
   for m in $MODULES; do
-    if [ ! -f "$repo/modules/$m/rust-lib/Cargo.lock" ]; then (cd "$repo/modules/$m/rust-lib" && cargo generate-lockfile); fi
+    if [ ! -f "$repo/modules/$m/rust-lib/Cargo.lock" ]; then
+      seed=$(lock_seed "$m")
+      if [ -n "$seed" ]; then
+        cp "$repo/$seed" "$repo/modules/$m/rust-lib/Cargo.lock"
+        (cd "$repo/modules/$m/rust-lib" && $(cargo_for "$m") metadata --format-version 1 > /dev/null)
+      else
+        (cd "$repo/modules/$m/rust-lib" && cargo generate-lockfile)
+      fi
+    fi
   done
 }
-calls_crate() { case "$1" in ferrata_attest_module) echo ferrata-attest-calls ;; *) echo ferrata-bridge-calls ;; esac; }
+calls_crate() { case "$1" in ferrata_attest_module) echo ferrata-attest-calls ;; ferrata_bridge_module) echo ferrata-bridge-calls ;;
+  ferrata_attestor_module) echo ferrata-attestor-calls ;; ferrata_monitor_module) echo ferrata-monitor-calls ;;
+  ferrata_updater_module) echo ferrata-updater-calls ;; esac; }
+# The updater module's crates are LEZ's: the toolchain lez/ builds with (lez/rust-toolchain.toml).
+cargo_for() { case "$1" in ferrata_updater_module) echo "cargo +1.98.1" ;; *) echo cargo ;; esac; }
 native_test() {
   local m
-  for m in $MODULES; do (cd "$repo/modules/$m/rust-lib" && cargo test --release --locked -p "$(calls_crate "$m")"); done
+  for m in $MODULES; do (cd "$repo/modules/$m/rust-lib" && RISC0_DEV_MODE=1 $(cargo_for "$m") test --release --locked -p "$(calls_crate "$m")"); done
 }
 native_calls() {
   local m name method file module
   for m in $MODULES; do
-    (cd "$repo/modules/$m/rust-lib" && cargo build --release --locked -p "$(calls_crate "$m")" --example call)
+    (cd "$repo/modules/$m/rust-lib" && $(cargo_for "$m") build --release --locked -p "$(calls_crate "$m")" --example call)
   done
-  "$repo/modules/ferrata_attest_module/rust-lib/target/release/examples/call" version > "$rep/replies/native/version.json"
+  if has ferrata_attest_module; then
+    "$repo/modules/ferrata_attest_module/rust-lib/target/release/examples/call" version > "$rep/replies/native/version.json"
+  fi
   while IFS=$'\t' read -r name method file module; do
     if [ "$file" != - ]; then
       "$repo/modules/$module/rust-lib/target/release/examples/call" "$method" "$rep/requests/$file" < /dev/null > "$rep/replies/native/$name.json"
     else
       "$repo/modules/$module/rust-lib/target/release/examples/call" "$method" < /dev/null > "$rep/replies/native/$name.json"
     fi
-  done < <(jq -r '.[] | [.name, .method, (if .request == "" then "-" else .request end), (.module // "ferrata_attest_module")] | @tsv' \
+  done < <(jq -r --arg mods " $MODULES " '.[] | select($mods | contains(" " + (.module // "ferrata_attest_module") + " "))
+                  | [.name, .method, (if .request == "" then "-" else .request end), (.module // "ferrata_attest_module")] | @tsv' \
              "$rep/requests/calls.json")
+}
+# The daemons' end-to-end runs natively: the reference the runs through Logos Core are held to.
+native_daemons() {
+  local rc=0
+  if has ferrata_attestor_module; then "$here/attestor-e2e.sh" "$rep/daemons-native/attestor" || rc=1; fi
+  if has ferrata_updater_module; then "$here/updater-e2e.sh" "$rep/daemons-native/updater" || rc=1; fi
+  if has ferrata_monitor_module; then
+    (cd "$repo/monitor" && MONITOR_E2E_OUT="$rep/daemons-native/monitor" bash tests/anvil-e2e.sh) || rc=1
+  fi
+  return $rc
 }
 
 # The flake sees only files git tracks, so each module is built from a copy in a fresh repository
@@ -140,7 +178,8 @@ prepare_build() {
       cd "$b"
       git init -q
       git add -A
-      for c in rust-lib/ferrata-core rust-lib/ferrata-bridge-core; do if [ -d "$c" ]; then git add -f "$c"; fi; done
+      for c in rust-lib/ferrata-core rust-lib/ferrata-bridge-core rust-lib/attestor rust-lib/crates rust-lib/monitor \
+               rust-lib/checkpoint rust-lib/vendor; do if [ -d "$c" ]; then git add -f "$c"; fi; done
       git add -f rust-lib/Cargo.lock
       if [ ! -f flake.lock ]; then nix flake lock; git add flake.lock; fi
     )
@@ -158,7 +197,8 @@ core() {
   rm -rf "$SESSION" "$out/home-$flavour"
   mkdir -p "$out/home-$flavour" "$rep/replies/$flavour"
   # The daemon's package downloader starts a storage node in $HOME: keep it out of the real one.
-  step 1 "$flavour-daemon-start" env HOME="$out/home-$flavour" "$LOGOSCTL" --config-dir "$SESSION" daemon start --detach
+  # RISC0_DEV_MODE: the updater module's in-process chain runs as the updater's tests do.
+  step 1 "$flavour-daemon-start" env HOME="$out/home-$flavour" RISC0_DEV_MODE=1 "$LOGOSCTL" --config-dir "$SESSION" daemon start --detach
   for m in $MODULES; do
     step 1 "$flavour-install-$m" ctl install "$out/$kind-$m"/*.lgx -y
     step 1 "$flavour-load-$m" ctl module load "$m"
@@ -177,11 +217,25 @@ core() {
     # The reply is the method's string, itself JSON.
     jq -c 'if (.result | type) == "string" then (.result | fromjson? // .result) else .result end' \
       "$raw" > "$rep/replies/$flavour/$name.json" 2>/dev/null || true
-  done < <(jq -r '[{name: "version", method: "version", request: "", module: "ferrata_attest_module"}] + . | .[]
+  done < <(jq -r --arg mods " $MODULES " '[{name: "version", method: "version", request: "", module: "ferrata_attest_module"}] + . | .[]
+                  | select($mods | contains(" " + (.module // "ferrata_attest_module") + " "))
                   | [.name, .method, (if .request == "" then "-" else .request end), (.module // "ferrata_attest_module")] | @tsv' \
              "$rep/requests/calls.json")
-  if [ "$E2E" != 0 ]; then
+  if [ "$E2E" != 0 ] && has ferrata_attest_module && has ferrata_bridge_module; then
     step 0 "$flavour-e2e" env CALL=logosctl LOGOSCTL="$LOGOSCTL" SESSION="$SESSION" "$here/e2e.sh" "$rep/e2e-$flavour" || true
+  fi
+  if [ "$E2E" != 0 ] && case " $DAEMONS_E2E_IN " in *" $flavour "*) true ;; *) false ;; esac; then
+    local d="$rep/daemons-$flavour"
+    if has ferrata_attestor_module; then
+      step 0 "$flavour-attestor-e2e" env CALL=logosctl LOGOSCTL="$LOGOSCTL" SESSION="$SESSION" "$here/attestor-e2e.sh" "$d/attestor" || true
+    fi
+    if has ferrata_updater_module; then
+      step 0 "$flavour-updater-e2e" env CALL=logosctl LOGOSCTL="$LOGOSCTL" SESSION="$SESSION" "$here/updater-e2e.sh" "$d/updater" || true
+    fi
+    if has ferrata_monitor_module; then
+      step 0 "$flavour-monitor-e2e" env -C "$repo/monitor" MONITOR_CMD="$here/monitor-module.sh" MONITOR_E2E_OUT="$d/monitor" \
+        LOGOSCTL="$LOGOSCTL" SESSION="$SESSION" bash tests/anvil-e2e.sh || true
+    fi
   fi
   step 0 "$flavour-module-ls" ctl module ls --json || true
   step 0 "$flavour-daemon-stop" ctl daemon stop || true
@@ -206,13 +260,16 @@ sizes() {
 }
 
 step 1 versions versions
+if has ferrata_updater_module; then step 1 guests guests; fi
 step 1 stage stage
 step 1 sdk-source sdk
 step 1 cargo-lockfiles lockfiles
 step 1 requests python3 -I "$here/requests.py" "$rep/requests"
 step 1 bridge-requests python3 -I "$here/bridge_requests.py" "$rep/requests"
+step 1 daemon-requests python3 -I "$here/daemon_requests.py" "$rep/requests"
 step 1 native-test native_test
 step 1 native-calls native_calls
+if [ "$E2E" != 0 ]; then step 0 native-daemons native_daemons || true; fi
 step 1 prepare-build prepare_build
 cd "$repo"
 step 1 build-lgx build lgx

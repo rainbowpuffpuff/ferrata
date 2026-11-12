@@ -1,0 +1,16 @@
+[package]
+name = "ferrata-updater-calls"
+description = "The methods of ferrata_updater_module as functions over JSON, without the module scaffold"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[dependencies]
+# The staged copy of lez/updater with its in-process LEZ chain (scripts/stage-updater.sh).
+ferrata-updater = { path = "../vendor/ferrata/lez/updater", features = ["harness"] }
+# The guests as staged, to report the image id of the bytes the module carries.
+methods = { path = "../vendor/ferrata/lez/methods" }
+risc0-binfmt = "3"
+anyhow = "1"
+serde_json = "1"
