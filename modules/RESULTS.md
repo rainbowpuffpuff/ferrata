@@ -10,8 +10,8 @@ modules.** `modules/scripts/check.sh` built `ferrata_attestor_module` (rule (B)'
 `checkpoint/attestor`), `ferrata_monitor_module` (the watchers' `monitor`) and `ferrata_updater_module`
 (`ferrata-updater`, `lez/updater`) with logos-module-builder, beside the two earlier modules, packaged all
 five as dev and portable `.lgx`, installed and loaded them together in a headless Logos Core (`logosctl`,
-dev and portable builds) and called every one-shot method: 48 (24 of them the three new modules') calls, each reply equal to the native
-call and meeting its expectations, in both. Then each daemon did its job through each Logos Core, on the
+dev and portable builds) and called every one-shot method: 48 calls (24 of them the three new modules'), each reply equal to the
+native call and meeting its expectations, in both. Then each daemon did its job through each Logos Core, on the
 devnet its own tests use, against the same job run natively:
 
 | Job | Devnet | Natively | Dev Logos Core | Portable | From the catalog |
@@ -21,7 +21,10 @@ devnet its own tests use, against the same job run natively:
 | the monitor: `monitor/tests/anvil-e2e.sh`, scenarios S1–S11, A0–A4, R1–R4 and the alerting check, the module in place of the binary | anvil, a v5 vault | 46 of 46 (the binary) | 46 of 46 | 46 of 46 | 46 of 46 |
 | the updater: mainnet and Sepolia from their checkpoints to the lab's final roots, none refused; the sequencer backend refused | the in-process LEZ v0.4.0-rc1 chain, the lab's records | 8 of 8 (`run`) | 10 of 10 | 10 of 10 | 10 of 10 |
 
-`e2e.sh` (the earlier modules' log end to end) passed 36 of 36 in both flavours. All five modules were
+The native, dev and portable columns and the calls are `check.sh` at commit `1388827` (step failures 0,
+check failures 0); the catalog column and the running zone are the run before it, at `d9f4e47`, with the
+same packages (two expectation fixes came between, see 8 below and "Calls"). `e2e.sh` (the earlier
+modules' log end to end) passed 36 of 36 in both flavours. All five modules were
 installed from the local catalog by name and loaded, and the three jobs passed through the installed
 modules (the last column). Results: [`results/check-2026-11-12/`](results/check-2026-11-12/summary.md),
 [`results/attestor-zone-live/`](results/attestor-zone-live/summary.md), [`catalog/`](catalog/README.md).
