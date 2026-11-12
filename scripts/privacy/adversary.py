@@ -399,7 +399,12 @@ def items(x, ctx, keep_order_state=False):
     (block ids, timestamps, a claim's time and validity window, nonces, commitment-set roots, and
     the cumulative state of accounts every operation changes). A private transaction's proof is read part by
     part (`proof.*`, the collector splits it): a real receipt's seal and a release's Groth16 seal are read as
-    any other bytes; only a public transaction's witness set (the submitter's signature) is left out."""
+    any other bytes; only a public transaction's witness set (the submitter's signature) is left out, and so are
+    fields shown to be a function of the record's own public data (class DERIVED: the receipt's claim, checked
+    to be ReceiptClaim::ok(circuit id, the journal rebuilt from the message), and the claim digest in the seal's
+    outputs): they add nothing to the message the adversary reads field by field, and read as one string (a
+    fake receipt's claim holds the whole message) they would make windows across the boundaries of a sorted
+    set, the noise the field split avoids."""
     out = []
     if x.chain == "lez":
         # Each named field is an item of its own; the rest of the transaction (its structure) is one
@@ -410,7 +415,7 @@ def items(x, ctx, keep_order_state=False):
         for n, v in sorted(x.fields, key=lambda f: len(f[1]), reverse=True):
             if len(v) >= 4:
                 tx = tx.replace(v, b"")
-            if classify(n)[0] != TIME and norm(n) != "witness_set" and not n.startswith(("block.", "commitment_root.")):
+            if classify(n)[0] not in (TIME, DERIVED) and norm(n) != "witness_set" and not n.startswith(("block.", "commitment_root.")):
                 out.append(v)
         out.append(tx)
         out += [v for name, v in x.blobs if name.startswith("event")]
@@ -419,7 +424,7 @@ def items(x, ctx, keep_order_state=False):
             if keep_order_state or acc not in ctx["shared"]:
                 out += [before, after]
     else:
-        out += [v for n, v in x.fields if classify(n)[0] != TIME and not n.startswith("block.")]
+        out += [v for n, v in x.fields if classify(n)[0] not in (TIME, DERIVED) and not n.startswith("block.")]
         out += [v for name, v in x.blobs if name == "log.emitter"]
         for acc, slot, old, new in x.writes:
             if keep_order_state or ctx["slot_class"].get(ctx["slot_names"].get(slot, "")) != TIME:
