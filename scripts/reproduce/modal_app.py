@@ -1,6 +1,6 @@
 """Ferrata's reproduction check on Modal, the route without Docker: Modal builds the image of
 scripts/reproduce/Dockerfile, this checkout's HEAD goes into a container (git archive: committed files only), and
-scripts/reproduce/check.sh runs there on up to 16 physical cores. Its progress, one line per check and the verdict
+scripts/reproduce/check.sh runs there with 16 CPUs. Its progress, one line per check and the verdict
 print here; its logs come back to target/reproduce/modal-<UTC time>/ (or --out DIR).
 
     MODAL_PROFILE=<your profile> modal run scripts/reproduce/modal_app.py [--only NAME[,NAME...]] [--out DIR]
@@ -25,17 +25,27 @@ image = modal.Image.from_dockerfile(HERE / "Dockerfile", context_dir=HERE, add_p
 app = modal.App("ferrata-reproduce")
 
 
-@app.function(image=image, cpu=(8.0, 16.0), memory=(16384, 65536), timeout=3 * 3600, retries=0, max_containers=1)
+@app.function(image=image, cpu=(16.0, 32.0), memory=(16384, 65536), timeout=3 * 3600, retries=0, max_containers=1)
 def check(tree: bytes, commit: str, only: str, env_in: dict) -> tuple[int, bytes]:
     """Unpack the tree at /work/ferrata, run check.sh there; its exit status and its logs (tar.gz, no binaries)."""
     os.makedirs("/work/ferrata", exist_ok=True)
+    os.makedirs("/work/out", exist_ok=True)
+    # The image's size on disk, measured beside the checks; what they write is left out (the tree, the logs, the
+    # cargo registry, which the image has empty, and temporary files).
+    du = subprocess.Popen("du -sxm --exclude=/proc --exclude=/sys --exclude=/dev --exclude=/tmp --exclude=/work/ferrata"
+                          " --exclude=/work/out --exclude=/home/builder/.cargo/registry --exclude=/home/builder/.cargo/git"
+                          " / > /work/out/image-size.txt 2>/dev/null", shell=True)
     subprocess.run(["tar", "-xz", "-C", "/work/ferrata"], input=tree, check=True)
     env = dict(os.environ, FERRATA_COMMIT=commit, **{k: v for k, v in env_in.items() if k in PASSED_ON})
+    # Modal's own Python (add_python) is in /usr/local/bin: the scripts get Ubuntu's python3, as in Docker.
+    path = env.get("PATH", "").split(":")
+    env["PATH"] = ":".join([d for d in path if d != "/usr/local/bin"] + ["/usr/local/bin"])
     cmd = ["bash", "/work/ferrata/scripts/reproduce/check.sh", "--out", "/work/out"] + (["--only", only] if only else [])
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env, text=True, bufsize=1)
     for line in p.stdout:
         print(line, end="", flush=True)
     rc = p.wait()
+    du.wait()
     logs = subprocess.run(["tar", "-cz", "--exclude=*.bin", "-C", "/work/out", "."], capture_output=True, check=True)
     return rc, logs.stdout
 
