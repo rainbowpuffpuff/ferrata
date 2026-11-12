@@ -314,7 +314,9 @@ safety role of §3.4.
   two `$HOME`s gives byte-identical guests and ids, 14 of 14 ([`image-ids.md`](image-ids.md),
   [`guides/verify.md`](guides/verify.md) §2); what must match is the pinned toolchains. The first live run's programs
   (`crown-live-1`) were built before this, at the maintainer's checkout path, and reproduce only there (6 of 6 on the
-  build box, [`guides/verify.md`](guides/verify.md)); the final programs are the ones a production deployment uses.
+  build box, [`guides/verify.md`](guides/verify.md)); the final programs are the ones a production deployment uses, and
+  the ones the live run `crown-live-3` deployed: its vault's image ids equal this tree's rebuilt ones (6 of 6,
+  [`guides/verify.md`](guides/verify.md) §2).
 
 ## 6. Failure classes, what is lost, what bounds it (Security #9)
 

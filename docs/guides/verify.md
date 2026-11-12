@@ -12,8 +12,9 @@ anything we say: one reads the chain, the other rebuilds the programs. Neither s
 ## 1. The round trip: `scripts/verify-sepolia.py`
 
 ```sh
-python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-1                 # public endpoint (publicnode)
-python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-1 --rpc http://localhost:8545   # your own node
+python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-3                 # public endpoint (publicnode)
+python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-3 --rpc http://localhost:8545   # your own node
+python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-1                 # the first live run, earlier programs
 ```
 
 It reads the run's records (`identity.json`, `deploy.json`, `params.json`, `run.json`, `manifest.json`, `crown.json`,
@@ -25,12 +26,14 @@ uses only read methods (`eth_chainId`, `eth_getCode`, `eth_getBalance`, `eth_get
 `eth_getTransactionByHash`, `eth_getTransactionReceipt`, `eth_getLogs`, `eth_getBlockByNumber`, `eth_call`), computes
 Keccak-256 itself, and needs nothing from this repository but the records (and, if present,
 [`docs/image-ids.md`](../image-ids.md), the final programs' ids, and `e2e/crown/README.md`, whose tables name the
-programs of earlier runs). It pins no image id: a run's ids are the ones its own records give.
+programs of earlier runs). A run's image ids are the ones its own records give; the two live vaults are pinned to the
+programs they were deployed with (crown-live-3's `0x04eE…e44c` to `docs/image-ids.md`, crown-live-1's `0xfE31…9E54`
+to its table in `e2e/crown/README.md`), so records of either that name other ids fail.
 
 | Check | What a PASS proves | What it still trusts |
 |---|---|---|
 | chain | the endpoint serves Sepolia (chain id 11155111); prints head and finalized block | the endpoint (use your own node to remove it) |
-| image ids | the run's own records give each program one id: `params.json` (`checkpoint_b`, `checkpoint`, release), `programs/ids.jsonl` as the run used them, and the ids LEZ session A deployed (attestation, bridge); a run of the final programs (any of its ids in [`docs/image-ids.md`](../image-ids.md)) has docs/image-ids.md's id for every program it names, or the check fails; a run of earlier programs is named by the table of `e2e/crown/README.md` that lists its ids (`crown-live-1`: "The programs of crown-live-1") | nothing on chain yet: the next checks tie them to the vault, and section 2 ties them to source |
+| image ids | the run's own records give each program one id: `params.json` (`checkpoint_b`, `checkpoint`, release), `programs/ids.jsonl` as the run used them, and the ids LEZ session A deployed (attestation, bridge); a run of the final programs (any of its ids in [`docs/image-ids.md`](../image-ids.md)) has docs/image-ids.md's id for every program it names, or the check fails; a run of earlier programs is named by the table of `e2e/crown/README.md` that lists its ids (`crown-live-1`: "The programs of crown-live-1"); the two live vaults must hold theirs: crown-live-3's the final programs, crown-live-1's its own | nothing on chain yet: the next checks tie them to the vault, and section 2 ties them to source |
 | deployment | each contract is at CREATE(deployer, N + i) for deploy.sh's seven nonces, code exactly where a contract was created: the emergency stop, the FerrataRegistry library, the vault and the test token were deployed by the deployer in that order | |
 | vault immutables | the vault's `checkpointImageId` is `checkpoint_b`'s id and its `releaseImageId` the release program's (the run's, as its records give them); `mode` is rule (B); `lezConfigId` = slot 2 = the run's configId; `genesisState` the run's; `nMin`/`tMin`; its verifier is the deployed emergency stop wrapping RISC Zero's Groth16 verifier; the FerrataRegistry library's address is linked into the vault's code; the fee recipient | that `0x8f0A…A2A0` is RISC Zero's verifier: its code can be compared with `risc0-ethereum` v3.0.0's build (not done here) |
 | configId and genesisState recomputed | sha256 of the 261-byte configuration preimage from LEZ session A's records equals the configId the vault holds; `bedrockGenesisId` = sha256 of the deployment settings; the genesis state recomputed from the tip T0 and the channel's key set equals the vault's | the LEZ devnet's records (no public LEZ network exists to read them from): the proof in the next checks is what binds them |
@@ -55,6 +58,12 @@ failed**, 61 RPC calls, on publicnode and on ethpandaops (release 1 final). The 
 it counted each `Release` event's gross amount as paid out, but the vault credits the checkpoint fee to the prover's
 `owed`; it now subtracts what each release credited. Controls on the final records: 5, 1 and 1 failed (a commitment, a
 seal byte and the genesis state; a capture's proof node; a release's recipient).
+
+On 12 November 2026, after DONE, on the records of the live run on the final programs committed in
+[`e2e/runs/crown-live-3/`](../../e2e/runs/crown-live-3/README.md): **13 passed, 0 pending, 0 failed**, 61 RPC calls, on
+publicnode and on ethpandaops; its image-id check reads "crown-live-3's vault: 6 of 6 = docs/image-ids.md", and
+crown-live-1's records again give 13 passed, 0 failed on both. Controls: crown-live-3's records with crown-live-1's six
+ids, and crown-live-1's with the final ids: 3 failed each (the pin, the vault's immutables, configId), exit status 1.
 
 ## 2. The programs: `scripts/reproduce-image-ids.sh`
 
@@ -90,9 +99,9 @@ scripts/reproduce-image-ids.sh docker            # the same inside scripts/repro
 - `compare` ([`scripts/reproduce/compare_ids.py`](../../scripts/reproduce/compare_ids.py)): the crown run's six
   programs beside [`e2e/crown/README.md`](../../e2e/crown/README.md)'s table and, with `--vault`, a crown vault's
   immutables read over RPC; every guest beside [`docs/image-ids.md`](../image-ids.md); exit 1 if one differs.
-  The one live v5 vault, `0xfE3199fa…9E54`, is crown-live-1's, which ran programs built before the wrapper (below):
-  `--vault` on it prints DIFFER for `checkpoint_b` and `release` and exits 1, as expected; `--vault` ties to this
-  source a vault deployed with the path-independent programs (crown-live-2 on).
+  Two v5 vaults are live on Sepolia. crown-live-3's, `0x04eE…e44c`, holds the final programs: `--vault` on it gives 6
+  of 6 (below). crown-live-1's, `0xfE3199fa…9E54`, ran programs built before the wrapper (below): `--vault` on it
+  prints DIFFER for `checkpoint_b` and `release` and exits 1, as expected.
 
 | Program | Where its id is used |
 |---|---|
@@ -114,6 +123,12 @@ RISC Zero home freshly installed by `install-risc0.sh` into a new directory): `b
 guests equal to `docs/image-ids.md` and 6 of 6 crown programs equal to `e2e/crown/README.md`'s table; with
 `--vault 0xfE3199fa…9E54`, 4 of 6 (`checkpoint_b` and `release` are crown-live-1's, as said above).
 
+**The live vault of the final programs** (12 Nov 2026, `crown-live-3`; `build` on the Modal build box at this
+worktree's path, 2 CPUs, 563 s, then `compare --vault 0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c` against publicnode):
+**6 of 6** crown programs equal `e2e/crown/README.md`'s table, the vault's `checkpointImageId` and `releaseImageId`
+equal to the rebuilt `checkpoint_b` and release, and **14 of 14** guests equal `docs/image-ids.md`
+([`e2e/runs/crown-live-3/compare-vault.txt`](../../e2e/runs/crown-live-3/compare-vault.txt)).
+
 **In the pinned image** (12 Nov 2026, [`scripts/reproduce/`](../../scripts/reproduce/README.md) on Modal: the
 Dockerfile built as an image, the tree at `/work/ferrata`): `build` and `compare`, 14 of 14 guests and 6 of 6 crown
 programs equal.
@@ -122,7 +137,8 @@ programs equal.
 path on the build box: those ids (`e2e/crown/README.md`, "The programs of crown-live-1") reproduce only from that
 commit (db9f034) at that path, and did so on a cold box, 6 of 6 equal to the vault's immutables
 ([`e2e/runs/verify-anyone/`](../../e2e/runs/verify-anyone/README.md)); the same build at another path gave 0 of 6 (the
-control there), which is what the wrapper removes. Runs from `crown-live-2` on use the path-independent programs.
+control there), which is what the wrapper removes. Runs from `crown-live-2` on use the path-independent programs;
+`crown-live-3` deployed them live.
 
 ## 3. A vault's state: the admin view
 

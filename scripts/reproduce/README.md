@@ -75,9 +75,12 @@ RISC Zero's toolchains above.
 - **Proofs.** The LEZ harness runs RISC Zero in dev mode: the programs execute and their journals are checked, but
   no receipt is proven or verified. A real proof takes about an hour on a laptop's CPU, and the Groth16 wraps run in
   RISC Zero's own Docker image; [EVIDENCE](../../docs/EVIDENCE.md) gives the runs that made them.
-- **The live vault's programs.** `scripts/reproduce-image-ids.sh compare --vault 0xfE3199fa…9E54` gives 4 of 6:
-  crown-live-1 ran programs built at the maintainer's path before guest builds were made path-independent
-  ([verify.md](../../docs/guides/verify.md) §2). `verify-sepolia` checks that run from its committed records.
+- **The live vaults' programs.** The `guest-ids` check compares with the recorded tables, not with a vault; add
+  `--vault 0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c` to `scripts/reproduce-image-ids.sh compare` to compare with the
+  live vault of the final programs (crown-live-3: 6 of 6, [verify.md](../../docs/guides/verify.md) §2). The first live
+  vault, `0xfE3199fa…9E54`, gives 4 of 6: crown-live-1 ran programs built at the maintainer's path before guest builds
+  were made path-independent. `verify-sepolia` checks that run from its committed records (this check runs it on
+  crown-live-1's; `python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-3` checks the final programs' run).
 - **Records that are not committed.** `e2e/crown.sh verify crown-live-1` needs LEZ session files kept on the
   maintainers' Modal volume.
 - **The rest of the components table**: the CI round trip (`e2e/ci/run.sh`), `cli/` and its tests, the mini-app,

@@ -425,9 +425,10 @@ private claim, `ImportRoot`, registry reads and release proving are **not built*
   image's private claim and burn (the crown rehearsal, the live round trip and `lez/results/p4-minimum` proved
   them on cloud CPUs, the latter held to 8 and 16 CPUs with 16 GiB); any user-side proof on a laptop (under macOS they were proven on M1 and M4 Mac minis, CPU only:
   EVIDENCE row 88);
-- a public LEZ network under the round trip: the v5 vault made the whole round trip on Sepolia on 11 November
-  2026 on the first live run's programs (`integration5`'s, not yet the final ones), a private claim of a Sepolia deposit and a private burn included, with LEZ as a devnet we ran (one
-  validator; [`e2e/runs/crown-live-1/`](../../e2e/runs/crown-live-1/README.md)); before it, the v3 vault of the end-to-end fixture
+- a public LEZ network under the round trip: the v5 vault made the whole round trip on Sepolia on 12 November
+  2026 on the final programs, a private claim of a Sepolia deposit and a private burn included, with LEZ as a devnet we ran (one
+  validator; [`e2e/runs/crown-live-3/`](../../e2e/runs/crown-live-3/README.md)), as on 11 November on the first live
+  run's programs ([`e2e/runs/crown-live-1/`](../../e2e/runs/crown-live-1/README.md)); before them, the v3 vault of the end-to-end fixture
   got one deposit on Sepolia, claimed by the plaintext path
   ([`lez/live/inbound/README.md`](../../lez/live/inbound/README.md); [`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §11);
 - LEZ testnet 0.4 itself, which did not exist when this was written.

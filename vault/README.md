@@ -36,8 +36,10 @@ once `W = Δ` (1 h by default) has passed, unless a watcher cancels it. Releases
 a burn under a finalised, unrevoked burn root.
 
 Status: prototype evidence for a grant proposal. **Not audited.** This v5 vault is deployed on Sepolia at
-`0xfE3199fa2634413CbAC317371076Cae3EB2d9E54` (rule (B), testnet parameters) by the crown run, which made the whole round
-trip through it on 11 November 2026 ([`../e2e/runs/crown-live-1/`](../e2e/runs/crown-live-1/README.md)); the v3 vault of the end-to-end
+`0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c` (rule (B), testnet parameters, the final programs' image ids) by the crown
+run, which made the whole round trip through it on 12 November 2026 ([`../e2e/runs/crown-live-3/`](../e2e/runs/crown-live-3/README.md)),
+and at `0xfE3199fa2634413CbAC317371076Cae3EB2d9E54` (the first run's programs), through which it made the round trip on
+11 November 2026 ([`../e2e/runs/crown-live-1/`](../e2e/runs/crown-live-1/README.md)); the v3 vault of the end-to-end
 fixture is on Sepolia with one deposit (`../lez/live/inbound/README.md`, "On Sepolia"). In the vault's own tests (376 of the 407; the other 31, in `test/real/`, use real proofs) proofs are mocked: the base verifier accepts exactly the (image id, journal digest) pairs a test registers.
 It sits behind RISC Zero's unmodified `RiscZeroVerifierEmergencyStop`, as a deployment's would. `test/real/` runs
 the return leg once with no mock on the Ethereum side: RISC Zero's real Groth16 verifier behind the same stop, a

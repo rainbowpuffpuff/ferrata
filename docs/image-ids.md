@@ -13,7 +13,9 @@ kernel); the user ELF's sha256 beside it.
 
 EVIDENCE rows of earlier runs keep the ids they ran with (built at their worktrees' paths); the crown run's first
 live run, `crown-live-1`, ran programs built at the maintainer's checkout path ([`e2e/crown/README.md`](../e2e/crown/README.md),
-"The programs of crown-live-1"). These are the final programs: the second live run, `crown-live-2`, deploys them.
+"The programs of crown-live-1"). These are the final programs: the live run `crown-live-3` deployed them on Sepolia (vault `0x04eE…e44c`,
+[`e2e/runs/crown-live-3/`](../e2e/runs/crown-live-3/README.md); `scripts/reproduce-image-ids.sh compare --vault` on it:
+6 of 6); `crown-live-2` stopped before deploying anything ([`e2e/runs/crown-live-2/`](../e2e/runs/crown-live-2/README.md)).
 
 | Program | Image id | sha256 of the binary | Bytes | sha256 of the user ELF |
 |---|---|---|---:|---|

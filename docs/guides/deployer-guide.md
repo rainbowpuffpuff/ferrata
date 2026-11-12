@@ -333,9 +333,9 @@ The attestation side's migration (successor and replacement instances) is in
 
 ## 10. What is not built or not run
 
-- a round trip on the final programs on public Sepolia (the first live run used `integration5`'s,
-  through FerrataVault v5: EVIDENCE row 41; `crown-live-2` deploys the final ones); a deployment on LEZ
-  testnet 0.4 (which does not exist);
+- a deployment with production parameters: the round trip ran on public Sepolia on the final programs (EVIDENCE
+  row 91, `crown-live-3`; the first live run, row 41, on `integration5`'s) through FerrataVault v5 with testnet
+  parameters and a LEZ devnet we ran; a deployment on LEZ testnet 0.4 (which does not exist);
 - `verify_checkpoint`'s fetching from several providers; the `ferrata_attestor` module (rule (B)'s
   sequencer side; the program is built);
 - on LEZ: the admin's own handover (an M-of-N freeze authority, its 14-day handover, watchers and the
