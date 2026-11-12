@@ -24,7 +24,8 @@ contract CiRoundTrip is Script {
         address admin = msg.sender;
         vm.startBroadcast();
         MockRiscZeroVerifier mock = new MockRiscZeroVerifier();
-        address freezeAuthority = address(uint160(uint256(keccak256("ferrata ci round trip: freeze authority (no key)"))));
+        address freezeAuthority =
+            address(uint160(uint256(keccak256("ferrata ci round trip: freeze authority (no key)"))));
         RiscZeroVerifierEmergencyStop verifier = new RiscZeroVerifierEmergencyStop(mock, freezeAuthority);
         FerrataVault.CapParams memory unlimited =
             FerrataVault.CapParams({capacity: type(uint256).max, refillPerSecond: 0});
