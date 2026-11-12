@@ -138,8 +138,10 @@ blst) were inside one `build-lgx` of 355.9 s for all five modules (it stopped la
    once; anvil 1.3.6 mined the first and kept the vault's pending for good, even through `evm_mine`. That
    run's monitor job was stopped by hand and failed; the test now deploys with `forge script --slow`, and
    the final run passed in both flavours.
-8. **Two checks of mine.** The calls' module filter in `check.sh` (jq) selected nothing in the first full
-   run, and the live zone script's tier check had a jq precedence error; both fixed before the final run.
+8. **Checks of mine.** The calls' module filter in `check.sh` (jq) selected nothing in the first full run,
+   and the live zone script's tier check had a jq precedence error (fixed before run 6); in run 6 the
+   native calls ran without `RISC0_DEV_MODE`, which the updater module's `version()` reports, so its reply
+   differed from the daemon's, and `requests.py`'s p1899 id was stale (both fixed for run 7, `1388827`).
 
 ### Not done (12 November)
 
