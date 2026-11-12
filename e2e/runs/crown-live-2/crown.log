@@ -1,0 +1,87 @@
+[2026-11-12T09:06:38Z] drive.py crown-live-2 live: done so far nothing
+[2026-11-12T09:06:40Z] inputs: LEZ bundle sha256 4dd813e28261ee96..., programs checkpoint_b 0xf8116722..., checkpoint 0xb9c1e6a8..., segment 0x11e888e9..., release 0xb64900bc...
+[2026-11-12T09:06:41Z] LEZ session A (attempt 1): lez_session, lez/crown/session.sh (sha256 87839f5292db), chain sepolia
+[2026-11-12T09:11:55Z] LEZ session A: ok=False ran=True exit=1 generation=0 after 314 s
+[2026-11-12T09:11:55Z] LEZ session tail:
+    [09:08:08] sequencer stopped (exit 0)
+    [09:08:46] sequencer start 3: scheduler after 34 s; its blocks fall 8 s after an epoch second
+    [09:08:47] sequencer stopped (exit 0)
+    [09:08:58] sequencer start 4: scheduler after 1 s; its blocks fall 0 s after an epoch second
+    [09:08:58] keeping this phase after 4 starts
+    [09:08:58] sequencer up, head block 1
+    [09:08:58] channel: {"accredited_keys":["0e51e1d440456a52b53721d0a2046174c59e2471a47187f374e080bd179d8828"],"configuration_threshold":1,"tip_message":"a2f7530c3bc5b1ec77dc3afa32f3497fb6d4a0ff6c50f29077a1456a2eaac1e2","config_tip_hash":"0000000000000000000000000000000000000000000000000000000000000000","tip_slot":8981388
+    [09:11:43] driver exit 1
+    Transaction is included in block 16
+    [crown-a] deploy bridge: WriteSegment 6 of 6 (68896 bytes)           applied   gas         0 +   69476 bytes, block   10
+    [crown-a] deploy bridge: WriteSegment 5 of 6 (98304 bytes)           applied   gas         0 +   98916 bytes, block   11
+    [crown-a] deploy bridge: WriteSegment 4 of 6 (98304 bytes)           applied   gas         0 +   98916 bytes, block   12
+    [crown-a] deploy bridge: WriteSegment 3 of 6 (98304 bytes)           applied   gas         0 +   98916 bytes, block   13
+    [crown-a] deploy bridge: WriteSegment 2 of 6 (98304 bytes)           applied   gas         0 +   98916 bytes, block   14
+    [crown-a] deploy bridge: WriteSegment 1 of 6 (98304 bytes)           applied   gas         0 +   98916 bytes, block   15
+    [crown-a] deploy bridge: CreateHeader (immutable) at AfrE4T3U17eZYUH3KMGDgeE6A4jnpDGum151T3VtddCp applied   gas         0 +     608 bytes, block   16
+    [deploy] bridge: image ccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd at AfrE4T3U17eZYUH3KMGDgeE6A4jnpDGum151T3VtddCp (computed by the sequencer's loader), immutable
+    [crown-a] crown sepolia: attestation program A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX, bridge AfrE4T3U17eZYUH3KMGDgeE6A4jnpDGum151T3VtddCp, instance 0x88df84285312923d6be0d04a7cd95a0ec13d61dececcdbfb26d7675ebd64c358
+    [crown-a] crown sepolia Init Init                                    reverted       gas   4000000 block   17 + 10.3s bf4cbd31554bc3eb19306ecb0e46844d529013452722294c56731be56e695407
+    Error: crown sepolia Init Init: expected to apply, got reverted  Execution outside of the validity window
+    [09:11:44] sequencer stopped (exit 0)
+    [09:11:53] node stopped (exit 143)
+    [09:11:53] not saved (clean stop 1, driver exit 1): the zone stays at generation 0
+    [09:11:53] session a: not-saved
+    [2026-11-12T09:11:53Z] session a: exit 1, generation 0
+[2026-11-12T09:11:55Z] LEZ session A (attempt 2): lez_session, lez/crown/session.sh (sha256 87839f5292db), chain sepolia
+[2026-11-12T09:15:04Z] LEZ session A: ok=False ran=True exit=1 generation=0 after 189 s
+[2026-11-12T09:15:04Z] LEZ session tail:
+    [09:12:01] crown LEZ session a (chain sepolia)
+    [09:12:02] a new zone
+    [09:12:02] Bedrock node up: {"cryptarchia_info":{"lib":"402255ecf1448ec5d136c293f7eb818cd6137af8175bdc72f06a99cf2eef8a52","lib_slot":0,"tip":"402255ecf1448ec5d136c293f7eb818cd6137af8175bdc72f06a99cf2eef8a52","slot":0,"height":0,"state":"Bootstrapping"},"phase":"InitialBlockDownload"}
+    [09:12:06] node slot 0 is unix second 1785493027
+    [09:12:09] sequencer start 1: scheduler after 2 s; its blocks fall 1 s after an epoch second
+    [09:12:09] sequencer up, head block 1
+    [09:12:09] channel: {"accredited_keys":["a3187b27bb39959c2837f3bab120e51a589b7596755d5417c54a0342595f7a20"],"configuration_threshold":1,"tip_message":"f8f8cd148781d8ea3f17e63ba425a47f40e9b6e6b0399596f833bcaa29be2701","config_tip_hash":"0000000000000000000000000000000000000000000000000000000000000000","tip_slot":8981701
+    [09:14:54] driver exit 1
+    Transaction is included in block 16
+    [crown-a] deploy bridge: WriteSegment 6 of 6 (68896 bytes)           applied   gas         0 +   69476 bytes, block   10
+    [crown-a] deploy bridge: WriteSegment 5 of 6 (98304 bytes)           applied   gas         0 +   98916 bytes, block   11
+    [crown-a] deploy bridge: WriteSegment 4 of 6 (98304 bytes)           applied   gas         0 +   98916 bytes, block   12
+    [crown-a] deploy bridge: WriteSegment 3 of 6 (98304 bytes)           applied   gas         0 +   98916 bytes, block   13
+    [crown-a] deploy bridge: WriteSegment 2 of 6 (98304 bytes)           applied   gas         0 +   98916 bytes, block   14
+    [crown-a] deploy bridge: WriteSegment 1 of 6 (98304 bytes)           applied   gas         0 +   98916 bytes, block   15
+    [crown-a] deploy bridge: CreateHeader (immutable) at AfrE4T3U17eZYUH3KMGDgeE6A4jnpDGum151T3VtddCp applied   gas         0 +     608 bytes, block   16
+    [deploy] bridge: image ccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd at AfrE4T3U17eZYUH3KMGDgeE6A4jnpDGum151T3VtddCp (computed by the sequencer's loader), immutable
+    [crown-a] crown sepolia: attestation program A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX, bridge AfrE4T3U17eZYUH3KMGDgeE6A4jnpDGum151T3VtddCp, instance 0x88df84285312923d6be0d04a7cd95a0ec13d61dececcdbfb26d7675ebd64c358
+    [crown-a] crown sepolia Init Init                                    reverted       gas   4000000 block   17 + 10.0s 9afb3d018402d0c2d2a4da3701cd4a7acaf907a2192450a31d858dfafeb67120
+    Error: crown sepolia Init Init: expected to apply, got reverted  Execution outside of the validity window
+    [09:14:55] sequencer stopped (exit 0)
+    [09:15:03] node stopped (exit 143)
+    [09:15:03] not saved (clean stop 1, driver exit 1): the zone stays at generation 0
+    [09:15:03] session a: not-saved
+    [2026-11-12T09:15:03Z] session a: exit 1, generation 0
+[2026-11-12T09:15:04Z] LEZ session A (attempt 3): lez_session, lez/crown/session.sh (sha256 87839f5292db), chain sepolia
+[2026-11-12T09:19:05Z] LEZ session A: ok=False ran=True exit=1 generation=0 after 240 s
+[2026-11-12T09:19:05Z] LEZ session tail:
+    [09:15:08] Bedrock node up: {"cryptarchia_info":{"lib":"402255ecf1448ec5d136c293f7eb818cd6137af8175bdc72f06a99cf2eef8a52","lib_slot":0,"tip":"402255ecf1448ec5d136c293f7eb818cd6137af8175bdc72f06a99cf2eef8a52","slot":0,"height":0,"state":"Bootstrapping"},"phase":"InitialBlockDownload"}
+    [09:15:12] node slot 0 is unix second 1785493027
+    [09:15:14] sequencer start 1: scheduler after 2 s; its blocks fall 7 s after an epoch second
+    [09:15:14] sequencer stopped (exit 0)
+    [09:16:08] sequencer start 2: scheduler after 50 s; its blocks fall 1 s after an epoch second
+    [09:16:08] sequencer up, head block 1
+    [09:16:08] channel: {"accredited_keys":["db0253773a99201502309ee7b9b83786bb5f6da5c36d32b23661521da2f15d3a"],"configuration_threshold":1,"tip_message":"5eb914bd83a293e2de7f1786be9311317502fa160742029b55a172a1eea2341b","config_tip_hash":"0000000000000000000000000000000000000000000000000000000000000000","tip_slot":8981887
+    [09:18:55] driver exit 1
+    Transaction is included in block 16
+    [crown-a] deploy bridge: WriteSegment 6 of 6 (68896 bytes)           applied   gas         0 +   69476 bytes, block   10
+    [crown-a] deploy bridge: WriteSegment 5 of 6 (98304 bytes)           applied   gas         0 +   98916 bytes, block   11
+    [crown-a] deploy bridge: WriteSegment 4 of 6 (98304 bytes)           applied   gas         0 +   98916 bytes, block   12
+    [crown-a] deploy bridge: WriteSegment 3 of 6 (98304 bytes)           applied   gas         0 +   98916 bytes, block   13
+    [crown-a] deploy bridge: WriteSegment 2 of 6 (98304 bytes)           applied   gas         0 +   98916 bytes, block   14
+    [crown-a] deploy bridge: WriteSegment 1 of 6 (98304 bytes)           applied   gas         0 +   98916 bytes, block   15
+    [crown-a] deploy bridge: CreateHeader (immutable) at AfrE4T3U17eZYUH3KMGDgeE6A4jnpDGum151T3VtddCp applied   gas         0 +     608 bytes, block   16
+    [deploy] bridge: image ccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd at AfrE4T3U17eZYUH3KMGDgeE6A4jnpDGum151T3VtddCp (computed by the sequencer's loader), immutable
+    [crown-a] crown sepolia: attestation program A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX, bridge AfrE4T3U17eZYUH3KMGDgeE6A4jnpDGum151T3VtddCp, instance 0x88df84285312923d6be0d04a7cd95a0ec13d61dececcdbfb26d7675ebd64c358
+    [crown-a] crown sepolia Init Init                                    reverted       gas   4000000 block   17 + 10.5s 93fb10dbfd7d075fb52eeca49be641c11d265200775ee4047c46d680ba1f4c44
+    Error: crown sepolia Init Init: expected to apply, got reverted  Execution outside of the validity window
+    [09:18:55] sequencer stopped (exit 0)
+    [09:19:04] node stopped (exit 143)
+    [09:19:04] not saved (clean stop 1, driver exit 1): the zone stays at generation 0
+    [09:19:04] session a: not-saved
+    [2026-11-12T09:19:04Z] session a: exit 1, generation 0
+[2026-11-12T09:19:05Z] STOP: LEZ session a did not complete (logs: the Volume's lez/crown-live-2/session-a.out, session-a/logs/)

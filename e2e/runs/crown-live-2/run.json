@@ -1,0 +1,8 @@
+{
+ "run": "crown-live-2",
+ "mode": "live",
+ "deployer": "0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07",
+ "chainId": 11155111,
+ "created_at": "2026-11-12T09:05:54Z",
+ "label": "crown run"
+}

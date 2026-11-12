@@ -1,0 +1,16 @@
+crown run crown-live-3 (live), vault 0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c, deployer 0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07
+PASS chain: chain id 11155111, head 12120004
+PASS configId from session A's fields: 0x10837afeaf6402e9d4bc2c4a13039e70f88762f13336d9c222d2f6d3b6a95553 = the vault's storedLezConfigId
+PASS bedrockGenesisId = sha256(deployment settings): 0x19383c41772ed9e87c929c6985a69b5c33894e347a89de255879acd37ff7d2ed
+PASS genesisState from T0 and the channel: 0x73f67b7fd1fadbb97fec99cfcc4d491096b752c2d2f84a387e99dd6208673b51 (T0 = 24) = the vault's
+PASS vault: code, CREATE address, rule (B): CREATE(deployer, nonce 25), mode B
+PASS every recorded transaction succeeded, sent by the deployer: 6 transactions of 6 stages (deposit-0, deposit-1, submit, finalizeAttested, release-0, release-1)
+PASS deposits: two logs, commitments recomputed: j0 leaf 0 1000000000000000 wei public; j1 leaf 1 1000000000000000 wei private
+PASS captures: headers are the chain's blocks; every slot proven: capture 1: block 12119428, 6 slots; capture 2: block 12119519, 6 slots
+PASS LEZ session records: T0 24 -> T1 90, 9 steps, claims ['private', 'public'], 2 burn notes
+PASS checkpoint journal fields: parent = genesisState, tip T1 90, burns 2, imported leaves 2
+PASS checkpoint final on the vault, its seal verified by RISC Zero's verifier (eth_call): final state 0x919b8573e4f1ab5866e0c90c67123a9c986f39947b026c6211ba944eabe9bf19, seal accepted (a changed seal refused), burn root 0xf353b9c3981bd55127d3557b670f900fcce984ba24ca02ded50f9b3512a20043 accepted
+PASS releases: paid once, seals verified on chain, events: public-0: 1000000000000000 wei to 0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07; private-1: 1000000000000000 wei to 0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07; vault balance now 6000000000000 wei
+PASS checkpoint input rebuilt from the node's recorded blocks = the proven input; guest re-executed: input sha256 451a5146e97aa3af... = proven; executed again: ,"journal_equals_native":true,"padded_cycles":20971520,"po2":[20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20],"segments":20,"user_cycles":18499940}
+PASS Groth16 receipts verify locally (ferrata-e2e verify): 3 receipts
+14 of 14 checks passed
