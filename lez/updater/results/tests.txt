@@ -1,0 +1,48 @@
+# cargo test -p ferrata-updater --features harness --locked -- --nocapture (RISC0_DEV_MODE=1), the mrun build box (ws-4), 12 Nov 2026 19:25-19:37Z, commit 247851c; the tests' own lines
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test header_answers_and_utc ... ok
+test updates_stream_splits_with_either_length_convention ... ok
+test sepolia_gloas_instance_is_the_crown_instance ... ok
+test shipped_configurations_parse ... ok
+test bad_configurations_are_refused ... ok
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test fee_limits_are_declared_and_enforced ... ok
+test lying_source_is_refused_without_gas ... ok
+test beacon_api_sources_over_http ... ok
+test headers_source_confirms_or_holds_back ... ok
+test own_job_is_finished_when_the_source_moves_on ... ok
+test restart_mid_job_and_mid_period ... ok
+test catches_up_mainnet_and_sepolia_from_recorded_data ... ok
+test stale_and_down_sources_fall_back ... ok
+test gate_two_honest_one_adversary ... ok
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 241.72s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+finish_own_jobs true, restart false: after the source moved on, (Miller, 15625984); 14 transactions in all
+mainnet: 16 rounds, 4 jobs applied, 16 transactions, finalized slot 15631808 root 530599ec91a6ce70948d70d1066bb35a2a0cb999ad8e2cb6229452dcb7102328, health ok
+headers source honest: 3 confirmations, 4 jobs applied
+http: finalized 15631808 via 11 requests to `up`, 11 errors from `down`
+headers source lying: 27 rounds waiting, 27 mismatches, health degraded
+finish_own_jobs true, restart true: after the source moved on, (Miller, 15625984); 14 transactions in all
+finish_own_jobs false, restart false: after the source moved on, (Open, 15626400); 12 transactions in all
+sepolia: 171 rounds, 35 jobs applied, 171 transactions, finalized slot 11556000 root d31b7d34c2e6b6d8c3430dcdc763375d0ba9a9b201554164326133367aa3f3cc, health ok
+gate	rounds	437	seed	default	adversary	true	salt	
+mainnet	updates applied	14	jobs (with Init)	15	finalized slot	15631808
+sepolia	updates applied	44	jobs (with Init)	45	finalized slot	11556000
+
+# the seven other gate runs (GATE_SEED, GATE_SALT, GATE_ADVERSARY=0), each its own cargo test, same box, 19:37-19:43Z
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 209.88s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 229.38s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 233.40s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 234.60s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 229.96s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 229.22s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 229.77s
+updater/results/gate-no-adversary.txt: honest refused gas / applied gas 0.0284 (gate <= 0.10) honest-1 share of honest fees 0.4762 honest-2 0.5238 (gate 0.35-0.65 each) 
+updater/results/gate-salt-a.txt: honest refused gas / applied gas 0.0655 (gate <= 0.10) honest-1 share of honest fees 0.4743 honest-2 0.5257 (gate 0.35-0.65 each) 
+updater/results/gate-salt-b.txt: honest refused gas / applied gas 0.0613 (gate <= 0.10) honest-1 share of honest fees 0.3933 honest-2 0.6067 (gate 0.35-0.65 each) 
+updater/results/gate-salt-c.txt: honest refused gas / applied gas 0.0715 (gate <= 0.10) honest-1 share of honest fees 0.3945 honest-2 0.6055 (gate 0.35-0.65 each) 
+updater/results/gate-seed-1.txt: honest refused gas / applied gas 0.0871 (gate <= 0.10) honest-1 share of honest fees 0.4375 honest-2 0.5625 (gate 0.35-0.65 each) 
+updater/results/gate-seed-2.txt: honest refused gas / applied gas 0.0566 (gate <= 0.10) honest-1 share of honest fees 0.4612 honest-2 0.5388 (gate 0.35-0.65 each) 
+updater/results/gate-seed-3.txt: honest refused gas / applied gas 0.0798 (gate <= 0.10) honest-1 share of honest fees 0.4477 honest-2 0.5523 (gate 0.35-0.65 each) 
+updater/results/gate.txt: honest refused gas / applied gas 0.0820 (gate <= 0.10) honest-1 share of honest fees 0.4428 honest-2 0.5572 (gate 0.35-0.65 each) 

@@ -7,14 +7,15 @@ against the on-chain store, and sends the next step of the public job (`Init`, `
 `Adopt`, `Finish`) for the candidate that moves the instance furthest, or the next step of a job
 another updater left open. It keeps no light-client store of its own: the chain is the state.
 
-**Status (11 November 2026).** Built and tested against LEZ v0.4.0-rc1's state machine in process
+**Status (13 November 2026).** Built and tested against LEZ v0.4.0-rc1's state machine in process
 (`HarnessLedger`: the harness's program image, LEZ's fee program and settlement, `RISC0_DEV_MODE`)
-on the lab's recorded mainnet and Sepolia data (`../lab/results/record/net/`). **Not built:** the
-backend that sends to a running LEZ sequencer (`daemon.ledger = "sequencer"` refuses to start); the
-lab driver (`../lab/driver/`) is what sends the same messages to a sequencer through LEZ's wallet
-today. Not run against live beacon endpoints (nothing is sent to a public network from this
-branch); the HTTP path (`BeaconApi`, through `curl`) is tested against beacon nodes on loopback
-serving the recorded data.
+on the lab's recorded mainnet and Sepolia data (`../lab/results/record/net/`), and **run on a running
+LEZ v0.4.0-rc1 sequencer and Logos Blockchain node** with its sequencer backend (`sequencer/`,
+`daemon.ledger = "sequencer"`): the crown run's zone and final programs (`../../docs/image-ids.md`),
+following Sepolia live from Lodestar's light-client data with publicnode's headers as the second
+source ([On a running LEZ sequencer](#on-a-running-lez-sequencer-with-live-sepolia-data), record in
+[`results/live-sepolia/`](results/live-sepolia/)). The beacon APIs are only read; nothing is sent to
+Sepolia or any public network.
 
 ## Run
 
@@ -23,6 +24,15 @@ cd lez
 cargo build -p ferrata-updater --features harness --locked      # dev mode: the in-process chain
 RISC0_DEV_MODE=1 target/debug/ferrata-updater --config updater/dev/dev.toml [--rounds N] [--quiet]
 updater/dev/demo.sh OUT_DIR    # 45 s of the above, /health and /metrics read, then SIGTERM
+
+# On a running LEZ sequencer: the build of sequencer/ (a workspace of its own: it links LEZ's
+# node-side crates, as ../crown/driver does; LEZ's tree at upstream/lez-v0.4.0-rc1 beside the
+# repository, libpcsclite-dev for LEZ's wallet)
+cd updater/sequencer && cargo build --release
+target/release/ferrata-updater --config FILE   # daemon.ledger = "sequencer", [sequencer] rpc and program
+# ... or on the crown run's cloud app, a zone of its own (lez/crown/session.sh a, then u), from the repository root:
+e2e/crown.sh updater crown-NAME --bin PATH/ferrata-updater --minutes N [--restart-min M] [--poll-s S]
+e2e/crown.sh updater-status crown-NAME; e2e/crown.sh updater-stop crown-NAME; e2e/crown.sh updater-fetch crown-NAME DIR
 ```
 
 One file configures everything: `ferrata-updater.example.toml` lists every field with its
@@ -30,11 +40,12 @@ default. In short:
 
 | section | fields |
 |---|---|
-| `[daemon]` | `name`, `state_dir` (committee cache and journal), `poll_secs`, `listen` (`/health`, `/metrics`), `ledger` (`harness`; `sequencer` not built) |
+| `[daemon]` | `name`, `state_dir` (committee cache, journal, the jobs it opened), `poll_secs`, `listen` (`/health`, `/metrics`), `ledger` (`harness`: the build of this crate with `--features harness`; `sequencer`: the build of `sequencer/`) |
+| `[sequencer]` | `rpc` (the sequencer's JSON-RPC; loopback only), `program` (the attestation program's account, base58 or 0x-hex), `wait_final` (default `true`: read the chain and settle transactions only in blocks final on Bedrock), `run_dir` (the backend's follower and manifest; default `state_dir/ledger`), `log` (the sequencer's log, for the reason of a dropped transaction) |
 | `[keys]` | `payer_key_file`: a 32-byte secret key in hex. It signs and pays every transaction and needs no other role: no step of the program checks a sender |
 | `[fees]` | `gas_limit` declared by every step (default 4,800,000; the largest step measured is 3,731,712), `max_fee_per_tx`, `budget` (the daemon stops sending at it and says so in `/health`) |
-| `[policy]` | `defer_window`, `max_lag_slots`, `min_agreeing`, `retry_base_ms`, `retry_max_ms`, `max_attempts`, `demote_rounds`, `max_periods_per_request` |
-| `[[chain]]` | `name`, `preset` (`mainnet`, `sepolia`), `checkpoint` (the instance's trusted block root), `adoption_parts`; `[[chain.source]]` with `url` (a beacon node's REST API) or `dir` (a recorded directory in the lab's layout) |
+| `[policy]` | `defer_window`, `max_lag_slots`, `min_agreeing`, `retry_base_ms`, `retry_max_ms`, `max_attempts`, `demote_rounds`, `max_periods_per_request`, `finish_own_jobs` (default `true`) |
+| `[[chain]]` | `name`, `preset` (`mainnet`, `sepolia`), `checkpoint` (the instance's trusted block root), `layout` (the checkpoint bootstrap's light-client layout, `electra` by default, `gloas` for a Gloas-era bootstrap; the instance id hashes it), `adoption_parts`; `[[chain.source]]` with `url` (a beacon node's REST API) or `dir` (a recorded directory in the lab's layout), and `kind`: `light-client` (default) or `headers` (a node that serves no light-client data, only `/eth/v1/beacon/headers/{slot}`: it confirms the finalized header, below) |
 
 SIGTERM or SIGINT: the round in hand finishes, then the daemon exits 0. Nothing needs saving: a
 transaction is either on chain or not, and the next start reads the chain.
@@ -57,26 +68,63 @@ transaction is either on chain or not, and the next start reads the chain.
 5. **Cross-check.** A source whose newest verified finalized slot is more than `max_lag_slots`
    behind the best is flagged lagging (the best source's update is used: fallback is per round). A
    source that does not answer is flagged unavailable. With `min_agreeing = k`, the updater sends
-   only an update whose finalized header `k` sources serve (the best such one), else waits.
+   only an update whose finalized header `k` sources serve or confirm (the best such one), else
+   waits: a light-client source by serving an update with that finalized header, a `headers` source
+   by holding that block canonical at its slot (`GET /eth/v1/beacon/headers/{slot}`; a confirmation
+   is kept, a finalized block stays canonical). Most public beacon APIs serve no light-client data
+   (publicnode's answers 404 to `light_client/finality_update`), so a second, independent provider
+   is a `headers` source; one that holds another block there is counted (`mismatches`) and named in
+   `/health`, and nothing is sent until enough sources agree.
 6. **Choice.** Adopting the next committee first when the store lacks it; then the furthest
    finalized header; then the most signers.
 7. **The job's next step, from the chain.** A job's id hashes the instance, its starting store and
    the update, so every updater computes the same id for the same update. No job yet: `Open`. A job
    in `Miller`: `Miller`. Adoption pending: the next `Adopt` part. Otherwise `Finish`. The updater
-   continues any open job, its own or another's, and after a restart its own.
+   continues any open job, its own or another's, and after a restart its own. A job it opened comes
+   first, before any other update is chosen (`finish_own_jobs`, default): a beacon node serves only
+   its newest finality update, so the update a job was opened for can be gone from every source
+   before the job's last step, and the steps already paid would be lost. The update is kept in
+   `state_dir/<chain>/open/` until the job is finished or moot (the store moved past it), so a
+   restarted updater finishes it too.
 8. **Deferral.** Each (job, step) is sent by the updater whose wait, `H(key, job, step) mod
    defer_window` rounds after it first saw the step due, runs out first; the others find the step
    done and skip it. Two honest updaters collide only when their waits are equal.
 9. **Send.** Within `max_fee_per_tx` and `budget`; a transport failure is retried with
    exponential backoff (`retry_base_ms * 2^attempt`, at most `retry_max_ms`, `max_attempts`), and
    before every retry the chain is read again: a step another updater sent meanwhile is not sent.
-   Every sent transaction is a line of `state_dir/<chain>/journal.tsv`.
+   Every sent transaction is a line of `state_dir/<chain>/journal.tsv` (round, step, job, finalized
+   slot, result, exit code, execution and storage gas, fee, block, the time it settled, its label).
+
+## The sequencer backend (`sequencer/`)
+
+`SequencerLedger` (`sequencer/src/ledger.rs`) is the `Ledger` for a running LEZ sequencer; the
+daemon is the same (`src/daemon.rs`). It reuses the live driver's modules by path
+(`../live/driver/src`: the wallet connection, the follower, the manifest), as the crown driver does.
+
+- **Send.** A step's transaction is built exactly as `HarnessLedger` builds it: the step's actors
+  and admission evidence, the payer's nonce (read from the sequencer), a fee declaration with the
+  configured gas limit and maximum fee, the payer's signature. It goes to the sequencer's
+  `sendTransaction` through LEZ's wallet client. An error the sequencer answers is a rejection
+  (nothing included, nothing charged: `rejected`); no answer is a transport failure, which the
+  updater retries after reading the chain again.
+- **Settle.** The sequencer serves no receipts. The follower applies every block the sequencer
+  serves with LEZ's own block application (`chain_state::apply`), and only once the block is
+  `Finalized` on Bedrock (a head block can still be replaced); a transaction's status, exit code,
+  execution and storage gas come from LEZ's settlement of it; its fee is what the payer's balance
+  fell by, read from the sequencer before and after. A transaction never included within 4 blocks
+  is `rejected` (dropped). Every one is a row of `state_dir/ledger/run.tsv` (the live driver's
+  manifest: hash, block, position, status, gas, base fees, fee, payer debit, the block's own totals).
+- **Read.** The actor states the updater reads are the follower's (blocks final on Bedrock),
+  checked against what the sequencer serves.
+- **Keep.** The follower is saved in `state_dir/ledger/` every 5 minutes and when the daemon stops,
+  so a restart follows on from there rather than from LEZ's genesis.
 
 ## Health and metrics
 
 `GET /health`: JSON per instance (`status` `ok`, `degraded` or `down`, the reasons, the finalized
 slot and period, the last plan and error); HTTP 503 when an instance has no usable source.
-`degraded`: a source demoted, lagging or unavailable, the budget reached, or the last round stuck.
+`degraded`: a source demoted, lagging or unavailable, a `headers` source holding another block at a
+finalized header's slot, the budget reached, or the last round stuck.
 
 `GET /metrics` (Prometheus text, labels `daemon`, `chain`, `source`): `ferrata_updater_rounds_total`,
 `_tx_total{step,result=applied|refused|rejected}`, `_refused_by_code_total{code}`,
@@ -84,10 +132,15 @@ slot and period, the last plan and error); HTTP 503 when an instance has no usab
 `_retries_total`, `_deferrals_total`, `_steps_done_by_others_total`, `_jobs_finished_total`,
 `_finalized_slot`, `_period`, `_health` (0 ok, 1 degraded, 2 down), and per source
 `_source_requests_total`, `_source_errors_total`, `_source_refused_total`, `_source_lagging`,
-`_source_available`, `_source_demoted`, `_source_finalized_slot`. A sample is
-`results/demo-metrics.txt`.
+`_source_available`, `_source_demoted`, `_source_finalized_slot`, `_source_confirmed_total` and
+`_source_mismatches_total` (a `headers` source's confirmations and disagreements). Samples:
+`results/demo-metrics.txt` (dev mode), `results/live-sepolia/metrics-last.txt` (the live run).
 
 ## Tested (measured; `cargo test -p ferrata-updater --features harness`, RISC0_DEV_MODE=1, on the mrun build box)
+
+Last run 12 November 2026 on the code of this README: 14 tests (5 in `config.rs`, 9 in `recorded.rs`), all pass;
+the seven other gate runs pass too ([`results/tests.txt`](results/tests.txt)). The guests build with LEZ's
+guest toolchain (Rust 1.91.1 in `RISC0_HOME`, `scripts/ci/install-risc0.sh`).
 
 | test | what it shows | result |
 |---|---|---|
@@ -97,8 +150,10 @@ slot and period, the last plan and error); HTTP 503 when an instance has no usab
 | `restart_mid_job_and_mid_period` | killed after `Open` and `Miller` of a finality update inside Sepolia's period 1410; restarted on the same state directory; two dropped connections; then a start with no state directory | the restarted updater sends `Finish` (not a second `Open`), two retries, applied; the one without state refills its committees from the sources and reaches the end; no transaction refused |
 | `beacon_api_sources_over_http` | `BeaconApi` (curl, SSZ, the `updates` endpoint's length-prefixed chunks) against two beacon nodes on loopback: one serving the recorded mainnet chain, one answering 503 | catch-up to 15,631,808 through the first; the second flagged unavailable, `/health` degraded naming it |
 | `fee_limits_are_declared_and_enforced` | a maximum fee below a step's cost; a budget of 250,000,000 with a maximum fee of 100,000,000 | the first is rejected by LEZ's settlement (`MaxFeeBelowReserve`: nothing charged, nothing applied); the second stops after 7 transactions (156,173,360 charged), `/health` says "budget reached" |
-| `config.rs` (3 tests) | the shipped `ferrata-updater.example.toml` and `dev/dev.toml` parse; an unknown preset, a non-hex checkpoint, a zero deferral window, a source with both `url` and `dir`, an unknown field are refused; the `updates` stream splits under both length conventions | pass |
-| `gate_two_honest_one_adversary` | proposal A3's done gate (below) | passes in all eight runs (seven with the adversary, one without) |
+| `headers_source_confirms_or_holds_back` | one recorded light-client source and a `headers` source over HTTP on loopback (`/eth/v1/beacon/headers/{slot}`, JSON, as publicnode's), `min_agreeing = 2`; then the same with a `headers` source that holds another block at every slot | honest: catch-up to 15,631,808, 3 confirmations, `/health` ok; lying: after `Init`, 27 of 30 rounds waiting, nothing sent, 27 mismatches, `/health` degraded naming it, nothing refused |
+| `own_job_is_finished_when_the_source_moves_on` | the source moves on to a newer finality update after this updater's `Open` (as a beacon node serves only its newest); with `finish_own_jobs`, without, and with it after a restart on the same state directory | with it: `Miller` of its own job next (also after the restart, from `state_dir/mainnet/open/`), both updates applied, 14 transactions; without: the newer update's `Open`, the first job left open, 12 transactions; nothing refused, no kept job left at the end |
+| `config.rs` (5 tests) | the shipped `ferrata-updater.example.toml` and `dev/dev.toml` parse; an unknown preset, a non-hex checkpoint, a zero deferral window, a source with both `url` and `dir`, an unknown field, `ledger = "sequencer"` without `[sequencer]` or with a sequencer not on loopback, an unknown ledger, an unknown layout, a `headers` source without `url` are refused; the example's Sepolia chain (checkpoint `3b901f5e…`, layout `gloas`) is the crown run's instance `a5fb2591…`; a beacon node's header answer is read only when canonical at that slot; the `updates` stream splits under both length conventions | pass |
+| `gate_two_honest_one_adversary` | proposal A3's done gate (below) | passes in all eight runs (seven with the adversary, one without), 12 November 2026 |
 
 **The A3 gate** (`results/gate.txt`). Two honest updaters (one with a lying source, one with a
 lagging one) and an adversarial updater follow mainnet and Sepolia on one chain while the record
@@ -109,26 +164,30 @@ job for a forged update and replays an applied one.
 | run (`GATE_SEED`: block order; `GATE_SALT`: names, so deferral waits) | default | seed 1 | seed 2 | seed 3 | salt a | salt b | salt c |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | updates applied, each once (`InstanceState.applied` = 1 + updates, per instance) | 58 | 58 | 58 | 58 | 58 | 58 | 58 |
-| honest gas on refused steps / on applied steps (gate ≤ 0.10) | 0.0698 | 0.0364 | 0.0384 | 0.0646 | 0.0468 | 0.0932 | 0.0860 |
-| honest-1 share of the honest fees (gate 0.35–0.65) | 0.6306 | 0.5465 | 0.5298 | 0.5377 | 0.5393 | 0.4926 | 0.5117 |
-| honest-2 share | 0.3694 | 0.4535 | 0.4702 | 0.4623 | 0.4607 | 0.5074 | 0.4883 |
-| honest-1 / honest-2 / adversary transactions applied | 62 / 38 / 150 | 59 / 52 / 139 | 56 / 52 / 142 | 58 / 50 / 142 | 57 / 49 / 144 | 54 / 50 / 146 | 51 / 50 / 149 |
-| honest-1 / honest-2 / adversary transactions refused | 18 / 28 / 25 | 15 / 13 / 28 | 18 / 11 / 19 | 16 / 18 / 23 | 11 / 14 / 22 | 20 / 27 / 31 | 21 / 12 / 23 |
-| rounds (blocks); ledger transactions | 447; 431 | 429; 416 | 437; 408 | 425; 417 | 430; 407 | 462; 438 | 436; 416 |
+| honest gas on refused steps / on applied steps (gate ≤ 0.10) | 0.0820 | 0.0871 | 0.0566 | 0.0798 | 0.0655 | 0.0613 | 0.0715 |
+| honest-1 share of the honest fees (gate 0.35–0.65) | 0.4428 | 0.4375 | 0.4612 | 0.4477 | 0.4743 | 0.3933 | 0.3945 |
+| honest-2 share | 0.5572 | 0.5625 | 0.5388 | 0.5523 | 0.5257 | 0.6067 | 0.6055 |
+| honest-1 / honest-2 / adversary transactions applied | 45 / 56 / 149 | 41 / 58 / 151 | 46 / 51 / 153 | 46 / 52 / 152 | 53 / 54 / 143 | 40 / 60 / 150 | 41 / 62 / 147 |
+| honest-1 / honest-2 / adversary transactions refused | 18 / 14 / 17 | 22 / 16 / 12 | 16 / 14 / 15 | 20 / 18 / 15 | 15 / 16 / 15 | 17 / 23 / 24 | 18 / 27 / 26 |
+| rounds (blocks); ledger transactions | 437; 409 | 444; 410 | 446; 405 | 416; 413 | 419; 406 | 407; 424 | 423; 431 |
 
-Without the adversary (`GATE_ADVERSARY=0`, `results/gate-no-adversary.txt`), the two honest
-updaters alone: 58 updates each applied once in 695 rounds, 132 and 118 transactions applied, 11 and
-17 refused (collisions of equal waits), refused gas 0.0172 of applied, fee shares 0.5404 / 0.4596.
+Measured on 12 November 2026 with `finish_own_jobs` (the default since then: an updater finishes the
+job it opened before it opens another). Without the adversary (`GATE_ADVERSARY=0`,
+`results/gate-no-adversary.txt`), the two honest updaters alone: 58 updates each applied once in 737
+rounds, 119 and 131 transactions applied, 19 and 15 refused (collisions of equal waits), refused gas
+0.0284 of applied, fee shares 0.4762 / 0.5238. The runs of 11 November, before `finish_own_jobs` (the
+same gate, the same 58 updates each applied once): refused gas 0.0364–0.0932 of applied, honest-1's
+share 0.4926–0.6306; without the adversary 0.0172 and 0.5404 / 0.4596 in 695 rounds.
 
 58 updates: 14 mainnet and 44 Sepolia, every update the lab recorded, not the gate's 100. The
 adversary also sent 110 junk `Open`s in each run, at its own cost. Files: `results/gate*.txt`.
 A wait is a hash of the updater's name and key, the job and the step, so the four `GATE_SEED` runs
-share one draw of waits (honest-1 drew the shorter ones: shares 0.53–0.63); other names draw
-others (`GATE_SALT`: 0.49–0.54). The refused share ranges 0.036–0.093 over the seven runs with the
-adversary: within the gate in all, with a thin margin in one (salt b). It comes from same-round
-collisions: two honest updaters with equal waits (1 in 8 per step), and an honest updater sending
-in the round the adversary races; a refused duplicate `Open` costs about 2.2M (step 1 runs before
-the job is found to exist), a refused later step at most about 24k.
+share one draw of waits; other names draw others (`GATE_SALT`). The refused share ranges
+0.057–0.087 over the seven runs with the adversary, within the gate in all; honest-1's share of
+the fees 0.39–0.47. It comes from same-round collisions: two honest updaters with equal waits (1 in
+8 per step), and an honest updater sending in the round the adversary races; a refused duplicate
+`Open` costs about 2.2M (step 1 runs before the job is found to exist), a refused later step at
+most about 24k.
 
 ## Not built, not tested
 
