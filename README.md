@@ -86,8 +86,9 @@ image ids and some execution-gas figures differ. The rest of the setup, the real
 [`lez/RESULTS.md`](lez/RESULTS.md) §8.
 
 The larger jobs have one command each (`just m0`, `just bench`, `just release`:
-[docs/release-engineering.md](docs/release-engineering.md)); every component's re-check command is in
-[the table below](#components-and-their-status).
+[docs/release-engineering.md](docs/release-engineering.md)); they need [`just`](https://github.com/casey/just), or
+run the script each recipe wraps, named there (`just m0` is `python3 -I scripts/m0.py`, which only reads files).
+Every component's re-check command is in [the table below](#components-and-their-status).
 
 ## Architecture in brief
 
