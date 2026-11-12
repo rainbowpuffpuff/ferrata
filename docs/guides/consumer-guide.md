@@ -429,8 +429,8 @@ From [`attestation.md`](../design/attestation.md) §15 and [`lez/RESULTS.md`](..
 - joining an open job, clean-up of failed jobs, deployment by `program_loader`; a consumer's own
   `Attest` on a running sequencer (the attestation program ran on LEZ's own sequencer at an image
   before `Attest`, [`lez/RESULTS.md`](../../lez/RESULTS.md) §9; the bridge's `Init` and `ImportRoot`,
-  which call `Attest`, ran on the sequencers of crown devnets, on Sepolia's real state in the live run:
-  [EVIDENCE](../EVIDENCE.md) rows 31, 41, 83);
+  which call `Attest`, ran on the sequencers of crown devnets, on Sepolia's real state in the live runs:
+  [EVIDENCE](../EVIDENCE.md) rows 31, 41, 83, 91);
 - a real proof of a private attestation on a laptop (proven on a cloud GPU, on cloud CPUs held to 8 and
   16 cores, and on M1 and M4 Mac minis under macOS: EVIDENCE rows 32–34, 38, 88);
 - in the Logos module, `advance` and reads and transactions through Logos Core's own modules;
