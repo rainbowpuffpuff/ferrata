@@ -388,8 +388,12 @@ impl Devnet {
                 .context("starting anvil")?,
         );
         let p = wait_for(&rpc).await?;
-        let mut zone =
-            HarnessLedger { world: hb::World::new(), applied: Vec::new(), touched: HashSet::new(), keys: HashMap::new() };
+        let mut zone = HarnessLedger {
+            world: hb::World::new(),
+            applied: Vec::new(),
+            touched: HashSet::new(),
+            keys: HashMap::new(),
+        };
         let program = zone.world.program;
         let vault = ANVIL0.create(3);
         let config = hb::config(vault.into_array(), hb::controls());
@@ -502,7 +506,13 @@ impl Devnet {
     /// whose root is `message` at that account's own actor of the bridge, with the public actors
     /// `publics`, as LEZ's wallet sends it; then checks the wallet's view of the account after it
     /// (`holder`, the bridge state it computes) against the chain's commitments.
-    fn private_tx(&mut self, a: usize, message: &BridgeMessage, publics: Vec<Actor>, holder: HolderState) -> Result<PrivateRun> {
+    fn private_tx(
+        &mut self,
+        a: usize,
+        message: &BridgeMessage,
+        publics: Vec<Actor>,
+        holder: HolderState,
+    ) -> Result<PrivateRun> {
         let program = self.ctx.program;
         let real = self.real_proofs;
         let slot = self.private.get_mut(a).ok_or_else(|| anyhow!("private account /{a} is outside the window"))?;
@@ -929,7 +939,14 @@ impl Devnet {
         let i = recover_burns(&keys, &self.cid, &chain, &self.ctx.vault, &history.burns, lez::BURN_GAP).next_i;
         let target = ReleaseTarget { chain_id: chain, vault: self.ctx.vault, recipient: recipient.into_array() };
         let note = BurnNote::create(&keys, &self.cid, i, &target, ETH_TOKEN, u128_to_word(amount));
-        let wire = bw::Note { r: note.r, memo: note.memo, mac: note.mac, token: ETH_TOKEN, amount: note.amount, c_out: note.c_out };
+        let wire = bw::Note {
+            r: note.r,
+            memo: note.memo,
+            mac: note.mac,
+            token: ETH_TOKEN,
+            amount: note.amount,
+            c_out: note.c_out,
+        };
         let program = self.ctx.program;
         let publics = vec![
             token_actor(program, &self.cid, &ETH_TOKEN),
