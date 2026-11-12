@@ -264,9 +264,9 @@ stop and its owner (renounced or not), tokens with their caps and fee schedules,
 - **Freezes.** The freeze authority sets mint and burn freezes, globally or per token, at most 30 days
   ahead; the admin cannot unfreeze. `Sunset` is the freeze authority's, one-way; imports stop after it.
 
-Measured costs of these steps (in-process harness, the merged program): `Init` 168,776 execution gas;
-`Register` 327,269 (426,841–450,566 on the vault's real storage); `ImportFees` 265,219; `SetCap` 55,805;
-`Freeze` 104,176 (it reads the newest attested record); `Sunset` 44,002
+Measured costs of these steps (in-process harness, this tree's program): `Init` 171,027 execution gas;
+`Register` 331,816 (431,512–455,116 on the vault's real storage); `ImportFees` 269,684; `SetCap` 91,019;
+`Freeze` 140,609 (it reads the newest attested record); `Sunset` 44,193
 ([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §1, last column; `lez/results/bridge-*.md`). All under LEZ's 5M
 execution target.
 

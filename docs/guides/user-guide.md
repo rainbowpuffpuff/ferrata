@@ -128,9 +128,9 @@ Three ways, the first preselected:
 
 | Path | How | Public | Hidden | Measured |
 |---|---|---|---|---|
-| **Private claim to a private account** (default) | `ClaimPrivately` runs as your destination account inside a privacy-preserving transaction; it reads `root(cid, n)` and credits its own private state | `N`, the configuration, the token, the denomination, which root was read (`n`), the fee schedule's range, the relayer, the time, the bridge program, a one-time fee alias | which deposit (leaf, depositor, `s`, `C`, path) and your account | 551,502 execution gas, 224,063 storage gas; the prover proves 41,160 + 111,596 user cycles (in-process harness, dev mode, the merged program) |
-| Private claim to a public account | the same proof, from a private account of yours; the mint goes publicly to the destination | the above and the destination | which deposit | 600,607 execution gas |
-| **Plaintext claim** | the witness is transaction data; one public transaction, for users who cannot prove | **everything, including which deposit**: the client must say so before allowing it | nothing | 258,885 execution gas (1 ETH), 2,053 bytes |
+| **Private claim to a private account** (default) | `ClaimPrivately` runs as your destination account inside a privacy-preserving transaction; it reads `root(cid, n)` and credits its own private state | `N`, the configuration, the token, the denomination, which root was read (`n`), the fee schedule's range, the relayer, the time, the bridge program, a one-time fee alias | which deposit (leaf, depositor, `s`, `C`, path) and your account | 553,641 execution gas, 224,063 storage gas; the prover proves 41,736 + 110,862 user cycles (in-process harness, dev mode, this tree's program) |
+| Private claim to a public account | the same proof, from a private account of yours; the mint goes publicly to the destination | the above and the destination | which deposit | 603,981 execution gas |
+| **Plaintext claim** | the witness is transaction data; one public transaction, for users who cannot prove | **everything, including which deposit**: the client must say so before allowing it | nothing | 261,671 execution gas (1 ETH), 2,053 bytes |
 
 Sources: [`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §1 (its last column: the merged program), §3;
 [`lez/BRIDGE.md`](../../lez/BRIDGE.md), "What each path makes public". The private claim's 8,937 bytes were searched for its private inputs
@@ -191,8 +191,8 @@ a copy cannot block it. The wallet advances `i` on every published burn, even a 
 never repeats.
 
 **Public:** token, denomination, time, the note; for a private holding the holder appears as an alias.
-**Hidden:** you and your recipient. **Measured** (in-process harness, the merged program): a private burn
-518,358 execution gas and 224,063 storage gas, 25,377 user cycles to prove; a public burn 164,153; the private
+**Hidden:** you and your recipient. **Measured** (in-process harness, this tree's program): a private burn
+519,678 execution gas and 224,063 storage gas, 25,679 user cycles to prove; a public burn 166,477; the private
 burn of the earlier image proven on one L4 in 12.4 s ([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md)
 §1, §7), the merged program's on a cloud CPU in 336.0 s with sending, in the crown rehearsal.
 
