@@ -108,9 +108,10 @@ Ethereum record, inside its own transaction, and writes a write-once `root(cid, 
 fixed cadence; **a client never imports for itself**, because importing right after your own deposit
 would date it. Your deposit is claimable once a root with a leaf count above its index exists:
 Ethereum finality (about 13–19 minutes, [`docs/design/attestation.md`](../design/attestation.md)
-§13) plus the next update and import. The importer daemon is **not built**; imports ran in the
-in-process harness and on a live sequencer on a stand-in beacon chain
-([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §2, §11).
+§13) plus the next update and import. The importer (the relayer's root imports) is **not built**; imports ran in the
+in-process harness, on a live sequencer on a stand-in beacon chain
+([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §2, §11) and in the crown runs, on Sepolia's real
+state in the live one ([EVIDENCE](../EVIDENCE.md) row 41).
 
 ## 5. Claim (LEZ)
 
@@ -153,7 +154,9 @@ laptop or on macOS (declared minimum: 16 GB, 8 cores with 16 threads, x86-64 (Ap
 the relayer it names ([`bridge.md`](../design/bridge.md) §5.5, §13). The LEZ transaction fee of a
 privacy-preserving transaction is paid in native LEZ from a private account of the prover, inside the
 proof; nobody else can pay it on v0.4. The **gas drop**, which lets a relayer fund that fee without
-learning which deposit is yours, is **not built** (milestone M0 tests it); until it works, a first
+learning which deposit is yours, is built in part: its receipt binding `(N, oneTimeAddress, relayer)` and
+the relayer's one credit per `N` (EVIDENCE rows 47, 48); the sealed credit to a private one-time account
+and its sweep inside the private claim are **not built** (milestone M0 tests them); until it works, a first
 claim needs native LEZ from a faucet or a public purchase, which is a correlation the client must
 state ([`bridge.md`](../design/bridge.md) §6).
 
@@ -264,8 +267,9 @@ A wallet restored from the seed, with no local state, finds everything
 the holdings: public ones read from the zone, private ones as the LEZ wallet decrypts them. Its end-to-end test
 recovers 12 deposits (2 claimed, one of them privately), 12 burns (one private; 2 released) and the holdings
 (measured, build box, 12 November 2026; [`cli/README.md`](../../cli/README.md)). In the test the harness stands
-in for the LEZ wallet's sync of its private accounts. The recovery in the module (`ferrata_bridge_module`) is
-**not built**; the scan's speed is measured in the bridge core.
+in for the LEZ wallet's sync of its private accounts. The module (`ferrata_bridge_module`) has `recover`, which finds the
+wallet's deposits and burns among the events it is given (EVIDENCE row 59); reading those events through
+Logos Core's own modules is **not built**; the scan's speed is measured in the bridge core.
 
 ## 9. Defaults, and what each weaker choice reveals (Privacy #7, U.5, U.6)
 
@@ -368,8 +372,10 @@ messages for each code.
 ## 13. For developers: integrating both flows (R.12)
 
 The integration surface today is the program messages and the derivations; the Logos module
-(`ferrata_bridge_module`: deposit, claim, redeem, release, recover, registry) is **not built**
-([`bridge.md`](../design/bridge.md) §1). Build against these:
+(`ferrata_bridge_module`: `deposit`, `claim`, `burn`, `release`, `recover`, `status`) is built and called
+under a headless Logos Core (EVIDENCE row 59); it builds messages without signing or sending them, and its
+private claim, `ImportRoot`, registry reads and release proving are **not built**
+([`bridge.md`](../design/bridge.md) §1; [`modules/README.md`](../../modules/README.md)). Build against these:
 
 - **Messages** of the bridge program, one borsh enum in [`lez/bridge-wire/src/lib.rs`](../../lez/bridge-wire/src/lib.rs),
   tabulated in [`lez/BRIDGE.md`](../../lez/BRIDGE.md) §2: `Init` (4), `ImportRoot` (1), `Register` (11),
@@ -405,15 +411,20 @@ The integration surface today is the program messages and the derivations; the L
 ([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §9; [`bridge.md`](../design/bridge.md) §1,
 §18.6, §19; [`vault/README.md`](../../vault/README.md), status paragraph)
 
-- a wallet integration and `ferrata_bridge_module`; the anonymity-set view; the `ferrata` tool's LEZ commands
+- a wallet integration; in `ferrata_bridge_module`, the private claim, `ImportRoot`, registry reads and
+  release proving (the module is built: EVIDENCE row 59); the anonymity-set view; the `ferrata` tool's LEZ commands
   against a live sequencer (its tests use the LEZ harness);
-- the gas drop and the relayer and wrapper services;
-- a transfer of wrapped tokens between holders; the switch to LEZ's token program;
+- the gas drop's sealed credit to a private one-time account and its sweep inside the private claim, and
+  the relayer's root imports (the gas-drop receipt and the relayer daemon `ferrata-relayer`, which also
+  wraps, are built: EVIDENCE rows 46–48);
+- a transfer that credits a private recipient privately (transfers between holders are built: EVIDENCE
+  rows 74, 75); the switch to LEZ's token program;
 - a real proof of a private claim to a public destination, and laptop or GPU proofs of the current program
   image's private claim and burn (the crown rehearsal, the live round trip and `lez/results/p4-minimum` proved
-  them on cloud CPUs, the latter held to 8 and 16 CPUs with 16 GiB); any user-side proof on a laptop or on macOS;
+  them on cloud CPUs, the latter held to 8 and 16 CPUs with 16 GiB); any user-side proof on a laptop (under macOS they were proven on M1 and M4 Mac minis, CPU only:
+  EVIDENCE row 88);
 - a public LEZ network under the round trip: the v5 vault made the whole round trip on Sepolia on 11 November
-  2026, a private claim of a Sepolia deposit and a private burn included, with LEZ as a devnet we ran (one
+  2026 on the first live run's programs (`integration5`'s, not yet the final ones), a private claim of a Sepolia deposit and a private burn included, with LEZ as a devnet we ran (one
   validator; [`e2e/runs/crown-live-1/`](../../e2e/runs/crown-live-1/README.md)); before it, the v3 vault of the end-to-end fixture
   got one deposit on Sepolia, claimed by the plaintext path
   ([`lez/live/inbound/README.md`](../../lez/live/inbound/README.md); [`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §11);

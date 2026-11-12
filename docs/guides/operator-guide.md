@@ -146,7 +146,7 @@ two-hour cadence (§2).
 Compare the instance's finalized slot and root with the chain's: the lab's `lab.sh status` puts both
 instances against the chains' clocks, and each session's fetch record holds the root a second provider
 reports for the newest finalized slot, which must equal the instance's `finalized_root`
-([`lez/lab/README.md`](../../lez/lab/README.md), "Re-check"). In the design `monitor` compares records with several providers'
+([`lez/lab/README.md`](../../lez/lab/README.md), "Re-check"). In the design the attestation side's `monitor` (not the watchers' `monitor` of §7) compares records with several providers'
 canonical roots and alarms at half the weak-subjectivity bound (**not built**,
 [`attestation.md`](../design/attestation.md) §3.6, §8). An instance lags by the cadence plus finality;
 it catches up when anyone sends the missing updates, as long as its store knows the signing committee.
@@ -511,7 +511,7 @@ Daemon CPU, memory and bandwidth for the real modules are **not measured** (they
 | Transaction outside its LEZ validity window | charged the **whole declared gas limit** | declare tight limits (the lab: 4.8M per job step) | [`attestation.md`](../design/attestation.md) §4.4 |
 | Duplicate update step | 2.2M wasted (first step) | deferral (§3.4) | [`attestation.md`](../design/attestation.md) §4.4 |
 | Ethereum finalizes nothing for a whole period | the instance stops safely and must be replaced from a fresh checkpoint (a new trust decision) | consumers move under the replacement recipe | [`attestation.md`](../design/attestation.md) §4.1; [`consumer-guide.md`](consumer-guide.md) §9 |
-| Instance past its weak-subjectivity bound | design: replacement; **the bound is not built** | — | [`attestation.md`](../design/attestation.md) §4.6 |
+| Instance past its weak-subjectivity bound | the store refuses every update (53); the instance is replaced from a fresh checkpoint under a new root id (the bound: EVIDENCE rows 69, 70) | — | [`attestation.md`](../design/attestation.md) §4.6 |
 | A job whose final step fails | stays unapplied; clean-up **not built** | start a new job | [`attestation.md`](../design/attestation.md) §4.5 |
 | Prover backlog | larger proofs | split into 180-block segments proven in parallel | [`checkpoint/RESULTS.md`](../../checkpoint/RESULTS.md) §3 |
 | Candidate cancelled | one more wait | submit again; it waits a full `W` | [`vault/README.md`](../../vault/README.md) |
@@ -551,8 +551,8 @@ checkpoints after a sunset until holders have released ([`bridge.md`](../design/
 The Logos modules of all three daemons (`monitor` is built as a standalone program, §7; `ferrata-relayer` and
 `ferrata-updater` are plain binaries, §6, §3.6); the updater's backend for a running sequencer; the relayer's root
 imports and its run against a live sequencer, the sealed gas drop to a private one-time account and its sweep inside
-the private claim (§6.4); `verify_checkpoint`; the rule (B) attestor module; job clean-up; the weak-subjectivity
-bound; the acceptance run at 100 updates and on a sequencer (it ran on 58 recorded updates in process, §3.4);
+the private claim (§6.4); `verify_checkpoint`'s fetching from several providers; the attestation side's `monitor`; the rule (B)
+attestor module; job clean-up; the acceptance run at 100 updates and on a sequencer (it ran on 58 recorded updates in process, §3.4);
 daemon resource measurements; the amortised costs at the recommended
 cadence with real proving (milestones A4, B4); a deployment on a public LEZ network. Sources:
 [`attestation.md`](../design/attestation.md) §15; [`bridge.md`](../design/bridge.md) §1, §18.6, §19;

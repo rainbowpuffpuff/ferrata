@@ -88,9 +88,10 @@ vault's storage holds that same id, so the order is fixed (D2; [`bridge.md`](../
    §20). A reproducible build is a precondition of an immutable production deployment.
 2. **LEZ: initialise an attestation instance** from a checkpoint you verified (`Init`, three
    transactions with the committee's adoption; [`attestation.md`](../design/attestation.md) §4.2), or
-   choose an existing one. Checkpoint verification (`verify_checkpoint`: at least three beacon providers
-   and the chain id against `genesis_validators_root`) is **not built**; until it is, compare the
-   checkpoint root by hand with several providers ([`attestation.md`](../design/attestation.md) §11.4).
+   choose an existing one. `verify_checkpoint` in `ferrata_attest_module` recomputes the instance id, runs the program's
+   `Init` checks on the bootstrap and compares the roots you give it (EVIDENCE row 59); fetching them
+   from at least three beacon providers is **not built**, so gather the checkpoint root by hand from
+   several providers ([`attestation.md`](../design/attestation.md) §11.4).
 3. **Compute `configId`** ([`bridge.md`](../design/bridge.md) §3; [`lez/BRIDGE.md`](../../lez/BRIDGE.md) §4):
    ```
    configId = H("ferrata/config/v1" ‖ bedrockGenesisId ‖ channelId ‖ bridgeHeader ‖ bridgeImageId
@@ -240,8 +241,10 @@ stop and its owner (renounced or not), tokens with their caps and fee schedules,
 - **Roles** are LEZ accounts fixed in the configuration (inside `salt`, so inside `configId`): the
   admin and the freeze authority. Each acts by a top-level call it signs at its own actor of the bridge
   program, which forwards to `config(cid)` or `token(cid, token)`; the target accepts only from the
-  role's actor. The 14-day replacement of the freeze authority, LEZ-side watchers and a permissionless
-  `Sunset` are **not built** on LEZ (§4 item 9 there).
+  role's actor. The freeze authority's 14-day handover, an M-of-N freeze authority (`Cosigned`), LEZ-side
+  watchers' 12-hour pauses and the keyless `Sunset` are built on LEZ
+  ([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §14, EVIDENCE row 74); the admin's own handover
+  is not.
 - **Registry bounds** checked by `Register` before any attestation: 1 to 8 denominations, strictly
   increasing, each an exact multiple of a power-of-ten `lezUnit` (at most `10^decimals`); relay fees at
   most 1% and multiples of `lezUnit`; non-zero `unitWeight`; schedule 0 without protocol fees. Refused
@@ -330,14 +333,18 @@ The attestation side's migration (successor and replacement instances) is in
 
 ## 10. What is not built or not run
 
-- the v5 vault on public Sepolia (the v3 vault of the end-to-end fixture is there, with one deposit) and a
-  round trip there; a deployment on LEZ testnet 0.4 (which did not exist);
-- `verify_checkpoint`; the `ferrata_attestor` module (rule (B)'s sequencer side);
-- on LEZ: multisig roles, the 14-day freeze-authority replacement, watchers, permissionless `Sunset`;
+- a round trip on the final programs on public Sepolia (the first live run used `integration5`'s,
+  through FerrataVault v5: EVIDENCE row 41; `crown-live-2` deploys the final ones); a deployment on LEZ
+  testnet 0.4 (which does not exist);
+- `verify_checkpoint`'s fetching from several providers; the `ferrata_attestor` module (rule (B)'s
+  sequencer side; the program is built);
+- on LEZ: the admin's own handover (an M-of-N freeze authority, its 14-day handover, watchers and the
+  keyless `Sunset` are built: EVIDENCE row 74);
 - deeper inbound finality settings; the malicious-tenant test;
 - the v5 vault's registrations and deposits priced on Sepolia (only the v3 vault's were);
 - source verification on Sourcify;
-- the admin user interface and `ferrata_bridge_module`'s administration methods.
+- `ferrata_bridge_module`'s administration methods (the read-only admin view, EVIDENCE row 57, and the
+  mini-app's `SetCap` and `Freeze` on a local devnet, row 62, are built).
 
 Sources: [`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §9; [`bridge.md`](../design/bridge.md)
 §19–§20; [`attestation.md`](../design/attestation.md) §15; [`lez/BRIDGE.md`](../../lez/BRIDGE.md) §4.

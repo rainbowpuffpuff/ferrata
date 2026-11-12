@@ -191,8 +191,8 @@ Without it the program exits 215 (`HEADER_REQUIRED`); a header that does not has
 gives 120 (`HeaderHashMismatch`). The header costs 20,663 cycles and 691 bytes per request.
 Measured on Sepolia block 12,105,936: a storage slot 278,253 cycles, an ERC-20 `Transfer` 96,713, an
 account 169,611 ([`attestation.md`](../design/attestation.md) §4.7; [`lez/RESULTS.md`](../../lez/RESULTS.md)
-§6). **Not built:** the private path under a Gloas record ([`attestation.md`](../design/attestation.md)
-§15).
+§6). The private path under a Gloas record is built and measured too ([`lez/RESULTS.md`](../../lez/RESULTS.md)
+§6).
 
 ## 5. Statement identifiers (F.6)
 
@@ -288,12 +288,15 @@ illustrates the linkage of an identifier-only nullifier; it runs no `ferrata-cor
 - Measured with two instances of the same checkpoint and committee, one configured with mainnet's
   chain id and one with Sepolia's: they are different instances with records of their own, and a
   request bound to one is refused at the other's record. A pool configured for another chain id is
-  refused the same way (row 36). **Not built:** the test with one contract at the same address on
-  mainnet and on a testnet ([`lez/RESULTS.md`](../../lez/RESULTS.md) §5).
+  refused the same way (row 36). One contract at the same address on mainnet and on Sepolia:
+  Multicall3 (`0xcA11…CA11`, one code hash on both) attested under a Sepolia record, and the same proof
+  asked as a mainnet statement refused with 140 ([`lez/RESULTS.md`](../../lez/RESULTS.md) §6; in the
+  harness on real data, not on a testnet deployment).
 - The program cannot check that a chain id belongs to a `genesis_validators_root`, because nothing a
   light client verifies commits to the execution chain id. You pin the instance id; the off-chain
-  `verify_checkpoint` compares the two (**not built**) ([`lez/RESULTS.md`](../../lez/RESULTS.md) §5,
-  "Decisions" item 1).
+  `verify_checkpoint` of `ferrata_attest_module` recomputes the instance id and compares the roots it is
+  given (EVIDENCE row 59); fetching them from several providers is **not built**
+  ([`lez/RESULTS.md`](../../lez/RESULTS.md) §5, "Decisions" item 1).
 - An update meant for another chain's instance runs to `Finish` and is refused there with 40
   (`SignatureInvalid`): the signing domain includes `genesis_validators_root`
   ([`attestation.md`](../design/attestation.md) §3.4, §4.7).
@@ -314,7 +317,8 @@ runs the program's own `evaluate` on the record and prices the transaction with 
 a scratch copy of the zone's state, and `--send` checks that the settled transaction equals it
 ([`lez/ATTEST-CLI.md`](../../lez/ATTEST-CLI.md): on the harness and recorded Sepolia data, refusals
 124 `ReceiptFailed` and 130 `PredicateFailed` predicted and reproduced). The module's dry run
-against live endpoints (U.2) is **not built** ([`attestation.md`](../design/attestation.md) §8).
+(`dry_run_attest`, EVIDENCE rows 59, 60) has run on recorded data served over JSON-RPC, not against live
+endpoints: the modules read plain `http://` ([`attestation.md`](../design/attestation.md) §8).
 Every code's name and meaning, and the borsh layout of `Attest`, its `Request` and the
 `Attestation` reply, are in the program's IDL
 ([`idl/ferrata_attestation.idl.json`](../../idl/ferrata_attestation.idl.json), SPEL's format,
@@ -358,7 +362,7 @@ with corrected input; nothing was consumed.
 | accumulator leaf | 160–163 | path not 32 siblings, index ≥ 2^32, empty leaf, path does not reach the root | rebuild the path against the attested root |
 | sync-committee signature invalid | 40 `SignatureInvalid`, 41 `SignatureMalformed`, 43 `SigningKeyIdentity`, 20 `ParticipationLow`, 51 `BelowSupermajority` | met by updaters, not consumers: a record exists only after these pass | — |
 | committee handoff not verified | 27, 28, 29, 45 `CommitteeInvalid`, 60 `CommitteeUnknown`; step API 83, 84 | updaters only | — |
-| checkpoint stale or outside the weak-subjectivity period | 10, 11, 12 at `Init`; **the bound itself is not built** ([`attestation.md`](../design/attestation.md) §4.6) | — | rely on `monitor` and replacement (§9) |
+| checkpoint stale or outside the weak-subjectivity period | 10, 11, 12 at `Init`; 53 `OutsideWeakSubjectivityPeriod` for every update once the store is past its period ([`attestation.md`](../design/attestation.md) §4.6; EVIDENCE rows 69, 70) | — | replacement from a fresh checkpoint (§9); the attestation side's `monitor`, which would warn first, is not built |
 | already consumed | consumer 223 `ALREADY_CLAIMED`; bridge 250 `ALREADY_CLAIMED` | the nullifier exists | stop |
 | wrong claimant actor | consumer 229 `NULLIFIER_MISMATCH` | the claim was sent to a claim actor the statement does not name | send it to `claim(pool, N)` |
 
@@ -381,14 +385,14 @@ new deployment that consumers choose to move to.
 | Change | What happens | What a consumer does |
 |---|---|---|
 | A fork **in the schedule fixed at `Init`** | the instance crosses it in place; the store upgrades its layout at the fork (measured on Sepolia through Gloas, periods 1378–1409) | nothing; a new `ferrata-core` release is needed if the fork changes containers or header layouts, and consumers that run the core in their own proofs rebuild with it |
-| A fork **scheduled after `Init`** | a successor instance under the same root id, with three invariants checked by `Init` (immutable fields copied, checkpoint = parent's latest record, inside the bound) | nothing: it accepts the successor under the root id (**not built**: no successors or root id yet) |
-| An instance past its weak-subjectivity bound, or stranded by a period without Ethereum finality | replacement from a fresh checkpoint under a **new root id**: a new trust decision | decide to accept it after checking the checkpoint (`verify_checkpoint`, not built); move with the successor recipe below |
+| A fork **scheduled after `Init`** | a successor instance under the same root id: anyone sends `Succeed` at the parent, which checks three invariants (immutable fields copied, checkpoint = the parent's finalized header, inside the bound; 216, 217) and sends `Spawn` (EVIDENCE row 70) | accept the successor under the root id; consumers bound to the root id are not built (the reference consumer and `ferrata_holdings` pin an instance), so today a consumer moves with the successor recipe below |
+| An instance past its weak-subjectivity bound, or stranded by a period without Ethereum finality | replacement from a fresh checkpoint under a **new root id**: a new trust decision | decide to accept it after checking the checkpoint (`verify_checkpoint`, without fetching: EVIDENCE row 59); move with the successor recipe below |
 | A new program version (new image) | a new deployment at a new header account | the successor recipe below |
 
 Sources: [`attestation.md`](../design/attestation.md) §3.5, §3.6, §4.1, §4.7, §15;
 [`lez/RESULTS.md`](../../lez/RESULTS.md) §6.
 
-**Successor recipe** (design, [`attestation.md`](../design/attestation.md) §7; not built):
+**Successor recipe** (design, [`attestation.md`](../design/attestation.md) §7; no consumer has carried it out yet):
 1. freeze the predecessor consumer's claims;
 2. deploy the successor consumer pinned to the new header account or instance;
 3. make the successor refuse every nullifier in the predecessor's set; how it checks that set is not
@@ -407,8 +411,8 @@ bridge's nullifiers do not include the instance (`N = H(s ‖ fid)`, accounts ke
 A captured sync committee (two thirds of 512 keys) can sign a header that was never on the
 canonical chain, and your consumer would act on facts under it. The design bounds the loss, not the
 attack's cost, because a bribe has no protocol floor: size what your caps let through before a
-freeze to what you can afford to lose, and wire `monitor`'s alarm (**not built**) to your freeze
-authority ([`attestation.md`](../design/attestation.md) §11.2–§11.3). The probabilities and the
+freeze to what you can afford to lose, and wire the attestation side's `monitor` alarm (**not built**) to your
+freeze authority ([`attestation.md`](../design/attestation.md) §11.2–§11.3). The probabilities and the
 bridge's numbers are in [`docs/trust.md`](../trust.md).
 
 ## 11. What is not built
@@ -416,18 +420,28 @@ bridge's numbers are in [`docs/trust.md`](../trust.md).
 From [`attestation.md`](../design/attestation.md) §15 and [`lez/RESULTS.md`](../../lez/RESULTS.md) §5
 ("What is not built"):
 
-- the second U.6 reference consumer (native ETH to a contract); rules 5–7 and a private claim in a
-  reference consumer (the bridge has them);
+- consumers bound to the root id rather than to an instance (the reference consumer, `ferrata_holdings`
+  and the bridge still pin one); migration tooling;
 - the F.8 test (two deposits whose private claims must be indistinguishable);
-- successors, root id, weak-subjectivity bound; migration tooling;
-- the private path under a Gloas record; a chain of several hops through the program; accumulator
-  leaves on real (deployed-vault) data through the program;
-- a real proof of a private attestation on a CPU or a user's machine (one exists on a cloud GPU);
-- the Logos module, CLI, dry run, IDL and `verify_checkpoint` (milestone A3);
-- an attestation on a running sequencer: the attestation program ran on LEZ's own sequencer only at
-  an image before `Attest` ([`lez/RESULTS.md`](../../lez/RESULTS.md) §9); the bridge's `Init`
-  and `ImportRoot`, which call `Attest`, ran on a live sequencer on a stand-in beacon chain
-  ([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §11).
+- a chain of several hops through the program (one hop is attested, also under a Gloas record);
+- joining an open job, clean-up of failed jobs, deployment by `program_loader`; a consumer's own
+  `Attest` on a running sequencer (the attestation program ran on LEZ's own sequencer at an image
+  before `Attest`, [`lez/RESULTS.md`](../../lez/RESULTS.md) §9; the bridge's `Init` and `ImportRoot`,
+  which call `Attest`, ran on the sequencers of crown devnets, on Sepolia's real state in the live run:
+  [EVIDENCE](../EVIDENCE.md) rows 31, 41, 83);
+- a real proof of a private attestation on a laptop (proven on a cloud GPU, on cloud CPUs held to 8 and
+  16 cores, and on M1 and M4 Mac minis under macOS: EVIDENCE rows 32–34, 38, 88);
+- in the Logos module, `advance` and reads and transactions through Logos Core's own modules;
+  `verify_checkpoint`'s fetching from several providers; a published catalog; the attestation side's
+  `monitor`; the updater as a module and its backend for a running sequencer
+  ([README](../../README.md#specified-but-not-built), "Specified but not built").
+
+Built since this guide's first draft, with their evidence: successors, the root id and the
+weak-subjectivity bound (EVIDENCE rows 69, 70); rules 5–7, a public and a private claim and the
+native-ETH pool in the reference consumer, on the vault's real deposits (row 73); accumulator leaves
+on the vault's real Sepolia state (row 71) and a hop under a Gloas record (row 72); the private path
+under a Gloas record ([`lez/RESULTS.md`](../../lez/RESULTS.md) §6); the module, both CLIs with dry
+runs, the IDL and `verify_checkpoint` without fetching (rows 55–61); the updater daemon (rows 79–81).
 
 ## 12. Worked example, step by step: `ferrata_holdings`
 
