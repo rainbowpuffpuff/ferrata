@@ -560,7 +560,7 @@ The vault and checkpoint program are immutable and parse v0.4 blocks, so a confi
 
 Since `importedLeafCount` is the count `ImportRoot` stored and a claim refuses `leafIndex >= count` (§5.4), every leaf is either claimable on LEZ or refundable on Ethereum, never both. No party moves escrow. Refunds need a finalised sunset checkpoint; retirement alone opens none. M0 asks Logos for a notice period before breaking changes.
 
-**Window boundary.** D11: `revokeFrom` is allowed while `block.timestamp <= finalizedAt + revokeWindow`; refunds, and releases whose delay equals `revokeWindow`, open only when `block.timestamp > finalizedAt + revokeWindow`. The prototype opens them at that same second (§19).
+**Window boundary.** D11: `revokeFrom` is allowed while `block.timestamp <= finalizedAt + revokeWindow`; refunds, and releases whose delay equals `revokeWindow`, open only when `block.timestamp > finalizedAt + revokeWindow`. The vault opens them one second after the last revocable second (since v4; §19).
 
 ## 17. What is public, and residual correlations (Privacy #1–#7)
 
