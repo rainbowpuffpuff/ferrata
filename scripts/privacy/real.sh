@@ -15,7 +15,8 @@
 #   real.sh finish RUN   build box: the Groth16 receipts assembled and verified, release-seals.json, the Foundry half
 #                        with the real verifier, the analysis -> docs/privacy/real/generated/, proofs.json
 #
-# The build box steps run through spike/modal-build/mrun (with --put target/privacy-real/RUN for `finish`); the
+# The build box steps run through spike/modal-build/mrun (with --put target/privacy-real/RUN for `finish`, and
+# --env FERRATA_COMMIT=<commit> for `build`: the box's copy is not a git checkout); the
 # laptop steps only call Modal. Raw data stays under target/privacy-real/ (not committed).
 set -euo pipefail
 root="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -44,7 +45,7 @@ build)
   got="$(jq -r .image_id "$T/logs/release-id.json")"; want="$(expect_id release)"; bridge="$(expect_id ferrata_bridge)"
   echo "release program: $got (docs/image-ids.md: $want); bridge program expected: $bridge"
   [ "$got" = "$want" ] || { echo "the release program's id is not docs/image-ids.md's" >&2; exit 1; }
-  python3 -I - "$S" "$want" "$bridge" "$(git -C "$root" rev-parse HEAD)" "$root/gpu-prover/logs/bin-meta/r0vm-cuda.json" <<'EOF'
+  python3 -I - "$S" "$want" "$bridge" "${FERRATA_COMMIT:-$(git -C "$root" rev-parse HEAD 2> /dev/null || echo unknown)}" "$root/gpu-prover/logs/bin-meta/r0vm-cuda.json" <<'EOF'
 import hashlib, json, os, subprocess, sys
 s, release, bridge, commit, meta = sys.argv[1:6]
 sha = lambda p: hashlib.sha256(open(p, "rb").read()).hexdigest()

@@ -88,7 +88,9 @@ contract PrivacySuiteTest is VaultTestBase {
             releaseId = vm.parseJsonBytes32(seals, ".release_image_id");
             RiscZeroGroth16Verifier groth16 =
                 new RiscZeroGroth16Verifier(ControlID.CONTROL_ROOT, ControlID.BN254_CONTROL_ID);
-            split = new ReleaseSplitVerifier(groth16, IRiscZeroVerifier(address(verifier)), releaseId);
+            split = new ReleaseSplitVerifier(
+                IRiscZeroVerifier(address(groth16)), IRiscZeroVerifier(address(verifier)), releaseId
+            );
             FerrataVault.Deployment memory d = _deployment(IRiscZeroVerifier(address(split)), configId);
             d.releaseImageId = releaseId;
             _deployAt(vaultAddress, abi.encode(d));
