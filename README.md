@@ -183,7 +183,7 @@ rebuild the programs to their image ids.
 | [Bridge program](lez/BRIDGE-RESULTS.md), `lez/` | The RFP-022 bridge on LEZ: `ImportRoot`, private claims and burns, fees, caps, freezes | prototype; real proofs, a LEZ devnet | [8–10, 28, 30, 31, 33, 38, 74, 75, 78, 88, 91](docs/EVIDENCE.md) |
 | [Inbound crossing, live](lez/live/inbound/README.md), `lez/live/inbound/` | Ethereum to LEZ on a running LEZ sequencer and Logos Blockchain node | run: a Sepolia deposit claimed on LEZ | [11, 27, 41, 91](docs/EVIDENCE.md) |
 | [GPU proving](gpu-prover/RESULTS.md), `gpu-prover/` | A Modal app proving checkpoints, the LEZ update and the private attestation, claim and burn on a GPU | measured | [5, 10, 16, 17, 24](docs/EVIDENCE.md) |
-| [Logos modules](modules/RESULTS.md), `modules/` | `ferrata_attest_module` (with `advance`, the updater's job planning) and `ferrata_bridge_module` (with the private claim, the root import, registry reads, the release rule and the release guest), on the `ferrata` tool's and the updater's own code (`cli/wallet`, `lez/advance`), and a catalog layout | built; run in a headless Logos Core | [7, 59–61](docs/EVIDENCE.md) |
+| [Logos modules](modules/RESULTS.md), `modules/` | `ferrata_attest_module` (with `advance`, the updater's job planning) and `ferrata_bridge_module` (with the private claim, the root import, registry reads, the release rule and the release guest), on the `ferrata` tool's and the updater's own code (`cli/wallet`, `lez/advance`); the three daemons as modules (`ferrata_attestor_module`, `ferrata_monitor_module`, `ferrata_updater_module`); a catalog layout | built; run in a headless Logos Core | [7, 59–61, 93–98](docs/EVIDENCE.md) |
 | [Vault](vault/README.md), `vault/` | `FerrataVault` v5, the immutable Ethereum vault (Solidity), and its linked library | prototype; deployed on Sepolia | [12–14, 25, 30, 35, 41, 54, 91](docs/EVIDENCE.md) |
 | [Bridge core and release proof](bridge/README.md), `bridge/` | Commitments, trees, nullifiers; the release and claim guests | prototype; real proofs | [19, 30, 33, 77, 78, 88](docs/EVIDENCE.md) |
 | [Checkpoint program](checkpoint/README.md), `checkpoint/` | The LEZ to Ethereum checkpoint proof: re-hashes LEZ blocks, collects burns, checks rule (A) or (B) | prototype; proven on real LEZ blocks | [15, 16, 24, 29, 78, 91](docs/EVIDENCE.md) |
@@ -278,21 +278,22 @@ cites the file it rests on, and each says what is not built.
 The design notes specify these; there is no code for them here:
 - in the bridge program on LEZ (`lez/BRIDGE-RESULTS.md` §9): a transfer that credits a private recipient
   privately, the admin's own handover, the switch to a v0.4 token program when one is released;
-- rule (B): `ferrata_attestor` packaged as a Logos module (the program is built, `checkpoint/attestor/`);
-  the four-sequencer zone with a bridge program, burns and a rotation its committee proposes (the zone ran
-  without a bridge program; the rotation was proven on the lab's chain with stand-in keys,
-  `checkpoint/attestor/RESULTS.md` §2, §7);
+- rule (B): the four-sequencer zone with a bridge program, burns and a rotation its committee proposes (the zone
+  ran without a bridge program; the rotation was proven on the lab's chain with stand-in keys,
+  `checkpoint/attestor/RESULTS.md` §2, §7; `ferrata_attestor` is built as a program and as a Logos module, which
+  ran beside each sequencer of a second run of that zone, `modules/RESULTS.md`);
 - of the relayer, its root imports and its Logos module (the daemon `ferrata-relayer`, its wrapping and the
-  gas drop are built); the watchers' `monitor` as a Logos module and its client of the LEZ and Logos
-  Blockchain nodes' RPCs (the program is built, `monitor/`); the attestation side's `monitor` (records against
-  several providers; the weak-subjectivity alarm);
+  gas drop are built); the watchers' `monitor`'s client of the LEZ and Logos Blockchain nodes' RPCs (the
+  program and its Logos module are built, `monitor/`, `modules/ferrata_monitor_module`; node views come through
+  an adapter); the attestation side's `monitor` (records against several providers; the weak-subjectivity alarm);
 - in the Logos modules (`modules/README.md`, "Left out"): reads and transactions through Logos Core's
   own modules (`eth_rpc_module`, `verified_proxy_module`, `keystore_module`, `tx_sender_module`,
   `lez_core`; the modules read plain `http://` JSON-RPC and build messages without signing or sending
   them; the private claim's private execution and proof are the LEZ wallet's: the module builds and checks
   `ClaimPrivately`; the release's Groth16 wrap is the relayer's), and a published catalog (laid out,
-  dry-run and installed from on 127.0.0.1 in `modules/catalog/`); the updater as a module (`ferrata-updater` is built as a
-  plain binary, `lez/updater/`; its backend for a running sequencer is not built);
+  dry-run and installed from on 127.0.0.1 in `modules/catalog/`); the updater's backend for a running sequencer
+  (`ferrata-updater` is built as a binary and as a Logos module, both on the in-process LEZ chain, `lez/updater/`,
+  `modules/ferrata_updater_module`);
 - the mini-app's private round trip on a LEZ sequencer: on its devnet the private round trip on the defaults
   settles (private claim and burn proven by the harness with the wallet's own keys, also for real; EVIDENCE
   rows 86, 87), but not through a sequencer: the `ferrata` tool's sequencer path (LEZ's wallet library for

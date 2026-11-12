@@ -1,5 +1,11 @@
 ==> downloading http://127.0.0.1:18546/ferrata_attest_module-v0.1.0/ferrata_attest_module-0.1.0.lgx
 ==> verifying pkg-0000.lgx
-==> downloading http://127.0.0.1:18546/ferrata_bridge_module-v0.1.0/ferrata_bridge_module-0.1.0.lgx
+==> downloading http://127.0.0.1:18546/ferrata_attestor_module-v0.1.0/ferrata_attestor_module-0.1.0.lgx
 ==> verifying pkg-0001.lgx
-==> wrote spike/tmp/modules/release/index.json — 2 package(s)
+==> downloading http://127.0.0.1:18546/ferrata_bridge_module-v0.1.0/ferrata_bridge_module-0.1.0.lgx
+==> verifying pkg-0002.lgx
+==> downloading http://127.0.0.1:18546/ferrata_monitor_module-v0.1.0/ferrata_monitor_module-0.1.0.lgx
+==> verifying pkg-0003.lgx
+==> downloading http://127.0.0.1:18546/ferrata_updater_module-v0.1.0/ferrata_updater_module-0.1.0.lgx
+==> verifying pkg-0004.lgx
+==> wrote spike/ferrata-wt-modules-more/modules/out/release/index.json — 5 package(s)

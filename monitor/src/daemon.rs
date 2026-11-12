@@ -444,7 +444,20 @@ impl Ctx {
 }
 
 /// Runs the monitor until `max_polls` or a signal (SIGINT, SIGTERM); the state file is current at every exit.
+/// Runs until SIGTERM or SIGINT (or `max_polls`): the binary.
 pub async fn run(cfg: Config, chain: Chain, alerts: Alerts) -> Result<()> {
+    run_with(cfg, chain, alerts, None).await
+}
+
+/// [`run`]; with `stop`, the loop ends when `stop` turns true (or its sender is dropped) instead of on
+/// a signal, and no signal handler is installed: the Logos module, whose process's signals are the
+/// host's.
+pub async fn run_with(
+    cfg: Config,
+    chain: Chain,
+    alerts: Alerts,
+    mut stop: Option<tokio::sync::watch::Receiver<bool>>,
+) -> Result<()> {
     let rule = chain.rule().await?;
     let turn_seconds = chain.turn_seconds().await?;
     let revoke_window = chain.revoke_window().await?;
@@ -499,7 +512,10 @@ pub async fn run(cfg: Config, chain: Chain, alerts: Alerts) -> Result<()> {
     let mut ctx = Ctx { cfg, chain, alerts, store, policy, revoke_window, is_watcher, is_freeze, deployment };
     ctx.save()?;
 
-    let mut term = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;
+    let mut term = match stop {
+        None => Some(tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?),
+        Some(_) => None,
+    };
     let mut polls = 0u64;
     let mut failing_since: Option<u64> = None;
     loop {
@@ -527,10 +543,17 @@ pub async fn run(cfg: Config, chain: Chain, alerts: Alerts) -> Result<()> {
         if ctx.cfg.max_polls.is_some_and(|m| polls >= m) {
             break;
         }
-        tokio::select! {
-            () = tokio::time::sleep(ctx.cfg.poll) => {}
-            _ = tokio::signal::ctrl_c() => break,
-            _ = term.recv() => break,
+        match (stop.as_mut(), term.as_mut()) {
+            (Some(rx), _) => tokio::select! {
+                () = tokio::time::sleep(ctx.cfg.poll) => {}
+                _ = rx.wait_for(|stopped| *stopped) => break,
+            },
+            (None, Some(term)) => tokio::select! {
+                () = tokio::time::sleep(ctx.cfg.poll) => {}
+                _ = tokio::signal::ctrl_c() => break,
+                _ = term.recv() => break,
+            },
+            (None, None) => unreachable!("a signal handler is installed when there is no stop channel"),
         }
     }
     let (_, now) = ctx.chain.head().await.unwrap_or((0, 0));

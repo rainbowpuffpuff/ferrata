@@ -16,7 +16,7 @@ LGX_PACKAGE=github:logos-co/logos-package/4bdd9041ebfbd06c2b22134afdcd27fce8a43f
 TOOL_REPO=https://github.com/logos-co/logos-modules-release-tool
 TOOL_REF=v1.3                                                                  # rebuild-index.yml's
 PORT=${PORT:-18546}
-MODULES="ferrata_attest_module ferrata_bridge_module"
+MODULES=${MODULES:-"ferrata_attest_module ferrata_bridge_module ferrata_attestor_module ferrata_monitor_module ferrata_updater_module"}
 if [ "$(ulimit -s)" = unlimited ]; then ulimit -s 1048576; fi
 mkdir -p "$1"
 out=$(cd "$1" && pwd)

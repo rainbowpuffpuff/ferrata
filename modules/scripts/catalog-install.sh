@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install both modules into a headless Logos Core *from the catalog*, as a client would: the dry-run
+# Install the modules into a headless Logos Core *from the catalog*, as a client would: the dry-run
 # catalog (release-local.sh's packages and index.json, and modules/catalog/logos-repo.json with its
 # indexUrl pointed at the local server) served over HTTPS on 127.0.0.1 (logosctl's catalogs require
 # https: "unsupported URL scheme (https required in v1)") with a throwaway self-signed certificate that
@@ -10,6 +10,16 @@
 # RELEASE_DIR: release-local.sh's OUT_DIR (its index.json names packages on 127.0.0.1:18546).
 # LOGOSCTL: a portable logosctl (check.sh's out/logos-portable/bin/logosctl): the packages are portable.
 set -uo pipefail
+# Logos Core keeps each module's socket in TMPDIR (logos_<module>_<id>). A Unix socket path holds at most
+# 107 bytes; with a longer one every module's host process dies at load (SIGSEGV after "failed to listen",
+# met on the build box). LOGOS_TMPDIR (default TMPDIR) must leave room for the longest module name.
+LOGOS_TMPDIR=${LOGOS_TMPDIR:-${TMPDIR:-/tmp}}
+if [ $(( ${#LOGOS_TMPDIR} + 45 )) -gt 107 ]; then
+  echo "$(basename "$0"): LOGOS_TMPDIR=$LOGOS_TMPDIR is too long for Logos Core's sockets (62 bytes at most); set a shorter one" >&2
+  exit 2
+fi
+mkdir -p "$LOGOS_TMPDIR"
+export TMPDIR="$LOGOS_TMPDIR"
 here=$(cd "$(dirname "$0")" && pwd)
 repo=$(cd "$here/../.." && pwd)
 rel=$(cd "$1" && pwd)
@@ -42,8 +52,8 @@ for _ in $(seq 1 100); do (echo > "/dev/tcp/127.0.0.1/$PORT") 2>/dev/null && bre
 fails=0
 run() { echo "\$ logosctl $*" >> "$out/log.txt"; if ctl "$@" >> "$out/log.txt" 2>&1; then echo "ok: $*"; else echo "FAILED: $*"; fails=$((fails + 1)); fi; }
 : > "$out/log.txt"
-echo "\$ logosctl daemon start --detach" >> "$out/log.txt"
-HOME="$out/home" "$ctl_bin" --config-dir "$out/session" daemon start --detach >> "$out/log.txt" 2>&1 || fails=$((fails + 1))
+echo "\$ RISC0_DEV_MODE=1 logosctl daemon start --detach   (the updater module's in-process chain runs as its tests do)" >> "$out/log.txt"
+HOME="$out/home" RISC0_DEV_MODE=1 "$ctl_bin" --config-dir "$out/session" daemon start --detach >> "$out/log.txt" 2>&1 || fails=$((fails + 1))
 # The daemon's default catalog (Logos's official one, on GitHub) cannot be verified with the throwaway
 # CA bundle: disable it, so that the refresh reads this catalog only.
 default=$(ctl catalog ls 2>/dev/null | jq -r '.[] | select(.isDefault == true) | .url // .repositoryUrl // empty' 2>/dev/null | head -n 1)
@@ -53,12 +63,23 @@ run catalog source http
 run catalog refresh
 run catalog ls
 run search ferrata
-for m in ferrata_attest_module ferrata_bridge_module; do
+for m in ${MODULES:-ferrata_attest_module ferrata_bridge_module ferrata_attestor_module ferrata_monitor_module ferrata_updater_module}; do
   run install "$m" -y
   run module load "$m"
   run call "$m" version --json
 done
 run package ls
+# The installed modules at work: with CATALOG_E2E=1, attestor-e2e.sh through this daemon (the zone's
+# records, the attestor's loop against a node served over HTTP), and any further script named in
+# CATALOG_E2E_MORE (run with CALL=logosctl LOGOSCTL SESSION set, an output directory as argument).
+if [ "${CATALOG_E2E:-0}" = 1 ]; then
+  for s in attestor-e2e.sh ${CATALOG_E2E_MORE:-}; do
+    echo "\$ CALL=logosctl $s" >> "$out/log.txt"
+    if env -u SSL_CERT_FILE -u NIX_SSL_CERT_FILE CALL=logosctl LOGOSCTL="$ctl_bin" SESSION="$out/session" "$here/$s" "$out/${s%.sh}" \
+        > "$out/${s%.sh}.log" 2>&1; then echo "ok: $s"; else echo "FAILED: $s"; fails=$((fails + 1)); fi
+    grep -E '^- (PASS|FAIL)' "$out/${s%.sh}/summary.md" >> "$out/log.txt" 2>/dev/null || true
+  done
+fi
 run daemon stop
 echo "failures: $fails" | tee -a "$out/log.txt"
 # The small logs into the repository, without machine paths.

@@ -1,0 +1,56 @@
+# ferrata_updater_module on the updater's test chain: LEZ v0.4.0-rc1's state machine in process
+# (`ledger = "harness"`; the module's process runs with RISC0_DEV_MODE=1, as the updater's tests do),
+# following mainnet and Sepolia from the lab's recorded light-client data, two "sources" each (the same
+# record read twice), as lez/updater/dev/dev.toml does for mainnet. `payer.key` is lez/updater's
+# throwaway dev key, funded only in the in-process chain. Paths are relative to this file.
+[daemon]
+name = "module"
+state_dir = "../../out/updater-state"
+poll_secs = 0
+ledger = "harness"
+
+[keys]
+payer_key_file = "../../../lez/updater/dev/payer.key"
+
+[fees]
+gas_limit = 4800000
+max_fee_per_tx = 1000000000
+budget = 1000000000000
+
+[policy]
+defer_window = 1
+max_lag_slots = 64
+min_agreeing = 2
+retry_base_ms = 500
+retry_max_ms = 30000
+max_attempts = 5
+demote_rounds = 50
+max_periods_per_request = 16
+
+[[chain]]
+name = "mainnet"
+preset = "mainnet"
+checkpoint = "4baa732e5dbdbe97932abcf62c7caccc1cba8e9c14118d153aea629e25a4abff"
+adoption_parts = 2
+
+  [[chain.source]]
+  name = "record-a"
+  dir = "../../../lez/lab/results/record/net/mainnet"
+
+  [[chain.source]]
+  name = "record-b"
+  dir = "../../../lez/lab/results/record/net/mainnet"
+
+[[chain]]
+name = "sepolia"
+preset = "sepolia"
+checkpoint = "5f71d7f650f9252b48749b5f062c0c234e01afd69f364ab600e2b6051494b20d"
+adoption_parts = 2
+
+  [[chain.source]]
+  name = "record-a"
+  dir = "../../../lez/lab/results/record/net/sepolia"
+
+  [[chain.source]]
+  name = "record-b"
+  dir = "../../../lez/lab/results/record/net/sepolia"

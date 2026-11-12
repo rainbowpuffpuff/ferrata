@@ -1,0 +1,32 @@
+{
+  "publisherRef": "ferrata_attestor_module-v0.1.0",
+  "releasedAt": "2026-11-12T21:21:21Z",
+  "sha256": "035b93182edf099deb8435d29a40b00270f4e6eeda0d75bf913e80ccd32ce443",
+  "size": 5501471,
+  "rootHash": "44f5080709514f97bba88b0f1cce65347ca00fb49d9e65a6a26da895f9cbb7f3",
+  "builtVariants": [
+    "linux-amd64"
+  ],
+  "missingVariants": [],
+  "manifest": {
+    "author": "",
+    "category": "bridge",
+    "dependencies": [],
+    "description": "Ferrata (prototype): ferrata_attestor as a module, the rule (B) signer a LEZ sequencer runs beside its Logos Blockchain node (reads the node's final tier, checks the channel's inscription chain, signs the final-tier message v2 with a key its channel key certified, once or as a loop) and the collector of t of n attestations into a checkpoint_b input",
+    "display_name": "Ferrata attestor (rule B)",
+    "hashes": {
+      "assets": "9aa759984e82bd85eefd4d47bb2540c5a08b40a35292b692c1279a321a688471",
+      "root": "44f5080709514f97bba88b0f1cce65347ca00fb49d9e65a6a26da895f9cbb7f3",
+      "variants": "f4f133bae9a04bb0e73f5f7e1d92275a3a4be5cfd5aef4dcf8c09a8a0d0006c4",
+      "variants/linux-amd64": "ada6b36a14d69aec39bdb68d20742a0a6d394bfc4d0c7f95a4c0f4afb7b591f7"
+    },
+    "icon": "",
+    "main": {
+      "linux-amd64": "ferrata_attestor_module_plugin.so"
+    },
+    "manifestVersion": "0.7.0",
+    "name": "ferrata_attestor_module",
+    "type": "core",
+    "version": "0.1.0"
+  }
+}

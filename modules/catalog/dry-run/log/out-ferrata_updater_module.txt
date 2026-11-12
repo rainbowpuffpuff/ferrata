@@ -1,0 +1,1 @@
+/nix/store/975c41x4vpch6h52cwp42qyhlf6vsqi2-logos-ferrata_updater_module-module-lib-lgx-0.1.0

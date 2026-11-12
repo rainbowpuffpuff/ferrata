@@ -1,0 +1,1 @@
+/nix/store/wx7b11d8kwqzl8qvgf4m3gz963vp4df8-logos-ferrata_monitor_module-module-lib-lgx-0.1.0

@@ -1,0 +1,32 @@
+{
+  "name": "ferrata_updater_module",
+  "display_name": "Ferrata updater (light client)",
+  "version": "0.1.0",
+  "type": "core",
+  "interface": "cdylib",
+  "category": "ethereum",
+  "description": "Ferrata (prototype): ferrata-updater as a module: keeps Ferrata light-client instances on LEZ following Ethereum from several beacon API sources, verifies every candidate with the program's own steps before paying for it, and drives the attestation program's public job, on the in-process LEZ v0.4.0-rc1 chain of its tests (the sequencer backend is not built)",
+  "main": "ferrata_updater_module_plugin",
+  "dependencies": [],
+
+  "codegen": {
+    "rust": { "crate": "rust-lib", "trait": "FerrataUpdaterModule" }
+  },
+
+  "nix": {
+    "packages": {
+      "build": [],
+      "runtime": []
+    },
+    "rust": {
+      "toolchain": "1.98.0"
+    },
+    "external_libraries": [],
+    "cmake": {
+      "find_packages": [],
+      "extra_sources": [],
+      "extra_include_dirs": [],
+      "extra_link_libraries": []
+    }
+  }
+}

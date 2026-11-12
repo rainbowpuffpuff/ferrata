@@ -25,11 +25,16 @@
 #
 # Run from monitor/ (on the build box: mrun --put vault/lib -- 'bash tests/anvil-e2e.sh').
 # Results: results/anvil-e2e/ (summary.md, scenarios.json, alerts.jsonl, pager.jsonl, state files).
+#
+# Through the Logos module (modules/ferrata_monitor_module, loaded in a running logosctl daemon):
+#   MONITOR_CMD=modules/scripts/monitor-module.sh MONITOR_E2E_OUT=DIR LOGOSCTL=BIN SESSION=DIR bash tests/anvil-e2e.sh
+# runs every scenario with the module in place of the binary; S5's SIGKILL then kills the module's host
+# process (monitor-module.sh kill9) and the module is loaded again.
 set -euo pipefail
 
 here="$(cd "$(dirname "$0")/.." && pwd)"
 vault_dir="$here/../vault"
-out="$here/results/anvil-e2e"
+out="${MONITOR_E2E_OUT:-$here/results/anvil-e2e}"
 run="$out/run"
 rm -rf "$out"
 mkdir -p "$run"
@@ -39,8 +44,12 @@ summary="$out/summary.md"
 scen="$out/scenarios.jsonl"
 fails=0
 
-cargo build --release --locked --quiet
-mon="$here/target/release/monitor"
+if [ -n "${MONITOR_CMD:-}" ]; then
+  mon=$(realpath "$MONITOR_CMD")
+else
+  cargo build --release --locked --quiet
+  mon="$here/target/release/monitor"
+fi
 
 anvil --port "$port" --chain-id 31337 > "$run/anvil.log" 2>&1 &
 anvil_pid=$!
@@ -62,7 +71,7 @@ genesis=$(label genesis)
 
 deploy_vault() { # MODE_A(true|false): sets vault, deploy_block
   ( cd "$vault_dir" && FIXTURE_MODE_A=$1 FIXTURE_GENESIS=$genesis FIXTURE_ADMIN=$admin FIXTURE_FREEZER=$freezer \
-    FIXTURE_WATCHER=$watcher FIXTURE_FEES=$fees forge script script/MonitorFixture.s.sol:MonitorFixture --rpc-url "$rpc" \
+    FIXTURE_WATCHER=$watcher FIXTURE_FEES=$fees forge script script/MonitorFixture.s.sol:MonitorFixture --rpc-url "$rpc" --slow \
     --broadcast --unlocked --sender "$deployer" >> "$run/forge.log" 2>&1 ) || { tail -30 "$run/forge.log"; exit 1; }
   vault=$(jq -r '.transactions[] | select(.contractName=="FerrataVault") | .contractAddress' \
     "$vault_dir/broadcast/MonitorFixture.s.sol/31337/run-latest.json" | tail -1)
@@ -122,6 +131,10 @@ state="$out/watcher-state.json"
   echo
   echo "$(anvil --version | head -1), chain id 31337; vault $vault (rule B, wait 1 h), watcher $watcher, freeze authority $freezer."
   echo
+  if [ -n "${MONITOR_CMD:-}" ]; then
+    echo "The monitor ran as the Logos module \`ferrata_monitor_module\` in a headless Logos Core ($("$LOGOSCTL" --version 2>&1 | head -n 1)), driven through \`modules/scripts/monitor-module.sh\`: \`run\` for the bounded runs, \`start\`/\`status\`/\`stop\` for the daemon of S5 and S10."
+    echo
+  fi
 } > "$summary"
 
 # S1: an honest candidate passes untouched.
@@ -175,10 +188,13 @@ for _ in $(seq 1 100); do
   jq -e --arg s "$n6" 'select(.kind=="candidate-waiting" and .newState==$s)' "$alerts" > /dev/null 2>&1 && break
   sleep 0.2
 done
-rss_kb=$(awk '/^VmRSS:/ {print $2}' "/proc/$mon_pid/status")
+rss_pid=$mon_pid
+if [ -n "${MONITOR_CMD:-}" ]; then rss_pid=$("$mon" host-pid); fi
+rss_kb=$(awk '/^VmRSS:/ {print $2}' "/proc/$rss_pid/status")
 polls_before_kill=$(jq .polls "$state")
 check "S5 a second monitor on the same state file is refused while the first runs" '! "$mon" "${margs[@]}" --max-polls 1 2> "$run/second.err" && grep -q "held by another monitor" "$run/second.err"'
 kill -9 "$mon_pid"; wait "$mon_pid" 2>/dev/null || true; mon_pid=
+if [ -n "${MONITOR_CMD:-}" ]; then "$mon" kill9; fi
 check "S5 monitor saw it and was killed while waiting (node lag allowance)" '[ -n "$(jq -c --arg s "$n6" "select(.kind==\"candidate-waiting\" and .newState==\$s)" "$alerts")" ] && [ "$(submitted_at "$n6")" != 0 ]'
 check "S5 its state file survived the kill and names the candidate" 'jq -e --arg s "$n6" ".candidates[\$s].status == \"pending\"" "$state" > /dev/null'
 warp 600 # past the 300 s allowance, 3000 s before the deadline
@@ -336,7 +352,11 @@ check "alerts: all $crit critical alerts reached the pager command" '[ "$crit" -
   echo
   echo "Alerts: $(jq -s 'group_by(.kind) | map("\(.[0].kind) \(length)") | join(", ")' "$alerts")."
   echo
-  echo "Resources (measured, build box): the daemon of S5 held $rss_kb kB resident (VmRSS) when it was killed, after $polls_before_kill polls of its state file's life; the S6 run (2 polls, a full rescan from the deployment block, one cancellation) took $(awk '{print $1 " kB max RSS, " $2 " s wall, " $3 " s user + " $4 " s system CPU"}' "$out/time-s6.txt")."
+  if [ -n "${MONITOR_CMD:-}" ]; then
+    echo "Through the Logos module: the module's host process (logos_host, with ferrata_monitor_module loaded) held $rss_kb kB resident (VmRSS) when S5 killed it, after $polls_before_kill polls of the state file's life; the S6 run (2 polls, a full rescan from the deployment block, one cancellation) took $(awk '{print $2 " s wall"}' "$out/time-s6.txt") as the client saw it (logosctl call)."
+  else
+    echo "Resources (measured, build box): the daemon of S5 held $rss_kb kB resident (VmRSS) when it was killed, after $polls_before_kill polls of its state file's life; the S6 run (2 polls, a full rescan from the deployment block, one cancellation) took $(awk '{print $1 " kB max RSS, " $2 " s wall, " $3 " s user + " $4 " s system CPU"}' "$out/time-s6.txt")."
+  fi
   echo
   echo "Under the B wait of 1 h, $(jq -s '[.[] | select(.kind=="cancelled" and .secondsBeforeDeadline != null)] | map(.secondsBeforeDeadline) | min' "$alerts") s was the smallest margin left before a deadline by any cancellation (the restart case)."
   echo
@@ -344,6 +364,6 @@ check "alerts: all $crit critical alerts reached the pager command" '[ "$crit" -
 } >> "$summary"
 cp "$state" "$out/watcher-state.json" 2>/dev/null || true
 # The alert log names the node file by its absolute path; the committed record names it from the checkout.
-sed -i 's#"file:[^"]*/monitor/results/#"file:<checkout>/monitor/results/#g' "$alerts"
+sed -i -e 's#"file:[^"]*/monitor/results/#"file:<checkout>/monitor/results/#g' -e 's#"file:[^"]*/modules/results/#"file:<checkout>/modules/results/#g' "$alerts"
 cat "$summary"
 [ "$fails" -eq 0 ]

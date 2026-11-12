@@ -1,0 +1,45 @@
+{
+  "attested": 19,
+  "config": {
+    "attestation_key": "1900decab401c1560c4d5fe999bde8c600253c8dfcea3e4803236094fa24be49",
+    "channel_key": "90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729",
+    "deployment": {
+      "channel_id": "0101010101010101010101010101010101010101010101010101010101010101",
+      "evm_chain_id": "0000000000000000000000000000000000000000000000000000000000007a69",
+      "lez_config_id": "21effc46a860f3cbe66cacdd28fc11d4e0691ce7239e9ca330657d7ecc19523e",
+      "vault": "0xcc12f910bdbe58196fe071d29859119be398fc38"
+    },
+    "max_rounds": null,
+    "node": "http://127.0.0.1:18080",
+    "poll_ms": 15000,
+    "publish_dir": "spike/ferrata-wt-modules-more/modules/out/zone-live/work/published-3",
+    "slot_from": 9025526,
+    "state_file": "spike/ferrata-wt-modules-more/modules/out/zone-live/work/state-3.json",
+    "work_dir": "spike/ferrata-wt-modules-more/modules/out/zone-live/work/loop-3"
+  },
+  "errors": 0,
+  "last_attestation": {
+    "answers": "spike/ferrata-wt-modules-more/modules/out/zone-live/work/loop-3/round-22",
+    "blocks_checked": 29,
+    "file": "spike/ferrata-wt-modules-more/modules/out/zone-live/work/published-3/att-30.json",
+    "lib_slot": 9025960,
+    "n": 4,
+    "tip_hash": "2e0dca726103bb02170f62281dba6a8fbab78e2c71bf9448a7dafe74dd002374",
+    "tip_id": 30
+  },
+  "last_round": {
+    "at": 1794518992,
+    "lib_slot": 9025960,
+    "outcome": "attested",
+    "round": 22,
+    "seconds": 0,
+    "tip_id": 30
+  },
+  "refused": 1,
+  "rounds": 22,
+  "running": false,
+  "started_at": 1794518674,
+  "stopped_at": 1794518993,
+  "unchanged": 2,
+  "verdict": "ok"
+}

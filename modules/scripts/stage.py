@@ -9,7 +9,8 @@ Each staged manifest is written with what it inherits from its own workspace res
 workspace dependencies), and without its dev-dependencies and lints, which a module build does not use.
 What was copied is recorded in rust-lib/staged/STAGED.json, which each module's version() reports.
 
-    python3 -I modules/scripts/stage.py            both modules
+    python3 -I modules/scripts/stage.py [MODULE...]   the attestation and the bridge module (default both;
+                                                   stage.sh stages the other three)
     FERRATA_COMMIT=<sha> FERRATA_LEZ=<dir> ...     the commit to record; LEZ's clone (default
                                                    spike/upstream/lez-v0.4.0-rc1 beside the repository)
 """
@@ -191,8 +192,11 @@ def main():
         sys.exit(f"stage.py: no LEZ clone at {LEZ} (FERRATA_LEZ)")
     commit = os.environ.get("FERRATA_COMMIT") or git_head(REPO)
     lez_commit = git_head(LEZ)
-    for module, crates in MODULES.items():
-        stage(module, crates, commit, lez_commit)
+    wanted = sys.argv[1:] or list(MODULES)
+    for module in wanted:
+        if module not in MODULES:
+            sys.exit(f"stage.py: no module {module} (stage.py stages {', '.join(MODULES)})")
+        stage(module, MODULES[module], commit, lez_commit)
 
 
 if __name__ == "__main__":

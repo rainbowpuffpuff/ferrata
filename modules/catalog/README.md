@@ -9,7 +9,7 @@ The proposal (§B7) releases Ferrata's Logos modules from a catalog of its own w
 |---|---|---|
 | `logos-repo.json` | how clients (`lgpd`, the `package_downloader` module, the package-manager UI) identify the catalog; `indexUrl` names the rolling `index` release | the base's template, filled in |
 | `.github/workflows/_release-module.yml` | calls `logos-co/logos-modules-release-action/.github/workflows/release.yml@v1` with the catalog's variants and signing (`signing_mode: none`) | unchanged but for a header |
-| `.github/workflows/release-ferrata_attest_module.yml`, `release-ferrata_bridge_module.yml` | one per module: `module_path: submodules/<module>` | the base's `release-module.yml.template`, as `scripts/add-module.sh` writes it |
+| `.github/workflows/release-<module>.yml` (five: `ferrata_attest_module`, `ferrata_bridge_module`, `ferrata_attestor_module`, `ferrata_monitor_module`, `ferrata_updater_module`) | one per module: `module_path: submodules/<module>` | the base's `release-module.yml.template`, as `scripts/add-module.sh` writes it |
 | `.github/workflows/release-all.yml` | releases every submodule | unchanged |
 
 In the catalog's own repository these files sit at its root (GitHub runs workflows only from the
@@ -23,7 +23,7 @@ published (no push, no public network). The action itself has not run.
 
 ## Dry run: the action's steps, run locally
 
-`modules/scripts/release-local.sh OUT_DIR` does for the `linux-amd64` variant what `release.yml` and
+`modules/scripts/release-local.sh OUT_DIR` does for the `linux-amd64` variant of each of the five modules what `release.yml` and
 `rebuild-index.yml` do, publishing nothing: export each module (`export.sh`), `nix build .#lgx-portable`,
 `lgx verify`, `lgx manifest --json`, the release sidecar with the action's fields, and the catalog's
 `index.json` built by `logos-modules-release-tool`'s `index.py` (tag `v1.3`, the one
@@ -35,5 +35,7 @@ action skips `lgx merge`. Its small outputs (sidecars, `index.json`, logs; no pa
 
 `modules/scripts/catalog-install.sh RELEASE_DIR LOGOSCTL WORK_DIR` serves the dry run's catalog over
 HTTPS on 127.0.0.1 (a throwaway certificate; `logosctl` requires https) and has a headless Logos Core
-add it, search it, install both modules by name, load them and call them. Both installed and answered;
-its log is in `install-test/` (`modules/RESULTS.md`, "Installed from the catalog").
+add it, search it, install the five modules by name, load them and call them; with `CATALOG_E2E=1` (and
+`CATALOG_E2E_MORE="updater-e2e.sh monitor-e2e.sh"`) the three daemon modules then do their jobs through
+the installed modules (`attestor-e2e.sh`, `updater-e2e.sh`, `monitor-e2e.sh`). Its log, with those runs'
+check lines, is in `install-test/` (`modules/RESULTS.md`).

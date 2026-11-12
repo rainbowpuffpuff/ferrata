@@ -17,6 +17,7 @@
 pub mod alert;
 pub mod chain;
 pub mod check;
+pub mod cli;
 pub mod daemon;
 pub mod node;
 pub mod store;

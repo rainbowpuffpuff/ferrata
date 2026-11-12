@@ -1,0 +1,22 @@
+[package]
+name = "ferrata_monitor_module"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+
+# A workspace of its own, so that cargo adopts no parent workspace. The staged copy of monitor/ (its
+# library: the binary's arguments, daemon and checks) is a member; it inherits nothing.
+[workspace]
+members = ["calls", "monitor"]
+
+[lib]
+crate-type = ["staticlib"]
+
+# Cargo.lock is committed: the builder feeds it to buildRustPackage. It was seeded from
+# monitor/Cargo.lock (the versions the monitor is tested with) on the build box.
+[dependencies]
+serde_json = "1"
+# Staged by the builder from the logos-rust-sdk revision its code generator comes from.
+logos-rust-sdk = { path = "../logos-rust-sdk-src" }
+ferrata-monitor-calls = { path = "calls" }

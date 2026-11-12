@@ -154,7 +154,9 @@ side is a devnet we ran (LEZ testnet 0.4 does not exist).
 - **The checkpoints over real blocks** are of one-validator devnets with one channel key (n = t = 1): row 24's
   chain has no bridge program, and its attestation was signed after the fact from a copy of the node's state; rows
   31, 41 and 91 carry the bridge program and both burns, and their attestations were signed by the run's driver once the
-  tip was final on the node. No `ferrata_attestor` module runs beside a sequencer.
+  tip was final on the node. `ferrata_attestor_module` has run beside each sequencer of a second run of row 65's zone
+  (four Logos Cores, row 94 as proposed): that zone has no bridge program, and its 3-of-4 input was checked by the rule
+  natively, not proven.
 - **Not measured**: user-side proving on a laptop (rows 32–34 and 38 are cloud servers held to 8 and to 16 CPUs with
   16 GiB, row 88 two Mac minis under macOS; at 8 CPUs the attestation and the claim take about 15 minutes, 19–21
   padded, 14 on an M1), and on a GPU under macOS (r0vm 3.0.5 has no Metal prover).
@@ -167,8 +169,9 @@ side is a devnet we ran (LEZ testnet 0.4 does not exist).
   of the final programs (row 89: every claim, burn and release proven, the releases checked by RISC Zero's Groth16
   verifier in the vault); the burn root's checkpoint is still the mock there (the harness's blocks are not chained,
   row 89). Timing and amount residuals, network metadata and LEZ's own anonymity set are outside both.
-- **Not built** (README, "Specified but not built"): among them `ferrata_attestor`, `monitor` and the
-  updater as Logos modules, the updater's backend for a running sequencer, the mini-app's private round trip
+- **Not built** (README, "Specified but not built"): among them the updater's backend for a running sequencer (the
+  three daemons are built as Logos modules, rows 93–97 as proposed, the updater's on its in-process chain only), the
+  monitor's client of the LEZ and Logos Blockchain nodes' RPCs, the mini-app's private round trip
   through a LEZ sequencer, reads and sends through Logos Core's own modules, a published module catalog. Nothing is audited: the static
   analysis, symbolic checks, fuzzing and the core's review (rows 1, 35, 36 and 40) are tooling, not an audit; the
   Halmos properties hold from one concrete fixture state within stated bounds; of the four not proven in 900 s,
