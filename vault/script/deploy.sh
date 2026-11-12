@@ -52,12 +52,28 @@ mkdir -p "$logs"
 # 24 s apart, only when the deployer's nonce (latest and pending) shows that nothing was sent; any later send uses that
 # same nonce, so at most one transaction per step can land.
 transient='-32001|block not found|header not found|failed to get account|failed to get storage|missing trie node'
+
+# The deployer's nonce at its freshest: the highest of three reads each of the latest and the pending nonce,
+# FERRATA_NONCE_GAP seconds apart (4). A node behind the chain reports an older nonce, never a newer one, so the
+# highest read is the closest to the truth: a run is retried only when even that equals the nonce before it and its
+# log shows nothing sent. (The endpoint is load-balanced; single reads disagreed and stopped crown-live-3.)
+nonce_max() {
+  local m=-1 k v
+  for k in 1 2 3; do
+    for v in "$(cast nonce "$ETH_FROM" --rpc-url "$rpc" 2>/dev/null || true)" \
+             "$(cast nonce "$ETH_FROM" --block pending --rpc-url "$rpc" 2>/dev/null || true)"; do
+      if [[ "$v" =~ ^[0-9]+$ ]] && [ "$v" -gt "$m" ]; then m="$v"; fi
+    done
+    if [ "$k" -lt 3 ]; then sleep "${FERRATA_NONCE_GAP:-4}"; fi
+  done
+  echo "$m"
+}
 last=""
 for run in $(seq 1 12); do
   log="$logs/deploy-$chain-$FERRATA_MODE-$run.log"
   tries=0
   while :; do
-    n0="$(cast nonce "$ETH_FROM" --rpc-url "$rpc")"
+    n0="$(nonce_max)"
     # forge would also read ETH_FROM as --froms, which --unlocked refuses: the sender is given as --sender.
     if env -u ETH_FROM forge script script/DeployVault.s.sol:DeployVault --rpc-url "$rpc" --sender "$ETH_FROM" ${sign[@]+"${sign[@]}"} \
         --broadcast --skip-simulation --slow --gas-estimate-multiplier "$FERRATA_GAS_MARGIN_PCT" -vv > "$log" 2>&1; then
@@ -65,12 +81,12 @@ for run in $(seq 1 12); do
     fi
     tail -n 25 "$log" >&2
     if [ "$tries" -lt 5 ] && grep -q -E -e "$transient" "$log" \
-        && [ "$(cast nonce "$ETH_FROM" --rpc-url "$rpc")" = "$n0" ] \
-        && [ "$(cast nonce "$ETH_FROM" --block pending --rpc-url "$rpc")" = "$n0" ]; then
+        && ! grep -q -E 'FERRATA_SENT|Hash: 0x|"hash": *"0x' "$log" \
+        && [ "$n0" -ge 0 ] && [ "$(nonce_max)" = "$n0" ]; then
       tries=$((tries + 1))
       mv "$log" "$log.transient-$tries"
       echo "deploy.sh: run $run: the endpoint failed a read and nothing was sent (nonce still $n0); again in 24 s ($tries of 5)" >&2
-      sleep 24
+      sleep "${FERRATA_RETRY_SLEEP:-24}"
       continue
     fi
     echo "deploy.sh: run $run failed; nothing more is sent (log $log)" >&2
