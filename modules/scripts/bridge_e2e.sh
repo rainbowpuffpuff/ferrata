@@ -160,4 +160,8 @@ jq -n --argjson r0 "$(rep release0)" --argjson r1 "$(rep release1)" --argjson rl
     checkpointed_burn_count: ($rl.roots | map(.count) | max), released_nullifiers: ($i.released_nullifiers // [])}' | req status
 call status status
 
+# No machine paths in the results (the release guest's path, the devnet's log): the directory beside
+# the repository becomes <spike>.
+spike=$(cd "$repo/.." && pwd)
+find "$out" -type f \( -name '*.json' -o -name '*.raw' -o -name '*.log' -o -name '*.txt' \) -exec sed -i "s|$spike/|<spike>/|g" {} +
 python3 -I "$here/bridge_e2e_check.py" "$out"
