@@ -256,8 +256,10 @@ Everything public about the root import is §B6's "the vault's root at a block" 
   the fee-schedule split, cap-rejection retries and the root-age residual of §B6 are not exercised.
 - **Naive inbound nullifier** is a substitution model, not an execution.
 - **Privacy #4–#7.** Failure paths (Priv.5) are covered only by the vault's `Privacy.t.sol` (failures
-  carry a selector only), not here; the gas drop and relayer switching (Priv.6) are not built; client
-  defaults (Priv.7) and component documentation (Priv.4) are not software yet. Network metadata is out
+  carry a selector only), not here; the gas drop and relayer switching (Priv.6) are outside this suite (the gas-drop receipt is built,
+  [EVIDENCE](../EVIDENCE.md) rows 47, 48; its sealed credit is not; the `ferrata` tool names a claim's relayer per
+  claim, rows 84, 85); client defaults (Priv.7: the `ferrata` tool and the mini-app, rows 84–86) and component
+  documentation (Priv.4: [`docs/trust.md`](../trust.md) §8, the user guide §10) are covered there, not by this suite. Network metadata is out
   of scope.
 - **LEZ's anonymity set.** The 20 private accounts exist from genesis in an otherwise empty commitment
   set; the private accounts' own recovery (LEZ's encrypted notes) is LEZ's and is not tested.

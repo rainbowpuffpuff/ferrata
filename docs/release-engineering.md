@@ -100,7 +100,7 @@ Output of `just m0` on 11 November 2026 (on the build box, `just` 1.36.0; the sa
 | Check | GO when | Measured | Verdict |
 |---|---|---|---|
 | 1. Private claim and private attestation padded as LEZ's wallet pads, and a release receipt, at the declared minimum, Linux and macOS | ≤ 20 min and ≤ 16 GB each | at 16 threads, 16 GiB: attestation 633.3 s (10.6 min), claim 600.7 s (10.0 min), burn 525.9 s, release 26.4-27.0 s; peaks 9.25 GiB and 1.49 GiB; 4 of 4 settled with the receipt verified. At 8 threads the attestation takes 20.6 min (NO-GO there) | **GO (Linux); macOS OPEN** |
-| 2. The gas drop | passes | no test of it in the repository | **NO-GO (not built)** |
+| 2. The gas drop | passes | (12 November, as `just m0` prints it now) 2 named tests, of the gas-drop receipt and the relayer's check of it; the sealed credit's sweep inside the private claim, which this check asks for, is not built (README, "Specified but not built") | **OPEN (built; run its tests)**; on 11 November: NO-GO (not built) |
 | 3. Token program on v0.4 | pinned, or ported by me in B2 | released for v0.2.4; the v0.4 port is an unmerged branch | **OPEN (the B2 port)** |
 | 4. Real proofs on the newest LEZ tag (v0.4.0-rc2), settled by its sequencer | pass | rc1: claim and burn proven and settled by a devnet sequencer, the update applied by a live one, the attestation settled in the harness; rc2: the one real proof stopped at its 1,200 s cap | **NO-GO (open on rc2)** |
 

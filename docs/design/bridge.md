@@ -30,7 +30,8 @@ The bridge moves registered ERC-20 tokens and ETH to LEZ and back in fixed denom
 | Rule (A) analysis | Written proof and simulation (`docs/design/finality-rule/`) |
 | Bridge program on LEZ | Prototype (`lez/BRIDGE-RESULTS.md`): pairing, the registry attested from the vault, `ImportRoot`, plaintext and private claims, burns, fees by leaf index, caps, freezes, roles and `Sunset`; since branch `bridge-controls` the keyless `Sunset`, the 14-day handover, a multisig freeze authority, watchers and transfers between holders (§14 there); run in the in-process harness (private paths in dev mode); real proofs of a private claim and a private burn of an earlier image (§7 there); an earlier, frozen image ran on a live LEZ sequencer, on a stand-in chain and for deposit 0 of the Sepolia vault (§11 there) |
 | Command-line tool `ferrata` (`cli/`) | Prototype: keys, deposit, scan, recover, claim, burn, release, status; one end-to-end test against a local anvil vault (mock verifier) and the harness (dev mode) |
-| `ferrata_attestor` as a Logos module (its core is built, §8.3); gas drop, relayer daemon, wrapper, `monitor` watchers | Not built |
+| Relayer daemon `ferrata-relayer` (`cli/`: rule (B) checkpoints, releases, wrapping, fees; the gas-drop receipt) and the watchers' `monitor` (`monitor/`) | Prototypes ([EVIDENCE](../EVIDENCE.md) rows 43–48): a local chain and an anvil fork of Sepolia, real proofs for the relayer |
+| `ferrata_attestor` as a Logos module (the program is built, `checkpoint/attestor/`, §8.3); the gas drop's sealed credit and its sweep; the relayer's root imports; `monitor` as a Logos module | Not built |
 
 ## 2. Overview
 
@@ -139,7 +140,7 @@ The fee payer is a correlation point; v0.4 constrains the RFP's relayer mitigati
 
 - **Public transactions** name any signing fee payer, so a relayer pays for root imports and checkpoints.
 - **Privacy-preserving transactions** pay the native fee from a regular private account of the prover, inside the proof. Nobody else can pay for it. The payer appears as a fresh alias with a fixed reserve per operation type.
-- **The gas drop.** A v0.4 proof can sweep a received native credit into the payer within the same transaction. The claimant shows a relayer a small receipt proving that some unclaimed deposit has nullifier `N`; its journal binds `(N, oneTimeAddress, relayer)` (D13), so it cannot be replayed to another relayer or address. The relayer sends one sealed credit per `N` to the one-time address; the claim sweeps it and pays the relayer the fixed relay fee in the wrapped token. Burns use the same drop. The relayer learns a time, a one-time address and the transaction, never which deposit. **Not built**; tested in M0. If it fails, a first claim needs native LEZ from a faucet or a public purchase, and the documentation will state the correlation that leaves.
+- **The gas drop.** A v0.4 proof can sweep a received native credit into the payer within the same transaction. The claimant shows a relayer a small receipt proving that some unclaimed deposit has nullifier `N`; its journal binds `(N, oneTimeAddress, relayer)` (D13), so it cannot be replayed to another relayer or address. The relayer sends one sealed credit per `N` to the one-time address; the claim sweeps it and pays the relayer the fixed relay fee in the wrapped token. Burns use the same drop. The relayer learns a time, a one-time address and the transaction, never which deposit. The receipt and the relayer's one credit per `N` are built ([EVIDENCE](../EVIDENCE.md) rows 47, 48); the sealed credit and its sweep inside the claim are **not built**; tested in M0. If it fails, a first claim needs native LEZ from a faucet or a public purchase, and the documentation will state the correlation that leaves.
 - **Throughput.** At most four privacy-preserving transactions fit in a block.
 
 ## 7. Outbound, part 1: what an executed burn does not prove
@@ -646,7 +647,7 @@ Components: BLAKE2b 55.9 cycles/B (no accelerator), SHA-256 2.59 cycles/B, Ed255
 
 ### 18.6 Simulation, and what is not measured
 
-The rule (A) simulation is a Python model of the v0.4 code (`docs/design/finality-rule/MODEL.md`), 12,000 runs for experiments (a) to (h) plus (i) to (k), deterministic per seed (§11). Not built or not measured: `ferrata_attestor` as a Logos module and the vault's rule (B) path; the LEZ bridge program, claims and imports on LEZ; the gas drop; composed real proofs; latency on a network; phones and the declared minimum (8 cores, 16 GB).
+The rule (A) simulation is a Python model of the v0.4 code (`docs/design/finality-rule/MODEL.md`), 12,000 runs for experiments (a) to (h) plus (i) to (k), deterministic per seed (§11). Not built or not measured: `ferrata_attestor` as a Logos module (the vault's rule (B) path and the bridge program's claims and imports on LEZ are built since: [EVIDENCE](../EVIDENCE.md) rows 24, 41, 63–68); the gas drop's sealed credit and its sweep; composed real proofs; inbound latency on a network (the outbound ran once on Sepolia, on testnet parameters, row 41); phones and a laptop at the declared minimum (cloud CPUs held to it and two Mac minis were measured, rows 32–34, 38, 88).
 
 ### 18.7 The return leg end to end: measured (real verifier, v3 vault; stand-in zone)
 
@@ -680,10 +681,10 @@ The vault prototype (v5) implements D3 to D5, D9, the vault items of D11 and D13
 | D12 | `mac` v2 covering `memo` | the core: MAC without `memo`; the bridge program's wire (`lez/bridge-wire`) has `mac` v2 |
 | D13 | rule (B): `final-tier/v2` message, attestation-key certificates, `ferrata_attestor`, program and vault path, immutable `mode`, 1 h wait | program and vault paths built and measured; `ferrata_attestor` module not built |
 | D13 | `submitCandidate` refuses a `newState` already pending | built (v3 and v4) |
-| D13 | watchers; cancelling candidates whose key set lags | vault side built (since v4: up to three watchers); LEZ side built in the bridge program (12-hour pauses, branch `bridge-controls`); `monitor` not built |
+| D13 | watchers; cancelling candidates whose key set lags | vault side built (since v4: up to three watchers); LEZ side built in the bridge program (12-hour pauses, branch `bridge-controls`); `monitor` built (`monitor/`, [EVIDENCE](../EVIDENCE.md) rows 43–45), not as a Logos module |
 | D13 | 14-day freeze-authority replacement; renounced stop owner; no refunds after a stop; keyless retirement after 30 days; cap floor | built (since vault v4); on LEZ, the 14-day handover, a multisig freeze authority and the keyless `Sunset` built in the bridge program (branch `bridge-controls`, `lez/BRIDGE-RESULTS.md` §14); the stop owner's renunciation is a step of the deployment script, run in its fork rehearsals only (`vault/README.md`, "Deployment") |
-| D13 | `ImportRoot` over slots 0 and 1; claim bound `leafIndex < count`; refunds on the release bucket; gas-drop receipt binding | refunds on the release bucket built (since vault v4); `ImportRoot` over slots 0 and 1 and the claim bound built in the bridge program; the gas-drop receipt not built |
-| D13 | `NOut` v2; burn account keyed on the whole note; newest root past its delay | the release guest: SPEC-v2 `NOut` with `burnId` (`NOut` v2 is in the bridge program's wire, wallet side only); the burn account keyed on the whole note built in the bridge program; the newest-root rule is a wallet rule, not built |
+| D13 | `ImportRoot` over slots 0 and 1; claim bound `leafIndex < count`; refunds on the release bucket; gas-drop receipt binding | refunds on the release bucket built (since vault v4); `ImportRoot` over slots 0 and 1 and the claim bound built in the bridge program; the gas-drop receipt built (`bridge/`, [EVIDENCE](../EVIDENCE.md) rows 47, 48) |
+| D13 | `NOut` v2; burn account keyed on the whole note; newest root past its delay | `NOut` v2 in the release guest and the core since the security fixes (review M-3) and in the bridge program's wire; the burn account keyed on the whole note built in the bridge program; the newest-root rule is a wallet rule, in the `ferrata` tool (`cli/src/flow.rs`), not in `ferrata_bridge_module` |
 | D13 | fees escrowed at deposit; checkpoint fee; default caps | fees escrowed at deposit and the checkpoint fee built (vault v5, `Fees.t.sol`); default caps: the rate-limit mechanism and the cap floor only |
 
 Built already, for reference: D12's tagged canonical `burnFrontierHash` and the 64-witness cycle-count gate.
@@ -703,7 +704,7 @@ Documented, not fixed in this version (beyond the unbuilt items of §19):
 - Busy support blocks make rule (A) checkpoints expensive (54.1M cycles per counted block with four private transactions).
 - Rule (A) needs an unpredictable `prevrandao`.
 - Issuer risk (blacklisting, transfer-fee switches) is inherited; rebasing tokens are unsupported.
-- The prototypes' image ids were not built reproducibly; an immutable deployment needs that.
+- Image ids: since `integration7` every guest builds byte-identical at any path ([EVIDENCE](../EVIDENCE.md) row 82, [`docs/image-ids.md`](../image-ids.md)); the Dockerfile that pins the toolchains has not been built.
 
 ## 21. What a fully verified return leg would need upstream
 
