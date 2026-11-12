@@ -8,8 +8,14 @@ set -euo pipefail
 export PATH="$HOME/.risc0/bin:$PATH"
 lez_home="${RISC0_HOME_LEZ:-$HOME/risc0-home-lez}"
 command -v rzup > /dev/null || curl -sSfL https://risczero.com/install | bash
-need() { # home component version
-  ls -d "$1"/toolchains/v"$3"-"$2"-* "$1"/extensions/v"$3"-"$2"-* > /dev/null 2>&1 || RISC0_HOME="$1" rzup install "$2" "$3"
+need() { # home component version: rzup installs it unless that version is there. rzup keeps toolchains in
+  # toolchains/, cargo-risczero in extensions/, and r0vm inside cargo-risczero's extension (no directory of its own).
+  # Each place is tested on its own: an unmatched pattern stays literal and does not exist.
+  local d
+  for d in "$1"/toolchains/v"$3"-"$2"-* "$1"/extensions/v"$3"-"$2"-* "$1"/extensions/v"$3"-cargo-risczero-*/"$2"; do
+    [ -e "$d" ] && return 0
+  done
+  RISC0_HOME="$1" rzup install "$2" "$3"
 }
 for home in "$HOME/.risc0" "$lez_home"; do
   mkdir -p "$home"
@@ -19,4 +25,4 @@ for home in "$HOME/.risc0" "$lez_home"; do
 done
 need "$HOME/.risc0" rust 1.88.0
 need "$lez_home" rust 1.91.1
-ls "$HOME/.risc0"/toolchains "$HOME/.risc0"/extensions "$lez_home"/toolchains "$lez_home"/extensions
+for home in "$HOME/.risc0" "$lez_home"; do echo "$home:"; (cd "$home" && ls -d toolchains/* extensions/*/*); done

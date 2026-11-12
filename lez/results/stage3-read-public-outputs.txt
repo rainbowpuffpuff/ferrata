@@ -2,18 +2,18 @@ Stage 3: a private consumer reads header(id, slot), image disclosed
 
 Decoded public fields (harness::private::describe_public_outputs):
 
-public_context.actors (2): native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@98nuLdy4rvh69odJA3nszo4zfisBxqtF27qVFuuKgvaB
+public_context.actors (2): ferrata@4wrKg7NQYmeCPqcKMpiwvprF9qXnb7GcBQyXppgf6fFA, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq
 public_context.authorized_accounts: {}
 execution.public_root: None
 execution.boundary (6 steps):
-  - PrivateToPublic from consumer@61yQrZPL8iZ8NbnqXkUEs1JR6DiuSkX3bWxdZSjYSWEu to ferrata@98nuLdy4rvh69odJA3nszo4zfisBxqtF27qVFuuKgvaB: Read (1 bytes)
-  - PublicToPrivate from ferrata@98nuLdy4rvh69odJA3nszo4zfisBxqtF27qVFuuKgvaB to consumer@61yQrZPL8iZ8NbnqXkUEs1JR6DiuSkX3bWxdZSjYSWEu: StateReply { state: 333 bytes } (337 bytes)
+  - PrivateToPublic from consumer@61yQrZPL8iZ8NbnqXkUEs1JR6DiuSkX3bWxdZSjYSWEu to ferrata@4wrKg7NQYmeCPqcKMpiwvprF9qXnb7GcBQyXppgf6fFA: Read (1 bytes)
+  - PublicToPrivate from ferrata@4wrKg7NQYmeCPqcKMpiwvprF9qXnb7GcBQyXppgf6fFA to consumer@61yQrZPL8iZ8NbnqXkUEs1JR6DiuSkX3bWxdZSjYSWEu: StateReply { state: 365 bytes } (369 bytes)
   - EndPrivateSubtree
   - EndPublicSubtree
   - PrivateToPublic from native@61yQrZPL8iZ8NbnqXkUEs1JR6DiuSkX3bWxdZSjYSWEu to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
   - EndPublicSubtree
 execution.program_image_claims (1):
-  - Disclosed { program: consumer, image_id: f883e6a4dbd8e49439465f918884abe1379b02276ff88676f0a4bf958ee49068 }
+  - Disclosed { program: consumer, image_id: 8464603bcf9ea9c69c0eac100605deb9c8ef666a56f964cceba66947958e4b96 }
 execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1647 bytes)
 execution.async_messages: 0
 execution.recovery_bindings: 0
@@ -21,7 +21,7 @@ execution.validity: ValidityWindows { blocks: ValidityWindow { from: None, to: N
 execution.fee: Some("refund_to Some(78Skt7EQTvVwfWVYnA1XMjghv3aUR1V5wgQAfVLKJZG5), fallback true")
 nonces: 0, admission evidence: 0
 
-The 8717 serialized bytes of the transaction were searched for the consumer's private inputs:
+The 8781 serialized bytes of the transaction were searched for the consumer's private inputs:
 - the query (75 bytes): absent
 - the account id the consumer acts for (32 bytes): absent
 - the authorization secret key (32 bytes): absent
@@ -31,4 +31,4 @@ The 8717 serialized bytes of the transaction were searched for the consumer's pr
 - the viewing key seed d (32 bytes): absent
 - the viewing key seed z (32 bytes): absent
 
-Charged: execution gas 421,641 (PRIVATE_VERIFY_GAS 409,764 + public part 11,877 cycles), storage gas 224,063.
+Charged: execution gas 422,032 (PRIVATE_VERIFY_GAS 409,764 + public part 12,268 cycles), storage gas 224,063.

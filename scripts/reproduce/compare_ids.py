@@ -59,17 +59,18 @@ def main() -> int:
                 methods[METHODS[m.group(1)]] = "0x" + b"".join(w.to_bytes(4, "little") for w in words).hex()
     table = vs.readme_ids(a.readme) if os.path.isfile(a.readme) else vs.image_ids_md(a.table)
     onchain, mode = {}, None
-    try:
-        if not a.vault:
-            raise vs.RpcError("no --vault given")
-        rpc = vs.Rpc(a.rpc)
-        onchain["checkpoint_b"] = vs.words(rpc.call(a.vault, "checkpointImageId()"))[0]
-        onchain["release"] = vs.words(rpc.call(a.vault, "releaseImageId()"))[0]
-        mode = int(vs.words(rpc.call(a.vault, "mode()"))[0], 16)
-    except vs.RpcError as e:
-        print(f"vault not readable over {a.rpc}: {e}")
-        mode = None
-    print(f"vault {a.vault} (mode {'B' if mode == 1 else mode}): checkpointImageId is checkpoint_b's id, releaseImageId release's")
+    if not a.vault:
+        print("vault: not checked (no --vault given)")
+    else:
+        try:
+            rpc = vs.Rpc(a.rpc)
+            onchain["checkpoint_b"] = vs.words(rpc.call(a.vault, "checkpointImageId()"))[0]
+            onchain["release"] = vs.words(rpc.call(a.vault, "releaseImageId()"))[0]
+            mode = int(vs.words(rpc.call(a.vault, "mode()"))[0], 16)
+        except vs.RpcError as e:
+            print(f"vault not readable over {a.rpc}: {e}")
+            mode = None
+        print(f"vault {a.vault} (mode {'B' if mode == 1 else mode}): checkpointImageId is checkpoint_b's id, releaseImageId release's")
     bad = 0
     for k in ORDER:
         r, t, v, mth = rebuilt.get(k), table.get(k), onchain.get(k), methods.get(k)

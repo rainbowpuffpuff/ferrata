@@ -5,12 +5,12 @@ Deposit 0 (block 12,111,477) under the record of block 12,112,773, one EIP-2935 
 
 | handler execution | input bytes (ReceiveInput) | journal bytes | user cycles | segments | cycles with padding (sum of 2^po2) | exit |
 |---|---:|---:|---:|---:|---:|---:|
-| ClaimDepositPrivately (sends Read) | 8,588 | 17,270 | 112,598 | 1 | 262,144 | 0 |
-| the record's reply (verifies the deposit, sends Spend) | 8,947 | 9,205 | 1,391,795 | 2 | 1,572,864 | 0 |
+| ClaimDepositPrivately (sends Read) | 8,588 | 17,270 | 112,597 | 1 | 262,144 | 0 |
+| the record's reply (verifies the deposit, sends Spend) | 8,979 | 9,237 | 1,392,412 | 2 | 1,572,864 | 0 |
 
-Proven in dev mode and settled: 8601 transaction bytes, 4357 proof bytes, execution gas 456439.
+Proven in dev mode and settled: 8665 transaction bytes, 4389 proof bytes, execution gas 456847.
 
-The 8601 serialized bytes of the transaction were searched:
+The 8665 serialized bytes of the transaction were searched:
 
 - the secret s (32 bytes): absent
 - the statement identifier (32 bytes): absent

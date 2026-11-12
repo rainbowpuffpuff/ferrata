@@ -36,9 +36,15 @@ synthetic state, measured before the vault was deployed.
 proofs and of the run on a sequencer (§9), was measured on the images built from this branch, which add the attestation, the store's
 upgrade in place and attestation under Gloas records: program `9f3eb00f…`, consumer `f883e6a4…`
 (`results/images.md`), in runs at commit ad40044 on a Modal container (`results/environment.md`),
-not on the laptop the earlier runs used. The executor is deterministic, so the cycle counts do not
-depend on the machine; the guest ELF holds the absolute paths of its sources, so the image ids are
-those of a build under this checkout's path. The images before were program `2f3566d4…` and
+not on the laptop the earlier runs used. Two exceptions since: §6's requests and claims on the live vault, measured
+on 11 November with the images that subsection names and quoted there as re-recorded, and the files the harness
+tests write (`results/stage3-*`, `stage4-attest-private-public-outputs.txt`, `stage5-vault-v5.md`,
+`stage5-consumer-*.md`, `holdings.md` and the bridge's), re-recorded on 12 November 2026 from this tree's programs
+(`../docs/image-ids.md`), which therefore differ from the §4 and §5 figures quoted here: the attestation program's
+`Attest` costs 900 to 1,190 cycles more per call and `Read` 391 more, and a record carries the instance's root id
+(365 bytes of state, not 333). The executor is deterministic, so the cycle counts do not
+depend on the machine; the guest ELF then held the absolute paths of its sources, so those image ids are
+those of a build under that checkout's path (this tree's guests build to the same ids at any path). The images before were program `2f3566d4…` and
 consumer `711584ff…` (commit d498591, on which Stage 4 was first measured), before them
 `cec0bc68…` and `aec03bcd…` (commit 8d0c647), and before the merge with `main` `e7cec90e…` and
 `620e6390…`. Against `2f3566d4…`, the execution gas of every public transaction of §2 to §5 of a
@@ -1137,18 +1143,19 @@ cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test vault --test va
 The Sepolia instance follows the chain from the period-1378 bootstrap through the replay fixture to
 that finality update and **writes the record itself** (nothing is placed with
 `force_insert_account`); every request goes to that record with the block's RLP header. The harness
-recomputes both leaves from the vault's events; their root is slot 0.
+recomputes both leaves from the vault's events; their root is slot 0. The figures below are this tree's programs'
+(`results/stage5-vault-v5.md`, re-recorded on 12 November 2026); the real proof is of the program of 11 November.
 
 | request, under the record of block 12,112,773 (Gloas layout) | execution gas (cycles) | storage gas (bytes) |
 |---|---:|---:|
-| the vault's slots 0 and 1 and deposit leaf 0 | 326,000 | 7,659 |
-| slots 0 and 1 and deposit leaf 1 | 326,001 | 7,659 |
-| slots 0 and 1 and both leaves | 391,291 | 8,731 |
-| an address without an account (exclusion) | 175,127 | 4,890 |
-| deposit 0's `Deposit` log, one EIP-2935 hop back (block 12,111,477, 479 receipts) | 324,408 | 8,787 |
-| deposit 1's `Deposit` log, one hop back (block 12,111,574, 117 receipts) | 324,934 | 8,832 |
+| the vault's slots 0 and 1 and deposit leaf 0 | 327,016 | 7,659 |
+| slots 0 and 1 and deposit leaf 1 | 327,017 | 7,659 |
+| slots 0 and 1 and both leaves | 392,358 | 8,731 |
+| an address without an account (exclusion) | 176,198 | 4,890 |
+| deposit 0's `Deposit` log, one EIP-2935 hop back (block 12,111,477, 479 receipts) | 325,595 | 8,787 |
+| deposit 1's `Deposit` log, one hop back (block 12,111,574, 117 receipts) | 325,962 | 8,832 |
 
-A leaf costs 65,290 cycles on the real state (391,291 − 326,001), as on the synthetic one. The leaf
+A leaf costs 65,341 cycles on the real state (392,358 − 327,017), as on the synthetic one. The leaf
 facts carry the core's identifiers, the log facts the identifiers derived from the JSON-RPC fields
 alone. Refused (10): a leaf not at its index, a leaf proven at another index, a leaf against slot 1,
 a sibling changed (163 `AccumulatorRootMismatch`); an empty position past the count (130, slot 1's
@@ -1157,7 +1164,7 @@ a hop that carries deposit 1's header, or without the hop (110 `ProofNodeMismatc
 predicate on the log's token topic (130). **With a real proof** (`results/prove-vault.log`,
 `harness/src/bin/prove_vault.rs`): the `Attest` handler execution of the request with slots 0 and 1
 and both leaves, replayed from the applied transaction with its input recorded, proven by r0vm 3.0.5
-on the build box's CPU (16 cores): 391,291 user cycles, 524,288 with padding, one segment, 67.2 s
+on the build box's CPU (16 cores), of the program of 11 November (`8fe18f74…`): 391,291 user cycles, 524,288 with padding, one segment, 67.2 s
 (69.1 s in a first run), a succinct receipt of 240,913 bytes verified against the program's image
 id, its journal equal to the executor's.
 
@@ -1175,16 +1182,16 @@ checks both openings against the commitments on chain.
 
 - **Public claim** of deposit 0 (public kind, to LEZ's public test account 0): `ClaimDeposit` at
   `claim(pool, N)` → `Attest` → the reply opens `C` and checks that `N` names this actor →
-  `CreditHolder` at `holder(pool, dest)`: 499,296 execution gas (114,235 + 332,160 + 36,995 + 15,906
+  `CreditHolder` at `holder(pool, dest)`: 500,206 execution gas (114,234 + 333,071 + 36,995 + 15,906
   cycles). Refused before it, nothing spent: a wrong secret, another destination (218
   `CommitmentMismatch`); the right opening at another claim actor (229); the private-kind deposit
   claimed publicly (219 `WrongKind`) or opened as public-kind (218); a pool of another token (130, a
   false predicate); a mainnet pool (140). After it: the replay (223), and the same deposit claimed
   privately, which cannot be proven (its public part exits 223).
 - **Private claim** of deposit 0 at a private account (`ClaimDepositPrivately`): two private
-  transitions of 112,598 and 1,391,795 user cycles (the second verifies the hop, the receipt and the
+  transitions of 112,597 and 1,392,412 user cycles (the second verifies the hop, the receipt and the
   opening inside the consumer's execution), proven in dev mode with LEZ's privacy-preserving circuit
-  and settled: 8,601 transaction bytes, 456,439 execution gas. The transaction holds none of the
+  and settled: 8,665 transaction bytes, 456,847 execution gas. The transaction holds none of the
   secret, the statement identifier, the commitment, the depositor, the deposit block's header or the
   receipt proof; it holds `N` (spent publicly) and, deposit 0 being public-kind, its destination and
   amount (`holder(pool, dest)` is credited publicly). After it, the public claim (223) and a second
@@ -1197,8 +1204,8 @@ checks both openings against the commitments on chain.
   deposit 1 is to LEZ's testnet private account 0, whose keys are a published test constant of LEZ
   v0.4.0-rc1 (`testnet_initial_state`); the harness derives them as LEE's key protocol does
   (`vault::lez_testnet_private_account_0`; the test checks the account id against the destination
-  the commitment opens to). Its private claim: 112,040 and 1,408,918 user cycles, proven in dev mode
-  and settled, 8,473 transaction bytes, 433,747 execution gas; the credit stays in the claimant's
+  the commitment opens to). Its private claim: 112,039 and 1,409,528 user cycles, proven in dev mode
+  and settled, 8,537 transaction bytes, 434,157 execution gas; the credit stays in the claimant's
   private state; what is public is `Read` to the record, `Spend` of `N` with no credit, and the fee;
   the transaction holds none of the secret, the statement identifier, the commitment, the depositor,
   the destination, the deposit block's header or the receipt proof. The same claim again cannot be
@@ -1212,11 +1219,12 @@ checks both openings against the commitments on chain.
   by its destination (`--deposit 1`, `results/prove-vault-claim-private-kind.log`): `execute_and_prove`
   401.6 s, a 227,306-byte receipt in a 231,486-byte transaction, settled with the receipt verified
   (433,747 execution gas); 8 min 24 s for the binary.
-- **Images.** This work changes the consumer (`be7c7710…`, 469,808 ELF bytes; it was `f883e6a4…`), and,
+- **Images.** This work changed the consumer (`be7c7710…`, 469,808 ELF bytes; it was `f883e6a4…`), and,
   through the wire crate, the program (`8fe18f74…`; it was `9f3eb00f…`) and the bridge program
-  (`944b7100…`): `prove_vault_claim --image-ids` lists all seven. The consumer's Stage 4 private
-  attestation (§5) now takes 380,870 user cycles (34,718 + 346,152,
-  `results/stage4-attest-private-public-outputs.txt`); §5's GPU proof was of the earlier image.
+  (`944b7100…`): `prove_vault_claim --image-ids` lists all seven; the real proofs above are of those images. The
+  dev-mode figures above are this tree's programs' (program `816d1fef…`, consumer `8464603b…`). With them the consumer's Stage 4 private
+  attestation (§5) takes 381,480 user cycles (34,717 + 346,763,
+  `results/stage4-attest-private-public-outputs.txt`; 380,870 on `be7c7710…`); §5's GPU proof was of the earlier image.
 
 ### Departures from the design note, and what Stage 5 does not cover
 
@@ -1389,7 +1397,8 @@ The 27 tests took about two minutes on eight test threads (`--test-threads 8`; t
 test binary, `tests/sepolia.rs`, 102 s); the figures above were produced that way, on a cloud
 container, and do not depend on the thread count. The harness has grown since: on 12 November 2026,
 on the Modal build box (16 cores), 56 tests in 30 binaries passed with `--test-threads 1` in about
-21 minutes after a 7-minute build (`vault_consumer` 383 s, `sepolia` 196 s, `public_path` 79 s). The Stage 4 tests read
+21 minutes after a 7-minute build (`vault_consumer` 383 s, `sepolia` 196 s, `public_path` 79 s); the same day, with
+`--test-threads 8`, in 773 s after a 445-s build, the run that re-recorded the files the tests write. The Stage 4 tests read
 `../crates/ferrata-spectests/fixtures/mainnet-attest-2026-11-10` (or `FERRATA_ATTEST_FIXTURE_DIR`),
 Stage 5 `…/sepolia-gloas-2026-11-10` and `…/sepolia-attest-2026-11-10` (or
 `FERRATA_SEPOLIA_FIXTURE_DIR`, `FERRATA_SEPOLIA_ATTEST_DIR`); their SHA-256 sums are compiled in.

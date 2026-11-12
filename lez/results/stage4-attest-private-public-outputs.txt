@@ -2,18 +2,18 @@ Stage 4: a private consumer attests an ERC-20 Transfer of mainnet block 26384851
 
 Decoded public fields (harness::private::describe_public_outputs):
 
-public_context.actors (2): ferrata@68jJUsqGdoEAHYmtRVyKh2okk7SVhjCae25YJVV5XpJ2, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq
+public_context.actors (2): ferrata@7cVDaEezMeoL3rP6seHmzVMQHt2SnxaVJAX9VW9FtvDz, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq
 public_context.authorized_accounts: {}
 execution.public_root: None
 execution.boundary (6 steps):
-  - PrivateToPublic from consumer@2Zg2ZpSuJvUqoUGyxFu2mY7rwV7JnWEQLGfc2rNDzDSV to ferrata@68jJUsqGdoEAHYmtRVyKh2okk7SVhjCae25YJVV5XpJ2: Read (1 bytes)
-  - PublicToPrivate from ferrata@68jJUsqGdoEAHYmtRVyKh2okk7SVhjCae25YJVV5XpJ2 to consumer@2Zg2ZpSuJvUqoUGyxFu2mY7rwV7JnWEQLGfc2rNDzDSV: StateReply { state: 333 bytes } (337 bytes)
+  - PrivateToPublic from consumer@2Zg2ZpSuJvUqoUGyxFu2mY7rwV7JnWEQLGfc2rNDzDSV to ferrata@7cVDaEezMeoL3rP6seHmzVMQHt2SnxaVJAX9VW9FtvDz: Read (1 bytes)
+  - PublicToPrivate from ferrata@7cVDaEezMeoL3rP6seHmzVMQHt2SnxaVJAX9VW9FtvDz to consumer@2Zg2ZpSuJvUqoUGyxFu2mY7rwV7JnWEQLGfc2rNDzDSV: StateReply { state: 365 bytes } (369 bytes)
   - EndPrivateSubtree
   - EndPublicSubtree
   - PrivateToPublic from native@2Zg2ZpSuJvUqoUGyxFu2mY7rwV7JnWEQLGfc2rNDzDSV to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
   - EndPublicSubtree
 execution.program_image_claims (1):
-  - Disclosed { program: consumer, image_id: be7c7710ae833fce88c68c0f2f8c9901fa9d7091b47550174edab67899f1284a }
+  - Disclosed { program: consumer, image_id: 8464603bcf9ea9c69c0eac100605deb9c8ef666a56f964cceba66947958e4b96 }
 execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1389 bytes)
 execution.async_messages: 0
 execution.recovery_bindings: 0
@@ -21,7 +21,7 @@ execution.validity: ValidityWindows { blocks: ValidityWindow { from: None, to: N
 execution.fee: Some("refund_to Some(78Skt7EQTvVwfWVYnA1XMjghv3aUR1V5wgQAfVLKJZG5), fallback true")
 nonces: 0, admission evidence: 0
 
-The 8201 serialized bytes of the transaction were searched for the consumer's private inputs:
+The 8265 serialized bytes of the transaction were searched for the consumer's private inputs:
 - the token address (20 bytes): absent
 - the transfer's sender (20 bytes): absent
 - the transfer's recipient (20 bytes): absent
@@ -42,14 +42,14 @@ The 8201 serialized bytes of the transaction were searched for the consumer's pr
 - proof node 2 (its first 32 of 1600 bytes) (32 bytes): absent
 - proof node 2 (its last 32 bytes) (32 bytes): absent
 
-Charged: execution gas 421,641 (PRIVATE_VERIFY_GAS 409,764 + public part 11,877 cycles), storage gas 224,063.
-The transaction is 8,201 bytes; its proof field is RISC Zero's fake receipt (4,157 bytes, dev mode).
+Charged: execution gas 422,032 (PRIVATE_VERIFY_GAS 409,764 + public part 12,268 cycles), storage gas 224,063.
+The transaction is 8,265 bytes; its proof field is RISC Zero's fake receipt (4,189 bytes, dev mode).
 
 The consumer's private transitions, in the executor (no proof; software Keccak):
 
 | handler execution | input bytes (ReceiveInput) | journal bytes | user cycles | segments | cycles with padding (sum of 2^po2) | exit |
 |---|---:|---:|---:|---:|---:|---:|
-| AttestPrivately (sends Read) | 2,251 | 4,593 | 34,718 | 1 | 131,072 | 0 |
-| the record's reply (verifies the fact) | 2,719 | 2,864 | 346,152 | 1 | 524,288 | 0 |
+| AttestPrivately (sends Read) | 2,251 | 4,593 | 34,717 | 1 | 131,072 | 0 |
+| the record's reply (verifies the fact) | 2,751 | 2,896 | 346,763 | 1 | 524,288 | 0 |
 
-Together 380,870 user cycles. The private state the consumer keeps afterwards is 120 bytes, whatever the proof was.
+Together 381,480 user cycles. The private state the consumer keeps afterwards is 120 bytes, whatever the proof was.

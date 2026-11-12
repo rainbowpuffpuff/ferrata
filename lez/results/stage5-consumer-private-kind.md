@@ -5,12 +5,12 @@ Deposit 1 (block 12,111,574) under the record of block 12,112,773, one EIP-2935 
 
 | handler execution | input bytes (ReceiveInput) | journal bytes | user cycles | segments | cycles with padding (sum of 2^po2) | exit |
 |---|---:|---:|---:|---:|---:|---:|
-| ClaimDepositPrivately (sends Read) | 8,633 | 17,360 | 112,040 | 1 | 262,144 | 0 |
-| the record's reply (verifies the deposit, sends Spend) | 8,992 | 9,250 | 1,408,918 | 2 | 2,097,152 | 0 |
+| ClaimDepositPrivately (sends Read) | 8,633 | 17,360 | 112,039 | 1 | 262,144 | 0 |
+| the record's reply (verifies the deposit, sends Spend) | 9,024 | 9,282 | 1,409,528 | 2 | 2,097,152 | 0 |
 
-Proven in dev mode and settled: 8473 transaction bytes, 4293 proof bytes, execution gas 433747. Public: `Read` to the record, `Spend` of N with no credit, the fee.
+Proven in dev mode and settled: 8537 transaction bytes, 4325 proof bytes, execution gas 434157. Public: `Read` to the record, `Spend` of N with no credit, the fee.
 
-The 8473 serialized bytes of the transaction were searched:
+The 8537 serialized bytes of the transaction were searched:
 
 - the secret s (32 bytes): absent
 - the statement identifier (32 bytes): absent
@@ -20,4 +20,4 @@ The 8473 serialized bytes of the transaction were searched:
 - the deposit block's header (677 bytes): absent
 - the receipt proof's last node (690 bytes): absent
 
-Then refused: the same claim again (`proving failed: Program exited with non-zero code 223 after 13411 cycles`).
+Then refused: the same claim again (`proving failed: Program exited with non-zero code 223 after 13413 cycles`).

@@ -35,7 +35,9 @@ gas is the transaction's serialized size.
 
 **Met** for every fact type measured. In-process harness, mainnet block 26,384,851 (finalized
 10 November 2026), RISC Zero's accelerated Keccak in the program ([`lez/RESULTS.md`](../lez/RESULTS.md)
-§5, `results/stage4-attest.md`, `results/stage4-attest-consumer.md`):
+§5, `results/stage4-attest.md`, `results/stage4-attest-consumer.md`; measured on the images that file names, program
+`9f3eb00f…`; with this tree's programs the private consumer's read is charged 422,032,
+`results/stage4-attest-private-public-outputs.txt`):
 
 | Statement (one transaction each) | Execution gas | Of the 5M target | Storage gas |
 |---|---:|---:|---:|
@@ -188,23 +190,23 @@ size.
 
 ### P.1 Claim and mint in one LEZ public transaction
 
-**Met.** In-process harness, the merged bridge program (time fix and security fixes; image `cf41b7e5…` at the
-fifth integration pass's path), synthetic vault storage (tables `lez/results/bridge-*.md`, regenerated at b93a945):
+**Met.** In-process harness, this tree's bridge program (image `ccde6171…`, the same built at any path:
+[`image-ids.md`](image-ids.md)), synthetic vault storage (tables `lez/results/bridge-*.md`, recorded on 12 November 2026):
 
 | Claim | Handlers (cycles each) | Execution gas | Storage gas |
 |---|---|---:|---:|
-| plaintext, 1 ETH, fee schedule 0 | Claim 107,479 → Issue 52,100 → Admit 33,886 → Spend 30,300 → Mint 17,560 → Mint 17,560 | 258,885 | 2,053 |
-| plaintext, 10 ETH, mint and relay fees | as above, three Mints (17,560; 17,560; 22,280) | 287,943 | 2,053 |
-| plaintext, under a Gloas record | — | 254,999 | 2,053 |
-| plaintext, on the v5 vault's real storage | — | 254,920–294,144 | — |
+| plaintext, 1 ETH, fee schedule 0 | Claim 107,702 → Issue 51,166 → Admit 35,565 → Spend 30,916 → Mint 18,161 → Mint 18,161 | 261,671 | 2,053 |
+| plaintext, 10 ETH, mint and relay fees | Claim 107,702 → Issue 51,586 → Admit 35,565 → Spend 37,291 → three Mints (18,161; 18,161; 22,496) | 290,962 | 2,053 |
+| plaintext, under a Gloas record | — | 257,785 | 2,053 |
+| plaintext, on the v5 vault's real storage | — | 257,706–296,766 | — |
 | plaintext on a live sequencer (the frozen earlier program, stand-in beacon chain) | — | 142,432 | — |
-| private, to a private destination | private: ClaimPrivately 41,160 + reply 111,596 user cycles; public: Read, Issue, Admit, Spend, Mint | 551,502 (409,764 + 141,738) | 224,063 |
-| private, to a public destination | the same private part; public part with three Mints | 600,607 (the test's output: `bridge_private.rs`, `a_private_claim_to_a_public_destination_and_the_refusals`) | 224,063 |
+| private, to a private destination | private: ClaimPrivately 41,736 + reply 110,862 user cycles; public: Read, Issue, Admit, Spend, Mint | 553,641 (409,764 + 143,877) | 224,063 |
+| private, to a public destination | the same private part; public part with three Mints | 603,981 (the test's output, 12 November: `bridge_private.rs`, `a_private_claim_to_a_public_destination_and_the_refusals`) | 224,063 |
 
 Breakdown by component: the claim statement (path, opening of `C`, nullifier) runs in `Claim`; the
 controls in `Issue` (denomination, fee schedule, token freeze and bucket) and `Admit` (global freeze and
 bucket); `Spend` writes the nullifier; one `Mint` per payee. The controls, attested time and the security fixes
-cost +116,441 against the program without them (×1.82). The bridge's own claim statement in a bare guest is 74,379 user cycles, constant
+cost +119,227 against the program without them (×1.84; with B2's roles and milestones A1 and A2). The bridge's own claim statement in a bare guest is 74,379 user cycles, constant
 over 64 witnesses ([`bridge.md`](design/bridge.md) §18.3). Sources: [`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md)
 §1–§3, §8a, §11.
 
@@ -214,15 +216,15 @@ The root import is the only additional verification (the claim needs no Ethereum
 
 | `ImportRoot` | Execution gas | Storage gas | Where |
 |---|---:|---:|---|
-| 8 leaves, synthetic storage | 231,365 | 2,025 | in-process harness |
-| the v5 vault's real storage, 3 and 6 leaves | 277,263; 278,099 | — | in-process harness |
-| under a Gloas record, with the header | 262,007 | 2,612 | in-process harness |
+| 8 leaves, synthetic storage | 236,224 | 2,025 | in-process harness |
+| the v5 vault's real storage, 3 and 6 leaves | 282,103; 282,881 | — | in-process harness |
+| under a Gloas record, with the header | 266,879 | 2,612 | in-process harness |
 | live sequencer, stand-in beacon chain | 232,278 | 2,460 | live sequencer |
 | Sepolia's real state: the live vault, one leaf, capture 1 (the frozen program) | 426,479 | 6,646 | live sequencer ([`lez/live/inbound/README.md`](../lez/live/inbound/README.md)) |
 | Sepolia's real state: the v5 vault, one leaf then two, captures 1 and 2 (this tree's program, the live round trip) | 433,528; 429,805 | — | crown devnet, LEZ v0.4.0-rc1 ([`e2e/runs/crown-live-1/README.md`](../e2e/runs/crown-live-1/README.md)) |
 
 **Amortised per deposit (derived)**: an import's cost divided by the deposits it newly covers, so with one
-import an hour: about 278k per deposit at one deposit an hour, 27.8k at ten, 2.8k at a hundred (from the
+import an hour: about 283k per deposit at one deposit an hour, 28.3k at ten, 2.8k at a hundred (from the
 real-storage figure). The import also needs a record, whose tracking cost is RFP-021 P.3's, shared with
 every other consumer. Sources: [`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md) §1, §2a, §8a;
 [`lez/live/inbound/README.md`](../lez/live/inbound/README.md). **Gap:** an import under a mainnet state
