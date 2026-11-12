@@ -731,6 +731,7 @@ See `README.md` for the commands. In short, from `bench/`:
 
 ```sh
 export TMPDIR=$PWD/../../tmp                 # tmp/ beside the repository, not /tmp
+mkdir -p "$TMPDIR"                           # rustc stops if it does not exist
 cargo build --release -p host                # risc0-build compiles the six guests, then the host
 ./target/release/host blst-accel             # every mode for blst-accel, ~2.5 min -> results/blst-accel.all.txt
 python3 -I tools/table.py results --headline # the headline table above

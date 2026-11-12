@@ -30,6 +30,7 @@ rzup install r0vm 3.0.5        # the executor; default_executor() finds it throu
 ```sh
 cd bench                                      # from the repository root
 export TMPDIR=$PWD/../../tmp                  # tmp/ beside the repository, not /tmp
+mkdir -p "$TMPDIR"                            # rustc stops if it does not exist
 cargo build --release -p host                 # compiles the six guests, then the host
 ./target/release/host blst-accel              # every mode for blst-accel, about 2.5 min
 ./target/release/host blst-accel --modes onchain,single-onchain,coresplit,steps   # the newer modes, under 1 min
@@ -75,7 +76,7 @@ computed natively. The guests assert every verdict.
 
 ```sh
 cd bench/exec                           # from the repository root
-export TMPDIR=$PWD/../../../tmp
+export TMPDIR=$PWD/../../../tmp && mkdir -p "$TMPDIR"
 cargo build --release -p exec-host      # compiles the two guests, then the host
 ./target/release/exec-host              # both configurations, results/<config>.txt
 ```

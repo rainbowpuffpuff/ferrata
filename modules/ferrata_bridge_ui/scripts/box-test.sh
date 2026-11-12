@@ -12,6 +12,7 @@ here="$(cd "$(dirname "$0")/.." && pwd)"
 repo="$(cd "$here/../.." && pwd)"
 out="$here/results"
 QT_BIN="${QT_BIN:-/usr/lib/qt6/bin}"
+[ -x "$QT_BIN/qmltestrunner" ] || { echo "no $QT_BIN/qmltestrunner: install Qt 6's QML test runner and modules (README, \"Tests\") or set QT_BIN" >&2; exit 1; }
 export PATH="$HOME/.foundry/bin:$PATH" FOUNDRY_DISABLE_NIGHTLY_WARNING=1 RISC0_DEV_MODE=1
 if [ -z "${RISC0_HOME:-}" ] && [ -d "$repo/../risc0-home-lez" ]; then export RISC0_HOME="$(cd "$repo/../risc0-home-lez" && pwd)"; fi
 final="$out"
@@ -25,7 +26,10 @@ if [ "${FERRATA_DEVNET_PROOFS:-}" = real ]; then
   echo "real proofs: r0vm $("$RISC0_SERVER_PATH" --version 2>&1 | head -n 1), $(nproc) CPUs"
 fi
 devdir="$repo/../tmp/miniapp-private/devnet"
-rm -rf "$out"; mkdir -p "$out/screenshots"
+# results/ also holds basecamp-ui-tests.sh's two logs: replace only what this test writes.
+rm -rf "$out/screenshots"
+rm -f "$out"/{backend-contract.txt,calls.jsonl,calls-summary.jsonl,devnet.log,qmltest.txt,qmltest.xml}
+mkdir -p "$out/screenshots"
 port=18600
 t0=$(date +%s)
 (cd "$repo/vault" && { [ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.0.0; } && forge build --quiet) || { echo "FAIL vault build"; exit 1; }

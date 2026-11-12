@@ -49,5 +49,6 @@ e2e/ci/run.sh                      # needs Rust 1.93 and 1.98.1, Foundry 1.3.6, 
 repository, else `~/risc0-home-lez`); `FERRATA_E2E_DIR` the scratch directory (default `$RUNNER_TEMP` on GitHub,
 else `../tmp/ci-roundtrip` beside the repository): `identity.json`, `txs.json`, `cp-ci-b.input`, `cp-ci-b.json`.
 
-The image ids depend on where the guests are built (risc0-build embeds paths), so the test deploys the vault
-with the ids of the guests it just built and checks that the executed guests are those.
+The test deploys the vault with the ids of the guests it just built and checks that the executed guests are
+those. (It was written when image ids still depended on where the guests were built; since `integration7`'s rustc
+wrapper they do not, and the ids it builds are those of [`docs/image-ids.md`](../../docs/image-ids.md).)

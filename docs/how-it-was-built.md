@@ -19,7 +19,7 @@ directory documents. For the core, acceptance is mechanical (its
 that re-checks it, so that each result can be checked without trusting who or what wrote the code.
 
 Most pieces were built on a branch of their own, each by an agent in its own git worktree, and merged into an
-integration branch (`integration`, then `integration3` to `integration7`); the merge commits name the
+integration branch (`integration`, then `integration3` to `integration8`); the merge commits name the
 branches. Several agents often worked at the same time on the same machines, so some timings were taken
 under their load; the results files say which (for example [`bridge/RESULTS.md`](../bridge/RESULTS.md) and
 [`checkpoint/RESULTS.md`](../checkpoint/RESULTS.md)).

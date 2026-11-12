@@ -106,7 +106,9 @@ GitHub keeps 10 GB of caches per repository (compressed); the first runs on GitH
 `forge test --no-match-contract PrivacySuite` in `vault/` (the job's last step), Foundry 1.3.6: 37 suites, 433 tests
 passed, 0 failed, in 20 s. With `PrivacySuite`: 433 passed and 1 failed, `test_privacySuite_ethereumHalf`
 (`vm.exists: the path ../target/privacy/scenario.json is not allowed to be accessed for read operations`): it needs the
-file the LEZ half of the privacy suite writes, and fails instead of skipping without it.
+file the LEZ half of the privacy suite writes, and fails instead of skipping without it. Since 12 November it skips:
+forge resolves the `../target/privacy` entry of `fs_permissions` only once that directory exists, and the test now
+treats a refused read of the default directory as no scenario (451 passed, 1 skipped on a clean checkout).
 
 ## What was not run
 

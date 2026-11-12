@@ -38,6 +38,7 @@ one target directory. From the repository root, `cd checkpoint`, then:
 
 ```sh
 export TMPDIR=$PWD/../../tmp CARGO_TARGET_DIR=$PWD/target
+mkdir -p "$TMPDIR"    # rustc stops ("couldn't create a temp dir") if it does not exist
 # Logos Blockchain's circuit crates download prebuilt witness generators at build time; keep that
 # cache under that tmp/ instead of ~/.cache:
 export XDG_CACHE_HOME=$PWD/../../tmp/xdg-cache

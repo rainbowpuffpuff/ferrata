@@ -53,8 +53,10 @@ the zkVM guests are out of this directory's scope.
 export PATH="$HOME/.foundry/bin:$PATH"
 # Dependencies (lib/ is not committed):
 forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.0.0
-forge build --sizes                                      # no compiler warnings, no lint findings, all under EIP-170
-forge test                                               # everything, including the invariant campaign
+FOUNDRY_OFFLINE=false forge build                        # once: forge is offline here (below); this fetches solc 0.8.26
+forge build --sizes                                      # no compiler warnings, no lint findings; exits 1, see below
+forge test                                               # everything, including the invariant campaign:
+                                                         # 451 passed, 1 skipped (PrivacySuite, without its LEZ half)
 forge test --isolate --match-contract GasScenarios -vv   # the numbers in GAS.md (mock verifier)
 forge test --match-path 'test/real/*' -vv                # the return leg with RISC Zero's real verifier and real proofs
 forge test --isolate --match-contract ReturnLegGas -vv   # its gas (GAS.md, "With the real verifier")
@@ -67,7 +69,9 @@ python3 -I tools/mutation_spotcheck.py [start stop]                   # hand-wri
 ```
 
 Toolchain and dependencies:
-- forge 1.3.6, solc 0.8.26 (pinned, `offline = true`), `evm_version = "cancun"`, optimizer at 200 runs.
+- forge 1.3.6, solc 0.8.26 (pinned, `offline = true`: forge never downloads by itself, so on a machine without
+  solc 0.8.26 the first build needs `FOUNDRY_OFFLINE=false`, or forge stops at "can't install missing solc 0.8.26
+  in offline mode"), `evm_version = "cancun"`, optimizer at 200 runs.
 - forge-std v1.10.0.
 - OpenZeppelin Contracts v5.4.0. The vault uses only `SafeERC20` and `ReentrancyGuardTransient`.
 - risc0-ethereum v3.0.0. The vault's own tests use only `RiscZeroVerifierEmergencyStop` and the verifier
@@ -75,8 +79,10 @@ Toolchain and dependencies:
   compiled unmodified against the OpenZeppelin v5.2.0 that risc0-ethereum itself pins.
 
 The vault takes the vendored one-function `IRiscZeroVerifier`, whose selector is the same as RISC Zero's. Its
-runtime is 24,312 bytes, 264 below the EIP-170 limit, with the library (4,917 bytes) holding the cold admin code;
-further features need more of it moved to the library.
+runtime is 24,254 bytes, 322 below the EIP-170 limit, with the library (12,504 bytes) holding the cold admin code;
+further features need more of it moved to the library. `forge build --sizes` prints these and exits 1 with "some
+contracts exceed the runtime size limit": the one over it is `VaultHandler` (37,962 bytes), the invariant campaign's
+test-only handler, which is never deployed (forge does not apply EIP-170 to tests).
 
 ## How it works
 

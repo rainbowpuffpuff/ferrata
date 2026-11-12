@@ -32,7 +32,7 @@ contract PrivacySuiteTest is VaultTestBase {
     function test_privacySuite_ethereumHalf() public {
         dir = vm.envOr("FERRATA_PRIVACY_DIR", string("../target/privacy"));
         string memory path = string.concat(dir, "/scenario.json");
-        if (!vm.exists(path)) {
+        if (!_scenarioExists(path)) {
             vm.skip(true);
             return;
         }
@@ -66,6 +66,19 @@ contract PrivacySuiteTest is VaultTestBase {
         vm.revertToState(fresh);
         vm.chainId(vm.parseJsonUint(scenario, ".chain_id"));
         _deposits("B", "plaintext");
+    }
+
+    /// @dev Whether the LEZ half's scenario is there. forge resolves the `../target/privacy` entry of `fs_permissions`
+    ///      only once that directory exists, and until then refuses even `vm.exists` under it: a checkout where the
+    ///      LEZ half never ran skips, as one without the file does. A directory given in `FERRATA_PRIVACY_DIR` that
+    ///      forge refuses still fails.
+    function _scenarioExists(string memory path) internal view returns (bool) {
+        try vm.exists(path) returns (bool found) {
+            return found;
+        } catch {
+            require(bytes(vm.envOr("FERRATA_PRIVACY_DIR", string(""))).length == 0, "FERRATA_PRIVACY_DIR refused");
+            return false;
+        }
     }
 
     /// @dev The vault's own creation code run at `where` (constructor storage and immutables land there).

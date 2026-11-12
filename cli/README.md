@@ -22,7 +22,9 @@ libraries that already exist:
 
 ## Installation
 
-Linux x86-64. The tool links LEZ's crates by path, like `lez/`:
+Linux x86-64. The tool links LEZ's crates by path, like `lez/`, and LEZ's wallet links the PC/SC library
+(`pcsc-sys`): install `libpcsclite-dev` first (Debian and Ubuntu; `pcsc-lite-devel` on Fedora), or the build
+stops at "The system library `libpcsclite` required by crate `pcsc-sys` was not found".
 
 ```sh
 # LEZ v0.4.0-rc1 (commit 1806e87) beside the repository, at ../upstream/lez-v0.4.0-rc1 (see lez/RESULTS.md §8)
@@ -480,17 +482,23 @@ account, which is why the test prints that line. **Reveals:** nothing. These are
 
 ```sh
 cd cli
+export RISC0_HOME=$PWD/../../risc0-home-lez   # LEZ's guests: RISC Zero's guest Rust 1.91.1 (lez/RESULTS.md §8)
 cargo test --lib       # 10 unit tests
 bash tests/e2e.sh      # the end-to-end test
 ```
+
+Both build LEZ's guests (the release build of the binary does not): with RISC Zero's default guest Rust 1.88.0
+they stop at "ruint@1.21.1 requires rustc 1.90". `e2e.sh` finds the home beside the repository by itself;
+`cargo test --lib` needs `RISC0_HOME`. `scripts/ci/install-risc0.sh` installs it (README, "Quickstart").
 
 The unit tests cover amounts shown and parsed exactly, the program codes equal to the wire's, every
 vault error decoded from its selector, derivations that are deterministic (with `kAuth` distinct from
 `kView` and distinct accounts), the privacy indicator (defaults Minimal, public paths High with a warning),
 and the relayer's journals and burn watch.
 
-The end-to-end test (`tests/e2e.rs`) needs Foundry (`anvil`, `forge`), and `vault/lib`, which
-`e2e.sh` installs. It also needs RISC Zero's Rust 1.91.1 for LEZ's guests in `../../risc0-home-lez`,
+The end-to-end test (`tests/e2e.rs`) needs Foundry (`anvil`, `forge`) with solc 0.8.26 (forge is offline in
+`vault/`: fetch it once with `FOUNDRY_OFFLINE=false forge build` there), and `vault/lib`, which `e2e.sh`
+installs. It also needs RISC Zero's Rust 1.91.1 for LEZ's guests in `../../risc0-home-lez`,
 or `RISC0_HOME` set to it (`lez/RESULTS.md` §8). It runs:
 - **Ethereum:** the v5 vault on a local anvil (chain id 1, never a public network), with the vault
   tests' `MockRiscZeroVerifier` behind the emergency stop.
