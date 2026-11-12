@@ -17,7 +17,7 @@ thirteen merged branches, guest builds independent of the build path): the progr
 any checkout rebuilds to the same ids (`scripts/reproduce-image-ids.sh`, [`docs/image-ids.md`](../../docs/image-ids.md));
 rehearsed on an anvil fork of Sepolia to DONE as `crown-rehearsal-5` (19 stages in 23 min 20 s, verify 14 of 14,
 [`e2e/runs/crown-rehearsal-5/`](../runs/crown-rehearsal-5/README.md); `crown-rehearsal-4` before it stopped at verify on
-stale pinned ids, since fixed);
+stale pinned ids; `verify.py` now takes them from the run's own records, `params.json` and `programs/ids.jsonl`);
 the owner's command: "Commands" below.
 
 ## Programs (built on the build box; since `integration7` the ids do not depend on the build path)
