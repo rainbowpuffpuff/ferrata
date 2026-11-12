@@ -4,23 +4,23 @@
 # Groth16 and checked in the vault by RISC Zero's Groth16 verifier; then the analysis of scripts/privacy/run.sh.
 #
 #   real.sh build        build box: the test binary, ferrata-e2e and the release program; the release program's id
-#                        checked against docs/image-ids.md; staged in target/privacy-real/stage with MANIFEST.json
+#                        checked against docs/image-ids.md; staged in target/privacy/real/stage with MANIFEST.json
 #   real.sh dev          build box: the staged binary in dev mode (fake receipts), the Foundry half (mock verifier),
 #                        the analysis -> docs/privacy/real/dev/ (the same programs and code: the baseline)
 #   real.sh volume       laptop: the CUDA r0vm (R0VM_CUDA, default gpu-prover/bin/r0vm-cuda; sha256 checked against
 #                        gpu-prover/logs/bin-meta/r0vm-cuda.json) into the Volume ferrata-prover of $MODAL_PROFILE
-#   real.sh gpu RUN      laptop: scripts/privacy/gpu_app.py on one L4 ($MODAL_PROFILE), fetched to target/privacy-real/RUN
+#   real.sh gpu RUN      laptop: scripts/privacy/gpu_app.py on one L4 ($MODAL_PROFILE), fetched to target/privacy/real/RUN
 #   real.sh wrap RUN     laptop: each release's Groth16 step (RISC Zero's prover image through e2e/crown/wrap.py,
 #                        FERRATA_WRAP_PROFILE, default $MODAL_PROFILE)
 #   real.sh finish RUN   build box: the Groth16 receipts assembled and verified, release-seals.json, the Foundry half
 #                        with the real verifier, the analysis -> docs/privacy/real/generated/, proofs.json
 #
-# The build box steps run through spike/modal-build/mrun (with --put target/privacy-real/RUN for `finish`, and
+# The build box steps run through spike/modal-build/mrun (with --put target/privacy/real/RUN for `finish`, and
 # --env FERRATA_COMMIT=<commit> for `build`: the box's copy is not a git checkout); the
-# laptop steps only call Modal. Raw data stays under target/privacy-real/ (not committed).
+# laptop steps only call Modal. Raw data stays under target/privacy/real/ (not committed).
 set -euo pipefail
 root="$(cd "$(dirname "$0")/../.." && pwd)"
-T="$root/target/privacy-real"; S="$T/stage"
+T="$root/target/privacy/real"; S="$T/stage"  # under target/privacy: the vault's fs_permissions
 step="${1:?step}"; RUN="${2:-}"
 expect_id() {  # the image id docs/image-ids.md records for a program named in its first column
   grep -F ": \`$1\` |" "$root/docs/image-ids.md" | awk -F'|' '{gsub(/[` ]/, "", $3); print $3}'

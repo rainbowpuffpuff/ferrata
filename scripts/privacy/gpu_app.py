@@ -10,7 +10,7 @@ One container with one NVIDIA L4 runs, in order:
    through the same r0vm), from the guest inputs the test wrote.
 The Groth16 step is not here: RISC Zero's prover image runs elsewhere (`real.sh wrap`, e2e/crown/wrap.py).
 
-Inputs are the stage directory (`FERRATA_PRIVACY_STAGE`, default target/privacy-real/stage at the repository root):
+Inputs are the stage directory (`FERRATA_PRIVACY_STAGE`, default target/privacy/real/stage at the repository root):
 the test binary, ferrata-e2e, the release program (R0BF) and MANIFEST.json with their sha256 and the image ids
 docs/image-ids.md records. The CUDA r0vm is the Volume's bin/r0vm-cuda (`real.sh volume` puts it there); its sha256
 must equal the manifest's before anything runs, the release program's image id must equal the expected one, and
@@ -30,7 +30,7 @@ import time
 import modal
 
 HERE = pathlib.Path(__file__).resolve().parent
-STAGE = pathlib.Path(os.environ.get("FERRATA_PRIVACY_STAGE") or HERE.parent.parent / "target" / "privacy-real" / "stage")
+STAGE = pathlib.Path(os.environ.get("FERRATA_PRIVACY_STAGE") or HERE.parent.parent / "target" / "privacy" / "real" / "stage")
 VOLUME_NAME = "ferrata-prover"  # the name gpu-prover/modal_app.py uses
 GPU, CPU_CORES, MEMORY_MIB = "L4", 4.0, 32768  # as gpu-prover/modal_app.py
 HARD_TIMEOUT_S = 2 * 3600
