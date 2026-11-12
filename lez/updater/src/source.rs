@@ -31,6 +31,14 @@ pub trait Source: Send {
     fn updates(&mut self, start_period: u64, count: u64) -> Result<Vec<Vec<u8>>>;
     /// `GET /eth/v1/beacon/light_client/finality_update`.
     fn finality_update(&mut self) -> Result<Vec<u8>>;
+    /// Whether it serves light-client data (`false`: a [`HeaderWitness`], which only confirms headers).
+    fn light_client(&self) -> bool {
+        true
+    }
+    /// `GET /eth/v1/beacon/headers/{slot}`: the root of the block it holds canonical at `slot` (`None`: none).
+    fn canonical_root(&mut self, slot: u64) -> Result<Option<Root>> {
+        bail!("{}: serves no headers (slot {slot})", self.name())
+    }
 }
 
 /// A beacon node's REST API, read with `curl` (no TLS library in this workspace): SSZ, a generic
@@ -72,6 +80,65 @@ impl Source for BeaconApi {
     fn finality_update(&mut self) -> Result<Vec<u8>> {
         self.get("/eth/v1/beacon/light_client/finality_update")
     }
+}
+
+/// A beacon node's REST API that serves no light-client data (most public ones; publicnode's answers 404 to
+/// `light_client/finality_update`): it only reports which block it holds canonical at a slot, through
+/// `/eth/v1/beacon/headers/{slot}` (JSON), and so counts towards `policy.min_agreeing` for an update whose finalized
+/// header is that block (`updater.rs`). Read with `curl`, a generic User-Agent, nothing that identifies the caller.
+pub struct HeaderWitness {
+    pub name: String,
+    pub base: String,
+    pub timeout_secs: u64,
+}
+
+impl Source for HeaderWitness {
+    fn name(&self) -> &str {
+        &self.name
+    }
+    fn bootstrap(&mut self, _: &Root) -> Result<Vec<u8>> {
+        bail!("{}: a headers source serves no light-client data", self.name)
+    }
+    fn updates(&mut self, _: u64, _: u64) -> Result<Vec<Vec<u8>>> {
+        bail!("{}: a headers source serves no light-client data", self.name)
+    }
+    fn finality_update(&mut self) -> Result<Vec<u8>> {
+        bail!("{}: a headers source serves no light-client data", self.name)
+    }
+    fn light_client(&self) -> bool {
+        false
+    }
+    fn canonical_root(&mut self, slot: u64) -> Result<Option<Root>> {
+        let url = format!("{}/eth/v1/beacon/headers/{slot}", self.base.trim_end_matches('/'));
+        let out = Command::new("curl")
+            .args(["-sS", "--max-time", &self.timeout_secs.to_string(), "-w", "\n%{http_code}"])
+            .args(["-H", "Accept: application/json", "-A", "ferrata-updater"])
+            .arg(&url)
+            .output()
+            .with_context(|| format!("{}: curl did not start", self.name))?;
+        if !out.status.success() {
+            bail!("{}: {url}: {}", self.name, String::from_utf8_lossy(&out.stderr).trim());
+        }
+        let text = String::from_utf8_lossy(&out.stdout);
+        let (body, code) = text.rsplit_once('\n').ok_or_else(|| anyhow!("{}: {url}: no status", self.name))?;
+        match code.trim() {
+            "200" => parse_header_answer(body, slot).with_context(|| format!("{}: {url}", self.name)),
+            "404" => Ok(None),
+            other => bail!("{}: {url}: HTTP {other}: {}", self.name, body.chars().take(200).collect::<String>()),
+        }
+    }
+}
+
+/// The root of a `/eth/v1/beacon/headers/{slot}` answer if it is the canonical block of `slot`.
+pub fn parse_header_answer(body: &str, slot: u64) -> Result<Option<Root>> {
+    let v: serde_json::Value = serde_json::from_str(body).context("not JSON")?;
+    let data = &v["data"];
+    let root = data["root"].as_str().ok_or_else(|| anyhow!("no data.root"))?;
+    let at = data["header"]["message"]["slot"].as_str().and_then(|s| s.parse::<u64>().ok());
+    if data["canonical"].as_bool() != Some(true) || at != Some(slot) {
+        return Ok(None);
+    }
+    Ok(Some(crate::chain::root(root)?))
 }
 
 /// One recorded response: its place in the record and what it is.

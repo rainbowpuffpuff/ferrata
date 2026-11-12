@@ -6,7 +6,13 @@
 //! committees the program only summarises (the signer witness needs them), keyed by the
 //! summary's `pubkeys_root`, accepted only when they match the summaries on chain.
 
-use std::{collections::BTreeMap, fmt::Write as _, fs, io::Write as _, path::PathBuf};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fmt::Write as _,
+    fs,
+    io::Write as _,
+    path::PathBuf,
+};
 
 use anyhow::{anyhow, bail, Context as _, Result};
 use ferrata_core::{
@@ -148,8 +154,15 @@ pub struct SourceStats {
     /// It answered last round.
     pub available: bool,
     pub demoted_until: u64,
-    /// The newest finalized slot among the candidates it served last round.
+    /// The newest finalized slot among the candidates it served last round (a headers source: the newest it
+    /// confirmed).
     pub finalized_slot: u64,
+    /// A headers source: the times it reported another block (or none) canonical at a finalized header's slot.
+    pub mismatches: u64,
+    /// ... and whether its last answer was such.
+    pub mismatch: bool,
+    /// A headers source: the finalized headers it confirmed.
+    pub confirmed: u64,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -191,6 +204,8 @@ struct Candidate {
     source: usize,
     update: LightClientUpdate,
     period_update: bool,
+    /// As the source served it (kept for a job this updater opens: `finish_own_jobs`).
+    raw: Vec<u8>,
 }
 
 /// What the program would do with a candidate on the current store.
@@ -211,6 +226,8 @@ struct Planned {
     witness: SignerWitness,
     jid: Root,
     outcome: ApplyOutcome,
+    period_update: bool,
+    raw: Vec<u8>,
 }
 
 pub struct Updater {
@@ -229,6 +246,13 @@ pub struct Updater {
     pub metrics: Metrics,
     round: u64,
     first_due: BTreeMap<(Root, Step), u64>,
+    /// Updates of jobs this updater opened, by job id: (period update, the bytes a source served). Until the job is
+    /// finished or moot (`policy.finish_own_jobs`).
+    carried: BTreeMap<Root, (bool, Vec<u8>)>,
+    /// The Open this round chose, kept once it is applied.
+    opening: Option<(Root, bool, Vec<u8>)>,
+    /// (headers source, slot) -> the root it confirmed canonical there (a finalized block stays canonical).
+    confirmed: BTreeMap<(usize, u64), Root>,
     /// How a backoff waits (milliseconds); tests pass one that does not sleep.
     pub sleep: fn(u64),
     /// Log lines to stderr.
@@ -268,6 +292,9 @@ impl Updater {
             metrics: Metrics::default(),
             round: 0,
             first_due: BTreeMap::new(),
+            carried: BTreeMap::new(),
+            opening: None,
+            confirmed: BTreeMap::new(),
             sleep: real_sleep,
             verbose: false,
         };
@@ -280,7 +307,7 @@ impl Updater {
 
     fn log(&self, line: &str) {
         if self.verbose {
-            eprintln!("[{} {}] {line}", self.label, self.inst.name);
+            eprintln!("{} [{} {}] {line}", crate::utc_now(), self.label, self.inst.name);
         }
     }
 
@@ -299,6 +326,16 @@ impl Updater {
             {
                 if self.bootstrap_verifies(&bootstrap) {
                     self.bootstrap = Some(bootstrap);
+                }
+            }
+        }
+        fs::create_dir_all(dir.join("open"))?;
+        for e in fs::read_dir(dir.join("open"))? {
+            let path = e?.path();
+            let jid = path.file_stem().and_then(|s| s.to_str()).and_then(|s| crate::chain::root(s).ok());
+            if let (Some(jid), Ok(b)) = (jid, fs::read(&path)) {
+                if let Some((&kind, raw)) = b.split_first() {
+                    self.carried.insert(jid, (kind == 1, raw.to_vec()));
                 }
             }
         }
@@ -326,10 +363,29 @@ impl Updater {
         Ok(())
     }
 
+    fn carry(&mut self, jid: Root, period_update: bool, raw: Vec<u8>) {
+        if let Some(dir) = self.dir() {
+            let mut b = vec![u8::from(period_update)];
+            b.extend_from_slice(&raw);
+            let _ = fs::write(dir.join("open").join(format!("{}.bin", hex::encode(jid))), b);
+        }
+        self.carried.insert(jid, (period_update, raw));
+    }
+
+    fn drop_carried(&mut self, jid: &Root) {
+        if self.carried.remove(jid).is_some() {
+            if let Some(dir) = self.dir() {
+                let _ = fs::remove_file(dir.join("open").join(format!("{}.bin", hex::encode(jid))));
+            }
+        }
+    }
+
+    /// One line per transaction: round, step, job, finalized slot, result, exit code, execution and storage gas,
+    /// fee, block, the time it was settled (UTC), its label.
     fn journal(&self, action: &Action, out: &TxOutcome) {
         let Some(dir) = self.dir() else { return };
         let line = format!(
-            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
             self.round,
             action.step.name(),
             hex::encode(action.job_id),
@@ -345,7 +401,9 @@ impl Updater {
             out.gas_exec,
             out.gas_stor,
             out.fee,
-            out.block
+            out.block,
+            crate::utc_now(),
+            action.tx.label
         );
         if let Ok(mut f) = fs::OpenOptions::new().create(true).append(true).open(dir.join("journal.tsv")) {
             let _ = f.write_all(line.as_bytes());
@@ -392,7 +450,7 @@ impl Updater {
         let fork = self.inst.config.fork().ok_or_else(|| anyhow!("config: no layout"))?;
         let n = self.inst.config.sync_committee_size as usize;
         for i in 0..self.sources.len() {
-            if !self.usable(i) {
+            if !self.usable(i) || !self.sources[i].light_client() {
                 continue;
             }
             self.stats(i).requests += 1;
@@ -440,7 +498,7 @@ impl Updater {
             if missing(self) == 0 {
                 break;
             }
-            if !self.usable(i) {
+            if !self.usable(i) || !self.sources[i].light_client() {
                 continue;
             }
             self.stats(i).requests += 1;
@@ -470,7 +528,7 @@ impl Updater {
         let period = spec.period_at_slot(store.finalized.slot);
         let mut out = Vec::new();
         for i in 0..self.sources.len() {
-            if !self.usable(i) {
+            if !self.usable(i) || !self.sources[i].light_client() {
                 continue;
             }
             let errors = self.stats(i).errors;
@@ -480,7 +538,7 @@ impl Updater {
                 Ok(bytes) => match decode_finality_update(&bytes, &self.inst.config) {
                     Ok((u, _)) => {
                         head = head.max(spec.period_at_slot(u.attested_header.beacon.slot));
-                        out.push(Candidate { source: i, update: u, period_update: false });
+                        out.push(Candidate { source: i, update: u, period_update: false, raw: bytes });
                     }
                     Err(e) => self.demote(i, &format!("a finality update that does not decode: {e:#}")),
                 },
@@ -492,7 +550,9 @@ impl Updater {
                 Ok(list) => {
                     for bytes in list {
                         match decode_update(&bytes, &self.inst.config) {
-                            Ok((u, _)) => out.push(Candidate { source: i, update: u, period_update: true }),
+                            Ok((u, _)) => {
+                                out.push(Candidate { source: i, update: u, period_update: true, raw: bytes })
+                            }
                             Err(e) => self.demote(i, &format!("an update that does not decode: {e:#}")),
                         }
                     }
@@ -530,7 +590,16 @@ impl Updater {
         match (opened, outcome) {
             (Some(_), Some(o)) if o.advanced || o.adopted || o.rotated => {
                 let jid = job_id(&self.inst.id, &store_u.digest(), &compact.digest(layout));
-                Verdict::Useful(Box::new(Planned { update: update.clone(), layout, compact, witness, jid, outcome: o }))
+                Verdict::Useful(Box::new(Planned {
+                    update: update.clone(),
+                    layout,
+                    compact,
+                    witness,
+                    jid,
+                    outcome: o,
+                    period_update: false,
+                    raw: Vec::new(),
+                }))
             }
             (Some(_), Some(_)) => Verdict::NoChange,
             _ if !steps::update_advances(&store_u, &compact, &spec)
@@ -647,6 +716,11 @@ impl Updater {
         if let Err(e) = self.ensure_committees(&store) {
             return Ok(Plan::Stuck(format!("{e:#}")));
         }
+        if self.policy.finish_own_jobs {
+            if let Some(plan) = self.continue_carried(ledger, &store, &state)? {
+                return Ok(plan);
+            }
+        }
         let candidates = self.candidates(&store);
         if candidates.is_empty() {
             return Ok(Plan::Stuck("no source answered".into()));
@@ -659,7 +733,9 @@ impl Updater {
             let digest = CompactUpdate::of(&c.update).digest(LcFork::Gloas);
             let verdict = self.evaluate(&store, &c.update);
             match verdict {
-                Verdict::Useful(p) => {
+                Verdict::Useful(mut p) => {
+                    p.period_update = c.period_update;
+                    p.raw = c.raw;
                     let e = best_seen.entry(c.source).or_default();
                     *e = (*e).max(p.update.finalized_header.beacon.slot);
                     seen_digests.insert(digest, true);
@@ -683,7 +759,7 @@ impl Updater {
         let best =
             useful.iter().map(|(_, p)| p.update.finalized_header.beacon.slot).max().unwrap_or(store.finalized.slot);
         for i in 0..self.sources.len() {
-            if !self.usable(i) {
+            if !self.usable(i) || !self.sources[i].light_client() {
                 continue;
             }
             let mine = best_seen.get(&i).copied().unwrap_or(0);
@@ -710,29 +786,58 @@ impl Updater {
                 p.update.sync_aggregate.bits.iter().filter(|b| **b).count(),
             )
         };
-        // The best candidate that enough sources serve (its finalized header root).
-        let agreement = |p: &Planned| {
-            let root = p.update.finalized_header.beacon.hash_tree_root();
-            useful
+        // The best candidate that enough sources serve: light-client sources serving an update with its finalized
+        // header, and headers sources holding that block canonical at its slot.
+        let mut order: Vec<usize> = (0..useful.len()).collect();
+        order.sort_by_key(|&i| std::cmp::Reverse(key(&useful[i].1)));
+        let mut asked: BTreeMap<(usize, u64), Option<Root>> = BTreeMap::new();
+        let (mut pick, mut first) = (None, None);
+        for &i in &order {
+            let header = useful[i].1.update.finalized_header.beacon.clone();
+            let root = header.hash_tree_root();
+            let mut agreeing: BTreeSet<usize> = useful
                 .iter()
                 .filter(|(_, q)| q.update.finalized_header.beacon.hash_tree_root() == root)
                 .map(|(s, _)| *s)
-                .collect::<std::collections::BTreeSet<usize>>()
-                .len()
+                .collect();
+            agreeing.extend(self.confirm_header(header.slot, &root, &mut asked));
+            first.get_or_insert((agreeing.len(), header.slot));
+            if agreeing.len() >= self.policy.min_agreeing {
+                pick = Some((i, agreeing));
+                break;
+            }
+        }
+        let Some((pick, agreeing)) = pick else {
+            let (n, slot) = first.expect("useful is not empty");
+            return Ok(Plan::Waiting(format!("{n} of {} sources serve finalized slot {slot}", self.policy.min_agreeing)));
         };
-        let mut order: Vec<usize> = (0..useful.len()).collect();
-        order.sort_by_key(|&i| std::cmp::Reverse(key(&useful[i].1)));
-        let Some(pick) = order.iter().copied().find(|&i| agreement(&useful[i].1) >= self.policy.min_agreeing) else {
-            let best = &useful[order[0]].1;
-            return Ok(Plan::Waiting(format!(
-                "{} of {} sources serve finalized slot {}",
-                agreement(best),
-                self.policy.min_agreeing,
-                best.update.finalized_header.beacon.slot
-            )));
-        };
-        let chosen = useful.swap_remove(pick).1;
-        // The job's next step, as the chain holds it (another updater may have begun it).
+        let chosen = *useful.swap_remove(pick).1;
+        let names: Vec<&str> = agreeing.iter().map(|&s| self.sources[s].name()).collect();
+        let what = format!(
+            "finalized slot {} root 0x{} (attested slot {}, signature slot {}, {} of {} signers{}{}{}), served or \
+             confirmed by {}",
+            chosen.update.finalized_header.beacon.slot,
+            hex::encode(chosen.update.finalized_header.beacon.hash_tree_root()),
+            chosen.update.attested_header.beacon.slot,
+            chosen.update.signature_slot,
+            chosen.update.sync_aggregate.bits.iter().filter(|b| **b).count(),
+            chosen.update.sync_aggregate.bits.len(),
+            if chosen.outcome.advanced { "; advances" } else { "" },
+            if chosen.outcome.rotated { "; rotates the committees" } else { "" },
+            if chosen.outcome.adopted { "; adopts the next committee" } else { "" },
+            names.join(", ")
+        );
+        let plan = self.next_step(ledger, chosen, &state)?;
+        if let Plan::Send(a) = &plan {
+            if a.step == Step::Open {
+                self.log(&format!("job 0x{}: {what}", &hex::encode(a.job_id)[..16]));
+            }
+        }
+        Ok(plan)
+    }
+
+    /// The job's next step, as the chain holds it (another updater, or this one before a restart, may have begun it).
+    fn next_step(&mut self, ledger: &dyn Ledger, chosen: Planned, state: &InstanceState) -> Result<Plan> {
         let step = match self.job_on_chain(ledger, &chosen.jid)? {
             None => Step::Open,
             Some(job) => match &job.phase {
@@ -747,6 +852,9 @@ impl Updater {
             return Ok(Plan::Deferred(step));
         }
         let tx = self.job_tx(&chosen, step)?;
+        if step == Step::Open {
+            self.opening = Some((chosen.jid, chosen.period_update, chosen.raw.clone()));
+        }
         Ok(Plan::Send(Action {
             step,
             job_id: chosen.jid,
@@ -754,6 +862,104 @@ impl Updater {
             finalized_slot: chosen.update.finalized_header.beacon.slot,
             store_seen: Some((state.active, state.store.clone())),
         }))
+    }
+
+    /// The next step of a job this updater opened whose update still moves the store (`policy.finish_own_jobs`); a
+    /// kept job that is finished, gone or moot is forgotten.
+    fn continue_carried(
+        &mut self,
+        ledger: &dyn Ledger,
+        store: &CompactStore,
+        state: &InstanceState,
+    ) -> Result<Option<Plan>> {
+        let carried: Vec<(Root, (bool, Vec<u8>))> = self.carried.iter().map(|(k, v)| (*k, v.clone())).collect();
+        for (jid, (period_update, raw)) in carried {
+            let decoded = if period_update {
+                decode_update(&raw, &self.inst.config)
+            } else {
+                decode_finality_update(&raw, &self.inst.config)
+            };
+            let Ok((update, _)) = decoded else {
+                self.drop_carried(&jid);
+                continue;
+            };
+            match self.evaluate(store, &update) {
+                Verdict::Useful(mut p) if p.jid == jid && self.job_on_chain(ledger, &jid)?.is_some() => {
+                    p.period_update = period_update;
+                    p.raw = raw;
+                    let plan = self.next_step(ledger, *p, state)?;
+                    if let Plan::Send(a) = &plan {
+                        self.log(&format!(
+                            "job 0x{} (finalized slot {}) is open: its {} first",
+                            &hex::encode(jid)[..16],
+                            a.finalized_slot,
+                            a.step.name()
+                        ));
+                    }
+                    return Ok(Some(plan));
+                }
+                _ => self.drop_carried(&jid),
+            }
+        }
+        Ok(None)
+    }
+
+    /// The headers sources that hold `root` canonical at `slot`: each asked at most once a round, a confirmation kept
+    /// (a finalized block stays canonical).
+    fn confirm_header(
+        &mut self,
+        slot: u64,
+        root: &Root,
+        asked: &mut BTreeMap<(usize, u64), Option<Root>>,
+    ) -> Vec<usize> {
+        let mut out = Vec::new();
+        for i in 0..self.sources.len() {
+            if self.sources[i].light_client() || !self.usable(i) {
+                continue;
+            }
+            if self.confirmed.get(&(i, slot)) == Some(root) {
+                out.push(i);
+                continue;
+            }
+            let answer = match asked.get(&(i, slot)) {
+                Some(a) => *a,
+                None => {
+                    self.stats(i).requests += 1;
+                    match self.sources[i].canonical_root(slot) {
+                        Ok(a) => {
+                            self.stats(i).available = true;
+                            asked.insert((i, slot), a);
+                            a
+                        }
+                        Err(e) => {
+                            let s = self.stats(i);
+                            s.errors += 1;
+                            s.available = false;
+                            self.log(&format!("header at slot {slot}: {e:#}"));
+                            continue;
+                        }
+                    }
+                }
+            };
+            let name = self.sources[i].name().to_string();
+            let s = self.stats(i);
+            if answer.as_ref() == Some(root) {
+                s.mismatch = false;
+                s.confirmed += 1;
+                s.finalized_slot = s.finalized_slot.max(slot);
+                if self.confirmed.len() > 4096 {
+                    self.confirmed.clear();
+                }
+                self.confirmed.insert((i, slot), *root);
+                out.push(i);
+            } else {
+                s.mismatch = true;
+                s.mismatches += 1;
+                let theirs = answer.map_or("no block".to_string(), |r| format!("0x{}", hex::encode(r)));
+                self.log(&format!("source {name} holds {theirs} canonical at slot {slot}, not 0x{}", hex::encode(root)));
+            }
+        }
+        out
     }
 
     fn job_on_chain(&self, ledger: &dyn Ledger, jid: &Root) -> Result<Option<Job>> {
@@ -945,6 +1151,14 @@ impl Updater {
         *self.metrics.tx.entry((action.step.name(), result)).or_default() += 1;
         let gas = out.gas_exec + out.gas_stor;
         if out.applied {
+            if action.step == Step::Open && self.policy.finish_own_jobs {
+                if let Some((jid, period_update, raw)) = self.opening.take().filter(|o| o.0 == action.job_id) {
+                    self.carry(jid, period_update, raw);
+                }
+            }
+            if action.step == Step::Finish {
+                self.drop_carried(&action.job_id);
+            }
             self.metrics.gas_applied += gas;
             self.metrics.fee_applied += out.fee;
             let last_adopt = matches!(action.step, Step::Adopt(p) if p + 1 == self.inst.config.adoption_parts)
@@ -987,6 +1201,8 @@ impl Updater {
                 why.push(format!("source {name} demoted (served what the program refuses)"));
             } else if s.lagging {
                 why.push(format!("source {name} lagging (finalized slot {})", s.finalized_slot));
+            } else if s.mismatch {
+                why.push(format!("source {name} holds another block canonical at a finalized header's slot"));
             } else if !s.available && s.requests > 0 {
                 why.push(format!("source {name} unavailable"));
             }
@@ -1044,6 +1260,8 @@ impl Updater {
             let _ = writeln!(o, "ferrata_updater_source_available{{{sl}}} {}", u8::from(s.available));
             let _ = writeln!(o, "ferrata_updater_source_demoted{{{sl}}} {}", u8::from(s.demoted_until > self.round));
             let _ = writeln!(o, "ferrata_updater_source_finalized_slot{{{sl}}} {}", s.finalized_slot);
+            let _ = writeln!(o, "ferrata_updater_source_confirmed_total{{{sl}}} {}", s.confirmed);
+            let _ = writeln!(o, "ferrata_updater_source_mismatches_total{{{sl}}} {}", s.mismatches);
         }
         let (status, _) = self.health();
         let code = match status {

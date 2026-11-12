@@ -15,6 +15,9 @@ pub struct File {
     pub fees: Fees,
     #[serde(default)]
     pub policy: Policy,
+    /// The sequencer `daemon.ledger = "sequencer"` writes to.
+    #[serde(default)]
+    pub sequencer: Option<SequencerCfg>,
     #[serde(rename = "chain")]
     pub chains: Vec<ChainCfg>,
 }
@@ -34,9 +37,30 @@ pub struct Daemon {
     #[serde(default)]
     pub listen: Option<String>,
     /// `harness`: LEZ's state machine in process (dev mode, recorded sources); `sequencer`: a
-    /// LEZ sequencer through its RPC (not in this build).
+    /// LEZ sequencer through its RPC (`[sequencer]`; the build of `sequencer/`).
     #[serde(default = "default_ledger")]
     pub ledger: String,
+}
+
+/// A running LEZ sequencer (`daemon.ledger = "sequencer"`).
+#[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SequencerCfg {
+    /// The sequencer's JSON-RPC address (`sequencer_service start --rpc-listen-address`); loopback only.
+    pub rpc: String,
+    /// The attestation program's account on that chain (base58), as its deployment computed it.
+    pub program: String,
+    /// Read the chain, and count a transaction as settled, only in blocks final on Bedrock (default). `false`: the
+    /// sequencer's head (LEZ's standalone sequencer has no Bedrock, so no block of it is ever final).
+    #[serde(default = "default_true")]
+    pub wait_final: bool,
+    /// The backend's own files: the follower of the chain, the blocks it applied, the manifest of every transaction
+    /// (default `<state_dir>/ledger`).
+    #[serde(default)]
+    pub run_dir: Option<String>,
+    /// The sequencer's log, read for the reason of a transaction it dropped (optional).
+    #[serde(default)]
+    pub log: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -82,6 +106,12 @@ pub struct Policy {
     pub demote_rounds: u64,
     /// Periods asked of the `updates` endpoint at once.
     pub max_periods_per_request: u64,
+    /// Finish a job this updater opened before choosing another update (default): a beacon node serves only its
+    /// newest finality update, so the update a job was opened for can be gone from every source before the job's
+    /// last step, and the steps already paid would be lost. The update is kept in `state_dir/<chain>/open/` until the
+    /// job is finished or moot, so a restarted updater finishes it too.
+    #[serde(default = "default_true")]
+    pub finish_own_jobs: bool,
 }
 
 impl Default for Policy {
@@ -95,6 +125,7 @@ impl Default for Policy {
             max_attempts: 5,
             demote_rounds: 50,
             max_periods_per_request: 16,
+            finish_own_jobs: true,
         }
     }
 }
@@ -109,6 +140,11 @@ pub struct ChainCfg {
     pub checkpoint: String,
     #[serde(default = "default_parts")]
     pub adoption_parts: u8,
+    /// The light-client layout of the checkpoint's bootstrap, which the instance's store starts in
+    /// (`Config::store_fork`): `electra` (default) or `gloas` (a bootstrap of the Gloas era, as
+    /// `crates/ferrata-spectests/fixtures/sepolia-2026-11-12`); the instance's id hashes it.
+    #[serde(default)]
+    pub layout: Option<String>,
     #[serde(rename = "source")]
     pub sources: Vec<SourceCfg>,
 }
@@ -125,6 +161,19 @@ pub struct SourceCfg {
     pub dir: Option<String>,
     #[serde(default = "default_timeout")]
     pub timeout_secs: u64,
+    /// `light-client` (default): it serves bootstraps, updates and finality updates. `headers`: it only serves
+    /// `/eth/v1/beacon/headers/{slot}` (most public beacon APIs), and counts towards `min_agreeing` for an update
+    /// whose finalized header is the block it reports canonical at that slot.
+    #[serde(default)]
+    pub kind: SourceKind,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum SourceKind {
+    #[default]
+    LightClient,
+    Headers,
 }
 
 fn default_name() -> String {
@@ -141,6 +190,9 @@ fn default_parts() -> u8 {
 }
 fn default_timeout() -> u64 {
     30
+}
+fn default_true() -> bool {
+    true
 }
 
 impl File {
@@ -165,8 +217,20 @@ impl File {
         if self.policy.defer_window == 0 || self.policy.max_attempts == 0 {
             bail!("policy: defer_window and max_attempts must be at least 1");
         }
+        match (self.daemon.ledger.as_str(), &self.sequencer) {
+            ("sequencer", None) => bail!("daemon.ledger = \"sequencer\" needs a [sequencer] section"),
+            ("sequencer", Some(s)) => {
+                crate::chain::check_loopback(&s.rpc)?;
+                if s.program.trim().is_empty() {
+                    bail!("sequencer.program: the attestation program's account");
+                }
+            }
+            ("harness", _) => {}
+            (other, _) => bail!("daemon.ledger = {other:?}: harness or sequencer"),
+        }
         for c in &self.chains {
-            crate::chain::preset(&c.preset, c.adoption_parts)?;
+            crate::chain::instance_config(&c.preset, c.adoption_parts, c.layout.as_deref())
+                .with_context(|| format!("chain {}", c.name))?;
             crate::chain::root(&c.checkpoint).with_context(|| format!("chain {}: checkpoint", c.name))?;
             if c.sources.is_empty() {
                 bail!("chain {}: no [[chain.source]]", c.name);
@@ -175,6 +239,12 @@ impl File {
                 if s.url.is_some() == s.dir.is_some() {
                     bail!("chain {} source {}: exactly one of url and dir", c.name, s.name);
                 }
+                if s.kind == SourceKind::Headers && s.url.is_none() {
+                    bail!("chain {} source {}: a headers source needs a url", c.name, s.name);
+                }
+            }
+            if c.sources.iter().all(|s| s.kind == SourceKind::Headers) {
+                bail!("chain {}: no light-client source (every source is kind = \"headers\")", c.name);
             }
         }
         Ok(())

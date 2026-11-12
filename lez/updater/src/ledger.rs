@@ -42,6 +42,11 @@ pub trait Ledger {
     /// Sign `tx` with `payer` (at its current nonce), declare `gas_limit` and `max_fee`, send it and
     /// wait until it is settled.
     fn submit(&mut self, payer: &PrivateKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> Result<TxOutcome>;
+    /// Save what the backend keeps between runs (the sequencer backend: its follower of the chain); the daemon calls
+    /// it now and then and when it stops.
+    fn flush(&mut self) -> Result<()> {
+        Ok(())
+    }
 }
 
 #[cfg(feature = "harness")]
