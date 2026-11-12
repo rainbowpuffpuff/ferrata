@@ -9,7 +9,8 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 
 /// The module's methods. The trait's name is the module's name in PascalCase.
 pub trait FerrataAttestModule: Send + 'static {
-    /// The module's version, the ferrata-core it was built from and its BLS backend, as JSON.
+    /// The module's version, what was staged beside it (the commit, LEZ's, each crate's sources'
+    /// SHA-256) and its BLS backend, as JSON.
     fn version(&mut self) -> String;
 
     /// Prove one storage slot or one log against a header record as the attestation program
