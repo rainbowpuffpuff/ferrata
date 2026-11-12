@@ -1335,13 +1335,19 @@ Toolchains, matching LEZ: host Rust 1.98.1 (LEZ's `rust-toolchain.toml`; `lez/ru
 pins it), RISC Zero zkVM 3.0.5 (LEZ's `Cargo.toml`), guests built with RISC Zero's Rust 1.91.1 (the
 toolchain of LEZ's own guest builds, `Justfile`: `r0.1.91.1`) and C++ 2024.1.5, r0vm 3.0.5. The
 guest toolchain was installed into a separate `RISC0_HOME` so as not to change the machine's
-default (1.88.0, which `../bench/` uses):
+default (1.88.0, which `../bench/` uses; LEZ's guests do not build with it: "ruint@1.21.1 requires rustc
+1.90"). From the repository root, `RISC0_HOME_LEZ=$PWD/../risc0-home-lez scripts/ci/install-risc0.sh`
+installs `rzup`, r0vm 3.0.5 and both guest toolchains, this one beside the repository where the block
+below expects it. The block is how the committed results were made: `./results_env.sh` and every
+`> results/…` rewrite committed files, and the harness tests rewrite their tables in `results/` too;
+to check rather than to record, run the `cargo test` line alone.
 
 ```sh
 cd lez                                               # from the repository root
-export RISC0_HOME=$PWD/../../risc0-home-lez          # rust 1.91.1 installed with `rzup install rust 1.91.1`;
-                                                     # cpp 2024.1.5 and r0vm 3.0.5 linked from ~/.risc0
+export RISC0_HOME=$PWD/../../risc0-home-lez          # guest rust 1.91.1, cpp 2024.1.5, r0vm 3.0.5
+                                                     # (scripts/ci/install-risc0.sh, above)
 export TMPDIR=$PWD/../../tmp CARGO_TARGET_DIR=$PWD/target
+mkdir -p "$TMPDIR"                                   # rustc stops ("couldn't create a temp dir") without it
 export RISC0_BUILD_LOCKED=1                          # risc0-build then builds the guests with --locked
 ./results_env.sh                                     # rewrites results/environment.md (run it first, on a clean tree)
 RISC0_DEV_MODE=1 cargo test -p harness --locked -- --test-threads 1 --nocapture \
@@ -1379,9 +1385,11 @@ lez/scripts/fetch-attest-fixture.py --network sepolia OUTDIR   # the same for St
                                                      # vault's capture is in §6
 ```
 
-The 27 tests take about two minutes on eight test threads (`--test-threads 8`; the longest
+The 27 tests took about two minutes on eight test threads (`--test-threads 8`; the longest
 test binary, `tests/sepolia.rs`, 102 s); the figures above were produced that way, on a cloud
-container, and do not depend on the thread count. The Stage 4 tests read
+container, and do not depend on the thread count. The harness has grown since: on 12 November 2026,
+on the Modal build box (16 cores), 56 tests in 30 binaries passed with `--test-threads 1` in about
+21 minutes after a 7-minute build (`vault_consumer` 383 s, `sepolia` 196 s, `public_path` 79 s). The Stage 4 tests read
 `../crates/ferrata-spectests/fixtures/mainnet-attest-2026-11-10` (or `FERRATA_ATTEST_FIXTURE_DIR`),
 Stage 5 `…/sepolia-gloas-2026-11-10` and `…/sepolia-attest-2026-11-10` (or
 `FERRATA_SEPOLIA_FIXTURE_DIR`, `FERRATA_SEPOLIA_ATTEST_DIR`); their SHA-256 sums are compiled in.
@@ -1542,7 +1550,7 @@ a live instance (§9: a proof is bound to the deployment it is made for).
 scripts/fetch-upstream.sh                     # also upstream/lez-v0.4.0-rc2 (commit e3edf47)
 lez/scripts/lez-select.sh v0.4.0-rc2          # manifests, feature lez-rc2, lockfiles/v0.4.0-rc2.patch
 cd lez
-export RISC0_HOME=$PWD/../../risc0-home-lez TMPDIR=$PWD/../../tmp
+export RISC0_HOME=$PWD/../../risc0-home-lez TMPDIR=$PWD/../../tmp && mkdir -p "$TMPDIR"
 export CARGO_TARGET_DIR=$PWD/target/lez-v0.4.0-rc2 RISC0_BUILD_LOCKED=1
 ./results_env.sh                              # results/v0.4.0-rc2/environment.md
 RISC0_DEV_MODE=1 cargo test -p harness --locked -- --test-threads 8 --nocapture \
