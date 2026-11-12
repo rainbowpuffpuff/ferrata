@@ -159,7 +159,7 @@ native_calls() {
     else
       "$repo/modules/$module/rust-lib/target/release/examples/call" "$method" < /dev/null > "$rep/replies/native/$name.json"
     fi
-  done < <(jq -r --arg mods " $MODULES " '.[] | select($mods | contains(" " + (.module // "ferrata_attest_module") + " "))
+  done < <(jq -r --arg mods " $MODULES " '.[] | select((.module // "ferrata_attest_module") as $m | $mods | contains(" " + $m + " "))
                   | [.name, .method, (if .request == "" then "-" else .request end), (.module // "ferrata_attest_module")] | @tsv' \
              "$rep/requests/calls.json")
 }
@@ -229,7 +229,7 @@ core() {
     jq -c 'if (.result | type) == "string" then (.result | fromjson? // .result) else .result end' \
       "$raw" > "$rep/replies/$flavour/$name.json" 2>/dev/null || true
   done < <(jq -r --arg mods " $MODULES " '[{name: "version", method: "version", request: "", module: "ferrata_attest_module"}] + . | .[]
-                  | select($mods | contains(" " + (.module // "ferrata_attest_module") + " "))
+                  | select((.module // "ferrata_attest_module") as $m | $mods | contains(" " + $m + " "))
                   | [.name, .method, (if .request == "" then "-" else .request end), (.module // "ferrata_attest_module")] | @tsv' \
              "$rep/requests/calls.json")
   if [ "$E2E" != 0 ] && has ferrata_attest_module && has ferrata_bridge_module; then
