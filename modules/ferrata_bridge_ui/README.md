@@ -118,11 +118,12 @@ with the private claim and burn proven for real; its results go to `results-real
 
 - **The private round trip runs on the devnet, not on a LEZ sequencer.** The harness proves and settles
   the private transactions (above); on a sequencer they would be sent by LEZ's wallet. Two things stand
-  between the view and that: `ferrata_bridge_module` (the core module the view calls in Logos) is not
-  built, so in Logos the view has nothing to call yet; and the CLI's sequencer ledger
-  (`cli/src/lez.rs`, `Sequencer::applied_with_private`) reads only public transactions' root calls into
-  the history, so a private burn's note (a delivery from a private transaction) is not found there and the
-  CLI could not release it; the devnet's ledger reads it. The CLI has no private burn command either.
+  between the view and that: `ferrata_bridge_module` (the core module the view calls in Logos) is built
+  but has no private claim yet and has not run with the view (`modules/README.md`, "Left out"); and the
+  `ferrata` tool's sequencer path has not run against a sequencer: since the merge of branch `bridge-cli` its
+  ledger (`cli/src/lez.rs`, `Sequencer::applied_with_private`) reads a private burn's note from the delivery
+  its transaction makes in the clear (`lez::visible_calls`), and the tool has a private burn (EVIDENCE rows
+  84, 85, both in the harness).
 - The checkpoint and release proofs and the Groth16 wrap are the mock verifier on the devnet (named in the
   replies); real proofs on this path are the private transactions' only.
 - The vault's own admin functions (fee announcements, watchers, the 14-day role change, retirement) are
