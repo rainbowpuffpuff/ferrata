@@ -43,8 +43,8 @@ half an hour on 16 CPUs). On a Modal account (`pip install modal`, then `modal s
 modal run --detach scripts/reproduce/modal_app.py
 ```
 
-With Docker on x86-64, `scripts/reproduce/run.sh` builds the same Dockerfile and runs the same `check.sh` in it. We
-have built that image and run it only on Modal: the Docker route itself has not been run yet. What it pins and what
+With Docker on x86-64, `scripts/reproduce/run.sh` builds the same Dockerfile and runs the same `check.sh` in it: run
+once under Docker on a fresh x86-64 Linux machine, 5 of 5 in 22 minutes ([`scripts/reproduce/runs/2026-11-12-docker-aws/`](scripts/reproduce/runs/2026-11-12-docker-aws/README.md)). What it pins and what
 it leaves out: [`scripts/reproduce/README.md`](scripts/reproduce/README.md).
 
 Commands run from the repository root. The first two need only Rust (with curl and tar for the vectors)

@@ -10,8 +10,8 @@ scripts/reproduce/run.sh                                                 # with 
 
 Both build the image of [`Dockerfile`](Dockerfile), copy this checkout's committed `HEAD` (`git archive`; uncommitted
 changes are not checked) to `/work/ferrata` beside the upstream sources, and run [`check.sh`](check.sh) there. The
-Docker route is that same Dockerfile and that same `check.sh`, which we have built and run on Modal; it has not yet
-been run under Docker itself.
+Docker route is that same Dockerfile and that same `check.sh`: run under Docker on a fresh x86-64 Linux machine on
+12 Nov 2026, 5 of 5 in 22:16 ([`runs/2026-11-12-docker-aws/`](runs/2026-11-12-docker-aws/README.md)).
 `--only NAME[,NAME...]` runs some of the checks. The logs land in `target/reproduce/<UTC time>/` (or `--out DIR`):
 one log per check, `summary.txt`, `environment.txt` and `packages.txt` (every version used),
 `guest-ids/` (the rebuilt ids) and `tree-changed.txt`. On a machine that already has these toolchains, `check.sh`
@@ -54,8 +54,9 @@ built it once, in 233 s, and later runs reuse it (this one did). The run: 16 CPU
 alone: commit 03f1a9b, 5 of 5 in 26:36 (a side-branch commit from before the tables were re-recorded, so 21 of them
 changed there), and commit 031b8c5, 5 of 5 in 36 minutes, the LEZ harness taking 24 of them; Modal had preempted
 that run's first container 20 minutes in and ran the function again from the start, so its call took 57 minutes.
-The Docker route, `run.sh`, builds the same Dockerfile and runs the same `check.sh`; it has not yet been run under
-Docker itself (no Docker on our machines).
+The Docker route, `run.sh`, builds the same Dockerfile and runs the same `check.sh`. Run once under Docker on an AWS
+EC2 m7i.4xlarge (16 vCPUs, 64 GiB, Ubuntu 24.04, Docker 29.1.3) at commit `bf430cc`: 5 of 5 in 22:16, no committed
+file changed ([`runs/2026-11-12-docker-aws/`](runs/2026-11-12-docker-aws/README.md)).
 
 The Modal route needs the `modal` client (`pip install modal`, then `modal setup`) and a Modal account; it sends the
 committed tree, about 41 MiB compressed. If the connection drops, Modal stops the run (one of ours ended that way);
