@@ -45,13 +45,13 @@ fn bad_configurations_are_refused() {
             "url and dir",
         ),
         ("[keys]", "[keys]\nunknown_field = 1", "unknown field"),
-        ("ledger = \"harness\"", "ledger = \"sequencer\"", "sequencer without [sequencer]"),
+        ("\nledger = \"harness\"", "\nledger = \"sequencer\"", "sequencer without [sequencer]"),
         (
-            "ledger = \"harness\"",
-            "ledger = \"sequencer\"\n[sequencer]\nrpc = \"http://10.0.0.1:3040\"\nprogram = \"x\"",
+            "\nledger = \"harness\"",
+            "\nledger = \"sequencer\"\n[sequencer]\nrpc = \"http://10.0.0.1:3040\"\nprogram = \"x\"",
             "a sequencer that is not on this machine",
         ),
-        ("ledger = \"harness\"", "ledger = \"chain\"", "unknown ledger"),
+        ("\nledger = \"harness\"", "\nledger = \"chain\"", "unknown ledger"),
         ("adoption_parts = 2", "adoption_parts = 2\nlayout = \"bellatrix\"", "unknown layout"),
         ("name = \"record-a\"\n  dir", "name = \"record-a\"\n  kind = \"headers\"\n  dir", "a headers source without url"),
     ] {
