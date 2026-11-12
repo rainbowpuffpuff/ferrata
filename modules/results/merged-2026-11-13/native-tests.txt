@@ -1,0 +1,19 @@
+Native tests of box run 1 (merge-modules, commit d4c0268), per suite (cargo's "test result" lines; suites with
+no tests left out). RISC0_DEV_MODE=1; lez/ and cli/ with RISC0_HOME=spike/risc0-home-lez (LEZ's guest Rust 1.91.1).
+
+cli/        ferrata-wallet (unittests src/lib.rs)          3 passed, 0 failed
+cli/        ferrata-cli (unittests src/lib.rs)            10 passed, 0 failed
+cli/        cargo test --no-run (every test target built), cargo build --example miniapp_devnet: ok
+cli/        tests/e2e.sh (the ferrata tool's end to end)   1 passed, 0 failed (25.25 s)
+lez/        ferrata-advance                                built and tested (no tests of its own)
+lez/        ferrata-updater --features harness, tests/config.rs     3 passed, 0 failed
+lez/        ferrata-updater --features harness, tests/recorded.rs   7 passed, 0 failed (250.27 s; the A3 gate:
+            437 rounds, honest gas refused/applied 0.0820 <= 0.10, honest fee shares 0.4428 / 0.5572)
+lez/        harness --bin module_e2e (profile test): built
+monitor/    tests/check.rs (cargo test --release --locked)  15 passed, 0 failed; the binary built
+checkpoint/ ferrata-attestor (cargo +1.88), tests/attestor.rs  12 passed, 0 failed
+
+The first cli/ step (native-cli in run-steps.txt) failed because the box script did not set RISC0_HOME for it:
+LEZ's guests, which the cli links through the harness, then built with RISC Zero's Rust 1.88.0 and stopped at
+"rustc 1.88.0-dev is not supported" (enum-ordinalize 4.4.2, ruint 1.21.1). Re-run in the same box with
+RISC0_HOME set (as tests/e2e.sh sets it): ok in 59 s, the results above.

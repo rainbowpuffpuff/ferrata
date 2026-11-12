@@ -1,0 +1,10 @@
+guests-bridge ok 69s
+guests-lez ok 364s
+native-cli FAILED(101) 263s
+native-lez ok 373s
+native-attestor ok 20s
+native-monitor ok 53s
+cli-e2e ok 407s
+check ok 1531s
+seconds=2729
+native-cli (re-run, RISC0_HOME=spike/risc0-home-lez) ok 59s

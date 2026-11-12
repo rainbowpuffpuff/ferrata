@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # What logos-modules-release-action's release.yml and rebuild-index.yml do, for the linux-amd64
-# variant, run locally for both modules and publishing nothing:
+# variant, run locally for the five modules and publishing nothing:
 #   export each module as its own repository (export.sh); `nix build .#lgx-portable`; `lgx verify`;
 #   `lgx manifest --json`; the release sidecar (the action's fields); then the catalog's index.json
 #   built by logos-modules-release-tool's index.py (the action's index builder) from the packages'
