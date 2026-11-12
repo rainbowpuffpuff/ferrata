@@ -74,5 +74,5 @@ reproducible builds and a re-check command for every result.
 author's line-by-line review; the author signed every row on 12 November 2026 (Carol Calin, after the agent
 review of 11 November), and the bridge prototypes have no such map yet. Under the proposal, consensus-critical and fund-holding code ships only after its vectors, its
 adversarial and mutation suites and the author's line-by-line review, signed function by function in that
-file: the core's 48 rows are signed (12 November 2026); the vault and the guests follow by milestones A1 and B1; agent reviews in a separate context
+file: the core's 48 rows are signed (12 November 2026); the program's on-chain steps (`steps.rs`, `witness.rs`) follow by milestone A1, the vault and the guests by B1; agent reviews in a separate context
 are kept with each milestone and never called an audit.
