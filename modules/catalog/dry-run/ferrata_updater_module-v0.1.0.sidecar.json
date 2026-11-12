@@ -1,9 +1,9 @@
 {
   "publisherRef": "ferrata_updater_module-v0.1.0",
-  "releasedAt": "2026-11-12T21:21:41Z",
-  "sha256": "bfab929271d9952e14da2ec7a6693fc7a752656363055bc63caa0d71433f7467",
-  "size": 15782027,
-  "rootHash": "4d036a71c966d25c1198e8530ff08de0812bcd56cbfb79088d8cfe28e0888c8f",
+  "releasedAt": "2026-11-12T23:04:44Z",
+  "sha256": "b44b0e6d1a2422c031efb102153422a9e7b3c474b1fee5daa9b2b0468225662b",
+  "size": 15801312,
+  "rootHash": "004687e0efbdd334dd56ab9fa74e93742b2fd0b08bc8971b8935a9277a5542fa",
   "builtVariants": [
     "linux-amd64"
   ],
@@ -16,9 +16,9 @@
     "display_name": "Ferrata updater (light client)",
     "hashes": {
       "assets": "a91eb41758da64189ce8fa19d371ea1d271c9505eeb2fc0c89e7c10a714a7624",
-      "root": "4d036a71c966d25c1198e8530ff08de0812bcd56cbfb79088d8cfe28e0888c8f",
-      "variants": "e3bfe2db9b18dbdfc03943f5420f9bb7e30332dadb5cb2e20ed9e612263899c1",
-      "variants/linux-amd64": "25a23efd933e9cf2785ceaf295035c36236bbc478847949e7c8b504f99bee70d"
+      "root": "004687e0efbdd334dd56ab9fa74e93742b2fd0b08bc8971b8935a9277a5542fa",
+      "variants": "f04f113e745df93c4d6d733579afb5623f7165f816d0bd126bddce9aaa210449",
+      "variants/linux-amd64": "519eed10cae86b88528b578930c404a48fa40c0d9867522ffcfc91a166b5cbb4"
     },
     "icon": "",
     "main": {

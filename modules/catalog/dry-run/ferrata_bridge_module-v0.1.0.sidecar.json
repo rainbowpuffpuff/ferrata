@@ -1,9 +1,9 @@
 {
   "publisherRef": "ferrata_bridge_module-v0.1.0",
-  "releasedAt": "2026-11-12T21:21:14Z",
-  "sha256": "262bb960c49a36050e188285999bad2440492fe35d99609369a53f601bd216ea",
-  "size": 5179690,
-  "rootHash": "cc229704082ad95c5f112ed13efe4f2314bc65b4d5649bdb6ab5b2db8b7df0d3",
+  "releasedAt": "2026-11-12T22:59:07Z",
+  "sha256": "42de2556f549b7978abda087bc8c2bcaa1766fd0a7fec4bfe7fda3b185cff62d",
+  "size": 9543619,
+  "rootHash": "7a4e782f2e3a2722b1d79bd056ab1405f2b26c9b8d373c3cc557d10165e16514",
   "builtVariants": [
     "linux-amd64"
   ],
@@ -15,10 +15,10 @@
     "description": "Ferrata (prototype): the user side of the Ferrata bridge between Ethereum and LEZ: deposit commitments and vault calls, claims, burns, release witnesses and journals, recovery and status, with the bridge core",
     "display_name": "Ferrata bridge",
     "hashes": {
-      "assets": "bef8a791e8d3eea97d4039b10ed182e1e0b366b551e2b8ffae6087557753e686",
-      "root": "cc229704082ad95c5f112ed13efe4f2314bc65b4d5649bdb6ab5b2db8b7df0d3",
-      "variants": "5a84bac05498d451673a992517aa6bb6cb36fb0eef81304723f231db83675426",
-      "variants/linux-amd64": "57d78c0988b547cfd518a9e0ec8bcc59ce5075c3e0e825ff699e821d0b7af1b9"
+      "assets": "7980214a0d08db70e2642e6eac536ed5a65132609e1e578b1636bfdbe042c7d1",
+      "root": "7a4e782f2e3a2722b1d79bd056ab1405f2b26c9b8d373c3cc557d10165e16514",
+      "variants": "5e8d295d1d163cac6ab7f33f09eb98f2514be3102ce1ba1e42c8734ef39f15d5",
+      "variants/linux-amd64": "bc58babf4246dbc02ffb93a97875f861393bf0a91ccb9eea8e4272ad3f51bc7b"
     },
     "icon": "",
     "main": {

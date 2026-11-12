@@ -1,2 +1,2 @@
-Package structure is valid: spike/ferrata-wt-modules-more/modules/out/release/dist/ferrata_updater_module-v0.1.0/ferrata_updater_module-0.1.0.lgx
+Package structure is valid: spike/ferrata-wt-merge-modules/modules/out/release/dist/ferrata_updater_module-v0.1.0/ferrata_updater_module-0.1.0.lgx
 Package is unsigned

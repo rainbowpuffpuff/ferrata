@@ -1,0 +1,9 @@
+{
+  "verdict": "collected",
+  "n": 4,
+  "t": 3,
+  "native": "accepted: n = 4, t = 3, 4 attestations counted, producer fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+  "journal_sha256": "21fb67716047a2657c4cbc8fa2e53f9700b2920bccd48d19b859471ee181088c",
+  "input_bytes": 25587,
+  "input_sha256": "34ce7ad809a6bc90329f77add93bc2a8499d7d33caa4800df48b8d89aac7048a"
+}

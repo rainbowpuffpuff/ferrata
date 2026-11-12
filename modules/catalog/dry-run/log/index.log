@@ -8,4 +8,4 @@
 ==> verifying pkg-0003.lgx
 ==> downloading http://127.0.0.1:18546/ferrata_updater_module-v0.1.0/ferrata_updater_module-0.1.0.lgx
 ==> verifying pkg-0004.lgx
-==> wrote spike/ferrata-wt-modules-more/modules/out/release/index.json — 5 package(s)
+==> wrote spike/ferrata-wt-merge-modules/modules/out/release/index.json — 5 package(s)

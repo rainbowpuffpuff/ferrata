@@ -1,0 +1,22 @@
+{"at":1794525005,"error":"the node's final tier: no inscription of channel 0101010101010101010101010101010101010101010101010101010101010101 in the node's final tier","outcome":"refused","round":1,"seconds":0}
+{"at":1794525020,"lib_slot":9031988,"outcome":"attested","round":2,"seconds":0,"tip_id":3}
+{"at":1794525035,"lib_slot":9032003,"outcome":"attested","round":3,"seconds":1,"tip_id":4}
+{"at":1794525051,"lib_slot":9032018,"outcome":"attested","round":4,"seconds":0,"tip_id":6}
+{"at":1794525066,"lib_slot":9032033,"outcome":"unchanged","round":5,"seconds":0,"tip_id":6}
+{"at":1794525081,"lib_slot":9032049,"outcome":"unchanged","round":6,"seconds":0,"tip_id":6}
+{"at":1794525096,"lib_slot":9032064,"outcome":"attested","round":7,"seconds":0,"tip_id":7}
+{"at":1794525111,"lib_slot":9032079,"outcome":"attested","round":8,"seconds":0,"tip_id":8}
+{"at":1794525126,"lib_slot":9032094,"outcome":"attested","round":9,"seconds":0,"tip_id":10}
+{"at":1794525141,"lib_slot":9032109,"outcome":"attested","round":10,"seconds":0,"tip_id":11}
+{"at":1794525157,"lib_slot":9032124,"outcome":"attested","round":11,"seconds":0,"tip_id":13}
+{"at":1794525172,"lib_slot":9032140,"outcome":"attested","round":12,"seconds":0,"tip_id":14}
+{"at":1794525187,"lib_slot":9032155,"outcome":"attested","round":13,"seconds":0,"tip_id":16}
+{"at":1794525202,"lib_slot":9032170,"outcome":"attested","round":14,"seconds":0,"tip_id":17}
+{"at":1794525217,"lib_slot":9032185,"outcome":"attested","round":15,"seconds":0,"tip_id":19}
+{"at":1794525233,"lib_slot":9032200,"outcome":"attested","round":16,"seconds":0,"tip_id":20}
+{"at":1794525248,"lib_slot":9032216,"outcome":"attested","round":17,"seconds":0,"tip_id":22}
+{"at":1794525263,"lib_slot":9032231,"outcome":"attested","round":18,"seconds":0,"tip_id":24}
+{"at":1794525278,"lib_slot":9032246,"outcome":"attested","round":19,"seconds":0,"tip_id":25}
+{"at":1794525293,"lib_slot":9032261,"outcome":"attested","round":20,"seconds":0,"tip_id":27}
+{"at":1794525309,"lib_slot":9032276,"outcome":"attested","round":21,"seconds":0,"tip_id":28}
+{"at":1794525324,"lib_slot":9032292,"outcome":"attested","round":22,"seconds":0,"tip_id":29}

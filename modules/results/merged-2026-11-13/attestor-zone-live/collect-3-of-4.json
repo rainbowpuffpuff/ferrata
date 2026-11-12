@@ -1,0 +1,15 @@
+{
+  "verdict": "collected",
+  "n": 4,
+  "t": 3,
+  "kept": [
+    "spike/ferrata-wt-merge-modules/modules/out/zone-live/work/published-0/latest.json",
+    "spike/ferrata-wt-merge-modules/modules/out/zone-live/work/published-1/latest.json",
+    "spike/ferrata-wt-merge-modules/modules/out/zone-live/work/published-3/latest.json"
+  ],
+  "dropped": [],
+  "native": "accepted: n = 4, t = 3, 3 attestations counted, producer fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+  "journal_sha256": "21fb67716047a2657c4cbc8fa2e53f9700b2920bccd48d19b859471ee181088c",
+  "input_bytes": 25323,
+  "input_sha256": "0d7c33a8472a62340d7085b3886bb4c319d4fdcf749dd2cf7f4f4dab43ef9727"
+}

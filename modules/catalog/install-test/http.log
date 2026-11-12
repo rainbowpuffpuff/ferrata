@@ -1,8 +1,8 @@
-127.0.0.1 - - [12/Nov/2026 21:21:46] "GET /logos-repo.json?_lgpd_cb=1794518506090471800-1 HTTP/1.1" 200 -
-127.0.0.1 - - [12/Nov/2026 21:21:46] "GET /logos-repo.json?_lgpd_cb=1794518506177633398-3 HTTP/1.1" 200 -
-127.0.0.1 - - [12/Nov/2026 21:21:46] "GET /index.json?_lgpd_cb=1794518506181520121-4 HTTP/1.1" 200 -
-127.0.0.1 - - [12/Nov/2026 21:21:46] "GET /ferrata_attest_module-v0.1.0/ferrata_attest_module-0.1.0.lgx HTTP/1.1" 200 -
-127.0.0.1 - - [12/Nov/2026 21:21:46] "GET /ferrata_bridge_module-v0.1.0/ferrata_bridge_module-0.1.0.lgx HTTP/1.1" 200 -
-127.0.0.1 - - [12/Nov/2026 21:21:47] "GET /ferrata_attestor_module-v0.1.0/ferrata_attestor_module-0.1.0.lgx HTTP/1.1" 200 -
-127.0.0.1 - - [12/Nov/2026 21:21:48] "GET /ferrata_monitor_module-v0.1.0/ferrata_monitor_module-0.1.0.lgx HTTP/1.1" 200 -
-127.0.0.1 - - [12/Nov/2026 21:21:49] "GET /ferrata_updater_module-v0.1.0/ferrata_updater_module-0.1.0.lgx HTTP/1.1" 200 -
+127.0.0.1 - - [12/Nov/2026 23:04:50] "GET /logos-repo.json?_lgpd_cb=1794524690279285568-1 HTTP/1.1" 200 -
+127.0.0.1 - - [12/Nov/2026 23:04:50] "GET /logos-repo.json?_lgpd_cb=1794524690375008353-3 HTTP/1.1" 200 -
+127.0.0.1 - - [12/Nov/2026 23:04:50] "GET /index.json?_lgpd_cb=1794524690379510911-4 HTTP/1.1" 200 -
+127.0.0.1 - - [12/Nov/2026 23:04:50] "GET /ferrata_attest_module-v0.1.0/ferrata_attest_module-0.1.0.lgx HTTP/1.1" 200 -
+127.0.0.1 - - [12/Nov/2026 23:04:51] "GET /ferrata_bridge_module-v0.1.0/ferrata_bridge_module-0.1.0.lgx HTTP/1.1" 200 -
+127.0.0.1 - - [12/Nov/2026 23:04:52] "GET /ferrata_attestor_module-v0.1.0/ferrata_attestor_module-0.1.0.lgx HTTP/1.1" 200 -
+127.0.0.1 - - [12/Nov/2026 23:04:53] "GET /ferrata_monitor_module-v0.1.0/ferrata_monitor_module-0.1.0.lgx HTTP/1.1" 200 -
+127.0.0.1 - - [12/Nov/2026 23:04:54] "GET /ferrata_updater_module-v0.1.0/ferrata_updater_module-0.1.0.lgx HTTP/1.1" 200 -

@@ -1,1 +1,1 @@
-export.sh: ferrata_attestor_module -> spike/ferrata-wt-modules-more/modules/out/release/src/ferrata_attestor_module (33 files, commit 2c211e4)
+export.sh: ferrata_attestor_module -> spike/ferrata-wt-merge-modules/modules/out/release/src/ferrata_attestor_module (33 files, commit 4815202)

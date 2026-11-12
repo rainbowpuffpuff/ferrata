@@ -1,0 +1,4 @@
+release ok 576s
+catalog FAILED(1) 292s
+zone-live ok 355s
+seconds=1224

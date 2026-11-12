@@ -1,18 +1,18 @@
 {
   "schemaVersion": 2,
   "repositoryName": "ferrata-modules",
-  "generatedAt": "2026-11-12T21:21:42Z",
+  "generatedAt": "2026-11-12T23:04:45Z",
   "packages": [
     {
       "name": "ferrata_attest_module",
       "versions": [
         {
-          "releasedAt": "2026-11-12T21:21:07Z",
+          "releasedAt": "2026-11-12T22:56:56Z",
           "publisherRef": "ferrata_attest_module-v0.1.0",
           "url": "http://127.0.0.1:18546/ferrata_attest_module-v0.1.0/ferrata_attest_module-0.1.0.lgx",
-          "size": 5282014,
-          "sha256": "aca5118a9de2388611917d5d6d37d179554ccb69fe660c3f5ecaf5059ee733af",
-          "rootHash": "1d4ea2298cb4975ad5afcb293895bd88a3c71e372231810765f899384dab9dc3",
+          "size": 6641682,
+          "sha256": "3e095d87bb47846e035fd1a97f7176ead0706b1c5e28dd447e926f667a3aee62",
+          "rootHash": "8dbb8af3ef17e4f9f5b94e679466e27fe1fd5c0f56b2ccb0385ddfa0860f93c1",
           "manifest": {
             "author": "",
             "category": "ethereum",
@@ -20,10 +20,10 @@
             "description": "Ferrata (prototype): dry-run an Ethereum attestation against a header record and verify a light-client checkpoint, with the program's verification core",
             "display_name": "Ferrata attestation",
             "hashes": {
-              "assets": "d6e49f23a1ca657ac538401e509bdfa345b96e4dc72e8ad843867f2a1e73bc87",
-              "root": "1d4ea2298cb4975ad5afcb293895bd88a3c71e372231810765f899384dab9dc3",
-              "variants": "7357ce1b2cd6abb1fc8a19922fbb071f4cbead1cbe43234d6471f59e4b78c30a",
-              "variants/linux-amd64": "40d1112396fee2c6b76b2943d9e7cd292a03f7d134e5c99efabb092b6505112a"
+              "assets": "fc750719c136ee6551d6f2a542b17de558370ed643c6ef2fe492d63a3d62663b",
+              "root": "8dbb8af3ef17e4f9f5b94e679466e27fe1fd5c0f56b2ccb0385ddfa0860f93c1",
+              "variants": "6491bb6ee8a6884106416d27c274765fe06039901266d4b4d75f17b01d3f06c4",
+              "variants/linux-amd64": "5bcb7a46108a4a8c5ebe698da20f67bbf215404a854b0e4023f0e05970aa6ce1"
             },
             "icon": "",
             "main": {
@@ -44,12 +44,12 @@
       "name": "ferrata_attestor_module",
       "versions": [
         {
-          "releasedAt": "2026-11-12T21:21:21Z",
+          "releasedAt": "2026-11-12T23:00:07Z",
           "publisherRef": "ferrata_attestor_module-v0.1.0",
           "url": "http://127.0.0.1:18546/ferrata_attestor_module-v0.1.0/ferrata_attestor_module-0.1.0.lgx",
-          "size": 5501471,
-          "sha256": "035b93182edf099deb8435d29a40b00270f4e6eeda0d75bf913e80ccd32ce443",
-          "rootHash": "44f5080709514f97bba88b0f1cce65347ca00fb49d9e65a6a26da895f9cbb7f3",
+          "size": 5502240,
+          "sha256": "58bc6a2695df307030fd8af8ee8f8be0358b91f793f3c94658b88935fe3dc619",
+          "rootHash": "a87b5a221ac248aa7bdcb8ee3146bb6a423e7460a932bf079fdc7ffdcb64e37f",
           "manifest": {
             "author": "",
             "category": "bridge",
@@ -58,9 +58,9 @@
             "display_name": "Ferrata attestor (rule B)",
             "hashes": {
               "assets": "9aa759984e82bd85eefd4d47bb2540c5a08b40a35292b692c1279a321a688471",
-              "root": "44f5080709514f97bba88b0f1cce65347ca00fb49d9e65a6a26da895f9cbb7f3",
-              "variants": "f4f133bae9a04bb0e73f5f7e1d92275a3a4be5cfd5aef4dcf8c09a8a0d0006c4",
-              "variants/linux-amd64": "ada6b36a14d69aec39bdb68d20742a0a6d394bfc4d0c7f95a4c0f4afb7b591f7"
+              "root": "a87b5a221ac248aa7bdcb8ee3146bb6a423e7460a932bf079fdc7ffdcb64e37f",
+              "variants": "116254c1913d3620c0eaed2c5e428d07f8636f1f892bf8b87104878962fcb909",
+              "variants/linux-amd64": "388092b327baed59dd086f7cf1cf3fc49fe96440799918418e8dc985e2e85aaa"
             },
             "icon": "",
             "main": {
@@ -81,12 +81,12 @@
       "name": "ferrata_bridge_module",
       "versions": [
         {
-          "releasedAt": "2026-11-12T21:21:14Z",
+          "releasedAt": "2026-11-12T22:59:06Z",
           "publisherRef": "ferrata_bridge_module-v0.1.0",
           "url": "http://127.0.0.1:18546/ferrata_bridge_module-v0.1.0/ferrata_bridge_module-0.1.0.lgx",
-          "size": 5179690,
-          "sha256": "262bb960c49a36050e188285999bad2440492fe35d99609369a53f601bd216ea",
-          "rootHash": "cc229704082ad95c5f112ed13efe4f2314bc65b4d5649bdb6ab5b2db8b7df0d3",
+          "size": 9543619,
+          "sha256": "42de2556f549b7978abda087bc8c2bcaa1766fd0a7fec4bfe7fda3b185cff62d",
+          "rootHash": "7a4e782f2e3a2722b1d79bd056ab1405f2b26c9b8d373c3cc557d10165e16514",
           "manifest": {
             "author": "",
             "category": "bridge",
@@ -94,10 +94,10 @@
             "description": "Ferrata (prototype): the user side of the Ferrata bridge between Ethereum and LEZ: deposit commitments and vault calls, claims, burns, release witnesses and journals, recovery and status, with the bridge core",
             "display_name": "Ferrata bridge",
             "hashes": {
-              "assets": "bef8a791e8d3eea97d4039b10ed182e1e0b366b551e2b8ffae6087557753e686",
-              "root": "cc229704082ad95c5f112ed13efe4f2314bc65b4d5649bdb6ab5b2db8b7df0d3",
-              "variants": "5a84bac05498d451673a992517aa6bb6cb36fb0eef81304723f231db83675426",
-              "variants/linux-amd64": "57d78c0988b547cfd518a9e0ec8bcc59ce5075c3e0e825ff699e821d0b7af1b9"
+              "assets": "7980214a0d08db70e2642e6eac536ed5a65132609e1e578b1636bfdbe042c7d1",
+              "root": "7a4e782f2e3a2722b1d79bd056ab1405f2b26c9b8d373c3cc557d10165e16514",
+              "variants": "5e8d295d1d163cac6ab7f33f09eb98f2514be3102ce1ba1e42c8734ef39f15d5",
+              "variants/linux-amd64": "bc58babf4246dbc02ffb93a97875f861393bf0a91ccb9eea8e4272ad3f51bc7b"
             },
             "icon": "",
             "main": {
@@ -118,12 +118,12 @@
       "name": "ferrata_monitor_module",
       "versions": [
         {
-          "releasedAt": "2026-11-12T21:21:29Z",
+          "releasedAt": "2026-11-12T23:02:41Z",
           "publisherRef": "ferrata_monitor_module-v0.1.0",
           "url": "http://127.0.0.1:18546/ferrata_monitor_module-v0.1.0/ferrata_monitor_module-0.1.0.lgx",
-          "size": 12187358,
-          "sha256": "24135191a84ae83be1959eac96a51f472d88fcebb42f89bf0ade355435e5240e",
-          "rootHash": "e0b87293f0e55b393490735d64b151770133e82ae1a7910e376159750ddf1dfb",
+          "size": 12187606,
+          "sha256": "be8e82e8c21bd0a2477aaa9062ef22882181a95a3d4d318905120634e7b520bf",
+          "rootHash": "83a08d4a85b743c0a25fe793e108a33d92e25e766a61f54dc25f73fa849c6b30",
           "manifest": {
             "author": "",
             "category": "bridge",
@@ -132,9 +132,9 @@
             "display_name": "Ferrata monitor (watchers)",
             "hashes": {
               "assets": "894dd6432483da06e7b8f110d9a478d198944bb5ad7288c90c12ed4aadbf03d0",
-              "root": "e0b87293f0e55b393490735d64b151770133e82ae1a7910e376159750ddf1dfb",
-              "variants": "a1afc1d88c70e600595d0f891f924fb43126391bb09b85e8dec1f21f6bcd01e0",
-              "variants/linux-amd64": "12dde1aa60b3dc71dffa7ca1835c76c7376509f2286c6f25f685f0ed58f0ab65"
+              "root": "83a08d4a85b743c0a25fe793e108a33d92e25e766a61f54dc25f73fa849c6b30",
+              "variants": "3b8f8044548adf1a9dde3401a304750864bf74652aff1834470dc41692dff78d",
+              "variants/linux-amd64": "3d9e293619f79a414127d03f9de6f813ac5f74a9567b1eb84fd5e89b240a2132"
             },
             "icon": "",
             "main": {
@@ -155,12 +155,12 @@
       "name": "ferrata_updater_module",
       "versions": [
         {
-          "releasedAt": "2026-11-12T21:21:40Z",
+          "releasedAt": "2026-11-12T23:04:43Z",
           "publisherRef": "ferrata_updater_module-v0.1.0",
           "url": "http://127.0.0.1:18546/ferrata_updater_module-v0.1.0/ferrata_updater_module-0.1.0.lgx",
-          "size": 15782027,
-          "sha256": "bfab929271d9952e14da2ec7a6693fc7a752656363055bc63caa0d71433f7467",
-          "rootHash": "4d036a71c966d25c1198e8530ff08de0812bcd56cbfb79088d8cfe28e0888c8f",
+          "size": 15801312,
+          "sha256": "b44b0e6d1a2422c031efb102153422a9e7b3c474b1fee5daa9b2b0468225662b",
+          "rootHash": "004687e0efbdd334dd56ab9fa74e93742b2fd0b08bc8971b8935a9277a5542fa",
           "manifest": {
             "author": "",
             "category": "ethereum",
@@ -169,9 +169,9 @@
             "display_name": "Ferrata updater (light client)",
             "hashes": {
               "assets": "a91eb41758da64189ce8fa19d371ea1d271c9505eeb2fc0c89e7c10a714a7624",
-              "root": "4d036a71c966d25c1198e8530ff08de0812bcd56cbfb79088d8cfe28e0888c8f",
-              "variants": "e3bfe2db9b18dbdfc03943f5420f9bb7e30332dadb5cb2e20ed9e612263899c1",
-              "variants/linux-amd64": "25a23efd933e9cf2785ceaf295035c36236bbc478847949e7c8b504f99bee70d"
+              "root": "004687e0efbdd334dd56ab9fa74e93742b2fd0b08bc8971b8935a9277a5542fa",
+              "variants": "f04f113e745df93c4d6d733579afb5623f7165f816d0bd126bddce9aaa210449",
+              "variants/linux-amd64": "519eed10cae86b88528b578930c404a48fa40c0d9867522ffcfc91a166b5cbb4"
             },
             "icon": "",
             "main": {
