@@ -5,17 +5,10 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 publish = false
 
-# A workspace of its own, so that cargo adopts no parent workspace. Its `package` fields are the
-# ones the staged copy of ferrata-core inherits; they equal the repository root's (stage.sh checks).
+# A workspace of its own, so that cargo adopts no parent workspace. The crates scripts/stage.py stages
+# under staged/ and upstream/ are its members; their manifests inherit nothing.
 [workspace]
 members = ["calls"]
-
-[workspace.package]
-version = "0.0.1"
-edition = "2021"
-license = "MIT OR Apache-2.0"
-rust-version = "1.81"
-repository = "https://github.com/rainbowpuffpuff/ferrata"
 
 [lib]
 crate-type = ["staticlib"]

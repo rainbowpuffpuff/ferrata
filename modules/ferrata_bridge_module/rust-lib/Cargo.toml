@@ -5,15 +5,10 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 publish = false
 
-# A workspace of its own, so that cargo adopts no parent workspace. Its `package` fields are the
-# ones the staged copy of ferrata-bridge-core inherits; they equal bridge/Cargo.toml's (stage.sh checks).
+# A workspace of its own, so that cargo adopts no parent workspace. The crates scripts/stage.py stages
+# under staged/ and upstream/ are its members; their manifests inherit nothing.
 [workspace]
 members = ["calls"]
-
-[workspace.package]
-edition = "2021"
-license = "MIT OR Apache-2.0"
-rust-version = "1.88"
 
 [lib]
 crate-type = ["staticlib"]

@@ -21,7 +21,7 @@ use ferrata_core::{
     witness::{uncompressed_keys, CompactStore, CompactUpdate, SignerWitness},
     Root,
 };
-use ferrata_lez_wire::{header_actor, instance_actor, job_actor, job_id, Config, Message};
+use ferrata_lez_wire::{header_actor, instance_actor, job_actor, job_id, Config, JobState, Message};
 use lee_core::account::{AccountId, Actor};
 
 // ---- what beacon nodes serve ------------------------------------------------------------------
@@ -279,6 +279,15 @@ pub fn next_step(job: Option<&Job>) -> Step {
             },
         },
     }
+}
+
+/// The job as the chain holds it at `job(id, job_id)` (`JobState`, Borsh; empty: no job).
+pub fn job_of_state(state: &[u8]) -> Result<Option<Job>> {
+    if state.is_empty() {
+        return Ok(None);
+    }
+    let js: JobState = borsh::from_slice(state).map_err(|e| anyhow!("job state: {e}"))?;
+    Ok(Some(Job::decode(&js.job).map_err(|e| anyhow!("job: {e:?}"))?))
 }
 
 /// Every step of a fresh job, in order: `Open`, `Miller`, the `Adopt` parts when the update adopts

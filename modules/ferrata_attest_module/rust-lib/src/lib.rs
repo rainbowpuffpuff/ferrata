@@ -38,6 +38,11 @@ pub trait FerrataAttestModule: Send + 'static {
     /// store (finalized header, committees) and jobs applied. JSON in and out (modules/README.md).
     fn read_instance(&mut self, request: String) -> String;
 
+    /// A light-client update planned as `ferrata-updater` plans it (its own code, `ferrata-advance`):
+    /// the program's checks run natively, the job it opens, and the transactions of the job's steps
+    /// (`Open`, `Miller`, `Adopt`, `Finish`) with their accounts. JSON in and out (modules/README.md).
+    fn advance(&mut self, request: String) -> String;
+
     /// Called once the module is wired to the host.
     fn on_context_ready(&mut self, _ctx: &RustModuleContext) {}
 }
@@ -82,6 +87,10 @@ impl FerrataAttestModule for FerrataAttest {
 
     fn read_instance(&mut self, request: String) -> String {
         guarded("read_instance", || ferrata_attest_calls::read_instance(&request))
+    }
+
+    fn advance(&mut self, request: String) -> String {
+        guarded("advance", || ferrata_attest_calls::advance(&request))
     }
 }
 

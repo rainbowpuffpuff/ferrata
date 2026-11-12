@@ -5,19 +5,13 @@
 use std::path::Path;
 
 use alloy::primitives::{Address, Bytes, B256, U256};
-use anyhow::{anyhow, ensure, Context as _, Result};
-use ferrata_bridge_core::{
-    chain_id_u256,
-    encoding::ReleaseInput,
-    outbound::{burn_leaf, release_journal, verify_release, OwnedBurn, ReleasePublic, ReleaseWitness},
-    tree::Tree,
-    Hash,
-};
+use anyhow::{anyhow, Context as _, Result};
+use ferrata_bridge_core::{chain_id_u256, encoding::ReleaseInput, outbound::OwnedBurn, Hash};
 
 use crate::{
     eth::IVault,
     lez::{Context, History},
-    units::{u128_to_word, word_to_u128},
+    units::word_to_u128,
 };
 
 /// A release, built and checked natively.
@@ -29,7 +23,8 @@ pub struct ReleasePlan {
     pub request: IVault::ReleaseRequest,
 }
 
-/// The release of `owned` under the accepted burn root of the first `burn_count` burns.
+/// The release of `owned` under the accepted burn root of the first `burn_count` burns
+/// (`ferrata_wallet::release::plan`, shared with `ferrata_bridge_module`), and the vault call's request.
 #[allow(clippy::too_many_arguments)]
 pub fn plan(
     ctx: &Context,
@@ -41,42 +36,19 @@ pub fn plan(
     relayer: [u8; 20],
     relay_fee: u128,
 ) -> Result<ReleasePlan> {
-    ensure!(
-        owned.burn.burn_index < burn_count,
-        "burn {} is not under the newest accepted burn root ({burn_count} burns): wait for the next checkpoint",
-        owned.burn.burn_index
-    );
-    ensure!(
-        burn_count as usize <= history.burns.len(),
-        "the zone shows {} burns, the burn root {burn_count}",
-        history.burns.len()
-    );
-    let leaves: Vec<Hash> = history.burns[..burn_count as usize]
-        .iter()
-        .map(|b| burn_leaf(&ctx.cid, b.burn_index, &b.note.token, &b.note.amount, &b.note.c_out, &b.note.r))
-        .collect();
-    let tree = Tree::from_leaves(leaves).map_err(|_| anyhow!("too many burns"))?;
-    ensure!(
-        tree.root() == burn_root,
-        "the zone's burns do not give the vault's accepted burn root at {burn_count} burns: the zone or the RPC serves another chain"
-    );
-    let path =
-        tree.path(owned.burn.burn_index).ok_or_else(|| anyhow!("burn {} is not in the tree", owned.burn.burn_index))?;
-    let witness = ReleaseWitness { burn_index: owned.burn.burn_index, path, s_out: owned.s_out, r: owned.burn.note.r };
-    let public = ReleasePublic {
-        chain_id: chain_id_u256(ctx.chain_id),
-        vault: ctx.vault,
-        config_id: ctx.cid,
-        token: owned.burn.note.token,
-        amount: owned.burn.note.amount,
-        recipient: owned.recipient,
+    let core = ferrata_wallet::release::plan(
+        &ctx.cid,
+        &chain_id_u256(ctx.chain_id),
+        &ctx.vault,
+        &history.burns,
+        owned,
+        burn_root,
+        burn_count,
         relayer,
-        relay_fee: u128_to_word(relay_fee),
-    };
-    let nullifier = verify_release(&burn_root, &witness, &public)
-        .map_err(|e| anyhow!("the release statement does not hold: {e:?}"))?;
-    ensure!(nullifier == owned.nullifier, "the release nullifier is not the recovered one");
-    let journal = release_journal(&burn_root, &nullifier, &public).to_vec();
+        relay_fee,
+    )
+    .map_err(crate::lez::refused)?;
+    let public = &core.input.public;
     let request = IVault::ReleaseRequest {
         token: Address::from(public.token),
         denomIndex: denom_index,
@@ -84,9 +56,9 @@ pub fn plan(
         relayer: Address::from(relayer),
         relayFee: U256::from(word_to_u128(&public.relay_fee)?),
         burnRoot: B256::from(burn_root),
-        nullifier: B256::from(nullifier),
+        nullifier: B256::from(core.nullifier),
     };
-    Ok(ReleasePlan { input: ReleaseInput { burn_root, witness, public }, journal, nullifier, request })
+    Ok(ReleasePlan { input: core.input, journal: core.journal, nullifier: core.nullifier, request })
 }
 
 /// What r0vm made of the release guest.

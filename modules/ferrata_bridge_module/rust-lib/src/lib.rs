@@ -35,6 +35,18 @@ pub trait FerrataBridgeModule: Send + 'static {
     /// releasable, released), from the chains' public state. JSON in and out.
     fn status(&mut self, request: String) -> String;
 
+    /// A release (as `release`), then the release guest run on its input through r0vm (`program`: the
+    /// guest's ELF), its journal checked against the native one; the tool's `release --prove`. JSON.
+    fn prove_release(&mut self, request: String) -> String;
+
+    /// The relayer's `ImportRoot` of a deposit root from the vault's `eth_getProof` proofs, dry-run
+    /// with the attestation and bridge programs' own functions when the record is given. JSON.
+    fn import_root(&mut self, request: String) -> String;
+
+    /// The bridge program's registry as LEZ holds it (`token(cid, token)`, `config(cid)`,
+    /// `root(cid, n)`), decoded, with a claim's schedule range and fees. JSON in and out.
+    fn registry(&mut self, request: String) -> String;
+
     /// Called once the module is wired to the host.
     fn on_context_ready(&mut self, _ctx: &RustModuleContext) {}
 }
@@ -79,6 +91,18 @@ impl FerrataBridgeModule for FerrataBridge {
 
     fn status(&mut self, request: String) -> String {
         guarded("status", || ferrata_bridge_calls::status(&request))
+    }
+
+    fn prove_release(&mut self, request: String) -> String {
+        guarded("prove_release", || ferrata_bridge_calls::prove_release(&request))
+    }
+
+    fn import_root(&mut self, request: String) -> String {
+        guarded("import_root", || ferrata_bridge_calls::import_root(&request))
+    }
+
+    fn registry(&mut self, request: String) -> String {
+        guarded("registry", || ferrata_bridge_calls::registry(&request))
     }
 }
 

@@ -140,7 +140,7 @@ prepare_build() {
       cd "$b"
       git init -q
       git add -A
-      for c in rust-lib/ferrata-core rust-lib/ferrata-bridge-core; do if [ -d "$c" ]; then git add -f "$c"; fi; done
+      for c in rust-lib/staged rust-lib/upstream; do if [ -d "$c" ]; then git add -f "$c"; fi; done
       git add -f rust-lib/Cargo.lock
       if [ ! -f flake.lock ]; then nix flake lock; git add flake.lock; fi
     )

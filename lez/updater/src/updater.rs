@@ -17,8 +17,7 @@ use ferrata_core::{
     Root,
 };
 use ferrata_lez_wire::{
-    header_actor, instance_actor, instance_id, instance_seed, job_actor, job_id, Config, InstanceState, JobState,
-    Message,
+    header_actor, instance_actor, instance_id, instance_seed, job_actor, job_id, Config, InstanceState, Message,
 };
 use lee::{AccountId, Actor, PrivateKey, PublicAccountEvidence, PublicKey};
 use sha2::{Digest, Sha256};
@@ -670,12 +669,7 @@ impl Updater {
     }
 
     fn job_on_chain(&self, ledger: &dyn Ledger, jid: &Root) -> Result<Option<Job>> {
-        let s = ledger.actor_state(self.inst.job(jid))?;
-        if s.is_empty() {
-            return Ok(None);
-        }
-        let js: JobState = borsh::from_slice(&s).context("job state")?;
-        Ok(Some(Job::decode(&js.job).map_err(|e| anyhow!("job: {e:?}"))?))
+        ferrata_advance::job_of_state(&ledger.actor_state(self.inst.job(jid))?)
     }
 
     fn adopt_tx(
