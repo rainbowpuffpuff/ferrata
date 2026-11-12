@@ -22,7 +22,7 @@ use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use anyhow::{anyhow, bail, ensure, Context as _, Result};
+use anyhow::{anyhow, bail, Context as _, Result};
 use attestor_core::{verify_certificate, Deployment, SignedAttestation};
 use checkpoint_core::hash::sha256_parts;
 use checkpoint_core::input::CheckpointInputB;
@@ -83,7 +83,7 @@ trait Mark<T> {
     /// The attestor or the collector refuses.
     fn no(self) -> Result<T, Fail>;
     /// Something outside the request failed (the node, a file).
-    fn err(self) -> Result<T, Fail>;
+    fn fault(self) -> Result<T, Fail>;
 }
 
 impl<T> Mark<T> for Result<T> {
@@ -93,7 +93,7 @@ impl<T> Mark<T> for Result<T> {
     fn no(self) -> Result<T, Fail> {
         self.map_err(Fail::Refused)
     }
-    fn err(self) -> Result<T, Fail> {
+    fn fault(self) -> Result<T, Fail> {
         self.map_err(Fail::Error)
     }
 }
@@ -229,7 +229,7 @@ fn answers_req(r: &Value, channel: &Hash) -> Result<(NodeAnswers, Value), Fail> 
         (Some(node), None) => {
             let save = text(r, "save_dir").bad()?;
             let from = opt_u64(r, "slot_from").bad()?.unwrap_or(0);
-            let a = NodeAnswers::fetch(node, channel, from, Path::new(save)).err()?;
+            let a = NodeAnswers::fetch(node, channel, from, Path::new(save)).fault()?;
             Ok((a, json!({ "node": node, "saved_to": save, "slot_from": from })))
         }
         (None, Some(dir)) => Ok((NodeAnswers::load(Path::new(dir)).bad()?, json!({ "answers_dir": dir }))),
@@ -250,14 +250,14 @@ pub fn keygen(request: &str) -> String {
             Some(label) => sha256_parts(&[b"ferrata/attestor/devnet-key/", label.as_bytes()]),
             None => {
                 let mut b = [0u8; 32];
-                fs::File::open("/dev/urandom").and_then(|mut f| f.read_exact(&mut b)).context("/dev/urandom").err()?;
+                fs::File::open("/dev/urandom").and_then(|mut f| f.read_exact(&mut b)).context("/dev/urandom").fault()?;
                 b
             }
         };
         if out.exists() {
             return Err(Fail::Refused(anyhow!("{} exists: a key is never overwritten", out.display())));
         }
-        write_secret(&out, &secret).err()?;
+        write_secret(&out, &secret).fault()?;
         let public = ed25519_dalek::SigningKey::from_bytes(&secret).verifying_key().to_bytes();
         Ok(json!({ "verdict": "ok", "public_key": hex::encode(public), "out": out, "devnet_label": label }))
     })())
@@ -294,7 +294,7 @@ pub fn deployment(request: &str) -> String {
         let input = CheckpointInputB::decode(&bytes).map_err(|e| anyhow!("input: {e:?}")).bad()?;
         let d = deployment_json(&deployment_of(&input.config));
         if let Some(out) = opt_text(&r, "out") {
-            write_json(Path::new(out), &d).err()?;
+            write_json(Path::new(out), &d).fault()?;
         }
         Ok(json!({ "verdict": "ok", "deployment": d }))
     })())
@@ -319,7 +319,7 @@ pub fn certify(request: &str) -> String {
             "certificate": hex::encode(certificate),
         });
         if let Some(out) = opt_text(&r, "out") {
-            write_json(Path::new(out), &v).err()?;
+            write_json(Path::new(out), &v).fault()?;
         }
         Ok(json!({ "verdict": "certified", "cert": v }))
     })())
@@ -351,7 +351,7 @@ pub fn tier(request: &str) -> String {
         let (answers, source) = answers_req(&r, &channel)?;
         let mut v = tier_json(&answers, &channel).no()?;
         if let Some(out) = opt_text(&r, "out") {
-            write_json(Path::new(out), &v).err()?;
+            write_json(Path::new(out), &v).fault()?;
         }
         v["verdict"] = json!("ok");
         v["source"] = source;
@@ -398,10 +398,10 @@ pub fn attest(request: &str) -> String {
         let att = attestor.attest(&tier, last).no()?;
         let record = attestation_json(&d, &att, &tier);
         if let Some(out) = opt_text(&r, "out") {
-            write_json(Path::new(out), &record).err()?;
+            write_json(Path::new(out), &record).fault()?;
         }
         if let Some(p) = &state {
-            write_json(p, &json!({"tip_id": att.tip.tip_id, "tip_hash": hex::encode(att.tip.tip_hash)})).err()?;
+            write_json(p, &json!({"tip_id": att.tip.tip_id, "tip_hash": hex::encode(att.tip.tip_hash)})).fault()?;
         }
         Ok(json!({
             "verdict": "attested", "tip_id": att.tip.tip_id, "tip_hash": hex::encode(att.tip.tip_hash),
@@ -450,10 +450,10 @@ pub fn collect(request: &str) -> String {
         let description = opt_text(&r, "description").unwrap_or("rule (B): t of n attestations collected by ferrata_attestor_module");
         let meta = fixture_meta(name, &c.input, description, None).no()?;
         if let Some(out) = opt_text(&r, "out") {
-            write_bytes(Path::new(out), &c.input).err()?;
+            write_bytes(Path::new(out), &c.input).fault()?;
         }
         if let Some(out) = opt_text(&r, "meta_out") {
-            write_json(Path::new(out), &meta).err()?;
+            write_json(Path::new(out), &meta).fault()?;
         }
         Ok(json!({
             "verdict": "collected", "n": c.n, "t": c.t,
@@ -479,10 +479,10 @@ pub fn assemble(request: &str) -> String {
         let meta = fixture_meta(name, &bytes, opt_text(&r, "description").unwrap_or("an input the program must refuse"), Some(expect))
             .no()?;
         if let Some(out) = opt_text(&r, "out") {
-            write_bytes(Path::new(out), &bytes).err()?;
+            write_bytes(Path::new(out), &bytes).fault()?;
         }
         if let Some(out) = opt_text(&r, "meta_out") {
-            write_json(Path::new(out), &meta).err()?;
+            write_json(Path::new(out), &meta).fault()?;
         }
         Ok(json!({ "verdict": "assembled", "native": meta["native"], "input_bytes": bytes.len(),
                    "input_sha256": sha256_hex(&bytes), "meta": meta }))
@@ -512,7 +512,7 @@ pub fn base(request: &str) -> String {
         let t_min = u32::try_from(u64_of(&r, "t_min").bad()?).context("t_min").bad()?;
         let bytes = base_from_answers(&answers, &channel, genesis_id, from, to, n_min, t_min).no()?;
         let out = text(&r, "out").bad()?;
-        write_bytes(Path::new(out), &bytes).err()?;
+        write_bytes(Path::new(out), &bytes).fault()?;
         let input = CheckpointInputB::decode(&bytes).map_err(|e| anyhow!("{e:?}")).no()?;
         Ok(json!({
             "verdict": "ok", "from": from, "to": to, "n": input.parent.keys.len(),
@@ -592,8 +592,8 @@ impl Daemon {
             keep_rounds: opt_u64(r, "keep_rounds").bad()?.unwrap_or(2).max(1),
             attestor,
         };
-        fs::create_dir_all(&cfg.work_dir).with_context(|| cfg.work_dir.display().to_string()).err()?;
-        fs::create_dir_all(&cfg.publish_dir).with_context(|| cfg.publish_dir.display().to_string()).err()?;
+        fs::create_dir_all(&cfg.work_dir).with_context(|| cfg.work_dir.display().to_string()).fault()?;
+        fs::create_dir_all(&cfg.publish_dir).with_context(|| cfg.publish_dir.display().to_string()).fault()?;
         let config = json!({
             "node": cfg.node, "slot_from": cfg.slot_from, "work_dir": cfg.work_dir, "publish_dir": cfg.publish_dir,
             "state_file": cfg.state_file, "poll_ms": cfg.poll.as_millis() as u64, "max_rounds": cfg.max_rounds,
@@ -607,7 +607,7 @@ impl Daemon {
             .name("ferrata-attestor".into())
             .spawn(move || run_loop(cfg, s2, sh2))
             .context("spawning the attestor's thread")
-            .err()?;
+            .fault()?;
         Ok(Self { stop, shared, handle: Some(handle), config })
     }
 

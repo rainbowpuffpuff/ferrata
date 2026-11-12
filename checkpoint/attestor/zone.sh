@@ -11,6 +11,12 @@
 #
 # With SILENT=i SILENT_AFTER=s in the environment, sequencer i is stopped s seconds into the run (a silent
 # sequencer: its turns come and nobody of its key posts).
+#
+# Hooks (modules/scripts/attestor-zone-live.sh uses them to run ferrata_attestor_module beside each sequencer):
+# ZONE_DURING is run (bash -c) once the sequencers are started, ZONE_AFTER once the answers are saved and
+# while the node still runs; both with ZONE_API (the node's HTTP API), ZONE_CHANNEL and ZONE_OUT (<out dir>)
+# in their environment, their output in <out dir>/during.log and after.log. ZONE_AFTER's exit status is
+# the script's.
 set -euo pipefail
 bundle="$(realpath "$1")"; out="$(realpath -m "$2")"; secs="${3:-300}"
 lez="$(realpath ../../upstream/lez-v0.4.0-rc1)"; dev="$lez/lez/configs/docker-all-in-one/devnet"
@@ -64,6 +70,10 @@ for i in 0 1 2 3; do
   SEQ_PIDS+=($!)
   [ "$i" = 0 ] && sleep 15
 done
+if [ -n "${ZONE_DURING:-}" ]; then
+  ZONE_API="$api" ZONE_CHANNEL="$CHANNEL" ZONE_OUT="$out" bash -c "$ZONE_DURING" > "$out/during.log" 2>&1 \
+    || log "ZONE_DURING exited $?"
+fi
 rpc() { curl -fsS -m 5 -H 'content-type: application/json' -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"$2\",\"params\":[]}" "http://127.0.0.1:$((19300 + $1))" 2>/dev/null | sed -n 's/.*"result":\([0-9]*\).*/\1/p'; }
 start=$(date +%s); end=$(( start + secs )); FIRST=""; SILENCED=""
 while [ "$(date +%s)" -lt "$end" ]; do
@@ -101,3 +111,9 @@ slots = [b["header"]["slot"] for b in kept]
 json.dump(kept, open(os.path.join(d, f"{min(slots)}-{max(slots)}.json"), "w"), separators=(",", ":"))
 EOF
 log "answers saved: $(ls "$out/answers/blocks" | wc -l) windows, $(cat "$out"/answers/blocks/*.json | wc -c) bytes; channel: $(cat "$out/answers/channel.json")"
+if [ -n "${ZONE_AFTER:-}" ]; then
+  rc=0
+  ZONE_API="$api" ZONE_CHANNEL="$CHANNEL" ZONE_OUT="$out" bash -c "$ZONE_AFTER" > "$out/after.log" 2>&1 || rc=$?
+  log "ZONE_AFTER exited $rc"
+  exit $rc
+fi

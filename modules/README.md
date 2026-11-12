@@ -1,18 +1,23 @@
 # Logos modules
 
-The proposal (§B7) puts everything off chain in Logos modules. This directory holds two, prototypes,
+The proposal (§B7) puts everything off chain in Logos modules. This directory holds five, prototypes,
 built the way Logos modules are built, loaded together by a headless Logos Core and called there:
 `ferrata_attest_module` (seven methods: dry runs, checkpoint checks, an instance's state read back, and a
 log or storage slot attested end to end: fetched over JSON-RPC, its `Attest` transaction built, the
-program's event read back) and
-`ferrata_bridge_module` (seven: deposit, claim, burn, release, recover, status). `catalog/` lays out
+program's event read back),
+`ferrata_bridge_module` (seven: deposit, claim, burn, release, recover, status), and the three daemons
+as modules: `ferrata_attestor_module` (rule (B)'s attestor beside a sequencer and its collector,
+`checkpoint/attestor`), `ferrata_monitor_module` (the watchers' `monitor`, `monitor/`) and
+`ferrata_updater_module` (the light-client updater `ferrata-updater`, `lez/updater`). `catalog/` lays out
 the catalog that would release them with `logos-modules-release-action`. `RESULTS.md` records what ran.
 
 ```sh
 modules/scripts/native.sh     # any Linux with cargo: stage, unit tests, the native call examples
 modules/scripts/e2e.sh OUT    # + the lez/ harness: a log end to end (methods called natively)
-modules/scripts/check.sh      # Linux x86-64 with Nix: the above, then build, package, load and call both
-                              # modules in Logos Core (dev and portable), and e2e.sh through the daemon
+modules/scripts/check.sh      # Linux x86-64 with Nix: the above, then build, package, load and call all
+                              # five modules in Logos Core (dev and portable), e2e.sh through the daemon,
+                              # and the three daemons doing their jobs as modules (natively first)
+modules/scripts/attestor-zone-live.sh BUNDLE OUT   # four Logos Cores beside a running zone of four sequencers
 ```
 
 ## How a Logos module is built and loaded
@@ -37,25 +42,48 @@ A Python client (`logos-logoscore-py`, `import logosctl`) drives the same daemon
 |---|---|---|
 | `ferrata_attest_module` | `ferrata_attest_module/` | `version`, `dry_run_attest`, `verify_checkpoint`, `fetch_log_proof`, `build_attest_tx`, `read_attestation`, `read_instance` |
 | `ferrata_bridge_module` | `ferrata_bridge_module/` | `version`, `deposit`, `claim`, `burn`, `release`, `recover`, `status` |
+| `ferrata_attestor_module` | `ferrata_attestor_module/` | `version`, `keygen`, `pubkey`, `deployment`, `certify`, `tier`, `attest`, `verify`, `collect`, `assemble`, `base`; the loop: `start`, `status`, `stop` |
+| `ferrata_monitor_module` | `ferrata_monitor_module/` | `version`, `check`, `node_view`, `run`; the daemon: `start`, `status`, `stop` |
+| `ferrata_updater_module` | `ferrata_updater_module/` | `version`, `check_config`, `run`; the daemon: `start`, `status`, `metrics`, `stop` |
 
-Both are laid out the same way:
+All five are laid out the same way:
 
 - `metadata.json`, `flake.nix`, `flake.lock`, `CMakeLists.txt`: the builder's Rust template, with the builder pinned
   to the commit above.
 - `rust-lib/`: the module crate (the trait and its implementation, a static library) and `calls/`,
   the methods' logic as a plain crate that runs and is tested without the generated scaffold
   (`calls/examples/call.rs` runs one method natively: `call METHOD [REQUEST_FILE]`).
-- The crate each module links is copied into `rust-lib/` before a build (`scripts/stage.sh`), because
+- The crates each module links are copied into `rust-lib/` before a build (`scripts/stage.sh`), because
   the builder copies only `rust-lib/`: `crates/ferrata-core` into the attestation module (without a
   BLS backend: no method verifies a signature), `bridge/crates/ferrata-bridge-core` into the bridge
-  module. The copies are ignored by git; each `rust-lib/Cargo.toml` carries the workspace fields its
-  copy inherits (`stage.sh` checks them).
-- Neither links a LEZ crate: the programs' crates link LEZ and the RISC Zero client, which the builder
-  cannot build from a module's directory. The programs' messages are Borsh-encoded field for field in
-  the modules, and the end-to-end test decodes and executes them with the programs' own types
-  (`lez/harness/src/bin/module_e2e.rs`).
+  module, `checkpoint/attestor` with `checkpoint-core` and `attestor-core` into the attestor module
+  (in `checkpoint/`'s layout), `monitor/` (its library) with `attestor-core` into the monitor module. The
+  copies are ignored by git; each `rust-lib/Cargo.toml` carries the workspace fields its copies inherit
+  (`stage.sh` checks them).
+- The attestation and bridge modules link no LEZ crate: their messages are Borsh-encoded field for field,
+  and the end-to-end test decodes and executes them with the programs' own types
+  (`lez/harness/src/bin/module_e2e.rs`). The updater module does link LEZ: the updater writes to LEZ's
+  state machine. `scripts/stage-updater.sh` copies into `rust-lib/vendor/` the updater, the `lez/` harness
+  and the crates they use in the repository's own layout with the workspace manifests they inherit from,
+  and the LEZ v0.4.0-rc1 tree (its `artifacts/`, which LEZ's build scripts embed); `lez/methods`, whose
+  build script runs risc0-build, is replaced there by a crate of the same name that embeds the guests
+  risc0-build made for it on the build box (same constants, same bytes; `version()` reports the image id
+  declared and the one computed from the bytes, and `updater-e2e.sh` checks both against
+  [`docs/image-ids.md`](../docs/image-ids.md)). No guest is changed or rebuilt by the module builder.
+- The monitor and updater modules pin a Rust toolchain in `metadata.json` (`nix.rust.toolchain`, from the
+  builder's rust-overlay): 1.93.0 for the monitor (alloy 1.8 needs more than the builder's nixpkgs
+  rustc), 1.98.0 for the updater (LEZ pins 1.98.1, which the builder's rust-overlay does not have yet).
 
-**Calling convention (both modules).** Each method takes one JSON string and returns one JSON string, so a call needs no type beyond
+**The daemons as modules.** A module stays loaded in its own host process (`logos_host`) for as long as
+the Logos Core daemon (`logosctl daemon`) runs it, so each daemon's loop runs in a thread of that
+process: `start` takes the daemon's configuration and returns once it has started (or with the
+daemon's own error), `status` reads it while it runs, `stop` ends it after the round or poll in hand,
+as SIGTERM ends the binary, and the host unloading the module stops it the same way (the SDK's
+`AboutToUnload`). The process's signals belong to the host, so no module installs a signal handler.
+One-shot methods (`attest`, `collect`, `check`, `run` with a bound) block for their duration; logosctl's
+`--timeout` gives them longer than its 20 s default.
+
+**Calling convention (all five).** Each method takes one JSON string and returns one JSON string, so a call needs no type beyond
 `String` and the request can come from a file (`logosctl call ferrata_bridge_module claim @request.json`).
 Byte strings are `0x` hex; 64-bit integers are JSON numbers, decimal strings or `0x` quantities;
 `uint256` amounts are `0x` hex of at most 32 bytes or decimal strings, and are returned as 32-byte hex.
@@ -106,6 +134,75 @@ carries `s` as the program's public claim does. The chain is `chain_id` (a numbe
 | `release(request)` | seed, `config_id`, `i`, `burn_index`, chain, `vault`, `recipient`, `token`, `amount`, optional `relayer`, `relay_fee`; the burn tree as `leaves` or `path` and `burn_root` | `verdict` `releasable` (with `nullifier`, `burn_root`, `r`, `journal`: the release guest's 352-byte journal the vault verifies, `journal_sha256`, `path`, the public inputs) or `refused` |
 | `recover(request)` | seed, chain, `vault`, `gap`, `destinations` (`{kind, index, dest}`: the wallet's candidate accounts), `deposits` (the vault's `Deposit` events: `depositor`, `j`, `leaf_index`, `token`, `amount`, `commitment`); optionally `config_id`, `burns` (published notes with `burn_index`) and `gap_limit` | the wallet's own deposits (with `kind`, `account_index`, `leaf`, `nullifier`) and burns (with `i`, `recipient`, `leaf`, `nullifier`), `next_i` |
 | `status(request)` | `deposits` (`leaf_index`, `nullifier`), `imported_leaf_count` (of the newest root imported on LEZ), `spent_nullifiers` (on LEZ); `burns` (`burn_index`, `nullifier`), `checkpointed_burn_count` (of the newest checkpoint the vault accepted), `released_nullifiers` (on the vault) | each deposit `awaiting_root`, `claimable` or `claimed`; each burn `awaiting_checkpoint`, `releasable` or `released` |
+
+### `ferrata_attestor_module`
+
+`ferrata_attestor` (`checkpoint/attestor`, [its README](../checkpoint/attestor/README.md)) as a module:
+the signer of finality rule (B) that each LEZ sequencer runs beside its Logos Blockchain node, and the
+collector of `t` of `n` attestations into a `checkpoint_b` input. The methods are the CLI's commands over
+the same library: the same records (`ferrata-attestation/v1`), the same checks, the same refusals. Keys
+are 32-byte files (as LEZ keeps a sequencer's `channel_signing_key`); requests name them, replies never
+carry a secret. Verdicts: the method's own, `refused` (the attestor or the collector refuses), `error`
+(the node could not be read), `invalid_request`.
+
+| Method | Takes | Returns |
+|---|---|---|
+| `version()` | — | the module's version, the attestor's version and the sources it was staged from (commit, sha256), the method list |
+| `keygen(request)` | `out` (a new file: never overwritten, mode 600); `seed_label` only for reproducible devnet keys | `public_key` |
+| `pubkey(request)` | `key_file` | `public_key` |
+| `deployment(request)` | `input` (hex) or `input_file`: a `checkpoint_b` input; optional `out` | the `deployment` (chain, vault, `lezConfigId`, channel) its configuration serves |
+| `certify(request)` | `channel_key_file`, `att_pub`, `deployment` or `deployment_file`; optional `out` | `cert`: the channel key's one certificate of the attestation key for this deployment (the CLI's record) |
+| `tier(request)` | `answers_dir` (saved answers) or `node` (its HTTP API) with `save_dir` and `slot_from`; optional `channel`, `out` | the node's final tier as the attestor checks it: tip, final message id, key set, blocks checked, blocks per signer |
+| `attest(request)` | `deployment`/`deployment_file`, `cert`/`cert_file`, `att_key_file`, the node (`answers_dir`, or `node` + `save_dir` [+ `slot_from`]); optional `state_file`, `out` | `attested` with the tip, the blocks checked, the key-set hash and the `attestation` record; or `refused` (certificate, channel key outside the live set, a tip below or beside one it signed, a final tier that does not check) |
+| `verify(request)` | `deployment`/`deployment_file`; `attestations` (records) and/or `att_files` | per attestation whether its certificate and final-tier signature verify; `verified` or `refused` |
+| `collect(request)` | `base`/`base_file` (a `checkpoint_b` input), `attestations` and/or `att_files`; optional `name`, `out`, `meta_out` | `collected` with `n`, `t`, kept and dropped (with the reason), the checkpoint rule's native run, the input's size and sha256, the fixture meta; `refused` below `t(n)` |
+| `assemble(request)` | as `collect`, with `name` and `expect` | an input with exactly these attestations, unchecked, and the native run, which must refuse it with `expect` |
+| `base(request)` | `answers_dir`, `genesis_file`, `n_min`, `t_min`, `out`; optional `from`, `to` (default: after the first inscribed block to the tip), `channel` | devnet set-up (the CLI's `base`): the input over those final blocks, its `lezConfigId`, parent state and deployment |
+| `start(request)` | `deployment`/`deployment_file`, `cert`/`cert_file`, `att_key_file`, `node`, `work_dir`, `publish_dir`, `state_file`; optional `poll_secs` (10) or `poll_ms`, `slot_from`, `max_rounds`, `keep_rounds` | `started`: the loop asks the node every poll (its answers saved per round), checks the final tier, signs the tip, keeps the state file (never two histories) and publishes `att-<tip>.json` and `latest.json`; refused at once for a certificate that does not certify the key |
+| `status()` | — | running, rounds, how many signed a new tip, found it unchanged, were refused or failed, the last round and attestation, the last 50 rounds |
+| `stop()` | — | the loop ended after the round in hand; its final status |
+
+### `ferrata_monitor_module`
+
+The watchers' `monitor` ([`monitor/`](../monitor/README.md)) as a module. `run` and `start` take the
+arguments of `monitor run` as a list (`{"args": [...]}`) and parse them with the binary's own parser
+(`ferrata_monitor::cli`, shared since this module); the daemon is the binary's (`daemon::run_with`):
+the same scan of the vault, verdicts, cancellations, pauses, revocations, attestation audit, alerts
+(standard error, `--alert-log`, `--alert-cmd`) and state file. The watcher key reaches the module as a
+file (`--key-file`, added for it) or a keystore: `--key-env` would name a variable of the module's own
+process. The module sends the monitor's Ethereum transactions itself, over the JSON-RPC endpoint `--rpc`
+names, as the binary does.
+
+| Method | Takes | Returns |
+|---|---|---|
+| `version()` | — | the module's version, the monitor's version and sources (commit, sha256), the method list |
+| `check(request)` | `rule` (`A`/`B`), `candidate` or `candidate_file`, `nodes` (node views, or sources `file:PATH`/`cmd:COMMAND`), `now`; optional `turn_seconds`, `b_lag_grace`, `delta_g`, `margin` | `monitor check`'s output: the verdict (`pass`, `wait` with `until`, `cancel` with the reason, `blind`) |
+| `node_view(request)` | `chain_tsv` or `chain_tsv_file` (the lab driver's block record); optional `label`, `key_sets`/`key_sets_file` | `view`: `monitor node-view`'s node view |
+| `run(request)` | `args`: `monitor run`'s arguments, with `--max-polls` (a run without a bound is `start`) | `ok` (the binary's exit 0) or `error` (its exit 1, with its message: a lock held by another monitor, an unreachable node), and the state file after the run |
+| `start(request)` | `args`: `monitor run`'s arguments | `started` once the daemon has taken its lock and saved its state, or the daemon's error |
+| `status()` | — | running, the exit when it ended (0 or 1 with the error), the state file (polls, candidates, cancellations, audits) |
+| `stop()` | — | the daemon ended after the poll in hand: a `stopped` alert, the state saved, the lock released (the binary's SIGTERM) |
+
+### `ferrata_updater_module`
+
+`ferrata-updater` ([`lez/updater`](../lez/updater/README.md)) as a module: the same configuration file
+(`ferrata-updater.example.toml`), the same set-up (`ferrata_updater::daemon`, shared since this module)
+and the same rounds. The chain is the binary's `ledger = "harness"`: LEZ v0.4.0-rc1's state machine in
+the module's process with LEZ's fee program and settlement and the attestation program at genesis (the
+chain the updater's tests run on, `RISC0_DEV_MODE=1` in the daemon's environment as for those tests); it
+lives in the daemon's thread, so `stop` ends it. `ledger = "sequencer"` is refused as the binary refuses
+it. `status` and `metrics` give what `/health` and `/metrics` give; with `daemon.listen` set, the module
+also serves those on that address.
+
+| Method | Takes | Returns |
+|---|---|---|
+| `version()` | — | the module's version, the updater's sources (commit, sha256), LEZ's revision, the guests' image ids as staged, the attestation program's id declared and computed from the bytes the module carries, `RISC0_DEV_MODE` |
+| `check_config(request)` | `config_file` | the file as the daemon reads it (chains, sources, ledger), or `invalid_request` with the binary's refusal |
+| `run(request)` | `config_file`, `rounds`; optional `until_up_to_date`, `quiet` | after the rounds: each instance's health, its state on the chain (finalized slot and header root, period, jobs applied), the notes, the metrics |
+| `start(request)` | `config_file`; optional `rounds`, `quiet` | `started` once the set-up is done, or the binary's error (an unreadable key, the sequencer backend) |
+| `status()` | — | running, the round, `up_to_date`, each instance's health and state on the chain, the last notes |
+| `metrics()` | — | the Prometheus text of `/metrics` as the last round left it |
+| `stop()` | — | the daemon ended after the round in hand; its final status |
 
 ### Tests
 
