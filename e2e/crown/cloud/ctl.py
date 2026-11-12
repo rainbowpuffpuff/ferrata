@@ -3,7 +3,9 @@
 
     ctl.py setup [--bundle FILE|none] [--programs DIR]  deploy ferrata-crown; the LEZ bundle and the R0BF programs to
                                                     the Volume (checked: sha256, image ids); a ping
-    ctl.py start <run> live|fork|selftest [--yes] [--halt-after STAGE]
+    ctl.py start <run> live|fork|selftest [--yes] [--halt-after STAGE] [--lez-chain sepolia]
+                    (--lez-chain sepolia: a fork run whose session A uses the real Sepolia checkpoint of the bundle's
+                    fixture instead of the stand-in; it ends after identity, so --halt-after lez-a|identity)
     ctl.py status <run>
     ctl.py fetch <run> [--lez]
     ctl.py stop [--app]
@@ -236,10 +238,12 @@ def pack(run: str) -> tuple[str, str, str, dict]:
     return bundle, tar, meta, src
 
 
-def start(run: str, mode: str, yes: bool, halt_after: str | None) -> None:
+def start(run: str, mode: str, yes: bool, halt_after: str | None, lez_chain: str | None = None) -> None:
     check_run_name(run)
     if halt_after and halt_after not in STAGES:
         die(f"--halt-after: one of {', '.join(STAGES)}")
+    if lez_chain is not None and (mode != "fork" or lez_chain != "sepolia" or halt_after not in ("lez-a", "identity")):
+        die("--lez-chain sepolia: fork runs only, with --halt-after lez-a or identity (no capture follows on Sepolia)")
     fname = "runner" if mode == "live" else "runner_rehearsal"
     fn = modal.Function.from_name(APP_NAME, fname)
     try:
@@ -261,6 +265,8 @@ def start(run: str, mode: str, yes: bool, halt_after: str | None) -> None:
         if rj["mode"] != mode and mode != "selftest":
             die(f"{run} is a {rj['mode']} run")
         deployer = rj["deployer"]
+        if lez_chain is not None and rj.get("lez_chain") != lez_chain:
+            die(f"{run} was started with session A on {rj.get('lez_chain') or 'its default chain'}")
         done = [l.split()[0] for l in (vread(vol, f"runs/{run}/stages.done") or b"").decode().splitlines() if l.strip()]
         print(f"resuming {run} (created {rj['created_at']}): done {', '.join(done) or 'nothing'}")
     if mode == "live" and not yes:
@@ -270,6 +276,9 @@ def start(run: str, mode: str, yes: bool, halt_after: str | None) -> None:
     if not rj:
         rj = {"run": run, "mode": "fork" if mode == "selftest" else mode, "deployer": deployer, "chainId": 11155111,
               "created_at": utc(), "label": "crown run" if mode == "live" else "crown REHEARSAL (anvil fork of Sepolia)"}
+        if lez_chain is not None:
+            rj["lez_chain"] = lez_chain
+            rj["label"] += f"; session A on the {lez_chain} checkpoint, ending after identity"
     if halt_after is not None:
         rj["halt_after"] = halt_after
     elif "halt_after" in rj and rj["halt_after"]:
@@ -390,7 +399,7 @@ def main() -> None:
     if a[:1] == ["setup"]:
         setup(opt("--bundle"), opt("--programs"))
     elif len(a) >= 3 and a[0] == "start" and a[2] in ("live", "fork", "selftest"):
-        start(a[1], a[2], "--yes" in a, opt("--halt-after"))
+        start(a[1], a[2], "--yes" in a, opt("--halt-after"), opt("--lez-chain"))
     elif len(a) >= 2 and a[0] == "status":
         status(a[1])
     elif len(a) >= 2 and a[0] == "fetch":

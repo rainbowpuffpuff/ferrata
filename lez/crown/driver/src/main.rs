@@ -14,12 +14,14 @@
 //!   export    the records of the run into `--out` (blocks.borsh, chain.tsv, segments.tsv, ...)
 //! Without a sequencer:
 //!   config-id   the configuration id for `--vault` from `--identity` (session-a.json)
-//!   check       the chain of `--captures` natively: the light client, the bridge's requests under
-//!               each record, every deposit's opening (what crown-b will send)
+//!   check       the chain natively: the fixture's bootstrap and catch-up, then the `--capture`s: the light
+//!               client, the bridge's requests under each record, every deposit's opening (what crown-b will
+//!               send); fails if the next session's transactions would fall outside the weak-subjectivity
+//!               period by this machine's clock (without --identity: session A's)
 //!   capture-slots  the vault slots a capture must prove
 //!
 //! Common options: --program-bin FILE (attestation program), --bridge-bin FILE (merged bridge),
-//! --chain sepolia|stand-in, --fixture DIR (the sepolia-gloas-2026-11-10 replay fixture),
+//! --chain sepolia|stand-in, --fixture DIR (a checkpoint fixture: crates/ferrata-spectests/fixtures/sepolia-2026-11-12),
 //! --run-dir DIR (the driver's state: wallet, follower, manifest), --out DIR, --gas-limit N,
 //! --wait-final yes|no, --sequencer-log FILE.
 //! crown-a: --channel FILE (the node's /channel/<id> answer), --genesis FILE (deployment

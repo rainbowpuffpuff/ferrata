@@ -2,7 +2,7 @@
 """One capture of the crown run (e2e/crown/README.md, stages 4 and 5): what LEZ session B reads of the vault at a
 block that a Sepolia light-client finality update finalizes, with the vault v5's ETH registry and fee slots.
 
-  capture.py --vault ADDR --from-block N [--expect-leaves n] [--min-block B] [--updates-from P] [--driver BIN] OUT
+  capture.py --vault ADDR --from-block N --updates-from P [--expect-leaves n] [--min-block B] [--driver BIN] OUT
   capture.py slots [--driver BIN]
   capture.py check DIR --vault ADDR      every proven slot of a capture (also capture-anvil.py's) against its header
 
@@ -137,7 +137,8 @@ def main() -> int:
     ap.add_argument("--from-block", type=int, required=True, help="the vault's deployment block (its Deposit logs from)")
     ap.add_argument("--expect-leaves", type=int)
     ap.add_argument("--min-block", type=int, default=0, help="the capture's block must be at least this (the deposit's)")
-    ap.add_argument("--updates-from", type=int, default=1410, help="first period update (the bundle's fixture ends at 1409)")
+    ap.add_argument("--updates-from", type=int, required=True,
+                    help="first period update: the bundle fixture's last period + 1 (drive.py passes it)")
     ap.add_argument("--driver", help="crown-driver: compare its capture-slots first")
     ap.add_argument("out")
     a = ap.parse_args()

@@ -278,7 +278,24 @@ def driver(*a: str) -> str:
 
 
 def lez_chain() -> str:
-    return "stand-in" if MODE == "fork" else "sepolia"
+    """The LEZ sessions' chain: Sepolia (live); the stand-in (fork), unless the fork run was started with `--lez-chain
+    sepolia` (run.json `lez_chain`): session A on the real Sepolia checkpoint, the run ending after identity."""
+    if MODE == "fork":
+        return "sepolia" if runj().get("lez_chain") == "sepolia" else "stand-in"
+    return "sepolia"
+
+
+SEPOLIA_ON_FORK_STAGES = ("lez-a", "identity")  # a fork run's stages with session A on Sepolia (no capture to follow)
+
+
+def fixture_last_period() -> int:
+    """The last period update of the bundle's fixture (session A's catch-up ends there): a capture fetches the updates
+    from the next period on."""
+    periods = [int(n[len("update_"):-len(".ssz")]) for n in os.listdir(f"{BUNDLE_DIR}/fixture")
+               if n.startswith("update_") and n.endswith(".ssz")]
+    if not periods:
+        die("the bundle's fixture has no period update")
+    return max(periods)
 
 
 # ---- fork mode: anvil ---------------------------------------------------------------------------------------------
@@ -427,7 +444,8 @@ def st_identity() -> bool:
                                         str(CHAIN_ID), "--vault", vault, "--depositor", deployer, "--j", str(j),
                                         "--kind", kind, "--dest", dest])
     c0, c1 = commit(0, "public", dests["public0"]), commit(1, "private", dests["private0"])
-    label = "crown run" if MODE == "live" else "crown REHEARSAL on an anvil fork of Sepolia (stand-in beacon committee on LEZ)"
+    label = "crown run" if MODE == "live" else ("crown REHEARSAL on an anvil fork of Sepolia (" + (
+        "session A on Sepolia's real checkpoint" if lez_chain() == "sepolia" else "stand-in beacon committee on LEZ") + ")")
     jsave(f"{RUN}/identity.json", {
         "label": label, "chainId": CHAIN_ID, "vault": vault, "configId": cid, "genesisState": gs,
         "groth16Verifier": VERIFIER, "delta": DELTA, "deployer": deployer, "firstNonce": n, "createAddresses": created,
@@ -527,8 +545,9 @@ def st_capture(n: int) -> bool:
             time.sleep(30)
         for attempt in range(1, CAPTURE_ATTEMPTS + 1):
             rc = run(["python3", "-I", f"{REPO}/e2e/crown/capture.py", "--vault", vault, "--from-block",
-                      str(rj["deploy_from_block"]), "--expect-leaves", str(n), "--min-block", str(block), "--driver",
-                      f"{BUNDLE_DIR}/bin/crown-driver", d], log=f"capture-{n}.log", check=False)
+                      str(rj["deploy_from_block"]), "--expect-leaves", str(n), "--min-block", str(block),
+                      "--updates-from", str(fixture_last_period() + 1), "--driver", f"{BUNDLE_DIR}/bin/crown-driver", d],
+                     log=f"capture-{n}.log", check=False)
             if rc == 0:
                 break
             if rc != 3:
@@ -922,6 +941,8 @@ def main() -> int:
         if MODE == "fork":
             start_anvil()
         for stage in STAGES:
+            if MODE == "fork" and lez_chain() == "sepolia" and stage not in SEPOLIA_ON_FORK_STAGES:
+                die(f"a fork run with session A on Sepolia (--lez-chain sepolia) ends after {SEPOLIA_ON_FORK_STAGES[-1]}")
             state(stage)
             t0 = time.time()
             acted = STEPS[stage]()

@@ -52,22 +52,46 @@ record() {
 # stage runs again, at most 5 times, 24 s apart, only while the deployer's nonce (latest and pending) is unchanged.
 transient='-32001|block not found|header not found|failed to get account|failed to get storage|missing trie node'
 
+# The deployer's nonce at its freshest (vault/script/deploy.sh says why): the highest of three reads each of the latest
+# and the pending nonce, FERRATA_NONCE_GAP seconds apart (4).
+nonce_max() {
+  local m=-1 k v
+  for k in 1 2 3; do
+    for v in "$(cast nonce "$ETH_FROM" "${rpc[@]}" 2>/dev/null || true)" \
+             "$(cast nonce "$ETH_FROM" --block pending "${rpc[@]}" 2>/dev/null || true)"; do
+      if [[ "$v" =~ ^[0-9]+$ ]] && [ "$v" -gt "$m" ]; then m="$v"; fi
+    done
+    if [ "$k" -lt 3 ]; then sleep "${FERRATA_NONCE_GAP:-4}"; fi
+  done
+  echo "$m"
+}
+# No transaction of the deployer pending: the latest and the pending nonce agree in one of five reads, 4 s apart (a
+# lagging node can report an older latest nonce than another node's pending one).
+nonces_agree() {
+  local k
+  for k in 1 2 3 4 5; do
+    [ "$(cast nonce "$ETH_FROM" "${rpc[@]}" 2>/dev/null || echo x)" = "$(cast nonce "$ETH_FROM" --block pending "${rpc[@]}" 2>/dev/null || echo y)" ] && return 0
+    sleep "${FERRATA_NONCE_GAP:-4}"
+  done
+  return 1
+}
+
 crown() { # crown <signature> [args]: one transaction of Crown.s.sol
   local sig="$1"; shift
   local name="${sig%%(*}${1:+-$1}" log="$run/logs/${sig%%(*}${1:+-$1}.log" tries=0 n0
   while :; do
-    n0="$(cast nonce "$ETH_FROM" "${rpc[@]}")"
+    n0="$(nonce_max)"
     ( cd "$here/vault" && env -u ETH_FROM FERRATA_CROWN="$run/crown.json" forge script script/Crown.s.sol:Crown --sig "$sig" "$@" \
         "${rpc[@]}" --sender "$ETH_FROM" "${signer[@]}" --broadcast --skip-simulation --slow \
         --gas-estimate-multiplier "$margin" ) > "$log" 2>&1 && break
     tail -n 25 "$log" | sed "s,$SEPOLIA_RPC_URL,<endpoint>,g"
     if [ "$tries" -lt 5 ] && grep -q -E -e "$transient" "$log" \
-        && [ "$(cast nonce "$ETH_FROM" "${rpc[@]}")" = "$n0" ] \
-        && [ "$(cast nonce "$ETH_FROM" --block pending "${rpc[@]}")" = "$n0" ]; then
+        && ! grep -q -E 'Hash: 0x|"hash": *"0x' "$log" \
+        && [ "$n0" -ge 0 ] && [ "$(nonce_max)" = "$n0" ]; then
       tries=$((tries + 1))
       mv "$log" "$log.transient-$tries"
       say "$name: the endpoint failed a read and nothing was sent (nonce still $n0); again in 24 s ($tries of 5)"
-      sleep 24
+      sleep "${FERRATA_RETRY_SLEEP:-24}"
       continue
     fi
     die "$name"
@@ -88,8 +112,7 @@ case "$step" in
       "checkpoints $(call 'checkpointCount()(uint256)')"
     ;;
   deploy)
-    [ "$(cast nonce "$ETH_FROM" "${rpc[@]}")" = "$(cast nonce "$ETH_FROM" --block pending "${rpc[@]}")" ] ||
-      die "the deployer has pending transactions"
+    nonces_agree || die "the deployer has pending transactions"
     ( cd "$here/vault" && FERRATA_MODE=B FERRATA_GAS_RULE=eip8037 FERRATA_GAS_MARGIN_PCT="$margin" \
         FERRATA_RPC_URL="$SEPOLIA_RPC_URL" FERRATA_PARAMS="$run/params.json" FERRATA_OUT="deployments/crown-$(basename "$run").json" \
         FERRATA_GROTH16_VERIFIER="$(jq -r .groth16Verifier "$id")" FERRATA_DELTA="$(jq -r .delta "$id")" \
