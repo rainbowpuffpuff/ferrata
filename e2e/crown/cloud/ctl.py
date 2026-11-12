@@ -462,7 +462,10 @@ def updater_status(run: str) -> None:
 def updater_fetch(run: str, dest: str) -> None:
     vol = volume()
     n = 0
-    for top in ("session-a", "session-u", "session-u.out", "updater-call.json"):
+    tops = ["session-a", "session-u.out", "updater-call.json"]
+    tops += sorted(e.path.rstrip("/").split("/")[-1] for e in vol.listdir(f"lez/{run}")
+                   if e.path.rstrip("/").split("/")[-1].startswith("session-u") and e.type == FileEntryType.DIRECTORY)
+    for top in tops:
         try:
             entries = list(vol.iterdir(f"lez/{run}/{top}", recursive=True))
         except (NotFoundError, FileNotFoundError):

@@ -42,6 +42,8 @@ case "$CHAIN" in sepolia|stand-in) ;; *) echo "CROWN_CHAIN: sepolia or stand-in"
 
 VOL="$(realpath -m "$VOL")"; WORK="$(realpath -m "$WORK")"
 OUT="$VOL/session-$STEP"; [ "$STEP" = dump ] && OUT="$VOL/session-b"
+# Each session U keeps its own records: session-u, then session-u2, session-u3, ...
+if [ "$STEP" = u ]; then n=1; while [ -e "$OUT/updater.log" ]; do n=$(( n + 1 )); OUT="$VOL/session-u$n"; done; fi
 rm -rf "$WORK"; mkdir -p "$WORK" "$VOL/state" "$OUT"
 LOG="$WORK/logs"; mkdir -p "$LOG"
 say() { echo "[$(date -u +%H:%M:%S)] $*" | tee -a "$LOG/session.log"; }
@@ -333,7 +335,7 @@ updater_session() {
     fi
     if [ "$restart" = 1 ]; then
       lines=$(journal_lines)
-      if { [ "$lines" -gt "$armed_lines" ] && [ "$(journal_tail)" = "Open applied" ]; } || [ $(( now - armed_at )) -ge 1200 ]; then
+      if { [ "$lines" -gt "$armed_lines" ] && [ "$(journal_tail)" = "open applied" ]; } || [ $(( now - armed_at )) -ge 1200 ]; then
         say "restart: the journal's last line is '$(journal_tail)'; SIGTERM"
         n=$(( n + 1 )); updater_probe "$n"
         updater_stop; rc=$?
