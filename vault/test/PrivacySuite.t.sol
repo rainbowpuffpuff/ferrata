@@ -4,6 +4,8 @@ pragma solidity ^0.8.26;
 import {Vm} from "forge-std/Vm.sol";
 import {ControlID} from "risc0/groth16/ControlID.sol";
 import {RiscZeroGroth16Verifier} from "risc0/groth16/RiscZeroGroth16Verifier.sol";
+import {IRiscZeroVerifier as IRiscZeroVerifierFull, Receipt} from "risc0/IRiscZeroVerifier.sol";
+import {RiscZeroVerifierEmergencyStop} from "risc0/RiscZeroVerifierEmergencyStop.sol";
 
 import {FerrataVault} from "../src/FerrataVault.sol";
 import {IRiscZeroVerifier} from "../src/interfaces/IRiscZeroVerifier.sol";
@@ -12,8 +14,9 @@ import {VaultTestBase} from "./utils/VaultTestBase.sol";
 /// @notice Test only (the privacy suite with real proofs): a release's seal goes to RISC Zero's Groth16 verifier, so
 ///         the vault checks the real proof of the release statement; every other image (the checkpoint, whose burn
 ///         root this suite accepts on synthetic LEZ data) goes to the mock. `releaseOnMock` sends releases to the mock
-///         too, for the naive-nullifier variant, which no real release program proves.
-contract ReleaseSplitVerifier is IRiscZeroVerifier {
+///         too, for the naive-nullifier variant, which no real release program proves. The vault reaches it through
+///         RISC Zero's emergency stop, as it reaches any verifier (its constructor requires a stop).
+contract ReleaseSplitVerifier is IRiscZeroVerifierFull {
     IRiscZeroVerifier public immutable groth16;
     IRiscZeroVerifier public immutable mock;
     bytes32 public immutable releaseImageId;
@@ -33,6 +36,11 @@ contract ReleaseSplitVerifier is IRiscZeroVerifier {
         } else {
             mock.verify(seal, imageId, journalDigest);
         }
+    }
+
+    /// @dev Not on the vault's paths (it calls `verify` only); the mock's, for the interface the stop requires.
+    function verifyIntegrity(Receipt calldata receipt) external view {
+        IRiscZeroVerifierFull(address(mock)).verifyIntegrity(receipt);
     }
 }
 
@@ -91,7 +99,8 @@ contract PrivacySuiteTest is VaultTestBase {
             split = new ReleaseSplitVerifier(
                 IRiscZeroVerifier(address(groth16)), IRiscZeroVerifier(address(verifier)), releaseId
             );
-            FerrataVault.Deployment memory d = _deployment(IRiscZeroVerifier(address(split)), configId);
+            RiscZeroVerifierEmergencyStop stop = new RiscZeroVerifierEmergencyStop(IRiscZeroVerifierFull(address(split)), freezer);
+            FerrataVault.Deployment memory d = _deployment(IRiscZeroVerifier(address(stop)), configId);
             d.releaseImageId = releaseId;
             _deployAt(vaultAddress, abi.encode(d));
         } else {
