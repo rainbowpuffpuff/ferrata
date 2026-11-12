@@ -45,6 +45,8 @@ a laptop is enough):
 scripts/fetch-vectors.sh && cargo test --workspace --locked
 ```
 
+(163 tests in 25 binaries; under two minutes on a 16-core machine with an empty cargo registry.)
+
 The live Sepolia round trip, checked from its committed records, read-only (Python's standard library
 only; it asks a public endpoint unless you give your own with `--rpc URL` or `SEPOLIA_RPC_URL`):
 
@@ -57,16 +59,31 @@ the Groth16 wraps, Docker on x86-64. The vault's suite (install the pinned depen
 [`vault/README.md`](vault/README.md)):
 
 ```sh
-cd vault && forge test
+cd vault && FOUNDRY_OFFLINE=false forge build && forge test
 ```
 
+`vault/foundry.toml` keeps forge offline, so the first build must be allowed to fetch solc 0.8.26
+(`FOUNDRY_OFFLINE=false`; without it forge stops at "can't install missing solc 0.8.26 in offline mode"); later
+runs need no network. Expected: 451 passed and 1 skipped, the privacy suite's Ethereum half, which replays the
+output of its LEZ half (`scripts/privacy/run.sh` runs both).
+
 The attestation and bridge programs on LEZ v0.4.0-rc1's own state machine, in process, with RISC Zero in
-dev mode (setup: [`lez/RESULTS.md`](lez/RESULTS.md) §8):
+dev mode. LEZ's guests are built with RISC Zero's guest Rust 1.91.1, kept in a RISC Zero home of their own
+beside the repository (with `~/.risc0`'s 1.88.0 their build stops at "ruint@1.21.1 requires rustc 1.90");
+`scripts/ci/install-risc0.sh` installs `rzup`, r0vm 3.0.5 and both guest toolchains:
 
 ```sh
 scripts/fetch-upstream.sh
-cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked -- --test-threads 1
+RISC0_HOME_LEZ=$PWD/../risc0-home-lez scripts/ci/install-risc0.sh
+cd lez && RISC0_HOME=$PWD/../../risc0-home-lez RISC0_DEV_MODE=1 cargo test -p harness --locked -- --test-threads 1
 ```
+
+On a 16-core machine: about 7 minutes of build, then 56 tests in 30 binaries in about 21 minutes (one test
+thread; `vault_consumer` alone runs six minutes without printing). The tests rewrite the tables in
+`lez/results/`, so git then shows them changed: the committed tables were written by an earlier build (they
+name bridge image `43615dc4…`), and with this tree's programs ([`docs/image-ids.md`](docs/image-ids.md)) the
+image ids and some execution-gas figures differ. The rest of the setup, the real proofs and the tables:
+[`lez/RESULTS.md`](lez/RESULTS.md) §8.
 
 The larger jobs have one command each (`just m0`, `just bench`, `just release`:
 [docs/release-engineering.md](docs/release-engineering.md)); every component's re-check command is in
@@ -168,7 +185,10 @@ every other command.
 | [Finality-rule analysis](docs/design/finality-rule/LEMMA.md), `docs/design/finality-rule/` | A model of LEZ v0.4 sequencer and Logos Blockchain behaviour cited to source lines, a written proof, and a discrete-event simulator | Simulator (Python, standard library), not a network | Broke the earlier rule (A); the repaired rule shows no violation in 500 adversarial runs within its conditions | `cd docs/design/finality-rule/sim && python3 experiments.py` (12,000 runs, 25 min on 14 processes; `python3 test_sim.py` checks the model) |
 
 The guests need RISC Zero's toolchain (`rzup`, r0vm 3.0.5), the vault Foundry (forge 1.3.6, solc
-0.8.26), and the Groth16 wraps Docker on x86-64. `lez/` and the checkpoint's fidelity tests read LEZ
+0.8.26), and the Groth16 wraps Docker on x86-64. Host Rust: stable for the root workspace, 1.98.1 for `lez/` and
+`cli/` (their `rust-toolchain.toml`), and 1.88 and 1.93.0 where a command names them (`cargo +1.88` in
+`checkpoint/`): `rustup toolchain install 1.88 1.93.0 1.98.1`. `cli/` and CI's round trip also need
+`libpcsclite-dev` (LEZ's wallet links PC/SC). `lez/` and the checkpoint's fidelity tests read LEZ
 v0.4.0-rc1 and Logos Blockchain from `upstream/` beside the repository; `lez/scripts/lez-select.sh v0.4.0-rc2`
 points `lez/` at LEZ v0.4.0-rc2 instead (what changed: [docs/design/lez-rc2-changes.md](docs/design/lez-rc2-changes.md)).
 `scripts/fetch-upstream.sh` fetches all three at the pinned commits. Scripts keep their scratch in
