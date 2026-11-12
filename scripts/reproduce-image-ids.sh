@@ -42,7 +42,7 @@ case "$mode" in
     log() { echo "$(date -u +%T) $*" | tee -a "$OUT/logs/steps.txt"; }
     R0LEZ="${RISC0_HOME_LEZ:-$BESIDE/risc0-home-lez}"
     for d in "$BESIDE/upstream/lez-v0.4.0-rc1" "$R0LEZ"; do
-      [ -d "$d" ] || { log "missing $d (scripts/fetch-upstream.sh; scripts/ci/install-risc0.sh; or set RISC0_HOME_LEZ)"; exit 1; }
+      [ -d "$d" ] || { log "missing $d (scripts/fetch-upstream.sh; RISC0_HOME_LEZ=$BESIDE/risc0-home-lez scripts/ci/install-risc0.sh; or set RISC0_HOME_LEZ)"; exit 1; }
     done
     # The wrapper is what makes the ids path-independent: never let an inherited one (sccache, ...) replace it.
     export RUSTC_WRAPPER="$SRC/scripts/guest-rustc" CARGO_TERM_COLOR=never RISC0_BUILD_LOCKED=1

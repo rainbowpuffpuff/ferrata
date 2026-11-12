@@ -76,7 +76,10 @@ scripts/reproduce-image-ids.sh docker            # the same inside scripts/repro
 - Toolchains: host Rust 1.93.0 (`checkpoint/`, `bridge/`) and 1.98.1 (`lez/`); RISC Zero 3.0.5 with guest Rust 1.88.0
   (`~/.risc0`) for `checkpoint/` and `bridge/` and guest Rust 1.91.1 in its own RISC Zero home for `lez/`
   (`RISC0_HOME_LEZ`, default `../risc0-home-lez`); LEZ v0.4.0-rc1 at commit 1806e87 and the Logos Blockchain revision
-  d480efc6 beside the tree in `../upstream/` (`scripts/fetch-upstream.sh`, `scripts/ci/install-risc0.sh`).
+  d480efc6 beside the tree in `../upstream/` (`scripts/fetch-upstream.sh`). From the root,
+  `RISC0_HOME_LEZ=$PWD/../risc0-home-lez scripts/ci/install-risc0.sh` installs the RISC Zero toolchains, the LEZ
+  home where `build` looks for it (without `RISC0_HOME_LEZ` the script installs it in `~/risc0-home-lez`, CI's place,
+  and `build` then stops at "missing …/risc0-home-lez").
   [`scripts/reproduce/Dockerfile`](../../scripts/reproduce/Dockerfile) installs exactly these.
 - `build`: the three `methods` builds in place (`lez`: `cargo build -p methods --locked` with the LEZ RISC Zero home;
   `checkpoint`, `bridge`: `cargo build --release -p methods --locked`), with `RUSTC_WRAPPER` set to the wrapper (an
@@ -87,6 +90,9 @@ scripts/reproduce-image-ids.sh docker            # the same inside scripts/repro
 - `compare` ([`scripts/reproduce/compare_ids.py`](../../scripts/reproduce/compare_ids.py)): the crown run's six
   programs beside [`e2e/crown/README.md`](../../e2e/crown/README.md)'s table and, with `--vault`, a crown vault's
   immutables read over RPC; every guest beside [`docs/image-ids.md`](../image-ids.md); exit 1 if one differs.
+  The one live v5 vault, `0xfE3199fa…9E54`, is crown-live-1's, which ran programs built before the wrapper (below):
+  `--vault` on it prints DIFFER for `checkpoint_b` and `release` and exits 1, as expected; `--vault` ties to this
+  source a vault deployed with the path-independent programs (crown-live-2 on).
 
 | Program | Where its id is used |
 |---|---|
@@ -102,6 +108,11 @@ the source is correct (that is the tests', the reviews' and an audit's job).
 
 **Proven on our build box** (a Modal CPU container; it has no Docker, so `build` ran there directly; the Dockerfile
 itself has not been built): run on the Modal build box, 11 Nov 2026 23:03–23:09Z (`spike`-side script `twopath.sh`, logs outside the repository): build A with the tree at `/build/a/ferrata` and `HOME=/build/home-a`, build B with the tree at `/build/elsewhere/deeper/checkout-b`, `HOME=/build/users/other-home` and real copies of `~/.risc0` and of the LEZ RISC Zero home at other paths, both from a fresh target directory, in parallel (225 s and 227 s once the cargo registry was warm); their dep-info files show each compiled from its own paths (1,363 and 1,368 references to the tree, 17,190 and 17,322 to the cargo home), no binary names either build's tree, `HOME` or the box's own paths, and `ids.tsv` of A and B are identical: 14 of 14 guests with the same image id, R0BF binary and user ELF, byte for byte; the crown run's six programs and the four R0BF files compared with `cmp`, equal.
+
+**Again at a third path** (walkthrough, 12 Nov 2026, the Modal build box, the tree at another directory, the LEZ
+RISC Zero home freshly installed by `install-risc0.sh` into a new directory): `build` 3 min 32 s, `compare` 14 of 14
+guests equal to `docs/image-ids.md` and 6 of 6 crown programs equal to `e2e/crown/README.md`'s table; with
+`--vault 0xfE3199fa…9E54`, 4 of 6 (`checkpoint_b` and `release` are crown-live-1's, as said above).
 
 **The first live run, `crown-live-1`**, ran programs built before the wrapper existed, at the maintainer's checkout
 path on the build box: those ids (`e2e/crown/README.md`, "The programs of crown-live-1") reproduce only from that
