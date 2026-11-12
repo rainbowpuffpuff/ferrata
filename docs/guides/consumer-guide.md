@@ -164,7 +164,7 @@ the fact, so prove at submission time ([`attestation.md`](../design/attestation.
 The measured fixture reads the record of the fact's own block, not the newest one
 ([`lez/RESULTS.md`](../../lez/RESULTS.md) §5, "What is not built").
 
-**Cost** (measured): LEZ charged 421,641 execution gas (its flat `PRIVATE_VERIFY_GAS` of 409,764 plus
+**Cost** (measured on the images of `lez/RESULTS.md` §5, consumer `f883e6a4…`): LEZ charged 421,641 execution gas (its flat `PRIVATE_VERIFY_GAS` of 409,764 plus
 11,877 cycles for the public `Read`) and its flat 224,063 storage gas. Your prover proves your two
 transitions: 380,577 user cycles with software Keccak (34,337 for the call, 346,240 for the reply
 that verifies the fact), or 137,064 with the accelerated Keccak (executor only; whether LEZ's
@@ -172,7 +172,9 @@ privacy circuit resolves the Keccak assumption was not tried). One real proof, o
 16.1 s for `execute_and_prove`, peak host memory 0.76 GiB, GPU memory 11,295 MiB, a 227,170-byte
 receipt, settled with the receipt verified ([`lez/RESULTS.md`](../../lez/RESULTS.md) §5;
 [`gpu-prover/RESULTS.md`](../../gpu-prover/RESULTS.md), run `gpu-l4-attest-2`). **Not measured:**
-this proof on a CPU or a user's laptop, and the 306-log case (ten segments).
+this proof on a CPU or a user's laptop, and the 306-log case (ten segments). With this tree's programs (dev mode,
+[`lez/results/stage4-attest-private-public-outputs.txt`](../../lez/results/stage4-attest-private-public-outputs.txt)) the read is
+charged 422,032 (`Read` 12,268 cycles) and the two transitions take 34,717 + 346,763 = 381,480 user cycles.
 
 **A fact that does not verify cannot be proven**: a forged receipt, a wrong recipient, a pool for
 another chain, a proof for another block and a slot without a record end your second transition
@@ -522,28 +524,29 @@ holds the balance `eth_call` gives, block 26,384,851, its hash, and the statemen
 `harness::attest::storage_statement_id` computes from the JSON alone.
 
 **Step 8. Measure.** In-process harness (LEZ v0.4.0-rc1's state machine and fee settlement), on the
-build box, 11 November 2026:
+build box, re-recorded on 12 November 2026 with this tree's programs:
 
 | Transaction | Handlers (cycles each) | Execution gas | Of the 5M target | Storage gas (tx bytes) |
 |---|---|---:|---:|---:|
-| accepted, at least 1,000 WETH | `Check` 111,198 → `Attest` 278,002 → reply 41,910 | 431,110 | 9% | 7,493 |
-| refused by the condition (balance + 1 wei) | `Check` 111,198 → `Attest` 253,744 | 364,942 | 7% | 7,493 |
-| refused for another chain | `Check` 111,198 → `Attest` 38,360 | 149,558 | 3% | 7,493 |
-| refused before asking (wrong actor) | `Check` 36,232 | 36,232 | 1% | 7,493 |
+| accepted, at least 1,000 WETH | `Check` 111,180 → `Attest` 279,023 → reply 41,925 | 432,128 | 9% | 7,493 |
+| refused by the condition (balance + 1 wei) | `Check` 111,180 → `Attest` 254,701 | 365,881 | 7% | 7,493 |
+| refused for another chain | `Check` 111,180 → `Attest` 39,317 | 150,497 | 3% | 7,493 |
+| refused before asking (wrong actor) | `Check` 36,215 | 36,215 | 1% | 7,493 |
 
 LEZ charges execution gas equal to the cycles it metered; the accepted check's base fee at genesis
-base fees is 3,508,824 ([`lez/results/holdings.md`](../../lez/results/holdings.md), every case and
+base fees is 3,516,968 ([`lez/results/holdings.md`](../../lez/results/holdings.md), every case and
 every handler's bytes). `Check` reads the proofs in its 6,966-byte message and writes them again into the
-`Attest` it sends (a 14,319-byte journal); refused before it builds the request, it costs 36,232
-cycles. The program adds 153,108 cycles to the attestation's 278,002 (derived: 431,110 − 278,002),
-36% of the transaction.
+`Attest` it sends (a 14,319-byte journal); refused before it builds the request, it costs 36,215
+cycles. The program adds 153,105 cycles to the attestation's 279,023 (derived: 432,128 − 279,023),
+35% of the transaction.
 
 **Step 9. Prove.** LEZ v0.4 does not prove a public transaction (a sequencer executes it); what a
 prover of this one would prove is its three handler executions. `prove_holdings`
 ([`lez/harness/src/bin/prove_holdings.rs`](../../lez/harness/src/bin/prove_holdings.rs)) settles the
 accepted check, replays it with each handler's input recorded, proves each execution with `r0vm`
 3.0.5 on the CPU (`RISC0_DEV_MODE=0`, succinct receipts), verifies each receipt against its
-program's image id and compares each journal with the executor's:
+program's image id and compares each journal with the executor's (on the build of 11 November named below,
+whose cycles were Step 8's before the re-recording):
 
 | # | Program | Handler | User cycles | Padded cycles (segments) | Proving time | Receipt |
 |---|---|---|---:|---:|---:|---|
@@ -556,8 +559,8 @@ program's image id and compares each journal with the executor's:
 (32 processors listed, 64 GB, no GPU), 11 November 2026; an earlier run of the same image took
 99.3 s
 ([`lez/results/prove-holdings.log`](../../lez/results/prove-holdings.log)). Image ids of that build:
-`ferrata_holdings` `4985868d…cd4f`, the attestation program `d2fb9aec…e600`; a guest's image id
-embeds the build's absolute paths, so another checkout gives other ids. To run it:
+`ferrata_holdings` `4985868d…cd4f`, the attestation program `d2fb9aec…e600`; those ids
+embedded the build's absolute paths (this tree's guests build to the same ids at any path: [`docs/image-ids.md`](../image-ids.md)). To run it:
 
 ```sh
 cd lez                                     # toolchains and environment: lez/RESULTS.md §8
