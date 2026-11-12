@@ -1,0 +1,4 @@
+logosctl call seconds 14.9
+nproc 2
+r0vm risc0-r0vm 3.0.5
+RISC0_DEV_MODE in the daemon: unset

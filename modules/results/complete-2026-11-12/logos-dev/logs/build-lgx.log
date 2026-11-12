@@ -1,0 +1,60 @@
+logos-ferrata_bridge_module-module-lib>   Policy CMP0167 is not set: The FindBoost module is removed.  Run "cmake
+logos-ferrata_bridge_module-module-lib>   --help-policy CMP0167" for policy details.  Use the cmake_policy command to
+logos-ferrata_bridge_module-module-lib>   set the policy and suppress this warning.
+logos-ferrata_bridge_module-module-lib> 
+logos-ferrata_bridge_module-module-lib> Call Stack (most recent call first):
+logos-ferrata_bridge_module-module-lib>   /nix/store/a94d5zmalqava26y3hqsnj5l11l5kl5y-cmake-3.31.7/share/cmake-3.31/Modules/CMakeFindDependencyMacro.cmake:76 (find_package)
+logos-ferrata_bridge_module-module-lib>   /nix/store/9g8y2i2fh58rmhing58h787mdswajf0f-logos-qt-host-0.1.0/lib/cmake/logos-qt-host/logos-qt-hostConfig.cmake:34 (find_dependency)
+logos-ferrata_bridge_module-module-lib>   /nix/store/h51akk2143624r9n32qz824d7abjkgkp-zbldbik992k9xvi8d2qmjrz6vv8z41qq-source/cmake/LogosModule.cmake:625 (find_package)
+logos-ferrata_bridge_module-module-lib>   CMakeLists.txt:18 (logos_module)
+logos-ferrata_bridge_module-module-lib> This warning is for project developers.  Use -Wno-dev to suppress it.
+logos-ferrata_bridge_module-module-lib> 
+logos-ferrata_bridge_module-module-lib> -- Logos module ferrata_bridge_module configured successfully
+logos-ferrata_bridge_module-module-lib> -- Configuring done (2.5s)
+logos-ferrata_bridge_module-module-lib> -- Generating done (0.1s)
+logos-ferrata_bridge_module-module-lib> CMake Warning:
+logos-ferrata_bridge_module-module-lib>   Manually-specified variables were not used by the project:
+logos-ferrata_bridge_module-module-lib> 
+logos-ferrata_bridge_module-module-lib>     BUILD_TESTING
+logos-ferrata_bridge_module-module-lib>     CMAKE_C_COMPILER
+logos-ferrata_bridge_module-module-lib>     CMAKE_EXPORT_NO_PACKAGE_REGISTRY
+logos-ferrata_bridge_module-module-lib>     CMAKE_POLICY_DEFAULT_CMP0025
+logos-ferrata_bridge_module-module-lib>     LOGOS_VIEW_TEMPLATE_DIR
+logos-ferrata_bridge_module-module-lib> 
+logos-ferrata_bridge_module-module-lib> 
+logos-ferrata_bridge_module-module-lib> -- Build files have been written to: <spike>/tmp/bmc/nix-build-logos-ferrata_bridge_module-module-lib-0.1.0.drv-0/w0v8cg73qp9w85jvk3yb6cdxbin2p4yv-source/build
+logos-ferrata_bridge_module-module-lib> cmake: enabled parallel building
+logos-ferrata_bridge_module-module-lib> cmake: enabled parallel installing
+logos-ferrata_bridge_module-module-lib> Running phase: buildPhase
+logos-ferrata_bridge_module-module-lib> build flags: -j8
+logos-ferrata_bridge_module-module-lib> [0/2] Re-checking globbed directories...
+logos-ferrata_bridge_module-module-lib> [1/6] Automatic MOC for target ferrata_bridge_module_module_plugin
+logos-ferrata_bridge_module-module-lib> [2/6] Building CXX object CMakeFiles/ferrata_bridge_module_module_plugin.dir/generated_code/logos_sdk.cpp.o
+logos-ferrata_bridge_module-module-lib> [3/6] Building CXX object CMakeFiles/ferrata_bridge_module_module_plugin.dir/ferrata_bridge_module_module_plugin_autogen/mocs_compilation.cpp.o
+logos-ferrata_bridge_module-module-lib> [4/6] Building CXX object CMakeFiles/ferrata_bridge_module_module_plugin.dir/generated_code/ferrata_bridge_module_cdylib_glue.cpp.o
+logos-ferrata_bridge_module-module-lib> [5/6] Linking CXX shared library modules/ferrata_bridge_module_plugin.so
+logos-ferrata_bridge_module-module-lib> Running phase: glibPreInstallPhase
+logos-ferrata_bridge_module-module-lib> Running phase: installPhase
+logos-ferrata_bridge_module-module-lib> Checking <spike>/tmp/bmc/nix-build-logos-ferrata_bridge_module-module-lib-0.1.0.drv-0/w0v8cg73qp9w85jvk3yb6cdxbin2p4yv-source/lib for external libraries...
+logos-ferrata_bridge_module-module-lib> Installed module LIDL contract: /nix/store/z1z3i0aqf0s11rbf1gnjrdkgi8jmwfv0-logos-ferrata_bridge_module-module-lib-0.1.0/share/logos/ferrata_bridge_module.lidl
+logos-ferrata_bridge_module-module-lib> Running phase: qtOwnPathsHook
+logos-ferrata_bridge_module-module-lib> Running phase: fixupPhase
+logos-ferrata_bridge_module-module-lib> shrinking RPATHs of ELF executables and libraries in /nix/store/z1z3i0aqf0s11rbf1gnjrdkgi8jmwfv0-logos-ferrata_bridge_module-module-lib-0.1.0
+logos-ferrata_bridge_module-module-lib> shrinking /nix/store/z1z3i0aqf0s11rbf1gnjrdkgi8jmwfv0-logos-ferrata_bridge_module-module-lib-0.1.0/lib/ferrata_bridge_module_plugin.so
+logos-ferrata_bridge_module-module-lib> checking for references to <spike>/tmp/bmc/nix-build-logos-ferrata_bridge_module-module-lib-0.1.0.drv-0/ in /nix/store/z1z3i0aqf0s11rbf1gnjrdkgi8jmwfv0-logos-ferrata_bridge_module-module-lib-0.1.0...
+logos-ferrata_bridge_module-module-lib> patching script interpreter paths in /nix/store/z1z3i0aqf0s11rbf1gnjrdkgi8jmwfv0-logos-ferrata_bridge_module-module-lib-0.1.0
+logos-ferrata_bridge_module-module-lib> Running phase: postPatchMkspecs
+building '/nix/store/9a41swgsazhzqny3gzmg0dspzmwnkfa0-logos-ferrata_bridge_module-module-lib-lgx-0.1.0.drv'...
+logos-ferrata_bridge_module-module-lib-lgx> Running phase: patchPhase
+logos-ferrata_bridge_module-module-lib-lgx> Running phase: updateAutotoolsGnuConfigScriptsPhase
+logos-ferrata_bridge_module-module-lib-lgx> Running phase: configurePhase
+logos-ferrata_bridge_module-module-lib-lgx> no configure script, doing nothing
+logos-ferrata_bridge_module-module-lib-lgx> Running phase: buildPhase
+logos-ferrata_bridge_module-module-lib-lgx> Created package: logos-ferrata_bridge_module-module-lib.lgx
+logos-ferrata_bridge_module-module-lib-lgx> Patching manifest from metadata...
+logos-ferrata_bridge_module-module-lib-lgx> Staged 1 entries from /nix/store/z1z3i0aqf0s11rbf1gnjrdkgi8jmwfv0-logos-ferrata_bridge_module-module-lib-0.1.0/lib
+logos-ferrata_bridge_module-module-lib-lgx> Bundled root asset directory: share/logos -> assets/lidl
+logos-ferrata_bridge_module-module-lib-lgx> Adding variant linux-amd64-dev to logos-ferrata_bridge_module-module-lib.lgx (main: ferrata_bridge_module_plugin.so)...
+logos-ferrata_bridge_module-module-lib-lgx> Added variant 'linux-amd64-dev' to logos-ferrata_bridge_module-module-lib.lgx
+logos-ferrata_bridge_module-module-lib-lgx> Done: logos-ferrata_bridge_module-module-lib.lgx
+logos-ferrata_bridge_module-module-lib-lgx> Running phase: installPhase

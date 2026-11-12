@@ -1,0 +1,4 @@
+{"method": "eth_getBlockByNumber", "params": ["0x19299d3", false], "bytes": 41154}
+{"method": "eth_getBlockReceipts", "params": ["0x19299d3"], "bytes": 1609795}
+{"method": "eth_getBlockByNumber", "params": ["0x19299d3", false], "bytes": 41154}
+{"method": "eth_getBlockReceipts", "params": ["0x19299d3"], "bytes": 1609795}

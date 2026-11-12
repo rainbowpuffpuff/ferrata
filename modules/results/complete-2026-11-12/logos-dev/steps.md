@@ -1,0 +1,25 @@
+| step | result | seconds |
+|---|---|---:|
+| versions | ok | 0.1 |
+| stage | ok | 0.1 |
+| sdk-source | ok | 0.2 |
+| cargo-lockfiles | ok | 0.0 |
+| requests | ok | 0.1 |
+| bridge-requests | ok | 0.1 |
+| native-test | ok | 4.1 |
+| native-calls | ok | 0.7 |
+| prepare-build | ok | 0.2 |
+| build-lgx | ok | 196.2 |
+| build-logosctl | ok | 37.8 |
+| dev-daemon-start | ok | 0.3 |
+| dev-install-ferrata_attest_module | ok | 0.4 |
+| dev-load-ferrata_attest_module | ok | 0.1 |
+| dev-show-ferrata_attest_module | ok | 0.0 |
+| dev-install-ferrata_bridge_module | ok | 0.7 |
+| dev-load-ferrata_bridge_module | ok | 0.1 |
+| dev-show-ferrata_bridge_module | ok | 0.1 |
+| dev-e2e | ok | 70.5 |
+| dev-bridge-e2e | ok | 19.1 |
+| dev-module-ls | ok | 0.1 |
+| dev-daemon-stop | ok | 0.7 |
+| sizes | ok | 0.7 |
