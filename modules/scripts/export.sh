@@ -18,13 +18,13 @@ tar -C "$repo/modules/$m" --exclude=./out --exclude=./rust-lib/target --exclude=
   --exclude='./result*' -cf - . | tar -C "$dest" -xf -
 cd "$dest"
 # In the standalone repository the staged crate is source, not a build copy.
-sed -i -e '/before a build/d' -e '\#^rust-lib/ferrata-core/$#d' -e '\#^rust-lib/ferrata-bridge-core/$#d' \
+sed -i -e '/before a build/d' -e '\#^rust-lib/staged/$#d' -e '\#^rust-lib/upstream/$#d' \
   -e '\#^rust-lib/attestor/$#d' -e '\#^rust-lib/crates/$#d' -e '\#^rust-lib/monitor/$#d' -e '\#^rust-lib/checkpoint/$#d' \
   -e '\#^rust-lib/vendor/$#d' .gitignore
 git init -q
 git add -A
 # The staged trees whole, whatever .gitignore files they carry (the LEZ tree's own).
-for c in rust-lib/attestor rust-lib/crates rust-lib/monitor rust-lib/checkpoint rust-lib/vendor; do
+for c in rust-lib/staged rust-lib/upstream rust-lib/attestor rust-lib/crates rust-lib/monitor rust-lib/checkpoint rust-lib/vendor; do
   if [ -d "$c" ]; then git add -f "$c"; fi
 done
 git -c user.name=ferrata-export -c user.email=export@localhost commit -q -m "$m $(jq -r .version metadata.json), exported from the Ferrata repository"

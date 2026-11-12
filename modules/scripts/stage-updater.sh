@@ -8,7 +8,8 @@
 #   vendor/ferrata/                the repository's crates the updater needs, in the repository's own
 #                                  layout, with the workspace manifests they inherit from (the root's,
 #                                  bridge/'s, lez/'s), so every path dependency resolves unchanged:
-#                                  lez/{updater,wire,bridge-wire,holdings-wire,harness},
+#                                  lez/{updater,advance,wire,bridge-wire,holdings-wire,harness} (advance:
+#                                  the update's job planning the updater shares with ferrata_attest_module),
 #                                  crates/{ferrata-core,ferrata-spectests}, bridge/crates/ferrata-bridge-core,
 #                                  checkpoint/crates/{checkpoint-core,attestor-core} (a dev-dependency's path),
 #                                  and the files the harness includes at compile time (SHA256SUMS of the
@@ -49,7 +50,7 @@ copy() { # SOURCE_DIR (relative to the repository): its Cargo.toml, README.md, b
   cp -r "$src/Cargo.toml" "$src/src" "$dst/"
   for f in README.md build.rs; do if [ -f "$src/$f" ]; then cp "$src/$f" "$dst/"; fi; done
 }
-crates="lez/updater lez/wire lez/bridge-wire lez/holdings-wire lez/harness crates/ferrata-core crates/ferrata-spectests
+crates="lez/updater lez/advance lez/wire lez/bridge-wire lez/holdings-wire lez/harness crates/ferrata-core crates/ferrata-spectests
         bridge/crates/ferrata-bridge-core checkpoint/crates/checkpoint-core checkpoint/crates/attestor-core"
 for c in $crates; do copy "$c"; done
 # The workspace manifests the copies inherit from.
