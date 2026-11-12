@@ -97,31 +97,15 @@ pub struct Proven {
     pub dev_mode: bool,
 }
 
-/// Runs the release guest in `program` on the plan's input through r0vm (`RISC0_DEV_MODE=1`:
+/// Runs the release guest in `program` on the plan's input through r0vm (`ferrata_wallet::release::prove`,
+/// shared with `ferrata_bridge_module`) (`RISC0_DEV_MODE=1`:
 /// executed only, a fake receipt; unset: a succinct proof on this machine's CPU), and checks that
 /// its journal is the native one. The vault takes a Groth16 seal: wrap the receipt (RISC Zero's
 /// Groth16 prover image, which needs Docker on x86) and pass the seal to `ferrata release --seal`.
 pub fn prove(program: &Path, plan: &ReleasePlan) -> Result<Proven> {
-    use risc0_zkvm::{compute_image_id, default_prover, ExecutorEnv, ProverOpts};
     let elf = std::fs::read(program).with_context(|| format!("reading the release program {}", program.display()))?;
-    let image_id = compute_image_id(&elf).map_err(|e| anyhow!("not a guest program: {e}"))?;
-    let input = plan.input.encode();
-    let env = ExecutorEnv::builder().write_slice(&input).build().map_err(|e| anyhow!("{e}"))?;
-    let info =
-        default_prover().prove_with_opts(env, &elf, &ProverOpts::succinct()).map_err(|e| anyhow!("r0vm: {e}"))?;
-    ensure!(info.receipt.journal.bytes == plan.journal, "the guest's journal is not the native release journal");
-    let dev_mode = std::env::var("RISC0_DEV_MODE").map(|v| v == "1" || v == "true").unwrap_or(false);
-    if !dev_mode {
-        info.receipt.verify(image_id).map_err(|e| anyhow!("the receipt does not verify: {e}"))?;
-    }
-    let receipt = receipt_json(&info.receipt)?;
-    let mut id = [0u8; 32];
-    id.copy_from_slice(image_id.as_bytes());
-    Ok(Proven { image_id: id, receipt, dev_mode })
-}
-
-fn receipt_json(receipt: &risc0_zkvm::Receipt) -> Result<Vec<u8>> {
-    serde_json::to_vec(receipt).map_err(|e| anyhow!("{e}"))
+    let p = ferrata_wallet::release::prove(&elf, &plan.input.encode(), &plan.journal).map_err(|e| anyhow!(e))?;
+    Ok(Proven { image_id: p.image_id, receipt: p.receipt, dev_mode: p.dev_mode })
 }
 
 /// The calldata of the vault call.

@@ -12,9 +12,8 @@ use anyhow::{anyhow, bail, Context as _, Result};
 use ferrata_core::{
     fork::LcFork,
     steps::{self, Job, Phase},
-    store::ApplyOutcome,
     types::{LightClientBootstrap, LightClientUpdate, SyncCommittee},
-    witness::{uncompressed_keys, CommitteeSummary, CompactBootstrap, CompactStore, CompactUpdate, SignerWitness},
+    witness::{uncompressed_keys, CommitteeSummary, CompactBootstrap, CompactStore, CompactUpdate},
     Root,
 };
 use ferrata_lez_wire::{
@@ -26,8 +25,8 @@ use sha2::{Digest, Sha256};
 
 use crate::{
     chain::{
-        committee_key, decode_committee, decode_finality_update, decode_update, encode_committee, layout_for, plan_job,
-        signer_witness, signing_committee,
+        committee_key, decode_committee, decode_finality_update, decode_update, encode_committee, layout_for, signer_witness,
+        signing_committee,
     },
     config::{Fees, Policy},
     ledger::{Ledger, Tx, TxOutcome},
@@ -76,36 +75,8 @@ impl Instance {
     }
 }
 
-/// A step of the public job path.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Step {
-    Init,
-    Open,
-    Miller,
-    Adopt(u8),
-    Finish,
-}
-
-impl Step {
-    pub fn name(&self) -> String {
-        match self {
-            Step::Init => "init".into(),
-            Step::Open => "open".into(),
-            Step::Miller => "miller".into(),
-            Step::Adopt(p) => format!("adopt{p}"),
-            Step::Finish => "finish".into(),
-        }
-    }
-    fn byte(&self) -> u8 {
-        match self {
-            Step::Init => 0,
-            Step::Open => 1,
-            Step::Miller => 2,
-            Step::Adopt(p) => 3 + p,
-            Step::Finish => 255,
-        }
-    }
-}
+/// A step of the public job path (ferrata-advance's, shared with ferrata_attest_module).
+pub use ferrata_advance::Step;
 
 /// The transaction an updater means to send.
 #[derive(Clone, Debug)]
@@ -193,25 +164,8 @@ struct Candidate {
     period_update: bool,
 }
 
-/// What the program would do with a candidate on the current store.
-enum Verdict {
-    Useful(Box<Planned>),
-    /// Valid or not, it would not move the store (older than what the instance holds).
-    NoChange,
-    /// Its signature falls in a period whose committee the store does not hold yet.
-    Unverifiable,
-    /// The program would refuse it.
-    Invalid(String),
-}
-
-struct Planned {
-    update: LightClientUpdate,
-    layout: LcFork,
-    compact: CompactUpdate,
-    witness: SignerWitness,
-    jid: Root,
-    outcome: ApplyOutcome,
-}
+// What the program would do with a candidate, and the job of an accepted one: ferrata-advance's.
+use ferrata_advance::{Planned, Verdict};
 
 pub struct Updater {
     /// The daemon's name (logs, metrics).
@@ -506,41 +460,9 @@ impl Updater {
     }
 
     fn evaluate(&self, store: &CompactStore, update: &LightClientUpdate) -> Verdict {
-        let config = &self.inst.config;
-        let spec = config.spec();
-        let Some(layout) = layout_for(config, store.fork, update) else {
-            return Verdict::Invalid("no light-client layout at its slot".into());
-        };
-        let Ok(store_u) = steps::store_for_update(store, layout, update.attested_header.beacon.slot, &spec) else {
-            return Verdict::Invalid(format!("the store cannot move to layout {layout:?}"));
-        };
         let current = self.committees.get(&store.current.pubkeys_root);
         let next = store.next.as_ref().and_then(|n| self.committees.get(&n.pubkeys_root));
-        let sig_period = spec.period_at_slot(update.signature_slot);
-        let store_period = spec.period_at_slot(store.finalized.slot);
-        if sig_period != store_period && sig_period != store_period + 1 {
-            return if sig_period < store_period { Verdict::NoChange } else { Verdict::Unverifiable };
-        }
-        let Some(committee) = signing_committee(store, update, &spec, current, next) else {
-            return Verdict::Unverifiable;
-        };
-        let compact = CompactUpdate::of(update);
-        let witness = signer_witness(committee, update);
-        let (opened, outcome) = plan_job(&store_u, &compact, &witness, update, config);
-        match (opened, outcome) {
-            (Some(_), Some(o)) if o.advanced || o.adopted || o.rotated => {
-                let jid = job_id(&self.inst.id, &store_u.digest(), &compact.digest(layout));
-                Verdict::Useful(Box::new(Planned { update: update.clone(), layout, compact, witness, jid, outcome: o }))
-            }
-            (Some(_), Some(_)) => Verdict::NoChange,
-            _ if !steps::update_advances(&store_u, &compact, &spec)
-                && update.finalized_header.beacon.slot <= store.finalized.slot
-                && (update.next_sync_committee.is_empty() || store.next.is_some()) =>
-            {
-                Verdict::NoChange
-            }
-            _ => Verdict::Invalid("the program's checks refuse it".into()),
-        }
+        ferrata_advance::evaluate(&self.inst.config, &self.inst.id, store, update, current, next)
     }
 
     // ---- a round --------------------------------------------------------------------------
@@ -733,16 +655,7 @@ impl Updater {
         };
         let chosen = useful.swap_remove(pick).1;
         // The job's next step, as the chain holds it (another updater may have begun it).
-        let step = match self.job_on_chain(ledger, &chosen.jid)? {
-            None => Step::Open,
-            Some(job) => match &job.phase {
-                Phase::Miller { .. } => Step::Miller,
-                Phase::FinalExp { .. } | Phase::Verified => match job.adoption.as_ref().filter(|a| !a.complete) {
-                    Some(a) => Step::Adopt(a.chunk_roots.len() as u8),
-                    None => Step::Finish,
-                },
-            },
-        };
+        let step = ferrata_advance::next_step(self.job_on_chain(ledger, &chosen.jid)?.as_ref());
         if self.defer(&chosen.jid, step) {
             return Ok(Plan::Deferred(step));
         }
@@ -775,72 +688,31 @@ impl Updater {
         what: &str,
     ) -> Tx {
         let parts = self.inst.config.adoption_parts;
-        let chunk = keys.len() / parts as usize;
-        let mut actors = vec![job_actor];
-        if p + 1 == parts {
-            if let Some(slot) = record_slot {
-                actors.extend([self.inst.actor(), self.inst.header(slot)]);
-            }
-        }
+        let t = ferrata_advance::adopt_step(self.inst.program, &self.inst.id, parts, job_actor, keys, p, record_slot);
         Tx {
             label: format!("{} {what} adopt {}/{parts}", self.inst.name, p + 1),
-            root: job_actor,
-            message: borsh::to_vec(&Message::Adopt {
-                part: p,
-                keys: keys[p as usize * chunk..(p as usize + 1) * chunk].to_vec(),
-            })
-            .expect("borsh"),
-            actors,
+            root: t.root,
+            message: t.message,
+            actors: t.actors,
             evidence: vec![],
             time_ms,
         }
     }
 
     fn job_tx(&self, p: &Planned, step: Step) -> Result<Tx> {
-        let job_actor = self.inst.job(&p.jid);
         let time_ms = self.inst.time_ms(p.update.signature_slot);
-        let fin = p.update.finalized_header.beacon.slot;
-        let what = format!("fin {fin}");
-        Ok(match step {
-            Step::Open => Tx {
-                label: format!("{} {what} Open", self.inst.name),
-                root: self.inst.actor(),
-                message: borsh::to_vec(&Message::Open {
-                    update: p.compact.encode(p.layout),
-                    signers: p.witness.encode(),
-                })?,
-                actors: vec![self.inst.actor(), job_actor],
-                evidence: vec![],
-                time_ms,
-            },
-            Step::Miller => Tx {
-                label: format!("{} {what} Miller", self.inst.name),
-                root: job_actor,
-                message: borsh::to_vec(&Message::Miller)?,
-                actors: vec![job_actor],
-                evidence: vec![],
-                time_ms,
-            },
+        let what = format!("fin {}", p.update.finalized_header.beacon.slot);
+        let label = match step {
+            Step::Open => format!("{} {what} Open", self.inst.name),
+            Step::Miller => format!("{} {what} Miller", self.inst.name),
             Step::Adopt(part) => {
-                let keys = uncompressed_keys(&p.update.next_sync_committee).map_err(|e| anyhow!("{e:?}"))?;
-                self.adopt_tx(job_actor, &keys, part, None, time_ms, &what)
+                format!("{} {what} adopt {}/{}", self.inst.name, part + 1, self.inst.config.adoption_parts)
             }
-            Step::Finish => {
-                let mut actors = vec![job_actor, self.inst.actor()];
-                if p.outcome.advanced {
-                    actors.push(self.inst.header(fin));
-                }
-                Tx {
-                    label: format!("{} {what} Finish", self.inst.name),
-                    root: job_actor,
-                    message: borsh::to_vec(&Message::Finish)?,
-                    actors,
-                    evidence: vec![],
-                    time_ms,
-                }
-            }
+            Step::Finish => format!("{} {what} Finish", self.inst.name),
             Step::Init => bail!("not a job step"),
-        })
+        };
+        let t = ferrata_advance::job_step(self.inst.program, &self.inst.id, &self.inst.config, p, step)?;
+        Ok(Tx { label, root: t.root, message: t.message, actors: t.actors, evidence: vec![], time_ms })
     }
 
     /// An `Open` for any update, unchecked (what an adversary sends; the tests use it).

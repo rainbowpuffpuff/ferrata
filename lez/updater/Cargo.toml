@@ -17,6 +17,8 @@ path = "src/main.rs"
 
 [dependencies]
 ferrata-lez-wire = { path = "../wire" }
+# The update's job planning and step transactions, shared with ferrata_attest_module (`advance`).
+ferrata-advance = { path = "../advance" }
 ferrata-core = { path = "../../crates/ferrata-core", features = ["blst"] }
 lee = { path = "../../../upstream/lez-v0.4.0-rc1/lee/state_machine" }
 lee_core = { path = "../../../upstream/lez-v0.4.0-rc1/lee/state_machine/core", features = ["host"] }

@@ -1,0 +1,20 @@
+# ferrata-advance: the attestation program's public job path as an updater plans it (which update
+# moves an instance, its job, and the transactions of the job's steps), checked first with the
+# program's own step code run natively. Shared by ferrata-updater and ferrata_attest_module
+# (`advance`): one implementation. Host code: no program or guest links it.
+[package]
+name = "ferrata-advance"
+description = "The attestation program's update steps (Open, Miller, Adopt, Finish) planned and checked natively, shared by ferrata-updater and ferrata_attest_module"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[dependencies]
+ferrata-lez-wire = { path = "../wire" }
+# The program's own step code, run natively before a transaction is paid for (BLS: blst).
+ferrata-core = { path = "../../crates/ferrata-core", features = ["blst"] }
+# LEZ v0.4.0-rc1 by path (see ../wire/Cargo.toml): actors.
+lee_core = { path = "../../../upstream/lez-v0.4.0-rc1/lee/state_machine/core" }
+borsh = { version = "=1.6.1", features = ["derive"] }
+anyhow = "1"

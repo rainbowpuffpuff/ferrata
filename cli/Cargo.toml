@@ -28,6 +28,9 @@ ferrata-lez-bridge-wire = { path = "../lez/bridge-wire" }
 # instance's finalized header and its newest record), as lez/bridge-wire links them.
 ferrata-lez-wire = { path = "../lez/wire" }
 ferrata-core = { path = "../crates/ferrata-core", default-features = false }
+# The wallet rules and bridge calls the tool shares with ferrata_bridge_module (one implementation):
+# the release rule, the claim builder, the root import, the release guest run (`prove`).
+ferrata-wallet = { path = "wallet", features = ["prove"] }
 
 # LEZ by path (v0.4.0-rc1, commit 1806e87), as lez/live/driver links it.
 wallet = { path = "../../upstream/lez-v0.4.0-rc1/lez/wallet" }

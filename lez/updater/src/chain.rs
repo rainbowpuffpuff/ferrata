@@ -4,17 +4,20 @@
 //! planning that runs the program's own step code natively before a transaction is paid for (as
 //! `harness::plan_job`).
 
-use anyhow::{anyhow, bail, ensure, Result};
+use anyhow::{anyhow, bail, Result};
 use ferrata_core::{
-    fork::{ChainSpec, LcFork, Preset, FAR_FUTURE_EPOCH},
-    merkle::ZERO,
-    steps::{self, Job},
-    store::ApplyOutcome,
-    types::{LightClientHeader, LightClientUpdate, SyncAggregate, SyncCommittee},
-    witness::{uncompressed_keys, CompactStore, CompactUpdate, SignerWitness},
+    fork::{ChainSpec, Preset, FAR_FUTURE_EPOCH},
+    types::SyncCommittee,
     Root,
 };
 use ferrata_lez_wire::Config;
+
+// The decoding of served updates and the job planning are ferrata-advance's, shared with
+// ferrata_attest_module (`advance`).
+pub use ferrata_advance::{
+    decode_committee, decode_finality_update, decode_update, layout_for, plan_job, served_layout, signer_witness,
+    signing_committee,
+};
 
 pub fn root(hex_str: &str) -> Result<Root> {
     let s = hex_str.trim().trim_start_matches("0x");
@@ -81,69 +84,6 @@ pub fn preset(name: &str, adoption_parts: u8) -> Result<Config> {
     })
 }
 
-/// The layout a beacon node serves light-client data of `slot` in.
-pub fn served_layout(spec: &ChainSpec, slot: u64) -> Option<LcFork> {
-    spec.fork_at_epoch(spec.epoch_at_slot(slot)).lc_fork()
-}
-
-/// A `LightClientUpdate` as the `updates` endpoint serves it, in the layout of the fork its
-/// attested header falls in.
-pub fn decode_update(bytes: &[u8], config: &Config) -> Result<(LightClientUpdate, LcFork)> {
-    let spec = config.spec();
-    let n = config.sync_committee_size as usize;
-    for layout in [LcFork::Electra, LcFork::Gloas] {
-        if let Ok(update) = LightClientUpdate::decode(bytes, layout, n) {
-            if served_layout(&spec, update.attested_header.beacon.slot) == Some(layout) {
-                return Ok((update, layout));
-            }
-        }
-    }
-    bail!("an update of {} bytes in no layout this chain's schedule allows", bytes.len())
-}
-
-/// A `LightClientFinalityUpdate` as the `LightClientUpdate` it stands for (empty committee
-/// fields): Electra (offsets) or Gloas (fixed size) layout.
-pub fn decode_finality_update(b: &[u8], config: &Config) -> Result<(LightClientUpdate, LcFork)> {
-    let spec = config.spec();
-    let n = config.sync_committee_size as usize;
-    let u64_at = |o: usize| u64::from_le_bytes(b[o..o + 8].try_into().expect("8 bytes"));
-    const H: usize = 112 + 32 + 11 * 32;
-    if b.len() == 2 * H + 9 * 32 + 160 + 8 {
-        let update = LightClientUpdate {
-            attested_header: LightClientHeader::decode(&b[..H], LcFork::Gloas).map_err(|e| anyhow!("{e:?}"))?,
-            next_sync_committee: SyncCommittee::empty(n),
-            next_sync_committee_branch: vec![ZERO; LcFork::Gloas.sync_committee_branch_len()],
-            finalized_header: LightClientHeader::decode(&b[H..2 * H], LcFork::Gloas).map_err(|e| anyhow!("{e:?}"))?,
-            finality_branch: b[2 * H..2 * H + 288].chunks(32).map(|c| c.try_into().expect("32")).collect(),
-            sync_aggregate: SyncAggregate::decode(&b[2 * H + 288..2 * H + 448], n).map_err(|e| anyhow!("{e:?}"))?,
-            signature_slot: u64_at(2 * H + 448),
-        };
-        ensure!(
-            served_layout(&spec, update.attested_header.beacon.slot) == Some(LcFork::Gloas),
-            "a Gloas finality update before Gloas"
-        );
-        return Ok((update, LcFork::Gloas));
-    }
-    ensure!(b.len() > 400, "a finality update of {} bytes", b.len());
-    let u32_at = |o: usize| u32::from_le_bytes(b[o..o + 4].try_into().expect("4 bytes")) as usize;
-    let (att, fin) = (u32_at(0), u32_at(4));
-    ensure!(att == 400 && fin > att && fin < b.len(), "LightClientFinalityUpdate offsets {att}, {fin}");
-    let update = LightClientUpdate {
-        attested_header: LightClientHeader::decode(&b[att..fin], LcFork::Electra).map_err(|e| anyhow!("{e:?}"))?,
-        next_sync_committee: SyncCommittee::empty(n),
-        next_sync_committee_branch: vec![ZERO; LcFork::Electra.sync_committee_branch_len()],
-        finalized_header: LightClientHeader::decode(&b[fin..], LcFork::Electra).map_err(|e| anyhow!("{e:?}"))?,
-        finality_branch: b[8..232].chunks(32).map(|c| c.try_into().expect("32")).collect(),
-        sync_aggregate: SyncAggregate::decode(&b[232..392], n).map_err(|e| anyhow!("{e:?}"))?,
-        signature_slot: u64_at(392),
-    };
-    ensure!(
-        served_layout(&spec, update.attested_header.beacon.slot) == Some(LcFork::Electra),
-        "an Electra finality update under Gloas"
-    );
-    Ok((update, LcFork::Electra))
-}
-
 /// The SSZ stream of the `updates` endpoint: per update a u64 length, a 4-byte fork digest, the
 /// SSZ. Accepts a length that counts the digest or one that does not (as `lab/fetch.py`).
 pub fn split_chunks(raw: &[u8]) -> Vec<Vec<u8>> {
@@ -166,72 +106,6 @@ pub fn split_chunks(raw: &[u8]) -> Vec<Vec<u8>> {
     Vec::new()
 }
 
-/// The witness of `update`'s non-signers, from the committee that signs it (`current` if its
-/// signature slot is in the store's period, else `next`).
-pub fn signing_committee<'a>(
-    store: &CompactStore,
-    update: &LightClientUpdate,
-    spec: &ChainSpec,
-    current: Option<&'a SyncCommittee>,
-    next: Option<&'a SyncCommittee>,
-) -> Option<&'a SyncCommittee> {
-    if spec.period_at_slot(update.signature_slot) == spec.period_at_slot(store.finalized.slot) {
-        current
-    } else {
-        next
-    }
-}
-
-pub fn signer_witness(committee: &SyncCommittee, update: &LightClientUpdate) -> SignerWitness {
-    SignerWitness::build(committee, &update.sync_aggregate.bits).unwrap_or_default()
-}
-
-/// The job as the program would run it: the job after step 1, and, if every step passes, what
-/// applying it does to `store` (as `harness::plan_job`).
-pub fn plan_job(
-    store: &CompactStore,
-    compact: &CompactUpdate,
-    witness: &SignerWitness,
-    update: &LightClientUpdate,
-    config: &Config,
-) -> (Option<Job>, Option<ApplyOutcome>) {
-    let spec = config.spec();
-    let n = config.sync_committee_size as usize;
-    let Ok(opened) = steps::step1(
-        store,
-        compact,
-        witness,
-        update.signature_slot,
-        &spec,
-        &config.genesis_validators_root,
-        config.adoption_parts,
-    ) else {
-        return (None, None);
-    };
-    let finish = || -> Option<ApplyOutcome> {
-        let mut job = opened.clone();
-        job.step2().ok()?;
-        job.step3().ok()?;
-        if job.adoption_pending() {
-            let keys = uncompressed_keys(&update.next_sync_committee).ok()?;
-            let parts = config.adoption_parts;
-            let chunk = n / parts as usize;
-            for p in 0..parts {
-                job.adopt(p, &keys[p as usize * chunk..(p as usize + 1) * chunk], n).ok()?;
-            }
-        }
-        steps::apply(store, &job, &spec).ok().map(|(_, outcome)| outcome)
-    };
-    let outcome = finish();
-    (Some(opened), outcome)
-}
-
-/// The layout an update is sent in to a store in `store_fork`: the layout it is served in, or the
-/// store's own if that is later.
-pub fn layout_for(config: &Config, store_fork: LcFork, update: &LightClientUpdate) -> Option<LcFork> {
-    served_layout(&config.spec(), update.attested_header.beacon.slot).map(|l| l.max(store_fork))
-}
-
 /// The hash of the full committee's keys as the program summarises it.
 pub fn committee_key(c: &SyncCommittee) -> Root {
     ferrata_core::witness::CommitteeSummary::of(c).pubkeys_root
@@ -247,9 +121,3 @@ pub fn encode_committee(c: &SyncCommittee) -> Vec<u8> {
     out
 }
 
-pub fn decode_committee(b: &[u8]) -> Result<SyncCommittee> {
-    ensure!(!b.is_empty() && b.len().is_multiple_of(48), "a committee file of {} bytes", b.len());
-    let mut keys: Vec<[u8; 48]> = b.chunks(48).map(|c| c.try_into().expect("48")).collect();
-    let aggregate_pubkey = keys.pop().expect("non-empty");
-    Ok(SyncCommittee { pubkeys: keys, aggregate_pubkey })
-}
