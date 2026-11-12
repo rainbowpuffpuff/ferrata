@@ -643,8 +643,13 @@ fn collect_private(
     meta["proof_bytes"] = json!(run.proof_bytes);
     meta["tx_bytes"] = json!(run.tx_bytes);
     meta["tx_sha256"] = json!(hx(&sha256(&tx)));
-    eprintln!("{id}: proven in {:.1} s ({}), receipt {} bytes, transaction {} bytes", run.prove_time.as_secs_f64(),
-              meta["kind"].as_str().unwrap_or("?"), run.proof_bytes, run.tx_bytes);
+    eprintln!(
+        "{id}: proven in {:.1} s ({}), receipt {} bytes, transaction {} bytes",
+        run.prove_time.as_secs_f64(),
+        meta["kind"].as_str().unwrap_or("?"),
+        run.proof_bytes,
+        run.tx_bytes
+    );
     Record {
         id,
         kind,

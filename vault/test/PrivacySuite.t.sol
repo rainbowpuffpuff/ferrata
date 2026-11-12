@@ -2,10 +2,11 @@
 pragma solidity ^0.8.26;
 
 import {Vm} from "forge-std/Vm.sol";
-import {ControlID} from "risc0/groth16/ControlID.sol";
-import {RiscZeroGroth16Verifier} from "risc0/groth16/RiscZeroGroth16Verifier.sol";
+
 import {IRiscZeroVerifier as IRiscZeroVerifierFull, Receipt} from "risc0/IRiscZeroVerifier.sol";
 import {RiscZeroVerifierEmergencyStop} from "risc0/RiscZeroVerifierEmergencyStop.sol";
+import {ControlID} from "risc0/groth16/ControlID.sol";
+import {RiscZeroGroth16Verifier} from "risc0/groth16/RiscZeroGroth16Verifier.sol";
 
 import {FerrataVault} from "../src/FerrataVault.sol";
 import {IRiscZeroVerifier} from "../src/interfaces/IRiscZeroVerifier.sol";
@@ -99,7 +100,8 @@ contract PrivacySuiteTest is VaultTestBase {
             split = new ReleaseSplitVerifier(
                 IRiscZeroVerifier(address(groth16)), IRiscZeroVerifier(address(verifier)), releaseId
             );
-            RiscZeroVerifierEmergencyStop stop = new RiscZeroVerifierEmergencyStop(IRiscZeroVerifierFull(address(split)), freezer);
+            RiscZeroVerifierEmergencyStop stop =
+                new RiscZeroVerifierEmergencyStop(IRiscZeroVerifierFull(address(split)), freezer);
             FerrataVault.Deployment memory d = _deployment(IRiscZeroVerifier(address(stop)), configId);
             d.releaseImageId = releaseId;
             _deployAt(vaultAddress, abi.encode(d));
@@ -184,7 +186,8 @@ contract PrivacySuiteTest is VaultTestBase {
                     vm.prank(ethRelayer);
                     // Bounded gas, as test/real/ does: a byte flipped inside a curve point makes the pairing
                     // precompile fail, which consumes all the gas it was given.
-                    (bool accepted,) = address(vault).call{gas: 5_000_000}(abi.encodeCall(FerrataVault.release, (r, bad)));
+                    (bool accepted,) =
+                        address(vault).call{gas: 5_000_000}(abi.encodeCall(FerrataVault.release, (r, bad)));
                     assertFalse(accepted, "a seal with one byte flipped is refused");
                 }
             } else {
