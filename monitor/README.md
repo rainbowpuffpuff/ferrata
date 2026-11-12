@@ -84,8 +84,9 @@ MONITOR_KEY=… target/release/monitor run --rpc http://127.0.0.1:8545 --vault 0
   --start-block <the vault's deployment block>
 ```
 
-- **Key.** The watcher key is given through `--key-env VAR` (hex in the environment) or through
-  `--keystore FILE --password-file FILE`, never on the command line. A monitor without a key, or with
+- **Key.** The watcher key is given through `--key-env VAR` (hex in the environment), `--key-file FILE`
+  (hex in a file only the monitor's user reads) or `--keystore FILE --password-file FILE`, never on the
+  command line. A monitor without a key, or with
   `--dry-run`, decides and raises alerts but sends nothing.
 - **Alerts.** Each alert is one JSON line on standard error and in `--alert-log`. Alerts of at least
   `--alert-level` (warn) also go to `--alert-cmd`, which gets the line on its standard input. Kinds:
@@ -165,6 +166,16 @@ A `cancelCandidate` sent by the monitor used **41,477 gas** (41,468 in S5), from
 37,438 ([`vault/GAS.md`](../vault/GAS.md)). Numbers are from the committed run; between runs the seconds differ by about 1 s and the memory by a few MB. On anvil the chain time moves only by the script's warps,
 so "0 s after submission" means the cancellation landed in the first poll after the submission.
 
+## As a Logos module
+
+[`ferrata_monitor_module`](../modules/README.md#ferrata_monitor_module) runs this program in a headless Logos
+Core (`logosctl daemon`): `run` (with `--max-polls`) and `start`/`status`/`stop` take `monitor run`'s
+arguments and run the same daemon (`src/cli.rs`, `daemon::run_with`, which ends on its stop channel
+instead of on signals, since the process's signals are the host's); `check` and `node_view` are
+`monitor check` and `monitor node-view`. `MONITOR_CMD=../modules/scripts/monitor-module.sh bash
+tests/anvil-e2e.sh` runs the scenarios above with the module in place of the binary
+([`modules/RESULTS.md`](../modules/RESULTS.md)).
+
 ## Not built
 
 - A client for the LEZ sequencer's RPC and the Logos Blockchain node's channel answer, to read the
@@ -176,7 +187,6 @@ so "0 s after submission" means the cancellation landed in the first poll after 
   - It is not built because no recorded `getBlock` response exists to test a decoder against. The lab
     driver's `chain.tsv` is the tested path.
 - The computation of `states` from the node's own blocks (the checkpoint program's state at a tip).
-- The Logos module packaging (`logosctl daemon`).
 - Fee bumping of a stuck transaction (today: the receipt timeout and an alert).
 - The attestation side's `monitor` duties (comparing records with several providers; the
   weak-subjectivity alarm, `docs/design/attestation.md` §3.6).

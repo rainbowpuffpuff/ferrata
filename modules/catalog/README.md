@@ -9,7 +9,7 @@ The proposal (§B7) releases Ferrata's Logos modules from a catalog of its own w
 |---|---|---|
 | `logos-repo.json` | how clients (`lgpd`, the `package_downloader` module, the package-manager UI) identify the catalog; `indexUrl` names the rolling `index` release | the base's template, filled in |
 | `.github/workflows/_release-module.yml` | calls `logos-co/logos-modules-release-action/.github/workflows/release.yml@v1` with the catalog's variants and signing (`signing_mode: none`) | unchanged but for a header |
-| `.github/workflows/release-ferrata_attest_module.yml`, `release-ferrata_bridge_module.yml` | one per module: `module_path: submodules/<module>` | the base's `release-module.yml.template`, as `scripts/add-module.sh` writes it |
+| `.github/workflows/release-<module>.yml` (five: `ferrata_attest_module`, `ferrata_bridge_module`, `ferrata_attestor_module`, `ferrata_monitor_module`, `ferrata_updater_module`) | one per module: `module_path: submodules/<module>` | the base's `release-module.yml.template`, as `scripts/add-module.sh` writes it |
 | `.github/workflows/release-all.yml` | releases every submodule | unchanged |
 
 In the catalog's own repository these files sit at its root (GitHub runs workflows only from the

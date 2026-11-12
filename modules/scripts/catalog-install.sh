@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install both modules into a headless Logos Core *from the catalog*, as a client would: the dry-run
+# Install the modules into a headless Logos Core *from the catalog*, as a client would: the dry-run
 # catalog (release-local.sh's packages and index.json, and modules/catalog/logos-repo.json with its
 # indexUrl pointed at the local server) served over HTTPS on 127.0.0.1 (logosctl's catalogs require
 # https: "unsupported URL scheme (https required in v1)") with a throwaway self-signed certificate that
@@ -59,6 +59,17 @@ for m in ${MODULES:-ferrata_attest_module ferrata_bridge_module ferrata_attestor
   run call "$m" version --json
 done
 run package ls
+# The installed modules at work: with CATALOG_E2E=1, attestor-e2e.sh through this daemon (the zone's
+# records, the attestor's loop against a node served over HTTP), and any further script named in
+# CATALOG_E2E_MORE (run with CALL=logosctl LOGOSCTL SESSION set, an output directory as argument).
+if [ "${CATALOG_E2E:-0}" = 1 ]; then
+  for s in attestor-e2e.sh ${CATALOG_E2E_MORE:-}; do
+    echo "\$ CALL=logosctl $s" >> "$out/log.txt"
+    if env -u SSL_CERT_FILE -u NIX_SSL_CERT_FILE CALL=logosctl LOGOSCTL="$ctl_bin" SESSION="$out/session" "$here/$s" "$out/${s%.sh}" \
+        > "$out/${s%.sh}.log" 2>&1; then echo "ok: $s"; else echo "FAILED: $s"; fails=$((fails + 1)); fi
+    grep -E '^- (PASS|FAIL)' "$out/${s%.sh}/summary.md" >> "$out/log.txt" 2>/dev/null || true
+  done
+fi
 run daemon stop
 echo "failures: $fails" | tee -a "$out/log.txt"
 # The small logs into the repository, without machine paths.

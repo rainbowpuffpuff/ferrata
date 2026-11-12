@@ -5,7 +5,9 @@ runs beside its Logos Blockchain node, and the collector that puts `t` of `n` of
 `checkpoint_b` input. The signed bytes (the certificate, the final-tier message v2, the key-set hash) are
 `crates/attestor-core`'s; this crate is the program around them. Results: [RESULTS.md](RESULTS.md).
 
-Not audited. A prototype: a command-line program, not yet the Logos module the proposal names (below).
+Not audited. A prototype: a command-line program, and the same library as a Logos module,
+[`ferrata_attestor_module`](../../modules/README.md#ferrata_attestor_module) (its methods are these commands;
+`start` runs the attestor as a loop beside its node; [`modules/RESULTS.md`](../../modules/RESULTS.md)).
 
 ## What it does
 
@@ -76,8 +78,9 @@ attestations of a descendant of `T`, and a key rotation in the proof (with a sta
 
 ## Not done here
 
-- `ferrata_attestor` as a Logos module: the module builder compiles only the module's own crate directory
-  (`modules/README.md`), so the module needs `attestor-core` and the checkpoint core's parsers vendored into
-  it; a cold module build took 47 minutes on the box (`modules/RESULTS.md`).
+- `ferrata_attestor` as a Logos module is built (`modules/ferrata_attestor_module`, the crates staged into it
+  by `modules/scripts/stage.sh`), and run beside each sequencer of a running zone of four
+  (`modules/scripts/attestor-zone-live.sh`, one Logos Core per sequencer, `zone.sh`'s `ZONE_DURING` and
+  `ZONE_AFTER` hooks); its key is a file, not `keystore_module`'s.
 - Publishing attestations (a relay, a watcher feed); the collector reads files.
 - Key rotations inside a proof: the collector pre-checks against the parent's key set only.

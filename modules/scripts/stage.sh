@@ -16,7 +16,7 @@
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 repo=$(cd "$here/../.." && pwd)
-commit=${FERRATA_COMMIT:-$(git -C "$repo" rev-parse HEAD 2>/dev/null || echo unknown)}
+commit=${FERRATA_COMMIT:-$(git -C "$repo" rev-parse --verify -q HEAD 2>/dev/null || echo unknown)}
 
 # The copy inherits these from the module's rust-lib/Cargo.toml; they must equal its source workspace's.
 fields() { sed -n '/^\[workspace.package\]/,/^\[/p' "$1" | grep -E '^(version|edition|license|rust-version|repository) = '; }

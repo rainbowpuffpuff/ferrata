@@ -29,7 +29,7 @@ here=$(cd "$(dirname "$0")" && pwd)
 repo=$(cd "$here/../.." && pwd)
 spike=$(cd "$repo/.." && pwd)
 lez_up="$spike/upstream/lez-v0.4.0-rc1"
-commit=${FERRATA_COMMIT:-$(git -C "$repo" rev-parse HEAD 2>/dev/null || echo unknown)}
+commit=${FERRATA_COMMIT:-$(git -C "$repo" rev-parse --verify -q HEAD 2>/dev/null || echo unknown)}
 r="$repo/modules/ferrata_updater_module/rust-lib"
 v="$r/vendor"
 

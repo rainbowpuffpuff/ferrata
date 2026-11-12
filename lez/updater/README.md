@@ -138,5 +138,6 @@ the job is found to exist), a refused later step at most about 24k.
 - Live beacon endpoints (the HTTP path ran against loopback nodes only); HTTPS without `curl`; JSON
   responses (only SSZ is read).
 - The proven path (`VerifyAll`): the daemon drives the public job only.
-- Running as a Logos module under `logosctl daemon` (the design: `docs/design/attestation.md` §8).
+- As a Logos module (`modules/ferrata_updater_module`, `logosctl daemon`) it runs with the harness ledger
+  only: the in-process chain lives in the module's process (the sequencer backend above is not built).
 - Jobs whose `Finish` fails stay open (the program has no clean-up step); the updater moves on.
