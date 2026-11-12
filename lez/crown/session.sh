@@ -393,7 +393,7 @@ else
   DRIVER_RC=$?
 fi
 sample_stop
-say "driver exit $DRIVER_RC"; tail -n 12 "$LOG/driver.log" | tee -a "$LOG/session.log"
+say "driver exit $DRIVER_RC"; [ -f "$LOG/driver.log" ] && tail -n 12 "$LOG/driver.log" | tee -a "$LOG/session.log"
 if [ "$DRIVER_RC" = 0 ] && [ "$STEP" = b ]; then node_dump; fi
 if [ "$DRIVER_RC" = 0 ]; then
   "$BIN/crown-driver" export "${D[@]}" --out "$WORK/export" > "$LOG/export.log" 2>&1 || say "export failed ($?)"
