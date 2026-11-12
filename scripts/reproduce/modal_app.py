@@ -30,11 +30,11 @@ def check(tree: bytes, commit: str, only: str, env_in: dict) -> tuple[int, bytes
     """Unpack the tree at /work/ferrata, run check.sh there; its exit status and its logs (tar.gz, no binaries)."""
     os.makedirs("/work/ferrata", exist_ok=True)
     os.makedirs("/work/out", exist_ok=True)
-    # The image's size on disk, measured beside the checks; what they write is left out (the tree, the logs, the
-    # cargo registry, which the image has empty, and temporary files).
-    du = subprocess.Popen("du -sxm --exclude=/proc --exclude=/sys --exclude=/dev --exclude=/tmp --exclude=/work/ferrata"
-                          " --exclude=/work/out --exclude=/home/builder/.cargo/registry --exclude=/home/builder/.cargo/git"
-                          " / > /work/out/image-size.txt 2>/dev/null", shell=True)
+    # The image's size on disk (MiB per directory: /usr/local is Modal's Python), measured beside the checks; what they
+    # write is left out (the cargo registry, which the image has empty; the tree and the logs are elsewhere).
+    du = subprocess.Popen("du -scm --exclude=/home/builder/.cargo/registry --exclude=/home/builder/.cargo/git /usr/local"
+                          " /usr /etc /var /opt /home/builder /work/upstream /work/risc0-home-lez"
+                          " > /work/out/image-size.txt 2>/dev/null", shell=True)
     subprocess.run(["tar", "-xz", "-C", "/work/ferrata"], input=tree, check=True)
     env = dict(os.environ, FERRATA_COMMIT=commit, **{k: v for k, v in env_in.items() if k in PASSED_ON})
     # Modal's own Python (add_python) is in /usr/local/bin: the scripts get Ubuntu's python3, as in Docker.

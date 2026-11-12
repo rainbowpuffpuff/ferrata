@@ -129,8 +129,8 @@ detail() { # name log
     vault)
       grep -E '[0-9]+ tests? passed, [0-9]+ failed, [0-9]+ skipped' "$2" | tail -n 1 | sed -E 's/.*: ([0-9]+ tests? passed)/\1/' ;;
     core|lez-harness)
-      awk '/^test result:/ {p += $4; f += $6; i += $8} /^ +Running / {b++} /^ +Doc-tests / {d++}
-           END {printf "%d passed, %d failed, %d ignored (%d test binaries, %d doc-test runs)", p, f, i, b, d}' "$2" ;;
+      awk '/^test result:/ {p += $4; f += $6; i += $8; n++}
+           END {printf "%d passed, %d failed, %d ignored in %d test runs", p, f, i, n}' "$2" ;;
     guest-ids)
       { grep -E '^[0-9]+ of [0-9]+ guests equal' "$2"; grep -E 'ids of the crown run' "$2"; } | tr '\n' ';' | sed 's/;$//; s/;/; /' ;;
   esac
