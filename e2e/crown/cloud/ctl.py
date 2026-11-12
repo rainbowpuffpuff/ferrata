@@ -172,22 +172,32 @@ def cast(*a: str, rpc: str) -> str:
     return r.stdout.strip()
 
 
-def gate(deployer: str) -> None:
-    """Before a live run: what will be signed, by whom, at what price; then a typed yes (ethskills wallets)."""
+def gate(deployer: str, identity: dict | None = None) -> None:
+    """Before a live run: what will be signed, by whom, at what price; then a typed yes (ethskills wallets).
+    identity: the run's identity.json on a resume. Its vault was fixed at the first start as CREATE(deployer, N+2) for
+    that start's nonce N; once part of the deployment has been sent the nonce has moved, so the current nonce + 2 is
+    not the vault (crown-live-3's resume printed CREATE at 27, 0x6B15…, while the run deployed identity.json's, at 25)."""
     rpc = os.environ.get("SEPOLIA_RPC_URL") or PUBLIC_SEPOLIA
     chain = cast("chain-id", rpc=rpc)
     if chain != "11155111":
         die(f"the endpoint is chain {chain}, not Sepolia")
     nonce, pending = cast("nonce", deployer, rpc=rpc), cast("nonce", deployer, "--block", "pending", rpc=rpc)
     balance, price = cast("balance", deployer, "--ether", rpc=rpc), int(cast("gas-price", rpc=rpc))
-    vault = cast("compute-address", deployer, "--nonce", str(int(nonce) + 2), rpc=rpc).split()[-1]
+    if identity and identity.get("vault"):
+        first = identity.get("firstNonce")
+        at = f": CREATE at nonce {int(first) + 2}" if isinstance(first, int) else ""
+        vault_line = f"{identity['vault']} (fixed at the first start{at}, identity.json; a resume keeps it)"
+    else:
+        vault = cast("compute-address", deployer, "--nonce", str(int(nonce) + 2), rpc=rpc).split()[-1]
+        vault_line = f"{vault} (CREATE at nonce {int(nonce) + 2}; the run checks it again before deploying)"
     gas = 60_000_000  # deploy (the vault alone ~39.5 M under EIP-8037) + 6 stage transactions (~1 M): an upper bound
     print(f"""
 LIVE crown run on Sepolia (chain {chain}), signed in the cloud (Modal app {APP_NAME}, workspace
 {os.environ.get('MODAL_PROFILE')}) with the keystore of the Secret {SECRET_NAME}:
   sender {deployer}: nonce {nonce} (pending {pending}), balance {balance} ETH
-  vault  {vault} (CREATE at nonce {int(nonce) + 2}; the run checks it again before deploying)
-  13 transactions: stop, library, vault, token, register ETH, register token, renounce; 2 deposits of
+  vault  {vault_line}
+  13 transactions{' in all (a resume sends only those not yet on chain)' if identity else ''}: stop, library, vault,
+     token, register ETH, register token, renounce; 2 deposits of
      0.001002 ETH each (0.001 + relay fee; returned by the releases less the checkpoint fees); submitCandidate;
      finalizeAttested (after W = 3600 s); 2 releases. Gas at most ~{gas:,} at {price} wei: ~{gas * price / 1e18:.9f} ETH.
   Modal: about 3 to 4 hours (GPU queue permitting), ~2-4 USD on {os.environ.get('MODAL_PROFILE')}.
@@ -261,6 +271,7 @@ def start(run: str, mode: str, yes: bool, halt_after: str | None, lez_chain: str
             print(f"note: the runner of {other} is active")
     rj = vjson(vol, f"runs/{run}/run.json")
     deployer = os.environ.get("ETH_FROM") or DEPLOYER
+    identity = vjson(vol, f"runs/{run}/identity.json") if rj else None
     if rj:
         if rj["mode"] != mode and mode != "selftest":
             die(f"{run} is a {rj['mode']} run")
@@ -270,7 +281,7 @@ def start(run: str, mode: str, yes: bool, halt_after: str | None, lez_chain: str
         done = [l.split()[0] for l in (vread(vol, f"runs/{run}/stages.done") or b"").decode().splitlines() if l.strip()]
         print(f"resuming {run} (created {rj['created_at']}): done {', '.join(done) or 'nothing'}")
     if mode == "live" and not yes:
-        gate(deployer)
+        gate(deployer, identity)
     bundle, tar, meta, src = pack(run)
     local_rj = None
     if not rj:
