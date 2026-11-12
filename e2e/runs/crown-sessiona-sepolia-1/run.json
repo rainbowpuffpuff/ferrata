@@ -1,0 +1,12 @@
+{
+ "run": "crown-sessiona-sepolia-1",
+ "mode": "fork",
+ "deployer": "0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07",
+ "chainId": 11155111,
+ "created_at": "2026-11-12T10:57:03Z",
+ "label": "crown REHEARSAL (anvil fork of Sepolia); session A on the sepolia checkpoint, ending after identity",
+ "lez_chain": "sepolia",
+ "halt_after": "identity",
+ "fork_upstream": "https://ethereum-sepolia-rpc.publicnode.com",
+ "fork_block": 12118394
+}

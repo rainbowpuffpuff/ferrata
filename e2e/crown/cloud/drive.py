@@ -444,7 +444,8 @@ def st_identity() -> bool:
                                         str(CHAIN_ID), "--vault", vault, "--depositor", deployer, "--j", str(j),
                                         "--kind", kind, "--dest", dest])
     c0, c1 = commit(0, "public", dests["public0"]), commit(1, "private", dests["private0"])
-    label = "crown run" if MODE == "live" else "crown REHEARSAL on an anvil fork of Sepolia (stand-in beacon committee on LEZ)"
+    label = "crown run" if MODE == "live" else ("crown REHEARSAL on an anvil fork of Sepolia (" + (
+        "session A on Sepolia's real checkpoint" if lez_chain() == "sepolia" else "stand-in beacon committee on LEZ") + ")")
     jsave(f"{RUN}/identity.json", {
         "label": label, "chainId": CHAIN_ID, "vault": vault, "configId": cid, "genesisState": gs,
         "groth16Verifier": VERIFIER, "delta": DELTA, "deployer": deployer, "firstNonce": n, "createAddresses": created,
