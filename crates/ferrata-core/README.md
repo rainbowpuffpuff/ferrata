@@ -426,14 +426,15 @@ node rules behind the hash check by re-linking forged nodes to a new root.
 
 ## How this was built
 
-With AI assistance (Claude Code); every commit carries an `Assisted-by` trailer. Acceptance is
-mechanical: the vectors, the BLS vectors, the mainnet replay and end-to-end run, the Sepolia
+With AI assistance (Claude Code): every commit was made with it, though not every one carries an
+`Assisted-by` trailer ([how it was built](../../docs/how-it-was-built.md)).
+Acceptance is mechanical: the vectors, the BLS vectors, the mainnet replay and end-to-end run, the Sepolia
 run through Gloas, the TrieTests, the alloy differentials, the Helios oracle, the adversarial
 and guard suites, the job steps' equivalence with the policy store, clippy with warnings as
 errors, and the `no_std` build.
 `docs/REVIEW-core.md` maps every function of the light client and the execution layer to its
-spec section and records the author's line-by-line sign-off; it does not cover `steps.rs` and
-`witness.rs` yet.
+spec section, with a column for the author's line-by-line sign-off (not filled in yet); it does
+not cover `steps.rs` and `witness.rs` yet.
 
 ## License
 
