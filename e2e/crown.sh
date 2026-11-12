@@ -3,9 +3,11 @@
 # workspace ws-3. Once started it needs nothing from this machine until the results are fetched.
 #
 #   e2e/crown.sh setup [--bundle FILE] [--programs DIR]   deploy the app; the LEZ bundle and the programs to its Volume
-#   e2e/crown.sh start [--fork] [--yes] [--halt-after STAGE] [run]
+#   e2e/crown.sh start [--fork] [--yes] [--halt-after STAGE] [--lez-chain sepolia] [run]
 #                                     live (default run crown-live-2; crown-live-1 is done): signs on Sepolia only after a typed yes;
-#                                     --fork (default run crown-rehearsal-4): an anvil fork of Sepolia, nothing sent
+#                                     --fork (default run crown-rehearsal-4): an anvil fork of Sepolia, nothing sent;
+#                                     --fork --lez-chain sepolia --halt-after identity: session A on the bundle's real
+#                                     Sepolia checkpoint (the live run's), ending after identity
 #   e2e/crown.sh status [run]         the runner, the stage, the stages done, the last lines of the log
 #   e2e/crown.sh fetch [--lez] [run]  the run directory into e2e/runs/<run>/ (--lez: also the LEZ sessions' records)
 #   e2e/crown.sh stop [--app]         cancel the runner (and a queued GPU proof); `start` resumes; --app also stops the app
@@ -38,6 +40,7 @@ start)
     --selftest) mode=selftest ;;  # the image, the tree, the inputs, a ping: no build, nothing sent
     --yes) opts+=(--yes) ;;
     --halt-after) opts+=(--halt-after "$2"); shift ;;
+    --lez-chain) opts+=(--lez-chain "$2"); shift ;;
     *) break ;;
     esac
     shift
@@ -56,5 +59,5 @@ verify)
   : "${SEPOLIA_RPC_URL:=https://ethereum-sepolia-rpc.publicnode.com}"
   SEPOLIA_RPC_URL="$SEPOLIA_RPC_URL" python3 -I "$here/crown/verify.py" "$run" --lez "$run/lez"
   ;;
-*) sed -n '2,19p' "$0" >&2; exit 2 ;;
+*) sed -n '2,18p' "$0" >&2; exit 2 ;;
 esac

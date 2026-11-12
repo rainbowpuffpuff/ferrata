@@ -2,8 +2,8 @@
 //! the merged bridge program on a LEZ v0.4 devnet, in two sessions with the devnet saved between
 //! them.
 //!
-//! Session A deploys both programs and the Sepolia instance (Init and the updates of the
-//! repository's replay fixture, 1378..=1409), then writes what the vault's constructor needs: the
+//! Session A deploys both programs and the Sepolia instance (Init from the checkpoint fixture's bootstrap and its
+//! period updates: `sepolia_base`), then writes what the vault's constructor needs: the
 //! channel's key, the last final block T0 (the checkpoint's parent tip), the zone's genesis id and
 //! the configuration's identity. Session B, after the deposits and their captures exist, applies
 //! the captures' updates and finality updates and runs the bridge: Init (the reciprocal pairing),
@@ -57,7 +57,7 @@ use crate::{
     keys::{account_of, derived_key, lez_test_payers},
     live::{mention, Live, Outcome, Sent, Tx},
     manifest::Row,
-    plan::{root, sepolia_config, Native, Pda, BLS, SEPOLIA_CHAIN_ID, SEPOLIA_CHECKPOINT},
+    plan::{sepolia_config, Native, Pda, BLS, SEPOLIA_CHAIN_ID},
     private::{private_wallet, TapClient},
     programs::GuestBinary,
     scenario::{self, deployment_accounts, Harness, World},
@@ -384,29 +384,139 @@ fn read(dir: &Path, name: &str) -> Result<Vec<u8>> {
     fs::read(dir.join(name)).map_err(|e| anyhow!("{}: {e}", dir.join(name).display()))
 }
 
-/// Sepolia from the period-1378 bootstrap of the repository's replay fixture, with its updates
-/// 1378..=1409.
+/// The light-client layouts a fixture's objects may be in.
+const LAYOUTS: [LcFork; 5] = [LcFork::Altair, LcFork::Capella, LcFork::Deneb, LcFork::Electra, LcFork::Gloas];
+
+/// The light-client layout of the fork that `config`'s schedule puts at `slot`.
+fn layout_at(config: &Config, slot: u64) -> Option<LcFork> {
+    let spec = config.spec();
+    spec.fork_at_epoch(spec.epoch_at_slot(slot)).lc_fork()
+}
+
+/// `Config::store_fork`'s byte of a layout (`Config::fork` read backwards).
+fn store_fork_of(layout: LcFork) -> u8 {
+    match layout {
+        LcFork::Altair => 0,
+        LcFork::Capella => 1,
+        LcFork::Deneb => 2,
+        LcFork::Electra => 3,
+        LcFork::Gloas => 4,
+    }
+}
+
+/// `bootstrap.ssz` in the layout of the fork at its own slot (the encoding does not name its layout).
+fn decode_bootstrap(config: &Config, bytes: &[u8]) -> Result<(LightClientBootstrap, LcFork)> {
+    let n = config.sync_committee_size as usize;
+    LAYOUTS
+        .into_iter()
+        .find_map(|layout| {
+            let b = LightClientBootstrap::decode(bytes, layout, n).ok()?;
+            (layout_at(config, b.header.beacon.slot) == Some(layout)).then_some((b, layout))
+        })
+        .ok_or_else(|| anyhow!("bootstrap.ssz decodes in no layout of the fork at its slot"))
+}
+
+/// An `update_<p>.ssz` in the layout of the fork at its attested slot (as `native_apply` upgrades the store).
+fn decode_update(config: &Config, bytes: &[u8], name: &str) -> Result<LightClientUpdate> {
+    let n = config.sync_committee_size as usize;
+    LAYOUTS
+        .into_iter()
+        .find_map(|layout| {
+            let u = LightClientUpdate::decode(bytes, layout, n).ok()?;
+            (layout_at(config, u.attested_header.beacon.slot) == Some(layout)).then_some(u)
+        })
+        .ok_or_else(|| anyhow!("{name} decodes in no layout of the fork at its attested slot"))
+}
+
+/// The block root the second beacon provider reported as canonical at `slot`
+/// (`beacon_header_<slot>_second.json`, its answer kept byte for byte by the fetch scripts).
+fn second_provider_root(fixture: &Path, slot: u64) -> Result<Root> {
+    let name = format!("beacon_header_{slot}_second.json");
+    let v: Value = serde_json::from_slice(&read(fixture, &name)?).with_context(|| name.clone())?;
+    let data = &v["data"];
+    ensure!(data["header"]["message"]["slot"].as_str() == Some(slot.to_string().as_str()), "{name}: not the header at slot {slot}");
+    ensure!(data["canonical"].as_bool() != Some(false), "{name}: not canonical");
+    hex_n::<32>(data["root"].as_str().ok_or_else(|| anyhow!("{name}: no data.root"))?)
+}
+
+/// Sepolia from a checkpoint fixture (`--fixture DIR`; `build.sh pack` copies what this reads into the bundle):
+/// `bootstrap.ssz` in the layout of the fork at its slot, which sets the store's layout; the checkpoint = the root the
+/// second beacon provider reported at that slot (`beacon_header_<slot>_second.json`), which `Init` and the native store
+/// check the bootstrap against; and every `update_<p>.ssz` present, for the periods from the bootstrap's on without a
+/// gap, each signed in its period: session A's catch-up. The crown run's fixture is
+/// `crates/ferrata-spectests/fixtures/sepolia-2026-11-12` (period 1411); `sepolia-gloas-2026-11-10` (period 1378,
+/// 32 updates) reads the same way, but its checkpoint left the weak-subjectivity period on 21 Oct 2026.
 pub fn sepolia_base(fixture: &Path) -> Result<Chain> {
-    let bootstrap = LightClientBootstrap::decode(&read(fixture, "bootstrap.ssz")?, LcFork::Electra, 512)
-        .map_err(|e| anyhow!("bootstrap.ssz: {e:?}"))?;
+    let mut config = sepolia_config(ADOPTION_PARTS);
+    let spec = config.spec();
+    let (bootstrap, bootstrap_fork) = decode_bootstrap(&config, &read(fixture, "bootstrap.ssz")?)?;
+    config.store_fork = store_fork_of(bootstrap_fork);
+    let slot = bootstrap.header.beacon.slot;
+    let checkpoint = second_provider_root(fixture, slot)?;
+    ensure!(
+        bootstrap.header.beacon.hash_tree_root() == checkpoint,
+        "bootstrap.ssz (slot {slot}) does not hash to the checkpoint 0x{} of beacon_header_{slot}_second.json",
+        hex::encode(checkpoint)
+    );
+    let mut periods = Vec::new();
+    for entry in fs::read_dir(fixture).with_context(|| fixture.display().to_string())? {
+        let name = entry?.file_name().to_string_lossy().into_owned();
+        if let Some(p) = name.strip_prefix("update_").and_then(|r| r.strip_suffix(".ssz")) {
+            periods.push(p.parse::<u64>().map_err(|_| anyhow!("{name}: not update_<period>.ssz"))?);
+        }
+    }
+    periods.sort_unstable();
+    let first = spec.period_at_slot(slot);
+    ensure!(!periods.is_empty(), "{}: no update_<period>.ssz: the store would not learn the next committee", fixture.display());
+    ensure!(
+        periods.iter().enumerate().all(|(i, p)| *p == first + i as u64),
+        "{}: the updates' periods {periods:?} are not {first}, {}, ... without a gap",
+        fixture.display(),
+        first + 1
+    );
     let mut catch_up = Vec::new();
-    for period in 1378..=1409u64 {
-        let layout = if period < 1379 { LcFork::Electra } else { LcFork::Gloas };
-        let name = format!("update_{period}.ssz");
-        catch_up.push((period, LightClientUpdate::decode(&read(fixture, &name)?, layout, 512).map_err(|e| anyhow!("{name}: {e:?}"))?));
+    for p in periods {
+        let name = format!("update_{p}.ssz");
+        let update = decode_update(&config, &read(fixture, &name)?, &name)?;
+        ensure!(spec.period_at_slot(update.signature_slot) == p, "{name} is not signed in period {p}");
+        catch_up.push((p, update));
     }
     let base_updates = catch_up.len();
     Ok(Chain {
         name: "crown sepolia".into(),
         stand_in: false,
-        config: sepolia_config(ADOPTION_PARTS),
-        checkpoint: root(SEPOLIA_CHECKPOINT),
+        config,
+        checkpoint,
         bootstrap,
-        bootstrap_fork: LcFork::Electra,
+        bootstrap_fork,
         catch_up,
         base_updates,
         stages: Vec::new(),
     })
+}
+
+/// The first slot outside the weak-subjectivity period of a store whose finalized header is at `slot`, and the time
+/// it starts (Unix ms): the exclusive end of every transaction's validity window on that store.
+pub fn ws_end(config: &Config, slot: u64) -> Result<(u64, u64)> {
+    let end = config.ws_end_slot(slot).ok_or_else(|| anyhow!("the configuration has no weak-subjectivity period"))?;
+    Ok((end, config.slot_start_ms(end)))
+}
+
+/// Unix milliseconds as `YYYY-MM-DDTHH:MM:SSZ`.
+fn utc(ms: u64) -> String {
+    let s = ms / 1000;
+    let (days, rem) = (s / 86_400, s % 86_400);
+    // Civil date from days since 1970-01-01 (Howard Hinnant's algorithm).
+    let z = days as i64 + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = yoe + era * 400 + i64::from(m <= 2);
+    format!("{y:04}-{m:02}-{d:02}T{:02}:{:02}:{:02}Z", rem / 3600, rem % 3600 / 60, rem % 60)
 }
 
 /// A Gloas-layout light-client header at `slot` binding `block_hash`, whose execution branch
@@ -504,11 +614,17 @@ pub fn add_captures(chain: &mut Chain, captures: &[PathBuf]) -> Result<()> {
         let m: Value = serde_json::from_slice(&read(dir, "fixture.json")?)?;
         let block = m["block"].as_u64().ok_or_else(|| anyhow!("{}: fixture.json has no block", dir.display()))?;
         if !chain.stand_in {
+            // A capture fetches every period's update from `--updates-from` (drive.py: the bundle fixture's last period
+            // + 1); one of a period the base covers (an older capture) is not needed: the store is past it.
+            let base_last = chain.catch_up[..chain.base_updates].iter().map(|(p, _)| *p).max();
             for p in m["updates"].as_array().into_iter().flatten() {
                 let p = p.as_u64().ok_or_else(|| anyhow!("fixture.json: updates"))?;
+                if base_last.is_some_and(|last| p <= last) {
+                    continue;
+                }
                 if !chain.catch_up.iter().any(|(q, _)| *q == p) {
                     let name = format!("update_{p}.ssz");
-                    chain.catch_up.push((p, LightClientUpdate::decode(&read(dir, &name)?, LcFork::Gloas, 512).map_err(|e| anyhow!("{name}: {e:?}"))?));
+                    chain.catch_up.push((p, decode_update(&chain.config, &read(dir, &name)?, &name)?));
                 }
             }
         }
@@ -649,9 +765,12 @@ fn native_apply(native: &mut Native, config: &Config, update: &LightClientUpdate
     native.process(update).map_err(|e| anyhow!("{label}: the native store refuses it: {e:?}"))
 }
 
-/// Without a sequencer: the chain through the native light client, the bridge's attestation
-/// requests under each record through the attestation program's own evaluation, the registry
-/// entry and schedule against the vault's slots, every deposit's opening.
+/// Without a sequencer: the chain through the native light client (session A's catch-up first, as the sessions
+/// apply it), the bridge's attestation requests under each record through the attestation program's own evaluation,
+/// the registry entry and schedule against the vault's slots, every deposit's opening; and, by this machine's clock,
+/// whether the next session's transactions fall inside the weak-subjectivity period the program bounds them by
+/// (without `identity`: session A's, bounded by the bootstrap's slot; with it: session B's, by the finalized header
+/// session A left).
 pub fn check(chain: &Chain, program: &GuestBinary, bridge: &GuestBinary, identity: Option<&Identity>) -> Result<()> {
     use ferrata_core::witness::HeaderRecord;
     use ferrata_lez_bridge_wire::{import_request, pairing_request, vault_request};
@@ -661,7 +780,47 @@ pub fn check(chain: &Chain, program: &GuestBinary, bridge: &GuestBinary, identit
     let inst_id = instance_id(&chain.config, &chain.checkpoint);
     println!("[check] {}: instance 0x{} of the attestation program at {attest}; bridge at {bridge_header}", chain.name, hex::encode(inst_id));
     let mut native = Native::with_fork(&chain.config, &chain.checkpoint, &chain.bootstrap, chain.bootstrap_fork)?;
-    let mut applied = 0;
+    let boot_slot = chain.bootstrap.header.beacon.slot;
+    println!(
+        "[check] {}: bootstrap slot {boot_slot} (period {}, {:?} layout, store_fork {}), checkpoint 0x{}: accepted by the native store",
+        chain.name,
+        boot_slot / 8192,
+        chain.bootstrap_fork,
+        chain.config.store_fork,
+        hex::encode(chain.checkpoint)
+    );
+    for (p, update) in &chain.catch_up[..chain.base_updates] {
+        let o = native_apply(&mut native, &chain.config, update, &format!("period {p}"))?;
+        println!(
+            "[check] period {p} update (attested {}, finalized {}): advanced {}, adopted {}, rotated {}",
+            update.attested_header.beacon.slot,
+            update.finalized_header.beacon.slot,
+            o.advanced,
+            o.adopted,
+            o.rotated
+        );
+    }
+    let after_a = native.core().finalized_header.beacon.slot;
+    println!(
+        "[check] after session A's {} update(s): finalized slot {after_a}, next sync committee {}",
+        chain.base_updates,
+        if native.core().is_next_sync_committee_known() { "known" } else { "UNKNOWN" }
+    );
+    let (bound_slot, what) = if identity.is_none() { (boot_slot, "session A (Init and its catch-up)") } else { (after_a, "session B") };
+    let (end_slot, end_ms) = ws_end(&chain.config, bound_slot)?;
+    let now = now_ms();
+    println!(
+        "[check] {what}: valid until slot {end_slot} ({}), the weak-subjectivity end of slot {bound_slot}; now {}: {}",
+        utc(end_ms),
+        utc(now),
+        if now < end_ms { "inside" } else { "OUTSIDE" }
+    );
+    ensure!(
+        now < end_ms,
+        "{what} would be refused: the program's validity window ended at {} (\"Execution outside of the validity window\"); a newer checkpoint is needed",
+        utc(end_ms)
+    );
+    let mut applied = chain.base_updates;
     for stage in &chain.stages {
         let period = stage.update.signature_slot / 8192;
         while applied < chain.catch_up.len() && chain.catch_up[applied].0 < period {
@@ -800,8 +959,14 @@ pub async fn session_a(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
     ensure!(scenario::instance_state(live, &world.inst).await?.is_none(), "the instance exists already: session A starts on a fresh zone");
     scenario::init(live, &mut world, &chain.bootstrap, &format!("{} Init", chain.name), Harness::None, payer).await?;
     for (p, update) in &chain.catch_up[..chain.base_updates] {
-        scenario::apply(live, &mut world, update, &format!("period {p} update"), Harness::None, payer).await?;
+        let run = scenario::apply(live, &mut world, update, &format!("period {p} update"), Harness::None, payer).await?;
+        let o = run.outcome.ok_or_else(|| anyhow!("period {p} update: not applied (native store and sequencer refuse it)"))?;
+        println!("[crown-a] period {p} update applied: advanced {}, adopted {}, rotated {}", o.advanced, o.adopted, o.rotated);
     }
+    ensure!(
+        chain.stand_in || world.native.core().is_next_sync_committee_known(),
+        "after the catch-up the instance does not know the next sync committee"
+    );
     live.sync().await?;
     let tip = live.follower.blocks.last().ok_or_else(|| anyhow!("no block followed"))?;
     let (tip_id, tip_hash) = (tip.header.block_id, tip.header.hash.0);
@@ -1141,5 +1306,77 @@ impl PrivateSession {
             "the wallet does not see the claimed 0.001 ETH on its private account"
         );
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn fixture(name: &str) -> PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../crates/ferrata-spectests/fixtures").join(name)
+    }
+
+    /// Session A's catch-up through the native store; the outcomes in order.
+    fn replay(chain: &Chain) -> (Native, Vec<ApplyOutcome>) {
+        let mut native = Native::with_fork(&chain.config, &chain.checkpoint, &chain.bootstrap, chain.bootstrap_fork).expect("bootstrap");
+        let outcomes = chain.catch_up[..chain.base_updates]
+            .iter()
+            .map(|(p, u)| native_apply(&mut native, &chain.config, u, &format!("period {p}")).expect("update"))
+            .collect();
+        (native, outcomes)
+    }
+
+    #[test]
+    fn utc_formats_unix_ms() {
+        assert_eq!(utc(0), "1970-01-01T00:00:00Z");
+        let config = sepolia_config(ADOPTION_PARTS);
+        assert_eq!(utc(config.slot_start_ms(11_288_576)), "2026-10-05T10:35:12Z");
+        assert_eq!(utc(config.slot_start_ms(11_562_112)), "2026-11-12T10:22:24Z");
+    }
+
+    /// The crown run's chain: the Gloas bootstrap of period 1411 and that period's update, which finalizes an older
+    /// header but carries the next committee the fresh store lacks; inside its weak-subjectivity period until
+    /// 28 Nov 2026 03:13:36 UTC.
+    #[test]
+    fn crown_fixture_reads_and_replays() {
+        let chain = sepolia_base(&fixture("sepolia-2026-11-12")).expect("sepolia_base");
+        assert_eq!(chain.bootstrap_fork, LcFork::Gloas);
+        assert_eq!(chain.config.store_fork, 4);
+        assert_eq!(hex::encode(chain.checkpoint), "3b901f5e6853b5cf5eb04d7ccfe1272e66c38291cb3a11dd159cacd1117ccf7c");
+        assert_eq!(chain.bootstrap.header.beacon.slot, 11_562_112);
+        assert_eq!(chain.catch_up.iter().map(|(p, _)| *p).collect::<Vec<_>>(), vec![1411]);
+        assert_eq!(chain.base_updates, 1);
+        let (native, outcomes) = replay(&chain);
+        assert_eq!(outcomes, vec![ApplyOutcome { rotated: false, advanced: false, adopted: true }]);
+        assert!(native.core().is_next_sync_committee_known());
+        assert_eq!(native.core().finalized_header.beacon.slot, 11_562_112);
+        let (end, end_ms) = ws_end(&chain.config, 11_562_112).unwrap();
+        assert_eq!((end, utc(end_ms).as_str()), (11_675_168, "2026-11-28T03:13:36Z"));
+    }
+
+    /// The fixture crown-live-2 ran: read the same way (Electra bootstrap, 32 updates into Gloas), and its checkpoint's
+    /// weak-subjectivity period ended on 21 Oct 2026, three weeks before the run's Init.
+    #[test]
+    fn replay_fixture_reads_and_is_outside_its_period() {
+        let chain = sepolia_base(&fixture("sepolia-gloas-2026-11-10")).expect("sepolia_base");
+        assert_eq!(chain.bootstrap_fork, LcFork::Electra);
+        assert_eq!(chain.config.store_fork, 3);
+        assert_eq!(hex::encode(chain.checkpoint), crate::plan::SEPOLIA_CHECKPOINT);
+        assert_eq!(chain.catch_up.iter().map(|(p, _)| *p).collect::<Vec<_>>(), (1378..=1409).collect::<Vec<_>>());
+        let (native, outcomes) = replay(&chain);
+        assert!(outcomes.iter().all(|o| o.advanced));
+        assert_eq!(native.core().finalized_header.beacon.slot, 11_542_528);
+        let (end, end_ms) = ws_end(&chain.config, chain.bootstrap.header.beacon.slot).unwrap();
+        assert_eq!((end, utc(end_ms).as_str()), (11_401_632, "2026-10-21T03:26:24Z"));
+        assert!(end_ms < chain.config.slot_start_ms(11_562_112));
+    }
+
+    /// The stand-in's fixed bootstrap slot (rehearsals) is bounded the same way.
+    #[test]
+    fn stand_in_period_end() {
+        let chain = stand_in_base().unwrap();
+        let (_, end_ms) = ws_end(&chain.config, chain.bootstrap.header.beacon.slot).unwrap();
+        assert_eq!(utc(end_ms), "2026-11-25T10:09:36Z");
     }
 }

@@ -7,9 +7,14 @@
 #   build.sh pack     bundle.tar.zst in $CROWN_LEZ_TMP (lez/lab's layout: bin/, node/, xdg-cache/, program/, plus
 #                     lez-config/, fixture/, crown/ and SHA256SUMS): what session.sh runs from
 #   build.sh all      driver and pack
+#   build.sh repack FROM  FROM (a packed bundle.tar.zst) with this tree's crown-driver ($CROWN_LEZ_TMP/bin), fixture/
+#                     and session.sh; everything else (sequencer, node, r0vm, xdg-cache, lez-config, the programs) kept
+#                     byte for byte; SHA256SUMS rewritten; -> $CROWN_LEZ_TMP/bundle.tar.zst
 #
 # $CROWN_LIVE (default tmp/crown/live beside the repository) holds the sequencer, the node and the target directory;
 # $CROWN_PROGRAMS (default tmp/crown/build/programs) the guests built at the crown path (their image ids are the run's).
+# The fixture: the Sepolia checkpoint the instance starts from ($CROWN_FIXTURE, default the 12 Nov 2026 one; the
+# period-1378 replay fixture left its weak-subjectivity period on 21 Oct 2026): what crown-driver's sepolia_base reads.
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$HERE/../.." && pwd)"
@@ -18,8 +23,16 @@ CROWN_LEZ_TMP="${CROWN_LEZ_TMP:-$BESIDE/tmp/crown-lez}"
 LIVE="${CROWN_LIVE:-$BESIDE/tmp/crown/live}"
 PROGRAMS="${CROWN_PROGRAMS:-$BESIDE/tmp/crown/build/programs}"
 LEZ="$BESIDE/upstream/lez-v0.4.0-rc1"
-FIXTURE="$REPO/crates/ferrata-spectests/fixtures/sepolia-gloas-2026-11-10"
+FIXTURE="${CROWN_FIXTURE:-$REPO/crates/ferrata-spectests/fixtures/sepolia-2026-11-12}"
 mkdir -p "$CROWN_LEZ_TMP/logs" "$CROWN_LEZ_TMP/bin"
+
+# The fixture's files crown-driver reads: the bootstrap, every period update, the second provider's headers (the
+# checkpoint root), and SOURCE.md for the record.
+fixture() {
+  rm -rf "$1/fixture" && mkdir -p "$1/fixture"
+  cp "$FIXTURE/bootstrap.ssz" "$FIXTURE"/update_*.ssz "$FIXTURE"/beacon_header_*_second.json "$FIXTURE/SOURCE.md" "$1/fixture/"
+}
+sums() { ( cd "$1" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS ); }
 
 case "${1:-}" in
   seed)
@@ -55,12 +68,26 @@ case "${1:-}" in
     cp -r "$LIVE/xdg-cache" "$b/xdg-cache"
     cp "$PROGRAMS/ferrata_lez.bin" "$PROGRAMS/ferrata_bridge.bin" "$b/program/"
     cp "$LEZ/lez/sequencer/service/networks/local.json" "$LEZ/bedrock/node-config.yaml" "$LEZ/bedrock/deployment-settings.yaml" "$b/lez-config/"
-    cp "$FIXTURE/bootstrap.ssz" "$FIXTURE"/update_1[34]*.ssz "$b/fixture/"
+    fixture "$b"
     cp "$HERE/session.sh" "$b/crown/"
-    ( cd "$b" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS )
+    sums "$b"
     tar -C "$b" -cf - . | zstd -q -T0 -9 -o "$CROWN_LEZ_TMP/bundle.tar.zst" -f
     echo "bundle: $(stat -c %s "$CROWN_LEZ_TMP/bundle.tar.zst") bytes, $(wc -l < "$b/SHA256SUMS") files"
     grep -E ' \./(bin|program)/' "$b/SHA256SUMS"
     ;;
-  *) sed -n '2,13p' "${BASH_SOURCE[0]}"; exit 2 ;;
+  repack)
+    from="${2:?build.sh repack FROM (a packed bundle.tar.zst)}"
+    b="$CROWN_LEZ_TMP/bundle"
+    rm -rf "$b" && mkdir -p "$b"
+    zstd -q -d -c "$from" | tar -x -C "$b"
+    ( cd "$b" && sha256sum -c --quiet SHA256SUMS ) || { echo "$from: its SHA256SUMS do not hold"; exit 1; }
+    cp "$CROWN_LEZ_TMP/bin/crown-driver" "$b/bin/crown-driver"
+    fixture "$b"
+    cp "$HERE/session.sh" "$b/crown/session.sh"
+    sums "$b"
+    tar -C "$b" --sort=name --owner=0 --group=0 --numeric-owner -cf - . | zstd -q -T0 -9 -o "$CROWN_LEZ_TMP/bundle.tar.zst" -f
+    echo "bundle: $(stat -c %s "$CROWN_LEZ_TMP/bundle.tar.zst") bytes, $(wc -l < "$b/SHA256SUMS") files, sha256 $(sha256sum "$CROWN_LEZ_TMP/bundle.tar.zst" | cut -c1-64)"
+    grep -E ' \./(bin|program|crown|fixture)/' "$b/SHA256SUMS"
+    ;;
+  *) sed -n '2,17p' "${BASH_SOURCE[0]}"; exit 2 ;;
 esac
