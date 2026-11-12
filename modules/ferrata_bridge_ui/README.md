@@ -97,6 +97,20 @@ modules/ferrata_bridge_ui/scripts/box-test.sh            # Linux box with Foundr
 modules/ferrata_bridge_ui/scripts/basecamp-ui-tests.sh   # Nix: Basecamp (pinned) standalone and headless, tests/ui-tests.mjs
 ```
 
+`box-test.sh` builds the devnet backend with the `ferrata` tool, so it needs what `cli/` needs (`libpcsclite-dev`,
+RISC Zero's guest Rust 1.91.1: [`cli/README.md`](../../cli/README.md)), and Qt 6's test runner with the QML modules the
+view imports. On Ubuntu 24.04 (Debian names; checked on the Modal build box, 12 Nov 2026: 17 of 17 passed):
+
+```sh
+sudo apt-get install --no-install-recommends qt6-qpa-plugins qml-qt6 qt6-declarative-dev-tools \
+  qml6-module-qtquick qml6-module-qtquick-controls qml6-module-qtquick-layouts qml6-module-qtquick-templates \
+  qml6-module-qtquick-window qml6-module-qtqml-workerscript qml6-module-qttest qml6-module-qtqml \
+  qml6-module-qtqml-models fonts-dejavu-core
+```
+
+It rewrites its own files in `results/` (git then shows them changed: timings and screenshots) and keeps the two
+logs of `basecamp-ui-tests.sh` there.
+
 The second installs the module in Logos Basecamp and runs Basecamp's own headless UI test: the view loads,
 chooses the core-module transport, every screen is built, and the sandbox refuses its network access.
 
