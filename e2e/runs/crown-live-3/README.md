@@ -9,8 +9,8 @@ the final ones, [`docs/image-ids.md`](../../../docs/image-ids.md), which any che
 the programs' weak-subjectivity bound refused the 38-day-old one `crown-live-2` started from
 ([`../crown-live-2/`](../crown-live-2/README.md)). 19 of 19 stages, **DONE at 16:23:30Z**, the runner's verify **14 of
 14** (`verify.txt`). **Vault `0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c`**. Every number here is from this run's files
-(`stages.done`, `manifest.json`, `deploy.json`, the runner's `crown.log`, LEZ sessions A and B's `driver.log` and
-`export/summary.txt`, which stay uncommitted because they name local paths) or was read back from Sepolia with `cast`
+(`stages.done`, `manifest.json`, `deploy.json`, LEZ sessions A and B's `logs/driver.log` and `export/summary.txt`, and
+the runner's `crown.log`, which stays uncommitted because it names local paths) or was read back from Sepolia with `cast`
 on publicnode's public endpoint (12 Nov, 16:42-16:50Z).
 
 **Real**: every Ethereum transaction (13, on Sepolia); the sync committee's signatures LEZ's light client checked
@@ -138,6 +138,8 @@ The ETH (read on Sepolia): the vault's balance went 0, 1,002,000,000,000,000 (de
 The 36 records of crown-live-1's pattern (the checkpoint input `crown-24-90`; `programs/ids.jsonl`; for
 `scripts/verify-sepolia.py` each capture's record, `header.rlp` and the vault's storage proof; for `e2e/crown.sh verify`
 session A's `deployment-settings.yaml`, the devnet's public genesis settings whose sha256 is `bedrockGenesisId`, and
-each capture's `block.json`), the verify outputs, `compare-vault.txt` and the controls. Not committed: the logs and `crown.log` (local paths),
+each capture's `block.json`), LEZ sessions A and B's `logs/driver.log` and `export/summary.txt` (no local path in
+them), the verify outputs, `compare-vault.txt` and the controls. Not committed: the runner's logs and `crown.log` (local
+paths),
 the programs and receipts (binaries), the LEZ sessions' exports and node data, the captures' other RPC answers, forge's
 broadcast records; `e2e/crown.sh fetch --lez crown-live-3` brings them from the ws-3 Volume.
