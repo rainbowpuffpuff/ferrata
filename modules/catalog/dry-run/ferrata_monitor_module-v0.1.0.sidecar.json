@@ -1,0 +1,32 @@
+{
+  "publisherRef": "ferrata_monitor_module-v0.1.0",
+  "releasedAt": "2026-11-12T21:21:30Z",
+  "sha256": "24135191a84ae83be1959eac96a51f472d88fcebb42f89bf0ade355435e5240e",
+  "size": 12187358,
+  "rootHash": "e0b87293f0e55b393490735d64b151770133e82ae1a7910e376159750ddf1dfb",
+  "builtVariants": [
+    "linux-amd64"
+  ],
+  "missingVariants": [],
+  "manifest": {
+    "author": "",
+    "category": "bridge",
+    "dependencies": [],
+    "description": "Ferrata (prototype): the watchers' monitor as a module: follows a Ferrata vault, checks every candidate checkpoint against its own node views and cancels a wrong one in time, pauses checkpoints, alerts on and revokes a wrong finalised one, audits rule (B)'s published attestations, as a loop under Logos Core or for a given number of polls, and offline verdicts",
+    "display_name": "Ferrata monitor (watchers)",
+    "hashes": {
+      "assets": "894dd6432483da06e7b8f110d9a478d198944bb5ad7288c90c12ed4aadbf03d0",
+      "root": "e0b87293f0e55b393490735d64b151770133e82ae1a7910e376159750ddf1dfb",
+      "variants": "a1afc1d88c70e600595d0f891f924fb43126391bb09b85e8dec1f21f6bcd01e0",
+      "variants/linux-amd64": "12dde1aa60b3dc71dffa7ca1835c76c7376509f2286c6f25f685f0ed58f0ab65"
+    },
+    "icon": "",
+    "main": {
+      "linux-amd64": "ferrata_monitor_module_plugin.so"
+    },
+    "manifestVersion": "0.7.0",
+    "name": "ferrata_monitor_module",
+    "type": "core",
+    "version": "0.1.0"
+  }
+}

@@ -1,0 +1,2 @@
+Package structure is valid: spike/ferrata-wt-modules-more/modules/out/release/dist/ferrata_attestor_module-v0.1.0/ferrata_attestor_module-0.1.0.lgx
+Package is unsigned

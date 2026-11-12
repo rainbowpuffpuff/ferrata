@@ -208,11 +208,18 @@ also serves those on that address.
 
 | Script | What it runs | Where |
 |---|---|---|
-| `scripts/native.sh` | stages both modules' crates, the calls crates' unit tests (`cargo test`), builds the `call` examples | any Linux with cargo |
-| `scripts/check.sh [OUT_DIR]` | the above, then both modules built and packaged by logos-module-builder (dev `.lgx` and `.lgx-portable`), installed and loaded together in a headless Logos Core (`logosctl`, dev and portable builds), every method called (`requests.py`: 10 attest requests from the attestation fixtures; `bridge_requests.py`: 13 bridge requests from `bridge/vectors/*-v2.json`), each reply compared with the native reply and with what the request must produce; then `e2e.sh` through the same daemon | Linux x86-64 with Nix |
+| `scripts/native.sh` | stages the modules' crates, the calls crates' unit tests (`cargo test`), builds the `call` examples (default the four that need only cargo; `MODULES=...` adds the updater module, which needs the guests of `lez/methods` built) | any Linux with cargo |
+| `scripts/check.sh [OUT_DIR]` | the above, then the five modules built and packaged by logos-module-builder (dev `.lgx` and `.lgx-portable`), installed and loaded together in a headless Logos Core (`logosctl`, dev and portable builds), every one-shot method called (`requests.py`: 10 attest requests from the attestation fixtures; `bridge_requests.py`: 13 bridge requests from `bridge/vectors/*-v2.json`; `daemon_requests.py`: 24 requests for the three daemon modules, from the zone run's records, a node view and the lab record, the updater's configurations), each reply compared with the native reply and with what the request must produce; then `e2e.sh` and the three daemons' jobs (below) through the same daemon, each first run natively | Linux x86-64 with Nix, the RISC Zero toolchain of `lez/`, r0vm, Foundry |
 | `scripts/e2e.sh OUT_DIR` | a log end to end: `recorded_rpc.py` serves the recorded mainnet block 26,384,851 over JSON-RPC; `fetch_log_proof` → `dry_run_attest` on the record read from the chain → `build_attest_tx` → `lez/harness`'s `module_e2e` decodes the bytes with the program's types and executes them in LEZ v0.4.0-rc1's state machine → `read_attestation`; two logs, two refusals (a tampered proof, another instance), and the bridge module's `Burn` and `Claim` decoded by the bridge program's types (`CALL=logosctl` runs it through a Logos Core daemon) | Linux with cargo (and `logosctl`) |
-| `scripts/release-local.sh OUT_DIR` | `logos-modules-release-action`'s steps for `linux-amd64`, locally, nothing published (`catalog/README.md`) | Linux x86-64 with Nix |
-| `scripts/catalog-install.sh RELEASE_DIR LOGOSCTL WORK_DIR` | a Logos Core installs both modules from that catalog, served over HTTPS on 127.0.0.1: `catalog add`, `search`, `install`, `module load`, `call` | Linux x86-64 with Nix |
+| `scripts/attestor-e2e.sh OUT_DIR` | the attestor's job on the four-sequencer zone's records (`checkpoint/attestor/runs/zone`): tier, base, each sequencer's key, certificate and attestation (each equal to the run's), verify, collect 3 of 4 (the input the checkpoint program proved, byte for byte), 4 of 4, 2 of 4 refused, three refusals to sign; then the module's loop against a node served from the same answers over HTTP (`recorded_node.py`): 23 checks | Linux with cargo (and `logosctl`) |
+| `scripts/attestor-zone-live.sh BUNDLE OUT_DIR` | a running zone of four LEZ sequencers (`checkpoint/attestor/zone.sh`, the lab bundle) and four Logos Cores, one per sequencer, each running the attestor module's loop against the zone's node while it runs; then the module's collector | Linux x86-64, the lab bundle, `logosctl` |
+| `scripts/updater-e2e.sh OUT_DIR` | the updater's job on its tests' chain: the in-process LEZ v0.4.0-rc1 chain, the lab's recorded mainnet and Sepolia data, from the checkpoints to the lab's final roots (`start`, `status` until up to date, `metrics`, `stop` through Logos Core; `run` natively); the sequencer backend refused | Linux with cargo, r0vm (and `logosctl`) |
+| `scripts/monitor-e2e.sh OUT_DIR` | `monitor/tests/anvil-e2e.sh` (a local anvil chain, a v5 vault, scenarios S1–S11, A0–A4, R1–R4, the alerting check: 46 checks) with the binary, or with the module through `scripts/monitor-module.sh` (`CALL=logosctl`): S5's SIGKILL then kills the module's host process and the module is loaded again | Linux with cargo and Foundry (and `logosctl`) |
+| `scripts/release-local.sh OUT_DIR` | `logos-modules-release-action`'s steps for `linux-amd64`, locally, for the five modules, nothing published (`catalog/README.md`) | Linux x86-64 with Nix |
+| `scripts/catalog-install.sh RELEASE_DIR LOGOSCTL WORK_DIR` | a Logos Core installs the five modules from that catalog, served over HTTPS on 127.0.0.1: `catalog add`, `search`, `install`, `module load`, `call`; with `CATALOG_E2E=1` (and `CATALOG_E2E_MORE`), the daemons' jobs through the installed modules | Linux x86-64 with Nix |
+
+Logos Core keeps each module's socket in `TMPDIR`; a Unix socket path holds 107 bytes, so the scripts
+that start a Logos Core refuse a `TMPDIR` (or `LOGOS_TMPDIR`) longer than 62 bytes.
 
 ### Left out
 
@@ -222,7 +229,10 @@ also serves those on that address.
   build each program message and name the account it goes to, but do not sign or submit: no
   `keystore_module`, `tx_sender_module`, `lez_core` or LEZ wallet. In the end-to-end test the
   harness wraps the message in a LEZ transaction and executes it in LEZ's state machine in-process,
-  not on a networked sequencer.
+  not on a networked sequencer. The daemon modules likewise use no Logos Core module: the attestor reads
+  its node over plain HTTP (`curl`, as the binary does) and keeps its keys in files; the monitor signs
+  and sends its Ethereum transactions itself (alloy, over the JSON-RPC endpoint it is given) with a key
+  file or keystore; the updater's sources are beacon API URLs or recorded directories.
 - **`ferrata_attest_module`:** no `advance` (the update's `Open`/`Miller`/`Adopt`/`Finish` messages);
   the instance's configuration is read from its state (`read_instance`), which comes in the request; the dry run still lacks the program-only checks (`WRONG_INSTANCE` is
   shown by the program in `e2e.sh`); no history hops, batches, conditions or relations, no accumulator
@@ -231,6 +241,20 @@ also serves those on that address.
   LEZ wallet), no `ImportRoot`, registry or fee-schedule reads, no release guest input or proof (the
   module gives the journal and the witness; proving is the CLI's `release --prove`); the vault's
   `Deposit` events and the program's burn records come in the request.
+- **`ferrata_attestor_module`:** attestations are published as files (`att-<tip>.json`, `latest.json`),
+  not to a relay or a watcher feed, and the collector reads files; the loop asks its node for the whole
+  final tier every round (from `slot_from`); the zone of the live run has one Logos Blockchain node that
+  the four Logos Cores share (as the zone run's attestors did), and no bridge program; the module's
+  checkpoint input is checked by the checkpoint rule natively, not proven here.
+- **`ferrata_monitor_module`:** node views still come through the adapter (`file:`/`cmd:`): no client of
+  the LEZ sequencer's or the Logos Blockchain node's RPC (`monitor/README.md`, "Not built"); one daemon
+  per module instance.
+- **`ferrata_updater_module`:** only the in-process chain (`ledger = "harness"`, the updater's tests'
+  chain, with `RISC0_DEV_MODE=1`): it lives in the module's process and ends with `stop`, so two updater
+  modules cannot share a chain, and the cooperative A3 gate (two honest updaters and an adversary) stays
+  the binary's test; the backend for a running sequencer is not built; built with Rust 1.98.0, LEZ pins
+  1.98.1; the guests it embeds are the ones risc0-build made on the build box (their ids checked against
+  `docs/image-ids.md`).
 - **Catalog:** laid out, dry-run and installed from on 127.0.0.1 (`catalog/`); nothing published, one
   variant (`linux-amd64`), unsigned.
 - **Linux x86-64 only** was tried.

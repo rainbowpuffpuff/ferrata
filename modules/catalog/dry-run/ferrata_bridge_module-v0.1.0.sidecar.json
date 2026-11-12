@@ -1,9 +1,9 @@
 {
   "publisherRef": "ferrata_bridge_module-v0.1.0",
-  "releasedAt": "2026-11-11T19:42:14Z",
-  "sha256": "35ed5eb1da842d3bd4c6707e652d2787735211301557c5cf94280e243b9c6367",
-  "size": 5180044,
-  "rootHash": "c785a01b1930cb8ecfd73cbed5e2ff3e71c504fdde792cbfe995848f2517c308",
+  "releasedAt": "2026-11-12T21:21:14Z",
+  "sha256": "262bb960c49a36050e188285999bad2440492fe35d99609369a53f601bd216ea",
+  "size": 5179690,
+  "rootHash": "cc229704082ad95c5f112ed13efe4f2314bc65b4d5649bdb6ab5b2db8b7df0d3",
   "builtVariants": [
     "linux-amd64"
   ],
@@ -16,9 +16,9 @@
     "display_name": "Ferrata bridge",
     "hashes": {
       "assets": "bef8a791e8d3eea97d4039b10ed182e1e0b366b551e2b8ffae6087557753e686",
-      "root": "c785a01b1930cb8ecfd73cbed5e2ff3e71c504fdde792cbfe995848f2517c308",
-      "variants": "650953372d6559e9e3c23ad9e079acbc210e20fb7ab21dd2defe8988e953de62",
-      "variants/linux-amd64": "2768305da59bae4c3f3718d07b4003e2d931f20af4c7e270f46559eef337f940"
+      "root": "cc229704082ad95c5f112ed13efe4f2314bc65b4d5649bdb6ab5b2db8b7df0d3",
+      "variants": "5a84bac05498d451673a992517aa6bb6cb36fb0eef81304723f231db83675426",
+      "variants/linux-amd64": "57d78c0988b547cfd518a9e0ec8bcc59ce5075c3e0e825ff699e821d0b7af1b9"
     },
     "icon": "",
     "main": {

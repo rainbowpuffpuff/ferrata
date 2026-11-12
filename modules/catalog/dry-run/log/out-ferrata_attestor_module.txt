@@ -1,0 +1,1 @@
+/nix/store/higyqc61ayq5snb09001r319cbq33zgh-logos-ferrata_attestor_module-module-lib-lgx-0.1.0

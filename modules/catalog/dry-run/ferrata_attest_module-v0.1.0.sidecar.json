@@ -1,9 +1,9 @@
 {
   "publisherRef": "ferrata_attest_module-v0.1.0",
-  "releasedAt": "2026-11-11T19:41:25Z",
-  "sha256": "dce2086a721780a8868b2dfe76b9e9abe3b6f30852ee396ec575aba4f7f4b1ed",
-  "size": 5280230,
-  "rootHash": "5fa7854878aaf91f1fe20a51251b88f7809ee4df7d5b7afbf6858b36a4f7b75c",
+  "releasedAt": "2026-11-12T21:21:07Z",
+  "sha256": "aca5118a9de2388611917d5d6d37d179554ccb69fe660c3f5ecaf5059ee733af",
+  "size": 5282014,
+  "rootHash": "1d4ea2298cb4975ad5afcb293895bd88a3c71e372231810765f899384dab9dc3",
   "builtVariants": [
     "linux-amd64"
   ],
@@ -16,9 +16,9 @@
     "display_name": "Ferrata attestation",
     "hashes": {
       "assets": "d6e49f23a1ca657ac538401e509bdfa345b96e4dc72e8ad843867f2a1e73bc87",
-      "root": "5fa7854878aaf91f1fe20a51251b88f7809ee4df7d5b7afbf6858b36a4f7b75c",
-      "variants": "d4a752023410d2bc86878ee220e33adb16cfe748a9ecb45516c53116ea511c26",
-      "variants/linux-amd64": "16751e7f1c7057b8594bd0e0786484e00e898117984b2b82db074a593c033d59"
+      "root": "1d4ea2298cb4975ad5afcb293895bd88a3c71e372231810765f899384dab9dc3",
+      "variants": "7357ce1b2cd6abb1fc8a19922fbb071f4cbead1cbe43234d6471f59e4b78c30a",
+      "variants/linux-amd64": "40d1112396fee2c6b76b2943d9e7cd292a03f7d134e5c99efabb092b6505112a"
     },
     "icon": "",
     "main": {

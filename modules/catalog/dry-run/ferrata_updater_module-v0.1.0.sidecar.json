@@ -1,0 +1,32 @@
+{
+  "publisherRef": "ferrata_updater_module-v0.1.0",
+  "releasedAt": "2026-11-12T21:21:41Z",
+  "sha256": "bfab929271d9952e14da2ec7a6693fc7a752656363055bc63caa0d71433f7467",
+  "size": 15782027,
+  "rootHash": "4d036a71c966d25c1198e8530ff08de0812bcd56cbfb79088d8cfe28e0888c8f",
+  "builtVariants": [
+    "linux-amd64"
+  ],
+  "missingVariants": [],
+  "manifest": {
+    "author": "",
+    "category": "ethereum",
+    "dependencies": [],
+    "description": "Ferrata (prototype): ferrata-updater as a module: keeps Ferrata light-client instances on LEZ following Ethereum from several beacon API sources, verifies every candidate with the program's own steps before paying for it, and drives the attestation program's public job, on the in-process LEZ v0.4.0-rc1 chain of its tests (the sequencer backend is not built)",
+    "display_name": "Ferrata updater (light client)",
+    "hashes": {
+      "assets": "a91eb41758da64189ce8fa19d371ea1d271c9505eeb2fc0c89e7c10a714a7624",
+      "root": "4d036a71c966d25c1198e8530ff08de0812bcd56cbfb79088d8cfe28e0888c8f",
+      "variants": "e3bfe2db9b18dbdfc03943f5420f9bb7e30332dadb5cb2e20ed9e612263899c1",
+      "variants/linux-amd64": "25a23efd933e9cf2785ceaf295035c36236bbc478847949e7c8b504f99bee70d"
+    },
+    "icon": "",
+    "main": {
+      "linux-amd64": "ferrata_updater_module_plugin.so"
+    },
+    "manifestVersion": "0.7.0",
+    "name": "ferrata_updater_module",
+    "type": "core",
+    "version": "0.1.0"
+  }
+}

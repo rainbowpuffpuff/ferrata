@@ -1,2 +1,5 @@
-127.0.0.1 - - [11/Nov/2026 19:42:15] "GET /ferrata_attest_module-v0.1.0/ferrata_attest_module-0.1.0.lgx HTTP/1.1" 200 -
-127.0.0.1 - - [11/Nov/2026 19:42:15] "GET /ferrata_bridge_module-v0.1.0/ferrata_bridge_module-0.1.0.lgx HTTP/1.1" 200 -
+127.0.0.1 - - [12/Nov/2026 21:21:42] "GET /ferrata_attest_module-v0.1.0/ferrata_attest_module-0.1.0.lgx HTTP/1.1" 200 -
+127.0.0.1 - - [12/Nov/2026 21:21:42] "GET /ferrata_attestor_module-v0.1.0/ferrata_attestor_module-0.1.0.lgx HTTP/1.1" 200 -
+127.0.0.1 - - [12/Nov/2026 21:21:42] "GET /ferrata_bridge_module-v0.1.0/ferrata_bridge_module-0.1.0.lgx HTTP/1.1" 200 -
+127.0.0.1 - - [12/Nov/2026 21:21:43] "GET /ferrata_monitor_module-v0.1.0/ferrata_monitor_module-0.1.0.lgx HTTP/1.1" 200 -
+127.0.0.1 - - [12/Nov/2026 21:21:43] "GET /ferrata_updater_module-v0.1.0/ferrata_updater_module-0.1.0.lgx HTTP/1.1" 200 -

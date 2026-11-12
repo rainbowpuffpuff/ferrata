@@ -1,5 +1,156 @@
 # Logos modules: results
 
+Three runs, newest first: the three daemons as modules (12 November), the attestation and bridge
+modules (11 November), the attestation module's prototype (10 November).
+
+## The daemons as modules, 12 November 2026
+
+**Five modules built, packaged, loaded and called together; the three daemons doing their jobs as
+modules.** `modules/scripts/check.sh` built `ferrata_attestor_module` (rule (B)'s attestor and collector,
+`checkpoint/attestor`), `ferrata_monitor_module` (the watchers' `monitor`) and `ferrata_updater_module`
+(`ferrata-updater`, `lez/updater`) with logos-module-builder, beside the two earlier modules, packaged all
+five as dev and portable `.lgx`, installed and loaded them together in a headless Logos Core (`logosctl`,
+dev and portable builds) and called every one-shot method: 48 (24 of them the three new modules') calls, each reply equal to the native
+call and meeting its expectations, in both. Then each daemon did its job through each Logos Core, on the
+devnet its own tests use, against the same job run natively:
+
+| Job | Devnet | Natively | Dev Logos Core | Portable | From the catalog |
+|---|---|---|---|---|---|
+| the attestor on the zone of four's records: tier, base, four certificates and attestations equal to the run's, the collector's 3 of 4 = the input the checkpoint program proved (sha256 `f376ad54…c575`), 4 of 4, 2 of 4 refused, three refusals to sign, the loop against a node over HTTP | `checkpoint/attestor/runs/zone` | 23 of 23 | 23 of 23 | 23 of 23 | 23 of 23 |
+| the attestor beside each sequencer of a **running** zone of four: four Logos Cores, each module's loop reading the node while the zone runs | `checkpoint/attestor/zone.sh` (the lab bundle) | — | — | 13 of 13 | — |
+| the monitor: `monitor/tests/anvil-e2e.sh`, scenarios S1–S11, A0–A4, R1–R4 and the alerting check, the module in place of the binary | anvil, a v5 vault | 46 of 46 (the binary) | 46 of 46 | 46 of 46 | 46 of 46 |
+| the updater: mainnet and Sepolia from their checkpoints to the lab's final roots, none refused; the sequencer backend refused | the in-process LEZ v0.4.0-rc1 chain, the lab's records | 8 of 8 (`run`) | 10 of 10 | 10 of 10 | 10 of 10 |
+
+`e2e.sh` (the earlier modules' log end to end) passed 36 of 36 in both flavours. All five modules were
+installed from the local catalog by name and loaded, and the three jobs passed through the installed
+modules (the last column). Results: [`results/check-2026-11-12/`](results/check-2026-11-12/summary.md),
+[`results/attestor-zone-live/`](results/attestor-zone-live/summary.md), [`catalog/`](catalog/README.md).
+
+### Where the daemons' modules ran
+
+The Modal build box of this worktree (workspace `ws-4`), a gVisor container (`Linux 4.19.0-gvisor
+x86_64`, 16 cores, 64 GiB), started cold: Nix 2.28.3 with the set-up of the first run, cargo 1.93.0 (and
+1.98.1 for `lez/`), Foundry 1.3.6 (anvil, forge, cast), r0vm 3.0.5; builder, SDK, `logosctl` and nixpkgs
+at the revisions of the first run; Logos packages built from source again (the dev `logosctl` took
+1,848.6 s). Logos Core with `LOGOS_TMPDIR=/var/tmp/lgm` (see 4 below). On the laptop only edits, `git` and
+reads. `version()` of the new modules reports commit `68c6e28`, the commit their staged crates were
+copied from: after it the modules changed only in `metadata.json`'s descriptions and the test scripts (the
+sources hashes in `version()` identify the copies). Every number here is from the runs' own output.
+
+### The three modules
+
+| Module | Wraps | Methods | Rust | Dev / portable `.lgx` bytes | Dev closure bytes |
+|---|---|---|---|---:|---:|
+| `ferrata_attestor_module` | `checkpoint/attestor` (`ferrata-attestor`) with `checkpoint-core`, `attestor-core` | `version`, `keygen`, `pubkey`, `deployment`, `certify`, `tier`, `attest`, `verify`, `collect`, `assemble`, `base`; `start`, `status`, `stop` | builder's nixpkgs | 2,342,262 / 5,502,245 | 668,735,576 |
+| `ferrata_monitor_module` | `monitor/` (its library, alloy 1.8.3, tokio) with `attestor-core` | `version`, `check`, `node_view`, `run`; `start`, `status`, `stop` | 1.93.0 | 9,029,901 / 12,187,598 | 693,801,688 |
+| `ferrata_updater_module` | `lez/updater` with the `lez/` harness, LEZ v0.4.0-rc1's state machine, the 7 guests of `lez/methods` | `version`, `check_config`, `run`; `start`, `status`, `metrics`, `stop` | 1.98.0 | 12,620,856 / 15,780,219 | 707,729,872 |
+
+The contracts the builder derived from the traits (`.lidl`): 2,045, 1,009 and 979 bytes. `module show`
+lists each method with its description (`show-*.json`). The updater module carries the attestation
+program it executes: `version()` reports the image id declared for it and the one computed from its
+bytes, both `0x816d1fef…03df`, the id of [`docs/image-ids.md`](../docs/image-ids.md) (checked by
+`updater-e2e.sh`). The daemons' own code changed only where a module needed it: the monitor's run
+arguments and start moved into its library (`monitor/src/cli.rs`), its loop ends on a stop channel instead
+of a signal when one is given (`daemon::run_with`: the module's process belongs to the host), and it takes
+`--key-file`; the updater's set-up and rounds moved into its library (`lez/updater/src/daemon.rs`). Both
+binaries run on the same code (the monitor's 15 tests and its anvil run, the updater's configuration tests
+and catch-up, below).
+
+### The attestor beside each sequencer of a running zone
+
+`modules/scripts/attestor-zone-live.sh` (12 November, 21:24–21:30 UTC, commit `d9f4e47`): `checkpoint/attestor/zone.sh` ran a zone of four LEZ
+v0.4.0-rc1 sequencers on one Logos Blockchain node (upstream's devnet configuration, the lab bundle's
+binaries, 300 s of sequencing, genesis sha256 equal to the earlier zone run's), and four portable Logos
+Cores, one per sequencer, each installed the attestor's package, loaded it, made its attestation key (OS
+randomness) and had that sequencer's channel key certify it. While the zone ran, each module's loop
+(`start`, poll 15 s) read the node over HTTP: 22 rounds each, the first refused (the node's final tier held no block yet), then 19 rising tips signed (3, 4, 6, 8, 9, 11, 13, 14, 16, 17, 19, 20, 22, 23, 25, 26, 28, 29, 30), each published as `att-<tip>.json`, none refused for a lower tip or another hash, no error. After the sequencers stopped and the LIB had
+passed the channel's tip, each signed the final tip 30 (`2e0dca72…2374`); the four were stopped, and the module's
+collector took 3 of 4 (attestor 3 left out; the checkpoint rule natively: accepted, n = 4, t = 3, producer `fce0d0fa…8096`; 26,166 bytes, journal sha256 `a58d6a4d…103e`), 4 of 4 (accepted) and refused 2 of 4. The node's final tier: the four channel keys, blocks 2..=30 checked (29), 11, 6, 6 and 6 blocks inscribed by the four sequencers.
+Records: [`results/attestor-zone-live/`](results/attestor-zone-live/summary.md) (each attestor's rounds,
+status, certificate and last attestation).
+
+### The monitor through the module
+
+`monitor/tests/anvil-e2e.sh` with `MONITOR_CMD=modules/scripts/monitor-module.sh`: every `monitor run`
+the test makes goes to the module, bounded runs as `run`, the daemons of S5 and S10 as `start` with the
+script waiting on `status`. S5 kills the module's host process (`logos_host --name ferrata_monitor_module`)
+with SIGKILL while the daemon waits on a candidate, loads the module again, and the restarted daemon
+cancels from the state file; a second daemon on the same state file is refused while the first runs (the
+file lock holds inside one process); S10's SIGTERM becomes `stop`: exit 0, a `stopped` alert, the state
+saved, the lock free. Every critical alert reached the pager through `--alert-cmd`, run by the module.
+The cancellations used 41,477 gas (41,468 in S5), as with the binary; the smallest margin left before a deadline was 2,991 s (S5, the restart). The module's host process held 73,940 kB (dev) and 49,780 kB (portable) resident when S5 killed it; the binary's daemon, in the same run natively, 78,376 kB.
+
+### The updater through the module
+
+`updater-e2e.sh`: `start` with the module's configuration (`ferrata_updater_module/dev/recorded.toml`: the
+harness ledger, mainnet and Sepolia, two recorded sources each), `status` every 5 s until both instances
+were up to date, `metrics`, `stop`. Both flavours: mainnet at slot 15,631,808 with root `530599ec…2328` and Sepolia at 11,556,000 with root `d31b7d34…f3cc`, the lab's final roots (`lez/lab/README.md`), 4 and 35 jobs applied, 187 transactions applied and none refused (`metrics`), both instances healthy, in 118 s (the daemon ran 213 and 666 rounds by the time `status` saw it up to date: with `poll_secs = 0` it goes on reading the chain and the sources while up to date). Natively, `run` until up to date: the same roots in 172 rounds, 119 s. `start` with `ledger = "sequencer"` returns the binary's refusal. `version()` through the module reports `RISC0_DEV_MODE=1` and the program id above.
+
+### Calls through Logos Core, five modules
+
+| Module | Calls | Requests from |
+|---|---:|---|
+| `ferrata_attest_module` | 11 | the attestation fixtures (as before) |
+| `ferrata_bridge_module` | 13 | `bridge/vectors/*-v2.json` (as before) |
+| `ferrata_attestor_module` | 12 | the zone run's records: `tier` (= its `tier.json`), `deployment`, `pubkey` (the devnet seq-0 key = its channel key), `certify` (= its `cert-0.json`), `attest` (= its `att-0.json`), `verify` (four), `collect` 3 of 4 (= the proven input) and 2 of 4 (refused), `assemble` (the program's refusal), a certificate of another key (refused), an unreadable request |
+| `ferrata_monitor_module` | 8 | `check` on a node view: pass, `tipConflict`, `keySetNotLive`, wait; `node_view` of the lab's record (final height 258); an unbounded `run` refused; an unreadable request |
+| `ferrata_updater_module` | 4 | `version`, `check_config` of the module's and the binary's example configuration, one with an unknown field refused |
+
+Every reply through the dev and the portable Logos Core equals the native reply and meets its
+expectations; calls take at most 0.2 s (`logosctl call`, process start included). One expectation of the
+earlier module was stale and was corrected first: `requests.py` still expected integration6's instance id
+for the p1899 checkpoint after lc-a1 added `ws_period_epochs` to the configuration (e3ba34e changed the
+configuration and the calls crate's own test, `0x39860f39…b79c`, but not this request).
+
+### Steps (12 November, the final run)
+
+`check.sh` at commit `1388827` (the Logos packages cached by the earlier runs on the same box): 765 s in
+all; native tests 27.6 s, native calls 1.9 s, the three daemons' jobs natively 153.2 s, `build-lgx` (five)
+39.2 s, `build-lgx-portable` 42.5 s; through the dev Logos Core: `e2e.sh` 68.0 s, attestor 4.3 s, updater
+118.5 s, monitor 40.0 s; through the portable one: 71.1, 4.6, 118.2 and 38.4 s. From the cold container: the
+dev `logosctl` 1,848.6 s (the warm-up run), the portable one 461.0 s; the first complete Nix builds of the
+three new crates (their whole dependency trees: alloy with aws-lc-sys, LEZ v0.4.0-rc1 with risc0-zkvm and
+blst) were inside one `build-lgx` of 355.9 s for all five modules (it stopped later, at 3 below);
+`release-local.sh` for five 45 s once cached (318 s the first time), `catalog-install.sh` with the three jobs
+148 s, the live zone 351 s. Steps: [`results/check-2026-11-12/steps.md`](results/check-2026-11-12/steps.md).
+
+### What failed on the way (12 November)
+
+1. **The socket path.** With this worktree's `TMPDIR` (68 bytes), every module's host process died at load:
+   Logos Core puts each module's socket in `TMPDIR` (`logos_<module>_<id>`), a Unix socket path holds 107
+   bytes, `logos_host` logged "failed to listen" and then crashed on SIGSEGV ("the module process died on
+   signal 11 before it reported that it had loaded"). The cold warm-up run lost its portable half to it.
+   The scripts that start a Logos Core now refuse a `TMPDIR` (or `LOGOS_TMPDIR`) over 62 bytes.
+2. **The scaffold's imports.** The generated `provider_gen.rs` imports `std::sync::Mutex`; the three crates
+   imported it too (E0252). Every dependency (alloy with aws-lc-sys, LEZ, risc0-zkvm, blst) had built.
+3. **`;` in `metadata.json`.** `LogosModule.cmake` reads the file into an unquoted CMake string; the new
+   descriptions' semicolons split it ("logos_module: NAME is required"). `check.sh` now refuses one.
+4. **Rust 1.98.1.** The builder's rust-overlay (locked 26 August 2026) stops at 1.98.0; LEZ pins 1.98.1.
+   The updater module builds with 1.98.0 (LEZ's crates deny warnings; none was raised).
+5. **An empty git history.** The box's copy of the tree has no commits; `git rev-parse HEAD` printed `HEAD`
+   before failing, which put a newline into `STAGED.json`. The staging scripts use `--verify -q`.
+6. **`Result::err`.** A trait method named `err` on `Result` is shadowed by the inherent one (compile error,
+   caught natively).
+7. **anvil.** In one run through the module, forge sent the rule (A) vault's two deploy transactions at
+   once; anvil 1.3.6 mined the first and kept the vault's pending for good, even through `evm_mine`. That
+   run's monitor job was stopped by hand and failed; the test now deploys with `forge script --slow`, and
+   the final run passed in both flavours.
+8. **Two checks of mine.** The calls' module filter in `check.sh` (jq) selected nothing in the first full
+   run, and the live zone script's tier check had a jq precedence error; both fixed before the final run.
+
+### Not done (12 November)
+
+What `README.md` lists under "Left out" for the three modules: the daemons use no Logos Core module for
+network or keys (the attestor reads its node over plain HTTP and keeps keys in files; the monitor sends its
+own Ethereum transactions with a key file; the updater reads beacon APIs or recorded directories);
+attestations are published as files; the monitor still reads node views through its adapter, with no client
+of the LEZ or Logos Blockchain nodes' RPCs; the updater module runs only on the in-process chain (no
+sequencer backend), so two of them cannot share a chain and the A3 gate remains the binary's test; the
+live zone had one Logos Blockchain node for the four Cores and no bridge program, and its collected input
+was checked by the rule natively, not proven; nothing published; Linux x86-64 only.
+
+## The attestation and bridge modules, 11 November 2026
+
 **Two modules, built, packaged, loaded and called; a log attested end to end through them.** On
 11 November 2026, `modules/scripts/check.sh` (repository at commit `2f91c14`) built
 `ferrata_attest_module` (seven methods) and `ferrata_bridge_module` (seven) with logos-module-builder,
@@ -11,7 +162,7 @@ module built, and the instance's state read back, 36 of 36 checks each. Step fai
 ([`results/check-2026-11-11/summary.md`](results/check-2026-11-11/summary.md)). The release action's
 steps ran locally for both packages ([`catalog/`](catalog/README.md)).
 
-## Where it ran
+### Where it ran
 
 The project's Modal build box (workspace `ohyou`), a gVisor container (`Linux 4.19.0-gvisor x86_64`,
 64 GiB; `nproc` reported 2, the box allows up to 32 threads), started cold for this worktree: Nix
@@ -20,7 +171,7 @@ the first run (below); Logos packages from source (the Logos binary cache was no
 only edits, `git`, and reads of public Logos repositories. Every number below is from the runs' own
 output, files under `results/check-2026-11-11/`, `e2e/native/` and `catalog/dry-run/`.
 
-## Methods
+### Methods
 
 | Module | Methods (`logosctl module show`: the trait's methods with their descriptions) |
 |---|---|
@@ -29,7 +180,7 @@ output, files under `results/check-2026-11-11/`, `e2e/native/` and `catalog/dry-
 
 Interfaces: [`README.md`](README.md).
 
-## Calls through Logos Core (24, dev and portable)
+### Calls through Logos Core (24, dev and portable)
 
 | Requests | Source | Calls | Result |
 |---|---|---:|---|
@@ -39,7 +190,7 @@ Interfaces: [`README.md`](README.md).
 Every reply through the dev and the portable Logos Core equals the native reply (JSON, key order
 ignored). Calls take 0.0–0.1 s (`logosctl call` wall clock, process start included).
 
-## A log end to end (`e2e.sh`, 36 checks; native, dev and portable: each 36 of 36)
+### A log end to end (`e2e.sh`, 36 checks; native, dev and portable: each 36 of 36)
 
 `recorded_rpc.py` serves the recorded block 26,384,851 (`eth_getBlockByNumber`,
 `eth_getBlockReceipts`) on 127.0.0.1; the chain is the `lez/` harness's Stage 4 (the mainnet instance
@@ -65,7 +216,7 @@ checkpoint (`checkpoint_attest_fixture`), which the first run could not confirm.
 answered 4 requests per run (3,301,898 bytes). The e2e took 55.7 s (dev) and 51.9 s (portable), most
 of it the harness rebuilding the Stage 4 chain for each transaction; each module call 0.04–0.10 s.
 
-## Packages and the release action's steps
+### Packages and the release action's steps
 
 | Artefact | Bytes |
 |---|---:|
@@ -82,7 +233,7 @@ sidecars (sha256 `dce2086a…` and `35ed5eb1…`, root hashes, manifests); `inde
 `logos-modules-release-tool` `v1.3` (`94462e6`) `index.py`: schema 2, repository `ferrata-modules`,
 2 packages; `index.py validate-repo` on `catalog/logos-repo.json`: OK. Nothing was published.
 
-## Installed from the catalog (`catalog-install.sh`)
+### Installed from the catalog (`catalog-install.sh`)
 
 A headless Logos Core installed both modules *from the catalog* as a client does: the dry run's
 `index.json` and packages and `catalog/logos-repo.json` served on 127.0.0.1 over HTTPS (`logosctl`
@@ -95,7 +246,7 @@ One command failed, for a reason outside this catalog: `catalog refresh` also fe
 built-in official catalog (GitHub), whose certificate cannot be verified with the throwaway CA bundle
 (curl error 60), even after `catalog disable`. Log: `catalog/install-test/log.txt`.
 
-## Steps (final run, seconds)
+### Steps (final run, seconds)
 
 Everything cached by the earlier runs on the same box: `build-lgx` (both modules) 94.7, `build-lgx-portable`
 21.2, daemon start, install and load under 1 each, `dev-e2e` 55.7, `portable-e2e` 51.9; whole run 286 s.
@@ -105,7 +256,7 @@ portable package 11.2 s, portable `logosctl` 518.3 s; its 11 calls again equal t
 portable (its summary counts 2 failures only because `summary.py` changed under it to require the e2e,
 which that script did not run). The harness's test build: 456 s.
 
-## What failed on the way (all fixed, re-run)
+### What failed on the way (all fixed, re-run)
 
 1. `check.sh`'s default output `modules/out` was not ignored by git, so the box copied it back; now ignored.
 2. With a tab `IFS`, `read` collapsed the empty request field of the `version` calls, which then got the
@@ -116,7 +267,7 @@ which that script did not run). The harness's test build: 456 s.
 5. `release-local.sh` read Nix's progress lines as the out path, and `index.py` named the repository
    `unknown` outside the catalog's directory; both fixed.
 
-## Not done
+### Not done
 
 What `README.md` lists under "Left out": the modules do not go through Logos Core's Ethereum, key and
 transaction modules (plain `http://` JSON-RPC; messages built, not signed or sent; the harness executes
