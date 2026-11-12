@@ -1125,7 +1125,6 @@ def write_markdown(out_dir, results, lez_json, scenario, n, half):
           f"the same in universe B (other commitments, public destinations): {results['gas']['deposit A equals B']}",
           f"- Ethereum gas used, releases: distinct values {results['gas']['release distinct values']} (NOut of the "
           f"release statement), {results['gas']['release naive distinct values']} (naive)"]
-    s += proofs_markdown(pr, n)
     rp = results["receipts_by_position"]
     s.append(f"- execution gas by position, minus the first: private claims {rp['claims private']}; plaintext claims "
              f"{rp['claims plaintext']}; burns {rp['burns']}; releases (Ethereum) {rp['releases']}")
@@ -1134,6 +1133,7 @@ def write_markdown(out_dir, results, lez_json, scenario, n, half):
     for k, v in results["lez_receipts"].items():
         s.append(f"- LEZ, {k}: " + "; ".join(f"{n[8:]} {vals if len(vals) > 3 else ', '.join(map(str, vals))}"
                                               for n, vals in v.items()))
+    s += proofs_markdown(pr, n)
     s.append("")
     (out_dir / "summary.md").write_text("\n".join(s) + "\n")
     # Section B6, compared.
