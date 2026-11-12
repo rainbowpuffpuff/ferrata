@@ -22,12 +22,17 @@ summary.md. Four parts:
    the claims and half the releases have happened; no per-item query exists in its interface.
 
 The ground truth (truth.json) is read only to score the adversary and the recovery.
+
+With real proofs (scripts/privacy/real.sh) the same analysis runs on real receipts: LEZ's proof is split by the
+collector into its parts (seal, control id, claim, ...) and the release's Groth16 seal into selector and proof, and
+each part is classified and tested like any other field (a fifth part, "proofs", reports what was checked about them).
 """
 
 import hashlib
 import hmac
 import json
 import math
+import os
 import re
 import sys
 from collections import Counter, defaultdict
@@ -111,6 +116,133 @@ def burn_id(cid, index, leaf):
     return sha(b"ferrata/burn/v1" + cid + u64(index) + leaf)
 
 
+# RISC Zero receipts (risc0-zkvm 3.0.5), read from the public bytes alone: the claim's borsh layout and digest rules
+# (`ReceiptClaim`, `Output`, `SystemState`, tagged structs and lists) and the seal's output words, BabyBear elements in
+# Montgomery form (`SuccinctReceipt::verify_integrity_with_context` decodes them with `as_u32`).
+BB_P = 2013265921
+BB_RINV = pow((1 << 32) % BB_P, -1, BB_P)
+ZERO32 = bytes(32)
+
+
+def tagged_struct(tag, down, data=()):
+    return sha(sha(tag.encode()) + b"".join(down) + b"".join(w.to_bytes(4, "little") for w in data)
+               + len(down).to_bytes(2, "little"))
+
+
+def claim_ok_digest(image_id, journal):
+    """The digest of ReceiptClaim::ok(image_id, journal)."""
+    post = tagged_struct("risc0.SystemState", [ZERO32], [0])
+    output = tagged_struct("risc0.Output", [sha(journal), ZERO32])
+    return tagged_struct("risc0.ReceiptClaim", [ZERO32, image_id, post, output], [0, 0])
+
+
+def parse_claim(buf):
+    """borsh MaybePruned<ReceiptClaim> -> (its digest, the journal if it is there unpruned)."""
+    pos = [0]
+
+    def take(n):
+        if pos[0] + n > len(buf):
+            raise ValueError("short claim")
+        pos[0] += n
+        return buf[pos[0] - n:pos[0]]
+
+    u8 = lambda: take(1)[0]
+    u32 = lambda: int.from_bytes(take(4), "little")
+
+    def maybe(value):
+        t = u8()
+        if t == 0:
+            return value()
+        if t == 1:
+            return take(32), None
+        raise ValueError("MaybePruned tag")
+
+    def option(value):
+        t = u8()
+        if t == 0:
+            return ZERO32, None
+        if t == 1:
+            return value()
+        raise ValueError("Option tag")
+
+    def system_state():
+        pc = u32()
+        return tagged_struct("risc0.SystemState", [take(32)], [pc]), None
+
+    def journal():
+        j = take(u32())
+        return sha(j), j
+
+    def assumptions():
+        ds = [maybe(lambda: (tagged_struct("risc0.Assumption", [take(32), take(32)]), None))[0] for _ in range(u32())]
+        d = ZERO32
+        for e in reversed(ds):
+            d = tagged_struct("risc0.Assumptions", [e, d])
+        return d, None
+
+    def output():
+        jd, j = maybe(journal)
+        ad, _ = maybe(assumptions)
+        return tagged_struct("risc0.Output", [jd, ad]), j
+
+    def uninhabited():
+        raise ValueError("Input is uninhabited")
+
+    def claim():
+        pre, _ = maybe(system_state)
+        post, _ = maybe(system_state)
+        t = u8()
+        code = (t, u32()) if t in (0, 1) else {2: (2, 0), 3: (2, 2)}[t]
+        inp, _ = maybe(lambda: option(uninhabited))
+        out, j = maybe(lambda: option(output))
+        return tagged_struct("risc0.ReceiptClaim", [inp, pre, post, out], list(code)), j
+
+    d, j = maybe(claim)
+    if pos[0] != len(buf):
+        raise ValueError("trailing bytes after the claim")
+    return d, j
+
+
+def seal_claim_digest(part):
+    """The claim digest a succinct seal's output words 16..32 carry (16-bit halves, Montgomery form), or None."""
+    hs = [(int.from_bytes(part[4 * i:4 * i + 4], "little") * BB_RINV) % BB_P for i in range(16)]
+    return None if any(h >= 1 << 16 for h in hs) else b"".join(bytes([h & 0xFF, h >> 8]) for h in hs)
+
+
+def receipt_checks(x, circuit_id):
+    """From a private LEZ record's public bytes: is the receipt's claim ReceiptClaim::ok(circuit id, journal), with
+    the journal the frame LEZ builds from the transaction's message (a prefix of the message's bytes); does the
+    seal's output carry that claim's digest."""
+    f = dict(x.fields)
+    if "proof.claim" not in f:
+        return {}
+    out = {}
+    try:
+        digest, journal = parse_claim(f["proof.claim"])
+    except (ValueError, KeyError) as e:
+        return {"claim_parsed": False, "error": str(e)}
+    tx = dict(x.blobs)["tx"]
+    out["claim_parsed"] = True
+    out["journal_is_message_prefix"] = (journal is not None and int.from_bytes(journal[:4], "little") == len(journal) - 4
+                                        and tx[1:len(journal) - 3] == journal[4:])
+    out["claim_is_ok_of_journal"] = journal is not None and digest == claim_ok_digest(circuit_id, journal)
+    if "proof.seal.claim_digest" in f:
+        out["seal_outputs_carry_claim_digest"] = seal_claim_digest(f["proof.seal.claim_digest"]) == digest
+    return out
+
+
+def control_seal(tx):
+    """The STARK part (seal words 32..) of the receipt that ends a private LEZ transaction's bytes, or None."""
+    for p in range(len(tx) - 8):
+        if tx[p:p + 4] == bytes(4) and int.from_bytes(tx[p + 4:p + 8], "little") == len(tx) - p - 8:
+            rc = tx[p + 8:]
+            if rc[0] != 1:
+                return None
+            n = int.from_bytes(rc[1:5], "little")
+            return rc[5 + 128:5 + 4 * n]
+    return None
+
+
 def b(x):
     x = x[2:] if x.startswith("0x") else x
     return bytes.fromhex(x)
@@ -138,6 +270,7 @@ class Rec:
         self.blobs = []   # (name, bytes): everything public, in a fixed order
         self.fields = []  # (name, bytes): named parts (values that also occur inside the blobs)
         self.time = []    # values that are time or order (block id, timestamps)
+        self.meta = {}    # not public: how the record was made (proving time, receipt checks)
 
     def corpus(self):
         return b"".join(v for _, v in self.blobs)
@@ -167,6 +300,7 @@ def load_lez(data):
         x.fields.append(("commitment_root.after", b(r["commitment_root_after"])))
         x.diff = [(b(d["account"]), b(d["before"]), b(d["after"])) for d in r["diff"]]
         x.time = [int(r["block_id"]).to_bytes(8, "little"), int(r["time_ms"]).to_bytes(8, "little")]
+        x.meta = r.get("meta") or {}
         recs.append(x)
     return recs
 
@@ -188,8 +322,23 @@ def load_eth(lines):
         else:
             names = ["request.token", "request.denomIndex", "request.recipient", "request.relayer",
                      "request.relayFee", "request.burnRoot", "request.nullifier", "seal.offset", "seal.length"]
-        for i, w in enumerate(words):
-            x.fields.append((f"calldata.{names[i]}" if i < len(names) else f"calldata.seal[{i - len(names)}]", w))
+        seal_len = int.from_bytes(words[8], "big") if r["kind"] == "release" else 0
+        if seal_len == 260:
+            # selector (4 bytes of the verifier parameters' digest) || the Groth16 proof: pi_A (G1, 64 bytes),
+            # pi_B (G2, 128), pi_C (G1, 64), as risc0-ethereum's RiscZeroGroth16Verifier takes it; then ABI padding.
+            seal = cd[4 + 32 * 9:4 + 32 * 9 + 260]
+            for i, w in enumerate(words[:9]):
+                x.fields.append((f"calldata.{names[i]}", w))
+            x.fields += [("calldata.seal.selector", seal[:4]), ("calldata.seal.groth16.a", seal[4:68]),
+                         ("calldata.seal.groth16.b", seal[68:196]), ("calldata.seal.groth16.c", seal[196:260]),
+                         ("calldata.seal.padding", cd[4 + 32 * 9 + 260:])]
+        else:
+            for i, w in enumerate(words):
+                x.fields.append((f"calldata.{names[i]}" if i < len(names) else f"calldata.seal[{i - len(names)}]", w))
+        # A transaction's receipt shows its gas used, which includes the calldata's cost (EIP-2028: 4 per zero
+        # byte, 16 per other byte) on top of the execution gas the Foundry call measures: a function of the calldata.
+        zeros = cd.count(0)
+        x.fields.append(("receipt.calldataGas", word(4 * zeros + 16 * (len(cd) - zeros))))
         for li, lg in enumerate(r["logs"]):
             topics = [b(t) for t in lg["topics"]]
             data = b(lg["data"])
@@ -224,6 +373,7 @@ def load_eth(lines):
 # ------------------------------------------------------------------------------------------------
 
 NULLIFIER, FRESH, USER, TIME = "nullifier", "fresh randomness", "the user's own public address", "time / order"
+DERIVED = "a function of public data"
 CLASSES = [
     # LEZ: the bridge's nullifier and the account it creates; LEZ's own private-state plumbing.
     (r"Issue\.nullifier$", NULLIFIER, "N"),
@@ -238,6 +388,11 @@ CLASSES = [
     (r"Burn\.(r|memo|mac|c_out)$", FRESH, "the burn note (tag, encrypted recipient, mac, COut)"),
     (r"^derived\.burn_record_account$", FRESH, "the burn record account, a PDA of H(note)"),
     (r"^witness_set$", FRESH, "the proof (dev mode: a fake receipt) or the submitter's signature"),
+    (r"^proof\.seal\.stark$", FRESH,
+     "LEZ's receipt: the STARK proper (trace commitments, FRI openings) of a zero-knowledge proof, drawn by the prover"),
+    (r"^calldata\.seal\.groth16\.(a|b|c)$", FRESH,
+     "the release's Groth16 proof (pi_A, pi_B, pi_C), randomized by the prover"),
+    (r"^receipt\.calldataGas$", DERIVED, "the calldata's gas (EIP-2028), a function of the calldata"),
     (r"(Issue|Claim)\.time_ms$|^validity$|^nonces$|^block\.(id|timestamp|number)$", TIME, "time"),
     (r"^receipt\.fee_base$", TIME, "LEZ: the base fee at the block's opening (moves with the chain's history)"),
     (r"^receipt\.gasUsed\.deposit$", TIME, "gas used: depends on the leaf position (order), see the summary"),
@@ -370,8 +525,14 @@ def derived(x, meta):
 def items(x, ctx, keep_order_state=False):
     """The public byte strings the adversary reads, without the allowed signals: time and order
     (block ids, timestamps, a claim's time and validity window, nonces, commitment-set roots, and
-    the cumulative state of accounts every operation changes), and without the proof (a dev-mode
-    fake receipt here; RISC Zero's zero knowledge is assumed for a real one)."""
+    the cumulative state of accounts every operation changes). A private transaction's proof is read part by
+    part (`proof.*`, the collector splits it): a real receipt's seal and a release's Groth16 seal are read as
+    any other bytes; only a public transaction's witness set (the submitter's signature) is left out, and so are
+    fields shown to be a function of the record's own public data (class DERIVED: the receipt's claim, checked
+    to be ReceiptClaim::ok(circuit id, the journal rebuilt from the message), and the claim digest in the seal's
+    outputs): they add nothing to the message the adversary reads field by field, and read as one string (a
+    fake receipt's claim holds the whole message) they would make windows across the boundaries of a sorted
+    set, the noise the field split avoids."""
     out = []
     if x.chain == "lez":
         # Each named field is an item of its own; the rest of the transaction (its structure) is one
@@ -382,7 +543,7 @@ def items(x, ctx, keep_order_state=False):
         for n, v in sorted(x.fields, key=lambda f: len(f[1]), reverse=True):
             if len(v) >= 4:
                 tx = tx.replace(v, b"")
-            if classify(n)[0] != TIME and norm(n) != "witness_set" and not n.startswith(("block.", "commitment_root.")):
+            if classify(n)[0] not in (TIME, DERIVED) and norm(n) != "witness_set" and not n.startswith(("block.", "commitment_root.")):
                 out.append(v)
         out.append(tx)
         out += [v for name, v in x.blobs if name.startswith("event")]
@@ -391,7 +552,7 @@ def items(x, ctx, keep_order_state=False):
             if keep_order_state or acc not in ctx["shared"]:
                 out += [before, after]
     else:
-        out += [v for n, v in x.fields if classify(n)[0] != TIME and not n.startswith("block.")]
+        out += [v for n, v in x.fields if classify(n)[0] not in (TIME, DERIVED) and not n.startswith("block.")]
         out += [v for name, v in x.blobs if name == "log.emitter"]
         for acc, slot, old, new in x.writes:
             if keep_order_state or ctx["slot_class"].get(ctx["slot_names"].get(slot, "")) != TIME:
@@ -402,21 +563,32 @@ def items(x, ctx, keep_order_state=False):
     return out
 
 
-def features(byte_items):
-    """16-byte windows with at least 12 non-zero bytes (hash-like content, not padded small numbers)."""
+def features(byte_items, keep=None):
+    """16-byte windows with at least 12 non-zero bytes (hash-like content, not padded small numbers); with
+    `keep`, only those in it."""
     out = set()
     for data in byte_items:
         for i in range(len(data) - N_WINDOW + 1):
             w = data[i:i + N_WINDOW]
-            if N_WINDOW - w.count(0) >= 12:
+            if (keep is None or w in keep) and N_WINDOW - w.count(0) >= 12:
                 out.add(w)
     return out
 
 
 def attack(left, right, truth_left, truth_right, meta, ctx_l, ctx_r, use_derived=True, keep_order_state=False):
     n = len(left)
-    lf = [features(items(x, ctx_l, keep_order_state) + (derived(x, meta) if use_derived else [])) for x in left]
-    rf = [features(items(y, ctx_r, keep_order_state) + (derived(y, meta) if use_derived else [])) for y in right]
+    li = [items(x, ctx_l, keep_order_state) + (derived(x, meta) if use_derived else []) for x in left]
+    ri = [items(y, ctx_r, keep_order_state) + (derived(y, meta) if use_derived else []) for y in right]
+    # A window counts only if both sides have it, so the larger side (real receipts: 230 kB a record) keeps only
+    # windows the smaller side has: the same scores, without holding every window of every receipt.
+    if sum(len(v) for it in li for v in it) <= sum(len(v) for it in ri for v in it):
+        lf = [features(it) for it in li]
+        union = set().union(*lf)
+        rf = [features(it, union) for it in ri]
+    else:
+        rf = [features(it) for it in ri]
+        union = set().union(*rf)
+        lf = [features(it, union) for it in li]
     cl = Counter(w for s in lf for w in s)
     cr = Counter(w for s in rf for w in s)
     score = [[0.0] * n for _ in right]
@@ -514,8 +686,20 @@ DESCRIBE = [  # what a field is, for the rows the classes do not describe
     (r"^fee$|^nonces$", "fee declaration / nonces of the public submitter (the harness's payer)"),
     (r"^calldata\.index$|^event\.Deposit\.index$", "j = depositCount[depositor] (0 for a fresh depositor)"),
     (r"relayFee$", "the registered relay fee"),
+    (r"^calldata\.seal\.selector$", "the Groth16 verifier's selector (the first 4 bytes of its parameters' digest)"),
+    (r"^calldata\.seal\.(offset|length)$", "the seal's ABI offset and length"),
+    (r"^calldata\.seal\.padding$", "the seal's ABI padding"),
     (r"^calldata\.seal", "the proof (mock verifier here: a constant; Groth16 on a real deployment)"),
     (r"^witness_set$", "proof (dev mode) or signature"),
+    (r"^witness_set\.signatures$", "the witness set's signatures: none (the sender is an alias)"),
+    (r"^proof\.length$", "the proof's length: the receipt's size in bytes"),
+    (r"^proof\.kind$", "the receipt's kind (borsh tag of InnerReceipt: 1 succinct, 3 fake)"),
+    (r"^proof\.seal\.length$", "the seal's length in 32-bit words"),
+    (r"^proof\.seal\.control_root$", "seal outputs: the recursion control root (which recursion programs are allowed)"),
+    (r"^proof\.control_id$", "the recursion program that made the final receipt"),
+    (r"^proof\.hashfn$", "the STARK's hash function"),
+    (r"^proof\.verifier_parameters$", "the digest of the verifier parameters (RISC Zero's version)"),
+    (r"^proof\.control_inclusion_proof$", "the control id's Merkle path under the control root"),
 ]
 
 
@@ -660,6 +844,76 @@ def recover(user, meta, deposits, spent_n, notes, released, gap):
 
 # ------------------------------------------------------------------------------------------------
 
+def spread(vals):
+    vs = sorted(vals)
+    return {"min": vs[0], "median": vs[len(vs) // 2] if len(vs) % 2 else (vs[len(vs) // 2 - 1] + vs[len(vs) // 2]) / 2,
+            "max": vs[-1], "sum": sum(vs), "n": len(vs)} if vs else None
+
+
+def proof_summary(recs):
+    """What the collector recorded about each record's proof (not public) and how each proof field varies."""
+    ms = [x.meta for x in recs]
+    out = {"records": len(recs), "kinds": sorted({m["kind"] for m in ms if m.get("kind")})}
+    for key in ("prove_s", "proof_bytes", "tx_bytes", "seal_words", "journal_bytes"):
+        out[key] = spread([m[key] for m in ms if key in m])
+    for key in ("claim_is_ok_of_journal", "seal_outputs_carry_claim_digest", "claim_is_pruned"):
+        vals = [m[key] for m in ms if key in m]
+        out[key] = [sum(1 for v in vals if v is True), len(vals)]
+    f = defaultdict(list)
+    for x in recs:
+        for n, v in x.fields:
+            if n.startswith(("proof.", "witness_set", "calldata.seal", "receipt.calldataGas")):
+                f[n].append(v)
+    out["fields"] = {n: {"distinct": len(set(vs)), "bytes": sorted({len(v) for v in vs}), "class": classify(n)[0]}
+                     for n, vs in sorted(f.items())}
+    return out
+
+
+def shared_windows(blobs, controls=()):
+    """Shared runs between different records' blobs ((record id, user, bytes)): every 16-byte window with at least
+    12 non-zero bytes at offsets that are multiples of 4 is indexed, every window at any offset is looked up, so
+    any common run of 19 bytes or more between two records is found (at any alignment). Returns how many indexed
+    windows are shared by how many records, and the pairs of records that share one, with whether they are the
+    same user's."""
+    where = defaultdict(set)
+    for rid, _, data in blobs:
+        for i in range(0, len(data) - N_WINDOW + 1, 4):
+            w = data[i:i + N_WINDOW]
+            if N_WINDOW - w.count(0) >= 12:
+                where[w].add(rid)
+    user = {rid: u for rid, u, _ in blobs}
+    hits = defaultdict(set)
+    for rid, _, data in blobs:
+        for i in range(len(data) - N_WINDOW + 1):
+            owners = where.get(data[i:i + N_WINDOW])
+            if owners:
+                for o in owners:
+                    if o != rid:
+                        hits[tuple(sorted((rid, o)))].add(data[i:i + N_WINDOW])
+    by = Counter(len(v) for v in where.values() if len(v) > 1)
+    pairs = [{"records": list(k), "same_user": user[k[0]] == user[k[1]], "windows": len(v)} for k, v in sorted(hits.items())]
+    kind = lambda rid: rid.split(":")[1]
+    cats = defaultdict(list)
+    for p in pairs:
+        a, c = p["records"]
+        cross = kind(a) != kind(c)
+        cats[f"{'-'.join(sorted((kind(a), kind(c))))}{', same user' if cross and p['same_user'] else ''}"].append(p["windows"])
+    out = {"indexed_windows": len(where), "shared_by_n_records": sorted(by.items()), "pairs_total": len(pairs),
+           "record_pairs_possible": len(blobs) * (len(blobs) - 1) // 2,
+           "same_user_pairs": sum(1 for p in pairs if p["same_user"]),
+           "windows_per_pair": {k: spread(v) for k, v in sorted(cats.items())}}
+    # Unrelated receipts of the same recursion circuit (other statements, other programs, another day): how many
+    # windows a record's seal shares with each, against how many it shares with another record of this run.
+    for name, seal in controls:
+        cw = {seal[i:i + N_WINDOW] for i in range(len(seal) - N_WINDOW + 1)}
+        per = []
+        for rid, _, data in blobs:
+            per.append(sum(1 for i in range(0, len(data) - N_WINDOW + 1, 4)
+                           if data[i:i + N_WINDOW] in cw and N_WINDOW - data[i:i + N_WINDOW].count(0) >= 12))
+        out.setdefault("unrelated_receipts", {})[name] = spread(per)
+    return out
+
+
 def main():
     data_dir, out_dir = Path(sys.argv[1]), Path(sys.argv[2])
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -688,6 +942,22 @@ def main():
     }
     for k, v in G.items():
         assert len(v) == n_users, (k, len(v))
+
+    # The proof's claim and the claim digest in a real seal's public outputs are functions of the transaction's
+    # message, if (and only if) the collector's checks held for every private transaction: then they may vary.
+    # Checked here from the public bytes alone (receipt_checks); the collector's own claim check must agree.
+    private_txs = [x for x in lez if x.variant == "private" and x.kind in ("claim", "burn")]
+    circuit_id = b(lez_json.get("circuit_image_id") or "")
+    public_checks = {x.id: receipt_checks(x, circuit_id) for x in private_txs}
+    if private_txs and all(c.get("journal_is_message_prefix") and c.get("claim_is_ok_of_journal") and
+                           x.meta.get("claim_is_ok_of_journal") is not False
+                           for x, c in ((x, public_checks[x.id]) for x in private_txs)):
+        EXPLAINED["proof.claim"] = (DERIVED, "the receipt's claim: ReceiptClaim::ok(circuit id, journal), the journal "
+                                             "the frame of the transaction's message (checked from the public bytes)")
+    succinct = [x for x in private_txs if "proof.seal.claim_digest" in dict(x.fields)]
+    if succinct and all(public_checks[x.id].get("seal_outputs_carry_claim_digest") for x in succinct):
+        EXPLAINED["proof.seal.claim_digest"] = (DERIVED, "seal outputs: the claim's digest in 16-bit halves (Montgomery "
+                                                         "form), that of `proof.claim` (checked from the public bytes)")
 
     # Ground truth: the user behind each record.
     co, po, bo, ro = truth["claim_order"], truth["plaintext_order"], truth["burn_order"], truth["release_order"]
@@ -739,6 +1009,43 @@ def main():
     acct_time = {vault, relayer}
 
     results = {"gate": {}, "adversary": {}, "order_only": {}, "recovery": {}, "fields": {}, "sizes": {}}
+    # Proofs: the receipts on LEZ and the release seals on Ethereum, what was checked and how they vary.
+    results["proofs"] = {
+        "mode": scenario.get("proofs", lez_json.get("proofs", "dev")),
+        "circuit_image_id": lez_json.get("circuit_image_id"),
+        "steps": {k: proof_summary(G[k]) for k in ("claim, private (default)", "burn, private holding",
+                                                    "release, NOut of the release statement",
+                                                    "release, naive NOut = burnId")},
+    }
+    for k in ("claim, private (default)", "burn, private holding"):
+        cs = [public_checks[x.id] for x in G[k]]
+        results["proofs"]["steps"][k]["public_checks"] = {
+            key: [sum(1 for c in cs if c.get(key) is True), sum(1 for c in cs if key in c)]
+            for key in ("claim_parsed", "journal_is_message_prefix", "claim_is_ok_of_journal",
+                        "seal_outputs_carry_claim_digest")}
+    user_of = {}
+    for k, kind in (("claim, private (default)", "claim"), ("burn, private holding", "burn"),
+                    ("release, NOut of the release statement", "release")):
+        for x in G[k]:
+            user_of[x.id] = {"claim": truth["claim_order"], "burn": truth["burn_order"],
+                             "release": [truth["burn_order"][i] for i in truth["release_order"]]}[kind][x.seq]
+    def part(x, name):
+        return b"".join(v for n, v in x.fields if n == name)
+    seal_blobs = [(x.id, user_of[x.id], part(x, "proof.seal.stark")) for k in ("claim, private (default)", "burn, private holding")
+                  for x in G[k] if part(x, "proof.seal.stark")]
+    groth_blobs = [(x.id, user_of[x.id], part(x, "calldata.seal.groth16.a") + part(x, "calldata.seal.groth16.b") +
+                    part(x, "calldata.seal.groth16.c")) for x in G["release, NOut of the release statement"]
+                   if part(x, "calldata.seal.groth16.a")]
+    controls = []
+    for path in [p for p in os.environ.get("FERRATA_PRIVACY_CONTROL_RECEIPTS", "").split(",") if p]:
+        seal = control_seal(Path(path).read_bytes())
+        if seal:
+            controls.append((Path(path).name, seal))
+    if seal_blobs:
+        results["proofs"]["shared_windows_lez_seals"] = shared_windows(seal_blobs, controls)
+    if groth_blobs:
+        results["proofs"]["shared_windows_groth16"] = shared_windows(groth_blobs)
+        results["proofs"]["shared_windows_groth16_vs_lez_seals"] = shared_windows(groth_blobs + seal_blobs)
     # Receipts: gas varies; it is order (time) only if it follows the position, not the user.
     def by_seq(k, name, endian):
         return [int.from_bytes(next(v for n, v in x.fields if n == name), endian) for x in G[k]]
@@ -910,11 +1217,57 @@ def main():
                       "recovery": {k: v for k, v in rec.items() if k != "per_user"}}, indent=1))
 
 
+def proofs_markdown(pr, n):
+    """The proofs section of summary.md."""
+    if not pr:
+        return []
+    out = ["", "## Proofs", "",
+           "What the collectors recorded about each proof (not public: proving time, the checks) and how each "
+           "part of the proof varies across the records of a step (public).", "",
+           "| step | receipt kind | proof bytes | transaction bytes | seal words | proving time, s (min / median / max; sum) | journal = the message's frame | claim = ok(circuit, journal) | seal outputs = claim digest |",
+           "|---|---|---|---|---|---|---|---|---|"]
+    rng = lambda d, f="{:,}": "-" if not d else (f.format(d["min"]) if d["min"] == d["max"] else f"{f.format(d['min'])}-{f.format(d['max'])}")
+    for k, v in pr["steps"].items():
+        t = v.get("prove_s")
+        times = "-" if not t else f"{t['min']:.1f} / {t['median']:.1f} / {t['max']:.1f}; {t['sum']:.0f}"
+        pc = v.get("public_checks", {})
+        ok = lambda key: "-" if not pc.get(key, [0, 0])[1] else f"{pc[key][0]} of {pc[key][1]}"
+        out.append(f"| {k} | {', '.join(v['kinds']) or '-'} | {rng(v['proof_bytes'])} | {rng(v['tx_bytes'])} | "
+                   f"{rng(v['seal_words'])} | {times} | {ok('journal_is_message_prefix')} | {ok('claim_is_ok_of_journal')} | "
+                   f"{ok('seal_outputs_carry_claim_digest')} |")
+    out += ["", "The three check columns are computed by this script from the public bytes alone (the claim parsed and "
+            "hashed by RISC Zero's rules, the seal's output words decoded from Montgomery form)."]
+    out += ["", "| step | proof field | bytes | distinct across the records | class |", "|---|---|---|---:|---|"]
+    for k, v in pr["steps"].items():
+        for name, f in v["fields"].items():
+            out.append(f"| {k} | `{name}` | {', '.join(f'{b:,}' for b in f['bytes'])} | {f['distinct']} of {v['records']} | "
+                       f"{f['class'] or ('constant' if f['distinct'] == 1 else 'UNCLASSIFIED')} |")
+    out += [""]
+    for key, label in (("shared_windows_lez_seals", "LEZ receipts' STARK parts (claims and burns)"),
+                       ("shared_windows_groth16", "the releases' Groth16 proofs"),
+                       ("shared_windows_groth16_vs_lez_seals", "Groth16 proofs and LEZ STARK parts together")):
+        w = pr.get(key)
+        if not w:
+            continue
+        hist = w["shared_by_n_records"]
+        out.append(f"- Shared runs, {label}: {w['indexed_windows']:,} windows indexed; "
+                   + (f"{sum(c for _, c in hist):,} recur in 2 to {max(k for k, _ in hist)} records; record pairs sharing "
+                      f"a run {w['pairs_total']} of {w['record_pairs_possible']}" if hist else "none recurs in a second record"))
+        for cat, d in (w.get("windows_per_pair") or {}).items():
+            out.append(f"  - windows shared per pair, {cat}: {d['min']}-{d['max']}, median {d['median']} ({d['n']} pairs)")
+        for name, d in (w.get("unrelated_receipts") or {}).items():
+            out.append(f"  - shared with an unrelated receipt (`{name}`): {d['min']}-{d['max']} windows per record, "
+                       f"median {d['median']}")
+    return out
+
+
 def write_markdown(out_dir, results, lez_json, scenario, n, half):
+    pr = results.get("proofs", {})
     s = ["# Privacy suite: generated results", "",
-         f"Bridge program image `{lez_json['bridge_image_id']}` (built at this worktree's path); vault "
+         f"Bridge program image `{lez_json['bridge_image_id']}`; vault "
          f"`{scenario['vault']}` on chain {scenario['chain_id']}; configuration `{scenario['config_id']}`; "
-         f"{n} users per direction. Written by `scripts/privacy/adversary.py`.", "",
+         f"{n} users per direction; proofs: **{pr.get('mode', 'dev')}** (LEZ's privacy-preserving circuit "
+         f"`{pr.get('circuit_image_id')}`). Written by `scripts/privacy/adversary.py`.", "",
          "## The differential gate", "", "| records | bytes (LEZ transaction / Ethereum calldata), min-max | identical once nullifiers, fresh randomness, own addresses and time are cut |", "|---|---|---|"]
     for k, v in results["gate"].items():
         lo, hi = results["sizes"][k]
@@ -954,6 +1307,7 @@ def write_markdown(out_dir, results, lez_json, scenario, n, half):
     for k, v in results["lez_receipts"].items():
         s.append(f"- LEZ, {k}: " + "; ".join(f"{n[8:]} {vals if len(vals) > 3 else ', '.join(map(str, vals))}"
                                               for n, vals in v.items()))
+    s += proofs_markdown(pr, n)
     s.append("")
     (out_dir / "summary.md").write_text("\n".join(s) + "\n")
     # Section B6, compared.

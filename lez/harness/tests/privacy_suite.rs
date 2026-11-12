@@ -18,7 +18,17 @@
 //! It writes them, the scenario the Foundry half replays and the ground truth the adversary must not
 //! see to `target/privacy/` at the repository root (`FERRATA_PRIVACY_DIR` overrides): `lez.json`,
 //! `scenario.json`, `truth.json`. `scripts/privacy/adversary.py` reads them with the Foundry half's
-//! `eth.jsonl`. Run with `RISC0_DEV_MODE=1`.
+//! `eth.jsonl`. Run with `RISC0_DEV_MODE=1` (fake receipts), or with `FERRATA_PRIVACY_PROOFS=real` and dev
+//! mode off: then r0vm proves every private claim and burn (on a GPU when `RISC0_SERVER_PATH` names a CUDA
+//! build of r0vm, `scripts/privacy/real.sh`), settlement verifies each receipt, and the test also writes
+//! each release statement's guest input (`releases/release-NN.{input,json}`) for its real proof.
+//!
+//! The witness set of a private transaction is split into named parts: its signatures (none) and LEZ's
+//! proof, a borsh `InnerReceipt` of the privacy-preserving circuit, whose seal, control id, claim and
+//! the rest each become a field the gate classifies and the adversary reads. What the test checked
+//! about them (the claim is `ReceiptClaim::ok(circuit id, journal)` with the journal rebuilt from the
+//! transaction's message; the seal's public outputs carry that claim's digest) and the proving time go
+//! to each record's `meta`, which is not public data.
 
 use std::{collections::BTreeSet, fs, path::PathBuf};
 
@@ -28,6 +38,7 @@ use checkpoint_core::{
 };
 use ferrata_bridge_core::{
     chain_id_u256,
+    encoding::ReleaseInput,
     inbound::{deposit_id, deposit_secret, recover, DestKind, VaultDeposit},
     outbound::{
         burn_commitment, burn_id, burn_leaf, burn_secret, burn_tag, recover_burns, release_journal, verify_release,
@@ -51,6 +62,7 @@ use harness::{
 };
 use lee::{AccountId, Actor, PrivacyPreservingTransaction};
 use lee_core::{execution_state::BoundaryStep, native_token, program::StateReply, PrivateAction};
+use risc0_zkvm::{sha::Digestible, InnerReceipt, ReceiptClaim};
 use serde_json::{json, Value};
 
 /// Users per direction (the B3 gate's 20 pairs).
@@ -68,8 +80,26 @@ const ETH_RELAY_FEE: u128 = AMOUNT / 500;
 /// A claim, burn or release every minute.
 const STEP_MS: u64 = 60_000;
 
-fn require_dev_mode() {
-    assert_eq!(std::env::var("RISC0_DEV_MODE").as_deref(), Ok("1"), "run this test with RISC0_DEV_MODE=1");
+/// `dev` (`RISC0_DEV_MODE=1`: fake receipts, the default run) or `real` (`FERRATA_PRIVACY_PROOFS=real` with
+/// `RISC0_DEV_MODE` unset or 0: r0vm proves, and settlement verifies every receipt).
+fn proof_mode() -> &'static str {
+    let dev = matches!(std::env::var("RISC0_DEV_MODE").as_deref(), Ok("1") | Ok("true"));
+    if std::env::var("FERRATA_PRIVACY_PROOFS").as_deref() == Ok("real") {
+        assert!(!dev, "FERRATA_PRIVACY_PROOFS=real: unset RISC0_DEV_MODE (or set it to 0)");
+        "real"
+    } else {
+        assert_eq!(
+            std::env::var("RISC0_DEV_MODE").as_deref(),
+            Ok("1"),
+            "run this test with RISC0_DEV_MODE=1, or with FERRATA_PRIVACY_PROOFS=real for real proofs"
+        );
+        "dev"
+    }
+}
+
+/// The hex of an image id without its `0x`, lower case.
+fn bare_hex(id: &str) -> String {
+    id.trim_start_matches("0x").to_lowercase()
 }
 
 fn out_dir() -> PathBuf {
@@ -183,6 +213,8 @@ struct Record {
     fields: Vec<(String, Vec<u8>)>,
     /// The calls to the bridge program the block shows in the clear (the checkpoint's parser).
     clear_calls: Vec<(String, Vec<u8>)>,
+    /// Not public: how the record was made (proving time, receipt size, what the test checked).
+    meta: Value,
 }
 
 impl Record {
@@ -197,6 +229,7 @@ impl Record {
             "commitment_root_before": hx(&self.root_before), "commitment_root_after": hx(&self.root_after),
             "fields": self.fields.iter().map(|(n, v)| json!([n, hx(v)])).collect::<Vec<_>>(),
             "clear_calls": self.clear_calls.iter().map(|(o, m)| json!([o, hx(m)])).collect::<Vec<_>>(),
+            "meta": self.meta,
         })
     }
 
@@ -232,6 +265,7 @@ impl Record {
             root_after: self.root_after.clone(),
             fields: self.fields.iter().map(|(n, v)| (n.clone(), sub(v))).collect(),
             clear_calls: self.clear_calls.iter().map(|(o, m)| (o.clone(), sub(m))).collect(),
+            meta: json!({"substituted_from": self.id}),
         }
     }
 }
@@ -400,8 +434,9 @@ fn boundary_fields(prefix: &str, steps: &[BoundaryStep], program: AccountId, f: 
     }
 }
 
-/// Every field a privacy-preserving transaction publishes that this test can name.
-fn private_fields(tx: &PrivacyPreservingTransaction, program: AccountId) -> Vec<(String, Vec<u8>)> {
+/// Every field a privacy-preserving transaction publishes that this test can name, and what was checked
+/// about its proof.
+fn private_fields(tx: &PrivacyPreservingTransaction, program: AccountId) -> (Vec<(String, Vec<u8>)>, Value) {
     let m = &tx.message;
     let e = &m.execution;
     let mut f = Vec::new();
@@ -427,8 +462,80 @@ fn private_fields(tx: &PrivacyPreservingTransaction, program: AccountId) -> Vec<
     f.push(("validity".into(), borsh::to_vec(&e.validity).unwrap()));
     let whole = borsh::to_vec(&LeeTransaction::PrivacyPreserving(tx.clone())).unwrap();
     let message_len = borsh::to_vec(m).unwrap().len();
-    f.push(("witness_set".into(), whole[1 + message_len..].to_vec()));
-    f
+    // The journal LEZ verifies the receipt against: rebuilt from the message (upstream `Proof::is_valid_for`).
+    let journal = lee_core::to_borsh_frame(&(&m.public_context, &m.execution));
+    let checks = proof_fields(&whole[1 + message_len..], &journal, &mut f);
+    (f, checks)
+}
+
+/// A BabyBear element's value from its Montgomery form (risc0's `Elem::as_u32`): `w * R^-1 mod p`, `R = 2^32 mod p`.
+fn from_montgomery(w: u32) -> u64 {
+    const P: u64 = 2_013_265_921;
+    let (mut base, mut exp, mut r_inv) = ((1u64 << 32) % P, P - 2, 1u64);
+    while exp > 0 {
+        if exp & 1 == 1 {
+            r_inv = r_inv * base % P;
+        }
+        base = base * base % P;
+        exp >>= 1;
+    }
+    u64::from(w) * r_inv % P
+}
+
+/// The witness set of a private transaction, split into named parts: borsh `Vec<(Signature, PublicKey)>`
+/// (empty: the sender is an alias), then `Proof`, a borsh `Vec<u8>` holding `borsh(InnerReceipt)` of LEZ's
+/// privacy-preserving circuit (upstream `witness_set.rs`, `circuit/mod.rs`). A succinct receipt's seal
+/// starts with the recursion circuit's 32 public output words: the control root (16 words), then the
+/// claim's digest in 16-bit halves (risc0-zkvm 3.0.5, `SuccinctReceipt::verify_integrity_with_context`);
+/// the rest is the STARK proof proper. Returns what was checked (for `meta`, not public).
+fn proof_fields(ws: &[u8], journal: &[u8], f: &mut Vec<(String, Vec<u8>)>) -> Value {
+    let signatures = u32::from_le_bytes(ws[..4].try_into().unwrap());
+    if signatures != 0 {
+        f.push(("witness_set".into(), ws.to_vec()));
+        return json!({"split": false, "signatures": signatures});
+    }
+    f.push(("witness_set.signatures".into(), ws[..4].to_vec()));
+    let len = u32::from_le_bytes(ws[4..8].try_into().unwrap()) as usize;
+    assert_eq!(ws.len(), 8 + len, "the witness set is the signatures and the proof");
+    f.push(("proof.length".into(), ws[4..8].to_vec()));
+    let receipt = &ws[8..];
+    let inner: InnerReceipt = borsh::from_slice(receipt).expect("LEZ's proof is a borsh InnerReceipt");
+    let expected = ReceiptClaim::ok(lee::PRIVACY_PRESERVING_CIRCUIT_ID, journal.to_vec()).digest();
+    f.push(("proof.kind".into(), receipt[..1].to_vec()));
+    let mut checks = json!({"split": true, "receipt_bytes": receipt.len(), "journal_bytes": journal.len()});
+    match &inner {
+        InnerReceipt::Succinct(s) => {
+            let words: Vec<u8> = s.seal.iter().flat_map(|w| w.to_le_bytes()).collect();
+            // BabyBear elements in Montgomery form (`as_u32` decodes them): x = w * R^-1 mod p, R = 2^32 mod p.
+            let halves: Vec<u8> = s.seal[16..32]
+                .iter()
+                .map(|&w| from_montgomery(w))
+                .flat_map(|h| [(h & 0xff) as u8, (h >> 8) as u8])
+                .collect();
+            let claim = borsh::to_vec(&s.claim).unwrap();
+            f.push(("proof.seal.length".into(), (s.seal.len() as u32).to_le_bytes().to_vec()));
+            f.push(("proof.seal.control_root".into(), words[..64].to_vec()));
+            f.push(("proof.seal.claim_digest".into(), words[64..128].to_vec()));
+            f.push(("proof.seal.stark".into(), words[128..].to_vec()));
+            f.push(("proof.control_id".into(), s.control_id.as_bytes().to_vec()));
+            f.push(("proof.claim".into(), claim));
+            f.push(("proof.hashfn".into(), s.hashfn.as_bytes().to_vec()));
+            f.push(("proof.verifier_parameters".into(), s.verifier_parameters.as_bytes().to_vec()));
+            f.push(("proof.control_inclusion_proof".into(), borsh::to_vec(&s.control_inclusion_proof).unwrap()));
+            checks["kind"] = json!("succinct");
+            checks["seal_words"] = json!(s.seal.len());
+            checks["claim_is_ok_of_journal"] = json!(s.claim.digest() == expected);
+            checks["seal_outputs_carry_claim_digest"] = json!(halves == s.claim.digest().as_bytes());
+            checks["claim_is_pruned"] = json!(s.claim.as_value().is_err());
+        }
+        InnerReceipt::Fake(r) => {
+            f.push(("proof.claim".into(), borsh::to_vec(&r.claim).unwrap()));
+            checks["kind"] = json!("fake");
+            checks["claim_is_ok_of_journal"] = json!(r.claim.digest() == expected);
+        }
+        other => panic!("unexpected receipt kind {:?}", std::mem::discriminant(other)),
+    }
+    checks
 }
 
 /// Every field of a public transaction this test can name.
@@ -488,11 +595,12 @@ fn collect_public(
         diff: state_diff(&before, &after),
         root_before,
         root_after: commitment_root(w),
+        meta: Value::Null,
     }
 }
 
-/// Prove (dev mode) and settle one private transaction with fresh randomness and keep what it
-/// published.
+/// Prove (dev mode, or for real) and settle one private transaction with fresh randomness and keep what
+/// it published.
 #[allow(clippy::too_many_arguments)]
 fn collect_private(
     w: &mut World,
@@ -530,6 +638,18 @@ fn collect_private(
     assert_eq!(tx.len(), run.tx_bytes);
     let block_id = w.chain.block_id - 1;
     let body = block(block_id, time, &tx);
+    let (fields, mut meta) = private_fields(&run.tx, w.program);
+    meta["prove_s"] = json!(run.prove_time.as_secs_f64());
+    meta["proof_bytes"] = json!(run.proof_bytes);
+    meta["tx_bytes"] = json!(run.tx_bytes);
+    meta["tx_sha256"] = json!(hx(&sha256(&tx)));
+    eprintln!(
+        "{id}: proven in {:.1} s ({}), receipt {} bytes, transaction {} bytes",
+        run.prove_time.as_secs_f64(),
+        meta["kind"].as_str().unwrap_or("?"),
+        run.proof_bytes,
+        run.tx_bytes
+    );
     Record {
         id,
         kind,
@@ -537,7 +657,7 @@ fn collect_private(
         seq,
         block_id,
         time_ms: time,
-        fields: [private_fields(&run.tx, w.program), receipt_fields(&run.charge)].concat(),
+        fields: [fields, receipt_fields(&run.charge)].concat(),
         clear_calls: clear_calls(w, &body),
         tx,
         block: body,
@@ -545,6 +665,7 @@ fn collect_private(
         diff: state_diff(&before, &after),
         root_before,
         root_after: commitment_root(w),
+        meta,
     }
 }
 
@@ -582,7 +703,12 @@ fn set_up_vault(w: &mut World, leaves: Vec<Hash>, variant: &'static str) -> (Has
 
 #[test]
 fn privacy_suite_lez_half() {
-    require_dev_mode();
+    let mode = proof_mode();
+    let bridge_image = harness::image_id_hex(methods::FERRATA_BRIDGE_ID);
+    if let Ok(want) = std::env::var("FERRATA_EXPECT_BRIDGE_IMAGE_ID") {
+        assert_eq!(bare_hex(&bridge_image), bare_hex(&want), "the bridge program's image id (docs/image-ids.md)");
+    }
+    eprintln!("privacy suite, LEZ half: proofs {mode}; bridge image {bridge_image}");
     let dir = out_dir();
     fs::create_dir_all(&dir).unwrap();
     let chain = chain_id_u256(CHAIN_ID);
@@ -702,6 +828,14 @@ fn privacy_suite_lez_half() {
         let witness =
             ReleaseWitness { burn_index: b as u64, path: burn_tree.path(b as u64).unwrap(), s_out: *s_out, r: note.r };
         let nout = verify_release(&burn_root, &witness, &public).expect("the release statement holds");
+        // The release guest's input and the journal it must commit (`ferrata-e2e prove` reads both).
+        let k = releases_private.len();
+        let journal = release_journal(&burn_root, &nout, &public);
+        let input = ReleaseInput { burn_root, witness: witness.clone(), public: public.clone() }.encode();
+        fs::create_dir_all(dir.join("releases")).unwrap();
+        fs::write(dir.join(format!("releases/release-{k:02}.input")), input).unwrap();
+        let release_meta = json!({"kind": "release", "journal": hx(&journal)});
+        fs::write(dir.join(format!("releases/release-{k:02}.json")), release_meta.to_string()).unwrap();
         let naive = burn_id(&cid, b as u64, &burn_leaves[b]);
         for (list, nf) in [(&mut releases_private, nout), (&mut releases_naive, naive)] {
             list.push(json!({
@@ -822,6 +956,7 @@ fn privacy_suite_lez_half() {
         "burn_root": format!("0x{}", hx(&burn_root)),
         "burn_count": USERS,
         "releases": {"private": releases_private, "naive": releases_naive},
+        "proofs": mode,
     });
     let truth = json!({
         "users": users.iter().enumerate().map(|(u, user)| json!({
@@ -869,7 +1004,9 @@ fn privacy_suite_lez_half() {
     }
     let lez = json!({
         "accounts": labels,
-        "bridge_image_id": harness::image_id_hex(methods::FERRATA_BRIDGE_ID),
+        "bridge_image_id": bridge_image,
+        "circuit_image_id": harness::image_id_hex(lee::PRIVACY_PRESERVING_CIRCUIT_ID),
+        "proofs": mode,
         "program": hx(w.program.value()),
         "chain_id": CHAIN_ID,
         "vault": hx(&VAULT_P),

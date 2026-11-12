@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # The privacy suite end to end (proposal B3): the LEZ half (RISC Zero dev mode), the Ethereum half
 # (Foundry, mock verifier), then the gate, the adversary, the field table and the recovery check.
+# With real proofs (a GPU, RISC Zero's Groth16 verifier): scripts/privacy/real.sh, docs/privacy/real/.
 #
 #   scripts/privacy/run.sh [OUT_DIR]        # from anywhere; OUT_DIR defaults to docs/privacy/generated
 #
