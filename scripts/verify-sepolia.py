@@ -13,10 +13,12 @@ eth_getTransactionReceipt, eth_getLogs and eth_call). One line per check:
     FAIL     it does not (the exit status is then 1; 2 if the endpoint does not answer as Sepolia)
     PENDING  the run has not reached that stage yet (on chain and in the records); not a failure
 
-Nothing here pins an image id: a run's ids are its own, as its records give them (params.json, programs/ids.jsonl,
-LEZ session A's deployed programs), which must agree with each other, and the vault must hold them. A run of the final
-programs must have the ids of docs/image-ids.md, which any checkout rebuilds (scripts/reproduce-image-ids.sh); a run of
-earlier programs (crown-live-1) is named by the table of e2e/crown/README.md that lists its ids.
+A run's image ids are its own, as its records give them (params.json, programs/ids.jsonl, LEZ session A's deployed
+programs), which must agree with each other, and the vault must hold them. The two live vaults are pinned to the
+programs they were deployed with: crown-live-3's (0x04eE…e44c) to the final programs of docs/image-ids.md, which any
+checkout rebuilds (scripts/reproduce-image-ids.sh), crown-live-1's (0xfE31…9E54) to e2e/crown/README.md's table "The
+programs of crown-live-1" (built before guest builds were path-independent). Any other run of the final programs must
+have docs/image-ids.md's ids; a run of earlier programs is named by the README table that lists its ids.
 """
 
 from __future__ import annotations
@@ -37,6 +39,13 @@ CHAIN_ID = 11155111
 # The run's programs by the names this script gives them; the guests' own names (docs/image-ids.md, programs/ids.jsonl)
 # map onto them. A run's ids come from its records only (the image ids check in main()).
 GUEST_KEYS = {"ferrata_lez": "attestation", "ferrata_bridge": "bridge"}
+# The live runs' vaults on Sepolia and the programs each must hold: crown-live-1's the programs it ran (built before guest
+# builds were path-independent; e2e/crown/README.md's "The programs of crown-live-1"), crown-live-3's the final programs
+# (docs/image-ids.md). A run of either vault whose records name other ids fails; other vaults (rehearsals on forks of
+# Sepolia, which reuse these addresses at the same nonces) are checked by their records alone.
+FINAL = "docs/image-ids.md"
+LIVE_VAULTS = {"0xfe3199fa2634413cbac317371076cae3eb2d9e54": ("crown-live-1", "crown-live-1"),
+               "0x04ee8ff19cc11cee4ae65d03e12b9888043de44c": ("crown-live-3", FINAL)}
 CHECKPOINT_DOMAIN = "0xbdb3b52df781536a6bcce7088d156b3951a00a45ec8bcf2805ba8406fbeb5ec7"
 # The order of deploy.sh's transactions from the deployer's first nonce N (identity.json createAddresses).
 DEPLOY_STEPS = ["emergency stop", "FerrataRegistry library", "FerrataVault", "test token", "register ETH",
@@ -328,16 +337,19 @@ def image_ids_md(path: str) -> dict:
 
 
 def readme_tables(path: str) -> dict:
-    """The image-id tables of e2e/crown/README.md, by the run each is headed with ("**The programs of `RUN`**")."""
+    """The image-id tables of e2e/crown/README.md, by the run or runs each is headed with ("**The programs of `RUN`**",
+    "**The programs of `RUN1` and `RUN2`**": one table under each name)."""
     names = [("attestation program", "attestation"), ("bridge program", "bridge"), ("`checkpoint_b`", "checkpoint_b"),
              ("`checkpoint`", "checkpoint"), ("`segment`", "segment"), ("release", "release")]
-    out, label, table = {}, None, None
+    out, labels, table = {}, [], None
     for line in open(path, encoding="utf-8"):
-        m = re.match(r"^\*\*The programs of `([^`]+)`\*\*", line)
+        m = re.match(r"^\*\*The programs of ([^*]+)\*\*", line)
         if m:
-            label = m.group(1)
-        if re.match(r"^\|\s*Program\s*\|\s*Image id", line) and label:
-            table = out.setdefault(label, {})
+            labels = re.findall(r"`([^`]+)`", m.group(1))
+        if re.match(r"^\|\s*Program\s*\|\s*Image id", line) and labels:
+            table = out.get(labels[0], {})
+            for label in labels:
+                out.setdefault(label, table)
             continue
         if not line.startswith("|"):
             table = None
@@ -398,7 +410,7 @@ def load(path: str):
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("run", help="the run's records (e.g. e2e/runs/crown-live-1)")
+    ap.add_argument("run", help="the run's records (e.g. e2e/runs/crown-live-3)")
     ap.add_argument("--rpc", default=os.environ.get("SEPOLIA_RPC_URL") or DEFAULT_RPC)
     here = os.path.dirname(os.path.abspath(__file__))
     ap.add_argument("--image-ids", default=os.path.join(here, "..", "docs", "image-ids.md"),
@@ -471,6 +483,23 @@ def main() -> int:
             raise Pending("no image ids recorded yet (params.json, programs/ids.jsonl, LEZ session A)")
         need(not clash, "the run's records disagree: " + "; ".join(clash))
         out = ", ".join(notes_) + " agree"
+        pin = LIVE_VAULTS.get(vault)
+        if pin:  # a live vault: the records must name the programs it was deployed with (the vault check reads them)
+            live, holds = pin
+            if holds == FINAL:
+                need(os.path.isfile(a.image_ids), f"{a.image_ids} not found: {live}'s vault holds the final programs")
+                want, where = image_ids_md(a.image_ids), "docs/image-ids.md"
+            else:
+                want = (readme_tables(a.readme) if os.path.isfile(a.readme) else {}).get(holds, {})
+                where = f"e2e/crown/README.md's \"The programs of {holds}\""
+                need(bool(want), f"{where} not found ({a.readme})")
+            common = [k for k in ids if k in want]
+            need({"checkpoint_b", "release"} <= set(common), f"no checkpoint_b and release ids in the records to compare"
+                 f" with {where}")
+            bad = [k for k in common if ids[k] != want[k]]
+            need(not bad, f"{live}'s vault holds the programs of {where}; the records give "
+                 + "; ".join(f"{k} {ids[k]} ({src[k]}), {where} {want[k]}" for k in bad))
+            return out + f"; {live}'s vault: {len(common)} of {len(common)} = {where}"
         if not os.path.isfile(a.image_ids):
             return out + f"; {a.image_ids} not found: the final programs not compared"
         final = image_ids_md(a.image_ids)
