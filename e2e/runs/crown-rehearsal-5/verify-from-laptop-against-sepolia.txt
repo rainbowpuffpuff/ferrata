@@ -1,0 +1,23 @@
+crown run crown-rehearsal-5 (fork: FORK, the chain is anvil), vault 0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c, deployer 0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07
+PASS chain: chain id 11155111, head 12115200
+FAIL configId from session A's fields: RuntimeError: cast call: Warning: This is a nightly build of Foundry. It is recommended to use the latest stable version. To mute this warning set `FOUNDRY_DISABLE_NIGHTLY_WARNING` in your environment. 
+
+Error: contract 0x04ee8ff19cc11cee4ae65d03e12b9888043de44c does not have any code
+PASS bedrockGenesisId = sha256(deployment settings): 0x19383c41772ed9e87c929c6985a69b5c33894e347a89de255879acd37ff7d2ed
+FAIL genesisState from T0 and the channel: RuntimeError: cast call: Warning: This is a nightly build of Foundry. It is recommended to use the latest stable version. To mute this warning set `FOUNDRY_DISABLE_NIGHTLY_WARNING` in your environment. 
+
+Error: contract 0x04ee8ff19cc11cee4ae65d03e12b9888043de44c does not have any code
+FAIL vault: code, CREATE address, rule (B): AssertionError: no code
+FAIL every recorded transaction succeeded, sent by the deployer: TimeoutExpired: Command '['cast', 'receipt', '0xaa694dcd360878b1793cdf4cba4c4aa7eff7f75d8a8af726bfac4aa7fad44bb1', '--json']' timed out after 180 seconds
+FAIL deposits: two logs, commitments recomputed: AssertionError: 0 Deposit logs
+PASS captures: headers are the chain's blocks; every slot proven: capture 1: block 12115079, 6 slots; capture 2: block 12115080, 6 slots (FORK: headers are the fork's, not checked against Sepolia)
+PASS LEZ session records: T0 19 -> T1 82, 9 steps, claims ['private', 'public'], 2 burn notes
+PASS checkpoint journal fields: parent = genesisState, tip T1 82, burns 2, imported leaves 2
+FAIL checkpoint final on the vault, its seal verified by RISC Zero's verifier (eth_call): RuntimeError: cast call: Warning: This is a nightly build of Foundry. It is recommended to use the latest stable version. To mute this warning set `FOUNDRY_DISABLE_NIGHTLY_WARNING` in your environment. 
+
+Error: contract 0x04ee8ff19cc11cee4ae65d03e12b9888043de44c does not have any code
+FAIL releases: paid once, seals verified on chain, events: RuntimeError: cast call: Warning: This is a nightly build of Foundry. It is recommended to use the latest stable version. To mute this warning set `FOUNDRY_DISABLE_NIGHTLY_WARNING` in your environment. 
+
+Error: contract 0x04ee8ff19cc11cee4ae65d03e12b9888043de44c does not have any code
+SKIP the rebuild of the checkpoint input and the local receipt checks (they need --e2e, --realblocks and the channel key: the cloud runner's verify stage does them)
+5 of 12 checks passed; FAILED: configId from session A's fields, genesisState from T0 and the channel, vault: code, CREATE address, rule (B), every recorded transaction succeeded, sent by the deployer, deposits: two logs, commitments recomputed, checkpoint final on the vault, its seal verified by RISC Zero's verifier (eth_call), releases: paid once, seals verified on chain, events

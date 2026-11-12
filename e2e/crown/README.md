@@ -15,7 +15,9 @@ re-checks every step from public data and the recorded blocks.
 **Next: `crown-live-2`, the second live run, on the final programs** (branch `integration7`, commit 73e6712: the
 thirteen merged branches, guest builds independent of the build path): the programs of the first table below, which
 any checkout rebuilds to the same ids (`scripts/reproduce-image-ids.sh`, [`docs/image-ids.md`](../../docs/image-ids.md));
-rehearsed on an anvil fork of Sepolia as `crown-rehearsal-4` ([`e2e/runs/crown-rehearsal-4/`](../runs/crown-rehearsal-4/README.md));
+rehearsed on an anvil fork of Sepolia to DONE as `crown-rehearsal-5` (19 stages in 23 min 20 s, verify 14 of 14,
+[`e2e/runs/crown-rehearsal-5/`](../runs/crown-rehearsal-5/README.md); `crown-rehearsal-4` before it stopped at verify on
+stale pinned ids, since fixed);
 the owner's command: "Commands" below.
 
 ## Programs (built on the build box; since `integration7` the ids do not depend on the build path)
@@ -154,7 +156,7 @@ Before the second live start, `crown-live-2` (state at the end of `integration7`
 - this tree (branch `integration7`, from its worktree); `vault/lib` present in it (forge-std 1.10.0, OpenZeppelin
   5.4.0, risc0-ethereum 3.0.0; git ignores it and `start` packs it);
 - the LEZ bundle and the R0BF programs of the final programs are on the ws-3 Volume (`setup` on 12 Nov 2026, the
-  rehearsal `crown-rehearsal-4` used them); `setup` again only if they were replaced since: it checks every program's
+  rehearsals `crown-rehearsal-4` and `-5` used them); `setup` again only if they were replaced since: it checks every program's
   sha256 and image id against the ids pinned in `cloud/ctl.py`;
 - the Secret `ferrata-sepolia-key` on ws-3 (it exists; the run signs with the same throwaway deployer, now at
   nonce 23 after crown-live-1's 13 transactions: the gate prints the nonce, the vault address and the balance);

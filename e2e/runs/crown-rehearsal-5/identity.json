@@ -1,0 +1,28 @@
+{
+ "label": "crown REHEARSAL on an anvil fork of Sepolia (stand-in beacon committee on LEZ)",
+ "chainId": 11155111,
+ "vault": "0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c",
+ "configId": "0xbba1596ca3f13857c0dacc0ddd2a262968f0c239c28468027831667b1cf7c51e",
+ "genesisState": "0xa55897f6b2d339c50b31e58af5a817a17e3ddb28e0655c0963dc5c2c6b74373a",
+ "groth16Verifier": "0x8f0Af3Bf302C64d57f840127F94d9c123a8Fa2A0",
+ "delta": 3600,
+ "deployer": "0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07",
+ "firstNonce": 23,
+ "createAddresses": [
+  "0x1dB3fa8041E8178f1608c2F7dF627d7EC16C8221",
+  "0xa75e653BdaD23d198Ea357277b715aD8A9687673",
+  "0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c",
+  "0x6b479b044501C8764a326EaBb64b5f441F96C3CB",
+  "0x6B15d304D984F534C507F2c661728d8BDA95d13F",
+  "0x7D396eaC0C1Fcc292168DeE940b58B9826C58C73",
+  "0x4596bfB19EAe0d8597F747A5A720865dE3b5Cf2a"
+ ],
+ "sessionA": {
+  "sha256": "a4f2d68c1bcf1a4e65bb3d1a2d157e5a1330ff061a8b1db972d1e7a37118b0de",
+  "tip": {
+   "hash": "0x865ceb082d97285bb6ef7f584dbeb4ffc5f2dba9a2b3eb9903712ca0f0ba6f1b",
+   "id": 19
+  },
+  "chain": "stand-in"
+ }
+}

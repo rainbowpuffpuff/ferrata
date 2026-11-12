@@ -1,0 +1,16 @@
+crown run crown-rehearsal-5 (fork: FORK, the chain is anvil), vault 0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c, deployer 0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07
+PASS chain: chain id 11155111, head 12115086
+PASS configId from session A's fields: 0xbba1596ca3f13857c0dacc0ddd2a262968f0c239c28468027831667b1cf7c51e = the vault's storedLezConfigId
+PASS bedrockGenesisId = sha256(deployment settings): 0x19383c41772ed9e87c929c6985a69b5c33894e347a89de255879acd37ff7d2ed
+PASS genesisState from T0 and the channel: 0xa55897f6b2d339c50b31e58af5a817a17e3ddb28e0655c0963dc5c2c6b74373a (T0 = 19) = the vault's
+PASS vault: code, CREATE address, rule (B): CREATE(deployer, nonce 25), mode B
+PASS every recorded transaction succeeded, sent by the deployer: 6 transactions of 6 stages (deposit-0, deposit-1, submit, finalizeAttested, release-0, release-1)
+PASS deposits: two logs, commitments recomputed: j0 leaf 0 1000000000000000 wei public; j1 leaf 1 1000000000000000 wei private
+PASS captures: headers are the chain's blocks; every slot proven: capture 1: block 12115079, 6 slots; capture 2: block 12115080, 6 slots (FORK: headers are the fork's, not checked against Sepolia)
+PASS LEZ session records: T0 19 -> T1 82, 9 steps, claims ['private', 'public'], 2 burn notes
+PASS checkpoint journal fields: parent = genesisState, tip T1 82, burns 2, imported leaves 2
+PASS checkpoint final on the vault, its seal verified by RISC Zero's verifier (eth_call): final state 0x889abeceb93952f6b88623f904369c49ab430df51ec17a05f81d39b0f2ab118b, seal accepted (a changed seal refused), burn root 0x9a9a1fe79b82ce6387d8e08d53c7722aeb4533edf459fc3ccbae53a886dad8a3 accepted
+PASS releases: paid once, seals verified on chain, events: public-0: 1000000000000000 wei to 0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07; private-1: 1000000000000000 wei to 0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07; vault balance now 6000000000000 wei
+PASS checkpoint input rebuilt from the node's recorded blocks = the proven input; guest re-executed: input sha256 071696e1c9cdd413... = proven; executed again: ,"journal_equals_native":true,"padded_cycles":20971520,"po2":[20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20],"segments":20,"user_cycles":18808076}
+PASS Groth16 receipts verify locally (ferrata-e2e verify): 3 receipts
+14 of 14 checks passed
