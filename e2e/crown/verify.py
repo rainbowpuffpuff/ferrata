@@ -20,6 +20,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -35,16 +36,51 @@ _spec.loader.exec_module(ident)
 
 CHAIN_ID = 11155111
 CHECKPOINT_DOMAIN = "0xbdb3b52df781536a6bcce7088d156b3951a00a45ec8bcf2805ba8406fbeb5ec7"
-# The vault-side programs a run must have used: crown-live-1 and its rehearsal crown-rehearsal-3 ran programs built at the
-# maintainer's checkout path (before guest builds were path-independent); later runs the final programs
-# (e2e/crown/README.md's first table, docs/image-ids.md), as cloud/drive.py pins them.
-RUN_IDS = {run: {"checkpoint_b": "0xa475e8f9aaa41d0ae3bf9a20ae7d937ebc637a961808765f0ff175158760d3b2",
-                 "release": "0x17257f91bca70abf7a5476b498d687e95b6fb4d59e75b6bca1d46877ac9bf5cd"}
-           for run in ("crown-live-1", "crown-rehearsal-3")}
-FINAL_IDS = {"checkpoint_b": "0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e",
-             "release": "0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9"}
-IDS = FINAL_IDS  # set per run in main()
+# The vault-side programs a run used (checkpoint_b, release) come from the run's own records, never from its name:
+# params.json (checkpointImageIdB, releaseImageId: what the vault was deployed with) and, when the run has it,
+# programs/ids.jsonl (the guests as the run built or fetched them); the records must agree. No id is pinned here, as in
+# scripts/verify-sepolia.py: a run of the final programs records docs/image-ids.md's ids, crown-live-1 and
+# crown-rehearsal-3 the ids of e2e/crown/README.md's "The programs of crown-live-1". The chain anchors them: the vault's
+# immutables must equal them (the "vault" check) and every seal must verify under them on chain.
+IDS: dict = {}  # set in main() by run_ids()
+IDS_SRC: list = []  # the records that gave them
+IDS_ERROR = ""
 RESULTS = []
+
+
+def run_ids(run: str):
+    """checkpoint_b and release as the run's records give them: (ids, the records that gave them, what is wrong or "")."""
+    ids, src, used, bad = {}, {}, set(), []
+
+    def rec(key: str, value, where: str) -> None:
+        v = str(value).lower()
+        if re.fullmatch(r"0x[0-9a-f]{64}", v) is None:
+            bad.append(f"{where}: {key} {value} is not an image id")
+        elif key in ids and ids[key] != v:
+            bad.append(f"the run's records disagree on {key}: {src[key]} {ids[key]}, {where} {v}")
+        else:
+            ids.setdefault(key, v)
+            src.setdefault(key, where)
+            used.add(where)
+    pp = os.path.join(run, "params.json")
+    if os.path.isfile(pp):
+        p = jl(pp)
+        for k, key in (("checkpointImageIdB", "checkpoint_b"), ("releaseImageId", "release")):
+            if k in p:
+                rec(key, p[k], "params.json")
+    pj = os.path.join(run, "programs", "ids.jsonl")
+    if os.path.isfile(pj):
+        with open(pj) as f:
+            for line in f:
+                if line.strip():
+                    row = json.loads(line)
+                    name = os.path.basename(row["program"]).removesuffix(".bin")
+                    if name in ("checkpoint_b", "release"):
+                        rec(name, row["image_id"], "programs/ids.jsonl")
+    missing = [k for k in ("checkpoint_b", "release") if k not in ids]
+    if missing:
+        bad.append(f"no recorded {' or '.join(missing)} id (params.json, programs/ids.jsonl)")
+    return ids, sorted(used), "; ".join(bad)
 
 
 def check(name: str):
@@ -108,8 +144,8 @@ def main() -> int:
     ap.add_argument("--e2e")
     ap.add_argument("--realblocks")
     a = ap.parse_args()
-    global IDS
-    IDS = RUN_IDS.get(os.path.basename(a.run.rstrip("/")), FINAL_IDS)
+    global IDS, IDS_SRC, IDS_ERROR
+    IDS, IDS_SRC, IDS_ERROR = run_ids(a.run)
     R, L = a.run, a.lez
     rj, idn, crown = jl(f"{R}/run.json"), jl(f"{R}/identity.json"), jl(f"{R}/crown.json")
     sa, sb = jl(f"{L}/session-a/session-a.json"), jl(f"{L}/session-b/session-b.json")
@@ -153,13 +189,18 @@ def main() -> int:
         need(gs == idn["genesisState"].lower() == on.lower(), f"recomputed {gs}, identity {idn['genesisState']}, vault {on}")
         return f"{gs} (T0 = {sa['tip']['id']}) = the vault's"
 
-    @check("vault: code, CREATE address, rule (B)")
+    @check("vault: code, CREATE address, rule (B), image ids = the run's records")
     def _():
         need(cast("code", vault) not in ("0x", ""), "no code")
         addr = cast("compute-address", deployer, "--nonce", str(int(idn["firstNonce"]) + 2)).split()[-1]
         need(addr.lower() == vault.lower(), f"CREATE(deployer, {idn['firstNonce']} + 2) = {addr}")
         need(call("mode()(uint8)") == "1", "mode is not B")
-        return f"CREATE(deployer, nonce {int(idn['firstNonce']) + 2}), mode B"
+        need(not IDS_ERROR, IDS_ERROR)
+        cp, rl = call("checkpointImageId()(bytes32)").lower(), call("releaseImageId()(bytes32)").lower()
+        need(cp == IDS["checkpoint_b"], f"checkpointImageId {cp} is not the run's checkpoint_b {IDS['checkpoint_b']}")
+        need(rl == IDS["release"], f"releaseImageId {rl} is not the run's release {IDS['release']}")
+        return (f"CREATE(deployer, nonce {int(idn['firstNonce']) + 2}), mode B; checkpointImageId {cp[:10]}… and "
+                f"releaseImageId {rl[:10]}… = the run's ({', '.join(IDS_SRC)})")
 
     @check("every recorded transaction succeeded, sent by the deployer")
     def _():
