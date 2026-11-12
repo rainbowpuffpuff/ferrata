@@ -4,7 +4,8 @@
 #
 #   e2e/crown.sh setup [--bundle FILE] [--programs DIR]   deploy the app; the LEZ bundle and the programs to its Volume
 #   e2e/crown.sh start [--fork] [--yes] [--halt-after STAGE] [--lez-chain sepolia] [run]
-#                                     live (default run crown-live-2; crown-live-1 is done): signs on Sepolia only after a typed yes;
+#                                     live (default run crown-live-3; crown-live-1 is done, crown-live-2 stopped at lez-a: its
+#                                     checkpoint was outside the weak-subjectivity period): signs on Sepolia only after a typed yes;
 #                                     --fork (default run crown-rehearsal-4): an anvil fork of Sepolia, nothing sent;
 #                                     --fork --lez-chain sepolia --halt-after identity: session A on the bundle's real
 #                                     Sepolia checkpoint (the live run's), ending after identity
@@ -45,19 +46,19 @@ start)
     esac
     shift
   done
-  def=crown-live-2; [ "$mode" = live ] || def=crown-rehearsal-4
+  def=crown-live-3; [ "$mode" = live ] || def=crown-rehearsal-4
   ctl start "${1:-$def}" "$mode" "${opts[@]}"
   ;;
-status) ctl status "${1:-crown-live-2}" ;;
+status) ctl status "${1:-crown-live-3}" ;;
 fetch)
   lez=(); [ "${1:-}" = --lez ] && { lez=(--lez); shift; }
-  ctl fetch "${1:-crown-live-2}" "${lez[@]}"
+  ctl fetch "${1:-crown-live-3}" "${lez[@]}"
   ;;
 stop) ctl stop "$@" ;;
 verify)
-  run="$repo/e2e/runs/${1:-crown-live-2}"
+  run="$repo/e2e/runs/${1:-crown-live-3}"
   : "${SEPOLIA_RPC_URL:=https://ethereum-sepolia-rpc.publicnode.com}"
   SEPOLIA_RPC_URL="$SEPOLIA_RPC_URL" python3 -I "$here/crown/verify.py" "$run" --lez "$run/lez"
   ;;
-*) sed -n '2,18p' "$0" >&2; exit 2 ;;
+*) sed -n '2,19p' "$0" >&2; exit 2 ;;
 esac

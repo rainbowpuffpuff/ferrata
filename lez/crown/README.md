@@ -15,12 +15,17 @@ generations on a Volume (as `lez/lab`). Design: `e2e/crown/README.md` (stages 1 
 ## Session A (`session.sh a`)
 A new zone: `sequencer_service setup --create-channel` (a random channel key), the node, the sequencer; the driver
 deploys the attestation program (`program/attest/header`) and the bridge (`program/bridge/header`), initialises the
-Sepolia instance from the period-1378 bootstrap of `crates/ferrata-spectests/fixtures/sepolia-gloas-2026-11-10` and
-applies its updates 1378..=1409, and writes `session-a.json` at the last block final on Bedrock (T0): the channel's
+Sepolia instance from the checkpoint fixture in the bundle (`build.sh` packs
+`crates/ferrata-spectests/fixtures/sepolia-2026-11-12`: the Gloas bootstrap at slot 11,562,112, period 1411, and that
+period's update; `crown-driver`'s `sepolia_base` reads the bootstrap's layout, the checkpoint root and the update files
+from it) and applies its updates, and writes `session-a.json` at the last block final on Bedrock (T0): the channel's
 key, posting timeframe and config tip hash (the node's `/channel/0101..01`), `bedrockGenesisId` = SHA-256 of the
 deployment settings, the programs' accounts and image ids, the instance, the controls and their salt. The vault's
 `lezConfigId` is `crown-driver config-id --identity session-a.json --vault ADDR`; its `genesisState` is
-`e2e/crown/identity.py genesis-state` over T0 and the channel.
+`e2e/crown/identity.py genesis-state` over T0 and the channel. Until 12 Nov 2026 the instance started from the period-1378
+bootstrap of `sepolia-gloas-2026-11-10`; `crown-live-2` stopped at its `Init` because the program's weak-subjectivity
+bound refused that 38-day-old checkpoint. `crown-driver check --chain sepolia --fixture DIR` says until when a fixture's
+`Init` is valid (this one: 28 Nov 2026 03:13:36 UTC); after that, a fresh one: `scripts/fetch-sepolia-checkpoint.py`.
 
 ## Session B (`session.sh b`)
 Restores A's generation; the captures' period updates and finality updates; then, under the first capture's record:
