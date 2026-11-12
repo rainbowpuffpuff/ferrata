@@ -162,8 +162,10 @@ side is a devnet we ran (LEZ testnet 0.4 does not exist).
   maintainer's checkout path; the final programs, live in row 91, rebuild to that vault's ids (row 92). The Dockerfile
   that pins the toolchains was built as an image on Modal (row 90); `scripts/reproduce/run.sh` under Docker has not
   been run by us.
-- **Privacy** (row 23) is measured in dev mode with a mock verifier on synthetic records; timing and
-  amount residuals, network metadata and LEZ's own anonymity set are outside it.
+- **Privacy** (row 23) is measured in dev mode with a mock verifier on synthetic records, and again on real proofs
+  of the final programs (row 89: every claim, burn and release proven, the releases checked by RISC Zero's Groth16
+  verifier in the vault); the burn root's checkpoint is still the mock there (the harness's blocks are not chained,
+  row 89). Timing and amount residuals, network metadata and LEZ's own anonymity set are outside both.
 - **Not built** (README, "Specified but not built"): among them `ferrata_attestor`, `monitor` and the
   updater as Logos modules, the updater's backend for a running sequencer, the mini-app's private round trip
   through a LEZ sequencer, reads and sends through Logos Core's own modules, a published module catalog. Nothing is audited: the static
