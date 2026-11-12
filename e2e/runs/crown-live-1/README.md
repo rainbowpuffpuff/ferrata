@@ -125,6 +125,8 @@ deposits' relay fees, escrowed with them) + `totalOwed(ETH)` 2,000,000,000,000 =
 ## Files
 
 The 26 records of crown-rehearsal-3's pattern (the checkpoint input `crown-178-252`), `programs/ids.jsonl`, and for
-`scripts/verify-sepolia.py` each capture's record, `header.rlp` and the vault's storage proof. Not committed: the logs
-(local paths), the programs and receipts (binaries), the LEZ sessions' exports and node data, the deployment
-settings; `e2e/crown.sh fetch --lez` brings them from the ws-3 Volume.
+`scripts/verify-sepolia.py` each capture's record, `header.rlp` and the vault's storage proof. Added on 12 November
+from the run's own files, so that `e2e/crown.sh verify crown-live-1` runs from the committed records: session A's
+`deployment-settings.yaml` (the devnet's public genesis settings; its sha256 is `bedrockGenesisId`) and each capture's
+`block.json` (Sepolia's answer for the block). Not committed: the logs (local paths), the programs and receipts
+(binaries), the LEZ sessions' exports and node data; `e2e/crown.sh fetch --lez` brings them from the ws-3 Volume.
