@@ -65,7 +65,7 @@ comes later.
 | `SetCap` (admin), a token's mint bucket | SetCap (admin's actor) 12,790 → SetCap (token) 36,839 | new: 49,629 | 733 | 91,019; 789 (through `config(cid)`, §14) |
 | `Freeze` (freeze authority): a token's mints; all mints | 12,483 → 34,060; 11,871 → 31,380 | new: 46,543; 43,251 | 710; 690 | 140,609 and 95,939; 839 and 755 (read the newest record) |
 | `Sunset` (freeze authority) | Sunset (its actor) 11,140 → Sunset (`config(cid)`) 30,844 | new: 41,984 | 671 | 44,193; 671 |
-| `Tick` at a token; at the configuration | 32,821; 27,213 | new: 32,821; 27,213 | 460; 440 | 95,554 and 80,628; 525 and 505 (read the newest record) |
+| `Tick` at a token; at the configuration | 32,821; 27,213 | new: 32,821; 27,213 | 460; 440 | 95,555 and 80,628; 525 and 505 (read the newest record) |
 
 Every transaction is under `TARGET_GAS_EXEC` (5,000,000); the largest applied public one is a
 `Register` (360,698 in §8, 7.2%; 448,038 on the vault's own storage, §8a). **What the merge
