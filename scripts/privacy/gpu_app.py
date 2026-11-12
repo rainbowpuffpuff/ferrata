@@ -39,7 +39,7 @@ HARD_TIMEOUT_S = 2 * 3600
 # driver Modal mounts, with libstdc++ and libgcc_s.
 image = (
     modal.Image.from_registry("nvidia/cuda:12.8.0-runtime-ubuntu24.04", add_python="3.12")
-    .apt_install("time", "ca-certificates", "libssl3t64", "zlib1g")
+    .apt_install("time")  # the staged binaries need only libc, libm and libgcc_s (MANIFEST.json, ldd)
     .add_local_dir(STAGE, "/stage")
 )
 app = modal.App("ferrata-privacy-real")
