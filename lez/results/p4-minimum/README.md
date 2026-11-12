@@ -1,7 +1,8 @@
 # Proving on a CPU at the declared minimum: 8 and 16 CPUs, 16 GiB
 
 RFP-021 P.4 and RFP-022 P.4 ask for the user-side proofs to be measured on a laptop and on the
-declared minimum hardware. The proposal declares 16 GB of memory and 8 cores with 16 threads, x86-64 (Apple Silicon in M0). Until this run the
+declared minimum hardware. The proposal then declared 16 GB of memory and 8 cores with 16 threads, x86-64 (Apple Silicon in M0); since the
+macOS measurement ([`../p4-macos/README.md`](../p4-macos/README.md), EVIDENCE row 88) it declares x86-64, or an Apple M1 with 16 GB. Until this run the
 repository had GPU figures for these proofs (one NVIDIA L4: the private attestation in 16.1 s, the
 private claim and burn in 15.3 s and 12.4 s) and CPU figures from the build box only (up to 32
 cores). Here the same proofs ran for real (`RISC0_DEV_MODE=0`) on the CPU, three times each, in a

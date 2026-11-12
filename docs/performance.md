@@ -1,10 +1,10 @@
 # Ferrata: performance report (RFP-021 P.1–P.9, RFP-022 P.1–P.7)
 
 **First draft, 11 November 2026.** Each requirement with the measured figures, where and how they were
-measured, and the gaps. Paths are relative to the repository root. The planned `just bench`, which
-would regenerate every number from a fresh checkout with real proving and record the hardware, is
-**not built**; today each number comes from the test, script or run named beside it
-([`docs/design/attestation.md`](design/attestation.md) §13). [`docs/EVIDENCE.md`](EVIDENCE.md) lists the
+measured, and the gaps. Paths are relative to the repository root. `just bench` regenerates the vault's gas, the light
+client's cycles and a real release proof from a fresh checkout and records the hardware ([EVIDENCE](EVIDENCE.md)
+row 49; `just bench-user`, the user-side proofs at the declared minimum, row 50); every other number comes
+from the test, script or run named beside it ([`docs/design/attestation.md`](design/attestation.md) §13). [`docs/EVIDENCE.md`](EVIDENCE.md) lists the
 evidence with its commands.
 
 ## Where things were measured
@@ -115,7 +115,7 @@ recommended cadence with real proving and recorded hardware (milestone A4).
 
 ### P.4 User proving (RFP-021)
 
-Declared minimum for user-side proving: **16 GB of memory and 8 cores with 16 threads, x86-64** (Apple Silicon in M0)
+Declared minimum for user-side proving: **16 GB of memory and 8 cores with 16 threads, x86-64, or an Apple M1 with 16 GB**
 ([`attestation.md`](design/attestation.md) §13). Measured: the private attestation on one L4, 16.1 s,
 0.76 GiB host memory (P.2); on CPUs, in cloud containers held to 8 and to 16 CPUs with 16 GiB hard (AMD Zen 3
 servers), **904.3 s** and **497.3 s** (medians of 3), 9.25 GiB peak: 2,355,666 user cycles, of which LEZ's
@@ -124,8 +124,11 @@ privacy-preserving circuit takes 1,975,089 and 85 % of the time ([`p4-minimum`](
 488.6 s on the same shapes (row 34). Modal's 8 CPUs are 8 hardware threads; an 8-core x86 laptop usually has 16.
 Padded as LEZ's wallet pads every private transaction (7 private actions, 512-byte notes, the fee's recovery note:
 what a client sends), the attestation takes **1,236.8 s** and **633.3 s** on the same shapes (medians of 2), LEZ's
-circuit 979,362–980,875 user cycles more (4 segments, was 3), the same 9.25 GiB peak (row 38). The update proof is
-an updater's, not a user's (9.18 GiB peak). **Gaps:** a mid-range laptop and macOS; a chain of hops (a 320-hop
+circuit 979,362–980,875 user cycles more (4 segments, was 3), the same 9.25 GiB peak (row 38). Under macOS 15.8 on
+Apple Silicon (Mac minis, CPU only: r0vm 3.0.5 has no Metal prover), padded: **857.4 s** on an M1 with 16 GB
+and **475.2 s** on an M4 (medians of 2), r0vm peak 9.26–9.45 GiB, no swap-out on the M1
+([`p4-macos`](../lez/results/p4-macos/README.md), row 88). The update proof is an updater's, not a user's
+(9.18 GiB peak). **Gaps:** a mid-range laptop; a chain of hops (a 320-hop
 claim is estimated at about 58M accelerated user cycles).
 
 ### P.5 End-to-end attestation latency
@@ -146,7 +149,8 @@ claim is estimated at about 58M accelerated user cycles).
 | the lab zone (sequencer, Bedrock node, driver) | two physical cores requested; a session of 6–11 transactions 123–133 s; state 20–31 MB compressed per generation; 0.0064 USD per scheduled session, about 0.08 USD a day (derived) | [`lez/lab/README.md`](../lez/lab/README.md) |
 | proven updater | 9.18 GiB, 54 min laptop CPU; 49.5 s one L4 | P.2 |
 
-**Gap:** the updater daemon and `monitor` (not built): CPU, memory, bandwidth.
+**Gap:** the CPU, memory and bandwidth of the updater daemon and of `monitor` (both built, [EVIDENCE](EVIDENCE.md)
+rows 43–45, 79–81; not measured).
 
 ### P.7 State growth
 
@@ -267,11 +271,12 @@ verifier.
 | private claim and private burn of the merged program, as this harness builds them | claim **905.4 s** / **463.7 s**, burn **756.3 s** / **389.0 s** at 8 / 16 CPUs (medians of 3; at 16 one run each on an Intel Xeon, 371.4 s and 310.6 s); peak 9.24 GiB | cloud containers held to 8 / 16 CPUs and 16 GiB | [`p4-minimum`](../lez/results/p4-minimum/README.md), [EVIDENCE](EVIDENCE.md) row 33 |
 | private claim and private burn of the merged program, padded as LEZ's wallet pads them (what a client sends) | claim **1,146.0 s** / **600.7 s**, burn **988.9 s** / **525.9 s** at 8 / 16 CPUs (medians of 2); LEZ's circuit about 0.98–0.99M user cycles more; peak 9.25 GiB | the same | [`p4-minimum`](../lez/results/p4-minimum/README.md), [EVIDENCE](EVIDENCE.md) row 38 |
 | LEZ's own wallet: its cheapest private transaction (the yardstick) | **991.7 s** / **488.6 s** at 8 / 16 CPUs; 2,851,842 user cycles | the same | [`p4-minimum`](../lez/results/p4-minimum/README.md), row 34 |
+| private claim and private burn, padded, under macOS (CPU only) | claim **818.7 s** / **453.5 s**, burn **716.5 s** / **396.1 s** on an M1 with 16 GB / an M4 (medians of 2); the release's succinct proof **31.7 s** / **18.4 s**; r0vm peak 9.26–9.45 GiB | Mac minis, macOS 15.8 | [`p4-macos`](../lez/results/p4-macos/README.md), row 88 |
 | recovery scan | median 128.9 ms per 100,000 deposits, 1,308.6 ms per 1,000,000 | laptop CPU, one thread | [`bridge.md`](design/bridge.md) §18.3 |
 
-Declared minimum: 16 GB and 8 cores with 16 threads, x86-64 (Apple Silicon in M0). The release's succinct proof needs the holder's burn
+Declared minimum: 16 GB and 8 cores with 16 threads, x86-64, or an Apple M1 with 16 GB. The release's succinct proof needs the holder's burn
 secret `sOut`, so it is the user's; the wrap takes only the succinct receipt, so any relayer can make it
-([`bridge.md`](design/bridge.md) §12.2, §12.3). **Gaps:** a mid-range laptop and macOS; the current program image on a GPU; the
+([`bridge.md`](design/bridge.md) §12.2, §12.3). **Gaps:** a mid-range laptop; the current program image on a GPU; the
 wrap on Apple Silicon (not supported today).
 
 ### P.5 Latency: deposit to mint, burn to release
@@ -311,7 +316,8 @@ with both burns to the first release's block, 64.7 min (checkpoint input, proof 
 | Groth16 wrap of a checkpoint | x86 | 7.3 GiB | 195.1–215.2 s (laptop); recursion 18.7 s on 16 cores + 14 s Groth16 (end-to-end run) | [`checkpoint/RESULTS.md`](../checkpoint/RESULTS.md); [`bridge.md`](design/bridge.md) §18.7 |
 | cloud cost of the GPU proofs | — | — | 385 L4-seconds billed for four checkpoint proofs and an update: about 0.09 USD of GPU | [`gpu-prover/RESULTS.md`](../gpu-prover/RESULTS.md), "Cost" |
 
-**Gap:** the relayer, importer and `monitor` daemons (not built).
+**Gap:** the resources of the relayer and `monitor` daemons (built, [EVIDENCE](EVIDENCE.md) rows 43–46; not
+measured) and of the importer (the relayer's root imports, not built).
 
 ### P.7 State growth at 1M and 10M operations
 
@@ -349,7 +355,7 @@ over one and five years with real traffic (milestone B4).
 
 ## Gaps, in one list
 
-`just bench`; user-side proofs on a laptop and on macOS (cloud CPUs held to 8 and 16 CPUs, padded as LEZ's wallet
+user-side proofs on a laptop (cloud CPUs held to 8 and 16 CPUs, and Mac minis under macOS, padded as LEZ's wallet
 pads: P.4); latency measured end to end on the inbound leg (the outbound once, on testnet parameters: P.5); the
 recommended-cadence tracking cost with real proving; daemon resources; the BLS precompile delta; cost
 against state size; v5's ERC-20 calls and refunds on Sepolia's gas rules; an import under a mainnet state root; LEZ account

@@ -147,8 +147,10 @@ sequencer, which verifies receipts, included it ([`lez/live/inbound/README.md`](
 by LEZ's wallet on a cloud CPU (16 cores reserved, up to 32) and sent in 276.8 s on a LEZ devnet, in the
 crown rehearsal ([`e2e/runs/crown-rehearsal-3`](../../e2e/runs/crown-rehearsal-3/README.md)); as this repository's
 harness builds it, it was proven in 905.4 s on cloud CPUs held to 8 CPUs and 16 GiB (half the declared minimum's threads)
-and in 463.7 s at 16 CPUs ([`lez/results/p4-minimum`](../../lez/results/p4-minimum/README.md)). **Not measured:** the private claim on a user's
-laptop or on macOS (declared minimum: 16 GB, 8 cores with 16 threads, x86-64 (Apple Silicon in M0), [`attestation.md`](../design/attestation.md) §13).
+and in 463.7 s at 16 CPUs ([`lez/results/p4-minimum`](../../lez/results/p4-minimum/README.md)). Under macOS 15.8 on Apple Silicon (Mac minis, CPU only) the padded private claim took
+818.7 s on an M1 with 16 GB and 453.5 s on an M4 ([`lez/results/p4-macos`](../../lez/results/p4-macos/README.md), EVIDENCE row 88).
+**Not measured:** the private claim on a user's laptop (declared minimum: 16 GB, 8 cores with 16 threads, x86-64,
+or an Apple M1 with 16 GB, [`attestation.md`](../design/attestation.md) §13).
 
 **Fees.** The claim mints your denomination to you and the escrowed fees to the fee recipient and to
 the relayer it names ([`bridge.md`](../design/bridge.md) §5.5, §13). The LEZ transaction fee of a
