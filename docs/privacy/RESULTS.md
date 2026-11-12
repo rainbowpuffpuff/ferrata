@@ -248,7 +248,10 @@ Everything public about the root import is §B6's "the vault's root at a block" 
   of the comparison and the adversary. The zero-knowledge property of RISC Zero receipts is assumed, as
   §B3 says; the real receipt of an earlier private claim was searched for private inputs in
   `lez/BRIDGE-RESULTS.md` §7. The vault ran with the mock verifier; a real Groth16 seal is fresh
-  randomness the comparison did not see.
+  randomness the comparison did not see. **Since measured** on the final programs with real proofs
+  ([`real/RESULTS.md`](real/RESULTS.md), 12 November 2026): 20 of 20 claims and burns proven on one L4 and
+  verified by LEZ's settlement, 20 of 20 releases checked by RISC Zero's Groth16 verifier; the gate passes,
+  the adversary is at chance, and every part of the receipts and seals is classified and tested.
 - **The Ethereum side of LEZ.** The vault's state reaches LEZ through synthetic records at genesis, as in
   all bridge-program tests; the deposit root is cross-checked equal, not attested from a real block.
 - **Timing and amounts.** One token, one denomination, one relayer, every deposit before every claim and
