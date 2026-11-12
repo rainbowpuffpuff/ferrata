@@ -6,7 +6,7 @@ day, all with forge 1.3.6, solc 0.8.26, optimizer on (200 runs), EVM cancun. "v3
 gas rules (Prague). Sepolia has run Glamsterdam since 6 October 2026, which prices new state far higher (EIP-8037):
 creation costs there are in "Creating the contracts on today's Sepolia" below; calls that write new storage cost
 more there too: the v3 round trip's 16 transactions as Sepolia's own node prices them are in "On Sepolia since
-Glamsterdam" below, with the receipts of the v5 round trip sent live on Sepolia (11 November 2026).
+Glamsterdam" below, with the receipts of the v5 round trips sent live on Sepolia (11 and 12 November 2026).
 
 ```
 forge test --isolate --match-contract GasScenarios -vv
@@ -130,6 +130,34 @@ rules: 593,678). On Sepolia's rules none of the proof-verifying calls is under t
 finalisation ≤ 500k, release ≤ 450k); on Foundry's all are. The node's estimates were 0.8 % (creations) and 1.7 %
 (registrations) above the gas used, 26 % for the renounce. One run on one state (a fresh vault, two deposits, the
 first checkpoint and releases), not a measurement over states.
+
+**The v5 round trip on the final programs, live on Sepolia (12 November 2026): the receipts.** `gasUsed` of the 13
+transactions of `crown-live-3` (the vault's immutable image ids those of [`../docs/image-ids.md`](../docs/image-ids.md))
+as Sepolia's receipts give them (read back with `cast receipt` on publicnode, 16:42Z; records and hashes:
+[`../e2e/runs/crown-live-3/`](../e2e/runs/crown-live-3/README.md)), the node's `eth_estimateGas` that set each
+deployment limit (`deploy.json`; limit = 1.25 x), and crown-live-1's receipts above. The same vault source and the
+same sequence; the differences are calldata (the image ids and the journal and seals of this run).
+
+| Nonce | Transaction | **Sepolia receipt (crown-live-3)** | Sepolia `eth_estimateGas` | crown-live-1's receipt |
+|---:|---|---:|---:|---:|
+| 23 | create RiscZeroVerifierEmergencyStop | 2,953,028 | 2,977,632 | 2,953,028 |
+| 24 | create FerrataRegistry (the library) | 19,544,631 | 19,700,914 | 19,544,631 |
+| 25 | create FerrataVault, rule (B), the final programs' ids | 39,247,231 | 39,559,884 | 39,247,243 |
+| 26 | create TestToken | 3,315,490 | 3,342,971 | 3,315,490 |
+| 27 | registerToken (ETH) | 3,165,774 | 3,218,360 | 3,165,774 |
+| 28 | registerToken (test token) | 3,167,052 | 3,219,659 | 3,167,052 |
+| 29 | the stop's owner renounced | 25,220 | 31,788 | 25,220 |
+| 30 | depositETH, the tree's first (public kind) | 559,652 | | 559,652 |
+| 31 | depositETH, the second (private kind) | 268,026 | | 268,014 |
+| 32 | rule (B) submitCandidate, real `checkpoint_b` seal | 729,349 | | 729,361 |
+| 33 | rule (B) finalizeAttested | 844,349 | | 844,361 |
+| 34 | release (ETH), real seal: the vault's first release and fee credits | 661,632 | | 661,668 |
+| 35 | release (ETH), real seal, the second | 465,768 | | 465,828 |
+| | **all 13** | **74,947,202** | | **74,947,322** |
+
+A rule (B) checkpoint on Sepolia costs 729,349 + 844,349 = **1,573,698** gas here. Fees paid: 0.0000248635 ETH in all,
+nearly all of it the deployment's (gas prices of 140,711 to 640,703 wei for five of its seven transactions, as the
+endpoint priced them then; 24 to 543 wei for the eight others).
 
 ## The security fixes of 11 November 2026 (branch `secfix-vault`)
 

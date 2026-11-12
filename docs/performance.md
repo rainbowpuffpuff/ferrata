@@ -16,7 +16,7 @@ evidence with its commands.
 | **live sequencer** | LEZ's own `sequencer_service` at `v0.4.0-rc1` with a Logos Blockchain node (one validator, leader proofs in dev mode) on a cloud container; charges re-checked by replaying the chain through LEZ's `chain_state` | [`lez/RESULTS.md`](../lez/RESULTS.md) §9; [`lez/live/inbound/README.md`](../lez/live/inbound/README.md); [`lez/lab/README.md`](../lez/lab/README.md) |
 | **local EVM** | Foundry (forge 1.3.6, solc 0.8.26, 200 runs, cancun), `forge test --isolate`: whole transactions under today's mainnet gas rules | [`vault/GAS.md`](../vault/GAS.md) |
 | **Sepolia node** | each transaction priced by a public Sepolia node (reth 2.10.0) with `eth_estimateGas` / `eth_simulateV1` on a fork's state: Glamsterdam's gas rules, nothing sent | [`e2e/README.md`](../e2e/README.md); [`vault/GAS.md`](../vault/GAS.md), "Creating the contracts on today's Sepolia" |
-| **Sepolia (live)** | receipts (`gasUsed`) of the transactions the live round trip `crown-live-1` sent on Sepolia, read back with `cast receipt` | [`e2e/runs/crown-live-1/README.md`](../e2e/runs/crown-live-1/README.md); [`vault/GAS.md`](../vault/GAS.md), "The v5 round trip, live on Sepolia" |
+| **Sepolia (live)** | receipts (`gasUsed`) of the transactions the live round trips sent on Sepolia, read back with `cast receipt`: `crown-live-3` on the final programs, `crown-live-1` on the first run's | [`e2e/runs/crown-live-3/README.md`](../e2e/runs/crown-live-3/README.md); [`e2e/runs/crown-live-1/README.md`](../e2e/runs/crown-live-1/README.md); [`vault/GAS.md`](../vault/GAS.md), "The v5 round trip, live on Sepolia" and "The v5 round trip on the final programs" |
 | **laptop CPU** | AMD Ryzen 9 7940HS, 8 cores, 16 threads, no GPU; shared with other jobs, so wall times state the load | [`docs/design/bridge.md`](design/bridge.md) §18 |
 | **cloud GPU** | one NVIDIA L4 (24 GB) on Modal, 4 CPU cores, 32 GiB; r0vm 3.0.5 built with CUDA | [`gpu-prover/RESULTS.md`](../gpu-prover/RESULTS.md) |
 | **simulation** | the Python model of the v0.4 sequencer and Logos Blockchain code | `docs/design/finality-rule/RESULTS.md` |
@@ -221,7 +221,8 @@ The root import is the only additional verification (the claim needs no Ethereum
 | under a Gloas record, with the header | 266,879 | 2,612 | in-process harness |
 | live sequencer, stand-in beacon chain | 232,278 | 2,460 | live sequencer |
 | Sepolia's real state: the live vault, one leaf, capture 1 (the frozen program) | 426,479 | 6,646 | live sequencer ([`lez/live/inbound/README.md`](../lez/live/inbound/README.md)) |
-| Sepolia's real state: the v5 vault, one leaf then two, captures 1 and 2 (this tree's program, the live round trip) | 433,528; 429,805 | — | crown devnet, LEZ v0.4.0-rc1 ([`e2e/runs/crown-live-1/README.md`](../e2e/runs/crown-live-1/README.md)) |
+| Sepolia's real state: the v5 vault, one leaf then two, captures 1 and 2 (this tree's program, the live round trip `crown-live-3`) | 432,182; 432,182 | — | crown devnet, LEZ v0.4.0-rc1 ([`e2e/runs/crown-live-3/README.md`](../e2e/runs/crown-live-3/README.md)) |
+| the same in the first live run (`integration5`'s program, `crown-live-1`) | 433,528; 429,805 | — | crown devnet, LEZ v0.4.0-rc1 ([`e2e/runs/crown-live-1/README.md`](../e2e/runs/crown-live-1/README.md)) |
 
 **Amortised per deposit (derived)**: an import's cost divided by the deposits it newly covers, so with one
 import an hour: about 283k per deposit at one deposit an hour, 28.3k at ten, 2.8k at a hundred (from the
@@ -232,15 +233,15 @@ root (estimated at roughly 275k cycles of attestation plus one slot proof; not m
 
 ### P.3 Ethereum gas: deposit, release, checkpoints
 
-| Transaction | Local EVM, v5 vault | Sepolia node, v3 vault | **Sepolia (live) receipts, v5 vault** |
+| Transaction | Local EVM, v5 vault | Sepolia node, v3 vault | **Sepolia (live) receipts, v5 vault** (`crown-live-3`, the final programs; `crown-live-1` where it differs) |
 |---|---:|---:|---:|
 | `depositETH`, first by an address | 179,275 (mock-verifier state); 198,427 (first of the tree) | 552,152 (first of the tree) | 559,652 (first of the tree) |
-| `depositETH`, later | 159,285 | 260,526 | 268,014 (the second) |
+| `depositETH`, later | 159,285 | 260,526 | 268,026 (the second; 268,014) |
 | `deposit` ERC-20, first by an address | 197,762 | 375,237 (the token's first deposit, the address's third) | not sent |
-| `release` ETH, real verifier | 373,657 | 619,477 | 661,668 (the first, with the first fee credits); 465,828 (the second) |
+| `release` ETH, real verifier | 373,657 | 619,477 | 661,632 (the first, with the first fee credits); 465,768 (the second) (661,668; 465,828) |
 | `release` ERC-20 with a relayer's fee, real verifier | 403,523 | 648,447 | not sent |
 | rule (A) checkpoint: `submitCandidate` + `recordBeacon` + `finalize`, real verifier | 438,444 + 77,937 + 457,965 = **974,346** | 1,381,770 + 262,063 + 1,183,452 = **2,827,285** (derived sum) | — (a rule (B) vault) |
-| rule (B) checkpoint: `submitCandidate` + `finalizeAttested`, real verifier | 347,820 + 195,149 = **542,969** | not measured | 729,361 + 844,361 = **1,573,722** |
+| rule (B) checkpoint: `submitCandidate` + `finalizeAttested`, real verifier | 347,820 + 195,149 = **542,969** | not measured | 729,349 + 844,349 = **1,573,698** (1,573,722) |
 | `registerToken`, three denominations | 647,208 | 2,136,791 (v3 vault: 472,211 on Foundry) | 3,165,774 (ETH, with fee schedules) |
 | `refund` ETH / ERC-20 | 179,155 / 205,540 | not measured | not sent |
 
@@ -249,10 +250,10 @@ verifier"); [`e2e/README.md`](../e2e/README.md) ("What the round trip costs on t
 transactions 62,096,366 gas on Sepolia against 11,030,062 on Foundry, ×5.63). Checkpoint costs are paid
 once per finalised LEZ state, not per burn. Against the M0 thresholds (release ≤ 450k, candidate and
 finalisation ≤ 500k, [`docs/traceability.md`](traceability.md) P.3) every v5 row is under them on Foundry's
-rules; on Sepolia's state-gas rules none of the proof-verifying calls is (the live receipts: 1.3 to 3.9 times
-Foundry's for the same transactions, [`vault/GAS.md`](../vault/GAS.md)). Mainnet has not scheduled
+rules; on Sepolia's state-gas rules none of the proof-verifying calls is (crown-live-1's live receipts: 1.3 to 3.9
+times Foundry's for the same transactions, [`vault/GAS.md`](../vault/GAS.md)). Mainnet has not scheduled
 Glamsterdam, so it still charges the Foundry column ([`e2e/README.md`](../e2e/README.md)). **Gaps:** v5's
-ERC-20 calls and refunds on Sepolia (the live run sent ETH only); a later (not first) candidate with the real
+ERC-20 calls and refunds on Sepolia (the live runs sent ETH only); a later (not first) candidate with the real
 verifier.
 
 ### P.4 User proving (RFP-022)
@@ -285,8 +286,9 @@ wrap on Apple Silicon (not supported today).
 
 **Inbound** (deposit to mint): Ethereum finality (about 13–19 min) + the next light-client update and root
 import (the operators' cadence; hourly in the design) + the privacy delay the client proposes + one claim
-transaction. Not measured end to end: in the live round trip a deposit's block to its capture took 19.7 and 19.1
-min, and both claims then ran in one later LEZ session. On the live sequencer the stand-in crossing ran `Init`, two imports
+transaction. Not measured end to end: in the live round trips a deposit's block to its capture took 19.7 and 19.1
+min (`crown-live-1`) and 14.7 and 25.2 min (`crown-live-3`; the second waited for one more light-client update), and
+both claims then ran in one later LEZ session. On the live sequencer the stand-in crossing ran `Init`, two imports
 and both claims; its duration is not a latency figure (stand-in beacon chain)
 ([`lez/live/inbound/README.md`](../lez/live/inbound/README.md)).
 
@@ -306,7 +308,9 @@ for a GPU (`e2e/sepolia-live.sh`, [`vault/README.md`](../vault/README.md)); the 
 deposits' finality waits, in about an hour and three quarters ([`e2e/README.md`](../e2e/README.md)). Measured live
 on Sepolia (`crown-live-1`; W = 1 h, release delay 120 s, a devnet with n = t = 1): from the end of the LEZ session
 with both burns to the first release's block, 64.7 min (checkpoint input, proof on an L40S and wrap 1.5 min, then
-`submitCandidate`, W, `finalizeAttested`, the delay) ([`e2e/runs/crown-live-1/README.md`](../e2e/runs/crown-live-1/README.md)).
+`submitCandidate`, W, `finalizeAttested`, the delay) ([`e2e/runs/crown-live-1/README.md`](../e2e/runs/crown-live-1/README.md));
+on the final programs (`crown-live-3`, the same parameters), 66.1 min (checkpoint input, proof on an L40S and wrap
+2.8 min) ([`e2e/runs/crown-live-3/README.md`](../e2e/runs/crown-live-3/README.md)).
 
 ### P.6 Off-chain compute (RFP-022)
 
@@ -315,6 +319,7 @@ with both burns to the first release's block, 64.7 min (checkpoint input, proof 
 | checkpoint prover | one L4 GPU, one CPU core | about 10.9 GiB GPU, 0.76–1.08 GiB host | 14.0 s (fixed part), 24.1 s (idle hour), 41.4 s (5 private tx), 219.3 s (50 private tx) | [`gpu-prover/RESULTS.md`](../gpu-prover/RESULTS.md) |
 | the same on a laptop CPU | 16 threads | 9.62 GB peak | 1,157.5–1,758.9 s fixed part; ≈ 34 min per idle hour and ≈ 4.8 h per busy hour (extrapolated) | [`checkpoint/RESULTS.md`](../checkpoint/RESULTS.md) |
 | rule (B) checkpoint | one L4 | — | 31.9 s (idle hour, `n` = 4, 9 segments) | [`bridge.md`](design/bridge.md) §18.5 |
+| rule (B) checkpoint of the live run on the final programs (`crown-live-3`: LEZ blocks 25..=90, 2 burns, 18,499,940 user cycles, 20 segments) | one L40S | — | 31.9 s prover wall (119 s with the queue and transfers) | [`e2e/runs/crown-live-3/README.md`](../e2e/runs/crown-live-3/README.md) |
 | Groth16 wrap of a checkpoint | x86 | 7.3 GiB | 195.1–215.2 s (laptop); recursion 18.7 s on 16 cores + 14 s Groth16 (end-to-end run) | [`checkpoint/RESULTS.md`](../checkpoint/RESULTS.md); [`bridge.md`](design/bridge.md) §18.7 |
 | cloud cost of the GPU proofs | — | — | 385 L4-seconds billed for four checkpoint proofs and an update: about 0.09 USD of GPU | [`gpu-prover/RESULTS.md`](../gpu-prover/RESULTS.md), "Cost" |
 
