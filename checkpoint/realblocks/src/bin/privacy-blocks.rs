@@ -92,11 +92,8 @@ fn run(config: &Config, parent: &State, blocks: &[&[u8]]) -> String {
 
 fn main() -> Result<()> {
     let a = args()?;
-    let (lez_path, sc_path, out) = (
-        a.get("lez").context("--lez")?,
-        a.get("scenario").context("--scenario")?,
-        a.get("out").context("--out")?,
-    );
+    let (lez_path, sc_path, out) =
+        (a.get("lez").context("--lez")?, a.get("scenario").context("--scenario")?, a.get("out").context("--out")?);
     let (lez_bytes, sc_bytes) = (fs::read(lez_path)?, fs::read(sc_path)?);
     let lez: Value = serde_json::from_slice(&lez_bytes)?;
     let sc: Value = serde_json::from_slice(&sc_bytes)?;
@@ -247,7 +244,9 @@ fn main() -> Result<()> {
         n - 1,
         n - 1
     );
-    println!("run_checkpoint_b (a) {as_provided}\nrun_checkpoint_b (b) {keys_only}\nrun_checkpoint_b (c) {relinked_run}");
+    println!(
+        "run_checkpoint_b (a) {as_provided}\nrun_checkpoint_b (b) {keys_only}\nrun_checkpoint_b (c) {relinked_run}"
+    );
     println!(
         "burns counted {} (scenario {want_count}), root {} (scenario {}): equal {}",
         frontier.count,
