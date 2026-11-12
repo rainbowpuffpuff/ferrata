@@ -35,7 +35,7 @@ else
   tree() { tar -C "$SRC" --exclude=target --exclude=./vault/lib --exclude=./vault/out --exclude=./vault/cache -cf - .; }
 fi
 # The logs come back owned by the caller; the exit status is check.sh's.
-tree | docker run --rm -i --platform linux/amd64 -v "$OUT:/out" -e FERRATA_COMMIT="$COMMIT" -e SEPOLIA_RPC_URL \
+tree | docker run --rm -i --platform linux/amd64 -v "$OUT:/out:z" -e FERRATA_COMMIT="$COMMIT" -e SEPOLIA_RPC_URL \
   -e FERRATA_HARNESS_THREADS -e HOST_IDS="$(id -u):$(id -g)" ferrata-reproduce bash -c \
   'mkdir -p /work/ferrata && tar -x -C /work/ferrata && /work/ferrata/scripts/reproduce/check.sh --out /out "$@"
    rc=$?; chown -R "$HOST_IDS" /out; exit $rc' check ${ARGS[@]+"${ARGS[@]}"}
