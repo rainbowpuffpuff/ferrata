@@ -143,14 +143,14 @@ status.
 ## Live on Sepolia, and how to check it yourself
 
 On 12 November 2026 (EVIDENCE rows 91–92) the whole round trip ran on the final programs of
-[`docs/image-ids.md`](docs/image-ids.md), Sepolia to LEZ and back, as `crown-live-3`: FerrataVault v5 deployed in
-mode (B) at [`0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c`](https://sepolia.etherscan.io/address/0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c),
+[`docs/image-ids.md`](docs/image-ids.md), Sepolia to LEZ and back, as `crown-live-3`, the second live round trip:
+FerrataVault v5 deployed in mode (B) at [`0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c`](https://sepolia.etherscan.io/address/0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c),
 the vault reviewers should check; LEZ's light client started from a fresh Sepolia checkpoint, inside the programs'
 weak-subjectivity bound; a public and a private deposit, final on Sepolia, imported by the bridge program on a LEZ
 v0.4.0-rc1 devnet from Sepolia's own finality updates and claimed, the private one with a real proof; a public and a
 private burn; a rule (B) checkpoint over the devnet's blocks proven on a GPU, its Groth16 seal verified on Sepolia;
 both releases paid. 13 transactions, 74.9M gas, two starts (one stop on the RPC endpoint's lagging reads, before the
-vault, resumed), verify 14 of 14 ([`e2e/runs/crown-live-3/`](e2e/runs/crown-live-3/README.md)). The second live run,
+vault, resumed), verify 14 of 14 ([`e2e/runs/crown-live-3/`](e2e/runs/crown-live-3/README.md)). A start before it,
 `crown-live-2`, stopped at its first stage with nothing sent: the bound refused its 38-day-old checkpoint
 ([`e2e/runs/crown-live-2/`](e2e/runs/crown-live-2/README.md)). The first, `crown-live-1` (11 November, EVIDENCE rows
 41–42), made the same round trip on earlier versions of these programs (`integration5`'s, built before guest builds
