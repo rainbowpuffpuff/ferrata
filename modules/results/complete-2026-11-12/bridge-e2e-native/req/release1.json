@@ -32,17 +32,17 @@
     {
       "count": 1,
       "delay": 120,
-      "finalized_at": 1794513089,
+      "finalized_at": 1794516218,
       "index": 0,
       "root": "0x89409baec579a74dc25e7d4e82783bd1e6f431eac37edfac064c058976e669f8"
     },
     {
       "count": 2,
       "delay": 120,
-      "finalized_at": 1794513990,
+      "finalized_at": 1794517119,
       "index": 1,
       "root": "0x112b1e1936447a13a56befe6dca18b736b7481042b864b577ce83905aac45650"
     }
   ],
-  "now": 1794514190
+  "now": 1794517320
 }

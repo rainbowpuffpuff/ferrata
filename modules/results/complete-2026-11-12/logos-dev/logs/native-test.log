@@ -1,12 +1,12 @@
    Compiling ferrata-attest-calls v0.1.0 (<spike>/ferrata-wt-bridge-module-complete/modules/ferrata_attest_module/rust-lib/calls)
-    Finished `release` profile [optimized] target(s) in 1.79s
+    Finished `release` profile [optimized] target(s) in 3.25s
      Running unittests src/lib.rs (target/release/deps/ferrata_attest_calls-25cdd12787071388)
 
 running 8 tests
-test tests::config_borsh_is_202_bytes ... ok
 test rpc::tests::urls_and_bodies ... ok
-test tests::hex_and_words ... ok
 test tests::chain_pairs ... ok
+test tests::hex_and_words ... ok
+test tests::config_borsh_is_202_bytes ... ok
 test tests::instance_id_equals_the_programs ... ok
 test tests::unreadable_requests_are_not_program_codes ... ok
 test trie::tests::empty_and_single ... ok
@@ -30,14 +30,14 @@ warning: function `check_shape` is never used
 
 warning: `ferrata-core` (lib) generated 1 warning
    Compiling ferrata-bridge-calls v0.1.0 (<spike>/ferrata-wt-bridge-module-complete/modules/ferrata_bridge_module/rust-lib/calls)
-    Finished `release` profile [optimized] target(s) in 1.95s
+    Finished `release` profile [optimized] target(s) in 3.79s
      Running unittests src/lib.rs (target/release/deps/ferrata_bridge_calls-54886e357a71b01b)
 
 running 6 tests
-test tests::unreadable_requests ... ok
-test tests::selectors ... ok
 test tests::amounts ... ok
+test tests::selectors ... ok
 test tests::burn_release_round_trip ... ok
+test tests::unreadable_requests ... ok
 test tests::deposit_claim_status_round_trip ... ok
 test wallet::tests::release_by_the_wallet_rule ... ok
 

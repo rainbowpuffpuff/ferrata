@@ -9,6 +9,6 @@ claim1	claim	0.01
 claim0_again	claim	0.01
 release0	release	0.01
 release1_early	release	0.01
-prove_release0	prove_release	0.06
-release1	release	0.01
+prove_release0	prove_release	0.08
+release1	release	0.02
 status	status	0.01

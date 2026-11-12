@@ -10,7 +10,7 @@ logos-ferrata_bridge_module-module-lib>   CMakeLists.txt:18 (logos_module)
 logos-ferrata_bridge_module-module-lib> This warning is for project developers.  Use -Wno-dev to suppress it.
 logos-ferrata_bridge_module-module-lib> 
 logos-ferrata_bridge_module-module-lib> -- Logos module ferrata_bridge_module configured successfully
-logos-ferrata_bridge_module-module-lib> -- Configuring done (2.5s)
+logos-ferrata_bridge_module-module-lib> -- Configuring done (3.6s)
 logos-ferrata_bridge_module-module-lib> -- Generating done (0.1s)
 logos-ferrata_bridge_module-module-lib> CMake Warning:
 logos-ferrata_bridge_module-module-lib>   Manually-specified variables were not used by the project:
@@ -22,7 +22,7 @@ logos-ferrata_bridge_module-module-lib>     CMAKE_POLICY_DEFAULT_CMP0025
 logos-ferrata_bridge_module-module-lib>     LOGOS_VIEW_TEMPLATE_DIR
 logos-ferrata_bridge_module-module-lib> 
 logos-ferrata_bridge_module-module-lib> 
-logos-ferrata_bridge_module-module-lib> -- Build files have been written to: <spike>/tmp/bmc/nix-build-logos-ferrata_bridge_module-module-lib-0.1.0.drv-0/w0v8cg73qp9w85jvk3yb6cdxbin2p4yv-source/build
+logos-ferrata_bridge_module-module-lib> -- Build files have been written to: <spike>/tmp/bmc/nix-build-logos-ferrata_bridge_module-module-lib-0.1.0.drv-0/63prikcf4kw628hpy8940ssxjq208k5y-source/build
 logos-ferrata_bridge_module-module-lib> cmake: enabled parallel building
 logos-ferrata_bridge_module-module-lib> cmake: enabled parallel installing
 logos-ferrata_bridge_module-module-lib> Running phase: buildPhase
@@ -35,16 +35,16 @@ logos-ferrata_bridge_module-module-lib> [4/6] Building CXX object CMakeFiles/fer
 logos-ferrata_bridge_module-module-lib> [5/6] Linking CXX shared library modules/ferrata_bridge_module_plugin.so
 logos-ferrata_bridge_module-module-lib> Running phase: glibPreInstallPhase
 logos-ferrata_bridge_module-module-lib> Running phase: installPhase
-logos-ferrata_bridge_module-module-lib> Checking <spike>/tmp/bmc/nix-build-logos-ferrata_bridge_module-module-lib-0.1.0.drv-0/w0v8cg73qp9w85jvk3yb6cdxbin2p4yv-source/lib for external libraries...
-logos-ferrata_bridge_module-module-lib> Installed module LIDL contract: /nix/store/z1z3i0aqf0s11rbf1gnjrdkgi8jmwfv0-logos-ferrata_bridge_module-module-lib-0.1.0/share/logos/ferrata_bridge_module.lidl
+logos-ferrata_bridge_module-module-lib> Checking <spike>/tmp/bmc/nix-build-logos-ferrata_bridge_module-module-lib-0.1.0.drv-0/63prikcf4kw628hpy8940ssxjq208k5y-source/lib for external libraries...
+logos-ferrata_bridge_module-module-lib> Installed module LIDL contract: /nix/store/jf4br57d5by4c23yxlcvlj8dm9z0aifq-logos-ferrata_bridge_module-module-lib-0.1.0/share/logos/ferrata_bridge_module.lidl
 logos-ferrata_bridge_module-module-lib> Running phase: qtOwnPathsHook
 logos-ferrata_bridge_module-module-lib> Running phase: fixupPhase
-logos-ferrata_bridge_module-module-lib> shrinking RPATHs of ELF executables and libraries in /nix/store/z1z3i0aqf0s11rbf1gnjrdkgi8jmwfv0-logos-ferrata_bridge_module-module-lib-0.1.0
-logos-ferrata_bridge_module-module-lib> shrinking /nix/store/z1z3i0aqf0s11rbf1gnjrdkgi8jmwfv0-logos-ferrata_bridge_module-module-lib-0.1.0/lib/ferrata_bridge_module_plugin.so
-logos-ferrata_bridge_module-module-lib> checking for references to <spike>/tmp/bmc/nix-build-logos-ferrata_bridge_module-module-lib-0.1.0.drv-0/ in /nix/store/z1z3i0aqf0s11rbf1gnjrdkgi8jmwfv0-logos-ferrata_bridge_module-module-lib-0.1.0...
-logos-ferrata_bridge_module-module-lib> patching script interpreter paths in /nix/store/z1z3i0aqf0s11rbf1gnjrdkgi8jmwfv0-logos-ferrata_bridge_module-module-lib-0.1.0
+logos-ferrata_bridge_module-module-lib> shrinking RPATHs of ELF executables and libraries in /nix/store/jf4br57d5by4c23yxlcvlj8dm9z0aifq-logos-ferrata_bridge_module-module-lib-0.1.0
+logos-ferrata_bridge_module-module-lib> shrinking /nix/store/jf4br57d5by4c23yxlcvlj8dm9z0aifq-logos-ferrata_bridge_module-module-lib-0.1.0/lib/ferrata_bridge_module_plugin.so
+logos-ferrata_bridge_module-module-lib> checking for references to <spike>/tmp/bmc/nix-build-logos-ferrata_bridge_module-module-lib-0.1.0.drv-0/ in /nix/store/jf4br57d5by4c23yxlcvlj8dm9z0aifq-logos-ferrata_bridge_module-module-lib-0.1.0...
+logos-ferrata_bridge_module-module-lib> patching script interpreter paths in /nix/store/jf4br57d5by4c23yxlcvlj8dm9z0aifq-logos-ferrata_bridge_module-module-lib-0.1.0
 logos-ferrata_bridge_module-module-lib> Running phase: postPatchMkspecs
-building '/nix/store/9a41swgsazhzqny3gzmg0dspzmwnkfa0-logos-ferrata_bridge_module-module-lib-lgx-0.1.0.drv'...
+building '/nix/store/himsxp90mbp08y5kzxhsr3fbwk0j24bq-logos-ferrata_bridge_module-module-lib-lgx-0.1.0.drv'...
 logos-ferrata_bridge_module-module-lib-lgx> Running phase: patchPhase
 logos-ferrata_bridge_module-module-lib-lgx> Running phase: updateAutotoolsGnuConfigScriptsPhase
 logos-ferrata_bridge_module-module-lib-lgx> Running phase: configurePhase
@@ -52,7 +52,7 @@ logos-ferrata_bridge_module-module-lib-lgx> no configure script, doing nothing
 logos-ferrata_bridge_module-module-lib-lgx> Running phase: buildPhase
 logos-ferrata_bridge_module-module-lib-lgx> Created package: logos-ferrata_bridge_module-module-lib.lgx
 logos-ferrata_bridge_module-module-lib-lgx> Patching manifest from metadata...
-logos-ferrata_bridge_module-module-lib-lgx> Staged 1 entries from /nix/store/z1z3i0aqf0s11rbf1gnjrdkgi8jmwfv0-logos-ferrata_bridge_module-module-lib-0.1.0/lib
+logos-ferrata_bridge_module-module-lib-lgx> Staged 1 entries from /nix/store/jf4br57d5by4c23yxlcvlj8dm9z0aifq-logos-ferrata_bridge_module-module-lib-0.1.0/lib
 logos-ferrata_bridge_module-module-lib-lgx> Bundled root asset directory: share/logos -> assets/lidl
 logos-ferrata_bridge_module-module-lib-lgx> Adding variant linux-amd64-dev to logos-ferrata_bridge_module-module-lib.lgx (main: ferrata_bridge_module_plugin.so)...
 logos-ferrata_bridge_module-module-lib-lgx> Added variant 'linux-amd64-dev' to logos-ferrata_bridge_module-module-lib.lgx

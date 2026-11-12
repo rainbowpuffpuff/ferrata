@@ -22,7 +22,15 @@ rm -rf "$S" "$out/home"
 mkdir -p "$out/home"
 ctl() { "$LOGOSCTL" --config-dir "$S" "$@"; }
 env -u RISC0_DEV_MODE HOME="$out/home" "$LOGOSCTL" --config-dir "$S" daemon start --detach > "$out/daemon.txt" 2>&1
-trap 'ctl daemon stop >> "$out/daemon.txt" 2>&1 || true' EXIT
+# At exit: the daemon stopped, the last lines of its log kept, its session and home removed (they hold
+# the installed package and the daemon's state, not results).
+finish() {
+  ctl daemon stop >> "$out/daemon.txt" 2>&1 || true
+  tail -n 20 "$S"/logs/daemon_*.log > "$out/daemon-log-tail.txt" 2>/dev/null || true
+  sed -i "s|$spike/|<spike>/|g" "$out/daemon-log-tail.txt" 2>/dev/null || true
+  rm -rf "$S" "$out/home"
+}
+trap finish EXIT
 ctl install "$LGX"/*.lgx -y >> "$out/daemon.txt" 2>&1
 ctl module load ferrata_bridge_module >> "$out/daemon.txt" 2>&1
 # The request names the release guest by path: this machine's.

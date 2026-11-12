@@ -44,11 +44,11 @@ module ferrata_bridge_module {
   version "0.1.0"
   depends []
 
-  method version() -> tstr description "The module's version and the ferrata-bridge-core it was built from, as JSON."
+  method version() -> tstr description "The module's version and what was staged beside it (the commit, LEZ's, each crate's sources'\nSHA-256), as JSON."
   method deposit(request: tstr) -> tstr description "A deposit's commitment and the vault call that makes it (`deposit` or `depositETH`), and,\nwith its leaf index, the leaf, deposit id and nullifier. JSON in and out (modules/README.md)."
-  method claim(request: tstr) -> tstr description "A claim of a deposit: its Merkle path in the deposit tree, the check the bridge program runs\n(`verify_claim`), its nullifier, and the program's `Claim` message. JSON in and out."
+  method claim(request: tstr) -> tstr description "A claim of a deposit: its Merkle path in the deposit tree, the check the bridge program runs\n(`verify_claim`), its nullifier, and the program's `Claim` or `ClaimPrivately` message; given\nLEZ's state, the `ferrata` tool's claim (the program's checks, fees, accounts). JSON in and out."
   method burn(request: tstr) -> tstr description "A burn: the note (tag, memo, MAC, commitment) and the bridge program's `Burn` message, and,\nwith its index in the burn tree, the leaf, burn id and release nullifier. JSON in and out."
-  method release(request: tstr) -> tstr description "A release: the burn's path in the checkpointed burn tree, the release guest's check\n(`verify_release`), its nullifier and the journal the vault verifies. JSON in and out."
+  method release(request: tstr) -> tstr description "A release: the burn's path in the checkpointed burn tree (its root given, or picked by the\nwallet's rule: the newest accepted root whose release delay has passed), the release guest's\ncheck (`verify_release`), its nullifier and the journal the vault verifies. JSON in and out."
   method recover(request: tstr) -> tstr description "The wallet's own deposits and burns among public ones, from its seed alone. JSON in and out."
   method status(request: tstr) -> tstr description "Where each deposit and burn stands (awaiting root, claimable, claimed; awaiting checkpoint,\nreleasable, released), from the chains' public state. JSON in and out."
   method prove_release(request: tstr) -> tstr description "A release (as `release`), then the release guest run on its input through r0vm (`program`: the\nguest's ELF), its journal checked against the native one; the tool's `release --prove`. JSON."

@@ -1,4 +1,4 @@
-    Finished `release` profile [optimized] target(s) in 0.18s
+    Finished `release` profile [optimized] target(s) in 0.30s
 warning: function `check_shape` is never used
    --> staged/crates/ferrata-core/src/bls/mod.rs:107:15
     |
@@ -8,4 +8,4 @@ warning: function `check_shape` is never used
     = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
 
 warning: `ferrata-core` (lib) generated 1 warning
-    Finished `release` profile [optimized] target(s) in 0.25s
+    Finished `release` profile [optimized] target(s) in 0.39s

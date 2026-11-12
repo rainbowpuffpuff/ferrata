@@ -32,18 +32,18 @@
     {
       "count": 1,
       "delay": 120,
-      "finalized_at": 1794515513,
+      "finalized_at": 1794518197,
       "index": 0,
       "root": "0x89409baec579a74dc25e7d4e82783bd1e6f431eac37edfac064c058976e669f8"
     },
     {
       "count": 2,
       "delay": 120,
-      "finalized_at": 1794516414,
+      "finalized_at": 1794519098,
       "index": 1,
       "root": "0x112b1e1936447a13a56befe6dca18b736b7481042b864b577ce83905aac45650"
     }
   ],
-  "now": 1794516414,
+  "now": 1794519098,
   "program": "<spike>/ferrata-wt-bridge-module-complete/bridge/target/riscv-guest/methods/ferrata-guests/riscv32im-risc0-zkvm-elf/release/release.bin"
 }

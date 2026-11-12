@@ -4,58 +4,58 @@
 
 | step | result | seconds |
 |---|---|---:|
-| versions | ok | 0.1 |
-| stage | ok | 0.1 |
-| sdk-source | ok | 0.2 |
-| cargo-lockfiles | ok | 0.0 |
-| requests | ok | 0.1 |
-| bridge-requests | ok | 0.1 |
-| native-test | ok | 4.1 |
-| native-calls | ok | 0.7 |
-| prepare-build | ok | 0.2 |
-| build-lgx | ok | 196.2 |
-| build-logosctl | ok | 37.8 |
-| dev-daemon-start | ok | 0.3 |
-| dev-install-ferrata_attest_module | ok | 0.4 |
+| versions | ok | 1.1 |
+| stage | ok | 0.3 |
+| sdk-source | ok | 1.0 |
+| cargo-lockfiles | ok | 0.2 |
+| requests | ok | 0.2 |
+| bridge-requests | ok | 0.5 |
+| native-test | ok | 7.6 |
+| native-calls | ok | 1.0 |
+| prepare-build | ok | 0.5 |
+| build-lgx | ok | 333.5 |
+| build-logosctl | ok | 1456.8 |
+| dev-daemon-start | ok | 0.4 |
+| dev-install-ferrata_attest_module | ok | 0.6 |
 | dev-load-ferrata_attest_module | ok | 0.1 |
-| dev-show-ferrata_attest_module | ok | 0.0 |
-| dev-install-ferrata_bridge_module | ok | 0.7 |
+| dev-show-ferrata_attest_module | ok | 0.1 |
+| dev-install-ferrata_bridge_module | ok | 0.9 |
 | dev-load-ferrata_bridge_module | ok | 0.1 |
 | dev-show-ferrata_bridge_module | ok | 0.1 |
-| dev-e2e | ok | 70.5 |
-| dev-bridge-e2e | ok | 19.1 |
+| dev-e2e | ok | 101.5 |
+| dev-bridge-e2e | ok | 25.5 |
 | dev-module-ls | ok | 0.1 |
 | dev-daemon-stop | ok | 0.7 |
-| sizes | ok | 0.7 |
+| sizes | ok | 0.9 |
 
 ## Calls
 
 | call | module | method | native verdict | code | expectations | dev: equal to native | dev: seconds |
 |---|---|---|---|---:|---|---|---:|
 | version | ferrata_attest_module | version | ferrata_attest_module |  | met | yes | 0.1 |
-| attest_weth_balance | ferrata_attest_module | dry_run_attest | attested | 0 | met | yes | 0.0 |
-| attest_empty_slot | ferrata_attest_module | dry_run_attest | attested | 0 | met | yes | 0.0 |
-| attest_absent_account | ferrata_attest_module | dry_run_attest | attested | 0 | met | yes | 0.0 |
-| refuse_tampered_proof | ferrata_attest_module | dry_run_attest | refused | 110 | met | yes | 0.0 |
-| refuse_other_block | ferrata_attest_module | dry_run_attest | refused | 110 | met | yes | 0.0 |
+| attest_weth_balance | ferrata_attest_module | dry_run_attest | attested | 0 | met | yes | 0.1 |
+| attest_empty_slot | ferrata_attest_module | dry_run_attest | attested | 0 | met | yes | 0.1 |
+| attest_absent_account | ferrata_attest_module | dry_run_attest | attested | 0 | met | yes | 0.1 |
+| refuse_tampered_proof | ferrata_attest_module | dry_run_attest | refused | 110 | met | yes | 0.1 |
+| refuse_other_block | ferrata_attest_module | dry_run_attest | refused | 110 | met | yes | 0.1 |
 | refuse_wrong_chain | ferrata_attest_module | dry_run_attest | refused | 140 | met | yes | 0.1 |
-| checkpoint_p1899 | ferrata_attest_module | verify_checkpoint | ok | 0 | met | yes | 0.0 |
-| checkpoint_attest_fixture | ferrata_attest_module | verify_checkpoint | ok | 0 | met | yes | 0.0 |
+| checkpoint_p1899 | ferrata_attest_module | verify_checkpoint | ok | 0 | met | yes | 0.1 |
+| checkpoint_attest_fixture | ferrata_attest_module | verify_checkpoint | ok | 0 | met | yes | 0.1 |
 | checkpoint_wrong_root | ferrata_attest_module | verify_checkpoint | failed | 10 | met | yes | 0.1 |
-| checkpoint_chain_mismatch | ferrata_attest_module | verify_checkpoint | failed |  | met | yes | 0.0 |
-| bridge_version | ferrata_bridge_module | version | ferrata_bridge_module |  | met | yes | 0.0 |
-| bridge_deposit_case0 | ferrata_bridge_module | deposit | ok |  | met | yes | 0.0 |
-| bridge_deposit_case1 | ferrata_bridge_module | deposit | ok |  | met | yes | 0.0 |
-| bridge_deposit_case2 | ferrata_bridge_module | deposit | ok |  | met | yes | 0.0 |
-| bridge_claim_vector | ferrata_bridge_module | claim | claimable |  | met | yes | 0.0 |
-| bridge_claim_wrong_amount | ferrata_bridge_module | claim | refused |  | met | yes | 0.0 |
-| bridge_burn_case0 | ferrata_bridge_module | burn | ok |  | met | yes | 0.0 |
-| bridge_burn_case1 | ferrata_bridge_module | burn | ok |  | met | yes | 0.0 |
-| bridge_burn_case2 | ferrata_bridge_module | burn | ok |  | met | yes | 0.0 |
-| bridge_release_vector | ferrata_bridge_module | release | releasable |  | met | yes | 0.0 |
-| bridge_release_wrong_recipient | ferrata_bridge_module | release | refused |  | met | yes | 0.0 |
-| bridge_recover | ferrata_bridge_module | recover | ok |  | met | yes | 0.0 |
-| bridge_status | ferrata_bridge_module | status | ok |  | met | yes | 0.0 |
+| checkpoint_chain_mismatch | ferrata_attest_module | verify_checkpoint | failed |  | met | yes | 0.1 |
+| bridge_version | ferrata_bridge_module | version | ferrata_bridge_module |  | met | yes | 0.1 |
+| bridge_deposit_case0 | ferrata_bridge_module | deposit | ok |  | met | yes | 0.1 |
+| bridge_deposit_case1 | ferrata_bridge_module | deposit | ok |  | met | yes | 0.1 |
+| bridge_deposit_case2 | ferrata_bridge_module | deposit | ok |  | met | yes | 0.1 |
+| bridge_claim_vector | ferrata_bridge_module | claim | claimable |  | met | yes | 0.1 |
+| bridge_claim_wrong_amount | ferrata_bridge_module | claim | refused |  | met | yes | 0.1 |
+| bridge_burn_case0 | ferrata_bridge_module | burn | ok |  | met | yes | 0.1 |
+| bridge_burn_case1 | ferrata_bridge_module | burn | ok |  | met | yes | 0.1 |
+| bridge_burn_case2 | ferrata_bridge_module | burn | ok |  | met | yes | 0.1 |
+| bridge_release_vector | ferrata_bridge_module | release | releasable |  | met | yes | 0.1 |
+| bridge_release_wrong_recipient | ferrata_bridge_module | release | refused |  | met | yes | 0.1 |
+| bridge_recover | ferrata_bridge_module | recover | ok |  | met | yes | 0.1 |
+| bridge_status | ferrata_bridge_module | status | ok |  | met | yes | 0.1 |
 
 ## End to end through Logos Core (dev): 43 checks, 0 failed
 
@@ -121,22 +121,22 @@
 | registry | config(cid) decoded; configId recomputed from it equals the devnet's | yes | instance 0x1d1d1d1d1d1d1d1d… |
 | registry | root(cid, 2) decoded | yes |  |
 | claim (private) | deposit 0: the tool's claim (ferrata-wallet): claimable, ClaimPrivately, root = the private account's own actor | yes | 1239 bytes, 6 accounts, mint fee 0 |
-| claim (private) | deposit 0: proven and settled privately on the zone | yes | proof dev, prove 815 ms, balance 100000000000000000 |
+| claim (private) | deposit 0: proven and settled privately on the zone | yes | proof dev, prove 1061 ms, balance 100000000000000000 |
 | claim (private) | deposit 1: the tool's claim (ferrata-wallet): claimable, ClaimPrivately, root = the private account's own actor | yes | 1239 bytes, 6 accounts, mint fee 0 |
-| claim (private) | deposit 1: proven and settled privately on the zone | yes | proof dev, prove 870 ms, balance 200000000000000000 |
+| claim (private) | deposit 1: proven and settled privately on the zone | yes | proof dev, prove 1075 ms, balance 200000000000000000 |
 | claim (private) | deposit 0 again: refused from the nullifier's account (ALREADY_CLAIMED, 250) | yes |  |
 | claim (private) | the private account holds both denominations | yes | balance 200000000000000000 |
-| release (the wallet's rule) | two accepted roots: over burn 0 (delay passed) and over both (in its delay) | yes | now 1794516414, opens [1794515633, 1794516534] |
+| release (the wallet's rule) | two accepted roots: over burn 0 (delay passed) and over both (in its delay) | yes | now 1794519098, opens [1794518317, 1794519218] |
 | release (the wallet's rule) | burn 0: the newest root whose delay has passed is the older one | yes | picked checkpoint 0, root 0x89409baec579a74d… |
-| release (the wallet's rule) | burn 1: only the newer root covers it, in its delay: ReleaseDelayNotElapsed, with when it opens | yes | first open 1794516534 |
+| release (the wallet's rule) | burn 1: only the newer root covers it, in its delay: ReleaseDelayNotElapsed, with when it opens | yes | first open 1794519218 |
 | release (the wallet's rule) | after the delay: burn 1 under the newer root | yes |  |
-| prove_release | the release guest run on the module's input through r0vm: its journal is the native one | yes | image 0xb64900bcf7416685…, dev mode True, 56 ms, receipt 2344 bytes |
+| prove_release | the release guest run on the module's input through r0vm: its journal is the native one | yes | image 0xb64900bcf7416685…, dev mode True, 72 ms, receipt 2344 bytes |
 | vault | both releases the module planned are accepted by the vault (mock verifier on the exact journals) | yes | paid 100000000000000000 and 100000000000000000 wei |
 | status | both burns released | yes |  |
 
 ## Replies (native)
 
-- `version`: `{"bls_backend": "blst (advance runs the program's steps natively)", "methods": ["version", "dry_run_attest", "verify_checkpoint", "fetch_log_proof", "build_attest_tx", "read_attestation", "read_instance", "advance"], "module": "ferrata_attest_module", "staged": {"commit": "61e7b3d60583dc23bfc856e1b50f62ea1c734d58", "crates": [{"from": "crates/ferrata-core", "name": "ferrata-core", "source_sha256": "f43255c33578f87ccd50386f936ea722ae2bbddc7fc60509e97a6eafc39864d8", "version": "0.0.1"}, {"from": "lez/wire", "name": "ferrata-lez-wire", "source_sha256": "759b29f064000656b2d3795496d72bdd0074ce13aff …`
+- `version`: `{"bls_backend": "blst (advance runs the program's steps natively)", "methods": ["version", "dry_run_attest", "verify_checkpoint", "fetch_log_proof", "build_attest_tx", "read_attestation", "read_instance", "advance"], "module": "ferrata_attest_module", "staged": {"commit": "3a15b73a1417f8cc0334aed80c5258970dcaa70c", "crates": [{"from": "crates/ferrata-core", "name": "ferrata-core", "source_sha256": "f43255c33578f87ccd50386f936ea722ae2bbddc7fc60509e97a6eafc39864d8", "version": "0.0.1"}, {"from": "lez/wire", "name": "ferrata-lez-wire", "source_sha256": "759b29f064000656b2d3795496d72bdd0074ce13aff …`
 - `attest_weth_balance`: `{"account_id": "0x7e5f4c87430552093b5b39e5195c6cd5c9210a2832f24b51638586730311555d", "block_hash": "0x3e02e5baa81bf1604b6447e9ca014a1ca85e3c7785ca6b9a5430b6c93cba7bce", "block_number": 26384851, "chain_id": 1, "code": 0, "fact": {"address": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", "kind": "storage", "slot": "0xb374801ace2c02f5db0425ab5920a2b7ed1d5a00abbcd395fda7530ba1d666c0", "value": "0x0000000000000000000000000000000000000000000000f22ca9b4cc5d0f3d61"}, "id": "0xabc1114e5c089b52e94b0980941b17a7d081c2444f5341b3823fdc4d3a1dfa53", "id_at_block": "0xfd7e6c60a6c14fee4d28571da503a22e6a3f64678d …`
 - `attest_empty_slot`: `{"account_id": "0x7e5f4c87430552093b5b39e5195c6cd5c9210a2832f24b51638586730311555d", "block_hash": "0x3e02e5baa81bf1604b6447e9ca014a1ca85e3c7785ca6b9a5430b6c93cba7bce", "block_number": 26384851, "chain_id": 1, "code": 0, "fact": {"address": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", "kind": "storage", "slot": "0x00000000000000000000000000000000000000000000000000000000000000ff", "value": "0x0000000000000000000000000000000000000000000000000000000000000000"}, "id": "0x49bb018ccdfed73fe40c55f138a279f692c2dd9334ee7b14fb077635edf0f5a7", "id_at_block": "0x5203696b1eae4e90077ec32e2fcc21dc3fa9085b66 …`
 - `attest_absent_account`: `{"account_id": "0x567af131df4aab8b29530d46307672993c062f7c49e9680b250dcb3c41d91a2e", "block_hash": "0x3e02e5baa81bf1604b6447e9ca014a1ca85e3c7785ca6b9a5430b6c93cba7bce", "block_number": 26384851, "chain_id": 1, "code": 0, "fact": {"address": "0x3e05d7d15f0d45265117bcd6e6682f138ee60e60", "kind": "storage", "slot": "0x0000000000000000000000000000000000000000000000000000000000000000", "value": "0x0000000000000000000000000000000000000000000000000000000000000000"}, "id": "0xba5e00d8343ced08f8be5c4acbb0e32ae692f099f08b0fcb8821b656afe9cfbf", "id_at_block": "0x356cfa3c7d9cd95e7303711c8bc4cd96c22ed4be22 …`
@@ -147,7 +147,7 @@
 - `checkpoint_attest_fixture`: `{"bootstrap": {"code": 0, "header_root": "0x7c279a5e7aee53514ad2ce373139ff36b50e26563ff53134e46cf57b57382433", "slot": 15622144, "verdict": "accepted"}, "chain_pair": {"network": "mainnet", "status": "known"}, "checkpoint": "0x7c279a5e7aee53514ad2ce373139ff36b50e26563ff53134e46cf57b57382433", "failed": [], "instance_id": "0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd", "instance_id_matches": null, "observed": [{"agrees": true, "root": "0x7c279a5e7aee53514ad2ce373139ff36b50e26563ff53134e46cf57b57382433", "source": "ethereum-beacon-api.publicnode.com, /eth/v1/beacon/headers/ …`
 - `checkpoint_wrong_root`: `{"bootstrap": {"code": 10, "error": "CheckpointMismatch", "header_root": "0x7c279a5e7aee53514ad2ce373139ff36b50e26563ff53134e46cf57b57382433", "slot": 15622144, "stage": "init", "verdict": "refused"}, "chain_pair": {"network": "mainnet", "status": "known"}, "checkpoint": "0x46d069655d60786d109a3abec9a63e4db77560b9ca7e588c82f13ef988a4f40f", "failed": ["bootstrap", "observed"], "instance_id": "0x7b5a448d1517806feadfe8f762a42ef38212574d2e157bb8fb29d7e69e77d348", "instance_id_matches": null, "observed": [{"agrees": false, "root": "0x7c279a5e7aee53514ad2ce373139ff36b50e26563ff53134e46cf57b57382433" …`
 - `checkpoint_chain_mismatch`: `{"bootstrap": null, "chain_pair": {"network": "mainnet", "status": "mismatch"}, "checkpoint": "0x64b56a372f8c4ccc274d9f42c9b4a1d9a18966a20188992bcac15b1c6e7d91ac", "failed": ["chain_pair"], "instance_id": "0xe54b2c63a3f3c5b5b8406d7ea3b730136b81210315f787cf39ad972a26845543", "instance_id_matches": null, "observed": [], "observed_agreeing": 0, "required_agreeing": 0, "verdict": "failed"}`
-- `bridge_version`: `{"methods": ["version", "deposit", "claim", "burn", "release", "recover", "status", "prove_release", "import_root", "registry"], "module": "ferrata_bridge_module", "spec": "v2", "staged": {"commit": "61e7b3d60583dc23bfc856e1b50f62ea1c734d58", "crates": [{"from": "crates/ferrata-core", "name": "ferrata-core", "source_sha256": "f43255c33578f87ccd50386f936ea722ae2bbddc7fc60509e97a6eafc39864d8", "version": "0.0.1"}, {"from": "bridge/crates/ferrata-bridge-core", "name": "ferrata-bridge-core", "source_sha256": "29349d5bd266412e48c4c0d1df40d609c0992301fe90922ea7176fb51183c4db", "version": "0.2.0"}, { …`
+- `bridge_version`: `{"methods": ["version", "deposit", "claim", "burn", "release", "recover", "status", "prove_release", "import_root", "registry"], "module": "ferrata_bridge_module", "spec": "v2", "staged": {"commit": "3a15b73a1417f8cc0334aed80c5258970dcaa70c", "crates": [{"from": "crates/ferrata-core", "name": "ferrata-core", "source_sha256": "f43255c33578f87ccd50386f936ea722ae2bbddc7fc60509e97a6eafc39864d8", "version": "0.0.1"}, {"from": "bridge/crates/ferrata-bridge-core", "name": "ferrata-bridge-core", "source_sha256": "29349d5bd266412e48c4c0d1df40d609c0992301fe90922ea7176fb51183c4db", "version": "0.2.0"}, { …`
 - `bridge_deposit_case0`: `{"commitment": "0xfeca64e68270002b498592eb9e94c83960660c22124ce0dc4693becdb982d994", "deposit_id": "0x11b636d17fb7e50c6426f49e6ac439c4c320070be71b57e919191f41a3003589", "kind": "private", "leaf": "0x63b02a52331676f290debc0bef44a5b4562bf2c4e31c20dc517ae97990a57e9f", "leaf_index": 0, "nullifier": "0xd9049bc8927d4a76ffdd8ac7387b801bd110a7cd628ae5fb22a44ef43198ac2d", "vault_call": {"data": "0x7fde1952000000000000000000000000d59b99d6b6394e84dc9c86bfe0502b68ed0acff60000000000000000000000000000000000000000000000000000000000000000feca64e68270002b498592eb9e94c83960660c22124ce0dc4693becdb982d99400000000 …`
 - `bridge_deposit_case1`: `{"commitment": "0x98797c474a30d7f35b791c1c17d5f1964bfdb28170a32398813cf1cea60354ac", "deposit_id": "0x3eed65632601190fcc7f7502cf1e25bbc37df052bff760e910f17ef49783237b", "kind": "public", "leaf": "0x3f3da4efc146d1e2d5138ef8a7a802db50142c8c241b0bd7b9b8d6b37a3a728e", "leaf_index": 41, "nullifier": "0x13b66647c0dcb358dd662015f4f83e5384d0531cb69f8b37afcd3f9eadc073a9", "vault_call": {"data": "0x7fde1952000000000000000000000000c07d37f72c68b53042121f94913c8f2da71a9581000000000000000000000000000000000000000000000000000000000000000098797c474a30d7f35b791c1c17d5f1964bfdb28170a32398813cf1cea60354ac00000000 …`
 - `bridge_deposit_case2`: `{"commitment": "0x4546c0d6c2d6bd776c946f1b875b48da9b42b6e28e06a31674919bfe551eb4b2", "deposit_id": "0x2f04c5ff0e24741cb893a58c4c5417151841375ed4b70493b27118aea91b655b", "kind": "private", "leaf": "0xaaf498c683cef5788ba0fc1d2347e77de44e8de0f5456c0b4d4a7d6e63364682", "leaf_index": 4294967295, "nullifier": "0xa0a3c1dc23b4e10f31cc7da08e0aa7cae2343b27a93efd38d863906087bb5f39", "vault_call": {"data": "0x7fde1952000000000000000000000000d881c54b2030adcbf7014c36c477d9476e1f989d00000000000000000000000000000000000000000000000000000000000000004546c0d6c2d6bd776c946f1b875b48da9b42b6e28e06a31674919bfe551eb4b …`

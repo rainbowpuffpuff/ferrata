@@ -1,2 +1,2 @@
-stage.py: ferrata_attest_module: ferrata-core 0.0.1, ferrata-lez-wire 0.1.0, ferrata-advance 0.1.0, lee_core 0.1.0; commit 61e7b3d60583dc23bfc856e1b50f62ea1c734d58
-stage.py: ferrata_bridge_module: ferrata-core 0.0.1, ferrata-bridge-core 0.2.0, ferrata-lez-wire 0.1.0, ferrata-lez-bridge-wire 0.1.0, ferrata-wallet 0.1.0, lee_core 0.1.0; commit 61e7b3d60583dc23bfc856e1b50f62ea1c734d58
+stage.py: ferrata_attest_module: ferrata-core 0.0.1, ferrata-lez-wire 0.1.0, ferrata-advance 0.1.0, lee_core 0.1.0; commit 3a15b73a1417f8cc0334aed80c5258970dcaa70c
+stage.py: ferrata_bridge_module: ferrata-core 0.0.1, ferrata-bridge-core 0.2.0, ferrata-lez-wire 0.1.0, ferrata-lez-bridge-wire 0.1.0, ferrata-wallet 0.1.0, lee_core 0.1.0; commit 3a15b73a1417f8cc0334aed80c5258970dcaa70c

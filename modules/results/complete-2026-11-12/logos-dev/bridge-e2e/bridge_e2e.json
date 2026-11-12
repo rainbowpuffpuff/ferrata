@@ -79,7 +79,7 @@
    "group": "claim (private)",
    "check": "deposit 0: proven and settled privately on the zone",
    "passed": "yes",
-   "detail": "proof dev, prove 815 ms, balance 100000000000000000"
+   "detail": "proof dev, prove 1061 ms, balance 100000000000000000"
   },
   {
    "group": "claim (private)",
@@ -91,7 +91,7 @@
    "group": "claim (private)",
    "check": "deposit 1: proven and settled privately on the zone",
    "passed": "yes",
-   "detail": "proof dev, prove 870 ms, balance 200000000000000000"
+   "detail": "proof dev, prove 1075 ms, balance 200000000000000000"
   },
   {
    "group": "claim (private)",
@@ -109,7 +109,7 @@
    "group": "release (the wallet's rule)",
    "check": "two accepted roots: over burn 0 (delay passed) and over both (in its delay)",
    "passed": "yes",
-   "detail": "now 1794516414, opens [1794515633, 1794516534]"
+   "detail": "now 1794519098, opens [1794518317, 1794519218]"
   },
   {
    "group": "release (the wallet's rule)",
@@ -121,7 +121,7 @@
    "group": "release (the wallet's rule)",
    "check": "burn 1: only the newer root covers it, in its delay: ReleaseDelayNotElapsed, with when it opens",
    "passed": "yes",
-   "detail": "first open 1794516534"
+   "detail": "first open 1794519218"
   },
   {
    "group": "release (the wallet's rule)",
@@ -133,7 +133,7 @@
    "group": "prove_release",
    "check": "the release guest run on the module's input through r0vm: its journal is the native one",
    "passed": "yes",
-   "detail": "image 0xb64900bcf7416685\u2026, dev mode True, 56 ms, receipt 2344 bytes"
+   "detail": "image 0xb64900bcf7416685\u2026, dev mode True, 72 ms, receipt 2344 bytes"
   },
   {
    "group": "vault",

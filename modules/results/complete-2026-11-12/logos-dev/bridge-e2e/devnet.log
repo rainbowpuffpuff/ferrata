@@ -1,50 +1,50 @@
-miniapp devnet: http://127.0.0.1:18752/rpc (anvil http://127.0.0.1:19352, vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9, configId 0x4b87fc2d51de184bb82f98a16e8cb06b328f39c7b1c084d8e633bddf167a9608)
-info 7 ms ok=true
-deposit 45 ms ok=true
-deposit 57 ms ok=true
-module.import_block 2 ms ok=true
-module.inputs 5 ms ok=true
-module.submit 510 ms ok=true
-module.submit 662 ms ok=true
-module.import_fees 639 ms ok=true
-module.inputs 5 ms ok=true
-module.inputs 7 ms ok=true
-module.inputs 5 ms ok=true
+miniapp devnet: http://127.0.0.1:18807/rpc (anvil http://127.0.0.1:19407, vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9, configId 0x4b87fc2d51de184bb82f98a16e8cb06b328f39c7b1c084d8e633bddf167a9608)
+info 9 ms ok=true
+deposit 54 ms ok=true
+deposit 56 ms ok=true
+module.import_block 3 ms ok=true
+module.inputs 9 ms ok=true
+module.submit 649 ms ok=true
+module.submit 823 ms ok=true
+module.import_fees 848 ms ok=true
+module.inputs 9 ms ok=true
+module.inputs 9 ms ok=true
+module.inputs 8 ms ok=true
 WARNING: proving in dev mode. This will not generate valid, secure proofs.
 WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
 WARNING: proving in dev mode. This will not generate valid, secure proofs.
 WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
 WARNING: proving in dev mode. This will not generate valid, secure proofs.
 WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
-module.submit 1238 ms ok=true
-module.inputs 6 ms ok=true
-module.inputs 6 ms ok=true
+module.submit 1616 ms ok=true
+module.inputs 8 ms ok=true
+module.inputs 9 ms ok=true
 WARNING: proving in dev mode. This will not generate valid, secure proofs.
 WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
 WARNING: proving in dev mode. This will not generate valid, secure proofs.
 WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
 WARNING: proving in dev mode. This will not generate valid, secure proofs.
 WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
-module.submit 1297 ms ok=true
-module.inputs 5 ms ok=true
-scan 13 ms ok=true
+module.submit 1623 ms ok=true
+module.inputs 8 ms ok=true
+scan 17 ms ok=true
 WARNING: proving in dev mode. This will not generate valid, secure proofs.
 WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
 WARNING: proving in dev mode. This will not generate valid, secure proofs.
 WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
-burn 808 ms ok=true
-checkpoint 18 ms ok=true
+burn 1191 ms ok=true
+checkpoint 27 ms ok=true
 WARNING: proving in dev mode. This will not generate valid, secure proofs.
 WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
 WARNING: proving in dev mode. This will not generate valid, secure proofs.
 WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
-burn 787 ms ok=true
-checkpoint 15 ms ok=true
-module.vault_roots 3 ms ok=true
-module.inputs 5 ms ok=true
-module.vault_release 36 ms ok=true
-advance_time 1 ms ok=true
+burn 1002 ms ok=true
+checkpoint 25 ms ok=true
 module.vault_roots 4 ms ok=true
-module.vault_release 35 ms ok=true
-module.inputs 6 ms ok=true
+module.inputs 8 ms ok=true
+module.vault_release 48 ms ok=true
+advance_time 1 ms ok=true
+module.vault_roots 5 ms ok=true
+module.vault_release 49 ms ok=true
+module.inputs 9 ms ok=true
 miniapp devnet: stopped
