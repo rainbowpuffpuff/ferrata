@@ -151,8 +151,10 @@ private claim or burn takes about 13–16 s on one L4 (row 10: 15.3 and 12.4 s, 
 
 ## What is not covered
 
-- The burn root's acceptance (one candidate and one finalisation for all 20 burns) is on the mock verifier: a real
-  checkpoint proof over the harness's blocks was not made; row 24 and the crown run prove checkpoints for real.
+- The burn root's acceptance (one candidate and one finalisation for all 20 burns) is on the mock verifier: the
+  checkpoint program cannot prove the harness's blocks (not a hash-linked chain; no channel key set, inscription or
+  attestation), checked with its own code in [ROOT.md](ROOT.md), which also says what a real one would take; row 24
+  and the crown run prove checkpoints for real.
 - The Ethereum records LEZ reads are synthetic, as in all bridge-program tests; the naive variants are models.
 - One run: receipts are randomized, so another run gives other seals (and, by the classes above, the same verdicts).
 - The LEZ circuit's image id is LEZ's own build in this tree; it is not in docs/image-ids.md and was not compared
