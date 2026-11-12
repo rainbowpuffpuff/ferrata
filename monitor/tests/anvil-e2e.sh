@@ -71,7 +71,7 @@ genesis=$(label genesis)
 
 deploy_vault() { # MODE_A(true|false): sets vault, deploy_block
   ( cd "$vault_dir" && FIXTURE_MODE_A=$1 FIXTURE_GENESIS=$genesis FIXTURE_ADMIN=$admin FIXTURE_FREEZER=$freezer \
-    FIXTURE_WATCHER=$watcher FIXTURE_FEES=$fees forge script script/MonitorFixture.s.sol:MonitorFixture --rpc-url "$rpc" \
+    FIXTURE_WATCHER=$watcher FIXTURE_FEES=$fees forge script script/MonitorFixture.s.sol:MonitorFixture --rpc-url "$rpc" --slow \
     --broadcast --unlocked --sender "$deployer" >> "$run/forge.log" 2>&1 ) || { tail -30 "$run/forge.log"; exit 1; }
   vault=$(jq -r '.transactions[] | select(.contractName=="FerrataVault") | .contractAddress' \
     "$vault_dir/broadcast/MonitorFixture.s.sol/31337/run-latest.json" | tail -1)
