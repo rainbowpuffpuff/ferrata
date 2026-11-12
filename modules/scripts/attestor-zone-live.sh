@@ -151,7 +151,7 @@ check "four Logos Cores loaded the module; each attestation key certified by its
 check "the four loops started against the node's HTTP API" \
   '[ "$(for i in 0 1 2 3; do jq -r .verdict "$W/rep/start-$i.json"; done | sort -u)" = started ]'
 check "the node's final tier: tip $tip, four keys, every sequencer inscribed" \
-  '[ "$(jq "[.keys | length, (.blocks_per_signer | length)]" -c "$W/rep/tier.json")" = "[4,4]" ]'
+  '[ "$(jq -c "[(.keys | length), (.blocks_per_signer | length)]" "$W/rep/tier.json")" = "[4,4]" ]'
 for i in 0 1 2 3; do
   s="$W/rep/stop-$i.json"
   tips=$(ls "$W/published-$i" | sed -n 's/^att-\([0-9]*\)\.json$/\1/p' | sort -n | tr '\n' ' ')
