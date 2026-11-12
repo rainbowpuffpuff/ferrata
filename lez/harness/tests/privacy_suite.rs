@@ -468,6 +468,20 @@ fn private_fields(tx: &PrivacyPreservingTransaction, program: AccountId) -> (Vec
     (f, checks)
 }
 
+/// A BabyBear element's value from its Montgomery form (risc0's `Elem::as_u32`): `w * R^-1 mod p`, `R = 2^32 mod p`.
+fn from_montgomery(w: u32) -> u64 {
+    const P: u64 = 2_013_265_921;
+    let (mut base, mut exp, mut r_inv) = ((1u64 << 32) % P, P - 2, 1u64);
+    while exp > 0 {
+        if exp & 1 == 1 {
+            r_inv = r_inv * base % P;
+        }
+        base = base * base % P;
+        exp >>= 1;
+    }
+    u64::from(w) * r_inv % P
+}
+
 /// The witness set of a private transaction, split into named parts: borsh `Vec<(Signature, PublicKey)>`
 /// (empty: the sender is an alias), then `Proof`, a borsh `Vec<u8>` holding `borsh(InnerReceipt)` of LEZ's
 /// privacy-preserving circuit (upstream `witness_set.rs`, `circuit/mod.rs`). A succinct receipt's seal
@@ -492,7 +506,12 @@ fn proof_fields(ws: &[u8], journal: &[u8], f: &mut Vec<(String, Vec<u8>)>) -> Va
     match &inner {
         InnerReceipt::Succinct(s) => {
             let words: Vec<u8> = s.seal.iter().flat_map(|w| w.to_le_bytes()).collect();
-            let halves: Vec<u8> = s.seal[16..32].iter().flat_map(|w| [(w & 0xff) as u8, (w >> 8) as u8]).collect();
+            // BabyBear elements in Montgomery form (`as_u32` decodes them): x = w * R^-1 mod p, R = 2^32 mod p.
+            let halves: Vec<u8> = s.seal[16..32]
+                .iter()
+                .map(|&w| from_montgomery(w))
+                .flat_map(|h| [(h & 0xff) as u8, (h >> 8) as u8])
+                .collect();
             let claim = borsh::to_vec(&s.claim).unwrap();
             f.push(("proof.seal.length".into(), (s.seal.len() as u32).to_le_bytes().to_vec()));
             f.push(("proof.seal.control_root".into(), words[..64].to_vec()));

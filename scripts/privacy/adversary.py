@@ -32,6 +32,7 @@ import hashlib
 import hmac
 import json
 import math
+import os
 import re
 import sys
 from collections import Counter, defaultdict
@@ -113,6 +114,133 @@ def burn_leaf(cid, index, token, amount, c_out, r):
 
 def burn_id(cid, index, leaf):
     return sha(b"ferrata/burn/v1" + cid + u64(index) + leaf)
+
+
+# RISC Zero receipts (risc0-zkvm 3.0.5), read from the public bytes alone: the claim's borsh layout and digest rules
+# (`ReceiptClaim`, `Output`, `SystemState`, tagged structs and lists) and the seal's output words, BabyBear elements in
+# Montgomery form (`SuccinctReceipt::verify_integrity_with_context` decodes them with `as_u32`).
+BB_P = 2013265921
+BB_RINV = pow((1 << 32) % BB_P, -1, BB_P)
+ZERO32 = bytes(32)
+
+
+def tagged_struct(tag, down, data=()):
+    return sha(sha(tag.encode()) + b"".join(down) + b"".join(w.to_bytes(4, "little") for w in data)
+               + len(down).to_bytes(2, "little"))
+
+
+def claim_ok_digest(image_id, journal):
+    """The digest of ReceiptClaim::ok(image_id, journal)."""
+    post = tagged_struct("risc0.SystemState", [ZERO32], [0])
+    output = tagged_struct("risc0.Output", [sha(journal), ZERO32])
+    return tagged_struct("risc0.ReceiptClaim", [ZERO32, image_id, post, output], [0, 0])
+
+
+def parse_claim(buf):
+    """borsh MaybePruned<ReceiptClaim> -> (its digest, the journal if it is there unpruned)."""
+    pos = [0]
+
+    def take(n):
+        if pos[0] + n > len(buf):
+            raise ValueError("short claim")
+        pos[0] += n
+        return buf[pos[0] - n:pos[0]]
+
+    u8 = lambda: take(1)[0]
+    u32 = lambda: int.from_bytes(take(4), "little")
+
+    def maybe(value):
+        t = u8()
+        if t == 0:
+            return value()
+        if t == 1:
+            return take(32), None
+        raise ValueError("MaybePruned tag")
+
+    def option(value):
+        t = u8()
+        if t == 0:
+            return ZERO32, None
+        if t == 1:
+            return value()
+        raise ValueError("Option tag")
+
+    def system_state():
+        pc = u32()
+        return tagged_struct("risc0.SystemState", [take(32)], [pc]), None
+
+    def journal():
+        j = take(u32())
+        return sha(j), j
+
+    def assumptions():
+        ds = [maybe(lambda: (tagged_struct("risc0.Assumption", [take(32), take(32)]), None))[0] for _ in range(u32())]
+        d = ZERO32
+        for e in reversed(ds):
+            d = tagged_struct("risc0.Assumptions", [e, d])
+        return d, None
+
+    def output():
+        jd, j = maybe(journal)
+        ad, _ = maybe(assumptions)
+        return tagged_struct("risc0.Output", [jd, ad]), j
+
+    def uninhabited():
+        raise ValueError("Input is uninhabited")
+
+    def claim():
+        pre, _ = maybe(system_state)
+        post, _ = maybe(system_state)
+        t = u8()
+        code = (t, u32()) if t in (0, 1) else {2: (2, 0), 3: (2, 2)}[t]
+        inp, _ = maybe(lambda: option(uninhabited))
+        out, j = maybe(lambda: option(output))
+        return tagged_struct("risc0.ReceiptClaim", [inp, pre, post, out], list(code)), j
+
+    d, j = maybe(claim)
+    if pos[0] != len(buf):
+        raise ValueError("trailing bytes after the claim")
+    return d, j
+
+
+def seal_claim_digest(part):
+    """The claim digest a succinct seal's output words 16..32 carry (16-bit halves, Montgomery form), or None."""
+    hs = [(int.from_bytes(part[4 * i:4 * i + 4], "little") * BB_RINV) % BB_P for i in range(16)]
+    return None if any(h >= 1 << 16 for h in hs) else b"".join(bytes([h & 0xFF, h >> 8]) for h in hs)
+
+
+def receipt_checks(x, circuit_id):
+    """From a private LEZ record's public bytes: is the receipt's claim ReceiptClaim::ok(circuit id, journal), with
+    the journal the frame LEZ builds from the transaction's message (a prefix of the message's bytes); does the
+    seal's output carry that claim's digest."""
+    f = dict(x.fields)
+    if "proof.claim" not in f:
+        return {}
+    out = {}
+    try:
+        digest, journal = parse_claim(f["proof.claim"])
+    except (ValueError, KeyError) as e:
+        return {"claim_parsed": False, "error": str(e)}
+    tx = dict(x.blobs)["tx"]
+    out["claim_parsed"] = True
+    out["journal_is_message_prefix"] = (journal is not None and int.from_bytes(journal[:4], "little") == len(journal) - 4
+                                        and tx[1:len(journal) - 3] == journal[4:])
+    out["claim_is_ok_of_journal"] = journal is not None and digest == claim_ok_digest(circuit_id, journal)
+    if "proof.seal.claim_digest" in f:
+        out["seal_outputs_carry_claim_digest"] = seal_claim_digest(f["proof.seal.claim_digest"]) == digest
+    return out
+
+
+def control_seal(tx):
+    """The STARK part (seal words 32..) of the receipt that ends a private LEZ transaction's bytes, or None."""
+    for p in range(len(tx) - 8):
+        if tx[p:p + 4] == bytes(4) and int.from_bytes(tx[p + 4:p + 8], "little") == len(tx) - p - 8:
+            rc = tx[p + 8:]
+            if rc[0] != 1:
+                return None
+            n = int.from_bytes(rc[1:5], "little")
+            return rc[5 + 128:5 + 4 * n]
+    return None
 
 
 def b(x):
@@ -741,7 +869,7 @@ def proof_summary(recs):
     return out
 
 
-def shared_windows(blobs):
+def shared_windows(blobs, controls=()):
     """Shared runs between different records' blobs ((record id, user, bytes)): every 16-byte window with at least
     12 non-zero bytes at offsets that are multiples of 4 is indexed, every window at any offset is looked up, so
     any common run of 19 bytes or more between two records is found (at any alignment). Returns how many indexed
@@ -764,8 +892,26 @@ def shared_windows(blobs):
                         hits[tuple(sorted((rid, o)))].add(data[i:i + N_WINDOW])
     by = Counter(len(v) for v in where.values() if len(v) > 1)
     pairs = [{"records": list(k), "same_user": user[k[0]] == user[k[1]], "windows": len(v)} for k, v in sorted(hits.items())]
-    return {"indexed_windows": len(where), "shared_by_n_records": sorted(by.items()), "pairs": pairs[:50],
-            "pairs_total": len(pairs), "same_user_pairs": sum(1 for p in pairs if p["same_user"])}
+    kind = lambda rid: rid.split(":")[1]
+    cats = defaultdict(list)
+    for p in pairs:
+        a, c = p["records"]
+        cross = kind(a) != kind(c)
+        cats[f"{'-'.join(sorted((kind(a), kind(c))))}{', same user' if cross and p['same_user'] else ''}"].append(p["windows"])
+    out = {"indexed_windows": len(where), "shared_by_n_records": sorted(by.items()), "pairs_total": len(pairs),
+           "record_pairs_possible": len(blobs) * (len(blobs) - 1) // 2,
+           "same_user_pairs": sum(1 for p in pairs if p["same_user"]),
+           "windows_per_pair": {k: spread(v) for k, v in sorted(cats.items())}}
+    # Unrelated receipts of the same recursion circuit (other statements, other programs, another day): how many
+    # windows a record's seal shares with each, against how many it shares with another record of this run.
+    for name, seal in controls:
+        cw = {seal[i:i + N_WINDOW] for i in range(len(seal) - N_WINDOW + 1)}
+        per = []
+        for rid, _, data in blobs:
+            per.append(sum(1 for i in range(0, len(data) - N_WINDOW + 1, 4)
+                           if data[i:i + N_WINDOW] in cw and N_WINDOW - data[i:i + N_WINDOW].count(0) >= 12))
+        out.setdefault("unrelated_receipts", {})[name] = spread(per)
+    return out
 
 
 def main():
@@ -799,14 +945,19 @@ def main():
 
     # The proof's claim and the claim digest in a real seal's public outputs are functions of the transaction's
     # message, if (and only if) the collector's checks held for every private transaction: then they may vary.
+    # Checked here from the public bytes alone (receipt_checks); the collector's own claim check must agree.
     private_txs = [x for x in lez if x.variant == "private" and x.kind in ("claim", "burn")]
-    if private_txs and all(x.meta.get("claim_is_ok_of_journal") is True for x in private_txs):
+    circuit_id = b(lez_json.get("circuit_image_id") or "")
+    public_checks = {x.id: receipt_checks(x, circuit_id) for x in private_txs}
+    if private_txs and all(c.get("journal_is_message_prefix") and c.get("claim_is_ok_of_journal") and
+                           x.meta.get("claim_is_ok_of_journal") is not False
+                           for x, c in ((x, public_checks[x.id]) for x in private_txs)):
         EXPLAINED["proof.claim"] = (DERIVED, "the receipt's claim: ReceiptClaim::ok(circuit id, journal), the journal "
-                                             "rebuilt from the transaction's message (checked for every record)")
-    succinct = [x for x in private_txs if x.meta.get("kind") == "succinct"]
-    if succinct and all(x.meta.get("seal_outputs_carry_claim_digest") is True for x in succinct):
-        EXPLAINED["proof.seal.claim_digest"] = (DERIVED, "seal outputs: the claim's digest in 16-bit halves, that of "
-                                                         "`proof.claim` (checked for every record)")
+                                             "the frame of the transaction's message (checked from the public bytes)")
+    succinct = [x for x in private_txs if "proof.seal.claim_digest" in dict(x.fields)]
+    if succinct and all(public_checks[x.id].get("seal_outputs_carry_claim_digest") for x in succinct):
+        EXPLAINED["proof.seal.claim_digest"] = (DERIVED, "seal outputs: the claim's digest in 16-bit halves (Montgomery "
+                                                         "form), that of `proof.claim` (checked from the public bytes)")
 
     # Ground truth: the user behind each record.
     co, po, bo, ro = truth["claim_order"], truth["plaintext_order"], truth["burn_order"], truth["release_order"]
@@ -866,6 +1017,12 @@ def main():
                                                     "release, NOut of the release statement",
                                                     "release, naive NOut = burnId")},
     }
+    for k in ("claim, private (default)", "burn, private holding"):
+        cs = [public_checks[x.id] for x in G[k]]
+        results["proofs"]["steps"][k]["public_checks"] = {
+            key: [sum(1 for c in cs if c.get(key) is True), sum(1 for c in cs if key in c)]
+            for key in ("claim_parsed", "journal_is_message_prefix", "claim_is_ok_of_journal",
+                        "seal_outputs_carry_claim_digest")}
     user_of = {}
     for k, kind in (("claim, private (default)", "claim"), ("burn, private holding", "burn"),
                     ("release, NOut of the release statement", "release")):
@@ -879,8 +1036,13 @@ def main():
     groth_blobs = [(x.id, user_of[x.id], part(x, "calldata.seal.groth16.a") + part(x, "calldata.seal.groth16.b") +
                     part(x, "calldata.seal.groth16.c")) for x in G["release, NOut of the release statement"]
                    if part(x, "calldata.seal.groth16.a")]
+    controls = []
+    for path in [p for p in os.environ.get("FERRATA_PRIVACY_CONTROL_RECEIPTS", "").split(",") if p]:
+        seal = control_seal(Path(path).read_bytes())
+        if seal:
+            controls.append((Path(path).name, seal))
     if seal_blobs:
-        results["proofs"]["shared_windows_lez_seals"] = shared_windows(seal_blobs)
+        results["proofs"]["shared_windows_lez_seals"] = shared_windows(seal_blobs, controls)
     if groth_blobs:
         results["proofs"]["shared_windows_groth16"] = shared_windows(groth_blobs)
         results["proofs"]["shared_windows_groth16_vs_lez_seals"] = shared_windows(groth_blobs + seal_blobs)
@@ -1062,28 +1224,40 @@ def proofs_markdown(pr, n):
     out = ["", "## Proofs", "",
            "What the collectors recorded about each proof (not public: proving time, the checks) and how each "
            "part of the proof varies across the records of a step (public).", "",
-           "| step | receipt kind | proof bytes | transaction bytes | seal words | proving time, s (min / median / max; sum) | claim = ok(circuit, journal) | seal outputs = claim digest |",
-           "|---|---|---|---|---|---|---|---|"]
+           "| step | receipt kind | proof bytes | transaction bytes | seal words | proving time, s (min / median / max; sum) | journal = the message's frame | claim = ok(circuit, journal) | seal outputs = claim digest |",
+           "|---|---|---|---|---|---|---|---|---|"]
     rng = lambda d, f="{:,}": "-" if not d else (f.format(d["min"]) if d["min"] == d["max"] else f"{f.format(d['min'])}-{f.format(d['max'])}")
     for k, v in pr["steps"].items():
         t = v.get("prove_s")
         times = "-" if not t else f"{t['min']:.1f} / {t['median']:.1f} / {t['max']:.1f}; {t['sum']:.0f}"
-        ok = lambda key: "-" if not v[key][1] else f"{v[key][0]} of {v[key][1]}"
+        pc = v.get("public_checks", {})
+        ok = lambda key: "-" if not pc.get(key, [0, 0])[1] else f"{pc[key][0]} of {pc[key][1]}"
         out.append(f"| {k} | {', '.join(v['kinds']) or '-'} | {rng(v['proof_bytes'])} | {rng(v['tx_bytes'])} | "
-                   f"{rng(v['seal_words'])} | {times} | {ok('claim_is_ok_of_journal')} | {ok('seal_outputs_carry_claim_digest')} |")
+                   f"{rng(v['seal_words'])} | {times} | {ok('journal_is_message_prefix')} | {ok('claim_is_ok_of_journal')} | "
+                   f"{ok('seal_outputs_carry_claim_digest')} |")
+    out += ["", "The three check columns are computed by this script from the public bytes alone (the claim parsed and "
+            "hashed by RISC Zero's rules, the seal's output words decoded from Montgomery form)."]
     out += ["", "| step | proof field | bytes | distinct across the records | class |", "|---|---|---|---:|---|"]
     for k, v in pr["steps"].items():
         for name, f in v["fields"].items():
             out.append(f"| {k} | `{name}` | {', '.join(f'{b:,}' for b in f['bytes'])} | {f['distinct']} of {v['records']} | "
                        f"{f['class'] or ('constant' if f['distinct'] == 1 else 'UNCLASSIFIED')} |")
+    out += [""]
     for key, label in (("shared_windows_lez_seals", "LEZ receipts' STARK parts (claims and burns)"),
                        ("shared_windows_groth16", "the releases' Groth16 proofs"),
                        ("shared_windows_groth16_vs_lez_seals", "Groth16 proofs and LEZ STARK parts together")):
         w = pr.get(key)
-        if w:
-            out.append(f"- Shared runs, {label}: {w['indexed_windows']:,} windows indexed; windows shared by several "
-                       f"records {w['shared_by_n_records'] or 'none'}; record pairs sharing a run {w['pairs_total']} "
-                       f"(of them the same user's: {w['same_user_pairs']})")
+        if not w:
+            continue
+        hist = w["shared_by_n_records"]
+        out.append(f"- Shared runs, {label}: {w['indexed_windows']:,} windows indexed; "
+                   + (f"{sum(c for _, c in hist):,} recur in 2 to {max(k for k, _ in hist)} records; record pairs sharing "
+                      f"a run {w['pairs_total']} of {w['record_pairs_possible']}" if hist else "none recurs in a second record"))
+        for cat, d in (w.get("windows_per_pair") or {}).items():
+            out.append(f"  - windows shared per pair, {cat}: {d['min']}-{d['max']}, median {d['median']} ({d['n']} pairs)")
+        for name, d in (w.get("unrelated_receipts") or {}).items():
+            out.append(f"  - shared with an unrelated receipt (`{name}`): {d['min']}-{d['max']} windows per record, "
+                       f"median {d['median']}")
     return out
 
 

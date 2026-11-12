@@ -13,7 +13,8 @@
 #   real.sh wrap RUN     laptop: each release's Groth16 step (RISC Zero's prover image through e2e/crown/wrap.py,
 #                        FERRATA_WRAP_PROFILE, default $MODAL_PROFILE)
 #   real.sh finish RUN   build box: the Groth16 receipts assembled and verified, release-seals.json, the Foundry half
-#                        with the real verifier, the analysis -> docs/privacy/real/generated/, proofs.json
+#                        with the real verifier, then `analyze`
+#   real.sh analyze RUN  build box: the analysis -> docs/privacy/real/generated/ and docs/privacy/real/proofs.json
 #
 # The build box steps run through spike/modal-build/mrun (with --put target/privacy/real/RUN for `finish`, and
 # --env FERRATA_COMMIT=<commit> for `build`: the box's copy is not a git checkout); the
@@ -113,7 +114,15 @@ EOF
   ( cd "$root/vault" && FERRATA_PRIVACY_DIR="$D" forge test --match-contract PrivacySuiteTest -vv ) > "$G/forge.log" 2>&1 \
     || { tail -n 30 "$G/forge.log"; exit 1; }
   grep -E 'PASS|FAIL|Suite result' "$G/forge.log" | head -n 3
-  python3 -I "$root/scripts/privacy/adversary.py" "$D" "$root/docs/privacy/real/generated" | tee "$G/analysis.json"
+  bash "$0" analyze "$RUN"
+  ;;
+analyze)
+  : "${RUN:?run name}"; G="$T/$RUN"
+  # Controls for the seals' recurring runs: three receipts of the same recursion circuit from another day, other
+  # programs and other statements (gpu-prover/, EVIDENCE rows 5 and 10).
+  r="$root/gpu-prover/results"
+  export FERRATA_PRIVACY_CONTROL_RECEIPTS="$r/gpu-l4-bridge/lez-bridge/bridge-private-claim-tx.borsh,$r/gpu-l4-bridge/lez-bridge/bridge-private-burn-tx.borsh,$r/gpu-l4-attest-2/lez-attest/stage4-private-attest-tx.borsh"
+  python3 -I "$root/scripts/privacy/adversary.py" "$G/data" "$root/docs/privacy/real/generated" | tee "$G/analysis.json"
   python3 -I "$root/scripts/privacy/proofs.py" "$G" "$root/docs/privacy/real/proofs.json"
   ;;
 *) echo "unknown step $step" >&2; exit 2 ;;
