@@ -4,12 +4,14 @@ The README's quick start, and the rebuild of every guest program, in one contain
 ends with one line per check and a verdict.
 
 ```sh
-scripts/reproduce/run.sh                                         # with Docker (x86-64 images)
-MODAL_PROFILE=<yours> modal run scripts/reproduce/modal_app.py    # or on Modal, without Docker
+MODAL_PROFILE=<yours> modal run --detach scripts/reproduce/modal_app.py   # on Modal: the route we have run
+scripts/reproduce/run.sh                                                 # with Docker (x86-64 images): not run yet
 ```
 
 Both build the image of [`Dockerfile`](Dockerfile), copy this checkout's committed `HEAD` (`git archive`; uncommitted
-changes are not checked) to `/work/ferrata` beside the upstream sources, and run [`check.sh`](check.sh) there.
+changes are not checked) to `/work/ferrata` beside the upstream sources, and run [`check.sh`](check.sh) there. The
+Docker route is that same Dockerfile and that same `check.sh`, which we have built and run on Modal; it has not yet
+been run under Docker itself.
 `--only NAME[,NAME...]` runs some of the checks. The logs land in `target/reproduce/<UTC time>/` (or `--out DIR`):
 one log per check, `summary.txt`, `environment.txt` and `packages.txt` (every version used),
 `guest-ids/` (the rebuilt ids) and `tree-changed.txt`. On a machine that already has these toolchains, `check.sh`
@@ -17,7 +19,7 @@ runs on its own, on a copy of the checkout: it writes into the tree it runs in.
 
 | Check | What runs (the commands of the README and of [verify.md](../../docs/guides/verify.md)) | It passes when |
 |---|---|---|
-| `verify-sepolia` | `python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-1`, read-only calls to a public Sepolia endpoint (a second public one if the first fails; `SEPOLIA_RPC_URL` to use yours) | 0 failed (13 passed) |
+| `verify-sepolia` | `python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-3`, then the same on `e2e/runs/crown-live-1`, read-only calls to a public Sepolia endpoint (a second public one if the first fails; `SEPOLIA_RPC_URL` to use yours) | 0 failed for each run (13 passed each) |
 | `vault` | `cd vault`, `forge install --no-git` at [vault/README.md](../../vault/README.md)'s pins, `FOUNDRY_OFFLINE=false forge build`, `forge test` | forge exits 0 (451 passed, 1 skipped) |
 | `core` | `scripts/fetch-vectors.sh && cargo test --workspace --locked` | cargo exits 0 (163 passed) |
 | `guest-ids` | `scripts/reproduce-image-ids.sh build`, then `compare` | 14 of 14 guests equal [docs/image-ids.md](../../docs/image-ids.md), 6 of 6 crown programs equal [e2e/crown/README.md](../../e2e/crown/README.md) |
@@ -79,8 +81,8 @@ RISC Zero's toolchains above.
   `--vault 0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c` to `scripts/reproduce-image-ids.sh compare` to compare with the
   live vault of the final programs (crown-live-3: 6 of 6, [verify.md](../../docs/guides/verify.md) §2). The first live
   vault, `0xfE3199fa…9E54`, gives 4 of 6: crown-live-1 ran programs built at the maintainer's path before guest builds
-  were made path-independent. `verify-sepolia` checks that run from its committed records (this check runs it on
-  crown-live-1's; `python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-3` checks the final programs' run).
+  were made path-independent. `verify-sepolia` checks both live runs from their committed records,
+  crown-live-3 (the final programs) first, each vault pinned to the image ids it was deployed with.
 - **Records that are not committed.** `e2e/crown.sh verify crown-live-1` needs LEZ session files kept on the
   maintainers' Modal volume.
 - **The rest of the components table**: the CI round trip (`e2e/ci/run.sh`), `cli/` and its tests, the mini-app,

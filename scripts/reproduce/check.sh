@@ -8,8 +8,8 @@
 #
 #   scripts/reproduce/check.sh [--out DIR] [--only NAME[,NAME...]]
 #
-#   verify-sepolia  python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-1: read-only calls to a public Sepolia
-#                   endpoint ($SEPOLIA_RPC_URL if set; a second public endpoint if the first fails)
+#   verify-sepolia  python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-3, then e2e/runs/crown-live-1: read-only
+#                   calls to a public Sepolia endpoint ($SEPOLIA_RPC_URL if set; a second public one if the first fails)
 #   vault           cd vault && forge install --no-git <vault/README.md's pins> && FOUNDRY_OFFLINE=false forge build
 #                   && forge test
 #   core            scripts/fetch-vectors.sh && cargo test --workspace --locked
@@ -30,7 +30,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --out) OUT="$2"; shift 2 ;;
     --only) ONLY="$(echo "$2" | tr ',' ' ')"; shift 2 ;;
-    -h|--help) sed -n '2,23p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -h|--help) sed -n '2,22p' "${BASH_SOURCE[0]}"; exit 0 ;;
     *) echo "unknown argument $1" >&2; exit 2 ;;
   esac
 done
@@ -84,14 +84,18 @@ say "Ferrata reproduction check, commit $COMMIT; checks: $CHECKS; logs in $OUT"
 say "$TOOLS"
 
 # ---- the checks (each runs in a subshell at the root of the tree) -----------------------------------------------
-c_verify_sepolia() {
-  local rpcs r rc=1
+c_verify_sepolia() {   # the final programs' live run (crown-live-3), then the first live run (crown-live-1)
+  local rpcs r run one rc=0
   if [ -n "${SEPOLIA_RPC_URL:-}" ]; then rpcs=("$SEPOLIA_RPC_URL")
   else rpcs=(https://ethereum-sepolia-rpc.publicnode.com https://rpc.sepolia.ethpandaops.io); fi
-  for r in "${rpcs[@]}"; do
-    echo "== python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-1 --rpc $([ -n "${SEPOLIA_RPC_URL:-}" ] && echo '$SEPOLIA_RPC_URL' || echo "$r")"
-    python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-1 --rpc "$r"; rc=$?
-    [ $rc = 0 ] && break
+  for run in crown-live-3 crown-live-1; do
+    one=1
+    for r in "${rpcs[@]}"; do
+      echo "== python3 -I scripts/verify-sepolia.py e2e/runs/$run --rpc $([ -n "${SEPOLIA_RPC_URL:-}" ] && echo '$SEPOLIA_RPC_URL' || echo "$r")"
+      python3 -I scripts/verify-sepolia.py "e2e/runs/$run" --rpc "$r"; one=$?
+      [ $one = 0 ] && break
+    done
+    [ $one = 0 ] || rc=$one
   done
   return $rc
 }
@@ -124,8 +128,10 @@ c_lez_harness() {
 # What a check's log says, in one line.
 detail() { # name log
   case "$1" in
-    verify-sepolia)
-      grep -E '^[0-9]+ passed, [0-9]+ pending, [0-9]+ failed' "$2" | tail -n 1 ;;
+    verify-sepolia)   # one result per run: the last endpoint's
+      awk '/^== python3 -I scripts\/verify-sepolia.py / {run = $5; sub(/.*\//, "", run)}
+           /^[0-9]+ passed, [0-9]+ pending, [0-9]+ failed/ {if (!(run in res)) ord[++n] = run; res[run] = $0}
+           END {for (i = 1; i <= n; i++) printf "%s%s: %s", (i > 1 ? "; " : ""), ord[i], res[ord[i]]}' "$2" ;;
     vault)
       grep -E '[0-9]+ tests? passed, [0-9]+ failed, [0-9]+ skipped' "$2" | tail -n 1 | sed -E 's/.*: ([0-9]+ tests? passed)/\1/' ;;
     core|lez-harness)
@@ -158,8 +164,9 @@ for name in $CHECKS; do
 done
 # verify-sepolia ran in a subshell: which endpoint answered is in its log.
 if [ -f "$OUT/verify-sepolia.log" ]; then
-  n=$(grep -c '^== python3 -I scripts/verify-sepolia.py' "$OUT/verify-sepolia.log")
-  [ "${n:-0}" -gt 1 ] && DETAIL[verify-sepolia]="${DETAIL[verify-sepolia]} (second public endpoint; the first failed)"
+  again="$(sed -n 's#^== python3 -I scripts/verify-sepolia.py e2e/runs/\([^ ]*\) .*#\1#p' "$OUT/verify-sepolia.log" \
+    | uniq -d | tr '\n' ' ' | sed 's/ $//')"
+  [ -n "$again" ] && DETAIL[verify-sepolia]="${DETAIL[verify-sepolia]} (second public endpoint for $again; the first failed)"
 fi
 
 # ---- committed files the checks rewrote -------------------------------------------------------------------------

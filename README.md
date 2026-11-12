@@ -36,13 +36,16 @@ what is not built.
 ## Quickstart
 
 **In one command**, in a container with every toolchain pinned: the checks below and the rebuild of all 14 guest
-programs against [`docs/image-ids.md`](docs/image-ids.md), ending in one line per check and a verdict (with Docker; a
-10 GB image; half an hour on 16 CPUs). Without Docker, on a Modal account: `modal run scripts/reproduce/modal_app.py`.
-What it pins and what it leaves out: [`scripts/reproduce/README.md`](scripts/reproduce/README.md).
+programs against [`docs/image-ids.md`](docs/image-ids.md), ending in one line per check and a verdict (a 10 GB image;
+half an hour on 16 CPUs). On a Modal account (`pip install modal`, then `modal setup`), the route we have run:
 
 ```sh
-scripts/reproduce/run.sh
+modal run --detach scripts/reproduce/modal_app.py
 ```
+
+With Docker on x86-64, `scripts/reproduce/run.sh` builds the same Dockerfile and runs the same `check.sh` in it. We
+have built that image and run it only on Modal: the Docker route itself has not been run yet. What it pins and what
+it leaves out: [`scripts/reproduce/README.md`](scripts/reproduce/README.md).
 
 Commands run from the repository root. The first two need only Rust (with curl and tar for the vectors)
 and Python 3.
