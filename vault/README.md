@@ -275,6 +275,7 @@ cannot lock the vault for good.
 | 1 | `nextLeafIndex` (uint64) | alone in its slot |
 | 2 | `storedLezConfigId` (bytes32) | copy of the immutable `lezConfigId`; LEZ `Init` attests it (reciprocal pairing) |
 | 3–34 | `_branch[0..31]` | incremental-tree frontier |
+| 37 | `freezeAuthority` (low 20 bytes), `retired` (byte offset 20: byte 11 of the big-endian word) | the LEZ bridge program's keyless `Sunset` attests `retired` here (`lez/bridge-wire`, `SLOT_RETIRED`, `RETIRED_BYTE`); pinned by `test/ReviewVault.t.sol` |
 
 Nothing is declared before these, and the only parent contract (`ReentrancyGuardTransient`) uses transient
 storage. Tests read slots 0–2 with `vm.load`, including in every step of the invariant campaign. The rest of the
@@ -428,10 +429,13 @@ Kept from v3:
 - **Only the global release freeze stops refunds**, as D5 words it. A per-token release freeze stops that token's
   releases, not its refunds.
 - **Constructor bounds:** `minReleaseDelay ≤ revokeWindow` and `≤ 30 days`; `revokeWindow / deltaFloor ≤ 1,000`, so
-  `revokeFrom` marks at most 1,001 checkpoints (two finalisations are at least `deltaFloor` apart; review I-7).
+  `revokeFrom` marks at most 1,001 checkpoints (review I-7): every checkpoint of the pinned programs changes the state
+  (`S` commits the tip), and state changes are at least `deltaFloor` apart. The vault alone allows a no-op checkpoint
+  beside a state change in one block (`ReviewVault.t.sol`), which no pinned program makes; it could double the count.
 - **Stale candidates** (submitted before a finalisation or a revocation, so built on an earlier `finalState`) are
   dead: they cannot be finalised and a new submission of the same `newState` replaces them (review L-1). A candidate
-  records `epoch = revocationEpoch + checkpointCount()` at submission and is live only while that sum is unchanged.
+  records `epoch = revocationEpoch +` the number of finalisations that moved `finalState` at submission, and is live
+  only while that sum is unchanged (a no-op checkpoint leaves pending candidates live).
 - **`cancelCandidate`** refuses a state that was never submitted and one already finalised alike
   (`UnknownCandidate`). It also deletes a stale candidate, which is harmless. It works under the checkpoint freeze
   and after a verifier stop, since it needs no proof. Every candidate keeps its tip for `CandidateCancelled`.
