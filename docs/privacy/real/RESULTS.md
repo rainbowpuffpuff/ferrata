@@ -162,9 +162,11 @@ private claim or burn takes about 13–16 s on one L4 (row 10: 15.3 and 12.4 s, 
 
 ## Modal spend
 
-On profile `ws-5` (billing report, `spike/modal-build/mcost`): 5.1233 USD before this work, 5.5183 USD after the
-GPU run, the wraps and the analysis (ferrata-privacy-real 0.2458 USD: the L4 container and its image; the build box
-and the Groth16 prover containers in ferrata-build). See the end of this file for the final figure.
+On profile `ws-5`, from Modal's billing report (`spike/modal-build/mcost`): 5.1233 USD before this work and
+5.5183 USD after the last step (+0.395 USD; the report can lag the last calls by up to an hour): the L4 container and
+its image (app `ferrata-privacy-real`) 0.2458 USD, the build box and the Groth16 prover containers (app `ferrata-build`)
+the rest. The local estimates of the same calls (mrun's ledger, `wrap.py`'s) add up to about 0.7 USD; `wrap.py`'s
+overstate later wraps, whose CPU-seconds accumulate across calls in one container.
 
 ## Reproduce
 
