@@ -9,6 +9,13 @@
 #                  registration, imports, claims and burns, with two real private proofs); the node's final blocks
 #                  (session-b/node/, for the checkpoint); stop; save; session-b/
 #   session.sh dump  restore the newest generation, start the node alone, write session-b/node/ again; saves nothing
+#   session.sh u   restore the newest generation (after a); ferrata-updater, the build of lez/updater/sequencer
+#                  ($CROWN_UPDATER_BIN, default $CROWN_LEZ_VOL/inputs/updater/ferrata-updater), keeps session A's Sepolia
+#                  instance following Sepolia through the public beacon APIs (Lodestar's light-client data, publicnode's
+#                  headers) on this zone's sequencer for CROWN_UPDATER_MIN minutes (default 60) or until
+#                  /root/updater-stop exists; restarted once from its state after CROWN_UPDATER_RESTART_MIN minutes, as
+#                  soon as it has opened a job (mid-job); /health and /metrics read every CROWN_UPDATER_PROBE_S (60) s;
+#                  then stopped by SIGTERM, the chain exported by crown-driver, the zone saved; session-u/
 #
 # Environment: CROWN_LEZ_VOL (default /vol/lez), CROWN_LEZ_WORK (default /root/crown-lez, wiped), CROWN_CHAIN
 # (sepolia | stand-in), CROWN_VAULT (a: optional), CROWN_CAPTURES (b: capture dirs in order; default
@@ -30,7 +37,7 @@ TICK_MIN=1; TICK_MAX=6; TICK_AFTER=3          # where its blocks fall after an e
 MAX_STARTS="${CROWN_MAX_STARTS:-4}"
 BEDROCK_FUNDING_PUBLIC_KEY=2e03b2eff5a45478e7e79668d2a146cf2c5c7925bce927f2b1c67f2ab4fc0d26
 CHANNEL=0101010101010101010101010101010101010101010101010101010101010101
-case "$STEP" in a|b|dump) ;; *) echo "session.sh a | b | dump"; exit 2 ;; esac
+case "$STEP" in a|b|dump|u) ;; *) echo "session.sh a | b | dump | u"; exit 2 ;; esac
 case "$CHAIN" in sepolia|stand-in) ;; *) echo "CROWN_CHAIN: sepolia or stand-in"; exit 2 ;; esac
 
 VOL="$(realpath -m "$VOL")"; WORK="$(realpath -m "$WORK")"
@@ -218,6 +225,137 @@ done
 for i in $(seq 1 120); do h="$(head_block)"; [ -n "$h" ] && break; sleep 1; done
 say "sequencer up, head block ${h:-?}"
 
+# ---- Session U: the updater daemon --------------------------------------------------------------
+# LEZ's published test key of local.json's first genesis account (lez/live/driver/src/keys.rs: lez_test_payers()[2]);
+# session A pays with [0] and [1], the bridge's fee recipient is [3].
+UPDATER_PAYER=7f273098f25b71e6c005a9519f2678da8d1c7f01f6a27778e2d9948abdf901fb
+UPD_PID=""; UPD_LIFE=0
+updater_start() {
+  UPD_LIFE=$(( UPD_LIFE + 1 ))
+  echo "==== $(date -u +%FT%TZ) life $UPD_LIFE" >> "$LOG/updater.log"
+  ( cd "$S/updater" && exec "$WORK/ferrata-updater" --config "$S/updater/updater.toml" ) >> "$LOG/updater.log" 2>&1 &
+  UPD_PID=$!
+  say "updater life $UPD_LIFE started (pid $UPD_PID)"
+}
+updater_stop() { # SIGTERM; the round in hand (a transaction waiting to be final) finishes first: up to 30 min
+  local i rc
+  [ -n "$UPD_PID" ] || return 0
+  kill -TERM "$UPD_PID" 2>/dev/null
+  for i in $(seq 1 1800); do kill -0 "$UPD_PID" 2>/dev/null || break; sleep 1; done
+  if kill -0 "$UPD_PID" 2>/dev/null; then
+    kill -KILL "$UPD_PID"; wait "$UPD_PID" 2>/dev/null; say "updater life $UPD_LIFE killed after 30 min"; UPD_PID=""; return 1
+  fi
+  wait "$UPD_PID"; rc=$?
+  say "updater life $UPD_LIFE stopped by SIGTERM after $i s: exit $rc"
+  echo "==== $(date -u +%FT%TZ) life $UPD_LIFE exit $rc" >> "$LOG/updater.log"
+  UPD_PID=""
+  return "$rc"
+}
+updater_probe() { # /health and /metrics: one JSON line per probe; the full texts every 10th probe and the last
+  local t code n="$1" P="$OUT/probes"
+  t="$(date -u +%FT%TZ)"
+  code="$(curl -sS -m 5 -o "$WORK/health.json" -w '%{http_code}' http://127.0.0.1:9464/health 2>/dev/null)"
+  curl -fsS -m 5 -o "$WORK/metrics.txt" http://127.0.0.1:9464/metrics 2>/dev/null || : > "$WORK/metrics.txt"
+  python3 -I "$WORK/probe.py" "$t" "${code:-000}" "$WORK/health.json" "$WORK/metrics.txt" "$UPD_LIFE" >> "$P/health.jsonl"
+  [ -s "$WORK/metrics.txt" ] && cp "$WORK/metrics.txt" "$OUT/metrics-last.txt"
+  [ -s "$WORK/health.json" ] && cp "$WORK/health.json" "$OUT/health-last.json"
+  if [ $(( n % 10 )) = 1 ] && [ -s "$WORK/metrics.txt" ]; then
+    cp "$WORK/metrics.txt" "$P/metrics-$t.txt"; cp "$WORK/health.json" "$P/health-$t.json" 2>/dev/null
+  fi
+  return 0
+}
+updater_mirror() { # the records so far, to the Volume
+  local J="$S/updater/state/sepolia"
+  cp "$LOG/updater.log" "$OUT/updater.log" 2>/dev/null
+  [ -f "$J/journal.tsv" ] && cp "$J/journal.tsv" "$OUT/journal.tsv"
+  [ -f "$S/updater/state/ledger/run.tsv" ] && cp "$S/updater/state/ledger/run.tsv" "$OUT/run.tsv"
+  return 0
+}
+journal_lines() { if [ -f "$S/updater/state/sepolia/journal.tsv" ]; then wc -l < "$S/updater/state/sepolia/journal.tsv"; else echo 0; fi; }
+journal_tail() { tail -n 1 "$S/updater/state/sepolia/journal.tsv" 2>/dev/null | cut -f2,5 | tr '\t' ' '; }
+updater_session() {
+  local U="$S/updater" bin="${CROWN_UPDATER_BIN:-$VOL/inputs/updater/ferrata-updater}" minutes="${CROWN_UPDATER_MIN:-60}"
+  local restart_min="${CROWN_UPDATER_RESTART_MIN:-}" probe_s="${CROWN_UPDATER_PROBE_S:-60}" poll_s="${CROWN_UPDATER_POLL_S:-24}"
+  local program t0 end now last_probe=0 n=0 restart=0 armed_at=0 armed_lines=0 lines rc=0
+  mkdir -p "$U" "$OUT/probes"
+  cp "$bin" "$WORK/ferrata-updater" 2>/dev/null && chmod +x "$WORK/ferrata-updater" || { say "no updater binary at $bin"; return 3; }
+  say "updater binary sha256 $(sha256sum "$WORK/ferrata-updater" | cut -c1-64)"
+  program="$(python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1]))["attestation"]["account"])' "$VOL/session-a/session-a.json")" \
+    || { say "no attestation account in session-a/session-a.json"; return 3; }
+  [ -f "$U/updater.toml" ] && say "the updater's state from an earlier session U is kept ($(du -sh "$U/state" 2>/dev/null | cut -f1))"
+  printf '%s\n' "$UPDATER_PAYER" > "$U/payer.key"
+  printf '%s\n' \
+    '# Written by lez/crown/session.sh u: the zone of session A (crown-driver crown-a deployed the attestation program and' \
+    '# initialised the Sepolia instance from crates/ferrata-spectests/fixtures/sepolia-2026-11-12 and its period-1411 update).' \
+    '[daemon]' 'name = "updater-live"' 'state_dir = "state"' "poll_secs = $poll_s" 'listen = "127.0.0.1:9464"' 'ledger = "sequencer"' '' \
+    '[sequencer]' "rpc = \"http://127.0.0.1:$RPC_PORT\"" "program = \"$program\"" 'wait_final = true' "log = \"$LOG/sequencer.log\"" '' \
+    '[keys]' 'payer_key_file = "payer.key"' '' \
+    '[fees]' 'gas_limit = 4800000' 'max_fee_per_tx = 1000000000' 'budget = 1000000000000' '' \
+    '[policy]' 'defer_window = 1' 'max_lag_slots = 64' 'min_agreeing = 2' 'retry_base_ms = 1000' 'retry_max_ms = 60000' \
+    'max_attempts = 5' 'demote_rounds = 50' 'max_periods_per_request = 4' 'finish_own_jobs = true' '' \
+    '[[chain]]' 'name = "sepolia"' 'preset = "sepolia"' 'checkpoint = "3b901f5e6853b5cf5eb04d7ccfe1272e66c38291cb3a11dd159cacd1117ccf7c"' \
+    'layout = "gloas"' 'adoption_parts = 2' '' \
+    '  [[chain.source]]' '  name = "lodestar"' '  url = "https://lodestar-sepolia.chainsafe.io"' '  timeout_secs = 30' '' \
+    '  [[chain.source]]' '  name = "publicnode"' '  url = "https://ethereum-sepolia-beacon-api.publicnode.com"' '  kind = "headers"' \
+    '  timeout_secs = 30' > "$U/updater.toml"
+  sed -e "s#$LOG/#work/logs/#" "$U/updater.toml" > "$OUT/updater.toml"
+  printf '%s\n' \
+    'import json, sys' \
+    't, code, health, metrics, life = sys.argv[1:6]' \
+    'try:' '    h = json.load(open(health))' 'except Exception:' '    h = None' \
+    'm = {}' \
+    'for line in open(metrics, errors="replace"):' \
+    '    if line.startswith("ferrata_updater_") and " " in line:' \
+    '        k, v = line.rsplit(" ", 1)' '        m[k] = v.strip()' \
+    'def pick(name):' '    return {k.split("{", 1)[1].rstrip("}"): v for k, v in m.items() if k.startswith(name + "{")}' \
+    'print(json.dumps({"t": t, "life": int(life), "http": int(code), "health": h, "tx": pick("ferrata_updater_tx_total"),' \
+    '                  "fee": pick("ferrata_updater_fee_total"), "available": pick("ferrata_updater_source_available"),' \
+    '                  "confirmed": pick("ferrata_updater_source_confirmed_total")}, separators=(",", ":")))' > "$WORK/probe.py"
+  t0=$(date +%s); end=$(( t0 + minutes * 60 ))
+  say "session U: $minutes min (until $(date -u -d "@$end" +%FT%TZ)); restart after ${restart_min:-never} min; probe every $probe_s s"
+  updater_start
+  while :; do
+    now=$(date +%s)
+    if [ -f /root/updater-stop ]; then say "stop requested: $(head -c 200 /root/updater-stop)"; break; fi
+    if [ "$now" -ge "$end" ]; then say "the session's $minutes min are over"; break; fi
+    if ! kill -0 "$UPD_PID" 2>/dev/null; then
+      wait "$UPD_PID"; rc=$?; say "the updater exited by itself (life $UPD_LIFE, exit $rc)"; UPD_PID=""
+      updater_mirror
+      if [ "$UPD_LIFE" -ge 4 ]; then say "four lives: giving up"; break; fi
+      sleep 30; updater_start; continue
+    fi
+    if [ $(( now - last_probe )) -ge "$probe_s" ]; then n=$(( n + 1 )); updater_probe "$n"; updater_mirror; last_probe=$now; fi
+    # The restart: armed after restart_min; done as soon as the updater has applied an Open (a job half done), or
+    # after 20 min armed, whatever it is doing.
+    if [ -n "$restart_min" ] && [ "$restart" = 0 ] && [ "$now" -ge $(( t0 + restart_min * 60 )) ]; then
+      restart=1; armed_at=$now; armed_lines=$(journal_lines)
+      say "restart armed (journal at $armed_lines lines)"
+    fi
+    if [ "$restart" = 1 ]; then
+      lines=$(journal_lines)
+      if { [ "$lines" -gt "$armed_lines" ] && [ "$(journal_tail)" = "Open applied" ]; } || [ $(( now - armed_at )) -ge 1200 ]; then
+        say "restart: the journal's last line is '$(journal_tail)'; SIGTERM"
+        n=$(( n + 1 )); updater_probe "$n"
+        updater_stop; rc=$?
+        updater_mirror
+        cp "$U/state/sepolia/journal.tsv" "$OUT/journal-at-restart.tsv" 2>/dev/null
+        ls -la "$U/state" "$U/state/sepolia" "$U/state/sepolia/open" "$U/state/ledger" > "$OUT/state-at-restart.txt" 2>&1
+        restart=2; sleep 15
+        updater_start
+        last_probe=0
+        continue
+      fi
+    fi
+    sleep 1
+  done
+  n=$(( n + 1 )); updater_probe "$n"
+  updater_stop; rc=$?
+  updater_mirror
+  ls -la "$U/state" "$U/state/sepolia" "$U/state/sepolia/open" "$U/state/ledger" > "$OUT/state-at-end.txt" 2>&1
+  say "session U: updater lives $UPD_LIFE, last exit $rc, journal $(journal_lines) transactions"
+  return "$rc"
+}
+
 # ---- The driver -----------------------------------------------------------------------------
 D=(--rpc "http://127.0.0.1:$RPC_PORT" --run-dir "$S/driver" --program-bin "$B/program/ferrata_lez.bin"
    --bridge-bin "$B/program/ferrata_bridge.bin" --chain "$CHAIN" --fixture "$B/fixture" --sequencer-log "$LOG/sequencer.log")
@@ -235,6 +373,9 @@ if [ "$STEP" = a ]; then
   extra=(); [ -n "${CROWN_VAULT:-}" ] && extra=(--vault "$CROWN_VAULT")
   timeout $(( DEADLINE_MIN * 60 )) "$BIN/crown-driver" crown-a "${D[@]}" --channel "$WORK/channel.json" \
     --genesis "$S/bedrock/deployment-settings.yaml" --identity-out "$WORK/session-a.json" "${extra[@]}" > "$LOG/driver.log" 2>&1
+  DRIVER_RC=$?
+elif [ "$STEP" = u ]; then
+  updater_session
   DRIVER_RC=$?
 else
   caps=(); for c in ${CROWN_CAPTURES:-$VOL/inputs/capture-1 $VOL/inputs/capture-2}; do caps+=(--capture "$c"); done
@@ -287,7 +428,7 @@ if [ "$STEP" = a ]; then
   cp "$S/bedrock/deployment-settings.yaml" "$OUT/deployment-settings.yaml"
   cp "$S/sequencer_home/channel_signing_key" "$OUT/channel_signing_key" 2>/dev/null || say "no channel_signing_key in the sequencer home"
   [ -n "$SAVED" ] && cp "$WORK/session-a.json" "$OUT/session-a.json"
-else
+elif [ "$STEP" = b ]; then
   [ -n "$SAVED" ] && cp "$WORK/session-b.json" "$WORK/burn-notes.json" "$OUT/"
 fi
 [ -d "$WORK/export" ] && { rm -rf "$OUT/export"; cp -r "$WORK/export" "$OUT/export"; }

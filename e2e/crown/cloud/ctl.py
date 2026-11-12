@@ -9,6 +9,12 @@
     ctl.py status <run>
     ctl.py fetch <run> [--lez]
     ctl.py stop [--app]
+    ctl.py updater <run> --bin FILE [--minutes N] [--restart-min M] [--poll-s S] [--probe-s S]
+                    lez/crown/session.sh a then u in the function updater_session (lez/updater/sequencer's daemon on a
+                    zone of session A, the public Sepolia beacon APIs read); nothing is sent to any public network
+    ctl.py updater-stop <run> [REASON]   end session U at its next check (within 30 s)
+    ctl.py updater-status <run>          the call, the session's last lines, the journal's
+    ctl.py updater-fetch <run> DIR       lez/<run>/session-a/, session-u/ and the logs into DIR
 """
 import hashlib
 import json
@@ -404,6 +410,76 @@ def stop(app_too: bool) -> None:
     print(f"kept: Volume {VOLUME_NAME} (inputs, runs, LEZ generations); nothing runs")
 
 
+def updater(run: str, binary: str | None, env: dict) -> None:
+    check_run_name(run)
+    if not binary or not os.path.isfile(binary):
+        die("updater: --bin FILE (lez/updater/sequencer's ferrata-updater, built on the build box)")
+    vol = volume()
+    if vread(vol, f"lez/{run}/updater-call.json"):
+        state, _ = call_state(vjson(vol, f"lez/{run}/updater-call.json")["call"])
+        if state == "active":
+            die(f"updater: {run} has an active call")
+    script = open(os.path.join(REPO, "lez/crown/session.sh"), "rb").read()
+    with vol.batch_upload(force=True) as b:
+        b.put_file(binary, f"lez/{run}/inputs/updater/ferrata-updater")
+    try:
+        modal.Dict.from_name("ferrata-crown-control", create_if_missing=True).pop(f"stop/{run}")
+    except KeyError:
+        pass
+    fn = modal.Function.from_name(APP_NAME, "updater_session")
+    call = fn.spawn(run=run, script=script, env=env)
+    meta = {"call": call.object_id, "started_at": utc(), "binary_sha256": sha256(binary), "env": env,
+            "session_sh_sha256": hashlib.sha256(script).hexdigest(), "commit": git("rev-parse", "HEAD").strip()}
+    path = os.path.join(SCRATCH, f"updater-call-{run}.json")
+    os.makedirs(SCRATCH, exist_ok=True)
+    with open(path, "w") as f:
+        json.dump(meta, f, indent=1)
+    with vol.batch_upload(force=True) as b:
+        b.put_file(path, f"lez/{run}/updater-call.json")
+    print(json.dumps(meta, indent=1))
+
+
+def updater_stop(run: str, reason: str) -> None:
+    modal.Dict.from_name("ferrata-crown-control", create_if_missing=True)[f"stop/{run}"] = reason or f"stopped at {utc()}"
+    print(f"stop/{run} set: session U ends at its next check")
+
+
+def updater_status(run: str) -> None:
+    vol = volume()
+    meta = vjson(vol, f"lez/{run}/updater-call.json") or {}
+    state, result = call_state(meta["call"]) if meta.get("call") else ("none", None)
+    print(f"call {meta.get('call')} started {meta.get('started_at')}: {state}")
+    if isinstance(result, dict):
+        print({k: v for k, v in result.items() if k != "tail"})
+    out = (vread(vol, f"lez/{run}/session-u.out") or b"").decode(errors="replace").splitlines()
+    print("\n".join(out[-8:]))
+    log = (vread(vol, f"lez/{run}/session-u/updater.log") or b"").decode(errors="replace").splitlines()
+    print(f"updater.log: {len(log)} lines; last:\n  " + "\n  ".join(l[:220] for l in log[-6:]))
+    j = (vread(vol, f"lez/{run}/session-u/journal.tsv") or b"").decode(errors="replace").splitlines()
+    print(f"journal: {len(j)} transactions; last: {j[-1][:220] if j else '-'}")
+
+
+def updater_fetch(run: str, dest: str) -> None:
+    vol = volume()
+    n = 0
+    for top in ("session-a", "session-u", "session-u.out", "updater-call.json"):
+        try:
+            entries = list(vol.iterdir(f"lez/{run}/{top}", recursive=True))
+        except (NotFoundError, FileNotFoundError):
+            continue
+        for e in entries:
+            if e.type != FileEntryType.FILE:
+                continue
+            rel = e.path.split(f"lez/{run}/", 1)[1]
+            p = os.path.join(dest, rel)
+            os.makedirs(os.path.dirname(p), exist_ok=True)
+            with open(p, "wb") as f:
+                for chunk in vol.read_file(e.path):
+                    f.write(chunk)
+            n += 1
+    print(f"{n} files into {dest}")
+
+
 def main() -> None:
     a = sys.argv[1:]
     opt = lambda name: a[a.index(name) + 1] if name in a and a.index(name) + 1 < len(a) else None
@@ -417,6 +493,16 @@ def main() -> None:
         fetch(a[1], "--lez" in a)
     elif a[:1] == ["stop"]:
         stop("--app" in a)
+    elif len(a) >= 2 and a[0] == "updater":
+        env = {"CROWN_UPDATER_MIN": opt("--minutes") or "60", "CROWN_UPDATER_RESTART_MIN": opt("--restart-min"),
+               "CROWN_UPDATER_POLL_S": opt("--poll-s"), "CROWN_UPDATER_PROBE_S": opt("--probe-s"), "CROWN_SAMPLE": "1"}
+        updater(a[1], opt("--bin"), {k: v for k, v in env.items() if v is not None})
+    elif len(a) >= 2 and a[0] == "updater-stop":
+        updater_stop(a[1], " ".join(a[2:]))
+    elif len(a) >= 2 and a[0] == "updater-status":
+        updater_status(a[1])
+    elif len(a) >= 3 and a[0] == "updater-fetch":
+        updater_fetch(a[1], a[2])
     else:
         print(__doc__, file=sys.stderr)
         sys.exit(2)
