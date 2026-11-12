@@ -21,6 +21,16 @@ M=ferrata_attestor_module
 Z="$repo/checkpoint/attestor/runs/zone"
 DEV="$repo/../upstream/lez-v0.4.0-rc1/lez/configs/docker-all-in-one/devnet"
 phase=main
+# Logos Core keeps each module's socket in TMPDIR (logos_<module>_<id>). A Unix socket path holds at most
+# 107 bytes; with a longer one every module's host process dies at load (SIGSEGV after "failed to listen",
+# met on the build box). LOGOS_TMPDIR (default TMPDIR) must leave room for the longest module name.
+LOGOS_TMPDIR=${LOGOS_TMPDIR:-${TMPDIR:-/tmp}}
+if [ $(( ${#LOGOS_TMPDIR} + 45 )) -gt 107 ]; then
+  echo "$(basename "$0"): LOGOS_TMPDIR=$LOGOS_TMPDIR is too long for Logos Core's sockets (62 bytes at most); set a shorter one" >&2
+  exit 2
+fi
+mkdir -p "$LOGOS_TMPDIR"
+export TMPDIR="$LOGOS_TMPDIR"
 case "${1:-}" in during | after) phase=$1; shift ;; esac
 
 ctl() { local i=$1; shift; "$LOGOSCTL" --config-dir "$W/core-$i" "$@"; }

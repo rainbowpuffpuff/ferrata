@@ -48,10 +48,13 @@ fail_on() { # REPLY OK_VERDICT...: exit 1 with the reply's error unless its verd
   exit 1
 }
 
+# The module's host process: `logos_host --name ferrata_monitor_module --path ... --instance-persistence-path
+# $SESSION/data/...` (as logosctl 66d098d starts it), in this session.
 host_pid() {
-  local p
+  local p a
   for p in $(pgrep -f logos_host 2>/dev/null); do
-    if tr '\0' ' ' < "/proc/$p/cmdline" 2>/dev/null | grep -q "$M"; then echo "$p"; return 0; fi
+    a=$(tr '\0' ' ' < "/proc/$p/cmdline" 2>/dev/null) || continue
+    case "$a" in *"--name $M "*"$SESSION/"*) echo "$p"; return 0 ;; esac
   done
   return 1
 }

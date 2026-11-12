@@ -8,7 +8,6 @@
 //! `/health` and `/metrics` do); `stop`, or the host unloading the module, ends it.
 
 use std::panic::{catch_unwind, AssertUnwindSafe};
-use std::sync::Mutex;
 
 use ferrata_updater_calls::Daemon;
 
@@ -44,7 +43,7 @@ include!(concat!(env!("CARGO_MANIFEST_DIR"), "/generated/provider_gen.rs"));
 
 #[derive(Default)]
 struct FerrataUpdater {
-    daemon: Mutex<Option<Daemon>>,
+    daemon: std::sync::Mutex<Option<Daemon>>,
 }
 
 /// A panic must not cross into the host: report it as JSON instead.

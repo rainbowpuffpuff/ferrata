@@ -10,6 +10,16 @@
 # RELEASE_DIR: release-local.sh's OUT_DIR (its index.json names packages on 127.0.0.1:18546).
 # LOGOSCTL: a portable logosctl (check.sh's out/logos-portable/bin/logosctl): the packages are portable.
 set -uo pipefail
+# Logos Core keeps each module's socket in TMPDIR (logos_<module>_<id>). A Unix socket path holds at most
+# 107 bytes; with a longer one every module's host process dies at load (SIGSEGV after "failed to listen",
+# met on the build box). LOGOS_TMPDIR (default TMPDIR) must leave room for the longest module name.
+LOGOS_TMPDIR=${LOGOS_TMPDIR:-${TMPDIR:-/tmp}}
+if [ $(( ${#LOGOS_TMPDIR} + 45 )) -gt 107 ]; then
+  echo "$(basename "$0"): LOGOS_TMPDIR=$LOGOS_TMPDIR is too long for Logos Core's sockets (62 bytes at most); set a shorter one" >&2
+  exit 2
+fi
+mkdir -p "$LOGOS_TMPDIR"
+export TMPDIR="$LOGOS_TMPDIR"
 here=$(cd "$(dirname "$0")" && pwd)
 repo=$(cd "$here/../.." && pwd)
 rel=$(cd "$1" && pwd)
@@ -42,8 +52,8 @@ for _ in $(seq 1 100); do (echo > "/dev/tcp/127.0.0.1/$PORT") 2>/dev/null && bre
 fails=0
 run() { echo "\$ logosctl $*" >> "$out/log.txt"; if ctl "$@" >> "$out/log.txt" 2>&1; then echo "ok: $*"; else echo "FAILED: $*"; fails=$((fails + 1)); fi; }
 : > "$out/log.txt"
-echo "\$ logosctl daemon start --detach" >> "$out/log.txt"
-HOME="$out/home" "$ctl_bin" --config-dir "$out/session" daemon start --detach >> "$out/log.txt" 2>&1 || fails=$((fails + 1))
+echo "\$ RISC0_DEV_MODE=1 logosctl daemon start --detach   (the updater module's in-process chain runs as its tests do)" >> "$out/log.txt"
+HOME="$out/home" RISC0_DEV_MODE=1 "$ctl_bin" --config-dir "$out/session" daemon start --detach >> "$out/log.txt" 2>&1 || fails=$((fails + 1))
 # The daemon's default catalog (Logos's official one, on GitHub) cannot be verified with the throwaway
 # CA bundle: disable it, so that the refresh reads this catalog only.
 default=$(ctl catalog ls 2>/dev/null | jq -r '.[] | select(.isDefault == true) | .url // .repositoryUrl // empty' 2>/dev/null | head -n 1)

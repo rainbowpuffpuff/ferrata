@@ -6,7 +6,7 @@
 # daemon_requests.py). Then, through the same daemon: e2e.sh (a log fetched over JSON-RPC, attested by
 # a transaction the module built and the LEZ harness executed) and the three daemons doing their jobs
 # as modules: attestor-e2e.sh (the zone of four's records), updater-e2e.sh (the in-process LEZ chain
-# with the lab's recorded beacon data), monitor/tests/anvil-e2e.sh (an anvil chain with a v5 vault),
+# with the lab's recorded beacon data), monitor-e2e.sh (monitor/tests/anvil-e2e.sh: an anvil chain with a v5 vault),
 # each first run natively (the calls crate, or the monitor binary) as the reference.
 # Needs Linux x86-64, Nix with flakes, cargo, python3 and jq; for the daemons also the RISC Zero
 # toolchain of lez/ (the guests the updater module embeds), r0vm, and Foundry (anvil, forge, cast) with
@@ -31,6 +31,16 @@ has() { case " $MODULES " in *" $1 "*) return 0 ;; esac; return 1; }
 # On the build box (a container) the stack limit is "unlimited": Nix's evaluation of the module's flake
 # overflowed its stack, and local builds failed below 1 GiB. With a finite 1 GiB limit both work.
 if [ "$(ulimit -s)" = unlimited ]; then ulimit -s 1048576; fi
+# Logos Core keeps each module's socket in TMPDIR (logos_<module>_<id>). A Unix socket path holds at most
+# 107 bytes; with a longer one every module's host process dies at load (SIGSEGV after "failed to listen",
+# met on the build box). LOGOS_TMPDIR (default TMPDIR) must leave room for the longest module name.
+LOGOS_TMPDIR=${LOGOS_TMPDIR:-${TMPDIR:-/tmp}}
+if [ $(( ${#LOGOS_TMPDIR} + 45 )) -gt 107 ]; then
+  echo "$(basename "$0"): LOGOS_TMPDIR=$LOGOS_TMPDIR is too long for Logos Core's sockets (62 bytes at most); set a shorter one" >&2
+  exit 2
+fi
+mkdir -p "$LOGOS_TMPDIR"
+export TMPDIR="$LOGOS_TMPDIR"
 
 here=$(cd "$(dirname "$0")" && pwd)
 repo=$(cd "$here/../.." && pwd)
@@ -158,9 +168,7 @@ native_daemons() {
   local rc=0
   if has ferrata_attestor_module; then "$here/attestor-e2e.sh" "$rep/daemons-native/attestor" || rc=1; fi
   if has ferrata_updater_module; then "$here/updater-e2e.sh" "$rep/daemons-native/updater" || rc=1; fi
-  if has ferrata_monitor_module; then
-    (cd "$repo/monitor" && MONITOR_E2E_OUT="$rep/daemons-native/monitor" bash tests/anvil-e2e.sh) || rc=1
-  fi
+  if has ferrata_monitor_module; then "$here/monitor-e2e.sh" "$rep/daemons-native/monitor" || rc=1; fi
   return $rc
 }
 
@@ -233,8 +241,7 @@ core() {
       step 0 "$flavour-updater-e2e" env CALL=logosctl LOGOSCTL="$LOGOSCTL" SESSION="$SESSION" "$here/updater-e2e.sh" "$d/updater" || true
     fi
     if has ferrata_monitor_module; then
-      step 0 "$flavour-monitor-e2e" env -C "$repo/monitor" MONITOR_CMD="$here/monitor-module.sh" MONITOR_E2E_OUT="$d/monitor" \
-        LOGOSCTL="$LOGOSCTL" SESSION="$SESSION" bash tests/anvil-e2e.sh || true
+      step 0 "$flavour-monitor-e2e" env CALL=logosctl LOGOSCTL="$LOGOSCTL" SESSION="$SESSION" "$here/monitor-e2e.sh" "$d/monitor" || true
     fi
   fi
   step 0 "$flavour-module-ls" ctl module ls --json || true
