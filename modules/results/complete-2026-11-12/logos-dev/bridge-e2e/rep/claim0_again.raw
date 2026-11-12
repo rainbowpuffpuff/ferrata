@@ -1,0 +1,1 @@
+{"method":"claim","module":"ferrata_bridge_module","result":"{\"code\":250,\"detail\":\"checked before sending: the nullifier is spent\",\"error\":\"ALREADY_CLAIMED\",\"verdict\":\"refused\"}","status":"ok"}

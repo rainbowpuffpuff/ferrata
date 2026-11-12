@@ -1,0 +1,60 @@
+nix-bundle-dir_2	cb9afc8c8c8a0037cf27f7467132f9e01e476588
+nix-bundle-dir_3	ffc410b7f2bab32b1c2ceb347c56902e7321049c
+nix-bundle-lgx	55e4c99f67bf6ab0085eaea8243f5cf9b3354f5e
+nix-bundle-logos-module-install	4ebf721f3558919aa932ba250a93a7d62e932d47
+nixpkgs	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs-windows	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_10	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_11	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_12	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_13	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_14	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_15	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_16	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_17	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_2	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_3	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_4	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_5	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_6	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_7	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_8	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs-windows_9	b5aa0fbd538984f6e3d201be0005b4463d8b09f8
+nixpkgs_10	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_11	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_12	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_13	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_14	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_15	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_16	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_17	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_18	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_19	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_2	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_3	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_4	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_5	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_6	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_7	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_8	e9f00bd893984bc8ce46c895c3bf7cac95331127
+nixpkgs_9	e9f00bd893984bc8ce46c895c3bf7cac95331127
+rust-overlay	494680f9ffa2b4bf9f2df0f442c7096e44adfa00
+== contract in lgx-ferrata_bridge_module/logos-ferrata_bridge_module-module-lib.lgx:
+module ferrata_bridge_module {
+  version "0.1.0"
+  depends []
+
+  method version() -> tstr description "The module's version and what was staged beside it (the commit, LEZ's, each crate's sources'\nSHA-256), as JSON."
+  method deposit(request: tstr) -> tstr description "A deposit's commitment and the vault call that makes it (`deposit` or `depositETH`), and,\nwith its leaf index, the leaf, deposit id and nullifier. JSON in and out (modules/README.md)."
+  method claim(request: tstr) -> tstr description "A claim of a deposit: its Merkle path in the deposit tree, the check the bridge program runs\n(`verify_claim`), its nullifier, and the program's `Claim` or `ClaimPrivately` message; given\nLEZ's state, the `ferrata` tool's claim (the program's checks, fees, accounts). JSON in and out."
+  method burn(request: tstr) -> tstr description "A burn: the note (tag, memo, MAC, commitment) and the bridge program's `Burn` message, and,\nwith its index in the burn tree, the leaf, burn id and release nullifier. JSON in and out."
+  method release(request: tstr) -> tstr description "A release: the burn's path in the checkpointed burn tree (its root given, or picked by the\nwallet's rule: the newest accepted root whose release delay has passed), the release guest's\ncheck (`verify_release`), its nullifier and the journal the vault verifies. JSON in and out."
+  method recover(request: tstr) -> tstr description "The wallet's own deposits and burns among public ones, from its seed alone. JSON in and out."
+  method status(request: tstr) -> tstr description "Where each deposit and burn stands (awaiting root, claimable, claimed; awaiting checkpoint,\nreleasable, released), from the chains' public state. JSON in and out."
+  method prove_release(request: tstr) -> tstr description "A release (as `release`), then the release guest run on its input through r0vm (`program`: the\nguest's ELF), its journal checked against the native one; the tool's `release --prove`. JSON."
+  method import_root(request: tstr) -> tstr description "The relayer's `ImportRoot` of a deposit root from the vault's `eth_getProof` proofs, dry-run\nwith the attestation and bridge programs' own functions when the record is given. JSON."
+  method registry(request: tstr) -> tstr description "The bridge program's registry as LEZ holds it (`token(cid, token)`, `config(cid)`,\n`root(cid, n)`), decoded, with a claim's schedule range and fees. JSON in and out."
+}
+logosctl version pre-release-66d098d
+commit: 66d098d3af1367cf831b69c13a5aa8345edeb682
+dependency commits:

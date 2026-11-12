@@ -4,45 +4,52 @@
 //!
 //! The cryptography is `ferrata-bridge-core`'s (specification v2), the crate the bridge program, the
 //! release guest and the CLI use, so commitments, nullifiers, paths and journals cannot drift. The
-//! messages for the bridge program (`Claim`, `Burn`) are Borsh-encoded here field for field
-//! (`lez/bridge-wire/src/lib.rs`, `BridgeMessage`); the program's crate links LEZ, which the module
-//! builder cannot build from the module's directory. The vault's calls are ABI-encoded here.
+//! bridge program's messages and states are its own types (`ferrata-lez-bridge-wire`, staged with
+//! LEZ's `lee_core` by `scripts/stage.py`). The claim with LEZ state, the release rule and the release
+//! guest run, the root import and the registry run the `ferrata` tool's own code (`ferrata-wallet`,
+//! `wallet.rs`). The vault's calls are ABI-encoded here.
 //!
 //! Secrets: a request carries the wallet's `bridge_seed` (or the LEZ wallet's 64-byte `lez_seed`, from
 //! which the bridge seed is derived as the CLI derives it). Replies never contain `kAuth`, `kView`, a
 //! deposit secret `s` or a burn secret `sOut`, except where the bridge program needs it: the
-//! plaintext `Claim` message carries `s`, as the program's public claim does.
+//! plaintext `Claim` message carries `s`, as the program's public claim does, and the `ClaimPrivately`
+//! message carries it as the private execution's input (the LEZ wallet runs it privately; it is not
+//! sent in the clear).
 
 use std::fmt::Write as _;
 
+mod wallet;
+
 use ferrata_bridge_core::{
-    chain_id_u256, hmac_sha256,
+    chain_id_u256,
+    encoding::ReleaseInput,
+    hmac_sha256,
     inbound::{self, ClaimWitness, DestKind, VaultDeposit},
     outbound::{self, BurnNote, PublishedBurn, ReleasePublic, ReleaseTarget, ReleaseWitness},
     sha256,
     tree::{MerklePath, Tree, TREE_DEPTH},
     Address, BridgeKeys, Hash, VerifyError, U256,
 };
+use ferrata_lez_bridge_wire::{self as bw, BridgeMessage};
 use serde_json::{json, Value};
 
-/// What `scripts/stage.sh` recorded about the ferrata-bridge-core copy this crate was built against.
-const STAGED: &str = include_str!("../../ferrata-bridge-core/STAGED.json");
+/// What `scripts/stage.py` recorded about the crates staged beside this one (the commit, LEZ's, each
+/// crate's version and sources' SHA-256).
+const STAGED: &str = include_str!("../../staged/STAGED.json");
 
 /// The label of the bridge seed under the LEZ wallet's seed (`cli/src/seed.rs`).
 pub const BRIDGE_SEED_LABEL: &[u8] = b"ferrata/bridge-seed/v1";
 
-/// The bridge program's `BridgeMessage` variants used here.
-const BURN_VARIANT: u8 = 0;
-const CLAIM_VARIANT: u8 = 5;
 
 /// `version()`: the module's version and the bridge core it was built from.
 pub fn version() -> String {
     json!({
         "module": "ferrata_bridge_module",
         "version": env!("CARGO_PKG_VERSION"),
-        "ferrata_bridge_core": serde_json::from_str::<Value>(STAGED).unwrap_or(Value::Null),
+        "staged": serde_json::from_str::<Value>(STAGED).unwrap_or(Value::Null),
         "spec": "v2",
-        "methods": ["version", "deposit", "claim", "burn", "release", "recover", "status"],
+        "tool_code": "ferrata-wallet (claim with LEZ state, release rule, release guest run, root import)",
+        "methods": ["version", "deposit", "claim", "burn", "release", "recover", "status", "prove_release", "import_root", "registry"],
     })
     .to_string()
 }
@@ -54,7 +61,13 @@ pub fn deposit(request: &str) -> String {
 
 /// `claim(request)`: the claim of one deposit against a deposit root.
 pub fn claim(request: &str) -> String {
-    reply(parse(request).and_then(|r| claim_of(&r)))
+    reply(parse(request).and_then(|r| {
+        if r["root_state"].is_null() && r["token_state"].is_null() {
+            claim_of(&r)
+        } else {
+            wallet::claim_with_state(&r)
+        }
+    }))
 }
 
 /// `burn(request)`: a burn note and the bridge program's `Burn` message.
@@ -64,7 +77,30 @@ pub fn burn(request: &str) -> String {
 
 /// `release(request)`: the release of one burn against a checkpointed burn root.
 pub fn release(request: &str) -> String {
-    reply(parse(request).and_then(|r| release_of(&r)))
+    reply(parse(request).and_then(|r| {
+        if r["roots"].is_null() {
+            release_explicit(&r).map(|x| x.map_or_else(|refusal| refusal, |(v, _, _)| v))
+        } else {
+            wallet::release_by_rule(&r).map(|x| x.map_or_else(|refusal| refusal, |(v, _)| v))
+        }
+    }))
+}
+
+/// `prove_release(request)`: a release (as `release`), then the release guest run on its input
+/// through r0vm, its journal checked against the native one.
+pub fn prove_release(request: &str) -> String {
+    reply(parse(request).and_then(|r| wallet::prove_release_of(&r)))
+}
+
+/// `import_root(request)`: the relayer's `ImportRoot` of a deposit root from the vault's proofs,
+/// dry-run with the programs' own functions when the record is given.
+pub fn import_root(request: &str) -> String {
+    reply(parse(request).and_then(|r| wallet::import_root_of(&r)))
+}
+
+/// `registry(request)`: the bridge program's token, configuration and root states, decoded.
+pub fn registry(request: &str) -> String {
+    reply(parse(request).and_then(|r| wallet::registry_of(&r)))
 }
 
 /// `recover(request)`: the wallet's deposits and burns among public ones.
@@ -97,7 +133,7 @@ fn verify_error(e: VerifyError) -> &'static str {
 // ---------------------------------------------------------------------------------------------
 
 /// The wallet's keys: `bridge_seed`, or `lez_seed` (the BIP-39 seed of the LEZ wallet).
-fn keys(req: &Value) -> Result<BridgeKeys, String> {
+pub(crate) fn keys(req: &Value) -> Result<BridgeKeys, String> {
     if !req["bridge_seed"].is_null() {
         let seed = bytes(&req["bridge_seed"], "bridge_seed")?;
         return Ok(BridgeKeys::from_bridge_seed(&seed));
@@ -110,14 +146,14 @@ fn keys(req: &Value) -> Result<BridgeKeys, String> {
 }
 
 /// `evm_chain_id` (a 32-byte word) or `chain_id` (a number).
-fn chain(req: &Value) -> Result<U256, String> {
+pub(crate) fn chain(req: &Value) -> Result<U256, String> {
     if !req["evm_chain_id"].is_null() {
         return u256(&req["evm_chain_id"], "evm_chain_id");
     }
     Ok(chain_id_u256(uint(&req["chain_id"], "chain_id")?))
 }
 
-fn kind(v: &Value) -> Result<DestKind, String> {
+pub(crate) fn kind(v: &Value) -> Result<DestKind, String> {
     let k = match v {
         Value::String(s) if s == "private" => 1,
         Value::String(s) if s == "public" => 2,
@@ -126,7 +162,7 @@ fn kind(v: &Value) -> Result<DestKind, String> {
     u8::try_from(k).ok().and_then(DestKind::from_byte).ok_or_else(|| format!("kind: {k} is not 1 (private) or 2 (public)"))
 }
 
-fn kind_name(k: DestKind) -> &'static str {
+pub(crate) fn kind_name(k: DestKind) -> &'static str {
     match k {
         DestKind::Private => "private",
         DestKind::Public => "public",
@@ -163,7 +199,7 @@ fn path_of(req: &Value, leaf_index: u64) -> Result<(MerklePath, Option<Hash>), S
     Ok((MerklePath { directions, siblings: s }, None))
 }
 
-fn path_json(p: &MerklePath) -> Value {
+pub(crate) fn path_json(p: &MerklePath) -> Value {
     json!({ "directions": p.directions, "siblings": p.siblings.iter().map(|s| hex(s)).collect::<Vec<_>>() })
 }
 
@@ -196,7 +232,7 @@ fn selector(signature: &str) -> [u8; 4] {
     [out[0], out[1], out[2], out[3]]
 }
 
-fn word_u64(n: u64) -> [u8; 32] {
+pub(crate) fn word_u64(n: u64) -> [u8; 32] {
     let mut w = [0u8; 32];
     w[24..].copy_from_slice(&n.to_be_bytes());
     w
@@ -274,37 +310,33 @@ fn deposit_of(req: &Value) -> Result<Value, String> {
 // claim
 // ---------------------------------------------------------------------------------------------
 
-fn borsh_len(out: &mut Vec<u8>, n: usize) {
-    out.extend_from_slice(&(n as u32).to_le_bytes());
-}
-
-/// Borsh of `BridgeMessage::Claim { config_id, leaf_count, witness, range, relayer }`.
-fn claim_message(config_id: &Hash, leaf_count: u64, w: &ClaimWitness, range: [u64; 3], relayer: Option<Hash>) -> Vec<u8> {
-    let mut m = vec![CLAIM_VARIANT];
-    m.extend_from_slice(config_id);
-    m.extend_from_slice(&leaf_count.to_le_bytes());
-    m.extend_from_slice(&w.depositor);
-    m.extend_from_slice(&w.token);
-    m.extend_from_slice(&w.amount);
-    m.extend_from_slice(&w.leaf_index.to_le_bytes());
-    borsh_len(&mut m, TREE_DEPTH);
-    for s in &w.path.siblings {
-        m.extend_from_slice(s);
-    }
-    m.extend_from_slice(&w.s);
-    m.push(w.kind as u8);
-    m.extend_from_slice(&w.dest);
-    for x in range {
-        m.extend_from_slice(&x.to_le_bytes());
-    }
-    match relayer {
-        None => m.push(0),
-        Some(r) => {
-            m.push(1);
-            m.extend_from_slice(&r);
-        }
-    }
-    m
+/// Borsh of the bridge program's `Claim` (or, `private`, `ClaimPrivately`) with this witness: the
+/// program's own type (`BridgeMessage`).
+fn claim_message(
+    config_id: &Hash,
+    leaf_count: u64,
+    w: &ClaimWitness,
+    range: [u64; 3],
+    relayer: Option<Hash>,
+    private: bool,
+) -> Vec<u8> {
+    let witness = bw::ClaimWitness {
+        depositor: w.depositor,
+        token: w.token,
+        amount: w.amount,
+        leaf_index: w.leaf_index,
+        path: w.path.siblings.to_vec(),
+        s: w.s,
+        kind: w.kind as u8,
+        dest: w.dest,
+    };
+    let range = bw::ScheduleRange { index: range[0], from_leaf: range[1], until_leaf: range[2] };
+    let message = if private {
+        BridgeMessage::ClaimPrivately { config_id: *config_id, leaf_count, witness, range, relayer }
+    } else {
+        BridgeMessage::Claim { config_id: *config_id, leaf_count, witness, range, relayer }
+    };
+    borsh::to_vec(&message).expect("borsh")
 }
 
 fn claim_of(req: &Value) -> Result<Value, String> {
@@ -348,11 +380,14 @@ fn claim_of(req: &Value) -> Result<Value, String> {
             }))
         }
     };
-    // The bridge program's plaintext claim (a public destination), sent at `root(cid, n)`.
+    // The bridge program's claim, sent at `root(cid, n)`: plaintext `Claim` for a public destination,
+    // `ClaimPrivately` (run in a private execution of the LEZ wallet) for a private one or with
+    // `private`. With LEZ's state (`root_state`, `token_state`) the claim goes through the tool's code
+    // instead (`wallet::claim_with_state`): the program's checks, the fees and the accounts.
     if !req["config_id"].is_null() {
-        if w.kind != DestKind::Public {
-            out["message_note"] =
-                json!("a private destination is claimed with ClaimPrivately in a private execution (LEZ wallet)");
+        let private = req["private"].as_bool().unwrap_or(w.kind != DestKind::Public);
+        if !private && w.kind != DestKind::Public {
+            out["message_note"] = json!("a private destination is claimed with ClaimPrivately (`private`)");
         } else {
             let config_id: Hash = fixed(&req["config_id"], "config_id")?;
             let leaf_count = match (&req["leaf_count"], req["leaves"].as_array()) {
@@ -367,7 +402,8 @@ fn claim_of(req: &Value) -> Result<Value, String> {
                 [uint(&r["index"], "range.index")?, uint(&r["from_leaf"], "range.from_leaf")?, uint(&r["until_leaf"], "range.until_leaf")?]
             };
             let relayer = if req["relayer"].is_null() { None } else { Some(fixed::<32>(&req["relayer"], "relayer")?) };
-            let m = claim_message(&config_id, leaf_count, &w, range, relayer);
+            let m = claim_message(&config_id, leaf_count, &w, range, relayer, private);
+            out["variant"] = json!(if private { "ClaimPrivately" } else { "Claim" });
             out["message"] = json!(hex(&m));
             out["message_bytes"] = json!(m.len());
             out["leaf_count"] = json!(leaf_count);
@@ -380,17 +416,10 @@ fn claim_of(req: &Value) -> Result<Value, String> {
 // burn
 // ---------------------------------------------------------------------------------------------
 
-/// Borsh of `BridgeMessage::Burn { config_id, r, memo, mac, token, amount, c_out }`.
+/// Borsh of the bridge program's `Burn` of note `n` (`BridgeMessage::burn`, the program's own type).
 fn burn_message(config_id: &Hash, n: &BurnNote) -> Vec<u8> {
-    let mut m = vec![BURN_VARIANT];
-    m.extend_from_slice(config_id);
-    m.extend_from_slice(&n.r);
-    m.extend_from_slice(&n.memo);
-    m.extend_from_slice(&n.mac);
-    m.extend_from_slice(&n.token);
-    m.extend_from_slice(&n.amount);
-    m.extend_from_slice(&n.c_out);
-    m
+    let note = bw::Note { r: n.r, memo: n.memo, mac: n.mac, token: n.token, amount: n.amount, c_out: n.c_out };
+    borsh::to_vec(&BridgeMessage::burn(*config_id, &note)).expect("borsh")
 }
 
 fn burn_of(req: &Value) -> Result<Value, String> {
@@ -425,7 +454,7 @@ fn burn_of(req: &Value) -> Result<Value, String> {
     Ok(out)
 }
 
-fn note_json(n: &BurnNote) -> Value {
+pub(crate) fn note_json(n: &BurnNote) -> Value {
     json!({
         "r": hex(&n.r),
         "memo": hex(&n.memo),
@@ -436,7 +465,7 @@ fn note_json(n: &BurnNote) -> Value {
     })
 }
 
-fn note_of(v: &Value, what: &str) -> Result<BurnNote, String> {
+pub(crate) fn note_of(v: &Value, what: &str) -> Result<BurnNote, String> {
     Ok(BurnNote {
         r: fixed(&v["r"], &format!("{what}.r"))?,
         memo: fixed(&v["memo"], &format!("{what}.memo"))?,
@@ -451,7 +480,10 @@ fn note_of(v: &Value, what: &str) -> Result<BurnNote, String> {
 // release
 // ---------------------------------------------------------------------------------------------
 
-fn release_of(req: &Value) -> Result<Value, String> {
+/// `release` with the burn root given (`burn_root`, with `path` or `leaves`): the reply, and for a
+/// releasable burn the release guest's input (encoded) and the journal; or a refusal reply.
+#[allow(clippy::type_complexity)]
+pub(crate) fn release_explicit(req: &Value) -> Result<Result<(Value, Vec<u8>, Vec<u8>), Value>, String> {
     let keys = keys(req)?;
     let config_id: Hash = fixed(&req["config_id"], "config_id")?;
     let i = uint(&req["i"], "i")?;
@@ -474,7 +506,8 @@ fn release_of(req: &Value) -> Result<Value, String> {
     Ok(match outbound::verify_release(&burn_root, &w, &p) {
         Ok(n) => {
             let journal = outbound::release_journal(&burn_root, &n, &p);
-            json!({
+            let input = ReleaseInput { burn_root, witness: w.clone(), public: p.clone() }.encode().to_vec();
+            Ok((json!({
                 "verdict": "releasable",
                 "nullifier": hex(&n),
                 "burn_root": hex(&burn_root),
@@ -492,9 +525,9 @@ fn release_of(req: &Value) -> Result<Value, String> {
                     "relayer": hex(&p.relayer),
                     "relay_fee": hex(&p.relay_fee),
                 },
-            })
+            }), input, journal.to_vec()))
         }
-        Err(e) => json!({ "verdict": "refused", "error": verify_error(e), "burn_root": hex(&burn_root), "r": hex(&r) }),
+        Err(e) => Err(json!({ "verdict": "refused", "error": verify_error(e), "burn_root": hex(&burn_root), "r": hex(&r) })),
     })
 }
 
@@ -661,7 +694,7 @@ pub fn unhex(s: &str) -> Result<Vec<u8>, String> {
         .collect()
 }
 
-fn text<'a>(v: &'a Value, what: &str) -> Result<&'a str, String> {
+pub(crate) fn text<'a>(v: &'a Value, what: &str) -> Result<&'a str, String> {
     match v {
         Value::String(s) => Ok(s),
         Value::Null => Err(format!("{what}: missing")),
@@ -669,19 +702,19 @@ fn text<'a>(v: &'a Value, what: &str) -> Result<&'a str, String> {
     }
 }
 
-fn bytes(v: &Value, what: &str) -> Result<Vec<u8>, String> {
+pub(crate) fn bytes(v: &Value, what: &str) -> Result<Vec<u8>, String> {
     unhex(text(v, what)?).map_err(|e| format!("{what}: {e}"))
 }
 
 /// A byte string of exactly `N` bytes, in hex.
-fn fixed<const N: usize>(v: &Value, what: &str) -> Result<[u8; N], String> {
+pub(crate) fn fixed<const N: usize>(v: &Value, what: &str) -> Result<[u8; N], String> {
     let b = bytes(v, what)?;
     let len = b.len();
     b.try_into().map_err(|_| format!("{what}: expected {N} bytes, got {len}"))
 }
 
 /// An unsigned 64-bit integer: a JSON number, a decimal string or a `0x` quantity.
-fn uint(v: &Value, what: &str) -> Result<u64, String> {
+pub(crate) fn uint(v: &Value, what: &str) -> Result<u64, String> {
     match v {
         Value::Number(n) => n.as_u64().ok_or_else(|| format!("{what}: not an unsigned 64-bit integer")),
         Value::String(s) => match s.strip_prefix("0x") {
@@ -696,7 +729,7 @@ fn uint(v: &Value, what: &str) -> Result<u64, String> {
 
 /// A `uint256` as a 32-byte big-endian word: `0x` hex of at most 32 bytes (left-padded), a decimal
 /// string, or a JSON number.
-fn u256(v: &Value, what: &str) -> Result<U256, String> {
+pub(crate) fn u256(v: &Value, what: &str) -> Result<U256, String> {
     let mut w = [0u8; 32];
     match v {
         Value::Number(_) => w[24..].copy_from_slice(&uint(v, what)?.to_be_bytes()),

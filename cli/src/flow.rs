@@ -567,15 +567,22 @@ pub struct Released {
     pub sent: Option<B256>,
 }
 
-/// The wallet's release rule: among the accepted burn roots that cover `burn_index`, the newest whose
-/// release delay has passed at `now` (the vault opens a root at `finalizedAt + delay`). A burn no
+/// The wallet's release rule (`ferrata_wallet::release::RootRule`): among the accepted burn roots that
+/// cover `burn_index`, the newest whose release delay has passed at `now` (the vault opens a root at `finalizedAt + delay`). A burn no
 /// root covers is refused with `BurnRootNotAccepted`; one whose covering roots are all still in their
 /// delay with `ReleaseDelayNotElapsed`, naming when the first opens.
 pub async fn pick_root(eth: &Eth, token: Address, burn_index: u64) -> Result<(eth::AcceptedRoot, u64)> {
+    use ferrata_wallet::release::{covering, AcceptedRoot, RootRefusal, RootRule};
     let roots = eth::accepted_roots(&eth.p, eth.vault, eth.from_block, eth.chunk).await?;
     let now = eth::now(&eth.p).await?;
-    let mut first_open: Option<u64> = None;
-    for r in roots.iter().rev().filter(|r| r.count > burn_index) {
+    // The rule is ferrata-wallet's (shared with ferrata_bridge_module); the tool reads each covering
+    // root's delay from the vault only as the rule asks for it, newest first.
+    let shared: Vec<AcceptedRoot> = roots
+        .iter()
+        .map(|r| AcceptedRoot { root: r.root.0, count: r.count, index: r.index, finalized_at: r.finalized_at })
+        .collect();
+    let mut rule = RootRule::new(now);
+    for r in covering(&shared, burn_index) {
         let delay = eth::view(
             &eth.p,
             eth.vault,
@@ -583,21 +590,21 @@ pub async fn pick_root(eth: &Eth, token: Address, burn_index: u64) -> Result<(et
             None,
         )
         .await?;
-        let opens = r.finalized_at.saturating_add(u64::try_from(delay).unwrap_or(u64::MAX));
-        if now > opens {
-            return Ok((*r, delay.try_into().unwrap_or(u64::MAX)));
+        let delay = u64::try_from(delay).unwrap_or(u64::MAX);
+        if rule.offer(r, delay) {
+            let picked = roots.iter().find(|x| x.index == r.index).copied().expect("a root of the list");
+            return Ok((picked, delay));
         }
-        first_open = Some(first_open.map_or(opens, |o: u64| o.min(opens)));
     }
-    match first_open {
-        Some(t) => Err(vault_refusal(
+    match rule.refusal() {
+        RootRefusal::DelayNotElapsed { first_open: t } => Err(vault_refusal(
             "ReleaseDelayNotElapsed",
             &format!(
                 "checked before sending: the roots that cover this burn are in their release delay; the first opens at Ethereum time {t}, in {} s",
                 t.saturating_sub(now) + 1
             ),
         )),
-        None => Err(vault_refusal(
+        RootRefusal::NotAccepted => Err(vault_refusal(
             "BurnRootNotAccepted",
             "checked before sending: no finalized checkpoint covers this burn yet; wait for the next checkpoint",
         )),

@@ -1,0 +1,14 @@
+name	method	seconds
+import_root	import_root	0.06
+import_root_bad	import_root	0.06
+registry	registry	0.06
+claim0_pre	claim	0.07
+claim0	claim	0.06
+claim1_pre	claim	0.06
+claim1	claim	0.06
+claim0_again	claim	0.06
+release0	release	0.06
+release1_early	release	0.07
+prove_release0	prove_release	0.13
+release1	release	0.06
+status	status	0.07

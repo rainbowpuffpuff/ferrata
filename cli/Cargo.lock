@@ -3213,6 +3213,7 @@ dependencies = [
  "ferrata-core",
  "ferrata-lez-bridge-wire",
  "ferrata-lez-wire",
+ "ferrata-wallet",
  "harness",
  "hex",
  "hmac 0.12.1",
@@ -3288,6 +3289,19 @@ dependencies = [
  "sha2 0.10.9",
  "sha3 0.10.9",
  "snap",
+]
+
+[[package]]
+name = "ferrata-wallet"
+version = "0.1.0"
+dependencies = [
+ "borsh",
+ "ferrata-bridge-core",
+ "ferrata-lez-bridge-wire",
+ "ferrata-lez-wire",
+ "lee_core",
+ "risc0-zkvm",
+ "serde_json",
 ]
 
 [[package]]

@@ -1,0 +1,11 @@
+    Finished `release` profile [optimized] target(s) in 0.30s
+warning: function `check_shape` is never used
+   --> staged/crates/ferrata-core/src/bls/mod.rs:107:15
+    |
+107 | pub(crate) fn check_shape(committee: &SyncCommittee, bits: &[bool]) -> Result<usize, Error> {
+    |               ^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `ferrata-core` (lib) generated 1 warning
+    Finished `release` profile [optimized] target(s) in 0.39s

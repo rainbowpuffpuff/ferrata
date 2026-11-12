@@ -1,0 +1,265 @@
+{
+ "mode": "call mode: native",
+ "checks": 43,
+ "failed": 0,
+ "rows": [
+  {
+   "group": "chain",
+   "check": "harness info read",
+   "passed": "yes",
+   "detail": "instance 0x599a0de5f1dc6248\u2026, block 26384851, slot 15624480"
+  },
+  {
+   "group": "chain",
+   "check": "read_instance decodes the instance's state; the id recomputed from its config and checkpoint",
+   "passed": "yes",
+   "detail": "chain 1, finalized slot 15624480, 2 jobs applied, store Electra"
+  },
+  {
+   "group": "log transfer",
+   "check": "fetch_log_proof over JSON-RPC: receipts rebuild the block's receiptsRoot",
+   "passed": "yes",
+   "detail": "531 receipts, 3 proof nodes, 2 RPC calls"
+  },
+  {
+   "group": "log transfer",
+   "check": "the log located is the fixture's",
+   "passed": "yes",
+   "detail": "tx 0, log 0, token 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+  },
+  {
+   "group": "log transfer",
+   "check": "dry_run_attest on the record read from the chain: attested, code 0",
+   "passed": "yes",
+   "detail": "id 0x4910a599ca62fab4\u2026"
+  },
+  {
+   "group": "log transfer",
+   "check": "the attested fact is the provider's log",
+   "passed": "yes",
+   "detail": "3 topics, data 0x000000000000000000\u2026"
+  },
+  {
+   "group": "log transfer",
+   "check": "build_attest_tx names header(id, slot)",
+   "passed": "yes",
+   "detail": "message 2121 bytes"
+  },
+  {
+   "group": "log transfer",
+   "check": "the program decodes the module's bytes (canonical Borsh)",
+   "passed": "yes",
+   "detail": ""
+  },
+  {
+   "group": "log transfer",
+   "check": "the transaction is applied",
+   "passed": "yes",
+   "detail": "gas_exec 93316, gas_stor 2519, tx 2519 bytes"
+  },
+  {
+   "group": "log transfer",
+   "check": "the program's event = native evaluation",
+   "passed": "yes",
+   "detail": ""
+  },
+  {
+   "group": "log transfer",
+   "check": "the program's statement ids = the module's dry-run ids",
+   "passed": "yes",
+   "detail": ""
+  },
+  {
+   "group": "log transfer",
+   "check": "read_attestation: event matches the dry run and the instance",
+   "passed": "yes",
+   "detail": "block 26384851"
+  },
+  {
+   "group": "log largest_receipt",
+   "check": "fetch_log_proof over JSON-RPC: receipts rebuild the block's receiptsRoot",
+   "passed": "yes",
+   "detail": "531 receipts, 3 proof nodes, 2 RPC calls"
+  },
+  {
+   "group": "log largest_receipt",
+   "check": "the log located is the fixture's",
+   "passed": "yes",
+   "detail": "tx 1, log 0, token 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+  },
+  {
+   "group": "log largest_receipt",
+   "check": "dry_run_attest on the record read from the chain: attested, code 0",
+   "passed": "yes",
+   "detail": "id 0xc76c6d570eeb6ccc\u2026"
+  },
+  {
+   "group": "log largest_receipt",
+   "check": "the attested fact is the provider's log",
+   "passed": "yes",
+   "detail": "3 topics, data 0x000000000000000000\u2026"
+  },
+  {
+   "group": "log largest_receipt",
+   "check": "build_attest_tx names header(id, slot)",
+   "passed": "yes",
+   "detail": "message 58310 bytes"
+  },
+  {
+   "group": "log largest_receipt",
+   "check": "the program decodes the module's bytes (canonical Borsh)",
+   "passed": "yes",
+   "detail": ""
+  },
+  {
+   "group": "log largest_receipt",
+   "check": "the transaction is applied",
+   "passed": "yes",
+   "detail": "gas_exec 1615769, gas_stor 58708, tx 58708 bytes"
+  },
+  {
+   "group": "log largest_receipt",
+   "check": "the program's event = native evaluation",
+   "passed": "yes",
+   "detail": ""
+  },
+  {
+   "group": "log largest_receipt",
+   "check": "the program's statement ids = the module's dry-run ids",
+   "passed": "yes",
+   "detail": ""
+  },
+  {
+   "group": "log largest_receipt",
+   "check": "read_attestation: event matches the dry run and the instance",
+   "passed": "yes",
+   "detail": "block 26384851"
+  },
+  {
+   "group": "storage slot (WETH balance)",
+   "check": "dry_run_attest: attested, the provider's value",
+   "passed": "yes",
+   "detail": "value 0x000000000000000000\u2026"
+  },
+  {
+   "group": "storage slot (WETH balance)",
+   "check": "build_attest_tx names header(id, slot); two facts (the account, then the slot)",
+   "passed": "yes",
+   "detail": "message 6906 bytes"
+  },
+  {
+   "group": "storage slot (WETH balance)",
+   "check": "decoded (canonical), applied, event = native = dry-run ids (account, slot)",
+   "passed": "yes",
+   "detail": "gas_exec 274613, gas_stor 7304"
+  },
+  {
+   "group": "storage slot (WETH balance)",
+   "check": "read_attestation matches",
+   "passed": "yes",
+   "detail": ""
+  },
+  {
+   "group": "refusal: tampered receipt proof",
+   "check": "dry run refuses",
+   "passed": "yes",
+   "detail": "code 110 ProofNodeMismatch"
+  },
+  {
+   "group": "refusal: tampered receipt proof",
+   "check": "the program refuses with the predicted code",
+   "passed": "yes",
+   "detail": "exit 110, gas_exec 68357"
+  },
+  {
+   "group": "refusal: another instance",
+   "check": "the program refuses with WRONG_INSTANCE (211)",
+   "passed": "yes",
+   "detail": "exit 211"
+  },
+  {
+   "group": "advance (finality update)",
+   "check": "advance plans the update with the updater's code: useful, it advances the instance",
+   "passed": "yes",
+   "detail": "job 0xfdb24409059fc23b\u2026, finalized slot 15624480, 505 signers"
+  },
+  {
+   "group": "advance (finality update)",
+   "check": "its steps are Open, Miller, Finish (a finality update adopts no committee)",
+   "passed": "yes",
+   "detail": "open 4990 B, miller 1 B, finish 1 B"
+  },
+  {
+   "group": "advance (finality update)",
+   "check": "the program decodes each message (canonical) and applies each transaction",
+   "passed": "yes",
+   "detail": "Open: gas_exec 2330188, gas_stor 5452; Miller: gas_exec 3308048, gas_stor 399; Finish: gas_exec 3723960, gas_stor 527"
+  },
+  {
+   "group": "advance (finality update)",
+   "check": "the instance's finalized slot moves to the update's; its record is written",
+   "passed": "yes",
+   "detail": "15622144 -> 15624480"
+  },
+  {
+   "group": "advance (finality update)",
+   "check": "the instance and the record equal those the harness's own job leaves (job id equal)",
+   "passed": "yes",
+   "detail": "harness job: 3 transactions"
+  },
+  {
+   "group": "advance (finality update)",
+   "check": "read_instance on the advanced state: the new finalized slot, 2 jobs applied",
+   "passed": "yes",
+   "detail": "finalized slot 15624480, applied 2"
+  },
+  {
+   "group": "advance (finality update)",
+   "check": "the same update against the advanced instance: no change",
+   "passed": "yes",
+   "detail": "no_change"
+  },
+  {
+   "group": "bridge Burn",
+   "check": "the burn note equals the specification vector",
+   "passed": "yes",
+   "detail": "r, memo, mac, C_out"
+  },
+  {
+   "group": "bridge Burn",
+   "check": "leaf, burn id and nullifier equal the vector",
+   "passed": "yes",
+   "detail": ""
+  },
+  {
+   "group": "bridge Burn",
+   "check": "the bridge program decodes the message (canonical) to the same note",
+   "passed": "yes",
+   "detail": "185 bytes"
+  },
+  {
+   "group": "bridge Claim",
+   "check": "claimable; nullifier and root equal the vector",
+   "passed": "yes",
+   "detail": ""
+  },
+  {
+   "group": "bridge Claim",
+   "check": "the path equals the vector's",
+   "passed": "yes",
+   "detail": ""
+  },
+  {
+   "group": "bridge Claim",
+   "check": "the bridge program decodes the message (canonical) to the same witness",
+   "passed": "yes",
+   "detail": "1271 bytes"
+  },
+  {
+   "group": "JSON-RPC",
+   "check": "every read went over the network to the recorded-data server",
+   "passed": "yes",
+   "detail": "eth_getBlockByNumber x2, eth_getBlockReceipts x2, 3,301,898 bytes served"
+  }
+ ]
+}

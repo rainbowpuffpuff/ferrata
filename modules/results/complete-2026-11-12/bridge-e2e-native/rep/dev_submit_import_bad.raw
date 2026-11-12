@@ -1,0 +1,1 @@
+{"ok":true,"result":{"exit_code":247,"gas_exec":199361,"gas_stor":1757,"private":false,"revert":"\"Program exited with non-zero code 247 after 39074 cycles\"","settled":false,"what":"import of root(cid, 3) under the record of slot 9000064"}}

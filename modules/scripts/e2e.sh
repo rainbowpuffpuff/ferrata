@@ -8,6 +8,8 @@
 #   lez/harness module_e2e attest           decodes the bytes with the program's types and executes
 #                                           them in LEZ v0.4.0-rc1's state machine (Stage 4 chain)
 #   ferrata_attest_module.read_attestation  the program's event against the dry run's statement ids
+#   ferrata_attest_module.advance           the fixture's finality update planned with the updater's
+#                                           code; its Open, Miller and Finish executed in that chain
 #
 # and the bridge module's messages (Burn, Claim from the specification's vectors) decoded with the
 # bridge program's types. Two refusals: a tampered receipt proof (the program's exit code must be the
@@ -122,6 +124,21 @@ jq -n --argjson i "$(rep info)" --argjson f "$(rep fetch_transfer)" \
   '{program_id: $i.program_id, instance_id: ("0x" + ("11" * 32)), chain_id: $i.chain_id, slot: $i.finalized_slot, log: $f.log}' | req tx_wrong_instance
 call ferrata_attest_module build_attest_tx tx_wrong_instance
 harness attest "$(jq -r .message "$out/rep/tx_wrong_instance.json")" "$(jq -r .header_account "$out/rep/info.json")" > "$out/rep/exec_wrong_instance.json"
+
+# advance: the instance before its finality update (the same chain); the module plans the update with
+# the updater's code (Open, Miller, Finish), the harness executes the module's transactions in order and
+# compares the instance with the one the harness's own job leaves; read_instance reads it back.
+harness advance-info > "$out/rep/advance_info.json"
+jq '{program_id, instance_state, finality_update, bootstrap}' "$out/rep/advance_info.json" | req advance
+call ferrata_attest_module advance advance
+harness advance "$out/rep/advance.json" > "$out/rep/exec_advance.json"
+jq -n --argjson i "$(rep info)" --argjson e "$(rep exec_advance)" \
+  '{state: $e.instance_state_after, checkpoint: $i.checkpoint, expected_instance_id: $i.instance_id}' | req read_instance_after
+call ferrata_attest_module read_instance read_instance_after
+# The same update again, against the advanced instance: no change.
+jq -n --argjson a "$(rep advance_info)" --argjson e "$(rep exec_advance)" \
+  '{program_id: $a.program_id, instance_state: $e.instance_state_after, finality_update: $a.finality_update, bootstrap: $a.bootstrap}' | req advance_again
+call ferrata_attest_module advance advance_again
 
 # The bridge module's messages, decoded by the bridge program's types: a burn (outbound vector
 # case 0) and a plaintext claim (the inbound vector's claim, a public destination).

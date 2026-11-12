@@ -21,20 +21,23 @@ use ferrata_core::{
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
+mod advance;
 mod rpc;
 mod trie;
 mod tx;
 
-/// What `scripts/stage.sh` recorded about the ferrata-core copy this crate was built against.
-const STAGED: &str = include_str!("../../ferrata-core/STAGED.json");
+/// What `scripts/stage.py` recorded about the crates staged beside this one (the commit, LEZ's, each
+/// crate's version and sources' SHA-256).
+const STAGED: &str = include_str!("../../staged/STAGED.json");
 
 /// `version()`: the module's version and the ferrata-core it was built from.
 pub fn version() -> String {
     json!({
         "module": "ferrata_attest_module",
         "version": env!("CARGO_PKG_VERSION"),
-        "ferrata_core": serde_json::from_str::<Value>(STAGED).unwrap_or(Value::Null),
-        "bls_backend": "none",
+        "staged": serde_json::from_str::<Value>(STAGED).unwrap_or(Value::Null),
+        "bls_backend": "blst (advance runs the program's steps natively)",
+        "tool_code": "ferrata-advance (the updater's job planning)",
         "methods": [
             "version",
             "dry_run_attest",
@@ -42,10 +45,17 @@ pub fn version() -> String {
             "fetch_log_proof",
             "build_attest_tx",
             "read_attestation",
-            "read_instance"
+            "read_instance",
+            "advance"
         ],
     })
     .to_string()
+}
+
+/// `advance(request)`: a light-client update planned as the updater plans it: whether it moves the
+/// instance, its job, and the transactions of the job's steps (`Open`, `Miller`, `Adopt`, `Finish`).
+pub fn advance(request: &str) -> String {
+    reply(advance::advance_of(request))
 }
 
 /// `dry_run_attest(request)`: prove one storage slot or one log against a header record.
@@ -801,7 +811,7 @@ pub fn unhex(s: &str) -> Result<Vec<u8>, String> {
         .collect()
 }
 
-fn text<'a>(v: &'a Value, what: &str) -> Result<&'a str, String> {
+pub(crate) fn text<'a>(v: &'a Value, what: &str) -> Result<&'a str, String> {
     match v {
         Value::String(s) => Ok(s),
         Value::Null => Err(format!("{what}: missing")),
@@ -810,7 +820,7 @@ fn text<'a>(v: &'a Value, what: &str) -> Result<&'a str, String> {
 }
 
 /// A byte string of exactly `N` bytes, in hex.
-fn fixed<const N: usize>(v: &Value, what: &str) -> Result<[u8; N], String> {
+pub(crate) fn fixed<const N: usize>(v: &Value, what: &str) -> Result<[u8; N], String> {
     let bytes = unhex(text(v, what)?).map_err(|e| format!("{what}: {e}"))?;
     let len = bytes.len();
     bytes.try_into().map_err(|_| format!("{what}: expected {N} bytes, got {len}"))

@@ -4,7 +4,8 @@ lib/
 rust-lib/target/
 rust-lib/generated/
 logos-rust-sdk-src
-# A copy of crates/ferrata-core, made by scripts/stage.sh before a build.
-rust-lib/ferrata-core/
+# The crates scripts/stage.py copies in before a build (the repository's and LEZ's).
+rust-lib/staged/
+rust-lib/upstream/
 # check.sh output (default OUT_DIR)
 out/

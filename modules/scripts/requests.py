@@ -101,14 +101,15 @@ def main():
     requests["refuse_wrong_chain"] = ("dry_run_attest", storage(fx["weth_balance_slot"], weth, chain_id=11155111))
     expect["refuse_wrong_chain"] = {"verdict": "refused", "code": 140, "error": "ChainMismatch"}
 
-    # Checkpoints. The lez/ harness's mainnet instance (World::new(2)): its id is in the program's own
-    # transactions (lez/results/stage3-read-tx.hex; prefix in lez/results/prove-private-dry-run.log),
-    # and a second provider's root for its slot is EXPECTED_FINALIZED[0] in lez/harness/src/lib.rs.
+    # Checkpoints. The lez/ harness's mainnet instance (World::new(2)); a second provider's root for its
+    # slot is EXPECTED_FINALIZED[0] in lez/harness/src/lib.rs. Its id with lc-a1's ws_period_epochs in the
+    # configuration (the calls crate's instance_id_equals_the_programs); before lc-a1 (integration6) it was
+    # 0xce624027…afdfb, the id in lez/results/stage3-read-tx.hex.
     p1899_root = "0x64b56a372f8c4ccc274d9f42c9b4a1d9a18966a20188992bcac15b1c6e7d91ac"
     requests["checkpoint_p1899"] = ("verify_checkpoint", {
         "config": mainnet_config(2),
         "checkpoint": p1899_root,
-        "expected_instance_id": "0xce624027489c721108da1cbaeb5eb16990111f6908282949e05108e7cb2afdfb",
+        "expected_instance_id": "0x39860f39c97574b5eed493bdfce3429de1b8ff1b1f2a2452e72292460953b79c",
         "bootstrap": "0x" + (P1899 / "bootstrap.ssz").read_bytes().hex(),
         "observed": [{"source": "second beacon provider, slot 15556608 (lez/harness EXPECTED_FINALIZED)",
                       "root": p1899_root}],

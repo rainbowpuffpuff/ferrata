@@ -1,0 +1,5 @@
+Daemon started (pid 64125)
+Logs: <spike>/ferrata-wt-bridge-module-complete/modules/results/complete-2026-11-12/real-proof/session/logs/daemon.log
+{"affected_loaded":[],"changes":[{"action":"install","file":"<spike>/ferrata-wt-bridge-module-complete/modules/out/complete/lgx-ferrata_bridge_module/logos-ferrata_bridge_module-module-lib.lgx","fromVersion":"","name":"ferrata_bridge_module","signature":"unsigned","toVersion":"0.1.0"}],"installed":["ferrata_bridge_module"],"op":"install","reloaded":[],"status":"ok","stopped_dependents":[]}
+{"dependencies_loaded":[],"module":"ferrata_bridge_module","status":"ok","version":"0.1.0"}
+{"message":"Daemon shutting down.","status":"ok"}

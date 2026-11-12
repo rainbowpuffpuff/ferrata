@@ -1,0 +1,1 @@
+{"account_matches":true,"applied":false,"canonical":true,"cycles":68357,"decoded":true,"event_data":null,"event_emitter_is_program":null,"event_matches_native":false,"exit_code":110,"facts":1,"gas_exec":68357,"gas_stor":2519,"message_bytes":2121,"native":{"code":110,"verdict":"refused"},"revert":"\"Program exited with non-zero code 110 after 68357 cycles\"","tx_bytes":2519}

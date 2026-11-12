@@ -86,6 +86,33 @@ e = rep("exec_wrong_instance")
 check("refusal: another instance", "the program refuses with WRONG_INSTANCE (211)", e.get("applied") is False and e.get("exit_code") == 211,
       f"exit {e.get('exit_code')}")
 
+a, x, ra, again = rep("advance"), rep("exec_advance"), rep("read_instance_after"), rep("advance_again")
+ai = rep("advance_info")
+g = "advance (finality update)"
+check(g, "advance plans the update with the updater's code: useful, it advances the instance",
+      a.get("verdict") == "useful" and a.get("outcome", {}).get("advanced") is True
+      and a.get("outcome", {}).get("finalized_slot") == ai.get("expected_finalized_slot"),
+      f"job {a.get('job_id', '')[:18]}…, finalized slot {a.get('outcome', {}).get('finalized_slot')}, "
+      f"{a.get('update', {}).get('signers')} signers")
+check(g, "its steps are Open, Miller, Finish (a finality update adopts no committee)",
+      [st.get("step") for st in a.get("steps", [])] == ["open", "miller", "finish"],
+      ", ".join(f"{st.get('step')} {st.get('message_bytes')} B" for st in a.get("steps", [])))
+check(g, "the program decodes each message (canonical) and applies each transaction",
+      x.get("all_applied") is True and all(st.get("canonical") and st.get("root_is_program_actor") for st in x.get("steps", []))
+      and [st.get("variant") for st in x.get("steps", [])] == ["Open", "Miller", "Finish"],
+      "; ".join(f"{st.get('variant')}: gas_exec {st.get('gas_exec')}, gas_stor {st.get('gas_stor')}" for st in x.get("steps", [])))
+check(g, "the instance's finalized slot moves to the update's; its record is written",
+      x.get("finalized_slot_after") == x.get("expected_finalized_slot") and x.get("record_written") is True,
+      f"{ai.get('finalized_slot_before')} -> {x.get('finalized_slot_after')}")
+check(g, "the instance and the record equal those the harness's own job leaves (job id equal)",
+      x.get("state_equals_harness_job") is True and x.get("record_equals_harness_job") is True
+      and x.get("harness_job_id") == a.get("job_id"), f"harness job: {x.get('harness_transactions')} transactions")
+check(g, "read_instance on the advanced state: the new finalized slot, 2 jobs applied",
+      ra.get("verdict") == "ok" and ra.get("instance_matches") is True
+      and ra.get("store", {}).get("finalized_slot") == x.get("expected_finalized_slot"),
+      f"finalized slot {ra.get('store', {}).get('finalized_slot')}, applied {ra.get('applied')}")
+check(g, "the same update against the advanced instance: no change", again.get("verdict") == "no_change", again.get("verdict", ""))
+
 ob = json.loads((vectors / "outbound-v2.json").read_text())["cases"][0]
 b, db = rep("bridge_burn"), rep("decode_burn")
 fields = db.get("fields", {})

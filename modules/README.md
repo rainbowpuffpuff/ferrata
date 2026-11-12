@@ -2,17 +2,24 @@
 
 The proposal (§B7) puts everything off chain in Logos modules. This directory holds two, prototypes,
 built the way Logos modules are built, loaded together by a headless Logos Core and called there:
-`ferrata_attest_module` (seven methods: dry runs, checkpoint checks, an instance's state read back, and a
+`ferrata_attest_module` (eight methods: dry runs, checkpoint checks, an instance's state read back, a
 log or storage slot attested end to end: fetched over JSON-RPC, its `Attest` transaction built, the
-program's event read back) and
-`ferrata_bridge_module` (seven: deposit, claim, burn, release, recover, status). `catalog/` lays out
+program's event read back; and `advance`, an update's job planned with the updater's code) and
+`ferrata_bridge_module` (ten: deposit, claim (plaintext or private), burn, release (by the wallet's rule),
+prove_release, import_root, registry, recover, status). Where the `ferrata` tool or the updater already
+has the logic, the module runs the same code: `ferrata-wallet` (`cli/wallet`) and `ferrata-advance`
+(`lez/advance`) are linked by the tool and the updater and by the modules. `catalog/` lays out
 the catalog that would release them with `logos-modules-release-action`. `RESULTS.md` records what ran.
 
 ```sh
 modules/scripts/native.sh     # any Linux with cargo: stage, unit tests, the native call examples
-modules/scripts/e2e.sh OUT    # + the lez/ harness: a log end to end (methods called natively)
+modules/scripts/e2e.sh OUT    # + the lez/ harness: a log end to end, an update advanced (methods called natively)
+RELEASE_ELF=... modules/scripts/bridge_e2e.sh OUT
+                              # + the mini-app's devnet: root import, registry, private claims, the
+                              # release rule, the release guest, releases on the vault (natively)
 modules/scripts/check.sh      # Linux x86-64 with Nix: the above, then build, package, load and call both
                               # modules in Logos Core (dev and portable), and e2e.sh through the daemon
+                              # (BRIDGE_E2E=1 RELEASE_ELF=...: bridge_e2e.sh through it too)
 ```
 
 ## How a Logos module is built and loaded
@@ -35,8 +42,8 @@ A Python client (`logos-logoscore-py`, `import logosctl`) drives the same daemon
 
 | Module | Directory | Methods |
 |---|---|---|
-| `ferrata_attest_module` | `ferrata_attest_module/` | `version`, `dry_run_attest`, `verify_checkpoint`, `fetch_log_proof`, `build_attest_tx`, `read_attestation`, `read_instance` |
-| `ferrata_bridge_module` | `ferrata_bridge_module/` | `version`, `deposit`, `claim`, `burn`, `release`, `recover`, `status` |
+| `ferrata_attest_module` | `ferrata_attest_module/` | `version`, `dry_run_attest`, `verify_checkpoint`, `fetch_log_proof`, `build_attest_tx`, `read_attestation`, `read_instance`, `advance` |
+| `ferrata_bridge_module` | `ferrata_bridge_module/` | `version`, `deposit`, `claim`, `burn`, `release`, `recover`, `status`, `prove_release`, `import_root`, `registry` |
 
 Both are laid out the same way:
 
@@ -45,15 +52,24 @@ Both are laid out the same way:
 - `rust-lib/`: the module crate (the trait and its implementation, a static library) and `calls/`,
   the methods' logic as a plain crate that runs and is tested without the generated scaffold
   (`calls/examples/call.rs` runs one method natively: `call METHOD [REQUEST_FILE]`).
-- The crate each module links is copied into `rust-lib/` before a build (`scripts/stage.sh`), because
-  the builder copies only `rust-lib/`: `crates/ferrata-core` into the attestation module (without a
-  BLS backend: no method verifies a signature), `bridge/crates/ferrata-bridge-core` into the bridge
-  module. The copies are ignored by git; each `rust-lib/Cargo.toml` carries the workspace fields its
-  copy inherits (`stage.sh` checks them).
-- Neither links a LEZ crate: the programs' crates link LEZ and the RISC Zero client, which the builder
-  cannot build from a module's directory. The programs' messages are Borsh-encoded field for field in
-  the modules, and the end-to-end test decodes and executes them with the programs' own types
-  (`lez/harness/src/bin/module_e2e.rs`).
+- The crates each module links are copied into `rust-lib/` before a build (`scripts/stage.py`, run by
+  `stage.sh`), because the builder copies only `rust-lib/`. They keep their places relative to each
+  other, so their own path dependencies hold: the repository's under `rust-lib/staged/<path>`, LEZ's
+  `lee_core` (v0.4.0-rc1) under `rust-lib/upstream/lez-v0.4.0-rc1/`. Each staged manifest is written
+  with what it inherits from its own workspace resolved, without dev-dependencies or lints. The copies
+  are ignored by git; `staged/STAGED.json` records the commit, LEZ's commit and each crate's sources'
+  SHA-256, which `version()` reports.
+  - attestation module: `crates/ferrata-core` (with blst: `advance` runs the program's job steps
+    natively), `lez/wire` (the program's messages and states), `lez/advance` (`ferrata-advance`, the
+    updater's job planning), `lee_core`;
+  - bridge module: `bridge/crates/ferrata-bridge-core`, `crates/ferrata-core`, `lez/wire`,
+    `lez/bridge-wire` (the bridge program's messages, states, addresses and checks), `cli/wallet`
+    (`ferrata-wallet`, the `ferrata` tool's wallet rules and calls, with the RISC Zero client for the
+    release guest), `lee_core`.
+- The programs' messages and states are the programs' own types (`BridgeMessage`, `Message`,
+  `TokenState`, `RecordState`, ...), Borsh by their derives: the field-by-field encoders of the first
+  versions are gone. The end-to-end tests also decode and execute them with the programs
+  (`lez/harness/src/bin/module_e2e.rs`, the devnet).
 
 **Calling convention (both modules).** Each method takes one JSON string and returns one JSON string, so a call needs no type beyond
 `String` and the request can come from a file (`logosctl call ferrata_bridge_module claim @request.json`).
@@ -67,12 +83,13 @@ method returns `{"verdict":"error",...}` instead of crossing into Logos Core. Ev
 
 | Method | Takes | Returns |
 |---|---|---|
-| `version()` | — | the module's version, the `ferrata-core` version and the source revision it was staged from, which BLS backend is compiled in (none), the method list |
+| `version()` | — | the module's version, what was staged (`STAGED.json`: the commit, LEZ's commit, each crate's version and sources' SHA-256), the BLS backend (blst, for `advance`), the method list |
 | `dry_run_attest(request)` | the consumer's `chain_id`; a header `record`: either `{chain_id, encoded}` (the bytes the program stores at `header(id, slot)`, `RecordState::record`, as read from LEZ) or its fields (instance chain id, anchor slot, block number, timestamp, block hash, parent hash, state root, receipts root); and either `storage` (an `eth_getProof` result and the slot) or `log` (`{tx_index, log_index, receipt_proof}`, as `fetch_log_proof` returns it) | `verdict` (`attested` or `refused`), `code` (the program's code: 0, or the core's refusal code, which the program returns unchanged, `lez/wire/src/lib.rs` `refusal`), the error's name, and for an attested fact its fields and statement identifiers (`id`, `id_at_block`) |
 | `verify_checkpoint(request)` | a `config` (the program's `Config` fields), a `checkpoint` root, optionally the `expected_instance_id`, the `bootstrap` (SSZ, hex) and `observed` roots for the checkpoint as other sources report them | the recomputed `instance_id`; whether it equals the expected one; the program's `Init` verdict on the bootstrap (`StoreCore::from_bootstrap`: layout, header, header root against the checkpoint, committee branch) with its code; each observed root against the checkpoint; whether the chain id and `genesis_validators_root` are a known pair; an overall `verdict` |
 | `fetch_log_proof(request)` | `rpc_url` (`http://` only: a local node or `scripts/recorded_rpc.py`), `block`, and `tx_index` + `log_index` (within the receipt) or `block_log_index` (JSON-RPC's `logIndex`); optional `timeout_ms` | `verdict` `fetched` (or `inconsistent` when the receipts do not rebuild the block's `receiptsRoot`), the block hash and receipts root, `log` = `{tx_index, log_index, receipt_proof}` ready for `dry_run_attest` and `build_attest_tx`, what the provider said the log is (`provider_log`), `rpc_calls` |
 | `build_attest_tx(request)` | `program_id` (the attestation program's account id), `instance_id`, `chain_id`, `slot` (of the record), and `log`, `logs` or `storage` | `account`: `header(id, slot)` (LEZ's public PDA of the program, seed SHA-256(`ferrata-lez/v1/header` ‖ id ‖ slot LE)), the account list, `message`: Borsh of `Message::Attest { request }` (variant 7), its size and SHA-256, the number of facts |
 | `read_attestation(request)` | `event_data` (the program's `FRT-ATT1` event data, hex), optionally `selector`, `expected_ids` (the dry run's `id`s), `expected_instance_id` | `instance_id`, `chain_id`, `block_number`, the `statements`, `matches_expected`, `instance_matches` |
+| `advance(request)` | `program_id`; `instance_state` (as `read_instance` takes it); the update as a beacon node serves it, `update` (SSZ of an `updates` entry) or `finality_update` (SSZ); the full committees the store summarises, `bootstrap` (SSZ: its current committee) and/or `committees` (each the keys, then the aggregate key, 48 bytes each); optionally `job_state` (the job's state at `job(id, job_id)`, to continue a job already open) | `verdict`: `useful` (the program would accept it and it moves the store), `no_change`, `unverifiable` (the signing committee is not known) or `invalid`; with `useful`: `job_id`, the layout, the outcome (`advanced`, `adopted`, `rotated`, the new finalized slot) and `steps`: each step's name (`open`, `miller`, `adopt<k>`, `finish`), its root actor, the actors it names and its message (the program's `Message`, Borsh). The planning is the updater's (`ferrata-advance`: `evaluate`, `job_steps`, `job_step`): the program's step code is run natively first (`ferrata_core::steps` with blst), and the committees are taken only where they match the store's summaries |
 | `read_instance(request)` | `state`: the instance's state as LEZ holds it at `instance(id)` (the program's `InstanceState`, Borsh, hex); optionally `checkpoint` and `expected_instance_id` | `id`, `config` (the program's `Config`, as `verify_checkpoint` takes it), `active`, `applied` (jobs), `store` (fork, finalized header and slot, whether the next committee is known, the store digest); with `checkpoint`, the id recomputed and `id_matches_config`; `instance_matches` |
 
 The record is built the program's way (`witness::HeaderRecord`, then `attest::HeaderRecord::from_recorded`,
@@ -93,17 +110,26 @@ The user's side of the bridge, over `ferrata-bridge-core` (specification v2), th
 program, the release guest and the CLI use. Every method that derives keys takes the wallet's
 `bridge_seed` (32 bytes) or the LEZ wallet's `lez_seed` (its 64-byte BIP-39 seed; the bridge seed is
 `HMAC-SHA256(lez_seed, "ferrata/bridge-seed/v1")`, as `cli/src/seed.rs`). No reply contains `kAuth`,
-`kView`, a deposit secret `s` or a burn secret `sOut`, except the plaintext `Claim` message, which
-carries `s` as the program's public claim does. The chain is `chain_id` (a number) or `evm_chain_id`
+`kView`, a deposit secret `s` or a burn secret `sOut`, except the claim messages: the plaintext `Claim`
+carries `s` as the program's public claim does, and `ClaimPrivately` carries it as the input of the private
+execution the LEZ wallet runs (it is not sent in the clear). The calls that read LEZ (a claim with state,
+the root import, the registry) and the release rule run the `ferrata` tool's own code (`ferrata-wallet`,
+`cli/wallet`: the tool's `lez::plan_claim`, `flow::pick_root`, `release::plan`, `release::prove` are thin
+readers around it). The chain is `chain_id` (a number) or `evm_chain_id`
 (a 32-byte word); a destination `kind` is `1`/`"private"` or `2`/`"public"`.
 
 | Method | Takes | Returns |
 |---|---|---|
-| `version()` | — | the module's version, the `ferrata-bridge-core` version and source revision, the method list |
+| `version()` | — | the module's version, what was staged (`STAGED.json`), the method list |
 | `deposit(request)` | seed, chain, `vault`, `depositor`, `j` (the depositor's deposit count), `kind`, `dest` (the LEZ account id), `token` (zero for ETH), optional `denom_index`; optionally `leaf_index` and `amount` (from the vault's `Deposit` event) | `commitment`; `vault_call` (`to`, `from`, `function`: `deposit(address,uint8,bytes32,uint64)` or `depositETH(uint8,bytes32,uint64)`, ABI `data`, what `value` must be); with `leaf_index`: `leaf`, `deposit_id`, `nullifier` |
-| `claim(request)` | seed, chain, `vault`, `depositor`, `j`, `leaf_index`, `token`, `amount`, `kind`, `dest`; the deposit tree as `leaves` (all of them) or as `path` (`directions`, 32 `siblings`) and `root`; optionally `config_id`, `leaf_count` (of the imported root), `range` (`index`, `from_leaf`, `until_leaf` of the fee schedule), `relayer` | `verdict` `claimable` (with `nullifier`, `root`, `leaf`, `commitment`, `deposit_id`, `path`) or `refused` (`RootMismatch`, `DirectionsMismatch`); with `config_id` and a public destination, `message`: Borsh of the bridge program's `Claim` (variant 5), sent at `root(cid, n)` |
+| `claim(request)` | seed, chain, `vault`, `depositor`, `j`, `leaf_index`, `token`, `amount`, `kind`, `dest`; the deposit tree as `leaves` (all of them) or as `path` (`directions`, 32 `siblings`) and `root`; optionally `config_id`, `leaf_count` (of the imported root), `range` (`index`, `from_leaf`, `until_leaf` of the fee schedule), `relayer`, `private` | `verdict` `claimable` (with `nullifier`, `root`, `leaf`, `commitment`, `deposit_id`, `path`) or `refused` (`RootMismatch`, `DirectionsMismatch`); with `config_id`, `message`: Borsh of the bridge program's `Claim`, or of `ClaimPrivately` for a private destination (or `private`), sent at `root(cid, n)` |
+| `claim(request)` with LEZ state | as above with `program` (the bridge program's account), `config_id`, the vault's `leaves`, `imported` (the leaf counts of the configuration's imported roots) or `leaf_count`, and the states as LEZ holds them: `root_state` (`root(cid, n)`), `token_state` (`token(cid, token)`), `nullifier_state` (`nullifier(chain, vault, N)`, absent or empty: unspent); `private` (default: a private destination's), `relayer`, `prover` (the private account that proves a public-kind private claim) | the tool's claim (`ferrata_wallet::claim`, as `ferrata claim`): the newest imported root that covers the leaf, the tree checked against it, the path, the schedule range, then the program's checks (`verify_claim`, the denomination, the destination kind, the nullifier, the fees); `claimable` with `variant` (`Claim` or `ClaimPrivately`), `message`, `accounts` (each account, its program and how the sender names it: `pda` with its seed, `private_self`, `signer`, `public`), `root_index`, `leaf_count`, `range`, `mint_fee`, `relay_fee`; or `refused` with the program's `code` and its name |
 | `burn(request)` | seed, `config_id`, `i` (the wallet's burn counter), chain, `vault`, `recipient`, `token`, `amount`; optionally `burn_index` (from the program's burn record) | the note (`r`, `memo`, `mac`, `token`, `amount`, `c_out`); `message`: Borsh of the bridge program's `Burn` (variant 0); with `burn_index`: `burn_leaf`, `burn_id`, `nullifier` |
 | `release(request)` | seed, `config_id`, `i`, `burn_index`, chain, `vault`, `recipient`, `token`, `amount`, optional `relayer`, `relay_fee`; the burn tree as `leaves` or `path` and `burn_root` | `verdict` `releasable` (with `nullifier`, `burn_root`, `r`, `journal`: the release guest's 352-byte journal the vault verifies, `journal_sha256`, `path`, the public inputs) or `refused` |
+| `release(request)` by the wallet's rule | seed, `config_id`, chain, `vault`, `i` (the burn counter), `burns` (the zone's published burns, in order: `burn_index`, `note`), `roots` (the vault's accepted burn roots, oldest first: `root`, `count`, `index`, `finalized_at`, `delay` = `releaseDelayFor(token, index)`), `now` (Ethereum time); optional `relayer`, `relay_fee`, `gap_limit` | the tool's release (`ferrata_wallet::release`, as `ferrata release`): the burn recovered from the seed, the newest accepted root that covers it and whose release delay has passed (`picked`: root, count, index, delay, when it opened), the tree of its first `count` burns checked against it, the witness, `verify_release`, the journal and the guest's `input`; or `refused` with `BurnRootNotAccepted`, or `ReleaseDelayNotElapsed` and `first_open` |
+| `prove_release(request)` | a `release` request (either form) and `program` (the release guest's binary); optional `expected_image_id`, `receipt_out` (a path for the receipt) | the release, then the release guest run on its input through r0vm (`ferrata_wallet::release::prove`, as `ferrata release --prove`; `RISC0_DEV_MODE=1`: executed, a fake receipt; unset: a succinct proof on the host's CPU, verified against the image id): `verdict` `proven`, `image_id`, `dev_mode`, `receipt_bytes`, `receipt_sha256`, `prove_ms`, `image_id_matches`. The guest's journal must equal the native one. The Groth16 wrap the vault takes is the relayer's |
+| `import_root(request)` | `program`, `config_id`, `config_state` (`config(cid)` as LEZ holds it), `record_slot`, `get_proof` (`eth_getProof` of the vault with slots 0 and 1, at the record's block), optional `header` (the block's RLP header, when the record binds its hash only), `root` and `leaf_count` (default: the proof's slot values), `record_state` (the attestation program's `RecordState` at `header(id, slot)`) | the relayer's `ImportRoot` (`ferrata_wallet::import`): `message`, `accounts` (`config(cid)`, `header(id, slot)`, `root(cid, n)`); with `record_state`, a dry run with the two programs' own functions (the bridge's `import_request`, the attestation program's `evaluate`, the bridge's `check_import`): `importable` and the `root(cid, n)` state it writes, or `refused` with the code the transaction would exit with |
+| `registry(request)` | any of `token_state` (with `leaf_index`, and `amount`), `config_state` (with `bridge_header`: the program's account), `root_state` | each decoded with the program's types: the token's entry (denominations, relay fees, LEZ definition and unit), its fee schedules, `known_until`, controls and gate; the range a claim of `leaf_index` names (the tool's `range_for`) and its mint and relay fees; the configuration (phase, instance, vault, controls) and `configId` recomputed; the imported root |
 | `recover(request)` | seed, chain, `vault`, `gap`, `destinations` (`{kind, index, dest}`: the wallet's candidate accounts), `deposits` (the vault's `Deposit` events: `depositor`, `j`, `leaf_index`, `token`, `amount`, `commitment`); optionally `config_id`, `burns` (published notes with `burn_index`) and `gap_limit` | the wallet's own deposits (with `kind`, `account_index`, `leaf`, `nullifier`) and burns (with `i`, `recipient`, `leaf`, `nullifier`), `next_i` |
 | `status(request)` | `deposits` (`leaf_index`, `nullifier`), `imported_leaf_count` (of the newest root imported on LEZ), `spent_nullifiers` (on LEZ); `burns` (`burn_index`, `nullifier`), `checkpointed_burn_count` (of the newest checkpoint the vault accepted), `released_nullifiers` (on the vault) | each deposit `awaiting_root`, `claimable` or `claimed`; each burn `awaiting_checkpoint`, `releasable` or `released` |
 
@@ -112,8 +138,9 @@ carries `s` as the program's public claim does. The chain is `chain_id` (a numbe
 | Script | What it runs | Where |
 |---|---|---|
 | `scripts/native.sh` | stages both modules' crates, the calls crates' unit tests (`cargo test`), builds the `call` examples | any Linux with cargo |
-| `scripts/check.sh [OUT_DIR]` | the above, then both modules built and packaged by logos-module-builder (dev `.lgx` and `.lgx-portable`), installed and loaded together in a headless Logos Core (`logosctl`, dev and portable builds), every method called (`requests.py`: 10 attest requests from the attestation fixtures; `bridge_requests.py`: 13 bridge requests from `bridge/vectors/*-v2.json`), each reply compared with the native reply and with what the request must produce; then `e2e.sh` through the same daemon | Linux x86-64 with Nix |
-| `scripts/e2e.sh OUT_DIR` | a log end to end: `recorded_rpc.py` serves the recorded mainnet block 26,384,851 over JSON-RPC; `fetch_log_proof` → `dry_run_attest` on the record read from the chain → `build_attest_tx` → `lez/harness`'s `module_e2e` decodes the bytes with the program's types and executes them in LEZ v0.4.0-rc1's state machine → `read_attestation`; two logs, two refusals (a tampered proof, another instance), and the bridge module's `Burn` and `Claim` decoded by the bridge program's types (`CALL=logosctl` runs it through a Logos Core daemon) | Linux with cargo (and `logosctl`) |
+| `scripts/check.sh [OUT_DIR]` | the above, then both modules built and packaged by logos-module-builder (dev `.lgx` and `.lgx-portable`), installed and loaded together in a headless Logos Core (`logosctl`, dev and portable builds), every method called (`requests.py`: 10 attest requests from the attestation fixtures; `bridge_requests.py`: 13 bridge requests from `bridge/vectors/*-v2.json`), each reply compared with the native reply and with what the request must produce; then `e2e.sh` through the same daemon, and with `BRIDGE_E2E=1` `bridge_e2e.sh` too | Linux x86-64 with Nix |
+| `scripts/e2e.sh OUT_DIR` | a log end to end: `recorded_rpc.py` serves the recorded mainnet block 26,384,851 over JSON-RPC; `fetch_log_proof` → `dry_run_attest` on the record read from the chain → `build_attest_tx` → `lez/harness`'s `module_e2e` decodes the bytes with the program's types and executes them in LEZ v0.4.0-rc1's state machine → `read_attestation`; two logs, two refusals (a tampered proof, another instance); `advance`: the same instance before its finality update, the update planned by the module, its `Open`, `Miller`, `Finish` executed in order, the instance compared with the one the harness's own job leaves, read back with `read_instance`, and the update again (no change); and the bridge module's `Burn` and `Claim` decoded by the bridge program's types (`CALL=logosctl` runs it through a Logos Core daemon) | Linux with cargo (and `logosctl`) |
+| `scripts/bridge_e2e.sh OUT_DIR` | the bridge module against the mini-app's devnet (`cli/examples/miniapp_devnet.rs`: the v5 vault on anvil, chain id 1, its verifier the vault tests' mock; the zone in the LEZ harness with the bridge program): two private deposits; `import_root` from a block the devnet records (its proofs in `eth_getProof`'s shape), dry-run and applied, and a wrong count refused by the dry run and by the program with the same code; `registry`; both deposits claimed privately (`claim` with state → `ClaimPrivately`, proven and settled privately by the devnet with the wallet's keys) and a second claim refused from the nullifier's state; two private burns, a checkpoint over the first (its delay passed) and one over both (in its delay): `release` by the rule picks the older root, refuses the newer burn until its root opens, then picks the newer; `prove_release`; both releases accepted by the vault; `status` (`CALL=logosctl` through a daemon) | Linux with cargo, Foundry, `RELEASE_ELF` (and `logosctl`) |
 | `scripts/release-local.sh OUT_DIR` | `logos-modules-release-action`'s steps for `linux-amd64`, locally, nothing published (`catalog/README.md`) | Linux x86-64 with Nix |
 | `scripts/catalog-install.sh RELEASE_DIR LOGOSCTL WORK_DIR` | a Logos Core installs both modules from that catalog, served over HTTPS on 127.0.0.1: `catalog add`, `search`, `install`, `module load`, `call` | Linux x86-64 with Nix |
 
@@ -126,14 +153,20 @@ carries `s` as the program's public claim does. The chain is `chain_id` (a numbe
   `keystore_module`, `tx_sender_module`, `lez_core` or LEZ wallet. In the end-to-end test the
   harness wraps the message in a LEZ transaction and executes it in LEZ's state machine in-process,
   not on a networked sequencer.
-- **`ferrata_attest_module`:** no `advance` (the update's `Open`/`Miller`/`Adopt`/`Finish` messages);
-  the instance's configuration is read from its state (`read_instance`), which comes in the request; the dry run still lacks the program-only checks (`WRONG_INSTANCE` is
-  shown by the program in `e2e.sh`); no history hops, batches, conditions or relations, no accumulator
-  leaves; no `KeyValidate` on the committee (§11.4 of the attestation note: it needs the BLS backend).
-- **`ferrata_bridge_module`:** no private claim (`ClaimPrivately` runs in a private execution of the
-  LEZ wallet), no `ImportRoot`, registry or fee-schedule reads, no release guest input or proof (the
-  module gives the journal and the witness; proving is the CLI's `release --prove`); the vault's
-  `Deposit` events and the program's burn records come in the request.
+- **`ferrata_attest_module`:** `advance` plans a job for an active instance (`Open`, `Miller`, `Adopt`,
+  `Finish`); an instance's initialization (`Init` and its committee's `Adopt` parts) is not planned, nor
+  the updater's own work around the plan (several sources cross-checked, cooperation with other updaters,
+  retries); the instance's configuration is read from its state (`read_instance`), which comes in the
+  request; the dry run still lacks the program-only checks (`WRONG_INSTANCE` is shown by the program in
+  `e2e.sh`); no history hops, batches, conditions or relations, no accumulator leaves; no `KeyValidate` on
+  the committee (§11.4 of the attestation note).
+- **`ferrata_bridge_module`:** the private claim is built and checked by the module (`ClaimPrivately`),
+  but its private execution and proof are the LEZ wallet's (on the devnet, the harness proves and settles
+  it with the wallet's keys, as LEZ's wallet would); `import_root` takes the vault's `eth_getProof` and the
+  record in the request (on the devnet the block is a synthetic one holding the vault's real storage);
+  `prove_release` needs r0vm 3.0.5 on the module's host (`RISC0_SERVER_PATH`) and gives a succinct
+  receipt, not the Groth16 seal the vault takes (the relayer wraps it); the vault's `Deposit` events, the
+  program's burn records and every LEZ state come in the request.
 - **Catalog:** laid out, dry-run and installed from on 127.0.0.1 (`catalog/`); nothing published, one
   variant (`linux-amd64`), unsigned.
 - **Linux x86-64 only** was tried.

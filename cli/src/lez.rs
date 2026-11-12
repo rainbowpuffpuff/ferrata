@@ -15,39 +15,32 @@ use ferrata_bridge_core::{
     chain_id_u256,
     inbound::{self, DestKind, OwnedDeposit},
     outbound::{recover_burns, BurnNote, PublishedBurn, ReleaseTarget},
-    tree::Tree,
     BridgeKeys, Hash,
 };
 use ferrata_lez_bridge_wire::{
     self as bw, burn_actor, burn_seed, config_actor, config_seed, holder_actor, holder_seed, nullifier_actor,
-    nullifier_seed, own_actor, root_actor, root_seed, token_actor, token_seed, BridgeMessage, BridgeState, HolderState,
-    RootState, ScheduleRange, TokenState,
+    own_actor, root_actor, token_actor, token_seed, BridgeMessage, BridgeState, HolderState, RootState, TokenState,
 };
 use lee::AccountId;
 use lee_core::{account::Actor, program::PdaSeed};
 use sequencer_service_rpc::SequencerClient;
 use wallet::{AccountIdentity, AccountMention, WalletCore, WalletSequencerClient as _};
 
+use ferrata_wallet::claim;
+
 use crate::{
     codes::program_refusal,
     hx,
     seed::{Seed, DEFAULT_GAP},
-    units::{u128_to_word, word_to_u128},
+    units::u128_to_word,
 };
 
 /// How many unused burn counters end a burn scan.
 pub const BURN_GAP: u64 = 20;
 
-/// Which configuration of which bridge program, and the vault it pairs with.
-#[derive(Clone, Debug)]
-pub struct Context {
-    /// The bridge program's account.
-    pub program: AccountId,
-    /// `configId`.
-    pub cid: Hash,
-    pub chain_id: u64,
-    pub vault: [u8; 20],
-}
+/// Which configuration of which bridge program, and the vault it pairs with (shared with
+/// `ferrata_bridge_module` through `ferrata-wallet`).
+pub use ferrata_wallet::Context;
 
 /// One account a call declares.
 #[derive(Clone, Debug)]
@@ -71,6 +64,25 @@ impl Mention {
             | Mention::Other(actor, _)
             | Mention::PrivateSelf(actor) => *actor,
         }
+    }
+}
+
+impl From<ferrata_wallet::Mention> for Mention {
+    fn from(m: ferrata_wallet::Mention) -> Self {
+        match m {
+            ferrata_wallet::Mention::Pda { actor, seed } => Mention::Pda { actor, seed },
+            ferrata_wallet::Mention::Signer(actor) => Mention::Signer(actor),
+            ferrata_wallet::Mention::PrivateSelf(actor) => Mention::PrivateSelf(actor),
+            ferrata_wallet::Mention::Public(actor) => Mention::Other(actor, None),
+        }
+    }
+}
+
+/// A refusal of the shared wallet code as the tool reports it (with the program's code and meaning).
+pub fn refused(r: ferrata_wallet::Refusal) -> anyhow::Error {
+    match r {
+        ferrata_wallet::Refusal::Program { code, detail } => anyhow!(program_refusal(u32::from(code), detail)),
+        ferrata_wallet::Refusal::Wallet(detail) => anyhow!(detail),
     }
 }
 
@@ -213,16 +225,8 @@ pub fn is_claimed(ctx: &Context, history: &History, n: &Hash) -> bool {
         || history.touched_privately.contains(&nullifier_actor(ctx.program, ctx.chain_id, &ctx.vault, n).account_id)
 }
 
-/// The schedule range a wallet names for a claim of `leaf` (the widest its token state allows), as
-/// the harness's wallet does.
-pub fn range_for(token: &TokenState, leaf: u64) -> ScheduleRange {
-    if token.schedules.is_empty() {
-        return ScheduleRange { index: 0, from_leaf: 0, until_leaf: u64::MAX };
-    }
-    let j = token.schedules.iter().rposition(|s| s.from_leaf <= leaf).unwrap_or(0);
-    let until = token.schedules.get(j + 1).map_or(token.known_until, |s| s.from_leaf);
-    ScheduleRange { index: j as u64, from_leaf: token.schedules[j].from_leaf, until_leaf: until }
-}
+/// The schedule range a wallet names for a claim of `leaf` (the widest its token state allows).
+pub use ferrata_wallet::claim::range_for;
 
 async fn token_state<L: Ledger>(ledger: &L, ctx: &Context, token: &[u8; 20]) -> Result<TokenState> {
     match read(ledger, token_actor(ctx.program, &ctx.cid, token)).await? {
@@ -243,7 +247,8 @@ pub struct ClaimPlan {
 }
 
 /// Builds the claim of `owned` from the vault's whole leaf list `leaves`: the newest imported root
-/// that covers the leaf, the path, the range; then runs the program's checks.
+/// that covers the leaf, read with its token's state and the nullifier from the zone, then the shared
+/// builder (`ferrata_wallet::claim`: the path, the range, the program's checks, the accounts).
 #[allow(clippy::too_many_arguments)]
 pub async fn plan_claim<L: Ledger>(
     ledger: &L,
@@ -255,106 +260,27 @@ pub async fn plan_claim<L: Ledger>(
     relayer: Option<Hash>,
     prover: Option<AccountId>,
 ) -> Result<ClaimPlan> {
-    let d = &owned.deposit;
-    let Some(&n) = history.roots.iter().rev().find(|&&n| n > d.leaf_index) else {
-        let code = if history.roots.is_empty() { 245 } else { 248 };
-        bail!(program_refusal(
-            code,
-            "checked before sending: no imported root covers this leaf yet; wait for the next root import"
-        ));
-    };
+    let n = claim::pick_import(&history.roots, owned.deposit.leaf_index).map_err(refused)?;
     let root_state: RootState = match read(ledger, root_actor(ctx.program, &ctx.cid, n)).await? {
         Some(BridgeState::Root(r)) => r,
         _ => bail!(program_refusal(245, format!("checked before sending: root(cid, {n}) is not on the zone"))),
     };
-    ensure!(n as usize <= leaves.len(), "the vault's list has {} leaves, the imported root {n}", leaves.len());
-    let tree = Tree::from_leaves(leaves[..n as usize].to_vec()).map_err(|_| anyhow!("too many leaves"))?;
-    ensure!(
-        tree.root() == root_state.root,
-        "the vault's deposit list does not give the imported root at {n} leaves: the RPC or the zone serves another vault"
-    );
-    let path = tree.path(d.leaf_index).ok_or_else(|| anyhow!("leaf {} is not in the tree", d.leaf_index))?;
-    let witness = bw::ClaimWitness {
-        depositor: d.depositor,
-        token: d.token,
-        amount: d.amount,
-        leaf_index: d.leaf_index,
-        path: path.siblings.to_vec(),
-        s: owned.s,
-        kind: owned.kind as u8,
-        dest: owned.dest,
-    };
-    let token = token_state(ledger, ctx, &d.token).await?;
-    let range = range_for(&token, d.leaf_index);
-    let amount = word_to_u128(&d.amount)?;
-    if token.entry.index_of(amount).is_none() {
-        bail!(program_refusal(251, "checked before sending: the amount is not one of the token's denominations"));
-    }
-    if let Err(code) = bw::verify_claim(&root_state, &witness, &range) {
-        bail!(program_refusal(u32::from(code), "checked before sending with the program's verify_claim"));
-    }
-    if !private && owned.kind != DestKind::Public {
-        bail!(program_refusal(
-            252,
-            "checked before sending: a private-kind deposit is claimed privately (without --plaintext)"
-        ));
-    }
+    let token = token_state(ledger, ctx, &owned.deposit.token).await?;
     let n_actor = nullifier_actor(ctx.program, ctx.chain_id, &ctx.vault, &owned.nullifier);
-    if history.claimed.contains(&owned.nullifier) || read(ledger, n_actor).await?.is_some() {
-        bail!(program_refusal(250, "checked before sending"));
-    }
-    let (mint_fee, _) = token
-        .fees_for(amount, &range)
-        .map_err(|code| anyhow!(program_refusal(u32::from(code), "checked before sending")))?;
-    let relay_fee = token.entry.index_of(amount).map(|k| token.entry.relay_fees[k]).unwrap_or(0);
-    let fee_recipient = AccountId::new(token.controls.fee_recipient);
-    let relayer_account = relayer.map(AccountId::new).unwrap_or(fee_recipient);
-    let root = root_actor(ctx.program, &ctx.cid, n);
-    let mut mentions = Vec::new();
-    let message = if private {
-        // A private-kind deposit is proven by its destination; a public-kind one by any private
-        // account of the wallet (the mint still lands at the public destination, which becomes public;
-        // which deposit paid it does not).
-        let root_account = match owned.kind {
-            DestKind::Private => AccountId::new(owned.dest),
-            DestKind::Public => prover.ok_or_else(|| {
-                anyhow!(
-                    "a private claim of a public-kind deposit is proven by a private account of the wallet; none given"
-                )
-            })?,
-        };
-        mentions.push(Mention::PrivateSelf(own_actor(ctx.program, root_account)));
-        mentions.push(Mention::Pda { actor: root, seed: root_seed(&ctx.cid, n) });
-        BridgeMessage::ClaimPrivately { config_id: ctx.cid, leaf_count: n, witness, range, relayer }
-    } else {
-        mentions.push(Mention::Pda { actor: root, seed: root_seed(&ctx.cid, n) });
-        BridgeMessage::Claim { config_id: ctx.cid, leaf_count: n, witness, range, relayer }
-    };
-    mentions.push(Mention::Pda {
-        actor: token_actor(ctx.program, &ctx.cid, &d.token),
-        seed: token_seed(&ctx.cid, &d.token),
-    });
-    mentions.push(Mention::Pda { actor: config_actor(ctx.program, &ctx.cid), seed: config_seed(&ctx.cid) });
-    mentions.push(Mention::Pda { actor: n_actor, seed: nullifier_seed(ctx.chain_id, &ctx.vault, &owned.nullifier) });
-    let dest = (owned.kind == DestKind::Public).then(|| AccountId::new(owned.dest));
-    // Mints land at `holder(account)` PDAs (security review C-1); the mint's seed admits a new one.
-    for account in dest.into_iter().chain([fee_recipient, relayer_account]) {
-        let actor = holder_actor(ctx.program, account);
-        if !mentions.iter().any(|m| m.actor() == actor) {
-            mentions.push(Mention::Pda { actor, seed: holder_seed(account.value()) });
-        }
-    }
-    let what = format!(
-        "{} claim of leaf {} under root(cid, {n})",
-        if private { "private" } else { "plaintext" },
-        d.leaf_index
-    );
+    let spent = history.claimed.contains(&owned.nullifier) || read(ledger, n_actor).await?.is_some();
+    let inputs = claim::ClaimInputs { leaves, leaf_count: n, root: &root_state, token: &token, spent };
+    let plan = claim::build_claim(ctx, owned, &inputs, private, relayer, prover).map_err(refused)?;
     Ok(ClaimPlan {
-        call: LezCall { what, mentions, root_index: 0, message },
-        leaf_count: n,
-        nullifier: owned.nullifier,
-        mint_fee,
-        relay_fee,
+        call: LezCall {
+            what: plan.what,
+            mentions: plan.mentions.into_iter().map(Mention::from).collect(),
+            root_index: plan.root_index,
+            message: plan.message,
+        },
+        leaf_count: plan.leaf_count,
+        nullifier: plan.nullifier,
+        mint_fee: plan.mint_fee,
+        relay_fee: plan.relay_fee,
     })
 }
 

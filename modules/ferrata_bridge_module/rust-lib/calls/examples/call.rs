@@ -19,8 +19,11 @@ fn main() {
         "release" => ferrata_bridge_calls::release(&request),
         "recover" => ferrata_bridge_calls::recover(&request),
         "status" => ferrata_bridge_calls::status(&request),
+        "prove_release" => ferrata_bridge_calls::prove_release(&request),
+        "import_root" => ferrata_bridge_calls::import_root(&request),
+        "registry" => ferrata_bridge_calls::registry(&request),
         _ => {
-            eprintln!("usage: call version|deposit|claim|burn|release|recover|status [REQUEST_FILE]");
+            eprintln!("usage: call version|deposit|claim|burn|release|recover|status|prove_release|import_root|registry [REQUEST_FILE]");
             std::process::exit(2)
         }
     };

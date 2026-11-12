@@ -9,7 +9,8 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 
 /// The module's methods. The trait's name is the module's name in PascalCase.
 pub trait FerrataBridgeModule: Send + 'static {
-    /// The module's version and the ferrata-bridge-core it was built from, as JSON.
+    /// The module's version and what was staged beside it (the commit, LEZ's, each crate's sources'
+    /// SHA-256), as JSON.
     fn version(&mut self) -> String;
 
     /// A deposit's commitment and the vault call that makes it (`deposit` or `depositETH`), and,
@@ -17,15 +18,17 @@ pub trait FerrataBridgeModule: Send + 'static {
     fn deposit(&mut self, request: String) -> String;
 
     /// A claim of a deposit: its Merkle path in the deposit tree, the check the bridge program runs
-    /// (`verify_claim`), its nullifier, and the program's `Claim` message. JSON in and out.
+    /// (`verify_claim`), its nullifier, and the program's `Claim` or `ClaimPrivately` message; given
+    /// LEZ's state, the `ferrata` tool's claim (the program's checks, fees, accounts). JSON in and out.
     fn claim(&mut self, request: String) -> String;
 
     /// A burn: the note (tag, memo, MAC, commitment) and the bridge program's `Burn` message, and,
     /// with its index in the burn tree, the leaf, burn id and release nullifier. JSON in and out.
     fn burn(&mut self, request: String) -> String;
 
-    /// A release: the burn's path in the checkpointed burn tree, the release guest's check
-    /// (`verify_release`), its nullifier and the journal the vault verifies. JSON in and out.
+    /// A release: the burn's path in the checkpointed burn tree (its root given, or picked by the
+    /// wallet's rule: the newest accepted root whose release delay has passed), the release guest's
+    /// check (`verify_release`), its nullifier and the journal the vault verifies. JSON in and out.
     fn release(&mut self, request: String) -> String;
 
     /// The wallet's own deposits and burns among public ones, from its seed alone. JSON in and out.
@@ -34,6 +37,18 @@ pub trait FerrataBridgeModule: Send + 'static {
     /// Where each deposit and burn stands (awaiting root, claimable, claimed; awaiting checkpoint,
     /// releasable, released), from the chains' public state. JSON in and out.
     fn status(&mut self, request: String) -> String;
+
+    /// A release (as `release`), then the release guest run on its input through r0vm (`program`: the
+    /// guest's ELF), its journal checked against the native one; the tool's `release --prove`. JSON.
+    fn prove_release(&mut self, request: String) -> String;
+
+    /// The relayer's `ImportRoot` of a deposit root from the vault's `eth_getProof` proofs, dry-run
+    /// with the attestation and bridge programs' own functions when the record is given. JSON.
+    fn import_root(&mut self, request: String) -> String;
+
+    /// The bridge program's registry as LEZ holds it (`token(cid, token)`, `config(cid)`,
+    /// `root(cid, n)`), decoded, with a claim's schedule range and fees. JSON in and out.
+    fn registry(&mut self, request: String) -> String;
 
     /// Called once the module is wired to the host.
     fn on_context_ready(&mut self, _ctx: &RustModuleContext) {}
@@ -79,6 +94,18 @@ impl FerrataBridgeModule for FerrataBridge {
 
     fn status(&mut self, request: String) -> String {
         guarded("status", || ferrata_bridge_calls::status(&request))
+    }
+
+    fn prove_release(&mut self, request: String) -> String {
+        guarded("prove_release", || ferrata_bridge_calls::prove_release(&request))
+    }
+
+    fn import_root(&mut self, request: String) -> String {
+        guarded("import_root", || ferrata_bridge_calls::import_root(&request))
+    }
+
+    fn registry(&mut self, request: String) -> String {
+        guarded("registry", || ferrata_bridge_calls::registry(&request))
     }
 }
 

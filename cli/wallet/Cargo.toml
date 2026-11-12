@@ -1,0 +1,26 @@
+# ferrata-wallet: the `ferrata` tool's wallet rules and the bridge program's calls it builds, over
+# plain data (no network, no LEZ wallet, no Ethereum client). The tool (`cli/`, which reads the chains
+# and signs) and `ferrata_bridge_module` (which takes the chains' state in its requests) both link it,
+# so each rule has one implementation. Host code: no program or guest links it.
+[package]
+name = "ferrata-wallet"
+description = "The ferrata tool's wallet rules and bridge calls over plain data, shared with ferrata_bridge_module"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[dependencies]
+ferrata-bridge-core = { path = "../../bridge/crates/ferrata-bridge-core", features = ["std"] }
+ferrata-lez-bridge-wire = { path = "../../lez/bridge-wire" }
+ferrata-lez-wire = { path = "../../lez/wire" }
+# LEZ v0.4.0-rc1 by path, as the wire crates link it: account ids, actors, PDA seeds.
+lee_core = { path = "../../../upstream/lez-v0.4.0-rc1/lee/state_machine/core" }
+borsh = { version = "=1.6.1", features = ["derive"] }
+# `prove`: the release guest through r0vm 3.0.5 over IPC (the version the tool pins).
+risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["client"], optional = true }
+serde_json = { version = "1", optional = true }
+
+[features]
+default = []
+prove = ["dep:risc0-zkvm", "dep:serde_json"]

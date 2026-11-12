@@ -1,0 +1,1 @@
+{"burn_count":1,"burn_root":"0x89409baec579a74dc25e7d4e82783bd1e6f431eac37edfac064c058976e669f8","release_delay_passed":true,"stand_in":"the checkpoint proof and its Groth16 wrap: the mock verifier accepts the exact journal; anvil's clock is moved past the challenge window and the release delay"}

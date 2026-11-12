@@ -9,6 +9,7 @@ check fails.
 """
 
 import json
+import os
 import pathlib
 import sys
 
@@ -82,6 +83,20 @@ def main():
         lines += ["", f"## End to end through Logos Core ({f}): {e2e['checks']} checks, {e2e['failed']} failed", ""]
         lines += ["| group | check | passed | detail |", "|---|---|---|---|"]
         lines += [f"| {r['group']} | {r['check']} | {r['passed']} | {r['detail']} |" for r in e2e["rows"]]
+
+    # bridge_e2e.sh through Logos Core (check.sh with BRIDGE_E2E=1): required only then.
+    for f in flavours:
+        b = load(rep / f"bridge-e2e-{f}" / "bridge_e2e.json")
+        if b is None:
+            if os.environ.get("BRIDGE_E2E", "0") != "0":
+                lines += ["", f"## Bridge module end to end through Logos Core ({f})", "", "not run or no result", ""]
+                failures += 1
+            continue
+        failures += b["failed"]
+        lines += ["", f"## Bridge module end to end through Logos Core ({f}, the mini-app devnet): {b['checks']} checks, "
+                      f"{b['failed']} failed", ""]
+        lines += ["| group | check | passed | detail |", "|---|---|---|---|"]
+        lines += [f"| {r['group']} | {r['check']} | {r['passed']} | {r['detail']} |" for r in b["rows"]]
 
     lines += ["", "## Replies (native)", ""]
     for call in calls:

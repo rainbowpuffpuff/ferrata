@@ -19,6 +19,8 @@ CLI=github:logos-co/logos-logoscore-cli/66d098d3af1367cf831b69c13a5aa8345edeb682
 MODULES="ferrata_attest_module ferrata_bridge_module"
 PORTABLE=${PORTABLE:-1}
 E2E=${E2E:-1}
+BRIDGE_E2E=${BRIDGE_E2E:-0}
+export BRIDGE_E2E
 
 # On the build box (a container) the stack limit is "unlimited": Nix's evaluation of the module's flake
 # overflowed its stack, and local builds failed below 1 GiB. With a finite 1 GiB limit both work.
@@ -140,7 +142,7 @@ prepare_build() {
       cd "$b"
       git init -q
       git add -A
-      for c in rust-lib/ferrata-core rust-lib/ferrata-bridge-core; do if [ -d "$c" ]; then git add -f "$c"; fi; done
+      for c in rust-lib/staged rust-lib/upstream; do if [ -d "$c" ]; then git add -f "$c"; fi; done
       git add -f rust-lib/Cargo.lock
       if [ ! -f flake.lock ]; then nix flake lock; git add flake.lock; fi
     )
@@ -182,6 +184,11 @@ core() {
              "$rep/requests/calls.json")
   if [ "$E2E" != 0 ]; then
     step 0 "$flavour-e2e" env CALL=logosctl LOGOSCTL="$LOGOSCTL" SESSION="$SESSION" "$here/e2e.sh" "$rep/e2e-$flavour" || true
+  fi
+  # The bridge module against the mini-app's devnet (BRIDGE_E2E=1; RELEASE_ELF: the release guest).
+  if [ "$BRIDGE_E2E" != 0 ]; then
+    step 0 "$flavour-bridge-e2e" env CALL=logosctl LOGOSCTL="$LOGOSCTL" SESSION="$SESSION" \
+      "$here/bridge_e2e.sh" "$rep/bridge-e2e-$flavour" || true
   fi
   step 0 "$flavour-module-ls" ctl module ls --json || true
   step 0 "$flavour-daemon-stop" ctl daemon stop || true

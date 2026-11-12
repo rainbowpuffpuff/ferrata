@@ -1191,6 +1191,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "ferrata-advance"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "borsh",
+ "ferrata-core",
+ "ferrata-lez-wire",
+ "lee_core",
+]
+
+[[package]]
 name = "ferrata-bridge-core"
 version = "0.2.0"
 dependencies = [
@@ -1264,6 +1275,7 @@ dependencies = [
  "anyhow",
  "borsh",
  "fee_core",
+ "ferrata-advance",
  "ferrata-core",
  "ferrata-lez-wire",
  "harness",

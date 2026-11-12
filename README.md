@@ -183,7 +183,7 @@ rebuild the programs to their image ids.
 | [Bridge program](lez/BRIDGE-RESULTS.md), `lez/` | The RFP-022 bridge on LEZ: `ImportRoot`, private claims and burns, fees, caps, freezes | prototype; real proofs, a LEZ devnet | [8–10, 28, 30, 31, 33, 38, 74, 75, 78, 88, 91](docs/EVIDENCE.md) |
 | [Inbound crossing, live](lez/live/inbound/README.md), `lez/live/inbound/` | Ethereum to LEZ on a running LEZ sequencer and Logos Blockchain node | run: a Sepolia deposit claimed on LEZ | [11, 27, 41, 91](docs/EVIDENCE.md) |
 | [GPU proving](gpu-prover/RESULTS.md), `gpu-prover/` | A Modal app proving checkpoints, the LEZ update and the private attestation, claim and burn on a GPU | measured | [5, 10, 16, 17, 24](docs/EVIDENCE.md) |
-| [Logos modules](modules/RESULTS.md), `modules/` | `ferrata_attest_module` and `ferrata_bridge_module`, and a catalog layout | built; run in a headless Logos Core | [7, 59–61](docs/EVIDENCE.md) |
+| [Logos modules](modules/RESULTS.md), `modules/` | `ferrata_attest_module` (with `advance`, the updater's job planning) and `ferrata_bridge_module` (with the private claim, the root import, registry reads, the release rule and the release guest), on the `ferrata` tool's and the updater's own code (`cli/wallet`, `lez/advance`), and a catalog layout | built; run in a headless Logos Core | [7, 59–61](docs/EVIDENCE.md) |
 | [Vault](vault/README.md), `vault/` | `FerrataVault` v5, the immutable Ethereum vault (Solidity), and its linked library | prototype; deployed on Sepolia | [12–14, 25, 30, 35, 41, 54, 91](docs/EVIDENCE.md) |
 | [Bridge core and release proof](bridge/README.md), `bridge/` | Commitments, trees, nullifiers; the release and claim guests | prototype; real proofs | [19, 30, 33, 77, 78, 88](docs/EVIDENCE.md) |
 | [Checkpoint program](checkpoint/README.md), `checkpoint/` | The LEZ to Ethereum checkpoint proof: re-hashes LEZ blocks, collects burns, checks rule (A) or (B) | prototype; proven on real LEZ blocks | [15, 16, 24, 29, 78, 91](docs/EVIDENCE.md) |
@@ -289,9 +289,9 @@ The design notes specify these; there is no code for them here:
 - in the Logos modules (`modules/README.md`, "Left out"): reads and transactions through Logos Core's
   own modules (`eth_rpc_module`, `verified_proxy_module`, `keystore_module`, `tx_sender_module`,
   `lez_core`; the modules read plain `http://` JSON-RPC and build messages without signing or sending
-  them), `advance` in `ferrata_attest_module`, the private claim, `ImportRoot`,
-  registry reads and release proving in `ferrata_bridge_module`, and a published catalog (laid out, dry-run
-  and installed from on 127.0.0.1 in `modules/catalog/`); the updater as a module (`ferrata-updater` is built as a
+  them; the private claim's private execution and proof are the LEZ wallet's: the module builds and checks
+  `ClaimPrivately`; the release's Groth16 wrap is the relayer's), and a published catalog (laid out,
+  dry-run and installed from on 127.0.0.1 in `modules/catalog/`); the updater as a module (`ferrata-updater` is built as a
   plain binary, `lez/updater/`; its backend for a running sequencer is not built);
 - the mini-app's private round trip on a LEZ sequencer: on its devnet the private round trip on the defaults
   settles (private claim and burn proven by the harness with the wallet's own keys, also for real; EVIDENCE
@@ -312,11 +312,7 @@ implement yet:
 - inbound (D13): the gas drop's sealed credit to a private one-time account and its sweep inside the
   private claim (LEZ's wallet; the gas-drop receipt binding `(N, oneTimeAddress, relayer)` is built and the
   relayer checks it; refunds drawing on the release cap are in the vault; `ImportRoot` attesting slots 0 and 1, and claims refusing
-  `leafIndex >= count`, are in the bridge program);
-- outbound (D13): releases against the newest root whose delay has passed, a wallet rule, in
-  `ferrata_bridge_module` (it is in the `ferrata` tool, `cli/src/flow.rs`, tested in `cli/tests/e2e.rs`; the
-  write-once burn account keyed on the whole note is in the bridge program; `NOut` v2 is in the release guest
-  and the core since the security fixes).
+  `leafIndex >= count`, are in the bridge program).
 
 ## Not audited. Not for production.
 

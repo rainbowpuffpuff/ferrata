@@ -1,5 +1,95 @@
 # Logos modules: results
 
+## Completing the two modules (12 November 2026)
+
+**What the modules lacked is built, on the tools' own code, and runs through Logos Core.**
+`ferrata_attest_module` gains `advance` (an update's job planned the way the updater plans it);
+`ferrata_bridge_module` gains the private claim (`ClaimPrivately`, built and checked from LEZ's state),
+`import_root`, `registry`, the release by the wallet's rule (the newest accepted root whose release delay
+has passed) and `prove_release` (the release guest through r0vm). No logic is written twice: the `ferrata`
+tool's claim builder, release rule, release plan and release guest run moved into `ferrata-wallet`
+(`cli/wallet`), the updater's job planning into `ferrata-advance` (`lez/advance`); the tool, the updater
+and the modules all link them, and the modules now link the programs' own wire crates and LEZ's
+`lee_core` (staged by `scripts/stage.py`), so every message and state is the programs' own type. All of it
+ran on the Modal build box (`ws-5`, a gVisor container, 2 CPUs reported), repository at commit
+`3a15b73` (results in [`results/complete-2026-11-12/`](results/complete-2026-11-12/)):
+
+| What | Where it ran | Result |
+|---|---|---|
+| unit tests | native | `ferrata-wallet` 3 (the release rule at its edges, the import a claim goes under), the attestation module's calls 8, the bridge module's 6 (one: the rule through the JSON interface, against the explicit root); `ferrata-advance` is the updater's code moved, tested by the updater's tests (7, with the harness, its fee gate within bounds, first round, same code) and by `advance` below |
+| `e2e.sh` with `advance` | native and through Logos Core (dev `logosctl`) | 43 of 43 checks each ([native](results/complete-2026-11-12/e2e-native/e2e.md), [Logos Core](results/complete-2026-11-12/logos-dev/e2e/e2e.md)) |
+| `bridge_e2e.sh` (the mini-app's devnet) | native and through Logos Core | 24 of 24 each ([native](results/complete-2026-11-12/bridge-e2e-native/bridge_e2e.md), [Logos Core](results/complete-2026-11-12/logos-dev/bridge-e2e/bridge_e2e.md)) |
+| `check.sh` (`PORTABLE=0 E2E=1 BRIDGE_E2E=1`) | both modules built and packaged by logos-module-builder, installed and loaded in a headless Logos Core | step failures 0, check failures 0; every static call (25) equal to native ([summary](results/complete-2026-11-12/logos-dev/summary.md)) |
+| one release proven for real | through Logos Core: a daemon without `RISC0_DEV_MODE`, `prove_release` | **real** succinct receipt of the release guest `0xb64900bc…29e9` (the image id of [`docs/image-ids.md`](../docs/image-ids.md), built here: binary sha256 `7be1349c…11bf`, 230,360 bytes), verified against it by the module (`dev_mode` false, `image_id_matches` true): 15.0 s of proving on the box's CPU (the `logosctl call` 15.1 s), receipt 584,508 bytes of JSON, sha256 `038d07a5…c14f`, in the form `ferrata-relayer` wraps ([`real-proof/`](results/complete-2026-11-12/real-proof/)) |
+| the tools on the shared code | native | the `ferrata` tool's end-to-end test (`cli/tests/e2e.sh`: deposit, scan, claim, burn, release and recovery against anvil and the harness, its release rule included) passes |
+
+Proofs: dev mode (`RISC0_DEV_MODE=1`) everywhere but the one release above. The devnet's private claims
+are proven by its harness in dev mode (`FERRATA_DEVNET_PROOFS=real` would prove them for real, as EVIDENCE
+row 86 did for the mini-app).
+
+### `advance` (`e2e.sh`, the `lez/` harness's Stage 4 chain)
+
+`module_e2e advance-info` gives the mainnet instance initialized from the attestation fixture's bootstrap,
+before its finality update. `advance` takes its state, the fixture's finality update and bootstrap (SSZ,
+as a beacon node serves them) and plans the update with `ferrata-advance` (the program's step code run
+natively with blst first): useful, finalized slot 15,622,144 → 15,624,480, 505 signers, three steps:
+`Open` (4,990 bytes), `Miller`, `Finish` (1 byte each). `module_e2e advance` executes them in order in LEZ
+v0.4.0-rc1's state machine: each decoded canonically by the program and applied (execution gas 2,330,188,
+3,308,048 and 3,723,960), the instance's finalized slot moves, its record is written, and the instance's
+state and the record are byte-equal to what the harness's own job for the same update leaves (the same
+job id). `read_instance` reads the advanced state back; the same update again is `no_change`.
+
+### The bridge module against the mini-app's devnet (`bridge_e2e.sh`)
+
+The devnet is `cli/examples/miniapp_devnet.rs` (the v5 vault on anvil, chain id 1, local only, its
+verifier the vault tests' mock; the zone in the LEZ harness with the bridge program). It gained reads and
+a submission for this test (`module.*`: the zone's states, the vault's leaves and accepted roots, a
+synthetic recorded block's proofs, submitting what the module built) and a checkpoint that can leave the
+release delay running; it plans nothing.
+
+| Step | What the module did | What the chains did |
+|---|---|---|
+| two deposits (the tool's) | — | 0.1 ETH each to the user's private account `/0` |
+| `import_root` | `ImportRoot` (1,231 bytes) from the block's proofs in `eth_getProof`'s shape, dry-run with the programs' functions: importable, `root(cid, 2)` = the vault's | applied (231,020 execution gas); a wrong count: refused by the dry run and by the program, both 247 (`IMPORT_MISMATCH`) |
+| `registry` | `token(cid, ETH)`, `config(cid)`, `root(cid, 2)` decoded; the claim range of leaf 0 (0 to 2) and its fees; `configId` recomputed = the devnet's | — |
+| `claim`, private, ×2 | the tool's claim: `ClaimPrivately` (1,239 bytes, 6 accounts, the root the private account's own actor) | proven (dev mode) and settled privately; the private account holds 0.2 ETH; a second claim of deposit 0: refused by the module from the nullifier's state (250, `ALREADY_CLAIMED`) |
+| `release` by the rule | burn 0: the older root (its delay passed), not the newer (in its delay); burn 1: `ReleaseDelayNotElapsed` with the time the newer opens; 200 s later: the newer | two private burns (the tool's), two checkpoints (the mock verifier on the exact journals) |
+| `prove_release` | the release guest on the module's input, journal = native | — |
+| the vault | — | both releases accepted (the mock verifier on the exact journals), 0.1 ETH paid each; `status`: both released |
+
+The devnet's vault pins a placeholder release image id (its verifier is the mock); the release guest the
+module ran is the real one.
+
+### What changed to make it build in Logos Core
+
+- The modules link LEZ's `lee_core` (edition 2024) and, the bridge module, the RISC Zero client; both
+  build with logos-module-builder's toolchain (rustc 1.89.0) once `ruint` is held at 1.17.2 (1.20 needs
+  1.90; the modules' locks were seeded from `cli/Cargo.lock`).
+- A daemon whose `TMPDIR` path is long starts but cannot listen (its socket path passes the 107-byte limit
+  of a Unix socket): `check.sh` and `real_release_proof.sh` need a short `TMPDIR`.
+- `requests.py`'s expected id of `checkpoint_p1899` was stale since lc-a1 added `ws_period_epochs` to the
+  configuration (`e3ba34e`); it is the id the calls crate's own test gives (`0x39860f39…b79c`).
+
+### Re-run
+
+```sh
+cd bridge && cargo build --release --locked -p methods     # the release guest (image id 0xb64900bc…)
+RELEASE_ELF=$PWD/target/riscv-guest/methods/ferrata-guests/riscv32im-risc0-zkvm-elf/release/release.bin
+cd .. && modules/scripts/e2e.sh OUT1 && RELEASE_ELF=$RELEASE_ELF modules/scripts/bridge_e2e.sh OUT2
+TMPDIR=<short dir> PORTABLE=0 E2E=1 BRIDGE_E2E=1 RELEASE_ELF=$RELEASE_ELF modules/scripts/check.sh OUT3
+TMPDIR=<short dir> modules/scripts/real_release_proof.sh OUT3/logos/bin/logosctl OUT3/lgx-ferrata_bridge_module $RELEASE_ELF OUT4
+```
+
+### Not done
+
+The modules still read and send outside Logos Core's own modules (no `eth_rpc_module`, `keystore_module`,
+`tx_sender_module`, `lez_core`): the private claim's private execution is the LEZ wallet's (on the devnet
+the harness runs it with the wallet's keys), the import's proofs and every LEZ state come in the request,
+and the receipt `prove_release` gives is succinct (the vault takes the Groth16 wrap, the relayer's). The
+portable build was not re-run this time; Linux x86-64 only.
+
+## 11 November 2026: two modules, a log end to end
+
 **Two modules, built, packaged, loaded and called; a log attested end to end through them.** On
 11 November 2026, `modules/scripts/check.sh` (repository at commit `2f91c14`) built
 `ferrata_attest_module` (seven methods) and `ferrata_bridge_module` (seven) with logos-module-builder,
@@ -120,7 +210,7 @@ which that script did not run). The harness's test build: 456 s.
 
 What `README.md` lists under "Left out": the modules do not go through Logos Core's Ethereum, key and
 transaction modules (plain `http://` JSON-RPC; messages built, not signed or sent; the harness executes
-them in-process, not a networked sequencer); no `advance` in the attestation module; no private claim, `ImportRoot`, registry reads or release proof in the bridge module; the
+them in-process, not a networked sequencer); no `advance` in the attestation module; no private claim, `ImportRoot`, registry reads or release proof in the bridge module (all built on 12 November, above); the
 catalog is laid out, dry-run and installed from locally, not published; Linux x86-64 only.
 
 ## First run, 10 November 2026: the prototype (`ferrata_attest_module`, three methods)

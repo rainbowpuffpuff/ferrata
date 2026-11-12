@@ -6,9 +6,17 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 publish = false
 
+# The crates below are staged copies (scripts/stage.py: the repository's under ../staged/, LEZ's
+# under ../upstream/), laid out as in the repository so that their own path dependencies hold.
 [dependencies]
-# The staged copy (scripts/stage.sh), with `std`: full trees with paths, and the recovery scans.
-ferrata-bridge-core = { path = "../ferrata-bridge-core", features = ["std"] }
+# The bridge core, with `std`: full trees with paths, and the recovery scans.
+ferrata-bridge-core = { path = "../staged/bridge/crates/ferrata-bridge-core", features = ["std"] }
+# The bridge program's messages, states, addresses and checks; the attestation program's records.
+ferrata-lez-bridge-wire = { path = "../staged/lez/bridge-wire" }
+ferrata-lez-wire = { path = "../staged/lez/wire" }
+# The `ferrata` tool's wallet rules and calls (cli/wallet), with the release guest run through r0vm.
+ferrata-wallet = { path = "../staged/cli/wallet", features = ["prove"] }
+borsh = { version = "=1.6.1", features = ["derive"] }
 serde_json = "1"
 # The vault's function selectors (Keccak-256 of the signature), as ferrata-core computes Keccak.
 tiny-keccak = { version = "2", features = ["keccak"] }
