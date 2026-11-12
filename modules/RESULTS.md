@@ -1,8 +1,103 @@
 # Logos modules: results
 
-Runs, newest first: the three daemons as modules and completing the attestation and bridge modules
-(two branches of 12 November, each run on its own), the attestation and bridge modules (11 November),
-the attestation module's prototype (10 November).
+Runs, newest first: the five modules after the merge of the two branches of 12 November (12–13
+November, at the merged commit), the three daemons as modules and completing the attestation and bridge
+modules (those two branches, each run on its own), the attestation and bridge modules (11 November), the
+attestation module's prototype (10 November).
+
+## The five modules after the merge, 12–13 November 2026
+
+**The two branches of 12 November merged, and every result re-run at the merged commit.** The attestation
+and bridge modules completed on the tools' own code (`advance`, the private claim, `import_root`,
+`registry`, the release rule, `prove_release`; "Completing the two modules" below) and the three daemons as
+modules ("The daemons as modules" below) were built on separate branches from the same commit and ran
+separately. Merged (`c97ff21`), one `stage.sh` stages all five (the attestation and bridge modules through
+`stage.py`, the attestor and monitor modules as before, the updater through `stage-updater.sh`), one
+`check.sh` builds and checks them, with `BRIDGE_E2E=1` and the daemons' jobs. The updater now plans with
+`ferrata-advance` (`lez/advance`), the code the attestation module's `advance` runs, so the updater
+module's staged tree carries it too (`d4c0268`). Then, on the Modal build box (workspace `ws-4`, a
+gVisor container: 2 CPUs reported, up to 16 cores and 64 GiB; Nix 2.28.3 with the Nix store the daemons'
+run had built, Logos from source; cargo 1.93.0 and 1.98.1, r0vm 3.0.5, Foundry 1.3.6), at commit `d4c0268`
+([`results/merged-2026-11-13/`](results/merged-2026-11-13/summary.md)):
+
+| What | Natively | Dev Logos Core | Portable | From the catalog |
+|---|---|---|---|---|
+| 48 one-shot calls (the attestation module 11 with `version`, the bridge module 13, the attestor 12, the monitor 8, the updater 4), each reply equal to the native call and meeting its expectations | — | 48 of 48 | 48 of 48 | the five installed by name, loaded, `version` called |
+| `e2e.sh`: two logs attested end to end and two refusals, `advance` (an update's `Open`, `Miller`, `Finish` planned by the module and executed by the program in order), the bridge module's `Burn` and `Claim` decoded by the program's types | — | 43 of 43 | 43 of 43 | 43 of 43 |
+| `bridge_e2e.sh`: the mini-app's devnet (`import_root`, `registry`, two private claims, the release rule, `prove_release`, both releases accepted by the vault) | — | 24 of 24 | 24 of 24 | 24 of 24 |
+| the attestor on the zone of four's records (`attestor-e2e.sh`): the collector's 3 of 4 = the input the checkpoint program proved, byte for byte | 23 of 23 | 23 of 23 | 23 of 23 | 23 of 23 |
+| the attestor beside each sequencer of a running zone of four (`attestor-zone-live.sh`) | — | — | 13 of 13 | — |
+| the monitor (`monitor-e2e.sh`, `anvil-e2e.sh` with the module in place of the binary) | 46 of 46 (the binary) | 46 of 46 | 46 of 46 | 46 of 46 |
+| the updater (`updater-e2e.sh`): mainnet and Sepolia to the lab's final roots, 187 transactions applied, none refused | 8 of 8 | 10 of 10 | 10 of 10 | 10 of 10 |
+
+`check.sh` (`BRIDGE_E2E=1`, dev and portable): step failures 0, check failures 0, 1,531 s (the Logos
+packages and the daemons' run's builds cached in the Nix store; the five modules' dev packages built in
+507 s). Each job's figures are those of the branches' own runs, timings aside: the updater's mainnet instance at slot
+15,631,808 (root `530599ec…2328`) and Sepolia's at 11,556,000 (`d31b7d34…f3cc`), 4 and 35 jobs, in 107 s
+through each Core and 106 s natively; the monitor's cancellations at 41,477 gas (41,468 in S5), the smallest
+margin before a deadline 2,992 s through the module (3,000 s for the binary), the module's host process at
+70,404 kB (dev) and 74,632 kB (portable) resident when S5 killed it; the release guest built here has the id
+of [`docs/image-ids.md`](../docs/image-ids.md) (`0xb64900bc…29e9`, binary sha256 `7be1349c…11bf`); the
+updater module carries the attestation program `0x816d1fef…03df`, declared and computed from its bytes.
+
+The catalog's steps ran at the same commit after it (`release-local.sh`, 576 s: the five exported as their
+own repositories and built with `nix build .#lgx-portable`, `lgx verify` valid and unsigned, the sidecars,
+`index.json` with five packages, `validate-repo` OK; [`catalog/dry-run/`](catalog/dry-run/index.json)), then
+the install from that catalog (`catalog-install.sh` over HTTPS on 127.0.0.1, 292 s): the five found,
+installed by name, loaded and called, then every job through the installed modules (the last column: the
+daemons' 79 checks, `e2e.sh` 43, `bridge_e2e.sh` 24); one failure, the known one of EVIDENCE row 61,
+refreshing the built-in official catalog under the throwaway CA bundle
+([`catalog/install-test/log.txt`](catalog/install-test/log.txt)).
+
+Beside each sequencer of a second running zone of four (`attestor-zone-live.sh`: four LEZ v0.4.0-rc1
+sequencers from the lab bundle, 300 s of sequencing; four portable Logos Cores, each module's attestation
+key certified by its sequencer's channel key), each module's loop read the node every 15 s: 22 rounds and
+19 rising tips signed each, up to the final tip 29, one round refused (no final block yet), no error; the
+collector's 3 of 4 accepted by the checkpoint rule natively (n = 4, t = 3; the input 25,323 bytes, sha256
+`0d7c33a8…9727`), 4 of 4 accepted, 2 of 4 refused: 13 of 13
+([`results/merged-2026-11-13/attestor-zone-live/`](results/merged-2026-11-13/attestor-zone-live/summary.md);
+the zone's timing varies between runs: the daemons' run ended at tip 30).
+
+Packages (bytes, dev / portable): `ferrata_attest_module` 3,483,216 / 6,641,682, `ferrata_bridge_module`
+6,383,603 / 9,543,619, `ferrata_attestor_module` 2,342,266 / 5,502,240, `ferrata_monitor_module`
+9,029,942 / 12,187,606, `ferrata_updater_module` 12,641,535 / 15,801,312 ([`sizes.log`](results/merged-2026-11-13/sizes.log)).
+
+The native tests the two branches ran, at the same commit on the same box
+([`native-tests.txt`](results/merged-2026-11-13/native-tests.txt)): `cli/` (`ferrata-wallet` 3, the
+`ferrata` tool's library 10, every test target built, the devnet example built, the tool's end-to-end test
+`cli/tests/e2e.sh` passed), `lez/` (`ferrata-advance` built; `ferrata-updater` with the harness: its
+configuration tests 3 and its recorded-data tests 7, the A3 gate among them held: honest gas on refused
+steps 0.0820 of the applied, ≤ 0.10, honest fee shares 0.4428 / 0.5572), `monitor/` (15), and
+`checkpoint/attestor` (12, Rust 1.88). The first `cli/` step failed because the run's script did not point
+`RISC0_HOME` at LEZ's guest toolchain (its guests then built with RISC Zero's Rust 1.88 and stopped at
+packages that need 1.89 and 1.90); with it set, as `cli/tests/e2e.sh` sets it, it passed in the same box.
+
+What the merge resolved (both branches had changed the module scripts and the docs):
+- `stage.sh`: one entry point; `stage.py` now takes module names (it staged both of its modules at once).
+- `check.sh`: the daemons' branch's five-module check, with the completing branch's `BRIDGE_E2E=1` step
+  and `stage.py`'s `staged/` and `upstream/` trees in each module's build copy; `summary.py` reports both.
+- `requests.py`: both branches had fixed the same stale instance id to the same value.
+- The updater module: `stage-updater.sh` vendors `lez/advance`, and its `Cargo.lock` gains
+  `ferrata-advance` exactly as `lez/Cargo.lock` did; `export.sh` (which the catalog's steps call) commits
+  `stage.py`'s trees.
+
+Re-run (Linux x86-64 with Nix, the RISC Zero toolchains of `lez/` and `bridge/`, r0vm, Foundry with
+`vault/lib`; `LOGOS_TMPDIR` of at most 62 bytes):
+
+```sh
+(cd bridge && cargo build --release --locked -p methods)        # the release guest, for RELEASE_ELF
+BRIDGE_E2E=1 RELEASE_ELF=$(find bridge/target/riscv-guest -name release.bin | head -1) \
+  RISC0_SERVER_PATH=$(command -v r0vm) modules/scripts/check.sh OUT
+modules/scripts/release-local.sh REL
+CATALOG_E2E=1 CATALOG_E2E_MORE="updater-e2e.sh monitor-e2e.sh e2e.sh bridge_e2e.sh" \
+  modules/scripts/catalog-install.sh REL OUT/logos-portable/bin/logosctl WORK
+LOGOSCTL=OUT/logos-portable/bin/logosctl LGX=$(ls OUT/lgx-portable-ferrata_attestor_module/*.lgx) \
+  modules/scripts/attestor-zone-live.sh spike/tmp/lab/bundle.tar.zst LIVE 300 15
+```
+
+Not done at the merge: what each branch left stands (below). The completing branch's one real release
+proof through Logos Core was not repeated (`prove_release` is unchanged by the merge); everything here is
+in dev mode.
 
 ## The daemons as modules, 12 November 2026
 

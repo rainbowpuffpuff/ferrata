@@ -208,9 +208,12 @@ Where each ran, the measurements, the command that re-checks each and the toolch
 
 [docs/EVIDENCE.md](docs/EVIDENCE.md) is the index: one page with every piece of evidence, its numbers, where
 it ran, whether its proofs were real or in dev mode, what is stand-in data, and the command that re-checks it.
-The latest additions, of 11 and 12 November 2026, one line each (in full:
-[EVIDENCE.md, "The latest additions"](docs/EVIDENCE.md#the-latest-additions-of-11-and-12-november-2026)):
+The latest additions, of 11 to 13 November 2026, one line each (in full:
+[EVIDENCE.md, "The latest additions"](docs/EVIDENCE.md#the-latest-additions-of-11-to-13-november-2026)):
 
+- **Merged on 13 November 2026** (EVIDENCE rows 93–98, `bridge-module-complete` and `modules-more`): the five Logos
+  modules on one tree, the attestation and bridge modules completed on the tools' own code and the three daemons as
+  modules; every job through them in a headless Logos Core and from the local catalog.
 - **Live on 12 November 2026** (EVIDENCE rows 91–92, `crown-live-3`): the round trip on the final programs on
   Sepolia, verify 14 of 14; anyone's check from the records 13 of 13 on two public endpoints; the vault's image ids
   rebuilt from this tree.

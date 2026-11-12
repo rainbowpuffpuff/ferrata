@@ -132,9 +132,10 @@ with the private claim and burn proven for real; its results go to `results-real
 
 - **The private round trip runs on the devnet, not on a LEZ sequencer.** The harness proves and settles
   the private transactions (above); on a sequencer they would be sent by LEZ's wallet. Two things stand
-  between the view and that: `ferrata_bridge_module` (the core module the view calls in Logos) is built
-  but has no private claim yet and has not run with the view (`modules/README.md`, "Left out"); and the
-  `ferrata` tool's sequencer path has not run against a sequencer: since the merge of branch `bridge-cli` its
+  between the view and that: `ferrata_bridge_module` (the core module the view calls in Logos) is built,
+  with the private claim since EVIDENCE row 93, but has not run with the view (`modules/README.md`,
+  "Left out"); and the `ferrata` tool's sequencer path has not run against a sequencer: since the merge of
+  branch `bridge-cli` its
   ledger (`cli/src/lez.rs`, `Sequencer::applied_with_private`) reads a private burn's note from the delivery
   its transaction makes in the clear (`lez::visible_calls`), and the tool has a private burn (EVIDENCE rows
   84, 85, both in the harness).

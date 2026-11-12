@@ -36,6 +36,8 @@ action skips `lgx merge`. Its small outputs (sidecars, `index.json`, logs; no pa
 `modules/scripts/catalog-install.sh RELEASE_DIR LOGOSCTL WORK_DIR` serves the dry run's catalog over
 HTTPS on 127.0.0.1 (a throwaway certificate; `logosctl` requires https) and has a headless Logos Core
 add it, search it, install the five modules by name, load them and call them; with `CATALOG_E2E=1` (and
-`CATALOG_E2E_MORE="updater-e2e.sh monitor-e2e.sh"`) the three daemon modules then do their jobs through
-the installed modules (`attestor-e2e.sh`, `updater-e2e.sh`, `monitor-e2e.sh`). Its log, with those runs'
-check lines, is in `install-test/` (`modules/RESULTS.md`).
+`CATALOG_E2E_MORE="updater-e2e.sh monitor-e2e.sh e2e.sh bridge_e2e.sh"`) the installed modules then do
+their jobs: the three daemons' (`attestor-e2e.sh`, `updater-e2e.sh`, `monitor-e2e.sh`), the attestation
+module's log end to end and `advance` (`e2e.sh`), and the bridge module on the mini-app's devnet
+(`bridge_e2e.sh`, with `RELEASE_ELF`). Its log, with those runs' check lines, is in `install-test/`
+(`modules/RESULTS.md`).
