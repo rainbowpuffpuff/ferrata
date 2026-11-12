@@ -40,7 +40,9 @@ margin before a deadline 2,992 s through the module (3,000 s for the binary), th
 of [`docs/image-ids.md`](../docs/image-ids.md) (`0xb64900bc…29e9`, binary sha256 `7be1349c…11bf`); the
 updater module carries the attestation program `0x816d1fef…03df`, declared and computed from its bytes.
 
-The catalog's steps ran at the same commit after it (`release-local.sh`, 576 s: the five exported as their
+The catalog's steps ran next, on the same module sources (tree `11f5d63`: it adds run 1's results and has
+`catalog-install.sh` log `e2e.sh`'s and `bridge_e2e.sh`'s check counts; `version()` reports `d4c0268`)
+(`release-local.sh`, 576 s: the five exported as their
 own repositories and built with `nix build .#lgx-portable`, `lgx verify` valid and unsigned, the sidecars,
 `index.json` with five packages, `validate-repo` OK; [`catalog/dry-run/`](catalog/dry-run/index.json)), then
 the install from that catalog (`catalog-install.sh` over HTTPS on 127.0.0.1, 292 s): the five found,
@@ -49,7 +51,7 @@ daemons' 79 checks, `e2e.sh` 43, `bridge_e2e.sh` 24); one failure, the known one
 refreshing the built-in official catalog under the throwaway CA bundle
 ([`catalog/install-test/log.txt`](catalog/install-test/log.txt)).
 
-Beside each sequencer of a second running zone of four (`attestor-zone-live.sh`: four LEZ v0.4.0-rc1
+In the same run, beside each sequencer of a second running zone of four (`attestor-zone-live.sh`: four LEZ v0.4.0-rc1
 sequencers from the lab bundle, 300 s of sequencing; four portable Logos Cores, each module's attestation
 key certified by its sequencer's channel key), each module's loop read the node every 15 s: 22 rounds and
 19 rising tips signed each, up to the final tip 29, one round refused (no final block yet), no error; the
