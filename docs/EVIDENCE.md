@@ -178,6 +178,25 @@ of three new files are the only code change after the merges), the LEZ harness a
 vault at 31ea9c7; image ids of this worktree's path, as before. The guests' image ids at the crown build path and
 at the lab's path are row 37's. Every count and command is in [`evidence-suites.txt`](evidence-suites.txt).
 
+**Eighth pass (branch `integration8`, 12 Nov 2026).** The merges of `bridge-cli`, `miniapp-private`, `docs-voice`
+and `p4-macos` (rows 84–88). Run on the build box at 2e27613, then the failing steps again after their fixes (349dc4f:
+`cli/tests/roundtrip_b.rs` on the merged tool's signatures, `cli/tests/relayer_fork.rs` past the rustc wrapper (a
+`/bin/sh` script; dash drops `CARGO_BIN_EXE_ferrata-relayer`), a clippy lint in `bridge/e2e`; d1c772a and 01d4b64:
+rustfmt of the devnet example, `forge fmt` of the CI round trip's vault script). Every guest rebuilt from scratch:
+**14 of 14** image ids,
+binary sha256 and sizes equal [`image-ids.md`](image-ids.md), the crown run's six included. The CI workflow's jobs on
+their toolchains: `test` on stable (rustc 1.99.1) 163 passed in 25 binaries, fmt, clippy `-D warnings` and the
+`no_std` build clean; `witness-independence` passed (64 witnesses each: release 77,736 user cycles, claim 74,379, one
+segment); `roundtrip` passed (the test 8.1 s), with the tool's e2e (1 passed, 24.1 s); `vault` 451 passed in 42
+suites; `idl` passed; `admin` 232 checks. LEZ harness with the wire crates 60 passed in 41 binaries (dev mode), its
+clippy, fmt and the guests' fmt clean, both drivers check; updater 10 passed. Bridge core 59 passed in 10 binaries,
+vectors v1 and v2, `host execute`, `gasdrop 8`, `invariance 64`, `claim-check 16`, clippy and fmt clean;
+`ferrata-e2e` builds with and without its feature `wrap`. Checkpoint 46 passed in 13 binaries, fidelity 17 in 7.
+Vault 451 passed and 1 skipped (the privacy suite's Ethereum half) in 43 suites, invariants 28 in 2, `forge fmt`
+clean. CLI: 10 unit tests, `gasdrop` 1, every test target and the devnet example build, fmt clean. Mini-app: Qt Quick
+Test 17 passed (34.4 s, dev mode). Modules 8 + 5; `monitor` 15. Fuzz: the core's targets build (fmt, clippy clean);
+the programs' targets build instrumented and replay their 2,526 committed inputs clean.
+
 | Suite | Result |
 |---|---|
 | Root workspace, CI job as written (vectors fetched on the box) | fifth pass (`stable` as 1.98.1) and sixth (stable 1.99.1; fmt and clippy also on beta 1.101.0-beta.1): 142 tests passed in 21 binaries; fmt, clippy `-D warnings` and the `no_std` RISC-V build clean; seventh pass: 150 passed in 24 binaries (`review_core` 6, the two `fuzz_regressions` 1 each), fmt and clippy `-D warnings` clean (the `no_std` build not re-run) |
