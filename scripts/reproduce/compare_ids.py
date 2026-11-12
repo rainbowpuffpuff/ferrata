@@ -57,7 +57,7 @@ def main() -> int:
             if m.group(1) in METHODS:
                 words = [int(x.strip()) for x in m.group(2).split(",") if x.strip()]
                 methods[METHODS[m.group(1)]] = "0x" + b"".join(w.to_bytes(4, "little") for w in words).hex()
-    table = vs.readme_ids(a.readme) if os.path.isfile(a.readme) else vs.EXPECTED_IDS
+    table = vs.readme_ids(a.readme) if os.path.isfile(a.readme) else vs.image_ids_md(a.table)
     onchain, mode = {}, None
     try:
         if not a.vault:

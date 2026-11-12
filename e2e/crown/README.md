@@ -47,7 +47,7 @@ byte-identical binaries and these ids, [`docs/image-ids.md`](../../docs/image-id
 
 **The programs of `crown-live-1`** (`integration5`, built on the ws-4 build box at the maintainer's checkout path,
 before guest builds were path-independent, from commit db9f034; their ids reproduce only at that path and commit,
-[`docs/guides/verify.md`](../../docs/guides/verify.md) §2; pinned for that run in `scripts/verify-sepolia.py`):
+[`docs/guides/verify.md`](../../docs/guides/verify.md) §2; `scripts/verify-sepolia.py` takes them from the run's own records):
 
 | Program | Image id (crown-live-1) |
 |---|---|

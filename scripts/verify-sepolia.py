@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Check a Ferrata crown run on Sepolia yourself: Python 3 standard library only, any public JSON-RPC, read-only.
 
-    python3 -I scripts/verify-sepolia.py RUN_DIR [--rpc URL] [--readme e2e/crown/README.md]
+    python3 -I scripts/verify-sepolia.py RUN_DIR [--rpc URL] [--image-ids docs/image-ids.md] [--readme e2e/crown/README.md]
 
 RUN_DIR holds a run's records as committed in e2e/runs/crown-rehearsal-3/ (manifest.json, deploy.json,
 identity.json, params.json, run.json, crown.json, releases/, lez/session-a/, lez/session-b/). Every check reads the
@@ -13,9 +13,10 @@ eth_getTransactionReceipt, eth_getLogs and eth_call). One line per check:
     FAIL     it does not (the exit status is then 1; 2 if the endpoint does not answer as Sepolia)
     PENDING  the run has not reached that stage yet (on chain and in the records); not a failure
 
-The image ids the vault must hold are pinned below (EXPECTED_IDS, the table of e2e/crown/README.md, which the script
-also reads and compares when it is present); scripts/reproduce-image-ids.sh rebuilds the programs and prints the ids
-they really have.
+Nothing here pins an image id: a run's ids are its own, as its records give them (params.json, programs/ids.jsonl,
+LEZ session A's deployed programs), which must agree with each other, and the vault must hold them. A run of the final
+programs must have the ids of docs/image-ids.md, which any checkout rebuilds (scripts/reproduce-image-ids.sh); a run of
+earlier programs (crown-live-1) is named by the table of e2e/crown/README.md that lists its ids.
 """
 
 from __future__ import annotations
@@ -33,28 +34,9 @@ import urllib.request
 
 DEFAULT_RPC = "https://ethereum-sepolia-rpc.publicnode.com"
 CHAIN_ID = 11155111
-# The programs a run must have used. crown-live-1 ran programs built at the maintainer's checkout path (before guest
-# builds were path-independent); every later run, the final programs of e2e/crown/README.md's first table, which any
-# checkout rebuilds to the same ids (scripts/reproduce-image-ids.sh, docs/image-ids.md).
-RUN_IDS = {
-    "crown-live-1": {
-        "attestation": "0x2228bb462b83032ade1c5de62d381b8dcffe9d10d9e977dce9e9fc8da31467cf",
-        "bridge": "0x0e9dcd79482f9e0b83762b965d7e1d4319ffeba8a4bdfbdff148bbeaba79bbb6",
-        "checkpoint_b": "0xa475e8f9aaa41d0ae3bf9a20ae7d937ebc637a961808765f0ff175158760d3b2",
-        "checkpoint": "0xcf38b945a70b66d9132fb493b4baf1db308de73ccb8b1108e1c1f8a4363525e6",
-        "segment": "0xd2b30667292418ccf3cf68ee4fa2dc9ed7873de4034fcf1fb2ed3a6305a61cca",
-        "release": "0x17257f91bca70abf7a5476b498d687e95b6fb4d59e75b6bca1d46877ac9bf5cd",
-    },
-}
-FINAL_IDS = {
-    "attestation": "0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df",
-    "bridge": "0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd",
-    "checkpoint_b": "0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e",
-    "checkpoint": "0xb9c1e6a834879f6be79d09d728523565846018629b82f66986eb58fab4f52c84",
-    "segment": "0x11e888e94b9520b08477ba5c5c29cc46bdffc7b1e7c5fe822eb0776f40c54592",
-    "release": "0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9",
-}
-EXPECTED_IDS = FINAL_IDS  # set per run in main()
+# The run's programs by the names this script gives them; the guests' own names (docs/image-ids.md, programs/ids.jsonl)
+# map onto them. A run's ids come from its records only (the image ids check in main()).
+GUEST_KEYS = {"ferrata_lez": "attestation", "ferrata_bridge": "bridge"}
 CHECKPOINT_DOMAIN = "0xbdb3b52df781536a6bcce7088d156b3951a00a45ec8bcf2805ba8406fbeb5ec7"
 # The order of deploy.sh's transactions from the deployer's first nonce N (identity.json createAddresses).
 DEPLOY_STEPS = ["emergency stop", "FerrataRegistry library", "FerrataVault", "test token", "register ETH",
@@ -328,19 +310,50 @@ def commitment(chain_id: int, vault: bytes, depositor: bytes, j: int, kind: int,
     return hashlib.sha256(b"ferrata/C/v1" + s + bytes([kind]) + dest).digest()
 
 
-def readme_ids(path: str) -> dict:
-    """The image-id table of e2e/crown/README.md ("| Program | Image id |")."""
-    names = [("attestation program", "attestation"), ("bridge program", "bridge"), ("`checkpoint_b`", "checkpoint_b"),
-             ("`checkpoint`", "checkpoint"), ("`segment`", "segment"), ("release", "release")]
+def guest_key(name: str) -> str:
+    """A guest's name (`ferrata_lez`, `checkpoint_b.bin`, a path to it) as this script names the program."""
+    name = os.path.basename(name).removesuffix(".bin")
+    return GUEST_KEYS.get(name, name)
+
+
+def image_ids_md(path: str) -> dict:
+    """The final programs: docs/image-ids.md's table ("| Program | Image id | ..."), the guest's name last in the row's
+    first cell."""
     out = {}
     for line in open(path, encoding="utf-8"):
-        m = re.match(r"^\|\s*(.+?)\s*\|\s*`(0x[0-9a-f]{64})`\s*\|\s*$", line)
+        m = re.match(r"^\|[^|]*`(\w+)`\s*\|\s*`(0x[0-9a-f]{64})`\s*\|", line)
         if m:
+            out[guest_key(m.group(1))] = m.group(2)
+    return out
+
+
+def readme_tables(path: str) -> dict:
+    """The image-id tables of e2e/crown/README.md, by the run each is headed with ("**The programs of `RUN`**")."""
+    names = [("attestation program", "attestation"), ("bridge program", "bridge"), ("`checkpoint_b`", "checkpoint_b"),
+             ("`checkpoint`", "checkpoint"), ("`segment`", "segment"), ("release", "release")]
+    out, label, table = {}, None, None
+    for line in open(path, encoding="utf-8"):
+        m = re.match(r"^\*\*The programs of `([^`]+)`\*\*", line)
+        if m:
+            label = m.group(1)
+        if re.match(r"^\|\s*Program\s*\|\s*Image id", line) and label:
+            table = out.setdefault(label, {})
+            continue
+        if not line.startswith("|"):
+            table = None
+            continue
+        m = re.match(r"^\|\s*(.+?)\s*\|\s*`(0x[0-9a-f]{64})`\s*\|\s*$", line)
+        if m and table is not None:
             for prefix, key in names:
-                if m.group(1).startswith(prefix) and key not in out:
-                    out[key] = m.group(2)
+                if m.group(1).startswith(prefix) and key not in table:
+                    table[key] = m.group(2)
                     break
     return out
+
+
+def readme_ids(path: str) -> dict:
+    """The first image-id table of e2e/crown/README.md, the final programs' (scripts/reproduce/compare_ids.py)."""
+    return next(iter(readme_tables(path).values()), {})
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -388,12 +401,12 @@ def main() -> int:
     ap.add_argument("run", help="the run's records (e.g. e2e/runs/crown-live-1)")
     ap.add_argument("--rpc", default=os.environ.get("SEPOLIA_RPC_URL") or DEFAULT_RPC)
     here = os.path.dirname(os.path.abspath(__file__))
-    ap.add_argument("--readme", default=os.path.join(here, "..", "e2e", "crown", "README.md"))
+    ap.add_argument("--image-ids", default=os.path.join(here, "..", "docs", "image-ids.md"),
+                    help="the final programs' ids, which a run of the final programs must have")
+    ap.add_argument("--readme", default=os.path.join(here, "..", "e2e", "crown", "README.md"),
+                    help="its tables name the programs of earlier runs")
     a = ap.parse_args()
     R = a.run.rstrip("/")
-    global EXPECTED_IDS
-    run_name = os.path.basename(R)
-    EXPECTED_IDS = RUN_IDS.get(run_name, FINAL_IDS)
     rpc = Rpc(a.rpc)
     opt = lambda p: load(os.path.join(R, p)) if os.path.isfile(os.path.join(R, p)) else None  # noqa: E731
     run, idn, dep, params = opt("run.json") or {}, load(os.path.join(R, "identity.json")), opt("deploy.json"), opt("params.json")
@@ -425,35 +438,55 @@ def main() -> int:
         print(f"the endpoint {a.rpc} does not answer as Sepolia; nothing else checked (try another --rpc)")
         return 2
 
-    @check("image ids: e2e/crown/README.md's table = the ids pinned here = the run's records")
+    @check("image ids: the run's records agree (params.json, programs/ids.jsonl, LEZ session A); a run of the final "
+           "programs has docs/image-ids.md's")
     def _():
-        notes_ = []
-        if EXPECTED_IDS is not FINAL_IDS:
-            notes_.append(f"{run_name}: its own pinned ids (built at the maintainer's checkout path)")
-        elif os.path.isfile(a.readme):
-            t = readme_ids(a.readme)
-            need(t == EXPECTED_IDS, f"README table {t} differs from the pinned ids")
-            notes_.append("README table equal")
-        else:
-            notes_.append("README not found (pinned ids used)")
+        # The run's own ids, as it used them; every record that names a program must give it the same id.
+        ids: dict = {}
+        state["ids"], src, clash, notes_ = ids, {}, [], []
+
+        def rec(key: str, value: str, where: str) -> None:
+            v = value.lower()
+            need(re.fullmatch(r"0x[0-9a-f]{64}", v) is not None, f"{where}: {key} {value} is not an image id")
+            if key in ids and ids[key] != v:
+                clash.append(f"{key}: {src[key]} {ids[key]}, {where} {v}")
+            ids.setdefault(key, v)
+            src.setdefault(key, where)
         if params:
-            need(params["checkpointImageIdB"].lower() == EXPECTED_IDS["checkpoint_b"], "params checkpointImageIdB")
-            need(params["checkpointImageIdA"].lower() == EXPECTED_IDS["checkpoint"], "params checkpointImageIdA")
-            need(params["releaseImageId"].lower() == EXPECTED_IDS["release"], "params releaseImageId")
-            notes_.append("params.json equal")
+            for k, key in (("checkpointImageIdB", "checkpoint_b"), ("checkpointImageIdA", "checkpoint"),
+                           ("releaseImageId", "release")):
+                rec(key, params[k], "params.json")
+            notes_.append("params.json (checkpoint_b, checkpoint, release)")
+        pj = os.path.join(R, "programs", "ids.jsonl")
+        if os.path.isfile(pj):
+            rows = [json.loads(line) for line in open(pj, encoding="utf-8") if line.strip()]
+            for row in rows:
+                rec(guest_key(row["program"]), row["image_id"], "programs/ids.jsonl")
+            notes_.append(f"programs/ids.jsonl ({len(rows)})")
         if sa:
-            need(sa["attestation"]["imageId"].lower() == EXPECTED_IDS["attestation"], "session A attestation imageId")
-            need(sa["bridge"]["imageId"].lower() == EXPECTED_IDS["bridge"], "session A bridge imageId")
-            notes_.append("LEZ session A's deployed programs equal")
-        ids = os.path.join(R, "programs", "ids.jsonl")
-        if os.path.isfile(ids):
-            for line in open(ids, encoding="utf-8"):
-                if line.strip():
-                    row = json.loads(line)
-                    key = row["program"].removesuffix(".bin")
-                    need(row["image_id"].lower() == EXPECTED_IDS.get(key), f"programs/ids.jsonl {key} {row['image_id']}")
-            notes_.append("programs/ids.jsonl equal")
-        return ", ".join(notes_)
+            rec("attestation", sa["attestation"]["imageId"], "LEZ session A")
+            rec("bridge", sa["bridge"]["imageId"], "LEZ session A")
+            notes_.append("LEZ session A's deployed programs (attestation, bridge)")
+        if not ids:
+            raise Pending("no image ids recorded yet (params.json, programs/ids.jsonl, LEZ session A)")
+        need(not clash, "the run's records disagree: " + "; ".join(clash))
+        out = ", ".join(notes_) + " agree"
+        if not os.path.isfile(a.image_ids):
+            return out + f"; {a.image_ids} not found: the final programs not compared"
+        final = image_ids_md(a.image_ids)
+        common = [k for k in ids if k in final]
+        if not common:
+            return out + f"; none of its programs is in {a.image_ids}"
+        same = [k for k in common if ids[k] == final[k]]
+        if same:  # a run of the final programs: every program it names must be docs/image-ids.md's
+            need(len(same) == len(common), f"{len(same)} of {len(common)} ids are docs/image-ids.md's, the others not: "
+                 + "; ".join(f"{k} {ids[k]} ({src[k]}), docs/image-ids.md {final[k]}" for k in common if k not in same))
+            return out + f"; the final programs: {len(same)} of {len(common)} = docs/image-ids.md"
+        out += f"; not the final programs ({len(common)} of {len(common)} differ from docs/image-ids.md)"
+        tables = readme_tables(a.readme) if os.path.isfile(a.readme) else {}
+        named = [lb for lb, tb in tables.items() if any(k in tb for k in ids)
+                 and all(tb[k] == v for k, v in ids.items() if k in tb)]
+        return out + (f": e2e/crown/README.md's \"The programs of {named[0]}\"" if named else "")
 
     @check("deployment: every CREATE address from the deployer's nonces, code where a contract was created")
     def _():
@@ -476,14 +509,16 @@ def main() -> int:
         need(vault == addrs[2], "identity vault is not the third CREATE address")
         return "; ".join(out) + "; nonces N+4..N+6 are calls (no code)"
 
-    @check("vault immutables (eth_call) = README ids, configId, genesisState, rule (B), verifier, registry library")
+    @check("vault immutables (eth_call) = the run's image ids, configId, genesisState, rule (B), verifier, registry library")
     def _():
         code = rpc("eth_getCode", vault, "latest")
         need(len(code) > 2, "no runtime code at the vault")
         cp = word("checkpointImageId()")
         rl = word("releaseImageId()")
-        need(cp == EXPECTED_IDS["checkpoint_b"], f"checkpointImageId {cp} is not checkpoint_b's")
-        need(rl == EXPECTED_IDS["release"], f"releaseImageId {rl} is not release's")
+        ids = state.get("ids") or {}
+        need("checkpoint_b" in ids and "release" in ids, "no recorded checkpoint_b or release id (params.json, programs/ids.jsonl)")
+        need(cp == ids["checkpoint_b"], f"checkpointImageId {cp} is not the run's checkpoint_b {ids['checkpoint_b']}")
+        need(rl == ids["release"], f"releaseImageId {rl} is not the run's release {ids['release']}")
         mode = int(word("mode()"), 16)
         need(mode == 1, f"mode {mode}: not rule (B)")
         cfg, stored = word("lezConfigId()"), word("storedLezConfigId()")
@@ -676,11 +711,12 @@ def main() -> int:
         need(int(w[5], 16) == int(jw[13], 16) and w[6] == jw[14], "tip")
         dig = h(hashlib.sha256(b(crown["candidate"]["journal"])).digest())
         image = word("checkpointImageId()")
-        ok, err = rpc.call_ok(state.get("verifier") or "0x" + word("verifier()")[-40:], verify_call(crown["candidate"]["seal"], image, dig))
+        ver = state.get("verifier") or "0x" + word("verifier()")[-40:]  # also when the immutables check failed
+        ok, err = rpc.call_ok(ver, verify_call(crown["candidate"]["seal"], image, dig))
         need(ok, f"the verifier rejects the recorded seal: {err}")
         seal = crown["candidate"]["seal"]
         bad = seal[:-2] + ("00" if seal[-2:] != "00" else "01")
-        ok2, _ = rpc.call_ok(state["verifier"], verify_call(bad, image, dig))
+        ok2, _ = rpc.call_ok(ver, verify_call(bad, image, dig))
         need(not ok2, "the verifier accepts a changed seal (control failed)")
         return f"event = journal (tip {int(w[5], 16)}, delta {int(w[4], 16)} s); seal accepted for the vault's checkpointImageId, a changed seal refused"
 

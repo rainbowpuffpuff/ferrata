@@ -23,15 +23,16 @@ endpoint that does not answer as Sepolia stops it after the first check with exi
 reached but the records predate (records fetched mid-run) is checked from the chain. It
 uses only read methods (`eth_chainId`, `eth_getCode`, `eth_getBalance`, `eth_getTransactionCount`,
 `eth_getTransactionByHash`, `eth_getTransactionReceipt`, `eth_getLogs`, `eth_getBlockByNumber`, `eth_call`), computes
-Keccak-256 itself, and needs nothing from this repository but the records (and, if present, `e2e/crown/README.md`,
-whose id table it compares with the ids pinned in the script).
+Keccak-256 itself, and needs nothing from this repository but the records (and, if present,
+[`docs/image-ids.md`](../image-ids.md), the final programs' ids, and `e2e/crown/README.md`, whose tables name the
+programs of earlier runs). It pins no image id: a run's ids are the ones its own records give.
 
 | Check | What a PASS proves | What it still trusts |
 |---|---|---|
 | chain | the endpoint serves Sepolia (chain id 11155111); prints head and finalized block | the endpoint (use your own node to remove it) |
-| image ids | the README table, the run's `params.json`, `programs/ids.jsonl` and the ids LEZ session A deployed are one set of six ids | nothing on chain yet: the next checks tie them to the vault, and section 2 ties them to source |
+| image ids | the run's own records give each program one id: `params.json` (`checkpoint_b`, `checkpoint`, release), `programs/ids.jsonl` as the run used them, and the ids LEZ session A deployed (attestation, bridge); a run of the final programs (any of its ids in [`docs/image-ids.md`](../image-ids.md)) has docs/image-ids.md's id for every program it names, or the check fails; a run of earlier programs is named by the table of `e2e/crown/README.md` that lists its ids (`crown-live-1`: "The programs of crown-live-1") | nothing on chain yet: the next checks tie them to the vault, and section 2 ties them to source |
 | deployment | each contract is at CREATE(deployer, N + i) for deploy.sh's seven nonces, code exactly where a contract was created: the emergency stop, the FerrataRegistry library, the vault and the test token were deployed by the deployer in that order | |
-| vault immutables | the vault's `checkpointImageId` is `checkpoint_b`'s id and its `releaseImageId` the release program's (the table's); `mode` is rule (B); `lezConfigId` = slot 2 = the run's configId; `genesisState` the run's; `nMin`/`tMin`; its verifier is the deployed emergency stop wrapping RISC Zero's Groth16 verifier; the FerrataRegistry library's address is linked into the vault's code; the fee recipient | that `0x8f0A…A2A0` is RISC Zero's verifier: its code can be compared with `risc0-ethereum` v3.0.0's build (not done here) |
+| vault immutables | the vault's `checkpointImageId` is `checkpoint_b`'s id and its `releaseImageId` the release program's (the run's, as its records give them); `mode` is rule (B); `lezConfigId` = slot 2 = the run's configId; `genesisState` the run's; `nMin`/`tMin`; its verifier is the deployed emergency stop wrapping RISC Zero's Groth16 verifier; the FerrataRegistry library's address is linked into the vault's code; the fee recipient | that `0x8f0A…A2A0` is RISC Zero's verifier: its code can be compared with `risc0-ethereum` v3.0.0's build (not done here) |
 | configId and genesisState recomputed | sha256 of the 261-byte configuration preimage from LEZ session A's records equals the configId the vault holds; `bedrockGenesisId` = sha256 of the deployment settings; the genesis state recomputed from the tip T0 and the channel's key set equals the vault's | the LEZ devnet's records (no public LEZ network exists to read them from): the proof in the next checks is what binds them |
 | every recorded transaction | each transaction in `manifest.json` has a receipt with status 1, in the recorded block, from the deployer, to the vault, with the recorded gas used; says whether its block is finalized | |
 | deployer's nonce | the deployer sent exactly the seven deployment transactions plus the recorded ones (or reports how many later ones) | |
