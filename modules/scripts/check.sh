@@ -177,6 +177,9 @@ native_daemons() {
 prepare_build() {
   local m b
   for m in $MODULES; do
+    # LogosModule.cmake reads metadata.json into a CMake string unquoted: a ';' splits it and the JSON
+    # no longer parses ("logos_module: NAME is required"), after the whole Rust build.
+    if grep -q ';' "$repo/modules/$m/metadata.json"; then echo "check.sh: $m/metadata.json contains ';'" >&2; return 1; fi
     b="$out/build-$m"
     rm -rf "$b"
     mkdir -p "$b"

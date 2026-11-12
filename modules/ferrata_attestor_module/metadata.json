@@ -5,7 +5,7 @@
   "type": "core",
   "interface": "cdylib",
   "category": "bridge",
-  "description": "Ferrata (prototype): ferrata_attestor as a module, the rule (B) signer a LEZ sequencer runs beside its Logos Blockchain node (reads the node's final tier, checks the channel's inscription chain, signs the final-tier message v2 with a key its channel key certified; once or as a loop) and the collector of t of n attestations into a checkpoint_b input",
+  "description": "Ferrata (prototype): ferrata_attestor as a module, the rule (B) signer a LEZ sequencer runs beside its Logos Blockchain node (reads the node's final tier, checks the channel's inscription chain, signs the final-tier message v2 with a key its channel key certified, once or as a loop) and the collector of t of n attestations into a checkpoint_b input",
   "main": "ferrata_attestor_module_plugin",
   "dependencies": [],
 
