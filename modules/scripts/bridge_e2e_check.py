@@ -111,7 +111,8 @@ md = ["| group | check | ok | detail |", "|---|---|---|---|"]
 md += [f"| {a} | {b_} | {c_} | {d_} |" for a, b_, c_, d_ in rows]
 md.append(f"\n{len(rows) - failures} of {len(rows)} checks passed.")
 (out / "bridge_e2e.md").write_text("\n".join(md) + "\n")
-(out / "bridge_e2e.json").write_text(json.dumps({"checks": len(rows), "failures": failures,
-                                                  "rows": [dict(zip(("group", "check", "ok", "detail"), x)) for x in rows]}, indent=1) + "\n")
+mode = (out / "mode.txt").read_text().strip() if (out / "mode.txt").exists() else ""
+(out / "bridge_e2e.json").write_text(json.dumps({"mode": mode, "checks": len(rows), "failed": failures,
+                                                  "rows": [dict(zip(("group", "check", "passed", "detail"), x)) for x in rows]}, indent=1) + "\n")
 print("\n".join(md))
 sys.exit(1 if failures else 0)
