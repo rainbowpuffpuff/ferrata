@@ -3,7 +3,8 @@
 # /work/ferrata at run time and run scripts/reproduce/check.sh there; `scripts/reproduce-image-ids.sh docker` uses
 # the image for the guests alone. The paths do not matter to the image ids (scripts/guest-rustc remaps them); /work
 # is a neutral choice. x86-64 only (RISC Zero's toolchains). What is pinned, each checked while the image builds:
-#   Ubuntu 24.04 by digest; its packages from Ubuntu's snapshot archive of 10 November 2026;
+#   Ubuntu 24.04 by digest (its packages are the archive's of the day the image is built: check.sh writes their
+#     versions to packages.txt; the image ids do not depend on them, the guests are built by the toolchains below);
 #   rustup 1.29.3 (sha256); Rust 1.93.0 (the default: the workspace, checkpoint/, bridge/), 1.98.1 (lez/ and cli/ pin
 #     it), 1.88 (checkpoint/'s `cargo +1.88`);
 #   rzup 0.5.2 (crates.io, --locked: the rzup risc0-build 3.0.5 links; the installer at risczero.com fetches whatever
@@ -17,14 +18,9 @@ ENV HOME=/home/builder RUSTUP_HOME=/home/builder/.rustup CARGO_HOME=/home/builde
     DEBIAN_FRONTEND=noninteractive \
     PATH=/home/builder/.cargo/bin:/home/builder/.risc0/bin:/home/builder/.foundry/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-# System packages, from the snapshot (ca-certificates first, from the live archive, to reach it over https).
-# libpcsclite-dev is for cli/ (LEZ's wallet crates), the rest for the builds of every workspace and the scripts.
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
-    && rm -f /etc/apt/sources.list.d/ubuntu.sources /etc/apt/sources.list \
-    && printf '%s\n' 'Types: deb' 'URIs: https://snapshot.ubuntu.com/ubuntu/20261110T000000Z' \
-       'Suites: noble noble-updates noble-security' 'Components: main universe' \
-       'Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg' > /etc/apt/sources.list.d/snapshot.sources \
-    && apt-get update && apt-get install -y --no-install-recommends ca-certificates curl build-essential pkg-config \
+# System packages. libpcsclite-dev is for cli/ (LEZ's wallet crates), the rest for the builds of every workspace and
+# the scripts. (Ubuntu's snapshot archive would pin them by date, but served about 60 KB/s on 12 November 2026.)
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl build-essential pkg-config \
        libssl-dev git protobuf-compiler libprotobuf-dev clang libclang-dev llvm lld cmake ninja-build zstd rsync jq \
        unzip xz-utils file libudev-dev libpcsclite-dev libsqlite3-dev perl m4 nasm libgmp-dev python3 time procps \
     && rm -rf /var/lib/apt/lists/* && mkdir -p $HOME /work/upstream
@@ -43,7 +39,8 @@ RUN cargo install rzup --version 0.5.2 --locked && rm -rf $CARGO_HOME/registry $
          RISC0_HOME=$h rzup install cargo-risczero 3.0.5 && (RISC0_HOME=$h rzup install r0vm 3.0.5 || true) \
          && RISC0_HOME=$h rzup install cpp 2024.1.5 || exit 1; done \
     && rzup install rust 1.88.0 && RISC0_HOME=$RISC0_HOME_LEZ rzup install rust 1.91.1 \
-    && rzup show && RISC0_HOME=$RISC0_HOME_LEZ rzup show && r0vm --version | grep -q 3.0.5 && cargo risczero --version
+    && rzup show && RISC0_HOME=$RISC0_HOME_LEZ rzup show \
+    && { r0vm --version | grep 3.0.5 && cargo risczero --version || { find $HOME/.risc0 -maxdepth 3; exit 1; }; }
 
 # Foundry, then solc fetched once by forge (vault/foundry.toml keeps forge offline) and checked.
 RUN mkdir -p $FOUNDRY_DIR/bin && cd $FOUNDRY_DIR && curl -sSfL -o foundry.tar.gz \
@@ -55,7 +52,8 @@ RUN mkdir -p $FOUNDRY_DIR/bin && cd $FOUNDRY_DIR && curl -sSfL -o foundry.tar.gz
     && printf '// SPDX-License-Identifier: MIT\npragma solidity 0.8.26;\ncontract W {}\n' > src/W.sol \
     && forge build && cd / && rm -rf /opt/solc-warm \
     && s="$(ls $HOME/.svm/0.8.26/solc-0.8.26 $HOME/.local/share/svm/0.8.26/solc-0.8.26 2>/dev/null | head -n 1)" \
-    && echo "d5f23436f443edb85d8e76906d12f0a86ce0490e7663a9e608efeb7a93f149ef  $s" | sha256sum -c -
+    && { echo "d5f23436f443edb85d8e76906d12f0a86ce0490e7663a9e608efeb7a93f149ef  $s" | sha256sum -c - \
+         || { find $HOME -name 'solc*'; exit 1; }; }
 
 # The upstream trees beside the checkout, where scripts/fetch-upstream.sh puts them (run again, it only checks them).
 RUN for spec in v0.4.0-rc1:1806e873ea2ac0e1b608aa7cf2f9b6e1fb12db21 v0.4.0-rc2:e3edf47402a82557103ca719b30d0bd2684338d1; do \

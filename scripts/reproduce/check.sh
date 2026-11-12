@@ -19,7 +19,7 @@
 #                   -- --test-threads 1   (FERRATA_HARNESS_THREADS changes the 1)
 #
 # Exit 0 when every check run passed. DIR (default target/reproduce/<UTC time>) gets one log per check,
-# environment.txt (the versions), tree-changed.txt (committed files the checks rewrote) and summary.txt.
+# environment.txt and packages.txt (the versions), tree-changed.txt (committed files the checks rewrote), summary.txt.
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SRC="$(cd "$HERE/../.." && pwd)"
@@ -73,6 +73,7 @@ TOOLS="rust ${RUSTS:-?} (default $(rustc --version | ver)); RISC Zero r0vm $(r0v
   echo "packages: $(dpkg-query -W -f '${Package} ${Version}; ' clang libclang-dev cmake protobuf-compiler libssl-dev \
     libpcsclite-dev libsqlite3-dev git curl python3 2>/dev/null)"
 } > "$OUT/environment.txt" 2>&1
+dpkg-query -W -f '${Package}=${Version}\n' > "$OUT/packages.txt" 2> /dev/null
 
 # Every file of the tree before the checks, to say afterwards which committed files they rewrote.
 ( cd "$SRC" && find . \( -name .git -o -name target -o -name node_modules -o -path ./vault/lib -o -path ./vault/out \
