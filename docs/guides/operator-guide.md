@@ -537,8 +537,8 @@ fees owed). See [`admin/README.md`](../../admin/README.md) for each value's gett
 
 The vault and the checkpoint program parse LEZ v0.4 blocks; a LEZ change they cannot follow (including a
 change of turn or slot length) needs a retirement first. The freeze authority, or **anyone once no
-checkpoint has finalised for 30 days**, calls `retire()` on the vault; the freeze authority sends `Sunset`
-on LEZ (permissionless `Sunset` is **not built** on LEZ). After that: no deposits, no root imports;
+checkpoint has finalised for 30 days**, calls `retire()` on the vault; on LEZ the freeze authority sends `Sunset`,
+or anyone does once the vault's `retired` flag is attested there (the keyless `Sunset`, EVIDENCE row 74). After that: no deposits, no root imports;
 claims against imported roots, burns, checkpoints and releases continue. The first non-revoked final
 checkpoint carrying the sunset sets the refund boundary at its imported leaf count; once its revocation
 window has passed, anyone can refund each unimported deposit to its depositor. Operators keep proving

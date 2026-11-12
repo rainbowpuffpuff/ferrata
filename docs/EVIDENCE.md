@@ -151,10 +151,13 @@ side is a devnet we ran (LEZ testnet 0.4 does not exist).
   the toolchains has not been built by us (no Docker on the build box).
 - **Privacy** (row 23) is measured in dev mode with a mock verifier on synthetic records; timing and
   amount residuals, network metadata and LEZ's own anonymity set are outside it.
-- **Not built** (README, "Specified but not built"): among them `ferrata_attestor`, the bridge Logos
-  module, the gas drop, watchers' software, a permissionless `Sunset` on LEZ. Nothing is audited: the static
+- **Not built** (README, "Specified but not built"): among them `ferrata_attestor`, `monitor` and the
+  updater as Logos modules, the updater's backend for a running sequencer, the mini-app's private round trip
+  through a LEZ sequencer, reads and sends through Logos Core's own modules, a published module catalog. Nothing is audited: the static
   analysis, symbolic checks, fuzzing and the core's review (rows 1, 35, 36 and 40) are tooling, not an audit; the
-  Halmos properties hold from one concrete fixture state within stated bounds, and four of them are not proven.
+  Halmos properties hold from one concrete fixture state within stated bounds; of the four not proven in 900 s,
+  one passed with 4,800 s in its generic layout and three did not finish
+  ([`release-engineering.md`](release-engineering.md)).
 
 ## Suites at this commit
 
