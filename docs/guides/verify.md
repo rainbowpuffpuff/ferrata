@@ -107,12 +107,16 @@ LEZ ran the bridge program this source builds, so reading the source is reading 
 the source is correct (that is the tests', the reviews' and an audit's job).
 
 **Proven on our build box** (a Modal CPU container; it has no Docker, so `build` ran there directly; the Dockerfile
-itself has not been built): run on the Modal build box, 11 Nov 2026 23:03–23:09Z (`spike`-side script `twopath.sh`, logs outside the repository): build A with the tree at `/build/a/ferrata` and `HOME=/build/home-a`, build B with the tree at `/build/elsewhere/deeper/checkout-b`, `HOME=/build/users/other-home` and real copies of `~/.risc0` and of the LEZ RISC Zero home at other paths, both from a fresh target directory, in parallel (225 s and 227 s once the cargo registry was warm); their dep-info files show each compiled from its own paths (1,363 and 1,368 references to the tree, 17,190 and 17,322 to the cargo home), no binary names either build's tree, `HOME` or the box's own paths, and `ids.tsv` of A and B are identical: 14 of 14 guests with the same image id, R0BF binary and user ELF, byte for byte; the crown run's six programs and the four R0BF files compared with `cmp`, equal.
+was built later, below): run on the Modal build box, 11 Nov 2026 23:03–23:09Z (`spike`-side script `twopath.sh`, logs outside the repository): build A with the tree at `/build/a/ferrata` and `HOME=/build/home-a`, build B with the tree at `/build/elsewhere/deeper/checkout-b`, `HOME=/build/users/other-home` and real copies of `~/.risc0` and of the LEZ RISC Zero home at other paths, both from a fresh target directory, in parallel (225 s and 227 s once the cargo registry was warm); their dep-info files show each compiled from its own paths (1,363 and 1,368 references to the tree, 17,190 and 17,322 to the cargo home), no binary names either build's tree, `HOME` or the box's own paths, and `ids.tsv` of A and B are identical: 14 of 14 guests with the same image id, R0BF binary and user ELF, byte for byte; the crown run's six programs and the four R0BF files compared with `cmp`, equal.
 
 **Again at a third path** (walkthrough, 12 Nov 2026, the Modal build box, the tree at another directory, the LEZ
 RISC Zero home freshly installed by `install-risc0.sh` into a new directory): `build` 3 min 32 s, `compare` 14 of 14
 guests equal to `docs/image-ids.md` and 6 of 6 crown programs equal to `e2e/crown/README.md`'s table; with
 `--vault 0xfE3199fa…9E54`, 4 of 6 (`checkpoint_b` and `release` are crown-live-1's, as said above).
+
+**In the pinned image** (12 Nov 2026, [`scripts/reproduce/`](../../scripts/reproduce/README.md) on Modal: the
+Dockerfile built as an image, the tree at `/work/ferrata`): `build` and `compare`, 14 of 14 guests and 6 of 6 crown
+programs equal.
 
 **The first live run, `crown-live-1`**, ran programs built before the wrapper existed, at the maintainer's checkout
 path on the build box: those ids (`e2e/crown/README.md`, "The programs of crown-live-1") reproduce only from that
