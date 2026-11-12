@@ -18,7 +18,7 @@ opening sections).
 |---|---|---|---|---|
 | The starting checkpoint of an attestation instance | that the instance follows the real Ethereum | a false chain from the start | anyone can compare the checkpoint root with public Ethereum before relying on the instance | §2.1 |
 | The vault's deployment parameters: `genesisState` (the starting key set, turn length and tip), `lezConfigId`, the image ids, `turnSeconds`, `nMin`/`tMin` | that the vault follows the real LEZ channel from the right state with the right programs | a false LEZ history or program accepted from the start | anyone can check them before depositing: the channel's public state, `configId`'s preimage (it binds the vault's address), reproducible builds of the guests; the deployment script checks none of them and accepts `nMin = tMin = 1` (testnets only: it refuses every chain but anvil, Sepolia, Hoodi and Holesky) | §3.2, §4 |
-| Two thirds of each 512-member sync committee | that every recorded header was finalized | forged records: facts about blocks that never existed are attested | consumer caps and freezes; `monitor`'s alarm (not built) | §2.2 |
+| Two thirds of each 512-member sync committee | that every recorded header was finalized | forged records: facts about blocks that never existed are attested | consumer caps and freezes; the attestation side's `monitor` alarm (not built) | §2.2 |
 | Fewer than `t` of the LEZ channel's accredited keys are an attacker's, in every key set the checkpoint program used | validity of every burn root the vault accepts (both rules) | `t` keys can forge a burn root | the public wait, watchers, the release delay and revocation, release caps | §3.2 |
 | Logos Blockchain: no reorganisation deeper than `k` on the attestors' nodes | finality of accepted burn roots under rule (B) | a released burn is later undone on LEZ | the same | §3.3 |
 | Rule (A)'s conditions F1–F4, or else a live, uneclipsed watcher | finality under rule (A) | as above, with fewer than `t` keys or none | the same; outside F1–F4 the watchers are trusted for safety | §3.4 |
@@ -56,16 +56,19 @@ finalized checkpoint a public beacon API reported, which a second provider repor
 **How a verifier confirms it independently.** By comparing the checkpoint's block root with several
 independent beacon providers and with its own node, and checking that the chain id and
 `genesis_validators_root` belong together (the program cannot: nothing a light client verifies commits
-to the execution chain id). `verify_checkpoint` will do this (at least three providers and
-`verified_proxy_module`'s finalized block) and is **not built**
-([`attestation.md`](design/attestation.md) §11.4; [`lez/RESULTS.md`](../lez/RESULTS.md) §5, "Decisions" 1).
+to the execution chain id). `verify_checkpoint`, a method of `ferrata_attest_module`, recomputes the instance id, runs the
+program's `Init` checks on the bootstrap and compares the roots it is given ([EVIDENCE](EVIDENCE.md) row 59,
+[`modules/README.md`](../modules/README.md)); fetching them from at least three providers and
+`verified_proxy_module`'s finalized block is **not built** ([`attestation.md`](design/attestation.md) §11.4; [`lez/RESULTS.md`](../lez/RESULTS.md) §5, "Decisions" 1).
 
 **Weak subjectivity.** An instance that falls outside the weak-subjectivity period must be replaced from
 a fresh checkpoint under a new root id: a new trust decision. In the design the bound is fixed per
 instance (about two weeks on mainnet) and an update too far past the finalized slot is refused, with no
-clock. **Not built:** neither the program nor the core enforces a bound today, so an instance can be
-advanced from an old checkpoint, one period at a time, by any chain of handoffs its committees signed
-([`attestation.md`](design/attestation.md) §3.6, §4.6).
+clock. **Built** ([EVIDENCE](EVIDENCE.md) rows 69, 70): the core implements consensus-specs'
+`compute_weak_subjectivity_period` and `is_within_weak_subjectivity_period` against the store's finalized
+header, a store past its period refuses every update (53) and is recovered only by a new bootstrap, and
+the program applies the bound by the sequencer's clock. The alarm before an instance runs out (the
+attestation side's `monitor`) is not built ([`attestation.md`](design/attestation.md) §3.6, §4.6).
 
 ### 2.2 Two thirds of each sync committee
 
@@ -98,8 +101,9 @@ supply then exceeds escrow by at most what the caps let through ([`bridge.md`](d
 "Supply"). Those caps and freezes run on attested Ethereum time, the execution timestamp of a record,
 and a record moves a clock only in a LEZ block stamped at or after it: a captured committee's
 far-future record refills no bucket and ends no freeze unless a block producer also stamps its block
-that far ahead ([`lez/BRIDGE.md`](../lez/BRIDGE.md) §6). `monitor`, which compares records with several providers' canonical roots and feeds consumers'
-freeze authorities, is **not built** ([`attestation.md`](design/attestation.md) §11.3). A deeper inbound
+that far ahead ([`lez/BRIDGE.md`](../lez/BRIDGE.md) §6). The attestation side's `monitor`, which would compare records with several providers' canonical roots
+and feed consumers' freeze authorities, is **not built** (the watchers' `monitor` of the return leg is:
+EVIDENCE rows 43–45) ([`attestation.md`](design/attestation.md) §11.3). A deeper inbound
 finality setting would not help: it delays honest claimants, not a captured committee
 ([`bridge.md`](design/bridge.md) §5.4).
 
@@ -137,7 +141,8 @@ the chain id in its identifier ([`attestation.md`](design/attestation.md) §2, �
   was read and the consumer's program, and a private call publishes its query (RFP-021, "What the
   attestation does not do");
 - anything about LEZ state on Ethereum (that is the bridge's return leg, §3);
-- freshness relative to the weak-subjectivity period (not built, §2.1).
+- freshness relative to the weak-subjectivity period, beyond what the bound enforces (a store past its
+  period refuses every update; a record's own age is not bounded: §2.1).
 
 ### 2.4 Off-chain participants of the light client
 
@@ -145,7 +150,7 @@ the chain id in its identifier ([`attestation.md`](design/attestation.md) §2, �
 |---|---|---|---|---|---|
 | Any submitter or prover | updates | liveness only | refused: signatures are checked | anyone else submits | public data |
 | Beacon and execution providers | light-client data, proofs, receipts | liveness only | refused: checked against signatures and records | another provider, or your own node | which blocks are fetched |
-| Checkpoint source | each fresh checkpoint | **safety**, until checked | a false root; `verify_checkpoint` (not built) or a manual comparison catches it | nothing to stop | nothing |
+| Checkpoint source | each fresh checkpoint | **safety**, until checked | a false root; `verify_checkpoint` (built, without fetching: §2.1) or a manual comparison catches it | nothing to stop | nothing |
 | LEZ sequencers | inclusion, block timestamps | liveness only: the bridge's LEZ-side clock is attested Ethereum time, which a producer can delay (by leaving out a `Tick`) but not move ([`lez/BRIDGE.md`](../lez/BRIDGE.md) §6) | cannot forge a record | the zone stops | public transactions |
 | Deployer | the immutable deployment | nothing after deployment | — | — | nothing |
 
@@ -266,16 +271,19 @@ From [`vault/README.md`](../vault/README.md), "Roles"; [`bridge.md`](design/brid
 | **Emergency stop** (RISC Zero's `RiscZeroVerifierEmergencyStop`) | stop every proof-gated call for good | be tripped by anyone holding a key: its owner is renounced at deployment, so only `estop(receipt)`, RISC Zero's proof of unsoundness, trips it | — | — |
 | **Anyone** | deposit; submit and finalise checkpoints with proofs; record beacons; release with a proof; refund once allowed; apply a role proposal after 14 days; retire after 30 days without checkpoint progress (no submission or finalisation; freezes and pauses do not count), or once a sunset checkpoint can no longer be revoked | — | — | — |
 
-On LEZ, the roles are accounts fixed in the configuration; the 14-day replacement, watchers and the
-permissionless `Sunset` are **not built** there, and neither is a multisig freeze authority
-([`lez/BRIDGE.md`](../lez/BRIDGE.md) §4 item 9; [`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md) §9).
+On LEZ the same controls are built ([EVIDENCE](EVIDENCE.md) row 74; harness, dev mode): the freeze
+authority's 14-day handover (proposed, applied by anyone once 14 days of attested Ethereum time have
+passed, cancellable), an M-of-N freeze authority (`Cosigned`: one transaction all signers sign), watchers'
+12-hour pauses and the keyless `Sunset` (anyone attests the vault's `retired` flag)
+([`lez/BRIDGE.md`](../lez/BRIDGE.md) §2, §5; [`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md) §14). The admin's own
+handover on LEZ is not built ([README](../README.md#specified-but-not-built), "Specified but not built").
 
 **Off-chain participants of the bridge** (after [`bridge.md`](design/bridge.md) §6, §12.3, §14):
 
 | Who | Provides | If it lies | If it stops | Learns |
 |---|---|---|---|---|
 | Root importer | one attestation per record | refused by the primitive | anyone else imports | public data |
-| Relayer | gas drops (not built), submission | cannot redirect or overcharge: proofs bind destination, recipient and fee | the user picks another or submits directly | a time, a one-time address, the transaction it submits |
+| Relayer | gas drops (the receipt and one credit per `N` built, EVIDENCE rows 47, 48; the sealed credit's sweep not built), submission | cannot redirect or overcharge: proofs bind destination, recipient and fee | the user picks another or submits directly | a time, a one-time address, the transaction it submits |
 | Checkpoint prover | candidate and finalisation proofs | refused by the vault | anyone with a prover and an x86 machine; a backlog is proven in pieces | public data |
 | Release wrapper | the Groth16 wrap | refused by the vault | another wrapper, or the user's own x86 machine | what the release publishes |
 | Accredited sequencers | LEZ blocks; attestations under (B) | `t` of them can forge a burn root (§3.5 bounds it) | the zone stops; finalisation needs `t` live keys under (B), `t + 1` under (A) | public transactions |
@@ -344,10 +352,10 @@ Nothing runs itself; every state change is a transaction someone pays for
 | `ImportRoot` | anyone, as a top-level call or private root (the bridge refuses a nested or asynchronous import, which the checkpoint could not count; security review H-1) | depositors want to claim; relayers earn relay fees on claims | yes |
 | `submitCandidate`, `finalize` / `finalizeAttested` | anyone with a prover | the **checkpoint fee** of every release against that root goes to the candidate's prover, the sender of `submitCandidate` (not of the finalisation, which under rule (B) needs no proof) | yes (vault v5; prover since the security fixes of 11 November) |
 | `recordBeacon` (rule (A)) | anyone, typically the finaliser | needed for its finalisation | yes |
-| relaying claims and releases | relayers | the registered relay fee, bound by the proof (a plaintext claim's relayer is a free field: whoever gets a copy of it included first takes its relay fee, at most 1% of the denomination; the private claim binds the relayer inside the proof; security review L-4, not changed) | fee yes; relayer service no |
-| `cancelCandidate`, `pauseCheckpoints` | watchers | appointed by the admin; no fee | vault side yes; `monitor` no |
+| relaying claims and releases | relayers | the registered relay fee, bound by the proof (a plaintext claim's relayer is a free field: whoever gets a copy of it included first takes its relay fee, at most 1% of the denomination; the private claim binds the relayer inside the proof; security review L-4, not changed) | fee yes; the relayer daemon `ferrata-relayer` yes (EVIDENCE rows 46, 48: on a Sepolia fork) |
+| `cancelCandidate`, `pauseCheckpoints` | watchers | appointed by the admin; no fee | vault side yes; `monitor` yes (EVIDENCE rows 43–45: a local chain and a Sepolia fork), not yet as a Logos module |
 | `refund` after retirement | anyone, typically the depositor | it pays the depositor named in the leaf | yes |
-| `retire()` after 30 days without checkpoint progress, or after an irrevocable sunset checkpoint | anyone | to open refunds | yes (vault); LEZ `Sunset` by the freeze authority only |
+| `retire()` after 30 days without checkpoint progress, or after an irrevocable sunset checkpoint | anyone | to open refunds | yes (vault); LEZ `Sunset` by the freeze authority, or by anyone once the vault's `retired` flag is attested (EVIDENCE row 74) |
 
 Whether the fees cover the callers' gas at the deployer's chosen levels is **not measured**; the fee
 levels are the deployer's choice ([`deployer-guide.md`](guides/deployer-guide.md) §2).
@@ -362,14 +370,14 @@ transaction dumps of [`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md) §3 and
 | Correlation | What it reveals | Mitigation |
 |---|---|---|
 | amount and token | narrows a claim to deposits of that token and denomination | fixed denominations, at most eight per token, default three |
-| timing | deposit-to-claim and burn-to-release intervals | the client proposes a delay (not built) |
+| timing | deposit-to-claim and burn-to-release intervals | the client proposes a delay (the `ferrata` tool and the mini-app: a claim delay of 1–12 h from the seed, a random release delay; EVIDENCE rows 84, 86) |
 | the root a claim reads | the deposit is at least that old | read the newest root |
 | a retry after a cap rejection | the first attempt's time | the client checks caps before proving |
 | a fee-schedule change | splits sets by date: the claim's fee range shows which schedule applied | schedules change rarely, with 7 days' notice |
-| the fee payer of a private transaction | the payer appears as a fresh alias with its reserve in plaintext; a first claim funded from a faucet or a purchase links to that source until the gas drop exists | fixed reserve per operation type; gas drop (not built) |
+| the fee payer of a private transaction | the payer appears as a fresh alias with its reserve in plaintext; a first claim funded from a faucet or a purchase links to that source until the gas drop exists | fixed reserve per operation type; gas drop (its receipt and the relayer's credit built, EVIDENCE rows 47, 48; the sealed credit to a private one-time account and its sweep not built) |
 | a private read of a record | which record and which consumer program | read the newest record; hop inside the proof |
 | the plaintext claim | which deposit paid which mint | private by default; the client warns before allowing it |
-| network metadata | IP addresses to RPC endpoints and sequencers | out of scope; editable endpoints (U.9, not built) |
+| network metadata | IP addresses to RPC endpoints and sequencers | out of scope; editable endpoints (U.9: the mini-app's, EVIDENCE row 62) |
 | an adversary's own deposits | subtracted from any anonymity set | none |
 
 **Who handles user data (Privacy #4).** Only the wallet holds the seed, `s`, `C`'s opening, destinations,
@@ -406,7 +414,17 @@ publishes; RPC providers which blocks are fetched (recovery downloads whole list
 
 ## 10. Not built, and therefore not yet part of the guarantee
 
-`verify_checkpoint`; the weak-subjectivity bound; successors and root ids; `monitor`; the rule (B)
-attestor module; LEZ-side watchers, multisig roles, 14-day replacement and permissionless `Sunset`; the
-gas drop; the audit. Sources: [`attestation.md`](design/attestation.md) §15;
-[`bridge.md`](design/bridge.md) §19; [`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md) §9.
+`verify_checkpoint`'s fetching from several providers; the attestation side's `monitor` (records against
+several providers, the weak-subjectivity alarm); `ferrata_attestor` and the watchers' `monitor` as Logos
+modules (both programs are built), and `monitor`'s client of the LEZ and Logos Blockchain nodes' RPCs;
+consumers bound to the root id (the bridge, `ferrata_holdings` and the reference consumer still pin an
+instance); on LEZ, the admin's own handover; the gas drop's sealed credit to a private one-time account
+and its sweep inside the private claim; a rule (B) zone with a bridge program and a rotation its
+committee proposes; the audit. Sources: [README](../README.md#specified-but-not-built), "Specified but not
+built"; [`attestation.md`](design/attestation.md) §15; [`bridge.md`](design/bridge.md) §19;
+[`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md) §9.
+
+Built since this list's first draft, with their evidence: the weak-subjectivity bound, successors and root
+ids ([EVIDENCE](EVIDENCE.md) rows 69, 70); the watchers' `monitor` (rows 43–45); the rule (B) attestor
+program (rows 63–68); on LEZ, watchers, an M-of-N freeze authority, the 14-day handover and the keyless
+`Sunset` (row 74); the gas-drop receipt (rows 47, 48).
