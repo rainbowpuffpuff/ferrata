@@ -592,6 +592,12 @@ impl Devnet {
             "module.submit" => self.module_submit(params).await,
             "module.vault_roots" => self.module_vault_roots(params).await,
             "module.vault_release" => self.module_vault_release(params).await,
+            // ferrata_relayer_module's end-to-end test (modules/scripts/relayer-e2e.sh): the zone's reads, and
+            // the light client's finality update stood in; the relayer builds, checks and sends its imports
+            // itself (submitted with module.submit).
+            "zone.applied" => self.zone_applied(params).await,
+            "zone.actor_state" => self.zone_actor_state(params),
+            "lc.finalize" => self.lc_finalize(params).await,
             other => bail!("unknown method {other}"),
         }
     }
@@ -1390,6 +1396,7 @@ impl Devnet {
             "settled": report.ok(),
             "private": false,
             "what": what,
+            "block": self.zone.world.chain.block_id - 1,
             "exit_code": report.exit_code,
             "gas_exec": report.charge.gas_exec,
             "gas_stor": report.charge.gas_stor,
@@ -1460,6 +1467,116 @@ impl Devnet {
             "paid_wei": u256_str(paid),
             "release_image_id": release_image.to_string(),
             "stand_in": "the release proof's Groth16 wrap: the mock verifier accepts the exact journal",
+        }))
+    }
+}
+
+impl Devnet {
+    /// The zone's applied calls of `program` and the public accounts settled private transactions named:
+    /// what a relayer reads from a sequencer's blocks (`lez::Ledger::applied_with_private`).
+    async fn zone_applied(&self, params: &Value) -> Result<Value> {
+        let program = AccountId::new(ferrata_cli::h32(params["program"].as_str().context("program")?)?);
+        let (applied, touched) = self.zone.applied_with_private(program).await?;
+        Ok(json!({
+            "applied": applied
+                .iter()
+                .map(|a| json!({ "program": hx(a.to.program_account_id.value()), "account": hx(a.to.account_id.value()),
+                                 "message": hx(&a.message) }))
+                .collect::<Vec<_>>(),
+            "touched": touched.iter().map(|t| hx(t.value())).collect::<Vec<_>>(),
+            "block": self.zone.world.chain.block_id,
+        }))
+    }
+
+    /// An actor's state on the zone (`program`, `account`), hex; empty when it has none.
+    fn zone_actor_state(&self, params: &Value) -> Result<Value> {
+        Ok(json!({ "state": self.state_hex(actor_of(params)?) }))
+    }
+
+    /// The light client's finality update, stood in (the devnet has no beacon chain): anvil's newest block
+    /// becomes the finalized header of the configuration's attestation instance. Its record at
+    /// `header(id, slot)` holds the block's own number, hash, parent hash, receipts root and time, and as state
+    /// root the root of the trie anvil's `eth_getProof` answers from (the hash of the vault's first
+    /// account-proof node, as lez/crown/capture-anvil.py takes it); `instance(id)` is written with its store's
+    /// finalized header at that slot (the rest of the store is a stand-in: no committee). A relayer then reads
+    /// the vault's proofs from anvil itself. `tamper: true` flips a bit of the recorded state root (a record
+    /// that anvil's proofs do not match).
+    async fn lc_finalize(&mut self, params: &Value) -> Result<Value> {
+        use ferrata_core::{
+            fork::LcFork,
+            types::BeaconBlockHeader,
+            witness::{CommitteeSummary, CompactStore, ExecutionSummary, HeaderRecord},
+        };
+        use lee_core::account::ActorState;
+        let block: Value = self.p.raw_request("eth_getBlockByNumber".into(), ("latest", false)).await?;
+        let word = |k: &str| -> Result<[u8; 32]> { ferrata_cli::h32(block[k].as_str().with_context(|| format!("block.{k}"))?) };
+        let num = |k: &str| -> Result<u64> {
+            Ok(u64::from_str_radix(block[k].as_str().with_context(|| format!("block.{k}"))?.trim_start_matches("0x"), 16)?)
+        };
+        let number = num("number")?;
+        let answer: Value = self
+            .p
+            .raw_request("eth_getProof".into(), (self.vault, Vec::<String>::new(), format!("0x{number:x}")))
+            .await?;
+        let first = hex_bytes(&answer["accountProof"][0], "eth_getProof.accountProof[0]")?;
+        let proofs_root = alloy::primitives::keccak256(&first).0;
+        let header_root = word("stateRoot")?;
+        let mut state_root = proofs_root;
+        let tamper = params["tamper"].as_bool() == Some(true);
+        if tamper {
+            state_root[31] ^= 1;
+        }
+        let config = self.bridge_config()?;
+        let slot = 9_000_000 + 64 * self.eth_blocks;
+        self.eth_blocks += 1;
+        let record = HeaderRecord {
+            beacon: BeaconBlockHeader { slot, ..Default::default() },
+            execution_root: [0; 32],
+            execution: ExecutionSummary::Payload {
+                block_number: number,
+                block_hash: word("hash")?,
+                parent_hash: word("parentHash")?,
+                state_root,
+                receipts_root: word("receiptsRoot")?,
+                timestamp: num("timestamp")?,
+            },
+        };
+        let attestation = config.attestation;
+        let id = config.instance_id;
+        let put = |world: &mut hb::World, actor: Actor, state: Vec<u8>| {
+            let account = Account::default().with_actor_state(attestation, ActorState::from(state));
+            world.chain.state.force_insert_account(actor.account_id, account);
+        };
+        let record_state = ferrata_lez_wire::RecordState { instance_id: id, chain_id: config.evm_chain_id, record: record.encode(), root_id: id };
+        put(&mut self.zone.world, ferrata_lez_wire::header_actor(attestation, &id, slot), borsh::to_vec(&record_state)?);
+        let store = CompactStore {
+            fork: LcFork::Electra,
+            finalized: BeaconBlockHeader { slot, ..Default::default() },
+            current: CommitteeSummary { pubkeys_root: [0; 32], aggregate_pubkey: [0; 48] },
+            next: None,
+        };
+        let mut lc = harness::mainnet_config(1);
+        lc.chain_id = config.evm_chain_id;
+        let instance = ferrata_lez_wire::InstanceState {
+            id,
+            config: lc,
+            active: true,
+            store: store.encode(),
+            applied: self.eth_blocks,
+            root_id: id,
+            parent_id: [0; 32],
+        };
+        put(&mut self.zone.world, ferrata_lez_wire::instance_actor(attestation, &id), borsh::to_vec(&instance)?);
+        Ok(json!({
+            "record_slot": slot,
+            "block": number,
+            "block_hash": block["hash"],
+            "state_root": hx(&state_root),
+            "header_state_root": hx(&header_root),
+            "proofs_root_is_header_root": proofs_root == header_root,
+            "tampered": tamper,
+            "vault_count": eth::view(&self.p, self.vault, IVault::nextLeafIndexCall {}, None).await?,
+            "stand_in": "the light client's finality update: anvil's newest block recorded at header(id, slot) and instance(id) moved to it by the devnet (no beacon chain, no committee)",
         }))
     }
 }

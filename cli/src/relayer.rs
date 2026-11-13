@@ -11,6 +11,11 @@
 //!   relayer)` ([`ferrata_bridge_core::gasdrop`]). It learns `N` (the claim publishes it), a time and
 //!   the one-time address; never which deposit.
 //!
+//! **Root imports** ([`plan_root_import`]) need nothing handed over: the relayer reads the vault's
+//! deposit root and count (slots 0 and 1) with `eth_getProof` at the block of the newest record of the
+//! configuration's light-client instance on LEZ, and sends the bridge program's `ImportRoot`, built and
+//! dry-run by `ferrata_wallet::import` (the code `ferrata_bridge_module`'s `import_root` runs).
+//!
 //! **What it refuses before spending gas.** A job for another vault, chain or configuration; a release
 //! naming another relayer (only that relayer can be paid for it, and the proof cannot be changed); an
 //! unpaid release unless the operator accepts them; a used nullifier; a checkpoint built on a state
@@ -546,6 +551,7 @@ pub trait Credit {
 
 /// A sequencer endpoint through LEZ's wallet: a native transfer from the relayer's public account to
 /// the one-time address (an asynchronous credit the claim sweeps).
+#[cfg(feature = "lez-wallet")]
 impl Credit for crate::lez::Sequencer {
     async fn credit(&mut self, to: Hash, amount: u128) -> Result<String> {
         use wallet::program_facades::{native_token_transfer::NativeTokenTransfer, CreditDelivery};
@@ -560,6 +566,20 @@ impl Credit for crate::lez::Sequencer {
             .await
             .map_err(|e| anyhow!("the native transfer failed: {e:?}"))?;
         Ok(format!("{hash:?}"))
+    }
+}
+
+/// The relayer's zone: a sequencer sends the credit; the devnet's zone (a stand-in) sends none.
+impl Credit for crate::lez::Zone {
+    async fn credit(&mut self, to: Hash, amount: u128) -> Result<String> {
+        match self {
+            #[cfg(feature = "lez-wallet")]
+            crate::lez::Zone::Sequencer(s) => s.credit(to, amount).await,
+            crate::lez::Zone::Devnet(_) => {
+                let _ = (to, amount);
+                bail!("refused: the devnet's zone sends no native credit (gas drops need a sequencer)")
+            }
+        }
     }
 }
 
@@ -595,6 +615,186 @@ pub async fn gas_drop<C: Credit>(
     }
 }
 
+// ---- root imports --------------------------------------------------------------------------------
+
+/// What the relayer's root import finds in a round ([`plan_root_import`]).
+#[derive(Clone, Debug)]
+pub enum RootImport {
+    /// Every deposit of the vault is under an imported root (`imported`: the newest imported count).
+    UpToDate { imported: u64 },
+    /// The vault holds deposits LEZ has not imported, and there is no record that covers them yet (the
+    /// light client is behind, or the zone has no record or instance to read).
+    Waiting { reason: String, vault_count: u64, imported: u64 },
+    /// The configuration takes no more imports (sunset is one-way).
+    Closed { reason: String },
+    /// An import, built and dry-run: ready to send.
+    Planned(Box<PlannedImport>),
+}
+
+/// An `ImportRoot` call and what it imports.
+#[derive(Clone, Debug)]
+pub struct PlannedImport {
+    pub call: crate::lez::LezCall,
+    /// The record it reads: `header(id, record_slot)` of the configuration's instance.
+    pub record_slot: u64,
+    pub block_number: u64,
+    pub block_hash: Hash,
+    /// The vault's slots 0 and 1 at that block.
+    pub root: Hash,
+    pub leaf_count: u64,
+    /// The newest count imported before it.
+    pub imported: u64,
+    /// The `root(cid, n)` state the dry run says the import writes.
+    pub writes: ferrata_lez_bridge_wire::RootState,
+}
+
+/// One storage entry of an `eth_getProof` answer, by slot: its proof nodes and its value as a word.
+fn proof_entry(answer: &serde_json::Value, slot: u64) -> Result<(Vec<Vec<u8>>, Hash)> {
+    for e in answer["storageProof"].as_array().ok_or_else(|| anyhow!("eth_getProof: no storageProof"))? {
+        if quantity(&e["key"])? == U256::from(slot) {
+            return Ok((nodes(&e["proof"])?, quantity(&e["value"])?.to_be_bytes::<32>()));
+        }
+    }
+    bail!("eth_getProof: no proof of slot {slot}")
+}
+
+fn quantity(v: &serde_json::Value) -> Result<U256> {
+    let text = v.as_str().ok_or_else(|| anyhow!("eth_getProof: not a hex quantity: {v}"))?;
+    U256::from_str_radix(text.trim_start_matches("0x"), 16).map_err(|e| anyhow!("eth_getProof: {text}: {e}"))
+}
+
+fn nodes(v: &serde_json::Value) -> Result<Vec<Vec<u8>>> {
+    v.as_array()
+        .ok_or_else(|| anyhow!("eth_getProof: proof nodes are not a list"))?
+        .iter()
+        .map(|n| unhex(n.as_str().ok_or_else(|| anyhow!("eth_getProof: a proof node is not hex"))?))
+        .collect()
+}
+
+/// The vault's account proof and the proofs of its slots 0 (the deposit root) and 1 (the leaf count)
+/// from an `eth_getProof` answer, with the two values.
+pub fn import_proofs(answer: &serde_json::Value) -> Result<(Vec<Vec<u8>>, (Vec<Vec<u8>>, Hash), (Vec<Vec<u8>>, Hash))> {
+    let account = nodes(&answer["accountProof"])?;
+    Ok((account, proof_entry(answer, 0)?, proof_entry(answer, 1)?))
+}
+
+/// The relayer's root import (bridge.md §6): the configuration's newest record on the zone (the
+/// instance's finalized header, `header(id, slot)`), the vault's slots 0 and 1 at that record's block
+/// (`eth_getProof` from the relayer's Ethereum endpoint, the block's hash checked against the record),
+/// and, when its count is above the newest imported one, `ImportRoot` built and dry-run with
+/// `ferrata_wallet::import` (the attestation program's `evaluate` and the bridge program's
+/// `check_import`, natively): an import the programs would refuse is an error here, and nothing is sent.
+/// `vault_count` is the vault's `nextLeafIndex` now (what the relayer waits to cover).
+pub async fn plan_root_import<L: crate::lez::Ledger>(
+    ledger: &L,
+    p: &DynProvider,
+    ctx: &crate::lez::Context,
+    history: &crate::lez::History,
+    vault_count: u64,
+) -> Result<RootImport> {
+    use borsh::BorshDeserialize as _;
+    use ferrata_core::witness::ExecutionSummary;
+    use ferrata_lez_bridge_wire::{config_actor, BridgeState, ConfigState};
+    use ferrata_wallet::import;
+
+    let imported = history.roots.iter().copied().max().unwrap_or(0);
+    let waiting = |reason: String| -> Result<RootImport> { Ok(RootImport::Waiting { reason, vault_count, imported }) };
+    let config = match crate::lez::read(ledger, config_actor(ctx.program, &ctx.cid)).await? {
+        Some(BridgeState::Config(ConfigState::Ready { sunset: true, .. })) => {
+            return Ok(RootImport::Closed { reason: "the configuration is sunset: no root is imported after it".into() })
+        }
+        Some(BridgeState::Config(ConfigState::Ready { config, .. })) => config,
+        Some(BridgeState::Config(ConfigState::Pairing { .. })) => {
+            return waiting("the configuration is pairing (Init is outstanding)".into())
+        }
+        None => return waiting("the zone holds no config(cid): the configuration is not initialised".into()),
+        Some(other) => bail!("config(cid) holds another state: {other:?}"),
+    };
+    if vault_count <= imported {
+        return Ok(RootImport::UpToDate { imported });
+    }
+    let Some(instance) = crate::lez::instance(ledger, config.attestation, &config.instance_id).await? else {
+        return waiting(format!("the zone holds no instance {} of the attestation program", hx(&config.instance_id)));
+    };
+    if !instance.active {
+        return waiting("the configuration's instance is not active yet".into());
+    }
+    let slot = instance.finalized_slot;
+    let bytes =
+        ledger.actor_state(ferrata_lez_wire::header_actor(config.attestation, &config.instance_id, slot)).await?;
+    if bytes.is_empty() {
+        return waiting(format!("no record at header(id, {slot}), the instance's finalized slot"));
+    }
+    let record = ferrata_lez_wire::RecordState::try_from_slice(&bytes)
+        .map_err(|e| anyhow!("header(id, {slot}) holds no record: {e}"))?;
+    let header = record.header().map_err(|code| anyhow!("header(id, {slot})'s record does not decode (code {code})"))?;
+    let (block_number, block_hash) = match header.execution {
+        ExecutionSummary::Payload { block_number, block_hash, .. } => (block_number, block_hash),
+        ExecutionSummary::BlockHash(_) => {
+            return waiting(format!(
+                "header(id, {slot}) is a Gloas record (the block's hash only): this relayer does not fetch the block's header yet"
+            ))
+        }
+        ExecutionSummary::None => return waiting(format!("header(id, {slot}) is an Altair record: no execution block")),
+    };
+    // The endpoint's block at that height must be the recorded one (another chain, or a node behind, is refused).
+    let tag = format!("0x{block_number:x}");
+    let block: serde_json::Value = p
+        .raw_request("eth_getBlockByNumber".into(), (tag.clone(), false))
+        .await
+        .with_context(|| format!("eth_getBlockByNumber {block_number}"))?;
+    let served = block["hash"].as_str().map(unhex).transpose()?.unwrap_or_default();
+    if served != block_hash {
+        bail!(
+            "the Ethereum endpoint's block {block_number} is {}, not the recorded {}: refused",
+            if served.is_empty() { "unknown".to_string() } else { hx(&served) },
+            hx(&block_hash)
+        );
+    }
+    let answer: serde_json::Value = p
+        .raw_request("eth_getProof".into(), (hx(&ctx.vault), [hx(&[0u8; 32]), hx(&word_of(1))], tag))
+        .await
+        .with_context(|| format!("eth_getProof of the vault at block {block_number}"))?;
+    let (account, (root_nodes, root), (count_nodes, count_word)) = import_proofs(&answer)?;
+    let leaf_count = ferrata_lez_bridge_wire::u64_of(&count_word)
+        .ok_or_else(|| anyhow!("slot 1 (the leaf count) at block {block_number} is above 2^64"))?;
+    if leaf_count <= imported {
+        return waiting(format!(
+            "the newest record, header(id, {slot}) of block {block_number}, holds {leaf_count} deposits, {imported} are imported, the vault holds {vault_count}: waiting for a later record"
+        ));
+    }
+    let proof = import::import_proof(account, root_nodes, count_nodes, None);
+    let writes = import::dry_run_import(&ctx.cid, &config, &record, slot, root, leaf_count, &proof).map_err(|code| {
+        anyhow!(crate::codes::program_refusal(
+            u32::from(code),
+            format!(
+                "the dry run of ImportRoot n = {leaf_count} under header(id, {slot}) (the attestation and bridge programs' own checks): not sent"
+            )
+        ))
+    })?;
+    let c = import::import_call(ctx.program, &ctx.cid, &config, slot, root, leaf_count, proof);
+    let call = crate::lez::LezCall {
+        what: c.what,
+        mentions: c.mentions.into_iter().map(Into::into).collect(),
+        root_index: c.root_index,
+        message: c.message,
+    };
+    Ok(RootImport::Planned(Box::new(PlannedImport {
+        call,
+        record_slot: slot,
+        block_number,
+        block_hash,
+        root,
+        leaf_count,
+        imported,
+        writes,
+    })))
+}
+
+fn word_of(n: u64) -> Hash {
+    U256::from(n).to_be_bytes::<32>()
+}
+
 /// A job file in the relayer's inbox (`<inbox>/*.json`), handed over by a user who opts in or by
 /// the checkpoint prover. Nothing in it is secret.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -628,6 +828,26 @@ pub fn require_chain(view: &VaultView, chain_id: Option<u64>) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn import_proofs_read_an_eth_get_proof_answer() {
+        let answer = serde_json::json!({
+            "accountProof": ["0xf8", "0x01"],
+            "storageProof": [
+                { "key": "0x0000000000000000000000000000000000000000000000000000000000000001", "value": "0x2", "proof": ["0xaa"] },
+                { "key": "0x0", "value": "0x1234", "proof": ["0xbb", "0xcc"] },
+            ],
+        });
+        let (account, (root_nodes, root), (count_nodes, count)) = import_proofs(&answer).unwrap();
+        assert_eq!(account, vec![vec![0xf8], vec![0x01]]);
+        assert_eq!(root_nodes, vec![vec![0xbb], vec![0xcc]]);
+        assert_eq!(root[30..], [0x12, 0x34]);
+        assert!(root[..30].iter().all(|b| *b == 0));
+        assert_eq!(count_nodes, vec![vec![0xaa]]);
+        assert_eq!(count, word_of(2));
+        assert!(import_proofs(&serde_json::json!({ "accountProof": [], "storageProof": [] })).is_err());
+        assert!(import_proofs(&serde_json::json!({ "storageProof": [] })).is_err());
+    }
 
     fn checkpoint() -> IRelayVault::Checkpoint {
         IRelayVault::Checkpoint {

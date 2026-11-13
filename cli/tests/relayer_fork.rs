@@ -52,7 +52,12 @@ impl Drop for Anvil {
 /// The `ferrata-relayer` binary cargo built for this test. `CARGO_BIN_EXE_ferrata-relayer` does not reach rustc
 /// through this tree's rustc wrapper (`scripts/guest-rustc`, a `/bin/sh` script: dash drops variables whose names hold
 /// a `-`), so the binary is found beside the test's own (`target/<profile>/deps/..` -> `target/<profile>/`).
+/// `FERRATA_RELAYER_CMD` runs another command with the binary's arguments and behaviour in its place:
+/// `modules/scripts/relayer-module.sh`, the daemon as `ferrata_relayer_module` in a Logos Core.
 fn relayer_bin() -> PathBuf {
+    if let Ok(cmd) = std::env::var("FERRATA_RELAYER_CMD") {
+        return PathBuf::from(cmd);
+    }
     if let Some(p) = option_env!("CARGO_BIN_EXE_ferrata-relayer") {
         return PathBuf::from(p);
     }

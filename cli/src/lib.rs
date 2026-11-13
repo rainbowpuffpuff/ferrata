@@ -7,19 +7,27 @@
 //! * [`scan`]: recovery from the seed alone.
 //! * [`release`]: the release witness, journal, guest run and vault call.
 //! * [`relayer`]: the relayer daemon's checks and calls: releases and rule (B) checkpoints on the
-//!   vault, the gas drop on LEZ (`ferrata-relayer`).
+//!   vault, root imports and the gas drop on LEZ; [`relayerd`]: the daemon itself (`ferrata-relayer`,
+//!   and `ferrata_relayer_module`, which runs the same code).
 //! * [`codes`], [`units`]: refusals with their codes and meanings; amounts with decimals.
+//!
+//! The feature `lez-wallet` (default) adds LEZ's wallet library: [`seed`], [`scan`], [`flow`], the
+//! sequencer endpoint ([`lez::Sequencer`]) and the `ferrata` binary.
 
 #![forbid(unsafe_code)]
 
 pub mod codes;
 pub mod eth;
+#[cfg(feature = "lez-wallet")]
 pub mod flow;
 pub mod lez;
 pub mod privacy;
 pub mod relayer;
+pub mod relayerd;
 pub mod release;
+#[cfg(feature = "lez-wallet")]
 pub mod scan;
+#[cfg(feature = "lez-wallet")]
 pub mod seed;
 pub mod units;
 

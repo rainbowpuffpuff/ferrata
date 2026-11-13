@@ -16,10 +16,15 @@ publish = false
 [[bin]]
 name = "ferrata"
 path = "src/main.rs"
+required-features = ["lez-wallet"]
 
 [[bin]]
 name = "ferrata-relayer"
 path = "src/bin/relayer.rs"
+
+[[example]]
+name = "miniapp_devnet"
+required-features = ["lez-wallet"]
 
 [dependencies]
 ferrata-bridge-core = { path = "../bridge/crates/ferrata-bridge-core" }
@@ -32,13 +37,15 @@ ferrata-core = { path = "../crates/ferrata-core", default-features = false }
 # the release rule, the claim builder, the root import, the release guest run (`prove`).
 ferrata-wallet = { path = "wallet", features = ["prove"] }
 
-# LEZ by path (v0.4.0-rc1, commit 1806e87), as lez/live/driver links it.
-wallet = { path = "../../upstream/lez-v0.4.0-rc1/lez/wallet" }
-common = { path = "../../upstream/lez-v0.4.0-rc1/lez/common" }
-sequencer_service_rpc = { path = "../../upstream/lez-v0.4.0-rc1/lez/sequencer/service/rpc", features = ["client"] }
+# LEZ by path (v0.4.0-rc1, commit 1806e87), as lez/live/driver links it. The wallet library (with `common`, the
+# sequencer's RPC client and the key trees) only with the `lez-wallet` feature: it links LEZ's node-side crates
+# (RocksDB, libp2p).
+wallet = { path = "../../upstream/lez-v0.4.0-rc1/lez/wallet", optional = true }
+common = { path = "../../upstream/lez-v0.4.0-rc1/lez/common", optional = true }
+sequencer_service_rpc = { path = "../../upstream/lez-v0.4.0-rc1/lez/sequencer/service/rpc", features = ["client"], optional = true }
 lee = { path = "../../upstream/lez-v0.4.0-rc1/lee/state_machine" }
 lee_core = { path = "../../upstream/lez-v0.4.0-rc1/lee/state_machine/core", features = ["host"] }
-key_protocol = { path = "../../upstream/lez-v0.4.0-rc1/lee/key_protocol" }
+key_protocol = { path = "../../upstream/lez-v0.4.0-rc1/lee/key_protocol", optional = true }
 
 # Ethereum: keystore, signing, JSON-RPC and ABI.
 alloy = { version = "1", features = ["contract", "provider-http", "rpc-types", "signer-local", "signer-keystore", "network"] }
@@ -50,7 +57,7 @@ risc0-groth16 = { version = "3.0", features = ["prove"] }
 bincode = "1.3"
 
 bip39 = "2.2"
-tokio = { version = "1.50", features = ["rt-multi-thread", "macros", "time", "signal"] }
+tokio = { version = "1.50", features = ["rt-multi-thread", "macros", "time", "signal", "sync", "net", "io-util"] }
 clap = { version = "4.5", features = ["derive", "env"] }
 anyhow = "1"
 borsh = { version = "=1.6.1", features = ["derive"] }
@@ -60,6 +67,14 @@ hex = "0.4"
 sha2 = "0.10"
 hmac = "0.12"
 url = "2.5"
+
+[features]
+# The sequencer path: LEZ's wallet library (signing and sending on LEZ, syncing private accounts) and the seed's
+# LEZ keys (`seed`, `scan`, `flow`, the `ferrata` binary). Without it the library keeps the Ethereum side, the
+# zone's reads and the bridge calls over any `lez::Ledger`, and the relayer daemon with the devnet zone:
+# ferrata_relayer_module builds it so (modules/scripts/stage-relayer.sh).
+default = ["lez-wallet"]
+lez-wallet = ["dep:wallet", "dep:common", "dep:sequencer_service_rpc", "dep:key_protocol"]
 
 [dev-dependencies]
 # The LEZ side of the end-to-end test: LEZ's state transition with the bridge guest (dev mode).

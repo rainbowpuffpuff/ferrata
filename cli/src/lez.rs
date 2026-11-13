@@ -3,13 +3,15 @@
 //! so a refusal names the code the program would exit with — and submission through LEZ's own
 //! wallet library to a sequencer endpoint.
 
-use std::{
-    collections::HashSet,
-    path::{Path, PathBuf},
-};
+use std::collections::HashSet;
+#[cfg(feature = "lez-wallet")]
+use std::path::{Path, PathBuf};
 
-use anyhow::{anyhow, bail, ensure, Context as _, Result};
+#[cfg(feature = "lez-wallet")]
+use anyhow::ensure;
+use anyhow::{anyhow, bail, Context as _, Result};
 use borsh::BorshDeserialize as _;
+#[cfg(feature = "lez-wallet")]
 use common::transaction::LeeTransaction;
 use ferrata_bridge_core::{
     chain_id_u256,
@@ -23,17 +25,16 @@ use ferrata_lez_bridge_wire::{
 };
 use lee::AccountId;
 use lee_core::{account::Actor, program::PdaSeed};
+#[cfg(feature = "lez-wallet")]
 use sequencer_service_rpc::SequencerClient;
+#[cfg(feature = "lez-wallet")]
 use wallet::{AccountIdentity, AccountMention, WalletCore, WalletSequencerClient as _};
 
 use ferrata_wallet::claim;
 
-use crate::{
-    codes::program_refusal,
-    hx,
-    seed::{Seed, DEFAULT_GAP},
-    units::u128_to_word,
-};
+#[cfg(feature = "lez-wallet")]
+use crate::seed::{Seed, DEFAULT_GAP};
+use crate::{codes::program_refusal, hx, units::u128_to_word};
 
 /// How many unused burn counters end a burn scan.
 pub const BURN_GAP: u64 = 20;
@@ -364,6 +365,7 @@ pub async fn plan_burn<L: Ledger>(
 
 /// A zone reached through a sequencer's RPC with LEZ's wallet. The wallet's home (its config and
 /// its storage, encrypted under the password) is the LEZ keystore the user names by path.
+#[cfg(feature = "lez-wallet")]
 pub struct Sequencer {
     pub wallet: WalletCore<SequencerClient>,
     /// The account that pays the fee (it must be in the wallet).
@@ -374,6 +376,7 @@ pub struct Sequencer {
     pub synced: bool,
 }
 
+#[cfg(feature = "lez-wallet")]
 fn wallet_config_json(rpc: &str) -> String {
     format!(
         "{{\n  \"sequencer\": {{ \"sequencer_addr\": \"{rpc}\" }},\n  \"seq_poll_timeout\": \"1s\",\n  \
@@ -384,6 +387,7 @@ fn wallet_config_json(rpc: &str) -> String {
 
 /// Opens (or creates from the seed) the LEZ wallet at `home`, its storage encrypted under the
 /// password in `password_file`, and checks that its first accounts are the seed's.
+#[cfg(feature = "lez-wallet")]
 pub fn open_wallet(home: &Path, rpc: &str, password_file: &Path, seed: &Seed) -> Result<WalletCore<SequencerClient>> {
     let password = std::fs::read_to_string(password_file)
         .with_context(|| format!("reading the password file {}", password_file.display()))?;
@@ -414,6 +418,7 @@ pub fn open_wallet(home: &Path, rpc: &str, password_file: &Path, seed: &Seed) ->
     Ok(wallet)
 }
 
+#[cfg(feature = "lez-wallet")]
 fn mention(m: &Mention) -> AccountMention {
     let actor = m.actor();
     let program = actor.program_account_id;
@@ -428,6 +433,7 @@ fn mention(m: &Mention) -> AccountMention {
     }
 }
 
+#[cfg(feature = "lez-wallet")]
 impl Ledger for Sequencer {
     async fn applied(&self, program: AccountId) -> Result<Vec<Applied>> {
         Ok(self.applied_with_private(program).await?.0)
@@ -514,6 +520,191 @@ impl Ledger for Sequencer {
             self.synced = true;
         }
         Ok(self.wallet.get_account_private(id))
+    }
+}
+
+// ---- the mini-app devnet's zone, over its HTTP methods (a stand-in for a sequencer) ----------------
+
+/// The zone of the mini-app's devnet (`cli/examples/miniapp_devnet.rs`: LEZ v0.4.0-rc1's state transition
+/// with the bridge program, in the LEZ harness), reached over the devnet's HTTP methods in place of a
+/// sequencer's RPC. A stand-in for tests: reads are `zone.applied` and `zone.actor_state`; a call is
+/// sent with `module.submit`, which the devnet signs and settles as LEZ's wallet sends a public call
+/// (this side holds no LEZ key). Loopback addresses only.
+#[derive(Clone, Debug)]
+pub struct DevnetZone {
+    /// The devnet's endpoint, `http://127.0.0.1:PORT/rpc`.
+    pub url: String,
+}
+
+impl DevnetZone {
+    pub fn new(url: &str) -> Result<Self> {
+        let u = url::Url::parse(url).with_context(|| format!("the devnet's URL {url}"))?;
+        if u.scheme() != "http" {
+            bail!("the devnet's URL must be http:// (a local devnet), not {}", u.scheme());
+        }
+        match u.host_str() {
+            Some("127.0.0.1" | "localhost" | "[::1]") => {}
+            other => bail!("the devnet zone is a local stand-in: {other:?} is not a loopback address"),
+        }
+        Ok(Self { url: url.to_string() })
+    }
+
+    /// One method of the devnet: `{"method", "params"}` posted to its endpoint; its `result`, or its error.
+    pub async fn call(&self, method: &str, params: serde_json::Value) -> Result<serde_json::Value> {
+        use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
+        let u = url::Url::parse(&self.url)?;
+        let host = u.host_str().unwrap_or("127.0.0.1").trim_matches(['[', ']']).to_string();
+        let port = u.port_or_known_default().unwrap_or(80);
+        let path = if u.path().is_empty() { "/" } else { u.path() };
+        let body = serde_json::json!({ "method": method, "params": params }).to_string();
+        let request = format!(
+            "POST {path} HTTP/1.1\r\nHost: {host}:{port}\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\
+             Connection: close\r\n\r\n{body}",
+            body.len()
+        );
+        let mut stream = tokio::net::TcpStream::connect((host.as_str(), port))
+            .await
+            .with_context(|| format!("connection to the devnet at {}", self.url))?;
+        stream.write_all(request.as_bytes()).await?;
+        let mut raw = Vec::new();
+        stream.read_to_end(&mut raw).await?;
+        let at = raw.windows(4).position(|w| w == b"\r\n\r\n").ok_or_else(|| anyhow!("the devnet's reply has no body"))?;
+        let reply: serde_json::Value =
+            serde_json::from_slice(&raw[at + 4..]).with_context(|| format!("the devnet's reply to {method}"))?;
+        if reply["ok"] != serde_json::Value::Bool(true) {
+            bail!("the devnet refused {method}: {}", reply["error"].as_str().unwrap_or("no reason given"));
+        }
+        Ok(reply["result"].clone())
+    }
+}
+
+fn devnet_account(v: &serde_json::Value, what: &str) -> Result<AccountId> {
+    Ok(AccountId::new(crate::h32(v.as_str().ok_or_else(|| anyhow!("{what}: not a string"))?)?))
+}
+
+impl Ledger for DevnetZone {
+    async fn applied(&self, program: AccountId) -> Result<Vec<Applied>> {
+        Ok(self.applied_with_private(program).await?.0)
+    }
+
+    async fn applied_with_private(&self, program: AccountId) -> Result<(Vec<Applied>, HashSet<AccountId>)> {
+        let r = self.call("zone.applied", serde_json::json!({ "program": hx(program.value()) })).await?;
+        let mut out = Vec::new();
+        for a in r["applied"].as_array().ok_or_else(|| anyhow!("zone.applied: no list"))? {
+            let to = Actor::new(devnet_account(&a["account"], "account")?, devnet_account(&a["program"], "program")?);
+            let message = hex::decode(a["message"].as_str().unwrap_or_default().trim_start_matches("0x"))?;
+            out.push(Applied { to, message });
+        }
+        let mut touched = HashSet::new();
+        for t in r["touched"].as_array().ok_or_else(|| anyhow!("zone.applied: no touched list"))? {
+            touched.insert(devnet_account(t, "touched")?);
+        }
+        Ok((out, touched))
+    }
+
+    async fn actor_state(&self, actor: Actor) -> Result<Vec<u8>> {
+        let r = self
+            .call(
+                "zone.actor_state",
+                serde_json::json!({ "program": hx(actor.program_account_id.value()), "account": hx(actor.account_id.value()) }),
+            )
+            .await?;
+        Ok(hex::decode(r["state"].as_str().unwrap_or_default().trim_start_matches("0x"))?)
+    }
+
+    async fn submit(&mut self, call: &LezCall) -> Result<String> {
+        let mut accounts = Vec::new();
+        for m in &call.mentions {
+            let a = m.actor();
+            let mut v = serde_json::json!({ "account": hx(a.account_id.value()), "program": hx(a.program_account_id.value()) });
+            match m {
+                Mention::Pda { seed, .. } => {
+                    v["kind"] = "pda".into();
+                    v["seed"] = hx(seed.as_bytes()).into();
+                }
+                Mention::Signer(_) => v["kind"] = "signer".into(),
+                Mention::Other(_, None) => v["kind"] = "public".into(),
+                Mention::Other(_, Some(_)) => bail!("the devnet zone admits no new public account by its key"),
+                Mention::PrivateSelf(_) => v["kind"] = "private_self".into(),
+            }
+            accounts.push(v);
+        }
+        let r = self
+            .call(
+                "module.submit",
+                serde_json::json!({
+                    "what": call.what, "message": hx(&borsh::to_vec(&call.message)?),
+                    "accounts": accounts, "root_index": call.root_index,
+                }),
+            )
+            .await?;
+        if r["settled"] != serde_json::Value::Bool(true) {
+            match r["exit_code"].as_u64() {
+                Some(code) => bail!(program_refusal(code as u32, "returned by the program on the devnet")),
+                None => bail!("the devnet did not settle it: {}", r["revert"]),
+            }
+        }
+        Ok(format!("devnet block {}", r["block"]))
+    }
+}
+
+/// The zone a relayer reaches: a sequencer through LEZ's wallet, or the mini-app devnet's zone.
+pub enum Zone {
+    #[cfg(feature = "lez-wallet")]
+    Sequencer(Sequencer),
+    Devnet(DevnetZone),
+}
+
+impl Zone {
+    /// `sequencer` or `devnet`.
+    pub fn kind(&self) -> &'static str {
+        match self {
+            #[cfg(feature = "lez-wallet")]
+            Zone::Sequencer(_) => "sequencer",
+            Zone::Devnet(_) => "devnet",
+        }
+    }
+}
+
+impl Ledger for Zone {
+    async fn applied(&self, program: AccountId) -> Result<Vec<Applied>> {
+        match self {
+            #[cfg(feature = "lez-wallet")]
+            Zone::Sequencer(s) => s.applied(program).await,
+            Zone::Devnet(d) => d.applied(program).await,
+        }
+    }
+
+    async fn applied_with_private(&self, program: AccountId) -> Result<(Vec<Applied>, HashSet<AccountId>)> {
+        match self {
+            #[cfg(feature = "lez-wallet")]
+            Zone::Sequencer(s) => s.applied_with_private(program).await,
+            Zone::Devnet(d) => d.applied_with_private(program).await,
+        }
+    }
+
+    async fn actor_state(&self, actor: Actor) -> Result<Vec<u8>> {
+        match self {
+            #[cfg(feature = "lez-wallet")]
+            Zone::Sequencer(s) => s.actor_state(actor).await,
+            Zone::Devnet(d) => d.actor_state(actor).await,
+        }
+    }
+
+    async fn submit(&mut self, call: &LezCall) -> Result<String> {
+        match self {
+            #[cfg(feature = "lez-wallet")]
+            Zone::Sequencer(s) => s.submit(call).await,
+            Zone::Devnet(d) => d.submit(call).await,
+        }
+    }
+
+    async fn private_account(&mut self, id: AccountId) -> Result<Option<lee::Account>> {
+        match self {
+            #[cfg(feature = "lez-wallet")]
+            Zone::Sequencer(s) => s.private_account(id).await,
+            Zone::Devnet(d) => d.private_account(id).await,
+        }
     }
 }
 
