@@ -56,6 +56,8 @@ bash attestor/prove.sh                                     # executor, succinct 
 bash attestor/live-node.sh <bundle> <gen> attestor/runs/live-node   # against a running copy of the lab node
 bash attestor/zone.sh <bundle> attestor/runs/zone 300      # a real four-sequencer LEZ zone (no Docker)
 bash attestor/zone-attest.sh attestor/runs/zone            # its four attestors, 3 of 4 collected
+# from the worktree root: the bridge program on the zone, its checkpoint into the vault (stages in the header)
+bash checkpoint/attestor/zone-bridge.sh zone e2e/runs/zone-bridge-1
 ```
 
 `vectors/lab-node/` holds the lab node's answers trimmed to the node blocks that carry LEZ blocks 186..=202.
@@ -70,6 +72,19 @@ four sequencers' attestors sign the final tip; `t(4) = 3` of 4 is collected (one
 and accepted by a v5 vault with nMin 4, tMin 3; 2 of 4 is refused. With `SILENT=3`, sequencer 3 stops during
 the run: the chain waits out its turn and goes on, and the other three attestors' 3 of 4 is accepted.
 
+**The bridge program on that zone** (`zone-bridge.sh`, [`e2e/runs/zone-bridge-1/`](../../e2e/runs/zone-bridge-1/),
+[RESULTS.md](RESULTS.md) §8): the same zone with the final programs deployed by crown-driver's session A, a vault
+on a local anvil over the zone's four keys (nMin 4, tMin 3) taking two deposits, crown-driver's session B on the
+zone (pairing, registration, imports, a public and a private claim, a public and a private burn; the private ones
+proven by LEZ's wallet; the transactions sent to one sequencer and included by whichever held the turn), an
+attestor beside each sequencer signing the rising final tip while the zone ran and the last one after it stopped;
+`realblocks-crown --att` puts three of the four attestations into the checkpoint over the zone's blocks 35..=116,
+`checkpoint_b` proves it on the CPU, and the vault accepts it, its burn root and both burns' releases. With
+`ZB_ROTATE=1` ([`e2e/runs/zone-bridge-2/`](../../e2e/runs/zone-bridge-2/), [RESULTS.md](RESULTS.md) §9) a fifth key is
+staked on LEZ (`sequencer_service stake`) before session B; the committee proposes the five-key set, three of the
+four sign it, Bedrock applies it, the fifth sequencer and its attestor join; the checkpoint carries that
+`ChannelConfigOp` as it was inscribed and four of the five attestations, and the vault accepts it.
+
 **A stand-in key set over the lab's chain** (`devnet.sh`, `runs/devnet-n3/`): the lab's chain has one
 sequencer, so its run uses `K = {the lab's key (the real producer of T), k1, k2}` with seeded k1, k2 for
 sequencers that do not run, and gives the node's channel answer the same keys; it carries the cases a running
@@ -83,4 +98,5 @@ attestations of a descendant of `T`, and a key rotation in the proof (with a sta
   (`modules/scripts/attestor-zone-live.sh`, one Logos Core per sequencer, `zone.sh`'s `ZONE_DURING` and
   `ZONE_AFTER` hooks); its key is a file, not `keystore_module`'s.
 - Publishing attestations (a relay, a watcher feed); the collector reads files.
-- Key rotations inside a proof: the collector pre-checks against the parent's key set only.
+- Key rotations inside a proof: the collector checks against the set of the input's last rotation; the rotation
+  itself comes from the node's blocks only in `realblocks-crown --att` (§9), not in `base`.

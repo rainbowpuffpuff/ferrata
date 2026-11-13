@@ -159,10 +159,13 @@ side is a devnet we ran (LEZ testnet 0.4 does not exist).
   before the attestation existed; the current source has run on sequencers without proofs in the fork rehearsals of row 83
   and in the live run of row 91 (`Init` from a real Sepolia checkpoint inside its weak-subjectivity bound, which
   refused a 38-day-old one), earlier sources in rows 21, 22, 31 and 41.
-- **The checkpoints over real blocks** are of one-validator devnets with one channel key (n = t = 1): row 24's
+- **The checkpoints over real blocks** are of one-validator devnets with one channel key (n = t = 1), but one: row 24's
   chain has no bridge program, and its attestation was signed after the fact from a copy of the node's state; rows
   31, 41 and 91 carry the bridge program and both burns, and their attestations were signed by the run's driver once the
-  tip was final on the node. `ferrata_attestor_module` has run beside each sequencer of a second run of row 65's zone
+  tip was final on the node. Rows 100 and 101 are of a zone of four sequencers (row 65's) carrying the bridge program and
+  both burns, attested by an attestor beside each sequencer (3 of 4 collected; in row 101 after a rotation its
+  committee proposed and Bedrock applied, 4 of the 5 keys), proven and accepted by a v5 vault on a local anvil, both
+  burns released; their beacon chain on LEZ and their Ethereum side are stand-ins. `ferrata_attestor_module` has run beside each sequencer of a second run of row 65's zone
   (four Logos Cores, row 95): that zone has no bridge program, and its 3-of-4 input was checked by the rule
   natively, not proven.
 - **Not measured**: user-side proving on a laptop (rows 32–34 and 38 are cloud servers held to 8 and to 16 CPUs with

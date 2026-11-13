@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The execution half of a capture, from a LOCAL anvil fork (rehearsals only; STAND-IN).
+"""The execution half of a capture, from a LOCAL anvil, a fork or not (rehearsals only; STAND-IN).
 
   capture-anvil.py --rpc http://127.0.0.1:8545 --vault ADDR --from-block N --slot 0x.. [--slot ..] OUT
 
@@ -72,7 +72,10 @@ def main() -> None:
     open(os.path.join(a.out, f"deposits_{n}.json"), "w").write(json.dumps(logs, indent=1) + "\n")
     slots = [{"slot": w, "value": "0x" + int(sp["value"], 16).to_bytes(32, "big").hex()} for w, sp in zip(words, proof["storageProof"])]
     manifest = {
-        "network": "anvil fork of Sepolia (STAND-IN: not finalized by Sepolia's beacon chain)",
+        # A fork writes a zero state root (patched above); a plain local anvil (checkpoint/attestor/zone-bridge.sh) does not.
+        "network": ("anvil fork of Sepolia (STAND-IN: not finalized by Sepolia's beacon chain)" if patched
+                    else "local anvil, no fork, chain id " + str(int(call("eth_chainId", []), 16))
+                    + " (STAND-IN: not finalized by any beacon chain)"),
         "block": n,
         "block_hash": "0x" + e2e.keccak256(rlp).hex(),
         "anvil_block_hash": block["hash"],

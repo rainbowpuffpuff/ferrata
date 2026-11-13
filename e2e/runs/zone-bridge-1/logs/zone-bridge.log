@@ -1,0 +1,72 @@
+[07:01:08] zone-bridge zone-bridge-1: bundle sha256 0013bab125141c9daf2bb2e18c857e160e2235adc1e75c4f3ec34beda0593e67
+[07:01:09] LEZ program ferrata_lez.bin sha256 ddfde69bea89a5b882f55266fcb4b7c887df7debc1c9d4972d8ebea5a72eaad9
+[07:01:09] LEZ program ferrata_bridge.bin sha256 11d832482ff0a26c8f283edda1a35b262274c066734895c62f696394dcab6070
+[07:01:09] crown-driver (this tree) sha256 6eaf6692a71ec4f3db7131899b493beb0f3c904370ee1ca6965f569d84f3cb66
+[07:01:09] node up: {"cryptarchia_info":{"lib":"402255ecf1448ec5d136c293f7eb818cd6137af8175bdc72f06a99cf2eef8a52","lib_slot":0,"tip":"402255ecf1448ec5d136c293f7eb818cd6137af8175bdc72f06a99cf2eef8a52","slot":0,"height":0,"state":"Bootstrapping"},"phase":"InitialBlockDownload"}
+[07:01:13] node slot 0 is unix second 1785493027
+[07:01:13] seq-0 set up: channel key fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096
+[07:01:13] seq-1 set up: channel key 99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3
+[07:01:13] seq-2 set up: channel key 6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac
+[07:01:13] seq-3 set up: channel key 90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729
+[07:01:17] seq-0 start 1: scheduler 4 s after the launch; its blocks fall 0 s after an epoch second
+[07:02:37] seq-0 start 2: scheduler 70 s after the launch; its blocks fall 9 s after an epoch second
+[07:02:42] seq-0 start 3: scheduler 1 s after the launch; its blocks fall 4 s after an epoch second
+[07:03:50] seq-1 start 1: scheduler 68 s after the launch; its blocks fall 3 s after an epoch second
+[07:05:03] seq-2 start 1: scheduler 72 s after the launch; its blocks fall 5 s after an epoch second
+[07:06:17] seq-3 start 1: scheduler 74 s after the launch; its blocks fall 0 s after an epoch second
+[07:06:28] seq-3 start 2: scheduler 1 s after the launch; its blocks fall 0 s after an epoch second
+[07:06:31] seq-3 start 3: scheduler 1 s after the launch; its blocks fall 3 s after an epoch second
+[07:06:37] four keys accredited; heights 16/16/16/16; lib slot 9060564
+[07:06:37] crown-a: {"keys":4,"posting_timeframe":60,"configuration_threshold":3}
+[crown-a] crown STAND-IN Init adopt 1/2                              applied        gas   3397076 block   33 + 10.1s cd96590d94f2e78cb052059ba606c0ff074ebed17d7771f4d57b2d877d49b864
+[crown-a] crown STAND-IN Init adopt 2/2                              applied        gas   3480132 block   34 + 10.5s a02a389fdfcba805ad308a83a6871324cc6dc3f09a079a20eb0db3b04ef13721
+[crown-a] the channel accredits 4 key(s)
+[crown-a] T0 = block 34 0x0b678ced4cbb8891efb45a404d91ce3429b6ce65edc2b6fc77f66b3590f564d4; identity written to work/session-a.json
+[07:09:37] T0 = 34 0x0b678ced4cbb8891efb45a404d91ce3429b6ce65edc2b6fc77f66b3590f564d4; key set n = 4, posting timeframe 60
+[07:09:39] anvil (local, chain id 11155111, no fork): deployer 0x30aaBBF57DCbB3c8E7E32a32726498819eDfb682 (impersonated) nonce 0; vault 0xE9bD0e958697fE8aA6633DFEd2b8D0234F69D04C; configId 0x8c313ea41c646029fb17b0a65ee0315bef298a2acd3c7f368a375c8dc333f5d9; genesisState 0x958a2dcd50acb08bd0c8850267eaeb381aef8ace4ac324c160fd5d14b1a4fff4
+[2026-11-13T07:09:47Z] deploy complete: vault 0xE9bD0e958697fE8aA6633DFEd2b8D0234F69D04C, configId and genesisState as the run's identity
+capture of block 9 0x7750bc65916939890ec14640763b09d14b48bd8013ae8a724946aa190140cea6 (state root patched: False): 1 deposit(s), 6 slot(s)
+capture of block 10 0xbf123bbc551fd925bd0bbf0cd20571544ee3ce9c3ca99198b238635169af56d1 (state root patched: False): 2 deposit(s), 6 slot(s)
+[2026-11-13T07:09:49Z] chain 11155111 block 10 deployer nonce 10
+[2026-11-13T07:09:49Z] vault 0xE9bD0e958697fE8aA6633DFEd2b8D0234F69D04C: finalState 0x958a2dcd50acb08bd0c8850267eaeb381aef8ace4ac324c160fd5d14b1a4fff4 leaves 2 checkpoints 0
+[check] stage 1: configId 0x8c313ea41c646029fb17b0a65ee0315bef298a2acd3c7f368a375c8dc333f5d9 in slot 2; pairing, import and register requests accepted natively
+[check] stage 2: finalized slot 11542720 binds block 10 (timestamp 1794553789); 2 deposit(s) open to the run; ETH entry matches the vault; schedule 0 time Some(1794553785)
+[check] stage 2: configId 0x8c313ea41c646029fb17b0a65ee0315bef298a2acd3c7f368a375c8dc333f5d9 in slot 2; pairing, import and register requests accepted natively
+certified d13290f1a09d3dfa1896b1848c449a651b3cf37fd285e25eb6960e91993fb282 by channel key fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096
+certified 6fa79012ebc3a9d9d36f8b55df10f75805326bff114f0ca7bd4fdcdbc291abde by channel key 99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3
+certified fd334cbefe0e5fc69e12eeea7d0a8d9a1089a2dcc8ad742813267ae4a551a86f by channel key 6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac
+certified defdcf960031321006383fc0d30eb92b6618379e0673bea7f71ab91e2480f7e5 by channel key 90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729
+[07:09:50] four attestors started (a round every 60 s; attestation keys from the OS's randomness, never written to the repository)
+[crown-b] token(cid, ETH): 1 schedule(s), known until leaf 2
+[crown-b] bridge ImportRoot n=2 (stage 2, block 10)                  applied        gas    305431 block   48 + 10.1s 4aebb4875f16be636a584ba85272f809b9ff4dff1409c5fca4815ee424136464
+[crown-b] private wallet at block 48: account 44KVvzvh2ephQU9aR5snboGUXKgS1FnPYh1W4KZKwmhm
+[crown-b] bridge ClaimPrivately: deposit 1 at LEZ's private test account 0 (real proof): executed, proven and sent in 281.4 s (252267 bytes)
+[crown-b] bridge ClaimPrivately: deposit 1 at LEZ's private test account 0 (real proof) applied        gas    553328 block   78 + 18.4s 08149ae9d3a4c5ab3a2b63c9eb57161f0720dcea411e142b407a420a18934acb
+[crown-b] bridge Burn (public): 0.001 ETH of public test account 0, note 0 applied        gas    160297 block   79 +  8.2s d8fb83b8f958040c83b19875d89d1be68b3f9b4725ca9f5daaa52c34e030753f
+Syncing to block 79. Blocks to sync: 31
+Synced to block 79 in 24.521029ms
+[crown-b] private test account 0 after the claim (wallet's view at block 79): Some(HolderState { holdings: [Holding { config_id: [140, 49, 62, 164, 28, 100, 96, 41, 251, 23, 176, 166, 94, 224, 49, 91, 239, 41, 138, 42, 205, 60, 127, 54, 138, 55, 92, 141, 195, 51, 245, 217], token: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], amount: 1000000000000000 }], pending: None })
+[crown-b] bridge Burn (private): 0.001 ETH of private test account 0, note 1 (real proof): executed, proven and sent in 324.2 s (255031 bytes)
+[crown-b] bridge Burn (private): 0.001 ETH of private test account 0, note 1 (real proof) applied        gas    515555 block  113 + 16.7s 9b6009f607e4ea7892208bc0cf65b0bdd8c2777cafd510891e8be9e90203f93d
+[crown-b] blocks 35..=113 (T1 0x446c66fcf520b7dfb709d088515095651204a5616413b3308714bbd117d2eff2); 2 burn note(s) written to work/burn-notes.json
+[07:22:48] session B: T1 = 113; steps [["bridge Init (pairing: configId in the vault's slot 2)","applied","40"],["bridge Register ETH (registry entry, schedules 0 and 1, leaf count)","applied","41"],["bridge ImportRoot n=1 (stage 1, block 9)","applied","42"],["bridge Claim: deposit 0 (public) under root(cid, 1)","applied","43"],["bridge ImportFees: ETH schedule 1 absent at n=2","applied","47"],["bridge ImportRoot n=2 (stage 2, block 10)","applied","48"],["bridge ClaimPrivately: deposit 1 at LEZ's private test account 0 (real proof)","applied","78"],["bridge Burn (public): 0.001 ETH of public test account 0, note 0","applied","79"]
+[07:23:20] sequencers stopped; waiting for the node's LIB to pass the channel's tip
+[07:23:20] channel tip slot 9061566, lib 9061568
+attested: channel key fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096 | attestation key d13290f1a09d3dfa1896b1848c449a651b3cf37fd285e25eb6960e91993fb282 | final tip 116 4c37dbfc1c30989fd853c5fb86892a40a95a25ae41806f22e9b891a475900b55 (final message 4c451c6e9937292375da9d521d215fba5a6f9ec4f357566a2151c433722a7a06) | node lib slot 9061568, blocks 2..=116 checked | key set n = 4 hash a300aec501d6fa09b60964a4e85ca7fe91cd4d21f2689199176441254dd03469
+attested: channel key 99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3 | attestation key 6fa79012ebc3a9d9d36f8b55df10f75805326bff114f0ca7bd4fdcdbc291abde | final tip 116 4c37dbfc1c30989fd853c5fb86892a40a95a25ae41806f22e9b891a475900b55 (final message 4c451c6e9937292375da9d521d215fba5a6f9ec4f357566a2151c433722a7a06) | node lib slot 9061569, blocks 2..=116 checked | key set n = 4 hash a300aec501d6fa09b60964a4e85ca7fe91cd4d21f2689199176441254dd03469
+attested: channel key 6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac | attestation key fd334cbefe0e5fc69e12eeea7d0a8d9a1089a2dcc8ad742813267ae4a551a86f | final tip 116 4c37dbfc1c30989fd853c5fb86892a40a95a25ae41806f22e9b891a475900b55 (final message 4c451c6e9937292375da9d521d215fba5a6f9ec4f357566a2151c433722a7a06) | node lib slot 9061569, blocks 2..=116 checked | key set n = 4 hash a300aec501d6fa09b60964a4e85ca7fe91cd4d21f2689199176441254dd03469
+attested: channel key 90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729 | attestation key defdcf960031321006383fc0d30eb92b6618379e0673bea7f71ab91e2480f7e5 | final tip 116 4c37dbfc1c30989fd853c5fb86892a40a95a25ae41806f22e9b891a475900b55 (final message 4c451c6e9937292375da9d521d215fba5a6f9ec4f357566a2151c433722a7a06) | node lib slot 9061570, blocks 2..=116 checked | key set n = 4 hash a300aec501d6fa09b60964a4e85ca7fe91cd4d21f2689199176441254dd03469
+work/att-0/final.json: verifies (channel key fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096, tip 116)
+work/att-1/final.json: verifies (channel key 99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3, tip 116)
+work/att-2/final.json: verifies (channel key 6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac, tip 116)
+work/att-3/final.json: verifies (channel key 90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729, tip 116)
+[07:23:23] node answers: slots 9059955..=null, 0 windows, 0 bytes (748 compressed)
+[07:23:23] zone stage done
+[07:34:34] node answers (attestor 0's final round): slots from 9059955 to the LIB 9061568, 4 windows, 4944924 bytes (1325397 compressed)
+[07:49:39] W warped: 3601 s (anvil evm_increaseTime)
+[07:49:40] finalState 0x0d79f1d0045db3ce0cbd5ded6cf92d7a7ddce05f5b379f9428a8d8d8bf7848a6 = the journal's new state; burnRootStatus(0x64742ec992436953f4c96af5d1e06f76c4ee483d2af1b533fe3e3b3b66b5f577) = true 1794559781 [1.794e9] 
+[07:49:40] release delay warped: 121 s
+[07:49:42] release 0: recipient 0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07 +999000000000000 wei; nullifierUsed true
+[07:49:43] release 1: recipient 0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07 +999000000000000 wei; nullifierUsed true
+[2026-11-13T07:49:43Z] chain 11155111 block 16 deployer nonce 14
+[2026-11-13T07:49:43Z] vault 0xE9bD0e958697fE8aA6633DFEd2b8D0234F69D04C: finalState 0x0d79f1d0045db3ce0cbd5ded6cf92d7a7ddce05f5b379f9428a8d8d8bf7848a6 leaves 2 checkpoints 1

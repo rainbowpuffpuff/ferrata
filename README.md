@@ -193,7 +193,7 @@ rebuild the programs to their image ids.
 | [Relayer](docs/guides/operator-guide.md#6-the-relayer-and-the-wrapper), `cli/` | `ferrata-relayer`: root imports on a fixed cadence, users' release jobs, rule (B) checkpoints, finalisation, the gas drop; also a Logos module (`ferrata_relayer_module`) | prototype; a fork of Sepolia; root imports on the mini-app's devnet | [46–48, 106–107](docs/EVIDENCE.md) |
 | [Updater](lez/updater/README.md), `lez/updater/` | `ferrata-updater`, the light-client updater daemon | prototype; recorded data, the harness; 8 h on LEZ sequencers of two zones following Sepolia live, 74 updates applied, 56 on the chains kept ([record](lez/updater/results/live-sepolia/)) | [79–81, 99](docs/EVIDENCE.md) |
 | [Watchers' `monitor`](monitor/README.md), `monitor/` | The watchers' node-side program: checks each candidate, cancels in time, pauses, alerts | prototype; anvil and a fork of Sepolia | [43–45](docs/EVIDENCE.md) |
-| [Rule (B) attestor](checkpoint/attestor/README.md), `checkpoint/attestor/` | `ferrata_attestor`: the signer a sequencer runs, and the collector of t of n attestations | prototype; a four-sequencer zone | [63–68](docs/EVIDENCE.md) |
+| [Rule (B) attestor](checkpoint/attestor/README.md), `checkpoint/attestor/` | `ferrata_attestor`: the signer a sequencer runs, and the collector of t of n attestations | prototype; a four-sequencer zone, with the bridge program, its burns and their releases through a vault on a local anvil, and a rotation its committee proposed | [63–68, 100, 101](docs/EVIDENCE.md) |
 | [IDL](idl/README.md), `idl/` | The attestation and bridge programs' interfaces in SPEL's IDL format | built | [55, 58](docs/EVIDENCE.md) |
 | [Attestation CLI](lez/ATTEST-CLI.md), `lez/harness/` | `ferrata-attest`: advances an instance; attests a slot, an account, a log or a receipt | prototype; recorded fixtures | [56](docs/EVIDENCE.md) |
 | [Admin view](admin/README.md), `admin/` | One static, read-only page showing a deployed vault's state | prototype; read-only, on Sepolia | [57](docs/EVIDENCE.md) |
@@ -285,10 +285,10 @@ cites the file it rests on, and each says what is not built.
 The design notes specify these; there is no code for them here:
 - in the bridge program on LEZ (`lez/BRIDGE-RESULTS.md` §9): a transfer that credits a private recipient
   privately, the admin's own handover, the switch to a v0.4 token program when one is released;
-- rule (B): the four-sequencer zone with a bridge program, burns and a rotation its committee proposes (the zone
-  ran without a bridge program; the rotation was proven on the lab's chain with stand-in keys,
-  `checkpoint/attestor/RESULTS.md` §2, §7; `ferrata_attestor` is built as a program and as a Logos module, which
-  ran beside each sequencer of a second run of that zone, `modules/RESULTS.md`);
+- rule (B): the watchers' `monitor` reading attestations (the four-sequencer zone has run the bridge program, both
+  burns, their releases through a vault on a local anvil and a rotation its committee proposed,
+  `checkpoint/attestor/RESULTS.md` §8, §9; `ferrata_attestor` is built as a program and as a Logos module, which ran
+  beside each sequencer of a second run of that zone, `modules/RESULTS.md`);
 - of the relayer, its root imports on a running LEZ sequencer, and its Logos module's LEZ side through Logos Core's
   own modules (the daemon `ferrata-relayer`, its wrapping, the gas drop, its root imports and its Logos module are
   built; the imports and the module ran on the mini-app's devnet, whose zone the module reaches, and on a fork of

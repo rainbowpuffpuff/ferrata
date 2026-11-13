@@ -1,0 +1,6 @@
+
+thread '<unnamed>' panicked at checkpoint-b/src/main.rs:43:63:
+checkpoint refused: InsufficientAttestations { have: 3, need: 4 }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+Error: Guest panicked: checkpoint refused: InsufficientAttestations { have: 3, need: 4 }
+checkpoint refused: InsufficientAttestations { have: 3, need: 4 }
