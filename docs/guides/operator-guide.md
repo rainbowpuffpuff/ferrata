@@ -14,12 +14,14 @@ year. Every role below is permissionless except the watchers', and none can make
 vault accept something false ([`docs/design/attestation.md`](../design/attestation.md) §9, §11.5;
 [`docs/design/bridge.md`](../design/bridge.md) §14).
 
-**Status.** Three daemons are built as prototypes, outside Logos modules: `monitor` (§7), a standalone program
-([`monitor/`](../../monitor/README.md)); the relayer, the binary `ferrata-relayer` (§6: rule (B) checkpoints,
+**Status.** Three daemons are built as prototypes: `monitor` (§7), a standalone program
+([`monitor/`](../../monitor/README.md)) and a Logos module; the relayer, the binary `ferrata-relayer` (§6: rule (B) checkpoints,
 releases, wrapping, fee collection and the gas drop; tested on an anvil fork of Sepolia with real proofs and
 in the LEZ harness); and the **updater**, `ferrata-updater` ([`lez/updater/`](../../lez/updater/README.md), §3.6),
-tested against LEZ v0.4.0-rc1's state machine in process on the lab's recorded mainnet and Sepolia data. The
-relayer's root imports are **not built**; the updater's backend for a running sequencer ran 8 h on a LEZ devnet following Sepolia live (`lez/updater/results/live-sepolia/`). All three daemons are designed
+tested against LEZ v0.4.0-rc1's state machine in process on the lab's recorded mainnet and Sepolia data, also as a
+Logos module on that chain. The relayer's root imports and its module are **not built**; the updater's backend for a
+running sequencer, a binary of its own (`lez/updater/sequencer/`), ran 8 h on a LEZ devnet following Sepolia live
+(`lez/updater/results/live-sepolia/`). All three daemons are designed
 as Logos modules run under `logosctl daemon`, with structured logs, clean shutdown and configurable endpoints and depths
 ([`attestation.md`](../design/attestation.md) §8; [`bridge.md`](../design/bridge.md) §1). What runs
 today, and what this guide describes from measurement, is the **lab** (§2), the harness and live
@@ -173,7 +175,9 @@ restart mid-job and mid-period with dropped connections, and the acceptance run 
 `[sequencer]` section with the RPC address and the program's account) kept the crown run's Sepolia instance
 following Sepolia for 8 h on a LEZ v0.4.0-rc1 devnet, from Lodestar's light-client data with publicnode's
 headers as the second source (`kind = "headers"`, `min_agreeing = 2`): 74 updates applied, restarts
-mid-job and of the whole zone ([`lez/updater/results/live-sepolia/`](../../lez/updater/results/live-sepolia/)). Not built: the proven path, the Logos module.
+mid-job and of the whole zone ([`lez/updater/results/live-sepolia/`](../../lez/updater/results/live-sepolia/)). The Logos
+module `ferrata_updater_module` ([`modules/`](../../modules/README.md)) drives the same daemon on the in-process chain; it
+does not carry the sequencer backend. Not built: the proven path, the module on a running sequencer.
 
 ## 4. The root importer (RFP-022 P.2)
 
@@ -551,11 +555,11 @@ checkpoints after a sunset until holders have released ([`bridge.md`](../design/
 
 ## 12. What is not built
 
-The Logos modules of all three daemons (`monitor` is built as a standalone program, §7; `ferrata-relayer` and
-`ferrata-updater` are plain binaries, §6, §3.6); the relayer's root
+The relayer's Logos module (`ferrata-relayer` is a plain binary, §6; the monitor, the rule (B) attestor and the
+updater are built as Logos modules, the updater's on the in-process chain only, its backend for a running sequencer
+being a binary of its own, §3.6); the relayer's root
 imports and its run against a live sequencer, the sealed gas drop to a private one-time account and its sweep inside
-the private claim (§6.4); `verify_checkpoint`'s fetching from several providers; the attestation side's `monitor`; the rule (B)
-attestor module; job clean-up; the acceptance run at 100 updates and on a sequencer (it ran on 58 recorded updates in process, §3.4);
+the private claim (§6.4); `verify_checkpoint`'s fetching from several providers; the attestation side's `monitor`; job clean-up; the acceptance run at 100 updates and on a sequencer (it ran on 58 recorded updates in process, §3.4);
 daemon resource measurements; the amortised costs at the recommended
 cadence with real proving (milestones A4, B4); a deployment on a public LEZ network. Sources:
 [`attestation.md`](../design/attestation.md) §15; [`bridge.md`](../design/bridge.md) §1, §18.6, §19;

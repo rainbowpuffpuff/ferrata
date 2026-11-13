@@ -289,7 +289,8 @@ that start a Logos Core refuse a `TMPDIR` (or `LOGOS_TMPDIR`) longer than 62 byt
 - **`ferrata_updater_module`:** only the in-process chain (`ledger = "harness"`, the updater's tests'
   chain, with `RISC0_DEV_MODE=1`): it lives in the module's process and ends with `stop`, so two updater
   modules cannot share a chain, and the cooperative A3 gate (two honest updaters and an adversary) stays
-  the binary's test; the backend for a running sequencer is not built; built with Rust 1.98.0, LEZ pins
+  the binary's test; the backend for a running sequencer is a binary of its own (`lez/updater/sequencer/`,
+  which links LEZ's node-side crates), which the module does not carry; built with Rust 1.98.0, LEZ pins
   1.98.1; the guests it embeds are the ones risc0-build made on the build box (their ids checked against
   `docs/image-ids.md`).
 - **Catalog:** laid out, dry-run and installed from on 127.0.0.1 (`catalog/`); nothing published, one

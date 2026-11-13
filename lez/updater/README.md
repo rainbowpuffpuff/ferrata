@@ -47,8 +47,9 @@ default. In short:
 | `[policy]` | `defer_window`, `max_lag_slots`, `min_agreeing`, `retry_base_ms`, `retry_max_ms`, `max_attempts`, `demote_rounds`, `max_periods_per_request`, `finish_own_jobs` (default `true`) |
 | `[[chain]]` | `name`, `preset` (`mainnet`, `sepolia`), `checkpoint` (the instance's trusted block root), `layout` (the checkpoint bootstrap's light-client layout, `electra` by default, `gloas` for a Gloas-era bootstrap; the instance id hashes it), `adoption_parts`; `[[chain.source]]` with `url` (a beacon node's REST API) or `dir` (a recorded directory in the lab's layout), and `kind`: `light-client` (default) or `headers` (a node that serves no light-client data, only `/eth/v1/beacon/headers/{slot}`: it confirms the finalized header, below) |
 
-SIGTERM or SIGINT: the round in hand finishes, then the daemon exits 0. Nothing needs saving: a
-transaction is either on chain or not, and the next start reads the chain.
+SIGTERM or SIGINT: the round in hand finishes, the backend saves what it keeps (the sequencer
+backend: its follower of the chain; the harness: nothing), then the daemon exits 0. The updater itself
+needs nothing saved: a transaction is either on chain or not, and the next start reads the chain.
 
 ## What a round does
 
@@ -60,7 +61,8 @@ transaction is either on chain or not, and the next start reads the chain.
    and are accepted only when they hash to the summaries on chain.
 3. **Candidates.** From every usable source: the newest finality update and the period updates
    from the store's period to the source's head.
-4. **Verdicts.** Every candidate goes through the program's steps natively (`plan_job`: step 1,
+4. **Verdicts.** Every candidate goes through the program's steps natively (`ferrata-advance`,
+   `../advance`, shared with `ferrata_attest_module`'s `advance`; `plan_job`: step 1,
    Miller loops, final exponentiation, adoption, `apply`), on the on-chain store upgraded to the
    candidate's layout. *Useful* (it advances, rotates or adopts), *no change* (older than the
    store), *unverifiable* (signed by a committee the store does not hold yet), or *invalid*: the
@@ -98,7 +100,7 @@ transaction is either on chain or not, and the next start reads the chain.
 ## The sequencer backend (`sequencer/`)
 
 `SequencerLedger` (`sequencer/src/ledger.rs`) is the `Ledger` for a running LEZ sequencer; the
-daemon is the same (`src/daemon.rs`). It reuses the live driver's modules by path
+daemon is the same (`src/daemon.rs`, which the Logos module drives too). It reuses the live driver's modules by path
 (`../live/driver/src`: the wallet connection, the follower, the manifest), as the crown driver does.
 
 - **Send.** A step's transaction is built exactly as `HarnessLedger` builds it: the step's actors
@@ -215,6 +217,7 @@ Record, tables and the re-check: [`results/live-sepolia/`](results/live-sepolia/
   (and its 100 updates) ran in process only. No public LEZ v0.4 network exists to run on.
 - Several days unattended (proposal A4's seven days on testnet 0.4): the live run lasted hours.
 - The proven path (`VerifyAll`): the daemon drives the public job only.
-- As a Logos module (`modules/ferrata_updater_module`, `logosctl daemon`) it runs with the harness ledger
-  only: the in-process chain lives in the module's process (the sequencer backend above is not built).
+- As a Logos module (`modules/ferrata_updater_module`, `logosctl daemon`) it drives the same daemon with the
+  harness ledger only: the in-process chain lives in the module's process; the sequencer backend above is a
+  binary of its own (it links LEZ's node-side crates), which the module does not carry.
 - Jobs whose `Finish` fails stay open (the program has no clean-up step); the updater moves on.
