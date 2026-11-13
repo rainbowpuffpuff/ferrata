@@ -178,8 +178,10 @@ side is a devnet we ran (LEZ testnet 0.4 does not exist).
 - **Not built** (README, "Specified but not built"): among them the updater module's backend for a running sequencer
   and the A3 gate's three daemons on one (the three daemons are built as Logos modules, rows 94–98, the updater's on
   its in-process chain only; the updater's sequencer backend is a binary of its own, which followed Sepolia live for
-  eight hours, row 99), the monitor's client of the LEZ and Logos Blockchain nodes' RPCs, the mini-app's private round trip
-  through a LEZ sequencer, reads and sends through Logos Core's own modules, a published module catalog. Nothing is audited: the static
+  eight hours, row 99), the monitor's client of the LEZ and Logos Blockchain nodes' RPCs, reads and sends through Logos Core's own
+  modules (on a LEZ sequencer the user's private round trip has run through the tool and through the mini-app and
+  `ferrata_bridge_module` in a headless Logos Core, with a stand-in for those modules, rows 102 and 103), a published
+  module catalog. Nothing is audited: the static
   analysis, symbolic checks, fuzzing and the core's review (rows 1, 35, 36 and 40) are tooling, not an audit; the
   Halmos properties hold from one concrete fixture state within stated bounds; of the four not proven in 900 s,
   one passed with 4,800 s in its generic layout and three did not finish
