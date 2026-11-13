@@ -371,6 +371,11 @@ impl Chain {
         let private = matches!(mentions.first(), Some(Mention::PrivateSelf(_)));
         let since = self.seq.wallet.client().get_last_block_id().await.map_err(|e| anyhow!("get_last_block_id: {e}"))?;
         let call = LezCall { what: what.clone(), mentions, root_index, message };
+        if private {
+            // The wallet proves from its own view of the private account: brought up to the zone's head first
+            // (another process of the wallet, the gas drop's stand-in, may have changed it).
+            self.seq.wallet.sync_to_latest_block().await.map_err(|e| anyhow!("syncing the LEZ wallet: {e}"))?;
+        }
         let t0 = Instant::now();
         let hash = self.seq.submit(&call).await?;
         let send_ms = t0.elapsed().as_millis() as u64;
