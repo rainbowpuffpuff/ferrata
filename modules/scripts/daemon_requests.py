@@ -107,9 +107,20 @@ def main():
     bad.write_text((REPO / "modules/ferrata_updater_module/dev/recorded.toml").read_text().replace("[daemon]", "[daemon]\nunknown_field = 1", 1))
     add(U, "updater_config_unknown_field", "check_config", {"config_file": str(bad)}, {"verdict": "invalid_request"})
 
+    # ---- ferrata_relayer_module -----------------------------------------------------------------
+    # The binary's own parser and its refusals before any chain is asked; its rounds run in relayer-e2e.sh.
+    Re = "ferrata_relayer_module"
+    add(Re, "relayer_version", "version", None, {"module": Re, "lez_wallet": False})
+    add(Re, "relayer_run_unknown_option", "run", {"args": ["--frobnicate", "status"]}, {"verdict": "invalid_request"})
+    add(Re, "relayer_run_unbounded", "run", {"args": ["--eth-rpc", "http://127.0.0.1:9", "--vault", "0x" + "00" * 19 + "01",
+        "--unlocked", "0x" + "00" * 19 + "02", "run", "--inbox", str(out / "relayer-inbox")]}, {"verdict": "invalid_request"})
+    add(Re, "relayer_run_no_endpoint", "run", {"args": ["status"]}, {"verdict": "error", "error": "--eth-rpc is required"})
+    add(Re, "relayer_run_no_vault", "run", {"args": ["--eth-rpc", "http://127.0.0.1:9", "status"]},
+        {"verdict": "error", "error": "--vault is required"})
+
     (out / "calls.json").write_text(json.dumps(calls, indent=1))
     (out / "expect.json").write_text(json.dumps(expect, indent=1))
-    print(f"daemon_requests.py: {sum(1 for c in calls if c.get('module') in (A, Mo, U))} calls for {A}, {Mo}, {U}")
+    print(f"daemon_requests.py: {sum(1 for c in calls if c.get('module') in (A, Mo, U, Re))} calls for {A}, {Mo}, {U}, {Re}")
 
 
 if __name__ == "__main__":

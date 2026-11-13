@@ -1567,7 +1567,18 @@ impl Devnet {
             parent_id: [0; 32],
         };
         put(&mut self.zone.world, ferrata_lez_wire::instance_actor(attestation, &id), borsh::to_vec(&instance)?);
+        // What ferrata_bridge_module's import_root takes for this record (relayer-e2e.sh compares its message with
+        // the relayer's): the record's state and anvil's eth_getProof of the vault's slots 0 and 1 at the block.
+        let get_proof: Value = self
+            .p
+            .raw_request(
+                "eth_getProof".into(),
+                (self.vault, [hx(&word(0)), hx(&word(1))], format!("0x{number:x}")),
+            )
+            .await?;
         Ok(json!({
+            "record_state": hx(&borsh::to_vec(&record_state)?),
+            "get_proof": get_proof,
             "record_slot": slot,
             "block": number,
             "block_hash": block["hash"],

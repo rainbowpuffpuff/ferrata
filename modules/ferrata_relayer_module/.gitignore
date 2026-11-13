@@ -1,0 +1,10 @@
+result
+result-*
+lib/
+rust-lib/target/
+rust-lib/generated/
+logos-rust-sdk-src
+# The relayer (cli/ without LEZ's wallet), the crates it needs and the LEZ tree, made by scripts/stage-relayer.sh before a build.
+rust-lib/vendor/
+# check.sh output (default OUT_DIR)
+out/

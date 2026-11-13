@@ -13,6 +13,8 @@
 #                            -> rust-lib/monitor, rust-lib/checkpoint/crates/attestor-core
 #   ferrata_updater_module:  stage-updater.sh (rust-lib/vendor/: lez/updater with lez/advance, the
 #                            lez/ harness and the LEZ tree)
+#   ferrata_relayer_module:  stage-relayer.sh (rust-lib/vendor/: cli/'s library without lez-wallet, cli/wallet,
+#                            the crates they link and the LEZ tree)
 # Each records what was copied in a STAGED.json, which the module's version() reports.
 #
 #   modules/scripts/stage.sh [MODULE...]      (default: every module)
@@ -74,13 +76,14 @@ stage_monitor() {
 }
 
 if [ $# = 0 ]; then
-  set -- ferrata_attest_module ferrata_bridge_module ferrata_attestor_module ferrata_monitor_module ferrata_updater_module
+  set -- ferrata_attest_module ferrata_bridge_module ferrata_attestor_module ferrata_monitor_module ferrata_updater_module \
+    ferrata_relayer_module
 fi
 py=()
 for m in "$@"; do
   case "$m" in
     ferrata_attest_module|ferrata_bridge_module) py+=("$m") ;;
-    ferrata_attestor_module|ferrata_monitor_module|ferrata_updater_module) ;;
+    ferrata_attestor_module|ferrata_monitor_module|ferrata_updater_module|ferrata_relayer_module) ;;
     *) echo "stage.sh: no module $m" >&2; exit 2 ;;
   esac
 done
@@ -90,5 +93,6 @@ for m in "$@"; do
     ferrata_attestor_module) stage_attestor ;;
     ferrata_monitor_module) stage_monitor ;;
     ferrata_updater_module) FERRATA_COMMIT="$commit" "$here/stage-updater.sh" ;;
+    ferrata_relayer_module) FERRATA_COMMIT="$commit" "$here/stage-relayer.sh" ;;
   esac
 done

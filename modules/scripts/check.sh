@@ -8,7 +8,9 @@
 # module against the mini-app's devnet: an anvil vault and the LEZ harness), and the three daemons doing their jobs
 # as modules: attestor-e2e.sh (the zone of four's records), updater-e2e.sh (the in-process LEZ chain
 # with the lab's recorded beacon data), monitor-e2e.sh (monitor/tests/anvil-e2e.sh: an anvil chain with a v5 vault),
-# each first run natively (the calls crate, or the monitor binary) as the reference.
+# relayer-e2e.sh (cli/tests/relayer_fork.rs on an anvil fork of Sepolia, and root imports on the mini-app's devnet;
+# the module in a Logos Core of its own), each first run natively (the calls crate, or the monitor or relayer binary)
+# as the reference.
 # Needs Linux x86-64, Nix with flakes, cargo, python3 and jq; for the daemons also the RISC Zero
 # toolchain of lez/ (the guests the updater module embeds), r0vm, and Foundry (anvil, forge, cast) with
 # vault/lib; for BRIDGE_E2E=1 also RELEASE_ELF (the release guest, bridge_e2e.sh) and libpcsclite (the devnet
@@ -16,7 +18,7 @@
 #
 #   modules/scripts/check.sh [OUT_DIR]     default modules/out (ignored by git)
 #
-# MODULES="..." restricts the modules (default all five). PORTABLE=0 skips the portable packages and
+# MODULES="..." restricts the modules (default all six). PORTABLE=0 skips the portable packages and
 # the portable logosctl (built and run by default). E2E=0 skips the end-to-end runs through Logos Core;
 # DAEMONS_E2E_IN="dev portable" names the flavours the daemons' runs go through (default both).
 # BRIDGE_E2E=1 adds bridge_e2e.sh through each Logos Core (off by default).
@@ -25,7 +27,7 @@ set -euo pipefail
 
 BUILDER=github:logos-co/logos-module-builder/5f74cdb3cecacde054c68d72fcc0d2cfe2195900
 CLI=github:logos-co/logos-logoscore-cli/66d098d3af1367cf831b69c13a5aa8345edeb682
-MODULES=${MODULES:-"ferrata_attest_module ferrata_bridge_module ferrata_attestor_module ferrata_monitor_module ferrata_updater_module"}
+MODULES=${MODULES:-"ferrata_attest_module ferrata_bridge_module ferrata_attestor_module ferrata_monitor_module ferrata_updater_module ferrata_relayer_module"}
 PORTABLE=${PORTABLE:-1}
 E2E=${E2E:-1}
 DAEMONS_E2E_IN=${DAEMONS_E2E_IN:-"dev portable"}
@@ -126,7 +128,7 @@ sdk() {
 }
 # A missing lockfile is written from the daemon's own (the versions it is tested with), else fresh.
 lock_seed() { case "$1" in ferrata_attestor_module) echo checkpoint/Cargo.lock ;; ferrata_monitor_module) echo monitor/Cargo.lock ;;
-  ferrata_updater_module) echo lez/Cargo.lock ;; esac; }
+  ferrata_updater_module) echo lez/Cargo.lock ;; ferrata_relayer_module) echo cli/Cargo.lock ;; esac; }
 lockfiles() {
   local m seed
   for m in $MODULES; do
@@ -143,9 +145,9 @@ lockfiles() {
 }
 calls_crate() { case "$1" in ferrata_attest_module) echo ferrata-attest-calls ;; ferrata_bridge_module) echo ferrata-bridge-calls ;;
   ferrata_attestor_module) echo ferrata-attestor-calls ;; ferrata_monitor_module) echo ferrata-monitor-calls ;;
-  ferrata_updater_module) echo ferrata-updater-calls ;; esac; }
-# The updater module's crates are LEZ's: the toolchain lez/ builds with (lez/rust-toolchain.toml).
-cargo_for() { case "$1" in ferrata_updater_module) echo "cargo +1.98.1" ;; *) echo cargo ;; esac; }
+  ferrata_updater_module) echo ferrata-updater-calls ;; ferrata_relayer_module) echo ferrata-relayer-calls ;; esac; }
+# The updater and relayer modules' crates are LEZ's: the toolchain lez/ and cli/ build with (rust-toolchain.toml).
+cargo_for() { case "$1" in ferrata_updater_module|ferrata_relayer_module) echo "cargo +1.98.1" ;; *) echo cargo ;; esac; }
 native_test() {
   local m
   for m in $MODULES; do (cd "$repo/modules/$m/rust-lib" && RISC0_DEV_MODE=1 $(cargo_for "$m") test --release --locked -p "$(calls_crate "$m")"); done
@@ -176,6 +178,7 @@ native_daemons() {
   if has ferrata_attestor_module; then "$here/attestor-e2e.sh" "$rep/daemons-native/attestor" || rc=1; fi
   if has ferrata_updater_module; then "$here/updater-e2e.sh" "$rep/daemons-native/updater" || rc=1; fi
   if has ferrata_monitor_module; then "$here/monitor-e2e.sh" "$rep/daemons-native/monitor" || rc=1; fi
+  if has ferrata_relayer_module; then "$here/relayer-e2e.sh" "$rep/daemons-native/relayer" || rc=1; fi
   return $rc
 }
 
@@ -259,6 +262,11 @@ core() {
     fi
     if has ferrata_monitor_module; then
       step 0 "$flavour-monitor-e2e" env CALL=logosctl LOGOSCTL="$LOGOSCTL" SESSION="$SESSION" "$here/monitor-e2e.sh" "$d/monitor" || true
+    fi
+    # The relayer module in a Logos Core of its own (without this one's RISC0_DEV_MODE: it wraps a real receipt).
+    if has ferrata_relayer_module; then
+      step 0 "$flavour-relayer-e2e" env CALL=logosctl LOGOSCTL="$LOGOSCTL" LGX="$out/$kind-ferrata_relayer_module" \
+        "$here/relayer-e2e.sh" "$d/relayer" || true
     fi
   fi
   step 0 "$flavour-module-ls" ctl module ls --json || true

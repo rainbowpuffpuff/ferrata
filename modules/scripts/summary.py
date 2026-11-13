@@ -16,9 +16,10 @@ import os
 import pathlib
 import sys
 
-ALL = "ferrata_attest_module ferrata_bridge_module ferrata_attestor_module ferrata_monitor_module ferrata_updater_module"
+ALL = "ferrata_attest_module ferrata_bridge_module ferrata_attestor_module ferrata_monitor_module ferrata_updater_module ferrata_relayer_module"
 MODULES = set((os.environ.get("MODULES") or ALL).split())
-DAEMONS = {"attestor": "ferrata_attestor_module", "updater": "ferrata_updater_module", "monitor": "ferrata_monitor_module"}
+DAEMONS = {"attestor": "ferrata_attestor_module", "updater": "ferrata_updater_module", "monitor": "ferrata_monitor_module",
+           "relayer": "ferrata_relayer_module"}
 
 
 def load(path):

@@ -1,0 +1,32 @@
+{
+  "name": "ferrata_relayer_module",
+  "display_name": "Ferrata relayer",
+  "version": "0.1.0",
+  "type": "core",
+  "interface": "cdylib",
+  "category": "bridge",
+  "description": "Ferrata (prototype): ferrata-relayer as a module: imports the vault's deposit roots on LEZ (ImportRoot under the newest record of the configuration's light client, built and dry-run with the bridge module's code), submits rule (B) checkpoints and finalises them, relays and wraps users' releases for its fee, collects its fees and watches the zone's burns, as a loop under Logos Core or for a given number of rounds",
+  "main": "ferrata_relayer_module_plugin",
+  "dependencies": [],
+
+  "codegen": {
+    "rust": { "crate": "rust-lib", "trait": "FerrataRelayerModule" }
+  },
+
+  "nix": {
+    "packages": {
+      "build": [],
+      "runtime": []
+    },
+    "rust": {
+      "toolchain": "1.98.0"
+    },
+    "external_libraries": [],
+    "cmake": {
+      "find_packages": [],
+      "extra_sources": [],
+      "extra_include_dirs": [],
+      "extra_link_libraries": []
+    }
+  }
+}
