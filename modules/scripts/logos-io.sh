@@ -121,19 +121,51 @@ step e2e env CALL=logosctl ETH_VIA=eth_rpc_module LOGOSCTL="$LOGOSCTL" SESSION="
 step bridge-e2e env CALL=logosctl ETH_VIA=eth_rpc_module LOGOSCTL="$LOGOSCTL" SESSION="$SESSION" \
   RELEASE_ELF="$RELEASE_ELF" "$here/bridge_e2e.sh" "$out/bridge-e2e" || true
 
-# The send stack against a local anvil: a transfer priced by tx_sender_module (fee_module and
-# eth_rpc_module read the chain); nothing is signed or sent (signing needs keystore_module's approval).
+# The send stack against a local anvil, driven as an operator would from the command line: a transfer
+# priced by tx_sender_module (fee_module and eth_rpc_module read the chain), then sent: anvil's first
+# dev key imported into keystore_module, the roles given to this command line (the caller identity the
+# modules report), an unattended unlock scoped to tx_sender_module (signer_manager_module's `unlock`
+# with confirm false), tx_sender_module.send, send_status polled until final, the receipt read back
+# through eth_rpc_module. Informational: each reply is recorded in send-stack.log; it is not counted
+# as a failure of this run.
 anvil --port 18545 --chain-id 31337 --silent > "$out/anvil.log" 2>&1 &
 anvil=$!
 for _ in $(seq 1 50); do (echo > /dev/tcp/127.0.0.1/18545) 2>/dev/null && break; sleep 0.2; done
-{
-  ctl call eth_rpc_module set_chain_config 31337 '{"endpoint":"http://127.0.0.1:18545","name":"anvil","testnet":true}' --json
-  ctl call eth_rpc_module block_number 31337 --json
-  ctl call tx_sender_module prepare \
-    '{"chainId":31337,"from":"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266","calls":[{"to":"0x70997970C51812dc3A010C7d01b50e0d17dc79C8","value":"1000"}]}' --json
-  ctl call keystore_module caller_identity --json
-  ctl call signer_manager_module caller_identity --json
-} > "$rep/send-stack.log" 2>&1
+DEV0=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+DEV1=0x70997970C51812dc3A010C7d01b50e0d17dc79C8
+DEV0_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80  # anvil's public dev key 0
+sl="$rep/send-stack.log"
+c() { local label=$1; shift; printf '\n## %s\n' "$label" >> "$sl"; ctl call "$@" --json < /dev/null >> "$sl" 2>&1; }
+r() { ctl call "$@" --json < /dev/null 2>/dev/null | jq -r '.result // empty' 2>/dev/null; }
+: > "$sl"
+c "eth_rpc_module chain 31337 = anvil" eth_rpc_module set_chain_config 31337 '{"endpoint":"http://127.0.0.1:18545","name":"anvil","testnet":true}'
+c "eth_rpc_module block_number" eth_rpc_module block_number 31337
+c "tx_sender_module prepare" tx_sender_module prepare "{\"chainId\":31337,\"from\":\"$DEV0\",\"calls\":[{\"to\":\"$DEV1\",\"value\":\"1000\"}]}"
+c "keystore_module caller_identity" keystore_module caller_identity
+me=$(r keystore_module caller_identity | jq -r '.identity // empty' 2>/dev/null)
+echo "caller identity: ${me:-unknown}" >> "$sl"
+if [ -n "$me" ]; then
+  c "keystore_module configure" keystore_module configure "{\"approvers\":[\"$me\"],\"custodians\":[\"$me\"],\"managers\":[\"signer_manager_module\"]}"
+  c "keystore_module import_private_key" keystore_module import_private_key "$DEV0_KEY" "ferrata-devnet-password"
+  c "signer_manager_module configure" signer_manager_module configure "{\"approvers\":[\"$me\"],\"custodians\":[\"$me\"],\"signers\":[\"keystore_module\"]}"
+  c "signer_manager_module accounts" signer_manager_module accounts
+  c "signer_manager_module unlock" signer_manager_module unlock "{\"account\":\"$DEV0\",\"password\":\"ferrata-devnet-password\",\"ttlMs\":600000,\"count\":5,\"apps\":[\"tx_sender_module\"],\"confirm\":false}"
+  sr=$(r tx_sender_module send "{\"chainId\":31337,\"from\":\"$DEV0\",\"calls\":[{\"to\":\"$DEV1\",\"value\":\"1000\"}],\"purpose\":\"Ferrata logos-io: a devnet transfer\"}")
+  printf '\n## tx_sender_module send\n%s\n' "$sr" >> "$sl"
+  rid=$(echo "$sr" | jq -r '.requestId // empty' 2>/dev/null)
+  echo "requestId: ${rid:-none}" >> "$sl"
+  if [ -n "$rid" ]; then
+    for i in $(seq 1 15); do
+      st=$(r tx_sender_module send_status "$rid")
+      printf '\n## send_status %s\n%s\n' "$i" "$st" >> "$sl"
+      [ "$(echo "$st" | jq -r '.final // false' 2>/dev/null)" = true ] && break
+      sleep 2
+    done
+    hash=$(echo "$st" | jq -r '.hash // empty' 2>/dev/null)
+    [ -n "$hash" ] && c "eth_rpc_module get_transaction_receipt" eth_rpc_module get_transaction_receipt 31337 "$hash"
+  fi
+  c "signer_manager_module unattended_signatures" signer_manager_module unattended_signatures
+fi
 kill $anvil 2>/dev/null || true
 cp "$SESSION/logs/daemon.log" "$rep/daemon.log" 2>/dev/null || true
 
