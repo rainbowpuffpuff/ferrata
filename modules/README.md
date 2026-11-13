@@ -221,12 +221,15 @@ names, as the binary does.
 
 `ferrata-updater` ([`lez/updater`](../lez/updater/README.md)) as a module: the same configuration file
 (`ferrata-updater.example.toml`), the same set-up (`ferrata_updater::daemon`, shared since this module)
-and the same rounds. The chain is the binary's `ledger = "harness"`: LEZ v0.4.0-rc1's state machine in
-the module's process with LEZ's fee program and settlement and the attestation program at genesis (the
-chain the updater's tests run on, `RISC0_DEV_MODE=1` in the daemon's environment as for those tests); it
-lives in the daemon's thread, so `stop` ends it. `ledger = "sequencer"` is refused as the binary refuses
-it. `status` and `metrics` give what `/health` and `/metrics` give; with `daemon.listen` set, the module
-also serves those on that address.
+and the same rounds, over either of the binary's backends. `ledger = "harness"`: LEZ v0.4.0-rc1's state
+machine in the module's process with LEZ's fee program and settlement and the attestation program at genesis
+(the chain the updater's tests run on, `RISC0_DEV_MODE=1` in the daemon's environment as for those tests).
+`ledger = "sequencer"`: a running LEZ sequencer on this machine (`[sequencer]`), through
+`lez/updater/sequencer/`'s library, the code its binary runs: LEZ's wallet client sends, a follower applies
+every block final on Bedrock with LEZ's block application and reads each result; `stop` and the periodic save
+keep the follower in the state directory, and `start` restores it. The backend lives in the daemon's thread,
+so `stop` ends it. `status` and `metrics` give what `/health` and `/metrics` give; with `daemon.listen` set,
+the module also serves those on that address.
 
 | Method | Takes | Returns |
 |---|---|---|
@@ -248,7 +251,7 @@ also serves those on that address.
 | `scripts/bridge_e2e.sh OUT_DIR` | the bridge module against the mini-app's devnet (`cli/examples/miniapp_devnet.rs`: the v5 vault on anvil, chain id 1, its verifier the vault tests' mock; the zone in the LEZ harness with the bridge program): two private deposits; `import_root` from a block the devnet records (its proofs in `eth_getProof`'s shape), dry-run and applied, and a wrong count refused by the dry run and by the program with the same code; `registry`; both deposits claimed privately (`claim` with state → `ClaimPrivately`, proven and settled privately by the devnet with the wallet's keys) and a second claim refused from the nullifier's state; two private burns, a checkpoint over the first (its delay passed) and one over both (in its delay): `release` by the rule picks the older root, refuses the newer burn until its root opens, then picks the newer; `prove_release`; both releases accepted by the vault; `status` (`CALL=logosctl` through a daemon) | Linux with cargo, Foundry, `RELEASE_ELF` (and `logosctl`) |
 | `scripts/attestor-e2e.sh OUT_DIR` | the attestor's job on the four-sequencer zone's records (`checkpoint/attestor/runs/zone`): tier, base, each sequencer's key, certificate and attestation (each equal to the run's), verify, collect 3 of 4 (the input the checkpoint program proved, byte for byte), 4 of 4, 2 of 4 refused, three refusals to sign; then the module's loop against a node served from the same answers over HTTP (`recorded_node.py`): 23 checks | Linux with cargo (and `logosctl`) |
 | `scripts/attestor-zone-live.sh BUNDLE OUT_DIR` | a running zone of four LEZ sequencers (`checkpoint/attestor/zone.sh`, the lab bundle) and four Logos Cores, one per sequencer, each running the attestor module's loop against the zone's node while it runs; then the module's collector | Linux x86-64, the lab bundle, `logosctl` |
-| `scripts/updater-e2e.sh OUT_DIR` | the updater's job on its tests' chain: the in-process LEZ v0.4.0-rc1 chain, the lab's recorded mainnet and Sepolia data, from the checkpoints to the lab's final roots (`start`, `status` until up to date, `metrics`, `stop` through Logos Core; `run` natively); the sequencer backend refused | Linux with cargo, r0vm (and `logosctl`) |
+| `scripts/updater-e2e.sh OUT_DIR` | the updater's job on its tests' chain: the in-process LEZ v0.4.0-rc1 chain, the lab's recorded mainnet and Sepolia data, from the checkpoints to the lab's final roots (`start`, `status` until up to date, `metrics`, `stop` through Logos Core; `run` natively); the sequencer backend carried (with no sequencer, its set-up fails on the connection) | Linux with cargo, r0vm (and `logosctl`) |
 | `scripts/monitor-e2e.sh OUT_DIR` | `monitor/tests/anvil-e2e.sh` (a local anvil chain, a v5 vault, scenarios S1–S11, A0–A4, R1–R4, the alerting check: 46 checks) with the binary, or with the module through `scripts/monitor-module.sh` (`CALL=logosctl`): S5's SIGKILL then kills the module's host process and the module is loaded again | Linux with cargo and Foundry (and `logosctl`) |
 | `scripts/release-local.sh OUT_DIR` | `logos-modules-release-action`'s steps for `linux-amd64`, locally, for the five modules, nothing published (`catalog/README.md`) | Linux x86-64 with Nix |
 | `scripts/catalog-install.sh RELEASE_DIR LOGOSCTL WORK_DIR` | a Logos Core installs the five modules from that catalog, served over HTTPS on 127.0.0.1: `catalog add`, `search`, `install`, `module load`, `call`; with `CATALOG_E2E=1` (and `CATALOG_E2E_MORE`), the daemons' jobs through the installed modules | Linux x86-64 with Nix |
@@ -290,12 +293,12 @@ that start a Logos Core refuse a `TMPDIR` (or `LOGOS_TMPDIR`) longer than 62 byt
 - **`ferrata_monitor_module`:** node views still come through the adapter (`file:`/`cmd:`): no client of
   the LEZ sequencer's or the Logos Blockchain node's RPC (`monitor/README.md`, "Not built"); one daemon
   per module instance.
-- **`ferrata_updater_module`:** only the in-process chain (`ledger = "harness"`, the updater's tests'
-  chain, with `RISC0_DEV_MODE=1`): it lives in the module's process and ends with `stop`, so two updater
-  modules cannot share a chain, and the cooperative A3 gate (two honest updaters and an adversary) stays
-  the binary's test; the backend for a running sequencer is a binary of its own (`lez/updater/sequencer/`,
-  which links LEZ's node-side crates), which the module does not carry; built with Rust 1.98.0, LEZ pins
-  1.98.1; the guests it embeds are the ones risc0-build made on the build box (their ids checked against
+- **`ferrata_updater_module`:** two updater modules share a chain only on a sequencer (the in-process chain
+  lives in one module's process and ends with `stop`); the cooperative A3 gate (two honest updaters and an
+  adversary) is the binary's test, in process; the sequencer backend ran in one Logos Core on a one-validator
+  crown zone (EVIDENCE row 104), not beside other updaters; the package links LEZ's node-side crates (61 MB
+  portable, against 16 MB with the harness alone) and its host needs `curl` and `libpcsclite`; built with Rust
+  1.98.0, LEZ pins 1.98.1; the guests it embeds are the ones risc0-build made on the build box (their ids checked against
   `docs/image-ids.md`).
 - **Catalog:** laid out, dry-run and installed from on 127.0.0.1 (`catalog/`); nothing published, one
   variant (`linux-amd64`), unsigned.

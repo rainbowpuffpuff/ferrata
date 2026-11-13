@@ -221,7 +221,9 @@ Record, tables and the re-check: [`results/live-sepolia/`](results/live-sepolia/
   (and its 100 updates) ran in process only. No public LEZ v0.4 network exists to run on.
 - Several days unattended (proposal A4's seven days on testnet 0.4): the live run lasted hours.
 - The proven path (`VerifyAll`): the daemon drives the public job only.
-- As a Logos module (`modules/ferrata_updater_module`, `logosctl daemon`) it drives the same daemon with the
-  harness ledger only: the in-process chain lives in the module's process; the sequencer backend above is a
-  binary of its own (it links LEZ's node-side crates), which the module does not carry.
+- As a Logos module (`modules/ferrata_updater_module`, `logosctl daemon`) it drives the same daemon with either
+  ledger: the harness (the in-process chain lives in the module's process) or the sequencer backend above, whose
+  library (`sequencer/src/lib.rs`, `open_ledger`) the module links (`modules/scripts/stage-updater.sh` stages it
+  with LEZ's node-side crates and their prebuilt circuit and rapidsnark libraries). It ran inside a headless Logos
+  Core on a crown zone following Sepolia (`modules/results/updater-sequencer-2026-11-13/`, EVIDENCE row 104).
 - Jobs whose `Finish` fails stay open (the program has no clean-up step); the updater moves on.

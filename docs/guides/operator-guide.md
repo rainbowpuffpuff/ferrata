@@ -177,8 +177,14 @@ following Sepolia for 8 h on two LEZ v0.4.0-rc1 devnets in turn, from Lodestar's
 publicnode's headers as the second source (`kind = "headers"`, `min_agreeing = 2`): 74 updates applied (56 on
 the chains kept), restarts mid-job and of the whole zone
 ([`lez/updater/results/live-sepolia/`](../../lez/updater/results/live-sepolia/)). The Logos
-module `ferrata_updater_module` ([`modules/`](../../modules/README.md)) drives the same daemon on the in-process chain; it
-does not carry the sequencer backend. Not built: the proven path, the module on a running sequencer.
+module `ferrata_updater_module` ([`modules/`](../../modules/README.md)) drives the same daemon with either backend: the
+in-process chain, or a running sequencer through `lez/updater/sequencer/`'s library, with the same configuration
+(`daemon.ledger = "sequencer"`, `[sequencer]`); `start`, `status`, `metrics` and `stop` through Logos Core, `/health`
+and `/metrics` on `daemon.listen` as the binary's. It ran inside a headless Logos Core on a crown zone following
+Sepolia, with a restart mid-job through `stop` and `start` (EVIDENCE row 104,
+[`modules/results/updater-sequencer-2026-11-13/`](../../modules/results/updater-sequencer-2026-11-13/README.md)). The
+module's host process needs `curl` on its `PATH` (the beacon sources) and `libpcsclite` (LEZ's wallet links it). Not
+built: the proven path.
 
 ## 4. The root importer (RFP-022 P.2)
 
@@ -557,8 +563,7 @@ checkpoints after a sunset until holders have released ([`bridge.md`](../design/
 ## 12. What is not built
 
 The relayer's Logos module (`ferrata-relayer` is a plain binary, §6; the monitor, the rule (B) attestor and the
-updater are built as Logos modules, the updater's on the in-process chain only, its backend for a running sequencer
-being a binary of its own, §3.6); the relayer's root
+updater are built as Logos modules, the updater's with both of its backends, §3.6); the relayer's root
 imports and its run against a live sequencer, the sealed gas drop to a private one-time account and its sweep inside
 the private claim (§6.4); `verify_checkpoint` through Logos Core's `verified_proxy_module`; the attestation side's `monitor`; job clean-up; the acceptance run at 100 updates and on a sequencer (it ran on 58 recorded updates in process, §3.4);
 daemon resource measurements; the amortised costs at the recommended

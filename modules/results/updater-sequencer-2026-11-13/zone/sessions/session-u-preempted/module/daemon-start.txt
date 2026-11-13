@@ -1,0 +1,2 @@
+Daemon started (pid 4062)
+Logs: /root/crown-lez/logos-session/logs/daemon.log

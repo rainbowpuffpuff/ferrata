@@ -1,0 +1,1 @@
+{"method":"start","module":"ferrata_updater_module","result":"{\"config\":{\"config_file\":\"/root/crown-lez/state/updater/updater.toml\",\"rounds\":null,\"served\":\"127.0.0.1:9464\"},\"error\":null,\"notes\":[],\"running\":true,\"snapshot\":null,\"started_at\":1794561342,\"stopped_at\":null,\"verdict\":\"started\"}","status":"ok"}

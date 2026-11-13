@@ -435,8 +435,8 @@ From [`attestation.md`](../design/attestation.md) §15 and [`lez/RESULTS.md`](..
   16 cores, and on M1 and M4 Mac minis under macOS: EVIDENCE rows 32–34, 38, 88);
 - in the Logos module, reads and transactions through Logos Core's own modules (`advance` is built,
   EVIDENCE row 93); `verify_checkpoint` through Logos Core's `verified_proxy_module`; a published catalog; the
-  attestation side's `monitor`; the updater module on a running sequencer (the updater is built as a module
-  on the in-process chain, row 97, and with a backend for a running sequencer as a binary of its own, row 99)
+  attestation side's `monitor`; the A3 gate's three updaters on a running sequencer (the updater is built as
+  a binary and as a module, each with the in-process chain and a running sequencer as backends, rows 97, 99, 104)
   ([README](../../README.md#specified-but-not-built), "Specified but not built").
 
 Built since this guide's first draft, with their evidence: successors, the root id and the
