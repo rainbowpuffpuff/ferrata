@@ -337,6 +337,8 @@ impl Chain {
     /// The wallet's own view of one of its private accounts (LEZ's wallet decrypts it after a sync).
     async fn private(&mut self, params: &Value) -> Result<Value> {
         let id = AccountId::new(h32(params["account"].as_str().context("account")?)?);
+        // Synced again at every read: another process of the wallet (the gas drop's stand-in) may have sent since.
+        self.seq.synced = false;
         let account = self.seq.private_account(id).await?;
         Ok(match account {
             Some(a) => json!({

@@ -43,10 +43,12 @@ operator_import() {
 # b. The gas drop's stand-in.
 fund_private() {
   say "gas drop stand-in: native LEZ to the user's private account /0 (seqnet-fund)"
+  # LEZ's wallet prints its sync to stdout: the tool's JSON lines are kept apart.
   "${PROVE[@]}" "$BIN/seqnet-fund" --sequencer "$SEQ" --seed "$U/seed.txt" --lez-wallet "$U/lez-wallet" \
-    --lez-password-file "$U/lez.pass" --faucet-home "$W/faucet" > "$RUN/lez/fund.jsonl" 2> "$W/fund.err" \
+    --lez-password-file "$U/lez.pass" --faucet-home "$W/faucet" > "$W/fund.out" 2> "$W/fund.err" \
     || { tail -n 20 "$W/fund.err"; die "seqnet-fund"; }
-  jq -c '{step, tx, amount, send_ms, seen_ms}' "$RUN/lez/fund.jsonl" | tee -a "$RUN/run.log"
+  grep '^{' "$W/fund.out" > "$RUN/lez/fund.jsonl"
+  jq -c '{step, tx, amount, fee_paid_in_the_proof, send_ms, seen_ms}' "$RUN/lez/fund.jsonl" | tee -a "$RUN/run.log" || true
 }
 
 # The claim's delay let pass on anvil's clock: the tool's refusal names the first block it may be claimed in.
