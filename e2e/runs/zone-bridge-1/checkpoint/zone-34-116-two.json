@@ -1,0 +1,48 @@
+{
+  "attestations": [
+    {
+      "attestation_key": "d13290f1a09d3dfa1896b1848c449a651b3cf37fd285e25eb6960e91993fb282",
+      "channel_key": "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+      "tip_id": 116
+    },
+    {
+      "attestation_key": "6fa79012ebc3a9d9d36f8b55df10f75805326bff114f0ca7bd4fdcdbc291abde",
+      "channel_key": "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3",
+      "tip_id": 116
+    }
+  ],
+  "block_bytes": 604877,
+  "blocks": 82,
+  "blocks_to_t": 82,
+  "config_tip_hash": "e502602b81aa7b2ae5bca4f003303c26d00848b3d1339b56bc05fa5be654224c",
+  "deployment": {
+    "channel_id": "0101010101010101010101010101010101010101010101010101010101010101",
+    "evm_chain_id": "0000000000000000000000000000000000000000000000000000000000aa36a7",
+    "lez_config_id": "8c313ea41c646029fb17b0a65ee0315bef298a2acd3c7f368a375c8dc333f5d9",
+    "vault": "0xe9bd0e958697fe8aa6633dfed2b8d0234f69d04c"
+  },
+  "description": "an input the program must refuse",
+  "expect_refusal": "InsufficientAttestations { have: 2, need: 3 }",
+  "input_bytes": 607503,
+  "keys": [
+    "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+    "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac",
+    "90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729",
+    "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3"
+  ],
+  "kind": "checkpoint-b",
+  "n": 4,
+  "n_min": 4,
+  "name": "zone-34-116-two",
+  "native": "refused: InsufficientAttestations { have: 2, need: 3 }",
+  "parent_state": "958a2dcd50acb08bd0c8850267eaeb381aef8ace4ac324c160fd5d14b1a4fff4",
+  "parent_tip_hash": "0b678ced4cbb8891efb45a404d91ce3429b6ce65edc2b6fc77f66b3590f564d4",
+  "parent_tip_id": 34,
+  "posting_timeframe": 60,
+  "segments": 0,
+  "t": 3,
+  "t_min": 3,
+  "tip": 116,
+  "tip_hash": "4c37dbfc1c30989fd853c5fb86892a40a95a25ae41806f22e9b891a475900b55",
+  "transactions": 179
+}

@@ -20,6 +20,7 @@
 #   groth16 P the Groth16 receipt of P (checkpoint | release-<name>) from work/P/proof.json (mwrap on the laptop)
 #   vault     the local anvil from its saved state: submitCandidate, W warped, finalizeAttested, the release delay
 #             warped, the releases; the vault's state checked
+#   fixture   vault/test/real/fixtures/zone-bridge.json for ZoneBridge.t.sol (the journal, the seals, the run's values)
 #   verify    the input and journal re-derived from the recorded node answers and attestations; every receipt verified
 #
 # STAND-INs (every record says so): the beacon chain on LEZ (a committee the driver holds finalizes the anvil's
@@ -354,23 +355,28 @@ EOF
     ls "$W/att-$i/rounds" > "$RUN/zone/attestor-$i/tips-signed.txt"
   done
 
-  # -- the node's answers (the checkpoint's input is built from these alone)
-  local N2="$W/node" to
-  rm -rf "$N2"; mkdir -p "$N2/blocks"
-  curl -fsS -m 10 -o "$N2/info.json" "$API/cryptarchia/info"; curl -fsS -m 10 -o "$N2/channel.json" "$API/channel/$CHANNEL"
-  curl -fsS -m 10 -o "$N2/chain-id.json" "$API/chain/id" || true
-  lib="$(jq -r .lib_slot "$N2/info.json")"; local from="$FROM"
-  echo "$from" > "$N2/slot-from.txt"
-  while [ "$from" -le "$lib" ]; do to=$((from + 499)); [ "$to" -gt "$lib" ] && to="$lib"
-    curl -fsS -m 60 -o "$N2/blocks/$from-$to.json" "$API/cryptarchia/blocks?slot_from=$from&slot_to=$to"; from=$((to + 1)); done
-  tar -C "$W" --sort=name --owner=0 --group=0 --numeric-owner -cf - node | zstd -q -T0 -19 -o "$RUN/zone/node-answers.tar.zst" -f
-  log "node answers: slots $(cat "$N2/slot-from.txt")..=$lib, $(ls "$N2/blocks" | wc -l) windows, $(du -sb "$N2/blocks" | cut -f1) bytes ($(stat -c %s "$RUN/zone/node-answers.tar.zst") compressed)"
-  cp "$N2/channel.json" "$RUN/zone/channel-end.json"; cp "$N2/info.json" "$RUN/zone/info-end.json"
+  # -- the node's answers (the checkpoint's input is built from these alone): those attestor 0 fetched and checked in
+  #    its final round (attest --save), after the sequencers stopped and the LIB passed the channel's tip
+  pack_answers
   [ -d "$W/export" ] && tar -C "$W" -cf - export | zstd -q -T0 -19 -o "$RUN/lez/session-b/driver-export.tar.zst" -f
   cp "$W/phases.txt" "$RUN/zone/phases.txt"
   cp "$W/driver/manifest.tsv" "$RUN/lez/manifest.tsv" 2>/dev/null || true
   rm -f "$REPO/vault/deployments/crown-$NAME.json"   # DeployVault's record, kept as $RUN/deploy.json
-  log "zone stage done"
+  log "zone stage done"; scrub_logs
+}
+
+scrub_logs() { # forge's and the stages' logs under $RUN/logs name this machine's paths
+  find "$RUN/logs" -type f -name '*.log' -exec sed -i -e "s#$W/#work/#g" -e "s#$T/#tmp/#g" -e "s#$SPIKE/#spike/#g" -e "s#$HOME/#~/#g" {} +
+}
+
+pack_answers() { # $W/att-0/answers -> $RUN/zone/node-answers.tar.zst (as node/: info.json, channel.json, blocks/)
+  local A="$W/att-0/answers" lib
+  [ -s "$A/info.json" ] && [ -s "$A/channel.json" ] && ls "$A"/blocks/*.json > /dev/null 2>&1 || die "no saved answers in $A"
+  rm -rf "$W/node"; cp -r "$A" "$W/node"
+  tar -C "$W" --sort=name --owner=0 --group=0 --numeric-owner --mtime=@0 -cf - node | zstd -q -T0 -19 -o "$RUN/zone/node-answers.tar.zst" -f
+  lib="$(sed -n 's/.*"lib_slot":\([0-9]*\).*/\1/p' "$W/node/info.json")"
+  log "node answers (attestor 0's final round): slots from $(cat "$W/slot-from.txt") to the LIB $lib, $(ls "$W/node/blocks" | wc -l) windows, $(cat "$W"/node/blocks/*.json | wc -c) bytes ($(stat -c %s "$RUN/zone/node-answers.tar.zst") compressed)"
+  cp "$W/node/channel.json" "$RUN/zone/channel-end.json"; cp "$W/node/info.json" "$RUN/zone/info-end.json"
 }
 
 # ---- input ------------------------------------------------------------------------------------------------------
@@ -484,16 +490,42 @@ stage_vault() {
   log "finalState $final = the journal's new state; burnRootStatus($root) = $(cast call "$VAULT" 'burnRootStatus(bytes32)(bool,uint256)' "$root" --rpc-url "$R" | tr '\n' ' ')"
   cast rpc evm_increaseTime 121 --rpc-url "$R" > /dev/null; cast rpc evm_mine --rpc-url "$R" > /dev/null
   log "release delay warped: 121 s"
-  local k nrel; nrel="$(jq '.releases | length' "$RUN/crown.json")"
+  local k nrel paid="[]" status; nrel="$(jq '.releases | length' "$RUN/crown.json")"
+  status="$(cast call "$VAULT" 'burnRootStatus(bytes32)(bool,uint256)' "$root" --rpc-url "$R" | head -n 1)"
+  [ "$status" = true ] || die "the burn root is not accepted"
   for k in $(seq 0 $(( nrel - 1 ))); do
-    local rcpt nul before after
+    local rcpt nul before after used
     rcpt="$(jq -r ".releases[$k].recipient" "$RUN/crown.json")"; nul="$(jq -r ".releases[$k].nullifier" "$RUN/crown.json")"
     before="$(cast balance "$rcpt" --rpc-url "$R")"
     "$S" "$RUN" release "$k"
-    after="$(cast balance "$rcpt" --rpc-url "$R")"
-    log "release $k: recipient $rcpt +$(( after - before )) wei; nullifierUsed $(cast call "$VAULT" 'nullifierUsed(bytes32)(bool)' "$nul" --rpc-url "$R")"
+    after="$(cast balance "$rcpt" --rpc-url "$R")"; used="$(cast call "$VAULT" 'nullifierUsed(bytes32)(bool)' "$nul" --rpc-url "$R")"
+    [ "$used" = true ] || die "release $k: the nullifier is not used"
+    log "release $k: recipient $rcpt +$(python3 -I -c "print($after - $before)") wei; nullifierUsed $used"
+    paid="$(jq -c --arg r "$rcpt" --arg n "$nul" --arg w "$(python3 -I -c "print($after - $before)")" '. + [{recipient: $r, nullifier: $n, paidWei: $w}]' <<< "$paid")"
   done
+  jq -n --arg f "$final" --arg root "$root" --argjson paid "$paid" --arg bal "$(cast balance "$VAULT" --rpc-url "$R")" \
+    '{finalState: $f, burnRoot: $root, burnRootAccepted: true, releases: $paid, vaultBalanceWeiAfter: $bal}' > "$RUN/vault-checks.json"
   "$S" "$RUN" status | tee -a "$RUN/logs/zone-bridge.log"
+  scrub_logs
+}
+
+# ---- fixture: what vault/test/real/ZoneBridge.t.sol reads ---------------------------------------------------------
+stage_fixture() {
+  local C="$RUN/checkpoint" n A="$RUN/lez/session-a/session-a.json" out="$REPO/vault/test/real/fixtures/zone-bridge.json"
+  n="$(cname)"
+  jq -n --slurpfile m "$C/$n.json" --slurpfile a "$A" --slurpfile cj "$RUN/crown.json" --slurpfile id "$RUN/identity.json" \
+    --slurpfile vc "$RUN/vault-checks.json" --arg j "0x$(hexfile "$C/receipts/journal.hex")" --arg s "0x$(hexfile "$C/receipts/seal.hex")" \
+    --arg img "$(id_of checkpoint_b)" --arg rimg "$(id_of release)" --arg src "e2e/runs/$NAME" '
+    ($m[0]) as $m | ($a[0]) as $a | ($cj[0]) as $cj | ($vc[0]) as $vc |
+    {_source: ("checkpoint/attestor/zone-bridge.sh fixture over " + $src), imageId: $img, releaseImageId: $rimg,
+     journal: $j, journalSha256: ("0x" + $m.journal_sha256), seal: $s,
+     keys: $a.channel.keys, postingTimeframe: $a.channel.postingTimeframe, configTipHash: $a.channel.configTipHash,
+     parentTipId: $a.tip.id, parentTipHash: $a.tip.hash, tipId: $m.tip, tipHash: $m.tip_hash,
+     depositor: $id[0].deployer, commitments: [$cj.deposits[].commitment],
+     releaseCount: ($cj.releases | length),
+     releases: [$cj.releases | to_entries[] | .value + {paidOnAnvil: ($vc.releases[.key].paidWei | tonumber)}]}' > "$out"
+  [ "$(jq -r .journal "$out" | sed 's/^0x//')" = "$(jq -r .journal "$C/$n.json")" ] || die "fixture journal"
+  echo "wrote $out"
 }
 
 # ---- verify -----------------------------------------------------------------------------------------------------
@@ -521,11 +553,13 @@ stage_verify() {
 case "$STAGE" in
   build) stage_build ;;
   zone) stage_zone ;;
+  answers) pack_answers ;;
   input) stage_input ;;
   prove) stage_prove ;;
   releases) stage_releases ;;
   groth16) stage_groth16 "$@" ;;
   vault) stage_vault ;;
+  fixture) stage_fixture ;;
   verify) stage_verify ;;
   *) sed -n '2,30p' "${BASH_SOURCE[0]}"; exit 2 ;;
 esac

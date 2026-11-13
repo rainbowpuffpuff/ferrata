@@ -92,6 +92,11 @@ abstract contract RuleBMultiFixture is Test {
         );
     }
 
+    /// @dev The release program the vault pins (a run with burns and releases overrides it: ZoneBridge.t.sol).
+    function _releaseImageId() internal view virtual returns (bytes32) {
+        return keccak256("ferrata test: no release in this run");
+    }
+
     function _first(uint256 count) internal view returns (bytes32[] memory k) {
         k = new bytes32[](count);
         for (uint256 i = 0; i < count; i++) {
@@ -109,7 +114,7 @@ abstract contract RuleBMultiFixture is Test {
         FerrataVault.Deployment memory d = FerrataVault.Deployment({
             verifier: IRiscZeroVerifier(address(estop)),
             checkpointImageId: id,
-            releaseImageId: keccak256("ferrata test: no release in this run"),
+            releaseImageId: _releaseImageId(),
             lezConfigId: lezConfigId,
             genesisState: genesisState,
             nMin: nMin_,

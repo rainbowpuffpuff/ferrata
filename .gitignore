@@ -83,3 +83,6 @@ __pycache__/
 /e2e/runs/crown-*/logs/
 /e2e/runs/crown-*/anvil.log
 /e2e/runs/crown-*/verifier.log
+
+# checkpoint/attestor/zone-bridge.sh: the Groth16 prover inputs and outputs between the box and mwrap (not records)
+/e2e/runs/zone-bridge-*/work/
