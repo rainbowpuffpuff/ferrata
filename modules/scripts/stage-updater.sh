@@ -8,8 +8,11 @@
 #   vendor/ferrata/                the repository's crates the updater needs, in the repository's own
 #                                  layout, with the workspace manifests they inherit from (the root's,
 #                                  bridge/'s, lez/'s), so every path dependency resolves unchanged:
-#                                  lez/{updater,advance,wire,bridge-wire,holdings-wire,harness} (advance:
-#                                  the update's job planning the updater shares with ferrata_attest_module),
+#                                  lez/{updater,updater/sequencer,advance,wire,bridge-wire,holdings-wire,harness}
+#                                  (advance: the update's job planning the updater shares with
+#                                  ferrata_attest_module; updater/sequencer: the backend for a running LEZ
+#                                  sequencer, a library the module links, with the live driver's modules it
+#                                  compiles in by path, lez/live/driver/src/),
 #                                  crates/{ferrata-core,ferrata-spectests}, bridge/crates/ferrata-bridge-core,
 #                                  checkpoint/crates/{checkpoint-core,attestor-core} (a dev-dependency's path),
 #                                  and the files the harness includes at compile time (SHA256SUMS of the
@@ -20,6 +23,13 @@
 #                                  vendor/STAGED.json and checked against docs/image-ids.md by check-daemons.sh)
 #   vendor/upstream/lez-v0.4.0-rc1/  the LEZ tree beside the repository (without target/ and .git),
 #                                  whose artifacts/ LEZ's own build scripts embed
+#   vendor/lbc/                    the prebuilt artifact of logos-blockchain-circuits that LEZ's node-side crates
+#                                  (the sequencer backend's) link and embed, the release their version names
+#                                  (rust-lib/.cargo/config.toml points LBC_ROOT_DIR at it; otherwise their build
+#                                  scripts download it into the user's cache: no network inside Nix's sandbox).
+#                                  Taken from that cache when it is there, else from the circuits' GitHub release
+#   vendor/rapidsnark/             rapidsnark's static libraries (RAPIDSNARK_LIB_DIR), the release rust-rapidsnark's
+#                                  build script would download (logos-blockchain-rust-rapidsnark, rapidsnark-pic-v0.0.8)
 #
 # Needs the guests built (`cargo build --locked -p methods` in lez/, RISC0_HOME as lez/RESULTS.md says).
 # METHODS_RS=path picks the risc0-build output (methods.rs); default: the newest under lez/target.
@@ -50,9 +60,12 @@ copy() { # SOURCE_DIR (relative to the repository): its Cargo.toml, README.md, b
   cp -r "$src/Cargo.toml" "$src/src" "$dst/"
   for f in README.md build.rs; do if [ -f "$src/$f" ]; then cp "$src/$f" "$dst/"; fi; done
 }
-crates="lez/updater lez/advance lez/wire lez/bridge-wire lez/holdings-wire lez/harness crates/ferrata-core crates/ferrata-spectests
+crates="lez/updater lez/updater/sequencer lez/advance lez/wire lez/bridge-wire lez/holdings-wire lez/harness crates/ferrata-core crates/ferrata-spectests
         bridge/crates/ferrata-bridge-core checkpoint/crates/checkpoint-core checkpoint/crates/attestor-core"
 for c in $crates; do copy "$c"; done
+# The live driver's modules the sequencer backend compiles in by path (lez/updater/sequencer/src/lib.rs).
+mkdir -p "$v/ferrata/lez/live/driver/src"
+for f in blocklog follower live manifest plan programs; do cp "$repo/lez/live/driver/src/$f.rs" "$v/ferrata/lez/live/driver/src/"; done
 # The workspace manifests the copies inherit from.
 cp "$repo/Cargo.toml" "$v/ferrata/Cargo.toml"
 cp "$repo/lez/Cargo.toml" "$v/ferrata/lez/Cargo.toml"
@@ -63,6 +76,37 @@ for f in $(cd "$repo" && ls crates/ferrata-spectests/fixtures/*/SHA256SUMS) brid
   mkdir -p "$(dirname "$v/ferrata/$f")"
   cp "$repo/$f" "$v/ferrata/$f"
 done
+
+# The circuits' prebuilt artifact (rust-lib/.cargo/config.toml: LBC_ROOT_DIR), at the version of the circuits crates
+# the sequencer backend links (its lock), kept in the cache their build scripts use.
+lbc_version=$(awk '/^name = "logos-blockchain-circuits-common"$/ {getline; gsub(/version = |"/, ""); print; exit}' "$repo/lez/updater/sequencer/Cargo.lock")
+lbc="logos-blockchain-circuits-v$lbc_version-linux-x86_64"
+grep -q "\"vendor/lbc/$lbc\"" "$r/.cargo/config.toml" || { echo "stage-updater.sh: rust-lib/.cargo/config.toml does not name $lbc" >&2; exit 1; }
+lbc_cache="${XDG_CACHE_HOME:-$HOME/.cache}/logos/blockchain"
+if [ ! -d "$lbc_cache/$lbc" ]; then
+  mkdir -p "$lbc_cache"
+  curl -fsSL -A ferrata-build -o "$lbc_cache/$lbc.tar.gz.part" \
+    "https://github.com/logos-blockchain/logos-blockchain-circuits/releases/download/v$lbc_version/$lbc.tar.gz"
+  tar -xzf "$lbc_cache/$lbc.tar.gz.part" -C "$lbc_cache"
+  mv "$lbc_cache/$lbc.tar.gz.part" "$lbc_cache/$lbc.tar.gz"
+fi
+mkdir -p "$v/lbc"
+cp -r "$lbc_cache/$lbc" "$v/lbc/"
+lbc_sum=$( (cd "$v/lbc" && find "$lbc" -type f | LC_ALL=C sort | xargs sha256sum) | sha256sum | cut -d' ' -f1)
+# rapidsnark's static libraries, which logos-blockchain-circuits-prover links (static-rapidsnark): rust-rapidsnark's
+# build script reads ../RAPIDSNARK_VERSION from its git checkout and downloads them, unless RAPIDSNARK_LIB_DIR names
+# them (rust-lib/.cargo/config.toml); Nix vendors each crate alone, without that file. The version is the one of the
+# pinned rust-rapidsnark rev (e91187f: 0.0.8), the release its script downloads for x86_64 Linux.
+rs_version=0.0.8
+rs="rapidsnark-linux-x86_64-pic-v$rs_version"
+if [ ! -d "$lbc_cache/$rs" ]; then
+  curl -fsSL -A ferrata-build -o "$lbc_cache/$rs.zip.part" \
+    "https://github.com/logos-blockchain/logos-blockchain-rust-rapidsnark/releases/download/rapidsnark-pic-v$rs_version/$rs.zip"
+  (cd "$lbc_cache" && unzip -q -o "$rs.zip.part" && mv "$rs.zip.part" "$rs.zip")
+fi
+mkdir -p "$v/rapidsnark"
+cp "$lbc_cache/$rs/lib/"*.a "$v/rapidsnark/"
+rs_sum=$( (cd "$v/rapidsnark" && ls | LC_ALL=C sort | xargs sha256sum) | sha256sum | cut -d' ' -f1)
 
 # The LEZ tree.
 tar -C "$spike/upstream" --exclude='lez-v0.4.0-rc1/target' --exclude='lez-v0.4.0-rc1/.git' -cf - lez-v0.4.0-rc1 | tar -C "$v/upstream" -xf -
@@ -103,13 +147,17 @@ print("stage-updater.sh: guests " + ", ".join(f"{k} {v[:12]}…" for k, v in sor
 PY
 
 # What was staged, for version().
-sum=$( (cd "$repo" && for c in $crates; do find "$c/Cargo.toml" "$c/src" -type f; done | LC_ALL=C sort | xargs sha256sum) | sha256sum | cut -d' ' -f1)
+sum=$( (cd "$repo" && { for c in $crates; do find "$c/Cargo.toml" "$c/src" -type f; done
+                         for f in blocklog follower live manifest plan programs; do echo "lez/live/driver/src/$f.rs"; done; } \
+        | LC_ALL=C sort | xargs sha256sum) | sha256sum | cut -d' ' -f1)
 lez_rev=$(git -C "$lez_up" rev-parse --short HEAD 2>/dev/null || echo "1806e87 (lez/RESULTS.md)")
 version=$(sed -n 's/^version = "\(.*\)"/\1/p' "$repo/lez/updater/Cargo.toml" | head -n 1)
-python3 -I - "$v/STAGED.json" "$version" "$commit" "$sum" "$lez_rev" "$v/ids.json" <<'PY'
+python3 -I - "$v/STAGED.json" "$version" "$commit" "$sum" "$lez_rev" "$v/ids.json" "$lbc" "$lbc_sum" "$rs" "$rs_sum" <<'PY'
 import json, sys
-out, version, commit, s, lez, ids = sys.argv[1:7]
+out, version, commit, s, lez, ids, lbc, lbc_sum, rs, rs_sum = sys.argv[1:11]
 json.dump({"version": version, "commit": commit, "source_sha256": s, "lez": "v0.4.0-rc1 " + lez,
-           "guests": json.load(open(ids))}, open(out, "w"), sort_keys=True)
+           "guests": json.load(open(ids)), "circuits": {"artifact": lbc, "files_sha256": lbc_sum},
+           "rapidsnark": {"artifact": rs, "files_sha256": rs_sum}},
+          open(out, "w"), sort_keys=True)
 PY
 echo "stage-updater.sh: ferrata-updater $version into ferrata_updater_module, commit $commit, sources sha256 $sum, LEZ $lez_rev ($(du -sh "$v" | cut -f1))"

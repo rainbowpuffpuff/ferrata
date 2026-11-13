@@ -300,11 +300,12 @@ The design notes specify these; there is no code for them here:
   `lez_core`; the modules read plain `http://` JSON-RPC and build messages without signing or sending
   them; the private claim's private execution and proof are the LEZ wallet's: the module builds and checks
   `ClaimPrivately`; the release's Groth16 wrap is the relayer's), and a published catalog (laid out,
-  dry-run and installed from on 127.0.0.1 in `modules/catalog/`); the updater module's backend for a running
-  sequencer, and the A3 gate's three daemons on one (`ferrata-updater` is built as a binary and as a Logos module
-  that drives the same daemon, `lez/updater/`, `modules/ferrata_updater_module`, on the in-process LEZ chain; its
-  backend for a running LEZ sequencer is a binary of its own, `lez/updater/sequencer/`, which followed Sepolia live
-  for eight hours, EVIDENCE row 99; the gate's three daemons run in process, row 80);
+  dry-run and installed from on 127.0.0.1 in `modules/catalog/`); the A3 gate's three daemons on a running
+  sequencer (`ferrata-updater` is built as a binary and as a Logos module that drives the same daemon with either
+  backend, `lez/updater/`, `modules/ferrata_updater_module`: the in-process LEZ chain, or a running LEZ sequencer
+  through `lez/updater/sequencer/`'s library, which the module ran inside a headless Logos Core on a crown zone
+  following Sepolia, EVIDENCE row 104, and the binary for eight hours, row 99; the gate's three daemons run in
+  process, row 80);
 - the mini-app's private round trip on a LEZ sequencer: on its devnet the private round trip on the defaults
   settles (private claim and burn proven by the harness with the wallet's own keys, also for real; EVIDENCE
   rows 86, 87), but not through a sequencer: the `ferrata` tool's sequencer path (LEZ's wallet library for

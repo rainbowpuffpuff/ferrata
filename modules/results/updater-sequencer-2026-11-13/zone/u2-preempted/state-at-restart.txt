@@ -1,0 +1,29 @@
+/root/crown-lez/state/updater/state:
+total 0
+drwxr-xr-x 1 root root  80 Nov 13 09:15 .
+drwxr-xr-x 1 root root 100 Nov 13 09:15 ..
+drwxr-xr-x 1 root root 120 Nov 13 09:21 ledger
+drwxr-xr-x 1 root root 100 Nov 13 09:16 sepolia
+
+/root/crown-lez/state/updater/state/ledger:
+total 4093
+drwxr-xr-x 1 root root     120 Nov 13 09:21 .
+drwxr-xr-x 1 root root      80 Nov 13 09:15 ..
+-rw-r--r-- 1 root root 1454793 Nov 13 09:31 blocks.borsh
+-rw-r--r-- 1 root root 2731536 Nov 13 09:31 follower.borsh
+-rw-r--r-- 1 root root    3607 Nov 13 09:31 run.tsv
+drwxr-xr-x 1 root root      80 Nov 13 09:15 wallet
+
+/root/crown-lez/state/updater/state/sepolia:
+total 3
+drwxr-xr-x 1 root root  100 Nov 13 09:16 .
+drwxr-xr-x 1 root root   80 Nov 13 09:15 ..
+drwxr-xr-x 1 root root  100 Nov 13 09:21 committees
+-rw-r--r-- 1 root root 2477 Nov 13 09:31 journal.tsv
+drwxr-xr-x 1 root root   60 Nov 13 09:31 open
+
+/root/crown-lez/state/updater/state/sepolia/open:
+total 2
+drwxr-xr-x 1 root root   60 Nov 13 09:31 .
+drwxr-xr-x 1 root root  100 Nov 13 09:16 ..
+-rw-r--r-- 1 root root 1449 Nov 13 09:31 85c396fa8ad6bf94d13a84387376315d6a904e7c450a89f1366bb16025b1ec11.bin

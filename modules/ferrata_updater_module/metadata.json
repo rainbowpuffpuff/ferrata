@@ -5,7 +5,7 @@
   "type": "core",
   "interface": "cdylib",
   "category": "ethereum",
-  "description": "Ferrata (prototype): ferrata-updater as a module: keeps Ferrata light-client instances on LEZ following Ethereum from several beacon API sources, verifies every candidate with the program's own steps before paying for it, and drives the attestation program's public job, on the in-process LEZ v0.4.0-rc1 chain of its tests (the sequencer backend is not built)",
+  "description": "Ferrata (prototype): ferrata-updater as a module: keeps Ferrata light-client instances on LEZ following Ethereum from several beacon API sources, verifies every candidate with the program's own steps before paying for it, and drives the attestation program's public job, on a running LEZ v0.4.0-rc1 sequencer (its RPC on this machine, every result read from blocks final on Bedrock) or on the in-process LEZ chain of its tests",
   "main": "ferrata_updater_module_plugin",
   "dependencies": [],
 
@@ -16,10 +16,14 @@
   "nix": {
     "packages": {
       "build": [],
-      "runtime": []
+      "runtime": ["pcsclite"]
     },
     "rust": {
-      "toolchain": "1.98.0"
+      "toolchain": "1.98.0",
+      "packages": {
+        "build": ["pkg-config", "rustPlatform.bindgenHook"],
+        "runtime": ["pcsclite", "zlib"]
+      }
     },
     "external_libraries": [],
     "cmake": {

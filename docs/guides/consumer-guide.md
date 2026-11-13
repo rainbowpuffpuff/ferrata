@@ -296,9 +296,9 @@ illustrates the linkage of an identifier-only nullifier; it runs no `ferrata-cor
   harness on real data, not on a testnet deployment).
 - The program cannot check that a chain id belongs to a `genesis_validators_root`, because nothing a
   light client verifies commits to the execution chain id. You pin the instance id; the off-chain
-  `verify_checkpoint` of `ferrata_attest_module` recomputes the instance id and compares the roots it is
-  given (EVIDENCE row 59); fetching them from several providers is **not built**
-  ([`lez/RESULTS.md`](../../lez/RESULTS.md) §5, "Decisions" item 1).
+  `verify_checkpoint` of `ferrata_attest_module` recomputes the instance id, compares the roots it is
+  given and asks several beacon providers itself, whose spec gives the chain id (EVIDENCE rows 59, 105;
+  [`lez/RESULTS.md`](../../lez/RESULTS.md) §5, "Decisions" item 1).
 - An update meant for another chain's instance runs to `Finish` and is refused there with 40
   (`SignatureInvalid`): the signing domain includes `genesis_validators_root`
   ([`attestation.md`](../design/attestation.md) §3.4, §4.7).
@@ -434,9 +434,9 @@ From [`attestation.md`](../design/attestation.md) §15 and [`lez/RESULTS.md`](..
 - a real proof of a private attestation on a laptop (proven on a cloud GPU, on cloud CPUs held to 8 and
   16 cores, and on M1 and M4 Mac minis under macOS: EVIDENCE rows 32–34, 38, 88);
 - in the Logos module, reads and transactions through Logos Core's own modules (`advance` is built,
-  EVIDENCE row 93); `verify_checkpoint`'s fetching from several providers; a published catalog; the
-  attestation side's `monitor`; the updater module on a running sequencer (the updater is built as a module
-  on the in-process chain, row 97, and with a backend for a running sequencer as a binary of its own, row 99)
+  EVIDENCE row 93); `verify_checkpoint` through Logos Core's `verified_proxy_module`; a published catalog; the
+  attestation side's `monitor`; the A3 gate's three updaters on a running sequencer (the updater is built as
+  a binary and as a module, each with the in-process chain and a running sequencer as backends, rows 97, 99, 104)
   ([README](../../README.md#specified-but-not-built), "Specified but not built").
 
 Built since this guide's first draft, with their evidence: successors, the root id and the
@@ -444,7 +444,7 @@ weak-subjectivity bound (EVIDENCE rows 69, 70); rules 5–7, a public and a priv
 native-ETH pool in the reference consumer, on the vault's real deposits (row 73); accumulator leaves
 on the vault's real Sepolia state (row 71) and a hop under a Gloas record (row 72); the private path
 under a Gloas record ([`lez/RESULTS.md`](../../lez/RESULTS.md) §6); the module, both CLIs with dry
-runs, the IDL and `verify_checkpoint` without fetching (rows 55–61); the updater daemon (rows 79–81), and on
+runs, the IDL and `verify_checkpoint` (rows 55–61; its provider checks, row 105); the updater daemon (rows 79–81), and on
 a running LEZ sequencer following Sepolia live (row 99).
 
 ## 12. Worked example, step by step: `ferrata_holdings`

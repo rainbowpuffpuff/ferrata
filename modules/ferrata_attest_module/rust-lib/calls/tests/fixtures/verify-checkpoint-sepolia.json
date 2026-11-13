@@ -1,0 +1,29 @@
+{
+  "_comment": "verify_checkpoint's request for the crown run's Sepolia checkpoint (crates/ferrata-spectests/fixtures/sepolia-2026-11-12): the instance configuration of crown-driver's sepolia_config with layout gloas, whose id is the crown zones' instance (lez/updater/results/live-sepolia/zone-2/export/instances.tsv); the bootstrap is that fixture's bootstrap.ssz (added by the caller as hex); three beacon API providers of three operators (Lodestar by ChainSafe, publicnode by Allnodes, Nimbus's unstable node by Status) and a checkpointz server (ethpandaops), which serves genesis and spec but no headers; publicnode's execution JSON-RPC in the place of verified_proxy_module",
+  "config": {
+    "chain_id": 11155111,
+    "sync_committee_size": 512,
+    "slots_per_epoch": 32,
+    "epochs_per_sync_committee_period": 256,
+    "min_sync_committee_participants": 1,
+    "fork_versions": ["0x90000069", "0x90000070", "0x90000071", "0x90000072", "0x90000073", "0x90000074", "0x90000075", "0x90000076", "0x00000000"],
+    "fork_epochs": [0, 50, 100, 56832, 132608, 222464, 272640, 353024, 18446744073709551615],
+    "genesis_validators_root": "0xd8ea171f3c94aea21ebc42a1ed61052acf3f9209c00e4efbaaddac09ed9b8078",
+    "genesis_time": 1655733600,
+    "seconds_per_slot": 12,
+    "store_fork": 4,
+    "adoption_parts": 2,
+    "ws_period_epochs": 3532
+  },
+  "checkpoint": "0x3b901f5e6853b5cf5eb04d7ccfe1272e66c38291cb3a11dd159cacd1117ccf7c",
+  "expected_instance_id": "0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5",
+  "providers": [
+    {"name": "lodestar", "url": "https://lodestar-sepolia.chainsafe.io"},
+    {"name": "publicnode", "url": "https://ethereum-sepolia-beacon-api.publicnode.com"},
+    {"name": "nimbus", "url": "http://unstable.sepolia.beacon-api.nimbus.team"},
+    {"name": "checkpointz-ethpandaops", "url": "https://checkpoint-sync.sepolia.ethpandaops.io"}
+  ],
+  "min_providers": 3,
+  "execution": {"name": "publicnode-rpc", "url": "https://ethereum-sepolia-rpc.publicnode.com"},
+  "timeout_secs": 20
+}

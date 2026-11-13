@@ -89,9 +89,10 @@ vault's storage holds that same id, so the order is fixed (D2; [`bridge.md`](../
 2. **LEZ: initialise an attestation instance** from a checkpoint you verified (`Init`, three
    transactions with the committee's adoption; [`attestation.md`](../design/attestation.md) §4.2), or
    choose an existing one. `verify_checkpoint` in `ferrata_attest_module` recomputes the instance id, runs the program's
-   `Init` checks on the bootstrap and compares the roots you give it (EVIDENCE row 59); fetching them
-   from at least three beacon providers is **not built**, so gather the checkpoint root by hand from
-   several providers ([`attestation.md`](../design/attestation.md) §11.4).
+   `Init` checks and the full `KeyValidate` on the bootstrap, compares the roots you give it, and asks the
+   beacon providers you name (at least three hosts must agree, none disagree) and an execution endpoint
+   (EVIDENCE rows 59, 105; [`attestation.md`](../design/attestation.md) §11.4). Name providers you consider
+   independent: the method counts hosts, it cannot tell who runs them.
 3. **Compute `configId`** ([`bridge.md`](../design/bridge.md) §3; [`lez/BRIDGE.md`](../../lez/BRIDGE.md) §4):
    ```
    configId = H("ferrata/config/v1" ‖ bedrockGenesisId ‖ channelId ‖ bridgeHeader ‖ bridgeImageId
@@ -336,8 +337,8 @@ The attestation side's migration (successor and replacement instances) is in
 - a deployment with production parameters: the round trip ran on public Sepolia on the final programs (EVIDENCE
   row 91, `crown-live-3`; the first live run, row 41, on `integration5`'s) through FerrataVault v5 with testnet
   parameters and a LEZ devnet we ran; a deployment on LEZ testnet 0.4 (which does not exist);
-- `verify_checkpoint`'s fetching from several providers; the `ferrata_attestor` module (rule (B)'s
-  sequencer side; the program is built);
+- `verify_checkpoint` through Logos Core's `verified_proxy_module` (it reads plain HTTP); the `ferrata_attestor`
+  module (rule (B)'s sequencer side; the program is built);
 - on LEZ: the admin's own handover (an M-of-N freeze authority, its 14-day handover, watchers and the
   keyless `Sunset` are built: EVIDENCE row 74);
 - deeper inbound finality settings; the malicious-tenant test;

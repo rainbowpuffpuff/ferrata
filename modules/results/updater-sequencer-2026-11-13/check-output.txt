@@ -1,0 +1,30 @@
+## zone (session U3, module mode, with the export)
+PASS 19 of 19 journal lines have their manifest row (block, result, execution gas, fee = payer debit)
+PASS 19 of 19 included transactions: charged fee = the payer's balance fell by
+PASS 19 of 19 transactions alone in their block carry the block's own gas totals
+PASS transactions settle in increasing blocks
+PASS 5 jobs applied, each Open, Miller, [Adopt 1/2, Adopt 2/2,] Finish in increasing blocks
+PASS every applied job's update is in updater.log (finalized slot, root, sources)
+PASS 4 applied jobs advance the finalized header, each further than the one before (the others only adopt a committee: 1)
+PASS export/instances.tsv: the instance holds finalized slot 11569248 root 1e34457ed1d84b54..., the last advancing job's
+PASS export/instances.tsv: 7 jobs applied = session A's 2 + the updater's 5
+PASS 5 applied finalized roots are canonical at their slots on https://ethereum-sepolia-beacon-api.publicnode.com
+health: 26 probes, {'no answer (http 503)': 1, 'ok': 25}; lives [1, 2]
+journal: 19 transactions, {'applied': 19}; jobs applied 5; jobs opened and not finished 1
+wrote modules/results/updater-sequencer-2026-11-13/zone/summary.md
+ALL PASS
+
+## zone/u2-preempted (session U2, preempted 40 s before its end: no export)
+PASS 31 of 31 journal lines have their manifest row (block, result, execution gas, fee = payer debit)
+PASS 31 of 31 included transactions: charged fee = the payer's balance fell by
+PASS 31 of 31 transactions alone in their block carry the block's own gas totals
+PASS transactions settle in increasing blocks
+PASS 9 jobs applied, each Open, Miller, [Adopt 1/2, Adopt 2/2,] Finish in increasing blocks
+PASS every applied job's update is in updater.log (finalized slot, root, sources)
+PASS 8 applied jobs advance the finalized header, each further than the one before (the others only adopt a committee: 1)
+SKIP export/instances.tsv (not in the record yet)
+PASS 9 applied finalized roots are canonical at their slots on https://ethereum-sepolia-beacon-api.publicnode.com
+health: 51 probes, {'no answer (http 503)': 1, 'ok': 50}; lives [1, 2]
+journal: 31 transactions, {'applied': 31}; jobs applied 9; jobs opened and not finished 1
+wrote modules/results/updater-sequencer-2026-11-13/zone/u2-preempted/summary.md
+ALL PASS

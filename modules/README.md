@@ -129,7 +129,7 @@ method returns `{"verdict":"error",...}` instead of crossing into Logos Core. Ev
 |---|---|---|
 | `version()` | — | the module's version, what was staged (`STAGED.json`: the commit, LEZ's commit, each crate's version and sources' SHA-256), the BLS backend (blst, for `advance`), the method list |
 | `dry_run_attest(request)` | the consumer's `chain_id`; a header `record`: either `{chain_id, encoded}` (the bytes the program stores at `header(id, slot)`, `RecordState::record`, as read from LEZ) or its fields (instance chain id, anchor slot, block number, timestamp, block hash, parent hash, state root, receipts root); and either `storage` (an `eth_getProof` result and the slot) or `log` (`{tx_index, log_index, receipt_proof}`, as `fetch_log_proof` returns it) | `verdict` (`attested` or `refused`), `code` (the program's code: 0, or the core's refusal code, which the program returns unchanged, `lez/wire/src/lib.rs` `refusal`), the error's name, and for an attested fact its fields and statement identifiers (`id`, `id_at_block`) |
-| `verify_checkpoint(request)` | a `config` (the program's `Config` fields), a `checkpoint` root, optionally the `expected_instance_id`, the `bootstrap` (SSZ, hex) and `observed` roots for the checkpoint as other sources report them | the recomputed `instance_id`; whether it equals the expected one; the program's `Init` verdict on the bootstrap (`StoreCore::from_bootstrap`: layout, header, header root against the checkpoint, committee branch) with its code; each observed root against the checkpoint; whether the chain id and `genesis_validators_root` are a known pair; an overall `verdict` |
+| `verify_checkpoint(request)` | a `config` (the program's `Config` fields), a `checkpoint` root, optionally the `expected_instance_id`, the `bootstrap` (SSZ, hex), `observed` roots for the checkpoint as other sources report them, `providers` to ask (beacon API base URLs, or `{name, url}`), `min_providers` (3 when providers are given), an `execution` JSON-RPC endpoint, `key_validate` (on by default), `timeout_secs` | the recomputed `instance_id`; whether it equals the expected one; the program's `Init` verdict on the bootstrap (`StoreCore::from_bootstrap`: layout, header, header root against the checkpoint, committee branch) with its code; each observed root against the checkpoint; whether the chain id and `genesis_validators_root` are a known pair; `committee`: the full `KeyValidate` on the bootstrap's committee (every key in the subgroup, their sum the aggregate); each provider `agrees`, `disagrees` or is `unavailable` (the root canonical by root and at its slot, finalized there, the provider's genesis and spec those of the configuration, `DEPOSIT_CHAIN_ID` among them), with every request it made; `providers_agreeing` (counted by host); `execution`: the bootstrap's execution block on that endpoint (same chain id, canonical, finalized); an overall `verdict` |
 | `fetch_log_proof(request)` | `rpc_url` (`http://` only: a local node or `scripts/recorded_rpc.py`), `block`, and `tx_index` + `log_index` (within the receipt) or `block_log_index` (JSON-RPC's `logIndex`); optional `timeout_ms` | `verdict` `fetched` (or `inconsistent` when the receipts do not rebuild the block's `receiptsRoot`), the block hash and receipts root, `log` = `{tx_index, log_index, receipt_proof}` ready for `dry_run_attest` and `build_attest_tx`, what the provider said the log is (`provider_log`), `rpc_calls` |
 | `build_attest_tx(request)` | `program_id` (the attestation program's account id), `instance_id`, `chain_id`, `slot` (of the record), and `log`, `logs` or `storage` | `account`: `header(id, slot)` (LEZ's public PDA of the program, seed SHA-256(`ferrata-lez/v1/header` ‖ id ‖ slot LE)), the account list, `message`: Borsh of `Message::Attest { request }` (variant 7), its size and SHA-256, the number of facts |
 | `read_attestation(request)` | `event_data` (the program's `FRT-ATT1` event data, hex), optionally `selector`, `expected_ids` (the dry run's `id`s), `expected_instance_id` | `instance_id`, `chain_id`, `block_number`, the `statements`, `matches_expected`, `instance_matches` |
@@ -140,6 +140,10 @@ The record is built the program's way (`witness::HeaderRecord`, then `attest::He
 as `evaluate` does), and the proof is checked by `attest_storage` or `attest_log`, so the verdict and
 code are the ones the program would return for that proof against that record.
 
+`verify_checkpoint` reads the providers and the execution endpoint with `curl` (`http://` and `https://`, a
+generic User-Agent; `calls/src/providers.rs`), as `ferrata-updater` reads beacon nodes; nothing they serve is trusted
+beyond the comparison. Its tests replay the requests and responses of a live run against Sepolia's public providers
+(`calls/tests/fixtures/`, [`results/verify-checkpoint-2026-11-13/`](results/verify-checkpoint-2026-11-13/README.md)).
 `verify_checkpoint` recomputes the instance id as the program defines it (`lez/wire/src/lib.rs`
 `instance_id`: SHA-256 over the domain, `instance-id`, the Borsh encoding of `Config` and the
 checkpoint). The module encodes `Config` itself; for the attestation fixture's checkpoint it gives
@@ -229,12 +233,15 @@ names, as the binary does.
 
 `ferrata-updater` ([`lez/updater`](../lez/updater/README.md)) as a module: the same configuration file
 (`ferrata-updater.example.toml`), the same set-up (`ferrata_updater::daemon`, shared since this module)
-and the same rounds. The chain is the binary's `ledger = "harness"`: LEZ v0.4.0-rc1's state machine in
-the module's process with LEZ's fee program and settlement and the attestation program at genesis (the
-chain the updater's tests run on, `RISC0_DEV_MODE=1` in the daemon's environment as for those tests); it
-lives in the daemon's thread, so `stop` ends it. `ledger = "sequencer"` is refused as the binary refuses
-it. `status` and `metrics` give what `/health` and `/metrics` give; with `daemon.listen` set, the module
-also serves those on that address.
+and the same rounds, over either of the binary's backends. `ledger = "harness"`: LEZ v0.4.0-rc1's state
+machine in the module's process with LEZ's fee program and settlement and the attestation program at genesis
+(the chain the updater's tests run on, `RISC0_DEV_MODE=1` in the daemon's environment as for those tests).
+`ledger = "sequencer"`: a running LEZ sequencer on this machine (`[sequencer]`), through
+`lez/updater/sequencer/`'s library, the code its binary runs: LEZ's wallet client sends, a follower applies
+every block final on Bedrock with LEZ's block application and reads each result; `stop` and the periodic save
+keep the follower in the state directory, and `start` restores it. The backend lives in the daemon's thread,
+so `stop` ends it. `status` and `metrics` give what `/health` and `/metrics` give; with `daemon.listen` set,
+the module also serves those on that address.
 
 | Method | Takes | Returns |
 |---|---|---|
@@ -290,7 +297,7 @@ no instance or record yet), `root-import-refused`, `root-import-failed`, `root-i
 | `scripts/bridge_e2e.sh OUT_DIR` | the bridge module against the mini-app's devnet (`cli/examples/miniapp_devnet.rs`: the v5 vault on anvil, chain id 1, its verifier the vault tests' mock; the zone in the LEZ harness with the bridge program): two private deposits; `import_root` from a block the devnet records (its proofs in `eth_getProof`'s shape), dry-run and applied, and a wrong count refused by the dry run and by the program with the same code; `registry`; both deposits claimed privately (`claim` with state → `ClaimPrivately`, proven and settled privately by the devnet with the wallet's keys) and a second claim refused from the nullifier's state; two private burns, a checkpoint over the first (its delay passed) and one over both (in its delay): `release` by the rule picks the older root, refuses the newer burn until its root opens, then picks the newer; `prove_release`; both releases accepted by the vault; `status` (`CALL=logosctl` through a daemon) | Linux with cargo, Foundry, `RELEASE_ELF` (and `logosctl`) |
 | `scripts/attestor-e2e.sh OUT_DIR` | the attestor's job on the four-sequencer zone's records (`checkpoint/attestor/runs/zone`): tier, base, each sequencer's key, certificate and attestation (each equal to the run's), verify, collect 3 of 4 (the input the checkpoint program proved, byte for byte), 4 of 4, 2 of 4 refused, three refusals to sign; then the module's loop against a node served from the same answers over HTTP (`recorded_node.py`): 23 checks | Linux with cargo (and `logosctl`) |
 | `scripts/attestor-zone-live.sh BUNDLE OUT_DIR` | a running zone of four LEZ sequencers (`checkpoint/attestor/zone.sh`, the lab bundle) and four Logos Cores, one per sequencer, each running the attestor module's loop against the zone's node while it runs; then the module's collector | Linux x86-64, the lab bundle, `logosctl` |
-| `scripts/updater-e2e.sh OUT_DIR` | the updater's job on its tests' chain: the in-process LEZ v0.4.0-rc1 chain, the lab's recorded mainnet and Sepolia data, from the checkpoints to the lab's final roots (`start`, `status` until up to date, `metrics`, `stop` through Logos Core; `run` natively); the sequencer backend refused | Linux with cargo, r0vm (and `logosctl`) |
+| `scripts/updater-e2e.sh OUT_DIR` | the updater's job on its tests' chain: the in-process LEZ v0.4.0-rc1 chain, the lab's recorded mainnet and Sepolia data, from the checkpoints to the lab's final roots (`start`, `status` until up to date, `metrics`, `stop` through Logos Core; `run` natively); the sequencer backend carried (with no sequencer, its set-up fails on the connection) | Linux with cargo, r0vm (and `logosctl`) |
 | `scripts/monitor-e2e.sh OUT_DIR` | `monitor/tests/anvil-e2e.sh` (a local anvil chain, a v5 vault, scenarios S1–S11, A0–A4, R1–R4, the alerting check: 46 checks) with the binary, or with the module through `scripts/monitor-module.sh` (`CALL=logosctl`): S5's SIGKILL then kills the module's host process and the module is loaded again | Linux with cargo and Foundry (and `logosctl`) |
 | `scripts/relayer-e2e.sh OUT_DIR` | the relayer's job on its devnets, with the binary (the reference) or the module (`CALL=logosctl`, `scripts/relayer-module.sh` in the binary's place, in a Logos Core of its own started without `RISC0_DEV_MODE`): `cli/tests/relayer_fork.rs` (an anvil fork of Sepolia at the block before `crown-live-1`'s `submitCandidate`, that run's real checkpoint and release proofs: the checkpoint, its finalisation after W, the releases, one wrapped from a succinct receipt, fees, refusals, `status`, a clean stop on SIGTERM); root imports on the mini-app's devnet (the light client's finality update stood in by the devnet's `lc.finalize`: anvil's newest block recorded, `instance(id)` moved to it; the proofs anvil's own `eth_getProof`): waiting without a light client, n = 2 imported and byte-equal to `ferrata_bridge_module`'s `import_root`, nothing sent when up to date, waiting for a later record, a record the proofs do not match refused with the bridge module's code and not sent, n = 3, and the daemon on the default cadence (no import within the hour, n = 4 in the next) stopped cleanly | Linux with cargo, Foundry, r0vm (and `logosctl`); the fork reads public Sepolia state |
 | `scripts/release-local.sh OUT_DIR` | `logos-modules-release-action`'s steps for `linux-amd64`, locally, for the six modules (`MODULES`; `DRY_RUN_DIR` for the record of some of them), nothing published (`catalog/README.md`) | Linux x86-64 with Nix |
@@ -342,12 +349,12 @@ that start a Logos Core refuse a `TMPDIR` (or `LOGOS_TMPDIR`) longer than 62 byt
   A Gloas record (a block hash only) is waited on, not imported: the relayer does not fetch the block's header yet.
   The Groth16 wrap runs RISC Zero's prover image through `--wrap-command` (on the build box a stub returning the
   proof the image made on Modal, as in `relayer_fork.rs`).
-- **`ferrata_updater_module`:** only the in-process chain (`ledger = "harness"`, the updater's tests'
-  chain, with `RISC0_DEV_MODE=1`): it lives in the module's process and ends with `stop`, so two updater
-  modules cannot share a chain, and the cooperative A3 gate (two honest updaters and an adversary) stays
-  the binary's test; the backend for a running sequencer is a binary of its own (`lez/updater/sequencer/`,
-  which links LEZ's node-side crates), which the module does not carry; built with Rust 1.98.0, LEZ pins
-  1.98.1; the guests it embeds are the ones risc0-build made on the build box (their ids checked against
+- **`ferrata_updater_module`:** two updater modules share a chain only on a sequencer (the in-process chain
+  lives in one module's process and ends with `stop`); the cooperative A3 gate (two honest updaters and an
+  adversary) is the binary's test, in process; the sequencer backend ran in one Logos Core on a one-validator
+  crown zone (EVIDENCE row 104), not beside other updaters; the package links LEZ's node-side crates (61 MB
+  portable, against 16 MB with the harness alone) and its host needs `curl` and `libpcsclite`; built with Rust
+  1.98.0, LEZ pins 1.98.1; the guests it embeds are the ones risc0-build made on the build box (their ids checked against
   `docs/image-ids.md`).
 - **Catalog:** laid out, dry-run and installed from on 127.0.0.1 (`catalog/`); nothing published, one
   variant (`linux-amd64`), unsigned.

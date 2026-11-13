@@ -1,11 +1,30 @@
 # Logos modules: results
 
-Runs, newest first: the relayer as the sixth module (13 November: root imports in `ferrata-relayer` and
+Runs, newest first: the updater module with its sequencer backend, on a running LEZ sequencer inside a headless
+Logos Core (13 November), the relayer as the sixth module (13 November: root imports in `ferrata-relayer` and
 `ferrata_relayer_module`), the five modules after the merge of `updater-live` (13 November: the updater's
 sequencer backend, `headers` sources and `finish_own_jobs` on the daemon the updater module drives), the
 five modules after the merge of the two branches of 12 November (12–13 November, at the merged commit), the three daemons as modules and completing the attestation and bridge
 modules (those two branches, each run on its own), the attestation and bridge modules (11 November), the
 attestation module's prototype (10 November).
+
+## The updater module on a running LEZ sequencer, 13 November 2026
+
+`ferrata_updater_module` carries both of the daemon's backends: with `ledger = "sequencer"` it opens
+`lez/updater/sequencer/`'s library, the code of the binary of row 99 (LEZ's wallet client, a follower of blocks final
+on Bedrock), linking LEZ v0.4.0-rc1's node-side crates. Built with logos-module-builder at commit `2d86798` on the
+Modal build box (workspace ws-3): `check.sh` for this module, dev and portable, **step failures 0, check
+failures 0**, `updater-e2e.sh` 8/8 natively and 10/10 through each Logos Core on the in-process chain (187
+transactions applied, none refused; with no sequencer, the sequencer backend's set-up fails on the connection, as the
+binary's does). Then the portable package (61 MB) in the portable headless Logos Core on a crown zone (Modal,
+`ferrata-crown`'s `updater_session`, LEZ v0.4.0-rc1 and a Logos Blockchain node, the Sepolia instance of the crown
+run): `install`, `load`, `version`, `check_config`, `start`, `status` at every probe, `stop` and `start` mid-job,
+`metrics`, `stop`. Lodestar's light-client data and publicnode's headers, read only. Session U3: **5 updates applied
+end to end** (19 transactions: a rotation of the committees, the adoption of period 1413's committee, three finality
+updates), the restart through the module's `stop` and `start` with a job half done (the kept job finished, no second
+`Open`), export and generation 2 saved; session U2, preempted 40 s before its end: 9 updates (31 transactions) and the
+same restart. `check.py` ALL PASS on both records, every applied root canonical on publicnode.
+[`results/updater-sequencer-2026-11-13/`](results/updater-sequencer-2026-11-13/README.md).
 
 ## The relayer as a module, and its root imports, 13 November 2026
 
@@ -58,8 +77,9 @@ records are waited on, not imported; the five other modules were not rebuilt wit
 `headers` sources, the store's `layout` and `finish_own_jobs` (an updater finishes the job it opened first, also
 after a restart). They now sit in the daemon of `lez/updater/src/daemon.rs` that this module drives
 (`Daemon::open` with the harness ledger; the sequencer build passes its own ledger to the same daemon), with the
-update planning in `lez/advance`. The module carries the in-process chain only: it refuses `ledger = "sequencer"`
-(the check's configuration now has the `[sequencer]` section the configuration requires), and `check_config`
+update planning in `lez/advance`. The module carried the in-process chain only at this merge: it refused `ledger =
+"sequencer"` (the check's configuration now has the `[sequencer]` section the configuration requires; the module
+carries that backend since, above), and `check_config`
 reports the chains' `layout`, the sources' `kind`, `[sequencer]` and `finish_own_jobs`.
 
 Modal build box (workspace ws-4, gVisor, 2 CPUs reported, up to 16 cores, 64 GiB; Nix 2.28.3, the store of

@@ -1,0 +1,9 @@
+# LEZ's node-side crates (the sequencer backend: lez/updater/sequencer) link logos-blockchain-circuits, whose build
+# scripts take the circuits' prebuilt artifact from LBC_ROOT_DIR, or else download it into the user's cache, and
+# rapidsnark's static libraries (rust-rapidsnark), which its build script takes from RAPIDSNARK_LIB_DIR, or else
+# downloads after reading a version file of its git checkout that a vendored crate does not have. Both are staged
+# beside the crate by modules/scripts/stage-updater.sh (vendor/lbc/, vendor/rapidsnark/), so that the module builds
+# offline, inside Nix's sandbox too. The builder appends its own vendoring settings to this file.
+[env]
+LBC_ROOT_DIR = { value = "vendor/lbc/logos-blockchain-circuits-v0.5.7-linux-x86_64", relative = true }
+RAPIDSNARK_LIB_DIR = { value = "vendor/rapidsnark", relative = true }

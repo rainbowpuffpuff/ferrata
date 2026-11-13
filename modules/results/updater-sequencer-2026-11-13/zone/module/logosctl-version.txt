@@ -1,0 +1,12 @@
+logosctl version pre-release-66d098d
+commit: 66d098d3af1367cf831b69c13a5aa8345edeb682
+dependency commits:
+  logos-liblogos af19e519c9b579a1dab86e8dc3960925fc28b526
+  logos-cpp-sdk 3bf5365c5412f89bbbf30e3f46237cd68cff0599
+  logos-protocol 9d59f5de526624b120d42f4c422a3d83c0b9d64f
+  logos-plugin-qt 2d36a08819b8df36094036d02d130aa4bd3a6132
+  logos-capability-module 1a1b8b5a1167931afbf41ebaafbe76034e6357a0
+  logos-modules-state-module c70da49aa56e48f867d50b9ff58679749f09dbcf
+  logos-package-manager-module 4c5fa074489f1977f57d6ae0b0538b379c4428d4
+  logos-package-downloader-module 99b2299938ef5049a46eeffaa8f3b460f07cb313
+  logos-storage-module 7548f41ae189917d58c37f0fb6d3a2700b99f59b

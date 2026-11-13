@@ -1,0 +1,104 @@
+[2026-11-13T09:08:13Z] updater session crown-module-seq-1: bundle sha256 0013bab125141c9daf2bb2e18c857e160e2235adc1e75c4f3ec34beda0593e67, 8 CPUs visible, generation 0
+[2026-11-13T09:08:13Z] session a
+[09:08:13] crown LEZ session a (chain sepolia)
+[09:08:14] a new zone
+[09:08:14] Bedrock node up: {"cryptarchia_info":{"lib":"402255ecf1448ec5d136c293f7eb818cd6137af8175bdc72f06a99cf2eef8a52","lib_slot":0,"tip":"402255ecf1448ec5d136c293f7eb818cd6137af8175bdc72f06a99cf2eef8a52","slot":0,"height":0,"state":"Bootstrapping"},"phase":"InitialBlockDownload"}
+[09:08:19] node slot 0 is unix second 1785493027
+[09:08:22] sequencer start 1: scheduler after 2 s; its blocks fall 4 s after an epoch second
+[09:08:22] sequencer up, head block 1
+[09:08:22] channel: {"accredited_keys":["ba67656b722ef01c5a7dd683204d15ac6b42ee92fc5091c46438f3d421d254db"],"configuration_threshold":1,"tip_message":"ac5e950ddfc6126818dfaa5c4d972d79b085ae5b7e8e52cacc762cdd9feb642d","config_tip_hash":"0000000000000000000000000000000000000000000000000000000000000000","tip_slot":9067874
+samples 116 (2 s), cores visible 2
+peak busy cores 1.9, mean busy cores 1.3
+peak summed RSS 638 MiB
+  peak RSS logos-blockchai 226 MiB
+  peak RSS sequencer_servi 214 MiB
+[09:12:19] driver exit 0
+[deploy] bridge: image ccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd at AfrE4T3U17eZYUH3KMGDgeE6A4jnpDGum151T3VtddCp (computed by the sequencer's loader), immutable
+[crown-a] crown sepolia: attestation program A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX, bridge AfrE4T3U17eZYUH3KMGDgeE6A4jnpDGum151T3VtddCp, instance 0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5
+[crown-a] crown sepolia Init Init                                    applied        gas    114811 block   17 + 10.1s e3d3929cc593b04da0e04ee38c137f696c35c3823d67074da9188b1f246aa038
+[crown-a] crown sepolia Init adopt 1/2                               applied        gas   3397076 block   18 + 11.3s c83076de71c9f565eebaa1402a165bb60898209ed031a66873ee55054cd016e5
+[crown-a] crown sepolia Init adopt 2/2                               applied        gas   3480132 block   19 + 10.3s fe5dd1f8973b340d0dfa35b9487ee7fd67405fcbbefa1a22906492b08713e3e5
+[crown-a] period 1411 update Open (step 1)                           applied        gas   2096392 block   20 +  9.7s 74cceca3253b1a67d653136347aff1f3a0ffedeaf0f860a11afaf2fbd3f02cff
+[crown-a] period 1411 update Miller (step 2)                         applied        gas   3310470 block   21 +  9.0s 1b2dd95e7955852d88f7cf31cba26d8e6cfd308727472ed03df365eb550824fb
+[crown-a] period 1411 update adopt 1/2                               applied        gas   3408111 block   22 +  9.8s 71171d9b4415be91fe62e30aab65114eb552945457eec059dd40ae43db1007f0
+[crown-a] period 1411 update adopt 2/2                               applied        gas   3415303 block   23 + 10.1s c407f92ef9226c92ed1271ef29e063e1d6855af31bb1203140cab4745c4d97dc
+[crown-a] period 1411 update Finish (step 3)                         applied        gas   3696140 block   24 + 11.2s aab2cf61e50e41b1d3acae65ab1001c24c63cb93f0320ef043f434a4aa18810a
+[crown-a] period 1411 update applied: advanced false, adopted true, rotated false
+[crown-a] T0 = block 24 0xa6ca21b7c6a1e821e0e9d2c0fe3a55c373e46e901d72f575ea0ee95b249c5150; identity written to /root/crown-lez/session-a.json
+[09:12:20] sequencer stopped (exit 0)
+[09:12:28] node stopped (exit 143)
+[09:12:29] saved generation 1 (50779207 bytes; head block 24)
+[09:12:29] session a: ok
+[2026-11-13T09:12:29Z] session a: exit 0, generation 1
+[2026-11-13T09:12:33Z] session u
+[09:12:33] crown LEZ session u (chain sepolia)
+[09:12:34] restored generation 1 (236M)
+[09:12:35] Bedrock node up: {"cryptarchia_info":{"lib":"1744f98c5d699135c5669ebd6808405f4846f65f554a2a074a312db0dba02a17","lib_slot":9068115,"tip":"a1e83d2869a94b8c352b6c7f3958ad986cebfefa9c724a46319af5b113d832d3","slot":9068120,"height":248,"state":"Online"},"phase":"InitialBlockDownload"}
+[09:12:38] node slot 0 is unix second 1785493027
+[09:13:16] sequencer start 1: scheduler after 37 s; its blocks fall 8 s after an epoch second
+[09:13:16] sequencer stopped (exit 0)
+[09:13:24] sequencer start 2: scheduler after 0 s; its blocks fall 6 s after an epoch second
+[09:13:24] sequencer up, head block 24
+[09:13:26] module mode: logos-ferrata_updater_module-module-lib.lgx sha256 962304cc04a7f4ecdffb041a8a3b4b76d73270f5ffa30c926e2373fb0a2f29c2, logos-portable.tar.zst sha256 80f57e19a051fa6ac5e7cf8cf8184b60f9644d5b8506e90421df7090feebb45a
+[09:13:34] module version: {"version":"0.1.0","ledgers":["harness","sequencer"],"program":"0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df","computed":"0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df","dev_mode":null,"staged":"2d86798"}
+[09:13:34] check_config: {"verdict":"ok","ledger":"sequencer","sequencer":{"program":"0x86ce4d7f54bd68b4c7356398cfda192f791c83f6fa3c3102a18ac20fefdfa04c","rpc":"http://127.0.0.1:3040","wait_final":true},"chains":[{"name":"sepolia","layout":"gloas","sources":["lodestar:light-client","publicnode:headers"]}]}
+[09:13:34] session U (module): 50 min (until 2026-11-13T10:03:34Z); restart through stop/start after 15 min; probe every 60 s
+[09:13:46] module start, life 1: {"verdict":"started","running":true,"error":null,"round":null,"served":"127.0.0.1:9464"}
+[2026-11-13T09:14:44Z] updater session crown-module-seq-1: bundle sha256 0013bab125141c9daf2bb2e18c857e160e2235adc1e75c4f3ec34beda0593e67, 8 CPUs visible, generation 1
+[2026-11-13T09:14:44Z] session a: the zone has a generation; skipped
+[2026-11-13T09:14:45Z] session u
+[09:14:45] crown LEZ session u (chain sepolia)
+[09:14:46] restored generation 1 (236M)
+[09:14:47] Bedrock node up: {"cryptarchia_info":{"lib":"1744f98c5d699135c5669ebd6808405f4846f65f554a2a074a312db0dba02a17","lib_slot":9068115,"tip":"a1e83d2869a94b8c352b6c7f3958ad986cebfefa9c724a46319af5b113d832d3","slot":9068120,"height":248,"state":"Online"},"phase":"InitialBlockDownload"}
+[09:14:50] node slot 0 is unix second 1785493027
+[09:15:28] sequencer start 1: scheduler after 37 s; its blocks fall 0 s after an epoch second
+[09:15:28] sequencer stopped (exit 0)
+[09:15:34] sequencer start 2: scheduler after 0 s; its blocks fall 6 s after an epoch second
+[09:15:34] sequencer up, head block 24
+[09:15:35] module mode: logos-ferrata_updater_module-module-lib.lgx sha256 962304cc04a7f4ecdffb041a8a3b4b76d73270f5ffa30c926e2373fb0a2f29c2, logos-portable.tar.zst sha256 80f57e19a051fa6ac5e7cf8cf8184b60f9644d5b8506e90421df7090feebb45a
+[09:15:42] module version: {"version":"0.1.0","ledgers":["harness","sequencer"],"program":"0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df","computed":"0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df","dev_mode":null,"staged":"2d86798"}
+[09:15:42] check_config: {"verdict":"ok","ledger":"sequencer","sequencer":{"program":"0x86ce4d7f54bd68b4c7356398cfda192f791c83f6fa3c3102a18ac20fefdfa04c","rpc":"http://127.0.0.1:3040","wait_final":true},"chains":[{"name":"sepolia","layout":"gloas","sources":["lodestar:light-client","publicnode:headers"]}]}
+[09:15:42] session U (module): 50 min (until 2026-11-13T10:05:42Z); restart through stop/start after 15 min; probe every 60 s
+[09:15:54] module start, life 1: {"verdict":"started","running":true,"error":null,"round":null,"served":"127.0.0.1:9464"}
+[09:30:42] restart armed (journal at 14 lines)
+[09:31:41] restart: the journal's last line is 'open applied'; the module's stop
+[09:31:41] module stop, life 1, after 0 s: {"verdict":"ok","running":false,"error":null,"round":30}
+[09:31:57] module start, life 2: {"verdict":"started","running":true,"error":null,"round":null,"served":"127.0.0.1:9464"}
+[2026-11-13T10:05:36Z] updater session crown-module-seq-1: bundle sha256 0013bab125141c9daf2bb2e18c857e160e2235adc1e75c4f3ec34beda0593e67, 8 CPUs visible, generation 1
+[2026-11-13T10:05:36Z] session a: the zone has a generation; skipped
+[2026-11-13T10:05:36Z] session u
+[10:05:36] crown LEZ session u (chain sepolia)
+[10:05:38] restored generation 1 (236M)
+[10:05:38] Bedrock node up: {"cryptarchia_info":{"lib":"1744f98c5d699135c5669ebd6808405f4846f65f554a2a074a312db0dba02a17","lib_slot":9068115,"tip":"a1e83d2869a94b8c352b6c7f3958ad986cebfefa9c724a46319af5b113d832d3","slot":9068120,"height":248,"state":"Bootstrapping"},"phase":"InitialBlockDownload"}
+[10:05:42] node slot 0 is unix second 1785493027
+[10:06:15] sequencer start 1: scheduler after 33 s; its blocks fall 8 s after an epoch second
+[10:06:16] sequencer stopped (exit 0)
+[10:06:18] sequencer start 2: scheduler after 0 s; its blocks fall 0 s after an epoch second
+[10:06:18] sequencer stopped (exit 0)
+[10:06:21] sequencer start 3: scheduler after 0 s; its blocks fall 3 s after an epoch second
+[10:06:21] sequencer up, head block 24
+[10:06:22] module mode: logos-ferrata_updater_module-module-lib.lgx sha256 962304cc04a7f4ecdffb041a8a3b4b76d73270f5ffa30c926e2373fb0a2f29c2, logos-portable.tar.zst sha256 80f57e19a051fa6ac5e7cf8cf8184b60f9644d5b8506e90421df7090feebb45a
+[10:06:28] module version: {"version":"0.1.0","ledgers":["harness","sequencer"],"program":"0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df","computed":"0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df","dev_mode":null,"staged":"2d86798"}
+[10:06:29] check_config: {"verdict":"ok","ledger":"sequencer","sequencer":{"program":"0x86ce4d7f54bd68b4c7356398cfda192f791c83f6fa3c3102a18ac20fefdfa04c","rpc":"http://127.0.0.1:3040","wait_final":true},"chains":[{"name":"sepolia","layout":"gloas","sources":["lodestar:light-client","publicnode:headers"]}]}
+[10:06:29] session U (module): 50 min (until 2026-11-13T10:56:29Z); restart through stop/start after 15 min; probe every 60 s
+[10:06:39] module start, life 1: {"verdict":"started","running":true,"error":null,"round":null,"served":"127.0.0.1:9464"}
+[10:21:29] restart armed (journal at 14 lines)
+[10:22:57] restart: the journal's last line is 'open applied'; the module's stop
+[10:22:57] module stop, life 1, after 0 s: {"verdict":"ok","running":false,"error":null,"round":31}
+[10:23:12] module start, life 2: {"verdict":"started","running":true,"error":null,"round":null,"served":"127.0.0.1:9464"}
+[10:30:08] stop requested: enough: finality updates and the restart through the module's stop/start are recorded; ending early to limit preemption exposure
+[10:30:17] module stop, life 2, after 8 s: {"verdict":"ok","running":false,"error":null,"round":15}
+[10:30:17] session U (module): lives 2, last stop ended, journal 19 transactions
+samples 702 (2 s), cores visible 2
+peak busy cores 1.9, mean busy cores 1.2
+peak summed RSS 1235 MiB
+  peak RSS logosctl 118 MiB
+  peak RSS logos-blockchai 429 MiB
+  peak RSS logos_host 400 MiB
+  peak RSS sequencer_servi 221 MiB
+[10:30:17] driver exit 0
+[10:30:52] sequencer stopped (exit 0)
+[10:31:01] node stopped (exit 143)
+[10:31:03] saved generation 2 (372610799 bytes; head block 171)
+[10:31:03] session u: ok
+[2026-11-13T10:31:03Z] session u: exit 0, generation 2

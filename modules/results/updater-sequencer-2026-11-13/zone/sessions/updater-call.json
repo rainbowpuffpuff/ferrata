@@ -1,0 +1,16 @@
+{
+ "call": "fc-01M7A2M449W72Q008RTZDTD42H",
+ "started_at": "2026-11-13T09:08:09Z",
+ "binary_sha256": "62ec54cea5f67107e6ad28ab7d492508f293ab4b2da3883110ba4374cf81c586",
+ "env": {
+  "CROWN_UPDATER_MIN": "50",
+  "CROWN_UPDATER_RESTART_MIN": "15",
+  "CROWN_SAMPLE": "1"
+ },
+ "module": {
+  "logos-ferrata_updater_module-module-lib.lgx": "962304cc04a7f4ecdffb041a8a3b4b76d73270f5ffa30c926e2373fb0a2f29c2",
+  "logos-portable.tar.zst": "80f57e19a051fa6ac5e7cf8cf8184b60f9644d5b8506e90421df7090feebb45a"
+ },
+ "session_sh_sha256": "656f133f44bbf334f8c1c234616076ae278ccdc09d5d603c81574bd3b6072ba3",
+ "commit": "2d867984d792ae97bf8b8743ded75d61294879b9"
+}
