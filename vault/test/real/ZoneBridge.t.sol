@@ -16,13 +16,13 @@ import {console2} from "forge-std/Test.sol";
 import {FerrataVault} from "../../src/FerrataVault.sol";
 import {RuleBMultiFixture} from "./RuleBMulti.t.sol";
 
-contract ZoneBridgeTest is RuleBMultiFixture {
+abstract contract ZoneBridgeFixture is RuleBMultiFixture {
     bytes32 internal constant CHECKPOINT_B_IMAGE_ID = 0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e;
     bytes32 internal constant RELEASE_IMAGE_ID = 0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9;
 
-    function _path() internal pure override returns (string memory) {
-        return "test/real/fixtures/zone-bridge.json";
-    }
+    /// @dev The key set the journal is over (after the proof's rotations) and its threshold.
+    function _n() internal pure virtual returns (uint32);
+    function _t() internal pure virtual returns (uint32);
 
     function _releaseImageId() internal pure override returns (bytes32) {
         return RELEASE_IMAGE_ID;
@@ -74,12 +74,12 @@ contract ZoneBridgeTest is RuleBMultiFixture {
         assertEq(vault.nextLeafIndex(), 2);
     }
 
-    function test_zoneBridge_theJournalIsThreeOfFourOverTheZonesKeys() public view {
+    function test_zoneBridge_theJournalIsTOfNOverTheZonesKeys() public view {
         FerrataVault.Checkpoint memory c = _checkpoint();
-        assertEq(keys.length, 4);
+        assertEq(keys.length, 4, "the vault's genesis is over the zone's four keys");
         assertEq(c.parentState, vault.genesisState());
-        assertEq(c.n, 4);
-        assertEq(c.t, 3);
+        assertEq(c.n, _n());
+        assertEq(c.t, _t());
         assertEq(c.nMin, 4);
         assertEq(c.tMin, 3);
         assertEq(c.tipId, tipId);
@@ -147,9 +147,24 @@ contract ZoneBridgeTest is RuleBMultiFixture {
     function test_gas_zoneBridge() public {
         FerrataVault.Checkpoint memory c = _checkpoint();
         vault.submitCandidate(c, seal);
-        console2.log("zone-bridge n=4 t=3, 2 burns: submitCandidate", vm.lastCallGas().gasTotalUsed);
+        console2.log("zone-bridge, 2 burns: submitCandidate", vm.lastCallGas().gasTotalUsed);
         vm.warp(block.timestamp + WAIT);
         vault.finalizeAttested(c);
-        console2.log("zone-bridge n=4 t=3, 2 burns: finalizeAttested", vm.lastCallGas().gasTotalUsed);
+        console2.log("zone-bridge, 2 burns: finalizeAttested", vm.lastCallGas().gasTotalUsed);
+    }
+}
+
+/// @notice zone-bridge-1: the four sequencers' keys throughout; three of the four attestations (n = 4, t = 3).
+contract ZoneBridgeTest is ZoneBridgeFixture {
+    function _path() internal pure override returns (string memory) {
+        return "test/real/fixtures/zone-bridge.json";
+    }
+
+    function _n() internal pure override returns (uint32) {
+        return 4;
+    }
+
+    function _t() internal pure override returns (uint32) {
+        return 3;
     }
 }
