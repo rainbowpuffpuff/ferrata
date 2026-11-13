@@ -97,38 +97,53 @@ LEZ_CORE_REPO=logos-blockchain/logos-execution-zone-module
 LEZ_CORE_REV=cc73ebfe0857705cfc1c3b29743fb6c8c6aebd82
 LEZ_CORE_PATCH="$REPO/modules/patches/lez_core-cc73ebf-authorizes-public-pda.patch"
 
+# Saves the box's /nix to the volume (the setup script restores it in the next container).
+save_nix() {
+  say "caching /nix for the next container (/vol/nix/lez-core-v04.tar.zst)"
+  mkdir -p /vol/nix && tar -C / -cf - nix | zstd -q -T0 -3 -o /vol/nix/lez-core-v04.tar.zst.part -f \
+    && mv /vol/nix/lez-core-v04.tar.zst.part /vol/nix/lez-core-v04.tar.zst && ls -la /vol/nix/lez-core-v04.tar.zst
+}
+
+# build-lezcore [STAGE]: core (lez_core as merged: LEZ's core FFI, the long Nix build), rest (the patched lez_core, both
+# unit-test builds, the module and logosctl through check.sh), or both. A step whose output exists is not run again.
 build_lezcore() {
-  local L="$T/logs/build" P="$T/lez_core-patched" O="$T/modcheck" failed=""; mkdir -p "$L" "$T/logos" "$T/bin"
+  local stage="${1:-all}" L="$T/logs/build" P="$T/lez_core-patched" O="$T/modcheck" failed=""; mkdir -p "$L" "$T/logos" "$T/bin"
   # Nix's evaluation and local builds need a finite stack of 1 GiB on the box (modules/scripts/check.sh).
   if [ "$(ulimit -s)" = unlimited ]; then ulimit -s 1048576; fi
+  local NB=(nix build --cores "${NIX_CORES:-30}" --max-jobs 2 -L)
   # Each step is tried (one failing does not stop the others); the failures are listed at the end.
   try() { local name="$1" t0=$(date +%s); shift; if "$@" > "$L/$name.log" 2>&1; then say "$name: ok ($(( $(date +%s) - t0 )) s)";
           else say "$name: FAILED ($(( $(date +%s) - t0 )) s)"; grep -a -E -A5 '^error|error:|FAILED' "$L/$name.log" | tail -n 25; failed="$failed $name"; fi; }
-  try seqnet-chain bash -c "cd '$REPO/cli' && CARGO_TARGET_DIR='$TGT' cargo build --release --features seqnet --bin seqnet-chain && cp '$TGT/release/seqnet-chain' '$T/bin/'"
-  try lez_core-upstream nix build "github:$LEZ_CORE_REPO/$LEZ_CORE_REV#lgx" -o "$T/logos/lgx-lez_core-upstream" -L
-  try lez_core-source bash -c "rm -rf '$P' && git clone -q 'https://github.com/$LEZ_CORE_REPO' '$P' && git -C '$P' checkout -q '$LEZ_CORE_REV' && git -C '$P' apply '$LEZ_CORE_PATCH' && git -C '$P' diff --stat"
-  try lez_core-patched nix build "path:$P#lgx" -o "$T/logos/lgx-lez_core-patched" -L
-  try lez_core-tests-upstream nix build "github:$LEZ_CORE_REPO/$LEZ_CORE_REV#unit-tests" -o "$T/logos/lez_core-tests-upstream" -L
-  try lez_core-tests-patched nix build "path:$P#unit-tests" -o "$T/logos/lez_core-tests-patched" -L
-  # ferrata_bridge_module (native tests and calls, then the dev .lgx) and logosctl, through modules/scripts/check.sh.
-  try check env MODULES=ferrata_bridge_module PORTABLE=0 E2E=0 LOGOS_TMPDIR="$(dirname "$T")/mseq" RISC0_DEV_MODE=1 \
-    bash "$REPO/modules/scripts/check.sh" "$O"
-  tail -n 12 "$O/report/summary.md" 2>/dev/null
-  if [ -d "$O/lgx-ferrata_bridge_module" ]; then
-    rm -rf "$T/logos/lgx-ferrata_bridge_module"; cp -rL "$O/lgx-ferrata_bridge_module" "$T/logos/lgx-ferrata_bridge_module"
-    ln -sfn "$(readlink -f "$O/logos/bin/logosctl")" "$T/logos/logosctl"
+  [ -x "$T/bin/seqnet-chain" ] && [ "$T/bin/seqnet-chain" -nt "$REPO/cli/src/bin/seqnet_chain.rs" ] \
+    || try seqnet-chain bash -c "cd '$REPO/cli' && CARGO_TARGET_DIR='$TGT' cargo build --release --features seqnet --bin seqnet-chain && cp '$TGT/release/seqnet-chain' '$T/bin/'"
+  if [ "$stage" != rest ] && [ ! -e "$T/logos/lgx-lez_core-upstream" ]; then
+    try lez_core-upstream "${NB[@]}" "github:$LEZ_CORE_REPO/$LEZ_CORE_REV#lgx" -o "$T/logos/lgx-lez_core-upstream"
+    [ -e "$T/logos/lgx-lez_core-upstream" ] && save_nix
   fi
-  ( cd "$T/logos" && sha256sum lgx-*/*.lgx; ./logosctl --version 2>&1 | head -1 ) | tee "$T/logos/VERSIONS"
-  say "caching /nix for the next container (/vol/nix/lez-core-v04.tar.zst; the setup script restores it)"
-  mkdir -p /vol/nix && tar -C / -cf - nix | zstd -q -T0 -3 -o /vol/nix/lez-core-v04.tar.zst.part -f \
-    && mv /vol/nix/lez-core-v04.tar.zst.part /vol/nix/lez-core-v04.tar.zst && ls -la /vol/nix/lez-core-v04.tar.zst
+  if [ "$stage" != core ]; then
+    [ -e "$T/logos/lgx-lez_core-patched" ] || {
+      try lez_core-source bash -c "rm -rf '$P' && git clone -q 'https://github.com/$LEZ_CORE_REPO' '$P' && git -C '$P' checkout -q '$LEZ_CORE_REV' && git -C '$P' apply '$LEZ_CORE_PATCH' && git -C '$P' diff --stat"
+      try lez_core-patched "${NB[@]}" "path:$P#lgx" -o "$T/logos/lgx-lez_core-patched"; }
+    [ -e "$T/logos/lez_core-tests-upstream" ] || try lez_core-tests-upstream "${NB[@]}" "github:$LEZ_CORE_REPO/$LEZ_CORE_REV#unit-tests" -o "$T/logos/lez_core-tests-upstream"
+    [ -e "$T/logos/lez_core-tests-patched" ] || try lez_core-tests-patched "${NB[@]}" "path:$P#unit-tests" -o "$T/logos/lez_core-tests-patched"
+    # ferrata_bridge_module (native tests and calls, then the dev .lgx) and logosctl, through modules/scripts/check.sh.
+    try check env MODULES=ferrata_bridge_module PORTABLE=0 E2E=0 LOGOS_TMPDIR="$(dirname "$T")/mseq" RISC0_DEV_MODE=1 \
+      bash "$REPO/modules/scripts/check.sh" "$O"
+    tail -n 12 "$O/report/summary.md" 2>/dev/null
+    if [ -d "$O/lgx-ferrata_bridge_module" ]; then
+      rm -rf "$T/logos/lgx-ferrata_bridge_module"; cp -rL "$O/lgx-ferrata_bridge_module" "$T/logos/lgx-ferrata_bridge_module"
+      ln -sfn "$(readlink -f "$O/logos/bin/logosctl")" "$T/logos/logosctl"
+    fi
+    ( cd "$T/logos" && sha256sum lgx-*/*.lgx; ./logosctl --version 2>&1 | head -1 ) | tee "$T/logos/VERSIONS"
+    save_nix
+  fi
   [ -z "$failed" ] || die "build-lezcore: failed:$failed (logs in $L)"
 }
 
 case "${1:-}" in
   build) build ;;
   build-miniapp) build_miniapp ;;
-  build-lezcore) build_lezcore ;;
+  build-lezcore) build_lezcore "${2:-all}" ;;
   cli|miniapp|lezcore)
     NAME="${2:?run.sh $1 NAME}"
     # The tools are rebuilt first (incremental), so that a run uses this tree's (a restored box may hold older ones).
