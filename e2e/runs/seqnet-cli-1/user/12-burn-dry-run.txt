@@ -1,0 +1,18 @@
+$ ferrata --seed <work>/user/seed.txt --eth-rpc http://127.0.0.1:8545 --chain-id 11155111 --vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516 --from-block 1 --sequencer http://127.0.0.1:3040 --lez-wallet <work>/user/lez-wallet --lez-password-file <work>/user/lez.pass --bridge-account 0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d burn --amount 0.001 --recipient 0xa0151f0C0b1785fE1687d168a6E824eEb2591dAf --bridge-program <work>/zone/bundle/program/ferrata_bridge.bin
+
+Latest block is 28
+burn on LEZ (configuration 0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c):
+  amount       0.001 ETH (1000000000000000 base units, 18 decimals) from your private account /0
+  recipient    0xa0151f0C0b1785fE1687d168a6E824eEb2591dAf on Ethereum (bound into COut, encrypted in the memo)
+  would send   Burn to the bridge program 0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d, proven locally by LEZ's wallet; note r 0x396078f936626cea091ce987d4adc00accf89065523dace0bcf9007b80189bd0  COut 0xba46e0c57d40eb039330716fa66f16f5668187175b3a9ba4c1fec451c90b7bf3  burn counter 0
+  cost         at release, the burn fee 0 ETH (0 base units, 18 decimals) and the checkpoint fee 0.000001 ETH (1000000000000 base units, 18 decimals) in force now are deducted: the recipient receives 0.000997 ETH (997000000000000 base units, 18 decimals) through a relayer (relay fee 0.000002 ETH (2000000000000 base units, 18 decimals)), 0.000999 ETH (999000000000000 base units, 18 decimals) if you send the release yourself; the LEZ fee is paid inside the proof
+what becomes public (Burn (LEZ)):
+  public on Ethereum: nothing
+  public on LEZ:      the burn note: token, denomination, r, the recipient encrypted (c_out); the holder account, if it is public
+  stays private:      the Ethereum recipient (encrypted to you); a private holder and its balance
+privacy of these choices: Minimal: only the residual correlations (token, denomination, time)
+  ok Burn from a private account: the holder stays private.
+  ok Fresh recipient address: nothing on Ethereum ties the release to your depositor address.
+  ok Released through a relayer: the recipient needs no ETH for gas.
+public: private burn: the note (r, memo, mac, COut), the token, the denomination and the time; not the holder (a private account, shown as an alias) or the Ethereum recipient (encrypted in the memo)
+not sent: a dry run (add --send --yes to sign and send)

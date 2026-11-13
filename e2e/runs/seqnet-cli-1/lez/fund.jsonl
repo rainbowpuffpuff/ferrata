@@ -1,0 +1,11 @@
+{"amount":"3000000000000","balance_after":"3000000000000","balance_before":"0","from":"2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2","seen_ms":4003,"send_ms":2,"step":"faucet public transfer (stand-in for the gas drop)","to_public_0":"AKRYNTU8c4MZ4fSr5FHcn6BGE6T4dfRCzn1ziQCNKFBu","tx":"02db790c77b3663258600310665935fe2c32c5b402d7ca802ff519190a63500f"}
+Latest block is 26
+Syncing to block 26. Blocks to sync: 26
+Synced to block 26 in 43.799663ms
+Latest block is 26
+Latest block is 26
+Latest block is 26
+Latest block is 27
+Syncing to block 27. Blocks to sync: 1
+Synced to block 27 in 2.443579ms
+{"amount":"2000000000000","dev_mode":true,"fee_paid_in_the_proof":"5070616","from_public_0":"AKRYNTU8c4MZ4fSr5FHcn6BGE6T4dfRCzn1ziQCNKFBu","private_balance_after":"1999994929384","private_balance_before":"0","seen_ms":9393,"send_ms":148,"step":"the user's private transfer public /0 -> private /0 (proven by LEZ's wallet)","to_private_0":"Ezz73Y9kCtDTQTqBWAzFsRQVm4xvRZ4ZntqedNLFwKRW","tx":"52ba3674878a2217c4b504bc4397ae8bbfdb44d3eb71331e0d067c61ba7cc082"}
