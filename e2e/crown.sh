@@ -13,6 +13,10 @@
 #   e2e/crown.sh fetch [--lez] [run]  the run directory into e2e/runs/<run>/ (--lez: also the LEZ sessions' records)
 #   e2e/crown.sh stop [--app]         cancel the runner (and a queued GPU proof); `start` resumes; --app also stops the app
 #   e2e/crown.sh verify [run]         e2e/crown/verify.py over a fetched live run, from this machine (chain reads only)
+#   e2e/crown.sh updater RUN --bin FILE [--minutes N] [--restart-min M] [--poll-s S]
+#                                     session A on a new zone, then ferrata-updater (lez/updater/sequencer) on it for N
+#                                     minutes, reading the public Sepolia beacon APIs (lez/updater/README.md); also
+#                                     updater-stop RUN, updater-status RUN, updater-fetch RUN DIR
 #
 # Settings: e2e/sepolia-live.env (or $FERRATA_ENV_FILE) for SEPOLIA_RPC_URL and ETH_FROM (read-only checks of `start`;
 # the run itself signs with the Secret ferrata-sepolia-key that `e2e/sepolia-cloud.sh setup` made). The Modal
@@ -60,5 +64,6 @@ verify)
   : "${SEPOLIA_RPC_URL:=https://ethereum-sepolia-rpc.publicnode.com}"
   SEPOLIA_RPC_URL="$SEPOLIA_RPC_URL" python3 -I "$here/crown/verify.py" "$run" --lez "$run/lez"
   ;;
-*) sed -n '2,19p' "$0" >&2; exit 2 ;;
+updater|updater-stop|updater-status|updater-fetch) ctl "$cmd" "$@" ;;
+*) sed -n '2,23p' "$0" >&2; exit 2 ;;
 esac

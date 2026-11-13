@@ -435,7 +435,7 @@ From [`attestation.md`](../design/attestation.md) §15 and [`lez/RESULTS.md`](..
   16 cores, and on M1 and M4 Mac minis under macOS: EVIDENCE rows 32–34, 38, 88);
 - in the Logos module, `advance` and reads and transactions through Logos Core's own modules;
   `verify_checkpoint`'s fetching from several providers; a published catalog; the attestation side's
-  `monitor`; the updater as a module and its backend for a running sequencer
+  `monitor`; the updater as a module
   ([README](../../README.md#specified-but-not-built), "Specified but not built").
 
 Built since this guide's first draft, with their evidence: successors, the root id and the

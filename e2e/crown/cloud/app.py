@@ -479,6 +479,93 @@ def lez_session(run: str, step: str, chain: str, bundle_sha256: str, script: byt
     return {"ok": ok, "ran": ran, "rc": rc, "generation": gen(), "records": buf.getvalue(), "tail": "\n".join(tail)}
 
 
+# ---- the updater session: ferrata-updater (lez/updater/sequencer) on a zone of session A ------------------
+UPDATER_ENV = ("CROWN_UPDATER_MIN", "CROWN_UPDATER_RESTART_MIN", "CROWN_UPDATER_PROBE_S", "CROWN_UPDATER_POLL_S",
+               "CROWN_SAMPLE", "CROWN_MAX_STARTS")
+# The final programs (docs/image-ids.md): session A's deployment must have computed these, or session U does not run.
+FINAL_IMAGE_IDS = {"attestation": "0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df",
+                   "bridge": "0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd"}
+control = modal.Dict.from_name("ferrata-crown-control", create_if_missing=True)
+
+
+@app.function(image=runner_image, cpu=(2.0, 8.0), memory=(8192, 32768), timeout=14 * 3600, retries=0,
+              max_containers=1, single_use_containers=True, volumes={VOL: volume})
+def updater_session(run: str, script: bytes, env: dict) -> dict:
+    """lez/crown/session.sh a (a new zone: the final programs deployed, the Sepolia instance from the bundle's fixture;
+    skipped when the zone has a generation), then session.sh u (ferrata-updater from lez/<run>/inputs/updater/ on that
+    zone, for CROWN_UPDATER_MIN minutes), one container, CROWN_LEZ_VOL = lez/<run>. Fork-safe by construction: nothing
+    here holds a key of any public network; the zone is local to the container, the beacon APIs are only read.
+    `control["stop/<run>"] = reason` ends session U early (the next check, within 30 s). Returns {ok, steps, tail}."""
+    lez = f"{VOL}/lez/{run}"
+    os.makedirs(f"{lez}/state", exist_ok=True)
+    gen = lambda: int(open(f"{lez}/state/current").read().strip()) if os.path.isfile(f"{lez}/state/current") else 0
+    outlog = f"{lez}/session-u.out"
+    stop = threading.Event()
+
+    def committer():
+        while not stop.wait(60):
+            try:
+                volume.commit()
+            except Exception:
+                pass
+
+    def stop_watch():
+        while not stop.wait(30):
+            try:
+                why = control.get(f"stop/{run}")
+            except Exception:
+                why = None
+            if why:
+                with open("/root/updater-stop", "w") as f:
+                    f.write(str(why))
+
+    def say(msg: str) -> None:
+        with open(outlog, "a") as out:
+            out.write(f"[{_utc()}] {msg}\n")
+
+    if not os.path.isfile(f"{lez}/bundle.tar.zst"):
+        shutil.copy2(f"{VOL}/inputs/bundle.tar.zst", f"{lez}/bundle.tar.zst.part")
+        os.replace(f"{lez}/bundle.tar.zst.part", f"{lez}/bundle.tar.zst")
+    bundle_sha = _sha256(f"{lez}/bundle.tar.zst")
+    if not os.path.isfile(f"{lez}/inputs/updater/ferrata-updater"):
+        return {"ok": False, "steps": {}, "tail": f"no lez/{run}/inputs/updater/ferrata-updater (ctl.py updater uploads it)"}
+    with open("/root/session.sh", "wb") as f:
+        f.write(script)
+    e = {k: v for k, v in os.environ.items() if not k.startswith("CROWN_")}
+    e.update({k: str(v) for k, v in env.items() if k in UPDATER_ENV and v is not None})
+    e.update(CROWN_LEZ_VOL=lez, CROWN_LEZ_WORK="/root/crown-lez", CROWN_CHAIN="sepolia")
+    e.pop("RISC0_DEV_MODE", None)
+    threading.Thread(target=committer, daemon=True).start()
+    threading.Thread(target=stop_watch, daemon=True).start()
+    steps = {}
+    say(f"updater session {run}: bundle sha256 {bundle_sha}, {os.cpu_count()} CPUs visible, generation {gen()}")
+    for step in ("a", "u"):
+        if step == "a" and gen() >= 1:
+            say("session a: the zone has a generation; skipped")
+            continue
+        if step == "u":
+            ident = json.load(open(f"{lez}/session-a/session-a.json")) if os.path.isfile(f"{lez}/session-a/session-a.json") else {}
+            got = {k: (ident.get(k) or {}).get("imageId") for k in FINAL_IMAGE_IDS}
+            if got != FINAL_IMAGE_IDS:
+                say(f"session u not run: session A's programs {got} are not the final ones {FINAL_IMAGE_IDS}")
+                steps["u"] = None
+                break
+        with open(outlog, "a") as out:
+            out.write(f"[{_utc()}] session {step}\n")
+            out.flush()
+            rc = subprocess.run(["bash", "/root/session.sh", step], stdout=out, stderr=subprocess.STDOUT, env=e).returncode
+            out.write(f"[{_utc()}] session {step}: exit {rc}, generation {gen()}\n")
+        steps[step] = rc
+        volume.commit()
+        if rc != 0:
+            break
+    stop.set()
+    volume.commit()
+    tail = open(outlog, errors="replace").read().splitlines()[-30:]
+    return {"ok": steps.get("u") == 0, "steps": steps, "generation": gen(), "bundle_sha256": bundle_sha,
+            "tail": "\n".join(tail)}
+
+
 # ---- the GPU proof ------------------------------------------------------------------------------------------
 @app.function(image=gpu_image, gpu=GPU, cpu=4.0, memory=32768, timeout=3600,
               volumes={"/vol": prover_volume.read_only()}, max_containers=1, single_use_containers=True, retries=0)

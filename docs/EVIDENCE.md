@@ -174,9 +174,10 @@ side is a devnet we ran (LEZ testnet 0.4 does not exist).
   of the final programs (row 89: every claim, burn and release proven, the releases checked by RISC Zero's Groth16
   verifier in the vault); the burn root's checkpoint is still the mock there (the harness's blocks are not chained,
   row 89). Timing and amount residuals, network metadata and LEZ's own anonymity set are outside both.
-- **Not built** (README, "Specified but not built"): among them the updater's backend for a running sequencer (the
-  three daemons are built as Logos modules, rows 94–98, the updater's on its in-process chain only), the
-  monitor's client of the LEZ and Logos Blockchain nodes' RPCs, the mini-app's private round trip
+- **Not built** (README, "Specified but not built"): among them the updater module's backend for a running sequencer
+  and the A3 gate's three daemons on one (the three daemons are built as Logos modules, rows 94–98, the updater's on
+  its in-process chain only; the updater's sequencer backend is a binary of its own, which followed Sepolia live for
+  eight hours, row 99), the monitor's client of the LEZ and Logos Blockchain nodes' RPCs, the mini-app's private round trip
   through a LEZ sequencer, reads and sends through Logos Core's own modules, a published module catalog. Nothing is audited: the static
   analysis, symbolic checks, fuzzing and the core's review (rows 1, 35, 36 and 40) are tooling, not an audit; the
   Halmos properties hold from one concrete fixture state within stated bounds; of the four not proven in 900 s,

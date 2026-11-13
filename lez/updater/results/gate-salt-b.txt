@@ -1,9 +1,9 @@
-gate	rounds	462	seed	default	adversary	true	salt	b
+gate	rounds	407	seed	default	adversary	true	salt	b
 mainnet	updates applied	14	jobs (with Init)	15	finalized slot	15631808
 sepolia	updates applied	44	jobs (with Init)	45	finalized slot	11556000
-honest-1	applied tx	54	refused tx	20	gas applied	168274018	gas refused	9412723	fee	1421493928	deferrals	432
-honest-2	applied tx	50	refused tx	27	gas applied	161696435	gas refused	21353315	fee	1464398000	deferrals	429
-adversary	applied tx	146	refused tx	31	gas applied	455501540	gas refused	22632941	fee	3825075848	deferrals	0
-honest refused gas / applied gas	0.0932	(gate <= 0.10)
-honest-1 share of honest fees	0.4926	honest-2	0.5074	(gate 0.35-0.65 each)
-updates	58	adversary junk Opens	110	ledger transactions	438
+honest-1	applied tx	40	refused tx	17	gas applied	123263576	gas refused	6454598	fee	1037745392	deferrals	405
+honest-2	applied tx	60	refused tx	23	gas applied	187538067	gas refused	12599191	fee	1601098064	deferrals	379
+adversary	applied tx	150	refused tx	24	gas applied	474957107	gas refused	21977675	fee	3975478256	deferrals	0
+honest refused gas / applied gas	0.0613	(gate <= 0.10)
+honest-1 share of honest fees	0.3933	honest-2	0.6067	(gate 0.35-0.65 each)
+updates	58	adversary junk Opens	110	ledger transactions	424

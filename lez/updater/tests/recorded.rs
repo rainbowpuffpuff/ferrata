@@ -632,3 +632,166 @@ fn fee_limits_are_declared_and_enforced() {
     assert!(u2.health().1.iter().any(|w| w == "budget reached"));
     println!("budget: {sent} sent ({} charged) before the stop", u2.metrics.spent());
 }
+
+/// The finalized header (slot, root) of every update of the record.
+fn finalized_roots(r: &Rec) -> std::collections::BTreeMap<u64, Root> {
+    r.entries
+        .iter()
+        .map(|e| {
+            let (u, _) = if e.period_update {
+                decode_update(&e.bytes, &r.config)
+            } else {
+                decode_finality_update(&e.bytes, &r.config)
+            }
+            .unwrap();
+            (u.finalized_header.beacon.slot, u.finalized_header.beacon.hash_tree_root())
+        })
+        .collect()
+}
+
+/// A beacon node on loopback that serves only `/eth/v1/beacon/headers/{slot}` (JSON, as publicnode's): the recorded
+/// finalized headers' roots, or (`lie`) another root at every slot.
+fn mock_headers(roots: std::collections::BTreeMap<u64, Root>, lie: bool) -> String {
+    use std::{
+        io::{BufRead, BufReader, Write},
+        net::TcpListener,
+    };
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap();
+    std::thread::spawn(move || {
+        for stream in listener.incoming() {
+            let Ok(mut stream) = stream else { continue };
+            let mut reader = BufReader::new(stream.try_clone().unwrap());
+            let mut line = String::new();
+            if reader.read_line(&mut line).is_err() {
+                continue;
+            }
+            loop {
+                let mut h = String::new();
+                if reader.read_line(&mut h).is_err() || h == "\r\n" || h.is_empty() {
+                    break;
+                }
+            }
+            let path = line.split_whitespace().nth(1).unwrap_or("/").to_string();
+            let slot = path.strip_prefix("/eth/v1/beacon/headers/").and_then(|s| s.parse::<u64>().ok());
+            let (status, body) = match slot.and_then(|s| roots.get(&s).map(|r| (s, *r))) {
+                Some((s, mut r)) => {
+                    if lie {
+                        r[0] ^= 0xff;
+                    }
+                    let body = format!(
+                        "{{\"execution_optimistic\":false,\"finalized\":true,\"data\":{{\"root\":\"0x{}\",\"canonical\":true,\
+                         \"header\":{{\"message\":{{\"slot\":\"{s}\"}}}}}}}}",
+                        hex::encode(r)
+                    );
+                    ("200 OK", body)
+                }
+                None => ("404 Not Found", "{\"code\":404,\"message\":\"NOT_FOUND\"}".to_string()),
+            };
+            let _ = write!(stream, "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len());
+        }
+    });
+    format!("http://{addr}")
+}
+
+/// A headers source (as publicnode's, which serves no light-client data) beside one light-client source, with
+/// `min_agreeing = 2`: when it holds each update's finalized header canonical, the updater catches up as with two
+/// light-client sources; when it holds another block there, nothing after the checkpoint's `Init` is sent (the
+/// updater waits), nothing is refused, and `/health` names the source.
+#[test]
+fn headers_source_confirms_or_holds_back() {
+    use ferrata_updater::source::HeaderWitness;
+    let r = rec("mainnet");
+    let clock = Clock::new(r.entries.len());
+    let roots = finalized_roots(&r);
+    for lie in [false, true] {
+        let payer = key(if lie { 0x2b } else { 0x2a });
+        let mut l = HarnessLedger::new(std::slice::from_ref(&payer));
+        let witness = HeaderWitness { name: "headers".into(), base: mock_headers(roots.clone(), lie), timeout_secs: 5 };
+        let sources: Vec<Box<dyn Source>> = vec![r.honest("lc", &clock), Box::new(witness)];
+        let mut u = r.updater("hdr", payer, sources, None, Policy { min_agreeing: 2, ..policy(1) });
+        let h = &u.metrics.sources["headers"];
+        assert_eq!((h.confirmed, h.mismatches), (0, 0));
+        if !lie {
+            settle(&mut u, &mut l, 200);
+            assert_eq!(store(&u, &l).finalized.slot, r.last_finalized().0);
+            let h = &u.metrics.sources["headers"];
+            assert!(h.confirmed > 0 && h.mismatches == 0 && h.available, "{h:?}");
+            assert_eq!(u.health().0, "ok", "{:?}", u.health().1);
+            println!("headers source honest: {} confirmations, {} jobs applied", h.confirmed, applied(&u, &l));
+        } else {
+            let mut waiting = 0;
+            for _ in 0..30 {
+                if let Plan::Waiting(_) = u.tick(&mut l).unwrap() {
+                    waiting += 1;
+                }
+            }
+            assert!(waiting >= 25, "the updater waits once the instance is initialised ({waiting} rounds)");
+            assert_eq!(applied(&u, &l), 1, "only the initialisation");
+            let h = &u.metrics.sources["headers"];
+            assert!(h.mismatches > 0 && h.confirmed == 0, "{h:?}");
+            let (status, why) = u.health();
+            assert_eq!(status, "degraded");
+            assert!(why.iter().any(|w| w.contains("headers holds another block")), "{why:?}");
+            println!("headers source lying: {waiting} rounds waiting, {} mismatches, health {status}", h.mismatches);
+        }
+        assert_eq!(refused_total(&l), 0);
+    }
+}
+
+/// `finish_own_jobs`: a source that moves on to a newer finality update while this updater's job for the previous
+/// one is half done (as a beacon node serves only its newest). With it (the default), the updater finishes its own
+/// job first, also after a restart on the same state directory; without it, it opens the newer update's job and the
+/// first one stays open.
+#[test]
+fn own_job_is_finished_when_the_source_moves_on() {
+    let r = rec("mainnet");
+    let fin_of = |i: usize| {
+        let e = &r.entries[i];
+        assert!(!e.period_update);
+        decode_finality_update(&e.bytes, &r.config).unwrap().0.finalized_header.beacon.slot
+    };
+    // Two finality updates in a row, each further than the one before.
+    let i = (1..r.entries.len() - 1)
+        .find(|&i| !r.entries[i].period_update && !r.entries[i + 1].period_update && fin_of(i + 1) > fin_of(i))
+        .expect("two finality updates in a row");
+    let (fin1, fin2) = (fin_of(i), fin_of(i + 1));
+    for (finish, restart) in [(true, false), (true, true), (false, false)] {
+        let dir = scratch(&format!("own-job-{finish}-{restart}"));
+        let clock = Clock::new(i);
+        let payer = key(0x2c);
+        let mut l = HarnessLedger::new(std::slice::from_ref(&payer));
+        let pol = Policy { finish_own_jobs: finish, ..policy(1) };
+        let mut u = r.updater("own", payer.clone(), vec![r.honest("a", &clock)], Some(dir.clone()), pol.clone());
+        settle(&mut u, &mut l, 200);
+        assert!(store(&u, &l).finalized.slot < fin1, "the store is behind the first update");
+        clock.set(i + 1);
+        match u.tick(&mut l).unwrap() {
+            Plan::Send(a) => assert_eq!((a.step, a.finalized_slot), (Step::Open, fin1)),
+            other => panic!("expected the first update's Open, got {other:?}"),
+        }
+        clock.set(i + 2);
+        if restart {
+            u = r.updater("own", payer.clone(), vec![r.honest("a", &clock)], Some(dir.clone()), pol.clone());
+        }
+        let next = match u.tick(&mut l).unwrap() {
+            Plan::Send(a) => (a.step, a.finalized_slot),
+            other => panic!("expected a transaction, got {other:?}"),
+        };
+        if finish {
+            assert_eq!(next, (Step::Miller, fin1), "its own job first (restart {restart})");
+        } else {
+            assert_eq!(next, (Step::Open, fin2), "the newer update's job");
+        }
+        settle(&mut u, &mut l, 200);
+        assert_eq!(store(&u, &l).finalized.slot, fin2);
+        assert_eq!(refused_total(&l), 0);
+        let open_left = fs::read_dir(dir.join("mainnet/open")).map(|d| d.count()).unwrap_or(0);
+        assert_eq!(open_left, 0, "no kept job left once the store is past it");
+        println!(
+            "finish_own_jobs {finish}, restart {restart}: after the source moved on, {:?}; {} transactions in all",
+            next,
+            l.log.len()
+        );
+    }
+}

@@ -191,7 +191,7 @@ rebuild the programs to their image ids.
 | [Round trip in CI](e2e/ci/README.md), `e2e/ci/` | One deposit there and back on one machine, every step asserted, in GitHub Actions | tested on the build box; not yet on GitHub | [76, 77](docs/EVIDENCE.md) |
 | [Command-line tool](cli/README.md), `cli/` | `ferrata`, the user's tool: deposit, claim, burn, release, recover; private by default | prototype; anvil and the harness | [84, 85](docs/EVIDENCE.md) |
 | [Relayer](docs/guides/operator-guide.md#6-the-relayer-and-the-wrapper), `cli/` | `ferrata-relayer`: users' release jobs, rule (B) checkpoints, finalisation, the gas drop | prototype; a fork of Sepolia | [46–48](docs/EVIDENCE.md) |
-| [Updater](lez/updater/README.md), `lez/updater/` | `ferrata-updater`, the light-client updater daemon | prototype; recorded data, the harness | [79–81](docs/EVIDENCE.md) |
+| [Updater](lez/updater/README.md), `lez/updater/` | `ferrata-updater`, the light-client updater daemon | prototype; recorded data, the harness; 8 h on a LEZ sequencer following Sepolia live, 74 updates applied ([record](lez/updater/results/live-sepolia/)) | [79–81, 99](docs/EVIDENCE.md) |
 | [Watchers' `monitor`](monitor/README.md), `monitor/` | The watchers' node-side program: checks each candidate, cancels in time, pauses, alerts | prototype; anvil and a fork of Sepolia | [43–45](docs/EVIDENCE.md) |
 | [Rule (B) attestor](checkpoint/attestor/README.md), `checkpoint/attestor/` | `ferrata_attestor`: the signer a sequencer runs, and the collector of t of n attestations | prototype; a four-sequencer zone | [63–68](docs/EVIDENCE.md) |
 | [IDL](idl/README.md), `idl/` | The attestation and bridge programs' interfaces in SPEL's IDL format | built | [55, 58](docs/EVIDENCE.md) |
@@ -294,9 +294,11 @@ The design notes specify these; there is no code for them here:
   `lez_core`; the modules read plain `http://` JSON-RPC and build messages without signing or sending
   them; the private claim's private execution and proof are the LEZ wallet's: the module builds and checks
   `ClaimPrivately`; the release's Groth16 wrap is the relayer's), and a published catalog (laid out,
-  dry-run and installed from on 127.0.0.1 in `modules/catalog/`); the updater's backend for a running sequencer
-  (`ferrata-updater` is built as a binary and as a Logos module, both on the in-process LEZ chain, `lez/updater/`,
-  `modules/ferrata_updater_module`);
+  dry-run and installed from on 127.0.0.1 in `modules/catalog/`); the updater module's backend for a running
+  sequencer, and the A3 gate's three daemons on one (`ferrata-updater` is built as a binary and as a Logos module
+  that drives the same daemon, `lez/updater/`, `modules/ferrata_updater_module`, on the in-process LEZ chain; its
+  backend for a running LEZ sequencer is a binary of its own, `lez/updater/sequencer/`, which followed Sepolia live
+  for eight hours, EVIDENCE row 99; the gate's three daemons run in process, row 80);
 - the mini-app's private round trip on a LEZ sequencer: on its devnet the private round trip on the defaults
   settles (private claim and burn proven by the harness with the wallet's own keys, also for real; EVIDENCE
   rows 86, 87), but not through a sequencer: the `ferrata` tool's sequencer path (LEZ's wallet library for

@@ -6,7 +6,14 @@ name = "updater-1"                  # in logs and metrics
 state_dir = "state"                 # committee cache and journal, one subdirectory per chain
 poll_secs = 12                      # seconds between rounds (a beacon slot)
 listen = "127.0.0.1:9464"           # /health (JSON; 503 when no source is usable) and /metrics (Prometheus)
-ledger = "sequencer"                # "sequencer": a LEZ sequencer (not in this build); "harness": dev mode
+ledger = "sequencer"                # "sequencer": a LEZ sequencer ([sequencer]; the build of sequencer/); "harness": dev mode
+
+[sequencer]                         # daemon.ledger = "sequencer"
+rpc = "http://127.0.0.1:3040"       # the sequencer's JSON-RPC (sequencer_service start --rpc-listen-address); loopback only
+program = "A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX"  # the attestation program's account (base58 or 0x-hex), from its deployment
+wait_final = true                   # read the chain and settle transactions only in blocks final on Bedrock
+# run_dir = "state/ledger"          # the backend's follower of the chain and its manifest (default <state_dir>/ledger)
+# log = "sequencer.log"             # the sequencer's log: the reason of a transaction it dropped
 
 [keys]
 payer_key_file = "payer.key"        # 32-byte secret key, hex; signs and pays every transaction
@@ -25,21 +32,25 @@ retry_max_ms = 30000                # ... capped here
 max_attempts = 5
 demote_rounds = 50                  # rounds a source that served something the program refuses is not asked
 max_periods_per_request = 16        # periods per `updates` request
+finish_own_jobs = true              # finish a job this updater opened before another (its update is kept in state_dir)
 
 [[chain]]
 name = "sepolia"
 preset = "sepolia"                  # "mainnet" or "sepolia" (fork schedule, genesis, chain id)
-checkpoint = "5f71d7f650f9252b48749b5f062c0c234e01afd69f364ab600e2b6051494b20d"
+checkpoint = "3b901f5e6853b5cf5eb04d7ccfe1272e66c38291cb3a11dd159cacd1117ccf7c"  # crates/ferrata-spectests/fixtures/sepolia-2026-11-12
+layout = "gloas"                    # the checkpoint bootstrap's light-client layout (default "electra"); the instance id hashes it
 adoption_parts = 2                  # committee adoption in 2 transactions of 256 keys
 
   [[chain.source]]
   name = "lodestar"
   url = "https://lodestar-sepolia.chainsafe.io"
   timeout_secs = 30
+  kind = "light-client"             # serves bootstraps, updates, finality updates (default)
 
   [[chain.source]]
-  name = "publicnode"
+  name = "publicnode"               # serves no light-client data: confirms the finalized header (min_agreeing)
   url = "https://ethereum-sepolia-beacon-api.publicnode.com"
+  kind = "headers"
 
 [[chain]]
 name = "mainnet"
@@ -53,3 +64,4 @@ checkpoint = "4baa732e5dbdbe97932abcf62c7caccc1cba8e9c14118d153aea629e25a4abff"
   [[chain.source]]
   name = "publicnode"
   url = "https://ethereum-beacon-api.publicnode.com"
+  kind = "headers"

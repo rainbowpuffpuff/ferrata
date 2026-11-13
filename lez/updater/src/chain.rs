@@ -4,7 +4,7 @@
 //! planning that runs the program's own step code natively before a transaction is paid for (as
 //! `harness::plan_job`).
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, bail, ensure, Result};
 use ferrata_core::{
     fork::{ChainSpec, Preset, FAR_FUTURE_EPOCH},
     types::SyncCommittee,
@@ -84,6 +84,36 @@ pub fn preset(name: &str, adoption_parts: u8) -> Result<Config> {
     })
 }
 
+/// An instance's configuration: the preset with its store in `layout` (the checkpoint bootstrap's light-client
+/// layout, `Config::store_fork`; `None`: the preset's, Electra). The instance id hashes the whole configuration, so
+/// an updater finds an instance another submitter initialized (crown-driver's `sepolia_base` sets the store's layout
+/// from its bootstrap the same way) only with the same layout.
+pub fn instance_config(preset_name: &str, adoption_parts: u8, layout: Option<&str>) -> Result<Config> {
+    let mut config = preset(preset_name, adoption_parts)?;
+    if let Some(name) = layout {
+        config.store_fork = match name {
+            "altair" => 0,
+            "capella" => 1,
+            "deneb" => 2,
+            "electra" => 3,
+            "gloas" => 4,
+            other => bail!("layout {other:?}: altair, capella, deneb, electra or gloas"),
+        };
+    }
+    ensure!(config.fork().is_some(), "layout {layout:?}: not a light-client layout of this build");
+    Ok(config)
+}
+
+/// Only a sequencer on this machine (as the live driver's `check_loopback`): a LEZ wallet's default is a public
+/// network, and nothing here is meant for one.
+pub fn check_loopback(rpc: &str) -> Result<()> {
+    let rest =
+        rpc.strip_prefix("http://").ok_or_else(|| anyhow!("{rpc}: the RPC address must be http://127.0.0.1:PORT"))?;
+    let host = rest.split([':', '/']).next().unwrap_or("");
+    ensure!(host == "127.0.0.1" || host == "localhost", "refusing to talk to {host}: only a sequencer on this machine");
+    Ok(())
+}
+
 /// The SSZ stream of the `updates` endpoint: per update a u64 length, a 4-byte fork digest, the
 /// SSZ. Accepts a length that counts the digest or one that does not (as `lab/fetch.py`).
 pub fn split_chunks(raw: &[u8]) -> Vec<Vec<u8>> {
@@ -120,4 +150,3 @@ pub fn encode_committee(c: &SyncCommittee) -> Vec<u8> {
     out.extend_from_slice(&c.aggregate_pubkey);
     out
 }
-

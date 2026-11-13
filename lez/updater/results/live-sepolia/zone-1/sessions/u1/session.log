@@ -1,0 +1,26 @@
+[19:21:13] crown LEZ session u (chain sepolia)
+[19:21:14] restored generation 1 (226M)
+[19:21:15] Bedrock node up: {"cryptarchia_info":{"lib":"c94220a6c36a8ae960d4d3f19518fb4309244fd1c6a04c9209a1372f33cb984c","lib_slot":9018236,"tip":"914bf1aa419c6253aef96eb5d1011fa1af5c305d97fd5ef12992bebe8489f74d","slot":9018241,"height":319,"state":"Online"},"phase":"InitialBlockDownload"}
+[19:21:18] node slot 0 is unix second 1785493027
+[19:21:54] sequencer start 1: scheduler after 35 s; its blocks fall 6 s after an epoch second
+[19:21:54] sequencer up, head block 24
+[19:21:55] updater binary sha256 912208fc8fd7637207721ec66789fe1fbeea51a840d4c9b25cac0bf52942525a
+[19:21:55] session U: 510 min (until 2026-11-13T03:51:55Z); restart after 60 min; probe every 60 s
+[19:21:55] updater life 1 started (pid 4203)
+[20:21:55] restart armed (journal at 30 lines)
+[20:41:55] restart: the journal's last line is 'finish applied'; SIGTERM
+[20:41:56] updater life 1 stopped by SIGTERM after 2 s: exit 0
+[20:42:11] updater life 2 started (pid 65224)
+[20:45:33] stop requested: end of session U1 at 2026-11-12T20:45:25Z: the zone is saved and restored into session U2 (a restart of the daemon, the sequencer and the node from their state)
+[20:45:34] updater life 2 stopped by SIGTERM after 2 s: exit 0
+[20:45:34] session U: updater lives 2, last exit 0, journal 42 transactions
+samples 2439 (2 s), cores visible 2
+peak busy cores 5.1, mean busy cores 1.4
+peak summed RSS 1327 MiB
+  peak RSS logos-blockchai 923 MiB
+  peak RSS sequencer_servi 292 MiB
+[20:45:34] driver exit 0
+[20:47:30] sequencer stopped (exit 0)
+[20:47:39] node stopped (exit 143)
+[20:47:45] saved generation 2 (1304575983 bytes; head block 537)
+[20:47:46] session u: ok

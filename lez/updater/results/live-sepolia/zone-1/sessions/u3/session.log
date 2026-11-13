@@ -1,0 +1,27 @@
+[22:43:32] crown LEZ session u (chain sepolia)
+[22:43:43] restored generation 2 (4.1G)
+[22:43:46] Bedrock node up: {"cryptarchia_info":{"lib":"1d8cd06d27b0b69b188e7370abd1fa81c1b63c0c8ec43206241b6027c05db07b","lib_slot":9023426,"tip":"f64739339f1e444f497a7801eb9f1651363621b0fd7ec7c4d5d11fd7adcb0d20","slot":9023431,"height":5500,"state":"Bootstrapping"},"phase":"InitialBlockDownload"}
+[22:43:50] node slot 0 is unix second 1785493027
+[22:43:59] sequencer start 1: scheduler after 9 s; its blocks fall 2 s after an epoch second
+[22:43:59] sequencer up, head block 537
+[22:43:59] updater binary sha256 912208fc8fd7637207721ec66789fe1fbeea51a840d4c9b25cac0bf52942525a
+[22:43:59] the updater's state from an earlier session U is kept (4.5M)
+[22:44:00] session U: 435 min (until 2026-11-13T05:59:00Z); restart after 25 min; probe every 60 s
+[22:44:00] updater life 1 started (pid 479)
+[23:09:01] restart armed (journal at 57 lines)
+[23:11:07] restart: the journal's last line is 'open applied'; SIGTERM
+[23:11:08] updater life 1 stopped by SIGTERM after 2 s: exit 0
+[23:11:23] updater life 2 started (pid 19434)
+[01:15:43] stop requested: save cycle at 2026-11-13T01:15:20Z: the zone is saved (generation 3) and restored into the next session U, bounding what a preemption can lose
+[01:15:44] updater life 2 stopped by SIGTERM after 2 s: exit 0
+[01:15:44] session U: updater lives 2, last exit 0, journal 117 transactions
+samples 4400 (2 s), cores visible 2
+peak busy cores 4.6, mean busy cores 1.7
+peak summed RSS 3010 MiB
+  peak RSS logos-blockchai 2587 MiB
+  peak RSS sequencer_servi 312 MiB
+[01:15:45] driver exit 0
+[01:19:24] sequencer stopped (exit 0)
+[01:19:33] node stopped (exit 143)
+[01:19:48] saved generation 3 (2395803395 bytes; head block 1468)
+[01:19:49] session u: ok

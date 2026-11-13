@@ -19,7 +19,7 @@ vault accept something false ([`docs/design/attestation.md`](../design/attestati
 releases, wrapping, fee collection and the gas drop; tested on an anvil fork of Sepolia with real proofs and
 in the LEZ harness); and the **updater**, `ferrata-updater` ([`lez/updater/`](../../lez/updater/README.md), §3.6),
 tested against LEZ v0.4.0-rc1's state machine in process on the lab's recorded mainnet and Sepolia data. The
-relayer's root imports and the updater's backend for a running sequencer are **not built**. All three daemons are designed
+relayer's root imports are **not built**; the updater's backend for a running sequencer ran 8 h on a LEZ devnet following Sepolia live (`lez/updater/results/live-sepolia/`). All three daemons are designed
 as Logos modules run under `logosctl daemon`, with structured logs, clean shutdown and configurable endpoints and depths
 ([`attestation.md`](../design/attestation.md) §8; [`bridge.md`](../design/bridge.md) §1). What runs
 today, and what this guide describes from measurement, is the **lab** (§2), the harness and live
@@ -169,9 +169,11 @@ retries, deferrals, steps done by others, and per source requests, errors, refus
 availability. Tested in dev mode (RISC0_DEV_MODE, the in-process chain, recorded data): catch-up to the
 lab's final roots on both chains, a lying source, a stale and a down source, `min_agreeing = 2`, a
 restart mid-job and mid-period with dropped connections, and the acceptance run of §3.4
-([`lez/updater/README.md`](../../lez/updater/README.md)). Not built: the sequencer backend (the lab
-driver sends the same messages through LEZ's wallet today, §2), live beacon endpoints in a test, the
-proven path, the Logos module.
+([`lez/updater/README.md`](../../lez/updater/README.md)). On a running LEZ sequencer: the build of `lez/updater/sequencer/` (`daemon.ledger = "sequencer"`, a
+`[sequencer]` section with the RPC address and the program's account) kept the crown run's Sepolia instance
+following Sepolia for 8 h on a LEZ v0.4.0-rc1 devnet, from Lodestar's light-client data with publicnode's
+headers as the second source (`kind = "headers"`, `min_agreeing = 2`): 74 updates applied, restarts
+mid-job and of the whole zone ([`lez/updater/results/live-sepolia/`](../../lez/updater/results/live-sepolia/)). Not built: the proven path, the Logos module.
 
 ## 4. The root importer (RFP-022 P.2)
 
@@ -550,7 +552,7 @@ checkpoints after a sunset until holders have released ([`bridge.md`](../design/
 ## 12. What is not built
 
 The Logos modules of all three daemons (`monitor` is built as a standalone program, §7; `ferrata-relayer` and
-`ferrata-updater` are plain binaries, §6, §3.6); the updater's backend for a running sequencer; the relayer's root
+`ferrata-updater` are plain binaries, §6, §3.6); the relayer's root
 imports and its run against a live sequencer, the sealed gas drop to a private one-time account and its sweep inside
 the private claim (§6.4); `verify_checkpoint`'s fetching from several providers; the attestation side's `monitor`; the rule (B)
 attestor module; job clean-up; the acceptance run at 100 updates and on a sequencer (it ran on 58 recorded updates in process, §3.4);

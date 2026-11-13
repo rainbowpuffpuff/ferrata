@@ -1,0 +1,139 @@
+==== 2026-11-12T19:21:55Z life 1
+2026-11-12T19:22:08Z [sequencer] http://127.0.0.1:3040: head block 25, following to block 24 (final on Bedrock: true) in 12.8 s; payer CbgR6tj5kWx5oziiFptM7jMvrQeYY3Mzaao6ciuhSr2r balance 10000000000000; records in work/state/updater/state/ledger
+2026-11-12T19:22:08Z [updater-live sepolia] instance 0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5 of program A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX (checkpoint 0x3b901f5e6853b5cf5eb04d7ccfe1272e66c38291cb3a11dd159cacd1117ccf7c); payer CbgR6tj5kWx5oziiFptM7jMvrQeYY3Mzaao6ciuhSr2r; ledger sequencer
+2026-11-12T19:22:08Z [updater-live] /health and /metrics on http://127.0.0.1:9464
+2026-11-12T19:22:08Z [updater-live sepolia] bootstrap: lodestar: https://lodestar-sepolia.chainsafe.io/eth/v1/beacon/light_client/bootstrap/0x3b901f5e6853b5cf5eb04d7ccfe1272e66c38291cb3a11dd159cacd1117ccf7c: curl: (22) The requested URL returned error: 500
+2026-11-12T19:22:10Z [updater-live sepolia] job 0xe94d3a30f8a8c55a: finalized slot 11564736 root 0x36f03e0aa9aae618b1bf8f516f73e7ab6534f4ff04ad185d6cc0b8b8c43f7fea (attested slot 11564800, signature slot 11564801, 509 of 512 signers; advances), served or confirmed by lodestar, publicnode
+[updater] sepolia fin 11564736 Open                                  applied        gas   2074592 block   26 +  9.3s 5ab793dff7dce720b45bc850d86abef1fe8149b0d7d8738a6d798ffac87ac66a
+2026-11-12T19:22:20Z [updater-live sepolia] sepolia fin 11564736 Open applied (exit None, gas 2078027, fee 16624216, block 26)
+2026-11-12T19:22:44Z [updater-live sepolia] job 0xe94d3a30f8a8c55a (finalized slot 11564736) is open: its miller first
+[updater] sepolia fin 11564736 Miller                                applied        gas   3305374 block   30 + 15.8s 227de66908165a51cac62fc1d77714fe25ba95b8cdb0c35afe43db8a552f802f
+2026-11-12T19:23:00Z [updater-live sepolia] sepolia fin 11564736 Miller applied (exit None, gas 3305773, fee 26446184, block 30)
+2026-11-12T19:23:24Z [updater-live sepolia] job 0xe94d3a30f8a8c55a (finalized slot 11564736) is open: its finish first
+[updater] sepolia fin 11564736 Finish                                applied        gas   3721523 block   34 + 16.8s 30eb237c33fa1001113dd5a4d8d5cf8a3696b37c751960b6a0a4920e78de4716
+2026-11-12T19:23:41Z [updater-live sepolia] sepolia fin 11564736 Finish applied (exit None, gas 3722050, fee 29776400, block 34)
+2026-11-12T19:26:41Z [updater-live sepolia] job 0xdb2efb958818bbfd: finalized slot 11564768 root 0x41c5fb8abb8bdd24fce02d60cb419f1768223eb14d06e824285861bcb5448789 (attested slot 11564832, signature slot 11564833, 509 of 512 signers; advances), served or confirmed by lodestar, publicnode
+[updater] sepolia fin 11564768 Open                                  applied        gas   2074592 block   53 +  8.5s 86bb8a28e81972efc229ca5646da00d363c0262714971915190031d1a4445b9b
+2026-11-12T19:26:50Z [updater-live sepolia] sepolia fin 11564768 Open applied (exit None, gas 2078027, fee 16624216, block 53)
+2026-11-12T19:27:14Z [updater-live sepolia] job 0xdb2efb958818bbfd (finalized slot 11564768) is open: its miller first
+[updater] sepolia fin 11564768 Miller                                applied        gas   3305374 block   57 + 15.7s e104710cb95b1e13b589eb18c1110210e32b7da69567f9e6a866a3281e9e2dcc
+2026-11-12T19:27:30Z [updater-live sepolia] sepolia fin 11564768 Miller applied (exit None, gas 3305773, fee 26446184, block 57)
+2026-11-12T19:27:54Z [updater-live sepolia] job 0xdb2efb958818bbfd (finalized slot 11564768) is open: its finish first
+[updater] sepolia fin 11564768 Finish                                applied        gas   3721523 block   61 + 16.2s 6e4e5db7e73eba53d50e490009661137f56e8ed2218ab44971a729569cb0f3f8
+2026-11-12T19:28:10Z [updater-live sepolia] sepolia fin 11564768 Finish applied (exit None, gas 3722050, fee 29776400, block 61)
+2026-11-12T19:33:18Z [updater-live sepolia] job 0xb2ff61fb135563ea: finalized slot 11564800 root 0x709b80c7507ef47c420ee179387fa48729b3101e6ca31293caede359f4821bf0 (attested slot 11564864, signature slot 11564865, 509 of 512 signers; advances), served or confirmed by lodestar, publicnode
+[updater] sepolia fin 11564800 Open                                  applied        gas   2074416 block   93 + 12.1s 0664f99cb31335c64dc3098620855424027e3aa33478fff5e9fc09f9a278f7a9
+2026-11-12T19:33:30Z [updater-live sepolia] sepolia fin 11564800 Open applied (exit None, gas 2077851, fee 16622808, block 93)
+2026-11-12T19:33:54Z [updater-live sepolia] job 0xb2ff61fb135563ea (finalized slot 11564800) is open: its miller first
+[updater] sepolia fin 11564800 Miller                                applied        gas   3305374 block   97 + 15.4s 49268684bd169de0d35e4ca3e193685e7aa8c2c8db14bd76950ea9c7e51ef597
+2026-11-12T19:34:10Z [updater-live sepolia] sepolia fin 11564800 Miller applied (exit None, gas 3305773, fee 26446184, block 97)
+2026-11-12T19:34:34Z [updater-live sepolia] job 0xb2ff61fb135563ea (finalized slot 11564800) is open: its finish first
+[updater] sepolia fin 11564800 Finish                                applied        gas   3721523 block  101 + 17.1s fc9939aa406ed91a70cd091046f5b1175f8d9220fedbf6521a47088e4a052a03
+2026-11-12T19:34:51Z [updater-live sepolia] sepolia fin 11564800 Finish applied (exit None, gas 3722050, fee 29776400, block 101)
+2026-11-12T19:39:32Z [updater-live sepolia] job 0xd55bbfa203bcb4c4: finalized slot 11564832 root 0xd029a59fbaecf153c5b0879973e3cc4ef7ee93037f495c968b60450c7b44018f (attested slot 11564896, signature slot 11564897, 509 of 512 signers; advances), served or confirmed by lodestar, publicnode
+[updater] sepolia fin 11564832 Open                                  applied        gas   2074718 block  130 +  7.3s ff56a9b93b1a490e113dbc60e84fb24e35ba2c6cf335d7db33c53bbf36c23178
+2026-11-12T19:39:40Z [updater-live sepolia] sepolia fin 11564832 Open applied (exit None, gas 2078153, fee 16625224, block 130)
+2026-11-12T19:40:04Z [updater-live sepolia] job 0xd55bbfa203bcb4c4 (finalized slot 11564832) is open: its miller first
+[updater] sepolia fin 11564832 Miller                                applied        gas   3305374 block  134 + 15.6s 89eb72b2113701621169207bb6a406156e43334a23b1457820fecec161d99a15
+2026-11-12T19:40:20Z [updater-live sepolia] sepolia fin 11564832 Miller applied (exit None, gas 3305773, fee 26446184, block 134)
+2026-11-12T19:40:44Z [updater-live sepolia] job 0xd55bbfa203bcb4c4 (finalized slot 11564832) is open: its finish first
+[updater] sepolia fin 11564832 Finish                                applied        gas   3721523 block  138 + 17.0s b02ca270816fc8b81df0a9c6a3d8916487792eed8e3f2eadf680ba5f9c2bf1d6
+2026-11-12T19:41:01Z [updater-live sepolia] sepolia fin 11564832 Finish applied (exit None, gas 3722050, fee 29776400, block 138)
+2026-11-12T19:46:08Z [updater-live sepolia] job 0x861a48ce6b8196b5: finalized slot 11564864 root 0x7dddaf6b6085141ad25de3deca1dc0f57ea19e1229b48d213e56ca9d61f4a98c (attested slot 11564928, signature slot 11564929, 509 of 512 signers; advances), served or confirmed by lodestar, publicnode
+[updater] sepolia fin 11564864 Open                                  applied        gas   2074718 block  170 + 11.6s 66dca9d8e7624151a6a897aad6226bec43e7b82af51d0678303255198c07d8f4
+2026-11-12T19:46:20Z [updater-live sepolia] sepolia fin 11564864 Open applied (exit None, gas 2078153, fee 16625224, block 170)
+2026-11-12T19:46:44Z [updater-live sepolia] job 0x861a48ce6b8196b5 (finalized slot 11564864) is open: its miller first
+[updater] sepolia fin 11564864 Miller                                applied        gas   3305374 block  174 + 15.8s 38cf29fbd6118172b9b097ff757e920b7513dda68e43db9e5fd274c9bbb027d1
+2026-11-12T19:47:00Z [updater-live sepolia] sepolia fin 11564864 Miller applied (exit None, gas 3305773, fee 26446184, block 174)
+2026-11-12T19:47:24Z [updater-live sepolia] job 0x861a48ce6b8196b5 (finalized slot 11564864) is open: its finish first
+[updater] sepolia fin 11564864 Finish                                applied        gas   3721523 block  178 + 17.0s 38be147cc76509c1f39d5999ae22f443867366e3bf007526d843cd5ad6e42afe
+2026-11-12T19:47:41Z [updater-live sepolia] sepolia fin 11564864 Finish applied (exit None, gas 3722050, fee 29776400, block 178)
+2026-11-12T19:52:22Z [updater-live sepolia] job 0x4fe673725ccec1d1: finalized slot 11564896 root 0x6da60efaf565a938a33eea8a2334efdca17f3bcbdc73662132c588ec463b6a31 (attested slot 11564960, signature slot 11564961, 509 of 512 signers; advances), served or confirmed by lodestar, publicnode
+[updater] sepolia fin 11564896 Open                                  applied        gas   2074768 block  207 +  7.0s b7171657c1aae114d3df0eaf576e6c87baebb219aa295b6392520a4975377e2c
+2026-11-12T19:52:30Z [updater-live sepolia] sepolia fin 11564896 Open applied (exit None, gas 2078203, fee 16625624, block 207)
+2026-11-12T19:52:54Z [updater-live sepolia] job 0x4fe673725ccec1d1 (finalized slot 11564896) is open: its miller first
+[updater] sepolia fin 11564896 Miller                                applied        gas   3305374 block  211 + 15.8s 2089cc7dd3abf903ed805630d1c2b8aa11fca6b03e307b4f891bfcb858ea0178
+2026-11-12T19:53:10Z [updater-live sepolia] sepolia fin 11564896 Miller applied (exit None, gas 3305773, fee 26446184, block 211)
+2026-11-12T19:53:34Z [updater-live sepolia] job 0x4fe673725ccec1d1 (finalized slot 11564896) is open: its finish first
+[updater] sepolia fin 11564896 Finish                                applied        gas   3721523 block  215 + 16.9s 6b2c461f4f3df7bae48aa472996efb24615c55c8708e473cbe1d6116d6ec75be
+2026-11-12T19:53:51Z [updater-live sepolia] sepolia fin 11564896 Finish applied (exit None, gas 3722050, fee 29776400, block 215)
+2026-11-12T19:59:00Z [updater-live sepolia] job 0x8cf49974313180e1: finalized slot 11564928 root 0xb6694259a643537bdf442fc92b525ad100e35331531a89cde28d4d0390e56818 (attested slot 11564992, signature slot 11564993, 509 of 512 signers; advances), served or confirmed by lodestar, publicnode
+[updater] sepolia fin 11564928 Open                                  applied        gas   2074542 block  247 + 10.1s 891d31b7fad0e8e833e4c7c213f51afc4369355fe87fce0c1458267ff886e92a
+2026-11-12T19:59:10Z [updater-live sepolia] sepolia fin 11564928 Open applied (exit None, gas 2077977, fee 16623816, block 247)
+2026-11-12T19:59:34Z [updater-live sepolia] job 0x8cf49974313180e1 (finalized slot 11564928) is open: its miller first
+[updater] sepolia fin 11564928 Miller                                applied        gas   3305374 block  251 + 15.7s 2b8f5a358087ba78a9cfc62e45be50d1e52f358c255039b42073e31b4ea8c323
+2026-11-12T19:59:50Z [updater-live sepolia] sepolia fin 11564928 Miller applied (exit None, gas 3305773, fee 26446184, block 251)
+2026-11-12T20:00:14Z [updater-live sepolia] job 0x8cf49974313180e1 (finalized slot 11564928) is open: its finish first
+[updater] sepolia fin 11564928 Finish                                applied        gas   3721523 block  255 + 16.9s d1cdd707f98e76603d24371a1df833b2f67a2b180700ca6917cd88ddd0f81800
+2026-11-12T20:00:31Z [updater-live sepolia] sepolia fin 11564928 Finish applied (exit None, gas 3722050, fee 29776400, block 255)
+2026-11-12T20:05:15Z [updater-live sepolia] job 0x4c0592a4f3e01276: finalized slot 11564960 root 0x3379a3cd01c027dcfa0074981d9642f8eca04ee20cc8e9ca36c36803411774f0 (attested slot 11565024, signature slot 11565025, 509 of 512 signers; advances), served or confirmed by lodestar, publicnode
+[updater] sepolia fin 11564960 Open                                  applied        gas   2074768 block  285 + 14.6s 6287bd494e1349d8b5c720a5b53fb02cb30dc61e32c9d64769430926d8d711cc
+2026-11-12T20:05:30Z [updater-live sepolia] sepolia fin 11564960 Open applied (exit None, gas 2078203, fee 16625624, block 285)
+2026-11-12T20:05:54Z [updater-live sepolia] job 0x4c0592a4f3e01276 (finalized slot 11564960) is open: its miller first
+[updater] sepolia fin 11564960 Miller                                applied        gas   3305374 block  289 + 15.3s 940bcfbc8cc945241dffaec4e4d4fa1add8f3fe64d511f1bbc2aeb7086e5f8e1
+2026-11-12T20:06:10Z [updater-live sepolia] sepolia fin 11564960 Miller applied (exit None, gas 3305773, fee 26446184, block 289)
+2026-11-12T20:06:34Z [updater-live sepolia] job 0x4c0592a4f3e01276 (finalized slot 11564960) is open: its finish first
+[updater] sepolia fin 11564960 Finish                                applied        gas   3721523 block  293 + 17.1s 2b797f5ffdb50e0f0bb42c161fafe7bb6d5103f0d60e396bb8b218a835746c09
+2026-11-12T20:06:51Z [updater-live sepolia] sepolia fin 11564960 Finish applied (exit None, gas 3722050, fee 29776400, block 293)
+2026-11-12T20:11:33Z [updater-live sepolia] job 0x5015dedcb51fc6d6: finalized slot 11564992 root 0xee6c50637284f95d12e9720c45e95d78bf196557c80f935c3fb149dce3725367 (attested slot 11565056, signature slot 11565057, 509 of 512 signers; advances), served or confirmed by lodestar, publicnode
+[updater] sepolia fin 11564992 Open                                  applied        gas   2074592 block  323 + 16.4s 8984a0d731ab1a15f4b5cf1c83eea7e8037fa29c09864c77aa682ac547dc0e0e
+2026-11-12T20:11:50Z [updater-live sepolia] sepolia fin 11564992 Open applied (exit None, gas 2078027, fee 16624216, block 323)
+2026-11-12T20:12:14Z [updater-live sepolia] job 0x5015dedcb51fc6d6 (finalized slot 11564992) is open: its miller first
+[updater] sepolia fin 11564992 Miller                                applied        gas   3305374 block  327 + 15.6s d71500b4a8ece3aa9a31b4fbaf9f04d4ef7e91304e853632147be0097a178288
+2026-11-12T20:12:30Z [updater-live sepolia] sepolia fin 11564992 Miller applied (exit None, gas 3305773, fee 26446184, block 327)
+2026-11-12T20:12:54Z [updater-live sepolia] job 0x5015dedcb51fc6d6 (finalized slot 11564992) is open: its finish first
+[updater] sepolia fin 11564992 Finish                                applied        gas   3721523 block  331 + 16.2s 190bd81f50e01c3b1ca09e394cbd57a9eef77cedb67427a01837152fd2b9360b
+2026-11-12T20:13:10Z [updater-live sepolia] sepolia fin 11564992 Finish applied (exit None, gas 3722050, fee 29776400, block 331)
+2026-11-12T20:17:52Z [updater-live sepolia] job 0x74206957cf932687: finalized slot 11565024 root 0x794776f45dfe92558edba7246e4d07b26b68291006631b40fc00ffa7c514b895 (attested slot 11565088, signature slot 11565089, 509 of 512 signers; advances), served or confirmed by lodestar, publicnode
+[updater] sepolia fin 11565024 Open                                  applied        gas   2074718 block  360 +  8.7s 25c5a4d817b2b7a7066f5b6cd6f31b6d7dd4295c4e7b63b7312b7c256e03c718
+2026-11-12T20:18:01Z [updater-live sepolia] sepolia fin 11565024 Open applied (exit None, gas 2078153, fee 16625224, block 360)
+2026-11-12T20:18:25Z [updater-live sepolia] job 0x74206957cf932687 (finalized slot 11565024) is open: its miller first
+[updater] sepolia fin 11565024 Miller                                applied        gas   3305374 block  364 + 14.6s 8ebaa491724c14de0e211c619346d827e4d6a9829af3118c4b16ee1c44741ea6
+2026-11-12T20:18:40Z [updater-live sepolia] sepolia fin 11565024 Miller applied (exit None, gas 3305773, fee 26446184, block 364)
+2026-11-12T20:19:04Z [updater-live sepolia] job 0x74206957cf932687 (finalized slot 11565024) is open: its finish first
+[updater] sepolia fin 11565024 Finish                                applied        gas   3721523 block  368 + 16.8s 9db97c1d39d0621c741e9d137681ad190e0b8a7e6b6ddf21e5c2e89bf90c53fa
+2026-11-12T20:19:21Z [updater-live sepolia] sepolia fin 11565024 Finish applied (exit None, gas 3722050, fee 29776400, block 368)
+2026-11-12T20:24:29Z [updater-live sepolia] job 0x814bbafd97b31d02: finalized slot 11565056 root 0x6626d2578c32b92a0b3a082e2a976ce3105202f87f8dac6fbf80ea2386a230bf (attested slot 11565120, signature slot 11565121, 509 of 512 signers; advances), served or confirmed by lodestar, publicnode
+[updater] sepolia fin 11565056 Open                                  applied        gas   2074542 block  400 + 11.2s bdc464992c8265011cb6aaac1637daf4f0fba5c48cb88da75d7d5d44aa1b55f5
+2026-11-12T20:24:40Z [updater-live sepolia] sepolia fin 11565056 Open applied (exit None, gas 2077977, fee 16623816, block 400)
+2026-11-12T20:25:04Z [updater-live sepolia] job 0x814bbafd97b31d02 (finalized slot 11565056) is open: its miller first
+[updater] sepolia fin 11565056 Miller                                applied        gas   3305374 block  404 + 15.7s e3ad6d7d05902ae415266199b731ab2d664859ef117ea07411a685c630d6c891
+2026-11-12T20:25:20Z [updater-live sepolia] sepolia fin 11565056 Miller applied (exit None, gas 3305773, fee 26446184, block 404)
+2026-11-12T20:25:44Z [updater-live sepolia] job 0x814bbafd97b31d02 (finalized slot 11565056) is open: its finish first
+[updater] sepolia fin 11565056 Finish                                applied        gas   3721523 block  408 + 16.0s 1c2bd14e6a8e3487d151f8ceb200371779273888a639a26886aa1fbb26c86f5f
+2026-11-12T20:26:00Z [updater-live sepolia] sepolia fin 11565056 Finish applied (exit None, gas 3722050, fee 29776400, block 408)
+2026-11-12T20:30:41Z [updater-live sepolia] job 0x87be7cf233b86dd0: finalized slot 11565088 root 0x2fa35af2f334a32e1ba52a66fabc64ee323ef2c86141eaebf419123b259d4d79 (attested slot 11565152, signature slot 11565153, 509 of 512 signers; advances), served or confirmed by lodestar, publicnode
+[updater] sepolia fin 11565088 Open                                  applied        gas   2074718 block  437 +  8.2s 27e40db86c7cc22f3142a25fa77dbc950f8c2e548bef4c68fc2a6e4e0cb1eacc
+2026-11-12T20:30:50Z [updater-live sepolia] sepolia fin 11565088 Open applied (exit None, gas 2078153, fee 16625224, block 437)
+2026-11-12T20:31:14Z [updater-live sepolia] job 0x87be7cf233b86dd0 (finalized slot 11565088) is open: its miller first
+[updater] sepolia fin 11565088 Miller                                applied        gas   3305374 block  441 + 15.7s c7bed4e27129d379044c00b27eca23333c13753c16ebc3a6adf2cb9af6729cc6
+2026-11-12T20:31:30Z [updater-live sepolia] sepolia fin 11565088 Miller applied (exit None, gas 3305773, fee 26446184, block 441)
+2026-11-12T20:31:54Z [updater-live sepolia] job 0x87be7cf233b86dd0 (finalized slot 11565088) is open: its finish first
+[updater] sepolia fin 11565088 Finish                                applied        gas   3721523 block  445 + 16.9s 1b8c3183c7a323d1f33c55472998386d75b41584ff745df4232f2037dc174bdb
+2026-11-12T20:32:11Z [updater-live sepolia] sepolia fin 11565088 Finish applied (exit None, gas 3722050, fee 29776400, block 445)
+2026-11-12T20:37:18Z [updater-live sepolia] job 0x3b761ad7e7269d19: finalized slot 11565120 root 0xef8737c7f3c7e485b9f43493b9c17680e5fd1df450a329cd9f3ad36264f7a24a (attested slot 11565184, signature slot 11565185, 509 of 512 signers; advances), served or confirmed by lodestar, publicnode
+[updater] sepolia fin 11565120 Open                                  applied        gas   2074718 block  477 + 12.0s e282eeef61e6be54dbd51cae48ef74158eeefdd7cc470517d4fa1145299b6976
+2026-11-12T20:37:30Z [updater-live sepolia] sepolia fin 11565120 Open applied (exit None, gas 2078153, fee 16625224, block 477)
+2026-11-12T20:37:54Z [updater-live sepolia] job 0x3b761ad7e7269d19 (finalized slot 11565120) is open: its miller first
+[updater] sepolia fin 11565120 Miller                                applied        gas   3305374 block  481 + 15.6s 7f0e83d740516f14c9ad7f9bfc6058bc5f85b27520d4a16112d5c41a25d6cab3
+2026-11-12T20:38:10Z [updater-live sepolia] sepolia fin 11565120 Miller applied (exit None, gas 3305773, fee 26446184, block 481)
+2026-11-12T20:38:34Z [updater-live sepolia] job 0x3b761ad7e7269d19 (finalized slot 11565120) is open: its finish first
+[updater] sepolia fin 11565120 Finish                                applied        gas   3721523 block  485 + 17.0s 4552396bc4f7765a1ba85a7f1e5e23c27f54695f1e9d69e3063313c1a9dca754
+2026-11-12T20:38:51Z [updater-live sepolia] sepolia fin 11565120 Finish applied (exit None, gas 3722050, fee 29776400, block 485)
+2026-11-12T20:41:55Z [updater-live sepolia] stopped at round 167: {"chain":"sepolia","daemon":"updater-live","finalized_slot":11565120,"last_error":"","last_plan":"up-to-date","period":1411,"reasons":[],"round":167,"status":"ok"}
+==== 2026-11-12T20:41:56Z life 1 exit 0
+==== 2026-11-12T20:42:11Z life 2
+2026-11-12T20:42:11Z [sequencer] http://127.0.0.1:3040: head block 505, following to block 505 (final on Bedrock: true) in 0.4 s; payer CbgR6tj5kWx5oziiFptM7jMvrQeYY3Mzaao6ciuhSr2r balance 9999052985952; records in work/state/updater/state/ledger
+2026-11-12T20:42:11Z [updater-live sepolia] instance 0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5 of program A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX (checkpoint 0x3b901f5e6853b5cf5eb04d7ccfe1272e66c38291cb3a11dd159cacd1117ccf7c); payer CbgR6tj5kWx5oziiFptM7jMvrQeYY3Mzaao6ciuhSr2r; ledger sequencer
+2026-11-12T20:42:11Z [updater-live] /health and /metrics on http://127.0.0.1:9464
+2026-11-12T20:43:29Z [updater-live sepolia] job 0x7c977811ab732d5b: finalized slot 11565152 root 0x536d5f2c47ef9376734f65244de548d1c3bbe43f89ddc850bba130a37858e6b0 (attested slot 11565216, signature slot 11565217, 509 of 512 signers; advances), served or confirmed by lodestar, publicnode
+[updater] sepolia fin 11565152 Open                                  applied        gas   2074592 block  514 + 10.4s 76b0b9da847259fffdf7e334166ee9e81f45e3bfb04272e600b5dcc8424b9e10
+2026-11-12T20:43:40Z [updater-live sepolia] sepolia fin 11565152 Open applied (exit None, gas 2078027, fee 16624216, block 514)
+2026-11-12T20:44:04Z [updater-live sepolia] job 0x7c977811ab732d5b (finalized slot 11565152) is open: its miller first
+[updater] sepolia fin 11565152 Miller                                applied        gas   3305374 block  518 + 15.8s c73caca5cf2d425107353d1f1cddbd9720d8440de3b6cf78c44e39f790464863
+2026-11-12T20:44:20Z [updater-live sepolia] sepolia fin 11565152 Miller applied (exit None, gas 3305773, fee 26446184, block 518)
+2026-11-12T20:44:44Z [updater-live sepolia] job 0x7c977811ab732d5b (finalized slot 11565152) is open: its finish first
+[updater] sepolia fin 11565152 Finish                                applied        gas   3721523 block  522 + 16.8s e5b5fd54a4dc29da3dbda7451cd2b12afaa428c8dc6fe10203b341aa8cc8c486
+2026-11-12T20:45:01Z [updater-live sepolia] sepolia fin 11565152 Finish applied (exit None, gas 3722050, fee 29776400, block 522)
+2026-11-12T20:45:33Z [updater-live sepolia] stopped at round 7: {"chain":"sepolia","daemon":"updater-live","finalized_slot":11565152,"last_error":"","last_plan":"up-to-date","period":1411,"reasons":[],"round":7,"status":"ok"}
+==== 2026-11-12T20:45:34Z life 2 exit 0
