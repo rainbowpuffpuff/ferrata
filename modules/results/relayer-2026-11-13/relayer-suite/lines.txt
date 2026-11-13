@@ -1,0 +1,4 @@
+GAS DROP: N 0x70b5d2b017725bd221a21f0917616005f71b1d4cf4ddac7103df04ebdaa03ff1 -> one-time address 0x2a945f1adfa57eead2357f36423f8de39e1248d1524fb05854ce5f4954f8d1b0 (native credit 1 (harness stand-in)); replay to another relayer and a seco
+GAS DROP: the claim named the relayer, minted it the relay fee 10000000000000000; afterwards any relayer refuses the receipt (claimed)
+PRIVATE ROUND TRIP: 1 ETH deposited to private /0, claimed privately after its delay, burned from private /0, released by a relayer to a fresh address (999000000000000000 wei; relay fee 1000000000000000)
+RELAYER: burn 1 released by the relayer (134973 gas), relay fee 100000000000000 wei paid to it; redirected recipient refused: the vault would revert: server returned an error response: error code 3: execution reverted: custom error 0x439cc0

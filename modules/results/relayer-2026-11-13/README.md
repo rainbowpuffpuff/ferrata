@@ -60,6 +60,16 @@ binary's arguments to the module and prints its lines):
     not imported within the same hour of anvil's clock; once anvil's clock moves into the next hour, n = 4 is
     imported; SIGTERM stops it cleanly (`stop`, reason `SIGTERM`).
 
+## The relayer's own suite after the move of its daemon
+
+`cli/tests/relayer.sh` in full on the same box after these changes ([`relayer-suite/`](relayer-suite/test-results.txt),
+154 s): `cli/`'s 11 unit tests (6 of them the relayer's), the gas-drop checks on the real receipt
+(`tests/gasdrop.rs`), `relayer_fork.rs` with the binary, and the harness end to end with the gas-drop guest: the
+claim naming the relayer mints it 10¹⁶ wei, a release through the relayer 134,973 gas paying it 10¹⁴ wei, the
+redirected copy refused, the private round trip (EVIDENCE rows 46–48's figures). Two fresh-box faults of the script
+fixed on the way (`f6d94d3`, `3203266`): the guest lookup failed under `pipefail` when `bridge/target` did not exist,
+and the guests were built with `RISC0_HOME` empty instead of unset.
+
 ## The catalog
 
 `release-local.sh` for the relayer alone (`DRY_RUN_DIR`): exported as its own repository, `nix build
