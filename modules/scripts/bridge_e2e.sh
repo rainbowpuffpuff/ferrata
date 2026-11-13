@@ -171,15 +171,6 @@ jq -n --argjson r0 "$(rep release0)" --argjson r1 "$(rep release1)" --argjson rl
     checkpointed_burn_count: ($rl.roots | map(.count) | max), released_nullifiers: ($i.released_nullifiers // [])}' | req status
 call status status
 
-# The devnet's working directory holds its keystores (test keys): keep only its call log.
-curl -s -d '{"method":"shutdown","params":{}}' "http://127.0.0.1:$PORT/rpc" > /dev/null 2>&1 || true
-sleep 1
-cp "$out/devnet/calls.jsonl" "$out/devnet-calls.jsonl" 2>/dev/null || true
-rm -rf "$out/devnet"
-# No machine paths in the results (the release guest's path, the devnet's log): the directory beside
-# the repository becomes <spike>.
-spike=$(cd "$repo/.." && pwd)
-find "$out" -type f \( -name '*.json' -o -name '*.raw' -o -name '*.log' -o -name '*.txt' \) -exec sed -i "s|$spike/|<spike>/|g" {} +
 # --- import_root reading the vault's proofs (plain HTTP; eth_rpc_module) ---------------------------
 dev deposit2 deposit '{"kind":"private","denomination":0,"account":0}'
 dev lc_finalize lc.finalize
@@ -209,4 +200,13 @@ if [ "$ETH_VIA" = eth_rpc_module ]; then
   same import_read_eth
 fi
 
+# The devnet's working directory holds its keystores (test keys): keep only its call log.
+curl -s -d '{"method":"shutdown","params":{}}' "http://127.0.0.1:$PORT/rpc" > /dev/null 2>&1 || true
+sleep 1
+cp "$out/devnet/calls.jsonl" "$out/devnet-calls.jsonl" 2>/dev/null || true
+rm -rf "$out/devnet"
+# No machine paths in the results (the release guest's path, the devnet's log): the directory beside
+# the repository becomes <spike>.
+spike=$(cd "$repo/.." && pwd)
+find "$out" -type f \( -name '*.json' -o -name '*.raw' -o -name '*.log' -o -name '*.txt' \) -exec sed -i "s|$spike/|<spike>/|g" {} +
 python3 -I "$here/bridge_e2e_check.py" "$out"
