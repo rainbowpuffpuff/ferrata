@@ -26,7 +26,7 @@ forge build --quiet
 # (find fails when bridge/target does not exist yet: a fresh checkout builds it below.)
 elf="$(find "$here/../bridge/target" -path '*riscv32im-risc0-zkvm-elf/release/gasdrop.bin' 2>/dev/null | head -1 || true)"
 if [ -z "$elf" ]; then
-  (cd "$here/../bridge" && RISC0_HOME= cargo build --release -p host)
+  (cd "$here/../bridge" && env -u RISC0_HOME cargo build --release -p host)
   elf="$(find "$here/../bridge/target" -path '*riscv32im-risc0-zkvm-elf/release/gasdrop.bin' | head -1)"
 fi
 echo "gas-drop guest: $elf"
