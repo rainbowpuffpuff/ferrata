@@ -1,0 +1,12 @@
+{"method": "eth_getBlockByNumber", "params": ["0x19299d3", false], "bytes": 41154, "accept": "*/*", "user_agent": null}
+{"method": "eth_getBlockReceipts", "params": ["0x19299d3"], "bytes": 1609795, "accept": "*/*", "user_agent": null}
+{"method": "eth_getBlockByNumber", "params": ["0x19299d3", false], "bytes": 41154, "accept": "application/json", "user_agent": null}
+{"method": "eth_getBlockReceipts", "params": ["0x19299d3"], "bytes": 1609795, "accept": "application/json", "user_agent": null}
+{"method": "eth_getBlockByNumber", "params": ["0x19299d3", false], "bytes": 41154, "accept": "*/*", "user_agent": null}
+{"method": "eth_getBlockReceipts", "params": ["0x19299d3"], "bytes": 1609795, "accept": "*/*", "user_agent": null}
+{"method": "eth_getBlockByNumber", "params": ["0x19299d3", false], "bytes": 41154, "accept": "application/json", "user_agent": null}
+{"method": "eth_getBlockReceipts", "params": ["0x19299d3"], "bytes": 1609795, "accept": "application/json", "user_agent": null}
+{"method": "eth_getProof", "params": ["0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", ["0xb374801ace2c02f5db0425ab5920a2b7ed1d5a00abbcd395fda7530ba1d666c0"], "0x19299d3"], "bytes": 13988, "accept": "*/*", "user_agent": null}
+{"method": "eth_getProof", "params": ["0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", ["0xb374801ace2c02f5db0425ab5920a2b7ed1d5a00abbcd395fda7530ba1d666c0"], "0x19299d3"], "bytes": 13988, "accept": "*/*", "user_agent": null}
+{"method": "eth_getProof", "params": ["0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", ["0xb374801ace2c02f5db0425ab5920a2b7ed1d5a00abbcd395fda7530ba1d666c0"], "0x19299d3"], "bytes": 13988, "accept": "application/json", "user_agent": null}
+{"method": "eth_getProof", "params": ["0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", ["0xb374801ace2c02f5db0425ab5920a2b7ed1d5a00abbcd395fda7530ba1d666c0"], "0x19299d3"], "bytes": 13988, "accept": "application/json", "user_agent": null}

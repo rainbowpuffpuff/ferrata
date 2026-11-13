@@ -1,0 +1,1 @@
+call mode: logosctl; Ethereum read via: eth_rpc_module

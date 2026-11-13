@@ -1,0 +1,1 @@
+{"dependencies":["eth_rpc_module","fee_module","signer_manager_module"],"dependents":[],"name":"tx_sender_module","status":"not_loaded","version":"0.2.0"}

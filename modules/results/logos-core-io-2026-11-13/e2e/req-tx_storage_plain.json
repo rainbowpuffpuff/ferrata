@@ -1,0 +1,12 @@
+{
+  "program_id": "0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df",
+  "instance_id": "0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd",
+  "chain_id": 1,
+  "slot": 15624480,
+  "storage": {
+    "address": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+    "slot": "0xb374801ace2c02f5db0425ab5920a2b7ed1d5a00abbcd395fda7530ba1d666c0",
+    "block": 26384851,
+    "rpc_url": "http://127.0.0.1:34855"
+  }
+}

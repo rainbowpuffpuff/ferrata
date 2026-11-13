@@ -1,0 +1,79 @@
+{
+ "comparisons": [
+  {
+   "run": "e2e",
+   "name": "fetch_transfer",
+   "via": "eth_rpc_module",
+   "routes": "[\"direct\",\"direct\"]",
+   "equal_to_plain": "true"
+  },
+  {
+   "run": "e2e",
+   "name": "fetch_largest_receipt",
+   "via": "eth_rpc_module",
+   "routes": "[\"direct\",\"direct\"]",
+   "equal_to_plain": "true"
+  },
+  {
+   "run": "e2e",
+   "name": "dry_storage",
+   "via": "eth_rpc_module",
+   "routes": "[\"direct\"]",
+   "equal_to_plain": "true"
+  },
+  {
+   "run": "e2e",
+   "name": "tx_storage",
+   "via": "eth_rpc_module",
+   "routes": "[\"direct\"]",
+   "equal_to_plain": "true"
+  }
+ ],
+ "e2e": {
+  "e2e": {
+   "checks": 43,
+   "failed": 0,
+   "mode": "call mode: logosctl; Ethereum read via: eth_rpc_module"
+  }
+ },
+ "failures_in_steps": 3,
+ "recorded_server": [
+  {
+   "method": "eth_getBlockByNumber",
+   "accept": "*/*",
+   "user_agent": null,
+   "requests": 2
+  },
+  {
+   "method": "eth_getBlockReceipts",
+   "accept": "*/*",
+   "user_agent": null,
+   "requests": 2
+  },
+  {
+   "method": "eth_getBlockByNumber",
+   "accept": "application/json",
+   "user_agent": null,
+   "requests": 2
+  },
+  {
+   "method": "eth_getBlockReceipts",
+   "accept": "application/json",
+   "user_agent": null,
+   "requests": 2
+  },
+  {
+   "method": "eth_getProof",
+   "accept": "*/*",
+   "user_agent": null,
+   "requests": 2
+  },
+  {
+   "method": "eth_getProof",
+   "accept": "application/json",
+   "user_agent": null,
+   "requests": 2
+  }
+ ],
+ "bad": 1
+}

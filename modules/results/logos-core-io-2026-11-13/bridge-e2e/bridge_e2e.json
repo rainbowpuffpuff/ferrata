@@ -1,0 +1,151 @@
+{
+ "mode": "call mode: logosctl; Ethereum read via: eth_rpc_module",
+ "checks": 24,
+ "failed": 0,
+ "rows": [
+  {
+   "group": "devnet",
+   "check": "two deposits to the user's private account /0",
+   "passed": "yes",
+   "detail": "amount 100000000000000000 wei each, vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
+  },
+  {
+   "group": "import_root",
+   "check": "import_root dry-runs the import with the programs' functions: importable, root(cid, 2) as the vault holds it",
+   "passed": "yes",
+   "detail": "record slot 9000064, message 1231 bytes"
+  },
+  {
+   "group": "import_root",
+   "check": "the call names config(cid) (root, its seed), header(id, slot) and root(cid, n)",
+   "passed": "yes",
+   "detail": ""
+  },
+  {
+   "group": "import_root",
+   "check": "a wrong leaf count: the dry run refuses with IMPORT_MISMATCH (247)",
+   "passed": "yes",
+   "detail": "IMPORT_MISMATCH"
+  },
+  {
+   "group": "import_root",
+   "check": "submitted, the program refuses it with the same code",
+   "passed": "yes",
+   "detail": "exit 247"
+  },
+  {
+   "group": "import_root",
+   "check": "the module's ImportRoot is applied on the zone",
+   "passed": "yes",
+   "detail": "gas_exec 231020, gas_stor 1757"
+  },
+  {
+   "group": "import_root",
+   "check": "(stand-in) the relayer's ImportFees for the same block",
+   "passed": "yes",
+   "detail": ""
+  },
+  {
+   "group": "registry",
+   "check": "token(cid, ETH) decoded: the deposit's amount is a denomination",
+   "passed": "yes",
+   "detail": "denominations ['100000000000000000', '1000000000000000000', '10000000000000000000'], relay fees ['100000000000000', '1000000000000000', '10000000000000000']"
+  },
+  {
+   "group": "registry",
+   "check": "a claim of leaf 0: range from the token's schedules, mint and relay fees",
+   "passed": "yes",
+   "detail": "range {'from_leaf': 0, 'index': 0, 'until_leaf': 2}, claim {'denomination_index': 0, 'mint_fee': '0', 'relay_fee': '100000000000000', 'value': '100000000'}"
+  },
+  {
+   "group": "registry",
+   "check": "config(cid) decoded; configId recomputed from it equals the devnet's",
+   "passed": "yes",
+   "detail": "instance 0x1d1d1d1d1d1d1d1d\u2026"
+  },
+  {
+   "group": "registry",
+   "check": "root(cid, 2) decoded",
+   "passed": "yes",
+   "detail": ""
+  },
+  {
+   "group": "claim (private)",
+   "check": "deposit 0: the tool's claim (ferrata-wallet): claimable, ClaimPrivately, root = the private account's own actor",
+   "passed": "yes",
+   "detail": "1239 bytes, 6 accounts, mint fee 0"
+  },
+  {
+   "group": "claim (private)",
+   "check": "deposit 0: proven and settled privately on the zone",
+   "passed": "yes",
+   "detail": "proof dev, prove 885 ms, balance 100000000000000000"
+  },
+  {
+   "group": "claim (private)",
+   "check": "deposit 1: the tool's claim (ferrata-wallet): claimable, ClaimPrivately, root = the private account's own actor",
+   "passed": "yes",
+   "detail": "1239 bytes, 6 accounts, mint fee 0"
+  },
+  {
+   "group": "claim (private)",
+   "check": "deposit 1: proven and settled privately on the zone",
+   "passed": "yes",
+   "detail": "proof dev, prove 958 ms, balance 200000000000000000"
+  },
+  {
+   "group": "claim (private)",
+   "check": "deposit 0 again: refused from the nullifier's account (ALREADY_CLAIMED, 250)",
+   "passed": "yes",
+   "detail": ""
+  },
+  {
+   "group": "claim (private)",
+   "check": "the private account holds both denominations",
+   "passed": "yes",
+   "detail": "balance 200000000000000000"
+  },
+  {
+   "group": "release (the wallet's rule)",
+   "check": "two accepted roots: over burn 0 (delay passed) and over both (in its delay)",
+   "passed": "yes",
+   "detail": "now 1794571443, opens [1794570662, 1794571563]"
+  },
+  {
+   "group": "release (the wallet's rule)",
+   "check": "burn 0: the newest root whose delay has passed is the older one",
+   "passed": "yes",
+   "detail": "picked checkpoint 0, root 0x89409baec579a74d\u2026"
+  },
+  {
+   "group": "release (the wallet's rule)",
+   "check": "burn 1: only the newer root covers it, in its delay: ReleaseDelayNotElapsed, with when it opens",
+   "passed": "yes",
+   "detail": "first open 1794571563"
+  },
+  {
+   "group": "release (the wallet's rule)",
+   "check": "after the delay: burn 1 under the newer root",
+   "passed": "yes",
+   "detail": ""
+  },
+  {
+   "group": "prove_release",
+   "check": "the release guest run on the module's input through r0vm: its journal is the native one",
+   "passed": "yes",
+   "detail": "image 0xb64900bcf7416685\u2026, dev mode True, 56 ms, receipt 2344 bytes"
+  },
+  {
+   "group": "vault",
+   "check": "both releases the module planned are accepted by the vault (mock verifier on the exact journals)",
+   "passed": "yes",
+   "detail": "paid 100000000000000000 and 100000000000000000 wei"
+  },
+  {
+   "group": "status",
+   "check": "both burns released",
+   "passed": "yes",
+   "detail": ""
+  }
+ ]
+}

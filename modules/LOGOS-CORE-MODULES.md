@@ -83,7 +83,9 @@ path, kept as the fallback and for native runs). Every reply that read Ethereum 
 - **Used by Ferrata:** the attestation module's `fetch_log_proof` (`eth_getBlockByNumber`,
   `eth_getBlockReceipts`), its storage path (`eth_getProof` at the record's block, in `dry_run_attest` and
   `build_attest_tx`), and the bridge module's `import_root` (`eth_getProof` of the vault the configuration
-  names, slots 0 and 1). Shown in a headless Logos Core: `results/logos-core-io-2026-11-13/`.
+  names, slots 0 and 1). Shown in a headless Logos Core (`results/logos-core-io-2026-11-13/`): the attestation
+  module's four reads equal to the plain reads and its end-to-end run 43/43; the bridge module's `import_root`
+  read through it equal to the proofs given, `importable`, and its end-to-end run 24/24.
 
 ### `verified_proxy_module`: light-client-verified JSON-RPC
 
@@ -114,7 +116,7 @@ path, kept as the fallback and for native runs). Every reply that read Ethereum 
   `finalized_header` ("not a trust anchor").
 - **It does not verify** what providers return (README "Trust"; `beacon.rs` 219–258); the updater's program
   does, which is why it is fit to carry the updater's data.
-- **Status here:** built from source and installed in our Logos Core; the updater module still reads its
+- **Status here:** built from source and loaded in our Logos Core; the updater module still reads its
   sources itself (beacon API URLs or recorded directories). Moving its source to `lc_request` is the
   same change as `rpc.rs` above, not made in this work.
 
@@ -133,13 +135,19 @@ path, kept as the fallback and for native runs). Every reply that read Ethereum 
 - **`keystore_module`** (README 1–150): scrypt vaults, BIP-39/32 accounts (`import_private_key`,
   `import_mnemonic`, …, custodian only), signing only through the approval tiers ("No method signs on
   demand", 146) or as `logos.signer/1` for the signer manager.
-- **Status here:** all four built from source with our builder and installed beside our modules; the
-  stack loaded and `tx_sender_module.prepare` priced a transfer against the devnet's anvil (results). Not
-  done: the monitor's cancellations and the relayer's releases still sign with their own key file (alloy).
-  Moving them means a key imported into `keystore_module`, the signer manager's roles and an unattended
-  `unlock` scoped to `tx_sender_module`, and the monitor's `Chain::send` (one place, `monitor/src/chain.rs`
-  309–326) calling `send` and polling `send_status`; the approval model is the open question for a
-  watcher that must cancel within the challenge window without a person present.
+- **Status here:** `fee_module`, `signer_manager_module` and `tx_sender_module` built from source with our
+  builder and installed beside our modules; **`keystore_module` (`e83a899`) did not build**: it compiles and
+  links, then its install stops at `logos-cpp-generator --normalize-lidl` on its interface contract
+  (`interface_dependencies`: `wallets.lidl` of logos-signer-interface), the step that stops unchanged
+  `eth_rpc_module` on its optional dependencies. Without it `signer_manager_module` (which requires it) and so
+  `tx_sender_module` do not load, and nothing was signed or sent ([`results/…/send-stack.log`](results/logos-core-io-2026-11-13/send-stack.log)).
+  Its five calls to the `wallets` interface are bound clients with callbacks (`rust-lib/src/glue.rs` 320–476),
+  not the four plain calls `eth_rpc_module` needed. The monitor's cancellations and the relayer's releases
+  still sign with their own key file (alloy). Moving them means a key imported into `keystore_module`, the
+  signer manager's roles and an unattended `unlock` scoped to `tx_sender_module`, and the monitor's
+  `Chain::send` (one place, `monitor/src/chain.rs` 309–326) calling `send` and polling `send_status`; the
+  approval model is the open question for a watcher that must cancel within the challenge window without a
+  person present. `logos-io.sh` drives that sequence from the command line once the stack loads.
 
 ### `lez_core`: LEZ's wallet as a module
 
