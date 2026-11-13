@@ -63,3 +63,10 @@ work/att-3/final.json: verifies (channel key 90a548e0db5eaf858e31e437bdf3c6d9606
 [07:23:23] node answers: slots 9059955..=null, 0 windows, 0 bytes (748 compressed)
 [07:23:23] zone stage done
 [07:34:34] node answers (attestor 0's final round): slots from 9059955 to the LIB 9061568, 4 windows, 4944924 bytes (1325397 compressed)
+[07:49:39] W warped: 3601 s (anvil evm_increaseTime)
+[07:49:40] finalState 0x0d79f1d0045db3ce0cbd5ded6cf92d7a7ddce05f5b379f9428a8d8d8bf7848a6 = the journal's new state; burnRootStatus(0x64742ec992436953f4c96af5d1e06f76c4ee483d2af1b533fe3e3b3b66b5f577) = true 1794559781 [1.794e9] 
+[07:49:40] release delay warped: 121 s
+[07:49:42] release 0: recipient 0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07 +999000000000000 wei; nullifierUsed true
+[07:49:43] release 1: recipient 0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07 +999000000000000 wei; nullifierUsed true
+[2026-11-13T07:49:43Z] chain 11155111 block 16 deployer nonce 14
+[2026-11-13T07:49:43Z] vault 0xE9bD0e958697fE8aA6633DFEd2b8D0234F69D04C: finalState 0x0d79f1d0045db3ce0cbd5ded6cf92d7a7ddce05f5b379f9428a8d8d8bf7848a6 leaves 2 checkpoints 1

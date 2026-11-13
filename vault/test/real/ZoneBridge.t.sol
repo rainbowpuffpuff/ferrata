@@ -137,7 +137,7 @@ contract ZoneBridgeTest is RuleBMultiFixture {
         bytes memory bad = bytes.concat(seal);
         bad[bad.length - 1] = bad[bad.length - 1] ^ 0x01;
         vm.expectRevert();
-        vault.submitCandidate(c, bad);
+        vault.submitCandidate{gas: TAMPERED_CALL_GAS}(c, bad);
         FerrataVault.Checkpoint memory x = _checkpoint();
         x.t = 2;
         vm.expectRevert(FerrataVault.KeySetBelowFloor.selector);

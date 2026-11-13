@@ -1,0 +1,18 @@
+{
+  "finalState": "0x0d79f1d0045db3ce0cbd5ded6cf92d7a7ddce05f5b379f9428a8d8d8bf7848a6",
+  "burnRoot": "0x64742ec992436953f4c96af5d1e06f76c4ee483d2af1b533fe3e3b3b66b5f577",
+  "burnRootAccepted": true,
+  "releases": [
+    {
+      "recipient": "0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07",
+      "nullifier": "0x135bd39847155fc118a0d77bb05a9ebfdaff070abe1f39b39264096913ecc960",
+      "paidWei": "999000000000000"
+    },
+    {
+      "recipient": "0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07",
+      "nullifier": "0xb7f6107c210499824ffd87cfa22457ca8c2fa52c6e1da3d17b6d8dac3dfb0ee0",
+      "paidWei": "999000000000000"
+    }
+  ],
+  "vaultBalanceWeiAfter": "6000000000000"
+}

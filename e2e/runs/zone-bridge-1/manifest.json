@@ -20,6 +20,46 @@
         "to": "0xe9bd0e958697fe8aa6633dfed2b8d0234f69d04c",
         "contractAddress": null
       }
+    ],
+    "submit": [
+      {
+        "hash": "0xa097e8f7138515e9acacc80cd0b3720b96241ae9f9b11c4f54e5e51dfdb0fcbc",
+        "blockNumber": "0xb",
+        "status": "0x1",
+        "gasUsed": "0x5b9e5",
+        "to": "0xe9bd0e958697fe8aa6633dfed2b8d0234f69d04c",
+        "contractAddress": null
+      }
+    ],
+    "finalizeAttested": [
+      {
+        "hash": "0xec7aa4f84bdfa0bb880fd9879352c9b0c3dd9c4dea63d0c38c9cb542bf553b13",
+        "blockNumber": "0xd",
+        "status": "0x1",
+        "gasUsed": "0x35511",
+        "to": "0xe9bd0e958697fe8aa6633dfed2b8d0234f69d04c",
+        "contractAddress": null
+      }
+    ],
+    "release-0": [
+      {
+        "hash": "0xab0639a7adfe57d6ba6a9f4cb6dca9f5b98564bd3c104d93e8075f06ae975e44",
+        "blockNumber": "0xf",
+        "status": "0x1",
+        "gasUsed": "0x66ae8",
+        "to": "0xe9bd0e958697fe8aa6633dfed2b8d0234f69d04c",
+        "contractAddress": null
+      }
+    ],
+    "release-1": [
+      {
+        "hash": "0xcb046f854c76e1f4e8756a49cae3a0ff763f44f50dfe4ef34ae238c909c5fd65",
+        "blockNumber": "0x10",
+        "status": "0x1",
+        "gasUsed": "0x583b4",
+        "to": "0xe9bd0e958697fe8aa6633dfed2b8d0234f69d04c",
+        "contractAddress": null
+      }
     ]
   }
 }

@@ -403,21 +403,22 @@ stage_input() {
   local t1; t1="$(jq -r .tipT1.id "$RUN/lez/session-b/session-b.json")"
   [ "$(jq -r .tip "$C/$n.json")" -ge "$t1" ] || die "the attested tip is below session B's T1 ($t1)"
   [ "$(jq -r .burn_count "$C/burns.json")" = 2 ] || die "burns.json does not hold the session's two burns"
-  # 4 of 4 and 2 of 4 over the same base (the collector replaces the attestations)
+  # 4 of 4 and 2 of 4 over the same base (the collector replaces the attestations); their inputs stay in $T (re-derived
+  # from the base and the records by the same two commands), their metas are recorded
   "$ATT" collect --base "$C/$n.input" --att "$RUN/zone/attestor-0/final.json" --att "$RUN/zone/attestor-1/final.json" \
-    --att "$RUN/zone/attestor-2/final.json" --att "$RUN/zone/attestor-3/final.json" --out "$C/$n-all.input" --meta "$C/$n-all.json" \
+    --att "$RUN/zone/attestor-2/final.json" --att "$RUN/zone/attestor-3/final.json" --out "$T/$n-all.input" --meta "$C/$n-all.json" \
     --name "$n-all" | tee "$C/collect-all.txt"
   if "$ATT" collect --base "$C/$n.input" --att "$RUN/zone/attestor-0/final.json" --att "$RUN/zone/attestor-1/final.json" \
       --out "$T/two.input" --meta "$T/two.json" --name "$n-two" > "$C/collect-two.txt" 2>&1; then die "2 of 4 was accepted"; fi
   echo "2 of 4: refused by the collector: $(tail -n 1 "$C/collect-two.txt")" | tee -a "$C/collect-two.txt"
   "$ATT" assemble --base "$C/$n.input" --att "$RUN/zone/attestor-0/final.json" --att "$RUN/zone/attestor-1/final.json" \
-    --out "$C/$n-two.input" --meta "$C/$n-two.json" --name "$n-two" --expect InsufficientAttestations | tee -a "$C/collect-two.txt"
+    --out "$T/$n-two.input" --meta "$C/$n-two.json" --name "$n-two" --expect InsufficientAttestations | tee -a "$C/collect-two.txt"
   "$E" exec --program "$PROGRAMS/checkpoint_b.bin" --input "$C/$n.input" --meta "$C/$n.json" | tee "$C/exec.json"
   jq -e '.journal_equals_native' "$C/exec.json" > /dev/null
-  "$E" exec --program "$PROGRAMS/checkpoint_b.bin" --input "$C/$n-all.input" --meta "$C/$n-all.json" | tee "$C/exec-all.json"
+  "$E" exec --program "$PROGRAMS/checkpoint_b.bin" --input "$T/$n-all.input" --meta "$C/$n-all.json" | tee "$C/exec-all.json"
   # (the meta of an input the program must refuse has no journal; the executor is given a placeholder one)
   jq -n '{kind: "checkpoint-b", journal: "00"}' > "$T/two-exec-meta.json"
-  if "$E" exec --program "$PROGRAMS/checkpoint_b.bin" --input "$C/$n-two.input" --meta "$T/two-exec-meta.json" > "$C/exec-two.txt" 2>&1; then
+  if "$E" exec --program "$PROGRAMS/checkpoint_b.bin" --input "$T/$n-two.input" --meta "$T/two-exec-meta.json" > "$C/exec-two.txt" 2>&1; then
     die "the guest accepted 2 of 4"; fi
   grep -o 'checkpoint refused: [^"]*' "$C/exec-two.txt" | head -n 1 | tee -a "$C/exec-two.txt"
 }
