@@ -20,40 +20,44 @@ runs on its own, on a copy of the checkout: it writes into the tree it runs in.
 | Check | What runs (the commands of the README and of [verify.md](../../docs/guides/verify.md)) | It passes when |
 |---|---|---|
 | `verify-sepolia` | `python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-3`, then the same on `e2e/runs/crown-live-1`, read-only calls to a public Sepolia endpoint (a second public one if the first fails; `SEPOLIA_RPC_URL` to use yours) | 0 failed for each run (13 passed each) |
-| `vault` | `cd vault`, `forge install --no-git` at [vault/README.md](../../vault/README.md)'s pins, `FOUNDRY_OFFLINE=false forge build`, `forge test` | forge exits 0 (454 passed, 1 skipped) |
+| `vault` | `cd vault`, `forge install --no-git` at [vault/README.md](../../vault/README.md)'s pins, `FOUNDRY_OFFLINE=false forge build`, `forge test` | forge exits 0 (464 passed, 1 skipped) |
 | `core` | `scripts/fetch-vectors.sh && cargo test --workspace --locked` | cargo exits 0 (163 passed) |
 | `guest-ids` | `scripts/reproduce-image-ids.sh build`, then `compare` | 14 of 14 guests equal [docs/image-ids.md](../../docs/image-ids.md), 6 of 6 crown programs equal [e2e/crown/README.md](../../e2e/crown/README.md) |
 | `lez-harness` | `cd lez && RISC0_HOME=../../risc0-home-lez RISC0_DEV_MODE=1 cargo test -p harness --locked -- --test-threads 1` | cargo exits 0 (56 passed) |
 
 ## Run on Modal, 13 November 2026
 
-`MODAL_PROFILE=… modal run --detach scripts/reproduce/modal_app.py` from a checkout of commit a5fd69f (the tree
-published as `main`; the commits after it change documents only), 13 Nov 2026 05:20–05:52 UTC. Its last lines
-([`runs/2026-11-13-modal/summary.txt`](runs/2026-11-13-modal/summary.txt); `/work/out` is in the container, the logs
-came back to the machine that started it):
+`MODAL_PROFILE=… modal run --detach scripts/reproduce/modal_app.py` from a checkout of commit 0f31e30 (the final tree:
+the build's last merge with its checks and documents; the commits after it change documents only), 13 Nov 2026
+13:58–14:29 UTC; Modal preempted the first container 12 minutes in and ran the function again from the start. Its
+last lines ([`runs/2026-11-13-modal-final/summary.txt`](runs/2026-11-13-modal-final/summary.txt); `/work/out` is in the
+container, the logs came back to the machine that started it):
 
 ```text
 
-Ferrata reproduction check: commit a5fd69f5978304bbfa47d519d998077647e1cdea
-2026-11-13 05:52:47 UTC, 16 CPUs; rust 1.93.0 1.98.1 1.88.0 (default 1.93.0); RISC Zero r0vm 3.0.5, guest rust 1.88.0 (lez: 1.91.1); forge 1.3.6, solc 0.8.26; Python 3.12.3
+Ferrata reproduction check: commit 0f31e30394b1126ce9b6b556904a7eab307bcc2f
+2026-11-13 14:29:35 UTC, 16 CPUs; rust 1.93.0 1.98.1 1.88.0 (default 1.93.0); RISC Zero r0vm 3.0.5, guest rust 1.88.0 (lez: 1.91.1); forge 1.3.6, solc 0.8.26; Python 3.12.3
 
 check           result    time  detail
 verify-sepolia  PASS      0:20  crown-live-3: 13 passed, 0 pending, 0 failed (61 RPC calls); crown-live-1: 13 passed, 0 pending, 0 failed (61 RPC calls) (second public endpoint for crown-live-1; the first failed)
-vault           PASS      1:05  454 tests passed, 0 failed, 1 skipped (455 total tests)
-core            PASS      1:40  163 passed, 0 failed, 0 ignored in 25 test runs
-guest-ids       PASS      7:37  14 of 14 guests equal docs/image-ids.md; 6 of 6 ids of the crown run's programs equal the recorded ones
-lez-harness     PASS     21:23  56 passed, 0 failed, 0 ignored in 34 test runs
+vault           PASS      1:10  464 tests passed, 0 failed, 1 skipped (465 total tests)
+core            PASS      1:45  163 passed, 0 failed, 0 ignored in 25 test runs
+guest-ids       PASS      7:22  14 of 14 guests equal docs/image-ids.md; 6 of 6 ids of the crown run's programs equal the recorded ones
+lez-harness     PASS     20:48  56 passed, 0 failed, 0 ignored in 34 test runs
 
 tree: no committed file changed
-VERDICT: PASS, 5 of 5 checks, 32:07 in all
+VERDICT: PASS, 5 of 5 checks, 31:27 in all
 logs: /work/out
 ```
 
-The vault's 454 include the three tests the agent review of the vault and the guests added
+The vault's 464 include the ten tests of the zone runs' suites (`vault/test/real/ZoneBridge.t.sol`,
+`ZoneBridgeRotation.t.sol`; EVIDENCE rows 100, 101) and the three the agent review of the vault and the guests added
 (`vault/test/ReviewVault.t.sol`; [`docs/reviews/`](../../docs/reviews/agent-review-vault-guests-2026-11-12.md)).
 No committed file changed: the tables the LEZ harness writes in `lez/results/` came out as committed.
 
-Earlier, from a checkout of commit 596b158 (12 Nov 2026, 17:56–18:29 UTC, 1,995 s from the call to the logs back):
+Earlier, from a checkout of commit a5fd69f (the tree published as `main` before the last merges; 13 Nov 2026,
+05:20–05:52 UTC): 5 of 5 in 32:07, the same results but the vault's, 454 passed and 1 skipped (before the zone runs'
+suites; [`runs/2026-11-13-modal/`](runs/2026-11-13-modal/README.md)). From a checkout of commit 596b158 (12 Nov 2026, 17:56–18:29 UTC, 1,995 s from the call to the logs back):
 5 of 5 in 33:04, the same results but the vault's, 451 passed and 1 skipped (before the review's tests). The image:
 10.1 GiB on disk (10,770 MiB measured in the container, of which 451 MiB are Modal's own Python); Modal built it
 once, in 233 s, and later runs reuse it (596b158's did). Earlier full runs of the same checks, whose Sepolia check

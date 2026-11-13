@@ -77,7 +77,7 @@ cd vault && FOUNDRY_OFFLINE=false forge build && forge test
 
 `vault/foundry.toml` keeps forge offline, so the first build must be allowed to fetch solc 0.8.26
 (`FOUNDRY_OFFLINE=false`; without it forge stops at "can't install missing solc 0.8.26 in offline mode"); later
-runs need no network. Expected: 454 passed and 1 skipped, the privacy suite's Ethereum half, which replays the
+runs need no network. Expected: 464 passed and 1 skipped, the privacy suite's Ethereum half, which replays the
 output of its LEZ half (`scripts/privacy/run.sh` runs both).
 
 The attestation and bridge programs on LEZ v0.4.0-rc1's own state machine, in process, with RISC Zero in
