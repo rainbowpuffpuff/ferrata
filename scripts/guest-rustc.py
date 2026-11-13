@@ -105,6 +105,14 @@ def main() -> None:
     out_dir = (values("--out-dir") or [""])[-1]
     if f"/{TRIPLE}/" in out_dir:
         add(out_dir.split(f"/{TRIPLE}/")[0], "/target")
+    # An experiment's extra mappings, applied last so that they win (FERRATA_GUEST_REMAP_EXTRA="FROM=TO[;FROM=TO]"):
+    # for example, LEZ v0.4.0-rc3's tree compiled under rc1's name, to see whether a guest changes with the code or
+    # only with the name of the tree (lez/results/v0.4.0-rc3/image-ids.md). Unset in every recorded build.
+    for spec in filter(None, os.environ.get("FERRATA_GUEST_REMAP_EXTRA", "").split(";")):
+        frm, sep, to = spec.partition("=")
+        if not sep or not os.path.isabs(frm) or not to.startswith("/"):
+            die(f"FERRATA_GUEST_REMAP_EXTRA: expected absolute FROM=/TO, got {spec!r}")
+        add(frm, to)
 
     def remap(p: str) -> str:
         if not os.path.isabs(p):
