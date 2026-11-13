@@ -66,7 +66,8 @@ node_dump() {
   from="$(jq -r .tip_slot "$VOL/session-a/channel.json")"; from=$(( from > 3000 ? from - 3000 : 0 ))
   curl -fsS -m 10 -o "$N/info.json" "$api/cryptarchia/info" && curl -fsS -m 10 -o "$N/channel.json" "$api/channel/$CHANNEL" || return 1
   curl -fsS -m 10 -o "$N/chain-id.json" "$api/chain/id" || true
-  lib="$(jq -r .lib_slot "$N/info.json")"; echo "$from" > "$N/slot-from.txt"
+  lib="$(jq -r '.cryptarchia_info.lib_slot // .lib_slot' "$N/info.json")"; echo "$from" > "$N/slot-from.txt"
+  [[ "$lib" =~ ^[0-9]+$ ]] || return 1
   while [ "$from" -le "$lib" ]; do
     to=$(( from + 499 )); [ "$to" -gt "$lib" ] && to="$lib"
     curl -fsS -m 60 -o "$N/blocks/$from-$to.json" "$api/cryptarchia/blocks?slot_from=$from&slot_to=$to" || return 1
