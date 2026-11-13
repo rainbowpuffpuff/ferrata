@@ -162,6 +162,57 @@ next key and blocks continued to 25; the final tier has no block by seq-3's key 
 the checkpoint program in r0vm (6,214,564 user cycles, `T` = 25 inscribed by `6462ecf1…`); 2 of 4 refused.
 (`zone-attest.sh` also signs with seq-3's attestor, which reads the same node; its 4-of-4 input is accepted too.)
 
+## 8. The bridge program on the zone, and its checkpoint into the vault (`attestor/zone-bridge.sh`, `e2e/runs/zone-bridge-1/`)
+
+What ran on 13 November 2026, on the Modal build box of the `zone-bridge` worktree (workspace ws-4, a gVisor
+container on up to 16 cores, 32 threads), and in RISC Zero's Groth16 prover image (the `groth16_wrap` function of
+the same app). Nothing ran on a public network. The zone stage ran from 07:01 to 07:23 UTC (1,379 s, one command);
+proofs, wraps and the vault followed until 07:50 UTC. Records: [`e2e/runs/zone-bridge-1/`](../../e2e/runs/zone-bridge-1/)
+(`logs/zone-bridge.log` is the run's own log; `zone/` the zone's records, `lez/` the sessions', `checkpoint/` and
+`releases/` the proofs', `manifest.json` the anvil's transactions, `vault-checks.json` what the vault held after).
+
+**Real:** the four `sequencer_service` processes (each its own home, staked channel key and RPC; gossip between
+them over QUIC on loopback) and the Bedrock channel they share (four accredited keys, `configuration_threshold` 3,
+posting timeframe 60 slots, the turn rotating among them); the programs, the final ones of
+[`docs/image-ids.md`](../../docs/image-ids.md) (`ferrata_lez` `0x816d1fef…`, `ferrata_bridge` `0xccde6171…` from
+the crown-live-3 LEZ bundle, sha256 `0013bab1…`, its `SHA256SUMS` checked; `checkpoint_b` `0xf8116722…` and
+release `0xb64900bc…` as R0BF files whose sha256 are the table's); both private transactions proven by LEZ's
+wallet; four `ferrata_attestor` processes, each key certified by its sequencer's channel key; the node's final
+tier, each block of it checked by each attestor; `checkpoint_b`'s STARK proof and its Groth16 wrap; the release
+proofs; FerrataVault v5 in mode (B) with RISC Zero's Groth16 verifier behind its emergency stop.
+**STAND-IN:** the beacon chain on LEZ (crown-driver's stand-in committee, whose keys the driver holds, finalizes
+the anvil's blocks: the light client's Ethereum is not Sepolia's); the Ethereum side (a local anvil 1.3.6, not a
+fork, with Sepolia's chain id because crown-driver pins it; the deployer an impersonated address derived from a
+label); the vault's wait `W` (3,600 s) and release delay (120 s), passed by `evm_increaseTime`; leader proofs in
+dev mode on the one Bedrock node all four sequencers post to (as every devnet here); the channel keys are
+upstream's published devnet keys; the zone's genesis is upstream's devnet genesis plus `local.json`'s two funded
+public test accounts (the devnet's own two hold pre-fee balances, 10,000 and 20,000, below one fee reservation,
+as LEZ's `testnet_initial_state` says), the only change to upstream's configuration besides loopback addresses;
+the burns' recipient is crown-driver's default address.
+
+| Step | Result |
+|---|---|
+| Zone | upstream's four-sequencer devnet (as §7) on the bundle's binaries; each sequencer restarted until its blocks fall 1–6 s after an epoch second (the crown sessions' rule; `zone/phases.txt`: 3, 1, 1 and 3 starts); the channel accredits the four keys; over the run the turn went seq-0 → seq-2 → seq-3 → seq-1 → seq-0 four times (the channel's key order; `zone/logs/poll.log`, 50 polls), six blocks a turn; heights equal on all four at 48 of 50 polls (two polls one block apart); no head rewind and no given-up inscription in any sequencer's log |
+| Session A (`crown-driver crown-a`, this tree's build; transactions sent to seq-0's RPC) | the attestation program and the bridge deployed (15 transactions in blocks 17–31), the STAND-IN instance's `Init` (block 32) and its two adoptions (33, 34); T0 = 34 `0x0b678ced…` |
+| Ethereum side (local anvil) | DeployVault: verifier, stop, registry, vault `0xE9bD0e95…` (nonce 3, predicted), test token, ETH and the token registered, the stop's owner renounced; `lezConfigId` `0x8c313ea4…` (`crown-driver config-id` over session A and that address), `genesisState` `0x958a2dcd…` (the state at T0 over the four keys, posting timeframe 60); nMin 4, tMin 3; deposits j0 (public) and j1 (private) of 0.001 ETH plus the 0.2 % relay fee, 200,572 and 151,394 gas; captures of anvil blocks 9 and 10 (headers rebuilt and checked against their hashes); `crown-driver check`: pairing, import and registration accepted natively under both records |
+| Attestors | one per sequencer, keys from the OS's randomness (not recorded), each certified by its sequencer's channel key for this deployment (`zone/attestor-*/cert.json`); a round every 60 s from 07:09:50 UTC: each signed the same 14 rising final tips 35, 41, …, 113 and refused none (`rounds.tsv`) |
+| Session B (`crown-driver crown-b`) | bridge `Init` (block 40), `Register` ETH (41), `ImportRoot` n=1 (42), `Claim` of deposit 0 (43), `ImportFees` (47), `ImportRoot` n=2 (48), `ClaimPrivately` of deposit 1 (proven in 281.4 s, 252,267 bytes; block 78), `Burn` public (79), `Burn` private (proven in 324.2 s, 255,031 bytes; block 113); T1 = 113. Every transaction went to seq-0's RPC; the blocks that hold them were made by seq-0 (40–43, 113), seq-2 (47, 48) and seq-3 (78, 79): the others had them by gossip |
+| Final tier | the sequencers stopped at 07:23:20 UTC; once the node's LIB passed the channel's tip, all four attestors signed final tip 116 `0x4c37dbfc…` (final message `0x4c451c6e…`, inscribed by seq-2) after checking blocks 2..=116; `verify`: all four verify |
+| Node answers (`zone/node-answers.tar.zst`) | those attestor 0 fetched and checked in its final round: 1,322 immutable node blocks, slots 9,059,955..=9,061,568, 4,944,924 bytes (1,325,397 compressed); final inscriptions of LEZ blocks 2..=116 all accepted by `realblocks-crown` (parse, re-hash, link, framing, BLAKE2b, `verify_strict`), by seq-0 36, seq-1 30, seq-2 25, seq-3 24 |
+| Input `zone-34-116` (`realblocks-crown --att`, three of the four records, attestor 3 left out) | blocks 35..=116 (82 blocks, 179 transactions, 604,877 bytes), T = 116; n = 4, t = 3; two burns, burn root `0x64742ec9…`, imported leaf count 2; parent state `0x958a2dcd…` (= the vault's `genesisState`), new state `0x0d79f1d0…`; journal sha256 `a2aa83f3…` |
+| r0vm | 3 of 4: **8,060,167** user cycles, 10 segments (9×2^20 + 2^19), journal equal to the native one; 4 of 4: 9,758,970, 12 segments; 2 of 4: refused by the collector (`too few attestations: 2 valid, t(n = 4) = 3 needed`) and by the guest (`InsufficientAttestations { have: 2, need: 3 }`) |
+| Proof | `ferrata-e2e prove` on the box's CPU: **701.1 s**, 10 segments, 8,060,167 user / 9,961,472 total cycles, receipt 224,314 bytes sha256 `4e1ba0a4…`, verified against the image id; identity_p254 18.7 s; Groth16 prover image 14 s; seal 260 bytes, selector `0x73c457ba` |
+| Releases (`ferrata-e2e crown-release`, the burn tree recomputed by the bridge core, equal to the checkpoint core's) | `release-public-0` and `release-private-1`: 77,736 user cycles, 1 segment, 14.6 s and 14.3 s on the CPU; identity_p254 18.8 s and 18.5 s; Groth16 16 s and 14 s; journals sha256 `0aec6465…` and `96b17e06…` |
+| Vault (the anvil restored from its saved state; `e2e/crown/sepolia.sh`) | `submitCandidate` 375,269 gas; W passed (`evm_increaseTime` 3,601); `finalizeAttested` 218,385; `finalState` = the journal's new state; `burnRootStatus(0x64742ec9…)` accepted; the release delay passed (121 s); `release` 0 (420,584 gas) and 1 (361,396): each paid **999,000,000,000,000 wei** (0.001 ETH less the 0.1 % checkpoint fee) to the recipient each burn named, nullifier used; left in the vault: 6,000,000,000,000 wei (the relay and checkpoint fees) |
+| `vault/test/real/ZoneBridge.t.sol` (fixture `zone-bridge.json`, the run's journal and seals in a vault built as DeployVault builds it, at the journal's address and chain id) | **4 of 4**: the journal is 3 of 4 over the zone's keys, 2 burns, 2 leaves; candidate, final after the hour and not before, burn root accepted, both burns released with their seals (each as the anvil paid), a second release refused; a flipped seal byte and t = 2 refused; gas 343,581 + 181,337 (calls; the anvil's figures are transactions). `RuleBZoneTest` 4 of 4 and `RuleBMultiTest` 5 of 5 unchanged |
+| `zone-bridge.sh verify` | the input, the journal and `burns.json` re-derived from the recorded node answers and attestation records: equal; the six receipts (two of each proof) verify |
+
+Re-check (from the worktree root, on the build box): `bash checkpoint/attestor/zone-bridge.sh build e2e/runs/zone-bridge-1`
+then `ZB_PROGRAMS=<R0BF files of docs/image-ids.md> bash checkpoint/attestor/zone-bridge.sh verify e2e/runs/zone-bridge-1`
+(the programs from `scripts/reproduce-image-ids.sh build`); `cd vault && forge test --match-contract ZoneBridgeTest`.
+The whole run: the stages `zone`, `input`, `prove`, `releases`, then `spike/modal-build/mwrap` on each
+`work/<proof>/input.json`, `groth16 <proof>` for each, `vault`, `fixture`, `verify` (the script's header).
+
 ## What failed on the way
 
 - The recorded `realblocks/out/real-lab-186-202.input` no longer decodes (`BadLength { what: "suffix" }`): it
@@ -174,11 +225,17 @@ the checkpoint program in r0vm (6,214,564 user cycles, `T` = 25 inscribed by `64
   17,800 windows, while the local `mrun` was stopped by a 10-minute limit and the container recycled); the next
   runs fetch from the channel's first slot. The zone's block 1 has no inscription, so its spans start at 3.
 - One proof call returned nothing when its container was recycled mid-proof; it was redone on a new container.
+- §8: crown-driver refused a channel of four keys (`ensure!(keys.len() == 1)`: the crown run's devnet has one); it now
+  takes the channel's key set as it is. The first box build of crown-driver stopped at `pcsc-sys` (the box had
+  `libpcsclite1` but not its headers). The zone stage's own dump of the node's answers read `lib_slot` at the top of
+  `/cryptarchia/info`, where the node nests it (`cryptarchia_info.lib_slot`), and saved no window; the answers are
+  the ones attestor 0 fetched and checked in its final round (`zone-bridge.sh answers`), which the stage now packs
+  itself.
 
 ## Not done
 
-- The zone of §7 with a bridge program, burns and a rotation proposed by its committee; a dropped inscription
-  on it (B1's done gate; the silent sequencer is shown); the zone's checkpoint on Sepolia.
+- A rotation proposed by the zone's committee (§8 ran the bridge program, its burns and a release on the zone); a
+  dropped inscription on it (B1's done gate; the silent sequencer is shown); the zone's checkpoint on Sepolia.
 - `ferrata_attestor` as a Logos module (README).
 - Rotations proposed and inscribed by a running committee (the rotation here is built from the core's own
   encoding and signed with the stand-in keys); the monitor's watcher reading attestations.

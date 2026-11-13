@@ -86,3 +86,4 @@ __pycache__/
 
 # checkpoint/attestor/zone-bridge.sh: the Groth16 prover inputs and outputs between the box and mwrap (not records)
 /e2e/runs/zone-bridge-*/work/
+/e2e/runs/zone-bridge-*/logs/.mark-*
