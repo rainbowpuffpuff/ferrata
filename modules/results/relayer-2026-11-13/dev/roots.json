@@ -1,0 +1,266 @@
+{
+  "call": "logosctl",
+  "records": [
+    {
+      "block": 7,
+      "block_hash": "0x72e6c02d0fa474213a5a1f6261fd3b286189d23c0731f75c2b305762f6bbb694",
+      "header_state_root": "0x52bc23bfa51f965a532de5b38b6f0f41008005e357aa952fe4495f001e45b6e2",
+      "proofs_root_is_header_root": true,
+      "record_slot": 9000064,
+      "stand_in": "the light client's finality update: anvil's newest block recorded at header(id, slot) and instance(id) moved to it by the devnet (no beacon chain, no committee)",
+      "state_root": "0x52bc23bfa51f965a532de5b38b6f0f41008005e357aa952fe4495f001e45b6e2",
+      "tampered": false,
+      "vault_count": 2
+    },
+    {
+      "block": 8,
+      "block_hash": "0xc2bf4021f327b06edb25c0a44582c7b389cbff85c27205fbb61084486561b3e0",
+      "header_state_root": "0x336408678e710276fc4c784083f482d275bb8bdcadf38d207ecbc5ad6e4c7e41",
+      "proofs_root_is_header_root": true,
+      "record_slot": 9000128,
+      "stand_in": "the light client's finality update: anvil's newest block recorded at header(id, slot) and instance(id) moved to it by the devnet (no beacon chain, no committee)",
+      "state_root": "0x336408678e710276fc4c784083f482d275bb8bdcadf38d207ecbc5ad6e4c7e40",
+      "tampered": true,
+      "vault_count": 3
+    },
+    {
+      "block": 8,
+      "block_hash": "0xc2bf4021f327b06edb25c0a44582c7b389cbff85c27205fbb61084486561b3e0",
+      "header_state_root": "0x336408678e710276fc4c784083f482d275bb8bdcadf38d207ecbc5ad6e4c7e41",
+      "proofs_root_is_header_root": true,
+      "record_slot": 9000192,
+      "stand_in": "the light client's finality update: anvil's newest block recorded at header(id, slot) and instance(id) moved to it by the devnet (no beacon chain, no committee)",
+      "state_root": "0x336408678e710276fc4c784083f482d275bb8bdcadf38d207ecbc5ad6e4c7e41",
+      "tampered": false,
+      "vault_count": 3
+    },
+    {
+      "block": 9,
+      "block_hash": "0xfc072852270553e6d5b884f4a9364c93b312603c7194a2105ec4f8db030cace5",
+      "header_state_root": "0x355f005ccc283cc1e8dbe2e099d150f396cc03cd64c0489462d1386d10c5973f",
+      "proofs_root_is_header_root": true,
+      "record_slot": 9000256,
+      "stand_in": "the light client's finality update: anvil's newest block recorded at header(id, slot) and instance(id) moved to it by the devnet (no beacon chain, no committee)",
+      "state_root": "0x355f005ccc283cc1e8dbe2e099d150f396cc03cd64c0489462d1386d10c5973f",
+      "tampered": false,
+      "vault_count": 4
+    }
+  ],
+  "imported": [
+    2,
+    3,
+    4
+  ],
+  "rounds": {
+    "r1": [
+      {
+        "chainId": 1,
+        "configId": "0x4b87fc2d51de184bb82f98a16e8cb06b328f39c7b1c084d8e633bddf167a9608",
+        "event": "start",
+        "finalState": "0x4a45f91d9d1813c021a820c7240aa56425e3906e1e956685b96b37e4f2543ac7",
+        "gasDrops": false,
+        "importEvery": 0,
+        "importRoots": true,
+        "relayer": "0xea03e9e355d79f0cdfe7ccb38ff094eeb17f8388",
+        "t": 1794555984,
+        "vault": "0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9",
+        "zone": "devnet"
+      },
+      {
+        "event": "root-import-waiting",
+        "imported": 0,
+        "reason": "the zone holds no instance 0x1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d of the attestation program",
+        "t": 1794555984,
+        "vaultCount": 2
+      },
+      {
+        "event": "stop",
+        "reason": "rounds",
+        "rounds": 1,
+        "t": 1794555984
+      }
+    ],
+    "r2": [
+      {
+        "chainId": 1,
+        "configId": "0x4b87fc2d51de184bb82f98a16e8cb06b328f39c7b1c084d8e633bddf167a9608",
+        "event": "start",
+        "finalState": "0x4a45f91d9d1813c021a820c7240aa56425e3906e1e956685b96b37e4f2543ac7",
+        "gasDrops": false,
+        "importEvery": 0,
+        "importRoots": true,
+        "relayer": "0xea03e9e355d79f0cdfe7ccb38ff094eeb17f8388",
+        "t": 1794555984,
+        "vault": "0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9",
+        "zone": "devnet"
+      },
+      {
+        "accounts": 3,
+        "applied": true,
+        "block": 7,
+        "blockHash": "0x72e6c02d0fa474213a5a1f6261fd3b286189d23c0731f75c2b305762f6bbb694",
+        "event": "root-imported",
+        "leafCount": 2,
+        "previous": 0,
+        "recordSlot": 9000064,
+        "root": "0x9a2fa48f49209f4485ed239b41982671212daeff8e072e582413f965665e71da",
+        "t": 1794555985,
+        "tx": "devnet block 4",
+        "vaultCount": 2
+      },
+      {
+        "event": "stop",
+        "reason": "rounds",
+        "rounds": 1,
+        "t": 1794555985
+      }
+    ],
+    "r3": [
+      {
+        "chainId": 1,
+        "configId": "0x4b87fc2d51de184bb82f98a16e8cb06b328f39c7b1c084d8e633bddf167a9608",
+        "event": "start",
+        "finalState": "0x4a45f91d9d1813c021a820c7240aa56425e3906e1e956685b96b37e4f2543ac7",
+        "gasDrops": false,
+        "importEvery": 0,
+        "importRoots": true,
+        "relayer": "0xea03e9e355d79f0cdfe7ccb38ff094eeb17f8388",
+        "t": 1794555985,
+        "vault": "0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9",
+        "zone": "devnet"
+      },
+      {
+        "event": "stop",
+        "reason": "rounds",
+        "rounds": 1,
+        "t": 1794555985
+      }
+    ],
+    "r4": [
+      {
+        "chainId": 1,
+        "configId": "0x4b87fc2d51de184bb82f98a16e8cb06b328f39c7b1c084d8e633bddf167a9608",
+        "event": "start",
+        "finalState": "0x4a45f91d9d1813c021a820c7240aa56425e3906e1e956685b96b37e4f2543ac7",
+        "gasDrops": false,
+        "importEvery": 0,
+        "importRoots": true,
+        "relayer": "0xea03e9e355d79f0cdfe7ccb38ff094eeb17f8388",
+        "t": 1794555985,
+        "vault": "0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9",
+        "zone": "devnet"
+      },
+      {
+        "event": "root-import-waiting",
+        "imported": 2,
+        "reason": "the newest record, header(id, 9000064) of block 7, holds 2 deposits, 2 are imported, the vault holds 3: waiting for a later record",
+        "t": 1794555985,
+        "vaultCount": 3
+      },
+      {
+        "event": "stop",
+        "reason": "rounds",
+        "rounds": 1,
+        "t": 1794555985
+      }
+    ],
+    "r5": [
+      {
+        "chainId": 1,
+        "configId": "0x4b87fc2d51de184bb82f98a16e8cb06b328f39c7b1c084d8e633bddf167a9608",
+        "event": "start",
+        "finalState": "0x4a45f91d9d1813c021a820c7240aa56425e3906e1e956685b96b37e4f2543ac7",
+        "gasDrops": false,
+        "importEvery": 0,
+        "importRoots": true,
+        "relayer": "0xea03e9e355d79f0cdfe7ccb38ff094eeb17f8388",
+        "t": 1794555985,
+        "vault": "0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9",
+        "zone": "devnet"
+      },
+      {
+        "event": "root-import-refused",
+        "imported": 2,
+        "reason": "refused: LEZ bridge program exit code 110 UNKNOWN (the dry run of ImportRoot n = 3 under header(id, 9000128) (the attestation and bridge programs' own checks): not sent): not one of the bridge program's codes (240-255): another program's or LEZ's",
+        "t": 1794555985,
+        "vaultCount": 3
+      },
+      {
+        "event": "stop",
+        "reason": "rounds",
+        "rounds": 1,
+        "t": 1794555985
+      }
+    ],
+    "r6": [
+      {
+        "chainId": 1,
+        "configId": "0x4b87fc2d51de184bb82f98a16e8cb06b328f39c7b1c084d8e633bddf167a9608",
+        "event": "start",
+        "finalState": "0x4a45f91d9d1813c021a820c7240aa56425e3906e1e956685b96b37e4f2543ac7",
+        "gasDrops": false,
+        "importEvery": 0,
+        "importRoots": true,
+        "relayer": "0xea03e9e355d79f0cdfe7ccb38ff094eeb17f8388",
+        "t": 1794555986,
+        "vault": "0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9",
+        "zone": "devnet"
+      },
+      {
+        "accounts": 3,
+        "applied": true,
+        "block": 8,
+        "blockHash": "0xc2bf4021f327b06edb25c0a44582c7b389cbff85c27205fbb61084486561b3e0",
+        "event": "root-imported",
+        "leafCount": 3,
+        "previous": 2,
+        "recordSlot": 9000192,
+        "root": "0x526c746cb41d555a1bb7bcb50a2ff81de8f1a5bcff2fd51f2a3594789ddbf345",
+        "t": 1794555986,
+        "tx": "devnet block 5",
+        "vaultCount": 3
+      },
+      {
+        "event": "stop",
+        "reason": "rounds",
+        "rounds": 1,
+        "t": 1794555986
+      }
+    ],
+    "daemon": [
+      {
+        "chainId": 1,
+        "configId": "0x4b87fc2d51de184bb82f98a16e8cb06b328f39c7b1c084d8e633bddf167a9608",
+        "event": "start",
+        "finalState": "0x4a45f91d9d1813c021a820c7240aa56425e3906e1e956685b96b37e4f2543ac7",
+        "gasDrops": false,
+        "importEvery": 3600,
+        "importRoots": true,
+        "relayer": "0xea03e9e355d79f0cdfe7ccb38ff094eeb17f8388",
+        "t": 1794555987,
+        "vault": "0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9",
+        "zone": "devnet"
+      },
+      {
+        "accounts": 3,
+        "applied": true,
+        "block": 9,
+        "blockHash": "0xfc072852270553e6d5b884f4a9364c93b312603c7194a2105ec4f8db030cace5",
+        "event": "root-imported",
+        "leafCount": 4,
+        "previous": 3,
+        "recordSlot": 9000256,
+        "root": "0x87d74148d961c9fa4c8e3f1350f42c598270471119f46f3f7e3695dd708efa2d",
+        "t": 1794555995,
+        "tx": "devnet block 6",
+        "vaultCount": 4
+      },
+      {
+        "event": "stop",
+        "reason": "SIGTERM",
+        "rounds": 8,
+        "t": 1794555995
+      }
+    ]
+  }
+}

@@ -1,0 +1,113 @@
+{
+  "candidate": {
+    "burnCount": 2,
+    "burnRoot": "0xbefcd570e779294d22eac9ca5a5299631f124b46b09e415c65bba012694b0151",
+    "gasUsed": 375281,
+    "kind": "candidate",
+    "newState": "0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd",
+    "tx": "0xbf9bbec2761ccac73f9f167181874e8820a2efb6e4ef136ca48323649b140468"
+  },
+  "cleanStop": {
+    "event": "stop",
+    "reason": "SIGTERM",
+    "rounds": 5,
+    "t": 1794556079
+  },
+  "earlyRelease": "refused: vault error BurnRootNotAccepted() (eth_call before sending): the burn root is not one of a finalized, unrevoked checkpoint",
+  "finalized": {
+    "log": {
+      "burnCount": 2,
+      "burnRoot": "0xbefcd570e779294d22eac9ca5a5299631f124b46b09e415c65bba012694b0151",
+      "event": "finalized",
+      "gasUsed": 218385,
+      "newState": "0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd",
+      "t": 1794556042,
+      "tx": "0x4dcf1f566df7270cd8b074803aae7e809636a8018e3dc5b93a02e5fdd44d224f"
+    },
+    "wait": 3600
+  },
+  "forgedCheckpoint": {
+    "ethCall": "server returned an error response: error code 3: execution reverted: custom error 0x439cc0cd, data: \"0x439cc0cd\"",
+    "refused": true
+  },
+  "fork": {
+    "block": 12111745,
+    "endpoint": "https://rpc.sepolia.ethpandaops.io",
+    "vault": "0xfe3199fa2634413cbac317371076cae3eb2d9e54"
+  },
+  "otherRelayerDaemon": "refused: the proof names relayer 0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07; only it can be paid for this release (this relayer is 0x00000000000000000000000000000000000bAD01)",
+  "paidRelease": {
+    "gained": "2000000000000",
+    "redirectedRefused": true,
+    "relayFee": "2000000000000",
+    "relayer": "0x0000000000000000000000000000000000c0ffee",
+    "result": {
+      "gasUsed": 407052,
+      "kind": "release",
+      "nullifier": "0x6b5ec36ee357ba03fad0f9bb4afe4ef32c424722cd6c52131f48beffe1886414",
+      "paid": "2000000000000",
+      "paidTo": "0x0000000000000000000000000000000000c0ffee",
+      "recipient": "0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07",
+      "relayFee": "2000000000000",
+      "token": "0x0000000000000000000000000000000000000000",
+      "tx": "0x244b4f91f3bf5610745592e022ac408cafad56645204c93333b936289f784de8",
+      "wrapSecs": 17.514699422,
+      "wrapped": true
+    }
+  },
+  "releases": {
+    "balanceAfter": "100001997999936065760",
+    "balanceBefore": "100000996999959316920",
+    "done": [
+      {
+        "gasUsed": 358908,
+        "kind": "release",
+        "nullifier": "0x324dbfffe264185b60518bc4340a9172258498dfca519a6a015afefe67f67c4a",
+        "paid": "0",
+        "paidTo": "0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07",
+        "recipient": "0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07",
+        "relayFee": "0",
+        "token": "0x0000000000000000000000000000000000000000",
+        "tx": "0xff54c957d336b2054c48e6c769f67dff5bf2588849e1ed35552115e2fdfaf42e"
+      }
+    ],
+    "feesCollected": {
+      "amount": "2000000000000",
+      "event": "fees-collected",
+      "t": 1794556074,
+      "token": "0x0000000000000000000000000000000000000000",
+      "tx": "0xb4b99277b9bc7e3e33ebce903d5091eaf5dcceb16cfa6dbcb3f9bef026d72f4e"
+    }
+  },
+  "replay": {
+    "daemon": "refused: NOut 0x6b5ec36ee357ba03fad0f9bb4afe4ef32c424722cd6c52131f48beffe1886414 is already released",
+    "vault": "server returned an error response: error code 3: execution reverted: custom error 0xcad2ae02, data: \"0xcad2ae02\""
+  },
+  "status": {
+    "balanceWei": "100001997999936065760",
+    "candidates": [],
+    "checkpoints": "1",
+    "drops": 0,
+    "event": "status",
+    "finalState": "0xe7a78c0f11ae4bc105b720873c2c5ef65ffd602697ff8843d3907be3b35e98bd",
+    "owedWei": "0",
+    "t": 1794556074
+  },
+  "tamperedReleases": [
+    {
+      "ethCall": "server returned an error response: error code 3: execution reverted: custom error 0x439cc0cd, data: \"0x439cc0cd\"",
+      "refused": true,
+      "what": "relayer and fee redirected to the misbehaving relayer"
+    },
+    {
+      "ethCall": "server returned an error response: error code 3: execution reverted: custom error 0x439cc0cd, data: \"0x439cc0cd\"",
+      "refused": true,
+      "what": "recipient redirected"
+    },
+    {
+      "ethCall": "server returned an error response: error code 3: execution reverted: custom error 0x439cc0cd, data: \"0x439cc0cd\"",
+      "refused": true,
+      "what": "fee raised"
+    }
+  ]
+}

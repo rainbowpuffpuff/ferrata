@@ -1,0 +1,3 @@
+{"chainId":1,"configId":"0x4b87fc2d51de184bb82f98a16e8cb06b328f39c7b1c084d8e633bddf167a9608","event":"start","finalState":"0x4a45f91d9d1813c021a820c7240aa56425e3906e1e956685b96b37e4f2543ac7","gasDrops":false,"importEvery":3600,"importRoots":true,"relayer":"0xea03e9e355d79f0cdfe7ccb38ff094eeb17f8388","t":1794555987,"vault":"0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9","zone":"devnet"}
+{"accounts":3,"applied":true,"block":9,"blockHash":"0xfc072852270553e6d5b884f4a9364c93b312603c7194a2105ec4f8db030cace5","event":"root-imported","leafCount":4,"previous":3,"recordSlot":9000256,"root":"0x87d74148d961c9fa4c8e3f1350f42c598270471119f46f3f7e3695dd708efa2d","t":1794555995,"tx":"devnet block 6","vaultCount":4}
+{"event":"stop","reason":"SIGTERM","rounds":8,"t":1794555995}

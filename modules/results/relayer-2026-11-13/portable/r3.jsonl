@@ -1,0 +1,2 @@
+{"chainId":1,"configId":"0x4b87fc2d51de184bb82f98a16e8cb06b328f39c7b1c084d8e633bddf167a9608","event":"start","finalState":"0x4a45f91d9d1813c021a820c7240aa56425e3906e1e956685b96b37e4f2543ac7","gasDrops":false,"importEvery":0,"importRoots":true,"relayer":"0xbe4e721403638d7e029030ebaad044f4a5e52076","t":1794556083,"vault":"0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9","zone":"devnet"}
+{"event":"stop","reason":"rounds","rounds":1,"t":1794556083}

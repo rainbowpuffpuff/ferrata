@@ -1,0 +1,2 @@
+lgx-ferrata_relayer_module/logos-ferrata_relayer_module-module-lib.lgx 14318774 b4d8fdc53ad3791d1326c0c3da167ab5040a04f63901825ef88143da1551b3f0
+lgx-portable-ferrata_relayer_module/logos-ferrata_relayer_module-module-lib.lgx 17477514 a9bce9fb03a23fffd844aca9744b38be6a491e05e8db18bcd2dfeb3a7d090938

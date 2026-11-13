@@ -1,0 +1,2 @@
+Package structure is valid: spike/tmp/relayer-module/release/dist/ferrata_relayer_module-v0.1.0/ferrata_relayer_module-0.1.0.lgx
+Package is unsigned

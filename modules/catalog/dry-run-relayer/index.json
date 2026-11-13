@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 2,
+  "repositoryName": "ferrata-modules",
+  "generatedAt": "2026-11-13T07:51:50Z",
+  "packages": [
+    {
+      "name": "ferrata_relayer_module",
+      "versions": [
+        {
+          "releasedAt": "2026-11-13T07:51:47Z",
+          "publisherRef": "ferrata_relayer_module-v0.1.0",
+          "url": "http://127.0.0.1:18546/ferrata_relayer_module-v0.1.0/ferrata_relayer_module-0.1.0.lgx",
+          "size": 17477284,
+          "sha256": "548aa82216d6c82fc648e29021bf320c4f5ea786670d45c3b12c94ccad901159",
+          "rootHash": "79b8c70ad51c5770624284024f9d09bdff815a29f830ef4d465693fb6d16a361",
+          "manifest": {
+            "author": "",
+            "category": "bridge",
+            "dependencies": [],
+            "description": "Ferrata (prototype): ferrata-relayer as a module: imports the vault's deposit roots on LEZ (ImportRoot under the newest record of the configuration's light client, built and dry-run with the bridge module's code), submits rule (B) checkpoints and finalises them, relays and wraps users' releases for its fee, collects its fees and watches the zone's burns, as a loop under Logos Core or for a given number of rounds",
+            "display_name": "Ferrata relayer",
+            "hashes": {
+              "assets": "9eb23d2680e2c8dd27b622097969dd7bcae325955c1f05842a6fbf8bbab66a93",
+              "root": "79b8c70ad51c5770624284024f9d09bdff815a29f830ef4d465693fb6d16a361",
+              "variants": "9e93e382d7a68b7a5bf1e253ed2c139d21a13498f7f6f0b44d086948216a6c5f",
+              "variants/linux-amd64": "2f82ed44e95944f7d96ab058c92618607179cf4c2c9ae7dd6aedbeea07a06688"
+            },
+            "icon": "",
+            "main": {
+              "linux-amd64": "ferrata_relayer_module_plugin.so"
+            },
+            "manifestVersion": "0.7.0",
+            "name": "ferrata_relayer_module",
+            "type": "core",
+            "version": "0.1.0"
+          },
+          "urls": [
+            "http://127.0.0.1:18546/ferrata_relayer_module-v0.1.0/ferrata_relayer_module-0.1.0.lgx"
+          ]
+        }
+      ]
+    }
+  ]
+}
