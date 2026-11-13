@@ -1,0 +1,13 @@
+
+## eth_rpc_module chain 31337 = anvil
+{"method":"set_chain_config","module":"eth_rpc_module","result":true,"status":"ok"}
+
+## eth_rpc_module block_number
+{"method":"block_number","module":"eth_rpc_module","result":"{\"ok\":true,\"result\":\"0x0\",\"route\":\"direct\"}","status":"ok"}
+
+## tx_sender_module prepare
+{"code":"MODULE_NOT_LOADED","message":"Module 'tx_sender_module' is not loaded. Load it with: logosctl module load tx_sender_module","status":"error"}
+
+## keystore_module caller_identity
+{"code":"MODULE_NOT_LOADED","message":"Module 'keystore_module' is not loaded. Load it with: logosctl module load keystore_module","status":"error"}
+caller identity: unknown

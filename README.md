@@ -295,10 +295,12 @@ The design notes specify these; there is no code for them here:
   Sepolia, `modules/results/relayer-2026-11-13/`); the watchers' `monitor`'s client of the LEZ and Logos Blockchain nodes' RPCs (the
   program and its Logos module are built, `monitor/`, `modules/ferrata_monitor_module`; node views come through
   an adapter); the attestation side's `monitor` (records against several providers; the weak-subjectivity alarm);
-- in the Logos modules (`modules/README.md`, "Left out"): reads and transactions through Logos Core's
-  own modules (`eth_rpc_module`, `verified_proxy_module`, `keystore_module`, `tx_sender_module`,
-  `lez_core`; the modules read plain `http://` JSON-RPC and build messages without signing or sending
-  them; the private claim's private execution and proof are the LEZ wallet's: the module builds and checks
+- in the Logos modules (`modules/README.md`, "Left out"; [`modules/LOGOS-CORE-MODULES.md`](modules/LOGOS-CORE-MODULES.md)):
+  transactions through Logos Core's own modules (`keystore_module`, `tx_sender_module`, `lez_core`: the
+  modules build messages without signing or sending them; with our builder pin `keystore_module` does not
+  build, and `lez_core` pins LEZ v0.3.1), verified reads (`verified_proxy_module`: public networks only, no
+  `eth_getProof`), beacon data through `beacon_api_module` (the attestation module's Ethereum reads and the
+  bridge module's `import_root` go through `eth_rpc_module`, row 108); the private claim's private execution and proof are the LEZ wallet's: the module builds and checks
   `ClaimPrivately`; the release's Groth16 wrap is the relayer's), and a published catalog (laid out,
   dry-run and installed from on 127.0.0.1 in `modules/catalog/`); the A3 gate's three daemons on a running
   sequencer (`ferrata-updater` is built as a binary and as a Logos module that drives the same daemon with either

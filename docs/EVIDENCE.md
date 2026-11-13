@@ -188,7 +188,8 @@ side is a devnet we ran (LEZ testnet 0.4 does not exist).
   (the three daemons are built as Logos modules, rows 94–98; the updater module carries both backends and followed
   Sepolia on a crown zone inside a headless Logos Core, row 104; the binary followed it for eight hours, row 99),
   the monitor's client of the LEZ and Logos Blockchain nodes' RPCs, the mini-app's private round trip
-  through a LEZ sequencer, reads and sends through Logos Core's own modules, a published module catalog. Nothing is audited: the static
+  through a LEZ sequencer, sends and verified reads through Logos Core's own modules (the attestation and
+  bridge modules' Ethereum reads go through `eth_rpc_module`, rows 108–110), a published module catalog. Nothing is audited: the static
   analysis, symbolic checks, fuzzing and the core's review (rows 1, 35, 36 and 40) are tooling, not an audit; the
   Halmos properties hold from one concrete fixture state within stated bounds; of the four not proven in 900 s,
   one passed with 4,800 s in its generic layout and three did not finish

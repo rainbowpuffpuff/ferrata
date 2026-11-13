@@ -1,12 +1,28 @@
 # Logos modules: results
 
-Runs, newest first: the updater module with its sequencer backend, on a running LEZ sequencer inside a headless
+Runs, newest first: Ethereum reads through Logos Core's own `eth_rpc_module` (13 November), the updater module with its sequencer backend, on a running LEZ sequencer inside a headless
 Logos Core (13 November), the relayer as the sixth module (13 November: root imports in `ferrata-relayer` and
 `ferrata_relayer_module`), the five modules after the merge of `updater-live` (13 November: the updater's
 sequencer backend, `headers` sources and `finish_own_jobs` on the daemon the updater module drives), the
 five modules after the merge of the two branches of 12 November (12–13 November, at the merged commit), the three daemons as modules and completing the attestation and bridge
 modules (those two branches, each run on its own), the attestation and bridge modules (11 November), the
 attestation module's prototype (10 November).
+
+## Ethereum reads through Logos Core's `eth_rpc_module`, 13 November 2026
+
+[`results/logos-core-io-2026-11-13/`](results/logos-core-io-2026-11-13/) (Modal build box, `scripts/logos-io.sh`;
+what the Logos modules are: [LOGOS-CORE-MODULES.md](LOGOS-CORE-MODULES.md)). Logos Core's modules built from
+their sources with our builder pin: `eth_rpc_module` (its two optional dependencies called by name),
+`beacon_api_module`, `fee_module`, `signer_manager_module`, `tx_sender_module`; `keystore_module` does not
+build with that pin (its install stops on its interface contract), so the send stack does not load. In one
+headless Logos Core with `eth_rpc_module` beside them, the attestation and bridge modules read Ethereum
+through it (`raw_rpc`, called by name from inside the module; plain HTTP kept as the fallback):
+`fetch_log_proof` twice and the storage proof twice, each equal to the same read over plain HTTP, then `e2e.sh`
+43/43 on those replies; `import_root` reading the vault's `eth_getProof` through it, equal to the reply to the
+proofs given (`importable`, n = 3), `bridge_e2e.sh` 24/24. `check.sh` for the two modules: 0 step and 0
+check failures. Not shown: verified reads (`verified_proxy_module`: public networks only, no `eth_getProof`),
+sends (`keystore_module`), the updater's beacon data through `beacon_api_module`, LEZ through `lez_core`
+(v0.3.1).
 
 ## The updater module on a running LEZ sequencer, 13 November 2026
 

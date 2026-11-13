@@ -18,7 +18,10 @@
 
 use std::fmt::Write as _;
 
+mod rpc;
 mod wallet;
+
+pub use rpc::{set_eth_rpc_module, EthRpcModuleCall};
 
 use ferrata_bridge_core::{
     chain_id_u256,

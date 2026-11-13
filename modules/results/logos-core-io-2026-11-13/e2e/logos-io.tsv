@@ -1,0 +1,5 @@
+name	via	routes	equal_to_plain
+fetch_transfer	eth_rpc_module	["direct","direct"]	true
+fetch_largest_receipt	eth_rpc_module	["direct","direct"]	true
+dry_storage	eth_rpc_module	["direct"]	true
+tx_storage	eth_rpc_module	["direct"]	true

@@ -20,6 +20,14 @@
 #   CALL=logosctl LOGOSCTL=BIN SESSION=DIR modules/scripts/e2e.sh OUT_DIR
 #                                                      through a running Logos Core daemon in which
 #                                                      both modules are loaded
+#   CALL=logosctl ETH_VIA=eth_rpc_module ... e2e.sh OUT_DIR
+#                                                      the attestation module reads Ethereum (the block,
+#                                                      its receipts, the storage proof) through Logos
+#                                                      Core's own eth_rpc_module, loaded in the same
+#                                                      daemon (its chain 1 set to the recorded server),
+#                                                      instead of over plain HTTP; each such read is made
+#                                                      on the plain path too (NAME_plain) and the two
+#                                                      replies compared in logos-io.tsv
 # Needs: the call examples (native) or logosctl, cargo (the harness), python3, jq.
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
@@ -29,6 +37,7 @@ out=$(cd "$1" && pwd)
 rm -rf "$out/req" "$out/rep"
 mkdir -p "$out/req" "$out/rep"
 CALL=${CALL:-native}
+ETH_VIA=${ETH_VIA:-http}
 # A port of its own per run, so that two runs on one machine do not collide.
 PORT=${PORT:-$((20000 + $$ % 20000))}
 FIXTURE="$repo/crates/ferrata-spectests/fixtures/mainnet-attest-2026-11-10"
@@ -57,13 +66,32 @@ req() { cat > "$out/req/$1.json"; }
 rep() { cat "$out/rep/$1.json"; }
 
 printf 'name\tmodule\tmethod\tseconds\n' > "$out/timings.tsv"
-echo "call mode: $CALL" > "$out/mode.txt"
+echo "call mode: $CALL; Ethereum read via: $ETH_VIA" > "$out/mode.txt"
 
 python3 -I "$here/recorded_rpc.py" "$FIXTURE" "$PORT" "$out/rpc.log" &
 rpc_pid=$!
 trap 'kill $rpc_pid 2>/dev/null || true' EXIT
 : > "$out/rpc.log"
 for _ in $(seq 1 100); do (echo > "/dev/tcp/127.0.0.1/$PORT") 2>/dev/null && break; sleep 0.1; done
+
+# Where the module reads Ethereum (a jq object member): plain HTTP, or Logos Core's eth_rpc_module.
+plain="{rpc_url: \"http://127.0.0.1:$PORT\"}"
+eth=$plain
+if [ "$ETH_VIA" = eth_rpc_module ]; then
+  eth='{eth: {via: "eth_rpc_module", chain_id: 1}}'
+  "$LOGOSCTL" --config-dir "$SESSION" call eth_rpc_module set_chain_config 1 \
+    "{\"endpoint\":\"http://127.0.0.1:$PORT\",\"name\":\"recorded mainnet\"}" --json < /dev/null > "$out/rep/eth_rpc_chain.raw" 2>&1
+  "$LOGOSCTL" --config-dir "$SESSION" call eth_rpc_module get_chain_config 1 --json < /dev/null > "$out/rep/eth_rpc_chain_get.raw" 2>&1
+  printf 'name\tvia\troutes\tequal_to_plain\n' > "$out/logos-io.tsv"
+fi
+# same NAME: NAME's reply (eth_rpc_module) and NAME_plain's (plain HTTP), less what names the path, compared.
+same() {
+  local eq
+  eq=$(jq -n --slurpfile a "$out/rep/$1.json" --slurpfile b "$out/rep/$1_plain.json" \
+    '($a[0] | del(.eth, .rpc_calls)) == ($b[0] | del(.eth, .rpc_calls)) and ($a[0] | has("eth"))')
+  printf '%s\t%s\t%s\t%s\n' "$1" "$(jq -r '.eth.via // "none"' "$out/rep/$1.json")" \
+    "$(jq -c '.eth.routes // []' "$out/rep/$1.json")" "$eq" >> "$out/logos-io.tsv"
+}
 
 harness info > "$out/rep/info.json"
 info() { jq -c "$1" "$out/rep/info.json"; }
@@ -76,8 +104,13 @@ call ferrata_attest_module read_instance read_instance
 # One log case: NAME and the fetch selector (JSON object members).
 log_case() {
   local name=$1 select=$2
-  jq -n --arg url "http://127.0.0.1:$PORT" --argjson block "$block" "{rpc_url: \$url, block: \$block} + $select" | req "fetch_$name"
+  jq -n --argjson block "$block" "{block: \$block} + $eth + $select" | req "fetch_$name"
   call ferrata_attest_module fetch_log_proof "fetch_$name"
+  if [ "$ETH_VIA" = eth_rpc_module ]; then
+    jq -n --argjson block "$block" "{block: \$block} + $plain + $select" | req "fetch_${name}_plain"
+    call ferrata_attest_module fetch_log_proof "fetch_${name}_plain"
+    same "fetch_$name"
+  fi
   jq -n --argjson i "$(rep info)" --argjson f "$(rep "fetch_$name")" \
     '{chain_id: $i.chain_id, record: $i.record, log: $f.log}' | req "dry_$name"
   call ferrata_attest_module dry_run_attest "dry_$name"
@@ -98,6 +131,23 @@ log_case largest_receipt '{block_log_index: 7}'
 # A storage slot: WETH's balance slot of the fixture's holder, with the eth_getProof response the
 # fixture recorded for the block (the storage path of build_attest_tx: one account, one slot).
 weth_slot=$(jq -r .weth_balance_slot "$FIXTURE/fixture.json")
+if [ "$ETH_VIA" = eth_rpc_module ]; then
+  # The module reads eth_getProof itself (at the record's block for the dry run, at `block` for the
+  # message), through eth_rpc_module and, for the comparison, over plain HTTP.
+  weth=$(jq -r '(.result // .).address' "$FIXTURE/proof_weth_$block.json")
+  for v in "" _plain; do
+    e=$eth; [ -z "$v" ] || e=$plain
+    jq -n --argjson i "$(rep info)" --arg a "$weth" --arg slot "$weth_slot" \
+      "{chain_id: \$i.chain_id, record: \$i.record, storage: ({address: \$a, slot: \$slot} + $e)}" | req "dry_storage$v"
+    call ferrata_attest_module dry_run_attest "dry_storage$v"
+    jq -n --argjson i "$(rep info)" --arg a "$weth" --arg slot "$weth_slot" --argjson block "$block" \
+      "{program_id: \$i.program_id, instance_id: \$i.instance_id, chain_id: \$i.chain_id, slot: \$i.finalized_slot,
+        storage: ({address: \$a, slot: \$slot, block: \$block} + $e)}" | req "tx_storage$v"
+    call ferrata_attest_module build_attest_tx "tx_storage$v"
+  done
+  same dry_storage
+  same tx_storage
+else
 jq -n --argjson i "$(rep info)" --slurpfile p "$FIXTURE/proof_weth_$block.json" --arg slot "$weth_slot" \
   '{chain_id: $i.chain_id, record: $i.record, storage: {get_proof: ($p[0].result // $p[0]), slot: $slot}}' | req dry_storage
 call ferrata_attest_module dry_run_attest dry_storage
@@ -105,6 +155,7 @@ jq -n --argjson i "$(rep info)" --slurpfile p "$FIXTURE/proof_weth_$block.json" 
   '{program_id: $i.program_id, instance_id: $i.instance_id, chain_id: $i.chain_id, slot: $i.finalized_slot,
     storage: {get_proof: ($p[0].result // $p[0]), slot: $slot}}' | req tx_storage
 call ferrata_attest_module build_attest_tx tx_storage
+fi
 harness attest "$(jq -r .message "$out/rep/tx_storage.json")" "$(jq -r .account "$out/rep/tx_storage.json")" > "$out/rep/exec_storage.json"
 jq -n --argjson i "$(rep info)" --argjson d "$(rep dry_storage)" --argjson e "$(rep exec_storage)" \
   '{selector: "0x4652542d41545431", event_data: $e.event_data, expected_ids: $d.ids, expected_instance_id: $i.instance_id}' | req read_storage

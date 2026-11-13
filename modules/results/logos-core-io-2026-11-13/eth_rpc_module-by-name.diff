@@ -1,0 +1,94 @@
+diff --git a/metadata.json b/metadata.json
+index 90f342f..ceb62d8 100644
+--- a/metadata.json
++++ b/metadata.json
+@@ -9,18 +9,25 @@
+   "category": "wallet",
+   "main": "eth_rpc_module_plugin",
+   "dependencies": [],
+-  "optional_dependencies": [
+-    "modules_state",
+-    { "name": "verified_proxy_module", "version": "~0.2.0" }
+-  ],
++  "optional_dependencies": [],
+   "include": [],
+   "capabilities": [],
+   "codegen": {
+-    "rust": { "crate": "rust-lib", "trait": "EthRpcModule", "source": "src/glue.rs" }
++    "rust": {
++      "crate": "rust-lib",
++      "trait": "EthRpcModule",
++      "source": "src/glue.rs"
++    }
+   },
+   "nix": {
+     "external_libraries": [],
+-    "packages": { "build": [], "runtime": [] },
+-    "cmake": { "find_packages": [], "extra_include_dirs": [] }
++    "packages": {
++      "build": [],
++      "runtime": []
++    },
++    "cmake": {
++      "find_packages": [],
++      "extra_include_dirs": []
++    }
+   }
+ }
+diff --git a/rust-lib/src/glue.rs b/rust-lib/src/glue.rs
+index 6d22beb..78d835c 100644
+--- a/rust-lib/src/glue.rs
++++ b/rust-lib/src/glue.rs
+@@ -198,10 +198,10 @@ impl GateProbe for VerifiedProxyRouter {
+     /// not `is_ready`: a bool cannot separate "not loaded" from "the registry has nothing to
+     /// say", and only the listing carries `partial`.
+     fn readiness(&self) -> Readiness {
+-        let listing = modules_state::ModulesStateClient::new()
+-            .list_modules_with_timeout(MODULES_STATE_BUDGET)
+-            .ok()
+-            .map(|l| l.to_json());
++        let listing = LogosModuleSDK::new()
++            .plugin("modules_state")
++            .call_json_with_timeout("list_modules", &json!([]), MODULES_STATE_BUDGET)
++            .ok();
+         classify_readiness(listing.as_ref())
+     }
+ 
+@@ -209,18 +209,19 @@ impl GateProbe for VerifiedProxyRouter {
+     /// rather than a {success,value,error} envelope. Reading `value.state` here would silently
+     /// see nothing and call every healthy proxy unusable.
+     fn proxy_status(&self) -> std::result::Result<Value, String> {
+-        verified_proxy_module::VerifiedProxyModuleClient::new()
+-            .status_with_timeout(PROBE_BUDGET)
++        LogosModuleSDK::new()
++            .plugin(PROXY_MODULE)
++            .call_json_with_timeout("status", &json!([]), PROBE_BUDGET)
+             .map_err(|e| format!("{e:?}"))
+     }
+ 
+     /// Only ever after a failed probe, where it can sharpen the reason but never veto.
+     fn module_record(&self) -> Option<Value> {
+-        modules_state::ModulesStateClient::new()
+-            .module_record_with_timeout(PROXY_MODULE, MODULES_STATE_BUDGET)
++        LogosModuleSDK::new()
++            .plugin("modules_state")
++            .call_json_with_timeout("module_record", &json!([PROXY_MODULE]), MODULES_STATE_BUDGET)
+             .ok()
+-            .flatten()
+-            .map(|r| r.to_json())
++            .filter(|r| !r.is_null())
+     }
+ }
+ 
+@@ -243,8 +244,9 @@ impl VerifiedRouter for VerifiedProxyRouter {
+                 budget.as_millis()
+             )));
+         };
+-        let raw = verified_proxy_module::VerifiedProxyModuleClient::new()
+-            .rpc_with_timeout(method, params, left)
++        let raw = LogosModuleSDK::new()
++            .plugin(PROXY_MODULE)
++            .call_json_with_timeout("rpc", &json!([method, params]), left)
+             .map_err(|e| RouterError::Failed(format!("{method} failed ({e:?})")))?;
+ 
+         // `rpc` IS declared `-> result`, so this one DOES carry the envelope. The two methods

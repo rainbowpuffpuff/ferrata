@@ -42,8 +42,9 @@ pub trait FerrataBridgeModule: Send + 'static {
     /// guest's ELF), its journal checked against the native one; the tool's `release --prove`. JSON.
     fn prove_release(&mut self, request: String) -> String;
 
-    /// The relayer's `ImportRoot` of a deposit root from the vault's `eth_getProof` proofs, dry-run
-    /// with the attestation and bridge programs' own functions when the record is given. JSON.
+    /// The relayer's `ImportRoot` of a deposit root from the vault's `eth_getProof` proofs (given, or
+    /// read at `block` through Logos Core's `eth_rpc_module` or a plain endpoint), dry-run with the
+    /// attestation and bridge programs' own functions when the record is given. JSON.
     fn import_root(&mut self, request: String) -> String;
 
     /// The bridge program's registry as LEZ holds it (`token(cid, token)`, `config(cid)`,
@@ -56,6 +57,26 @@ pub trait FerrataBridgeModule: Send + 'static {
 
 // The builder injects the generated scaffold here: `install`, `RustModuleContext`, `context()`.
 include!(concat!(env!("CARGO_MANIFEST_DIR"), "/generated/provider_gen.rs"));
+
+/// Logos Core's `eth_rpc_module.raw_rpc(chain_id, method, params_json)`, called by name through the SDK
+/// (`PluginProxy::call_json_with_timeout`, what a generated client does inside). The module is not
+/// declared a dependency: with logos-module-builder 5f74cdb a declared optional dependency's contract
+/// fails to install (modules/LOGOS-CORE-MODULES.md), and the module must keep working without it.
+/// The calls crate uses it when a request says `"eth": {"via": "eth_rpc_module", "chain_id": N}`.
+fn eth_rpc_module_raw_rpc(chain_id: i64, method: &str, params: &str, timeout_ms: u64) -> Result<String, String> {
+    let v = logos_rust_sdk::LogosModuleSDK::new()
+        .plugin("eth_rpc_module")
+        .call_json_with_timeout(
+            "raw_rpc",
+            &serde_json::json!([chain_id, method, params]),
+            std::time::Duration::from_millis(timeout_ms.max(1)),
+        )
+        .map_err(|e| format!("eth_rpc_module.raw_rpc did not answer: {e:?}"))?;
+    Ok(match v {
+        serde_json::Value::String(s) => s,
+        other => other.to_string(),
+    })
+}
 
 #[derive(Default)]
 struct FerrataBridge;
@@ -111,5 +132,6 @@ impl FerrataBridgeModule for FerrataBridge {
 
 #[no_mangle]
 pub extern "Rust" fn logos_module_install() {
+    ferrata_bridge_calls::set_eth_rpc_module(eth_rpc_module_raw_rpc);
     install::<FerrataBridge>();
 }

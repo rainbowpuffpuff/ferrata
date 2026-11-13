@@ -1,0 +1,7 @@
+e732d54c17e53c60f24764dd137bf62afadd91de12e74d42e4f1c26b8e91bbfd  modules/out/logos-io/lgx-beacon_api_module/logos-beacon_api_module-module-lib.lgx
+8416b4cb1e7c8d77ed9fa8d6d4b1c02776b761999d5ab35813addc1986787a34  modules/out/logos-io/lgx-eth_rpc_module/logos-eth_rpc_module-module-lib.lgx
+f7071357549cfa6f82585c087d6785568f58817719a36dcd004ed1ea6eca4411  modules/out/logos-io/lgx-fee_module/logos-fee_module-module-lib.lgx
+8abdf2264dd9a426e3894a13d0b38dd476398e54e73809ed3d804bfce93946ea  modules/out/logos-io/lgx-signer_manager_module/logos-signer_manager_module-module-lib.lgx
+ad5318411c153ad972b36c2061e27a21e4ce209c93974f9904dd28b49418276a  modules/out/logos-io/lgx-tx_sender_module/logos-tx_sender_module-module-lib.lgx
+543b091c07fb545da5a5e9c4d25410bb6ea5c5423012623daaed5cd2245b1099  modules/out/logos-io/check/lgx-ferrata_attest_module/logos-ferrata_attest_module-module-lib.lgx
+00fd8d502db6365aeca2880dbb3fa7e11311b7c8dcff4112ca3ad2caccd39f3d  modules/out/logos-io/check/lgx-ferrata_bridge_module/logos-ferrata_bridge_module-module-lib.lgx
