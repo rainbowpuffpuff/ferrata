@@ -30,7 +30,7 @@
       "find_packages": [],
       "extra_sources": [],
       "extra_include_dirs": [],
-      "extra_link_libraries": ["pcsclite"]
+      "extra_link_libraries": []
     }
   }
 }

@@ -15,4 +15,8 @@ endif()
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/metadata.json" METADATA_JSON)
 string(JSON MODULE_NAME GET ${METADATA_JSON} name)
 
-logos_module(NAME ${MODULE_NAME})
+# The sequencer backend links LEZ's wallet, whose keycard support calls PC/SC (pcsc-sys: libpcsclite, a shared
+# library the Rust static library leaves undefined). logos_module's LINK_LIBRARIES come after the Rust archive on the
+# link line; metadata.json's nix.packages.runtime puts pcsclite in the build. (The builder at the pinned revision reads
+# nix.cmake.extra_link_libraries but does not pass it on.)
+logos_module(NAME ${MODULE_NAME} LINK_LIBRARIES pcsclite)
