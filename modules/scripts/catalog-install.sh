@@ -71,11 +71,12 @@ for m in ${MODULES:-ferrata_attest_module ferrata_bridge_module ferrata_attestor
 done
 run package ls
 # The installed modules at work: with CATALOG_E2E=1, attestor-e2e.sh through this daemon (the zone's
-# records, the attestor's loop against a node served over HTTP), and any further script named in
+# records, the attestor's loop against a node served over HTTP; CATALOG_E2E_SCRIPTS names others in its place,
+# for example relayer-e2e.sh with PARTS=roots), and any further script named in
 # CATALOG_E2E_MORE (run with CALL=logosctl LOGOSCTL SESSION set, an output directory as argument), for
 # example "updater-e2e.sh monitor-e2e.sh e2e.sh bridge_e2e.sh" (bridge_e2e.sh needs RELEASE_ELF).
 if [ "${CATALOG_E2E:-0}" = 1 ]; then
-  for s in attestor-e2e.sh ${CATALOG_E2E_MORE:-}; do
+  for s in ${CATALOG_E2E_SCRIPTS:-attestor-e2e.sh} ${CATALOG_E2E_MORE:-}; do
     echo "\$ CALL=logosctl $s" >> "$out/log.txt"
     if env -u SSL_CERT_FILE -u NIX_SSL_CERT_FILE CALL=logosctl LOGOSCTL="$ctl_bin" SESSION="$out/session" "$here/$s" "$out/${s%.sh}" \
         > "$out/${s%.sh}.log" 2>&1; then echo "ok: $s"; else echo "FAILED: $s"; fails=$((fails + 1)); fi

@@ -1573,7 +1573,7 @@ impl Devnet {
             .p
             .raw_request(
                 "eth_getProof".into(),
-                (self.vault, [hx(&word(0)), hx(&word(1))], format!("0x{number:x}")),
+                (self.vault, [hx(&crate::word(0)), hx(&crate::word(1))], format!("0x{number:x}")),
             )
             .await?;
         Ok(json!({

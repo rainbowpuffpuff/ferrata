@@ -15,8 +15,10 @@
 #           its message byte for byte ferrata_bridge_module's import_root for the same record and proofs (when the
 #           bridge module's call example is built); up to date: nothing sent; a third deposit not yet recorded:
 #           waiting; a record whose state root the proofs do not match: refused by the dry run with the code the
-#           bridge module's import_root gives, nothing sent; the next honest record: n = 3; then the daemon running
-#           (--poll-secs 1): a fourth deposit and its record imported while it runs, and a clean stop on SIGTERM
+#           bridge module's import_root gives, nothing sent; the next honest record: n = 3 (these rounds with
+#           --import-every 0); then the daemon running with the default cadence (--import-every 3600, --poll-secs 1):
+#           its period done, a fourth deposit and its record are not imported within the same hour of anvil's clock,
+#           and are once the clock passes into the next hour; a clean stop on SIGTERM
 #
 #   modules/scripts/relayer-e2e.sh OUT_DIR                                    the ferrata-relayer binary
 #   CALL=logosctl LOGOSCTL=BIN LGX=DIR modules/scripts/relayer-e2e.sh OUT_DIR  the module from the package in DIR
@@ -55,7 +57,10 @@ check() { # NAME CONDITION_COMMAND...
 }
 
 # The relayer: the binary, or the module through relayer-module.sh in a Logos Core of its own.
-(cd "$repo/cli" && cargo build --bin ferrata-relayer --example miniapp_devnet 2>&1 | tail -n 2)
+if ! (cd "$repo/cli" && cargo build --bin ferrata-relayer --example miniapp_devnet) > "$out/build.log" 2>&1; then
+  bad "build of ferrata-relayer and the devnet: $(grep -m 3 -E '^error' "$out/build.log" | tr '\n' ' ')"
+  exit 1
+fi
 if [ "$CALL" = logosctl ] && [ -z "${LGX:-}" ] && [ -n "${SESSION:-}" ]; then
   : "${LOGOSCTL:?}"
   export SESSION LOGOSCTL
@@ -131,9 +136,9 @@ if case " $PARTS " in *" roots "*) true ;; *) false ;; esac; then
     A=(--eth-rpc "http://127.0.0.1:$ANVIL_PORT" --vault "$VAULT" --chain-id 1
        --keystore "$out/devnet/keystore-relayer.json" --password-file "$out/devnet/password.txt"
        --state "$out/relayer-state" --lez-devnet "http://127.0.0.1:$PORT/rpc" --bridge-account "$PROGRAM" --import-roots)
-    # round NAME: one round of the relayer; its lines in rounds/NAME.jsonl
+    # round NAME: one round of the relayer (every round imports: --import-every 0); its lines in rounds/NAME.jsonl
     round() {
-      "$R" "${A[@]}" run --inbox "$out/inbox" --rounds 1 --poll-secs 0 > "$out/rounds/$1.jsonl" 2> "$out/rounds/$1.err"
+      "$R" "${A[@]}" --import-every 0 run --inbox "$out/inbox" --rounds 1 --poll-secs 0 > "$out/rounds/$1.jsonl" 2> "$out/rounds/$1.err"
       local rc=$?
       [ $rc = 0 ] || bad "round $1 exited $rc: $(head -c 300 "$out/rounds/$1.err")"
       return $rc
@@ -201,12 +206,27 @@ if case " $PARTS " in *" roots "*) true ;; *) false ;; esac; then
     check "roots: the next honest record: ImportRoot n = 3 applied ($(ev r6 root-imported | jq -c '{leafCount, previous, recordSlot}'))" \
       bash -c "[ \"\$(jq -s 'map(select(.event == \"root-imported\" and .leafCount == 3 and .previous == 2 and .applied == true)) | length' '$out/rounds/r6.jsonl')\" = 1 ] && jq -e '.imported == [2, 3]' '$out/rep/inputs6.json' > /dev/null"
 
-    # The daemon running: a deposit and its record while it polls, then SIGTERM.
-    "$R" "${A[@]}" run --inbox "$out/inbox" --poll-secs 1 > "$out/rounds/daemon.jsonl" 2> "$out/rounds/daemon.err" &
+    # The daemon running on the default cadence (one import per hour of Ethereum time), then SIGTERM.
+    anvil_time() { curl -s -H 'content-type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"eth_getBlockByNumber","params":["latest",false]}' \
+      "http://127.0.0.1:$ANVIL_PORT" | jq -r '.result.timestamp' | xargs printf '%d\n'; }
+    rm -f "$out/relayer-state/root-import.json"
+    "$R" "${A[@]}" --import-every 3600 run --inbox "$out/inbox" --poll-secs 1 > "$out/rounds/daemon.jsonl" 2> "$out/rounds/daemon.err" &
     d=$!
-    for _ in $(seq 1 240); do grep -q '"event":"start"' "$out/rounds/daemon.jsonl" 2>/dev/null && break; sleep 0.5; done
+    # Its first round finds nothing to import (n = 3 is): the period is done (kept in its state directory).
+    for _ in $(seq 1 240); do [ -s "$out/relayer-state/root-import.json" ] && break; sleep 0.5; done
+    period=$(jq -r .period "$out/relayer-state/root-import.json" 2>/dev/null)
     dev deposit3 deposit '{"kind":"private","denomination":0,"account":0}'
     dev fin4 lc.finalize
+    sleep 6
+    dev inputs7a module.inputs
+    same_hour=$(( $(anvil_time) / 3600 ))
+    if [ "$same_hour" = "$period" ]; then
+      check "roots: the cadence: a fourth deposit recorded within the hour of the last attempt (period $period) is not imported (imported $(imports inputs7a))" \
+        bash -c "jq -e '.imported == [2, 3]' '$out/rep/inputs7a.json' > /dev/null && [ \"\$(jq -s 'map(select(.event == \"root-imported\")) | length' '$out/rounds/daemon.jsonl')\" = 0 ]"
+    else
+      echo "skipped: the cadence's no-import check (anvil's clock passed into the next hour by itself)" | tee -a "$summary"
+    fi
+    dev advance advance_time '{"seconds":3600}'
     for _ in $(seq 1 240); do
       jq -e 'select(.event == "root-imported" and .leafCount == 4)' "$out/rounds/daemon.jsonl" > /dev/null 2>&1 && break
       sleep 0.5
@@ -215,7 +235,7 @@ if case " $PARTS " in *" roots "*) true ;; *) false ;; esac; then
     wait "$d"
     drc=$?
     dev inputs7 module.inputs
-    check "roots: the daemon running imports n = 4 while it polls; clean stop on SIGTERM (exit $drc, $(jq -s -c 'map(select(.event == "stop"))[0] | {rounds, reason}' "$out/rounds/daemon.jsonl"))" \
+    check "roots: the next hour of anvil's clock: the daemon imports n = 4; clean stop on SIGTERM (exit $drc, $(jq -s -c 'map(select(.event == "stop"))[0] | {rounds, reason}' "$out/rounds/daemon.jsonl"))" \
       bash -c "[ $drc = 0 ] && [ \"\$(jq -s 'map(select(.event == \"root-imported\" and .leafCount == 4)) | length' '$out/rounds/daemon.jsonl')\" = 1 ] && [ \"\$(jq -s -r 'map(select(.event == \"stop\"))[0].reason' '$out/rounds/daemon.jsonl')\" = SIGTERM ] && jq -e '.imported == [2, 3, 4]' '$out/rep/inputs7.json' > /dev/null"
 
     # The record of this part.

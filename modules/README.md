@@ -1,6 +1,6 @@
 # Logos modules
 
-The proposal (§B7) puts everything off chain in Logos modules. This directory holds five, prototypes,
+The proposal (§B7) puts everything off chain in Logos modules. This directory holds six, prototypes,
 built the way Logos modules are built, loaded together by a headless Logos Core and called there:
 `ferrata_attest_module` (eight methods: dry runs, checkpoint checks, an instance's state read back, a
 log or storage slot attested end to end: fetched over JSON-RPC, its `Attest` transaction built, the
@@ -8,11 +8,14 @@ program's event read back; and `advance`, an update's job planned with the updat
 `ferrata_bridge_module` (ten: deposit, claim (plaintext or private), burn, release (by the wallet's rule),
 prove_release, import_root, registry, recover, status), and the three daemons as modules:
 `ferrata_attestor_module` (rule (B)'s attestor beside a sequencer and its collector, `checkpoint/attestor`),
-`ferrata_monitor_module` (the watchers' `monitor`, `monitor/`) and `ferrata_updater_module` (the
-light-client updater `ferrata-updater`, `lez/updater`). Where the `ferrata` tool or the updater already
+`ferrata_monitor_module` (the watchers' `monitor`, `monitor/`), `ferrata_updater_module` (the
+light-client updater `ferrata-updater`, `lez/updater`) and `ferrata_relayer_module` (the relayer
+`ferrata-relayer`, `cli/`: root imports, rule (B) checkpoints and their finalisation, releases and their wrap,
+fees, the burn watch). Where the `ferrata` tool or the updater already
 has the logic, the module runs the same code: `ferrata-wallet` (`cli/wallet`) and `ferrata-advance`
 (`lez/advance`) are linked by the tool and the updater and by the modules (the updater module links
-`ferrata-advance` through the updater), and the daemon modules run the daemons' own libraries. `catalog/` lays out
+`ferrata-advance` through the updater; the relayer's root import is `ferrata-wallet`'s `import`, the bridge
+module's `import_root`), and the daemon modules run the daemons' own libraries. `catalog/` lays out
 the catalog that would release them with `logos-modules-release-action`. `RESULTS.md` records what ran.
 
 ```sh
@@ -22,9 +25,11 @@ RELEASE_ELF=... modules/scripts/bridge_e2e.sh OUT
                               # + the mini-app's devnet: root import, registry, private claims, the
                               # release rule, the release guest, releases on the vault (natively)
 modules/scripts/check.sh      # Linux x86-64 with Nix: the above, then build, package, load and call all
-                              # five modules in Logos Core (dev and portable), e2e.sh through the daemon
-                              # (BRIDGE_E2E=1 RELEASE_ELF=...: bridge_e2e.sh through it too), and the three
+                              # six modules in Logos Core (dev and portable), e2e.sh through the daemon
+                              # (BRIDGE_E2E=1 RELEASE_ELF=...: bridge_e2e.sh through it too), and the four
                               # daemons doing their jobs as modules (natively first)
+modules/scripts/relayer-e2e.sh OUT   # the relayer on its devnets: relayer_fork.rs (a fork of Sepolia) and root
+                              # imports on the mini-app's devnet (binary; CALL=logosctl: the module)
 modules/scripts/attestor-zone-live.sh BUNDLE OUT   # four Logos Cores beside a running zone of four sequencers
 ```
 
@@ -53,8 +58,9 @@ A Python client (`logos-logoscore-py`, `import logosctl`) drives the same daemon
 | `ferrata_attestor_module` | `ferrata_attestor_module/` | `version`, `keygen`, `pubkey`, `deployment`, `certify`, `tier`, `attest`, `verify`, `collect`, `assemble`, `base`; the loop: `start`, `status`, `stop` |
 | `ferrata_monitor_module` | `ferrata_monitor_module/` | `version`, `check`, `node_view`, `run`; the daemon: `start`, `status`, `stop` |
 | `ferrata_updater_module` | `ferrata_updater_module/` | `version`, `check_config`, `run`; the daemon: `start`, `status`, `metrics`, `stop` |
+| `ferrata_relayer_module` | `ferrata_relayer_module/` | `version`, `run`; the daemon: `start`, `status`, `stop` |
 
-All five are laid out the same way:
+All six are laid out the same way:
 
 - `metadata.json`, `flake.nix`, `flake.lock`, `CMakeLists.txt`: the builder's Rust template, with the builder pinned
   to the commit above.
@@ -85,6 +91,12 @@ All five are laid out the same way:
     guests risc0-build made for it on the build box (same constants, same bytes; `version()` reports the
     image id declared and the one computed from the bytes, and `updater-e2e.sh` checks both against
     [`docs/image-ids.md`](../docs/image-ids.md)). No guest is changed or rebuilt by the module builder.
+  - The relayer module (`scripts/stage-relayer.sh`): into `rust-lib/vendor/`, `cli/`'s library (its manifest
+    with only the package, dependencies, features and workspace; `src/` without the binaries) with `cli/wallet`,
+    the repository's crates they link (`lez/wire`, `lez/bridge-wire`, `crates/ferrata-core`,
+    `bridge/crates/ferrata-bridge-core`, with the workspace manifests they inherit from) and the LEZ v0.4.0-rc1 tree.
+    `cli/` is built without its `lez-wallet` feature: LEZ's wallet library links LEZ's node-side crates (RocksDB,
+    libp2p), which the module builder does not build; the module's LEZ side is the devnet's zone (below).
 - The programs' messages and states are the programs' own types (`BridgeMessage`, `Message`,
   `TokenState`, `RecordState`, ...), Borsh by their derives: the field-by-field encoders of the first
   versions are gone. The end-to-end tests also decode and execute them with the programs
@@ -103,7 +115,7 @@ as SIGTERM ends the binary, and the host unloading the module stops it the same 
 One-shot methods (`attest`, `collect`, `check`, `run` with a bound) block for their duration; logosctl's
 `--timeout` gives them longer than its 20 s default.
 
-**Calling convention (all five).** Each method takes one JSON string and returns one JSON string, so a call needs no type beyond
+**Calling convention (all six).** Each method takes one JSON string and returns one JSON string, so a call needs no type beyond
 `String` and the request can come from a file (`logosctl call ferrata_bridge_module claim @request.json`).
 Byte strings are `0x` hex; 64-bit integers are JSON numbers, decimal strings or `0x` quantities;
 `uint256` amounts are `0x` hex of at most 32 bytes or decimal strings, and are returned as 32-byte hex.
@@ -234,20 +246,55 @@ also serves those on that address.
 | `metrics()` | — | the Prometheus text of `/metrics` as the last round left it |
 | `stop()` | — | the daemon ended after the round in hand; its final status |
 
+### `ferrata_relayer_module`
+
+`ferrata-relayer` ([the operator guide](../docs/guides/operator-guide.md#6-the-relayer-and-the-wrapper) §6) as a
+module: the daemon is `ferrata_cli::relayerd`, the code the binary runs (moved into `cli/`'s library for this
+module), so the arguments, the rounds, the checks and the JSON lines are the binary's. `run` and `start` take the
+binary's arguments as a list (`{"args": [...]}`: the global options, then `run ...` or `status`) and parse them with
+its own parser; the lines the binary prints are returned (`run`) or kept (`start`, read with `status`). The
+relayer's Ethereum side is the binary's (alloy over the JSON-RPC endpoint `--eth-rpc` names; a keystore file and its
+password file, or `--unlocked` on a local anvil); its LEZ side is the mini-app devnet's zone (`--lez-devnet`, a
+stand-in: reads with `zone.applied` and `zone.actor_state`, calls sent with `module.submit`, which the devnet signs
+and settles in its LEZ harness); `--sequencer` is refused by this build (no LEZ wallet). Paths in the arguments are
+read by the module's process: give them absolute.
+
+| Method | Takes | Returns |
+|---|---|---|
+| `version()` | — | the module's version, what was staged (`STAGED.json`: the commit, the sources' SHA-256, LEZ's revision), `lez_wallet: false`, the zones it reaches, the method list |
+| `run(request)` | `args`: `ferrata-relayer`'s arguments ending in `run --rounds N` (N > 0) or `status` | `ok` (the binary's exit 0) or `error` (its exit 1, with the message it prints), and `events`: the lines it prints; `invalid_request` for arguments the binary's parser refuses, or a run without an end (that is `start`) |
+| `start(request)` | `args`: as `run`, ending in `run ...` (`--rounds` 0 or absent: until `stop`) | `started` once the daemon has set itself up (its `start` line: the endpoint read, the vault and chain checked, the zone reached), with its status; or its error |
+| `status(request)` | optional `since` (a line index) | `running`, how it ended (`exit` 0 or 1, `error`), the arguments, `events_total`, and the lines from `since` on (the newest 10,000 are kept) |
+| `stop(request)` | optional `reason` (default `stop`) and `since` | the daemon ends after the round in progress and logs `stop` with that reason (`scripts/relayer-module.sh` passes the signal it received, as the binary names its own); its final status |
+
+**Root imports** (`--import-roots`, also in the binary): in the first round of each `--import-every` period of
+Ethereum time (default 3,600 s; bridge.md §5.4: a fixed cadence, never in response to a deposit) the relayer reads
+`config(cid)`, the configuration's light-client instance (`instance(id)`: its store's finalized slot) and its
+record `header(id, slot)`, checks that its Ethereum endpoint's block at the record's number has the recorded hash,
+reads the vault's slots 0 and 1 there with `eth_getProof`, and when the count is above the newest imported one
+builds `ImportRoot` with `ferrata_wallet::import` (`import_proof`, `import_call`) and dry-runs it with the two
+programs' own functions (`dry_run_import`: the attestation program's `evaluate`, the bridge program's
+`check_import`) before sending it: the code `ferrata_bridge_module`'s `import_root` runs, so the relayer's message is
+byte for byte the module's for the same record and proofs (`relayer-e2e.sh` compares them). An import the programs
+would refuse is not sent (`root-import-refused` with the code); one sent is confirmed from `root(cid, n)`
+(`root-imported`). Lines: `root-imported`, `root-import-waiting` (no newer record covers the vault's deposits, or
+no instance or record yet), `root-import-refused`, `root-import-failed`, `root-import-closed` (sunset).
+
 ### Tests
 
 | Script | What it runs | Where |
 |---|---|---|
 | `scripts/native.sh` | stages the modules' crates, the calls crates' unit tests (`cargo test`), builds the `call` examples (default the four that need only cargo; `MODULES=...` adds the updater module, which needs the guests of `lez/methods` built) | any Linux with cargo |
-| `scripts/check.sh [OUT_DIR]` | the above, then the five modules built and packaged by logos-module-builder (dev `.lgx` and `.lgx-portable`), installed and loaded together in a headless Logos Core (`logosctl`, dev and portable builds), every one-shot method called (`requests.py`: 10 attest requests from the attestation fixtures; `bridge_requests.py`: 13 bridge requests from `bridge/vectors/*-v2.json`; `daemon_requests.py`: 24 requests for the three daemon modules, from the zone run's records, a node view and the lab record, the updater's configurations), each reply compared with the native reply and with what the request must produce; then `e2e.sh` and the three daemons' jobs (below) through the same daemon, each first run natively, and with `BRIDGE_E2E=1` `bridge_e2e.sh` too | Linux x86-64 with Nix, the RISC Zero toolchain of `lez/`, r0vm, Foundry (`RELEASE_ELF` for `BRIDGE_E2E=1`) |
+| `scripts/check.sh [OUT_DIR]` | the above, then the six modules built and packaged by logos-module-builder (dev `.lgx` and `.lgx-portable`), installed and loaded together in a headless Logos Core (`logosctl`, dev and portable builds), every one-shot method called (`requests.py`: 10 attest requests from the attestation fixtures; `bridge_requests.py`: 13 bridge requests from `bridge/vectors/*-v2.json`; `daemon_requests.py`: 29 requests for the four daemon modules, from the zone run's records, a node view and the lab record, the updater's configurations, the relayer's arguments), each reply compared with the native reply and with what the request must produce; then `e2e.sh` and the four daemons' jobs (below) through the same daemon (the relayer's in a Logos Core of its own), each first run natively, and with `BRIDGE_E2E=1` `bridge_e2e.sh` too | Linux x86-64 with Nix, the RISC Zero toolchain of `lez/`, r0vm, Foundry (`RELEASE_ELF` for `BRIDGE_E2E=1`) |
 | `scripts/e2e.sh OUT_DIR` | a log end to end: `recorded_rpc.py` serves the recorded mainnet block 26,384,851 over JSON-RPC; `fetch_log_proof` → `dry_run_attest` on the record read from the chain → `build_attest_tx` → `lez/harness`'s `module_e2e` decodes the bytes with the program's types and executes them in LEZ v0.4.0-rc1's state machine → `read_attestation`; two logs, two refusals (a tampered proof, another instance); `advance`: the same instance before its finality update, the update planned by the module, its `Open`, `Miller`, `Finish` executed in order, the instance compared with the one the harness's own job leaves, read back with `read_instance`, and the update again (no change); and the bridge module's `Burn` and `Claim` decoded by the bridge program's types (`CALL=logosctl` runs it through a Logos Core daemon) | Linux with cargo (and `logosctl`) |
 | `scripts/bridge_e2e.sh OUT_DIR` | the bridge module against the mini-app's devnet (`cli/examples/miniapp_devnet.rs`: the v5 vault on anvil, chain id 1, its verifier the vault tests' mock; the zone in the LEZ harness with the bridge program): two private deposits; `import_root` from a block the devnet records (its proofs in `eth_getProof`'s shape), dry-run and applied, and a wrong count refused by the dry run and by the program with the same code; `registry`; both deposits claimed privately (`claim` with state → `ClaimPrivately`, proven and settled privately by the devnet with the wallet's keys) and a second claim refused from the nullifier's state; two private burns, a checkpoint over the first (its delay passed) and one over both (in its delay): `release` by the rule picks the older root, refuses the newer burn until its root opens, then picks the newer; `prove_release`; both releases accepted by the vault; `status` (`CALL=logosctl` through a daemon) | Linux with cargo, Foundry, `RELEASE_ELF` (and `logosctl`) |
 | `scripts/attestor-e2e.sh OUT_DIR` | the attestor's job on the four-sequencer zone's records (`checkpoint/attestor/runs/zone`): tier, base, each sequencer's key, certificate and attestation (each equal to the run's), verify, collect 3 of 4 (the input the checkpoint program proved, byte for byte), 4 of 4, 2 of 4 refused, three refusals to sign; then the module's loop against a node served from the same answers over HTTP (`recorded_node.py`): 23 checks | Linux with cargo (and `logosctl`) |
 | `scripts/attestor-zone-live.sh BUNDLE OUT_DIR` | a running zone of four LEZ sequencers (`checkpoint/attestor/zone.sh`, the lab bundle) and four Logos Cores, one per sequencer, each running the attestor module's loop against the zone's node while it runs; then the module's collector | Linux x86-64, the lab bundle, `logosctl` |
 | `scripts/updater-e2e.sh OUT_DIR` | the updater's job on its tests' chain: the in-process LEZ v0.4.0-rc1 chain, the lab's recorded mainnet and Sepolia data, from the checkpoints to the lab's final roots (`start`, `status` until up to date, `metrics`, `stop` through Logos Core; `run` natively); the sequencer backend refused | Linux with cargo, r0vm (and `logosctl`) |
 | `scripts/monitor-e2e.sh OUT_DIR` | `monitor/tests/anvil-e2e.sh` (a local anvil chain, a v5 vault, scenarios S1–S11, A0–A4, R1–R4, the alerting check: 46 checks) with the binary, or with the module through `scripts/monitor-module.sh` (`CALL=logosctl`): S5's SIGKILL then kills the module's host process and the module is loaded again | Linux with cargo and Foundry (and `logosctl`) |
-| `scripts/release-local.sh OUT_DIR` | `logos-modules-release-action`'s steps for `linux-amd64`, locally, for the five modules, nothing published (`catalog/README.md`) | Linux x86-64 with Nix |
-| `scripts/catalog-install.sh RELEASE_DIR LOGOSCTL WORK_DIR` | a Logos Core installs the five modules from that catalog, served over HTTPS on 127.0.0.1: `catalog add`, `search`, `install`, `module load`, `call`; with `CATALOG_E2E=1` (and `CATALOG_E2E_MORE`), the daemons' jobs through the installed modules | Linux x86-64 with Nix |
+| `scripts/relayer-e2e.sh OUT_DIR` | the relayer's job on its devnets, with the binary (the reference) or the module (`CALL=logosctl`, `scripts/relayer-module.sh` in the binary's place, in a Logos Core of its own started without `RISC0_DEV_MODE`): `cli/tests/relayer_fork.rs` (an anvil fork of Sepolia at the block before `crown-live-1`'s `submitCandidate`, that run's real checkpoint and release proofs: the checkpoint, its finalisation after W, the releases, one wrapped from a succinct receipt, fees, refusals, `status`, a clean stop on SIGTERM); root imports on the mini-app's devnet (the light client's finality update stood in by the devnet's `lc.finalize`: anvil's newest block recorded, `instance(id)` moved to it; the proofs anvil's own `eth_getProof`): waiting without a light client, n = 2 imported and byte-equal to `ferrata_bridge_module`'s `import_root`, nothing sent when up to date, waiting for a later record, a record the proofs do not match refused with the bridge module's code and not sent, n = 3, and the daemon on the default cadence (no import within the hour, n = 4 in the next) stopped cleanly | Linux with cargo, Foundry, r0vm (and `logosctl`); the fork reads public Sepolia state |
+| `scripts/release-local.sh OUT_DIR` | `logos-modules-release-action`'s steps for `linux-amd64`, locally, for the six modules (`MODULES`; `DRY_RUN_DIR` for the record of some of them), nothing published (`catalog/README.md`) | Linux x86-64 with Nix |
+| `scripts/catalog-install.sh RELEASE_DIR LOGOSCTL WORK_DIR` | a Logos Core installs the six modules (`MODULES`) from that catalog, served over HTTPS on 127.0.0.1: `catalog add`, `search`, `install`, `module load`, `call`; with `CATALOG_E2E=1` (and `CATALOG_E2E_MORE`), the daemons' jobs through the installed modules | Linux x86-64 with Nix |
 
 Logos Core keeps each module's socket in `TMPDIR`; a Unix socket path holds 107 bytes, so the scripts
 that start a Logos Core refuse a `TMPDIR` (or `LOGOS_TMPDIR`) longer than 62 bytes.
@@ -286,6 +333,15 @@ that start a Logos Core refuse a `TMPDIR` (or `LOGOS_TMPDIR`) longer than 62 byt
 - **`ferrata_monitor_module`:** node views still come through the adapter (`file:`/`cmd:`): no client of
   the LEZ sequencer's or the Logos Blockchain node's RPC (`monitor/README.md`, "Not built"); one daemon
   per module instance.
+- **`ferrata_relayer_module`:** no LEZ wallet: its LEZ side is the mini-app devnet's zone (a stand-in over the
+  devnet's HTTP methods; the devnet signs and settles), not a sequencer; the binary keeps the sequencer path
+  (`--sequencer`, LEZ's wallet), which has not run with root imports (the crown runs imported their roots with
+  their own driver). Gas drops need a sequencer (the devnet's zone sends no native credit). On the devnet the light
+  client's finality update is the devnet's (`lc.finalize`): the record of anvil's block and `instance(id)` are
+  written into the harness's state, with as state root the root of the trie anvil's `eth_getProof` answers from.
+  A Gloas record (a block hash only) is waited on, not imported: the relayer does not fetch the block's header yet.
+  The Groth16 wrap runs RISC Zero's prover image through `--wrap-command` (on the build box a stub returning the
+  proof the image made on Modal, as in `relayer_fork.rs`).
 - **`ferrata_updater_module`:** only the in-process chain (`ledger = "harness"`, the updater's tests'
   chain, with `RISC0_DEV_MODE=1`): it lives in the module's process and ends with `stop`, so two updater
   modules cannot share a chain, and the cooperative A3 gate (two honest updaters and an adversary) stays

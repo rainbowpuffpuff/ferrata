@@ -4,10 +4,13 @@
 //! stops when it is asked to.
 //!
 //! One loop, every `--poll-secs`:
-//! 0. **Root imports** (with `--import-roots` and a zone). The newest record of the configuration's
-//!    light-client instance on LEZ, the vault's slots 0 and 1 at its block (`eth_getProof`), and, when
-//!    it covers deposits LEZ has not imported, `ImportRoot`, built and dry-run with `ferrata_wallet::import`
-//!    ([`relayer::plan_root_import`]) and sent; the import is confirmed from `root(cid, n)`.
+//! 0. **Root imports** (with `--import-roots` and a zone), on a fixed cadence (bridge.md §5.4): in the first
+//!    round of each `--import-every` period of Ethereum time, the newest record of the configuration's
+//!    light-client instance on LEZ, the vault's slots 0 and 1 at its block (`eth_getProof`), and, when it
+//!    covers deposits LEZ has not imported, `ImportRoot`, built and dry-run with `ferrata_wallet::import`
+//!    ([`relayer::plan_root_import`]) and sent; the import is confirmed from `root(cid, n)`. A period whose
+//!    attempt waits (no newer record yet) or fails is tried again in its next rounds; at most one import is
+//!    sent per period, whenever the deposits came (the period done is kept in `<state>/root-import.json`).
 //! 1. **Inbox.** Each `<inbox>/*.json` job ([`relayer::Job`]) handed over by a user who opts in, or by
 //!    the checkpoint prover: a release (journal and seal), a rule (B) checkpoint (journal and seal) or
 //!    a gas drop (receipt). Checked ([`relayer`]), then sent; the file moves to `<state>/done/` or
@@ -108,6 +111,10 @@ pub struct Cli {
     /// `import_root` runs). Needs a zone (--sequencer or --lez-devnet) and --bridge-account.
     #[arg(long, global = true)]
     pub import_roots: bool,
+    /// The root imports' period in seconds of Ethereum time: at most one import per period, tried from the first
+    /// round of each (a fixed cadence, never in response to a deposit). 0: every round (tests).
+    #[arg(long, default_value_t = 3600, global = true)]
+    pub import_every: u64,
     /// The Groth16 prover, run as `<command> <input.json> <proof.json>` (RISC Zero's prover image: Docker on
     /// x86, or a remote prover); with it the relayer wraps holders' succinct release receipts.
     #[arg(long, env = "FERRATA_WRAP_COMMAND", global = true)]
@@ -173,19 +180,35 @@ struct Daemon {
     wrap_command: Option<PathBuf>,
     /// `--import-roots`.
     import_roots: bool,
+    /// `--import-every` (seconds; 0: every round).
+    import_every: u64,
+    /// The period whose import is done (sent, or nothing to send).
+    import_done: Option<u64>,
     sink: Sink,
 }
 
 impl Daemon {
     async fn round(&mut self, inbox: &Path) -> Result<()> {
         let s = self.sink.clone();
-        // 0. Root imports: before the inbox, whose gas drops check the imported roots.
-        if self.import_roots {
-            if let Err(e) = self.import_root().await {
-                log(&s, "root-import-failed", json!({ "reason": format!("{e:#}") }));
+        let v = self.r.view(&self.p).await?;
+        // 0. Root imports, once per period: before the inbox, whose gas drops check the imported roots.
+        let period = if self.import_every == 0 { None } else { Some(v.now / self.import_every) };
+        if self.import_roots && (period.is_none() || period != self.import_done) {
+            match self.import_root().await {
+                Ok(true) => {
+                    if let Some(p) = period {
+                        // Kept in the state directory: a restart does not import twice in one period.
+                        std::fs::write(
+                            self.state.join("root-import.json"),
+                            serde_json::to_vec(&json!({ "every": self.import_every, "period": p }))?,
+                        )?;
+                    }
+                    self.import_done = period;
+                }
+                Ok(false) => {}
+                Err(e) => log(&s, "root-import-failed", json!({ "reason": format!("{e:#}") })),
             }
         }
-        let v = self.r.view(&self.p).await?;
         // 1. The inbox, in name order.
         let mut files: Vec<PathBuf> = match std::fs::read_dir(inbox) {
             Ok(dir) => dir
@@ -288,20 +311,27 @@ impl Daemon {
     }
 
     /// Step 0: the vault's newest deposit root on LEZ, under the newest record of the configuration's instance.
-    async fn import_root(&mut self) -> Result<()> {
+    /// `Ok(true)` when the period's import is done (sent and applied, or nothing to import, or closed).
+    async fn import_root(&mut self) -> Result<bool> {
         let s = self.sink.clone();
-        let Some((zone, ctx)) = self.zone.as_mut() else { return Ok(()) };
+        let Some((zone, ctx)) = self.zone.as_mut() else { return Ok(true) };
         let history = lez::history_of(&*zone, ctx).await?;
         let vault_count = eth::view(&self.p, self.r.vault, IVault::nextLeafIndexCall {}, None).await?;
         let imported = history.roots.iter().copied().max().unwrap_or(0);
-        match relayer::plan_root_import(&*zone, &self.p, ctx, &history, vault_count).await {
-            Ok(RootImport::UpToDate { .. }) => {}
-            Ok(RootImport::Waiting { reason, vault_count, imported }) => log(
-                &s,
-                "root-import-waiting",
-                json!({ "reason": reason, "vaultCount": vault_count, "imported": imported }),
-            ),
-            Ok(RootImport::Closed { reason }) => log(&s, "root-import-closed", json!({ "reason": reason })),
+        let done = match relayer::plan_root_import(&*zone, &self.p, ctx, &history, vault_count).await {
+            Ok(RootImport::UpToDate { .. }) => true,
+            Ok(RootImport::Waiting { reason, vault_count, imported }) => {
+                log(
+                    &s,
+                    "root-import-waiting",
+                    json!({ "reason": reason, "vaultCount": vault_count, "imported": imported }),
+                );
+                false
+            }
+            Ok(RootImport::Closed { reason }) => {
+                log(&s, "root-import-closed", json!({ "reason": reason }));
+                true
+            }
             Ok(RootImport::Planned(plan)) => {
                 let mut fields = json!({
                     "leafCount": plan.leaf_count, "root": hx(&plan.root), "recordSlot": plan.record_slot,
@@ -316,20 +346,25 @@ impl Daemon {
                         fields["tx"] = json!(tx);
                         fields["applied"] = json!(applied);
                         log(&s, if applied { "root-imported" } else { "root-import-unconfirmed" }, fields);
+                        applied
                     }
                     Err(e) => {
                         fields["reason"] = json!(format!("{e:#}"));
                         log(&s, "root-import-failed", fields);
+                        false
                     }
                 }
             }
-            Err(e) => log(
-                &s,
-                "root-import-refused",
-                json!({ "reason": format!("{e:#}"), "vaultCount": vault_count, "imported": imported }),
-            ),
-        }
-        Ok(())
+            Err(e) => {
+                log(
+                    &s,
+                    "root-import-refused",
+                    json!({ "reason": format!("{e:#}"), "vaultCount": vault_count, "imported": imported }),
+                );
+                false
+            }
+        };
+        Ok(done)
     }
 
     async fn job(&mut self, file: &Path, v: &relayer::VaultView) -> Result<serde_json::Value> {
@@ -499,6 +534,12 @@ pub async fn run(cli: Cli, sink: Sink, mut stop: tokio::sync::watch::Receiver<Op
         max_job_age: cli.max_job_age,
         wrap_command: cli.wrap_command.clone(),
         import_roots: cli.import_roots,
+        import_every: cli.import_every,
+        import_done: std::fs::read(cli.state.join("root-import.json"))
+            .ok()
+            .and_then(|b| serde_json::from_slice::<Value>(&b).ok())
+            .filter(|v| v["every"].as_u64() == Some(cli.import_every))
+            .and_then(|v| v["period"].as_u64()),
         sink: sink.clone(),
     };
     let zone_kind = d.zone.as_ref().map(|(z, _)| z.kind());
@@ -506,7 +547,8 @@ pub async fn run(cli: Cli, sink: Sink, mut stop: tokio::sync::watch::Receiver<Op
         &sink,
         "start",
         json!({ "vault": vault, "relayer": me, "chainId": v.chain_id, "configId": v.cid, "finalState": v.final_state,
-                "gasDrops": zone_kind == Some("sequencer"), "zone": zone_kind, "importRoots": cli.import_roots }),
+                "gasDrops": zone_kind == Some("sequencer"), "zone": zone_kind, "importRoots": cli.import_roots,
+                "importEvery": cli.import_every }),
     );
 
     match cli.command {
