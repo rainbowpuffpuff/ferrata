@@ -10,11 +10,12 @@ use std::fmt::Write as _;
 
 use ferrata_core::{
     attest::{attest_account, attest_storage, attest_log, HeaderRecord},
+    bls::{Aggregation, BlsBackend, Blst},
     exec::{Address, Word},
     fork::{ChainSpec, LcFork, Preset},
     merkle::ZERO,
     store::StoreCore,
-    types::{BeaconBlockHeader, LightClientBootstrap},
+    types::{BeaconBlockHeader, Execution, LightClientBootstrap, SyncCommittee},
     witness::{self, ExecutionSummary},
     Error, Root,
 };
@@ -22,6 +23,7 @@ use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
 mod advance;
+pub mod providers;
 mod rpc;
 mod trie;
 mod tx;
@@ -63,9 +65,16 @@ pub fn dry_run_attest(request: &str) -> String {
     reply(dry_run(request))
 }
 
-/// `verify_checkpoint(request)`: instance id, bootstrap and observed roots of a checkpoint.
+/// `verify_checkpoint(request)`: a checkpoint's instance id, its bootstrap (the program's `Init` checks and the full
+/// `KeyValidate` of its committee), the roots given in the request, and, fetched, what several beacon providers and an
+/// execution endpoint hold for it (`providers.rs`).
 pub fn verify_checkpoint(request: &str) -> String {
-    reply(checkpoint(request))
+    reply(checkpoint(request, None))
+}
+
+/// [`verify_checkpoint`] over the given HTTP client (a recording, a replay) instead of `curl`.
+pub fn verify_checkpoint_with(request: &str, http: &mut dyn providers::Http) -> String {
+    reply(checkpoint(request, Some(http)))
 }
 
 /// `fetch_log_proof(request)`: read a block and its receipts from a JSON-RPC endpoint, rebuild the
@@ -436,14 +445,14 @@ fn chain_pair(chain_id: u64, gvr: &Root) -> Value {
     json!({ "status": "unknown" })
 }
 
-fn checkpoint(request: &str) -> Result<Value, String> {
+fn checkpoint(request: &str, http: Option<&mut dyn providers::Http>) -> Result<Value, String> {
     let req: Value = serde_json::from_str(request).map_err(|e| format!("request is not JSON: {e}"))?;
     let config = Config::from_json(&req["config"])?;
     let checkpoint: Root = fixed(&req["checkpoint"], "checkpoint")?;
     let id = instance_id(&config, &checkpoint);
     let mut failed: Vec<&str> = Vec::new();
 
-    let expected = if req["expected_instance_id"].is_null() {
+    let expected_id = if req["expected_instance_id"].is_null() {
         Value::Null
     } else {
         let same = fixed::<32>(&req["expected_instance_id"], "expected_instance_id")? == id;
@@ -458,7 +467,10 @@ fn checkpoint(request: &str) -> Result<Value, String> {
         failed.push("chain_pair");
     }
 
-    // The checks of the program's `Init` on the bootstrap, against this checkpoint.
+    // The checks of the program's `Init` on the bootstrap, against this checkpoint. An accepted bootstrap gives the
+    // checkpoint's slot and execution block to the provider checks below.
+    let mut accepted: Option<LightClientBootstrap> = None;
+    let mut decoded_committee: Option<SyncCommittee> = None;
     let bootstrap = if req["bootstrap"].is_null() {
         Value::Null
     } else {
@@ -474,6 +486,10 @@ fn checkpoint(request: &str) -> Result<Value, String> {
                     };
                     v["slot"] = json!(b.header.beacon.slot);
                     v["header_root"] = json!(hex(&b.header.beacon.hash_tree_root()));
+                    decoded_committee = Some(b.current_sync_committee.clone());
+                    if v["code"] == 0 {
+                        accepted = Some(b);
+                    }
                     v
                 }
             },
@@ -482,6 +498,20 @@ fn checkpoint(request: &str) -> Result<Value, String> {
             failed.push("bootstrap");
         }
         verdict
+    };
+
+    // The full `KeyValidate` on the bootstrap's committee (every key canonical, on the curve, not the identity, in the
+    // prime-order subgroup; their sum the aggregate), which the program leaves to off-chain tools (attestation.md
+    // §4.3). On by default; `"key_validate": false` skips it.
+    let committee = match (&decoded_committee, req["key_validate"].as_bool().unwrap_or(true)) {
+        (Some(c), true) => {
+            let v = committee_check(c);
+            if v["code"] != 0 {
+                failed.push("committee");
+            }
+            v
+        }
+        _ => Value::Null,
     };
 
     // Roots that other sources report for the checkpoint, given in the call (no network here).
@@ -503,18 +533,107 @@ fn checkpoint(request: &str) -> Result<Value, String> {
         failed.push("observed");
     }
 
+    // What several beacon providers hold for the checkpoint, fetched (`providers`: base URLs, or {name, url}); at
+    // least `min_providers` of them (3 by default when any is given), on distinct hosts, must agree and none disagree.
+    let timeout = req["timeout_secs"].as_u64().unwrap_or(20);
+    let mut curl = providers::Curl { timeout_secs: timeout };
+    let http: &mut dyn providers::Http = match http {
+        Some(h) => h,
+        None => &mut curl,
+    };
+    let expected = providers::Expected {
+        checkpoint: &checkpoint,
+        slot: accepted.as_ref().map(|b| b.header.beacon.slot),
+        config: &config,
+    };
+    let mut provider_results = Vec::new();
+    if let Some(list) = req["providers"].as_array() {
+        for (i, p) in list.iter().enumerate() {
+            let (name, url) = endpoint(p, &format!("providers[{i}]"))?;
+            provider_results.push(providers::beacon(http, &name, &url, &expected));
+        }
+    }
+    let min_providers = if req["min_providers"].is_null() {
+        if provider_results.is_empty() { 0 } else { 3 }
+    } else {
+        uint(&req["min_providers"], "min_providers")?
+    };
+    let (providers_agreeing, any_disagrees) = providers::tally(&provider_results);
+    if providers_agreeing < min_providers || any_disagrees {
+        failed.push("providers");
+    }
+
+    // The checkpoint's execution block, as an execution endpoint holds it (`execution`: the design's
+    // `verified_proxy_module`, whose answers its own light client checks, or any node): the bootstrap header's block.
+    let execution = if req["execution"].is_null() {
+        Value::Null
+    } else {
+        let (name, url) = endpoint(&req["execution"], "execution")?;
+        let unavailable = |why: &str| json!({ "name": name, "url": url, "verdict": "unavailable", "unavailable": [why] });
+        let v = match accepted.as_ref().map(|b| &b.header.execution) {
+            Some(Execution::Payload { header, .. }) => providers::execution(
+                http,
+                &name,
+                &url,
+                &header.block_hash,
+                Some(header.block_number),
+                config.chain_id,
+            ),
+            Some(Execution::BlockHash { block_hash, .. }) => {
+                providers::execution(http, &name, &url, block_hash, None, config.chain_id)
+            }
+            Some(Execution::None) => unavailable("the bootstrap's layout (Altair) carries no execution block"),
+            None => unavailable("needs an accepted bootstrap: the execution block is its header's"),
+        };
+        if v["verdict"] != "agrees" {
+            failed.push("execution");
+        }
+        v
+    };
+
     Ok(json!({
         "verdict": if failed.is_empty() { "ok" } else { "failed" },
         "failed": failed,
         "instance_id": hex(&id),
-        "instance_id_matches": expected,
+        "instance_id_matches": expected_id,
         "checkpoint": hex(&checkpoint),
         "chain_pair": pair,
         "bootstrap": bootstrap,
+        "committee": committee,
         "observed": observed,
         "observed_agreeing": agreeing,
         "required_agreeing": required,
+        "providers": provider_results,
+        "providers_agreeing": providers_agreeing,
+        "min_providers": min_providers,
+        "execution": execution,
     }))
+}
+
+/// `KeyValidate` on every key of a committee and the sum (`BlsBackend::check_committee`, blst).
+fn committee_check(c: &SyncCommittee) -> Value {
+    let keys = c.pubkeys.len();
+    match Blst::new(Aggregation::Auto).check_committee(c) {
+        Ok(()) => json!({ "verdict": "accepted", "code": 0, "keys": keys,
+                          "check": "KeyValidate on every key (subgroup included); the keys sum to aggregate_pubkey" }),
+        Err(e) => {
+            let mut v = refused(e, "committee");
+            v["keys"] = json!(keys);
+            v
+        }
+    }
+}
+
+/// An endpoint of the request: a URL, or `{name, url}`.
+fn endpoint(v: &Value, what: &str) -> Result<(String, String), String> {
+    match v {
+        Value::String(u) => Ok((providers::host_of(u), u.clone())),
+        _ => {
+            let url = text(&v["url"], &format!("{what}.url"))?.to_owned();
+            let name = v["name"].as_str().map(str::to_owned).unwrap_or_else(|| providers::host_of(&url));
+            Ok((name, url))
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -923,6 +1042,191 @@ mod tests {
         assert_eq!(word(&json!("0x1ea6feb"), "w").unwrap()[28..], [0x01, 0xea, 0x6f, 0xeb]);
         assert_eq!(uint(&json!("0x6af31dd7"), "u").unwrap(), 0x6af3_1dd7);
         assert_eq!(uint(&json!("18446744073709551615"), "u").unwrap(), u64::MAX);
+    }
+
+    // ---- verify_checkpoint's provider checks, on the responses recorded for the crown run's Sepolia checkpoint ----
+
+    /// The crown run's Sepolia bootstrap (period 1411, slot 11,562,112).
+    const SEPOLIA_BOOTSTRAP: &[u8] =
+        include_bytes!("../../../../../crates/ferrata-spectests/fixtures/sepolia-2026-11-12/bootstrap.ssz");
+    /// The request (without its bootstrap) and every provider response of its live run (`examples/call.rs` with
+    /// `FERRATA_HTTP_RECORD`; `modules/results/verify-checkpoint-2026-11-13/`).
+    const SEPOLIA_REQUEST: &str = include_str!("../tests/fixtures/verify-checkpoint-sepolia.json");
+    const SEPOLIA_RECORD: &str = include_str!("../tests/fixtures/verify-checkpoint-sepolia.record.json");
+
+    fn sepolia_request() -> Value {
+        let mut r: Value = serde_json::from_str(SEPOLIA_REQUEST).unwrap();
+        r["bootstrap"] = json!(hex(SEPOLIA_BOOTSTRAP));
+        r
+    }
+
+    fn replay() -> providers::Replay {
+        providers::Replay { log: serde_json::from_str(SEPOLIA_RECORD).unwrap() }
+    }
+
+    fn check(request: &Value, http: &mut providers::Replay) -> Value {
+        serde_json::from_str(&verify_checkpoint_with(&request.to_string(), http)).unwrap()
+    }
+
+    /// Edit the recorded JSON response of the request whose URL starts with `base` and ends with `path` (and, for a
+    /// JSON-RPC call, names `method`).
+    fn edit(http: &mut providers::Replay, base: &str, path: &str, method: Option<&str>, f: impl Fn(&mut Value)) {
+        let e = http
+            .log
+            .iter_mut()
+            .find(|e| {
+                let url = e["url"].as_str().unwrap_or_default();
+                url.starts_with(base)
+                    && url.ends_with(path)
+                    && method.is_none_or(|m| e["body"].as_str().is_some_and(|b| b.contains(&format!("\"{m}\""))))
+            })
+            .unwrap_or_else(|| panic!("no recorded request {base}…{path} {method:?}"));
+        let mut v: Value = serde_json::from_str(e["response"].as_str().unwrap()).unwrap();
+        f(&mut v);
+        e["response"] = json!(v.to_string());
+    }
+
+    fn provider<'a>(v: &'a Value, name: &str) -> &'a Value {
+        v["providers"].as_array().unwrap().iter().find(|p| p["name"] == name).unwrap()
+    }
+
+    const LODESTAR: &str = "https://lodestar-sepolia.chainsafe.io";
+    const PUBLICNODE: &str = "https://ethereum-sepolia-beacon-api.publicnode.com";
+    const NIMBUS: &str = "http://unstable.sepolia.beacon-api.nimbus.team";
+    const EXECUTION: &str = "https://ethereum-sepolia-rpc.publicnode.com";
+
+    #[test]
+    fn sepolia_checkpoint_agrees_with_three_providers() {
+        let v = check(&sepolia_request(), &mut replay());
+        assert_eq!(v["verdict"], "ok", "{v:#}");
+        assert_eq!(v["instance_id_matches"], true);
+        assert_eq!(v["bootstrap"]["code"], 0);
+        assert_eq!(v["bootstrap"]["slot"], 11_562_112);
+        assert_eq!(v["committee"]["verdict"], "accepted");
+        assert_eq!(v["committee"]["keys"], 512);
+        assert_eq!(v["providers_agreeing"], 3);
+        for p in ["lodestar", "publicnode", "nimbus"] {
+            assert_eq!(provider(&v, p)["verdict"], "agrees", "{p}: {:#}", provider(&v, p));
+            assert_eq!(provider(&v, p)["slot"], 11_562_112);
+        }
+        // A checkpointz server serves the chain's genesis and spec, not the headers API: not counted.
+        assert_eq!(provider(&v, "checkpointz-ethpandaops")["verdict"], "unavailable");
+        assert_eq!(v["execution"]["verdict"], "agrees", "{:#}", v["execution"]);
+    }
+
+    #[test]
+    fn a_provider_with_another_block_at_the_slot_fails_the_check() {
+        let mut http = replay();
+        edit(&mut http, NIMBUS, "/eth/v1/beacon/headers/11562112", None, |r| {
+            r["data"]["root"] = json!(format!("0x{}", "ab".repeat(32)));
+        });
+        let v = check(&sepolia_request(), &mut http);
+        assert_eq!(v["verdict"], "failed");
+        assert!(v["failed"].as_array().unwrap().contains(&json!("providers")));
+        assert_eq!(provider(&v, "nimbus")["verdict"], "disagrees");
+        assert_eq!(v["providers_agreeing"], 2);
+    }
+
+    #[test]
+    fn a_provider_that_has_not_finalized_the_slot_disagrees() {
+        let mut http = replay();
+        edit(&mut http, LODESTAR, "/eth/v1/beacon/headers/finalized", None, |r| {
+            r["data"]["header"]["message"]["slot"] = json!("11562080");
+        });
+        let v = check(&sepolia_request(), &mut http);
+        assert_eq!(v["verdict"], "failed");
+        let p = provider(&v, "lodestar");
+        assert_eq!(p["verdict"], "disagrees");
+        assert!(p["disagreements"][0].as_str().unwrap().starts_with("finalized slot"), "{p:#}");
+    }
+
+    #[test]
+    fn a_provider_on_another_chain_disagrees() {
+        // The chain id the light client cannot check, tied to genesis_validators_root by the provider's own spec.
+        let mut http = replay();
+        edit(&mut http, PUBLICNODE, "/eth/v1/config/spec", None, |r| r["data"]["DEPOSIT_CHAIN_ID"] = json!("1"));
+        let v = check(&sepolia_request(), &mut http);
+        assert_eq!(v["verdict"], "failed");
+        assert!(provider(&v, "publicnode")["disagreements"][0].as_str().unwrap().starts_with("DEPOSIT_CHAIN_ID"));
+        let mut http = replay();
+        edit(&mut http, PUBLICNODE, "/eth/v1/beacon/genesis", None, |r| {
+            r["data"]["genesis_validators_root"] = json!(format!("0x{}", KNOWN_CHAINS[0].2));
+        });
+        let v = check(&sepolia_request(), &mut http);
+        assert_eq!(provider(&v, "publicnode")["verdict"], "disagrees");
+    }
+
+    #[test]
+    fn a_non_canonical_block_disagrees() {
+        let mut http = replay();
+        let root = "/eth/v1/beacon/headers/0x3b901f5e6853b5cf5eb04d7ccfe1272e66c38291cb3a11dd159cacd1117ccf7c";
+        edit(&mut http, LODESTAR, root, None, |r| r["data"]["canonical"] = json!(false));
+        let v = check(&sepolia_request(), &mut http);
+        assert_eq!(provider(&v, "lodestar")["verdict"], "disagrees");
+        assert_eq!(v["verdict"], "failed");
+    }
+
+    #[test]
+    fn an_unreachable_provider_is_not_counted_and_three_are_needed() {
+        let mut http = replay();
+        for e in http.log.iter_mut().filter(|e| e["url"].as_str().unwrap().starts_with(NIMBUS)) {
+            *e = json!({ "method": e["method"], "url": e["url"], "body": e["body"], "error": "Connection refused" });
+        }
+        let v = check(&sepolia_request(), &mut http);
+        assert_eq!(provider(&v, "nimbus")["verdict"], "unavailable");
+        assert_eq!(v["providers_agreeing"], 2);
+        assert_eq!(v["verdict"], "failed", "two of the three providers needed");
+        let mut r = sepolia_request();
+        r["min_providers"] = json!(2);
+        assert_eq!(check(&r, &mut http)["verdict"], "ok");
+    }
+
+    #[test]
+    fn providers_are_counted_by_host() {
+        let mut r = sepolia_request();
+        r["providers"] = json!([{"name": "a", "url": LODESTAR}, {"name": "b", "url": format!("{LODESTAR}/")}, {"name": "c", "url": PUBLICNODE}]);
+        let v = check(&r, &mut replay());
+        assert_eq!(v["providers_agreeing"], 2, "{v:#}");
+        assert_eq!(v["verdict"], "failed");
+    }
+
+    #[test]
+    fn the_execution_endpoint_must_hold_the_block_on_the_same_chain() {
+        let mut http = replay();
+        edit(&mut http, EXECUTION, "", Some("eth_chainId"), |r| r["result"] = json!("0x1"));
+        let v = check(&sepolia_request(), &mut http);
+        assert_eq!(v["execution"]["verdict"], "disagrees", "{:#}", v["execution"]);
+        assert!(v["failed"].as_array().unwrap().contains(&json!("execution")));
+        let mut http = replay();
+        edit(&mut http, EXECUTION, "", Some("eth_getBlockByHash"), |r| r["result"] = Value::Null);
+        assert_eq!(check(&sepolia_request(), &mut http)["execution"]["verdict"], "disagrees");
+    }
+
+    #[test]
+    fn no_providers_no_fetching() {
+        // The checks of row 59 alone: nothing fetched, nothing required of providers.
+        let mut r = sepolia_request();
+        for k in ["providers", "min_providers", "execution"] {
+            r.as_object_mut().unwrap().remove(k);
+        }
+        let mut empty = providers::Replay { log: Vec::new() };
+        let v = check(&r, &mut empty);
+        assert_eq!(v["verdict"], "ok", "{v:#}");
+        assert_eq!(v["min_providers"], 0);
+        assert_eq!(v["providers"], json!([]));
+    }
+
+    #[test]
+    fn key_validate_refuses_a_key_outside_the_subgroup() {
+        let b = LightClientBootstrap::decode(SEPOLIA_BOOTSTRAP, LcFork::Gloas, 512).unwrap();
+        assert_eq!(committee_check(&b.current_sync_committee)["code"], 0);
+        // (0, 2), a point of order three on the curve (crates/ferrata-spectests/tests/adversarial.rs).
+        let mut c = b.current_sync_committee.clone();
+        c.pubkeys[0] = [0u8; 48];
+        c.pubkeys[0][0] = 0x80;
+        let v = committee_check(&c);
+        assert_eq!(v["verdict"], "refused", "{v}");
+        assert_eq!(v["code"], Error::PubkeyInvalid.code(), "{v}");
     }
 
     #[test]

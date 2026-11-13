@@ -14,7 +14,22 @@ fn main() {
     let reply = match method.as_str() {
         "version" => ferrata_attest_calls::version(),
         "dry_run_attest" => ferrata_attest_calls::dry_run_attest(&request),
-        "verify_checkpoint" => ferrata_attest_calls::verify_checkpoint(&request),
+        // FERRATA_HTTP_RECORD=FILE: every provider request and response of the call, as JSON (the tests' fixtures).
+        "verify_checkpoint" => match std::env::var("FERRATA_HTTP_RECORD") {
+            Ok(path) => {
+                use ferrata_attest_calls::providers::{Curl, Recording};
+                let timeout = serde_json::from_str::<serde_json::Value>(&request)
+                    .ok()
+                    .and_then(|r| r["timeout_secs"].as_u64())
+                    .unwrap_or(20);
+                let mut rec = Recording { inner: Curl { timeout_secs: timeout }, log: Vec::new() };
+                let reply = ferrata_attest_calls::verify_checkpoint_with(&request, &mut rec);
+                let log = serde_json::to_string_pretty(&rec.log).unwrap_or_default();
+                std::fs::write(&path, log + "\n").unwrap_or_else(|e| eprintln!("call: cannot write {path}: {e}"));
+                reply
+            }
+            Err(_) => ferrata_attest_calls::verify_checkpoint(&request),
+        },
         "fetch_log_proof" => ferrata_attest_calls::fetch_log_proof(&request),
         "build_attest_tx" => ferrata_attest_calls::build_attest_tx(&request),
         "read_attestation" => ferrata_attest_calls::read_attestation(&request),
