@@ -32,6 +32,8 @@ Signed: not yet. Drafted on 12 November 2026 for the owner to read and sign, row
 
 ## The release guest and the bridge core's statements (`bridge/guests`)
 
+The agent review of these rows: [reviews/agent-review-vault-guests-2026-11-12.md](reviews/agent-review-vault-guests-2026-11-12.md).
+
 | Entry point or check (file) | Spec section | Deviation | Pinned by | Reviewed |
 |---|---|---|---|---|
 | `release` guest `main` (`bridge/guests/src/bin/release.rs`) | v2 §5.2 | reads a fixed 1,340-byte input; an invalid witness panics, so no receipt exists; commits exactly the vault's 352-byte journal | `vault/test/real/ReturnLeg`, `real/CrownR1::test_crownR4_*` (real seals); row 77 (64 witnesses, one cycle count); fuzz `release`; EVIDENCE rows 83, 91 | |

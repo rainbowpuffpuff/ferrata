@@ -26,6 +26,8 @@ Signed: not yet. Drafted on 12 November 2026 for the owner to read and sign, row
 
 ## Deposits and the deposit tree
 
+The agent review of these rows: [reviews/agent-review-vault-guests-2026-11-12.md](reviews/agent-review-vault-guests-2026-11-12.md).
+
 | Function (file) | Spec section | Deviation | Pinned by | Reviewed |
 |---|---|---|---|---|
 | `deposit` (FV:676) | v2 §3.4 (`deposit`), §3.1–3.3; D13 (fees escrowed at deposit) | escrows the denomination plus the mint and relay fees of the schedule in force; pulls the tokens before booking anything and refuses a balance change other than the total (fee-on-transfer); refused after a finalised sunset checkpoint (L-3) as after `retire()`; an ERC-20 deposit has no maximum if a fee change comes into force while it is pending (I-3, not fixed) | `Deposit` (USDT-style, fee-on-transfer, false-returning, delisting, index rules); `Fees` (`a_DepositAfterTheChangeMustSendTheNewTotal`, `depositBucketsCountTheWholeEscrow`); `Release::test_deposit_reentrantTokenIsBlocked`; V0–V8, V10, V205–V209; I: escrow, balance; H: `check_sunset_closes_deposits` | |

@@ -169,8 +169,8 @@ side is a devnet we ran (LEZ testnet 0.4 does not exist).
 - **Image ids**: since `integration7` guest builds are independent of the build path (row 82: 14 of 14 guests
   byte-identical at two paths with two `$HOME`s); the first live run's programs (row 37) reproduce only at the
   maintainer's checkout path; the final programs, live in row 91, rebuild to that vault's ids (row 92). The Dockerfile
-  that pins the toolchains was built as an image on Modal (row 90); `scripts/reproduce/run.sh` under Docker has not
-  been run by us.
+  that pins the toolchains was built and run on Modal and, with `scripts/reproduce/run.sh`, under Docker on a fresh
+  x86-64 machine (row 90).
 - **Privacy** (row 23) is measured in dev mode with a mock verifier on synthetic records, and again on real proofs
   of the final programs (row 89: every claim, burn and release proven, the releases checked by RISC Zero's Groth16
   verifier in the vault); the burn root's checkpoint is still the mock there (the harness's blocks are not chained,

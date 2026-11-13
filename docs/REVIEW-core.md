@@ -8,6 +8,8 @@ is part of the audit packet.
 Signed: Carol Calin, 12 November 2026, every row below (48), after reading each against its spec section
 and the agent review of 11 November.
 
+The agent review that preceded the sign-off: [reviews/agent-review-core-2026-11-11.md](reviews/agent-review-core-2026-11-11.md).
+
 | Function (file) | Spec section | Deviation | Pinned by | Reviewed |
 |---|---|---|---|---|
 | `validate_light_client_update` (validate.rs) | altair/light-client/sync-protocol.md `validate_light_client_update` | shape checks added first (layout, branch lengths, committee size); the signature path is chosen by the caller | sync vectors; adversarial; guards M03–M17, M37 | Carol Calin, 12 Nov 2026 |
