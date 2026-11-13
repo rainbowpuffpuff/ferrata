@@ -7,7 +7,8 @@
 //! LEZ's fee program and settlement and the attestation program as the guests were built (the chain the
 //! updater's tests run on; `RISC0_DEV_MODE=1` in the module's environment, as for those tests). It lives
 //! in the daemon's thread: `start` makes it, `stop` ends it. `ledger = "sequencer"` is refused, as by
-//! the binary (that backend is not built).
+//! the harness build of the binary: that backend is the build of `lez/updater/sequencer`, which links
+//! LEZ's node-side crates and passes its own ledger to the same daemon (`ferrata_updater::daemon::run`).
 
 use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
@@ -17,7 +18,7 @@ use std::thread::JoinHandle;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use anyhow::{bail, Context as _, Result};
-use ferrata_updater::config::File;
+use ferrata_updater::config::{File, SourceKind};
 use ferrata_updater::daemon::Daemon as Rounds;
 use ferrata_updater::serve::{serve, Snapshot};
 use serde_json::{json, Value};
@@ -96,8 +97,12 @@ pub fn check_config(request: &str) -> String {
         Ok(json!({
             "verdict": "ok", "daemon": f.daemon.name, "ledger": f.daemon.ledger, "poll_secs": f.daemon.poll_secs,
             "listen": f.daemon.listen,
+            "sequencer": f.sequencer.as_ref().map(|s| json!({ "rpc": s.rpc, "program": s.program, "wait_final": s.wait_final })),
+            "finish_own_jobs": f.policy.finish_own_jobs,
             "chains": f.chains.iter().map(|c| json!({ "name": c.name, "preset": c.preset, "checkpoint": c.checkpoint,
-                "sources": c.sources.iter().map(|s| json!({ "name": s.name, "url": s.url, "dir": s.dir })).collect::<Vec<_>>() }))
+                "layout": c.layout,
+                "sources": c.sources.iter().map(|s| json!({ "name": s.name, "url": s.url, "dir": s.dir,
+                    "kind": if s.kind == SourceKind::Headers { "headers" } else { "light-client" } })).collect::<Vec<_>>() }))
                 .collect::<Vec<_>>(),
         }))
     })())
@@ -135,6 +140,9 @@ pub fn run(request: &str) -> String {
             if d.file.daemon.poll_secs > 0 && d.round < rounds {
                 std::thread::sleep(Duration::from_secs(d.file.daemon.poll_secs));
             }
+        }
+        if let Err(e) = d.flush() {
+            push(&mut notes, format!("saving the backend's state: {e:#}"));
         }
         let mut v = snapshot_of(&d);
         v["verdict"] = json!("ok");
@@ -246,7 +254,8 @@ impl Daemon {
         json!({ "verdict": "ok", "round": s.snapshot["round"], "metrics": s.metrics }).to_string()
     }
 
-    /// `stop()`: the round in hand finishes, then the daemon ends (the in-process chain with it).
+    /// `stop()`: the round in hand finishes, the backend saves what it keeps, then the daemon ends (the
+    /// in-process chain with it).
     pub fn stop(&mut self) -> String {
         self.stop.store(true, Ordering::SeqCst);
         if let Some(h) = self.handle.take() {
@@ -324,9 +333,13 @@ fn run_loop(
             slept += step;
         }
     }
+    let saved = d.flush().err().map(|e| format!("saving the backend's state: {e:#}"));
     set(&mut |s| {
         s.running = false;
         s.stopped_at = Some(now_secs());
+        if let Some(e) = &saved {
+            s.error = Some(e.clone());
+        }
     });
 }
 

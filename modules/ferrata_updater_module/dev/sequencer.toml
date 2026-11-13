@@ -1,4 +1,6 @@
-# The same as recorded.toml with the sequencer backend, which is not built: the module refuses it, as the binary does.
+# The same as recorded.toml with the sequencer backend (`[sequencer]` below, as lez/updater's example), which the
+# module does not carry: it is the build of lez/updater/sequencer, which links LEZ's node-side crates. The module
+# refuses it, as the harness build of the binary does.
 [daemon]
 name = "module"
 state_dir = "../../out/updater-state"
@@ -50,3 +52,7 @@ adoption_parts = 2
   [[chain.source]]
   name = "record-b"
   dir = "../../../lez/lab/results/record/net/sepolia"
+
+[sequencer]
+rpc = "http://127.0.0.1:3040"
+program = "A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX"

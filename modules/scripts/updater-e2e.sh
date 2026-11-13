@@ -54,6 +54,7 @@ check() { if eval "$2"; then echo "- PASS $1" >> "$summary"; else echo "- FAIL $
 sed -e "s#^state_dir = .*#state_dir = \"$out/state\"#" \
     -e "s#\"\\.\\./\\.\\./\\.\\./#\"$repo/#g" "$repo/modules/$M/dev/recorded.toml" > "$out/recorded.toml"
 sed -e 's#^ledger = "harness"#ledger = "sequencer"#' "$out/recorded.toml" > "$out/sequencer.toml"
+printf '\n[sequencer]\nrpc = "http://127.0.0.1:3040"\nprogram = "A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX"\n' >> "$out/sequencer.toml"
 
 call version version
 check "version: the attestation program the module carries has the id of docs/image-ids.md ($PROGRAM_ID), declared and computed from its bytes" \
@@ -64,7 +65,7 @@ check "check_config: two chains (mainnet, sepolia), two sources each, ledger har
   '[ "$(jq -c "[.verdict, .ledger, [.chains[].name], [.chains[].sources | length]]" "$out/rep/config.json")" = "[\"ok\",\"harness\",[\"mainnet\",\"sepolia\"],[2,2]]" ]'
 jq -n --arg c "$out/sequencer.toml" '{config_file: $c, rounds: 1}' | req sequencer
 if [ "$CALL" = logosctl ]; then call start sequencer; else call run sequencer; fi
-check "the sequencer backend is refused, as by the binary (it is not built)" \
+check "the sequencer backend is refused, as by the harness build of the binary (it is the build of lez/updater/sequencer)" \
   '[ "$(jq -r .verdict "$out/rep/sequencer.json")" = error ] && jq -r .error "$out/rep/sequencer.json" | grep -q "sequencer backend is not in this build"'
 
 t0=$(date +%s)
