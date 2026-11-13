@@ -48,7 +48,7 @@ step() {
 # that box's two known failures (check.sh's nixb) and on a transient download error.
 nixb() {
   local attempt log="$out/nix-build-attempt.log"
-  for attempt in $(seq 1 12); do
+  for attempt in $(seq 1 40); do
     if [ "$(id -u)" = 0 ] && [ -d /homeless-shelter ]; then rm -rf /homeless-shelter; fi
     if nix build "$@" > >(tee "$log") 2>&1; then return 0; fi
     sleep 2
@@ -58,7 +58,9 @@ nixb() {
   return 1
 }
 
-# 1. Logos Core's own modules (name, repository under github.com/logos-co, revision).
+# 1. Logos Core's own modules (name, repository under github.com/logos-co, revision). eth_rpc_module is
+# built from its source with its two optional dependencies called by name (eth_rpc_by_name.py: with
+# our builder its install fails on their contracts); the others as they are.
 cat > "$rep/logos-modules.tsv" <<'M'
 eth_rpc_module	logos-evm-eth-rpc-module	6965f3252986eef02e9342198a0625fa725aad8d
 beacon_api_module	logos-evm-beacon-api-module	aca138e5c211a370654700f4f8f2779ea5081c86
@@ -67,20 +69,16 @@ signer_manager_module	logos-signer-manager-module	bd5c84d21ced71246c4bf44d137aa1
 fee_module	logos-evm-fee-module	f2065e787eebcd7fa49f6cf6ab1dc39457cba981
 tx_sender_module	logos-evm-tx-sender-module	f1754c3b13c7c580ee449116ba8982ca193e114d
 M
+ethsrc="$out/src-eth_rpc_module"
+rm -rf "$ethsrc"
+step src-eth_rpc_module bash -c "git clone -q https://github.com/logos-co/logos-evm-eth-rpc-module.git '$ethsrc' \
+  && git -C '$ethsrc' checkout -q 6965f3252986eef02e9342198a0625fa725aad8d \
+  && python3 -I '$here/eth_rpc_by_name.py' '$ethsrc' && git -C '$ethsrc' add -A && git -C '$ethsrc' diff --cached --stat" || true
+git -C "$ethsrc" diff --cached > "$rep/eth_rpc_module-by-name.diff" 2>/dev/null || true
 while IFS=$'\t' read -r name repository rev; do
-  step "build-$name" nixb "github:logos-co/$repository/$rev#lgx" --override-input logos-module-builder "$BUILDER" -o "$out/lgx-$name" || true
+  if [ "$name" = eth_rpc_module ]; then flake="git+file://$ethsrc"; else flake="github:logos-co/$repository/$rev"; fi
+  step "build-$name" nixb "$flake#lgx" --override-input logos-module-builder "$BUILDER" -o "$out/lgx-$name" || true
 done < "$rep/logos-modules.tsv"
-# The contract our modules are generated against is the one this eth_rpc_module publishes.
-step lidl-eth_rpc_module nixb "github:logos-co/logos-evm-eth-rpc-module/6965f3252986eef02e9342198a0625fa725aad8d#lidl" \
-  --override-input logos-module-builder "$BUILDER" -o "$out/lidl-eth_rpc_module" || true
-for m in ferrata_attest_module ferrata_bridge_module; do
-  if cmp -s "$out/lidl-eth_rpc_module/eth_rpc_module.lidl" "$repo/modules/$m/deps/eth_rpc_module.lidl" \
-     || cmp -s "$(find -L "$out/lidl-eth_rpc_module" -name eth_rpc_module.lidl | head -1)" "$repo/modules/$m/deps/eth_rpc_module.lidl"; then
-    echo "$m/deps/eth_rpc_module.lidl = the built module's contract" >> "$rep/contracts.txt"
-  else
-    echo "$m/deps/eth_rpc_module.lidl DIFFERS from the built module's contract" >> "$rep/contracts.txt"; failures=$((failures + 1))
-  fi
-done
 
 # 2. Our two modules: check.sh (its sdk step writes logos-rust-sdk-src as a nix result link: a copy
 # left there by a native build is moved out of its way).

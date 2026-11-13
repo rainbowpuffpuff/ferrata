@@ -8,8 +8,6 @@
   "description": "Ferrata (prototype): the user side of the Ferrata bridge between Ethereum and LEZ: deposit commitments and vault calls, claims, burns, release witnesses and journals, recovery and status, with the bridge core",
   "main": "ferrata_bridge_module_plugin",
   "dependencies": [],
-  "optional_dependencies": [{ "name": "eth_rpc_module", "version": "~0.2.0" }],
-  "dependency_overrides": { "eth_rpc_module": { "file": "deps/eth_rpc_module.lidl" } },
 
   "codegen": {
     "rust": { "crate": "rust-lib", "trait": "FerrataBridgeModule" }

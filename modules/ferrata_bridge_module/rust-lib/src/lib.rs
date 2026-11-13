@@ -55,18 +55,27 @@ pub trait FerrataBridgeModule: Send + 'static {
     fn on_context_ready(&mut self, _ctx: &RustModuleContext) {}
 }
 
-// The builder injects the generated scaffold here: `install`, `RustModuleContext`, `context()`, and the
-// typed client of each dependency (`eth_rpc_module::EthRpcModuleClient`, from deps/eth_rpc_module.lidl).
+// The builder injects the generated scaffold here: `install`, `RustModuleContext`, `context()`.
 include!(concat!(env!("CARGO_MANIFEST_DIR"), "/generated/provider_gen.rs"));
 
-/// Logos Core's `eth_rpc_module.raw_rpc(chain_id, method, params_json)`, through the client the builder
-/// generates from that module's contract (metadata.json: an optional dependency, its contract in
-/// `deps/eth_rpc_module.lidl`). `import_root` reads the vault's `eth_getProof` through it when the
-/// request says `"eth": {"via": "eth_rpc_module", "chain_id": N}`.
+/// Logos Core's `eth_rpc_module.raw_rpc(chain_id, method, params_json)`, called by name through the SDK
+/// (`PluginProxy::call_json_with_timeout`, what a generated client does inside). The module is not
+/// declared a dependency: with logos-module-builder 5f74cdb a declared optional dependency's contract
+/// fails to install (modules/LOGOS-CORE-MODULES.md), and the module must keep working without it.
+/// The calls crate uses it when a request says `"eth": {"via": "eth_rpc_module", "chain_id": N}`.
 fn eth_rpc_module_raw_rpc(chain_id: i64, method: &str, params: &str, timeout_ms: u64) -> Result<String, String> {
-    eth_rpc_module::EthRpcModuleClient::new()
-        .raw_rpc_with_timeout(chain_id, method, params, std::time::Duration::from_millis(timeout_ms.max(1)))
-        .map_err(|e| format!("eth_rpc_module.raw_rpc did not answer: {e:?}"))
+    let v = logos_rust_sdk::LogosModuleSDK::new()
+        .plugin("eth_rpc_module")
+        .call_json_with_timeout(
+            "raw_rpc",
+            &serde_json::json!([chain_id, method, params]),
+            std::time::Duration::from_millis(timeout_ms.max(1)),
+        )
+        .map_err(|e| format!("eth_rpc_module.raw_rpc did not answer: {e:?}"))?;
+    Ok(match v {
+        serde_json::Value::String(s) => s,
+        other => other.to_string(),
+    })
 }
 
 #[derive(Default)]
