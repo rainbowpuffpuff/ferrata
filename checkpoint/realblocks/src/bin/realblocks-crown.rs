@@ -28,7 +28,11 @@
 //!   `ferrata_attestor attest`, one per sequencer's attestor) instead of `--channel-key`, with `--n-min N --t-min T`
 //!   (the vault's floors; default 1 and 1): the key set is every key the channel accredits, each inscription must be
 //!   signed by one of them, and the input carries the given attestations (each checked for this deployment, key set
-//!   and tip before the rule runs); the rule needs t(n) of them.
+//!   and tip before the rule runs); the rule needs t(n) of them. A channel configuration change the node holds
+//!   between T0 and T (a rotation the zone's committee proposed and Bedrock applied: a `ChannelConfigOp` with its
+//!   `ChannelMultiSigProof`) goes into the input as it was inscribed (the transaction re-encoded and checked
+//!   against its hash), the parent's key set and configuration tip being session A's (`--session-a`); each block's
+//!   signer is checked against the key set in force at its node slot, and the attestations are over the set after it.
 //!
 //! Every inscription the node holds for the channel is parsed strictly and re-hashed by
 //! `checkpoint-core` exactly as the guest does, framed, BLAKE2b-hashed and signature-checked, and the
@@ -50,7 +54,9 @@ use attestor_core::{sign_certificate, Deployment, FinalTip, SignedAttestation};
 use checkpoint_core::hash::{sha256_parts, threshold};
 use checkpoint_core::input::CheckpointInputB;
 use checkpoint_core::lez::{hash_parsed_block, parse_block, Actor, NoVisitor, Origin, Visitor};
-use checkpoint_core::mantle::{inscription_msg_id, tx_hash, ElidedInscription, OP_CHANNEL_INSCRIBE, OP_TRANSFER};
+use checkpoint_core::mantle::{
+    inscription_msg_id, tx_hash, ConfigChange, ElidedInscription, OP_CHANNEL_CONFIG, OP_CHANNEL_INSCRIBE, OP_TRANSFER,
+};
 use checkpoint_core::rule_b::run_checkpoint_b;
 use checkpoint_core::state::{key_set_hash, Config, State};
 use checkpoint_core::tree::{burn_leaf, zero_hashes, Frontier};
@@ -117,9 +123,134 @@ fn encode_ops(ops: &[Value], reverse_fr: bool) -> Result<Vec<u8>> {
                     out.extend(fr(&o["pk"], "pk")?);
                 }
             }
+            OP_CHANNEL_CONFIG => {
+                out.extend(bytes32(&p["channel"], "channel")?);
+                out.extend(bytes32(&p["parent"], "parent")?);
+                let keys = p["keys"].as_array().context("keys")?;
+                out.extend(u16::try_from(keys.len())?.to_le_bytes());
+                for k in keys {
+                    out.extend(bytes32(k, "key")?);
+                }
+                out.extend(u32::try_from(number(&p["posting_timeframe"], "posting_timeframe")?)?.to_le_bytes());
+                out.extend(u32::try_from(number(&p["posting_timeout"], "posting_timeout")?)?.to_le_bytes());
+                out.extend(u16::try_from(number(&p["configuration_threshold"], "configuration_threshold")?)?.to_le_bytes());
+                out.extend(u16::try_from(number(&p["transfer_threshold"], "transfer_threshold")?)?.to_le_bytes());
+            }
             c => bail!("opcode {c:#04x}: not one a LEZ sequencer was expected to send"),
         }
     }
+    Ok(out)
+}
+
+/// 32 bytes served as hex (with or without 0x) or as an array of numbers.
+fn bytes32(v: &Value, what: &str) -> Result<[u8; 32]> {
+    match v {
+        Value::String(_) => hexa::<32>(v, what),
+        Value::Array(a) => a
+            .iter()
+            .map(|x| x.as_u64().and_then(|n| u8::try_from(n).ok()).context("byte"))
+            .collect::<Result<Vec<u8>>>()?
+            .try_into()
+            .map_err(|_| anyhow!("{what}: not 32 bytes")),
+        _ => bail!("{what}: neither hex nor bytes: {v}"),
+    }
+}
+
+/// A number served as a number, a decimal string or a one-field wrapper.
+fn number(v: &Value, what: &str) -> Result<u64> {
+    match v {
+        Value::Number(n) => n.as_u64().with_context(|| format!("{what}: {n}")),
+        Value::String(x) => x.parse().with_context(|| format!("{what}: {x}")),
+        Value::Object(m) if m.len() == 1 => number(m.values().next().context("value")?, what),
+        _ => bail!("{what}: not a number: {v}"),
+    }
+}
+
+/// A `ChannelMultiSigProof` as the node serves it: (key index, signature) pairs, ascending.
+fn multisig(v: &Value) -> Result<Vec<(u16, [u8; 64])>> {
+    let v = v.get("ChannelMultiSigProof").unwrap_or(v);
+    let sigs = v.get("signatures").unwrap_or(v);
+    let sig = |x: &Value| -> Result<[u8; 64]> {
+        let x = match x {
+            Value::Object(m) if m.len() == 1 => m.values().next().context("signature")?,
+            _ => x,
+        };
+        hexa::<64>(x, "signature")
+    };
+    let mut out: Vec<(u16, [u8; 64])> = match sigs {
+        Value::Object(m) => m.iter().map(|(k, x)| Ok((k.parse::<u16>().context("key index")?, sig(x)?))).collect::<Result<_>>()?,
+        Value::Array(a) => a
+            .iter()
+            .map(|e| match e {
+                Value::Array(p) if p.len() == 2 => Ok((u16::try_from(number(&p[0], "key index")?)?, sig(&p[1])?)),
+                Value::Object(m) => {
+                    let i = m.get("index").or(m.get("key_index")).context("key index")?;
+                    Ok((u16::try_from(number(i, "key index")?)?, sig(m.get("signature").context("signature")?)?))
+                }
+                _ => bail!("a multisig entry of an unknown shape: {e}"),
+            })
+            .collect::<Result<_>>()?,
+        _ => bail!("a ChannelMultiSigProof of an unknown shape: {v}"),
+    };
+    out.sort_by_key(|(i, _)| *i);
+    Ok(out)
+}
+
+/// A channel configuration transaction the node holds as final.
+struct Cfg {
+    node_block: String,
+    slot: u64,
+    ops: Vec<u8>,
+    op_index: u8,
+    sigs: Vec<(u16, [u8; 64])>,
+    tx_hash: Hash,
+}
+
+impl Cfg {
+    fn change(&self) -> ConfigChange<'_> {
+        ConfigChange { ops: &self.ops, op_index: self.op_index, signatures: self.sigs.iter().map(|(i, s)| (*i, s)).collect() }
+    }
+}
+
+/// Every `ChannelConfigOp` of `channel` in the node's immutable blocks, in slot order.
+fn load_configs(dir: &Path, channel: &Hash) -> Result<Vec<Cfg>> {
+    let mut files: Vec<PathBuf> = fs::read_dir(dir)?.map(|e| Ok(e?.path())).collect::<Result<_>>()?;
+    files
+        .sort_by_key(|p| p.file_name().and_then(|n| n.to_str()).and_then(|n| n.split('-').next()?.parse::<u64>().ok()));
+    let mut out = Vec::new();
+    for f in files {
+        let blocks: Vec<Value> = serde_json::from_slice(&fs::read(&f)?).with_context(|| format!("{}", f.display()))?;
+        for b in blocks {
+            for tx in b["transactions"].as_array().context("transactions")? {
+                let ops = tx["mantle_tx"]["ops"].as_array().context("ops")?;
+                let Some(op_index) = ops.iter().position(|o| {
+                    o["opcode"].as_u64() == Some(u64::from(OP_CHANNEL_CONFIG))
+                        && bytes32(&o["payload"]["channel"], "channel").ok().as_ref() == Some(channel)
+                }) else {
+                    continue;
+                };
+                let served: Hash = hexa(&tx["mantle_tx"]["hash"], "tx hash")?;
+                let bytes = [false, true]
+                    .into_iter()
+                    .map(|rev| encode_ops(ops, rev))
+                    .collect::<Result<Vec<_>>>()?
+                    .into_iter()
+                    .find(|bytes| tx_hash(bytes) == served)
+                    .with_context(|| format!("configuration tx {}: no encoding reproduces its hash", hex::encode(served)))?;
+                let proof = &tx["ops_proofs"][op_index];
+                let sigs = multisig(proof).with_context(|| format!("configuration tx {}: its proof {proof}", hex::encode(served)))?;
+                out.push(Cfg {
+                    node_block: b["header"]["id"].as_str().context("header id")?.to_string(),
+                    slot: b["header"]["slot"].as_u64().context("slot")?,
+                    ops: bytes,
+                    op_index: u8::try_from(op_index)?,
+                    sigs,
+                    tx_hash: served,
+                });
+            }
+        }
+    }
+    out.sort_by_key(|c| c.slot);
     Ok(out)
 }
 
@@ -233,6 +364,7 @@ fn identity(a: &BTreeMap<String, String>) -> Result<Identity> {
         "tMin": a.get("t-min").map_or(Ok(1), |v| v.parse::<u64>())?,
         "configId": pick("config-id", "configId"),
         "genesisState": a.get("genesis-state").map(|v| json!(v)).unwrap_or(Value::Null),
+        "parentKeys": sa["channel"]["keys"], "parentConfigTipHash": sa["channel"]["configTipHash"],
     });
     ensure!(!id["configId"].is_null(), "--config-id (or session-a.json configId) is required with --session-a");
     let t0 = sa["tip"]["id"].as_u64().context("session-a.json tip.id")?;
@@ -313,7 +445,7 @@ fn main() -> Result<()> {
     );
     ensure!(first <= t0 && t1 <= last, "the node holds final inscriptions of blocks {first}..={last}, not {t0}..={t1}");
     // The key set: the channel's one key (the crown run), or every key the channel accredits (a zone, --att).
-    let zone = a.get("att").is_some();
+    let zone = a.contains_key("att");
     let channel_keys: Vec<Hash> = channel_json["accredited_keys"]
         .as_array()
         .context("channel.json: accredited_keys")?
@@ -324,6 +456,41 @@ fn main() -> Result<()> {
     ensure!(zone || channel_keys.len() == 1, "the channel holds more than one key (a zone: give --att)");
     let channel_key = channel_keys[0];
     let mut signed_by: BTreeMap<Hash, u32> = BTreeMap::new();
+    // The parent's key set and configuration tip: session A's (a zone), else the channel's as the node reports it.
+    let parent_keys: Vec<Hash> = match id.get("parentKeys").and_then(Value::as_array).filter(|_| zone) {
+        Some(k) => k.iter().map(|x| hexa::<32>(x, "session-a channel key")).collect::<Result<_>>()?,
+        None => channel_keys.clone(),
+    };
+    let parent_config_tip: Hash = match id.get("parentConfigTipHash").filter(|v| zone && !v.is_null()) {
+        Some(v) => hexa(v, "session-a configTipHash")?,
+        None => hexa(&channel_json["config_tip_hash"], "config_tip_hash")?,
+    };
+    // Configuration changes after T0's inscription: applied in order natively (the program does it again).
+    let t0_slot = ins.get(&t0).context("no final inscription of T0")?.slot;
+    let all_configs = if zone { load_configs(&node.join("blocks"), &CHANNEL_ID)? } else { Vec::new() };
+    let configs: Vec<&Cfg> = all_configs.iter().filter(|c| c.slot > t0_slot).collect();
+    let mut sets: Vec<(u64, Vec<Hash>)> = vec![(0, parent_keys.clone())];
+    let mut cth = parent_config_tip;
+    for c in &configs {
+        let (op, h) = c.change().op().map_err(|e| anyhow!("configuration tx {}: {e:?}", hx(&c.tx_hash)))?;
+        ensure!(h == c.tx_hash, "configuration tx: re-hash");
+        ensure!(op.parent == &cth, "configuration tx {}: its parent is not the configuration tip before it", hx(&c.tx_hash));
+        cth = op.id();
+        sets.push((c.slot, op.keys.iter().map(|k| **k).collect()));
+        println!("configuration change in node block {} (slot {}): {} keys, threshold {}, posting timeframe {}, signed by \
+                  key indices {:?} of the set before it; new configuration tip {}",
+            c.node_block, c.slot, op.keys.len(), op.configuration_threshold, op.posting_timeframe,
+            c.sigs.iter().map(|(i, _)| *i).collect::<Vec<_>>(), hx(&cth));
+    }
+    let final_keys = sets.last().map(|(_, k)| k.clone()).context("key sets")?;
+    if zone {
+        ensure!(final_keys == channel_keys, "the key set after the configuration changes is not the channel's as the node reports it");
+        ensure!(cth == hexa::<32>(&channel_json["config_tip_hash"], "config_tip_hash")?, "the configuration tip after the changes is not the channel's");
+    }
+    // The key set in force for an inscription at node slot `slot` (a change takes effect after its own node block).
+    fn set_at(sets: &[(u64, Vec<Hash>)], slot: u64) -> &[Hash] {
+        &sets.iter().rev().find(|(from, _)| *from < slot || *from == 0).expect("the parent's set").1
+    }
     let mut record: Option<(Vec<u8>, usize)> = match a.get("record") {
         Some(d) => {
             let rec = fs::read(Path::new(d).join("blocks.borsh"))?;
@@ -348,7 +515,7 @@ fn main() -> Result<()> {
         let c = e.check(payload, &CHANNEL_ID).map_err(|e| anyhow!("block {k}: inscription refused: {e:?}"))?;
         ensure!(c.tx_hash == i.tx_hash, "block {k}: transaction hash");
         ensure!(k == first || c.parent == prev_msg, "block {k}: inscription parent is not block {}'s message", k - 1);
-        ensure!(channel_keys.contains(&c.signer), "block {k}: signer is not one of the channel's keys");
+        ensure!(set_at(&sets, i.slot).contains(&c.signer), "block {k}: signer is not one of the channel's keys at node slot {}", i.slot);
         *signed_by.entry(c.signer).or_default() += 1;
         let msg = inscription_msg_id(&CHANNEL_ID, payload, &c.parent, &c.signer);
         // Optional: the same block as the sequencer served it (equal but the status byte).
@@ -408,11 +575,11 @@ fn main() -> Result<()> {
 
     // ---- the parent state at T0 and the attestor(s) ---------------------------------------------------
     let posting_timeframe = u32::try_from(channel_json["posting_timeframe"].as_u64().context("posting_timeframe")?)?;
-    let config_tip_hash: Hash = hexa(&channel_json["config_tip_hash"], "config_tip_hash")?;
+    let config_tip_hash: Hash = parent_config_tip;
     let parent = State {
         tip_id: t0,
         tip_hash: ins[&t0].payload()?[40..72].try_into()?,
-        keys: channel_keys.clone(),
+        keys: parent_keys.clone(),
         posting_timeframe,
         config_tip_hash,
         burns: Default::default(),
@@ -427,7 +594,8 @@ fn main() -> Result<()> {
         );
     }
     let d = Deployment { evm_chain_id, vault, lez_config_id: config_id, channel_id: CHANNEL_ID };
-    let ksh = key_set_hash(&parent.keys, parent.posting_timeframe);
+    // Attestations are over the key set at T: after the configuration changes.
+    let ksh = key_set_hash(&final_keys, parent.posting_timeframe);
     let t_payload = tip_ins.payload()?;
     let tip = FinalTip { tip_id: t1, tip_hash: t_payload[40..72].try_into()?, final_msg_id: msg_ids[&t1] };
     let (attestations, att_record) = if let Some(files) = a.get("att") {
@@ -441,7 +609,7 @@ fn main() -> Result<()> {
                 .try_into()
                 .map_err(|_| anyhow!("{f}: encoded: wrong length"))?;
             let att = SignedAttestation::decode(&bytes);
-            ensure!(channel_keys.contains(&att.channel_key), "{f}: channel key {} is not in the key set", hx(&att.channel_key));
+            ensure!(final_keys.contains(&att.channel_key), "{f}: channel key {} is not in the key set", hx(&att.channel_key));
             ensure!(att.tip == tip, "{f}: attests tip {} {}, not T1 = {t1} {}", att.tip.tip_id, hx(&att.tip.tip_hash), hx(&tip.tip_hash));
             att.verify(&d, &ksh).map_err(|e| anyhow!("{f}: the attestation does not verify: {e:?}"))?;
             records.push(json!({"file": Path::new(f).file_name().map(|n| n.to_string_lossy().to_string()),
@@ -492,7 +660,7 @@ fn main() -> Result<()> {
     let input = CheckpointInputB {
         config: config.clone(),
         parent: parent.clone(),
-        config_changes: Vec::new(),
+        config_changes: configs.iter().map(|c| c.change()).collect(),
         blocks: blocks.clone(),
         t_index: u32::try_from(t1 - t0 - 1)?,
         producer: tip_ins.elided()?,
@@ -553,6 +721,10 @@ fn main() -> Result<()> {
         "first_block": t0 + 1, "tip": t1, "tip_hash": hx(&tip.tip_hash), "final_msg_id": hx(&tip.final_msg_id),
         "parent_state": hx(&parent.digest()), "new_state": hx(&outcome.journal.new_state), "n": n_keys, "t": threshold(n_keys),
         "attestations": attestations.len(), "n_min": config.n_min, "t_min": config.t_min,
+        "parent_keys": parent_keys.iter().map(|k| hx(k)).collect::<Vec<_>>(),
+        "config_changes": configs.iter().map(|c| json!({"node_block": c.node_block, "node_slot": c.slot, "tx_hash": hx(&c.tx_hash),
+            "op_index": c.op_index, "signer_indices": c.sigs.iter().map(|(i, _)| *i).collect::<Vec<_>>()})).collect::<Vec<_>>(),
+        "keys_after": final_keys.iter().map(|k| hx(k)).collect::<Vec<_>>(),
         "burn_root": hx(&outcome.journal.burn_root), "burn_count": outcome.journal.burn_count,
         "imported_leaf_count": outcome.journal.imported_leaf_count, "sunset": outcome.journal.sunset,
         "lez_config_id": hx(&config_id), "config_id_checked_against_identity": config_id_checked,

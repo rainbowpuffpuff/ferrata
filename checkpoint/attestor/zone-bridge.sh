@@ -12,15 +12,20 @@
 #             (private) and their captures; one ferrata_attestor per sequencer (its key certified by that sequencer's
 #             channel key) attesting the node's final tier every ZB_ROUND_S s; crown-driver crown-b (pairing,
 #             registration, imports, Claim, ClaimPrivately and both burns, private ones proven by LEZ's wallet);
-#             the sequencers stopped, the final tier attested by all four; the node's answers saved
-#   input     realblocks-crown over the node's final blocks T0+1..=T with three of the four attestations (n = 4,
-#             t = 3); 4 of 4 accepted, 2 of 4 refused (natively and in r0vm); r0vm executor run
+#             with ZB_ROTATE=1, then a rotation by the zone's committee: a fifth sequencer's key staked on LEZ
+#             (`sequencer_service stake`), the committee's ChannelConfigOp applied by Bedrock, the fifth sequencer and
+#             its attestor started, ZB_ROTATE_RUN_S (420) s more; the sequencers stopped, the final tier attested by
+#             every attestor; the node's answers saved
+#   input     realblocks-crown over the node's final blocks T0+1..=T (and the rotation, if any) with all attestations
+#             but one (3 of 4, n = 4, t = 3; after a rotation 4 of 5, t = 4); all n accepted, t - 1 refused (natively
+#             and in r0vm); r0vm executor run
 #   prove     the checkpoint's succinct proof on the CPU, identity_p254 (-> work/checkpoint/input.json for mwrap)
 #   releases  crown-release (one release statement per burn), executor, CPU proofs, identity_p254 each
 #   groth16 P the Groth16 receipt of P (checkpoint | release-<name>) from work/P/proof.json (mwrap on the laptop)
 #   vault     the local anvil from its saved state: submitCandidate, W warped, finalizeAttested, the release delay
 #             warped, the releases; the vault's state checked
-#   fixture   vault/test/real/fixtures/zone-bridge.json for ZoneBridge.t.sol (the journal, the seals, the run's values)
+#   fixture   vault/test/real/fixtures/${ZB_FIXTURE:-zone-bridge}.json for ZoneBridge.t.sol (the journal, the seals, the
+#             run's values, the rotated key set)
 #   verify    the input and journal re-derived from the recorded node answers and attestations; every receipt verified
 #
 # STAND-INs (every record says so): the beacon chain on LEZ (a committee the driver holds finalizes the anvil's
@@ -31,7 +36,7 @@
 #
 # Environment: ZB_BUNDLE (the crown-live-3 LEZ bundle: binaries, the final LEZ programs, the fixture), ZB_PROGRAMS (R0BF
 # checkpoint_b.bin, checkpoint.bin, release.bin, ids.jsonl of docs/image-ids.md), ZB_DRIVER, ZB_TMP (box scratch),
-# ZB_ROUND_S (60), ZB_LEAVE_OUT (the attestor left out of the 3 of 4; 3).
+# ZB_ROUND_S (60), ZB_LEAVE_OUT (the attestor left out; default the last), ZB_ROTATE, ZB_ROTATE_RUN_S, ZB_FIXTURE.
 set -euo pipefail
 STAGE="${1:?stage}"; RUN_ARG="${2:?run dir (under e2e/runs/)}"
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -47,7 +52,7 @@ DRV="${ZB_DRIVER:-$T/target-lez/release/crown-driver}"
 ATT="$REPO/checkpoint/target/release/ferrata_attestor"
 RC="$REPO/checkpoint/target/release/realblocks-crown"
 E="$REPO/bridge/target/release/ferrata-e2e"
-ROUND_S="${ZB_ROUND_S:-60}"; LEAVE_OUT="${ZB_LEAVE_OUT:-3}"
+ROUND_S="${ZB_ROUND_S:-60}"
 CHANNEL=0101010101010101010101010101010101010101010101010101010101010101
 FUND=2e03b2eff5a45478e7e79668d2a146cf2c5c7925bce927f2b1c67f2ab4fc0d26   # the dev node's funded key (compose default)
 PORT=18080; API="http://127.0.0.1:$PORT"; R=http://127.0.0.1:8545
@@ -101,6 +106,72 @@ zone_cleanup() {
   done
 }
 
+write_cfg() { # i: upstream's devnet sequencer configuration, loopback addresses, genesis plus local.json's funded accounts
+  python3 -I - "$DEV/sequencer_config.json" "$LEZ/lez/sequencer/service/networks/local.json" "$W/cfg-$1.json" "$API" "$1" <<'EOF'
+import json, sys
+src, local, dst, api, i = sys.argv[1:6]; i = int(i)
+c = json.load(open(src)); l = json.load(open(local))
+have = {json.dumps(a, sort_keys=True) for a in c["genesis"]["actions"]}
+extra = [a for a in l["genesis"]["actions"] if json.dumps(a, sort_keys=True) not in have]
+assert all("supply_account" in a for a in extra), "only local.json's public test accounts are added"
+c["genesis"]["actions"] += extra
+c["bedrock_config"]["node_url"] = api
+c["gossip"] = {"listen_addr": f"/ip4/127.0.0.1/udp/{19100 + i}/quic-v1",
+               "bootstrap_peers": [f"/ip4/127.0.0.1/udp/{19100 + j}/quic-v1" for j in range(5) if j != i]}
+c["metrics_listen_address"] = f"127.0.0.1:{19200 + i}"
+json.dump(c, open(dst, "w"), indent=2)
+EOF
+}
+
+start_attestor() { # i: a key, its certificate by sequencer i's channel key for this deployment, the loop
+  local i="$1"
+  mkdir -p "$W/att-$i/rounds" "$RUN/zone/attestor-$i"
+  "$ATT" keygen --out "$W/att-$i/key" > "$W/att-$i/pub.txt"
+  "$ATT" certify --channel-key "$W/seq-$i/channel_signing_key" --att-pub "$(cat "$W/att-$i/pub.txt")" \
+    --deployment "$W/deployment.json" --out "$W/att-$i/cert.json" | tee -a "$RUN/logs/zone-bridge.log"
+  cp "$W/att-$i/cert.json" "$RUN/zone/attestor-$i/cert.json"
+  attest_loop "$i" > "$W/logs/attest-loop-$i.log" 2>&1 &
+  LOOP_PID+=($!)
+}
+
+b58() { python3 -I -c '
+import sys
+b = bytes.fromhex(sys.argv[1].removeprefix("0x")); a = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+n = int.from_bytes(b, "big"); s = ""
+while n: n, r = divmod(n, 58); s = a[r] + s
+print("1" * (len(b) - len(b.lstrip(bytes(1)))) + s)' "$1"; }
+
+rotate_committee() { # a fifth key staked on LEZ (upstream's `sequencer_service stake`); the committee proposes the channel's
+                     # new key set (the turn's sequencer drafts the ChannelConfigOp, t(4) = 3 of the four sign it) and
+                     # Bedrock applies it; then the fifth sequencer starts, with its attestor
+  local k4 from ch n=0 k t0
+  mkdir -p "$W/seq-4"; write_cfg 4
+  sequencer_service setup "$W/seq-4" --config "$W/cfg-4.json" --funding-public-key "$FUND" > "$W/logs/setup-4.log" 2>&1 \
+    || { tail -n 20 "$W/logs/setup-4.log"; die "setup 4"; }
+  k4="$(grep -o 'channel signing public key *[0-9a-f]*' "$W/logs/setup-4.log" | awk '{print $NF}' || true)"
+  [ -n "$k4" ] || { tail -n 20 "$W/logs/setup-4.log" | scrub; die "seq-4: no channel key in its setup log"; }
+  ch="$(curl -fsS -m 5 "$API/channel/$CHANNEL")"; echo "$ch" > "$RUN/zone/channel-before-rotation.json"
+  log "seq-4 set up: channel key $k4, not staked; the channel: $(echo "$ch" | jq -c '{keys: (.accredited_keys | length), configuration_threshold, config_tip_hash}')"
+  from="$(b58 "$("$DRV" destinations | jq -r .public0)")"
+  t0="$(date +%s)"
+  env -u RISC0_DEV_MODE sequencer_service stake --wallet-home "$W/driver/wallet" --sequencer-key "$k4" --from "Public/$from" \
+    > "$W/logs/stake.log" 2>&1 || { tail -n 20 "$W/logs/stake.log" | scrub; die "stake"; }
+  tail -n 3 "$W/logs/stake.log" | scrub | tee -a "$RUN/logs/zone-bridge.log"
+  for k in $(seq 1 120); do
+    n="$(curl -fsS -m 5 "$API/channel/$CHANNEL" 2>/dev/null | jq -r '.accredited_keys | length' 2>/dev/null || echo 0)"
+    [ "$n" = 5 ] && break; sleep 10
+  done
+  [ "$n" = 5 ] || die "the channel does not accredit a fifth key $(( $(date +%s) - t0 )) s after the stake"
+  ch="$(curl -fsS -m 5 "$API/channel/$CHANNEL")"; echo "$ch" > "$RUN/zone/channel-after-rotation.json"
+  log "the channel accredits five keys $(( $(date +%s) - t0 )) s after the stake was sent: $(echo "$ch" | jq -c '{keys: .accredited_keys, configuration_threshold, config_tip_hash}')"
+  echo 5 > "$W/nseq"
+  seq_aligned 4
+  start_attestor 4
+  log "seq-4 and its attestor started; the zone runs ${ZB_ROTATE_RUN_S:-420} s more (seq-4's turns)"
+  sleep "${ZB_ROTATE_RUN_S:-420}"
+  log "after the rotation: heights $(heights)"
+}
+
 seq_start() { # i marker: one launch of sequencer i
   local i="$1" marker="$2"
   echo "$marker" >> "$W/logs/seq-$i.log"
@@ -136,7 +207,7 @@ seq_aligned() { # i: started until its blocks fall TICK_MIN..TICK_MAX s after an
   echo "$i $starts $after $delay" >> "$W/phases.txt"
 }
 
-heights() { local i out=""; for i in 0 1 2 3; do out="$out$( { curl -fsS -m 5 -H 'content-type: application/json' \
+heights() { local i out="" n; n="$(cat "$W/nseq" 2>/dev/null || echo 4)"; for i in $(seq 0 $(( n - 1 ))); do out="$out$( { curl -fsS -m 5 -H 'content-type: application/json' \
   -d '{"jsonrpc":"2.0","id":1,"method":"getLastBlockId","params":[]}' "http://127.0.0.1:$((19300 + i))" 2>/dev/null || true; } \
   | sed -n 's/.*"result":\([0-9]*\).*/\1/p')/"; done; echo "${out%/}"; }
 lib_slot() { { curl -fsS -m 5 "$API/cryptarchia/info" 2>/dev/null || true; } | sed -n 's/.*"lib_slot":\([0-9]*\).*/\1/p'; }
@@ -202,22 +273,10 @@ stage_zone() {
 
   # -- four sequencers: upstream's devnet configuration and keys; the genesis adds local.json's two funded test accounts
   #    (the devnet's own accounts hold pre-fee balances, 10000 and 20000, below one fee reservation)
+  echo 4 > "$W/nseq"
   for i in 0 1 2 3; do
     mkdir -p "$W/seq-$i"; cp "$DEV/seq-$i/channel_signing_key" "$W/seq-$i/channel_signing_key"
-    python3 -I - "$DEV/sequencer_config.json" "$LEZ/lez/sequencer/service/networks/local.json" "$W/cfg-$i.json" "$API" "$i" <<'EOF'
-import json, sys
-src, local, dst, api, i = sys.argv[1:6]; i = int(i)
-c = json.load(open(src)); l = json.load(open(local))
-have = {json.dumps(a, sort_keys=True) for a in c["genesis"]["actions"]}
-extra = [a for a in l["genesis"]["actions"] if json.dumps(a, sort_keys=True) not in have]
-assert all("supply_account" in a for a in extra), "only local.json's public test accounts are added"
-c["genesis"]["actions"] += extra
-c["bedrock_config"]["node_url"] = api
-c["gossip"] = {"listen_addr": f"/ip4/127.0.0.1/udp/{19100 + i}/quic-v1",
-               "bootstrap_peers": [f"/ip4/127.0.0.1/udp/{19100 + j}/quic-v1" for j in range(4) if j != i]}
-c["metrics_listen_address"] = f"127.0.0.1:{19200 + i}"
-json.dump(c, open(dst, "w"), indent=2)
-EOF
+    write_cfg "$i"
     local flag=""; [ "$i" = 0 ] && flag="--create-channel"
     sequencer_service setup "$W/seq-$i" --config "$W/cfg-$i.json" --funding-public-key "$FUND" $flag > "$W/logs/setup-$i.log" 2>&1 \
       || { tail -n 20 "$W/logs/setup-$i.log"; die "setup $i"; }
@@ -312,15 +371,7 @@ EOF
   jq -n --arg c "$(printf '%064x' "$CHAIN_ID")" --arg v "$(echo "$VAULT" | tr 'A-F' 'a-f')" --arg l "${CID#0x}" --arg ch "$CHANNEL" \
     '{evm_chain_id: $c, vault: $v, lez_config_id: $l, channel_id: $ch}' > "$W/deployment.json"
   cp "$W/deployment.json" "$RUN/zone/deployment.json"
-  for i in 0 1 2 3; do
-    mkdir -p "$W/att-$i/rounds" "$RUN/zone/attestor-$i"
-    "$ATT" keygen --out "$W/att-$i/key" > "$W/att-$i/pub.txt"
-    "$ATT" certify --channel-key "$W/seq-$i/channel_signing_key" --att-pub "$(cat "$W/att-$i/pub.txt")" \
-      --deployment "$W/deployment.json" --out "$W/att-$i/cert.json" | tee -a "$RUN/logs/zone-bridge.log"
-    cp "$W/att-$i/cert.json" "$RUN/zone/attestor-$i/cert.json"
-    attest_loop "$i" > "$W/logs/attest-loop-$i.log" 2>&1 &
-    LOOP_PID+=($!)
-  done
+  for i in 0 1 2 3; do start_attestor "$i"; done
   log "four attestors started (a round every $ROUND_S s; attestation keys from the OS's randomness, never written to the repository)"
 
   # -- session B on the zone: the bridge's pairing, registration, imports, the claims and the burns
@@ -332,23 +383,26 @@ EOF
   cp "$W/session-b.json" "$W/burn-notes.json" "$RUN/lez/session-b/"
   log "session B: T1 = $(jq -r .tipT1.id "$W/session-b.json"); steps $(jq -c '[.steps[] | [.step, .status, .block]]' "$W/session-b.json" | cut -c1-600)"
   "$DRV" export "${D[@]}" --out "$W/export" > "$W/logs/export.log" 2>&1 || log "export failed ($?)"
+  if [ "${ZB_ROTATE:-0}" = 1 ]; then rotate_committee; fi
+  local NS; NS="$(cat "$W/nseq")"
 
   # -- the sequencers stop; the node's final tier settles; every attestor signs it
   sleep 30
   for p in "${LOOP_PID[@]}"; do kill "$p" 2>/dev/null || true; done; LOOP_PID=()
-  for i in 0 1 2 3; do stop_pid "${SEQ_PID[$i]}" "seq-$i"; done; SEQ_PID=()
+  for i in $(seq 0 $(( NS - 1 ))); do stop_pid "${SEQ_PID[$i]}" "seq-$i"; done; SEQ_PID=()
   log "sequencers stopped; waiting for the node's LIB to pass the channel's tip"
   local tip_slot lib=""
   tip_slot="$(curl -fsS -m 5 "$API/channel/$CHANNEL" | jq -r .tip_slot)"
   for i in $(seq 1 120); do lib="$(lib_slot)"; [ -n "$lib" ] && [ "$lib" -ge "$tip_slot" ] && break; sleep 2; done
   log "channel tip slot $tip_slot, lib $lib"
-  for i in 0 1 2 3; do
+  local vargs=()
+  for i in $(seq 0 $(( NS - 1 ))); do
     attest_round "$i" "$W/att-$i/final.json" || { tail -n 5 "$W/att-$i/attest.log" | scrub; die "attestor $i: final round"; }
     tail -n 1 "$W/att-$i/attest.log" | scrub | tee -a "$RUN/logs/zone-bridge.log"
+    vargs+=(--att "$W/att-$i/final.json")
   done
-  "$ATT" verify --deployment "$W/deployment.json" --att "$W/att-0/final.json" --att "$W/att-1/final.json" \
-    --att "$W/att-2/final.json" --att "$W/att-3/final.json" | scrub | tee -a "$RUN/logs/zone-bridge.log"
-  for i in 0 1 2 3; do
+  "$ATT" verify --deployment "$W/deployment.json" "${vargs[@]}" | scrub | tee -a "$RUN/logs/zone-bridge.log"
+  for i in $(seq 0 $(( NS - 1 ))); do
     cp "$W/att-$i/final.json" "$RUN/zone/attestor-$i/final.json"; cp "$W/att-$i/rounds.tsv" "$RUN/zone/attestor-$i/rounds.tsv"
     jq '{tip_id, tip_hash, key_set_hash, node}' "$W/att-$i/final.json" > /dev/null
     scrub < "$W/att-$i/attest.log" | tail -n 400 > "$RUN/zone/attestor-$i/attest.log"
@@ -389,38 +443,43 @@ rc_args() { # realblocks-crown's arguments over the run's records (attestation f
     --vault "$(jq -r .vault "$RUN/identity.json")" --config-id "$(jq -r .configId "$RUN/identity.json")" \
     --genesis-state "$(jq -r .genesisState "$RUN/identity.json")" --tip "$(tip_of_attestors)" --n-min 4 --t-min 3 --att "$1"
 }
-three_of_four() { local i out=""; for i in 0 1 2 3; do [ "$i" = "$LEAVE_OUT" ] && continue; out="$out,$RUN/zone/attestor-$i/final.json"; done; echo "${out#,}"; }
+n_att() { find "$RUN/zone" -maxdepth 1 -name 'attestor-*' -type d | wc -l; }
+t_of() { python3 -I -c 'import sys; n = int(sys.argv[1]); print(max(1, min(-(-2 * n // 3), n - 1)))' "$1"; }
+left_out() { echo "${ZB_LEAVE_OUT:-$(( $(n_att) - 1 ))}"; }
+all_but_one() { local i out=""; for i in $(seq 0 $(( $(n_att) - 1 ))); do [ "$i" = "$(left_out)" ] && continue; out="$out,$RUN/zone/attestor-$i/final.json"; done; echo "${out#,}"; }
 cname() { echo "zone-$(jq -r .tip.id "$RUN/lez/session-a/session-a.json")-$(tip_of_attestors)"; }
 
 stage_input() {
   local C="$RUN/checkpoint" nd n i; mkdir -p "$C"; nd="$(node_dir)"; n="$(cname)"
-  for i in 1 2 3; do
+  for i in $(seq 1 $(( $(n_att) - 1 ))); do
     [ "$(jq -r '.tip_id, .tip_hash' "$RUN/zone/attestor-$i/final.json")" = "$(jq -r '.tip_id, .tip_hash' "$RUN/zone/attestor-0/final.json")" ] \
       || die "attestor $i signed another final tip than attestor 0"
   done
-  local args; mapfile -d '' args < <(rc_args "$(three_of_four)" "$nd")
+  local args; mapfile -d '' args < <(rc_args "$(all_but_one)" "$nd")
   "$RC" "${args[@]}" --out "$C" --name "$n" | tee "$C/realblocks-crown.txt"
   local t1; t1="$(jq -r .tipT1.id "$RUN/lez/session-b/session-b.json")"
   [ "$(jq -r .tip "$C/$n.json")" -ge "$t1" ] || die "the attested tip is below session B's T1 ($t1)"
   [ "$(jq -r .burn_count "$C/burns.json")" = 2 ] || die "burns.json does not hold the session's two burns"
-  # 4 of 4 and 2 of 4 over the same base (the collector replaces the attestations); their inputs stay in $T (re-derived
-  # from the base and the records by the same two commands), their metas are recorded
-  "$ATT" collect --base "$C/$n.input" --att "$RUN/zone/attestor-0/final.json" --att "$RUN/zone/attestor-1/final.json" \
-    --att "$RUN/zone/attestor-2/final.json" --att "$RUN/zone/attestor-3/final.json" --out "$T/$n-all.input" --meta "$C/$n-all.json" \
-    --name "$n-all" | tee "$C/collect-all.txt"
-  if "$ATT" collect --base "$C/$n.input" --att "$RUN/zone/attestor-0/final.json" --att "$RUN/zone/attestor-1/final.json" \
-      --out "$T/two.input" --meta "$T/two.json" --name "$n-two" > "$C/collect-two.txt" 2>&1; then die "2 of 4 was accepted"; fi
-  echo "2 of 4: refused by the collector: $(tail -n 1 "$C/collect-two.txt")" | tee -a "$C/collect-two.txt"
-  "$ATT" assemble --base "$C/$n.input" --att "$RUN/zone/attestor-0/final.json" --att "$RUN/zone/attestor-1/final.json" \
-    --out "$T/$n-two.input" --meta "$C/$n-two.json" --name "$n-two" --expect InsufficientAttestations | tee -a "$C/collect-two.txt"
+  # all n, and t - 1 of n, over the same base (the collector replaces the attestations); their inputs stay in $T
+  # (re-derived from the base and the records by the same commands), their metas are recorded
+  local na tt all=() below=()
+  na="$(n_att)"; tt="$(t_of "$na")"
+  for i in $(seq 0 $(( na - 1 ))); do all+=(--att "$RUN/zone/attestor-$i/final.json"); done
+  for i in $(seq 0 $(( tt - 2 ))); do below+=(--att "$RUN/zone/attestor-$i/final.json"); done
+  "$ATT" collect --base "$C/$n.input" "${all[@]}" --out "$T/$n-all.input" --meta "$C/$n-all.json" --name "$n-all" | tee "$C/collect-all.txt"
+  if "$ATT" collect --base "$C/$n.input" "${below[@]}" --out "$T/below.input" --meta "$T/below.json" --name "$n-below" \
+      > "$C/collect-below.txt" 2>&1; then die "$(( tt - 1 )) of $na was accepted"; fi
+  echo "$(( tt - 1 )) of $na: refused by the collector: $(tail -n 1 "$C/collect-below.txt")" | tee -a "$C/collect-below.txt"
+  "$ATT" assemble --base "$C/$n.input" "${below[@]}" --out "$T/$n-below.input" --meta "$C/$n-below.json" --name "$n-below" \
+    --expect InsufficientAttestations | tee -a "$C/collect-below.txt"
   "$E" exec --program "$PROGRAMS/checkpoint_b.bin" --input "$C/$n.input" --meta "$C/$n.json" | tee "$C/exec.json"
   jq -e '.journal_equals_native' "$C/exec.json" > /dev/null
   "$E" exec --program "$PROGRAMS/checkpoint_b.bin" --input "$T/$n-all.input" --meta "$C/$n-all.json" | tee "$C/exec-all.json"
   # (the meta of an input the program must refuse has no journal; the executor is given a placeholder one)
   jq -n '{kind: "checkpoint-b", journal: "00"}' > "$T/two-exec-meta.json"
-  if "$E" exec --program "$PROGRAMS/checkpoint_b.bin" --input "$T/$n-two.input" --meta "$T/two-exec-meta.json" > "$C/exec-two.txt" 2>&1; then
-    die "the guest accepted 2 of 4"; fi
-  grep -o 'checkpoint refused: [^"]*' "$C/exec-two.txt" | head -n 1 | tee -a "$C/exec-two.txt"
+  if "$E" exec --program "$PROGRAMS/checkpoint_b.bin" --input "$T/$n-below.input" --meta "$T/two-exec-meta.json" > "$C/exec-below.txt" 2>&1; then
+    die "the guest accepted t - 1 attestations"; fi
+  grep -o 'checkpoint refused: [^"]*' "$C/exec-below.txt" | head -n 1 | tee -a "$C/exec-below.txt"
 }
 
 # ---- prove ------------------------------------------------------------------------------------------------------
@@ -512,7 +571,7 @@ stage_vault() {
 
 # ---- fixture: what vault/test/real/ZoneBridge.t.sol reads ---------------------------------------------------------
 stage_fixture() {
-  local C="$RUN/checkpoint" n A="$RUN/lez/session-a/session-a.json" out="$REPO/vault/test/real/fixtures/zone-bridge.json"
+  local C="$RUN/checkpoint" n A="$RUN/lez/session-a/session-a.json" out="$REPO/vault/test/real/fixtures/${ZB_FIXTURE:-zone-bridge}.json"
   n="$(cname)"
   jq -n --slurpfile m "$C/$n.json" --slurpfile a "$A" --slurpfile cj "$RUN/crown.json" --slurpfile id "$RUN/identity.json" \
     --slurpfile vc "$RUN/vault-checks.json" --arg j "0x$(hexfile "$C/receipts/journal.hex")" --arg s "0x$(hexfile "$C/receipts/seal.hex")" \
@@ -524,7 +583,8 @@ stage_fixture() {
      parentTipId: $a.tip.id, parentTipHash: $a.tip.hash, tipId: $m.tip, tipHash: $m.tip_hash,
      depositor: $id[0].deployer, commitments: [$cj.deposits[].commitment],
      releaseCount: ($cj.releases | length),
-     releases: [$cj.releases | to_entries[] | .value + {paidOnAnvil: ($vc.releases[.key].paidWei | tonumber)}]}' > "$out"
+     releases: [$cj.releases | to_entries[] | .value + {paidOnAnvil: ($vc.releases[.key].paidWei | tonumber)}]}
+    + (if (($m.config_changes // []) | length) > 0 then {rotatedKeys: [$m.keys_after[] | "0x" + ltrimstr("0x")]} else {} end)' > "$out"
   [ "$(jq -r .journal "$out" | sed 's/^0x//')" = "$(jq -r .journal "$C/$n.json")" ] || die "fixture journal"
   echo "wrote $out"
 }
@@ -533,7 +593,7 @@ stage_fixture() {
 stage_verify() {
   local C="$RUN/checkpoint" n v="$T/verify-$NAME" nd args p m
   n="$(cname)"; rm -rf "$v"; mkdir -p "$v"; nd="$(node_dir)"
-  mapfile -d '' args < <(rc_args "$(three_of_four)" "$nd")
+  mapfile -d '' args < <(rc_args "$(all_but_one)" "$nd")
   "$RC" "${args[@]}" --out "$v" --name "$n" > "$v/out.txt"
   cmp -s "$v/$n.input" "$C/$n.input" || die "the re-derived input differs"
   [ "$(jq -r .journal "$v/$n.json")" = "$(jq -r .journal "$C/$n.json")" ] || die "the re-derived journal differs"
