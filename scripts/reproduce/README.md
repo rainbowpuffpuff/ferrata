@@ -20,7 +20,7 @@ runs on its own, on a copy of the checkout: it writes into the tree it runs in.
 | Check | What runs (the commands of the README and of [verify.md](../../docs/guides/verify.md)) | It passes when |
 |---|---|---|
 | `verify-sepolia` | `python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-3`, then the same on `e2e/runs/crown-live-1`, read-only calls to a public Sepolia endpoint (a second public one if the first fails; `SEPOLIA_RPC_URL` to use yours) | 0 failed for each run (13 passed each) |
-| `vault` | `cd vault`, `forge install --no-git` at [vault/README.md](../../vault/README.md)'s pins, `FOUNDRY_OFFLINE=false forge build`, `forge test` | forge exits 0 (451 passed, 1 skipped) |
+| `vault` | `cd vault`, `forge install --no-git` at [vault/README.md](../../vault/README.md)'s pins, `FOUNDRY_OFFLINE=false forge build`, `forge test` | forge exits 0 (454 passed, 1 skipped) |
 | `core` | `scripts/fetch-vectors.sh && cargo test --workspace --locked` | cargo exits 0 (163 passed) |
 | `guest-ids` | `scripts/reproduce-image-ids.sh build`, then `compare` | 14 of 14 guests equal [docs/image-ids.md](../../docs/image-ids.md), 6 of 6 crown programs equal [e2e/crown/README.md](../../e2e/crown/README.md) |
 | `lez-harness` | `cd lez && RISC0_HOME=../../risc0-home-lez RISC0_DEV_MODE=1 cargo test -p harness --locked -- --test-threads 1` | cargo exits 0 (56 passed) |

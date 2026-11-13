@@ -195,7 +195,7 @@ evening, the five Logos modules on one tree on 13 November, and the updater on a
 updater daemon with its backend for a running LEZ sequencer (`lez/updater/sequencer/`) kept the crown run's Sepolia
 instance following Sepolia live for about eight hours on LEZ v0.4.0-rc1 devnets, from Lodestar's light-client data
 with each finalized header confirmed canonical by publicnode: 74 updates applied end to end (224 transactions, none
-refused), across the sync-committee period boundary 1411 → 1412 (the committees rotated, period 1413's adopted),
+refused; 56 updates and 170 transactions on the chains kept, 18 and 54 on blocks a preempted container lost), across the sync-committee period boundary 1411 → 1412 (the committees rotated, period 1413's adopted),
 restarts mid-job and of the whole zone ([`lez/updater/results/live-sepolia/`](../lez/updater/results/live-sepolia/README.md)).
 Merged into the daemon the updater module drives, with the planning in `lez/advance`: the updater's 14 tests, the
 A3 gate's eight runs (every figure the same), the module's job in both Logos Cores and the five modules' check,

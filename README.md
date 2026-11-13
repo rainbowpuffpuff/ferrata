@@ -77,7 +77,7 @@ cd vault && FOUNDRY_OFFLINE=false forge build && forge test
 
 `vault/foundry.toml` keeps forge offline, so the first build must be allowed to fetch solc 0.8.26
 (`FOUNDRY_OFFLINE=false`; without it forge stops at "can't install missing solc 0.8.26 in offline mode"); later
-runs need no network. Expected: 451 passed and 1 skipped, the privacy suite's Ethereum half, which replays the
+runs need no network. Expected: 454 passed and 1 skipped, the privacy suite's Ethereum half, which replays the
 output of its LEZ half (`scripts/privacy/run.sh` runs both).
 
 The attestation and bridge programs on LEZ v0.4.0-rc1's own state machine, in process, with RISC Zero in
@@ -191,7 +191,7 @@ rebuild the programs to their image ids.
 | [Round trip in CI](e2e/ci/README.md), `e2e/ci/` | One deposit there and back on one machine, every step asserted, in GitHub Actions | tested on the build box; not yet on GitHub | [76, 77](docs/EVIDENCE.md) |
 | [Command-line tool](cli/README.md), `cli/` | `ferrata`, the user's tool: deposit, claim, burn, release, recover; private by default | prototype; anvil and the harness | [84, 85](docs/EVIDENCE.md) |
 | [Relayer](docs/guides/operator-guide.md#6-the-relayer-and-the-wrapper), `cli/` | `ferrata-relayer`: users' release jobs, rule (B) checkpoints, finalisation, the gas drop | prototype; a fork of Sepolia | [46–48](docs/EVIDENCE.md) |
-| [Updater](lez/updater/README.md), `lez/updater/` | `ferrata-updater`, the light-client updater daemon | prototype; recorded data, the harness; 8 h on a LEZ sequencer following Sepolia live, 74 updates applied ([record](lez/updater/results/live-sepolia/)) | [79–81, 99](docs/EVIDENCE.md) |
+| [Updater](lez/updater/README.md), `lez/updater/` | `ferrata-updater`, the light-client updater daemon | prototype; recorded data, the harness; 8 h on LEZ sequencers of two zones following Sepolia live, 74 updates applied, 56 on the chains kept ([record](lez/updater/results/live-sepolia/)) | [79–81, 99](docs/EVIDENCE.md) |
 | [Watchers' `monitor`](monitor/README.md), `monitor/` | The watchers' node-side program: checks each candidate, cancels in time, pauses, alerts | prototype; anvil and a fork of Sepolia | [43–45](docs/EVIDENCE.md) |
 | [Rule (B) attestor](checkpoint/attestor/README.md), `checkpoint/attestor/` | `ferrata_attestor`: the signer a sequencer runs, and the collector of t of n attestations | prototype; a four-sequencer zone | [63–68](docs/EVIDENCE.md) |
 | [IDL](idl/README.md), `idl/` | The attestation and bridge programs' interfaces in SPEL's IDL format | built | [55, 58](docs/EVIDENCE.md) |
@@ -211,9 +211,10 @@ it ran, whether its proofs were real or in dev mode, what is stand-in data, and 
 The latest additions, of 11 to 13 November 2026, one line each (in full:
 [EVIDENCE.md, "The latest additions"](docs/EVIDENCE.md#the-latest-additions-of-11-to-13-november-2026)):
 
-- **Live on 12–13 November 2026, merged on 13 November** (EVIDENCE rows 99, 80, `updater-live`): the updater on a
-  running LEZ sequencer following Sepolia live for eight hours, 74 updates applied across a period boundary; merged
-  into the daemon the updater module drives, every test and gate figure the same.
+- **Live on 12–13 November 2026, merged on 13 November** (EVIDENCE rows 99, 80, `updater-live`): the updater on
+  running LEZ sequencers following Sepolia live for eight hours on two zones, 74 updates applied (56 on the chains
+  kept) across a period boundary; merged into the daemon the updater module drives, every test and gate figure the
+  same.
 - **Merged on 13 November 2026** (EVIDENCE rows 93–98, `bridge-module-complete` and `modules-more`): the five Logos
   modules on one tree, the attestation and bridge modules completed on the tools' own code and the three daemons as
   modules; every job through them in a headless Logos Core and from the local catalog.

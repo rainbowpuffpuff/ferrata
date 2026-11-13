@@ -173,9 +173,10 @@ lab's final roots on both chains, a lying source, a stale and a down source, `mi
 restart mid-job and mid-period with dropped connections, and the acceptance run of §3.4
 ([`lez/updater/README.md`](../../lez/updater/README.md)). On a running LEZ sequencer: the build of `lez/updater/sequencer/` (`daemon.ledger = "sequencer"`, a
 `[sequencer]` section with the RPC address and the program's account) kept the crown run's Sepolia instance
-following Sepolia for 8 h on a LEZ v0.4.0-rc1 devnet, from Lodestar's light-client data with publicnode's
-headers as the second source (`kind = "headers"`, `min_agreeing = 2`): 74 updates applied, restarts
-mid-job and of the whole zone ([`lez/updater/results/live-sepolia/`](../../lez/updater/results/live-sepolia/)). The Logos
+following Sepolia for 8 h on two LEZ v0.4.0-rc1 devnets in turn, from Lodestar's light-client data with
+publicnode's headers as the second source (`kind = "headers"`, `min_agreeing = 2`): 74 updates applied (56 on
+the chains kept), restarts mid-job and of the whole zone
+([`lez/updater/results/live-sepolia/`](../../lez/updater/results/live-sepolia/)). The Logos
 module `ferrata_updater_module` ([`modules/`](../../modules/README.md)) drives the same daemon on the in-process chain; it
 does not carry the sequencer backend. Not built: the proven path, the module on a running sequencer.
 
