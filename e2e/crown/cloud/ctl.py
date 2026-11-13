@@ -9,9 +9,12 @@
     ctl.py status <run>
     ctl.py fetch <run> [--lez]
     ctl.py stop [--app]
-    ctl.py updater <run> --bin FILE [--minutes N] [--restart-min M] [--poll-s S] [--probe-s S]
+    ctl.py updater <run> --bin FILE|--module DIR [--minutes N] [--restart-min M] [--poll-s S] [--probe-s S]
                     lez/crown/session.sh a then u in the function updater_session (lez/updater/sequencer's daemon on a
-                    zone of session A, the public Sepolia beacon APIs read); nothing is sent to any public network
+                    zone of session A, the public Sepolia beacon APIs read); nothing is sent to any public network.
+                    --module DIR: the same daemon as ferrata_updater_module inside a headless Logos Core (DIR holds the
+                    module's portable package, *.lgx, and the portable logosctl as logos-portable.tar.zst); session.sh u
+                    runs in module mode when the Volume has them (inputs/updater/module/)
     ctl.py updater-stop <run> [REASON]   end session U at its next check (within 30 s)
     ctl.py updater-status <run>          the call, the session's last lines, the journal's
     ctl.py updater-fetch <run> DIR       lez/<run>/session-a/, session-u/ and the logs into DIR
@@ -410,10 +413,23 @@ def stop(app_too: bool) -> None:
     print(f"kept: Volume {VOLUME_NAME} (inputs, runs, LEZ generations); nothing runs")
 
 
-def updater(run: str, binary: str | None, env: dict) -> None:
+def updater(run: str, binary: str | None, env: dict, module: str | None = None) -> None:
     check_run_name(run)
-    if not binary or not os.path.isfile(binary):
-        die("updater: --bin FILE (lez/updater/sequencer's ferrata-updater, built on the build box)")
+    files = {}
+    if module:
+        if binary:
+            die("updater: --bin or --module, not both")
+        lgx = sorted(f for f in os.listdir(module) if f.endswith(".lgx")) if os.path.isdir(module) else []
+        if len(lgx) != 1 or not os.path.isfile(os.path.join(module, "logos-portable.tar.zst")):
+            die("updater: --module DIR holds one *.lgx (ferrata_updater_module, portable) and logos-portable.tar.zst")
+        files = {f: os.path.join(module, f) for f in (lgx[0], "logos-portable.tar.zst")}
+        # updater_session wants inputs/updater/ferrata-updater; in module mode it is this note, never run.
+        os.makedirs(SCRATCH, exist_ok=True)
+        binary = os.path.join(SCRATCH, "ferrata-updater-module-mode")
+        with open(binary, "w") as f:
+            f.write("#!/bin/sh\necho 'module mode: the updater runs in ferrata_updater_module (inputs/updater/module/)'\nexit 2\n")
+    elif not binary or not os.path.isfile(binary):
+        die("updater: --bin FILE (lez/updater/sequencer's ferrata-updater, built on the build box) or --module DIR")
     vol = volume()
     if vread(vol, f"lez/{run}/updater-call.json"):
         state, _ = call_state(vjson(vol, f"lez/{run}/updater-call.json")["call"])
@@ -422,6 +438,8 @@ def updater(run: str, binary: str | None, env: dict) -> None:
     script = open(os.path.join(REPO, "lez/crown/session.sh"), "rb").read()
     with vol.batch_upload(force=True) as b:
         b.put_file(binary, f"lez/{run}/inputs/updater/ferrata-updater")
+        for name, path in files.items():
+            b.put_file(path, f"lez/{run}/inputs/updater/module/{name}")
     try:
         modal.Dict.from_name("ferrata-crown-control", create_if_missing=True).pop(f"stop/{run}")
     except KeyError:
@@ -429,6 +447,7 @@ def updater(run: str, binary: str | None, env: dict) -> None:
     fn = modal.Function.from_name(APP_NAME, "updater_session")
     call = fn.spawn(run=run, script=script, env=env)
     meta = {"call": call.object_id, "started_at": utc(), "binary_sha256": sha256(binary), "env": env,
+            "module": {name: sha256(path) for name, path in files.items()} or None,
             "session_sh_sha256": hashlib.sha256(script).hexdigest(), "commit": git("rev-parse", "HEAD").strip()}
     path = os.path.join(SCRATCH, f"updater-call-{run}.json")
     os.makedirs(SCRATCH, exist_ok=True)
@@ -499,7 +518,7 @@ def main() -> None:
     elif len(a) >= 2 and a[0] == "updater":
         env = {"CROWN_UPDATER_MIN": opt("--minutes") or "60", "CROWN_UPDATER_RESTART_MIN": opt("--restart-min"),
                "CROWN_UPDATER_POLL_S": opt("--poll-s"), "CROWN_UPDATER_PROBE_S": opt("--probe-s"), "CROWN_SAMPLE": "1"}
-        updater(a[1], opt("--bin"), {k: v for k, v in env.items() if v is not None})
+        updater(a[1], opt("--bin"), {k: v for k, v in env.items() if v is not None}, opt("--module"))
     elif len(a) >= 2 and a[0] == "updater-stop":
         updater_stop(a[1], " ".join(a[2:]))
     elif len(a) >= 2 and a[0] == "updater-status":

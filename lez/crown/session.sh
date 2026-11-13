@@ -275,13 +275,9 @@ updater_mirror() { # the records so far, to the Volume
 }
 journal_lines() { if [ -f "$S/updater/state/sepolia/journal.tsv" ]; then wc -l < "$S/updater/state/sepolia/journal.tsv"; else echo 0; fi; }
 journal_tail() { tail -n 1 "$S/updater/state/sepolia/journal.tsv" 2>/dev/null | cut -f2,5 | tr '\t' ' '; }
-updater_session() {
-  local U="$S/updater" bin="${CROWN_UPDATER_BIN:-$VOL/inputs/updater/ferrata-updater}" minutes="${CROWN_UPDATER_MIN:-60}"
-  local restart_min="${CROWN_UPDATER_RESTART_MIN:-}" probe_s="${CROWN_UPDATER_PROBE_S:-60}" poll_s="${CROWN_UPDATER_POLL_S:-24}"
-  local program t0 end now last_probe=0 n=0 restart=0 armed_at=0 armed_lines=0 lines rc=0
-  mkdir -p "$U" "$OUT/probes"
-  cp "$bin" "$WORK/ferrata-updater" 2>/dev/null && chmod +x "$WORK/ferrata-updater" || { say "no updater binary at $bin"; return 3; }
-  say "updater binary sha256 $(sha256sum "$WORK/ferrata-updater" | cut -c1-64)"
+updater_config() { # POLL_S: payer.key and updater.toml in $S/updater (session A's zone), $OUT/updater.toml, $WORK/probe.py
+  local U="$S/updater" poll_s="$1" program
+  mkdir -p "$U"
   program="$(python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1]))["attestation"]["account"])' "$VOL/session-a/session-a.json")" \
     || { say "no attestation account in session-a/session-a.json"; return 3; }
   [ -f "$U/updater.toml" ] && say "the updater's state from an earlier session U is kept ($(du -sh "$U/state" 2>/dev/null | cut -f1))"
@@ -313,6 +309,15 @@ updater_session() {
     'print(json.dumps({"t": t, "life": int(life), "http": int(code), "health": h, "tx": pick("ferrata_updater_tx_total"),' \
     '                  "fee": pick("ferrata_updater_fee_total"), "available": pick("ferrata_updater_source_available"),' \
     '                  "confirmed": pick("ferrata_updater_source_confirmed_total")}, separators=(",", ":")))' > "$WORK/probe.py"
+}
+updater_session() {
+  local U="$S/updater" bin="${CROWN_UPDATER_BIN:-$VOL/inputs/updater/ferrata-updater}" minutes="${CROWN_UPDATER_MIN:-60}"
+  local restart_min="${CROWN_UPDATER_RESTART_MIN:-}" probe_s="${CROWN_UPDATER_PROBE_S:-60}" poll_s="${CROWN_UPDATER_POLL_S:-24}"
+  local program t0 end now last_probe=0 n=0 restart=0 armed_at=0 armed_lines=0 lines rc=0
+  mkdir -p "$U" "$OUT/probes"
+  cp "$bin" "$WORK/ferrata-updater" 2>/dev/null && chmod +x "$WORK/ferrata-updater" || { say "no updater binary at $bin"; return 3; }
+  say "updater binary sha256 $(sha256sum "$WORK/ferrata-updater" | cut -c1-64)"
+  updater_config "$poll_s" || return 3
   t0=$(date +%s); end=$(( t0 + minutes * 60 ))
   say "session U: $minutes min (until $(date -u -d "@$end" +%FT%TZ)); restart after ${restart_min:-never} min; probe every $probe_s s"
   updater_start
@@ -358,6 +363,125 @@ updater_session() {
   return "$rc"
 }
 
+# ---- Session U in module mode: the same daemon as ferrata_updater_module in a headless Logos Core --------------
+MOD_DIR="$VOL/inputs/updater/module"
+module_mode() { [ -f "$MOD_DIR/logos-portable.tar.zst" ] && ls "$MOD_DIR"/*.lgx > /dev/null 2>&1; }
+lctl() { HOME="$WORK/logos-home" TMPDIR="$WORK/t" "$WORK/logos/bin/logosctl" --config-dir "$WORK/logos-session" "$@"; }
+mcall() { # METHOD NAME [REQUEST_JSON]: through Logos Core; the method's reply (JSON) in $OUT/module/NAME.json
+  local m="$1" n="$2" raw="$OUT/module/$2.raw" rc=0
+  if [ -n "${3:-}" ]; then
+    printf '%s\n' "$3" > "$OUT/module/$n.req.json"
+    lctl --timeout 3600000 call ferrata_updater_module "$m" "@$OUT/module/$n.req.json" --json < /dev/null > "$raw" 2>&1 || rc=$?
+  else
+    lctl --timeout 3600000 call ferrata_updater_module "$m" --json < /dev/null > "$raw" 2>&1 || rc=$?
+  fi
+  jq -c 'if (.result | type) == "string" then (.result | fromjson? // .result) else .result end' "$raw" > "$OUT/module/$n.json" 2>/dev/null \
+    || echo "{\"verdict\":\"call-failed\",\"exit\":$rc}" > "$OUT/module/$n.json"
+  return 0
+}
+module_logs() { # the Logos Core daemon's log (the module's host process writes into it): the updater's log
+  mkdir -p "$OUT/logos-logs"
+  cp -L "$WORK/logos-session/logs/"*.log "$OUT/logos-logs/" 2>/dev/null
+  cp -L "$WORK/logos-session/logs/daemon.log" "$LOG/updater.log" 2>/dev/null
+  return 0
+}
+module_start() {
+  UPD_LIFE=$(( UPD_LIFE + 1 ))
+  mcall start "start-$UPD_LIFE" "{\"config_file\":\"$S/updater/updater.toml\",\"quiet\":false}"
+  say "module start, life $UPD_LIFE: $(jq -c '{verdict, running, error, round: .snapshot.round, served: .config.served}' "$OUT/module/start-$UPD_LIFE.json" 2>/dev/null | cut -c1-400)"
+  [ "$(jq -r .verdict "$OUT/module/start-$UPD_LIFE.json" 2>/dev/null)" = started ]
+}
+module_stop() { # the round in hand finishes, the backend saves its follower, the daemon's thread ends
+  local t0; t0=$(date +%s)
+  mcall stop "stop-$UPD_LIFE"
+  say "module stop, life $UPD_LIFE, after $(( $(date +%s) - t0 )) s: $(jq -c '{verdict, running, error, round: .snapshot.round}' "$OUT/module/stop-$UPD_LIFE.json" 2>/dev/null | cut -c1-300)"
+  [ "$(jq -r .running "$OUT/module/stop-$UPD_LIFE.json" 2>/dev/null)" = false ]
+}
+module_status() { # status through Logos Core: one JSON line per probe; 0 if the daemon runs in the module
+  local t; t="$(date -u +%FT%TZ)"
+  mcall status status-last
+  jq -c --arg t "$t" --argjson life "$UPD_LIFE" '{t: $t, life: $life, running, verdict, error, round: .snapshot.round,
+      healthy: .snapshot.healthy, up_to_date: .snapshot.up_to_date,
+      instances: [.snapshot.instances[]? | {chain, finalized_slot, finalized_root, period, applied}], notes: ((.notes // [])[-3:])}' \
+    "$OUT/module/status-last.json" >> "$OUT/probes/status.jsonl" 2>/dev/null
+  [ "$(jq -r .running "$OUT/module/status-last.json" 2>/dev/null)" = true ]
+}
+updater_module_session() {
+  local U="$S/updater" minutes="${CROWN_UPDATER_MIN:-60}"
+  local restart_min="${CROWN_UPDATER_RESTART_MIN:-}" probe_s="${CROWN_UPDATER_PROBE_S:-60}" poll_s="${CROWN_UPDATER_POLL_S:-24}"
+  local t0 end now last_probe=0 n=0 restart=0 armed_at=0 armed_lines=0 lines rc=0 lgx
+  mkdir -p "$U" "$OUT/probes" "$OUT/module" "$WORK/logos" "$WORK/logos-home" "$WORK/t"
+  lgx="$(ls "$MOD_DIR"/*.lgx | head -n 1)"
+  zstd -q -d -c "$MOD_DIR/logos-portable.tar.zst" | tar -x -C "$WORK/logos" || { say "module mode: logos-portable.tar.zst does not unpack"; return 3; }
+  say "module mode: $(basename "$lgx") sha256 $(sha256sum "$lgx" | cut -c1-64), logos-portable.tar.zst sha256 $(sha256sum "$MOD_DIR/logos-portable.tar.zst" | cut -c1-64)"
+  ( cd "$MOD_DIR" && sha256sum ./*.lgx logos-portable.tar.zst ) > "$OUT/module/inputs.sha256" 2>&1
+  updater_config "$poll_s" || return 3
+  # The headless Logos Core (portable), without RISC0_DEV_MODE: the sequencer executes every transaction, the module's
+  # follower applies its blocks; the daemon's /health and /metrics on daemon.listen as the binary's.
+  lctl --version > "$OUT/module/logosctl-version.txt" 2>&1
+  env -u RISC0_DEV_MODE HOME="$WORK/logos-home" TMPDIR="$WORK/t" "$WORK/logos/bin/logosctl" --config-dir "$WORK/logos-session" \
+    daemon start --detach > "$OUT/module/daemon-start.txt" 2>&1 || { say "logosctl daemon start failed: $(tail -c 300 "$OUT/module/daemon-start.txt")"; return 3; }
+  lctl install "$lgx" -y > "$OUT/module/install.txt" 2>&1 || { say "install failed: $(tail -c 300 "$OUT/module/install.txt")"; module_logs; return 3; }
+  lctl module load ferrata_updater_module > "$OUT/module/load.txt" 2>&1 || { say "load failed: $(tail -c 300 "$OUT/module/load.txt")"; module_logs; return 3; }
+  lctl module show ferrata_updater_module --json > "$OUT/module/show.json" 2>&1
+  mcall version version
+  say "module version: $(jq -c '{version, ledgers, program: .program.declared_id, computed: .program.computed_id, dev_mode, staged: .updater.commit}' "$OUT/module/version.json" | cut -c1-400)"
+  mcall check_config check_config "{\"config_file\":\"$U/updater.toml\"}"
+  say "check_config: $(jq -c '{verdict, ledger, sequencer, chains: [.chains[] | {name, layout, sources: [.sources[] | .name + ":" + .kind]}]}' "$OUT/module/check_config.json" | cut -c1-400)"
+  [ "$(jq -r .ledger "$OUT/module/check_config.json")" = sequencer ] || { say "check_config refused the configuration"; module_logs; return 3; }
+  t0=$(date +%s); end=$(( t0 + minutes * 60 ))
+  say "session U (module): $minutes min (until $(date -u -d "@$end" +%FT%TZ)); restart through stop/start after ${restart_min:-never} min; probe every $probe_s s"
+  module_start || { say "the module's start failed"; module_logs; lctl daemon stop > /dev/null 2>&1; return 3; }
+  while :; do
+    now=$(date +%s)
+    if [ -f /root/updater-stop ]; then say "stop requested: $(head -c 200 /root/updater-stop)"; break; fi
+    if [ "$now" -ge "$end" ]; then say "the session's $minutes min are over"; break; fi
+    if [ $(( now - last_probe )) -ge "$probe_s" ]; then
+      n=$(( n + 1 )); updater_probe "$n"
+      if ! module_status; then
+        say "the daemon is not running in the module (life $UPD_LIFE): $(jq -c '{verdict, error}' "$OUT/module/status-last.json" | cut -c1-300)"
+        module_logs; updater_mirror
+        if [ "$UPD_LIFE" -ge 4 ]; then say "four lives: giving up"; break; fi
+        sleep 30; module_start; last_probe=0; continue
+      fi
+      module_logs; updater_mirror; last_probe=$now
+    fi
+    # The restart through the module, armed after restart_min; done as soon as the daemon has applied an Open (a
+    # job half done), or after 20 min armed, whatever it is doing.
+    if [ -n "$restart_min" ] && [ "$restart" = 0 ] && [ "$now" -ge $(( t0 + restart_min * 60 )) ]; then
+      restart=1; armed_at=$now; armed_lines=$(journal_lines)
+      say "restart armed (journal at $armed_lines lines)"
+    fi
+    if [ "$restart" = 1 ]; then
+      lines=$(journal_lines)
+      if { [ "$lines" -gt "$armed_lines" ] && [ "$(journal_tail)" = "open applied" ]; } || [ $(( now - armed_at )) -ge 1200 ]; then
+        say "restart: the journal's last line is '$(journal_tail)'; the module's stop"
+        n=$(( n + 1 )); updater_probe "$n"; module_status
+        module_stop || say "the module's stop did not end the daemon"
+        module_logs; updater_mirror
+        cp "$U/state/sepolia/journal.tsv" "$OUT/journal-at-restart.tsv" 2>/dev/null
+        ls -la "$U/state" "$U/state/sepolia" "$U/state/sepolia/open" "$U/state/ledger" > "$OUT/state-at-restart.txt" 2>&1
+        restart=2; sleep 15
+        module_start || say "the module's start after the restart failed"
+        last_probe=0
+        continue
+      fi
+    fi
+    sleep 1
+  done
+  n=$(( n + 1 )); updater_probe "$n"; module_status
+  mcall metrics metrics-final
+  jq -r .metrics "$OUT/module/metrics-final.json" > "$OUT/module/metrics-final.txt" 2>/dev/null
+  module_stop; rc=$?
+  lctl module ls --json > "$OUT/module/module-ls.json" 2>&1
+  lctl daemon stop > "$OUT/module/daemon-stop.txt" 2>&1
+  module_logs; updater_mirror
+  ls -la "$U/state" "$U/state/sepolia" "$U/state/sepolia/open" "$U/state/ledger" > "$OUT/state-at-end.txt" 2>&1
+  say "session U (module): lives $UPD_LIFE, last stop $([ "$rc" = 0 ] && echo ended || echo FAILED), journal $(journal_lines) transactions"
+  [ "$rc" = 0 ] || return 1
+  return 0
+}
+
 # ---- The driver -----------------------------------------------------------------------------
 D=(--rpc "http://127.0.0.1:$RPC_PORT" --run-dir "$S/driver" --program-bin "$B/program/ferrata_lez.bin"
    --bridge-bin "$B/program/ferrata_bridge.bin" --chain "$CHAIN" --fixture "$B/fixture" --sequencer-log "$LOG/sequencer.log")
@@ -377,7 +501,7 @@ if [ "$STEP" = a ]; then
     --genesis "$S/bedrock/deployment-settings.yaml" --identity-out "$WORK/session-a.json" "${extra[@]}" > "$LOG/driver.log" 2>&1
   DRIVER_RC=$?
 elif [ "$STEP" = u ]; then
-  updater_session
+  if module_mode; then updater_module_session; else updater_session; fi
   DRIVER_RC=$?
 else
   caps=(); for c in ${CROWN_CAPTURES:-$VOL/inputs/capture-1 $VOL/inputs/capture-2}; do caps+=(--capture "$c"); done
