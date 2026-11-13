@@ -167,7 +167,7 @@ side is a devnet we ran (LEZ testnet 0.4 does not exist).
   verifier in the vault); the burn root's checkpoint is still the mock there (the harness's blocks are not chained,
   row 89). Timing and amount residuals, network metadata and LEZ's own anonymity set are outside both.
 - **Not built** (README, "Specified but not built"): among them `ferrata_attestor`, `monitor` and the
-  updater as Logos modules, the updater's backend for a running sequencer, the mini-app's private round trip
+  updater as Logos modules, the mini-app's private round trip
   through a LEZ sequencer, reads and sends through Logos Core's own modules, a published module catalog. Nothing is audited: the static
   analysis, symbolic checks, fuzzing and the core's review (rows 1, 35, 36 and 40) are tooling, not an audit; the
   Halmos properties hold from one concrete fixture state within stated bounds; of the four not proven in 900 s,

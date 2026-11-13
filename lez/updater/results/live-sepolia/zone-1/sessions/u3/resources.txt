@@ -1,0 +1,5 @@
+samples 4400 (2 s), cores visible 2
+peak busy cores 4.6, mean busy cores 1.7
+peak summed RSS 3010 MiB
+  peak RSS logos-blockchai 2587 MiB
+  peak RSS sequencer_servi 312 MiB

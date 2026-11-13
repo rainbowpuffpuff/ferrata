@@ -1,0 +1,56 @@
+[2026-11-13T01:35:31Z] updater session crown-updater-live-2: bundle sha256 0013bab125141c9daf2bb2e18c857e160e2235adc1e75c4f3ec34beda0593e67, 8 CPUs visible, generation 0
+[2026-11-13T01:35:31Z] session a
+[01:35:32] crown LEZ session a (chain sepolia)
+[01:35:32] a new zone
+[01:35:33] Bedrock node up: {"cryptarchia_info":{"lib":"402255ecf1448ec5d136c293f7eb818cd6137af8175bdc72f06a99cf2eef8a52","lib_slot":0,"tip":"402255ecf1448ec5d136c293f7eb818cd6137af8175bdc72f06a99cf2eef8a52","slot":0,"height":0,"state":"Bootstrapping"},"phase":"InitialBlockDownload"}
+[01:35:37] node slot 0 is unix second 1785493027
+[01:35:40] sequencer start 1: scheduler after 2 s; its blocks fall 2 s after an epoch second
+[01:35:40] sequencer up, head block 1
+[01:35:40] channel: {"accredited_keys":["202f99d213e3ebd45a1d5f48a2574b444bae5e84432051868ab79132cb04ff4a"],"configuration_threshold":1,"tip_message":"981a366c1c2fda37d4ddbce91d9f59a25287f646dfed091163a0ebbe5dcc01b8","config_tip_hash":"0000000000000000000000000000000000000000000000000000000000000000","tip_slot":9040712
+samples 116 (2 s), cores visible 2
+peak busy cores 1.9, mean busy cores 1.1
+peak summed RSS 644 MiB
+  peak RSS logos-blockchai 242 MiB
+  peak RSS sequencer_servi 208 MiB
+[01:39:37] driver exit 0
+[deploy] bridge: image ccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd at AfrE4T3U17eZYUH3KMGDgeE6A4jnpDGum151T3VtddCp (computed by the sequencer's loader), immutable
+[crown-a] crown sepolia: attestation program A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX, bridge AfrE4T3U17eZYUH3KMGDgeE6A4jnpDGum151T3VtddCp, instance 0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5
+[crown-a] crown sepolia Init Init                                    applied        gas    114811 block   17 + 12.1s 53e3f7a46e6f36735bb6d53b5c240f7a0156eabcd127cc19aef5613c910e8a97
+[crown-a] crown sepolia Init adopt 1/2                               applied        gas   3397076 block   18 + 10.0s 3a92ebe58aebe5b166cef921aae8ed8866b53ae39046e0926bfcb764f1ccae0a
+[crown-a] crown sepolia Init adopt 2/2                               applied        gas   3480132 block   19 +  9.3s 2dd6da655fea8675d9f50122d934a30bd503afa087caddd98de27754ac9b4a38
+[crown-a] period 1411 update Open (step 1)                           applied        gas   2096392 block   20 +  9.7s a83c9087d4f73ccde348c937811b807e3f665ac4543bd88492327afd655e2e78
+[crown-a] period 1411 update Miller (step 2)                         applied        gas   3310470 block   21 +  9.8s 6485324413a887284305dfbd3452b66d671e9758bd606f64dc463f3bc62c59ae
+[crown-a] period 1411 update adopt 1/2                               applied        gas   3408111 block   22 +  9.1s ef7ee556a88a8da32a10cc380df0aa511b62238d5a6aa9d784dd756271b5dcb5
+[crown-a] period 1411 update adopt 2/2                               applied        gas   3415303 block   23 + 10.8s abf25aecdfdad883a137b910e0f348eba1f0077cb587158e74382c5156e4f771
+[crown-a] period 1411 update Finish (step 3)                         applied        gas   3696140 block   24 + 10.4s e6b989d13143ad881878b0c9c4ea1e4d8f18f279f5919b287fe9e54480d91de7
+[crown-a] period 1411 update applied: advanced false, adopted true, rotated false
+[crown-a] T0 = block 24 0xd51987872a92248b24cb91b0a0d4019bb681f4bf322ff072b2d4a92fbf906f2c; identity written to work/session-a.json
+[01:39:38] sequencer stopped (exit 0)
+[01:39:46] node stopped (exit 143)
+[01:39:47] saved generation 1 (50162250 bytes; head block 24)
+[01:39:47] session a: ok
+[2026-11-13T01:39:47Z] session a: exit 0, generation 1
+[2026-11-13T01:39:51Z] session u
+[01:39:51] crown LEZ session u (chain sepolia)
+[01:39:52] restored generation 1 (232M)
+[01:39:53] Bedrock node up: {"cryptarchia_info":{"lib":"416cd50bc1ae601a10106475af38b42cda0b745b151006961717c8214ab5279b","lib_slot":9040953,"tip":"6c44743e391e9f5af65143b9c3307fa43c5db7082007a20ebd073e83118ed704","slot":9040958,"height":245,"state":"Online"},"phase":"InitialBlockDownload"}
+[01:39:56] node slot 0 is unix second 1785493027
+[01:40:30] sequencer start 1: scheduler after 34 s; its blocks fall 3 s after an epoch second
+[01:40:30] sequencer up, head block 24
+[01:40:30] updater binary sha256 912208fc8fd7637207721ec66789fe1fbeea51a840d4c9b25cac0bf52942525a
+[01:40:31] session U: 140 min (until 2026-11-13T04:00:31Z); restart after never min; probe every 60 s
+[01:40:31] updater life 1 started (pid 3738)
+[03:29:32] stop requested: end of the run at 2026-11-13T03:29:09Z: period 1412 rotated and 1413's committee adopted
+[03:29:33] updater life 1 stopped by SIGTERM after 2 s: exit 0
+[03:29:33] session U: updater lives 1, last exit 0, journal 53 transactions
+samples 3191 (2 s), cores visible 2
+peak busy cores 6.4, mean busy cores 1.3
+peak summed RSS 1781 MiB
+  peak RSS logos-blockchai 1376 MiB
+  peak RSS sequencer_servi 284 MiB
+[03:29:33] driver exit 0
+[03:31:53] sequencer stopped (exit 0)
+[03:32:01] node stopped (exit 143)
+[03:32:11] saved generation 2 (1687154688 bytes; head block 692)
+[03:32:11] session u: ok
+[2026-11-13T03:32:12Z] session u: exit 0, generation 2

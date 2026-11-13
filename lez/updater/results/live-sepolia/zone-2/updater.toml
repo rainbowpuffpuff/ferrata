@@ -1,0 +1,51 @@
+# Written by lez/crown/session.sh u: the zone of session A (crown-driver crown-a deployed the attestation program and
+# initialised the Sepolia instance from crates/ferrata-spectests/fixtures/sepolia-2026-11-12 and its period-1411 update).
+[daemon]
+name = "updater-live"
+state_dir = "state"
+poll_secs = 24
+listen = "127.0.0.1:9464"
+ledger = "sequencer"
+
+[sequencer]
+rpc = "http://127.0.0.1:3040"
+program = "0x86ce4d7f54bd68b4c7356398cfda192f791c83f6fa3c3102a18ac20fefdfa04c"
+wait_final = true
+log = "work/logs/sequencer.log"
+
+[keys]
+payer_key_file = "payer.key"
+
+[fees]
+gas_limit = 4800000
+max_fee_per_tx = 1000000000
+budget = 1000000000000
+
+[policy]
+defer_window = 1
+max_lag_slots = 64
+min_agreeing = 2
+retry_base_ms = 1000
+retry_max_ms = 60000
+max_attempts = 5
+demote_rounds = 50
+max_periods_per_request = 4
+finish_own_jobs = true
+
+[[chain]]
+name = "sepolia"
+preset = "sepolia"
+checkpoint = "3b901f5e6853b5cf5eb04d7ccfe1272e66c38291cb3a11dd159cacd1117ccf7c"
+layout = "gloas"
+adoption_parts = 2
+
+  [[chain.source]]
+  name = "lodestar"
+  url = "https://lodestar-sepolia.chainsafe.io"
+  timeout_secs = 30
+
+  [[chain.source]]
+  name = "publicnode"
+  url = "https://ethereum-sepolia-beacon-api.publicnode.com"
+  kind = "headers"
+  timeout_secs = 30

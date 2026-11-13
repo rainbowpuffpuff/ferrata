@@ -1,0 +1,13 @@
+[
+  {
+    "chain": "sepolia",
+    "daemon": "updater-live",
+    "finalized_slot": 11567104,
+    "last_error": "",
+    "last_plan": "up-to-date",
+    "period": 1412,
+    "reasons": [],
+    "round": 214,
+    "status": "ok"
+  }
+]

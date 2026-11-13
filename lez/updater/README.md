@@ -189,13 +189,31 @@ the fees 0.39–0.47. It comes from same-round collisions: two honest updaters w
 `Open` costs about 2.2M (step 1 runs before the job is found to exist), a refused later step at
 most about 24k.
 
+## On a running LEZ sequencer, with live Sepolia data
+
+12–13 November 2026, 19:21Z to 03:29Z (about eight hours, five sessions on two zones): the build of `sequencer/`
+kept the crown run's Sepolia instance (`0xa5fb2591…`, from `crates/ferrata-spectests/fixtures/sepolia-2026-11-12`)
+following Sepolia on LEZ v0.4.0-rc1 devnets made by the crown run's own session machinery (`lez/crown/session.sh a`,
+then `u`; the final programs `816d1fef…`, `ccde6171…`), on Modal (`e2e/crown.sh updater`), from Lodestar's public
+light-client data with publicnode's public beacon API as the second source (`kind = "headers"`, `min_agreeing = 2`).
+Record, tables and the re-check: [`results/live-sepolia/`](results/live-sepolia/README.md).
+
+| | |
+|---|---|
+| updates applied end to end | **74** (224 transactions, all applied; none refused, reverted, dropped or rejected; no job left open): 39 on zone 1's final chain, 18 on blocks a preempted container lost (records kept), 17 on zone 2 |
+| the period boundary | Sepolia's period 1411 → 1412 (03:00:48Z): the update finalizing slot 11,567,104 rotated the committees (blocks 585–593, 9,901,372 gas), the period-1412 update adopted period 1413's committee (blocks 597–613, five transactions, 16,117,928 gas), then two more updates under the new committee |
+| each update | checked by the program's own steps natively before paying, its finalized header confirmed canonical by publicnode; a finality update is three transactions, 9.11M gas, each final on Bedrock 6.9–16.4 s after sending |
+| `/health`, `/metrics` | read every minute: 464 of 483 probes `ok`; 5 before the daemon listened; 14 at HTTP 503 while a round waited on a zone out of Bedrock funds |
+| restarts from its state | SIGTERM between jobs and twice mid-job (the kept job finished: `Miller`, `Finish`, no second `Open`); the zone (sequencer, node, daemon) saved and restored twice; a container preempted and the zone restored from its last generation (the daemon caught up in one job) |
+| re-check | `python3 -I lez/updater/results/live-sepolia/check.py lez/updater/results/live-sepolia/zone-2 --beacon URL`: journal against manifest, fees against the payer's balance, the blocks' own gas totals, the jobs' steps, the instance in crown-driver's export, every root against a beacon node |
+| found | a LEZ zone's Bedrock funds for inscriptions ran out after 1,468 blocks (4.1 h), and its sequencer stopped; Lodestar's light-client data lagged the boundary by about 13 minutes; a preempted container loses the zone since its last generation (results README, Findings) |
+
 ## Not built, not tested
 
-- The sequencer backend (LEZ's wallet and `sequencer_service_rpc`, following blocks final on
-  Bedrock, as `../live/driver/src/live.rs`); it would implement `ledger::Ledger` in a workspace of
-  its own, as the lab driver does, since it links LEZ's node-side crates.
-- Live beacon endpoints (the HTTP path ran against loopback nodes only); HTTPS without `curl`; JSON
-  responses (only SSZ is read).
+- HTTPS without `curl`; light-client data as JSON (only SSZ is read).
+- A sequencer other updaters also write to: the live run had one daemon; the A3 gate's three daemons
+  (and its 100 updates) ran in process only. No public LEZ v0.4 network exists to run on.
+- Several days unattended (proposal A4's seven days on testnet 0.4): the live run lasted hours.
 - The proven path (`VerifyAll`): the daemon drives the public job only.
 - Running as a Logos module under `logosctl daemon` (the design: `docs/design/attestation.md` §8).
 - Jobs whose `Finish` fails stay open (the program has no clean-up step); the updater moves on.

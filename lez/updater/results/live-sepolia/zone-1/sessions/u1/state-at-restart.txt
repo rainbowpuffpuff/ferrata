@@ -1,0 +1,28 @@
+work/state/updater/state:
+total 0
+drwxr-xr-x 1 root root  80 Nov 12 19:22 .
+drwxr-xr-x 1 root root 100 Nov 12 19:21 ..
+drwxr-xr-x 1 root root 120 Nov 12 19:27 ledger
+drwxr-xr-x 1 root root 100 Nov 12 19:22 sepolia
+
+work/state/updater/state/ledger:
+total 4449
+drwxr-xr-x 1 root root     120 Nov 12 19:27 .
+drwxr-xr-x 1 root root      80 Nov 12 19:22 ..
+-rw-r--r-- 1 root root 1752368 Nov 12 20:41 blocks.borsh
+-rw-r--r-- 1 root root 2793123 Nov 12 20:41 follower.borsh
+-rw-r--r-- 1 root root    9047 Nov 12 20:41 run.tsv
+drwxr-xr-x 1 root root      80 Nov 12 19:21 wallet
+
+work/state/updater/state/sepolia:
+total 7
+drwxr-xr-x 1 root root  100 Nov 12 19:22 .
+drwxr-xr-x 1 root root   80 Nov 12 19:22 ..
+drwxr-xr-x 1 root root   80 Nov 12 19:22 committees
+-rw-r--r-- 1 root root 6478 Nov 12 20:38 journal.tsv
+drwxr-xr-x 1 root root   40 Nov 12 20:38 open
+
+work/state/updater/state/sepolia/open:
+total 0
+drwxr-xr-x 1 root root  40 Nov 12 20:38 .
+drwxr-xr-x 1 root root 100 Nov 12 19:22 ..

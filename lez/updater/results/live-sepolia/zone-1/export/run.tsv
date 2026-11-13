@@ -1,0 +1,24 @@
+phase	step	tx_hash	block	position	status	exit	exec_gas	stor_gas	gas_limit	base_fee_exec	base_fee_stor	fee	payer_debit	block_txs	block_exec_gas	block_stor_gas	harness_exec_gas	harness_stor_gas	harness_result	note
+crown-a	deploy attest: WriteSegment 7 of 7 (4816 bytes)	20cbc36af74c0ae401895764d97a1d4e8b3ac1d2076283dd6c6f0fbd426ab6d7	2	0	applied	-	0	5396	2000000	8	8	43168	-	1	0	5396	-	-	-	-
+crown-a	deploy attest: WriteSegment 6 of 7 (98304 bytes)	f4c3473846460d26417d605f8335dd61335b7d3c95cf7636ce229accabc1b87f	3	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+crown-a	deploy attest: WriteSegment 5 of 7 (98304 bytes)	c2480a4ce96637a1f0af12a587f14ef38e680d3aad047631c9f275b7526be225	4	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+crown-a	deploy attest: WriteSegment 4 of 7 (98304 bytes)	3fa3d397005c7b21b6fa81a7a871e307946404aa0cf08ad4b7c820f88359ab75	5	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+crown-a	deploy attest: WriteSegment 3 of 7 (98304 bytes)	c2ec90eeda1d7efc9fc2f62727624c0e96925f2d08e9c13c7cf9ef9ddb9cfd7c	6	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+crown-a	deploy attest: WriteSegment 2 of 7 (98304 bytes)	4aa56e98a4fb1d4817000e1e28dd14e4b055a18928da12b82ed53decc3b79e3d	7	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+crown-a	deploy attest: WriteSegment 1 of 7 (98304 bytes)	7965553fb43c2b215d419c9756882ce3fcf1e609659c0c6b8942edf38e8e380d	8	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+crown-a	deploy attest: CreateHeader (immutable) at A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX	3aca6a3b06acb739b1b304f70e316d3017fef0058ca7d656de33434a942d9f93	9	0	applied	-	0	608	2000000	8	8	4864	4796000	1	0	608	-	-	-	payer_debit is for the whole deployment; its fees sum to 4796000
+crown-a	deploy bridge: WriteSegment 6 of 6 (68896 bytes)	554f12b2eef59ca3813eefe55a01125e229206135317d1053fae3c10ed96092c	10	0	applied	-	0	69476	2000000	8	8	555808	-	1	0	69476	-	-	-	-
+crown-a	deploy bridge: WriteSegment 5 of 6 (98304 bytes)	354d8aea6e1fdbca9e8cfa60c7fc8c296af54b9199f3eebfec9f2866aacfcf8a	11	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+crown-a	deploy bridge: WriteSegment 4 of 6 (98304 bytes)	2ca88eb911ffda415b17c8aa07dfaa55ca1a88871fbcf960f6f0dcfc3f5d9685	12	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+crown-a	deploy bridge: WriteSegment 3 of 6 (98304 bytes)	c5c8187cc42a9b149ff3a92557f8bc8ccb9c61a88a71636cd11d69f60365b0e0	13	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+crown-a	deploy bridge: WriteSegment 2 of 6 (98304 bytes)	431722c700cf48703342e0ec8dd0816eeaac273e6b474c25e6b2848905775885	14	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+crown-a	deploy bridge: WriteSegment 1 of 6 (98304 bytes)	7db05e4d118bc6a5ac6eb17d3cb02cf5ef4d66c2574229ee3890179e1ccf4fd5	15	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+crown-a	deploy bridge: CreateHeader (immutable) at AfrE4T3U17eZYUH3KMGDgeE6A4jnpDGum151T3VtddCp	c4f03420f7dc4d80136329170a62d0b0deaf06c123a8d580dc37e5090a386aad	16	0	applied	-	0	608	2000000	8	8	4864	4517312	1	0	608	-	-	-	payer_debit is for the whole deployment; its fees sum to 4517312
+crown-a	crown sepolia Init Init	99c08d210ef451daca94a8ff6649c466093d82154a93077f6f14034c5d30d783	17	0	applied	-	114811	1764	4000000	8	8	932600	932600	1	114811	1764	-	-	-	-
+crown-a	crown sepolia Init adopt 1/2	2d0ff1553010a0ea3c852c9f0a24bc9384d91a8bb90f2b482f9237a3e43eeb43	18	0	applied	-	3397076	24980	4000000	8	8	27376448	27376448	1	3397076	24980	-	-	-	-
+crown-a	crown sepolia Init adopt 2/2	6a24f4768652dafbf78ed617cdc6f6ae60529dd1bb038110ffaf9f80c8662f2c	19	0	applied	-	3480132	25173	4000000	8	8	28042440	28042440	1	3480132	25173	-	-	-	-
+crown-a	period 1411 update Open (step 1)	d72bf0fc23358a358e16d5e0faa92527924b0a21f44d1a76efda02b6713a37fb	20	0	applied	-	2096392	3580	4000000	8	8	16799776	16799776	1	2096392	3580	-	-	-	-
+crown-a	period 1411 update Miller (step 2)	4a1ad7c1a2fb43ff0f2f4e1c95eb8256950ef8c150712712f10e693f552e5264	21	0	applied	-	3310470	399	4000000	8	8	26486952	26486952	1	3310470	399	-	-	-	-
+crown-a	period 1411 update adopt 1/2	ef0fc60dd2a60e7b6579bf047f279b199822db4b8c58794135dd24c90e6746ce	22	0	applied	-	3408111	24980	4000000	8	8	27464728	27464728	1	3408111	24980	-	-	-	-
+crown-a	period 1411 update adopt 2/2	68af8f502bcee3ae45b01b74225551e33f91e8a731d4faf79a383adb24441c31	23	0	applied	-	3415303	24980	4000000	8	8	27522264	27522264	1	3415303	24980	-	-	-	-
+crown-a	period 1411 update Finish (step 3)	8b100051e996901faf73d2a98fd7caf49f8fe1a5f9cca60863dc53351c055fbf	24	0	applied	-	3696140	463	4000000	8	8	29572824	29572824	1	3696140	463	-	-	-	-

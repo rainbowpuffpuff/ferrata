@@ -1,0 +1,6 @@
+==== 2026-11-13T01:21:14Z life 1
+2026-11-13T01:21:18Z [sequencer] http://127.0.0.1:3040: head block 1468, following to block 1468 (final on Bedrock: true) in 3.9 s; payer CbgR6tj5kWx5oziiFptM7jMvrQeYY3Mzaao6ciuhSr2r balance 9997150184824; records in work/state/updater/state/ledger
+2026-11-13T01:21:18Z [updater-live sepolia] instance 0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5 of program A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX (checkpoint 0x3b901f5e6853b5cf5eb04d7ccfe1272e66c38291cb3a11dd159cacd1117ccf7c); payer CbgR6tj5kWx5oziiFptM7jMvrQeYY3Mzaao6ciuhSr2r; ledger sequencer
+2026-11-13T01:21:18Z [updater-live] /health and /metrics on http://127.0.0.1:9464
+2026-11-13T01:21:19Z [updater-live sepolia] job 0x59b30c26916ccbb8: finalized slot 11566528 root 0xbfcdc79597a2a40e5b7382ea8b48cf1e1345808de4b3f8109f4829320ea16b72 (attested slot 11566592, signature slot 11566593, 509 of 512 signers; advances), served or confirmed by lodestar, publicnode
+==== 2026-11-13T01:34:59Z life 1 exit 137

@@ -4,12 +4,13 @@
     python3 -I check.py [DIR] [--beacon URL] [--write]
 
 DIR (default: this script's directory) holds what session U of lez/crown/session.sh recorded:
-  updater.log        the daemon's log (every job it opened: the update's finalized slot and root, its sources)
+  updater*.log       the daemon's logs, one per session (every job it opened: the update's finalized slot and root, its
+                     sources)
   journal.tsv        the daemon's journal: one line per transaction it sent, as the chain settled it
   run.tsv            the sequencer backend's manifest (lez/live/driver/src/manifest.rs): per transaction its hash, block,
                      status, gas and fee as LEZ's settlement charged them while following blocks final on Bedrock, the
                      payer's balance before minus after, and the totals the block's own fee transaction states
-  probes/health.jsonl  /health and /metrics read every minute
+  probes*/health.jsonl  /health and /metrics read every minute, one directory per session
   export/instances.tsv crown-driver's export after the run: the instance as crown-driver's own follower reads it
 Checks (no network unless --beacon):
   1. every journal line has its manifest row (same block, same result) and the fee it records is what the payer's
@@ -22,6 +23,7 @@ Checks (no network unless --beacon):
      User-Agent) holds canonical at that slot
 --write: also writes summary.md (the tables of the README) beside the record.
 """
+import glob
 import json
 import os
 import re
@@ -86,7 +88,7 @@ blocks = [int(r["block"]) for r in included]
 check(blocks == sorted(blocks), "transactions settle in increasing blocks")
 
 # ---- the jobs ------------------------------------------------------------------------------------------------------
-log = open(os.path.join(D, "updater.log"), errors="replace").read().splitlines() if os.path.isfile(os.path.join(D, "updater.log")) else []
+log = [l for f in sorted(glob.glob(os.path.join(D, "updater*.log"))) for l in open(f, errors="replace").read().splitlines()]
 opened = {}
 pat = re.compile(r"^(\S+) \[\S+ \S+\] job 0x([0-9a-f]{16}): finalized slot (\d+) root 0x([0-9a-f]{64}) \(attested slot (\d+), "
                  r"signature slot (\d+), (\d+) of (\d+) signers([^)]*)\), served or confirmed by (.*)$")
@@ -152,10 +154,7 @@ if beacon:
           f"{agree} applied finalized roots are canonical at their slots on {beacon}")
 
 # ---- health ----------------------------------------------------------------------------------------------------------
-probes = []
-hp = os.path.join(D, "probes/health.jsonl")
-if os.path.isfile(hp):
-    probes = [json.loads(l) for l in open(hp) if l.strip()]
+probes = [json.loads(l) for f in sorted(glob.glob(os.path.join(D, "probes*/health.jsonl"))) for l in open(f) if l.strip()]
 status = Counter((p["health"] or [{}])[0].get("status", f"http {p['http']}") if p.get("health") else f"no answer (http {p['http']})"
                  for p in probes)
 print(f"health: {len(probes)} probes, {dict(status)}; lives {sorted(set(p['life'] for p in probes))}")
