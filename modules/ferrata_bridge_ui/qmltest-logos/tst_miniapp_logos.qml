@@ -76,8 +76,9 @@ Item {
             idle();
             verify(host.app.registry !== null, "registry: " + host.app.lastError);
             verify(has(el("registry.token.0").text, "ETH  registered"), el("registry.token.0").text);
-            verify(el("registry.lez.0").visible, "the LEZ side of the token is shown (token(cid, ETH) decoded by the module)");
-            shot("03-registry");
+            // The bridge's configuration and token reach LEZ with the operator's first import (Init, Register).
+            verify(!el("registry.lez.0").visible, "no LEZ side before the operator's first import");
+            shot("03-registry-before-the-first-import");
         }
 
         function test_03_deposit_private_by_default() {
@@ -108,6 +109,11 @@ Item {
             // Logos). The operator's side, then the gas drop's stand-in (native LEZ for the private account's fees).
             ops("import");
             ops("fund");
+            tab("registry");
+            click("registry.refresh");
+            idle();
+            verify(el("registry.lez.0").visible, "the LEZ side of the token is shown (token(cid, ETH) decoded by the module)");
+            shot("07b-registry-after-the-import");
             tab("positions");
             click("positions.recover");
             idle();

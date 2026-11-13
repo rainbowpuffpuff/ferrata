@@ -204,11 +204,16 @@ impl Chain {
         let mut token = r["token"].clone();
         token["symbol"] = json!("ETH");
         token["decimals"] = json!(18);
-        let mut req = json!({ "token_state": inputs["token_state"], "config_state": inputs["config_state"], "bridge_header": self.s["program"] });
-        if !inputs["root_state"].is_null() {
-            req["root_state"] = inputs["root_state"].clone();
+        // Before the operator's first import the bridge has no configuration or token on LEZ yet (its `Init` and
+        // `Register` read the vault's state under an attested record): the vault's side alone is shown then.
+        let present = |k: &str| inputs[k].as_str().is_some_and(|h| h.len() > 2);
+        let mut req = json!({ "bridge_header": self.s["program"] });
+        for k in ["token_state", "config_state", "root_state"] {
+            if present(k) {
+                req[k] = inputs[k].clone();
+            }
         }
-        let lez = w::registry_of(&req)?;
+        let lez = if present("token_state") || present("config_state") { w::registry_of(&req)? } else { json!({}) };
         let t = &lez["token"];
         token["lez"] = if t.is_null() {
             Value::Null
