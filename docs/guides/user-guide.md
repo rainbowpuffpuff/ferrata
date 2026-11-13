@@ -108,8 +108,8 @@ Ethereum record, inside its own transaction, and writes a write-once `root(cid, 
 fixed cadence; **a client never imports for itself**, because importing right after your own deposit
 would date it. Your deposit is claimable once a root with a leaf count above its index exists:
 Ethereum finality (about 13–19 minutes, [`docs/design/attestation.md`](../design/attestation.md)
-§13) plus the next update and import. The importer (the relayer's root imports) is **not built**; imports ran in the
-in-process harness, on a live sequencer on a stand-in beacon chain
+§13) plus the next update and import. The importer (the relayer's root imports) is a prototype, run on the mini-app's devnet
+(EVIDENCE rows 106, 107); imports also ran in the in-process harness, on a live sequencer on a stand-in beacon chain
 ([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §2, §11) and in the crown runs, on Sepolia's real
 state in the live one ([EVIDENCE](../EVIDENCE.md) row 41).
 

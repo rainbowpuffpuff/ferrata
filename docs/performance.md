@@ -324,7 +324,7 @@ on the final programs (`crown-live-3`, the same parameters), 66.1 min (checkpoin
 | cloud cost of the GPU proofs | — | — | 385 L4-seconds billed for four checkpoint proofs and an update: about 0.09 USD of GPU | [`gpu-prover/RESULTS.md`](../gpu-prover/RESULTS.md), "Cost" |
 
 **Gap:** the resources of the relayer and `monitor` daemons (built, [EVIDENCE](EVIDENCE.md) rows 43–46; not
-measured) and of the importer (the relayer's root imports, not built).
+measured) and of the importer (the relayer's root imports: a prototype, row 106; not measured).
 
 ### P.7 State growth at 1M and 10M operations
 

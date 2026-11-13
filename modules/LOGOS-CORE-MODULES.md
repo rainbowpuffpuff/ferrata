@@ -155,11 +155,11 @@ path, kept as the fallback and for native runs). Every reply that read Ethereum 
   `restore_storage`), accounts (`get_account_public` 56, `get_balance` 55, …), `sync_to_block`,
   `send_generic_public_transaction(account_ids, signing_requirements, instruction, program_id, payer, …)`
   (93), `send_generic_private_transaction(…)` (99), `poll_transaction_status`.
-- **What it cannot do for us yet.** `main` pins **LEZ v0.3.1** (`flake.lock`: `logos-execution-zone`
-  `1a003bf`); Ferrata's programs run on **v0.4.0-rc1**. The two open pull requests that move it to v0.4.0-rc1
-  `1806e87` (exactly ours), #72 "Sequencer FFI adaptation" (`51260ab`) and #74 "sequencer query API"
-  (`e5a3444`, adding `getAccount`, `getBlockById`, `getTransaction`, `getLastFinalizedBlockId`), were open on
-  13 November (both updated 12 November). It has no dry run, no event query or subscription and no setter
+- **What it cannot do for us yet.** `main` pinned **LEZ v0.3.1** (`flake.lock`: `logos-execution-zone`
+  `1a003bf`) until its PRs 72 and 74 (v0.4.0-rc1, `1806e87`) were merged on 13 November, 13:18–13:20 UTC
+  (`main` `cc73ebf`); not yet tried here. Ferrata's programs run on **v0.4.0-rc1**, so the new pin is exactly
+  ours: #72 "Sequencer FFI adaptation" (`51260ab`) and #74 "sequencer query API" (`e5a3444`, adding
+  `getAccount`, `getBlockById`, `getTransaction`, `getLastFinalizedBlockId`). It has no dry run, no event query or subscription and no setter
   for the sequencer's address (R3 §5). So the bridge module's claims and burns and the relayer's root
   imports keep going to the devnet's zone (the harness) as before; with #72/#74 merged, the bridge module's
   messages (already built as LEZ instructions with their accounts) are what `send_generic_public_transaction`

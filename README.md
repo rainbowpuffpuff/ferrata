@@ -304,8 +304,9 @@ The design notes specify these; there is no code for them here:
   an adapter); the attestation side's `monitor` (records against several providers; the weak-subjectivity alarm);
 - in the Logos modules (`modules/README.md`, "Left out"; [`modules/LOGOS-CORE-MODULES.md`](modules/LOGOS-CORE-MODULES.md)):
   transactions through Logos Core's own modules (`keystore_module`, `tx_sender_module`, `lez_core`: the
-  modules build messages without signing or sending them; with our builder pin `keystore_module` does not
-  build, and `lez_core` pins LEZ v0.3.1), verified reads (`verified_proxy_module`: public networks only, no
+  modules build messages without signing or sending them; with our builder pin `keystore_module`'s install
+  fails, so the send stack does not load, and `lez_core` pinned LEZ v0.3.1 until its PRs 72 and 74 (v0.4.0-rc1, `1806e87`) were merged on 13 November, 13:18–13:20 UTC,
+  not yet tried here), verified reads (`verified_proxy_module`: public networks only, no
   `eth_getProof`), beacon data through `beacon_api_module` (the attestation module's Ethereum reads and the
   bridge module's `import_root` go through `eth_rpc_module`, rows 108, 109); the private claim's private execution and proof are the LEZ wallet's: the module builds and checks
   `ClaimPrivately`; the release's Groth16 wrap is the relayer's), and a published catalog (laid out,

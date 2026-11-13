@@ -207,3 +207,17 @@ matches: the functions it copies are unchanged in rc2. The live driver had stopp
 either tag for a reason that is not rc2's: the wire gained a `chain_id` with the attestation, after
 the rc1 run. Every table row the harness measures (cycles, execution and storage gas, base fees,
 results) is the same on rc2 as on rc1; only the image ids move.
+
+## Since: v0.4.0-rc3 (11 November 2026), not tried yet
+
+- **What changed.** LEZ published `v0.4.0-rc3` on 11 November 2026, 10:23 UTC (tag `bafd07b`, a
+  pre-release), 8 commits and 39 files after rc2 ([`compare/v0.4.0-rc2...v0.4.0-rc3`](https://github.com/logos-blockchain/logos-execution-zone/compare/v0.4.0-rc2...v0.4.0-rc3)):
+  one clock actor in place of the clock accounts, its assert messages removed and a read-state message added
+  (a new test program, `clock_reader.rs`, reads it), and Logos Blockchain moved to 0.3.5-rc.1 (Bedrock's
+  deployment settings gain an execution market and a gas profile for channel operations; a new genesis).
+- **What Ferrata uses.** The guests take time only through validity windows (`timestamp_window` in
+  `lez/guests/program` and `lez/guests/bridge`; no clock account or clock assert), and rc3 changes no file under
+  `lee/`, so the programs are probably unaffected; the checkpoint guest and the attestor parse Bedrock's blocks
+  and channel operations, which 0.3.5-rc.1 may have changed.
+- **Untried.** Nothing here was built or run on rc3; the proposal's milestone M0 runs the four real proofs on
+  the newest tag first.

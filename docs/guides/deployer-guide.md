@@ -260,7 +260,7 @@ stop and its owner (renounced or not), tokens with their caps and fee schedules,
 - **Caps.** A mint and a burn token bucket per token and one per configuration on LEZ, in value units
   (`amount / lezUnit × unitWeight`); deposit and release buckets per token and globally on the vault;
   refunds draw on the release buckets. `SetCap` never goes below the configuration's immutable floor.
-  LEZ programs cannot read a clock: claims, `Freeze`, `SetCap` and `Tick` carry the caller's time `t`
+  LEZ programs on v0.4.0-rc1 and rc2 cannot read a clock (rc3 adds a clock they can read, untried here): claims, `Freeze`, `SetCap` and `Tick` carry the caller's time `t`
   under a validity window `[t, t + 10 min)`, which a sequencer can stretch within its own limits.
 - **Freezes.** The freeze authority sets mint and burn freezes, globally or per token, at most 30 days
   ahead; the admin cannot unfreeze. `Sunset` is the freeze authority's, one-way; imports stop after it.

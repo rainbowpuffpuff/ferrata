@@ -274,5 +274,4 @@ account through a CLI, not from an operator's own funds.
 - On the zone of §8 and §9: a dropped inscription (B1's done gate; the silent sequencer is shown, §7); a rotation that
   removes a key; the attestor as the Logos module beside the bridge zone's sequencers (the binary ran there); the
   zone's checkpoint on Sepolia.
-- `ferrata_attestor` as a Logos module (README).
 - The monitor's watcher reading attestations. (Rotations proposed and inscribed by a running committee: §9.)

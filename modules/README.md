@@ -320,12 +320,11 @@ that start a Logos Core refuse a `TMPDIR` (or `LOGOS_TMPDIR`) longer than 62 byt
   with a chain in `required` mode the block and receipt reads would go through it unchanged, not run here
   (no public network was read). The updater's beacon data does not go through `beacon_api_module` yet,
   nor the other modules' reads (the relayer's and monitor's alloy providers, the attestor's node). LEZ
-  state (a record, an event, nullifiers, counts) comes in the request: `lez_core` pins LEZ v0.3.1, and the
-  pull requests that move it to our v0.4.0-rc1 (#72, #74) were open on 13 November. The modules build each
-  program message and name the account it goes to, but do not sign or submit: `keystore_module`,
-  `signer_manager_module`, `fee_module` and `tx_sender_module` do not assemble with our builder pin
-  (`keystore_module`'s install fails on its interface contract, so the signer manager and `tx_sender_module`
-  do not load), no Ferrata module sends through them, and neither `lez_core` nor LEZ's wallet is used. In the end-to-end test the
+  state (a record, an event, nullifiers, counts) comes in the request: `lez_core` pinned LEZ v0.3.1 until its
+  PRs 72 and 74 (v0.4.0-rc1, `1806e87`) were merged on 13 November, 13:18–13:20 UTC; not yet tried here. The
+  modules build each program message and name the account it goes to, but do not sign or submit:
+  `keystore_module`'s install fails with our builder pin, so `signer_manager_module` and `tx_sender_module`
+  (both built) do not load; no Ferrata module sends through them, and neither `lez_core` nor LEZ's wallet is used. In the end-to-end test the
   harness wraps the message in a LEZ transaction and executes it in LEZ's state machine in-process,
   not on a networked sequencer. The daemon modules likewise use no Logos Core module: the attestor reads
   its node over plain HTTP (`curl`, as the binary does) and keeps its keys in files; the monitor signs

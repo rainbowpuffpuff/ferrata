@@ -427,13 +427,15 @@ publishes; RPC providers which blocks are fetched (recovery downloads whole list
 several providers, the weak-subjectivity alarm); `monitor`'s client of the LEZ and Logos Blockchain nodes' RPCs;
 consumers bound to the root id (the bridge, `ferrata_holdings` and the reference consumer still pin an
 instance); on LEZ, the admin's own handover; the gas drop's sealed credit to a private one-time account
-and its sweep inside the private claim; a rule (B) zone with a bridge program and a rotation its
-committee proposes; the audit. Sources: [README](../README.md#specified-but-not-built), "Specified but not
-built"; [`attestation.md`](design/attestation.md) §15; [`bridge.md`](design/bridge.md) §19;
+and its sweep inside the private claim; a rule (B) zone of Logos's sequencers with the attestor module beside
+each, its checkpoints on Sepolia, and a rotation that removes a key; the audit. Sources:
+[README](../README.md#specified-but-not-built), "Specified but not built"; [`attestation.md`](design/attestation.md) §15; [`bridge.md`](design/bridge.md) §19;
 [`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md) §9.
 
 Built since this list's first draft, with their evidence: the weak-subjectivity bound, successors and root
 ids ([EVIDENCE](EVIDENCE.md) rows 69, 70); the watchers' `monitor` (rows 43–45); the rule (B) attestor
 program (rows 63–68); the attestor and the watchers' `monitor`, also as Logos modules (rows 94–96); on LEZ,
 watchers, an M-of-N freeze authority, the 14-day handover and the keyless `Sunset` (row 74); the gas-drop receipt
-(rows 47, 48).
+(rows 47, 48); a zone of four sequencers running the bridge program, its checkpoint proven and both burns
+released, and a rotation its committee proposed (rows 100, 101); the relayer's root imports and its Logos module
+(rows 106, 107).
