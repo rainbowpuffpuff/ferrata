@@ -68,3 +68,15 @@ the view to the module, 15 screenshots.
 `seqnet-chain` had been started without `RISC0_DEV_MODE`, so LEZ's wallet proved both private transactions for real while
 the replies still named them `dev` (the label came from the run's setting; it now comes from the process's environment).
 The sequencer ran in dev mode, which still verifies a real receipt as one. 217 transactions in LEZ blocks 1..=91.
+
+### `seqnet-miniapp-2` (13 Nov 10:51–11:13 UTC, `SEQNET_PROOFS=real`): the sequencer verifying real receipts
+
+[`e2e/runs/seqnet-miniapp-2/`](../runs/seqnet-miniapp-2/SUMMARY.md): the same path with the recovery fixed, the
+sequencer started **without** dev mode (it verifies every private transaction's receipt) and every private transaction
+proven for real by LEZ's wallet on the box's CPU (r0vm 3.0.5 of the bundle): the gas drop's shield (213.2 s), the
+mini-app's private claim (369.4 s; receipt 239,532 B, transaction 256,068 B; LEZ block 87) and private burn (332.7 s;
+receipt 239,046 B, transaction 255,031 B; LEZ block 121). Then the checkpoint over LEZ blocks 20..=121 (all 122 blocks'
+inscriptions accepted; input 865,844 B; `finalizeAttested`), the view's refresh finding the burn from the seed and its
+release held by its random delay. 8 of 9 test functions passed (1,045 s): the last stopped at `ops("pass-time …")`,
+whose argument held a quote that broke the `bash -c` line, so the release was not sent. 281 transactions in LEZ blocks
+1..=123.
