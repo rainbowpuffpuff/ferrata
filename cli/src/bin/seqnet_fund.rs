@@ -133,16 +133,17 @@ async fn main() -> Result<()> {
         .await
         .map_err(|e| anyhow!("the user's private transfer was not sent: {e:?}"))?;
     let send_ms = t0.elapsed().as_millis() as u64;
-    let want = private_before + a.private_amount;
+    // The transfer's own LEZ fee is paid inside its proof, from the private account's new balance: it holds the
+    // amount less that fee once applied.
     let mut seen = 0u128;
     let t1 = std::time::Instant::now();
     loop {
         user.sync_to_latest_block().await.map_err(|e| anyhow!("syncing the user's wallet: {e}"))?;
         seen = user.get_account_private(private0).and_then(|acc| acc.data.native_balance().ok()).unwrap_or(0);
-        if seen >= want {
+        if seen > private_before {
             break;
         }
-        ensure!(t1.elapsed().as_secs() < 300, "the private transfer: private /0 holds {seen}, not {want}, after 300 s");
+        ensure!(t1.elapsed().as_secs() < 300, "the private transfer: private /0 still holds {seen} after 300 s");
         tokio::time::sleep(Duration::from_secs(3)).await;
     }
     user.store_persistent_data()?;
@@ -151,6 +152,7 @@ async fn main() -> Result<()> {
         json!({"step": "the user's private transfer public /0 -> private /0 (proven by LEZ's wallet)", "tx": hash.to_string(),
                "from_public_0": public0.to_string(), "to_private_0": private0.to_string(), "amount": a.private_amount.to_string(),
                "private_balance_before": private_before.to_string(), "private_balance_after": seen.to_string(),
+               "fee_paid_in_the_proof": (private_before + a.private_amount).saturating_sub(seen).to_string(),
                "dev_mode": std::env::var("RISC0_DEV_MODE").map(|v| v == "1" || v == "true").unwrap_or(false),
                "send_ms": send_ms, "seen_ms": t1.elapsed().as_millis() as u64})
     );
