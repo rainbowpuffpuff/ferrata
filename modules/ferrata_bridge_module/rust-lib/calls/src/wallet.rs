@@ -414,7 +414,25 @@ pub(crate) fn import_root_of(req: &Value) -> Result<Value, String> {
     let cid: Hash = fixed(&req["config_id"], "config_id")?;
     let (config, _) = config_of(req)?;
     let record_slot = uint(&req["record_slot"], "record_slot")?;
-    let gp = if req["get_proof"]["result"].is_object() { &req["get_proof"]["result"] } else { &req["get_proof"] };
+    // The vault's `eth_getProof` of slots 0 (the root) and 1 (the leaf count): given in the request
+    // (`get_proof`), or read by the module at `block` from the vault the configuration names, through
+    // Logos Core's eth_rpc_module (`eth`) or a plain http:// endpoint (`rpc_url`): rpc.rs.
+    let mut read = None;
+    let read_gp;
+    let gp = if !req["get_proof"].is_null() {
+        if req["get_proof"]["result"].is_object() { &req["get_proof"]["result"] } else { &req["get_proof"] }
+    } else {
+        let block = uint(&req["block"], "block (get_proof absent: the block the vault's proofs are read at)")?;
+        let timeout = if req["timeout_ms"].is_null() { 20_000 } else { uint(&req["timeout_ms"], "timeout_ms")? };
+        let mut rpc = crate::rpc::Rpc::from_request(req, timeout).map_err(|e| format!("get_proof absent: {e}"))?;
+        let slots: Vec<String> = [0u64, 1].iter().map(|s| hex(&crate::word_u64(*s))).collect();
+        read_gp = rpc.call("eth_getProof", json!([hex(&config.vault), slots, format!("0x{block:x}")]))?;
+        let mut report = rpc.report();
+        report["block"] = json!(block);
+        report["address"] = json!(hex(&config.vault));
+        read = Some(report);
+        &read_gp
+    };
     let account_proof = node_list(&gp["accountProof"], "get_proof.accountProof")?;
     let storage = gp["storageProof"].as_array().ok_or("get_proof.storageProof: expected an array")?;
     let (root_nodes, root_value) = storage_entry(storage, 0)?;
@@ -443,6 +461,9 @@ pub(crate) fn import_root_of(req: &Value) -> Result<Value, String> {
         "instance_id": hex(&config.instance_id),
         "vault": hex(&config.vault),
     });
+    if let Some(r) = read {
+        out["eth"] = r;
+    }
     if !req["record_state"].is_null() {
         let b = bytes(&req["record_state"], "record_state")?;
         let record = RecordState::try_from_slice(&b).map_err(|e| format!("record_state: not a RecordState: {e}"))?;

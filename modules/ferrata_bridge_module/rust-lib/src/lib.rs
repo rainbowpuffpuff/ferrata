@@ -42,8 +42,9 @@ pub trait FerrataBridgeModule: Send + 'static {
     /// guest's ELF), its journal checked against the native one; the tool's `release --prove`. JSON.
     fn prove_release(&mut self, request: String) -> String;
 
-    /// The relayer's `ImportRoot` of a deposit root from the vault's `eth_getProof` proofs, dry-run
-    /// with the attestation and bridge programs' own functions when the record is given. JSON.
+    /// The relayer's `ImportRoot` of a deposit root from the vault's `eth_getProof` proofs (given, or
+    /// read at `block` through Logos Core's `eth_rpc_module` or a plain endpoint), dry-run with the
+    /// attestation and bridge programs' own functions when the record is given. JSON.
     fn import_root(&mut self, request: String) -> String;
 
     /// The bridge program's registry as LEZ holds it (`token(cid, token)`, `config(cid)`,
@@ -54,8 +55,19 @@ pub trait FerrataBridgeModule: Send + 'static {
     fn on_context_ready(&mut self, _ctx: &RustModuleContext) {}
 }
 
-// The builder injects the generated scaffold here: `install`, `RustModuleContext`, `context()`.
+// The builder injects the generated scaffold here: `install`, `RustModuleContext`, `context()`, and the
+// typed client of each dependency (`eth_rpc_module::EthRpcModuleClient`, from deps/eth_rpc_module.lidl).
 include!(concat!(env!("CARGO_MANIFEST_DIR"), "/generated/provider_gen.rs"));
+
+/// Logos Core's `eth_rpc_module.raw_rpc(chain_id, method, params_json)`, through the client the builder
+/// generates from that module's contract (metadata.json: an optional dependency, its contract in
+/// `deps/eth_rpc_module.lidl`). `import_root` reads the vault's `eth_getProof` through it when the
+/// request says `"eth": {"via": "eth_rpc_module", "chain_id": N}`.
+fn eth_rpc_module_raw_rpc(chain_id: i64, method: &str, params: &str, timeout_ms: u64) -> Result<String, String> {
+    eth_rpc_module::EthRpcModuleClient::new()
+        .raw_rpc_with_timeout(chain_id, method, params, std::time::Duration::from_millis(timeout_ms.max(1)))
+        .map_err(|e| format!("eth_rpc_module.raw_rpc did not answer: {e:?}"))
+}
 
 #[derive(Default)]
 struct FerrataBridge;
@@ -111,5 +123,6 @@ impl FerrataBridgeModule for FerrataBridge {
 
 #[no_mangle]
 pub extern "Rust" fn logos_module_install() {
+    ferrata_bridge_calls::set_eth_rpc_module(eth_rpc_module_raw_rpc);
     install::<FerrataBridge>();
 }

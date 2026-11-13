@@ -8,6 +8,8 @@
   "description": "Ferrata (prototype): dry-run an Ethereum attestation against a header record and verify a light-client checkpoint, with the program's verification core",
   "main": "ferrata_attest_module_plugin",
   "dependencies": [],
+  "optional_dependencies": [{ "name": "eth_rpc_module", "version": "~0.2.0" }],
+  "dependency_overrides": { "eth_rpc_module": { "file": "deps/eth_rpc_module.lidl" } },
 
   "codegen": {
     "rust": { "crate": "rust-lib", "trait": "FerrataAttestModule" }

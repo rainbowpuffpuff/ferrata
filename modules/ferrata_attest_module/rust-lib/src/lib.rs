@@ -22,8 +22,9 @@ pub trait FerrataAttestModule: Send + 'static {
     /// `request` and the reply are JSON (modules/README.md).
     fn verify_checkpoint(&mut self, request: String) -> String;
 
-    /// Read a block and its receipts from a JSON-RPC endpoint (`rpc_url`), rebuild the receipts
-    /// trie, check it against the block's receipts root, and return one log's receipt proof.
+    /// Read a block and its receipts through Logos Core's `eth_rpc_module` (`eth`) or from a plain
+    /// JSON-RPC endpoint (`rpc_url`), rebuild the receipts trie, check it against the block's receipts
+    /// root, and return one log's receipt proof.
     /// `request` and the reply are JSON (modules/README.md).
     fn fetch_log_proof(&mut self, request: String) -> String;
 
@@ -48,8 +49,19 @@ pub trait FerrataAttestModule: Send + 'static {
     fn on_context_ready(&mut self, _ctx: &RustModuleContext) {}
 }
 
-// The builder injects the generated scaffold here: `install`, `RustModuleContext`, `context()`.
+// The builder injects the generated scaffold here: `install`, `RustModuleContext`, `context()`, and the
+// typed client of each dependency (`eth_rpc_module::EthRpcModuleClient`, from deps/eth_rpc_module.lidl).
 include!(concat!(env!("CARGO_MANIFEST_DIR"), "/generated/provider_gen.rs"));
+
+/// Logos Core's `eth_rpc_module.raw_rpc(chain_id, method, params_json)`, through the client the builder
+/// generates from that module's contract (metadata.json: an optional dependency, its contract in
+/// `deps/eth_rpc_module.lidl`). `fetch_log_proof` reads through it when the request says
+/// `"eth": {"via": "eth_rpc_module", "chain_id": N}`.
+fn eth_rpc_module_raw_rpc(chain_id: i64, method: &str, params: &str, timeout_ms: u64) -> Result<String, String> {
+    eth_rpc_module::EthRpcModuleClient::new()
+        .raw_rpc_with_timeout(chain_id, method, params, std::time::Duration::from_millis(timeout_ms.max(1)))
+        .map_err(|e| format!("eth_rpc_module.raw_rpc did not answer: {e:?}"))
+}
 
 #[derive(Default)]
 struct FerrataAttest;
@@ -97,5 +109,6 @@ impl FerrataAttestModule for FerrataAttest {
 
 #[no_mangle]
 pub extern "Rust" fn logos_module_install() {
+    ferrata_attest_calls::set_eth_rpc_module(eth_rpc_module_raw_rpc);
     install::<FerrataAttest>();
 }

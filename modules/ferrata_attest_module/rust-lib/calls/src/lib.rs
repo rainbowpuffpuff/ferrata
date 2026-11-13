@@ -23,6 +23,7 @@ use sha2::{Digest, Sha256};
 
 mod advance;
 mod rpc;
+pub use rpc::{set_eth_rpc_module, EthRpcModuleCall};
 mod trie;
 mod tx;
 
@@ -131,7 +132,13 @@ fn dry_run(request: &str) -> Result<Value, String> {
     };
 
     let mut out = if !req["storage"].is_null() {
-        storage(&record, chain_id, &req["storage"])?
+        // The proof given, or read at the record's block through the path the storage names.
+        let (s, read) = storage_with_proof(&req["storage"], Some(record.number()))?;
+        let mut o = storage(&record, chain_id, &s)?;
+        if let Some(r) = read {
+            o["eth"] = r;
+        }
+        o
     } else if !req["log"].is_null() {
         log(&record, chain_id, &req["log"])?
     } else {
@@ -527,10 +534,10 @@ fn checkpoint(request: &str) -> Result<Value, String> {
 
 fn fetch_log(request: &str) -> Result<Value, String> {
     let req: Value = serde_json::from_str(request).map_err(|e| format!("request is not JSON: {e}"))?;
-    let url = text(&req["rpc_url"], "rpc_url")?;
     let timeout = if req["timeout_ms"].is_null() { 20_000 } else { uint(&req["timeout_ms"], "timeout_ms")? };
     let block = uint(&req["block"], "block")?;
-    let mut rpc = rpc::Rpc::new(url, timeout)?;
+    // `rpc_url` (plain http://) or `eth` (Logos Core's eth_rpc_module): rpc.rs.
+    let mut rpc = rpc::Rpc::from_request(&req, timeout)?;
     let tag = format!("0x{block:x}");
     let header = rpc.call("eth_getBlockByNumber", json!([tag, false]))?;
     if header.is_null() {
@@ -550,6 +557,7 @@ fn fetch_log(request: &str) -> Result<Value, String> {
             "receipts_root": hex(&receipts_root),
             "rebuilt_root": hex(&rebuilt),
             "rpc_calls": rpc.calls,
+            "eth": rpc.report(),
         }));
     }
     // Which log: `tx_index` and `log_index` (within the receipt), or JSON-RPC's block-wide
@@ -587,6 +595,7 @@ fn fetch_log(request: &str) -> Result<Value, String> {
             "transactionHash": receipt["transactionHash"],
         },
         "rpc_calls": rpc.calls,
+        "eth": rpc.report(),
     }))
 }
 
@@ -624,8 +633,12 @@ fn build_tx(request: &str) -> Result<Value, String> {
         });
     }
     let mut accounts = Vec::new();
+    let mut read = None;
     if !req["storage"].is_null() {
-        accounts.push(account_query(&req["storage"])?);
+        // The proof given, or read at `storage.block` through the path the storage names.
+        let (s, r) = storage_with_proof(&req["storage"], None)?;
+        accounts.push(account_query(&s)?);
+        read = r;
     }
     if logs.is_empty() && accounts.is_empty() {
         return Err("the request needs `log`, `logs` or `storage`".into());
@@ -634,7 +647,7 @@ fn build_tx(request: &str) -> Result<Value, String> {
     let facts = logs.len() + accounts.iter().map(|a| 1 + a.slots.len()).sum::<usize>();
     let message = tx::attest_message(&tx::Request { instance_id, chain_id, accounts, logs });
     let account = tx::header_account(&program, &instance_id, slot);
-    Ok(json!({
+    let mut out = json!({
         "program_id": hex(&program),
         "instance_id": hex(&instance_id),
         "chain_id": chain_id,
@@ -645,7 +658,36 @@ fn build_tx(request: &str) -> Result<Value, String> {
         "message": hex(&message),
         "message_bytes": message.len(),
         "message_sha256": hex(&Sha256::digest(&message)),
-    }))
+    });
+    if let Some(r) = read {
+        out["eth"] = r;
+    }
+    Ok(out)
+}
+
+/// `storage` with its `eth_getProof` result: as given (`get_proof`, or its fields directly), or read
+/// for `address` and `slot` at `block` (the record's for a dry run, else `storage.block`) through the
+/// path the storage names (`eth` or `rpc_url`, rpc.rs). The storage with `get_proof` filled in, and
+/// what answered when it was read.
+fn storage_with_proof(s: &Value, block: Option<u64>) -> Result<(Value, Option<Value>), String> {
+    let given = !s["get_proof"].is_null() || !s["accountProof"].is_null();
+    if given || (s["eth"].is_null() && s["rpc_url"].is_null()) {
+        return Ok((s.clone(), None));
+    }
+    let block = match block {
+        Some(b) => b,
+        None => uint(&s["block"], "storage.block (the block the proof is read at)")?,
+    };
+    let timeout = if s["timeout_ms"].is_null() { 20_000 } else { uint(&s["timeout_ms"], "storage.timeout_ms")? };
+    let address: Address = fixed(&s["address"], "storage.address")?;
+    let slot = word(&s["slot"], "storage.slot")?;
+    let mut rpc = rpc::Rpc::from_request(s, timeout)?;
+    let gp = rpc.call("eth_getProof", json!([hex(&address), [hex(&slot)], format!("0x{block:x}")]))?;
+    let mut filled = s.clone();
+    filled["get_proof"] = gp;
+    let mut report = rpc.report();
+    report["block"] = json!(block);
+    Ok((filled, Some(report)))
 }
 
 /// One account and one slot from an `eth_getProof` result (`get_proof`, or its fields) and `slot`.
