@@ -5,8 +5,9 @@ built the way Logos modules are built, loaded together by a headless Logos Core 
 `ferrata_attest_module` (eight methods: dry runs, checkpoint checks, an instance's state read back, a
 log or storage slot attested end to end: fetched over JSON-RPC, its `Attest` transaction built, the
 program's event read back; and `advance`, an update's job planned with the updater's code),
-`ferrata_bridge_module` (ten: deposit, claim (plaintext or private), burn, release (by the wallet's rule),
-prove_release, import_root, registry, recover, status), and the three daemons as modules:
+`ferrata_bridge_module` (eleven: deposit, claim (plaintext or private), burn, release (by the wallet's rule),
+prove_release, import_root, registry, recover, status, and `wallet`, the mini-app's calls run with the others), and
+the three daemons as modules:
 `ferrata_attestor_module` (rule (B)'s attestor beside a sequencer and its collector, `checkpoint/attestor`),
 `ferrata_monitor_module` (the watchers' `monitor`, `monitor/`), `ferrata_updater_module` (the
 light-client updater `ferrata-updater`, `lez/updater`) and `ferrata_relayer_module` (the relayer
@@ -54,7 +55,7 @@ A Python client (`logos-logoscore-py`, `import logosctl`) drives the same daemon
 | Module | Directory | Methods |
 |---|---|---|
 | `ferrata_attest_module` | `ferrata_attest_module/` | `version`, `dry_run_attest`, `verify_checkpoint`, `fetch_log_proof`, `build_attest_tx`, `read_attestation`, `read_instance`, `advance` |
-| `ferrata_bridge_module` | `ferrata_bridge_module/` | `version`, `deposit`, `claim`, `burn`, `release`, `recover`, `status`, `prove_release`, `import_root`, `registry` |
+| `ferrata_bridge_module` | `ferrata_bridge_module/` | `version`, `deposit`, `claim`, `burn`, `release`, `recover`, `status`, `prove_release`, `import_root`, `registry`, `wallet` |
 | `ferrata_attestor_module` | `ferrata_attestor_module/` | `version`, `keygen`, `pubkey`, `deployment`, `certify`, `tier`, `attest`, `verify`, `collect`, `assemble`, `base`; the loop: `start`, `status`, `stop` |
 | `ferrata_monitor_module` | `ferrata_monitor_module/` | `version`, `check`, `node_view`, `run`; the daemon: `start`, `status`, `stop` |
 | `ferrata_updater_module` | `ferrata_updater_module/` | `version`, `check_config`, `run`; the daemon: `start`, `status`, `metrics`, `stop` |
@@ -180,6 +181,7 @@ readers around it). The chain is `chain_id` (a number) or `evm_chain_id`
 | `registry(request)` | any of `token_state` (with `leaf_index`, and `amount`), `config_state` (with `bridge_header`: the program's account), `root_state` | each decoded with the program's types: the token's entry (denominations, relay fees, LEZ definition and unit), its fee schedules, `known_until`, controls and gate; the range a claim of `leaf_index` names (the tool's `range_for`) and its mint and relay fees; the configuration (phase, instance, vault, controls) and `configId` recomputed; the imported root |
 | `recover(request)` | seed, chain, `vault`, `gap`, `destinations` (`{kind, index, dest}`: the wallet's candidate accounts), `deposits` (the vault's `Deposit` events: `depositor`, `j`, `leaf_index`, `token`, `amount`, `commitment`); optionally `config_id`, `burns` (published notes with `burn_index`) and `gap_limit` | the wallet's own deposits (with `kind`, `account_index`, `leaf`, `nullifier`) and burns (with `i`, `recipient`, `leaf`, `nullifier`), `next_i` |
 | `status(request)` | `deposits` (`leaf_index`, `nullifier`), `imported_leaf_count` (of the newest root imported on LEZ), `spent_nullifiers` (on LEZ); `burns` (`burn_index`, `nullifier`), `checkpointed_burn_count` (of the newest checkpoint the vault accepted), `released_nullifiers` (on the vault) | each deposit `awaiting_root`, `claimable` or `claimed`; each burn `awaiting_checkpoint`, `releasable` or `released` |
+| `wallet(request)` | `{"method", "params"}`: one call of the mini-app's view (`open` with `chain`, the chain service's `http://` URL; then `info`, `registry`, `price`, `deposit`, `scan`, `claim`, `burn`, `release`, with the view's parameters) | `{"ok": true, "result"}` in the view's shapes, or `{"ok": false, "error"}`. Each call is run with the methods above (`deposit`'s commitment and vault call; `recover` and the states for the positions; the claim with LEZ state and its `ClaimPrivately` message and accounts; `burn`'s note and `Burn` message; the release by the wallet's rule) over the chains' state, which a chain service reads and to which it signs and sends: the stand-in for Logos Core's own modules (`eth_rpc_module`, `keystore_module`/`tx_sender_module`, `lez_core`); on a LEZ sequencer `cli/src/bin/seqnet_chain.rs` (e2e/seqnet), whose methods are the mini-app devnet's `module.*` ones (`calls/src/session.rs`) |
 
 ### `ferrata_attestor_module`
 

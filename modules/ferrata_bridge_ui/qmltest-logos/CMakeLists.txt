@@ -1,0 +1,10 @@
+# The mini-app's Qt Quick Test runner with a headless Logos Core behind the view (main.cpp; e2e/seqnet).
+cmake_minimum_required(VERSION 3.16)
+project(ferrata_miniapp_logos LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_AUTOMOC ON)
+find_package(Qt6 REQUIRED COMPONENTS Core Qml Quick QuickTest)
+add_executable(ferrata_miniapp_logos main.cpp)
+target_link_libraries(ferrata_miniapp_logos PRIVATE Qt6::Core Qt6::Qml Qt6::Quick Qt6::QuickTest)
+target_compile_definitions(ferrata_miniapp_logos PRIVATE QUICK_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")

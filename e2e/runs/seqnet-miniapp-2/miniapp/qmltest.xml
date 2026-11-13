@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<testsuite name="ferrata_miniapp_logos" timestamp="2026&#x002D;11&#x002D;13T10:56:13" hostname="modal" tests="9" failures="1" errors="0" skipped="0" time="1044.953">
+  <properties>
+    <property name="QTestVersion" value="6.4.2"/>
+    <property name="QtVersion" value="6.4.2"/>
+    <property name="QtBuild" value="Qt 6.4.2 (x86_64&#x002D;little_endian&#x002D;lp64 shared (dynamic) release build; by GCC 13.2.0)"/>
+  </properties>
+  <testcase name="FerrataMiniAppLogos::initTestCase" classname="ferrata_miniapp_logos" time="0.431">
+    <system-out>
+      <![CDATA[qml: SESSION {"chain":"http://127.0.0.1:18700/","chain_id":11155111,"config_id":"0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c","depositor":"0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc","module":"ferrata_bridge_module wallet session","program":"0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d","proofs":"real","vault":"0x67ac447386f2ea14ef2fbf55ef33ce1d8f386516"}]]>
+    </system-out>
+  </testcase>
+  <testcase name="FerrataMiniAppLogos::test_01_connect" classname="ferrata_miniapp_logos" time="1.323"/>
+  <testcase name="FerrataMiniAppLogos::test_02_registry" classname="ferrata_miniapp_logos" time="0.717"/>
+  <testcase name="FerrataMiniAppLogos::test_03_deposit_private_by_default" classname="ferrata_miniapp_logos" time="1.448">
+    <system-out>
+      <![CDATA[qml: DEPOSIT Deposited 0.001 ETH to a private account (/0): transaction 0x2a1ca6…fdb102 in block 9, position #0. Public on Ethereum: the depositor address, the token, the denomination and fees, the time, the commitment C. Hidden: the LEZ destination (C commits to it).]]>
+    </system-out>
+  </testcase>
+  <testcase name="FerrataMiniAppLogos::test_04_positions_before_import" classname="ferrata_miniapp_logos" time="0.655"/>
+  <testcase name="FerrataMiniAppLogos::test_05_private_claim" classname="ferrata_miniapp_logos" time="673.444">
+    <system-out>
+      <![CDATA[qml: WAITED claim delay 535 min (the view's clock)]]>
+      <![CDATA[qml: CLAIM {"tx":"72db033c66a33f3d7a0f5f3da6e74bebdf9189be4d625124f3a7fe873a51fa59","block":87,"proof":{"by":"LEZ's wallet library (send_privacy_preserving_tx_with_pre_check): executed and proven on this machine, verified by the sequencer","mode":"real","prove_ms":369385,"receipt_bytes":239532,"tx_bytes":256068},"variant":"ClaimPrivately"}]]>
+    </system-out>
+  </testcase>
+  <testcase name="FerrataMiniAppLogos::test_06_private_burn_on_defaults" classname="ferrata_miniapp_logos" time="343.514">
+    <system-out>
+      <![CDATA[qml: BURN {"tx":"f61448deca5bcfdf062b84f695fb5b91f7f30030b28baf83526ab7ef431f9aaa","block":121,"proof":{"by":"LEZ's wallet library (send_privacy_preserving_tx_with_pre_check): executed and proven on this machine, verified by the sequencer","mode":"real","prove_ms":332689,"receipt_bytes":239046,"tx_bytes":255031}}]]>
+    </system-out>
+  </testcase>
+  <testcase name="FerrataMiniAppLogos::test_07_checkpoint_and_private_release" classname="ferrata_miniapp_logos" time="23.394">
+    <failure type="fail" message="&apos;ops pass&#x002D;time 121 the vault&apos;s release delay after finalizeAttested: /usr/bin/bash: &#x002D;c: line 1: unexpected EOF while looking for matching `&apos;&apos;">
+      <![CDATA[' returned FALSE. ()]]>
+    </failure>
+    <system-out>
+      <![CDATA[qml: WAITED release delay 180 min (the view's clock)]]>
+    </system-out>
+  </testcase>
+  <testcase name="FerrataMiniAppLogos::cleanupTestCase" classname="ferrata_miniapp_logos" time="0.000"/>
+</testsuite>

@@ -26,6 +26,23 @@ path = "src/bin/relayer.rs"
 name = "miniapp_devnet"
 required-features = ["lez-wallet"]
 
+# The devnet tools of e2e/seqnet (the user's round trip on a running LEZ sequencer): the gas drop's stand-in
+# and the zone's transaction list. Built only with `--features seqnet`.
+[[bin]]
+name = "seqnet-fund"
+path = "src/bin/seqnet_fund.rs"
+required-features = ["seqnet"]
+
+[[bin]]
+name = "seqnet-txs"
+path = "src/bin/seqnet_txs.rs"
+required-features = ["seqnet"]
+
+[[bin]]
+name = "seqnet-chain"
+path = "src/bin/seqnet_chain.rs"
+required-features = ["seqnet"]
+
 [dependencies]
 ferrata-bridge-core = { path = "../bridge/crates/ferrata-bridge-core" }
 ferrata-lez-bridge-wire = { path = "../lez/bridge-wire" }
@@ -75,6 +92,9 @@ url = "2.5"
 # ferrata_relayer_module builds it so (modules/scripts/stage-relayer.sh).
 default = ["lez-wallet"]
 lez-wallet = ["dep:wallet", "dep:common", "dep:sequencer_service_rpc", "dep:key_protocol"]
+# The devnet tools of e2e/seqnet (seqnet-fund, seqnet-txs, seqnet-chain): they sign, send and sync with LEZ's
+# wallet library.
+seqnet = ["lez-wallet"]
 
 [dev-dependencies]
 # The LEZ side of the end-to-end test: LEZ's state transition with the bridge guest (dev mode).

@@ -771,7 +771,7 @@ fn native_apply(native: &mut Native, config: &Config, update: &LightClientUpdate
 /// whether the next session's transactions fall inside the weak-subjectivity period the program bounds them by
 /// (without `identity`: session A's, bounded by the bootstrap's slot; with it: session B's, by the finalized header
 /// session A left).
-pub fn check(chain: &Chain, program: &GuestBinary, bridge: &GuestBinary, identity: Option<&Identity>) -> Result<()> {
+pub fn check(chain: &Chain, program: &GuestBinary, bridge: &GuestBinary, identity: Option<&Identity>, operator_only: bool) -> Result<()> {
     use ferrata_core::witness::HeaderRecord;
     use ferrata_lez_bridge_wire::{import_request, pairing_request, vault_request};
     use ferrata_lez_wire::attest::evaluate;
@@ -835,8 +835,11 @@ pub fn check(chain: &Chain, program: &GuestBinary, bridge: &GuestBinary, identit
         let tree = Tree::from_leaves(stage.deposits.iter().map(DepositLog::leaf).collect()).map_err(|_| anyhow!("tree"))?;
         ensure!(tree.root() == stage.slot(&SLOT_ROOT)?.1, "{}: slot 0 is not the root of the deposits", stage.label);
         ensure!(stage.slot(&SLOT_COUNT)?.1 == word_of(stage.deposits.len() as u64), "{}: slot 1 is not the deposit count", stage.label);
-        for leaf in 0..stage.deposits.len() as u64 {
-            witness(&stage.vault, &stage.deposits, leaf)?;
+        // The run's own deposits open to its keys; with --operator-only the deposits are a user's (e2e/seqnet).
+        if !operator_only {
+            for leaf in 0..stage.deposits.len() as u64 {
+                witness(&stage.vault, &stage.deposits, leaf)?;
+            }
         }
         let entry_ok = stage.slot(&registry_slot(&ETH)).map(|(_, v)| v == eth_entry().hash()).unwrap_or(false);
         let fees_at = find_fees_at(stage).ok();
@@ -1018,6 +1021,9 @@ pub struct SessionB {
     pub private: String,
     pub session_out: PathBuf,
     pub notes_out: PathBuf,
+    /// Only the operator's and the relayer's steps (the finality updates, `Init`, `Register`, `ImportFees`,
+    /// `ImportRoot`): no claim and no burn, which a user's own wallet sends (e2e/seqnet: the `ferrata` tool).
+    pub operator_only: bool,
 }
 
 /// Session B: the captures, the bridge's pairing, registration and imports, the claims and the
@@ -1111,6 +1117,9 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
         let o = send(live, &format!("bridge ImportRoot n={n} ({}, block {})", stage.label, stage.block), vec![mention(config_pda), mention(header_pda), mention(root_pda)], &import, payer).await?.expect_applied()?;
         steps.push(row_json(&o));
 
+        if b.operator_only {
+            continue;
+        }
         if k == 0 {
             // Claim of deposit 0 (public), relay fee to the fee recipient (no relayer).
             let (w, nullifier, kind) = witness(&vault, &stage.deposits, 0)?;

@@ -1,0 +1,18 @@
+[2026-11-13 09:53:11.806] [info] Inter-module access enforcement is OFF (no access policy set): any loaded module may call any other
+[2026-11-13 09:53:11.823] [info] [logos] Granting host services to 'capability_module': token_registry,token_delivery
+[2026-11-13 09:53:11.852] [out] [capability_module] [2026-11-13 09:53:11.852] [info] Granting host services to capability_module: ["token_registry","token_delivery"]
+[2026-11-13 09:53:11.853] [info] [logos] Module loaded: capability_module
+[2026-11-13 09:53:11.876] [info] [logos] Module loaded: modules_state
+[2026-11-13 09:53:11.905] [info] [logos] Module loaded: package_manager
+[2026-11-13 09:53:11.908] [info] [logos] Pushed module snapshot to modules_state
+[2026-11-13 09:53:11.935] [info] [logos] [storage_module] StorageModuleImpl: Initializing...
+[2026-11-13 09:53:11.936] [info] [logos] Module loaded: storage_module
+[2026-11-13 09:53:11.961] [info] [logos] Module loaded: package_downloader
+[2026-11-13 09:53:11.967] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+Logosctl daemon started (pid 31722, instance b55c130cd4e7)
+Daemon state: <work>/logos-session/daemon/state.json
+Local client config: <work>/logos-session/client/config.yaml
+[2026-11-13 09:53:11.969] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-13 09:53:12.571] [warning] [logos] [package_manager] Warning: Package is unsigned: <tmp>/logos/lgx-ferrata_bridge_module/logos-ferrata_bridge_module-module-lib.lgx
+[2026-11-13 09:53:12.844] [info] [logos] Module loaded: ferrata_bridge_module
+Shutting down logosctl daemon...

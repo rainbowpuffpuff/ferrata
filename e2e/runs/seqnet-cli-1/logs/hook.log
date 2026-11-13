@@ -1,0 +1,26 @@
+[09:10:09] operator: crown-driver crown-b --operator-only over capture-1
+[crown-b] bridge Register ETH (registry entry, schedules 0 and 1, leaf count) applied        gas    451572 block   24 +  9.9s 50cc551a0ebebbe3d4ad233c7ae9cc7989ed70f7235e083781defabfd6b07842
+[crown-b] token(cid, ETH): 1 schedule(s), known until leaf 1
+[crown-b] bridge ImportRoot n=1 (stage 1, block 9)                   applied        gas    301949 block   25 + 10.0s 807e5c2d8d03b48de15c837e3344f1b59ae2bfe261cf6a2a367eee4861ed19f7
+[crown-b] blocks 20..=25 (T1 0xa95c01046e14234f13c32c240917a4b3afa44b454a04d2e841ee1399a5ef3d9d); 0 burn note(s) written to ~/Downloads/software_i_built/logos-rfp/spike/tmp/miniapp-sequencer/w-cli-1/notes.json
+[09:11:15] gas drop stand-in: native LEZ to the user's private account /0 (seqnet-fund)
+jq: parse error: Invalid numeric literal at line 2, column 7
+{"step":"faucet public transfer (stand-in for the gas drop)","tx":"02db790c77b3663258600310665935fe2c32c5b402d7ca802ff519190a63500f","amount":"3000000000000","send_ms":2,"seen_ms":4003}
+[09:11:30] the claim's delay let pass on anvil's clock: 601 blocks mined (block 9 -> 610; the tool counts 12 s per block)
+[09:11:40] applied: block 28, private transaction 148ad854730f3fe4539c338628eb4581838112210bc6067269f18e3ef380f998, reverted false, program (private root), visible bridge calls Read,Issue
+[09:11:40] the user's fresh Ethereum address for the release: 0xa0151f0C0b1785fE1687d168a6E824eEb2591dAf (cast wallet new; its key is not kept)
+[09:11:50] applied: block 29, private transaction a4ea74add511f7fe1e78b835a1aafc72d125a649dd3b3309bdf4cf069ebd48fa, reverted false, program (private root), visible bridge calls Burn
+[09:11:50] checkpoint: blocks 20..=29, once block 29 is final on Bedrock
+[09:12:10] realblocks-crown: node: 388 immutable blocks (0 other transactions), final inscriptions of LEZ blocks 1..=30: parse + re-hash + link + framing + BLAKE2b + verify_strict by 02a49846…: all 30 accepted; channel tip message = block 30's: false seqnet-19-29: 10 blocks, 30 transactions, 117239 B of blocks, input 119217 B
+[09:12:11] checkpoint_b executed (final program 0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e): {"executor_wall_s":0.202826811,"image_id":"0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e","input_bytes":119217,"journal_bytes":544,"journal_equals_native":true,"padded_cycles":5505024,"po2":[20,20,20,20,20,18],"segments":6,"user_cycles":4856552}
+[09:12:11] stand-in prover: the mock verifier accepts checkpoint_b's journal (sha256 0xf42e43ceea49cf9b26641ba007933f4f31c8cd8175cb6e12b81668b690d6bab8)
+[09:12:11] relayer: {"event":"job-done","tx":null,"why":null} {"event":"candidate-waiting","tx":null,"why":null} {"event":"stop","tx":null,"why":"rounds"} 
+[09:12:11] anvil's clock moved on 3601 s: the candidate's wait (Delta 3600 s) (Ethereum time now 1794564732)
+[09:12:11] relayer: {"event":"start","tx":null} {"event":"finalized","tx":"0x3b12bac1213c9321bcee851a3ed3c12c478120c79fcc8e39cb3d4e39b246da93"} {"event":"stop","tx":null} 
+[09:12:11] vault: finalState 0x7a2802fe490ee53587319b782200f1b6c281c0ac6400adb649f84595867c2a5e, checkpoints 1
+[09:12:11] anvil's clock moved on 121 s: the release delay (120 s after finalizeAttested) (Ethereum time now 1794564853)
+[09:12:12] stand-in prover: the mock verifier accepts the release journal (sha256 0xfdf05ff88a37494f4a24cc8c48d82c5bc9f8073852e1ffd9e4e4dffe7adf3536)
+[09:12:12] relayer: {"event":"job-done","tx":null,"why":null} {"event":"fees-collected","tx":"0x308b6f7d7eec1df65e1ea0ef7a6d69e6a365d04067debdf1b9d304330064d654","why":null} {"event":"stop","tx":null,"why":"rounds"} 
+[09:12:12] the fresh address 0xa0151f0C0b1785fE1687d168a6E824eEb2591dAf holds 997000000000000 wei
+[09:12:12] the zone: 97 transactions in blocks 1..=31
+[09:12:12] hook-cli: done

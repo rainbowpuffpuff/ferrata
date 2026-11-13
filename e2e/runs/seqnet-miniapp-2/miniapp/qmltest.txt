@@ -1,0 +1,21 @@
+********* Start testing of ferrata_miniapp_logos *********
+Config: Using QtTest library 6.4.2, Qt 6.4.2 (x86_64-little_endian-lp64 shared (dynamic) release build; by GCC 13.2.0), ubuntu 24.04
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::initTestCase() qml: SESSION {"chain":"http://127.0.0.1:18700/","chain_id":11155111,"config_id":"0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c","depositor":"0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc","module":"ferrata_bridge_module wallet session","program":"0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d","proofs":"real","vault":"0x67ac447386f2ea14ef2fbf55ef33ce1d8f386516"}
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::initTestCase()
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_01_connect()
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_02_registry()
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_03_deposit_private_by_default() qml: DEPOSIT Deposited 0.001 ETH to a private account (/0): transaction 0x2a1ca6…fdb102 in block 9, position #0. Public on Ethereum: the depositor address, the token, the denomination and fees, the time, the commitment C. Hidden: the LEZ destination (C commits to it).
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_03_deposit_private_by_default()
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_04_positions_before_import()
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_05_private_claim() qml: WAITED claim delay 535 min (the view's clock)
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_05_private_claim() qml: CLAIM {"tx":"72db033c66a33f3d7a0f5f3da6e74bebdf9189be4d625124f3a7fe873a51fa59","block":87,"proof":{"by":"LEZ's wallet library (send_privacy_preserving_tx_with_pre_check): executed and proven on this machine, verified by the sequencer","mode":"real","prove_ms":369385,"receipt_bytes":239532,"tx_bytes":256068},"variant":"ClaimPrivately"}
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_05_private_claim()
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_06_private_burn_on_defaults() qml: BURN {"tx":"f61448deca5bcfdf062b84f695fb5b91f7f30030b28baf83526ab7ef431f9aaa","block":121,"proof":{"by":"LEZ's wallet library (send_privacy_preserving_tx_with_pre_check): executed and proven on this machine, verified by the sequencer","mode":"real","prove_ms":332689,"receipt_bytes":239046,"tx_bytes":255031}}
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_06_private_burn_on_defaults()
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_07_checkpoint_and_private_release() qml: WAITED release delay 180 min (the view's clock)
+FAIL!  : ferrata_miniapp_logos::FerrataMiniAppLogos::test_07_checkpoint_and_private_release() 'ops pass-time 121 the vault's release delay after finalizeAttested: /usr/bin/bash: -c: line 1: unexpected EOF while looking for matching `''
+' returned FALSE. ()
+   Loc: [<repo>/modules/ferrata_bridge_ui/qmltest-logos/tst_miniapp_logos.qml(56)]
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::cleanupTestCase()
+Totals: 8 passed, 1 failed, 0 skipped, 0 blacklisted, 1044953ms
+********* Finished testing of ferrata_miniapp_logos *********

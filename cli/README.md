@@ -560,13 +560,16 @@ RECOVERY: 12 deposits (2 claimed, 10 unclaimed), 12 burns (2 released), holdings
 
 ## Not built yet
 
-- **No live sequencer or public network.** The LEZ commands (`claim`, `burn`, `release`, `recover`) have not
-  been run against LEZ's sequencer; their sequencer path is the wallet library's, as in `lez/live/driver`
-  (private transactions through `send_privacy_preserving_tx_with_pre_check`, the wallet's private accounts
-  through its sync). The tests run the same library functions on the LEZ harness.
-- **The wallet's sync of private accounts is a stand-in in the test.** The harness keeps the private
-  accounts' states as the chain committed them; on a sequencer the tool asks LEZ's wallet, which decrypts
-  them from the zone. A recovery of private holdings by the wallet's own sync is not tested.
+- **No public network.** On a running LEZ v0.4.0-rc1 sequencer and node (a devnet on the build box, the final
+  programs, the vault on a local anvil) the tool's sequencer path has run the private round trip on its
+  defaults (`e2e/seqnet`, [`e2e/runs/seqnet-cli-1/`](../e2e/runs/seqnet-cli-1/SUMMARY.md), 13 November 2026):
+  `deposit`, `claim` (held by its delay, then `ClaimPrivately` executed and proven by LEZ's wallet and applied by
+  the sequencer), `burn` from private `/0` (its note read back from the zone through `lez::visible_calls`),
+  `release` through `ferrata-relayer`, and `recover` (the private holding decrypted by LEZ's wallet after its
+  sync). That run's private receipts were dev-mode ones; the operator's imports were `crown-driver`'s, the
+  checkpoint's and release's proofs the vault tests' mock verifier, the private account's fees a stand-in for
+  the gas drop (`e2e/seqnet/README.md`). In `tests/e2e.rs` the harness still stands in for the sequencer and
+  keeps the private accounts' states as the chain committed them.
 - **Remote proving of a claim or a burn.** LEZ's wallet proves locally. For a release, a remote prover is
   reached through files: `--input-out`, then `--seal`, or a succinct receipt in the relayer's job.
 - **ERC-20s on LEZ in the test.** The test deposits a USDT-shaped token on the vault, but registers only ETH

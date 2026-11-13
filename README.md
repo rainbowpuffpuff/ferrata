@@ -308,12 +308,16 @@ The design notes specify these; there is no code for them here:
   through `lez/updater/sequencer/`'s library, which the module ran inside a headless Logos Core on a crown zone
   following Sepolia, EVIDENCE row 104, and the binary for eight hours, row 99; the gate's three daemons run in
   process, row 80);
-- the mini-app's private round trip on a LEZ sequencer: on its devnet the private round trip on the defaults
-  settles (private claim and burn proven by the harness with the wallet's own keys, also for real; EVIDENCE
-  rows 86, 87), but not through a sequencer: the `ferrata` tool's sequencer path (LEZ's wallet library for
-  private sends and sync, and its reading of a private burn's note, `lez::visible_calls`) has not run against
-  one; the mini-app calling `ferrata_bridge_module` inside Logos (both are built, on branches merged here, and
-  have not run together);
+- the user's round trip on a LEZ sequencer through Logos Core's own modules: on a running LEZ sequencer and
+  node (a devnet with the final programs, the vault on a local anvil) the private round trip has run through the
+  `ferrata` tool's sequencer path and through the mini-app driving `ferrata_bridge_module` inside a headless
+  Logos Core (`e2e/seqnet/RESULTS.md`, EVIDENCE rows 102, 103), but the mini-app's calls (the module's `wallet`
+  method) read the chains, sign and send through a stand-in service (`seqnet-chain`: LEZ's wallet library, a
+  keystore, the relayer) instead of `eth_rpc_module`, `keystore_module`/`tx_sender_module` and `lez_core` (the
+  module's `import_root` reads the vault through `eth_rpc_module`, row 109; the `wallet` method does not use it
+  yet), the view ran under Qt Quick Test rather than in Basecamp, and that devnet's Ethereum side is anvil
+  finalized by a stand-in committee, with the vault tests' mock verifier (no Groth16 proof) and a stand-in for the
+  gas drop;
 - in the attestation program: consumers bound to the root id (the bridge, `ferrata_holdings` and the
   reference consumer still pin an instance); a chain of several EIP-2935 hops under a Gloas record (one hop
   is attested); the F.8 test (`docs/design/attestation.md` §6.5, §15).

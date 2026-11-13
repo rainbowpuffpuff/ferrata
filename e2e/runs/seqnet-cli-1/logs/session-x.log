@@ -1,0 +1,13 @@
+[09:10:02] crown LEZ session x (chain stand-in)
+[09:10:03] restored generation 1 (157M)
+[09:10:04] Bedrock node up: {"cryptarchia_info":{"lib":"97d1830775ed46c061574d326931df0bc373800aef931f1c2cc83ae6072243d0","lib_slot":9067955,"tip":"76c58f04251b3ce69adfdc6d95386fe242efeb45fdc714175ec30497c5560bee","slot":9067960,"height":267,"state":"Online"},"phase":"InitialBlockDownload"}
+[09:10:07] node slot 0 is unix second 1785493027
+[09:10:09] sequencer start 1: scheduler after 1 s; its blocks fall 1 s after an epoch second
+[09:10:09] sequencer up, head block 19
+[09:10:09] hook ~/Downloads/software_i_built/logos-rfp/spike/ferrata-wt-miniapp-sequencer/e2e/seqnet/hook-cli.sh
+[09:12:12] driver exit 0
+[09:12:13] export failed (1)
+[09:12:13] sequencer stopped (exit 0)
+[09:12:22] node stopped (exit 143)
+[09:12:22] saved generation 2 (35064485 bytes; head block 31)
+[09:12:22] session x: ok

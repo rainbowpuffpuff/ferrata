@@ -1,0 +1,23 @@
+$ ferrata --seed <work>/user/seed.txt --eth-rpc http://127.0.0.1:8545 --chain-id 11155111 --vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516 --from-block 1 deposit --denomination 0 --keystore <work>/user/keystore/depositor --password-file <work>/user/eth.pass --send --yes
+
+deposit to the vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516 on chain 11155111
+  denomination  0.001 ETH (1000000000000000 base units, 18 decimals)
+  mint fee      0 ETH (0 base units, 18 decimals)  (schedule 0)
+  relay fee     0.000002 ETH (2000000000000 base units, 18 decimals)  (paid to the relayer that submits your claim)
+  total         0.001002 ETH (1002000000000000 base units, 18 decimals)
+  depositor     0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC   j = 0
+  destination   your private LEZ account /0 (hidden: C commits to it)
+  commitment C  0xa421c67a1128eca72fe990ac38e1cca441643b358e3740d204409386cb10ed32
+  claim delay   2 h after the deposit (from your seed; `ferrata claim` waits for it)
+would send: to 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516  value 1002000000000000  data 0xf7edb8570000000000000000000000000000000000000000000000000000000000000000a421c67a1128eca72fe990ac38e1cca441643b358e3740d204409386cb10ed320000000000000000000000000000000000000000000000000000000000000000
+cost: 0.001002 ETH (1002000000000000 base units, 18 decimals) to the vault, and a network fee of about 0.00027169117677816 ETH (271691176778160 base units, 18 decimals) (200572 gas at 1354581780 wei, eth_estimateGas)
+what becomes public (Deposit (Ethereum)):
+  public on Ethereum: your depositor address; the token; the denomination and its fees; the time; the commitment C (random-looking)
+  public on LEZ:      nothing
+  stays private:      the LEZ account that will receive the tokens (C commits to it); which later claim spends it
+privacy of these choices: Minimal: only the residual correlations (token, denomination, time)
+  ok Fixed denomination: your deposit looks like every other deposit of 0.001 ETH (1000000000000000 base units, 18 decimals).
+  ok Private destination: the receiving account and its balance stay private on LEZ.
+  ok Delayed claim: held for 2 h, so the claim's time does not point at your deposit.
+  ok Private fee path: the claim's LEZ fee is paid inside its proof (or by a relayer); no fee payment ties the claim to you.
+sent: 0x2a1ca6ff38580699518033fe947f11d57d328f81d476444d28f1dc0529fdb102 in block 9

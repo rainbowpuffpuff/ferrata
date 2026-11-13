@@ -1,0 +1,575 @@
+//! `wallet(request)`: the mini-app's calls, run inside `ferrata_bridge_module` (the view's module transport).
+//!
+//! The view (`modules/ferrata_bridge_ui/qml/Main.qml`) sends `{"method", "params"}` with the methods it also
+//! sends to the devnet backend (`open`, `info`, `registry`, `price`, `deposit`, `scan`, `claim`, `burn`,
+//! `release`, `set_endpoints`). Each is answered here with the module's own methods (the `ferrata` tool's
+//! code): `deposit_of` (the commitment and the vault call), `recover_of` (the wallet's deposits and burns
+//! from its seed), `wallet::claim_with_state` (which imported root, the program's checks, the
+//! `ClaimPrivately` message and its accounts), `burn_of` (the note and the `Burn` message),
+//! `wallet::release_by_rule` (the newest accepted root whose release delay has passed, the journal),
+//! `wallet::registry_of`. The chains' state comes from, and the signing and sending go to, a chain service
+//! at `params.chain` of `open`: the stand-in for Logos Core's own modules (`eth_rpc_module`,
+//! `keystore_module`/`tx_sender_module`, `lez_core`), which are not available here. On a LEZ sequencer
+//! that is `e2e/seqnet`'s `seqnet-chain` (LEZ's wallet library and the `ferrata` tool's Ethereum reads);
+//! its methods are the mini-app devnet's `module.*` ones. Plain `http://` only, as the module's other reads.
+//!
+//! Every reply is `{"ok": true, "result"}` or `{"ok": false, "error"}`, the envelope the view reads.
+
+use std::io::{Read, Write};
+use std::net::{TcpStream, ToSocketAddrs};
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
+
+use borsh::BorshDeserialize as _;
+use ferrata_bridge_core::Hash;
+use ferrata_lez_bridge_wire::{self as bw, BridgeState};
+use ferrata_wallet::AccountId;
+use serde_json::{json, Value};
+
+use crate::{fixed, hex, unhex, wallet as w};
+
+const ETH: &str = "0x0000000000000000000000000000000000000000";
+
+struct Session {
+    chain: String,
+    s: Value,
+    calls: u64,
+}
+
+static SESSION: Mutex<Option<Session>> = Mutex::new(None);
+
+/// `wallet(request)`: one call of the view.
+pub fn wallet(request: &str) -> String {
+    let reply = match serde_json::from_str::<Value>(request) {
+        Ok(r) => {
+            let method = r["method"].as_str().unwrap_or("").to_string();
+            match dispatch(&method, &r["params"]) {
+                Ok(v) => json!({ "ok": true, "result": v }),
+                Err(e) => json!({ "ok": false, "error": e }),
+            }
+        }
+        Err(e) => json!({ "ok": false, "error": format!("invalid request: {e}") }),
+    };
+    reply.to_string()
+}
+
+fn dispatch(method: &str, params: &Value) -> Result<Value, String> {
+    if method == "open" {
+        return open(params);
+    }
+    let (chain, s) = {
+        let mut g = SESSION.lock().map_err(|_| "the session lock is poisoned")?;
+        let sess = g.as_mut().ok_or("no wallet session: open it first (wallet {\"method\":\"open\",\"params\":{\"chain\":URL}})")?;
+        sess.calls += 1;
+        (sess.chain.clone(), sess.s.clone())
+    };
+    let c = Chain { url: chain, s };
+    match method {
+        "info" => c.info(),
+        "registry" => c.registry(),
+        "price" => c.post("module.price", json!({ "denomination": params["denomination"], "token": ETH })),
+        "deposit" => c.deposit(params),
+        "scan" => c.scan(),
+        "claim" => c.claim(params),
+        "burn" => c.burn(params),
+        "release" => c.release(params),
+        "set_endpoints" => Err("the endpoints are the chain service's (seqnet-chain): set them where it starts".into()),
+        m if m.starts_with("admin.") => Err("the admin functions are the devnet backend's: not run through the module".into()),
+        "relay" | "checkpoint" | "advance_time" => {
+            Err(format!("{method} is a devnet stand-in: on a sequencer the relayer and the checkpoint prover do it, and time passes"))
+        }
+        m => Err(format!("unknown method {m}")),
+    }
+}
+
+/// Opens the session: the chain service's account of the wallet (its bridge seed, accounts, the
+/// configuration).
+fn open(params: &Value) -> Result<Value, String> {
+    let url = params["chain"].as_str().ok_or("open needs `chain` (the chain service's http:// URL)")?.to_string();
+    let c = Chain { url: url.clone(), s: Value::Null };
+    let s = c.post("module.session", json!({}))?;
+    for k in ["bridge_seed", "chain_id", "vault", "config_id", "program", "depositor", "private_accounts", "public_accounts"] {
+        if s[k].is_null() {
+            return Err(format!("the chain service's session has no `{k}`"));
+        }
+    }
+    let summary = json!({
+        "chain": url,
+        "chain_id": s["chain_id"],
+        "vault": s["vault"],
+        "config_id": s["config_id"],
+        "program": s["program"],
+        "depositor": s["depositor"],
+        "proofs": s["proofs"],
+        "module": "ferrata_bridge_module wallet session",
+    });
+    *SESSION.lock().map_err(|_| "the session lock is poisoned")? = Some(Session { chain: url, s, calls: 0 });
+    Ok(summary)
+}
+
+struct Chain {
+    url: String,
+    s: Value,
+}
+
+impl Chain {
+    /// One call of the chain service: `{"method", "params"}` -> its `result`, or its `error`.
+    fn post(&self, method: &str, params: Value) -> Result<Value, String> {
+        let rest = self.url.strip_prefix("http://").ok_or("the chain service: only http:// (127.0.0.1)")?;
+        let (authority, path) = match rest.find('/') {
+            Some(i) => (&rest[..i], &rest[i..]),
+            None => (rest, "/"),
+        };
+        let addr = authority
+            .to_socket_addrs()
+            .map_err(|e| format!("{method}: {authority}: {e}"))?
+            .next()
+            .ok_or_else(|| format!("{method}: no address for {authority}"))?;
+        let body = json!({ "method": method, "params": params }).to_string();
+        // A private transaction is proven before it is sent: minutes on a CPU.
+        let timeout = Duration::from_secs(1800);
+        let mut stream = TcpStream::connect_timeout(&addr, Duration::from_secs(10))
+            .map_err(|e| format!("{method}: the chain service {addr} does not answer: {e}"))?;
+        stream.set_read_timeout(Some(timeout)).map_err(|e| e.to_string())?;
+        let head = format!(
+            "POST {path} HTTP/1.1\r\nHost: {authority}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+            body.len()
+        );
+        stream
+            .write_all(head.as_bytes())
+            .and_then(|_| stream.write_all(body.as_bytes()))
+            .map_err(|e| format!("{method}: send: {e}"))?;
+        let mut raw = Vec::new();
+        stream.take(256 << 20).read_to_end(&mut raw).map_err(|e| format!("{method}: read: {e}"))?;
+        let end = raw.windows(4).position(|w| w == b"\r\n\r\n").ok_or_else(|| format!("{method}: no HTTP header"))?;
+        let v: Value = serde_json::from_slice(&raw[end + 4..]).map_err(|e| format!("{method}: the reply is not JSON: {e}"))?;
+        if v["ok"].as_bool() == Some(true) {
+            Ok(v["result"].clone())
+        } else {
+            Err(v["error"].as_str().map(str::to_string).unwrap_or_else(|| format!("{method}: {v}")))
+        }
+    }
+
+    fn seed_fields(&self) -> Value {
+        json!({ "bridge_seed": self.s["bridge_seed"], "chain_id": self.s["chain_id"], "vault": self.s["vault"],
+                "config_id": self.s["config_id"], "program": self.s["program"], "depositor": self.s["depositor"] })
+    }
+
+    fn account(&self, kind: &str, a: u64) -> Result<String, String> {
+        let list = if kind == "private" { &self.s["private_accounts"] } else { &self.s["public_accounts"] };
+        list[a as usize].as_str().map(str::to_string).ok_or_else(|| format!("account /{a} is outside the recovery window"))
+    }
+
+    fn program(&self) -> Result<AccountId, String> {
+        Ok(AccountId::new(fixed::<32>(&self.s["program"], "program")?))
+    }
+
+    fn cid(&self) -> Result<Hash, String> {
+        fixed::<32>(&self.s["config_id"], "config_id")
+    }
+
+    fn info(&self) -> Result<Value, String> {
+        let i = self.post("module.info", json!({}))?;
+        Ok(json!({
+            "network": format!("a running LEZ devnet (sequencer {} and a Logos Blockchain node) and a local anvil ({})",
+                               self.s["sequencer"].as_str().unwrap_or("?"), self.s["eth_rpc"].as_str().unwrap_or("?")),
+            "private_proofs": match self.s["proofs"].as_str() {
+                Some("real") => "real: LEZ's wallet proves each private transaction on the CPU; the sequencer verifies it",
+                _ => "dev mode: LEZ's wallet makes a fake receipt (RISC0_DEV_MODE=1), which this devnet's sequencer accepts",
+            },
+            "eth_rpc": self.s["eth_rpc"],
+            "sequencer": self.s["sequencer"],
+            "chain_id": self.s["chain_id"],
+            "vault": self.s["vault"],
+            "config_id": self.s["config_id"],
+            "program": self.s["program"],
+            "eth_block": i["eth_block"],
+            "eth_time": i["eth_time"],
+            "lez_head": i["lez_head"],
+            "user": {
+                "depositor": self.s["depositor"],
+                "eth_balance_wei": i["eth_balance_wei"],
+                "public_accounts": self.s["public_accounts"],
+                "private_accounts": self.s["private_accounts"],
+            },
+            "relayer": i["relayer"],
+            "backend": "ferrata_bridge_module in Logos Core; the chains through seqnet-chain (the stand-in for Logos Core's own modules)",
+            "stand_in": "the vault's verifier is the vault tests' mock (no Groth16 wrap); Ethereum is a local anvil whose blocks a stand-in committee finalizes for LEZ",
+        }))
+    }
+
+    fn registry(&self) -> Result<Value, String> {
+        let r = self.post("module.registry", json!({ "token": ETH }))?;
+        let inputs = self.post("module.inputs", json!({ "token": ETH }))?;
+        let mut token = r["token"].clone();
+        token["symbol"] = json!("ETH");
+        token["decimals"] = json!(18);
+        // Before the operator's first import the bridge has no configuration or token on LEZ yet (its `Init` and
+        // `Register` read the vault's state under an attested record): the vault's side alone is shown then.
+        let present = |k: &str| inputs[k].as_str().is_some_and(|h| h.len() > 2);
+        let mut req = json!({ "bridge_header": self.s["program"] });
+        for k in ["token_state", "config_state", "root_state"] {
+            if present(k) {
+                req[k] = inputs[k].clone();
+            }
+        }
+        let lez = if present("token_state") || present("config_state") { w::registry_of(&req)? } else { json!({}) };
+        let t = &lez["token"];
+        token["lez"] = if t.is_null() {
+            Value::Null
+        } else {
+            json!({
+                "now_ms": t["gate"]["now_ms"],
+                "mints_frozen_until_ms": t["gate"]["mints_until"],
+                "burns_frozen_until_ms": t["gate"]["burns_until"],
+                "mint_cap": t["gate"]["mint"],
+                "burn_cap": t["gate"]["burn"],
+                "known_until_leaf": t["known_until"],
+                "fee_schedules": t["schedules"].as_array().map(|a| a.len()),
+                "decoded_by": "ferrata_bridge_module registry (token(cid, ETH) with the bridge program's types)",
+            })
+        };
+        Ok(json!({ "tokens": [token], "vault": r["vault"], "lez_config": lez["config"], "imported_root": lez["root"] }))
+    }
+
+    fn deposit(&self, params: &Value) -> Result<Value, String> {
+        let d = params["denomination"].as_u64().unwrap_or(0);
+        let kind = params["kind"].as_str().unwrap_or("private");
+        let a = params["account"].as_u64().unwrap_or(0);
+        let gap = self.s["gap"].as_u64().unwrap_or(8);
+        if a >= gap {
+            return Err(format!("account /{a} is outside the recovery window ({gap}): a wallet would not find it"));
+        }
+        let inputs = self.post("module.deposit_inputs", json!({}))?;
+        let price = self.post("module.price", json!({ "denomination": d, "token": ETH }))?;
+        let mut req = self.seed_fields();
+        req["j"] = inputs["j"].clone();
+        req["kind"] = json!(kind);
+        req["dest"] = json!(self.account(kind, a)?);
+        req["token"] = json!(ETH);
+        req["denom_index"] = json!(d);
+        let made = crate::deposit_of(&req)?;
+        let call = &made["vault_call"];
+        let sent = self.post("module.send_deposit", json!({ "to": call["to"], "data": call["data"], "value": price["total"] }))?;
+        Ok(json!({
+            "tx_hash": sent["tx_hash"],
+            "block": sent["block"],
+            "leaf_index": sent["leaf_index"],
+            "j": sent["j"],
+            "amount": price["denomination"],
+            "total_paid": price["total"],
+            "commitment": made["commitment"],
+            "kind": kind,
+            "account": a,
+            "made_by": "ferrata_bridge_module deposit (the commitment and the vault call); signed and sent by seqnet-chain",
+            "public_on_ethereum": ["the depositor address", "the token", "the denomination and fees", "the time", "the commitment C"],
+            "hidden": ["the LEZ destination (C commits to it)"],
+        }))
+    }
+
+    /// The wallet's deposits and burns (`recover`) among the chains' public ones, with where each stands.
+    fn positions(&self, inputs: &Value) -> Result<(Value, Vec<Value>, Vec<Value>), String> {
+        let gap = self.s["gap"].as_u64().unwrap_or(8);
+        let mut dests = Vec::new();
+        for kind in ["private", "public"] {
+            for a in 0..gap {
+                dests.push(json!({ "kind": kind, "index": a, "dest": self.account(kind, a)? }));
+            }
+        }
+        let mut req = self.seed_fields();
+        req["gap"] = json!(gap);
+        req["destinations"] = json!(dests);
+        req["deposits"] = inputs["deposits"].clone();
+        // `recover` takes each published burn's note fields beside its index (the chain service nests them).
+        req["burns"] = Value::Array(
+            inputs["burns"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .map(|b| {
+                    let n = &b["note"];
+                    json!({ "burn_index": b["burn_index"], "r": n["r"], "memo": n["memo"], "mac": n["mac"],
+                            "token": n["token"], "amount": n["amount"], "c_out": n["c_out"] })
+                })
+                .collect(),
+        );
+        let rec = crate::recover_of(&req)?;
+        let program = self.program()?;
+        let chain_id = self.s["chain_id"].as_u64().ok_or("chain_id")?;
+        let vault: [u8; 20] = fixed(&self.s["vault"], "vault")?;
+        let touched: Vec<String> = inputs["touched_privately"].as_array().into_iter().flatten().filter_map(|v| v.as_str().map(str::to_lowercase)).collect();
+        let claimed: Vec<String> = inputs["claimed_plaintext"].as_array().into_iter().flatten().filter_map(|v| v.as_str().map(str::to_lowercase)).collect();
+        let refunded: Vec<u64> = inputs["refunded_leaves"].as_array().into_iter().flatten().filter_map(Value::as_u64).collect();
+        let released: Vec<String> = inputs["released_nullifiers"].as_array().into_iter().flatten().filter_map(|v| v.as_str().map(str::to_lowercase)).collect();
+        let imported = inputs["imported"].as_array().into_iter().flatten().filter_map(Value::as_u64).max().unwrap_or(0);
+        let mut deposits = Vec::new();
+        for d in rec["deposits"].as_array().into_iter().flatten() {
+            let n: Hash = fixed(&d["nullifier"], "nullifier")?;
+            let n_account = hex(bw::nullifier_actor(program, chain_id, &vault, &n).account_id.value()).to_lowercase();
+            let leaf = d["leaf_index"].as_u64().unwrap_or(0);
+            let state = if claimed.contains(&hex(&n).to_lowercase()) || touched.contains(&n_account) {
+                "claimed"
+            } else if refunded.contains(&leaf) {
+                "refunded"
+            } else if leaf < imported {
+                "claimable"
+            } else {
+                "waiting for the root import"
+            };
+            deposits.push(json!({
+                "leaf_index": leaf,
+                "j": d["j"],
+                "amount": word_dec(&d["amount"])?,
+                "kind": d["kind"],
+                "account": d["account_index"],
+                "state": state,
+                "nullifier": d["nullifier"],
+                "dest": d["dest"],
+            }));
+        }
+        let mut burns = Vec::new();
+        for b in rec["burns"].as_array().into_iter().flatten() {
+            let n = b["nullifier"].as_str().unwrap_or("").to_lowercase();
+            burns.push(json!({
+                "burn_index": b["burn_index"],
+                "i": b["i"],
+                "amount": word_dec(&b["amount"])?,
+                "recipient": b["recipient"],
+                "released": released.contains(&n),
+                "nullifier": b["nullifier"],
+            }));
+        }
+        Ok((rec, deposits, burns))
+    }
+
+    /// The private holding of account `/a` as the wallet sees it (LEZ's wallet decrypts it).
+    fn private_holding(&self, a: u64) -> Result<(u128, Value), String> {
+        let id = self.account("private", a)?;
+        let p = self.post("module.private", json!({ "account": id }))?;
+        let state = p["bridge_state"].as_str().unwrap_or("0x");
+        let bytes = unhex(state)?;
+        let held = if bytes.is_empty() {
+            0
+        } else {
+            match BridgeState::try_from_slice(&bytes) {
+                Ok(BridgeState::Holder(h)) => {
+                    let cid = self.cid()?;
+                    h.holdings.iter().find(|x| x.config_id == cid && x.token == [0u8; 20]).map_or(0, |x| x.amount)
+                }
+                _ => 0,
+            }
+        };
+        Ok((held, p))
+    }
+
+    fn scan(&self) -> Result<Value, String> {
+        let gap = self.s["gap"].as_u64().unwrap_or(8);
+        let publics: Vec<Value> = (0..gap).map(|a| self.account("public", a).map(Value::from)).collect::<Result<_, _>>()?;
+        let inputs = self.post("module.inputs", json!({ "token": ETH, "public_holders": publics }))?;
+        let (rec, deposits, burns) = self.positions(&inputs)?;
+        let mut holdings = Vec::new();
+        let (held, _) = self.private_holding(0)?;
+        if held > 0 {
+            holdings.push(json!({ "kind": "private", "account": 0, "balance": held.to_string() }));
+        }
+        for (a, h) in inputs["public_holder_states"].as_array().into_iter().flatten().enumerate() {
+            let bytes = unhex(h["state"].as_str().unwrap_or("0x"))?;
+            if let Ok(BridgeState::Holder(s)) = BridgeState::try_from_slice(&bytes) {
+                let cid = self.cid()?;
+                let amount = s.holdings.iter().find(|x| x.config_id == cid && x.token == [0u8; 20]).map_or(0, |x| x.amount);
+                if amount > 0 {
+                    holdings.push(json!({ "kind": "public", "account": a, "balance": amount.to_string() }));
+                }
+            }
+        }
+        Ok(json!({
+            "deposits": deposits,
+            "burns": burns,
+            "next_burn_counter": rec["next_i"],
+            "holdings": holdings,
+            "vault_deposits": inputs["deposits"].as_array().map(|a| a.len()),
+            "imported_roots": inputs["imported"],
+            "how": "ferrata_bridge_module recover over the whole deposit list (checked against depositRoot by the chain service) and the zone's applied calls: no per-item query",
+        }))
+    }
+
+    fn claim(&self, params: &Value) -> Result<Value, String> {
+        let leaf = params["leaf_index"].as_u64().ok_or("claim needs leaf_index")?;
+        let private = params["private"].as_bool().unwrap_or(true);
+        let inputs = self.post("module.inputs", json!({ "token": ETH }))?;
+        let (_, deposits, _) = self.positions(&inputs)?;
+        let d = deposits.iter().find(|d| d["leaf_index"].as_u64() == Some(leaf)).ok_or("not a deposit of this wallet")?;
+        let inputs = self.post("module.inputs", json!({ "token": ETH, "nullifier": d["nullifier"] }))?;
+        let mut req = self.seed_fields();
+        for k in ["leaves", "imported", "root_state", "token_state", "nullifier_state"] {
+            req[k] = inputs[k].clone();
+        }
+        req["j"] = d["j"].clone();
+        req["leaf_index"] = json!(leaf);
+        req["token"] = json!(ETH);
+        req["amount"] = d["amount"].clone();
+        req["kind"] = d["kind"].clone();
+        req["dest"] = d["dest"].clone();
+        req["private"] = json!(private);
+        if private && d["kind"] == "public" {
+            req["prover"] = json!(self.account("private", 0)?);
+        }
+        let c = w::claim_with_state(&req)?;
+        if c["verdict"] != "claimable" {
+            return Err(format!("refused by the module (checked before sending): {} {}", c["error"].as_str().unwrap_or(""), c["detail"].as_str().unwrap_or("")));
+        }
+        let sent = self.post("module.submit", json!({ "message": c["message"], "accounts": c["accounts"], "root_index": c["root_index"],
+                                                       "what": format!("{} of leaf {leaf}", c["variant"].as_str().unwrap_or("claim")) }))?;
+        let a = d["account"].as_u64().unwrap_or(0);
+        let balance = if private && d["kind"] == "private" { self.private_holding(a)?.0.to_string() } else { String::new() };
+        Ok(json!({
+            "settled": sent["settled"],
+            "private": private,
+            "what": format!("{} under root(cid, {}) (block {}, transaction {})", c["variant"].as_str().unwrap_or("?"), c["leaf_count"],
+                            sent["block"], sent["tx_hash"].as_str().unwrap_or("?")),
+            "account": a,
+            "nullifier": d["nullifier"],
+            "root_leaf_count": c["leaf_count"],
+            "balance": balance,
+            "tx_hash": sent["tx_hash"],
+            "block": sent["block"],
+            "proof": sent["proof"],
+            "variant": c["variant"],
+            "accounts": c["accounts"],
+            "made_by": "ferrata_bridge_module claim (the tool's claim with LEZ state); executed, proven and sent by LEZ's wallet library (seqnet-chain)",
+            "public_on_lez": ["the nullifier N (its account)", "the token and denomination", "the root read", "the fee schedule's range", "the relayer"],
+            "hidden": ["the destination account (an alias appears)", "the leaf index", "the depositor", "the private balance"],
+        }))
+    }
+
+    fn burn(&self, params: &Value) -> Result<Value, String> {
+        let private = params["private"].as_bool().unwrap_or(true);
+        if !private {
+            return Err("a public burn is not run through the module on the sequencer (the round trip is the private one)".into());
+        }
+        let a = params["account"].as_u64().unwrap_or(0);
+        let amount: u128 = params["amount"].as_str().ok_or("amount (base units, a string)")?.parse().map_err(|_| "amount: a decimal")?;
+        let recipient = params["recipient"].as_str().filter(|s| !s.is_empty()).ok_or("burn needs a recipient")?;
+        let (held, _) = self.private_holding(a)?;
+        if held < amount {
+            return Err(format!("refused: LEZ bridge program exit code 254 INSUFFICIENT_BALANCE (checked before sending: the private holding of /{a} is {held} base units)"));
+        }
+        let inputs = self.post("module.inputs", json!({ "token": ETH }))?;
+        let (rec, _, _) = self.positions(&inputs)?;
+        let i = rec["next_i"].as_u64().unwrap_or(0);
+        let mut req = self.seed_fields();
+        req["i"] = json!(i);
+        req["recipient"] = json!(recipient);
+        req["token"] = json!(ETH);
+        req["amount"] = json!(amount.to_string());
+        let b = crate::burn_of(&req)?;
+        let n = &b["note"];
+        let note = bw::Note {
+            r: fixed(&n["r"], "note.r")?,
+            memo: fixed(&n["memo"], "note.memo")?,
+            mac: fixed(&n["mac"], "note.mac")?,
+            token: [0u8; 20],
+            amount: fixed(&n["amount"], "note.amount")?,
+            c_out: fixed(&n["c_out"], "note.c_out")?,
+        };
+        let program = self.program()?;
+        let cid = self.cid()?;
+        let holder = AccountId::new(fixed::<32>(&json!(self.account("private", a)?), "account")?);
+        let pda = |account: &AccountId, of: &AccountId, seed: &[u8]| {
+            json!({ "account": hex(account.value()), "program": hex(of.value()), "kind": "pda", "seed": hex(seed) })
+        };
+        let me = bw::own_actor(program, holder);
+        let note_hash = note.hash();
+        let (t, ts) = (bw::token_actor(program, &cid, &[0u8; 20]), bw::token_seed(&cid, &[0u8; 20]));
+        let (c, cs) = (bw::config_actor(program, &cid), bw::config_seed(&cid));
+        let (u, us) = (bw::burn_actor(program, &cid, &note_hash), bw::burn_seed(&cid, &note_hash));
+        let accounts = json!([
+            { "account": hex(me.account_id.value()), "program": hex(me.program_account_id.value()), "kind": "private_self" },
+            pda(&t.account_id, &t.program_account_id, ts.as_bytes()),
+            pda(&c.account_id, &c.program_account_id, cs.as_bytes()),
+            pda(&u.account_id, &u.program_account_id, us.as_bytes()),
+        ]);
+        let sent = self.post("module.submit", json!({ "message": b["message"], "accounts": accounts, "root_index": 0,
+                                                       "what": format!("Burn (private) with tag counter {i}") }))?;
+        let burn_index = inputs["burns"].as_array().map_or(0, |v| v.len());
+        Ok(json!({
+            "settled": sent["settled"],
+            "private": true,
+            "what": format!("Burn (private) of /{a} (block {}, transaction {})", sent["block"], sent["tx_hash"].as_str().unwrap_or("?")),
+            "burn_index": burn_index,
+            "i": i,
+            "account": a,
+            "amount": amount.to_string(),
+            "recipient": recipient,
+            "balance": self.private_holding(a)?.0.to_string(),
+            "tx_hash": sent["tx_hash"],
+            "block": sent["block"],
+            "proof": sent["proof"],
+            "made_by": "ferrata_bridge_module burn (the note and the Burn message); executed, proven and sent by LEZ's wallet library (seqnet-chain)",
+            "public_on_lez": ["the note: r, memo, mac, c_out (the recipient encrypted)", "the token and denomination", "the time"],
+            "hidden": ["the holder (a private account: an alias appears)", "the Ethereum recipient (encrypted in the memo)"],
+        }))
+    }
+
+    fn release(&self, params: &Value) -> Result<Value, String> {
+        let burn_index = params["burn_index"].as_u64().ok_or("release needs burn_index")?;
+        let inputs = self.post("module.inputs", json!({ "token": ETH }))?;
+        let (_, _, burns) = self.positions(&inputs)?;
+        let b = burns.iter().find(|b| b["burn_index"].as_u64() == Some(burn_index)).ok_or("not a burn of this wallet")?;
+        if b["released"] == true {
+            return Err("already released: the vault's NullifierAlreadyUsed for this burn's NOut (checked before sending)".into());
+        }
+        let roots = self.post("module.vault_roots", json!({ "token": ETH }))?;
+        // Any relayer may send it and is paid the relay fee in force for the burn's denomination (the tool's
+        // `flow::release_fees`): the vault's current schedule.
+        let reg = self.post("module.registry", json!({ "token": ETH }))?;
+        let relay_fee = reg["token"]["denominations"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .find(|d| d["amount"] == b["amount"])
+            .map(|d| d["relay_fee"].clone())
+            .ok_or("the burn's amount is not one of the vault's denominations")?;
+        let mut req = self.seed_fields();
+        req["relay_fee"] = relay_fee;
+        req["i"] = b["i"].clone();
+        req["burns"] = inputs["burns"].clone();
+        req["roots"] = roots["roots"].clone();
+        req["now"] = roots["now"].clone();
+        let r = match w::release_by_rule(&req)? {
+            Ok((v, _)) => v,
+            Err(refusal) => {
+                let first = refusal["first_open"].as_u64();
+                return Err(match first {
+                    Some(t) => format!("refused: vault error ReleaseDelayNotElapsed() (checked before sending: the roots that cover this burn open at Ethereum time {t})"),
+                    None => format!("refused (checked before sending): {}", refusal["error"].as_str().unwrap_or("no accepted burn root covers this burn yet: wait for the next checkpoint")),
+                });
+            }
+        };
+        let t0 = Instant::now();
+        let sent = self.post("module.vault_release", json!({ "release": r }))?;
+        Ok(json!({
+            "settled": sent["settled"],
+            "tx_hash": sent["tx_hash"],
+            "block": sent["block"],
+            "recipient": sent["recipient"],
+            "paid_wei": sent["paid_wei"],
+            "sent_by": sent["sent_by"],
+            "picked": r["picked"],
+            "journal_sha256": r["journal_sha256"],
+            "relay_ms": t0.elapsed().as_millis() as u64,
+            "made_by": "ferrata_bridge_module release (the wallet's rule: the newest accepted root whose delay has passed; the journal); handed to ferrata-relayer by seqnet-chain",
+            "public_on_ethereum": ["the recipient", "the token and amount", "NOut (the release nullifier)", "the burn root used", "the time", "the relayer"],
+            "stand_in": sent["stand_in_prover"]["what"],
+        }))
+    }
+}
+
+/// A 32-byte word (hex) as a decimal string.
+fn word_dec(v: &Value) -> Result<String, String> {
+    let w: [u8; 32] = fixed(v, "amount")?;
+    if w[..16].iter().any(|b| *b != 0) {
+        return Err("amount above 2^128".into());
+    }
+    Ok(u128::from_be_bytes(w[16..].try_into().expect("16 bytes")).to_string())
+}

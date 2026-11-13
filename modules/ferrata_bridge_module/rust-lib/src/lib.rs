@@ -51,6 +51,10 @@ pub trait FerrataBridgeModule: Send + 'static {
     /// `root(cid, n)`), decoded, with a claim's schedule range and fees. JSON in and out.
     fn registry(&mut self, request: String) -> String;
 
+    /// The mini-app's calls (`{"method", "params"}`: open, info, registry, price, deposit, scan, claim,
+    /// burn, release), each run with the methods above over the chains' state, which a chain service
+    /// reads and to which it signs and sends (the stand-in for Logos Core's own modules); `{"ok", ...}`.
+    fn wallet(&mut self, request: String) -> String;
     /// Called once the module is wired to the host.
     fn on_context_ready(&mut self, _ctx: &RustModuleContext) {}
 }
@@ -121,6 +125,9 @@ impl FerrataBridgeModule for FerrataBridge {
         guarded("prove_release", || ferrata_bridge_calls::prove_release(&request))
     }
 
+    fn wallet(&mut self, request: String) -> String {
+        guarded("wallet", || ferrata_bridge_calls::wallet(&request))
+    }
     fn import_root(&mut self, request: String) -> String {
         guarded("import_root", || ferrata_bridge_calls::import_root(&request))
     }

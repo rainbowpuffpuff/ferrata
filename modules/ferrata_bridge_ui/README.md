@@ -39,10 +39,12 @@ modules/ferrata_bridge_ui/scripts/nix-build.sh [OUT_DIR]   # nix build .#lgx and
 
 Every call is `call(method, params)` with one JSON value in and one out:
 
-- **In Logos** (the host injects `logos`): `logos.callModule("ferrata_bridge_module", method, [json])`, on
-  the user's first action. That core module is not built yet (the proposal's §B7 lists it; README
-  "Specified but not built"). Basecamp's sandbox refuses a ui module any network access (measured:
-  `RESULTS.md`), so inside Logos this is the only path, as the design has it.
+- **In Logos** (the host injects `logos`): `logos.callModule("ferrata_bridge_module", "wallet",
+  [json])` with `{"method", "params"}`, on the user's first action. The module's `wallet` method runs each
+  call with its own methods over the chains a chain service reads and sends to (`modules/README.md`; on a
+  LEZ sequencer `e2e/seqnet`'s `seqnet-chain`, the stand-in for Logos Core's own modules). Basecamp's sandbox
+  refuses a ui module any network access (measured: `RESULTS.md`), so inside Logos this is the only path, as
+  the design has it.
 - **On the devnet**: HTTP to `cli/examples/miniapp_devnet.rs`, which serves the same methods (`info`,
   `registry`, `price`, `deposit`, `relay`, `scan`, `claim`, `burn`, `checkpoint`, `release`,
   `set_endpoints`, `advance_time` (the devnet's clock, for letting a delay pass), `admin.status`,
@@ -130,15 +132,13 @@ with the private claim and burn proven for real; its results go to `results-real
 
 ## Not done
 
-- **The private round trip runs on the devnet, not on a LEZ sequencer.** The harness proves and settles
-  the private transactions (above); on a sequencer they would be sent by LEZ's wallet. Two things stand
-  between the view and that: `ferrata_bridge_module` (the core module the view calls in Logos) is built,
-  with the private claim since EVIDENCE row 93, but has not run with the view (`modules/README.md`,
-  "Left out"); and the `ferrata` tool's sequencer path has not run against a sequencer: since the merge of
-  branch `bridge-cli` its
-  ledger (`cli/src/lez.rs`, `Sequencer::applied_with_private`) reads a private burn's note from the delivery
-  its transaction makes in the clear (`lez::visible_calls`), and the tool has a private burn (EVIDENCE rows
-  84, 85, both in the harness).
+- **On a LEZ sequencer only through a stand-in for Logos Core's chain modules, and outside Basecamp.**
+  `e2e/seqnet` drives this view headless with a headless Logos Core behind it (`qmltest-logos/`: the
+  runner's `logos` calls `logosctl call ferrata_bridge_module wallet`) on a running LEZ sequencer and node
+  ([`e2e/seqnet/RESULTS.md`](../../e2e/seqnet/RESULTS.md)): the chains are read and written by
+  `seqnet-chain` (LEZ's wallet library, the user's Ethereum keystore, the relayer) instead of
+  `eth_rpc_module`, `keystore_module`/`tx_sender_module` and `lez_core`; the operator's import, the
+  checkpoint and the gas drop are stand-ins run by the test (`ops.sh`); the vault's verifier is the mock.
 - The checkpoint and release proofs and the Groth16 wrap are the mock verifier on the devnet (named in the
   replies); real proofs on this path are the private transactions' only.
 - The vault's own admin functions (fee announcements, watchers, the 14-day role change, retirement) are

@@ -107,7 +107,8 @@ Rectangle {
         };
         if (transport === "module") {
             try {
-                var raw = logos.callModule("ferrata_bridge_module", method, [JSON.stringify(params || {})]);
+                // One method of the module serves the view: `wallet`, with the call's name and parameters.
+                var raw = logos.callModule("ferrata_bridge_module", "wallet", [JSON.stringify({ method: method, params: params || {} })]);
                 var r = (typeof raw === "string") ? JSON.parse(raw) : raw;
                 if (r && r.ok === false) finish(false, r.error);
                 else finish(true, (r && r.result !== undefined) ? r.result : r);

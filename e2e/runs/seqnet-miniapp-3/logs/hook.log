@@ -1,0 +1,6 @@
+[11:20:21] seqnet-chain: seqnet-chain: http://127.0.0.1:18700/ (vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516, configId 0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c, user 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC)
+[11:20:22] Logos Core: ferrata_bridge_module installed from logos-ferrata_bridge_module-module-lib.lgx and loaded
+[11:20:22] the mini-app: Qt Quick Test (offscreen), the view's calls to ferrata_bridge_module in Logos Core
+[11:38:45] qmltest: exit 0 in 1103 s: Totals: 9 passed, 0 failed, 0 skipped, 0 blacklisted, 1102623ms
+[11:38:45] the zone: 293 transactions in blocks 1..=129
+[11:38:45] hook-miniapp: done
