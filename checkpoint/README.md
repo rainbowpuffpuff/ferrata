@@ -249,8 +249,9 @@ withdrawals a channel withdrawal). Any other opcode is refused rather than skipp
 - Composition was demonstrated in dev mode only; `host compose --real` (real recursion) was not run.
 - Rule (B) (SPEC-v3 D7, D13) is built in the program and measured in the executor (RESULTS §4), and
   the vault's rule (B) path verifies one real rule (B) proof in a local EVM
-  ([`../vault/README.md`](../vault/README.md)). Not built: `ferrata_attestor` as a Logos module
-  (only its core, `crates/attestor-core`), the watchers' software (the vault has the watcher role).
+  ([`../vault/README.md`](../vault/README.md)). Built since: the attestor
+  (`attestor/`, and as `ferrata_attestor_module`) and the watchers' `monitor` (`../monitor/`, and as
+  `ferrata_monitor_module`): EVIDENCE rows 43–45, 63–66, 94–96.
 - This program's tests run no LEZ or Bedrock node (the LEZ program's run on a sequencer,
   [`../lez/live/`](../lez/live/README.md), did not involve it). Real sequencer blocks were checked and
   proven from the lab's devnet (one validator, dev-mode leader proofs, n = 1; RESULTS, "Real LEZ

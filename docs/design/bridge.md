@@ -647,7 +647,7 @@ Components: BLAKE2b 55.9 cycles/B (no accelerator), SHA-256 2.59 cycles/B, Ed255
 
 ### 18.6 Simulation, and what is not measured
 
-The rule (A) simulation is a Python model of the v0.4 code (`docs/design/finality-rule/MODEL.md`), 12,000 runs for experiments (a) to (h) plus (i) to (k), deterministic per seed (§11). Not built or not measured: `ferrata_attestor` as a Logos module (the vault's rule (B) path and the bridge program's claims and imports on LEZ are built since: [EVIDENCE](../EVIDENCE.md) rows 24, 41, 63–68); the gas drop's sealed credit and its sweep; composed real proofs; inbound latency on a network (the outbound ran once on Sepolia, on testnet parameters, row 41); phones and a laptop at the declared minimum (cloud CPUs held to it and two Mac minis were measured, rows 32–34, 38, 88).
+The rule (A) simulation is a Python model of the v0.4 code (`docs/design/finality-rule/MODEL.md`), 12,000 runs for experiments (a) to (h) plus (i) to (k), deterministic per seed (§11). Not built or not measured (the vault's rule (B) path, the bridge program's claims and imports on LEZ and `ferrata_attestor`, also as a Logos module, are built since: [EVIDENCE](../EVIDENCE.md) rows 24, 41, 63–68, 94–95): the gas drop's sealed credit and its sweep; composed real proofs; inbound latency on a network (the outbound ran once on Sepolia, on testnet parameters, row 41); phones and a laptop at the declared minimum (cloud CPUs held to it and two Mac minis were measured, rows 32–34, 38, 88).
 
 ### 18.7 The return leg end to end: measured (real verifier, v3 vault; stand-in zone)
 
@@ -679,7 +679,7 @@ The vault prototype (v5) implements D3 to D5, D9, the vault items of D11 and D13
 | D11 | `finalize` also compares `t` and the tip, and checks `importedLeafCount <= nextLeafIndex` | built (vault v4: the whole journal, by its digest) |
 | D11 | further logic in a linked library | built (`FerrataRegistry`; v5's runtime with the security fixes 24,254 bytes, 322 under EIP-170) |
 | D12 | `mac` v2 covering `memo` | the core: MAC without `memo`; the bridge program's wire (`lez/bridge-wire`) has `mac` v2 |
-| D13 | rule (B): `final-tier/v2` message, attestation-key certificates, `ferrata_attestor`, program and vault path, immutable `mode`, 1 h wait | program and vault paths built and measured; `ferrata_attestor` module not built |
+| D13 | rule (B): `final-tier/v2` message, attestation-key certificates, `ferrata_attestor`, program and vault path, immutable `mode`, 1 h wait | program and vault paths built and measured; `ferrata_attestor` built, also as a Logos module (rows 94–95) |
 | D13 | `submitCandidate` refuses a `newState` already pending | built (v3 and v4) |
 | D13 | watchers; cancelling candidates whose key set lags | vault side built (since v4: up to three watchers); LEZ side built in the bridge program (12-hour pauses, branch `bridge-controls`); `monitor` built (`monitor/`, [EVIDENCE](../EVIDENCE.md) rows 43–45), also as a Logos module (row 96) |
 | D13 | 14-day freeze-authority replacement; renounced stop owner; no refunds after a stop; keyless retirement after 30 days; cap floor | built (since vault v4); on LEZ, the 14-day handover, a multisig freeze authority and the keyless `Sunset` built in the bridge program (branch `bridge-controls`, `lez/BRIDGE-RESULTS.md` §14); the stop owner's renunciation is a step of the deployment script, run in its fork rehearsals only (`vault/README.md`, "Deployment") |

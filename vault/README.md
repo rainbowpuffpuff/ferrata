@@ -58,7 +58,7 @@ forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-co
 FOUNDRY_OFFLINE=false forge build                        # once: forge is offline here (below); this fetches solc 0.8.26
 forge build --sizes                                      # no compiler warnings, no lint findings; exits 1, see below
 forge test                                               # everything, including the invariant campaign:
-                                                         # 451 passed, 1 skipped (PrivacySuite, without its LEZ half)
+                                                         # 454 passed, 1 skipped (PrivacySuite, without its LEZ half)
 forge test --isolate --match-contract GasScenarios -vv   # the numbers in GAS.md (mock verifier)
 forge test --match-path 'test/real/*' -vv                # the return leg with RISC Zero's real verifier and real proofs
 forge test --isolate --match-contract ReturnLegGas -vv   # its gas (GAS.md, "With the real verifier")

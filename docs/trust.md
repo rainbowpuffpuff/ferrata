@@ -203,8 +203,9 @@ and works on any EVM chain; off-chain roles are liveness-only ([`bridge.md`](des
 **Status:** the rule is built and measured in the checkpoint program and the vault, and one real proof was
 verified on a rule (B) vault ([`checkpoint/RESULTS.md`](../checkpoint/RESULTS.md) §4;
 [`vault/README.md`](../vault/README.md)), of the guest before the tip-inscription check (that check is
-built, tested and measured, §4a there, not proven for real); the attestor as a Logos module is **not built**, and whether the
-zone's sequencers will run it is the decision the proposal asks of Logos ([`bridge.md`](design/bridge.md) §9).
+built, tested and measured, §4a there, not proven for real); the attestor is built as a program and as a Logos
+module (EVIDENCE rows 63–66, 94–95), and whether the zone's sequencers will run it is the decision the proposal
+asks of Logos ([`bridge.md`](design/bridge.md) §9).
 
 ### 3.4 Finality under rule (A), the fallback
 
@@ -417,8 +418,7 @@ publishes; RPC providers which blocks are fetched (recovery downloads whole list
 ## 10. Not built, and therefore not yet part of the guarantee
 
 `verify_checkpoint`'s fetching from several providers; the attestation side's `monitor` (records against
-several providers, the weak-subjectivity alarm); `ferrata_attestor` and the watchers' `monitor` as Logos
-modules (both programs are built), and `monitor`'s client of the LEZ and Logos Blockchain nodes' RPCs;
+several providers, the weak-subjectivity alarm); `monitor`'s client of the LEZ and Logos Blockchain nodes' RPCs;
 consumers bound to the root id (the bridge, `ferrata_holdings` and the reference consumer still pin an
 instance); on LEZ, the admin's own handover; the gas drop's sealed credit to a private one-time account
 and its sweep inside the private claim; a rule (B) zone with a bridge program and a rotation its
@@ -428,5 +428,6 @@ built"; [`attestation.md`](design/attestation.md) §15; [`bridge.md`](design/bri
 
 Built since this list's first draft, with their evidence: the weak-subjectivity bound, successors and root
 ids ([EVIDENCE](EVIDENCE.md) rows 69, 70); the watchers' `monitor` (rows 43–45); the rule (B) attestor
-program (rows 63–68); on LEZ, watchers, an M-of-N freeze authority, the 14-day handover and the keyless
-`Sunset` (row 74); the gas-drop receipt (rows 47, 48).
+program (rows 63–68); the attestor and the watchers' `monitor`, also as Logos modules (rows 94–96); on LEZ,
+watchers, an M-of-N freeze authority, the 14-day handover and the keyless `Sunset` (row 74); the gas-drop receipt
+(rows 47, 48).

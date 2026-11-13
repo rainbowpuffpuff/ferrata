@@ -68,7 +68,7 @@ submitted, or roots finalised, after it ([`vault/README.md`](../../vault/README.
 
 **Choosing the rule.** Rule (A) needs an unpredictable `prevrandao` (Ethereum and its testnets); on a
 chain whose `prevrandao` or timestamp is constant or sequencer-chosen, deploy rule (B). Rule (B) also
-needs an attestor beside every sequencer (`ferrata_attestor`, **not built** as a module), tolerates
+needs an attestor beside every sequencer (`ferrata_attestor`, a program and a Logos module), tolerates
 `n − t` silent sequencers against `n − 1 − t` for (A), and costs one proof per checkpoint against two
 ([`bridge.md`](../design/bridge.md) §3, §9). Trust consequences are in [`docs/trust.md`](../trust.md).
 

@@ -5,7 +5,7 @@ ends with one line per check and a verdict.
 
 ```sh
 MODAL_PROFILE=<yours> modal run --detach scripts/reproduce/modal_app.py   # on Modal: the route we have run
-scripts/reproduce/run.sh                                                 # with Docker (x86-64 images): not run yet
+scripts/reproduce/run.sh                                                 # with Docker (x86-64 images): 5 of 5 at bf430cc (runs/2026-11-12-docker-aws/)
 ```
 
 Both build the image of [`Dockerfile`](Dockerfile), copy this checkout's committed `HEAD` (`git archive`; uncommitted
@@ -25,35 +25,42 @@ runs on its own, on a copy of the checkout: it writes into the tree it runs in.
 | `guest-ids` | `scripts/reproduce-image-ids.sh build`, then `compare` | 14 of 14 guests equal [docs/image-ids.md](../../docs/image-ids.md), 6 of 6 crown programs equal [e2e/crown/README.md](../../e2e/crown/README.md) |
 | `lez-harness` | `cd lez && RISC0_HOME=../../risc0-home-lez RISC0_DEV_MODE=1 cargo test -p harness --locked -- --test-threads 1` | cargo exits 0 (56 passed) |
 
-## Run on Modal, 12 November 2026
+## Run on Modal, 13 November 2026
 
-`MODAL_PROFILE=… modal run --detach scripts/reproduce/modal_app.py` from a checkout of commit 596b158 (the scripts as
-here; the commits after it change documents only). Its last lines (`/work/out` is in the container; the logs came
-back to the machine that started it):
+`MODAL_PROFILE=… modal run --detach scripts/reproduce/modal_app.py` from a checkout of commit a5fd69f (the tree
+published as `main`; the commits after it change documents only), 13 Nov 2026 05:20–05:52 UTC. Its last lines
+([`runs/2026-11-13-modal/summary.txt`](runs/2026-11-13-modal/summary.txt); `/work/out` is in the container, the logs
+came back to the machine that started it):
 
 ```text
-Ferrata reproduction check: commit 596b158fe90435857cb17d5a468008d6dff9005e
-2026-11-12 18:29:16 UTC, 16 CPUs; rust 1.93.0 1.98.1 1.88.0 (default 1.93.0); RISC Zero r0vm 3.0.5, guest rust 1.88.0 (lez: 1.91.1); forge 1.3.6, solc 0.8.26; Python 3.12.3
+
+Ferrata reproduction check: commit a5fd69f5978304bbfa47d519d998077647e1cdea
+2026-11-13 05:52:47 UTC, 16 CPUs; rust 1.93.0 1.98.1 1.88.0 (default 1.93.0); RISC Zero r0vm 3.0.5, guest rust 1.88.0 (lez: 1.91.1); forge 1.3.6, solc 0.8.26; Python 3.12.3
 
 check           result    time  detail
-verify-sepolia  PASS      0:20  crown-live-3: 13 passed, 0 pending, 0 failed (61 RPC calls); crown-live-1: 13 passed, 0 pending, 0 failed (61 RPC calls)
-vault           PASS      1:10  451 tests passed, 0 failed, 1 skipped (452 total tests)
+verify-sepolia  PASS      0:20  crown-live-3: 13 passed, 0 pending, 0 failed (61 RPC calls); crown-live-1: 13 passed, 0 pending, 0 failed (61 RPC calls) (second public endpoint for crown-live-1; the first failed)
+vault           PASS      1:05  454 tests passed, 0 failed, 1 skipped (455 total tests)
 core            PASS      1:40  163 passed, 0 failed, 0 ignored in 25 test runs
-guest-ids       PASS      8:02  14 of 14 guests equal docs/image-ids.md; 6 of 6 ids of the crown run's programs equal the recorded ones
-lez-harness     PASS     21:49  56 passed, 0 failed, 0 ignored in 34 test runs
+guest-ids       PASS      7:37  14 of 14 guests equal docs/image-ids.md; 6 of 6 ids of the crown run's programs equal the recorded ones
+lez-harness     PASS     21:23  56 passed, 0 failed, 0 ignored in 34 test runs
 
 tree: no committed file changed
-VERDICT: PASS, 5 of 5 checks, 33:04 in all
+VERDICT: PASS, 5 of 5 checks, 32:07 in all
 logs: /work/out
 ```
 
-The image: 10.1 GiB on disk (10,770 MiB measured in the container, of which 451 MiB are Modal's own Python); Modal
-built it once, in 233 s, and later runs reuse it (this one did). The run: 16 CPUs and up to 64 GiB, 17:56–18:29 UTC,
-1,995 s from the call to the logs back. No committed file changed: the tables the LEZ harness writes in
-`lez/results/` came out as committed. Earlier full runs of the same checks, whose Sepolia check was crown-live-1's
-alone: commit 03f1a9b, 5 of 5 in 26:36 (a side-branch commit from before the tables were re-recorded, so 21 of them
-changed there), and commit 031b8c5, 5 of 5 in 36 minutes, the LEZ harness taking 24 of them; Modal had preempted
-that run's first container 20 minutes in and ran the function again from the start, so its call took 57 minutes.
+The vault's 454 include the three tests the agent review of the vault and the guests added
+(`vault/test/ReviewVault.t.sol`; [`docs/reviews/`](../../docs/reviews/agent-review-vault-guests-2026-11-12.md)).
+No committed file changed: the tables the LEZ harness writes in `lez/results/` came out as committed.
+
+Earlier, from a checkout of commit 596b158 (12 Nov 2026, 17:56–18:29 UTC, 1,995 s from the call to the logs back):
+5 of 5 in 33:04, the same results but the vault's, 451 passed and 1 skipped (before the review's tests). The image:
+10.1 GiB on disk (10,770 MiB measured in the container, of which 451 MiB are Modal's own Python); Modal built it
+once, in 233 s, and later runs reuse it (596b158's did). Earlier full runs of the same checks, whose Sepolia check
+was crown-live-1's alone: commit 03f1a9b, 5 of 5 in 26:36 (a side-branch commit from before the tables were
+re-recorded, so 21 of them changed there), and commit 031b8c5, 5 of 5 in 36 minutes, the LEZ harness taking 24 of
+them; Modal had preempted that run's first container 20 minutes in and ran the function again from the start, so
+its call took 57 minutes.
 The Docker route, `run.sh`, builds the same Dockerfile and runs the same `check.sh`. Run once under Docker on an AWS
 EC2 m7i.4xlarge (16 vCPUs, 64 GiB, Ubuntu 24.04, Docker 29.1.3) at commit `bf430cc`: 5 of 5 in 22:16, no committed
 file changed ([`runs/2026-11-12-docker-aws/`](runs/2026-11-12-docker-aws/README.md)).
