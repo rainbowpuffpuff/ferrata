@@ -9,6 +9,11 @@ publish = false
 [dependencies]
 # The staged copy of lez/updater with its in-process LEZ chain (scripts/stage-updater.sh).
 ferrata-updater = { path = "../vendor/ferrata/lez/updater", features = ["harness"] }
+# The staged copy of lez/updater/sequencer: the backend for a running LEZ sequencer (`ledger = "sequencer"`), the
+# library the binary of that directory runs; it links LEZ v0.4.0-rc1's wallet client and block application.
+ferrata-updater-sequencer = { path = "../vendor/ferrata/lez/updater/sequencer" }
+# LEZ's state machine (the staged LEZ tree): the key and account types of the backends' opener.
+lee = { path = "../vendor/upstream/lez-v0.4.0-rc1/lee/state_machine" }
 # The guests as staged, to report the image id of the bytes the module carries.
 methods = { path = "../vendor/ferrata/lez/methods" }
 risc0-binfmt = "3"

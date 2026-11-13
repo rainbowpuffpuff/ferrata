@@ -1,0 +1,7 @@
+# LEZ's node-side crates (the sequencer backend: lez/updater/sequencer) link logos-blockchain-circuits, whose build
+# scripts take the circuits' prebuilt artifact from LBC_ROOT_DIR, or else download it into the user's cache. The
+# artifact is staged beside the crate by modules/scripts/stage-updater.sh (vendor/lbc/, the release the circuits
+# crates' version names), so that the module builds offline, inside Nix's sandbox too. The builder appends its own
+# vendoring settings to this file.
+[env]
+LBC_ROOT_DIR = { value = "vendor/lbc/logos-blockchain-circuits-v0.5.7-linux-x86_64", relative = true }

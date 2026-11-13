@@ -2,7 +2,9 @@
 # `../src/daemon.rs` over `SequencerLedger` (src/ledger.rs), which builds each transaction as the in-process
 # `HarnessLedger` does, sends it to the sequencer's RPC with LEZ's wallet client, and reads its result by following the
 # chain with LEZ's own block application over blocks final on Bedrock (the live driver's modules, `../../live/driver/src`,
-# by path, as `../../crown/driver` uses them). A workspace of its own: it links LEZ's node-side crates.
+# by path, as `../../crown/driver` uses them). The backend is a library (src/lib.rs: `open_ledger`), which the binary
+# (src/main.rs) and ferrata_updater_module (modules/ferrata_updater_module, staged by its stage-updater.sh) both pass
+# to the same daemon. A workspace of its own: it links LEZ's node-side crates.
 [package]
 name = "ferrata-updater-sequencer"
 description = "ferrata-updater writing to a running LEZ sequencer"
@@ -12,6 +14,10 @@ license = "MIT OR Apache-2.0"
 publish = false
 
 [workspace]
+
+[lib]
+name = "ferrata_updater_sequencer"
+path = "src/lib.rs"
 
 [[bin]]
 name = "ferrata-updater"

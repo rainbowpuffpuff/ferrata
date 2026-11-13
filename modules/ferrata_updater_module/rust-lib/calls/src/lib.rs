@@ -3,12 +3,16 @@
 //! the module by `scripts/stage-updater.sh`): the same configuration file, the same set-up and the same
 //! rounds as the binary (`ferrata_updater::daemon`).
 //!
-//! The chain is the binary's `ledger = "harness"`: LEZ v0.4.0-rc1's state machine in process, with
-//! LEZ's fee program and settlement and the attestation program as the guests were built (the chain the
-//! updater's tests run on; `RISC0_DEV_MODE=1` in the module's environment, as for those tests). It lives
-//! in the daemon's thread: `start` makes it, `stop` ends it. `ledger = "sequencer"` is refused, as by
-//! the harness build of the binary: that backend is the build of `lez/updater/sequencer`, which links
-//! LEZ's node-side crates and passes its own ledger to the same daemon (`ferrata_updater::daemon::run`).
+//! The chain is either of the binary's two backends, as the configuration's `daemon.ledger` names it:
+//! - `harness`: LEZ v0.4.0-rc1's state machine in process, with LEZ's fee program and settlement and the
+//!   attestation program as the guests were built (the chain the updater's tests run on; `RISC0_DEV_MODE=1` in the
+//!   module's environment, as for those tests);
+//! - `sequencer`: a running LEZ sequencer (`[sequencer]`: its RPC on this machine, the program's account), through
+//!   the library of `lez/updater/sequencer` (`ferrata_updater_sequencer::open_ledger`), the code the binary of that
+//!   directory runs: LEZ's wallet client sends each transaction, a follower of the chain applies every block final on
+//!   Bedrock with LEZ's block application and reads the transaction's result; the follower is saved in the state
+//!   directory (`state/ledger/`) when the daemon stops and every five minutes, and restored when it starts.
+//! The backend lives in the daemon's thread: `start` opens it, `stop` saves what it keeps and ends it.
 
 use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
@@ -20,6 +24,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use anyhow::{bail, Context as _, Result};
 use ferrata_updater::config::{File, SourceKind};
 use ferrata_updater::daemon::Daemon as Rounds;
+use ferrata_updater::ledger::Ledger;
 use ferrata_updater::serve::{serve, Snapshot};
 use serde_json::{json, Value};
 
@@ -54,11 +59,24 @@ pub fn version() -> String {
             "computed_id": computed,
             "bytes": methods::FERRATA_LEZ_ELF.len(),
         },
-        "ledgers": ["harness"],
+        "ledgers": ["harness", "sequencer"],
         "dev_mode": std::env::var("RISC0_DEV_MODE").ok(),
         "methods": METHODS,
     })
     .to_string()
+}
+
+/// The module's chain backends (`daemon.ledger`): `sequencer` is `lez/updater/sequencer`'s library, anything else is
+/// `ferrata_updater`'s own opener (`harness`, the in-process chain; an unknown name is refused there).
+pub fn open_ledger(
+    file: &File,
+    base: &Path,
+    payer: &lee::PrivateKey,
+) -> Result<(Box<dyn Ledger>, lee::AccountId)> {
+    match file.daemon.ledger.as_str() {
+        "sequencer" => ferrata_updater_sequencer::open_ledger(file, base, payer),
+        _ => ferrata_updater::daemon::open_ledger(file, base, payer),
+    }
 }
 
 fn hex_of(b: &[u8]) -> String {
@@ -125,7 +143,7 @@ pub fn run(request: &str) -> String {
         let until = r.get("until_up_to_date").and_then(Value::as_bool).unwrap_or(false);
         let quiet = r.get("quiet").and_then(Value::as_bool).unwrap_or(true);
         let t0 = Instant::now();
-        let mut d = match Rounds::open(&path, !quiet) {
+        let mut d = match Rounds::open_with(&path, !quiet, open_ledger) {
             Ok(d) => d,
             Err(e) => return Ok(json!({ "verdict": "error", "error": format!("{e:#}") })),
         };
@@ -286,7 +304,7 @@ fn run_loop(
         let mut s = shared.lock().unwrap_or_else(|p| p.into_inner());
         f(&mut s);
     };
-    let opened = Rounds::open(path, !quiet).and_then(|d| {
+    let opened = Rounds::open_with(path, !quiet, open_ledger).and_then(|d| {
         let served = match &d.file.daemon.listen {
             Some(addr) => Some(listener(addr)?),
             None => None,
@@ -357,6 +375,39 @@ mod tests {
             assert_eq!(call(f, json!({}))["verdict"], "invalid_request");
             assert_eq!(serde_json::from_str::<Value>(&f("[1]")).unwrap()["verdict"], "invalid_request");
         }
+    }
+
+    /// `ledger = "sequencer"` opens the sequencer backend (no longer refused as "not in this build"): with nothing
+    /// listening at the configured RPC address, the set-up fails on the connection, as the binary's does.
+    #[test]
+    fn the_sequencer_backend_is_carried() {
+        let dir = std::env::temp_dir().join(format!("ferrata-updater-calls-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        // The repository's dev key (lez/updater/dev), beside this crate.
+        let key = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../lez/updater/dev/payer.key");
+        let config = dir.join("sequencer.toml");
+        std::fs::write(
+            &config,
+            format!(
+                "[daemon]\nstate_dir = \"{}\"\npoll_secs = 0\nledger = \"sequencer\"\n\n[keys]\npayer_key_file = \"{}\"\n\n\
+                 [sequencer]\nrpc = \"http://127.0.0.1:1\"\nprogram = \"A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX\"\n\n\
+                 [[chain]]\nname = \"sepolia\"\npreset = \"sepolia\"\n\
+                 checkpoint = \"5f71d7f650f9252b48749b5f062c0c234e01afd69f364ab600e2b6051494b20d\"\n\n\
+                 [[chain.source]]\nname = \"a\"\nurl = \"http://127.0.0.1:1\"\n\n\
+                 [[chain.source]]\nname = \"b\"\nurl = \"http://127.0.0.1:1\"\n",
+                dir.join("state").display(),
+                key.display()
+            ),
+        )
+        .unwrap();
+        let checked = call(check_config, json!({ "config_file": config }));
+        assert_eq!(checked["ledger"], "sequencer", "{checked}");
+        let v = call(run, json!({ "config_file": config, "rounds": 1 }));
+        assert_eq!(v["verdict"], "error", "{v}");
+        let e = v["error"].as_str().unwrap();
+        assert!(!e.contains("not in this build"), "{e}");
+        assert!(e.contains("the sequencer"), "{e}");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

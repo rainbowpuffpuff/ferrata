@@ -65,8 +65,8 @@ check "check_config: two chains (mainnet, sepolia), two sources each, ledger har
   '[ "$(jq -c "[.verdict, .ledger, [.chains[].name], [.chains[].sources | length]]" "$out/rep/config.json")" = "[\"ok\",\"harness\",[\"mainnet\",\"sepolia\"],[2,2]]" ]'
 jq -n --arg c "$out/sequencer.toml" '{config_file: $c, rounds: 1}' | req sequencer
 if [ "$CALL" = logosctl ]; then call start sequencer; else call run sequencer; fi
-check "the sequencer backend is refused, as by the harness build of the binary (it is the build of lez/updater/sequencer)" \
-  '[ "$(jq -r .verdict "$out/rep/sequencer.json")" = error ] && jq -r .error "$out/rep/sequencer.json" | grep -q "sequencer backend is not in this build"'
+check "the sequencer backend is carried (lez/updater/sequencer's library): with no sequencer at 127.0.0.1:3040, the set-up fails on the connection, as the binary's does" \
+  '[ "$(jq -r .verdict "$out/rep/sequencer.json")" = error ] && jq -r .error "$out/rep/sequencer.json" | grep -q "the sequencer" && ! jq -r .error "$out/rep/sequencer.json" | grep -q "not in this build"'
 
 t0=$(date +%s)
 if [ "$CALL" = logosctl ]; then

@@ -1,6 +1,7 @@
-# The same as recorded.toml with the sequencer backend (`[sequencer]` below, as lez/updater's example), which the
-# module does not carry: it is the build of lez/updater/sequencer, which links LEZ's node-side crates. The module
-# refuses it, as the harness build of the binary does.
+# The same as recorded.toml with the sequencer backend (`[sequencer]` below, as lez/updater's example): the module
+# carries it (lez/updater/sequencer's library, which links LEZ's node-side crates) and connects to the sequencer's RPC
+# on this machine; with none there, the set-up fails on the connection, as the binary's does. A running sequencer and
+# the program's account: lez/crown/session.sh u in module mode writes such a file for a crown zone.
 [daemon]
 name = "module"
 state_dir = "../../out/updater-state"
