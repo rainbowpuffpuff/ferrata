@@ -180,7 +180,7 @@ Item {
             var waited = waitUntil(host.app.releaseHeldUntil[0]);
             console.log("WAITED release delay " + Math.round(waited / 60000) + " min (the view's clock)");
             // The vault's own release delay after the checkpoint, on Ethereum's clock.
-            ops("pass-time 121 the vault's release delay after finalizeAttested");
+            ops("pass-time 121 the vault release delay after finalizeAttested");
             tryVerify(function () { return !host.app.releaseHeld(0); }, 10000, "the delay has passed");
             verify(!host.app.releaseSkipDelay, "the delay was waited out, not overridden");
             verify(el("release.submit").enabled, "releasable once the delay has passed");
