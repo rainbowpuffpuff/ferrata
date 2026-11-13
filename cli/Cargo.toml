@@ -21,6 +21,21 @@ path = "src/main.rs"
 name = "ferrata-relayer"
 path = "src/bin/relayer.rs"
 
+# The devnet tools of e2e/seqnet (the user's round trip on a running LEZ sequencer): the gas drop's stand-in
+# and the zone's transaction list. Built only with `--features seqnet`.
+[[bin]]
+name = "seqnet-fund"
+path = "src/bin/seqnet_fund.rs"
+required-features = ["seqnet"]
+
+[[bin]]
+name = "seqnet-txs"
+path = "src/bin/seqnet_txs.rs"
+required-features = ["seqnet"]
+
+[features]
+seqnet = []
+
 [dependencies]
 ferrata-bridge-core = { path = "../bridge/crates/ferrata-bridge-core" }
 ferrata-lez-bridge-wire = { path = "../lez/bridge-wire" }

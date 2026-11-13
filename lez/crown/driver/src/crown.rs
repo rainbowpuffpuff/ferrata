@@ -1015,6 +1015,9 @@ pub struct SessionB {
     pub private: String,
     pub session_out: PathBuf,
     pub notes_out: PathBuf,
+    /// Only the operator's and the relayer's steps (the finality updates, `Init`, `Register`, `ImportFees`,
+    /// `ImportRoot`): no claim and no burn, which a user's own wallet sends (e2e/seqnet: the `ferrata` tool).
+    pub operator_only: bool,
 }
 
 /// Session B: the captures, the bridge's pairing, registration and imports, the claims and the
@@ -1108,6 +1111,9 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
         let o = send(live, &format!("bridge ImportRoot n={n} ({}, block {})", stage.label, stage.block), vec![mention(config_pda), mention(header_pda), mention(root_pda)], &import, payer).await?.expect_applied()?;
         steps.push(row_json(&o));
 
+        if b.operator_only {
+            continue;
+        }
         if k == 0 {
             // Claim of deposit 0 (public), relay fee to the fee recipient (no relayer).
             let (w, nullifier, kind) = witness(&vault, &stage.deposits, 0)?;

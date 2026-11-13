@@ -9,6 +9,8 @@
 #                  registration, imports, claims and burns, with two real private proofs); the node's final blocks
 #                  (session-b/node/, for the checkpoint); stop; save; session-b/
 #   session.sh dump  restore the newest generation, start the node alone, write session-b/node/ again; saves nothing
+#   session.sh x   restore the newest generation (after a); run the hook $CROWN_HOOK (a script, with the zone's ports,
+#                  paths and binaries in its environment: e2e/seqnet) while the zone runs; stop; save; session-x/
 #   session.sh u   restore the newest generation (after a); ferrata-updater, the build of lez/updater/sequencer
 #                  ($CROWN_UPDATER_BIN, default $CROWN_LEZ_VOL/inputs/updater/ferrata-updater), keeps session A's Sepolia
 #                  instance following Sepolia through the public beacon APIs (Lodestar's light-client data, publicnode's
@@ -22,7 +24,8 @@
 # $CROWN_LEZ_VOL/inputs/capture-1 and -2), CROWN_ETH_FEES_AT, CROWN_RECIPIENT, CROWN_PRIVATE (real | fake),
 # CROWN_R0VM (the prover's r0vm; default the bundle's), CROWN_CLAIM_TIME_OFFSET_S (no effect
 # since the time fix: a claim carries no time), CROWN_DEADLINE_MIN (120),
-# CROWN_SAMPLE=1 (peak RSS and busy cores while the driver runs -> session-X/resources.txt).
+# CROWN_SAMPLE=1 (peak RSS and busy cores while the driver runs -> session-X/resources.txt);
+# CROWN_SEQUENCER_DEV_MODE=1 (x only): the sequencer accepts RISC Zero dev-mode receipts (RISC0_DEV_MODE=1).
 # Layout of $CROWN_LEZ_VOL: bundle.tar.zst (input), state/gen-N.tar.zst + state/current, inputs/, session-a/, session-b/.
 set -uo pipefail
 STEP="${1:?a or b}"
@@ -37,7 +40,7 @@ TICK_MIN=1; TICK_MAX=6; TICK_AFTER=3          # where its blocks fall after an e
 MAX_STARTS="${CROWN_MAX_STARTS:-4}"
 BEDROCK_FUNDING_PUBLIC_KEY=2e03b2eff5a45478e7e79668d2a146cf2c5c7925bce927f2b1c67f2ab4fc0d26
 CHANNEL=0101010101010101010101010101010101010101010101010101010101010101
-case "$STEP" in a|b|dump|u) ;; *) echo "session.sh a | b | dump | u"; exit 2 ;; esac
+case "$STEP" in a|b|dump|u|x) ;; *) echo "session.sh a | b | dump | u | x"; exit 2 ;; esac
 case "$CHAIN" in sepolia|stand-in) ;; *) echo "CROWN_CHAIN: sepolia or stand-in"; exit 2 ;; esac
 
 VOL="$(realpath -m "$VOL")"; WORK="$(realpath -m "$WORK")"
@@ -205,7 +208,9 @@ while :; do
   fi
   echo "ferrata-crown start $STARTS" >> "$LOG/sequencer.log"
   launched="$(date +%s)"
-  env -u RISC0_DEV_MODE RUST_LOG="info,sequencer_core=debug,risc0_zkvm=warn,kameo=warn" \
+  seqdev=(env -u RISC0_DEV_MODE)
+  [ "$STEP" = x ] && [ "${CROWN_SEQUENCER_DEV_MODE:-0}" = 1 ] && seqdev=(env RISC0_DEV_MODE=1)
+  "${seqdev[@]}" RUST_LOG="info,sequencer_core=debug,risc0_zkvm=warn,kameo=warn" \
     "$BIN/sequencer_service" start "$S/sequencer_home" --rpc-listen-address "127.0.0.1:$RPC_PORT" >> "$LOG/sequencer.log" 2>&1 &
   SEQ_PID=$!
   sched=""
@@ -378,6 +383,13 @@ if [ "$STEP" = a ]; then
   DRIVER_RC=$?
 elif [ "$STEP" = u ]; then
   updater_session
+  DRIVER_RC=$?
+elif [ "$STEP" = x ]; then
+  [ -n "${CROWN_HOOK:-}" ] && [ -f "$CROWN_HOOK" ] || fail "session x needs CROWN_HOOK (a script)"
+  say "hook $CROWN_HOOK"
+  RPC_PORT="$RPC_PORT" BEDROCK_PORT="$BEDROCK_PORT" CHANNEL="$CHANNEL" ZONE_STATE="$S" ZONE_BUNDLE="$B" ZONE_BIN="$BIN" \
+    ZONE_LOG="$LOG" ZONE_VOL="$VOL" ZONE_OUT="$OUT" ZONE_WORK="$WORK" ZONE_DRIVER_ARGS="${D[*]}" \
+    timeout $(( DEADLINE_MIN * 60 )) bash "$CROWN_HOOK" > "$LOG/hook.log" 2>&1
   DRIVER_RC=$?
 else
   caps=(); for c in ${CROWN_CAPTURES:-$VOL/inputs/capture-1 $VOL/inputs/capture-2}; do caps+=(--capture "$c"); done

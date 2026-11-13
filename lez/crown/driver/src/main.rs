@@ -28,7 +28,8 @@
 //! settings), --identity-out FILE, [--vault ADDR].
 //! crown-b: --identity FILE, --capture DIR (repeatable, in order), [--eth-fees-at UNIX_S],
 //! [--recipient ADDR], [--private real|fake], [--claim-time-offset-s S (default -30)], --session-out FILE,
-//! --notes-out FILE.
+//! --notes-out FILE, [--operator-only yes] (the updates, Init, Register, ImportFees and ImportRoot only: the
+//! claims and burns are a user's wallet's, e2e/seqnet).
 
 #![allow(dead_code)]
 
@@ -313,6 +314,7 @@ async fn run(args: Args) -> Result<()> {
                 private: args.get("private").unwrap_or("real").to_string(),
                 session_out: args.path("session-out")?,
                 notes_out: args.path("notes-out")?,
+                operator_only: args.get("operator-only") == Some("yes"),
             };
             crown::session_b(&mut live, &program, &bridge, &chain, &b).await?;
         }
