@@ -33,6 +33,11 @@ name = "seqnet-txs"
 path = "src/bin/seqnet_txs.rs"
 required-features = ["seqnet"]
 
+[[bin]]
+name = "seqnet-chain"
+path = "src/bin/seqnet_chain.rs"
+required-features = ["seqnet"]
+
 [features]
 seqnet = []
 

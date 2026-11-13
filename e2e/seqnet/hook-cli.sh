@@ -26,12 +26,14 @@ u 08-claim-held "${F[@]}" claim --bridge-program "$BRIDGE_BIN" && die "the claim
 let_claim_delay_pass "$RUN/user/08-claim-held.txt"
 u 09-claim-dry-run "${F[@]}" claim --bridge-program "$BRIDGE_BIN" || die "claim dry run"
 u 10-claim "${PROVE[@]}" "${F[@]}" claim --bridge-program "$BRIDGE_BIN" --send --yes || die "the private claim"
+wait_tx "$RUN/user/10-claim.txt"
 u 11-recover "${F[@]}" recover || die "recover"
 FRESH="$(cast wallet new --json | jq -r '.[0].address')"
 echo "FRESH=$FRESH" >> "$SEQNET_ENV"
 say "the user's fresh Ethereum address for the release: $FRESH (cast wallet new; its key is not kept)"
 u 12-burn-dry-run "${F[@]}" burn --amount 0.001 --recipient "$FRESH" --bridge-program "$BRIDGE_BIN" || die "burn dry run"
 u 13-burn "${PROVE[@]}" "${F[@]}" burn --amount 0.001 --recipient "$FRESH" --bridge-program "$BRIDGE_BIN" --send --yes || die "the private burn"
+wait_tx "$RUN/user/13-burn.txt"
 u 14-recover "${F[@]}" recover || die "recover"
 
 checkpoint                                                                 # d

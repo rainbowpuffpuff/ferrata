@@ -17,10 +17,12 @@ RUN="$REPO/e2e/runs/seqnet-$NAME"
 W="$T/w-$NAME"; VOL="$W/vol"; BIN="$T/bin"; R0BF="$T/inputs/r0bf"
 PROOFS="${SEQNET_PROOFS:-dev}"
 RPC=http://127.0.0.1:8545
-DEPLOYER=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266   # anvil's published dev accounts: deployer and stand-in prover,
-RELAYER=0x70997970C51812dc3A010C7d01b50e0d17dc79C8    # the relayer,
+# The deployer and stand-in prover: an address nobody holds a key for, impersonated by anvil (DeployVault refuses
+# anvil's public accounts on a chain id other than 31337); anvil's published dev accounts: the relayer,
+DEPLOYER=0x000000000000000000000000000000005E9DE901
+RELAYER=0x70997970C51812dc3A010C7d01b50e0d17dc79C8
 DEPOSITOR=0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC  # the user's Ethereum account (a keystore of anvil's 3rd key)
-DEPOSITOR_KEY=5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdb365a
+ANVIL_MNEMONIC="test test test test test test test test test test test junk"   # anvil's published dev mnemonic
 PHRASE="abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"  # the user's
 # LEZ seed: the published BIP-39 test phrase (as the mini-app's devnet), never a wallet
 CHECKPOINT_A_ID=0xb9c1e6a834879f6be79d09d728523565846018629b82f66986eb58fab4f52c84
@@ -54,9 +56,10 @@ BRIDGE="$(jq -r .bridge.header "$SA")"; ATTEST="$(jq -r .attestation.account "$S
 say "session A: tip $(jq -c .tip "$SA"); bridge program $BRIDGE (image $BRIDGE_ID), attestation program $ATTEST (image $ATTEST_ID)"
 
 # ---- 2. anvil, the mock verifier, the vault ---------------------------------------------------------
-anvil --chain-id 11155111 --port 8545 --gas-limit 100000000 > "$W/anvil.log" 2>&1 & ANVIL=$!
+anvil --chain-id 11155111 --port 8545 --gas-limit 100000000 --auto-impersonate > "$W/anvil.log" 2>&1 & ANVIL=$!
 trap 'kill $ANVIL 2>/dev/null || true' EXIT
 for _ in $(seq 60); do cast chain-id --rpc-url $RPC > /dev/null 2>&1 && break; sleep 1; done
+cast rpc anvil_setBalance $DEPLOYER 0x56bc75e2d63100000 --rpc-url $RPC > /dev/null   # 100 ETH
 MOCK="$(cd "$REPO/vault" && forge create test/mocks/MockVerifiers.sol:MockRiscZeroVerifier --rpc-url $RPC --unlocked \
   --from $DEPLOYER --broadcast --json 2>/dev/null | jq -r .deployedTo)"
 [ -n "$MOCK" ] && [ "$MOCK" != null ] || die "the mock verifier was not deployed"
@@ -84,36 +87,36 @@ rm -f "$REPO/vault/deployments/crown-seqnet-$NAME.json"   # the same record is $
 U="$W/user"; mkdir -p "$U"
 printf '%s\n' "$PHRASE" > "$U/seed.txt"; printf 'seqnet-user\n' > "$U/lez.pass"; printf 'seqnet-depositor\n' > "$U/eth.pass"
 chmod 600 "$U/seed.txt" "$U/lez.pass" "$U/eth.pass"
-cast wallet import depositor --private-key "$DEPOSITOR_KEY" --keystore-dir "$U/keystore" --unsafe-password seqnet-depositor > /dev/null
+cast wallet import depositor --private-key "$(cast wallet private-key --mnemonic "$ANVIL_MNEMONIC" --mnemonic-index 2)" \
+  --keystore-dir "$U/keystore" --unsafe-password seqnet-depositor > /dev/null
+[ "$(cast wallet address --keystore "$U/keystore/depositor" --password seqnet-depositor)" = "$DEPOSITOR" ] || die "the user's keystore"
 KEYSTORE="$U/keystore/depositor"
 cat > "$W/env.sh" <<EOF
 RUN=$RUN; W=$W; VOL=$VOL; BIN=$BIN; R0BF=$R0BF; PROOFS=$PROOFS; RPC=$RPC; MODE=$MODE; NAME=$NAME; REPO=$REPO; T=$T
 DEPLOYER=$DEPLOYER; RELAYER=$RELAYER; DEPOSITOR=$DEPOSITOR; KEYSTORE=$KEYSTORE; U=$U
 VAULT=$VAULT; MOCK=$MOCK; CID=$CID; GS=$GS; FROM=$FROM; SA=$SA; BRIDGE=$BRIDGE; ATTEST=$ATTEST
-CHECKPOINT_B_ID=$CHECKPOINT_B_ID; RELEASE_ID=$RELEASE_ID
+CHECKPOINT_B_ID=$CHECKPOINT_B_ID; RELEASE_ID=$RELEASE_ID; BESIDE_SHORT=$(dirname "$T")/mseq
 EOF
 . "$W/env.sh"; . "$HERE/common.sh"
 F=("$BIN/ferrata" --seed "$U/seed.txt" --eth-rpc $RPC --chain-id 11155111 --vault "$VAULT" --from-block "$FROM")
 
-# ---- 3b. The private deposit (cli: the tool; miniapp: the view, in the hook) and capture-1 --------------
+# ---- 3b. cli: the private deposit with the tool, then capture-1 (miniapp: both in the hook, through the view) ------
 if [ "$MODE" = cli ]; then
   u 01-keys "${F[@]}" keys --accounts 2 || die "keys"
   u 02-status "${F[@]}" status || die "status"
   u 03-deposit-dry-run "${F[@]}" deposit --denomination 0 --from "$DEPOSITOR" || die "deposit dry run"
   u 04-deposit "${F[@]}" deposit --denomination 0 --keystore "$KEYSTORE" --password-file "$U/eth.pass" --send --yes || die "deposit"
   u 05-scan "${F[@]}" scan || die "scan"
-else
-  bash "$HERE/miniapp-deposit.sh" "$W/env.sh" || die "the mini-app's deposit"
+  slots="$("$BIN/crown-driver" capture-slots | jq -r '.slots[].slot')"
+  sargs=(); for s in $slots; do sargs+=(--slot "$s"); done
+  python3 -I "$REPO/lez/crown/capture-anvil.py" --rpc $RPC --vault "$VAULT" --from-block "$FROM" "${sargs[@]}" "$VOL/inputs/capture-1" \
+    > "$W/capture-1.log" 2>&1 || { tail -n 20 "$W/capture-1.log"; die "capture-1"; }
+  say "capture-1: $(tail -n 1 "$W/capture-1.log")"
+  B="$W/check-bundle"; mkdir -p "$B"; zstd -q -d -c "$VOL/bundle.tar.zst" | tar -C "$B" -xf -
+  "$BIN/crown-driver" check --chain stand-in --program-bin "$B/program/ferrata_lez.bin" --bridge-bin "$B/program/ferrata_bridge.bin" \
+    --capture "$VOL/inputs/capture-1" --identity "$SA" > "$W/check.log" 2>&1 || { tail -n 20 "$W/check.log"; die "crown-driver check"; }
+  say "crown-driver check: $(tail -n 1 "$W/check.log")"
 fi
-slots="$("$BIN/crown-driver" capture-slots | jq -r '.slots[].slot')"
-sargs=(); for s in $slots; do sargs+=(--slot "$s"); done
-python3 -I "$REPO/lez/crown/capture-anvil.py" --rpc $RPC --vault "$VAULT" --from-block "$FROM" "${sargs[@]}" "$VOL/inputs/capture-1" \
-  > "$W/capture-1.log" 2>&1 || { tail -n 20 "$W/capture-1.log"; die "capture-1"; }
-say "capture-1: $(tail -n 1 "$W/capture-1.log")"
-B="$W/check-bundle"; mkdir -p "$B"; zstd -q -d -c "$VOL/bundle.tar.zst" | tar -C "$B" -xf -
-"$BIN/crown-driver" check --chain stand-in --program-bin "$B/program/ferrata_lez.bin" --bridge-bin "$B/program/ferrata_bridge.bin" \
-  --capture "$VOL/inputs/capture-1" --identity "$SA" > "$W/check.log" 2>&1 || { tail -n 20 "$W/check.log"; die "crown-driver check"; }
-say "crown-driver check: $(tail -n 1 "$W/check.log")"
 
 # ---- 4. The zone again, with the hook ---------------------------------------------------------------
 dev=0; [ "$PROOFS" = dev ] && dev=1

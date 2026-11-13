@@ -130,6 +130,23 @@ relay_release() {
   say "the fresh address $FRESH holds $(cast balance "$FRESH" --rpc-url "$RPC") wei"
 }
 
+# wait_tx FILE: the transaction a command of the user sent ("sent: HASH" in its output) applied in a block of the zone.
+wait_tx() {
+  local h i line
+  h="$(grep -o -E 'sent: [0-9a-fA-Fx]+' "$1" | tail -n 1 | awk '{print $2}')"
+  [ -n "$h" ] || die "no transaction hash in $1"
+  for i in $(seq 1 90); do
+    line="$("$BIN/seqnet-txs" --sequencer "$SEQ" --home "$W/txs-wallet" --bridge-account "$BRIDGE" --attest-account "$ATTEST" 2>/dev/null | grep -F "$h")"
+    if [ -n "$line" ]; then
+      say "applied: $(echo "$line" | awk -F'\t' '{print "block " $1 ", " $6 " transaction " $5 ", reverted " $7 ", program " $8 ", visible bridge calls " $10}')"
+      echo "$line" | awk -F'\t' '{print $7}' | grep -q false || die "transaction $h reverted"
+      return 0
+    fi
+    sleep 4
+  done
+  die "transaction $h not in a block after 6 min"
+}
+
 records() {
   "$BIN/seqnet-txs" --sequencer "$SEQ" --home "$W/txs-wallet" --bridge-account "$BRIDGE" --attest-account "$ATTEST" \
     > "$RUN/lez/transactions.tsv" 2> "$W/txs.err" || say "seqnet-txs failed: $(tail -n 3 "$W/txs.err")"

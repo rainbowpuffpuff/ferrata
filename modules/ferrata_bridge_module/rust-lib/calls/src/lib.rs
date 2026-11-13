@@ -18,6 +18,7 @@
 
 use std::fmt::Write as _;
 
+mod session;
 mod wallet;
 
 use ferrata_bridge_core::{
@@ -49,7 +50,7 @@ pub fn version() -> String {
         "staged": serde_json::from_str::<Value>(STAGED).unwrap_or(Value::Null),
         "spec": "v2",
         "tool_code": "ferrata-wallet (claim with LEZ state, release rule, release guest run, root import)",
-        "methods": ["version", "deposit", "claim", "burn", "release", "recover", "status", "prove_release", "import_root", "registry"],
+        "methods": ["version", "deposit", "claim", "burn", "release", "recover", "status", "prove_release", "import_root", "registry", "wallet"],
     })
     .to_string()
 }
@@ -111,6 +112,12 @@ pub fn recover(request: &str) -> String {
 /// `status(request)`: where each deposit and burn stands.
 pub fn status(request: &str) -> String {
     reply(parse(request).and_then(|r| status_of(&r)))
+}
+
+/// `wallet(request)`: one call of the mini-app's view (`{"method", "params"}`), run with this module's
+/// methods over the chains a chain service reads and sends to (`session.rs`); `{"ok", "result"|"error"}`.
+pub fn wallet(request: &str) -> String {
+    session::wallet(request)
 }
 
 fn parse(request: &str) -> Result<Value, String> {
