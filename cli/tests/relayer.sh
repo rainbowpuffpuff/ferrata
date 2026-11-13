@@ -23,7 +23,8 @@ FERRATA_RELAYER_FORK=1 FERRATA_RELAYER_RESULTS="${FERRATA_RELAYER_RESULTS:-$here
 cd "$here/../vault"
 [ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.0.0
 forge build --quiet
-elf="$(find "$here/../bridge/target" -path '*riscv32im-risc0-zkvm-elf/release/gasdrop.bin' 2>/dev/null | head -1)"
+# (find fails when bridge/target does not exist yet: a fresh checkout builds it below.)
+elf="$(find "$here/../bridge/target" -path '*riscv32im-risc0-zkvm-elf/release/gasdrop.bin' 2>/dev/null | head -1 || true)"
 if [ -z "$elf" ]; then
   (cd "$here/../bridge" && RISC0_HOME= cargo build --release -p host)
   elf="$(find "$here/../bridge/target" -path '*riscv32im-risc0-zkvm-elf/release/gasdrop.bin' | head -1)"
