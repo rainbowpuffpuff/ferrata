@@ -170,6 +170,7 @@ impl Chain {
             "module.inputs" => self.inputs(params).await,
             "module.private" => self.private(params).await,
             "module.submit" => self.submit(params).await,
+            "module.tx" => self.tx(params).await,
             "module.vault_roots" => self.vault_roots(params).await,
             "module.vault_release" => self.vault_release(params).await,
             "module.stop" => Ok(json!({ "stopping": true })),
@@ -423,6 +424,34 @@ impl Chain {
             "proof": if private { json!({ "mode": proof_mode(), "prove_ms": send_ms, "receipt_bytes": receipt_bytes, "tx_bytes": tx_bytes,
                 "by": "LEZ's wallet library (send_privacy_preserving_tx_with_pre_check): executed and proven on this machine, verified by the sequencer" }) } else { Value::Null },
         }))
+    }
+
+    /// The plain path's view of a transaction another sender made (Logos Core's `lez_core`, for the module's
+    /// private claim and burn): the block that applied it, whether it reverted, its size and its receipt's.
+    async fn tx(&self, params: &Value) -> Result<Value> {
+        let hash = params["hash"].as_str().filter(|h| !h.is_empty()).context("hash")?.to_string();
+        let since = params["since"].as_u64().unwrap_or(1);
+        let (block, reverted, tx) = self.wait_applied(&hash, since).await?;
+        let tx_bytes = borsh::to_vec(&tx).map(|b| b.len()).unwrap_or(0);
+        let (private, receipt_bytes, visible) = match &tx {
+            LeeTransaction::PrivacyPreserving(t) => (
+                true,
+                borsh::to_vec(&t.witness_set).ok().and_then(|w| {
+                    (w.len() >= 8 && w[..4] == [0, 0, 0, 0]).then(|| u32::from_le_bytes([w[4], w[5], w[6], w[7]]) as usize)
+                }),
+                lez::visible_calls(t, self.ctx.program)
+                    .iter()
+                    .map(|c| match BridgeMessage::try_from_slice(&c.message) {
+                        Ok(m) => format!("{m:?}").split(['(', ' ', '{']).next().unwrap_or("?").to_string(),
+                        Err(_) => "?".into(),
+                    })
+                    .collect::<Vec<_>>(),
+            ),
+            LeeTransaction::Public(_) => (false, None, Vec::new()),
+        };
+        Ok(json!({ "hash": hash, "block": block, "reverted": reverted, "private": private, "tx_bytes": tx_bytes,
+                   "receipt_bytes": receipt_bytes, "visible_bridge_calls": visible,
+                   "read_by": "seqnet-chain (LEZ's wallet library's sequencer client: getBlockRange until the hash appears)" }))
     }
 
     async fn wait_applied(&self, hash: &str, since: u64) -> Result<(u64, bool, LeeTransaction)> {

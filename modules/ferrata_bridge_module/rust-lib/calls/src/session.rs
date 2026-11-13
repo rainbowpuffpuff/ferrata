@@ -57,6 +57,18 @@ fn dispatch(method: &str, params: &Value) -> Result<Value, String> {
     if method == "open" {
         return open(params);
     }
+    if method == "lez" {
+        // The session's LEZ path: Logos Core's lez_core (reads, the private holding, private sends) or plain.
+        let private0 = SESSION.lock().ok().and_then(|g| g.as_ref().and_then(|s| s.s["private_accounts"][0].as_str().map(str::to_string)));
+        return crate::lez::configure(params, private0);
+    }
+    if method == "lez_report" {
+        return Ok(crate::lez::report());
+    }
+    if method == "lez_probe" {
+        let s = SESSION.lock().ok().and_then(|g| g.as_ref().map(|s| s.s.clone())).ok_or("open the session first")?;
+        return crate::lez::probe(&s);
+    }
     let (chain, s) = {
         let mut g = SESSION.lock().map_err(|_| "the session lock is poisoned")?;
         let sess = g.as_mut().ok_or("no wallet session: open it first (wallet {\"method\":\"open\",\"params\":{\"chain\":URL}})")?;
@@ -150,6 +162,62 @@ impl Chain {
         }
     }
 
+    /// The chain service's `module.inputs`; on the `lez_core` path every bridge actor state in it read again
+    /// through Logos Core's `lez_core` and compared (`lez` in the reply, `lez.rs`).
+    fn inputs(&self, params: Value) -> Result<Value, String> {
+        let mut inputs = self.post("module.inputs", params.clone())?;
+        if crate::lez::active() {
+            crate::lez::verify_inputs(&mut inputs, &self.s, params["nullifier"].as_str())?;
+        }
+        Ok(inputs)
+    }
+
+    /// Sends the module's message. A private one (its first account the wallet's private account) on the
+    /// `lez_core` path: executed, proven and sent by LEZ's wallet inside Logos Core, then the block that applied
+    /// it read by the chain service (`module.tx`, the plain path's view) beside `lez_core`'s own status. Else, or
+    /// when `lez_core` sent nothing, the chain service sends it (`module.submit`).
+    fn submit(&self, message: &Value, accounts: &Value, root_index: &Value, what: &str) -> Result<Value, String> {
+        let private = accounts[0]["kind"] == "private_self";
+        let plain = || self.post("module.submit", json!({ "message": message, "accounts": accounts, "root_index": root_index, "what": what }));
+        if !(private && crate::lez::active()) {
+            let mut sent = plain()?;
+            if crate::lez::active() {
+                sent["lez"] = json!({ "via": "the chain service", "why": "a public call: lez_core's public send has no account kind for the bridge program's PDAs" });
+            }
+            return Ok(sent);
+        }
+        let since = self.post("module.info", json!({}))?["lez_head"].as_u64().unwrap_or(0);
+        let message_hex = message.as_str().ok_or("message: hex")?;
+        let program = self.s["program"].as_str().ok_or("program")?;
+        match crate::lez::send_private(message_hex, accounts, root_index.as_u64().unwrap_or(0), program, what) {
+            Ok(lez) => {
+                let hash = lez["reply"]["tx_hash"].as_str().unwrap_or("").to_string();
+                let applied = self.post("module.tx", json!({ "hash": hash, "since": since }))?;
+                let status = crate::lez::poll(&hash);
+                Ok(json!({
+                    "settled": applied["reverted"] == false,
+                    "private": true,
+                    "what": what,
+                    "tx_hash": hash,
+                    "block": applied["block"],
+                    "reverted": applied["reverted"],
+                    "tx_bytes": applied["tx_bytes"],
+                    "proof": { "mode": self.s["proofs"], "prove_ms": lez["prove_ms"], "receipt_bytes": applied["receipt_bytes"],
+                               "tx_bytes": applied["tx_bytes"],
+                               "by": "LEZ's wallet inside Logos Core (lez_core.send_generic_private_transaction_with_accounts): executed and proven there, verified by the sequencer" },
+                    "lez": { "via": "lez_core", "attempts": lez["attempts"], "synced_to": lez["synced_to"],
+                             "program_bin_sha256": lez["program_bin_sha256"], "poll_transaction_status": status,
+                             "applied_per_the_chain_service": applied },
+                }))
+            }
+            Err(e) => {
+                let mut sent = plain()?;
+                sent["lez"] = json!({ "via": "the chain service (fallback)", "lez_core_error": e });
+                Ok(sent)
+            }
+        }
+    }
+
     fn seed_fields(&self) -> Value {
         json!({ "bridge_seed": self.s["bridge_seed"], "chain_id": self.s["chain_id"], "vault": self.s["vault"],
                 "config_id": self.s["config_id"], "program": self.s["program"], "depositor": self.s["depositor"] })
@@ -200,7 +268,7 @@ impl Chain {
 
     fn registry(&self) -> Result<Value, String> {
         let r = self.post("module.registry", json!({ "token": ETH }))?;
-        let inputs = self.post("module.inputs", json!({ "token": ETH }))?;
+        let inputs = self.inputs(json!({ "token": ETH }))?;
         let mut token = r["token"].clone();
         token["symbol"] = json!("ETH");
         token["decimals"] = json!(18);
@@ -345,7 +413,10 @@ impl Chain {
     /// The private holding of account `/a` as the wallet sees it (LEZ's wallet decrypts it).
     fn private_holding(&self, a: u64) -> Result<(u128, Value), String> {
         let id = self.account("private", a)?;
-        let p = self.post("module.private", json!({ "account": id }))?;
+        let mut p = self.post("module.private", json!({ "account": id }))?;
+        if crate::lez::active() {
+            p = crate::lez::private_state(&id, self.s["program"].as_str().ok_or("program")?, &p)?;
+        }
         let state = p["bridge_state"].as_str().unwrap_or("0x");
         let bytes = unhex(state)?;
         let held = if bytes.is_empty() {
@@ -365,7 +436,7 @@ impl Chain {
     fn scan(&self) -> Result<Value, String> {
         let gap = self.s["gap"].as_u64().unwrap_or(8);
         let publics: Vec<Value> = (0..gap).map(|a| self.account("public", a).map(Value::from)).collect::<Result<_, _>>()?;
-        let inputs = self.post("module.inputs", json!({ "token": ETH, "public_holders": publics }))?;
+        let inputs = self.inputs(json!({ "token": ETH, "public_holders": publics }))?;
         let (rec, deposits, burns) = self.positions(&inputs)?;
         let mut holdings = Vec::new();
         let (held, _) = self.private_holding(0)?;
@@ -396,10 +467,10 @@ impl Chain {
     fn claim(&self, params: &Value) -> Result<Value, String> {
         let leaf = params["leaf_index"].as_u64().ok_or("claim needs leaf_index")?;
         let private = params["private"].as_bool().unwrap_or(true);
-        let inputs = self.post("module.inputs", json!({ "token": ETH }))?;
+        let inputs = self.inputs(json!({ "token": ETH }))?;
         let (_, deposits, _) = self.positions(&inputs)?;
         let d = deposits.iter().find(|d| d["leaf_index"].as_u64() == Some(leaf)).ok_or("not a deposit of this wallet")?;
-        let inputs = self.post("module.inputs", json!({ "token": ETH, "nullifier": d["nullifier"] }))?;
+        let inputs = self.inputs(json!({ "token": ETH, "nullifier": d["nullifier"] }))?;
         let mut req = self.seed_fields();
         for k in ["leaves", "imported", "root_state", "token_state", "nullifier_state"] {
             req[k] = inputs[k].clone();
@@ -418,8 +489,7 @@ impl Chain {
         if c["verdict"] != "claimable" {
             return Err(format!("refused by the module (checked before sending): {} {}", c["error"].as_str().unwrap_or(""), c["detail"].as_str().unwrap_or("")));
         }
-        let sent = self.post("module.submit", json!({ "message": c["message"], "accounts": c["accounts"], "root_index": c["root_index"],
-                                                       "what": format!("{} of leaf {leaf}", c["variant"].as_str().unwrap_or("claim")) }))?;
+        let sent = self.submit(&c["message"], &c["accounts"], &c["root_index"], &format!("{} of leaf {leaf}", c["variant"].as_str().unwrap_or("claim")))?;
         let a = d["account"].as_u64().unwrap_or(0);
         let balance = if private && d["kind"] == "private" { self.private_holding(a)?.0.to_string() } else { String::new() };
         Ok(json!({
@@ -436,7 +506,8 @@ impl Chain {
             "proof": sent["proof"],
             "variant": c["variant"],
             "accounts": c["accounts"],
-            "made_by": "ferrata_bridge_module claim (the tool's claim with LEZ state); executed, proven and sent by LEZ's wallet library (seqnet-chain)",
+            "made_by": sent_by(&sent, "ferrata_bridge_module claim (the tool's claim with LEZ state)"),
+            "lez": sent["lez"],
             "public_on_lez": ["the nullifier N (its account)", "the token and denomination", "the root read", "the fee schedule's range", "the relayer"],
             "hidden": ["the destination account (an alias appears)", "the leaf index", "the depositor", "the private balance"],
         }))
@@ -454,7 +525,7 @@ impl Chain {
         if held < amount {
             return Err(format!("refused: LEZ bridge program exit code 254 INSUFFICIENT_BALANCE (checked before sending: the private holding of /{a} is {held} base units)"));
         }
-        let inputs = self.post("module.inputs", json!({ "token": ETH }))?;
+        let inputs = self.inputs(json!({ "token": ETH }))?;
         let (rec, _, _) = self.positions(&inputs)?;
         let i = rec["next_i"].as_u64().unwrap_or(0);
         let mut req = self.seed_fields();
@@ -489,8 +560,7 @@ impl Chain {
             pda(&c.account_id, &c.program_account_id, cs.as_bytes()),
             pda(&u.account_id, &u.program_account_id, us.as_bytes()),
         ]);
-        let sent = self.post("module.submit", json!({ "message": b["message"], "accounts": accounts, "root_index": 0,
-                                                       "what": format!("Burn (private) with tag counter {i}") }))?;
+        let sent = self.submit(&b["message"], &accounts, &json!(0), &format!("Burn (private) with tag counter {i}"))?;
         let burn_index = inputs["burns"].as_array().map_or(0, |v| v.len());
         Ok(json!({
             "settled": sent["settled"],
@@ -505,7 +575,8 @@ impl Chain {
             "tx_hash": sent["tx_hash"],
             "block": sent["block"],
             "proof": sent["proof"],
-            "made_by": "ferrata_bridge_module burn (the note and the Burn message); executed, proven and sent by LEZ's wallet library (seqnet-chain)",
+            "made_by": sent_by(&sent, "ferrata_bridge_module burn (the note and the Burn message)"),
+            "lez": sent["lez"],
             "public_on_lez": ["the note: r, memo, mac, c_out (the recipient encrypted)", "the token and denomination", "the time"],
             "hidden": ["the holder (a private account: an alias appears)", "the Ethereum recipient (encrypted in the memo)"],
         }))
@@ -513,7 +584,7 @@ impl Chain {
 
     fn release(&self, params: &Value) -> Result<Value, String> {
         let burn_index = params["burn_index"].as_u64().ok_or("release needs burn_index")?;
-        let inputs = self.post("module.inputs", json!({ "token": ETH }))?;
+        let inputs = self.inputs(json!({ "token": ETH }))?;
         let (_, _, burns) = self.positions(&inputs)?;
         let b = burns.iter().find(|b| b["burn_index"].as_u64() == Some(burn_index)).ok_or("not a burn of this wallet")?;
         if b["released"] == true {
@@ -562,6 +633,14 @@ impl Chain {
             "public_on_ethereum": ["the recipient", "the token and amount", "NOut (the release nullifier)", "the burn root used", "the time", "the relayer"],
             "stand_in": sent["stand_in_prover"]["what"],
         }))
+    }
+}
+
+/// Who made a send: the module, and who executed, proved and sent it.
+fn sent_by(sent: &Value, made: &str) -> String {
+    match sent["lez"]["via"].as_str() {
+        Some("lez_core") => format!("{made}; executed, proven and sent by LEZ's wallet inside Logos Core (lez_core)"),
+        _ => format!("{made}; executed, proven and sent by LEZ's wallet library (seqnet-chain)"),
     }
 }
 

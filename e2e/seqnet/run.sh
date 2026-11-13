@@ -12,6 +12,12 @@
 #   run.sh cli NAME       the round trip through the `ferrata` tool (hook-cli.sh); records in e2e/runs/seqnet-NAME/
 #   run.sh miniapp NAME   the same through the mini-app driving ferrata_bridge_module in a headless Logos Core
 #                         (hook-miniapp.sh)
+#   run.sh build-lezcore  also: lez_core (logos-execution-zone-module, LEZ v0.4.0-rc1's wallet as a Logos module) from
+#                         its source at the merged v0.4 state, as merged and with modules/patches/lez_core-*.patch, and
+#                         both packages' unit tests (Nix, its own pins: logos-module-builder 5f74cdb, LEZ 1806e87)
+#   run.sh lezcore NAME   ferrata_bridge_module in a headless Logos Core beside lez_core: the module's LEZ reads, the
+#                         private holding and the private claim and burn through lez_core, each beside the plain path
+#                         (seqnet-chain) (hook-lezcore.sh)
 #
 # Inputs (beside the repository, spike/tmp/miniapp-sequencer/inputs/, put on the box with mrun --put): the crown-live-3
 # LEZ bundle (bundle-crown-live-3.tar.zst, sha256 0013bab1...: sequencer_service, the node, r0vm, the final programs
@@ -85,14 +91,49 @@ build_miniapp() {
   ls -la "$T/nix-store.tar.zst"
 }
 
+# lez_core: main of logos-blockchain/logos-execution-zone-module after its v0.4 pull requests (#72 "Sequencer FFI
+# adaptation" and #74 "sequencer query API") were merged on 13 Nov 2026 (13:18 and 13:20 UTC).
+LEZ_CORE_REPO=logos-blockchain/logos-execution-zone-module
+LEZ_CORE_REV=cc73ebfe0857705cfc1c3b29743fb6c8c6aebd82
+LEZ_CORE_PATCH="$REPO/modules/patches/lez_core-cc73ebf-authorizes-public-pda.patch"
+
+build_lezcore() {
+  local L="$T/logs/build" P="$T/lez_core-patched" O="$T/modcheck" failed=""; mkdir -p "$L" "$T/logos" "$T/bin"
+  # Nix's evaluation and local builds need a finite stack of 1 GiB on the box (modules/scripts/check.sh).
+  if [ "$(ulimit -s)" = unlimited ]; then ulimit -s 1048576; fi
+  # Each step is tried (one failing does not stop the others); the failures are listed at the end.
+  try() { local name="$1" t0=$(date +%s); shift; if "$@" > "$L/$name.log" 2>&1; then say "$name: ok ($(( $(date +%s) - t0 )) s)";
+          else say "$name: FAILED ($(( $(date +%s) - t0 )) s)"; grep -a -E -A5 '^error|error:|FAILED' "$L/$name.log" | tail -n 25; failed="$failed $name"; fi; }
+  try seqnet-chain bash -c "cd '$REPO/cli' && CARGO_TARGET_DIR='$TGT' cargo build --release --features seqnet --bin seqnet-chain && cp '$TGT/release/seqnet-chain' '$T/bin/'"
+  try lez_core-upstream nix build "github:$LEZ_CORE_REPO/$LEZ_CORE_REV#lgx" -o "$T/logos/lgx-lez_core-upstream" -L
+  try lez_core-source bash -c "rm -rf '$P' && git clone -q 'https://github.com/$LEZ_CORE_REPO' '$P' && git -C '$P' checkout -q '$LEZ_CORE_REV' && git -C '$P' apply '$LEZ_CORE_PATCH' && git -C '$P' diff --stat"
+  try lez_core-patched nix build "path:$P#lgx" -o "$T/logos/lgx-lez_core-patched" -L
+  try lez_core-tests-upstream nix build "github:$LEZ_CORE_REPO/$LEZ_CORE_REV#unit-tests" -o "$T/logos/lez_core-tests-upstream" -L
+  try lez_core-tests-patched nix build "path:$P#unit-tests" -o "$T/logos/lez_core-tests-patched" -L
+  # ferrata_bridge_module (native tests and calls, then the dev .lgx) and logosctl, through modules/scripts/check.sh.
+  try check env MODULES=ferrata_bridge_module PORTABLE=0 E2E=0 LOGOS_TMPDIR="$(dirname "$T")/mseq" RISC0_DEV_MODE=1 \
+    bash "$REPO/modules/scripts/check.sh" "$O"
+  tail -n 12 "$O/report/summary.md" 2>/dev/null
+  if [ -d "$O/lgx-ferrata_bridge_module" ]; then
+    rm -rf "$T/logos/lgx-ferrata_bridge_module"; cp -rL "$O/lgx-ferrata_bridge_module" "$T/logos/lgx-ferrata_bridge_module"
+    ln -sfn "$(readlink -f "$O/logos/bin/logosctl")" "$T/logos/logosctl"
+  fi
+  ( cd "$T/logos" && sha256sum lgx-*/*.lgx; ./logosctl --version 2>&1 | head -1 ) | tee "$T/logos/VERSIONS"
+  say "caching /nix for the next container (/vol/nix/lez-core-v04.tar.zst; the setup script restores it)"
+  mkdir -p /vol/nix && tar -C / -cf - nix | zstd -q -T0 -3 -o /vol/nix/lez-core-v04.tar.zst.part -f \
+    && mv /vol/nix/lez-core-v04.tar.zst.part /vol/nix/lez-core-v04.tar.zst && ls -la /vol/nix/lez-core-v04.tar.zst
+  [ -z "$failed" ] || die "build-lezcore: failed:$failed (logs in $L)"
+}
+
 case "${1:-}" in
   build) build ;;
   build-miniapp) build_miniapp ;;
-  cli|miniapp)
+  build-lezcore) build_lezcore ;;
+  cli|miniapp|lezcore)
     NAME="${2:?run.sh $1 NAME}"
     # The tools are rebuilt first (incremental), so that a run uses this tree's (a restored box may hold older ones).
     build > "$T/logs/build-before-$NAME.log" 2>&1 || { tail -n 20 "$T/logs/build-before-$NAME.log"; die "build"; }
-    if [ "$1" = miniapp ]; then
+    if [ "$1" != cli ]; then
       ( cd "$REPO/cli" && CARGO_TARGET_DIR="$TGT" cargo build --release --features seqnet --bin seqnet-chain ) >> "$T/logs/build-before-$NAME.log" 2>&1 \
         && cp "$TGT/release/seqnet-chain" "$T/bin/" || die "seqnet-chain build"
     fi
