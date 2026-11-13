@@ -35,7 +35,11 @@ cargo build --release          # Rust 1.98.1 from cli/rust-toolchain.toml (LEZ's
 
 `release --prove` also needs `r0vm` 3.0.5 (`rzup install r0vm 3.0.5`). Building the tests needs
 more (see [Tests](#tests)). `ferrata` has its own Cargo workspace, because it links LEZ's wallet and
-node-side crates and alloy, which the rest of the repository avoids.
+node-side crates and alloy, which the rest of the repository avoids. LEZ's wallet comes with the feature
+`lez-wallet` (default): without it (`cargo build --lib --no-default-features`) the library keeps the Ethereum side,
+the zone's reads and calls over any `lez::Ledger` and the relayer daemon (`relayerd`) with the devnet's zone, which is
+how `ferrata_relayer_module` builds it; the `ferrata` binary needs the feature, `ferrata-relayer` then lacks
+`--sequencer`.
 
 ## Files and settings
 

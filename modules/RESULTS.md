@@ -1,10 +1,55 @@
 # Logos modules: results
 
-Runs, newest first: the five modules after the merge of `updater-live` (13 November: the updater's
+Runs, newest first: the relayer as the sixth module (13 November: root imports in `ferrata-relayer` and
+`ferrata_relayer_module`), the five modules after the merge of `updater-live` (13 November: the updater's
 sequencer backend, `headers` sources and `finish_own_jobs` on the daemon the updater module drives), the
 five modules after the merge of the two branches of 12 November (12–13 November, at the merged commit), the three daemons as modules and completing the attestation and bridge
 modules (those two branches, each run on its own), the attestation and bridge modules (11 November), the
 attestation module's prototype (10 November).
+
+## The relayer as a module, and its root imports, 13 November 2026
+
+**`ferrata-relayer` imports the vault's deposit roots, and runs as `ferrata_relayer_module`.** The daemon moved from
+`cli/src/bin/relayer.rs` into `cli/`'s library (`cli/src/relayerd.rs`): the binary parses its arguments, prints the
+daemon's lines and turns SIGTERM or SIGINT into a stop; the module runs the same code in a thread of its host
+process, keeps the lines and stops when asked. New in the daemon: root imports (`--import-roots`; once per
+`--import-every` period of Ethereum time, default 3,600 s) with the code `ferrata_bridge_module`'s `import_root`
+runs (`ferrata_wallet::import`: `import_proof`, `import_call`, `dry_run_import`), and `--lez-devnet`, the mini-app
+devnet's zone in place of a sequencer (a stand-in). `cli/` gained the feature `lez-wallet` (default): the module
+builds `cli/`'s library without LEZ's wallet library, which links LEZ's node-side crates (RocksDB, libp2p).
+
+Where: the Modal build box (gVisor; Nix 2.28.3; Logos Core from source), the sources of commit `a29c1c7`.
+`MODULES=ferrata_relayer_module modules/scripts/check.sh`: **0 step failures, 0 check failures**; the dev package
+14,318,774 bytes (built in 179 s), the portable 17,477,514; five one-shot calls (`daemon_requests.py`) equal to the
+native replies in both Logos Cores; `relayer-e2e.sh` 10 of 10 with the binary, 11 of 11 through the module in the dev
+and in the portable Logos Core (in a Logos Core of its own, without `RISC0_DEV_MODE`):
+
+- `cli/tests/relayer_fork.rs` through the module (`FERRATA_RELAYER_CMD=modules/scripts/relayer-module.sh`): an anvil
+  fork of Sepolia with `crown-live-1`'s real proofs; candidate 375,281 gas, `finalizeAttested` 218,385, release
+  358,908, the paid release wrapped by the module from a succinct receipt 407,052 (2 × 10¹² wei to the relayer): the
+  committed binary run's transactions and gas (EVIDENCE row 46); refusals, `status`, a clean stop on SIGTERM.
+- Root imports on the mini-app's devnet, the light client's record of anvil's own block written by the devnet
+  (`lc.finalize`, stand-in; its state root is anvil's header's) and the proofs anvil's `eth_getProof`: waiting
+  without a light client; n = 2 applied (273,511–275,460 execution gas), the message byte for byte
+  `ferrata_bridge_module`'s `import_root` for the same record and proofs; nothing sent when up to date; waiting for a
+  later record; a record the proofs do not match refused before sending with code 110 (`ProofNodeMismatch`), the
+  bridge module's code for it; n = 3; on the default cadence, no import within the hour and n = 4 in the next; a
+  clean stop on SIGTERM.
+- The catalog, for the relayer alone (`DRY_RUN_DIR`, `INSTALL_TEST_DIR`: the five's records are kept): exported,
+  `nix build .#lgx-portable` (204 s), `lgx verify` valid, unsigned, `index.json` with 1 package, `validate-repo` OK;
+  installed by name from the catalog over HTTPS on 127.0.0.1, loaded, called, and the installed module's root
+  imports 10 of 10 (`catalog/dry-run-relayer/`, `catalog/install-test-relayer/`).
+
+Records: [`results/relayer-2026-11-13/`](results/relayer-2026-11-13/README.md). The box runs before the final one:
+`cargo check --no-default-features` of `cli/` and its default build, unit tests and test targets (ok); the binary's
+`relayer-e2e.sh` 8 of 8 (before the cadence check and the comparison existed); a first `check.sh` whose only failure
+was the comparison with the bridge module, because the devnet no longer compiled (a closure named `word` hid the
+function `word`) and the earlier devnet binary was used: fixed, and `relayer-e2e.sh` now stops on a build error.
+Spend: about 0.32 USD of box time (estimated by `mrun`), workspace ws-4.
+
+Not done: the relayer's root imports on a running LEZ sequencer (the binary's `--sequencer` path has not run with
+`--import-roots`; the module has no LEZ wallet); the devnet's records are not written by a sync committee; Gloas
+records are waited on, not imported; the five other modules were not rebuilt with the shared scripts' new entries.
 
 ## The five modules after the merge of `updater-live`, 13 November 2026
 

@@ -9,7 +9,7 @@ The proposal (§B7) releases Ferrata's Logos modules from a catalog of its own w
 |---|---|---|
 | `logos-repo.json` | how clients (`lgpd`, the `package_downloader` module, the package-manager UI) identify the catalog; `indexUrl` names the rolling `index` release | the base's template, filled in |
 | `.github/workflows/_release-module.yml` | calls `logos-co/logos-modules-release-action/.github/workflows/release.yml@v1` with the catalog's variants and signing (`signing_mode: none`) | unchanged but for a header |
-| `.github/workflows/release-<module>.yml` (five: `ferrata_attest_module`, `ferrata_bridge_module`, `ferrata_attestor_module`, `ferrata_monitor_module`, `ferrata_updater_module`) | one per module: `module_path: submodules/<module>` | the base's `release-module.yml.template`, as `scripts/add-module.sh` writes it |
+| `.github/workflows/release-<module>.yml` (six: `ferrata_attest_module`, `ferrata_bridge_module`, `ferrata_attestor_module`, `ferrata_monitor_module`, `ferrata_updater_module`, `ferrata_relayer_module`) | one per module: `module_path: submodules/<module>` | the base's `release-module.yml.template`, as `scripts/add-module.sh` writes it |
 | `.github/workflows/release-all.yml` | releases every submodule | unchanged |
 
 In the catalog's own repository these files sit at its root (GitHub runs workflows only from the
@@ -23,13 +23,15 @@ published (no push, no public network). The action itself has not run.
 
 ## Dry run: the action's steps, run locally
 
-`modules/scripts/release-local.sh OUT_DIR` does for the `linux-amd64` variant of each of the five modules what `release.yml` and
+`modules/scripts/release-local.sh OUT_DIR` does for the `linux-amd64` variant of each module (the five, then the relayer's on its own) what `release.yml` and
 `rebuild-index.yml` do, publishing nothing: export each module (`export.sh`), `nix build .#lgx-portable`,
 `lgx verify`, `lgx manifest --json`, the release sidecar with the action's fields, and the catalog's
 `index.json` built by `logos-modules-release-tool`'s `index.py` (tag `v1.3`, the one
 `rebuild-index.yml` checks out) from the packages' URLs, served on 127.0.0.1. With one variant the
 action skips `lgx merge`. Its small outputs (sidecars, `index.json`, logs; no package binaries) are in
-`dry-run/`, and the run is described in `modules/RESULTS.md`.
+`dry-run/` for the five modules (EVIDENCE row 98) and in `dry-run-relayer/` for `ferrata_relayer_module`, released
+on its own on 13 November (`MODULES=ferrata_relayer_module DRY_RUN_DIR=...`: its index holds that one package);
+the runs are described in `modules/RESULTS.md`.
 
 ## Installed from the catalog
 
@@ -40,4 +42,6 @@ add it, search it, install the five modules by name, load them and call them; wi
 their jobs: the three daemons' (`attestor-e2e.sh`, `updater-e2e.sh`, `monitor-e2e.sh`), the attestation
 module's log end to end and `advance` (`e2e.sh`), and the bridge module on the mini-app's devnet
 (`bridge_e2e.sh`, with `RELEASE_ELF`). Its log, with those runs' check lines, is in `install-test/`
-(`modules/RESULTS.md`).
+(`modules/RESULTS.md`). `install-test-relayer/` is the relayer module's: installed by name from its own dry run's
+catalog, loaded, called, and its root imports on the mini-app's devnet through the installed module
+(`CATALOG_E2E_SCRIPTS=relayer-e2e.sh PARTS=roots`), 10 checks passed.

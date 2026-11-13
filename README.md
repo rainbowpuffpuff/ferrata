@@ -183,14 +183,14 @@ rebuild the programs to their image ids.
 | [Bridge program](lez/BRIDGE-RESULTS.md), `lez/` | The RFP-022 bridge on LEZ: `ImportRoot`, private claims and burns, fees, caps, freezes | prototype; real proofs, a LEZ devnet | [8–10, 28, 30, 31, 33, 38, 74, 75, 78, 88, 91](docs/EVIDENCE.md) |
 | [Inbound crossing, live](lez/live/inbound/README.md), `lez/live/inbound/` | Ethereum to LEZ on a running LEZ sequencer and Logos Blockchain node | run: a Sepolia deposit claimed on LEZ | [11, 27, 41, 91](docs/EVIDENCE.md) |
 | [GPU proving](gpu-prover/RESULTS.md), `gpu-prover/` | A Modal app proving checkpoints, the LEZ update and the private attestation, claim and burn on a GPU | measured | [5, 10, 16, 17, 24](docs/EVIDENCE.md) |
-| [Logos modules](modules/RESULTS.md), `modules/` | `ferrata_attest_module` (with `advance`, the updater's job planning) and `ferrata_bridge_module` (with the private claim, the root import, registry reads, the release rule and the release guest), on the `ferrata` tool's and the updater's own code (`cli/wallet`, `lez/advance`); the three daemons as modules (`ferrata_attestor_module`, `ferrata_monitor_module`, `ferrata_updater_module`); a catalog layout | built; run in a headless Logos Core | [7, 59–61, 93–98](docs/EVIDENCE.md) |
+| [Logos modules](modules/RESULTS.md), `modules/` | `ferrata_attest_module` (with `advance`, the updater's job planning) and `ferrata_bridge_module` (with the private claim, the root import, registry reads, the release rule and the release guest), on the `ferrata` tool's and the updater's own code (`cli/wallet`, `lez/advance`); the four daemons as modules (`ferrata_attestor_module`, `ferrata_monitor_module`, `ferrata_updater_module`, `ferrata_relayer_module`); a catalog layout | built; run in a headless Logos Core | [7, 59–61, 93–98, 106–107](docs/EVIDENCE.md) |
 | [Vault](vault/README.md), `vault/` | `FerrataVault` v5, the immutable Ethereum vault (Solidity), and its linked library | prototype; deployed on Sepolia | [12–14, 25, 30, 35, 41, 54, 91](docs/EVIDENCE.md) |
 | [Bridge core and release proof](bridge/README.md), `bridge/` | Commitments, trees, nullifiers; the release and claim guests | prototype; real proofs | [19, 30, 33, 77, 78, 88](docs/EVIDENCE.md) |
 | [Checkpoint program](checkpoint/README.md), `checkpoint/` | The LEZ to Ethereum checkpoint proof: re-hashes LEZ blocks, collects burns, checks rule (A) or (B) | prototype; proven on real LEZ blocks | [15, 16, 24, 29, 78, 91](docs/EVIDENCE.md) |
 | [Return leg, end to end](e2e/README.md), `e2e/` | The checkpoint program, the release program and the v3 vault in one fixture | run; the LEZ side a stand-in | [18, 25, 26, 41, 91](docs/EVIDENCE.md) |
 | [Round trip in CI](e2e/ci/README.md), `e2e/ci/` | One deposit there and back on one machine, every step asserted, in GitHub Actions | tested on the build box; not yet on GitHub | [76, 77](docs/EVIDENCE.md) |
 | [Command-line tool](cli/README.md), `cli/` | `ferrata`, the user's tool: deposit, claim, burn, release, recover; private by default | prototype; anvil and the harness | [84, 85](docs/EVIDENCE.md) |
-| [Relayer](docs/guides/operator-guide.md#6-the-relayer-and-the-wrapper), `cli/` | `ferrata-relayer`: users' release jobs, rule (B) checkpoints, finalisation, the gas drop | prototype; a fork of Sepolia | [46–48](docs/EVIDENCE.md) |
+| [Relayer](docs/guides/operator-guide.md#6-the-relayer-and-the-wrapper), `cli/` | `ferrata-relayer`: root imports on a fixed cadence, users' release jobs, rule (B) checkpoints, finalisation, the gas drop; also a Logos module (`ferrata_relayer_module`) | prototype; a fork of Sepolia; root imports on the mini-app's devnet | [46–48, 106–107](docs/EVIDENCE.md) |
 | [Updater](lez/updater/README.md), `lez/updater/` | `ferrata-updater`, the light-client updater daemon | prototype; recorded data, the harness; 8 h on LEZ sequencers of two zones following Sepolia live, 74 updates applied, 56 on the chains kept ([record](lez/updater/results/live-sepolia/)) | [79–81, 99](docs/EVIDENCE.md) |
 | [Watchers' `monitor`](monitor/README.md), `monitor/` | The watchers' node-side program: checks each candidate, cancels in time, pauses, alerts | prototype; anvil and a fork of Sepolia | [43–45](docs/EVIDENCE.md) |
 | [Rule (B) attestor](checkpoint/attestor/README.md), `checkpoint/attestor/` | `ferrata_attestor`: the signer a sequencer runs, and the collector of t of n attestations | prototype; a four-sequencer zone | [63–68](docs/EVIDENCE.md) |
@@ -289,8 +289,10 @@ The design notes specify these; there is no code for them here:
   ran without a bridge program; the rotation was proven on the lab's chain with stand-in keys,
   `checkpoint/attestor/RESULTS.md` §2, §7; `ferrata_attestor` is built as a program and as a Logos module, which
   ran beside each sequencer of a second run of that zone, `modules/RESULTS.md`);
-- of the relayer, its root imports and its Logos module (the daemon `ferrata-relayer`, its wrapping and the
-  gas drop are built); the watchers' `monitor`'s client of the LEZ and Logos Blockchain nodes' RPCs (the
+- of the relayer, its root imports on a running LEZ sequencer, and its Logos module's LEZ side through Logos Core's
+  own modules (the daemon `ferrata-relayer`, its wrapping, the gas drop, its root imports and its Logos module are
+  built; the imports and the module ran on the mini-app's devnet, whose zone the module reaches, and on a fork of
+  Sepolia, `modules/results/relayer-2026-11-13/`); the watchers' `monitor`'s client of the LEZ and Logos Blockchain nodes' RPCs (the
   program and its Logos module are built, `monitor/`, `modules/ferrata_monitor_module`; node views come through
   an adapter); the attestation side's `monitor` (records against several providers; the weak-subjectivity alarm);
 - in the Logos modules (`modules/README.md`, "Left out"): reads and transactions through Logos Core's

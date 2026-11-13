@@ -19,7 +19,9 @@ vault accept something false ([`docs/design/attestation.md`](../design/attestati
 releases, wrapping, fee collection and the gas drop; tested on an anvil fork of Sepolia with real proofs and
 in the LEZ harness); and the **updater**, `ferrata-updater` ([`lez/updater/`](../../lez/updater/README.md), §3.6),
 tested against LEZ v0.4.0-rc1's state machine in process on the lab's recorded mainnet and Sepolia data, also as a
-Logos module on that chain. The relayer's root imports and its module are **not built**; the updater's backend for a
+Logos module on that chain. The relayer's root imports (§4, §6.1) and its Logos module (`ferrata_relayer_module`, the
+same daemon code) are built as prototypes, shown on the mini-app's devnet and the Sepolia fork, the module's LEZ side the
+devnet's zone (§6.6); the updater's backend for a
 running sequencer, a binary of its own (`lez/updater/sequencer/`), ran 8 h on a LEZ devnet following Sepolia live
 (`lez/updater/results/live-sepolia/`). All three daemons are designed
 as Logos modules run under `logosctl daemon`, with structured logs, clean shutdown and configurable endpoints and depths
@@ -203,6 +205,18 @@ import's cost divided by the deposits it newly covers (the measurement at the re
 milestone B4 deliverable). Failure: an import at a count already imported is refused (244, after the
 attestation: 233,436 gas wasted); an import after `Sunset` is refused before it (242).
 
+**The relayer imports** (`ferrata-relayer --import-roots`, §6.1 step 0; prototype). In the first round of each
+`--import-every` period of Ethereum time (default 3,600 s: one import at most per period, whenever the deposits came)
+it reads the configuration's newest record on LEZ (`instance(id)`'s finalized slot, then `header(id, slot)`), checks
+that its Ethereum endpoint's block at the record's number has the recorded hash, reads the vault's slots 0 and 1 there
+with `eth_getProof`, and, when the count is above the newest imported one, builds `ImportRoot` and dry-runs it with
+the attestation and bridge programs' own functions (`ferrata_wallet::import`, the code `ferrata_bridge_module`'s
+`import_root` runs) before sending it: an import they would refuse is not sent, so no gas is spent on it; one sent is
+confirmed from `root(cid, n)`. A Gloas record (a block hash only) is waited on: the relayer does not fetch the
+block's header yet. On the mini-app's devnet (anvil's own `eth_getProof`, the light client's record written by the
+devnet) an import of 2 leaves cost 273,511–275,460 execution gas and 2,677–2,709 storage gas (§6.6; not yet run on a
+LEZ sequencer).
+
 ## 5. The checkpoint prover (the return leg)
 
 ### 5.1 What it proves
@@ -289,9 +303,13 @@ the cloud").
 
 ### 6.1 What `ferrata-relayer` does
 
-`ferrata-relayer` (`cli/src/bin/relayer.rs`, its checks in `cli/src/relayer.rs`; prototype, unaudited) runs
-one round every `--poll-secs` (default 12 s, one Ethereum slot):
+`ferrata-relayer` (the daemon in `cli/src/relayerd.rs`, the binary `cli/src/bin/relayer.rs`, its checks in
+`cli/src/relayer.rs`; prototype, unaudited; the same code runs as the Logos module `ferrata_relayer_module`,
+[`modules/README.md`](../../modules/README.md)) runs one round every `--poll-secs` (default 12 s, one Ethereum slot):
 
+0. **Root imports** (with `--import-roots` and the LEZ side): §4. At most one `ImportRoot` per `--import-every`
+   period, tried from the period's first round until it is sent or there is nothing to import; the period done is
+   kept in `<state>/root-import.json`, so a restart does not import twice in it.
 1. **Inbox.** Each `<inbox>/*.json` job is checked, then sent; the file moves to `<state>/done/` or
    `<state>/refused/` and one JSON line on stdout says what happened and why. A job that fails for a
    temporary reason (the root not final yet, the release delay, a freeze, a cap, the endpoint unreachable)
@@ -313,7 +331,8 @@ one round every `--poll-secs` (default 12 s, one Ethereum slot):
    tested against the harness zone: 11 burns and none accepted ask for one, none once they are accepted).
    On a rule (A) vault the daemon does not finalise (that needs the beacon proof, the prover's job).
 
-Logs are one JSON object per line (`start`, `job-done`, `job-refused`, `candidate-waiting`, `finalized`,
+Logs are one JSON object per line (`start`, `root-imported`, `root-import-waiting`, `root-import-refused`,
+`root-import-failed`, `root-import-closed`, `job-done`, `job-refused`, `candidate-waiting`, `finalized`,
 `fees-collected`, `checkpoint-needed`, `job-deferred`, `round-failed`, `stop`). The state directory is all
 it keeps between rounds: the drop book (`drops.json`), the done and refused jobs. SIGTERM or SIGINT stops it
 after the round in progress (a `stop` line names the signal), so a service manager can restart it at will; a gas drop is recorded before its credit is sent, so a crash cannot cause a second drop for
@@ -339,6 +358,12 @@ account needs gas money only; it is paid relay fees by the releases that name it
 <prover>` makes it wrap succinct receipts (§6.5); jobs must be written atomically (write `x.json.tmp`, then
 rename it to `x.json`: the daemon reads only `*.json`). `--unlocked <address>`
 lets a local anvil sign (tests and rehearsals only; refused unless the endpoint answers `anvil_nodeInfo`).
+
+Root imports: add `--import-roots` (with the LEZ side above; `--import-every <seconds>`, default 3600, 0 for every
+round). `--lez-devnet http://127.0.0.1:<port>/rpc` reaches the mini-app devnet's zone instead of a sequencer (tests
+only: the devnet signs and settles). Inside Logos Core the module takes the same arguments:
+`logosctl call ferrata_relayer_module start @request.json` with `{"args": [...]}`, then `status` and `stop`
+([`modules/README.md`](../../modules/README.md); built without LEZ's wallet, so `--sequencer` is the binary's only).
 
 ### 6.3 What it holds, and what it refuses
 
@@ -411,6 +436,14 @@ with the prover stood in by the proof it had produced on Modal (15 s there), ide
   (relay fee 10¹⁶ wei minted to it on LEZ), the receipt refused afterwards as claimed, the burn watch on the
   zone's 11 burns, and a release that pays the relayer 10¹⁴ wei (134,973–134,985 gas with the mock
   verifier), its redirected copy refused ([`e2e/runs/relayer-harness/`](../../e2e/runs/relayer-harness/test.log)).
+- `modules/scripts/relayer-e2e.sh` (13 November, build box; [`modules/results/relayer-2026-11-13/`](../../modules/results/relayer-2026-11-13/README.md)),
+  with the binary and with `ferrata_relayer_module` in a headless Logos Core (dev and portable builds): (2) above
+  through the module, the same transactions and gas; and **root imports on the mini-app's devnet** (the light
+  client's record of anvil's own block written by the devnet, the proofs anvil's `eth_getProof`): waiting without a
+  light client, n = 2 imported (273,511–275,460 execution gas) and byte for byte `ferrata_bridge_module`'s
+  `import_root` for the same record, nothing sent when up to date, a record the proofs do not match refused before
+  sending (code 110, the bridge module's for it), n = 3, the hourly cadence (no import within the hour, n = 4 in the
+  next), a clean stop on SIGTERM; also through the module installed from the local catalog.
 - Release gas on the v5 vault with the real verifier: 373,657 (ETH) and 403,523 (ERC-20 with the relayer's
   fee) on Foundry's rules; 619,477 and 648,447 on Sepolia's node prices, v3 vault
   ([`vault/GAS.md`](../../vault/GAS.md); [`e2e/README.md`](../../e2e/README.md)).
