@@ -213,6 +213,41 @@ then `ZB_PROGRAMS=<R0BF files of docs/image-ids.md> bash checkpoint/attestor/zon
 The whole run: the stages `zone`, `input`, `prove`, `releases`, then `spike/modal-build/mwrap` on each
 `work/<proof>/input.json`, `groth16 <proof>` for each, `vault`, `fixture`, `verify` (the script's header).
 
+## 9. A rotation the zone's committee proposed, in the checkpoint (`ZB_ROTATE=1 attestor/zone-bridge.sh`, `e2e/runs/zone-bridge-2/`)
+
+The run of §8 again (same box, same programs, same stand-ins), 13 November 2026, zone stage 08:43–09:05 UTC (1,363 s),
+proofs and vault until 09:25 UTC, with one step more between the attestors' start and session B: a fifth sequencer
+joins the committee the way LEZ v0.4.0-rc1 provides for. Its key is staked on LEZ with upstream's own operator
+command (`sequencer_service stake --sequencer-key … --from Public/…`, the minimum stake, 149, paid by a funded test
+account through crown-driver's wallet); LEZ's state then names five keys, and the four running sequencers'
+`channel_signing` actors do what they are written to do: the turn's sequencer drafts the `ChannelConfigOp`, its peers
+sign that transaction, and Bedrock applies it once t(4) = 3 of the four keys have signed. Nothing of this is driven by
+Ferrata's code; the run only stakes the key and watches the node's `/channel`. Records:
+[`e2e/runs/zone-bridge-2/`](../../e2e/runs/zone-bridge-2/) (`zone/channel-before-rotation.json`,
+`channel-after-rotation.json`; the rest as §8's).
+
+| Step | Result |
+|---|---|
+| Before | session A on the four sequencers: T0 = 28 `0x82816c41…`; the vault (same address and `lezConfigId` as §8's: same deployer, nonces and zone settings) with `genesisState` `0x2f604a80…` over the four keys; deposits and captures as §8 |
+| The stake | seq-4's home set up (a fresh channel key `98b684c5…`); `stake` of 149 from public test account 0 into a new ownership account, transaction `95b71382…`, included by seq-0 in its turn |
+| The rotation | **15 s after the stake was sent the node's channel accredits five keys**: `configuration_threshold` 3 → 4, configuration tip `0xe502602b…` → `0xd070c2ab…`; the `ChannelConfigOp` (transaction `0x60095f74…`: the config op and its fee transfer) in node block `d9cd820d…`, slot 9,066,785, between the inscriptions of LEZ blocks 30 and 31; its `ChannelMultiSigProof` carries the signatures of key indices 0, 2 and 3 of the old set (seq-0, seq-3, seq-1); the new set is the five keys in ascending order |
+| The fifth sequencer | started on the channel (three starts for its phase), it took its turn in the rotation: seq-0 → seq-2 → seq-3 → seq-4 → seq-1 (the new key order), six blocks a turn; it inscribed LEZ blocks 44–49, 73–78 and 102–107 (18 of the final tier's); heights equal on every running sequencer at 49 of the 55 polls (at four one sequencer was a block ahead or behind, at two seq-4's RPC was not up yet); no head rewind and no given-up inscription in any log |
+| Attestors | four from before the rotation (each signed 16 rising tips, 29 … 117, refusing none: tip 29 under the four-key set, every later one under the five-key set, `attest.log`) and seq-4's, certified by its new channel key, started after it (14 rounds, 38 … 113) |
+| Session B (on five sequencers) | as §8: `Init` (block 55, seq-1's), `Register` ETH (56), `ImportRoot` n=1 (57), `Claim` (58), `ImportFees` (62, seq-2's), `ImportRoot` n=2 (63), `ClaimPrivately` (proven in 227.6 s; block 87), `Burn` public (88), `Burn` private (proven in 274.8 s; block 116); T1 = 116 |
+| Final tier | all five attestors sign final tip 119 `0xe6c7f705…` (final message `0x5322cb50…`) after checking blocks 2..=119, key set n = 5; all five verify |
+| Node answers | attestor 0's final round: 1,307 immutable node blocks, slots 9,065,973..=9,067,693, 4,943,984 bytes; final inscriptions of LEZ blocks 2..=119 accepted, each signer checked against the key set in force at its node slot (seq-0 27, seq-1 24, seq-2 25, seq-3 24, seq-4 18) |
+| Input `zone-28-119` (`realblocks-crown --att`, attestor 4 left out) | the rotation as it was inscribed: the transaction re-encoded from the node's JSON and checked against its hash, op index 0, the three signatures; parent = T0 over the four keys and session A's configuration tip; blocks 29..=119 (91 blocks, 198 transactions, 613,341 bytes); four of the five attestations, over the new set; n = 5, t = 4; the same two burns (burn root `0x64742ec9…`: the leaves are §8's, from the same configuration, notes and amounts); parent state `0x2f604a80…`, new state `0xa2a12e2c…` (its key set the five), journal sha256 `0c916209…` |
+| r0vm | 4 of 5: **12,544,642** user cycles, 15 segments; 5 of 5: 14,231,687, 16 segments; 3 of 5: refused by the collector (`too few attestations: 3 valid, t(n = 5) = 4 needed`) and by the guest (`InsufficientAttestations { have: 3, need: 4 }`) |
+| Proof | the box's CPU: **921.1 s**, 15 segments, 12,544,642 user / 14,696,448 total cycles, receipt sha256 `4db4bd52…`; identity_p254 14.9 s; Groth16 14 s |
+| Releases | the same two statements as §8 (inputs byte for byte): 11.1 s and 11.2 s on the CPU, receipts `18de1d11…` and `2dc50451…`, Groth16 14 s and 15 s |
+| Vault (local anvil) | `submitCandidate` 375,293 gas; W warped; `finalizeAttested` 218,385; `finalState` = the five-key new state; the burn root accepted; both releases (420,596 and 361,396 gas) paid 999,000,000,000,000 wei each, nullifiers used |
+| `vault/test/real/ZoneBridgeRotation.t.sol` (fixture `zone-bridge-rotation.json`) | **6 of 6**: the journal is 4 of 5 (n = 5, t = 4) over a parent of four keys; the proof's set is the committee's five, which keep the four; candidate, final after the hour, both releases with their seals; a flipped seal byte and t = 2 refused; a vault whose genesis is the new set refuses it (`ParentNotFinal`); gas 343,581 + 181,337 (a fixed-size journal: as §8's) |
+| `zone-bridge.sh verify` | input, journal and burns re-derived from the recorded answers and attestations: equal; six receipts verify (and §8's run again, equal, with this `realblocks-crown`) |
+
+What the rotation here is not: the key set grew (no key was removed, so "a key removed by a rotation the proof
+applied" is still shown only on the lab's chain with stand-in keys, §2); the new sequencer's stake came from a test
+account through a CLI, not from an operator's own funds.
+
 ## What failed on the way
 
 - The recorded `realblocks/out/real-lab-186-202.input` no longer decodes (`BadLength { what: "suffix" }`): it
@@ -231,11 +266,13 @@ The whole run: the stages `zone`, `input`, `prove`, `releases`, then `spike/moda
   `/cryptarchia/info`, where the node nests it (`cryptarchia_info.lib_slot`), and saved no window; the answers are
   the ones attestor 0 fetched and checked in its final round (`zone-bridge.sh answers`), which the stage now packs
   itself.
+- §9: the first start of the rotation run never reached the box (the laptop's Modal client timed out, "Deadline
+  exceeded", and the box's container was recycled); the second start ran it.
 
 ## Not done
 
-- A rotation proposed by the zone's committee (§8 ran the bridge program, its burns and a release on the zone); a
-  dropped inscription on it (B1's done gate; the silent sequencer is shown); the zone's checkpoint on Sepolia.
+- On the zone of §8 and §9: a dropped inscription (B1's done gate; the silent sequencer is shown, §7); a rotation that
+  removes a key; the attestor as the Logos module beside the bridge zone's sequencers (the binary ran there); the
+  zone's checkpoint on Sepolia.
 - `ferrata_attestor` as a Logos module (README).
-- Rotations proposed and inscribed by a running committee (the rotation here is built from the core's own
-  encoding and signed with the stand-in keys); the monitor's watcher reading attestations.
+- The monitor's watcher reading attestations. (Rotations proposed and inscribed by a running committee: §9.)
