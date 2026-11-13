@@ -28,6 +28,8 @@
 #                                  (rust-lib/.cargo/config.toml points LBC_ROOT_DIR at it; otherwise their build
 #                                  scripts download it into the user's cache: no network inside Nix's sandbox).
 #                                  Taken from that cache when it is there, else from the circuits' GitHub release
+#   vendor/rapidsnark/             rapidsnark's static libraries (RAPIDSNARK_LIB_DIR), the release rust-rapidsnark's
+#                                  build script would download (logos-blockchain-rust-rapidsnark, rapidsnark-pic-v0.0.8)
 #
 # Needs the guests built (`cargo build --locked -p methods` in lez/, RISC0_HOME as lez/RESULTS.md says).
 # METHODS_RS=path picks the risc0-build output (methods.rs); default: the newest under lez/target.
@@ -91,6 +93,20 @@ fi
 mkdir -p "$v/lbc"
 cp -r "$lbc_cache/$lbc" "$v/lbc/"
 lbc_sum=$( (cd "$v/lbc" && find "$lbc" -type f | LC_ALL=C sort | xargs sha256sum) | sha256sum | cut -d' ' -f1)
+# rapidsnark's static libraries, which logos-blockchain-circuits-prover links (static-rapidsnark): rust-rapidsnark's
+# build script reads ../RAPIDSNARK_VERSION from its git checkout and downloads them, unless RAPIDSNARK_LIB_DIR names
+# them (rust-lib/.cargo/config.toml); Nix vendors each crate alone, without that file. The version is the one of the
+# pinned rust-rapidsnark rev (e91187f: 0.0.8), the release its script downloads for x86_64 Linux.
+rs_version=0.0.8
+rs="rapidsnark-linux-x86_64-pic-v$rs_version"
+if [ ! -d "$lbc_cache/$rs" ]; then
+  curl -fsSL -A ferrata-build -o "$lbc_cache/$rs.zip.part" \
+    "https://github.com/logos-blockchain/logos-blockchain-rust-rapidsnark/releases/download/rapidsnark-pic-v$rs_version/$rs.zip"
+  (cd "$lbc_cache" && unzip -q -o "$rs.zip.part" && mv "$rs.zip.part" "$rs.zip")
+fi
+mkdir -p "$v/rapidsnark"
+cp "$lbc_cache/$rs/lib/"*.a "$v/rapidsnark/"
+rs_sum=$( (cd "$v/rapidsnark" && ls | LC_ALL=C sort | xargs sha256sum) | sha256sum | cut -d' ' -f1)
 
 # The LEZ tree.
 tar -C "$spike/upstream" --exclude='lez-v0.4.0-rc1/target' --exclude='lez-v0.4.0-rc1/.git' -cf - lez-v0.4.0-rc1 | tar -C "$v/upstream" -xf -
@@ -136,11 +152,12 @@ sum=$( (cd "$repo" && { for c in $crates; do find "$c/Cargo.toml" "$c/src" -type
         | LC_ALL=C sort | xargs sha256sum) | sha256sum | cut -d' ' -f1)
 lez_rev=$(git -C "$lez_up" rev-parse --short HEAD 2>/dev/null || echo "1806e87 (lez/RESULTS.md)")
 version=$(sed -n 's/^version = "\(.*\)"/\1/p' "$repo/lez/updater/Cargo.toml" | head -n 1)
-python3 -I - "$v/STAGED.json" "$version" "$commit" "$sum" "$lez_rev" "$v/ids.json" "$lbc" "$lbc_sum" <<'PY'
+python3 -I - "$v/STAGED.json" "$version" "$commit" "$sum" "$lez_rev" "$v/ids.json" "$lbc" "$lbc_sum" "$rs" "$rs_sum" <<'PY'
 import json, sys
-out, version, commit, s, lez, ids, lbc, lbc_sum = sys.argv[1:9]
+out, version, commit, s, lez, ids, lbc, lbc_sum, rs, rs_sum = sys.argv[1:11]
 json.dump({"version": version, "commit": commit, "source_sha256": s, "lez": "v0.4.0-rc1 " + lez,
-           "guests": json.load(open(ids)), "circuits": {"artifact": lbc, "files_sha256": lbc_sum}},
+           "guests": json.load(open(ids)), "circuits": {"artifact": lbc, "files_sha256": lbc_sum},
+           "rapidsnark": {"artifact": rs, "files_sha256": rs_sum}},
           open(out, "w"), sort_keys=True)
 PY
 echo "stage-updater.sh: ferrata-updater $version into ferrata_updater_module, commit $commit, sources sha256 $sum, LEZ $lez_rev ($(du -sh "$v" | cut -f1))"
