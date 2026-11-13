@@ -57,9 +57,15 @@ finalized checkpoint a public beacon API reported, which a second provider repor
 independent beacon providers and with its own node, and checking that the chain id and
 `genesis_validators_root` belong together (the program cannot: nothing a light client verifies commits
 to the execution chain id). `verify_checkpoint`, a method of `ferrata_attest_module`, recomputes the instance id, runs the
-program's `Init` checks on the bootstrap and compares the roots it is given ([EVIDENCE](EVIDENCE.md) row 59,
-[`modules/README.md`](../modules/README.md)); fetching them from at least three providers and
-`verified_proxy_module`'s finalized block is **not built** ([`attestation.md`](design/attestation.md) §11.4; [`lez/RESULTS.md`](../lez/RESULTS.md) §5, "Decisions" 1).
+program's `Init` checks and the full `KeyValidate` on the bootstrap, compares the roots it is given, and asks
+the beacon providers named in the call itself: at least three hosts must hold the root as the canonical,
+finalized block at its slot and serve the instance's genesis and spec (their `DEPOSIT_CHAIN_ID` ties the chain id
+to `genesis_validators_root`), and none may disagree; an execution endpoint is asked for the checkpoint's execution
+block ([EVIDENCE](EVIDENCE.md) rows 59, 105, [`modules/README.md`](../modules/README.md),
+[`modules/results/verify-checkpoint-2026-11-13/`](../modules/results/verify-checkpoint-2026-11-13/README.md)). The
+endpoint meant is `verified_proxy_module`'s local JSON-RPC server; the module reaches every endpoint over plain HTTP,
+not through Logos Core, and the pull request that offers the check to that module is prepared, not opened
+([`attestation.md`](design/attestation.md) §11.4; [`lez/RESULTS.md`](../lez/RESULTS.md) §5, "Decisions" 1).
 
 **Weak subjectivity.** An instance that falls outside the weak-subjectivity period must be replaced from
 a fresh checkpoint under a new root id: a new trust decision. In the design the bound is fixed per
@@ -150,7 +156,7 @@ the chain id in its identifier ([`attestation.md`](design/attestation.md) §2, �
 |---|---|---|---|---|---|
 | Any submitter or prover | updates | liveness only | refused: signatures are checked | anyone else submits | public data |
 | Beacon and execution providers | light-client data, proofs, receipts | liveness only | refused: checked against signatures and records | another provider, or your own node | which blocks are fetched |
-| Checkpoint source | each fresh checkpoint | **safety**, until checked | a false root; `verify_checkpoint` (built, without fetching: §2.1) or a manual comparison catches it | nothing to stop | nothing |
+| Checkpoint source | each fresh checkpoint | **safety**, until checked | a false root; `verify_checkpoint` (built, with its provider checks: §2.1) or a manual comparison catches it | nothing to stop | nothing |
 | LEZ sequencers | inclusion, block timestamps | liveness only: the bridge's LEZ-side clock is attested Ethereum time, which a producer can delay (by leaving out a `Tick`) but not move ([`lez/BRIDGE.md`](../lez/BRIDGE.md) §6) | cannot forge a record | the zone stops | public transactions |
 | Deployer | the immutable deployment | nothing after deployment | — | — | nothing |
 
@@ -417,7 +423,7 @@ publishes; RPC providers which blocks are fetched (recovery downloads whole list
 
 ## 10. Not built, and therefore not yet part of the guarantee
 
-`verify_checkpoint`'s fetching from several providers; the attestation side's `monitor` (records against
+`verify_checkpoint` through Logos Core's `verified_proxy_module`; the attestation side's `monitor` (records against
 several providers, the weak-subjectivity alarm); `monitor`'s client of the LEZ and Logos Blockchain nodes' RPCs;
 consumers bound to the root id (the bridge, `ferrata_holdings` and the reference consumer still pin an
 instance); on LEZ, the admin's own handover; the gas drop's sealed credit to a private one-time account
