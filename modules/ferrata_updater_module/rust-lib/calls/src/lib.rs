@@ -68,11 +68,7 @@ pub fn version() -> String {
 
 /// The module's chain backends (`daemon.ledger`): `sequencer` is `lez/updater/sequencer`'s library, anything else is
 /// `ferrata_updater`'s own opener (`harness`, the in-process chain; an unknown name is refused there).
-pub fn open_ledger(
-    file: &File,
-    base: &Path,
-    payer: &lee::PrivateKey,
-) -> Result<(Box<dyn Ledger>, lee::AccountId)> {
+pub fn open_ledger(file: &File, base: &Path, payer: &lee::PrivateKey) -> Result<(Box<dyn Ledger>, lee::AccountId)> {
     match file.daemon.ledger.as_str() {
         "sequencer" => ferrata_updater_sequencer::open_ledger(file, base, payer),
         _ => ferrata_updater::daemon::open_ledger(file, base, payer),

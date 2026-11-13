@@ -330,7 +330,9 @@ pub fn execution(
     }
     let mut finalized = None;
     if let Some(n) = number {
-        if let Some(b) = rpc(&mut a, url, "block at number", "eth_getBlockByNumber", json!([format!("0x{n:x}"), false])) {
+        if let Some(b) =
+            rpc(&mut a, url, "block at number", "eth_getBlockByNumber", json!([format!("0x{n:x}"), false]))
+        {
             if root_of(&b["hash"]) != Some(*block_hash) {
                 a.differs(&format!("canonical block {n}"), &b["hash"], &hash);
             }
