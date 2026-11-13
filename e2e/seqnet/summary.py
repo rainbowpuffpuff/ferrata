@@ -55,6 +55,15 @@ for c in jsonl("miniapp/chain-calls.jsonl"):
     r = (c.get("reply") or {}).get("result") or {}
     if c.get("method") == "module.submit" and r.get("tx_hash"):
         who[str(r["tx_hash"]).lower()] = ("user (mini-app via ferrata_bridge_module)", r.get("what", ""))
+for c in jsonl("lezcore/chain-calls.jsonl"):
+    r = (c.get("reply") or {}).get("result") or {}
+    if c.get("method") == "module.submit" and r.get("tx_hash"):
+        who[str(r["tx_hash"]).lower()] = ("user (ferrata_bridge_module; sent by seqnet-chain)", r.get("what", ""))
+for c in jsonl("lezcore/calls.jsonl"):
+    r = (c.get("reply") or {}).get("result") or {}
+    if c.get("method") in ("claim", "burn") and isinstance(r, dict) and r.get("tx_hash"):
+        via = (r.get("lez") or {}).get("via", "")
+        who[str(r["tx_hash"]).lower()] = (f"user (ferrata_bridge_module; executed, proven and sent by {'Logos Core’s lez_core' if via == 'lez_core' else 'seqnet-chain'})", r.get("what", ""))
 
 lez = tsv("lez/transactions.tsv")
 try:
@@ -102,6 +111,42 @@ if calls:
         rep = c.get("reply") if isinstance(c.get("reply"), dict) else {}
         excerpt = json.dumps(rep.get("result") if rep.get("ok") else rep.get("error"))[:120].replace("|", "/")
         md.append(f"| {i + 1} | {req.get('method', c.get('method'))} | {rep.get('ok')} | {c.get('ms')} | {excerpt} |")
+lcalls = jsonl("lezcore/calls.jsonl")
+if lcalls:
+    md += ["", "## What the module was called with (`lezcore/calls.jsonl`: logosctl call ferrata_bridge_module wallet)", "",
+           "| # | method | ok | ms | reply (excerpt) |", "|---:|---|---|---:|---|"]
+    for i, c in enumerate(lcalls):
+        rep_ = c.get("reply") if isinstance(c.get("reply"), dict) else {}
+        res = rep_.get("result")
+        if isinstance(res, dict):
+            res = {k: v for k, v in res.items() if k not in ("lez", "accounts", "calls", "log", "detail")}
+        excerpt = json.dumps(res if rep_.get("ok") else rep_.get("error"))[:140].replace("|", "/")
+        md.append(f"| {i + 1} | {c.get('method')} | {rep_.get('ok')} | {c.get('ms')} | {excerpt} |")
+try:
+    lr = json.loads((run / "lezcore" / "lez-report.json").read_text())
+except (OSError, ValueError):
+    lr = {}
+if lr.get("log"):
+    md += ["", "## Through Logos Core's `lez_core`, beside the plain path (`lezcore/lez-report.json`)", "",
+           f"Reads: {lr.get('reads')} bridge actor states through `get_account_public`, {lr.get('reads_equal')} equal to seqnet-chain's "
+           f"({lr.get('reads_failed')} failed); private holding: {lr.get('private_reads')} reads after `sync_to_block`, "
+           f"{lr.get('private_reads_equal')} equal; private sends: {lr.get('sends')} attempts, {lr.get('sends_sent')} sent.", "",
+           "| kind | what | through lez_core | beside the plain path | ms |", "|---|---|---|---|---:|"]
+    for e in lr["log"]:
+        k = e.get("kind")
+        if k == "read":
+            md.append(f"| read | {e.get('what')} `{short(e.get('account', ''))}` | {e.get('bytes', '-')} B | "
+                      f"{'equal' if e.get('equal') else ('ERROR ' + str(e.get('error'))[:80] if e.get('error') else 'DIFFERS')} | {e.get('ms', '')} |")
+        elif k == "private":
+            md.append(f"| private holding | `{short(e.get('account', ''))}` after sync to {e.get('head')} | {e.get('bytes')} B | "
+                      f"{'equal' if e.get('equal') else 'DIFFERS'} | {(e.get('ms') or {}).get('sync', '')} + {(e.get('ms') or {}).get('read', '')} |")
+        elif k == "send":
+            r = e.get("reply") or {}
+            md.append(f"| private send | {e.get('what')}: {e.get('attempt')} | "
+                      f"{'sent ' + short(r.get('tx_hash', '')) if r.get('success') else 'refused: ' + str(r.get('error') or r.get('raw'))[:90]} | "
+                      f"{'(seqnet-chain read the block that applied it)' if r.get('success') else '-'} | {e.get('ms')} |")
+        elif k == "poll":
+            md.append(f"| poll_transaction_status | `{short(e.get('tx_hash', ''))}` | {e.get('found')} | - | {e.get('ms', '')} |")
 shots = sorted((run / "miniapp" / "screenshots").glob("*.png")) if (run / "miniapp" / "screenshots").is_dir() else []
 if shots:
     md += ["", "## What the user saw (the view's screenshots)", ""] + [f"- [`{s.name}`](miniapp/screenshots/{s.name})" for s in shots]
@@ -110,7 +155,8 @@ md += ["", "## The run's log", "", "```text"] + [l[:300] for l in lines("run.log
 (run / "summary.json").write_text(json.dumps({
     "lez_transactions": len(lez), "lez_reverted": sum(1 for t in lez if t.get("reverted") == "true"),
     "eth_transactions": len(eth), "eth_reverted": sum(1 for t in eth if t.get("status") != "ok"),
-    "user_commands": len(index), "view_calls": len(calls), "screenshots": len(shots),
+    "user_commands": len(index), "view_calls": len(calls), "screenshots": len(shots), "module_calls": len(lcalls),
+    "lez_core": {k: lr.get(k) for k in ("reads", "reads_equal", "reads_failed", "private_reads", "private_reads_equal", "sends", "sends_sent")} if lr else None,
     "senders": {k: v[0] for k, v in who.items()},
 }, indent=1) + "\n")
 print(f"{run.name}: {len(lez)} LEZ and {len(eth)} Ethereum transactions, {len(index)} user commands, {len(calls)} view calls")
