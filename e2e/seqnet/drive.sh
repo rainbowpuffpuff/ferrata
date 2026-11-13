@@ -121,8 +121,9 @@ fi
 # ---- 4. The zone again, with the hook ---------------------------------------------------------------
 dev=0; [ "$PROOFS" = dev ] && dev=1
 say "LEZ session X: the zone restored and running; hook-$MODE.sh"
+xrc=0
 SEQNET_ENV="$W/env.sh" CROWN_HOOK="$HERE/hook-$MODE.sh" CROWN_SEQUENCER_DEV_MODE=$dev CROWN_DEADLINE_MIN=170 \
-  bash "$REPO/lez/crown/session.sh" x > "$W/session-x.log" 2>&1; xrc=$?
+  bash "$REPO/lez/crown/session.sh" x > "$W/session-x.log" 2>&1 || xrc=$?
 tail -n 6 "$W/session-x.log" | tee -a "$RUN/run.log"
 cp "$VOL/session-x/logs/hook.log" "$RUN/logs/hook.log" 2>/dev/null || true
 cp "$VOL/session-x/logs/session.log" "$RUN/logs/session-x.log" 2>/dev/null || true
