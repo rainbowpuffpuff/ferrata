@@ -21,12 +21,15 @@
 #   CALL=logosctl LOGOSCTL=BIN SESSION=DIR modules/scripts/bridge_e2e.sh OUT_DIR
 #                                                              through a running Logos Core daemon
 #   CALL=logosctl ETH_VIA=eth_rpc_module ... bridge_e2e.sh OUT_DIR
-#                                                              import_root reads the vault's eth_getProof
-#                                                              itself through Logos Core's eth_rpc_module
-#                                                              (its chain 1 set to the devnet's anvil), and
-#                                                              that message is the one submitted
-# In every mode import_root is also called with the module reading the proofs over plain HTTP
-# (import_root_plain); each read reply is compared with the reply to the proofs given (logos-io.tsv).
+#                                                              also import_root reading the vault's
+#                                                              eth_getProof itself through Logos Core's
+#                                                              eth_rpc_module (chain 1 = the devnet's anvil)
+# At the end, in every mode: a third deposit, anvil's newest block recorded as the instance's finalized
+# header (the devnet's lc.finalize, as relayer-e2e.sh does), and import_root with the proofs given and
+# with the module reading them from anvil at that block over plain HTTP (import_read_plain) and, with
+# ETH_VIA=eth_rpc_module, through eth_rpc_module (import_read_eth); each read reply compared with the
+# given one (logos-io.tsv). (The import above is under the devnet's synthetic block, whose proofs anvil
+# cannot answer.)
 # Needs: RELEASE_ELF (the release guest's binary: bridge/, `cargo build --release -p methods`), the call
 # example (native) or logosctl, Foundry (anvil, forge) and vault/lib, cargo, curl, jq, python3.
 set -euo pipefail
@@ -96,31 +99,6 @@ jq -n --argjson i "$(rep dev_inputs_import)" --argjson b "$(rep dev_import_block
   '{program: $i.program, config_id: $i.config_id, config_state: $i.config_state, record_slot: $b.record_slot,
     record_state: $b.record_state, get_proof: $b.get_proof, header: $b.header}' | req import_root
 call import_root import_root
-# The same with the module reading eth_getProof itself (from the vault the configuration names, at the
-# recorded block): over plain HTTP, and through eth_rpc_module when asked. Equal to the reply above
-# but for `eth`, which says what answered.
-printf 'name\tvia\troutes\tequal_to_given\n' > "$out/logos-io.tsv"
-same() {
-  local eq
-  eq=$(jq -n --slurpfile a "$out/rep/$1.json" --slurpfile b "$out/rep/import_root.json" \
-    '($a[0] | del(.eth)) == $b[0] and ($a[0] | has("eth"))')
-  printf '%s\t%s\t%s\t%s\n' "$1" "$(jq -r '.eth.via // "none"' "$out/rep/$1.json")" \
-    "$(jq -c '.eth.routes // []' "$out/rep/$1.json")" "$eq" >> "$out/logos-io.tsv"
-}
-jq --argjson b "$(rep dev_import_block)" --arg url "http://127.0.0.1:$ANVIL_PORT" \
-  'del(.get_proof) + {block: $b.block, rpc_url: $url}' "$out/req/import_root.json" | req import_root_plain
-call import_root import_root_plain
-same import_root_plain
-if [ "$ETH_VIA" = eth_rpc_module ]; then
-  "$LOGOSCTL" --config-dir "$SESSION" call eth_rpc_module set_chain_config 1 \
-    "{\"endpoint\":\"http://127.0.0.1:$ANVIL_PORT\",\"name\":\"devnet anvil\"}" --json < /dev/null > "$out/rep/eth_rpc_chain.raw" 2>&1
-  jq --argjson b "$(rep dev_import_block)" 'del(.get_proof) + {block: $b.block, eth: {via: "eth_rpc_module", chain_id: 1}}' \
-    "$out/req/import_root.json" | req import_root_eth
-  call import_root import_root_eth
-  same import_root_eth
-  # The message built from eth_rpc_module's read is the one submitted below.
-  jq 'del(.eth)' "$out/rep/import_root_eth.json" > "$out/rep/import_root.json"
-fi
 # A wrong leaf count: the dry run refuses, then the program, with the same code.
 jq --argjson b "$(rep dev_import_block)" '. + {leaf_count: ($b.leaf_count + 1)}' "$out/req/import_root.json" | req import_root_bad
 call import_root import_root_bad
@@ -202,4 +180,33 @@ rm -rf "$out/devnet"
 # the repository becomes <spike>.
 spike=$(cd "$repo/.." && pwd)
 find "$out" -type f \( -name '*.json' -o -name '*.raw' -o -name '*.log' -o -name '*.txt' \) -exec sed -i "s|$spike/|<spike>/|g" {} +
+# --- import_root reading the vault's proofs (plain HTTP; eth_rpc_module) ---------------------------
+dev deposit2 deposit '{"kind":"private","denomination":0,"account":0}'
+dev lc_finalize lc.finalize
+dev inputs_read module.inputs
+jq -n --argjson i "$(rep dev_inputs_read)" --argjson f "$(rep dev_lc_finalize)" \
+  '{program: $i.program, config_id: $i.config_id, config_state: $i.config_state, record_slot: $f.record_slot,
+    record_state: $f.record_state, get_proof: $f.get_proof}' | req import_given
+call import_root import_given
+printf 'name\tvia\troutes\tequal_to_given\n' > "$out/logos-io.tsv"
+same() {
+  local eq
+  eq=$(jq -n --slurpfile a "$out/rep/$1.json" --slurpfile b "$out/rep/import_given.json" \
+    '($a[0] | del(.eth)) == $b[0] and ($a[0] | has("eth"))')
+  printf '%s\t%s\t%s\t%s\n' "$1" "$(jq -r '.eth.via // "none"' "$out/rep/$1.json")" \
+    "$(jq -c '.eth.routes // []' "$out/rep/$1.json")" "$eq" >> "$out/logos-io.tsv"
+}
+jq --argjson f "$(rep dev_lc_finalize)" --arg url "http://127.0.0.1:$ANVIL_PORT" \
+  'del(.get_proof) + {block: $f.block, rpc_url: $url}' "$out/req/import_given.json" | req import_read_plain
+call import_root import_read_plain
+same import_read_plain
+if [ "$ETH_VIA" = eth_rpc_module ]; then
+  "$LOGOSCTL" --config-dir "$SESSION" call eth_rpc_module set_chain_config 1 \
+    "{\"endpoint\":\"http://127.0.0.1:$ANVIL_PORT\",\"name\":\"devnet anvil\"}" --json < /dev/null > "$out/rep/eth_rpc_chain.raw" 2>&1
+  jq --argjson f "$(rep dev_lc_finalize)" 'del(.get_proof) + {block: $f.block, eth: {via: "eth_rpc_module", chain_id: 1}}' \
+    "$out/req/import_given.json" | req import_read_eth
+  call import_root import_read_eth
+  same import_read_eth
+fi
+
 python3 -I "$here/bridge_e2e_check.py" "$out"
