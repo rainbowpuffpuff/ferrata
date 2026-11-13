@@ -12,10 +12,10 @@
 #             (private) and their captures; one ferrata_attestor per sequencer (its key certified by that sequencer's
 #             channel key) attesting the node's final tier every ZB_ROUND_S s; crown-driver crown-b (pairing,
 #             registration, imports, Claim, ClaimPrivately and both burns, private ones proven by LEZ's wallet);
-#             with ZB_ROTATE=1, then a rotation by the zone's committee: a fifth sequencer's key staked on LEZ
-#             (`sequencer_service stake`), the committee's ChannelConfigOp applied by Bedrock, the fifth sequencer and
-#             its attestor started, ZB_ROTATE_RUN_S (420) s more; the sequencers stopped, the final tier attested by
-#             every attestor; the node's answers saved
+#             (with ZB_ROTATE=1, before session B, a rotation by the zone's committee: a fifth sequencer's key staked
+#             on LEZ with `sequencer_service stake`, the committee's ChannelConfigOp applied by Bedrock, the fifth
+#             sequencer and its attestor started, ZB_ROTATE_RUN_S (120) s); the sequencers stopped, the final tier
+#             attested by every attestor; the node's answers saved
 #   input     realblocks-crown over the node's final blocks T0+1..=T (and the rotation, if any) with all attestations
 #             but one (3 of 4, n = 4, t = 3; after a rotation 4 of 5, t = 4); all n accepted, t - 1 refused (natively
 #             and in r0vm); r0vm executor run
@@ -167,8 +167,8 @@ rotate_committee() { # a fifth key staked on LEZ (upstream's `sequencer_service 
   echo 5 > "$W/nseq"
   seq_aligned 4
   start_attestor 4
-  log "seq-4 and its attestor started; the zone runs ${ZB_ROTATE_RUN_S:-420} s more (seq-4's turns)"
-  sleep "${ZB_ROTATE_RUN_S:-420}"
+  log "seq-4 and its attestor started; ${ZB_ROTATE_RUN_S:-120} s before session B"
+  sleep "${ZB_ROTATE_RUN_S:-120}"
   log "after the rotation: heights $(heights)"
 }
 
@@ -374,6 +374,9 @@ stage_zone() {
   for i in 0 1 2 3; do start_attestor "$i"; done
   log "four attestors started (a round every $ROUND_S s; attestation keys from the OS's randomness, never written to the repository)"
 
+  # -- a rotation by the zone's committee (ZB_ROTATE=1), before session B: its blocks follow T0 like the bridge's
+  if [ "${ZB_ROTATE:-0}" = 1 ]; then rotate_committee; fi
+
   # -- session B on the zone: the bridge's pairing, registration, imports, the claims and the burns
   timeout 7200 env -u RISC0_DEV_MODE RISC0_SERVER_PATH="$BIN/r0vm" nice -n 10 "$DRV" crown-b "${D[@]}" \
     --identity "$W/session-a.json" --capture "$W/inputs/capture-1" --capture "$W/inputs/capture-2" --private real \
@@ -383,7 +386,6 @@ stage_zone() {
   cp "$W/session-b.json" "$W/burn-notes.json" "$RUN/lez/session-b/"
   log "session B: T1 = $(jq -r .tipT1.id "$W/session-b.json"); steps $(jq -c '[.steps[] | [.step, .status, .block]]' "$W/session-b.json" | cut -c1-600)"
   "$DRV" export "${D[@]}" --out "$W/export" > "$W/logs/export.log" 2>&1 || log "export failed ($?)"
-  if [ "${ZB_ROTATE:-0}" = 1 ]; then rotate_committee; fi
   local NS; NS="$(cat "$W/nseq")"
 
   # -- the sequencers stop; the node's final tier settles; every attestor signs it
