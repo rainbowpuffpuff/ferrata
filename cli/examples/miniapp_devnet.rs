@@ -1214,7 +1214,9 @@ fn hex_bytes(v: &Value, what: &str) -> Result<Vec<u8>> {
 }
 
 fn actor_of(v: &Value) -> Result<Actor> {
-    let id = |k: &str| -> Result<AccountId> { Ok(AccountId::new(ferrata_cli::h32(v[k].as_str().context("an account id")?)?)) };
+    let id = |k: &str| -> Result<AccountId> {
+        Ok(AccountId::new(ferrata_cli::h32(v[k].as_str().context("an account id")?)?))
+    };
     Ok(Actor::new(id("account")?, id("program")?))
 }
 
@@ -1224,7 +1226,9 @@ impl Devnet {
     }
 
     fn bridge_config(&self) -> Result<bw::BridgeConfig> {
-        match bw::BridgeState::try_from_slice(&self.zone.world.chain.actor_state(config_actor(self.ctx.program, &self.cid))) {
+        match bw::BridgeState::try_from_slice(
+            &self.zone.world.chain.actor_state(config_actor(self.ctx.program, &self.cid)),
+        ) {
             Ok(bw::BridgeState::Config(c)) => Ok(c.config().clone()),
             _ => bail!("config(cid) holds no configuration"),
         }
@@ -1237,7 +1241,9 @@ impl Devnet {
     async fn module_inputs(&self, params: &Value) -> Result<Value> {
         let program = self.ctx.program;
         let token = match params["token"].as_str() {
-            Some(t) => <[u8; 20]>::try_from(hex::decode(t.trim_start_matches("0x"))?.as_slice()).context("token: 20 bytes")?,
+            Some(t) => {
+                <[u8; 20]>::try_from(hex::decode(t.trim_start_matches("0x"))?.as_slice()).context("token: 20 bytes")?
+            }
             None => ETH_TOKEN,
         };
         let history = self.history().await?;
@@ -1283,7 +1289,8 @@ impl Devnet {
         }
         if let Some(nf) = params["nullifier"].as_str() {
             let nf = ferrata_cli::h32(nf)?;
-            out["nullifier_state"] = json!(self.state_hex(bw::nullifier_actor(program, 1, &self.vault.into_array(), &nf)));
+            out["nullifier_state"] =
+                json!(self.state_hex(bw::nullifier_actor(program, 1, &self.vault.into_array(), &nf)));
         }
         Ok(out)
     }
@@ -1341,7 +1348,9 @@ impl Devnet {
             &self.vault.into_array(),
         );
         self.zone.record(&f);
-        Ok(json!({ "applied": f.ok(), "exit_code": f.exit_code, "stand_in": "the relayer's ImportFees through the harness's own call" }))
+        Ok(
+            json!({ "applied": f.ok(), "exit_code": f.exit_code, "stand_in": "the relayer's ImportFees through the harness's own call" }),
+        )
     }
 
     /// Submits a call the module built (`message`, `accounts`, `root_index`): public, signed and
@@ -1378,7 +1387,9 @@ impl Devnet {
                 mentions.iter().enumerate().filter(|(i, _)| *i != root_index).map(|(_, m)| m.actor()).collect();
             let mut holder = self.private[a].holder.clone();
             if let BridgeMessage::ClaimPrivately { witness, .. } = &message {
-                holder.credit(&self.cid, &witness.token, u128_of(&witness.amount)).context("the holding would overflow")?;
+                holder
+                    .credit(&self.cid, &witness.token, u128_of(&witness.amount))
+                    .context("the holding would overflow")?;
             }
             let run = self.private_tx(a, &message, publics, holder)?;
             return Ok(json!({
@@ -1421,8 +1432,10 @@ impl Devnet {
                 None,
             )
             .await?;
-            out.push(json!({ "root": hx(&r.root.0), "count": r.count, "index": r.index, "finalized_at": r.finalized_at,
-                             "delay": u64::try_from(delay).unwrap_or(u64::MAX) }));
+            out.push(
+                json!({ "root": hx(&r.root.0), "count": r.count, "index": r.index, "finalized_at": r.finalized_at,
+                             "delay": u64::try_from(delay).unwrap_or(u64::MAX) }),
+            );
         }
         Ok(json!({ "roots": out, "now": eth::now(&self.p).await? }))
     }
@@ -1434,7 +1447,9 @@ impl Devnet {
         let journal = hex_bytes(&rel["journal"], "release.journal")?;
         let p = &rel["public"];
         let a20 = |v: &Value, w: &str| -> Result<Address> { Ok(Address::from_slice(&hex_bytes(v, w)?)) };
-        let w256 = |v: &Value, w: &str| -> Result<B256> { Ok(B256::from(ferrata_cli::h32(v.as_str().context(w.to_string())?)?)) };
+        let w256 = |v: &Value, w: &str| -> Result<B256> {
+            Ok(B256::from(ferrata_cli::h32(v.as_str().context(w.to_string())?)?))
+        };
         let request = IVault::ReleaseRequest {
             token: a20(&p["token"], "token")?,
             denomIndex: params["denom_index"].as_u64().unwrap_or(0) as u8,
@@ -1509,9 +1524,14 @@ impl Devnet {
         };
         use lee_core::account::ActorState;
         let block: Value = self.p.raw_request("eth_getBlockByNumber".into(), ("latest", false)).await?;
-        let word = |k: &str| -> Result<[u8; 32]> { ferrata_cli::h32(block[k].as_str().with_context(|| format!("block.{k}"))?) };
+        let word = |k: &str| -> Result<[u8; 32]> {
+            ferrata_cli::h32(block[k].as_str().with_context(|| format!("block.{k}"))?)
+        };
         let num = |k: &str| -> Result<u64> {
-            Ok(u64::from_str_radix(block[k].as_str().with_context(|| format!("block.{k}"))?.trim_start_matches("0x"), 16)?)
+            Ok(u64::from_str_radix(
+                block[k].as_str().with_context(|| format!("block.{k}"))?.trim_start_matches("0x"),
+                16,
+            )?)
         };
         let number = num("number")?;
         let answer: Value = self
@@ -1547,8 +1567,17 @@ impl Devnet {
             let account = Account::default().with_actor_state(attestation, ActorState::from(state));
             world.chain.state.force_insert_account(actor.account_id, account);
         };
-        let record_state = ferrata_lez_wire::RecordState { instance_id: id, chain_id: config.evm_chain_id, record: record.encode(), root_id: id };
-        put(&mut self.zone.world, ferrata_lez_wire::header_actor(attestation, &id, slot), borsh::to_vec(&record_state)?);
+        let record_state = ferrata_lez_wire::RecordState {
+            instance_id: id,
+            chain_id: config.evm_chain_id,
+            record: record.encode(),
+            root_id: id,
+        };
+        put(
+            &mut self.zone.world,
+            ferrata_lez_wire::header_actor(attestation, &id, slot),
+            borsh::to_vec(&record_state)?,
+        );
         let store = CompactStore {
             fork: LcFork::Electra,
             finalized: BeaconBlockHeader { slot, ..Default::default() },

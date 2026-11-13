@@ -52,9 +52,10 @@ pub enum Mention {
 impl Mention {
     pub fn actor(&self) -> Actor {
         match self {
-            Mention::Pda { actor, .. } | Mention::Signer(actor) | Mention::PrivateSelf(actor) | Mention::Public(actor) => {
-                *actor
-            }
+            Mention::Pda { actor, .. }
+            | Mention::Signer(actor)
+            | Mention::PrivateSelf(actor)
+            | Mention::Public(actor) => *actor,
         }
     }
 

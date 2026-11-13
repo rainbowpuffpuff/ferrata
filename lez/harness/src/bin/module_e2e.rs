@@ -165,7 +165,13 @@ fn bridge(message_hex: &str) -> Value {
 /// committee adopted, no update applied.
 fn advance_world() -> (World, Fixture) {
     let fx = Fixture::load();
-    let w = World::at(harness::ferrata_account(), mainnet_config(2), fx.checkpoint, fx.bootstrap.clone(), vec![fx.update.clone()]);
+    let w = World::at(
+        harness::ferrata_account(),
+        mainnet_config(2),
+        fx.checkpoint,
+        fx.bootstrap.clone(),
+        vec![fx.update.clone()],
+    );
     (w, fx)
 }
 
@@ -210,7 +216,8 @@ fn advance(reply_file: &str) -> Value {
             Err(e) => format!("undecodable: {e}"),
         };
         let root = actor_of(&step["root"]);
-        let actors: Vec<Actor> = step["accounts"].as_array().map(|a| a.iter().map(actor_of).collect()).unwrap_or_default();
+        let actors: Vec<Actor> =
+            step["accounts"].as_array().map(|a| a.iter().map(actor_of).collect()).unwrap_or_default();
         let label = format!("module advance {}", step["step"].as_str().unwrap_or("?"));
         let report = w.chain.submit(&label, root, bytes.clone(), actors, vec![], time);
         all_applied &= report.ok();

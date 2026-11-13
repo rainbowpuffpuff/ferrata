@@ -143,7 +143,9 @@ fn note_value(n: &BurnNote) -> Value {
 
 fn token_of(params: &Value) -> Result<[u8; 20]> {
     Ok(match params["token"].as_str() {
-        Some(t) => <[u8; 20]>::try_from(hex::decode(t.trim_start_matches("0x"))?.as_slice()).context("token: 20 bytes")?,
+        Some(t) => {
+            <[u8; 20]>::try_from(hex::decode(t.trim_start_matches("0x"))?.as_slice()).context("token: 20 bytes")?
+        }
         None => [0; 20],
     })
 }
@@ -213,7 +215,13 @@ impl Chain {
         let fee_state = eth::view(p, v, IVault::feeStateCall { token }, None).await?;
         let mut denominations = Vec::new();
         for (d, amount) in cfg.denominations_.iter().enumerate() {
-            let f = eth::view(p, v, IVault::feesCall { token, index: U256::from(fee_state.current), denomIndex: d as u8 }, None).await?;
+            let f = eth::view(
+                p,
+                v,
+                IVault::feesCall { token, index: U256::from(fee_state.current), denomIndex: d as u8 },
+                None,
+            )
+            .await?;
             denominations.push(json!({ "index": d, "amount": amount.to_string(), "mint_fee": f.mintFee.to_string(),
                 "relay_fee": f.relayFee.to_string(), "burn_fee": f.burnFee.to_string(), "checkpoint_fee": f.checkpointFee.to_string() }));
         }
@@ -297,8 +305,10 @@ impl Chain {
             .deposits
             .iter()
             .zip(&list.blocks)
-            .map(|(d, b)| json!({ "leaf_index": d.leaf_index, "depositor": hx(&d.depositor), "j": d.j, "token": hx(&d.token),
-                                  "amount": hx(&d.amount), "commitment": hx(&d.commitment), "block": b }))
+            .map(|(d, b)| {
+                json!({ "leaf_index": d.leaf_index, "depositor": hx(&d.depositor), "j": d.j, "token": hx(&d.token),
+                                  "amount": hx(&d.amount), "commitment": hx(&d.commitment), "block": b })
+            })
             .collect();
         let mut touched: Vec<String> = history.touched_privately.iter().map(|a| hx(a.value())).collect();
         touched.sort();
@@ -335,7 +345,9 @@ impl Chain {
             let mut states = Vec::new();
             for h in holders {
                 let id = AccountId::new(h32(h.as_str().context("a public holder")?)?);
-                states.push(json!({ "account": hx(id.value()), "state": self.state_hex(bw::holder_actor(program, id)).await? }));
+                states.push(
+                    json!({ "account": hx(id.value()), "state": self.state_hex(bw::holder_actor(program, id)).await? }),
+                );
             }
             out["public_holder_states"] = json!(states);
         }
@@ -379,7 +391,8 @@ impl Chain {
         }
         let what = params["what"].as_str().unwrap_or("module call").to_string();
         let private = matches!(mentions.first(), Some(Mention::PrivateSelf(_)));
-        let since = self.seq.wallet.client().get_last_block_id().await.map_err(|e| anyhow!("get_last_block_id: {e}"))?;
+        let since =
+            self.seq.wallet.client().get_last_block_id().await.map_err(|e| anyhow!("get_last_block_id: {e}"))?;
         let call = LezCall { what: what.clone(), mentions, root_index, message };
         if private {
             // The wallet proves from its own view of the private account: brought up to the zone's head first
@@ -438,9 +451,17 @@ impl Chain {
         let roots = eth::accepted_roots(&self.eth.p, self.eth.vault, self.eth.from_block, self.eth.chunk).await?;
         let mut out = Vec::new();
         for r in &roots {
-            let delay = eth::view(&self.eth.p, self.eth.vault, IVault::releaseDelayForCall { token, checkpointIndex: U256::from(r.index) }, None).await?;
-            out.push(json!({ "root": hx(&r.root.0), "count": r.count, "index": r.index, "finalized_at": r.finalized_at,
-                             "delay": u64::try_from(delay).unwrap_or(u64::MAX) }));
+            let delay = eth::view(
+                &self.eth.p,
+                self.eth.vault,
+                IVault::releaseDelayForCall { token, checkpointIndex: U256::from(r.index) },
+                None,
+            )
+            .await?;
+            out.push(
+                json!({ "root": hx(&r.root.0), "count": r.count, "index": r.index, "finalized_at": r.finalized_at,
+                             "delay": u64::try_from(delay).unwrap_or(u64::MAX) }),
+            );
         }
         Ok(json!({ "roots": out, "now": self.eth_time().await? }))
     }
@@ -451,13 +472,15 @@ impl Chain {
     async fn vault_release(&self, params: &Value) -> Result<Value> {
         let rel = &params["release"];
         let journal = hex_bytes(&rel["journal"], "release.journal")?;
-        let recipient: Address = Address::from_slice(&hex_bytes(&rel["public"]["recipient"], "release.public.recipient")?);
+        let recipient: Address =
+            Address::from_slice(&hex_bytes(&rel["public"]["recipient"], "release.public.recipient")?);
         let image = B256::from(h32(&self.a.release_image_id)?);
         let data = {
             use alloy::sol_types::SolCall as _;
             IMock::acceptCall { imageId: image, journalDigest: B256::from(sha256(&journal)) }.abi_encode()
         };
-        let tx = TransactionRequest::default().with_from(self.a.prover).with_to(self.a.mock).with_input(Bytes::from(data));
+        let tx =
+            TransactionRequest::default().with_from(self.a.prover).with_to(self.a.mock).with_input(Bytes::from(data));
         let receipt = self.eth.p.send_transaction(tx).await?.get_receipt().await?;
         ensure!(receipt.status(), "the stand-in prover's accept reverted");
         std::fs::create_dir_all(&self.a.relayer_inbox)?;
@@ -465,11 +488,23 @@ impl Chain {
         std::fs::write(&job, json!({ "kind": "release", "journal": hx(&journal), "seal": "0x5ea15ea1" }).to_string())?;
         let before = self.eth.p.get_balance(recipient).await?;
         let out = Command::new(&self.a.relayer_bin)
-            .args(["--eth-rpc", &self.a.eth_rpc, "--vault", &self.eth.vault.to_string(), "--chain-id", &self.eth.chain_id.to_string(),
-                   "--unlocked", &self.a.relayer.to_string(), "--from-block", &self.eth.from_block.to_string()])
-            .arg("--state").arg(&self.a.relayer_state)
+            .args([
+                "--eth-rpc",
+                &self.a.eth_rpc,
+                "--vault",
+                &self.eth.vault.to_string(),
+                "--chain-id",
+                &self.eth.chain_id.to_string(),
+                "--unlocked",
+                &self.a.relayer.to_string(),
+                "--from-block",
+                &self.eth.from_block.to_string(),
+            ])
+            .arg("--state")
+            .arg(&self.a.relayer_state)
             .args(["run", "--poll-secs", "1", "--rounds", "1"])
-            .arg("--inbox").arg(&self.a.relayer_inbox)
+            .arg("--inbox")
+            .arg(&self.a.relayer_inbox)
             .output()?;
         let lines = String::from_utf8_lossy(&out.stdout).to_string();
         let events: Vec<Value> = lines.lines().filter_map(|l| serde_json::from_str(l).ok()).collect();
@@ -477,7 +512,11 @@ impl Chain {
         let done = events.iter().find(|e| e["event"] == "job-done").cloned().unwrap_or(Value::Null);
         let tx_hash = done["result"]
             .as_object()
-            .and_then(|o| o.iter().find(|(k, v)| (k.contains("tx") || k.contains("hash")) && v.is_string()).map(|(_, v)| v.clone()))
+            .and_then(|o| {
+                o.iter()
+                    .find(|(k, v)| (k.contains("tx") || k.contains("hash")) && v.is_string())
+                    .map(|(_, v)| v.clone())
+            })
             .unwrap_or(Value::Null);
         let mut block = Value::Null;
         if let Some(h) = tx_hash.as_str() {
@@ -525,7 +564,10 @@ fn read_request(stream: &mut TcpStream) -> Result<Vec<u8>> {
 }
 
 fn respond(stream: &mut TcpStream, body: &str) {
-    let head = format!("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n", body.len());
+    let head = format!(
+        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+        body.len()
+    );
     let _ = stream.write_all(head.as_bytes());
     let _ = stream.write_all(body.as_bytes());
     let _ = stream.flush();
@@ -549,7 +591,13 @@ fn main() -> Result<()> {
         anyhow::Ok(Chain { a, eth, seq, ctx, seed, user })
     })?;
     let listener = TcpListener::bind(&chain.a.listen)?;
-    println!("seqnet-chain: http://{}/ (vault {}, configId {}, user {})", chain.a.listen, chain.eth.vault, hx(&chain.ctx.cid), chain.user);
+    println!(
+        "seqnet-chain: http://{}/ (vault {}, configId {}, user {})",
+        chain.a.listen,
+        chain.eth.vault,
+        hx(&chain.ctx.cid),
+        chain.user
+    );
     let mut log = std::fs::OpenOptions::new().create(true).append(true).open(&chain.a.log)?;
     for stream in listener.incoming() {
         let mut stream = match stream {

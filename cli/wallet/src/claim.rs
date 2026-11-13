@@ -87,13 +87,15 @@ pub fn build_claim(
             inputs.leaves.len()
         )));
     }
-    let tree = Tree::from_leaves(inputs.leaves[..n as usize].to_vec()).map_err(|_| Refusal::wallet("too many leaves"))?;
+    let tree =
+        Tree::from_leaves(inputs.leaves[..n as usize].to_vec()).map_err(|_| Refusal::wallet("too many leaves"))?;
     if tree.root() != inputs.root.root {
         return Err(Refusal::wallet(format!(
             "the vault's deposit list does not give the imported root at {n} leaves: the RPC or the zone serves another vault"
         )));
     }
-    let path = tree.path(d.leaf_index).ok_or_else(|| Refusal::wallet(format!("leaf {} is not in the tree", d.leaf_index)))?;
+    let path =
+        tree.path(d.leaf_index).ok_or_else(|| Refusal::wallet(format!("leaf {} is not in the tree", d.leaf_index)))?;
     let witness = bw::ClaimWitness {
         depositor: d.depositor,
         token: d.token,
@@ -150,7 +152,10 @@ pub fn build_claim(
         mentions.push(Mention::Pda { actor: root, seed: root_seed(&ctx.cid, n) });
         BridgeMessage::Claim { config_id: ctx.cid, leaf_count: n, witness, range, relayer }
     };
-    mentions.push(Mention::Pda { actor: token_actor(ctx.program, &ctx.cid, &d.token), seed: token_seed(&ctx.cid, &d.token) });
+    mentions.push(Mention::Pda {
+        actor: token_actor(ctx.program, &ctx.cid, &d.token),
+        seed: token_seed(&ctx.cid, &d.token),
+    });
     mentions.push(Mention::Pda { actor: config_actor(ctx.program, &ctx.cid), seed: config_seed(&ctx.cid) });
     mentions.push(Mention::Pda { actor: n_actor, seed: nullifier_seed(ctx.chain_id, &ctx.vault, &owned.nullifier) });
     let dest = (owned.kind == DestKind::Public).then(|| AccountId::new(owned.dest));

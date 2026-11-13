@@ -22,8 +22,10 @@ fn shipped_configurations_parse() {
     assert_eq!(example.fees.gas_limit, 4_800_000);
     assert_eq!(example.policy.defer_window, 8);
     assert!(example.chains.iter().all(|c| c.sources.len() == 2 && c.sources.iter().all(|s| s.url.is_some())));
-    assert!(example.chains.iter().all(|c| c.sources[0].kind == SourceKind::LightClient
-        && c.sources[1].kind == SourceKind::Headers));
+    assert!(example
+        .chains
+        .iter()
+        .all(|c| c.sources[0].kind == SourceKind::LightClient && c.sources[1].kind == SourceKind::Headers));
     assert_eq!(example.daemon.ledger, "sequencer");
     assert_eq!(example.sequencer.as_ref().unwrap().rpc, "http://127.0.0.1:3040");
     assert!(example.policy.finish_own_jobs);
@@ -53,7 +55,11 @@ fn bad_configurations_are_refused() {
         ),
         ("\nledger = \"harness\"", "\nledger = \"chain\"", "unknown ledger"),
         ("adoption_parts = 2", "adoption_parts = 2\nlayout = \"bellatrix\"", "unknown layout"),
-        ("name = \"record-a\"\n  dir", "name = \"record-a\"\n  kind = \"headers\"\n  dir", "a headers source without url"),
+        (
+            "name = \"record-a\"\n  dir",
+            "name = \"record-a\"\n  kind = \"headers\"\n  dir",
+            "a headers source without url",
+        ),
     ] {
         let text = base.replacen(from, to, 1);
         assert_ne!(text, base, "{why}: the substitution applies");
@@ -99,7 +105,10 @@ fn header_answers_and_utc() {
     let want = root("3b901f5e6853b5cf5eb04d7ccfe1272e66c38291cb3a11dd159cacd1117ccf7c").unwrap();
     assert_eq!(parse_header_answer(body, 11_562_112).unwrap(), Some(want));
     assert_eq!(parse_header_answer(body, 11_562_113).unwrap(), None, "another slot");
-    assert_eq!(parse_header_answer(&body.replace("\"canonical\":true", "\"canonical\":false"), 11_562_112).unwrap(), None);
+    assert_eq!(
+        parse_header_answer(&body.replace("\"canonical\":true", "\"canonical\":false"), 11_562_112).unwrap(),
+        None
+    );
     assert!(parse_header_answer("not json", 1).is_err());
     assert_eq!(utc(1_794_481_349), "2026-11-12T11:02:29Z");
     assert_eq!(utc(0), "1970-01-01T00:00:00Z");

@@ -701,7 +701,9 @@ pub async fn plan_root_import<L: crate::lez::Ledger>(
     let waiting = |reason: String| -> Result<RootImport> { Ok(RootImport::Waiting { reason, vault_count, imported }) };
     let config = match crate::lez::read(ledger, config_actor(ctx.program, &ctx.cid)).await? {
         Some(BridgeState::Config(ConfigState::Ready { sunset: true, .. })) => {
-            return Ok(RootImport::Closed { reason: "the configuration is sunset: no root is imported after it".into() })
+            return Ok(RootImport::Closed {
+                reason: "the configuration is sunset: no root is imported after it".into(),
+            })
         }
         Some(BridgeState::Config(ConfigState::Ready { config, .. })) => config,
         Some(BridgeState::Config(ConfigState::Pairing { .. })) => {
@@ -727,7 +729,8 @@ pub async fn plan_root_import<L: crate::lez::Ledger>(
     }
     let record = ferrata_lez_wire::RecordState::try_from_slice(&bytes)
         .map_err(|e| anyhow!("header(id, {slot}) holds no record: {e}"))?;
-    let header = record.header().map_err(|code| anyhow!("header(id, {slot})'s record does not decode (code {code})"))?;
+    let header =
+        record.header().map_err(|code| anyhow!("header(id, {slot})'s record does not decode (code {code})"))?;
     let (block_number, block_hash) = match header.execution {
         ExecutionSummary::Payload { block_number, block_hash, .. } => (block_number, block_hash),
         ExecutionSummary::BlockHash(_) => {

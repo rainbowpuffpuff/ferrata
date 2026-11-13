@@ -342,7 +342,8 @@ impl Daemon {
                     Ok(tx) => {
                         // Applied when root(cid, n) holds what the dry run said the import writes.
                         let at = ferrata_lez_bridge_wire::root_actor(ctx.program, &ctx.cid, plan.leaf_count);
-                        let applied = matches!(lez::read(&*zone, at).await?, Some(BridgeState::Root(r)) if r == plan.writes);
+                        let applied =
+                            matches!(lez::read(&*zone, at).await?, Some(BridgeState::Root(r)) if r == plan.writes);
                         fields["tx"] = json!(tx);
                         fields["applied"] = json!(applied);
                         log(&s, if applied { "root-imported" } else { "root-import-unconfirmed" }, fields);

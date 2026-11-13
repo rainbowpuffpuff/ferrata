@@ -62,8 +62,7 @@ fn faucet_wallet(home: &PathBuf, rpc: &str) -> Result<(WalletCore<sequencer_serv
              \"gas_limit\": 4000000\n}}\n"
         ),
     )?;
-    let bytes: [u8; 32] =
-        hex::decode(FAUCET_KEY)?.try_into().map_err(|_| anyhow!("the faucet key is not 32 bytes"))?;
+    let bytes: [u8; 32] = hex::decode(FAUCET_KEY)?.try_into().map_err(|_| anyhow!("the faucet key is not 32 bytes"))?;
     let key = PrivateKey::try_new(bytes).map_err(|e| anyhow!("the faucet key is not a scalar: {e}"))?;
     let id = AccountId::from(&PublicKey::new_from_private_key(&key));
     let wallet = if storage.exists() {
@@ -87,7 +86,8 @@ async fn main() -> Result<()> {
 
     // 1. The faucet pays the user's public account /0.
     let (faucet, faucet_id) = faucet_wallet(&a.faucet_home, &a.sequencer)?;
-    let before = faucet.get_account_balance(public0).await.map_err(|e| anyhow!("reading the user's public balance: {e}"))?;
+    let before =
+        faucet.get_account_balance(public0).await.map_err(|e| anyhow!("reading the user's public balance: {e}"))?;
     let t0 = std::time::Instant::now();
     let (hash, _) = NativeTokenTransfer(&faucet)
         .transfer(

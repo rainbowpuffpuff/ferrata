@@ -42,7 +42,8 @@ impl SequencerLedger {
         let mut live = rt.block_on(Live::open(opts, &[])).context("the sequencer")?;
         live.phase = "updater".into();
         let payer_id = AccountId::from(&PublicKey::new_from_private_key(payer));
-        let (head, balance) = rt.block_on(async { Ok::<_, anyhow::Error>((live.head().await?, live.balance(payer_id).await?)) })?;
+        let (head, balance) =
+            rt.block_on(async { Ok::<_, anyhow::Error>((live.head().await?, live.balance(payer_id).await?)) })?;
         eprintln!(
             "{} [sequencer] {}: head block {head}, following to block {} (final on Bedrock: {}) in {:.1} s; payer {payer_id} \
              balance {balance}; records in {}",
@@ -79,7 +80,8 @@ impl Ledger for SequencerLedger {
 async fn submit(live: &mut Live, payer: &PrivateKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> Result<TxOutcome> {
     live.sync().await?;
     let payer_id = AccountId::from(&PublicKey::new_from_private_key(payer));
-    let nonce = *live.wallet.get_accounts_nonces(&[payer_id]).await?.first().ok_or_else(|| anyhow!("no nonce served"))?;
+    let nonce =
+        *live.wallet.get_accounts_nonces(&[payer_id]).await?.first().ok_or_else(|| anyhow!("no nonce served"))?;
     let balance_before = live.balance(payer_id).await?;
     let since_head = live.head().await?;
     let msg = PublicMessage::new(

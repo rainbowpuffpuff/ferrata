@@ -568,7 +568,8 @@ impl DevnetZone {
         stream.write_all(request.as_bytes()).await?;
         let mut raw = Vec::new();
         stream.read_to_end(&mut raw).await?;
-        let at = raw.windows(4).position(|w| w == b"\r\n\r\n").ok_or_else(|| anyhow!("the devnet's reply has no body"))?;
+        let at =
+            raw.windows(4).position(|w| w == b"\r\n\r\n").ok_or_else(|| anyhow!("the devnet's reply has no body"))?;
         let reply: serde_json::Value =
             serde_json::from_slice(&raw[at + 4..]).with_context(|| format!("the devnet's reply to {method}"))?;
         if reply["ok"] != serde_json::Value::Bool(true) {
@@ -616,7 +617,8 @@ impl Ledger for DevnetZone {
         let mut accounts = Vec::new();
         for m in &call.mentions {
             let a = m.actor();
-            let mut v = serde_json::json!({ "account": hx(a.account_id.value()), "program": hx(a.program_account_id.value()) });
+            let mut v =
+                serde_json::json!({ "account": hx(a.account_id.value()), "program": hx(a.program_account_id.value()) });
             match m {
                 Mention::Pda { seed, .. } => {
                     v["kind"] = "pda".into();

@@ -31,9 +31,8 @@ struct Args {
 }
 
 fn account(hex_id: &str) -> Result<AccountId> {
-    let bytes: [u8; 32] = hex::decode(hex_id.trim_start_matches("0x"))?
-        .try_into()
-        .map_err(|_| anyhow!("an account id is 32 bytes"))?;
+    let bytes: [u8; 32] =
+        hex::decode(hex_id.trim_start_matches("0x"))?.try_into().map_err(|_| anyhow!("an account id is 32 bytes"))?;
     Ok(AccountId::new(bytes))
 }
 
@@ -84,7 +83,8 @@ async fn main() -> Result<()> {
     let mut start = 1;
     while start <= last {
         let end = (start + 99).min(last);
-        let blocks = client.get_block_range(start, end).await.map_err(|e| anyhow!("get_block_range {start}..{end}: {e}"))?;
+        let blocks =
+            client.get_block_range(start, end).await.map_err(|e| anyhow!("get_block_range {start}..{end}: {e}"))?;
         for block in blocks {
             for (i, tx) in block.body.transactions.iter().enumerate() {
                 let reverted = block.body.reverted.contains(&(i as u64));
