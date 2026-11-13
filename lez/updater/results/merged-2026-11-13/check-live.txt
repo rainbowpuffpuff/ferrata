@@ -1,0 +1,41 @@
+== zone-2
+PASS 53 of 53 journal lines have their manifest row (block, result, execution gas, fee = payer debit)
+PASS 53 of 53 included transactions: charged fee = the payer's balance fell by
+PASS 53 of 53 transactions alone in their block carry the block's own gas totals
+PASS transactions settle in increasing blocks
+PASS 17 jobs applied, each Open, Miller, [Adopt 1/2, Adopt 2/2,] Finish in increasing blocks
+PASS every applied job's update is in updater.log (finalized slot, root, sources)
+PASS 16 applied jobs advance the finalized header, each further than the one before (the others only adopt a committee: 1)
+PASS export/instances.tsv: the instance holds finalized slot 11567168 root 8e84a34449cbf42b..., the last advancing job's
+PASS export/instances.tsv: 19 jobs applied = session A's 2 + the updater's 17
+PASS 17 applied finalized roots are canonical at their slots on https://ethereum-sepolia-beacon-api.publicnode.com
+health: 111 probes, {'no answer (http 0)': 1, 'ok': 110}; lives [1]
+journal: 53 transactions, {'applied': 53}; jobs applied 17; jobs opened and not finished 0
+ALL PASS
+== zone-1
+PASS 117 of 117 journal lines have their manifest row (block, result, execution gas, fee = payer debit)
+PASS 117 of 117 included transactions: charged fee = the payer's balance fell by
+PASS 117 of 117 transactions alone in their block carry the block's own gas totals
+PASS transactions settle in increasing blocks
+PASS 39 jobs applied, each Open, Miller, [Adopt 1/2, Adopt 2/2,] Finish in increasing blocks
+PASS every applied job's update is in updater.log (finalized slot, root, sources)
+PASS 39 applied jobs advance the finalized header, each further than the one before (the others only adopt a committee: 0)
+PASS export/instances.tsv: the instance holds finalized slot 11566496 root 26aceb3cde9cf5c8..., the last advancing job's
+PASS export/instances.tsv: 41 jobs applied = session A's 2 + the updater's 39
+PASS 39 applied finalized roots are canonical at their slots on https://ethereum-sepolia-beacon-api.publicnode.com
+health: 256 probes, {'no answer (http 0)': 3, 'ok': 239, 'no answer (http 503)': 14}; lives [1, 2]
+journal: 117 transactions, {'applied': 117}; jobs applied 39; jobs opened and not finished 0
+ALL PASS
+== zone-1-u2-lost
+PASS 96 of 96 journal lines have their manifest row (block, result, execution gas, fee = payer debit)
+PASS 96 of 96 included transactions: charged fee = the payer's balance fell by
+PASS 96 of 96 transactions alone in their block carry the block's own gas totals
+PASS transactions settle in increasing blocks
+PASS 32 jobs applied, each Open, Miller, [Adopt 1/2, Adopt 2/2,] Finish in increasing blocks
+PASS every applied job's update is in updater.log (finalized slot, root, sources)
+PASS 32 applied jobs advance the finalized header, each further than the one before (the others only adopt a committee: 0)
+SKIP export/instances.tsv (not in the record yet)
+PASS 32 applied finalized roots are canonical at their slots on https://ethereum-sepolia-beacon-api.publicnode.com
+health: 116 probes, {'no answer (http 0)': 1, 'ok': 115}; lives [1, 2]
+journal: 96 transactions, {'applied': 96}; jobs applied 32; jobs opened and not finished 0
+ALL PASS

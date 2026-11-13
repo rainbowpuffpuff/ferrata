@@ -1,0 +1,34 @@
+200
+404
+exit 0
+bootstrap.ssz
+committees
+journal.tsv
+open
+16
+[
+  {
+    "chain": "mainnet",
+    "daemon": "dev",
+    "finalized_slot": 15631808,
+    "last_error": "",
+    "last_plan": "up-to-date",
+    "period": 1908,
+    "reasons": [],
+    "round": 36,
+    "status": "ok"
+  }
+]
+
+ferrata_updater_rounds_total{daemon="dev",chain="mainnet"} 36
+ferrata_updater_tx_total{daemon="dev",chain="mainnet",step="adopt0",result="applied"} 3
+ferrata_updater_tx_total{daemon="dev",chain="mainnet",step="adopt1",result="applied"} 3
+ferrata_updater_tx_total{daemon="dev",chain="mainnet",step="finish",result="applied"} 3
+ferrata_updater_tx_total{daemon="dev",chain="mainnet",step="init",result="applied"} 1
+ferrata_updater_tx_total{daemon="dev",chain="mainnet",step="miller",result="applied"} 3
+ferrata_updater_tx_total{daemon="dev",chain="mainnet",step="open",result="applied"} 3
+2026-11-13T04:20:58Z [dev mainnet] job 0x668172890e5407b2 (finalized slot 15630720) is open: its adopt1 first
+2026-11-13T04:20:59Z [dev mainnet] mainnet fin 15630720 adopt 2/2 applied (exit None, gas 3443169, fee 27545352, block 16)
+2026-11-13T04:21:00Z [dev mainnet] job 0x668172890e5407b2 (finalized slot 15630720) is open: its finish first
+2026-11-13T04:21:00Z [dev mainnet] mainnet fin 15630720 Finish applied (exit None, gas 3699561, fee 29596488, block 17)
+2026-11-13T04:21:21Z [dev mainnet] stopped at round 36: {"chain":"mainnet","daemon":"dev","finalized_slot":15631808,"last_error":"","last_plan":"up-to-date","period":1908,"reasons":[],"round":36,"status":"ok"}

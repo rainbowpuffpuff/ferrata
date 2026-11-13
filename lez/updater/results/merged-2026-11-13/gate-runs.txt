@@ -1,0 +1,56 @@
+== gate-ADVERSARY=0
+gate	rounds	737	seed	default	adversary	false	salt	
+honest-1	applied tx	119	refused tx	19	gas applied	372860451	gas refused	11957819	fee	3078546160	deferrals	707
+honest-2	applied tx	131	refused tx	15	gas applied	412898299	gas refused	10344580	fee	3385943032	deferrals	699
+honest refused gas / applied gas	0.0284	(gate <= 0.10)
+honest-1 share of honest fees	0.4762	honest-2	0.5238	(gate 0.35-0.65 each)
+updates	58	adversary junk Opens	0	ledger transactions	284
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 213.72s
+== gate-SALT=a
+gate	rounds	419	seed	default	adversary	true	salt	a
+honest-1	applied tx	53	refused tx	15	gas applied	166620920	gas refused	8717475	fee	1402707160	deferrals	405
+honest-2	applied tx	54	refused tx	16	gas applied	180369216	gas refused	13996590	fee	1554926448	deferrals	403
+honest refused gas / applied gas	0.0655	(gate <= 0.10)
+honest-1 share of honest fees	0.4743	honest-2	0.5257	(gate 0.35-0.65 each)
+updates	58	adversary junk Opens	110	ledger transactions	406
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 234.66s
+== gate-SALT=b
+gate	rounds	407	seed	default	adversary	true	salt	b
+honest-1	applied tx	40	refused tx	17	gas applied	123263576	gas refused	6454598	fee	1037745392	deferrals	405
+honest-2	applied tx	60	refused tx	23	gas applied	187538067	gas refused	12599191	fee	1601098064	deferrals	379
+honest refused gas / applied gas	0.0613	(gate <= 0.10)
+honest-1 share of honest fees	0.3933	honest-2	0.6067	(gate 0.35-0.65 each)
+updates	58	adversary junk Opens	110	ledger transactions	424
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 238.65s
+== gate-SALT=c
+gate	rounds	423	seed	default	adversary	true	salt	c
+honest-1	applied tx	41	refused tx	18	gas applied	133238747	gas refused	7386261	fee	1125000064	deferrals	416
+honest-2	applied tx	62	refused tx	27	gas applied	199473503	gas refused	16406867	fee	1727042960	deferrals	386
+honest refused gas / applied gas	0.0715	(gate <= 0.10)
+honest-1 share of honest fees	0.3945	honest-2	0.6055	(gate 0.35-0.65 each)
+updates	58	adversary junk Opens	110	ledger transactions	431
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 240.31s
+== gate-SEED=1
+gate	rounds	444	seed	1	adversary	true	salt	
+honest-1	applied tx	41	refused tx	22	gas applied	127898180	gas refused	17244636	fee	1161142528	deferrals	431
+honest-2	applied tx	58	refused tx	16	gas applied	177251368	gas refused	9347407	fee	1492790200	deferrals	420
+honest refused gas / applied gas	0.0871	(gate <= 0.10)
+honest-1 share of honest fees	0.4375	honest-2	0.5625	(gate 0.35-0.65 each)
+updates	58	adversary junk Opens	110	ledger transactions	410
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 235.07s
+== gate-SEED=2
+gate	rounds	446	seed	2	adversary	true	salt	
+honest-1	applied tx	46	refused tx	16	gas applied	142098754	gas refused	5355504	fee	1179634064	deferrals	436
+honest-2	applied tx	51	refused tx	14	gas applied	160508753	gas refused	11769263	fee	1378224128	deferrals	433
+honest refused gas / applied gas	0.0566	(gate <= 0.10)
+honest-1 share of honest fees	0.4612	honest-2	0.5388	(gate 0.35-0.65 each)
+updates	58	adversary junk Opens	110	ledger transactions	405
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 234.59s
+== gate-SEED=3
+gate	rounds	416	seed	3	adversary	true	salt	
+honest-1	applied tx	46	refused tx	20	gas applied	136392171	gas refused	8173872	fee	1156528344	deferrals	408
+honest-2	applied tx	52	refused tx	18	gas applied	162670994	gas refused	15683685	fee	1426837432	deferrals	404
+honest refused gas / applied gas	0.0798	(gate <= 0.10)
+honest-1 share of honest fees	0.4477	honest-2	0.5523	(gate 0.35-0.65 each)
+updates	58	adversary junk Opens	110	ledger transactions	413
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 233.02s

@@ -1,0 +1,38 @@
+binary sha256 6d5347cc8d40eb7c847b7a86889a1e0da66c3097adf04dc10394b7e6d1baf408 bytes 25664240
+--- no arguments
+usage: ferrata-updater --config FILE [--rounds N] [--quiet]
+exit 2
+--- daemon.ledger = harness (lez/updater/dev/dev.toml)
+Error: this build writes to a LEZ sequencer (daemon.ledger = "sequencer"); the in-process chain is the build of lez/updater with --features harness
+exit 1
+--- daemon.ledger = sequencer, rpc http://127.0.0.1:3040 with nothing listening (the example configuration)
+Error: the sequencer
+
+Caused by:
+    0: client error (Connect)
+    1: tcp connect error
+    2: Connection refused (os error 111)
+exit 1
+--- a sequencer that is not on this machine
+Error: refusing to talk to 10.0.0.1: only a sequencer on this machine
+exit 1
+--- lock: what the build added (git diff of lez/updater/sequencer/Cargo.lock, taken on the laptop after mrun copied the lock
+--- back; the box's own `git diff` printed nothing, and the empty grep after it is this step's exit 1 in run-steps.txt)
++[[package]]
++name = "ferrata-advance"
++version = "0.1.0"
++dependencies = [
++ "anyhow",
++ "borsh",
++ "ferrata-core",
++ "ferrata-lez-wire",
++ "lee_core",
++]
+ (and "ferrata-advance" in ferrata-updater's dependencies; nothing else changed)
+--- the build (CARGO_TARGET_DIR = the crown build's live target directory, seeded by lez/crown/build.sh seed)
+   Compiling ferrata-core v0.0.1 (spike/ferrata-wt-merge-updater/crates/ferrata-core)
+   Compiling ferrata-lez-wire v0.1.0 (spike/ferrata-wt-merge-updater/lez/wire)
+   Compiling ferrata-advance v0.1.0 (spike/ferrata-wt-merge-updater/lez/advance)
+   Compiling ferrata-updater v0.1.0 (spike/ferrata-wt-merge-updater/lez/updater)
+   Compiling ferrata-updater-sequencer v0.1.0 (spike/ferrata-wt-merge-updater/lez/updater/sequencer)
+    Finished `release` profile [optimized] target(s) in 51.24s
