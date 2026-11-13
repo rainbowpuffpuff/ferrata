@@ -8,7 +8,7 @@
 #
 # Cargo has no variables in manifests, so this rewrites, in place and nothing else:
 # - every LEZ path dependency of lez/ (`upstream/lez-<tag>/`, the clone beside the repository, in
-#   the manifests of wire/, bridge-wire/, harness/, updater/, guests/*/, live/driver/ and the frozen copy
+#   the manifests of wire/, bridge-wire/, harness/, updater/, advance/, guests/*/, live/driver/ and the frozen copy
 #   live/frozen/bridge-wire/ that live/driver/ builds against: one tag in the driver's graph);
 # - the default feature of harness/ and live/driver/ (the line marked `# lez-select`): `lez-rc2`
 #   on v0.4.0-rc2, `lez-rc3` (which implies `lez-rc2`) on v0.4.0-rc3, none on v0.4.0-rc1 (the few
@@ -23,7 +23,7 @@ lez="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 beside="$(cd "$lez/../.." && pwd)"
 manifests=(wire bridge-wire harness guests/program guests/program-keccak-soft guests/consumer
            guests/consumer-keccak-accel guests/scripted guests/bridge live/driver live/frozen/bridge-wire
-           holdings-wire guests/holdings updater)
+           holdings-wire guests/holdings updater advance)
 featured=(harness live/driver)
 
 die() { echo "lez-select: $*" >&2; exit 1; }
