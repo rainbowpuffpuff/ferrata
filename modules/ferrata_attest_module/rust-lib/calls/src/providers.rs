@@ -63,7 +63,7 @@ impl Curl {
         let (body, code) = text.rsplit_once('\n').unwrap_or(("", text.as_str()));
         match code.trim().parse::<u16>() {
             Ok(code) if code != 0 => Ok((code, body.to_owned())),
-            _ => Err(format!("{}", String::from_utf8_lossy(&out.stderr).trim())),
+            _ => Err(String::from_utf8_lossy(&out.stderr).trim().to_string()),
         }
     }
 }
@@ -205,15 +205,17 @@ pub fn beacon(http: &mut dyn Http, name: &str, base: &str, e: &Expected) -> Valu
             let (version, epoch) = (&d[format!("{name}_FORK_VERSION")], &d[format!("{name}_FORK_EPOCH")]);
             let scheduled = c.fork_epochs[i] != u64::MAX;
             if scheduled {
-                if epoch.is_null() && version.is_null() {
-                    a.differs(&format!("{name}_FORK_EPOCH"), "not served", c.fork_epochs[i]);
-                    continue;
+                // A value served must be the configuration's; one not served is only noted (a checkpoint-sync
+                // server, for one, serves a spec without the fork schedule).
+                match num(epoch) {
+                    Some(v) if v == c.fork_epochs[i] => {}
+                    None if epoch.is_null() => a.notes.push(format!("{name}_FORK_EPOCH not served")),
+                    _ => a.differs(&format!("{name}_FORK_EPOCH"), epoch, c.fork_epochs[i]),
                 }
-                if num(epoch) != Some(c.fork_epochs[i]) {
-                    a.differs(&format!("{name}_FORK_EPOCH"), epoch, c.fork_epochs[i]);
-                }
-                if version.as_str() != Some(hex(&c.fork_versions[i]).as_str()) {
-                    a.differs(&format!("{name}_FORK_VERSION"), version, hex(&c.fork_versions[i]));
+                match version.as_str() {
+                    Some(v) if v == hex(&c.fork_versions[i]) => {}
+                    None if version.is_null() => a.notes.push(format!("{name}_FORK_VERSION not served")),
+                    _ => a.differs(&format!("{name}_FORK_VERSION"), version, hex(&c.fork_versions[i])),
                 }
             } else if let Some(at) = num(epoch).filter(|x| *x != u64::MAX) {
                 a.notes.push(format!(
@@ -373,7 +375,9 @@ pub struct Recording<H: Http> {
 impl<H: Http> Recording<H> {
     fn keep(&mut self, method: &str, url: &str, body: Option<&str>, r: Reply) -> Reply {
         self.log.push(match &r {
-            Ok((status, text)) => json!({ "method": method, "url": url, "body": body, "status": status, "response": text }),
+            Ok((status, text)) => {
+                json!({ "method": method, "url": url, "body": body, "status": status, "response": text })
+            }
             Err(e) => json!({ "method": method, "url": url, "body": body, "error": e }),
         });
         r
@@ -401,7 +405,9 @@ impl Replay {
         let hit = self.log.iter().find(|e| e["method"] == method && e["url"] == url && e["body"].as_str() == body);
         match hit {
             Some(e) if e["error"].is_string() => Err(e["error"].as_str().unwrap_or_default().to_owned()),
-            Some(e) => Ok((e["status"].as_u64().unwrap_or(0) as u16, e["response"].as_str().unwrap_or_default().to_owned())),
+            Some(e) => {
+                Ok((e["status"].as_u64().unwrap_or(0) as u16, e["response"].as_str().unwrap_or_default().to_owned()))
+            }
             None => Err(format!("not recorded: {method} {url}")),
         }
     }

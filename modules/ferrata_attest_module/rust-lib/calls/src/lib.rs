@@ -1226,7 +1226,8 @@ mod tests {
         c.pubkeys[0][0] = 0x80;
         let v = committee_check(&c);
         assert_eq!(v["verdict"], "refused", "{v}");
-        assert_eq!(v["code"], Error::PubkeyInvalid.code(), "{v}");
+        // ferrata-core's committee check reports a key that fails KeyValidate as the committee's refusal.
+        assert_eq!(v["code"], Error::CommitteeInvalid.code(), "{v}");
     }
 
     #[test]
