@@ -17,7 +17,8 @@
 //!   check       the chain natively: the fixture's bootstrap and catch-up, then the `--capture`s: the light
 //!               client, the bridge's requests under each record, every deposit's opening (what crown-b will
 //!               send); fails if the next session's transactions would fall outside the weak-subjectivity
-//!               period by this machine's clock (without --identity: session A's)
+//!               period by this machine's clock (without --identity: session A's); --operator-only yes: the deposits
+//!               are a user's, their openings are not checked
 //!   capture-slots  the vault slots a capture must prove
 //!
 //! Common options: --program-bin FILE (attestation program), --bridge-bin FILE (merged bridge),
@@ -287,7 +288,7 @@ async fn run(args: Args) -> Result<()> {
                 Some(p) => Some(crown::Identity::load(Path::new(p))?),
                 None => None,
             };
-            return crown::check(&chain, &program, &bridge, identity.as_ref());
+            return crown::check(&chain, &program, &bridge, identity.as_ref(), args.get("operator-only") == Some("yes"));
         }
         _ => {}
     }

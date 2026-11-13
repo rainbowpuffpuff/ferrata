@@ -114,7 +114,7 @@ if [ "$MODE" = cli ]; then
   say "capture-1: $(tail -n 1 "$W/capture-1.log")"
   B="$W/check-bundle"; mkdir -p "$B"; zstd -q -d -c "$VOL/bundle.tar.zst" | tar -C "$B" -xf -
   "$BIN/crown-driver" check --chain stand-in --program-bin "$B/program/ferrata_lez.bin" --bridge-bin "$B/program/ferrata_bridge.bin" \
-    --capture "$VOL/inputs/capture-1" --identity "$SA" > "$W/check.log" 2>&1 || { tail -n 20 "$W/check.log"; die "crown-driver check"; }
+    --capture "$VOL/inputs/capture-1" --identity "$SA" --operator-only yes > "$W/check.log" 2>&1 || { tail -n 20 "$W/check.log"; die "crown-driver check"; }
   say "crown-driver check: $(tail -n 1 "$W/check.log")"
 fi
 

@@ -81,7 +81,8 @@ fn faucet_wallet(home: &PathBuf, rpc: &str) -> Result<(WalletCore<sequencer_serv
 async fn main() -> Result<()> {
     let a = Args::parse();
     let seed = Seed::from_file(&a.seed)?;
-    let public0 = seed.public_accounts(1)?[0].id;
+    let first = &seed.public_accounts(1)?[0];
+    let (public0, public0_key) = (first.id, PublicKey::new_from_private_key(&first.key));
     let private0 = seed.private_account_ids(1)?[0];
 
     // 1. The faucet pays the user's public account /0.
@@ -91,7 +92,8 @@ async fn main() -> Result<()> {
     let (hash, _) = NativeTokenTransfer(&faucet)
         .transfer(
             AccountIdentity::Public(faucet_id),
-            AccountIdentity::PublicNoSign(public0),
+            // A public account not used yet is named by its public key (LEZ's wallet CLI: `--to-pk`).
+            AccountIdentity::PublicForeign(public0_key),
             a.public_amount,
             CreditDelivery::Automatic,
         )

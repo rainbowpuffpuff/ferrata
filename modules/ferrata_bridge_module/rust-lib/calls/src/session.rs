@@ -26,7 +26,7 @@ use ferrata_lez_bridge_wire::{self as bw, BridgeState};
 use ferrata_wallet::AccountId;
 use serde_json::{json, Value};
 
-use crate::{fixed, hex, unhex, wallet};
+use crate::{fixed, hex, unhex, wallet as w};
 
 const ETH: &str = "0x0000000000000000000000000000000000000000";
 
@@ -208,7 +208,7 @@ impl Chain {
         if !inputs["root_state"].is_null() {
             req["root_state"] = inputs["root_state"].clone();
         }
-        let lez = wallet::registry_of(&req)?;
+        let lez = w::registry_of(&req)?;
         let t = &lez["token"];
         token["lez"] = if t.is_null() {
             Value::Null
@@ -397,7 +397,7 @@ impl Chain {
         if private && d["kind"] == "public" {
             req["prover"] = json!(self.account("private", 0)?);
         }
-        let c = wallet::claim_with_state(&req)?;
+        let c = w::claim_with_state(&req)?;
         if c["verdict"] != "claimable" {
             return Err(format!("refused by the module (checked before sending): {} {}", c["error"].as_str().unwrap_or(""), c["detail"].as_str().unwrap_or("")));
         }
@@ -503,12 +503,23 @@ impl Chain {
             return Err("already released: the vault's NullifierAlreadyUsed for this burn's NOut (checked before sending)".into());
         }
         let roots = self.post("module.vault_roots", json!({ "token": ETH }))?;
+        // Any relayer may send it and is paid the relay fee in force for the burn's denomination (the tool's
+        // `flow::release_fees`): the vault's current schedule.
+        let reg = self.post("module.registry", json!({ "token": ETH }))?;
+        let relay_fee = reg["token"]["denominations"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .find(|d| d["amount"] == b["amount"])
+            .map(|d| d["relay_fee"].clone())
+            .ok_or("the burn's amount is not one of the vault's denominations")?;
         let mut req = self.seed_fields();
+        req["relay_fee"] = relay_fee;
         req["i"] = b["i"].clone();
         req["burns"] = inputs["burns"].clone();
         req["roots"] = roots["roots"].clone();
         req["now"] = roots["now"].clone();
-        let r = match wallet::release_by_rule(&req)? {
+        let r = match w::release_by_rule(&req)? {
             Ok((v, _)) => v,
             Err(refusal) => {
                 let first = refusal["first_open"].as_u64();

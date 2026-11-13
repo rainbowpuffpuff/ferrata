@@ -19,7 +19,7 @@ case "${1:-}" in
       > "$W/capture-1.log" 2>&1 || { tail -n 20 "$W/capture-1.log"; die "capture-1"; }
     say "capture-1: $(tail -n 1 "$W/capture-1.log")"
     "$BIN/crown-driver" check --chain stand-in --program-bin "$ZONE_BUNDLE/program/ferrata_lez.bin" --bridge-bin "$BRIDGE_BIN" \
-      --capture "$VOL/inputs/capture-1" --identity "$SA" > "$W/check.log" 2>&1 || { tail -n 20 "$W/check.log"; die "crown-driver check"; }
+      --capture "$VOL/inputs/capture-1" --identity "$SA" --operator-only yes > "$W/check.log" 2>&1 || { tail -n 20 "$W/check.log"; die "crown-driver check"; }
     operator_import
     ;;
   fund) fund_private ;;

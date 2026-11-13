@@ -771,7 +771,7 @@ fn native_apply(native: &mut Native, config: &Config, update: &LightClientUpdate
 /// whether the next session's transactions fall inside the weak-subjectivity period the program bounds them by
 /// (without `identity`: session A's, bounded by the bootstrap's slot; with it: session B's, by the finalized header
 /// session A left).
-pub fn check(chain: &Chain, program: &GuestBinary, bridge: &GuestBinary, identity: Option<&Identity>) -> Result<()> {
+pub fn check(chain: &Chain, program: &GuestBinary, bridge: &GuestBinary, identity: Option<&Identity>, operator_only: bool) -> Result<()> {
     use ferrata_core::witness::HeaderRecord;
     use ferrata_lez_bridge_wire::{import_request, pairing_request, vault_request};
     use ferrata_lez_wire::attest::evaluate;
@@ -835,8 +835,11 @@ pub fn check(chain: &Chain, program: &GuestBinary, bridge: &GuestBinary, identit
         let tree = Tree::from_leaves(stage.deposits.iter().map(DepositLog::leaf).collect()).map_err(|_| anyhow!("tree"))?;
         ensure!(tree.root() == stage.slot(&SLOT_ROOT)?.1, "{}: slot 0 is not the root of the deposits", stage.label);
         ensure!(stage.slot(&SLOT_COUNT)?.1 == word_of(stage.deposits.len() as u64), "{}: slot 1 is not the deposit count", stage.label);
-        for leaf in 0..stage.deposits.len() as u64 {
-            witness(&stage.vault, &stage.deposits, leaf)?;
+        // The run's own deposits open to its keys; with --operator-only the deposits are a user's (e2e/seqnet).
+        if !operator_only {
+            for leaf in 0..stage.deposits.len() as u64 {
+                witness(&stage.vault, &stage.deposits, leaf)?;
+            }
         }
         let entry_ok = stage.slot(&registry_slot(&ETH)).map(|(_, v)| v == eth_entry().hash()).unwrap_or(false);
         let fees_at = find_fees_at(stage).ok();
