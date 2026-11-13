@@ -13,6 +13,8 @@ here=$(cd "$(dirname "$0")" && pwd)
 repo=$(cd "$here/../.." && pwd)
 MODULES=${MODULES:-"ferrata_attest_module ferrata_bridge_module ferrata_attestor_module ferrata_monitor_module"}
 ALL="ferrata_attest_module ferrata_bridge_module ferrata_attestor_module ferrata_monitor_module ferrata_updater_module ferrata_relayer_module"
+# The two modules' Ethereum client (plain HTTP or Logos Core's eth_rpc_module) is one file kept in both.
+cmp "$repo/modules/ferrata_attest_module/rust-lib/calls/src/rpc.rs" "$repo/modules/ferrata_bridge_module/rust-lib/calls/src/rpc.rs"
 "$here/stage.sh" $MODULES
 calls_crate() { case "$1" in ferrata_attest_module) echo ferrata-attest-calls ;; ferrata_bridge_module) echo ferrata-bridge-calls ;;
   ferrata_attestor_module) echo ferrata-attestor-calls ;; ferrata_monitor_module) echo ferrata-monitor-calls ;;
