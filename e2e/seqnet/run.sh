@@ -90,6 +90,12 @@ case "${1:-}" in
   build-miniapp) build_miniapp ;;
   cli|miniapp)
     NAME="${2:?run.sh $1 NAME}"
+    # The tools are rebuilt first (incremental), so that a run uses this tree's (a restored box may hold older ones).
+    build > "$T/logs/build-before-$NAME.log" 2>&1 || { tail -n 20 "$T/logs/build-before-$NAME.log"; die "build"; }
+    if [ "$1" = miniapp ]; then
+      ( cd "$REPO/cli" && CARGO_TARGET_DIR="$TGT" cargo build --release --features seqnet --bin seqnet-chain ) >> "$T/logs/build-before-$NAME.log" 2>&1 \
+        && cp "$TGT/release/seqnet-chain" "$T/bin/" || die "seqnet-chain build"
+    fi
     export SEQNET_MODE="$1" SEQNET_NAME="$NAME" SEQNET_REPO="$REPO" SEQNET_T="$T"
     exec bash "$HERE/drive.sh"
     ;;
