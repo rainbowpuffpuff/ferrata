@@ -1,9 +1,35 @@
 # Logos modules: results
 
-Runs, newest first: the five modules after the merge of the two branches of 12 November (12–13
-November, at the merged commit), the three daemons as modules and completing the attestation and bridge
+Runs, newest first: the five modules after the merge of `updater-live` (13 November: the updater's
+sequencer backend, `headers` sources and `finish_own_jobs` on the daemon the updater module drives), the
+five modules after the merge of the two branches of 12 November (12–13 November, at the merged commit), the three daemons as modules and completing the attestation and bridge
 modules (those two branches, each run on its own), the attestation and bridge modules (11 November), the
 attestation module's prototype (10 November).
+
+## The five modules after the merge of `updater-live`, 13 November 2026
+
+**`updater-live` merged into the daemon the updater module drives, and check.sh re-run.** `updater-live` gave
+`ferrata-updater` a backend for a running LEZ sequencer (`lez/updater/sequencer/`, a binary of its own),
+`headers` sources, the store's `layout` and `finish_own_jobs` (an updater finishes the job it opened first, also
+after a restart). They now sit in the daemon of `lez/updater/src/daemon.rs` that this module drives
+(`Daemon::open` with the harness ledger; the sequencer build passes its own ledger to the same daemon), with the
+update planning in `lez/advance`. The module carries the in-process chain only: it refuses `ledger = "sequencer"`
+(the check's configuration now has the `[sequencer]` section the configuration requires), and `check_config`
+reports the chains' `layout`, the sources' `kind`, `[sequencer]` and `finish_own_jobs`.
+
+Modal build box (workspace ws-4, gVisor, 2 CPUs reported, up to 16 cores, 64 GiB; Nix 2.28.3, the store of
+the modules-more box restored), commit `6dcf6af`, 13 Nov 2026 04:23–04:52 UTC: `check.sh` with the five modules,
+dev and portable, `E2E=1 BRIDGE_E2E=1`, **step failures 0, check failures 0** (1,708 s): 48 calls, each equal to
+native in both Cores and meeting its expectations (attest 11, bridge 13, attestor 12, monitor 8, updater 4);
+`e2e.sh` 43/43 and `bridge_e2e.sh` 24/24 in each Core; the attestor's job 23/23 and the monitor's 46/46, natively
+and in each Core; **the updater's job 8/8 natively (109 s) and 10/10 in each Core** (dev 117 s, portable 113 s):
+mainnet to 15,631,808 and Sepolia to 11,556,000, the lab's roots, 4 and 35 jobs, 187 transactions applied, none
+refused. Packages (dev/portable bytes): attest 3,483,190/6,641,640; bridge 6,383,644/9,543,692; attestor
+2,342,281/5,502,285; monitor 9,030,000/12,187,798; updater 12,723,920/15,878,719. Files:
+[`results/merged-updater-2026-11-13/`](results/merged-updater-2026-11-13/). In the same run, the updater's own
+tests (14 of 14), the A3 gate's eight runs (every figure as before the merge), the sequencer build and the
+re-check of the live Sepolia records: [`../lez/updater/results/merged-2026-11-13/`](../lez/updater/results/merged-2026-11-13/README.md).
+Dev mode throughout; the catalog and the live zone of four were not re-run.
 
 ## The five modules after the merge, 12–13 November 2026
 

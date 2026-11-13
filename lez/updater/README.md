@@ -140,8 +140,11 @@ finalized header's slot, the budget reached, or the last round stuck.
 
 ## Tested (measured; `cargo test -p ferrata-updater --features harness`, RISC0_DEV_MODE=1, on the mrun build box)
 
-Last run 12 November 2026 on the code of this README: 14 tests (5 in `config.rs`, 9 in `recorded.rs`), all pass;
-the seven other gate runs pass too ([`results/tests.txt`](results/tests.txt)). The guests build with LEZ's
+Last run 13 November 2026 on the tree that merges this work with the daemon the Logos module drives and the
+planning in `../advance` (commit `6dcf6af`): 14 tests (5 in `config.rs`, 9 in `recorded.rs`), all pass; the seven
+other gate runs pass too, every figure as on 12 November
+([`results/merged-2026-11-13/`](results/merged-2026-11-13/README.md); the run of 12 November:
+[`results/tests.txt`](results/tests.txt)). The guests build with LEZ's
 guest toolchain (Rust 1.91.1 in `RISC0_HOME`, `scripts/ci/install-risc0.sh`).
 
 | test | what it shows | result |
@@ -177,8 +180,9 @@ Measured on 12 November 2026 with `finish_own_jobs` (the default since then: an 
 job it opened before it opens another). Without the adversary (`GATE_ADVERSARY=0`,
 `results/gate-no-adversary.txt`), the two honest updaters alone: 58 updates each applied once in 737
 rounds, 119 and 131 transactions applied, 19 and 15 refused (collisions of equal waits), refused gas
-0.0284 of applied, fee shares 0.4762 / 0.5238. The runs of 11 November, before `finish_own_jobs` (the
-same gate, the same 58 updates each applied once): refused gas 0.0364–0.0932 of applied, honest-1's
+0.0284 of applied, fee shares 0.4762 / 0.5238. The runs of 11 November, on an earlier tree (the
+same gate, the same 58 updates each applied once; the default run gives today's figures without
+`finish_own_jobs` too, at `d4c0268`): refused gas 0.0364–0.0932 of applied, honest-1's
 share 0.4926–0.6306; without the adversary 0.0172 and 0.5404 / 0.4596 in 695 rounds.
 
 58 updates: 14 mainnet and 44 Sepolia, every update the lab recorded, not the gate's 100. The

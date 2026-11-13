@@ -211,6 +211,9 @@ it ran, whether its proofs were real or in dev mode, what is stand-in data, and 
 The latest additions, of 11 to 13 November 2026, one line each (in full:
 [EVIDENCE.md, "The latest additions"](docs/EVIDENCE.md#the-latest-additions-of-11-to-13-november-2026)):
 
+- **Live on 12–13 November 2026, merged on 13 November** (EVIDENCE rows 99, 80, `updater-live`): the updater on a
+  running LEZ sequencer following Sepolia live for eight hours, 74 updates applied across a period boundary; merged
+  into the daemon the updater module drives, every test and gate figure the same.
 - **Merged on 13 November 2026** (EVIDENCE rows 93–98, `bridge-module-complete` and `modules-more`): the five Logos
   modules on one tree, the attestation and bridge modules completed on the tools' own code and the three daemons as
   modules; every job through them in a headless Logos Core and from the local catalog.
