@@ -1,12 +1,28 @@
 # Logos modules: results
 
-Runs, newest first: Ethereum reads through Logos Core's own `eth_rpc_module` (13 November), the updater module with its sequencer backend, on a running LEZ sequencer inside a headless
+Runs, newest first: the six modules on the final tree (13 November, after the last merge), Ethereum reads through Logos Core's own `eth_rpc_module` (13 November), the updater module with its sequencer backend, on a running LEZ sequencer inside a headless
 Logos Core (13 November), the relayer as the sixth module (13 November: root imports in `ferrata-relayer` and
 `ferrata_relayer_module`), the five modules after the merge of `updater-live` (13 November: the updater's
 sequencer backend, `headers` sources and `finish_own_jobs` on the daemon the updater module drives), the
 five modules after the merge of the two branches of 12 November (12–13 November, at the merged commit), the three daemons as modules and completing the attestation and bridge
 modules (those two branches, each run on its own), the attestation and bridge modules (11 November), the
 attestation module's prototype (10 November).
+
+## The six modules on the final tree, 13 November 2026
+
+**After the last merge (`miniapp-sequencer` into `integration8`, branch `final-merge`), every module check again.**
+Modal build box (workspace ws-4, gVisor, 2 CPUs reported, up to 16 cores, 64 GiB; Nix 2.28.3, the store of the
+modules-more box restored), commit `6a19ec9`, 13 Nov 2026 12:28–13:37 UTC, dev mode: `check.sh` with the six modules,
+dev and portable, `E2E=1 BRIDGE_E2E=1`, **step failures 0 (71 steps), check failures 0** (2,827 s): 53 calls, each
+equal to native in both Cores and meeting its expectations (attest 11, bridge 13, attestor 12, monitor 8, updater 4,
+relayer 5); `e2e.sh` 43/43 and `bridge_e2e.sh` 24/24 in each Core; the attestor's job 23/23 and the monitor's 46/46,
+natively and in each Core; the updater's 8/8 natively and 10/10 in each Core; the relayer's 10/10 natively and 11/11
+in each Core. Then `logos-io.sh` (1,144 s): Logos Core's own modules built from their sources with the same findings
+as in the section below (`keystore_module` stops at install, `tx_sender_module` does not load), the attestation module's four reads
+and `import_root`'s read through `eth_rpc_module` each equal to the plain read or the proofs given, `e2e.sh` 43/43
+and `bridge_e2e.sh` 24/24 through that Logos Core. In the same session: `cli/`'s tests, its e2e and the relayer's
+suite, `lez/`'s updater tests, `monitor/` and `checkpoint/attestor`. Files and every figure:
+[`results/final-2026-11-13/`](results/final-2026-11-13/README.md).
 
 ## Ethereum reads through Logos Core's `eth_rpc_module`, 13 November 2026
 

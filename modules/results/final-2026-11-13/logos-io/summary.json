@@ -1,0 +1,98 @@
+{
+ "comparisons": [
+  {
+   "run": "e2e",
+   "name": "fetch_transfer",
+   "via": "eth_rpc_module",
+   "routes": "[\"direct\",\"direct\"]",
+   "equal_to_plain": "true"
+  },
+  {
+   "run": "e2e",
+   "name": "fetch_largest_receipt",
+   "via": "eth_rpc_module",
+   "routes": "[\"direct\",\"direct\"]",
+   "equal_to_plain": "true"
+  },
+  {
+   "run": "e2e",
+   "name": "dry_storage",
+   "via": "eth_rpc_module",
+   "routes": "[\"direct\"]",
+   "equal_to_plain": "true"
+  },
+  {
+   "run": "e2e",
+   "name": "tx_storage",
+   "via": "eth_rpc_module",
+   "routes": "[\"direct\"]",
+   "equal_to_plain": "true"
+  },
+  {
+   "run": "bridge-e2e",
+   "name": "import_read_plain",
+   "via": "http",
+   "routes": "[\"http\"]",
+   "equal_to_given": "true"
+  },
+  {
+   "run": "bridge-e2e",
+   "name": "import_read_eth",
+   "via": "eth_rpc_module",
+   "routes": "[\"direct\"]",
+   "equal_to_given": "true"
+  }
+ ],
+ "e2e": {
+  "e2e": {
+   "checks": 43,
+   "failed": 0,
+   "mode": "call mode: logosctl; Ethereum read via: eth_rpc_module"
+  },
+  "bridge-e2e": {
+   "checks": 24,
+   "failed": 0,
+   "mode": "call mode: logosctl; Ethereum read via: eth_rpc_module"
+  }
+ },
+ "failures_in_steps": 2,
+ "recorded_server": [
+  {
+   "method": "eth_getBlockByNumber",
+   "accept": "*/*",
+   "user_agent": null,
+   "requests": 2
+  },
+  {
+   "method": "eth_getBlockReceipts",
+   "accept": "*/*",
+   "user_agent": null,
+   "requests": 2
+  },
+  {
+   "method": "eth_getBlockByNumber",
+   "accept": "application/json",
+   "user_agent": null,
+   "requests": 2
+  },
+  {
+   "method": "eth_getBlockReceipts",
+   "accept": "application/json",
+   "user_agent": null,
+   "requests": 2
+  },
+  {
+   "method": "eth_getProof",
+   "accept": "*/*",
+   "user_agent": null,
+   "requests": 2
+  },
+  {
+   "method": "eth_getProof",
+   "accept": "application/json",
+   "user_agent": null,
+   "requests": 2
+  }
+ ],
+ "bad": 0
+}

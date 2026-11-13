@@ -7,7 +7,7 @@ log or storage slot attested end to end: fetched over JSON-RPC, its `Attest` tra
 program's event read back; and `advance`, an update's job planned with the updater's code),
 `ferrata_bridge_module` (eleven: deposit, claim (plaintext or private), burn, release (by the wallet's rule),
 prove_release, import_root, registry, recover, status, and `wallet`, the mini-app's calls run with the others), and
-the three daemons as modules:
+the four daemons as modules:
 `ferrata_attestor_module` (rule (B)'s attestor beside a sequencer and its collector, `checkpoint/attestor`),
 `ferrata_monitor_module` (the watchers' `monitor`, `monitor/`), `ferrata_updater_module` (the
 light-client updater `ferrata-updater`, `lez/updater`) and `ferrata_relayer_module` (the relayer
@@ -344,7 +344,11 @@ that start a Logos Core refuse a `TMPDIR` (or `LOGOS_TMPDIR`) longer than 62 byt
   record in the request (on the devnet the block is a synthetic one holding the vault's real storage);
   `prove_release` needs r0vm 3.0.5 on the module's host (`RISC0_SERVER_PATH`) and gives a succinct
   receipt, not the Groth16 seal the vault takes (the relayer wraps it); the vault's `Deposit` events, the
-  program's burn records and every LEZ state come in the request.
+  program's burn records and every LEZ state come in the request. `wallet` (the mini-app's calls) runs these methods
+  over a chain service that reads both chains and signs and sends for it (`cli`'s `seqnet-chain`, a stand-in for
+  `eth_rpc_module`, `keystore_module`/`tx_sender_module` and `lez_core`: LEZ's wallet library, a keystore, the
+  relayer); so it ran the private round trip on a running LEZ sequencer (`e2e/seqnet/`, EVIDENCE row 103), and does
+  not read through `eth_rpc_module` yet.
 - **`ferrata_attestor_module`:** attestations are published as files (`att-<tip>.json`, `latest.json`),
   not to a relay or a watcher feed, and the collector reads files; the loop asks its node for the whole
   final tier every round (from `slot_from`); the zone of the live run has one Logos Blockchain node that

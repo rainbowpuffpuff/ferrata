@@ -39,7 +39,9 @@ node-side crates and alloy, which the rest of the repository avoids. LEZ's walle
 `lez-wallet` (default): without it (`cargo build --lib --no-default-features`) the library keeps the Ethereum side,
 the zone's reads and calls over any `lez::Ledger` and the relayer daemon (`relayerd`) with the devnet's zone, which is
 how `ferrata_relayer_module` builds it; the `ferrata` binary needs the feature, `ferrata-relayer` then lacks
-`--sequencer`.
+`--sequencer`. The feature `seqnet` (with `lez-wallet`) adds the devnet tools of [`e2e/seqnet`](../e2e/seqnet/README.md):
+`seqnet-fund` (the gas drop's stand-in), `seqnet-txs` (the zone's transactions) and `seqnet-chain` (the mini-app's
+chain service).
 
 ## Files and settings
 

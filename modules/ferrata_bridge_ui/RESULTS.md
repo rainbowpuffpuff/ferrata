@@ -185,7 +185,9 @@ dev-dependency); the first build added it (12 lines).
 
 - Superseded on 12 November (above): "the harness proves private transactions only for its test keys" was
   a key-format mapping, not a missing feature: the wallet's keys are the harness's `TestPrivateKeys` fields.
-  The private round trip now settles on the devnet; on a LEZ sequencer it is not run (`README.md`).
+  The private round trip now settles on the devnet, and on a running LEZ sequencer through `ferrata_bridge_module`
+  in a headless Logos Core (13 November, [`e2e/seqnet/RESULTS.md`](../../e2e/seqnet/RESULTS.md) §2, EVIDENCE
+  row 103), the chains' I/O through a stand-in for Logos Core's own modules (`README.md`, "Not done").
 - What `README.md` lists under "Not done".
 
 ## Reproduce
