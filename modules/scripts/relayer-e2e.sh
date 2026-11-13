@@ -22,6 +22,8 @@
 #   CALL=logosctl LOGOSCTL=BIN LGX=DIR modules/scripts/relayer-e2e.sh OUT_DIR  the module from the package in DIR
 #       (*.lgx), in a Logos Core of its own: started without RISC0_DEV_MODE (the relayer wraps a real succinct
 #       receipt) and with FERRATA_WRAP_STUB_PROOF (the wrap stub the daemon runs reads it)
+#   CALL=logosctl LOGOSCTL=BIN SESSION=DIR PARTS=roots modules/scripts/relayer-e2e.sh OUT_DIR
+#       the module already loaded in that running Logos Core (catalog-install.sh's, installed from the catalog)
 # PARTS="fork roots" (default both). FERRATA_FORK_URL as relayer_fork.rs. BRIDGE_CALL: ferrata_bridge_module's call
 # example (default the one scripts/check.sh builds; skipped when absent). Needs cargo, Foundry (anvil, forge) and
 # vault/lib, r0vm (the wrap's identity_p254), curl, jq; the fork part reads public Sepolia state.
@@ -54,8 +56,17 @@ check() { # NAME CONDITION_COMMAND...
 
 # The relayer: the binary, or the module through relayer-module.sh in a Logos Core of its own.
 (cd "$repo/cli" && cargo build --bin ferrata-relayer --example miniapp_devnet 2>&1 | tail -n 2)
-if [ "$CALL" = logosctl ]; then
-  : "${LOGOSCTL:?}" "${LGX:?LGX: the directory holding the relayer module package}"
+if [ "$CALL" = logosctl ] && [ -z "${LGX:-}" ] && [ -n "${SESSION:-}" ]; then
+  : "${LOGOSCTL:?}"
+  export SESSION LOGOSCTL
+  "$LOGOSCTL" --config-dir "$SESSION" call ferrata_relayer_module version --json < /dev/null > "$out/version.raw" 2>&1
+  jq -c 'if (.result | type) == "string" then (.result | fromjson? // .result) else .result end' "$out/version.raw" > "$out/version.json"
+  check "the module loaded in the given Logos Core, version() $(jq -c '{module, version, lez_wallet}' "$out/version.json" 2>/dev/null)" \
+    jq -e '.module == "ferrata_relayer_module"' "$out/version.json"
+  R="$here/relayer-module.sh"
+elif [ "$CALL" = logosctl ]; then
+  : "${LOGOSCTL:?}" "${LGX:?LGX: the directory holding the relayer module package, or SESSION}"
+  own_core=1
   LOGOS_TMPDIR=${LOGOS_TMPDIR:-${TMPDIR:-/tmp}}
   if [ $(( ${#LOGOS_TMPDIR} + 45 )) -gt 107 ]; then echo "relayer-e2e.sh: LOGOS_TMPDIR too long for Logos Core's sockets" >&2; exit 2; fi
   export TMPDIR="$LOGOS_TMPDIR"
@@ -98,7 +109,7 @@ if case " $PARTS " in *" roots "*) true ;; *) false ;; esac; then
     curl -s -d '{"method":"shutdown","params":{}}' "http://127.0.0.1:$PORT/rpc" > /dev/null 2>&1 || true
     sleep 1
     kill "$devnet" 2>/dev/null || true
-    if [ "$CALL" = logosctl ]; then "$LOGOSCTL" --config-dir "$SESSION" daemon stop > /dev/null 2>&1 || true; fi
+    if [ -n "${own_core:-}" ]; then "$LOGOSCTL" --config-dir "$SESSION" daemon stop > /dev/null 2>&1 || true; fi
   }
   trap stop_all EXIT
   for _ in $(seq 1 480); do curl -sf "http://127.0.0.1:$PORT/" > /dev/null && break; sleep 0.5; done

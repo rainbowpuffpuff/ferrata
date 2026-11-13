@@ -12,12 +12,12 @@ set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 repo=$(cd "$here/../.." && pwd)
 MODULES=${MODULES:-"ferrata_attest_module ferrata_bridge_module ferrata_attestor_module ferrata_monitor_module"}
-ALL="ferrata_attest_module ferrata_bridge_module ferrata_attestor_module ferrata_monitor_module ferrata_updater_module"
+ALL="ferrata_attest_module ferrata_bridge_module ferrata_attestor_module ferrata_monitor_module ferrata_updater_module ferrata_relayer_module"
 "$here/stage.sh" $MODULES
 calls_crate() { case "$1" in ferrata_attest_module) echo ferrata-attest-calls ;; ferrata_bridge_module) echo ferrata-bridge-calls ;;
   ferrata_attestor_module) echo ferrata-attestor-calls ;; ferrata_monitor_module) echo ferrata-monitor-calls ;;
-  ferrata_updater_module) echo ferrata-updater-calls ;; esac; }
-cargo_for() { case "$1" in ferrata_updater_module) echo "cargo +1.98.1" ;; *) echo cargo ;; esac; }
+  ferrata_updater_module) echo ferrata-updater-calls ;; ferrata_relayer_module) echo ferrata-relayer-calls ;; esac; }
+cargo_for() { case "$1" in ferrata_updater_module|ferrata_relayer_module) echo "cargo +1.98.1" ;; *) echo cargo ;; esac; }
 for m in $MODULES; do
   d="$repo/modules/$m"
   if [ ! -e "$d/logos-rust-sdk-src" ]; then

@@ -9,6 +9,7 @@
 #   modules/scripts/catalog-install.sh RELEASE_DIR LOGOSCTL WORK_DIR    (logs also to modules/catalog/install-test/)
 # RELEASE_DIR: release-local.sh's OUT_DIR (its index.json names packages on 127.0.0.1:18546).
 # LOGOSCTL: a portable logosctl (check.sh's out/logos-portable/bin/logosctl): the packages are portable.
+# INSTALL_TEST_DIR names another directory than modules/catalog/install-test/ for the kept logs.
 set -uo pipefail
 # Logos Core keeps each module's socket in TMPDIR (logos_<module>_<id>). A Unix socket path holds at most
 # 107 bytes; with a longer one every module's host process dies at load (SIGSEGV after "failed to listen",
@@ -63,7 +64,7 @@ run catalog source http
 run catalog refresh
 run catalog ls
 run search ferrata
-for m in ${MODULES:-ferrata_attest_module ferrata_bridge_module ferrata_attestor_module ferrata_monitor_module ferrata_updater_module}; do
+for m in ${MODULES:-ferrata_attest_module ferrata_bridge_module ferrata_attestor_module ferrata_monitor_module ferrata_updater_module ferrata_relayer_module}; do
   run install "$m" -y
   run module load "$m"
   run call "$m" version --json
@@ -88,7 +89,7 @@ fi
 run daemon stop
 echo "failures: $fails" | tee -a "$out/log.txt"
 # The small logs into the repository, without machine paths.
-keep="$repo/modules/catalog/install-test"
+keep="${INSTALL_TEST_DIR:-$repo/modules/catalog/install-test}"
 rm -rf "$keep"
 mkdir -p "$keep"
 cp "$out/log.txt" "$out/http.log" "$keep/"

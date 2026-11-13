@@ -9,6 +9,7 @@
 # catalog's default, signing_mode: none).
 #
 #   modules/scripts/release-local.sh OUT_DIR      results also copied to modules/catalog/dry-run/
+# (DRY_RUN_DIR names another directory for them: a dry run of some of the modules beside the full one.)
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 repo=$(cd "$here/../.." && pwd)
@@ -16,7 +17,7 @@ LGX_PACKAGE=github:logos-co/logos-package/4bdd9041ebfbd06c2b22134afdcd27fce8a43f
 TOOL_REPO=https://github.com/logos-co/logos-modules-release-tool
 TOOL_REF=v1.3                                                                  # rebuild-index.yml's
 PORT=${PORT:-18546}
-MODULES=${MODULES:-"ferrata_attest_module ferrata_bridge_module ferrata_attestor_module ferrata_monitor_module ferrata_updater_module"}
+MODULES=${MODULES:-"ferrata_attest_module ferrata_bridge_module ferrata_attestor_module ferrata_monitor_module ferrata_updater_module ferrata_relayer_module"}
 if [ "$(ulimit -s)" = unlimited ]; then ulimit -s 1048576; fi
 mkdir -p "$1"
 out=$(cd "$1" && pwd)
@@ -85,7 +86,7 @@ python3 -I "$out/_tool/index.py" validate-repo "$repo/modules/catalog/logos-repo
 jq '{ schemaVersion, repositoryName, packageCount: (.packages | length) }' "$out/index.json" | tee "$out/log/index-summary.json"
 
 # The small results into the repository (no package binaries).
-dry="$repo/modules/catalog/dry-run"
+dry="${DRY_RUN_DIR:-$repo/modules/catalog/dry-run}"
 rm -rf "$dry"
 mkdir -p "$dry"
 cp "$out/index.json" "$out/urls.txt" "$dry/"
