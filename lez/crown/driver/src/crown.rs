@@ -978,7 +978,10 @@ pub async fn session_a(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
         .iter()
         .map(|k| hex_n::<32>(k.as_str().unwrap_or("")))
         .collect::<Result<Vec<_>>>()?;
-    ensure!(keys.len() == 1, "the channel holds {} keys, the run expects one", keys.len());
+    // One key on the crown run's one-sequencer devnet; a zone of several sequencers (checkpoint/attestor/zone-bridge.sh)
+    // accredits each sequencer's key, and the vault's genesis state is over all of them (nothing here depends on n).
+    ensure!(!keys.is_empty(), "the channel accredits no key");
+    println!("[crown-a] the channel accredits {} key(s)", keys.len());
     let identity = Identity {
         label: if chain.stand_in { "STAND-IN rehearsal (beacon committee held by the driver; not Sepolia)".into() } else { "crown".into() },
         chain: if chain.stand_in { "stand-in".into() } else { "sepolia".into() },

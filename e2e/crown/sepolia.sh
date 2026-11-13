@@ -6,7 +6,8 @@
 # deploy   vault/script/deploy.sh with FERRATA_MODE=B and FERRATA_GAS_RULE=eip8037: the stop, the library, the vault,
 #          the test token, ETH and the token registered with fees, the stop's owner renounced (one transaction per
 #          forge run, each limit the node's estimate x margin), the Groth16 verifier reused (<run>/identity.json
-#          .groth16Verifier); then the deployed vault is checked against <run>/identity.json.
+#          .groth16Verifier; without one, DeployVault deploys it first); then the deployed vault is checked against
+#          <run>/identity.json.
 # deposit, submit, finalize, release: vault/script/Crown.s.sol, one transaction each; forge asks the node for
 #          eth_estimateGas right before it signs (--skip-simulation: Foundry's EVM does not price Sepolia's state gas)
 #          and the limit is that estimate x FERRATA_GAS_MARGIN_PCT / 100; a stage the node cannot price sends nothing.
@@ -113,9 +114,11 @@ case "$step" in
     ;;
   deploy)
     nonces_agree || die "the deployer has pending transactions"
-    ( cd "$here/vault" && FERRATA_MODE=B FERRATA_GAS_RULE=eip8037 FERRATA_GAS_MARGIN_PCT="$margin" \
+    # identity.json without .groth16Verifier (a fresh local chain: checkpoint/attestor/zone-bridge.sh): DeployVault deploys one.
+    gv="$(jq -r '.groth16Verifier // empty' "$id")"
+    ( cd "$here/vault" && if [ -n "$gv" ]; then export FERRATA_GROTH16_VERIFIER="$gv"; fi && FERRATA_MODE=B FERRATA_GAS_RULE=eip8037 FERRATA_GAS_MARGIN_PCT="$margin" \
         FERRATA_RPC_URL="$SEPOLIA_RPC_URL" FERRATA_PARAMS="$run/params.json" FERRATA_OUT="deployments/crown-$(basename "$run").json" \
-        FERRATA_GROTH16_VERIFIER="$(jq -r .groth16Verifier "$id")" FERRATA_DELTA="$(jq -r .delta "$id")" \
+        FERRATA_DELTA="$(jq -r .delta "$id")" \
         FERRATA_LOG_DIR="$run/logs/deploy" script/deploy.sh ) > "$run/logs/deploy.log" 2>&1 ||
       { tail -n 30 "$run/logs/deploy.log" | sed "s,$SEPOLIA_RPC_URL,<endpoint>,g"; die deploy; }
     cp "$here/vault/deployments/crown-$(basename "$run").json" "$run/deploy.json"

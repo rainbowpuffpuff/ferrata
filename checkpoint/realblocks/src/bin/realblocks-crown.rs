@@ -24,6 +24,11 @@
 //!   attested tip; the input holds blocks `T0+1..=T1` as inscribed;
 //! - `--record DIR`: optional `blocks.borsh` of the blocks as the sequencer served them (u32 count, then
 //!   the blocks back to back, `lez/lab` and live-driver export format); compared, not used.
+//! - A zone of several sequencers (`checkpoint/attestor/zone-bridge.sh`): `--att A.json,B.json,...` (records of
+//!   `ferrata_attestor attest`, one per sequencer's attestor) instead of `--channel-key`, with `--n-min N --t-min T`
+//!   (the vault's floors; default 1 and 1): the key set is every key the channel accredits, each inscription must be
+//!   signed by one of them, and the input carries the given attestations (each checked for this deployment, key set
+//!   and tip before the rule runs); the rule needs t(n) of them.
 //!
 //! Every inscription the node holds for the channel is parsed strictly and re-hashed by
 //! `checkpoint-core` exactly as the guest does, framed, BLAKE2b-hashed and signature-checked, and the
@@ -224,7 +229,9 @@ fn identity(a: &BTreeMap<String, String>) -> Result<Identity> {
         "label": sa.get("label"), "bedrockGenesisId": sa["bedrockGenesisId"], "channelId": sa["channel"]["id"],
         "bridgeHeader": sa["bridge"]["header"], "bridgeImageId": sa["bridge"]["imageId"], "chainId": sa["evmChainId"],
         "vault": pick("vault", "vault"), "attestationRootId": sa["attestationRootId"], "salt": sa["salt"],
-        "nMin": 1, "tMin": 1, "configId": pick("config-id", "configId"),
+        "nMin": a.get("n-min").map_or(Ok(1), |v| v.parse::<u64>())?,
+        "tMin": a.get("t-min").map_or(Ok(1), |v| v.parse::<u64>())?,
+        "configId": pick("config-id", "configId"),
         "genesisState": a.get("genesis-state").map(|v| json!(v)).unwrap_or(Value::Null),
     });
     ensure!(!id["configId"].is_null(), "--config-id (or session-a.json configId) is required with --session-a");
@@ -305,8 +312,18 @@ fn main() -> Result<()> {
         "the node's final inscriptions are not contiguous in {first}..={last}"
     );
     ensure!(first <= t0 && t1 <= last, "the node holds final inscriptions of blocks {first}..={last}, not {t0}..={t1}");
-    let channel_key = hexa::<32>(&channel_json["accredited_keys"][0], "accredited key")?;
-    ensure!(channel_json["accredited_keys"].as_array().map(Vec::len) == Some(1), "the channel holds more than one key");
+    // The key set: the channel's one key (the crown run), or every key the channel accredits (a zone, --att).
+    let zone = a.get("att").is_some();
+    let channel_keys: Vec<Hash> = channel_json["accredited_keys"]
+        .as_array()
+        .context("channel.json: accredited_keys")?
+        .iter()
+        .map(|k| hexa::<32>(k, "accredited key"))
+        .collect::<Result<_>>()?;
+    ensure!(!channel_keys.is_empty(), "the channel accredits no key");
+    ensure!(zone || channel_keys.len() == 1, "the channel holds more than one key (a zone: give --att)");
+    let channel_key = channel_keys[0];
+    let mut signed_by: BTreeMap<Hash, u32> = BTreeMap::new();
     let mut record: Option<(Vec<u8>, usize)> = match a.get("record") {
         Some(d) => {
             let rec = fs::read(Path::new(d).join("blocks.borsh"))?;
@@ -331,7 +348,8 @@ fn main() -> Result<()> {
         let c = e.check(payload, &CHANNEL_ID).map_err(|e| anyhow!("block {k}: inscription refused: {e:?}"))?;
         ensure!(c.tx_hash == i.tx_hash, "block {k}: transaction hash");
         ensure!(k == first || c.parent == prev_msg, "block {k}: inscription parent is not block {}'s message", k - 1);
-        ensure!(c.signer == channel_key, "block {k}: signer is not the channel's key");
+        ensure!(channel_keys.contains(&c.signer), "block {k}: signer is not one of the channel's keys");
+        *signed_by.entry(c.signer).or_default() += 1;
         let msg = inscription_msg_id(&CHANNEL_ID, payload, &c.parent, &c.signer);
         // Optional: the same block as the sequencer served it (equal but the status byte).
         let mut rec_note = "-";
@@ -371,9 +389,11 @@ fn main() -> Result<()> {
     fs::write(out_dir.join("blocks.tsv"), rows.join("\n") + "\n")?;
     fs::write(out_dir.join("inscriptions.jsonl"), lines.join("\n") + "\n")?;
     let channel_tip: Hash = hexa(&channel_json["tip_message"], "tip_message")?;
+    let by: Vec<String> = signed_by.iter().map(|(k, n)| format!("{}… {n}", &hex::encode(k)[..8])).collect();
     println!("node: {node_blocks} immutable blocks ({other_txs} other transactions), final inscriptions of LEZ blocks {first}..={last}: \
-              parse + re-hash + link + framing + BLAKE2b + verify_strict by {}…: all {} accepted; channel tip message = block {last}'s: {}",
-        &hex::encode(channel_key)[..8], last - first + 1, channel_tip == prev_msg);
+              parse + re-hash + link + framing + BLAKE2b + verify_strict by the channel's {} key(s) ({}): all {} accepted; \
+              channel tip message = block {last}'s: {}",
+        channel_keys.len(), by.join(", "), last - first + 1, channel_tip == prev_msg);
     if record.is_some() {
         println!("record: {record_equal} blocks equal to the inscribed ones but the status byte");
     }
@@ -386,18 +406,13 @@ fn main() -> Result<()> {
     let tip_ins = &ins[&t1];
     ensure!(tip_ins.slot <= lib_slot, "T1's inscription is in node block slot {} > LIB {lib_slot}", tip_ins.slot);
 
-    // ---- the parent state at T0 and the attestor ------------------------------------------------------
-    let channel_sk_bytes: [u8; 32] =
-        fs::read(get("channel-key")?)?.try_into().map_err(|_| anyhow!("channel key: not 32 bytes"))?;
-    let channel_sk = SigningKey::from_bytes(&channel_sk_bytes);
-    let channel_pk = channel_sk.verifying_key().to_bytes();
-    ensure!(channel_pk == channel_key, "the channel key file is not the channel's accredited key");
+    // ---- the parent state at T0 and the attestor(s) ---------------------------------------------------
     let posting_timeframe = u32::try_from(channel_json["posting_timeframe"].as_u64().context("posting_timeframe")?)?;
     let config_tip_hash: Hash = hexa(&channel_json["config_tip_hash"], "config_tip_hash")?;
     let parent = State {
         tip_id: t0,
         tip_hash: ins[&t0].payload()?[40..72].try_into()?,
-        keys: vec![channel_pk],
+        keys: channel_keys.clone(),
         posting_timeframe,
         config_tip_hash,
         burns: Default::default(),
@@ -411,15 +426,66 @@ fn main() -> Result<()> {
             hx(&parent.digest())
         );
     }
-    let att_sk = SigningKey::from_bytes(&sha256_parts(&[b"ferrata/crown/attestation-key/v1", &channel_sk_bytes]));
-    let att_pk = att_sk.verifying_key().to_bytes();
     let d = Deployment { evm_chain_id, vault, lez_config_id: config_id, channel_id: CHANNEL_ID };
-    let certificate = sign_certificate(&channel_sk, &d, &att_pk);
     let ksh = key_set_hash(&parent.keys, parent.posting_timeframe);
     let t_payload = tip_ins.payload()?;
     let tip = FinalTip { tip_id: t1, tip_hash: t_payload[40..72].try_into()?, final_msg_id: msg_ids[&t1] };
-    let attestation = SignedAttestation::new(&att_sk, channel_pk, certificate, &d, &ksh, tip);
-    attestation.verify(&d, &ksh).map_err(|e| anyhow!("the attestation does not verify: {e:?}"))?;
+    let (attestations, att_record) = if let Some(files) = a.get("att") {
+        // A zone: the attestors' own records; each must verify for this deployment, key set and tip.
+        let mut atts = Vec::new();
+        let mut records = Vec::new();
+        for f in files.split(',') {
+            let v: Value = serde_json::from_slice(&fs::read(f).with_context(|| f.to_string())?).with_context(|| f.to_string())?;
+            ensure!(v["version"].as_str() == Some("ferrata-attestation/v1"), "{f}: not a ferrata-attestation/v1 record");
+            let bytes: [u8; attestor_core::SIGNED_ATTESTATION_LEN] = hex::decode(v["encoded"].as_str().context("encoded")?)?
+                .try_into()
+                .map_err(|_| anyhow!("{f}: encoded: wrong length"))?;
+            let att = SignedAttestation::decode(&bytes);
+            ensure!(channel_keys.contains(&att.channel_key), "{f}: channel key {} is not in the key set", hx(&att.channel_key));
+            ensure!(att.tip == tip, "{f}: attests tip {} {}, not T1 = {t1} {}", att.tip.tip_id, hx(&att.tip.tip_hash), hx(&tip.tip_hash));
+            att.verify(&d, &ksh).map_err(|e| anyhow!("{f}: the attestation does not verify: {e:?}"))?;
+            records.push(json!({"file": Path::new(f).file_name().map(|n| n.to_string_lossy().to_string()),
+                "channel_key": hx(&att.channel_key), "attestation_key": hx(&att.att_key), "certificate": hx(&att.certificate),
+                "signature": hx(&att.signature), "tip_id": att.tip.tip_id}));
+            atts.push(att);
+        }
+        let rec = json!({
+            "what": "zone attestors: each sequencer's channel key certified one attestation key (ferrata_attestor certify); each attestor read the node's final tier and signed the final-tier message v2 for T1 (ferrata_attestor attest); the records were checked here for this deployment, key set and tip",
+            "key_set": channel_keys.iter().map(|k| hx(k)).collect::<Vec<_>>(), "n": channel_keys.len(),
+            "t": threshold(u32::try_from(channel_keys.len())?), "attestations": records,
+            "key_set_hash": hx(&ksh), "posting_timeframe": posting_timeframe, "config_tip_hash": hx(&config_tip_hash),
+            "tip_id": t1, "tip_hash": hx(&tip.tip_hash), "final_msg_id": hx(&tip.final_msg_id),
+            "tip_node_block": tip_ins.node_block, "tip_node_slot": tip_ins.slot, "lib_slot": lib_slot,
+            "channel_tip_is_last_final_block": channel_tip == prev_msg, "last_final_block": last,
+            "deployment": {"evm_chain_id": chain_id, "vault": hx(&vault), "lez_config_id": hx(&config_id), "channel_id": hx(&CHANNEL_ID)},
+        });
+        (atts, rec)
+    } else {
+        let channel_sk_bytes: [u8; 32] =
+            fs::read(get("channel-key")?)?.try_into().map_err(|_| anyhow!("channel key: not 32 bytes"))?;
+        let channel_sk = SigningKey::from_bytes(&channel_sk_bytes);
+        let channel_pk = channel_sk.verifying_key().to_bytes();
+        ensure!(channel_pk == channel_key, "the channel key file is not the channel's accredited key");
+        let att_sk = SigningKey::from_bytes(&sha256_parts(&[b"ferrata/crown/attestation-key/v1", &channel_sk_bytes]));
+        let att_pk = att_sk.verifying_key().to_bytes();
+        let certificate = sign_certificate(&channel_sk, &d, &att_pk);
+        let attestation = SignedAttestation::new(&att_sk, channel_pk, certificate, &d, &ksh, tip);
+        attestation.verify(&d, &ksh).map_err(|e| anyhow!("the attestation does not verify: {e:?}"))?;
+        let rec = json!({
+            "what": "crown attestor: the devnet sequencer's channel key certifies an attestation key (secret = sha256(\"ferrata/crown/attestation-key/v1\" || channel secret), not written); the attestation key signs the final-tier message v2 for T1, final by the node's rule (inscription in an immutable node block, slot <= LIB)",
+            "channel_key": hx(&channel_pk), "attestation_key": hx(&att_pk),
+            "certificate_message": hx(&d.certificate_message(&att_pk)), "certificate": hx(&certificate),
+            "key_set_hash": hx(&ksh), "posting_timeframe": posting_timeframe, "config_tip_hash": hx(&config_tip_hash),
+            "tip_id": t1, "tip_hash": hx(&tip.tip_hash), "final_msg_id": hx(&tip.final_msg_id),
+            "tip_node_block": tip_ins.node_block, "tip_node_slot": tip_ins.slot, "lib_slot": lib_slot,
+            "tip_status_inscribed": STATUS.get(parse_block(t_payload, &mut NoVisitor).map_err(|e| anyhow!("{e:?}"))?.status as usize),
+            "channel_tip_is_last_final_block": channel_tip == prev_msg, "last_final_block": last,
+            "signature": hx(&attestation.signature),
+            "deployment": {"evm_chain_id": chain_id, "vault": hx(&vault), "lez_config_id": hx(&config_id), "channel_id": hx(&CHANNEL_ID)},
+        });
+        (vec![attestation], rec)
+    };
+    let n_keys = u32::try_from(channel_keys.len())?;
 
     // ---- the input, the guest's rule run natively, and the burns it counts -----------------------------
     let blocks: Vec<&[u8]> = ((t0 + 1)..=t1).map(|k| ins[&k].payload()).collect::<Result<_>>()?;
@@ -430,7 +496,7 @@ fn main() -> Result<()> {
         blocks: blocks.clone(),
         t_index: u32::try_from(t1 - t0 - 1)?,
         producer: tip_ins.elided()?,
-        attestations: vec![attestation],
+        attestations: attestations.clone(),
         segments: Vec::new(),
     };
     let outcome = run_checkpoint_b(&input).map_err(|e| anyhow!("run_checkpoint_b refused the span: {e:?}"))?;
@@ -475,31 +541,25 @@ fn main() -> Result<()> {
     fs::write(out_dir.join(format!("{name}.input")), &encoded)?;
     let meta = json!({
         "kind": "checkpoint-b",
-        "description": format!("crown run: rule (B) over the devnet's blocks {}..={t1} (parent tip {t0}), T = {t1}, one certified attestation (n = 1, t = 1)", t0 + 1),
+        "description": if zone {
+            format!("zone: rule (B) over the zone's blocks {}..={t1} (parent tip {t0}), T = {t1}, {} certified attestations of n = {n_keys} (t = {})",
+                t0 + 1, attestations.len(), threshold(n_keys))
+        } else {
+            format!("crown run: rule (B) over the devnet's blocks {}..={t1} (parent tip {t0}), T = {t1}, one certified attestation (n = 1, t = 1)", t0 + 1)
+        },
         "journal": hex::encode(journal),
         "journal_sha256": hex::encode(sha256_parts(&[journal.as_slice()])),
         "blocks": blocks.len(), "transactions": txs, "block_bytes": bytes, "input_bytes": encoded.len(),
         "first_block": t0 + 1, "tip": t1, "tip_hash": hx(&tip.tip_hash), "final_msg_id": hx(&tip.final_msg_id),
-        "parent_state": hx(&parent.digest()), "new_state": hx(&outcome.journal.new_state), "n": 1, "t": threshold(1),
+        "parent_state": hx(&parent.digest()), "new_state": hx(&outcome.journal.new_state), "n": n_keys, "t": threshold(n_keys),
+        "attestations": attestations.len(), "n_min": config.n_min, "t_min": config.t_min,
         "burn_root": hx(&outcome.journal.burn_root), "burn_count": outcome.journal.burn_count,
         "imported_leaf_count": outcome.journal.imported_leaf_count, "sunset": outcome.journal.sunset,
         "lez_config_id": hx(&config_id), "config_id_checked_against_identity": config_id_checked,
         "identity_label": id.get("label"), "evm_chain_id": chain_id, "vault": hx(&vault),
     });
     fs::write(out_dir.join(format!("{name}.json")), serde_json::to_string_pretty(&meta)? + "\n")?;
-    let att = json!({
-        "what": "crown attestor: the devnet sequencer's channel key certifies an attestation key (secret = sha256(\"ferrata/crown/attestation-key/v1\" || channel secret), not written); the attestation key signs the final-tier message v2 for T1, final by the node's rule (inscription in an immutable node block, slot <= LIB)",
-        "channel_key": hx(&channel_pk), "attestation_key": hx(&att_pk),
-        "certificate_message": hx(&d.certificate_message(&att_pk)), "certificate": hx(&certificate),
-        "key_set_hash": hx(&ksh), "posting_timeframe": posting_timeframe, "config_tip_hash": hx(&config_tip_hash),
-        "tip_id": t1, "tip_hash": hx(&tip.tip_hash), "final_msg_id": hx(&tip.final_msg_id),
-        "tip_node_block": tip_ins.node_block, "tip_node_slot": tip_ins.slot, "lib_slot": lib_slot,
-        "tip_status_inscribed": STATUS.get(parse_block(t_payload, &mut NoVisitor).map_err(|e| anyhow!("{e:?}"))?.status as usize),
-        "channel_tip_is_last_final_block": channel_tip == prev_msg, "last_final_block": last,
-        "signature": hx(&attestation.signature),
-        "deployment": {"evm_chain_id": chain_id, "vault": hx(&vault), "lez_config_id": hx(&config_id), "channel_id": hx(&CHANNEL_ID)},
-    });
-    fs::write(out_dir.join("attestor.json"), serde_json::to_string_pretty(&att)? + "\n")?;
+    fs::write(out_dir.join("attestor.json"), serde_json::to_string_pretty(&att_record)? + "\n")?;
     let burns_json = json!({"config_id": hx(&config_id), "parent_tip": t0, "tip": t1, "burn_count": frontier.count,
         "burn_root": hx(&frontier.root(&zeros)), "burns": burns, "imports": imports, "sunset": sunset});
     fs::write(out_dir.join("burns.json"), serde_json::to_string_pretty(&burns_json)? + "\n")?;

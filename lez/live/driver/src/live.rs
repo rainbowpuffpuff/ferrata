@@ -24,6 +24,12 @@ use crate::{
 /// recorded as dropped by the sequencer.
 pub const DROP_AFTER_BLOCKS: u64 = 4;
 
+/// `DROP_AFTER_BLOCKS`, or `FERRATA_DROP_AFTER_BLOCKS` from the environment: on a zone of several sequencers a
+/// transaction waits for the turn of a sequencer that holds it (checkpoint/attestor/zone-bridge.sh sets 40).
+pub fn drop_after_blocks() -> u64 {
+    std::env::var("FERRATA_DROP_AFTER_BLOCKS").ok().and_then(|v| v.parse().ok()).unwrap_or(DROP_AFTER_BLOCKS)
+}
+
 /// How long a transaction that was seen in a block may take to be final on Bedrock. The
 /// sequencer gives up on an inscription Bedrock does not mine after 300 slots (its
 /// `stale_refund_slots`), rewinds its head and includes the transactions again.
@@ -188,7 +194,7 @@ impl Live {
     }
 
     /// Wait until `hash` is settled: in a block the follower has applied (a block final on
-    /// Bedrock, if there is one). `None` if the sequencer produced `DROP_AFTER_BLOCKS` blocks
+    /// Bedrock, if there is one). `None` if the sequencer produced `drop_after_blocks()` blocks
     /// without ever including it. Also returns the head blocks it was seen in on the way: more
     /// than one means the sequencer rewound its head and included it again.
     pub async fn wait_settled(&mut self, hash: HashType, since_head: u64) -> Result<(Option<u64>, Vec<u64>)> {
@@ -207,7 +213,7 @@ impl Live {
                 if self.follower.receipt(&hash).is_some() {
                     return Ok((Some(block_id), seen));
                 }
-            } else if seen.is_empty() && self.head().await? >= since_head + DROP_AFTER_BLOCKS {
+            } else if seen.is_empty() && self.head().await? >= since_head + drop_after_blocks() {
                 if self.wallet.get_transaction(hash).await?.is_none() {
                     return Ok((None, seen));
                 }
@@ -259,7 +265,7 @@ impl Live {
                 let lines = self.sequencer_lines(&hash.to_string());
                 let reason = lines.iter().map(|l| log_message(l)).collect::<Vec<_>>().join(" | ");
                 row.note = if reason.is_empty() {
-                    format!("not included within {DROP_AFTER_BLOCKS} blocks; {}", row.note)
+                    format!("not included within {} blocks; {}", drop_after_blocks(), row.note)
                 } else {
                     format!("sequencer: {reason}; {}", row.note)
                 };
