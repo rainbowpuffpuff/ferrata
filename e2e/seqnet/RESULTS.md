@@ -37,3 +37,34 @@ relayer's `submitCandidate`, `finalizeAttested`, `release` and `claimOwed`).
 
 Dev mode (`SEQNET_PROOFS=dev`): the sequencer was started with `RISC0_DEV_MODE=1` and LEZ's wallet made fake receipts
 for the three private transactions (the shield, the claim, the burn).
+
+## 2. Through the mini-app driving `ferrata_bridge_module` inside a headless Logos Core
+
+The view (`modules/ferrata_bridge_ui/qml/Main.qml`, its module transport: every call is the module's `wallet` method)
+driven by Qt Quick Test (`modules/ferrata_bridge_ui/qmltest-logos/`), offscreen; its `logos` object is the runner's,
+whose `callModule` is `logosctl call ferrata_bridge_module wallet @request` against a headless Logos Core daemon
+(logosctl `pre-release-66d098d`, built from logos-logoscore-cli at its pin) into which the module was installed from its
+dev `.lgx` (logos-module-builder `5f74cdb`; `modules/scripts/check.sh` first: the module's native tests and calls, the
+package built, loaded and called in Logos Core, 0 step and 0 check failures). The module runs each of the view's calls
+with its own methods; `seqnet-chain` reads the chains and signs and sends (the stand-in for Logos Core's own modules).
+The operator's import, the gas drop's stand-in, the checkpoint and the clocks are `ops.sh`, which the test runs between
+the user's actions (the view shows no button for them inside Logos).
+
+### `seqnet-miniapp-1` (13 Nov 09:52–10:05 UTC): the private claim and burn proven for real; the release not reached
+
+[`e2e/runs/seqnet-miniapp-1/`](../runs/seqnet-miniapp-1/SUMMARY.md): 8 of 9 test functions passed (720 s), 17 calls of
+the view to the module, 15 screenshots.
+
+| Step | Through the view and the module | Result |
+|---|---|---|
+| connect, registry | `open` (the host's), `info`, `registry` | the vault's registry before the bridge's first import on LEZ (no LEZ side yet), the LEZ side after it (`token(cid, ETH)` decoded by the module) |
+| deposit | Deposit screen on the defaults (private `/0`, 0.001 ETH), the wallet's approval | the module's commitment and `depositETH` call, signed with the user's keystore by `seqnet-chain`: anvil block 9, leaf 0 |
+| positions | Positions, recover | `waiting for the root import`, then (after the operator's import) `claimable` |
+| private claim | Claim: held by the view's random delay (59 min, waited out on the view's clock), then the private claim on the defaults | `ClaimPrivately` built by the module (the tool's claim with LEZ state), executed and **proven for real** by LEZ's wallet in `seqnet-chain` (316.6 s, receipt 239,532 B, transaction 256,068 B), applied in LEZ block 59; the deposit then `claimed`, private `/0` holding 0.001 ETH |
+| private burn | Burn and release: private holder, a fresh recipient, the release delay on (defaults) | the module's note and `Burn` with its four accounts, **proven for real** (289.1 s, receipt 239,046 B), applied in LEZ block 89; holding 0 |
+| checkpoint | `ops.sh checkpoint` | `realblocks-crown` over the zone's final blocks (all 90 LEZ blocks' inscriptions accepted; the input over blocks 20..=89: 70 blocks, 150 transactions, 615,855 B), `checkpoint_b` executed (journal equal to the native one, 20,447,232 padded cycles), the stand-in prover's `accept`, the relayer's `submitCandidate` and, Δ later, `finalizeAttested` |
+| release | Redeem, refresh | **failed**: the module's `recover` read each published burn's note fields flat and the chain service nests them under `note` (`burns[0].r: missing`), so the view could not list the burn; fixed in the module (24e1f9e) |
+
+`seqnet-chain` had been started without `RISC0_DEV_MODE`, so LEZ's wallet proved both private transactions for real while
+the replies still named them `dev` (the label came from the run's setting; it now comes from the process's environment).
+The sequencer ran in dev mode, which still verifies a real receipt as one. 217 transactions in LEZ blocks 1..=91.
