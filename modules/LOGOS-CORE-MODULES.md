@@ -42,15 +42,23 @@ Built into `logosctl` (logos-logoscore-cli `66d098d`) and listed by `module load
   another contract than the provider's is refused at run time (`docs/configuration.md` 827–829). Every
   module in our Logos Core is therefore built with one builder (our pin, `5f74cdb`, by
   `--override-input logos-module-builder`), and the send stack at the revisions `tx_sender_module`'s lock
-  pins.
+  pins. (A call by name skips the generated client and its contract check: the caller and the provider
+  agree on the method's name and argument order only.)
 
-**What Ferrata's modules do.** `ferrata_attest_module` and `ferrata_bridge_module` declare
-`eth_rpc_module` an optional dependency; its contract is committed as `deps/eth_rpc_module.lidl` (the
-file `eth_rpc_module` `6965f32` publishes when built with our builder; `scripts/logos-io.sh` checks the
-two are equal) and named by `dependency_overrides`, so the modules' `flake.lock` does not change. Each
-module crate installs a function calling `eth_rpc_module::EthRpcModuleClient::raw_rpc_with_timeout` into
-its calls crate (`rpc.rs`, the same file in both); a request then chooses the path:
-`"eth": {"via": "eth_rpc_module", "chain_id": N}` (Logos Core) or `"rpc_url": "http://…"` (the plain
+**What Ferrata's modules do.** `ferrata_attest_module` and `ferrata_bridge_module` call `eth_rpc_module`
+**by name**, through the SDK (`LogosModuleSDK::new().plugin("eth_rpc_module").call_json_with_timeout("raw_rpc",
+[chain_id, method, params_json], timeout)`: what a generated client does inside), without declaring it a
+dependency. Declaring it (optional, its contract in a committed `.lidl` named by `dependency_overrides`)
+was the first design; it was dropped because **with our builder pin (`5f74cdb`) a module with optional
+dependencies fails to install**: `eth_rpc_module` itself, built with that builder, compiles and links, then
+stops in its install phase at `logos-cpp-generator --normalize-lidl` on its optional dependencies'
+contracts ("Plugin file does not exist: --normalize-lidl", `lib/common.nix` 255–275; runs 1 and 2a of
+[`results/logos-core-io-2026-11-13/`](results/logos-core-io-2026-11-13/)); modules with required dependencies
+(`tx_sender_module`, `fee_module`) install. So `eth_rpc_module` is built here from its source with its two
+optional dependencies called by name in the same way (`scripts/eth_rpc_by_name.py`: four call sites, its
+verified-proxy gate and routing unchanged), and our modules keep loading without it. Each module crate
+installs that call into its calls crate (`rpc.rs`, the same file in both); a request then chooses the
+path: `"eth": {"via": "eth_rpc_module", "chain_id": N}` (Logos Core) or `"rpc_url": "http://…"` (the plain
 path, kept as the fallback and for native runs). Every reply that read Ethereum carries
 `eth: {via, chain_id | rpc_url, calls, routes}`, `routes` being `eth_rpc_module`'s own label per call
 (`direct`, `verified`, `proxied`).
