@@ -80,3 +80,20 @@ inscriptions accepted; input 865,844 B; `finalizeAttested`), the view's refresh 
 release held by its random delay. 8 of 9 test functions passed (1,045 s): the last stopped at `ops("pass-time …")`,
 whose argument held a quote that broke the `bash -c` line, so the release was not sent. 281 transactions in LEZ blocks
 1..=123.
+
+### `seqnet-miniapp-3` (13 Nov 11:16–11:39 UTC, `SEQNET_PROOFS=real`): the whole round trip, 9 of 9
+
+[`e2e/runs/seqnet-miniapp-3/`](../runs/seqnet-miniapp-3/SUMMARY.md): **all 9 test functions passed** (1,103 s), 20 calls
+of the view to the module through Logos Core, 19 screenshots. The sequencer verified every private transaction's
+receipt (no dev mode on LEZ), and LEZ's wallet proved each for real on the box's CPU:
+
+| Step | Through the view and the module | Result |
+|---|---|---|
+| deposit | Deposit on the defaults, approved in the wallet prompt | the module's commitment and `depositETH`, anvil block 9, leaf 0 |
+| import, fees | `ops.sh import`, `ops.sh fund` | `Init`, `Register` ETH, `ImportRoot` n=1; the gas drop's shield proven for real (248.4 s) |
+| private claim | Claim: held by the view's random delay, waited out, then the private claim on the defaults | `ClaimPrivately` from the module, proven by LEZ's wallet (388.1 s; receipt 239,532 B; transaction 256,068 B), verified and applied by the sequencer in LEZ block 93; the deposit `claimed`, private `/0` holding 0.001 ETH |
+| private burn | Burn and release on the defaults (private holder, a fresh recipient, the release delay on) | the module's `Burn`, proven (333.9 s; receipt 239,046 B; transaction 255,031 B), LEZ block 127; holding 0 |
+| checkpoint | `ops.sh checkpoint` | over LEZ blocks 20..=127 (108 blocks, 226 transactions; every block's final inscription accepted); `checkpoint_b` executed (22,544,384 padded cycles, journal equal to the native one); mock `accept`; `submitCandidate`, Δ, `finalizeAttested` |
+| release | Redeem: the burn found from the seed, held by its random delay (waited out on the view's clock) and the vault's 120 s (anvil's), then the release on the defaults | the module's release by the wallet's rule (checkpoint 0, the registered relay fee, any relayer); `seqnet-chain` hands it to `ferrata-relayer`: **0.000997 ETH paid to the fresh address** (anvil block 16); Positions: `0 not claimed`, `0 not released` |
+
+293 transactions in LEZ blocks 1..=129 and 15 on anvil, none reverted (`SUMMARY.md` lists each with its sender).
