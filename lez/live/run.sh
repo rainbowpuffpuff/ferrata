@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Ferrata on a running LEZ sequencer (v0.4.0-rc1; LEZ_TAG=v0.4.0-rc2 for rc2): build, run, record.
+# Ferrata on a running LEZ sequencer (v0.4.0-rc1; LEZ_TAG=v0.4.0-rc2 or v0.4.0-rc3 for those): build, run, record.
 #
 #   run.sh build            LEZ's sequencer_service (as `just run-sequencer` builds it) and the driver
 #   run.sh build-standalone LEZ's sequencer_service with the `standalone` feature (mock Bedrock)

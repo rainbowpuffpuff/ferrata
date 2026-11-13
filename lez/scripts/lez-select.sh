@@ -2,7 +2,7 @@
 # Point Ferrata's LEZ crates at one LEZ tag.
 #
 #   lez/scripts/lez-select.sh TAG     # TAG: v0.4.0-rc1 (the default; what the repository commits)
-#                                     #      or v0.4.0-rc2
+#                                     #      or v0.4.0-rc2, v0.4.0-rc3
 #   LEZ_TAG=TAG lez/scripts/lez-select.sh
 #   lez/scripts/lez-select.sh --show  # print the tag the manifests point at
 #
@@ -11,7 +11,8 @@
 #   the manifests of wire/, bridge-wire/, harness/, updater/, guests/*/, live/driver/ and the frozen copy
 #   live/frozen/bridge-wire/ that live/driver/ builds against: one tag in the driver's graph);
 # - the default feature of harness/ and live/driver/ (the line marked `# lez-select`): `lez-rc2`
-#   on v0.4.0-rc2, none on v0.4.0-rc1 (the few calls whose LEZ API differs between the tags);
+#   on v0.4.0-rc2, `lez-rc3` (which implies `lez-rc2`) on v0.4.0-rc3, none on v0.4.0-rc1 (the few
+#   calls whose LEZ API differs between the tags);
 # - the lockfiles: lockfiles/<tag>.patch holds what the tag changes in the v0.4.0-rc1 lockfiles
 #   (dependency edges of LEZ's own crates); it is applied, or reverted for v0.4.0-rc1.
 # Selecting the tag already selected changes nothing. The LEZ checkout must be at the tag's commit
@@ -30,10 +31,11 @@ commit_of() {
   case "$1" in
     v0.4.0-rc1) echo 1806e873ea2ac0e1b608aa7cf2f9b6e1fb12db21 ;;
     v0.4.0-rc2) echo e3edf47402a82557103ca719b30d0bd2684338d1 ;;
+    v0.4.0-rc3) echo bafd07be0701398f9bc435f73ab05e9a7936c301 ;;
     *) return 1 ;;
   esac
 }
-features_of() { case "$1" in v0.4.0-rc1) echo "" ;; *) echo '"lez-rc2"' ;; esac; }
+features_of() { case "$1" in v0.4.0-rc1) echo "" ;; v0.4.0-rc2) echo '"lez-rc2"' ;; *) echo '"lez-rc3"' ;; esac; }
 selected() {
   local tags
   tags="$(sed -n 's#.*upstream/lez-\([A-Za-z0-9.+-]*\)/.*#\1#p' "${manifests[@]/%//Cargo.toml}" | sort -u)"
@@ -44,7 +46,7 @@ selected() {
 cd "$lez"
 if [ "${1:-}" = --show ]; then selected; exit 0; fi
 tag="${1:-${LEZ_TAG:-v0.4.0-rc1}}"
-commit="$(commit_of "$tag")" || die "unknown LEZ tag $tag (known: v0.4.0-rc1, v0.4.0-rc2)"
+commit="$(commit_of "$tag")" || die "unknown LEZ tag $tag (known: v0.4.0-rc1, v0.4.0-rc2, v0.4.0-rc3)"
 src="$beside/upstream/lez-$tag"
 [ -f "$src/Cargo.toml" ] || die "LEZ $tag not found at $src"
 if [ -d "$src/.git" ]; then

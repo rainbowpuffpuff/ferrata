@@ -4,6 +4,7 @@
 #   upstream/lez-v0.4.0-rc1               logos-execution-zone at tag v0.4.0-rc1 (commit 1806e87)
 #   upstream/lez-v0.4.0-rc2               logos-execution-zone at tag v0.4.0-rc2 (commit e3edf47;
 #                                         lez/scripts/lez-select.sh points lez/ at it)
+#   upstream/lez-v0.4.0-rc3               logos-execution-zone at tag v0.4.0-rc3 (commit bafd07b; the same)
 #   upstream/logos-blockchain-d480efc6    logos-blockchain at d480efc6, the revision LEZ pins
 # Read-only clones; nothing is sent anywhere.
 set -euo pipefail
@@ -11,7 +12,8 @@ here="$(cd "$(dirname "$0")/.." && pwd)"
 up="$(dirname "$here")/upstream"
 mkdir -p "$up"
 
-for spec in v0.4.0-rc1:1806e873ea2ac0e1b608aa7cf2f9b6e1fb12db21 v0.4.0-rc2:e3edf47402a82557103ca719b30d0bd2684338d1; do
+for spec in v0.4.0-rc1:1806e873ea2ac0e1b608aa7cf2f9b6e1fb12db21 v0.4.0-rc2:e3edf47402a82557103ca719b30d0bd2684338d1 \
+            v0.4.0-rc3:bafd07be0701398f9bc435f73ab05e9a7936c301; do
   tag="${spec%%:*}" commit="${spec#*:}"
   lez="$up/lez-$tag"
   if [ ! -d "$lez/.git" ]; then

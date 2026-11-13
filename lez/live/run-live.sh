@@ -45,7 +45,7 @@ BEDROCK="${FERRATA_LIVE_BEDROCK:-}"
 if [ -z "$BEDROCK" ]; then if [ -x "$NODE_BIN" ]; then BEDROCK=node; else BEDROCK=mock; fi; fi
 case "$BEDROCK" in
   # With a Bedrock node the block interval is 10 s (LEZ's testnet.json value; local.json has
-  # 15 s): a divisor of the node's epoch (100 s on v0.4.0-rc1, 240 s on rc2), so that the
+  # 15 s): a divisor of the node's epoch (100 s on v0.4.0-rc1, 240 s on rc2 and rc3), so that the
   # sequencer can be started in a phase in which it never publishes a block in the second before
   # an epoch begins (below).
   node) SEQUENCER="$BIN/sequencer_service"; [ -x "$NODE_BIN" ] || die "run.sh build-bedrock first"
@@ -61,7 +61,7 @@ LOG="$RUN_DIR/logs"
 STARTED="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 # The phase of the sequencer's blocks against Bedrock's epochs. On LEZ's local node an epoch is
-# 100 slots of 1 s (v0.4.0-rc1) or 60 slots of 4 s (rc2: LEZ #1063), read from the deployment
+# 100 slots of 1 s (v0.4.0-rc1) or 60 slots of 4 s (rc2 and rc3: LEZ #1063), read from the deployment
 # settings below, and the node sets its storage gas price anew when an epoch begins. An
 # inscription the sequencer submits in the last second of an epoch can only enter the first
 # block of the next one; if the price has risen by then, the node leaves it out of every block,
