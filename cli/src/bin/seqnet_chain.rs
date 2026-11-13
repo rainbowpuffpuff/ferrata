@@ -119,6 +119,14 @@ struct Chain {
     user: Address,
 }
 
+/// How LEZ's wallet proves in this process: `dev` (RISC0_DEV_MODE set: a fake receipt) or `real`.
+fn proof_mode() -> &'static str {
+    match std::env::var("RISC0_DEV_MODE").as_deref() {
+        Ok("1") | Ok("true") => "dev",
+        _ => "real",
+    }
+}
+
 fn hex_bytes(v: &Value, what: &str) -> Result<Vec<u8>> {
     hex::decode(v.as_str().with_context(|| format!("{what}: a hex string"))?.trim_start_matches("0x"))
         .with_context(|| format!("{what}: hex"))
@@ -180,7 +188,7 @@ impl Chain {
             "gap": DEFAULT_GAP,
             "public_accounts": self.seed.public_accounts(DEFAULT_GAP)?.iter().map(|a| hx(a.id.value())).collect::<Vec<_>>(),
             "private_accounts": self.seed.private_account_ids(DEFAULT_GAP)?.iter().map(|a| hx(a.value())).collect::<Vec<_>>(),
-            "proofs": self.a.proofs,
+            "proofs": proof_mode(),
             "eth_rpc": self.a.eth_rpc,
             "sequencer": self.a.sequencer,
         }))
@@ -399,7 +407,7 @@ impl Chain {
             "block": block,
             "reverted": reverted,
             "tx_bytes": tx_bytes,
-            "proof": if private { json!({ "mode": self.a.proofs, "prove_ms": send_ms, "receipt_bytes": receipt_bytes, "tx_bytes": tx_bytes,
+            "proof": if private { json!({ "mode": proof_mode(), "prove_ms": send_ms, "receipt_bytes": receipt_bytes, "tx_bytes": tx_bytes,
                 "by": "LEZ's wallet library (send_privacy_preserving_tx_with_pre_check): executed and proven on this machine, verified by the sequencer" }) } else { Value::Null },
         }))
     }

@@ -280,7 +280,19 @@ impl Chain {
         req["gap"] = json!(gap);
         req["destinations"] = json!(dests);
         req["deposits"] = inputs["deposits"].clone();
-        req["burns"] = inputs["burns"].clone();
+        // `recover` takes each published burn's note fields beside its index (the chain service nests them).
+        req["burns"] = Value::Array(
+            inputs["burns"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .map(|b| {
+                    let n = &b["note"];
+                    json!({ "burn_index": b["burn_index"], "r": n["r"], "memo": n["memo"], "mac": n["mac"],
+                            "token": n["token"], "amount": n["amount"], "c_out": n["c_out"] })
+                })
+                .collect(),
+        );
         let rec = crate::recover_of(&req)?;
         let program = self.program()?;
         let chain_id = self.s["chain_id"].as_u64().ok_or("chain_id")?;
