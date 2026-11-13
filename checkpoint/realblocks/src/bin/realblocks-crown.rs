@@ -133,7 +133,9 @@ fn encode_ops(ops: &[Value], reverse_fr: bool) -> Result<Vec<u8>> {
                 }
                 out.extend(u32::try_from(number(&p["posting_timeframe"], "posting_timeframe")?)?.to_le_bytes());
                 out.extend(u32::try_from(number(&p["posting_timeout"], "posting_timeout")?)?.to_le_bytes());
-                out.extend(u16::try_from(number(&p["configuration_threshold"], "configuration_threshold")?)?.to_le_bytes());
+                out.extend(
+                    u16::try_from(number(&p["configuration_threshold"], "configuration_threshold")?)?.to_le_bytes(),
+                );
                 out.extend(u16::try_from(number(&p["transfer_threshold"], "transfer_threshold")?)?.to_le_bytes());
             }
             c => bail!("opcode {c:#04x}: not one a LEZ sequencer was expected to send"),
@@ -178,7 +180,9 @@ fn multisig(v: &Value) -> Result<Vec<(u16, [u8; 64])>> {
         hexa::<64>(x, "signature")
     };
     let mut out: Vec<(u16, [u8; 64])> = match sigs {
-        Value::Object(m) => m.iter().map(|(k, x)| Ok((k.parse::<u16>().context("key index")?, sig(x)?))).collect::<Result<_>>()?,
+        Value::Object(m) => {
+            m.iter().map(|(k, x)| Ok((k.parse::<u16>().context("key index")?, sig(x)?))).collect::<Result<_>>()?
+        }
         Value::Array(a) => a
             .iter()
             .map(|e| match e {
@@ -208,7 +212,11 @@ struct Cfg {
 
 impl Cfg {
     fn change(&self) -> ConfigChange<'_> {
-        ConfigChange { ops: &self.ops, op_index: self.op_index, signatures: self.sigs.iter().map(|(i, s)| (*i, s)).collect() }
+        ConfigChange {
+            ops: &self.ops,
+            op_index: self.op_index,
+            signatures: self.sigs.iter().map(|(i, s)| (*i, s)).collect(),
+        }
     }
 }
 
@@ -236,9 +244,12 @@ fn load_configs(dir: &Path, channel: &Hash) -> Result<Vec<Cfg>> {
                     .collect::<Result<Vec<_>>>()?
                     .into_iter()
                     .find(|bytes| tx_hash(bytes) == served)
-                    .with_context(|| format!("configuration tx {}: no encoding reproduces its hash", hex::encode(served)))?;
+                    .with_context(|| {
+                        format!("configuration tx {}: no encoding reproduces its hash", hex::encode(served))
+                    })?;
                 let proof = &tx["ops_proofs"][op_index];
-                let sigs = multisig(proof).with_context(|| format!("configuration tx {}: its proof {proof}", hex::encode(served)))?;
+                let sigs = multisig(proof)
+                    .with_context(|| format!("configuration tx {}: its proof {proof}", hex::encode(served)))?;
                 out.push(Cfg {
                     node_block: b["header"]["id"].as_str().context("header id")?.to_string(),
                     slot: b["header"]["slot"].as_u64().context("slot")?,
@@ -474,18 +485,35 @@ fn main() -> Result<()> {
     for c in &configs {
         let (op, h) = c.change().op().map_err(|e| anyhow!("configuration tx {}: {e:?}", hx(&c.tx_hash)))?;
         ensure!(h == c.tx_hash, "configuration tx: re-hash");
-        ensure!(op.parent == &cth, "configuration tx {}: its parent is not the configuration tip before it", hx(&c.tx_hash));
+        ensure!(
+            op.parent == &cth,
+            "configuration tx {}: its parent is not the configuration tip before it",
+            hx(&c.tx_hash)
+        );
         cth = op.id();
         sets.push((c.slot, op.keys.iter().map(|k| **k).collect()));
-        println!("configuration change in node block {} (slot {}): {} keys, threshold {}, posting timeframe {}, signed by \
+        println!(
+            "configuration change in node block {} (slot {}): {} keys, threshold {}, posting timeframe {}, signed by \
                   key indices {:?} of the set before it; new configuration tip {}",
-            c.node_block, c.slot, op.keys.len(), op.configuration_threshold, op.posting_timeframe,
-            c.sigs.iter().map(|(i, _)| *i).collect::<Vec<_>>(), hx(&cth));
+            c.node_block,
+            c.slot,
+            op.keys.len(),
+            op.configuration_threshold,
+            op.posting_timeframe,
+            c.sigs.iter().map(|(i, _)| *i).collect::<Vec<_>>(),
+            hx(&cth)
+        );
     }
     let final_keys = sets.last().map(|(_, k)| k.clone()).context("key sets")?;
     if zone {
-        ensure!(final_keys == channel_keys, "the key set after the configuration changes is not the channel's as the node reports it");
-        ensure!(cth == hexa::<32>(&channel_json["config_tip_hash"], "config_tip_hash")?, "the configuration tip after the changes is not the channel's");
+        ensure!(
+            final_keys == channel_keys,
+            "the key set after the configuration changes is not the channel's as the node reports it"
+        );
+        ensure!(
+            cth == hexa::<32>(&channel_json["config_tip_hash"], "config_tip_hash")?,
+            "the configuration tip after the changes is not the channel's"
+        );
     }
     // The key set in force for an inscription at node slot `slot` (a change takes effect after its own node block).
     fn set_at(sets: &[(u64, Vec<Hash>)], slot: u64) -> &[Hash] {
@@ -515,7 +543,11 @@ fn main() -> Result<()> {
         let c = e.check(payload, &CHANNEL_ID).map_err(|e| anyhow!("block {k}: inscription refused: {e:?}"))?;
         ensure!(c.tx_hash == i.tx_hash, "block {k}: transaction hash");
         ensure!(k == first || c.parent == prev_msg, "block {k}: inscription parent is not block {}'s message", k - 1);
-        ensure!(set_at(&sets, i.slot).contains(&c.signer), "block {k}: signer is not one of the channel's keys at node slot {}", i.slot);
+        ensure!(
+            set_at(&sets, i.slot).contains(&c.signer),
+            "block {k}: signer is not one of the channel's keys at node slot {}",
+            i.slot
+        );
         *signed_by.entry(c.signer).or_default() += 1;
         let msg = inscription_msg_id(&CHANNEL_ID, payload, &c.parent, &c.signer);
         // Optional: the same block as the sequencer served it (equal but the status byte).
@@ -603,14 +635,29 @@ fn main() -> Result<()> {
         let mut atts = Vec::new();
         let mut records = Vec::new();
         for f in files.split(',') {
-            let v: Value = serde_json::from_slice(&fs::read(f).with_context(|| f.to_string())?).with_context(|| f.to_string())?;
-            ensure!(v["version"].as_str() == Some("ferrata-attestation/v1"), "{f}: not a ferrata-attestation/v1 record");
-            let bytes: [u8; attestor_core::SIGNED_ATTESTATION_LEN] = hex::decode(v["encoded"].as_str().context("encoded")?)?
-                .try_into()
-                .map_err(|_| anyhow!("{f}: encoded: wrong length"))?;
+            let v: Value =
+                serde_json::from_slice(&fs::read(f).with_context(|| f.to_string())?).with_context(|| f.to_string())?;
+            ensure!(
+                v["version"].as_str() == Some("ferrata-attestation/v1"),
+                "{f}: not a ferrata-attestation/v1 record"
+            );
+            let bytes: [u8; attestor_core::SIGNED_ATTESTATION_LEN] =
+                hex::decode(v["encoded"].as_str().context("encoded")?)?
+                    .try_into()
+                    .map_err(|_| anyhow!("{f}: encoded: wrong length"))?;
             let att = SignedAttestation::decode(&bytes);
-            ensure!(final_keys.contains(&att.channel_key), "{f}: channel key {} is not in the key set", hx(&att.channel_key));
-            ensure!(att.tip == tip, "{f}: attests tip {} {}, not T1 = {t1} {}", att.tip.tip_id, hx(&att.tip.tip_hash), hx(&tip.tip_hash));
+            ensure!(
+                final_keys.contains(&att.channel_key),
+                "{f}: channel key {} is not in the key set",
+                hx(&att.channel_key)
+            );
+            ensure!(
+                att.tip == tip,
+                "{f}: attests tip {} {}, not T1 = {t1} {}",
+                att.tip.tip_id,
+                hx(&att.tip.tip_hash),
+                hx(&tip.tip_hash)
+            );
             att.verify(&d, &ksh).map_err(|e| anyhow!("{f}: the attestation does not verify: {e:?}"))?;
             records.push(json!({"file": Path::new(f).file_name().map(|n| n.to_string_lossy().to_string()),
                 "channel_key": hx(&att.channel_key), "attestation_key": hx(&att.att_key), "certificate": hx(&att.certificate),
