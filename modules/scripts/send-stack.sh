@@ -25,16 +25,20 @@ signer_manager_module logos-signer-manager-module bd5c84d21ced71246c4bf44d137aa1
 tx_sender_module logos-evm-tx-sender-module f1754c3b13c7c580ee449116ba8982ca193e114d"
 
 build() {
-  printf 'module\trevision\tresult\tseconds\n' > "$OUT/steps.tsv"
+  [ -f "$OUT/steps.tsv" ] || printf 'module\trevision\tresult\tseconds\n' > "$OUT/steps.tsv"
   while read -r name gh rev; do
     local src="$OUT/src/$name" t0 r
+    # ONLY="a b": build only these.
+    case " ${ONLY:-$name} " in *" $name "*) ;; *) continue ;; esac
+    # A builder that writes $HOME leaves /homeless-shelter behind, and every later build refuses to start.
+    rm -rf /homeless-shelter
     t0=$(date +%s)
     rm -rf "$src" && git clone -q "https://github.com/logos-co/$gh" "$src" && git -C "$src" checkout -q "$rev" \
       && python3 -I "$here/graft_builder_lock.py" "$src/flake.lock" "$repo/modules/ferrata_bridge_module/flake.lock" > "$src/flake.lock.new" \
       2> "$OUT/logs/graft-$name.log" && mv "$src/flake.lock.new" "$src/flake.lock" || { echo "$name: source or graft failed"; continue; }
     if nix build "path:$src#lgx" -o "$OUT/lgx-$name" -L > "$OUT/logs/build-$name.log" 2>&1; then r=ok; else r="FAILED($?)"; fi
     printf '%s\t%s\t%s\t%s\n' "$name" "${rev:0:12}" "$r" "$(( $(date +%s) - t0 ))" | tee -a "$OUT/steps.tsv"
-    grep -a -E 'Plugin file does not exist|^error|error:' "$OUT/logs/build-$name.log" | tail -n 5
+    grep -a -E 'Plugin file does not exist|^error|error:|error\[' "$OUT/logs/build-$name.log" | head -n 8
   done <<< "$MODS"
   ( cd "$OUT" && sha256sum lgx-*/*.lgx ) > "$OUT/lgx-sha256.txt" 2>&1
 }
