@@ -36,7 +36,16 @@ build() {
     rm -rf "$src" && git clone -q "https://github.com/logos-co/$gh" "$src" && git -C "$src" checkout -q "$rev" \
       && python3 -I "$here/graft_builder_lock.py" "$src/flake.lock" "$repo/modules/ferrata_bridge_module/flake.lock" > "$src/flake.lock.new" \
       2> "$OUT/logs/graft-$name.log" && mv "$src/flake.lock.new" "$src/flake.lock" || { echo "$name: source or graft failed"; continue; }
-    if nix build "path:$src#lgx" -o "$OUT/lgx-$name" -L > "$OUT/logs/build-$name.log" 2>&1; then r=ok; else r="FAILED($?)"; fi
+    # A derivation that writes $HOME leaves /homeless-shelter behind and the next derivation of the same build
+    # refuses to start ("home directory '/homeless-shelter' exists"); finished derivations stay in the store, so the
+    # build is retried from where it stopped (as logos-core-io's runs did, up to 12 times).
+    local attempt
+    for attempt in $(seq 1 12); do
+      rm -rf /homeless-shelter
+      if nix build "path:$src#lgx" -o "$OUT/lgx-$name" -L > "$OUT/logs/build-$name.log" 2>&1; then r="ok (attempt $attempt)"; break; fi
+      r="FAILED($?, attempt $attempt)"
+      grep -q "homeless-shelter' exists" "$OUT/logs/build-$name.log" || break
+    done
     printf '%s\t%s\t%s\t%s\n' "$name" "${rev:0:12}" "$r" "$(( $(date +%s) - t0 ))" | tee -a "$OUT/steps.tsv"
     grep -a -E 'Plugin file does not exist|^error|error:|error\[' "$OUT/logs/build-$name.log" | head -n 8
   done <<< "$MODS"
