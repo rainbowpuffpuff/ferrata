@@ -8,22 +8,6 @@ five modules after the merge of the two branches of 12 November (12–13 Novembe
 modules (those two branches, each run on its own), the attestation and bridge modules (11 November), the
 attestation module's prototype (10 November).
 
-## The six modules on the final tree, 13 November 2026
-
-**After the last merge (`miniapp-sequencer` into `integration8`, branch `final-merge`), every module check again.**
-Modal build box (gVisor, 2 CPUs reported, up to 16 cores, 64 GiB; Nix 2.28.3, the store of the
-modules-more box restored), commit `6a19ec9`, 13 Nov 2026 12:28–13:37 UTC, dev mode: `check.sh` with the six modules,
-dev and portable, `E2E=1 BRIDGE_E2E=1`, **step failures 0 (71 steps), check failures 0** (2,827 s): 53 calls, each
-equal to native in both Cores and meeting its expectations (attest 11, bridge 13, attestor 12, monitor 8, updater 4,
-relayer 5); `e2e.sh` 43/43 and `bridge_e2e.sh` 24/24 in each Core; the attestor's job 23/23 and the monitor's 46/46,
-natively and in each Core; the updater's 8/8 natively and 10/10 in each Core; the relayer's 10/10 natively and 11/11
-in each Core. Then `logos-io.sh` (1,144 s): Logos Core's own modules built from their sources with the same findings
-as in the section below (`keystore_module` stops at install, `tx_sender_module` does not load), the attestation module's four reads
-and `import_root`'s read through `eth_rpc_module` each equal to the plain read or the proofs given, `e2e.sh` 43/43
-and `bridge_e2e.sh` 24/24 through that Logos Core. In the same session: `cli/`'s tests, its e2e and the relayer's
-suite, `lez/`'s updater tests, `monitor/` and `checkpoint/attestor`. Files and every figure:
-[`results/final-2026-11-13/`](results/final-2026-11-13/README.md).
-
 ## Ferrata's Ethereum transactions through Logos Core's send stack, 14 November 2026
 
 [`results/send-stack-2026-11-14/`](results/send-stack-2026-11-14/README.md) (Modal build box, `scripts/send-stack.sh`;
@@ -41,6 +25,22 @@ relayer's `submitCandidate`, `finalizeAttested`, `release`, `claimOwed`, the mon
 state after). The fallback (tx_sender_module unloaded, the key held) sent the plain way and said so. Findings: the
 glue patch (draft upstream PR); a module method that blocks while its own thread calls another module deadlocks (the
 SDK's worker-thread calls wait for the Qt thread), so the daemons run with `start` and `run` refuses `--send-via logos`.
+
+## The six modules on the final tree, 13 November 2026
+
+**After the last merge (`miniapp-sequencer` into `integration8`, branch `final-merge`), every module check again.**
+Modal build box (gVisor, 2 CPUs reported, up to 16 cores, 64 GiB; Nix 2.28.3, the store of the
+modules-more box restored), commit `6a19ec9`, 13 Nov 2026 12:28–13:37 UTC, dev mode: `check.sh` with the six modules,
+dev and portable, `E2E=1 BRIDGE_E2E=1`, **step failures 0 (71 steps), check failures 0** (2,827 s): 53 calls, each
+equal to native in both Cores and meeting its expectations (attest 11, bridge 13, attestor 12, monitor 8, updater 4,
+relayer 5); `e2e.sh` 43/43 and `bridge_e2e.sh` 24/24 in each Core; the attestor's job 23/23 and the monitor's 46/46,
+natively and in each Core; the updater's 8/8 natively and 10/10 in each Core; the relayer's 10/10 natively and 11/11
+in each Core. Then `logos-io.sh` (1,144 s): Logos Core's own modules built from their sources with the same findings
+as in the section below (`keystore_module` stops at install, `tx_sender_module` does not load), the attestation module's four reads
+and `import_root`'s read through `eth_rpc_module` each equal to the plain read or the proofs given, `e2e.sh` 43/43
+and `bridge_e2e.sh` 24/24 through that Logos Core. In the same session: `cli/`'s tests, its e2e and the relayer's
+suite, `lez/`'s updater tests, `monitor/` and `checkpoint/attestor`. Files and every figure:
+[`results/final-2026-11-13/`](results/final-2026-11-13/README.md).
 
 ## Verified reads through Logos Core's `verified_proxy_module`, on Sepolia, 14 November 2026
 
