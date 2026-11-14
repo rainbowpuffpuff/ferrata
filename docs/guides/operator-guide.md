@@ -598,7 +598,7 @@ checkpoints after a sunset until holders have released ([`bridge.md`](../design/
 The relayer's Logos module (`ferrata-relayer` is a plain binary, §6; the monitor, the rule (B) attestor and the
 updater are built as Logos modules, the updater's with both of its backends, §3.6); the relayer's root
 imports and its run against a live sequencer, the sealed gas drop to a private one-time account and its sweep inside
-the private claim (§6.4); `verify_checkpoint` through Logos Core's `verified_proxy_module`; the attestation side's `monitor`; job clean-up; the acceptance run at 100 updates and on a sequencer (it ran on 58 recorded updates in process, §3.4);
+the private claim (§6.4); `verify_checkpoint` as an API of Logos Core's Ethereum module (its execution check runs through `verified_proxy_module`); the attestation side's `monitor`; job clean-up; the acceptance run at 100 updates and on a sequencer (it ran on 58 recorded updates in process, §3.4);
 daemon resource measurements; the amortised costs at the recommended
 cadence with real proving (milestones A4, B4); a deployment on a public LEZ network. Sources:
 [`attestation.md`](../design/attestation.md) §15; [`bridge.md`](../design/bridge.md) §1, §18.6, §19;

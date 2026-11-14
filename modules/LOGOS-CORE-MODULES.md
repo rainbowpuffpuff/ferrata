@@ -5,7 +5,8 @@ asks for long-running components "using LEZ module and Ethereum module for the r
 This note maps the modules Logos ships for that, how one module calls another, and what Ferrata's modules
 use today. Read 13 November 2026 from the sources below (all `github.com/logos-co/` unless named); the
 commits are the repositories' `main` on that day, and the ones built and run in
-[`results/logos-core-io-2026-11-13/`](results/logos-core-io-2026-11-13/).
+[`results/logos-core-io-2026-11-13/`](results/logos-core-io-2026-11-13/) and, for `verified_proxy_module` (unchanged on
+14 November), [`results/verified-proxy-2026-11-14/`](results/verified-proxy-2026-11-14/README.md).
 
 | Module (name in Logos Core) | Repository @ commit | Kind | Depends on |
 |---|---|---|---|
@@ -85,7 +86,9 @@ path, kept as the fallback and for native runs). Every reply that read Ethereum 
   `build_attest_tx`), and the bridge module's `import_root` (`eth_getProof` of the vault the configuration
   names, slots 0 and 1). Shown in a headless Logos Core (`results/logos-core-io-2026-11-13/`): the attestation
   module's four reads equal to the plain reads and its end-to-end run 43/43; the bridge module's `import_root`
-  read through it equal to the proofs given, `importable`, and its end-to-end run 24/24.
+  read through it equal to the proofs given, `importable`, and its end-to-end run 24/24. With Sepolia in `required` mode
+  (`results/verified-proxy-2026-11-14/`): the attestation module's reads of the live runs' deposits and
+  `verify_checkpoint`'s execution check answered by `verified_proxy_module`.
 
 ### `verified_proxy_module`: light-client-verified JSON-RPC
 
@@ -96,16 +99,30 @@ path, kept as the fallback and for native runs). Every reply that read Ethereum 
   URLs that serve `eth_getProof` (README 58), beacon providers from `beacon_api_module`.
 - **What it cannot do for us.** (1) It serves only those three networks: it syncs nimbus's light client
   from a trusted root against real beacon providers, so it cannot answer for a devnet (anvil has no beacon
-  chain). (2) It has **no `eth_getProof`** (absent from `tools/rpc_methods.json` and from nimbus v0.4.4's C
-  dispatch, `library_c_frontend.nim` 895–1223, R3 §4): on a chain in `required` mode `eth_rpc_module`
-  routes `eth_getProof` there and gets an error, so the storage proofs and `import_root`'s proofs must come
-  from a chain configured `off` (or `raw_rpc_url`, which `required` refuses only for the five `verified`
-  methods). That is safe for Ferrata: the programs check every proof against a record the light client
-  verified. Blocks and receipts it does verify (receipts against `receiptsRoot`, nimbus
-  `engine_receipts.nim` 49–67), which is what `fetch_log_proof` reads.
-- **Not built or run here:** its Nim library is a ~25-minute build of its own, and the only networks it
-  serves are public ones, which this work did not read (the brief: nothing to Sepolia or any public
-  network). The read path above takes it unchanged: set the chain's mode to `required`.
+  chain). (2) It has **no `eth_getProof`**, and nimbus has no verified one to expose: at v0.4.4 (and on its `master`
+  of 14 November, `87dcde6`) the engine's `frontend.eth_getProof` is marked `# pass-forward` and returns the
+  provider's answer unchecked (`nimbus_verified_proxy/engine/rpc_frontend.nim` 589–606); the C library the module
+  calls does not dispatch it (`library/c_frontend.nim` 894–1227: `unknown method`, measured below); the module's
+  `tools/rpc_methods.json` does not list it. What the proxy verifies is the values: `eth_getBalance`, `eth_getCode`,
+  `eth_getTransactionCount` and `eth_getStorageAt` fetch an `eth_getProof` themselves and check the account proof
+  against the verified state root and each storage proof against the account (`engine/accounts.nim`
+  `getAccountFromProof`, `getStorageFromProof`). So on a chain in `required` mode `eth_rpc_module` routes `eth_getProof`
+  there and gets an error, and the storage proofs and `import_root`'s proofs must come from a chain configured `off`
+  (or `raw_rpc_url`, which `required` refuses only for the five `verified` methods). That is safe for Ferrata: the
+  programs check every proof against a record the light client verified. Blocks and receipts it does verify: a block's
+  header hash, and that it is canonical from the light client's anchor through EIP-2935's history contract (with an
+  archive URL) or a walk of at most 1,000 blocks (`engine/blocks.nim` 371–422); receipts against the verified
+  `receiptsRoot` (`engine/receipts.nim` 49–80): what `fetch_log_proof` reads. `eth_rpc_module` labels those calls
+  `proxied` and only its five proof-backed methods `verified`.
+- **Built and run** ([`results/verified-proxy-2026-11-14/`](results/verified-proxy-2026-11-14/README.md),
+  `scripts/verified-proxy.sh`): `fa98479` with its own lock (builder `a57dc7f`, as `beacon_api_module` `aca138e`
+  pins it too, so its generated client is the one that module answers), `libverifproxy` built from nimbus-eth1 v0.4.4's
+  source (Nim 2.2.12, 828 s on the build box), loaded in logosctl `66d098d` beside our modules (built with `5f74cdb`).
+  On public Sepolia, from a finalized root three beacon providers agreed on, its light client synced (the verified head
+  two or three blocks behind the endpoint's, every slot), and with Sepolia in `required` mode in `eth_rpc_module` it
+  served the attestation module's `fetch_log_proof` for the live runs' four deposits, the capture blocks' headers, the
+  vault's storage values (24 slots, `verified`) and `verify_checkpoint`'s execution check, each equal to the runs'
+  records and to the same read with the mode `off`; `eth_getProof` refused four times.
 
 ### `beacon_api_module`: consensus-layer providers
 
@@ -116,9 +133,17 @@ path, kept as the fallback and for native runs). Every reply that read Ethereum 
   `finalized_header` ("not a trust anchor").
 - **It does not verify** what providers return (README "Trust"; `beacon.rs` 219–258); the updater's program
   does, which is why it is fit to carry the updater's data.
-- **Status here:** built from source and loaded in our Logos Core; the updater module still reads its
-  sources itself (beacon API URLs or recorded directories). Moving its source to `lc_request` is the
-  same change as `rpc.rs` above, not made in this work.
+- **It answers JSON.** `lc_request` returns the provider's body verbatim (`{ok, provider, body, attempts}`), asked
+  with `Accept: application/json`; the updater reads SSZ. `lez/updater/src/lc_json.rs` turns the beacon API's JSON
+  light-client objects (every layout, Altair to Gloas) into the SSZ the same provider serves.
+- **Used by Ferrata:** the updater module's sources may be it (`[[chain.source]] via = "beacon_api_module"`,
+  `chain_id`, `provider`; the module crate calls `lc_request` by name, as the attestation module calls
+  `eth_rpc_module`). On Sepolia ([`results/verified-proxy-2026-11-14/`](results/verified-proxy-2026-11-14/README.md)):
+  its bootstrap (Lodestar refused it, the module failed over to Nimbus), updates and finality update each equal to the
+  provider's own answer, and turned into SSZ equal byte for byte to the SSZ the provider served and to the 12 November
+  fixture; `ferrata_updater_module` with both its sources through it followed the crown runs' checkpoint to the
+  current finalized header on the in-process LEZ chain (21 transactions, none refused). The proxy's own beacon
+  providers came from it too (`beaconSource: module`).
 
 ### `keystore_module`, `signer_manager_module`, `fee_module`, `tx_sender_module`: keys and sends
 

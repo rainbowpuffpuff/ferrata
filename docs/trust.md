@@ -63,8 +63,10 @@ finalized block at its slot and serve the instance's genesis and spec (their `DE
 to `genesis_validators_root`), and none may disagree; an execution endpoint is asked for the checkpoint's execution
 block ([EVIDENCE](EVIDENCE.md) rows 59, 105, [`modules/README.md`](../modules/README.md),
 [`modules/results/verify-checkpoint-2026-11-13/`](../modules/results/verify-checkpoint-2026-11-13/README.md)). The
-endpoint meant is `verified_proxy_module`'s local JSON-RPC server; the module reaches every endpoint over plain HTTP,
-not through Logos Core, and the pull request that offers the check to that module is prepared, not opened
+endpoint meant is `verified_proxy_module`: on Sepolia the execution check ran through Logos Core's `eth_rpc_module` with
+the chain in `required` mode, answered by that module's light client
+([`modules/results/verified-proxy-2026-11-14/`](../modules/results/verified-proxy-2026-11-14/README.md)); the beacon providers are still read over plain
+HTTP by the attestation module itself, and the pull request that offers the check to that module is prepared, not opened
 ([`attestation.md`](design/attestation.md) §11.4; [`lez/RESULTS.md`](../lez/RESULTS.md) §5, "Decisions" 1).
 
 **Weak subjectivity.** An instance that falls outside the weak-subjectivity period must be replaced from
@@ -423,7 +425,8 @@ publishes; RPC providers which blocks are fetched (recovery downloads whole list
 
 ## 10. Not built, and therefore not yet part of the guarantee
 
-`verify_checkpoint` through Logos Core's `verified_proxy_module`; the attestation side's `monitor` (records against
+`verify_checkpoint` as an API of Logos Core's Ethereum module (its execution check runs through `verified_proxy_module`;
+the upstream pull request is not opened); the attestation side's `monitor` (records against
 several providers, the weak-subjectivity alarm); `monitor`'s client of the LEZ and Logos Blockchain nodes' RPCs;
 consumers bound to the root id (the bridge, `ferrata_holdings` and the reference consumer still pin an
 instance); on LEZ, the admin's own handover; the gas drop's sealed credit to a private one-time account

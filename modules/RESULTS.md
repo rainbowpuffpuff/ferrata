@@ -24,6 +24,23 @@ and `bridge_e2e.sh` 24/24 through that Logos Core. In the same session: `cli/`'s
 suite, `lez/`'s updater tests, `monitor/` and `checkpoint/attestor`. Files and every figure:
 [`results/final-2026-11-13/`](results/final-2026-11-13/README.md).
 
+## Verified reads through Logos Core's `verified_proxy_module`, on Sepolia, 14 November 2026
+
+[`results/verified-proxy-2026-11-14/`](results/verified-proxy-2026-11-14/README.md) (Modal build box,
+`scripts/verified-proxy.sh`; public Sepolia, reads only). Logos Core's `verified_proxy_module` (`fa98479`, with
+nimbus-eth1 v0.4.4's `libverifproxy` built from source) and `beacon_api_module` (`aca138e`), each with its own lock,
+loaded in logosctl `66d098d` beside `eth_rpc_module`, `ferrata_attest_module` and `ferrata_updater_module`. From a
+finalized root Lodestar, publicnode and Nimbus agreed on, the proxy's light client synced (verified head two or three
+blocks behind the endpoint's). With Sepolia in `required` mode: `fetch_log_proof` of the four deposits of
+`crown-live-3` and `crown-live-1`, the four capture blocks' headers and the vault's 24 storage values (route
+`verified`), and `verify_checkpoint`'s execution check, each equal to the runs' records and to the same read with the
+mode `off`; `eth_getProof` refused (`unknown method`: nimbus's library passes it through unverified and does not
+dispatch it). The updater's light-client data through `beacon_api_module.lc_request`, turned into SSZ equal byte for
+byte to the providers' SSZ and the 12 November fixture; `ferrata_updater_module` on those sources followed the crown
+runs' checkpoint to Sepolia's finalized header on the in-process LEZ chain (21 transactions applied, none refused).
+48 of 48 checks. Not shown: the proxy on a devnet (it serves public networks only), any other module's reads through
+it, the updater through it on a sequencer, sends.
+
 ## LEZ through Logos Core's `lez_core` (its merged v0.4 state), 14 November 2026
 
 [`results/lez-core-v04-2026-11-14/`](results/lez-core-v04-2026-11-14/README.md) (Modal build box). `lez_core` at
@@ -49,9 +66,9 @@ through it (`raw_rpc`, called by name from inside the module; plain HTTP kept as
 `fetch_log_proof` twice and the storage proof twice, each equal to the same read over plain HTTP, then `e2e.sh`
 43/43 on those replies; `import_root` reading the vault's `eth_getProof` through it, equal to the reply to the
 proofs given (`importable`, n = 3), `bridge_e2e.sh` 24/24. `check.sh` for the two modules: 0 step and 0
-check failures. Not shown: verified reads (`verified_proxy_module`: public networks only, no `eth_getProof`),
-sends (`keystore_module`), the updater's beacon data through `beacon_api_module`, LEZ through `lez_core`
-(v0.3.1).
+check failures. Not shown here: verified reads (`verified_proxy_module`: shown on Sepolia on 14 November, above),
+sends (`keystore_module`), the updater's beacon data through `beacon_api_module` (14 November, above), LEZ through
+`lez_core` (v0.3.1).
 
 ## The updater module on a running LEZ sequencer, 13 November 2026
 

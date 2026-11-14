@@ -338,7 +338,8 @@ The attestation side's migration (successor and replacement instances) is in
 - a deployment with production parameters: the round trip ran on public Sepolia on the final programs (EVIDENCE
   row 91, `crown-live-3`; the first live run, row 41, on `integration5`'s) through FerrataVault v5 with testnet
   parameters and a LEZ devnet we ran; a deployment on LEZ testnet 0.4 (which does not exist);
-- `verify_checkpoint` through Logos Core's `verified_proxy_module` (it reads plain HTTP); the `ferrata_attestor`
+- `verify_checkpoint` as an API of Logos Core's Ethereum module (its execution check runs through
+  `verified_proxy_module`, its beacon checks read plain HTTP); the `ferrata_attestor`
   module (rule (B)'s sequencer side; the program is built);
 - on LEZ: the admin's own handover (an M-of-N freeze authority, its 14-day handover, watchers and the
   keyless `Sunset` are built: EVIDENCE row 74);
