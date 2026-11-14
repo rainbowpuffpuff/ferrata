@@ -1,0 +1,9 @@
+{
+  "block": 12111574,
+  "block_log_index": 223,
+  "eth": {
+    "via": "eth_rpc_module",
+    "chain_id": 11155111
+  },
+  "timeout_ms": 300000
+}

@@ -1,0 +1,75 @@
+{
+  "all_equal": true,
+  "rows": [
+    {
+      "bytes": 25472,
+      "comparisons": [
+        {
+          "against": "Nimbus's SSZ (same request, same session)",
+          "bytes": 25472,
+          "equal": true
+        },
+        {
+          "against": "the fixture's bootstrap.ssz (Lodestar, 12 Nov)",
+          "bytes": 25472,
+          "equal": true
+        }
+      ],
+      "provider": "nimbus-unstable",
+      "what": "bootstrap"
+    },
+    {
+      "bytes": 26424,
+      "comparisons": [
+        {
+          "against": "Lodestar's SSZ stream (same request), split",
+          "bytes": 26424,
+          "equal": true
+        },
+        {
+          "against": "the fixture's update_1411.ssz",
+          "bytes": 26424,
+          "equal": true
+        }
+      ],
+      "provider": "lodestar",
+      "what": "update 0 (period 1411)"
+    },
+    {
+      "bytes": 26424,
+      "comparisons": [
+        {
+          "against": "Lodestar's SSZ stream (same request), split",
+          "bytes": 26424,
+          "equal": true
+        }
+      ],
+      "provider": "lodestar",
+      "what": "update 1 (period 1412)"
+    },
+    {
+      "bytes": 26424,
+      "comparisons": [
+        {
+          "against": "Lodestar's SSZ stream (same request), split",
+          "bytes": 26424,
+          "equal": true
+        }
+      ],
+      "provider": "lodestar",
+      "what": "update 2 (period 1413)"
+    },
+    {
+      "bytes": 1448,
+      "comparisons": [
+        {
+          "against": "Lodestar's SSZ (same signature slot)",
+          "bytes": 1448,
+          "equal": true
+        }
+      ],
+      "provider": "lodestar",
+      "what": "finality update"
+    }
+  ]
+}

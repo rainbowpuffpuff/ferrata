@@ -1,0 +1,448 @@
+{
+ "checks": [
+  {
+   "ok": true,
+   "what": "trusted block root: Lodestar's finalized header, the block publicnode holds canonical at that slot and Nimbus's header of that root agree, at or below publicnode's finalized epoch",
+   "detail": "root 0xa9cb778f351a6d0cf5c8f383ca90cabe60ec32990360b77f5d326951ae47c361, slot 11577536"
+  },
+  {
+   "ok": true,
+   "what": "verified_proxy_module.start: the light client bootstrapped from that root and synced once",
+   "detail": "{\"error\": null, \"success\": true, \"value\": {\"chainId\": 11155111, \"endpoint\": \"http://127.0.0.1:18645\"}}"
+  },
+  {
+   "ok": true,
+   "what": "syncing: the verified head and the last sync time move between status samples, state running",
+   "detail": "(head, lastSyncedAt, state) = [(None, 1794665026, 'running'), (12133577, 1794665061, 'running'), (12133580, 1794665098, 'running'), (12133584, 1794665146, 'running')]; the endpoint's own block number at each sample: [12133576, 12133579, 12133583, 12133586]"
+  },
+  {
+   "ok": true,
+   "what": "the proxy's beacon providers came from beacon_api_module (beaconSource module)",
+   "detail": "{\"source\": \"module\", \"urls\": [\"https://lodestar-sepolia.chainsafe.io\", \"http://unstable.sepolia.beacon-api.nimbus.team\"]}"
+  },
+  {
+   "ok": true,
+   "what": "eth_rpc_module.verified_proxy_status(11155111): required, usable",
+   "detail": "{\"action\": \"none\", \"blocking\": false, \"chainId\": 11155111, \"detail\": \"\", \"message\": \"Verified.\", \"mode\": \"required\", \"ok\": true, \"state\": \"ready\", \"usable\": true}"
+  },
+  {
+   "ok": true,
+   "what": "crown-live-3-deposit-0: fetch_log_proof through eth_rpc_module in required mode (verified_proxy_module answered eth_getBlockByNumber and eth_getBlockReceipts)",
+   "detail": "routes ['proxied', 'proxied'], verdict fetched"
+  },
+  {
+   "ok": true,
+   "what": "crown-live-3-deposit-0: the log is the run's deposit (transaction, block, status, the vault) as the run's manifest records it",
+   "detail": "tx 0x32b188db031993f23358ca29c22b2bc1d3fabb638dc02e80bbe737bbd39cdec6, block 12119421"
+  },
+  {
+   "ok": true,
+   "what": "crown-live-3-deposit-0: equal to the same call with the chain's mode off (eth_rpc_module direct to the endpoint): block hash, receipts root, receipt count, the receipt proof, the log",
+   "detail": "block_hash 0x5952f7ae9197212c986ca6dac3a4e5c468b373bc7405e16d6637fa9fe29fff02, receipts 158, proof nodes 3"
+  },
+  {
+   "ok": true,
+   "what": "crown-live-3-deposit-0: the block hash equals publicnode's (a second provider, plain JSON-RPC)",
+   "detail": "0x5952f7ae9197212c986ca6dac3a4e5c468b373bc7405e16d6637fa9fe29fff02"
+  },
+  {
+   "ok": true,
+   "what": "crown-live-3-deposit-1: fetch_log_proof through eth_rpc_module in required mode (verified_proxy_module answered eth_getBlockByNumber and eth_getBlockReceipts)",
+   "detail": "routes ['proxied', 'proxied'], verdict fetched"
+  },
+  {
+   "ok": true,
+   "what": "crown-live-3-deposit-1: the log is the run's deposit (transaction, block, status, the vault) as the run's manifest records it",
+   "detail": "tx 0x8f813d221868234eb53a890e52a1e29cdf01862ebf22dc7dd861614fd97cfa08, block 12119492"
+  },
+  {
+   "ok": true,
+   "what": "crown-live-3-deposit-1: equal to the same call with the chain's mode off (eth_rpc_module direct to the endpoint): block hash, receipts root, receipt count, the receipt proof, the log",
+   "detail": "block_hash 0x7c4c777f03525487283cbc376fddfe79bac23e9d0cccd3dfccbbc71734dca792, receipts 135, proof nodes 3"
+  },
+  {
+   "ok": true,
+   "what": "crown-live-3-deposit-1: the block hash equals publicnode's (a second provider, plain JSON-RPC)",
+   "detail": "0x7c4c777f03525487283cbc376fddfe79bac23e9d0cccd3dfccbbc71734dca792"
+  },
+  {
+   "ok": true,
+   "what": "crown-live-1-deposit-0: fetch_log_proof through eth_rpc_module in required mode (verified_proxy_module answered eth_getBlockByNumber and eth_getBlockReceipts)",
+   "detail": "routes ['proxied', 'proxied'], verdict fetched"
+  },
+  {
+   "ok": true,
+   "what": "crown-live-1-deposit-0: the log is the run's deposit (transaction, block, status, the vault) as the run's manifest records it",
+   "detail": "tx 0x759d8c722d6e0ac648d5cf8a5fc1d7ba283fd6a05ae52b92edad75be24e376db, block 12111477"
+  },
+  {
+   "ok": true,
+   "what": "crown-live-1-deposit-0: equal to the same call with the chain's mode off (eth_rpc_module direct to the endpoint): block hash, receipts root, receipt count, the receipt proof, the log",
+   "detail": "block_hash 0x60d2f893c196a6089554dfe86e40b8648a88104296fdca735e81c74048ac8095, receipts 479, proof nodes 3"
+  },
+  {
+   "ok": true,
+   "what": "crown-live-1-deposit-0: the block hash equals publicnode's (a second provider, plain JSON-RPC)",
+   "detail": "0x60d2f893c196a6089554dfe86e40b8648a88104296fdca735e81c74048ac8095"
+  },
+  {
+   "ok": true,
+   "what": "crown-live-1-deposit-1: fetch_log_proof through eth_rpc_module in required mode (verified_proxy_module answered eth_getBlockByNumber and eth_getBlockReceipts)",
+   "detail": "routes ['proxied', 'proxied'], verdict fetched"
+  },
+  {
+   "ok": true,
+   "what": "crown-live-1-deposit-1: the log is the run's deposit (transaction, block, status, the vault) as the run's manifest records it",
+   "detail": "tx 0x295e3a8c51cb1860098d26f4f64dff9fea1f4774926b69906783cb11179e0b29, block 12111574"
+  },
+  {
+   "ok": true,
+   "what": "crown-live-1-deposit-1: equal to the same call with the chain's mode off (eth_rpc_module direct to the endpoint): block hash, receipts root, receipt count, the receipt proof, the log",
+   "detail": "block_hash 0xe65a7a4f401c77c451feaafb3449733e457a14cd3bea540d5f6f38c3ea013b36, receipts 117, proof nodes 3"
+  },
+  {
+   "ok": true,
+   "what": "crown-live-1-deposit-1: the block hash equals publicnode's (a second provider, plain JSON-RPC)",
+   "detail": "0xe65a7a4f401c77c451feaafb3449733e457a14cd3bea540d5f6f38c3ea013b36"
+  },
+  {
+   "ok": true,
+   "what": "crown-live-3-capture-1: block 12119428's header through the verified proxy (route proxied): hash and state root equal to the capture's record",
+   "detail": "0xf9ae2c6365e3e684c7b01b4e6b417d3d8efa3738d5bb4cb2ddaab3a2e3e5fd9a / 0x7c8140ac5e59a523ff4aadbd40f00f8ba627e63819f971b879453410e6064792"
+  },
+  {
+   "ok": true,
+   "what": "crown-live-3-capture-1: the vault's six slots (eth_getStorageAt, route verified: the proxy checked an account and storage proof against the verified state root) equal the run's capture",
+   "detail": "6/6 equal; routes ['verified']"
+  },
+  {
+   "ok": true,
+   "what": "crown-live-3-capture-1: eth_getProof in required mode is refused (libverifproxy has no eth_getProof)",
+   "detail": "verified proxy: eth_getProof: bad request: unknown method"
+  },
+  {
+   "ok": true,
+   "what": "crown-live-3-capture-1: eth_getProof with the mode off (direct) equals the proof the run used (byte for byte, every field)",
+   "detail": "equal"
+  },
+  {
+   "ok": true,
+   "what": "crown-live-3-capture-2: block 12119519's header through the verified proxy (route proxied): hash and state root equal to the capture's record",
+   "detail": "0xc637bfeee44c1685a0c8aec236d73876b7ab7cefdbea48b94d190296d11111f1 / 0x29752df333b7d6bd4d99219b299ab40b9bd2ca488849dd2344a6085fc287c647"
+  },
+  {
+   "ok": true,
+   "what": "crown-live-3-capture-2: the vault's six slots (eth_getStorageAt, route verified: the proxy checked an account and storage proof against the verified state root) equal the run's capture",
+   "detail": "6/6 equal; routes ['verified']"
+  },
+  {
+   "ok": true,
+   "what": "crown-live-3-capture-2: eth_getProof in required mode is refused (libverifproxy has no eth_getProof)",
+   "detail": "verified proxy: eth_getProof: bad request: unknown method"
+  },
+  {
+   "ok": true,
+   "what": "crown-live-3-capture-2: eth_getProof with the mode off (direct) equals the proof the run used (byte for byte, every field)",
+   "detail": "equal"
+  },
+  {
+   "ok": true,
+   "what": "crown-live-1-capture-1: block 12111509's header through the verified proxy (route proxied): hash and state root equal to the capture's record",
+   "detail": "0x678dd3d74be97a5b6fd62dc8109b6d6672423392f315e9a7fb404dc91d9d28db / 0x2588588b6a2825c0716e91f71b687a43c9a92d899edd4eb85ae33e6a413430f9"
+  },
+  {
+   "ok": true,
+   "what": "crown-live-1-capture-1: the vault's six slots (eth_getStorageAt, route verified: the proxy checked an account and storage proof against the verified state root) equal the run's capture",
+   "detail": "6/6 equal; routes ['verified']"
+  },
+  {
+   "ok": true,
+   "what": "crown-live-1-capture-1: eth_getProof in required mode is refused (libverifproxy has no eth_getProof)",
+   "detail": "verified proxy: eth_getProof: bad request: unknown method"
+  },
+  {
+   "ok": true,
+   "what": "crown-live-1-capture-1: eth_getProof with the mode off (direct) equals the proof the run used (byte for byte, every field)",
+   "detail": "equal"
+  },
+  {
+   "ok": true,
+   "what": "crown-live-1-capture-2: block 12111602's header through the verified proxy (route proxied): hash and state root equal to the capture's record",
+   "detail": "0x1fed716573fc8406f75a722f2f78c08f904a5e3a4da759320c9b09ee39813ab1 / 0xe410eedeb32034fe7853ae3b77bc11a1595c3601214690d960f7ecad88b5abe5"
+  },
+  {
+   "ok": true,
+   "what": "crown-live-1-capture-2: the vault's six slots (eth_getStorageAt, route verified: the proxy checked an account and storage proof against the verified state root) equal the run's capture",
+   "detail": "6/6 equal; routes ['verified']"
+  },
+  {
+   "ok": true,
+   "what": "crown-live-1-capture-2: eth_getProof in required mode is refused (libverifproxy has no eth_getProof)",
+   "detail": "verified proxy: eth_getProof: bad request: unknown method"
+  },
+  {
+   "ok": true,
+   "what": "crown-live-1-capture-2: eth_getProof with the mode off (direct) equals the proof the run used (byte for byte, every field)",
+   "detail": "equal"
+  },
+  {
+   "ok": true,
+   "what": "verify_checkpoint: the checkpoint's execution block checked through eth_rpc_module in required mode (verified_proxy_module: canonical by hash and at its number, at or below its finalized block, chain id)",
+   "detail": "verdict agrees, block 12118225, finalized 12133493, routes ['proxied', 'proxied', 'proxied', 'proxied'], unavailable []"
+  },
+  {
+   "ok": true,
+   "what": "verify_checkpoint: verdict ok (instance id, bootstrap, committee, three beacon providers, execution)",
+   "detail": "verdict ok, failed []"
+  },
+  {
+   "ok": true,
+   "what": "verify_checkpoint: the same execution block as 13 November's check through publicnode's plain RPC",
+   "detail": "12118225 0xceaaa1ba00d05d2e3f7252b9d1bdd84de6d76cb14c1f3457216f8859683b08c7 vs 12118225 0xceaaa1ba00d05d2e3f7252b9d1bdd84de6d76cb14c1f3457216f8859683b08c7"
+  },
+  {
+   "ok": true,
+   "what": "verify_checkpoint's execution check with the chain's mode off (direct) agrees on the same block",
+   "detail": "agrees 12118225"
+  },
+  {
+   "ok": true,
+   "what": "verify_checkpoint's execution check through the proxy's own JSON-RPC endpoint (curl) agrees on the same block",
+   "detail": "agrees 12118225"
+  },
+  {
+   "ok": true,
+   "what": "beacon_api_module.lc_request getLightClientBootstrap (the fixture's root): the provider's JSON, equal to Nimbus's own answer",
+   "detail": "provider nimbus-unstable, attempts [{\"error\": \"HTTP 500\", \"provider\": \"lodestar\"}]"
+  },
+  {
+   "ok": true,
+   "what": "beacon_api_module.lc_request getLightClientUpdatesByRange (1411, 3): equal to Lodestar's own JSON answer",
+   "detail": "provider lodestar, 3 updates"
+  },
+  {
+   "ok": true,
+   "what": "beacon_api_module.lc_request getLightClientFinalityUpdate: equal to Lodestar's own JSON answer at the same signature slot",
+   "detail": "signature slot 11577633"
+  },
+  {
+   "ok": true,
+   "what": "those bodies turned into SSZ by the updater's converter (lez/updater lc_json) equal the SSZ the providers served (and the fixture's bootstrap.ssz and update_1411.ssz)",
+   "detail": "[{\"bytes\": 25472, \"comparisons\": [{\"against\": \"Nimbus's SSZ (same request, same session)\", \"bytes\": 25472, \"equal\": true}, {\"against\": \"the fixture's bootstrap.ssz (Lodestar, 12 Nov)\", \"bytes\": 25472, \"equal\": true}], \"provider\": \"nimbus-unstable\", \"what\": \"bootstrap\"}, {\"bytes\": 26424, \"comparisons\": [{\"against\": \"Lodestar's SSZ stream (same request), split\", \"bytes\": 26424, \"equal\": true}, {\"aga"
+  },
+  {
+   "ok": true,
+   "what": "ferrata_updater_module.run with its sources through beacon_api_module (two providers, min_agreeing 2), on the in-process LEZ chain: the instance initialised from the fixture's checkpoint and followed Sepolia",
+   "detail": "up to date after 22 rounds; finalized slot 11577568; {\"active\": true, \"applied\": 5, \"finalized_root\": \"40dffa33da50d15c3f2ed46fa45f748098f3a0ce12d5751187cfd95753c7224b\", \"finalized_slot\": 11577568, \"period\": 1413}"
+  },
+  {
+   "ok": true,
+   "what": "the instance's finalized header after the run is the block publicnode holds canonical at that slot",
+   "detail": "{\"slot\": \"11577568\", \"instance_root\": \"40dffa33da50d15c3f2ed46fa45f748098f3a0ce12d5751187cfd95753c7224b\", \"publicnode_root\": \"0x40dffa33da50d15c3f2ed46fa45f748098f3a0ce12d5751187cfd95753c7224b\", \"agree\": true}"
+  }
+ ],
+ "failed": 0,
+ "facts": {
+  "trusted_root": {
+   "root": "0xa9cb778f351a6d0cf5c8f383ca90cabe60ec32990360b77f5d326951ae47c361",
+   "slot": 11577536,
+   "epoch": 361798,
+   "lodestar": "finalized header",
+   "publicnode": {
+    "root_at_slot": "0xa9cb778f351a6d0cf5c8f383ca90cabe60ec32990360b77f5d326951ae47c361",
+    "canonical": true,
+    "finalized_epoch": 361798
+   },
+   "nimbus": {
+    "root": "0xa9cb778f351a6d0cf5c8f383ca90cabe60ec32990360b77f5d326951ae47c361",
+    "slot": 11577536
+   },
+   "agree": true
+  },
+  "plain_heads": [
+   12133576,
+   12133579,
+   12133583,
+   12133586
+  ],
+  "proxy_status_samples": [
+   [
+    null,
+    1794665026,
+    "running"
+   ],
+   [
+    12133577,
+    1794665061,
+    "running"
+   ],
+   [
+    12133580,
+    1794665098,
+    "running"
+   ],
+   [
+    12133584,
+    1794665146,
+    "running"
+   ]
+  ],
+  "proxy_beacon": {
+   "source": "module",
+   "urls": [
+    "https://lodestar-sepolia.chainsafe.io",
+    "http://unstable.sepolia.beacon-api.nimbus.team"
+   ]
+  },
+  "gate": {
+   "action": "none",
+   "blocking": false,
+   "chainId": 11155111,
+   "detail": "",
+   "message": "Verified.",
+   "mode": "required",
+   "ok": true,
+   "state": "ready",
+   "usable": true
+  },
+  "eth_getProof_required": {
+   "crown-live-3-capture-1": "verified proxy: eth_getProof: bad request: unknown method",
+   "crown-live-3-capture-2": "verified proxy: eth_getProof: bad request: unknown method",
+   "crown-live-1-capture-1": "verified proxy: eth_getProof: bad request: unknown method",
+   "crown-live-1-capture-2": "verified proxy: eth_getProof: bad request: unknown method"
+  },
+  "verify_checkpoint_execution": {
+   "verdict": "agrees",
+   "block_hash": "0xceaaa1ba00d05d2e3f7252b9d1bdd84de6d76cb14c1f3457216f8859683b08c7",
+   "block_number": 12118225,
+   "finalized_number": 12133493,
+   "eth": {
+    "calls": 4,
+    "chain_id": 11155111,
+    "routes": [
+     "proxied",
+     "proxied",
+     "proxied",
+     "proxied"
+    ],
+    "via": "eth_rpc_module"
+   },
+   "unavailable": []
+  },
+  "lc_json_to_ssz": {
+   "all_equal": true,
+   "rows": [
+    {
+     "bytes": 25472,
+     "comparisons": [
+      {
+       "against": "Nimbus's SSZ (same request, same session)",
+       "bytes": 25472,
+       "equal": true
+      },
+      {
+       "against": "the fixture's bootstrap.ssz (Lodestar, 12 Nov)",
+       "bytes": 25472,
+       "equal": true
+      }
+     ],
+     "provider": "nimbus-unstable",
+     "what": "bootstrap"
+    },
+    {
+     "bytes": 26424,
+     "comparisons": [
+      {
+       "against": "Lodestar's SSZ stream (same request), split",
+       "bytes": 26424,
+       "equal": true
+      },
+      {
+       "against": "the fixture's update_1411.ssz",
+       "bytes": 26424,
+       "equal": true
+      }
+     ],
+     "provider": "lodestar",
+     "what": "update 0 (period 1411)"
+    },
+    {
+     "bytes": 26424,
+     "comparisons": [
+      {
+       "against": "Lodestar's SSZ stream (same request), split",
+       "bytes": 26424,
+       "equal": true
+      }
+     ],
+     "provider": "lodestar",
+     "what": "update 1 (period 1412)"
+    },
+    {
+     "bytes": 26424,
+     "comparisons": [
+      {
+       "against": "Lodestar's SSZ stream (same request), split",
+       "bytes": 26424,
+       "equal": true
+      }
+     ],
+     "provider": "lodestar",
+     "what": "update 2 (period 1413)"
+    },
+    {
+     "bytes": 1448,
+     "comparisons": [
+      {
+       "against": "Lodestar's SSZ (same signature slot)",
+       "bytes": 1448,
+       "equal": true
+      }
+     ],
+     "provider": "lodestar",
+     "what": "finality update"
+    }
+   ]
+  },
+  "updater_run": {
+   "health": [
+    {
+     "chain": "sepolia",
+     "daemon": "verified-proxy-session",
+     "finalized_slot": 11577568,
+     "last_error": "",
+     "last_plan": "up-to-date",
+     "period": 1413,
+     "reasons": [],
+     "round": 22,
+     "status": "ok"
+    }
+   ],
+   "healthy": true,
+   "instances": [
+    {
+     "active": true,
+     "applied": 5,
+     "chain": "sepolia",
+     "finalized_root": "40dffa33da50d15c3f2ed46fa45f748098f3a0ce12d5751187cfd95753c7224b",
+     "finalized_slot": 11577568,
+     "period": 1413
+    }
+   ],
+   "metrics": "ferrata_updater_rounds_total{daemon=\"verified-proxy-session\",chain=\"sepolia\"} 22\nferrata_updater_tx_total{daemon=\"verified-proxy-session\",chain=\"sepolia\",step=\"adopt0\",result=\"applied\"} 4\nferrata_updater_tx_total{daemon=\"verified-proxy-session\",chain=\"sepolia\",step=\"adopt1\",result=\"applied\"} 4\nferrata_updater_tx_total{daemon=\"verified-proxy-session\",chain=\"sepolia\",step=\"finish\",result=\"applied\"} 4\nferrata_updater_tx_total{daemon=\"verified-proxy-session\",chain=\"sepolia\",step=\"init\",result=\"applied\"} 1\nferrata_updater_tx_total{daemon=\"verified-proxy-session\",chain=\"sepolia\",step=\"miller\",result=\"applied\"} 4\nferrata_updater_tx_total{daemon=\"verified-proxy-session\",chain=\"sepolia\",step=\"open\",result=\"applied\"} 4\nferrata_updater_gas_total{daemon=\"verified-proxy-session\",chain=\"sepolia\",result=\"applied\"} 64375422\nferrata_updater_gas_total{daemon=\"verified-proxy-session\",chain=\"sepolia\",result=\"refused\"} 0\nferrata_updater_fee_total{daemon=\"verified-proxy-session\",chain=\"sepolia\",result=\"applied\"} 515003376\nferrata_updater_fee_total{daemon=\"verified-proxy-session\",chain=\"sepolia\",result=\"refused\"} 0\nferrata_updater_budget_remaining{daemon=\"verified-proxy-session\",chain=\"sepolia\"} 999484996624\nferrata_updater_transport_errors_total{daemon=\"verified-proxy-session\",chain=\"sepolia\"} 0\nferrata_updater_retries_total{daemon=\"verified-proxy-session\",chain=\"sepolia\"} 0\nferrata_updater_deferrals_total{daemon=\"verified-proxy-session\",chain=\"sepolia\"} 0\nferrata_updater_steps_done_by_others_total{daemon=\"verified-proxy-session\",chain=\"sepolia\"} 0\nferrata_updater_jobs_finished_total{daemon=\"verified-proxy-session\",chain=\"sepolia\"} 5\nferrata_updater_finalized_slot{daemon=\"verified-proxy-session\",chain=\"sepolia\"} 11577568\nferrata_updater_period{daemon=\"verified-proxy-session\",chain=\"sepolia\"} 1413\nferrata_updater_source_requests_total{daemon=\"verified-proxy-session\",chain=\"sepolia\",source=\"beacon_api_module-lodestar\"} 14\nferrata_updater_source_errors_total{daemon=\"verified-proxy-session\",chain=\"sepolia\",source=\"beacon_api_module-lodestar\"} 0\nferrata_updater_source_refused_total{daemon=\"verified-proxy-session\",chain=\"sepolia\",source=\"beacon_api_module-lodestar\"} 0\nferrata_updater_source_lagging{daemon=\"verified-proxy-session\",chain=\"sepolia\",source=\"beacon_api_module-lodestar\"} 0\nferrata_updater_source_available{daemon=\"verified-proxy-session\",chain=\"sepolia\",source=\"beacon_api_module-lodestar\"} 1\nferrata_updater_source_demoted{daemon=\"verified-proxy-session\",chain=\"sepolia\",source=\"beacon_api_module-lodestar\"} 0\nferrata_updater_source_finalized_slot{daemon=\"verified-proxy-session\",chain=\"sepolia\",source=\"beacon_api_module-lodestar\"} 11577568\nferrata_updater_source_confirmed_total{daemon=\"verified-proxy-session\",chain=\"sepolia\",source=\"beacon_api_module-lodestar\"} 0\nferrata_updater_source_mismatches_total{daemon=\"verified-proxy-session\",chain=\"sepolia\",source=\"beacon_api_module-lodestar\"} 0\nferrata_updater_source_requests_total{daemon=\"verified-proxy-session\",chain=\"sepolia\",source=\"beacon_api_module-nimbus\"} 10\nferrata_updater_source_errors_total{daemon=\"verified-proxy-session\",chain=\"sepolia\",source=\"beacon_api_module-nimbus\"} 0\nferrata_updater_source_refused_total{daemon=\"verified-proxy-session\",chain=\"sepolia\",source=\"beacon_api_module-nimbus\"} 0\nferrata_updater_source_lagging{daemon=\"verified-proxy-session\",chain=\"sepolia\",source=\"beacon_api_module-nimbus\"} 0\nferrata_updater_source_available{daemon=\"verified-proxy-session\",chain=\"sepolia\",source=\"beacon_api_module-nimbus\"} 1\nferrata_updater_source_demoted{daemon=\"verified-proxy-session\",chain=\"sepolia\",source=\"beacon_api_module-nimbus\"} 0\nferrata_updater_source_finalized_slot{daemon=\"verified-proxy-session\",chain=\"sepolia\",source=\"beacon_api_module-nimbus\"} 11577568\nferrata_updater_source_confirmed_total{daemon=\"verified-proxy-session\",chain=\"sepolia\",source=\"beacon_api_module-nimbus\"} 0\nferrata_updater_source_mismatches_total{daemon=\"verified-proxy-session\",chain=\"sepolia\",source=\"beacon_api_module-nimbus\"} 0\nferrata_updater_health{daemon=\"verified-proxy-session\",chain=\"sepolia\"} 0\n",
+   "notes": [],
+   "round": 22,
+   "seconds": 24.334588088,
+   "up_to_date": true,
+   "verdict": "ok"
+  },
+  "updater_instance": {
+   "active": true,
+   "applied": 5,
+   "chain": "sepolia",
+   "finalized_root": "40dffa33da50d15c3f2ed46fa45f748098f3a0ce12d5751187cfd95753c7224b",
+   "finalized_slot": 11577568,
+   "period": 1413
+  }
+ }
+}

@@ -1,0 +1,1 @@
+{"chainId":11155111,"consensusVersion":"gloas","endpoint":"http://unstable.sepolia.beacon-api.nimbus.team","healthy":true,"https":false,"lagSlots":0,"latencyMs":288,"ok":true,"provider":"nimbus-unstable","servesLightClient":true,"slot":11577618}

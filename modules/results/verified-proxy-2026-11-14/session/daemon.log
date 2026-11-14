@@ -1,0 +1,97 @@
+[2026-11-14 14:03:36.809] [info] Inter-module access enforcement is OFF (no access policy set): any loaded module may call any other
+[2026-11-14 14:03:36.811] [info] [logos] Granting host services to 'capability_module': token_registry,token_delivery
+[2026-11-14 14:03:36.840] [out] [capability_module] [2026-11-14 14:03:36.840] [info] Granting host services to capability_module: ["token_registry","token_delivery"]
+[2026-11-14 14:03:36.840] [info] [logos] Module loaded: capability_module
+[2026-11-14 14:03:36.863] [info] [logos] Module loaded: modules_state
+[2026-11-14 14:03:36.895] [info] [logos] Module loaded: package_manager
+[2026-11-14 14:03:36.898] [info] [logos] Pushed module snapshot to modules_state
+[2026-11-14 14:03:36.925] [info] [logos] [storage_module] StorageModuleImpl: Initializing...
+[2026-11-14 14:03:36.926] [info] [logos] Module loaded: storage_module
+[2026-11-14 14:03:36.955] [info] [logos] Module loaded: package_downloader
+[2026-11-14 14:03:36.961] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+Logosctl daemon started (pid 47766, instance fc9409082bf8)
+Daemon state: /var/tmp/vp/vps/daemon/state.json
+Local client config: /var/tmp/vp/vps/client/config.yaml
+[2026-11-14 14:03:36.964] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-14 14:03:37.397] [warning] [logos] [package_manager] Warning: Package is unsigned: OUT/lgx-beacon_api_module/logos-beacon_api_module-module-lib.lgx
+[2026-11-14 14:03:38.095] [warning] [logos] [package_manager] Warning: Package is unsigned: OUT/lgx-verified_proxy_module/logos-verified_proxy_module-module-lib.lgx
+[2026-11-14 14:03:38.707] [warning] [logos] [package_manager] Warning: Package is unsigned: OUT/lgx-eth_rpc_module/logos-eth_rpc_module-module-lib.lgx
+[2026-11-14 14:03:39.180] [warning] [logos] [package_manager] Warning: Package is unsigned: OUT/check/lgx-ferrata_attest_module/logos-ferrata_attest_module-module-lib.lgx
+[2026-11-14 14:03:42.411] [warning] [logos] [package_manager] Warning: Package is unsigned: OUT/check/lgx-ferrata_updater_module/logos-ferrata_updater_module-module-lib.lgx
+[2026-11-14 14:03:43.683] [info] [logos] Module loaded: beacon_api_module
+[2026-11-14 14:03:43.752] [info] [logos] Module loaded: verified_proxy_module
+[2026-11-14 14:03:43.820] [info] [logos] Module loaded: eth_rpc_module
+[2026-11-14 14:03:43.882] [info] [logos] Module loaded: ferrata_attest_module
+[2026-11-14 14:03:43.955] [info] [logos] Module loaded: ferrata_updater_module
+[2026-11-14 14:03:45.270] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-14 14:03:45.280] [out] [verified_proxy_module] WRN 2026-11-14 14:03:45.280+00:00 Logging configuration options not enabled in the current build
+[2026-11-14 14:03:45.280] [out] [verified_proxy_module] INF 2026-11-14 14:03:45.280+00:00 Connected to beacon backend                topics="vp_main" url=https://lodestar-sepolia.chainsafe.io
+[2026-11-14 14:03:45.280] [out] [verified_proxy_module] INF 2026-11-14 14:03:45.280+00:00 Connected to beacon backend                topics="vp_main" url=http://unstable.sepolia.beacon-api.nimbus.team
+[2026-11-14 14:03:45.280] [out] [verified_proxy_module] INF 2026-11-14 14:03:45.280+00:00 Connected to execution backend             topics="vp_main" url=https://rpc.sepolia.ethpandaops.io
+[2026-11-14 14:03:45.280] [out] [verified_proxy_module] INF 2026-11-14 14:03:45.280+00:00 Connected to archive backend               topics="vp_main" url=https://rpc.sepolia.ethpandaops.io
+[2026-11-14 14:03:45.856] [out] [verified_proxy_module] INF 2026-11-14 14:03:45.856+00:00 New LC optimistic header                   topics="vp_main" execution_block_hash=6e0704ef
+[2026-11-14 14:03:45.856] [out] [verified_proxy_module] INF 2026-11-14 14:03:45.856+00:00 New LC finalized header                    topics="vp_main" execution_block_hash=6e0704ef
+[2026-11-14 14:03:45.856] [out] [verified_proxy_module] INF 2026-11-14 14:03:45.856+00:00 LC bootstrap verified                      topics="vp_engine" trustedBlockRoot=a9cb778f
+[2026-11-14 14:03:46.636] [out] [verified_proxy_module] INF 2026-11-14 14:03:46.635+00:00 New LC optimistic header                   topics="vp_main" execution_block_hash=463d635f
+[2026-11-14 14:03:57.732] [out] [verified_proxy_module] INF 2026-11-14 14:03:57.732+00:00 New LC optimistic header                   topics="vp_main" execution_block_hash=fd8bffd5
+[2026-11-14 14:04:10.088] [out] [verified_proxy_module] INF 2026-11-14 14:04:10.088+00:00 New LC optimistic header                   topics="vp_main" execution_block_hash=97516344
+[2026-11-14 14:04:21.739] [out] [verified_proxy_module] INF 2026-11-14 14:04:21.739+00:00 New LC optimistic header                   topics="vp_main" execution_block_hash=49e31847
+[2026-11-14 14:04:34.153] [out] [verified_proxy_module] INF 2026-11-14 14:04:34.153+00:00 New LC optimistic header                   topics="vp_main" execution_block_hash=f955622e
+[2026-11-14 14:04:46.127] [out] [verified_proxy_module] INF 2026-11-14 14:04:46.127+00:00 New LC optimistic header                   topics="vp_main" execution_block_hash=cb814436
+[2026-11-14 14:04:58.139] [out] [verified_proxy_module] INF 2026-11-14 14:04:58.139+00:00 New LC optimistic header                   topics="vp_main" execution_block_hash=58d27f68
+[2026-11-14 14:05:10.229] [out] [verified_proxy_module] INF 2026-11-14 14:05:10.229+00:00 New LC optimistic header                   topics="vp_main" execution_block_hash=f61a962f
+[2026-11-14 14:05:21.813] [out] [verified_proxy_module] INF 2026-11-14 14:05:21.813+00:00 New LC optimistic header                   topics="vp_main" execution_block_hash=204121a4
+[2026-11-14 14:05:34.287] [out] [verified_proxy_module] INF 2026-11-14 14:05:34.287+00:00 New LC optimistic header                   topics="vp_main" execution_block_hash=c22b5de5
+[2026-11-14 14:05:46.308] [out] [verified_proxy_module] INF 2026-11-14 14:05:46.308+00:00 New LC optimistic header                   topics="vp_main" execution_block_hash=5c0c0fb5
+[2026-11-14 14:05:48.018] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-14 14:05:48.022] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-14 14:05:49.101] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-14 14:05:58.877] [out] [verified_proxy_module] INF 2026-11-14 14:05:58.877+00:00 New LC optimistic header                   topics="vp_main" execution_block_hash=72292075
+[2026-11-14 14:06:11.005] [out] [verified_proxy_module] INF 2026-11-14 14:06:11.005+00:00 New LC optimistic header                   topics="vp_main" execution_block_hash=136be6ea
+[2026-11-14 14:06:22.834] [out] [verified_proxy_module] INF 2026-11-14 14:06:22.834+00:00 New LC optimistic header                   topics="vp_main" execution_block_hash=d7fa36d2
+[2026-11-14 14:06:34.644] [out] [verified_proxy_module] INF 2026-11-14 14:06:34.643+00:00 New LC optimistic header                   topics="vp_main" execution_block_hash=2498a79c
+[2026-11-14 14:06:46.688] [out] [verified_proxy_module] INF 2026-11-14 14:06:46.688+00:00 New LC optimistic header                   topics="vp_main" execution_block_hash=a8ee48e4
+[2026-11-14 14:06:47.396] [out] [verified_proxy_module] INF 2026-11-14 14:06:47.396+00:00 New LC finalized header                    topics="vp_main" execution_block_hash=d5f0148d
+[2026-11-14 14:06:55.302] [info] [logos] [ferrata_updater_module] 2026-11-14T14:06:55Z [verified-proxy-session sepolia] instance 0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5 of program 9iE718tLLpNX7jUofw329HeJ2crB4CqBxQTRGjS1YBP4 (checkpoint 0x3b901f5e6853b5cf5eb04d7ccfe1272e66c38291cb3a11dd159cacd1117ccf7c); payer 4ZyXXGxaw83mTWZc8fRRTnSDSR6Qhq9d8taM8QWhR9wd; ledger harness
+[2026-11-14 14:06:55.305] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-14 14:06:56.716] [info] [logos] [ferrata_updater_module] 2026-11-14T14:06:56Z [verified-proxy-session sepolia] sepolia Init applied (exit None, gas 116510, fee 932080, block 2)
+[2026-11-14 14:06:57.100] [info] [logos] [ferrata_updater_module] 2026-11-14T14:06:57Z [verified-proxy-session sepolia] sepolia init adopt 1/2 applied (exit None, gas 3422056, fee 27376448, block 3)
+[2026-11-14 14:06:57.786] [info] [logos] [ferrata_updater_module] 2026-11-14T14:06:57Z [verified-proxy-session sepolia] sepolia init adopt 2/2 applied (exit None, gas 3505240, fee 28041920, block 4)
+[2026-11-14 14:06:58.711] [out] [verified_proxy_module] INF 2026-11-14 14:06:58.711+00:00 New LC optimistic header                   topics="vp_main" execution_block_hash=04b744dc
+[2026-11-14 14:07:00.081] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:00Z [verified-proxy-session sepolia] job 0x458432d5ad4812f0: finalized slot 11558912 root 0xf54bd3575c05c7d83ee53dcef9bbfd98720b39e0be93aa9707a22dce8f2225d3 (attested slot 11558976, signature slot 11558977, 509 of 512 signers; adopts the next committee), served or confirmed by beacon_api_module-lodestar, beacon_api_module-nimbus
+[2026-11-14 14:07:00.575] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:00Z [verified-proxy-session sepolia] sepolia fin 11558912 Open applied (exit None, gas 2099907, fee 16799256, block 5)
+[2026-11-14 14:07:00.586] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:00Z [verified-proxy-session sepolia] job 0x458432d5ad4812f0 (finalized slot 11558912) is open: its miller first
+[2026-11-14 14:07:01.028] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:01Z [verified-proxy-session sepolia] sepolia fin 11558912 Miller applied (exit None, gas 3310869, fee 26486952, block 6)
+[2026-11-14 14:07:01.047] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:01Z [verified-proxy-session sepolia] job 0x458432d5ad4812f0 (finalized slot 11558912) is open: its adopt0 first
+[2026-11-14 14:07:01.425] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:01Z [verified-proxy-session sepolia] sepolia fin 11558912 adopt 1/2 applied (exit None, gas 3433091, fee 27464728, block 7)
+[2026-11-14 14:07:01.444] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:01Z [verified-proxy-session sepolia] job 0x458432d5ad4812f0 (finalized slot 11558912) is open: its adopt1 first
+[2026-11-14 14:07:01.837] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:01Z [verified-proxy-session sepolia] sepolia fin 11558912 adopt 2/2 applied (exit None, gas 3440283, fee 27522264, block 8)
+[2026-11-14 14:07:01.848] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:01Z [verified-proxy-session sepolia] job 0x458432d5ad4812f0 (finalized slot 11558912) is open: its finish first
+[2026-11-14 14:07:02.447] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:02Z [verified-proxy-session sepolia] sepolia fin 11558912 Finish applied (exit None, gas 3696603, fee 29572824, block 9)
+[2026-11-14 14:07:05.472] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:05Z [verified-proxy-session sepolia] job 0xb85ac2feddaab96f: finalized slot 11567104 root 0xf665af3947a89ec955df954ae605120921d6fa49fdf6b9aedcd4b9564d11a945 (attested slot 11567172, signature slot 11567173, 504 of 512 signers; advances; rotates the committees; adopts the next committee), served or confirmed by beacon_api_module-lodestar, beacon_api_module-nimbus
+[2026-11-14 14:07:05.963] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:05Z [verified-proxy-session sepolia] sepolia fin 11567104 Open applied (exit None, gas 2238611, fee 17908888, block 10)
+[2026-11-14 14:07:05.974] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:05Z [verified-proxy-session sepolia] job 0xb85ac2feddaab96f (finalized slot 11567104) is open: its miller first
+[2026-11-14 14:07:06.396] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:06Z [verified-proxy-session sepolia] sepolia fin 11567104 Miller applied (exit None, gas 3310869, fee 26486952, block 11)
+[2026-11-14 14:07:06.415] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:06Z [verified-proxy-session sepolia] job 0xb85ac2feddaab96f (finalized slot 11567104) is open: its adopt0 first
+[2026-11-14 14:07:06.788] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:06Z [verified-proxy-session sepolia] sepolia fin 11567104 adopt 1/2 applied (exit None, gas 3433091, fee 27464728, block 12)
+[2026-11-14 14:07:06.807] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:06Z [verified-proxy-session sepolia] job 0xb85ac2feddaab96f (finalized slot 11567104) is open: its adopt1 first
+[2026-11-14 14:07:07.187] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:07Z [verified-proxy-session sepolia] sepolia fin 11567104 adopt 2/2 applied (exit None, gas 3440283, fee 27522264, block 13)
+[2026-11-14 14:07:07.198] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:07Z [verified-proxy-session sepolia] job 0xb85ac2feddaab96f (finalized slot 11567104) is open: its finish first
+[2026-11-14 14:07:07.946] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:07Z [verified-proxy-session sepolia] sepolia fin 11567104 Finish applied (exit None, gas 3732085, fee 29856680, block 14)
+[2026-11-14 14:07:10.874] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:10Z [verified-proxy-session sepolia] job 0x85443f3c2ba491ee: finalized slot 11577568 root 0x40dffa33da50d15c3f2ed46fa45f748098f3a0ce12d5751187cfd95753c7224b (attested slot 11577632, signature slot 11577633, 507 of 512 signers; advances; rotates the committees), served or confirmed by beacon_api_module-lodestar, beacon_api_module-nimbus
+[2026-11-14 14:07:11.204] [out] [verified_proxy_module] INF 2026-11-14 14:07:11.204+00:00 New LC optimistic header                   topics="vp_main" execution_block_hash=186c5b7c
+[2026-11-14 14:07:11.356] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:11Z [verified-proxy-session sepolia] sepolia fin 11577568 Open applied (exit None, gas 2133137, fee 17065096, block 15)
+[2026-11-14 14:07:11.358] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:11Z [verified-proxy-session sepolia] job 0x85443f3c2ba491ee (finalized slot 11577568) is open: its miller first
+[2026-11-14 14:07:11.781] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:11Z [verified-proxy-session sepolia] sepolia fin 11577568 Miller applied (exit None, gas 3305773, fee 26446184, block 16)
+[2026-11-14 14:07:11.783] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:11Z [verified-proxy-session sepolia] job 0x85443f3c2ba491ee (finalized slot 11577568) is open: its finish first
+[2026-11-14 14:07:12.534] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:12Z [verified-proxy-session sepolia] sepolia fin 11577568 Finish applied (exit None, gas 3721478, fee 29771824, block 17)
+[2026-11-14 14:07:14.533] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:14Z [verified-proxy-session sepolia] job 0x1801a5564c562a09: finalized slot 11575296 root 0x2ca5e6854a13cd4d0907d4f9fd8a5c894f66c979d41f85fc76fddb054b192532 (attested slot 11575363, signature slot 11575364, 507 of 512 signers; adopts the next committee), served or confirmed by beacon_api_module-lodestar, beacon_api_module-nimbus
+[2026-11-14 14:07:15.021] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:15Z [verified-proxy-session sepolia] sepolia fin 11575296 Open applied (exit None, gas 2154690, fee 17237520, block 18)
+[2026-11-14 14:07:15.032] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:15Z [verified-proxy-session sepolia] job 0x1801a5564c562a09 (finalized slot 11575296) is open: its miller first
+[2026-11-14 14:07:15.459] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:15Z [verified-proxy-session sepolia] sepolia fin 11575296 Miller applied (exit None, gas 3310869, fee 26486952, block 19)
+[2026-11-14 14:07:15.477] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:15Z [verified-proxy-session sepolia] job 0x1801a5564c562a09 (finalized slot 11575296) is open: its adopt0 first
+[2026-11-14 14:07:15.854] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:15Z [verified-proxy-session sepolia] sepolia fin 11575296 adopt 1/2 applied (exit None, gas 3433091, fee 27464728, block 20)
+[2026-11-14 14:07:15.873] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:15Z [verified-proxy-session sepolia] job 0x1801a5564c562a09 (finalized slot 11575296) is open: its adopt1 first
+[2026-11-14 14:07:16.251] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:16Z [verified-proxy-session sepolia] sepolia fin 11575296 adopt 2/2 applied (exit None, gas 3440283, fee 27522264, block 21)
+[2026-11-14 14:07:16.262] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:16Z [verified-proxy-session sepolia] job 0x1801a5564c562a09 (finalized slot 11575296) is open: its finish first
+[2026-11-14 14:07:16.862] [info] [logos] [ferrata_updater_module] 2026-11-14T14:07:16Z [verified-proxy-session sepolia] sepolia fin 11575296 Finish applied (exit None, gas 3696603, fee 29572824, block 22)

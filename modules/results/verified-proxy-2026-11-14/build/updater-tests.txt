@@ -1,0 +1,15 @@
+     Running unittests src/lib.rs (target/debug/deps/ferrata_updater-5332e417d97749f1)
+test lc_json::tests::a_wrong_shape_is_refused ... ok
+test lc_json::tests::finality_update_json_is_the_served_ssz ... ok
+test lc_json::tests::uint256_is_little_endian ... ok
+test lc_json::tests::bootstrap_json_is_the_served_ssz ... ok
+test lc_json::tests::updates_json_is_the_served_ssz ... ok
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/config.rs (target/debug/deps/config-eec286235cf2de1a)
+test a_beacon_api_module_source_parses ... ok
+test header_answers_and_utc ... ok
+test bad_configurations_are_refused ... ok
+test updates_stream_splits_with_either_length_convention ... ok
+test sepolia_gloas_instance_is_the_crown_instance ... ok
+test shipped_configurations_parse ... ok
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
