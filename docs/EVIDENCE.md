@@ -200,8 +200,10 @@ side is a devnet we ran (LEZ testnet 0.4 does not exist).
 - **Not built** (README, "Specified but not built"): among them the A3 gate's three daemons on a running sequencer
   (the three daemons are built as Logos modules, rows 94–98; the updater module carries both backends and followed
   Sepolia on a crown zone inside a headless Logos Core, row 104; the binary followed it for eight hours, row 99),
-  the monitor's client of the LEZ and Logos Blockchain nodes' RPCs, sends and verified reads through Logos Core's
-  own modules (the attestation and bridge modules' Ethereum reads go through `eth_rpc_module`, rows 108–110; on a
+  the monitor's client of the LEZ and Logos Blockchain nodes' RPCs, sends through Logos Core's own modules and
+  verified reads beyond the attestation module's (the attestation and bridge modules' Ethereum reads go through
+  `eth_rpc_module`, rows 108–110; the attestation module's through `verified_proxy_module` on public Sepolia, the
+  updater's light-client data through `beacon_api_module`, rows 116–118; on a
   LEZ sequencer the user's private round trip has run through the tool and through the mini-app and
   `ferrata_bridge_module` in a headless Logos Core, with a stand-in for those modules, rows 102 and 103), the
   mini-app inside Basecamp, a published module catalog. Nothing is audited: the static
