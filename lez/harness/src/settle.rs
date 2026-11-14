@@ -16,6 +16,9 @@
 //!   sequencer-stake operations, which these tests never send);
 //! - the bridge and cross-zone-inbox guards of `validate_user_state_modification` are left out
 //!   (they reject writes to accounts these tests never touch); the clock/fee guard is kept.
+//!
+//! Against v0.4.0-rc2 and rc3 the copied functions are unchanged, except that rc3 has one clock
+//! account instead of three (LEZ #988): the guard takes the tag's (feature `lez-rc3`).
 
 use std::collections::{BTreeMap, HashSet};
 
@@ -176,6 +179,19 @@ fn native_balance_only_increased(pre: &lee::Account, post: &lee::Account) -> boo
         && non_native(pre).eq(non_native(post))
 }
 
+/// The clock accounts: three on v0.4.0-rc1 and rc2 (every 1, 10 and 50 blocks), one from v0.4.0-rc3 on
+/// (LEZ #988).
+#[cfg(not(feature = "lez-rc3"))]
+fn clock_account_ids() -> impl Iterator<Item = AccountId> {
+    system_accounts::clock_account_ids().into_iter()
+}
+
+/// The clock account (v0.4.0-rc3: one, read through the clock's actor, LEZ #988).
+#[cfg(feature = "lez-rc3")]
+fn clock_account_ids() -> impl Iterator<Item = AccountId> {
+    std::iter::once(system_accounts::clock_account_id())
+}
+
 /// The clock/fee part of `common::transaction::validate_user_state_modification`.
 fn validate_no_restricted_account_modification(
     tx: &LeeTransaction,
@@ -183,7 +199,7 @@ fn validate_no_restricted_account_modification(
     diff: &ValidatedStateDiff,
 ) -> Result<(), String> {
     let fee_inbox = system_accounts::fee_inbox_account_id();
-    for account_id in system_accounts::clock_account_ids().into_iter().chain(system_accounts::fee_account_ids()) {
+    for account_id in clock_account_ids().chain(system_accounts::fee_account_ids()) {
         let in_proof_fee = account_id == fee_inbox
             && matches!(tx, LeeTransaction::PrivacyPreserving(_))
             && diff

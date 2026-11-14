@@ -1,0 +1,29 @@
+# python3 -I lez/scripts/elf-diff-sections.py <v0.4.0-rc1 build> <v0.4.0-rc3 build under rc1s name>, user ELFs, box of 14 Nov 2026
+== ferrata_lez
+sizes 594,640 / 594,640
+section .rodata: 1 of 25,452 bytes differ
+section .strtab: 763 of 81,382 bytes differ
+== ferrata_lez_keccak_soft
+sizes 597,868 / 597,868
+section .rodata: 1 of 25,652 bytes differ
+section .strtab: 763 of 81,458 bytes differ
+== ferrata_consumer
+sizes 438,984 / 438,984
+section .rodata: 1 of 17,424 bytes differ
+section .strtab: 706 of 59,776 bytes differ
+== ferrata_consumer_keccak_accel
+sizes 435,984 / 435,984
+section .rodata: 1 of 17,248 bytes differ
+section .strtab: 706 of 59,897 bytes differ
+== ferrata_bridge
+sizes 560,416 / 560,416
+section .rodata: 1 of 18,912 bytes differ
+section .strtab: 706 of 66,488 bytes differ
+== ferrata_holdings
+sizes 275,080 / 275,080
+section .rodata: 1 of 15,680 bytes differ
+section .strtab: 706 of 51,454 bytes differ
+== scripted
+sizes 235,804 / 235,804
+section .rodata: 4 of 16,120 bytes differ
+section .strtab: 793 of 51,454 bytes differ

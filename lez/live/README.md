@@ -260,3 +260,38 @@ FERRATA_LIVE_TICK_AFTER=1 FERRATA_LIVE_TICK_WINDOW="1 2" FERRATA_LIVE_PROOF_SECO
 python3 lez/live/tables.py lez/live/results/v0.4.0-rc2
 lez/live/verify-run.sh $P $S
 ```
+
+## LEZ v0.4.0-rc3
+
+One invocation of `run.sh run` on 14 November 2026, 10:02–10:54 UTC, with `LEZ_TAG=v0.4.0-rc3`, on a Modal build
+box, then `verify-run.sh` once there ([`results/v0.4.0-rc3/verify-run.log`](results/v0.4.0-rc3/verify-run.log));
+scripts of commit `97246f4`. What rc3 changed: [`../results/v0.4.0-rc3/README.md`](../results/v0.4.0-rc3/README.md).
+
+| part | on rc3 |
+|---|---|
+| Sequencer | `sequencer_service` of the unmodified tag `v0.4.0-rc3` (commit `bafd07b`), `RISC0_DEV_MODE` not set |
+| Bedrock | the node rc3 pins, **Logos Blockchain 0.3.5-rc.1** (`f6d4267f`), which LEZ's resolver took from its release; rc3's deployment settings (4 s slots, depth 3, 240 s epochs, as on rc2); one validator, leader proofs in dev mode |
+| Program | **the final programs**: `ferrata_lez` `816d1fef…` and `scripted` `8cb0e3f5…`, the binaries of [`../../docs/image-ids.md`](../../docs/image-ids.md) (checked byte for byte before the run), deployed through rc3's loader |
+| Client | the driver built against rc3 (feature `lez-rc3`, which keeps rc2's pinned gas limits and allowed reverts) |
+| Phases | as on rc2 but the real proof (`private-real`): not attempted, for time |
+| Record | `results/v0.4.0-rc3/`: `summary.txt`, `tables.md` (against `../results/v0.4.0-rc3/stage1-*.md`), `run.tsv`, `blocks.borsh` |
+
+182 blocks, all `Finalized` on Bedrock at export; 99 transactions sent: 76 applied, 19 refused by the program with
+its exit code, 2 reverted otherwise, 2 dropped (the stored GPU-proven transaction and the fake receipt, as on rc1
+and rc2). Of the 65 with a harness row, the same execution gas in 64; the other is the validity-window case, as on
+rc1 and rc2. Deployment, as on rc2, pays execution gas: the program (627,064-byte binary, 7 segments) 8
+transactions, 1,091,406 execution gas, 599,500 storage gas, 13,527,248 in base fees; `scripted` 4 transactions,
+373,430, 238,216, 4,893,168. Base fee 8, 9 after the block over the target. `verify-run.sh`: every block hash holds
+with the bytecode put back (17 chunks), the 182 blocks replay through rc3's `chain_state` from the pre-genesis
+state, 97 manifest rows equal LEZ's settlement, the image ids are the final ones.
+
+What the 0.3.5-rc.1 node showed: 61 blocks were final 14–24 s after the sequencer published them (rc2: 14–25 s), but
+120, in two runs of 60, only 1,214–1,216 s after (about 300 slots of 4 s), and one public transaction waited
+1,219.6 s to settle (the other 76: 19.1–36.8 s, mean 35.6 s over all 77). Not traced: the sequencer's log has no
+rewind and one skipped turn; the node's storage gas price rose 1 → 7 over the run (rc2: 1 → 3). Figures from
+`results/v0.4.0-rc3/logs/` by the same count as rc2's (`spike/tmp/rc2/tools/latency.py`, beside the repository).
+
+Reproduce on rc3 as on rc2 above, with `v0.4.0-rc3` for the tag, the final binaries for `FERRATA_PROGRAM_BIN` and
+`FERRATA_SCRIPTED_BIN` (`scripts/reproduce-image-ids.sh build` makes them), `FERRATA_LIVE_HARNESS_RESULTS` at
+`lez/results/v0.4.0-rc3` and `FERRATA_LIVE_PHASES="info deploy replay scenarios capacity private-stored private-fake
+export"`.

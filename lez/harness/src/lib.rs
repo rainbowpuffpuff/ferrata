@@ -47,7 +47,13 @@ use trace::{trace_public, TransitionTrace};
 
 /// The LEZ tag this harness is built against (`../scripts/lez-select.sh` sets it with the path
 /// dependencies).
-pub const LEZ_TAG: &str = if cfg!(feature = "lez-rc2") { "v0.4.0-rc2" } else { "v0.4.0-rc1" };
+pub const LEZ_TAG: &str = if cfg!(feature = "lez-rc3") {
+    "v0.4.0-rc3"
+} else if cfg!(feature = "lez-rc2") {
+    "v0.4.0-rc2"
+} else {
+    "v0.4.0-rc1"
+};
 
 /// Where the tests and `tables` write: `lez/results/` against v0.4.0-rc1, `lez/results/<tag>/`
 /// against another tag, so that one tag's results never overwrite another's;

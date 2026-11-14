@@ -9,13 +9,15 @@ LIVE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$LIVE_DIR/../.." && pwd)"
 BESIDE="$(cd "$REPO/.." && pwd)"
 # Which LEZ: the tag, the source tree and the commit it must be at. The default is the tag of the
-# recorded run in results/; LEZ_TAG=v0.4.0-rc2 selects rc2 (results/v0.4.0-rc2/). The driver's
+# recorded run in results/; LEZ_TAG=v0.4.0-rc2 selects rc2 (results/v0.4.0-rc2/), LEZ_TAG=v0.4.0-rc3
+# rc3 (results/v0.4.0-rc3/). The driver's
 # manifests must point at the same tag (../scripts/lez-select.sh).
 LEZ_TAG="${LEZ_TAG:-v0.4.0-rc1}"
 LEZ_SRC="${LEZ_SRC:-$BESIDE/upstream/lez-$LEZ_TAG}"
 case "$LEZ_TAG" in
   v0.4.0-rc1) LEZ_COMMIT="${LEZ_COMMIT:-1806e873ea2ac0e1b608aa7cf2f9b6e1fb12db21}" ;;
   v0.4.0-rc2) LEZ_COMMIT="${LEZ_COMMIT:-e3edf47402a82557103ca719b30d0bd2684338d1}" ;;
+  v0.4.0-rc3) LEZ_COMMIT="${LEZ_COMMIT:-bafd07be0701398f9bc435f73ab05e9a7936c301}" ;;
   *) [ -n "${LEZ_COMMIT:-}" ] || { echo "error: no commit known for LEZ $LEZ_TAG: set LEZ_COMMIT" >&2; exit 1; } ;;
 esac
 
@@ -53,7 +55,7 @@ unset GITHUB_TOKEN GH_TOKEN
 die() { echo "error: $*" >&2; exit 1; }
 
 check_lez() {
-  [ -f "$LEZ_SRC/Cargo.toml" ] || die "LEZ $LEZ_TAG not found at $LEZ_SRC (scripts/fetch-upstream.sh fetches v0.4.0-rc1 and rc2)"
+  [ -f "$LEZ_SRC/Cargo.toml" ] || die "LEZ $LEZ_TAG not found at $LEZ_SRC (scripts/fetch-upstream.sh fetches v0.4.0-rc1, rc2 and rc3)"
   if [ -d "$LEZ_SRC/.git" ]; then
     local head; head="$(git -C "$LEZ_SRC" rev-parse HEAD)"
     [ "$head" = "$LEZ_COMMIT" ] || die "LEZ checkout is at $head, expected $LEZ_COMMIT ($LEZ_TAG)"

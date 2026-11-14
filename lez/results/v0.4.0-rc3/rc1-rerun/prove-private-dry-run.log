@@ -1,0 +1,26 @@
+program image 816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df (627064 ELF bytes); consumer image 8464603bcf9ea9c69c0eac100605deb9c8ef666a56f964cceba66947958e4b96; RISC0_DEV_MODE on
+private transition (VerifyAll, finality update): 9,049,362 user cycles, 10 segments, 9,699,328 cycles padded (sum of 2^po2), exit Halted(0)
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+DRY RUN, NOT A PROOF (RISC0_DEV_MODE=1): execute_and_prove 1.3 s (prove + settle 1.5 s); receipt (fake receipt) 4107 bytes; transaction 8101 bytes
+wrote the proven transaction to <scratch>/t-rc1/lez/target/dry-run-tx.borsh (8101 bytes)
+public_context.actors (3): ferrata@4wrKg7NQYmeCPqcKMpiwvprF9qXnb7GcBQyXppgf6fFA, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@Ah5fwGHFhbmTsF75WZs8qgHZshJGyyAHrwiHqNPTerzE
+public_context.authorized_accounts: {}
+execution.public_root: None
+execution.boundary (4 steps):
+  - PrivateToPublic from ferrata@EoTYfFi4rVfLkTBefMr8sB6GcyhRTZv682hg9J1S1QsL to ferrata@Ah5fwGHFhbmTsF75WZs8qgHZshJGyyAHrwiHqNPTerzE: ApplyVerified { instance_id: 39860f39c975, job: 470 bytes } (507 bytes)
+  - EndPublicSubtree
+  - PrivateToPublic from native@EoTYfFi4rVfLkTBefMr8sB6GcyhRTZv682hg9J1S1QsL to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
+  - EndPublicSubtree
+execution.program_image_claims (1):
+  - Disclosed { program: ferrata, image_id: 816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df }
+execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1233 bytes)
+execution.async_messages: 0
+execution.recovery_bindings: 0
+execution.validity: ValidityWindows { blocks: ValidityWindow { from: None, to: None }, timestamps: ValidityWindow { from: Some(1793602427000), to: Some(1794859991000) } }
+execution.fee: Some("refund_to Some(78Skt7EQTvVwfWVYnA1XMjghv3aUR1V5wgQAfVLKJZG5), fallback true")
+nonces: 0, admission evidence: 0
+
+settled: execution gas 485,298 (PRIVATE_VERIFY_GAS 409,764 + public part 75,534 cycles), storage gas 224,063, base fee 5,674,888

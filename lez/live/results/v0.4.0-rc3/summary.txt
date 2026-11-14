@@ -1,0 +1,6 @@
+blocks: 1..=182
+transactions: 99 sent; 76 applied, 19 refused with an exit code, 2 reverted otherwise, 2 dropped by the sequencer, 0 rejected at its RPC, 0 unfinished
+charged in all: execution gas 197455192, storage gas 2137001, base fees 1600373844
+against the harness tables: 65 transactions have a harness row; execution gas equal in 64, different in 1
+  differs: Open before its signature slot (validity window) live 4000000 harness 10000000 (Execution outside of the validity window; update_0 on an instance whose slots start ten years later; the harness sets the block time instead and declares 10M)
+base fee exec over the blocks: min 8, max 9; blocks finalized on Bedrock at export: 182 of 182
