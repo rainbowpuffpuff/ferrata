@@ -53,7 +53,9 @@ pub trait FerrataBridgeModule: Send + 'static {
 
     /// The mini-app's calls (`{"method", "params"}`: open, info, registry, price, deposit, scan, claim,
     /// burn, release), each run with the methods above over the chains' state, which a chain service
-    /// reads and to which it signs and sends (the stand-in for Logos Core's own modules); `{"ok", ...}`.
+    /// reads and to which it signs and sends (the stand-in for Logos Core's own modules); `lez` routes the
+    /// session's LEZ reads and private sends through Logos Core's `lez_core`, `lez_report` lists those
+    /// calls; `{"ok", ...}`.
     fn wallet(&mut self, request: String) -> String;
     /// Called once the module is wired to the host.
     fn on_context_ready(&mut self, _ctx: &RustModuleContext) {}
@@ -76,6 +78,24 @@ fn eth_rpc_module_raw_rpc(chain_id: i64, method: &str, params: &str, timeout_ms:
             std::time::Duration::from_millis(timeout_ms.max(1)),
         )
         .map_err(|e| format!("eth_rpc_module.raw_rpc did not answer: {e:?}"))?;
+    Ok(match v {
+        serde_json::Value::String(s) => s,
+        other => other.to_string(),
+    })
+}
+
+/// Logos Core's own LEZ module, `lez_core` (logos-execution-zone-module: LEZ's wallet as a module), called by
+/// name through the SDK as `eth_rpc_module` above: (method, the arguments as a JSON array, a timeout) -> the
+/// method's reply as text. Not declared a dependency, for the same reason, and because the module must keep
+/// working without it (the plain path). The calls crate uses it when the wallet session's `lez` call names
+/// `lez_core` (calls/src/lez.rs): the bridge's actor states, the wallet's private account and the private
+/// claim and burn.
+fn lez_core_call(method: &str, args: &str, timeout_ms: u64) -> Result<String, String> {
+    let args: serde_json::Value = serde_json::from_str(args).map_err(|e| format!("lez_core.{method}: arguments: {e}"))?;
+    let v = logos_rust_sdk::LogosModuleSDK::new()
+        .plugin("lez_core")
+        .call_json_with_timeout(method, &args, std::time::Duration::from_millis(timeout_ms.max(1)))
+        .map_err(|e| format!("lez_core.{method} did not answer: {e:?}"))?;
     Ok(match v {
         serde_json::Value::String(s) => s,
         other => other.to_string(),
@@ -140,5 +160,6 @@ impl FerrataBridgeModule for FerrataBridge {
 #[no_mangle]
 pub extern "Rust" fn logos_module_install() {
     ferrata_bridge_calls::set_eth_rpc_module(eth_rpc_module_raw_rpc);
+    ferrata_bridge_calls::set_lez_core(lez_core_call);
     install::<FerrataBridge>();
 }

@@ -18,10 +18,12 @@
 
 use std::fmt::Write as _;
 
+mod lez;
 mod rpc;
 mod session;
 mod wallet;
 
+pub use lez::{set_lez_core, LezCoreCall};
 pub use rpc::{set_eth_rpc_module, EthRpcModuleCall};
 
 use ferrata_bridge_core::{

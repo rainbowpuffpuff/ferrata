@@ -1,0 +1,15 @@
+Daemon started (pid 46191)
+Logs: <work>/core-probe/logs/daemon.log
+{"affected_loaded":[],"changes":[{"action":"install","file":"<tmp>/logos/lgx-ferrata_bridge_module/logos-ferrata_bridge_module-module-lib.lgx","fromVersion":"","name":"ferrata_bridge_module","signature":"unsigned","toVersion":"0.1.0"}],"installed":["ferrata_bridge_module"],"op":"install","reloaded":[],"status":"ok","stopped_dependents":[]}
+{"affected_loaded":[],"changes":[{"action":"install","file":"<tmp>/logos/lgx-lez_core-upstream/logos-lez_core-module-lib.lgx","fromVersion":"","name":"lez_core","signature":"unsigned","toVersion":"0.6.0"}],"installed":["lez_core"],"op":"install","reloaded":[],"status":"ok","stopped_dependents":[]}
+{"dependencies_loaded":[],"module":"lez_core","status":"ok","version":"0.6.0"}
+{"dependencies_loaded":[],"module":"ferrata_bridge_module","status":"ok","version":"0.1.0"}
+{"message":"Daemon shutting down.","status":"ok"}
+Daemon started (pid 46303)
+Logs: <work>/core/logs/daemon.log
+{"affected_loaded":[],"changes":[{"action":"install","file":"<tmp>/logos/lgx-ferrata_bridge_module/logos-ferrata_bridge_module-module-lib.lgx","fromVersion":"","name":"ferrata_bridge_module","signature":"unsigned","toVersion":"0.1.0"}],"installed":["ferrata_bridge_module"],"op":"install","reloaded":[],"status":"ok","stopped_dependents":[]}
+{"affected_loaded":[],"changes":[{"action":"install","file":"<tmp>/logos/lgx-lez_core-patched/logos-lez_core-module-lib.lgx","fromVersion":"","name":"lez_core","signature":"unsigned","toVersion":"0.6.0"}],"installed":["lez_core"],"op":"install","reloaded":[],"status":"ok","stopped_dependents":[]}
+{"dependencies_loaded":[],"module":"lez_core","status":"ok","version":"0.6.0"}
+{"dependencies_loaded":[],"module":"ferrata_bridge_module","status":"ok","version":"0.1.0"}
+{"code":"NO_DAEMON","message":"No daemon running (no local endpoint at ~/Downloads/software_i_built/logos-rfp/spike/tmp/mseq/logos_core_service_a0d43921e5b5). A daemon that stopped removes it; start one in this session to get it back.","status":"error"}
+{"message":"Daemon shutting down.","status":"ok"}

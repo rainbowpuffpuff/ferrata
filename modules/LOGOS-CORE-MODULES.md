@@ -16,7 +16,7 @@ commits are the repositories' `main` on that day, and the ones built and run in
 | `signer_manager_module` 0.2.x | `logos-signer-manager-module` @ `152c96d` (`main`), `bd5c84d` (pinned) | Rust cdylib | `keystore_module`; optional: keycard, keycard-shell, QR signers |
 | `fee_module` 0.2.0 | `logos-evm-fee-module` @ `f2065e7` | Rust cdylib | `eth_rpc_module` |
 | `tx_sender_module` 0.2.0 | `logos-evm-tx-sender-module` @ `f1754c3` | Rust cdylib | `eth_rpc_module`, `fee_module`, `signer_manager_module` |
-| `lez_core` 0.5.1 | `logos-blockchain/logos-execution-zone-module` @ `fdd6a75` | C++ universal + LEZ's wallet FFI | none |
+| `lez_core` 0.6.0 | `logos-blockchain/logos-execution-zone-module` @ `cc73ebf` (13 Nov, after #72 and #74; `fdd6a75` before) | C++ universal + LEZ's core FFI (wallet and sequencer) | none |
 
 Built into `logosctl` (logos-logoscore-cli `66d098d`) and listed by `module load` without being installed:
 `capability_module`, `modules_state`, `package_manager`, `package_downloader`, `storage_module`
@@ -139,7 +139,20 @@ path, kept as the fallback and for native runs). Every reply that read Ethereum 
   builder and installed beside our modules; **`keystore_module` (`e83a899`) did not build**: it compiles and
   links, then its install stops at `logos-cpp-generator --normalize-lidl` on its interface contract
   (`interface_dependencies`: `wallets.lidl` of logos-signer-interface), the step that stops unchanged
-  `eth_rpc_module` on its optional dependencies. Without it `signer_manager_module` (which requires it) and so
+  `eth_rpc_module` on its optional dependencies. **The cause is the override, not the builder** (found 13 November
+  by lez-core-v04): `--override-input logos-module-builder …/5f74cdb` relocks the builder but nix keeps the module's
+  old lock entries for the builder's own inputs, so `keystore_module` (its lock: builder `9f420c2`) and
+  `eth_rpc_module` (`e1a2570`) were built with logos-cpp-sdk `e1d6bf2` (3 September), whose `logos-cpp-generator`
+  has no `--normalize-lidl` (`3bf5365`, builder 5f74cdb's own pin, has it: `cpp-generator/main.cpp` 462, 492); the
+  three that installed already lock `3bf5365`. [`scripts/graft_builder_lock.py`](scripts/graft_builder_lock.py) gives a
+  module the builder with the builder's own locks (every other input as the module locks it) and
+  [`scripts/send-stack.sh`](scripts/send-stack.sh) builds the five so. Measured (14 November,
+  [`results/lez-core-v04-2026-11-14/send-stack/`](results/lez-core-v04-2026-11-14/send-stack/README.md)):
+  `keystore_module` and `signer_manager_module` then build, install and load together (the manager with the keystore
+  as its dependency, listing it as its signer); `eth_rpc_module` 6965f32 does not compile against the new generator's
+  client of `verified_proxy_module` (`src/glue.rs` 212, 247), so `fee_module` and `tx_sender_module` still do not load.
+  `import_private_key` from logosctl is refused (`not authorized`): the keystore's custodian and approver tiers are for
+  named modules, not the CLI. Without it `signer_manager_module` (which requires it) and so
   `tx_sender_module` do not load, and nothing was signed or sent ([`results/…/send-stack.log`](results/logos-core-io-2026-11-13/send-stack.log)).
   Its five calls to the `wallets` interface are bound clients with callbacks (`rust-lib/src/glue.rs` 320–476),
   not the four plain calls `eth_rpc_module` needed. The monitor's cancellations and the relayer's releases
@@ -149,18 +162,42 @@ path, kept as the fallback and for native runs). Every reply that read Ethereum 
   approval model is the open question for a watcher that must cancel within the challenge window without a
   person present. `logos-io.sh` drives that sequence from the command line once the stack loads.
 
-### `lez_core`: LEZ's wallet as a module
+### `lez_core`: LEZ's wallet (and sequencer) as a module
 
-- **Offers** (`src/lez_core_module.h` 41–134, R3 §5): the LEZ wallet (`create_new`, `open`,
-  `restore_storage`), accounts (`get_account_public` 56, `get_balance` 55, …), `sync_to_block`,
-  `send_generic_public_transaction(account_ids, signing_requirements, instruction, program_id, payer, …)`
-  (93), `send_generic_private_transaction(…)` (99), `poll_transaction_status`.
-- **What it cannot do for us yet.** `main` pinned **LEZ v0.3.1** (`flake.lock`: `logos-execution-zone`
-  `1a003bf`) until its PRs 72 and 74 (v0.4.0-rc1, `1806e87`) were merged on 13 November, 13:18–13:20 UTC
-  (`main` `cc73ebf`); not yet tried here. Ferrata's programs run on **v0.4.0-rc1**, so the new pin is exactly
-  ours: #72 "Sequencer FFI adaptation" (`51260ab`) and #74 "sequencer query API" (`e5a3444`, adding
-  `getAccount`, `getBlockById`, `getTransaction`, `getLastFinalizedBlockId`). It has no dry run, no event query or subscription and no setter
-  for the sequencer's address (R3 §5). So the bridge module's claims and burns and the relayer's root
-  imports keep going to the devnet's zone (the harness) as before; with #72/#74 merged, the bridge module's
-  messages (already built as LEZ instructions with their accounts) are what `send_generic_public_transaction`
-  takes, and `getAccount` is the state read the modules now take in the request.
+At **`cc73ebf`** (`main` after #72 "Sequencer FFI adaptation" and #74 "sequencer query API" were merged on 13 November,
+13:18 and 13:20 UTC): `lez_core` 0.6.0, LEZ **v0.4.0-rc1 `1806e87`** (exactly ours), logos-module-builder `5f74cdb`
+(ours), no module dependencies; a C++ universal module over LEZ's `core_ffi` (`src/lez_core_module.h`).
+
+- **Two sides.** The wallet (`create_new`/`open(config, storage, password, force_rpc)`, accounts,
+  `get_account_public` = the sequencer's `getAccount` through LEZ's wallet library, `get_account_private` after
+  `sync_to_block`, `send_generic_public_transaction`, `send_generic_private_transaction(_with_accounts)`,
+  `poll_transaction_status`, program deployment) and, new in #72/#74, a sequencer: `start_sequencer(config)` runs LEZ's
+  sequencer **inside the module**, and `getAccount`, `getBlockById`, `getBlocks`, `getTransaction`,
+  `getTransactionsByAccount`, `getLastFinalizedBlockId` answer only for that one (otherwise "sequencer not started"
+  and an empty reply). That sequencer binds no RPC (core_ffi `sequencer/api/lifecycle.rs`: the service's `rpc` feature
+  is off), so nothing outside the module reaches it: a zone whose operator, relayer, checkpoint prover and other
+  wallets use the sequencer's RPC keeps its sequencer outside, and `lez_core` is then a wallet client of it
+  (`open(…, force_rpc = true)`), without the block queries.
+- **What Ferrata routes through it** (`ferrata_bridge_module`'s wallet session, `rust-lib/calls/src/lez.rs`; the module
+  calls `lez_core` by name through the SDK, as `eth_rpc_module`): the user's LEZ wallet opened inside `lez_core`;
+  every bridge actor state the session reads (`config(cid)`, `token(cid, ETH)`, `root(cid, n)`, a deposit's
+  `nullifier(…)`, `holder(account)`) through `get_account_public`, compared byte for byte with the chain service's
+  read; the private holding through `sync_to_block` + `get_account_private`; the **private claim and the private burn**
+  through `send_generic_private_transaction_with_accounts` (the module's `Borsh` message, its accounts, the bridge
+  program's binary as a `disclosed` program at its header account), executed and proven by LEZ's wallet inside Logos
+  Core; the chain service then reads the block that applied it (`module.tx`) beside `poll_transaction_status`. The
+  zone's history (imported roots, published burns, accounts named by private transactions) stays with the chain
+  service: the wallet side serves no blocks.
+- **What it cannot do at `cc73ebf`, and the patch.** (1) **No account authorizes**: `buildAccountMentions`
+  value-initialises `FfiAccountMention`, so `authorizes` is false for every account of every generic send, and
+  LEZ's wallet then neither signs for a public account (`lez/wallet/src/account_manager.rs` 1035–1038) nor gives a
+  private one its spending key (1112–1118), nor takes it as the fee payer (`lib.rs` ~552); LEZ's own wallet API
+  mentions accounts authorizing (`select_program_actor_state`). (2) **No PDA account kind**: the private send takes
+  `private_owned`, `public`, `public_no_sign` and `private_foreign`; the bridge's claim and burn mention three or four
+  of the program's PDAs, one of them new (the deposit's nullifier, the burn record), which the program creates only
+  through the mention's seed; core_ffi has the kind (`FfiAccountIdentityKind_PublicPda`, `types.rs` 558–564). (3) The
+  header lets `actor_state_program_account_ids_hex` be empty; the code requires every entry.
+  [`patches/lez_core-cc73ebf-authorizes-public-pda.patch`](patches/lez_core-cc73ebf-authorizes-public-pda.patch)
+  fixes (1) and (2) (accounts authorize as the wallet API mentions them; `"authorizes": false` for one that only
+  receives; `{"kind": "public_pda", "account_id", "program", "seed"}`) with four unit tests; the draft pull request is in
+  the lez-core-v04 report. `e2e/seqnet/run.sh build-lezcore` builds both, `run.sh lezcore NAME` runs the round trip.

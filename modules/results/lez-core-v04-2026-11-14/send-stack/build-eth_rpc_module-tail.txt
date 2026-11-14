@@ -1,0 +1,5 @@
+eth_rpc_module> error[E0308]: mismatched types
+eth_rpc_module> error[E0308]: mismatched types
+error: builder for '/nix/store/q1c835vs7y7ia5sa2fxjg5bkddwx2w92-eth_rpc_module-0.2.0.drv' failed with exit code 101
+error: 1 dependencies of derivation '/nix/store/mrh01f2472zvs5364kali4n85gxg8k68-logos-eth_rpc_module-module-lib-0.2.0.drv' failed to build
+error: 1 dependencies of derivation '/nix/store/7wzaxr2k9yvgsc5cxxzbd9fgxixgigd0-logos-eth_rpc_module-module-lib-lgx-0.2.0.drv' failed to build

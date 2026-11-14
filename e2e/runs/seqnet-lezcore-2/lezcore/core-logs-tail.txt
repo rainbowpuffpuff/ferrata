@@ -1,0 +1,187 @@
+==> <work>/core/logs/daemon.log <==
+[2026-11-14 10:15:39.172] [info] Inter-module access enforcement is OFF (no access policy set): any loaded module may call any other
+[2026-11-14 10:15:39.175] [info] [logos] Granting host services to 'capability_module': token_registry,token_delivery
+[2026-11-14 10:15:39.201] [out] [capability_module] [2026-11-14 10:15:39.200] [info] Granting host services to capability_module: ["token_registry","token_delivery"]
+[2026-11-14 10:15:39.201] [info] [logos] Module loaded: capability_module
+[2026-11-14 10:15:39.227] [info] [logos] Module loaded: modules_state
+[2026-11-14 10:15:39.263] [info] [logos] Module loaded: package_manager
+[2026-11-14 10:15:39.267] [info] [logos] Pushed module snapshot to modules_state
+[2026-11-14 10:15:39.295] [info] [logos] [storage_module] StorageModuleImpl: Initializing...
+[2026-11-14 10:15:39.296] [info] [logos] Module loaded: storage_module
+[2026-11-14 10:15:39.326] [info] [logos] Module loaded: package_downloader
+[2026-11-14 10:15:39.334] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+Logosctl daemon started (pid 11348, instance 0f063d8bff3b)
+Daemon state: <work>/core/daemon/state.json
+Local client config: <work>/core/client/config.yaml
+[2026-11-14 10:15:39.337] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-14 10:15:39.940] [warning] [logos] [package_manager] Warning: Package is unsigned: <tmp>/logos/lgx-ferrata_bridge_module/logos-ferrata_bridge_module-module-lib.lgx
+[2026-11-14 10:15:44.734] [warning] [logos] [package_manager] Warning: Package is unsigned: <tmp>/logos/lgx-lez_core-patched/logos-lez_core-module-lib.lgx
+[2026-11-14 10:15:46.585] [info] [logos] Module loaded: lez_core
+[2026-11-14 10:15:46.654] [info] [logos] Module loaded: ferrata_bridge_module
+[2026-11-14 10:15:47.097] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-14 10:15:47.098] [info] [logos] [lez_core] [ffi] Null wallet handle
+[2026-11-14 10:15:47.098] [info] [logos] [lez_core] send_generic_private_transaction_with_accounts: wallet FFI error 1
+[2026-11-14 10:15:47.597] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:47.599] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:47.601] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:47.602] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:47.604] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:47.606] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:47.607] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:47.609] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:47.611] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:47.612] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:47.640] [out] [lez_core] Syncing to block 20. Blocks to sync: 20
+[2026-11-14 10:15:47.668] [out] [lez_core] Synced to block 20 in 28.468528ms
+[2026-11-14 10:15:47.801] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:47.804] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:48.558] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:48.560] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:48.562] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:48.563] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:48.565] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:48.566] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:48.568] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:48.570] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:48.572] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:48.573] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:48.580] [out] [lez_core] Syncing to block 21. Blocks to sync: 1
+[2026-11-14 10:15:48.582] [out] [lez_core] Synced to block 21 in 1.485079ms
+[2026-11-14 10:20:19.574] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:20:19.576] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:20:19.577] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:20:19.579] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:20:19.580] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:20:19.581] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:20:19.583] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:20:19.584] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:20:19.609] [out] [lez_core] Syncing to block 48. Blocks to sync: 27
+[2026-11-14 10:20:19.638] [out] [lez_core] Synced to block 48 in 28.445297ms
+[2026-11-14 10:20:19.793] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:20:19.988] [info] [logos] [lez_core] [ffi] Private send failed: TransactionBuildError(ProgramExitedWithCode { code: 252, cycles: 24995 })
+[2026-11-14 10:20:19.988] [info] [logos] [lez_core] send_generic_private_transaction_with_accounts: wallet FFI error 99
+[2026-11-14 10:24:39.682] [out] [lez_core] Syncing to block 74. Blocks to sync: 26
+[2026-11-14 10:24:39.719] [out] [lez_core] Synced to block 74 in 38.483156ms
+[2026-11-14 10:24:39.963] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:24:39.965] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:24:39.966] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:24:39.968] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:24:39.970] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:24:39.972] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:24:39.973] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:24:39.975] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:28:39.379] [out] [lez_core] Syncing to block 98. Blocks to sync: 24
+[2026-11-14 10:28:39.412] [out] [lez_core] Synced to block 98 in 36.220008ms
+[2026-11-14 10:28:39.687] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:28:39.688] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:28:39.690] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:28:39.692] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:28:39.693] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:28:39.695] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:28:39.697] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:28:39.699] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:29:02.390] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:29:02.392] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:29:02.394] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:29:02.396] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:29:02.398] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:29:02.400] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:29:02.402] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:29:02.403] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:29:02.411] [out] [lez_core] Syncing to block 100. Blocks to sync: 2
+[2026-11-14 10:29:02.416] [out] [lez_core] Synced to block 100 in 4.6013ms
+Shutting down logosctl daemon...
+
+==> <work>/core/logs/daemon_20261114_101539.log <==
+[2026-11-14 10:15:39.172] [info] Inter-module access enforcement is OFF (no access policy set): any loaded module may call any other
+[2026-11-14 10:15:39.175] [info] [logos] Granting host services to 'capability_module': token_registry,token_delivery
+[2026-11-14 10:15:39.201] [out] [capability_module] [2026-11-14 10:15:39.200] [info] Granting host services to capability_module: ["token_registry","token_delivery"]
+[2026-11-14 10:15:39.201] [info] [logos] Module loaded: capability_module
+[2026-11-14 10:15:39.227] [info] [logos] Module loaded: modules_state
+[2026-11-14 10:15:39.263] [info] [logos] Module loaded: package_manager
+[2026-11-14 10:15:39.267] [info] [logos] Pushed module snapshot to modules_state
+[2026-11-14 10:15:39.295] [info] [logos] [storage_module] StorageModuleImpl: Initializing...
+[2026-11-14 10:15:39.296] [info] [logos] Module loaded: storage_module
+[2026-11-14 10:15:39.326] [info] [logos] Module loaded: package_downloader
+[2026-11-14 10:15:39.334] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+Logosctl daemon started (pid 11348, instance 0f063d8bff3b)
+Daemon state: <work>/core/daemon/state.json
+Local client config: <work>/core/client/config.yaml
+[2026-11-14 10:15:39.337] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-14 10:15:39.940] [warning] [logos] [package_manager] Warning: Package is unsigned: <tmp>/logos/lgx-ferrata_bridge_module/logos-ferrata_bridge_module-module-lib.lgx
+[2026-11-14 10:15:44.734] [warning] [logos] [package_manager] Warning: Package is unsigned: <tmp>/logos/lgx-lez_core-patched/logos-lez_core-module-lib.lgx
+[2026-11-14 10:15:46.585] [info] [logos] Module loaded: lez_core
+[2026-11-14 10:15:46.654] [info] [logos] Module loaded: ferrata_bridge_module
+[2026-11-14 10:15:47.097] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-14 10:15:47.098] [info] [logos] [lez_core] [ffi] Null wallet handle
+[2026-11-14 10:15:47.098] [info] [logos] [lez_core] send_generic_private_transaction_with_accounts: wallet FFI error 1
+[2026-11-14 10:15:47.597] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:47.599] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:47.601] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:47.602] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:47.604] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:47.606] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:47.607] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:47.609] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:47.611] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:47.612] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:47.640] [out] [lez_core] Syncing to block 20. Blocks to sync: 20
+[2026-11-14 10:15:47.668] [out] [lez_core] Synced to block 20 in 28.468528ms
+[2026-11-14 10:15:47.801] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:47.804] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:48.558] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:48.560] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:48.562] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:48.563] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:48.565] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:48.566] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:48.568] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:48.570] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:48.572] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:48.573] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:15:48.580] [out] [lez_core] Syncing to block 21. Blocks to sync: 1
+[2026-11-14 10:15:48.582] [out] [lez_core] Synced to block 21 in 1.485079ms
+[2026-11-14 10:20:19.574] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:20:19.576] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:20:19.577] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:20:19.579] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:20:19.580] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:20:19.581] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:20:19.583] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:20:19.584] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:20:19.609] [out] [lez_core] Syncing to block 48. Blocks to sync: 27
+[2026-11-14 10:20:19.638] [out] [lez_core] Synced to block 48 in 28.445297ms
+[2026-11-14 10:20:19.793] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:20:19.988] [info] [logos] [lez_core] [ffi] Private send failed: TransactionBuildError(ProgramExitedWithCode { code: 252, cycles: 24995 })
+[2026-11-14 10:20:19.988] [info] [logos] [lez_core] send_generic_private_transaction_with_accounts: wallet FFI error 99
+[2026-11-14 10:24:39.682] [out] [lez_core] Syncing to block 74. Blocks to sync: 26
+[2026-11-14 10:24:39.719] [out] [lez_core] Synced to block 74 in 38.483156ms
+[2026-11-14 10:24:39.963] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:24:39.965] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:24:39.966] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:24:39.968] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:24:39.970] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:24:39.972] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:24:39.973] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:24:39.975] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:28:39.379] [out] [lez_core] Syncing to block 98. Blocks to sync: 24
+[2026-11-14 10:28:39.412] [out] [lez_core] Synced to block 98 in 36.220008ms
+[2026-11-14 10:28:39.687] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:28:39.688] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:28:39.690] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:28:39.692] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:28:39.693] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:28:39.695] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:28:39.697] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:28:39.699] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:29:02.390] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:29:02.392] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:29:02.394] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:29:02.396] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:29:02.398] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:29:02.400] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:29:02.402] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:29:02.403] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-14 10:29:02.411] [out] [lez_core] Syncing to block 100. Blocks to sync: 2
+[2026-11-14 10:29:02.416] [out] [lez_core] Synced to block 100 in 4.6013ms
+Shutting down logosctl daemon...

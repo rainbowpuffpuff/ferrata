@@ -303,10 +303,14 @@ The design notes specify these; there is no code for them here:
   program and its Logos module are built, `monitor/`, `modules/ferrata_monitor_module`; node views come through
   an adapter); the attestation side's `monitor` (records against several providers; the weak-subjectivity alarm);
 - in the Logos modules (`modules/README.md`, "Left out"; [`modules/LOGOS-CORE-MODULES.md`](modules/LOGOS-CORE-MODULES.md)):
-  transactions through Logos Core's own modules (`keystore_module`, `tx_sender_module`, `lez_core`: the
-  modules build messages without signing or sending them; with our builder pin `keystore_module`'s install
-  fails, so the send stack does not load, and `lez_core` pinned LEZ v0.3.1 until its PRs 72 and 74 (v0.4.0-rc1, `1806e87`) were merged on 13 November, 13:18–13:20 UTC,
-  not yet tried here), verified reads (`verified_proxy_module`: public networks only, no
+  Ethereum transactions through Logos Core's own modules (`keystore_module`, `tx_sender_module`: the modules build
+  messages without signing or sending them; with our builder's own locks `keystore_module` and
+  `signer_manager_module` build and load, but `eth_rpc_module` 6965f32 does not compile against that builder's code
+  generator, so `fee_module` and `tx_sender_module` do not load,
+  [`modules/results/lez-core-v04-2026-11-14/`](modules/results/lez-core-v04-2026-11-14/)); LEZ through `lez_core` is
+  built for the bridge module's wallet session only (its LEZ reads and its private claim and burn, through `lez_core` at
+  its merged v0.4 state with a patch of ours, on a devnet: EVIDENCE rows 113, 114), not for the other modules' LEZ
+  reads and sends, nor the zone's history, which `lez_core` serves only for a sequencer it runs itself; verified reads (`verified_proxy_module`: public networks only, no
   `eth_getProof`), beacon data through `beacon_api_module` (the attestation module's Ethereum reads and the
   bridge module's `import_root` go through `eth_rpc_module`, rows 108, 109); the private claim's private execution and proof are the LEZ wallet's: the module builds and checks
   `ClaimPrivately`; the release's Groth16 wrap is the relayer's), and a published catalog (laid out,
@@ -321,9 +325,10 @@ The design notes specify these; there is no code for them here:
   `ferrata` tool's sequencer path and through the mini-app driving `ferrata_bridge_module` inside a headless
   Logos Core (`e2e/seqnet/RESULTS.md`, EVIDENCE rows 102, 103), but the mini-app's calls (the module's `wallet`
   method) read the chains, sign and send through a stand-in service (`seqnet-chain`: LEZ's wallet library, a
-  keystore, the relayer) instead of `eth_rpc_module`, `keystore_module`/`tx_sender_module` and `lez_core` (the
-  module's `import_root` reads the vault through `eth_rpc_module`, row 109; the `wallet` method does not use it
-  yet), the view ran under Qt Quick Test rather than in Basecamp, and that devnet's Ethereum side is anvil
+  keystore, the relayer) instead of `eth_rpc_module` and `keystore_module`/`tx_sender_module` (the module's
+  `import_root` reads the vault through `eth_rpc_module`, row 109; the `wallet` method does not use it yet; its LEZ
+  reads and private sends go through `lez_core` when the session says so, run without the view in
+  `e2e/runs/seqnet-lezcore-1/`, rows 113, 114), the view ran under Qt Quick Test rather than in Basecamp, and that devnet's Ethereum side is anvil
   finalized by a stand-in committee, with the vault tests' mock verifier (no Groth16 proof) and a stand-in for the
   gas drop;
 - in the attestation program: consumers bound to the root id (the bridge, `ferrata_holdings` and the

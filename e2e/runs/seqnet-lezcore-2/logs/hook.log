@@ -1,0 +1,46 @@
+[10:15:30] seqnet-chain: seqnet-chain: http://127.0.0.1:18700/ (vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516, configId 0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c, user 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC)
+[10:15:38] wallet open: {"chain":"http://127.0.0.1:18700/","chain_id":11155111,"config_id":"0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c","depositor":"0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc","module":"ferrata_bridge_mo
+[10:15:38] wallet lez_probe: {"accounts_json":["{\"account_id\":\"0xe629dd971612b72a39d9460a51e34f4835069ec70a15b61cec97b69f10c745c3\",\"kind\":\"public_pda\",\"program\":\"0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d\",\"seed\
+[10:15:46] Logos Core: ferrata_bridge_module and lez_core (patched) installed from their .lgx and loaded
+[10:15:47] wallet open: {"chain":"http://127.0.0.1:18700/","chain_id":11155111,"config_id":"0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c","depositor":"0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc","module":"ferrata_bridge_mo
+[10:15:47] wallet lez_probe: {"accounts_json":["{\"account_id\":\"0xe629dd971612b72a39d9460a51e34f4835069ec70a15b61cec97b69f10c745c3\",\"kind\":\"public_pda\",\"program\":\"0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d\",\"seed\
+[10:15:47] wallet lez: {"plain_path":"the zone's history and Ethereum: the chain service; a send lez_core refuses goes through the chain service","private_holding":"lez_core.sync_to_block + get_account_private, beside the chain service's walle
+[10:15:47] wallet info: {"backend":"ferrata_bridge_module in Logos Core; the chains through seqnet-chain (the stand-in for Logos Core's own modules)","chain_id":11155111,"config_id":"0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042
+[10:15:47] wallet scan: {"burns":[],"deposits":[],"holdings":[],"how":"ferrata_bridge_module recover over the whole deposit list (checked against depositRoot by the chain service) and the zone's applied calls: no per-item query","imported_roots
+[10:15:47] wallet registry: {"imported_root":null,"lez_config":null,"tokens":[{"decimals":18,"denominations":[{"amount":"1000000000000000","burn_fee":"0","checkpoint_fee":"1000000000000","index":0,"mint_fee":"0","relay_fee":"2000000000000"},{"amoun
+[10:15:47] wallet price: {"denomination":"1000000000000000","mint_fee":"0","relay_fee":"2000000000000","schedule":0,"total":"1002000000000000"}
+[10:15:48] wallet deposit: {"account":0,"amount":"1000000000000000","block":9,"commitment":"0xa421c67a1128eca72fe990ac38e1cca441643b358e3740d204409386cb10ed32","hidden":["the LEZ destination (C commits to it)"],"j":0,"kind":"private","leaf_index":
+[10:15:48] wallet scan: {"burns":[],"deposits":[{"account":0,"amount":"1000000000000000","dest":"0xd0029aa57943164511b1565faea8a7b0f0df439cc613c9ee5fc64366ac66fe85","j":0,"kind":"private","leaf_index":0,"nullifier":"0xcd6efdc213344cb4703558dba0
+[10:15:48] capture-1: capture of block 9 0x2edea0b4a86d6bf764ef63e837e75a0689235504f838350b88a6580f42328890 (state root patched: False): 1 deposit(s), 6 slot(s)
+[10:15:49] operator: crown-driver crown-b --operator-only over capture-1
+[crown-b] bridge Register ETH (registry entry, schedules 0 and 1, leaf count) applied        gas    451572 block   26 + 10.3s df142cf66b56859cc2f868c4f7b91945c152ff9e4c7e15f0c6ff28a1ca3deaa5
+[crown-b] token(cid, ETH): 1 schedule(s), known until leaf 1
+[crown-b] bridge ImportRoot n=1 (stage 1, block 9)                   applied        gas    301949 block   27 +  9.9s ef15e1d7f4ddf2adf57f282ef0c93269c0c85b6231eb22bba38bca996072761b
+[crown-b] blocks 20..=27 (T1 0x057362a7c4ffa7e066a48bb6e7e523f7f76cf7ee399a200cb432fbcdc652b41b); 0 burn note(s) written to ~/Downloads/software_i_built/logos-rfp/spike/tmp/lez-core-v04-seq/w-lezcore-2/notes.json
+[10:16:55] wallet registry: {"imported_root":{"block_number":9,"config_id":"0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c","evm_chain_id":11155111,"leaf_count":1,"record_slot":11542656,"root":"0x8de765294b027c36b584555c3d6c7be0
+[10:16:55] gas drop stand-in: native LEZ to the user's private account /0 (seqnet-fund)
+{"step":"faucet public transfer (stand-in for the gas drop)","tx":"bc0d0bab5fa056ed5d65e13b6e4e4b593b1aeaffbbb9af6e8131b5738ff2881b","amount":"3000000000000","fee_paid_in_the_proof":null,"send_ms":2,"seen_ms":4005}
+{"step":"the user's private transfer public /0 -> private /0 (proven by LEZ's wallet)","tx":"9d750ebb9c7667971e0277ff7dae97fd6fa8bd79b6862159e4b66d15836142fd","amount":"2000000000000","fee_paid_in_the_proof":"5070616","send_ms":193549,"seen_ms":6027}
+[10:20:19] wallet scan: {"burns":[],"deposits":[{"account":0,"amount":"1000000000000000","dest":"0xd0029aa57943164511b1565faea8a7b0f0df439cc613c9ee5fc64366ac66fe85","j":0,"kind":"private","leaf_index":0,"nullifier":"0xcd6efdc213344cb4703558dba0
+[10:24:39] wallet claim: {"account":0,"balance":"1000000000000000","block":74,"hidden":["the destination account (an alias appears)","the leaf index","the depositor","the private balance"],"made_by":"ferrata_bridge_module claim (the tool's claim
+[10:24:40] wallet scan: {"burns":[],"deposits":[{"account":0,"amount":"1000000000000000","dest":"0xd0029aa57943164511b1565faea8a7b0f0df439cc613c9ee5fc64366ac66fe85","j":0,"kind":"private","leaf_index":0,"nullifier":"0xcd6efdc213344cb4703558dba0
+[10:24:40] the user's fresh Ethereum address for the release: 0x7000B2eCED6939C5B877129882BE73bD791C8419 (cast wallet new; its key is not kept)
+[10:28:39] wallet burn: {"account":0,"amount":"1000000000000000","balance":"0","block":98,"burn_index":0,"hidden":["the holder (a private account: an alias appears)","the Ethereum recipient (encrypted in the memo)"],"i":0,"made_by":"ferrata_bri
+[10:28:39] wallet scan: {"burns":[{"amount":"1000000000000000","burn_index":0,"i":0,"nullifier":"0x01596679d2a9c85930b98abde954c6d5804e007185114473c91ac522675cd584","recipient":"0x7000b2eced6939c5b877129882be73bd791c8419","released":false}],"de
+[10:28:39] checkpoint: blocks 20..=98, once block 98 is final on Bedrock
+[10:29:00] realblocks-crown: node: 1045 immutable blocks (0 other transactions), final inscriptions of LEZ blocks 1..=99: parse + re-hash + link + framing + BLAKE2b + verify_strict by the channel's 1 key(s) (67bb4799… 99): all 99 accepted; channel tip message = block 99's: false seqnet-19-98: 79 blocks, 168 transactions, 8441
+[10:29:01] checkpoint_b executed (final program 0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e): {"executor_wall_s":0.543419608,"image_id":"0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e","input_bytes":846455,"journal_bytes":544,"journal_equals_native":true,"padded_cycles":20447232,"po2":[20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,19],"segments":20,"user_cycles
+[10:29:01] stand-in prover: the mock verifier accepts checkpoint_b's journal (sha256 0xa95e93274e4e625830be96b03f6a73109dcb8ac705b087d43af78205c284f3c7)
+[10:29:01] relayer: {"event":"job-done","tx":null,"why":null} {"event":"candidate-waiting","tx":null,"why":null} {"event":"stop","tx":null,"why":"rounds"} 
+[10:29:01] anvil's clock moved on 3601 s: the candidate's wait (Delta 3600 s) (Ethereum time now 1794655742)
+[10:29:01] relayer: {"event":"start","tx":null} {"event":"finalized","tx":"0x7bd5d000873bb2402376734346b53eec94cd6200abd6efde05ed1beebd47516c"} {"event":"stop","tx":null} 
+[10:29:01] vault: finalState 0xeebb747e3dcd3c0c0ef96339a01a3f8538817e3c756e5e6b0bf183674aeb3011, checkpoints 1
+[10:29:01] wallet release: ERROR refused: vault error ReleaseDelayNotElapsed() (checked before sending: the roots that cover this burn open at Ethereum time 1794655862)
+[10:29:02] anvil's clock moved on 121 s: the release delay (120 s after finalizeAttested) (Ethereum time now 1794655863)
+[10:29:02] wallet release: {"block":16,"journal_sha256":"0x06922d5a486ac7367778a75567e1e135028294a017b41563b44661860726494e","made_by":"ferrata_bridge_module release (the wallet's rule: the newest accepted root whose delay has passed; the journal)
+[10:29:02] the fresh address 0x7000B2eCED6939C5B877129882BE73bD791C8419 holds 997000000000000 wei
+[10:29:02] wallet scan: {"burns":[{"amount":"1000000000000000","burn_index":0,"i":0,"nullifier":"0x01596679d2a9c85930b98abde954c6d5804e007185114473c91ac522675cd584","recipient":"0x7000b2eced6939c5b877129882be73bd791c8419","released":true}],"dep
+[10:29:02] wallet lez_report: {"log":[{"calls":[{"method":"open","ms":100,"reply":"0"},{"method":"get_sequencer_addr","ms":2,"reply":"http://127.0.0.1:3040/"},{"method":"get_current_block_height","ms":10,"reply":"20"},{"method":"list_accounts","ms":1
+[10:29:02] lez_core: {"reads":85,"reads_equal":85,"reads_failed":0,"private_reads":9,"private_reads_equal":9,"sends":3,"sends_sent":2}
+[10:29:02] the zone: 235 transactions in blocks 1..=100
+[10:29:02] hook-lezcore: done

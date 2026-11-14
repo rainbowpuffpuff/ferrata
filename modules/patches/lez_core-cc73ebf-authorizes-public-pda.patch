@@ -1,0 +1,342 @@
+From d71f2d64fdd4584d3fa8cd07c6f9905e4d434ab0 Mon Sep 17 00:00:00 2001
+From: rainbowpuffpuff <rainbowpuffpuff@users.noreply.github.com>
+Date: Fri, 13 Nov 2026 16:39:14 +0100
+Subject: [PATCH] fix: generic sends authorize their accounts; public_pda
+ accounts for private sends
+
+FfiAccountMention was value-initialised in buildAccountMentions, so every mention
+reached LEZ's wallet with authorizes = false: a public signer was not signed for and
+this wallet's private account got no spending key (RegularKey::Nullifying), so a
+generic transaction could neither debit it nor pay its fee from it. Mentions now
+authorize as LEZ's wallet API does (AccountIdentity::select_program_actor_state):
+every account but public_no_sign and private_foreign; send_generic_public_transaction
+takes the flag from signing_requirements; an accounts_json entry may say
+"authorizes": false for an account that only receives.
+
+send_generic_private_transaction_with_accounts gains
+{"kind": "public_pda", "account_id", "program", "seed"}: a program's public PDA,
+which the program claims or writes through its seed (FfiAccountIdentityKind_PublicPda,
+already in core_ffi). A program that creates accounts (a nullifier, a burn record)
+needs it.
+
+Assisted-by: Claude Code (claude-opus-5-5)
+---
+ src/lez_core_ffi_marshalling.h |  3 ++
+ src/lez_core_module.cpp        | 75 +++++++++++++++++++++++++++++++---
+ src/lez_core_module.h          |  3 ++
+ tests/test_lez_core.cpp        | 64 +++++++++++++++++++++++++++++
+ 4 files changed, 140 insertions(+), 5 deletions(-)
+
+diff --git a/src/lez_core_ffi_marshalling.h b/src/lez_core_ffi_marshalling.h
+index 56e9cbb..8a2f063 100644
+--- a/src/lez_core_ffi_marshalling.h
++++ b/src/lez_core_ffi_marshalling.h
+@@ -53,6 +53,9 @@ namespace marshalling {
+         constexpr auto KindPublic = "public";
+         constexpr auto KindPublicNoSign = "public_no_sign";
+         constexpr auto KindPrivateForeign = "private_foreign";
++        constexpr auto KindPublicPda = "public_pda";
++        constexpr auto Seed = "seed";
++        constexpr auto Authorizes = "authorizes";
+     } // namespace JsonKeys
+ 
+     // Lower-case hex of `length` raw bytes (32-byte hashes/ids/keys).
+diff --git a/src/lez_core_module.cpp b/src/lez_core_module.cpp
+index 2599b85..facf286 100644
+--- a/src/lez_core_module.cpp
++++ b/src/lez_core_module.cpp
+@@ -17,8 +17,14 @@ using namespace marshalling;
+ 
+ namespace {
+     // Mentions borrow the identities' heap fields; free the identities only after use.
++    //
++    // `authorizes[i]` is whether mention i authorizes (FfiAccountMention::authorizes). LEZ's own
++    // wallet API mentions an account authorizing (`AccountIdentity::select_program_actor_state`);
++    // a mention left unauthorizing is not signed for (a public account) and gets no spending key
++    // (a private one: `RegularKey::Nullifying`), so it can neither be debited nor pay the fee.
+     bool buildAccountMentions(
+         const std::vector<FfiAccountIdentity>& identities,
++        const std::vector<bool>& authorizes,
+         const std::vector<std::string>& actor_state_program_account_ids_hex,
+         std::vector<FfiAccountMention>& out_mentions,
+         std::string& out_error
+@@ -27,12 +33,17 @@ namespace {
+             out_error = "actor_state_program_account_ids_hex must be empty or match account_ids in size";
+             return false;
+         }
++        if (authorizes.size() != identities.size()) {
++            out_error = "internal: one authorization flag per account";
++            return false;
++        }
+ 
+         out_mentions.clear();
+         out_mentions.reserve(identities.size());
+         for (size_t i = 0; i < identities.size(); ++i) {
+             FfiAccountMention mention{};
+             mention.identity = identities[i];
++            mention.authorizes = authorizes[i];
+ 
+             const bool hasOverride =
+                 !actor_state_program_account_ids_hex.empty() && !actor_state_program_account_ids_hex[i].empty();
+@@ -54,10 +65,11 @@ namespace {
+ 
+     // Identities for one private send. Those resolved by the wallet FFI hold Rust allocations
+     // and go back through `wallet_ffi_free_account_identity`; foreign ones point at viewing keys
+-    // held here instead, so they must never reach it.
++    // held here instead, and program-derived ones hold no allocation, so they must never reach it.
+     struct PrivateSendAccounts {
+         std::vector<FfiAccountIdentity> identities;
+         std::vector<bool> resolved_by_ffi;
++        std::vector<bool> authorizes;
+         std::vector<std::unique_ptr<std::vector<uint8_t>>> viewing_keys;
+ 
+         PrivateSendAccounts() = default;
+@@ -71,17 +83,27 @@ namespace {
+             }
+         }
+ 
+-        void addResolved(const FfiAccountIdentity& identity) {
++        void addResolved(const FfiAccountIdentity& identity, bool authorizing) {
+             identities.push_back(identity);
+             resolved_by_ffi.push_back(true);
++            authorizes.push_back(authorizing);
+         }
+ 
++        // Built here, owning nothing (a public PDA: its account id, program and seed).
++        void addLocal(const FfiAccountIdentity& identity, bool authorizing) {
++            identities.push_back(identity);
++            resolved_by_ffi.push_back(false);
++            authorizes.push_back(authorizing);
++        }
++
++        // Another user's account cannot authorize: it only receives.
+         void addForeign(FfiAccountIdentity identity, std::vector<uint8_t> viewing_key) {
+             viewing_keys.push_back(std::make_unique<std::vector<uint8_t>>(std::move(viewing_key)));
+             identity.viewing_public_key = viewing_keys.back()->data();
+             identity.viewing_public_key_len = static_cast<uintptr_t>(viewing_keys.back()->size());
+             identities.push_back(identity);
+             resolved_by_ffi.push_back(false);
++            authorizes.push_back(false);
+         }
+     };
+ 
+@@ -104,7 +126,8 @@ namespace {
+                         ": wallet FFI error " + std::to_string(ffi_error);
+                 return false;
+             }
+-            accounts.addResolved(identity);
++            // This wallet's own private account: it authorizes (it may be debited and pay the fee).
++            accounts.addResolved(identity, true);
+         }
+         return true;
+     }
+@@ -127,6 +150,23 @@ namespace {
+         }
+         const std::string kind = doc[JsonKeys::Kind].get<std::string>();
+ 
++        // Optional "authorizes": false mentions an account without its authorization (it only
++        // receives). Defaults as LEZ's wallet API: true, except public_no_sign and private_foreign,
++        // which cannot authorize.
++        const bool cannotAuthorize = kind == JsonKeys::KindPublicNoSign || kind == JsonKeys::KindPrivateForeign;
++        bool authorizing = !cannotAuthorize;
++        if (doc.contains(JsonKeys::Authorizes)) {
++            if (!doc[JsonKeys::Authorizes].is_boolean()) {
++                error = "\"authorizes\" must be a boolean";
++                return false;
++            }
++            authorizing = doc[JsonKeys::Authorizes].get<bool>();
++            if (authorizing && cannotAuthorize) {
++                error = kind + " cannot authorize";
++                return false;
++            }
++        }
++
+         if (kind == JsonKeys::KindPrivateForeign) {
+             FfiAccountIdentity identity{};
+             identity.kind = FfiAccountIdentityKind::FfiAccountIdentityKind_PrivateForeign;
+@@ -156,6 +196,25 @@ namespace {
+             return false;
+         }
+         FfiAccountIdentity identity{};
++        if (kind == JsonKeys::KindPublicPda) {
++            // A program's public PDA: the program that owns it and the seed it is derived from. The
++            // wallet FFI checks `account_id` against the pair (`AccountId::for_public_pda`); the
++            // program claims or writes it in this transaction by that seed.
++            identity.kind = FfiAccountIdentityKind::FfiAccountIdentityKind_PublicPda;
++            identity.account_id = id;
++            if (!doc.contains(JsonKeys::Program) || !doc[JsonKeys::Program].is_string() ||
++                !hexToBytes32(doc[JsonKeys::Program].get<std::string>(), &identity.authority)) {
++                error = "public_pda needs the 32-byte account id of its \"program\"";
++                return false;
++            }
++            if (!doc.contains(JsonKeys::Seed) || !doc[JsonKeys::Seed].is_string() ||
++                !hexToBytes32(doc[JsonKeys::Seed].get<std::string>(), &identity.seed)) {
++                error = "public_pda needs a 32-byte \"seed\"";
++                return false;
++            }
++            accounts.addLocal(identity, authorizing);
++            return true;
++        }
+         FfiOperationError ffi_error = FfiOperationError_Success;
+         if (kind == JsonKeys::KindPrivateOwned) {
+             ffi_error = wallet_ffi_resolve_private_account(wallet_handle, id, &identity);
+@@ -169,7 +228,7 @@ namespace {
+             error = "resolving " + kind + " failed: wallet FFI error " + std::to_string(ffi_error);
+             return false;
+         }
+-        accounts.addResolved(identity);
++        accounts.addResolved(identity, authorizing);
+         return true;
+     }
+ 
+@@ -178,6 +237,7 @@ namespace {
+         WalletHandle* wallet_handle,
+         const char* method,
+         const std::vector<FfiAccountIdentity>& identities,
++        const std::vector<bool>& authorizes,
+         const uint64_t root_mention,
+         const std::vector<uint8_t>& message,
+         const std::vector<uint8_t>& program_elf,
+@@ -262,6 +322,7 @@ namespace {
+         std::string mentions_error;
+         if (!buildAccountMentions(
+                 identities,
++                authorizes,
+                 actor_state_program_account_ids_hex,
+                 mentions,
+                 mentions_error
+@@ -802,8 +863,10 @@ std::string LEZCoreModule::send_generic_public_transaction(
+ 
+     std::vector<FfiAccountMention> mentions;
+     std::string mentions_error;
++    // A signing account authorizes; one mentioned without signing does not.
++    const std::vector<bool> authorizes(signing_requirements.begin(), signing_requirements.end());
+     if (!buildAccountMentions(
+-            identities_resolved, actor_state_program_account_ids_hex, mentions, mentions_error
++            identities_resolved, authorizes, actor_state_program_account_ids_hex, mentions, mentions_error
+         )) {
+         fprintf(stderr, "send_generic_public_transaction: %s\n", mentions_error.c_str());
+         free_identities();
+@@ -856,6 +919,7 @@ std::string LEZCoreModule::send_generic_private_transaction(
+         walletHandle,
+         "send_generic_private_transaction",
+         accounts.identities,
++        accounts.authorizes,
+         root_mention,
+         message,
+         program_elf,
+@@ -890,6 +954,7 @@ std::string LEZCoreModule::send_generic_private_transaction_with_accounts(
+         walletHandle,
+         "send_generic_private_transaction_with_accounts",
+         accounts.identities,
++        accounts.authorizes,
+         root_mention,
+         message,
+         program_elf,
+diff --git a/src/lez_core_module.h b/src/lez_core_module.h
+index d5353b8..fd9a510 100644
+--- a/src/lez_core_module.h
++++ b/src/lez_core_module.h
+@@ -109,7 +109,10 @@ public:
+     //   {"kind": "public", "account_id": hex}          a public account this wallet signs for
+     //   {"kind": "public_no_sign", "account_id": hex}  a public account mentioned without signing
+     //   {"kind": "private_foreign", "nullifier_public_key": hex, "viewing_public_key": hex} a new private account under another user's keys
++    //   {"kind": "public_pda", "account_id": hex, "program": hex, "seed": hex} a program's public PDA, claimed or written by that program through its seed
+     // "private_foreign" takes the keys as `get_private_account_keys` returns them;
++    // every entry but public_no_sign and private_foreign authorizes, as LEZ's wallet API mentions an account;
++    // "authorizes": false mentions one without its authorization (an account that only receives).
+     // The other arguments are as for `send_generic_private_transaction`.
+     std::string send_generic_private_transaction_with_accounts(const std::vector<std::string>& accounts_json, const uint64_t root_mention, const std::vector<uint8_t>& message, const std::vector<uint8_t>& program_elf, const std::string& program_kind_json, const std::vector<std::vector<uint8_t>>& program_dependencies, const std::vector<std::string>& dependency_kinds_json, const std::vector<std::string>& actor_state_program_account_ids_hex);
+     // Deploys `program_elf` via `program_loader`: one write-once segment account per
+diff --git a/tests/test_lez_core.cpp b/tests/test_lez_core.cpp
+index 7c516e7..c8963f9 100644
+--- a/tests/test_lez_core.cpp
++++ b/tests/test_lez_core.cpp
+@@ -403,6 +403,16 @@ LOGOS_TEST(send_generic_public_transaction_shard_override) {
+     LOGOS_ASSERT_TRUE(bytesEqual(MockWalletFfiCapture::lastMentions[1].program_account_id, 0xCC));
+ }
+ 
++LOGOS_TEST(send_generic_public_transaction_signing_accounts_authorize) {
++    auto t = LogosTestContext("logos_execution_zone");
++    LEZCoreModule module;
++
++    module.send_generic_public_transaction({VALID_ID, VALID_ID_2}, 0, {true, false}, {}, VALID_ID_C, {VALID_ID_C, VALID_ID_C});
++    // A signer authorizes (the wallet signs for it); an account mentioned without signing does not.
++    LOGOS_ASSERT_TRUE(MockWalletFfiCapture::lastMentions[0].authorizes);
++    LOGOS_ASSERT_FALSE(MockWalletFfiCapture::lastMentions[1].authorizes);
++}
++
+ LOGOS_TEST(send_generic_public_transaction_shard_size_mismatch_error_json) {
+     auto t = LogosTestContext("logos_execution_zone");
+     LEZCoreModule module;
+@@ -584,6 +594,56 @@ LOGOS_TEST(send_generic_private_transaction_with_accounts_mentions_each_kind) {
+         LOGOS_ASSERT_TRUE(bytesEqual(mention.program_account_id, 0xCC));
+ }
+ 
++static std::string pdaAccount(const std::string& extra = "") {
++    return R"({"kind": "public_pda", "account_id": ")" + VALID_ID_2 + R"(", "program": ")" + VALID_ID_C
++        + R"(", "seed": ")" + VALID_ID_D + "\"" + extra + "}";
++}
++
++LOGOS_TEST(send_generic_private_transaction_with_accounts_mentions_a_public_pda) {
++    auto t = LogosTestContext("logos_execution_zone");
++    LEZCoreModule module;
++
++    const nlohmann::json obj = sendWithAccounts(module, {describedAccount("private_owned", VALID_ID), pdaAccount()});
++    LOGOS_ASSERT_TRUE(obj["success"].get<bool>());
++    const auto& mentions = MockWalletFfiCapture::lastMentions;
++    LOGOS_ASSERT_EQ(mentions.size(), static_cast<size_t>(2));
++    LOGOS_ASSERT_EQ(mentions[1].identity.kind, FfiAccountIdentityKind_PublicPda);
++    LOGOS_ASSERT_TRUE(bytesEqual(mentions[1].identity.account_id, 0xBB));
++    LOGOS_ASSERT_TRUE(bytesEqual(mentions[1].identity.authority, 0xCC));
++    LOGOS_ASSERT_TRUE(bytesEqual(mentions[1].identity.seed, 0xDD));
++}
++
++LOGOS_TEST(send_generic_private_transaction_with_accounts_authorizes_as_the_wallet_api) {
++    auto t = LogosTestContext("logos_execution_zone");
++    LEZCoreModule module;
++
++    LOGOS_ASSERT_TRUE(sendWithAccounts(
++        module,
++        {describedAccount("private_owned", VALID_ID), describedAccount("public_no_sign", VALID_ID_2),
++         describedAccount("public", VALID_ID_2), foreignAccount(), pdaAccount()}
++    )["success"].get<bool>());
++    const auto& mentions = MockWalletFfiCapture::lastMentions;
++    LOGOS_ASSERT_TRUE(mentions[0].authorizes);   // this wallet's private account: debited, pays the fee
++    LOGOS_ASSERT_FALSE(mentions[1].authorizes);  // mentioned without signing
++    LOGOS_ASSERT_TRUE(mentions[2].authorizes);   // signed for
++    LOGOS_ASSERT_FALSE(mentions[3].authorizes);  // another user's: it only receives
++    LOGOS_ASSERT_TRUE(mentions[4].authorizes);   // the program's own PDA, by its seed
++
++    // "authorizes": false mentions an account that only receives.
++    LOGOS_ASSERT_TRUE(sendWithAccounts(
++        module, {R"({"kind": "private_owned", "account_id": ")" + VALID_ID + R"(", "authorizes": false})"}
++    )["success"].get<bool>());
++    LOGOS_ASSERT_FALSE(MockWalletFfiCapture::lastMentions[0].authorizes);
++}
++
++LOGOS_TEST(send_generic_private_transaction_with_accounts_never_frees_a_pda_through_the_ffi) {
++    auto t = LogosTestContext("logos_execution_zone");
++    LEZCoreModule module;
++
++    LOGOS_ASSERT_TRUE(sendWithAccounts(module, {pdaAccount()})["success"].get<bool>());
++    LOGOS_ASSERT_FALSE(t.cFunctionCalled("wallet_ffi_free_account_identity"));
++}
++
+ LOGOS_TEST(send_generic_private_transaction_with_accounts_never_frees_a_foreign_account_through_the_ffi) {
+     auto t = LogosTestContext("logos_execution_zone");
+     LEZCoreModule module;
+@@ -615,6 +675,10 @@ LOGOS_TEST(send_generic_private_transaction_with_accounts_rejects_malformed_entr
+              R"({"account_id": ")" + VALID_ID + R"("})",
+              describedAccount("public_signer", VALID_ID),
+              describedAccount("public_no_sign", "bad"),
++             R"({"kind": "public_pda", "account_id": ")" + VALID_ID + R"(", "program": ")" + VALID_ID_C + R"("})",
++             R"({"kind": "public_pda", "account_id": ")" + VALID_ID + R"(", "seed": ")" + VALID_ID_C + R"("})",
++             R"({"kind": "public_no_sign", "account_id": ")" + VALID_ID + R"(", "authorizes": true})",
++             R"({"kind": "public", "account_id": ")" + VALID_ID + R"(", "authorizes": "yes"})",
+              R"({"kind": "private_foreign", "viewing_public_key": ")" + std::string(2 * 1184, 'e') + R"("})"
+              }) {
+         const nlohmann::json obj = sendWithAccounts(module, {account});
+-- 
+2.56.0
+
