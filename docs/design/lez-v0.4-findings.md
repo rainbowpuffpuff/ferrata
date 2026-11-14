@@ -227,6 +227,8 @@ from its record and from a copy of the node's state, 202 LEZ blocks and their 20
   the Bedrock pin `d480efc6`. Ferrata's guests built against rc2 unchanged, and every harness table row
   (438) equals rc1's [M]; no real proof has been made on rc2.
 
+**`lez_core` #72 and #74** were merged on 13 November (`cc73ebf`, LEZ v0.4.0-rc1); [EVIDENCE](../EVIDENCE.md) rows 113–115.
+
 ## Unconfirmed
 
 - Live testnet-0.4 parameters, endpoints and ids. No LEZ testnet 0.4 exists yet: rc1 is not Latest, roadmap v0.4 milestones are unchecked, and [spel#291](https://github.com/logos-co/spel/issues/291) says "Testnet 0.3 has been live since 1 Oct".

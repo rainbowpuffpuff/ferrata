@@ -327,11 +327,11 @@ that start a Logos Core refuse a `TMPDIR` (or `LOGOS_TMPDIR`) longer than 62 byt
   as merged it mentions no account authorizing and has no PDA account kind) when the session says so
   (`wallet lez`; [`results/lez-core-v04-2026-11-14/`](results/lez-core-v04-2026-11-14/)); the other modules' requests
   and the zone's history do not go through it. The modules build each program message and name the account it goes
-  to; apart from those two private sends they do not sign or submit: `keystore_module`, `signer_manager_module`,
-  `fee_module` and `tx_sender_module` do not assemble with our builder pin (built with an overridden builder,
-  `keystore_module`'s install fails on its interface contract, because the override keeps its old code generator;
-  with the builder's own locks, `eth_rpc_module` 6965f32 does not compile against the new generator's clients), so no
-  Ferrata module sends Ethereum transactions through them. In the end-to-end test the
+  to; apart from those two private sends they do not sign or submit: `fee_module` and `tx_sender_module` do not load
+  with our builder pin (`keystore_module` and `signer_manager_module` do, with the builder's own locks; built with an
+  overridden builder, `keystore_module`'s install fails on its interface contract, because the override keeps its old
+  code generator; with the builder's own locks, `eth_rpc_module` 6965f32, which both need, does not compile against
+  the new generator's clients), so no Ferrata module sends Ethereum transactions through them. In the end-to-end test the
   harness wraps the message in a LEZ transaction and executes it in LEZ's state machine in-process,
   not on a networked sequencer. The daemon modules likewise use no Logos Core module: the attestor reads
   its node over plain HTTP (`curl`, as the binary does) and keeps its keys in files; the monitor signs

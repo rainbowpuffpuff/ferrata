@@ -6,8 +6,8 @@ dependency moved from `d480efc6` to the 0.3.5-rc.1 release (#1095), and a CI cha
 (`lee_core`, the state machine, the privacy circuit) and the wallet are unchanged since rc2, so rc2's
 findings stand ([`docs/design/lez-rc2-changes.md`](../../../docs/design/lez-rc2-changes.md)). Ferrata's
 programs target v0.4.0-rc1 and were checked on rc2 (EVIDENCE row 22, [`../../RESULTS.md`](../../RESULTS.md)
-§10); this directory does the same for rc3. Everything below ran on 13 November 2026 on a Modal build box
-(`environment.md`; 16 physical cores, under gVisor), from this tree.
+§10); this directory does the same for rc3. Everything below ran on 13–14 November 2026 (`environment.md`: 14 Nov 09:42
+UTC) on a Modal build box (16 physical cores, under gVisor), from this tree.
 
 ## What ran on rc3
 

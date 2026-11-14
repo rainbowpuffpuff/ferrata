@@ -208,9 +208,15 @@ Where each ran, the measurements, the command that re-checks each and the toolch
 
 [docs/EVIDENCE.md](docs/EVIDENCE.md) is the index: one page with every piece of evidence, its numbers, where
 it ran, whether its proofs were real or in dev mode, what is stand-in data, and the command that re-checks it.
-The latest additions, of 11 to 13 November 2026, one line each (in full:
-[EVIDENCE.md, "The latest additions"](docs/EVIDENCE.md#the-latest-additions-of-11-to-13-november-2026)):
+The latest additions, of 11 to 14 November 2026, one line each (in full:
+[EVIDENCE.md, "The latest additions"](docs/EVIDENCE.md#the-latest-additions-of-11-to-14-november-2026)):
 
+- **Merged on 14 November 2026** (EVIDENCE rows 111–115; `lez-core-v04`, `lez-rc3`): the bridge module's LEZ state
+  reads and the user's private claim and burn through Logos Core's own `lez_core` (with our patch), proven by LEZ's
+  wallet inside Logos Core, and what Logos Core's modules cannot do for us yet; the final programs on LEZ
+  v0.4.0-rc3's sequencer and its Logos Blockchain node 0.3.5-rc.1, whose fork digest the checkpoint guests do not
+  read yet; all re-checked on the tree to publish
+  ([`modules/results/final-verify-2026-11-14/`](modules/results/final-verify-2026-11-14/README.md)).
 - **Merged on 13 November 2026** (EVIDENCE rows 100–110; `zone-bridge`, `updater-module-seq`, `relayer-module`,
   `logos-core-io`, `miniapp-sequencer`): the bridge program on a zone of four LEZ sequencers, its rule (B) checkpoint
   proven into the vault and a rotation its committee proposed; the user's private round trip on a running LEZ

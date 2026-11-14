@@ -49,8 +49,9 @@ Built into `logosctl` (logos-logoscore-cli `66d098d`) and listed by `module load
 **by name**, through the SDK (`LogosModuleSDK::new().plugin("eth_rpc_module").call_json_with_timeout("raw_rpc",
 [chain_id, method, params_json], timeout)`: what a generated client does inside), without declaring it a
 dependency. Declaring it (optional, its contract in a committed `.lidl` named by `dependency_overrides`)
-was the first design; it was dropped because **with our builder pin (`5f74cdb`) a module with optional
-dependencies fails to install**: `eth_rpc_module` itself, built with that builder, compiles and links, then
+was the first design; it was dropped because **with our builder pin applied by `--override-input`, which keeps the
+module's old code generator (below, "The cause is the override"), a module with optional dependencies fails to
+install**: `eth_rpc_module` itself, built with that builder, compiles and links, then
 stops in its install phase at `logos-cpp-generator --normalize-lidl` on its optional dependencies'
 contracts ("Plugin file does not exist: --normalize-lidl", `lib/common.nix` 255–275; runs 1 and 2a of
 [`results/logos-core-io-2026-11-13/`](results/logos-core-io-2026-11-13/)); modules with required dependencies
@@ -152,8 +153,9 @@ path, kept as the fallback and for native runs). Every reply that read Ethereum 
   as its dependency, listing it as its signer); `eth_rpc_module` 6965f32 does not compile against the new generator's
   client of `verified_proxy_module` (`src/glue.rs` 212, 247), so `fee_module` and `tx_sender_module` still do not load.
   `import_private_key` from logosctl is refused (`not authorized`): the keystore's custodian and approver tiers are for
-  named modules, not the CLI. Without it `signer_manager_module` (which requires it) and so
-  `tx_sender_module` do not load, and nothing was signed or sent ([`results/…/send-stack.log`](results/logos-core-io-2026-11-13/send-stack.log)).
+  named modules, not the CLI. On 13 November, without `keystore_module`, `signer_manager_module` (which requires
+  it) and so `tx_sender_module` did not load ([`results/…/send-stack.log`](results/logos-core-io-2026-11-13/send-stack.log)); on 14
+  November `fee_module` and `tx_sender_module` wait for `eth_rpc_module`.
   Its five calls to the `wallets` interface are bound clients with callbacks (`rust-lib/src/glue.rs` 320–476),
   not the four plain calls `eth_rpc_module` needed. The monitor's cancellations and the relayer's releases
   still sign with their own key file (alloy). Moving them means a key imported into `keystore_module`, the
@@ -199,5 +201,5 @@ At **`cc73ebf`** (`main` after #72 "Sequencer FFI adaptation" and #74 "sequencer
   header lets `actor_state_program_account_ids_hex` be empty; the code requires every entry.
   [`patches/lez_core-cc73ebf-authorizes-public-pda.patch`](patches/lez_core-cc73ebf-authorizes-public-pda.patch)
   fixes (1) and (2) (accounts authorize as the wallet API mentions them; `"authorizes": false` for one that only
-  receives; `{"kind": "public_pda", "account_id", "program", "seed"}`) with four unit tests; the draft pull request is in
-  the lez-core-v04 report. `e2e/seqnet/run.sh build-lezcore` builds both, `run.sh lezcore NAME` runs the round trip.
+  receives; `{"kind": "public_pda", "account_id", "program", "seed"}`) with four unit tests; a pull request is drafted,
+  not opened. `e2e/seqnet/run.sh build-lezcore` builds both, `run.sh lezcore NAME` runs the round trip.

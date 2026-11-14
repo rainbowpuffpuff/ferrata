@@ -304,7 +304,7 @@ The two U.6 reference consumers (an ERC-20 and a native ETH transfer to a contra
   - the **updater** follows Ethereum, submits updates, defers (§9) and resumes from on-chain state;
   - **`monitor`** compares records with several providers' canonical roots, alarms at half the weak-subjectivity bound (§3.6), and feeds consumers' freeze authorities (§11.3).
 - **Ethereum access**: light-client data through `beacon_api_module.lc_request` (unverified until the program checks it), until the light-client API Logos R&D announced on 6 November exists; execution reads through `eth_rpc_module`, with `verified_proxy_module` in required mode wherever it covers the call. The proxy has no `eth_getProof`, so storage proofs use a second chain configuration with the proxy off, which is safe because every proof is checked against a record.
-- **LEZ access** through `lez_core`, which pinned LEZ v0.3.1 until its PRs 72 and 74 (v0.4.0-rc1, `1806e87`) were merged on 13 November, 13:18–13:20 UTC; not yet tried here (if it falls short, call the sequencer directly).
+- **LEZ access** through `lez_core`, which pinned LEZ v0.3.1 until its PRs 72 and 74 (v0.4.0-rc1, `1806e87`) were merged on 13 November, 13:18–13:20 UTC; tried for the bridge module's wallet session ([EVIDENCE](../EVIDENCE.md) rows 113–115), not yet for this module (if it falls short, call the sequencer directly).
 - **IDL**: hand-written and checked in CI by decoding every accepted message from it alone; SPEL's stable release targets LEZ v0.2.4, and generated output replaces the hand-written IDL when SPEL supports v0.4. **Catalog**: the project's own, from `logos-modules-release-base`, released with `logos-modules-release-action` (milestone A4).
 
 ## 9. Liveness and deferral (R.9, R.10, S.7, F.12)
