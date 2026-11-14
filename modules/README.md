@@ -181,7 +181,7 @@ readers around it). The chain is `chain_id` (a number) or `evm_chain_id`
 | `registry(request)` | any of `token_state` (with `leaf_index`, and `amount`), `config_state` (with `bridge_header`: the program's account), `root_state` | each decoded with the program's types: the token's entry (denominations, relay fees, LEZ definition and unit), its fee schedules, `known_until`, controls and gate; the range a claim of `leaf_index` names (the tool's `range_for`) and its mint and relay fees; the configuration (phase, instance, vault, controls) and `configId` recomputed; the imported root |
 | `recover(request)` | seed, chain, `vault`, `gap`, `destinations` (`{kind, index, dest}`: the wallet's candidate accounts), `deposits` (the vault's `Deposit` events: `depositor`, `j`, `leaf_index`, `token`, `amount`, `commitment`); optionally `config_id`, `burns` (published notes with `burn_index`) and `gap_limit` | the wallet's own deposits (with `kind`, `account_index`, `leaf`, `nullifier`) and burns (with `i`, `recipient`, `leaf`, `nullifier`), `next_i` |
 | `status(request)` | `deposits` (`leaf_index`, `nullifier`), `imported_leaf_count` (of the newest root imported on LEZ), `spent_nullifiers` (on LEZ); `burns` (`burn_index`, `nullifier`), `checkpointed_burn_count` (of the newest checkpoint the vault accepted), `released_nullifiers` (on the vault) | each deposit `awaiting_root`, `claimable` or `claimed`; each burn `awaiting_checkpoint`, `releasable` or `released` |
-| `wallet(request)` | `{"method", "params"}`: one call of the mini-app's view (`open` with `chain`, the chain service's `http://` URL; then `info`, `registry`, `price`, `deposit`, `scan`, `claim`, `burn`, `release`, with the view's parameters) | `{"ok": true, "result"}` in the view's shapes, or `{"ok": false, "error"}`. Each call is run with the methods above (`deposit`'s commitment and vault call; `recover` and the states for the positions; the claim with LEZ state and its `ClaimPrivately` message and accounts; `burn`'s note and `Burn` message; the release by the wallet's rule) over the chains' state, which a chain service reads and to which it signs and sends: the stand-in for Logos Core's own modules (`eth_rpc_module`, `keystore_module`/`tx_sender_module`, `lez_core`); on a LEZ sequencer `cli/src/bin/seqnet_chain.rs` (e2e/seqnet), whose methods are the mini-app devnet's `module.*` ones (`calls/src/session.rs`) |
+| `wallet(request)` | `{"method", "params"}`: one call of the mini-app's view (`open` with `chain`, the chain service's `http://` URL; then `info`, `registry`, `price`, `deposit`, `scan`, `claim`, `burn`, `release`, with the view's parameters); `lez` with `{"via": "lez_core", "wallet": {config, storage, password_file}, "program_bin"}` routes the session's LEZ reads, private holding and private sends through Logos Core's `lez_core` (`{"via": "plain"}` back), `lez_report` lists those calls beside the plain path, `lez_probe` asks `lez_core` about one of the bridge's PDAs | `{"ok": true, "result"}` in the view's shapes, or `{"ok": false, "error"}`. Each call is run with the methods above (`deposit`'s commitment and vault call; `recover` and the states for the positions; the claim with LEZ state and its `ClaimPrivately` message and accounts; `burn`'s note and `Burn` message; the release by the wallet's rule) over the chains' state, which a chain service reads and to which it signs and sends: the stand-in for Logos Core's own modules (`eth_rpc_module`, `keystore_module`/`tx_sender_module`, `lez_core`); on a LEZ sequencer `cli/src/bin/seqnet_chain.rs` (e2e/seqnet), whose methods are the mini-app devnet's `module.*` ones (`calls/src/session.rs`) |
 
 ### `ferrata_attestor_module`
 
@@ -320,12 +320,18 @@ that start a Logos Core refuse a `TMPDIR` (or `LOGOS_TMPDIR`) longer than 62 byt
   with a chain in `required` mode the block and receipt reads would go through it unchanged, not run here
   (no public network was read). The updater's beacon data does not go through `beacon_api_module` yet,
   nor the other modules' reads (the relayer's and monitor's alloy providers, the attestor's node). LEZ
-  state (a record, an event, nullifiers, counts) comes in the request: `lez_core` pins LEZ v0.3.1, and the
-  pull requests that move it to our v0.4.0-rc1 (#72, #74) were open on 13 November. The modules build each
-  program message and name the account it goes to, but do not sign or submit: `keystore_module`,
-  `signer_manager_module`, `fee_module` and `tx_sender_module` do not assemble with our builder pin
-  (`keystore_module`'s install fails on its interface contract, so the signer manager and `tx_sender_module`
-  do not load), no Ferrata module sends through them, and neither `lez_core` nor LEZ's wallet is used. In the end-to-end test the
+  state (a record, an event, nullifiers, counts) comes in the request, except in `ferrata_bridge_module`'s wallet
+  session, which reads its bridge states and its private holding and sends its private claim and burn through
+  `lez_core` at its merged v0.4 state (`cc73ebf`, with
+  [`patches/lez_core-cc73ebf-authorizes-public-pda.patch`](patches/lez_core-cc73ebf-authorizes-public-pda.patch):
+  as merged it mentions no account authorizing and has no PDA account kind) when the session says so
+  (`wallet lez`; [`results/lez-core-v04-2026-11-14/`](results/lez-core-v04-2026-11-14/)); the other modules' requests
+  and the zone's history do not go through it. The modules build each program message and name the account it goes
+  to; apart from those two private sends they do not sign or submit: `keystore_module`, `signer_manager_module`,
+  `fee_module` and `tx_sender_module` do not assemble with our builder pin (built with an overridden builder,
+  `keystore_module`'s install fails on its interface contract, because the override keeps its old code generator;
+  with the builder's own locks, `eth_rpc_module` 6965f32 does not compile against the new generator's clients), so no
+  Ferrata module sends Ethereum transactions through them. In the end-to-end test the
   harness wraps the message in a LEZ transaction and executes it in LEZ's state machine in-process,
   not on a networked sequencer. The daemon modules likewise use no Logos Core module: the attestor reads
   its node over plain HTTP (`curl`, as the binary does) and keeps its keys in files; the monitor signs
@@ -348,7 +354,10 @@ that start a Logos Core refuse a `TMPDIR` (or `LOGOS_TMPDIR`) longer than 62 byt
   over a chain service that reads both chains and signs and sends for it (`cli`'s `seqnet-chain`, a stand-in for
   `eth_rpc_module`, `keystore_module`/`tx_sender_module` and `lez_core`: LEZ's wallet library, a keystore, the
   relayer); so it ran the private round trip on a running LEZ sequencer (`e2e/seqnet/`, EVIDENCE row 103), and does
-  not read through `eth_rpc_module` yet.
+  not read through `eth_rpc_module` yet. With `wallet lez` its LEZ side goes through Logos Core's `lez_core` instead
+  (every bridge state it reads, compared with the chain service's; the private holding; the private claim and burn,
+  proven by LEZ's wallet inside Logos Core), the chain service kept beside it and as the fallback
+  (`e2e/runs/seqnet-lezcore-1/`, EVIDENCE rows 113, 114).
 - **`ferrata_attestor_module`:** attestations are published as files (`att-<tip>.json`, `latest.json`),
   not to a relay or a watcher feed, and the collector reads files; the loop asks its node for the whole
   final tier every round (from `slot_from`); the zone of the live run has one Logos Blockchain node that
