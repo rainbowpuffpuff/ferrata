@@ -309,11 +309,13 @@ The design notes specify these; there is no code for them here:
   program and its Logos module are built, `monitor/`, `modules/ferrata_monitor_module`; node views come through
   an adapter); the attestation side's `monitor` (records against several providers; the weak-subjectivity alarm);
 - in the Logos modules (`modules/README.md`, "Left out"; [`modules/LOGOS-CORE-MODULES.md`](modules/LOGOS-CORE-MODULES.md)):
-  Ethereum transactions through Logos Core's own modules (`keystore_module`, `tx_sender_module`: the modules build
-  messages without signing or sending them; with our builder's own locks `keystore_module` and
-  `signer_manager_module` build and load, but `eth_rpc_module` 6965f32 does not compile against that builder's code
-  generator, so `fee_module` and `tx_sender_module` do not load,
-  [`modules/results/lez-core-v04-2026-11-14/`](modules/results/lez-core-v04-2026-11-14/)); LEZ through `lez_core` is
+  Ethereum transactions through Logos Core's own modules beyond the two daemons on a devnet (the monitor's and the
+  relayer's sends go through `tx_sender_module`, signed by `keystore_module` through `signer_manager_module`, with
+  `--send-via logos`, on anvil only: 7 of 7 equal to the plain path, EVIDENCE rows 119, 120; that needs our patch of
+  `eth_rpc_module` 6965f32 for our builder's code generator, a draft upstream PR, and rests on the keystore's and signer
+  manager's `configure` being ungated upstream to name our modules custodians; the bridge module's own Ethereum sends,
+  the mini-app's deposit among them, still go through its stand-in chain service, and nothing went to a public network
+  through the send stack, [`modules/results/send-stack-2026-11-14/`](modules/results/send-stack-2026-11-14/README.md)); LEZ through `lez_core` is
   built for the bridge module's wallet session only (its LEZ reads and its private claim and burn, through `lez_core` at
   its merged v0.4 state with a patch of ours, on a devnet: EVIDENCE rows 113, 114), not for the other modules' LEZ
   reads and sends, nor the zone's history, which `lez_core` serves only for a sequencer it runs itself; verified reads

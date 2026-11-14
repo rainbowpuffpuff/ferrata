@@ -57,9 +57,9 @@ A Python client (`logos-logoscore-py`, `import logosctl`) drives the same daemon
 | `ferrata_attest_module` | `ferrata_attest_module/` | `version`, `dry_run_attest`, `verify_checkpoint`, `fetch_log_proof`, `build_attest_tx`, `read_attestation`, `read_instance`, `advance` |
 | `ferrata_bridge_module` | `ferrata_bridge_module/` | `version`, `deposit`, `claim`, `burn`, `release`, `recover`, `status`, `prove_release`, `import_root`, `registry`, `wallet` |
 | `ferrata_attestor_module` | `ferrata_attestor_module/` | `version`, `keygen`, `pubkey`, `deployment`, `certify`, `tier`, `attest`, `verify`, `collect`, `assemble`, `base`; the loop: `start`, `status`, `stop` |
-| `ferrata_monitor_module` | `ferrata_monitor_module/` | `version`, `check`, `node_view`, `run`; the daemon: `start`, `status`, `stop` |
+| `ferrata_monitor_module` | `ferrata_monitor_module/` | `version`, `check`, `node_view`, `run`; the daemon: `start`, `status`, `stop`; `custody` (the watcher key into Logos Core's `keystore_module`, unlocked for `tx_sender_module`) |
 | `ferrata_updater_module` | `ferrata_updater_module/` | `version`, `check_config`, `run`; the daemon: `start`, `status`, `metrics`, `stop` |
-| `ferrata_relayer_module` | `ferrata_relayer_module/` | `version`, `run`; the daemon: `start`, `status`, `stop` |
+| `ferrata_relayer_module` | `ferrata_relayer_module/` | `version`, `run`; the daemon: `start`, `status`, `stop`; `custody` (the relayer's Ethereum key, likewise) |
 
 All six are laid out the same way:
 
@@ -338,16 +338,26 @@ that start a Logos Core refuse a `TMPDIR` (or `LOGOS_TMPDIR`) longer than 62 byt
   as merged it mentions no account authorizing and has no PDA account kind) when the session says so
   (`wallet lez`; [`results/lez-core-v04-2026-11-14/`](results/lez-core-v04-2026-11-14/)); the other modules' requests
   and the zone's history do not go through it. The modules build each program message and name the account it goes
-  to; apart from those two private sends they do not sign or submit: `fee_module` and `tx_sender_module` do not load
-  with our builder pin (`keystore_module` and `signer_manager_module` do, with the builder's own locks; built with an
-  overridden builder, `keystore_module`'s install fails on its interface contract, because the override keeps its old
-  code generator; with the builder's own locks, `eth_rpc_module` 6965f32, which both need, does not compile against
-  the new generator's clients), so no Ferrata module sends Ethereum transactions through them. In the end-to-end test the
+  to; apart from those two private sends they do not sign or submit LEZ transactions. Ethereum transactions go
+  through Logos Core's send stack for the two daemons that send them, behind a flag: `monitor run --send-via logos`
+  and `ferrata-relayer --send-via logos` (as modules, started with `start`) hand each call to `tx_sender_module`, which
+  has `keystore_module` sign it through `signer_manager_module` and broadcasts it through `eth_rpc_module`; the plain
+  path (alloy, the daemon's key file or keystore) stays the default and the fallback. That needs `eth_rpc_module`
+  6965f32 patched for the clients our builder generates
+  ([`patches/eth_rpc_module-6965f32-generated-clients.patch`](patches/eth_rpc_module-6965f32-generated-clients.patch)),
+  every send-stack module built with the builder's own locks (`scripts/send-stack.sh`), the two Ferrata modules
+  named custodians by the keystore's and the signer manager's `configure` (ungated upstream), and their `custody`
+  (the key imported, unlocked for `tx_sender_module` without confirmation)
+  ([`results/send-stack-2026-11-14/`](results/send-stack-2026-11-14/README.md): 7 of 7 daemon transactions equal on
+  both paths on anvil). Left out of that: a public network (only anvil), `revokeFrom` (same code path, not run), the
+  verified route's `rpc` at run time (no beacon chain on a devnet), the bridge module's own Ethereum sends (the
+  mini-app's deposit goes through its stand-in chain service, `seqnet-chain`), and a deployment that does not rely on
+  `configure` being ungated (keystore PR #25 moves the grant to the access policy). In the end-to-end test the
   harness wraps the message in a LEZ transaction and executes it in LEZ's state machine in-process,
   not on a networked sequencer. The daemon modules likewise use no other Logos Core module: the attestor reads
-  its node over plain HTTP (`curl`, as the binary does) and keeps its keys in files; the monitor signs
-  and sends its Ethereum transactions itself (alloy, over the JSON-RPC endpoint it is given) with a key
-  file or keystore; the updater's sources are beacon API URLs or recorded directories unless its configuration names
+  its node over plain HTTP (`curl`, as the binary does) and keeps its keys in files; the monitor reads the vault itself
+  (alloy, over the JSON-RPC endpoint it is given) and signs its transactions itself unless started with `--send-via
+  logos`; the updater's sources are beacon API URLs or recorded directories unless its configuration names
   `beacon_api_module`.
 - **`ferrata_attest_module`:** `advance` plans a job for an active instance (`Open`, `Miller`, `Adopt`,
   `Finish`); an instance's initialization (`Init` and its committee's `Adopt` parts) is not planned, nor
