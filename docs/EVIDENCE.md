@@ -201,6 +201,11 @@ side is a devnet we ran (LEZ testnet 0.4 does not exist).
   Halmos properties hold from one concrete fixture state within stated bounds; of the four not proven in 900 s,
   one passed with 4,800 s in its generic layout and three did not finish
   ([`release-engineering.md`](release-engineering.md)).
+- **LEZ v0.4.0-rc3 and Logos Blockchain 0.3.5-rc.1** (rows 111, 112): the final programs ran on rc3's own
+  sequencer and node, but no checkpoint has been made over a zone whose node runs 0.3.5-rc.1 (Logos's devnet runs
+  it): its transactions carry a fork digest that the checkpoint guests do not read, and checkpoint-core refuses
+  them ([`lez/results/v0.4.0-rc3/README.md`](../lez/results/v0.4.0-rc3/README.md)); no real proof has been made
+  on rc2 or rc3.
 
 ## The latest additions, of 11 to 13 November 2026
 

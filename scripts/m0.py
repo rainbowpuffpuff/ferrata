@@ -28,7 +28,7 @@ TOKEN_REPO = "https://github.com/logos-blockchain/lez-programs.git"
 
 # Facts that are not measurements. Each has its source; --online re-checks the upstream ones.
 FACTS = {
-    "lez_newest_tag": ("v0.4.0-rc2", "docs/design/lez-rc2-changes.md (tagged 9 Nov 2026, commit e3edf47)"),
+    "lez_newest_tag": ("v0.4.0-rc3", "lez/results/v0.4.0-rc3/README.md (tagged 11 Nov 2026, commit bafd07b)"),
     "token_program_v04": (
         "released for v0.2.4; the v0.4 port is an unmerged branch",
         "proposal §B9 and README.md (state of 11 Nov 2026, spike/upstream/lez-programs at 6674d78)",
@@ -193,6 +193,9 @@ def check_real_proofs(online):
                        "verified in the harness (row 5), not on a sequencer", "partly"),
         ("v0.4.0-rc2", "programs rebuilt unchanged, the same charges; the one real proof stopped at its 1,200 s cap "
                        "(EVIDENCE row 22)", "not passed"),
+        ("v0.4.0-rc3", "the final programs ran on rc3's sequencer and its 0.3.5-rc.1 node; no real proof "
+                       "attempted; rc3's circuit is rc2's (EVIDENCE rows 111-112, lez/results/v0.4.0-rc3/README.md)",
+         "not passed"),
     ]
     if online:
         tags, err = ls_remote(LEZ_REPO, r"^v\d")

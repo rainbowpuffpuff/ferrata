@@ -1,0 +1,36 @@
+consumer image 8464603bcf9ea9c69c0eac100605deb9c8ef666a56f964cceba66947958e4b96 (471408 ELF bytes); program image 816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df (627064 ELF bytes); RISC0_DEV_MODE on; shape wallet
+record: header(id, 15624480) of instance 599a0de5f1dc, mainnet block 26384851; fact: Transfer of token a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 in transaction 0, log 0
+the consumer's private transitions (executor):
+| handler execution | input bytes (ReceiveInput) | journal bytes | user cycles | segments | cycles with padding (sum of 2^po2) | exit |
+|---|---:|---:|---:|---:|---:|---:|
+| AttestPrivately (sends Read) | 2,251 | 4,593 | 34,717 | 1 | 131,072 | 0 |
+| the record's reply (verifies the fact) | 2,751 | 2,896 | 346,763 | 1 | 524,288 | 0 |
+
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+DRY RUN, NOT A PROOF (RISC0_DEV_MODE=1): execute_and_prove 0.6 s (prove + settle 0.7 s); receipt (fake receipt) 16233 bytes; transaction 32353 bytes
+wrote the proven transaction to <scratch>/t-rc1/lez/target/attest-dry-run-tx.borsh (32353 bytes)
+public_context.actors (2): ferrata@7cVDaEezMeoL3rP6seHmzVMQHt2SnxaVJAX9VW9FtvDz, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq
+public_context.authorized_accounts: {}
+execution.public_root: None
+execution.boundary (6 steps):
+  - PrivateToPublic from consumer@F66DGsNEgHF2JZyjRenfuXkmEffw5Q8DV64hKrdfUc5E to ferrata@7cVDaEezMeoL3rP6seHmzVMQHt2SnxaVJAX9VW9FtvDz: Read (1 bytes)
+  - PublicToPrivate from ferrata@7cVDaEezMeoL3rP6seHmzVMQHt2SnxaVJAX9VW9FtvDz to consumer@F66DGsNEgHF2JZyjRenfuXkmEffw5Q8DV64hKrdfUc5E: StateReply { state: 365 bytes } (369 bytes)
+  - EndPrivateSubtree
+  - EndPublicSubtree
+  - PrivateToPublic from native@5vWYmk84i2B66qJ8LGTdy1THcfQkdBPRzjaTBHTQ9Xkv to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
+  - EndPublicSubtree
+execution.program_image_claims (1):
+  - Disclosed { program: consumer, image_id: 8464603bcf9ea9c69c0eac100605deb9c8ef666a56f964cceba66947958e4b96 }
+execution.private_actions (7): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (11256 bytes)
+execution.async_messages: 0
+execution.recovery_bindings: 1
+execution.validity: ValidityWindows { blocks: ValidityWindow { from: None, to: None }, timestamps: ValidityWindow { from: None, to: None } }
+execution.fee: Some("refund_to None, fallback true")
+nonces: 0, admission evidence: 0
+
+settled: execution gas 422,032 (PRIVATE_VERIFY_GAS 409,764 + public part 12,268 cycles), storage gas 224,063, base fee 5,168,760

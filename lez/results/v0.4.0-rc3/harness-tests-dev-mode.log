@@ -1,0 +1,1446 @@
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 2 tests
+test the_pool_accepts_exactly_its_deposit ... ok
+test accumulator_leaves_of_the_shared_vectors_through_a_request ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 3 tests
+| handler execution | input bytes (ReceiveInput) | journal bytes | user cycles | segments | cycles with padding (sum of 2^po2) | exit |
+|---|---:|---:|---:|---:|---:|---:|
+| AttestPrivately (sends Read) | 2,251 | 4,593 | 34,717 | 1 | 131,072 | 0 |
+| the record's reply (verifies the fact) | 2,751 | 2,896 | 346,763 | 1 | 524,288 | 0 |
+
+a forged receipt: proving failed: Program exited with non-zero code 110 after 315674 cycles
+a private call: execution gas 510,281 (public part 100,517 cycles), storage gas 224,063; the 2225-byte request and the 301-byte attestation are in the transaction
+test a_private_consumer_calling_attest_publishes_its_request ... ok
+a Transfer to another recipient: proving failed: Program exited with non-zero code 130 after 333105 cycles
+Stage 4: a private consumer attests an ERC-20 Transfer of mainnet block 26384851 against the record it reads
+
+Decoded public fields (harness::private::describe_public_outputs):
+
+public_context.actors (2): ferrata@2314hyokTRPu4gAJQK82QQKEqci2N6jTHcKi1FHY9Yep, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq
+public_context.authorized_accounts: {}
+execution.public_root: None
+execution.boundary (6 steps):
+  - PrivateToPublic from consumer@2Zg2ZpSuJvUqoUGyxFu2mY7rwV7JnWEQLGfc2rNDzDSV to ferrata@2314hyokTRPu4gAJQK82QQKEqci2N6jTHcKi1FHY9Yep: Read (1 bytes)
+  - PublicToPrivate from ferrata@2314hyokTRPu4gAJQK82QQKEqci2N6jTHcKi1FHY9Yep to consumer@2Zg2ZpSuJvUqoUGyxFu2mY7rwV7JnWEQLGfc2rNDzDSV: StateReply { state: 365 bytes } (369 bytes)
+  - EndPrivateSubtree
+  - EndPublicSubtree
+  - PrivateToPublic from native@2Zg2ZpSuJvUqoUGyxFu2mY7rwV7JnWEQLGfc2rNDzDSV to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
+  - EndPublicSubtree
+execution.program_image_claims (1):
+  - Disclosed { program: consumer, image_id: 9dc21f01d175ad6a384fb2e69732fa304aa2185bea6b826a5535fc3cfac71df3 }
+execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1389 bytes)
+execution.async_messages: 0
+execution.recovery_bindings: 0
+execution.validity: ValidityWindows { blocks: ValidityWindow { from: None, to: None }, timestamps: ValidityWindow { from: None, to: None } }
+execution.fee: Some("refund_to Some(78Skt7EQTvVwfWVYnA1XMjghv3aUR1V5wgQAfVLKJZG5), fallback true")
+nonces: 0, admission evidence: 0
+
+The 8265 serialized bytes of the transaction were searched for the consumer's private inputs:
+- the token address (20 bytes): absent
+- the transfer's sender (20 bytes): absent
+- the transfer's recipient (20 bytes): absent
+- the amount (its 32-byte word) (32 bytes): absent
+- the statement identifier (32 bytes): absent
+- the pool id (32 bytes): absent
+- the account id the consumer acts for (32 bytes): absent
+- the authorization secret key (32 bytes): absent
+- the nullifier secret key (32 bytes): absent
+- the nullifier public key (32 bytes): absent
+- the viewing public key (its first 32 of 1,184 bytes) (32 bytes): absent
+- the viewing key seed d (32 bytes): absent
+- the viewing key seed z (32 bytes): absent
+- proof node 0 (its first 32 of 308 bytes) (32 bytes): absent
+- proof node 0 (its last 32 bytes) (32 bytes): absent
+- proof node 1 (its first 32 of 115 bytes) (32 bytes): absent
+- proof node 1 (its last 32 bytes) (32 bytes): absent
+- proof node 2 (its first 32 of 1600 bytes) (32 bytes): absent
+- proof node 2 (its last 32 bytes) (32 bytes): absent
+
+Charged: execution gas 422,032 (PRIVATE_VERIFY_GAS 409,764 + public part 12,268 cycles), storage gas 224,063.
+The transaction is 8,265 bytes; its proof field is RISC Zero's fake receipt (4,189 bytes, dev mode).
+
+The consumer's private transitions, in the executor (no proof; software Keccak):
+
+| handler execution | input bytes (ReceiveInput) | journal bytes | user cycles | segments | cycles with padding (sum of 2^po2) | exit |
+|---|---:|---:|---:|---:|---:|---:|
+| AttestPrivately (sends Read) | 2,251 | 4,593 | 34,717 | 1 | 131,072 | 0 |
+| the record's reply (verifies the fact) | 2,751 | 2,896 | 346,763 | 1 | 524,288 | 0 |
+
+Together 381,480 user cycles. The private state the consumer keeps afterwards is 120 bytes, whatever the proof was.
+
+test a_private_consumer_attests_a_transfer_and_only_the_read_is_public ... ok
+a pool configured for another chain id: proving failed: Program exited with non-zero code 140 after 25559 cycles
+a proof valid for another header (the bootstrap's record): proving failed: Program exited with non-zero code 110 after 78621 cycles
+a slot without a record: proving failed: Program exited with non-zero code 222 after 18845 cycles
+test a_private_attestation_that_does_not_verify_cannot_be_proven ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.36s
+
+
+running 4 tests
+| # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | a public actor calls Attest: storage slot | consumer CallAttest 87,410 → Attest 279,023 → consumer (reply) 19,748 | 386,181 | 8% | 7,507 | 3,149,504 | applied |
+| 2 | a public actor calls Attest: event log | consumer CallAttest 43,268 → Attest 100,517 → consumer (reply) 21,087 | 164,872 | 3% | 2,792 | 1,341,312 | applied |
+| 3 | reference consumer: claim an ERC-20 Transfer (credits its sender once) | consumer Claim 37,667 → Attest 100,517 → consumer (reply) 31,502 → consumer Credit 15,703 | 185,389 | 4% | 2,768 | 1,505,256 | applied |
+| 4 | reference consumer: the same claim again (replay) | consumer Claim 14,936 | 14,936 | 0% | 2,768 | 141,632 | refused: exit 223 (consumer: AlreadyClaimed) |
+
+| transaction | handler | cycles | segments | input bytes (ReceiveInput) | of which message | of which pre-state | journal bytes | post-state bytes | exit |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| a public actor calls Attest: storage slot | consumer CallAttest | 87,410 | 1 | 7,054 | 6,980 | 0 | 14,161 | 70 | 0 |
+| a public actor calls Attest: storage slot | Attest | 279,023 | 1 | 7,443 | 6,940 | 365 | 7,906 | – | 0 |
+| a public actor calls Attest: storage slot | consumer (reply) | 19,748 | 1 | 578 | 370 | 70 | 983 | 380 | 0 |
+| a public actor calls Attest: event log | consumer CallAttest | 43,268 | 1 | 2,719 | 2,265 | 380 | 5,485 | 444 | 0 |
+| a public actor calls Attest: event log | Attest | 100,517 | 1 | 2,728 | 2,225 | 365 | 3,122 | – | 0 |
+| a public actor calls Attest: event log | consumer (reply) | 21,087 | 1 | 883 | 301 | 444 | 1,219 | 311 | 0 |
+| reference consumer: claim an ERC-20 Transfer (credits its sender once) | consumer Claim | 37,667 | 1 | 2,251 | 2,177 | 0 | 4,751 | 178 | 0 |
+| reference consumer: claim an ERC-20 Transfer (credits its sender once) | Attest | 100,517 | 1 | 2,728 | 2,225 | 365 | 3,122 | – | 0 |
+| reference consumer: claim an ERC-20 Transfer (credits its sender once) | consumer (reply) | 31,502 | 1 | 617 | 301 | 178 | 925 | 78 | 0 |
+| reference consumer: claim an ERC-20 Transfer (credits its sender once) | consumer Credit | 15,703 | 1 | 239 | 101 | 0 | 341 | 77 | 0 |
+| reference consumer: the same claim again (replay) | consumer Claim | 14,936 | 1 | 2,329 | 2,177 | 78 | 0 | – | 223 |
+
+test the_reference_consumer_credits_a_transfer_once ... ok
+| # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | account: the WETH contract (nonce, balance, storage root, code hash) | Attest 168,909 | 168,909 | 3% | 4,424 | 1,386,664 | applied |
+| 2 | storage slot: a WETH balance, value >= 1 | Attest 275,865 | 275,865 | 6% | 7,338 | 2,265,624 | applied |
+| 3 | storage slot: an absent slot is zero | Attest 270,580 | 270,580 | 5% | 7,291 | 2,222,968 | applied |
+| 4 | account: an address without an account | Attest 151,829 | 151,829 | 3% | 4,150 | 1,247,832 | applied |
+| 5 | event log: an ERC-20 Transfer (receipt with 7 logs) | Attest 97,485 | 97,485 | 2% | 2,623 | 800,864 | applied |
+| 6 | event log: a Transfer in the block's largest receipt (306 logs) | Attest 1,619,960 | 1,619,960 | 32% | 58,812 | 13,430,176 | applied |
+| 7 | storage slot 16 blocks back: one EIP-2935 hop, then the slot | Attest 499,277 | 499,277 | 10% | 13,578 | 4,102,840 | applied |
+| 8 | four facts in one call (account, two slots, a log) and a relation | Attest 454,255 | 454,255 | 9% | 12,309 | 3,732,512 | applied |
+
+| transaction | handler | cycles | segments | input bytes (ReceiveInput) | of which message | of which pre-state | journal bytes | post-state bytes | exit |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| account: the WETH contract (nonce, balance, storage root, code hash) | Attest | 168,909 | 1 | 4,465 | 4,026 | 365 | 4,578 | – | 0 |
+| storage slot: a WETH balance, value >= 1 | Attest | 275,865 | 1 | 7,379 | 6,940 | 365 | 7,524 | – | 0 |
+| storage slot: an absent slot is zero | Attest | 270,580 | 1 | 7,332 | 6,893 | 365 | 7,477 | – | 0 |
+| account: an address without an account | Attest | 151,829 | 1 | 4,191 | 3,752 | 365 | 4,304 | – | 0 |
+| event log: an ERC-20 Transfer (receipt with 7 logs) | Attest | 97,485 | 1 | 2,664 | 2,225 | 365 | 2,777 | – | 0 |
+| event log: a Transfer in the block's largest receipt (306 logs) | Attest | 1,619,960 | 2 | 58,853 | 58,414 | 365 | 58,966 | – | 0 |
+| storage slot 16 blocks back: one EIP-2935 hop, then the slot | Attest | 499,277 | 1 | 13,619 | 13,180 | 365 | 13,764 | – | 0 |
+| four facts in one call (account, two slots, a log) and a relation | Attest | 454,255 | 1 | 12,350 | 11,911 | 365 | 12,559 | – | 0 |
+
+test every_kind_of_fact_is_attested_under_the_real_record ... ok
+| # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | account: the WETH contract (nonce, balance, storage root, code hash) | Attest 626,322 | 626,322 | 13% | 4,424 | 5,045,968 | applied |
+| 2 | storage slot: a WETH balance, value >= 1 | Attest 1,100,712 | 1,100,712 | 22% | 7,338 | 8,864,400 | applied |
+| 3 | storage slot: an absent slot is zero | Attest 1,080,243 | 1,080,243 | 22% | 7,291 | 8,700,272 | applied |
+| 4 | account: an address without an account | Attest 578,873 | 578,873 | 12% | 4,150 | 4,664,184 | applied |
+| 5 | event log: an ERC-20 Transfer (receipt with 7 logs) | Attest 340,998 | 340,998 | 7% | 2,623 | 2,748,968 | applied |
+| 6 | event log: a Transfer in the block's largest receipt (306 logs) | Attest 8,227,481 | 8,227,481 | 165% | 58,812 | 66,290,344 | applied |
+| 7 | storage slot 16 blocks back: one EIP-2935 hop, then the slot | Attest 2,105,108 | 2,105,108 | 42% | 13,578 | 16,949,488 | applied |
+| 8 | four facts in one call (account, two slots, a log) and a relation | Attest 1,876,739 | 1,876,739 | 38% | 12,309 | 15,112,384 | applied |
+
+test the_same_attestations_with_software_keccak_in_the_program ... ok
+| # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | a request for another chain id | Attest 37,872 | 37,872 | 1% | 7,304 | 361,408 | refused: exit 140 (ChainMismatch) |
+| 2 | a request bound to another instance | Attest 37,427 | 37,427 | 1% | 7,304 | 357,848 | refused: exit 211 (WrongInstance) |
+| 3 | a request bound to instance A, sent to instance B's record | Attest 37,427 | 37,427 | 1% | 7,304 | 357,848 | refused: exit 211 (WrongInstance) |
+| 4 | a request naming instance B but expecting mainnet's chain id | Attest 37,872 | 37,872 | 1% | 7,304 | 361,408 | refused: exit 140 (ChainMismatch) |
+| 5 | an actor that holds no record (no header at this slot) | Attest 29,857 | 29,857 | 1% | 7,369 | 297,808 | refused: exit 213 (NoRecord) |
+| 6 | header(id, slot) of another deployment of the same image | Attest 29,857 | 29,857 | 1% | 7,369 | 297,808 | refused: exit 213 (NoRecord) |
+| 7 | an actor of the program that is not a record (the instance) | Attest 31,838 | 31,838 | 1% | 7,304 | 313,136 | refused: exit 209 (BadState) |
+| 8 | a storage proof valid for another header's block | Attest 51,296 | 51,296 | 1% | 7,304 | 468,800 | refused: exit 110 (ProofNodeMismatch) |
+| 9 | a receipt proof valid for another header's block | Attest 30,766 | 30,766 | 1% | 2,519 | 266,280 | refused: exit 110 (ProofNodeMismatch) |
+| 10 | a forged node in the account proof | Attest 51,296 | 51,296 | 1% | 7,304 | 468,800 | refused: exit 110 (ProofNodeMismatch) |
+| 11 | a forged node in the storage proof (its leaf) | Attest 247,318 | 247,318 | 5% | 7,304 | 2,036,976 | refused: exit 110 (ProofNodeMismatch) |
+| 12 | a forged receipt (one bit of the trie leaf) | Attest 68,357 | 68,357 | 1% | 2,519 | 567,008 | refused: exit 110 (ProofNodeMismatch) |
+| 13 | a storage proof presented for another slot | Attest 185,787 | 185,787 | 4% | 7,304 | 1,544,728 | refused: exit 110 (ProofNodeMismatch) |
+| 14 | an account proof presented for another address | Attest 66,015 | 66,015 | 1% | 7,304 | 586,552 | refused: exit 110 (ProofNodeMismatch) |
+| 15 | a storage proof without its last node | Attest 244,934 | 244,934 | 5% | 7,257 | 2,017,528 | refused: exit 111 (ProofIncomplete) |
+| 16 | a storage proof with a node appended | Attest 251,410 | 251,410 | 5% | 7,840 | 2,074,000 | refused: exit 112 (ProofTrailingNodes) |
+| 17 | a predicate that does not hold (a positive balance < 1) | Attest 253,805 | 253,805 | 5% | 7,338 | 2,089,144 | refused: exit 130 (PredicateFailed) |
+| 18 | a log that is not a Transfer to the expected recipient | Attest 87,603 | 87,603 | 2% | 2,623 | 721,808 | refused: exit 130 (PredicateFailed) |
+| 19 | a condition on a field the fact does not have | Attest 253,275 | 253,275 | 5% | 7,339 | 2,084,912 | refused: exit 131 (QueryInvalid) |
+| 20 | a relation that does not hold (a balance < the contract's nonce) | Attest 253,856 | 253,856 | 5% | 7,315 | 2,089,368 | refused: exit 130 (PredicateFailed) |
+| 21 | a log index past the receipt's last log | Attest 78,153 | 78,153 | 2% | 2,519 | 645,376 | refused: exit 125 (LogIndexOutOfRange) |
+| 22 | a transaction index past the block's last transaction | Attest 64,491 | 64,491 | 1% | 1,247 | 525,904 | refused: exit 122 (ReceiptNotIncluded) |
+| 23 | a log of a transaction that failed | Attest 55,530 | 55,530 | 1% | 1,612 | 457,136 | refused: exit 124 (ReceiptFailed) |
+| 24 | a receipt proof presented for another transaction index | Attest 38,637 | 38,637 | 1% | 2,519 | 329,248 | refused: exit 110 (ProofNodeMismatch) |
+| 25 | a hop to a block that is not older than the record's | Attest 65,543 | 65,543 | 1% | 13,592 | 633,080 | refused: exit 150 (HistoryOutOfWindow) |
+| 26 | a hop with a header the history contract does not hold | Attest 248,123 | 248,123 | 5% | 13,578 | 2,093,608 | refused: exit 151 (HistoryHashMismatch) |
+| 27 | an older block's proof without its hop | Attest 51,296 | 51,296 | 1% | 7,304 | 468,800 | refused: exit 110 (ProofNodeMismatch) |
+| 28 | an empty request | Attest 15,185 | 15,185 | 0% | 460 | 125,160 | refused: exit 131 (QueryInvalid) |
+| 29 | an accumulator leaf whose root is not a storage fact | Attest 268,878 | 268,878 | 5% | 8,376 | 2,218,032 | refused: exit 214 (BadQuery) |
+| 30 | a proof whose first node is replaced by two junk bytes | Attest 44,920 | 44,920 | 1% | 6,773 | 413,544 | refused: exit 110 (ProofNodeMismatch) |
+| 31 | a message cut short by one byte | (undecodable) 29,520 | 29,520 | 1% | 7,303 | 294,584 | refused: exit 200 (BadMessage) |
+| 32 | a message with a byte appended | (undecodable) 30,053 | 30,053 | 1% | 7,305 | 298,864 | refused: exit 200 (BadMessage) |
+| 33 | consumer: a Transfer of the token to another recipient | consumer Claim 37,667 → Attest 88,722 | 126,389 | 3% | 2,768 | 1,033,256 | refused: exit 130 (PredicateFailed) |
+| 34 | consumer: a Transfer of another token | consumer Claim 37,667 → Attest 87,363 | 125,030 | 3% | 2,768 | 1,022,384 | refused: exit 130 (PredicateFailed) |
+| 35 | consumer: a claim sent to a claim actor the statement does not name | consumer Claim 37,667 → Attest 100,517 → consumer (reply) 22,240 | 160,424 | 3% | 2,768 | 1,305,536 | refused: exit 229 (consumer: NullifierMismatch) |
+| 36 | consumer: a pool configured for another chain id | consumer Claim 37,667 → Attest 24,685 | 62,352 | 1% | 2,768 | 520,960 | refused: exit 140 (ChainMismatch) |
+| 37 | consumer: a claim with a forged receipt | consumer Claim 37,667 → Attest 71,290 | 108,957 | 2% | 2,768 | 893,800 | refused: exit 110 (ProofNodeMismatch) |
+| 38 | consumer: Credit sent as the transaction root | consumer Credit 9,541 | 9,541 | 0% | 564 | 80,840 | refused: exit 225 (consumer: WrongSender) |
+| 39 | consumer: Credit from another program's actor | scripted 9,742 → consumer Credit 10,391 | 20,133 | 0% | 784 | 167,336 | refused: exit 225 (consumer: WrongSender) |
+| 40 | consumer: an attestation it did not ask for, from another program's actor | scripted 11,383 → consumer (reply) 7,154 | 18,537 | 0% | 984 | 156,168 | refused: exit 220 (consumer: BadMessage) |
+| 41 | consumer: the same deposit claimed again (replay) | consumer Claim 14,936 | 14,936 | 0% | 2,768 | 141,632 | refused: exit 223 (consumer: AlreadyClaimed) |
+
+test refusals_exit_with_their_codes_and_change_nothing ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 19.03s
+
+
+running 1 test
+| transaction | origin | message bytes | checkpoint's decoder | collected |
+|---|---|---:|---|---|
+| ImportRoot A n=8 | PublicRoot | 1499 | ImportRoot (its proofs skipped) | yes |
+| Claim: leaf 6 (10 ETH to the payer) | PublicRoot | 1271 | ignored (variant 4 and up) | no |
+| Burn 1 ETH (A) by the payer | PublicRoot | 185 | Burn | yes |
+| Burn: the same note again | PublicRoot | 185 | Burn | no (reverted) |
+| Burn 1 ETH (B) by the payer | PublicRoot | 185 | Burn | yes |
+| Echo (rule (A)'s nonce) | PublicRoot | 33 | Echo | yes |
+| private claim (leaf 5) | PrivateToPublic | 1 | ignored (variant 4 and up) | no |
+| private claim (leaf 5) | PublicToPrivate | 121 | ignored (variant 4 and up) | no (not public execution) |
+| private claim (leaf 5) | PrivateToPublic | 167 | ignored (variant 4 and up) | no |
+| private burn | PrivateToPublic | 185 | Burn | yes |
+
+test burns_and_what_the_checkpoint_collects ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 24.29s
+
+
+running 1 test
+| transaction | origin | message bytes | checkpoint's decoder | collected |
+|---|---|---:|---|---|
+| Sunset B by a signer with no role | PublicRoot | 33 | Sunset | no (reverted) |
+| Sunset B (freeze authority) | PublicRoot | 33 | Sunset | yes |
+| Sunset B again | PublicRoot | 33 | Sunset | no (reverted) |
+| ImportRoot B after Sunset | PublicRoot | 1392 | ImportRoot | no (reverted) |
+| Burn 1 ETH (B) after Sunset: burns continue | PublicRoot | 185 | Burn | yes |
+
+test registry_fees_caps_freezes_and_sunset ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 55.95s
+
+
+running 3 tests
+test the_bridge_codes_are_its_own_block ... ok
+| # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | Init C, Gloas record, no header | bridge Init 46,103 → Attest 20,673 | 66,776 | 1% | 1,968 | 549,952 | refused: exit 215 (HeaderRequired) |
+| 2 | Init C, Gloas record, another block's header | bridge Init 54,048 → Attest 36,830 | 90,878 | 2% | 2,695 | 748,584 | refused: exit 120 (HeaderHashMismatch) |
+| 3 | Init C, Gloas record, header in front of the account proof | bridge Init 54,048 → Attest 113,473 → bridge (reply) 39,419 | 206,940 | 4% | 2,695 | 1,677,080 | applied |
+| 4 | Register ETH (C), Gloas record, no header | bridge Register 73,647 → Attest 25,664 | 99,311 | 2% | 2,673 | 815,872 | refused: exit 215 (HeaderRequired) |
+| 5 | Register ETH (C), Gloas record, with the header | bridge Register 84,495 → Attest 176,262 → bridge (reply) 74,476 → bridge WriteToken 32,147 | 367,380 | 7% | 3,400 | 2,966,240 | applied |
+| 6 | ImportRoot C, Gloas record, no header | bridge ImportRoot 51,024 → Attest 22,441 | 73,465 | 1% | 1,885 | 602,800 | refused: exit 215 (HeaderRequired) |
+| 7 | ImportRoot C, Gloas record, with the header (2 leaves) | bridge ImportRoot 60,259 → Attest 135,887 → bridge (reply) 53,650 → bridge WriteRoot 17,083 | 266,879 | 5% | 2,612 | 2,155,928 | applied |
+| 8 | Claim: leaf 0 under root(C, 2) | bridge Claim 107,702 → bridge Issue 47,280 → bridge Admit 35,565 → bridge Spend 30,916 → bridge Mint 18,161 → bridge Mint 18,161 | 257,785 | 5% | 2,053 | 2,078,704 | applied |
+| 9 | Claim: leaf 0 again (replay) | bridge Claim 107,702 → bridge Issue 47,280 → bridge Admit 35,565 → bridge Spend 19,559 | 210,106 | 4% | 2,053 | 1,697,272 | refused: exit 250 (ALREADY_CLAIMED) |
+
+| transaction | handler | cycles | segments | input bytes (ReceiveInput) | of which message | of which pre-state | journal bytes | post-state bytes | exit |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Init C, Gloas record, no header | bridge Init | 46,103 | 1 | 1,515 | 1,441 | 0 | 3,180 | 390 | 0 |
+| Init C, Gloas record, no header | Attest | 20,673 | 1 | 1,569 | 1,178 | 253 | 0 | – | 215 |
+| Init C, Gloas record, another block's header | bridge Init | 54,048 | 1 | 2,242 | 2,168 | 0 | 4,598 | 390 | 0 |
+| Init C, Gloas record, another block's header | Attest | 36,830 | 1 | 2,260 | 1,869 | 253 | 0 | – | 120 |
+| Init C, Gloas record, header in front of the account proof | bridge Init | 54,048 | 1 | 2,242 | 2,168 | 0 | 4,598 | 390 | 0 |
+| Init C, Gloas record, header in front of the account proof | Attest | 113,473 | 1 | 2,260 | 1,869 | 253 | 2,723 | – | 0 |
+| Init C, Gloas record, header in front of the account proof | bridge (reply) | 39,419 | 1 | 898 | 370 | 390 | 1,487 | 564 | 0 |
+| Register ETH (C), Gloas record, no header | bridge Register | 73,647 | 1 | 2,785 | 2,147 | 564 | 5,791 | 950 | 0 |
+| Register ETH (C), Gloas record, no header | Attest | 25,664 | 1 | 2,350 | 1,959 | 253 | 0 | – | 215 |
+| Register ETH (C), Gloas record, with the header | bridge Register | 84,495 | 1 | 3,512 | 2,874 | 564 | 7,209 | 950 | 0 |
+| Register ETH (C), Gloas record, with the header | Attest | 176,262 | 1 | 3,041 | 2,650 | 253 | 3,855 | – | 0 |
+| Register ETH (C), Gloas record, with the header | bridge (reply) | 74,476 | 1 | 1,809 | 721 | 950 | 3,345 | 564 | 0 |
+| Register ETH (C), Gloas record, with the header | bridge WriteToken | 32,147 | 1 | 981 | 843 | 0 | 1,849 | 843 | 0 |
+| ImportRoot C, Gloas record, no header | bridge ImportRoot | 51,024 | 1 | 1,997 | 1,359 | 564 | 4,147 | 613 | 0 |
+| ImportRoot C, Gloas record, no header | Attest | 22,441 | 1 | 1,831 | 1,440 | 253 | 0 | – | 215 |
+| ImportRoot C, Gloas record, with the header (2 leaves) | bridge ImportRoot | 60,259 | 1 | 2,724 | 2,086 | 564 | 5,565 | 613 | 0 |
+| ImportRoot C, Gloas record, with the header (2 leaves) | Attest | 135,887 | 1 | 2,522 | 2,131 | 253 | 3,102 | – | 0 |
+| ImportRoot C, Gloas record, with the header (2 leaves) | bridge (reply) | 53,650 | 1 | 1,238 | 487 | 613 | 2,048 | 564 | 0 |
+| ImportRoot C, Gloas record, with the header (2 leaves) | bridge WriteRoot | 17,083 | 1 | 255 | 117 | 0 | 397 | 117 | 0 |
+| Claim: leaf 0 under root(C, 2) | bridge Claim | 107,702 | 1 | 1,462 | 1,271 | 117 | 1,754 | – | 0 |
+| Claim: leaf 0 under root(C, 2) | bridge Issue | 47,280 | 1 | 1,180 | 199 | 843 | 2,516 | 843 | 0 |
+| Claim: leaf 0 under root(C, 2) | bridge Admit | 35,565 | 1 | 772 | 70 | 564 | 1,361 | 564 | 0 |
+| Claim: leaf 0 under root(C, 2) | bridge Spend | 30,916 | 1 | 360 | 222 | 0 | 992 | 77 | 0 |
+| Claim: leaf 0 under root(C, 2) | bridge Mint | 18,161 | 1 | 299 | 161 | 0 | 398 | 74 | 0 |
+| Claim: leaf 0 under root(C, 2) | bridge Mint | 18,161 | 1 | 299 | 161 | 0 | 398 | 74 | 0 |
+| Claim: leaf 0 again (replay) | bridge Claim | 107,702 | 1 | 1,462 | 1,271 | 117 | 1,754 | – | 0 |
+| Claim: leaf 0 again (replay) | bridge Issue | 47,280 | 1 | 1,180 | 199 | 843 | 2,516 | 843 | 0 |
+| Claim: leaf 0 again (replay) | bridge Admit | 35,565 | 1 | 772 | 70 | 564 | 1,361 | 564 | 0 |
+| Claim: leaf 0 again (replay) | bridge Spend | 19,559 | 1 | 437 | 222 | 77 | 0 | – | 250 |
+
+test inbound_under_a_gloas_record ... ok
+| # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | Init A: vault A's slot 2 holds configId(A) | bridge Init 44,818 → Attest 86,790 → bridge (reply) 39,419 | 171,027 | 3% | 1,946 | 1,383,784 | applied |
+| 2 | Init B (another configuration, vault B) | bridge Init 44,198 → Attest 84,699 → bridge (reply) 39,419 | 168,316 | 3% | 1,882 | 1,361,584 | applied |
+| 3 | Init A' (vault A, another fee recipient): slot 2 is configId(A) | bridge Init 44,818 → Attest 86,790 → bridge (reply) 32,198 | 163,806 | 3% | 1,946 | 1,326,016 | refused: exit 246 (PAIRING_MISMATCH) |
+| 4 | Init A again | bridge Init 39,401 | 39,401 | 1% | 1,946 | 330,776 | refused: exit 244 (ALREADY_WRITTEN) |
+| 5 | Register ETH (A): entry and schedule 0 attested at block 100 | bridge Register 73,920 → Attest 151,273 → bridge (reply) 74,476 → bridge WriteToken 32,147 | 331,816 | 7% | 2,747 | 2,676,504 | applied |
+| 6 | Register ETH (B) | bridge Register 76,864 → Attest 156,184 → bridge (reply) 74,476 → bridge WriteToken 32,147 | 339,671 | 7% | 2,770 | 2,739,528 | applied |
+| 7 | ImportRoot A: slots 0 and 1 at block 100 (5 leaves) | bridge ImportRoot 50,128 → Attest 109,870 → bridge (reply) 53,650 → bridge WriteRoot 17,083 | 230,731 | 5% | 1,895 | 1,861,008 | applied |
+| 8 | ImportRoot A: block 101 (8 leaves) | bridge ImportRoot 51,721 → Attest 113,770 → bridge (reply) 53,650 → bridge WriteRoot 17,083 | 236,224 | 5% | 2,025 | 1,905,992 | applied |
+| 9 | ImportRoot A: block 101 again (same count) | bridge ImportRoot 51,721 → Attest 113,770 → bridge (reply) 53,650 → bridge WriteRoot 18,567 | 237,708 | 5% | 2,025 | 1,917,864 | refused: exit 244 (ALREADY_WRITTEN) |
+| 10 | ImportRoot A: block 101, message claims count 7 | bridge ImportRoot 51,721 → Attest 113,770 → bridge (reply) 39,074 | 204,565 | 4% | 2,025 | 1,652,720 | refused: exit 247 (IMPORT_MISMATCH) |
+| 11 | ImportRoot A: block 101, message claims the 5-leaf root | bridge ImportRoot 51,721 → Attest 113,770 → bridge (reply) 38,594 | 204,085 | 4% | 2,025 | 1,648,880 | refused: exit 247 (IMPORT_MISMATCH) |
+| 12 | ImportRoot A with vault B's proofs | bridge ImportRoot 49,908 → Attest 44,014 | 93,922 | 2% | 1,918 | 766,720 | refused: exit 110 (ProofNodeMismatch) |
+| 13 | ImportRoot A': no configuration (never initialised) | bridge ImportRoot 16,143 | 16,143 | 0% | 2,090 | 145,864 | refused: exit 245 (NOT_FOUND) |
+| 14 | ImportRoot A: block 102, root of 8 leaves, count 6 (a lagging count) | bridge ImportRoot 51,721 → Attest 113,770 → bridge (reply) 53,650 → bridge WriteRoot 17,083 | 236,224 | 5% | 2,025 | 1,905,992 | applied |
+| 15 | ImportRoot B: block 100 (8 leaves) | bridge ImportRoot 49,908 → Attest 115,561 → bridge (reply) 53,650 → bridge WriteRoot 17,083 | 236,202 | 5% | 1,918 | 1,904,960 | applied |
+| 16 | ImportFees ETH (A): schedule 1 at block 101 | bridge ImportFees 55,929 → Attest 113,770 → bridge (reply) 58,259 → bridge ExtendFees 41,726 | 269,684 | 5% | 2,206 | 2,175,120 | applied |
+| 17 | ImportFees ETH (A): no schedule 2 at block 101 (8 leaves) | bridge ImportFees 50,198 → Attest 108,223 → bridge (reply) 52,487 → bridge ExtendFees 39,427 | 250,335 | 5% | 1,945 | 2,018,240 | applied |
+| 18 | Claim: the shared vector's deposit (leaf 2) under root(A, 5) | bridge Claim 107,702 → bridge Issue 51,166 → bridge Admit 35,565 → bridge Spend 30,916 → bridge Mint 18,161 → bridge Mint 18,161 | 261,671 | 5% | 2,053 | 2,109,792 | applied |
+| 19 | Claim: the same again (replay) | bridge Claim 107,702 → bridge Issue 51,166 → bridge Admit 35,565 → bridge Spend 19,559 | 213,992 | 4% | 2,053 | 1,728,360 | refused: exit 250 (ALREADY_CLAIMED) |
+| 20 | Claim: the same deposit under root(A, 8) | bridge Claim 107,702 → bridge Issue 51,166 → bridge Admit 35,565 → bridge Spend 19,559 | 213,992 | 4% | 2,053 | 1,728,360 | refused: exit 250 (ALREADY_CLAIMED) |
+| 21 | Claim: leaf 6 under root(A, 6) (block 102: index >= count) | bridge Claim 32,012 | 32,012 | 1% | 2,053 | 272,520 | refused: exit 248 (LEAF_NOT_IMPORTED) |
+| 22 | Claim: leaf 6, one sibling changed | bridge Claim 94,768 | 94,768 | 2% | 2,053 | 774,568 | refused: exit 249 (CLAIM_INVALID) |
+| 23 | Claim: leaf 6 as 1 ETH instead of 10 (another leaf) | bridge Claim 94,768 | 94,768 | 2% | 2,053 | 774,568 | refused: exit 249 (CLAIM_INVALID) |
+| 24 | Claim: leaf 6's preimage at index 4 | bridge Claim 94,768 | 94,768 | 2% | 2,053 | 774,568 | refused: exit 249 (CLAIM_INVALID) |
+| 25 | Claim: leaf 6 redirected to another destination | bridge Claim 94,768 | 94,768 | 2% | 2,053 | 774,568 | refused: exit 249 (CLAIM_INVALID) |
+| 26 | Claim: leaf 6 under root(B, 8) (another configuration's vault) | bridge Claim 94,768 | 94,768 | 2% | 2,053 | 774,568 | refused: exit 249 (CLAIM_INVALID) |
+| 27 | Claim: leaf 7, 0.5 ETH (not a denomination) | bridge Claim 107,702 → bridge Issue 28,187 | 135,889 | 3% | 2,053 | 1,103,536 | refused: exit 251 (NOT_REGISTERED) |
+| 28 | Claim: leaf 5 (private kind) by the plaintext path | bridge Claim 98,394 | 98,394 | 2% | 2,053 | 803,576 | refused: exit 252 (WRONG_DESTINATION) |
+| 29 | Claim: under root(A, 3), never imported | bridge Claim 27,943 | 27,943 | 1% | 2,118 | 240,488 | refused: exit 245 (NOT_FOUND) |
+| 30 | Mint sent directly to a holder | bridge Mint 11,546 | 11,546 | 0% | 624 | 97,360 | refused: exit 243 (WRONG_SENDER) |
+| 31 | Claim: leaf 6, 10 ETH to the payer, under root(A, 8) (fee schedule 1) | bridge Claim 107,702 → bridge Issue 51,586 → bridge Admit 35,565 → bridge Spend 37,291 → bridge Mint 18,161 → bridge Mint 18,161 → bridge Mint 22,496 | 290,962 | 6% | 2,053 | 2,344,120 | applied |
+| 32 | Claim: vault B's deposit under root(B, 8) | bridge Claim 107,702 → bridge Issue 47,293 → bridge Admit 35,565 → bridge Spend 30,916 → bridge Mint 22,784 → bridge Mint 22,784 | 267,044 | 5% | 2,053 | 2,152,776 | applied |
+
+| transaction | handler | cycles | segments | input bytes (ReceiveInput) | of which message | of which pre-state | journal bytes | post-state bytes | exit |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Init A: vault A's slot 2 holds configId(A) | bridge Init | 44,818 | 1 | 1,493 | 1,419 | 0 | 3,136 | 390 | 0 |
+| Init A: vault A's slot 2 holds configId(A) | Attest | 86,790 | 1 | 1,659 | 1,156 | 365 | 2,122 | – | 0 |
+| Init A: vault A's slot 2 holds configId(A) | bridge (reply) | 39,419 | 1 | 898 | 370 | 390 | 1,487 | 564 | 0 |
+| Init B (another configuration, vault B) | bridge Init | 44,198 | 1 | 1,429 | 1,355 | 0 | 3,008 | 390 | 0 |
+| Init B (another configuration, vault B) | Attest | 84,699 | 1 | 1,595 | 1,092 | 365 | 2,058 | – | 0 |
+| Init B (another configuration, vault B) | bridge (reply) | 39,419 | 1 | 898 | 370 | 390 | 1,487 | 564 | 0 |
+| Init A' (vault A, another fee recipient): slot 2 is configId(A) | bridge Init | 44,818 | 1 | 1,493 | 1,419 | 0 | 3,136 | 390 | 0 |
+| Init A' (vault A, another fee recipient): slot 2 is configId(A) | Attest | 86,790 | 1 | 1,659 | 1,156 | 365 | 2,122 | – | 0 |
+| Init A' (vault A, another fee recipient): slot 2 is configId(A) | bridge (reply) | 32,198 | 1 | 898 | 370 | 390 | 0 | – | 246 |
+| Init A again | bridge Init | 39,401 | 1 | 2,122 | 1,484 | 564 | 0 | – | 244 |
+| Register ETH (A): entry and schedule 0 attested at block 100 | bridge Register | 73,920 | 1 | 2,859 | 2,221 | 564 | 5,939 | 950 | 0 |
+| Register ETH (A): entry and schedule 0 attested at block 100 | Attest | 151,273 | 1 | 2,536 | 2,033 | 365 | 3,350 | – | 0 |
+| Register ETH (A): entry and schedule 0 attested at block 100 | bridge (reply) | 74,476 | 1 | 1,809 | 721 | 950 | 3,345 | 564 | 0 |
+| Register ETH (A): entry and schedule 0 attested at block 100 | bridge WriteToken | 32,147 | 1 | 981 | 843 | 0 | 1,849 | 843 | 0 |
+| Register ETH (B) | bridge Register | 76,864 | 1 | 2,882 | 2,244 | 564 | 5,985 | 950 | 0 |
+| Register ETH (B) | Attest | 156,184 | 1 | 2,559 | 2,056 | 365 | 3,373 | – | 0 |
+| Register ETH (B) | bridge (reply) | 74,476 | 1 | 1,809 | 721 | 950 | 3,345 | 564 | 0 |
+| Register ETH (B) | bridge WriteToken | 32,147 | 1 | 981 | 843 | 0 | 1,849 | 843 | 0 |
+| ImportRoot A: slots 0 and 1 at block 100 (5 leaves) | bridge ImportRoot | 50,128 | 1 | 2,007 | 1,369 | 564 | 4,167 | 613 | 0 |
+| ImportRoot A: slots 0 and 1 at block 100 (5 leaves) | Attest | 109,870 | 1 | 1,953 | 1,450 | 365 | 2,533 | – | 0 |
+| ImportRoot A: slots 0 and 1 at block 100 (5 leaves) | bridge (reply) | 53,650 | 1 | 1,238 | 487 | 613 | 2,048 | 564 | 0 |
+| ImportRoot A: slots 0 and 1 at block 100 (5 leaves) | bridge WriteRoot | 17,083 | 1 | 255 | 117 | 0 | 397 | 117 | 0 |
+| ImportRoot A: block 101 (8 leaves) | bridge ImportRoot | 51,721 | 1 | 2,137 | 1,499 | 564 | 4,427 | 613 | 0 |
+| ImportRoot A: block 101 (8 leaves) | Attest | 113,770 | 1 | 2,083 | 1,580 | 365 | 2,663 | – | 0 |
+| ImportRoot A: block 101 (8 leaves) | bridge (reply) | 53,650 | 1 | 1,238 | 487 | 613 | 2,048 | 564 | 0 |
+| ImportRoot A: block 101 (8 leaves) | bridge WriteRoot | 17,083 | 1 | 255 | 117 | 0 | 397 | 117 | 0 |
+| ImportRoot A: block 101 again (same count) | bridge ImportRoot | 51,721 | 1 | 2,137 | 1,499 | 564 | 4,427 | 613 | 0 |
+| ImportRoot A: block 101 again (same count) | Attest | 113,770 | 1 | 2,083 | 1,580 | 365 | 2,663 | – | 0 |
+| ImportRoot A: block 101 again (same count) | bridge (reply) | 53,650 | 1 | 1,238 | 487 | 613 | 2,048 | 564 | 0 |
+| ImportRoot A: block 101 again (same count) | bridge WriteRoot | 18,567 | 1 | 372 | 117 | 117 | 0 | – | 244 |
+| ImportRoot A: block 101, message claims count 7 | bridge ImportRoot | 51,721 | 1 | 2,137 | 1,499 | 564 | 4,427 | 613 | 0 |
+| ImportRoot A: block 101, message claims count 7 | Attest | 113,770 | 1 | 2,083 | 1,580 | 365 | 2,663 | – | 0 |
+| ImportRoot A: block 101, message claims count 7 | bridge (reply) | 39,074 | 1 | 1,238 | 487 | 613 | 0 | – | 247 |
+| ImportRoot A: block 101, message claims the 5-leaf root | bridge ImportRoot | 51,721 | 1 | 2,137 | 1,499 | 564 | 4,427 | 613 | 0 |
+| ImportRoot A: block 101, message claims the 5-leaf root | Attest | 113,770 | 1 | 2,083 | 1,580 | 365 | 2,663 | – | 0 |
+| ImportRoot A: block 101, message claims the 5-leaf root | bridge (reply) | 38,594 | 1 | 1,238 | 487 | 613 | 0 | – | 247 |
+| ImportRoot A with vault B's proofs | bridge ImportRoot | 49,908 | 1 | 2,030 | 1,392 | 564 | 4,213 | 613 | 0 |
+| ImportRoot A with vault B's proofs | Attest | 44,014 | 1 | 1,976 | 1,473 | 365 | 0 | – | 110 |
+| ImportRoot A': no configuration (never initialised) | bridge ImportRoot | 16,143 | 1 | 1,573 | 1,499 | 0 | 0 | – | 245 |
+| ImportRoot A: block 102, root of 8 leaves, count 6 (a lagging count) | bridge ImportRoot | 51,721 | 1 | 2,137 | 1,499 | 564 | 4,427 | 613 | 0 |
+| ImportRoot A: block 102, root of 8 leaves, count 6 (a lagging count) | Attest | 113,770 | 1 | 2,083 | 1,580 | 365 | 2,663 | – | 0 |
+| ImportRoot A: block 102, root of 8 leaves, count 6 (a lagging count) | bridge (reply) | 53,650 | 1 | 1,238 | 487 | 613 | 2,048 | 564 | 0 |
+| ImportRoot A: block 102, root of 8 leaves, count 6 (a lagging count) | bridge WriteRoot | 17,083 | 1 | 255 | 117 | 0 | 397 | 117 | 0 |
+| ImportRoot B: block 100 (8 leaves) | bridge ImportRoot | 49,908 | 1 | 2,030 | 1,392 | 564 | 4,213 | 613 | 0 |
+| ImportRoot B: block 100 (8 leaves) | Attest | 115,561 | 1 | 1,976 | 1,473 | 365 | 2,556 | – | 0 |
+| ImportRoot B: block 100 (8 leaves) | bridge (reply) | 53,650 | 1 | 1,238 | 487 | 613 | 2,048 | 564 | 0 |
+| ImportRoot B: block 100 (8 leaves) | bridge WriteRoot | 17,083 | 1 | 255 | 117 | 0 | 397 | 117 | 0 |
+| ImportFees ETH (A): schedule 1 at block 101 | bridge ImportFees | 55,929 | 1 | 2,318 | 1,680 | 564 | 4,785 | 790 | 0 |
+| ImportFees ETH (A): schedule 1 at block 101 | Attest | 113,770 | 1 | 2,083 | 1,580 | 365 | 2,663 | – | 0 |
+| ImportFees ETH (A): schedule 1 at block 101 | bridge (reply) | 58,259 | 1 | 1,415 | 487 | 790 | 2,366 | 564 | 0 |
+| ImportFees ETH (A): schedule 1 at block 101 | bridge ExtendFees | 41,726 | 1 | 1,239 | 258 | 843 | 2,295 | 1,031 | 0 |
+| ImportFees ETH (A): no schedule 2 at block 101 (8 leaves) | bridge ImportFees | 50,198 | 1 | 2,057 | 1,419 | 564 | 4,263 | 602 | 0 |
+| ImportFees ETH (A): no schedule 2 at block 101 (8 leaves) | Attest | 108,223 | 1 | 2,010 | 1,507 | 365 | 2,590 | – | 0 |
+| ImportFees ETH (A): no schedule 2 at block 101 (8 leaves) | bridge (reply) | 52,487 | 1 | 1,227 | 487 | 602 | 1,990 | 564 | 0 |
+| ImportFees ETH (A): no schedule 2 at block 101 (8 leaves) | bridge ExtendFees | 39,427 | 1 | 1,239 | 70 | 1,031 | 2,295 | 1,031 | 0 |
+| Claim: the shared vector's deposit (leaf 2) under root(A, 5) | bridge Claim | 107,702 | 1 | 1,462 | 1,271 | 117 | 1,754 | – | 0 |
+| Claim: the shared vector's deposit (leaf 2) under root(A, 5) | bridge Issue | 51,166 | 1 | 1,368 | 199 | 1,031 | 2,892 | 1,031 | 0 |
+| Claim: the shared vector's deposit (leaf 2) under root(A, 5) | bridge Admit | 35,565 | 1 | 772 | 70 | 564 | 1,361 | 564 | 0 |
+| Claim: the shared vector's deposit (leaf 2) under root(A, 5) | bridge Spend | 30,916 | 1 | 360 | 222 | 0 | 992 | 77 | 0 |
+| Claim: the shared vector's deposit (leaf 2) under root(A, 5) | bridge Mint | 18,161 | 1 | 299 | 161 | 0 | 398 | 74 | 0 |
+| Claim: the shared vector's deposit (leaf 2) under root(A, 5) | bridge Mint | 18,161 | 1 | 299 | 161 | 0 | 398 | 74 | 0 |
+| Claim: the same again (replay) | bridge Claim | 107,702 | 1 | 1,462 | 1,271 | 117 | 1,754 | – | 0 |
+| Claim: the same again (replay) | bridge Issue | 51,166 | 1 | 1,368 | 199 | 1,031 | 2,892 | 1,031 | 0 |
+| Claim: the same again (replay) | bridge Admit | 35,565 | 1 | 772 | 70 | 564 | 1,361 | 564 | 0 |
+| Claim: the same again (replay) | bridge Spend | 19,559 | 1 | 437 | 222 | 77 | 0 | – | 250 |
+| Claim: the same deposit under root(A, 8) | bridge Claim | 107,702 | 1 | 1,462 | 1,271 | 117 | 1,754 | – | 0 |
+| Claim: the same deposit under root(A, 8) | bridge Issue | 51,166 | 1 | 1,368 | 199 | 1,031 | 2,892 | 1,031 | 0 |
+| Claim: the same deposit under root(A, 8) | bridge Admit | 35,565 | 1 | 772 | 70 | 564 | 1,361 | 564 | 0 |
+| Claim: the same deposit under root(A, 8) | bridge Spend | 19,559 | 1 | 437 | 222 | 77 | 0 | – | 250 |
+| Claim: leaf 6 under root(A, 6) (block 102: index >= count) | bridge Claim | 32,012 | 1 | 1,462 | 1,271 | 117 | 0 | – | 248 |
+| Claim: leaf 6, one sibling changed | bridge Claim | 94,768 | 1 | 1,462 | 1,271 | 117 | 0 | – | 249 |
+| Claim: leaf 6 as 1 ETH instead of 10 (another leaf) | bridge Claim | 94,768 | 1 | 1,462 | 1,271 | 117 | 0 | – | 249 |
+| Claim: leaf 6's preimage at index 4 | bridge Claim | 94,768 | 1 | 1,462 | 1,271 | 117 | 0 | – | 249 |
+| Claim: leaf 6 redirected to another destination | bridge Claim | 94,768 | 1 | 1,462 | 1,271 | 117 | 0 | – | 249 |
+| Claim: leaf 6 under root(B, 8) (another configuration's vault) | bridge Claim | 94,768 | 1 | 1,462 | 1,271 | 117 | 0 | – | 249 |
+| Claim: leaf 7, 0.5 ETH (not a denomination) | bridge Claim | 107,702 | 1 | 1,462 | 1,271 | 117 | 1,754 | – | 0 |
+| Claim: leaf 7, 0.5 ETH (not a denomination) | bridge Issue | 28,187 | 1 | 1,368 | 199 | 1,031 | 0 | – | 251 |
+| Claim: leaf 5 (private kind) by the plaintext path | bridge Claim | 98,394 | 1 | 1,462 | 1,271 | 117 | 0 | – | 252 |
+| Claim: under root(A, 3), never imported | bridge Claim | 27,943 | 1 | 1,345 | 1,271 | 0 | 0 | – | 245 |
+| Mint sent directly to a holder | bridge Mint | 11,546 | 1 | 235 | 161 | 0 | 0 | – | 243 |
+| Claim: leaf 6, 10 ETH to the payer, under root(A, 8) (fee schedule 1) | bridge Claim | 107,702 | 1 | 1,462 | 1,271 | 117 | 1,754 | – | 0 |
+| Claim: leaf 6, 10 ETH to the payer, under root(A, 8) (fee schedule 1) | bridge Issue | 51,586 | 1 | 1,368 | 199 | 1,031 | 2,940 | 1,031 | 0 |
+| Claim: leaf 6, 10 ETH to the payer, under root(A, 8) (fee schedule 1) | bridge Admit | 35,565 | 1 | 772 | 70 | 564 | 1,361 | 564 | 0 |
+| Claim: leaf 6, 10 ETH to the payer, under root(A, 8) (fee schedule 1) | bridge Spend | 37,291 | 1 | 408 | 270 | 0 | 1,305 | 77 | 0 |
+| Claim: leaf 6, 10 ETH to the payer, under root(A, 8) (fee schedule 1) | bridge Mint | 18,161 | 1 | 299 | 161 | 0 | 398 | 74 | 0 |
+| Claim: leaf 6, 10 ETH to the payer, under root(A, 8) (fee schedule 1) | bridge Mint | 18,161 | 1 | 299 | 161 | 0 | 398 | 74 | 0 |
+| Claim: leaf 6, 10 ETH to the payer, under root(A, 8) (fee schedule 1) | bridge Mint | 22,496 | 1 | 373 | 161 | 74 | 472 | 74 | 0 |
+| Claim: vault B's deposit under root(B, 8) | bridge Claim | 107,702 | 1 | 1,462 | 1,271 | 117 | 1,754 | – | 0 |
+| Claim: vault B's deposit under root(B, 8) | bridge Issue | 47,293 | 1 | 1,180 | 199 | 843 | 2,516 | 843 | 0 |
+| Claim: vault B's deposit under root(B, 8) | bridge Admit | 35,565 | 1 | 772 | 70 | 564 | 1,361 | 564 | 0 |
+| Claim: vault B's deposit under root(B, 8) | bridge Spend | 30,916 | 1 | 360 | 222 | 0 | 992 | 77 | 0 |
+| Claim: vault B's deposit under root(B, 8) | bridge Mint | 22,784 | 1 | 373 | 161 | 74 | 540 | 142 | 0 |
+| Claim: vault B's deposit under root(B, 8) | bridge Mint | 22,784 | 1 | 373 | 161 | 74 | 540 | 142 | 0 |
+
+test inbound_configuration_import_and_plaintext_claim ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 20.82s
+
+
+running 2 tests
+| handler execution | input bytes (ReceiveInput) | journal bytes | user cycles | segments | cycles with padding (sum of 2^po2) | exit |
+|---|---:|---:|---:|---:|---:|---:|
+| ClaimPrivately (sends Read) | 1,345 | 2,719 | 41,736 | 1 | 131,072 | 0 |
+| the root's reply (verifies the claim, sends Issue) | 1,535 | 1,873 | 110,862 | 1 | 262,144 | 0 |
+
+The 8937 serialized bytes of the transaction were searched for the claim's private inputs:
+- the destination (the private account id) (32 bytes): absent
+- the deposit secret s (32 bytes): absent
+- the commitment C (32 bytes): absent
+- the deposit leaf (32 bytes): absent
+- the depositor (20 bytes): absent
+- the borsh witness (1173 bytes): absent
+- path sibling 0 (32 bytes): absent
+- path sibling 1 (32 bytes): absent
+- path sibling 2 (32 bytes): absent
+- path sibling 3 (32 bytes): absent
+- path sibling 4 (32 bytes): absent
+- path sibling 5 (32 bytes): absent
+- path sibling 6 (32 bytes): absent
+- path sibling 7 (32 bytes): absent
+- path sibling 8 (32 bytes): absent
+- path sibling 9 (32 bytes): absent
+- path sibling 10 (32 bytes): absent
+- path sibling 11 (32 bytes): absent
+- path sibling 12 (32 bytes): absent
+- path sibling 13 (32 bytes): absent
+- path sibling 14 (32 bytes): absent
+- path sibling 15 (32 bytes): absent
+- path sibling 16 (32 bytes): absent
+- path sibling 17 (32 bytes): absent
+- path sibling 18 (32 bytes): absent
+- path sibling 19 (32 bytes): absent
+- path sibling 20 (32 bytes): absent
+- path sibling 21 (32 bytes): absent
+- path sibling 22 (32 bytes): absent
+- path sibling 23 (32 bytes): absent
+- path sibling 24 (32 bytes): absent
+- path sibling 25 (32 bytes): absent
+- path sibling 26 (32 bytes): absent
+- path sibling 27 (32 bytes): absent
+- path sibling 28 (32 bytes): absent
+- path sibling 29 (32 bytes): absent
+- path sibling 30 (32 bytes): absent
+- path sibling 31 (32 bytes): absent
+- N (public by design): present
+- configId (public by design): present
+- the root read (public by design): present
+
+test a_private_claim_publishes_only_the_nullifier_the_denomination_and_the_root_read ... ok
+private claim, public destination: execution gas 603981, storage gas 224063
+replay: proving failed: Program exited with non-zero code 250 after 20122 cycles
+not the destination: proving failed: Program exited with non-zero code 252 after 100228 cycles
+test a_private_claim_to_a_public_destination_and_the_refusals ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 13.89s
+
+
+running 2 tests
+test a_private_holder_transfers ... ok
+| transaction | origin | message bytes | checkpoint's decoder | collected |
+|---|---|---:|---|---|
+| Cosigned Sunset approval by M1 and M2 | PublicRoot | 102 | ignored (variant 4 and up) | no |
+| Sunset sent to config(A) by anyone, not approved | PublicRoot | 33 | Sunset | no (reverted) |
+| Sunset A sent to config(A) by anyone, approved | PublicRoot | 33 | Sunset | yes |
+| Sunset A again | PublicRoot | 33 | Sunset | no (reverted) |
+| AttestRetired B: retired (anyone) | PublicRoot | 1028 | ignored (variant 4 and up) | no |
+| Sunset B forwarded by a signer's own actor (not top-level at config(B)) | PublicRoot | 33 | Sunset | no (reverted) |
+| Sunset B sent to config(B) by anyone, retired | PublicRoot | 33 | Sunset | yes |
+| Transfer 1 ETH (A): the payer to a holder | PublicRoot | 101 | ignored (variant 4 and up) | no |
+
+test transfers_handover_multisig_watchers_and_keyless_sunset ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 47.35s
+
+
+running 8 tests
+test c1_f_a_mint_is_accepted_only_at_its_holder ... ok
+test h1_b_import_with_a_sender_is_refused ... ok
+test h1_a_nested_import_is_refused ... ok
+test c1_a_a_claim_cannot_block_init ... ok
+test c1_b_a_claim_cannot_block_register ... ok
+test c1_d_a_claim_cannot_block_an_import ... ok
+test c1_c_a_claim_cannot_destroy_a_pending_claim ... ok
+test c1_e_a_claim_cannot_block_a_burn ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.82s
+
+
+running 1 test
+test freezes_and_caps_follow_attested_time_only ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 35.24s
+
+
+running 1 test
+| # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | Init (pairing under a synthetic block: slot 2 = configId) | bridge Init 42,488 → Attest 75,407 → bridge (reply) 39,419 | 157,314 | 3% | 1,731 | 1,272,360 | applied |
+| 2 | Register ETH with lezUnit ×10 (not the vault's entry) | bridge Register 106,268 → Attest 220,937 → bridge (reply) 50,670 | 377,875 | 8% | 4,974 | 3,062,792 | refused: exit 247 (IMPORT_MISMATCH) |
+| 3 | Register ETH with schedule 0 a second later | bridge Register 106,076 → Attest 220,937 → bridge (reply) 53,399 | 380,412 | 8% | 4,974 | 3,083,088 | refused: exit 247 (IMPORT_MISMATCH) |
+| 4 | Register ETH: the vault's entry and schedule 0 at P | bridge Register 106,076 → Attest 220,937 → bridge (reply) 74,476 → bridge WriteToken 32,147 | 433,636 | 9% | 4,974 | 3,508,880 | applied |
+| 5 | Register token 0xf62849…: the vault's entry and schedule 0 at P | bridge Register 100,037 → Attest 226,956 → bridge (reply) 74,476 → bridge WriteToken 32,147 | 433,616 | 9% | 4,999 | 3,508,920 | applied |
+| 6 | Register token 0x5991a2…: the vault's entry and schedule 0 at P | bridge Register 101,233 → Attest 223,998 → bridge (reply) 74,476 → bridge WriteToken 32,147 | 431,854 | 9% | 4,805 | 3,493,272 | applied |
+| 7 | Register token 0xc71834…: the vault's entry and schedule 0 at P | bridge Register 103,090 → Attest 245,403 → bridge (reply) 74,476 → bridge WriteToken 32,147 | 455,116 | 9% | 5,264 | 3,683,040 | applied |
+| 8 | Register token 0x1d1499…: the vault's entry and schedule 0 at P | bridge Register 97,420 → Attest 230,329 → bridge (reply) 72,789 → bridge WriteToken 30,974 | 431,512 | 9% | 5,084 | 3,492,768 | applied |
+| 9 | ImportRoot: the vault's slots 0 and 1 at P | bridge ImportRoot 63,991 → Attest 147,379 → bridge (reply) 53,650 → bridge WriteRoot 17,083 | 282,103 | 6% | 3,095 | 2,281,584 | applied |
+| 10 | Claim leaf 0 (ETH, under root(n = 3)) | bridge Claim 107,702 → bridge Issue 47,201 → bridge Admit 35,565 → bridge Spend 30,916 → bridge Mint 18,161 → bridge Mint 18,161 | 257,706 | 5% | 2,053 | 2,078,072 | applied |
+| 11 | Claim leaf 1 (token 0x1d1499…, under root(n = 3)) | bridge Claim 107,702 → bridge Issue 45,889 → bridge Admit 35,565 → bridge Spend 30,916 → bridge Mint 18,161 → bridge Mint 23,017 | 261,250 | 5% | 2,053 | 2,106,424 | applied |
+| 12 | Claim leaf 2 (ETH, under root(n = 3)) | bridge Claim 107,702 → bridge Issue 47,166 → bridge Admit 35,565 → bridge Spend 30,916 → bridge Mint 18,161 → bridge Mint 23,965 | 263,475 | 5% | 2,053 | 2,124,224 | applied |
+| 13 | ImportFees ETH schedule 1 with another mint fee | bridge ImportFees 68,349 → Attest 145,314 → bridge (reply) 42,997 | 256,660 | 5% | 3,179 | 2,078,712 | refused: exit 247 (IMPORT_MISMATCH) |
+| 14 | ImportFees ETH: the vault's schedule 1 at Q | bridge ImportFees 68,349 → Attest 145,314 → bridge (reply) 58,259 → bridge ExtendFees 41,471 | 313,393 | 6% | 3,179 | 2,532,576 | applied |
+| 15 | ImportFees ETH: no schedule 2 at Q | bridge ImportFees 61,884 → Attest 130,554 → bridge (reply) 52,487 → bridge ExtendFees 39,427 | 284,352 | 6% | 2,768 | 2,296,960 | applied |
+| 16 | ImportFees token 0xf62849…: no schedule 1 at Q | bridge ImportFees 62,526 → Attest 135,814 → bridge (reply) 52,487 → bridge ExtendFees 35,860 | 286,687 | 6% | 2,877 | 2,316,512 | applied |
+| 17 | ImportFees token 0x5991a2…: no schedule 1 at Q | bridge ImportFees 63,420 → Attest 134,786 → bridge (reply) 52,487 → bridge ExtendFees 35,860 | 286,553 | 6% | 2,811 | 2,314,912 | applied |
+| 18 | ImportFees token 0xc71834…: no schedule 1 at Q | bridge ImportFees 64,816 → Attest 141,870 → bridge (reply) 52,487 → bridge ExtendFees 35,860 | 295,033 | 6% | 3,016 | 2,384,392 | applied |
+| 19 | ImportFees token 0x1d1499…: no schedule 1 at Q | bridge ImportFees 63,280 → Attest 138,032 → bridge (reply) 52,487 → bridge ExtendFees 34,737 | 288,536 | 6% | 2,945 | 2,331,848 | applied |
+| 20 | ImportRoot: the vault's slots 0 and 1 at Q | bridge ImportRoot 64,301 → Attest 147,847 → bridge (reply) 53,650 → bridge WriteRoot 17,083 | 282,881 | 6% | 3,127 | 2,288,064 | applied |
+| 21 | Claim leaf 3 (ETH, under root(n = 6)) | bridge Claim 107,702 → bridge Issue 51,535 → bridge Admit 35,565 → bridge Spend 37,291 → bridge Mint 18,161 → bridge Mint 18,161 → bridge Mint 23,965 | 292,380 | 6% | 2,053 | 2,355,464 | applied |
+| 22 | Claim leaf 4 (token 0x1d1499…, under root(n = 6)) | bridge Claim 107,702 → bridge Issue 45,905 → bridge Admit 35,565 → bridge Spend 30,916 → bridge Mint 18,161 → bridge Mint 24,212 | 262,461 | 5% | 2,053 | 2,116,112 | applied |
+| 23 | Claim leaf 5 (ETH, under root(n = 6)) | bridge Claim 107,702 → bridge Issue 51,586 → bridge Admit 35,565 → bridge Spend 37,291 → bridge Mint 18,161 → bridge Mint 22,496 → bridge Mint 23,965 | 296,766 | 6% | 2,053 | 2,390,552 | applied |
+
+| transaction | handler | cycles | segments | input bytes (ReceiveInput) | of which message | of which pre-state | journal bytes | post-state bytes | exit |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Init (pairing under a synthetic block: slot 2 = configId) | bridge Init | 42,488 | 1 | 1,278 | 1,204 | 0 | 2,706 | 390 | 0 |
+| Init (pairing under a synthetic block: slot 2 = configId) | Attest | 75,407 | 1 | 1,444 | 941 | 365 | 1,907 | – | 0 |
+| Init (pairing under a synthetic block: slot 2 = configId) | bridge (reply) | 39,419 | 1 | 898 | 370 | 390 | 1,487 | 564 | 0 |
+| Register ETH with lezUnit ×10 (not the vault's entry) | bridge Register | 106,268 | 1 | 5,086 | 4,448 | 564 | 10,393 | 950 | 0 |
+| Register ETH with lezUnit ×10 (not the vault's entry) | Attest | 220,937 | 1 | 4,763 | 4,260 | 365 | 5,577 | – | 0 |
+| Register ETH with lezUnit ×10 (not the vault's entry) | bridge (reply) | 50,670 | 1 | 1,809 | 721 | 950 | 0 | – | 247 |
+| Register ETH with schedule 0 a second later | bridge Register | 106,076 | 1 | 5,086 | 4,448 | 564 | 10,393 | 950 | 0 |
+| Register ETH with schedule 0 a second later | Attest | 220,937 | 1 | 4,763 | 4,260 | 365 | 5,577 | – | 0 |
+| Register ETH with schedule 0 a second later | bridge (reply) | 53,399 | 1 | 1,809 | 721 | 950 | 0 | – | 247 |
+| Register ETH: the vault's entry and schedule 0 at P | bridge Register | 106,076 | 1 | 5,086 | 4,448 | 564 | 10,393 | 950 | 0 |
+| Register ETH: the vault's entry and schedule 0 at P | Attest | 220,937 | 1 | 4,763 | 4,260 | 365 | 5,577 | – | 0 |
+| Register ETH: the vault's entry and schedule 0 at P | bridge (reply) | 74,476 | 1 | 1,809 | 721 | 950 | 3,345 | 564 | 0 |
+| Register ETH: the vault's entry and schedule 0 at P | bridge WriteToken | 32,147 | 1 | 981 | 843 | 0 | 1,849 | 843 | 0 |
+| Register token 0xf62849…: the vault's entry and schedule 0 at P | bridge Register | 100,037 | 1 | 5,111 | 4,473 | 564 | 10,443 | 950 | 0 |
+| Register token 0xf62849…: the vault's entry and schedule 0 at P | Attest | 226,956 | 1 | 4,788 | 4,285 | 365 | 5,602 | – | 0 |
+| Register token 0xf62849…: the vault's entry and schedule 0 at P | bridge (reply) | 74,476 | 1 | 1,809 | 721 | 950 | 3,345 | 564 | 0 |
+| Register token 0xf62849…: the vault's entry and schedule 0 at P | bridge WriteToken | 32,147 | 1 | 981 | 843 | 0 | 1,849 | 843 | 0 |
+| Register token 0x5991a2…: the vault's entry and schedule 0 at P | bridge Register | 101,233 | 1 | 4,917 | 4,279 | 564 | 10,055 | 950 | 0 |
+| Register token 0x5991a2…: the vault's entry and schedule 0 at P | Attest | 223,998 | 1 | 4,594 | 4,091 | 365 | 5,408 | – | 0 |
+| Register token 0x5991a2…: the vault's entry and schedule 0 at P | bridge (reply) | 74,476 | 1 | 1,809 | 721 | 950 | 3,345 | 564 | 0 |
+| Register token 0x5991a2…: the vault's entry and schedule 0 at P | bridge WriteToken | 32,147 | 1 | 981 | 843 | 0 | 1,849 | 843 | 0 |
+| Register token 0xc71834…: the vault's entry and schedule 0 at P | bridge Register | 103,090 | 1 | 5,376 | 4,738 | 564 | 10,973 | 950 | 0 |
+| Register token 0xc71834…: the vault's entry and schedule 0 at P | Attest | 245,403 | 1 | 5,053 | 4,550 | 365 | 5,867 | – | 0 |
+| Register token 0xc71834…: the vault's entry and schedule 0 at P | bridge (reply) | 74,476 | 1 | 1,809 | 721 | 950 | 3,345 | 564 | 0 |
+| Register token 0xc71834…: the vault's entry and schedule 0 at P | bridge WriteToken | 32,147 | 1 | 981 | 843 | 0 | 1,849 | 843 | 0 |
+| Register token 0x1d1499…: the vault's entry and schedule 0 at P | bridge Register | 97,420 | 1 | 5,196 | 4,558 | 564 | 10,613 | 870 | 0 |
+| Register token 0x1d1499…: the vault's entry and schedule 0 at P | Attest | 230,329 | 1 | 4,953 | 4,450 | 365 | 5,767 | – | 0 |
+| Register token 0x1d1499…: the vault's entry and schedule 0 at P | bridge (reply) | 72,789 | 1 | 1,729 | 721 | 870 | 3,185 | 564 | 0 |
+| Register token 0x1d1499…: the vault's entry and schedule 0 at P | bridge WriteToken | 30,974 | 1 | 901 | 763 | 0 | 1,689 | 763 | 0 |
+| ImportRoot: the vault's slots 0 and 1 at P | bridge ImportRoot | 63,991 | 1 | 3,207 | 2,569 | 564 | 6,567 | 613 | 0 |
+| ImportRoot: the vault's slots 0 and 1 at P | Attest | 147,379 | 1 | 3,153 | 2,650 | 365 | 3,733 | – | 0 |
+| ImportRoot: the vault's slots 0 and 1 at P | bridge (reply) | 53,650 | 1 | 1,238 | 487 | 613 | 2,048 | 564 | 0 |
+| ImportRoot: the vault's slots 0 and 1 at P | bridge WriteRoot | 17,083 | 1 | 255 | 117 | 0 | 397 | 117 | 0 |
+| Claim leaf 0 (ETH, under root(n = 3)) | bridge Claim | 107,702 | 1 | 1,462 | 1,271 | 117 | 1,754 | – | 0 |
+| Claim leaf 0 (ETH, under root(n = 3)) | bridge Issue | 47,201 | 1 | 1,180 | 199 | 843 | 2,516 | 843 | 0 |
+| Claim leaf 0 (ETH, under root(n = 3)) | bridge Admit | 35,565 | 1 | 772 | 70 | 564 | 1,361 | 564 | 0 |
+| Claim leaf 0 (ETH, under root(n = 3)) | bridge Spend | 30,916 | 1 | 360 | 222 | 0 | 992 | 77 | 0 |
+| Claim leaf 0 (ETH, under root(n = 3)) | bridge Mint | 18,161 | 1 | 299 | 161 | 0 | 398 | 74 | 0 |
+| Claim leaf 0 (ETH, under root(n = 3)) | bridge Mint | 18,161 | 1 | 299 | 161 | 0 | 398 | 74 | 0 |
+| Claim leaf 1 (token 0x1d1499…, under root(n = 3)) | bridge Claim | 107,702 | 1 | 1,462 | 1,271 | 117 | 1,754 | – | 0 |
+| Claim leaf 1 (token 0x1d1499…, under root(n = 3)) | bridge Issue | 45,889 | 1 | 1,100 | 199 | 763 | 2,356 | 763 | 0 |
+| Claim leaf 1 (token 0x1d1499…, under root(n = 3)) | bridge Admit | 35,565 | 1 | 772 | 70 | 564 | 1,361 | 564 | 0 |
+| Claim leaf 1 (token 0x1d1499…, under root(n = 3)) | bridge Spend | 30,916 | 1 | 360 | 222 | 0 | 992 | 77 | 0 |
+| Claim leaf 1 (token 0x1d1499…, under root(n = 3)) | bridge Mint | 18,161 | 1 | 299 | 161 | 0 | 398 | 74 | 0 |
+| Claim leaf 1 (token 0x1d1499…, under root(n = 3)) | bridge Mint | 23,017 | 1 | 373 | 161 | 74 | 540 | 142 | 0 |
+| Claim leaf 2 (ETH, under root(n = 3)) | bridge Claim | 107,702 | 1 | 1,462 | 1,271 | 117 | 1,754 | – | 0 |
+| Claim leaf 2 (ETH, under root(n = 3)) | bridge Issue | 47,166 | 1 | 1,180 | 199 | 843 | 2,516 | 843 | 0 |
+| Claim leaf 2 (ETH, under root(n = 3)) | bridge Admit | 35,565 | 1 | 772 | 70 | 564 | 1,361 | 564 | 0 |
+| Claim leaf 2 (ETH, under root(n = 3)) | bridge Spend | 30,916 | 1 | 360 | 222 | 0 | 992 | 77 | 0 |
+| Claim leaf 2 (ETH, under root(n = 3)) | bridge Mint | 18,161 | 1 | 299 | 161 | 0 | 398 | 74 | 0 |
+| Claim leaf 2 (ETH, under root(n = 3)) | bridge Mint | 23,965 | 1 | 441 | 161 | 142 | 608 | 142 | 0 |
+| ImportFees ETH schedule 1 with another mint fee | bridge ImportFees | 68,349 | 1 | 3,291 | 2,653 | 564 | 6,731 | 790 | 0 |
+| ImportFees ETH schedule 1 with another mint fee | Attest | 145,314 | 1 | 3,056 | 2,553 | 365 | 3,636 | – | 0 |
+| ImportFees ETH schedule 1 with another mint fee | bridge (reply) | 42,997 | 1 | 1,415 | 487 | 790 | 0 | – | 247 |
+| ImportFees ETH: the vault's schedule 1 at Q | bridge ImportFees | 68,349 | 1 | 3,291 | 2,653 | 564 | 6,731 | 790 | 0 |
+| ImportFees ETH: the vault's schedule 1 at Q | Attest | 145,314 | 1 | 3,056 | 2,553 | 365 | 3,636 | – | 0 |
+| ImportFees ETH: the vault's schedule 1 at Q | bridge (reply) | 58,259 | 1 | 1,415 | 487 | 790 | 2,366 | 564 | 0 |
+| ImportFees ETH: the vault's schedule 1 at Q | bridge ExtendFees | 41,471 | 1 | 1,239 | 258 | 843 | 2,295 | 1,031 | 0 |
+| ImportFees ETH: no schedule 2 at Q | bridge ImportFees | 61,884 | 1 | 2,880 | 2,242 | 564 | 5,909 | 602 | 0 |
+| ImportFees ETH: no schedule 2 at Q | Attest | 130,554 | 1 | 2,833 | 2,330 | 365 | 3,413 | – | 0 |
+| ImportFees ETH: no schedule 2 at Q | bridge (reply) | 52,487 | 1 | 1,227 | 487 | 602 | 1,990 | 564 | 0 |
+| ImportFees ETH: no schedule 2 at Q | bridge ExtendFees | 39,427 | 1 | 1,239 | 70 | 1,031 | 2,295 | 1,031 | 0 |
+| ImportFees token 0xf62849…: no schedule 1 at Q | bridge ImportFees | 62,526 | 1 | 2,989 | 2,351 | 564 | 6,127 | 602 | 0 |
+| ImportFees token 0xf62849…: no schedule 1 at Q | Attest | 135,814 | 1 | 2,942 | 2,439 | 365 | 3,522 | – | 0 |
+| ImportFees token 0xf62849…: no schedule 1 at Q | bridge (reply) | 52,487 | 1 | 1,227 | 487 | 602 | 1,990 | 564 | 0 |
+| ImportFees token 0xf62849…: no schedule 1 at Q | bridge ExtendFees | 35,860 | 1 | 1,051 | 70 | 843 | 1,919 | 843 | 0 |
+| ImportFees token 0x5991a2…: no schedule 1 at Q | bridge ImportFees | 63,420 | 1 | 2,923 | 2,285 | 564 | 5,995 | 602 | 0 |
+| ImportFees token 0x5991a2…: no schedule 1 at Q | Attest | 134,786 | 1 | 2,876 | 2,373 | 365 | 3,456 | – | 0 |
+| ImportFees token 0x5991a2…: no schedule 1 at Q | bridge (reply) | 52,487 | 1 | 1,227 | 487 | 602 | 1,990 | 564 | 0 |
+| ImportFees token 0x5991a2…: no schedule 1 at Q | bridge ExtendFees | 35,860 | 1 | 1,051 | 70 | 843 | 1,919 | 843 | 0 |
+| ImportFees token 0xc71834…: no schedule 1 at Q | bridge ImportFees | 64,816 | 1 | 3,128 | 2,490 | 564 | 6,405 | 602 | 0 |
+| ImportFees token 0xc71834…: no schedule 1 at Q | Attest | 141,870 | 1 | 3,081 | 2,578 | 365 | 3,661 | – | 0 |
+| ImportFees token 0xc71834…: no schedule 1 at Q | bridge (reply) | 52,487 | 1 | 1,227 | 487 | 602 | 1,990 | 564 | 0 |
+| ImportFees token 0xc71834…: no schedule 1 at Q | bridge ExtendFees | 35,860 | 1 | 1,051 | 70 | 843 | 1,919 | 843 | 0 |
+| ImportFees token 0x1d1499…: no schedule 1 at Q | bridge ImportFees | 63,280 | 1 | 3,057 | 2,419 | 564 | 6,263 | 602 | 0 |
+| ImportFees token 0x1d1499…: no schedule 1 at Q | Attest | 138,032 | 1 | 3,010 | 2,507 | 365 | 3,590 | – | 0 |
+| ImportFees token 0x1d1499…: no schedule 1 at Q | bridge (reply) | 52,487 | 1 | 1,227 | 487 | 602 | 1,990 | 564 | 0 |
+| ImportFees token 0x1d1499…: no schedule 1 at Q | bridge ExtendFees | 34,737 | 1 | 971 | 70 | 763 | 1,759 | 763 | 0 |
+| ImportRoot: the vault's slots 0 and 1 at Q | bridge ImportRoot | 64,301 | 1 | 3,239 | 2,601 | 564 | 6,631 | 613 | 0 |
+| ImportRoot: the vault's slots 0 and 1 at Q | Attest | 147,847 | 1 | 3,185 | 2,682 | 365 | 3,765 | – | 0 |
+| ImportRoot: the vault's slots 0 and 1 at Q | bridge (reply) | 53,650 | 1 | 1,238 | 487 | 613 | 2,048 | 564 | 0 |
+| ImportRoot: the vault's slots 0 and 1 at Q | bridge WriteRoot | 17,083 | 1 | 255 | 117 | 0 | 397 | 117 | 0 |
+| Claim leaf 3 (ETH, under root(n = 6)) | bridge Claim | 107,702 | 1 | 1,462 | 1,271 | 117 | 1,754 | – | 0 |
+| Claim leaf 3 (ETH, under root(n = 6)) | bridge Issue | 51,535 | 1 | 1,368 | 199 | 1,031 | 2,940 | 1,031 | 0 |
+| Claim leaf 3 (ETH, under root(n = 6)) | bridge Admit | 35,565 | 1 | 772 | 70 | 564 | 1,361 | 564 | 0 |
+| Claim leaf 3 (ETH, under root(n = 6)) | bridge Spend | 37,291 | 1 | 408 | 270 | 0 | 1,305 | 77 | 0 |
+| Claim leaf 3 (ETH, under root(n = 6)) | bridge Mint | 18,161 | 1 | 299 | 161 | 0 | 398 | 74 | 0 |
+| Claim leaf 3 (ETH, under root(n = 6)) | bridge Mint | 18,161 | 1 | 299 | 161 | 0 | 398 | 74 | 0 |
+| Claim leaf 3 (ETH, under root(n = 6)) | bridge Mint | 23,965 | 1 | 441 | 161 | 142 | 608 | 142 | 0 |
+| Claim leaf 4 (token 0x1d1499…, under root(n = 6)) | bridge Claim | 107,702 | 1 | 1,462 | 1,271 | 117 | 1,754 | – | 0 |
+| Claim leaf 4 (token 0x1d1499…, under root(n = 6)) | bridge Issue | 45,905 | 1 | 1,100 | 199 | 763 | 2,356 | 763 | 0 |
+| Claim leaf 4 (token 0x1d1499…, under root(n = 6)) | bridge Admit | 35,565 | 1 | 772 | 70 | 564 | 1,361 | 564 | 0 |
+| Claim leaf 4 (token 0x1d1499…, under root(n = 6)) | bridge Spend | 30,916 | 1 | 360 | 222 | 0 | 992 | 77 | 0 |
+| Claim leaf 4 (token 0x1d1499…, under root(n = 6)) | bridge Mint | 18,161 | 1 | 299 | 161 | 0 | 398 | 74 | 0 |
+| Claim leaf 4 (token 0x1d1499…, under root(n = 6)) | bridge Mint | 24,212 | 1 | 441 | 161 | 142 | 608 | 142 | 0 |
+| Claim leaf 5 (ETH, under root(n = 6)) | bridge Claim | 107,702 | 1 | 1,462 | 1,271 | 117 | 1,754 | – | 0 |
+| Claim leaf 5 (ETH, under root(n = 6)) | bridge Issue | 51,586 | 1 | 1,368 | 199 | 1,031 | 2,940 | 1,031 | 0 |
+| Claim leaf 5 (ETH, under root(n = 6)) | bridge Admit | 35,565 | 1 | 772 | 70 | 564 | 1,361 | 564 | 0 |
+| Claim leaf 5 (ETH, under root(n = 6)) | bridge Spend | 37,291 | 1 | 408 | 270 | 0 | 1,305 | 77 | 0 |
+| Claim leaf 5 (ETH, under root(n = 6)) | bridge Mint | 18,161 | 1 | 299 | 161 | 0 | 398 | 74 | 0 |
+| Claim leaf 5 (ETH, under root(n = 6)) | bridge Mint | 22,496 | 1 | 373 | 161 | 74 | 472 | 74 | 0 |
+| Claim leaf 5 (ETH, under root(n = 6)) | bridge Mint | 23,965 | 1 | 441 | 161 | 142 | 608 | 142 | 0 |
+
+test the_bridge_reads_the_vaults_own_registry_fees_and_tree ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 23.59s
+
+
+running 3 tests
+test the_blocks_do_not_overlap ... ok
+test every_code_lies_in_a_block_of_its_owner ... ok
+test the_tables_name_every_core_code ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 1 test
+holder 0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc held 0x0000000000000000000000000000000000000000000000f22ca9b4cc5d0f3d61 wei of WETH at block 26384851
+refused as expected: wrong chain (a gate for Sepolia) → exit 140 (ChainMismatch)
+refused as expected: unfinalized block (the attested, not finalized, header) → exit 213 (NoRecord)
+refused as expected: unknown block (no record at this slot) → exit 213 (NoRecord)
+refused as expected: proof of another block (the bootstrap's record) → exit 110 (ProofNodeMismatch)
+refused as expected: bad proof (a storage-proof byte flipped) → exit 110 (ProofNodeMismatch)
+refused as expected: bad proof (an account-proof byte flipped) → exit 110 (ProofNodeMismatch)
+refused as expected: mismatched value (minimum = balance + 1 wei) → exit 130 (PredicateFailed)
+refused as expected: mismatched holder (the pair's proofs for another address) → exit 110 (ProofNodeMismatch)
+refused as expected: wrong actor (a check sent to another holder's actor) → exit 232 (holdings: WrongReceiver)
+accepted: Holding { gate_id: [240, 190, 9, 209, 38, 205, 255, 255, 182, 223, 233, 194, 225, 59, 166, 244, 242, 63, 148, 212, 65, 216, 96, 14, 120, 54, 157, 18, 99, 252, 45, 222], holder: [180, 225, 109, 1, 104, 229, 45, 53, 202, 205, 44, 97, 133, 180, 66, 129, 236, 40, 201, 220], balance: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 242, 44, 169, 180, 204, 93, 15, 61, 97], beacon_slot: 15624480, block_number: 26384851, block_hash: [62, 2, 229, 186, 168, 27, 241, 96, 75, 100, 71, 233, 202, 1, 74, 28, 168, 94, 60, 119, 133, 202, 107, 154, 84, 48, 182, 201, 60, 186, 123, 206], statement_id: [171, 193, 17, 78, 92, 8, 155, 82, 233, 75, 9, 128, 148, 27, 23, 167, 208, 129, 194, 68, 79, 83, 65, 179, 130, 63, 220, 77, 58, 29, 250, 83] }
+refused as expected: stale: the same block again → exit 239 (holdings: Stale)
+# ferrata_holdings on the Stage 4 chain (dev mode, in-process harness)
+
+Written by `RISC0_DEV_MODE=1 cargo test -p harness --locked --test holdings -- --nocapture`.
+Holder 0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc (Uniswap v2 USDC/WETH), WETH 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2, block 26384851, record `header(id, 15624480)`,
+balance 0x0000000000000000000000000000000000000000000000f22ca9b4cc5d0f3d61 wei.
+
+## Transactions
+
+| # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | wrong chain (a gate for Sepolia) | holdings Check 111,180 → Attest 39,317 | 150,497 | 3% | 7,493 | 1,263,920 | refused: exit 140 (ChainMismatch) |
+| 2 | unfinalized block (the attested, not finalized, header) | holdings Check 111,180 → Attest 31,333 | 142,513 | 3% | 7,558 | 1,200,568 | refused: exit 213 (NoRecord) |
+| 3 | unknown block (no record at this slot) | holdings Check 111,180 → Attest 31,333 | 142,513 | 3% | 7,558 | 1,200,568 | refused: exit 213 (NoRecord) |
+| 4 | proof of another block (the bootstrap's record) | holdings Check 111,180 → Attest 52,872 | 164,052 | 3% | 7,493 | 1,372,360 | refused: exit 110 (ProofNodeMismatch) |
+| 5 | bad proof (a storage-proof byte flipped) | holdings Check 111,180 → Attest 248,894 | 360,074 | 7% | 7,493 | 2,940,536 | refused: exit 110 (ProofNodeMismatch) |
+| 6 | bad proof (an account-proof byte flipped) | holdings Check 111,180 → Attest 52,872 | 164,052 | 3% | 7,493 | 1,372,360 | refused: exit 110 (ProofNodeMismatch) |
+| 7 | mismatched value (minimum = balance + 1 wei) | holdings Check 111,180 → Attest 254,701 | 365,881 | 7% | 7,493 | 2,986,992 | refused: exit 130 (PredicateFailed) |
+| 8 | mismatched holder (the pair's proofs for another address) | holdings Check 111,180 → Attest 187,363 | 298,543 | 6% | 7,493 | 2,448,288 | refused: exit 110 (ProofNodeMismatch) |
+| 9 | wrong actor (a check sent to another holder's actor) | holdings Check 36,215 | 36,215 | 1% | 7,493 | 349,664 | refused: exit 232 (holdings: WrongReceiver) |
+| 10 | accepted: the pair held ≥ 1,000 WETH | holdings Check 111,180 → Attest 279,023 → holdings (reply) 41,925 | 432,128 | 9% | 7,493 | 3,516,968 | applied |
+| 11 | accepted: minimum = the balance exactly | holdings Check 111,180 → Attest 279,083 → holdings (reply) 41,985 | 432,248 | 9% | 7,493 | 3,517,928 | applied |
+| 12 | stale: the same block again | holdings Check 109,689 → Attest 279,023 → holdings (reply) 38,145 | 426,857 | 9% | 7,493 | 3,474,800 | refused: exit 239 (holdings: Stale) |
+
+## Handlers
+
+| transaction | handler | cycles | segments | input bytes (ReceiveInput) | of which message | of which pre-state | journal bytes | post-state bytes | exit |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| wrong chain (a gate for Sepolia) | holdings Check | 111,180 | 1 | 7,040 | 6,966 | 0 | 14,319 | 242 | 0 |
+| wrong chain (a gate for Sepolia) | Attest | 39,317 | 1 | 7,443 | 6,940 | 365 | 0 | – | 140 |
+| unfinalized block (the attested, not finalized, header) | holdings Check | 111,180 | 1 | 7,040 | 6,966 | 0 | 14,319 | 242 | 0 |
+| unfinalized block (the attested, not finalized, header) | Attest | 31,333 | 1 | 7,078 | 6,940 | 0 | 0 | – | 213 |
+| unknown block (no record at this slot) | holdings Check | 111,180 | 1 | 7,040 | 6,966 | 0 | 14,319 | 242 | 0 |
+| unknown block (no record at this slot) | Attest | 31,333 | 1 | 7,078 | 6,940 | 0 | 0 | – | 213 |
+| proof of another block (the bootstrap's record) | holdings Check | 111,180 | 1 | 7,040 | 6,966 | 0 | 14,319 | 242 | 0 |
+| proof of another block (the bootstrap's record) | Attest | 52,872 | 1 | 7,443 | 6,940 | 365 | 0 | – | 110 |
+| bad proof (a storage-proof byte flipped) | holdings Check | 111,180 | 1 | 7,040 | 6,966 | 0 | 14,319 | 242 | 0 |
+| bad proof (a storage-proof byte flipped) | Attest | 248,894 | 1 | 7,443 | 6,940 | 365 | 0 | – | 110 |
+| bad proof (an account-proof byte flipped) | holdings Check | 111,180 | 1 | 7,040 | 6,966 | 0 | 14,319 | 242 | 0 |
+| bad proof (an account-proof byte flipped) | Attest | 52,872 | 1 | 7,443 | 6,940 | 365 | 0 | – | 110 |
+| mismatched value (minimum = balance + 1 wei) | holdings Check | 111,180 | 1 | 7,040 | 6,966 | 0 | 14,319 | 242 | 0 |
+| mismatched value (minimum = balance + 1 wei) | Attest | 254,701 | 1 | 7,443 | 6,940 | 365 | 0 | – | 130 |
+| mismatched holder (the pair's proofs for another address) | holdings Check | 111,180 | 1 | 7,040 | 6,966 | 0 | 14,319 | 242 | 0 |
+| mismatched holder (the pair's proofs for another address) | Attest | 187,363 | 1 | 7,443 | 6,940 | 365 | 0 | – | 110 |
+| wrong actor (a check sent to another holder's actor) | holdings Check | 36,215 | 1 | 7,040 | 6,966 | 0 | 0 | – | 232 |
+| accepted: the pair held ≥ 1,000 WETH | holdings Check | 111,180 | 1 | 7,040 | 6,966 | 0 | 14,319 | 242 | 0 |
+| accepted: the pair held ≥ 1,000 WETH | Attest | 279,023 | 1 | 7,443 | 6,940 | 365 | 7,906 | – | 0 |
+| accepted: the pair held ≥ 1,000 WETH | holdings (reply) | 41,925 | 1 | 750 | 370 | 242 | 940 | 165 | 0 |
+| accepted: minimum = the balance exactly | holdings Check | 111,180 | 1 | 7,040 | 6,966 | 0 | 14,319 | 242 | 0 |
+| accepted: minimum = the balance exactly | Attest | 279,083 | 1 | 7,443 | 6,940 | 365 | 7,906 | – | 0 |
+| accepted: minimum = the balance exactly | holdings (reply) | 41,985 | 1 | 750 | 370 | 242 | 940 | 165 | 0 |
+| stale: the same block again | holdings Check | 109,689 | 1 | 7,205 | 6,966 | 165 | 14,492 | 250 | 0 |
+| stale: the same block again | Attest | 279,023 | 1 | 7,443 | 6,940 | 365 | 7,906 | – | 0 |
+| stale: the same block again | holdings (reply) | 38,145 | 1 | 758 | 370 | 250 | 0 | – | 239 |
+
+test holdings_consumer ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.71s
+
+
+running 1 test
+bridge core recover_burns over the 20 LEZ notes (v2 mac): 20 found
+test privacy_suite_lez_half has been running for over 60 seconds
+privacy suite, LEZ half: 82 records (20 private claims, 20 burns, 20 plaintext claims, 20 naive) in ../../ferrata-wt-lez-rc3/lez/harness/../../target/privacy
+test privacy_suite_lez_half ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 80.52s
+
+
+running 2 tests
+Stage 3: the same consumer sends its query to the program (ReadPadded)
+
+Decoded public fields (harness::private::describe_public_outputs):
+
+public_context.actors (2): native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@BsHtwgUtirAznHU7kU48KmA8DCrZ6Kv9n5D5vDvPJMwn
+public_context.authorized_accounts: {}
+execution.public_root: None
+execution.boundary (6 steps):
+  - PrivateToPublic from consumer@DYMXat67yG3gSP7GFoRaTUEHduv3mLWBRr5UousHBSho to ferrata@BsHtwgUtirAznHU7kU48KmA8DCrZ6Kv9n5D5vDvPJMwn: ReadPadded { padding: 0x73746f72616765283078303030303030303032313961623534303335366342423833394362653035333033643737303546612c20736c6f74203729203d206465706f736974202334323432 } (80 bytes)
+  - PublicToPrivate from ferrata@BsHtwgUtirAznHU7kU48KmA8DCrZ6Kv9n5D5vDvPJMwn to consumer@DYMXat67yG3gSP7GFoRaTUEHduv3mLWBRr5UousHBSho: StateReply { state: 365 bytes } (369 bytes)
+  - EndPrivateSubtree
+  - EndPublicSubtree
+  - PrivateToPublic from native@DYMXat67yG3gSP7GFoRaTUEHduv3mLWBRr5UousHBSho to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
+  - EndPublicSubtree
+execution.program_image_claims (1):
+  - Disclosed { program: consumer, image_id: 9dc21f01d175ad6a384fb2e69732fa304aa2185bea6b826a5535fc3cfac71df3 }
+execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1568 bytes)
+execution.async_messages: 0
+execution.recovery_bindings: 0
+execution.validity: ValidityWindows { blocks: ValidityWindow { from: None, to: None }, timestamps: ValidityWindow { from: None, to: None } }
+execution.fee: Some("refund_to Some(78Skt7EQTvVwfWVYnA1XMjghv3aUR1V5wgQAfVLKJZG5), fallback true")
+nonces: 0, admission evidence: 0
+
+The 8781 serialized bytes of the transaction were searched for the consumer's private inputs:
+- the query (75 bytes): FOUND
+- the account id the consumer acts for (32 bytes): absent
+- the authorization secret key (32 bytes): absent
+- the nullifier secret key (32 bytes): absent
+- the nullifier public key (32 bytes): absent
+- the viewing public key (its first 32 of 1,184 bytes) (32 bytes): absent
+- the viewing key seed d (32 bytes): absent
+- the viewing key seed z (32 bytes): absent
+
+Charged: execution gas 422,393 (PRIVATE_VERIFY_GAS 409,764 + public part 12,629 cycles), storage gas 224,063.
+
+test a_private_consumer_calling_the_program_publishes_what_it_sends ... ok
+Stage 3: a private consumer reads header(id, slot), image disclosed
+
+Decoded public fields (harness::private::describe_public_outputs):
+
+public_context.actors (2): native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@BsHtwgUtirAznHU7kU48KmA8DCrZ6Kv9n5D5vDvPJMwn
+public_context.authorized_accounts: {}
+execution.public_root: None
+execution.boundary (6 steps):
+  - PrivateToPublic from consumer@61yQrZPL8iZ8NbnqXkUEs1JR6DiuSkX3bWxdZSjYSWEu to ferrata@BsHtwgUtirAznHU7kU48KmA8DCrZ6Kv9n5D5vDvPJMwn: Read (1 bytes)
+  - PublicToPrivate from ferrata@BsHtwgUtirAznHU7kU48KmA8DCrZ6Kv9n5D5vDvPJMwn to consumer@61yQrZPL8iZ8NbnqXkUEs1JR6DiuSkX3bWxdZSjYSWEu: StateReply { state: 365 bytes } (369 bytes)
+  - EndPrivateSubtree
+  - EndPublicSubtree
+  - PrivateToPublic from native@61yQrZPL8iZ8NbnqXkUEs1JR6DiuSkX3bWxdZSjYSWEu to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
+  - EndPublicSubtree
+execution.program_image_claims (1):
+  - Disclosed { program: consumer, image_id: 9dc21f01d175ad6a384fb2e69732fa304aa2185bea6b826a5535fc3cfac71df3 }
+execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1647 bytes)
+execution.async_messages: 0
+execution.recovery_bindings: 0
+execution.validity: ValidityWindows { blocks: ValidityWindow { from: None, to: None }, timestamps: ValidityWindow { from: None, to: None } }
+execution.fee: Some("refund_to Some(78Skt7EQTvVwfWVYnA1XMjghv3aUR1V5wgQAfVLKJZG5), fallback true")
+nonces: 0, admission evidence: 0
+
+The 8781 serialized bytes of the transaction were searched for the consumer's private inputs:
+- the query (75 bytes): absent
+- the account id the consumer acts for (32 bytes): absent
+- the authorization secret key (32 bytes): absent
+- the nullifier secret key (32 bytes): absent
+- the nullifier public key (32 bytes): absent
+- the viewing public key (its first 32 of 1,184 bytes) (32 bytes): absent
+- the viewing key seed d (32 bytes): absent
+- the viewing key seed z (32 bytes): absent
+
+Charged: execution gas 422,032 (PRIVATE_VERIFY_GAS 409,764 + public part 12,268 cycles), storage gas 224,063.
+
+Stage 3: a private consumer reads header(id, slot), image undisclosed
+
+Decoded public fields (harness::private::describe_public_outputs):
+
+public_context.actors (2): native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@BsHtwgUtirAznHU7kU48KmA8DCrZ6Kv9n5D5vDvPJMwn
+public_context.authorized_accounts: {}
+execution.public_root: None
+execution.boundary (6 steps):
+  - PrivateToPublic from consumer@AodAGCgEG5tEZ9G66zav6VgeBX9hfvyxnimA6U3L6j1C to ferrata@BsHtwgUtirAznHU7kU48KmA8DCrZ6Kv9n5D5vDvPJMwn: Read (1 bytes)
+  - PublicToPrivate from ferrata@BsHtwgUtirAznHU7kU48KmA8DCrZ6Kv9n5D5vDvPJMwn to consumer@AodAGCgEG5tEZ9G66zav6VgeBX9hfvyxnimA6U3L6j1C: StateReply { state: 365 bytes } (369 bytes)
+  - EndPrivateSubtree
+  - EndPublicSubtree
+  - PrivateToPublic from native@AodAGCgEG5tEZ9G66zav6VgeBX9hfvyxnimA6U3L6j1C to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
+  - EndPublicSubtree
+execution.program_image_claims (1):
+  - Undisclosed { commitment root: 50c871a600c6d5bfae88ebb48bf32481faaa98b35f2fcbc9bb5f8367cdf13099 }
+execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1647 bytes)
+execution.async_messages: 0
+execution.recovery_bindings: 0
+execution.validity: ValidityWindows { blocks: ValidityWindow { from: None, to: None }, timestamps: ValidityWindow { from: None, to: None } }
+execution.fee: Some("refund_to Some(78Skt7EQTvVwfWVYnA1XMjghv3aUR1V5wgQAfVLKJZG5), fallback true")
+nonces: 0, admission evidence: 0
+
+The 8717 serialized bytes of the transaction were searched for the consumer's private inputs:
+- the query (75 bytes): absent
+- the account id the consumer acts for (32 bytes): absent
+- the authorization secret key (32 bytes): absent
+- the nullifier secret key (32 bytes): absent
+- the nullifier public key (32 bytes): absent
+- the viewing public key (its first 32 of 1,184 bytes) (32 bytes): absent
+- the viewing key seed d (32 bytes): absent
+- the viewing key seed z (32 bytes): absent
+
+Charged: execution gas 422,032 (PRIVATE_VERIFY_GAS 409,764 + public part 12,268 cycles), storage gas 224,063.
+
+test a_private_consumer_reads_a_record ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.68s
+
+
+running 3 tests
+another program's private actor, simulated: proving failed: Program exited with non-zero code 202 after 17304 cycles
+forged update, private: proving failed: Program exited with non-zero code 40 after 9031725 cycles
+test a_forged_update_cannot_be_proven ... ok
+another program's private actor, settled: reverted (Program exited with non-zero code 202 after 17304 cycles); charged execution gas 427,068, storage gas 224,063
+public_context.actors (2): ferrata@61pAf1Tjo6rED1bi7QJB1u6AWGhKoXkHcdLbTvgNnAHd, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq
+public_context.authorized_accounts: {}
+execution.public_root: None
+execution.boundary (4 steps):
+  - PrivateToPublic from program 4y7eczQqdVhTvZWLjoFxw1FwzJtHJ3sJb5Hhu1aZBeuV@DhmA7Pqr73s6N82dhULiaHCCEWWhNAgKRuYu7cZE92F9 to ferrata@61pAf1Tjo6rED1bi7QJB1u6AWGhKoXkHcdLbTvgNnAHd: ApplyVerified { instance_id: 39860f39c975, job: 470 bytes } (507 bytes)
+  - EndPublicSubtree
+  - PrivateToPublic from native@DhmA7Pqr73s6N82dhULiaHCCEWWhNAgKRuYu7cZE92F9 to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
+  - EndPublicSubtree
+execution.program_image_claims (1):
+  - Disclosed { program: 4y7eczQqdVhTvZWLjoFxw1FwzJtHJ3sJb5Hhu1aZBeuV, image_id: 3af31a8d2cfef9ecc9291221af63fe9fb7a11e161b7f255e56c038d60d2add48 }
+execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1233 bytes)
+execution.async_messages: 0
+execution.recovery_bindings: 0
+execution.validity: ValidityWindows { blocks: ValidityWindow { from: None, to: None }, timestamps: ValidityWindow { from: None, to: None } }
+execution.fee: Some("refund_to Some(78Skt7EQTvVwfWVYnA1XMjghv3aUR1V5wgQAfVLKJZG5), fallback true")
+nonces: 0, admission evidence: 0
+
+test a_private_sender_of_another_program_is_refused ... ok
+finality update, verified privately:
+public_context.actors (3): ferrata@61pAf1Tjo6rED1bi7QJB1u6AWGhKoXkHcdLbTvgNnAHd, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, ferrata@BsHtwgUtirAznHU7kU48KmA8DCrZ6Kv9n5D5vDvPJMwn
+public_context.authorized_accounts: {}
+execution.public_root: None
+execution.boundary (4 steps):
+  - PrivateToPublic from ferrata@EoTYfFi4rVfLkTBefMr8sB6GcyhRTZv682hg9J1S1QsL to ferrata@61pAf1Tjo6rED1bi7QJB1u6AWGhKoXkHcdLbTvgNnAHd: ApplyVerified { instance_id: 39860f39c975, job: 470 bytes } (507 bytes)
+  - EndPublicSubtree
+  - PrivateToPublic from native@EoTYfFi4rVfLkTBefMr8sB6GcyhRTZv682hg9J1S1QsL to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
+  - EndPublicSubtree
+execution.program_image_claims (1):
+  - Disclosed { program: ferrata, image_id: efd9aef79f65f57f9fc38c9bba69dc87058de2229de6d1be1e3de76935d23254 }
+execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1233 bytes)
+execution.async_messages: 0
+execution.recovery_bindings: 0
+execution.validity: ValidityWindows { blocks: ValidityWindow { from: None, to: None }, timestamps: ValidityWindow { from: Some(1793602427000), to: Some(1794859991000) } }
+execution.fee: Some("refund_to Some(78Skt7EQTvVwfWVYnA1XMjghv3aUR1V5wgQAfVLKJZG5), fallback true")
+nonces: 0, admission evidence: 0
+
+charged: execution gas 485,298 (PRIVATE_VERIFY_GAS 409,764 + public part 75,534 cycles), storage gas 224,063, base fee 5,674,888; tx 8101 bytes, proof 4107 bytes (dev mode)
+handoff verified privately: execution gas 451,895 (public part 42,131 cycles), storage gas 224,063
+test an_update_verified_privately_applies_to_the_public_instance ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.38s
+
+
+running 5 tests
+| # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | finality update in one transaction (VerifyAll) | VerifyAll 9,049,362 → ApplyVerified 58,184 → Record 17,350 | 9,124,896 | 182% | 4,105 | 73,032,008 | applied |
+
+test a_finality_update_in_one_public_transaction ... ok
+| transaction | handler | cycles | segments | input bytes (ReceiveInput) | of which message | of which pre-state | journal bytes | post-state bytes | exit |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| public consumer reads header(id, slot) | consumer ReadRecord | 12,061 | 1 | 151 | 77 | 0 | 323 | 74 | 0 |
+| public consumer reads header(id, slot) | Read | 12,268 | 1 | 504 | 1 | 365 | 966 | – | 0 |
+| public consumer reads header(id, slot) | consumer (reply) | 15,081 | 1 | 581 | 369 | 74 | 909 | 303 | 0 |
+| public consumer reads with 0 bytes of padding (ReadPadded) | consumer ReadPadded | 16,496 | 1 | 454 | 77 | 303 | 919 | 363 | 0 |
+| public consumer reads with 0 bytes of padding (ReadPadded) | ReadPadded | 12,399 | 1 | 508 | 5 | 365 | 970 | – | 0 |
+| public consumer reads with 0 bytes of padding (ReadPadded) | consumer (reply) | 17,381 | 1 | 870 | 369 | 363 | 1,194 | 299 | 0 |
+| public consumer reads with 8192 bytes of padding (ReadPadded) | consumer ReadPadded | 97,498 | 1 | 8,642 | 8,269 | 299 | 17,299 | 363 | 0 |
+| public consumer reads with 8192 bytes of padding (ReadPadded) | ReadPadded | 59,094 | 1 | 8,700 | 8,197 | 365 | 9,162 | – | 0 |
+| public consumer reads with 8192 bytes of padding (ReadPadded) | consumer (reply) | 17,381 | 1 | 870 | 369 | 363 | 1,194 | 299 | 0 |
+| public consumer reads with 24576 bytes of padding (ReadPadded) | consumer ReadPadded | 257,580 | 1 | 25,026 | 24,653 | 299 | 50,067 | 363 | 0 |
+| public consumer reads with 24576 bytes of padding (ReadPadded) | ReadPadded | 152,159 | 1 | 25,084 | 24,581 | 365 | 25,546 | – | 0 |
+| public consumer reads with 24576 bytes of padding (ReadPadded) | consumer (reply) | 17,381 | 1 | 870 | 369 | 363 | 1,194 | 299 | 0 |
+| public consumer reads with 49152 bytes of padding (ReadPadded) | consumer ReadPadded | 497,711 | 1 | 49,602 | 49,229 | 299 | 99,219 | 363 | 0 |
+| public consumer reads with 49152 bytes of padding (ReadPadded) | ReadPadded | 291,782 | 1 | 49,660 | 49,157 | 365 | 50,122 | – | 0 |
+| public consumer reads with 49152 bytes of padding (ReadPadded) | consumer (reply) | 17,381 | 1 | 870 | 369 | 363 | 1,194 | 299 | 0 |
+
+test shell_costs ... ok
+| # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | Init Init | Init 191,616 → JobOpen 19,050 | 210,666 | 4% | 1,896 | 1,700,496 | applied |
+| 2 | Init adopt 1/2 | Adopt 3,399,141 | 3,399,141 | 68% | 24,980 | 27,392,968 | applied |
+| 3 | Init adopt 2/2 | Adopt 3,409,234 → Apply 58,991 → Record 17,350 | 3,485,575 | 70% | 25,108 | 28,085,464 | applied |
+| 4 | update_0 Open (step 1) | Open 2,129,836 → JobOpen 26,464 | 2,156,300 | 43% | 2,853 | 17,273,224 | applied |
+| 5 | update_0 Miller (step 2) | Miller 3,313,372 | 3,313,372 | 66% | 399 | 26,510,168 | applied |
+| 6 | update_0 adopt 1/2 | Adopt 3,410,995 | 3,410,995 | 68% | 24,980 | 27,487,800 | applied |
+| 7 | update_0 adopt 2/2 | Adopt 3,418,189 | 3,418,189 | 68% | 24,980 | 27,545,352 | applied |
+| 8 | update_0 Finish (step 3) | Finish 3,653,838 → Apply 45,260 | 3,699,098 | 74% | 463 | 29,596,488 | applied |
+| 9 | update_1 as finality update Open (step 1) | Open 2,171,611 → JobOpen 23,291 | 2,194,902 | 44% | 3,525 | 17,587,416 | applied |
+| 10 | update_1 as finality update Miller (step 2) | Miller 3,308,048 | 3,308,048 | 66% | 399 | 26,467,576 | applied |
+| 11 | update_1 as finality update Finish (step 3) | Finish 3,647,652 → Apply 60,953 → Record 17,350 | 3,725,955 | 75% | 527 | 29,811,856 | applied |
+| 12 | update_1 (next committee only) Open (step 1) | Open 2,185,144 → JobOpen 26,464 | 2,211,608 | 44% | 3,605 | 17,721,704 | applied |
+| 13 | update_1 (next committee only) Miller (step 2) | Miller 3,313,372 | 3,313,372 | 66% | 399 | 26,510,168 | applied |
+| 14 | update_1 (next committee only) adopt 1/2 | Adopt 3,410,995 | 3,410,995 | 68% | 24,980 | 27,487,800 | applied |
+| 15 | update_1 (next committee only) adopt 2/2 | Adopt 3,418,189 | 3,418,189 | 68% | 24,980 | 27,545,352 | applied |
+| 16 | update_1 (next committee only) Finish (step 3) | Finish 3,653,838 → Apply 45,260 | 3,699,098 | 74% | 463 | 29,596,488 | applied |
+
+test a_finality_update_is_three_transactions ... ok
+| # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | Init Init | Init 191,616 → JobOpen 19,050 | 210,666 | 4% | 1,896 | 1,700,496 | applied |
+| 2 | Init adopt 1/2 | Adopt 3,399,141 | 3,399,141 | 68% | 24,980 | 27,392,968 | applied |
+| 3 | Init adopt 2/2 | Adopt 3,409,234 → Apply 58,991 → Record 17,350 | 3,485,575 | 70% | 25,108 | 28,085,464 | applied |
+| 4 | update_0 Open (step 1) | Open 2,129,836 → JobOpen 26,464 | 2,156,300 | 43% | 2,853 | 17,273,224 | applied |
+| 5 | update_0 Miller (step 2) | Miller 3,313,372 | 3,313,372 | 66% | 399 | 26,510,168 | applied |
+| 6 | update_0 adopt 1/2 | Adopt 3,410,995 | 3,410,995 | 68% | 24,980 | 27,487,800 | applied |
+| 7 | update_0 adopt 2/2 | Adopt 3,418,189 | 3,418,189 | 68% | 24,980 | 27,545,352 | applied |
+| 8 | update_0 Finish (step 3) | Finish 3,653,838 → Apply 45,260 | 3,699,098 | 74% | 463 | 29,596,488 | applied |
+| 9 | update_1 Open (step 1) | Open 2,186,674 → JobOpen 26,464 | 2,213,138 | 44% | 3,605 | 17,733,944 | applied |
+| 10 | update_1 Miller (step 2) | Miller 3,313,372 | 3,313,372 | 66% | 399 | 26,510,168 | applied |
+| 11 | update_1 adopt 1/2 | Adopt 3,410,995 | 3,410,995 | 68% | 24,980 | 27,487,800 | applied |
+| 12 | update_1 adopt 2/2 | Adopt 3,418,189 | 3,418,189 | 68% | 24,980 | 27,545,352 | applied |
+| 13 | update_1 Finish (step 3) | Finish 3,653,838 → Apply 65,473 → Record 17,350 | 3,736,661 | 75% | 527 | 29,897,504 | applied |
+| 14 | update_2 Open (step 1) | Open 2,187,248 → JobOpen 26,464 | 2,213,712 | 44% | 3,615 | 17,738,616 | applied |
+| 15 | update_2 Miller (step 2) | Miller 3,313,372 | 3,313,372 | 66% | 399 | 26,510,168 | applied |
+| 16 | update_2 adopt 1/2 | Adopt 3,410,995 | 3,410,995 | 68% | 24,980 | 27,487,800 | applied |
+| 17 | update_2 adopt 2/2 | Adopt 3,418,189 | 3,418,189 | 68% | 24,980 | 27,545,352 | applied |
+| 18 | update_2 Finish (step 3) | Finish 3,653,838 → Apply 65,473 → Record 17,350 | 3,736,661 | 75% | 527 | 29,897,504 | applied |
+| 19 | update_3 Open (step 1) | Open 2,131,882 → JobOpen 26,464 | 2,158,346 | 43% | 2,852 | 17,289,584 | applied |
+| 20 | update_3 Miller (step 2) | Miller 3,313,372 | 3,313,372 | 66% | 399 | 26,510,168 | applied |
+| 21 | update_3 adopt 1/2 | Adopt 3,410,995 | 3,410,995 | 68% | 24,980 | 27,487,800 | applied |
+| 22 | update_3 adopt 2/2 | Adopt 3,418,189 | 3,418,189 | 68% | 24,980 | 27,545,352 | applied |
+| 23 | update_3 Finish (step 3) | Finish 3,653,838 → Apply 65,473 → Record 17,350 | 3,736,661 | 75% | 527 | 29,897,504 | applied |
+| 24 | update_4 Open (step 1) | Open 2,159,662 → JobOpen 26,464 | 2,186,126 | 44% | 3,221 | 17,514,776 | applied |
+| 25 | update_4 Miller (step 2) | Miller 3,313,372 | 3,313,372 | 66% | 399 | 26,510,168 | applied |
+| 26 | update_4 adopt 1/2 | Adopt 3,410,995 | 3,410,995 | 68% | 24,980 | 27,487,800 | applied |
+| 27 | update_4 adopt 2/2 | Adopt 3,418,189 | 3,418,189 | 68% | 24,980 | 27,545,352 | applied |
+| 28 | update_4 Finish (step 3) | Finish 3,653,838 → Apply 65,473 → Record 17,350 | 3,736,661 | 75% | 527 | 29,897,504 | applied |
+
+test mainnet_replay_through_lez ... ok
+| # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | forged signature: Open (passes) | Open 2,171,737 → JobOpen 23,291 | 2,195,028 | 44% | 3,525 | 17,588,424 | applied |
+| 2 | forged signature: Miller (passes) | Miller 3,308,048 | 3,308,048 | 66% | 399 | 26,467,576 | applied |
+| 3 | forged signature: Finish | Finish 3,636,300 | 3,636,300 | 73% | 463 | 29,094,104 | refused: exit 40 (SignatureInvalid) |
+| 4 | malformed signature: Open | Open 357,307 | 357,307 | 7% | 3,525 | 2,886,656 | refused: exit 41 (SignatureMalformed) |
+| 5 | duplicate Open (same job) | Open 2,171,611 → JobOpen 16,529 | 2,188,140 | 44% | 3,525 | 17,533,320 | refused: exit 207 (JobExists) |
+| 6 | Finish before Miller (skipped step) | Finish 24,242 | 24,242 | 0% | 463 | 197,640 | refused: exit 81 (StepError::Phase) |
+| 7 | Miller replayed | Miller 21,237 | 21,237 | 0% | 399 | 173,088 | refused: exit 81 (StepError::Phase) |
+| 8 | Finish replayed after the job applied | Finish 6,111 | 6,111 | 0% | 527 | 53,104 | refused: exit 205 (NoJob) |
+| 9 | Open an applied update again | Open 211,586 | 211,586 | 4% | 3,525 | 1,720,888 | refused: exit 52 (NotNewer) |
+| 10 | Apply sent as the transaction root | Apply 18,877 | 18,877 | 0% | 937 | 158,512 | refused: exit 202 (WrongSender) |
+| 11 | Apply from another program's actor | scripted 13,436 → Apply 19,730 | 33,166 | 1% | 1,157 | 274,584 | refused: exit 202 (WrongSender) |
+| 12 | ApplyVerified from another program's actor | scripted 13,172 → ApplyVerified 17,304 | 30,476 | 1% | 1,125 | 252,808 | refused: exit 202 (WrongSender) |
+| 13 | JobOpen from another program's actor | scripted 13,372 → JobOpen 11,060 | 24,432 | 0% | 1,226 | 205,264 | refused: exit 202 (WrongSender) |
+| 14 | Record from another program's actor | scripted 9,610 → Record 9,692 | 19,302 | 0% | 771 | 160,584 | refused: exit 202 (WrongSender) |
+| 15 | update for another chain's instance: Finish | Finish 3,638,518 | 3,638,518 | 73% | 463 | 29,111,848 | refused: exit 40 (SignatureInvalid) |
+| 16 | instance A's job id sent to instance B | Finish 6,111 | 6,111 | 0% | 464 | 52,600 | refused: exit 205 (NoJob) |
+| 17 | Open before its signature slot (validity window) | Open 2,171,611 → JobOpen 23,291 | 10,000,000 | 200% | 3,525 | 80,028,200 | reverted: Execution outside of the validity window |
+| 18 | Init of an existing instance | Init 18,588 | 18,588 | 0% | 1,832 | 163,360 | refused: exit 203 (AlreadyInitialized) |
+
+test refusals_exit_with_a_code_and_are_charged_what_they_used ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 52.62s
+
+
+running 3 tests
+period 1379 (the upgrade) in one private VerifyAll: public part 79,481 cycles, tx 8459 bytes (dev mode)
+test the_upgrade_through_the_proven_path_in_dev_mode ... ok
+test real_sepolia_facts_under_a_gloas_record has been running for over 60 seconds
+test sepolia_through_the_gloas_fork_over_the_public_path has been running for over 60 seconds
+| # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | Init Init | Init 191,482 → JobOpen 19,050 | 210,532 | 4% | 1,902 | 1,699,472 | applied |
+| 2 | Init adopt 1/2 | Adopt 3,399,141 | 3,399,141 | 68% | 24,980 | 27,392,968 | applied |
+| 3 | Init adopt 2/2 | Adopt 3,409,234 → Apply 58,991 → Record 17,350 | 3,485,575 | 70% | 25,108 | 28,085,464 | applied |
+| 4 | period 1378 Open (step 1) | Open 2,129,962 → JobOpen 26,464 | 2,156,426 | 43% | 2,837 | 17,274,104 | applied |
+| 5 | period 1378 Miller (step 2) | Miller 3,313,372 | 3,313,372 | 66% | 399 | 26,510,168 | applied |
+| 6 | period 1378 adopt 1/2 | Adopt 3,410,995 | 3,410,995 | 68% | 24,980 | 27,487,800 | applied |
+| 7 | period 1378 adopt 2/2 | Adopt 3,418,189 | 3,418,189 | 68% | 24,980 | 27,545,352 | applied |
+| 8 | period 1378 Finish (step 3) | Finish 3,653,838 → Apply 63,479 → Record 17,350 | 3,734,667 | 75% | 527 | 29,881,552 | applied |
+| 9 | period 1379 Open (step 1) | Open 1,989,972 → JobOpen 25,468 | 2,015,440 | 40% | 2,363 | 16,142,424 | applied |
+| 10 | period 1379 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 11 | period 1379 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 12 | period 1379 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 13 | period 1379 Finish (step 3) | Finish 3,652,003 → Apply 66,300 → Record 16,310 | 3,734,613 | 75% | 527 | 29,881,120 | applied |
+| 14 | period 1380 Open (step 1) | Open 1,989,984 → JobOpen 25,468 | 2,015,452 | 40% | 2,363 | 16,142,520 | applied |
+| 15 | period 1380 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 16 | period 1380 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 17 | period 1380 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 18 | period 1380 Finish (step 3) | Finish 3,652,003 → Apply 63,245 → Record 16,310 | 3,731,558 | 75% | 527 | 29,856,680 | applied |
+| 19 | period 1381 Open (step 1) | Open 1,989,859 → JobOpen 25,468 | 2,015,327 | 40% | 2,363 | 16,141,520 | applied |
+| 20 | period 1381 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 21 | period 1381 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 22 | period 1381 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 23 | period 1381 Finish (step 3) | Finish 3,652,003 → Apply 63,245 → Record 16,310 | 3,731,558 | 75% | 527 | 29,856,680 | applied |
+| 24 | period 1382 Open (step 1) | Open 1,989,557 → JobOpen 25,468 | 2,015,025 | 40% | 2,363 | 16,139,104 | applied |
+| 25 | period 1382 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 26 | period 1382 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 27 | period 1382 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 28 | period 1382 Finish (step 3) | Finish 3,652,003 → Apply 63,245 → Record 16,310 | 3,731,558 | 75% | 527 | 29,856,680 | applied |
+| 29 | period 1383 Open (step 1) | Open 1,989,808 → JobOpen 25,468 | 2,015,276 | 40% | 2,363 | 16,141,112 | applied |
+| 30 | period 1383 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 31 | period 1383 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 32 | period 1383 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 33 | period 1383 Finish (step 3) | Finish 3,652,003 → Apply 63,245 → Record 16,310 | 3,731,558 | 75% | 527 | 29,856,680 | applied |
+| 34 | period 1384 Open (step 1) | Open 1,989,970 → JobOpen 25,468 | 2,015,438 | 40% | 2,363 | 16,142,408 | applied |
+| 35 | period 1384 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 36 | period 1384 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 37 | period 1384 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 38 | period 1384 Finish (step 3) | Finish 3,652,003 → Apply 63,245 → Record 16,310 | 3,731,558 | 75% | 527 | 29,856,680 | applied |
+| 39 | period 1385 Open (step 1) | Open 1,989,747 → JobOpen 25,468 | 2,015,215 | 40% | 2,363 | 16,140,624 | applied |
+| 40 | period 1385 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 41 | period 1385 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 42 | period 1385 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 43 | period 1385 Finish (step 3) | Finish 3,652,003 → Apply 63,245 → Record 16,310 | 3,731,558 | 75% | 527 | 29,856,680 | applied |
+| 44 | period 1386 Open (step 1) | Open 2,018,375 → JobOpen 25,468 | 2,043,843 | 41% | 2,747 | 16,372,720 | applied |
+| 45 | period 1386 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 46 | period 1386 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 47 | period 1386 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 48 | period 1386 Finish (step 3) | Finish 3,652,003 → Apply 63,245 → Record 16,310 | 3,731,558 | 75% | 527 | 29,856,680 | applied |
+| 49 | period 1387 Open (step 1) | Open 1,989,920 → JobOpen 25,468 | 2,015,388 | 40% | 2,363 | 16,142,008 | applied |
+| 50 | period 1387 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 51 | period 1387 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 52 | period 1387 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 53 | period 1387 Finish (step 3) | Finish 3,652,003 → Apply 63,245 → Record 16,310 | 3,731,558 | 75% | 527 | 29,856,680 | applied |
+| 54 | period 1388 Open (step 1) | Open 1,989,923 → JobOpen 25,468 | 2,015,391 | 40% | 2,363 | 16,142,032 | applied |
+| 55 | period 1388 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 56 | period 1388 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 57 | period 1388 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 58 | period 1388 Finish (step 3) | Finish 3,652,003 → Apply 63,245 → Record 16,310 | 3,731,558 | 75% | 527 | 29,856,680 | applied |
+| 59 | period 1389 Open (step 1) | Open 1,989,683 → JobOpen 25,468 | 2,015,151 | 40% | 2,363 | 16,140,112 | applied |
+| 60 | period 1389 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 61 | period 1389 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 62 | period 1389 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 63 | period 1389 Finish (step 3) | Finish 3,652,003 → Apply 63,245 → Record 16,310 | 3,731,558 | 75% | 527 | 29,856,680 | applied |
+| 64 | period 1390 Open (step 1) | Open 1,990,049 → JobOpen 25,468 | 2,015,517 | 40% | 2,363 | 16,143,040 | applied |
+| 65 | period 1390 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 66 | period 1390 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 67 | period 1390 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 68 | period 1390 Finish (step 3) | Finish 3,652,003 → Apply 63,245 → Record 16,310 | 3,731,558 | 75% | 527 | 29,856,680 | applied |
+| 69 | period 1391 Open (step 1) | Open 2,018,021 → JobOpen 25,468 | 2,043,489 | 41% | 2,747 | 16,369,888 | applied |
+| 70 | period 1391 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 71 | period 1391 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 72 | period 1391 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 73 | period 1391 Finish (step 3) | Finish 3,652,003 → Apply 63,245 → Record 16,310 | 3,731,558 | 75% | 527 | 29,856,680 | applied |
+| 74 | period 1392 Open (step 1) | Open 1,989,923 → JobOpen 25,468 | 2,015,391 | 40% | 2,363 | 16,142,032 | applied |
+| 75 | period 1392 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 76 | period 1392 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 77 | period 1392 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 78 | period 1392 Finish (step 3) | Finish 3,652,003 → Apply 63,245 → Record 16,310 | 3,731,558 | 75% | 527 | 29,856,680 | applied |
+| 79 | period 1393 Open (step 1) | Open 2,018,138 → JobOpen 25,468 | 2,043,606 | 41% | 2,747 | 16,370,824 | applied |
+| 80 | period 1393 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 81 | period 1393 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 82 | period 1393 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 83 | period 1393 Finish (step 3) | Finish 3,652,003 → Apply 63,245 → Record 16,310 | 3,731,558 | 75% | 527 | 29,856,680 | applied |
+| 84 | period 1394 Open (step 1) | Open 1,990,110 → JobOpen 25,468 | 2,015,578 | 40% | 2,363 | 16,143,528 | applied |
+| 85 | period 1394 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 86 | period 1394 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 87 | period 1394 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 88 | period 1394 Finish (step 3) | Finish 3,652,003 → Apply 63,245 → Record 16,310 | 3,731,558 | 75% | 527 | 29,856,680 | applied |
+| 89 | period 1395 Open (step 1) | Open 2,126,401 → JobOpen 25,468 | 2,151,869 | 43% | 4,283 | 17,249,216 | applied |
+| 90 | period 1395 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 91 | period 1395 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 92 | period 1395 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 93 | period 1395 Finish (step 3) | Finish 3,652,003 → Apply 63,245 → Record 16,310 | 3,731,558 | 75% | 527 | 29,856,680 | applied |
+| 94 | period 1396 Open (step 1) | Open 2,017,880 → JobOpen 25,468 | 2,043,348 | 41% | 2,747 | 16,368,760 | applied |
+| 95 | period 1396 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 96 | period 1396 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 97 | period 1396 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 98 | period 1396 Finish (step 3) | Finish 3,652,003 → Apply 63,245 → Record 16,310 | 3,731,558 | 75% | 527 | 29,856,680 | applied |
+| 99 | period 1397 Open (step 1) | Open 1,989,859 → JobOpen 25,468 | 2,015,327 | 40% | 2,363 | 16,141,520 | applied |
+| 100 | period 1397 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 101 | period 1397 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 102 | period 1397 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 103 | period 1397 Finish (step 3) | Finish 3,652,003 → Apply 63,245 → Record 16,310 | 3,731,558 | 75% | 527 | 29,856,680 | applied |
+| 104 | period 1398 Open (step 1) | Open 1,989,758 → JobOpen 25,468 | 2,015,226 | 40% | 2,363 | 16,140,712 | applied |
+| 105 | period 1398 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 106 | period 1398 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 107 | period 1398 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 108 | period 1398 Finish (step 3) | Finish 3,652,003 → Apply 63,245 → Record 16,310 | 3,731,558 | 75% | 527 | 29,856,680 | applied |
+| 109 | period 1399 Open (step 1) | Open 1,989,873 → JobOpen 25,468 | 2,015,341 | 40% | 2,363 | 16,141,632 | applied |
+| 110 | period 1399 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 111 | period 1399 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 112 | period 1399 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 113 | period 1399 Finish (step 3) | Finish 3,652,003 → Apply 63,245 → Record 16,310 | 3,731,558 | 75% | 527 | 29,856,680 | applied |
+| 114 | period 1400 Open (step 1) | Open 1,989,873 → JobOpen 25,468 | 2,015,341 | 40% | 2,363 | 16,141,632 | applied |
+| 115 | period 1400 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 116 | period 1400 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 117 | period 1400 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 118 | period 1400 Finish (step 3) | Finish 3,652,003 → Apply 63,245 → Record 16,310 | 3,731,558 | 75% | 527 | 29,856,680 | applied |
+| 119 | period 1401 Open (step 1) | Open 1,989,747 → JobOpen 25,468 | 2,015,215 | 40% | 2,363 | 16,140,624 | applied |
+| 120 | period 1401 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 121 | period 1401 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 122 | period 1401 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 123 | period 1401 Finish (step 3) | Finish 3,652,003 → Apply 63,245 → Record 16,310 | 3,731,558 | 75% | 527 | 29,856,680 | applied |
+| 124 | period 1402 Open (step 1) | Open 1,989,697 → JobOpen 25,468 | 2,015,165 | 40% | 2,363 | 16,140,224 | applied |
+| 125 | period 1402 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 126 | period 1402 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 127 | period 1402 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 128 | period 1402 Finish (step 3) | Finish 3,652,003 → Apply 63,245 → Record 16,310 | 3,731,558 | 75% | 527 | 29,856,680 | applied |
+| 129 | period 1403 Open (step 1) | Open 2,153,393 → JobOpen 25,468 | 2,178,861 | 44% | 4,667 | 17,468,224 | applied |
+| 130 | period 1403 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 131 | period 1403 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 132 | period 1403 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 133 | period 1403 Finish (step 3) | Finish 3,652,003 → Apply 63,245 → Record 16,310 | 3,731,558 | 75% | 527 | 29,856,680 | applied |
+| 134 | period 1404 Open (step 1) | Open 2,044,969 → JobOpen 25,468 | 2,070,437 | 41% | 3,131 | 16,588,544 | applied |
+| 135 | period 1404 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 136 | period 1404 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 137 | period 1404 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 138 | period 1404 Finish (step 3) | Finish 3,652,003 → Apply 63,245 → Record 16,310 | 3,731,558 | 75% | 527 | 29,856,680 | applied |
+| 139 | period 1405 Open (step 1) | Open 2,153,150 → JobOpen 25,468 | 2,178,618 | 44% | 4,667 | 17,466,280 | applied |
+| 140 | period 1405 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 141 | period 1405 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 142 | period 1405 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 143 | period 1405 Finish (step 3) | Finish 3,652,003 → Apply 63,245 → Record 16,310 | 3,731,558 | 75% | 527 | 29,856,680 | applied |
+| 144 | period 1406 Open (step 1) | Open 2,017,835 → JobOpen 25,468 | 2,043,303 | 41% | 2,747 | 16,368,400 | applied |
+| 145 | period 1406 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 146 | period 1406 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 147 | period 1406 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 148 | period 1406 Finish (step 3) | Finish 3,652,003 → Apply 63,245 → Record 16,310 | 3,731,558 | 75% | 527 | 29,856,680 | applied |
+| 149 | period 1407 Open (step 1) | Open 2,153,571 → JobOpen 25,468 | 2,179,039 | 44% | 4,667 | 17,469,648 | applied |
+| 150 | period 1407 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 151 | period 1407 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 152 | period 1407 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 153 | period 1407 Finish (step 3) | Finish 3,652,003 → Apply 63,245 → Record 16,310 | 3,731,558 | 75% | 527 | 29,856,680 | applied |
+| 154 | period 1408 Open (step 1) | Open 2,126,089 → JobOpen 25,468 | 2,151,557 | 43% | 4,283 | 17,246,720 | applied |
+| 155 | period 1408 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 156 | period 1408 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 157 | period 1408 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 158 | period 1408 Finish (step 3) | Finish 3,652,003 → Apply 63,245 → Record 16,310 | 3,731,558 | 75% | 527 | 29,856,680 | applied |
+| 159 | period 1409 Open (step 1) | Open 2,099,379 → JobOpen 25,468 | 2,124,847 | 42% | 3,899 | 17,029,968 | applied |
+| 160 | period 1409 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 161 | period 1409 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 162 | period 1409 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 163 | period 1409 Finish (step 3) | Finish 3,652,003 → Apply 63,245 → Record 16,310 | 3,731,558 | 75% | 527 | 29,856,680 | applied |
+| 164 | finality update Open (step 1) | Open 2,918,278 → JobOpen 22,312 | 2,940,590 | 59% | 15,723 | 23,650,504 | applied |
+| 165 | finality update Miller (step 2) | Miller 3,305,374 | 3,305,374 | 66% | 399 | 26,446,184 | applied |
+| 166 | finality update Finish (step 3) | Finish 3,645,860 → Apply 59,353 → Record 16,310 | 3,721,523 | 74% | 527 | 29,776,400 | applied |
+
+Sepolia replay: 166 transactions, execution gas 526,472,162, storage gas 1,788,057, cycles 526,472,162
+test sepolia_through_the_gloas_fork_over_the_public_path ... ok
+| # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | storage slot: Sepolia USDC totalSupply_ (slot 11), with the block header | Attest 279,157 | 279,157 | 6% | 7,633 | 2,294,320 | applied |
+| 2 | log: an ERC-20 Transfer (emitter, recipient), with the block header | Attest 97,794 | 97,794 | 2% | 2,586 | 803,040 | applied |
+| 3 | account: Multicall3 (code hash), with the block header | Attest 170,523 | 170,523 | 3% | 4,723 | 1,401,968 | applied |
+| 4 | the three in one request, with the block header | Attest 470,241 | 470,241 | 9% | 12,658 | 3,863,192 | applied |
+
+| # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | no block header for a record that binds a block hash | Attest 38,701 | 38,701 | 1% | 6,951 | 365,216 | refused: exit 215 (HeaderRequired) |
+| 2 | the block header with one byte changed | Attest 48,496 | 48,496 | 1% | 7,633 | 449,032 | refused: exit 120 (HeaderHashMismatch) |
+| 3 | the header of another block (12,103,422, the replay fixture's) | Attest 55,088 | 55,088 | 1% | 7,642 | 501,840 | refused: exit 120 (HeaderHashMismatch) |
+| 4 | the block header truncated by one byte | Attest 53,708 | 53,708 | 1% | 7,632 | 490,720 | refused: exit 120 (HeaderHashMismatch) |
+| 5 | the block header with one byte appended | Attest 53,910 | 53,910 | 1% | 7,634 | 492,352 | refused: exit 120 (HeaderHashMismatch) |
+| 6 | F.5: the same proof asked as a mainnet statement (chain id 1) | Attest 27,214 | 27,214 | 1% | 4,723 | 255,496 | refused: exit 140 (ChainMismatch) |
+| 7 | F.5: the same storage proof asked as a mainnet statement | Attest 35,703 | 35,703 | 1% | 7,633 | 346,688 | refused: exit 140 (ChainMismatch) |
+| 8 | a block header sent to a record that holds the payload (the bootstrap's) | Attest 23,541 | 23,541 | 0% | 2,586 | 209,016 | refused: exit 214 (BadQuery) |
+
+test real_sepolia_facts_under_a_gloas_record ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 104.47s
+
+
+running 3 tests
+image program (guests/program): efd9aef79f65f57f9fc38c9bba69dc87058de2229de6d1be1e3de76935d23254 (627064 bytes)
+image consumer (guests/consumer): 9dc21f01d175ad6a384fb2e69732fa304aa2185bea6b826a5535fc3cfac71df3 (471408 bytes)
+image holdings (guests/holdings): ca94902d541ff0a56141c5fd4dc30f0674554f1a741a76ee80e7fa9ca83b0799 (307504 bytes)
+image bridge (guests/bridge): 8f8efd14b5e236f16ba3d7776bf501c4bf9c5585247e35e627e8c2caeaf5f395 (592840 bytes)
+test prints_the_image_ids ... ok
+| # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | Open after the period | Open 2,129,962 → JobOpen 26,464 | 10,000,000 | 200% | 2,837 | 80,022,696 | reverted: Execution outside of the validity window |
+| 2 | Open in the period's last millisecond | Open 2,129,962 → JobOpen 26,464 | 2,156,426 | 43% | 2,837 | 17,274,104 | applied |
+| 3 | Open signed after the period Open (step 1) | Open 2,117,345 | 2,117,345 | 42% | 2,837 | 16,961,456 | refused: exit 53 (OutsideWeakSubjectivityPeriod) |
+
+test the_weak_subjectivity_bound_on_init_and_open ... ok
+| # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | Succeed from an earlier record | Succeed 28,323 | 28,323 | 1% | 697 | 232,160 | refused: exit 217 (StaleCheckpoint) |
+| 2 | Succeed with a changed weak-subjectivity bound | Succeed 28,900 | 28,900 | 1% | 697 | 236,776 | refused: exit 216 (BadSuccessor) |
+| 3 | Succeed with a shorter weak-subjectivity bound | Succeed 28,900 | 28,900 | 1% | 697 | 236,776 | refused: exit 216 (BadSuccessor) |
+| 4 | Succeed with another chain id | Succeed 28,598 | 28,598 | 1% | 697 | 234,360 | refused: exit 216 (BadSuccessor) |
+| 5 | Succeed with another genesis_validators_root | Succeed 28,644 | 28,644 | 1% | 697 | 234,728 | refused: exit 216 (BadSuccessor) |
+| 6 | Succeed with another genesis time | Succeed 28,876 | 28,876 | 1% | 697 | 236,584 | refused: exit 216 (BadSuccessor) |
+| 7 | Succeed with other adoption parts | Succeed 28,891 | 28,891 | 1% | 697 | 236,704 | refused: exit 216 (BadSuccessor) |
+| 8 | Succeed with a settled fork at another epoch | Succeed 29,757 | 29,757 | 1% | 697 | 243,632 | refused: exit 216 (BadSuccessor) |
+| 9 | Succeed with a settled fork with another version | Succeed 29,302 | 29,302 | 1% | 697 | 239,992 | refused: exit 216 (BadSuccessor) |
+| 10 | Succeed with a fork inserted before the checkpoint | Succeed 29,844 | 29,844 | 1% | 697 | 244,328 | refused: exit 216 (BadSuccessor) |
+| 11 | Succeed with a schedule out of order | Succeed 29,869 | 29,869 | 1% | 697 | 244,528 | refused: exit 216 (BadSuccessor) |
+| 12 | Succeed with another store layout | Succeed 28,901 | 28,901 | 1% | 697 | 236,784 | refused: exit 216 (BadSuccessor) |
+| 13 | Succeed with the parent's own config | Succeed 29,989 | 29,989 | 1% | 697 | 245,488 | refused: exit 216 (BadSuccessor) |
+| 14 | Succeed at the end of the period | Succeed 45,512 → Spawn 25,098 | 10,000,000 | 200% | 697 | 80,005,576 | reverted: Execution outside of the validity window |
+| 15 | Spawn sent directly | Spawn 12,256 | 12,256 | 0% | 1,040 | 106,368 | refused: exit 202 (WrongSender) |
+
+| # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | Succeed | Succeed 45,512 → Spawn 25,098 | 70,610 | 1% | 697 | 570,456 | applied |
+| 2 | successor: period 1379 Open (step 1) | Open 1,989,972 → JobOpen 25,468 | 2,015,440 | 40% | 2,363 | 16,142,424 | applied |
+| 3 | successor: period 1379 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 4 | successor: period 1379 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 5 | successor: period 1379 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 6 | successor: period 1379 Finish (step 3) | Finish 3,652,003 → Apply 66,300 → Record 16,310 | 3,734,613 | 75% | 527 | 29,881,120 | applied |
+| 7 | successor: period 1380 Open (step 1) | Open 1,989,984 → JobOpen 25,468 | 2,015,452 | 40% | 2,363 | 16,142,520 | applied |
+| 8 | successor: period 1380 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 9 | successor: period 1380 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 10 | successor: period 1380 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 11 | successor: period 1380 Finish (step 3) | Finish 3,652,003 → Apply 63,245 → Record 16,310 | 3,731,558 | 75% | 527 | 29,856,680 | applied |
+| 12 | successor: period 1381 Open (step 1) | Open 1,989,859 → JobOpen 25,468 | 2,015,327 | 40% | 2,363 | 16,141,520 | applied |
+| 13 | successor: period 1381 Miller (step 2) | Miller 3,310,470 | 3,310,470 | 66% | 399 | 26,486,952 | applied |
+| 14 | successor: period 1381 adopt 1/2 | Adopt 3,408,111 | 3,408,111 | 68% | 24,980 | 27,464,728 | applied |
+| 15 | successor: period 1381 adopt 2/2 | Adopt 3,415,303 | 3,415,303 | 68% | 24,980 | 27,522,264 | applied |
+| 16 | successor: period 1381 Finish (step 3) | Finish 3,652,003 → Apply 63,245 → Record 16,310 | 3,731,558 | 75% | 527 | 29,856,680 | applied |
+
+| # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | Attest bound to the root id | Attest 14,225 | 14,225 | 0% | 460 | 117,480 | refused: exit 215 (HeaderRequired) |
+| 2 | Attest bound to the successor | Attest 14,006 | 14,006 | 0% | 460 | 115,728 | refused: exit 215 (HeaderRequired) |
+| 3 | Attest bound to another instance | Attest 13,771 | 13,771 | 0% | 460 | 113,848 | refused: exit 211 (WrongInstance) |
+
+test a_successor_crosses_a_fork_not_in_the_schedule_fixed_at_init ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 20.70s
+
+
+running 2 tests
+| # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | vault slots 0 and 1, no leaf (synthetic state, Gloas record) | Attest 122,067 | 122,067 | 2% | 2,319 | 995,088 | applied |
+| 2 | vault slots 0 and 1 and one deposit leaf | Attest 187,786 | 187,786 | 4% | 3,391 | 1,529,416 | applied |
+| 3 | vault slots 0 and 1 and two deposit leaves | Attest 253,107 | 253,107 | 5% | 4,463 | 2,060,560 | applied |
+| 4 | vault slots 0 and 1 and all eight deposit leaves | Attest 646,014 | 646,014 | 13% | 10,895 | 5,255,272 | applied |
+| 5 | the same with one leaf, under a record that holds the payload's fields (no header) | Attest 167,123 | 167,123 | 3% | 2,700 | 1,358,584 | applied |
+
+| # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | a leaf that is not at its index | Attest 173,594 | 173,594 | 3% | 3,391 | 1,415,880 | refused: exit 163 (AccumulatorRootMismatch) |
+| 2 | a leaf proven at another index | Attest 173,591 | 173,591 | 3% | 3,391 | 1,415,856 | refused: exit 163 (AccumulatorRootMismatch) |
+| 3 | a leaf against slot 1 (the count, not the root) | Attest 173,594 | 173,594 | 3% | 3,391 | 1,415,880 | refused: exit 163 (AccumulatorRootMismatch) |
+| 4 | an empty position past the count (slot 1 condition) | Attest 127,932 | 127,932 | 3% | 3,391 | 1,050,584 | refused: exit 130 (PredicateFailed) |
+| 5 | the vault's facts asked as mainnet statements | Attest 39,342 | 39,342 | 1% | 3,391 | 341,864 | refused: exit 140 (ChainMismatch) |
+| 6 | the vault's facts without the block header | Attest 37,113 | 37,113 | 1% | 2,700 | 318,504 | refused: exit 215 (HeaderRequired) |
+
+test accumulator_leaves_through_the_program_on_a_synthetic_vault ... ok
+test the_vault_on_sepolia has been running for over 60 seconds
+# FerrataVault v5 on Sepolia through the program: deposit leaves on real data
+
+Generated by `RISC0_DEV_MODE=1 cargo test -p harness --locked --test vault` (see `../RESULTS.md`).
+Fixture `crates/ferrata-spectests/fixtures/sepolia-vault-v5-2026-11-11`: finalized slot 11556608, block 12112773, the vault 0xfe3199fa2634413cbac317371076cae3eb2d9e54 with root 0xfaad123258a78fc60cfa12c793a7d68bab13c2d319d68e847a1bd3f2e140579d over 2 deposits.
+
+## Accepted
+
+| # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | the vault v5: slots 0 and 1 and deposit leaf 0 (real Sepolia state) | Attest 327,016 | 327,016 | 7% | 7,659 | 2,677,400 | applied |
+| 2 | the vault v5: slots 0 and 1 and deposit leaf 1 | Attest 327,017 | 327,017 | 7% | 7,659 | 2,677,408 | applied |
+| 3 | the vault v5: slots 0 and 1 and both deposit leaves | Attest 392,358 | 392,358 | 8% | 8,731 | 3,208,712 | applied |
+| 4 | an address without an account (exclusion), under the Gloas record | Attest 176,198 | 176,198 | 4% | 4,890 | 1,448,704 | applied |
+| 5 | deposit 0's Deposit log, block 12111477, one EIP-2935 hop under the Gloas record | Attest 325,595 | 325,595 | 7% | 8,787 | 2,675,056 | applied |
+| 6 | deposit 1's Deposit log, block 12111574, one EIP-2935 hop under the Gloas record | Attest 325,962 | 325,962 | 7% | 8,832 | 2,678,352 | applied |
+
+## Refused
+
+| # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | a leaf that is not at its index | Attest 301,798 | 301,798 | 6% | 7,659 | 2,475,656 | refused: exit 163 (AccumulatorRootMismatch) |
+| 2 | a leaf proven at another index | Attest 301,797 | 301,797 | 6% | 7,659 | 2,475,648 | refused: exit 163 (AccumulatorRootMismatch) |
+| 3 | a leaf against slot 1 (the count, not the root) | Attest 301,798 | 301,798 | 6% | 7,659 | 2,475,656 | refused: exit 163 (AccumulatorRootMismatch) |
+| 4 | an empty position past the count (slot 1 condition) | Attest 256,138 | 256,138 | 5% | 7,659 | 2,110,376 | refused: exit 130 (PredicateFailed) |
+| 5 | a leaf with one sibling changed | Attest 301,798 | 301,798 | 6% | 7,659 | 2,475,656 | refused: exit 163 (AccumulatorRootMismatch) |
+| 6 | the vault's facts asked as mainnet statements | Attest 54,043 | 54,043 | 1% | 7,659 | 493,616 | refused: exit 140 (ChainMismatch) |
+| 7 | the vault's facts without the block header | Attest 51,133 | 51,133 | 1% | 6,968 | 464,808 | refused: exit 215 (HeaderRequired) |
+| 8 | deposit 0's log through a hop that carries deposit 1's block header | Attest 218,160 | 218,160 | 4% | 8,800 | 1,815,680 | refused: exit 110 (ProofNodeMismatch) |
+| 9 | deposit 0's log without the hop (proof against the record's block) | Attest 48,569 | 48,569 | 1% | 2,717 | 410,288 | refused: exit 110 (ProofNodeMismatch) |
+| 10 | deposit 0's log with a false predicate (token topic = 0x11…11) | Attest 301,166 | 301,166 | 6% | 8,822 | 2,479,904 | refused: exit 130 (PredicateFailed) |
+
+test the_vault_on_sepolia ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 99.96s
+
+
+running 4 tests
+test a_private_kind_deposit_is_claimed_privately_by_its_destination has been running for over 60 seconds
+test a_real_deposit_is_claimed_privately_once has been running for over 60 seconds
+test a_real_deposit_is_claimed_publicly_once has been running for over 60 seconds
+test private_claims_that_do_not_verify_are_refused has been running for over 60 seconds
+a private-kind deposit claimed by an account that is not its destination: exits [224]
+| handler execution | input bytes (ReceiveInput) | journal bytes | user cycles | segments | cycles with padding (sum of 2^po2) | exit |
+|---|---:|---:|---:|---:|---:|---:|
+| ClaimDepositPrivately (sends Read) | 8,588 | 17,270 | 112,597 | 1 | 262,144 | 0 |
+| the record's reply (verifies the deposit, sends Spend) | 8,979 | 9,237 | 1,392,412 | 2 | 1,572,864 | 0 |
+
+a byte that is no destination kind: exits [219]
+| handler execution | input bytes (ReceiveInput) | journal bytes | user cycles | segments | cycles with padding (sum of 2^po2) | exit |
+|---|---:|---:|---:|---:|---:|---:|
+| ClaimDepositPrivately (sends Read) | 8,633 | 17,360 | 112,039 | 1 | 262,144 | 0 |
+| the record's reply (verifies the deposit, sends Spend) | 9,024 | 9,282 | 1,409,528 | 2 | 2,097,152 | 0 |
+
+a wrong secret: exits [0, 218]
+a private-kind deposit opened as public-kind: exits [0, 218]
+a forged receipt: exits [0, 110]
+a pool configured for mainnet: exits [0, 140]
+a pool of another token (false predicate): exits [0, 130]
+test private_claims_that_do_not_verify_are_refused ... ok
+The 8537 serialized bytes of the transaction were searched:
+
+- the secret s (32 bytes): absent
+- the statement identifier (32 bytes): absent
+- the commitment C (32 bytes): absent
+- the depositor (20 bytes): absent
+- the destination (the claimant's account id) (32 bytes): absent
+- the deposit block's header (677 bytes): absent
+- the receipt proof's last node (690 bytes): absent
+
+The 8665 serialized bytes of the transaction were searched:
+
+- the secret s (32 bytes): absent
+- the statement identifier (32 bytes): absent
+- the commitment C (32 bytes): absent
+- the depositor (20 bytes): absent
+- the deposit block's header (664 bytes): absent
+- the receipt proof's last node (690 bytes): absent
+- the nullifier N (32 bytes): present (spent publicly, by design)
+
+test a_private_kind_deposit_is_claimed_privately_by_its_destination ... ok
+test a_real_deposit_is_claimed_privately_once ... ok
+the private claim after the public one: proving failed: Program exited with non-zero code 223 after 13956 cycles
+## Accepted
+
+| # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | the public claim of deposit 0 (block 12,111,477, one hop) | consumer ClaimDeposit 114,234 → Attest 333,071 → consumer (reply) 36,995 → consumer CreditHolder 15,906 | 500,206 | 10% | 9,105 | 4,074,488 | applied |
+
+## Refused
+
+| # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | a wrong secret (the opening does not hash to C) | consumer ClaimDeposit 114,234 → Attest 333,071 → consumer (reply) 20,607 | 467,912 | 9% | 9,105 | 3,816,136 | refused: exit 218 (consumer: CommitmentMismatch) |
+| 2 | another destination than C commits to | consumer ClaimDeposit 114,234 → Attest 333,071 → consumer (reply) 20,607 | 467,912 | 9% | 9,105 | 3,816,136 | refused: exit 218 (consumer: CommitmentMismatch) |
+| 3 | the right opening at a claim actor its nullifier does not name | consumer ClaimDeposit 114,234 → Attest 333,071 → consumer (reply) 26,672 | 473,977 | 9% | 9,105 | 3,864,656 | refused: exit 229 (consumer: NullifierMismatch) |
+| 4 | a private-kind deposit claimed publicly | consumer ClaimDeposit 36,383 | 36,383 | 1% | 9,150 | 364,264 | refused: exit 219 (consumer: WrongKind) |
+| 5 | a private-kind deposit opened as public-kind | consumer ClaimDeposit 118,664 → Attest 333,565 → consumer (reply) 20,607 | 472,836 | 9% | 9,150 | 3,855,888 | refused: exit 218 (consumer: CommitmentMismatch) |
+| 6 | an ETH deposit claimed in a pool of another token (false predicate) | consumer ClaimDeposit 114,234 → Attest 304,469 | 418,703 | 8% | 9,105 | 3,422,464 | refused: exit 130 (PredicateFailed) |
+| 7 | a pool configured for mainnet (chain binding) | consumer ClaimDeposit 114,234 → Attest 45,160 | 159,394 | 3% | 9,105 | 1,347,992 | refused: exit 140 (ChainMismatch) |
+| 8 | the same claim again (replay) | consumer ClaimDeposit 33,409 | 33,409 | 1% | 9,105 | 340,112 | refused: exit 223 (consumer: AlreadyClaimed) |
+
+test a_real_deposit_is_claimed_publicly_once ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 106.86s
+
+
+running 1 test
+the wallet's transfer: PublicShape { private_actions: 7, action_bytes: [1704, 1704, 1704, 1704, 1704, 1704, 1704], ciphertext_bytes: [516, 516, 516, 516, 516, 516, 516], epk_bytes: [1092, 1092, 1092, 1092, 1092, 1092, 1092], recovery_bindings: [1258], async_messages: 0, refund_named: false, fee_fallback_bytes: Some(1868), public_root: false, nonces: 0 }
+private attestation: PublicShape { private_actions: 7, action_bytes: [1704, 1704, 1704, 1704, 1704, 1704, 1704], ciphertext_bytes: [516, 516, 516, 516, 516, 516, 516], epk_bytes: [1092, 1092, 1092, 1092, 1092, 1092, 1092], recovery_bindings: [1258], async_messages: 0, refund_named: false, fee_fallback_bytes: Some(1868), public_root: false, nonces: 0 }
+private claim: PublicShape { private_actions: 7, action_bytes: [1704, 1704, 1704, 1704, 1704, 1704, 1704], ciphertext_bytes: [516, 516, 516, 516, 516, 516, 516], epk_bytes: [1092, 1092, 1092, 1092, 1092, 1092, 1092], recovery_bindings: [1258], async_messages: 0, refund_named: false, fee_fallback_bytes: Some(1868), public_root: false, nonces: 0 }
+private burn: PublicShape { private_actions: 7, action_bytes: [1704, 1704, 1704, 1704, 1704, 1704, 1704], ciphertext_bytes: [516, 516, 516, 516, 516, 516, 516], epk_bytes: [1092, 1092, 1092, 1092, 1092, 1092, 1092], recovery_bindings: [1258], async_messages: 0, refund_named: false, fee_fallback_bytes: Some(1868), public_root: false, nonces: 0 }
+private attestation, bare: PublicShape { private_actions: 1, action_bytes: [1485], ciphertext_bytes: [297], epk_bytes: [1092], recovery_bindings: [], async_messages: 0, refund_named: true, fee_fallback_bytes: Some(1493), public_root: false, nonces: 0 }
+test padded_attestation_claim_and_burn_have_the_wallets_public_shape_and_settle ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 38.19s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

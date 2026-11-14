@@ -75,6 +75,14 @@ the harness on rc2 against the same source on rc1, on one machine); only the ima
 pays execution gas, and blocks were final on Bedrock after 14–25 s instead of 5–6 s; no real proof
 was made on rc2.
 
+**On LEZ v0.4.0-rc3 (§11).** The final programs (the rc1 builds of `docs/image-ids.md`) ran as they are on
+rc3's own sequencer and on its Logos Blockchain node 0.3.5-rc.1 ({{SESSION_SHORT}}). Rebuilt against rc3 their
+image ids change, by the name of the LEZ tree hashed into the guests and by one panic location's line number; their
+code does not. The harness on rc3 passes 56 of 56 tests, and 1,119 of 1,120 table rows equal the rc1 run of the same
+source on the same box (the other is an identifier derived from the image id). rc3 lets a program read the clock;
+the weak-subjectivity bound stays a validity window. Logos Blockchain 0.3.5-rc.1 puts a fork digest in every
+transaction, which the checkpoint guests do not read yet. No real proof was made on rc3.
+
 | operation (mainnet, 512-member committees) | transactions | largest transaction, execution gas (cycles) | total execution gas | total storage gas (bytes) |
 |---|---:|---:|---:|---:|
 | `Init`: bootstrap checks, then the adoption of its committee in two parts | 3 | 3,482,647 | 7,090,909 | 51,976 |
@@ -1571,3 +1579,16 @@ scripts/lez-select.sh v0.4.0-rc1              # back to the committed state
 
 The live session: `live/README.md`, "LEZ v0.4.0-rc2". The box scripts that ran all of it are in
 `spike/tmp/rc2/` (`box1.sh`, `box3.sh`) beside the repository, not in it.
+
+## 11. LEZ v0.4.0-rc3
+
+LEZ tagged `v0.4.0-rc3` (commit `bafd07be0701398f9bc435f73ab05e9a7936c301`) on 11 November 2026, eight
+commits after rc2: one clock account that an actor can read (LEZ #988) and every `logos-blockchain`
+dependency moved to the 0.3.5-rc.1 release (#1095). What it changes for Ferrata, what ran on it on
+14 November 2026 (a Modal build box: the guests rebuilt and compared byte by byte, the harness in dev mode
+against the same source on rc1, the final programs on rc3's sequencer), why the weak-subjectivity bound stays a
+validity window rather than a clock read, what Logos Blockchain 0.3.5-rc.1 asks of the checkpoint guests, and
+what moving to rc3 would take and in which milestone:
+[`results/v0.4.0-rc3/README.md`](results/v0.4.0-rc3/README.md). The session: [`live/README.md`](live/README.md),
+"LEZ v0.4.0-rc3". Selecting rc3: `scripts/lez-select.sh v0.4.0-rc3` (feature `lez-rc3`,
+`lockfiles/v0.4.0-rc3.patch`); sections 1–10 stay as they were.

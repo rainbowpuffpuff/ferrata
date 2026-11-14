@@ -1,0 +1,20 @@
+bridge image ccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd (592840 ELF bytes); RISC0_DEV_MODE on; shape wallet
+private claim: vault A leaf 5 (1 ETH, private kind) under root n = 8, configuration f25abf0963f2; N = 1dbba1cacb2c3b88480a9f252a16cac0d96c2685524509f4b2165d1a6df068c2
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+private claim: DRY RUN, NOT A PROOF (RISC0_DEV_MODE=1): execute_and_prove 1.0 s (prove + settle 1.5 s); receipt (fake receipt) 16615 bytes; transaction 33117 bytes
+private claim: wrote the proven transaction to <scratch>/t-rc1/lez/target/bridge-claim-dry-run-tx.borsh (33117 bytes)
+private claim: of its 33117 transaction bytes, none holds the destination, s, C, the leaf, the depositor, the witness or any of 32 path siblings; N, configId and the root read are present
+private claim: settled: execution gas 553,641 (PRIVATE_VERIFY_GAS 409,764 + public part 143,877 cycles), storage gas 224,063, base fee 6,221,632; receipt at bytes 16,502..33,117 of 33,117
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+private burn: DRY RUN, NOT A PROOF (RISC0_DEV_MODE=1): execute_and_prove 0.6 s (prove + settle 1.0 s); receipt (fake receipt) 16033 bytes; transaction 31953 bytes
+private burn: wrote the proven transaction to <scratch>/t-rc1/lez/target/bridge-burn-dry-run-tx.borsh (31953 bytes)
+private burn: one private-to-public delivery of the 185-byte Burn to the token's account, from an alias
+private burn: settled: execution gas 519,678 (PRIVATE_VERIFY_GAS 409,764 + public part 109,914 cycles), storage gas 224,063, base fee 5,949,928; receipt at bytes 15,920..31,953 of 31,953
