@@ -1,0 +1,3 @@
+a6385ff0a8d3d90d1b446553d7f4cf836291881e0922c768db72182df379af3c  lgx-ferrata_bridge_module/logos-ferrata_bridge_module-module-lib.lgx
+56a4ec0b0424378ce63125b96e94faa0f956dea05a43a9d5b71c825a7d1f11f4  lgx-lez_core-upstream/logos-lez_core-module-lib.lgx
+df272fd35cd662fb6a0f77cec26a93198935305f38ac352c2ad99f029c66ce41  lgx-lez_core-patched/logos-lez_core-module-lib.lgx
