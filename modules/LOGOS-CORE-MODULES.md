@@ -16,7 +16,7 @@ commits are the repositories' `main` on that day, and the ones built and run in
 | `signer_manager_module` 0.2.x | `logos-signer-manager-module` @ `152c96d` (`main`), `bd5c84d` (pinned) | Rust cdylib | `keystore_module`; optional: keycard, keycard-shell, QR signers |
 | `fee_module` 0.2.0 | `logos-evm-fee-module` @ `f2065e7` | Rust cdylib | `eth_rpc_module` |
 | `tx_sender_module` 0.2.0 | `logos-evm-tx-sender-module` @ `f1754c3` | Rust cdylib | `eth_rpc_module`, `fee_module`, `signer_manager_module` |
-| `lez_core` 0.5.1 | `logos-blockchain/logos-execution-zone-module` @ `fdd6a75` | C++ universal + LEZ's wallet FFI | none |
+| `lez_core` 0.6.0 | `logos-blockchain/logos-execution-zone-module` @ `cc73ebf` (13 Nov, after #72 and #74; `fdd6a75` before) | C++ universal + LEZ's core FFI (wallet and sequencer) | none |
 
 Built into `logosctl` (logos-logoscore-cli `66d098d`) and listed by `module load` without being installed:
 `capability_module`, `modules_state`, `package_manager`, `package_downloader`, `storage_module`
