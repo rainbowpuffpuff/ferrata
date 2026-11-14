@@ -1,0 +1,45 @@
+==> <work>/core-probe/logs/daemon.log <==
+[2026-11-14 10:15:30.425] [info] Inter-module access enforcement is OFF (no access policy set): any loaded module may call any other
+[2026-11-14 10:15:30.428] [info] [logos] Granting host services to 'capability_module': token_registry,token_delivery
+[2026-11-14 10:15:30.455] [out] [capability_module] [2026-11-14 10:15:30.455] [info] Granting host services to capability_module: ["token_registry","token_delivery"]
+[2026-11-14 10:15:30.455] [info] [logos] Module loaded: capability_module
+[2026-11-14 10:15:30.488] [info] [logos] Module loaded: modules_state
+[2026-11-14 10:15:30.525] [info] [logos] Module loaded: package_manager
+[2026-11-14 10:15:30.530] [info] [logos] Pushed module snapshot to modules_state
+[2026-11-14 10:15:30.562] [info] [logos] [storage_module] StorageModuleImpl: Initializing...
+[2026-11-14 10:15:30.562] [info] [logos] Module loaded: storage_module
+[2026-11-14 10:15:30.592] [info] [logos] Module loaded: package_downloader
+[2026-11-14 10:15:30.601] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+Logosctl daemon started (pid 11248, instance 1e7ca58cd1f9)
+Daemon state: <work>/core-probe/daemon/state.json
+Local client config: <work>/core-probe/client/config.yaml
+[2026-11-14 10:15:30.604] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-14 10:15:31.312] [warning] [logos] [package_manager] Warning: Package is unsigned: <tmp>/logos/lgx-ferrata_bridge_module/logos-ferrata_bridge_module-module-lib.lgx
+[2026-11-14 10:15:36.161] [warning] [logos] [package_manager] Warning: Package is unsigned: <tmp>/logos/lgx-lez_core-upstream/logos-lez_core-module-lib.lgx
+[2026-11-14 10:15:38.068] [info] [logos] Module loaded: lez_core
+[2026-11-14 10:15:38.145] [info] [logos] Module loaded: ferrata_bridge_module
+[2026-11-14 10:15:38.380] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+Shutting down logosctl daemon...
+
+==> <work>/core-probe/logs/daemon_20261114_101530.log <==
+[2026-11-14 10:15:30.425] [info] Inter-module access enforcement is OFF (no access policy set): any loaded module may call any other
+[2026-11-14 10:15:30.428] [info] [logos] Granting host services to 'capability_module': token_registry,token_delivery
+[2026-11-14 10:15:30.455] [out] [capability_module] [2026-11-14 10:15:30.455] [info] Granting host services to capability_module: ["token_registry","token_delivery"]
+[2026-11-14 10:15:30.455] [info] [logos] Module loaded: capability_module
+[2026-11-14 10:15:30.488] [info] [logos] Module loaded: modules_state
+[2026-11-14 10:15:30.525] [info] [logos] Module loaded: package_manager
+[2026-11-14 10:15:30.530] [info] [logos] Pushed module snapshot to modules_state
+[2026-11-14 10:15:30.562] [info] [logos] [storage_module] StorageModuleImpl: Initializing...
+[2026-11-14 10:15:30.562] [info] [logos] Module loaded: storage_module
+[2026-11-14 10:15:30.592] [info] [logos] Module loaded: package_downloader
+[2026-11-14 10:15:30.601] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+Logosctl daemon started (pid 11248, instance 1e7ca58cd1f9)
+Daemon state: <work>/core-probe/daemon/state.json
+Local client config: <work>/core-probe/client/config.yaml
+[2026-11-14 10:15:30.604] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-14 10:15:31.312] [warning] [logos] [package_manager] Warning: Package is unsigned: <tmp>/logos/lgx-ferrata_bridge_module/logos-ferrata_bridge_module-module-lib.lgx
+[2026-11-14 10:15:36.161] [warning] [logos] [package_manager] Warning: Package is unsigned: <tmp>/logos/lgx-lez_core-upstream/logos-lez_core-module-lib.lgx
+[2026-11-14 10:15:38.068] [info] [logos] Module loaded: lez_core
+[2026-11-14 10:15:38.145] [info] [logos] Module loaded: ferrata_bridge_module
+[2026-11-14 10:15:38.380] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+Shutting down logosctl daemon...
