@@ -179,7 +179,7 @@ def check_token_program(online):
     if online:
         tags, err = ls_remote(TOKEN_REPO, r".*")
         rows.append(("lez-programs tags (online)", err or (", ".join(tags[-5:]) if tags else "no tags"), ""))
-    return dict(verdict="OPEN (not pinned upstream: the B2 port)", value=value,
+    return dict(verdict="OPEN (not pinned upstream; if still open at M0, Logos decides: proposal §B9)", value=value,
                 rows=rows + [("otherwise", "balances stay in the bridge's accounts, not transferable; Logos chooses", "")],
                 sources=[source])
 
@@ -224,7 +224,7 @@ def main():
         ("2", "The gas drop: a private claim that sweeps a sealed native credit and pays its fee from it", "passes",
          check_gas_drop()),
         ("3", "Token program on v0.4: immutable; the bridge's mint authority; burns only through synchronous messages; "
-              "ATA-compatible accounts", "pinned, or ported by me in B2", check_token_program(a.online)),
+              "ATA-compatible accounts", "pinned", check_token_program(a.online)),
         ("4", "Real proofs on the newest LEZ tag of the private update, attestation, claim and burn, settled by its "
               "sequencer", "pass", check_real_proofs(a.online)),
     ]
