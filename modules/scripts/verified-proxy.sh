@@ -94,14 +94,22 @@ build-ferrata)
       rm -rf "$repo/modules/$m/logos-rust-sdk-src"
     fi
   done
+  # The updater's own tests (its JSON-to-SSZ converter against recorded provider answers, its configuration) and the
+  # example the session's comparison runs.
+  step updater-tests bash -c "cd '$repo/lez' && cargo test --locked -p ferrata-updater --lib --test config \
+    && cargo build --locked -p ferrata-updater --example lc_json_compare" || true
   step check env MODULES="ferrata_attest_module ferrata_updater_module" PORTABLE=0 E2E=0 \
     LOGOS_TMPDIR="$LOGOS_TMPDIR" "$here/check.sh" "$out/check" || true
   cp "$out/check/report/summary.md" "$rep/check-summary.md" 2>/dev/null || true
   cp "$out/check/report/steps.md" "$rep/check-steps.md" 2>/dev/null || true
   ;;
 run)
-  LOGOSCTL="$out/check/logos/bin/logosctl" OUT="$out" LOGOS_TMPDIR="$LOGOS_TMPDIR" bash "$here/verified-proxy-session.sh"
-  failures=$?
+  step session env LOGOSCTL="$out/check/logos/bin/logosctl" OUT="$out" LOGOS_TMPDIR="$LOGOS_TMPDIR" \
+    bash "$here/verified-proxy-session.sh" || true
+  step lc-ssz-compare "$repo/lez/target/debug/examples/lc_json_compare" "$out/session" \
+    "$repo/crates/ferrata-spectests/fixtures/sepolia-2026-11-12" || true
+  step summary python3 -I "$here/verified_proxy.py" summary "$repo" "$out/session" || true
+  cat "$out/session/summary.md" 2>/dev/null
   ;;
 *) echo "verified-proxy.sh: $cmd: build-logos, build-ferrata or run" >&2; exit 2 ;;
 esac
