@@ -1,0 +1,30 @@
+eth_rpc_module>    = note: `#[warn(unused_imports)]` on by default
+eth_rpc_module> 
+eth_rpc_module> error[E0308]: mismatched types
+eth_rpc_module>    --> src/glue.rs:212:9
+eth_rpc_module>     |
+eth_rpc_module> 211 |       fn proxy_status(&self) -> std::result::Result<Value, String> {
+eth_rpc_module>     |                                 ---------------------------------- expected `std::result::Result<Value, std::string::String>` because of return type
+eth_rpc_module> 212 | /         verified_proxy_module::VerifiedProxyModuleClient::new()
+eth_rpc_module> 213 | |             .status_with_timeout(PROBE_BUDGET)
+eth_rpc_module> 214 | |             .map_err(|e| format!("{e:?}"))
+eth_rpc_module>     | |__________________________________________^ expected `Result<Value, String>`, found `Result<BTreeMap<String, Value>, String>`
+eth_rpc_module>     |
+eth_rpc_module>     = note: expected enum `std::result::Result<Value, _>`
+eth_rpc_module>                found enum `std::result::Result<BTreeMap<std::string::String, Value>, _>`
+eth_rpc_module> 
+eth_rpc_module> error[E0308]: mismatched types
+eth_rpc_module>     --> src/glue.rs:247:39
+eth_rpc_module>      |
+eth_rpc_module> 247  |             .rpc_with_timeout(method, params, left)
+eth_rpc_module>      |              ----------------         ^^^^^^ expected `&[Value]`, found `&Value`
+eth_rpc_module>      |              |
+eth_rpc_module>      |              arguments to this method are incorrect
+eth_rpc_module>      |
+eth_rpc_module>      = note: expected reference `&[Value]`
+eth_rpc_module>                 found reference `&Value`
+eth_rpc_module> note: method defined here
+eth_rpc_module>     --> spike/tmp/lez-core-v04/nix-build-eth_rpc_module-0.2.0.drv-0/logos-eth_rpc_module-rust-src/rust-lib/generated/provider_gen.rs:2359:16
+eth_rpc_module>      |
+eth_rpc_module> 2359 | ...   pub fn rpc_with_timeout(&self, method: &str, params: &[serde_json::Value], timeout: std::time::Duration) -> Result<serde_json::Valu...
+eth_rpc_module>      |              ^^^^^^^^^^^^^^^^                      ----------------------------

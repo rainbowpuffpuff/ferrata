@@ -1,0 +1,12 @@
+module	revision	result	seconds
+eth_rpc_module	6965f3252986	FAILED(1)	50
+fee_module	f2065e787eeb	FAILED(1)	8
+keystore_module	e83a899a1718	FAILED(1)	10
+signer_manager_module	bd5c84d21ced	FAILED(1)	9
+tx_sender_module	f1754c3b13c7	FAILED(1)	10
+fee_module	f2065e787eeb	FAILED(1)	27
+keystore_module	e83a899a1718	FAILED(1)	104
+signer_manager_module	bd5c84d21ced	FAILED(1)	78
+tx_sender_module	f1754c3b13c7	FAILED(1)	53
+keystore_module	e83a899a1718	ok (attempt 2)	129
+signer_manager_module	bd5c84d21ced	ok (attempt 2)	135

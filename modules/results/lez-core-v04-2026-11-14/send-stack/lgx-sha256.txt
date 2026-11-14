@@ -1,0 +1,2 @@
+1fe764ad3515ef47b19c4380e790343b5ea2ac843737c7c11e43983a9b9ffe02  lgx-keystore_module/logos-keystore_module-module-lib.lgx
+958db309def1fb757150efc41ad82e8ea6e0f55932b0a549a55d8ea3c491c0f2  lgx-signer_manager_module/logos-signer_manager_module-module-lib.lgx

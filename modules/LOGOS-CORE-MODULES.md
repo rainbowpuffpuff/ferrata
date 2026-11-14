@@ -146,7 +146,13 @@ path, kept as the fallback and for native runs). Every reply that read Ethereum 
   has no `--normalize-lidl` (`3bf5365`, builder 5f74cdb's own pin, has it: `cpp-generator/main.cpp` 462, 492); the
   three that installed already lock `3bf5365`. [`scripts/graft_builder_lock.py`](scripts/graft_builder_lock.py) gives a
   module the builder with the builder's own locks (every other input as the module locks it) and
-  [`scripts/send-stack.sh`](scripts/send-stack.sh) builds the five so; not run yet. Without it `signer_manager_module` (which requires it) and so
+  [`scripts/send-stack.sh`](scripts/send-stack.sh) builds the five so. Measured (14 November,
+  [`results/lez-core-v04-2026-11-14/send-stack/`](results/lez-core-v04-2026-11-14/send-stack/README.md)):
+  `keystore_module` and `signer_manager_module` then build, install and load together (the manager with the keystore
+  as its dependency, listing it as its signer); `eth_rpc_module` 6965f32 does not compile against the new generator's
+  client of `verified_proxy_module` (`src/glue.rs` 212, 247), so `fee_module` and `tx_sender_module` still do not load.
+  `import_private_key` from logosctl is refused (`not authorized`): the keystore's custodian and approver tiers are for
+  named modules, not the CLI. Without it `signer_manager_module` (which requires it) and so
   `tx_sender_module` do not load, and nothing was signed or sent ([`results/…/send-stack.log`](results/logos-core-io-2026-11-13/send-stack.log)).
   Its five calls to the `wallets` interface are bound clients with callbacks (`rust-lib/src/glue.rs` 320–476),
   not the four plain calls `eth_rpc_module` needed. The monitor's cancellations and the relayer's releases

@@ -1,0 +1,1 @@
+error: home directory '/homeless-shelter' exists; please remove it to assure purity of builds without sandboxing

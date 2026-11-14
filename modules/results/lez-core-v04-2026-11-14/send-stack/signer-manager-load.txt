@@ -1,0 +1,18 @@
++ HOME=spike/tmp/lez-core-v04/ss/sm-home
++ spike/tmp/lez-core-v04-seq/logos/logosctl --config-dir spike/tmp/lez-core-v04/ss/sm-session daemon start --detach
+Daemon started (pid 18021)
+Logs: spike/tmp/lez-core-v04/ss/sm-session/logs/daemon.log
++ spike/tmp/lez-core-v04-seq/logos/logosctl --config-dir spike/tmp/lez-core-v04/ss/sm-session install spike/tmp/lez-core-v04/ss/lgx-keystore_module/logos-keystore_module-module-lib.lgx -y
+{"affected_loaded":[],"changes":[{"action":"install","file":"spike/tmp/lez-core-v04/ss/lgx-keystore_module/logos-keystore_module-module-lib.lgx","fromVersion":"","name":"keystore_module","signature":"unsigned","toVersion":"0.2.0"}],"installed":["keystore_module"],"op":"install","reloaded":[],"status":"ok","stopped_dependents":[]}
++ spike/tmp/lez-core-v04-seq/logos/logosctl --config-dir spike/tmp/lez-core-v04/ss/sm-session install spike/tmp/lez-core-v04/ss/lgx-signer_manager_module/logos-signer_manager_module-module-lib.lgx -y
+{"affected_loaded":[],"changes":[{"action":"install","file":"spike/tmp/lez-core-v04/ss/lgx-signer_manager_module/logos-signer_manager_module-module-lib.lgx","fromVersion":"","name":"signer_manager_module","signature":"unsigned","toVersion":"0.2.0"}],"installed":["signer_manager_module"],"op":"install","reloaded":[],"status":"ok","stopped_dependents":[]}
++ spike/tmp/lez-core-v04-seq/logos/logosctl --config-dir spike/tmp/lez-core-v04/ss/sm-session module load signer_manager_module
+{"dependencies_loaded":["keystore_module"],"module":"signer_manager_module","optional_skipped":[{"module":"keycard_module","named_by":"signer_manager_module","reason":"not_installed"},{"module":"keycard_shell_module","named_by":"signer_manager_module","reason":"not_installed"},{"module":"qr_signer_module","named_by":"signer_manager_module","reason":"not_installed"}],"status":"ok","version":"0.2.0"}
++ spike/tmp/lez-core-v04-seq/logos/logosctl --config-dir spike/tmp/lez-core-v04/ss/sm-session module list --json
+[{"name":"signer_manager_module","status":"loaded","uptime_seconds":0,"version":"0.2.0"},{"name":"keystore_module","status":"loaded","uptime_seconds":0,"version":"0.2.0"},{"name":"package_manager","status":"loaded","uptime_seconds":2,"version":"1.0.0"},{"name":"storage_module","status":"loaded","uptime_seconds":2,"version":"3.0.2"},{"name":"package_downloader","status":"loaded","uptime_seconds":2,"version":"1.0.0"},{"name":"modules_state","status":"loaded","uptime_seconds":2,"version":"0.1.0"},{"name":"capability_module","status":"loaded","uptime_seconds":2,"version":"1.0.0"}]
++ spike/tmp/lez-core-v04-seq/logos/logosctl --config-dir spike/tmp/lez-core-v04/ss/sm-session call signer_manager_module signers --json
+{"method":"signers","module":"signer_manager_module","result":"{\"ok\":true,\"signers\":[{\"info\":{\"collects\":\"password\",\"families\":[\"evm\",\"bitcoin\",\"bitcoin_taproot\"],\"interface\":\"logos.signer/1\",\"kind\":\"keystore\",\"model\":\"scrypt key files\",\"requestKinds\":[\"hash\"],\"showsRequest\":false,\"unlockKey\":true},\"name\":\"keystore_module\"},{\"info\":null,\"name\":\"keycard_shell_module\"},{\"info\":null,\"name\":\"keycard_module\"},{\"info\":null,\"name\":\"qr_signer_module\"}]}","status":"ok"}
++ spike/tmp/lez-core-v04-seq/logos/logosctl --config-dir spike/tmp/lez-core-v04/ss/sm-session call signer_manager_module accounts --json
+{"method":"accounts","module":"signer_manager_module","result":"{\"accounts\":[],\"ok\":true}","status":"ok"}
++ spike/tmp/lez-core-v04-seq/logos/logosctl --config-dir spike/tmp/lez-core-v04/ss/sm-session daemon stop
+{"message":"Daemon shutting down.","status":"ok"}

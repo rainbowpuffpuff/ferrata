@@ -59,7 +59,12 @@ RISC Zero dev receipts, and LEZ's wallet inside `lez_core` made fake ones (`RISC
 
 ## 3. Logos Core's Ethereum send stack (`send-stack/`)
 
-<!-- SENDSTACK -->
+With logos-module-builder 5f74cdb's own locks (`modules/scripts/send-stack.sh`, `graft_builder_lock.py`):
+**`keystore_module` (e83a899) and `signer_manager_module` (bd5c84d) build, install and load together** in a headless
+Logos Core (the cause of their earlier failure was the builder override keeping their old code generator,
+`modules/LOGOS-CORE-MODULES.md`); **`eth_rpc_module` (6965f32) does not compile** against the new generator's client of
+its optional dependency, so `fee_module` and `tx_sender_module`, which require it, were not loaded, and no Ethereum
+transaction was signed or sent through the stack. Details: [`send-stack/README.md`](send-stack/README.md).
 
 ## Re-check
 
