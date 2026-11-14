@@ -25,6 +25,9 @@ rm -rf "$W"
 mkdir -p "$W/rep" "$W/plain" "$W/req"
 SESSION="$LOGOS_TMPDIR/vps"
 rm -rf "$SESSION"
+# Logos Core keeps each module's socket in TMPDIR: a Unix socket path holds at most 107 bytes, and with a longer one the
+# module's host process dies at load (check.sh). LOGOS_TMPDIR is short.
+export TMPDIR="$LOGOS_TMPDIR"
 CHAIN=11155111
 EL=https://rpc.sepolia.ethpandaops.io
 PN_EL=https://ethereum-sepolia-rpc.publicnode.com
