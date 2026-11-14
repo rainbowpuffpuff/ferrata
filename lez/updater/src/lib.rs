@@ -1,6 +1,7 @@
 //! `ferrata-updater`: keeps Ferrata light-client instances on LEZ following Ethereum.
 //!
-//! - [`source`]: beacon API endpoints and recorded data; faults for the tests.
+//! - [`source`]: beacon API endpoints, Logos Core's `beacon_api_module` and recorded data; faults for the tests.
+//! - [`lc_json`]: the beacon API's JSON form of light-client data turned into SSZ (what `beacon_api_module` serves).
 //! - [`chain`]: chain presets, decoding of what beacon nodes serve, the program's checks run natively.
 //! - [`updater`]: one instance's updater: candidates, cross-check, the job's next step, cooperation
 //!   with other updaters, retries, health and metrics.
@@ -13,6 +14,7 @@
 pub mod chain;
 pub mod config;
 pub mod daemon;
+pub mod lc_json;
 pub mod ledger;
 pub mod serve;
 pub mod source;

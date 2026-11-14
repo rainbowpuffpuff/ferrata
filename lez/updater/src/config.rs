@@ -159,6 +159,15 @@ pub struct SourceCfg {
     /// A recorded directory in the lab's layout (dev mode).
     #[serde(default)]
     pub dir: Option<String>,
+    /// `"beacon_api_module"`: Logos Core's module of that name, for `chain_id` (inside Logos Core only).
+    #[serde(default)]
+    pub via: Option<String>,
+    /// The chain id `beacon_api_module` is asked about (with `via`).
+    #[serde(default)]
+    pub chain_id: Option<i64>,
+    /// The provider id `beacon_api_module` tries first (with `via`; default: its own order).
+    #[serde(default)]
+    pub provider: Option<String>,
     #[serde(default = "default_timeout")]
     pub timeout_secs: u64,
     /// `light-client` (default): it serves bootstraps, updates and finality updates. `headers`: it only serves
@@ -236,8 +245,19 @@ impl File {
                 bail!("chain {}: no [[chain.source]]", c.name);
             }
             for s in &c.sources {
-                if s.url.is_some() == s.dir.is_some() {
-                    bail!("chain {} source {}: exactly one of url and dir", c.name, s.name);
+                if [s.url.is_some(), s.dir.is_some(), s.via.is_some()].iter().filter(|x| **x).count() != 1 {
+                    bail!("chain {} source {}: exactly one of url, dir and via", c.name, s.name);
+                }
+                if let Some(via) = &s.via {
+                    if via != "beacon_api_module" {
+                        bail!("chain {} source {}: via = {via:?}: \"beacon_api_module\"", c.name, s.name);
+                    }
+                    if !s.chain_id.is_some_and(|id| id > 0) {
+                        bail!("chain {} source {}: via needs chain_id (a positive integer)", c.name, s.name);
+                    }
+                    if s.kind == SourceKind::Headers {
+                        bail!("chain {} source {}: beacon_api_module is a light-client source", c.name, s.name);
+                    }
                 }
                 if s.kind == SourceKind::Headers && s.url.is_none() {
                     bail!("chain {} source {}: a headers source needs a url", c.name, s.name);

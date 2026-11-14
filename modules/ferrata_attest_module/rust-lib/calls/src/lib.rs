@@ -572,25 +572,36 @@ fn checkpoint(request: &str, http: Option<&mut dyn providers::Http>) -> Result<V
 
     // The checkpoint's execution block, as an execution endpoint holds it (`execution`: the design's
     // `verified_proxy_module`, whose answers its own light client checks, or any node): the bootstrap header's block.
+    // `{"via": "eth_rpc_module", "chain_id": N}` asks Logos Core's `eth_rpc_module` (rpc.rs): with chain N in its
+    // verified mode (`required`), `verified_proxy_module` answers every call; anything else is a URL read with curl.
     let execution = if req["execution"].is_null() {
         Value::Null
     } else {
-        let (name, url) = endpoint(&req["execution"], "execution")?;
-        let unavailable = |why: &str| json!({ "name": name, "url": url, "verdict": "unavailable", "unavailable": [why] });
-        let v = match accepted.as_ref().map(|b| &b.header.execution) {
-            Some(Execution::Payload { header, .. }) => providers::execution(
-                http,
-                &name,
-                &url,
-                &header.block_hash,
-                Some(header.block_number),
-                config.chain_id,
-            ),
-            Some(Execution::BlockHash { block_hash, .. }) => {
-                providers::execution(http, &name, &url, block_hash, None, config.chain_id)
+        let target = match accepted.as_ref().map(|b| &b.header.execution) {
+            Some(Execution::Payload { header, .. }) => Ok((header.block_hash, Some(header.block_number))),
+            Some(Execution::BlockHash { block_hash, .. }) => Ok((*block_hash, None)),
+            Some(Execution::None) => Err("the bootstrap's layout (Altair) carries no execution block"),
+            None => Err("needs an accepted bootstrap: the execution block is its header's"),
+        };
+        let unavailable =
+            |name: &str, url: &str, why: &str| json!({ "name": name, "url": url, "verdict": "unavailable", "unavailable": [why] });
+        let e = &req["execution"];
+        let v = if e["via"].as_str() == Some("eth_rpc_module") {
+            let mut module = EthRpcModuleHttp(rpc::Rpc::from_request(&json!({ "eth": e }), timeout.saturating_mul(1000))?);
+            let name = e["name"].as_str().unwrap_or("eth_rpc_module").to_owned();
+            let url = format!("eth_rpc_module:{}", e["chain_id"]);
+            let mut v = match target {
+                Ok((hash, number)) => providers::execution(&mut module, &name, &url, &hash, number, config.chain_id),
+                Err(why) => unavailable(&name, &url, why),
+            };
+            v["eth"] = module.0.report();
+            v
+        } else {
+            let (name, url) = endpoint(e, "execution")?;
+            match target {
+                Ok((hash, number)) => providers::execution(http, &name, &url, &hash, number, config.chain_id),
+                Err(why) => unavailable(&name, &url, why),
             }
-            Some(Execution::None) => unavailable("the bootstrap's layout (Altair) carries no execution block"),
-            None => unavailable("needs an accepted bootstrap: the execution block is its header's"),
         };
         if v["verdict"] != "agrees" {
             failed.push("execution");
@@ -628,6 +639,26 @@ fn committee_check(c: &SyncCommittee) -> Value {
             v["keys"] = json!(keys);
             v
         }
+    }
+}
+
+/// `verify_checkpoint`'s execution endpoint as Logos Core's `eth_rpc_module`: each JSON-RPC request the check makes
+/// goes to `raw_rpc(chain_id, method, params)` (rpc.rs) and comes back as a node's answer; a refusal (for instance
+/// `verified_proxy_module` unable to verify) as a JSON-RPC error, which the check counts as unavailable.
+struct EthRpcModuleHttp(rpc::Rpc);
+
+impl providers::Http for EthRpcModuleHttp {
+    fn get(&mut self, url: &str) -> providers::Reply {
+        Err(format!("{url}: eth_rpc_module takes JSON-RPC requests only"))
+    }
+    fn post(&mut self, _url: &str, body: &str) -> providers::Reply {
+        let req: Value = serde_json::from_str(body).map_err(|e| format!("the request is not JSON: {e}"))?;
+        let method = req["method"].as_str().ok_or("the request names no method")?;
+        let answer = match self.0.call(method, req["params"].clone()) {
+            Ok(result) => json!({ "jsonrpc": "2.0", "id": req["id"], "result": result }),
+            Err(e) => json!({ "jsonrpc": "2.0", "id": req["id"], "error": { "code": -32000, "message": e } }),
+        };
+        Ok((200, answer.to_string()))
     }
 }
 
@@ -1230,6 +1261,25 @@ mod tests {
         let v = check(&r, &mut replay());
         assert_eq!(v["providers_agreeing"], 2, "{v:#}");
         assert_eq!(v["verdict"], "failed");
+    }
+
+    #[test]
+    fn the_execution_check_goes_through_eth_rpc_module_when_asked() {
+        // Natively no eth_rpc_module is installed: the check is unavailable (and so failed), the beacon checks unchanged,
+        // and the reply says which path was asked. Through Logos Core the same request reads verified_proxy_module's
+        // answers when eth_rpc_module holds the chain in `required` mode (modules/scripts/verified-proxy.sh).
+        let mut req = sepolia_request();
+        req["execution"] = json!({ "via": "eth_rpc_module", "chain_id": 11_155_111 });
+        let v = check(&req, &mut replay());
+        assert_eq!(v["execution"]["verdict"], "unavailable", "{:#}", v["execution"]);
+        assert_eq!(v["execution"]["url"], "eth_rpc_module:11155111");
+        assert_eq!(v["execution"]["eth"]["via"], "eth_rpc_module");
+        assert_eq!(v["execution"]["eth"]["chain_id"], 11_155_111);
+        assert!(v["execution"]["unavailable"][0].as_str().unwrap().contains("only from inside Logos Core"), "{v:#}");
+        assert_eq!(v["failed"], json!(["execution"]));
+        assert_eq!(v["providers_agreeing"], 3);
+        req["execution"] = json!({ "via": "eth_rpc_module" });
+        assert_eq!(check(&req, &mut replay())["verdict"], "invalid_request");
     }
 
     #[test]

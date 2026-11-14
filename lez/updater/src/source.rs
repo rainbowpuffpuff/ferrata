@@ -1,6 +1,7 @@
-//! Where light-client data comes from: beacon API endpoints (`BeaconApi`, through `curl`), a
-//! recorded directory in the lab's layout (`Recorded`, with a clock the tests move), and the
-//! faults a source can have (`Faulty`: lies, lags, goes down), for the tests.
+//! Where light-client data comes from: beacon API endpoints (`BeaconApi`, through `curl`), Logos Core's
+//! `beacon_api_module` (`BeaconApiModule`, its `lc_request`, inside Logos Core only), a recorded directory in the
+//! lab's layout (`Recorded`, with a clock the tests move), and the faults a source can have (`Faulty`: lies, lags,
+//! goes down), for the tests.
 //!
 //! A source only serves bytes. Nothing it serves is trusted: the updater decodes every candidate
 //! and runs the program's own checks on it against the instance's on-chain store before it sends
@@ -12,7 +13,7 @@ use std::{
     process::Command,
     sync::{
         atomic::{AtomicUsize, Ordering},
-        Arc,
+        Arc, OnceLock,
     },
 };
 
@@ -79,6 +80,81 @@ impl Source for BeaconApi {
     }
     fn finality_update(&mut self) -> Result<Vec<u8>> {
         self.get("/eth/v1/beacon/light_client/finality_update")
+    }
+}
+
+/// How the module crate reaches `beacon_api_module.lc_request` inside Logos Core: (chain id, endpoint, the params as
+/// JSON text, the provider to try first (may be empty), a deadline in milliseconds) -> that module's reply text
+/// (`{ok: true, provider, body, attempts}`, `body` the provider's JSON verbatim, or `{ok: false, code, error}`), or
+/// why the call did not reach it.
+pub type BeaconApiModuleCall = fn(i64, &str, &str, &str, u64) -> std::result::Result<String, String>;
+
+static BEACON_API_MODULE: OnceLock<BeaconApiModuleCall> = OnceLock::new();
+
+/// Installed once by `ferrata_updater_module` (inside Logos Core); natively nothing is installed and a
+/// [`BeaconApiModule`] source answers with an error.
+pub fn set_beacon_api_module(f: BeaconApiModuleCall) {
+    let _ = BEACON_API_MODULE.set(f);
+}
+
+/// Logos Core's `beacon_api_module` (`[[chain.source]] via = "beacon_api_module"`): the consensus-layer providers that
+/// module holds for `chain_id` (its list, failover and proxy policy), asked through its `lc_request`. That module
+/// answers with the provider's JSON, which [`crate::lc_json`] turns into the SSZ the other sources serve. It checks
+/// nothing (as `beacon_api_module` itself does not): the updater runs the program's own checks on every candidate.
+pub struct BeaconApiModule {
+    pub name: String,
+    pub chain_id: i64,
+    /// The provider id `beacon_api_module` tries first (`""`: its own order).
+    pub provider: String,
+    pub timeout_secs: u64,
+    /// The provider that answered each request, in order (`beacon_api_module`'s ids).
+    pub answered: Vec<String>,
+}
+
+impl BeaconApiModule {
+    fn request(&mut self, endpoint: &str, params: serde_json::Value) -> Result<serde_json::Value> {
+        let f = BEACON_API_MODULE
+            .get()
+            .ok_or_else(|| anyhow!("{}: beacon_api_module is reachable only from inside Logos Core", self.name))?;
+        let text = f(self.chain_id, endpoint, &params.to_string(), &self.provider, self.timeout_secs * 1000)
+            .map_err(|e| anyhow!("{}: {endpoint}: {e}", self.name))?;
+        let v: serde_json::Value = serde_json::from_str(&text)
+            .with_context(|| format!("{}: {endpoint}: beacon_api_module's reply is not JSON", self.name))?;
+        if v["ok"].as_bool() != Some(true) {
+            bail!(
+                "{}: {endpoint}: beacon_api_module answered {} ({})",
+                self.name,
+                v["error"].as_str().unwrap_or("no detail"),
+                v["code"].as_str().unwrap_or("no code")
+            );
+        }
+        self.answered.push(v["provider"].as_str().unwrap_or("?").to_string());
+        let body = v["body"].as_str().ok_or_else(|| anyhow!("{}: {endpoint}: no body", self.name))?;
+        serde_json::from_str(body).with_context(|| format!("{}: {endpoint}: the provider's body is not JSON", self.name))
+    }
+}
+
+impl Source for BeaconApiModule {
+    fn name(&self) -> &str {
+        &self.name
+    }
+    fn bootstrap(&mut self, block_root: &Root) -> Result<Vec<u8>> {
+        let v = self.request(
+            "getLightClientBootstrap",
+            serde_json::json!({ "block_root": format!("0x{}", hex::encode(block_root)) }),
+        )?;
+        crate::lc_json::bootstrap(&v).with_context(|| format!("{}: bootstrap", self.name))
+    }
+    fn updates(&mut self, start_period: u64, count: u64) -> Result<Vec<Vec<u8>>> {
+        let v = self.request(
+            "getLightClientUpdatesByRange",
+            serde_json::json!({ "start_period": start_period, "count": count }),
+        )?;
+        crate::lc_json::updates(&v).with_context(|| format!("{}: updates", self.name))
+    }
+    fn finality_update(&mut self) -> Result<Vec<u8>> {
+        let v = self.request("getLightClientFinalityUpdate", serde_json::json!({}))?;
+        crate::lc_json::finality_update(&v).with_context(|| format!("{}: finality update", self.name))
     }
 }
 

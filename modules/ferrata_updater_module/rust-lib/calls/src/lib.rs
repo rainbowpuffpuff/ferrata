@@ -23,6 +23,8 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use anyhow::{bail, Context as _, Result};
 use ferrata_updater::config::{File, SourceKind};
+/// The module crate installs Logos Core's `beacon_api_module` here (a source with `via = "beacon_api_module"`).
+pub use ferrata_updater::source::set_beacon_api_module;
 use ferrata_updater::daemon::Daemon as Rounds;
 use ferrata_updater::ledger::Ledger;
 use ferrata_updater::serve::{serve, Snapshot};
@@ -116,6 +118,7 @@ pub fn check_config(request: &str) -> String {
             "chains": f.chains.iter().map(|c| json!({ "name": c.name, "preset": c.preset, "checkpoint": c.checkpoint,
                 "layout": c.layout,
                 "sources": c.sources.iter().map(|s| json!({ "name": s.name, "url": s.url, "dir": s.dir,
+                    "via": s.via, "chain_id": s.chain_id,
                     "kind": if s.kind == SourceKind::Headers { "headers" } else { "light-client" } })).collect::<Vec<_>>() }))
                 .collect::<Vec<_>>(),
         }))

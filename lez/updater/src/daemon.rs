@@ -22,7 +22,7 @@ use crate::{
     config::{File, SourceKind},
     ledger::Ledger,
     serve::{serve, Snapshot},
-    source::{BeaconApi, Clock, HeaderWitness, Recorded, Source},
+    source::{BeaconApi, BeaconApiModule, Clock, HeaderWitness, Recorded, Source},
     updater::{Instance, Plan, Updater},
     utc_now,
 };
@@ -101,6 +101,16 @@ impl Daemon {
             let config = instance_config(&c.preset, c.adoption_parts, c.layout.as_deref())?;
             let mut sources: Vec<Box<dyn Source>> = Vec::new();
             for s in &c.sources {
+                if s.via.is_some() {
+                    sources.push(Box::new(BeaconApiModule {
+                        name: s.name.clone(),
+                        chain_id: s.chain_id.expect("checked by config"),
+                        provider: s.provider.clone().unwrap_or_default(),
+                        timeout_secs: s.timeout_secs,
+                        answered: Vec::new(),
+                    }));
+                    continue;
+                }
                 match (&s.url, &s.dir, s.kind) {
                     (Some(url), _, SourceKind::Headers) => sources.push(Box::new(HeaderWitness {
                         name: s.name.clone(),

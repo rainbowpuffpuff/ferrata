@@ -41,6 +41,32 @@ pub trait FerrataUpdaterModule: Send + 'static {
 // The builder injects the generated scaffold here: `install`, `logos_install!`, `RustModuleContext`.
 include!(concat!(env!("CARGO_MANIFEST_DIR"), "/generated/provider_gen.rs"));
 
+/// Logos Core's `beacon_api_module.lc_request(chain_id, endpoint, params_json, provider, deadline_ms)`, called by name
+/// through the SDK (`PluginProxy::call_json_with_timeout`, what a generated client does inside), as
+/// `ferrata_attest_module` calls `eth_rpc_module`. Not a declared dependency: the module keeps loading without it. The
+/// updater uses it for a source that says `via = "beacon_api_module"` (lez/updater/src/source.rs, `BeaconApiModule`).
+fn beacon_api_module_lc_request(
+    chain_id: i64,
+    endpoint: &str,
+    params: &str,
+    provider: &str,
+    deadline_ms: u64,
+) -> Result<String, String> {
+    let v = logos_rust_sdk::LogosModuleSDK::new()
+        .plugin("beacon_api_module")
+        .call_json_with_timeout(
+            "lc_request",
+            &serde_json::json!([chain_id, endpoint, params, provider, deadline_ms as i64]),
+            // The module's deadline bounds its failover over providers; the call itself gets five seconds more.
+            std::time::Duration::from_millis(deadline_ms.max(1) + 5_000),
+        )
+        .map_err(|e| format!("beacon_api_module.lc_request did not answer: {e:?}"))?;
+    Ok(match v {
+        serde_json::Value::String(s) => s,
+        other => other.to_string(),
+    })
+}
+
 #[derive(Default)]
 struct FerrataUpdater {
     daemon: std::sync::Mutex<Option<Daemon>>,
@@ -123,5 +149,6 @@ impl logos_rust_sdk::AboutToUnload for FerrataUpdater {
 
 #[no_mangle]
 pub extern "Rust" fn logos_module_install() {
+    ferrata_updater_calls::set_beacon_api_module(beacon_api_module_lc_request);
     logos_install!(FerrataUpdater);
 }
