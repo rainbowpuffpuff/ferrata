@@ -5,13 +5,21 @@
 The user's private round trip of RFP-022 (a private deposit, a private claim, a private burn to a fresh
 address, the release by a relayer), on a running LEZ v0.4.0-rc1 sequencer and Logos Blockchain node with
 the final programs ([`docs/image-ids.md`](../../docs/image-ids.md)) and FerrataVault v5 in mode (B) on a
-local anvil, twice:
+local anvil, three ways:
 
 1. through the `ferrata` tool's sequencer path (`cli/`: LEZ's wallet library for the private sends and the
    wallet's sync, `lez::visible_calls` for a private burn's note): `run.sh cli NAME`;
 2. through the mini-app's view (`modules/ferrata_bridge_ui/qml/Main.qml`) driving `ferrata_bridge_module`
    inside a headless Logos Core, the view driven by Qt Quick Test as in EVIDENCE rows 86 and 87:
-   `run.sh miniapp NAME`.
+   `run.sh miniapp NAME`;
+3. through `ferrata_bridge_module` inside a headless Logos Core **beside Logos Core's own LEZ module, `lez_core`**
+   (logos-execution-zone-module at its merged v0.4 state, `cc73ebf`, built from its source, as merged and with
+   [`modules/patches/lez_core-cc73ebf-authorizes-public-pda.patch`](../../modules/patches/lez_core-cc73ebf-authorizes-public-pda.patch)):
+   the module's wallet session routed through `lez_core` (`wallet lez`): every bridge actor state it reads (the
+   configuration, the token, the imported root, the deposit's nullifier, the public holders), the wallet's private
+   holding, and the private claim and burn (executed and proven by LEZ's wallet inside Logos Core), each beside the
+   plain path's (`seqnet-chain`); the module's calls made with `logosctl` in the mini-app's order (no view):
+   `run.sh lezcore NAME` (`hook-lezcore.sh`, after `run.sh build-lezcore`).
 
 Results: [`RESULTS.md`](RESULTS.md); each run's records in `e2e/runs/seqnet-NAME/`.
 
@@ -61,6 +69,9 @@ cd spike/ferrata-wt-<name>                       # a worktree; the inputs beside
 ../modal-build/mrun --profile ws-5 --timeout 10800 -- 'bash e2e/seqnet/run.sh cli cli-N'
 ../modal-build/mrun --profile ws-5 --timeout 10800 -- 'SEQNET_PROOFS=real bash e2e/seqnet/run.sh cli cli-N'
 ../modal-build/mrun --profile ws-5 --timeout 10800 -- 'bash e2e/seqnet/run.sh miniapp miniapp-N'
+../modal-build/mrun --profile ws-5 --timeout 3600 -- 'bash e2e/seqnet/run.sh build-lezcore core'   # lez_core as merged (Nix)
+../modal-build/mrun --profile ws-5 --timeout 3600 -- 'bash e2e/seqnet/run.sh build-lezcore rest'   # patched; the module
+../modal-build/mrun --profile ws-5 --timeout 10800 -- 'bash e2e/seqnet/run.sh lezcore lezcore-N'
 ```
 
 The inputs: the crown-live-3 LEZ bundle (`bundle-crown-live-3.tar.zst`, sha256 `0013bab1…`: the sequencer, the
@@ -69,9 +80,9 @@ programs (`r0bf/checkpoint_b.bin`, `r0bf/release.bin`), which `scripts/reproduce
 
 | File | What |
 |---|---|
-| `run.sh` | `build`, `build-miniapp`, `cli NAME`, `miniapp NAME` |
+| `run.sh` | `build`, `build-miniapp`, `cli NAME`, `miniapp NAME`, `build-lezcore [core\|rest]`, `lezcore NAME` |
 | `drive.sh` | one run: session A, anvil and the vault, the user's keys, the deposit and capture (cli), the zone with the hook, Ethereum's transactions |
-| `hook-cli.sh`, `hook-miniapp.sh` | what runs while the zone runs (`lez/crown/session.sh x`) |
+| `hook-cli.sh`, `hook-miniapp.sh`, `hook-lezcore.sh` | what runs while the zone runs (`lez/crown/session.sh x`) |
 | `common.sh` | the steps the hooks share: the operator's import, the gas drop's stand-in, the checkpoint, the relayer, the records |
 | `ops.sh` | the same steps for the mini-app's test, run between the user's actions |
 | `ethtxs.py` | anvil's transactions, named |
