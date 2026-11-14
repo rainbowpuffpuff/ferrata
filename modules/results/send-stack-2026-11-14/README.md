@@ -1,6 +1,6 @@
 # Ferrata's Ethereum transactions through Logos Core's send stack (14 November 2026, Modal build box)
 
-Where it ran: the Modal build box of this worktree (profile ws-5; x86-64, gVisor, Nix 2.28.3, Foundry 1.3.6), a
+Where it ran: the Modal build box of this worktree (our Modal workspace; x86-64, gVisor, Nix 2.28.3, Foundry 1.3.6), a
 local anvil chain (id 31337, hardfork Prague). Nothing was sent to any public network. Dev builds (`.#lgx`) of every
 module; logosctl `66d098d` (Logos Core, headless). Script: [`modules/scripts/send-stack.sh`](../../scripts/send-stack.sh)
 (`build`, then `run`); comparison: [`modules/scripts/send_stack_compare.py`](../../scripts/send_stack_compare.py).
@@ -154,4 +154,4 @@ FERRATA_LGX=CHECK modules/scripts/send-stack.sh run OUT       # OUT/run/compare.
 ```
 
 `spike/modal-build/mrun` ran them as `B1` (build, 574 s), `B4` (check.sh, 317 s) and `B5` (run, 32 s; the comparison's
-exit 0). Spend for the whole item on ws-5: about 0.35 USD (mrun ledger).
+exit 0). Spend for the whole item on our Modal workspace: about 0.35 USD (mrun ledger).
