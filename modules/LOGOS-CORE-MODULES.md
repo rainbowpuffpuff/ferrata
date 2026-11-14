@@ -6,11 +6,13 @@ This note maps the modules Logos ships for that, how one module calls another, a
 use today. Read 13 November 2026 from the sources below (all `github.com/logos-co/` unless named); the
 commits are the repositories' `main` on that day, and the ones built and run in
 [`results/logos-core-io-2026-11-13/`](results/logos-core-io-2026-11-13/) and, for `verified_proxy_module` (unchanged on
-14 November), [`results/verified-proxy-2026-11-14/`](results/verified-proxy-2026-11-14/README.md).
+14 November), [`results/verified-proxy-2026-11-14/`](results/verified-proxy-2026-11-14/README.md); the send stack
+(`keystore_module`, `signer_manager_module`, `fee_module`, `tx_sender_module` with `eth_rpc_module` patched) in
+[`results/send-stack-2026-11-14/`](results/send-stack-2026-11-14/README.md).
 
 | Module (name in Logos Core) | Repository @ commit | Kind | Depends on |
 |---|---|---|---|
-| `eth_rpc_module` 0.2.0 | `logos-evm-eth-rpc-module` @ `6965f32` | Rust cdylib | optional: `modules_state`, `verified_proxy_module` |
+| `eth_rpc_module` 0.2.0 | `logos-evm-eth-rpc-module` @ `6965f32` (+ our glue patch for builder 5f74cdb) | Rust cdylib | optional: `modules_state`, `verified_proxy_module` |
 | `verified_proxy_module` 0.2.0 | `logos-verified-proxy-module` @ `fa98479` | C++ universal + `libverifproxy` (nimbus-eth1 v0.4.4, Nim) | `beacon_api_module` |
 | `beacon_api_module` 0.2.0 | `logos-evm-beacon-api-module` @ `aca138e` | Rust cdylib | none |
 | `keystore_module` 0.2.x | `logos-evm-keystore-module` @ `9d9a432` (`main`), `e83a899` (what the send stack pins) | Rust cdylib | none |
@@ -45,6 +47,15 @@ Built into `logosctl` (logos-logoscore-cli `66d098d`) and listed by `module load
   `--override-input logos-module-builder`), and the send stack at the revisions `tx_sender_module`'s lock
   pins. (A call by name skips the generated client and its contract check: the caller and the provider
   agree on the method's name and argument order only.)
+- **From which thread.** A call made from a module's worker thread blocks until the module's Qt main thread services
+  it: on the Qt-affine transport, the default inside a module process, `lp_client_create` ends in a
+  `Qt::BlockingQueuedConnection` (logos-rust-sdk `040e94e` `src/plugin.rs` 212–222). A module method that blocks while
+  its own worker calls another module therefore deadlocks, and the call's timeout does not bound it (measured: a
+  relayer round run by the module's blocking `run` method, its send to `tx_sender_module` from the daemon's thread,
+  timed out after logosctl's 900 s; [`results/send-stack-2026-11-14/`](results/send-stack-2026-11-14/README.md), F2).
+  A daemon that calls other modules runs with `start`, whose method returns; the async twins
+  (`call_json_async_with_timeout`, a callback on the Qt loop) are the other way, which `tx_sender_module`'s own
+  opener thread uses.
 
 **What Ferrata's modules do.** `ferrata_attest_module` and `ferrata_bridge_module` call `eth_rpc_module`
 **by name**, through the SDK (`LogosModuleSDK::new().plugin("eth_rpc_module").call_json_with_timeout("raw_rpc",
@@ -58,7 +69,11 @@ contracts ("Plugin file does not exist: --normalize-lidl", `lib/common.nix` 255�
 [`results/logos-core-io-2026-11-13/`](results/logos-core-io-2026-11-13/)); modules with required dependencies
 (`tx_sender_module`, `fee_module`) install. So `eth_rpc_module` is built here from its source with its two
 optional dependencies called by name in the same way (`scripts/eth_rpc_by_name.py`: four call sites, its
-verified-proxy gate and routing unchanged), and our modules keep loading without it. Each module crate
+verified-proxy gate and routing unchanged), and our modules keep loading without it (the read-path builds:
+`logos-io.sh`, `verified-proxy.sh`). The send stack builds it instead with builder 5f74cdb's own locks and keeps its
+generated clients, with a 6-line patch of its glue for the clients that builder generates
+([`patches/eth_rpc_module-6965f32-generated-clients.patch`](patches/eth_rpc_module-6965f32-generated-clients.patch),
+below). Each module crate
 installs that call into its calls crate (`rpc.rs`, the same file in both); a request then chooses the
 path: `"eth": {"via": "eth_rpc_module", "chain_id": N}` (Logos Core) or `"rpc_url": "http://…"` (the plain
 path, kept as the fallback and for native runs). Every reply that read Ethereum carries
@@ -161,8 +176,9 @@ path, kept as the fallback and for native runs). Every reply that read Ethereum 
 - **`keystore_module`** (README 1–150): scrypt vaults, BIP-39/32 accounts (`import_private_key`,
   `import_mnemonic`, …, custodian only), signing only through the approval tiers ("No method signs on
   demand", 146) or as `logos.signer/1` for the signer manager.
-- **Status here:** `fee_module`, `signer_manager_module` and `tx_sender_module` built from source with our
-  builder and installed beside our modules; **`keystore_module` (`e83a899`) did not build**: it compiles and
+- **Status here (14 November): all five build with one builder and run in one Logos Core, and Ferrata's monitor and
+  relayer send their Ethereum transactions through them** ([`results/send-stack-2026-11-14/`](results/send-stack-2026-11-14/README.md)).
+  How it got there, in order. On 13 November `keystore_module` (`e83a899`) did not build: it compiles and
   links, then its install stops at `logos-cpp-generator --normalize-lidl` on its interface contract
   (`interface_dependencies`: `wallets.lidl` of logos-signer-interface), the step that stops unchanged
   `eth_rpc_module` on its optional dependencies. **The cause is the override, not the builder** (found 13 November
@@ -175,19 +191,38 @@ path, kept as the fallback and for native runs). Every reply that read Ethereum 
   [`scripts/send-stack.sh`](scripts/send-stack.sh) builds the five so. Measured (14 November,
   [`results/lez-core-v04-2026-11-14/send-stack/`](results/lez-core-v04-2026-11-14/send-stack/README.md)):
   `keystore_module` and `signer_manager_module` then build, install and load together (the manager with the keystore
-  as its dependency, listing it as its signer); `eth_rpc_module` 6965f32 does not compile against the new generator's
-  client of `verified_proxy_module` (`src/glue.rs` 212, 247), so `fee_module` and `tx_sender_module` still do not load.
-  `import_private_key` from logosctl is refused (`not authorized`): the keystore's custodian and approver tiers are for
-  named modules, not the CLI. On 13 November, without `keystore_module`, `signer_manager_module` (which requires
-  it) and so `tx_sender_module` did not load ([`results/…/send-stack.log`](results/logos-core-io-2026-11-13/send-stack.log)); on 14
-  November `fee_module` and `tx_sender_module` wait for `eth_rpc_module`.
-  Its five calls to the `wallets` interface are bound clients with callbacks (`rust-lib/src/glue.rs` 320–476),
-  not the four plain calls `eth_rpc_module` needed. The monitor's cancellations and the relayer's releases
-  still sign with their own key file (alloy). Moving them means a key imported into `keystore_module`, the
-  signer manager's roles and an unattended `unlock` scoped to `tx_sender_module`, and the monitor's
-  `Chain::send` (one place, `monitor/src/chain.rs` 309–326) calling `send` and polling `send_status`; the
-  approval model is the open question for a watcher that must cancel within the challenge window without a
-  person present. `logos-io.sh` drives that sequence from the command line once the stack loads.
+  as its dependency, listing it as its signer); `eth_rpc_module` 6965f32 did not compile against the new generator's
+  client of `verified_proxy_module` (`src/glue.rs` 212, 247: `E0308`): logos-rust-sdk #64 (`569ecc5`, 22 September,
+  "Generate typed Rust collection APIs from LIDL"), in builder 5f74cdb's pin and not in the module's own lock, types
+  `status() -> {tstr: any}` as `BTreeMap<String, Value>` and `rpc`'s `params: [any]` as `&[Value]`.
+  [`patches/eth_rpc_module-6965f32-generated-clients.patch`](patches/eth_rpc_module-6965f32-generated-clients.patch)
+  turns the map back into the object the gate reads and passes the params array's elements, which the client sends as
+  the same JSON array (+6 lines; draft upstream PR in the send-stack report; no upstream branch or PR fixes it as of
+  14 November). With it, `send-stack.sh build` builds all five, and `send-stack.sh run` loads them in one Logos Core
+  with `verified_proxy_module` and `beacon_api_module` (their own lock) and Ferrata's monitor and relayer modules: 14
+  modules. At run time the patched `proxy_status` read the proxy's own status (`uninitialized`, so `unconfigured`, and
+  a call in `required` mode refused); `rpc` through the proxy was compiled, not run (a devnet has no beacon chain).
+- **The key and who holds it.** `import_private_key` from logosctl is refused (`not authorized`): the keystore's
+  custodian and approver tiers are for named modules, not the CLI. Both `keystore_module`'s and
+  `signer_manager_module`'s `configure` are ungated upstream ("UNGATED, deliberately and for now: any caller can name
+  itself custodian", keystore glue.rs 36–45; signer manager glue.rs 27–30) and total, so a deployment names its
+  custodians by configuration: the run keeps every default and adds `ferrata_monitor_module` and
+  `ferrata_relayer_module` to both. Each module's `custody` method then imports its daemon's key (from a file; tier D,
+  made by the module), waits until the signer manager lists it (the keystore enrols the wallet itself, glue.rs
+  466–479), unlocks it for `tx_sender_module` with `confirm: false` (the signer manager's tier D `unlock`; its
+  `request_approval` then signs a covered request as it arrives, glue.rs 646–670), and waits until
+  `tx_sender_module` has opened the account's history (it refuses a send with `unavailable` until then). Keystore PR
+  #25 (open: "Tier A and D grants come from the access policy; configure is removed") would move the grant to the
+  access policy; the custody method stays the same.
+- **Ferrata's sends through it.** `monitor run --send-via logos --from ADDRESS` (`monitor/src/logos_send.rs`, the
+  one `Chain::send`: `cancelCandidate`, `pauseCheckpoints`, `revokeFrom`) and `ferrata-relayer --send-via logos --from
+  ADDRESS` (`cli/src/logos_send.rs`, the same file; the daemon's `submitCandidate`, `finalizeAttested`, `release`,
+  `claimOwed`) keep their `eth_call` and their own receipt read, and hand the call to `tx_sender_module.send`, then poll
+  `send_status`, which broadcasts through `eth_rpc_module`; the module crate installs the call by name. The plain
+  path (alloy, a key file or keystore) stays the default, and the fallback when a key is held too and nothing was
+  broadcast. On anvil, from one snapshot per step, 7 of 7 transactions were equal on both paths (calldata, sender,
+  nonce, status, gas used, logs, block, the vault's state after), each reported with its path; 29–66 ms from `send` to
+  the broadcast. The relayer's root import is a LEZ transaction, not one of these.
 
 ### `lez_core`: LEZ's wallet (and sequencer) as a module
 

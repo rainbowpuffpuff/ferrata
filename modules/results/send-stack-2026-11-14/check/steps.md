@@ -1,0 +1,24 @@
+| step | result | seconds |
+|---|---|---:|
+| versions | ok | 0.1 |
+| stage | ok | 0.8 |
+| sdk-source | ok | 0.2 |
+| cargo-lockfiles | ok | 0.0 |
+| requests | ok | 0.1 |
+| bridge-requests | ok | 0.0 |
+| daemon-requests | ok | 0.1 |
+| native-test | ok | 22.6 |
+| native-calls | ok | 1.3 |
+| prepare-build | ok | 0.8 |
+| build-lgx | ok | 284.2 |
+| build-logosctl | ok | 0.6 |
+| dev-daemon-start | ok | 0.3 |
+| dev-install-ferrata_monitor_module | ok | 1.0 |
+| dev-load-ferrata_monitor_module | ok | 0.1 |
+| dev-show-ferrata_monitor_module | ok | 0.0 |
+| dev-install-ferrata_relayer_module | ok | 1.6 |
+| dev-load-ferrata_relayer_module | ok | 0.1 |
+| dev-show-ferrata_relayer_module | ok | 0.1 |
+| dev-module-ls | ok | 0.0 |
+| dev-daemon-stop | ok | 0.7 |
+| sizes | ok | 1.1 |

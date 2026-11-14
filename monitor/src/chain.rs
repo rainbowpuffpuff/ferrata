@@ -1,5 +1,7 @@
 //! The Ethereum side: the vault's events, the views the monitor reads, and its three transactions
-//! (`cancelCandidate`, `pauseCheckpoints`, and `revokeFrom` when its key is the freeze authority).
+//! (`cancelCandidate`, `pauseCheckpoints`, and `revokeFrom` when its key is the freeze authority), sent with the
+//! watcher key over `--rpc` (the plain path) or through Logos Core's `tx_sender_module` (`--send-via logos`,
+//! [`crate::logos_send`]).
 
 // The event constructors `sol!` generates take one argument per field.
 #![allow(clippy::too_many_arguments)]
@@ -17,6 +19,7 @@ use alloy::{
 use anyhow::{anyhow, bail, Context, Result};
 
 use crate::check::{Candidate, Rule};
+use crate::logos_send::{Outcome, Route, Via};
 use crate::node::H32;
 
 sol! {
@@ -125,8 +128,8 @@ pub struct OnChain {
 /// What a transaction attempt came to.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Sent {
-    /// Mined and succeeded: transaction hash, block number, block time.
-    Mined { tx: B256, block: u64, time: u64 },
+    /// Mined and succeeded: transaction hash, block number, block time, and the path it went by.
+    Mined { tx: B256, block: u64, time: u64, via: Via },
     /// Not needed any more (the candidate is gone, the checkpoint already revoked).
     Moot,
 }
@@ -139,6 +142,8 @@ pub struct Chain {
     /// How long a sent transaction may stay unmined before the monitor gives up on it for this poll
     /// (alerted; the next poll looks at the vault again), so a stuck transaction never stops the loop.
     pub tx_timeout: std::time::Duration,
+    /// `--send-via logos`: the transactions go through Logos Core's `tx_sender_module` from this account.
+    pub logos: Option<Route>,
 }
 
 fn h(b: B256) -> H32 {
@@ -152,7 +157,7 @@ impl Chain {
             Some(s) => ProviderBuilder::new().wallet(EthereumWallet::from(s)).connect_http(url.parse()?).erased(),
             None => ProviderBuilder::new().connect_http(url.parse()?).erased(),
         };
-        Ok(Self { p, vault, me, tx_timeout: std::time::Duration::from_secs(180) })
+        Ok(Self { p, vault, me, tx_timeout: std::time::Duration::from_secs(180), logos: None })
     }
 
     pub async fn view<C: SolCall>(&self, call: C) -> Result<C::Return> {
@@ -305,11 +310,31 @@ impl Chain {
         Ok(out)
     }
 
-    /// Simulates, then sends and waits for one confirmation. A revert in simulation is an error.
-    async fn send(&self, input: Bytes) -> Result<Sent> {
+    /// Simulates, then sends and waits for one confirmation. A revert in simulation is an error. With `--send-via
+    /// logos` the transaction goes through `tx_sender_module`; one it did not broadcast goes the plain way when the
+    /// monitor holds the watcher key too (the fallback), and is an error otherwise.
+    async fn send(&self, input: Bytes, label: &'static str) -> Result<Sent> {
         let from = self.me.context("the monitor holds no key")?;
-        let tx = TransactionRequest::default().with_from(from).with_to(self.vault).with_input(input);
+        let tx = TransactionRequest::default().with_from(from).with_to(self.vault).with_input(input.clone());
         self.p.call(tx.clone()).await.map_err(|e| anyhow!("the vault would revert: {e}"))?;
+        let mut via = Via::Plain;
+        if let Some(route) = self.logos.clone() {
+            let vault = self.vault;
+            let outcome = tokio::task::spawn_blocking(move || route.send(vault, &input, label))
+                .await
+                .map_err(|e| anyhow!("the send through Logos Core did not finish: {e}"))?;
+            match outcome {
+                Outcome::Broadcast { hash, request_id, polls, millis } => {
+                    let receipt = self.receipt(hash).await?;
+                    return self.mined(receipt, Via::Logos { request_id, polls, millis }).await;
+                }
+                Outcome::Unknown(why) => bail!("{why}"),
+                Outcome::NotSent(why) if self.logos.as_ref().is_some_and(|r| r.fallback) => {
+                    via = Via::Fallback { reason: why }
+                }
+                Outcome::NotSent(why) => bail!("not sent: {why}"),
+            }
+        }
         let pending = self.p.send_transaction(tx).await.map_err(|e| anyhow!("sending: {e}"))?;
         let hash = *pending.tx_hash();
         let receipt = pending
@@ -317,12 +342,30 @@ impl Chain {
             .get_receipt()
             .await
             .map_err(|e| anyhow!("{hash:#x} not mined within {:?}: {e}", self.tx_timeout))?;
+        self.mined(receipt, via).await
+    }
+
+    /// The receipt of a transaction another party broadcast, waited for on the monitor's own node.
+    async fn receipt(&self, hash: B256) -> Result<alloy::rpc::types::TransactionReceipt> {
+        let t0 = std::time::Instant::now();
+        loop {
+            if let Some(r) = self.p.get_transaction_receipt(hash).await? {
+                return Ok(r);
+            }
+            if t0.elapsed() > self.tx_timeout {
+                bail!("{hash:#x} not mined within {:?}", self.tx_timeout);
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+        }
+    }
+
+    async fn mined(&self, receipt: alloy::rpc::types::TransactionReceipt, via: Via) -> Result<Sent> {
         if !receipt.status() {
             bail!("the transaction {} reverted", receipt.transaction_hash);
         }
         let block = receipt.block_number.unwrap_or_default();
         let time = self.p.get_block(BlockId::number(block)).await?.map(|b| b.header.timestamp).unwrap_or_default();
-        Ok(Sent::Mined { tx: receipt.transaction_hash, block, time })
+        Ok(Sent::Mined { tx: receipt.transaction_hash, block, time, via })
     }
 
     /// `cancelCandidate(newState)`; `Moot` if nothing is pending there any more.
@@ -331,7 +374,7 @@ impl Chain {
             return Ok(Sent::Moot);
         }
         let input = IFerrataVault::cancelCandidateCall { newState: B256::from(new_state.0) }.abi_encode().into();
-        match self.send(input).await {
+        match self.send(input, "cancelCandidate").await {
             Ok(s) => Ok(s),
             // Finalised or cancelled by someone else between the check and the transaction.
             Err(_) if self.pending(new_state).await?.is_none() => Ok(Sent::Moot),
@@ -340,7 +383,7 @@ impl Chain {
     }
 
     pub async fn pause(&self) -> Result<Sent> {
-        self.send(IFerrataVault::pauseCheckpointsCall {}.abi_encode().into()).await
+        self.send(IFerrataVault::pauseCheckpointsCall {}.abi_encode().into(), "pauseCheckpoints").await
     }
 
     /// `revokeFrom(index)` (the freeze authority's power); `Moot` if already revoked.
@@ -348,6 +391,6 @@ impl Chain {
         if self.checkpoint(index).await?.0 {
             return Ok(Sent::Moot);
         }
-        self.send(IFerrataVault::revokeFromCall { index: U256::from(index) }.abi_encode().into()).await
+        self.send(IFerrataVault::revokeFromCall { index: U256::from(index) }.abi_encode().into(), "revokeFrom").await
     }
 }

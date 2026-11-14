@@ -26,7 +26,7 @@ use serde_json::{json, Value};
 /// What `scripts/stage-relayer.sh` recorded about the sources this crate was built against.
 const STAGED: &str = include_str!("../../vendor/STAGED.json");
 
-pub const METHODS: &[&str] = &["version", "run", "start", "status", "stop"];
+pub const METHODS: &[&str] = &["version", "run", "start", "status", "stop", "custody"];
 
 /// The most lines a daemon keeps (the oldest are dropped first; `events_from` says where the kept ones start).
 const KEEP: usize = 10_000;
@@ -58,6 +58,29 @@ fn parse(request: &str) -> Result<Value> {
         bail!("the request is not a JSON object");
     }
     Ok(v)
+}
+
+/// Logos Core's call of another module by name, set by the module crate when Logos Core installs it; natively
+/// none, and `--send-via logos` and `custody` are refused.
+pub fn set_module_call(call: ferrata_cli::logos_send::ModuleCall) {
+    ferrata_cli::logos_send::install(call);
+}
+
+/// `custody(request)`: `{key_file, password_file, ttl_ms?, count?, apps?}`: the relayer's Ethereum key into Logos
+/// Core's `keystore_module` (`import_private_key`) and, once `signer_manager_module` lists it, an unlock of it for
+/// `tx_sender_module` without confirmation. This module must be a custodian of both (their `configure`). Afterwards
+/// `run` and `start` with `--send-via logos --from ADDRESS` send the relayer's Ethereum transactions through
+/// `tx_sender_module`. `verdict` `ok` with the address and the unlock's terms, `refused` with the step and the reply.
+pub fn custody(request: &str) -> String {
+    reply((|| {
+        let r = parse(request)?;
+        let req: ferrata_cli::logos_send::CustodyRequest =
+            serde_json::from_value(r).context("custody takes {key_file, password_file, ttl_ms?, count?, apps?}")?;
+        let call = ferrata_cli::logos_send::installed().context(
+            "custody needs Logos Core (keystore_module, signer_manager_module): call it on ferrata_relayer_module",
+        )?;
+        Ok(ferrata_cli::logos_send::custody(call, &req))
+    })())
 }
 
 fn now_secs() -> u64 {
@@ -133,6 +156,9 @@ pub fn run(request: &str) -> String {
         if let Command::Run { rounds: 0, .. } = cli.command {
             bail!("run needs `run --rounds N` or `status` in args (it blocks until done); start runs until stop");
         }
+        if cli.send_via == "logos" {
+            bail!("`run` holds the module's Qt thread until the rounds are done, and a call to another module from the daemon's thread waits for that thread (logos-rust-sdk src/plugin.rs 212-222: a Qt::BlockingQueuedConnection): with --send-via logos use `start`, then `status`");
+        }
         let lines = Arc::new(Mutex::new(Lines::default()));
         // The sender lives until the run ends: the loop ends by its rounds, never by a stop.
         let (_tx, rx) = tokio::sync::watch::channel(None);
@@ -176,7 +202,8 @@ impl Daemon {
         if !matches!(cli.command, Command::Run { .. }) {
             return Err(reply(Err(anyhow!("start runs `ferrata-relayer ... run ...`; status is a run"))));
         }
-        let args: Vec<String> = r["args"].as_array().into_iter().flatten().filter_map(|v| v.as_str().map(str::to_owned)).collect();
+        let args: Vec<String> =
+            r["args"].as_array().into_iter().flatten().filter_map(|v| v.as_str().map(str::to_owned)).collect();
         let runtime = runtime().map_err(|e| json!({ "verdict": "error", "error": format!("{e:#}") }).to_string())?;
         let (tx, rx) = tokio::sync::watch::channel(None);
         let outcome = Arc::new(Mutex::new(Outcome { running: true, started_at: now_secs(), ..Default::default() }));
@@ -185,7 +212,9 @@ impl Daemon {
         let handle = std::thread::Builder::new()
             .name("ferrata-relayer-daemon".into())
             .spawn(move || {
-                let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| runtime.block_on(relayerd::run(cli, sink, rx))));
+                let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    runtime.block_on(relayerd::run(cli, sink, rx))
+                }));
                 let result = match r {
                     Ok(Ok(())) => Ok(()),
                     Ok(Err(e)) => Err(format!("{e:#}")),
@@ -196,7 +225,9 @@ impl Daemon {
                 g.stopped_at = Some(now_secs());
                 g.result = Some(result);
             })
-            .map_err(|e| json!({ "verdict": "error", "error": format!("starting the daemon's thread: {e}") }).to_string())?;
+            .map_err(|e| {
+                json!({ "verdict": "error", "error": format!("starting the daemon's thread: {e}") }).to_string()
+            })?;
         let d = Daemon { tx, handle: Some(handle), outcome, lines, args };
         // Set up, or ended: the `start` line, or the daemon's end (an unreachable endpoint, a missing argument).
         let t0 = Instant::now();

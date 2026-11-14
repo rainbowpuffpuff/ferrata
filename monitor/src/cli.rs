@@ -83,6 +83,19 @@ pub struct RunArgs {
     /// Decide and alert; send no transaction.
     #[arg(long)]
     pub dry_run: bool,
+    /// Where the monitor's transactions go: `plain` (signed here with the watcher key, sent over --rpc; the
+    /// default) or `logos` (Logos Core's `tx_sender_module`, signed by `keystore_module` through
+    /// `signer_manager_module`; only when the monitor runs as `ferrata_monitor_module`). With `logos` and a watcher
+    /// key too, a transaction `tx_sender_module` did not broadcast goes the plain way (the fallback).
+    #[arg(long, default_value = "plain", value_parser = ["plain", "logos"])]
+    pub send_via: String,
+    /// With --send-via logos: the keystore account that sends (the watcher's address; the watcher key's address
+    /// when one is given, which must then be the same).
+    #[arg(long)]
+    pub from: Option<Address>,
+    /// With --send-via logos: seconds a transaction may wait for its approval before it is withdrawn.
+    #[arg(long, default_value_t = 30)]
+    pub approval_timeout: u64,
 }
 
 pub fn parse_level(s: &str) -> Result<Level> {
@@ -124,6 +137,25 @@ pub async fn run(a: RunArgs, stop: Option<tokio::sync::watch::Receiver<bool>>) -
         use alloy::providers::Provider as _;
         chain.p.get_chain_id().await?
     };
+    if a.send_via == "logos" {
+        let call = crate::logos_send::installed()
+            .context("--send-via logos needs Logos Core: run the monitor as ferrata_monitor_module")?;
+        let from = match (a.from, chain.me) {
+            (Some(f), Some(me)) if f != me => bail!("--from {f} is not the watcher key's address {me}"),
+            (Some(f), _) => f,
+            (None, Some(me)) => me,
+            (None, None) => bail!("--send-via logos needs --from (the keystore account) or the watcher key"),
+        };
+        chain.logos = Some(crate::logos_send::Route {
+            call,
+            chain_id,
+            from,
+            purpose: "Ferrata monitor",
+            fallback: chain.me.is_some(),
+            approval_timeout: Duration::from_secs(a.approval_timeout),
+        });
+        chain.me = Some(from);
+    }
     let alerts = Alerts { log: a.alert_log.clone(), cmd: a.alert_cmd.clone(), cmd_level: Some(a.alert_level) };
     let cfg = Config {
         vault: a.vault,

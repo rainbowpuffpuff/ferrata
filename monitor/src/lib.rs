@@ -19,5 +19,6 @@ pub mod chain;
 pub mod check;
 pub mod cli;
 pub mod daemon;
+pub mod logos_send;
 pub mod node;
 pub mod store;

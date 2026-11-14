@@ -1,0 +1,27 @@
+diff --git a/rust-lib/src/glue.rs b/rust-lib/src/glue.rs
+index 6d22beb..29930b3 100644
+--- a/rust-lib/src/glue.rs
++++ b/rust-lib/src/glue.rs
+@@ -208,9 +208,12 @@ impl GateProbe for VerifiedProxyRouter {
+     /// `status` is declared `-> {tstr: any}`, NOT `-> result`, so it answers the object itself
+     /// rather than a {success,value,error} envelope. Reading `value.state` here would silently
+     /// see nothing and call every healthy proxy unusable.
++    ///
++    /// The generated client decodes `{tstr: any}` into a map; the gate reads it as the object.
+     fn proxy_status(&self) -> std::result::Result<Value, String> {
+         verified_proxy_module::VerifiedProxyModuleClient::new()
+             .status_with_timeout(PROBE_BUDGET)
++            .map(|status| Value::Object(status.into_iter().collect()))
+             .map_err(|e| format!("{e:?}"))
+     }
+ 
+@@ -243,6 +246,9 @@ impl VerifiedRouter for VerifiedProxyRouter {
+                 budget.as_millis()
+             )));
+         };
++        // `rpc`'s `params` is `[any]`: the generated client takes the elements and sends them as
++        // the same JSON array. `verified_params` always hands this router an array.
++        let params = params.as_array().map(Vec::as_slice).unwrap_or_default();
+         let raw = verified_proxy_module::VerifiedProxyModuleClient::new()
+             .rpc_with_timeout(method, params, left)
+             .map_err(|e| RouterError::Failed(format!("{method} failed ({e:?})")))?;

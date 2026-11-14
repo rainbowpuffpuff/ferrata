@@ -1,0 +1,60 @@
+16:15:35 dev-show-ferrata_monitor_module
+16:15:35 dev-install-ferrata_relayer_module
+16:15:37 dev-load-ferrata_relayer_module
+16:15:37 dev-show-ferrata_relayer_module
+16:15:38 dev-module-ls
+16:15:38 dev-daemon-stop
+16:15:38 sizes
+# check.sh summary
+
+## Steps
+
+| step | result | seconds |
+|---|---|---:|
+| versions | ok | 0.1 |
+| stage | ok | 0.8 |
+| sdk-source | ok | 0.2 |
+| cargo-lockfiles | ok | 0.0 |
+| requests | ok | 0.1 |
+| bridge-requests | ok | 0.0 |
+| daemon-requests | ok | 0.1 |
+| native-test | ok | 22.6 |
+| native-calls | ok | 1.3 |
+| prepare-build | ok | 0.8 |
+| build-lgx | ok | 284.2 |
+| build-logosctl | ok | 0.6 |
+| dev-daemon-start | ok | 0.3 |
+| dev-install-ferrata_monitor_module | ok | 1.0 |
+| dev-load-ferrata_monitor_module | ok | 0.1 |
+| dev-show-ferrata_monitor_module | ok | 0.0 |
+| dev-install-ferrata_relayer_module | ok | 1.6 |
+| dev-load-ferrata_relayer_module | ok | 0.1 |
+| dev-show-ferrata_relayer_module | ok | 0.1 |
+| dev-module-ls | ok | 0.0 |
+| dev-daemon-stop | ok | 0.7 |
+| sizes | ok | 1.1 |
+
+## Calls
+
+| call | module | method | native verdict | code | expectations | dev: equal to native | dev: seconds |
+|---|---|---|---|---:|---|---|---:|
+| monitor_version | ferrata_monitor_module | version | ferrata_monitor_module |  | met | yes | 0.0 |
+| monitor_check_pass | ferrata_monitor_module | check | pass |  | met | yes | 0.0 |
+| monitor_check_conflict | ferrata_monitor_module | check | cancel |  | met | yes | 0.0 |
+| monitor_check_stale_set | ferrata_monitor_module | check | cancel |  | met | yes | 0.0 |
+| monitor_check_wait | ferrata_monitor_module | check | wait |  | met | yes | 0.0 |
+| monitor_node_view_lab | ferrata_monitor_module | node_view | ok |  | met | yes | 0.0 |
+| monitor_run_unbounded | ferrata_monitor_module | run | invalid_request |  | met | yes | 0.0 |
+| monitor_invalid | ferrata_monitor_module | check | invalid_request |  | met | yes | 0.0 |
+| relayer_version | ferrata_relayer_module | version | ferrata_relayer_module |  | met | yes | 0.0 |
+| relayer_run_unknown_option | ferrata_relayer_module | run | invalid_request |  | met | yes | 0.0 |
+| relayer_run_unbounded | ferrata_relayer_module | run | invalid_request |  | met | yes | 0.0 |
+| relayer_run_no_endpoint | ferrata_relayer_module | run | error |  | met | yes | 0.0 |
+| relayer_run_no_vault | ferrata_relayer_module | run | error |  | met | yes | 0.0 |
+
+## Replies (native)
+
+- `monitor_version`: `{"methods": ["version", "check", "node_view", "run", "start", "status", "stop", "custody"], "module": "ferrata_monitor_module", "monitor": {"commit": "unknown", "source_sha256": "6c59a99e337a6c562dbae06a699efba2f7c6b520ed1c090045f2d393975c8cd1", "version": "0.1.0"}, "version": "0.1.0"}`
+- `monitor_check_pass`: `{"verdict": "pass"}`
+- `monitor_check_conflict`: `{"reason": {"finalHash": "0x3333333333333333333333333333333333333333333333333333333333333333", "kind": "tipConflict", "node": "synthetic", "tipId": 3}, "verdict": "cancel"}`
+- `monitor_check_stale_set`: `{"reason": {"candidateN": 3, "candidateT": 2, "kind": "keySetNotLive", "liveN": 4, "liveT": 3, "node": "synthetic"}, "verdict": "cancel"}`

@@ -1,0 +1,9 @@
+module	revision	result	seconds
+eth_rpc_module	6965f3252986	ok (attempt 2)	94
+fee_module	f2065e787eeb	ok (attempt 2)	49
+keystore_module	e83a899a1718	ok (attempt 2)	115
+signer_manager_module	bd5c84d21ced	ok (attempt 2)	108
+tx_sender_module	f1754c3b13c7	ok (attempt 2)	82
+beacon_api_module	aca138e5c211	ok (attempt 1, own lock)	7
+verified_proxy_module	fa984790c5c5	ok (attempt 1, own lock)	60
+logosctl	66d098d3af13	ok (attempt 1)	58

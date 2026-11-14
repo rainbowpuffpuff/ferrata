@@ -1,12 +1,30 @@
 # Logos modules: results
 
-Runs, newest first: the six modules on the final tree (13 November, after the last merge), Ethereum reads through Logos Core's own `eth_rpc_module` (13 November), the updater module with its sequencer backend, on a running LEZ sequencer inside a headless
+Runs, newest first: Ferrata's Ethereum transactions through Logos Core's send stack (14 November), the six modules on the final tree (13 November, after the last merge), Ethereum reads through Logos Core's own `eth_rpc_module` (13 November), the updater module with its sequencer backend, on a running LEZ sequencer inside a headless
 Logos Core (13 November), the relayer as the sixth module (13 November: root imports in `ferrata-relayer` and
 `ferrata_relayer_module`), the five modules after the merge of `updater-live` (13 November: the updater's
 sequencer backend, `headers` sources and `finish_own_jobs` on the daemon the updater module drives), the
 five modules after the merge of the two branches of 12 November (12–13 November, at the merged commit), the three daemons as modules and completing the attestation and bridge
 modules (those two branches, each run on its own), the attestation and bridge modules (11 November), the
 attestation module's prototype (10 November).
+
+## Ferrata's Ethereum transactions through Logos Core's send stack, 14 November 2026
+
+[`results/send-stack-2026-11-14/`](results/send-stack-2026-11-14/README.md) (Modal build box, `scripts/send-stack.sh`;
+a local anvil chain only). `eth_rpc_module` 6965f32 with our 6-line glue patch for the clients builder 5f74cdb
+generates (`patches/eth_rpc_module-6965f32-generated-clients.patch`), `fee_module`, `keystore_module`,
+`signer_manager_module`, `tx_sender_module` (each with the builder's own locks), `verified_proxy_module` and
+`beacon_api_module` (their own lock) and `ferrata_monitor_module` and `ferrata_relayer_module` (`check.sh`: step and
+check failures 0) loaded in one headless Logos Core (logosctl `66d098d`, 14 modules). The two Ferrata modules named
+custodians by the keystore's and signer manager's `configure` (ungated upstream); each module's `custody` imported its
+daemon's key and unlocked it for `tx_sender_module` without confirmation (74 ms, 68 ms). From one anvil snapshot per
+step, each daemon transaction sent the plain way (alloy) and with `--send-via logos` (`tx_sender_module`, signed by
+`keystore_module` through `signer_manager_module`, broadcast through `eth_rpc_module`, 29–66 ms after `send`): the
+relayer's `submitCandidate`, `finalizeAttested`, `release`, `claimOwed`, the monitor's `cancelCandidate` (twice) and
+`pauseCheckpoints`: **7 of 7 equal** (calldata, sender, nonce, status, gas used, gas limit, logs, block, the vault's
+state after). The fallback (tx_sender_module unloaded, the key held) sent the plain way and said so. Findings: the
+glue patch (draft upstream PR); a module method that blocks while its own thread calls another module deadlocks (the
+SDK's worker-thread calls wait for the Qt thread), so the daemons run with `start` and `run` refuses `--send-via logos`.
 
 ## The six modules on the final tree, 13 November 2026
 
