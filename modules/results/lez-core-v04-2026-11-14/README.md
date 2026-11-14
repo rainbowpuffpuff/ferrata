@@ -55,9 +55,22 @@ RISC Zero dev receipts, and LEZ's wallet inside `lez_core` made fake ones (`RISC
   ([`lez-report.json`](../../../e2e/runs/seqnet-lezcore-1/lezcore/lez-report.json), `core-logs-tail.txt`). The same claim,
   its accounts authorizing as LEZ's wallet API mentions them, is the one applied in block 30.
 
-<!-- LEZCORE2 -->
+## 3. The same with real proofs (`e2e/runs/seqnet-lezcore-2/`, the sequencer verifying every receipt)
 
-## 3. Logos Core's Ethereum send stack (`send-stack/`)
+`SEQNET_PROOFS=real run.sh lezcore lezcore-2` (14 Nov 10:11–10:29 UTC, [`SUMMARY.md`](../../../e2e/runs/seqnet-lezcore-2/SUMMARY.md)):
+the sequencer without dev mode, every private transaction proven for real on the box's CPU (r0vm 3.0.5 of the bundle).
+
+| What | Through `lez_core` | Beside the plain path |
+|---|---|---|
+| bridge states, private holding | 85 and 9 reads | **85 of 85**, **9 of 9** equal |
+| private claim | proven by LEZ's wallet inside Logos Core in **248.7 s**; receipt 239,532 B, transaction 256,068 B | verified and applied by the sequencer in **LEZ block 74**, not reverted; the same sizes as the plain path's claim in `seqnet-miniapp-3` (proven by `seqnet-chain` in 388.1 s) |
+| private burn | proven in **228.8 s**; receipt 239,046 B, transaction 255,031 B | applied in **LEZ block 98**; the same sizes as `seqnet-miniapp-3`'s burn (333.9 s there) |
+| the claim as `cc73ebf` sends it | refused before proving (`ProgramExitedWithCode { code: 252 }`) | nothing sent |
+| release | — | held by the vault's delay, then 0.000997 ETH paid |
+
+235 LEZ transactions in blocks 1..=102 and 15 on anvil, none reverted.
+
+## 4. Logos Core's Ethereum send stack (`send-stack/`)
 
 With logos-module-builder 5f74cdb's own locks (`modules/scripts/send-stack.sh`, `graft_builder_lock.py`):
 **`keystore_module` (e83a899) and `signer_manager_module` (bd5c84d) build, install and load together** in a headless

@@ -56,7 +56,9 @@ Everything runs in one command on the Modal build box (`spike/modal-build/mrun`)
   the view's own clock in the mini-app), never overridden.
 - **Logos Core's own modules** (miniapp): `ferrata_bridge_module` runs inside Logos Core and decides everything
   that is the bridge's; the chains' state and the signing and sending come from `seqnet-chain`, standing in for
-  `eth_rpc_module`, `keystore_module`/`tx_sender_module` and `lez_core`, which are not available here. The
+  `eth_rpc_module`, `keystore_module`/`tx_sender_module` and `lez_core`, which are not available here (in the
+  `lezcore` mode `lez_core` is there: the module's LEZ reads and its private claim and burn go through it, and
+  `seqnet-chain` is kept beside them, for the zone's history and for Ethereum). The
   view's `logos` object is the test runner's, whose `callModule` is `logosctl call` against the daemon.
 - **Bedrock**: the node's leader proofs are in dev mode (LEZ's local configuration, as every crown session).
 

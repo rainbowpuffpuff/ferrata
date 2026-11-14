@@ -126,3 +126,11 @@ the zone's history and Ethereum.
 (`accounts_json[0] unknown kind "public_pda"`); the claim with no account authorizing (as `cc73ebf` mentions them) is
 refused by the bridge program (`ProgramExitedWithCode { code: 252 }`, `WRONG_DESTINATION`). 101 LEZ transactions in
 blocks 1..=33 and 15 on anvil, none reverted.
+
+### `seqnet-lezcore-2` (14 Nov 10:11–10:29 UTC, `SEQNET_PROOFS=real`): proven inside Logos Core, verified by the sequencer
+
+[`e2e/runs/seqnet-lezcore-2/`](../runs/seqnet-lezcore-2/SUMMARY.md): the same path with the sequencer verifying every
+receipt. Through `lez_core`: 85 of 85 bridge-state reads and 9 of 9 private-holding reads equal to the plain path's; the
+private claim proven by LEZ's wallet inside Logos Core in 248.7 s (receipt 239,532 B, transaction 256,068 B: the sizes
+of `seqnet-miniapp-3`'s claim) and applied in LEZ block 74; the private burn proven in 228.8 s (239,046 B, 255,031 B)
+and applied in block 98; the release paid 0.000997 ETH. 235 LEZ and 15 Ethereum transactions, none reverted.

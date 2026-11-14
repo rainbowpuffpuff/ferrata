@@ -33,7 +33,8 @@ its unit tests 60/60 as merged, 64/64 patched; `check.sh` for `ferrata_bridge_mo
 LEZ v0.4.0-rc1 devnet with the final programs (`e2e/runs/seqnet-lezcore-1/`, dev mode), the module's wallet session
 through `lez_core`: 85 of 85 bridge-state reads (`get_account_public`) and 9 of 9 private-holding reads equal to the
 plain path's, the private claim and the private burn executed, proven and sent by LEZ's wallet inside Logos Core and
-applied (LEZ blocks 30, 31), the release paid. As merged, `lez_core` refuses the bridge's PDA accounts (no
+applied (LEZ blocks 30, 31), the release paid; with real proofs (`e2e/runs/seqnet-lezcore-2/`, the sequencer verifying)
+the claim and the burn proven inside Logos Core in 248.7 s and 228.8 s and applied (blocks 74, 98). As merged, `lez_core` refuses the bridge's PDA accounts (no
 `public_pda` kind) and, with no account authorizing, the bridge program refuses the claim (exit 252).
 
 ## Ethereum reads through Logos Core's `eth_rpc_module`, 13 November 2026
