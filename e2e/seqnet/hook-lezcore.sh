@@ -41,7 +41,9 @@ LT="$BESIDE_SHORT"; mkdir -p "$LT"
 dmode=(env RISC0_DEV_MODE=1); [ "$PROOFS" = real ] && dmode=(env -u RISC0_DEV_MODE)
 core_start() { # DIR: a daemon with its own config directory
   mkdir -p "$1.home"
-  "${dmode[@]}" RISC0_SERVER_PATH="${RISC0_SERVER_PATH:-}" TMPDIR="$LT" HOME="$1.home" "$LOGOSCTL" --config-dir "$1" daemon start --detach \
+  # lez_core proves private transactions inside its module process: the zone's r0vm on its PATH and as RISC0_SERVER_PATH.
+  "${dmode[@]}" RISC0_SERVER_PATH="${RISC0_SERVER_PATH:-}" PATH="${ZONE_BIN:-/nonexistent}:$PATH" TMPDIR="$LT" HOME="$1.home" \
+    "$LOGOSCTL" --config-dir "$1" daemon start --detach \
     >> "$M/logos-daemon.txt" 2>&1
 }
 S=""
