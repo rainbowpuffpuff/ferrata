@@ -1,0 +1,3 @@
+grafted 96 nodes under logos-module-builder (5f74cdb3ceca); dropped 747 unreachable nodes
+Checking patch rust-lib/src/glue.rs...
+Applied patch rust-lib/src/glue.rs cleanly.

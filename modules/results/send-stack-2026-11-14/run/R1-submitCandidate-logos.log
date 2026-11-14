@@ -1,0 +1,1 @@
+ferrata_relayer_module.start -> exit 0: {"args":["--eth-rpc","http://127.0.0.1:18545","--vault","0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0","--chain-id","31337","--from-block","3","--send-via","logos","--from","0xA25378e43d2282Fe4eEe0b44F30DbC336115d59E","--state","spike/tmp/send-stack/ss/run/relayer-logos-state","run","--inbox","spike/tmp/send-st

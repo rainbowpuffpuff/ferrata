@@ -1,0 +1,5 @@
+The box's eth_rpc_module source after send-stack.sh's graft and patch (git diff against 6965f32):
+- diff --git a/rust-lib/src/glue.rs b/rust-lib/src/glue.rs
+- diff --git a/flake.lock b/flake.lock
+Only rust-lib/src/glue.rs is kept here (eth_rpc_module-applied.diff, equal to modules/patches/eth_rpc_module-6965f32-generated-clients.patch);
+flake.lock is the graft (graft-eth_rpc_module.log: builder 5f74cdb's own subtree).

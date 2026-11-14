@@ -1,0 +1,726 @@
+{
+ "steps": [
+  {
+   "step": "M1-cancelCandidate",
+   "ok": true,
+   "transactions": {
+    "plain": 1,
+    "logos": 1
+   },
+   "stateEqual": true,
+   "viaReported": {
+    "plain": true,
+    "logos": true
+   },
+   "pairs": [
+    {
+     "call": "cancelCandidate",
+     "to": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+     "inputBytes": 36,
+     "equal": {
+      "to": true,
+      "input": true,
+      "value": true,
+      "from": true,
+      "nonce": true,
+      "chainId": true,
+      "status": true,
+      "gasUsed": true,
+      "logs": true,
+      "block": true
+     },
+     "plain": {
+      "hash": "0xcbdd6a8fe601a33fde87c9b7585f622daf5fd7fcf68333626f5c7f111e9003d0",
+      "nonce": 0,
+      "type": 2,
+      "gasLimit": 52163,
+      "gasUsed": 41477,
+      "maxFeePerGas": 339965119,
+      "maxPriorityFeePerGas": 1,
+      "effectiveGasPrice": 148934854,
+      "costWei": 6177370939358,
+      "block": 12,
+      "events": [
+       "CandidateCancelled"
+      ]
+     },
+     "logos": {
+      "hash": "0x20ddbce54e6f81c23248638f386643a001bfc96c58ea3e438457c56a37158cc7",
+      "nonce": 0,
+      "type": 2,
+      "gasLimit": 52163,
+      "gasUsed": 41477,
+      "maxFeePerGas": 260738951,
+      "maxPriorityFeePerGas": 1,
+      "effectiveGasPrice": 130369476,
+      "costWei": 5407334756052,
+      "block": 12,
+      "events": [
+       "CandidateCancelled"
+      ]
+     }
+    }
+   ],
+   "via": {
+    "plain": [
+     {
+      "tx": "0xcbdd6a8fe601a33fde87c9b7585f622daf5fd7fcf68333626f5c7f111e9003d0",
+      "kind": "cancelled",
+      "via": {
+       "path": "plain"
+      }
+     }
+    ],
+    "logos": [
+     {
+      "tx": "0x20ddbce54e6f81c23248638f386643a001bfc96c58ea3e438457c56a37158cc7",
+      "kind": "cancelled",
+      "via": {
+       "millisToBroadcast": 66,
+       "module": "tx_sender_module",
+       "path": "logos",
+       "requestId": "snd_smh_378bfffd57dffe9e8d4a5b98ee1aaaf35",
+       "statusPolls": 1
+      }
+     }
+    ]
+   },
+   "state": {
+    "plain": {
+     "finalState": "0x7c4841c75f70762f07d3a4cca626d28afd2bfb13a4df3fd4c1399f39cf90ea38",
+     "checkpointCount": "1",
+     "candidate_state1": "0x0000000000000000000000000000000000000000000000000000000000000000 0x0000000000000000000000000000000000000000000000000000000000000000 0 0 0 0 0 0x0000000000000000000000000000000000000000 ",
+     "candidate_state2": "0x0000000000000000000000000000000000000000000000000000000000000000 0x0000000000000000000000000000000000000000000000000000000000000000 0 0 0 0 0 0x0000000000000000000000000000000000000000 ",
+     "burnRootEntry_root1": "1",
+     "nullifierUsed_1": "true",
+     "escrowedETH": "1000000000000000 [1e15]",
+     "owedRelayerETH": "0",
+     "checkpointsFrozenUntil": "0",
+     "recipientBalance": "10000098900000000000000",
+     "vaultBalance": "1000000000000000"
+    },
+    "logos": {
+     "finalState": "0x7c4841c75f70762f07d3a4cca626d28afd2bfb13a4df3fd4c1399f39cf90ea38",
+     "checkpointCount": "1",
+     "candidate_state1": "0x0000000000000000000000000000000000000000000000000000000000000000 0x0000000000000000000000000000000000000000000000000000000000000000 0 0 0 0 0 0x0000000000000000000000000000000000000000 ",
+     "candidate_state2": "0x0000000000000000000000000000000000000000000000000000000000000000 0x0000000000000000000000000000000000000000000000000000000000000000 0 0 0 0 0 0x0000000000000000000000000000000000000000 ",
+     "burnRootEntry_root1": "1",
+     "nullifierUsed_1": "true",
+     "escrowedETH": "1000000000000000 [1e15]",
+     "owedRelayerETH": "0",
+     "checkpointsFrozenUntil": "0",
+     "recipientBalance": "10000098900000000000000",
+     "vaultBalance": "1000000000000000"
+    }
+   }
+  },
+  {
+   "step": "M2-cancel-and-pause",
+   "ok": true,
+   "transactions": {
+    "plain": 2,
+    "logos": 2
+   },
+   "stateEqual": true,
+   "viaReported": {
+    "plain": true,
+    "logos": true
+   },
+   "pairs": [
+    {
+     "call": "cancelCandidate",
+     "to": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+     "inputBytes": 36,
+     "equal": {
+      "to": true,
+      "input": true,
+      "value": true,
+      "from": true,
+      "nonce": true,
+      "chainId": true,
+      "status": true,
+      "gasUsed": true,
+      "logs": true,
+      "block": true
+     },
+     "plain": {
+      "hash": "0x23105a7894918a037b63da8bac689fb1cfe72e258cf978dbb9c76c7a6208b4ff",
+      "nonce": 1,
+      "type": 2,
+      "gasLimit": 52163,
+      "gasUsed": 41477,
+      "maxFeePerGas": 228236705,
+      "maxPriorityFeePerGas": 1,
+      "effectiveGasPrice": 99987906,
+      "costWei": 4147198377162,
+      "block": 14,
+      "events": [
+       "CandidateCancelled"
+      ]
+     },
+     "logos": {
+      "hash": "0xb06323fe788e9393ca71352546e67284e1c897c86e3eef3431727bc214b45e6e",
+      "nonce": 1,
+      "type": 2,
+      "gasLimit": 52163,
+      "gasUsed": 41477,
+      "maxFeePerGas": 153235901,
+      "maxPriorityFeePerGas": 1,
+      "effectiveGasPrice": 76617951,
+      "costWei": 3177882753627,
+      "block": 14,
+      "events": [
+       "CandidateCancelled"
+      ]
+     }
+    },
+    {
+     "call": "pauseCheckpoints",
+     "to": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+     "inputBytes": 4,
+     "equal": {
+      "to": true,
+      "input": true,
+      "value": true,
+      "from": true,
+      "nonce": true,
+      "chainId": true,
+      "status": true,
+      "gasUsed": true,
+      "logs": true,
+      "block": true
+     },
+     "plain": {
+      "hash": "0x79af4618ac4dc982c557426063be960a9fd64b23baca4e6397fbd531c0f87169",
+      "nonce": 2,
+      "type": 2,
+      "gasLimit": 47260,
+      "gasUsed": 47260,
+      "maxFeePerGas": 199975811,
+      "maxPriorityFeePerGas": 1,
+      "effectiveGasPrice": 87523978,
+      "costWei": 4136383200280,
+      "block": 15,
+      "events": [
+       "CheckpointsPaused"
+      ]
+     },
+     "logos": {
+      "hash": "0xc804ba09f4865873f453ca91d776cbd8ad11d08ceef0db815f6919d9694abdb5",
+      "nonce": 2,
+      "type": 2,
+      "gasLimit": 47260,
+      "gasUsed": 47260,
+      "maxFeePerGas": 134134379,
+      "maxPriorityFeePerGas": 1,
+      "effectiveGasPrice": 67067190,
+      "costWei": 3169595399400,
+      "block": 15,
+      "events": [
+       "CheckpointsPaused"
+      ]
+     }
+    }
+   ],
+   "via": {
+    "plain": [
+     {
+      "tx": "0x23105a7894918a037b63da8bac689fb1cfe72e258cf978dbb9c76c7a6208b4ff",
+      "kind": "cancelled",
+      "via": {
+       "path": "plain"
+      }
+     },
+     {
+      "tx": "0x79af4618ac4dc982c557426063be960a9fd64b23baca4e6397fbd531c0f87169",
+      "kind": "paused",
+      "via": {
+       "path": "plain"
+      }
+     }
+    ],
+    "logos": [
+     {
+      "tx": "0xb06323fe788e9393ca71352546e67284e1c897c86e3eef3431727bc214b45e6e",
+      "kind": "cancelled",
+      "via": {
+       "millisToBroadcast": 66,
+       "module": "tx_sender_module",
+       "path": "logos",
+       "requestId": "snd_smh_9e35270908e26324b39a6d652d7174376",
+       "statusPolls": 1
+      }
+     },
+     {
+      "tx": "0xc804ba09f4865873f453ca91d776cbd8ad11d08ceef0db815f6919d9694abdb5",
+      "kind": "paused",
+      "via": {
+       "millisToBroadcast": 29,
+       "module": "tx_sender_module",
+       "path": "logos",
+       "requestId": "snd_smh_4a85d71f5c873f31dea0e09964424a4b7",
+       "statusPolls": 1
+      }
+     }
+    ]
+   },
+   "state": {
+    "plain": {
+     "finalState": "0x7c4841c75f70762f07d3a4cca626d28afd2bfb13a4df3fd4c1399f39cf90ea38",
+     "checkpointCount": "1",
+     "candidate_state1": "0x0000000000000000000000000000000000000000000000000000000000000000 0x0000000000000000000000000000000000000000000000000000000000000000 0 0 0 0 0 0x0000000000000000000000000000000000000000 ",
+     "candidate_state2": "0x0000000000000000000000000000000000000000000000000000000000000000 0x0000000000000000000000000000000000000000000000000000000000000000 0 0 0 0 0 0x0000000000000000000000000000000000000000 ",
+     "burnRootEntry_root1": "1",
+     "nullifierUsed_1": "true",
+     "escrowedETH": "1000000000000000 [1e15]",
+     "owedRelayerETH": "0",
+     "checkpointsFrozenUntil": "1794720143 [1.794e9]",
+     "recipientBalance": "10000098900000000000000",
+     "vaultBalance": "1000000000000000"
+    },
+    "logos": {
+     "finalState": "0x7c4841c75f70762f07d3a4cca626d28afd2bfb13a4df3fd4c1399f39cf90ea38",
+     "checkpointCount": "1",
+     "candidate_state1": "0x0000000000000000000000000000000000000000000000000000000000000000 0x0000000000000000000000000000000000000000000000000000000000000000 0 0 0 0 0 0x0000000000000000000000000000000000000000 ",
+     "candidate_state2": "0x0000000000000000000000000000000000000000000000000000000000000000 0x0000000000000000000000000000000000000000000000000000000000000000 0 0 0 0 0 0x0000000000000000000000000000000000000000 ",
+     "burnRootEntry_root1": "1",
+     "nullifierUsed_1": "true",
+     "escrowedETH": "1000000000000000 [1e15]",
+     "owedRelayerETH": "0",
+     "checkpointsFrozenUntil": "1794720143 [1.794e9]",
+     "recipientBalance": "10000098900000000000000",
+     "vaultBalance": "1000000000000000"
+    }
+   }
+  },
+  {
+   "step": "R1-submitCandidate",
+   "ok": true,
+   "transactions": {
+    "plain": 1,
+    "logos": 1
+   },
+   "stateEqual": true,
+   "viaReported": {
+    "plain": true,
+    "logos": true
+   },
+   "pairs": [
+    {
+     "call": "submitCandidate",
+     "to": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+     "inputBytes": 484,
+     "equal": {
+      "to": true,
+      "input": true,
+      "value": true,
+      "from": true,
+      "nonce": true,
+      "chainId": true,
+      "status": true,
+      "gasUsed": true,
+      "logs": true,
+      "block": true
+     },
+     "plain": {
+      "hash": "0xee9caf30a8602c6efa5be5e1d44a7d70acfb95e7711ccd98631ceaae5875b149",
+      "nonce": 0,
+      "type": 2,
+      "gasLimit": 141271,
+      "gasUsed": 141271,
+      "maxFeePerGas": 1275976431,
+      "maxPriorityFeePerGas": 1,
+      "effectiveGasPrice": 559306044,
+      "costWei": 79013724141924,
+      "block": 6,
+      "events": [
+       "CandidateSubmitted"
+      ]
+     },
+     "logos": {
+      "hash": "0x4b60859b696b0265a335071cbaf0523f871160e466f8ad292fdc280157f37f85",
+      "nonce": 0,
+      "type": 2,
+      "gasLimit": 141271,
+      "gasUsed": 141271,
+      "maxFeePerGas": 980102473,
+      "maxPriorityFeePerGas": 1,
+      "effectiveGasPrice": 490051237,
+      "costWei": 69230028302227,
+      "block": 6,
+      "events": [
+       "CandidateSubmitted"
+      ]
+     }
+    }
+   ],
+   "via": {
+    "plain": [
+     {
+      "tx": "0xee9caf30a8602c6efa5be5e1d44a7d70acfb95e7711ccd98631ceaae5875b149",
+      "kind": "candidate",
+      "via": {
+       "path": "plain"
+      }
+     }
+    ],
+    "logos": [
+     {
+      "tx": "0x4b60859b696b0265a335071cbaf0523f871160e466f8ad292fdc280157f37f85",
+      "kind": "candidate",
+      "via": {
+       "millisToBroadcast": 33,
+       "module": "tx_sender_module",
+       "path": "logos",
+       "requestId": "snd_smh_73568b01f44e9903a1596f84601a7ef91",
+       "statusPolls": 1
+      }
+     }
+    ]
+   },
+   "state": {
+    "plain": {
+     "finalState": "0xeba60e6e7c3ceaafde935daefd65d9a00ca3f66d7d09fe8ddc56d7231590482f",
+     "checkpointCount": "0",
+     "candidate_state1": "0x8d8214469cf23a979fd46121423027d66bd60df54588da35b7601d8df15c1ffc 0x1b7ec371d4cc86ef2293bee240bf4a05cb3f8abe363bbda80b458df953ebc00b 10 3 1794673246 [1.794e9] 3600 0 0xA25378e43d2282Fe4eEe0b44F30DbC336115d59E ",
+     "candidate_state2": "0x0000000000000000000000000000000000000000000000000000000000000000 0x0000000000000000000000000000000000000000000000000000000000000000 0 0 0 0 0 0x0000000000000000000000000000000000000000 ",
+     "burnRootEntry_root1": "0",
+     "nullifierUsed_1": "false",
+     "escrowedETH": "101000000000000000 [1.01e17]",
+     "owedRelayerETH": "0",
+     "checkpointsFrozenUntil": "0",
+     "recipientBalance": "10000000000000000000000",
+     "vaultBalance": "101000000000000000"
+    },
+    "logos": {
+     "finalState": "0xeba60e6e7c3ceaafde935daefd65d9a00ca3f66d7d09fe8ddc56d7231590482f",
+     "checkpointCount": "0",
+     "candidate_state1": "0x8d8214469cf23a979fd46121423027d66bd60df54588da35b7601d8df15c1ffc 0x1b7ec371d4cc86ef2293bee240bf4a05cb3f8abe363bbda80b458df953ebc00b 10 3 1794673246 [1.794e9] 3600 0 0xA25378e43d2282Fe4eEe0b44F30DbC336115d59E ",
+     "candidate_state2": "0x0000000000000000000000000000000000000000000000000000000000000000 0x0000000000000000000000000000000000000000000000000000000000000000 0 0 0 0 0 0x0000000000000000000000000000000000000000 ",
+     "burnRootEntry_root1": "0",
+     "nullifierUsed_1": "false",
+     "escrowedETH": "101000000000000000 [1.01e17]",
+     "owedRelayerETH": "0",
+     "checkpointsFrozenUntil": "0",
+     "recipientBalance": "10000000000000000000000",
+     "vaultBalance": "101000000000000000"
+    }
+   }
+  },
+  {
+   "step": "R2-finalizeAttested",
+   "ok": true,
+   "transactions": {
+    "plain": 1,
+    "logos": 1
+   },
+   "stateEqual": true,
+   "viaReported": {
+    "plain": true,
+    "logos": true
+   },
+   "pairs": [
+    {
+     "call": "finalizeAttested",
+     "to": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+     "inputBytes": 420,
+     "equal": {
+      "to": true,
+      "input": true,
+      "value": true,
+      "from": true,
+      "nonce": true,
+      "chainId": true,
+      "status": true,
+      "gasUsed": true,
+      "logs": true,
+      "block": true
+     },
+     "plain": {
+      "hash": "0x126c8e2504bf62a462121d977f1e5af3c2a1cca0e2b31c2b546e2a32adbb1578",
+      "nonce": 1,
+      "type": 2,
+      "gasLimit": 235367,
+      "gasUsed": 216167,
+      "maxFeePerGas": 858743499,
+      "maxPriorityFeePerGas": 1,
+      "effectiveGasPrice": 375700282,
+      "costWei": 81214002859094,
+      "block": 8,
+      "events": [
+       "CheckpointFinalized"
+      ]
+     },
+     "logos": {
+      "hash": "0xc57bbd55463d8dd28ba0853abe0c2edee385130de5c034cac55deca57e18e967",
+      "nonce": 1,
+      "type": 2,
+      "gasLimit": 235367,
+      "gasUsed": 216167,
+      "maxFeePerGas": 658829061,
+      "maxPriorityFeePerGas": 1,
+      "effectiveGasPrice": 329414531,
+      "costWei": 71208550922677,
+      "block": 8,
+      "events": [
+       "CheckpointFinalized"
+      ]
+     }
+    }
+   ],
+   "via": {
+    "plain": [
+     {
+      "tx": "0x126c8e2504bf62a462121d977f1e5af3c2a1cca0e2b31c2b546e2a32adbb1578",
+      "kind": "finalized",
+      "via": {
+       "path": "plain"
+      }
+     }
+    ],
+    "logos": [
+     {
+      "tx": "0xc57bbd55463d8dd28ba0853abe0c2edee385130de5c034cac55deca57e18e967",
+      "kind": "finalized",
+      "via": {
+       "millisToBroadcast": 31,
+       "module": "tx_sender_module",
+       "path": "logos",
+       "requestId": "snd_smh_2f3ddb6f1dabc9f70c7219c43647b2572",
+       "statusPolls": 1
+      }
+     }
+    ]
+   },
+   "state": {
+    "plain": {
+     "finalState": "0x7c4841c75f70762f07d3a4cca626d28afd2bfb13a4df3fd4c1399f39cf90ea38",
+     "checkpointCount": "1",
+     "candidate_state1": "0x0000000000000000000000000000000000000000000000000000000000000000 0x0000000000000000000000000000000000000000000000000000000000000000 0 0 0 0 0 0x0000000000000000000000000000000000000000 ",
+     "candidate_state2": "0x0000000000000000000000000000000000000000000000000000000000000000 0x0000000000000000000000000000000000000000000000000000000000000000 0 0 0 0 0 0x0000000000000000000000000000000000000000 ",
+     "burnRootEntry_root1": "1",
+     "nullifierUsed_1": "false",
+     "escrowedETH": "101000000000000000 [1.01e17]",
+     "owedRelayerETH": "0",
+     "checkpointsFrozenUntil": "0",
+     "recipientBalance": "10000000000000000000000",
+     "vaultBalance": "101000000000000000"
+    },
+    "logos": {
+     "finalState": "0x7c4841c75f70762f07d3a4cca626d28afd2bfb13a4df3fd4c1399f39cf90ea38",
+     "checkpointCount": "1",
+     "candidate_state1": "0x0000000000000000000000000000000000000000000000000000000000000000 0x0000000000000000000000000000000000000000000000000000000000000000 0 0 0 0 0 0x0000000000000000000000000000000000000000 ",
+     "candidate_state2": "0x0000000000000000000000000000000000000000000000000000000000000000 0x0000000000000000000000000000000000000000000000000000000000000000 0 0 0 0 0 0x0000000000000000000000000000000000000000 ",
+     "burnRootEntry_root1": "1",
+     "nullifierUsed_1": "false",
+     "escrowedETH": "101000000000000000 [1.01e17]",
+     "owedRelayerETH": "0",
+     "checkpointsFrozenUntil": "0",
+     "recipientBalance": "10000000000000000000000",
+     "vaultBalance": "101000000000000000"
+    }
+   }
+  },
+  {
+   "step": "R3-release",
+   "ok": true,
+   "transactions": {
+    "plain": 2,
+    "logos": 2
+   },
+   "stateEqual": true,
+   "viaReported": {
+    "plain": true,
+    "logos": true
+   },
+   "pairs": [
+    {
+     "call": "release",
+     "to": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+     "inputBytes": 292,
+     "equal": {
+      "to": true,
+      "input": true,
+      "value": true,
+      "from": true,
+      "nonce": true,
+      "chainId": true,
+      "status": true,
+      "gasUsed": true,
+      "logs": true,
+      "block": true
+     },
+     "plain": {
+      "hash": "0xaca5ff19f6d2f9fd528ac10a985fefbdfb92c4a6afbba95a84e6b8c159931dcf",
+      "nonce": 2,
+      "type": 2,
+      "gasLimit": 175312,
+      "gasUsed": 173273,
+      "maxFeePerGas": 658829061,
+      "maxPriorityFeePerGas": 1,
+      "effectiveGasPrice": 288831120,
+      "costWei": 50046634655760,
+      "block": 9,
+      "events": [
+       "Release",
+       "OwedCredited"
+      ]
+     },
+     "logos": {
+      "hash": "0x5532b8d9c73b5f9d9ce5a831c256f522001821405c16d5b5db9d884c66d811f3",
+      "nonce": 2,
+      "type": 2,
+      "gasLimit": 175312,
+      "gasUsed": 173273,
+      "maxFeePerGas": 443153485,
+      "maxPriorityFeePerGas": 1,
+      "effectiveGasPrice": 221576743,
+      "costWei": 38393266989839,
+      "block": 9,
+      "events": [
+       "Release",
+       "OwedCredited"
+      ]
+     }
+    },
+    {
+     "call": "claimOwed",
+     "to": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+     "inputBytes": 36,
+     "equal": {
+      "to": true,
+      "input": true,
+      "value": true,
+      "from": true,
+      "nonce": true,
+      "chainId": true,
+      "status": true,
+      "gasUsed": true,
+      "logs": true,
+      "block": true
+     },
+     "plain": {
+      "hash": "0xe51411d5c09aca21ce9a95c84aac673cb76fb3b4b05d5e38a0b13a2c86473ff4",
+      "nonce": 3,
+      "type": 2,
+      "gasLimit": 47107,
+      "gasUsed": 35786,
+      "maxFeePerGas": 577662239,
+      "maxPriorityFeePerGas": 1,
+      "effectiveGasPrice": 253144286,
+      "costWei": 9059021418796,
+      "block": 10,
+      "events": [
+       "OwedClaimed"
+      ]
+     },
+     "logos": {
+      "hash": "0x6fd74817ad5c8747c735546e53bf159a6cf08931aa69da6c63b2fc14e366c5fa",
+      "nonce": 3,
+      "type": 2,
+      "gasLimit": 47107,
+      "gasUsed": 35786,
+      "maxFeePerGas": 388399189,
+      "maxPriorityFeePerGas": 1,
+      "effectiveGasPrice": 194199595,
+      "costWei": 6949626706670,
+      "block": 10,
+      "events": [
+       "OwedClaimed"
+      ]
+     }
+    }
+   ],
+   "via": {
+    "plain": [
+     {
+      "tx": "0xaca5ff19f6d2f9fd528ac10a985fefbdfb92c4a6afbba95a84e6b8c159931dcf",
+      "kind": "release",
+      "via": {
+       "path": "plain"
+      }
+     },
+     {
+      "tx": "0xe51411d5c09aca21ce9a95c84aac673cb76fb3b4b05d5e38a0b13a2c86473ff4",
+      "kind": "fees-collected",
+      "via": {
+       "path": "plain"
+      }
+     }
+    ],
+    "logos": [
+     {
+      "tx": "0x5532b8d9c73b5f9d9ce5a831c256f522001821405c16d5b5db9d884c66d811f3",
+      "kind": "release",
+      "via": {
+       "millisToBroadcast": 36,
+       "module": "tx_sender_module",
+       "path": "logos",
+       "requestId": "snd_smh_cd6bb2cdc63d2e5edb0590dbac32064b3",
+       "statusPolls": 1
+      }
+     },
+     {
+      "tx": "0x6fd74817ad5c8747c735546e53bf159a6cf08931aa69da6c63b2fc14e366c5fa",
+      "kind": "fees-collected",
+      "via": {
+       "millisToBroadcast": 29,
+       "module": "tx_sender_module",
+       "path": "logos",
+       "requestId": "snd_smh_308b15a59fd193df5b38757099d515d04",
+       "statusPolls": 1
+      }
+     }
+    ]
+   },
+   "state": {
+    "plain": {
+     "finalState": "0x7c4841c75f70762f07d3a4cca626d28afd2bfb13a4df3fd4c1399f39cf90ea38",
+     "checkpointCount": "1",
+     "candidate_state1": "0x0000000000000000000000000000000000000000000000000000000000000000 0x0000000000000000000000000000000000000000000000000000000000000000 0 0 0 0 0 0x0000000000000000000000000000000000000000 ",
+     "candidate_state2": "0x0000000000000000000000000000000000000000000000000000000000000000 0x0000000000000000000000000000000000000000000000000000000000000000 0 0 0 0 0 0x0000000000000000000000000000000000000000 ",
+     "burnRootEntry_root1": "1",
+     "nullifierUsed_1": "true",
+     "escrowedETH": "1000000000000000 [1e15]",
+     "owedRelayerETH": "0",
+     "checkpointsFrozenUntil": "0",
+     "recipientBalance": "10000098900000000000000",
+     "vaultBalance": "1000000000000000"
+    },
+    "logos": {
+     "finalState": "0x7c4841c75f70762f07d3a4cca626d28afd2bfb13a4df3fd4c1399f39cf90ea38",
+     "checkpointCount": "1",
+     "candidate_state1": "0x0000000000000000000000000000000000000000000000000000000000000000 0x0000000000000000000000000000000000000000000000000000000000000000 0 0 0 0 0 0x0000000000000000000000000000000000000000 ",
+     "candidate_state2": "0x0000000000000000000000000000000000000000000000000000000000000000 0x0000000000000000000000000000000000000000000000000000000000000000 0 0 0 0 0 0x0000000000000000000000000000000000000000 ",
+     "burnRootEntry_root1": "1",
+     "nullifierUsed_1": "true",
+     "escrowedETH": "1000000000000000 [1e15]",
+     "owedRelayerETH": "0",
+     "checkpointsFrozenUntil": "0",
+     "recipientBalance": "10000098900000000000000",
+     "vaultBalance": "1000000000000000"
+    }
+   }
+  }
+ ],
+ "fallback": {
+  "transactions": 1,
+  "calls": [
+   "cancelCandidate"
+  ],
+  "status": [
+   1
+  ],
+  "via": [
+   {
+    "tx": "0x2f91e1e999af80155df23af30a021c80b1e7f5654d196dc7c14b1aa62a9fde95",
+    "kind": "cancelled",
+    "via": {
+     "fallback": true,
+     "path": "plain",
+     "reason": "tx_sender_module.send did not answer: tx_sender_module.send did not answer: PluginCallFailed { plugin: \"tx_sender_module\", method: \"send\", message: \"{\\\"code\\\":\\\"object_unavailable\\\",\\\"message\\\":\\\"failed to acquire remote object 'tx_sender_module' (module not loaded, not published, or transport failure)\\\",\\\"origin\\\":\\\"tx_sender_module\\\"}\" }"
+    }
+   }
+  ]
+ }
+}

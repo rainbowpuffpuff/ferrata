@@ -1,0 +1,70 @@
+{
+  "vault": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+  "nextBlock": 13,
+  "candidates": {
+    "0x5ec50cea03723224274572702df3214ccaafc5e1632c644c91fe29dd748be320": {
+      "candidate": {
+        "newState": "0x5ec50cea03723224274572702df3214ccaafc5e1632c644c91fe29dd748be320",
+        "parentState": "0x7c4841c75f70762f07d3a4cca626d28afd2bfb13a4df3fd4c1399f39cf90ea38",
+        "burnRoot": "0x95db46112d31b93509e24c21200544a15eb5fd2de8681ed234a1f7fbd3a66f28",
+        "burnCount": 2,
+        "importedLeafCount": 0,
+        "sunset": false,
+        "deltaAtSubmit": 3600,
+        "tipId": 12,
+        "tipHash": "0x2746a76f9b4a8faba69698959e7c8c019e73acd3484d05384f7bea53b8dc71f2",
+        "n": 4,
+        "t": 3,
+        "submittedAt": 1794676895
+      },
+      "status": "cancelledByUs",
+      "verdict": {
+        "verdict": "cancel",
+        "reason": {
+          "kind": "tipConflict",
+          "node": "lez-honest",
+          "tipId": 12,
+          "finalHash": "0x89b457454900333cef210f735b857af0e8d5823249e356a45efa68279c1bd80a"
+        }
+      },
+      "firstSeenAt": 1794676895,
+      "cancelTx": "0xcbdd6a8fe601a33fde87c9b7585f622daf5fd7fcf68333626f5c7f111e9003d0",
+      "cancelledAt": 1794676907
+    },
+    "0x7c4841c75f70762f07d3a4cca626d28afd2bfb13a4df3fd4c1399f39cf90ea38": {
+      "candidate": {
+        "newState": "0x7c4841c75f70762f07d3a4cca626d28afd2bfb13a4df3fd4c1399f39cf90ea38",
+        "parentState": "0xeba60e6e7c3ceaafde935daefd65d9a00ca3f66d7d09fe8ddc56d7231590482f",
+        "burnRoot": "0x36d3f4a19c49c9ec51bd098faffc788be65631353b7f94557ad66efcee2c169c",
+        "burnCount": 1,
+        "importedLeafCount": 0,
+        "sunset": false,
+        "deltaAtSubmit": 3600,
+        "tipId": 10,
+        "tipHash": "0x1b7ec371d4cc86ef2293bee240bf4a05cb3f8abe363bbda80b458df953ebc00b",
+        "n": 4,
+        "t": 3,
+        "submittedAt": 0
+      },
+      "status": "gone",
+      "verdict": null,
+      "firstSeenAt": 1794676895,
+      "cancelTx": null,
+      "cancelledAt": null
+    }
+  },
+  "cancelEvents": {
+    "0x5ec50cea03723224274572702df3214ccaafc5e1632c644c91fe29dd748be320": {
+      "0xcbdd6a8fe601a33fde87c9b7585f622daf5fd7fcf68333626f5c7f111e9003d0": 12
+    }
+  },
+  "finalized": {
+    "0": "ok"
+  },
+  "toAudit": {},
+  "alerted": [],
+  "finalHeight": 20,
+  "finalHeightSince": 1794676895,
+  "pausedAt": null,
+  "polls": 2
+}

@@ -1,0 +1,1 @@
+ferrata_monitor_module.run -> exit 0: {"error":"`run` holds the module's Qt thread until the polls are done, and a call to another module from the daemon's thread waits for that thread (logos-rust-sdk src/plugin.rs 212-222: a Qt::BlockingQueuedConnection): with --send-via logos use `start`, then `status`","verdict":"invalid_request"}

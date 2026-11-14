@@ -1,0 +1,2 @@
+735730e28ca6a1753c24c3b9b0e7777e5c18b467f89bae07bc0aae7148af7ef1  lgx-ferrata_monitor_module/logos-ferrata_monitor_module-module-lib.lgx
+1f53786b77188af38f2d6257e8335bac39f3adc2268ed582f9fc7a06ddc33027  lgx-ferrata_relayer_module/logos-ferrata_relayer_module-module-lib.lgx

@@ -1,0 +1,15 @@
+logos-eth_rpc_module-module-lib> Running phase: postPatchMkspecs
+building '/nix/store/13x6hkpna8ql3ylvjb13kpr9iphf88y7-logos-eth_rpc_module-module-lib-lgx-0.2.0.drv'...
+logos-eth_rpc_module-module-lib-lgx> Running phase: patchPhase
+logos-eth_rpc_module-module-lib-lgx> Running phase: updateAutotoolsGnuConfigScriptsPhase
+logos-eth_rpc_module-module-lib-lgx> Running phase: configurePhase
+logos-eth_rpc_module-module-lib-lgx> no configure script, doing nothing
+logos-eth_rpc_module-module-lib-lgx> Running phase: buildPhase
+logos-eth_rpc_module-module-lib-lgx> Created package: logos-eth_rpc_module-module-lib.lgx
+logos-eth_rpc_module-module-lib-lgx> Patching manifest from metadata...
+logos-eth_rpc_module-module-lib-lgx> Staged 1 entries from /nix/store/cdc3gnm83g6kwmpbg66rrxl4z4kkjjvj-logos-eth_rpc_module-module-lib-0.2.0/lib
+logos-eth_rpc_module-module-lib-lgx> Bundled root asset directory: share/logos -> assets/lidl
+logos-eth_rpc_module-module-lib-lgx> Adding variant linux-amd64-dev to logos-eth_rpc_module-module-lib.lgx (main: eth_rpc_module_plugin.so)...
+logos-eth_rpc_module-module-lib-lgx> Added variant 'linux-amd64-dev' to logos-eth_rpc_module-module-lib.lgx
+logos-eth_rpc_module-module-lib-lgx> Done: logos-eth_rpc_module-module-lib.lgx
+logos-eth_rpc_module-module-lib-lgx> Running phase: installPhase

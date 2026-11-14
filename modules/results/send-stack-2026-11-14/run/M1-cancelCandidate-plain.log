@@ -1,0 +1,1 @@
+ferrata_monitor_module.start -> exit 0: {"args":["--rpc","http://127.0.0.1:18545","--vault","0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0","--node","file:spike/tmp/send-stack/ss/run/node-view.json","--start-block","3","--poll","1","--confirmations","0","--margin","120","--alert-level","critical","--max-polls","2","--key-file","spike/tmp/send-stack/ss

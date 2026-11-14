@@ -1,0 +1,15 @@
+logos-signer_manager_module-module-lib> Running phase: postPatchMkspecs
+building '/nix/store/n34bdjn2hvf62sfw19ssvb096p18c7ln-logos-signer_manager_module-module-lib-lgx-0.2.0.drv'...
+logos-signer_manager_module-module-lib-lgx> Running phase: patchPhase
+logos-signer_manager_module-module-lib-lgx> Running phase: updateAutotoolsGnuConfigScriptsPhase
+logos-signer_manager_module-module-lib-lgx> Running phase: configurePhase
+logos-signer_manager_module-module-lib-lgx> no configure script, doing nothing
+logos-signer_manager_module-module-lib-lgx> Running phase: buildPhase
+logos-signer_manager_module-module-lib-lgx> Created package: logos-signer_manager_module-module-lib.lgx
+logos-signer_manager_module-module-lib-lgx> Patching manifest from metadata...
+logos-signer_manager_module-module-lib-lgx> Staged 1 entries from /nix/store/pl0y94978gnv10laz9575kcidpqkmgpi-logos-signer_manager_module-module-lib-0.2.0/lib
+logos-signer_manager_module-module-lib-lgx> Bundled root asset directory: share/logos -> assets/lidl
+logos-signer_manager_module-module-lib-lgx> Adding variant linux-amd64-dev to logos-signer_manager_module-module-lib.lgx (main: signer_manager_module_plugin.so)...
+logos-signer_manager_module-module-lib-lgx> Added variant 'linux-amd64-dev' to logos-signer_manager_module-module-lib.lgx
+logos-signer_manager_module-module-lib-lgx> Done: logos-signer_manager_module-module-lib.lgx
+logos-signer_manager_module-module-lib-lgx> Running phase: installPhase
