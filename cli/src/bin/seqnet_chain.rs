@@ -437,7 +437,8 @@ impl Chain {
             LeeTransaction::PrivacyPreserving(t) => (
                 true,
                 borsh::to_vec(&t.witness_set).ok().and_then(|w| {
-                    (w.len() >= 8 && w[..4] == [0, 0, 0, 0]).then(|| u32::from_le_bytes([w[4], w[5], w[6], w[7]]) as usize)
+                    (w.len() >= 8 && w[..4] == [0, 0, 0, 0])
+                        .then(|| u32::from_le_bytes([w[4], w[5], w[6], w[7]]) as usize)
                 }),
                 lez::visible_calls(t, self.ctx.program)
                     .iter()
