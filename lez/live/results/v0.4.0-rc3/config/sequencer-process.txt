@@ -1,0 +1,3 @@
+command: ../ferrata-wt-lez-rc3/../tmp/lez-rc3/live/bin/sequencer_service start ../ferrata-wt-lez-rc3/../tmp/lez-rc3/live/run/sequencer_home --rpc-listen-address 127.0.0.1:3040 
+RISC0_* variables in the sequencer's environment: RISC0_HOME=../risc0-home-lez RISC0_BUILD_LOCKED=1 
+(RISC0_DEV_MODE absent: receipts of privacy-preserving transactions are verified)

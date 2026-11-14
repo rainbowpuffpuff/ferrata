@@ -1,0 +1,4 @@
+../tmp/lez-rc3/live/run/sequencer_home is set up
+  channel signing public key  2b6ed1ca04188349822331d8746e41d4ab6688739842e0d6d3fa134bdec9d64a
+`start` creates the channel if it does not exist yet.
+Creating the channel stakes that key at genesis.

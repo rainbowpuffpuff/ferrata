@@ -76,7 +76,7 @@ pays execution gas, and blocks were final on Bedrock after 14–25 s instead of 
 was made on rc2.
 
 **On LEZ v0.4.0-rc3 (§11).** The final programs (the rc1 builds of `docs/image-ids.md`) ran as they are on
-rc3's own sequencer and on its Logos Blockchain node 0.3.5-rc.1 ({{SESSION_SHORT}}). Rebuilt against rc3 their
+rc3's own sequencer and on its Logos Blockchain node 0.3.5-rc.1 (182 blocks; 99 transactions sent, 76 applied, 19 refused with their codes; 64 of the 65 with a harness row at the harness's execution gas, the other the validity-window case as before; `verify-run.sh` replays the chain). Rebuilt against rc3 their
 image ids change, by the name of the LEZ tree hashed into the guests and by one panic location's line number; their
 code does not. The harness on rc3 passes 56 of 56 tests, and 1,119 of 1,120 table rows equal the rc1 run of the same
 source on the same box (the other is an identifier derived from the image id). rc3 lets a program read the clock;
