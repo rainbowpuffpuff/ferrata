@@ -160,7 +160,7 @@ impl Ctx {
             return Ok(());
         }
         match self.chain.pause().await {
-            Ok(Sent::Mined { tx, block, time }) => {
+            Ok(Sent::Mined { tx, block, time, via }) => {
                 self.store.paused_at = Some(time);
                 self.save()?;
                 self.alerts.emit(
@@ -168,6 +168,7 @@ impl Ctx {
                     "paused",
                     now,
                     json!({ "why": why, "tx": format!("{tx:#x}"), "block": block, "until": time + WATCHER_PAUSE,
+                            "via": via.to_json(),
                             "next": "the freeze authority decides: setCheckpointsFrozen, or let the pause lapse" }),
                 );
             }
@@ -334,7 +335,7 @@ impl Ctx {
                     } else {
                         let earlier = self.store.cancels_before(&k, u64::MAX);
                         match self.chain.cancel(c.new_state).await {
-                            Ok(Sent::Mined { tx, block, time }) => {
+                            Ok(Sent::Mined { tx, block, time, via }) => {
                                 t.status = Status::CancelledByUs;
                                 t.cancel_tx = Some(format!("{tx:#x}"));
                                 t.cancelled_at = Some(time);
@@ -346,6 +347,7 @@ impl Ctx {
                                 f["cancelledAt"] = json!(time);
                                 f["secondsAfterSubmission"] = json!(time.saturating_sub(c.submitted_at));
                                 f["secondsBeforeDeadline"] = json!(i128::from(deadline) - i128::from(time));
+                                f["via"] = via.to_json();
                                 self.alerts.emit(Level::Critical, "cancelled", now, f);
                                 if u32::try_from(earlier + 1).unwrap_or(u32::MAX) >= self.cfg.pause_after_cancels {
                                     self.alerts.emit(
@@ -416,7 +418,7 @@ impl Ctx {
                 continue; // the multisig acts on the alert; audited again next poll until revoked
             }
             match self.chain.revoke_from(index).await {
-                Ok(Sent::Mined { tx, block, time }) => {
+                Ok(Sent::Mined { tx, block, time, via }) => {
                     self.store.to_audit.remove(&index);
                     self.store.finalized.insert(index, "revoked".into());
                     self.save()?;
@@ -424,6 +426,7 @@ impl Ctx {
                     g["tx"] = json!(format!("{tx:#x}"));
                     g["block"] = json!(block);
                     g["revokedAt"] = json!(time);
+                    g["via"] = via.to_json();
                     self.alerts.emit(Level::Critical, "revoked", now, g);
                 }
                 Ok(Sent::Moot) => {
@@ -499,7 +502,12 @@ pub async fn run_with(
         json!({ "vault": vault_label, "rule": rule, "me": me.map(|m| format!("{m:#x}")), "isWatcher": is_watcher,
                 "isFreezeAuthority": is_freeze, "dryRun": cfg.dry_run, "resumed": resumed, "nextBlock": store.next_block,
                 "pendingKnown": store.candidates.values().filter(|t| t.status == Status::Pending).count(),
-                "policy": policy, "nodes": cfg.nodes.iter().map(NodeSource::label).collect::<Vec<_>>() }),
+                "policy": policy, "nodes": cfg.nodes.iter().map(NodeSource::label).collect::<Vec<_>>(),
+                "sendVia": chain.logos.as_ref().map_or_else(
+                    || json!("plain"),
+                    |r| json!({ "path": "logos", "module": crate::logos_send::TX_SENDER, "from": format!("{:#x}", r.from),
+                                "fallback": r.fallback }),
+                ) }),
     );
     if !is_watcher && !is_freeze {
         alerts.emit(

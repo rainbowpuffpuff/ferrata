@@ -28,12 +28,36 @@ pub trait FerrataRelayerModule: Send + 'static {
     /// Stop the daemon after the round in progress (its `stop` line names `reason`); its final status. JSON in and out.
     fn stop(&mut self, request: String) -> String;
 
+    /// The relayer's Ethereum key into Logos Core's `keystore_module` and unlocked for `tx_sender_module` (this module
+    /// named a custodian of `keystore_module` and `signer_manager_module`), for `--send-via logos`. JSON in and out.
+    fn custody(&mut self, request: String) -> String;
+
     /// Called once the module is wired to the host.
     fn on_context_ready(&mut self, _ctx: &RustModuleContext) {}
 }
 
 // The builder injects the generated scaffold here: `install`, `logos_install!`, `RustModuleContext`.
 include!(concat!(env!("CARGO_MANIFEST_DIR"), "/generated/provider_gen.rs"));
+
+/// Another Logos Core module's method, called by name through the SDK (`PluginProxy::call_json_with_timeout`, what a
+/// generated client does inside), as `ferrata_bridge_module` calls `eth_rpc_module`: the relayer's Ethereum sends go
+/// to `tx_sender_module` and `custody` to `keystore_module` and `signer_manager_module`, none of them a declared
+/// dependency (the relayer runs without them on the plain path).
+fn module_call(
+    module: &str,
+    method: &str,
+    args: &serde_json::Value,
+    timeout: std::time::Duration,
+) -> Result<String, String> {
+    let v = logos_rust_sdk::LogosModuleSDK::new()
+        .plugin(module)
+        .call_json_with_timeout(method, args, timeout)
+        .map_err(|e| format!("{module}.{method} did not answer: {e:?}"))?;
+    Ok(match v {
+        serde_json::Value::String(s) => s,
+        other => other.to_string(),
+    })
+}
 
 #[derive(Default)]
 struct FerrataRelayer {
@@ -98,9 +122,11 @@ impl FerrataRelayerModule for FerrataRelayer {
     }
 
     fn stop(&mut self, request: String) -> String {
-        guarded("stop", || {
-            self.with_daemon(|slot| slot.as_mut().map(|d| d.stop(&request)).unwrap_or_else(not_started))
-        })
+        guarded("stop", || self.with_daemon(|slot| slot.as_mut().map(|d| d.stop(&request)).unwrap_or_else(not_started)))
+    }
+
+    fn custody(&mut self, request: String) -> String {
+        guarded("custody", || ferrata_relayer_calls::custody(&request))
     }
 }
 
@@ -116,5 +142,6 @@ impl logos_rust_sdk::AboutToUnload for FerrataRelayer {
 
 #[no_mangle]
 pub extern "Rust" fn logos_module_install() {
+    ferrata_relayer_calls::set_module_call(module_call);
     logos_install!(FerrataRelayer);
 }

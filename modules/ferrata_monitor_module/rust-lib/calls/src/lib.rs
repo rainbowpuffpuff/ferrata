@@ -24,7 +24,7 @@ use serde_json::{json, Value};
 /// What `scripts/stage.sh` recorded about the copy of `monitor/` this crate was built against.
 const STAGED: &str = include_str!("../../monitor/STAGED.json");
 
-pub const METHODS: &[&str] = &["version", "check", "node_view", "run", "start", "status", "stop"];
+pub const METHODS: &[&str] = &["version", "check", "node_view", "run", "start", "status", "stop", "custody"];
 
 /// `version()`: the module's version and the monitor it was built from.
 pub fn version() -> String {
@@ -105,8 +105,34 @@ pub fn run(request: &str) -> String {
         let seconds = t0.elapsed().as_secs_f64();
         Ok(match result {
             Ok(()) => json!({ "verdict": "ok", "seconds": seconds, "state": state_of(&a) }),
-            Err(e) => json!({ "verdict": "error", "error": format!("{e:#}"), "seconds": seconds, "state": state_of(&a) }),
+            Err(e) => {
+                json!({ "verdict": "error", "error": format!("{e:#}"), "seconds": seconds, "state": state_of(&a) })
+            }
         })
+    })())
+}
+
+/// Logos Core's call of another module by name, set by the module crate when Logos Core installs it; natively
+/// none, and `--send-via logos` and `custody` are refused.
+pub fn set_module_call(call: ferrata_monitor::logos_send::ModuleCall) {
+    ferrata_monitor::logos_send::install(call);
+}
+
+/// `custody(request)`: `{key_file, password_file, ttl_ms?, count?, apps?}`: the watcher key into Logos Core's
+/// `keystore_module` (`import_private_key`) and, once `signer_manager_module` lists it, an unlock of it for
+/// `tx_sender_module` without confirmation (`unlock`, `confirm: false`). This module must be a custodian of both
+/// (their `configure`, which names custodians). Afterwards `run` and `start` with `--send-via logos --from ADDRESS`
+/// send the monitor's transactions through `tx_sender_module`. `verdict` `ok` with the address and the unlock's
+/// terms, `refused` with the step and the module's reply.
+pub fn custody(request: &str) -> String {
+    reply((|| {
+        let r = parse(request)?;
+        let req: ferrata_monitor::logos_send::CustodyRequest =
+            serde_json::from_value(r).context("custody takes {key_file, password_file, ttl_ms?, count?, apps?}")?;
+        let call = ferrata_monitor::logos_send::installed().context(
+            "custody needs Logos Core (keystore_module, signer_manager_module): call it on ferrata_monitor_module",
+        )?;
+        Ok(ferrata_monitor::logos_send::custody(call, &req))
     })())
 }
 
@@ -305,12 +331,18 @@ mod tests {
             assert_eq!(serde_json::from_str::<Value>(&f("[1]")).unwrap()["verdict"], "invalid_request");
         }
         // The binary's own parser: a missing --state is its error.
-        let e = call(run, json!({"args": ["--rpc", "http://127.0.0.1:1", "--vault", "0x0000000000000000000000000000000000000001", "--node", "file:x"]}));
+        let e = call(
+            run,
+            json!({"args": ["--rpc", "http://127.0.0.1:1", "--vault", "0x0000000000000000000000000000000000000001", "--node", "file:x"]}),
+        );
         assert_eq!(e["verdict"], "invalid_request");
         assert!(e["error"].as_str().unwrap().contains("--state"), "{e}");
         // An open-ended run is refused (it would block the module).
-        let e = call(run, json!({"args": ["--rpc", "http://127.0.0.1:1", "--vault", "0x0000000000000000000000000000000000000001",
-            "--node", "file:x", "--state", "s.json"]}));
+        let e = call(
+            run,
+            json!({"args": ["--rpc", "http://127.0.0.1:1", "--vault", "0x0000000000000000000000000000000000000001",
+            "--node", "file:x", "--state", "s.json"]}),
+        );
         assert!(e["error"].as_str().unwrap().contains("--max-polls"), "{e}");
     }
 

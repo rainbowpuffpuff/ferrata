@@ -32,8 +32,10 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
+use alloy::network::TransactionBuilder as _;
 use alloy::primitives::{Address, Bytes};
 use alloy::providers::{DynProvider, Provider};
+use alloy::rpc::types::{TransactionReceipt, TransactionRequest};
 use alloy::sol_types::SolCall;
 use anyhow::{anyhow, bail, Context as _, Result};
 use clap::{Parser, Subcommand};
@@ -122,6 +124,19 @@ pub struct Cli {
     /// Seconds a job may wait in the inbox for a temporary condition (root not final, delay, freeze, cap).
     #[arg(long, default_value_t = 7 * 24 * 3600, global = true)]
     pub max_job_age: u64,
+    /// Where the relayer's Ethereum transactions go: `plain` (signed here, or by a local anvil with --unlocked, and
+    /// sent over --eth-rpc; the default) or `logos` (Logos Core's `tx_sender_module`, signed by `keystore_module`
+    /// through `signer_manager_module`; only when the relayer runs as `ferrata_relayer_module`). With `logos` and a
+    /// key of its own as well, a transaction `tx_sender_module` did not broadcast goes the plain way (the fallback).
+    #[arg(long, default_value = "plain", value_parser = ["plain", "logos"], global = true)]
+    pub send_via: String,
+    /// With --send-via logos: the keystore account that sends (the relayer's address; its key's address when it
+    /// has one here, which must then be the same).
+    #[arg(long, global = true)]
+    pub from: Option<Address>,
+    /// With --send-via logos: seconds a transaction may wait for its approval before it is withdrawn.
+    #[arg(long, default_value_t = 30, global = true)]
+    pub approval_timeout: u64,
     #[command(subcommand)]
     pub command: Command,
 }
@@ -184,10 +199,55 @@ struct Daemon {
     import_every: u64,
     /// The period whose import is done (sent, or nothing to send).
     import_done: Option<u64>,
+    /// `--send-via logos`: the Ethereum transactions go through Logos Core's `tx_sender_module`.
+    logos: Option<crate::logos_send::Route>,
     sink: Sink,
 }
 
 impl Daemon {
+    /// One transaction to the vault: [`Relayer::submit`] (the plain path), or through `tx_sender_module` after the
+    /// same `eth_call`, the receipt then read on the relayer's own node; what `tx_sender_module` did not broadcast
+    /// goes the plain way when the relayer has a key here too (the fallback).
+    async fn send(&self, input: Bytes, label: &'static str) -> Result<(TransactionReceipt, crate::logos_send::Via)> {
+        use crate::logos_send::{Outcome, Via};
+        let Some(route) = self.logos.clone() else {
+            return Ok((self.r.submit(&self.p, input).await?, Via::Plain));
+        };
+        let fallback = route.fallback;
+        let tx = TransactionRequest::default().with_from(self.r.me).with_to(self.r.vault).with_input(input.clone());
+        if let Err(e) = self.p.call(tx).await {
+            match eth::refusal_of(&e, "eth_call before sending") {
+                Some(r) => bail!(r),
+                None => bail!("the vault would revert: {e}"),
+            }
+        }
+        let (vault, sent) = (self.r.vault, input.clone());
+        let outcome = tokio::task::spawn_blocking(move || route.send(vault, &sent, label))
+            .await
+            .map_err(|e| anyhow!("the send through Logos Core did not finish: {e}"))?;
+        match outcome {
+            Outcome::Broadcast { hash, request_id, polls, millis } => {
+                let t0 = std::time::Instant::now();
+                let receipt = loop {
+                    if let Some(r) = self.p.get_transaction_receipt(hash).await? {
+                        break r;
+                    }
+                    if t0.elapsed() > Duration::from_secs(600) {
+                        bail!("{hash:#x} (sent by tx_sender_module, request {request_id}) not mined within 600 s");
+                    }
+                    tokio::time::sleep(Duration::from_millis(250)).await;
+                };
+                anyhow::ensure!(receipt.status(), "the transaction {} reverted", receipt.transaction_hash);
+                Ok((receipt, Via::Logos { request_id, polls, millis }))
+            }
+            Outcome::NotSent(reason) if fallback => {
+                Ok((self.r.submit(&self.p, input).await?, Via::Fallback { reason }))
+            }
+            Outcome::NotSent(reason) => bail!("not sent: {reason}"),
+            Outcome::Unknown(reason) => bail!("{reason}"),
+        }
+    }
+
     async fn round(&mut self, inbox: &Path) -> Result<()> {
         let s = self.sink.clone();
         let v = self.r.view(&self.p).await?;
@@ -261,11 +321,11 @@ impl Daemon {
                 continue;
             }
             let input: Bytes = IRelayVault::finalizeAttestedCall { c: c.clone() }.abi_encode().into();
-            match self.r.submit(&self.p, input).await {
-                Ok(rc) => log(
+            match self.send(input, "finalizeAttested").await {
+                Ok((rc, via)) => log(
                     &s,
                     "finalized",
-                    json!({ "newState": c.newState, "burnRoot": c.burnRoot, "burnCount": c.burnCount, "tx": rc.transaction_hash, "gasUsed": rc.gas_used }),
+                    json!({ "newState": c.newState, "burnRoot": c.burnRoot, "burnCount": c.burnCount, "tx": rc.transaction_hash, "gasUsed": rc.gas_used, "via": via.to_json() }),
                 ),
                 Err(e) => log(&s, "finalize-refused", json!({ "newState": c.newState, "reason": format!("{e:#}") })),
             }
@@ -278,11 +338,11 @@ impl Daemon {
                 continue;
             }
             let input: Bytes = IRelayVault::claimOwedCall { token }.abi_encode().into();
-            match self.r.submit(&self.p, input).await {
-                Ok(rc) => log(
+            match self.send(input, "claimOwed").await {
+                Ok((rc, via)) => log(
                     &s,
                     "fees-collected",
-                    json!({ "token": token, "amount": owed.to_string(), "tx": rc.transaction_hash }),
+                    json!({ "token": token, "amount": owed.to_string(), "tx": rc.transaction_hash, "gasUsed": rc.gas_used, "via": via.to_json() }),
                 ),
                 Err(e) => log(&s, "fees-refused", json!({ "token": token, "reason": format!("{e:#}") })),
             }
@@ -374,13 +434,13 @@ impl Daemon {
             Job::Release { journal, seal } => {
                 let (req, input) =
                     self.r.plan_release(&self.p, v, &relayer::unhex(&journal)?, relayer::unhex(&seal)?.into()).await?;
-                let rc = self.r.submit(&self.p, input).await?;
+                let (rc, via) = self.send(input, "release").await?;
                 self.tokens.insert(req.token);
                 let paid = relayer::relay_fee_paid(&rc, self.r.me);
                 Ok(json!({
                     "kind": "release", "nullifier": req.nullifier, "recipient": req.recipient, "token": req.token,
                     "relayFee": req.relayFee.to_string(), "paidTo": self.r.me, "paid": paid.map(|(_, f)| f.to_string()),
-                    "tx": rc.transaction_hash, "gasUsed": rc.gas_used,
+                    "tx": rc.transaction_hash, "gasUsed": rc.gas_used, "via": via.to_json(),
                 }))
             }
             Job::ReleaseSuccinct { receipt } => {
@@ -397,23 +457,23 @@ impl Daemon {
                 let seal = tokio::task::block_in_place(|| relayer::wrap_release(&receipt, image.0, &cmd, &work))?;
                 let wrap_s = started.elapsed().as_secs_f64();
                 let (req, input) = self.r.plan_release(&self.p, v, &journal, seal.into()).await?;
-                let rc = self.r.submit(&self.p, input).await?;
+                let (rc, via) = self.send(input, "release").await?;
                 self.tokens.insert(req.token);
                 let paid = relayer::relay_fee_paid(&rc, self.r.me);
                 Ok(json!({
                     "kind": "release", "wrapped": true, "wrapSecs": wrap_s, "nullifier": req.nullifier,
                     "recipient": req.recipient, "token": req.token, "relayFee": req.relayFee.to_string(),
                     "paidTo": self.r.me, "paid": paid.map(|(_, f)| f.to_string()), "tx": rc.transaction_hash,
-                    "gasUsed": rc.gas_used,
+                    "gasUsed": rc.gas_used, "via": via.to_json(),
                 }))
             }
             Job::Checkpoint { journal, seal } => {
                 let journal = relayer::unhex(&journal)?;
                 let input = self.r.plan_candidate(&self.p, v, &journal, relayer::unhex(&seal)?.into()).await?;
-                let rc = self.r.submit(&self.p, input).await?;
+                let (rc, via) = self.send(input, "submitCandidate").await?;
                 let c = relayer::checkpoint_from_journal(&journal)?.checkpoint;
                 Ok(
-                    json!({ "kind": "candidate", "newState": c.newState, "burnRoot": c.burnRoot, "burnCount": c.burnCount, "tx": rc.transaction_hash, "gasUsed": rc.gas_used }),
+                    json!({ "kind": "candidate", "newState": c.newState, "burnRoot": c.burnRoot, "burnCount": c.burnCount, "tx": rc.transaction_hash, "gasUsed": rc.gas_used, "via": via.to_json() }),
                 )
             }
             Job::GasDrop { receipt } => {
@@ -478,7 +538,12 @@ fn sequencer(_cli: &Cli, _rpc: &str) -> Result<Zone> {
 pub async fn run(cli: Cli, sink: Sink, mut stop: tokio::sync::watch::Receiver<Option<String>>) -> Result<()> {
     let url = cli.eth_rpc.clone().ok_or_else(|| anyhow!("--eth-rpc is required"))?;
     let vault = cli.vault.ok_or_else(|| anyhow!("--vault is required"))?;
+    let logos = cli.send_via == "logos";
     let (p, me) = match (&cli.keystore, &cli.password_file, cli.unlocked) {
+        (None, None, None) if logos => {
+            let me = cli.from.ok_or_else(|| anyhow!("--send-via logos needs --from (the keystore account)"))?;
+            (eth::provider(&url)?, me)
+        }
         (Some(ks), Some(pw), None) => {
             let signer = eth::keystore_signer(ks, pw)?;
             let me = signer.address();
@@ -495,11 +560,28 @@ pub async fn run(cli: Cli, sink: Sink, mut stop: tokio::sync::watch::Receiver<Op
             }
             (p, me)
         }
-        _ => bail!("give --keystore and --password-file, or --unlocked on a local anvil"),
+        _ => bail!("give --keystore and --password-file, or --unlocked on a local anvil, or --send-via logos --from"),
     };
     let r = Relayer { vault, me, accept_unpaid: cli.accept_unpaid };
     let v = r.view(&p).await?;
     relayer::require_chain(&v, cli.chain_id)?;
+    let logos = if logos {
+        let call = crate::logos_send::installed()
+            .ok_or_else(|| anyhow!("--send-via logos needs Logos Core: run the relayer as ferrata_relayer_module"))?;
+        if let Some(f) = cli.from {
+            anyhow::ensure!(f == me, "--from {f} is not the relayer key's address {me}");
+        }
+        Some(crate::logos_send::Route {
+            call,
+            chain_id: v.chain_id,
+            from: me,
+            purpose: "Ferrata relayer",
+            fallback: cli.keystore.is_some() || cli.unlocked.is_some(),
+            approval_timeout: Duration::from_secs(cli.approval_timeout),
+        })
+    } else {
+        None
+    };
     std::fs::create_dir_all(&cli.state)?;
 
     let zone = match (&cli.sequencer, &cli.lez_devnet) {
@@ -541,6 +623,7 @@ pub async fn run(cli: Cli, sink: Sink, mut stop: tokio::sync::watch::Receiver<Op
             .and_then(|b| serde_json::from_slice::<Value>(&b).ok())
             .filter(|v| v["every"].as_u64() == Some(cli.import_every))
             .and_then(|v| v["period"].as_u64()),
+        logos,
         sink: sink.clone(),
     };
     let zone_kind = d.zone.as_ref().map(|(z, _)| z.kind());
@@ -549,7 +632,9 @@ pub async fn run(cli: Cli, sink: Sink, mut stop: tokio::sync::watch::Receiver<Op
         "start",
         json!({ "vault": vault, "relayer": me, "chainId": v.chain_id, "configId": v.cid, "finalState": v.final_state,
                 "gasDrops": zone_kind == Some("sequencer"), "zone": zone_kind, "importRoots": cli.import_roots,
-                "importEvery": cli.import_every }),
+                "importEvery": cli.import_every,
+                "sendVia": d.logos.as_ref().map_or_else(|| json!("plain"), |r| json!({ "path": "logos",
+                    "module": crate::logos_send::TX_SENDER, "from": r.from, "fallback": r.fallback })) }),
     );
 
     match cli.command {

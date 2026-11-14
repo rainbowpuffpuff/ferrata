@@ -21,6 +21,7 @@ pub mod eth;
 #[cfg(feature = "lez-wallet")]
 pub mod flow;
 pub mod lez;
+pub mod logos_send;
 pub mod privacy;
 pub mod relayer;
 pub mod relayerd;
