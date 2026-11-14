@@ -316,9 +316,12 @@ The design notes specify these; there is no code for them here:
   [`modules/results/lez-core-v04-2026-11-14/`](modules/results/lez-core-v04-2026-11-14/)); LEZ through `lez_core` is
   built for the bridge module's wallet session only (its LEZ reads and its private claim and burn, through `lez_core` at
   its merged v0.4 state with a patch of ours, on a devnet: EVIDENCE rows 113, 114), not for the other modules' LEZ
-  reads and sends, nor the zone's history, which `lez_core` serves only for a sequencer it runs itself; verified reads (`verified_proxy_module`: public networks only, no
-  `eth_getProof`), beacon data through `beacon_api_module` (the attestation module's Ethereum reads and the
-  bridge module's `import_root` go through `eth_rpc_module`, rows 108, 109); the private claim's private execution and proof are the LEZ wallet's: the module builds and checks
+  reads and sends, nor the zone's history, which `lez_core` serves only for a sequencer it runs itself; verified reads
+  beyond the attestation module's (`verified_proxy_module`, built from its source, served that module's reads on public
+  Sepolia in `required` mode, and the updater module's light-client data came through `beacon_api_module`,
+  [`modules/results/verified-proxy-2026-11-14/`](modules/results/verified-proxy-2026-11-14/README.md); not the bridge
+  module's, the relayer's or the monitor's reads; the proxy serves no devnet and no `eth_getProof`, so storage proofs
+  come unverified and the programs check them against a record; the private claim's private execution and proof are the LEZ wallet's: the module builds and checks
   `ClaimPrivately`; the release's Groth16 wrap is the relayer's), and a published catalog (laid out,
   dry-run and installed from on 127.0.0.1 in `modules/catalog/`); the A3 gate's three daemons on a running
   sequencer (`ferrata-updater` is built as a binary and as a Logos module that drives the same daemon with either

@@ -1,0 +1,1 @@
+{"code":500,"message":"syncCommitteeWitness not available 0x3b901f5e6853b5cf5eb04d7ccfe1272e66c38291cb3a11dd159cacd1117ccf7c"}

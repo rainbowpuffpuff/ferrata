@@ -60,11 +60,43 @@ fn bad_configurations_are_refused() {
             "name = \"record-a\"\n  kind = \"headers\"\n  dir",
             "a headers source without url",
         ),
+        (
+            "name = \"record-a\"\n  dir = \"../../lab/results/record/net/mainnet\"",
+            "name = \"record-a\"\n  via = \"beacon_api_module\"",
+            "beacon_api_module without chain_id",
+        ),
+        (
+            "name = \"record-a\"\n  dir = \"../../lab/results/record/net/mainnet\"",
+            "name = \"record-a\"\n  via = \"eth_rpc_module\"\n  chain_id = 1",
+            "an unknown via",
+        ),
+        (
+            "name = \"record-a\"\n  dir",
+            "name = \"record-a\"\n  via = \"beacon_api_module\"\n  chain_id = 1\n  dir",
+            "via and dir",
+        ),
     ] {
         let text = base.replacen(from, to, 1);
         assert_ne!(text, base, "{why}: the substitution applies");
         assert!(File::parse(&text).is_err(), "{why} must be refused");
     }
+}
+
+#[test]
+fn a_beacon_api_module_source_parses() {
+    let base = std::fs::read_to_string(here("dev/dev.toml")).unwrap();
+    let text = base.replacen(
+        "name = \"record-a\"\n  dir = \"../../lab/results/record/net/mainnet\"",
+        "name = \"record-a\"\n  via = \"beacon_api_module\"\n  chain_id = 1\n  provider = \"lodestar\"",
+        1,
+    );
+    assert_ne!(text, base);
+    let f = File::parse(&text).unwrap();
+    let s = &f.chains[0].sources[0];
+    assert_eq!(
+        (s.via.as_deref(), s.chain_id, s.provider.as_deref()),
+        (Some("beacon_api_module"), Some(1), Some("lodestar"))
+    );
 }
 
 #[test]

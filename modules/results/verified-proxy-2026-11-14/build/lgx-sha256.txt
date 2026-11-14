@@ -1,0 +1,4 @@
+59f270924bb875ee5f68a11038ce7482a54feac4983ad654296e4f2c5fb9153e  verified_proxy_module/logos-verified_proxy_module-module-lib.lgx
+90d79436f886d10d943e110fef8e931c5eecaee7135ab4ebfc1e26200b23856a  beacon_api_module/logos-beacon_api_module-module-lib.lgx
+ba29ec02f0753f68423545bd8b0702e449047f9cbe046353bb0dcd3fc1af10ae  eth_rpc_module/logos-eth_rpc_module-module-lib.lgx
+libverifproxy.a: 55809754 bytes, built by nbs-nim-2.2.12

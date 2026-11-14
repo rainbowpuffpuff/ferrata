@@ -1,0 +1,3 @@
+beacon_api_module: lgx-beacon_api_module
+verified_proxy_module: lgx-verified_proxy_module
+eth_rpc_module: lgx-eth_rpc_module

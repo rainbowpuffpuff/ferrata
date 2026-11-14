@@ -1,0 +1,16 @@
+{
+ "root": "0xa9cb778f351a6d0cf5c8f383ca90cabe60ec32990360b77f5d326951ae47c361",
+ "slot": 11577536,
+ "epoch": 361798,
+ "lodestar": "finalized header",
+ "publicnode": {
+  "root_at_slot": "0xa9cb778f351a6d0cf5c8f383ca90cabe60ec32990360b77f5d326951ae47c361",
+  "canonical": true,
+  "finalized_epoch": 361798
+ },
+ "nimbus": {
+  "root": "0xa9cb778f351a6d0cf5c8f383ca90cabe60ec32990360b77f5d326951ae47c361",
+  "slot": 11577536
+ },
+ "agree": true
+}

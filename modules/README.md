@@ -130,7 +130,7 @@ method returns `{"verdict":"error",...}` instead of crossing into Logos Core. Ev
 |---|---|---|
 | `version()` | — | the module's version, what was staged (`STAGED.json`: the commit, LEZ's commit, each crate's version and sources' SHA-256), the BLS backend (blst, for `advance`), the method list |
 | `dry_run_attest(request)` | the consumer's `chain_id`; a header `record`: either `{chain_id, encoded}` (the bytes the program stores at `header(id, slot)`, `RecordState::record`, as read from LEZ) or its fields (instance chain id, anchor slot, block number, timestamp, block hash, parent hash, state root, receipts root); and either `storage` (an `eth_getProof` result and the slot; or `address`, `slot` and `eth` or `rpc_url`, the module reading the proof at the record's block, `build_attest_tx` at `storage.block`) or `log` (`{tx_index, log_index, receipt_proof}`, as `fetch_log_proof` returns it) | `verdict` (`attested` or `refused`), `code` (the program's code: 0, or the core's refusal code, which the program returns unchanged, `lez/wire/src/lib.rs` `refusal`), the error's name, and for an attested fact its fields and statement identifiers (`id`, `id_at_block`) |
-| `verify_checkpoint(request)` | a `config` (the program's `Config` fields), a `checkpoint` root, optionally the `expected_instance_id`, the `bootstrap` (SSZ, hex), `observed` roots for the checkpoint as other sources report them, `providers` to ask (beacon API base URLs, or `{name, url}`), `min_providers` (3 when providers are given), an `execution` JSON-RPC endpoint, `key_validate` (on by default), `timeout_secs` | the recomputed `instance_id`; whether it equals the expected one; the program's `Init` verdict on the bootstrap (`StoreCore::from_bootstrap`: layout, header, header root against the checkpoint, committee branch) with its code; each observed root against the checkpoint; whether the chain id and `genesis_validators_root` are a known pair; `committee`: the full `KeyValidate` on the bootstrap's committee (every key in the subgroup, their sum the aggregate); each provider `agrees`, `disagrees` or is `unavailable` (the root canonical by root and at its slot, finalized there, the provider's genesis and spec those of the configuration, `DEPOSIT_CHAIN_ID` among them), with every request it made; `providers_agreeing` (counted by host); `execution`: the bootstrap's execution block on that endpoint (same chain id, canonical, finalized); an overall `verdict` |
+| `verify_checkpoint(request)` | a `config` (the program's `Config` fields), a `checkpoint` root, optionally the `expected_instance_id`, the `bootstrap` (SSZ, hex), `observed` roots for the checkpoint as other sources report them, `providers` to ask (beacon API base URLs, or `{name, url}`), `min_providers` (3 when providers are given), an `execution` JSON-RPC endpoint (a URL or `{name, url}`, or `{"via": "eth_rpc_module", "chain_id": N}`: through Logos Core's `eth_rpc_module`, whose chain N in `required` mode sends every call to `verified_proxy_module`), `key_validate` (on by default), `timeout_secs` | the recomputed `instance_id`; whether it equals the expected one; the program's `Init` verdict on the bootstrap (`StoreCore::from_bootstrap`: layout, header, header root against the checkpoint, committee branch) with its code; each observed root against the checkpoint; whether the chain id and `genesis_validators_root` are a known pair; `committee`: the full `KeyValidate` on the bootstrap's committee (every key in the subgroup, their sum the aggregate); each provider `agrees`, `disagrees` or is `unavailable` (the root canonical by root and at its slot, finalized there, the provider's genesis and spec those of the configuration, `DEPOSIT_CHAIN_ID` among them), with every request it made; `providers_agreeing` (counted by host); `execution`: the bootstrap's execution block on that endpoint (same chain id, canonical, finalized); an overall `verdict` |
 | `fetch_log_proof(request)` | where to read Ethereum: `eth` = `{"via": "eth_rpc_module", "chain_id": N}` (through Logos Core's `eth_rpc_module`, [LOGOS-CORE-MODULES.md](LOGOS-CORE-MODULES.md)) or `rpc_url` (`http://` only: a local node or `scripts/recorded_rpc.py`); `block`, and `tx_index` + `log_index` (within the receipt) or `block_log_index` (JSON-RPC's `logIndex`); optional `timeout_ms` | `verdict` `fetched` (or `inconsistent` when the receipts do not rebuild the block's `receiptsRoot`), the block hash and receipts root, `log` = `{tx_index, log_index, receipt_proof}` ready for `dry_run_attest` and `build_attest_tx`, what the provider said the log is (`provider_log`), `rpc_calls`, `eth` (`{via, chain_id or rpc_url, calls, routes}`: what answered; `routes` are `eth_rpc_module`'s own labels, `direct`, `verified` or `proxied`) |
 | `build_attest_tx(request)` | `program_id` (the attestation program's account id), `instance_id`, `chain_id`, `slot` (of the record), and `log`, `logs` or `storage` | `account`: `header(id, slot)` (LEZ's public PDA of the program, seed SHA-256(`ferrata-lez/v1/header` ‖ id ‖ slot LE)), the account list, `message`: Borsh of `Message::Attest { request }` (variant 7), its size and SHA-256, the number of facts |
 | `read_attestation(request)` | `event_data` (the program's `FRT-ATT1` event data, hex), optionally `selector`, `expected_ids` (the dry run's `id`s), `expected_instance_id` | `instance_id`, `chain_id`, `block_number`, the `statements`, `matches_expected`, `instance_matches` |
@@ -142,8 +142,10 @@ as `evaluate` does), and the proof is checked by `attest_storage` or `attest_log
 code are the ones the program would return for that proof against that record.
 
 `verify_checkpoint` reads the providers and the execution endpoint with `curl` (`http://` and `https://`, a
-generic User-Agent; `calls/src/providers.rs`), as `ferrata-updater` reads beacon nodes; nothing they serve is trusted
-beyond the comparison. Its tests replay the requests and responses of a live run against Sepolia's public providers
+generic User-Agent; `calls/src/providers.rs`), as `ferrata-updater` reads beacon nodes, or the execution endpoint
+through `eth_rpc_module` when the request names it (in Logos Core: with Sepolia in `required` mode the check was
+answered by `verified_proxy_module`, [`results/verified-proxy-2026-11-14/`](results/verified-proxy-2026-11-14/README.md));
+nothing they serve is trusted beyond the comparison. Its tests replay the requests and responses of a live run against Sepolia's public providers
 (`calls/tests/fixtures/`, [`results/verify-checkpoint-2026-11-13/`](results/verify-checkpoint-2026-11-13/README.md)).
 `verify_checkpoint` recomputes the instance id as the program defines it (`lez/wire/src/lib.rs`
 `instance_id`: SHA-256 over the domain, `instance-id`, the Borsh encoding of `Config` and the
@@ -243,7 +245,11 @@ machine in the module's process with LEZ's fee program and settlement and the at
 every block final on Bedrock with LEZ's block application and reads each result; `stop` and the periodic save
 keep the follower in the state directory, and `start` restores it. The backend lives in the daemon's thread,
 so `stop` ends it. `status` and `metrics` give what `/health` and `/metrics` give; with `daemon.listen` set,
-the module also serves those on that address.
+the module also serves those on that address. A source may be Logos Core's `beacon_api_module`
+(`[[chain.source]] via = "beacon_api_module"`, `chain_id`, optionally `provider`, the one it asks first): the module
+asks its `lc_request` by name and the updater turns the providers' JSON into the SSZ it reads
+(`lez/updater/src/lc_json.rs`); on Sepolia it followed the crown runs' checkpoint to the current finalized header that
+way ([`results/verified-proxy-2026-11-14/`](results/verified-proxy-2026-11-14/README.md)).
 
 | Method | Takes | Returns |
 |---|---|---|
@@ -312,14 +318,19 @@ that start a Logos Core refuse a `TMPDIR` (or `LOGOS_TMPDIR`) longer than 62 byt
 ### Left out
 
 - **Logos Core's own network and keys** ([LOGOS-CORE-MODULES.md](LOGOS-CORE-MODULES.md)). The attestation
-  module's Ethereum reads (`fetch_log_proof`'s block and receipts, the storage proofs) and the bridge
-  module's `import_root` (the vault's `eth_getProof`) go through Logos Core's `eth_rpc_module` when the
-  request names it (`eth`), plain `http://` JSON-RPC staying the fallback; shown in a headless Logos Core
-  with `eth_rpc_module` built from its source (`scripts/logos-io.sh`). Not through `verified_proxy_module`:
-  it serves only mainnet, Sepolia and Hoodi (a devnet has no beacon chain) and has no `eth_getProof`;
-  with a chain in `required` mode the block and receipt reads would go through it unchanged, not run here
-  (no public network was read). The updater's beacon data does not go through `beacon_api_module` yet,
-  nor the other modules' reads (the relayer's and monitor's alloy providers, the attestor's node). LEZ
+  module's Ethereum reads (`fetch_log_proof`'s block and receipts, the storage proofs, `verify_checkpoint`'s execution
+  check) and the bridge module's `import_root` (the vault's `eth_getProof`) go through Logos Core's `eth_rpc_module`
+  when the request names it (`eth`), plain `http://` JSON-RPC staying the fallback; shown in a headless Logos Core
+  with `eth_rpc_module` built from its source (`scripts/logos-io.sh`). Through `verified_proxy_module` (built from its
+  source, nimbus-eth1 v0.4.4's library included) with Sepolia in `required` mode: `fetch_log_proof` of the live runs'
+  deposits, the capture blocks' headers, the vault's storage values (`eth_getStorageAt`, verified against the state
+  root) and `verify_checkpoint`'s execution check, each equal to the runs' records and to a plain read
+  ([`results/verified-proxy-2026-11-14/`](results/verified-proxy-2026-11-14/README.md), `scripts/verified-proxy.sh`);
+  not on a devnet (the proxy serves mainnet, Sepolia and Hoodi), and not for `eth_getProof`, which it refuses
+  (`unknown method`: nimbus's library has no verified `eth_getProof`), so storage proofs come from a chain in `off`
+  mode and are checked by the programs against a record. The updater's beacon data goes through `beacon_api_module`
+  when its configuration says so (`via = "beacon_api_module"`; shown on Sepolia on the in-process LEZ chain); the
+  other modules' reads (the relayer's and monitor's alloy providers, the attestor's node) do not. LEZ
   state (a record, an event, nullifiers, counts) comes in the request, except in `ferrata_bridge_module`'s wallet
   session, which reads its bridge states and its private holding and sends its private claim and burn through
   `lez_core` at its merged v0.4 state (`cc73ebf`, with
@@ -333,10 +344,11 @@ that start a Logos Core refuse a `TMPDIR` (or `LOGOS_TMPDIR`) longer than 62 byt
   code generator; with the builder's own locks, `eth_rpc_module` 6965f32, which both need, does not compile against
   the new generator's clients), so no Ferrata module sends Ethereum transactions through them. In the end-to-end test the
   harness wraps the message in a LEZ transaction and executes it in LEZ's state machine in-process,
-  not on a networked sequencer. The daemon modules likewise use no Logos Core module: the attestor reads
+  not on a networked sequencer. The daemon modules likewise use no other Logos Core module: the attestor reads
   its node over plain HTTP (`curl`, as the binary does) and keeps its keys in files; the monitor signs
   and sends its Ethereum transactions itself (alloy, over the JSON-RPC endpoint it is given) with a key
-  file or keystore; the updater's sources are beacon API URLs or recorded directories.
+  file or keystore; the updater's sources are beacon API URLs or recorded directories unless its configuration names
+  `beacon_api_module`.
 - **`ferrata_attest_module`:** `advance` plans a job for an active instance (`Open`, `Miller`, `Adopt`,
   `Finish`); an instance's initialization (`Init` and its committee's `Adopt` parts) is not planned, nor
   the updater's own work around the plan (several sources cross-checked, cooperation with other updaters,

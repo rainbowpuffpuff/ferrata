@@ -1,0 +1,44 @@
+[daemon]
+name = "verified-proxy-session"
+state_dir = "OUT/session/updater-state"
+poll_secs = 0
+ledger = "harness"
+
+[keys]
+payer_key_file = "REPO/lez/updater/dev/payer.key"
+
+[fees]
+gas_limit = 4800000
+max_fee_per_tx = 1000000000
+budget = 1000000000000
+
+[policy]
+defer_window = 1
+max_lag_slots = 64
+min_agreeing = 2
+retry_base_ms = 500
+retry_max_ms = 30000
+max_attempts = 5
+demote_rounds = 50
+max_periods_per_request = 16
+
+[[chain]]
+name = "sepolia"
+preset = "sepolia"
+layout = "gloas"
+checkpoint = "3b901f5e6853b5cf5eb04d7ccfe1272e66c38291cb3a11dd159cacd1117ccf7c"
+adoption_parts = 2
+
+  [[chain.source]]
+  name = "beacon_api_module-lodestar"
+  via = "beacon_api_module"
+  chain_id = 11155111
+  provider = "lodestar"
+  timeout_secs = 60
+
+  [[chain.source]]
+  name = "beacon_api_module-nimbus"
+  via = "beacon_api_module"
+  chain_id = 11155111
+  provider = "nimbus-unstable"
+  timeout_secs = 60

@@ -1,0 +1,3 @@
+verified_proxy_module	logos-verified-proxy-module	fa984790c5c5d7b39f37ed42d7b66abfc9e72b67	own lock (builder a57dc7f)
+beacon_api_module	logos-evm-beacon-api-module	aca138e5c211a370654700f4f8f2779ea5081c86	own lock (builder a57dc7f)
+eth_rpc_module	logos-evm-eth-rpc-module	6965f3252986eef02e9342198a0625fa725aad8d	builder 5f74cdb (override), optional dependencies by name

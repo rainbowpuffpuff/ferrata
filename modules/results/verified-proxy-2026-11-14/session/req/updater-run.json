@@ -1,0 +1,6 @@
+{
+  "config_file": "OUT/session/req/updater.toml",
+  "rounds": 600,
+  "until_up_to_date": true,
+  "quiet": false
+}

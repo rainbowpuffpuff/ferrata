@@ -1,0 +1,23 @@
+14:03:35 session: logosctl logosctl version pre-release-66d098d
+14:03:35 1. trusted root
+14:03:36 trusted root 0xa9cb778f351a6d0cf5c8f383ca90cabe60ec32990360b77f5d326951ae47c361 (slot 11577536), agree=true
+14:03:36 2. Logos Core
+Daemon started (pid 47766)
+Logs: /var/tmp/vp/vps/logs/daemon.log
+{"affected_loaded":[],"changes":[{"action":"install","file":"OUT/lgx-beacon_api_module/logos-beacon_api_module-module-lib.lgx","fromVersion":"","name":"beacon_api_module","signature":"unsigned","toVersion":"0.2.0"}],"installed":["beacon_api_module"],"op":"install","reloaded":[],"status":"ok","stopped_dependents":[]}
+{"affected_loaded":[],"changes":[{"action":"install","file":"OUT/lgx-verified_proxy_module/logos-verified_proxy_module-module-lib.lgx","fromVersion":"","name":"verified_proxy_module","signature":"unsigned","toVersion":"0.2.0"}],"installed":["verified_proxy_module"],"op":"install","reloaded":[],"status":"ok","stopped_dependents":[]}
+{"affected_loaded":[],"changes":[{"action":"install","file":"OUT/lgx-eth_rpc_module/logos-eth_rpc_module-module-lib.lgx","fromVersion":"","name":"eth_rpc_module","signature":"unsigned","toVersion":"0.2.0"}],"installed":["eth_rpc_module"],"op":"install","reloaded":[],"status":"ok","stopped_dependents":[]}
+{"affected_loaded":[],"changes":[{"action":"install","file":"OUT/check/lgx-ferrata_attest_module/logos-ferrata_attest_module-module-lib.lgx","fromVersion":"","name":"ferrata_attest_module","signature":"unsigned","toVersion":"0.1.0"}],"installed":["ferrata_attest_module"],"op":"install","reloaded":[],"status":"ok","stopped_dependents":[]}
+{"affected_loaded":[],"changes":[{"action":"install","file":"OUT/check/lgx-ferrata_updater_module/logos-ferrata_updater_module-module-lib.lgx","fromVersion":"","name":"ferrata_updater_module","signature":"unsigned","toVersion":"0.1.0"}],"installed":["ferrata_updater_module"],"op":"install","reloaded":[],"status":"ok","stopped_dependents":[]}
+{"dependencies_loaded":[],"module":"beacon_api_module","status":"ok","version":"0.2.0"}
+{"dependencies_loaded":[],"module":"verified_proxy_module","status":"ok","version":"0.2.0"}
+{"dependencies_loaded":[],"module":"eth_rpc_module","status":"ok","version":"0.2.0"}
+{"dependencies_loaded":[],"module":"ferrata_attest_module","status":"ok","version":"0.1.0"}
+{"dependencies_loaded":[],"module":"ferrata_updater_module","status":"ok","version":"0.1.0"}
+14:03:45 verified_proxy_module.start (the light client bootstraps from the root)
+14:05:47 3. eth_rpc_module
+14:05:49 3a. required mode
+14:06:28 3b. mode off
+14:06:48 4. beacon_api_module and the updater
+{"message":"Daemon shutting down.","status":"ok"}
+14:07:20 session done

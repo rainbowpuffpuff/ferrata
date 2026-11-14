@@ -1,0 +1,1 @@
+{"config":{"enabled":true,"endpoint":"https://rpc.sepolia.ethpandaops.io","name":"sepolia","proxy":null,"proxyRequired":false,"source":"external","testnet":true,"timeoutSecs":60,"verifiedMaxSecs":45,"verifiedProxyMode":"required","verifiedTimeoutSecs":240},"ok":true}
