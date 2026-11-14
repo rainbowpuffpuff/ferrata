@@ -538,7 +538,7 @@ the configuration's attestation instance; `Tick` (still open) and `Freeze` read 
 moves forward; the transaction is valid only in a block stamped at or after the record's time; no
 message carries a time (`Claim`, `ClaimPrivately`, `Issue`, `Admit`, `SetCap` lost theirs).
 
-**Where and what ran.** The ws-5 Modal build box through `mrun` (2 vCPU), 11 Nov 2026, this
+**Where and what ran.** The Modal build box through `mrun` (2 vCPU), 11 Nov 2026, this
 worktree at commit `e13a6ce` plus rustfmt: `RISC0_DEV_MODE=1 cargo test -p harness --locked`, 37
 tests, all pass (the 36 of `integration4` and `bridge_time.rs`); clippy `-D warnings` and rustfmt
 clean on the LEZ crates; `prove_bridge`'s dry run (claim and burn settled with fake receipts); the

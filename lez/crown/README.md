@@ -48,4 +48,4 @@ On the build box: the whole of A and B against a STAND-IN (an anvil fork of Sepo
 committee held by the driver), with the zone saved after A and restored for B (every step applied, both private
 proofs real: 274 s and 321 s on the box's CPU; peak RSS 10.4 GiB, r0vm 9.2 GiB); and session A on the real Sepolia
 path (176 transactions, 29.5 min). To repeat on the box (from the worktree):
-`../modal-build/mrun --profile ws-4 --timeout 7200 --put ../tmp/crown/build/ids-methods-hex.txt -- 'bash lez/crown/build.sh seed && bash lez/crown/build.sh all && bash lez/crown/rehearse.sh all'`.
+`../modal-build/mrun --profile <yours> --timeout 7200 --put ../tmp/crown/build/ids-methods-hex.txt -- 'bash lez/crown/build.sh seed && bash lez/crown/build.sh all && bash lez/crown/rehearse.sh all'`.

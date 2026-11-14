@@ -63,7 +63,7 @@ working directory in which `checkpoint/` and `lez/` were separate checkouts.
 ## Run it
 
 Every Modal command takes the workspace profile in its own environment. `modal profile activate` is never
-used, because the machine's active profile belongs to another workspace.
+used, so no command depends on which profile happens to be active.
 
 ```sh
 export MODAL_PROFILE=<profile>
@@ -88,8 +88,8 @@ FERRATA_ATTEST_FIXTURE_DIR=inputs-lez-attest/mainnet-attest-2026-11-10 RISC0_DEV
 # the bridge program's private claim and private burn (what was run; the binary built and staged on
 # the build box, the settle checks run there too, not on the laptop):
 ../lez/scripts/stage-prove-bridge.sh $PWD/inputs-lez-bridge <prove_bridge built on glibc <= 2.39>
-MODAL_PROFILE=ws-3 modal run --detach modal_app.py::lez --job lez-bridge --run gpu-l4-bridge --limit-s 1800
-MODAL_PROFILE=ws-3 scripts/fetch.sh gpu-l4-bridge
+MODAL_PROFILE=<yours> modal run --detach modal_app.py::lez --job lez-bridge --run gpu-l4-bridge --limit-s 1800
+MODAL_PROFILE=<yours> scripts/fetch.sh gpu-l4-bridge
 (cd ../lez && RISC0_DEV_MODE=0 target/debug/prove_bridge --settle \
   ../gpu-prover/results/gpu-l4-bridge/lez-bridge/bridge-private-claim-tx.borsh \
   ../gpu-prover/results/gpu-l4-bridge/lez-bridge/bridge-private-burn-tx.borsh)

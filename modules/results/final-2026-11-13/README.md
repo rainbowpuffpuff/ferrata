@@ -1,7 +1,7 @@
 # The final tree's checks, 13 November 2026 (branch `final-merge`)
 
 After the last merge of the build waves (`miniapp-sequencer` into `integration8`'s tip `402626e`: merge `2bddffa`)
-and a rustfmt pass (`6a19ec9`, layout only), on the Modal build box (workspace ws-4; gVisor, 2 CPUs reported, up
+and a rustfmt pass (`6a19ec9`, layout only), on the Modal build box (our Modal workspace; gVisor, 2 CPUs reported, up
 to 16 cores, 64 GiB; Nix 2.28.3 with the modules-more box's store restored; cargo 1.93.0, 1.98.1 and 1.88.0, r0vm
 3.0.5, Foundry 1.3.6), 13 Nov 2026 11:53–13:41 UTC. Dev mode throughout: no proof was made. The native part ran at
 `2bddffa`, the rest at `6a19ec9`; every step and its seconds: [`run-steps.txt`](run-steps.txt); the environment:

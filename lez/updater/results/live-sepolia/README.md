@@ -8,10 +8,10 @@ any public network: the beacon APIs were only read, every transaction went to th
 
 | part | what ran | mode |
 |---|---|---|
-| zone | LEZ v0.4.0-rc1 `sequencer_service` (unmodified tag, `1806e87`) and a Logos Blockchain node (`d480efc6`), LEZ's local configuration with 10 s blocks, as the crown run's LEZ sessions run them: `lez/crown/session.sh` from the crown bundle `0013bab1…` (the one of `e2e/runs/crown-sessiona-sepolia-1` and `crown-live-3`), on Modal (workspace ws-3, app `ferrata-crown`, function `updater_session`: 2 cores requested, up to 8; 8 GiB) | the sequencer executes and verifies every transaction (`RISC0_DEV_MODE` unset); Bedrock leader proofs in dev mode, one validator (LEZ's local setup) |
+| zone | LEZ v0.4.0-rc1 `sequencer_service` (unmodified tag, `1806e87`) and a Logos Blockchain node (`d480efc6`), LEZ's local configuration with 10 s blocks, as the crown run's LEZ sessions run them: `lez/crown/session.sh` from the crown bundle `0013bab1…` (the one of `e2e/runs/crown-sessiona-sepolia-1` and `crown-live-3`), on Modal (our Modal workspace, app `ferrata-crown`, function `updater_session`: 2 cores requested, up to 8; 8 GiB) | the sequencer executes and verifies every transaction (`RISC0_DEV_MODE` unset); Bedrock leader proofs in dev mode, one validator (LEZ's local setup) |
 | programs | deployed by session A through LEZ's `program_loader`: the attestation program `816d1fef…` and the bridge `ccde6171…`, the image ids the sequencer's loader computed ([`../../../../docs/image-ids.md`](../../../../docs/image-ids.md)) | final programs |
 | instance | `crown-driver crown-a`'s Sepolia instance `0xa5fb2591…b2b5`: `Init` from [`crates/ferrata-spectests/fixtures/sepolia-2026-11-12`](../../../../crates/ferrata-spectests/fixtures/sepolia-2026-11-12/SOURCE.md) (checkpoint `0x3b901f5e…ccf7c`, slot 11,562,112, period 1411) and that period's update (the next committee) | session A, as `crown-sessiona-sepolia-1` |
-| daemon | `ferrata-updater`, the build of `lez/updater/sequencer/` at commit `1056343` (binary SHA-256 `912208fc8fd7637207721ec66789fe1fbeea51a840d4c9b25cac0bf52942525a`, built on the ws-4 build box), with `zone-*/updater.toml`: one daemon, `layout = "gloas"` (so it computes the crown's instance id), `min_agreeing = 2`, `poll_secs = 24`, `defer_window = 1`, payer LEZ's published test key of `local.json`'s genesis | the same daemon as the harness build, another `Ledger` |
+| daemon | `ferrata-updater`, the build of `lez/updater/sequencer/` at commit `1056343` (binary SHA-256 `912208fc8fd7637207721ec66789fe1fbeea51a840d4c9b25cac0bf52942525a`, built on the Modal build box), with `zone-*/updater.toml`: one daemon, `layout = "gloas"` (so it computes the crown's instance id), `min_agreeing = 2`, `poll_secs = 24`, `defer_window = 1`, payer LEZ's published test key of `local.json`'s genesis | the same daemon as the harness build, another `Ledger` |
 | sources | Lodestar's public Sepolia beacon API `https://lodestar-sepolia.chainsafe.io` (light-client data, SSZ: finality updates, period updates, bootstrap); publicnode's `https://ethereum-sepolia-beacon-api.publicnode.com` as `kind = "headers"` (it serves no light-client data: 404): each update's finalized header must be the block it holds canonical at that slot | read only, User-Agent `ferrata-updater`, no key |
 
 ## What happened
@@ -129,7 +129,7 @@ To run it again (about 6 minutes of session A, then the daemon; nothing is sent 
 
 ```sh
 # the binary, on the build box (lez/crown/build.sh seed brings the crown build's target directory)
-../modal-build/mrun --profile ws-4 -- 'bash lez/crown/build.sh seed && cd lez/updater/sequencer && CARGO_TARGET_DIR=$(cd ../../../.. && pwd)/tmp/crown/live/target cargo build --release'
+../modal-build/mrun --profile <yours> -- 'bash lez/crown/build.sh seed && cd lez/updater/sequencer && CARGO_TARGET_DIR=$(cd ../../../.. && pwd)/tmp/crown/live/target cargo build --release'
 e2e/crown.sh updater crown-NAME --bin PATH/ferrata-updater --minutes 120 [--restart-min 25]
 e2e/crown.sh updater-status crown-NAME; e2e/crown.sh updater-fetch crown-NAME DIR
 ```

@@ -5,7 +5,7 @@
 #
 #   proofs.sh <run> input                 box: realblocks-crown over the LEZ side's files -> checkpoint/, executor check
 #   proofs.sh <run> stage-gpu             any: checkpoint/gpu-inputs (R0BF programs, the fixture, MANIFEST.json)
-#   proofs.sh <run> gpu [name]            laptop: one L4 proof (gpu-prover spawn on ws-3), waits, fetches -> checkpoint/gpu/
+#   proofs.sh <run> gpu [name]            laptop: one L4 proof (gpu-prover spawn on your Modal workspace), waits, fetches -> checkpoint/gpu/
 #   proofs.sh <run> releases              box: crown-release (checkpoint/burns.json + burn-notes.json), executor, CPU proofs
 #   proofs.sh <run> p254 <proof>          box: identity_p254 -> work/<proof>/input.json (proof: checkpoint | release-<name>)
 #   proofs.sh <run> groth16-prove <proof> laptop: RISC Zero's Groth16 prover image via the box app (wrap.py) -> proof.json
@@ -20,7 +20,7 @@
 #   programs/ (or $FERRATA_PROGRAMS)               R0BF checkpoint_b.bin checkpoint.bin segment.bin release.bin, ids.jsonl
 #                                                  (ferrata-e2e program-binary of the crown build's user ELFs)
 # Overrides: REALBLOCKS_CROWN, FERRATA_E2E (tool paths), BURNS / NOTES (crown-release inputs; rehearsals only),
-# FERRATA_GPU_PROFILE (default ws-3), FERRATA_TMPDIR (modal's scratch on the laptop; default <run>/tmp).
+# FERRATA_GPU_PROFILE (default: CROWN_MODAL_PROFILE), FERRATA_TMPDIR (modal's scratch on the laptop; default <run>/tmp).
 set -euo pipefail
 run="$(realpath -m "${1:?run dir}")"; step="${2:?step}"
 here="$(cd "$(dirname "$0")" && pwd)"; repo="$(cd "$here/../.." && pwd)"
@@ -28,7 +28,7 @@ RC="${REALBLOCKS_CROWN:-$repo/checkpoint/target/release/realblocks-crown}"
 E="${FERRATA_E2E:-$repo/bridge/target/release/ferrata-e2e}"
 P="${FERRATA_PROGRAMS:-$run/programs}"
 A="$run/lez/session-a"; B="$run/lez/session-b"; C="$run/checkpoint"; REL="$run/releases"
-GPU_PROFILE="${FERRATA_GPU_PROFILE:-ws-3}"
+GPU_PROFILE="${FERRATA_GPU_PROFILE:-${CROWN_MODAL_PROFILE:?set FERRATA_GPU_PROFILE or CROWN_MODAL_PROFILE}}"
 
 id_of() { jq -r --arg p "/$1.bin" 'select(.program | endswith($p)) | .image_id' "$P/ids.jsonl"; }
 name_of() { basename "$(ls "$C"/crown-*.input | head -n 1)" .input; }

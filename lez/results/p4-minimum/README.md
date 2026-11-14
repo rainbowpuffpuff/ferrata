@@ -252,13 +252,13 @@ adds 996,910 cycles to each of our transactions, which would make the attestatio
 ### Commands (second pass)
 
 ```sh
-# 1. On the build box (mrun --profile ws-4), from lez/ of this worktree, with $S a scratch directory
+# 1. On the build box (mrun --profile <yours>), from lez/ of this worktree, with $S a scratch directory
 #    beside the repository holding in/release.bin (the crown build's R0BF release program):
 bash results/p4-minimum/box-build-scale.sh     # builds prove_native_transfer (debug) and ferrata-e2e (release),
                                                # the dev-mode cycle counts, the release witnesses, both stages
 strip -o $S/box/stage-stripped/transfer/prove_native_transfer target/debug/prove_native_transfer
                                                # 156,093,544 -> 11,393,944 bytes, the same code (manifest records both)
-# 2. From the laptop, in lez/results/p4-minimum, with MODAL_PROFILE=ws-4 P4_APP=p4-scale P4_MEM_MIB=16384:
+# 2. From the laptop, in lez/results/p4-minimum, with MODAL_PROFILE=<yours> P4_APP=p4-scale P4_MEM_MIB=16384:
 modal volume put p4-minimum $S/box/stage-stripped/transfer /bundle/transfer
 modal volume put p4-minimum $S/box/stage/release /bundle/release
 P4_CPU=16 modal run --detach minimum.py::main --job attest --runs 3 --tag cpu16-mem16g     # cancelled after run 2
@@ -397,12 +397,12 @@ roughly double that peak, past the 16 GiB the minimum declares (*estimated*, not
 ```sh
 # 1. On the build box, from lez/ of this worktree (commit 9bec9fe; 511d5ce after it is rustfmt only):
 M=<spike>/modal-build
-$M/mrun --profile ws-4 --get <spike>/tmp/p4-pad/box -- \
+$M/mrun --profile <yours> --get <spike>/tmp/p4-pad/box -- \
   'FERRATA_HEAD=9bec9fe9514c5574d297b099d9d6ba701dc31969 FERRATA_DIRTY=0 bash results/p4-minimum/box-build-pad.sh'
 #    builds the three binaries, runs tests/wallet_padding.rs (dev mode), the dev-mode dry runs and settlements,
 #    strips prove_attest (158,359,704 -> 11,582,504 bytes) and prove_bridge (158,846,864 -> 11,914,096) and stages them
 #    (manifests: runs/pad-box/MANIFEST-*.json)
-# 2. From the laptop, in lez/results/p4-minimum, with MODAL_PROFILE=ws-4 P4_APP=p4-pad P4_MEM_MIB=16384:
+# 2. From the laptop, in lez/results/p4-minimum, with MODAL_PROFILE=<yours> P4_APP=p4-pad P4_MEM_MIB=16384:
 modal volume put p4-minimum <spike>/tmp/p4-pad/box/stage/attest-pad /bundle/attest-pad
 modal volume put p4-minimum <spike>/tmp/p4-pad/box/stage/bridge-pad /bundle/bridge-pad
 for c in 8 16; do for r in a b; do for j in bridge-pad attest-pad; do       # eight containers at once, one run each
@@ -465,7 +465,7 @@ load; these figures are not a laptop's.
   on the state of the tests (`../../BRIDGE-RESULTS.md` §3, §4, §7). Each is LEZ's
   `execute_and_prove`; the receipt is the succinct `InnerReceipt` of LEZ's circuit, borsh.
 - **Binaries**: `lez/target/debug/prove_attest` (157,634,064 bytes, sha256 `7699c9d2567d…`) and
-  `prove_bridge` (158,126,064 bytes, `b92df59c2248…`), built on the build box (Modal, through
+  `prove_bridge` (158,126,064 bytes, `b92df59c2248…`), built on the build box (through
   `mrun`): `cargo build -p harness --locked --bin prove_attest --bin prove_bridge` in 5 min 10 s,
   with `RISC0_HOME` the guest toolchain of `../../RESULTS.md` §8 and `RISC0_BUILD_LOCKED=1`. Debug
   host binaries, as for the GPU runs: the proving is done by `r0vm`, a release binary, in its own
@@ -490,7 +490,7 @@ FERRATA_HEAD=0b135f76ebd6e12787ca9ebf1f5b83c53519a69c FERRATA_DIRTY=0 \
 FERRATA_HEAD=0b135f76ebd6e12787ca9ebf1f5b83c53519a69c FERRATA_DIRTY=0 \
   scripts/stage-prove-bridge.sh STAGE/bridge target/debug/prove_bridge
 
-# 2. From the laptop (network only), in lez/results/p4-minimum, with MODAL_PROFILE=ws-4:
+# 2. From the laptop (network only), in lez/results/p4-minimum, with MODAL_PROFILE=<yours>:
 modal volume put p4-minimum STAGE/attest /bundle/attest
 modal volume put p4-minimum STAGE/bridge /bundle/bridge
 modal volume put p4-minimum ~/.risc0/extensions/v3.0.5-cargo-risczero-x86_64-unknown-linux-gnu/r0vm /bundle/r0vm/r0vm
@@ -536,7 +536,7 @@ curl -L https://risczero.com/install | bash
 R0VM=~/.risc0/extensions/v3.0.5-cargo-risczero-x86_64-unknown-linux-gnu/r0vm
 sha256sum $R0VM          # 36c016a5bb2ded5bd1f8f92cc487e6ffaeb1e95ec05850c983081a0f716b515b
 # the prebuilt prove_attest and the fixture it reads (152 MB), from the Volume the container read
-MODAL_PROFILE=ws-4 modal volume get p4-minimum /bundle/attest .
+MODAL_PROFILE=<yours> modal volume get p4-minimum /bundle/attest .
 cd attest && chmod +x prove_attest
 python3 -I -c 'import hashlib,json; m=json.load(open("MANIFEST.json")); print([p for p,v in m["files"].items() if hashlib.sha256(open(p,"rb").read()).hexdigest()!=v["sha256"]] or "all files match MANIFEST.json")'
 ./prove_attest --image-ids          # consumer image 3f357bae…ee6d

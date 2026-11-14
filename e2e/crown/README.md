@@ -47,7 +47,7 @@ script that re-checks every step from public data and the recorded blocks.
 **The programs of `crown-live-2` and `crown-live-3`** (the final programs: `integration7`, guest sources as of 4abfbf5, built on the Modal build box with
 `scripts/reproduce-image-ids.sh build`; the same commit built at two other paths with two other `$HOME`s gives
 byte-identical binaries and these ids, [`docs/image-ids.md`](../../docs/image-ids.md); pinned in `cloud/ctl.py` and
-`cloud/drive.py`; on the ws-3 Volume since `setup` on 12 Nov 2026; the LEZ bundle of these programs for
+`cloud/drive.py`; on the Modal Volume since `setup` on 12 Nov 2026; the LEZ bundle of these programs for
 `crown-live-3`: 138,872,352 bytes, sha256 `0013bab125141c9d…`, uploaded by `setup` at 10:56Z: `crown-live-2`'s bundle
 (139,304,302 bytes, sha256 `4dd813e28261ee96…`) repacked by `lez/crown/build.sh repack` with crown-driver `44024e7e…`
 from this tree and the fixture `sepolia-2026-11-12`, its programs byte for byte):
@@ -61,7 +61,7 @@ from this tree and the fixture `sepolia-2026-11-12`, its programs byte for byte)
 | `segment` | `0x11e888e94b9520b08477ba5c5c29cc46bdffc7b1e7c5fe822eb0776f40c54592` |
 | release (`NOut` v2; sources as crown-live-1's) | `0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9` |
 
-**The programs of `crown-live-1`** (`integration5`, built on the ws-4 build box at the maintainer's checkout path,
+**The programs of `crown-live-1`** (`integration5`, built on the Modal build box at the maintainer's checkout path,
 before guest builds were path-independent, from commit db9f034; their ids reproduce only at that path and commit,
 [`docs/guides/verify.md`](../../docs/guides/verify.md) §2; `scripts/verify-sepolia.py` takes them from the run's own records):
 
@@ -80,8 +80,8 @@ in the merged wire (`checkpoint/crates/checkpoint-core/src/wire.rs`, `lez/harnes
 
 ## Stages and where each runs
 
-Modal workspace ws-3, app `ferrata-crown` (CPU runner, GPU session, wrap), Volume `ferrata-crown`. Builds on
-the build box (`mrun --profile ws-4`). The laptop only starts, reads status and fetches.
+our Modal workspace, app `ferrata-crown` (CPU runner, GPU session, wrap), Volume `ferrata-crown`. Builds on
+the build box (`mrun --profile <yours>). The laptop only starts, reads status and fetches.
 
 | # | Stage | Machine | Persists (Volume) |
 |---|---|---|---|
@@ -140,10 +140,10 @@ The run refuses to start unless latest = pending nonce and the CREATE addresses 
 1,002,000,000,000,000 wei of deposits; each release paid back 0.000999 ETH (the 0.1 % checkpoint fee is credited to
 the prover's `owed`, the 0.2 % relay fees stay escrowed); gas 74,947,322 (measured; planned ~50-100 M), 0.0000165 ETH
 at the prices paid (65-72 wei per gas, release 0 25,000,044); crown-live-3: gas 74,947,202, 0.0000248635 ETH (five
-of the deployment's seven at 140,711 to 640,703 wei per gas, the other eight transactions at 24 to 543). Modal (ws-3, cap 20 USD; ~2.4 spent before this work):
+of the deployment's seven at 140,711 to 640,703 wei per gas, the other eight transactions at 24 to 543). Modal (cap 20 USD; ~2.4 spent before this work):
 runner ~4 h of 2 cores (~1 USD at the nonpreemptible rate), GPU session ~1 h (~1 USD), wraps cents.
 
-## Built and measured so far (build box = Modal, workspace ws-4, through `mrun`)
+## Built and measured so far (build box = Modal, our Modal workspace, through `mrun`)
 
 | What | Result |
 |---|---|
@@ -165,11 +165,11 @@ runner ~4 h of 2 cores (~1 USD at the nonpreemptible rate), GPU session ~1 h (~1
    RISC0_SERVER_PATH makes both private proofs GPU proofs against the live sequencer.
 5. Release inputs from real burns (bridge/e2e `release` uses the v1 burn MAC; the merged notes use v2).
 6. The capture with the ETH registry and fee slots (register_slots) beside slots 0-2.
-7. The cloud app (`ferrata-crown` on ws-3), `e2e/crown.sh`, the verify script, one full rehearsal to DONE.
+7. The cloud app (`ferrata-crown` on our Modal workspace), `e2e/crown.sh`, the verify script, one full rehearsal to DONE.
 
 ## Commands (for the owner)
 
-The cloud app (`e2e/crown/cloud/`, Modal app `ferrata-crown` on workspace ws-3) runs the whole round trip from
+The cloud app (`e2e/crown/cloud/`, Modal app `ferrata-crown` on our Modal workspace) runs the whole round trip from
 one `start`; it needs this machine only to start, to look and to fetch. Rehearsed to DONE on an anvil fork of Sepolia
 three times: `e2e/runs/crown-rehearsal-1/` and `-2/` on the earlier programs (branch `crown-rehearsal`; 2 stopped on
 purpose and resumed), and **`e2e/runs/crown-rehearsal-3/` on the programs of this tree** (branch `integration5`, commit
@@ -179,12 +179,12 @@ Before the live start of `crown-live-3` (as it stood after the fresh checkpoint,
 - this tree (branch `integration7`, from its worktree); `vault/lib` present in it (forge-std 1.10.0, OpenZeppelin
   5.4.0, risc0-ethereum 3.0.0; git ignores it and `start` packs it);
 - the LEZ bundle with the fresh checkpoint (sha256 `0013bab125141c9d…`) and the R0BF programs of the final programs
-  are on the ws-3 Volume (`setup` on 12 Nov 2026 at 10:56Z; `crown-sessiona-sepolia-1` ran session A from that
+  are on the Modal Volume (`setup` on 12 Nov 2026 at 10:56Z; `crown-sessiona-sepolia-1` ran session A from that
   bundle); `setup` again only if they were replaced since: it checks every program's sha256 and image id against the
   ids pinned in `cloud/ctl.py`; `crown-driver check --chain sepolia` says until when the checkpoint is valid (28 Nov
   2026 03:13 UTC for this one; after it, a fresh fixture: `scripts/fetch-sepolia-checkpoint.py`, then
   `lez/crown/build.sh repack` and `setup`);
-- the Secret `ferrata-sepolia-key` on ws-3 (it exists; the run signs with the same throwaway deployer, then at
+- the Secret `ferrata-sepolia-key` on our Modal workspace (it exists; the run signs with the same throwaway deployer, then at
   nonce 23 after crown-live-1's 13 transactions, now at 36 after crown-live-3's: the gate prints the nonce, the vault
   address and the balance; on a resume, the vault the identity fixed at the first start);
 - no ferrata-sepolia runner active (`e2e/sepolia-cloud.sh status`): both runs use the deployer's nonces, and `start`
@@ -195,6 +195,7 @@ public endpoint and the known deployer are used, read-only, by `start`):
 
 ```
 cd spike/ferrata-wt-integ7
+export CROWN_MODAL_PROFILE=<your Modal profile>  # every command needs it (the run's Modal workspace)
 e2e/crown.sh start crown-live-3                 # the live run: prints sender, nonce, vault address, the 13
                                                 #   transactions, the gas price; type yes
 e2e/crown.sh status crown-live-3                # any time: the stage, the stages done, the last lines of the log
@@ -224,8 +225,8 @@ covers it (up to ~7 min more): ~40 min for both; session B ~15 min (857 s in cro
 proven and sent in 276.8 s, the private burn in 336.0 s); the checkpoint ~2 min (crown-rehearsal-3: 18.5M user cycles,
 33.3 s on an L40S, 41 s with the queue; GPU queue permitting: up to 2 h, then the CPU here); W = 60 min (the release
 proofs, ~3 min, run in it); finalize, the 120 s release delay and both releases ~4 min; verify ~1 min. About **2 h 40
-min to 3 h 10 min** in all, longer if no GPU is free. Modal: about 1-2 USD on ws-3 (estimated; the app `ferrata-crown`
-had been billed 1.08 USD in all, a selftest and three rehearsals, by 06:52 CET; `mcost ws-3`; 3.38 USD by
+min to 3 h 10 min** in all, longer if no GPU is free. Modal: about 1-2 USD on our Modal workspace (estimated; the app `ferrata-crown`
+had been billed 1.08 USD in all, a selftest and three rehearsals, by 06:52 CET; `mcost Modal; 3.38 USD by
 16:41 CET, so about 2.3 USD for the live run, derived). Sepolia: 13 transactions, ~50 M gas (the vault ~39.5 M under
 EIP-8037; the secured vault's `submitCandidate` costs ~24.7 k more), 0.002004 ETH escrowed by the deposits and paid
 back by the releases less the fees. With the secured vault the checkpoint fee goes to the sender of

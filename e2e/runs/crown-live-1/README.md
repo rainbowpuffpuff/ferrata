@@ -1,6 +1,6 @@
 # crown-live-1: the whole round trip, live, Sepolia -> LEZ -> Sepolia, to DONE (11 Nov 2026)
 
-The owner's `e2e/crown.sh start` on Modal workspace ws-3 (app `ferrata-crown`, function `runner`), from the
+The owner's `e2e/crown.sh start` on our Modal workspace (app `ferrata-crown`, function `runner`), from the
 tree `spike/ferrata-wt-integ5`, branch `integration5`, signing on Sepolia with the throwaway deployer
 `0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07` (keystore in the Modal Secret `ferrata-sepolia-key`). 19 of 19
 stages, **DONE at 15:14:17Z**, the runner's verify **14 of 14** (`verify.txt`). Every number here is from this run's
@@ -129,4 +129,4 @@ The 26 records of crown-rehearsal-3's pattern (the checkpoint input `crown-178-2
 from the run's own files, so that `e2e/crown.sh verify crown-live-1` runs from the committed records: session A's
 `deployment-settings.yaml` (the devnet's public genesis settings; its sha256 is `bedrockGenesisId`) and each capture's
 `block.json` (Sepolia's answer for the block). Not committed: the logs (local paths), the programs and receipts
-(binaries), the LEZ sessions' exports and node data; `e2e/crown.sh fetch --lez` brings them from the ws-3 Volume.
+(binaries), the LEZ sessions' exports and node data; `e2e/crown.sh fetch --lez` brings them from the Modal Volume.

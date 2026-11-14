@@ -1,6 +1,6 @@
 # crown-rehearsal-4: the final programs on an anvil fork of Sepolia, 18 of 19 stages, then stopped (12 Nov 2026)
 
-`e2e/crown.sh start --fork crown-rehearsal-4` on Modal workspace ws-3 (app `ferrata-crown`, `runner_rehearsal`),
+`e2e/crown.sh start --fork crown-rehearsal-4` on our Modal workspace (app `ferrata-crown`, `runner_rehearsal`),
 branch `integration7` at commit 9d26a1b: the final programs (path-independent builds, `docs/image-ids.md`): attestation
 `0x816d1fef…03df`, bridge `0xccde6171…71dd`, `checkpoint_b` `0xf8116722…626e`, release `0xb64900bc…29e9`; LEZ bundle
 sha256 `4dd813e2…`, 139,304,302 bytes. Started 23:11:17Z (11 Nov). Every number below is from this run's files.

@@ -164,7 +164,7 @@ the checkpoint program in r0vm (6,214,564 user cycles, `T` = 25 inscribed by `64
 
 ## 8. The bridge program on the zone, and its checkpoint into the vault (`attestor/zone-bridge.sh`, `e2e/runs/zone-bridge-1/`)
 
-What ran on 13 November 2026, on the Modal build box of the `zone-bridge` worktree (workspace ws-4, a gVisor
+What ran on 13 November 2026, on the Modal build box of the `zone-bridge` worktree (our Modal workspace, a gVisor
 container on up to 16 cores, 32 threads), and in RISC Zero's Groth16 prover image (the `groth16_wrap` function of
 the same app). Nothing ran on a public network. The zone stage ran from 07:01 to 07:23 UTC (1,379 s, one command);
 proofs, wraps and the vault followed until 07:50 UTC. Records: [`e2e/runs/zone-bridge-1/`](../../e2e/runs/zone-bridge-1/)

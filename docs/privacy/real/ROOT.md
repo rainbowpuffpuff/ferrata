@@ -17,7 +17,7 @@ every other proof in the round trip is real, as in RESULTS.md.
 `checkpoint/realblocks/src/bin/privacy-blocks.rs` runs checkpoint-core's own functions, the ones the guest runs, over
 universe A's blocks in the data of run `privacy-real-1`: `lez.json` (84,769,000 B, sha256 `313a88fa…d51d`) and
 `scenario.json` (sha256 `a3774036…ab9a`). The blocks are the deposit-root import, the 20 private claims and the 20 burns.
-It ran natively on the Modal build box (`mrun`, profile `ws-5`, 35 s, build included). Its output is
+It ran natively on the Modal build box (`mrun`, Modal, 35 s, build included). Its output is
 [`root/check.json`](root/check.json), with one row per block.
 
 | check | result |

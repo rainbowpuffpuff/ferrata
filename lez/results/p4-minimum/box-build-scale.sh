@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# p4-minimum, second pass, on the build box (mrun --profile ws-4), from spike/ferrata-wt-p4/lez:
+# p4-minimum, second pass, on the build box (mrun --profile <yours>), from spike/ferrata-wt-p4/lez:
 # build prove_native_transfer (debug, as prove_attest) and ferrata-e2e (release, as the crown runner),
 # run both in dev mode / the executor for their cycles, make the release witnesses of the crown
 # rehearsal 3 (final programs) and stage everything for minimum.py.

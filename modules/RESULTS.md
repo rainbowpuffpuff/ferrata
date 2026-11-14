@@ -11,7 +11,7 @@ attestation module's prototype (10 November).
 ## The six modules on the final tree, 13 November 2026
 
 **After the last merge (`miniapp-sequencer` into `integration8`, branch `final-merge`), every module check again.**
-Modal build box (workspace ws-4, gVisor, 2 CPUs reported, up to 16 cores, 64 GiB; Nix 2.28.3, the store of the
+Modal build box (gVisor, 2 CPUs reported, up to 16 cores, 64 GiB; Nix 2.28.3, the store of the
 modules-more box restored), commit `6a19ec9`, 13 Nov 2026 12:28–13:37 UTC, dev mode: `check.sh` with the six modules,
 dev and portable, `E2E=1 BRIDGE_E2E=1`, **step failures 0 (71 steps), check failures 0** (2,827 s): 53 calls, each
 equal to native in both Cores and meeting its expectations (attest 11, bridge 13, attestor 12, monitor 8, updater 4,
@@ -45,7 +45,7 @@ sends (`keystore_module`), the updater's beacon data through `beacon_api_module`
 `ferrata_updater_module` carries both of the daemon's backends: with `ledger = "sequencer"` it opens
 `lez/updater/sequencer/`'s library, the code of the binary of row 99 (LEZ's wallet client, a follower of blocks final
 on Bedrock), linking LEZ v0.4.0-rc1's node-side crates. Built with logos-module-builder at commit `2d86798` on the
-Modal build box (workspace ws-3): `check.sh` for this module, dev and portable, **step failures 0, check
+Modal build box: `check.sh` for this module, dev and portable, **step failures 0, check
 failures 0**, `updater-e2e.sh` 8/8 natively and 10/10 through each Logos Core on the in-process chain (187
 transactions applied, none refused; with no sequencer, the sequencer backend's set-up fails on the connection, as the
 binary's does). Then the portable package (61 MB) in the portable headless Logos Core on a crown zone (Modal,
@@ -96,7 +96,7 @@ Records: [`results/relayer-2026-11-13/`](results/relayer-2026-11-13/README.md). 
 `relayer-e2e.sh` 8 of 8 (before the cadence check and the comparison existed); a first `check.sh` whose only failure
 was the comparison with the bridge module, because the devnet no longer compiled (a closure named `word` hid the
 function `word`) and the earlier devnet binary was used: fixed, and `relayer-e2e.sh` now stops on a build error.
-Spend: about 0.32 USD of box time (estimated by `mrun`), workspace ws-4.
+Spend: about 0.32 USD of box time (estimated by `mrun`), our Modal workspace.
 
 Not done: the relayer's root imports on a running LEZ sequencer (the binary's `--sequencer` path has not run with
 `--import-roots`; the module has no LEZ wallet); the devnet's records are not written by a sync committee; Gloas
@@ -114,7 +114,7 @@ update planning in `lez/advance`. The module carried the in-process chain only a
 carries that backend since, above), and `check_config`
 reports the chains' `layout`, the sources' `kind`, `[sequencer]` and `finish_own_jobs`.
 
-Modal build box (workspace ws-4, gVisor, 2 CPUs reported, up to 16 cores, 64 GiB; Nix 2.28.3, the store of
+Modal build box (gVisor, 2 CPUs reported, up to 16 cores, 64 GiB; Nix 2.28.3, the store of
 the modules-more box restored), commit `6dcf6af`, 13 Nov 2026 04:23–04:52 UTC: `check.sh` with the five modules,
 dev and portable, `E2E=1 BRIDGE_E2E=1`, **step failures 0, check failures 0** (1,708 s): 48 calls, each equal to
 native in both Cores and meeting its expectations (attest 11, bridge 13, attestor 12, monitor 8, updater 4);
@@ -138,7 +138,7 @@ separately. Merged (`c97ff21`), one `stage.sh` stages all five (the attestation 
 `stage.py`, the attestor and monitor modules as before, the updater through `stage-updater.sh`), one
 `check.sh` builds and checks them, with `BRIDGE_E2E=1` and the daemons' jobs. The updater now plans with
 `ferrata-advance` (`lez/advance`), the code the attestation module's `advance` runs, so the updater
-module's staged tree carries it too (`d4c0268`). Then, on the Modal build box (workspace `ws-4`, a
+module's staged tree carries it too (`d4c0268`). Then, on the Modal build box (a
 gVisor container: 2 CPUs reported, up to 16 cores and 64 GiB; Nix 2.28.3 with the Nix store the daemons'
 run had built, Logos from source; cargo 1.93.0 and 1.98.1, r0vm 3.0.5, Foundry 1.3.6), at commit `d4c0268`
 ([`results/merged-2026-11-13/`](results/merged-2026-11-13/summary.md)):
@@ -252,7 +252,7 @@ modules (the last column). Results: [`results/check-2026-11-12/`](results/check-
 
 ### Where the daemons' modules ran
 
-The Modal build box of this worktree (workspace `ws-4`), a gVisor container (`Linux 4.19.0-gvisor
+The Modal build box of this worktree (our Modal workspace), a gVisor container (`Linux 4.19.0-gvisor
 x86_64`, 16 cores, 64 GiB), started cold: Nix 2.28.3 with the set-up of the first run, cargo 1.93.0 (and
 1.98.1 for `lez/`), Foundry 1.3.6 (anvil, forge, cast), r0vm 3.0.5; builder, SDK, `logosctl` and nixpkgs
 at the revisions of the first run; Logos packages built from source again (the dev `logosctl` took
@@ -386,7 +386,7 @@ tool's claim builder, release rule, release plan and release guest run moved int
 (`cli/wallet`), the updater's job planning into `ferrata-advance` (`lez/advance`); the tool, the updater
 and the modules all link them, and the modules now link the programs' own wire crates and LEZ's
 `lee_core` (staged by `scripts/stage.py`), so every message and state is the programs' own type. All of it
-ran on the Modal build box (`ws-5`, a gVisor container, 2 CPUs reported), repository at commit
+ran on the Modal build box (a gVisor container, 2 CPUs reported), repository at commit
 `3a15b73` (results in [`results/complete-2026-11-12/`](results/complete-2026-11-12/)):
 
 | What | Where it ran | Result |

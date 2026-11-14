@@ -153,7 +153,7 @@ of the 1 ETH. Each proof covers the bridge program's private transitions, the fe
 privacy-preserving circuit over them. Prebuilt `prove_bridge` (sha256 `e2b20f51…1ea3`, 156,187,512
 bytes, built on the build box (glibc 2.39) from the integration branch at `21abe05`), staged by
 `../lez/scripts/stage-prove-bridge.sh` into `inputs-lez-bridge/`; job `lez-bridge` (`modal_app.py`),
-run `gpu-l4-bridge`, profile `ws-3`, one container. The staged binary matches the manifest
+run `gpu-l4-bridge`, Modal, one container. The staged binary matches the manifest
 (`input_hashes_equal_manifest: true`).
 
 | | **NVIDIA L4** |

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """e2e/crown/wrap.py <input.json> <proof.json> (crown run, stages 7 and 9): the Groth16 step (RISC Zero's prover image) through the build box app's
-groth16_wrap, as spike/modal-build/mwrap does, on the profile FERRATA_WRAP_PROFILE (default ws-4; mwrap
+groth16_wrap, as spike/modal-build/mwrap does, on the profile FERRATA_WRAP_PROFILE (required; mwrap
 hard-codes config.json's). Appends to spike/modal-build/ledger.tsv in mwrap's format."""
 import json, os, sys, time
 # spike/<worktree>/e2e/crown/wrap.py -> spike/
 SPIKE = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
-profile = os.environ.get("FERRATA_WRAP_PROFILE", "ws-4")
+profile = os.environ.get("FERRATA_WRAP_PROFILE") or sys.exit("set FERRATA_WRAP_PROFILE to your Modal profile")
 os.environ["MODAL_PROFILE"] = profile
 os.environ["TMPDIR"] = os.path.join(SPIKE, "tmp", "modal-build")
 os.makedirs(os.environ["TMPDIR"], exist_ok=True)

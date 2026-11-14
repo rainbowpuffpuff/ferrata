@@ -37,7 +37,7 @@ sums() { ( cd "$1" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xarg
 case "${1:-}" in
   seed)
     snap=/vol/snap/ferrata-wt-crown.tar.zst
-    [ -f "$snap" ] || { echo "no $snap (run on the ws-4 build box)"; exit 1; }
+    [ -f "$snap" ] || { echo "no $snap (run on the Modal build box)"; exit 1; }
     rel() { echo "${1#/}"; }
     t0=$(date +%s)
     zstd -q -d -T0 -c "$snap" | tar -x -C / \

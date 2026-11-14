@@ -1,6 +1,6 @@
 # crown-live-3: the round trip on the final programs, live, Sepolia -> LEZ -> Sepolia, to DONE (12 Nov 2026)
 
-The owner's `e2e/crown.sh start crown-live-3` on Modal workspace ws-3 (app `ferrata-crown`, function `runner`),
+The owner's `e2e/crown.sh start crown-live-3` on our Modal workspace (app `ferrata-crown`, function `runner`),
 from the tree `spike/ferrata-wt-integ7`, branch `integration7`, signing on Sepolia with the throwaway deployer
 `0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07` (keystore in the Modal Secret `ferrata-sepolia-key`). The programs are
 the final ones, [`docs/image-ids.md`](../../../docs/image-ids.md), which any checkout rebuilds to the same ids
@@ -142,4 +142,4 @@ each capture's `block.json`), LEZ sessions A and B's `logs/driver.log` and `expo
 them), the verify outputs, `compare-vault.txt` and the controls. Not committed: the runner's logs and `crown.log` (local
 paths),
 the programs and receipts (binaries), the LEZ sessions' exports and node data, the captures' other RPC answers, forge's
-broadcast records; `e2e/crown.sh fetch --lez crown-live-3` brings them from the ws-3 Volume.
+broadcast records; `e2e/crown.sh fetch --lez crown-live-3` brings them from the Modal Volume.

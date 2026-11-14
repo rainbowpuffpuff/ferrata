@@ -1,5 +1,5 @@
 ✓ Initialized. View run at 
-https://modal.com/apps/ws-1/main/ap-GwFKyNpKVOaNicXLWJjOw3
+https://modal.com/apps/<workspace>/main/ap-GwFKyNpKVOaNicXLWJjOw3
 Building image im-7EoBvYUjBtQwV0N7q7ihFt
 
 => Step 0: FROM base
@@ -113,4 +113,4 @@ P4-DONE
 {"run": 1, "exit_code": 0, "wall_s": 1049.58, "proof_lines": ["private claim: REAL PROOF: execute_and_prove 556.9 s (prove + settle 557.4 s); receipt (succinct InnerReceipt, borsh) 239628 bytes; transaction 256130 bytes", "private burn: REAL PROOF: execute_and_prove 484.0 s (prove + settle 484.3 s); receipt (succinct InnerReceipt, borsh) 239046 bytes; transaction 254966 bytes"], "settle_exit": 0, "max_rss_kib": "9683572", "sampled_max": {"cgroup_current_bytes": 9907224576, "meminfo_used_kib": 9675256, "rss_sum_kib": 9785664, "r0vm_rss_kib": 9681356}}
 Stopping app - local entrypoint completed.
 ✓ App completed. View run at 
-https://modal.com/apps/ws-1/main/ap-GwFKyNpKVOaNicXLWJjOw3
+https://modal.com/apps/<workspace>/main/ap-GwFKyNpKVOaNicXLWJjOw3

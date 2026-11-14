@@ -1,4 +1,4 @@
-"""ferrata-crown: the crown run (e2e/crown/README.md) in the cloud, Modal workspace ws-3.
+"""ferrata-crown: the crown run (e2e/crown/README.md) in the cloud, our Modal workspace.
 
 Deployed and driven by e2e/crown.sh (setup, start, status, fetch, stop; e2e/crown/README.md, "Commands").
 Never `modal profile activate`: the profile is given per command.

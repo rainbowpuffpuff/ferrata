@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# p4-minimum, padded pass, on the build box (mrun --profile ws-4), from spike/ferrata-wt-p4-pad/lez:
+# p4-minimum, padded pass, on the build box (mrun --profile <yours>), from spike/ferrata-wt-p4-pad/lez:
 # build prove_attest, prove_bridge and prove_native_transfer (debug, as before), run the padding test
 # (harness/tests/wallet_padding.rs, dev mode), the dev-mode cycle counts of the padded transactions,
 # then strip the two binaries and stage them for minimum.py (jobs attest-pad, bridge-pad).

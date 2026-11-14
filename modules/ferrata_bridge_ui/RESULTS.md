@@ -3,7 +3,7 @@
 ## 12 November 2026: the private round trip on the defaults (B3's done gate)
 
 **A user's private round trip runs through the mini-app on its defaults, headless, against the devnet.**
-Branch `miniapp-private`, Modal build box (profile ws-4, the same container image as below):
+Branch `miniapp-private`, Modal build box (Modal, the same container image as below):
 `scripts/box-test.sh` drove the view through a private deposit with the defaults, the relayer's root
 import, the claim's random delay let pass on the devnet's clock (not overridden), a **private claim settled**,
 a **private burn settled** to the fresh address the view generated, with the release's random delay on, the

@@ -1,6 +1,6 @@
 # zone-bridge-2: the same with a rotation its committee proposed (four sequencers, then five)
 
-13 November 2026, the Modal build box (workspace ws-4): `checkpoint/attestor/zone-bridge.sh` (stages in its
+13 November 2026, the Modal build box: `checkpoint/attestor/zone-bridge.sh` (stages in its
 header); results: [`checkpoint/attestor/RESULTS.md`](../../../checkpoint/attestor/RESULTS.md) §9 (§8 for what is real and what stands in). Run with `ZB_ROTATE=1`: after the attestors started and before session B, a fifth key staked on LEZ (`sequencer_service stake`), the committee's `ChannelConfigOp` applied by Bedrock (`zone/channel-before-rotation.json`, `channel-after-rotation.json`), the fifth sequencer and its attestor started.
 Nothing ran on a public network: the Ethereum side is a local anvil (no fork, Sepolia's chain id), the beacon
 chain on LEZ crown-driver's stand-in committee.

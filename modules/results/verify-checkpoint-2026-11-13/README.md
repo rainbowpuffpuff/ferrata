@@ -8,7 +8,7 @@ with User-Agent `ferrata-verify-checkpoint`; nothing was sent to any chain.
 
 | | |
 |---|---|
-| where | Modal build box (workspace ws-3), 13 Nov 2026 07:25:20Z–07:25:32Z, the `call` example built from the tree of commit `e8d6d55` (`run.txt`) |
+| where | Modal build box, 13 Nov 2026 07:25:20Z–07:25:32Z, the `call` example built from the tree of commit `e8d6d55` (`run.txt`) |
 | request | [`verify-checkpoint-sepolia.json`](../../ferrata_attest_module/rust-lib/calls/tests/fixtures/verify-checkpoint-sepolia.json) with the fixture's `bootstrap.ssz` as hex: the instance configuration of the crown zones (layout Gloas, `ws_period_epochs` 3,532), `min_providers` 3 |
 | reply | [`reply.json`](reply.json) (every provider's requests included), [`summary.json`](summary.json) |
 | record | every request and response (22), [`verify-checkpoint-sepolia.record.json`](../../ferrata_attest_module/rust-lib/calls/tests/fixtures/verify-checkpoint-sepolia.record.json): the tests replay it |

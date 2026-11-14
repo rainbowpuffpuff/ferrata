@@ -1,5 +1,5 @@
 ✓ Initialized. View run at 
-https://modal.com/apps/ws-1/main/ap-XfIEII2I8HoFy3zzmiPVs2
+https://modal.com/apps/<workspace>/main/ap-XfIEII2I8HoFy3zzmiPVs2
 ✓ Created objects.
 ├── 🔨 Created mount 
 │   ./le
@@ -16,4 +16,4 @@ P4-RELEASE-FINISH {"run": 1, "inputs_equal_manifest": true, "groth16_exit": 0, "
 P4-DONE
 Stopping app - local entrypoint completed.
 ✓ App completed. View run at 
-https://modal.com/apps/ws-1/main/ap-XfIEII2I8HoFy3zzmiPVs2
+https://modal.com/apps/<workspace>/main/ap-XfIEII2I8HoFy3zzmiPVs2

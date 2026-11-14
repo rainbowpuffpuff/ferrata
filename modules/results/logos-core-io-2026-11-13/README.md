@@ -1,6 +1,6 @@
 # Ferrata's modules reading Ethereum through Logos Core's `eth_rpc_module` (13 November 2026)
 
-Where it ran: the Modal build box (gVisor, x86-64, 64 GiB), workspace ws-5; Nix 2.28.3, cargo 1.93.0,
+Where it ran: the Modal build box (gVisor, x86-64, 64 GiB), our Modal workspace; Nix 2.28.3, cargo 1.93.0,
 anvil 1.3.6, `logosctl` pre-release-66d098d built from logos-logoscore-cli `66d098d` ([`env.txt`](env.txt)).
 Tree: branch `logos-core-io` at `6d31183` (run 3) and `b2946c4` (run 4, the bridge's end-to-end run after its
 fix). RISC Zero dev mode (no proof in these runs). What the modules are and why they are built this way:

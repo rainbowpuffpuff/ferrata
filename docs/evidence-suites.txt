@@ -2,7 +2,7 @@ Suites of branch `integration5`, fifth integration pass, 11 Nov 2026 (docs/EVIDE
 Code as of commit b93a945 (merges of lez-time-fix, crown-rehearsal, secfix-lez, secfix-vault and the fixes after
 them) plus the run's own formatting step (cargo fmt of cli/ and lez/harness, forge fmt of vault/, cargo fmt of
 bridge/), committed as b369d65; later commits change documents only. Every command ran on the Modal build box of
-this worktree through spike/modal-build/mrun (workspace ws-5; 2 threads reported by nproc, 64 GiB, gVisor,
+this worktree through spike/modal-build/mrun (our Modal workspace; 2 threads reported by nproc, 64 GiB, gVisor,
 glibc 2.39). Counts are the sums of the "test result" / "Suite result" lines of each log. Image ids are those of
 the integration5 worktree's path.
 
@@ -62,7 +62,7 @@ its clippy lints; the crown script's 7-field candidates() destructuring; formatt
 
 Sixth pass, branch `integration6` (documents brought to the merged code; the code changes are the privacy suite's
 seed-only wallet deriving NOut as D13's v2, its labels of the holder PDAs, and e2e/crown.sh's guard). Run "r4" at
-96d3e1f, 11 Nov 06:51 - 06:52 UTC, on the same kind of box (workspace ws-5; warm from runs r1-r3 of the same
+96d3e1f, 11 Nov 06:51 - 06:52 UTC, on the same kind of box (our Modal workspace; warm from runs r1-r3 of the same
 script, run r1 cold: 497 s in all):
   CI job `test` as .github/workflows/ci.yml runs it, with the current toolchains (`rustup toolchain install stable beta`)
     rustc                                                              stable 1.99.1; beta 1.101.0-beta.1
@@ -89,7 +89,7 @@ ran clean on the build box with RISC0_SKIP_BUILD=1 before the merge):
 
 Seventh pass (branch integration6, 11 Nov 2026): the merges of review-core 0d53068, sectools a5a5ee0, verify-anyone
 90ce55b, p4-pad 17b7854, consumer-example 189ac4d and fuzz-core 0fcfc0c (EVIDENCE rows 35-40), what they touched.
-Build box of this worktree through spike/modal-build/mrun (workspace ws-5), Rust 1.93.0 (the box's default).
+Build box of this worktree through spike/modal-build/mrun (our Modal workspace), Rust 1.93.0 (the box's default).
 Run "checks" at e029602 (15:28 - 15:45 CET, 1,030 s, four groups in parallel):
   root: cargo test --workspace --locked                                150 passed, 0 failed (24 test binaries)
   lez:  RISC0_DEV_MODE=1 cargo test -p harness -p ferrata-lez-holdings-wire --locked -- --test-threads 8

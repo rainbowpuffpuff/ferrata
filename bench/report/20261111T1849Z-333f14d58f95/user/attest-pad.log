@@ -1,5 +1,5 @@
 ✓ Initialized. View run at 
-https://modal.com/apps/ws-1/main/ap-K6f0k43PVWwuob1j0HTN8l
+https://modal.com/apps/<workspace>/main/ap-K6f0k43PVWwuob1j0HTN8l
 Building image im-7EoBvYUjBtQwV0N7q7ihFt
 
 => Step 0: FROM base
@@ -112,4 +112,4 @@ P4-DONE
 {"run": 1, "exit_code": 0, "wall_s": 572.76, "proof_lines": ["REAL PROOF: execute_and_prove 569.4 s (prove + settle 569.6 s); receipt (succinct InnerReceipt, borsh) 239214 bytes; transaction 255302 bytes"], "settle_exit": 0, "max_rss_kib": "9670796", "sampled_max": {"cgroup_current_bytes": 9910439936, "meminfo_used_kib": 9678392, "rss_sum_kib": 9777516, "r0vm_rss_kib": 9670796}}
 Stopping app - local entrypoint completed.
 ✓ App completed. View run at 
-https://modal.com/apps/ws-1/main/ap-K6f0k43PVWwuob1j0HTN8l
+https://modal.com/apps/<workspace>/main/ap-K6f0k43PVWwuob1j0HTN8l

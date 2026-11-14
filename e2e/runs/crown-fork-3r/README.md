@@ -1,6 +1,6 @@
 # crown-fork-3r: the Sepolia stages of the crown run on a fork (STAND-IN, rehearsal)
 
-11 Nov 2026 00:17Z, build box (ws-4, mrun), anvil 1.3.6 fork of Sepolia block 12,108,134 with the real
+11 Nov 2026 00:17Z, build box (mrun), anvil 1.3.6 fork of Sepolia block 12,108,134 with the real
 deployer impersonated (nonce 10 there). Script: spike/tmp/crown/box-3r.sh (outside the repository), driving
 `e2e/crown/sepolia.sh` (deploy | deposit 0 | deposit 1 | submit | finalize | release 0 | release 1).
 

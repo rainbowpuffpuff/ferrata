@@ -1,4 +1,4 @@
-# The build box (mrun, Modal workspace ws-4, from spike/ferrata-wt-p4/lez): box-build.sh
+# The build box (mrun, our Modal workspace, from spike/ferrata-wt-p4/lez): box-build.sh
 2026-11-11T06:58:43Z
 nproc 2
 model name	: unknown

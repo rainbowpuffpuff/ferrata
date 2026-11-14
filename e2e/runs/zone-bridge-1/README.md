@@ -1,6 +1,6 @@
 # zone-bridge-1: the bridge program on a zone of four LEZ sequencers, checkpointed into the vault
 
-13 November 2026, the Modal build box (workspace ws-4): `checkpoint/attestor/zone-bridge.sh` (stages in its
+13 November 2026, the Modal build box: `checkpoint/attestor/zone-bridge.sh` (stages in its
 header); results, what is real and what stands in: [`checkpoint/attestor/RESULTS.md`](../../../checkpoint/attestor/RESULTS.md) §8.
 Nothing ran on a public network: the Ethereum side is a local anvil (no fork, Sepolia's chain id), the beacon
 chain on LEZ crown-driver's stand-in committee.

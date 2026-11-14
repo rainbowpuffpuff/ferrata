@@ -1,6 +1,6 @@
 # The crown run's LEZ side: rehearsals on the build box (11 Nov 2026)
 
-All on the Modal build box (`spike/modal-build/mrun`, workspace ws-4, worktree box ferrata-wt-crown-lez; up to
+All on the Modal build box (`spike/modal-build/mrun`, our Modal workspace, worktree box ferrata-wt-crown-lez; up to
 32 physical cores, 64 GiB), with the guests built at the crown path (attestation program image `0x2228bb46…67cf`,
 merged bridge `0x0be48090…25df`), LEZ v0.4.0-rc1's sequencer and Logos Blockchain node (dev-mode leader proofs).
 Numbers are measured unless marked derived.

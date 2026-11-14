@@ -1,13 +1,13 @@
 # crown-rehearsal-3: the whole crown run on the merged programs, on an anvil fork of Sepolia, to DONE (11 Nov 2026)
 
-`e2e/crown.sh start --fork crown-rehearsal-3` on Modal workspace ws-3 (app `ferrata-crown`, `runner_rehearsal`),
+`e2e/crown.sh start --fork crown-rehearsal-3` on our Modal workspace (app `ferrata-crown`, `runner_rehearsal`),
 from branch `integration5` at commit fecd9c7: the programs after the merges of `lez-time-fix` (LEZ-side time from
 attested records, rule (B)'s check of the tip's producer inscription) and of the security fixes (`secfix-lez`:
 holder PDAs, visible imports only, `NOut` v2; `secfix-vault`: FerrataVault with M-1, M-2, L-1, L-3, I-2, I-7).
 Started 05:20:49Z, DONE 05:45:08Z, no stop: 24 min 19 s of wall time. Every number below is from this run's files
 (`stages.done`, `crown.log`, `lez/session-b/logs/driver.log`, `verify.txt`, the records here).
 
-Programs, built on the ws-4 build box at the crown build path (`spike/ferrata-wt-crown`, where the earlier crown
+Programs, built on the Modal build box at the crown build path (`spike/ferrata-wt-crown`, where the earlier crown
 build ran; the attestation program came out byte-identical to that build's, image `0x2228bb46…67cf`): bridge program
 `ferrata_bridge.bin` image `0x0e9dcd79…bbb6`; `checkpoint_b` `0xa475e8f9…d3b2`, release `0x17257f91…f5cd` (R0BF
 programs, `ferrata-e2e program-binary`); LEZ bundle sha256 `7cc85db0…`, 139,311,009 bytes.

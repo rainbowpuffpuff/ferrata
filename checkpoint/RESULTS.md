@@ -330,7 +330,7 @@ five lines in the rule, the generator and `realblocks` supply the inscription th
 `PayloadMismatch`), and a `T` whose producer a rotation in the same proof removed (`NotAccredited`);
 the other 13 tests run with `T`'s inscription by channel key 0.
 
-**Cycles.** Executor (r0vm 3.0.5) on the ws-5 build box through `mrun`, 11 Nov 2026: `fidelity`'s
+**Cycles.** Executor (r0vm 3.0.5) on the Modal build box through `mrun`, 11 Nov 2026: `fidelity`'s
 `gen empty` and `gen busy` (the four sources), `host gen-b`, then `host bench` over the four sources
 and every `ra-*`/`rb-*` fixture (`results/ruleb-producer-bench.log`; ids of that build,
 `results/ruleb-producer-ids.log`: checkpoint `0x0f2e2e695d61a4330a9a1cb4df127fe163ba4c11b8d3966c4afe3641a82a8158`,
@@ -634,7 +634,7 @@ Executor: r0vm 3.0.5 on the build box (`out/executor.jsonl`), both journals equa
 program is `checkpoint_b` `0xd3597543…0d64`, the recorded ELF of §4 (sha256 `386a3a31…80d9`), not rebuilt (the
 guest sources are unchanged since), the same program as the v5 vault's earlier rule (B) test.
 
-GPU (`../gpu-prover/results/realblocks-l4/`): one NVIDIA L4 (workspace ws-3, GCP us-east), 10 Nov
+GPU (`../gpu-prover/results/realblocks-l4/`): one NVIDIA L4 (our Modal workspace, GCP us-east), 10 Nov
 22:48 UTC: **39.5 s** (segment proofs 29.2 s, recursion 9.6 s; container 41.4 s), succinct receipt 224,314 bytes,
 verified in the container and again on the build box, journal equal to the native one (sha256
 `887c8d44…0d5f`). Groth16 wrap: identity_p254 17.8 s in r0vm on the build box, RISC Zero's Groth16 prover image

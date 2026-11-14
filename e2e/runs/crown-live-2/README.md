@@ -1,6 +1,6 @@
 # crown-live-2: stopped at its first stage, nothing sent (12 Nov 2026)
 
-The owner's `e2e/crown.sh start crown-live-2` on Modal workspace ws-3, from the tree `spike/ferrata-wt-integ7`,
+The owner's `e2e/crown.sh start crown-live-2` on our Modal workspace, from the tree `spike/ferrata-wt-integ7`,
 branch `integration7`, commit fff83c9 (the final programs of [`docs/image-ids.md`](../../../docs/image-ids.md);
 `programs/ids.jsonl` is byte for byte `crown-live-3`'s). One runner, `fc-01M77G3GHWYAE1M7T2KCSH7ARY`, started
 09:06:03Z; it stopped itself at 09:19:05Z in stage `lez-a`, LEZ session A, before any other stage (`state.json`: done
@@ -27,5 +27,5 @@ from it is valid until 28 Nov 2026 03:13 UTC), read by the driver from the bundl
 same programs.
 
 Files: `run.json`, `state.json`, `bundle.json` (the old bundle, sha256 `4dd813e2…3530`), `programs/ids.jsonl`, and the
-runner's `crown.log` (no local path in it). The session's own logs and the runner's are on the ws-3 Volume
+runner's `crown.log` (no local path in it). The session's own logs and the runner's are on the Modal Volume
 (`e2e/crown.sh fetch --lez crown-live-2`).

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # The crown run (e2e/crown/README.md) in the cloud: the Modal app ferrata-crown (e2e/crown/cloud/app.py) on the
-# workspace ws-3. Once started it needs nothing from this machine until the results are fetched.
+# your Modal workspace. Once started it needs nothing from this machine until the results are fetched.
 #
 #   e2e/crown.sh setup [--bundle FILE] [--programs DIR]   deploy the app; the LEZ bundle and the programs to its Volume
 #   e2e/crown.sh start [--fork] [--yes] [--halt-after STAGE] [--lez-chain sepolia] [run]
@@ -22,15 +22,13 @@
 #
 # Settings: e2e/sepolia-live.env (or $FERRATA_ENV_FILE) for SEPOLIA_RPC_URL and ETH_FROM (read-only checks of `start`;
 # the run itself signs with the Secret ferrata-sepolia-key that `e2e/sepolia-cloud.sh setup` made). The Modal
-# workspace is CROWN_MODAL_PROFILE (default ws-3), given per command, never activated.
+# workspace is CROWN_MODAL_PROFILE (required: yModal), given per command, never activated.
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 repo="$(cd "$here/.." && pwd)"
 envfile="${FERRATA_ENV_FILE:-$here/sepolia-live.env}"
 if [ -f "$envfile" ]; then set -a; . "$envfile"; set +a; fi
-MODAL_PROFILE="${CROWN_MODAL_PROFILE:-ws-3}"
-# A retired Modal workspace (named by the first 16 hex digits of its name's SHA-256) must not run the crown.
-[ "$(printf %s "$MODAL_PROFILE" | sha256sum | cut -c1-16)" != 5e810fe35ab057e2 ] || { echo "crown: not on the retired workspace" >&2; exit 1; }
+MODAL_PROFILE="${CROWN_MODAL_PROFILE:?set CROWN_MODAL_PROFILE to your Modal profile}"
 export MODAL_PROFILE FERRATA_REPO="$repo" TMPDIR="${TMPDIR:-$repo/../tmp}"
 mkdir -p "$TMPDIR/crown-cloud"
 ctl() { (cd "$repo" && python3 "$here/crown/cloud/ctl.py" "$@"); }

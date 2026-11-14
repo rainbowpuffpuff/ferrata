@@ -56,11 +56,11 @@ Everything runs in one command on the Modal build box (`spike/modal-build/mrun`)
 
 ```sh
 cd spike/ferrata-wt-<name>                       # a worktree; the inputs beside it in spike/tmp/miniapp-sequencer/inputs/
-../modal-build/mrun --profile ws-5 --put ../tmp/miniapp-sequencer/inputs -- 'bash e2e/seqnet/run.sh build'
-../modal-build/mrun --profile ws-5 -- 'bash e2e/seqnet/run.sh build-miniapp'        # Nix: the module, logosctl
-../modal-build/mrun --profile ws-5 --timeout 10800 -- 'bash e2e/seqnet/run.sh cli cli-N'
-../modal-build/mrun --profile ws-5 --timeout 10800 -- 'SEQNET_PROOFS=real bash e2e/seqnet/run.sh cli cli-N'
-../modal-build/mrun --profile ws-5 --timeout 10800 -- 'bash e2e/seqnet/run.sh miniapp miniapp-N'
+../modal-build/mrun --profile <yours> --put ../tmp/miniapp-sequencer/inputs -- 'bash e2e/seqnet/run.sh build'
+../modal-build/mrun --profile <yours> -- 'bash e2e/seqnet/run.sh build-miniapp'        # Nix: the module, logosctl
+../modal-build/mrun --profile <yours> --timeout 10800 -- 'bash e2e/seqnet/run.sh cli cli-N'
+../modal-build/mrun --profile <yours> --timeout 10800 -- 'SEQNET_PROOFS=real bash e2e/seqnet/run.sh cli cli-N'
+../modal-build/mrun --profile <yours> --timeout 10800 -- 'bash e2e/seqnet/run.sh miniapp miniapp-N'
 ```
 
 The inputs: the crown-live-3 LEZ bundle (`bundle-crown-live-3.tar.zst`, sha256 `0013bab1…`: the sequencer, the

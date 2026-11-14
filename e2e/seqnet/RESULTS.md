@@ -4,7 +4,7 @@ What ran, where and with what, for the user's private round trip on a running LE
 Every number below is from the run's own records under `e2e/runs/seqnet-NAME/` (each has a `SUMMARY.md`: every
 transaction on both chains with who sent it, and what the user saw).
 
-**Where:** the Modal build box (`spike/modal-build/mrun`, profile ws-5: gVisor, Ubuntu 24.04, up to 16 physical
+**Where:** the Modal build box (`spike/modal-build/mrun`, our Modal profile: gVisor, Ubuntu 24.04, up to 16 physical
 cores), 13 November 2026. **Chains:** a LEZ v0.4.0-rc1 devnet started there (the sequencer and the Logos Blockchain
 node of the crown-live-3 bundle, LEZ's local configuration, dev-mode leader proofs) with the final programs of
 [`docs/image-ids.md`](../../docs/image-ids.md) (attestation `0x816d1fef…`, bridge `0xccde6171…`, read back from the

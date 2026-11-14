@@ -6,7 +6,7 @@ tables, three vault tests, three checkpoint-core tests, two mutant runners, a do
 The branch changes no source file of `vault/src`, `bridge/guests`, `bridge/crates`, `checkpoint/crates`,
 `checkpoint/guests`, `lez/guests` or the wire crates (it adds one test file under
 `checkpoint/crates/checkpoint-core/tests/`), so no image id and no vault bytecode changes. Modal: profile
-`ws-4`, four `mrun` calls (357 s, 1,918 CPU-seconds), 0.055 USD by the ledger's estimates (Modal's own bill for the workspace still
+Modal, four `mrun` calls (357 s, 1,918 CPU-seconds), 0.055 USD by the ledger's estimates (Modal's own bill for the workspace still
 read 8.82 USD at the end, unchanged: it lags).
 
 Specifications read: `docs/design/spec/bridge-spec-v2.md` (`v2 §n`), `bridge-spec-v3-changes.md` (`Dn`),
@@ -383,7 +383,7 @@ not committed.
 
 ## 4. Sign-off checklist (the "Reviewed" column is the owner's)
 
-Commands from the worktree root on the build box: `M=…/spike/modal-build; $M/mrun --profile ws-4 -- '<command>'`
+Commands from the worktree root on the build box: `M=…/spike/modal-build; $M/mrun --profile <yours> -- '<command>'`
 (the vault needs `vault/lib`, see `vault/README.md`). `VT` = `cd vault && forge test --match-contract`;
 `mut n` = `python3 -I tools/mutation_spotcheck.py n n+1` from `vault/`; `vr` = `python3 -I tools/review_mutants.py`.
 

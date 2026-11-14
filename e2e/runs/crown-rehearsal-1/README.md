@@ -1,6 +1,6 @@
 # crown-rehearsal-1: the whole crown run in the cloud, on an anvil fork of Sepolia, to DONE (11 Nov 2026)
 
-`e2e/crown.sh start --fork crown-rehearsal-1` on Modal workspace ws-3 (app `ferrata-crown`, `runner_rehearsal`),
+`e2e/crown.sh start --fork crown-rehearsal-1` on our Modal workspace (app `ferrata-crown`, `runner_rehearsal`),
 from branch `crown-rehearsal` = crown-cloud + crown-lez 5815c6b + crown-proofs 4f2f0be (commits 89d39b2, then 2e63d33
 after one fix). Started 02:24:34Z, stopped once at capture 1 (a check of mine that did not know capture-anvil.py's
 stand-in header; fixed in the capture check, `start` again resumed at capture 1 with anvil's state reloaded), DONE

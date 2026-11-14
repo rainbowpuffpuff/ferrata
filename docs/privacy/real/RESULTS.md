@@ -25,7 +25,7 @@ the same programs in dev mode (fake receipts, mock verifier), the baseline again
 | | |
 |---|---|
 | programs | bridge program `0xccde6171…71dd` (the test stops before its first proof unless its id is this, docs/image-ids.md); release `0xb64900bc…29e9` (rebuilt R0BF binary, sha256 `7be1349c…11bf`, equal to docs/image-ids.md's); LEZ v0.4.0-rc1's privacy-preserving circuit as built in this tree, `8fc948d1…f257` (LEZ's own program, not in docs/image-ids.md); vault v5 (`vault/src` of this commit) with RISC Zero's `RiscZeroGroth16Verifier` (risc0-ethereum v3.0.0 `ControlID`) behind RISC Zero's emergency stop |
-| LEZ half | the suite's test binary (built on the build box at commit `2686e55`, the test code of `c892b7e`; stripped, sha256 `eece2d83…`) with `FERRATA_PRIVACY_PROOFS=real` and dev mode off, in one Modal container (profile `ws-5`): **one NVIDIA L4** (23,034 MiB, driver 610.57.04), 4 cores, 32 GiB; r0vm 3.0.5 built with CUDA (sha256 `781ca946…6fb7`, the binary of [`../../../gpu-prover/`](../../../gpu-prover/), checked before use) as the prover (`RISC0_SERVER_PATH`) |
+| LEZ half | the suite's test binary (built on the build box at commit `2686e55`, the test code of `c892b7e`; stripped, sha256 `eece2d83…`) with `FERRATA_PRIVACY_PROOFS=real` and dev mode off, in one Modal container (Modal): **one NVIDIA L4** (23,034 MiB, driver 610.57.04), 4 cores, 32 GiB; r0vm 3.0.5 built with CUDA (sha256 `781ca946…6fb7`, the binary of [`../../../gpu-prover/`](../../../gpu-prover/), checked before use) as the prover (`RISC0_SERVER_PATH`) |
 | releases | each release statement's succinct proof and `identity_p254` step in the same L4 container (`ferrata-e2e prove`, `ferrata-e2e p254`); the Groth16 step in RISC Zero's prover image (`risczero/risc0-groth16-prover:v2025-04-03.1`, CPU, Modal, `e2e/crown/wrap.py`); the Groth16 receipt assembled and verified on the build box (`ferrata-e2e groth16`, `ferrata-e2e verify`) |
 | Ethereum half | Foundry on the build box: `vault/test/PrivacySuite.t.sol` with `release-seals.json`: the vault at P on chain 1, its release image id the real one, releases verified by `RiscZeroGroth16Verifier`; the checkpoint (the burn root's acceptance, one transaction for all 20) on the mock, as before |
 | when | 12 November 2026; the L4 container ran 11:38:31Z to 11:50:04Z (692.7 s), 46 minutes after the app started (the image build and the wait for an L4, which is not billed) |
@@ -164,7 +164,7 @@ private claim or burn takes about 13–16 s on one L4 (row 10: 15.3 and 12.4 s, 
 
 ## Modal spend
 
-On profile `ws-5`, from Modal's billing report (`spike/modal-build/mcost`): 5.1233 USD before this work and
+On Modal, from Modal's billing report (`spike/modal-build/mcost`): 5.1233 USD before this work and
 5.5183 USD after the last step (+0.395 USD; the report can lag the last calls by up to an hour): the L4 container and
 its image (app `ferrata-privacy-real`) 0.2458 USD, the build box and the Groth16 prover containers (app `ferrata-build`)
 the rest. The local estimates of the same calls (mrun's ledger, `wrap.py`'s) add up to about 0.7 USD; `wrap.py`'s
