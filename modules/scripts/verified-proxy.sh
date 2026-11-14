@@ -19,7 +19,7 @@
 set -uo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 repo=$(cd "$here/../.." && pwd)
-cmd=${1:?build-logos, build-ferrata or run}
+cmd=${1:?build-logos, build-logos-graft, build-ferrata or run}
 mkdir -p "${2:?OUT}"
 out=$(cd "$2" && pwd)
 BUILDER=github:logos-co/logos-module-builder/5f74cdb3cecacde054c68d72fcc0d2cfe2195900
@@ -87,6 +87,20 @@ M
       "$(stat -c %s "$out/libverifproxy/lib/libverifproxy.a")" \
       "$(strings -a "$out/libverifproxy/lib/libverifproxy.a" | grep -om1 'nbs-nim-[0-9.]*' || echo '?')"
   } > "$rep/lgx-sha256.txt" 2>&1
+  ;;
+build-logos-graft)
+  # The fallback when the modules built with their own builder (a57dc7f) do not load beside logosctl 66d098d: the same
+  # two with builder 5f74cdb as 5f74cdb locks its own inputs (graft_builder_lock.py, as send-stack.sh); libverifproxy
+  # does not depend on the builder and is reused.
+  for spec in "verified_proxy_module logos-verified-proxy-module $VP_REV" "beacon_api_module logos-evm-beacon-api-module $BEACON_REV"; do
+    set -- $spec
+    src="$out/src-graft-$1"
+    rm -rf "$src"
+    step "src-graft-$1" bash -c "git clone -q https://github.com/logos-co/$2.git '$src' && git -C '$src' checkout -q $3 \
+      && python3 -I '$here/graft_builder_lock.py' '$src/flake.lock' '$repo/modules/ferrata_bridge_module/flake.lock' \
+         > '$src/flake.lock.new' && mv '$src/flake.lock.new' '$src/flake.lock' && git -C '$src' add -A" || true
+    step "build-graft-$1" nixb "git+file://$src#lgx" -o "$out/lgx-graft-$1" || true
+  done
   ;;
 build-ferrata)
   for m in ferrata_attest_module ferrata_updater_module; do

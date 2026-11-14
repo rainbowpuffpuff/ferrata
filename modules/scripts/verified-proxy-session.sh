@@ -88,8 +88,12 @@ note "2. Logos Core"
 mkdir -p "$W/home"
 trap 'ctl daemon stop > /dev/null 2>&1 || true' EXIT
 env HOME="$W/home" RISC0_DEV_MODE=1 "$LOGOSCTL" --config-dir "$SESSION" daemon start --detach >> "$log" 2>&1
+# VP_VARIANT=graft: the two built with builder 5f74cdb (verified-proxy.sh build-logos-graft) instead of their own.
 for m in beacon_api_module verified_proxy_module eth_rpc_module; do
-  ctl install "$OUT/lgx-$m"/*.lgx -y >> "$log" 2>&1 || note "install $m failed"
+  d="$OUT/lgx-$m"
+  if [ "${VP_VARIANT:-own}" = graft ] && [ -d "$OUT/lgx-graft-$m" ]; then d="$OUT/lgx-graft-$m"; fi
+  echo "$m: $(basename "$d")" >> "$W/variants.txt"
+  ctl install "$d"/*.lgx -y >> "$log" 2>&1 || note "install $m failed"
 done
 for m in ferrata_attest_module ferrata_updater_module; do
   ctl install "$OUT/check/lgx-$m"/*.lgx -y >> "$log" 2>&1 || note "install $m failed"
