@@ -71,11 +71,22 @@ case "${1:-}" in
     ;;
   verify)
     [ -d "$RESULTS/record" ] || { echo "fetch first" >&2; exit 1; }
+    # The lab's program is this branch's of 11 Nov; A1 (d43ee2ab) later changed lez/wire's instance
+    # layout, so the driver that reads the lab's instances is built from LAB_DRIVER_REV (the commit
+    # whose verify of 11 Nov passed), in a worktree beside the repository, with this record.
+    rev="${LAB_DRIVER_REV:-f17b472e}"
+    if [ -z "${LAB_VERIFY_BIN:-}" ] && [ -z "${LAB_IN_DRIVER_SRC:-}" ] \
+        && ! git -C "$REPO" diff --quiet "$rev" HEAD -- lez/wire lez/lab/driver; then
+      src="$BESIDE/ferrata-lab-driver-src"
+      [ -d "$src" ] || git -C "$REPO" worktree add -q --detach "$src" "$rev"
+      rm -rf "$src/lez/lab/results"; cp -r "$RESULTS" "$src/lez/lab/results"; cp "$LAB_DIR/lab.sh" "$src/lez/lab/lab.sh"
+      exec env LAB_IN_DRIVER_SRC=1 "$src/lez/lab/lab.sh" verify
+    fi
     if [ -n "${LAB_VERIFY_BIN:-}" ]; then
       "$LAB_VERIFY_BIN" verify --dir "$RESULTS/record" --binary "${LAB_PROGRAM_BIN:-$LAB_TMP/program/ferrata_lez.bin}"
     else
       ( cd "$REPO" && "$BESIDE/modal-build/mrun" --profile "$MODAL_PROFILE" --put "$LAB_TMP/program/ferrata_lez.bin" -- \
-          "lez/lab/build.sh driver > ../tmp/lab/logs/verify-build.log 2>&1 || { tail -n 20 ../tmp/lab/logs/verify-build.log; exit 1; }; ../tmp/lab/live/bin/lab-driver verify --dir lez/lab/results/record --binary ../tmp/lab/program/ferrata_lez.bin" )
+          "(apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq libpcsclite-dev pkg-config) > /dev/null 2>&1; mkdir -p ../tmp/lab/logs && lez/lab/build.sh driver > ../tmp/lab/logs/verify-build.log 2>&1 || { tail -n 20 ../tmp/lab/logs/verify-build.log; exit 1; }; ../tmp/lab/live/bin/lab-driver verify --dir lez/lab/results/record --binary ../tmp/lab/program/ferrata_lez.bin" )
     fi
     ;;
   stop)

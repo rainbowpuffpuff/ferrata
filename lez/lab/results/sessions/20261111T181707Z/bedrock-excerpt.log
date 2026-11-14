@@ -1,0 +1,101 @@
+Error reading the log directory/files: No such file or directory (os error 2)
+2026-11-11T18:17:16.776701Z  INFO logos_blockchain::tracing::service: Service 'Tracing' is ready.
+2026-11-11T18:17:16.787234Z  INFO logos_blockchain::storage: Service 'Storage' is ready.
+2026-11-11T18:17:16.893979Z  INFO logos_blockchain::node: Running chain 0.2.1 on fork 0x751d5cb337403d63fc3ffb0dbc38ad33bda7d6fb262f04ca81c8b5a008ddaa6e.
+2026-11-11T18:17:16.894123Z  INFO logos_blockchain::libp2p: libp2p peer_id:12D3KooWG4KLGSKXUMGMXKK6ucH2j8RHurgkggWQZExMEpL24hur
+2026-11-11T18:17:16.894640Z  INFO logos_blockchain::chain::service: recovering Cryptarchia tip=HeaderId(d58d679428cdadf46219a3c3641d193cc5c35bce4a3c9b0cca1bcf9e76e267ef) lib=HeaderId(af0e8154d8b0334aa95a82667301f3322b0830be897836c4de3e178d0b88133d) lib_height=2901 genesis=HeaderId(402255ecf1448ec5d136c293f7eb818cd6137af8175bdc72f06a99cf2eef8a52)
+2026-11-11T18:17:16.894980Z  INFO logos_blockchain::chain::service: loading stored blocks for chain recovery lib=HeaderId(af0e8154d8b0334aa95a82667301f3322b0830be897836c4de3e178d0b88133d) tip=HeaderId(d58d679428cdadf46219a3c3641d193cc5c35bce4a3c9b0cca1bcf9e76e267ef)
+2026-11-11T18:17:16.896633Z  INFO logos_blockchain::chain::service: found 5 stored blocks to replay during chain recovery
+2026-11-11T18:17:16.899377Z  INFO logos_blockchain::libp2p::behaviour::nat::gateway-monitor: Initial gateway detected: 172.20.0.1
+2026-11-11T18:17:16.899617Z  INFO logos_blockchain::network_service: Service 'Network' is ready.
+2026-11-11T18:17:16.899634Z  INFO logos_blockchain::mempool::service: Service 'Mempool' is ready.
+2026-11-11T18:17:16.909030Z  INFO logos_blockchain::chain::service: 5 blocks replayed. Chain recovery finished tip_height=2906 lib_height=2901
+2026-11-11T18:17:16.909046Z  INFO logos_blockchain::chain::service: Service 'Cryptarchia' is ready.
+2026-11-11T18:17:16.909053Z  INFO logos_blockchain::chain::service: entering AwaitingGenesisTime phase
+2026-11-11T18:17:16.909059Z  INFO logos_blockchain::chain::service: genesis time is already in the past: finishing AwaitingGenesisTime phase with no-op
+2026-11-11T18:17:16.909062Z  INFO logos_blockchain::chain::service: entering InitialBlockDownload phase
+2026-11-11T18:17:16.909080Z  INFO logos_blockchain::sdp: Service 'Sdp' is ready.
+2026-11-11T18:17:16.909148Z  INFO logos_blockchain::blend::service: Waiting for chain to become Online mode
+2026-11-11T18:17:16.909151Z  INFO logos_blockchain::wallet::service: Wallet connecting to chain tip=HeaderId(d58d679428cdadf46219a3c3641d193cc5c35bce4a3c9b0cca1bcf9e76e267ef) lib=HeaderId(af0e8154d8b0334aa95a82667301f3322b0830be897836c4de3e178d0b88133d) slot=Slot(8920879)
+2026-11-11T18:17:16.909174Z  INFO logos_blockchain::wallet::core: initializing wallet with LIB wallet state lib=HeaderId(af0e8154d8b0334aa95a82667301f3322b0830be897836c4de3e178d0b88133d) n_known_keys=2 n_known_vouchers=2908 n_all_vouchers=2901 n_voucher_paths=2901 n_snapshotted_voucher_paths=2826
+2026-11-11T18:17:16.974834Z  INFO logos_blockchain::wallet::service: Wallet service is ready and subscribed to blocks
+2026-11-11T18:17:17.400868Z  WARN libp2p_kad::behaviour: Failed to trigger bootstrap: No known peers.
+2026-11-11T18:17:17.910791Z  WARN logos_blockchain::chain::network::bootstrap::ibd: Skipping IBD as no peers are configured
+2026-11-11T18:17:17.910800Z  INFO logos_blockchain::chain::network: Initial Block Download completed successfully
+2026-11-11T18:17:17.910832Z  INFO logos_blockchain::chain::service: IBD completed: finishing InitialBlockDownload phase
+2026-11-11T18:17:17.910836Z  INFO logos_blockchain::chain::service: entering ProlongedBootstrapPeriod phase
+2026-11-11T18:17:17.910950Z  INFO logos_blockchain::chain::network: Tip-poll lag watchdog enabled era=0 cadence_slots=2 lag_threshold_slots=6 max_peers=5
+2026-11-11T18:17:17.910956Z  INFO logos_blockchain::chain::network: Service 'ChainNetwork' is ready.
+2026-11-11T18:17:18.912537Z  INFO logos_blockchain::chain::service: Prolonged Bootstrap Period completed: switching chain to online
+2026-11-11T18:17:18.912551Z  INFO logos_blockchain::chain::service: chain switched to online
+2026-11-11T18:17:18.912636Z  INFO logos_blockchain::blend::service: Chain is now Online.
+2026-11-11T18:17:18.912671Z  INFO logos_blockchain::chain::service: entering Following phase
+2026-11-11T18:17:18.912730Z  WARN logos_blockchain::ledger::cryptarchia: skipped epochs old_epoch=Epoch(89208) new_epoch=Epoch(89280) epochs_skipped=71 old_total_stake=1 new_total_stake=1 slot=Slot(8928011)
+2026-11-11T18:17:18.912753Z  INFO logos_blockchain::blend::service: current membership is ready members=0
+2026-11-11T18:17:18.912757Z  INFO logos_blockchain::blend::service::orchestrator: Starting service BlendBroadcast
+2026-11-11T18:17:18.912801Z  INFO logos_blockchain::blend::service::orchestrator: Waiting until service BlendBroadcast is ready
+2026-11-11T18:17:18.912865Z  WARN logos_blockchain::ledger::cryptarchia: skipped epochs old_epoch=Epoch(89208) new_epoch=Epoch(89280) epochs_skipped=71 old_total_stake=1 new_total_stake=1 slot=Slot(8928011)
+2026-11-11T18:17:18.912905Z  INFO logos_blockchain::blend::service::broadcast: Service 'BlendBroadcast' is ready.
+2026-11-11T18:17:18.912926Z  INFO logos_blockchain::blend::service: Service 'Blend' is ready.
+2026-11-11T18:17:18.912940Z  INFO logos_blockchain::chain::leader: Waiting for chain to become online
+2026-11-11T18:17:18.912945Z  INFO logos_blockchain::chain::leader: Chain is online. Starting block proposals.
+2026-11-11T18:17:18.912993Z  INFO logos_blockchain::pow: Waiting for the chain to become online
+2026-11-11T18:17:18.913005Z  INFO logos_blockchain::chain::leader: Service 'CryptarchiaLeader' is ready.
+2026-11-11T18:17:18.913014Z  INFO logos_blockchain::pow: Chain is online; starting the PoW service
+2026-11-11T18:17:18.913068Z  WARN logos_blockchain::ledger::cryptarchia: skipped epochs old_epoch=Epoch(89208) new_epoch=Epoch(89280) epochs_skipped=71 old_total_stake=1 new_total_stake=1 slot=Slot(8928011)
+2026-11-11T18:17:19.080730Z  WARN logos_blockchain::ledger::cryptarchia: skipped epochs old_epoch=Epoch(89208) new_epoch=Epoch(89280) epochs_skipped=71 old_total_stake=1 new_total_stake=1 slot=Slot(8928011)
+2026-11-11T18:17:19.083172Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(fd47adbb8845784f8c171ed899a3cd8d72848459c607fc1e9ad481c44531b1b6) with 0 transactions (0 removed)
+2026-11-11T18:17:19.083205Z  WARN logos_blockchain::ledger::cryptarchia: skipped epochs old_epoch=Epoch(89208) new_epoch=Epoch(89280) epochs_skipped=71 old_total_stake=1 new_total_stake=1 slot=Slot(8928011)
+2026-11-11T18:17:19.085554Z  INFO logos_blockchain::chain::service: Canonical TSI epoch state committed diagnostic="blend_reachability" event="tsi_epoch_committed" canonical=true from_epoch=89208 to_epoch=89280 skipped_epochs=71 source_block_slot=8928011 source_block_id=0xfd47adbb8845784f8c171ed899a3cd8d72848459c607fc1e9ad481c44531b1b6 old_total_stake=1 new_total_stake=1
+2026-11-11T18:17:19.281972Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(214bac7af1b65fa4cbf98c00dcb632baf9da963dc49a8816a21736fa180ce45a) with 0 transactions (0 removed)
+2026-11-11T18:17:20.160364Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(a63496d6c7bb9a71c5994525183aa7d51d1e4b5711496ec8f9e98c544f21fd5d) with 0 transactions (0 removed)
+2026-11-11T18:17:21.164664Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(914570b8294fcce0577c36764dde48c70f617c07f63f39e71f09a673666270d9) with 0 transactions (0 removed)
+2026-11-11T18:17:22.167049Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(e22c5ac06514bd639daacc4fab6e763641d0835e5978cc2ba95ac712399b4659) with 0 transactions (0 removed)
+2026-11-11T18:17:23.166969Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(63cca9f9e9e37690fd2f0920bb93b2f005efa2d2d24a5482f648235eb3139b7c) with 0 transactions (0 removed)
+2026-11-11T18:17:24.180169Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(e87ff7d7f71b93c458ce657f654001ed4ab4397b6746ce7dd3d927e4318a3835) with 0 transactions (0 removed)
+2026-11-11T18:17:25.166251Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(0296074cc8b13125848e10d5ff4256d015d6de08af3d191f22f97fcb1cde0758) with 0 transactions (0 removed)
+2026-11-11T18:17:26.163893Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(c00977fb4f7d43bb96e3bedf3403b2c27cfb550b4bb8141e952e2a85f514f976) with 0 transactions (0 removed)
+2026-11-11T18:17:27.171903Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(14c33d5ec0383914778417e90e5c90abddbc7125362ccd2fb63fa7149f218ad9) with 0 transactions (0 removed)
+2026-11-11T18:17:28.233311Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(03c0387ddc9e665f6f52ca7b74e142d0811b55232361019f8eba692b947dd7dd) with 0 transactions (0 removed)
+2026-11-11T18:17:29.191485Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(e914e0800c0f2961aad7b83940001189dde78fbf23ff84ba82a9917b8af684f1) with 0 transactions (0 removed)
+[...]
+2026-11-11T18:18:18.164235Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(2d391635be08ce2e68d029c73c70916e4fbc9310b376138b623f597867607def) with 0 transactions (0 removed)
+2026-11-11T18:18:18.179226Z ERROR logos_blockchain::network_service::backends::libp2p::gossipsub: failed to broadcast message to topic: /logos-blockchain/751d5cb337403d63fc3ffb0dbc38ad33bda7d6fb262f04ca81c8b5a008ddaa6e/cryptarchia NoPeersSubscribedToTopic
+2026-11-11T18:18:19.161184Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(66a684eeef6cdebb09d5c0a4451e3ddd08bc99af15de0e76d620217f87bd86c9) with 0 transactions (0 removed)
+2026-11-11T18:18:19.170127Z ERROR logos_blockchain::network_service::backends::libp2p::gossipsub: failed to broadcast message to topic: /logos-blockchain/751d5cb337403d63fc3ffb0dbc38ad33bda7d6fb262f04ca81c8b5a008ddaa6e/cryptarchia NoPeersSubscribedToTopic
+2026-11-11T18:18:20.158318Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(f9631bc66e3e6f4fbee900ad30c6f690c8b9efc41aa4d61db79b68623dd90aea) with 0 transactions (0 removed)
+2026-11-11T18:18:20.170586Z ERROR logos_blockchain::network_service::backends::libp2p::gossipsub: failed to broadcast message to topic: /logos-blockchain/751d5cb337403d63fc3ffb0dbc38ad33bda7d6fb262f04ca81c8b5a008ddaa6e/cryptarchia NoPeersSubscribedToTopic
+2026-11-11T18:18:21.161494Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(d9b439cffa4e0dfd2f11ba32bff0af24de020270ecb6e960a6a0a87f87575a5f) with 0 transactions (0 removed)
+2026-11-11T18:18:21.169680Z ERROR logos_blockchain::network_service::backends::libp2p::gossipsub: failed to broadcast message to topic: /logos-blockchain/751d5cb337403d63fc3ffb0dbc38ad33bda7d6fb262f04ca81c8b5a008ddaa6e/cryptarchia NoPeersSubscribedToTopic
+2026-11-11T18:18:22.170080Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(beb941118d8f49b431ceb36d27fa1786ca2fa7bb30f7aa167f7244f29d7a78c6) with 1 transactions (0 removed)
+2026-11-11T18:18:22.176916Z ERROR logos_blockchain::network_service::backends::libp2p::gossipsub: failed to broadcast message to topic: /logos-blockchain/751d5cb337403d63fc3ffb0dbc38ad33bda7d6fb262f04ca81c8b5a008ddaa6e/cryptarchia NoPeersSubscribedToTopic
+2026-11-11T18:18:22.813776Z ERROR logos_blockchain::network_service::backends::libp2p::gossipsub: failed to broadcast message to topic: /logos-blockchain/751d5cb337403d63fc3ffb0dbc38ad33bda7d6fb262f04ca81c8b5a008ddaa6e/mempool NoPeersSubscribedToTopic
+2026-11-11T18:18:23.188666Z ERROR logos_blockchain::network_service::backends::libp2p::gossipsub: failed to broadcast message to topic: /logos-blockchain/751d5cb337403d63fc3ffb0dbc38ad33bda7d6fb262f04ca81c8b5a008ddaa6e/cryptarchia NoPeersSubscribedToTopic
+2026-11-11T18:18:23.201638Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(d687f24c80e94417d9c6e5d91cb772b85c9e3f7ce751eecbe5939adb2f552c8d) with 0 transactions (0 removed)
+2026-11-11T18:18:24.163882Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(9997af8cdd9e8cb952a5b972eb764959ebd212863f0d5babe481d25544414add) with 0 transactions (0 removed)
+2026-11-11T18:18:24.185759Z ERROR logos_blockchain::network_service::backends::libp2p::gossipsub: failed to broadcast message to topic: /logos-blockchain/751d5cb337403d63fc3ffb0dbc38ad33bda7d6fb262f04ca81c8b5a008ddaa6e/cryptarchia NoPeersSubscribedToTopic
+2026-11-11T18:18:25.159703Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(eecab17cafea177496cc27ccaeef199091ee09e67e56206650fae3e8fbf01c7b) with 0 transactions (0 removed)
+2026-11-11T18:18:25.184847Z ERROR logos_blockchain::network_service::backends::libp2p::gossipsub: failed to broadcast message to topic: /logos-blockchain/751d5cb337403d63fc3ffb0dbc38ad33bda7d6fb262f04ca81c8b5a008ddaa6e/cryptarchia NoPeersSubscribedToTopic
+2026-11-11T18:18:26.159454Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(4a2615a02358e508917b02a8cbd0312c4a7d5a4c72fe77ef9a2fbfbe13431b26) with 0 transactions (0 removed)
+2026-11-11T18:18:26.173657Z ERROR logos_blockchain::network_service::backends::libp2p::gossipsub: failed to broadcast message to topic: /logos-blockchain/751d5cb337403d63fc3ffb0dbc38ad33bda7d6fb262f04ca81c8b5a008ddaa6e/cryptarchia NoPeersSubscribedToTopic
+2026-11-11T18:18:27.159132Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(d166ccbb7d3cbae146464be74df6a18763792df7ee989bd9b064f12950af2572) with 0 transactions (0 removed)
+2026-11-11T18:18:27.177342Z ERROR logos_blockchain::network_service::backends::libp2p::gossipsub: failed to broadcast message to topic: /logos-blockchain/751d5cb337403d63fc3ffb0dbc38ad33bda7d6fb262f04ca81c8b5a008ddaa6e/cryptarchia NoPeersSubscribedToTopic
+2026-11-11T18:18:28.160000Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(5ec88fa4610cb19eef085e90899c9b8a6754a1b65d6d6c04f84862ce8025a102) with 0 transactions (0 removed)
+2026-11-11T18:18:28.166039Z ERROR logos_blockchain::network_service::backends::libp2p::gossipsub: failed to broadcast message to topic: /logos-blockchain/751d5cb337403d63fc3ffb0dbc38ad33bda7d6fb262f04ca81c8b5a008ddaa6e/cryptarchia NoPeersSubscribedToTopic
+2026-11-11T18:18:29.166983Z ERROR logos_blockchain::network_service::backends::libp2p::gossipsub: failed to broadcast message to topic: /logos-blockchain/751d5cb337403d63fc3ffb0dbc38ad33bda7d6fb262f04ca81c8b5a008ddaa6e/cryptarchia NoPeersSubscribedToTopic
+2026-11-11T18:18:29.171641Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(e61e0640e0243e042aecc0f45f4d25c5452decfe7a213b8b6ecfe63255f40887) with 0 transactions (0 removed)
+2026-11-11T18:18:30.158457Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(6c81bd08461abcb6c522284ca0200f29f7888d53813d39cf4d62865e0274dbff) with 0 transactions (0 removed)
+2026-11-11T18:18:30.169783Z ERROR logos_blockchain::network_service::backends::libp2p::gossipsub: failed to broadcast message to topic: /logos-blockchain/751d5cb337403d63fc3ffb0dbc38ad33bda7d6fb262f04ca81c8b5a008ddaa6e/cryptarchia NoPeersSubscribedToTopic
+2026-11-11T18:18:31.159104Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(cd56d51d817c21f13d742e1b9fde72540a70efa1455491ed102f16393ad2f76b) with 0 transactions (0 removed)
+2026-11-11T18:18:31.167671Z ERROR logos_blockchain::network_service::backends::libp2p::gossipsub: failed to broadcast message to topic: /logos-blockchain/751d5cb337403d63fc3ffb0dbc38ad33bda7d6fb262f04ca81c8b5a008ddaa6e/cryptarchia NoPeersSubscribedToTopic
+2026-11-11T18:18:32.159220Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(1471fd3f73162ae0dc470d8a2374ca6a258e45faa41b043bb7ec2bce621f79f3) with 0 transactions (0 removed)
+2026-11-11T18:18:32.166367Z ERROR logos_blockchain::network_service::backends::libp2p::gossipsub: failed to broadcast message to topic: /logos-blockchain/751d5cb337403d63fc3ffb0dbc38ad33bda7d6fb262f04ca81c8b5a008ddaa6e/cryptarchia NoPeersSubscribedToTopic
+2026-11-11T18:18:32.709029Z ERROR logos_blockchain::network_service::backends::libp2p::gossipsub: failed to broadcast message to topic: /logos-blockchain/751d5cb337403d63fc3ffb0dbc38ad33bda7d6fb262f04ca81c8b5a008ddaa6e/mempool NoPeersSubscribedToTopic
+2026-11-11T18:18:33.159255Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(07a48be8de5442b50346ae930f5e7e0cb4d30354299a9a8294867adb509ef81f) with 0 transactions (0 removed)
+2026-11-11T18:18:33.178214Z ERROR logos_blockchain::network_service::backends::libp2p::gossipsub: failed to broadcast message to topic: /logos-blockchain/751d5cb337403d63fc3ffb0dbc38ad33bda7d6fb262f04ca81c8b5a008ddaa6e/cryptarchia NoPeersSubscribedToTopic
+2026-11-11T18:18:34.161037Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(6e95e74f0b738b6093a5812acaba0ca660fb258987ec2101f4c145ba4b8b0556) with 0 transactions (0 removed)
+2026-11-11T18:18:34.167035Z ERROR logos_blockchain::network_service::backends::libp2p::gossipsub: failed to broadcast message to topic: /logos-blockchain/751d5cb337403d63fc3ffb0dbc38ad33bda7d6fb262f04ca81c8b5a008ddaa6e/cryptarchia NoPeersSubscribedToTopic
+2026-11-11T18:18:35.160751Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(949e4d280ffe11414fd416e48305599c2513e40792d758e340a1d0704d4cee81) with 0 transactions (0 removed)
+2026-11-11T18:18:35.172239Z ERROR logos_blockchain::network_service::backends::libp2p::gossipsub: failed to broadcast message to topic: /logos-blockchain/751d5cb337403d63fc3ffb0dbc38ad33bda7d6fb262f04ca81c8b5a008ddaa6e/cryptarchia NoPeersSubscribedToTopic
+2026-11-11T18:18:36.160811Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(68ce37b9135f4b87e8366302160ad77d11b4bd9499376e1009dcc3a9f82694b8) with 0 transactions (0 removed)
+2026-11-11T18:18:36.169520Z ERROR logos_blockchain::network_service::backends::libp2p::gossipsub: failed to broadcast message to topic: /logos-blockchain/751d5cb337403d63fc3ffb0dbc38ad33bda7d6fb262f04ca81c8b5a008ddaa6e/cryptarchia NoPeersSubscribedToTopic

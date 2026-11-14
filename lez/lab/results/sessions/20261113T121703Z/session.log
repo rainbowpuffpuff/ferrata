@@ -1,0 +1,28 @@
+[12:17:03] session 20261113T121703Z
+[12:17:05] restored generation 33 (128M)
+[12:17:06] Bedrock node up: {"cryptarchia_info":{"lib":"2933e5cb31354c55f4df2060ec426b040220742fa76f9cc535c4c3366396cca8","lib_slot":9072075,"tip":"509ad87fe97955e438ddcc1f7a361232ba00bf79ff047ef8c045bcf69583ee81","slot":9072080,"height":4756,"state":"Bootstrapping"},"phase":"InitialBlockDownload"}
+[12:17:10] node slot 0 is unix second 1785493027
+[12:17:12] sequencer start 1: scheduler after 1 s; its blocks fall 4 s after an epoch second
+[12:17:12] sequencer up, head block 406
+sepolia: instance at slot 11569216, head period 1412, 1 update(s), finality update yes; 3 request(s)
+mainnet: instance at slot 15644992, head period 1909, 1 update(s), finality update yes; 3 request(s)
+[12:18:19] driver exit 0
+[mainnet] update 001909.ssz (attested 15638676, finalized 15638592): not applied, the native client refuses it: UpdateIrrelevant
+[20261113T121703Z] mainnet #38 finality p1909 fin 15645600 Open (step 1)      applied        gas   2219535 block  410 +  9.4s 8ce0c41689dc7a3573745768fa2882a6c49662d1180ac5a8b3eac7c6869db732
+[20261113T121703Z] mainnet #38 finality p1909 fin 15645600 Miller (step 2)    applied        gas   3307963 block  411 + 10.1s 0f24bca97198f032914e35d25ee29345208a5f34878f11964757bff8ddbb431c
+[20261113T121703Z] mainnet #38 finality p1909 fin 15645600 Finish (step 3)    applied        gas   3723564 block  412 + 10.3s 5a2a97ffaa010b1ffe93f354989841fc345dc97953f776bc3c9810e7893b41bd
+[mainnet] mainnet #38 finality p1909 fin 15645600: applied (3 transactions, blocks 410-412); rotated false advanced true adopted false
+[mainnet] 1 job(s) applied this session, 0 committee handoff(s)
+blocks: 1..=412 (every one final on Bedrock)
+transactions: 410 sent; 410 applied, 0 refused with an exit code, 0 reverted otherwise, 0 dropped, 0 rejected at the RPC, 0 unfinished
+[12:18:19] sequencer stopped (exit 0)
+[12:18:28] node stopped (exit 143)
+state to save:
+119M	lab/state/bedrock
+2.0K	lab/state/config
+6.8M	lab/state/driver
+62M	lab/state/sequencer_home
+66877552 bedrock/state/db/002939.log
+39037646 sequencer_home/rocksdb-0101010101010101010101010101010101010101010101010101010101010101/000476.log
+17617878 bedrock/state/db/002936.sst
+[12:18:28] saved generation 34 (35374361 bytes)

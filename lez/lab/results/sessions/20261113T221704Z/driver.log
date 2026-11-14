@@ -1,0 +1,16 @@
+[session 20261113T221704Z] sequencer head 441, follower at block 441
+[deploy] already deployed at A21ic7TofHbrABepXwsDDU2U2E8E1RKcTiNn228gNNUs: image 61b7b70dee5a5020af54b3107cef5298861fadd301c9dc0b063c80d88ca42f9a
+[sepolia] update 001412.ssz (attested 11567172, finalized 11567104): not applied, the native client refuses it: UpdateIrrelevant
+[20261113T221704Z] sepolia #74 finality p1412 fin 11572800 Open (step 1)      applied        gas   2208533 block  442 + 13.2s c9e2bd5319664c96fdbe2925b52a5dd81c61f6ba4310c4cf47d66c94c2bacb39
+[20261113T221704Z] sepolia #74 finality p1412 fin 11572800 Miller (step 2)    applied        gas   3305289 block  443 +  9.8s ce5bcd204de77c40a3b7722ba116a31b26afcd3b0d77541c82a004dda1d73111
+[20261113T221704Z] sepolia #74 finality p1412 fin 11572800 Finish (step 3)    applied        gas   3718605 block  444 + 11.2s e3284d3bffff2fe410685bab173a9b6911fc989da54c20ef43c4694411e1ea59
+[sepolia] sepolia #74 finality p1412 fin 11572800: applied (3 transactions, blocks 442-444); rotated false advanced true adopted false
+[sepolia] 1 job(s) applied this session, 0 committee handoff(s)
+[mainnet] update 001910.ssz (attested 15646786, finalized 15646720): not applied, the native client refuses it: UpdateIrrelevant
+[20261113T221704Z] mainnet #44 finality p1910 fin 15648608 Open (step 1)      applied        gas   2166922 block  445 +  8.6s 882d43391ab68cd76b8cabb11213f2f693bd8f4b041329feed6eedb3d0e3e5ca
+[20261113T221704Z] mainnet #44 finality p1910 fin 15648608 Miller (step 2)    applied        gas   3307963 block  446 +  9.8s c06a3e1788fbcfa2fa7173eca596c8a4843f03f5a206a8770ac342ca407bccbf
+[20261113T221704Z] mainnet #44 finality p1910 fin 15648608 Finish (step 3)    applied        gas   3723564 block  447 + 11.6s a9855307b509d4c4e403f9c8357bd67b4761d7c1919af6095f2b8b13d0657444
+[mainnet] mainnet #44 finality p1910 fin 15648608: applied (3 transactions, blocks 445-447); rotated false advanced true adopted false
+[mainnet] 1 job(s) applied this session, 0 committee handoff(s)
+blocks: 1..=447 (every one final on Bedrock)
+transactions: 445 sent; 445 applied, 0 refused with an exit code, 0 reverted otherwise, 0 dropped, 0 rejected at the RPC, 0 unfinished

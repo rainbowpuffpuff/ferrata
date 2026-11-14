@@ -108,22 +108,23 @@ the record). The Volume keeps the state after `stop`; `modal volume delete ferra
 | sessions | 10 Nov 18:49 UTC: failed to start (r0vm was not in the bundle; fixed, kept in the record). 18:51–19:22 UTC: the catch-up, 1,868 s, 184 transactions, all applied, blocks 1–185. 20:17 UTC (scheduled, after 54 min stopped): 123 s, 6 transactions, all applied, blocks 186–191. 22:17 UTC (scheduled): 133 s, 11 transactions, all applied, blocks 192–202, Sepolia's first live committee handoff (its period-1410 update). 11 Nov, 00:17 to 14:17 UTC, eight scheduled sessions: 83–134 s each, 6 transactions each but 11 at 10:17 (mainnet's live committee handoff into period 1,908) and 9 at 12:17, all applied, blocks 203–258 |
 | transactions | 257, all applied, none refused, reverted, dropped or rejected; the program's transactions used 208,951 (`Init`) to 3,733,713 (`Finish` of mainnet's period-1908 update) execution gas, none over the 5M target; fees 6,288,435,520 in all (the payers held 1e13 and 2e13 at genesis) |
 | re-check | `lab.sh verify` after each session, on the build box (exit 0 each time); after the third: 202 blocks replay, 201 manifest rows equal LEZ's charges; Sepolia at finalized slot 11,551,200 (period 1,410, Gloas layout), root `80088b24…9a30`, and mainnet at 15,627,008 (period 1,907), root `4b909f85…7bdb`, both equal to the native client; at every session both roots equal the second provider's. After the session of 11 Nov 14:17 UTC (the eight sessions of 11 Nov fetched together at 15:48 UTC; `lab.sh verify` once, on the build box of our Modal workspace): 258 blocks replay, 257 manifest rows equal LEZ's charges; Sepolia at finalized slot 11,556,000 (period 1,410), root `d31b7d34…f3cc`, and mainnet at 15,631,808 (period 1,908), root `530599ec…2328`, both equal to the native client; each session's applied finality update has the finalized header root that session's second provider reported (22 of 22, the root recomputed from the kept update) |
+| 14 Nov fetch | the record to the session of 14 Nov 14:17 UTC (fetched the same afternoon): 48 sessions, 47 ok; the 46 scheduled since 10 Nov 20:17 UTC all ran (83–140 s each; 7 of them started the sequencer twice, the script's own phase alignment, `session.log`), none failed; 498 transactions, all applied, blocks 1–500; Sepolia's live handoffs into periods 1,411 (12 Nov 00:17), 1,412 (13 Nov 04:17), 1,413 (14 Nov 08:17), mainnet's into 1,909 (12 Nov 14:17) and 1,910 (13 Nov 16:17). `lab.sh verify` (the driver of f17b472e, on the build box): 500 blocks replay, 498 manifest rows equal LEZ's charges; Sepolia at finalized slot 11,577,600 (period 1,413, Gloas layout), root `27375fd2…31b2`, mainnet at 15,653,408 (period 1,910), root `5fc50898…38db`, both equal to the native client after 83 and 52 kept updates and to the roots the last session's second provider reported |
 | state | generation 2: 20,402,011 bytes compressed (node 52M, sequencer 48M, driver 5.6M on disk); generation 3: 30,970,636 bytes. It grows with the node's and the sequencer's write-ahead logs; `sessions/<id>/session.log` lists the largest files at every save |
 | cost | billed by Modal (`modal.billing`, hourly buckets, workspace `rainbowpuffpuff`): the build box 0.1967 USD in the hour of the builds (18:00 UTC), then 0.0802 and 0.0522 USD (packing, the first two `lab.sh verify` runs, and the 20 minutes the box stays warm after each call); the lab's failed start and catch-up session together 0.0642 USD (31 min, two physical cores requested); the scheduled session of 20:17 UTC 0.0064 USD (the whole 20:00 hour of the app). At twelve such sessions a day: about 0.08 USD a day, 0.54 USD to 17 November (derived) |
 
 ## The claim that can be made today
 
-As of the session of 11 November 2026, 14:17 UTC (`results/`, re-checked by `lab.sh verify`):
+As of the session of 14 November 2026, 14:17 UTC (`results/`, re-checked by `lab.sh verify`):
 
 > Two instances of Ferrata's light-client program have followed their chains on LEZ v0.4.0-rc1's
 > own sequencer (one Bedrock validator, leader proofs in dev mode) since 10 November 2026,
 > 19:22 UTC, with no manual repair. **Sepolia:** initialized from the period-1378 bootstrap,
-> through the Gloas fork, 44 updates applied (33 period updates, 11 finality updates), 32
-> committee handoffs (one of them live, into period 1,410); finalized slot 11,556,000.
-> **Mainnet:** initialized at the finalized checkpoint of slot 15,625,920, 14 updates applied
-> (3 period updates, 11 finality updates), 1 committee handoff (live, into period 1,908);
-> finalized slot 15,631,808. 12 sessions, of which 1 failed to start before the first good
-> one; 11 good, 10 of them scheduled. 257 transactions, all applied; 258
+> through the Gloas fork, 83 updates applied (36 period updates, 47 finality updates), 35
+> committee handoffs (four of them live, into periods 1,410 to 1,413); finalized slot 11,577,600.
+> **Mainnet:** initialized at the finalized checkpoint of slot 15,625,920, 52 updates applied
+> (5 period updates, 47 finality updates), 3 committee handoffs (all live, into periods 1,908 to
+> 1,910); finalized slot 15,653,408. 48 sessions, of which 1 failed to start before the first
+> good one; 47 good, 46 of them scheduled, none missed. 498 transactions, all applied; 500
 > blocks, all final on Bedrock; the whole chain replays offline to the recorded charges and
 > to both instances' stores, and both finalized roots are the ones a second beacon provider
 > reports.

@@ -1,0 +1,46 @@
+{
+ "chain": "sepolia",
+ "lc_endpoint": "https://lodestar-sepolia.chainsafe.io",
+ "second_endpoint": "https://ethereum-sepolia-beacon-api.publicnode.com",
+ "user_agent": "ferrata-lab-fetch",
+ "started": 1794485834.404692,
+ "instance_finalized_slot": 11562016,
+ "finality_attested_slot": 11562656,
+ "finality_finalized_slot": 11562592,
+ "head_period": 1411,
+ "second_provider_finalized_root": "0x3bcce8b92c403c418b8d96d10e3c79fad1114f4b249215d518731d0c9f6f55de",
+ "updates": [
+  {
+   "period": 1411,
+   "fork_digest": "669e6c11",
+   "bytes": 26424
+  }
+ ],
+ "finished": 1794485839.1669056,
+ "requests": [
+  {
+   "url": "https://lodestar-sepolia.chainsafe.io/eth/v1/beacon/light_client/finality_update",
+   "status": 200,
+   "bytes": 1448,
+   "sha256": "e39f188daac2495337bf92adeeab2e4ec2f3514104652b156eaf57ee83aefd9b",
+   "version": "gloas",
+   "at": 1794485834.4
+  },
+  {
+   "url": "https://ethereum-sepolia-beacon-api.publicnode.com/eth/v1/beacon/headers/11562592",
+   "status": 200,
+   "bytes": 668,
+   "sha256": "b5ae8f1375ffcf59d68dbeeeb77051bf95e6e3c1a317987d40be4dd4c12c3eb0",
+   "version": null,
+   "at": 1794485836.4
+  },
+  {
+   "url": "https://lodestar-sepolia.chainsafe.io/eth/v1/beacon/light_client/updates?start_period=1411&count=1",
+   "status": 200,
+   "bytes": 26436,
+   "sha256": "55263a1333cd818c2cbe077564d6add9f39c3fc42c0af329cb3513576b77807b",
+   "version": "gloas",
+   "at": 1794485836.9
+  }
+ ]
+}
