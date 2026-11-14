@@ -97,3 +97,32 @@ receipt (no dev mode on LEZ), and LEZ's wallet proved each for real on the box's
 | release | Redeem: the burn found from the seed, held by its random delay (waited out on the view's clock) and the vault's 120 s (anvil's), then the release on the defaults | the module's release by the wallet's rule (checkpoint 0, the registered relay fee, any relayer); `seqnet-chain` hands it to `ferrata-relayer`: **0.000997 ETH paid to the fresh address** (anvil block 16); Positions: `0 not claimed`, `0 not released` |
 
 293 transactions in LEZ blocks 1..=129 and 15 on anvil, none reverted (`SUMMARY.md` lists each with its sender).
+
+## 3. Through `ferrata_bridge_module` beside Logos Core's own `lez_core`
+
+`lez_core` (logos-execution-zone-module) at **`cc73ebf`**, `main` after its v0.4 pull requests were merged on 13 November
+(LEZ v0.4.0-rc1 `1806e87`, logos-module-builder `5f74cdb`: our pins), built from its source as merged and with
+[`modules/patches/lez_core-cc73ebf-authorizes-public-pda.patch`](../../modules/patches/lez_core-cc73ebf-authorizes-public-pda.patch)
+(`run.sh build-lezcore`; [`modules/results/lez-core-v04-2026-11-14/`](../../modules/results/lez-core-v04-2026-11-14/)).
+`run.sh lezcore NAME`: a headless Logos Core (logosctl `66d098d`) with `ferrata_bridge_module` and the patched `lez_core`;
+the user's LEZ wallet opened inside `lez_core` (`open`, `force_rpc`: a client of the zone's sequencer); the module's
+session routed through it (`wallet lez`); the user's calls in the mini-app's order with logosctl (no view, so the
+wallet's privacy delays are not waited for); `seqnet-chain` kept beside every LEZ read and send (the plain path) and for
+the zone's history and Ethereum.
+
+### `seqnet-lezcore-1` (14 Nov 10:02–10:09 UTC, dev mode): the round trip, every LEZ read equal
+
+[`e2e/runs/seqnet-lezcore-1/`](../runs/seqnet-lezcore-1/SUMMARY.md):
+
+| Step | Through `lez_core` | Beside it |
+|---|---|---|
+| bridge states | 85 reads through `get_account_public`: `config(cid)` 13, `token(cid, ETH)` 13, `root(cid, 1)` 10, the deposit's `nullifier(…)` 1, `holder(…)` 48 (30 non-empty) | 85 of 85 equal to `seqnet-chain`'s reads |
+| private holding | 9 reads (`sync_to_block`, `get_account_private`) | 9 of 9 equal to `seqnet-chain`'s wallet |
+| private claim | `ClaimPrivately` (the private account, four PDAs) executed and proven (dev) by LEZ's wallet inside Logos Core and sent, 603 ms | applied in LEZ block 30 (private, 33,055 B; visible calls `Read`, `Issue`) |
+| private burn | `Burn` (the private account, three PDAs), 413 ms | applied in LEZ block 31 (private, 32,018 B; visible call `Burn`) |
+| release | — | 0.000997 ETH to the fresh address (the module's rule, `seqnet-chain`'s relayer) |
+
+`lez_core` as merged, on the same calls: the bridge program's PDA as an account is refused
+(`accounts_json[0] unknown kind "public_pda"`); the claim with no account authorizing (as `cc73ebf` mentions them) is
+refused by the bridge program (`ProgramExitedWithCode { code: 252 }`, `WRONG_DESTINATION`). 101 LEZ transactions in
+blocks 1..=33 and 15 on anvil, none reverted.
