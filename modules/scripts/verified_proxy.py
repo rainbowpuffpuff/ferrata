@@ -86,18 +86,25 @@ def summary(repo, w):
           "canonical at that slot and Nimbus's header of that root agree, at or below publicnode's finalized epoch",
           f"root {tr.get('root')}, slot {tr.get('slot')}")
     started = reply(w, "vp-start")
-    c.add(isinstance(started, dict) and started.get("ok", started.get("success", True)) is not False
-          and "error" not in json.dumps(started).lower()[:200], "verified_proxy_module.start: the light client "
-          "bootstrapped from that root and synced once", json.dumps(started)[:300])
+    c.add(isinstance(started, dict) and started.get("success") is True, "verified_proxy_module.start: the light "
+          "client bootstrapped from that root and synced once", json.dumps(started)[:300])
     st = [reply(w, f"vp-status-{i}") for i in range(4)]
     st = [s for s in st if isinstance(s, dict)]
-    heads = [((s.get("head") or {}).get("number"), (s.get("sync") or {}).get("lastSyncedAt"), s.get("state")) for s in st]
+    def head_of(s):
+        b = (s.get("head") or {}).get("blockNumber")
+        return int(b, 16) if isinstance(b, str) and b.startswith("0x") else None
+    heads = [(head_of(s), (s.get("sync") or {}).get("lastSyncedAt"), s.get("state")) for s in st]
+    plain_heads = []
+    for i in range(4):
+        r = load(w / "plain" / f"el-blocknumber-{i}.json") or {}
+        plain_heads.append(int(r["result"], 16) if isinstance(r.get("result"), str) else None)
+    facts["plain_heads"] = plain_heads
     facts["proxy_status_samples"] = heads
     nums = [h[0] for h in heads if isinstance(h[0], int)]
     syncs = [h[1] for h in heads if h[1] is not None]
     c.add(len(nums) >= 2 and nums[-1] > nums[0] and len(set(syncs)) >= 2 and all(h[2] in ("running", "ready") for h in heads),
           "syncing: the verified head and the last sync time move between status samples, state running",
-          f"(head, lastSyncedAt, state) = {heads}")
+          f"(head, lastSyncedAt, state) = {heads}; the endpoint's own block number at each sample: {plain_heads}")
     beacon = (st[-1].get("beacon") if st else None) or {}
     facts["proxy_beacon"] = beacon
     c.add(beacon.get("source") == "module", "the proxy's beacon providers came from beacon_api_module (beaconSource "
@@ -207,10 +214,14 @@ def summary(repo, w):
     facts["updater_run"] = run if isinstance(run, dict) else None
     insts = (run or {}).get("instances") if isinstance(run, dict) else None
     sep = (insts or [{}])[0] if isinstance(insts, list) else (insts or {}).get("sepolia", {}) if isinstance(insts, dict) else {}
-    c.add(isinstance(run, dict) and run.get("verdict") in ("ok", "up_to_date", "done") and sep,
+    sep = next((i for i in (insts or []) if isinstance(i, dict) and i.get("chain") == "sepolia"), {}) if isinstance(insts, list) else {}
+    facts["updater_instance"] = sep
+    c.add(isinstance(run, dict) and run.get("up_to_date") is True and sep.get("finalized_slot"),
           "ferrata_updater_module.run with its sources through beacon_api_module (two providers, min_agreeing 2), on "
           "the in-process LEZ chain: the instance initialised from the fixture's checkpoint and followed Sepolia",
-          json.dumps(run)[:500] if isinstance(run, dict) else "no reply")
+          (f"up to date after {run.get('round')} rounds; finalized slot {sep.get('finalized_slot')}; "
+           f"{json.dumps({k: v for k, v in sep.items() if k not in ('chain',)})[:300]}")
+          if isinstance(run, dict) and run.get("up_to_date") is not None else json.dumps(run)[:400])
     fin = load(w / "plain" / "updater-finalized-check.json") or {}
     c.add(fin.get("agree") is True, "the instance's finalized header after the run is the block publicnode holds "
           "canonical at that slot", json.dumps(fin)[:300])

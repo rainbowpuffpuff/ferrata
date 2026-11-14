@@ -224,9 +224,19 @@ ledger = "harness"
 [keys]
 payer_key_file = "$repo/lez/updater/dev/payer.key"
 
+[fees]
+gas_limit = 4800000
+max_fee_per_tx = 1000000000
+budget = 1000000000000
+
 [policy]
 defer_window = 1
+max_lag_slots = 64
 min_agreeing = 2
+retry_base_ms = 500
+retry_max_ms = 30000
+max_attempts = 5
+demote_rounds = 50
 max_periods_per_request = 16
 
 [[chain]]
@@ -252,7 +262,7 @@ adoption_parts = 2
 T
 jq -n --arg c "$W/req/updater.toml" '{config_file: $c}' > "$W/req/updater-check.json"
 call ferrata_updater_module check_config U-check_config "@$W/req/updater-check.json"
-jq -n --arg c "$W/req/updater.toml" '{config_file: $c, rounds: 80, until_up_to_date: true, quiet: false}' > "$W/req/updater-run.json"
+jq -n --arg c "$W/req/updater.toml" '{config_file: $c, rounds: 600, until_up_to_date: true, quiet: false}' > "$W/req/updater-run.json"
 CALL_MS=1800000 call ferrata_updater_module run U-run "@$W/req/updater-run.json"
 # The instance's finalized header, against publicnode's canonical block at that slot.
 fslot=$(jq -r '[.. | objects | select(has("finalized_slot")) | .finalized_slot][0] // empty' "$W/rep/U-run.json")
