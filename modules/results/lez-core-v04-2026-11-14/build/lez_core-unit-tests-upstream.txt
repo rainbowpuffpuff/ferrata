@@ -1,0 +1,80 @@
+logos-lez_core-tests> start_sequencer: warning: error during config home adaptation
+logos-lez_core-tests> 
+logos-lez_core-tests>  ── lez_core_module_tests ──────────────────────────────────
+logos-lez_core-tests> 
+logos-lez_core-tests>    PASS  wallet_dir_reports_no_directory_without_a_provisioning_host  0ms
+logos-lez_core-tests>    PASS  create_account_public_returns_hex_on_success  0ms
+logos-lez_core-tests>    PASS  create_account_public_returns_empty_on_error  0ms
+logos-lez_core-tests>    PASS  create_account_private_returns_hex_on_success  0ms
+logos-lez_core-tests>    PASS  list_accounts_maps_entries  0ms
+logos-lez_core-tests>    PASS  list_accounts_empty_on_error  0ms
+logos-lez_core-tests>    PASS  get_balance_invalid_hex_returns_empty  0ms
+logos-lez_core-tests>    PASS  get_balance_returns_decimal_string  0ms
+logos-lez_core-tests>    PASS  get_balance_zero  0ms
+logos-lez_core-tests>    PASS  get_account_public_returns_json  0ms
+logos-lez_core-tests>    PASS  get_account_public_invalid_hex_returns_empty  0ms
+logos-lez_core-tests>    PASS  get_public_account_key_returns_hex  0ms
+logos-lez_core-tests>    PASS  get_private_account_keys_returns_json  0ms
+logos-lez_core-tests>    PASS  account_id_to_base58_invalid_hex_returns_empty  0ms
+logos-lez_core-tests>    PASS  account_id_to_base58_returns_string  0ms
+logos-lez_core-tests>    PASS  account_id_from_base58_returns_hex  0ms
+logos-lez_core-tests>    PASS  account_id_from_base58_error_returns_empty  0ms
+logos-lez_core-tests>    PASS  sync_to_block_forwards_value  0ms
+logos-lez_core-tests>    PASS  get_last_synced_block_returns_value  0ms
+logos-lez_core-tests>    PASS  get_last_synced_block_error_returns_zero  0ms
+logos-lez_core-tests>    PASS  get_current_block_height_returns_value  0ms
+logos-lez_core-tests>    PASS  transfer_public_success_json  0ms
+logos-lez_core-tests>    PASS  transfer_public_invalid_hex_error_json  0ms
+logos-lez_core-tests>    PASS  transfer_public_invalid_amount_error_json  0ms
+logos-lez_core-tests>    PASS  transfer_public_ffi_error_json  0ms
+logos-lez_core-tests>    PASS  transfer_shielded_invalid_keys_json_error  0ms
+logos-lez_core-tests>    PASS  transfer_shielded_missing_nullifier_key_error  0ms
+logos-lez_core-tests>    PASS  transfer_shielded_misspelled_nullifier_key_error  0ms
+logos-lez_core-tests>    PASS  transfer_shielded_abbreviated_nullifier_key_error  0ms
+logos-lez_core-tests>    PASS  transfer_shielded_nullifier_key_omitted_viewing_key_only_error  0ms
+logos-lez_core-tests>    PASS  transfer_shielded_nullifier_key_wrong_type_error  0ms
+logos-lez_core-tests>    PASS  transfer_shielded_viewing_key_wrong_type_error  0ms
+logos-lez_core-tests>    PASS  transfer_shielded_success_json  0ms
+logos-lez_core-tests>    PASS  transfer_private_missing_nullifier_key_error  0ms
+logos-lez_core-tests>    PASS  send_generic_public_transaction_shard_override  0ms
+logos-lez_core-tests>    PASS  send_generic_public_transaction_shard_size_mismatch_error_json  0ms
+logos-lez_core-tests>    PASS  send_generic_public_transaction_signing_requirements_size_mismatch_error_json  0ms
+logos-lez_core-tests>    PASS  send_generic_public_transaction_invalid_account_id_frees_resolved_identities  0ms
+logos-lez_core-tests>    PASS  send_generic_private_transaction_invalid_actor_states_frees_resolved_identities  0ms
+logos-lez_core-tests>    PASS  send_generic_private_transaction_disclosed_root_and_shadow_dependency  0ms
+logos-lez_core-tests>    PASS  send_generic_private_transaction_undisclosed_dependency  0ms
+logos-lez_core-tests>    PASS  send_generic_private_transaction_native_root_supplies_no_programs  0ms
+logos-lez_core-tests>    PASS  send_generic_private_transaction_shadow_root_requires_explicit_actor_states  0ms
+logos-lez_core-tests>    PASS  send_generic_private_transaction_invalid_kind_json_error  0ms
+logos-lez_core-tests>    PASS  send_generic_private_transaction_dependency_kinds_size_mismatch_error  0ms
+logos-lez_core-tests>    PASS  send_generic_private_transaction_with_accounts_mentions_each_kind  0ms
+logos-lez_core-tests>    PASS  send_generic_private_transaction_with_accounts_never_frees_a_foreign_account_through_the_ffi  0ms
+logos-lez_core-tests>    PASS  send_generic_private_transaction_with_accounts_frees_resolved_accounts_on_a_bad_entry  0ms
+logos-lez_core-tests>    PASS  send_generic_private_transaction_with_accounts_rejects_malformed_entries  0ms
+logos-lez_core-tests>    PASS  send_program_deployment_transaction_success_json  0ms
+logos-lez_core-tests>    PASS  send_program_deployment_transaction_invalid_payer_hex_error_json  0ms
+logos-lez_core-tests>    PASS  send_program_deployment_transaction_invalid_segment_hex_error_json  0ms
+logos-lez_core-tests>    PASS  bridge_withdraw_success_json  0ms
+logos-lez_core-tests>    PASS  bridge_withdraw_invalid_hex_error_json  0ms
+logos-lez_core-tests>    PASS  bridge_withdraw_ffi_error_json  0ms
+logos-lez_core-tests>    PASS  create_new_success_then_double_open_fails  0ms
+logos-lez_core-tests>    PASS  create_new_null_handle_returns_internal_error  0ms
+logos-lez_core-tests>    PASS  open_success  0ms
+logos-lez_core-tests>    PASS  save_forwards_return_code  0ms
+logos-lez_core-tests>    PASS  get_sequencer_addr_returns_string  0ms
+logos-lez_core-tests> 
+logos-lez_core-tests>  ── Results: 60 passed (3ms) ──────
+logos-lez_core-tests> 
+logos-lez_core-tests> Running phase: glibPreInstallPhase
+logos-lez_core-tests> Running phase: installPhase
+logos-lez_core-tests> Running phase: qtOwnPathsHook
+logos-lez_core-tests> Running phase: fixupPhase
+logos-lez_core-tests> wrapping Qt applications in /nix/store/cq6fiswj6qdbfslydspgdl3svpwmq126-logos-lez_core-tests-0.6.0/bin /nix/store/cq6fiswj6qdbfslydspgdl3svpwmq126-logos-lez_core-tests-0.6.0/sbin /nix/store/cq6fiswj6qdbfslydspgdl3svpwmq126-logos-lez_core-tests-0.6.0/libexec /nix/store/cq6fiswj6qdbfslydspgdl3svpwmq126-logos-lez_core-tests-0.6.0/Applications
+logos-lez_core-tests> wrapping /nix/store/cq6fiswj6qdbfslydspgdl3svpwmq126-logos-lez_core-tests-0.6.0/bin/lez_core_module_tests
+logos-lez_core-tests> shrinking RPATHs of ELF executables and libraries in /nix/store/cq6fiswj6qdbfslydspgdl3svpwmq126-logos-lez_core-tests-0.6.0
+logos-lez_core-tests> shrinking /nix/store/cq6fiswj6qdbfslydspgdl3svpwmq126-logos-lez_core-tests-0.6.0/bin/.lez_core_module_tests-wrapped
+logos-lez_core-tests> shrinking /nix/store/cq6fiswj6qdbfslydspgdl3svpwmq126-logos-lez_core-tests-0.6.0/bin/lez_core_module_tests
+logos-lez_core-tests> checking for references to spike/tmp/lez-core-v04/nix-build-logos-lez_core-tests-0.6.0.drv-0/ in /nix/store/cq6fiswj6qdbfslydspgdl3svpwmq126-logos-lez_core-tests-0.6.0...
+logos-lez_core-tests> patching script interpreter paths in /nix/store/cq6fiswj6qdbfslydspgdl3svpwmq126-logos-lez_core-tests-0.6.0
+logos-lez_core-tests> stripping (with command strip and flags -S -p) in  /nix/store/cq6fiswj6qdbfslydspgdl3svpwmq126-logos-lez_core-tests-0.6.0/bin
+logos-lez_core-tests> Running phase: postPatchMkspecs

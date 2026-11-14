@@ -1,0 +1,6 @@
+cc73ebf Merge pull request #74 from logos-blockchain/Pravdyvy/sequencer-ffi-query-api
+ src/lez_core_ffi_marshalling.h |  3 ++
+ src/lez_core_module.cpp        | 75 +++++++++++++++++++++++++++++++++++++++---
+ src/lez_core_module.h          |  3 ++
+ tests/test_lez_core.cpp        | 64 +++++++++++++++++++++++++++++++++++
+ 4 files changed, 140 insertions(+), 5 deletions(-)

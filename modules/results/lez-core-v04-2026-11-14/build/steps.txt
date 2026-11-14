@@ -1,0 +1,7 @@
+[09:30:56] seqnet-chain: ok (54 s)
+[09:52:25] lez_core-upstream: ok (1289 s)
+[09:54:23] lez_core-source: ok (6 s)
+[09:55:23] lez_core-patched: ok (60 s)
+[09:55:59] lez_core-tests-upstream: ok (36 s)
+[09:56:37] lez_core-tests-patched: ok (38 s)
+[10:00:38] check: ok (241 s)
