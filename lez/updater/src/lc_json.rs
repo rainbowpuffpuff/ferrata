@@ -177,7 +177,7 @@ fn committee(c: &Value) -> Result<Vec<u8>> {
 fn sync_aggregate(a: &Value, n: usize) -> Result<Vec<u8>> {
     let raw = bytes(&a["sync_committee_bits"]).context("sync_committee_bits")?;
     ensure!(n > 0 && raw.len() == n.div_ceil(8), "sync_committee_bits: {} bytes for a committee of {n}", raw.len());
-    let bits = (0..n).map(|i| raw[i / 8] >> (i % 8) & 1 == 1).collect();
+    let bits = (0..n).map(|i| (raw[i / 8] >> (i % 8)) & 1 == 1).collect();
     let signature = fixed(&a["sync_committee_signature"]).context("sync_committee_signature")?;
     Ok(encode_sync_aggregate(&SyncAggregate { bits, signature }))
 }
