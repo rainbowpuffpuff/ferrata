@@ -1,0 +1,38 @@
+== all 2026-11-14T11:10:06Z commit 6b7ea86f6f28f792a7b79312fc41b2c21d915ff0
+== native 2026-11-14T11:10:06Z commit 6b7ea86f6f28f792a7b79312fc41b2c21d915ff0
+seed ok 28s
+risc0 ok 0s
+sequencer ok 29s
+guests-bridge ok 68s
+guests-lez ok 315s
+native-attestor ok 52s
+checkpoint-core ok 11s
+native-monitor ok 106s
+fmt-cli-lez FAILED(1) 11s
+fmt-checkpoint ok 7s
+fmt-monitor ok 9s
+fmt-ferrata_attest_module FAILED(1) 0s
+fmt-ferrata_attestor_module FAILED(1) 0s
+fmt-ferrata_bridge_module FAILED(1) 0s
+fmt-ferrata_monitor_module FAILED(1) 1s
+fmt-ferrata_relayer_module FAILED(1) 0s
+fmt-ferrata_updater_module FAILED(1) 0s
+native-lez ok 351s
+native-cli ok 654s
+cli-e2e ok 57s
+relayer-suite ok 123s
+lez-harness ok 637s
+native done in 1334s
+== check 2026-11-14T11:32:20Z commit 6b7ea86f6f28f792a7b79312fc41b2c21d915ff0
+check ok 2217s
+Step failures: 0. Check failures: 0.
+check done in 2217s
+== logosio 2026-11-14T12:09:17Z commit 6b7ea86f6f28f792a7b79312fc41b2c21d915ff0
+logos-io FAILED(1) 212s
+logosio done in 212s
+== results 2026-11-14T12:12:49Z commit 6b7ea86f6f28f792a7b79312fc41b2c21d915ff0
+results done in 0s
+ALL DONE 2026-11-14T12:12:49Z
+all done in 3763s
+fix-rebuild (cli seqnet bins build, cli/ and lez/ fmt --check) ok 16s commit 4a58137a
+== results 2026-11-14T12:15:21Z commit 4a58137a4e9b6064dfb021521eb065c9fc92eddb (copied again, for the line above)

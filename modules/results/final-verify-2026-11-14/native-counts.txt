@@ -1,0 +1,6 @@
+lez-harness: 56 passed, 0 failed, 0 ignored in 34 test runs
+checkpoint-core: 40 passed, 0 failed, 0 ignored in 10 test runs
+native-attestor: 12 passed, 0 failed, 0 ignored in 5 test runs
+native-monitor: 15 passed, 0 failed, 0 ignored in 4 test runs
+native-lez: 14 passed, 0 failed, 0 ignored in 7 test runs
+native-cli: 14 passed, 0 failed, 0 ignored in 3 test runs

@@ -1,0 +1,38 @@
+# The tree to publish, checked again: 14 November 2026 (branch `final-verify`)
+
+After the merges of `lez-core-v04` (the bridge module's LEZ side through Logos Core's `lez_core`, rows 113–115) and
+`lez-rc3` (LEZ v0.4.0-rc3, rows 111–112) into `integration8` (tip `6b7ea86`), on the Modal build box (our Modal
+workspace; gVisor, 2 CPUs reported, up to 16 cores, 64 GiB; Nix 2.28.3 with the store of the last check's box
+restored; cargo 1.93.0, 1.98.1 and 1.88.0, r0vm 3.0.5, Foundry 1.3.6), 14 Nov 2026 11:10–12:13 UTC, 3,763 s for the
+four parts. Dev mode throughout: no proof was made. Everything ran at `6b7ea86`; the one fix (`4a58137`: rustfmt of one
+line, whitespace only) and the steps it touches ran again at `4a58137`, and the one-command check ran there. Every step
+and its seconds: [`run-steps.txt`](run-steps.txt); the environment: [`run-env.txt`](run-env.txt); the test counts:
+[`native-counts.txt`](native-counts.txt), [`native-tests.txt`](native-tests.txt). The last check before these merges:
+[`../final-2026-11-13/`](../final-2026-11-13/README.md).
+
+| What | Command | Result |
+|---|---|---|
+| The guests | `cd lez && cargo build --locked -p methods`; `cd bridge && cargo build --release --locked -p methods` | built; `release.bin` sha256 `7be1349c…11bf`, id `0xb64900bc…29e9`, as [`docs/image-ids.md`](../../../docs/image-ids.md) |
+| `cli/` | `cargo test -p ferrata-wallet`; `cargo test --lib`; `cargo test --no-run`; `cargo build --example miniapp_devnet`; `cargo build --features seqnet --bins`; `cargo check --lib --no-default-features` | 3 and 11 passed; every test target, the devnet example, the `seqnet` tools (`seqnet-chain` with its new `module.tx` read, for `lez_core`'s sends) and the library without `lez-wallet` build |
+| The `ferrata` tool's e2e | `cd cli && bash tests/e2e.sh` | 1 passed: the private round trip on the defaults and the recovery from the seed, the lines `cli/README.md` shows |
+| The relayer's suite | `bash cli/tests/relayer.sh` | 9 passed: 6 unit tests, `gasdrop` 1, `relayer_fork` 1, the harness e2e with the gas-drop guest 1; on the fork the candidate 375,281 gas, `finalizeAttested` 218,385, the release 358,908, the paid release 407,052, each equal to [`e2e/runs/relayer-fork/results.json`](../../../e2e/runs/relayer-fork/results.json) (only the times differ: [`relayer-fork-results.json`](relayer-fork-results.json)) |
+| `lez/` | `cargo test --locked -p ferrata-advance`; `cargo test --locked -p ferrata-updater --features harness` | 14 passed; the A3 gate's default run 0.0820, `lez/updater/results/gate.txt` the same after the run |
+| `lez/updater/sequencer` | `cargo build --locked --release`; `cargo test --locked --release` (its own lock) | builds; it has no tests of its own |
+| The LEZ harness | `cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked -- --test-threads 4` (LEZ v0.4.0-rc1, the default: `lez/scripts/lez-select.sh --show`; `lez-rc3`'s feature off) | 56 passed in 34 test runs; the tables it writes in `lez/results/` came out as committed (no tracked file changed) |
+| `monitor/` | `cargo test --release --locked` | 15 passed |
+| `checkpoint/attestor` | `cd checkpoint && cargo +1.88 test --locked -p ferrata-attestor` | 12 passed |
+| The checkpoint core | `cd checkpoint && cargo +1.88 test --locked -p checkpoint-core -p attestor-core` | 40 passed in 10 test runs: `attestor-core` 6; `checkpoint-core`'s `bedrock_0_3_5` 3 (`lez-rc3`'s: upstream's transaction fixtures of Logos Blockchain `d480efc6` framed, the 0.3.5-rc.1 one with its fork digest refused), `cross_vectors` 3, `review_guests` 3, `rule_b` 14, `units` 11 |
+| rustfmt | `cargo fmt --all --check` in `cli/`, `lez/`, `checkpoint/` and `monitor/`; `rustfmt --edition 2021 --check` of `lez/updater/sequencer/src/ledger.rs` | one expression in `cli/src/bin/seqnet_chain.rs` (from the `lez-core-v04` merge) had drifted: formatted in `4a58137` (whitespace only; the tokens are unchanged), then the `seqnet` tools built again and `cli/` and `lez/` checked clean on the box (16 s); `lez/`, the ledger, `checkpoint/` and `monitor/` clean. The six modules' own crates are not rustfmt-clean (`rustfmt --check` on their crate roots: files in each, most of them older than these merges; the repository never said they were): left as they are |
+| The six modules | `BRIDGE_E2E=1 RELEASE_ELF=… modules/scripts/check.sh OUT` (dev and portable, `E2E=1`, the daemons' jobs in both flavours) | **0 step failures in 71 steps, 0 check failures** (2,217 s): 53 calls equal to the native ones in both Logos Cores and meeting their expectations (attest 11, bridge 13, attestor 12, monitor 8, updater 4, relayer 5); `e2e.sh` 43/43 and `bridge_e2e.sh` 24/24 in each Core; the attestor's job 23/23 and the monitor's 46/46, natively and in each Core; the updater's 8/8 natively and 10/10 in each Core; the relayer's 10/10 natively and 11/11 in each Core ([`check/`](check/summary.md)) |
+| Logos Core's own modules beside ours | `RELEASE_ELF=… LOGOS_TMPDIR=/var/tmp/lio modules/scripts/logos-io.sh OUT` | 212 s (the Logos modules' builds came from the restored store); the same two step failures as before, whose cause row 115 found: `build-keystore_module` (its old logos-cpp-sdk has no `--normalize-lidl`) and so `load-tx_sender_module`; everything else ok: `eth_rpc_module`, `beacon_api_module`, `signer_manager_module`, `fee_module` and `tx_sender_module` built; the attestation module's 4 reads through `eth_rpc_module` (route `direct`), each equal to the plain-HTTP read; `import_root`'s read through it equal to the proofs given; `e2e.sh` 43/43 and `bridge_e2e.sh` 24/24 through that Logos Core; its `check.sh` of the two modules 0 and 0 ([`logos-io/`](logos-io/summary.md)) |
+| The `e2e/seqnet` records (no sequencer started) | `python3 -I e2e/seqnet/summary.py` on a copy of each run | all six runs: `summary.json` re-derived equal for `seqnet-lezcore-1` and `-2`, and for `seqnet-cli-1`, `-miniapp-1`, `-2`, `-3` but for the two keys the newer `summary.py` adds (`"module_calls": 0`, `"lez_core": null`); `SUMMARY.md` equal for the three mini-app runs, and for `cli-1`, `lezcore-1` and `lezcore-2` but for two more lines at the end (the run log's count and `DONE`, written after the committed summary); in all six, `programs.txt`'s `checkpoint_b` and `release` sha256 and ids equal `docs/image-ids.md`, and the attestation (`0x816d1fef…`) and bridge (`0xccde6171…`) programs' ids are in each run's records |
+| The one-command check | `MODAL_PROFILE=… modal run --detach scripts/reproduce/modal_app.py` at `4a58137` | **5 of 5 PASS in 36:10**: both live runs' records 13 of 13, the vault 464 passed and 1 skipped, the core 163, 14 of 14 guest ids and 6 of 6 crown programs, the LEZ harness 56; no committed file changed ([`scripts/reproduce/runs/2026-11-14-modal-verify/`](../../../scripts/reproduce/runs/2026-11-14-modal-verify/README.md)) |
+
+Packages (bytes, dev / portable): attest 3,525,083 / 6,685,649; bridge 6,515,971 / 9,674,928 (47,998 and 50,676 more
+than on 13 Nov: the LEZ side through `lez_core`); attestor 2,342,286 / 5,502,279; monitor 9,029,997 / 12,187,823;
+updater 57,842,399 / 61,007,738; relayer 14,317,053 / 17,477,426 ([`check/sizes.log`](check/sizes.log)).
+
+Not re-run here: `lez_core`'s build and the round trip through it (`e2e/seqnet/run.sh build-lezcore`, `lezcore`), the
+send stack (`modules/scripts/send-stack.sh`), the rc3 harness and live session (`lez/scripts/lez-select.sh v0.4.0-rc3`),
+the live driver, the catalog (`release-local.sh`, `catalog-install.sh`), the mini-app's Qt Quick and Basecamp tests,
+the live zone of four, any sequencer run, any proof.

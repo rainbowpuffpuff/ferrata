@@ -1,0 +1,6 @@
+eth_rpc_module	logos-evm-eth-rpc-module	6965f3252986eef02e9342198a0625fa725aad8d
+beacon_api_module	logos-evm-beacon-api-module	aca138e5c211a370654700f4f8f2779ea5081c86
+keystore_module	logos-evm-keystore-module	e83a899a1718ed52e3173dc85d06b15b9c68f41a
+signer_manager_module	logos-signer-manager-module	bd5c84d21ced71246c4bf44d137aa1c597496fb0
+fee_module	logos-evm-fee-module	f2065e787eebcd7fa49f6cf6ab1dc39457cba981
+tx_sender_module	logos-evm-tx-sender-module	f1754c3b13c7c580ee449116ba8982ca193e114d
