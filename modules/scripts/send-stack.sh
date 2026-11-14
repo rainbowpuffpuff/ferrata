@@ -5,8 +5,14 @@
 # the builder subtree of modules/ferrata_bridge_module/flake.lock; every other input as the module's lock pins it).
 # Built with `--override-input logos-module-builder` instead, keystore_module and eth_rpc_module keep their own older
 # logos-cpp-sdk (e1d6bf2, no `--normalize-lidl`) and stop in their install phase (modules/LOGOS-CORE-MODULES.md).
+# A module's patches, modules/patches/<name>-<rev7>-*.patch, are applied to its source before the build:
+# eth_rpc_module 6965f32's glue for the verified_proxy_module client builder 5f74cdb generates (without it, E0308 at
+# rust-lib/src/glue.rs 212 and 247). verified_proxy_module and beacon_api_module (eth_rpc_module's verified route) are
+# built with their own lock (builder a57dc7f), as modules/scripts/verified-proxy.sh builds them; logosctl 66d098d as
+# modules/scripts/check.sh builds it.
 #
-#   modules/scripts/send-stack.sh build OUT      the five dev .lgx in OUT/lgx-<name>/ (Nix; OUT/logs, OUT/steps.tsv)
+#   modules/scripts/send-stack.sh build OUT      the dev .lgx in OUT/lgx-<name>/, logosctl in OUT/logos (Nix; OUT/logs,
+#                                                OUT/steps.tsv); ONLY="a b" builds only these
 #   LOGOSCTL=... modules/scripts/send-stack.sh run OUT
 #                                                a headless Logos Core with them on an anvil chain (31337): loaded, the
 #                                                callers' identities, eth_rpc_module's chain, tx_sender_module's prepare
@@ -23,6 +29,10 @@ fee_module logos-evm-fee-module f2065e787eebcd7fa49f6cf6ab1dc39457cba981
 keystore_module logos-evm-keystore-module e83a899a1718ed52e3173dc85d06b15b9c68f41a
 signer_manager_module logos-signer-manager-module bd5c84d21ced71246c4bf44d137aa1c597496fb0
 tx_sender_module logos-evm-tx-sender-module f1754c3b13c7c580ee449116ba8982ca193e114d"
+# Built with their own lock (no graft): the pair upstream tests together.
+OWN_LOCK="beacon_api_module logos-evm-beacon-api-module aca138e5c211a370654700f4f8f2779ea5081c86
+verified_proxy_module logos-verified-proxy-module fa984790c5c5d7b39f37ed42d7b66abfc9e72b67"
+CLI=github:logos-co/logos-logoscore-cli/66d098d3af1367cf831b69c13a5aa8345edeb682
 
 build() {
   [ -f "$OUT/steps.tsv" ] || printf 'module\trevision\tresult\tseconds\n' > "$OUT/steps.tsv"
@@ -36,6 +46,13 @@ build() {
     rm -rf "$src" && git clone -q "https://github.com/logos-co/$gh" "$src" && git -C "$src" checkout -q "$rev" \
       && python3 -I "$here/graft_builder_lock.py" "$src/flake.lock" "$repo/modules/ferrata_bridge_module/flake.lock" > "$src/flake.lock.new" \
       2> "$OUT/logs/graft-$name.log" && mv "$src/flake.lock.new" "$src/flake.lock" || { echo "$name: source or graft failed"; continue; }
+    local patch
+    for patch in "$repo/modules/patches/$name-${rev:0:7}-"*.patch; do
+      [ -f "$patch" ] || continue
+      git -C "$src" apply --verbose "$patch" >> "$OUT/logs/graft-$name.log" 2>&1 \
+        || { echo "$name: $(basename "$patch") does not apply"; continue 2; }
+      echo "$name: applied $(basename "$patch")"
+    done
     # A derivation that writes $HOME leaves /homeless-shelter behind and the next derivation of the same build
     # refuses to start ("home directory '/homeless-shelter' exists"); finished derivations stay in the store, so the
     # build is retried from where it stopped (as logos-core-io's runs did, up to 12 times).
@@ -49,6 +66,29 @@ build() {
     printf '%s\t%s\t%s\t%s\n' "$name" "${rev:0:12}" "$r" "$(( $(date +%s) - t0 ))" | tee -a "$OUT/steps.tsv"
     grep -a -E 'Plugin file does not exist|^error|error:|error\[' "$OUT/logs/build-$name.log" | head -n 8
   done <<< "$MODS"
+  local attempt
+  while read -r name gh rev; do
+    case " ${ONLY:-$name} " in *" $name "*) ;; *) continue ;; esac
+    t0=$(date +%s)
+    for attempt in $(seq 1 12); do
+      rm -rf /homeless-shelter
+      if nix build "github:logos-co/$gh/$rev#lgx" -o "$OUT/lgx-$name" -L > "$OUT/logs/build-$name.log" 2>&1; then r="ok (attempt $attempt, own lock)"; break; fi
+      r="FAILED($?, attempt $attempt)"
+      grep -q "homeless-shelter' exists" "$OUT/logs/build-$name.log" || break
+    done
+    printf '%s\t%s\t%s\t%s\n' "$name" "${rev:0:12}" "$r" "$(( $(date +%s) - t0 ))" | tee -a "$OUT/steps.tsv"
+  done <<< "$OWN_LOCK"
+  case " ${ONLY:-logosctl} " in
+    *" logosctl "*)
+      t0=$(date +%s)
+      for attempt in $(seq 1 12); do
+        rm -rf /homeless-shelter
+        if nix build "$CLI#ctl" -o "$OUT/logos" -L > "$OUT/logs/build-logosctl.log" 2>&1; then r="ok (attempt $attempt)"; break; fi
+        r="FAILED($?, attempt $attempt)"
+        grep -q "homeless-shelter' exists" "$OUT/logs/build-logosctl.log" || break
+      done
+      printf '%s\t%s\t%s\t%s\n' logosctl 66d098d3af13 "$r" "$(( $(date +%s) - t0 ))" | tee -a "$OUT/steps.tsv" ;;
+  esac
   ( cd "$OUT" && sha256sum lgx-*/*.lgx ) > "$OUT/lgx-sha256.txt" 2>&1
 }
 
