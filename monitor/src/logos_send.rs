@@ -121,9 +121,18 @@ impl Route {
     pub fn send(&self, to: Address, input: &Bytes, label: &str) -> Outcome {
         let t0 = Instant::now();
         let request = self.request(to, input, label).to_string();
-        let v = match (self.call)(TX_SENDER, "send", &json!([request]), CALL_TIMEOUT) {
-            Ok(r) => parse(&r),
-            Err(e) => return Outcome::NotSent(format!("{TX_SENDER}.send did not answer: {e}")),
+        let v = loop {
+            let v = match (self.call)(TX_SENDER, "send", &json!([request]), CALL_TIMEOUT) {
+                Ok(r) => parse(&r),
+                Err(e) => return Outcome::NotSent(format!("{TX_SENDER}.send did not answer: {e}")),
+            };
+            // `unavailable`: the account's history is still opening (its key being asked of the signer manager);
+            // nothing was reserved or signed, so it is asked again until the approval timeout.
+            let opening = v.get("code").and_then(Value::as_str) == Some("unavailable");
+            if v.get("ok") == Some(&Value::Bool(true)) || !opening || t0.elapsed() > self.approval_timeout {
+                break v;
+            }
+            std::thread::sleep(POLL);
         };
         if v.get("ok") != Some(&Value::Bool(true)) {
             return Outcome::NotSent(format!("{TX_SENDER}.send refused: {}", why(&v)));
@@ -270,12 +279,32 @@ pub fn custody(call: ModuleCall, req: &CustodyRequest) -> Value {
         return json!({ "verdict": "refused", "step": "unlock", "address": address.to_checksum(None),
                        "reply": unlocked });
     }
+    // tx_sender_module opens an account's history with its key from the signer manager, in its own thread, and
+    // refuses a send until it has (`code: unavailable`, then `locked` if the wallet is locked): wait for it here.
+    let mut history = Value::Null;
+    if req.apps.iter().any(|a| a == TX_SENDER) {
+        for _ in 0..100 {
+            history = match call(TX_SENDER, "history", &json!([address.to_checksum(None), 0]), CALL_TIMEOUT) {
+                Ok(r) => parse(&r),
+                Err(e) => json!({ "ok": false, "error": e }),
+            };
+            if history.get("ok") == Some(&Value::Bool(true)) {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(200));
+        }
+        if history.get("ok") != Some(&Value::Bool(true)) {
+            return json!({ "verdict": "refused", "step": "history", "address": address.to_checksum(None),
+                           "reply": history, "unlock": unlocked });
+        }
+    }
     json!({
         "verdict": "ok",
         "address": address.to_checksum(None),
         "imported": if held_already { json!("held already") } else { imported },
         "listed": listed,
         "unlock": unlocked,
+        "historyOpen": history.get("ok") == Some(&Value::Bool(true)),
         "apps": req.apps,
         "confirm": false,
         "millis": u64::try_from(t0.elapsed().as_millis()).unwrap_or(u64::MAX),
@@ -367,6 +396,17 @@ mod tests {
     }
 
     #[test]
+    fn a_send_refused_while_the_history_opens_is_asked_again() {
+        let _g = SERIAL.lock().unwrap();
+        script(&[
+            ("send", json!({ "ok": false, "code": "unavailable", "error": "This account's history isn't open yet" })),
+            ("send", json!({ "ok": true, "requestId": "r5" })),
+            ("send_status", json!({ "ok": true, "status": "broadcast", "final": true, "hashes": [H], "hash": H })),
+        ]);
+        assert!(matches!(route().send(Address::ZERO, &Bytes::new(), "x"), Outcome::Broadcast { polls: 1, .. }));
+    }
+
+    #[test]
     fn a_stuck_send_is_never_reported_as_not_sent() {
         let _g = SERIAL.lock().unwrap();
         script(&[
@@ -398,6 +438,8 @@ mod tests {
                 json!({ "ok": true, "accounts": [{ "id": a.to_lowercase(), "address": a, "family": "evm", "signer": "keystore_module" }] }),
             ),
             ("unlock", json!({ "ok": true, "account": a, "expiresInMs": 3600000, "countLeft": null })),
+            ("history", json!({ "ok": false, "code": "unavailable", "address": a })),
+            ("history", json!({ "ok": true, "address": a, "transactions": [] })),
         ]);
         let req = CustodyRequest {
             key_file: k,
@@ -412,9 +454,12 @@ mod tests {
         assert_eq!(r["address"], a);
         let seen = SEEN.lock().unwrap();
         assert_eq!(seen[0].2[0], "59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d");
-        let unlock: Value = serde_json::from_str(seen.last().unwrap().2[0].as_str().unwrap()).unwrap();
+        let unlock = seen.iter().find(|(_, m, _)| m == "unlock").unwrap();
+        let unlock: Value = serde_json::from_str(unlock.2[0].as_str().unwrap()).unwrap();
         assert_eq!(unlock["apps"], json!(["tx_sender_module"]));
         assert_eq!(unlock["confirm"], false);
         assert_eq!(unlock["account"], a.to_lowercase());
+        assert_eq!(r["historyOpen"], true);
+        assert_eq!(seen.last().unwrap().1, "history");
     }
 }

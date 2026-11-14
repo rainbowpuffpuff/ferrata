@@ -166,7 +166,7 @@ run() {
   HOME="$OUT/home" TMPDIR="$LT" "$LOGOSCTL" --config-dir "$S" daemon start --detach > "$OUT/daemon.txt" 2>&1
   {
     local d m
-    for d in "$OUT"/lgx-* "$FERRATA_LGX/lgx-ferrata_monitor_module" "$FERRATA_LGX/lgx-ferrata_relayer_module"; do
+    for d in "$OUT"/lgx-*/ "$FERRATA_LGX/lgx-ferrata_monitor_module" "$FERRATA_LGX/lgx-ferrata_relayer_module"; do
       ctl install "$d"/*.lgx -y 2>&1 | tail -n 1
     done
     for m in tx_sender_module verified_proxy_module ferrata_monitor_module ferrata_relayer_module; do ctl module load "$m" 2>&1 | tail -n 2; done
