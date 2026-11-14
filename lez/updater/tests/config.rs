@@ -93,7 +93,10 @@ fn a_beacon_api_module_source_parses() {
     assert_ne!(text, base);
     let f = File::parse(&text).unwrap();
     let s = &f.chains[0].sources[0];
-    assert_eq!((s.via.as_deref(), s.chain_id, s.provider.as_deref()), (Some("beacon_api_module"), Some(1), Some("lodestar")));
+    assert_eq!(
+        (s.via.as_deref(), s.chain_id, s.provider.as_deref()),
+        (Some("beacon_api_module"), Some(1), Some("lodestar"))
+    );
 }
 
 #[test]

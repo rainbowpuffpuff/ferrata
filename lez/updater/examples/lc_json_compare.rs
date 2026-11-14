@@ -41,10 +41,15 @@ fn main() -> Result<()> {
 
     let (v, p) = body(w, "B-bootstrap")?;
     let ours = lc_json::bootstrap(&v)?;
-    row("bootstrap", &p, &ours, vec![
-        ("Nimbus's SSZ (same request, same session)", plain("nimbus-bootstrap.ssz")),
-        ("the fixture's bootstrap.ssz (Lodestar, 12 Nov)", fs::read(fx.join("bootstrap.ssz")).map_err(Into::into)),
-    ]);
+    row(
+        "bootstrap",
+        &p,
+        &ours,
+        vec![
+            ("Nimbus's SSZ (same request, same session)", plain("nimbus-bootstrap.ssz")),
+            ("the fixture's bootstrap.ssz (Lodestar, 12 Nov)", fs::read(fx.join("bootstrap.ssz")).map_err(Into::into)),
+        ],
+    );
 
     let (v, p) = body(w, "B-updates")?;
     let ours = lc_json::updates(&v)?;

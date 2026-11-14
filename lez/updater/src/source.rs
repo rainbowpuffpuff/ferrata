@@ -130,7 +130,8 @@ impl BeaconApiModule {
         }
         self.answered.push(v["provider"].as_str().unwrap_or("?").to_string());
         let body = v["body"].as_str().ok_or_else(|| anyhow!("{}: {endpoint}: no body", self.name))?;
-        serde_json::from_str(body).with_context(|| format!("{}: {endpoint}: the provider's body is not JSON", self.name))
+        serde_json::from_str(body)
+            .with_context(|| format!("{}: {endpoint}: the provider's body is not JSON", self.name))
     }
 }
 
