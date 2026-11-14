@@ -107,6 +107,10 @@ run() {
   : > "$OUT/calls.jsonl"; : > "$R/steps.jsonl"
   anvil --port 18545 --chain-id 31337 > "$R/anvil.log" 2>&1 & anvil_pid=$!
   for _ in $(seq 60); do cast chain-id --rpc-url "$rpc" > /dev/null 2>&1 && break; sleep 0.5; done
+  # The chain's clock is the run's, not the wall's: 12 s per block, so both branches of a step mine at the same times.
+  # (Unpinned, they did not: the vault's `submittedAt` and the cost of `keylessFrom = block.timestamp`, 2,800 gas
+  # cheaper when the value is unchanged, then differ between the paths for reasons that are anvil's clock.)
+  cast rpc --rpc-url "$rpc" anvil_setBlockTimestampInterval 12 > /dev/null
   ctl() { TMPDIR="$LT" "$LOGOSCTL" --config-dir "$S" "$@"; }
   # c MODULE METHOD ARGS...: one call through Logos Core, recorded in calls.jsonl; LAST holds its result. Keys and
   # passwords travel only as file paths.
@@ -208,6 +212,11 @@ run() {
       0xbdb3b52df781536a6bcce7088d156b3951a00a45ec8bcf2805ba8406fbeb5ec7 31337 "$vault" "$cid" 3 2 "$1" "$2" "$5" "$6" 0 0 "$zero" "$3" "$4" 4 3
   }
   block_now() { cast block-number --rpc-url "$rpc"; }
+  # warp SECONDS: one block that many seconds after the latest.
+  warp() {
+    cast rpc --rpc-url "$rpc" evm_setNextBlockTimestamp $(( $(cast block latest --field timestamp --rpc-url "$rpc") + $1 )) > /dev/null
+    cast rpc --rpc-url "$rpc" evm_mine > /dev/null
+  }
   probe() {
     jq -n --arg final "$(cast call --rpc-url "$rpc" "$vault" 'finalState()(bytes32)')" \
       --arg count "$(cast call --rpc-url "$rpc" "$vault" 'checkpointCount()(uint256)')" \
@@ -239,11 +248,14 @@ run() {
   # ab STEP PLAIN LOGOS: snapshot; the plain run (function PLAIN DIR); recorded; revert; the run through Logos Core
   # (function LOGOS DIR); recorded. Only the Logos branch goes on.
   ab() {
-    local step=$1 snap b0 b1
+    local step=$1 snap b0 b1 t0
     snap=$(cast rpc --rpc-url "$rpc" evm_snapshot | tr -d '"'); b0=$(block_now)
+    t0=$(cast block latest --field timestamp --rpc-url "$rpc")
+    cast rpc --rpc-url "$rpc" evm_setNextBlockTimestamp $((t0 + 12)) > /dev/null
     "$2" "$R/$step/plain" > "$R/$step-plain.log" 2>&1; b1=$(block_now); record "$R/$step/plain" "$b0" "$b1"
     cast rpc --rpc-url "$rpc" evm_revert "$snap" > /dev/null
     [ "$(block_now)" = "$b0" ] || echo "$step: the revert left block $(block_now), not $b0"
+    cast rpc --rpc-url "$rpc" evm_setNextBlockTimestamp $((t0 + 12)) > /dev/null
     "$3" "$R/$step/logos" > "$R/$step-logos.log" 2>&1; b1=$(block_now); record "$R/$step/logos" "$b0" "$b1"
     step_log "$step" "$([ -s "$R/$step/plain/txs.jsonl" ] && [ -s "$R/$step/logos/txs.jsonl" ] && echo 1 || echo 0)" \
       "plain $(wc -l < "$R/$step/plain/txs.jsonl") tx, logos $(wc -l < "$R/$step/logos/txs.jsonl") tx"
@@ -284,7 +296,7 @@ run() {
   JOB=$(jq -c -n --arg j "$(cp_journal "$genesis" "$s1" 10 "$(label block/10)" "$(label burn-root/1)" 1)" '{kind: "checkpoint", journal: $j, seal: "0x"}')
   ab R1-submitCandidate rp rl
   # R2: after the vault's wait (1 h), the relayer finalises it (finalizeAttested).
-  JOB=""; cast rpc --rpc-url "$rpc" evm_increaseTime 3601 > /dev/null; cast rpc --rpc-url "$rpc" evm_mine > /dev/null
+  JOB=""; warp 3601
   ab R2-finalizeAttested rp rl
   # R3: a holder's release job (journal, empty seal): the relayer releases the deposit to the recipient, is paid the
   # relay fee, and collects the checkpoint fee the release credited to it (claimOwed, in the same round).
@@ -320,7 +332,7 @@ run() {
   {
     local s3 j3 b0
     s3=$(label state/3); j3=$(cp_tuple "$s1" "$s3" 13 "$(label forged/13)" "$(label burn-root/3)" 3)
-    cast rpc --rpc-url "$rpc" evm_increaseTime 43300 > /dev/null; cast rpc --rpc-url "$rpc" evm_mine > /dev/null # past the pause
+    warp 43300 # past the pause
     submit "$j3"
     ctl module unload tx_sender_module 2>&1 | tail -n 2
     b0=$(block_now)
