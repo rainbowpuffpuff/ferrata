@@ -304,8 +304,9 @@ The design notes specify these; there is no code for them here:
   an adapter); the attestation side's `monitor` (records against several providers; the weak-subjectivity alarm);
 - in the Logos modules (`modules/README.md`, "Left out"; [`modules/LOGOS-CORE-MODULES.md`](modules/LOGOS-CORE-MODULES.md)):
   Ethereum transactions through Logos Core's own modules (`keystore_module`, `tx_sender_module`: the modules build
-  messages without signing or sending them; `eth_rpc_module` 6965f32 does not compile against our builder's code
-  generator and `keystore_module` did not install with an overridden builder,
+  messages without signing or sending them; with our builder's own locks `keystore_module` and
+  `signer_manager_module` build and load, but `eth_rpc_module` 6965f32 does not compile against that builder's code
+  generator, so `fee_module` and `tx_sender_module` do not load,
   [`modules/results/lez-core-v04-2026-11-14/`](modules/results/lez-core-v04-2026-11-14/)); LEZ through `lez_core` is
   built for the bridge module's wallet session only (its LEZ reads and its private claim and burn, through `lez_core` at
   its merged v0.4 state with a patch of ours, on a devnet: EVIDENCE rows 113, 114), not for the other modules' LEZ
