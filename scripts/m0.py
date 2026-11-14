@@ -180,7 +180,7 @@ def check_token_program(online):
         tags, err = ls_remote(TOKEN_REPO, r".*")
         rows.append(("lez-programs tags (online)", err or (", ".join(tags[-5:]) if tags else "no tags"), ""))
     return dict(verdict="OPEN (not pinned upstream; if still open at M0, Logos decides: proposal §B9)", value=value,
-                rows=rows + [("otherwise", "balances stay in the bridge's accounts, not transferable; Logos chooses", "")],
+                rows=rows + [("otherwise", "balances stay in the bridge's own accounts, moved only by the bridge (its Transfer included); Logos chooses", "")],
                 sources=[source])
 
 
