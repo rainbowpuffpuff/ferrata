@@ -147,5 +147,5 @@ on the merged tree.
   computing it from a beacon state is not built.
 - An on-chain cap on `ws_period_epochs`: the program checks it is nonzero; its value is the deployer's,
   pinned in the instance id and checked off chain.
-- A successor test on an Ethereum devnet (the proposal's done gate): this run uses real Sepolia data
+- An Ethereum-devnet fork after `Init` (dropped from A1's gate in draft 17): this run uses real Sepolia data
   through its Gloas fork in the harness.
