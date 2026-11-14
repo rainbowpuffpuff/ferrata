@@ -156,6 +156,9 @@ pub fn run(request: &str) -> String {
         if let Command::Run { rounds: 0, .. } = cli.command {
             bail!("run needs `run --rounds N` or `status` in args (it blocks until done); start runs until stop");
         }
+        if cli.send_via == "logos" {
+            bail!("`run` holds the module's Qt thread until the rounds are done, and a call to another module from the daemon's thread waits for that thread (logos-rust-sdk src/plugin.rs 212-222: a Qt::BlockingQueuedConnection): with --send-via logos use `start`, then `status`");
+        }
         let lines = Arc::new(Mutex::new(Lines::default()));
         // The sender lives until the run ends: the loop ends by its rounds, never by a stop.
         let (_tx, rx) = tokio::sync::watch::channel(None);

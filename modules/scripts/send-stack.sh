@@ -250,11 +250,28 @@ run() {
   }
   relayer_args_plain() { echo "--eth-rpc $rpc --vault $vault --chain-id 31337 --from-block $deploy_block --keystore $R/keys/relayer --password-file $pw"; }
   relayer_args_logos() { echo "--eth-rpc $rpc --vault $vault --chain-id 31337 --from-block $deploy_block --send-via logos --from $relayer"; }
+  # Both daemons run as they run in production: `start` (the daemon in its own thread; the method returns), then
+  # `status` until it ends by its bound (--rounds, --max-polls). A daemon thread's call to tx_sender_module needs the
+  # module's Qt thread free (logos-rust-sdk src/plugin.rs 212-222), which a blocking `run` would hold: the modules'
+  # `run` refuses --send-via logos.
+  # until_done MODULE STATUS-ARG...: poll `status` until the daemon no longer runs; LAST: the final status.
+  until_done() {
+    local m=$1 st; shift
+    for _ in $(seq 1200); do
+      st=$(ctl --timeout 60000 call "$m" status "$@" --json < /dev/null 2>/dev/null |
+        jq -c 'if (.result | type) == "string" then (.result | fromjson? // .result) else .result end' 2>/dev/null)
+      [ "$(jq -r '.running' <<< "$st" 2>/dev/null)" = true ] || break
+      sleep 0.25
+    done
+    LAST=$st
+  }
   # relayer_round DIR STATE ARGS...: one round of the relayer module (its inbox DIR/inbox with JOB, its state STATE).
   relayer_round() {
     local dir=$1 state=$2; shift 2
     mkdir -p "$dir/inbox"; if [ -n "${JOB:-}" ]; then printf '%s\n' "$JOB" > "$dir/inbox/job.json"; fi
-    c ferrata_relayer_module run "$(jq -c -n --args '{args: $ARGS.positional}' -- "$@" --state "$state" run --inbox "$dir/inbox" --rounds 1 --poll-secs 1)"
+    c ferrata_relayer_module start "$(jq -c -n --args '{args: $ARGS.positional}' -- "$@" --state "$state" run --inbox "$dir/inbox" --rounds 1 --poll-secs 1)"
+    printf '%s\n' "$LAST" > "$dir/start.json"
+    until_done ferrata_relayer_module '{"since":0}'
     printf '%s\n' "$LAST" > "$dir/reply.json"
   }
   # The plain branch starts from a copy of the Logos branch's relayer state (the branch that goes on).
@@ -284,14 +301,18 @@ run() {
       "submitCandidate((uint32,uint32,bytes32,bytes32,bytes32,uint64,uint64,bool,bytes32,uint64,bytes32,uint32,uint32),bytes)" "$1" 0x > /dev/null
   }
   monargs() { echo "--rpc $rpc --vault $vault --node file:$view --start-block $deploy_block --poll 1 --confirmations 0 --margin 120 --alert-level critical --max-polls 2"; }
-  monitor_run() { # DIR STATE ARGS...
+  monitor_run() { # DIR STATE ARGS...: the monitor module's daemon until its --max-polls are done
     local dir=$1 state=$2; shift 2; mkdir -p "$dir"
-    c ferrata_monitor_module run "$(jq -c -n --args '{args: $ARGS.positional}' -- "$@" --state "$state" --alert-log "$dir/alerts.jsonl")"
+    c ferrata_monitor_module start "$(jq -c -n --args '{args: $ARGS.positional}' -- "$@" --state "$state" --alert-log "$dir/alerts.jsonl")"
+    printf '%s\n' "$LAST" > "$dir/start.json"
+    until_done ferrata_monitor_module
     printf '%s\n' "$LAST" > "$dir/reply.json"
   }
   # The plain branch starts from a copy of the Logos branch's state file (its cancellation count).
   mp() { mkdir -p "$1"; cp "$R/monitor-logos.json" "$1/state.json" 2>/dev/null || true; monitor_run "$1" "$1/state.json" $(monargs) --key-file "$R/keys/watcher.key"; }
   ml() { monitor_run "$1" "$R/monitor-logos.json" $(monargs) --send-via logos --from "$watcher"; }
+  # `run` (the blocking method) with --send-via logos is refused, with the reason.
+  c ferrata_monitor_module run "$(jq -c -n --args '{args: $ARGS.positional}' -- $(monargs) --state "$R/refused.json" --send-via logos --from "$watcher")" > "$R/run-refused.log" 2>&1
   submit "$j2" && ab M1-cancelCandidate mp ml
   # M2: the same wrong state submitted again: cancelled again, and the watcher pauses checkpoints (pauseCheckpoints).
   submit "$j2" && ab M2-cancel-and-pause mp ml

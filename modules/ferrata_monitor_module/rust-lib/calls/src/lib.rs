@@ -98,6 +98,9 @@ pub fn run(request: &str) -> String {
         if a.max_polls.is_none() {
             bail!("run needs --max-polls in args (it blocks until the polls are done); start runs until stop");
         }
+        if a.send_via == "logos" {
+            bail!("`run` holds the module's Qt thread until the polls are done, and a call to another module from the daemon's thread waits for that thread (logos-rust-sdk src/plugin.rs 212-222: a Qt::BlockingQueuedConnection): with --send-via logos use `start`, then `status`");
+        }
         let t0 = std::time::Instant::now();
         // The sender lives until the run ends: the loop ends by its polls, never by a signal.
         let (_tx, rx) = tokio::sync::watch::channel(false);
