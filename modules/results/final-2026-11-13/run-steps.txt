@@ -1,4 +1,4 @@
-== native 2026-11-13T11:53:10Z commit 2bddffa467d224e3eed67e1bcdb643b60818fd7c
+== native 2026-11-13T11:53:10Z commit 067a079d8890e4e0885ec568b84539f4addf1a68
 seed ok 39s
 risc0 ok 0s
 sequencer ok 44s
@@ -12,19 +12,19 @@ native-monitor ok 67s
 cli-e2e ok 156s
 relayer-suite ok 136s
 native done in 1718s
-== fmt 2026-11-13T12:26:15Z commit 2bddffa467d224e3eed67e1bcdb643b60818fd7c
+== fmt 2026-11-13T12:26:15Z commit 067a079d8890e4e0885ec568b84539f4addf1a68
 fmt-apply ok 7s
 fmt-check ok 15s
 rebuild-cli ok 64s
 rebuild-lez ok 12s
 rebuild-sequencer ok 8s
 fmt done in 106s
-== check 2026-11-13T12:28:44Z commit 6a19ec99b4453eb06dd3b8747e798401d168f0a2
+== check 2026-11-13T12:28:44Z commit 14838c37cec2cb4df9ab6d4e8221b0c50168d510
 check ok 2827s
 Step failures: 0. Check failures: 0.
 check done in 2827s
-== logosio 2026-11-13T13:18:07Z commit 6a19ec99b4453eb06dd3b8747e798401d168f0a2
+== logosio 2026-11-13T13:18:07Z commit 14838c37cec2cb4df9ab6d4e8221b0c50168d510
 logos-io FAILED(1) 1144s
 nix-save ok 55s
 logosio done in 1199s
-== results 2026-11-13T13:41:06Z commit 6a19ec99b4453eb06dd3b8747e798401d168f0a2
+== results 2026-11-13T13:41:06Z commit 14838c37cec2cb4df9ab6d4e8221b0c50168d510

@@ -99,7 +99,7 @@
    "path": "lez/target/debug/prove_native_transfer",
    "sha256": "bd59b32baccbead5cf993d183dbc1666d2fb53395e5737529b855731e61745dc"
   },
-  "ferrata_head": "2b4aa703b69ab0267c5f6fe231ca37961a305ae0",
+  "ferrata_head": "16bd93f4adf2a7f790595de54786450785e7a512",
   "ferrata_dirty": "0"
  },
  "input_hashes_equal_manifest": true,

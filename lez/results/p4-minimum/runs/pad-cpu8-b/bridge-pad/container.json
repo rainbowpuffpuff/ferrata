@@ -90,7 +90,7 @@
  "affinity": 0,
  "manifest": {
   "binary_from": "lez/target/debug/prove_bridge",
-  "ferrata_commit": "9bec9fe9514c5574d297b099d9d6ba701dc31969",
+  "ferrata_commit": "ccfa7243cf5393cb1ba3e7e9351e42b045934d09",
   "ferrata_uncommitted_changes": 0,
   "expected_bridge_image_id": "41a5d7b5ac22af8e6eb1576eb904f3fc9f2c9396e9f6aa594d9193887640e6e4",
   "prove_command": "FERRATA_EXPECT_BRIDGE_IMAGE_ID=<expected_bridge_image_id> RISC0_DEV_MODE=0 RISC0_SERVER_PATH=<r0vm 3.0.5 built with CUDA> /usr/bin/time -v ./prove_bridge --claim-out bridge-private-claim-tx.borsh --burn-out bridge-private-burn-tx.borsh > prove-bridge.log 2>&1",

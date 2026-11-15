@@ -58,7 +58,7 @@
     "source": {
       "file": "spike/tmp/inbound/sepolia-plan.json",
       "sha256": "e26824d8ba12d3c533c9eb53c553c477f9a7a3568270a658a66a59171253813a",
-      "status": "FINAL, written 2026-11-10 20:54 UTC by the inbound agent on branch inbound-live at e0067b8. The bridge guest is frozen: ",
+      "status": "FINAL, written 2026-11-10 20:54 UTC by the inbound agent on branch inbound-live at 5c04f86. The bridge guest is frozen: ",
       "fields": "config_identity.{bedrock_genesis_id,channel_id,bridge_header,bridge_image_id,attestation_root_id,salt}.value; deposits[j].{kind,dest,amount_wei}",
       "third_deposit": "the test token's deposit (leaf 2) is this run's own, not the plan's: sent after capture 2, so no root LEZ attests holds it; it funds the ERC-20 release of the return leg; its dest is a label (sha256 of 'e2e: LEZ destination account 2'), never claimed"
     },

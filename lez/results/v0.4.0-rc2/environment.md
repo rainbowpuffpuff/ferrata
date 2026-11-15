@@ -2,7 +2,7 @@
 
 - date: 2026-11-10T21:18:09+00:00
 - where: a Modal build box (profile deeferentleeg; 16 physical cores, 64 GiB at most; under gVisor), by spike/tmp/rc2/box1.sh
-- ferrata worktree HEAD: cd7a230da5b40eb07779e71477a0cea4201e2320 (uncommitted: 0 paths besides results/ and RESULTS.md)
+- ferrata worktree HEAD: b76130052e45e1b94c232a98f556425f9d41510a (uncommitted: 0 paths besides results/ and RESULTS.md)
 - LEZ: v0.4.0-rc2 = e3edf47402a82557103ca719b30d0bd2684338d1, upstream tree clean: yes
 - risc0-zkvm (host and guests): version="3.0.5"
 - r0vm: risc0-r0vm 3.0.5

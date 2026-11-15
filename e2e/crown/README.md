@@ -4,7 +4,7 @@ Status (12 Nov 2026, 16:23Z): **run live on Sepolia to DONE on the final program
 ([`e2e/runs/crown-live-3/`](../runs/crown-live-3/README.md): the records, the two starts and what each of the 13
 transactions shows; EVIDENCE rows 91 and 92): FerrataVault v5 `0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c`, the
 programs of the first table below, verify 14 of 14 on the runner and its 12 chain checks again from the laptop; one
-stop on the RPC endpoint's lagging reads, before the vault, resumed by the same `start` from 148ff07 (the hardened
+stop on the RPC endpoint's lagging reads, before the vault, resumed by the same `start` from 0a7e39b (the hardened
 retries; none fired again). Its light client started from the fresh checkpoint
 [`crates/ferrata-spectests/fixtures/sepolia-2026-11-12`](../../crates/ferrata-spectests/fixtures/sepolia-2026-11-12/SOURCE.md)
 (Gloas bootstrap at slot 11,562,112, period 1411; an `Init` from it is valid until 28 Nov 2026 03:13 UTC), which
@@ -14,7 +14,7 @@ retries; none fired again). Its light client started from the fresh checkpoint
 first stage, before anything was sent to Sepolia: the programs' weak-subjectivity bound refused its 38-day-old
 checkpoint (`crown sepolia Init` reverted, "Execution outside of the validity window"); a new run name, because a
 resumed `crown-live-2` would have kept its own copy of the old bundle (`prepare_inputs` copies a run's bundle once). The
-final programs (branch `integration7`, the guests as of 4abfbf5 (no later commit changes a guest): the thirteen merged
+final programs (branch `integration7`, the guests as of 9b9bbd4 (no later commit changes a guest): the thirteen merged
 branches, guest builds independent of the build path) are those of the first table below, which any checkout rebuilds
 to the same ids (`scripts/reproduce-image-ids.sh`, [`docs/image-ids.md`](../../docs/image-ids.md); `compare --vault
 0x04eE8FF1…` after a `build`: 6 of 6, `e2e/runs/crown-live-3/compare-vault.txt`); rehearsed on an anvil fork of Sepolia
@@ -38,13 +38,13 @@ script that re-checks every step from public data and the recorded blocks.
 
 | Program | Source | Role |
 |---|---|---|
-| attestation program | `lez/guests/program` (as `integration` 5a94634) | Sepolia light client on LEZ (Gloas) |
+| attestation program | `lez/guests/program` (as `integration` 45de0a7) | Sepolia light client on LEZ (Gloas) |
 | merged bridge program | `lez/guests/bridge`, `lez/bridge-wire` (as `integration5`: the time fix and the security fixes; `0x0e9dcd79…bbb6` at the crown build path) | registry, fees, caps and freezes on attested time, Sunset, Gloas header, holder PDAs |
 | `checkpoint_b` | `checkpoint/` (after the `ImportRoot` fix 12d17e3) | rule (B) checkpoint over the session's blocks |
 | release | `bridge/` | one release per burn |
 | FerrataVault v5 + FerrataRegistry | `vault/src` | mode (B), RISC Zero's Groth16 verifier behind an emergency stop |
 
-**The programs of `crown-live-2` and `crown-live-3`** (the final programs: `integration7`, guest sources as of 4abfbf5, built on the Modal build box with
+**The programs of `crown-live-2` and `crown-live-3`** (the final programs: `integration7`, guest sources as of 9b9bbd4, built on the Modal build box with
 `scripts/reproduce-image-ids.sh build`; the same commit built at two other paths with two other `$HOME`s gives
 byte-identical binaries and these ids, [`docs/image-ids.md`](../../docs/image-ids.md); pinned in `cloud/ctl.py` and
 `cloud/drive.py`; on the Modal Volume since `setup` on 12 Nov 2026; the LEZ bundle of these programs for
@@ -62,7 +62,7 @@ from this tree and the fixture `sepolia-2026-11-12`, its programs byte for byte)
 | release (`NOut` v2; sources as crown-live-1's) | `0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9` |
 
 **The programs of `crown-live-1`** (`integration5`, built on the Modal build box at the maintainer's checkout path,
-before guest builds were path-independent, from commit db9f034; their ids reproduce only at that path and commit,
+before guest builds were path-independent, from commit 1d150d1; their ids reproduce only at that path and commit,
 [`docs/guides/verify.md`](../../docs/guides/verify.md) §2; `scripts/verify-sepolia.py` takes them from the run's own records):
 
 | Program | Image id (crown-live-1) |
@@ -173,7 +173,7 @@ The cloud app (`e2e/crown/cloud/`, Modal app `ferrata-crown` on our Modal worksp
 one `start`; it needs this machine only to start, to look and to fetch. Rehearsed to DONE on an anvil fork of Sepolia
 three times: `e2e/runs/crown-rehearsal-1/` and `-2/` on the earlier programs (branch `crown-rehearsal`; 2 stopped on
 purpose and resumed), and **`e2e/runs/crown-rehearsal-3/` on the programs of this tree** (branch `integration5`, commit
-fecd9c7; 19 stages in 24 min 19 s, no stop, verify 14 of 14).
+cf5edf0; 19 stages in 24 min 19 s, no stop, verify 14 of 14).
 
 Before the live start of `crown-live-3` (as it stood after the fresh checkpoint, 12 Nov 2026, 11:10Z; the run is done):
 - this tree (branch `integration7`, from its worktree); `vault/lib` present in it (forge-std 1.10.0, OpenZeppelin

@@ -1,6 +1,6 @@
 # Milestone A1: successors, the root id and the weak-subjectivity bound
 
-Branch `lc-a1` (from `integration6` at `f17b472`). Measured on the build box (Modal CPU container,
+Branch `lc-a1` (from `integration6` at `66f6bbb`). Measured on the build box (Modal CPU container,
 Modal), 11 November 2026, RISC Zero dev mode (executor, no proofs), in the in-process
 harness over LEZ v0.4.0-rc1's state machine and fee settlement. Design: `docs/design/attestation.md`
 §3.5, §3.6, §4.6. Core: `crates/ferrata-core/src/ws.rs`, rows in `docs/REVIEW-core.md` (last section).

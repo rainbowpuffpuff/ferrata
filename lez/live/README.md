@@ -202,7 +202,7 @@ driver takes any `ProgramBinary` file, for instance the ones `cargo build -p met
 One invocation of `run.sh run` on 10 November 2026, 22:16–23:09 UTC, with `LEZ_TAG=v0.4.0-rc2`,
 on a Modal build box like the rc1 run, then `verify-run.sh` once on the same machine
 ([`results/v0.4.0-rc2/verify-run.log`](results/v0.4.0-rc2/verify-run.log)); scripts of commit
-`b548e18`. What rc2 changed and why the scripts changed with it:
+`22e717f`. What rc2 changed and why the scripts changed with it:
 `../../docs/design/lez-rc2-changes.md`.
 
 | part | on rc2 | as on rc1? |
@@ -265,7 +265,7 @@ lez/live/verify-run.sh $P $S
 
 One invocation of `run.sh run` on 14 November 2026, 10:02–10:54 UTC, with `LEZ_TAG=v0.4.0-rc3`, on a Modal build
 box, then `verify-run.sh` once there ([`results/v0.4.0-rc3/verify-run.log`](results/v0.4.0-rc3/verify-run.log));
-scripts of commit `97246f4`. What rc3 changed: [`../results/v0.4.0-rc3/README.md`](../results/v0.4.0-rc3/README.md).
+scripts of commit `bd95305`. What rc3 changed: [`../results/v0.4.0-rc3/README.md`](../results/v0.4.0-rc3/README.md).
 
 | part | on rc3 |
 |---|---|

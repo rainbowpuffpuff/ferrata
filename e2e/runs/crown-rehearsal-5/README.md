@@ -1,7 +1,7 @@
 # crown-rehearsal-5: the whole crown run on the final programs, on an anvil fork of Sepolia, to DONE (12 Nov 2026)
 
 `e2e/crown.sh start --fork crown-rehearsal-5` on our Modal workspace (app `ferrata-crown`, `runner_rehearsal`),
-from branch `integration7` at commit 2d13f90: the thirteen merged branches and guest builds independent of the build
+from branch `integration7` at commit ed97db5: the thirteen merged branches and guest builds independent of the build
 path. Started 23:45:05Z (11 Nov), DONE 00:08:25Z, no stop: 23 min 20 s of wall time. Every number below is from this
 run's files (`stages.done`, `crown.log`, `lez/session-b/logs/driver.log`, `verify.txt`, the records here). The same
 programs ran first as [`crown-rehearsal-4`](../crown-rehearsal-4/README.md) (18 of 19 stages; verify stopped on stale

@@ -10,7 +10,7 @@ and `Sunset` (§8); on branch `integration` it is merged with the Gloas header o
 `f11b1aba55fde1ea977f74a54cc927ff50253e8bf479c89dac0b3658177c58eb` built at the integration
 worktree's path (the ELF holds its build paths); `bridge-complete`'s own was `b5d177bb…1132` at its
 path. The figures marked *after* are the merged program's, measured on the integration build box;
-those marked *before* are the program as first integrated (136cf35), re-run on `bridge-complete`'s
+those marked *before* are the program as first integrated (a66a486), re-run on `bridge-complete`'s
 build box before any change: image `64faa2e3…7267` at that path, every gas figure equal to the
 tables the integration branch committed for `25dfd9b2…8c49` (only the image and the ids derived
 from it differ). The inbound crossing on a live sequencer (§11) deploys neither: it uses the frozen
@@ -170,7 +170,7 @@ box, the merged program (`f11b1aba…`).
 Against the payload-layout `Init` of §1, the header adds 749 bytes to the transaction, 26,727
 cycles to `Attest` (decoding and hashing the header) and 9,225 to the bridge's own `Init`, which
 carries it; `Register` grows alike. The largest, `Register`, stays at 7.2% of LEZ's 5M execution
-target. Before the merge (branch `inbound-live`, commit 5b75f64, the program the live crossing of
+target. Before the merge (branch `inbound-live`, commit 335814f, the program the live crossing of
 §11 deploys) the same test had no `Register` and its applied `Init` cost 192,310.
 
 ## 3. The private claim (`results/bridge-private-claim.md`)
@@ -492,7 +492,7 @@ cargo build -p harness --locked --bin prove_bridge   # §7
 RISC0_DEV_MODE=1 target/debug/prove_bridge --allow-dev-mode   # dry run: the same commands, fake receipts
 scripts/stage-prove-bridge.sh ../gpu-prover/inputs-lez-bridge   # then ../gpu-prover/README.md, job lez-bridge
 RISC0_DEV_MODE=0 target/debug/prove_bridge --settle results/bridge-private-claim-tx.borsh \
-  results/bridge-private-burn-tx.borsh   # the proven pair of §7: only on the tree that proved it (136cf35)
+  results/bridge-private-burn-tx.borsh   # the proven pair of §7: only on the tree that proved it (a66a486)
 ```
 On the integration worktree they ran through `../../modal-build/mrun` (a cloud container, 2 vCPU)
 with `--locked` and `RISC0_BUILD_LOCKED=1`: the whole harness (35 tests) in 290 s, `prove_bridge`'s
@@ -539,7 +539,7 @@ moves forward; the transaction is valid only in a block stamped at or after the 
 message carries a time (`Claim`, `ClaimPrivately`, `Issue`, `Admit`, `SetCap` lost theirs).
 
 **Where and what ran.** The Modal build box through `mrun` (2 vCPU), 11 Nov 2026, this
-worktree at commit `e13a6ce` plus rustfmt: `RISC0_DEV_MODE=1 cargo test -p harness --locked`, 37
+worktree at commit `5b27f08` plus rustfmt: `RISC0_DEV_MODE=1 cargo test -p harness --locked`, 37
 tests, all pass (the 36 of `integration4` and `bridge_time.rs`); clippy `-D warnings` and rustfmt
 clean on the LEZ crates; `prove_bridge`'s dry run (claim and burn settled with fake receipts); the
 CLI's tests build and its unit tests pass. Image `d0c11833f2944d1d928bb4a40ffe9300591561dba0c7ca20f1c66265258b23cd`
@@ -607,7 +607,7 @@ every figure in §1–§5 and §8a of `f11b1aba…58eb`: none of them has this c
 *History: the figures below are this branch's own run, before the merge; the merged program's (both fixes)
 are in `results/` and in §1's last column, and supersede them.*
 
-The review `notes/reviews/security/review-2026-11-11.md` (of integration4 at `1bb20d5`) found, on this
+The review `notes/reviews/security/review-2026-11-11.md` (of integration4 at `bc4a2a6`) found, on this
 side: **C-1** a claim could write a holder state at any bridge PDA not written yet (as its public
 destination, its relayer, or its configuration's fee recipient), blocking `Init`, `Register` or an import
 for good, destroying a pending claim (its nullifier) or blocking a burn (its record); **H-1** `ImportRoot`
@@ -631,7 +631,7 @@ burn's record as relayer, then the burn; (f) `Mint` delivered at `config(cid)` (
 `holder(config(cid))` (accepted), in the executor; H-1: `ImportRoot` forwarded by LEZ's `scripted`
 program (refused, nothing written; the top-level import of the same count then succeeds), and
 delivered with a sender, as LEZ presents an asynchronous message (executor: refused; without a sender:
-accepted). **Before** (the new tests against `1bb20d5`'s program, build box, `RUN=baseline`): all seven
+accepted). **Before** (the new tests against `bc4a2a6`'s program, build box, `RUN=baseline`): all seven
 of (a)–(e) and both H-1 tests fail, each because the attack worked: the claims wrote a holder state at
 `config(H)`, `token(H, ETH)`, the nullifier, `root(H, 1)` and the burn record; the nested import and the
 import with a sender were accepted. ((f) uses the new `Mint` field and has no before.) **After**

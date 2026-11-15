@@ -26,13 +26,13 @@ under their load; the results files say which (for example [`bridge/RESULTS.md`]
 
 ## The `Assisted-by` trailers
 
-Not every commit says how it was made. 185 of the 418 commits up to `0b135f7` carry an `Assisted-by`
+Not every commit says how it was made. 185 of the 418 commits up to `2854e4e` carry an `Assisted-by`
 trailer (`git log --grep=Assisted-by`), every commit made after 04:37 CET on 11 November among them; the
 others, most of those of 10 and 11 November, should be read the same way.
 
-At `d81a855` (the tip of `integration7`, 11 November 2026, 23:41 CET), 537 of the 770 commits carry the
+At `b4ad05f` (the tip of `integration7`, 11 November 2026, 23:41 CET), 537 of the 770 commits carry the
 trailer: 502 name `claude-opus-5-5` and 35 `claude-fable-5-2` (counted with
-`git rev-list --count d81a855` and `git log --format=%B d81a855 | grep '^Assisted-by' | sort | uniq -c`).
+`git rev-list --count b4ad05f` and `git log --format=%B b4ad05f | grep '^Assisted-by' | sort | uniq -c`).
 The two commits of 04:37 CET on 11 November are the last without it; every commit since carries one.
 
 ## Reviews by agents
@@ -43,11 +43,11 @@ repository has been audited; the audit is planned for the code the proposal woul
 
 - **The security review of 11 November 2026**: an adversarial reading of the bridge (the vault, the bridge
   program, the checkpoint and release guests, the attestation program and the core's gates it calls) at
-  `integration4` (`1bb20d5`) by Claude Code (`claude-opus-5-5`), headless and read-only, in a context
+  `integration4` (`bc4a2a6`) by Claude Code (`claude-opus-5-5`), headless and read-only, in a context
   separate from the agents that wrote the code
   ([`notes/reviews/security/review-2026-11-11.md`](../notes/reviews/security/review-2026-11-11.md)). It
   found 1 critical, 1 high, 3 medium, 4 low and 10 informational issues. Ten are fixed, each with a test
-  that fails on `1bb20d5` and passes after the fix; nine are not fixed, each with its reason
+  that fails on `bc4a2a6` and passes after the fix; nine are not fixed, each with its reason
   ([`fixes-2026-11-11.md`](../notes/reviews/security/fixes-2026-11-11.md); EVIDENCE row 30).
 - **The review of the core against the specifications** (branch `review-core`, merged on 11 November): an
   agent in a separate context read each function against its specification section and planted 24 mutants

@@ -66,7 +66,7 @@ with the job's build settings and `RISC0_HOME` at the LEZ home): passed in 33 s 
 
 With the two refusals added to the test (a checkpoint whose journal no guest committed, another burn root; the
 release redirected to another address), the round trip passed again: steps 1–7 in 8.5 s (the rule (B) guest:
-6,184,321 user cycles), build step 31 s, run step 50 s. The branch's tip (311a46b, comments changed since) once
+6,184,321 user cycles), build step 31 s, run step 50 s. The branch's tip (e857dcb, comments changed since) once
 more: steps 1–7 in 9.8 s (6,188,682 user cycles), build step 32 s, run step 58 s; the witness check as above.
 
 ## `witness-independence`

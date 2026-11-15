@@ -40,7 +40,7 @@ peak summed RSS 638 MiB
 [09:13:24] sequencer start 2: scheduler after 0 s; its blocks fall 6 s after an epoch second
 [09:13:24] sequencer up, head block 24
 [09:13:26] module mode: logos-ferrata_updater_module-module-lib.lgx sha256 962304cc04a7f4ecdffb041a8a3b4b76d73270f5ffa30c926e2373fb0a2f29c2, logos-portable.tar.zst sha256 80f57e19a051fa6ac5e7cf8cf8184b60f9644d5b8506e90421df7090feebb45a
-[09:13:34] module version: {"version":"0.1.0","ledgers":["harness","sequencer"],"program":"0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df","computed":"0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df","dev_mode":null,"staged":"2d86798"}
+[09:13:34] module version: {"version":"0.1.0","ledgers":["harness","sequencer"],"program":"0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df","computed":"0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df","dev_mode":null,"staged":"e613fb4"}
 [09:13:34] check_config: {"verdict":"ok","ledger":"sequencer","sequencer":{"program":"0x86ce4d7f54bd68b4c7356398cfda192f791c83f6fa3c3102a18ac20fefdfa04c","rpc":"http://127.0.0.1:3040","wait_final":true},"chains":[{"name":"sepolia","layout":"gloas","sources":["lodestar:light-client","publicnode:headers"]}]}
 [09:13:34] session U (module): 50 min (until 2026-11-13T10:03:34Z); restart through stop/start after 15 min; probe every 60 s
 [09:13:46] module start, life 1: {"verdict":"started","running":true,"error":null,"round":null,"served":"127.0.0.1:9464"}
@@ -56,7 +56,7 @@ peak summed RSS 638 MiB
 [09:15:34] sequencer start 2: scheduler after 0 s; its blocks fall 6 s after an epoch second
 [09:15:34] sequencer up, head block 24
 [09:15:35] module mode: logos-ferrata_updater_module-module-lib.lgx sha256 962304cc04a7f4ecdffb041a8a3b4b76d73270f5ffa30c926e2373fb0a2f29c2, logos-portable.tar.zst sha256 80f57e19a051fa6ac5e7cf8cf8184b60f9644d5b8506e90421df7090feebb45a
-[09:15:42] module version: {"version":"0.1.0","ledgers":["harness","sequencer"],"program":"0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df","computed":"0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df","dev_mode":null,"staged":"2d86798"}
+[09:15:42] module version: {"version":"0.1.0","ledgers":["harness","sequencer"],"program":"0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df","computed":"0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df","dev_mode":null,"staged":"e613fb4"}
 [09:15:42] check_config: {"verdict":"ok","ledger":"sequencer","sequencer":{"program":"0x86ce4d7f54bd68b4c7356398cfda192f791c83f6fa3c3102a18ac20fefdfa04c","rpc":"http://127.0.0.1:3040","wait_final":true},"chains":[{"name":"sepolia","layout":"gloas","sources":["lodestar:light-client","publicnode:headers"]}]}
 [09:15:42] session U (module): 50 min (until 2026-11-13T10:05:42Z); restart through stop/start after 15 min; probe every 60 s
 [09:15:54] module start, life 1: {"verdict":"started","running":true,"error":null,"round":null,"served":"127.0.0.1:9464"}
@@ -78,7 +78,7 @@ peak summed RSS 638 MiB
 [10:06:21] sequencer start 3: scheduler after 0 s; its blocks fall 3 s after an epoch second
 [10:06:21] sequencer up, head block 24
 [10:06:22] module mode: logos-ferrata_updater_module-module-lib.lgx sha256 962304cc04a7f4ecdffb041a8a3b4b76d73270f5ffa30c926e2373fb0a2f29c2, logos-portable.tar.zst sha256 80f57e19a051fa6ac5e7cf8cf8184b60f9644d5b8506e90421df7090feebb45a
-[10:06:28] module version: {"version":"0.1.0","ledgers":["harness","sequencer"],"program":"0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df","computed":"0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df","dev_mode":null,"staged":"2d86798"}
+[10:06:28] module version: {"version":"0.1.0","ledgers":["harness","sequencer"],"program":"0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df","computed":"0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df","dev_mode":null,"staged":"e613fb4"}
 [10:06:29] check_config: {"verdict":"ok","ledger":"sequencer","sequencer":{"program":"0x86ce4d7f54bd68b4c7356398cfda192f791c83f6fa3c3102a18ac20fefdfa04c","rpc":"http://127.0.0.1:3040","wait_final":true},"chains":[{"name":"sepolia","layout":"gloas","sources":["lodestar:light-client","publicnode:headers"]}]}
 [10:06:29] session U (module): 50 min (until 2026-11-13T10:56:29Z); restart through stop/start after 15 min; probe every 60 s
 [10:06:39] module start, life 1: {"verdict":"started","running":true,"error":null,"round":null,"served":"127.0.0.1:9464"}

@@ -2,7 +2,7 @@
 
 Reviewer: a headless agent (Claude Code, Opus 5.5), 11 November 2026, 14:15–14:44 CET. Modal
 spend for this review (mrun ledger estimates, profile `deeferentleeg`): 0.30 USD over 11 calls.
-Code: branch `integration6` at `2eb5902` (every `file:line` below is at that commit; the review
+Code: branch `integration6` at `c52eee4` (every `file:line` below is at that commit; the review
 branch changes no file of `ferrata-core`). Review branch: `review-core` in
 `spike/ferrata-wt-review-core` (tests and mutant scripts only; tip in §4).
 Spec text used (kept under `spike/tmp/review-core/spec/`, with `SOURCES.txt`): consensus-specs
@@ -18,7 +18,7 @@ What ran (all on Modal, profile `deeferentleeg`, through `mrun`; measured):
 - `scripts/fetch-vectors.sh && cargo test -p ferrata-core -p ferrata-spectests --locked`: **142 passed, 0
   failed** (log `spike/tmp/review-core/test1.log`). Every test a row names exists and passed.
 - New tests on the review branch, `crates/ferrata-spectests/tests/review_core.rs`: 6, all pass on
-  `2eb5902`'s code (they pin what the code does where a row says otherwise or where nothing pinned it).
+  `c52eee4`'s code (they pin what the code does where a row says otherwise or where nothing pinned it).
 - New mutants, `scripts/review-mutants.py` (same runner as `scripts/mutants.py`, whole workspace):
   R01–R13 on the 43 rows' functions, S01–S11 on `steps.rs` (results in §2.3).
 
@@ -111,7 +111,7 @@ accepts, on any input that reaches it on the shipped path.
   product (no forged verdict: the element is the same).
 - **Fix suggested.** Either say in the row "canonical encoding written by `miller_half`;
   `final_half` reads modulo p; `Job::step3` refuses non-canonical bytes" (wording committed on the
-  review branch as `0d53068`, "suggested fix, not merged", docs only), or move the check into
+  review branch as `428ab75`, "suggested fix, not merged", docs only), or move the check into
   `final_half` (changes the core, so a new image id).
 
 ### 2.2 DOC MISMATCH, row 38: a relation on a missing log topic is `PredicateFailed`
@@ -127,7 +127,7 @@ accepts, on any input that reaches it on the shipped path.
   no" would read a malformed field reference as a false statement.
 - **Fix suggested.** Correct the row and A:723-725 ("…a fact that is not there, or a field of
   another kind of fact, is `QueryInvalid`; a topic or data word the log lacks is
-  `PredicateFailed`"). The row's wording is in `0d53068` (docs only); A:723-725 is a comment in the
+  `PredicateFailed`"). The row's wording is in `428ab75` (docs only); A:723-725 is a comment in the
   core, left for the next core release.
 
 ### 2.3 Test gaps: six plausible bugs survived the suite (all closed on the review branch)
@@ -433,9 +433,9 @@ Commands run from the worktree root on the build box:
 
 ## 4. Branch
 
-`review-core` (from `integration6` `2eb5902`), tip `0d53068`. Commits: `b963f35` (R mutants), `0202f81` (tests for §2.1, §2.2), `f8f4884` (S mutants),
-`90f2003`, `44dccdb`, `f87b535`, `b40309c` (tests that kill R03, R12, R07, S02/S03/S09), `0d53068`
+`review-core` (from `integration6` `c52eee4`), tip `428ab75`. Commits: `5f520e5` (R mutants), `fd70d05` (tests for §2.1, §2.2), `be3f6cf` (S mutants),
+`020112d`, `3d713da`, `12d3a68`, `6d6db6f` (tests that kill R03, R12, R07, S02/S03/S09), `428ab75`
 ("suggested fix, not merged": `docs/REVIEW-core.md` rows 11, 17, 18, 38 and the `steps.rs` scope
-note; docs only). `git diff 2eb5902 -- crates/ferrata-core` is empty, so no image id changes.
+note; docs only). `git diff c52eee4 -- crates/ferrata-core` is empty, so no image id changes.
 Not pushed. Run the review tests: `$M/mrun --profile deeferentleeg -- 'cargo test -p
 ferrata-spectests --locked --test review_core'` (6 pass).

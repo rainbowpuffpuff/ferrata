@@ -1,6 +1,6 @@
 {
   "binary_from": "lez/target/debug/prove_attest",
-  "ferrata_commit": "9bec9fe9514c5574d297b099d9d6ba701dc31969",
+  "ferrata_commit": "ccfa7243cf5393cb1ba3e7e9351e42b045934d09",
   "ferrata_uncommitted_changes": 0,
   "fixtures_from": "crates/ferrata-spectests/fixtures/mainnet-attest-2026-11-10",
   "expected_consumer_image_id": "0af0739130e4f794eb7284e146dd6b672f28484574affb072310f6637eae2347",

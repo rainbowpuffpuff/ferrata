@@ -4,7 +4,7 @@
 
 `scripts/reproduce-image-ids.sh build` on the build box (Modal CPU container, workspace deeferentleeg, through
 `mrun`; no Docker there, so its steps ran directly in the box's image, which the Dockerfile mirrors), branch
-`verify-anyone` from `integration6` 2eb5902, the tree copied to the crown build path
+`verify-anyone` from `integration6` c52eee4, the tree copied to the crown build path
 `spike/ferrata-wt-crown` inside the box only. A cold box (no cargo registry, no target directory): copy 13:09:25Z,
 the three `methods` builds done 13:16:52Z (7 min 27 s), `mrun` 475 s in all, 1.45 core-hours, about 0.09 USD
 (mrun's estimate).

@@ -1,4 +1,4 @@
-# cargo test -p ferrata-updater --features harness --locked -- --nocapture (RISC0_DEV_MODE=1), the mrun build box, 12 Nov 2026 19:25-19:37Z, commit 247851c; the tests' own lines
+# cargo test -p ferrata-updater --features harness --locked -- --nocapture (RISC0_DEV_MODE=1), the mrun build box, 12 Nov 2026 19:25-19:37Z, commit 345e904; the tests' own lines
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test header_answers_and_utc ... ok

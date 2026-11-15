@@ -25,7 +25,7 @@ the same programs in dev mode (fake receipts, mock verifier), the baseline again
 | | |
 |---|---|
 | programs | bridge program `0xccde6171…71dd` (the test stops before its first proof unless its id is this, docs/image-ids.md); release `0xb64900bc…29e9` (rebuilt R0BF binary, sha256 `7be1349c…11bf`, equal to docs/image-ids.md's); LEZ v0.4.0-rc1's privacy-preserving circuit as built in this tree, `8fc948d1…f257` (LEZ's own program, not in docs/image-ids.md); vault v5 (`vault/src` of this commit) with RISC Zero's `RiscZeroGroth16Verifier` (risc0-ethereum v3.0.0 `ControlID`) behind RISC Zero's emergency stop |
-| LEZ half | the suite's test binary (built on the build box at commit `2686e55`, the test code of `c892b7e`; stripped, sha256 `eece2d83…`) with `FERRATA_PRIVACY_PROOFS=real` and dev mode off, in one Modal container (Modal): **one NVIDIA L4** (23,034 MiB, driver 610.57.04), 4 cores, 32 GiB; r0vm 3.0.5 built with CUDA (sha256 `781ca946…6fb7`, the binary of [`../../../gpu-prover/`](../../../gpu-prover/), checked before use) as the prover (`RISC0_SERVER_PATH`) |
+| LEZ half | the suite's test binary (built on the build box at commit `e9798ca`, the test code of `3d12568`; stripped, sha256 `eece2d83…`) with `FERRATA_PRIVACY_PROOFS=real` and dev mode off, in one Modal container (Modal): **one NVIDIA L4** (23,034 MiB, driver 610.57.04), 4 cores, 32 GiB; r0vm 3.0.5 built with CUDA (sha256 `781ca946…6fb7`, the binary of [`../../../gpu-prover/`](../../../gpu-prover/), checked before use) as the prover (`RISC0_SERVER_PATH`) |
 | releases | each release statement's succinct proof and `identity_p254` step in the same L4 container (`ferrata-e2e prove`, `ferrata-e2e p254`); the Groth16 step in RISC Zero's prover image (`risczero/risc0-groth16-prover:v2025-04-03.1`, CPU, Modal, `e2e/crown/wrap.py`); the Groth16 receipt assembled and verified on the build box (`ferrata-e2e groth16`, `ferrata-e2e verify`) |
 | Ethereum half | Foundry on the build box: `vault/test/PrivacySuite.t.sol` with `release-seals.json`: the vault at P on chain 1, its release image id the real one, releases verified by `RiscZeroGroth16Verifier`; the checkpoint (the burn root's acceptance, one transaction for all 20) on the mock, as before |
 | when | 12 November 2026; the L4 container ran 11:38:31Z to 11:50:04Z (692.7 s), 46 minutes after the app started (the image build and the wait for an L4, which is not billed) |
@@ -139,7 +139,7 @@ private claim or burn takes about 13–16 s on one L4 (row 10: 15.3 and 12.4 s, 
 2. **The collector's seal-output check was wrong in this run's binary** (it compared the seal's raw words, which are
    BabyBear elements in Montgomery form, with the claim digest, and recorded `false` for 40 of 40). The receipts were
    verified by LEZ's settlement regardless, and this analysis now decodes the words and checks them from the public
-   bytes (40 of 40); the test is fixed for later runs (`af0e0aa`), its `meta` flag in this run's data is superseded.
+   bytes (40 of 40); the test is fixed for later runs (`6011352`), its `meta` flag in this run's data is superseded.
 3. **Section B6's release row lists no proof.** The release shows a 260-byte seal: a constant selector and a 256-byte
    Groth16 proof drawn fresh for each release. The claim and burn rows' "LEZ's own private-transaction fields" cover
    the receipt, which also carries a copy of the message (the journal, 4,524 or 3,984 bytes).

@@ -1479,7 +1479,7 @@ LEZ tagged `v0.4.0-rc2` (commit `e3edf47402a82557103ca719b30d0bd2684338d1`) on 9
 59 commits after rc1. What changed, and what each change touches here:
 [`../docs/design/lez-rc2-changes.md`](../docs/design/lez-rc2-changes.md). Sections 1–9 were
 measured on rc1 and stay as they were; this section is rc2. Its runs were made on a Modal build
-box (`results/v0.4.0-rc2/environment.md`), at commit `cd7a230` for the harness.
+box (`results/v0.4.0-rc2/environment.md`), at commit `b761300` for the harness.
 
 ### What moving to rc2 took
 

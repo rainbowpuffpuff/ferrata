@@ -2,7 +2,7 @@
 
 Each row is one entry point of a guest program with an image id ([image-ids.md](image-ids.md)), or one check it
 runs: the specification it implements, any deliberate deviation, what pins it, and the author's sign-off. Line
-numbers are at `bf430cc`. The guests may not change (their image ids are those of the live round trip), so a
+numbers are at `89e6d6d`. The guests may not change (their image ids are those of the live round trip), so a
 deviation found here is fixed, if at all, by a new program and a new id. As in [REVIEW-core.md](REVIEW-core.md), the
 deviations column is part of the audit packet; the light-client core the attestation program runs (`ferrata-core`,
 `steps.rs`) has rows there and is not repeated here.

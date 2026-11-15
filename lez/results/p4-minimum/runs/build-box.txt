@@ -9,7 +9,7 @@ risc0-r0vm 3.0.5
 ldd (Ubuntu GLIBC 2.39-0ubuntu8.9) 2.39
 r0vm <spike>/risc0-home-lez/extensions/v3.0.5-cargo-risczero-x86_64-unknown-linux-gnu/r0vm
 36c016a5bb2ded5bd1f8f92cc487e6ffaeb1e95ec05850c983081a0f716b515b  <spike>/risc0-home-lez/extensions/v3.0.5-cargo-risczero-x86_64-unknown-linux-gnu/r0vm
-FERRATA_HEAD=0b135f76ebd6e12787ca9ebf1f5b83c53519a69c FERRATA_DIRTY=0
+FERRATA_HEAD=2854e4e54e6a2f4a387524063bd5d1403a38bdf4 FERRATA_DIRTY=0
 # cargo build -p harness --locked --bin prove_attest --bin prove_bridge (GNU time)
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 5m 10s
 	Percent of CPU this job got: 825%
@@ -28,7 +28,7 @@ settled: execution gas 421,641 (PRIVATE_VERIFY_GAS 409,764 + public part 11,877 
 # stage manifests
 {
   "binary_from": "lez/target/debug/prove_attest",
-  "ferrata_commit": "0b135f76ebd6e12787ca9ebf1f5b83c53519a69c",
+  "ferrata_commit": "2854e4e54e6a2f4a387524063bd5d1403a38bdf4",
   "ferrata_uncommitted_changes": 0,
   "fixtures_from": "crates/ferrata-spectests/fixtures/mainnet-attest-2026-11-10",
   "expected_consumer_image_id": "3f357bae4537eafd9a922befade5275e7cf3453deb91c93d1698631ff9feee6d",
@@ -63,7 +63,7 @@ settled: execution gas 421,641 (PRIVATE_VERIFY_GAS 409,764 + public part 11,877 
 }
 {
   "binary_from": "lez/target/debug/prove_bridge",
-  "ferrata_commit": "0b135f76ebd6e12787ca9ebf1f5b83c53519a69c",
+  "ferrata_commit": "2854e4e54e6a2f4a387524063bd5d1403a38bdf4",
   "ferrata_uncommitted_changes": 0,
   "expected_bridge_image_id": "1156918fdfee530b4fc9cb1eae2078d161d21cb11e26ffbfc7f75aa427de9773",
   "prove_command": "FERRATA_EXPECT_BRIDGE_IMAGE_ID=<expected_bridge_image_id> RISC0_DEV_MODE=0 RISC0_SERVER_PATH=<r0vm 3.0.5 built with CUDA> /usr/bin/time -v ./prove_bridge --claim-out bridge-private-claim-tx.borsh --burn-out bridge-private-burn-tx.borsh > prove-bridge.log 2>&1",

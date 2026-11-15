@@ -1,7 +1,7 @@
 # Release 0.1.0-rc.1: how it was built and tested
 
 Built on the Modal build box (`spike/modal-build/mrun`, workspace bcarol) on 11 November 2026, 19:01 UTC, from commit
-`7eb40b64d73da7ab6ad0bbc205e9172f76f9f19c` with `just release 0.1.0-rc.1 <out>` (just 1.36.0): the six guests at the
+`fa1d453cb831c9303abedc27f04082d1974b4966` with `just release 0.1.0-rc.1 <out>` (just 1.36.0): the six guests at the
 crown build path (`scripts/reproduce-image-ids.sh build`), the vault (forge 1.3.6, solc 0.8.26, sources only), the CLI
 (Rust 1.98.1). Tarball `ferrata-0.1.0-rc.1-x86_64-linux.tar.gz`, sha256
 `617c0117400aa1422c5d6c120b17d5ff7ce70b87253316d32137dca0a9a5fcd7` (not committed; on the box and in

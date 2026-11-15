@@ -1,7 +1,7 @@
 # crown-rehearsal-1: the whole crown run in the cloud, on an anvil fork of Sepolia, to DONE (11 Nov 2026)
 
 `e2e/crown.sh start --fork crown-rehearsal-1` on our Modal workspace (app `ferrata-crown`, `runner_rehearsal`),
-from branch `crown-rehearsal` = crown-cloud + crown-lez 5815c6b + crown-proofs 4f2f0be (commits 89d39b2, then 2e63d33
+from branch `crown-rehearsal` = crown-cloud + crown-lez 4453767 + crown-proofs c1c78d1 (commits a8ca7ef, then 754037c
 after one fix). Started 02:24:34Z, stopped once at capture 1 (a check of mine that did not know capture-anvil.py's
 stand-in header; fixed in the capture check, `start` again resumed at capture 1 with anvil's state reloaded), DONE
 02:53:24Z: about 29 minutes of wall time. Every number below is from this run's files (`stages.done`, `crown.log`,

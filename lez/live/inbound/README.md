@@ -141,7 +141,7 @@ holds one leaf (slot 0 `a5b5c43f…4875`, slot 1 = 1) and slot 2 = `configId`.
 Recorded by `run.sh real CAPTURE_1` (capture 1 alone, the fixture above) on a Modal build box,
 01:03–01:35 UTC: the same sequencer and Bedrock node binaries as the stand-in session and
 `../results/` (sha256 `fdf1125e…5b76` and `2e5390b5…ccfc`, rebuilt from source on a fresh box and
-equal bit for bit), the frozen programs, the driver of commit `c55644c`. Records in
+equal bit for bit), the frozen programs, the driver of commit `095652e`. Records in
 [`results/sepolia-capture-1/`](results/sepolia-capture-1/) (`run.tsv` the manifest, `blocks.borsh` and
 `chain.tsv` the block log, `logs/`, `inbound-summary.json`, `verify-run.log`). 186 blocks, all final on
 Bedrock at export; 185 transactions, 181 applied and 4 refused with the expected code.

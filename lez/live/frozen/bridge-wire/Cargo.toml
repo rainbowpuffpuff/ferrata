@@ -1,4 +1,4 @@
-# A frozen copy of lez/bridge-wire at branch inbound-live a597270 (src/lib.rs byte for byte): the
+# A frozen copy of lez/bridge-wire at branch inbound-live e781588 (src/lib.rs byte for byte): the
 # encoding of the bridge program the inbound crossing deploys (ferrata_bridge.bin, image
 # 66722fc7..., pinned through configId by the Sepolia vault). lez/bridge-wire has moved on (the
 # registry, fees, caps, freezes and Sunset; another image id), so the live driver builds against

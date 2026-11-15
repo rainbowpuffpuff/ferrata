@@ -97,7 +97,7 @@ the 352-byte journal; an invalid witness panics. Image id
 
 ### Since 11 November 2026: D13's `NOut` and D12's MAC (security review M-3, I-4)
 
-The review of `1bb20d5` (`notes/reviews/security/review-2026-11-11.md`) found the guest still committing
+The review of `bc4a2a6` (`notes/reviews/security/review-2026-11-11.md`) found the guest still committing
 SPEC-v2's `NOut = H("ferrata/nf-out/v1" ‖ sOut ‖ burnId)`, which changes with the burn's index: a burn
 released against a checkpoint that is later revoked, and collected at another index on the canonical
 branch, could be released again (M-3). The core now gives D13's `NOut = H("ferrata/nf-out/v2" ‖ sOut)`
@@ -113,9 +113,9 @@ Measured on the `secfix-lez` worktree's Modal box (2 vCPU), guests built at that
   native. `host invariance 64`: one (cycles, po2) value for each guest, `(77736, [17])` and `(74379, [17])`.
 - **The double release** (`host reindex`): one burn at index 1 of a revoked branch's tree and at index 3 of
   the canonical one; both executions of the guest commit `NOut 0xd8bab371…32a5` = D13's value, so the vault
-  (replay keyed on `NOut`) releases it once. The same command against `1bb20d5`'s guest committed
+  (replay keyed on `NOut`) releases it once. The same command against `bc4a2a6`'s guest committed
   `0x869f497a…fab7` at index 1 and failed its check. Core tests: `tests/secfix.rs` (M-3, and I-4: a copied
-  note with another memo no longer verifies), both failing on `1bb20d5`'s core; the core's whole suite 56
+  note with another memo no longer verifies), both failing on `bc4a2a6`'s core; the core's whole suite 56
   passed, 0 failed; the vectors (`outbound-v2.json`, `tags-v2.json`) regenerated and re-checked by
   `scripts/check_vectors_v2.py` (v1 vectors unchanged, still checked); clippy clean.
 - **Not redone**: the saved receipts in `artifacts/` and the evm-verify fixtures are proofs of earlier

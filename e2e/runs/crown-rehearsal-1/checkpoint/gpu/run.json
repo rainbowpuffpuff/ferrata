@@ -17,7 +17,7 @@
   },
   "image_ids_equal": true,
   "input_hashes_equal_manifest": true,
-  "source_commit": "2e63d3357307d0085b9d4e5d036a3a6715fdc38d",
+  "source_commit": "754037c4ac861875204f1ec21eeafae317fdbf19",
   "prover_wall_s": 7.003807306289673,
   "container_s_until_done": 7.23432183265686,
   "prove": {

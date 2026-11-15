@@ -1,6 +1,6 @@
 # The burn root's acceptance in the privacy suite: why it is still the mock
 
-12 November 2026, branch `privacy-root` (from `4327f41`). The question: can the one stand-in left in the suite's
+12 November 2026, branch `privacy-root` (from `481121c`). The question: can the one stand-in left in the suite's
 real-proof round trip ([RESULTS.md](RESULTS.md), EVIDENCE row 89) be closed? On Ethereum the vault accepts the burn root
 of the 20 burns through the mock checkpoint seal. Closing it would take a rule (B) checkpoint proof (`checkpoint_b`
 `0xf8116722…626e`, [docs/image-ids.md](../../image-ids.md)) over the harness's blocks that carry the burns, wrapped to

@@ -30,7 +30,7 @@ SDK's worker-thread calls wait for the Qt thread), so the daemons run with `star
 
 **After the last merge (`miniapp-sequencer` into `integration8`, branch `final-merge`), every module check again.**
 Modal build box (gVisor, 2 CPUs reported, up to 16 cores, 64 GiB; Nix 2.28.3, the store of the
-modules-more box restored), commit `6a19ec9`, 13 Nov 2026 12:28–13:37 UTC, dev mode: `check.sh` with the six modules,
+modules-more box restored), commit `14838c3`, 13 Nov 2026 12:28–13:37 UTC, dev mode: `check.sh` with the six modules,
 dev and portable, `E2E=1 BRIDGE_E2E=1`, **step failures 0 (71 steps), check failures 0** (2,827 s): 53 calls, each
 equal to native in both Cores and meeting its expectations (attest 11, bridge 13, attestor 12, monitor 8, updater 4,
 relayer 5); `e2e.sh` 43/43 and `bridge_e2e.sh` 24/24 in each Core; the attestor's job 23/23 and the monitor's 46/46,
@@ -92,7 +92,7 @@ sends (`keystore_module`), the updater's beacon data through `beacon_api_module`
 
 `ferrata_updater_module` carries both of the daemon's backends: with `ledger = "sequencer"` it opens
 `lez/updater/sequencer/`'s library, the code of the binary of row 99 (LEZ's wallet client, a follower of blocks final
-on Bedrock), linking LEZ v0.4.0-rc1's node-side crates. Built with logos-module-builder at commit `2d86798` on the
+on Bedrock), linking LEZ v0.4.0-rc1's node-side crates. Built with logos-module-builder at commit `e613fb4` on the
 Modal build box: `check.sh` for this module, dev and portable, **step failures 0, check
 failures 0**, `updater-e2e.sh` 8/8 natively and 10/10 through each Logos Core on the in-process chain (187
 transactions applied, none refused; with no sequencer, the sequencer backend's set-up fails on the connection, as the
@@ -117,7 +117,7 @@ runs (`ferrata_wallet::import`: `import_proof`, `import_call`, `dry_run_import`)
 devnet's zone in place of a sequencer (a stand-in). `cli/` gained the feature `lez-wallet` (default): the module
 builds `cli/`'s library without LEZ's wallet library, which links LEZ's node-side crates (RocksDB, libp2p).
 
-Where: the Modal build box (gVisor; Nix 2.28.3; Logos Core from source), the sources of commit `a29c1c7`.
+Where: the Modal build box (gVisor; Nix 2.28.3; Logos Core from source), the sources of commit `f3dc299`.
 `MODULES=ferrata_relayer_module modules/scripts/check.sh`: **0 step failures, 0 check failures**; the dev package
 14,318,774 bytes (built in 179 s), the portable 17,477,514; five one-shot calls (`daemon_requests.py`) equal to the
 native replies in both Logos Cores; `relayer-e2e.sh` 10 of 10 with the binary, 11 of 11 through the module in the dev
@@ -163,7 +163,7 @@ carries that backend since, above), and `check_config`
 reports the chains' `layout`, the sources' `kind`, `[sequencer]` and `finish_own_jobs`.
 
 Modal build box (gVisor, 2 CPUs reported, up to 16 cores, 64 GiB; Nix 2.28.3, the store of
-the modules-more box restored), commit `6dcf6af`, 13 Nov 2026 04:23–04:52 UTC: `check.sh` with the five modules,
+the modules-more box restored), commit `b099490`, 13 Nov 2026 04:23–04:52 UTC: `check.sh` with the five modules,
 dev and portable, `E2E=1 BRIDGE_E2E=1`, **step failures 0, check failures 0** (1,708 s): 48 calls, each equal to
 native in both Cores and meeting its expectations (attest 11, bridge 13, attestor 12, monitor 8, updater 4);
 `e2e.sh` 43/43 and `bridge_e2e.sh` 24/24 in each Core; the attestor's job 23/23 and the monitor's 46/46, natively
@@ -182,13 +182,13 @@ Dev mode throughout; the catalog and the live zone of four were not re-run.
 and bridge modules completed on the tools' own code (`advance`, the private claim, `import_root`,
 `registry`, the release rule, `prove_release`; "Completing the two modules" below) and the three daemons as
 modules ("The daemons as modules" below) were built on separate branches from the same commit and ran
-separately. Merged (`c97ff21`), one `stage.sh` stages all five (the attestation and bridge modules through
+separately. Merged (`50b13d3`), one `stage.sh` stages all five (the attestation and bridge modules through
 `stage.py`, the attestor and monitor modules as before, the updater through `stage-updater.sh`), one
 `check.sh` builds and checks them, with `BRIDGE_E2E=1` and the daemons' jobs. The updater now plans with
 `ferrata-advance` (`lez/advance`), the code the attestation module's `advance` runs, so the updater
-module's staged tree carries it too (`d4c0268`). Then, on the Modal build box (a
+module's staged tree carries it too (`2dbad7c`). Then, on the Modal build box (a
 gVisor container: 2 CPUs reported, up to 16 cores and 64 GiB; Nix 2.28.3 with the Nix store the daemons'
-run had built, Logos from source; cargo 1.93.0 and 1.98.1, r0vm 3.0.5, Foundry 1.3.6), at commit `d4c0268`
+run had built, Logos from source; cargo 1.93.0 and 1.98.1, r0vm 3.0.5, Foundry 1.3.6), at commit `2dbad7c`
 ([`results/merged-2026-11-13/`](results/merged-2026-11-13/summary.md)):
 
 | What | Natively | Dev Logos Core | Portable | From the catalog |
@@ -211,8 +211,8 @@ margin before a deadline 2,992 s through the module (3,000 s for the binary), th
 of [`docs/image-ids.md`](../docs/image-ids.md) (`0xb64900bc…29e9`, binary sha256 `7be1349c…11bf`); the
 updater module carries the attestation program `0x816d1fef…03df`, declared and computed from its bytes.
 
-The catalog's steps ran next, on the same module sources (tree `11f5d63`: it adds run 1's results and has
-`catalog-install.sh` log `e2e.sh`'s and `bridge_e2e.sh`'s check counts; `version()` reports `d4c0268`)
+The catalog's steps ran next, on the same module sources (tree `905731a`: it adds run 1's results and has
+`catalog-install.sh` log `e2e.sh`'s and `bridge_e2e.sh`'s check counts; `version()` reports `2dbad7c`)
 (`release-local.sh`, 576 s: the five exported as their
 own repositories and built with `nix build .#lgx-portable`, `lgx verify` valid and unsigned, the sidecars,
 `index.json` with five packages, `validate-repo` OK; [`catalog/dry-run/`](catalog/dry-run/index.json)), then
@@ -290,8 +290,8 @@ devnet its own tests use, against the same job run natively:
 | the monitor: `monitor/tests/anvil-e2e.sh`, scenarios S1–S11, A0–A4, R1–R4 and the alerting check, the module in place of the binary | anvil, a v5 vault | 46 of 46 (the binary) | 46 of 46 | 46 of 46 | 46 of 46 |
 | the updater: mainnet and Sepolia from their checkpoints to the lab's final roots, none refused; the sequencer backend refused | the in-process LEZ v0.4.0-rc1 chain, the lab's records | 8 of 8 (`run`) | 10 of 10 | 10 of 10 | 10 of 10 |
 
-The native, dev and portable columns and the calls are `check.sh` at commit `1388827` (step failures 0,
-check failures 0); the catalog column and the running zone are the run before it, at `d9f4e47`, with the
+The native, dev and portable columns and the calls are `check.sh` at commit `dcf7502` (step failures 0,
+check failures 0); the catalog column and the running zone are the run before it, at `a161df1`, with the
 same packages (two expectation fixes came between, see 8 below and "Calls"). `e2e.sh` (the earlier
 modules' log end to end) passed 36 of 36 in both flavours. All five modules were
 installed from the local catalog by name and loaded, and the three jobs passed through the installed
@@ -305,7 +305,7 @@ x86_64`, 16 cores, 64 GiB), started cold: Nix 2.28.3 with the set-up of the firs
 1.98.1 for `lez/`), Foundry 1.3.6 (anvil, forge, cast), r0vm 3.0.5; builder, SDK, `logosctl` and nixpkgs
 at the revisions of the first run; Logos packages built from source again (the dev `logosctl` took
 1,848.6 s). Logos Core with `LOGOS_TMPDIR=/var/tmp/lgm` (see 4 below). On the laptop only edits, `git` and
-reads. `version()` of the new modules reports commit `68c6e28`, the commit their staged crates were
+reads. `version()` of the new modules reports commit `723fa5b`, the commit their staged crates were
 copied from: after it the modules changed only in `metadata.json`'s descriptions and the test scripts (the
 sources hashes in `version()` identify the copies). Every number here is from the runs' own output.
 
@@ -330,7 +330,7 @@ and catch-up, below).
 
 ### The attestor beside each sequencer of a running zone
 
-`modules/scripts/attestor-zone-live.sh` (12 November, 21:24–21:30 UTC, commit `d9f4e47`): `checkpoint/attestor/zone.sh` ran a zone of four LEZ
+`modules/scripts/attestor-zone-live.sh` (12 November, 21:24–21:30 UTC, commit `a161df1`): `checkpoint/attestor/zone.sh` ran a zone of four LEZ
 v0.4.0-rc1 sequencers on one Logos Blockchain node (upstream's devnet configuration, the lab bundle's
 binaries, 300 s of sequencing, genesis sha256 equal to the earlier zone run's), and four portable Logos
 Cores, one per sequencer, each installed the attestor's package, loaded it, made its attestation key (OS
@@ -371,12 +371,12 @@ were up to date, `metrics`, `stop`. Both flavours: mainnet at slot 15,631,808 wi
 Every reply through the dev and the portable Logos Core equals the native reply and meets its
 expectations; calls take at most 0.2 s (`logosctl call`, process start included). One expectation of the
 earlier module was stale and was corrected first: `requests.py` still expected integration6's instance id
-for the p1899 checkpoint after lc-a1 added `ws_period_epochs` to the configuration (e3ba34e changed the
+for the p1899 checkpoint after lc-a1 added `ws_period_epochs` to the configuration (51d8d80 changed the
 configuration and the calls crate's own test, `0x39860f39…b79c`, but not this request).
 
 ### Steps (12 November, the final run)
 
-`check.sh` at commit `1388827` (the Logos packages cached by the earlier runs on the same box): 765 s in
+`check.sh` at commit `dcf7502` (the Logos packages cached by the earlier runs on the same box): 765 s in
 all; native tests 27.6 s, native calls 1.9 s, the three daemons' jobs natively 153.2 s, `build-lgx` (five)
 39.2 s, `build-lgx-portable` 42.5 s; through the dev Logos Core: `e2e.sh` 68.0 s, attestor 4.3 s, updater
 118.5 s, monitor 40.0 s; through the portable one: 71.1, 4.6, 118.2 and 38.4 s. From the cold container: the
@@ -410,7 +410,7 @@ blst) were inside one `build-lgx` of 355.9 s for all five modules (it stopped la
 8. **Checks of mine.** The calls' module filter in `check.sh` (jq) selected nothing in the first full run,
    and the live zone script's tier check had a jq precedence error (fixed before run 6); in run 6 the
    native calls ran without `RISC0_DEV_MODE`, which the updater module's `version()` reports, so its reply
-   differed from the daemon's, and `requests.py`'s p1899 id was stale (both fixed for run 7, `1388827`).
+   differed from the daemon's, and `requests.py`'s p1899 id was stale (both fixed for run 7, `dcf7502`).
 
 ### Not done (12 November)
 
@@ -435,7 +435,7 @@ tool's claim builder, release rule, release plan and release guest run moved int
 and the modules all link them, and the modules now link the programs' own wire crates and LEZ's
 `lee_core` (staged by `scripts/stage.py`), so every message and state is the programs' own type. All of it
 ran on the Modal build box (a gVisor container, 2 CPUs reported), repository at commit
-`3a15b73` (results in [`results/complete-2026-11-12/`](results/complete-2026-11-12/)):
+`3be4e37` (results in [`results/complete-2026-11-12/`](results/complete-2026-11-12/)):
 
 | What | Where it ran | Result |
 |---|---|---|
@@ -491,7 +491,7 @@ module ran is the real one.
 - A daemon whose `TMPDIR` path is long starts but cannot listen (its socket path passes the 107-byte limit
   of a Unix socket): `check.sh` and `real_release_proof.sh` need a short `TMPDIR`.
 - `requests.py`'s expected id of `checkpoint_p1899` was stale since lc-a1 added `ws_period_epochs` to the
-  configuration (`e3ba34e`); it is the id the calls crate's own test gives (`0x39860f39…b79c`).
+  configuration (`51d8d80`); it is the id the calls crate's own test gives (`0x39860f39…b79c`).
 
 ### Re-run
 
@@ -514,7 +514,7 @@ portable build was not re-run this time; Linux x86-64 only.
 ## The attestation and bridge modules, 11 November 2026
 
 **Two modules, built, packaged, loaded and called; a log attested end to end through them.** On
-11 November 2026, `modules/scripts/check.sh` (repository at commit `2f91c14`) built
+11 November 2026, `modules/scripts/check.sh` (repository at commit `8a55838`) built
 `ferrata_attest_module` (seven methods) and `ferrata_bridge_module` (seven) with logos-module-builder,
 packaged each as a dev and a portable `.lgx`, installed and loaded both together in a headless Logos
 Core (`logosctl`, dev and portable builds), and called every method: 24 calls, each reply equal to the
@@ -587,7 +587,7 @@ of it the harness rebuilding the Stage 4 chain for each transaction; each module
 | Nix closure of each dev package | 667,834,808 / 667,482,016 |
 | Nix closure of the dev `logosctl` | 907,405,600 |
 
-`release-local.sh` (commit `2f91c14`): each module exported as its own repository (39 and 20 files),
+`release-local.sh` (commit `8a55838`): each module exported as its own repository (39 and 20 files),
 `nix build .#lgx-portable` (47 s and 49 s, dependencies cached; the same packages as `check.sh`'s, 5,280,230
 and 5,180,044 bytes),
 `lgx verify` (`logos-package` `4bdd904`, `lgx 0.1.0`): "Package structure is valid", unsigned; the
@@ -603,7 +603,7 @@ refuses a plain `http://` catalog: "unsupported URL scheme (https required in v1
 self-signed certificate given to the daemon as its CA bundle; portable `logosctl` of the final run.
 `catalog add` the catalog's `logos-repo.json`, `catalog source http`, `search ferrata` (both found),
 `install` each by name (downloaded over HTTPS, root hashes from the index), `module load`, `call version`
-(both answer, staged from commit `2f91c14`). The server logged the index and the two packages fetched.
+(both answer, staged from commit `8a55838`). The server logged the index and the two packages fetched.
 One command failed, for a reason outside this catalog: `catalog refresh` also fetches the daemon's
 built-in official catalog (GitHub), whose certificate cannot be verified with the throwaway CA bundle
 (curl error 60), even after `catalog disable`. Log: `catalog/install-test/log.txt`.
@@ -612,7 +612,7 @@ built-in official catalog (GitHub), whose certificate cannot be verified with th
 
 Everything cached by the earlier runs on the same box: `build-lgx` (both modules) 94.7, `build-lgx-portable`
 21.2, daemon start, install and load under 1 each, `dev-e2e` 55.7, `portable-e2e` 51.9; whole run 286 s.
-From the cold box, the first command re-ran the first run's `check.sh` (the prototype at `0523f77`):
+From the cold box, the first command re-ran the first run's `check.sh` (the prototype at `17030d4`):
 SDK source 53.7 s, `build-lgx` (the module and every Logos dependency) 511.5 s, `logosctl` (dev) 1,573.0 s,
 portable package 11.2 s, portable `logosctl` 518.3 s; its 11 calls again equal to native in dev and
 portable (its summary counts 2 failures only because `summary.py` changed under it to require the e2e,

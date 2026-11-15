@@ -1,7 +1,7 @@
 # crown-rehearsal-3: the whole crown run on the merged programs, on an anvil fork of Sepolia, to DONE (11 Nov 2026)
 
 `e2e/crown.sh start --fork crown-rehearsal-3` on our Modal workspace (app `ferrata-crown`, `runner_rehearsal`),
-from branch `integration5` at commit fecd9c7: the programs after the merges of `lez-time-fix` (LEZ-side time from
+from branch `integration5` at commit cf5edf0: the programs after the merges of `lez-time-fix` (LEZ-side time from
 attested records, rule (B)'s check of the tip's producer inscription) and of the security fixes (`secfix-lez`:
 holder PDAs, visible imports only, `NOut` v2; `secfix-vault`: FerrataVault with M-1, M-2, L-1, L-3, I-2, I-7).
 Started 05:20:49Z, DONE 05:45:08Z, no stop: 24 min 19 s of wall time. Every number below is from this run's files

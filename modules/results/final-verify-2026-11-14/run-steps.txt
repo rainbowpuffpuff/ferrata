@@ -1,5 +1,5 @@
-== all 2026-11-14T11:10:06Z commit 6b7ea86f6f28f792a7b79312fc41b2c21d915ff0
-== native 2026-11-14T11:10:06Z commit 6b7ea86f6f28f792a7b79312fc41b2c21d915ff0
+== all 2026-11-14T11:10:06Z commit ef7cecb649576d24f55c28785a8643bb9b5db75e
+== native 2026-11-14T11:10:06Z commit ef7cecb649576d24f55c28785a8643bb9b5db75e
 seed ok 28s
 risc0 ok 0s
 sequencer ok 29s
@@ -23,16 +23,16 @@ cli-e2e ok 57s
 relayer-suite ok 123s
 lez-harness ok 637s
 native done in 1334s
-== check 2026-11-14T11:32:20Z commit 6b7ea86f6f28f792a7b79312fc41b2c21d915ff0
+== check 2026-11-14T11:32:20Z commit ef7cecb649576d24f55c28785a8643bb9b5db75e
 check ok 2217s
 Step failures: 0. Check failures: 0.
 check done in 2217s
-== logosio 2026-11-14T12:09:17Z commit 6b7ea86f6f28f792a7b79312fc41b2c21d915ff0
+== logosio 2026-11-14T12:09:17Z commit ef7cecb649576d24f55c28785a8643bb9b5db75e
 logos-io FAILED(1) 212s
 logosio done in 212s
-== results 2026-11-14T12:12:49Z commit 6b7ea86f6f28f792a7b79312fc41b2c21d915ff0
+== results 2026-11-14T12:12:49Z commit ef7cecb649576d24f55c28785a8643bb9b5db75e
 results done in 0s
 ALL DONE 2026-11-14T12:12:49Z
 all done in 3763s
-fix-rebuild (cli seqnet bins build, cli/ and lez/ fmt --check) ok 16s commit 4a58137a
-== results 2026-11-14T12:15:21Z commit 4a58137a4e9b6064dfb021521eb065c9fc92eddb (copied again, for the line above)
+fix-rebuild (cli seqnet bins build, cli/ and lez/ fmt --check) ok 16s commit a87cebe6
+== results 2026-11-14T12:15:21Z commit a87cebe628873a2ae3a734afdb4aae7e457d8ed9 (copied again, for the line above)

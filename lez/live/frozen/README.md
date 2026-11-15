@@ -13,7 +13,7 @@ configuration differ, and so does its image id (`f11b1aba…58eb` built at the i
 worktree's path; image ids depend on the build path; `../../BRIDGE-RESULTS.md` §8).
 
 `bridge-wire/` here is `lez/bridge-wire` as it was when the binaries were frozen (branch
-`inbound-live` a597270), `src/lib.rs` byte for byte (SHA-256 `a11f87d5…1f50`); only the paths in
+`inbound-live` e781588), `src/lib.rs` byte for byte (SHA-256 `a11f87d5…1f50`); only the paths in
 its `Cargo.toml` differ. The live driver (`../driver`) builds against it, so its messages are the
 deployed program's. It uses `../../wire` as it stands: the attestation wire has not changed since
 the binaries were frozen; if it does, freeze a copy of it here too.

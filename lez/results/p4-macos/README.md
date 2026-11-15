@@ -102,7 +102,7 @@ rzup 0.6.0 with RISC Zero's Rust 1.91.1 (`rustc 1.91.1-dev (30e2186d0 2025-11-25
 `cargo-risczero` / `r0vm` 3.0.5 (`risc0-r0vm 3.0.5`, the aarch64-apple-darwin release rzup installs, sha256
 `e57ef8a01d97d1b87ca7f1fb7ab55eb636d478d7e5a8e498bbe985120c3e81f9`).
 
-Sources, the same on both (`runs/<mac>/sources.log`): this repository at `integration6` 0523f77 (`main` on GitHub),
+Sources, the same on both (`runs/<mac>/sources.log`): this repository at `integration6` 17030d4 (`main` on GitHub),
 copied as a git bundle; LEZ v0.4.0-rc1 (1806e87) and Logos Blockchain d480efc6 (the revision LEZ pins) cloned from
 their public GitHub repositories into `upstream/` beside it, as [`scripts/fetch-upstream.sh`](../../../scripts/fetch-upstream.sh)
 lays them out (the harness itself needs no Logos Blockchain crate; `checkpoint/` does). No file was changed.
@@ -159,7 +159,7 @@ sh rustup-init.sh -y --profile minimal --default-toolchain none && rustup toolch
 bash rzup-install.sh                      # https://risczero.com/install: rzup 0.6.0
 rzup install rust 1.91.1; rzup install cpp 2024.1.5; rzup install r0vm 3.0.5; rzup install cargo-risczero 3.0.5
 # sources
-git clone -b integration6 ferrata.bundle ferrata                                   # 0523f77
+git clone -b integration6 ferrata.bundle ferrata                                   # 17030d4
 git clone --depth 1 --branch v0.4.0-rc1 https://github.com/logos-blockchain/logos-execution-zone.git upstream/lez-v0.4.0-rc1
 git -C upstream/logos-blockchain-d480efc6 fetch --depth 1 origin d480efc6bbb48fb493c10fe9afefd84c18a04f02   # after git init + remote add
 # build, from ferrata/lez

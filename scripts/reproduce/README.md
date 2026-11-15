@@ -5,7 +5,7 @@ ends with one line per check and a verdict.
 
 ```sh
 MODAL_PROFILE=<yours> modal run --detach scripts/reproduce/modal_app.py   # on Modal: the route we have run
-scripts/reproduce/run.sh                                                 # with Docker (x86-64 images): 5 of 5 at bf430cc (runs/2026-11-12-docker-aws/)
+scripts/reproduce/run.sh                                                 # with Docker (x86-64 images): 5 of 5 at 89e6d6d (runs/2026-11-12-docker-aws/)
 ```
 
 Both build the image of [`Dockerfile`](Dockerfile), copy this checkout's committed `HEAD` (`git archive`; uncommitted
@@ -27,7 +27,7 @@ runs on its own, on a copy of the checkout: it writes into the tree it runs in.
 
 ## Run on Modal, 14 November 2026
 
-`MODAL_PROFILE=… modal run --detach scripts/reproduce/modal_app.py` from a checkout of commit 4a58137 (the tree to
+`MODAL_PROFILE=… modal run --detach scripts/reproduce/modal_app.py` from a checkout of commit a87cebe (the tree to
 publish: the final tree of 13 November with the merges of `lez-core-v04` and `lez-rc3` and one rustfmt line; the
 commits after it record this run and the build box's checks), 14 Nov 2026 11:36–12:12 UTC, 2,185 s from the call to
 the logs back. Its last lines ([`runs/2026-11-14-modal-verify/summary.txt`](runs/2026-11-14-modal-verify/summary.txt);
@@ -35,7 +35,7 @@ the logs back. Its last lines ([`runs/2026-11-14-modal-verify/summary.txt`](runs
 
 ```text
 
-Ferrata reproduction check: commit 4a58137a4e9b6064dfb021521eb065c9fc92eddb
+Ferrata reproduction check: commit a87cebe628873a2ae3a734afdb4aae7e457d8ed9
 2026-11-14 12:12:12 UTC, 16 CPUs; rust 1.93.0 1.98.1 1.88.0 (default 1.93.0); RISC Zero r0vm 3.0.5, guest rust 1.88.0 (lez: 1.91.1); forge 1.3.6, solc 0.8.26; Python 3.12.3
 
 check           result    time  detail
@@ -55,22 +55,22 @@ The vault's 464 include the ten tests of the zone runs' suites (`vault/test/real
 (`vault/test/ReviewVault.t.sol`; [`docs/reviews/`](../../docs/reviews/agent-review-vault-guests-2026-11-12.md)).
 No committed file changed: the tables the LEZ harness writes in `lez/results/` came out as committed.
 
-Earlier, from a checkout of commit 0f31e30 (the final tree of 13 November, before the merges of `lez-core-v04` and
+Earlier, from a checkout of commit 5a22d93 (the final tree of 13 November, before the merges of `lez-core-v04` and
 `lez-rc3`; 13 Nov 2026, 13:58–14:29 UTC; Modal preempted the first container 12 minutes in and ran the function again
 from the start): 5 of 5 in 31:27 with the same results
-([`runs/2026-11-13-modal-final/`](runs/2026-11-13-modal-final/README.md)). From a checkout of commit a5fd69f (the tree
+([`runs/2026-11-13-modal-final/`](runs/2026-11-13-modal-final/README.md)). From a checkout of commit 007456e (the tree
 published as `main` before the last merges; 13 Nov 2026,
 05:20–05:52 UTC): 5 of 5 in 32:07, the same results but the vault's, 454 passed and 1 skipped (before the zone runs'
-suites; [`runs/2026-11-13-modal/`](runs/2026-11-13-modal/README.md)). From a checkout of commit 596b158 (12 Nov 2026, 17:56–18:29 UTC, 1,995 s from the call to the logs back):
+suites; [`runs/2026-11-13-modal/`](runs/2026-11-13-modal/README.md)). From a checkout of commit 09e88e9 (12 Nov 2026, 17:56–18:29 UTC, 1,995 s from the call to the logs back):
 5 of 5 in 33:04, the same results but the vault's, 451 passed and 1 skipped (before the review's tests). The image:
 10.1 GiB on disk (10,770 MiB measured in the container, of which 451 MiB are Modal's own Python); Modal built it
-once, in 233 s, and later runs reuse it (596b158's did). Earlier full runs of the same checks, whose Sepolia check
-was crown-live-1's alone: commit 03f1a9b, 5 of 5 in 26:36 (a side-branch commit from before the tables were
-re-recorded, so 21 of them changed there), and commit 031b8c5, 5 of 5 in 36 minutes, the LEZ harness taking 24 of
+once, in 233 s, and later runs reuse it (09e88e9's did). Earlier full runs of the same checks, whose Sepolia check
+was crown-live-1's alone: commit 33ff3db, 5 of 5 in 26:36 (a side-branch commit from before the tables were
+re-recorded, so 21 of them changed there), and commit 3c79e01, 5 of 5 in 36 minutes, the LEZ harness taking 24 of
 them; Modal had preempted that run's first container 20 minutes in and ran the function again from the start, so
 its call took 57 minutes.
 The Docker route, `run.sh`, builds the same Dockerfile and runs the same `check.sh`. Run once under Docker on an AWS
-EC2 m7i.4xlarge (16 vCPUs, 64 GiB, Ubuntu 24.04, Docker 29.1.3) at commit `bf430cc`: 5 of 5 in 22:16, no committed
+EC2 m7i.4xlarge (16 vCPUs, 64 GiB, Ubuntu 24.04, Docker 29.1.3) at commit `89e6d6d`: 5 of 5 in 22:16, no committed
 file changed ([`runs/2026-11-12-docker-aws/`](runs/2026-11-12-docker-aws/README.md)).
 
 The Modal route needs the `modal` client (`pip install modal`, then `modal setup`) and a Modal account; it sends the

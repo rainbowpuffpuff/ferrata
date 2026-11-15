@@ -1,4 +1,4 @@
-Native tests of box run 1 (merge-modules, commit d4c0268), per suite (cargo's "test result" lines; suites with
+Native tests of box run 1 (merge-modules, commit 2dbad7c), per suite (cargo's "test result" lines; suites with
 no tests left out). RISC0_DEV_MODE=1; lez/ and cli/ with RISC0_HOME=spike/risc0-home-lez (LEZ's guest Rust 1.91.1).
 
 cli/        ferrata-wallet (unittests src/lib.rs)          3 passed, 0 failed

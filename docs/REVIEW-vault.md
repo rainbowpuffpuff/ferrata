@@ -3,7 +3,7 @@
 Each row is one function of `FerrataVault` v5 ([`vault/src/FerrataVault.sol`](../vault/src/FerrataVault.sol), `FV`)
 or of its linked library `FerrataRegistry` ([`vault/src/FerrataRegistry.sol`](../vault/src/FerrataRegistry.sol),
 `FR`): the specification it implements, any deliberate deviation, what pins it, and the author's sign-off. Line
-numbers are at `bf430cc`. As in [REVIEW-core.md](REVIEW-core.md), the deviations column is part of the audit packet.
+numbers are at `89e6d6d`. As in [REVIEW-core.md](REVIEW-core.md), the deviations column is part of the audit packet.
 
 Specifications: `v2 §n` is [bridge-spec-v2.md](design/spec/bridge-spec-v2.md); `Dn` is an item of
 [bridge-spec-v3-changes.md](design/spec/bridge-spec-v3-changes.md), which wins where the two differ;

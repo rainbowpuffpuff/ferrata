@@ -69,7 +69,7 @@ vault's mock verifier).
 
 The other tests are those of the run below, unchanged.
 
-Packages of this view (`scripts/nix-build.sh` on the box, commit `dd813a7`'s view):
+Packages of this view (`scripts/nix-build.sh` on the box, commit `242625c`'s view):
 
 | Target | Seconds | `.lgx` bytes | SHA-256 |
 |---|---:|---:|---|
@@ -106,7 +106,7 @@ below comes from those runs' logs; the commit that ran is the one that adds `res
 | Target | Seconds | `.lgx` bytes | SHA-256 |
 |---|---:|---:|---|
 | `nix build .#lgx` (first build, with the builder's Logos inputs) | 162 | — (skeleton view) | — |
-| `nix build .#lgx` (final view, commit `4127517`) | 4 | 16,120 | `eebfa58f1820833755fea1f6ce02e219694df24810c11681f3bc833ed26d5e18` |
+| `nix build .#lgx` (final view, commit `358714b`) | 4 | 16,120 | `eebfa58f1820833755fea1f6ce02e219694df24810c11681f3bc833ed26d5e18` |
 | `nix build .#lgx-portable` (final view) | 6 | 16,108 | `84fe671077c2a9685f5e6301bcc1a5bde97e4aabe6444d3ca2b30d757a3b38c1` |
 
 The package holds the view (`qml/`), the icon and the module's `metadata.json`; there is no compiled
@@ -114,8 +114,8 @@ plugin (a QML-only `ui_qml` module).
 
 ## The headless run
 
-`scripts/box-test.sh`, the run committed here (on `063281a`, the last of ten passing runs; the packages
-below are from `4127517`, whose view is the same): the 15 test functions in 29.3 s; the whole script 43 s. The backend
+`scripts/box-test.sh`, the run committed here (on `eec1e1d`, the last of ten passing runs; the packages
+below are from `358714b`, whose view is the same): the 15 test functions in 29.3 s; the whole script 43 s. The backend
 answered 54 calls in 10.6 s in total (the slowest 1.71 s, a root import: the harness executes the bridge
 guest), 7 of them the refusals the test asks for.
 

@@ -83,7 +83,7 @@
    "input_hashes_equal_manifest": true,
    "image_ids": "consumer image 3f357bae4537eafd9a922befade5275e7cf3453deb91c93d1698631ff9feee6d (419456 ELF bytes); program image e517399a94269f1a65b50c53c6187cd630c1f8f6d91f9617619ef94a3cba7177 (602872 ELF bytes); RISC0_DEV_MODE off"
   },
-  "manifest_commit": "0b135f76ebd6e12787ca9ebf1f5b83c53519a69c",
+  "manifest_commit": "2854e4e54e6a2f4a387524063bd5d1403a38bdf4",
   "runs": [
    {
     "run": 1,
@@ -415,7 +415,7 @@
    "input_hashes_equal_manifest": true,
    "image_ids": "bridge image 1156918fdfee530b4fc9cb1eae2078d161d21cb11e26ffbfc7f75aa427de9773 (541456 ELF bytes); RISC0_DEV_MODE off"
   },
-  "manifest_commit": "0b135f76ebd6e12787ca9ebf1f5b83c53519a69c",
+  "manifest_commit": "2854e4e54e6a2f4a387524063bd5d1403a38bdf4",
   "runs": [
    {
     "run": 1,

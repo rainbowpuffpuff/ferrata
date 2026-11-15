@@ -12,7 +12,7 @@
 - as the logs show it: 304 blocks published, at seconds after an epoch second (mod 10): 2 s (x304); 14 epochs began during the run, at seconds after slot 0 (mod 240): 0 (x13), 4 (x1); the least time from a published block to the next epoch's first second: 2 s; blocks the node proposed with a transaction removed: 297
 - Bedrock gas prices during the run (logs/bedrock-gas-prices.log): 7 values; first: 2026-11-14T10:03:20.472Z execution_base_gas_price:1 storage_gas_price:1; last: 2026-11-14T10:49:07.170Z execution_base_gas_price:1 storage_gas_price:7
 - head rewinds in the sequencer's log: 1; inscriptions it gave up on: 120
-- driver: live-driver, built from lez/live/driver at 97246f4 (uncommitted paths: 30)
+- driver: live-driver, built from lez/live/driver at bd95305 (uncommitted paths: 30)
 - r0vm: risc0-r0vm 3.0.5
 - guest binaries: program sha256 ddfde69bea89a5b882f55266fcb4b7c887df7debc1c9d4972d8ebea5a72eaad9, scripted sha256 29249a3ac807ad3268ff5499ccee70a75b687d5fe5517fa5843b333c2c6c1bc0
 - machine: 2 CPUs visible, unknown, 64 GiB, Linux 4.19.0-gvisor

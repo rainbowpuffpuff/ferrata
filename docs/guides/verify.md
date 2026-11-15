@@ -135,7 +135,7 @@ programs equal.
 
 **The first live run, `crown-live-1`**, ran programs built before the wrapper existed, at the maintainer's checkout
 path on the build box: those ids (`e2e/crown/README.md`, "The programs of crown-live-1") reproduce only from that
-commit (db9f034) at that path, and did so on a cold box, 6 of 6 equal to the vault's immutables
+commit (1d150d1) at that path, and did so on a cold box, 6 of 6 equal to the vault's immutables
 ([`e2e/runs/verify-anyone/`](../../e2e/runs/verify-anyone/README.md)); the same build at another path gave 0 of 6 (the
 control there), which is what the wrapper removes. Runs from `crown-live-2` on use the path-independent programs;
 `crown-live-3` deployed them live.

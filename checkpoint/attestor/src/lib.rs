@@ -513,8 +513,8 @@ pub fn assemble_unchecked(base: &[u8], attestations: &[SignedAttestation]) -> Re
     Ok(input.encode())
 }
 
-/// The real-blocks input `realblocks/out/real-lab-186-202.input` was written (b21dd13) before rule (B)
-/// carried `T`'s inscription (91c0df8): `config ‖ parent ‖ changes ‖ blocks ‖ tIndex ‖ attestations(1) ‖
+/// The real-blocks input `realblocks/out/real-lab-186-202.input` was written (31fc7ae) before rule (B)
+/// carried `T`'s inscription (490b5a4): `config ‖ parent ‖ changes ‖ blocks ‖ tIndex ‖ attestations(1) ‖
 /// segments(0)`. This inserts `producer` after `tIndex` (the old tail is the one attestation, its count and
 /// the empty segment list: 4 + 264 + 4 bytes) and checks that the result decodes whole.
 pub fn upgrade_pre_producer_input(old: &[u8], producer: &ElidedInscription<'_>) -> Result<Vec<u8>> {

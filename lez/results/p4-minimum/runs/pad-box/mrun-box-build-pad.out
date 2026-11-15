@@ -9,7 +9,7 @@ risc0-r0vm 3.0.5
 ldd (Ubuntu GLIBC 2.39-0ubuntu8.9) 2.39
 r0vm <workspace>/spike/risc0-home-lez/extensions/v3.0.5-cargo-risczero-x86_64-unknown-linux-gnu/r0vm
 36c016a5bb2ded5bd1f8f92cc487e6ffaeb1e95ec05850c983081a0f716b515b  <workspace>/spike/risc0-home-lez/extensions/v3.0.5-cargo-risczero-x86_64-unknown-linux-gnu/r0vm
-FERRATA_HEAD=9bec9fe9514c5574d297b099d9d6ba701dc31969 FERRATA_DIRTY=0
+FERRATA_HEAD=ccfa7243cf5393cb1ba3e7e9351e42b045934d09 FERRATA_DIRTY=0
 build exit 0
 warning: lee@0.1.0: Generated module at <workspace>/spike/ferrata-wt-p4-pad/lez/target/debug/build/lee-946ef43b73a11943/out/lee/privacy_preserving_circuit/mod.rs
 warning: programs@0.1.0: Generated module at <workspace>/spike/ferrata-wt-p4-pad/lez/target/debug/build/programs-64ee1b9189a8bf3b/out/lez/programs/mod.rs

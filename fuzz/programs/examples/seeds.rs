@@ -46,7 +46,7 @@ fn main() {
             .collect();
     for (name, first) in [("real-lab-186-202", 186u64), ("real-lab-8-202", 8)] {
         let recorded = fs::read(repo.join(format!("checkpoint/realblocks/out/{name}.input"))).expect("recorded input");
-        // Recorded before rule (B) took T's producer inscription (commit 91c0df8): insert it, from
+        // Recorded before rule (B) took T's producer inscription (commit 490b5a4): insert it, from
         // the recorded inscription of T = 202, before the attestations (one, no segments).
         let row = &rows[&202];
         let (prefix, suffix, signature) =

@@ -27,18 +27,18 @@ anything was sent; the third hit the check that follows a send.
 
 | Start | Runner (Modal call), started | Commit | What it did | How it ended |
 |---|---|---|---|---|
-| 1 | `fc-01M74KND6KWJCPVCZ68VDRN945`, 06:10:36Z | 0b135f7 | `lez-a` (1,808 s), `identity`; deploy: the emergency stop (nonce 10), the FerrataRegistry library (nonce 11) | stopped itself 06:42:27Z before the vault: "-32001 block not found: 0xb8c8d7" (block 12,110,039, the library's own); nothing more sent |
-| 2 | `fc-01M75138JKY8NMNFZJ06ZPECP1`, 10:05:19Z | 0b135f7 | deploy: the vault (nonce 12) | stopped itself 10:06:01Z before the token: "block not found: 0xb8ccc8" (12,111,048, the vault's own); nothing more sent |
-| 3 | `fc-01M7560BPSVH2KMXG2T54GCEE9`, 11:31:06Z | 2eb26bb | the rest of the deployment (token, both registrations, the stop's owner renounced), deposits, captures, LEZ session B, the checkpoint, submit, W, finalize, release 0 | stopped itself 13:30:49Z after release 0 had succeeded (block 12,112,040): the check after the send read the nullifier as unused |
-| 4 | `fc-01M75JPQXXS6VE11QAHQ9XS3EC`, 15:12:59Z | 0f0e579 | release 0 found done on chain; release 1; verify | **DONE** 15:14:17Z |
+| 1 | `fc-01M74KND6KWJCPVCZ68VDRN945`, 06:10:36Z | 2854e4e | `lez-a` (1,808 s), `identity`; deploy: the emergency stop (nonce 10), the FerrataRegistry library (nonce 11) | stopped itself 06:42:27Z before the vault: "-32001 block not found: 0xb8c8d7" (block 12,110,039, the library's own); nothing more sent |
+| 2 | `fc-01M75138JKY8NMNFZJ06ZPECP1`, 10:05:19Z | 2854e4e | deploy: the vault (nonce 12) | stopped itself 10:06:01Z before the token: "block not found: 0xb8ccc8" (12,111,048, the vault's own); nothing more sent |
+| 3 | `fc-01M7560BPSVH2KMXG2T54GCEE9`, 11:31:06Z | cfabb60 | the rest of the deployment (token, both registrations, the stop's owner renounced), deposits, captures, LEZ session B, the checkpoint, submit, W, finalize, release 0 | stopped itself 13:30:49Z after release 0 had succeeded (block 12,112,040): the check after the send read the nullifier as unused |
+| 4 | `fc-01M75JPQXXS6VE11QAHQ9XS3EC`, 15:12:59Z | d92e630 | release 0 found done on chain; release 1; verify | **DONE** 15:14:17Z |
 
-So `lez-a`, `identity`, the stop, the library and the vault ran from 0b135f7; everything from the token to release 0
-from 2eb26bb; release 1 and the verify stage from 0f0e579. The commits differ only in tooling
-(`git diff --stat 0b135f7 0f0e579`: `e2e/crown/cloud/drive.py`, `e2e/crown/sepolia.sh`, `vault/script/deploy.sh`):
-the contracts, the programs and their image ids are the same. 2eb26bb runs a forge step again, at most 5 times, 24 s
-apart, only when its log shows such a read error and the deployer's nonce (latest and pending) is unchanged; 0f0e579
+So `lez-a`, `identity`, the stop, the library and the vault ran from 2854e4e; everything from the token to release 0
+from cfabb60; release 1 and the verify stage from d92e630. The commits differ only in tooling
+(`git diff --stat 2854e4e d92e630`: `e2e/crown/cloud/drive.py`, `e2e/crown/sepolia.sh`, `vault/script/deploy.sh`):
+the contracts, the programs and their image ids are the same. cfabb60 runs a forge step again, at most 5 times, 24 s
+apart, only when its log shows such a read error and the deployer's nonce (latest and pending) is unchanged; d92e630
 reads again before stopping when a state check follows a send. All three commits are in `integration6`'s history
-(2eb26bb also as its cherry-pick ce690aa). **The retry fired once**: release 0's first forge run, 13:30:16Z, "block
+(cfabb60 also as its cherry-pick 6f8dc87). **The retry fired once**: release 0's first forge run, 13:30:16Z, "block
 not found: 0xb8d0a5" (12,112,037) for the vault's account before sending, nonce still 21: "again in 24 s (1 of 5)";
 the second run sent release 0. In the deployment of start 3 every forge step read fine. Wall time from the first start
 to DONE 9 h 3 min 41 s, of which the runners ran 2 h 33 min 34 s; the rest was waiting for the owner's restarts.

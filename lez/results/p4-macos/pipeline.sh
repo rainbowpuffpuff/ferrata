@@ -9,7 +9,7 @@
 set -u
 W=$HOME/w; O=$W/out; P=$O/progress.txt
 mkdir -p "$O"
-FERRATA_HEAD=0523f7725da26262a59e469690bad22de287da2c   # integration6 = main on GitHub
+FERRATA_HEAD=17030d462c0a7c8c8b48eb14a68acde98a52624c   # integration6 = main on GitHub
 LEZ_COMMIT=1806e873ea2ac0e1b608aa7cf2f9b6e1fb12db21     # logos-execution-zone v0.4.0-rc1
 LB_COMMIT=d480efc6bbb48fb493c10fe9afefd84c18a04f02       # logos-blockchain, the revision LEZ pins
 export CARGO_TERM_COLOR=never

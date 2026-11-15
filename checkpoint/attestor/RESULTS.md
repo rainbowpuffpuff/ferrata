@@ -251,7 +251,7 @@ account through a CLI, not from an operator's own funds.
 ## What failed on the way
 
 - The recorded `realblocks/out/real-lab-186-202.input` no longer decodes (`BadLength { what: "suffix" }`): it
-  was written before rule (B) inputs carried `T`'s inscription (91c0df8). `upgrade` inserts it from the node.
+  was written before rule (B) inputs carried `T`'s inscription (490b5a4). `upgrade` inserts it from the node.
 - The first test expectation that a journal claiming t = 1 fails verification was wrong: the vault refuses it
   earlier (`KeySetBelowFloor`).
 - The host needs Rust 1.93.0 (a dependency needs 1.90); the first build with 1.88 failed.

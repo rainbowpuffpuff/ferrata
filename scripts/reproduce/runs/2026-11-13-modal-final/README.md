@@ -1,6 +1,6 @@
 # The one-command check on the final tree, 13 Nov 2026
 
-`MODAL_PROFILE=… modal run --detach scripts/reproduce/modal_app.py` from a checkout of commit `0f31e30` (branch
+`MODAL_PROFILE=… modal run --detach scripts/reproduce/modal_app.py` from a checkout of commit `5a22d93` (branch
 `final-merge`: the build's last merge, `miniapp-sequencer` into `integration8`, with its checks and documents; the
 commits after it record this run and change documents only): **5 of 5 PASS in 31:27** on 16 CPUs, no committed file
 changed: both live runs' records 13 passed each, the vault 464 passed and 1 skipped (the zone runs' suites
@@ -10,6 +10,6 @@ in, during the LEZ harness (its first four checks had passed, with the same resu
 the start: 13:44–13:56 UTC, then 13:58–14:29 UTC, 2,745 s from the call to the logs back.
 [`summary.txt`](summary.txt) is its verdict; [`environment.txt`](environment.txt) and [`packages.txt`](packages.txt)
 its toolchains and packages (the same as the run before but the commit and the date); `guest-ids/` the rebuilt ids
-(the same as the run before). The run before, at the published tree `a5fd69f`:
+(the same as the run before). The run before, at the published tree `007456e`:
 [`../2026-11-13-modal/`](../2026-11-13-modal/README.md); the same check under Docker on an x86-64 machine:
 [`../2026-11-12-docker-aws/`](../2026-11-12-docker-aws/README.md).

@@ -4,7 +4,7 @@ What ran: `ferrata-relayer` with root imports (`--import-roots`, `cli/src/relaye
 daemon `cli/src/relayerd.rs`) and `ferrata_relayer_module` (`modules/ferrata_relayer_module/`, the same daemon
 code inside Logos Core), on the devnets the relayer's and the modules' tests use. Where: the Modal build box
 (gVisor, Linux x86-64, Nix 2.28.3, Logos Core built from source at the pins of `modules/scripts/check.sh`), the
-sources of commit `a29c1c7` (synced to the box; the box's own git has no commits, so the staged `STAGED.json`
+sources of commit `f3dc299` (synced to the box; the box's own git has no commits, so the staged `STAGED.json`
 says `box`). Measured, except where a line says otherwise. Nothing was sent to a public network: the fork reads
 public Sepolia state through anvil.
 
@@ -67,7 +67,7 @@ binary's arguments to the module and prints its lines):
 (`tests/gasdrop.rs`), `relayer_fork.rs` with the binary, and the harness end to end with the gas-drop guest: the
 claim naming the relayer mints it 10¹⁶ wei, a release through the relayer 134,973 gas paying it 10¹⁴ wei, the
 redirected copy refused, the private round trip (EVIDENCE rows 46–48's figures). Two fresh-box faults of the script
-fixed on the way (`f6d94d3`, `3203266`): the guest lookup failed under `pipefail` when `bridge/target` did not exist,
+fixed on the way (`9cb3212`, `da3627c`): the guest lookup failed under `pipefail` when `bridge/target` did not exist,
 and the guests were built with `RISC0_HOME` empty instead of unset.
 
 ## The catalog

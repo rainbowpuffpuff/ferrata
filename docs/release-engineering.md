@@ -140,7 +140,7 @@ the manifest (size and sha256) and, where `r0vm` 3.0.5 is installed, recomputes 
 
 ### Release 0.1.0-rc.1 (`releases/0.1.0-rc.1/`)
 
-**Built and tested** on the build box on 11 November 2026 at 19:01 UTC from commit `7eb40b6`, with
+**Built and tested** on the build box on 11 November 2026 at 19:01 UTC from commit `fa1d453`, with
 `just release 0.1.0-rc.1` (`releases/0.1.0-rc.1/TESTS.md` has the transcript). Tarball 10.9 MB, sha256
 `617c0117400aa1422c5d6c120b17d5ff7ce70b87253316d32137dca0a9a5fcd7`.
 

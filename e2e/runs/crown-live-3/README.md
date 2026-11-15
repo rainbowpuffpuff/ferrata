@@ -29,17 +29,17 @@ prover are all the deployer.
 
 | Start | Runner (Modal call), started | Commit | What it did | How it ended |
 |---|---|---|---|---|
-| 1 | `fc-01M7813X6QN5VXADY0VFGDBWEA`, 14:03:23Z | f38f431 | `lez-a` (267 s), `identity`; deploy: the emergency stop (nonce 23), the FerrataRegistry library (nonce 24) | stopped itself 14:09:03Z before the vault: forge's next state read got "-32001 block not found: 0xb8ed32" (block 12,119,346, the library's own); its retry was refused because single nonce reads on the load-balanced endpoint disagreed; nothing more sent |
-| 2 | `fc-01M7823A7CFXKMQPA4H0JRD182`, 14:20:29Z | 148ff07 | the rest of the deployment (vault at nonce 25, token, both registrations, the stop's owner renounced), deposits, captures, LEZ session B, the checkpoint, submit, W, finalize, both releases, verify | **DONE** 16:23:30Z |
+| 1 | `fc-01M7813X6QN5VXADY0VFGDBWEA`, 14:03:23Z | 169c3dc | `lez-a` (267 s), `identity`; deploy: the emergency stop (nonce 23), the FerrataRegistry library (nonce 24) | stopped itself 14:09:03Z before the vault: forge's next state read got "-32001 block not found: 0xb8ed32" (block 12,119,346, the library's own); its retry was refused because single nonce reads on the load-balanced endpoint disagreed; nothing more sent |
+| 2 | `fc-01M7823A7CFXKMQPA4H0JRD182`, 14:20:29Z | 0a7e39b | the rest of the deployment (vault at nonce 25, token, both registrations, the stop's owner renounced), deposits, captures, LEZ session B, the checkpoint, submit, W, finalize, both releases, verify | **DONE** 16:23:30Z |
 
-The two commits differ only in tooling (`git diff --stat f38f431 148ff07`: `e2e/crown/sepolia.sh`,
+The two commits differ only in tooling (`git diff --stat 169c3dc 0a7e39b`: `e2e/crown/sepolia.sh`,
 `vault/script/deploy.sh`): the nonce a retry compares is the highest of three latest-and-pending reads, a retry also
 needs no transaction hash in the failed run's log, and the deploy stage's pending check takes the first agreeing of five
 reads. The contracts, the programs and their image ids are the same; both commits are in `integration8`'s history (the
-merge 6c6b2d4). **No retry fired after the resume** (no "again in" in any log of start 2). The resume's start gate
+merge 0fa75f8). **No retry fired after the resume** (no "again in" in any log of start 2). The resume's start gate
 printed a wrong vault preview, `0x6B15d304…d13F` (CREATE at the current nonce 25 + 2); the run deployed the vault its
 identity had fixed at the first start, CREATE(deployer, 23 + 2) = `0x04eE8FF1…e44c` (`identity.json`, and `deploy.sh`
-checks the deployed address against it). The gate now prints the identity's vault on a resume (79b9bbc). Wall time from
+checks the deployed address against it). The gate now prints the identity's vault on a resume (63ec379). Wall time from
 the first start to DONE 2 h 20 min 7 s, of which the runners ran about 2 h 8 min 42 s; the rest, about 11 min 25 s, was
 the retry fix and the owner's restart.
 
@@ -124,8 +124,8 @@ The ETH (read on Sepolia): the vault's balance went 0, 1,002,000,000,000,000 (de
   records with the final programs' ids (`t3`), **3 failed** the same way (`verify-sepolia-crown-live-1-final-ids.txt`);
   exit status 1 each.
 - `compare-vault.txt`: `scripts/reproduce-image-ids.sh compare --vault 0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c`
-  (publicnode, 16:57Z) after `scripts/reproduce-image-ids.sh build` of `integration8` (79b9bbc; the guests as of
-  4abfbf5) on the Modal build box (2 CPUs, 563 s): **6 of 6** ids of the crown run's programs equal the recorded ones,
+  (publicnode, 16:57Z) after `scripts/reproduce-image-ids.sh build` of `integration8` (63ec379; the guests as of
+  9b9bbd4) on the Modal build box (2 CPUs, 563 s): **6 of 6** ids of the crown run's programs equal the recorded ones,
   the vault's `checkpointImageId` and `releaseImageId` equal to the rebuilt `checkpoint_b` and release, and **14 of 14**
   guests equal [`docs/image-ids.md`](../../../docs/image-ids.md) ([`docs/guides/verify.md`](../../../docs/guides/verify.md) §2).
 - With `cast` (publicnode, 16:42Z): every transaction above (status, block, sender, nonce, gas used, value), the

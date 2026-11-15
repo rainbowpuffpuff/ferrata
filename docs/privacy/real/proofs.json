@@ -34,7 +34,7 @@
   "started_at_utc": "2026-11-12T11:38:31Z",
   "finished_at_utc": "2026-11-12T11:50:04Z",
   "manifest": {
-   "commit": "2686e557e7dd88b512f9e856af4d0d10251aeb24",
+   "commit": "e9798ca99ec01ef1cb57bf7e6665933826f25721",
    "files": {
     "privacy_suite": {
      "sha256": "eece2d83baf5218e1db865b1384c7b566a631f7e300ce4594bdb58f0ae95e8d6",

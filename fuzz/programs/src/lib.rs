@@ -161,7 +161,7 @@ pub fn awaited(state: &w::BridgeState) -> Option<Actor> {
 
 /// The lab's recorded rule (B) input over blocks 186..=202 (`checkpoint/realblocks/out`), with T's
 /// producer inscription (recorded in `inscriptions.jsonl`) inserted where today's format has it: the
-/// file predates the field (commit 91c0df8). One attestation, no segments.
+/// file predates the field (commit 490b5a4). One attestation, no segments.
 pub fn recorded_rule_b_input() -> Vec<u8> {
     let out = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../checkpoint/realblocks/out");
     let recorded = std::fs::read(out.join("real-lab-186-202.input")).expect("the recorded input");

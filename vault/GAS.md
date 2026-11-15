@@ -164,9 +164,9 @@ endpoint priced them then; 24 to 543 wei for the eight others).
 The fixes of the vault findings of `notes/reviews/security/review-2026-11-11.md` change these rows; everything else
 in this file is unchanged (all rows below were re-measured; the release rows, the hot path, did not move). Measured
 on the build box with Foundry 1.3.6, `forge test --isolate --match-contract 'GasScenarios|ReturnLegGas' -vv`, on
-`integration4` (1bb20d5) and on this branch, in one run (logs kept outside the repository):
+`integration4` (bc4a2a6) and on this branch, in one run (logs kept outside the repository):
 
-| Operation (whole transaction) | 1bb20d5 | with the fixes | change | why |
+| Operation (whole transaction) | bc4a2a6 | with the fixes | change | why |
 |---|---:|---:|---:|---|
 | `submitCandidate`, including its beacon ¹ | 178,555 | 203,207 | +24,652 | M-2: the candidate stores its prover (one new slot); M-1: the submission restarts the keyless clock |
 | `submitCandidate`, real checkpoint seal (records a beacon) | 438,444 | 463,096 | +24,652 | the same |

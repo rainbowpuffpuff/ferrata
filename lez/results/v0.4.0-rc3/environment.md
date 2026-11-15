@@ -2,7 +2,7 @@
 
 - date: 2026-11-14T09:42:12+00:00
 - where: a Modal build box (our Modal profile; 16 physical cores, 64 GiB at most; under gVisor), by spike/tmp/lez-rc3/boxC.sh
-- ferrata worktree HEAD: 97246f4 (uncommitted: 0 paths besides results/ and RESULTS.md)
+- ferrata worktree HEAD: bd95305 (uncommitted: 0 paths besides results/ and RESULTS.md)
 - LEZ: v0.4.0-rc3 = bafd07be0701398f9bc435f73ab05e9a7936c301, upstream tree clean: yes
 - risc0-zkvm (host and guests): version="3.0.5"
 - r0vm: risc0-r0vm 3.0.5

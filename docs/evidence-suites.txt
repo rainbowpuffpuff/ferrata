@@ -1,7 +1,7 @@
 Suites of branch `integration5`, fifth integration pass, 11 Nov 2026 (docs/EVIDENCE.md, last section).
-Code as of commit b93a945 (merges of lez-time-fix, crown-rehearsal, secfix-lez, secfix-vault and the fixes after
+Code as of commit 8041590 (merges of lez-time-fix, crown-rehearsal, secfix-lez, secfix-vault and the fixes after
 them) plus the run's own formatting step (cargo fmt of cli/ and lez/harness, forge fmt of vault/, cargo fmt of
-bridge/), committed as b369d65; later commits change documents only. Every command ran on the Modal build box of
+bridge/), committed as 064063f; later commits change documents only. Every command ran on the Modal build box of
 this worktree through spike/modal-build/mrun (our Modal workspace; 2 threads reported by nproc, 64 GiB, gVisor,
 glibc 2.39). Counts are the sums of the "test result" / "Suite result" lines of each log. Image ids are those of
 the integration5 worktree's path.
@@ -54,15 +54,15 @@ Run "final2" (11 Nov 05:21 - 05:31 UTC, on a box warmed by two earlier runs of t
                                                                        245/245, 338/338, 45/45, 33/33
     forge fmt --check                                                  ok
 
-Link checker (laptop: it reads `git ls-files`; at 5916222): python3 -I scripts/check-links.py   24 files, 833 links, 0 broken
+Link checker (laptop: it reads `git ls-files`; at f5966c7): python3 -I scripts/check-links.py   24 files, 833 links, 0 broken
 
-Earlier runs of the same script on this box: "warm" (at 998fff8, before the security merges) and "final" (at
-db9f034); their failures were fixed by b93a945 and b369d65 (realblocks-crown missing the producer inscription, then
+Earlier runs of the same script on this box: "warm" (at 41f831e, before the security merges) and "final" (at
+1d150d1); their failures were fixed by 8041590 and 064063f (realblocks-crown missing the producer inscription, then
 its clippy lints; the crown script's 7-field candidates() destructuring; formatting).
 
 Sixth pass, branch `integration6` (documents brought to the merged code; the code changes are the privacy suite's
 seed-only wallet deriving NOut as D13's v2, its labels of the holder PDAs, and e2e/crown.sh's guard). Run "r4" at
-96d3e1f, 11 Nov 06:51 - 06:52 UTC, on the same kind of box (our Modal workspace; warm from runs r1-r3 of the same
+0056d8b, 11 Nov 06:51 - 06:52 UTC, on the same kind of box (our Modal workspace; warm from runs r1-r3 of the same
 script, run r1 cold: 497 s in all):
   CI job `test` as .github/workflows/ci.yml runs it, with the current toolchains (`rustup toolchain install stable beta`)
     rustc                                                              stable 1.99.1; beta 1.101.0-beta.1
@@ -87,10 +87,10 @@ ran clean on the build box with RISC0_SKIP_BUILD=1 before the merge):
   link checker on the laptop (it reads `git ls-files`)                24 files, 859 links, 0 broken
   python3 -I scripts/check-links.py lez/results/p4-minimum/README.md   1 file, 11 links, 0 broken
 
-Seventh pass (branch integration6, 11 Nov 2026): the merges of review-core 0d53068, sectools a5a5ee0, verify-anyone
-90ce55b, p4-pad 17b7854, consumer-example 189ac4d and fuzz-core 0fcfc0c (EVIDENCE rows 35-40), what they touched.
+Seventh pass (branch integration6, 11 Nov 2026): the merges of review-core 428ab75, sectools 3fbda22, verify-anyone
+83b8204, p4-pad a5ce0d3, consumer-example 785aed6 and fuzz-core bcd8542 (EVIDENCE rows 35-40), what they touched.
 Build box of this worktree through spike/modal-build/mrun (our Modal workspace), Rust 1.93.0 (the box's default).
-Run "checks" at e029602 (15:28 - 15:45 CET, 1,030 s, four groups in parallel):
+Run "checks" at 57cbf12 (15:28 - 15:45 CET, 1,030 s, four groups in parallel):
   root: cargo test --workspace --locked                                150 passed, 0 failed (24 test binaries)
   lez:  RISC0_DEV_MODE=1 cargo test -p harness -p ferrata-lez-holdings-wire --locked -- --test-threads 8
                                                                        47 passed, 0 failed (harness 27 binaries;
@@ -98,12 +98,12 @@ Run "checks" at e029602 (15:28 - 15:45 CET, 1,030 s, four groups in parallel):
         cargo fmt (wire, bridge-wire, holdings-wire, harness, methods) --check; rustfmt --check of the holdings guest   ok; ok
         RISC0_SKIP_BUILD=1 cargo clippy (the same five) --all-targets --locked -D warnings                ok
   fuzz: cargo build --release --locked --bins (the seven targets)      ok
-  found here, fixed in 31ea9c7 (layout and lint only): rustfmt of crates/ferrata-spectests/tests/review_core.rs,
+  found here, fixed in 2dfee78 (layout and lint only): rustfmt of crates/ferrata-spectests/tests/review_core.rs,
   clippy clone_on_copy there (2) and type_complexity in fuzz/fuzz_targets/exec.rs, forge fmt of
   vault/test/halmos/VaultHalmos.t.sol. The vault suite failed only test_privacySuite_ethereumHalf (target/privacy
   not yet written: it ran beside the LEZ half). The harness run rewrote 14 path-dependent files under lez/results
   (bridge image 3f068b79... at this path); restored, not committed.
-Run "checks2" at 31ea9c7 (15:47 CET, 51 s, the box warm):
+Run "checks2" at 2dfee78 (15:47 CET, 51 s, the box warm):
   root: cargo fmt --all --check; cargo clippy --workspace --all-targets --locked -D warnings   ok; ok
         cargo test --workspace --locked                                150 passed, 0 failed (24 test binaries)
   fuzz: cargo fmt --all --check; cargo clippy --all-targets --keep-going -D warnings; build   ok; ok; ok

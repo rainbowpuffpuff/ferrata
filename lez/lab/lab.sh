@@ -71,10 +71,10 @@ case "${1:-}" in
     ;;
   verify)
     [ -d "$RESULTS/record" ] || { echo "fetch first" >&2; exit 1; }
-    # The lab's program is this branch's of 11 Nov; A1 (d43ee2ab) later changed lez/wire's instance
+    # The lab's program is this branch's of 11 Nov; A1 (1a452aea) later changed lez/wire's instance
     # layout, so the driver that reads the lab's instances is built from LAB_DRIVER_REV (the commit
     # whose verify of 11 Nov passed), in a worktree beside the repository, with this record.
-    rev="${LAB_DRIVER_REV:-f17b472e}"
+    rev="${LAB_DRIVER_REV:-66f6bbbd}"
     if [ -z "${LAB_VERIFY_BIN:-}" ] && [ -z "${LAB_IN_DRIVER_SRC:-}" ] \
         && ! git -C "$REPO" diff --quiet "$rev" HEAD -- lez/wire lez/lab/driver; then
       src="$BESIDE/ferrata-lab-driver-src"

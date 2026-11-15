@@ -1,6 +1,6 @@
 # Image ids of the guests at `integration7`
 
-Every guest program of this tree, built on 12 November 2026 from commit 4abfbf5 (`scripts/reproduce-image-ids.sh build`,
+Every guest program of this tree, built on 12 November 2026 from commit 9b9bbd4 (`scripts/reproduce-image-ids.sh build`,
 on the Modal build box: RISC Zero 3.0.5, guest Rust 1.88.0 for `checkpoint/` and `bridge/`, 1.91.1 for `lez/`). Guest
 builds are **independent of the build path**: [`scripts/guest-rustc`](../scripts/guest-rustc) (cargo's
 `build.rustc-wrapper`, [`.cargo/config.toml`](../.cargo/config.toml)) remaps the tree, the upstream sources, the cargo

@@ -1,7 +1,7 @@
 # crown-rehearsal-2: the crown run on a fork again, stopped on purpose during LEZ session B and resumed (11 Nov 2026)
 
 `e2e/crown.sh start --fork crown-rehearsal-2` on our Modal workspace from branch `crown-rehearsal` (crown-cloud + crown-lez
-3f99f26 + crown-proofs 4f2f0be), the same STAND-IN set-up as crown-rehearsal-1 (anvil fork of Sepolia block
+a1bfe0d + crown-proofs c1c78d1), the same STAND-IN set-up as crown-rehearsal-1 (anvil fork of Sepolia block
 12,108,942, stand-in beacon committee on LEZ, W and the release delay passed with evm_increaseTime; everything else real).
 Started 02:59:46Z, DONE 03:33:34Z; `verify.txt`: 14 of 14 checks passed. Records here: stages.done, run.json,
 identity.json, verify.txt (the full run directory stays on the Volume ferrata-crown, runs/crown-rehearsal-2/).

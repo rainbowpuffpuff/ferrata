@@ -395,10 +395,10 @@ roughly double that peak, past the 16 GiB the minimum declares (*estimated*, not
 ### Commands (padded pass)
 
 ```sh
-# 1. On the build box, from lez/ of this worktree (commit 9bec9fe; 511d5ce after it is rustfmt only):
+# 1. On the build box, from lez/ of this worktree (commit ccfa724; 12dc47f after it is rustfmt only):
 M=<spike>/modal-build
 $M/mrun --profile <yours> --get <spike>/tmp/p4-pad/box -- \
-  'FERRATA_HEAD=9bec9fe9514c5574d297b099d9d6ba701dc31969 FERRATA_DIRTY=0 bash results/p4-minimum/box-build-pad.sh'
+  'FERRATA_HEAD=ccfa7243cf5393cb1ba3e7e9351e42b045934d09 FERRATA_DIRTY=0 bash results/p4-minimum/box-build-pad.sh'
 #    builds the three binaries, runs tests/wallet_padding.rs (dev mode), the dev-mode dry runs and settlements,
 #    strips prove_attest (158,359,704 -> 11,582,504 bytes) and prove_bridge (158,846,864 -> 11,914,096) and stages them
 #    (manifests: runs/pad-box/MANIFEST-*.json)
@@ -450,7 +450,7 @@ load; these figures are not a laptop's.
 
 ## What was proven, with what
 
-- **Sources**: branch `p4-minimum` = `integration5` at `0b135f7` plus this directory; LEZ v0.4.0-rc1
+- **Sources**: branch `p4-minimum` = `integration5` at `2854e4e` plus this directory; LEZ v0.4.0-rc1
   (`1806e87`). The merged programs, built at this worktree's path. Their image ids
   (`--image-ids`): consumer `3f357bae4537eafd9a922befade5275e7cf3453deb91c93d1698631ff9feee6d`
   (419,456 ELF bytes; the image the attestation discloses), attestation program
@@ -485,9 +485,9 @@ cargo build -p harness --locked --bin prove_attest --bin prove_bridge
 RISC0_DEV_MODE=1 target/debug/prove_attest --allow-dev-mode --tx-out attest-dry.borsh      # dry runs: the same
 RISC0_DEV_MODE=1 target/debug/prove_bridge --allow-dev-mode --claim-out claim-dry.borsh \  # commands, fake
   --burn-out burn-dry.borsh                                                                # receipts, settled
-FERRATA_HEAD=0b135f76ebd6e12787ca9ebf1f5b83c53519a69c FERRATA_DIRTY=0 \
+FERRATA_HEAD=2854e4e54e6a2f4a387524063bd5d1403a38bdf4 FERRATA_DIRTY=0 \
   scripts/stage-prove-attest.sh STAGE/attest target/debug/prove_attest
-FERRATA_HEAD=0b135f76ebd6e12787ca9ebf1f5b83c53519a69c FERRATA_DIRTY=0 \
+FERRATA_HEAD=2854e4e54e6a2f4a387524063bd5d1403a38bdf4 FERRATA_DIRTY=0 \
   scripts/stage-prove-bridge.sh STAGE/bridge target/debug/prove_bridge
 
 # 2. From the laptop (network only), in lez/results/p4-minimum, with MODAL_PROFILE=<yours>:

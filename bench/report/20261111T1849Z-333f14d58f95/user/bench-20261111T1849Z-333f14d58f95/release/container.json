@@ -119,7 +119,7 @@
     "bytes": 1030
    }
   },
-  "ferrata_head": "6b666125bd5464f34111f6ee7176c92590c9a918"
+  "ferrata_head": "053eecd5a35061efec24c4a8a57855eca73e038d"
  },
  "input_hashes_equal_manifest": true,
  "r0vm_version": "risc0-r0vm 3.0.5",

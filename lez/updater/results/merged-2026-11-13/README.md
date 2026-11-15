@@ -4,7 +4,7 @@ The updater's tests, the A3 gate's eight runs, the harness binary as a process, 
 re-check of the live Sepolia records, on the tree that merges `updater-live` (the sequencer backend, `headers`
 sources, `layout`, `finish_own_jobs`) into the daemon refactored for the Logos module, with the update planning in
 `lez/advance`. Modal build box (gVisor, 2 CPUs reported, up to 16 cores, 64 GiB), commit
-`6dcf6af`, 13 Nov 2026 03:57–04:52 UTC, `RISC0_DEV_MODE=1` (no proof is made by any of it). The script:
+`b099490`, 13 Nov 2026 03:57–04:52 UTC, `RISC0_DEV_MODE=1` (no proof is made by any of it). The script:
 `spike/tmp/merge-updater/box/run1.sh` (beside the repository); the modules' run of the same script is in
 [`../../../../modules/results/merged-updater-2026-11-13/`](../../../../modules/results/merged-updater-2026-11-13/).
 

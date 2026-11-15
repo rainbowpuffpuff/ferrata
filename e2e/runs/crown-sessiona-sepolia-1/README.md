@@ -10,7 +10,7 @@ outside that period since 21 Oct 03:26 UTC. The fix is a fresh checkpoint:
 `crown-driver` from the bundle's fixture.
 
 What this run is: `e2e/crown.sh start --fork --lez-chain sepolia --halt-after identity crown-sessiona-sepolia-1` on the
-our Modal workspace, commit 5975127: the live run's own LEZ session (`lez/crown/session.sh a` through
+our Modal workspace, commit ab16e56: the live run's own LEZ session (`lez/crown/session.sh a` through
 `e2e/crown/cloud`, a fresh LEZ v0.4.0-rc1 devnet on a 16-core container, the sequencer on its real clock) on the
 **Sepolia chain**, with the LEZ bundle `setup` uploaded at 10:56Z (138,872,352 bytes, sha256 `0013bab125141c9d…`:
 `lez/crown/build.sh repack` of `crown-live-2`'s bundle `4dd813e2…` with crown-driver `44024e7e…` and the new fixture;

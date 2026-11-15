@@ -15,7 +15,7 @@ transaction went to the zone's own sequencer.
 
 | part | what |
 |---|---|
-| tree | commit `2d86798`; the module's `version()` reports `staged: 2d86798`, `ledgers: ["harness", "sequencer"]`, the attestation program `0x816d1fef…03df` declared and computed from its bytes, the circuits `v0.5.7` and rapidsnark `v0.0.8` (PIC) libraries it embeds |
+| tree | commit `e613fb4`; the module's `version()` reports `staged: e613fb4`, `ledgers: ["harness", "sequencer"]`, the attestation program `0x816d1fef…03df` declared and computed from its bytes, the circuits `v0.5.7` and rapidsnark `v0.0.8` (PIC) libraries it embeds |
 | build and checks | Modal build box (app `ferrata-build`): `modules/scripts/check.sh` with `MODULES=ferrata_updater_module` ([`check/`](check/summary.md)) |
 | packages | `nix build .#lgx-portable`: `logos-ferrata_updater_module-module-lib.lgx`, 61,016,822 bytes, SHA-256 `962304cc…29c2` (16 MB before, with the harness alone); the portable `logosctl` (`logos-logoscore-cli#ctl-bundle-dir` at `66d098d`), 353 MB, packed as `logos-portable.tar.zst` (108,744,582 bytes, SHA-256 `80f57e19…b45a`), with the system loader `/lib64/ld-linux-x86-64.so.2` and no reference into `/nix` |
 | zone | the crown run's session machinery on Modal: our Modal workspace, app `ferrata-crown`, function `updater_session` (2 cores requested, up to 8; 8 GiB), the crown bundle `0013bab1…` (LEZ v0.4.0-rc1 `sequencer_service`, a Logos Blockchain node `d480efc6`, LEZ's local configuration with 10 s blocks, one validator, dev-mode leader proofs); session A deployed the final programs and initialised the Sepolia instance `0xa5fb2591…b2b5` from `crates/ferrata-spectests/fixtures/sepolia-2026-11-12` (checkpoint `0x3b901f5e…ccf7c`, slot 11,562,112, period 1411) and that period's update |
@@ -94,7 +94,7 @@ e2e/crown.sh updater-status crown-NAME; e2e/crown.sh updater-fetch crown-NAME FE
 
 ## The checks on the build box ([`check/`](check/summary.md))
 
-`check.sh` with the updater module, dev and portable, `E2E=1`, at `2d86798`: **step failures 0, check failures 0**.
+`check.sh` with the updater module, dev and portable, `E2E=1`, at `e613fb4`: **step failures 0, check failures 0**.
 `updater-e2e.sh` passed 8 of 8 natively and 10 of 10 through each Logos Core. The in-process chain, as in row 97: the
 lab's records from two sources each; mainnet to slot 15,631,808 (`530599ec…2328`) and Sepolia to 11,556,000
 (`d31b7d34…f3cc`); 187 transactions applied and none refused; 117 s in each Core. The check that used to see

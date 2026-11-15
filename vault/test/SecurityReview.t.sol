@@ -7,7 +7,7 @@ import {IRiscZeroVerifier} from "../src/interfaces/IRiscZeroVerifier.sol";
 import {VaultTestBase} from "./utils/VaultTestBase.sol";
 
 /// @notice Regressions for the vault findings of the security review of 11 November 2026
-///         (notes/reviews/security/review-2026-11-11.md, integration4 at 1bb20d5). Each test fails on that vault and
+///         (notes/reviews/security/review-2026-11-11.md, integration4 at bc4a2a6). Each test fails on that vault and
 ///         passes on the fixed one; they use only the interface both share, so the same file runs against either.
 contract SecurityReviewTest is VaultTestBase {
     bytes32 internal constant ROOT = keccak256("security review root");
@@ -36,7 +36,7 @@ contract SecurityReviewTest is VaultTestBase {
     ///         deployment), not at deployment.
     function test_M1_keylessRetirementCountsFromTheFirstFinalisableMoment() public {
         uint256 t0 = block.timestamp;
-        vm.warp(t0 + KEYLESS); // the opening at 1bb20d5
+        vm.warp(t0 + KEYLESS); // the opening at bc4a2a6
         _retireRefused();
         vm.warp(t0 + MIN_WAIT + KEYLESS - 1);
         _retireRefused();

@@ -1,6 +1,6 @@
 # Independent review of the vault and the guests against the specifications (docs/REVIEW-vault.md, 52 rows; docs/REVIEW-guests.md, 55 rows)
 
-Reviewer: a headless agent (Claude Code, Opus 5.5), 12 November 2026, 19:50–20:50 CET. Code: `bf430cc` (every
+Reviewer: a headless agent (Claude Code, Opus 5.5), 12 November 2026, 19:50–20:50 CET. Code: `89e6d6d` (every
 `file:line` below is at that commit). Review branch: `review-vault` in `spike/ferrata-wt-review-vault` (the two
 tables, three vault tests, three checkpoint-core tests, two mutant runners, a docs-only suggested fix; tip in §5).
 The branch changes no source file of `vault/src`, `bridge/guests`, `bridge/crates`, `checkpoint/crates`,
@@ -25,9 +25,9 @@ What ran (Modal build box of the worktree, through `mrun`; measured):
 - `cd vault && forge test` with the review's test file: **454 passed, 0 failed, 1 skipped in 44 suites** (26.8 s;
   without the review's file: 451 passed, 1 skipped, 43 suites, of which 61 tests with real proofs in 15 suites under
   `test/real/`). Log `spike/tmp/review-vault/mut/full-suite.log`.
-- `vault/test/ReviewVault.t.sol`: 3 new tests, all pass on `bf430cc`'s vault (they pin what the code does where
+- `vault/test/ReviewVault.t.sol`: 3 new tests, all pass on `89e6d6d`'s vault (they pin what the code does where
   nothing pinned it or where a comment says otherwise).
-- `checkpoint/crates/checkpoint-core/tests/review_guests.rs`: 3 new tests, all pass on `bf430cc`'s checkpoint core
+- `checkpoint/crates/checkpoint-core/tests/review_guests.rs`: 3 new tests, all pass on `89e6d6d`'s checkpoint core
   (`cargo test -p checkpoint-core --locked --test review_guests`).
 - 25 vault mutants VR01–VR25 (`vault/tools/review_mutants.py`, `mutation_spotcheck.py`'s runner: optimizer off,
   every suite but the invariant campaign, then the campaign for a survivor, here at 64 runs instead of 256): first
@@ -198,7 +198,7 @@ any input that reaches it on the shipped path.
   tests the program against a synthetic slot 37 (`bridge_roles.rs:105-108`), not against the vault.
 - **Test.** VR25 declares `retired` before `freezeAuthority`: it survived every suite and the invariant campaign
   (§3.1). New tests `ReviewVault::test_review_slot37_holdsTheFreezeAuthorityAndTheRetiredByteTheLezSideReads` and
-  `test_review_slot37_keylessRetirementSetsTheSameByte` pass on `bf430cc` and kill VR25 (both fail on it; `spike/tmp/review-vault/run3.log`).
+  `test_review_slot37_keylessRetirementSetsTheSameByte` pass on `89e6d6d` and kill VR25 (both fail on it; `spike/tmp/review-vault/run3.log`).
 - **Impact.** None on v5 or on the live round trip. A later vault whose layout moves `retired` breaks the keyless
   `Sunset` either way. With a zero at byte 11 it never opens: if the freeze key is also lost, LEZ can never be
   sunset, so no sunset checkpoint, so deposits LEZ never imported are never refundable (the case D13's keyless path
@@ -206,7 +206,7 @@ any input that reaches it on the shipped path.
   LEZ configuration while the vault runs, ending its imports for good (no loss: the vault stops deposits at the
   sunset checkpoint (L-3) and refunds what LEZ never imported, but a shutdown nobody authorised).
 - **Fix suggested.** Add slot 37 (`freezeAuthority`, and `retired` at byte offset 20, word byte 11) to the vault's
-  storage-slot contract (README table, done on the branch as a suggested docs-only fix, `1dd75c2`; the comment at
+  storage-slot contract (README table, done on the branch as a suggested docs-only fix, `bbdfe41`; the comment at
   FV:274-278 waits for the next vault, since a comment changes the vault's metadata hash), and keep the two tests.
 
 ### 2.2 Gap (closed on the branch), guest row 17: the refusal of a repeated key had no test
@@ -222,7 +222,7 @@ any input that reaches it on the shipped path.
   shows what the refusal does not cover: the parent's own set is checked only when no rotation replaces it
   (CC/rule.rs:246-258, so that a genesis channel may start below the floors), so a parent that repeats a key lets
   that key give two of the `t(4) = 3` signatures of the rotation that replaces it, and the checkpoint is accepted.
-  All three pass on `bf430cc`'s code.
+  All three pass on `89e6d6d`'s code.
 - **Impact.** None on the live programs: every set a checkpoint reaches is checked, so only a genesis state can
   repeat a key, and the genesis state is a trust root (I-1). Had the refusal been dropped in a later program,
   nothing would have caught it.
@@ -244,7 +244,7 @@ any input that reaches it on the shipped path.
   at least `deltaFloor` apart (each needs a candidate submitted after the previous one and a full wait). With a
   program that could make no-ops, the bound roughly doubles: about 2,000 marks at the constructor's limit, some
   10 M gas by the per-mark estimate of FV:233 (estimated, not measured), still under a block.
-- **Fix suggested.** README:431 on the branch (`1dd75c2`, docs only); FR:339-340 and FV:232-234 with the next vault
+- **Fix suggested.** README:431 on the branch (`bbdfe41`, docs only); FR:339-340 and FV:232-234 with the next vault
   (a comment changes the metadata hash, so the bytecode). The wording, in all three: "every checkpoint of the pinned programs
   changes the state (`S` commits the tip), and state changes are at least `deltaFloor` apart; a no-op checkpoint,
   which no pinned program makes, could double the count".
@@ -257,7 +257,7 @@ any input that reaches it on the shipped path.
 - **Test.** `Refund::test_refund_noSecondAllowsBothRefundAndRevocation`,
   `ReleaseDelay::test_releaseDelay_equalToRevokeWindowOpensAfterTheLastRevocableSecond` (V91, V152).
 - **Impact.** None; a reader of the design note would believe a one-second overlap exists.
-- **Fix suggested.** On the branch (`1dd75c2`): "The vault opens them one second after the last revocable second
+- **Fix suggested.** On the branch (`bbdfe41`): "The vault opens them one second after the last revocable second
   (since v4; §19)."
 
 ### 2.5 DOC MISMATCH, row 14: README's epoch formula predates the L-1 fix
@@ -266,7 +266,7 @@ any input that reaches it on the shipped path.
   `revocationEpoch + _stateChanges` (FV:1340-1342), which leaves out no-op checkpoints, so that they do not stale
   pending candidates (the L-1 fix).
 - **Test.** `Checkpoint::test_finalize_aNoOpCheckpointDoesNotInvalidatePendingCandidates`; V46, V47.
-- **Fix suggested.** On the branch (`1dd75c2`): "`epoch = revocationEpoch +` the number of finalisations that moved
+- **Fix suggested.** On the branch (`bbdfe41`): "`epoch = revocationEpoch +` the number of finalisations that moved
   `finalState`".
 
 ### 2.6 DOC MISMATCH, guest row 10: the rule (A) guest's comment gives SPEC-v2's journal size
@@ -283,7 +283,7 @@ any input that reaches it on the shipped path.
 ### 2.7 DOC MISMATCH: EVIDENCE row 12's test counts are older than the tree
 
 - **What.** Row 12: "433 tests passed, 1 skipped … in 38 suites (… 43 tests with real proofs in 10 suites …)".
-  `forge test` at `bf430cc`: 451 passed, 1 skipped, 43 suites; 61 tests with real proofs in 15 suites under
+  `forge test` at `89e6d6d`: 451 passed, 1 skipped, 43 suites; 61 tests with real proofs in 15 suites under
   `test/real/` (measured, log above). `vault/README.md` already says 451. The coverage and mutant figures of the row
   were not re-measured here.
 - **Fix suggested.** The row text in `spike/tmp/review-vault/REPORT.md` (the owner edits EVIDENCE).
@@ -430,10 +430,10 @@ vault_consumer --test holdings`.
 
 ## 5. Branch
 
-`review-vault` (from `bf430cc`), tip `46cc451`. Commits: `5f1146d` (docs/REVIEW-vault.md), `fa8cf5c`
-(docs/REVIEW-guests.md), `eb59316` (the vault tests and the two mutant runners), `ec6f392` (the checkpoint core's review tests),
-`77ac6b8` (the tables name the new tests), `1dd75c2` ("suggested fix, not merged": `vault/README.md`'s bound, epoch
-and slot 37, `docs/design/bridge.md` §16; docs only), `46cc451` (README and `docs/how-it-was-built.md` point at the
+`review-vault` (from `89e6d6d`), tip `0d6eb75`. Commits: `a2e42bb` (docs/REVIEW-vault.md), `321620d`
+(docs/REVIEW-guests.md), `4921c9c` (the vault tests and the two mutant runners), `4c4e068` (the checkpoint core's review tests),
+`d8620bb` (the tables name the new tests), `bbdfe41` ("suggested fix, not merged": `vault/README.md`'s bound, epoch
+and slot 37, `docs/design/bridge.md` §16; docs only), `0d6eb75` (README and `docs/how-it-was-built.md` point at the
 two tables, "drafted, not yet signed").
-`git diff bf430cc -- vault/src bridge/guests bridge/crates checkpoint/crates checkpoint/guests lez/guests lez/wire
+`git diff 89e6d6d -- vault/src bridge/guests bridge/crates checkpoint/crates checkpoint/guests lez/guests lez/wire
 lez/bridge-wire lez/holdings-wire` is empty. Not pushed.
