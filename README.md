@@ -14,9 +14,10 @@ and moves ETH and ERC-20 tokens between Ethereum and LEZ without linking the two
   links a deposit to its mint or a burn to its release, beyond token, denomination, time and the residual
   correlations the design lists.
 
-This repository is one codebase, from a finalized Ethereum header to a wrapped token and back, written as
-the evidence for a proposal to [Logos RFP-022](https://github.com/logos-co/rfp) (a privacy-preserving wrapped
-ERC-20 and ETH bridge for LEZ) that also covers RFP-021 (trustless Ethereum state attestation for LEZ).
+Both parts live in this one repository and are tested against each other along the whole path: from a
+finalized Ethereum header to a wrapped token on LEZ, and back to Ethereum. It was written as the evidence for a
+proposal to [Logos RFP-022](https://github.com/logos-co/rfp) (a privacy-preserving wrapped ERC-20 and ETH bridge
+for LEZ) that also covers RFP-021 (trustless Ethereum state attestation for LEZ).
 
 What is here are prototypes and their measurements. **Not audited. Not for production.**
 
