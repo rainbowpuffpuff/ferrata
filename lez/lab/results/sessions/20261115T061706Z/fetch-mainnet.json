@@ -1,0 +1,46 @@
+{
+ "chain": "mainnet",
+ "lc_endpoint": "https://lodestar-mainnet.chainsafe.io",
+ "second_endpoint": "https://ethereum-beacon-api.publicnode.com",
+ "user_agent": "ferrata-lab-fetch",
+ "started": 1794723440.7871046,
+ "instance_finalized_slot": 15657600,
+ "finality_attested_slot": 15658273,
+ "finality_finalized_slot": 15658208,
+ "head_period": 1911,
+ "second_provider_finalized_root": "0xf18662e451eb15cc58aaed537dbf944328e1c88d3b463455fff5e401ecfa7004",
+ "updates": [
+  {
+   "period": 1911,
+   "fork_digest": "8c9f62fe",
+   "bytes": 26892
+  }
+ ],
+ "finished": 1794723441.162962,
+ "requests": [
+  {
+   "url": "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/light_client/finality_update",
+   "status": 200,
+   "bytes": 2104,
+   "sha256": "b84c159cd30c21c4a7b8c03e44a3c8f55fcbbf227357447c4dc0b727844b71ab",
+   "version": "fulu",
+   "at": 1794723440.8
+  },
+  {
+   "url": "https://ethereum-beacon-api.publicnode.com/eth/v1/beacon/headers/15658208",
+   "status": 200,
+   "bytes": 672,
+   "sha256": "3c5d0a59533d120053f8b256fc63eace9283182f3e347ca5287375d964325425",
+   "version": null,
+   "at": 1794723440.9
+  },
+  {
+   "url": "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/light_client/updates?start_period=1911&count=1",
+   "status": 200,
+   "bytes": 26904,
+   "sha256": "3f6b01e9a435db26c99f5a7286513a33dc9fb2c388251c2076f65bd015325fd4",
+   "version": "fulu",
+   "at": 1794723441.0
+  }
+ ]
+}
