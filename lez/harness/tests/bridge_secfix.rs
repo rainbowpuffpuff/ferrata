@@ -1,4 +1,4 @@
-//! The attack paths of the security review of 11 November 2026 (`notes/reviews/security`), each
+//! The attack paths of the security review of 11 November 2026 (`docs/reviews/security`), each
 //! run against the bridge program through LEZ's own state machine (RISC Zero dev mode).
 //!
 //! **C-1.** A claim mints to three accounts its sender chooses or names: the public destination

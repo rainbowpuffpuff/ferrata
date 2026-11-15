@@ -97,7 +97,7 @@ the 352-byte journal; an invalid witness panics. Image id
 
 ### Since 11 November 2026: D13's `NOut` and D12's MAC (security review M-3, I-4)
 
-The review of `bc4a2a6` (`notes/reviews/security/review-2026-11-11.md`) found the guest still committing
+The review of `bc4a2a6` (`docs/reviews/security/review-2026-11-11.md`) found the guest still committing
 SPEC-v2's `NOut = H("ferrata/nf-out/v1" ‖ sOut ‖ burnId)`, which changes with the burn's index: a burn
 released against a checkpoint that is later revoked, and collected at another index on the canonical
 branch, could be released again (M-3). The core now gives D13's `NOut = H("ferrata/nf-out/v2" ‖ sOut)`

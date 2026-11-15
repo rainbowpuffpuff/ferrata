@@ -1,4 +1,4 @@
-//! The outbound findings of the security review of 11 November 2026 (`notes/reviews/security`).
+//! The outbound findings of the security review of 11 November 2026 (`docs/reviews/security`).
 //!
 //! **M-3.** A checkpoint finalised over a LEZ branch that later loses can be revoked after releases
 //! were made against it; used nullifiers stay used. On the canonical branch the same burn lands at

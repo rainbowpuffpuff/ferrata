@@ -607,7 +607,7 @@ every figure in §1–§5 and §8a of `f11b1aba…58eb`: none of them has this c
 *History: the figures below are this branch's own run, before the merge; the merged program's (both fixes)
 are in `results/` and in §1's last column, and supersede them.*
 
-The review `notes/reviews/security/review-2026-11-11.md` (of integration4 at `bc4a2a6`) found, on this
+The review `docs/reviews/security/review-2026-11-11.md` (of integration4 at `bc4a2a6`) found, on this
 side: **C-1** a claim could write a holder state at any bridge PDA not written yet (as its public
 destination, its relayer, or its configuration's fee recipient), blocking `Init`, `Register` or an import
 for good, destroying a pending claim (its nullifier) or blocking a burn (its record); **H-1** `ImportRoot`

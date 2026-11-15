@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # The four Halmos properties that did not finish in 900 s in the run of 11 November
-# (notes/reviews/security/tools-2026-11-11.md §3.1), re-run with a longer budget: one Halmos process per
+# (docs/reviews/security/tools-2026-11-11.md §3.1), re-run with a longer budget: one Halmos process per
 # property and storage layout, in parallel, each bounded by HALMOS_LONG_TIMEOUT seconds (default 4800).
 #
 # Usage: scripts/halmos-long.sh install     Halmos 0.3.3 alone (uv, Python 3.12) into $SECTOOLS_DIR
@@ -11,7 +11,7 @@
 set -uo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 export SECTOOLS_DIR=${SECTOOLS_DIR:-$HOME/.cache/ferrata-sectools}
-BASE=${SECTOOLS_OUT:-$ROOT/notes/reviews/security/tools-out}/halmos-long
+BASE=${SECTOOLS_OUT:-$ROOT/docs/reviews/security/tools-out}/halmos-long
 T=${HALMOS_LONG_TIMEOUT:-4800}
 # Unbuffered: Halmos prints its results only at the end, and `timeout` stops Python without a flush, so a buffered
 # run that hits its bound leaves nothing; unbuffered, everything printed so far stays in the log.

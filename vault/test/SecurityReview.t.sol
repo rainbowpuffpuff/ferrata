@@ -7,7 +7,7 @@ import {IRiscZeroVerifier} from "../src/interfaces/IRiscZeroVerifier.sol";
 import {VaultTestBase} from "./utils/VaultTestBase.sol";
 
 /// @notice Regressions for the vault findings of the security review of 11 November 2026
-///         (notes/reviews/security/review-2026-11-11.md, integration4 at bc4a2a6). Each test fails on that vault and
+///         (docs/reviews/security/review-2026-11-11.md, integration4 at bc4a2a6). Each test fails on that vault and
 ///         passes on the fixed one; they use only the interface both share, so the same file runs against either.
 contract SecurityReviewTest is VaultTestBase {
     bytes32 internal constant ROOT = keccak256("security review root");

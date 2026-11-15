@@ -8,15 +8,15 @@
 #   steps: install versions slither aderyn halmos halmos-groups audit deny all
 #   (halmos runs every check in one process; halmos-groups is the parallel, time-bounded run the note records)
 #   SECTOOLS_DIR  where the tools are installed (default ~/.cache/ferrata-sectools)
-#   SECTOOLS_OUT  where the reports are written (default notes/reviews/security/tools-out)
+#   SECTOOLS_OUT  where the reports are written (default docs/reviews/security/tools-out)
 # Needs: Foundry (forge, with solc 0.8.26 available offline, as vault/foundry.toml pins), Rust/cargo, curl,
 # the vault's Foundry libraries in vault/lib (vault/README.md lists the pins). The triage of every finding is
-# in notes/reviews/security/tools-2026-11-11.md.
+# in docs/reviews/security/tools-2026-11-11.md.
 set -uo pipefail
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 TOOLS=${SECTOOLS_DIR:-$HOME/.cache/ferrata-sectools}
-OUT=${SECTOOLS_OUT:-$ROOT/notes/reviews/security/tools-out}
+OUT=${SECTOOLS_OUT:-$ROOT/docs/reviews/security/tools-out}
 export PATH="$TOOLS/bin:$TOOLS/venv/bin:$PATH"
 
 # Versions of the 2026-11-11 run (install pins them; set one to empty for the latest).

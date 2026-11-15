@@ -471,7 +471,7 @@ New in v4:
   releases pay less the relay, burn and checkpoint fees, the checkpoint fee goes to the candidate's prover (review
   M-2), schedules take effect seven days after announcement. As D13 specifies, a release pays the outbound fees in
   force at the release, so a fee announced after a burn applies to it (review L-2, not fixed:
-  `../notes/reviews/security/fixes-2026-11-11.md`).
+  `../docs/reviews/security/fixes-2026-11-11.md`).
 
 ## Known limits (SPEC-v3 D8, kept) and residual risks
 

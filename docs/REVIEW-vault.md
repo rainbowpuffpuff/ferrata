@@ -11,7 +11,7 @@ Specifications: `v2 §n` is [bridge-spec-v2.md](design/spec/bridge-spec-v2.md); 
 [the LEZ program's plan](../lez/BRIDGE.md), which defines the storage the LEZ side attests. "README" is
 [`vault/README.md`](../vault/README.md), whose "Where I interpreted or departed from the spec" and "Known limits"
 list the deviations at length; review ids (M-2, L-1, I-7, …) are those of
-[the security review of 11 November](../notes/reviews/security/review-2026-11-11.md).
+[the security review of 11 November](reviews/security/review-2026-11-11.md).
 
 Pinned by: test names are in `vault/test/<Suite>.t.sol` (suite named where it is not obvious); `Vn` is mutant `n` of
 `MUTANTS` in [`vault/tools/mutation_spotcheck.py`](../vault/tools/mutation_spotcheck.py) (0–253, all killed:

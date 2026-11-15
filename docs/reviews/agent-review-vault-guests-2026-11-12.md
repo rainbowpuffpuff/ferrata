@@ -13,7 +13,7 @@ Specifications read: `docs/design/spec/bridge-spec-v2.md` (`v2 §n`), `bridge-sp
 `docs/design/bridge.md` §§10, 12.3, 13, 14, 16, 19, `docs/design/attestation.md` §§3–7, `lez/BRIDGE.md` §§2, 4, 5,
 6, `checkpoint/README.md` ("What the program checks", "Choices"), `vault/README.md` ("Where I interpreted or
 departed from the spec", "Known limits", "Storage-slot contract"), and the security review of 11 November with its
-fixes (`notes/reviews/security/`), whose ids (C-1, H-1, M-1 … I-10, LD-2) are used here.
+fixes (`docs/reviews/security/`), whose ids (C-1, H-1, M-1 … I-10, LD-2) are used here.
 
 Abbreviations: `FV` = `vault/src/FerrataVault.sol`, `FR` = `vault/src/FerrataRegistry.sol`; `BC/` =
 `bridge/crates/ferrata-bridge-core/src/`, `CC/` = `checkpoint/crates/checkpoint-core/src/`, `AT` =

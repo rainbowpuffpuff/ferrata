@@ -161,7 +161,7 @@ endpoint priced them then; 24 to 543 wei for the eight others).
 
 ## The security fixes of 11 November 2026 (branch `secfix-vault`)
 
-The fixes of the vault findings of `notes/reviews/security/review-2026-11-11.md` change these rows; everything else
+The fixes of the vault findings of `docs/reviews/security/review-2026-11-11.md` change these rows; everything else
 in this file is unchanged (all rows below were re-measured; the release rows, the hot path, did not move). Measured
 on the build box with Foundry 1.3.6, `forge test --isolate --match-contract 'GasScenarios|ReturnLegGas' -vv`, on
 `integration4` (bc4a2a6) and on this branch, in one run (logs kept outside the repository):

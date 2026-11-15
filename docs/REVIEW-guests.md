@@ -13,7 +13,7 @@ Specifications: `v2 §n` is [bridge-spec-v2.md](design/spec/bridge-spec-v2.md); 
 `bridge.md §n` is [the bridge design note](design/bridge.md); "checkpoint README" is
 [`checkpoint/README.md`](../checkpoint/README.md), "What the program checks" and its table "Choices this
 implementation makes", the checkpoint design as built. Review ids (C-1, H-1, M-3, I-10, …) are those of
-[the security review of 11 November](../notes/reviews/security/review-2026-11-11.md).
+[the security review of 11 November](reviews/security/review-2026-11-11.md).
 
 Files: `bridge/crates/ferrata-bridge-core/src/` is `BC/`; `checkpoint/crates/checkpoint-core/src/` is `CC/`;
 `checkpoint/crates/attestor-core/src/lib.rs` is `AT`; `lez/guests/program/src/main.rs` is `P`,

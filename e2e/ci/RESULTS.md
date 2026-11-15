@@ -115,3 +115,6 @@ treats a refused read of the default directory as no scenario (451 passed, 1 ski
 The workflow itself on GitHub (no push from this branch): the job steps were run on the box, one by one, by the
 same scripts, after the same toolchain versions were installed or present. `actions/checkout`, the caches and
 `dtolnay/rust-toolchain`/`foundry-toolchain` were not exercised; the workflow file parses as YAML (five jobs: test, witness-independence, roundtrip, vault, links).
+
+That was the state of 12 November. On 15 November 2026, with the repository public, the workflow ran on GitHub at
+`main` (commit `3e002fd1`, [run 43730879603](https://github.com/rainbowpuffpuff/ferrata/actions/runs/43730879603)): all seven jobs passed (the five above, `idl` and `admin`), `roundtrip` in 51 minutes.

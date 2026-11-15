@@ -4,7 +4,9 @@
 Usage: scripts/check-links.py [PATH ...]
 
 With no arguments it checks README.md and every Markdown file under docs/. A PATH may be a file or
-a directory (searched for *.md). Links with a scheme (https:, mailto:, ...) and in-page anchors
+a directory (searched for *.md). Files in a directory named tools-out are left out when a directory is
+searched: they are reports a tool wrote, kept as recorded, and their links are the tool's own (Slither's
+checklist links the sources relative to the directory it analysed). Links with a scheme (https:, mailto:, ...) and in-page anchors
 (#...) are skipped; for the rest the fragment and query are dropped and the path is resolved
 against the linking file's directory. Inline links, images, reference definitions and HTML
 href/src attributes are checked; code spans and fenced code blocks are not. Inside a git work tree
@@ -88,14 +90,19 @@ def broken(md, target, tracked):
     return None if resolved.exists() else "missing"
 
 
+def searched(directory):
+    """The Markdown files under a directory, without the recorded tool reports (tools-out/)."""
+    return sorted(f for f in directory.rglob("*.md") if "tools-out" not in f.relative_to(directory).parts)
+
+
 def markdown_files(args):
     if not args:
-        files = [ROOT / "README.md"] + sorted((ROOT / "docs").rglob("*.md"))
+        files = [ROOT / "README.md"] + searched(ROOT / "docs")
         return [f for f in files if f.is_file()]
     files = []
     for a in args:
         p = pathlib.Path(a).resolve()
-        files.extend(sorted(p.rglob("*.md")) if p.is_dir() else [p])
+        files.extend(searched(p) if p.is_dir() else [p])
     return files
 
 

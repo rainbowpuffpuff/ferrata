@@ -45,10 +45,10 @@ repository has been audited; the audit is planned for the code the proposal woul
   program, the checkpoint and release guests, the attestation program and the core's gates it calls) at
   `integration4` (`bc4a2a6`) by Claude Code (`claude-opus-5-5`), headless and read-only, in a context
   separate from the agents that wrote the code
-  ([`notes/reviews/security/review-2026-11-11.md`](../notes/reviews/security/review-2026-11-11.md)). It
+  ([`docs/reviews/security/review-2026-11-11.md`](reviews/security/review-2026-11-11.md)). It
   found 1 critical, 1 high, 3 medium, 4 low and 10 informational issues. Ten are fixed, each with a test
   that fails on `bc4a2a6` and passes after the fix; nine are not fixed, each with its reason
-  ([`fixes-2026-11-11.md`](../notes/reviews/security/fixes-2026-11-11.md); EVIDENCE row 30).
+  ([`fixes-2026-11-11.md`](reviews/security/fixes-2026-11-11.md); EVIDENCE row 30).
 - **The review of the core against the specifications** (branch `review-core`, merged on 11 November): an
   agent in a separate context read each function against its specification section and planted 24 mutants
   (R01–R13, and S01–S11 in `steps.rs`); 18 were killed by the suite, the other 6 by four new tests in
@@ -56,7 +56,7 @@ repository has been audited; the audit is planned for the code the proposal woul
   review independent, it means a separate agent context, not a second person.
 - **Security tooling and fuzzing**: Slither, Aderyn, Halmos, cargo-audit, cargo-deny and the fuzz targets
   were run, and their findings triaged, on the agents' branches (EVIDENCE rows 35, 36, 40 and 78;
-  [`tools-2026-11-11.md`](../notes/reviews/security/tools-2026-11-11.md)). They are tooling, not an audit.
+  [`tools-2026-11-11.md`](reviews/security/tools-2026-11-11.md)). They are tooling, not an audit.
 
 ## The decision log
 

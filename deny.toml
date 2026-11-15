@@ -1,5 +1,5 @@
 # cargo-deny policy for Ferrata's Rust workspaces (scripts/security-tools.sh deny; triage in
-# notes/reviews/security/tools-2026-11-11.md). Checks: advisories, licenses, sources.
+# docs/reviews/security/tools-2026-11-11.md). Checks: advisories, licenses, sources.
 
 [graph]
 all-features = true
@@ -35,7 +35,7 @@ allow = [
 ]
 
 # MPL-2.0 is file-level copyleft: using these crates unmodified as dependencies keeps the workspace's licence
-# (triage: notes/reviews/security/tools-2026-11-11.md). Allowed for these two crates only.
+# (triage: docs/reviews/security/tools-2026-11-11.md). Allowed for these two crates only.
 exceptions = [
     { allow = ["MPL-2.0"], crate = "attohttpc" },
     { allow = ["MPL-2.0"], crate = "option-ext" },

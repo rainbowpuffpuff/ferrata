@@ -4,9 +4,9 @@ pragma solidity ^0.8.26;
 import {FerrataVault} from "../../src/FerrataVault.sol";
 import {VaultHalmos} from "./VaultHalmos.t.sol";
 
-/// Concrete replays under `forge test` of what Halmos reported (notes/reviews/security/tools-2026-11-11.md §3).
+/// Concrete replays under `forge test` of what Halmos reported (docs/reviews/security/tools-2026-11-11.md §3).
 /// Kept outside the suite so its count stays as docs/EVIDENCE.md row 12 gives it; to run:
-///   cp notes/reviews/security/replay/HalmosReplay.t.sol vault/test/halmos/ && cd vault &&
+///   cp docs/reviews/security/replay/HalmosReplay.t.sol vault/test/halmos/ && cd vault &&
 ///   forge test --match-contract HalmosReplay -vv
 /// test_replay_*: the counterexamples to check_after_stop_only_owed_leaves under the generic storage layout (an
 /// admin's registerToken after the stop): the call succeeds and no balance, escrow, owed amount or checkpoint changes.

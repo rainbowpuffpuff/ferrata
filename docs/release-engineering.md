@@ -221,18 +221,18 @@ differ, which the plan output makes visible before anything is sent.
 ## 5. The four Halmos properties, with a longer budget
 
 Four properties of `vault/test/halmos/VaultHalmos.t.sol` did not finish in the 900 s bound of the run of 11 November
-(`notes/reviews/security/tools-2026-11-11.md` §3.1): `check_after_stop_only_owed_leaves` (default layout; the
+(`docs/reviews/security/tools-2026-11-11.md` §3.1): `check_after_stop_only_owed_leaves` (default layout; the
 generic layout gave 63 counterexamples, all `registerToken` calls that a concrete replay shows harmless),
 `check_no_role_call_moves_funds`, `check_no_role_call_moves_funds_after_retire` (neither layout finished) and
 `check_role_entry_points_move_no_funds`. `scripts/halmos-long.sh` runs them again with the same tool, pins, local
 fixes and bounds (`scripts/security-tools.sh halmos`: Halmos 0.3.3, z3 4.12.6, arrays of length 1, byte strings of
 4 bytes, loops unrolled twice), one process per property and storage layout (six), in parallel on the build box,
 each bounded by `HALMOS_LONG_TIMEOUT` (4,800 s here, 5.3 times the earlier bound). Logs:
-`notes/reviews/security/tools-out/halmos-long/<run>/halmos.log`.
+`docs/reviews/security/tools-out/halmos-long/<run>/halmos.log`.
 
 ### Results of 11 November 2026
 
-**`check_after_stop_only_owed_leaves`, default layout** (`notes/reviews/security/tools-out/halmos-long-results/`):
+**`check_after_stop_only_owed_leaves`, default layout** (`docs/reviews/security/tools-out/halmos-long-results/`):
 with the longer bound the run **finishes**, in 968.3 s, but as **[ERROR]**, not PASS: 2,837 paths explored, **no
 counterexample**, and 140 paths stopped by Halmos's `NotConcreteError: symbolic storage base slot` at
 `sha256("ferrata/vault/registry/v1" ‖ token)`, the registry's namespaced storage slot, for the four registered tokens
@@ -240,13 +240,13 @@ counterexample**, and 140 paths stopped by Halmos's `NotConcreteError: symbolic 
 sha256; the local fix of `scripts/security-tools.sh` (concrete input hashed for real) does not reach this input, and
 a second fix that simplifies the input first gave the same outcome (2,703 paths, 973.6 s, the same 140 errors;
 reverted). Under the generic layout the earlier run had found 63 counterexamples, every one a `registerToken` call
-that a concrete replay shows harmless (`notes/reviews/security/tools-2026-11-11.md` §3.1). So this property is now
+that a concrete replay shows harmless (`docs/reviews/security/tools-2026-11-11.md` §3.1). So this property is now
 **explored to the end of its paths on the default layout without a counterexample, except for the 140 paths Halmos
 cannot model**: not a proof. (A first run of the same check in the six-process batch also finished, in 1,455 s, but
 its log was lost: see the trap below.)
 
 **The role properties, 4,800 s each, six processes in parallel on the build box** (logs rescued from the deleted
-files, see the trap below; `notes/reviews/security/tools-out/halmos-long-results/<run>/halmos.log`):
+files, see the trap below; `docs/reviews/security/tools-out/halmos-long-results/<run>/halmos.log`):
 
 | Property | Layout | Result |
 |---|---|---|
@@ -264,7 +264,7 @@ process each on an otherwise idle box.
 
 **Trap met (for whoever re-runs this on the build box):** `mrun` syncs the worktree's untracked files to the box
 before every command, replacing them (unlink and create). Halmos logs written inside the worktree
-(`notes/reviews/security/tools-out/halmos-long/`) were replaced by older copies while the processes ran, so the
+(`docs/reviews/security/tools-out/halmos-long/`) were replaced by older copies while the processes ran, so the
 processes kept writing to deleted files, and Halmos (which prints its results at the end, buffered) lost them. Write
 long-run logs outside the worktree (`spike/tmp/<name>/`) and fetch them with `--get`; `scripts/halmos-long.sh` now
 runs Halmos unbuffered.
