@@ -46,10 +46,13 @@ The design notes specify these; there is no code for them here:
   method) read the chains, sign and send through a stand-in service (`seqnet-chain`: LEZ's wallet library, a
   keystore, the relayer) instead of `eth_rpc_module` and `keystore_module`/`tx_sender_module` (the module's
   `import_root` reads the vault through `eth_rpc_module`, row 109; the `wallet` method does not use it yet; its LEZ
-  reads and private sends go through `lez_core` when the session says so, run without the view in
-  `e2e/runs/seqnet-lezcore-1/`, rows 113, 114), the view ran under Qt Quick Test rather than in Basecamp, and that devnet's Ethereum side is anvil
-  finalized by a stand-in committee, with the vault tests' mock verifier (no Groth16 proof) and a stand-in for the
-  gas drop;
+  reads and private sends go through `lez_core` when the session says so, rows 113, 114); the view has run inside
+  Logos Basecamp (`b642a9a`) with `ferrata_bridge_module` and `lez_core` loaded there, the whole private round
+  trip clicked through Basecamp and checked on the chains, in dev mode only (row 125,
+  [`modules/ferrata_bridge_ui/results-basecamp-roundtrip/`](../modules/ferrata_bridge_ui/results-basecamp-roundtrip/README.md)):
+  real proofs inside Basecamp wait on its 20 s cap on a view's call to a core module (an upstream fix, or the
+  module's claim and burn as a job the view polls); that devnet's Ethereum side is anvil finalized by a stand-in
+  committee, with the vault tests' mock verifier (no Groth16 proof) and a stand-in for the gas drop;
 - in the attestation program: consumers bound to the root id (the bridge, `ferrata_holdings` and the
   reference consumer still pin an instance); a chain of several EIP-2935 hops under a Gloas record (one hop
   is attested); the F.8 test (`docs/design/attestation.md` §6.5, §15).

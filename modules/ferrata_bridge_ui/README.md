@@ -44,7 +44,10 @@ Every call is `call(method, params)` with one JSON value in and one out:
   call with its own methods over the chains a chain service reads and sends to (`modules/README.md`; on a
   LEZ sequencer `e2e/seqnet`'s `seqnet-chain`, the stand-in for Logos Core's own modules). Basecamp's sandbox
   refuses a ui module any network access (measured: `RESULTS.md`), so inside Logos this is the only path, as
-  the design has it.
+  the design has it. Where the host has `logos.callModuleAsync` (Basecamp) the view calls asynchronously, so it
+  does not hold Basecamp's GUI thread. Basecamp's bridge serialises the module's string reply once more as a JSON
+  string, and `moduleReply()` reads that, logosctl's form and the host's error payload. A host timeout is reported
+  as an outcome to check with a refresh.
 - **On the devnet**: HTTP to `cli/examples/miniapp_devnet.rs`, which serves the same methods (`info`,
   `registry`, `price`, `deposit`, `relay`, `scan`, `claim`, `burn`, `checkpoint`, `release`,
   `set_endpoints`, `advance_time` (the devnet's clock, for letting a delay pass), `admin.status`,
@@ -97,6 +100,8 @@ and checks that the built-in prompts are then not used (`test_14_wallet_provider
 ```sh
 modules/ferrata_bridge_ui/scripts/box-test.sh            # Linux box with Foundry, RISC Zero (dev mode), Qt 6 qmltestrunner, curl, jq
 modules/ferrata_bridge_ui/scripts/basecamp-ui-tests.sh   # Nix: Basecamp (pinned) standalone and headless, tests/ui-tests.mjs
+modules/ferrata_bridge_ui/scripts/basecamp-build.sh OUT <module .lgx dir> <lez_core .lgx dir>   # Basecamp #dev, the view, a modules root
+BASECAMP_BUILD=OUT bash e2e/seqnet/run.sh basecamp NAME     # the round trip in Basecamp on a LEZ devnet (basecamp/roundtrip.mjs)
 ```
 
 `box-test.sh` builds the devnet backend with the `ferrata` tool, so it needs what `cli/` needs (`libpcsclite-dev`,
@@ -132,13 +137,24 @@ with the private claim and burn proven for real; its results go to `results-real
 
 ## Not done
 
-- **On a LEZ sequencer only through a stand-in for Logos Core's chain modules, and outside Basecamp.**
-  `e2e/seqnet` drives this view headless with a headless Logos Core behind it (`qmltest-logos/`: the
-  runner's `logos` calls `logosctl call ferrata_bridge_module wallet`) on a running LEZ sequencer and node
-  ([`e2e/seqnet/RESULTS.md`](../../e2e/seqnet/RESULTS.md)): the chains are read and written by
-  `seqnet-chain` (LEZ's wallet library, the user's Ethereum keystore, the relayer) instead of
-  `eth_rpc_module`, `keystore_module`/`tx_sender_module` and `lez_core`; the operator's import, the
-  checkpoint and the gas drop are stand-ins run by the test (`ops.sh`); the vault's verifier is the mock.
+- **Inside Basecamp in dev mode only, with Ethereum through a stand-in.** The private round trip ran in this view
+  inside Logos Basecamp (`b642a9a`) on a running LEZ sequencer and node, with `ferrata_bridge_module` and
+  `lez_core` loaded in the same Basecamp: 13 of 13 steps, each checked on the chains
+  ([`results-basecamp-roundtrip/`](results-basecamp-roundtrip/README.md)). Still not done:
+  - **Real proofs inside Basecamp.** Basecamp's bridge cuts a ui module's call to a core module at 20 s, and a real
+    claim or burn takes about four minutes. This needs the upstream fix described there, or the module's `claim`
+    and `burn` turned into a job that the view polls.
+  - **Ethereum through Logos Core's modules.** The module's Ethereum reads, the deposit's signing and sending and
+    the release go through `seqnet-chain` (the user's keystore, the relayer) instead of `eth_rpc_module` and
+    `keystore_module`/`tx_sender_module`; LEZ goes through `lez_core` with our patch.
+  - **Session, dependency, QML access.** The wallet session is opened by the test through the view's `logos`
+    (no wallet SDK yet). The view does not declare `ferrata_bridge_module` as its dependency, so the core modules
+    are loaded in Basecamp's Module Inspector. Basecamp marks a view's direct `logos.callModule` as deprecated, so
+    a later Basecamp needs these calls behind a backend module.
+  - **Operator stand-ins.** The operator's import, the checkpoint and the gas drop are stand-ins run by the test
+    (`ops.sh`); the vault's verifier is the mock.
+  - **Not the Basecamp users run.** This was its dev build, headless, in standalone mode, with the modules
+    installed from local `.lgx` files.
 - The checkpoint and release proofs and the Groth16 wrap are the mock verifier on the devnet (named in the
   replies); real proofs on this path are the private transactions' only.
 - The vault's own admin functions (fee announcements, watchers, the 14-day role change, retirement) are

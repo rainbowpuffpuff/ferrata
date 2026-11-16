@@ -191,9 +191,9 @@ The design notes specify these; there is no code for them here. In short (in ful
 - **Logos modules:** Ethereum transactions through Logos Core's own modules beyond the two daemons on a devnet,
   LEZ through `lez_core` beyond the bridge module's wallet session, verified reads beyond the attestation
   module's, a published catalog.
-- **The user's round trip on a LEZ sequencer through Logos Core's own modules:** the mini-app's calls still read
-  the chains, sign and send through a stand-in service, and the view ran under Qt Quick Test rather than in
-  Basecamp.
+- **The user's round trip on a LEZ sequencer through Logos Core's own modules:** inside Logos Basecamp the
+  mini-app's round trip ran with LEZ through `lez_core`, in dev mode only, and its Ethereum side still reads, signs
+  and sends through a stand-in service; real proofs inside Basecamp wait on its 20 s cap on a view's call.
 - **Logos Blockchain 0.3.5-rc.1:** the checkpoint guests' reading of a transaction's fork digest.
 - **From the v3 specification:** rule (A)'s Δ_g of 3 h when participation is partial, the deployment script that
   renounces the emergency stop's owner outside fork rehearsals, the gas drop's sealed credit and its sweep

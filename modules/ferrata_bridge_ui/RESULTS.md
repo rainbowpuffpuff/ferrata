@@ -1,5 +1,29 @@
 # `ferrata_bridge_ui`: results
 
+## 16 November 2026: the private round trip inside Logos Basecamp
+
+**Logos Basecamp itself ran the mini-app with its core modules, and a user's private round trip ran in the view
+on a running LEZ devnet** ([`results-basecamp-roundtrip/`](results-basecamp-roundtrip/README.md), branch
+`basecamp`, the Modal build box). Basecamp at its pin `b642a9a` was built from source (`nix build …#dev`, 950 s;
+`scripts/basecamp-build.sh`) and run headless in its standalone mode. It opened the view; its Module Inspector
+loaded `ferrata_bridge_module` and `lez_core` (patched); the view called the module through the `logos` object
+Basecamp injects (`callModuleAsync`). Every user step was a click through Basecamp's QML inspector, and after each
+step the chains were read directly (cast on anvil, `seqnet-txs` on the sequencer): connect, with the account and
+the Ethereum balance equal to anvil's; the registry before and after the operator's import, with the caps; a private
+deposit on the defaults; recovery from the seed; the private claim once its random delay had passed (LEZ block 30);
+a private burn to a fresh address (block 31); the checkpoint; the release by a relayer, 0.000997 ETH to the fresh
+address. **13 of 13 steps, 50 checks**, dev-mode proofs, 23 pictures of Basecamp's window. LEZ went through
+`lez_core` (167 of 167 bridge-state reads and 17 of 17 private-holding reads equal to the plain path's; the claim
+and burn proven and sent by it inside Basecamp), Ethereum through the stand-in `seqnet-chain`
+(`e2e/runs/seqnet-basecamp-2/`).
+
+For Basecamp the view now parses the module's reply a second time (Basecamp's bridge serialises the module's
+string result as a JSON string), reads the host's error payload, calls asynchronously where the host can, and
+shows both sides' balances. Not reached: real proofs inside Basecamp. There, a ui module's call to a core module
+is cut at 20 s (logos-protocol's default `Timeout`, which `LogosQmlBridge::callModuleAsync` does not override),
+while a real claim or burn takes 229–249 s ([`results-basecamp-roundtrip/README.md`](results-basecamp-roundtrip/README.md),
+"Not reached: L4"). Suites run again on this view: `results-basecamp-roundtrip/regression/`.
+
 ## 12 November 2026: the private round trip on the defaults (B3's done gate)
 
 **A user's private round trip runs through the mini-app on its defaults, headless, against the devnet.**

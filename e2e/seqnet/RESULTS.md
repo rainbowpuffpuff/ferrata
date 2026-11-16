@@ -134,3 +134,19 @@ receipt. Through `lez_core`: 85 of 85 bridge-state reads and 9 of 9 private-hold
 private claim proven by LEZ's wallet inside Logos Core in 248.7 s (receipt 239,532 B, transaction 256,068 B: the sizes
 of `seqnet-miniapp-3`'s claim) and applied in LEZ block 74; the private burn proven in 228.8 s (239,046 B, 255,031 B)
 and applied in block 98; the release paid 0.000997 ETH. 235 LEZ and 15 Ethereum transactions, none reverted.
+
+## 4. The mini-app inside Logos Basecamp, beside `lez_core`
+
+### `seqnet-basecamp-2` (16 Nov 15:50–15:58 UTC, dev mode): the round trip in Basecamp, 13 of 13 steps
+
+[`e2e/runs/seqnet-basecamp-2/`](../runs/seqnet-basecamp-2/SUMMARY.md); Basecamp's records and its window's pictures:
+[`modules/ferrata_bridge_ui/results-basecamp-roundtrip/`](../../modules/ferrata_bridge_ui/results-basecamp-roundtrip/README.md).
+Logos Basecamp `b642a9a` (dev build, standalone mode, offscreen) hosted the view; its Module Inspector loaded
+`ferrata_bridge_module` and `lez_core` (patched); the view called the module through Basecamp's `logos`
+(`callModuleAsync`, 27 calls); each user step was a click through Basecamp's inspector, and the chains were read
+directly after each step: 13 of 13 steps, 50 checks, 149 s. Through `lez_core`: 167 of 167 bridge-state reads and
+17 of 17 private-holding reads equal to the plain path's; the private claim and burn executed, proven (dev) and
+sent by `lez_core` inside Basecamp, applied in LEZ blocks 30 and 31; the release paid 0.000997 ETH to the fresh
+address. Ethereum through `seqnet-chain`. 103 LEZ and 15 Ethereum transactions, none reverted. Real proofs were not
+run in Basecamp: a ui module's call to a core module is cut at 20 s there (the results README, "Not reached: L4").
+
