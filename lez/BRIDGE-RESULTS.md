@@ -470,7 +470,8 @@ admitted).
 
 Since branch `bridge-controls` (§14) the program has the keyless `Sunset`, the freeze authority's
 14-day handover, a multisig (M-of-N) freeze authority, the watchers on LEZ and transfers between
-holders. Not built: the gas drop; a transfer that credits a private recipient privately (a private
+holders. Not built: the gas drop in the relayer daemon (this program's private claim swept a relayer's sealed credit
+and paid its fee from it on LEZ v0.4.0-rc3, real proofs, `lez/results/v0.4.0-rc3/gas-drop/`); a transfer that credits a private recipient privately (a private
 holder's transfer reaches a public `holder(account)`, §14); the switch to a token program; a real proof of
 the extended program's burn (§7 is of the earlier image; §14 proves the private claim and
 private transfer of `bridge-controls`' image, `43615dc4…`) and of a private claim to a public destination; a run of this program on a sequencer (§11's crossing deploys the frozen earlier

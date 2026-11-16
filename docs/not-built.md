@@ -67,7 +67,8 @@ implement yet:
 - roles (D13): the deployment script that renounces the emergency stop's owner is run in fork
   rehearsals only (the vault's side, the watchers, the 14-day role change, keyless `retire()` and the
   cap floor are built);
-- inbound (D13): the gas drop's sealed credit to a private one-time account and its sweep inside the
-  private claim (LEZ's wallet; the gas-drop receipt binding `(N, oneTimeAddress, relayer)` is built and the
-  relayer checks it; refunds drawing on the release cap are in the vault; `ImportRoot` attesting slots 0 and 1, and claims refusing
+- inbound (D13): the gas drop's sealed credit in the relayer daemon (`ferrata-relayer` sends a public transfer, which
+  no private claim can sweep) and for burns; the sealed credit to a private one-time account and its sweep inside
+  the private claim ran on LEZ v0.4.0-rc3 with real proofs (EVIDENCE row 124: `ferrata-gasdrop`, crown-driver; the
+  gas-drop receipt binding `(N, oneTimeAddress, relayer)` is built and the relayer checks it; refunds drawing on the release cap are in the vault; `ImportRoot` attesting slots 0 and 1, and claims refusing
   `leafIndex >= count`, are in the bridge program).
