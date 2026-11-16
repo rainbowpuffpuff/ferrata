@@ -1,0 +1,5 @@
+blocks: 1..=111
+transactions: 0 sent; 0 applied, 0 refused with an exit code, 0 reverted otherwise, 0 dropped by the sequencer, 0 rejected at its RPC, 0 unfinished
+charged in all: execution gas 0, storage gas 0, base fees 0
+against the harness tables: 0 transactions have a harness row; execution gas equal in 0, different in 0
+base fee exec over the blocks: min 8, max 8; blocks finalized on Bedrock at export: 111 of 111

@@ -1,0 +1,4 @@
+../tmp/m0-gasdrop/live/run/sequencer_home is set up
+  channel signing public key  32f8690895396c8b38dca36b1d710a0687160100478209f22a1bad67cb04e6b7
+`start` creates the channel if it does not exist yet.
+Creating the channel stakes that key at genesis.

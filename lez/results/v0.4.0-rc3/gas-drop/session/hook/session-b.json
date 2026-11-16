@@ -1,0 +1,62 @@
+{
+  "blocks": {
+    "from": 25,
+    "to": 47
+  },
+  "chain": "stand-in",
+  "claims": [],
+  "configId": "0x60b11ece3c017751a86e1d132c3cc3fb6254a30d6e79e978f81331d25a5e8729",
+  "instance": "0xabd362ebd8091508211f8c37dfd4c8e77d7ee313248579c5399aecf726b13c4a",
+  "label": "STAND-IN rehearsal (beacon committee held by the driver; not Sepolia)",
+  "steps": [
+    {
+      "block": "33",
+      "execGas": "224568",
+      "exit": "",
+      "status": "applied",
+      "step": "bridge Init (pairing: configId in the vault's slot 2)",
+      "tx": "73705fd36c1912d297ebd907aa242d34534c9599b2d3440b3ba06603b0fe17af"
+    },
+    {
+      "block": "35",
+      "execGas": "451572",
+      "exit": "",
+      "status": "applied",
+      "step": "bridge Register ETH (registry entry, schedules 0 and 1, leaf count)",
+      "tx": "2590dc9813f3ea8e6b8cd61578188267874e154aed12fd28d6f1dee06d28715c"
+    },
+    {
+      "block": "37",
+      "execGas": "301949",
+      "exit": "",
+      "status": "applied",
+      "step": "bridge ImportRoot n=1 (stage 1, block 9)",
+      "tx": "9066b9e28873cab963578ada712f839a076360f18f41733f1ce4b4e117b909c1"
+    },
+    {
+      "block": "45",
+      "execGas": "315313",
+      "exit": "",
+      "status": "applied",
+      "step": "bridge ImportFees: ETH schedule 1 absent at n=2",
+      "tx": "7f23e0c03d7dacc3bfeb5f6f625e06ebaece219f3ed489a93a0d99356ceca847"
+    },
+    {
+      "block": "47",
+      "execGas": "301949",
+      "exit": "",
+      "status": "applied",
+      "step": "bridge ImportRoot n=2 (stage 2, block 10)",
+      "tx": "5d6c5e77a2ed4abfb0e3c404e1c1de3cf4e170b29d13f330cd4408d03bd8734d"
+    }
+  ],
+  "tipT0": {
+    "hash": "0x8f297b8129da5d1e10007d14d9228acfe3817d557088f6a4f4efefd60497b25d",
+    "id": 24
+  },
+  "tipT1": {
+    "hash": "0x27fb28d3e60b3ebdafe639743dacadcca9e4fd003c40d6d13eca2bdb1d6bc12c",
+    "id": 47
+  },
+  "vault": "0x67ac447386f2ea14ef2fbf55ef33ce1d8f386516"
+}

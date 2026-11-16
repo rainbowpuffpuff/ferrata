@@ -1,0 +1,83 @@
+[2026-11-16T17:24:11Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/crown/driver/wallet/storage.json
+Latest block is 77
+Syncing to block 77. Blocks to sync: 29
+[2026-11-16T17:24:12Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:24:12Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:24:12Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:24:12Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:24:12Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:24:12Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:24:12Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:24:12Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:24:12Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:24:12Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:24:12Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:24:12Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:24:12Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:24:12Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:24:12Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:24:12Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:24:12Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:24:12Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:24:12Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:24:12Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:24:12Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:24:12Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:24:12Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:24:12Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:24:12Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:24:12Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:24:12Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:24:12Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:24:12Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+Synced to block 77 in 14.03314ms
+[gas-drop] the claimant before its claim: {"atBlock":77,"chain":{"mainId":"0","oneTimeId":"0","public":"0"},"credit":{"blinded":false,"nativeCredit":"20000000","position":"16","publication":"Sealed","recipientAccount":"6r8SGi1tZ2X2jGRoNPdb3Rp7xx9EmTARLHtuEM9yBeTz","to":"6r8SGi1tZ2X2jGRoNPdb3Rp7xx9EmTARLHtuEM9yBeTz"},"creditSealed":true,"pendingMessages":[{"blinded":false,"nativeCredit":"20000000","position":"16","publication":"Sealed","recipientAccount":"6r8SGi1tZ2X2jGRoNPdb3Rp7xx9EmTARLHtuEM9yBeTz","to":"6r8SGi1tZ2X2jGRoNPdb3Rp7xx9EmTARLHtuEM9yBeTz"}],"private":{"main":{"native":"0","wallet":"state"},"oneTime":{"native":"0","wallet":"state"}},"recoveryBindingAtOneTimeAddress":false,"relayerHolder":[],"walletSyncedTo":77}
+[2026-11-16T17:24:12Z INFO  wallet] Claiming 1 pending credit(s) before the root: [(16, Some(20000000))]
+[gas-drop] the claim, dry run: Dry run: nothing proven or sent
+  public cycles:  139751
+  base fees:      exec 8 / stor 8 (height 77)
+  fee at head:    6188624
+  headroom:       5 blocks, up to exec 13 / stor 13 (10056514)
+  reserve:        10056514 (surplus refunded)
+  fee payer:      6r8SGi1tZ2X2jGRoNPdb3Rp7xx9EmTARLHtuEM9yBeTz
+  claims:         1 pending credit(s), 20000000 to the payer
+  refund to:      the payer's alias
+[2026-11-16T17:24:12Z INFO  wallet] Claiming 1 pending credit(s) before the root: [(16, Some(20000000))]
+[gas-drop-claim] gas drop: ClaimPrivately of deposit 1 into a fresh private account, its fee paid from the swept sealed credit (real proof) applied        gas    549515 block  109 + 22.7s 426a246c4ffe54467a7e2fbacfca0925f06cec3e4e19f75b888025cc0fef56a6
+Syncing to block 110. Blocks to sync: 33
+[2026-11-16T17:29:44Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:29:44Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:29:44Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:29:44Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:29:44Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:29:44Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:29:44Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:29:44Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:29:44Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:29:44Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:29:44Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:29:44Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:29:44Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:29:44Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:29:44Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:29:44Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:29:44Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:29:44Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:29:44Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:29:44Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:29:44Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:29:44Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:29:44Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:29:44Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:29:44Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:29:44Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:29:44Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:29:44Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:29:44Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:29:44Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:29:44Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:29:44Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T17:29:44Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+Synced to block 110 in 12.069153ms
+Latest block is 110
+[gas-drop] after the claim: {"atBlock":110,"chain":{"mainId":"0","oneTimeId":"0","public":"0"},"feeRecipientHolder":[],"mainHoldings":[{"amount":"1000000000000000","token":"0x0000000000000000000000000000000000000000"}],"nullifierSpent":true,"pendingMessages":[{"blinded":true,"nativeCredit":"3867890","position":"25","publication":"Clear","recipientAccount":"6r8SGi1tZ2X2jGRoNPdb3Rp7xx9EmTARLHtuEM9yBeTz","to":"4e6dGCH2BMeyxom6JR78Z5szqPn89bGZRW5cSuqAzbkS"}],"private":{"main":{"native":"0","wallet":"state"},"oneTime":{"native":"9943486","wallet":"state"}},"relayerHolder":[{"amount":"2000000000000","token":"0x0000000000000000000000000000000000000000"}]}

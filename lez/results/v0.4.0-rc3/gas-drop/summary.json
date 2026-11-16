@@ -1,0 +1,146 @@
+{
+ "tag": "v0.4.0-rc3",
+ "session": {
+  "tag": "v0.4.0-rc3",
+  "lez_commit": "bafd07be0701398f9bc435f73ab05e9a7936c301",
+  "lez_tree": "unmodified",
+  "node": "0.3.5-rc.1",
+  "node_commit": "f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30",
+  "sequencer_dev_mode": false,
+  "started": "2026-11-16T16:50:36Z",
+  "finished": "2026-11-16T17:30:09Z"
+ },
+ "checks": {
+  "session": {
+   "passed": true,
+   "read": "v0.4.0-rc3 (bafd07be0701398f9bc435f73ab05e9a7936c301, tree unmodified), node 0.3.5-rc.1, sequencer RISC0_DEV_MODE absent"
+  },
+  "zero_before": {
+   "passed": true,
+   "read": "block 48: private account 0 (state), one-time account 0 (state) in its wallet; on the chain its public account 0, the private ids 0 and 0; 0 pending message(s)"
+  },
+  "negative": {
+   "passed": true,
+   "read": "Failed to build transaction: Invalid input: Fee reserve of 6188624 from payer 6r8SGi1tZ2X2jGRoNPdb3Rp7xx9EmTARLHtuEM9yBeTz fails, though the transaction runs without it: Invalid native transfer: sender 6r8SGi1tZ2X2jGRoNPdb3Rp7xx9EmTARLHtuEM9yBeTz holds less than the transferred amount: TransactionBuildError(InvalidInput(\"Fee reserve of 6188624 from payer 6r8SGi1tZ2X2jGRoNPdb3Rp7xx9EmTARLHtuEM9yBeT",
+   "dry_run": {
+    "baseFeeExec": 8,
+    "baseFeeStor": 8,
+    "claims": 0,
+    "execCeiling": 13,
+    "feeAtHead": "6188624",
+    "headroomBlocks": 5,
+    "headroomReserve": "10056514",
+    "height": 48,
+    "payer": "6r8SGi1tZ2X2jGRoNPdb3Rp7xx9EmTARLHtuEM9yBeTz",
+    "publicCycles": 139751,
+    "refundTo": null,
+    "reserve": "6188624",
+    "storCeiling": 13,
+    "swept": "0"
+   }
+  },
+  "receipt": {
+   "passed": true,
+   "read": "image 0x895804161df14b00e1cb02e5d27fe136efb82b178db511c7697c030676fc9eb4, 12.9 s, 76230 user cycles, 583923 B (JSON), journal N 0x41436b7f386704b8142b5db516f5f8ee576e9bcb97934fa4b88a8236408704af"
+  },
+  "relayer": {
+   "passed": true,
+   "read": "sent at 1794849579 (tx 36960385b0cb9a40ce7808e7b7957ca3b7bab141f7edc384a596372a2710bbfb); again: refused: this N already had its drop; another relayer: refused: the receipt is bound to another relayer; after the claim: refused: the deposit with this N is already claimed"
+  },
+  "sealed": {
+   "passed": true,
+   "read": "credit applied in block 76 (Finalized); publication Sealed of 20000000; recovery binding at the one-time address: False"
+  },
+  "claim": {
+   "passed": true,
+   "read": "applied in block 109 (Finalized); dry run: 1 claim(s), 20000000 swept, payer 6r8SGi1tZ2X2jGRoNPdb3Rp7xx9EmTARLHtuEM9yBeTz, reserve 10056514; nullifier spent True"
+  },
+  "accounting": {
+   "passed": true,
+   "read": "credit 20000000 = note after 9943486 + refund 3867890 + fee 6188624 (reserve 10056514)"
+  }
+ },
+ "passed": true,
+ "failed": [],
+ "credit": {
+  "found": true,
+  "step": "gas drop: the relayer's native credit, sealed to the one-time address (real proof)",
+  "status": "applied",
+  "block": 76,
+  "tx_hash": "36960385b0cb9a40ce7808e7b7957ca3b7bab141f7edc384a596372a2710bbfb",
+  "exec_gas": "409764",
+  "stor_gas": "224063",
+  "fee": "5070616",
+  "base_fee_exec": "8",
+  "base_fee_stor": "8",
+  "prove_and_submit_s": 253.8,
+  "tx_bytes": 253340,
+  "receipt_bytes": 238233,
+  "private_actions": 7,
+  "real_proof": true,
+  "bedrock_status": "Finalized",
+  "final_after_s": 12.5,
+  "applied_final_real": true
+ },
+ "claim": {
+  "found": true,
+  "step": "gas drop: ClaimPrivately of deposit 1 into a fresh private account, its fee paid from the swept sealed credit (real proof)",
+  "status": "applied",
+  "block": 109,
+  "tx_hash": "426a246c4ffe54467a7e2fbacfca0925f06cec3e4e19f75b888025cc0fef56a6",
+  "exec_gas": "549515",
+  "stor_gas": "224063",
+  "fee": "6188624",
+  "base_fee_exec": "8",
+  "base_fee_stor": "8",
+  "prove_and_submit_s": 308.7,
+  "tx_bytes": 252589,
+  "receipt_bytes": 237760,
+  "private_actions": 7,
+  "real_proof": true,
+  "bedrock_status": "Finalized",
+  "final_after_s": 14.5,
+  "applied_final_real": true
+ },
+ "accounting": {
+  "credit": "20000000",
+  "creditEqualsNotePlusRefundPlusFee": true,
+  "creditStillPending": false,
+  "feeCharged": "6188624",
+  "oneTimeNoteAfter": "9943486",
+  "refundIsBlinded": true,
+  "refundPending": "3867890",
+  "relayFeeToRelayer": "2000000000000",
+  "reserve": "10056514",
+  "wrappedEthToClaimant": "1000000000000000"
+ },
+ "after": {
+  "claimant_wrapped_eth": "1000000000000000",
+  "relay_fee_to_relayer": "2000000000000",
+  "one_time_note": "9943486",
+  "refund_pending": "3867890",
+  "refund_blinded": true,
+  "public_account_chain": "0",
+  "main_private_native": "0"
+ },
+ "relayer_learned": {
+  "at": 1794849579,
+  "receipt_journal": {
+   "chainId": "0x0000000000000000000000000000000000000000000000000000000000aa36a7",
+   "nullifier": "0x41436b7f386704b8142b5db516f5f8ee576e9bcb97934fa4b88a8236408704af",
+   "oneTimeAddress": "0x56e04d46437ae01aa6dacc5f4542909b13996dafe82a64ad83012799e6b7b9e1",
+   "relayer": "0x42345887181bf6e1af59f7ed2924be1da2eb40305ab0161fb62977354c0b2846",
+   "root": "0x7f61c94efa00b5736397873b5f8e5e578aba0919570279310a2f69e1ce5e27f4",
+   "vault": "0x67ac447386f2ea14ef2fbf55ef33ce1d8f386516"
+  },
+  "request": {
+   "oneTimeAddress": "0x56e04d46437ae01aa6dacc5f4542909b13996dafe82a64ad83012799e6b7b9e1",
+   "oneTimeNpk": "0x8e69e8d1e057603474221b2a0e481d9683f9f9fe7f1482e2c97d5a0fdabdbd07",
+   "oneTimeVpkBytes": 1184
+  },
+  "its_credit_tx": "36960385b0cb9a40ce7808e7b7957ca3b7bab141f7edc384a596372a2710bbfb",
+  "the_claim_tx": "426a246c4ffe54467a7e2fbacfca0925f06cec3e4e19f75b888025cc0fef56a6",
+  "the_claim_block": 109
+ },
+ "generated_by": "lez/scripts/gas-drop-summary.py"
+}

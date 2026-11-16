@@ -1,0 +1,10 @@
+{
+  "drops": {
+    "0x41436b7f386704b8142b5db516f5f8ee576e9bcb97934fa4b88a8236408704af": {
+      "one_time_address": "0x56e04d46437ae01aa6dacc5f4542909b13996dafe82a64ad83012799e6b7b9e1",
+      "amount": 20000000,
+      "at": 1794849579,
+      "tx": "36960385b0cb9a40ce7808e7b7957ca3b7bab141f7edc384a596372a2710bbfb"
+    }
+  }
+}

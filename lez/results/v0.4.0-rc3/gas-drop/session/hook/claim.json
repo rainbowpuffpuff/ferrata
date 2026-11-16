@@ -1,0 +1,127 @@
+{
+  "accounting": {
+    "credit": "20000000",
+    "creditEqualsNotePlusRefundPlusFee": true,
+    "creditStillPending": false,
+    "feeCharged": "6188624",
+    "oneTimeNoteAfter": "9943486",
+    "refundIsBlinded": true,
+    "refundPending": "3867890",
+    "relayFeeToRelayer": "2000000000000",
+    "reserve": "10056514",
+    "wrappedEthToClaimant": "1000000000000000"
+  },
+  "after": {
+    "atBlock": 110,
+    "chain": {
+      "mainId": "0",
+      "oneTimeId": "0",
+      "public": "0"
+    },
+    "feeRecipientHolder": [],
+    "mainHoldings": [
+      {
+        "amount": "1000000000000000",
+        "token": "0x0000000000000000000000000000000000000000"
+      }
+    ],
+    "nullifierSpent": true,
+    "pendingMessages": [
+      {
+        "blinded": true,
+        "nativeCredit": "3867890",
+        "position": "25",
+        "publication": "Clear",
+        "recipientAccount": "6r8SGi1tZ2X2jGRoNPdb3Rp7xx9EmTARLHtuEM9yBeTz",
+        "to": "4e6dGCH2BMeyxom6JR78Z5szqPn89bGZRW5cSuqAzbkS"
+      }
+    ],
+    "private": {
+      "main": {
+        "native": "0",
+        "wallet": "state"
+      },
+      "oneTime": {
+        "native": "9943486",
+        "wallet": "state"
+      }
+    },
+    "relayerHolder": [
+      {
+        "amount": "2000000000000",
+        "token": "0x0000000000000000000000000000000000000000"
+      }
+    ]
+  },
+  "at": "2026-11-16T17:29:44Z",
+  "before": {
+    "atBlock": 77,
+    "chain": {
+      "mainId": "0",
+      "oneTimeId": "0",
+      "public": "0"
+    },
+    "credit": {
+      "blinded": false,
+      "nativeCredit": "20000000",
+      "position": "16",
+      "publication": "Sealed",
+      "recipientAccount": "6r8SGi1tZ2X2jGRoNPdb3Rp7xx9EmTARLHtuEM9yBeTz",
+      "to": "6r8SGi1tZ2X2jGRoNPdb3Rp7xx9EmTARLHtuEM9yBeTz"
+    },
+    "creditSealed": true,
+    "pendingMessages": [
+      {
+        "blinded": false,
+        "nativeCredit": "20000000",
+        "position": "16",
+        "publication": "Sealed",
+        "recipientAccount": "6r8SGi1tZ2X2jGRoNPdb3Rp7xx9EmTARLHtuEM9yBeTz",
+        "to": "6r8SGi1tZ2X2jGRoNPdb3Rp7xx9EmTARLHtuEM9yBeTz"
+      }
+    ],
+    "private": {
+      "main": {
+        "native": "0",
+        "wallet": "state"
+      },
+      "oneTime": {
+        "native": "0",
+        "wallet": "state"
+      }
+    },
+    "recoveryBindingAtOneTimeAddress": false,
+    "relayerHolder": [],
+    "walletSyncedTo": 77
+  },
+  "block": "109",
+  "described": "transaction 252589 bytes: receipt 237760 bytes; claims image ccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd at account AfrE4T3U17eZYUH3KMGDgeE6A4jnpDGum151T3VtddCp; 7 private action(s); 8 boundary step(s)",
+  "dryRun": {
+    "baseFeeExec": 8,
+    "baseFeeStor": 8,
+    "claims": 1,
+    "execCeiling": 13,
+    "feeAtHead": "6188624",
+    "headroomBlocks": 5,
+    "headroomReserve": "10056514",
+    "height": 77,
+    "payer": "6r8SGi1tZ2X2jGRoNPdb3Rp7xx9EmTARLHtuEM9yBeTz",
+    "publicCycles": 139751,
+    "refundTo": null,
+    "reserve": "10056514",
+    "storCeiling": 13,
+    "swept": "20000000"
+  },
+  "nullifier": "0x41436b7f386704b8142b5db516f5f8ee576e9bcb97934fa4b88a8236408704af",
+  "provenAndSentS": 308.7,
+  "relayer": "0x42345887181bf6e1af59f7ed2924be1da2eb40305ab0161fb62977354c0b2846",
+  "row": {
+    "baseFeeExec": "8",
+    "baseFeeStor": "8",
+    "execGas": "549515",
+    "fee": "6188624",
+    "storGas": "224063"
+  },
+  "status": "applied",
+  "tx": "426a246c4ffe54467a7e2fbacfca0925f06cec3e4e19f75b888025cc0fef56a6"
+}

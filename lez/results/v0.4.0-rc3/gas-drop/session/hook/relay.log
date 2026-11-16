@@ -1,0 +1,16 @@
+[2026-11-16T17:19:39Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/crown/driver/wallet/storage.json
+[gas-drop] relayer's private wallet at block 50: account 478hD6LXFTYu5gRRkWkCyXPRsWgCwAfRredoCUfxr5b9
+[2026-11-16T17:19:39Z INFO  wallet] Claiming 1 pending credit(s) before the root: [(6, Some(20000000000000))]
+[gas-drop] relayer's credit, dry run: Dry run: nothing proven or sent
+  public cycles:  0
+  base fees:      exec 8 / stor 8 (height 50)
+  fee at head:    5070616
+  headroom:       5 blocks, up to exec 13 / stor 13 (8239751)
+  reserve:        8239751 (surplus refunded)
+  fee payer:      478hD6LXFTYu5gRRkWkCyXPRsWgCwAfRredoCUfxr5b9
+  claims:         1 pending credit(s), 20000000000000 to the payer
+  refund to:      the payer's alias
+[2026-11-16T17:19:39Z INFO  wallet] Claiming 1 pending credit(s) before the root: [(6, Some(20000000000000))]
+[gas-drop-credit] gas drop: the relayer's native credit, sealed to the one-time address (real proof) applied        gas    409764 block   76 + 18.3s 36960385b0cb9a40ce7808e7b7957ca3b7bab141f7edc384a596372a2710bbfb
+36960385b0cb9a40ce7808e7b7957ca3b7bab141f7edc384a596372a2710bbfb
+{"amount":"20000000","at":1794849579,"book":{"amount":20000000,"at":1794849579,"one_time_address":"0x56e04d46437ae01aa6dacc5f4542909b13996dafe82a64ad83012799e6b7b9e1","tx":"36960385b0cb9a40ce7808e7b7957ca3b7bab141f7edc384a596372a2710bbfb"},"creditS":272.4,"decision":"sent","journal":{"chainId":"0x0000000000000000000000000000000000000000000000000000000000aa36a7","nullifier":"0x41436b7f386704b8142b5db516f5f8ee576e9bcb97934fa4b88a8236408704af","oneTimeAddress":"0x56e04d46437ae01aa6dacc5f4542909b13996dafe82a64ad83012799e6b7b9e1","relayer":"0x42345887181bf6e1af59f7ed2924be1da2eb40305ab0161fb62977354c0b2846","root":"0x7f61c94efa00b5736397873b5f8e5e578aba0919570279310a2f69e1ce5e27f4","vault":"0x67ac447386f2ea14ef2fbf55ef33ce1d8f386516"},"step":"relay","tx":"36960385b0cb9a40ce7808e7b7957ca3b7bab141f7edc384a596372a2710bbfb"}

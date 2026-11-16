@@ -1,0 +1,65 @@
+{
+  "at": "2026-11-16T17:19:26Z",
+  "before": {
+    "atBlock": 48,
+    "chain": {
+      "mainId": "0",
+      "oneTimeId": "0",
+      "public": "0"
+    },
+    "pendingMessages": [],
+    "private": {
+      "main": {
+        "native": "0",
+        "wallet": "state"
+      },
+      "oneTime": {
+        "native": "0",
+        "wallet": "state"
+      }
+    },
+    "walletPublicAccounts": [
+      "D1saCjUWMrQz7n1Vyi1cwjDpkbWA92h5z5NnJcxCcgos",
+      "HGzXBSpdWxVgZo9MbFXUpqd5ZkmQxcCYCbvSaZRSJy1k"
+    ]
+  },
+  "chainId": 11155111,
+  "claimedBefore": false,
+  "configId": "0x60b11ece3c017751a86e1d132c3cc3fb6254a30d6e79e978f81331d25a5e8729",
+  "importedRoots": [
+    "0x7c8381a401b30beaddfb379d2b42a8a41c6a51f60895fb1f5e88ec59ec194093",
+    "0x7f61c94efa00b5736397873b5f8e5e578aba0919570279310a2f69e1ce5e27f4"
+  ],
+  "leaf": 1,
+  "leafCount": 2,
+  "negativeControl": {
+    "dryRun": {
+      "baseFeeExec": 8,
+      "baseFeeStor": 8,
+      "claims": 0,
+      "execCeiling": 13,
+      "feeAtHead": "6188624",
+      "headroomBlocks": 5,
+      "headroomReserve": "10056514",
+      "height": 48,
+      "payer": "6r8SGi1tZ2X2jGRoNPdb3Rp7xx9EmTARLHtuEM9yBeTz",
+      "publicCycles": 139751,
+      "refundTo": null,
+      "reserve": "6188624",
+      "storCeiling": 13,
+      "swept": "0"
+    },
+    "error": "Failed to build transaction: Invalid input: Fee reserve of 6188624 from payer 6r8SGi1tZ2X2jGRoNPdb3Rp7xx9EmTARLHtuEM9yBeTz fails, though the transaction runs without it: Invalid native transfer: sender 6r8SGi1tZ2X2jGRoNPdb3Rp7xx9EmTARLHtuEM9yBeTz holds less than the transferred amount: TransactionBuildError(InvalidInput(\"Fee reserve of 6188624 from payer 6r8SGi1tZ2X2jGRoNPdb3Rp7xx9EmTARLHtuEM9yBeTz fails, though the transaction runs without it: Invalid native transfer: sender 6r8SGi1tZ2X2jGRoNPdb3Rp7xx9EmTARLHtuEM9yBeTz holds less than the transferred amount\"))",
+    "reasonIsFee": true,
+    "refused": true,
+    "refusedBy": "wallet",
+    "seconds": 0.9,
+    "sequencerHeadAfter": 48,
+    "sequencerHeadBefore": 48,
+    "transactionWritten": false,
+    "what": "the same ClaimPrivately (deposit 1 into the claimant's private account, fee payer the one-time account, relayer named) before any credit"
+  },
+  "nullifier": "0x41436b7f386704b8142b5db516f5f8ee576e9bcb97934fa4b88a8236408704af",
+  "relayer": "0x42345887181bf6e1af59f7ed2924be1da2eb40305ab0161fb62977354c0b2846",
+  "vault": "0x67ac447386f2ea14ef2fbf55ef33ce1d8f386516"
+}

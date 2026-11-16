@@ -1,0 +1,34 @@
+{
+  "amount": "20000000",
+  "at": "2026-11-16T17:24:11Z",
+  "block": "76",
+  "described": "transaction 253340 bytes: receipt 238233 bytes; claims ; 7 private action(s); 2 boundary step(s)",
+  "dryRun": {
+    "baseFeeExec": 8,
+    "baseFeeStor": 8,
+    "claims": 1,
+    "execCeiling": 13,
+    "feeAtHead": "5070616",
+    "headroomBlocks": 5,
+    "headroomReserve": "8239751",
+    "height": 50,
+    "payer": "478hD6LXFTYu5gRRkWkCyXPRsWgCwAfRredoCUfxr5b9",
+    "publicCycles": 0,
+    "refundTo": null,
+    "reserve": "8239751",
+    "storCeiling": 13,
+    "swept": "20000000000000"
+  },
+  "keysDeriveTo": true,
+  "provenAndSentS": 253.8,
+  "relayerPrivateAccount": "478hD6LXFTYu5gRRkWkCyXPRsWgCwAfRredoCUfxr5b9",
+  "relayerPrivateAccountIs": "LEZ's test private account 1 (its genesis pending credit funds it; this send claims it)",
+  "row": {
+    "execGas": "409764",
+    "fee": "5070616",
+    "storGas": "224063"
+  },
+  "status": "applied",
+  "to": "0x56e04d46437ae01aa6dacc5f4542909b13996dafe82a64ad83012799e6b7b9e1",
+  "tx": "36960385b0cb9a40ce7808e7b7957ca3b7bab141f7edc384a596372a2710bbfb"
+}

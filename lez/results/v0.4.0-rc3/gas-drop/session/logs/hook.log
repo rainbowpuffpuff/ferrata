@@ -1,0 +1,24 @@
+[gasdrop-hook 16:51:39] crown-a: deploy attest and bridge, the stand-in instance (channel 0101010101010101010101010101010101010101010101010101010101010101)
+[gasdrop-hook 16:55:32] session A: tip {"hash":"0x8f297b8129da5d1e10007d14d9228acfe3817d557088f6a4f4efefd60497b25d","id":24}; attestation 0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df; bridge 0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd
+[gasdrop-hook 16:55:32] keys
+[gasdrop-hook 16:55:32] claimant: {"main":"2Kq17JiTCSwckmRLFbx9qkmig1B6aFhCT3qceonXsbyn","oneTime":"6r8SGi1tZ2X2jGRoNPdb3Rp7xx9EmTARLHtuEM9yBeTz","public":"HGzXBSpdWxVgZo9MbFXUpqd5ZkmQxcCYCbvSaZRSJy1k","relayer":"5TSCmjbsZVF7MQzavk5G3ZdjxdTzdMXMXhcCFBFm8JkD"}
+[gasdrop-hook 16:55:33] vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516 (mock verifier 0x25Fa4286d401bdc4AC7657bc7a1ebdE1B737F4b1), configId 0x60b11ece3c017751a86e1d132c3cc3fb6254a30d6e79e978f81331d25a5e8729; deposit j1 to the claimant's private account 0x13ae6ad98db1381848478c615e1f13f0282f5d497b979d9ce85601a1c108cb75
+[gasdrop-hook 16:55:38] deposit 0 sent; capture-1: capture of block 9 0x9aef4affad3421732d4785f7e6d5b1ca8e2f88a61e9d821a2e32de8d2f3d59b7 (state root patched: False): 1 deposit(s), 6 slot(s)
+[gasdrop-hook 16:55:39] deposit 1 sent; capture-2: capture of block 10 0xe7b04bad8f1f416ea4cae87caa4d8c6ff7d00571345b063d1d600abd625cb58b (state root patched: False): 2 deposit(s), 6 slot(s)
+[gasdrop-hook 16:55:40] crown-driver check: [check] stage 2: configId 0x60b11ece3c017751a86e1d132c3cc3fb6254a30d6e79e978f81331d25a5e8729 in slot 2; pairing, import and register requests accepted natively
+[gasdrop-hook 16:55:40] crown-b --operator-only yes: the updates, Init, Register ETH, ImportFees, ImportRoot n=1, n=2
+[crown-b] bridge ImportFees: ETH schedule 1 absent at n=2            applied        gas    315313 block   45 + 19.6s 7f23e0c03d7dacc3bfeb5f6f625e06ebaece219f3ed489a93a0d99356ceca847
+[crown-b] token(cid, ETH): 1 schedule(s), known until leaf 2
+[crown-b] bridge ImportRoot n=2 (stage 2, block 10)                  applied        gas    301949 block   47 + 19.7s 5d6c5e77a2ed4abfb0e3c404e1c1de3cf4e170b29d13f330cd4408d03bd8734d
+[crown-b] blocks 25..=47 (T1 0x27fb28d3e60b3ebdafe639743dacadcca9e4fd003c40d6d13eca2bdb1d6bc12c); 0 burn note(s) written to ../tmp/m0-gasdrop/live/run/crown/burn-notes.json
+[gasdrop-hook 17:19:24] prepare
+[gasdrop-hook 17:19:26] negative control: {"refused":true,"refusedBy":"wallet","reasonIsFee":true,"error":"Failed to build transaction: Invalid input: Fee reserve of 6188624 from payer 6r8SGi1tZ2X2jGRoNPdb3Rp7xx9EmTARLHtuEM9yBeTz fails, though the transaction runs without it: Invalid native transfer: sender 6r8SGi1tZ2X2jGRoNPdb3Rp7xx9EmTARLHtuEM"}
+[gasdrop-hook 17:19:26] receipt
+[gasdrop-hook 17:19:39] receipt: {"provenS":12.9,"userCycles":76230,"receiptJsonBytes":583923,"verified":true}
+[gasdrop-hook 17:19:39] relay
+[gasdrop-hook 17:24:11] relayer: {"decision":"sent","tx":"36960385b0cb9a40ce7808e7b7957ca3b7bab141f7edc384a596372a2710bbfb","amount":"20000000","at":1794849579}
+[gasdrop-hook 17:24:11] refused: refused: this N already had its drop; refused: the receipt is bound to another relayer
+[gasdrop-hook 17:24:11] claim
+[gasdrop-hook 17:29:44] claim: {"tx":"426a246c4ffe54467a7e2fbacfca0925f06cec3e4e19f75b888025cc0fef56a6","block":"109","provenAndSentS":308.7,"accounting":{"credit":"20000000","creditEqualsNotePlusRefundPlusFee":true,"creditStillPending":false,"feeCharged":"6188624","oneTimeNoteAfter":"9943486","refundIsBlinded":true,"refundPending":"3867890","relayFeeToRelayer":"2000000000000","reserve":"10056514","wrappedEthToClaimant":"1000000000000000"}}
+[gasdrop-hook 17:29:44] after the claim: refused: the deposit with this N is already claimed
+[gasdrop-hook 17:29:44] done

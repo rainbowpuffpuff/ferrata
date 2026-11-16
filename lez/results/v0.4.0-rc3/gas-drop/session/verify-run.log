@@ -1,0 +1,4 @@
+static: 111 blocks (1..=111), chain links hold; 98 block hashes recomputed, 13 blocks hold elided program bytecode; 0 manifest rows: 0 included at the recorded block and position with the recorded revert flag (0 alone in their block: gas and fee equal the totals in the block's fee transaction), 0 not included
+binary ferrata_lez.bin: image 816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df, sha256 ddfde69bea89a5b882f55266fcb4b7c887df7debc1c9d4972d8ebea5a72eaad9
+binary ferrata_bridge.bin: image ccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd, sha256 11d832482ff0a26c8f283edda1a35b262274c066734895c62f696394dcab6070
+Error: main: no program header at CXnzhRVkXzwZaDFcvchMvz28iVTy9f8tmesDGpLcGSs

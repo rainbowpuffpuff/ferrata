@@ -1,0 +1,17 @@
+[crown-b] crown STAND-IN: vault 0x67ac447386f2ea14ef2fbf55ef33ce1d8f386516, configId 0x60b11ece3c017751a86e1d132c3cc3fb6254a30d6e79e978f81331d25a5e8729, instance 0xabd362ebd8091508211f8c37dfd4c8e77d7ee313248579c5399aecf726b13c4a
+[crown-b] stage 1 finality update (block 9) Open (step 1)            applied        gas   1996101 block   27 + 26.9s 8f13e79b1bba063fe116312a849f73d17f6517f9760b87e94c9db998f9a450be
+[crown-b] stage 1 finality update (block 9) Miller (step 2)          applied        gas   3305374 block   29 + 15.7s e81074393c0efbd5e5d6d24946c06a6cc657a70b636b5a19c8df116d71169a59
+[crown-b] stage 1 finality update (block 9) Finish (step 3)          applied        gas   3718957 block   31 + 20.0s d5cc99d3b091976e5239d4ab8511b89396fae6a61a3a5715cdaafd715b479842
+[crown-b] bridge Init (pairing: configId in the vault's slot 2)      applied        gas    224568 block   33 + 27.6s 73705fd36c1912d297ebd907aa242d34534c9599b2d3440b3ba06603b0fe17af
+[crown-b] ETH schedule 0 announced and effective at 1794848136
+[crown-b] 2590dc9813f3ea8e6b8cd61578188267874e154aed12fd28d6f1dee06d28715c moved from block 36 to block 35: the head was rewound
+[crown-b] bridge Register ETH (registry entry, schedules 0 and 1, leaf count) applied        gas    451572 block   35 +1211.8s 2590dc9813f3ea8e6b8cd61578188267874e154aed12fd28d6f1dee06d28715c
+[crown-b] token(cid, ETH): 1 schedule(s), known until leaf 1
+[crown-b] bridge ImportRoot n=1 (stage 1, block 9)                   applied        gas    301949 block   37 + 19.6s 9066b9e28873cab963578ada712f839a076360f18f41733f1ce4b4e117b909c1
+[crown-b] stage 2 finality update (block 10) Open (step 1)           applied        gas   1995749 block   39 + 19.6s 362fd040c5ee6f9932bdbe64b7bdb21cf5e555e1f87c421b32af05548a4cc3c5
+[crown-b] stage 2 finality update (block 10) Miller (step 2)         applied        gas   3305374 block   41 + 19.8s bc6695604e1ceed8947c3e50937dfcc4cf22ede0cf0f7ef7a0fc7d2712a12a2a
+[crown-b] stage 2 finality update (block 10) Finish (step 3)         applied        gas   3718957 block   43 + 20.0s cd32116a1446ecea589368e34bd7ed65d671c7629183ba5635603420595e4fd7
+[crown-b] bridge ImportFees: ETH schedule 1 absent at n=2            applied        gas    315313 block   45 + 19.6s 7f23e0c03d7dacc3bfeb5f6f625e06ebaece219f3ed489a93a0d99356ceca847
+[crown-b] token(cid, ETH): 1 schedule(s), known until leaf 2
+[crown-b] bridge ImportRoot n=2 (stage 2, block 10)                  applied        gas    301949 block   47 + 19.7s 5d6c5e77a2ed4abfb0e3c404e1c1de3cf4e170b29d13f330cd4408d03bd8734d
+[crown-b] blocks 25..=47 (T1 0x27fb28d3e60b3ebdafe639743dacadcca9e4fd003c40d6d13eca2bdb1d6bc12c); 0 burn note(s) written to ../tmp/m0-gasdrop/live/run/crown/burn-notes.json
