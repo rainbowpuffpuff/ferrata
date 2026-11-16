@@ -130,8 +130,45 @@ def check_user_proving(p4):
                 rows=rows, sources=[rel(pad_f), rel(scale_f), "lez/results/p4-minimum/README.md"])
 
 
+GAS_DROP_CHECKS = ("session", "zero_before", "negative", "receipt", "relayer", "sealed", "claim", "accounting")
+GAS_DROP_OTHERWISE = ("otherwise", "first claims are faucet-funded, the correlation disclosed, Logos decides", "")
+
+
+def gas_drop_verdict(summary, newest):
+    """Check 2 from a gas-drop summary (lez/scripts/gas-drop-summary.py --write): GO only when it is of the newest tag,
+    its sequencer ran without RISC0_DEV_MODE, and every check of the summary passed: the claimant's private and public
+    native balances zero before, the negative control (the same claim without the credit) refused, the receipt real,
+    the relayer's drop sent once, the credit sealed, and the claim that sweeps it applied with a real proof in a block
+    final on Bedrock, its fee paid from the credit. Returns (verdict, value, rows)."""
+    checks = summary.get("checks", {})
+    rows = [(k, (checks.get(k) or {}).get("read", "not in the summary"),
+             "pass" if (checks.get(k) or {}).get("passed") else "not passed") for k in GAS_DROP_CHECKS]
+    claim, acc = summary.get("claim", {}), summary.get("accounting", {})
+    tag, dev = summary.get("tag"), summary.get("session", {}).get("sequencer_dev_mode")
+    failed = [k for k in GAS_DROP_CHECKS if not (checks.get(k) or {}).get("passed")]
+    real = bool(claim.get("real_proof") and claim.get("status") == "applied" and claim.get("bedrock_status") == "Finalized")
+    if tag == newest and dev is False and not failed and summary.get("passed") and real:
+        return ("GO", f"newest tag {newest}: a private claim (ClaimPrivately) by a claimant with no native LEZ swept the "
+                f"relayer's sealed credit of {acc.get('credit')} into its one-time account and paid its fee "
+                f"({acc.get('feeCharged')}) from it in the same transaction; proven for real in "
+                f"{fmt_s(claim['prove_and_submit_s']) if claim.get('prove_and_submit_s') is not None else '?'}, applied in "
+                f"block {claim.get('block')} (final on Bedrock); the same claim without the credit refused by the wallet",
+                rows)
+    why = (f"the record is of {tag}, not {newest}" if tag != newest else
+           "its sequencer is not shown without RISC0_DEV_MODE" if dev is not False else
+           "not passed: " + ", ".join(failed) if failed else "the claim is not shown applied with a real proof in a final block")
+    return ("NO-GO (measured: the sweep did not pass)", f"newest tag {newest}: {why}", rows + [GAS_DROP_OTHERWISE])
+
+
 def check_gas_drop():
-    """Check 2: a private claim that sweeps a sealed native credit and pays its fee from it."""
+    """Check 2: lez/results/<newest tag>/gas-drop/summary.json, written from that tag's session records; without one,
+    what is built of the gas drop (its receipt and the relayer's side)."""
+    newest, source = FACTS["lez_newest_tag"]
+    path = os.path.join(ROOT, "lez", "results", newest, "gas-drop", "summary.json")
+    if os.path.exists(path):
+        verdict, value, rows = gas_drop_verdict(load(path), newest)
+        return dict(verdict=verdict, value=value, rows=rows,
+                    sources=[source, rel(path), rel(os.path.join(os.path.dirname(path), "README.md"))])
     hits = []
     for pat in ("lez/**/*.rs", "bridge/**/*.rs", "cli/**/*.rs", "e2e/**/*.py"):
         for f in glob.glob(os.path.join(ROOT, pat), recursive=True):
@@ -146,14 +183,12 @@ def check_gas_drop():
     if not hits:
         return dict(verdict="NO-GO (not built)",
                     value="no test of the gas drop in the repository (specified in the proposal §B2, not built)",
-                    rows=[("otherwise", "first claims are faucet-funded, the correlation disclosed, Logos decides", "")],
-                    sources=["grep: fn *gas_drop* in lez/, bridge/, cli/, e2e/"])
-    return dict(verdict="OPEN (the sweep of a sealed native credit by a private claim is not built)",
+                    rows=[GAS_DROP_OTHERWISE], sources=["grep: fn *gas_drop* in lez/, bridge/, cli/, e2e/"])
+    return dict(verdict=f"OPEN (not measured on {newest})",
                 value=f"the gas drop's receipt binding (N, oneTimeAddress, relayer) and the relayer's side are built and tested "
-                      f"({len(hits)} named test(s): " + ", ".join(hits[:6]) + "); the claim that sweeps the sealed credit "
-                      "and pays its fee from it is not (README, Specified but not built)",
-                rows=[("otherwise", "first claims are faucet-funded, the correlation disclosed, Logos decides", "")],
-                sources=hits[:6] + ["README.md: Specified but not built"])
+                      f"({len(hits)} named function(s): " + ", ".join(hits[:6]) + f"); no gas-drop record for {newest} "
+                      f"({rel(path)})",
+                rows=[GAS_DROP_OTHERWISE], sources=hits[:6] + [rel(path)])
 
 
 def ls_remote(url, pattern):
