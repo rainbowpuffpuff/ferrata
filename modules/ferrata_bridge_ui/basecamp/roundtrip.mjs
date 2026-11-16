@@ -45,12 +45,35 @@ function ops(args) {
   return out;
 }
 // The chains' own state (not the view's, not the module's): ops.sh chain.
-function chain(label) {
+function chain(label, record = true) {
   const out = execFileSync("bash", ["-c", `${process.env.SEQNET_OPS} chain ${st.fresh}`], { encoding: "utf8", maxBuffer: 64 << 20 });
   const j = JSON.parse(out.trim().split("\n").pop());
-  appendFileSync(`${OUT}/chain-checks.jsonl`, JSON.stringify({ t: new Date().toISOString(), label, ...j }) + "\n");
+  if (record) appendFileSync(`${OUT}/chain-checks.jsonl`, JSON.stringify({ t: new Date().toISOString(), label, ...j }) + "\n");
   st.chain[label] = j;
   return j;
+}
+// After an approval: the view's call either settled (its text says so), or the host cut it (Basecamp cuts a view's
+// call to a core module at 20 s: results README, "Not reached: L4") while the module went on. Then the view's report
+// is recorded and pictured, the outcome is read on the chain (a new private LEZ transaction), and the caller refreshes
+// the view. Returns null when the view's call settled, else the chain's transaction.
+async function settledOrCut(app, textProp, settledPart, what, before, shotName) {
+  const text = await get(app, textProp);
+  if (has(text, settledPart)) return null;
+  const err = await get(app, "lastError");
+  if (!has(err, "Logos host")) throw new Error(`${what}: ${text} ${err}`);
+  log({ host_cut: what, error: err });
+  await shot(app, shotName);
+  const t0 = Date.now();
+  for (;;) {
+    const j = chain(`${what}: on the chain after the host's cut`, false);
+    const fresh = j.lez.txs.filter((t) => t.kind === "private" && !before.lez.txs.some((b) => b.tx === t.tx));
+    if (fresh.length) {
+      log({ applied_after_the_cut: what, tx: fresh[0].tx, block: fresh[0].block, reverted: fresh[0].reverted, ms_after_the_cut: Date.now() - t0 });
+      return fresh[0];
+    }
+    if (Date.now() - t0 > WAIT) throw new Error(`${what}: no new private transaction on the chain ${WAIT} ms after the host's cut`);
+    await sleep(15000);
+  }
 }
 const word = (data, i) => BigInt("0x" + hex(data).slice(64 * i, 64 * (i + 1)));
 function lezTx(j, txHash) { return j.lez.txs.find((t) => hex(t.tx) === hex(txHash)); }
@@ -225,16 +248,18 @@ step("the private claim, once its random delay has passed", async (app) => {
   const before = chain("before claim");
   await click(app, "claim.submit");
   await approve(app, "Private claim", "14-claim-approval");
-  await waitFor(app, async () => { if (!has(await get(app, "claimText"), "Claimed privately")) throw new Error(await get(app, "claimText + ' ' + lastError")); }, WAIT, "the private claim");
-  st.claim = await getJson(app, "claimReply");
-  check(st.claim.settled && st.claim.private, "settled as a private transaction on the sequencer");
+  const cut = await settledOrCut(app, "claimText", "Claimed privately", "claim", before, "14b-claim-cut-by-the-host");
+  if (!cut) {
+    st.claim = await getJson(app, "claimReply");
+    check(st.claim.settled && st.claim.private, "settled as a private transaction on the sequencer");
+  }
   await click(app, "claim.refresh");
   await idle(app);
   await waitFor(app, async () => { const s = await get(app, "positions.deposits[0].state"); if (s !== "claimed") throw new Error(s); }, 60000, "the deposit shows as claimed");
   const j = chain("after claim");
-  const t = lezTx(j, st.claim.tx_hash);
-  check(t && t.kind === "private" && !t.reverted, `the claim's transaction ${hex(st.claim.tx_hash).slice(0, 12)}… is in LEZ block ${t && t.block}, private, not reverted`);
-  check(st.claim.block === undefined || Number(st.claim.block) === t.block, `the block the view names (${st.claim.block}) is the sequencer's (${t && t.block})`);
+  const t = lezTx(j, cut ? cut.tx : st.claim.tx_hash);
+  check(t && t.kind === "private" && !t.reverted, `the claim's transaction ${hex(t && t.tx).slice(0, 12)}… is in LEZ block ${t && t.block}, private, not reverted${cut ? " (found on the chain after the host cut the view's call)" : ""}`);
+  if (!cut) check(st.claim.block === undefined || Number(st.claim.block) === t.block, `the block the view names (${st.claim.block}) is the sequencer's (${t && t.block})`);
   check(j.lez.txs.length > before.lez.txs.length, "the zone has the claim's transaction more");
   await click(app, "header.refresh");
   await idle(app);
@@ -252,14 +277,17 @@ step("the private burn to a fresh address", async (app) => {
   check(hex(st.fresh) !== hex(dep), `a fresh recipient generated (${st.fresh})`);
   check(has(await evalIn(app, "burn.leaks.summary", "text"), "Minimal"), "the leak indicator reads Minimal");
   await picture(app, "16-burn-private-defaults");
+  const before = chain("before burn");
   await click(app, "burn.submit");
   await approve(app, "Burn", "17-burn-approval");
-  await waitFor(app, async () => { if (!has(await get(app, "burnText"), "Burned privately")) throw new Error(await get(app, "burnText + ' ' + lastError")); }, WAIT, "the private burn");
-  st.burn = await getJson(app, "burnReply");
-  check(st.burn.settled && st.burn.private && st.burn.balance === "0", "settled privately; the private holding is spent");
-  check(hex(st.burn.recipient) === hex(st.fresh), "the note is for the fresh recipient");
+  const cut = await settledOrCut(app, "burnText", "Burned privately", "burn", before, "17b-burn-cut-by-the-host");
+  if (!cut) {
+    st.burn = await getJson(app, "burnReply");
+    check(st.burn.settled && st.burn.private && st.burn.balance === "0", "settled privately; the private holding is spent");
+    check(hex(st.burn.recipient) === hex(st.fresh), "the note is for the fresh recipient");
+  }
   const j = chain("after burn");
-  const t = lezTx(j, st.burn.tx_hash);
+  const t = lezTx(j, cut ? cut.tx : st.burn.tx_hash);
   check(t && t.kind === "private" && !t.reverted && has(t.visible, "Burn"), `the burn's transaction is in LEZ block ${t && t.block}, private, not reverted, its Burn call visible to the checkpoint`);
   await picture(app, "18-burn-settled-privately");
 });
