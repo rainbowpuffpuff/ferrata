@@ -1,0 +1,16 @@
+[crown-b] crown STAND-IN: vault 0x67ac447386f2ea14ef2fbf55ef33ce1d8f386516, configId 0x60b11ece3c017751a86e1d132c3cc3fb6254a30d6e79e978f81331d25a5e8729, instance 0xabd362ebd8091508211f8c37dfd4c8e77d7ee313248579c5399aecf726b13c4a
+[crown-b] stage 1 finality update (block 9) Open (step 1)            applied        gas   1996101 block   27 + 21.7s f934a777dcf4f639e19c93c949a4baa82233582e64c0d307e5259622d64913dc
+[crown-b] stage 1 finality update (block 9) Miller (step 2)          applied        gas   3305374 block   29 + 19.7s f24801e42565d1d9f6f52832ae2d6ad6bb3466423709e079acd6c60d0dca33bc
+[crown-b] stage 1 finality update (block 9) Finish (step 3)          applied        gas   3718957 block   31 + 20.0s f56f757f5711dc113771ae22b098744ab78a46818a6199b9443a577f41c18cc5
+[crown-b] bridge Init (pairing: configId in the vault's slot 2)      applied        gas    224568 block   33 + 19.4s e006766263e0c67bb71218a7378fbab40700da65204a53b775f6fa856b8d6fb6
+[crown-b] ETH schedule 0 announced and effective at 1794843797
+[crown-b] bridge Register ETH (registry entry, schedules 0 and 1, leaf count) applied        gas    456742 block   35 + 19.8s 49a3afec0485e17d20f61a038358eafc007af0165400ed531d02b6f6def7e015
+[crown-b] token(cid, ETH): 1 schedule(s), known until leaf 1
+[crown-b] bridge ImportRoot n=1 (stage 1, block 9)                   applied        gas    301949 block   37 + 19.6s 48a9b55902e8be466fb9d680d30c1e2aceb3bbcab25428d8d67f0b0e7f7bc2f1
+[crown-b] stage 2 finality update (block 10) Open (step 1)           applied        gas   1996101 block   39 + 19.6s 12a56c2d536bafbce4c09bb8bff0ce23846bd4b81e20867b6ce68d36c271f856
+[crown-b] stage 2 finality update (block 10) Miller (step 2)         applied        gas   3305374 block   41 + 19.8s e6527d56296d9d091432b7a40bb5b5bdb7d06e50947db50f3a0fc60bd6a093b5
+[crown-b] stage 2 finality update (block 10) Finish (step 3)         applied        gas   3718957 block   43 + 20.0s f20c23e7902d7b3cbc4bfdd9a51874748a5b1ce50920b92e7221a36a8a35410d
+[crown-b] bridge ImportFees: ETH schedule 1 absent at n=2            applied        gas    315313 block   45 + 19.6s 417f75e4d83b34a17eea7005d467811ae7d63275916c01dee1298dd37f0bd032
+[crown-b] token(cid, ETH): 1 schedule(s), known until leaf 2
+[crown-b] bridge ImportRoot n=2 (stage 2, block 10)                  applied        gas    301949 block   47 + 19.6s 67647f21f139376c254c9a95dfdc34b63111b69556adecbd6deeab676418479f
+[crown-b] blocks 25..=47 (T1 0xb344c4f0f7e8da236a52d3e9eff14ef9f8dc8c3bae65cba2306da6dcc2937cfa); 0 burn note(s) written to ../tmp/m0-gasdrop/live/run/crown/burn-notes.json

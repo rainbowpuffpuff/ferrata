@@ -1,0 +1,10 @@
+{
+  "drops": {
+    "0xef2958f9feb820c4b23faee54f4fca07740860f364887f2f6661511fb68f8912": {
+      "one_time_address": "0x0bc08855159531606433ef1628347146fd3cf388036d064e358e45beb2e7f2ee",
+      "amount": 20000000,
+      "at": 1794844037,
+      "tx": "failed: the credit command failed (exit status: 1)"
+    }
+  }
+}

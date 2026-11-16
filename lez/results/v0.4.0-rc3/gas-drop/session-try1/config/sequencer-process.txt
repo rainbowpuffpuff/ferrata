@@ -1,0 +1,3 @@
+command: ../tmp/m0-gasdrop/live/bin/sequencer_service start ../tmp/m0-gasdrop/live/run/sequencer_home --rpc-listen-address 127.0.0.1:3040 
+RISC0_* variables in the sequencer's environment: RISC0_HOME=../risc0-home-lez 
+(RISC0_DEV_MODE absent: receipts of privacy-preserving transactions are verified)

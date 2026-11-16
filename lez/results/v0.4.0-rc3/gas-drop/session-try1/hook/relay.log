@@ -1,0 +1,19 @@
+[2026-11-16T15:47:18Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/crown/driver/wallet/storage.json
+[gas-drop] relayer's private wallet at block 49: account 478hD6LXFTYu5gRRkWkCyXPRsWgCwAfRredoCUfxr5b9
+[2026-11-16T15:47:18Z INFO  wallet] Claiming 1 pending credit(s) before the root: [(6, Some(20000000000000))]
+[gas-drop] relayer's credit, dry run: Dry run: nothing proven or sent
+  public cycles:  0
+  base fees:      exec 8 / stor 8 (height 49)
+  fee at head:    5070616
+  headroom:       5 blocks, up to exec 13 / stor 13 (8239751)
+  reserve:        8239751 (surplus refunded)
+  fee payer:      478hD6LXFTYu5gRRkWkCyXPRsWgCwAfRredoCUfxr5b9
+  claims:         1 pending credit(s), 20000000000000 to the payer
+  refund to:      the payer's alias
+[2026-11-16T15:47:18Z INFO  wallet] Claiming 1 pending credit(s) before the root: [(6, Some(20000000000000))]
+Error: the relayer's credit: dropped  not included within 4 blocks; execute_and_prove and submission 224.8 s; transaction 253340 bytes: receipt 238233 bytes; claims ; 7 private action(s); 2 boundary step(s)
+[gas-drop-credit] gas drop: the relayer's native credit, sealed to the one-time address (real proof) dropped        gas           block      +  0.0s 4b40b921554358279bf465f6272b319cdca2214cc7a3d70c34c1f2275de3d1a7
+Error: the credit failed; recorded as failed
+
+Caused by:
+    the credit command failed (exit status: 1)

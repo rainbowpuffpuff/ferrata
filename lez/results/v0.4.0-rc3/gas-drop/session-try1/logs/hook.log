@@ -1,0 +1,39 @@
+[gasdrop-hook 15:39:19] crown-a: deploy attest and bridge, the stand-in instance (channel 0101010101010101010101010101010101010101010101010101010101010101)
+[gasdrop-hook 15:43:11] session A: tip {"hash":"0x63665b7418b25deb4861d124eaa00efdec571029647a818fc423f9da94561dc1","id":24}; attestation 0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df; bridge 0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd
+[gasdrop-hook 15:43:11] keys
+[gasdrop-hook 15:43:12] claimant: {"main":"7iT963ekXsmXii9nrHSK6X3StRq4j9h1KMnQJ7XefT1v","oneTime":"nsmAUWrZB1RTjAWmzUSN2t6pPau1xFhv9E3qDEsncfX","public":"EnWgfXjkBou7QxncQzhD537PyeAZQDqjKuqdWvtmVxcq","relayer":"5TSCmjbsZVF7MQzavk5G3ZdjxdTzdMXMXhcCFBFm8JkD"}
+[gasdrop-hook 15:43:14] vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516 (mock verifier 0x25Fa4286d401bdc4AC7657bc7a1ebdE1B737F4b1), configId 0x60b11ece3c017751a86e1d132c3cc3fb6254a30d6e79e978f81331d25a5e8729; deposit j1 to the claimant's private account 0x63c47d9d235f750daa5ff8dcc72da0c8be7b378883bbd7de0851cc5dd08284dd
+[gasdrop-hook 15:43:19] deposit 0 sent; capture-1: capture of block 9 0x7b95e85af1a6cefb98fcbea8b604ce08bb3c02d5867e092084f585cfdaa5c66a (state root patched: False): 1 deposit(s), 6 slot(s)
+[gasdrop-hook 15:43:20] deposit 1 sent; capture-2: capture of block 10 0xd3080a007e15ad45f98a56c29bb6c53df0feb5af54a0a5378acb96a67b20e7c4 (state root patched: False): 2 deposit(s), 6 slot(s)
+[gasdrop-hook 15:43:21] crown-driver check: [check] stage 2: configId 0x60b11ece3c017751a86e1d132c3cc3fb6254a30d6e79e978f81331d25a5e8729 in slot 2; pairing, import and register requests accepted natively
+[gasdrop-hook 15:43:21] crown-b --operator-only yes: the updates, Init, Register ETH, ImportFees, ImportRoot n=1, n=2
+[crown-b] bridge ImportFees: ETH schedule 1 absent at n=2            applied        gas    315313 block   45 + 19.6s 417f75e4d83b34a17eea7005d467811ae7d63275916c01dee1298dd37f0bd032
+[crown-b] token(cid, ETH): 1 schedule(s), known until leaf 2
+[crown-b] bridge ImportRoot n=2 (stage 2, block 10)                  applied        gas    301949 block   47 + 19.6s 67647f21f139376c254c9a95dfdc34b63111b69556adecbd6deeab676418479f
+[crown-b] blocks 25..=47 (T1 0xb344c4f0f7e8da236a52d3e9eff14ef9f8dc8c3bae65cba2306da6dcc2937cfa); 0 burn note(s) written to ../tmp/m0-gasdrop/live/run/crown/burn-notes.json
+[gasdrop-hook 15:47:03] prepare
+[gasdrop-hook 15:47:06] negative control: {"refused":true,"refusedBy":"wallet","reasonIsFee":true,"error":"Failed to build transaction: Invalid input: Fee reserve of 6188624 from payer nsmAUWrZB1RTjAWmzUSN2t6pPau1xFhv9E3qDEsncfX fails, though the transaction runs without it: Invalid native transfer: sender nsmAUWrZB1RTjAWmzUSN2t6pPau1xFhv9E3qDEs"}
+[gasdrop-hook 15:47:06] receipt
+[gasdrop-hook 15:47:17] receipt: {"provenS":11.7,"userCycles":76230,"receiptJsonBytes":583883,"verified":true}
+[gasdrop-hook 15:47:17] relay
+[2026-11-16T15:47:18Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/crown/driver/wallet/storage.json
+[gas-drop] relayer's private wallet at block 49: account 478hD6LXFTYu5gRRkWkCyXPRsWgCwAfRredoCUfxr5b9
+[2026-11-16T15:47:18Z INFO  wallet] Claiming 1 pending credit(s) before the root: [(6, Some(20000000000000))]
+[gas-drop] relayer's credit, dry run: Dry run: nothing proven or sent
+  public cycles:  0
+  base fees:      exec 8 / stor 8 (height 49)
+  fee at head:    5070616
+  headroom:       5 blocks, up to exec 13 / stor 13 (8239751)
+  reserve:        8239751 (surplus refunded)
+  fee payer:      478hD6LXFTYu5gRRkWkCyXPRsWgCwAfRredoCUfxr5b9
+  claims:         1 pending credit(s), 20000000000000 to the payer
+  refund to:      the payer's alias
+[2026-11-16T15:47:18Z INFO  wallet] Claiming 1 pending credit(s) before the root: [(6, Some(20000000000000))]
+Error: the relayer's credit: dropped  not included within 4 blocks; execute_and_prove and submission 224.8 s; transaction 253340 bytes: receipt 238233 bytes; claims ; 7 private action(s); 2 boundary step(s)
+[gas-drop-credit] gas drop: the relayer's native credit, sealed to the one-time address (real proof) dropped        gas           block      +  0.0s 4b40b921554358279bf465f6272b319cdca2214cc7a3d70c34c1f2275de3d1a7
+Error: the credit failed; recorded as failed
+
+Caused by:
+    the credit command failed (exit status: 1)
+[gasdrop-hook 15:51:03] relay failed (exit 1): waiting for ../tmp/m0-gasdrop/live/run/gasdrop/RETRY or ../tmp/m0-gasdrop/live/run/gasdrop/ABORT
+[gasdrop-hook 15:55:43] STOP: the relayer's drop

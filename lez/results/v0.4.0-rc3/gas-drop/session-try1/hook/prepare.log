@@ -1,0 +1,38 @@
+[2026-11-16T15:47:04Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/crown/driver/wallet/storage.json
+Syncing to block 48. Blocks to sync: 23
+[2026-11-16T15:47:04Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T15:47:04Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T15:47:04Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T15:47:04Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T15:47:04Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T15:47:04Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T15:47:04Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T15:47:04Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T15:47:04Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T15:47:04Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T15:47:04Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T15:47:04Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T15:47:04Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T15:47:04Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T15:47:04Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T15:47:04Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T15:47:04Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T15:47:04Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T15:47:04Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T15:47:04Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T15:47:04Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T15:47:04Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+[2026-11-16T15:47:04Z INFO  wallet] Stored persistent accounts at ../tmp/m0-gasdrop/live/run/gasdrop/claimant/storage.json
+Synced to block 48 in 10.567149ms
+Latest block is 48
+[gas-drop] the claimant before the drop: {"atBlock":48,"chain":{"mainId":"0","oneTimeId":"0","public":"0"},"pendingMessages":[],"private":{"main":{"native":"0","wallet":"state"},"oneTime":{"native":"0","wallet":"state"}},"walletPublicAccounts":["2qnm2jrXXvfM9vY8F5ciujmnqhJoTxDdAWaTeQSGuAm5","EnWgfXjkBou7QxncQzhD537PyeAZQDqjKuqdWvtmVxcq"]}
+[gas-drop] negative control, dry run: Dry run: nothing proven or sent
+  public cycles:  139751
+  base fees:      exec 8 / stor 8 (height 48)
+  fee at head:    6188624
+  headroom:       5 blocks, up to exec 13 / stor 13 (10056514)
+  reserve:        6188624 (surplus refunded)
+  fee payer:      nsmAUWrZB1RTjAWmzUSN2t6pPau1xFhv9E3qDEsncfX
+  claims:         0 pending credit(s), 0 to the payer
+  refund to:      the payer's alias
+[gas-drop] negative control (no credit), after 1.0 s: refused true: Failed to build transaction: Invalid input: Fee reserve of 6188624 from payer nsmAUWrZB1RTjAWmzUSN2t6pPau1xFhv9E3qDEsncfX fails, though the transaction runs without it: Invalid native transfer: sender nsmAUWrZB1RTjAWmzUSN2t6pPau1xFhv9E3qDEsncfX holds less than the transferred amount: TransactionBuildError(InvalidInput("Fee reserve of 6188624 from payer nsmAUWrZB1RTjAWmzUSN2t6pPau1xFhv9E3qDEsncfX fails, though the transaction runs without it: Invalid native transfer: sender nsmAUWrZB1RTjAWmzUSN2t6pPau1xFhv9E3qDEsncfX holds less than the transferred amount"))
