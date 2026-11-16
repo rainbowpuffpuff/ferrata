@@ -1,0 +1,173 @@
+sequencer http://127.0.0.1:3040: head block 2, followed to block 0 (the last one final on Bedrock)
+fee state at height 2: base fee exec 8 / stor 8; block caps exec 10000000 / stor 1000000
+LEZ constants: wallet default gas limit 2000000, TARGET_GAS_EXEC 5000000, MAX_GAS_EXEC 10000000, TARGET_GAS_STOR 500000, MAX_GAS_STOR 1000000, PRIVATE_VERIFY_GAS 409764, PRIVATE_GAS_STOR 224063
+program: image 816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df, 627064 bytes (sha256 ddfde69bea89a5b882f55266fcb4b7c887df7debc1c9d4972d8ebea5a72eaad9), user ELF 594640 bytes in 7 segment(s)
+scripted: image 8cb0e3f54dd11a2aea7551227c43e6416a6218e101cc7779c98f4f1a53d64e61, 268228 bytes (sha256 29249a3ac807ad3268ff5499ccee70a75b687d5fe5517fa5843b333c2c6c1bc0), user ELF 235804 bytes in 3 segment(s)
+deployments: main CXnzhRVkXzwZaDFcvchMvz28iVTy9f8tmesDGpLcGSs, twin DVcubqr9iDMUwCPdL5sDo5WXLkLFB2dgnc2vdi5bsd57, scripted FeoLrnY94gX4NJQ8duSL11vmFM2r5zGkhiQgJasMKY3K
+payer 0: 6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV holds 10000000000000
+payer 1: 7wHg9sbJwc6h3NP1S9bekfAzB8CHifEcxKswCKUt3YQo holds 20000000000000
+payer 2: CbgR6tj5kWx5oziiFptM7jMvrQeYY3Mzaao6ciuhSr2r holds 10000000000000
+payer 3: 2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2 holds 20000000000000
+harness tables: 55 rows from ../ferrata-wt-m0-rc3-a/lez/results/v0.4.0-rc3
+Transaction hash is 07886fc9994009818af46446a4facd9dc2a76f517b3ac1acee461c5ea540f558
+Transaction is included in block 3
+Transaction hash is 75b0836f0cb3dd3fdb5135ce71a71be66f42a76732b48debe2c837e320a010aa
+Transaction is included in block 4
+Transaction hash is e33abcc979ef9a1ed36c8df62fa27dc39ca801f1b1afdad9195cd2b42ae9d7c6
+Transaction is included in block 5
+Transaction hash is 99e51daf1f66207e383e343cf14e5f50194fc3a264a5a93b2c9594a10e1c6f92
+Transaction is included in block 6
+Transaction hash is 3295d64d1c0294ae6e4faf60b3b416844c0364a559ea7b882c2c6682a3a89d2f
+Transaction is included in block 7
+Transaction hash is bffd2ee46de68fb75bbc32dbd73955d0cccede0aa8f81ee47c267aed3c62df38
+Transaction is included in block 8
+Transaction hash is 9e436fed0d317460b23a914dde088f095fb4a6a583583636acb415bc557c3d4e
+Transaction is included in block 9
+Transaction hash is 83f95795e18a984dbfd26858196f024870ccc6b2f6d2486ac46693f9acdd4dd6
+Transaction is included in block 10
+[deploy] deploy main: WriteSegment 7 of 7 (4816 bytes)              applied   gas         0 +    5396 bytes, block    3
+[deploy] deploy main: WriteSegment 6 of 7 (98304 bytes)             applied   gas      4822 +   98916 bytes, block    4
+[deploy] deploy main: WriteSegment 5 of 7 (98304 bytes)             applied   gas     98342 +   98916 bytes, block    5
+[deploy] deploy main: WriteSegment 4 of 7 (98304 bytes)             applied   gas     98342 +   98916 bytes, block    6
+[deploy] deploy main: WriteSegment 3 of 7 (98304 bytes)             applied   gas     98342 +   98916 bytes, block    7
+[deploy] deploy main: WriteSegment 2 of 7 (98304 bytes)             applied   gas     98342 +   98916 bytes, block    8
+[deploy] deploy main: WriteSegment 1 of 7 (98304 bytes)             applied   gas     98342 +   98916 bytes, block    9
+[deploy] deploy main: CreateHeader (immutable) at CXnzhRVkXzwZaDFcvchMvz28iVTy9f8tmesDGpLcGSs applied   gas    594874 +     608 bytes, block   10
+[deploy] main: image 816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df at CXnzhRVkXzwZaDFcvchMvz28iVTy9f8tmesDGpLcGSs (computed by the sequencer's loader), immutable
+Transaction hash is 09c2d3429591c16362f9807839be29f8583ee809b73356c422b19ffa29cd7c44
+Transaction is included in block 12
+Transaction hash is 423545cf9ab68d323445fafc36c002897c06e04459a42e20d62362100f5c4dcc
+Transaction is included in block 13
+Transaction hash is ec4a2b0475789648451f5f127f7cd31f5e5d499955d358e3319e607a94d75331
+Transaction is included in block 14
+Transaction hash is 9e215e5a41bf0c8fb1b630af6f34bf30ff9d999be9443f2877f20d0fd8d0c89f
+Transaction is included in block 15
+Transaction hash is 59d3a35a1b360a5e268b3470881d9fa728c3502843f4ae79aecc5cd510c57f79
+Transaction is included in block 16
+Transaction hash is a7bde96316088ed881af929a0e5bb15c1dce8dfe820b4d63099d4eb4f4ce307e
+Transaction is included in block 17
+Transaction hash is a7233da0355b11fa1107ad8ebc45cf483e928963063ce749acabfe9edbadc05d
+Transaction is included in block 18
+Transaction hash is 3ac8ed7ae40e69876d5c61ae67c847b5be69ab258b29a62a8ec4b2cab46e8eaf
+Transaction is included in block 19
+[deploy] deploy twin: WriteSegment 7 of 7 (4816 bytes)              applied   gas         0 +    5396 bytes, block   12
+[deploy] deploy twin: WriteSegment 6 of 7 (98304 bytes)             applied   gas      4822 +   98916 bytes, block   13
+[deploy] deploy twin: WriteSegment 5 of 7 (98304 bytes)             applied   gas     98342 +   98916 bytes, block   14
+[deploy] deploy twin: WriteSegment 4 of 7 (98304 bytes)             applied   gas     98342 +   98916 bytes, block   15
+[deploy] deploy twin: WriteSegment 3 of 7 (98304 bytes)             applied   gas     98342 +   98916 bytes, block   16
+[deploy] deploy twin: WriteSegment 2 of 7 (98304 bytes)             applied   gas     98342 +   98916 bytes, block   17
+[deploy] deploy twin: WriteSegment 1 of 7 (98304 bytes)             applied   gas     98342 +   98916 bytes, block   18
+[deploy] deploy twin: CreateHeader (immutable) at DVcubqr9iDMUwCPdL5sDo5WXLkLFB2dgnc2vdi5bsd57 applied   gas    594874 +     608 bytes, block   19
+[deploy] twin: image 816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df at DVcubqr9iDMUwCPdL5sDo5WXLkLFB2dgnc2vdi5bsd57 (computed by the sequencer's loader), immutable
+Transaction hash is 68eab9fdcd8f440d0ae6bbba55faffd111752c06d73f9330b5034458687ef850
+Transaction is included in block 21
+Transaction hash is 7579ae5712c6837741302acf16de5da7e35ac4a0b011e160f0cc7d4bcf406a5a
+Transaction is included in block 22
+Transaction hash is d92f340bbb6dde872444ecc275406a9d756e907d511cdd7e1f1555eb950c9c4d
+Transaction is included in block 23
+Transaction hash is 814be00b15f8d4126f53231ea27c2fa3acc7d344db15807273f64bc62fc1d307
+Transaction is included in block 24
+[deploy] deploy scripted: WriteSegment 3 of 3 (39196 bytes)         applied   gas         0 +   39776 bytes, block   21
+[deploy] deploy scripted: WriteSegment 2 of 3 (98304 bytes)         applied   gas     39202 +   98916 bytes, block   22
+[deploy] deploy scripted: WriteSegment 1 of 3 (98304 bytes)         applied   gas     98342 +   98916 bytes, block   23
+[deploy] deploy scripted: CreateHeader (immutable) at FeoLrnY94gX4NJQ8duSL11vmFM2r5zGkhiQgJasMKY3K applied   gas    235886 +     608 bytes, block   24
+[deploy] scripted: image 8cb0e3f54dd11a2aea7551227c43e6416a6218e101cc7779c98f4f1a53d64e61 at FeoLrnY94gX4NJQ8duSL11vmFM2r5zGkhiQgJasMKY3K (computed by the sequencer's loader), immutable
+[replay] Init Init                                                  applied        gas    210666 block   26 + 23.5s 2465575254199e8a1e7d3c1988d61783bb5bb63320e0889c3d67b5774f711275
+[replay] Init adopt 1/2                                             applied        gas   3399141 block   28 + 24.1s c4e41c446cce5cff611f2c7388254976b955a3bb186aebb31d7ebacdde4e25fe
+[replay] Init adopt 2/2                                             applied        gas   3485575 block   31 + 32.0s de984541aac65b2582061ac11583af6c53d6fb12c656eca0023de1e643f019d6
+[replay] update_0 Open (step 1)                                     applied        gas   2156300 block   34 + 27.5s ef26a666f3c6f6352703b72541dbd90376d36b5657212712a0a5b419b525e73a
+[replay] update_0 Miller (step 2)                                   applied        gas   3313372 block   37 + 31.7s 16c6965699db702a1e7d08721f3c94f73440b27ca1c80d437b15f658c8f9168e
+[replay] update_0 adopt 1/2                                         applied        gas   3410995 block   40 + 23.7s cc4bdc9c141087346831ccd17eb33df525bcc62c2e386d446d1eee9f4dc3a6fd
+[replay] update_0 adopt 2/2                                         applied        gas   3418189 block   42 + 19.3s 070ab1fbd54afe2c968490580fb182cc4dc36ceeded3ba1f0749229bfec5a4c1
+[replay] update_0 Finish (step 3)                                   applied        gas   3699098 block   44 + 24.3s 9232f8c60e8302ed19e3e351dfc94f0c4b087d37ad0a135dc7b5f23f2d933848
+[replay] update_1 Open (step 1)                                     applied        gas   2213138 block   47 + 23.2s 2b88bd2d6b051d10ab3a507df28a64d00f633b66a3db2ffcef5b84ce513bf944
+[replay] update_1 Miller (step 2)                                   applied        gas   3313372 block   49 + 20.1s 16cef5c672c527602a2aed2edbea8c9904c379cc7d1c70b7faa39adfd216fb3f
+[replay] update_1 adopt 1/2                                         applied        gas   3410995 block   51 + 19.3s 9ac218ec1acf399e01d8dbd220d883ac6892067f52e6190787662e847eb7e844
+[replay] update_1 adopt 2/2                                         applied        gas   3418189 block   53 + 19.8s b3a21070190ea0d68d5110c2543e11279fd6a15d63c1eb0156d86f9d3c598fcc
+[replay] update_1 Finish (step 3)                                   applied        gas   3736661 block   55 + 20.4s 2ff210dbf44fc4b63bf70167b15d6381e310085d936c3ee91d0fa7d7362bac86
+[replay] update_2 Open (step 1)                                     applied        gas   2213712 block   57 + 19.4s 93e0369960c1cdb8ca439018a5bafcc5b5d3611524c51427d4ba53113065f0ea
+[replay] update_2 Miller (step 2)                                   applied        gas   3313372 block   59 + 19.6s 2b549bf49bf4c505ca1af0b744edf6df66797aba114886f598dac4f5b204f52d
+[replay] update_2 adopt 1/2                                         applied        gas   3410995 block   61 + 19.3s 32dff8aaaa1a9af28139b606bf3a13fdf074193ec4dbf47c1ad3c1430f210045
+[replay] update_2 adopt 2/2                                         applied        gas   3418189 block   63 + 19.8s 4cdb7cdc61582c8f29e51f0f73914bff68bcadf201ead82171463ef3b9878650
+[replay] update_2 Finish (step 3)                                   applied        gas   3736661 block   65 + 20.0s d5c132dbb2eaec67a3d9c2b61d653fac3619947c4b2daf7bf1a8d964b698e095
+[replay] update_3 Open (step 1)                                     applied        gas   2158346 block   67 + 19.4s 9b09c34737d34b6e1a84657f6a478df95f30386deb3f08c441cf564c370cf45d
+[replay] update_3 Miller (step 2)                                   applied        gas   3313372 block   69 + 19.6s ea5a1cf55f3e8b35a1fd4888778e9ccfac66edf36b249500d06fde69834b426f
+[replay] update_3 adopt 1/2                                         applied        gas   3410995 block   71 + 19.7s 2b29ae43c32171b97214df0ea0a60aadffef6ae1b38d05c617a401f8d6af53f2
+[replay] update_3 adopt 2/2                                         applied        gas   3418189 block   73 + 20.2s 6e6f8b6637411a672e03f52cbbebf68f9518116139be2e470bd59fe7f8f27ec7
+[replay] update_3 Finish (step 3)                                   applied        gas   3736661 block   75 + 19.9s e51799c9a371c8a48ed0d0680f3e1f8a9565bfb6f80c03d75097fb0af5da1911
+[replay] update_4 Open (step 1)                                     applied        gas   2186126 block   77 + 19.0s 23148e3fd232f35787a25b1d4872114f4998be16a24aa62978b693093d6fa77e
+[replay] update_4 Miller (step 2)                                   applied        gas   3313372 block   79 + 19.7s 8337fd98c801d638faeadc52bc6e883d2e9d0260c70790b5ed527d0a4691dd0f
+[replay] update_4 adopt 1/2                                         applied        gas   3410995 block   81 + 19.7s 093f1ac71ee5408b99c404dfe017c1364b239dcb63e1f4629be37b9c58951d52
+[replay] update_4 adopt 2/2                                         applied        gas   3418189 block   83 + 19.8s bf98838a864ef3a58df8dc7d8e332814627f3d6b9addb60554be4a32a3ea5548
+[replay] update_4 Finish (step 3)                                   applied        gas   3736661 block   85 + 20.0s 0499e30c372fef51637212dc63dde5392ae64cd08e9fc9865c29d0f0b7cde997
+[scenarios] twin Init Init                                             applied        gas    210666 block   87 + 19.2s 0348e393640432fe7d3a5269acdd6afacc189ba03a3d3cf6e25b48ef71d12077
+[scenarios] twin Init adopt 1/2 with the wallet's default gas limit    reverted       gas   2000000 block   89 + 19.8s acc0d064db7b5bceb5d9380d1d3cd01aa7831716a0bbc218198fa0b4cde42553
+[scenarios] twin Init adopt 1/2                                        applied        gas   3399141 block   91 + 19.8s 4346652cd92b2501f7cbe38c062a498c8115df4be76cb81b00c678a4ce5fc4ac
+[scenarios] twin Init adopt 2/2                                        applied        gas   3485575 block   93 + 19.9s 841ce5add35a58a825c9bef6aaff954d109a90cc9465fec64918b3ec7d41ba7d
+[scenarios] twin update_0 Open (step 1)                                applied        gas   2156300 block   95 + 19.5s c9a1af5f5b2ae99e6abef79ea64700bcb01a58ba5563a86c73a39508e70cbee9
+[scenarios] twin update_0 Miller (step 2)                              applied        gas   3313372 block   97 + 20.1s 01afdf52c0bded40b539388284ffb7ec18e301d02b72afc29be1af5e3828fc02
+[scenarios] twin update_0 adopt 1/2                                    applied        gas   3410995 block   99 + 19.8s cf01b8d2eda76d7a308db849131c4db682e38df5861d298016a56731dec6fba7
+[scenarios] twin update_0 adopt 2/2                                    applied        gas   3418189 block  101 + 19.7s 8b24c8af78c25a37770ddc31dd9403c895a92fb15967ed1ef452b80b9a3e9084
+[scenarios] twin update_0 Finish (step 3)                              applied        gas   3699098 block  103 + 19.5s e2675e95aec82c746709fefe38d1af477ecef75ff2cec55bc49616f41e050f20
+[scenarios] malformed signature: Open (step 1)                         refused   41 (SignatureMalformed) gas    357307 block  105 + 19.5s 89e281e7a09311ac322649fa842d28dd4712a308bea1e6db4d9d5995671efaf4
+[scenarios] forged signature: Open (step 1)                            applied        gas   2195028 block  107 + 19.9s d1f688248cad251fa20256022ee67e2035ee54b29b6fd1d6218310deed960f8c
+[scenarios] forged signature: Miller (step 2)                          applied        gas   3308048 block  109 + 20.1s e7b27ad7c4470e52e928cadb204a0a519486e4dad8719e6e409f13ccccae6df4
+[scenarios] forged signature: Finish (step 3)                          refused   40 (SignatureInvalid) gas   3636300 block  111 + 20.0s d1857e55e06075ac93a1c259f6ea37fa3991a1efb04ed8a9a66ec6dbedb36472
+[scenarios] Apply sent as the transaction root                         refused   202 (WrongSender) gas     18877 block  113 + 19.5s 4a020789605370fea0c59f218983f9dde7e9c1dbdbc793c6319456d7b82066a6
+[scenarios] Apply from another program's actor                         refused   202 (WrongSender) gas     33166 block  115 + 20.0s dc3c6d6b88c61f684a1932617b5493bd036ace1fa5e997fe280a004e44a54be8
+[scenarios] ApplyVerified from another program's actor                 refused   202 (WrongSender) gas     30476 block  117 + 19.8s ea15335bd7cf54b6373f1b58ce99594ee09b2602fc2d7273c19089c970bf1b0c
+[scenarios] JobOpen from another program's actor                       refused   202 (WrongSender) gas     24432 block  119 + 19.8s dd3ea67bfcfbdfbd3fa90e896d4b4bb1bced57475e1b22294e63719dc07dc2b6
+[scenarios] Record from another program's actor                        refused   202 (WrongSender) gas     19302 block  121 + 19.4s 6a3e24a8083af02488030fe63000f51513d4d54ed64d2e0e78e9d524c93baca2
+[scenarios] Miller at the other deployment's address of the job        refused   205 (NoJob) gas      6108 block  123 + 19.8s ce1f4dbb1f5e7a6b67a42b3dd900dc9e1d7a19cdea4c609f7735da7dc25bf7a4
+[scenarios] Init of an existing instance                               refused   203 (AlreadyInitialized) gas     18588 block  125 + 19.9s 14e0107ab1640e7bce08850c9705e0de58341e5488654f8161f5912f43f5d746
+[scenarios] other chain Init Init                                      applied        gas    210666 block  127 + 19.9s ba886acc1db38ff416c59e7afb9a1af4123c497672f85efb3aaabe8502f4b6a1
+[scenarios] other chain Init adopt 1/2                                 applied        gas   3399141 block  129 + 20.2s 5e40b69056d716f4b190af02f38a3a67c44693c3ddd435b39512c38b1fbe4d3e
+[scenarios] other chain Init adopt 2/2                                 applied        gas   3485575 block  131 + 19.9s 923a8f2e25470dce7ba40e78d7247eb87430317e08fbf187ede799f5b5901d09
+[scenarios] other chain update_0 Open (step 1)                         applied        gas   2156124 block  133 + 19.1s b8c032f3dd52b1d68287aa8f2e083121962b8ad8b3705bd09039c78c75869ae0
+[scenarios] other chain update_0 Miller (step 2)                       applied        gas   3313372 block  135 + 19.6s 424e90dd54072eda6ff821517b4ca6f6b1971bf0f7d6e95239093fe23b845024
+[scenarios] other chain update_0 adopt 1/2                             applied        gas   3410995 block  137 + 19.7s f40c0c1021d4cd9b1d1e37c05c6e56f35f472e2b7fa2c100a8d8e90b62459cf9
+[scenarios] other chain update_0 adopt 2/2                             applied        gas   3418189 block  139 + 19.7s 534b4463ca718964c5f34f675e23cd35cdc23bd52827b230f01f635781ed6999
+[scenarios] other chain update_0 Finish (step 3)                       refused   40 (SignatureInvalid) gas   3638518 block  141 + 20.0s 86faae2b86fbb3d5ebe5754e22a2a5fece6102c69122f6f76c5ed105bca6b754
+[scenarios] instance A's job id sent to instance B                     refused   205 (NoJob) gas      6111 block  143 + 19.9s 12b8aafd4b76d52bbec0943717f7417816a60095f62e4c8e36d027c8678bd958
+[scenarios] late clock Init Init                                       applied        gas    210666 block  145 + 19.5s 8dbb954b4fdb4598629a2ff6b41122d92a4146bda96f7357f63e3e4c318e7b69
+[scenarios] late clock Init adopt 1/2                                  applied        gas   3399141 block  147 + 20.2s c5bc27dd24c8561b075068990852eed8b7e8843053b6e1a0d608e12ef172bd96
+[scenarios] late clock Init adopt 2/2                                  applied        gas   3485575 block  149 + 19.5s d3a86c6c0a6caa0fa86a913a9db177dde0c819a0c8ad3900b34db71e01d0c798
+[scenarios] Open before its signature slot (validity window)           reverted       gas   4000000 block  151 + 19.7s 9466d60da575fb9c4e5a20081aacd8fe7cba07345e9979439a1f6f83fd5528b2
+[scenarios] update_1 as finality update Open (step 1)                  applied        gas   2194902 block  153 + 19.6s f71f544f371a777b57858d728d86bdd85543f3ec8de6b9b5ee4e29964c4bfdf4
+[scenarios] duplicate Open (same job)                                  refused   207 (JobExists) gas   2188140 block  155 + 19.9s 80a94377389995c43e49a1ca45e837774da69e23eac2452b79521940f2638fe4
+[scenarios] Finish before Miller (skipped step)                        refused   81 (StepError::Phase) gas     24242 block  157 + 19.8s 8d03af12375c8cbaa064d7de050a5bcf1d67f777aa3dcd8f94ed336a5d0db234
+[scenarios] update_1 as finality update Miller (step 2)                applied        gas   3308048 block  159 + 19.9s 4dedff3ba22193cbf050e1a5a88bde19a6d389ba2a8850c901c92039a79d940d
+[scenarios] Miller replayed                                            refused   81 (StepError::Phase) gas     21237 block  161 + 19.3s 5262e0406403139bd33184295ede6e4a2ee4220068a7531682c576c3fade0020
+[scenarios] update_1 as finality update Finish (step 3)                applied        gas   3725955 block  163 + 20.1s 8b93dac4fff64c238dd337798f3131d3f94d7df68f064b78d3f50df8902d80c6
+[scenarios] Finish replayed after the job applied                      refused   205 (NoJob) gas      6111 block  165 + 19.7s 0e1cf01239ef1af7254c240e1e099f082ad7d23bab16c4cbad219ef14b890781
+[scenarios] Open an applied update again                               refused   52 (NotNewer) gas    211586 block  167 + 19.5s b6752782dcf47004ccacc462bbae163cd2c6c09a3e80f556a727086ee97e913d
+[scenarios] update_1 (next committee only) Open (step 1)               applied        gas   2211608 block  169 + 19.9s b67d759e52a6edddd6877f75aae3128a162bd7e2b1272f9d0fe827c68d375c11
+[scenarios] update_1 (next committee only) Miller (step 2)             applied        gas   3313372 block  171 + 19.7s c923f03274c2a2548c01a0e2f41e2aebf2382e50ec2f642bdc191a859463c0fb
+[scenarios] update_1 (next committee only) adopt 1/2                   applied        gas   3410995 block  173 + 20.1s ec0d1b4455b1a75e8821094115fb1fce463e4242168683093cb3b126a05ac135
+[scenarios] update_1 (next committee only) adopt 2/2                   applied        gas   3418189 block  175 + 19.4s 77d709240054ed58e69062fb3f9034bdc63abfed696cef512ca7c5f38a589dc8
+[scenarios] update_1 (next committee only) Finish (step 3)             applied        gas   3699098 block  177 + 20.3s c9a0b6b79566a47933240d919d20b6c5e31cfcfc54aea41c228bd62effed271a
+[private] update_2 as a finality update, verified by VerifyAll at the private account 44KVvzvh2ephQU9aR5snboGUXKgS1FnPYh1W4KZKwmhm's actor of DVcubqr9iDMUwCPdL5sDo5WXLkLFB2dgnc2vdi5bsd57; wallet synced at block 178; RISC0_DEV_MODE=1: a fake receipt
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+[private] proved and sent in 1.7 s: transaction 28830 bytes: receipt 14439 bytes; claims image 816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df at account DVcubqr9iDMUwCPdL5sDo5WXLkLFB2dgnc2vdi5bsd57; 7 private action(s); 4 boundary step(s)
+[private] private update for the live instance, fake receipt (RISC0_DEV_MODE=1 in the wallet) dropped        gas           block      + 32.2s 060d3edb7e158f0c1a0f11b0180adc60bdbc8266826a0d8559b615bd1b75d280
+blocks: 1..=180
+transactions: 95 sent; 76 applied, 16 refused with an exit code, 2 reverted otherwise, 1 dropped by the sequencer, 0 rejected at its RPC, 0 unfinished
+charged in all: execution gas 186546292, storage gas 2135612, base fees 1509455232
+against the harness tables: 62 transactions have a harness row; execution gas equal in 61, different in 1
+  differs: Open before its signature slot (validity window) live 4000000 harness 10000000 (Execution outside of the validity window; update_0 on an instance whose slots start ten years later; the harness sets the block time instead and declares 10M)
+base fee exec over the blocks: min 8, max 8; blocks finalized on Bedrock at export: 180 of 180
+records written to ../tmp/m0-rc3/live/run/export
+[private] update_2 as a finality update, verified by VerifyAll at the private account 44KVvzvh2ephQU9aR5snboGUXKgS1FnPYh1W4KZKwmhm's actor of DVcubqr9iDMUwCPdL5sDo5WXLkLFB2dgnc2vdi5bsd57; wallet synced at block 182; a real proof
+[private] proved and sent in 887.3 s: transaction 251843 bytes: receipt 237452 bytes; claims image 816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df at account DVcubqr9iDMUwCPdL5sDo5WXLkLFB2dgnc2vdi5bsd57; 7 private action(s); 4 boundary step(s)
+[private] private update for the live instance, real proof           applied        gas    485298 block  271 + 16.5s 9fff9aac9d686f1b1cb772798b1a5820621aa72951576482865eabaa567d3232
+[private] the instance holds the native store after the update, and the record of slot 15572992
+blocks: 1..=271
+transactions: 96 sent; 77 applied, 16 refused with an exit code, 2 reverted otherwise, 1 dropped by the sequencer, 0 rejected at its RPC, 0 unfinished
+charged in all: execution gas 187031590, storage gas 2359675, base fees 1515130120
+against the harness tables: 62 transactions have a harness row; execution gas equal in 61, different in 1
+  differs: Open before its signature slot (validity window) live 4000000 harness 10000000 (Execution outside of the validity window; update_0 on an instance whose slots start ten years later; the harness sets the block time instead and declares 10M)
+base fee exec over the blocks: min 8, max 8; blocks finalized on Bedrock at export: 271 of 271
+records written to ../tmp/m0-rc3/live/run/export
