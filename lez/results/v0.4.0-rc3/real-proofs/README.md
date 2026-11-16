@@ -79,7 +79,12 @@ sequencer logged `Pending tx … expired unmined; orphaned` 120 times, `Channel 
 old head and stopped on `the sequencer has no block 29` before any proof started. This is the "120 blocks final only
 after 1,214–1,216 s" of the 14 November rc3 session ([`../README.md`](../README.md)), now seen to its end: a
 rewind to the last final block, the orphaned blocks' transactions included again afterwards. Its cause in the node
-(why one validator stops including the channel's inscriptions for 300 slots) is not traced here. The live driver now
+(why one validator stops including the channel's inscriptions for 300 slots) is not traced here, but the timing is
+that of [LEZ issue 1109](https://github.com/logos-blockchain/logos-execution-zone/issues/1109) (our report of
+12 November: a storage-price rise at an epoch rotation strands an inscription funded with the 12 % reserve): block 29's
+inscription was submitted at 13:17:09 and the node's storage gas price rose from 2 to 3 at 13:17:11
+(`attest-claim-burn-try1/logs/bedrock-gas-prices.log`), a rise of 50 %. The node's log excerpt holds no rejection
+line, so this is a match by timing, not a trace. The live driver now
 waits through a rewind (`lez/live/driver/src/live.rs`, `sync`), and a settlement may wait 3,000 s; the session was run
 again (above).
 
@@ -92,7 +97,8 @@ again (above).
   circuit); no GPU was used.
 - The Ethereum side of the claim and burn is a local anvil whose blocks a stand-in committee finalizes (as e2e/seqnet),
   with the vault tests' mock verifier; nothing was sent to a public network.
-- The node's 20-minute stall and the rewind are recorded, not explained.
+- The node's 20-minute stall and the rewind are recorded; they match LEZ issue 1109 by timing, and the node's own
+  rejection of the inscription was not captured.
 
 ## Files and the re-check
 
