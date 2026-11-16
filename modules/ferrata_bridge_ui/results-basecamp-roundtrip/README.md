@@ -13,7 +13,7 @@ Basecamp's window was grabbed at every state: 23 pictures in [`pictures/`](pictu
 | L1: Basecamp built; the ui module and the core modules installed and loaded in one Basecamp | **yes** | [`probe/`](probe/) (3 of 3), pictures 01–02, `run/basecamp-run.log` lines "Successfully loaded core module" |
 | L2: the view calls `ferrata_bridge_module` through Basecamp's `logos` and shows live devnet data: account, balances on both sides, registry with caps | **yes** | pictures 04–06, 11, 15; the checks "the Ethereum balance the view shows equals anvil's" and "the LEZ side of the token is shown" |
 | L3: the whole round trip driven inside Basecamp, each step checked on the chains | **yes, dev-mode proofs** | [`run/events.jsonl`](run/events.jsonl) (13 steps, 50 checks), [`run/chain-checks.jsonl`](run/chain-checks.jsonl), [`e2e/runs/seqnet-basecamp-2/`](../../../e2e/runs/seqnet-basecamp-2/SUMMARY.md) |
-| L4: the private claim and burn proven for real | **no** | the blocker is in "Not reached: L4" below |
+| L4: the private claim and burn proven for real | **no**: proven for real inside Basecamp and applied, but the view's calls were cut at 20 s and the release was not reached | "Not reached: L4" below; [`l4-real-proofs/`](l4-real-proofs/README.md) |
 | L5: pictures of Basecamp's window at each step | **yes** | [`pictures/`](pictures/), 23 PNGs, 84–200 kB each, 3.6 MB in all |
 
 ## What ran, where
@@ -98,9 +98,13 @@ records. Across the run there were 103 LEZ and 15 Ethereum transactions, none re
 ## Not reached: L4 (real proofs inside Basecamp)
 
 **A ui module's call to a core module cannot last longer than 20 s in this Basecamp.** A private claim or burn
-proven for real by `lez_core` takes 229–249 s on this box (EVIDENCE row 114: claim 248.7 s, burn 228.8 s), so the
-view would be told the call failed while `lez_core` is still proving. A step reported as failed that still lands
-on chain is worse than a clean failure, so no real-proof run was claimed. From the sources at Basecamp's pins:
+proven for real by `lez_core` takes 229–249 s on this box (EVIDENCE row 114: claim 248.7 s, burn 228.8 s).
+**Measured** ([`l4-real-proofs/`](l4-real-proofs/README.md), `SEQNET_PROOFS=real`): the view's claim and burn were
+cut after 20 s (`Logos host: Module source unavailable: call to 'ferrata_bridge_module.wallet' timed out after
+20000ms`). `lez_core` went on proving, and the sequencer, verifying real receipts, applied the claim in LEZ block 73
+(234.4 s after the cut, a 256,068-byte transaction) and the burn in block 97 (220.7 s after). But the view had told
+the user that nothing was changed. That message is fixed now, but the view still loses a cut burn's release delay,
+and the run stopped before the release. From the sources at Basecamp's pins:
 
 - logos-protocol `9d59f5d`, `cpp/logos_mode.h` 29–32: `struct Timeout { int ms; explicit Timeout(int milliseconds
   = 20000) … }`.
