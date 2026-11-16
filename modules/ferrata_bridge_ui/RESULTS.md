@@ -19,10 +19,12 @@ and burn proven and sent by it inside Basecamp), Ethereum through the stand-in `
 
 For Basecamp the view now parses the module's reply a second time (Basecamp's bridge serialises the module's
 string result as a JSON string), reads the host's error payload, calls asynchronously where the host can, and
-shows both sides' balances. Not reached: real proofs inside Basecamp. There, a ui module's call to a core module
-is cut at 20 s (logos-protocol's default `Timeout`, which `LogosQmlBridge::callModuleAsync` does not override),
-while a real claim or burn takes 229–249 s ([`results-basecamp-roundtrip/README.md`](results-basecamp-roundtrip/README.md),
-"Not reached: L4"). Suites run again on this view: `results-basecamp-roundtrip/regression/`.
+shows both sides' balances. Not reached: the round trip with real proofs inside Basecamp. Measured with
+`SEQNET_PROOFS=real`, `lez_core` proved the claim and the burn for real inside Basecamp and the sequencer applied them
+(LEZ blocks 73 and 97). But Basecamp cut the view's calls at 20 s (`timed out after 20000ms`: logos-protocol's default
+`Timeout`, which `LogosQmlBridge::callModuleAsync` does not override), the view had said nothing changed (now: "the
+step may still complete"), and the run stopped before the release
+([`results-basecamp-roundtrip/l4-real-proofs/`](results-basecamp-roundtrip/l4-real-proofs/README.md)). Suites run again on this view: `results-basecamp-roundtrip/regression/`.
 
 ## 12 November 2026: the private round trip on the defaults (B3's done gate)
 

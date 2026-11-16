@@ -147,6 +147,14 @@ Logos Basecamp `b642a9a` (dev build, standalone mode, offscreen) hosted the view
 directly after each step: 13 of 13 steps, 50 checks, 149 s. Through `lez_core`: 167 of 167 bridge-state reads and
 17 of 17 private-holding reads equal to the plain path's; the private claim and burn executed, proven (dev) and
 sent by `lez_core` inside Basecamp, applied in LEZ blocks 30 and 31; the release paid 0.000997 ETH to the fresh
-address. Ethereum through `seqnet-chain`. 103 LEZ and 15 Ethereum transactions, none reverted. Real proofs were not
-run in Basecamp: a ui module's call to a core module is cut at 20 s there (the results README, "Not reached: L4").
+address. Ethereum through `seqnet-chain`. 103 LEZ and 15 Ethereum transactions, none reverted.
+
+### `seqnet-basecamp-real-1` (16 Nov 17:09–17:29 UTC, `SEQNET_PROOFS=real`): proven inside Basecamp, the view's calls cut
+
+[`e2e/runs/seqnet-basecamp-real-1/`](../runs/seqnet-basecamp-real-1/SUMMARY.md). `lez_core` proved the private claim and
+burn for real inside Basecamp, and the sequencer, verifying, applied them in LEZ blocks 73 and 97 (transactions 256,068 and
+255,031 B). Basecamp cut each of the view's calls after 20 s (`timed out after 20000ms`), so the view learned the
+outcome only by refreshing, and lost the burn's release delay; the run stopped before the release. 235 LEZ and 12
+Ethereum transactions, none reverted
+([`l4-real-proofs/`](../../modules/ferrata_bridge_ui/results-basecamp-roundtrip/l4-real-proofs/README.md)).
 
