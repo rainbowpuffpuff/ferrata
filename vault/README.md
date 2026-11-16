@@ -712,11 +712,16 @@ and `cast rpc anvil_mine 1`; the beacon there is anvil's random `prevrandao`, no
 then rehearsed on a second fork from a clean run directory (`FERRATA_FORK=1`;
 [`../e2e/runs/fork-driver/`](../e2e/runs/fork-driver/README.md)), with interruptions: see there.
 
-**Source verification** is a separate step, [`script/sourcify.sh`](script/sourcify.sh), and was not run.
-`script/sourcify.sh risc0` verifies RISC Zero's two contracts on Sourcify and sends only files that are public
-already. `script/sourcify.sh vault` verifies the vault and the test token, which publishes
-`src/FerrataVault.sol`, `src/interfaces/IRiscZeroVerifier.sol` and `script/TestToken.sol` of this repository
-for good; it runs only with `FERRATA_PUBLISH_SOURCES=yes`.
+**Source verification** is a separate step, [`script/sourcify.sh`](script/sourcify.sh), run on 16 November 2026 for
+the three Sepolia deployments: every contract is an exact match on Sourcify, compiler metadata hash included, and
+verified on Etherscan
+([`docs/sepolia.md`](../docs/sepolia.md), EVIDENCE row 122). `script/sourcify.sh status` sends nothing and prints what
+Sourcify holds for a run's addresses. `script/sourcify.sh risc0` verifies RISC Zero's two contracts and sends only
+files that are public already. `script/sourcify.sh vault` verifies the registry library, the vault and the test token,
+which publishes `src/FerrataVault.sol`, `src/FerrataRegistry.sol`, `src/interfaces/IEmergencyStop.sol`,
+`src/interfaces/IRiscZeroVerifier.sol` and `script/TestToken.sol` of this repository for good; it runs only with
+`FERRATA_PUBLISH_SOURCES=yes`. The vault is sent unlinked, as it was compiled: Sourcify reads the library's address
+from the deployed code.
 
 The testnet configuration (`deploy` only; each from the environment): `FERRATA_DELTA` 600 s as both
 `deltaFloor` and the initial `delta`, `turnSeconds` 900 s (the fixture's posting timeframe of 900

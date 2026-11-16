@@ -318,8 +318,10 @@ row F.16).
   status | fetch | stop`; the key lives in a cloud secret only during the run and must be a throwaway
   testnet key), and its rehearsal on a fork reached ALL CHECKS PASSED with 16 transactions
   ([`e2e/README.md`](../../e2e/README.md), "Running it in the cloud"; commit `f7b1aa7`).
-- **Source verification** (`script/sourcify.sh`) is a separate step and was **not run**; `vault` mode
-  publishes this repository's vault sources for good and runs only with `FERRATA_PUBLISH_SOURCES=yes`.
+- **Source verification** (`script/sourcify.sh`) is a separate step. It was run on 16 November 2026 for the three
+  Sepolia deployments: every contract is an exact match on Sourcify ([`docs/sepolia.md`](../sepolia.md), EVIDENCE row
+  122). `vault` mode publishes this repository's vault sources for good and runs only with
+  `FERRATA_PUBLISH_SOURCES=yes`; `status` sends nothing.
 
 ## 9. Retirement is the migration mechanism (Security #8)
 
@@ -345,7 +347,6 @@ The attestation side's migration (successor and replacement instances) is in
   keyless `Sunset` are built: EVIDENCE row 74);
 - deeper inbound finality settings; the malicious-tenant test;
 - the v5 vault's registrations and deposits priced on Sepolia (only the v3 vault's were);
-- source verification on Sourcify;
 - `ferrata_bridge_module`'s administration methods (the read-only admin view, EVIDENCE row 57, and the
   mini-app's `SetCap` and `Freeze` on a local devnet, row 62, are built).
 

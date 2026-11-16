@@ -58,3 +58,18 @@ is planned for the code the proposal would deliver. A security review by an agen
 (11 November 2026) is not an audit; its fixes are in this tree (EVIDENCE row 30), and the frozen bridge program
 of the real session predates them and the time fix. Slither, Aderyn, Halmos, cargo-audit, cargo-deny and fuzzing
 (EVIDENCE rows 35, 36, 40 and 78) are tooling, not an audit.
+
+**Source verification.** Since 16 November 2026 every contract of the three deployments is verified on Sourcify as an
+exact match, compiler metadata hash included, and Blockscout shows each as fully verified: the two v5 vaults
+([`0x04eE…`](https://repo.sourcify.dev/11155111/0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c),
+[`0xfE31…`](https://repo.sourcify.dev/11155111/0xfE3199fa2634413CbAC317371076Cae3EB2d9E54)) with the registry library each is linked to
+([`0xa75e…`](https://repo.sourcify.dev/11155111/0xa75e653BdaD23d198Ea357277b715aD8A9687673),
+[`0xe5D7…`](https://repo.sourcify.dev/11155111/0xe5D797C9f585a9c1b5e530814f9F25bED24a4B15)), the v3 vault
+([`0xd0B5…`](https://repo.sourcify.dev/11155111/0xd0B5fcC0B47D8E6f514f9D246Bb0b416b2048AF7), from the tree it was deployed from, `c6aee464`), the
+three test tokens, the three emergency stops and the Groth16 verifier
+([`0x8f0A…`](https://repo.sourcify.dev/11155111/0x8f0Af3Bf302C64d57f840127F94d9c123a8Fa2A0)): 12 of 12. Re-check, sending nothing:
+`vault/script/sourcify.sh status`, and the same with `FERRATA_FIXTURE=../e2e/runs/crown-live-1/deploy.json` (EVIDENCE
+row 122). Etherscan keeps its own records and shows the same twelve as verified since that day, the three vaults as
+exact matches (eight contracts by their source, four by its match to an identical contract among them). Its page for a
+v5 vault adds "Heuristics suggest this may be a proxy contract": the vault calls its linked library by DELEGATECALL at
+an address fixed in its bytecode. It is not a proxy and the address cannot be changed.
