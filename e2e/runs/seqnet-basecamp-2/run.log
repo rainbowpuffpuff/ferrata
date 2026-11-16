@@ -1,0 +1,50 @@
+[15:50:52] seqnet basecamp-2: mode basecamp, private proofs dev
+[15:50:52] LEZ session A: a new zone, the programs, the stand-in instance
+[15:54:19] session A: tip {"hash":"0xe1f404090a7d73d7ccaf708d5d013dc92af6a1861db424b293804bea5d9140af","id":19}; bridge program 0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d (image 0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd), attestation program 0x86ce4d7f54bd68b4c7356398cfda192f791c83f6fa3c3102a18ac20fefdfa04c (image 0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df)
+[15:54:20] vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516 (mock verifier 0x25Fa4286d401bdc4AC7657bc7a1ebdE1B737F4b1), configId 0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c, genesisState 0xfcb062bcea18eb6cd92493e8f159ab1f1f357329dc6aa87e001cfc762d4183c6
+[2026-11-16T15:54:27Z] deploy complete: vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516, configId and genesisState as the run's identity
+[15:54:28] LEZ session X: the zone restored and running; hook-basecamp.sh
+[15:55:21] seqnet-chain: seqnet-chain: http://127.0.0.1:18700/ (vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516, configId 0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c, user 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC)
+[15:55:21] Basecamp: logos-basecamp b642a9aba732b80343a3a7b622dad8c65e534bdb: /nix/store/hv3jz3fhvpyr; the round trip in the mini-app (LEZ through lez_core, proofs dev)
+[15:55:38] capture-1: capture of block 9 0xa6667639805722c111163b159284cafaad093c7f79933353e2744c5db6d566f3 (state root patched: False): 1 deposit(s), 6 slot(s)
+[15:55:39] operator: crown-driver crown-b --operator-only over capture-1
+[crown-b] bridge Register ETH (registry entry, schedules 0 and 1, leaf count) applied        gas    451572 block   26 + 10.1s f2eba179114dc6721c77a1e769176684701ee6457fdb82298a50dc1f1a1c7377
+[crown-b] token(cid, ETH): 1 schedule(s), known until leaf 1
+[crown-b] bridge ImportRoot n=1 (stage 1, block 9)                   applied        gas    301949 block   27 + 10.4s d51dc5f891e4ebc2e93b9bcdfb30d89b2ee368573817cc1795770343beef290e
+[crown-b] blocks 20..=27 (T1 0xaba9580add40dda2f6ce6a4d78e24589ac2bba3482d5b9edbe939485180012ae); 0 burn note(s) written to <work>/notes.json
+[15:56:46] gas drop stand-in: native LEZ to the user's private account /0 (seqnet-fund)
+{"step":"faucet public transfer (stand-in for the gas drop)","tx":"2a4ddd0612b2ee33502a9c197f40c3332429ea4f221f5033177e3ea4b30ac807","amount":"3000000000000","fee_paid_in_the_proof":null,"send_ms":4,"seen_ms":4007}
+{"step":"the user's private transfer public /0 -> private /0 (proven by LEZ's wallet)","tx":"f3c2f27f61ef8c43a361a3a4588ba85544798c3be32da1b237cece04a85dd867","amount":"2000000000000","fee_paid_in_the_proof":"5070616","send_ms":174,"seen_ms":9022}
+[15:57:21] checkpoint: blocks 20..=31, once block 31 is final on Bedrock
+[15:57:42] realblocks-crown: node: 385 immutable blocks (0 other transactions), final inscriptions of LEZ blocks 1..=32: parse + re-hash + link + framing + BLAKE2b + verify_strict by the channel's 1 key(s) (62905a69… 32): all 32 accepted; channel tip message = block 32's: false seqnet-19-31: 12 blocks, 34 transactions, 118917
+[15:57:42] checkpoint_b executed (final program 0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e): {"executor_wall_s":0.208398165,"image_id":"0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e","input_bytes":120903,"journal_bytes":544,"journal_equals_native":true,"padded_cycles":5505024,"po2":[20,20,20,20,20,18],"segments":6,"user_cycles":4878016}
+[15:57:42] stand-in prover: the mock verifier accepts checkpoint_b's journal (sha256 0x5fcfcc755bf3ea98e0144619b12c2fc65d8ab6c1b5c86c7f2a71be62d615fa6d)
+[15:57:42] relayer: {"event":"job-done","tx":null,"why":null} {"event":"candidate-waiting","tx":null,"why":null} {"event":"stop","tx":null,"why":"rounds"} 
+[15:57:43] anvil's clock moved on 3601 s: the candidate's wait (Delta 3600 s) (Ethereum time now 1794848264)
+[15:57:43] relayer: {"event":"start","tx":null} {"event":"finalized","tx":"0x197236813b0162415fb1e18dbb89896260c71783a24e6f6195f8e2a6c37e7472"} {"event":"stop","tx":null} 
+[15:57:43] vault: finalState 0xe474d227c540cb5a8f1ef6f4d09cd40ea95e986abd11fdf6169fe8c64d35888d, checkpoints 1
+[15:57:45] anvil's clock moved on 121 s: the vault release delay after finalizeAttested (Ethereum time now 1794848387)
+[15:57:50] Basecamp round trip: exit 0 in 149 s: 13 passed, 0 failed
+  [32m✓[0m Basecamp opens the mini-app
+  [32m✓[0m Basecamp's Module Inspector loads the core modules
+  [32m✓[0m the session: the module opened at the chains (the host's step)
+  [32m✓[0m connect: the account and both sides' balances
+  [32m✓[0m registry before the operator's first import
+  [32m✓[0m deposit: private by default
+  [32m✓[0m positions before the import (recovery from the seed)
+  [32m✓[0m the operator's import and the gas drop (not the user's steps)
+  [32m✓[0m the private claim, once its random delay has passed
+  [32m✓[0m the private burn to a fresh address
+  [32m✓[0m the checkpoint (operator) and the release by a relayer
+  [32m✓[0m positions after the round trip
+  [32m✓[0m records: the view's calls, the module's LEZ path
+[15:57:50] the zone: 103 transactions in blocks 1..=34
+[15:57:50] hook-basecamp: done
+[15:57:51] driver exit 0
+[15:57:52] export failed (1)
+[15:57:52] sequencer stopped (exit 0)
+[15:58:01] node stopped (exit 143)
+[15:58:01] saved generation 2 (43459272 bytes; head block 34)
+[15:58:02] session x: ok
+seqnet-basecamp-2: 103 LEZ and 15 Ethereum transactions, 0 user commands, 0 view calls
+[15:58:02] seqnet basecamp-2: DONE

@@ -1,0 +1,209 @@
+{
+  "lez": "lez_core",
+  "deposit": "Deposited 0.001 ETH to a private account (/0): transaction 0xdb8fcb…ff9cf5 in block 9, position #0. Public on Ethereum: the depositor address, the token, the denomination and fees, the time, the commitment C. Hidden: the LEZ destination (C commits to it).",
+  "leaf": 0,
+  "claim": {
+    "account": 0,
+    "accounts": [
+      {
+        "account": "0xd0029aa57943164511b1565faea8a7b0f0df439cc613c9ee5fc64366ac66fe85",
+        "kind": "private_self",
+        "program": "0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d"
+      },
+      {
+        "account": "0xca2acbaf3226c4aca4f4398ca79c3ea7ef6a5a72142e24146b2fba6776d0109c",
+        "kind": "pda",
+        "program": "0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d",
+        "seed": "0x9841324986c1738609d1ce86706830ba333bddd8c3b0a15eae3c6ba7725656d6"
+      },
+      {
+        "account": "0xf6f31c5f7fc3c9def9540bc6c5a094aff85dde07d0533e49093cd4a09f67829a",
+        "kind": "pda",
+        "program": "0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d",
+        "seed": "0xdb969a9d8d4c230b6834eb49fec5db23acc3fc2016b45dec7c22ee2f03968a2d"
+      },
+      {
+        "account": "0xe629dd971612b72a39d9460a51e34f4835069ec70a15b61cec97b69f10c745c3",
+        "kind": "pda",
+        "program": "0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d",
+        "seed": "0x317520139f7796f663c3a78a6a7dc5fa6fda376150a062a25e0098fbf3900255"
+      },
+      {
+        "account": "0xc20652ac739e79be454663e70d38e4ab9d56797033b0d9e2bfd4ccabe3443ed2",
+        "kind": "pda",
+        "program": "0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d",
+        "seed": "0xa69e5333481e537ac3b97554ae6c9619982fbd2faf574284b8727851254f4243"
+      },
+      {
+        "account": "0xd50f4251bfaeaf077ae7b3742fc77e38808b463842e98487fef85c513b2c4b65",
+        "kind": "pda",
+        "program": "0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d",
+        "seed": "0x691ded1418b0a1bd5c2dee67f38c3edaddf50a28de8133a1bedce004cd7a85b8"
+      }
+    ],
+    "balance": "1000000000000000",
+    "block": 30,
+    "hidden": [
+      "the destination account (an alias appears)",
+      "the leaf index",
+      "the depositor",
+      "the private balance"
+    ],
+    "lez": {
+      "applied_per_the_chain_service": {
+        "block": 30,
+        "hash": "f2bcb7454dc5501af36f3b578e7ef72fc4d0b78390ee227f484adbb691968946",
+        "private": true,
+        "read_by": "seqnet-chain (LEZ's wallet library's sequencer client: getBlockRange until the hash appears)",
+        "receipt_bytes": 16519,
+        "reverted": false,
+        "tx_bytes": 33055,
+        "visible_bridge_calls": [
+          "Read",
+          "Issue"
+        ]
+      },
+      "attempts": [
+        {
+          "accounts": [
+            "{\"account_id\":\"0xd0029aa57943164511b1565faea8a7b0f0df439cc613c9ee5fc64366ac66fe85\",\"kind\":\"private_owned\"}",
+            "{\"account_id\":\"0xca2acbaf3226c4aca4f4398ca79c3ea7ef6a5a72142e24146b2fba6776d0109c\",\"kind\":\"public_pda\",\"program\":\"0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d\",\"seed\":\"0x9841324986c1738609d1ce86706830ba333bddd8c3b0a15eae3c6ba7725656d6\"}",
+            "{\"account_id\":\"0xf6f31c5f7fc3c9def9540bc6c5a094aff85dde07d0533e49093cd4a09f67829a\",\"kind\":\"public_pda\",\"program\":\"0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d\",\"seed\":\"0xdb969a9d8d4c230b6834eb49fec5db23acc3fc2016b45dec7c22ee2f03968a2d\"}",
+            "{\"account_id\":\"0xe629dd971612b72a39d9460a51e34f4835069ec70a15b61cec97b69f10c745c3\",\"kind\":\"public_pda\",\"program\":\"0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d\",\"seed\":\"0x317520139f7796f663c3a78a6a7dc5fa6fda376150a062a25e0098fbf3900255\"}",
+            "{\"account_id\":\"0xc20652ac739e79be454663e70d38e4ab9d56797033b0d9e2bfd4ccabe3443ed2\",\"kind\":\"public_pda\",\"program\":\"0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d\",\"seed\":\"0xa69e5333481e537ac3b97554ae6c9619982fbd2faf574284b8727851254f4243\"}",
+            "{\"account_id\":\"0xd50f4251bfaeaf077ae7b3742fc77e38808b463842e98487fef85c513b2c4b65\",\"kind\":\"public_pda\",\"program\":\"0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d\",\"seed\":\"0x691ded1418b0a1bd5c2dee67f38c3edaddf50a28de8133a1bedce004cd7a85b8\"}"
+          ],
+          "attempt": "authorizing as LEZ's wallet API (the patched lez_core)",
+          "kind": "send",
+          "ms": 698,
+          "reply": {
+            "error": "",
+            "secrets": [
+              "5dd7da4f3001a140ceb0ae466bc7e88b97b0ec8a04e02ba6822510b5f37eff6a"
+            ],
+            "success": true,
+            "tx_hash": "f2bcb7454dc5501af36f3b578e7ef72fc4d0b78390ee227f484adbb691968946"
+          },
+          "sync": {
+            "ms": 2,
+            "rc": "0",
+            "to": 29
+          },
+          "what": "ClaimPrivately of leaf 0"
+        }
+      ],
+      "poll_transaction_status": {
+        "found": true,
+        "kind": "poll",
+        "ms": 3,
+        "tx_hash": "f2bcb7454dc5501af36f3b578e7ef72fc4d0b78390ee227f484adbb691968946"
+      },
+      "program_bin_sha256": "0x11d832482ff0a26c8f283edda1a35b262274c066734895c62f696394dcab6070",
+      "synced_to": 29,
+      "via": "lez_core"
+    },
+    "made_by": "ferrata_bridge_module claim (the tool's claim with LEZ state); executed, proven and sent by LEZ's wallet inside Logos Core (lez_core)",
+    "nullifier": "0xcd6efdc213344cb4703558dba09755f76699b31837e3c6f271bad16311b1adad",
+    "private": true,
+    "proof": {
+      "by": "LEZ's wallet inside Logos Core (lez_core.send_generic_private_transaction_with_accounts): executed and proven there, verified by the sequencer",
+      "mode": "dev",
+      "prove_ms": 698,
+      "receipt_bytes": 16519,
+      "tx_bytes": 33055
+    },
+    "public_on_lez": [
+      "the nullifier N (its account)",
+      "the token and denomination",
+      "the root read",
+      "the fee schedule's range",
+      "the relayer"
+    ],
+    "root_leaf_count": 1,
+    "settled": true,
+    "tx_hash": "f2bcb7454dc5501af36f3b578e7ef72fc4d0b78390ee227f484adbb691968946",
+    "variant": "ClaimPrivately",
+    "what": "ClaimPrivately under root(cid, 1) (block 30, transaction f2bcb7454dc5501af36f3b578e7ef72fc4d0b78390ee227f484adbb691968946)"
+  },
+  "burn": {
+    "account": 0,
+    "amount": "1000000000000000",
+    "balance": "0",
+    "block": 31,
+    "burn_index": 0,
+    "hidden": [
+      "the holder (a private account: an alias appears)",
+      "the Ethereum recipient (encrypted in the memo)"
+    ],
+    "i": 0,
+    "lez": {
+      "applied_per_the_chain_service": {
+        "block": 31,
+        "hash": "bd548236d9716d7444666d950b7096298027cdb900c648a65ee01dcb200a0631",
+        "private": true,
+        "read_by": "seqnet-chain (LEZ's wallet library's sequencer client: getBlockRange until the hash appears)",
+        "receipt_bytes": 16033,
+        "reverted": false,
+        "tx_bytes": 32018,
+        "visible_bridge_calls": [
+          "Burn"
+        ]
+      },
+      "attempts": [
+        {
+          "accounts": [
+            "{\"account_id\":\"0xd0029aa57943164511b1565faea8a7b0f0df439cc613c9ee5fc64366ac66fe85\",\"kind\":\"private_owned\"}",
+            "{\"account_id\":\"0xf6f31c5f7fc3c9def9540bc6c5a094aff85dde07d0533e49093cd4a09f67829a\",\"kind\":\"public_pda\",\"program\":\"0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d\",\"seed\":\"0xdb969a9d8d4c230b6834eb49fec5db23acc3fc2016b45dec7c22ee2f03968a2d\"}",
+            "{\"account_id\":\"0xe629dd971612b72a39d9460a51e34f4835069ec70a15b61cec97b69f10c745c3\",\"kind\":\"public_pda\",\"program\":\"0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d\",\"seed\":\"0x317520139f7796f663c3a78a6a7dc5fa6fda376150a062a25e0098fbf3900255\"}",
+            "{\"account_id\":\"0xa2a31614dedfa6d71a8c5578aa0dd201a8782033183ee07d7df3cb1be4797ac3\",\"kind\":\"public_pda\",\"program\":\"0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d\",\"seed\":\"0x3c4039118de1bfbe9b30f365a36e8507fabfc3e5a5e07a97b5ad15b4fbe86e18\"}"
+          ],
+          "attempt": "authorizing as LEZ's wallet API (the patched lez_core)",
+          "kind": "send",
+          "ms": 424,
+          "reply": {
+            "error": "",
+            "secrets": [
+              "1b7e2ae0f625ec68f66e22060cf7b2f2838dd2dfc2113e2aec0b95e9a73e3547"
+            ],
+            "success": true,
+            "tx_hash": "bd548236d9716d7444666d950b7096298027cdb900c648a65ee01dcb200a0631"
+          },
+          "sync": {
+            "ms": 1,
+            "rc": "0",
+            "to": 30
+          },
+          "what": "Burn (private) with tag counter 0"
+        }
+      ],
+      "poll_transaction_status": {
+        "found": true,
+        "kind": "poll",
+        "ms": 3,
+        "tx_hash": "bd548236d9716d7444666d950b7096298027cdb900c648a65ee01dcb200a0631"
+      },
+      "program_bin_sha256": "0x11d832482ff0a26c8f283edda1a35b262274c066734895c62f696394dcab6070",
+      "synced_to": 30,
+      "via": "lez_core"
+    },
+    "made_by": "ferrata_bridge_module burn (the note and the Burn message); executed, proven and sent by LEZ's wallet inside Logos Core (lez_core)",
+    "private": true,
+    "proof": {
+      "by": "LEZ's wallet inside Logos Core (lez_core.send_generic_private_transaction_with_accounts): executed and proven there, verified by the sequencer",
+      "mode": "dev",
+      "prove_ms": 424,
+      "receipt_bytes": 16033,
+      "tx_bytes": 32018
+    },
+    "public_on_lez": [
+      "the note: r, memo, mac, c_out (the recipient encrypted)",
+      "the token and denomination",
+      "the time"
+    ],
+    "recipient": "0xec3c52c209c2cd9bdc7e0bd55f3e1a306a9611b3",
+    "settled": true,
+    "tx_hash": "bd548236d9716d7444666d950b7096298027cdb900c648a65ee01dcb200a0631",
+    "what": "Burn (private) of /0 (block 31, transaction bd548236d9716d7444666d950b7096298027cdb900c648a65ee01dcb200a0631)"
+  },
+  "fresh": "0xec3c52c209c2cd9bdc7e0bd55f3e1a306a9611b3"
+}

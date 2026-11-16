@@ -1,0 +1,8 @@
+{
+  "request": "{\"method\":\"info\",\"params\":{}}",
+  "reply": {
+    "type": "string",
+    "raw": "\"{\\\"error\\\":\\\"no wallet session: open it first (wallet {\\\\\\\"method\\\\\\\":\\\\\\\"open\\\\\\\",\\\\\\\"params\\\\\\\":{\\\\\\\"chain\\\\\\\":URL}})\\\",\\\"ok\\\":false}\""
+  },
+  "callModuleAsync": "function"
+}

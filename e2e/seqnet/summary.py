@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 """The record of one e2e/seqnet run, from its files: every Ethereum and LEZ transaction with who sent it, and what the
-user ran and saw.  summary.py RUN_DIR  ->  RUN_DIR/SUMMARY.md and RUN_DIR/summary.json"""
+user ran and saw.  summary.py RUN_DIR [BASECAMP_DIR]  ->  RUN_DIR/SUMMARY.md and RUN_DIR/summary.json
+(BASECAMP_DIR: a basecamp run's records when they were moved out of RUN_DIR/basecamp)"""
 import json
+import os
 import pathlib
 import re
 import sys
 
 run = pathlib.Path(sys.argv[1])
+bdir = pathlib.Path(sys.argv[2]) if len(sys.argv) > 2 else run / "basecamp"
+blink = os.path.relpath(bdir, run)  # links from SUMMARY.md to the basecamp records
 
 
 def lines(p):
@@ -26,6 +30,8 @@ def tsv(p):
 
 def jsonl(p):
     out = []
+    if p.startswith("basecamp/"):
+        p = os.path.relpath(bdir / p.removeprefix("basecamp/"), run)
     for line in lines(p):
         try:
             out.append(json.loads(line))
@@ -64,7 +70,7 @@ for c in jsonl("basecamp/chain-calls.jsonl"):
     if c.get("method") == "module.submit" and r.get("tx_hash"):
         who[str(r["tx_hash"]).lower()] = ("user (mini-app in Basecamp via ferrata_bridge_module; sent by seqnet-chain)", r.get("what", ""))
 try:
-    bsum = json.loads((run / "basecamp" / "summary.json").read_text())
+    bsum = json.loads((bdir / "summary.json").read_text())
 except (OSError, ValueError):
     bsum = {}
 for k in ("claim", "burn"):
@@ -137,7 +143,7 @@ if lcalls:
         excerpt = json.dumps(res if rep_.get("ok") else rep_.get("error"))[:140].replace("|", "/")
         md.append(f"| {i + 1} | {c.get('method')} | {rep_.get('ok')} | {c.get('ms')} | {excerpt} |")
 lr, lr_dir = {}, "lezcore"
-for d in ("lezcore", "basecamp"):
+for d in ("lezcore", blink):
     try:
         lr, lr_dir = json.loads((run / d / "lez-report.json").read_text()), d
         break
@@ -168,24 +174,26 @@ ev = jsonl("basecamp/events.jsonl")
 bsteps = [e for e in ev if "step" in e]
 bchecks = [e["check"] for e in ev if "check" in e]
 if bsteps:
-    md += ["", "## In Logos Basecamp (`basecamp/events.jsonl`: the steps, driven by clicks through Basecamp's inspector)", "",
+    md += ["", f"## In Logos Basecamp (`{blink}/events.jsonl`: the steps, driven by clicks through Basecamp's inspector)", "",
            "| # | step | ok | seconds |", "|---:|---|---|---:|"]
     md += [f"| {i + 1} | {e['step']} | {e['ok']}{(': ' + e['error'][:160].replace('|', '/')) if e.get('error') else ''} | {e['ms'] / 1000:.1f} |"
            for i, e in enumerate(bsteps)]
-    md += ["", f"Checks ({len(bchecks)}), each on the chains read directly (`basecamp/chain-checks.jsonl`) or on the view:", ""]
+    md += ["", f"Checks ({len(bchecks)}), each on the chains read directly (`{blink}/chain-checks.jsonl`) or on the view:", ""]
     md += [f"- {c}" for c in bchecks]
 try:
-    vcalls = json.loads((run / "basecamp" / "view-calls.json").read_text())
+    vcalls = json.loads((bdir / "view-calls.json").read_text())
 except (OSError, ValueError):
     vcalls = []
 if vcalls:
-    md += ["", "## What the view called inside Basecamp (`basecamp/view-calls.json`: the view's own call log, "
+    md += ["", f"## What the view called inside Basecamp (`{blink}/view-calls.json`: the view's own call log, "
            "logos.callModuleAsync to ferrata_bridge_module's wallet)", "", "| # | method | ok | ms | error |", "|---:|---|---|---:|---|"]
     md += [f"| {i + 1} | {c.get('method')} | {c.get('ok')} | {c.get('ms')} | {str(c.get('error', ''))[:120].replace('|', '/')} |"
            for i, c in enumerate(vcalls)]
-bshots = sorted((run / "basecamp" / "shots").glob("*.png")) if (run / "basecamp" / "shots").is_dir() else []
+pdir = next((d for d in (bdir / "shots", bdir / "pictures", bdir.parent / "pictures") if d.is_dir()), None)
+bshots = sorted(pdir.glob("*.png")) if pdir else []
 if bshots:
-    md += ["", "## Basecamp's window at each state (`basecamp/shots/`)", ""] + [f"- [`{s.name}`](basecamp/shots/{s.name})" for s in bshots]
+    plink = os.path.relpath(pdir, run)
+    md += ["", f"## Basecamp's window at each state (`{plink}/`)", ""] + [f"- [`{s.name}`]({plink}/{s.name})" for s in bshots]
 shots = sorted((run / "miniapp" / "screenshots").glob("*.png")) if (run / "miniapp" / "screenshots").is_dir() else []
 if shots:
     md += ["", "## What the user saw (the view's screenshots)", ""] + [f"- [`{s.name}`](miniapp/screenshots/{s.name})" for s in shots]

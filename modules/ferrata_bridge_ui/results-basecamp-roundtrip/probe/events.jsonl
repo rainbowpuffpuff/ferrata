@@ -1,0 +1,15 @@
+{"t":"2026-11-16T15:36:04.869Z","transport":"module","inLogos":true}
+{"t":"2026-11-16T15:36:04.942Z","shot":"p01-view-opened","width":1600,"height":900}
+{"t":"2026-11-16T15:36:05.051Z","click":"sidebar.section.3"}
+{"t":"2026-11-16T15:36:05.771Z","shot":"p02-module-inspector","width":1600,"height":900}
+{"t":"2026-11-16T15:36:05.795Z","module":"ferrata_bridge_module","before":"Load"}
+{"t":"2026-11-16T15:36:05.818Z","click":"moduleRow.loadToggle.ferrata_bridge_module"}
+{"t":"2026-11-16T15:36:05.980Z","module":"ferrata_bridge_module","after":"Unload (loaded)"}
+{"t":"2026-11-16T15:36:05.997Z","module":"lez_core","before":"Load"}
+{"t":"2026-11-16T15:36:06.013Z","click":"moduleRow.loadToggle.lez_core"}
+{"t":"2026-11-16T15:36:06.175Z","module":"lez_core","after":"Unload (loaded)"}
+{"t":"2026-11-16T15:36:06.231Z","shot":"p03-core-modules-loaded","width":1600,"height":900}
+{"t":"2026-11-16T15:36:06.253Z","click":"sidebar.app.ferrata_bridge_ui"}
+{"t":"2026-11-16T15:36:06.921Z","call":"wallet info (sync callModule)","reply":{"type":"string","raw":"\"{\\\"error\\\":\\\"no wallet session: open it first (wallet {\\\\\\\"method\\\\\\\":\\\\\\\"open\\\\\\\",\\\\\\\"params\\\\\\\":{\\\\\\\"chain\\\\\\\":URL}})\\\",\\\"ok\\\":false}\""}}
+{"t":"2026-11-16T15:36:06.932Z","callModuleAsync":"function"}
+{"t":"2026-11-16T15:36:06.989Z","shot":"p04-view-after-call","width":1600,"height":900}
