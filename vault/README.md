@@ -477,6 +477,15 @@ New in v4:
 
 - **A tripped verifier stop strands all escrow except owed balances.** No new checkpoints follow, and nothing more
   is released or refunded (D13).
+- **Deposits stay open after the verifier's stop.** `_checkDeposit` does not ask the stop, so a deposit made after
+  it is escrow that no path returns. Until a later vault refuses such deposits, a deployment's runbook retires the
+  vault (or freezes deposits) when the stop trips, and a wallet must not deposit while `verifier.paused()`; the
+  `ferrata` tool and the monitor do not check this yet (review of 16 November 2026, F-9).
+- **The release-cap floor protects nothing unless the deployment sets it.** A floor of (0, 0) is accepted, and every
+  script here deploys with it: the admin can then set a release bucket to zero in one call, which stops releases and
+  refunds with no timelock and no lapse. Neither the floor nor a cap is checked against the denominations. A
+  deployment must set the floor above the value of its largest denomination, with a non-zero refill (review of
+  16 November 2026, F-1).
 - **The freeze key is powerful until replaced.** A compromised freeze authority can keep renewing freezes, cancel
   every candidate, revoke honest checkpoints within the window, or retire the vault: a denial of service, not theft.
   The admin replaces it after 14 days (D13). A compromised admin can, after the same 14 days, install its own freeze

@@ -279,7 +279,10 @@ freeze authority unfreezes.
 actor (authorised), debited from its own state (a private holder) or its `holder(account)`, checked by
 `token(cid, token)` (a multiple of the LEZ unit, so the token-program switch stays exact), credited at
 `holder(to)` by `Credit`, which that PDA accepts only from the token actor. Transfers are not gated by
-freezes or caps (nothing crosses the bridge) and continue after `Sunset`. From a private holder the
+freezes or caps (nothing crosses the bridge) and continue after `Sunset`. `Transfer` is accepted from a
+nested call too (message 26): LEZ marks a signer's account authorised in every call of the transaction, so
+a program a holder calls in a transaction it signs can move the holder's bridge balance, as it can the
+holder's native balance; `Burn` is top-level only (review of 16 November 2026, F-2). From a private holder the
 debit runs privately: the transaction shows the `Transfer` to the token (configuration, token, amount,
 recipient) from an alias, not the sender.
 

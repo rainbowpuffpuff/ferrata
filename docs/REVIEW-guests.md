@@ -33,6 +33,7 @@ Signed: not yet. Drafted on 12 November 2026 for the owner to read and sign, row
 ## The release guest and the bridge core's statements (`bridge/guests`)
 
 The agent review of these rows: [reviews/agent-review-vault-guests-2026-11-12.md](reviews/agent-review-vault-guests-2026-11-12.md).
+A second review, of the rows as drafted, on 16 November 2026: [reviews/agent-review-vault-guests-2026-11-16.md](reviews/agent-review-vault-guests-2026-11-16.md); the row it found incomplete (`transfer`) is corrected below.
 
 | Entry point or check (file) | Spec section | Deviation | Pinned by | Reviewed |
 |---|---|---|---|---|
@@ -95,7 +96,7 @@ The agent review of these rows: [reviews/agent-review-vault-guests-2026-11-12.md
 | `issue`, `TokenState::fees_for`, `admit` (B:600, 649; BW:1159) | D13 (the claim mints the denomination and the fees); BRIDGE §5 (caps, freezes) | the relay fee goes to the named relayer, else to the fee recipient | `bridge_controls`; `bridge_time::freezes_and_caps_follow_attested_time_only` | |
 | `spend`, `Mint` (B:672, 165) | v2 §1 (one nullifier namespace `(chain, vault, N)`) | mints land only at `holder(account)` PDAs (C-1) | `bridge_secfix::c1_c_*`, `c1_f_a_mint_is_accepted_only_at_its_holder`; `bridge_inbound` | |
 | `burn` (four receivers) (B:720) | v2 §5.1; D10 (a burn only as a root call or a private root); D13 (the burn account keyed on the whole note) | a public holder's burn forwards to its `holder(account)` (a nested call the checkpoint need not see) | `bridge_burn::burns_and_what_the_checkpoint_collects`; `bridge_secfix::c1_e_a_claim_cannot_block_a_burn`; `bridge_private` | |
-| `transfer`, `credit` (B:806, 862) | BRIDGE §5 ("Transfers"; not in the specifications) | amounts in multiples of `lezUnit`; not gated by freezes or caps | `bridge_roles::a_private_holder_transfers`, `transfers_handover_multisig_watchers_and_keyless_sunset`; EVIDENCE row 75 | |
+| `transfer`, `credit` (B:806, 862) | BRIDGE §5 ("Transfers"; not in the specifications) | amounts in multiples of `lezUnit`; not gated by freezes or caps; accepted at the holder's own actor from any call of a transaction the holder signed, nested calls from other programs included (LEZ's authorisation is per transaction; BRIDGE §2, message 26), so a program a holder calls can move the holder's balance, while `Burn` is top-level only (review of 16 November, F-2) | `bridge_roles::a_private_holder_transfers`, `transfers_handover_multisig_watchers_and_keyless_sunset`; EVIDENCE row 75 | |
 | `role_message` (`Sunset`, `Freeze`, `Pause`, `SetCap`, `ProposeRoles`, `CancelRoles`) (B:902) | D13 (roles); BRIDGE §4.9–4.11, §5 | role messages are top-level calls at the role's own actor, forwarded to `config(cid)`; an executed `Sunset` is always visible to the checkpoint | `bridge_controls`; `bridge_roles`; `bridge_time`; EVIDENCE row 74 | |
 | `cosigned` (B:1069) | BRIDGE §5 (multisig freeze authority), §4.11 | a multisig `Sunset` only approves; anyone then sends the visible `Sunset` | `bridge_roles::transfers_handover_multisig_watchers_and_keyless_sunset` | |
 | `attest_retired`, `check_retired` (B:1026; BW:1433) | D13 (keyless `Sunset`); BRIDGE §4.10 | reads the vault's `retired` flag at slot 37, byte 11 (FerrataVault v5's layout) | `bridge_roles` (a synthetic slot 37); vault side: `ReviewVault::test_review_slot37_*` | |
