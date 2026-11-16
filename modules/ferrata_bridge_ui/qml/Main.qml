@@ -272,7 +272,14 @@ Rectangle {
                     text: info ? info.network : (transport === "module" ? "Logos core: ferrata_bridge_module" : "devnet backend: " + backendUrl)
                     color: "#4a5563"; font.pixelSize: 12
                 }
-                Label { objectName: "header.endpoints"; text: "Ethereum RPC " + ethRpc + " · LEZ " + sequencer; color: "#4a5563"; font.pixelSize: 12 }
+                Label {
+                    objectName: "header.endpoints"
+                    // Inside Logos the endpoints are the module's (its chain service's), read with `info`.
+                    text: transport !== "module" ? "Ethereum RPC " + ethRpc + " · LEZ " + sequencer
+                          : (info && info.eth_rpc ? "Ethereum RPC " + info.eth_rpc + " · LEZ sequencer " + info.sequencer
+                             : "Endpoints: ferrata_bridge_module's")
+                    color: "#4a5563"; font.pixelSize: 12
+                }
                 RowLayout {
                     Label { objectName: "wallet.status"; text: connectedAccount ? "Wallet: " + Fmt.short(connectedAccount) : "Wallet: not connected"; font.bold: true }
                     Button { objectName: "wallet.connect"; text: connectedAccount ? "Switch account" : "Connect wallet"; onClicked: walletConnect() }

@@ -59,6 +59,20 @@ for c in jsonl("lezcore/chain-calls.jsonl"):
     r = (c.get("reply") or {}).get("result") or {}
     if c.get("method") == "module.submit" and r.get("tx_hash"):
         who[str(r["tx_hash"]).lower()] = ("user (ferrata_bridge_module; sent by seqnet-chain)", r.get("what", ""))
+for c in jsonl("basecamp/chain-calls.jsonl"):
+    r = (c.get("reply") or {}).get("result") or {}
+    if c.get("method") == "module.submit" and r.get("tx_hash"):
+        who[str(r["tx_hash"]).lower()] = ("user (mini-app in Basecamp via ferrata_bridge_module; sent by seqnet-chain)", r.get("what", ""))
+try:
+    bsum = json.loads((run / "basecamp" / "summary.json").read_text())
+except (OSError, ValueError):
+    bsum = {}
+for k in ("claim", "burn"):
+    r = bsum.get(k) or {}
+    if r.get("tx_hash"):
+        via = (r.get("lez") or {}).get("via", "")
+        who[str(r["tx_hash"]).lower().removeprefix("0x")] = (
+            f"user (mini-app in Basecamp; executed, proven and sent by {'Logos Core’s lez_core' if via == 'lez_core' else 'seqnet-chain'})", r.get("what", ""))
 for c in jsonl("lezcore/calls.jsonl"):
     r = (c.get("reply") or {}).get("result") or {}
     if c.get("method") in ("claim", "burn") and isinstance(r, dict) and r.get("tx_hash"):
@@ -122,12 +136,15 @@ if lcalls:
             res = {k: v for k, v in res.items() if k not in ("lez", "accounts", "calls", "log", "detail")}
         excerpt = json.dumps(res if rep_.get("ok") else rep_.get("error"))[:140].replace("|", "/")
         md.append(f"| {i + 1} | {c.get('method')} | {rep_.get('ok')} | {c.get('ms')} | {excerpt} |")
-try:
-    lr = json.loads((run / "lezcore" / "lez-report.json").read_text())
-except (OSError, ValueError):
-    lr = {}
+lr, lr_dir = {}, "lezcore"
+for d in ("lezcore", "basecamp"):
+    try:
+        lr, lr_dir = json.loads((run / d / "lez-report.json").read_text()), d
+        break
+    except (OSError, ValueError):
+        pass
 if lr.get("log"):
-    md += ["", "## Through Logos Core's `lez_core`, beside the plain path (`lezcore/lez-report.json`)", "",
+    md += ["", f"## Through Logos Core's `lez_core`, beside the plain path (`{lr_dir}/lez-report.json`)", "",
            f"Reads: {lr.get('reads')} bridge actor states through `get_account_public`, {lr.get('reads_equal')} equal to seqnet-chain's "
            f"({lr.get('reads_failed')} failed); private holding: {lr.get('private_reads')} reads after `sync_to_block`, "
            f"{lr.get('private_reads_equal')} equal; private sends: {lr.get('sends')} attempts, {lr.get('sends_sent')} sent.", "",
@@ -147,6 +164,28 @@ if lr.get("log"):
                       f"{'(seqnet-chain read the block that applied it)' if r.get('success') else '-'} | {e.get('ms')} |")
         elif k == "poll":
             md.append(f"| poll_transaction_status | `{short(e.get('tx_hash', ''))}` | {e.get('found')} | - | {e.get('ms', '')} |")
+ev = jsonl("basecamp/events.jsonl")
+bsteps = [e for e in ev if "step" in e]
+bchecks = [e["check"] for e in ev if "check" in e]
+if bsteps:
+    md += ["", "## In Logos Basecamp (`basecamp/events.jsonl`: the steps, driven by clicks through Basecamp's inspector)", "",
+           "| # | step | ok | seconds |", "|---:|---|---|---:|"]
+    md += [f"| {i + 1} | {e['step']} | {e['ok']}{(': ' + e['error'][:160].replace('|', '/')) if e.get('error') else ''} | {e['ms'] / 1000:.1f} |"
+           for i, e in enumerate(bsteps)]
+    md += ["", f"Checks ({len(bchecks)}), each on the chains read directly (`basecamp/chain-checks.jsonl`) or on the view:", ""]
+    md += [f"- {c}" for c in bchecks]
+try:
+    vcalls = json.loads((run / "basecamp" / "view-calls.json").read_text())
+except (OSError, ValueError):
+    vcalls = []
+if vcalls:
+    md += ["", "## What the view called inside Basecamp (`basecamp/view-calls.json`: the view's own call log, "
+           "logos.callModuleAsync to ferrata_bridge_module's wallet)", "", "| # | method | ok | ms | error |", "|---:|---|---|---:|---|"]
+    md += [f"| {i + 1} | {c.get('method')} | {c.get('ok')} | {c.get('ms')} | {str(c.get('error', ''))[:120].replace('|', '/')} |"
+           for i, c in enumerate(vcalls)]
+bshots = sorted((run / "basecamp" / "shots").glob("*.png")) if (run / "basecamp" / "shots").is_dir() else []
+if bshots:
+    md += ["", "## Basecamp's window at each state (`basecamp/shots/`)", ""] + [f"- [`{s.name}`](basecamp/shots/{s.name})" for s in bshots]
 shots = sorted((run / "miniapp" / "screenshots").glob("*.png")) if (run / "miniapp" / "screenshots").is_dir() else []
 if shots:
     md += ["", "## What the user saw (the view's screenshots)", ""] + [f"- [`{s.name}`](miniapp/screenshots/{s.name})" for s in shots]
@@ -155,7 +194,8 @@ md += ["", "## The run's log", "", "```text"] + [l[:300] for l in lines("run.log
 (run / "summary.json").write_text(json.dumps({
     "lez_transactions": len(lez), "lez_reverted": sum(1 for t in lez if t.get("reverted") == "true"),
     "eth_transactions": len(eth), "eth_reverted": sum(1 for t in eth if t.get("status") != "ok"),
-    "user_commands": len(index), "view_calls": len(calls), "screenshots": len(shots), "module_calls": len(lcalls),
+    "user_commands": len(index), "view_calls": len(calls) or len(vcalls), "screenshots": len(shots) or len(bshots), "module_calls": len(lcalls),
+    "basecamp": {"steps": len(bsteps), "steps_ok": sum(1 for e in bsteps if e.get("ok")), "checks": len(bchecks)} if bsteps else None,
     "lez_core": {k: lr.get(k) for k in ("reads", "reads_equal", "reads_failed", "private_reads", "private_reads_equal", "sends", "sends_sent")} if lr else None,
     "senders": {k: v[0] for k, v in who.items()},
 }, indent=1) + "\n")
