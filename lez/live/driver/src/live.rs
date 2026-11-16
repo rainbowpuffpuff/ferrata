@@ -33,7 +33,7 @@ pub fn drop_after_blocks() -> u64 {
 /// How long a transaction that was seen in a block may take to be final on Bedrock. The
 /// sequencer gives up on an inscription Bedrock does not mine after 300 slots (its
 /// `stale_refund_slots`), rewinds its head and includes the transactions again.
-pub const SETTLE_TIMEOUT: Duration = Duration::from_secs(1500);
+pub const SETTLE_TIMEOUT: Duration = Duration::from_secs(3000); // two stalls of rc3's 0.3.5-rc.1 node (1,215 s each) fit
 
 pub struct Options {
     pub rpc: String,
@@ -144,7 +144,10 @@ impl Live {
         let mut receipts = Vec::new();
         while self.follower.height() < head {
             let id = self.follower.height() + 1;
-            let block = self.wallet.get_block(id).await?.ok_or_else(|| anyhow!("the sequencer has no block {id}"))?;
+            // None: the head was rewound below `id` after `head` was read (on LEZ v0.4.0-rc3 with Logos
+            // Blockchain 0.3.5-rc.1 the sequencer orphans unmined inscriptions and rewinds to the last final
+            // block); the follower waits for the chain to come back.
+            let Some(block) = self.wallet.get_block(id).await? else { break };
             if self.opts.wait_final && !matches!(block.bedrock_status, BedrockStatus::Finalized) {
                 break;
             }
