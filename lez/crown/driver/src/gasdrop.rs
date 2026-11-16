@@ -471,12 +471,13 @@ pub async fn credit(live: &mut Live, args: &Args, dir: &Path) -> Result<()> {
     live.rows.push(Row { phase: live.phase.clone(), step: step.clone(), status: "unfinished".into(), note: "the proof had not finished when the run was recorded".into(), ..Row::default() });
     live.save()?;
     let pending_row = live.rows.len() - 1;
-    let since_head = live.head().await?;
     let started = Instant::now();
     let sent = wallet
         .send_tx_with_pre_check(vec![AccountIdentity::PrivateOwned(me).balance()], 0, message, &ProgramCatalog::default(), None, delivery(&wallet)?, None, |_| Ok(()))
         .await;
     let seconds = started.elapsed().as_secs_f64();
+    // The head when the transaction reached the sequencer, not before its proof (as crown-b's private sends).
+    let since_head = live.head().await?;
     live.rows.remove(pending_row);
     let hash = match sent {
         Ok((hash, _)) => hash,
@@ -582,12 +583,12 @@ pub async fn claim(live: &mut Live, args: &Args, bridge_bin: &GuestBinary, dir: 
     live.rows.push(Row { phase: live.phase.clone(), step: step.clone(), status: "unfinished".into(), note: "the proof had not finished when the run was recorded".into(), ..Row::default() });
     live.save()?;
     let pending_row = live.rows.len() - 1;
-    let since_head = live.head().await?;
     let started = Instant::now();
     let sent = wallet
         .send_privacy_preserving_tx_with_pre_check(claim_mentions(&c, &keys), 0, message, &catalog, Some(keys.one_time), |_| Ok(()))
         .await;
     let seconds = started.elapsed().as_secs_f64();
+    let since_head = live.head().await?;
     live.rows.remove(pending_row);
     let hash = match sent {
         Ok((hash, _)) => hash,
