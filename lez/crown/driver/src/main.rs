@@ -12,6 +12,10 @@
 //!             Register ETH, ImportRoot n=1, n=2, Claim (public), ClaimPrivately (real proof), Burn
 //!             (public), Burn (private, real proof); then `--session-out` and `--notes-out`
 //!   export    the records of the run into `--out` (blocks.borsh, chain.tsv, segments.tsv, ...)
+//!   gas-drop-keys, gas-drop-prepare, gas-drop-credit, gas-drop-claim
+//!             the gas drop (M0 check 2; src/gasdrop.rs, LEZ v0.4.0-rc3 only): the claimant's new wallet, the
+//!             balances before and the negative control, the relayer's sealed credit, the claim that sweeps it
+//!             (lez/live/hooks/gasdrop.sh runs them); `--gasdrop-dir DIR` holds each step's JSON
 //! Without a sequencer:
 //!   config-id   the configuration id for `--vault` from `--identity` (session-a.json)
 //!   check       the chain natively: the fixture's bootstrap and catch-up, then the `--capture`s: the light
@@ -322,6 +326,12 @@ async fn run(args: Args) -> Result<()> {
         "export" => {
             let chain = base_chain(&args)?;
             export(&mut live, &program, &bridge, &chain).await?;
+        }
+        "gas-drop-keys" | "gas-drop-prepare" | "gas-drop-credit" | "gas-drop-claim" => {
+            #[cfg(feature = "lez-rc3")]
+            crown::gasdrop::run(&mut live, &args, &bridge).await?;
+            #[cfg(not(feature = "lez-rc3"))]
+            bail!("{}: the gas drop runs on LEZ v0.4.0-rc3's wallet (lez/scripts/lez-select.sh v0.4.0-rc3)", args.command);
         }
         other => bail!("unknown command {other}"),
     }

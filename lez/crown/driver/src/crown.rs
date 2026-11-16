@@ -63,6 +63,11 @@ use crate::{
     scenario::{self, deployment_accounts, Harness, World},
 };
 
+/// The gas drop (M0 check 2): built on LEZ v0.4.0-rc3's wallet only (its sweep of pending credits, PR 985).
+#[cfg(feature = "lez-rc3")]
+#[path = "gasdrop.rs"]
+pub mod gasdrop;
+
 /// The deployment names of the two programs (their header accounts come from the derived keys of
 /// `program/<name>/header`: independent of the image and of the order of deployment).
 pub const ATTEST: &str = "attest";
@@ -704,10 +709,17 @@ pub fn destination(j: u64) -> Result<(DestKind, [u8; 32])> {
 
 /// The claim witness of the deposit at `leaf` among `deposits`, its nullifier and its kind.
 pub fn witness(vault: &[u8; 20], deposits: &[DepositLog], leaf: u64) -> Result<(ClaimWitness, Root, DestKind)> {
-    let chain_id = SEPOLIA_CHAIN_ID;
     let d = deposits.get(leaf as usize).ok_or_else(|| anyhow!("no deposit at leaf {leaf}"))?;
     let j = deposits[..leaf as usize].iter().filter(|e| e.depositor == d.depositor).count() as u64;
     let (kind, dest) = destination(j)?;
+    witness_to(vault, deposits, leaf, kind, dest)
+}
+
+/// As [`witness`], for a deposit made to `dest` (the gas drop's claimant: a fresh private account).
+pub fn witness_to(vault: &[u8; 20], deposits: &[DepositLog], leaf: u64, kind: DestKind, dest: [u8; 32]) -> Result<(ClaimWitness, Root, DestKind)> {
+    let chain_id = SEPOLIA_CHAIN_ID;
+    let d = deposits.get(leaf as usize).ok_or_else(|| anyhow!("no deposit at leaf {leaf}"))?;
+    let j = deposits[..leaf as usize].iter().filter(|e| e.depositor == d.depositor).count() as u64;
     let s = deposit_secret(&bridge_keys().auth, &chain_id_u256(chain_id), vault, &d.depositor, j);
     ensure!(commitment(&s, kind, &dest) == d.commitment, "leaf {leaf}: C is not the run's opening (j {j})");
     let tree = Tree::from_leaves(deposits.iter().map(DepositLog::leaf).collect()).map_err(|_| anyhow!("tree full"))?;
