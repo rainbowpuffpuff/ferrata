@@ -1,0 +1,23 @@
+[crown-hook 13:55:23] crown-a: deploy attest and bridge, the stand-in instance (channel 0101010101010101010101010101010101010101010101010101010101010101)
+[crown-hook 13:59:36] session A: tip {"hash":"0x05fc6ccc9defe69c0cb1eeb3760ea2c55103b2e8871459c86c876d4104e990a9","id":98}; attestation 0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df; bridge 0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd
+[crown-hook 13:59:37] vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516 (mock verifier 0x25Fa4286d401bdc4AC7657bc7a1ebdE1B737F4b1), configId 0x60b11ece3c017751a86e1d132c3cc3fb6254a30d6e79e978f81331d25a5e8729, genesisState 0x916aa17cb86555433d5400217662514159351da640c8e3037f8c7ecc2c6ad93e
+[crown-hook 13:59:44] deposit 0 sent; capture-1: capture of block 9 0x2b01773b82e847fd281d69a1597ab8402a3c5e519250e86751f7af3bc302a449 (state root patched: False): 1 deposit(s), 6 slot(s)
+[crown-hook 13:59:45] deposit 1 sent; capture-2: capture of block 10 0x1e7232dcad786e8b18e8f944c18b3aea9893733f6e4cefa98ca9a22e65359cd9 (state root patched: False): 2 deposit(s), 6 slot(s)
+[crown-hook 13:59:46] crown-driver check: [check] stage 2: configId 0x60b11ece3c017751a86e1d132c3cc3fb6254a30d6e79e978f81331d25a5e8729 in slot 2; pairing, import and register requests accepted natively
+[crown-hook 13:59:46] crown-b: real private proofs, RAYON_NUM_THREADS=32
+[crown-b] stage 2 finality update (block 10) Miller (step 2)         applied        gas   3305374 block  117 + 19.7s 3945cc9a81adf1a2b6693fd279ae14e9b70d636f0a7e36701f71b19d6811d0b6
+[crown-b] stage 2 finality update (block 10) Finish (step 3)         applied        gas   3718957 block  119 + 19.9s 4032f255efc08807278456643aad3c3b567b1e1288c504ed1dd8932e4997afdc
+[crown-b] bridge ImportFees: ETH schedule 1 absent at n=2            applied        gas    315313 block  121 + 19.5s 86e79d92c5fc99c0712dcb7500cf7df13d37b4483cbbb086f4a814dfe4ebaef2
+[crown-b] token(cid, ETH): 1 schedule(s), known until leaf 2
+[crown-b] bridge ImportRoot n=2 (stage 2, block 10)                  applied        gas    301949 block  123 + 19.6s 38da2e986fc2c91f4c1d9e012a5f4ef04b7242f8ed25be70912fd19e69b635d9
+[crown-b] private wallet at block 124: account 44KVvzvh2ephQU9aR5snboGUXKgS1FnPYh1W4KZKwmhm
+[crown-b] bridge ClaimPrivately: deposit 1 at LEZ's private test account 0 (real proof): executed, proven and sent in 264.3 s (252267 bytes)
+[crown-b] bridge ClaimPrivately: deposit 1 at LEZ's private test account 0 (real proof) applied        gas    553328 block  151 + 15.9s 726cb5a1903e0b5a8aaf6d3f5942782a75a5b552e3d67bb6a109fe83d11b31b2
+[crown-b] bridge Burn (public): 0.001 ETH of public test account 0, note 0 applied        gas    160297 block  153 + 19.5s 31862ef0ddd385b2ae3e96f635bad97e7cdc88ddaf9b614bdf5f3b0201c6cf9f
+Syncing to block 153. Blocks to sync: 29
+Synced to block 153 in 28.445388ms
+[crown-b] private test account 0 after the claim (wallet's view at block 153): Some(HolderState { holdings: [Holding { config_id: [96, 177, 30, 206, 60, 1, 119, 81, 168, 110, 29, 19, 44, 60, 195, 251, 98, 84, 163, 13, 110, 121, 233, 120, 248, 19, 49, 210, 90, 94, 135, 41], token: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], amount: 1000000000000000 }], pending: None })
+[crown-b] bridge Burn (private): 0.001 ETH of private test account 0, note 1 (real proof): executed, proven and sent in 302.2 s (255031 bytes)
+[crown-b] bridge Burn (private): 0.001 ETH of private test account 0, note 1 (real proof) applied        gas    515555 block  185 + 17.6s bd284b9e6dc7a9c250bc41394ec71f00594edc9e50516e7e98d8e171b1d51c3d
+[crown-b] blocks 99..=185 (T1 0x63ef04bb5e81af49726c0cdabc3dc3215053a3f2d08471412dccb033e59d451f); 2 burn note(s) written to ../tmp/m0-rc3/live-b/run/crown/burn-notes.json
+[crown-hook 14:14:04] done: [["bridge Init (pairing: configId in the vault's slot 2)","applied","107"],["bridge Register ETH (registry entry, schedules 0 and 1, leaf count)","applied","109"],["bridge ImportRoot n=1 (stage 1, block 9)","applied","111"],["bridge Claim: deposit 0 (public) under root(cid, 1)","applied","113"],["bridge ImportFees: ETH schedule 1 absent at n=2","applied","121"],["bridge ImportRoot n=2 (stage 2, block 10)","applied","123"],["bridge ClaimPrivately: deposit 1 at LEZ's private test account 0 (real proof)","applied","151"],["bridge Burn (public): 0.001 ETH of public test account 0, note 0","applied

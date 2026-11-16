@@ -1,0 +1,113 @@
+{
+ "tag": "v0.4.0-rc3",
+ "sessions": {
+  "update": {
+   "tag": "v0.4.0-rc3",
+   "lez_commit": "bafd07be0701398f9bc435f73ab05e9a7936c301",
+   "lez_tree": "unmodified",
+   "node": "0.3.5-rc.1",
+   "node_commit": "f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30",
+   "sequencer_dev_mode": false,
+   "started": "2026-11-16T12:24:36Z",
+   "finished": "2026-11-16T13:10:45Z"
+  },
+  "attest-claim-burn": {
+   "tag": "v0.4.0-rc3",
+   "lez_commit": "bafd07be0701398f9bc435f73ab05e9a7936c301",
+   "lez_tree": "unmodified",
+   "node": "0.3.5-rc.1",
+   "node_commit": "f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30",
+   "sequencer_dev_mode": false,
+   "started": "2026-11-16T13:42:15Z",
+   "finished": "2026-11-16T14:14:40Z"
+  }
+ },
+ "fake_receipt": {
+  "status": "dropped",
+  "note": "sequencer: Transaction with hash 060d3edb7e158f0c1a0f11b0180adc60bdbc8266826a0d8559b615bd1b75d280 failed settlement: State transition failed at transaction 0: Invalid privacy preserving execution circuit proof, skipping it; execute_and_prove and submission 1.7 s; transaction 28830 bytes: receipt 144"
+ },
+ "items": [
+  {
+   "key": "update",
+   "what": "private update: VerifyAll at a private account's actor advances the public instance",
+   "session": "update",
+   "manifest": "update/run.tsv",
+   "found": true,
+   "step": "private update for the live instance, real proof",
+   "status": "applied",
+   "block": 271,
+   "tx_hash": "9fff9aac9d686f1b1cb772798b1a5820621aa72951576482865eabaa567d3232",
+   "exit": "-",
+   "exec_gas": "485298",
+   "prove_and_submit_s": 887.3,
+   "tx_bytes": 251843,
+   "receipt_bytes": 237452,
+   "real_proof": true,
+   "bedrock_status": "Finalized",
+   "final_after_s": 14.2,
+   "passed": true
+  },
+  {
+   "key": "attestation",
+   "what": "private attestation: the reference consumer's AttestPrivately reads a record",
+   "session": "attest-claim-burn",
+   "manifest": "attest-claim-burn/run.tsv",
+   "found": true,
+   "step": "private attestation (consumer AttestPrivately), real proof",
+   "status": "applied",
+   "block": 73,
+   "tx_hash": "e1adeae39b9a77c507c71f403b6a0d93de33b8e19b0b550d6a5bc112eb274c87",
+   "exit": "-",
+   "exec_gas": "422032",
+   "prove_and_submit_s": 279.9,
+   "tx_bytes": 251630,
+   "receipt_bytes": 237378,
+   "real_proof": true,
+   "bedrock_status": "Finalized",
+   "final_after_s": 14.2,
+   "passed": true
+  },
+  {
+   "key": "claim",
+   "what": "private claim: the bridge's ClaimPrivately of deposit 1",
+   "session": "attest-claim-burn",
+   "manifest": "attest-claim-burn/crown/export/run.tsv",
+   "found": true,
+   "step": "bridge ClaimPrivately: deposit 1 at LEZ's private test account 0 (real proof)",
+   "status": "applied",
+   "block": 151,
+   "tx_hash": "726cb5a1903e0b5a8aaf6d3f5942782a75a5b552e3d67bb6a109fe83d11b31b2",
+   "exit": "-",
+   "exec_gas": "553328",
+   "prove_and_submit_s": 264.3,
+   "tx_bytes": 252267,
+   "receipt_bytes": 237664,
+   "real_proof": true,
+   "bedrock_status": "Finalized",
+   "final_after_s": 14.2,
+   "passed": true
+  },
+  {
+   "key": "burn",
+   "what": "private burn: the bridge's Burn from a private account",
+   "session": "attest-claim-burn",
+   "manifest": "attest-claim-burn/crown/export/run.tsv",
+   "found": true,
+   "step": "bridge Burn (private): 0.001 ETH of private test account 0, note 1 (real proof)",
+   "status": "applied",
+   "block": 185,
+   "tx_hash": "bd284b9e6dc7a9c250bc41394ec71f00594edc9e50516e7e98d8e171b1d51c3d",
+   "exit": "-",
+   "exec_gas": "515555",
+   "prove_and_submit_s": 302.2,
+   "tx_bytes": 255031,
+   "receipt_bytes": 239046,
+   "real_proof": true,
+   "bedrock_status": "Finalized",
+   "final_after_s": 14.1,
+   "passed": true
+  }
+ ],
+ "passed": 4,
+ "generated_by": "lez/scripts/real-proofs-summary.py"
+}

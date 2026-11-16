@@ -1,0 +1,1268 @@
+[2026-11-16T13:43:05Z INFO  sequencer_service] Config: {"home":"../tmp/m0-rc3/live-b/run/sequencer_home","max_num_tx_in_block":20,"mempool_max_size":1000,"block_create_timeout":"10s","retry_pending_blocks_timeout":"5s","bedrock_config":{"channel_id":"0101010101010101010101010101010101010101010101010101010101010101","node_url":"http://127.0.0.1:18080/","auth":null,"priority_fee_percent":12,"stale_refund_slots":300},"genesis":{"channel_params":{"minimum_sequencer_stake":149,"posting_timeframe":300,"posting_timeout":25,"exit_delay":100,"max_block_size":1048576},"actions":[{"supply_account":{"recipient":{"identified":{"key":"6aa4c365699b89d963ef85a59868b9612b6001f90750b4970662a62776332e81"}},"balance":10000000000000}},{"supply_account":{"recipient":{"identified":{"key":"891ae258f92ca8447af6cf09c41d96b3a06187d098b91ab2cc17b42e3c4a2fa1"}},"balance":20000000000000}},{"supply_private_account":{"address":"44KVvzvh2ephQU9aR5snboGUXKgS1FnPYh1W4KZKwmhm","balance":10000000000000}},{"supply_private_account":{"address":"478hD6LXFTYu5gRRkWkCyXPRsWgCwAfRredoCUfxr5b9","balance":20000000000000}}]},"cross_zone":null,"metrics_listen_address":"127.0.0.1:9000","gossip":{"listen_addr":"/ip4/127.0.0.1/udp/0/quic-v1","bootstrap_peers":[]}}, channel signing key file: ../tmp/m0-rc3/live-b/run/sequencer_home/channel_signing_key, funding public key: "2e03b2eff5a45478e7e79668d2a146cf2c5c7925bce927f2b1c67f2ab4fc0d26"
+[2026-11-16T13:43:05Z INFO  sequencer_service] Storage Actor spawned
+[2026-11-16T13:43:05Z INFO  sequencer_service] Bedrock Broker Actor spawned
+[2026-11-16T13:43:05Z INFO  sequencer_service] Channel signing public key: a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:43:05Z INFO  logos_blockchain::zone_sdk::sequencer] Starting fresh (no checkpoint)
+[2026-11-16T13:43:05Z INFO  logos_blockchain::zone_sdk::sequencer] Sequencer connected: tip=HeaderId(ebb85b866572eb1d2d7c82585081a69be48e6b2205c45752325e7d1979d7d727), lib=HeaderId(99e4fdba361357efe9db02962ac49157c7aebfc1d73fbbf403ca70cf381d0f5b)
+[2026-11-16T13:43:07Z INFO  sequencer_service] Bedrock Actor spawned
+[2026-11-16T13:43:07Z INFO  sequencer_bedrock_actor::actor] Turn update: our_turn=true, starting_slot=None, ends_at_slot=None
+[2026-11-16T13:43:07Z INFO  sequencer_core] Channel signing public key: a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:43:07Z INFO  sequencer_core] Channel does not exist yet; starting it as channel creator
+[2026-11-16T13:43:07Z INFO  sequencer_core] Genesis fingerprint: 537d07e1b6f4875b5139315080fcf686b9f2a5a935dbb8ad8cd2c38bd3a9e875
+[2026-11-16T13:43:07Z INFO  sequencer_core] Producer reward account (stake ownership): Va94LdVUi4vQ3U95cNEmDBDa5cL9jd27gkhPps942WS
+[2026-11-16T13:43:08Z INFO  sequencer_core] Genesis fingerprint: 537d07e1b6f4875b5139315080fcf686b9f2a5a935dbb8ad8cd2c38bd3a9e875
+[2026-11-16T13:43:08Z INFO  sequencer_core] No stored channel view; starting on the final tier
+[2026-11-16T13:43:08Z INFO  sequencer_bedrock_actor::actor] Published block 1 with the size of 3882 bytes
+[2026-11-16T13:43:08Z INFO  sequencer_service] Executor Actor spawned
+[2026-11-16T13:43:08Z INFO  libp2p_swarm] local_peer_id=12D3KooWM7VYVAxRZXf4BaRtSdwnFqkLccbcd14ek1zzd57WwGe4
+[2026-11-16T13:43:08Z INFO  sequencer_gossip_actor::actor] Gossip listening on [/ip4/127.0.0.1/udp/24397/quic-v1] as 12D3KooWM7VYVAxRZXf4BaRtSdwnFqkLccbcd14ek1zzd57WwGe4
+[2026-11-16T13:43:08Z INFO  sequencer_service] Gossip network started as 12D3KooWM7VYVAxRZXf4BaRtSdwnFqkLccbcd14ek1zzd57WwGe4
+[2026-11-16T13:43:08Z INFO  sequencer_service] Gossip Actor spawned
+[2026-11-16T13:43:08Z INFO  sequencer_rpc_server_actor::actor] Starting RPC Server on 127.0.0.1:3040
+[2026-11-16T13:43:08Z INFO  sequencer_service] RPC Server Actor spawned
+[2026-11-16T13:43:08Z INFO  sequencer_service] Block production scheduler started
+[2026-11-16T13:43:09Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:33212 conn_id=0
+[2026-11-16T13:43:15Z INFO  sequencer_bedrock_actor::actor] Turn update: our_turn=true, starting_slot=Some(2335891), ends_at_slot=Some(2335891)
+[2026-11-16T13:43:18Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:43:18Z INFO  sequencer_core] Publishing block 2 on pin 46296c4772ce19e7510ce385f2449ddc63d4648fdfc27d12d7f94455d53239e4
+[2026-11-16T13:43:18Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([81, 219, 200, 95, 79, 70, 10, 127, 44, 111, 2, 67, 231, 104, 51, 97, 90, 26, 243, 158, 233, 156, 255, 246, 193, 183, 196, 159, 227, 176, 173, 84])
+[2026-11-16T13:43:18Z INFO  sequencer_bedrock_actor::actor] Published block 2 with the size of 711 bytes
+[2026-11-16T13:43:19Z INFO  sequencer_executor_actor::actor] Block with id 2 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:43:19Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:22768 conn_id=1
+[2026-11-16T13:43:19Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:22450 conn_id=2
+[2026-11-16T13:43:23Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 1..=1 (1), head Some(2)
+[2026-11-16T13:43:28Z DEBUG sequencer_core] Validated transaction with hash 2f2ac69289e4ad8d16e2a1b84dfc19fbb41cf47fa8febc0dfb847c15954dee5b, including it in block
+[2026-11-16T13:43:28Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:43:28Z INFO  sequencer_core] Publishing block 3 on pin 21a3d4629fec83fbb1163c6977ac5dfa18ff06162cf1993b711d26492b16a468
+[2026-11-16T13:43:28Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([113, 106, 223, 255, 126, 134, 85, 49, 85, 55, 200, 12, 105, 28, 41, 193, 154, 88, 204, 209, 44, 160, 207, 118, 214, 169, 180, 17, 203, 40, 205, 212])
+[2026-11-16T13:43:28Z INFO  sequencer_bedrock_actor::actor] Published block 3 with the size of 6107 bytes
+[2026-11-16T13:43:29Z INFO  sequencer_executor_actor::actor] Block with id 3 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:43:31Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 2..=2 (1), head Some(3)
+[2026-11-16T13:43:38Z DEBUG sequencer_core] Validated transaction with hash 00c127c7aace3b031a86a8327e6ff4bdfc450445284eb1997eb1c9f50049617f, including it in block
+[2026-11-16T13:43:38Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:43:38Z INFO  sequencer_core] Publishing block 4 on pin c2cc2ce42c2dfb0b673f0228a21d170f71170e99fd044e47ca2e228e421707ba
+[2026-11-16T13:43:38Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([17, 246, 159, 138, 95, 193, 194, 111, 183, 70, 153, 71, 117, 17, 246, 235, 68, 115, 46, 110, 188, 88, 6, 114, 42, 160, 85, 11, 213, 159, 31, 64])
+[2026-11-16T13:43:38Z INFO  sequencer_bedrock_actor::actor] Published block 4 with the size of 99627 bytes
+[2026-11-16T13:43:39Z INFO  sequencer_executor_actor::actor] Block with id 4 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:43:43Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 3..=3 (1), head Some(4)
+[2026-11-16T13:43:48Z DEBUG sequencer_core] Validated transaction with hash 70ade5d083c028d4d610ce1a00e60ad30e3962dc0e817d5189c310d72b7b76c3, including it in block
+[2026-11-16T13:43:48Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:43:48Z INFO  sequencer_core] Publishing block 5 on pin abd2f1bc3333109a9ad93c7718b147730f7d4ae137a20a4766330a8a2cd36e13
+[2026-11-16T13:43:48Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([247, 142, 32, 117, 141, 209, 117, 165, 111, 133, 125, 36, 116, 237, 66, 37, 52, 25, 34, 178, 224, 49, 4, 193, 43, 175, 66, 145, 82, 100, 114, 96])
+[2026-11-16T13:43:48Z INFO  sequencer_bedrock_actor::actor] Published block 5 with the size of 99627 bytes
+[2026-11-16T13:43:49Z INFO  sequencer_executor_actor::actor] Block with id 5 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:43:51Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 4..=4 (1), head Some(5)
+[2026-11-16T13:43:58Z DEBUG sequencer_core] Validated transaction with hash f0e23efe08068e36929df3c4bd8f72fc801a389d260d04e1f350fb53c6fd28aa, including it in block
+[2026-11-16T13:43:58Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:43:58Z INFO  sequencer_core] Publishing block 6 on pin 65a0644930e24e8299210ba36696451a93c6656146aca12cce79e3b49deb3857
+[2026-11-16T13:43:58Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([169, 112, 53, 106, 196, 33, 158, 57, 164, 124, 180, 188, 188, 110, 120, 24, 89, 234, 143, 61, 45, 80, 155, 18, 67, 164, 228, 95, 187, 16, 211, 21])
+[2026-11-16T13:43:58Z INFO  sequencer_bedrock_actor::actor] Published block 6 with the size of 99627 bytes
+[2026-11-16T13:43:59Z INFO  sequencer_executor_actor::actor] Block with id 6 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:44:03Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 5..=5 (1), head Some(6)
+[2026-11-16T13:44:08Z DEBUG sequencer_core] Validated transaction with hash 3ba939c24d4532e8ab152916119cbd6940dbb411eac9a140b3ce3c9bc298df8f, including it in block
+[2026-11-16T13:44:08Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:44:08Z INFO  sequencer_core] Publishing block 7 on pin eaa57dbd8ea2df16a2578689f2ea734ed87c3e3d3e0e2d512635cbe133676e93
+[2026-11-16T13:44:08Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([181, 73, 228, 108, 155, 131, 39, 240, 112, 116, 108, 250, 231, 109, 218, 13, 48, 213, 245, 57, 5, 206, 192, 177, 164, 98, 212, 190, 134, 39, 110, 188])
+[2026-11-16T13:44:08Z INFO  sequencer_bedrock_actor::actor] Published block 7 with the size of 99627 bytes
+[2026-11-16T13:44:09Z INFO  sequencer_executor_actor::actor] Block with id 7 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:44:11Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 6..=6 (1), head Some(7)
+[2026-11-16T13:44:18Z DEBUG sequencer_core] Validated transaction with hash 8c4f18110d3dee49fc0888f0996aef2daccc457cd0466c4080d3c8a229c708ef, including it in block
+[2026-11-16T13:44:18Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:44:18Z INFO  sequencer_core] Publishing block 8 on pin e5bf8d170476af5588dc5c234308d5f2d214bda60ca1ad352274f9c1d61d8cc7
+[2026-11-16T13:44:18Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([4, 10, 42, 171, 92, 60, 153, 255, 178, 233, 35, 168, 238, 197, 64, 27, 104, 22, 167, 103, 73, 72, 154, 252, 125, 1, 153, 163, 174, 157, 72, 94])
+[2026-11-16T13:44:18Z INFO  sequencer_bedrock_actor::actor] Published block 8 with the size of 99627 bytes
+[2026-11-16T13:44:19Z INFO  sequencer_executor_actor::actor] Block with id 8 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:44:23Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 7..=7 (1), head Some(8)
+[2026-11-16T13:44:28Z DEBUG sequencer_core] Validated transaction with hash 70fe52c2b58378b9fa7b4051c917a274b1924369876f6173844df324da4b6c58, including it in block
+[2026-11-16T13:44:28Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:44:28Z INFO  sequencer_core] Publishing block 9 on pin aba90e10ddc20e97af037e08fd10c7bcfb8cf995d0fac0960da084bd3f82372e
+[2026-11-16T13:44:28Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([148, 49, 51, 29, 129, 66, 54, 121, 255, 67, 230, 208, 173, 241, 221, 190, 219, 109, 91, 94, 231, 37, 211, 247, 3, 117, 190, 178, 154, 124, 255, 232])
+[2026-11-16T13:44:28Z INFO  sequencer_bedrock_actor::actor] Published block 9 with the size of 99627 bytes
+[2026-11-16T13:44:29Z INFO  sequencer_executor_actor::actor] Block with id 9 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:44:31Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 8..=8 (1), head Some(9)
+[2026-11-16T13:44:38Z DEBUG sequencer_core] Validated transaction with hash 81495016ff5053b52acc03ce7391a01294604f495553db516f4784499f8efc27, including it in block
+[2026-11-16T13:44:38Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:44:38Z INFO  sequencer_core] Publishing block 10 on pin 7d223e14527832e3850db77bf33ee612e5064200b601c79311127e6bb048493c
+[2026-11-16T13:44:39Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([219, 6, 235, 166, 225, 122, 101, 203, 217, 0, 187, 214, 57, 253, 108, 31, 3, 56, 175, 129, 128, 46, 59, 95, 142, 85, 184, 209, 153, 80, 210, 99])
+[2026-11-16T13:44:39Z INFO  sequencer_bedrock_actor::actor] Published block 10 with the size of 1319 bytes
+[2026-11-16T13:44:39Z INFO  sequencer_executor_actor::actor] Block with id 10 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:44:43Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 9..=9 (1), head Some(10)
+[2026-11-16T13:44:48Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:44:48Z INFO  sequencer_core] Publishing block 11 on pin 3962f93fc7e343ea8430608baa72f7a60bdf147ecea960040c876e753fa1d38c
+[2026-11-16T13:44:48Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([190, 159, 31, 55, 215, 37, 150, 157, 183, 213, 0, 165, 77, 242, 215, 117, 253, 222, 159, 190, 108, 158, 155, 236, 98, 5, 219, 85, 227, 63, 144, 117])
+[2026-11-16T13:44:48Z INFO  sequencer_bedrock_actor::actor] Published block 11 with the size of 711 bytes
+[2026-11-16T13:44:49Z INFO  sequencer_executor_actor::actor] Block with id 11 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:44:51Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 10..=10 (1), head Some(11)
+[2026-11-16T13:44:58Z DEBUG sequencer_core] Validated transaction with hash f42e74cafe01a65d529e9647ca9c770e46d619780344e32e8780465eeea7e00f, including it in block
+[2026-11-16T13:44:58Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:44:58Z INFO  sequencer_core] Publishing block 12 on pin b6f1279fb6d652687ac401c787ab25ea81e398d3cc9ce3e5fec5451d4ef0c2ca
+[2026-11-16T13:44:58Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([200, 91, 109, 120, 55, 208, 49, 121, 205, 34, 96, 72, 53, 5, 28, 128, 242, 167, 145, 237, 232, 142, 61, 243, 92, 126, 116, 252, 202, 178, 208, 209])
+[2026-11-16T13:44:58Z INFO  sequencer_bedrock_actor::actor] Published block 12 with the size of 6107 bytes
+[2026-11-16T13:44:59Z INFO  sequencer_executor_actor::actor] Block with id 12 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:45:03Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 11..=11 (1), head Some(12)
+[2026-11-16T13:45:08Z DEBUG sequencer_core] Validated transaction with hash b34dad3cb6510bd5d6ec23a02b6e98e6ddaece0b5bde763ed41e82736f152156, including it in block
+[2026-11-16T13:45:08Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:45:08Z INFO  sequencer_core] Publishing block 13 on pin 35652b7da7fc22752471f52f186b15889255b3bc4fc6b76aa24343737e103b96
+[2026-11-16T13:45:09Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([196, 203, 102, 194, 39, 203, 75, 60, 208, 188, 195, 150, 197, 76, 15, 120, 179, 127, 116, 220, 217, 99, 45, 58, 251, 134, 73, 116, 6, 164, 101, 63])
+[2026-11-16T13:45:09Z INFO  sequencer_bedrock_actor::actor] Published block 13 with the size of 99627 bytes
+[2026-11-16T13:45:09Z INFO  sequencer_executor_actor::actor] Block with id 13 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:45:11Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 12..=12 (1), head Some(13)
+[2026-11-16T13:45:18Z DEBUG sequencer_core] Validated transaction with hash 2e042e63b7695c5226b6378d4cdd7ffc87913bc061b1cbd274db13ba199a5030, including it in block
+[2026-11-16T13:45:18Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:45:18Z INFO  sequencer_core] Publishing block 14 on pin 7d84f55a9fafe706f89fb70f822993ae8adabaad6e4371ee0dbcc35350ef9403
+[2026-11-16T13:45:19Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([192, 202, 212, 61, 179, 131, 99, 236, 43, 185, 56, 95, 234, 219, 51, 127, 195, 16, 122, 116, 55, 245, 175, 121, 102, 24, 254, 244, 132, 237, 11, 142])
+[2026-11-16T13:45:19Z INFO  sequencer_bedrock_actor::actor] Published block 14 with the size of 99627 bytes
+[2026-11-16T13:45:19Z INFO  sequencer_executor_actor::actor] Block with id 14 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:45:23Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 13..=13 (1), head Some(14)
+[2026-11-16T13:45:28Z DEBUG sequencer_core] Validated transaction with hash 4da9fa3159af394fab0ae211c27565a65e9ced41860b1cd8b4a02def5d02b837, including it in block
+[2026-11-16T13:45:28Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:45:28Z INFO  sequencer_core] Publishing block 15 on pin fa4e2e2e5ab11560eda2e9a3f23b5ab0c263fbbb81a07ddc1c7ee27a1031c0ab
+[2026-11-16T13:45:28Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([94, 93, 220, 238, 149, 67, 74, 229, 89, 100, 100, 186, 33, 87, 63, 21, 108, 31, 144, 212, 55, 227, 36, 107, 163, 29, 177, 35, 129, 209, 170, 108])
+[2026-11-16T13:45:28Z INFO  sequencer_bedrock_actor::actor] Published block 15 with the size of 99627 bytes
+[2026-11-16T13:45:29Z INFO  sequencer_executor_actor::actor] Block with id 15 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:45:35Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 14..=14 (1), head Some(15)
+[2026-11-16T13:45:38Z DEBUG sequencer_core] Validated transaction with hash 663b99d4004d0241126c758c6ea05ed9ed4d02911471c715b39caa09d7d4ed44, including it in block
+[2026-11-16T13:45:38Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:45:38Z INFO  sequencer_core] Publishing block 16 on pin dd86063860159e129d1bd6d523beaf1bc83f34e691d894b7b628d5f7e0fdcae8
+[2026-11-16T13:45:38Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([88, 15, 179, 73, 29, 188, 14, 224, 157, 174, 105, 249, 10, 213, 14, 69, 225, 113, 82, 224, 19, 183, 172, 134, 78, 15, 127, 62, 26, 244, 151, 131])
+[2026-11-16T13:45:38Z INFO  sequencer_bedrock_actor::actor] Published block 16 with the size of 99627 bytes
+[2026-11-16T13:45:39Z INFO  sequencer_executor_actor::actor] Block with id 16 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:45:43Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 15..=15 (1), head Some(16)
+[2026-11-16T13:45:48Z DEBUG sequencer_core] Validated transaction with hash 03a9d882cccc400c06446de56777e0fce47e54a330c5723c7ab9929865451a90, including it in block
+[2026-11-16T13:45:48Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:45:48Z INFO  sequencer_core] Publishing block 17 on pin 640132ef62761184a04d2b082efde5c5b41ec99bf704ea9319cdb03c1b5d9a03
+[2026-11-16T13:45:49Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([96, 198, 88, 16, 133, 2, 25, 105, 195, 202, 76, 190, 34, 165, 81, 73, 248, 246, 112, 167, 74, 205, 183, 97, 230, 147, 204, 18, 61, 122, 231, 119])
+[2026-11-16T13:45:49Z INFO  sequencer_bedrock_actor::actor] Published block 17 with the size of 99627 bytes
+[2026-11-16T13:45:49Z INFO  sequencer_executor_actor::actor] Block with id 17 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:45:51Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 16..=16 (1), head Some(17)
+[2026-11-16T13:45:58Z DEBUG sequencer_core] Validated transaction with hash 36da5bbcb7f7b7def1a828b4f6c6d7755295175f7e75a14060a2d98ef1f9cca1, including it in block
+[2026-11-16T13:45:58Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:45:58Z INFO  sequencer_core] Publishing block 18 on pin 8143ba26a4d974b8daaa9ec24a369ddee801ab8b2308de9b486df08b88b413dc
+[2026-11-16T13:45:58Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([128, 176, 249, 143, 18, 231, 223, 184, 77, 83, 195, 173, 122, 79, 9, 116, 26, 204, 254, 8, 226, 115, 121, 164, 79, 85, 191, 45, 112, 84, 81, 140])
+[2026-11-16T13:45:58Z INFO  sequencer_bedrock_actor::actor] Published block 18 with the size of 99627 bytes
+[2026-11-16T13:45:59Z INFO  sequencer_executor_actor::actor] Block with id 18 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:46:07Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 17..=17 (1), head Some(18)
+[2026-11-16T13:46:08Z DEBUG sequencer_core] Validated transaction with hash 2c51c5fafef42c93607c15ab8a7f36ec2c0cb3b3c4ba929c1e5a14dd5a8f99bf, including it in block
+[2026-11-16T13:46:08Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:46:08Z INFO  sequencer_core] Publishing block 19 on pin 6cf6372c1c5dbb85a4141710abb7c634f0729e2c2956de7055dccd34f2e8698f
+[2026-11-16T13:46:09Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([175, 97, 239, 203, 75, 212, 137, 70, 126, 230, 255, 164, 205, 186, 31, 107, 66, 54, 93, 21, 200, 208, 133, 212, 218, 240, 90, 188, 86, 13, 129, 106])
+[2026-11-16T13:46:09Z INFO  sequencer_bedrock_actor::actor] Published block 19 with the size of 1319 bytes
+[2026-11-16T13:46:09Z INFO  sequencer_executor_actor::actor] Block with id 19 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:46:18Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:46:18Z INFO  sequencer_core] Publishing block 20 on pin 02d493c6049b0fca4ccc58bedbe0a06423977410913c0207f903ecfa5b4bef11
+[2026-11-16T13:46:18Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([209, 141, 32, 149, 195, 93, 210, 212, 240, 92, 76, 197, 97, 120, 253, 236, 17, 5, 106, 244, 3, 129, 104, 153, 22, 48, 91, 167, 29, 50, 43, 208])
+[2026-11-16T13:46:18Z INFO  sequencer_bedrock_actor::actor] Published block 20 with the size of 711 bytes
+[2026-11-16T13:46:19Z INFO  sequencer_executor_actor::actor] Block with id 20 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:46:19Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 18..=18 (1), head Some(20)
+[2026-11-16T13:46:27Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 19..=19 (1), head Some(20)
+[2026-11-16T13:46:28Z DEBUG sequencer_core] Validated transaction with hash c55403988af2c2e1e7d4993f6bb2f2c35f4d7eb26faff8858b8019ef1e74102a, including it in block
+[2026-11-16T13:46:28Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:46:28Z INFO  sequencer_core] Publishing block 21 on pin 45e80b74d069ed11158d0813162a0889a3e532a9418ea9da8072966139e0a41b
+[2026-11-16T13:46:28Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([206, 153, 189, 181, 187, 65, 216, 93, 116, 81, 97, 149, 13, 69, 198, 85, 216, 135, 126, 167, 149, 228, 156, 116, 85, 151, 54, 238, 31, 71, 151, 103])
+[2026-11-16T13:46:28Z INFO  sequencer_bedrock_actor::actor] Published block 21 with the size of 40487 bytes
+[2026-11-16T13:46:29Z INFO  sequencer_executor_actor::actor] Block with id 21 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:46:31Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 20..=20 (1), head Some(21)
+[2026-11-16T13:46:38Z DEBUG sequencer_core] Validated transaction with hash a78bd7544288ea9746f715dd8a0d6dcb17a3a3f6a459471ed0cf7d8c747075c5, including it in block
+[2026-11-16T13:46:38Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:46:38Z INFO  sequencer_core] Publishing block 22 on pin d9f4ec949f138f18e30ad8849b67ad4d78c7a5f54aa3a20fd0ed01d0bcc1409c
+[2026-11-16T13:46:38Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([40, 227, 221, 228, 38, 142, 19, 187, 53, 87, 11, 52, 138, 83, 244, 1, 74, 196, 112, 137, 150, 195, 0, 196, 141, 79, 51, 176, 72, 99, 229, 222])
+[2026-11-16T13:46:38Z INFO  sequencer_bedrock_actor::actor] Published block 22 with the size of 99627 bytes
+[2026-11-16T13:46:39Z INFO  sequencer_executor_actor::actor] Block with id 22 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:46:43Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 21..=21 (1), head Some(22)
+[2026-11-16T13:46:48Z DEBUG sequencer_core] Validated transaction with hash 9a378a64ac04b40d3037276fcf4385a347b5a132d91165e90948bbecd065b6fb, including it in block
+[2026-11-16T13:46:48Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:46:48Z INFO  sequencer_core] Publishing block 23 on pin 2bea789da6129466a43dd6f9283a453171389f1f473d8a20c37c9a9ac66b40ec
+[2026-11-16T13:46:48Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([144, 115, 152, 168, 2, 155, 124, 165, 94, 220, 66, 94, 172, 156, 211, 11, 158, 232, 1, 78, 154, 254, 144, 74, 14, 177, 16, 178, 251, 33, 153, 110])
+[2026-11-16T13:46:48Z INFO  sequencer_bedrock_actor::actor] Published block 23 with the size of 99627 bytes
+[2026-11-16T13:46:49Z INFO  sequencer_executor_actor::actor] Block with id 23 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:46:51Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 22..=22 (1), head Some(23)
+[2026-11-16T13:46:58Z DEBUG sequencer_core] Validated transaction with hash be73f645db4dfb84289311cee032c4faf3c96400af2539e2af990e916c56b516, including it in block
+[2026-11-16T13:46:58Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:46:58Z INFO  sequencer_core] Publishing block 24 on pin 10569f50183df5b89597b13396142d1da7b57a3406cfc06b940de500f0572ea3
+[2026-11-16T13:46:59Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([70, 118, 5, 246, 175, 182, 38, 193, 12, 163, 247, 11, 230, 231, 188, 210, 204, 18, 6, 124, 158, 207, 9, 129, 8, 46, 75, 215, 160, 56, 96, 200])
+[2026-11-16T13:46:59Z INFO  sequencer_bedrock_actor::actor] Published block 24 with the size of 1319 bytes
+[2026-11-16T13:46:59Z INFO  sequencer_executor_actor::actor] Block with id 24 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:47:03Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 23..=23 (1), head Some(24)
+[2026-11-16T13:47:08Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:47:08Z INFO  sequencer_core] Publishing block 25 on pin 43201b36266e4e78f9951dbe86affc8ccafc60bd2772a39ce1ead65020626209
+[2026-11-16T13:47:08Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([195, 109, 109, 204, 178, 132, 70, 42, 15, 50, 0, 248, 97, 198, 83, 55, 186, 163, 196, 93, 106, 146, 33, 118, 220, 125, 39, 94, 78, 82, 154, 97])
+[2026-11-16T13:47:08Z INFO  sequencer_bedrock_actor::actor] Published block 25 with the size of 711 bytes
+[2026-11-16T13:47:09Z INFO  sequencer_executor_actor::actor] Block with id 25 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:47:11Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 24..=24 (1), head Some(25)
+[2026-11-16T13:47:12Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:36515 conn_id=3
+[2026-11-16T13:47:18Z DEBUG sequencer_core] Validated transaction with hash 5d82d6c8fa6987e7bf4dc90c633316b413c4783c0b04b766bec8586b00fdd785, including it in block
+[2026-11-16T13:47:18Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:47:18Z INFO  sequencer_core] Publishing block 26 on pin 44234a7ec17f136709aa7e8db3d301bc3b69f59d23bf55768ea35fc2825e253b
+[2026-11-16T13:47:18Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([207, 73, 45, 233, 10, 232, 217, 60, 195, 179, 166, 35, 14, 140, 37, 0, 212, 107, 196, 238, 193, 203, 81, 192, 214, 238, 93, 177, 145, 241, 59, 59])
+[2026-11-16T13:47:18Z INFO  sequencer_bedrock_actor::actor] Published block 26 with the size of 47059 bytes
+[2026-11-16T13:47:19Z INFO  sequencer_executor_actor::actor] Block with id 26 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:47:27Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 25..=25 (1), head Some(26)
+[2026-11-16T13:47:28Z DEBUG sequencer_core] Validated transaction with hash 2258a17e29aa8f6acd2d725380bf3f551d9b983c1ed43f292822e6338662007d, including it in block
+[2026-11-16T13:47:28Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:47:28Z INFO  sequencer_core] Publishing block 27 on pin 5701297ef117583e80e45b7c67da8a569c9cb343962772739371747ab73dfe33
+[2026-11-16T13:47:28Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([30, 234, 5, 13, 125, 213, 244, 39, 2, 234, 201, 231, 27, 4, 140, 193, 133, 37, 86, 217, 244, 44, 117, 155, 235, 194, 178, 61, 97, 11, 193, 144])
+[2026-11-16T13:47:28Z INFO  sequencer_bedrock_actor::actor] Published block 27 with the size of 99627 bytes
+[2026-11-16T13:47:29Z INFO  sequencer_executor_actor::actor] Block with id 27 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:47:35Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 26..=26 (1), head Some(27)
+[2026-11-16T13:47:38Z DEBUG sequencer_core] Validated transaction with hash b0058a13fa4ee76332035cf4e302894b1f110ec5af8456725f0a0f92dcdeb0a7, including it in block
+[2026-11-16T13:47:38Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:47:38Z INFO  sequencer_core] Publishing block 28 on pin fe588dbb7f45650adb02d0b3eeda25380dcb3d6e7e599248315a03daec6e80c1
+[2026-11-16T13:47:38Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([75, 139, 40, 15, 201, 157, 22, 158, 197, 41, 240, 19, 173, 128, 104, 63, 157, 46, 186, 65, 171, 68, 136, 247, 71, 93, 65, 189, 12, 104, 143, 222])
+[2026-11-16T13:47:38Z INFO  sequencer_bedrock_actor::actor] Published block 28 with the size of 99627 bytes
+[2026-11-16T13:47:39Z INFO  sequencer_executor_actor::actor] Block with id 28 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:47:43Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 27..=27 (1), head Some(28)
+[2026-11-16T13:47:48Z DEBUG sequencer_core] Validated transaction with hash ff379b259599e0181a29d1454da209cc20e03101f6b3df200eaef93069663c87, including it in block
+[2026-11-16T13:47:48Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:47:48Z INFO  sequencer_core] Publishing block 29 on pin c88eb11d9129dae753259fd4f35b5f6412ae16d8355715be06fd9e63861305c9
+[2026-11-16T13:47:48Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([230, 63, 132, 193, 141, 8, 230, 192, 107, 57, 29, 91, 111, 214, 180, 72, 210, 210, 201, 252, 132, 91, 157, 173, 10, 30, 27, 232, 33, 200, 187, 188])
+[2026-11-16T13:47:48Z INFO  sequencer_bedrock_actor::actor] Published block 29 with the size of 99627 bytes
+[2026-11-16T13:47:49Z INFO  sequencer_executor_actor::actor] Block with id 29 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:47:51Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 28..=28 (1), head Some(29)
+[2026-11-16T13:47:58Z DEBUG sequencer_core] Validated transaction with hash 248d6595d9042b5a1d58f69896870662e0159056c57d5a9f4ad0e551f4c1bd75, including it in block
+[2026-11-16T13:47:58Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:47:58Z INFO  sequencer_core] Publishing block 30 on pin 159242756286523dbb100a34c4cb250cd528d4033b75f9255c752ffa9375ed91
+[2026-11-16T13:47:59Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([209, 183, 26, 200, 224, 180, 41, 48, 141, 49, 106, 252, 254, 160, 100, 252, 240, 87, 169, 46, 19, 83, 215, 93, 24, 174, 135, 154, 94, 12, 98, 151])
+[2026-11-16T13:47:59Z INFO  sequencer_bedrock_actor::actor] Published block 30 with the size of 99627 bytes
+[2026-11-16T13:47:59Z INFO  sequencer_executor_actor::actor] Block with id 30 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:48:07Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 29..=29 (1), head Some(30)
+[2026-11-16T13:48:08Z WARN  libp2p_kad::behaviour] Failed to trigger bootstrap: No known peers.
+[2026-11-16T13:48:08Z DEBUG sequencer_core] Validated transaction with hash 54e43de2c24e5dbed9ffbb45a0e35068d33b6335ca501678c4a57ba64f70e9e2, including it in block
+[2026-11-16T13:48:08Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:48:08Z INFO  sequencer_core] Publishing block 31 on pin b321af106e27eeb7416e16d47f7bbceaa4247dc2719e64b421ecb85f46cb7010
+[2026-11-16T13:48:09Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([229, 178, 57, 243, 90, 251, 105, 172, 46, 222, 192, 31, 187, 248, 176, 231, 161, 55, 236, 42, 76, 139, 157, 197, 244, 240, 3, 26, 201, 132, 54, 28])
+[2026-11-16T13:48:09Z INFO  sequencer_bedrock_actor::actor] Published block 31 with the size of 1319 bytes
+[2026-11-16T13:48:09Z INFO  sequencer_executor_actor::actor] Block with id 31 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:48:15Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 30..=30 (1), head Some(31)
+[2026-11-16T13:48:18Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:48:18Z INFO  sequencer_core] Publishing block 32 on pin e4e3a17327420d89b9f223d4b802a5ce54d6db592aed0b4e976ae1865ef3eb2c
+[2026-11-16T13:48:18Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([172, 229, 26, 142, 90, 0, 149, 254, 101, 116, 63, 225, 63, 159, 81, 82, 80, 164, 54, 52, 135, 167, 123, 249, 169, 150, 163, 27, 33, 83, 118, 64])
+[2026-11-16T13:48:18Z INFO  sequencer_bedrock_actor::actor] Published block 32 with the size of 711 bytes
+[2026-11-16T13:48:19Z INFO  sequencer_executor_actor::actor] Block with id 32 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:48:27Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 31..=31 (1), head Some(32)
+[2026-11-16T13:48:28Z DEBUG sequencer_core] Validated transaction with hash a5bcda9b1405d6893f23505b7c9682b9ca42dc82e809c229cbafd44d4da7838d, including it in block
+[2026-11-16T13:48:29Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:48:29Z INFO  sequencer_core] Publishing block 33 on pin 36844ef1cd9f471cf9539fc7ebbbe0843fe47f0053bf85069c7d28a52907b943
+[2026-11-16T13:48:29Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([174, 106, 32, 155, 155, 140, 77, 175, 121, 15, 61, 12, 102, 106, 170, 182, 169, 9, 135, 209, 121, 188, 18, 113, 80, 51, 125, 252, 111, 115, 243, 76])
+[2026-11-16T13:48:29Z INFO  sequencer_bedrock_actor::actor] Published block 33 with the size of 2671 bytes
+[2026-11-16T13:48:29Z INFO  sequencer_executor_actor::actor] Block with id 33 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:48:35Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 32..=32 (1), head Some(33)
+[2026-11-16T13:48:38Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:48:38Z INFO  sequencer_core] Publishing block 34 on pin 2835d5b4d4df7849d0da184b45250f412d3310ac8f15f56d7c5eb881cd919279
+[2026-11-16T13:48:38Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([184, 95, 106, 35, 155, 146, 161, 161, 150, 241, 182, 115, 5, 253, 62, 214, 19, 165, 211, 179, 225, 62, 223, 165, 41, 130, 167, 9, 228, 129, 100, 35])
+[2026-11-16T13:48:38Z INFO  sequencer_bedrock_actor::actor] Published block 34 with the size of 711 bytes
+[2026-11-16T13:48:39Z INFO  sequencer_executor_actor::actor] Block with id 34 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:48:47Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 33..=33 (1), head Some(34)
+[2026-11-16T13:48:48Z DEBUG sequencer_core] Validated transaction with hash 7427631f593c4157d4a45c9bdfb69e541645c7d0ecdddd65d1035660428b9ae7, including it in block
+[2026-11-16T13:48:49Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:48:49Z INFO  sequencer_core] Publishing block 35 on pin 9d441608e0f9a64dee413041bed2831e5c7d7608a6872ece16301ab0efcb7fee
+[2026-11-16T13:48:49Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([201, 237, 245, 247, 4, 121, 21, 13, 187, 165, 10, 149, 86, 156, 68, 31, 15, 6, 62, 229, 208, 194, 5, 64, 120, 178, 71, 190, 139, 102, 57, 246])
+[2026-11-16T13:48:49Z INFO  sequencer_bedrock_actor::actor] Published block 35 with the size of 25691 bytes
+[2026-11-16T13:48:49Z INFO  sequencer_executor_actor::actor] Block with id 35 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:48:55Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 34..=34 (1), head Some(35)
+[2026-11-16T13:48:58Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:48:58Z INFO  sequencer_core] Publishing block 36 on pin 52e4c198b118c712fca19e74eec8a8165942d0b39ddd5e1e4d910b8e3c0e7ef8
+[2026-11-16T13:48:58Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([76, 14, 89, 230, 85, 122, 143, 73, 110, 207, 136, 102, 122, 69, 186, 48, 9, 143, 146, 143, 10, 115, 225, 23, 81, 44, 102, 158, 82, 39, 72, 236])
+[2026-11-16T13:48:58Z INFO  sequencer_bedrock_actor::actor] Published block 36 with the size of 711 bytes
+[2026-11-16T13:48:59Z INFO  sequencer_executor_actor::actor] Block with id 36 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:49:03Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 35..=35 (1), head Some(36)
+[2026-11-16T13:49:09Z DEBUG sequencer_core] Validated transaction with hash 475ac62b0dbc6831b727f0d1d1297d4b6a2493d01c66f3a685542dd347db37ed, including it in block
+[2026-11-16T13:49:09Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:49:09Z INFO  sequencer_core] Publishing block 37 on pin 558bfe4ac76eec740b2567cd7cc0b2b7dcf245eba6b23aeda47eddaeec6de8b5
+[2026-11-16T13:49:09Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([242, 229, 125, 214, 39, 160, 95, 29, 21, 157, 57, 161, 91, 214, 189, 158, 99, 6, 176, 150, 165, 61, 19, 90, 95, 251, 108, 10, 86, 243, 144, 157])
+[2026-11-16T13:49:09Z INFO  sequencer_bedrock_actor::actor] Published block 37 with the size of 25884 bytes
+[2026-11-16T13:49:09Z INFO  sequencer_executor_actor::actor] Block with id 37 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:49:11Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 36..=36 (1), head Some(37)
+[2026-11-16T13:49:18Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:49:18Z INFO  sequencer_core] Publishing block 38 on pin 5a5a810a050419b1fe9b9a0db623b9bc4be5279c19e7fcf5f0d477f3e8f8a71c
+[2026-11-16T13:49:18Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([184, 73, 101, 21, 99, 232, 1, 92, 145, 202, 53, 34, 108, 142, 5, 49, 186, 194, 134, 28, 127, 202, 29, 215, 244, 23, 171, 122, 76, 236, 47, 222])
+[2026-11-16T13:49:18Z INFO  sequencer_bedrock_actor::actor] Published block 38 with the size of 711 bytes
+[2026-11-16T13:49:19Z INFO  sequencer_executor_actor::actor] Block with id 38 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:49:23Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 37..=37 (1), head Some(38)
+[2026-11-16T13:49:29Z DEBUG sequencer_core] Validated transaction with hash 5a9378b23672e9a8bee25fb2757665d000ceb7f627451d961e208aa480742f7b, including it in block
+[2026-11-16T13:49:29Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:49:29Z INFO  sequencer_core] Publishing block 39 on pin b84e115b8cc0d72c5cb66a6e71255a1b7e10639cd8eed3dd103cf08276d9c571
+[2026-11-16T13:49:29Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([153, 42, 80, 164, 76, 169, 211, 47, 65, 209, 170, 139, 228, 53, 208, 240, 200, 107, 162, 76, 109, 188, 180, 43, 44, 90, 146, 36, 37, 78, 82, 84])
+[2026-11-16T13:49:29Z INFO  sequencer_bedrock_actor::actor] Published block 39 with the size of 6228 bytes
+[2026-11-16T13:49:29Z INFO  sequencer_executor_actor::actor] Block with id 39 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:49:31Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 38..=38 (1), head Some(39)
+[2026-11-16T13:49:38Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:49:38Z INFO  sequencer_core] Publishing block 40 on pin 8a9f48c5a6916178a6882303e8a036b8f019c528c06834ac84744db12bf877c1
+[2026-11-16T13:49:38Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([61, 141, 83, 234, 17, 255, 34, 73, 2, 207, 240, 92, 140, 77, 140, 146, 127, 0, 31, 3, 123, 248, 74, 161, 88, 186, 5, 240, 4, 164, 60, 126])
+[2026-11-16T13:49:38Z INFO  sequencer_bedrock_actor::actor] Published block 40 with the size of 711 bytes
+[2026-11-16T13:49:39Z INFO  sequencer_executor_actor::actor] Block with id 40 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:49:43Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 39..=39 (1), head Some(40)
+[2026-11-16T13:49:48Z DEBUG sequencer_core] Validated transaction with hash 2ea74beeb7398c672443475f75e81c66c3a8973fe4b4d95fbc45bf28ebee2746, including it in block
+[2026-11-16T13:49:49Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:49:49Z INFO  sequencer_core] Publishing block 41 on pin 5b17fd027e84ff2219703fc2b925502ed1bdec9c0b21da406df3f49661547148
+[2026-11-16T13:49:49Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([149, 22, 204, 238, 207, 241, 154, 175, 66, 143, 177, 209, 153, 172, 5, 14, 83, 241, 73, 116, 250, 218, 89, 188, 220, 74, 189, 2, 244, 198, 211, 90])
+[2026-11-16T13:49:49Z INFO  sequencer_bedrock_actor::actor] Published block 41 with the size of 1110 bytes
+[2026-11-16T13:49:49Z INFO  sequencer_executor_actor::actor] Block with id 41 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:49:51Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 40..=40 (1), head Some(41)
+[2026-11-16T13:49:58Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:49:58Z INFO  sequencer_core] Publishing block 42 on pin 9317c4a5f4298a5208a391e7a77cc8216d85ff54e1b137125df394e29c6618e3
+[2026-11-16T13:49:58Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([29, 41, 241, 79, 54, 60, 218, 152, 161, 70, 13, 102, 156, 134, 75, 110, 69, 160, 180, 248, 146, 175, 165, 251, 191, 31, 4, 237, 22, 154, 78, 64])
+[2026-11-16T13:49:58Z INFO  sequencer_bedrock_actor::actor] Published block 42 with the size of 711 bytes
+[2026-11-16T13:49:59Z INFO  sequencer_executor_actor::actor] Block with id 42 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:50:03Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 41..=41 (1), head Some(42)
+[2026-11-16T13:50:09Z DEBUG sequencer_core] Validated transaction with hash 08e9ed89aac9172559247f96f92e5c91af3126d76ab4b46eb03291dfff2096cd, including it in block
+[2026-11-16T13:50:09Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:50:09Z INFO  sequencer_core] Publishing block 43 on pin 7ca255e984ead0de2fe21a9bb12bead878b03ea685a3f014c4fb869aeb162458
+[2026-11-16T13:50:09Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([150, 183, 243, 207, 193, 22, 104, 198, 91, 204, 130, 171, 71, 23, 154, 186, 129, 254, 126, 96, 188, 231, 5, 19, 137, 89, 149, 198, 112, 127, 173, 31])
+[2026-11-16T13:50:09Z INFO  sequencer_bedrock_actor::actor] Published block 43 with the size of 1303 bytes
+[2026-11-16T13:50:10Z INFO  sequencer_executor_actor::actor] Block with id 43 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:50:11Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 42..=42 (1), head Some(43)
+[2026-11-16T13:50:18Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:50:18Z INFO  sequencer_core] Publishing block 44 on pin 32001c487075f49949b14e1e5b1b0df191a2bd4dedf7b726859893af95804700
+[2026-11-16T13:50:18Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([36, 134, 217, 65, 35, 191, 221, 76, 128, 205, 180, 64, 136, 107, 213, 134, 238, 170, 122, 80, 108, 73, 142, 149, 78, 253, 168, 222, 185, 32, 51, 202])
+[2026-11-16T13:50:18Z INFO  sequencer_bedrock_actor::actor] Published block 44 with the size of 711 bytes
+[2026-11-16T13:50:19Z INFO  sequencer_executor_actor::actor] Block with id 44 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:50:23Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 43..=43 (1), head Some(44)
+[2026-11-16T13:50:28Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:50:28Z INFO  sequencer_core] Publishing block 45 on pin 165ca8d794f4f231a6b15bee0d1b864746b3d1924bb970d01cceb1efa9d54e95
+[2026-11-16T13:50:29Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([105, 35, 138, 138, 39, 89, 100, 194, 45, 81, 94, 174, 179, 195, 113, 222, 92, 175, 103, 23, 157, 192, 178, 171, 43, 165, 217, 84, 184, 128, 169, 174])
+[2026-11-16T13:50:29Z INFO  sequencer_bedrock_actor::actor] Published block 45 with the size of 711 bytes
+[2026-11-16T13:50:29Z INFO  sequencer_executor_actor::actor] Block with id 45 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:50:31Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 44..=44 (1), head Some(45)
+[2026-11-16T13:50:38Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:50:38Z INFO  sequencer_core] Publishing block 46 on pin 04059c9989cf36fa862b0f3585cc9dfe9cc4a0da2becae5a2349ff223e4836e7
+[2026-11-16T13:50:38Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([190, 73, 144, 169, 79, 73, 3, 199, 252, 40, 50, 54, 156, 146, 200, 227, 201, 100, 192, 143, 54, 96, 4, 4, 152, 139, 197, 54, 30, 157, 18, 75])
+[2026-11-16T13:50:38Z INFO  sequencer_bedrock_actor::actor] Published block 46 with the size of 711 bytes
+[2026-11-16T13:50:39Z INFO  sequencer_executor_actor::actor] Block with id 46 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:50:43Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 45..=45 (1), head Some(46)
+[2026-11-16T13:50:48Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:50:48Z INFO  sequencer_core] Publishing block 47 on pin 7f85929bcfe9c571fbe0e54bb5a71c7858fa4ea884c55e31d418ea9c30423e68
+[2026-11-16T13:50:49Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([54, 139, 47, 161, 140, 248, 63, 65, 223, 225, 9, 190, 33, 32, 100, 104, 187, 49, 201, 254, 63, 103, 252, 235, 103, 138, 196, 213, 2, 167, 57, 228])
+[2026-11-16T13:50:49Z INFO  sequencer_bedrock_actor::actor] Published block 47 with the size of 711 bytes
+[2026-11-16T13:50:49Z INFO  sequencer_executor_actor::actor] Block with id 47 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:50:51Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 46..=46 (1), head Some(47)
+[2026-11-16T13:50:58Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:50:58Z INFO  sequencer_core] Publishing block 48 on pin 5276ca6353f53c8f11673ec63bb9f124773c15be3dfd651b38a48f0c8d0f9de1
+[2026-11-16T13:50:59Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([39, 121, 227, 208, 61, 142, 234, 55, 204, 84, 59, 147, 55, 103, 110, 169, 227, 246, 208, 123, 150, 174, 26, 9, 129, 37, 183, 210, 209, 41, 243, 130])
+[2026-11-16T13:50:59Z INFO  sequencer_bedrock_actor::actor] Published block 48 with the size of 711 bytes
+[2026-11-16T13:50:59Z INFO  sequencer_executor_actor::actor] Block with id 48 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:51:03Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 47..=47 (1), head Some(48)
+[2026-11-16T13:51:08Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:51:08Z INFO  sequencer_core] Publishing block 49 on pin 6a5e933b5bec9bfb2e3be0cb5ba960e1e776671b080b0ffa1f8e6e6aef739051
+[2026-11-16T13:51:09Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([34, 160, 68, 7, 212, 167, 236, 182, 203, 129, 15, 84, 85, 250, 21, 170, 202, 2, 188, 37, 241, 43, 48, 57, 184, 188, 3, 159, 84, 66, 50, 139])
+[2026-11-16T13:51:09Z INFO  sequencer_bedrock_actor::actor] Published block 49 with the size of 711 bytes
+[2026-11-16T13:51:09Z INFO  sequencer_executor_actor::actor] Block with id 49 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:51:11Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 48..=48 (1), head Some(49)
+[2026-11-16T13:51:19Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:51:19Z INFO  sequencer_core] Publishing block 50 on pin 679a4cf0bba4f98b254c0dea804ef949923ee3060d76523ae7d4997a1053f76e
+[2026-11-16T13:51:19Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([178, 183, 181, 120, 101, 53, 107, 112, 94, 137, 71, 110, 155, 211, 131, 41, 58, 66, 50, 80, 202, 224, 142, 122, 165, 67, 143, 112, 242, 69, 128, 65])
+[2026-11-16T13:51:19Z INFO  sequencer_bedrock_actor::actor] Published block 50 with the size of 711 bytes
+[2026-11-16T13:51:20Z INFO  sequencer_executor_actor::actor] Block with id 50 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:51:23Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 49..=49 (1), head Some(50)
+[2026-11-16T13:51:29Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:51:29Z INFO  sequencer_core] Publishing block 51 on pin dede86af4dddc79a16611f2f23467568b440653fb24c2396458439c94eadcfb1
+[2026-11-16T13:51:29Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([16, 18, 137, 126, 125, 230, 39, 155, 86, 136, 33, 35, 191, 63, 111, 217, 51, 98, 176, 186, 166, 236, 176, 241, 87, 212, 117, 250, 216, 88, 96, 199])
+[2026-11-16T13:51:29Z INFO  sequencer_bedrock_actor::actor] Published block 51 with the size of 711 bytes
+[2026-11-16T13:51:29Z INFO  sequencer_executor_actor::actor] Block with id 51 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:51:35Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 50..=50 (1), head Some(51)
+[2026-11-16T13:51:38Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:51:38Z INFO  sequencer_core] Publishing block 52 on pin 71342beb4413448d5889f9a6ca485b1b73823bd65ac5f5cb8edc5584e1b856bb
+[2026-11-16T13:51:39Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([120, 195, 213, 145, 70, 4, 110, 234, 53, 0, 250, 2, 112, 123, 196, 80, 103, 236, 70, 91, 54, 64, 11, 122, 209, 80, 34, 244, 35, 152, 255, 221])
+[2026-11-16T13:51:39Z INFO  sequencer_bedrock_actor::actor] Published block 52 with the size of 711 bytes
+[2026-11-16T13:51:39Z INFO  sequencer_executor_actor::actor] Block with id 52 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:51:43Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 51..=51 (1), head Some(52)
+[2026-11-16T13:51:49Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:51:49Z INFO  sequencer_core] Publishing block 53 on pin 4a7d9d3787b2bb9975f0528243664b7bec41759719c3a016188aa2da9d7347cf
+[2026-11-16T13:51:49Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([128, 80, 120, 166, 253, 99, 179, 136, 226, 48, 186, 195, 32, 29, 168, 159, 65, 4, 65, 253, 216, 142, 87, 174, 235, 153, 130, 119, 70, 254, 228, 146])
+[2026-11-16T13:51:49Z INFO  sequencer_bedrock_actor::actor] Published block 53 with the size of 711 bytes
+[2026-11-16T13:51:49Z INFO  sequencer_executor_actor::actor] Block with id 53 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:51:51Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 52..=52 (1), head Some(53)
+[2026-11-16T13:51:59Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:51:59Z INFO  sequencer_core] Publishing block 54 on pin 7581e00608d4e83d96de6b64b859c6c0cdb81d016f093527e7b0fa06a08f8c9f
+[2026-11-16T13:51:59Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([43, 41, 178, 206, 118, 223, 189, 184, 18, 65, 142, 141, 136, 28, 167, 56, 52, 244, 41, 184, 161, 120, 190, 78, 138, 124, 207, 139, 244, 156, 108, 46])
+[2026-11-16T13:51:59Z INFO  sequencer_bedrock_actor::actor] Published block 54 with the size of 711 bytes
+[2026-11-16T13:51:59Z INFO  sequencer_executor_actor::actor] Block with id 54 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:52:03Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 53..=53 (1), head Some(54)
+[2026-11-16T13:52:08Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:52:08Z INFO  sequencer_core] Publishing block 55 on pin ebe9f29ddad81400a2c15c682648bd7c1757b330caba6b3820e8167365b82e19
+[2026-11-16T13:52:09Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([66, 29, 114, 213, 52, 223, 119, 190, 54, 214, 196, 162, 53, 39, 68, 248, 170, 116, 208, 37, 92, 253, 83, 52, 208, 135, 58, 148, 92, 69, 224, 39])
+[2026-11-16T13:52:09Z INFO  sequencer_bedrock_actor::actor] Published block 55 with the size of 711 bytes
+[2026-11-16T13:52:09Z INFO  sequencer_executor_actor::actor] Block with id 55 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:52:15Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 54..=54 (1), head Some(55)
+[2026-11-16T13:52:19Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:52:19Z INFO  sequencer_core] Publishing block 56 on pin 4678a39442c296cfa0953b3257b3e660e91da96d8ac5e9b3f586948488578c6b
+[2026-11-16T13:52:19Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([243, 95, 108, 137, 168, 103, 108, 39, 25, 89, 211, 34, 30, 227, 238, 236, 204, 181, 95, 248, 115, 80, 182, 36, 59, 32, 169, 200, 187, 152, 220, 15])
+[2026-11-16T13:52:19Z INFO  sequencer_bedrock_actor::actor] Published block 56 with the size of 711 bytes
+[2026-11-16T13:52:19Z INFO  sequencer_executor_actor::actor] Block with id 56 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:52:23Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 55..=55 (1), head Some(56)
+[2026-11-16T13:52:29Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:52:29Z INFO  sequencer_core] Publishing block 57 on pin 5daa532ca1a94b6af37d9995c610aea4bbec872aeddaffbf521a707cb1fb0447
+[2026-11-16T13:52:29Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([238, 243, 95, 82, 172, 191, 143, 223, 54, 45, 85, 55, 199, 52, 227, 43, 157, 167, 223, 74, 224, 170, 148, 155, 55, 181, 57, 61, 141, 231, 72, 33])
+[2026-11-16T13:52:29Z INFO  sequencer_bedrock_actor::actor] Published block 57 with the size of 711 bytes
+[2026-11-16T13:52:29Z INFO  sequencer_executor_actor::actor] Block with id 57 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:52:31Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 56..=56 (1), head Some(57)
+[2026-11-16T13:52:39Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:52:39Z INFO  sequencer_core] Publishing block 58 on pin 674a097e60a4b81ac73a070ac8e6ac2bd4d4204ac4a2d5aedebe2b278db35b95
+[2026-11-16T13:52:39Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([42, 107, 121, 124, 71, 54, 115, 182, 103, 57, 252, 23, 146, 74, 74, 140, 31, 182, 66, 127, 158, 160, 249, 244, 231, 90, 211, 242, 21, 155, 106, 214])
+[2026-11-16T13:52:39Z INFO  sequencer_bedrock_actor::actor] Published block 58 with the size of 711 bytes
+[2026-11-16T13:52:40Z INFO  sequencer_executor_actor::actor] Block with id 58 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:52:43Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 57..=57 (1), head Some(58)
+[2026-11-16T13:52:49Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:52:49Z INFO  sequencer_core] Publishing block 59 on pin 28a212e282412dd341d060422ee876177e9aff9e4358e9ebcee862b4f53066f1
+[2026-11-16T13:52:49Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([64, 201, 253, 168, 163, 249, 210, 162, 44, 224, 14, 215, 196, 252, 32, 191, 211, 246, 74, 177, 137, 87, 79, 11, 68, 46, 219, 209, 41, 66, 78, 78])
+[2026-11-16T13:52:49Z INFO  sequencer_bedrock_actor::actor] Published block 59 with the size of 711 bytes
+[2026-11-16T13:52:49Z INFO  sequencer_executor_actor::actor] Block with id 59 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:52:55Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 58..=58 (1), head Some(59)
+[2026-11-16T13:52:59Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:52:59Z INFO  sequencer_core] Publishing block 60 on pin caf58ac43d120e7264d00701783d1b69016da56ffee35da80f953b20cc038e8f
+[2026-11-16T13:52:59Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([203, 164, 49, 203, 162, 211, 247, 249, 86, 36, 238, 200, 138, 129, 22, 14, 64, 99, 133, 147, 246, 124, 225, 169, 183, 101, 23, 51, 12, 251, 212, 177])
+[2026-11-16T13:52:59Z INFO  sequencer_bedrock_actor::actor] Published block 60 with the size of 711 bytes
+[2026-11-16T13:52:59Z INFO  sequencer_executor_actor::actor] Block with id 60 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:53:03Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 59..=59 (1), head Some(60)
+[2026-11-16T13:53:08Z WARN  libp2p_kad::behaviour] Failed to trigger bootstrap: No known peers.
+[2026-11-16T13:53:08Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:53:08Z INFO  sequencer_core] Publishing block 61 on pin 52cc88ff61601cc62f5fcffe9bb00330979ef3dafdaa1a8b335f558c8c5cc57b
+[2026-11-16T13:53:09Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([224, 208, 246, 199, 35, 67, 210, 26, 187, 152, 61, 247, 255, 56, 207, 235, 193, 147, 173, 229, 229, 245, 0, 59, 186, 193, 132, 167, 229, 132, 220, 200])
+[2026-11-16T13:53:09Z INFO  sequencer_bedrock_actor::actor] Published block 61 with the size of 711 bytes
+[2026-11-16T13:53:09Z INFO  sequencer_executor_actor::actor] Block with id 61 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:53:15Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 60..=60 (1), head Some(61)
+[2026-11-16T13:53:18Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:53:18Z INFO  sequencer_core] Publishing block 62 on pin 4388cc505935cf25137542b3a4cae3788e94a8f5140478b2efc13c43b08489da
+[2026-11-16T13:53:19Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([154, 125, 190, 134, 227, 72, 207, 165, 57, 216, 246, 3, 105, 9, 35, 149, 212, 184, 60, 65, 201, 183, 165, 210, 0, 30, 162, 59, 29, 91, 118, 204])
+[2026-11-16T13:53:19Z INFO  sequencer_bedrock_actor::actor] Published block 62 with the size of 711 bytes
+[2026-11-16T13:53:19Z INFO  sequencer_executor_actor::actor] Block with id 62 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:53:23Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 61..=61 (1), head Some(62)
+[2026-11-16T13:53:28Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:53:28Z INFO  sequencer_core] Publishing block 63 on pin add85332d6f54713c26a93fda2bb92a4909455e3500d34f30542942fde23f06a
+[2026-11-16T13:53:29Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([24, 229, 171, 105, 13, 9, 51, 23, 163, 146, 49, 50, 233, 255, 222, 255, 100, 22, 231, 166, 151, 9, 125, 81, 246, 217, 2, 18, 242, 9, 187, 12])
+[2026-11-16T13:53:29Z INFO  sequencer_bedrock_actor::actor] Published block 63 with the size of 711 bytes
+[2026-11-16T13:53:29Z INFO  sequencer_executor_actor::actor] Block with id 63 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:53:31Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 62..=62 (1), head Some(63)
+[2026-11-16T13:53:38Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:53:38Z INFO  sequencer_core] Publishing block 64 on pin 8598ff1bd98df9cfea153dfbd6d855233dbca899c5cfe3f9029d69f32c3e18c4
+[2026-11-16T13:53:39Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([168, 158, 62, 166, 170, 144, 152, 75, 102, 48, 54, 97, 161, 89, 236, 139, 165, 43, 178, 55, 56, 108, 14, 154, 223, 34, 110, 29, 189, 145, 182, 215])
+[2026-11-16T13:53:39Z INFO  sequencer_bedrock_actor::actor] Published block 64 with the size of 711 bytes
+[2026-11-16T13:53:39Z INFO  sequencer_executor_actor::actor] Block with id 64 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:53:43Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 63..=63 (1), head Some(64)
+[2026-11-16T13:53:48Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:53:48Z INFO  sequencer_core] Publishing block 65 on pin c56a394e25f62b2f143935c1ffc3ff01b2f323ff9b3435a907e75f24b653238a
+[2026-11-16T13:53:49Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([134, 121, 202, 240, 104, 228, 212, 241, 143, 97, 109, 182, 125, 178, 45, 164, 175, 65, 39, 88, 94, 230, 194, 142, 96, 191, 90, 196, 182, 71, 235, 32])
+[2026-11-16T13:53:49Z INFO  sequencer_bedrock_actor::actor] Published block 65 with the size of 711 bytes
+[2026-11-16T13:53:49Z INFO  sequencer_executor_actor::actor] Block with id 65 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:53:51Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 64..=64 (1), head Some(65)
+[2026-11-16T13:53:59Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:53:59Z INFO  sequencer_core] Publishing block 66 on pin 71f7c2cbdcf73565f5c5e43ab154638556f913d53c687c49d95a84b68387b763
+[2026-11-16T13:53:59Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([202, 122, 50, 80, 15, 192, 98, 240, 158, 94, 97, 222, 100, 215, 61, 2, 32, 68, 244, 83, 52, 40, 8, 53, 119, 135, 53, 223, 93, 205, 185, 65])
+[2026-11-16T13:53:59Z INFO  sequencer_bedrock_actor::actor] Published block 66 with the size of 711 bytes
+[2026-11-16T13:53:59Z INFO  sequencer_executor_actor::actor] Block with id 66 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:54:03Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 65..=65 (1), head Some(66)
+[2026-11-16T13:54:09Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:54:09Z INFO  sequencer_core] Publishing block 67 on pin 359059530aa9e3a6ce634c886cefaa1fc4070cfad2b6fdab714927971e25fbef
+[2026-11-16T13:54:09Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([53, 202, 168, 73, 38, 239, 166, 177, 213, 5, 119, 23, 24, 28, 132, 88, 152, 119, 7, 149, 163, 138, 71, 49, 34, 254, 15, 224, 66, 188, 151, 17])
+[2026-11-16T13:54:09Z INFO  sequencer_bedrock_actor::actor] Published block 67 with the size of 711 bytes
+[2026-11-16T13:54:09Z INFO  sequencer_executor_actor::actor] Block with id 67 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:54:15Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 66..=66 (1), head Some(67)
+[2026-11-16T13:54:18Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:54:18Z INFO  sequencer_core] Publishing block 68 on pin e68a18fc927a103593e41e9e7afbc1996e301bf44c6ef186d0630067cbcc187e
+[2026-11-16T13:54:19Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([241, 202, 221, 65, 162, 57, 163, 204, 161, 52, 30, 225, 206, 194, 219, 15, 33, 78, 187, 220, 250, 136, 157, 194, 132, 141, 205, 131, 122, 80, 123, 219])
+[2026-11-16T13:54:19Z INFO  sequencer_bedrock_actor::actor] Published block 68 with the size of 711 bytes
+[2026-11-16T13:54:19Z INFO  sequencer_executor_actor::actor] Block with id 68 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:54:23Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 67..=67 (1), head Some(68)
+[2026-11-16T13:54:28Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:54:28Z INFO  sequencer_core] Publishing block 69 on pin e79d83c4456ffe97e947caf4b9519d9bbca5154e1362d6e1f5d03ec9df039d8e
+[2026-11-16T13:54:28Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([212, 185, 28, 144, 155, 28, 122, 153, 152, 189, 246, 103, 31, 26, 60, 100, 29, 95, 244, 167, 155, 50, 80, 149, 34, 164, 133, 140, 88, 34, 26, 100])
+[2026-11-16T13:54:28Z INFO  sequencer_bedrock_actor::actor] Published block 69 with the size of 711 bytes
+[2026-11-16T13:54:29Z INFO  sequencer_executor_actor::actor] Block with id 69 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:54:31Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 68..=68 (1), head Some(69)
+[2026-11-16T13:54:38Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:54:38Z INFO  sequencer_core] Publishing block 70 on pin cb563c11d2d3fa695db205e9e49609ce2161832694c1c6f3285513132851fb04
+[2026-11-16T13:54:39Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([244, 98, 12, 102, 62, 187, 255, 148, 241, 199, 152, 85, 228, 36, 21, 109, 144, 240, 35, 194, 251, 250, 104, 139, 184, 185, 19, 60, 255, 235, 42, 154])
+[2026-11-16T13:54:39Z INFO  sequencer_bedrock_actor::actor] Published block 70 with the size of 711 bytes
+[2026-11-16T13:54:39Z INFO  sequencer_executor_actor::actor] Block with id 70 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:54:43Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 69..=69 (1), head Some(70)
+[2026-11-16T13:54:48Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:54:48Z INFO  sequencer_core] Publishing block 71 on pin f1a9f464387c11ec5ab47a9bf0c03824c9211e1ae8ad068998760afd23badbcb
+[2026-11-16T13:54:49Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([243, 39, 117, 44, 20, 91, 248, 159, 235, 132, 117, 34, 102, 76, 92, 192, 144, 45, 21, 158, 237, 169, 200, 1, 43, 72, 232, 75, 94, 100, 25, 211])
+[2026-11-16T13:54:49Z INFO  sequencer_bedrock_actor::actor] Published block 71 with the size of 711 bytes
+[2026-11-16T13:54:49Z INFO  sequencer_executor_actor::actor] Block with id 71 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:54:51Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 70..=70 (1), head Some(71)
+[2026-11-16T13:54:58Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:54:58Z INFO  sequencer_core] Publishing block 72 on pin ea7d38f0467acd64acee2be83ea8e30707f75559c3568987c3826234791d46c8
+[2026-11-16T13:54:59Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([241, 101, 112, 229, 107, 168, 108, 44, 81, 189, 63, 184, 162, 171, 145, 2, 99, 74, 116, 11, 1, 123, 150, 37, 170, 84, 37, 83, 139, 234, 249, 113])
+[2026-11-16T13:54:59Z INFO  sequencer_bedrock_actor::actor] Published block 72 with the size of 711 bytes
+[2026-11-16T13:54:59Z INFO  sequencer_executor_actor::actor] Block with id 72 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:55:03Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 71..=71 (1), head Some(72)
+[2026-11-16T13:55:04Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:37207 conn_id=4
+[2026-11-16T13:55:08Z DEBUG sequencer_core] Validated transaction with hash e1adeae39b9a77c507c71f403b6a0d93de33b8e19b0b550d6a5bc112eb274c87, including it in block
+[2026-11-16T13:55:09Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:55:09Z INFO  sequencer_core] Publishing block 73 on pin 9dcc1f1c09d3ddbada5aeaddede39e850e7985b2a6ff8cb10ac6516b08fb64ba
+[2026-11-16T13:55:09Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([89, 76, 99, 5, 44, 195, 101, 55, 153, 146, 39, 144, 77, 206, 100, 247, 70, 120, 41, 35, 50, 198, 115, 51, 207, 116, 103, 134, 90, 177, 57, 252])
+[2026-11-16T13:55:09Z INFO  sequencer_bedrock_actor::actor] Published block 73 with the size of 252341 bytes
+[2026-11-16T13:55:09Z INFO  sequencer_executor_actor::actor] Block with id 73 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:55:15Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 72..=72 (1), head Some(73)
+[2026-11-16T13:55:18Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:55:18Z INFO  sequencer_core] Publishing block 74 on pin 19824afebc6ac3202a47a4fb8b7222178a670c118e2f5c4235d5010d6a5a4592
+[2026-11-16T13:55:18Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([139, 67, 202, 4, 161, 139, 114, 245, 44, 103, 95, 1, 82, 210, 147, 46, 153, 180, 169, 215, 79, 178, 241, 41, 198, 71, 51, 167, 161, 104, 196, 205])
+[2026-11-16T13:55:18Z INFO  sequencer_bedrock_actor::actor] Published block 74 with the size of 711 bytes
+[2026-11-16T13:55:19Z INFO  sequencer_executor_actor::actor] Block with id 74 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:55:23Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 73..=73 (1), head Some(74)
+[2026-11-16T13:55:24Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:29468 conn_id=5
+[2026-11-16T13:55:28Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:55:28Z INFO  sequencer_core] Publishing block 75 on pin 906ba368ed391c7b030b8f83b2a2a06793861b1473a97b1866f2c120e42d1983
+[2026-11-16T13:55:28Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([66, 250, 168, 119, 60, 79, 11, 145, 2, 118, 42, 243, 117, 220, 140, 235, 103, 204, 87, 52, 171, 61, 8, 248, 116, 8, 133, 166, 80, 178, 97, 24])
+[2026-11-16T13:55:28Z INFO  sequencer_bedrock_actor::actor] Published block 75 with the size of 711 bytes
+[2026-11-16T13:55:29Z INFO  sequencer_executor_actor::actor] Block with id 75 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:55:31Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 74..=74 (1), head Some(75)
+[2026-11-16T13:55:38Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:55:38Z INFO  sequencer_core] Publishing block 76 on pin 0b472295ffd5ed58fdcbbd139c2aed0a9f7f09e1e61d691fa096785d877734d8
+[2026-11-16T13:55:39Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([23, 22, 153, 142, 178, 29, 202, 72, 197, 216, 87, 204, 178, 79, 179, 183, 191, 29, 23, 67, 152, 142, 102, 204, 114, 89, 149, 239, 37, 52, 180, 30])
+[2026-11-16T13:55:39Z INFO  sequencer_bedrock_actor::actor] Published block 76 with the size of 711 bytes
+[2026-11-16T13:55:39Z INFO  sequencer_executor_actor::actor] Block with id 76 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:55:43Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 75..=75 (1), head Some(76)
+[2026-11-16T13:55:48Z DEBUG sequencer_core] Validated transaction with hash 59f681d681e74e3e0efefc04b5b82d2efe52253355cf1b59533d5ed4cd9ea5df, including it in block
+[2026-11-16T13:55:48Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:55:48Z INFO  sequencer_core] Publishing block 77 on pin 39d79af85b4030d37b821936327e79ec80fd6679dbb8204f8366f19d7c5daea6
+[2026-11-16T13:55:49Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([104, 9, 200, 1, 13, 201, 108, 80, 198, 192, 68, 117, 54, 36, 104, 54, 233, 188, 190, 84, 72, 227, 157, 32, 27, 183, 191, 30, 45, 27, 42, 151])
+[2026-11-16T13:55:49Z INFO  sequencer_bedrock_actor::actor] Published block 77 with the size of 6107 bytes
+[2026-11-16T13:55:49Z INFO  sequencer_executor_actor::actor] Block with id 77 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:55:51Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 76..=76 (1), head Some(77)
+[2026-11-16T13:55:58Z DEBUG sequencer_core] Validated transaction with hash eddf0b73258c0ab85d887cd5c870e824ecf94126838f1d8839d3927dae7d310a, including it in block
+[2026-11-16T13:55:58Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:55:58Z INFO  sequencer_core] Publishing block 78 on pin fae9fc0c568304d59dcda088e45eaac183e9cea68f33b4ede1b91a23c1595194
+[2026-11-16T13:55:59Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([219, 119, 136, 13, 53, 84, 245, 11, 136, 152, 144, 163, 103, 227, 168, 41, 248, 44, 4, 67, 105, 61, 211, 220, 221, 70, 171, 101, 84, 133, 255, 241])
+[2026-11-16T13:55:59Z INFO  sequencer_bedrock_actor::actor] Published block 78 with the size of 99627 bytes
+[2026-11-16T13:55:59Z INFO  sequencer_executor_actor::actor] Block with id 78 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:56:03Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 77..=77 (1), head Some(78)
+[2026-11-16T13:56:08Z DEBUG sequencer_core] Validated transaction with hash 986e8f8f54549d23c28d7114d1bc2937539e593f6eef644e1d8b87f0bb517e96, including it in block
+[2026-11-16T13:56:08Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:56:08Z INFO  sequencer_core] Publishing block 79 on pin 885a879a3760d497dae143e8362b9f9fd1fdb90b6c0e6820acad325e39420467
+[2026-11-16T13:56:09Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([115, 192, 136, 48, 117, 159, 246, 200, 186, 9, 217, 235, 110, 59, 206, 19, 94, 223, 9, 20, 239, 105, 214, 7, 199, 76, 190, 129, 165, 54, 45, 167])
+[2026-11-16T13:56:09Z INFO  sequencer_bedrock_actor::actor] Published block 79 with the size of 99627 bytes
+[2026-11-16T13:56:09Z INFO  sequencer_executor_actor::actor] Block with id 79 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:56:11Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 78..=78 (1), head Some(79)
+[2026-11-16T13:56:18Z DEBUG sequencer_core] Validated transaction with hash b238f62f3e1066e658bd48e74baa4436fc7a350c8d815760b385391a1d8af6c8, including it in block
+[2026-11-16T13:56:18Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:56:18Z INFO  sequencer_core] Publishing block 80 on pin 2da4fafff34d6eee4a8e982693faf013e352a89036d0df3d5ce885f1909a8857
+[2026-11-16T13:56:19Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([192, 246, 26, 234, 191, 122, 66, 65, 104, 94, 84, 128, 233, 47, 222, 153, 173, 225, 34, 188, 84, 181, 236, 39, 189, 159, 156, 186, 34, 210, 21, 38])
+[2026-11-16T13:56:19Z INFO  sequencer_bedrock_actor::actor] Published block 80 with the size of 99627 bytes
+[2026-11-16T13:56:19Z INFO  sequencer_executor_actor::actor] Block with id 80 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:56:23Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 79..=79 (1), head Some(80)
+[2026-11-16T13:56:28Z DEBUG sequencer_core] Validated transaction with hash c281e5c9c4f90660e21bb8eb5888f570105e0efbfff71be7c096022fdba5359b, including it in block
+[2026-11-16T13:56:28Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:56:28Z INFO  sequencer_core] Publishing block 81 on pin 68c7cb21e10b69142b0298718656f5a2ee25fd3faf1da1d5429cf4f1d9c4fa0b
+[2026-11-16T13:56:29Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([201, 224, 52, 11, 29, 244, 3, 51, 126, 105, 235, 99, 95, 136, 34, 232, 64, 147, 12, 86, 94, 78, 220, 219, 231, 88, 168, 34, 187, 118, 197, 101])
+[2026-11-16T13:56:29Z INFO  sequencer_bedrock_actor::actor] Published block 81 with the size of 99627 bytes
+[2026-11-16T13:56:29Z INFO  sequencer_executor_actor::actor] Block with id 81 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:56:31Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 80..=80 (1), head Some(81)
+[2026-11-16T13:56:38Z DEBUG sequencer_core] Validated transaction with hash e7dcd42471f351e90930dd41c328730e1e13f4731f0e5f5f024575685b0ee21f, including it in block
+[2026-11-16T13:56:38Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:56:38Z INFO  sequencer_core] Publishing block 82 on pin 81ebd3fc3663805d2d0aca6495f10c0ad72be45c960fe4aa60f832148966a748
+[2026-11-16T13:56:39Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([201, 100, 104, 26, 220, 17, 180, 157, 155, 157, 150, 204, 230, 168, 140, 74, 181, 132, 210, 2, 196, 246, 152, 163, 24, 35, 185, 247, 156, 62, 134, 0])
+[2026-11-16T13:56:39Z INFO  sequencer_bedrock_actor::actor] Published block 82 with the size of 99627 bytes
+[2026-11-16T13:56:39Z INFO  sequencer_executor_actor::actor] Block with id 82 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:56:43Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 81..=81 (1), head Some(82)
+[2026-11-16T13:56:48Z DEBUG sequencer_core] Validated transaction with hash 349f1b2d3665fa272619a6814e46734dd1451ffac2f65ff1a617c5f5ab0df398, including it in block
+[2026-11-16T13:56:48Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:56:48Z INFO  sequencer_core] Publishing block 83 on pin 11cec08c9e34e931a6596c30f367a0020127d002549682b2c35e7ee957b13857
+[2026-11-16T13:56:49Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([20, 244, 129, 9, 57, 35, 186, 8, 221, 126, 150, 237, 199, 192, 18, 49, 68, 227, 65, 110, 230, 131, 184, 46, 212, 85, 186, 127, 24, 86, 92, 190])
+[2026-11-16T13:56:49Z INFO  sequencer_bedrock_actor::actor] Published block 83 with the size of 99627 bytes
+[2026-11-16T13:56:49Z INFO  sequencer_executor_actor::actor] Block with id 83 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:56:51Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 82..=82 (1), head Some(83)
+[2026-11-16T13:56:58Z DEBUG sequencer_core] Validated transaction with hash 56bb3f405db175633bb29f9cec2ce8b0a9258bf1cfb4d95d05f932aa6eb836d1, including it in block
+[2026-11-16T13:56:59Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:56:59Z INFO  sequencer_core] Publishing block 84 on pin 739268f14b9a8a1e4eba21f372f68c7ade10beb503112c27cb470fe3d1f1fb09
+[2026-11-16T13:56:59Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([75, 139, 225, 56, 229, 107, 9, 215, 36, 242, 0, 46, 203, 24, 191, 61, 137, 137, 183, 65, 165, 90, 209, 215, 107, 205, 162, 79, 235, 68, 118, 27])
+[2026-11-16T13:56:59Z INFO  sequencer_bedrock_actor::actor] Published block 84 with the size of 1319 bytes
+[2026-11-16T13:56:59Z INFO  sequencer_executor_actor::actor] Block with id 84 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:57:03Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 83..=83 (1), head Some(84)
+[2026-11-16T13:57:08Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:57:08Z INFO  sequencer_core] Publishing block 85 on pin d385aeae2f5db81ea2b8a592b3a396ec29592efd8b9c484bd90a9088f5b31c25
+[2026-11-16T13:57:08Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([79, 65, 45, 38, 86, 241, 203, 34, 207, 116, 86, 177, 51, 226, 75, 56, 161, 165, 215, 122, 102, 47, 91, 74, 215, 100, 60, 138, 5, 246, 186, 248])
+[2026-11-16T13:57:08Z INFO  sequencer_bedrock_actor::actor] Published block 85 with the size of 711 bytes
+[2026-11-16T13:57:09Z INFO  sequencer_executor_actor::actor] Block with id 85 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:57:15Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 84..=84 (1), head Some(85)
+[2026-11-16T13:57:18Z DEBUG sequencer_core] Validated transaction with hash 44c1e1a6d9d272fd24076b41ba4f3e74e32682e53b2e26baae047ed5bd947ce3, including it in block
+[2026-11-16T13:57:18Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:57:18Z INFO  sequencer_core] Publishing block 86 on pin 557a4e1511e66100561b622a3bedf8234c2e83a6dc5da55c08fc911635ea93ce
+[2026-11-16T13:57:19Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([167, 140, 138, 187, 202, 22, 46, 187, 143, 145, 211, 79, 190, 154, 156, 162, 181, 34, 91, 106, 43, 57, 24, 105, 208, 153, 230, 203, 192, 146, 139, 76])
+[2026-11-16T13:57:19Z INFO  sequencer_bedrock_actor::actor] Published block 86 with the size of 70187 bytes
+[2026-11-16T13:57:19Z INFO  sequencer_executor_actor::actor] Block with id 86 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:57:23Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 85..=85 (1), head Some(86)
+[2026-11-16T13:57:28Z DEBUG sequencer_core] Validated transaction with hash 3ed7f677b92b1be162d752c169581cd0ec6d15b1e34395dcb28a06f33ca4f11b, including it in block
+[2026-11-16T13:57:29Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:57:29Z INFO  sequencer_core] Publishing block 87 on pin c17eca307c02049c744fdba3867d0499d15d5b1438f72a8bfae4e5c87d7131da
+[2026-11-16T13:57:29Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([178, 217, 252, 187, 166, 172, 229, 94, 182, 219, 85, 172, 88, 186, 209, 252, 68, 203, 77, 38, 31, 140, 10, 91, 109, 140, 62, 92, 253, 117, 141, 175])
+[2026-11-16T13:57:29Z INFO  sequencer_bedrock_actor::actor] Published block 87 with the size of 99627 bytes
+[2026-11-16T13:57:29Z INFO  sequencer_executor_actor::actor] Block with id 87 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:57:31Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 86..=86 (1), head Some(87)
+[2026-11-16T13:57:38Z DEBUG sequencer_core] Validated transaction with hash 7cb3928b9fc16f689f649bb02a9b253b261123ee2eaa0a7ffd7d5a440f0641f4, including it in block
+[2026-11-16T13:57:38Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:57:38Z INFO  sequencer_core] Publishing block 88 on pin be50bd29865edda23ae2b251c5ac9a7432b294752eb1087acf212e685c83e0e5
+[2026-11-16T13:57:39Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([121, 65, 227, 125, 168, 138, 87, 141, 224, 83, 250, 128, 181, 2, 251, 118, 104, 132, 49, 92, 115, 255, 146, 209, 232, 100, 91, 25, 114, 44, 6, 112])
+[2026-11-16T13:57:39Z INFO  sequencer_bedrock_actor::actor] Published block 88 with the size of 99627 bytes
+[2026-11-16T13:57:39Z INFO  sequencer_executor_actor::actor] Block with id 88 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:57:43Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 87..=87 (1), head Some(88)
+[2026-11-16T13:57:48Z DEBUG sequencer_core] Validated transaction with hash 2df9cecc299c7eed66d9a5ad708d90a5a60593b7156e28398a5b8bf5d58085da, including it in block
+[2026-11-16T13:57:48Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:57:48Z INFO  sequencer_core] Publishing block 89 on pin 8851bf8109bf794ca554075c45a31a9510eb6c4b1fb0878d1597eb190f767478
+[2026-11-16T13:57:49Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([194, 229, 200, 17, 88, 18, 188, 30, 117, 242, 78, 85, 209, 152, 96, 46, 122, 174, 235, 20, 162, 217, 122, 174, 27, 90, 85, 189, 201, 180, 44, 212])
+[2026-11-16T13:57:49Z INFO  sequencer_bedrock_actor::actor] Published block 89 with the size of 99627 bytes
+[2026-11-16T13:57:49Z INFO  sequencer_executor_actor::actor] Block with id 89 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:57:51Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 88..=88 (1), head Some(89)
+[2026-11-16T13:57:58Z DEBUG sequencer_core] Validated transaction with hash 7d3c71c37fc9cbc4b028d3e644d9c3e1bca0ee055ff5adf088390ce924c0a5a7, including it in block
+[2026-11-16T13:57:58Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:57:58Z INFO  sequencer_core] Publishing block 90 on pin 5e268486a7ae5936086a30063e7461cac0fd81ec29ced6e0722258ed2cbebe06
+[2026-11-16T13:57:59Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([250, 108, 0, 53, 110, 164, 139, 121, 168, 125, 220, 14, 148, 8, 129, 57, 118, 6, 204, 189, 133, 101, 89, 49, 106, 239, 228, 210, 8, 67, 35, 242])
+[2026-11-16T13:57:59Z INFO  sequencer_bedrock_actor::actor] Published block 90 with the size of 99627 bytes
+[2026-11-16T13:57:59Z INFO  sequencer_executor_actor::actor] Block with id 90 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:58:03Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 89..=89 (1), head Some(90)
+[2026-11-16T13:58:08Z WARN  libp2p_kad::behaviour] Failed to trigger bootstrap: No known peers.
+[2026-11-16T13:58:08Z DEBUG sequencer_core] Validated transaction with hash a844d92c1096a7fc5520169d5ab7fb38dd74d720996d1edf6ace884edf7d571b, including it in block
+[2026-11-16T13:58:08Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:58:08Z INFO  sequencer_core] Publishing block 91 on pin 47cde051d27f46fc0fde95f288c4c3ea4cfdc9667ef8a22d8b0dd24cff6600f7
+[2026-11-16T13:58:09Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([67, 25, 238, 119, 70, 70, 74, 63, 200, 253, 205, 134, 54, 183, 233, 193, 166, 150, 156, 67, 188, 192, 28, 20, 65, 183, 114, 41, 147, 67, 119, 75])
+[2026-11-16T13:58:09Z INFO  sequencer_bedrock_actor::actor] Published block 91 with the size of 99627 bytes
+[2026-11-16T13:58:09Z INFO  sequencer_executor_actor::actor] Block with id 91 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:58:11Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 90..=90 (1), head Some(91)
+[2026-11-16T13:58:18Z DEBUG sequencer_core] Validated transaction with hash 122b6ccc182d9f6da8c5b37270ca845ecf6eb56ff002a9d8b181d198dedfe712, including it in block
+[2026-11-16T13:58:19Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:58:19Z INFO  sequencer_core] Publishing block 92 on pin d8d0a52cccdff270e2cc8d82dccd3defae2e706d839d6821b06c4073f51e91bf
+[2026-11-16T13:58:19Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([80, 228, 103, 253, 140, 36, 235, 88, 187, 135, 197, 119, 60, 124, 219, 114, 37, 212, 163, 169, 218, 79, 69, 200, 128, 27, 63, 176, 205, 188, 108, 99])
+[2026-11-16T13:58:19Z INFO  sequencer_bedrock_actor::actor] Published block 92 with the size of 1319 bytes
+[2026-11-16T13:58:19Z INFO  sequencer_executor_actor::actor] Block with id 92 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:58:23Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 91..=91 (1), head Some(92)
+[2026-11-16T13:58:28Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:58:28Z INFO  sequencer_core] Publishing block 93 on pin 0ce175cc7cda2749314761904640a4359f34c24cb2d4d97617b1e269c8ceb9bb
+[2026-11-16T13:58:29Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([21, 18, 208, 33, 226, 181, 2, 136, 103, 26, 158, 164, 151, 1, 120, 214, 219, 203, 56, 73, 230, 145, 47, 2, 42, 73, 241, 126, 222, 50, 75, 229])
+[2026-11-16T13:58:29Z INFO  sequencer_bedrock_actor::actor] Published block 93 with the size of 711 bytes
+[2026-11-16T13:58:29Z INFO  sequencer_executor_actor::actor] Block with id 93 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:58:35Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 92..=92 (1), head Some(93)
+[2026-11-16T13:58:38Z DEBUG sequencer_core] Validated transaction with hash 06bfc6ba69b5e329c14806a29d5027793aa8d074c386bc55a12e30a9bf114e0d, including it in block
+[2026-11-16T13:58:39Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:58:39Z INFO  sequencer_core] Publishing block 94 on pin d3c5105cc0f1cf44175851b32183484c45b4a785359fe9a44905d7f574ef51eb
+[2026-11-16T13:58:39Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([91, 128, 25, 9, 114, 154, 249, 180, 39, 70, 91, 176, 223, 132, 14, 209, 122, 40, 186, 148, 79, 114, 223, 227, 6, 234, 226, 117, 84, 87, 123, 118])
+[2026-11-16T13:58:39Z INFO  sequencer_bedrock_actor::actor] Published block 94 with the size of 2475 bytes
+[2026-11-16T13:58:39Z INFO  sequencer_executor_actor::actor] Block with id 94 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:58:43Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 93..=93 (1), head Some(94)
+[2026-11-16T13:58:48Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:58:48Z INFO  sequencer_core] Publishing block 95 on pin 58ae364f561dfa9762f3081030c0483ada373409ff67178130c1c133c39f3791
+[2026-11-16T13:58:49Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([68, 42, 34, 191, 213, 60, 201, 95, 251, 67, 104, 121, 65, 215, 139, 111, 79, 121, 177, 112, 109, 134, 197, 1, 223, 35, 138, 225, 152, 153, 105, 32])
+[2026-11-16T13:58:49Z INFO  sequencer_bedrock_actor::actor] Published block 95 with the size of 711 bytes
+[2026-11-16T13:58:49Z INFO  sequencer_executor_actor::actor] Block with id 95 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:58:55Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 94..=94 (1), head Some(95)
+[2026-11-16T13:58:59Z DEBUG sequencer_core] Validated transaction with hash 17b13d955cbed203936590fdf4a3613a42caebf4271bf1224abb0b5bed0b7dfb, including it in block
+[2026-11-16T13:58:59Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:58:59Z INFO  sequencer_core] Publishing block 96 on pin 1ef6dc46c1a62815ce6e9f957a29709f44b754406c04b6edaff1e77d57a55f65
+[2026-11-16T13:58:59Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([15, 234, 95, 213, 145, 224, 180, 92, 112, 46, 71, 166, 84, 253, 54, 46, 253, 187, 84, 40, 56, 234, 233, 15, 170, 93, 248, 171, 224, 39, 67, 133])
+[2026-11-16T13:58:59Z INFO  sequencer_bedrock_actor::actor] Published block 96 with the size of 25691 bytes
+[2026-11-16T13:58:59Z INFO  sequencer_executor_actor::actor] Block with id 96 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:59:03Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 95..=95 (1), head Some(96)
+[2026-11-16T13:59:08Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:59:08Z INFO  sequencer_core] Publishing block 97 on pin 921c5bba9dd6a53593df25f2d340fe43169e29745a82126c4896e54973a78742
+[2026-11-16T13:59:09Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([114, 194, 76, 169, 63, 70, 246, 4, 105, 141, 209, 97, 99, 60, 220, 96, 150, 120, 200, 79, 230, 112, 187, 79, 192, 4, 62, 72, 55, 32, 185, 247])
+[2026-11-16T13:59:09Z INFO  sequencer_bedrock_actor::actor] Published block 97 with the size of 711 bytes
+[2026-11-16T13:59:09Z INFO  sequencer_executor_actor::actor] Block with id 97 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:59:15Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 96..=96 (1), head Some(97)
+[2026-11-16T13:59:19Z DEBUG sequencer_core] Validated transaction with hash 976fdd7f18e45cd4f1a7530842351291626f2ae50357e0064ab700862a66ceca, including it in block
+[2026-11-16T13:59:19Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:59:19Z INFO  sequencer_core] Publishing block 98 on pin 268b87dc81eb33772542ff8e9769edccb8e9347ad2957e61a32102e254fb3c32
+[2026-11-16T13:59:19Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([184, 228, 155, 239, 58, 235, 97, 61, 254, 175, 132, 179, 84, 250, 160, 141, 154, 83, 4, 50, 197, 247, 181, 67, 167, 111, 14, 67, 255, 186, 215, 73])
+[2026-11-16T13:59:19Z INFO  sequencer_bedrock_actor::actor] Published block 98 with the size of 25884 bytes
+[2026-11-16T13:59:19Z INFO  sequencer_executor_actor::actor] Block with id 98 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:59:23Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 97..=97 (1), head Some(98)
+[2026-11-16T13:59:28Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:59:28Z INFO  sequencer_core] Publishing block 99 on pin 82b4f795799ce9d7c0077d163d61160e5cb30c626710853c90b268381ab751df
+[2026-11-16T13:59:29Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([133, 137, 49, 210, 160, 51, 148, 78, 105, 156, 206, 89, 43, 35, 162, 209, 198, 241, 142, 221, 127, 228, 223, 39, 21, 224, 188, 153, 202, 214, 202, 228])
+[2026-11-16T13:59:29Z INFO  sequencer_bedrock_actor::actor] Published block 99 with the size of 711 bytes
+[2026-11-16T13:59:29Z INFO  sequencer_executor_actor::actor] Block with id 99 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:59:35Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 98..=98 (1), head Some(99)
+[2026-11-16T13:59:38Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:59:38Z INFO  sequencer_core] Publishing block 100 on pin 26575a49949bd91d26c60ba4ba1711a4b63986d4ca1a43e8082b95e9424fba64
+[2026-11-16T13:59:39Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([106, 181, 9, 153, 31, 152, 75, 18, 72, 35, 161, 29, 243, 62, 7, 16, 45, 80, 119, 203, 211, 46, 211, 137, 225, 112, 213, 109, 90, 235, 194, 15])
+[2026-11-16T13:59:39Z INFO  sequencer_bedrock_actor::actor] Published block 100 with the size of 711 bytes
+[2026-11-16T13:59:39Z INFO  sequencer_executor_actor::actor] Block with id 100 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:59:43Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 99..=99 (1), head Some(100)
+[2026-11-16T13:59:46Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:43166 conn_id=6
+[2026-11-16T13:59:49Z DEBUG sequencer_core] Validated transaction with hash a33dd3bb7ef7eee12638a49ebea2cee8a8f1b874b3882c0e4d61ad629df193b4, including it in block
+[2026-11-16T13:59:49Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T13:59:49Z INFO  sequencer_core] Publishing block 101 on pin 798db279f090e32049b55527a9cef3abbd6e7c620ff2bf03189a65186ed2f24e
+[2026-11-16T13:59:49Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([45, 106, 18, 210, 10, 30, 19, 167, 65, 180, 2, 183, 250, 100, 193, 185, 90, 187, 180, 125, 104, 112, 61, 5, 162, 189, 188, 170, 176, 238, 23, 217])
+[2026-11-16T13:59:49Z INFO  sequencer_bedrock_actor::actor] Published block 101 with the size of 3059 bytes
+[2026-11-16T13:59:49Z INFO  sequencer_executor_actor::actor] Block with id 101 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T13:59:51Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 100..=100 (1), head Some(101)
+[2026-11-16T13:59:58Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T13:59:58Z INFO  sequencer_core] Publishing block 102 on pin 09812ca713e0c829b0bbf3a2556a7134edfbae74b53355431492d71656154295
+[2026-11-16T13:59:59Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([39, 209, 196, 89, 22, 4, 229, 254, 80, 209, 224, 49, 90, 212, 76, 242, 141, 229, 108, 124, 192, 180, 99, 151, 164, 240, 54, 1, 250, 244, 171, 119])
+[2026-11-16T13:59:59Z INFO  sequencer_bedrock_actor::actor] Published block 102 with the size of 711 bytes
+[2026-11-16T13:59:59Z INFO  sequencer_executor_actor::actor] Block with id 102 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:00:03Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 101..=101 (1), head Some(102)
+[2026-11-16T14:00:09Z DEBUG sequencer_core] Validated transaction with hash 8293cc562183952f55bfe3f10ea76d6290c6b38bc234d58c865aaa49b6e44525, including it in block
+[2026-11-16T14:00:09Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T14:00:09Z INFO  sequencer_core] Publishing block 103 on pin d62e8e719a4831bf59706bf814652bdac152af094981158bd794c0654fa16b00
+[2026-11-16T14:00:09Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([20, 227, 218, 92, 111, 26, 55, 96, 36, 214, 102, 120, 230, 137, 56, 48, 126, 245, 197, 153, 209, 202, 6, 79, 63, 36, 122, 187, 97, 88, 180, 212])
+[2026-11-16T14:00:09Z INFO  sequencer_bedrock_actor::actor] Published block 103 with the size of 1110 bytes
+[2026-11-16T14:00:09Z INFO  sequencer_executor_actor::actor] Block with id 103 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:00:11Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 102..=102 (1), head Some(103)
+[2026-11-16T14:00:18Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:00:18Z INFO  sequencer_core] Publishing block 104 on pin cb92b4ae35aec138d2c58872c00a4603c3dc35d5cd587aa010071ba177b90000
+[2026-11-16T14:00:18Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([142, 16, 136, 116, 168, 107, 212, 119, 109, 219, 218, 27, 173, 132, 18, 51, 105, 68, 88, 58, 102, 28, 170, 50, 171, 253, 52, 177, 113, 72, 134, 228])
+[2026-11-16T14:00:18Z INFO  sequencer_bedrock_actor::actor] Published block 104 with the size of 711 bytes
+[2026-11-16T14:00:19Z INFO  sequencer_executor_actor::actor] Block with id 104 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:00:23Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 103..=103 (1), head Some(104)
+[2026-11-16T14:00:29Z DEBUG sequencer_core] Validated transaction with hash d8bd6b8c0eabc1c63833c44ffb732b6b211d6633adf3af0858df46ddbb414c90, including it in block
+[2026-11-16T14:00:29Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T14:00:29Z INFO  sequencer_core] Publishing block 105 on pin c242fac70d25b74e945b76eb7ffca64a3b1c7f06fe27a6ca83fde8bf66fd39af
+[2026-11-16T14:00:29Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([174, 185, 210, 228, 244, 187, 195, 22, 133, 84, 134, 41, 197, 101, 110, 213, 36, 142, 240, 214, 81, 15, 27, 13, 177, 82, 103, 21, 110, 220, 100, 84])
+[2026-11-16T14:00:29Z INFO  sequencer_bedrock_actor::actor] Published block 105 with the size of 1303 bytes
+[2026-11-16T14:00:30Z INFO  sequencer_executor_actor::actor] Block with id 105 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:00:31Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 104..=104 (1), head Some(105)
+[2026-11-16T14:00:38Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:00:38Z INFO  sequencer_core] Publishing block 106 on pin b5c39dd9c34a34a12e0e4baf794d0e598619581e27f9535d80352a0e90df70e4
+[2026-11-16T14:00:38Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([190, 184, 113, 86, 10, 69, 43, 38, 213, 25, 243, 166, 234, 78, 194, 192, 109, 142, 8, 170, 115, 225, 74, 27, 84, 25, 185, 75, 185, 0, 94, 9])
+[2026-11-16T14:00:38Z INFO  sequencer_bedrock_actor::actor] Published block 106 with the size of 711 bytes
+[2026-11-16T14:00:39Z INFO  sequencer_executor_actor::actor] Block with id 106 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:00:43Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 105..=105 (1), head Some(106)
+[2026-11-16T14:00:49Z DEBUG sequencer_core] Validated transaction with hash 4ac70a6a73be71f191fdb22697ecaeb9d0deca15ae53a12b84eca1b8d4094a2b, including it in block
+[2026-11-16T14:00:49Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T14:00:49Z INFO  sequencer_core] Publishing block 107 on pin fd422d88c0e5d51b5d8845190377044e68c043a1e6121eef894783237b3cb390
+[2026-11-16T14:00:49Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([30, 188, 103, 131, 172, 24, 165, 225, 40, 95, 139, 216, 66, 112, 53, 78, 252, 129, 187, 236, 249, 57, 223, 0, 100, 165, 247, 202, 255, 219, 91, 239])
+[2026-11-16T14:00:49Z INFO  sequencer_bedrock_actor::actor] Published block 107 with the size of 3747 bytes
+[2026-11-16T14:00:49Z INFO  sequencer_executor_actor::actor] Block with id 107 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:00:51Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 106..=106 (1), head Some(107)
+[2026-11-16T14:00:58Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:00:58Z INFO  sequencer_core] Publishing block 108 on pin 5e1a9163cdede9afa4107be14b75c8e7ad73c07db7b40adb0dbd8a7558ac89d3
+[2026-11-16T14:00:58Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([180, 45, 188, 103, 154, 154, 47, 210, 115, 173, 163, 107, 150, 27, 91, 236, 198, 127, 14, 101, 76, 254, 57, 18, 223, 72, 252, 93, 41, 65, 9, 208])
+[2026-11-16T14:00:58Z INFO  sequencer_bedrock_actor::actor] Published block 108 with the size of 711 bytes
+[2026-11-16T14:00:59Z INFO  sequencer_executor_actor::actor] Block with id 108 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:01:03Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 107..=107 (1), head Some(108)
+[2026-11-16T14:01:09Z DEBUG sequencer_core] Validated transaction with hash cd50f939682b1af8e0921792c213ade1cb0148b9cbf98131312272ff3d465758, including it in block
+[2026-11-16T14:01:09Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T14:01:09Z INFO  sequencer_core] Publishing block 109 on pin 63e86ac0584922702078f37a809f206888ed76d9fe25ab0b99d226259f2b5ad9
+[2026-11-16T14:01:09Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([8, 128, 135, 84, 56, 22, 142, 164, 2, 159, 225, 131, 237, 64, 105, 56, 112, 227, 192, 174, 128, 107, 89, 143, 40, 109, 168, 17, 15, 72, 193, 173])
+[2026-11-16T14:01:09Z INFO  sequencer_bedrock_actor::actor] Published block 109 with the size of 6157 bytes
+[2026-11-16T14:01:09Z INFO  sequencer_executor_actor::actor] Block with id 109 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:01:11Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 108..=108 (1), head Some(109)
+[2026-11-16T14:01:18Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:01:18Z INFO  sequencer_core] Publishing block 110 on pin 70d986bda7578d43eadae73c60c3e1e0b86d9e2e6da69b46165b83de0448f5fb
+[2026-11-16T14:01:18Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([185, 241, 204, 88, 239, 35, 210, 136, 0, 34, 29, 3, 29, 68, 104, 113, 47, 158, 155, 211, 215, 168, 26, 243, 100, 131, 193, 130, 167, 213, 123, 52])
+[2026-11-16T14:01:18Z INFO  sequencer_bedrock_actor::actor] Published block 110 with the size of 711 bytes
+[2026-11-16T14:01:19Z INFO  sequencer_executor_actor::actor] Block with id 110 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:01:23Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 109..=109 (1), head Some(110)
+[2026-11-16T14:01:29Z DEBUG sequencer_core] Validated transaction with hash ec3434faa1a600d2144907b27b9aeda099cec1a6d2f96e6e2f508650d70993dd, including it in block
+[2026-11-16T14:01:29Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T14:01:29Z INFO  sequencer_core] Publishing block 111 on pin 89511d4fd62aea5c87fbbc3def44c2f03a1ebb576a581d47b3969ed7f36df77a
+[2026-11-16T14:01:29Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([94, 117, 117, 174, 211, 223, 20, 110, 143, 207, 81, 173, 65, 1, 222, 176, 83, 221, 145, 240, 243, 24, 212, 133, 78, 33, 120, 226, 248, 145, 131, 46])
+[2026-11-16T14:01:29Z INFO  sequencer_bedrock_actor::actor] Published block 111 with the size of 4169 bytes
+[2026-11-16T14:01:29Z INFO  sequencer_executor_actor::actor] Block with id 111 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:01:31Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 110..=110 (1), head Some(111)
+[2026-11-16T14:01:38Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:01:38Z INFO  sequencer_core] Publishing block 112 on pin 6a6b5cafb9a37939dc6e3e97408b6c6b64d83e4afde5c320f7e4e02d932dc11b
+[2026-11-16T14:01:38Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([175, 203, 235, 196, 137, 25, 67, 120, 231, 252, 232, 38, 46, 137, 159, 245, 31, 101, 129, 1, 6, 229, 79, 201, 204, 3, 97, 197, 95, 209, 225, 165])
+[2026-11-16T14:01:38Z INFO  sequencer_bedrock_actor::actor] Published block 112 with the size of 711 bytes
+[2026-11-16T14:01:39Z INFO  sequencer_executor_actor::actor] Block with id 112 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:01:43Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 111..=111 (1), head Some(112)
+[2026-11-16T14:01:49Z DEBUG sequencer_core] Validated transaction with hash ea2f1d649b7db44985fd750d6c77e750f041a31ddcb38f5a76bded0e1861a79a, including it in block
+[2026-11-16T14:01:49Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T14:01:49Z INFO  sequencer_core] Publishing block 113 on pin cf6705d7ebeb76e6a6b3af2871082abfdd317ad359a32804756f8cbb92a01e11
+[2026-11-16T14:01:49Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([135, 201, 60, 175, 142, 226, 168, 116, 240, 238, 153, 254, 87, 44, 35, 39, 149, 26, 81, 37, 64, 52, 252, 102, 212, 231, 208, 51, 5, 117, 43, 129])
+[2026-11-16T14:01:49Z INFO  sequencer_bedrock_actor::actor] Published block 113 with the size of 2863 bytes
+[2026-11-16T14:01:50Z INFO  sequencer_executor_actor::actor] Block with id 113 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:01:51Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 112..=112 (1), head Some(113)
+[2026-11-16T14:01:58Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:01:58Z INFO  sequencer_core] Publishing block 114 on pin 1a7a3ac1957e2b79adc3ecc851c4c03002f75a94c8244ce0bdf827c1d2e820cd
+[2026-11-16T14:01:58Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([148, 169, 162, 226, 51, 2, 28, 173, 186, 162, 64, 26, 159, 224, 28, 36, 112, 216, 158, 14, 156, 130, 31, 186, 105, 197, 242, 166, 157, 158, 199, 206])
+[2026-11-16T14:01:58Z INFO  sequencer_bedrock_actor::actor] Published block 114 with the size of 711 bytes
+[2026-11-16T14:01:59Z INFO  sequencer_executor_actor::actor] Block with id 114 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:02:03Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 113..=113 (1), head Some(114)
+[2026-11-16T14:02:09Z DEBUG sequencer_core] Validated transaction with hash d1497b765b735503203a10d09fcb0a7703068d7fff15866d65269d3628a34b59, including it in block
+[2026-11-16T14:02:09Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T14:02:09Z INFO  sequencer_core] Publishing block 115 on pin d86dfb331f3de20135952aa33db038c521088e55407f96b4dd87e5e207eb21ec
+[2026-11-16T14:02:09Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([5, 221, 105, 76, 47, 120, 164, 65, 132, 101, 8, 53, 47, 194, 88, 30, 188, 92, 241, 238, 111, 246, 145, 127, 58, 202, 20, 254, 212, 29, 113, 130])
+[2026-11-16T14:02:09Z INFO  sequencer_bedrock_actor::actor] Published block 115 with the size of 3059 bytes
+[2026-11-16T14:02:09Z INFO  sequencer_executor_actor::actor] Block with id 115 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:02:11Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 114..=114 (1), head Some(115)
+[2026-11-16T14:02:18Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:02:18Z INFO  sequencer_core] Publishing block 116 on pin bb7d23513eb353a186104866245383419beff5995709aae52c8c9ee0b18c1672
+[2026-11-16T14:02:18Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([156, 45, 20, 121, 78, 39, 113, 78, 137, 161, 45, 254, 207, 162, 240, 213, 209, 89, 207, 129, 20, 173, 52, 193, 120, 179, 161, 217, 8, 9, 115, 209])
+[2026-11-16T14:02:18Z INFO  sequencer_bedrock_actor::actor] Published block 116 with the size of 711 bytes
+[2026-11-16T14:02:19Z INFO  sequencer_executor_actor::actor] Block with id 116 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:02:23Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 115..=115 (1), head Some(116)
+[2026-11-16T14:02:29Z DEBUG sequencer_core] Validated transaction with hash 3945cc9a81adf1a2b6693fd279ae14e9b70d636f0a7e36701f71b19d6811d0b6, including it in block
+[2026-11-16T14:02:29Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T14:02:29Z INFO  sequencer_core] Publishing block 117 on pin 673a1751dd41ec4fb45cd8024c0011df60d92bcc892a05c2719b6e334cdcb4de
+[2026-11-16T14:02:29Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([122, 127, 63, 173, 179, 13, 96, 178, 63, 54, 100, 127, 171, 8, 78, 51, 126, 180, 210, 43, 235, 108, 253, 227, 115, 62, 172, 97, 157, 67, 68, 221])
+[2026-11-16T14:02:29Z INFO  sequencer_bedrock_actor::actor] Published block 117 with the size of 1110 bytes
+[2026-11-16T14:02:29Z INFO  sequencer_executor_actor::actor] Block with id 117 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:02:31Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 116..=116 (1), head Some(117)
+[2026-11-16T14:02:38Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:02:38Z INFO  sequencer_core] Publishing block 118 on pin da05809071c2ba0c2b6d068a726fdca5587d90f9613130a16349ae6e0aa28905
+[2026-11-16T14:02:38Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([226, 55, 241, 160, 191, 8, 156, 89, 249, 137, 25, 68, 50, 199, 109, 197, 236, 142, 255, 47, 179, 68, 6, 121, 230, 54, 87, 120, 34, 47, 55, 209])
+[2026-11-16T14:02:38Z INFO  sequencer_bedrock_actor::actor] Published block 118 with the size of 711 bytes
+[2026-11-16T14:02:39Z INFO  sequencer_executor_actor::actor] Block with id 118 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:02:43Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 117..=117 (1), head Some(118)
+[2026-11-16T14:02:49Z DEBUG sequencer_core] Validated transaction with hash 4032f255efc08807278456643aad3c3b567b1e1288c504ed1dd8932e4997afdc, including it in block
+[2026-11-16T14:02:49Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T14:02:49Z INFO  sequencer_core] Publishing block 119 on pin bc8cb16c2cd4ccca058ed77f4744a22924f231b8ab938447aa8556de69dba7f7
+[2026-11-16T14:02:49Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([188, 60, 18, 107, 31, 220, 62, 32, 160, 119, 63, 208, 51, 76, 48, 213, 103, 158, 11, 214, 208, 12, 19, 230, 248, 159, 137, 117, 120, 42, 251, 222])
+[2026-11-16T14:02:49Z INFO  sequencer_bedrock_actor::actor] Published block 119 with the size of 1303 bytes
+[2026-11-16T14:02:50Z INFO  sequencer_executor_actor::actor] Block with id 119 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:02:51Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 118..=118 (1), head Some(119)
+[2026-11-16T14:02:58Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:02:58Z INFO  sequencer_core] Publishing block 120 on pin 8f14bd710d376ecf392a67e534a99e49fe1090f3e74062895cf58009cb1a6613
+[2026-11-16T14:02:58Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([40, 49, 214, 4, 198, 139, 62, 185, 15, 154, 47, 255, 151, 122, 201, 30, 45, 247, 130, 155, 141, 214, 175, 154, 1, 229, 93, 199, 96, 154, 15, 168])
+[2026-11-16T14:02:58Z INFO  sequencer_bedrock_actor::actor] Published block 120 with the size of 711 bytes
+[2026-11-16T14:02:59Z INFO  sequencer_executor_actor::actor] Block with id 120 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:03:03Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 119..=119 (1), head Some(120)
+[2026-11-16T14:03:08Z WARN  libp2p_kad::behaviour] Failed to trigger bootstrap: No known peers.
+[2026-11-16T14:03:09Z DEBUG sequencer_core] Validated transaction with hash 86e79d92c5fc99c0712dcb7500cf7df13d37b4483cbbb086f4a814dfe4ebaef2, including it in block
+[2026-11-16T14:03:09Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T14:03:09Z INFO  sequencer_core] Publishing block 121 on pin 9a8c8022bdd36deecb71ac570c5f1375c1216c62d7711f8c1bfae0eaa197f674
+[2026-11-16T14:03:09Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([98, 13, 182, 182, 11, 146, 185, 94, 228, 106, 248, 38, 65, 52, 190, 126, 127, 146, 149, 230, 213, 237, 31, 6, 67, 144, 48, 1, 219, 122, 196, 51])
+[2026-11-16T14:03:09Z INFO  sequencer_bedrock_actor::actor] Published block 121 with the size of 4088 bytes
+[2026-11-16T14:03:09Z INFO  sequencer_executor_actor::actor] Block with id 121 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:03:11Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 120..=120 (1), head Some(121)
+[2026-11-16T14:03:18Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:03:18Z INFO  sequencer_core] Publishing block 122 on pin ec3daf031db9e893dc1f3563ee63f8098d5a1433e596ea52197c05b0cb7b353c
+[2026-11-16T14:03:18Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([216, 120, 68, 174, 167, 232, 176, 249, 189, 162, 185, 224, 160, 102, 38, 32, 223, 44, 34, 229, 109, 0, 135, 216, 185, 114, 95, 97, 136, 230, 248, 101])
+[2026-11-16T14:03:18Z INFO  sequencer_bedrock_actor::actor] Published block 122 with the size of 711 bytes
+[2026-11-16T14:03:19Z INFO  sequencer_executor_actor::actor] Block with id 122 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:03:23Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 121..=121 (1), head Some(122)
+[2026-11-16T14:03:29Z DEBUG sequencer_core] Validated transaction with hash 38da2e986fc2c91f4c1d9e012a5f4ef04b7242f8ed25be70912fd19e69b635d9, including it in block
+[2026-11-16T14:03:29Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T14:03:29Z INFO  sequencer_core] Publishing block 123 on pin e6aca927879b5b993f93f9764f3ff6683448a7ea42de9f65161ff0f1c0b6bc41
+[2026-11-16T14:03:29Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([188, 98, 24, 103, 30, 50, 247, 77, 119, 0, 244, 57, 29, 79, 71, 41, 182, 113, 154, 49, 1, 205, 110, 173, 109, 195, 253, 189, 31, 80, 191, 5])
+[2026-11-16T14:03:29Z INFO  sequencer_bedrock_actor::actor] Published block 123 with the size of 4169 bytes
+[2026-11-16T14:03:29Z INFO  sequencer_executor_actor::actor] Block with id 123 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:03:31Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 122..=122 (1), head Some(123)
+[2026-11-16T14:03:38Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:03:38Z INFO  sequencer_core] Publishing block 124 on pin bed08f0e8022044d86337587a34b765b05a50a839e17eedddfe139a65ac702ff
+[2026-11-16T14:03:38Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([8, 87, 10, 115, 113, 240, 92, 140, 20, 8, 248, 119, 91, 28, 59, 158, 221, 222, 121, 195, 70, 58, 197, 110, 110, 180, 93, 6, 73, 155, 208, 192])
+[2026-11-16T14:03:38Z INFO  sequencer_bedrock_actor::actor] Published block 124 with the size of 711 bytes
+[2026-11-16T14:03:39Z INFO  sequencer_executor_actor::actor] Block with id 124 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:03:43Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 123..=123 (1), head Some(124)
+[2026-11-16T14:03:48Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:03:48Z INFO  sequencer_core] Publishing block 125 on pin c2225e8027c5c8d50086316d0ae7c8686ec3c80dddcd9db84d180b3d86d5bc4d
+[2026-11-16T14:03:49Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([155, 215, 130, 4, 106, 115, 179, 170, 245, 8, 234, 39, 165, 151, 196, 209, 181, 153, 69, 142, 223, 238, 10, 68, 174, 149, 53, 201, 137, 179, 58, 184])
+[2026-11-16T14:03:49Z INFO  sequencer_bedrock_actor::actor] Published block 125 with the size of 711 bytes
+[2026-11-16T14:03:49Z INFO  sequencer_executor_actor::actor] Block with id 125 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:03:51Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 124..=124 (1), head Some(125)
+[2026-11-16T14:03:58Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:03:58Z INFO  sequencer_core] Publishing block 126 on pin 07420a0879f35ab15ff71c220b10a81c1054c5e194ac9c3ce7292a8200273636
+[2026-11-16T14:03:59Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([53, 221, 202, 247, 180, 140, 18, 91, 184, 91, 4, 184, 247, 134, 109, 180, 75, 115, 187, 251, 20, 139, 105, 242, 17, 195, 74, 217, 205, 244, 130, 185])
+[2026-11-16T14:03:59Z INFO  sequencer_bedrock_actor::actor] Published block 126 with the size of 711 bytes
+[2026-11-16T14:03:59Z INFO  sequencer_executor_actor::actor] Block with id 126 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:04:03Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 125..=125 (1), head Some(126)
+[2026-11-16T14:04:08Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:04:08Z INFO  sequencer_core] Publishing block 127 on pin 8bd40482ac98d0ec2178ce9d0e68f403c3b811007fadf281dd60d37dedef88dc
+[2026-11-16T14:04:08Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([124, 132, 215, 0, 72, 116, 115, 42, 75, 125, 223, 190, 102, 67, 37, 67, 57, 159, 232, 177, 180, 42, 49, 61, 100, 114, 171, 111, 14, 126, 10, 172])
+[2026-11-16T14:04:08Z INFO  sequencer_bedrock_actor::actor] Published block 127 with the size of 711 bytes
+[2026-11-16T14:04:09Z INFO  sequencer_executor_actor::actor] Block with id 127 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:04:11Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 126..=126 (1), head Some(127)
+[2026-11-16T14:04:18Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:04:18Z INFO  sequencer_core] Publishing block 128 on pin b5451eb34a62d7c49eb3f9071595f3d6ae7227d9fa91904f3f31568e90087b48
+[2026-11-16T14:04:19Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([204, 254, 86, 97, 151, 223, 84, 254, 204, 130, 89, 122, 160, 212, 232, 196, 59, 115, 137, 70, 214, 168, 143, 195, 198, 195, 224, 189, 208, 97, 155, 108])
+[2026-11-16T14:04:19Z INFO  sequencer_bedrock_actor::actor] Published block 128 with the size of 711 bytes
+[2026-11-16T14:04:19Z INFO  sequencer_executor_actor::actor] Block with id 128 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:04:23Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 127..=127 (1), head Some(128)
+[2026-11-16T14:04:29Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:04:29Z INFO  sequencer_core] Publishing block 129 on pin 9df49a51399be41b050dc7fe6768bcd7dd48c3d6e56294c3a31b933e6ca82287
+[2026-11-16T14:04:29Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([230, 161, 6, 134, 215, 180, 163, 13, 199, 134, 115, 117, 157, 206, 220, 211, 170, 95, 144, 189, 129, 120, 19, 12, 210, 86, 223, 155, 239, 242, 199, 184])
+[2026-11-16T14:04:29Z INFO  sequencer_bedrock_actor::actor] Published block 129 with the size of 711 bytes
+[2026-11-16T14:04:29Z INFO  sequencer_executor_actor::actor] Block with id 129 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:04:31Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 128..=128 (1), head Some(129)
+[2026-11-16T14:04:38Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:04:38Z INFO  sequencer_core] Publishing block 130 on pin 8c1733b75fa38b727644d898cda671bd2d977385c415b7032caa27b53e6ec1fd
+[2026-11-16T14:04:39Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([218, 139, 130, 39, 53, 0, 61, 212, 153, 65, 2, 13, 144, 87, 66, 97, 225, 15, 110, 71, 130, 26, 138, 10, 161, 26, 85, 41, 172, 80, 97, 148])
+[2026-11-16T14:04:39Z INFO  sequencer_bedrock_actor::actor] Published block 130 with the size of 711 bytes
+[2026-11-16T14:04:39Z INFO  sequencer_executor_actor::actor] Block with id 130 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:04:43Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 129..=129 (1), head Some(130)
+[2026-11-16T14:04:49Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:04:49Z INFO  sequencer_core] Publishing block 131 on pin b48fe1b7594d31eada03fec6f86998316afa7ef7d718fcb982b3b6c67701bbef
+[2026-11-16T14:04:49Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([14, 103, 132, 234, 208, 172, 198, 44, 131, 64, 123, 246, 127, 20, 192, 58, 64, 0, 41, 215, 124, 33, 29, 137, 143, 176, 184, 75, 137, 16, 33, 61])
+[2026-11-16T14:04:49Z INFO  sequencer_bedrock_actor::actor] Published block 131 with the size of 711 bytes
+[2026-11-16T14:04:49Z INFO  sequencer_executor_actor::actor] Block with id 131 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:04:51Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 130..=130 (1), head Some(131)
+[2026-11-16T14:04:58Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:04:58Z INFO  sequencer_core] Publishing block 132 on pin 4ddc2c2ec7cdc324f5c3f1e9f55c4b54ed4dedbcdc720a45969c673bf30225f1
+[2026-11-16T14:04:59Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([118, 237, 37, 139, 232, 237, 5, 136, 66, 214, 81, 85, 1, 221, 42, 120, 162, 95, 232, 238, 83, 54, 77, 92, 128, 178, 16, 24, 103, 76, 75, 98])
+[2026-11-16T14:04:59Z INFO  sequencer_bedrock_actor::actor] Published block 132 with the size of 711 bytes
+[2026-11-16T14:04:59Z INFO  sequencer_executor_actor::actor] Block with id 132 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:05:03Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 131..=131 (1), head Some(132)
+[2026-11-16T14:05:09Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:05:09Z INFO  sequencer_core] Publishing block 133 on pin 6f97d51c9fcd53f28d615d663793fa13c1d25748cbacba5f4d74a9d99844e036
+[2026-11-16T14:05:09Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([44, 139, 168, 102, 144, 105, 131, 143, 120, 62, 18, 97, 92, 117, 146, 109, 118, 37, 117, 0, 51, 203, 7, 234, 212, 52, 55, 187, 32, 100, 128, 229])
+[2026-11-16T14:05:09Z INFO  sequencer_bedrock_actor::actor] Published block 133 with the size of 711 bytes
+[2026-11-16T14:05:09Z INFO  sequencer_executor_actor::actor] Block with id 133 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:05:11Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 132..=132 (1), head Some(133)
+[2026-11-16T14:05:19Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:05:19Z INFO  sequencer_core] Publishing block 134 on pin 4fdb95f230f341de14ab5a14d71f55df172df8f47f0ddb0eee97637a2b2341f6
+[2026-11-16T14:05:19Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([227, 219, 23, 129, 119, 66, 49, 87, 244, 109, 167, 239, 120, 210, 198, 204, 160, 147, 16, 155, 240, 108, 107, 154, 220, 36, 242, 239, 187, 215, 15, 86])
+[2026-11-16T14:05:19Z INFO  sequencer_bedrock_actor::actor] Published block 134 with the size of 711 bytes
+[2026-11-16T14:05:19Z INFO  sequencer_executor_actor::actor] Block with id 134 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:05:23Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 133..=133 (1), head Some(134)
+[2026-11-16T14:05:29Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:05:29Z INFO  sequencer_core] Publishing block 135 on pin c9347fb0caa94fbb8c4100689aec143a98161c2aac7384407578593c068304a6
+[2026-11-16T14:05:29Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([43, 180, 98, 145, 111, 202, 174, 12, 103, 66, 96, 254, 88, 247, 82, 172, 19, 172, 31, 4, 39, 70, 33, 208, 157, 216, 1, 110, 173, 131, 96, 116])
+[2026-11-16T14:05:29Z INFO  sequencer_bedrock_actor::actor] Published block 135 with the size of 711 bytes
+[2026-11-16T14:05:29Z INFO  sequencer_executor_actor::actor] Block with id 135 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:05:31Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 134..=134 (1), head Some(135)
+[2026-11-16T14:05:39Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:05:39Z INFO  sequencer_core] Publishing block 136 on pin ec6105c4cc7a7825ce113f6354ec5f63ec51b4592447fc14b8d312afb948c618
+[2026-11-16T14:05:39Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([163, 243, 252, 231, 114, 106, 105, 110, 73, 1, 111, 122, 199, 252, 238, 153, 27, 4, 58, 156, 210, 184, 159, 233, 29, 241, 225, 206, 69, 232, 78, 130])
+[2026-11-16T14:05:39Z INFO  sequencer_bedrock_actor::actor] Published block 136 with the size of 711 bytes
+[2026-11-16T14:05:39Z INFO  sequencer_executor_actor::actor] Block with id 136 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:05:43Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 135..=135 (1), head Some(136)
+[2026-11-16T14:05:49Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:05:49Z INFO  sequencer_core] Publishing block 137 on pin e576240302b64cdde9b0ed03fa02ada65f0674daa740c6a858d19cf939bff600
+[2026-11-16T14:05:49Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([220, 26, 9, 20, 250, 48, 1, 109, 56, 35, 69, 192, 168, 93, 225, 205, 69, 48, 64, 245, 237, 223, 214, 238, 223, 132, 184, 191, 156, 107, 158, 124])
+[2026-11-16T14:05:49Z INFO  sequencer_bedrock_actor::actor] Published block 137 with the size of 711 bytes
+[2026-11-16T14:05:49Z INFO  sequencer_executor_actor::actor] Block with id 137 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:05:51Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 136..=136 (1), head Some(137)
+[2026-11-16T14:05:58Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:05:58Z INFO  sequencer_core] Publishing block 138 on pin 2e641417b77322c8457a93323d2178c588070740c81a1376072545558817ec29
+[2026-11-16T14:05:59Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([1, 253, 108, 62, 135, 74, 144, 244, 212, 57, 119, 36, 253, 185, 243, 3, 52, 1, 154, 79, 223, 225, 255, 153, 186, 142, 65, 254, 58, 70, 192, 146])
+[2026-11-16T14:05:59Z INFO  sequencer_bedrock_actor::actor] Published block 138 with the size of 711 bytes
+[2026-11-16T14:05:59Z INFO  sequencer_executor_actor::actor] Block with id 138 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:06:03Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 137..=137 (1), head Some(138)
+[2026-11-16T14:06:09Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:06:09Z INFO  sequencer_core] Publishing block 139 on pin 34f7a533e549f38fad317cab13aba21ffd78e896f0b5d06547f8a4ab510fc059
+[2026-11-16T14:06:09Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([165, 54, 174, 154, 174, 199, 85, 129, 154, 72, 242, 31, 245, 201, 103, 249, 42, 30, 58, 252, 159, 243, 130, 226, 224, 1, 109, 242, 162, 116, 175, 88])
+[2026-11-16T14:06:09Z INFO  sequencer_bedrock_actor::actor] Published block 139 with the size of 711 bytes
+[2026-11-16T14:06:09Z INFO  sequencer_executor_actor::actor] Block with id 139 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:06:11Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 138..=138 (1), head Some(139)
+[2026-11-16T14:06:18Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:06:18Z INFO  sequencer_core] Publishing block 140 on pin eaa2ef990633b8aa18dae4132219e879adb46365b796bd77244bb582cfc877d4
+[2026-11-16T14:06:19Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([216, 217, 80, 148, 222, 86, 29, 172, 97, 220, 48, 253, 10, 209, 68, 10, 4, 16, 32, 112, 152, 93, 15, 133, 82, 70, 67, 237, 124, 174, 120, 201])
+[2026-11-16T14:06:19Z INFO  sequencer_bedrock_actor::actor] Published block 140 with the size of 711 bytes
+[2026-11-16T14:06:19Z INFO  sequencer_executor_actor::actor] Block with id 140 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:06:23Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 139..=139 (1), head Some(140)
+[2026-11-16T14:06:29Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:06:29Z INFO  sequencer_core] Publishing block 141 on pin 2f4965ba7cf2a916df53aa3645066a65d5e48955d01838c1c2f6c3ee321b3a35
+[2026-11-16T14:06:29Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([212, 60, 24, 29, 158, 14, 84, 101, 231, 19, 222, 25, 150, 162, 76, 6, 51, 8, 119, 249, 44, 39, 228, 19, 148, 110, 7, 28, 43, 227, 42, 76])
+[2026-11-16T14:06:29Z INFO  sequencer_bedrock_actor::actor] Published block 141 with the size of 711 bytes
+[2026-11-16T14:06:29Z INFO  sequencer_executor_actor::actor] Block with id 141 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:06:31Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 140..=140 (1), head Some(141)
+[2026-11-16T14:06:39Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:06:39Z INFO  sequencer_core] Publishing block 142 on pin 8f982849e26d007eaa3f1607842cc6c7b507d548ec6446c91793e6153c9a7f4c
+[2026-11-16T14:06:39Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([106, 72, 66, 17, 143, 224, 33, 168, 172, 210, 239, 66, 30, 186, 194, 108, 108, 233, 235, 234, 201, 201, 206, 42, 93, 16, 40, 248, 91, 79, 119, 185])
+[2026-11-16T14:06:39Z INFO  sequencer_bedrock_actor::actor] Published block 142 with the size of 711 bytes
+[2026-11-16T14:06:39Z INFO  sequencer_executor_actor::actor] Block with id 142 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:06:43Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 141..=141 (1), head Some(142)
+[2026-11-16T14:06:48Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:06:48Z INFO  sequencer_core] Publishing block 143 on pin 478f2c214e7b0470057d4424564e244982a07775c42dc594b3da1058fe3c1baf
+[2026-11-16T14:06:49Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([255, 77, 123, 191, 97, 128, 252, 86, 129, 160, 108, 73, 148, 247, 203, 88, 78, 83, 42, 41, 128, 183, 39, 37, 95, 69, 69, 44, 6, 27, 198, 159])
+[2026-11-16T14:06:49Z INFO  sequencer_bedrock_actor::actor] Published block 143 with the size of 711 bytes
+[2026-11-16T14:06:49Z INFO  sequencer_executor_actor::actor] Block with id 143 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:06:51Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 142..=142 (1), head Some(143)
+[2026-11-16T14:06:59Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:06:59Z INFO  sequencer_core] Publishing block 144 on pin 47965639c34cfa47680d113b9245953746f7d272358eaafed718cb9139b2dcb7
+[2026-11-16T14:06:59Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([18, 105, 11, 142, 242, 83, 72, 241, 255, 180, 215, 117, 174, 21, 163, 108, 181, 144, 166, 52, 176, 232, 135, 25, 144, 31, 137, 171, 95, 191, 85, 116])
+[2026-11-16T14:06:59Z INFO  sequencer_bedrock_actor::actor] Published block 144 with the size of 711 bytes
+[2026-11-16T14:06:59Z INFO  sequencer_executor_actor::actor] Block with id 144 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:07:03Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 143..=143 (1), head Some(144)
+[2026-11-16T14:07:08Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:07:08Z INFO  sequencer_core] Publishing block 145 on pin b2ad1a61ae5ab903cde072323550349993917e7d2148e8df19187d6ca4a37632
+[2026-11-16T14:07:09Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([2, 160, 131, 139, 248, 222, 192, 191, 252, 5, 13, 32, 200, 143, 155, 89, 188, 137, 31, 156, 55, 14, 165, 181, 190, 76, 208, 139, 131, 99, 162, 176])
+[2026-11-16T14:07:09Z INFO  sequencer_bedrock_actor::actor] Published block 145 with the size of 711 bytes
+[2026-11-16T14:07:09Z INFO  sequencer_executor_actor::actor] Block with id 145 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:07:11Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 144..=144 (1), head Some(145)
+[2026-11-16T14:07:19Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:07:19Z INFO  sequencer_core] Publishing block 146 on pin ae9635a78f067ad12d20d1d76717a7472710cbaef4191c7e7db51daeeff922d8
+[2026-11-16T14:07:19Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([111, 232, 32, 228, 255, 201, 230, 34, 128, 25, 227, 83, 204, 136, 246, 70, 140, 128, 234, 157, 129, 71, 73, 222, 101, 101, 23, 122, 175, 213, 171, 151])
+[2026-11-16T14:07:19Z INFO  sequencer_bedrock_actor::actor] Published block 146 with the size of 711 bytes
+[2026-11-16T14:07:20Z INFO  sequencer_executor_actor::actor] Block with id 146 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:07:23Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 145..=145 (1), head Some(146)
+[2026-11-16T14:07:28Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:07:28Z INFO  sequencer_core] Publishing block 147 on pin 219f727a90c968ed2e2988161dd1f7474c6a07545e86dd0fbe071ad1b74b823a
+[2026-11-16T14:07:29Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([27, 114, 112, 226, 145, 143, 105, 88, 136, 183, 37, 144, 123, 232, 61, 66, 225, 13, 23, 2, 95, 56, 250, 73, 148, 250, 112, 43, 141, 2, 89, 252])
+[2026-11-16T14:07:29Z INFO  sequencer_bedrock_actor::actor] Published block 147 with the size of 711 bytes
+[2026-11-16T14:07:29Z INFO  sequencer_executor_actor::actor] Block with id 147 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:07:31Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 146..=146 (1), head Some(147)
+[2026-11-16T14:07:38Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:07:38Z INFO  sequencer_core] Publishing block 148 on pin 2ef046bb5372149116c0dd5fcb8202635006097ab4ba8ddd10f1a76e31c5e30b
+[2026-11-16T14:07:39Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([192, 206, 164, 130, 80, 93, 111, 119, 219, 153, 245, 131, 33, 248, 138, 208, 238, 209, 92, 93, 77, 247, 233, 98, 186, 25, 81, 140, 183, 219, 170, 146])
+[2026-11-16T14:07:39Z INFO  sequencer_bedrock_actor::actor] Published block 148 with the size of 711 bytes
+[2026-11-16T14:07:39Z INFO  sequencer_executor_actor::actor] Block with id 148 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:07:43Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 147..=147 (1), head Some(148)
+[2026-11-16T14:07:48Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:07:48Z INFO  sequencer_core] Publishing block 149 on pin a550fdac25ba163b5b86bf1e9e7f4ea66c05c9ac4ce348ae2a817e66399ec6c0
+[2026-11-16T14:07:49Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([7, 56, 252, 156, 7, 181, 104, 235, 216, 194, 209, 151, 77, 145, 51, 49, 189, 173, 29, 127, 121, 151, 218, 80, 81, 42, 87, 162, 163, 47, 22, 5])
+[2026-11-16T14:07:49Z INFO  sequencer_bedrock_actor::actor] Published block 149 with the size of 711 bytes
+[2026-11-16T14:07:49Z INFO  sequencer_executor_actor::actor] Block with id 149 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:07:51Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 148..=148 (1), head Some(149)
+[2026-11-16T14:07:58Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:07:58Z INFO  sequencer_core] Publishing block 150 on pin 5cf331ed9f10c2a7bea7f39505b3d317a1bbb743719d221fbef363ff7ea109f1
+[2026-11-16T14:07:59Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([145, 109, 175, 207, 241, 133, 139, 138, 45, 154, 191, 144, 55, 204, 38, 167, 235, 248, 219, 219, 170, 154, 231, 166, 35, 52, 77, 241, 101, 49, 135, 217])
+[2026-11-16T14:07:59Z INFO  sequencer_bedrock_actor::actor] Published block 150 with the size of 711 bytes
+[2026-11-16T14:07:59Z INFO  sequencer_executor_actor::actor] Block with id 150 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:08:03Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 149..=149 (1), head Some(150)
+[2026-11-16T14:08:08Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:56059 conn_id=7
+[2026-11-16T14:08:08Z WARN  libp2p_kad::behaviour] Failed to trigger bootstrap: No known peers.
+[2026-11-16T14:08:09Z DEBUG sequencer_core] Validated transaction with hash 726cb5a1903e0b5a8aaf6d3f5942782a75a5b552e3d67bb6a109fe83d11b31b2, including it in block
+[2026-11-16T14:08:09Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T14:08:09Z INFO  sequencer_core] Publishing block 151 on pin f0ff7640533480431c662aaa4f1a41cbfbbbab18df10cd6c1f6fb02b40df2976
+[2026-11-16T14:08:09Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([236, 157, 94, 12, 12, 116, 205, 16, 199, 49, 202, 188, 211, 87, 184, 219, 121, 99, 101, 243, 154, 45, 240, 204, 26, 97, 38, 193, 237, 51, 254, 55])
+[2026-11-16T14:08:09Z INFO  sequencer_bedrock_actor::actor] Published block 151 with the size of 252978 bytes
+[2026-11-16T14:08:10Z INFO  sequencer_executor_actor::actor] Block with id 151 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:08:15Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 150..=150 (1), head Some(151)
+[2026-11-16T14:08:18Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:08:18Z INFO  sequencer_core] Publishing block 152 on pin 00d4205330139a433149debaa8205fc4891593c78df5f33f8b7a490b1d4a2067
+[2026-11-16T14:08:18Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([179, 246, 208, 0, 110, 187, 107, 13, 172, 248, 74, 59, 202, 84, 105, 83, 220, 45, 127, 230, 185, 61, 84, 212, 161, 173, 240, 246, 168, 54, 98, 1])
+[2026-11-16T14:08:18Z INFO  sequencer_bedrock_actor::actor] Published block 152 with the size of 711 bytes
+[2026-11-16T14:08:19Z INFO  sequencer_executor_actor::actor] Block with id 152 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:08:23Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 151..=151 (1), head Some(152)
+[2026-11-16T14:08:29Z DEBUG sequencer_core] Validated transaction with hash 31862ef0ddd385b2ae3e96f635bad97e7cdc88ddaf9b614bdf5f3b0201c6cf9f, including it in block
+[2026-11-16T14:08:29Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T14:08:29Z INFO  sequencer_core] Publishing block 153 on pin 06f8dacfcf01fb5ebd5d86a4bef08eafbf7aefb5bdd358bb3e9c0031834425a5
+[2026-11-16T14:08:29Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([91, 184, 235, 159, 208, 80, 189, 107, 26, 254, 12, 245, 157, 113, 98, 163, 247, 199, 77, 225, 61, 64, 214, 188, 160, 214, 50, 93, 128, 105, 120, 143])
+[2026-11-16T14:08:29Z INFO  sequencer_bedrock_actor::actor] Published block 153 with the size of 1791 bytes
+[2026-11-16T14:08:30Z INFO  sequencer_executor_actor::actor] Block with id 153 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:08:31Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 152..=152 (1), head Some(153)
+[2026-11-16T14:08:38Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:08:38Z INFO  sequencer_core] Publishing block 154 on pin cb77f3f33b4ee032094a6cc2a1ec41f2983bc27d08947abeab6b877dea24882f
+[2026-11-16T14:08:39Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([249, 71, 104, 254, 253, 116, 218, 183, 110, 210, 132, 135, 132, 91, 255, 149, 244, 19, 13, 95, 47, 162, 110, 46, 101, 236, 65, 110, 213, 237, 0, 54])
+[2026-11-16T14:08:39Z INFO  sequencer_bedrock_actor::actor] Published block 154 with the size of 711 bytes
+[2026-11-16T14:08:39Z INFO  sequencer_executor_actor::actor] Block with id 154 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:08:43Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 153..=153 (1), head Some(154)
+[2026-11-16T14:08:49Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:08:49Z INFO  sequencer_core] Publishing block 155 on pin 44bbe9e9cc14fcf3f0566482787e3b6fcbf3045665c2a978eaec2670c897d3d0
+[2026-11-16T14:08:49Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([119, 111, 230, 84, 56, 173, 94, 235, 150, 190, 116, 41, 199, 128, 203, 84, 241, 51, 188, 229, 148, 187, 85, 82, 59, 85, 105, 199, 219, 24, 45, 81])
+[2026-11-16T14:08:49Z INFO  sequencer_bedrock_actor::actor] Published block 155 with the size of 711 bytes
+[2026-11-16T14:08:49Z INFO  sequencer_executor_actor::actor] Block with id 155 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:08:51Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 154..=154 (1), head Some(155)
+[2026-11-16T14:08:58Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:08:58Z INFO  sequencer_core] Publishing block 156 on pin a7778473a56a8b531516f56dc57855c099fabdb32a59d052468b646f49dcf6db
+[2026-11-16T14:08:59Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([139, 246, 200, 184, 3, 72, 134, 44, 68, 169, 207, 135, 230, 188, 141, 211, 192, 193, 67, 229, 111, 125, 88, 185, 136, 209, 164, 108, 208, 202, 39, 229])
+[2026-11-16T14:08:59Z INFO  sequencer_bedrock_actor::actor] Published block 156 with the size of 711 bytes
+[2026-11-16T14:08:59Z INFO  sequencer_executor_actor::actor] Block with id 156 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:09:03Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 155..=155 (1), head Some(156)
+[2026-11-16T14:09:08Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:09:08Z INFO  sequencer_core] Publishing block 157 on pin 756b84a5068aa0b2e4487b0d0fde4e4eba6a5d1dfc8a1c3e74fcd6edd26e7ded
+[2026-11-16T14:09:09Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([249, 162, 84, 87, 172, 57, 132, 176, 84, 135, 48, 138, 248, 67, 57, 178, 154, 203, 185, 85, 179, 54, 5, 25, 196, 32, 85, 25, 154, 170, 137, 192])
+[2026-11-16T14:09:09Z INFO  sequencer_bedrock_actor::actor] Published block 157 with the size of 711 bytes
+[2026-11-16T14:09:09Z INFO  sequencer_executor_actor::actor] Block with id 157 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:09:11Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 156..=156 (1), head Some(157)
+[2026-11-16T14:09:18Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:09:18Z INFO  sequencer_core] Publishing block 158 on pin f17b0a7db818d3969ec84de66740a6af3fef255d0bb16e44d652de0038988631
+[2026-11-16T14:09:19Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([251, 148, 2, 69, 112, 225, 191, 89, 28, 26, 167, 112, 30, 92, 144, 177, 63, 213, 8, 32, 160, 31, 154, 243, 77, 19, 250, 70, 79, 18, 75, 241])
+[2026-11-16T14:09:19Z INFO  sequencer_bedrock_actor::actor] Published block 158 with the size of 711 bytes
+[2026-11-16T14:09:19Z INFO  sequencer_executor_actor::actor] Block with id 158 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:09:23Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 157..=157 (1), head Some(158)
+[2026-11-16T14:09:29Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:09:29Z INFO  sequencer_core] Publishing block 159 on pin 700d18d4f9fd0732b78e84122bd6eda97f6a31923c9a82ae2fe134047ba0c0ce
+[2026-11-16T14:09:29Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([29, 87, 54, 121, 114, 165, 175, 163, 129, 214, 70, 174, 231, 171, 14, 54, 12, 242, 119, 19, 21, 207, 200, 77, 49, 79, 180, 164, 234, 182, 181, 83])
+[2026-11-16T14:09:29Z INFO  sequencer_bedrock_actor::actor] Published block 159 with the size of 711 bytes
+[2026-11-16T14:09:29Z INFO  sequencer_executor_actor::actor] Block with id 159 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:09:31Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 158..=158 (1), head Some(159)
+[2026-11-16T14:09:38Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:09:38Z INFO  sequencer_core] Publishing block 160 on pin 492494eb25e25c6db36c1f900837d640b96a74650188561c6bea5a43a78358e0
+[2026-11-16T14:09:39Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([215, 57, 30, 145, 50, 246, 37, 100, 172, 171, 132, 165, 166, 128, 162, 63, 2, 118, 28, 129, 196, 88, 197, 12, 32, 9, 80, 39, 136, 211, 46, 4])
+[2026-11-16T14:09:39Z INFO  sequencer_bedrock_actor::actor] Published block 160 with the size of 711 bytes
+[2026-11-16T14:09:39Z INFO  sequencer_executor_actor::actor] Block with id 160 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:09:43Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 159..=159 (1), head Some(160)
+[2026-11-16T14:09:49Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:09:49Z INFO  sequencer_core] Publishing block 161 on pin dc3b202e55616e9eff9eb983603e35b3721739fc0a69c34eeb43b03650968f67
+[2026-11-16T14:09:49Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([173, 226, 206, 197, 254, 6, 84, 104, 217, 76, 139, 46, 190, 43, 18, 216, 149, 97, 63, 54, 191, 242, 177, 115, 228, 120, 98, 244, 10, 169, 94, 194])
+[2026-11-16T14:09:49Z INFO  sequencer_bedrock_actor::actor] Published block 161 with the size of 711 bytes
+[2026-11-16T14:09:49Z INFO  sequencer_executor_actor::actor] Block with id 161 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:09:51Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 160..=160 (1), head Some(161)
+[2026-11-16T14:09:59Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:09:59Z INFO  sequencer_core] Publishing block 162 on pin 7ca98cdbf729bbbcbe6e694326743ae50baa3c03cbd8d7b4f1f91e683567a6db
+[2026-11-16T14:09:59Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([219, 189, 151, 16, 213, 0, 8, 180, 207, 113, 57, 228, 27, 25, 209, 195, 121, 244, 190, 168, 200, 185, 176, 115, 138, 239, 237, 98, 14, 146, 250, 127])
+[2026-11-16T14:09:59Z INFO  sequencer_bedrock_actor::actor] Published block 162 with the size of 711 bytes
+[2026-11-16T14:09:59Z INFO  sequencer_executor_actor::actor] Block with id 162 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:10:03Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 161..=161 (1), head Some(162)
+[2026-11-16T14:10:09Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:10:09Z INFO  sequencer_core] Publishing block 163 on pin b4290b50c643e532061969f3a75265cec44e8ca2bdea47edaab315294e7f14d4
+[2026-11-16T14:10:09Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([50, 161, 32, 48, 190, 234, 249, 67, 164, 83, 85, 101, 246, 167, 202, 242, 249, 24, 205, 66, 97, 238, 226, 226, 208, 24, 251, 147, 145, 168, 240, 210])
+[2026-11-16T14:10:09Z INFO  sequencer_bedrock_actor::actor] Published block 163 with the size of 711 bytes
+[2026-11-16T14:10:09Z INFO  sequencer_executor_actor::actor] Block with id 163 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:10:15Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 162..=162 (1), head Some(163)
+[2026-11-16T14:10:19Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:10:19Z INFO  sequencer_core] Publishing block 164 on pin 5b70dbedbf574686da0474e81ced353208aad6a0ee2246b1652949b3550bdff7
+[2026-11-16T14:10:19Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([224, 53, 226, 252, 224, 84, 203, 239, 173, 171, 3, 55, 127, 211, 40, 79, 67, 73, 107, 33, 172, 208, 62, 200, 210, 17, 141, 77, 67, 236, 196, 219])
+[2026-11-16T14:10:19Z INFO  sequencer_bedrock_actor::actor] Published block 164 with the size of 711 bytes
+[2026-11-16T14:10:20Z INFO  sequencer_executor_actor::actor] Block with id 164 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:10:23Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 163..=163 (1), head Some(164)
+[2026-11-16T14:10:29Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:10:29Z INFO  sequencer_core] Publishing block 165 on pin ee605ac9214415e8d15db1c42f0f348ab3a5929421c42b31fb6d4b39777cc0e5
+[2026-11-16T14:10:29Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([200, 249, 233, 224, 128, 71, 172, 32, 246, 181, 116, 220, 64, 104, 33, 86, 16, 230, 186, 125, 136, 111, 74, 31, 213, 135, 82, 57, 230, 83, 87, 30])
+[2026-11-16T14:10:29Z INFO  sequencer_bedrock_actor::actor] Published block 165 with the size of 711 bytes
+[2026-11-16T14:10:29Z INFO  sequencer_executor_actor::actor] Block with id 165 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:10:35Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 164..=164 (1), head Some(165)
+[2026-11-16T14:10:39Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:10:39Z INFO  sequencer_core] Publishing block 166 on pin db7e011b41984e725ae832c8325e97fcbeea9e1e97ddfe32c127523a92fb1ea5
+[2026-11-16T14:10:39Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([30, 84, 209, 23, 37, 132, 51, 62, 73, 118, 205, 202, 233, 51, 41, 161, 240, 152, 41, 238, 193, 46, 120, 24, 252, 74, 110, 144, 51, 122, 165, 144])
+[2026-11-16T14:10:39Z INFO  sequencer_bedrock_actor::actor] Published block 166 with the size of 711 bytes
+[2026-11-16T14:10:39Z INFO  sequencer_executor_actor::actor] Block with id 166 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:10:43Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 165..=165 (1), head Some(166)
+[2026-11-16T14:10:49Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:10:49Z INFO  sequencer_core] Publishing block 167 on pin e74d919c8dba471faceba28f972939b734d71082ee6464ba3fd2728ddb7d1a3a
+[2026-11-16T14:10:49Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([81, 50, 182, 25, 205, 102, 184, 48, 152, 201, 185, 117, 151, 126, 187, 95, 157, 85, 1, 74, 196, 202, 246, 3, 22, 246, 2, 93, 187, 221, 181, 104])
+[2026-11-16T14:10:49Z INFO  sequencer_bedrock_actor::actor] Published block 167 with the size of 711 bytes
+[2026-11-16T14:10:49Z INFO  sequencer_executor_actor::actor] Block with id 167 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:10:51Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 166..=166 (1), head Some(167)
+[2026-11-16T14:10:58Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:10:58Z INFO  sequencer_core] Publishing block 168 on pin 9682c85a84e024311b689ae2b69dae9c4bd8a061742621b7047cd9f6afb10e10
+[2026-11-16T14:10:59Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([49, 124, 73, 4, 106, 193, 252, 103, 223, 134, 32, 173, 69, 113, 91, 90, 168, 155, 195, 185, 43, 129, 45, 190, 107, 179, 158, 2, 175, 99, 124, 236])
+[2026-11-16T14:10:59Z INFO  sequencer_bedrock_actor::actor] Published block 168 with the size of 711 bytes
+[2026-11-16T14:10:59Z INFO  sequencer_executor_actor::actor] Block with id 168 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:11:03Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 167..=167 (1), head Some(168)
+[2026-11-16T14:11:09Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:11:09Z INFO  sequencer_core] Publishing block 169 on pin ac162bd2e3f28975a32a139a87e984f0409190e40f9bf03eaf38b514c611255e
+[2026-11-16T14:11:09Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([207, 5, 154, 99, 244, 78, 158, 96, 71, 42, 223, 67, 151, 106, 191, 90, 139, 223, 163, 63, 158, 253, 84, 124, 211, 24, 134, 135, 183, 120, 6, 226])
+[2026-11-16T14:11:09Z INFO  sequencer_bedrock_actor::actor] Published block 169 with the size of 711 bytes
+[2026-11-16T14:11:09Z INFO  sequencer_executor_actor::actor] Block with id 169 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:11:11Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 168..=168 (1), head Some(169)
+[2026-11-16T14:11:19Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:11:19Z INFO  sequencer_core] Publishing block 170 on pin f0c03bc59504681b57519a6017fdc9e4efea6696d181346384c5e23cb93c6b0a
+[2026-11-16T14:11:19Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([161, 132, 13, 90, 89, 170, 210, 201, 127, 131, 242, 223, 66, 184, 125, 202, 96, 210, 101, 138, 111, 187, 56, 14, 186, 243, 66, 85, 62, 34, 57, 181])
+[2026-11-16T14:11:19Z INFO  sequencer_bedrock_actor::actor] Published block 170 with the size of 711 bytes
+[2026-11-16T14:11:19Z INFO  sequencer_executor_actor::actor] Block with id 170 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:11:23Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 169..=169 (1), head Some(170)
+[2026-11-16T14:11:29Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:11:29Z INFO  sequencer_core] Publishing block 171 on pin 53a87fb26f8d6b1a1b230b4f329fe6000ccb37f0d5269dca7997c9ceed209df0
+[2026-11-16T14:11:29Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([70, 24, 27, 192, 39, 103, 160, 15, 103, 23, 63, 142, 238, 218, 189, 93, 227, 226, 9, 239, 118, 79, 146, 20, 99, 97, 223, 159, 254, 2, 27, 88])
+[2026-11-16T14:11:29Z INFO  sequencer_bedrock_actor::actor] Published block 171 with the size of 711 bytes
+[2026-11-16T14:11:29Z INFO  sequencer_executor_actor::actor] Block with id 171 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:11:31Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 170..=170 (1), head Some(171)
+[2026-11-16T14:11:39Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:11:39Z INFO  sequencer_core] Publishing block 172 on pin 011743abd97c81f2f84fbc8e7c66429498384cafff979b031732436dc4451062
+[2026-11-16T14:11:39Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([17, 38, 87, 187, 118, 104, 105, 133, 51, 246, 178, 225, 48, 54, 35, 224, 197, 98, 140, 178, 136, 48, 167, 144, 146, 117, 110, 67, 124, 200, 205, 245])
+[2026-11-16T14:11:39Z INFO  sequencer_bedrock_actor::actor] Published block 172 with the size of 711 bytes
+[2026-11-16T14:11:39Z INFO  sequencer_executor_actor::actor] Block with id 172 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:11:43Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 171..=171 (1), head Some(172)
+[2026-11-16T14:11:49Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:11:49Z INFO  sequencer_core] Publishing block 173 on pin 5e52643438af81a2a1ff1404eb51afb52a4722e5e285d722e7570388cd1010e7
+[2026-11-16T14:11:49Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([122, 122, 39, 188, 26, 77, 163, 155, 95, 231, 240, 236, 95, 86, 175, 236, 241, 227, 9, 97, 127, 1, 179, 110, 255, 188, 62, 169, 218, 237, 187, 101])
+[2026-11-16T14:11:49Z INFO  sequencer_bedrock_actor::actor] Published block 173 with the size of 711 bytes
+[2026-11-16T14:11:49Z INFO  sequencer_executor_actor::actor] Block with id 173 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:11:55Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 172..=172 (1), head Some(173)
+[2026-11-16T14:11:59Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:11:59Z INFO  sequencer_core] Publishing block 174 on pin a09dbef03b47344052c438f80fd5b0ce89ef82167a3a47b69b18a06e519cbe47
+[2026-11-16T14:11:59Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([35, 231, 129, 178, 246, 96, 26, 121, 109, 207, 130, 181, 20, 153, 5, 211, 34, 50, 70, 2, 251, 181, 143, 227, 22, 254, 119, 132, 10, 63, 80, 167])
+[2026-11-16T14:11:59Z INFO  sequencer_bedrock_actor::actor] Published block 174 with the size of 711 bytes
+[2026-11-16T14:11:59Z INFO  sequencer_executor_actor::actor] Block with id 174 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:12:03Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 173..=173 (1), head Some(174)
+[2026-11-16T14:12:09Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:12:09Z INFO  sequencer_core] Publishing block 175 on pin d7a0b0e07ce0e0d738f02d8990068e7c650aab1112f74159fdd646fed3943d03
+[2026-11-16T14:12:09Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([202, 178, 130, 56, 184, 135, 205, 40, 187, 62, 7, 240, 41, 255, 94, 82, 221, 124, 236, 201, 184, 198, 55, 166, 43, 80, 236, 188, 172, 103, 97, 135])
+[2026-11-16T14:12:09Z INFO  sequencer_bedrock_actor::actor] Published block 175 with the size of 711 bytes
+[2026-11-16T14:12:09Z INFO  sequencer_executor_actor::actor] Block with id 175 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:12:11Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 174..=174 (1), head Some(175)
+[2026-11-16T14:12:19Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:12:19Z INFO  sequencer_core] Publishing block 176 on pin 141d5576d7c6cdc380d4cf6aa227ce705cbb9eecd36537a8d79c912976be77ab
+[2026-11-16T14:12:19Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([183, 91, 57, 200, 31, 181, 240, 172, 73, 148, 84, 197, 40, 239, 77, 253, 69, 168, 160, 42, 9, 142, 244, 142, 141, 181, 6, 83, 212, 6, 240, 33])
+[2026-11-16T14:12:19Z INFO  sequencer_bedrock_actor::actor] Published block 176 with the size of 711 bytes
+[2026-11-16T14:12:19Z INFO  sequencer_executor_actor::actor] Block with id 176 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:12:23Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 175..=175 (1), head Some(176)
+[2026-11-16T14:12:29Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:12:29Z INFO  sequencer_core] Publishing block 177 on pin f90a061c6db02ae768113628a63d9ea918f0f4a350c6889e2d5fedb011b52152
+[2026-11-16T14:12:29Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([127, 176, 56, 150, 96, 102, 252, 45, 121, 3, 2, 84, 90, 178, 29, 114, 103, 81, 177, 171, 66, 51, 95, 74, 145, 153, 123, 65, 255, 178, 107, 13])
+[2026-11-16T14:12:29Z INFO  sequencer_bedrock_actor::actor] Published block 177 with the size of 711 bytes
+[2026-11-16T14:12:29Z INFO  sequencer_executor_actor::actor] Block with id 177 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:12:35Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 176..=176 (1), head Some(177)
+[2026-11-16T14:12:39Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:12:39Z INFO  sequencer_core] Publishing block 178 on pin 0ed8954e4312f9be606b78bd61828242d25ea3b8027a0e7b69edfb933f7c4fad
+[2026-11-16T14:12:39Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([201, 32, 185, 191, 158, 125, 2, 186, 190, 211, 205, 240, 0, 72, 52, 99, 211, 12, 210, 250, 137, 86, 114, 229, 34, 80, 217, 37, 234, 20, 163, 91])
+[2026-11-16T14:12:39Z INFO  sequencer_bedrock_actor::actor] Published block 178 with the size of 711 bytes
+[2026-11-16T14:12:39Z INFO  sequencer_executor_actor::actor] Block with id 178 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:12:43Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 177..=177 (1), head Some(178)
+[2026-11-16T14:12:49Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:12:49Z INFO  sequencer_core] Publishing block 179 on pin 56aa1c9feb642440e6873e4d6ab7bccbc743922c56e4780175994d2fbaaa4b4e
+[2026-11-16T14:12:49Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([251, 74, 110, 56, 54, 246, 221, 57, 68, 244, 163, 193, 200, 189, 62, 7, 204, 90, 84, 145, 87, 37, 78, 47, 105, 50, 170, 88, 245, 170, 38, 178])
+[2026-11-16T14:12:49Z INFO  sequencer_bedrock_actor::actor] Published block 179 with the size of 711 bytes
+[2026-11-16T14:12:49Z INFO  sequencer_executor_actor::actor] Block with id 179 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:12:51Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 178..=178 (1), head Some(179)
+[2026-11-16T14:12:59Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:12:59Z INFO  sequencer_core] Publishing block 180 on pin 0c93630c9e1e23f55730b0e11cd3da4257a6f0dfc07371f0b039f97b35206a40
+[2026-11-16T14:12:59Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([49, 15, 188, 93, 149, 4, 158, 6, 240, 239, 6, 95, 121, 45, 166, 31, 18, 196, 50, 87, 54, 25, 127, 115, 89, 252, 14, 19, 108, 228, 13, 8])
+[2026-11-16T14:12:59Z INFO  sequencer_bedrock_actor::actor] Published block 180 with the size of 711 bytes
+[2026-11-16T14:12:59Z INFO  sequencer_executor_actor::actor] Block with id 180 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:13:03Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 179..=179 (1), head Some(180)
+[2026-11-16T14:13:08Z WARN  libp2p_kad::behaviour] Failed to trigger bootstrap: No known peers.
+[2026-11-16T14:13:09Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:13:09Z INFO  sequencer_core] Publishing block 181 on pin dd602d3223b44f1ae464dc0686ecaad17fd52eb85ad3e2070a914d43a94efb09
+[2026-11-16T14:13:09Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([89, 223, 195, 178, 136, 122, 206, 177, 198, 146, 173, 233, 177, 128, 199, 139, 172, 30, 54, 209, 102, 11, 238, 82, 171, 121, 212, 95, 24, 76, 28, 148])
+[2026-11-16T14:13:09Z INFO  sequencer_bedrock_actor::actor] Published block 181 with the size of 711 bytes
+[2026-11-16T14:13:09Z INFO  sequencer_executor_actor::actor] Block with id 181 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:13:15Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 180..=180 (1), head Some(181)
+[2026-11-16T14:13:19Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:13:19Z INFO  sequencer_core] Publishing block 182 on pin b51fe037598aa028202a3c80ebededb5692398a283d7347536bb710de6d6370b
+[2026-11-16T14:13:19Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([153, 28, 83, 46, 228, 41, 139, 207, 22, 133, 174, 204, 237, 252, 51, 79, 31, 37, 168, 107, 155, 47, 129, 26, 94, 139, 114, 70, 74, 0, 93, 189])
+[2026-11-16T14:13:19Z INFO  sequencer_bedrock_actor::actor] Published block 182 with the size of 711 bytes
+[2026-11-16T14:13:19Z INFO  sequencer_executor_actor::actor] Block with id 182 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:13:23Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 181..=181 (1), head Some(182)
+[2026-11-16T14:13:29Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:13:29Z INFO  sequencer_core] Publishing block 183 on pin 30d5c96d8bdf58dc586097f92c0745076199fbc5f96f9168db77b1cb58be95b1
+[2026-11-16T14:13:29Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([40, 10, 135, 4, 127, 241, 87, 79, 249, 175, 12, 116, 201, 13, 200, 173, 190, 53, 14, 204, 153, 142, 46, 205, 25, 50, 19, 183, 129, 109, 214, 6])
+[2026-11-16T14:13:29Z INFO  sequencer_bedrock_actor::actor] Published block 183 with the size of 711 bytes
+[2026-11-16T14:13:29Z INFO  sequencer_executor_actor::actor] Block with id 183 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:13:35Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 182..=182 (1), head Some(183)
+[2026-11-16T14:13:39Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:13:39Z INFO  sequencer_core] Publishing block 184 on pin 2f8ad4021b3750861af8924659b38b69ae7db9fd59a43fe58242f071429cb5c4
+[2026-11-16T14:13:39Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([162, 73, 136, 219, 73, 148, 161, 76, 144, 105, 148, 139, 37, 117, 193, 127, 205, 156, 215, 221, 81, 27, 131, 142, 44, 88, 71, 6, 230, 218, 137, 202])
+[2026-11-16T14:13:39Z INFO  sequencer_bedrock_actor::actor] Published block 184 with the size of 711 bytes
+[2026-11-16T14:13:39Z INFO  sequencer_executor_actor::actor] Block with id 184 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:13:43Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 183..=183 (1), head Some(184)
+[2026-11-16T14:13:46Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:30588 conn_id=8
+[2026-11-16T14:13:49Z DEBUG sequencer_core] Validated transaction with hash bd284b9e6dc7a9c250bc41394ec71f00594edc9e50516e7e98d8e171b1d51c3d, including it in block
+[2026-11-16T14:13:49Z INFO  sequencer_core] Created block with 3 transactions in 0 seconds
+[2026-11-16T14:13:49Z INFO  sequencer_core] Publishing block 185 on pin 3801f07d15f9bbf70c9caeb807740e867832e5aac920f56e761dbe2f080a250e
+[2026-11-16T14:13:49Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([37, 82, 68, 231, 50, 87, 147, 217, 116, 35, 182, 230, 151, 57, 88, 163, 159, 248, 72, 46, 194, 53, 202, 129, 107, 186, 234, 97, 228, 48, 222, 35])
+[2026-11-16T14:13:49Z INFO  sequencer_bedrock_actor::actor] Published block 185 with the size of 255742 bytes
+[2026-11-16T14:13:49Z INFO  sequencer_executor_actor::actor] Block with id 185 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:13:55Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 184..=184 (1), head Some(185)
+[2026-11-16T14:13:59Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:13:59Z INFO  sequencer_core] Publishing block 186 on pin d7516b3073ed623773a1dec4860f49ef4b9f306288483eb1a2ff663f3e4e4e4f
+[2026-11-16T14:13:59Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([103, 55, 14, 92, 148, 30, 135, 193, 211, 82, 150, 19, 27, 137, 139, 223, 193, 52, 54, 12, 70, 149, 234, 214, 104, 68, 192, 98, 73, 106, 247, 18])
+[2026-11-16T14:13:59Z INFO  sequencer_bedrock_actor::actor] Published block 186 with the size of 711 bytes
+[2026-11-16T14:13:59Z INFO  sequencer_executor_actor::actor] Block with id 186 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:14:03Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 185..=185 (1), head Some(186)
+[2026-11-16T14:14:04Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:50795 conn_id=9
+[2026-11-16T14:14:05Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:38254 conn_id=10
+[2026-11-16T14:14:09Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:14:09Z INFO  sequencer_core] Publishing block 187 on pin 48ee542160d8065a319db7c24a9840742f8db6623cbce2c3c6bc68a26b5569a1
+[2026-11-16T14:14:09Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([177, 45, 232, 137, 146, 16, 174, 12, 143, 25, 72, 114, 32, 138, 24, 96, 228, 188, 27, 8, 177, 215, 189, 185, 154, 145, 76, 180, 122, 167, 239, 169])
+[2026-11-16T14:14:09Z INFO  sequencer_bedrock_actor::actor] Published block 187 with the size of 711 bytes
+[2026-11-16T14:14:09Z INFO  sequencer_executor_actor::actor] Block with id 187 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:14:15Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 186..=186 (1), head Some(187)
+[2026-11-16T14:14:18Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:14:18Z INFO  sequencer_core] Publishing block 188 on pin a358e45a266304f8be7b2415169a66b79ee98525cfa2b71faaac826afdabd79f
+[2026-11-16T14:14:19Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([140, 164, 246, 206, 104, 180, 81, 231, 4, 67, 17, 14, 30, 22, 56, 120, 82, 197, 73, 56, 165, 93, 246, 213, 133, 115, 62, 157, 63, 132, 5, 196])
+[2026-11-16T14:14:19Z INFO  sequencer_bedrock_actor::actor] Published block 188 with the size of 711 bytes
+[2026-11-16T14:14:19Z INFO  sequencer_executor_actor::actor] Block with id 188 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:14:23Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 187..=187 (1), head Some(188)
+[2026-11-16T14:14:29Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:14:29Z INFO  sequencer_core] Publishing block 189 on pin b909a8fd287373fc854b611fe52bf6dce1697829e8a3a5574427d866dd7a6ae5
+[2026-11-16T14:14:29Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([171, 34, 42, 166, 181, 79, 123, 251, 238, 34, 141, 250, 62, 162, 25, 42, 250, 113, 135, 30, 62, 48, 174, 125, 103, 103, 217, 111, 232, 84, 239, 128])
+[2026-11-16T14:14:29Z INFO  sequencer_bedrock_actor::actor] Published block 189 with the size of 711 bytes
+[2026-11-16T14:14:29Z INFO  sequencer_executor_actor::actor] Block with id 189 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:14:31Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 188..=188 (1), head Some(189)
+[2026-11-16T14:14:39Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-16T14:14:39Z INFO  sequencer_core] Publishing block 190 on pin 7d38d8cf7c7928e1c72d62b70481ec7826fc0850bbb0579723013c2b2e10a846
+[2026-11-16T14:14:39Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([136, 254, 194, 180, 159, 168, 165, 240, 70, 125, 42, 60, 9, 136, 182, 226, 171, 150, 44, 30, 251, 61, 250, 125, 103, 109, 214, 191, 81, 235, 154, 7])
+[2026-11-16T14:14:39Z INFO  sequencer_bedrock_actor::actor] Published block 190 with the size of 711 bytes
+[2026-11-16T14:14:39Z INFO  sequencer_executor_actor::actor] Block with id 190 created by a7d3c4cb6b6ce525d9bf4453498d95268d16f1fd35f214fd79048536e268ec81
+[2026-11-16T14:14:39Z INFO  jsonrpsee_server::server] connection; remote_addr=127.0.0.1:33859 conn_id=11
+[2026-11-16T14:14:39Z INFO  sequencer_service] Received SIGTERM
+[2026-11-16T14:14:39Z INFO  sequencer_service] Shutting down sequencer...
+[2026-11-16T14:14:39Z INFO  sequencer_service::actor_handle] Stopping kameo_actors::scheduler::Scheduler#6 actor...
+[2026-11-16T14:14:39Z INFO  sequencer_service::actor_handle] kameo_actors::scheduler::Scheduler#6 actor stopped
+[2026-11-16T14:14:39Z INFO  sequencer_service::actor_handle] Killing kameo_actors::scheduler::Scheduler#6 actor
+[2026-11-16T14:14:39Z INFO  sequencer_service::actor_handle] Stopping Broker#2 actor...
+[2026-11-16T14:14:39Z INFO  sequencer_service::actor_handle] Broker#2 actor stopped
+[2026-11-16T14:14:39Z INFO  sequencer_service::actor_handle] Killing Broker#2 actor
+[2026-11-16T14:14:39Z INFO  sequencer_service::actor_handle] Stopping sequencer_rpc_server_actor::actor::RpcServerActor#8 actor...
+[2026-11-16T14:14:39Z INFO  sequencer_service::actor_handle] sequencer_rpc_server_actor::actor::RpcServerActor#8 actor stopped
+[2026-11-16T14:14:39Z INFO  sequencer_service::actor_handle] Killing sequencer_rpc_server_actor::actor::RpcServerActor#8 actor
+[2026-11-16T14:14:39Z INFO  sequencer_service::actor_handle] Stopping sequencer_gossip_actor::actor::GossipActor#7 actor...
+[2026-11-16T14:14:39Z INFO  sequencer_service::actor_handle] sequencer_gossip_actor::actor::GossipActor#7 actor stopped
+[2026-11-16T14:14:39Z INFO  sequencer_service::actor_handle] Killing sequencer_gossip_actor::actor::GossipActor#7 actor
+[2026-11-16T14:14:39Z INFO  sequencer_service::actor_handle] Stopping sequencer_executor_actor::actor::ExecutorActor<sequencer_storage_actor::actor::StorageActor, sequencer_bedrock_actor::actor::BedrockActor>#1 actor...
+[2026-11-16T14:14:39Z INFO  sequencer_service::actor_handle] sequencer_executor_actor::actor::ExecutorActor<sequencer_storage_actor::actor::StorageActor, sequencer_bedrock_actor::actor::BedrockActor>#1 actor stopped
+[2026-11-16T14:14:39Z INFO  sequencer_service::actor_handle] Killing sequencer_executor_actor::actor::ExecutorActor<sequencer_storage_actor::actor::StorageActor, sequencer_bedrock_actor::actor::BedrockActor>#1 actor
+[2026-11-16T14:14:39Z INFO  sequencer_service::actor_handle] Stopping sequencer_slasher_actor::actor::SlasherActor#4 actor...
+[2026-11-16T14:14:39Z INFO  sequencer_service::actor_handle] sequencer_slasher_actor::actor::SlasherActor#4 actor stopped
+[2026-11-16T14:14:39Z INFO  sequencer_service::actor_handle] Killing sequencer_slasher_actor::actor::SlasherActor#4 actor
+[2026-11-16T14:14:39Z INFO  sequencer_service::actor_handle] Stopping sequencer_bedrock_actor::actor::BedrockActor#3 actor...
+[2026-11-16T14:14:39Z INFO  sequencer_service::actor_handle] sequencer_bedrock_actor::actor::BedrockActor#3 actor stopped
+[2026-11-16T14:14:39Z INFO  sequencer_service::actor_handle] Killing sequencer_bedrock_actor::actor::BedrockActor#3 actor
+[2026-11-16T14:14:39Z INFO  sequencer_service::actor_handle] Stopping sequencer_storage_actor::actor::StorageActor#0 actor...
+[2026-11-16T14:14:39Z INFO  sequencer_service::actor_handle] sequencer_storage_actor::actor::StorageActor#0 actor stopped
+[2026-11-16T14:14:39Z INFO  sequencer_service::actor_handle] Killing sequencer_storage_actor::actor::StorageActor#0 actor
+[2026-11-16T14:14:39Z INFO  sequencer_service] Sequencer shutdown complete

@@ -1,0 +1,9 @@
+{
+  "label": "live crown hook: local anvil (chain id 11155111, the stand-in committee finalizes its blocks), the vault tests MockRiscZeroVerifier",
+  "chainId": 11155111,
+  "vault": "0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516",
+  "configId": "0x60b11ece3c017751a86e1d132c3cc3fb6254a30d6e79e978f81331d25a5e8729",
+  "genesisState": "0x916aa17cb86555433d5400217662514159351da640c8e3037f8c7ecc2c6ad93e",
+  "groth16Verifier": "0x25Fa4286d401bdc4AC7657bc7a1ebdE1B737F4b1",
+  "delta": 3600
+}

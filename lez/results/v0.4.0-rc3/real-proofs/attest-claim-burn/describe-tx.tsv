@@ -1,0 +1,3 @@
+crown/crown-private-claim-tx.borsh	transaction 252267 bytes: receipt 237664 bytes; claims image ccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd at account AfrE4T3U17eZYUH3KMGDgeE6A4jnpDGum151T3VtddCp; 7 private action(s); 8 boundary step(s)
+crown/crown-private-burn-tx.borsh	transaction 255031 bytes: receipt 239046 bytes; claims image ccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd at account AfrE4T3U17eZYUH3KMGDgeE6A4jnpDGum151T3VtddCp; 7 private action(s); 4 boundary step(s)
+private/attest/transaction.borsh	transaction 251630 bytes: receipt 237378 bytes; claims image 8464603bcf9ea9c69c0eac100605deb9c8ef666a56f964cceba66947958e4b96 at account BHGktSkLP4MVFA6t3N8YEQjAU7y6yD5in9XpkYEhDpH1; 7 private action(s); 6 boundary step(s)

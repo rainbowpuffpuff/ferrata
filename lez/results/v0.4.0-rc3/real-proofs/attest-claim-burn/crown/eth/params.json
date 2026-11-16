@@ -1,0 +1,13 @@
+{
+  "_source": "live crown hook (the final programs of docs/image-ids.md; the identity of this zone session A)",
+  "checkpointImageIdA": "0xb9c1e6a834879f6be79d09d728523565846018629b82f66986eb58fab4f52c84",
+  "checkpointImageIdB": "0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e",
+  "releaseImageId": "0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9",
+  "lezConfigId": "0x60b11ece3c017751a86e1d132c3cc3fb6254a30d6e79e978f81331d25a5e8729",
+  "genesisState": "0x916aa17cb86555433d5400217662514159351da640c8e3037f8c7ecc2c6ad93e",
+  "nMin": 1,
+  "tMin": 1,
+  "postingTimeframe": 0,
+  "ethLezDefinition": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "tokenLezDefinition": "0x0000000000000000000000000000000000000000000000000000000000000000"
+}

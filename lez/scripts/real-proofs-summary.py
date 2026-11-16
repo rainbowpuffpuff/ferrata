@@ -126,7 +126,7 @@ def summarize(root):
         item["passed"] = bool(found and item["real_proof"] and item["status"] == "applied"
                               and item.get("bedrock_status") == "Finalized" and f["sequencer_dev_mode"] is False)
         items.append(item)
-    tags = {s["tag"] for s in sessions.values()}
+    tags = {s["tag"] for s in sessions.values() if s["tag"]}
     fake = [r for r in rows(os.path.join(root, "update", "run.tsv"))
             if r["phase"] == "private" and "fake receipt" in r["step"]]
     return {

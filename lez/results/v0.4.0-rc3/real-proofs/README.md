@@ -18,7 +18,21 @@ own wallet library (its privacy-preserving circuit, which is rc2's), on the box'
 
 ## Result
 
-{{RESULT_TABLE}}
+**4 of 4 pass**: each was proven for real, sent to rc3's sequencer, logged by it as validated ("Validated transaction
+with hash …, including it in block"), applied, and its block was final on the 0.3.5-rc.1 node 14 s after it was
+published (the sequencer's "Channel update: … finalized N..=N").
+
+| | program (image, the final build) | proven and sent | transaction / receipt | block (final after) | session |
+|---|---|---|---|---|---|
+| (a) the private update: `update_2` as a finality update, `VerifyAll` at a private account's actor, the public instance advancing | attestation program `0x816d1fef…` (twin deployment) | 887.3 s | 251,843 / 237,452 B | 271 (14.2 s) | `update/` |
+| (b) a private attestation: the reference consumer's `AttestPrivately` reads the record of mainnet block 26,384,851 and verifies an ERC-20 `Transfer` log of USDC (`0xa0b8…eb48`) against it; only the `Read` is public | consumer `0x8464603b…`, reading the attestation program `0x816d1fef…` | 279.9 s | 251,630 / 237,378 B | 73 (14.2 s) | `attest-claim-burn/` |
+| (c) a private claim: the bridge's `ClaimPrivately` of deposit 1 into LEZ's private test account 0 | bridge `0xccde6171…` | 264.3 s | 252,267 / 237,664 B | 151 (14.2 s) | `attest-claim-burn/crown/` |
+| (d) a private burn: the bridge's `Burn` of 0.001 ETH from that private account, note 1 | bridge `0xccde6171…` | 302.2 s | 255,031 / 239,046 B | 185 (14.1 s) | `attest-claim-burn/crown/` |
+
+"Proven and sent" is LEZ's wallet's `execute_and_prove` plus the submission, on 32 CPU threads of the box (no GPU),
+below the node and the sequencer (nice 10). Transaction hashes: `9fff9aac…`, `e1adeae3…`, `726cb5a1…`, `bd284b9e…`
+(`summary.json`). The fake receipt of the private update (RISC0_DEV_MODE=1 in the wallet only) was dropped by the
+sequencer as an "Invalid privacy preserving execution circuit proof".
 
 `summary.json` holds these values, written by `lez/scripts/real-proofs-summary.py` from the records below; it is what
 `python3 -I scripts/m0.py` reads for check 4.
@@ -41,7 +55,21 @@ held the native light client's store and the new record. `verify-run.sh`: the 27
 (`update/verify-run.log`).
 
 **`attest-claim-burn/`: the private attestation, claim and burn** (one zone; phases `info deploy attest-private hook
-export`). {{SESSION_B}}
+export`). 13:42–14:15 UTC. The final attestation program and `scripted` deployed as in `update/`; then **`attest-private`**
+(new, `lez/live/driver/src/attest.rs`): the reference consumer deployed, a new mainnet instance of the main deployment
+initialised from the harness's Stage 4 fixture (`crates/ferrata-spectests/fixtures/mainnet-attest-2026-11-10`, period
+1907) and its finality update applied publicly (the record of slot 15,624,480 written), then the private attestation
+with LEZ's second test private account, proven and sent in 279.9 s, applied in block 73. Then **`hook`**
+(`lez/live/hooks/crown.sh`, new) while the same zone ran: crown-driver (`lez/crown/driver`, built against rc3)
+`crown-a` deployed the attestation program and the bridge (`attest`, `bridge`) and the stand-in instance; a local
+anvil (chain id 11155111) got the vault tests' mock verifier, FerrataVault v5 in mode (B) with this zone's `configId`
+and `genesisState`, and two deposits of 0.001 ETH, each captured; `crown-b` then applied the captures' updates and
+ran the bridge's `Init`, Register ETH, `ImportFees`, `ImportRoot` n=1 and n=2, the public claim, **the private claim
+(264.3 s, block 151)**, the public burn and **the private burn (302.2 s, block 185)**. 188 blocks, all final; the live
+driver's 33 transactions and crown-driver's 33, all applied; no head rewind in this session. `verify-run.sh` with the
+four final binaries: every block hash holds, the 188 blocks replay through rc3's `chain_state`, 33 rows equal LEZ's
+settlement (`attest-claim-burn/verify-run.log`). crown-driver's own export is in `crown/export/` without its
+`blocks.borsh` (the session's `blocks.borsh` holds every block).
 
 **`attest-claim-burn-try1/`: the first attempt, stopped by rc3's node and sequencer, not by a proof.** The same zone
 setup; after block 28 (the consumer's deployment was in blocks 26–31) the 0.3.5-rc.1 node mined none of the
