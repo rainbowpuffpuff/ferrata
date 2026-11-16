@@ -1,0 +1,54 @@
+[16:56:42] seqnet miniapp-4: mode miniapp, private proofs dev
+[16:56:43] LEZ session A: a new zone, the programs, the stand-in instance
+[17:00:07] session A: tip {"hash":"0xc471dc642c2d7632c98547531bf5478c1a3a743afd0ab8d71d98a4d7241ea032","id":19}; bridge program 0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d (image 0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd), attestation program 0x86ce4d7f54bd68b4c7356398cfda192f791c83f6fa3c3102a18ac20fefdfa04c (image 0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df)
+[17:00:08] vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516 (mock verifier 0x25Fa4286d401bdc4AC7657bc7a1ebdE1B737F4b1), configId 0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c, genesisState 0x4e6848f3cce51635de223dd5bf93c90488c8450f98a65c4692d123308e84dc88
+[2026-11-16T17:00:14Z] deploy complete: vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516, configId and genesisState as the run's identity
+[17:00:14] LEZ session X: the zone restored and running; hook-miniapp.sh
+[17:00:52] seqnet-chain: seqnet-chain: http://127.0.0.1:18700/ (vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516, configId 0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c, user 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC)
+[17:00:53] Logos Core: ferrata_bridge_module installed from logos-ferrata_bridge_module-module-lib.lgx and loaded
+[17:00:53] the mini-app: Qt Quick Test (offscreen), the view's calls to ferrata_bridge_module in Logos Core
+[17:00:57] capture-1: capture of block 9 0x55da07211bc70b78fb5325391279a7a32724c16a5cf4117cf8513b2872056760 (state root patched: False): 1 deposit(s), 6 slot(s)
+[17:00:58] operator: crown-driver crown-b --operator-only over capture-1
+[crown-b] bridge Register ETH (registry entry, schedules 0 and 1, leaf count) applied        gas    451572 block   24 +  9.7s 18cdae47aecf434a9a196787d0d5acf67805051f05aa33c59a2781213bc3ea35
+[crown-b] token(cid, ETH): 1 schedule(s), known until leaf 1
+[crown-b] bridge ImportRoot n=1 (stage 1, block 9)                   applied        gas    301949 block   25 + 10.1s 9a3b9aba55571f49938865a152e197666672ef1015e40e1061ca79cba15d09a8
+[crown-b] blocks 20..=25 (T1 0x0a4c6eceb851217185d4aa2bdf8d4a4bc2adb39d32a15565d34b67526754ca4d); 0 burn note(s) written to <work>/notes.json
+[17:01:58] gas drop stand-in: native LEZ to the user's private account /0 (seqnet-fund)
+{"step":"faucet public transfer (stand-in for the gas drop)","tx":"32b36c166bff76722ca7abe2350c048b66c5d5f867577079eb2f35531117fd66","amount":"3000000000000","fee_paid_in_the_proof":null,"send_ms":2,"seen_ms":4005}
+{"step":"the user's private transfer public /0 -> private /0 (proven by LEZ's wallet)","tx":"6cfde41b7f47113c7ef59a26b08a1c6d286f793115ad34d384c82737c99835ad","amount":"2000000000000","fee_paid_in_the_proof":"5070616","send_ms":159,"seen_ms":9011}
+[17:02:33] checkpoint: blocks 20..=29, once block 29 is final on Bedrock
+[17:02:53] realblocks-crown: node: 351 immutable blocks (0 other transactions), final inscriptions of LEZ blocks 1..=30: parse + re-hash + link + framing + BLAKE2b + verify_strict by the channel's 1 key(s) (ae894815… 30): all 30 accepted; channel tip message = block 30's: false seqnet-19-29: 10 blocks, 30 transactions, 117239
+[17:02:54] checkpoint_b executed (final program 0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e): {"executor_wall_s":0.194326587,"image_id":"0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e","input_bytes":119217,"journal_bytes":544,"journal_equals_native":true,"padded_cycles":5505024,"po2":[20,20,20,20,20,18],"segments":6,"user_cycles":4858854}
+[17:02:54] stand-in prover: the mock verifier accepts checkpoint_b's journal (sha256 0x24869648ddb161aa1c2e49467d8cfecc228adefcaca3e639c7f57371528ed719)
+[17:02:54] relayer: {"event":"job-done","tx":null,"why":null} {"event":"candidate-waiting","tx":null,"why":null} {"event":"stop","tx":null,"why":"rounds"} 
+[17:02:54] anvil's clock moved on 3601 s: the candidate's wait (Delta 3600 s) (Ethereum time now 1794852175)
+[17:02:54] relayer: {"event":"start","tx":null} {"event":"finalized","tx":"0x3608bbeb70d3d0f39a78c27104ed42c8f01e638a777670085e55df569fd3f419"} {"event":"stop","tx":null} 
+[17:02:54] vault: finalState 0x0af4f0a490d04659029c8a2b6d695dd5be9784d1a92381af89a65cd24fdb5e2c, checkpoints 1
+[17:02:55] anvil's clock moved on 121 s: the vault release delay after finalizeAttested (Ethereum time now 1794852297)
+[17:02:56] qmltest: exit 0 in 123 s: Totals: 9 passed, 0 failed, 0 skipped, 0 blacklisted, 122733ms
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::initTestCase() qml: SESSION {"chain":"http://127.0.0.1:18700/","chain_id":11155111,"config_id":"0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c","depositor":"0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc","module":"ferrata_bridge_m
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::initTestCase()
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_01_connect()
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_02_registry()
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_03_deposit_private_by_default() qml: DEPOSIT Deposited 0.001 ETH to a private account (/0): transaction 0x2a1ca6…fdb102 in block 9, position #0. Public on Ethereum: the depositor address, the token, the denomination and fees, the time, the 
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_03_deposit_private_by_default()
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_04_positions_before_import()
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_05_private_claim() qml: WAITED claim delay 359 min (the view's clock)
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_05_private_claim() qml: CLAIM {"tx":"c17e42f20fa362e3e40b8cf5da475a1f02d9630d78506f4a5e7cfd2f8df2722b","block":28,"proof":{"by":"LEZ's wallet library (send_privacy_preserving_tx_with_pre_check): executed and proven on this machine, verified b
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_05_private_claim()
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_06_private_burn_on_defaults() qml: BURN {"tx":"bd880199c04ce90830db80073e9a8b19b38a7ebff4488e18096f97384d8655ae","block":29,"proof":{"by":"LEZ's wallet library (send_privacy_preserving_tx_with_pre_check): executed and proven on this machine, 
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_06_private_burn_on_defaults()
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_07_checkpoint_and_private_release() qml: WAITED release delay 480 min (the view's clock)
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_07_checkpoint_and_private_release() qml: RELEASE Released: 0.000997 ETH paid to 0xA7ffD1e06070c8F5a6820F014B50086A31451800 in block 16 (transaction 0x0f10d7…36b0d8), sent by the relayer 0x70997970C51812dc3A010C7d01b50e0d17dc79C8 (ferrata-re
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_07_checkpoint_and_private_release()
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::cleanupTestCase()
+[17:02:56] the zone: 97 transactions in blocks 1..=31
+[17:02:56] hook-miniapp: done
+[17:02:58] driver exit 0
+[17:02:58] export failed (1)
+[17:02:59] sequencer stopped (exit 0)
+[17:03:07] node stopped (exit 143)
+[17:03:08] saved generation 2 (38268703 bytes; head block 31)
+[17:03:08] session x: ok
+seqnet-miniapp-4: 97 LEZ and 15 Ethereum transactions, 0 user commands, 20 view calls
+[17:03:08] seqnet miniapp-4: DONE

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<testsuite name="qmltestrunner" timestamp="2026&#x002D;11&#x002D;16T16:55:02" hostname="modal" tests="17" failures="0" errors="0" skipped="0" time="34.525">
+  <properties>
+    <property name="QTestVersion" value="6.4.2"/>
+    <property name="QtVersion" value="6.4.2"/>
+    <property name="QtBuild" value="Qt 6.4.2 (x86_64&#x002D;little_endian&#x002D;lp64 shared (dynamic) release build; by GCC 13.2.0)"/>
+  </properties>
+  <testcase name="FerrataMiniApp::initTestCase" classname="qmltestrunner" time="0.193"/>
+  <testcase name="FerrataMiniApp::test_01_connect" classname="qmltestrunner" time="0.811"/>
+  <testcase name="FerrataMiniApp::test_02_endpoints" classname="qmltestrunner" time="1.557"/>
+  <testcase name="FerrataMiniApp::test_03_registry" classname="qmltestrunner" time="0.636"/>
+  <testcase name="FerrataMiniApp::test_04_deposit_private_by_default" classname="qmltestrunner" time="1.413"/>
+  <testcase name="FerrataMiniApp::test_05_public_needs_an_explicit_action" classname="qmltestrunner" time="1.592"/>
+  <testcase name="FerrataMiniApp::test_06_positions_from_the_seed" classname="qmltestrunner" time="0.635"/>
+  <testcase name="FerrataMiniApp::test_07_private_claim" classname="qmltestrunner" time="4.819">
+    <system-out>
+      <![CDATA[qml: PROOF claim {"mode":"dev","prove_ms":907,"receipt_bytes":4429,"tx_bytes":8745}]]>
+    </system-out>
+  </testcase>
+  <testcase name="FerrataMiniApp::test_08_plaintext_claim" classname="qmltestrunner" time="1.852"/>
+  <testcase name="FerrataMiniApp::test_09_error_messages" classname="qmltestrunner" time="1.287"/>
+  <testcase name="FerrataMiniApp::test_10_private_burn_on_defaults" classname="qmltestrunner" time="2.115">
+    <system-out>
+      <![CDATA[qml: PROOF burn {"mode":"dev","prove_ms":578,"receipt_bytes":3985,"tx_bytes":7857}]]>
+    </system-out>
+  </testcase>
+  <testcase name="FerrataMiniApp::test_11_checkpoint_and_private_release" classname="qmltestrunner" time="2.494"/>
+  <testcase name="FerrataMiniApp::test_11b_public_burn_and_release" classname="qmltestrunner" time="3.632"/>
+  <testcase name="FerrataMiniApp::test_12_admin" classname="qmltestrunner" time="10.060"/>
+  <testcase name="FerrataMiniApp::test_13_privacy" classname="qmltestrunner" time="0.500"/>
+  <testcase name="FerrataMiniApp::test_14_wallet_provider_seam" classname="qmltestrunner" time="0.910">
+    <system-out>
+      <![CDATA[qml: WALLET seam connect: Ferrata Bridge (ferrata_bridge_ui) | approve: Deposit to the Ferrata vault]]>
+    </system-out>
+  </testcase>
+  <testcase name="FerrataMiniApp::cleanupTestCase" classname="qmltestrunner" time="0.000"/>
+</testsuite>

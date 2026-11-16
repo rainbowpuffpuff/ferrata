@@ -1,0 +1,25 @@
+QStandardPaths: XDG_RUNTIME_DIR not set, defaulting to '<spike>/tmp/lez-core-v04/runtime-root'
+********* Start testing of qmltestrunner *********
+Config: Using QtTest library 6.4.2, Qt 6.4.2 (x86_64-little_endian-lp64 shared (dynamic) release build; by GCC 13.2.0), ubuntu 24.04
+PASS   : qmltestrunner::FerrataMiniApp::initTestCase()
+PASS   : qmltestrunner::FerrataMiniApp::test_01_connect()
+PASS   : qmltestrunner::FerrataMiniApp::test_02_endpoints()
+PASS   : qmltestrunner::FerrataMiniApp::test_03_registry()
+PASS   : qmltestrunner::FerrataMiniApp::test_04_deposit_private_by_default()
+PASS   : qmltestrunner::FerrataMiniApp::test_05_public_needs_an_explicit_action()
+PASS   : qmltestrunner::FerrataMiniApp::test_06_positions_from_the_seed()
+QDEBUG : qmltestrunner::FerrataMiniApp::test_07_private_claim() qml: PROOF claim {"mode":"dev","prove_ms":907,"receipt_bytes":4429,"tx_bytes":8745}
+PASS   : qmltestrunner::FerrataMiniApp::test_07_private_claim()
+PASS   : qmltestrunner::FerrataMiniApp::test_08_plaintext_claim()
+PASS   : qmltestrunner::FerrataMiniApp::test_09_error_messages()
+QDEBUG : qmltestrunner::FerrataMiniApp::test_10_private_burn_on_defaults() qml: PROOF burn {"mode":"dev","prove_ms":578,"receipt_bytes":3985,"tx_bytes":7857}
+PASS   : qmltestrunner::FerrataMiniApp::test_10_private_burn_on_defaults()
+PASS   : qmltestrunner::FerrataMiniApp::test_11_checkpoint_and_private_release()
+PASS   : qmltestrunner::FerrataMiniApp::test_11b_public_burn_and_release()
+PASS   : qmltestrunner::FerrataMiniApp::test_12_admin()
+PASS   : qmltestrunner::FerrataMiniApp::test_13_privacy()
+QDEBUG : qmltestrunner::FerrataMiniApp::test_14_wallet_provider_seam() qml: WALLET seam connect: Ferrata Bridge (ferrata_bridge_ui) | approve: Deposit to the Ferrata vault
+PASS   : qmltestrunner::FerrataMiniApp::test_14_wallet_provider_seam()
+PASS   : qmltestrunner::FerrataMiniApp::cleanupTestCase()
+Totals: 17 passed, 0 failed, 0 skipped, 0 blacklisted, 34526ms
+********* Finished testing of qmltestrunner *********
