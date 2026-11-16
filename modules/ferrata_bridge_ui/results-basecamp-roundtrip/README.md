@@ -188,6 +188,19 @@ The box used no other setup than `e2e/seqnet`'s (its setup script restores `/nix
 | Ethereum | anvil (Foundry 1.3.6), chain id 11155111, FerrataVault v5 mode (B), `MockRiscZeroVerifier` |
 | Box | Modal, gVisor, x86-64, Nix 2.28.3; Basecamp's window 1440 × 1250 |
 
+## The suites the view's change touches, run again ([`regression/`](regression/))
+
+On the box, on this branch's view, 16 November:
+
+| Suite | Before (committed) | Now |
+|---|---|---|
+| Basecamp's `nix run .#ui-tests` (`scripts/basecamp-ui-tests.sh`, Basecamp `b642a9a` as built here) | 10 of 10 (11 Nov) | **10 of 10** in 9 s ([`regression/basecamp-ui-tests.txt`](regression/basecamp-ui-tests.txt)) |
+| The devnet Qt Quick Test (`scripts/box-test.sh`: the view against `cli/examples/miniapp_devnet`, Qt 6.4 offscreen) | 17 of 17 (12 Nov) | **17 of 17**, 34.5 s ([`regression/box-test/qmltest.txt`](regression/box-test/qmltest.txt)) |
+| The view in a headless Logos Core on a LEZ devnet (`e2e/seqnet/run.sh miniapp`, the `qmltest-logos` runner, dev mode) | 9 of 9 (13 Nov, `seqnet-miniapp-3`, real proofs) | **9 of 9**, 122.7 s, dev mode ([`regression/seqnet-miniapp/`](regression/seqnet-miniapp/qmltest.txt)) |
+
+`ferrata_bridge_module` itself was not changed, so its own tests were not run again. The committed `results/` of 12
+November were left as they were: these runs' outputs are only here.
+
 ## What failed on the way
 
 The first round trip (`basecamp-1`) stopped at step 6 on the driver's own check. It expected the vault to grow by
