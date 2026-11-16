@@ -156,7 +156,7 @@ Rectangle {
         if (r && r.ok === false) { finish(false, r.error); return; }
         if (r && r.ok === undefined && r.error !== undefined) {
             var what = "Logos host: " + r.error + (r.message ? ": " + r.message : "");
-            if (String(r.error).indexOf("timeout") >= 0 || String(r.message).indexOf("imeout") >= 0)
+            if (/timed out|timeout/i.test(String(r.error) + " " + String(r.message)))
                 what += " (the call's outcome is unknown: refresh the positions before repeating it)";
             finish(false, what);
             return;

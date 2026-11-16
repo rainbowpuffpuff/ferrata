@@ -32,6 +32,9 @@ function pct(used, capacity) {
 
 // The program's and the vault's codes, by name, mapped to what the user can do.
 var MESSAGES = [
+    // The host stopped waiting (Basecamp cuts a ui module's call to a core module at 20 s), the module did not: the
+    // step may still complete, so the user must not be told that nothing changed.
+    [/Logos host:.*(timed out|timeout)/i, "No answer in time: the step may still complete. Refresh your positions before repeating it."],
     [/Rejected in the wallet/, "Rejected in the wallet: nothing was signed or sent."],
     [/private burn|harness settles public/i, "Not available on this devnet: private transactions are proven by the LEZ wallet on a sequencer."],
     [/NullifierAlreadyUsed|already released/, "Already released: this burn was paid out before. Nothing was sent."],
