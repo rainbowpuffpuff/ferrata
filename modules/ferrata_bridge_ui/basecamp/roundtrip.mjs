@@ -175,8 +175,9 @@ step("deposit: private by default", async (app) => {
   check(deps.length === before.eth.logs.Deposit.length + 1, `one Deposit log more on the vault (${deps.length})`);
   const d = deps[deps.length - 1];
   check(hex(d.topics[0]).endsWith(hex(j.eth.user)), "the Deposit log names the user's account as depositor");
-  check(BigInt(j.eth.vault_balance_wei) - BigInt(before.eth.vault_balance_wei) === word(d.data, 2), `the vault holds the deposited amount more (${word(d.data, 2)} wei)`);
-  check(BigInt(j.eth.user_balance_wei) < BigInt(before.eth.user_balance_wei) - word(d.data, 2), "the user's balance fell by the amount and gas");
+  // The vault keeps the denomination and the deposit's fees; the user paid both and the gas.
+  const inVault = BigInt(j.eth.vault_balance_wei) - BigInt(before.eth.vault_balance_wei), paid = BigInt(before.eth.user_balance_wei) - BigInt(j.eth.user_balance_wei);
+  check(inVault >= word(d.data, 2) && paid > inVault, `the vault holds ${inVault} wei more (the Deposit log's ${word(d.data, 2)} and its fees); the user paid ${paid} wei with gas`);
   st.leaf = Number(word(d.data, 1));
   await picture(app, "09-deposit-sent");
 });

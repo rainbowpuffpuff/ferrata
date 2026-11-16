@@ -56,7 +56,7 @@ t0=$(date +%s)
     PATH="${ZONE_BIN:-/nonexistent}:$PATH" TMPDIR="$LT" HOME="$W/basecamp-home" LOGOS_TEST_TIMEOUT=10800 \
     BASECAMP_OUT="$M" BASECAMP_LEZ="$LEZ_ROUTE" BASECAMP_LEZ_PARAMS="$LEZ_PARAMS" BASECAMP_WAIT_MS="$wait_ms" \
     SEQNET_CHAIN_URL="http://127.0.0.1:$CHAIN_PORT/" SEQNET_OPS="bash $REPO/e2e/seqnet/ops.sh" \
-    "$DEV" --module "$BC/ui-install" --modules-dir "$BC/modules-root" --width 1440 --height 1500 \
+    "$DEV" --module "$BC/ui-install" --modules-dir "$BC/modules-root" --width 1440 --height 1250 \
     --test "$REPO/modules/ferrata_bridge_ui/basecamp/roundtrip.mjs" ) > "$M/basecamp-run.log" 2>&1
 brc=$?
 say "Basecamp round trip: exit $brc in $(( $(date +%s) - t0 )) s: $(grep -E '[0-9]+ passed, [0-9]+ failed' "$M/basecamp-run.log" | tail -n 1)"
