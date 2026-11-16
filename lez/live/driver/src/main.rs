@@ -16,6 +16,9 @@
 //!   private-stored  submit lez/results/stage2-private-tx.borsh (the real-proof transaction)
 //!   private-fake    the private update for the live instance with a fake receipt (RISC0_DEV_MODE=1)
 //!   private-real    the same with a real proof (RISC0_DEV_MODE unset)
+//!   attest-private  the reference consumer (--consumer-bin, deployed as consumer) attests privately, with a
+//!                   real proof, a Transfer log of the mainnet block of --attest-fixture (default the harness's
+//!                   Stage 4 fixture) on a new instance of the main deployment; --private-account N (default 1)
 //!   submit-proven   submit a private update proven elsewhere (--tx FILE, from prove-from-transcript)
 //!   export          write the records into --out
 //! Without a sequencer:
@@ -23,16 +26,19 @@
 //!   inbound-plan    the inbound run's configuration identity (--attest-bin, --bridge-bin, --vault HEX)
 //!   verify          re-check a recorded run in --dir, fully if --binary FILE ... are given
 //!   prove-from-transcript  prove the private update from a recorded RPC transcript
+//!   describe-tx     the size, receipt size and claims of proven transactions (--tx FILE, repeatable)
 //! Against a running sequencer:
 //!   check-rpc       the sequencer serves the chain recorded in --dir
 //!
 //! Options: --rpc URL (default http://127.0.0.1:3040), --run-dir DIR, --out DIR,
 //! --program-bin FILE, --scripted-bin FILE, --fixtures DIR, --harness-results DIR,
 //! --sequencer-log FILE, --gas-limit N (default 4000000), --stored-tx FILE, --dir DIR,
-//! --binary FILE (repeatable), --transcript FILE, --tx-out FILE, --tx FILE,
+//! --binary FILE (repeatable), --transcript FILE, --tx-out FILE, --tx FILE, --consumer-bin FILE,
+//! --attest-fixture DIR, --private-account N,
 //! --wait-final yes|no (default yes: a transaction is settled once its block is final on Bedrock;
 //! no for LEZ's mock Bedrock, where no block becomes final).
 
+mod attest;
 mod blocklog;
 mod follower;
 mod inbound;
@@ -116,6 +122,8 @@ struct Run {
     scripted: GuestBinary,
     /// The bridge program (`--bridge-bin`), for the inbound commands.
     bridge: Option<GuestBinary>,
+    /// The reference consumer (`--consumer-bin`), for `attest-private`.
+    consumer: Option<GuestBinary>,
     payers: Vec<AccountId>,
 }
 
@@ -146,6 +154,10 @@ async fn open(args: &Args, phase: &str) -> Result<Run> {
         keys.extend(deployment_keys(inbound::ATTEST, &program));
         keys.extend(deployment_keys(inbound::BRIDGE, bridge));
     }
+    let consumer = args.get("consumer-bin").map(|p| GuestBinary::load("consumer", Path::new(p))).transpose()?;
+    if let Some(consumer) = &consumer {
+        keys.extend(deployment_keys("consumer", consumer));
+    }
     let run_dir = args.path("run-dir")?;
     let opts = Options {
         rpc: args.get("rpc").unwrap_or("http://127.0.0.1:3040").to_string(),
@@ -158,7 +170,7 @@ async fn open(args: &Args, phase: &str) -> Result<Run> {
     };
     let mut live = Live::open(opts, &keys).await?;
     live.phase = phase.to_string();
-    Ok(Run { live, fixtures: fixtures(args)?, program, scripted, bridge, payers: payer_keys.iter().map(account_of).collect() })
+    Ok(Run { live, fixtures: fixtures(args)?, program, scripted, bridge, consumer, payers: payer_keys.iter().map(account_of).collect() })
 }
 
 async fn info(run: &Run) -> Result<()> {
@@ -214,12 +226,24 @@ fn instances(run: &Run) -> Vec<Instance> {
     other.genesis_validators_root = [0x42; 32];
     let mut late = mainnet_config(2);
     late.genesis_time += 315_360_000;
-    vec![
+    let mut all = vec![
         Instance::new("A (main deployment, mainnet)", run.main(), mainnet_config(2), checkpoint),
         Instance::new("B (twin deployment, mainnet)", run.twin(), mainnet_config(2), checkpoint),
         Instance::new("C (twin deployment, another chain's genesis_validators_root)", run.twin(), other, checkpoint),
         Instance::new("D (twin deployment, genesis time ten years later)", run.twin(), late, checkpoint),
-    ]
+    ];
+    if run.consumer.is_some() {
+        if let Ok(fx) = attest::AttestFixture::load(&attest_fixture_dir(None)) {
+            all.push(Instance::new("attest-mainnet (main deployment, the attestation fixture)", run.main(), mainnet_config(2), fx.checkpoint));
+        }
+    }
+    all
+}
+
+fn attest_fixture_dir(given: Option<&str>) -> PathBuf {
+    given
+        .map(PathBuf::from)
+        .unwrap_or_else(|| repository_root().join("crates/ferrata-spectests/fixtures/mainnet-attest-2026-11-10"))
 }
 
 /// Write the records of the run: the manifest, the chain (blocks without program bytecode, the
@@ -272,10 +296,13 @@ async fn export(run: &mut Run) -> Result<()> {
     fs::write(out.join("chain.tsv"), chain)?;
 
     let mut programs = String::from("name\theader_account\timage_id\tbinary_sha256\tbinary_bytes\tuser_elf_bytes\tsegments\n");
-    let deployed: Vec<(&str, &GuestBinary)> = match &run.bridge {
+    let mut deployed: Vec<(&str, &GuestBinary)> = match &run.bridge {
         Some(bridge) => vec![(inbound::ATTEST, &run.program), (inbound::BRIDGE, bridge)],
         None => vec![("main", &run.program), ("twin", &run.program), ("scripted", &run.scripted)],
     };
+    if let Some(consumer) = &run.consumer {
+        deployed.push(("consumer", consumer));
+    }
     for (name, binary) in deployed {
         let (header, segments) = deployment_accounts(name, binary);
         writeln!(
@@ -384,6 +411,12 @@ async fn run(args: Args) -> Result<()> {
             println!("{}", serde_json::to_string_pretty(&ids)?);
             return Ok(());
         }
+        "describe-tx" => {
+            for path in args.all("tx") {
+                println!("{}\t{}", path.display(), private::describe_private(&path)?);
+            }
+            return Ok(());
+        }
         "prove-from-transcript" => {
             let program = GuestBinary::load("program", &args.path("program-bin")?)?;
             let twin = deployment_accounts("twin", &program).0;
@@ -432,6 +465,13 @@ async fn run(args: Args) -> Result<()> {
         "submit-proven" => {
             let twin = run.twin();
             private::submit_proven(&mut run.live, twin, &run.fixtures, &args.path("tx")?).await?;
+        }
+        "attest-private" => {
+            let consumer = run.consumer.clone().ok_or_else(|| anyhow!("--consumer-bin is required"))?;
+            let (program, payer) = (run.program.clone(), run.payers[1]);
+            let index = args.get("private-account").map(str::parse).transpose()?.unwrap_or(1);
+            let dir = attest_fixture_dir(args.get("attest-fixture"));
+            attest::attest_private(&mut run.live, &program, &consumer, &dir, payer, index).await?;
         }
         "inbound-deploy" => {
             let bridge = run.bridge.clone().ok_or_else(|| anyhow!("--bridge-bin is required"))?;

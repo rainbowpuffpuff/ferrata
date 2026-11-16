@@ -392,6 +392,11 @@ pub fn private_job(twin: AccountId, fixtures: &Fixtures, on_chain: Option<&ferra
 }
 
 pub(crate) fn private_wallet(home: &Path, rpc: &str, client: TapClient) -> Result<(WalletCore<TapClient>, AccountId)> {
+    private_wallet_at(home, rpc, client, 0)
+}
+
+/// As `private_wallet`, with LEZ's test private account `index` (0 or 1 on LEZ's local network).
+pub(crate) fn private_wallet_at(home: &Path, rpc: &str, client: TapClient, index: usize) -> Result<(WalletCore<TapClient>, AccountId)> {
     check_loopback(rpc)?;
     fs::create_dir_all(home)?;
     let config_path = home.join("wallet_config.json");
@@ -405,18 +410,18 @@ pub(crate) fn private_wallet(home: &Path, rpc: &str, client: TapClient) -> Resul
         ),
     )?;
     let (mut wallet, _mnemonic) = WalletCore::new_init_storage_with_client(config_path, storage_path, None, "", client)?;
-    // LEZ's first test private account: the genesis of its local network credits it, and its
-    // keys are in LEZ's source (`testnet_initial_state`).
+    // LEZ's test private account `index` (the first by default): the genesis of its local
+    // network credits it, and its keys are in LEZ's source (`testnet_initial_state`).
     let account = testnet_initial_state::initial_priv_accounts_private_keys()
         .into_iter()
-        .next()
-        .ok_or_else(|| anyhow!("LEZ's initial state has no private account"))?;
+        .nth(index)
+        .ok_or_else(|| anyhow!("LEZ's initial state has no private account {index}"))?;
     let id = account.account_id();
     wallet.storage_mut().key_chain_mut().add_imported_private_account(account.key_chain, account.chain_index, account.account);
     Ok((wallet, id))
 }
 
-fn describe_private(tx_out: &Path) -> Result<String> {
+pub(crate) fn describe_private(tx_out: &Path) -> Result<String> {
     let bytes = fs::read(tx_out)?;
     let tx: LeeTransaction = borsh::from_slice(&bytes)?;
     Ok(format!("transaction {} bytes: {}", bytes.len(), describe_claims(&tx)))

@@ -331,6 +331,23 @@ for phase in $PHASES; do
         if [ -n "${FERRATA_LIVE_PROOF_THREADS:-}" ]; then export RAYON_NUM_THREADS="$FERRATA_LIVE_PROOF_THREADS"; fi
         renice -n "${FERRATA_LIVE_PROOF_NICE:-10}" -p $BASHPID > /dev/null
         driver "$phase" ) 2>&1 | tee -a "$LOG/driver.log"; rc=${PIPESTATUS[0]} ;;
+    attest-private)   # driver/src/attest.rs: the private attestation, proven for real in the driver; its threads and
+      # priority as private-real's (FERRATA_LIVE_PROOF_THREADS, FERRATA_LIVE_PROOF_NICE); --consumer-bin through
+      # FERRATA_LIVE_DRIVER_EXTRA
+      ( unset RISC0_DEV_MODE
+        if [ -n "${FERRATA_LIVE_PROOF_THREADS:-}" ]; then export RAYON_NUM_THREADS="$FERRATA_LIVE_PROOF_THREADS"; fi
+        renice -n "${FERRATA_LIVE_PROOF_NICE:-10}" -p $BASHPID > /dev/null
+        driver "$phase" ) 2>&1 | tee -a "$LOG/driver.log"; rc=${PIPESTATUS[0]} ;;
+    hook)   # FERRATA_LIVE_HOOK: a script run while the zone runs (hooks/crown.sh), with the zone in its environment
+      if [ -z "${FERRATA_LIVE_HOOK:-}" ] || [ ! -f "$FERRATA_LIVE_HOOK" ]; then
+        echo "   no FERRATA_LIVE_HOOK script" | tee -a "$LOG/driver.log"; rc=2
+      else
+        ( unset RISC0_DEV_MODE
+          export ZONE_RPC="http://127.0.0.1:$RPC_PORT" ZONE_BEDROCK="http://127.0.0.1:$BEDROCK_PORT" ZONE_RUN_DIR="$RUN_DIR" \
+            ZONE_LOG="$LOG" ZONE_BIN="$BIN" ZONE_OUT="$OUT" ZONE_WAIT_FINAL="$WAIT_FINAL" ZONE_PROGRAM_BIN="$PROGRAM_BIN" \
+            ZONE_SEQUENCER_CONFIG="$RUN_DIR/config/sequencer_config.json" ZONE_DEPLOYMENT="$RUN_DIR/bedrock/deployment-settings.yaml"
+          bash "$FERRATA_LIVE_HOOK" ) 2>&1 | tee -a "$LOG/hook.log"; rc=${PIPESTATUS[0]}
+      fi ;;
     *) ( unset RISC0_DEV_MODE; driver "$phase" ) 2>&1 | tee -a "$LOG/driver.log"; rc=${PIPESTATUS[0]} ;;
   esac
   case "$rc" in
@@ -359,6 +376,7 @@ scrub < "$RUN_DIR/sequencer_home/sequencer_config.json" > "$OUT/config/sequencer
 scrub < "$LOG/sequencer.log" > "$OUT/logs/sequencer.log"
 scrub < "$LOG/sequencer-setup.log" > "$OUT/logs/sequencer-setup.log"
 scrub < "$LOG/driver.log" > "$OUT/logs/driver.log"
+[ -f "$LOG/hook.log" ] && scrub < "$LOG/hook.log" > "$OUT/logs/hook.log"
 [ -f "$LOG/bedrock-gas-prices.log" ] && cp "$LOG/bedrock-gas-prices.log" "$OUT/logs/"
 if [ -f "$LOG/bedrock.log" ]; then
   # The node's log is large: keep its start, the epochs it began (one line each; it logs each
@@ -380,7 +398,7 @@ if [ -f "$LOG/bedrock.log" ]; then
     echo "the whole log: $(wc -l < "$LOG/bedrock.log") lines, $(wc -c < "$LOG/bedrock.log") bytes; blocks proposed: $(grep -c 'proposed block' "$LOG/bedrock.log" || true), of which with transactions: $(grep -c -E 'proposed block .* with [1-9][0-9]* transactions' "$LOG/bedrock.log" || true), with a transaction removed: $(grep -c -E '\([1-9][0-9]* removed\)' "$LOG/bedrock.log" || true)"
   } | scrub > "$OUT/logs/bedrock-excerpt.log"
 fi
-for kind in fake real; do
+for kind in fake real attest; do   # private-attest: phase attest-private
   d="$RUN_DIR/driver/private-$kind"
   [ -d "$d" ] || continue
   mkdir -p "$OUT/private/$kind"

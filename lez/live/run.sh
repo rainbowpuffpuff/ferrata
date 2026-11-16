@@ -24,6 +24,11 @@
 #                          reports fewer CPUs than it may use; FERRATA_LIVE_PROOF_NICE its niceness
 #                          (default 10: below the node and the sequencer)
 #   FERRATA_LIVE_OUT       where the records go (default results/ here)
+#   FERRATA_LIVE_DRIVER_EXTRA  more options for every driver phase but private-real (for example
+#                          --consumer-bin FILE, which phase attest-private needs)
+#   FERRATA_LIVE_HOOK      the script phase `hook` runs while the zone runs, with the zone's RPC,
+#                          node API, run directory, logs and binaries in ZONE_* variables
+#                          (hooks/crown.sh: the bridge's private claim and burn by crown-driver)
 #   For the observations in observations/: FERRATA_LIVE_PHASE_SECONDS (a cap on each phase) and
 #   FERRATA_LIVE_BEDROCK_TRACE=1 (the node's block proposer logs at trace level)
 #   FERRATA_LIVE_JOBS, FERRATA_LIVE_NICE   build parallelism (default 4 jobs under nice 19)
