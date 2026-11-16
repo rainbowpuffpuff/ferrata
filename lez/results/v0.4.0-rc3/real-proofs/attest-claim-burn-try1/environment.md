@@ -1,0 +1,21 @@
+# The run's environment
+
+- started 2026-11-16T13:12:11Z, finished 2026-11-16T13:37:01Z (UTC); exit status of the phases: 1
+- phases: info deploy attest-private hook export
+- LEZ: v0.4.0-rc3, commit bafd07be0701398f9bc435f73ab05e9a7936c301, source tree unmodified
+- sequencer: sequencer_service, sha256 be2ac354f4268d7c021519735667d5d5b723e5901a65e4dcd47cd686dc42ca34, built with rustc 1.98.1 (48a229cea 2026-09-01) cargo 1.98.1 (797e8a9bc 2026-08-05) 
+- Bedrock: a Logos Blockchain node run as a process, resolved by LEZ's bedrock/tools/resolve_bedrock_node.py: { "binary_sha256": "2f30172903a36175606f466fa6a9d5503a26cb8f95eb9b9444677ee06520c6e2", "release_asset": "logos-blockchain-node-linux-x86_64-0.3.5-rc.1.tar.gz", "release_commit": "f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30", "release_tag": "0.3.5-rc.1", "resolution": "release", "resolved_sha": "f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30", "target_platform": "linux-x86_64"}
+- Bedrock configuration: LEZ's bedrock/node-config.yaml (see config/bedrock-node-config.diff) and bedrock/deployment-settings.yaml, POL_PROOF_DEV_MODE=true as in LEZ's container entrypoint (leader proofs in dev mode)
+- sequencer configuration: LEZ's lez/sequencer/service/networks/local.json with the changes of config/sequencer_config.diff
+- RISC0_* variables in the sequencer's environment: RISC0_HOME=../risc0-home-lez 
+- block phase: slot 0 of the Bedrock node is unix second 1785493027, so an epoch (60 slots of 4 s) begins at seconds = 67 mod 240; the sequencer makes its blocks 1 s after the seconds at which an epoch can begin and 9 s before the next such second (interval 10 s; wanted: 1 to 2 s after); the zone was started 1 time(s) to get this
+- as the logs show it: 147 blocks published, at seconds after an epoch second (mod 10): 1 s (x117), 2 s (x30); 7 epochs began during the run, at seconds after slot 0 (mod 240): 0 (x6), 4 (x1); the least time from a published block to the next epoch's first second: 2 s; blocks the node proposed with a transaction removed: 294
+- Bedrock gas prices during the run (logs/bedrock-gas-prices.log): 3 values; first: 2026-11-16T13:12:24.084Z execution_base_gas_price:1 storage_gas_price:1; last: 2026-11-16T13:17:11.188Z execution_base_gas_price:1 storage_gas_price:3
+- head rewinds in the sequencer's log: 1; inscriptions it gave up on: 120
+- driver: live-driver, built from lez/live/driver at  (uncommitted paths: 0)
+- r0vm: risc0-r0vm 3.0.5
+- guest binaries: program sha256 ddfde69bea89a5b882f55266fcb4b7c887df7debc1c9d4972d8ebea5a72eaad9, scripted sha256 29249a3ac807ad3268ff5499ccee70a75b687d5fe5517fa5843b333c2c6c1bc0
+- machine: 2 CPUs visible, unknown, 64 GiB, Linux 4.19.0-gvisor
+- ports: sequencer RPC 127.0.0.1:3040, metrics 127.0.0.1:9000, Bedrock API 127.0.0.1:18080
+- last block: 28; blocks the sequencer published to Bedrock: 148; its last channel update: adopted none, finalized 28..=28 (1), head Some(30)
+- Bedrock node at the end (cryptarchia/info): {"cryptarchia_info":{"lib":"d02c1b0302503a8e0fc138a3e73788cb622d16f3a892538796c189cced4198e4","lib_slot":2335795,"tip":"4270100d2576a3b23e14d612140fc2776c7525a67ed0b34a2938b1e7191c0706","slot":2335798,"height":367,"state":"Online"},"phase":"Following"}
