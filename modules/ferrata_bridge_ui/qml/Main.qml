@@ -26,6 +26,9 @@ Rectangle {
     readonly property bool inLogos: typeof logos !== "undefined" && logos !== null
     property string transport: inLogos ? "module" : "devnet"
     property string backendUrl: "http://127.0.0.1:18600/rpc"
+    // How long the view waits for the core module's answer through an asynchronous host bridge.
+    property int moduleTimeoutMs: 600000
+    property var callLog: []
     property string ethRpc: "http://127.0.0.1:18545"
     property string sequencer: "harness"
     property string endpointStatus: ""
@@ -98,20 +101,27 @@ Rectangle {
     function call(method, params, done) {
         busy += 1;
         calls += 1;
+        var t0 = Date.now();
         var finish = function (ok, value) {
             busy -= 1;
+            // The view's own record of its calls (method, outcome, milliseconds), for a test or a support request.
+            callLog.push({ method: method, ok: ok, ms: Date.now() - t0, transport: transport, error: ok ? "" : String(value).slice(0, 300) });
+            if (callLog.length > 500) callLog.shift();
             lastMethod = method;
             lastOk = ok;
             if (ok) { lastResult = value; lastError = ""; } else { lastError = String(value); }
             if (done) done(ok, value);
         };
         if (transport === "module") {
+            // One method of the module serves the view: `wallet`, with the call's name and parameters.
+            var req = JSON.stringify({ method: method, params: params || {} });
             try {
-                // One method of the module serves the view: `wallet`, with the call's name and parameters.
-                var raw = logos.callModule("ferrata_bridge_module", "wallet", [JSON.stringify({ method: method, params: params || {} })]);
-                var r = (typeof raw === "string") ? JSON.parse(raw) : raw;
-                if (r && r.ok === false) finish(false, r.error);
-                else finish(true, (r && r.result !== undefined) ? r.result : r);
+                // Basecamp's bridge also calls asynchronously: the view then does not hold Basecamp's GUI thread
+                // while the module works (a host without it, such as the Qt Quick Test runner, is called synchronously).
+                if (typeof logos.callModuleAsync === "function")
+                    logos.callModuleAsync("ferrata_bridge_module", "wallet", [req], function (payload) { moduleReply(payload, finish); }, moduleTimeoutMs);
+                else
+                    moduleReply(logos.callModule("ferrata_bridge_module", "wallet", [req]), finish);
             } catch (e) {
                 finish(false, "ferrata_bridge_module: " + e);
             }
@@ -130,6 +140,29 @@ Rectangle {
         xhr.send(JSON.stringify({ method: method, params: params || {} }));
     }
 
+    // The module's reply as the host hands it over: the reply object, its JSON text (logosctl's result), or that text
+    // serialised once more as a JSON string (Basecamp's bridge serialises the module's string result). A host error
+    // ({error, module, method, message}: the module not loaded or not reachable, a timeout) is reported as the host's;
+    // after a timeout the call's outcome is unknown (the module may still complete it), so the message says to refresh
+    // before repeating the step.
+    function moduleReply(raw, finish) {
+        var r = raw;
+        try {
+            for (var i = 0; i < 2 && typeof r === "string"; i++) r = JSON.parse(r);
+        } catch (e) {
+            finish(false, "ferrata_bridge_module: unreadable reply: " + String(raw).slice(0, 200));
+            return;
+        }
+        if (r && r.ok === false) { finish(false, r.error); return; }
+        if (r && r.ok === undefined && r.error !== undefined) {
+            var what = "Logos host: " + r.error + (r.message ? ": " + r.message : "");
+            if (String(r.error).indexOf("timeout") >= 0 || String(r.message).indexOf("imeout") >= 0)
+                what += " (the call's outcome is unknown: refresh the positions before repeating it)";
+            finish(false, what);
+            return;
+        }
+        finish(true, (r && r.result !== undefined) ? r.result : r);
+    }
     function refreshInfo(done) { call("info", {}, function (ok, v) { if (ok) info = v; if (done) done(ok, v); }); }
     function refreshRegistry(done) { call("registry", {}, function (ok, v) { if (ok) registry = v; if (done) done(ok, v); }); }
     function refreshPositions(done) { call("scan", {}, function (ok, v) { if (ok) positions = v; if (done) done(ok, v); }); }
@@ -244,6 +277,20 @@ Rectangle {
                     Label { objectName: "wallet.status"; text: connectedAccount ? "Wallet: " + Fmt.short(connectedAccount) : "Wallet: not connected"; font.bold: true }
                     Button { objectName: "wallet.connect"; text: connectedAccount ? "Switch account" : "Connect wallet"; onClicked: walletConnect() }
                     BusyIndicator { running: busy > 0; visible: busy > 0; implicitWidth: 24; implicitHeight: 24 }
+                }
+                // Both sides of the connected account, as the backend last read them: the Ethereum balance and block
+                // (`info`), the LEZ holdings of account /0 (`scan`); refreshed on demand.
+                RowLayout {
+                    visible: connectedAccount !== "" && info !== null
+                    Label {
+                        objectName: "header.balances"
+                        text: !info ? "" : ("Ethereum: " + (info.user && info.user.eth_balance_wei !== undefined ? Fmt.eth(info.user.eth_balance_wei) : "–")
+                              + (info.eth_block !== undefined ? " (block " + info.eth_block + ")" : "")
+                              + "  ·  LEZ /0: private " + Fmt.eth(holding("private")) + ", public " + Fmt.eth(holding("public"))
+                              + (info.lez_head !== undefined ? " (block " + info.lez_head + ")" : ""))
+                        color: "#1d2733"; font.pixelSize: 12
+                    }
+                    Button { objectName: "header.refresh"; text: "Refresh"; onClicked: { refreshInfo(); refreshPositions(); } }
                 }
             }
         }

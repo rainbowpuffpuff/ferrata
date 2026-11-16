@@ -8,6 +8,10 @@
 #                              prover, the relayer's submitCandidate, Delta let pass on anvil's clock, finalizeAttested)
 #   ops.sh pass-time S WHAT    anvil's clock moved on S seconds
 #   ops.sh records             the zone's transactions (seqnet-txs)
+#   ops.sh chain [ADDR]        the chains' own state as one JSON line, read here and not through the module or the
+#                              view: on anvil (cast) the user's and the vault's balances, the vault's Deposit, Release
+#                              and CheckpointFinalized logs, ADDR's balance; on the sequencer (seqnet-txs) its head
+#                              and every applied transaction (block, hash, kind, reverted, the bridge's visible calls)
 set -uo pipefail
 . "$SEQNET_ENV"
 . "$REPO/e2e/seqnet/common.sh"
@@ -26,5 +30,6 @@ case "${1:-}" in
   checkpoint) checkpoint ;;
   pass-time) shift; s="$1"; shift; pass_time "$s" "$*" ;;
   records) records ;;
-  *) sed -n '2,12p' "${BASH_SOURCE[0]}"; exit 2 ;;
+  chain) shift; chain_state "${1:-}" ;;
+  *) sed -n '2,14p' "${BASH_SOURCE[0]}"; exit 2 ;;
 esac

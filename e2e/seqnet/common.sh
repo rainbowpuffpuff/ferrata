@@ -155,3 +155,26 @@ records() {
     > "$RUN/lez/transactions.tsv" 2> "$W/txs.err" || say "seqnet-txs failed: $(tail -n 3 "$W/txs.err")"
   say "the zone: $(($(wc -l < "$RUN/lez/transactions.tsv") - 1)) transactions in blocks 1..=$(head_block)"
 }
+
+# The chains' own state as one JSON line (ops.sh chain [ADDR]): read directly from anvil (cast) and from the sequencer
+# (seqnet-txs, LEZ's wallet library with a throwaway home and no keys), never through the module or the view. Log data
+# words are kept as hex (the reader decodes them).
+chain_state() {
+  local fresh="${1:-}" topic logs txs n
+  local j; j="$(jq -n -c --argjson b "$(cast block-number --rpc-url "$RPC")" --arg d "$DEPOSITOR" --arg u "$(cast balance "$DEPOSITOR" --rpc-url "$RPC")" \
+    --arg v "$(cast balance "$VAULT" --rpc-url "$RPC")" '{eth: {block: $b, user: $d, user_balance_wei: $u, vault_balance_wei: $v}}')"
+  for ev in 'Deposit(address,uint64,uint64,address,uint256,bytes32)' \
+            'Release(bytes32,address,address,uint256,address,uint256,bytes32)' \
+            'CheckpointFinalized(uint256,bytes32,bytes32,bytes32,uint64,uint64,bool,uint64,bytes32,uint32,uint32)'; do
+    topic="$(cast keccak "$ev")"
+    logs="$(cast logs --rpc-url "$RPC" --address "$VAULT" --from-block "$FROM" "$topic" --json 2>/dev/null \
+      | jq -c '[.[] | {block: .blockNumber, tx: .transactionHash, topics: .topics[1:], data: .data}]' 2>/dev/null)"
+    j="$(echo "$j" | jq -c --arg k "${ev%%(*}" --argjson l "${logs:-[]}" '.eth.logs[$k] = $l')"
+  done
+  if [ -n "$fresh" ]; then j="$(echo "$j" | jq -c --arg a "$fresh" --arg b "$(cast balance "$fresh" --rpc-url "$RPC")" '.eth.fresh = {address: $a, balance_wei: $b}')"; fi
+  "$BIN/seqnet-txs" --sequencer "$SEQ" --home "$W/txs-wallet-check" --bridge-account "$BRIDGE" --attest-account "$ATTEST" \
+    > "$W/chain-txs.tsv" 2> "$W/chain-txs.err"
+  txs="$(tail -n +2 "$W/chain-txs.tsv" | jq -R -s -c 'split("\n") | map(select(length > 0) | split("\t")
+    | {block: (.[0] | tonumber), tx: .[4], kind: .[5], reverted: (.[6] == "true"), program: .[7], variant: .[8], visible: .[9]})')"
+  echo "$j" | jq -c --argjson h "$(head_block)" --argjson t "${txs:-[]}" '.lez = {head: $h, txs: $t}'
+}
