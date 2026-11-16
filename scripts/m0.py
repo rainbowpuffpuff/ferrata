@@ -184,19 +184,48 @@ def check_token_program(online):
                 sources=[source])
 
 
+REAL_PROOF_ITEMS = ("update", "attestation", "claim", "burn")
+
+
+def real_proofs_verdict(summary, newest):
+    """Check 4 from a real-proofs summary (lez/scripts/real-proofs-summary.py --write): GO only when it is of the newest
+    tag, its sessions' sequencers ran without RISC0_DEV_MODE, and each of the private update, attestation, claim and
+    burn was applied with a real proof in a block final on Bedrock. Returns (verdict, value, rows)."""
+    rows = []
+    items = {i["key"]: i for i in summary.get("items", [])}
+    for key in REAL_PROOF_ITEMS:
+        i = items.get(key)
+        if not i or not i.get("found"):
+            rows.append((key, f"no record of it in {i['manifest'] if i else 'the summary'}", "not passed"))
+            continue
+        final = i.get("final_after_s")
+        rows.append((i["what"], f"{i['status']} in block {i['block']} ({i.get('bedrock_status')}"
+                     + (f", final {final:,.0f} s after it was published" if final is not None else "") + "); proven and sent in "
+                     + (fmt_s(i["prove_and_submit_s"]) if i.get("prove_and_submit_s") is not None else "?")
+                     + f"; transaction {i.get('tx_bytes') or 0:,} B, receipt {i.get('receipt_bytes') or 0:,} B",
+                     "pass" if i.get("passed") else "not passed"))
+    sessions = summary.get("sessions", {})
+    verifying = bool(sessions) and all(v.get("sequencer_dev_mode") is False for v in sessions.values())
+    rows.append(("the sequencer", "RISC0_DEV_MODE absent from its environment in every session: it verifies the receipts"
+                 if verifying else "RISC0_DEV_MODE not shown absent in every session", "" if verifying else "not passed"))
+    fake = summary.get("fake_receipt")
+    if fake:
+        rows.append(("a fake receipt of the private update", f"{fake['status']} by the sequencer", ""))
+    passed = [k for k in REAL_PROOF_ITEMS if items.get(k, {}).get("passed")]
+    tag = summary.get("tag")
+    if tag == newest and verifying and len(passed) == len(REAL_PROOF_ITEMS):
+        return ("GO", f"newest tag {newest}: the private update, attestation, claim and burn proven for real and applied by "
+                f"its sequencer in final blocks ({len(passed)} of {len(REAL_PROOF_ITEMS)})", rows)
+    missing = [k for k in REAL_PROOF_ITEMS if k not in passed]
+    why = f"the record is of {tag}" if tag != newest else ("not yet: " + ", ".join(missing) if missing else "the sequencer")
+    return ("NO-GO (open on the newest tag)",
+            f"newest tag {newest}: {len(passed)} of {len(REAL_PROOF_ITEMS)} real proofs pass; {why}", rows)
+
+
 def check_real_proofs(online):
+    """Check 4: lez/results/<newest tag>/real-proofs/summary.json, written from that tag's session records."""
     newest, source = FACTS["lez_newest_tag"]
-    rows = [
-        ("v0.4.0-rc1", "the private claim and burn proven by LEZ's wallet and settled by a devnet sequencer (EVIDENCE "
-                       "row 31; live round trip row 41); the proven update verified and applied by a live sequencer "
-                       "(docs/performance.md P.2); the private attestation proven and settled with its receipt "
-                       "verified in the harness (row 5), not on a sequencer", "partly"),
-        ("v0.4.0-rc2", "programs rebuilt unchanged, the same charges; the one real proof stopped at its 1,200 s cap "
-                       "(EVIDENCE row 22)", "not passed"),
-        ("v0.4.0-rc3", "the final programs ran on rc3's sequencer and its 0.3.5-rc.1 node; no real proof "
-                       "attempted; rc3's circuit is rc2's (EVIDENCE rows 111-112, lez/results/v0.4.0-rc3/README.md)",
-         "not passed"),
-    ]
+    rows = []
     if online:
         tags, err = ls_remote(LEZ_REPO, r"^v\d")
         if tags:
@@ -204,10 +233,15 @@ def check_real_proofs(online):
             rows.append(("newest LEZ tag (online)", newest, "" if newest == FACTS["lez_newest_tag"][0] else "NEW: re-run"))
         else:
             rows.append(("newest LEZ tag (online)", f"not read: {err}", ""))
-    verdict = "GO" if newest == "v0.4.0-rc1" else "NO-GO (open on the newest tag)"
-    return dict(verdict=verdict, value=f"newest tag {newest}: real proofs pass on v0.4.0-rc1, not yet on {newest}",
-                rows=rows + [("otherwise", "the tag's change is traced and fixed in A1", "")],
-                sources=[source, "docs/EVIDENCE.md rows 22, 27, 31, 41", "lez/RESULTS.md §10"])
+    path = os.path.join(ROOT, "lez", "results", newest, "real-proofs", "summary.json")
+    otherwise = ("otherwise", "the tag's change is traced and fixed in A1", "")
+    if not os.path.exists(path):
+        return dict(verdict="NO-GO (open on the newest tag)",
+                    value=f"newest tag {newest}: no real-proof record for it ({rel(path)})",
+                    rows=rows + [otherwise], sources=[source, rel(path)])
+    verdict, value, measured = real_proofs_verdict(load(path), newest)
+    return dict(verdict=verdict, value=value, rows=rows + measured + ([] if verdict == "GO" else [otherwise]),
+                sources=[source, rel(path), rel(os.path.join(os.path.dirname(path), "README.md"))])
 
 
 def main():
