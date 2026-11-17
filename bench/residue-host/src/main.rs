@@ -55,7 +55,17 @@ fn root(s: &str) -> Root {
 fn mainnet() -> ChainSpec {
     ChainSpec {
         preset: Preset::MAINNET,
-        versions: [[0, 0, 0, 0], [1, 0, 0, 0], [2, 0, 0, 0], [3, 0, 0, 0], [4, 0, 0, 0], [5, 0, 0, 0], [6, 0, 0, 0], [7, 0, 0, 0], [8, 0, 0, 0]],
+        versions: [
+            [0, 0, 0, 0],
+            [1, 0, 0, 0],
+            [2, 0, 0, 0],
+            [3, 0, 0, 0],
+            [4, 0, 0, 0],
+            [5, 0, 0, 0],
+            [6, 0, 0, 0],
+            [7, 0, 0, 0],
+            [8, 0, 0, 0],
+        ],
         epochs: [0, 74_240, 144_896, 194_048, 269_568, 364_032, 411_392, FAR_FUTURE_EPOCH, FAR_FUTURE_EPOCH],
     }
 }
@@ -188,7 +198,8 @@ fn cases(spec: &ChainSpec, gvr: &Root) -> Vec<Case> {
     let u0 = LightClientUpdate::decode(&fixture("update_0.ssz"), LcFork::Electra, 512).unwrap();
     let u1 = LightClientUpdate::decode(&fixture("update_1.ssz"), LcFork::Electra, 512).unwrap();
     let mut policy =
-        FinalizedStore::initialize_with(&root(TRUSTED), &bootstrap, LcFork::Electra, spec, &bls, Adoption::OnChain).unwrap();
+        FinalizedStore::initialize_with(&root(TRUSTED), &bootstrap, LcFork::Electra, spec, &bls, Adoption::OnChain)
+            .unwrap();
     policy.process_update(&u0, u0.signature_slot + 1, &ctx).unwrap();
     let store = CompactStore::of(policy.core());
     let real = signing_committee(policy.core(), &u1, spec).clone();
@@ -296,7 +307,8 @@ fn measure() {
     let run = execute(MODE_ONE_TX, &[2], &[&inp.store, &inp.update, &inp.signers, &inp.keys, &inp.c, &inp.w, &inp.c]);
     assert_eq!(run.extra, vec![0xff, 241], "a c^-1 that is not the inverse is refused (241)");
     report(&mut raw, "REFUSAL: finality update_1, folded path, c given as its own inverse", &run);
-    let run = execute(MODE_ONE_TX, &[2], &[&inp.store, &inp.update, &inp.signers, &inp.keys, &flipped, &inp.w, &inp.c_inv]);
+    let run =
+        execute(MODE_ONE_TX, &[2], &[&inp.store, &inp.update, &inp.signers, &inp.keys, &flipped, &inp.w, &inp.c_inv]);
     assert_eq!(run.extra, vec![0xff, 241], "a flipped c no longer matches its inverse (241)");
     report(&mut raw, "REFUSAL: finality update_1, folded path, c with one bit flipped", &run);
 
@@ -336,8 +348,17 @@ fn guest_check() {
         }
     }
     let mut out = String::new();
-    report(&mut out, "CHECK (d): every product of test (a), the witness check and the final exponentiation in the guest", &run);
-    writeln!(out, "(d) {} records ({valid} valid, {invalid} invalid): the guest's verdicts equal the native ones, by both paths", valid + invalid).unwrap();
+    report(
+        &mut out,
+        "CHECK (d): every product of test (a), the witness check and the final exponentiation in the guest",
+        &run,
+    );
+    writeln!(
+        out,
+        "(d) {} records ({valid} valid, {invalid} invalid): the guest's verdicts equal the native ones, by both paths",
+        valid + invalid
+    )
+    .unwrap();
     let dir = bench_dir().join("results/residue");
     fs::create_dir_all(&dir).unwrap();
     fs::write(dir.join("guest-check.txt"), &out).unwrap();

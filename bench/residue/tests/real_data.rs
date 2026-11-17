@@ -26,7 +26,7 @@ use std::{
     path::PathBuf,
 };
 
-use blst::{blst_fp12, blst_fp12_inverse, blst_fp_from_bendian};
+use blst::{blst_fp12, blst_fp12_inverse};
 use ferrata_core::{
     bls::{Aggregation, BlsBackend, Blst, FP12_BYTES as CORE_FP12_BYTES},
     fork::{ChainSpec, LcFork, Preset, FAR_FUTURE_EPOCH},
@@ -168,7 +168,17 @@ fn root(s: &str) -> Root {
 fn mainnet() -> ChainSpec {
     ChainSpec {
         preset: Preset::MAINNET,
-        versions: [[0, 0, 0, 0], [1, 0, 0, 0], [2, 0, 0, 0], [3, 0, 0, 0], [4, 0, 0, 0], [5, 0, 0, 0], [6, 0, 0, 0], [7, 0, 0, 0], [8, 0, 0, 0]],
+        versions: [
+            [0, 0, 0, 0],
+            [1, 0, 0, 0],
+            [2, 0, 0, 0],
+            [3, 0, 0, 0],
+            [4, 0, 0, 0],
+            [5, 0, 0, 0],
+            [6, 0, 0, 0],
+            [7, 0, 0, 0],
+            [8, 0, 0, 0],
+        ],
         epochs: [0, 74_240, 144_896, 194_048, 269_568, 364_032, 411_392, FAR_FUTURE_EPOCH, FAR_FUTURE_EPOCH],
     }
 }
@@ -271,8 +281,9 @@ fn every_signature_check_of_the_vectors_and_the_real_chains_agrees() {
         let compact = CompactStore::of(policy.core());
         let committee = signing_committee(policy.core(), update, &spec).clone();
         let witness_keys = SignerWitness::build(&committee, &update.sync_aggregate.bits).unwrap();
-        let mut job = steps::step1(&compact, &CompactUpdate::of(update), &witness_keys, update.signature_slot, &spec, &gvr, 1)
-            .unwrap();
+        let mut job =
+            steps::step1(&compact, &CompactUpdate::of(update), &witness_keys, update.signature_slot, &spec, &gvr, 1)
+                .unwrap();
         job.step2().unwrap();
         let Phase::FinalExp { product } = job.phase.clone() else { panic!("step 2 leaves the product") };
         let f = decode_fp12(&product).unwrap();
@@ -370,9 +381,15 @@ fn setup() -> Setup {
     let bls = Blst::new(Aggregation::Auto);
     let ctx = Context { spec: &spec, genesis_validators_root: gvr, bls: &bls };
     let (bootstrap, updates) = mainnet_data();
-    let mut policy =
-        FinalizedStore::initialize_with(&root(MAINNET_TRUSTED), &bootstrap, LcFork::Electra, &spec, &bls, Adoption::OnChain)
-            .unwrap();
+    let mut policy = FinalizedStore::initialize_with(
+        &root(MAINNET_TRUSTED),
+        &bootstrap,
+        LcFork::Electra,
+        &spec,
+        &bls,
+        Adoption::OnChain,
+    )
+    .unwrap();
     let compact_boot = CompactStore::of(policy.core());
     let committee_boot = signing_committee(policy.core(), &updates[0], &spec).clone();
     policy.process_update(&updates[0], updates[0].signature_slot + 1, &ctx).unwrap();
@@ -521,7 +538,10 @@ fn tampered_inputs_are_refused() {
     let forged_w = mul(&pow_lambda(&any_c), &inverse(&bad));
     assert!(equation_holds(&bad, &any_c, &forged_w));
     assert_eq!(check(&bad, &any_c, &forged_w), Err(Refusal::ScalingNotInFp6));
-    lines.push("necessity of w in Fp6: w = c^λ/f satisfies f·w == c^λ for an invalid f and any c; refused, ScalingNotInFp6".into());
+    lines.push(
+        "necessity of w in Fp6: w = c^λ/f satisfies f·w == c^λ for an invalid f and any c; refused, ScalingNotInFp6"
+            .into(),
+    );
     for l in &lines {
         println!("(b) {l}");
     }

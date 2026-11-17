@@ -105,7 +105,7 @@ fn random_fp12(seed: u64) -> blst_fp12 {
             chunk.copy_from_slice(&next().to_be_bytes());
         }
         b[0] &= 0x0f; // below 2^380 < p
-        // SAFETY: `b` holds the 48 bytes blst reads.
+                      // SAFETY: `b` holds the 48 bytes blst reads.
         unsafe { blst_fp_from_bendian(fp, b.as_ptr()) };
     }
     f

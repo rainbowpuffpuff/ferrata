@@ -1,0 +1,45 @@
+# cargo test --release -p residue -- --nocapture (Modal build box, 2026-11-17); summary lines
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/constants.rs (target/release/deps/constants-2b7ccf412d3b4c75)
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+     Running tests/differential.rs (target/release/deps/differential-7864b8696ae1012d)
+differential: category | cases | accepted | refused (reason: count) | valid: 3-part order: count; POLY-part 1
+  I1 invalid: signature on another message | 2000 | 0 | {"ScalingNotInFp6": 2000} | {}; 0
+  I2 invalid: signature by another key | 1000 | 0 | {"ScalingNotInFp6": 1000} | {}; 0
+  I3 invalid: random Fp12 element | 2000 | 0 | {"ScalingNotInFp6": 2000} | {}; 0
+  I4 invalid only in the r-part: valid product times an element of order r | 1000 | 0 | {"ScalingNotInFp6": 1000} | {}; 0
+  I5 edge invalid: zero, and an element of order r alone | 2 | 0 | {"ScalingNotInFp6": 1, "ZeroResidue": 1} | {}; 0
+  V1 valid signature, random key and message | 3000 | 3000 | {} | {1: 105, 3: 237, 9: 640, 27: 2018}; 0
+  V2 valid aggregate signature, 2-16 signers | 1000 | 1000 | {} | {1: 41, 3: 84, 9: 203, 27: 672}; 0
+  V3 constructed valid: x^r times an element of order dividing 27*POLY | 1000 | 1000 | {} | {1: 38, 3: 91, 9: 233, 27: 638}; 0
+  V4 edge valid: 1, pure 27*POLY, 3-part and POLY-part elements | 32 | 32 | {} | {1: 16, 9: 6, 27: 10}; 16
+differential: 11034 cases, 5032 accepted, 6002 refused; threads 32
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 22.96s
+     Running tests/fold.rs (target/release/deps/fold-1b4d0ae145ad71d1)
+fold: 2000 products (1000 valid, 1000 invalid): the Rust loop equals blst_miller_loop_n byte for byte; the folded check accepts exactly the valid ones, as the plain check and the final exponentiation; 1000 x 3 tampered witnesses refused; c = 0 refused
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.80s
+     Running tests/real_data.rs (target/release/deps/real_data-941267a3e690d544)
+(b) signature: update_2's: final exponentiation refuses; witness check refuses (Err(ScalingNotInFp6) with the honest witness, Mismatch with update_1's)
+(b) message: the attested header's proposer index changed: final exponentiation refuses; witness check refuses (Err(ScalingNotInFp6) with the honest witness, Mismatch with update_1's)
+(b) participants: a signer marked absent: final exponentiation refuses; witness check refuses (Err(ScalingNotInFp6) with the honest witness, Mismatch with update_1's)
+(b) participants: an absent member marked a signer: final exponentiation refuses; witness check refuses (Err(ScalingNotInFp6) with the honest witness, Mismatch with update_1's)
+(b) c: one bit flipped: refused, Mismatch
+(b) c: update_0's: refused, Mismatch
+(b) c: zero: refused, ZeroResidue
+(b) c: a coefficient plus p (non-canonical): refused, NonCanonical
+(b) w: times a cube root of unity: refused, Mismatch
+(b) w: update_0's: refused, Mismatch
+(b) w: with a coefficient outside Fp6: refused, ScalingNotInFp6
+(b) w: zero: refused, Mismatch
+(b) w: a coefficient plus p (non-canonical): refused, NonCanonical
+(b) w: one instead of the honest scaling factor: Err(Mismatch) (the honest w is one: false)
+(b) c times a cube root of unity: accepted (another valid witness; witnesses are not unique)
+(b) necessity of c != 0: c = 0, w = 0 satisfy f·w == c^λ for an invalid f; refused, ZeroResidue
+(b) necessity of w in Fp6: w = c^λ/f satisfies f·w == c^λ for an invalid f and any c; refused, ScalingNotInFp6
+(b) 15 tampered or forged inputs refused; 2 informational cases
+(a) official sync vectors (52 cases x Full and OnChain, spec and policy stores): 556 reached the pairing (556 accepted, 0 refused by it), refused before it by code {}; 105 distinct products
+(a) mainnet p1899 (5 updates, policy and spec stores): 10 signature checks reached the pairing, all accepted alike: true; the step API's product of each update: 5 accepted by both
+(a) sepolia gloas (32 period updates and a finality update, policy and spec stores): 66 signature checks reached the pairing, all accepted alike: true
+(a) total: 632 signature checks reached the pairing (632 accepted, 0 refused), the witness check agreeing on every one; 0 refused before it; 143 distinct products
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 25.34s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

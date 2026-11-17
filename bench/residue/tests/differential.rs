@@ -48,7 +48,7 @@ impl Rng {
         for fp in f.fp6.iter_mut().flat_map(|x| x.fp2.iter_mut()).flat_map(|x| x.fp.iter_mut()) {
             let mut b: [u8; 48] = self.bytes();
             b[0] &= 0x0f; // below 2^380 < p
-            // SAFETY: `b` holds the 48 bytes blst reads.
+                          // SAFETY: `b` holds the 48 bytes blst reads.
             unsafe { blst_fp_from_bendian(fp, b.as_ptr()) };
         }
         f
@@ -177,7 +177,7 @@ fn build(category: usize, index: u64) -> blst_fp12 {
             0 => one(),
             1 => small_part(&mut rng),
             2 => pow_be(&small_part(&mut rng), &POLY.to_be_bytes()), // order divides 27
-            _ => pow_be(&small_part(&mut rng), &[27]),              // order divides POLY
+            _ => pow_be(&small_part(&mut rng), &[27]),               // order divides POLY
         },
         4 => {
             let (sk, msg, other) = (rng.key(), rng.bytes::<32>(), rng.bytes::<32>());
@@ -270,7 +270,9 @@ fn the_witness_check_agrees_with_the_final_exponentiation() {
 
     let tally = tally.into_inner().unwrap();
     let (mut cases, mut accepted) = (0, 0);
-    println!("differential: category | cases | accepted | refused (reason: count) | valid: 3-part order: count; POLY-part 1");
+    println!(
+        "differential: category | cases | accepted | refused (reason: count) | valid: 3-part order: count; POLY-part 1"
+    );
     for (name, t) in &tally {
         cases += t.cases;
         accepted += t.accepted;

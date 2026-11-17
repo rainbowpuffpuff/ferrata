@@ -10,7 +10,9 @@
 
 use std::hint::black_box;
 
-use blst::{blst_fp12, blst_fp12_cyclotomic_sqr, blst_p1_affine, blst_p1_deserialize, blst_p2_affine, blst_p2_deserialize};
+use blst::{
+    blst_fp12, blst_fp12_cyclotomic_sqr, blst_p1_affine, blst_p1_deserialize, blst_p2_affine, blst_p2_deserialize,
+};
 use ferrata_core::{
     fork::{ChainSpec, Preset, FAR_FUTURE_EPOCH},
     steps::{self, Phase, StepError},
@@ -66,7 +68,17 @@ fn h32(s: &str) -> Root {
 fn mainnet() -> ChainSpec {
     ChainSpec {
         preset: Preset::MAINNET,
-        versions: [[0, 0, 0, 0], [1, 0, 0, 0], [2, 0, 0, 0], [3, 0, 0, 0], [4, 0, 0, 0], [5, 0, 0, 0], [6, 0, 0, 0], [7, 0, 0, 0], [8, 0, 0, 0]],
+        versions: [
+            [0, 0, 0, 0],
+            [1, 0, 0, 0],
+            [2, 0, 0, 0],
+            [3, 0, 0, 0],
+            [4, 0, 0, 0],
+            [5, 0, 0, 0],
+            [6, 0, 0, 0],
+            [7, 0, 0, 0],
+            [8, 0, 0, 0],
+        ],
         epochs: [0, 74_240, 144_896, 194_048, 269_568, 364_032, 411_392, FAR_FUTURE_EPOCH, FAR_FUTURE_EPOCH],
     }
 }
@@ -99,7 +111,11 @@ fn one_tx(rec: &mut Rec) -> Vec<u8> {
         (read_blob(), read_blob(), read_blob(), read_blob(), read_blob(), read_blob(), read_blob());
     let t1 = env::cycle_count();
     rec.note("R  read the inputs", t1 - t0);
-    rec.note("info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)", (store_b.len() + update_b.len() + signers_b.len() + keys_b.len() + c_b.len() + w_b.len() + c_inv_b.len()) as u64);
+    rec.note(
+        "info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)",
+        (store_b.len() + update_b.len() + signers_b.len() + keys_b.len() + c_b.len() + w_b.len() + c_inv_b.len())
+            as u64,
+    );
     let result = verify(rec, path, &store_b, &update_b, &signers_b, &keys_b, &c_b, &w_b, &c_inv_b);
     let t2 = env::cycle_count();
     rec.note("T  whole update: inputs read to new store (one cycle_count delta)", t2 - t0);
@@ -146,41 +162,48 @@ fn verify(
         })
         .map_err(step)?;
     if path == 2 {
-        rec.time("S23f Miller loop with c^-1 folded in (blst lines, own loop) and the folded witness check", || -> Result<(), u16> {
-            let Phase::Miller { hm, neg_key, signature } = &job.phase else { return Err(StepError::Phase.code()) };
-            let (mut q1, mut p1, mut q2) = (blst_p2_affine::default(), blst_p1_affine::default(), blst_p2_affine::default());
-            // SAFETY: the 192- and 96-byte serializations step 1 wrote; valid destinations.
-            let ok = unsafe {
-                blst_p2_deserialize(&mut q1, hm.as_ptr()) == blst::BLST_ERROR::BLST_SUCCESS
-                    && blst_p1_deserialize(&mut p1, neg_key.as_ptr()) == blst::BLST_ERROR::BLST_SUCCESS
-                    && blst_p2_deserialize(&mut q2, signature.as_ptr()) == blst::BLST_ERROR::BLST_SUCCESS
-            };
-            if !ok {
-                return Err(Error::Malformed.code());
-            }
-            let fp12 = |b: &[u8]| -> Result<blst_fp12, u16> {
-                let a: &[u8; residue::FP12_BYTES] = b.try_into().map_err(|_| Error::Malformed.code())?;
-                residue::decode_fp12(a).ok_or(refusal_code(residue::Refusal::NonCanonical))
-            };
-            let (c, w, c_inv) = (fp12(c_b)?, fp12(w_b)?, fp12(c_inv_b)?);
-            let (l1, l2) = (residue::fold::precompute_lines(&q1), residue::fold::precompute_lines(&q2));
-            residue::fold::check_folded(&l1, &p1, &l2, &c, &c_inv, &w).map_err(refusal_code)?;
-            job.phase = Phase::Verified;
-            Ok(())
-        })?;
+        rec.time(
+            "S23f Miller loop with c^-1 folded in (blst lines, own loop) and the folded witness check",
+            || -> Result<(), u16> {
+                let Phase::Miller { hm, neg_key, signature } = &job.phase else { return Err(StepError::Phase.code()) };
+                let (mut q1, mut p1, mut q2) =
+                    (blst_p2_affine::default(), blst_p1_affine::default(), blst_p2_affine::default());
+                // SAFETY: the 192- and 96-byte serializations step 1 wrote; valid destinations.
+                let ok = unsafe {
+                    blst_p2_deserialize(&mut q1, hm.as_ptr()) == blst::BLST_ERROR::BLST_SUCCESS
+                        && blst_p1_deserialize(&mut p1, neg_key.as_ptr()) == blst::BLST_ERROR::BLST_SUCCESS
+                        && blst_p2_deserialize(&mut q2, signature.as_ptr()) == blst::BLST_ERROR::BLST_SUCCESS
+                };
+                if !ok {
+                    return Err(Error::Malformed.code());
+                }
+                let fp12 = |b: &[u8]| -> Result<blst_fp12, u16> {
+                    let a: &[u8; residue::FP12_BYTES] = b.try_into().map_err(|_| Error::Malformed.code())?;
+                    residue::decode_fp12(a).ok_or(refusal_code(residue::Refusal::NonCanonical))
+                };
+                let (c, w, c_inv) = (fp12(c_b)?, fp12(w_b)?, fp12(c_inv_b)?);
+                let (l1, l2) = (residue::fold::precompute_lines(&q1), residue::fold::precompute_lines(&q2));
+                residue::fold::check_folded(&l1, &p1, &l2, &c, &c_inv, &w).map_err(refusal_code)?;
+                job.phase = Phase::Verified;
+                Ok(())
+            },
+        )?;
     } else {
         rec.time("S2 step 2: two-pair Miller loop", || job.step2()).map_err(step)?;
     }
     if path == 1 {
-        rec.time("S3w witness check: decode c and w (canonical), c != 0, w in Fp6, f*w == c^lambda", || -> Result<(), u16> {
-            let Phase::FinalExp { product } = &job.phase else { return Err(StepError::Phase.code()) };
-            let f = residue::decode_fp12(product).ok_or(Error::Malformed.code())?;
-            let c: &[u8; residue::FP12_BYTES] = c_b.try_into().map_err(|_| Error::Malformed.code())?;
-            let w: &[u8; residue::FP12_BYTES] = w_b.try_into().map_err(|_| Error::Malformed.code())?;
-            residue::check_bytes(&f, c, w).map_err(refusal_code)?;
-            job.phase = Phase::Verified;
-            Ok(())
-        })?;
+        rec.time(
+            "S3w witness check: decode c and w (canonical), c != 0, w in Fp6, f*w == c^lambda",
+            || -> Result<(), u16> {
+                let Phase::FinalExp { product } = &job.phase else { return Err(StepError::Phase.code()) };
+                let f = residue::decode_fp12(product).ok_or(Error::Malformed.code())?;
+                let c: &[u8; residue::FP12_BYTES] = c_b.try_into().map_err(|_| Error::Malformed.code())?;
+                let w: &[u8; residue::FP12_BYTES] = w_b.try_into().map_err(|_| Error::Malformed.code())?;
+                residue::check_bytes(&f, c, w).map_err(refusal_code)?;
+                job.phase = Phase::Verified;
+                Ok(())
+            },
+        )?;
     } else if path == 0 {
         rec.time("S3 step 3: final exponentiation and check (Blst::final_half)", || job.step3()).map_err(step)?;
     }
@@ -188,15 +211,16 @@ fn verify(
         let keys: Vec<UncompressedPubkey> = rec.time("A0 the adoption keys into 96-byte arrays", || {
             keys_b.chunks_exact(96).map(|c| c.try_into().unwrap()).collect()
         });
-        rec.time("A1 adoption: 512 keys in one part (on curve, not identity, key root, sum)", || job.adopt(0, &keys, n))
-            .map_err(step)?;
+        rec.time("A1 adoption: 512 keys in one part (on curve, not identity, key root, sum)", || {
+            job.adopt(0, &keys, n)
+        })
+        .map_err(step)?;
     }
     let encoded = rec.time("J  encode the job (VerifyAll hands it to the instance)", || job.encode());
     rec.note("info: job bytes", encoded.len() as u64);
-    let (next, outcome) = rec.time("P  apply (the instance's ApplyVerified, without its decode)", || {
-        steps::apply(&stored, &job, &spec)
-    })
-    .map_err(step)?;
+    let (next, outcome) = rec
+        .time("P  apply (the instance's ApplyVerified, without its decode)", || steps::apply(&stored, &job, &spec))
+        .map_err(step)?;
     rec.note("info: adopted a committee (1 = yes)", u64::from(outcome.adopted));
     Ok(next.encode())
 }

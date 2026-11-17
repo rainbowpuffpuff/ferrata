@@ -8,9 +8,7 @@ use std::thread;
 use blst::{
     blst_fp12, blst_hash_to_g2, blst_miller_loop_n, blst_p1, blst_p1_affine, blst_p1_affine_generator, blst_p1_cneg,
     blst_p1_deserialize, blst_p1_from_affine, blst_p1_to_affine, blst_p2, blst_p2_affine, blst_p2_deserialize,
-    blst_p2_to_affine,
-    min_pk::SecretKey,
-    BLST_ERROR,
+    blst_p2_to_affine, min_pk::SecretKey, BLST_ERROR,
 };
 use residue::{
     check, decode_fp12, encode_fp12, eq, final_exp_is_one, fold, inverse, mul, one, witness, Refusal, FP12_BYTES,
