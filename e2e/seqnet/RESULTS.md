@@ -167,3 +167,14 @@ the private claim in 247.1 s and the burn in 222.9 s inside Basecamp, the sequen
 blocks 74 and 97 (transactions 256,068 and 255,031 B), and the release paid 0.000997 ETH to the fresh address. 13 of 13
 steps, 64 checks; 191 calls of the view, 162 of them polls, the longest 3,176 ms, none cut by Basecamp's 20 s.
 
+### `seqnet-basecamp-reopen-real` and `seqnet-basecamp-final-real` (17 Nov 15:57–16:17 and 16:31–16:49 UTC, `SEQNET_PROOFS=real`): the view closed and opened again while the burn was proven
+
+[`e2e/runs/seqnet-basecamp-reopen-real/`](../runs/seqnet-basecamp-reopen-real/SUMMARY.md),
+[`e2e/runs/seqnet-basecamp-final-real/`](../runs/seqnet-basecamp-final-real/SUMMARY.md). With `BASECAMP_REOPEN=1` the
+driver unloaded the view in Basecamp's Apps Inspector 6 s into the burn's real proof and loaded it again; the new view
+found the running job and completed the burn and the release, 13 of 13 each. The first run (the view of `48a3b13d`)
+found one call of the reopened view refused (a `scan` sent before it had adopted the running job), fixed in
+`3b7ffe1d`; on that final code: the claim proven in 245.9 s (LEZ block 73), the burn in 229.0 s (block 97), 196 calls of
+the two views, none cut, none refused
+([`real-proofs-jobs/final/`](../../modules/ferrata_bridge_ui/results-basecamp-roundtrip/real-proofs-jobs/final/README.md)).
+

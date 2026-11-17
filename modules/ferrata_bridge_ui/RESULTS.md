@@ -12,7 +12,11 @@ With `SEQNET_PROOFS=real`: 13 of 13 steps, 64 checks; `lez_core` proved the priv
 and the burn in 222.9 s (block 97) inside Basecamp, the sequencer verifying each receipt; the release paid 0.000997 ETH
 to the fresh address. 191 calls of the view (162 polls), the longest 3,176 ms, none cut. During each proof a second
 start of the step answered the running job, and a `scan` was refused at once. 25 pictures of Basecamp's window, two of
-a job proving and two of it settled. Ethereum stays behind the stand-in `seqnet-chain`, the vault's verifier the mock.
+a job proving and two of it settled. On the final code (`3b7ffe1d`) the round trip passed again with the view closed
+and opened again (Basecamp's Apps Inspector) 6 s into the burn's proof: the new view found the running job and
+completed the burn and the release; the first such run had found one call of the reopened view refused, which
+`3b7ffe1d` fixed ([`real-proofs-jobs/final/`](results-basecamp-roundtrip/real-proofs-jobs/final/README.md)). Ethereum
+stays behind the stand-in `seqnet-chain`, the vault's verifier the mock.
 
 ## 16 November 2026: the private round trip inside Logos Basecamp
 

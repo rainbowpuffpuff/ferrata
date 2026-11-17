@@ -1,5 +1,14 @@
 # Real proofs inside Basecamp: the whole private round trip, the claim and the burn as jobs (17 November 2026)
 
+| Run | The module and the view | What it shows | Result |
+|---|---|---|---|
+| [`final/`](final/README.md), `seqnet-basecamp-final-real` | `3b7ffe1d`, the final code | **R1 and R2**: the round trip with real proofs, and the view closed and opened again while the burn was proven | 13 of 13; the claim proven in 245.9 s, the burn in 229.0 s; the reopened view found the running job and refused nothing; 196 calls, none cut |
+| this folder, `seqnet-basecamp-jobs-real` | `48a3b13d` | **R1**, first: the round trip with real proofs | 13 of 13, 64 checks (below) |
+| [`reopen/`](reopen/README.md), `seqnet-basecamp-reopen-real` | `48a3b13d` | **R2**, first | 13 of 13; it found one refused call of the reopened view, fixed in `3b7ffe1d` |
+| [`regression/`](regression/README.md) | `48a3b13d`, `3b7ffe1d` | **R3**: the module's tests, the dev-mode round trip in Basecamp, Basecamp's ui-tests, the devnet Qt Quick Test, the view in a headless Logos Core, the module through logosctl with `"wait": true` | see there |
+
+The rest of this page is the first R1 run.
+
 **With real proofs, the user's whole private round trip ran in the mini-app inside Logos Basecamp, and no call of the
 view was cut.** `lez_core`, loaded in Basecamp, proved the private claim (247.1 s) and the private burn (222.9 s) for
 real; the LEZ sequencer, verifying every receipt (no `RISC0_DEV_MODE`), applied them in LEZ blocks 74 and 97; after the
@@ -68,7 +77,7 @@ as in [`../pictures/`](../pictures/). All data in them is the run's own (no stub
   and `tx_sender_module`; `lez_core` is patched (row 113); the operator's import, the gas drop and the checkpoint are
   `ops.sh` stand-ins; the session is opened by the test; the core modules are loaded in the Module Inspector; the
   user's waiting is the view's clock moved on (`clockOffset`), the vault's release delay anvil's.
-- **Not shown here**: the view closed and opened again while a proof is made (R2, [`../README.md`](../README.md));
+- **Not shown in this run**: the view closed and opened again while a proof is made (R2: [`final/`](final/README.md));
   a module restarted during a job (the jobs, at most 64, live in the module's memory: they are lost, and the view then
   says "Unknown job"); real proofs on the chain service's own path (`BASECAMP_LEZ=plain`: there the chain service proves,
   and a call of the view to it would wait); the claim's own random delay after a reopened view (the view keeps it in

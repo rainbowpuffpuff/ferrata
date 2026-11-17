@@ -16,7 +16,7 @@ on a view's call (still there upstream) cut nothing.
 | L1: Basecamp built; the ui module and the core modules installed and loaded in one Basecamp | **yes** | [`probe/`](probe/) (3 of 3), pictures 01–02, `run/basecamp-run.log` lines "Successfully loaded core module" |
 | L2: the view calls `ferrata_bridge_module` through Basecamp's `logos` and shows live devnet data: account, balances on both sides, registry with caps | **yes** | pictures 04–06, 11, 15; the checks "the Ethereum balance the view shows equals anvil's" and "the LEZ side of the token is shown" |
 | L3: the whole round trip driven inside Basecamp, each step checked on the chains | **yes, dev-mode proofs** | [`run/events.jsonl`](run/events.jsonl) (13 steps, 50 checks), [`run/chain-checks.jsonl`](run/chain-checks.jsonl), [`e2e/runs/seqnet-basecamp-2/`](../../../e2e/runs/seqnet-basecamp-2/SUMMARY.md) |
-| L4: the private claim and burn proven for real | **yes, 17 Nov**, with the claim and burn as jobs of the module that the view polls: 13 of 13 steps, 64 checks, the claim proven in 247.1 s and the burn in 222.9 s inside Basecamp, the release paid; 191 calls of the view, none cut. On 16 Nov, before the jobs, the view's calls were cut at 20 s and the release was not reached | "L4" below; [`real-proofs-jobs/`](real-proofs-jobs/README.md); the cut: [`l4-real-proofs/`](l4-real-proofs/README.md) |
+| L4: the private claim and burn proven for real | **yes, 17 Nov**, with the claim and burn as jobs of the module that the view polls: 13 of 13 steps, the claim and burn proven inside Basecamp (245.9 s and 229.0 s on the final code), the release paid, no call of the view cut; also with the view closed and opened again while the burn was proven. On 16 Nov, before the jobs, the view's calls were cut at 20 s and the release was not reached | "L4" below; [`real-proofs-jobs/`](real-proofs-jobs/README.md) (its [`final/`](real-proofs-jobs/final/README.md)); the cut: [`l4-real-proofs/`](l4-real-proofs/README.md) |
 | L5: pictures of Basecamp's window at each step | **yes** | [`pictures/`](pictures/), 23 PNGs, 84–200 kB each, 3.6 MB in all |
 
 ## What ran, where
@@ -130,7 +130,11 @@ settled or failed), its time and, once done, the reply the call used to carry; `
 a reply, or one opened again, finds them. The view polls every 3 s. With `SEQNET_PROOFS=real` the whole round trip
 passed in Basecamp: 13 of 13 steps, 64 checks, the claim proven in 247.1 s (LEZ block 74), the burn in 222.9 s (block
 97), the release paid 0.000997 ETH to the fresh address, and the release held for the delay the burn's job carried.
-The view made 191 calls, 162 of them polls; the longest took 3,176 ms, and none was cut. The job's thread reaches
+The view made 191 calls, 162 of them polls; the longest took 3,176 ms, and none was cut. On the final code (`3b7ffe1d`)
+the same round trip passed again with the view **closed and opened again while the burn was being proven** (Basecamp's
+Apps Inspector unloaded and loaded `ferrata_bridge_ui` 6 s into the proof): the new view found the running job in the
+module's listing and completed the burn and the release ([`real-proofs-jobs/final/`](real-proofs-jobs/final/README.md)).
+The job's thread reaches
 `lez_core` through the SDK, which runs the call on the module's Qt thread and waits there in a nested event loop that
 also answers the view's polls; this needs the method that started the job to have returned (EVIDENCE row 121).
 
