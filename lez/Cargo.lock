@@ -1458,7 +1458,9 @@ dependencies = [
  "lee",
  "lee_core",
  "methods",
+ "methods-residue-experimental",
  "programs",
+ "residue",
  "risc0-zkvm",
  "serde_json",
  "sha2 0.10.9",
@@ -1839,6 +1841,13 @@ dependencies = [
 
 [[package]]
 name = "methods"
+version = "0.1.0"
+dependencies = [
+ "risc0-build",
+]
+
+[[package]]
+name = "methods-residue-experimental"
 version = "0.1.0"
 dependencies = [
  "risc0-build",
@@ -2334,6 +2343,13 @@ name = "regex-syntax"
 version = "0.8.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dc897dd8d9e8bd1ed8cdad82b5966c3e0ecae09fb1907d58efaa013543185d0a"
+
+[[package]]
+name = "residue"
+version = "0.1.0"
+dependencies = [
+ "blst",
+]
 
 [[package]]
 name = "rfc6979"

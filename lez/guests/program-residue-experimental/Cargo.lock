@@ -795,7 +795,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "ferrata_lez"
+name = "ferrata_lez_residue_experimental"
 version = "0.1.0"
 dependencies = [
  "blst",
@@ -803,6 +803,7 @@ dependencies = [
  "ferrata-core",
  "ferrata-lez-wire",
  "lee_core",
+ "residue",
  "risc0-zkvm",
  "sha2",
  "tiny-keccak",
@@ -1526,6 +1527,13 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 3.0.10",
+]
+
+[[package]]
+name = "residue"
+version = "0.1.0"
+dependencies = [
+ "blst",
 ]
 
 [[package]]
