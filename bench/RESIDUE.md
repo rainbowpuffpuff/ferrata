@@ -500,7 +500,8 @@ At 342 signers LEZ charges 198,436 more than the bare guest's whole update (8,12
 handlers' envelope (about 6 cycles per input byte on 24,518 bytes of signer witness) and the two
 handlers after `VerifyAll`. Folded into the Miller loop (not in the copy) the bare guest saves another
 661,586 at 342, so about 7.66M on LEZ (derived, not run). The copy's image id changed with this
-change (it is printed by the test; it is not in `docs/image-ids.md`).
+change (`a097e928…` in §6's run, `adbf28c8…` in this build; both depend on the build path, and neither
+is in `docs/image-ids.md`); the deployed program's, printed by the same test, is still `816d1fef…`.
 
 ### 9.7 What an auditor must check (in addition to §7)
 
