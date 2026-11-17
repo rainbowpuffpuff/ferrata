@@ -1,0 +1,56 @@
+{
+  "open": {
+    "ok": true,
+    "result": {
+      "chain": "http://127.0.0.1:18700/",
+      "chain_id": 11155111,
+      "config_id": "0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c",
+      "depositor": "0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc",
+      "module": "ferrata_bridge_module wallet session",
+      "program": "0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d",
+      "proofs": "real",
+      "vault": "0x67ac447386f2ea14ef2fbf55ef33ce1d8f386516"
+    }
+  },
+  "lez": {
+    "ok": true,
+    "result": {
+      "calls": [
+        {
+          "method": "open",
+          "ms": 191,
+          "reply": "0"
+        },
+        {
+          "method": "get_sequencer_addr",
+          "ms": 1,
+          "reply": "http://127.0.0.1:3040/"
+        },
+        {
+          "method": "get_current_block_height",
+          "ms": 6,
+          "reply": "19"
+        },
+        {
+          "method": "list_accounts",
+          "ms": 1
+        }
+      ],
+      "plain_path": "the zone's history and Ethereum: the chain service; a send lez_core refuses goes through the chain service",
+      "private_holding": "lez_core.sync_to_block + get_account_private, beside the chain service's wallet",
+      "private_sends": "lez_core.send_generic_private_transaction_with_accounts (executed and proven by LEZ's wallet inside Logos Core)",
+      "program_bin_bytes": 592840,
+      "program_bin_sha256": "0x11d832482ff0a26c8f283edda1a35b262274c066734895c62f696394dcab6070",
+      "reads": "every bridge actor state through lez_core.get_account_public, beside the chain service's",
+      "via": "lez_core",
+      "wallet": {
+        "config": "<spike>/tmp/lez-core-v04-seq/w-basecamp-final-real/lezcore-wallet/wallet_config.json",
+        "head": "19",
+        "holds_private_0": true,
+        "private_accounts": 9,
+        "sequencer": "http://127.0.0.1:3040/",
+        "storage": "<spike>/tmp/lez-core-v04-seq/w-basecamp-final-real/lezcore-wallet/storage.json"
+      }
+    }
+  }
+}

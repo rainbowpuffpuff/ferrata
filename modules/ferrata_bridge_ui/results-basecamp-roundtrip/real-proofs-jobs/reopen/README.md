@@ -17,7 +17,8 @@ the longest 3,186 ms: its `jobs` at opening), the reopened one 85 (73 polls, the
 refreshes the positions) before it had adopted the running burn job, so it sent a `scan`, and the module refused it at
 once ("busy: job 2 (the private burn) is proving since 8 s …", 1 ms; `view-calls.json`, call 1). The next call cleared
 the banner, so picture 17d shows none. Fixed in `3b7ffe1d` (the view adopts both jobs before applying either), and the
-driver now checks that the reopened view's calls are all answered (the run on the fixed view: `../final/`). The
+driver now checks that the reopened view's calls are all answered (the run on the fixed view:
+[`../final/`](../final/README.md)). The
 reopened view had not read the registry yet (the view reads it on its Registry tab), so its burn button reads "Burn –".
 
 Pictures ([`pictures/`](pictures/)): 17b the burn's job proving in the first view; 17c the Apps Inspector with the view

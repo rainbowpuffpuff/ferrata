@@ -1,0 +1,5 @@
+[16:35:11] seqnet-chain: seqnet-chain: http://127.0.0.1:18700/ (vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516, configId 0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c, user 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC)
+[16:35:11] Basecamp: logos-basecamp b642a9aba732b80343a3a7b622dad8c65e534bdb: /nix/store/hv3jz3fhvpyr; the round trip in the mini-app (LEZ through lez_core, proofs real)
+[16:48:40] Basecamp round trip: exit 0 in 808 s: 13 passed, 0 failed
+[16:48:40] the zone: 235 transactions in blocks 1..=100
+[16:48:40] hook-basecamp: done
