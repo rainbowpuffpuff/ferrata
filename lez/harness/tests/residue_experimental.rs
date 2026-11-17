@@ -223,9 +223,17 @@ fn verify_all_message(w: &World, update: &LightClientUpdate, signers: Vec<u8>, c
     .unwrap()
 }
 
-/// The marked encoding of a `NonSigners` witness the copy reads (0xffff, then the witness).
+/// The marked encoding of a `NonSigners` witness the copy reads (0xffff, then the witness): the
+/// points summed by blst's batch addition.
 fn marked(n: &NonSigners) -> Vec<u8> {
     let mut s = vec![0xff, 0xff];
+    s.extend_from_slice(&n.encode());
+    s
+}
+
+/// The same with the marker 0xfffe: one mixed addition per non-signer, as the core.
+fn marked_chain(n: &NonSigners) -> Vec<u8> {
+    let mut s = vec![0xfe, 0xff];
     s.extend_from_slice(&n.encode());
     s
 }
@@ -409,6 +417,39 @@ fn spread(absent: usize) -> Vec<bool> {
         bits[j * 512 / absent] = false;
     }
     bits
+}
+
+/// EXPERIMENTAL: the 342-signer update of the test above, the non-signers' points summed by one
+/// mixed addition each (the core's chain, exact for any points on the curve) instead of blst's
+/// batch addition: applied, the store equal to the natively applied job's.
+#[test]
+fn a_342_signer_finality_update_with_one_multiproof_and_the_chain_of_additions() {
+    let (mut w, fake, substituted) = world_with_the_bench_committee();
+    let bits: Vec<bool> = (0..512).map(|i| i % 3 != 2).collect();
+    let u = signed_by(&w, &fake, bits);
+    let (new, _, c, wit, expected) = native_job(&w, &substituted, &u, &fake.committee);
+    let verifier = Actor::new(w.chain.payer, EXPERIMENTAL);
+    let header = header_actor(w.inst.program, &w.inst.id, u.finalized_header.beacon.slot);
+    let time = w.inst.config.slot_start_ms(u.signature_slot) + 12_000;
+    println!("| transaction | handlers run (cycles each) | execution gas | of MAX_GAS_EXEC 10M | storage gas (tx bytes) | base fee | result |");
+    println!("|---|---|---:|---:|---:|---:|---|");
+    let msg = verify_all_message(&w, &u, marked_chain(&new), &c, &wit);
+    let report = w.chain.submit(
+        "EXPERIMENTAL VerifyAll, one multiproof (chain of additions) + residue witness (finality update_1, 342 of 512 signers)",
+        verifier,
+        msg,
+        vec![verifier, w.inst.actor(), header],
+        vec![],
+        time,
+    );
+    print_report(&report);
+    assert!(report.ok(), "{:?}", report.charge.revert);
+    assert_eq!(w.inst.store(&w.chain), expected, "the store is the natively applied job's");
+    println!(
+        "342 of 512 in one transaction, chain of additions: {} execution gas ({:.1}% of MAX_GAS_EXEC)",
+        report.charge.gas_exec,
+        report.charge.gas_exec as f64 / 100_000.0
+    );
 }
 
 /// EXPERIMENTAL: the fewest signers whose finality update fits one transaction through the copy

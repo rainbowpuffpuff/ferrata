@@ -198,7 +198,7 @@ pub fn measure() {
         ("342 (170 absent at random, seed 1)".into(), random_bits(512, 170, 1), all.clone()),
     ];
     let mut worst = all.clone();
-    worst.push((2, 2));
+    worst.extend([(1, 2), (2, 2)]);
     choices.push(("342 (every third member absent: the multiproof's worst case)".into(), every_third(), worst));
     for (label, bits, runs) in choices {
         let u = signed(&b, &b.finality, bits);

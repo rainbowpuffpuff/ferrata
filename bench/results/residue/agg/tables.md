@@ -54,6 +54,7 @@
 | finality, update_1 signed by the bench's committee: 342 (every third member absent: the multiproof's worst case) | witness | multiproof + batch sum | 30956 | 3605938 | 4383280 | 0 | 86200 | 8075418 | 8120369 | 24516 | 9 |
 | finality, update_1 signed by the bench's committee: 342 (every third member absent: the multiproof's worst case) | witness folded | core (a branch per non-signer) | 469465 | 5832502 | 3722450 | 0 | 528305 | 10083257 | 10126621 | 65282 | 11 |
 | finality, update_1 signed by the bench's committee: 342 (every third member absent: the multiproof's worst case) | witness folded | multiproof + batch sum | 30956 | 3605938 | 3722450 | 0 | 86175 | 7414563 | 7458783 | 24516 | 8 |
+| finality, update_1 signed by the bench's committee: 342 (every third member absent: the multiproof's worst case) | witness | multiproof + chain sum | 30956 | 3940489 | 4383280 | 0 | 86200 | 8409969 | 8454920 | 24516 | 9 |
 | finality, update_1 signed by the bench's committee: 342 (every third member absent: the multiproof's worst case) | witness folded | multiproof + chain sum | 30956 | 3940489 | 3722450 | 0 | 86175 | 7749114 | 7793334 | 24516 | 9 |
 | period (adopts 512 keys), mainnet update_1 as served: 510 of 512 (real committee) | witness folded | core (a branch per non-signer) | 5785 | 2097419 | 3722450 | 5991991 | 66541 | 11878401 | 11935129 | 770 | 13 |
 | period (adopts 512 keys), mainnet update_1 as served: 510 of 512 (real committee) | witness folded | multiproof + batch sum | 884 | 2079758 | 3722450 | 5991991 | 61753 | 11855952 | 11913877 | 548 | 13 |

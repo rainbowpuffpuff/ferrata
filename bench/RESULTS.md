@@ -412,14 +412,16 @@ update_0, signed by the bench's committee substituted in the store except the 51
   non-signer's key, in either composition.
 * **The fewest signers that fit one transaction**: with a branch per non-signer 348 (folded) and 374
   (witness check) in the bare guest (`boundary.md`: 348 at 9,976,122, 347 at 10,001,188; 374 at
-  9,985,559, 373 at 10,010,661), and 386 through LEZ's state machine (9,985,704 execution gas; 380 to
+  9,985,559, 373 at 10,010,661), and 386 through LEZ's state machine (9,985,702 execution gas; 380 to
   385 exceed the budget); with one multiproof 342, the policy's floor, in every path that checks a
   residue witness.
 * Through LEZ's state machine (in-process harness, LEZ v0.4.0-rc1; the experimental copy of the
   program, which now also takes the non-signers as one multiproof): the 342-signer finality update in
-  one transaction was charged **8,318,805** execution gas (83.2%), applied, the store the natively
-  applied job's; with a branch per non-signer it exceeded the 10M budget; with one node of the
-  multiproof altered it was refused (exit 80). The 510-signer mainnet update: 6,606,692 (6,629,337
+  one transaction was charged **8,318,645** execution gas (83.2%), applied, the store the natively
+  applied job's (8,653,530 with the non-signers summed by the core's chain of additions, exact for any
+  points; blst's batch addition is exact for keys in G1, every Ethereum committee's: `RESIDUE.md`
+  §9.3); with a branch per non-signer it exceeded the 10M budget; with one node of the multiproof
+  altered it was refused (exit 80). The 510-signer mainnet update: 6,606,700 (6,629,335
   with a branch per non-signer in the same build).
 * Re-check: `cd bench && cargo test --release -p residue-agg && cargo build --release -p residue-host
   && ./target/release/residue-host profile && ./target/release/residue-host measure-agg &&

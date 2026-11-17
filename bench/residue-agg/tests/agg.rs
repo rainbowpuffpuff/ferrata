@@ -1085,3 +1085,119 @@ fn batch_sum_edge_cases() {
     }
     println!("batch sum: cancelling and doubling pairs (the first 32 absent sum to the identity), equal to the chain and to the signers' sum");
 }
+
+/// blst's batch addition outside G1. Its pairwise step (`HEAD` in `bulk_addition.c`) takes a pair
+/// whose x-coordinates are equal for a doubling or a cancellation, so the identity (stored as
+/// (0, 0)) paired with a point of order 3, (0, ±2), in a later round is not added correctly. Keys in
+/// G1, as every Ethereum committee's (deposits pass KeyValidate), never sum to a point of order 3;
+/// here a committee is built with one on purpose: member 0 is K + T (T = (0, 2)), member 1 is −K, and
+/// members 2 to 31 cancel in pairs, all 32 absent. The batch key then differs from the exact sum (the
+/// core's, and the chain's) by a point of order 3, and the verdict is the same: the reduced pairing is
+/// trivial on rE(Fp), which holds every point of order 3 (3 does not divide r).
+#[test]
+fn batch_sum_outside_g1_differs_by_an_order_3_point_and_keeps_the_verdict() {
+    use blst::{
+        blst_fp, blst_fp_from_bendian, blst_p1_affine_compress as compress_affine, blst_p1_affine_in_g1,
+        blst_p1_affine_on_curve, blst_p1_is_inf,
+    };
+    let (spec, gvr, store, update, current) = substituted_base();
+    // T = (0, 2): on the curve y^2 = x^3 + 4, of order 3, not in G1.
+    let mut y = blst_fp::default();
+    let mut two = [0u8; 48];
+    two[47] = 2;
+    // SAFETY: 48 bytes read.
+    unsafe { blst_fp_from_bendian(&mut y, two.as_ptr()) };
+    let t = blst_p1_affine { x: blst_fp::default(), y };
+    // SAFETY: valid points.
+    unsafe {
+        assert!(blst_p1_affine_on_curve(&t));
+        assert!(!blst_p1_affine_in_g1(&t));
+    }
+    let fake = fake_committee(512, 31);
+    let mut c = fake.committee.clone();
+    let mut k0 = blst_p1_affine::default();
+    let mut acc = blst_p1::default();
+    let mut k0t = [0u8; 48];
+    // SAFETY: valid inputs and outputs; aliasing allowed.
+    unsafe {
+        assert_eq!(blst_p1_uncompress(&mut k0, c.pubkeys[0].as_ptr()), BLST_ERROR::BLST_SUCCESS);
+        blst_p1_from_affine(&mut acc, &k0);
+        let a: *mut blst_p1 = &mut acc;
+        blst_p1_add_or_double_affine(a, a, &t);
+        blst_p1_compress(k0t.as_mut_ptr(), &acc);
+    }
+    c.pubkeys[1] = neg(&c.pubkeys[0]);
+    c.pubkeys[0] = k0t;
+    for k in 1..16 {
+        c.pubkeys[2 * k + 1] = neg(&c.pubkeys[2 * k]);
+    }
+    c.aggregate_pubkey = sum_keys(&c.pubkeys);
+    let mut p0 = blst_p1_affine::default();
+    // SAFETY: valid input and output.
+    unsafe {
+        assert_eq!(blst_p1_uncompress(&mut p0, c.pubkeys[0].as_ptr()), BLST_ERROR::BLST_SUCCESS);
+        assert!(!blst_p1_affine_in_g1(&p0), "member 0 is outside G1");
+    }
+    let store = substitute(&store, current, &c);
+    let bits: Vec<bool> = (0..512).map(|i| i >= 32).collect();
+    let signing = ferrata_spectests::testkit::FakeCommittee { keys: fake.keys.clone(), committee: c.clone() };
+    let bls = Blst::new(Aggregation::Auto);
+    let ctx = Context { spec: &spec, genesis_validators_root: gvr, bls: &bls };
+    let neg_key = |job: &Job| -> [u8; 96] {
+        let ferrata_core::steps::Phase::Miller { neg_key, .. } = &job.phase else { panic!("step 1 leaves the points") };
+        *neg_key
+    };
+    for (label, message) in
+        [("a valid signature", sync_committee_signing_root(&update, &ctx)), ("a wrong message", [7u8; 32])]
+    {
+        let mut u = update.clone();
+        u.sync_aggregate.signature = sign(&signing, &bits, &message);
+        u.sync_aggregate.bits = bits.clone();
+        let cu = CompactUpdate::of(&u);
+        let slot = u.signature_slot;
+        let old = SignerWitness::build(&c, &bits).unwrap();
+        let new = NonSigners::build(&c, &bits).unwrap();
+        let core = steps::step1(&store, &cu, &old, slot, &spec, &gvr, 1).unwrap();
+        let chain = residue_agg::step1(&store, &cu, &new, slot, &spec, &gvr, 1, Sum::Chain).unwrap();
+        let batch = residue_agg::step1(&store, &cu, &new, slot, &spec, &gvr, 1, Sum::Batch).unwrap();
+        assert_eq!(chain, core, "{label}: the chain is the core's exact sum");
+        assert_ne!(neg_key(&batch), neg_key(&core), "{label}: the batch sum differs here");
+        // The difference is a point of order 3.
+        let (mut a, mut b) = (blst_p1_affine::default(), blst_p1_affine::default());
+        let mut d = blst_p1::default();
+        // SAFETY: the 96-byte serializations step 1 wrote; valid outputs; aliasing allowed.
+        unsafe {
+            assert_eq!(blst_p1_deserialize(&mut a, neg_key(&batch).as_ptr()), BLST_ERROR::BLST_SUCCESS);
+            assert_eq!(blst_p1_deserialize(&mut b, neg_key(&core).as_ptr()), BLST_ERROR::BLST_SUCCESS);
+            let mut minus_b = blst_p1::default();
+            blst_p1_from_affine(&mut minus_b, &b);
+            blst_p1_cneg(&mut minus_b, true);
+            blst_p1_from_affine(&mut d, &a);
+            let dp: *mut blst_p1 = &mut d;
+            blst::blst_p1_add_or_double(dp, dp, &minus_b);
+            assert!(!blst_p1_is_inf(&d), "{label}: a nonzero difference");
+            let mut d_affine = blst_p1_affine::default();
+            blst_p1_to_affine(&mut d_affine, &d);
+            let mut three = d;
+            let tp: *mut blst_p1 = &mut three;
+            blst_p1_add_or_double_affine(tp, tp, &d_affine);
+            blst_p1_add_or_double_affine(tp, tp, &d_affine);
+            assert!(blst_p1_is_inf(&three), "{label}: the difference has order 3");
+            let mut x = [0u8; 48];
+            compress_affine(x.as_mut_ptr(), &d_affine);
+            assert_eq!(x[1..], [0u8; 47], "{label}: the difference is (0, ±2)");
+        }
+        // The verdict (Miller loop, final exponentiation) is the same for both keys.
+        let (mut jc, mut jb) = (core.clone(), batch.clone());
+        jc.step2().unwrap();
+        jb.step2().unwrap();
+        let (vc, vb) = (jc.step3(), jb.step3());
+        assert_eq!(vc, vb, "{label}: the same verdict");
+        assert_eq!(vc.is_ok(), label == "a valid signature", "{label}");
+    }
+    println!(
+        "batch sum outside G1: with an order-3 component in a committee's keys, the batch key differs from \
+         the exact sum by (0, ±2); the verdict is the same (a valid signature accepted, a wrong message refused, \
+         by both keys); with keys in G1 the sums are equal (the differential)"
+    );
+}

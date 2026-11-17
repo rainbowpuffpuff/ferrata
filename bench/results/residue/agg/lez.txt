@@ -1,4 +1,4 @@
-# LEZ's state machine: the experimental copy with one multiproof for the non-signers (17 Nov 2026)
+# LEZ's state machine: the experimental copy with one multiproof for the non-signers (17 Nov 2026; the run after the 0xfffe marker was added)
 
 EXPERIMENTAL, bench-only (bench/RESIDUE.md §9.6). In-process harness, LEZ v0.4.0-rc1 (lez/RESULTS.md §1), RISC Zero
 dev mode (public transactions are executed, not proven), on the Modal build box. Command:
@@ -11,23 +11,29 @@ Lines as the test printed them ("program 7MNn…" is the copy's account: its han
 | transaction | handlers run (cycles each) | execution gas | of MAX_GAS_EXEC 10M | storage gas (tx bytes) | base fee | result |
 |---|---|---:|---:|---:|---:|---|
 | EXPERIMENTAL VerifyAll, a branch per non-signer + residue witness (342 of 512) |  | 10000000 | 100.0% | 69769 | 80558152 | reverted: Execution exceeded its cycle budget of 10000000 cycles |
-| EXPERIMENTAL VerifyAll, one multiproof with one node altered (342 of 512) | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 1494948 | 1494948 | 14.9% | 29005 | 12191624 | refused: exit 80 |
-| EXPERIMENTAL VerifyAll, one multiproof + residue witness (finality update_1, 342 of 512 signers) | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 8243266 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 58187 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 17352 | 8318805 | 83.2% | 29005 | 66782480 | applied |
-342 of 512 in one transaction: 8318805 execution gas (83.2% of MAX_GAS_EXEC); the signer witness 24518 bytes (a branch per non-signer: 65282 bytes)
+| EXPERIMENTAL VerifyAll, one multiproof with one node altered (342 of 512) | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 1494785 | 1494785 | 14.9% | 29005 | 12190320 | refused: exit 80 |
+| EXPERIMENTAL VerifyAll, one multiproof + residue witness (finality update_1, 342 of 512 signers) | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 8243106 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 58187 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 17352 | 8318645 | 83.2% | 29005 | 66781200 | applied |
+342 of 512 in one transaction: 8318645 execution gas (83.2% of MAX_GAS_EXEC); the signer witness 24518 bytes (a branch per non-signer: 65282 bytes)
+
+### test a_342_signer_finality_update_with_one_multiproof_and_the_chain_of_additions
+| transaction | handlers run (cycles each) | execution gas | of MAX_GAS_EXEC 10M | storage gas (tx bytes) | base fee | result |
+|---|---|---:|---:|---:|---:|---|
+| EXPERIMENTAL VerifyAll, one multiproof (chain of additions) + residue witness (finality update_1, 342 of 512 signers) | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 8577991 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 58187 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 17352 | 8653530 | 86.5% | 29005 | 69460280 | applied |
+342 of 512 in one transaction, chain of additions: 8653530 execution gas (86.5% of MAX_GAS_EXEC)
 
 ### test a_finality_update_in_one_transaction_with_one_multiproof
 | transaction | handlers run (cycles each) | execution gas | of MAX_GAS_EXEC 10M | storage gas (tx bytes) | base fee | result |
 |---|---|---:|---:|---:|---:|---|
-| EXPERIMENTAL VerifyAll, one multiproof + residue witness (finality update_1, 510 of 512 signers) | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 6531153 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 58187 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 17352 | 6606692 | 66.1% | 5037 | 52893832 | applied |
+| EXPERIMENTAL VerifyAll, one multiproof + residue witness (finality update_1, 510 of 512 signers) | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 6531161 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 58187 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 17352 | 6606700 | 66.1% | 5037 | 52893896 | applied |
 
 ### test a_finality_update_in_one_transaction_with_the_residue_witness
-image ids in this build: experimental copy adbf28c8f9241cbc586027d7da1d4e111cd0867f35d52c538e0c5a434d07349b, deployed program 816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df
+image ids in this build: experimental copy 4f1b2fa67dd47706921a273855190c4a984230446fd39cdc8978a4cd8076caee, deployed program 816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df
 | transaction | handlers run (cycles each) | execution gas | of MAX_GAS_EXEC 10M | storage gas (tx bytes) | base fee | result |
 |---|---|---:|---:|---:|---:|---|
-| EXPERIMENTAL VerifyAll, residue witness with c tampered | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 6533045 | 6533045 | 65.3% | 5257 | 52306416 | refused: exit 40 |
-| EXPERIMENTAL VerifyAll, residue witness (finality update_1, 510 of 512 signers) | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 6553798 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 58187 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 17352 | 6629337 | 66.3% | 5257 | 53076752 | applied |
+| EXPERIMENTAL VerifyAll, residue witness with c tampered | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 6533043 | 6533043 | 65.3% | 5257 | 52306400 | refused: exit 40 |
+| EXPERIMENTAL VerifyAll, residue witness (finality update_1, 510 of 512 signers) | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 6553796 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 58187 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 17352 | 6629335 | 66.3% | 5257 | 53076736 | applied |
 | finality update in one transaction (VerifyAll) | VerifyAll 9049362 → ApplyVerified 58184 → Record 17350 | 9124896 | 91.2% | 4105 | 73032008 | applied |
-difference in execution gas, deployed minus experimental: 2495559
+difference in execution gas, deployed minus experimental: 2495561
 
 ### test the_fewest_signers_that_fit_with_a_branch_per_non_signer
 | transaction | handlers run (cycles each) | execution gas | of MAX_GAS_EXEC 10M | storage gas (tx bytes) | base fee | result |
@@ -35,9 +41,9 @@ difference in execution gas, deployed minus experimental: 2495559
 | EXPERIMENTAL VerifyAll, a branch per non-signer + residue witness (380 of 512) |  | 10000000 | 100.0% | 55177 | 80441416 | reverted: Execution exceeded its cycle budget of 10000000 cycles |
 | EXPERIMENTAL VerifyAll, a branch per non-signer + residue witness (381 of 512) |  | 10000000 | 100.0% | 54793 | 80438344 | reverted: Execution exceeded its cycle budget of 10000000 cycles |
 | EXPERIMENTAL VerifyAll, a branch per non-signer + residue witness (382 of 512) |  | 10000000 | 100.0% | 54409 | 80435272 | reverted: Execution exceeded its cycle budget of 10000000 cycles |
-| EXPERIMENTAL VerifyAll, a branch per non-signer + residue witness (383 of 512) | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 9991240 | 10000000 | 100.0% | 54025 | 80432200 | reverted: Execution exceeded its cycle budget of 8760 cycles |
-| EXPERIMENTAL VerifyAll, a branch per non-signer + residue witness (384 of 512) | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 9964027 | 10000000 | 100.0% | 53641 | 80429128 | reverted: Execution exceeded its cycle budget of 35973 cycles |
-| EXPERIMENTAL VerifyAll, a branch per non-signer + residue witness (385 of 512) | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 9937230 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 58187 | 10000000 | 100.0% | 53257 | 80426056 | reverted: Execution exceeded its cycle budget of 4583 cycles |
-| EXPERIMENTAL VerifyAll, a branch per non-signer + residue witness (386 of 512) | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 9910165 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 58187 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 17352 | 9985704 | 99.9% | 52873 | 80308616 | applied |
+| EXPERIMENTAL VerifyAll, a branch per non-signer + residue witness (383 of 512) | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 9991238 | 10000000 | 100.0% | 54025 | 80432200 | reverted: Execution exceeded its cycle budget of 8762 cycles |
+| EXPERIMENTAL VerifyAll, a branch per non-signer + residue witness (384 of 512) | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 9964025 | 10000000 | 100.0% | 53641 | 80429128 | reverted: Execution exceeded its cycle budget of 35975 cycles |
+| EXPERIMENTAL VerifyAll, a branch per non-signer + residue witness (385 of 512) | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 9937228 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 58187 | 10000000 | 100.0% | 53257 | 80426056 | reverted: Execution exceeded its cycle budget of 4585 cycles |
+| EXPERIMENTAL VerifyAll, a branch per non-signer + residue witness (386 of 512) | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 9910163 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 58187 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 17352 | 9985702 | 99.9% | 52873 | 80308600 | applied |
 fewest signers that fit one transaction with a branch per non-signer: Some(386)
-test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 38.56s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 46.04s

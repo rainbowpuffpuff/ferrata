@@ -92,7 +92,7 @@ policy accepts (342 of 512) 10,809,028 (10,147,477 folded), and an update that a
 11.9M to 16.8M: over the limit either way ([`bench/RESIDUE.md`](../bench/RESIDUE.md); EVIDENCE row
 127). With the non-signers' keys checked through one Merkle multiproof instead of a branch each (a
 non-signer then costs 9,418 cycles instead of 25,094), the 342-signer finality update fits: the
-experimental copy was charged **8,318,805** execution gas for it in one transaction (83.2%), and the
+experimental copy was charged **8,318,645** execution gas for it in one transaction (83.2%), and the
 bare guest takes 7,458,783 folded; with a branch per non-signer the fewest signers that fit are 386
 (EVIDENCE row 128, [`bench/RESIDUE.md`](../bench/RESIDUE.md) §9). A period update still does not fit.
 The deployed programs are unchanged.
