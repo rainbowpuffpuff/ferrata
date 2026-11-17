@@ -155,3 +155,8 @@ pub fn check_folded(
         Err(Refusal::Mismatch)
     }
 }
+
+// Licence note: `miller_loop` follows the schedule and the first step of blst's `miller_loop_n`
+// and `miller_loop_lines` (supranational/blst, `src/pairing.c`, Apache License 2.0), re-implemented
+// in Rust over blst's exported functions; no blst source text is copied. (This note is at the end
+// of the file so that adding it moved no line of code.)

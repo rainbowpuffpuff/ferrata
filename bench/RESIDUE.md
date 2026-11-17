@@ -248,11 +248,13 @@ numbers (§5) are over the limit already, and LEZ adds about 5.7 cycles per byte
 
 ## 8. The production change, as an option
 
-The light-client program's `VerifyAll` (the one-transaction path of milestone A1's production
-form) could take `c` and `w` and run this check in place of `Job::step3`, which would put a
-finality update at mainnet participation at about two thirds of the limit. It would cost: a new
-program image and so a new image id (`docs/image-ids.md`), a new deployment and instances (an
-immutable program cannot be changed in place), new real proofs of the private path (the M0 proofs
-were made on the current image), the witness computation in the updater (host code, milliseconds),
-and an audit of the check. It would not replace the job path, which period updates and low
-participation still need. Nothing of this is done; the deployed programs are unchanged.
+One option for milestone A1 (the light client in production form) would be the light-client
+program's update as one transaction: its `VerifyAll` would take `c` and `w` (and, folded, `c^−1`)
+and run this check in place of `Job::step3`, which would put a finality update at mainnet
+participation at about two thirds of the limit (about 60% folded). It would cost: a new program
+image and so a new image id (`docs/image-ids.md`), a new deployment and new instances (an immutable
+program cannot be changed in place), new real proofs of the private path (the M0 proofs were made
+on the current image), the witness computation in the updater (host code: three exponentiations in
+Fp12 per update, not timed here), and an audit of the check. It would not replace the job path,
+which period updates and low participation still need. Nothing of this is done; the deployed
+programs are unchanged.
