@@ -117,7 +117,7 @@ fn a_finality_update_in_one_transaction_with_the_residue_witness() {
     let time = w.inst.config.slot_start_ms(update.signature_slot) + 12_000;
 
     println!(
-        "image ids in this build (they depend on the build path): experimental copy {}, deployed program {}",
+        "image ids in this build: experimental copy {}, deployed program {}",
         image_id_hex(methods_residue_experimental::FERRATA_LEZ_RESIDUE_EXPERIMENTAL_ID),
         image_id_hex(methods::FERRATA_LEZ_ID)
     );
