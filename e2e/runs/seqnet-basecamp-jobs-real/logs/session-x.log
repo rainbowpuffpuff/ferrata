@@ -1,0 +1,16 @@
+[14:53:36] crown LEZ session x (chain stand-in)
+[14:53:37] restored generation 1 (184M)
+[14:53:37] Bedrock node up: {"cryptarchia_info":{"lib":"e3975236ba62eef61b09cc30f7fbb8dde8eca43ce409a472d2eba929e49f5c7b","lib_slot":9434175,"tip":"49633003b0922f882a22e6abf69da274dbe67053815a3ecd3eaea863641404c0","slot":9434181,"height":198,"state":"Online"},"phase":"InitialBlockDownload"}
+[14:53:40] node slot 0 is unix second 1785493027
+[14:54:04] sequencer start 1: scheduler after 24 s; its blocks fall 7 s after an epoch second
+[14:54:04] sequencer stopped (exit 0)
+[14:54:07] sequencer start 2: scheduler after 0 s; its blocks fall 9 s after an epoch second
+[14:54:07] sequencer stopped (exit 0)
+[14:54:11] sequencer start 3: scheduler after 0 s; its blocks fall 3 s after an epoch second
+[14:54:11] sequencer up, head block 19
+[14:54:11] hook ~/Downloads/software_i_built/logos-rfp/spike/ferrata-wt-lez-core-v04/e2e/seqnet/hook-basecamp.sh
+[15:07:43] driver exit 0
+[15:07:54] sequencer stopped (exit 0)
+[15:08:02] node stopped (exit 143)
+[15:08:03] saved generation 2 (218376696 bytes; head block 101)
+[15:08:04] session x: ok

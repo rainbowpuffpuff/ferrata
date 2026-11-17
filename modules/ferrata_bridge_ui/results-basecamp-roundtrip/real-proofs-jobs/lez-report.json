@@ -1,0 +1,2232 @@
+{
+  "log": [
+    {
+      "calls": [
+        {
+          "method": "open",
+          "ms": 159,
+          "reply": "0"
+        },
+        {
+          "method": "get_sequencer_addr",
+          "ms": 2,
+          "reply": "http://127.0.0.1:3040/"
+        },
+        {
+          "method": "get_current_block_height",
+          "ms": 9,
+          "reply": "19"
+        },
+        {
+          "method": "list_accounts",
+          "ms": 1
+        }
+      ],
+      "kind": "open"
+    },
+    {
+      "call": {
+        "method": "open",
+        "ms": 159,
+        "reply": "0"
+      },
+      "kind": "call"
+    },
+    {
+      "call": {
+        "method": "get_sequencer_addr",
+        "ms": 2,
+        "reply": "http://127.0.0.1:3040/"
+      },
+      "kind": "call"
+    },
+    {
+      "call": {
+        "method": "get_current_block_height",
+        "ms": 9,
+        "reply": "19"
+      },
+      "kind": "call"
+    },
+    {
+      "call": {
+        "method": "list_accounts",
+        "ms": 1
+      },
+      "kind": "call"
+    },
+    {
+      "account": "0xe629dd971612b72a39d9460a51e34f4835069ec70a15b61cec97b69f10c745c3",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 2,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "config(cid)"
+    },
+    {
+      "account": "0xf6f31c5f7fc3c9def9540bc6c5a094aff85dde07d0533e49093cd4a09f67829a",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "token(cid, ETH)"
+    },
+    {
+      "account": "0xd29ddfc72b4e49cbb2b7ff75a64856e77409ee52e73c3681e665827508698d2e",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x8a7162a5)"
+    },
+    {
+      "account": "0xaf31ba1760e14c6b3720b582aae7266ca5f4fb78f3ccde94d2f6e25455d7c89b",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xc0fe2bd9)"
+    },
+    {
+      "account": "0x5035accd68c9e64a9e0da346d144208b5e88a03cd023a02d5e2abcca019749c4",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xa9d64610)"
+    },
+    {
+      "account": "0x810f27075ab6536f718c05277636fd9cdaa331c6f80870322fe369e1f5c2b4fb",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x34cd0ca1)"
+    },
+    {
+      "account": "0x42cac3eb21382a92c9512f5b3a4d0cee797598a53e26cf90f174337a7bef4224",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xb5311784)"
+    },
+    {
+      "account": "0xe802e7177e2a2db40ff877ff3fed757631c8a784a68c9d4d812daa8a357f9e16",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x4bb3f9c5)"
+    },
+    {
+      "account": "0xa36c649638e37627fa9d532ce5d07fc1d7c1968383945b606eec5b73eeb2c91a",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xbe130503)"
+    },
+    {
+      "account": "0xad9062629c4520be0f2f838ac8c542742751b54ec1d6f60599b05c0ab740344d",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x8df690dd)"
+    },
+    {
+      "account": "0xd0029aa57943164511b1565faea8a7b0f0df439cc613c9ee5fc64366ac66fe85",
+      "bytes": 0,
+      "equal": true,
+      "head": 19,
+      "kind": "private",
+      "known": true,
+      "ms": {
+        "height": 1,
+        "read": 1,
+        "sync": 29
+      },
+      "plain_bytes": 0,
+      "sync": "0"
+    },
+    {
+      "account": "0xe629dd971612b72a39d9460a51e34f4835069ec70a15b61cec97b69f10c745c3",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "config(cid)"
+    },
+    {
+      "account": "0xf6f31c5f7fc3c9def9540bc6c5a094aff85dde07d0533e49093cd4a09f67829a",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "token(cid, ETH)"
+    },
+    {
+      "account": "0xd29ddfc72b4e49cbb2b7ff75a64856e77409ee52e73c3681e665827508698d2e",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x8a7162a5)"
+    },
+    {
+      "account": "0xaf31ba1760e14c6b3720b582aae7266ca5f4fb78f3ccde94d2f6e25455d7c89b",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xc0fe2bd9)"
+    },
+    {
+      "account": "0x5035accd68c9e64a9e0da346d144208b5e88a03cd023a02d5e2abcca019749c4",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xa9d64610)"
+    },
+    {
+      "account": "0x810f27075ab6536f718c05277636fd9cdaa331c6f80870322fe369e1f5c2b4fb",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x34cd0ca1)"
+    },
+    {
+      "account": "0x42cac3eb21382a92c9512f5b3a4d0cee797598a53e26cf90f174337a7bef4224",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xb5311784)"
+    },
+    {
+      "account": "0xe802e7177e2a2db40ff877ff3fed757631c8a784a68c9d4d812daa8a357f9e16",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x4bb3f9c5)"
+    },
+    {
+      "account": "0xa36c649638e37627fa9d532ce5d07fc1d7c1968383945b606eec5b73eeb2c91a",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xbe130503)"
+    },
+    {
+      "account": "0xad9062629c4520be0f2f838ac8c542742751b54ec1d6f60599b05c0ab740344d",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x8df690dd)"
+    },
+    {
+      "account": "0xd0029aa57943164511b1565faea8a7b0f0df439cc613c9ee5fc64366ac66fe85",
+      "bytes": 0,
+      "equal": true,
+      "head": 19,
+      "kind": "private",
+      "known": true,
+      "ms": {
+        "height": 1,
+        "read": 5,
+        "sync": 0
+      },
+      "plain_bytes": 0,
+      "sync": "0"
+    },
+    {
+      "account": "0xe629dd971612b72a39d9460a51e34f4835069ec70a15b61cec97b69f10c745c3",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 2,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "config(cid)"
+    },
+    {
+      "account": "0xf6f31c5f7fc3c9def9540bc6c5a094aff85dde07d0533e49093cd4a09f67829a",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "token(cid, ETH)"
+    },
+    {
+      "account": "0xe629dd971612b72a39d9460a51e34f4835069ec70a15b61cec97b69f10c745c3",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 2,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "config(cid)"
+    },
+    {
+      "account": "0xf6f31c5f7fc3c9def9540bc6c5a094aff85dde07d0533e49093cd4a09f67829a",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "token(cid, ETH)"
+    },
+    {
+      "account": "0xd29ddfc72b4e49cbb2b7ff75a64856e77409ee52e73c3681e665827508698d2e",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 2,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x8a7162a5)"
+    },
+    {
+      "account": "0xaf31ba1760e14c6b3720b582aae7266ca5f4fb78f3ccde94d2f6e25455d7c89b",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xc0fe2bd9)"
+    },
+    {
+      "account": "0x5035accd68c9e64a9e0da346d144208b5e88a03cd023a02d5e2abcca019749c4",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xa9d64610)"
+    },
+    {
+      "account": "0x810f27075ab6536f718c05277636fd9cdaa331c6f80870322fe369e1f5c2b4fb",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x34cd0ca1)"
+    },
+    {
+      "account": "0x42cac3eb21382a92c9512f5b3a4d0cee797598a53e26cf90f174337a7bef4224",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xb5311784)"
+    },
+    {
+      "account": "0xe802e7177e2a2db40ff877ff3fed757631c8a784a68c9d4d812daa8a357f9e16",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x4bb3f9c5)"
+    },
+    {
+      "account": "0xa36c649638e37627fa9d532ce5d07fc1d7c1968383945b606eec5b73eeb2c91a",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xbe130503)"
+    },
+    {
+      "account": "0xad9062629c4520be0f2f838ac8c542742751b54ec1d6f60599b05c0ab740344d",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x8df690dd)"
+    },
+    {
+      "account": "0xd0029aa57943164511b1565faea8a7b0f0df439cc613c9ee5fc64366ac66fe85",
+      "bytes": 0,
+      "equal": true,
+      "head": 20,
+      "kind": "private",
+      "known": true,
+      "ms": {
+        "height": 1,
+        "read": 2,
+        "sync": 2
+      },
+      "plain_bytes": 0,
+      "sync": "0"
+    },
+    {
+      "account": "0xe629dd971612b72a39d9460a51e34f4835069ec70a15b61cec97b69f10c745c3",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 2,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "config(cid)"
+    },
+    {
+      "account": "0xf6f31c5f7fc3c9def9540bc6c5a094aff85dde07d0533e49093cd4a09f67829a",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "token(cid, ETH)"
+    },
+    {
+      "account": "0xd29ddfc72b4e49cbb2b7ff75a64856e77409ee52e73c3681e665827508698d2e",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x8a7162a5)"
+    },
+    {
+      "account": "0xaf31ba1760e14c6b3720b582aae7266ca5f4fb78f3ccde94d2f6e25455d7c89b",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xc0fe2bd9)"
+    },
+    {
+      "account": "0x5035accd68c9e64a9e0da346d144208b5e88a03cd023a02d5e2abcca019749c4",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xa9d64610)"
+    },
+    {
+      "account": "0x810f27075ab6536f718c05277636fd9cdaa331c6f80870322fe369e1f5c2b4fb",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x34cd0ca1)"
+    },
+    {
+      "account": "0x42cac3eb21382a92c9512f5b3a4d0cee797598a53e26cf90f174337a7bef4224",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xb5311784)"
+    },
+    {
+      "account": "0xe802e7177e2a2db40ff877ff3fed757631c8a784a68c9d4d812daa8a357f9e16",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x4bb3f9c5)"
+    },
+    {
+      "account": "0xa36c649638e37627fa9d532ce5d07fc1d7c1968383945b606eec5b73eeb2c91a",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xbe130503)"
+    },
+    {
+      "account": "0xad9062629c4520be0f2f838ac8c542742751b54ec1d6f60599b05c0ab740344d",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x8df690dd)"
+    },
+    {
+      "account": "0xd0029aa57943164511b1565faea8a7b0f0df439cc613c9ee5fc64366ac66fe85",
+      "bytes": 0,
+      "equal": true,
+      "head": 20,
+      "kind": "private",
+      "known": true,
+      "ms": {
+        "height": 1,
+        "read": 0,
+        "sync": 0
+      },
+      "plain_bytes": 0,
+      "sync": "0"
+    },
+    {
+      "account": "0xe629dd971612b72a39d9460a51e34f4835069ec70a15b61cec97b69f10c745c3",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "config(cid)"
+    },
+    {
+      "account": "0xf6f31c5f7fc3c9def9540bc6c5a094aff85dde07d0533e49093cd4a09f67829a",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "token(cid, ETH)"
+    },
+    {
+      "account": "0xd29ddfc72b4e49cbb2b7ff75a64856e77409ee52e73c3681e665827508698d2e",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x8a7162a5)"
+    },
+    {
+      "account": "0xaf31ba1760e14c6b3720b582aae7266ca5f4fb78f3ccde94d2f6e25455d7c89b",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xc0fe2bd9)"
+    },
+    {
+      "account": "0x5035accd68c9e64a9e0da346d144208b5e88a03cd023a02d5e2abcca019749c4",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xa9d64610)"
+    },
+    {
+      "account": "0x810f27075ab6536f718c05277636fd9cdaa331c6f80870322fe369e1f5c2b4fb",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x34cd0ca1)"
+    },
+    {
+      "account": "0x42cac3eb21382a92c9512f5b3a4d0cee797598a53e26cf90f174337a7bef4224",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xb5311784)"
+    },
+    {
+      "account": "0xe802e7177e2a2db40ff877ff3fed757631c8a784a68c9d4d812daa8a357f9e16",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x4bb3f9c5)"
+    },
+    {
+      "account": "0xa36c649638e37627fa9d532ce5d07fc1d7c1968383945b606eec5b73eeb2c91a",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xbe130503)"
+    },
+    {
+      "account": "0xad9062629c4520be0f2f838ac8c542742751b54ec1d6f60599b05c0ab740344d",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x8df690dd)"
+    },
+    {
+      "account": "0xd0029aa57943164511b1565faea8a7b0f0df439cc613c9ee5fc64366ac66fe85",
+      "bytes": 0,
+      "equal": true,
+      "head": 20,
+      "kind": "private",
+      "known": true,
+      "ms": {
+        "height": 1,
+        "read": 0,
+        "sync": 0
+      },
+      "plain_bytes": 0,
+      "sync": "0"
+    },
+    {
+      "account": "0xe629dd971612b72a39d9460a51e34f4835069ec70a15b61cec97b69f10c745c3",
+      "actor_states": 1,
+      "bytes": 564,
+      "equal": true,
+      "kind": "read",
+      "ms": 16,
+      "plain_bytes": 564,
+      "via": "lez_core.get_account_public",
+      "what": "config(cid)"
+    },
+    {
+      "account": "0xf6f31c5f7fc3c9def9540bc6c5a094aff85dde07d0533e49093cd4a09f67829a",
+      "actor_states": 1,
+      "bytes": 843,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 843,
+      "via": "lez_core.get_account_public",
+      "what": "token(cid, ETH)"
+    },
+    {
+      "account": "0xca2acbaf3226c4aca4f4398ca79c3ea7ef6a5a72142e24146b2fba6776d0109c",
+      "actor_states": 1,
+      "bytes": 117,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 117,
+      "via": "lez_core.get_account_public",
+      "what": "root(cid, 1)"
+    },
+    {
+      "account": "0xe629dd971612b72a39d9460a51e34f4835069ec70a15b61cec97b69f10c745c3",
+      "actor_states": 1,
+      "bytes": 564,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 564,
+      "via": "lez_core.get_account_public",
+      "what": "config(cid)"
+    },
+    {
+      "account": "0xf6f31c5f7fc3c9def9540bc6c5a094aff85dde07d0533e49093cd4a09f67829a",
+      "actor_states": 1,
+      "bytes": 843,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 843,
+      "via": "lez_core.get_account_public",
+      "what": "token(cid, ETH)"
+    },
+    {
+      "account": "0xca2acbaf3226c4aca4f4398ca79c3ea7ef6a5a72142e24146b2fba6776d0109c",
+      "actor_states": 1,
+      "bytes": 117,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 117,
+      "via": "lez_core.get_account_public",
+      "what": "root(cid, 1)"
+    },
+    {
+      "account": "0xd29ddfc72b4e49cbb2b7ff75a64856e77409ee52e73c3681e665827508698d2e",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x8a7162a5)"
+    },
+    {
+      "account": "0xaf31ba1760e14c6b3720b582aae7266ca5f4fb78f3ccde94d2f6e25455d7c89b",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xc0fe2bd9)"
+    },
+    {
+      "account": "0x5035accd68c9e64a9e0da346d144208b5e88a03cd023a02d5e2abcca019749c4",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xa9d64610)"
+    },
+    {
+      "account": "0x810f27075ab6536f718c05277636fd9cdaa331c6f80870322fe369e1f5c2b4fb",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x34cd0ca1)"
+    },
+    {
+      "account": "0x42cac3eb21382a92c9512f5b3a4d0cee797598a53e26cf90f174337a7bef4224",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xb5311784)"
+    },
+    {
+      "account": "0xe802e7177e2a2db40ff877ff3fed757631c8a784a68c9d4d812daa8a357f9e16",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x4bb3f9c5)"
+    },
+    {
+      "account": "0xa36c649638e37627fa9d532ce5d07fc1d7c1968383945b606eec5b73eeb2c91a",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xbe130503)"
+    },
+    {
+      "account": "0xad9062629c4520be0f2f838ac8c542742751b54ec1d6f60599b05c0ab740344d",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x8df690dd)"
+    },
+    {
+      "account": "0xd0029aa57943164511b1565faea8a7b0f0df439cc613c9ee5fc64366ac66fe85",
+      "bytes": 0,
+      "equal": true,
+      "head": 48,
+      "kind": "private",
+      "known": true,
+      "ms": {
+        "height": 1,
+        "read": 1,
+        "sync": 19
+      },
+      "plain_bytes": 0,
+      "sync": "0"
+    },
+    {
+      "account": "0xe629dd971612b72a39d9460a51e34f4835069ec70a15b61cec97b69f10c745c3",
+      "actor_states": 1,
+      "bytes": 564,
+      "equal": true,
+      "kind": "read",
+      "ms": 2,
+      "plain_bytes": 564,
+      "via": "lez_core.get_account_public",
+      "what": "config(cid)"
+    },
+    {
+      "account": "0xf6f31c5f7fc3c9def9540bc6c5a094aff85dde07d0533e49093cd4a09f67829a",
+      "actor_states": 1,
+      "bytes": 843,
+      "equal": true,
+      "kind": "read",
+      "ms": 2,
+      "plain_bytes": 843,
+      "via": "lez_core.get_account_public",
+      "what": "token(cid, ETH)"
+    },
+    {
+      "account": "0xca2acbaf3226c4aca4f4398ca79c3ea7ef6a5a72142e24146b2fba6776d0109c",
+      "actor_states": 1,
+      "bytes": 117,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 117,
+      "via": "lez_core.get_account_public",
+      "what": "root(cid, 1)"
+    },
+    {
+      "account": "0xe629dd971612b72a39d9460a51e34f4835069ec70a15b61cec97b69f10c745c3",
+      "actor_states": 1,
+      "bytes": 564,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 564,
+      "via": "lez_core.get_account_public",
+      "what": "config(cid)"
+    },
+    {
+      "account": "0xf6f31c5f7fc3c9def9540bc6c5a094aff85dde07d0533e49093cd4a09f67829a",
+      "actor_states": 1,
+      "bytes": 843,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 843,
+      "via": "lez_core.get_account_public",
+      "what": "token(cid, ETH)"
+    },
+    {
+      "account": "0xca2acbaf3226c4aca4f4398ca79c3ea7ef6a5a72142e24146b2fba6776d0109c",
+      "actor_states": 1,
+      "bytes": 117,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 117,
+      "via": "lez_core.get_account_public",
+      "what": "root(cid, 1)"
+    },
+    {
+      "account": "0xc20652ac739e79be454663e70d38e4ab9d56797033b0d9e2bfd4ccabe3443ed2",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "nullifier(chain, vault, N)"
+    },
+    {
+      "accounts": [
+        "{\"account_id\":\"0xd0029aa57943164511b1565faea8a7b0f0df439cc613c9ee5fc64366ac66fe85\",\"kind\":\"private_owned\"}",
+        "{\"account_id\":\"0xca2acbaf3226c4aca4f4398ca79c3ea7ef6a5a72142e24146b2fba6776d0109c\",\"kind\":\"public_pda\",\"program\":\"0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d\",\"seed\":\"0x9841324986c1738609d1ce86706830ba333bddd8c3b0a15eae3c6ba7725656d6\"}",
+        "{\"account_id\":\"0xf6f31c5f7fc3c9def9540bc6c5a094aff85dde07d0533e49093cd4a09f67829a\",\"kind\":\"public_pda\",\"program\":\"0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d\",\"seed\":\"0xdb969a9d8d4c230b6834eb49fec5db23acc3fc2016b45dec7c22ee2f03968a2d\"}",
+        "{\"account_id\":\"0xe629dd971612b72a39d9460a51e34f4835069ec70a15b61cec97b69f10c745c3\",\"kind\":\"public_pda\",\"program\":\"0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d\",\"seed\":\"0x317520139f7796f663c3a78a6a7dc5fa6fda376150a062a25e0098fbf3900255\"}",
+        "{\"account_id\":\"0xc20652ac739e79be454663e70d38e4ab9d56797033b0d9e2bfd4ccabe3443ed2\",\"kind\":\"public_pda\",\"program\":\"0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d\",\"seed\":\"0xa69e5333481e537ac3b97554ae6c9619982fbd2faf574284b8727851254f4243\"}",
+        "{\"account_id\":\"0xd50f4251bfaeaf077ae7b3742fc77e38808b463842e98487fef85c513b2c4b65\",\"kind\":\"public_pda\",\"program\":\"0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d\",\"seed\":\"0x691ded1418b0a1bd5c2dee67f38c3edaddf50a28de8133a1bedce004cd7a85b8\"}"
+      ],
+      "attempt": "authorizing as LEZ's wallet API (the patched lez_core)",
+      "kind": "send",
+      "ms": 247111,
+      "reply": {
+        "error": "",
+        "secrets": [
+          "0b4e398a5d48e2e5708dd5894bc2cb3559eb35e35fee468cbc651b0d54bd85de"
+        ],
+        "success": true,
+        "tx_hash": "2b423d9077c92839370b5ad25ea3f234502f5afbb1c68c2d912e8ca33de8f0f6"
+      },
+      "sync": {
+        "ms": 1,
+        "rc": "0",
+        "to": 48
+      },
+      "what": "ClaimPrivately of leaf 0"
+    },
+    {
+      "found": true,
+      "kind": "poll",
+      "ms": 7,
+      "tx_hash": "2b423d9077c92839370b5ad25ea3f234502f5afbb1c68c2d912e8ca33de8f0f6"
+    },
+    {
+      "account": "0xd0029aa57943164511b1565faea8a7b0f0df439cc613c9ee5fc64366ac66fe85",
+      "bytes": 74,
+      "equal": true,
+      "head": 74,
+      "kind": "private",
+      "known": true,
+      "ms": {
+        "height": 1,
+        "read": 1,
+        "sync": 16
+      },
+      "plain_bytes": 74,
+      "sync": "0"
+    },
+    {
+      "account": "0xe629dd971612b72a39d9460a51e34f4835069ec70a15b61cec97b69f10c745c3",
+      "actor_states": 1,
+      "bytes": 564,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 564,
+      "via": "lez_core.get_account_public",
+      "what": "config(cid)"
+    },
+    {
+      "account": "0xf6f31c5f7fc3c9def9540bc6c5a094aff85dde07d0533e49093cd4a09f67829a",
+      "actor_states": 1,
+      "bytes": 843,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 843,
+      "via": "lez_core.get_account_public",
+      "what": "token(cid, ETH)"
+    },
+    {
+      "account": "0xca2acbaf3226c4aca4f4398ca79c3ea7ef6a5a72142e24146b2fba6776d0109c",
+      "actor_states": 1,
+      "bytes": 117,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 117,
+      "via": "lez_core.get_account_public",
+      "what": "root(cid, 1)"
+    },
+    {
+      "account": "0xd29ddfc72b4e49cbb2b7ff75a64856e77409ee52e73c3681e665827508698d2e",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x8a7162a5)"
+    },
+    {
+      "account": "0xaf31ba1760e14c6b3720b582aae7266ca5f4fb78f3ccde94d2f6e25455d7c89b",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xc0fe2bd9)"
+    },
+    {
+      "account": "0x5035accd68c9e64a9e0da346d144208b5e88a03cd023a02d5e2abcca019749c4",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xa9d64610)"
+    },
+    {
+      "account": "0x810f27075ab6536f718c05277636fd9cdaa331c6f80870322fe369e1f5c2b4fb",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x34cd0ca1)"
+    },
+    {
+      "account": "0x42cac3eb21382a92c9512f5b3a4d0cee797598a53e26cf90f174337a7bef4224",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xb5311784)"
+    },
+    {
+      "account": "0xe802e7177e2a2db40ff877ff3fed757631c8a784a68c9d4d812daa8a357f9e16",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x4bb3f9c5)"
+    },
+    {
+      "account": "0xa36c649638e37627fa9d532ce5d07fc1d7c1968383945b606eec5b73eeb2c91a",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 0,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xbe130503)"
+    },
+    {
+      "account": "0xad9062629c4520be0f2f838ac8c542742751b54ec1d6f60599b05c0ab740344d",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x8df690dd)"
+    },
+    {
+      "account": "0xd0029aa57943164511b1565faea8a7b0f0df439cc613c9ee5fc64366ac66fe85",
+      "bytes": 74,
+      "equal": true,
+      "head": 74,
+      "kind": "private",
+      "known": true,
+      "ms": {
+        "height": 1,
+        "read": 0,
+        "sync": 1
+      },
+      "plain_bytes": 74,
+      "sync": "0"
+    },
+    {
+      "account": "0xe629dd971612b72a39d9460a51e34f4835069ec70a15b61cec97b69f10c745c3",
+      "actor_states": 1,
+      "bytes": 564,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 564,
+      "via": "lez_core.get_account_public",
+      "what": "config(cid)"
+    },
+    {
+      "account": "0xf6f31c5f7fc3c9def9540bc6c5a094aff85dde07d0533e49093cd4a09f67829a",
+      "actor_states": 1,
+      "bytes": 843,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 843,
+      "via": "lez_core.get_account_public",
+      "what": "token(cid, ETH)"
+    },
+    {
+      "account": "0xca2acbaf3226c4aca4f4398ca79c3ea7ef6a5a72142e24146b2fba6776d0109c",
+      "actor_states": 1,
+      "bytes": 117,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 117,
+      "via": "lez_core.get_account_public",
+      "what": "root(cid, 1)"
+    },
+    {
+      "account": "0xd29ddfc72b4e49cbb2b7ff75a64856e77409ee52e73c3681e665827508698d2e",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x8a7162a5)"
+    },
+    {
+      "account": "0xaf31ba1760e14c6b3720b582aae7266ca5f4fb78f3ccde94d2f6e25455d7c89b",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xc0fe2bd9)"
+    },
+    {
+      "account": "0x5035accd68c9e64a9e0da346d144208b5e88a03cd023a02d5e2abcca019749c4",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xa9d64610)"
+    },
+    {
+      "account": "0x810f27075ab6536f718c05277636fd9cdaa331c6f80870322fe369e1f5c2b4fb",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x34cd0ca1)"
+    },
+    {
+      "account": "0x42cac3eb21382a92c9512f5b3a4d0cee797598a53e26cf90f174337a7bef4224",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xb5311784)"
+    },
+    {
+      "account": "0xe802e7177e2a2db40ff877ff3fed757631c8a784a68c9d4d812daa8a357f9e16",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x4bb3f9c5)"
+    },
+    {
+      "account": "0xa36c649638e37627fa9d532ce5d07fc1d7c1968383945b606eec5b73eeb2c91a",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xbe130503)"
+    },
+    {
+      "account": "0xad9062629c4520be0f2f838ac8c542742751b54ec1d6f60599b05c0ab740344d",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x8df690dd)"
+    },
+    {
+      "account": "0xd0029aa57943164511b1565faea8a7b0f0df439cc613c9ee5fc64366ac66fe85",
+      "bytes": 74,
+      "equal": true,
+      "head": 74,
+      "kind": "private",
+      "known": true,
+      "ms": {
+        "height": 1,
+        "read": 0,
+        "sync": 0
+      },
+      "plain_bytes": 74,
+      "sync": "0"
+    },
+    {
+      "account": "0xe629dd971612b72a39d9460a51e34f4835069ec70a15b61cec97b69f10c745c3",
+      "actor_states": 1,
+      "bytes": 564,
+      "equal": true,
+      "kind": "read",
+      "ms": 2,
+      "plain_bytes": 564,
+      "via": "lez_core.get_account_public",
+      "what": "config(cid)"
+    },
+    {
+      "account": "0xf6f31c5f7fc3c9def9540bc6c5a094aff85dde07d0533e49093cd4a09f67829a",
+      "actor_states": 1,
+      "bytes": 843,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 843,
+      "via": "lez_core.get_account_public",
+      "what": "token(cid, ETH)"
+    },
+    {
+      "account": "0xca2acbaf3226c4aca4f4398ca79c3ea7ef6a5a72142e24146b2fba6776d0109c",
+      "actor_states": 1,
+      "bytes": 117,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 117,
+      "via": "lez_core.get_account_public",
+      "what": "root(cid, 1)"
+    },
+    {
+      "account": "0xd29ddfc72b4e49cbb2b7ff75a64856e77409ee52e73c3681e665827508698d2e",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x8a7162a5)"
+    },
+    {
+      "account": "0xaf31ba1760e14c6b3720b582aae7266ca5f4fb78f3ccde94d2f6e25455d7c89b",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xc0fe2bd9)"
+    },
+    {
+      "account": "0x5035accd68c9e64a9e0da346d144208b5e88a03cd023a02d5e2abcca019749c4",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xa9d64610)"
+    },
+    {
+      "account": "0x810f27075ab6536f718c05277636fd9cdaa331c6f80870322fe369e1f5c2b4fb",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x34cd0ca1)"
+    },
+    {
+      "account": "0x42cac3eb21382a92c9512f5b3a4d0cee797598a53e26cf90f174337a7bef4224",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xb5311784)"
+    },
+    {
+      "account": "0xe802e7177e2a2db40ff877ff3fed757631c8a784a68c9d4d812daa8a357f9e16",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x4bb3f9c5)"
+    },
+    {
+      "account": "0xa36c649638e37627fa9d532ce5d07fc1d7c1968383945b606eec5b73eeb2c91a",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xbe130503)"
+    },
+    {
+      "account": "0xad9062629c4520be0f2f838ac8c542742751b54ec1d6f60599b05c0ab740344d",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x8df690dd)"
+    },
+    {
+      "account": "0xd0029aa57943164511b1565faea8a7b0f0df439cc613c9ee5fc64366ac66fe85",
+      "bytes": 74,
+      "equal": true,
+      "head": 74,
+      "kind": "private",
+      "known": true,
+      "ms": {
+        "height": 1,
+        "read": 0,
+        "sync": 0
+      },
+      "plain_bytes": 74,
+      "sync": "0"
+    },
+    {
+      "account": "0xd0029aa57943164511b1565faea8a7b0f0df439cc613c9ee5fc64366ac66fe85",
+      "bytes": 74,
+      "equal": true,
+      "head": 74,
+      "kind": "private",
+      "known": true,
+      "ms": {
+        "height": 1,
+        "read": 1,
+        "sync": 0
+      },
+      "plain_bytes": 74,
+      "sync": "0"
+    },
+    {
+      "account": "0xe629dd971612b72a39d9460a51e34f4835069ec70a15b61cec97b69f10c745c3",
+      "actor_states": 1,
+      "bytes": 564,
+      "equal": true,
+      "kind": "read",
+      "ms": 2,
+      "plain_bytes": 564,
+      "via": "lez_core.get_account_public",
+      "what": "config(cid)"
+    },
+    {
+      "account": "0xf6f31c5f7fc3c9def9540bc6c5a094aff85dde07d0533e49093cd4a09f67829a",
+      "actor_states": 1,
+      "bytes": 843,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 843,
+      "via": "lez_core.get_account_public",
+      "what": "token(cid, ETH)"
+    },
+    {
+      "account": "0xca2acbaf3226c4aca4f4398ca79c3ea7ef6a5a72142e24146b2fba6776d0109c",
+      "actor_states": 1,
+      "bytes": 117,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 117,
+      "via": "lez_core.get_account_public",
+      "what": "root(cid, 1)"
+    },
+    {
+      "accounts": [
+        "{\"account_id\":\"0xd0029aa57943164511b1565faea8a7b0f0df439cc613c9ee5fc64366ac66fe85\",\"kind\":\"private_owned\"}",
+        "{\"account_id\":\"0xf6f31c5f7fc3c9def9540bc6c5a094aff85dde07d0533e49093cd4a09f67829a\",\"kind\":\"public_pda\",\"program\":\"0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d\",\"seed\":\"0xdb969a9d8d4c230b6834eb49fec5db23acc3fc2016b45dec7c22ee2f03968a2d\"}",
+        "{\"account_id\":\"0xe629dd971612b72a39d9460a51e34f4835069ec70a15b61cec97b69f10c745c3\",\"kind\":\"public_pda\",\"program\":\"0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d\",\"seed\":\"0x317520139f7796f663c3a78a6a7dc5fa6fda376150a062a25e0098fbf3900255\"}",
+        "{\"account_id\":\"0x2ae69d48b8e0a3ebba4b252ddc933c3f73dbbfd0a6459c87acefcc908b4b3880\",\"kind\":\"public_pda\",\"program\":\"0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d\",\"seed\":\"0x3ebc6facd904d36a239bdbd0020dfb7f577eb9e9931ac6d41e0cc11c3da95f96\"}"
+      ],
+      "attempt": "authorizing as LEZ's wallet API (the patched lez_core)",
+      "kind": "send",
+      "ms": 222949,
+      "reply": {
+        "error": "",
+        "secrets": [
+          "e772283e2a343c3350490b97eabee228d2acd66cc1ac6bfeb393b4a97cc3bdfc"
+        ],
+        "success": true,
+        "tx_hash": "4fa1d77af4af4be2f627e7c90bc132b32151f7a355b1e5c72d60354fa6b5fb57"
+      },
+      "sync": {
+        "ms": 1,
+        "rc": "0",
+        "to": 74
+      },
+      "what": "Burn (private) with tag counter 0"
+    },
+    {
+      "found": true,
+      "kind": "poll",
+      "ms": 4,
+      "tx_hash": "4fa1d77af4af4be2f627e7c90bc132b32151f7a355b1e5c72d60354fa6b5fb57"
+    },
+    {
+      "account": "0xd0029aa57943164511b1565faea8a7b0f0df439cc613c9ee5fc64366ac66fe85",
+      "bytes": 6,
+      "equal": true,
+      "head": 97,
+      "kind": "private",
+      "known": true,
+      "ms": {
+        "height": 1,
+        "read": 1,
+        "sync": 15
+      },
+      "plain_bytes": 6,
+      "sync": "0"
+    },
+    {
+      "account": "0xe629dd971612b72a39d9460a51e34f4835069ec70a15b61cec97b69f10c745c3",
+      "actor_states": 1,
+      "bytes": 564,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 564,
+      "via": "lez_core.get_account_public",
+      "what": "config(cid)"
+    },
+    {
+      "account": "0xf6f31c5f7fc3c9def9540bc6c5a094aff85dde07d0533e49093cd4a09f67829a",
+      "actor_states": 1,
+      "bytes": 843,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 843,
+      "via": "lez_core.get_account_public",
+      "what": "token(cid, ETH)"
+    },
+    {
+      "account": "0xca2acbaf3226c4aca4f4398ca79c3ea7ef6a5a72142e24146b2fba6776d0109c",
+      "actor_states": 1,
+      "bytes": 117,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 117,
+      "via": "lez_core.get_account_public",
+      "what": "root(cid, 1)"
+    },
+    {
+      "account": "0xd29ddfc72b4e49cbb2b7ff75a64856e77409ee52e73c3681e665827508698d2e",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x8a7162a5)"
+    },
+    {
+      "account": "0xaf31ba1760e14c6b3720b582aae7266ca5f4fb78f3ccde94d2f6e25455d7c89b",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xc0fe2bd9)"
+    },
+    {
+      "account": "0x5035accd68c9e64a9e0da346d144208b5e88a03cd023a02d5e2abcca019749c4",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xa9d64610)"
+    },
+    {
+      "account": "0x810f27075ab6536f718c05277636fd9cdaa331c6f80870322fe369e1f5c2b4fb",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x34cd0ca1)"
+    },
+    {
+      "account": "0x42cac3eb21382a92c9512f5b3a4d0cee797598a53e26cf90f174337a7bef4224",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xb5311784)"
+    },
+    {
+      "account": "0xe802e7177e2a2db40ff877ff3fed757631c8a784a68c9d4d812daa8a357f9e16",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x4bb3f9c5)"
+    },
+    {
+      "account": "0xa36c649638e37627fa9d532ce5d07fc1d7c1968383945b606eec5b73eeb2c91a",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xbe130503)"
+    },
+    {
+      "account": "0xad9062629c4520be0f2f838ac8c542742751b54ec1d6f60599b05c0ab740344d",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x8df690dd)"
+    },
+    {
+      "account": "0xd0029aa57943164511b1565faea8a7b0f0df439cc613c9ee5fc64366ac66fe85",
+      "bytes": 6,
+      "equal": true,
+      "head": 97,
+      "kind": "private",
+      "known": true,
+      "ms": {
+        "height": 1,
+        "read": 0,
+        "sync": 0
+      },
+      "plain_bytes": 6,
+      "sync": "0"
+    },
+    {
+      "account": "0xe629dd971612b72a39d9460a51e34f4835069ec70a15b61cec97b69f10c745c3",
+      "actor_states": 1,
+      "bytes": 564,
+      "equal": true,
+      "kind": "read",
+      "ms": 3,
+      "plain_bytes": 564,
+      "via": "lez_core.get_account_public",
+      "what": "config(cid)"
+    },
+    {
+      "account": "0xf6f31c5f7fc3c9def9540bc6c5a094aff85dde07d0533e49093cd4a09f67829a",
+      "actor_states": 1,
+      "bytes": 843,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 843,
+      "via": "lez_core.get_account_public",
+      "what": "token(cid, ETH)"
+    },
+    {
+      "account": "0xca2acbaf3226c4aca4f4398ca79c3ea7ef6a5a72142e24146b2fba6776d0109c",
+      "actor_states": 1,
+      "bytes": 117,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 117,
+      "via": "lez_core.get_account_public",
+      "what": "root(cid, 1)"
+    },
+    {
+      "account": "0xd29ddfc72b4e49cbb2b7ff75a64856e77409ee52e73c3681e665827508698d2e",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x8a7162a5)"
+    },
+    {
+      "account": "0xaf31ba1760e14c6b3720b582aae7266ca5f4fb78f3ccde94d2f6e25455d7c89b",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xc0fe2bd9)"
+    },
+    {
+      "account": "0x5035accd68c9e64a9e0da346d144208b5e88a03cd023a02d5e2abcca019749c4",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xa9d64610)"
+    },
+    {
+      "account": "0x810f27075ab6536f718c05277636fd9cdaa331c6f80870322fe369e1f5c2b4fb",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x34cd0ca1)"
+    },
+    {
+      "account": "0x42cac3eb21382a92c9512f5b3a4d0cee797598a53e26cf90f174337a7bef4224",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xb5311784)"
+    },
+    {
+      "account": "0xe802e7177e2a2db40ff877ff3fed757631c8a784a68c9d4d812daa8a357f9e16",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x4bb3f9c5)"
+    },
+    {
+      "account": "0xa36c649638e37627fa9d532ce5d07fc1d7c1968383945b606eec5b73eeb2c91a",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xbe130503)"
+    },
+    {
+      "account": "0xad9062629c4520be0f2f838ac8c542742751b54ec1d6f60599b05c0ab740344d",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x8df690dd)"
+    },
+    {
+      "account": "0xd0029aa57943164511b1565faea8a7b0f0df439cc613c9ee5fc64366ac66fe85",
+      "bytes": 6,
+      "equal": true,
+      "head": 99,
+      "kind": "private",
+      "known": true,
+      "ms": {
+        "height": 1,
+        "read": 0,
+        "sync": 2
+      },
+      "plain_bytes": 6,
+      "sync": "0"
+    },
+    {
+      "account": "0xe629dd971612b72a39d9460a51e34f4835069ec70a15b61cec97b69f10c745c3",
+      "actor_states": 1,
+      "bytes": 564,
+      "equal": true,
+      "kind": "read",
+      "ms": 2,
+      "plain_bytes": 564,
+      "via": "lez_core.get_account_public",
+      "what": "config(cid)"
+    },
+    {
+      "account": "0xf6f31c5f7fc3c9def9540bc6c5a094aff85dde07d0533e49093cd4a09f67829a",
+      "actor_states": 1,
+      "bytes": 843,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 843,
+      "via": "lez_core.get_account_public",
+      "what": "token(cid, ETH)"
+    },
+    {
+      "account": "0xca2acbaf3226c4aca4f4398ca79c3ea7ef6a5a72142e24146b2fba6776d0109c",
+      "actor_states": 1,
+      "bytes": 117,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 117,
+      "via": "lez_core.get_account_public",
+      "what": "root(cid, 1)"
+    },
+    {
+      "account": "0xe629dd971612b72a39d9460a51e34f4835069ec70a15b61cec97b69f10c745c3",
+      "actor_states": 1,
+      "bytes": 564,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 564,
+      "via": "lez_core.get_account_public",
+      "what": "config(cid)"
+    },
+    {
+      "account": "0xf6f31c5f7fc3c9def9540bc6c5a094aff85dde07d0533e49093cd4a09f67829a",
+      "actor_states": 1,
+      "bytes": 843,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 843,
+      "via": "lez_core.get_account_public",
+      "what": "token(cid, ETH)"
+    },
+    {
+      "account": "0xca2acbaf3226c4aca4f4398ca79c3ea7ef6a5a72142e24146b2fba6776d0109c",
+      "actor_states": 1,
+      "bytes": 117,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 117,
+      "via": "lez_core.get_account_public",
+      "what": "root(cid, 1)"
+    },
+    {
+      "account": "0xd29ddfc72b4e49cbb2b7ff75a64856e77409ee52e73c3681e665827508698d2e",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x8a7162a5)"
+    },
+    {
+      "account": "0xaf31ba1760e14c6b3720b582aae7266ca5f4fb78f3ccde94d2f6e25455d7c89b",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xc0fe2bd9)"
+    },
+    {
+      "account": "0x5035accd68c9e64a9e0da346d144208b5e88a03cd023a02d5e2abcca019749c4",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xa9d64610)"
+    },
+    {
+      "account": "0x810f27075ab6536f718c05277636fd9cdaa331c6f80870322fe369e1f5c2b4fb",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x34cd0ca1)"
+    },
+    {
+      "account": "0x42cac3eb21382a92c9512f5b3a4d0cee797598a53e26cf90f174337a7bef4224",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xb5311784)"
+    },
+    {
+      "account": "0xe802e7177e2a2db40ff877ff3fed757631c8a784a68c9d4d812daa8a357f9e16",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x4bb3f9c5)"
+    },
+    {
+      "account": "0xa36c649638e37627fa9d532ce5d07fc1d7c1968383945b606eec5b73eeb2c91a",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xbe130503)"
+    },
+    {
+      "account": "0xad9062629c4520be0f2f838ac8c542742751b54ec1d6f60599b05c0ab740344d",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x8df690dd)"
+    },
+    {
+      "account": "0xd0029aa57943164511b1565faea8a7b0f0df439cc613c9ee5fc64366ac66fe85",
+      "bytes": 6,
+      "equal": true,
+      "head": 99,
+      "kind": "private",
+      "known": true,
+      "ms": {
+        "height": 1,
+        "read": 0,
+        "sync": 0
+      },
+      "plain_bytes": 6,
+      "sync": "0"
+    },
+    {
+      "account": "0xe629dd971612b72a39d9460a51e34f4835069ec70a15b61cec97b69f10c745c3",
+      "actor_states": 1,
+      "bytes": 564,
+      "equal": true,
+      "kind": "read",
+      "ms": 2,
+      "plain_bytes": 564,
+      "via": "lez_core.get_account_public",
+      "what": "config(cid)"
+    },
+    {
+      "account": "0xf6f31c5f7fc3c9def9540bc6c5a094aff85dde07d0533e49093cd4a09f67829a",
+      "actor_states": 1,
+      "bytes": 843,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 843,
+      "via": "lez_core.get_account_public",
+      "what": "token(cid, ETH)"
+    },
+    {
+      "account": "0xca2acbaf3226c4aca4f4398ca79c3ea7ef6a5a72142e24146b2fba6776d0109c",
+      "actor_states": 1,
+      "bytes": 117,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 117,
+      "via": "lez_core.get_account_public",
+      "what": "root(cid, 1)"
+    },
+    {
+      "account": "0xd29ddfc72b4e49cbb2b7ff75a64856e77409ee52e73c3681e665827508698d2e",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x8a7162a5)"
+    },
+    {
+      "account": "0xaf31ba1760e14c6b3720b582aae7266ca5f4fb78f3ccde94d2f6e25455d7c89b",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xc0fe2bd9)"
+    },
+    {
+      "account": "0x5035accd68c9e64a9e0da346d144208b5e88a03cd023a02d5e2abcca019749c4",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xa9d64610)"
+    },
+    {
+      "account": "0x810f27075ab6536f718c05277636fd9cdaa331c6f80870322fe369e1f5c2b4fb",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x34cd0ca1)"
+    },
+    {
+      "account": "0x42cac3eb21382a92c9512f5b3a4d0cee797598a53e26cf90f174337a7bef4224",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xb5311784)"
+    },
+    {
+      "account": "0xe802e7177e2a2db40ff877ff3fed757631c8a784a68c9d4d812daa8a357f9e16",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x4bb3f9c5)"
+    },
+    {
+      "account": "0xa36c649638e37627fa9d532ce5d07fc1d7c1968383945b606eec5b73eeb2c91a",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xbe130503)"
+    },
+    {
+      "account": "0xad9062629c4520be0f2f838ac8c542742751b54ec1d6f60599b05c0ab740344d",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x8df690dd)"
+    },
+    {
+      "account": "0xd0029aa57943164511b1565faea8a7b0f0df439cc613c9ee5fc64366ac66fe85",
+      "bytes": 6,
+      "equal": true,
+      "head": 100,
+      "kind": "private",
+      "known": true,
+      "ms": {
+        "height": 1,
+        "read": 0,
+        "sync": 2
+      },
+      "plain_bytes": 6,
+      "sync": "0"
+    },
+    {
+      "account": "0xe629dd971612b72a39d9460a51e34f4835069ec70a15b61cec97b69f10c745c3",
+      "actor_states": 1,
+      "bytes": 564,
+      "equal": true,
+      "kind": "read",
+      "ms": 2,
+      "plain_bytes": 564,
+      "via": "lez_core.get_account_public",
+      "what": "config(cid)"
+    },
+    {
+      "account": "0xf6f31c5f7fc3c9def9540bc6c5a094aff85dde07d0533e49093cd4a09f67829a",
+      "actor_states": 1,
+      "bytes": 843,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 843,
+      "via": "lez_core.get_account_public",
+      "what": "token(cid, ETH)"
+    },
+    {
+      "account": "0xca2acbaf3226c4aca4f4398ca79c3ea7ef6a5a72142e24146b2fba6776d0109c",
+      "actor_states": 1,
+      "bytes": 117,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 117,
+      "via": "lez_core.get_account_public",
+      "what": "root(cid, 1)"
+    },
+    {
+      "account": "0xd29ddfc72b4e49cbb2b7ff75a64856e77409ee52e73c3681e665827508698d2e",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x8a7162a5)"
+    },
+    {
+      "account": "0xaf31ba1760e14c6b3720b582aae7266ca5f4fb78f3ccde94d2f6e25455d7c89b",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xc0fe2bd9)"
+    },
+    {
+      "account": "0x5035accd68c9e64a9e0da346d144208b5e88a03cd023a02d5e2abcca019749c4",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xa9d64610)"
+    },
+    {
+      "account": "0x810f27075ab6536f718c05277636fd9cdaa331c6f80870322fe369e1f5c2b4fb",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x34cd0ca1)"
+    },
+    {
+      "account": "0x42cac3eb21382a92c9512f5b3a4d0cee797598a53e26cf90f174337a7bef4224",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xb5311784)"
+    },
+    {
+      "account": "0xe802e7177e2a2db40ff877ff3fed757631c8a784a68c9d4d812daa8a357f9e16",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x4bb3f9c5)"
+    },
+    {
+      "account": "0xa36c649638e37627fa9d532ce5d07fc1d7c1968383945b606eec5b73eeb2c91a",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0xbe130503)"
+    },
+    {
+      "account": "0xad9062629c4520be0f2f838ac8c542742751b54ec1d6f60599b05c0ab740344d",
+      "actor_states": 0,
+      "bytes": 0,
+      "equal": true,
+      "kind": "read",
+      "ms": 1,
+      "plain_bytes": 0,
+      "via": "lez_core.get_account_public",
+      "what": "holder(0x8df690dd)"
+    },
+    {
+      "account": "0xd0029aa57943164511b1565faea8a7b0f0df439cc613c9ee5fc64366ac66fe85",
+      "bytes": 6,
+      "equal": true,
+      "head": 100,
+      "kind": "private",
+      "known": true,
+      "ms": {
+        "height": 1,
+        "read": 0,
+        "sync": 1
+      },
+      "plain_bytes": 6,
+      "sync": "0"
+    }
+  ],
+  "private_reads": 17,
+  "private_reads_equal": 17,
+  "program_bin_sha256": "0x11d832482ff0a26c8f283edda1a35b262274c066734895c62f696394dcab6070",
+  "reads": 167,
+  "reads_equal": 167,
+  "reads_failed": 0,
+  "sends": 2,
+  "sends_sent": 2,
+  "via": "lez_core",
+  "wallet": {
+    "config": "<spike>/tmp/lez-core-v04-seq/w-basecamp-jobs-real/lezcore-wallet/wallet_config.json",
+    "head": "19",
+    "holds_private_0": true,
+    "private_accounts": 9,
+    "sequencer": "http://127.0.0.1:3040/",
+    "storage": "<spike>/tmp/lez-core-v04-seq/w-basecamp-jobs-real/lezcore-wallet/storage.json"
+  }
+}
