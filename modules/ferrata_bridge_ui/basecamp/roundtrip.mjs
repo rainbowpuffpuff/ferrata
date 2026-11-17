@@ -147,6 +147,8 @@ async function reopenView(app, kind) {
   check((await get(app, "connectedAccount")) === "" && (await get(app, "callLog.length")) < 10, "a fresh instance of the view (not connected, its call log new)");
   check(j.id === before.id, `the reopened view found job ${j.id} (${j.state}, ${j.elapsed_ms} ms) from the module's listing`);
   log({ reopened: kind, job: j.id, state: j.state, elapsed_ms: j.elapsed_ms });
+  const refused = (await getJson(app, "callLog")).filter((c) => !c.ok);
+  check(refused.length === 0 && (await get(app, "lastError")) === "", `the reopened view's calls all answered, none refused (${refused.map((c) => c.method + ": " + c.error).join("; ").slice(0, 200)})`);
   // The user connects the reopened view again.
   await click(app, "wallet.connect");
   await waitFor(app, async () => { if ((await get(app, "selecting")) !== true) throw new Error("not selecting"); }, 10000, "account selection");

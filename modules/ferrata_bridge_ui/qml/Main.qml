@@ -237,8 +237,12 @@ Rectangle {
             if (ok && v && v.jobs) {
                 var newest = {};
                 for (var i = 0; i < v.jobs.length; i++) newest[v.jobs[i].kind] = v.jobs[i];
-                if (newest.claim && (!claimJob || claimJob.id <= newest.claim.id)) adoptJob(newest.claim, true);
-                if (newest.burn && (!burnJob || burnJob.id <= newest.burn.id)) adoptJob(newest.burn, true);
+                // Both jobs are known before a finished one is applied: applying refreshes the positions, which must
+                // wait while the other job runs (the module refuses that read meanwhile).
+                var picked = [];
+                if (newest.claim && (!claimJob || claimJob.id <= newest.claim.id)) { claimJob = newest.claim; picked.push(newest.claim); }
+                if (newest.burn && (!burnJob || burnJob.id <= newest.burn.id)) { burnJob = newest.burn; picked.push(newest.burn); }
+                for (var k = 0; k < picked.length; k++) if (jobOver(picked[k])) applyJob(picked[k], true);
             }
             if (done) done(ok, v);
         }, true);
