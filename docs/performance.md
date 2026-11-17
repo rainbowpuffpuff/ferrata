@@ -90,7 +90,12 @@ deployed `VerifyAll` in the same build (in-process harness). Bare guest, one who
 user cycles (5,911,714 with the witness folded into the Miller loop); at the fewest signers the
 policy accepts (342 of 512) 10,809,028 (10,147,477 folded), and an update that adopts a committee
 11.9M to 16.8M: over the limit either way ([`bench/RESIDUE.md`](../bench/RESIDUE.md); EVIDENCE row
-127). The deployed programs are unchanged.
+127). With the non-signers' keys checked through one Merkle multiproof instead of a branch each (a
+non-signer then costs 9,418 cycles instead of 25,094), the 342-signer finality update fits: the
+experimental copy was charged **8,318,805** execution gas for it in one transaction (83.2%), and the
+bare guest takes 7,458,783 folded; with a branch per non-signer the fewest signers that fit are 386
+(EVIDENCE row 128, [`bench/RESIDUE.md`](../bench/RESIDUE.md) §9). A period update still does not fit.
+The deployed programs are unchanged.
 
 **Statement verification by type**: P.1's table. **Proof time and size of an attestation**: the private
 attestation of a `Transfer`, 380,577 user cycles for the consumer's two transitions plus LEZ's privacy

@@ -3,7 +3,9 @@
 (The execution layer, measured on 9 Nov 2026, has its own section below:
 "2026-11-09: the execution layer". The residue-witness check, an experimental replacement of the
 final exponentiation measured on 17 Nov 2026, has one too: "2026-11-17: one update in one
-transaction with a residue witness", and its own note, [`RESIDUE.md`](RESIDUE.md).)
+transaction with a residue witness", and its own note, [`RESIDUE.md`](RESIDUE.md); so does the
+signing key composed from one multiproof of the non-signers, measured the same evening: "2026-11-17:
+the fewest signers in one transaction".)
 
 **Former name.** Measured at commit f030475, before the project was renamed Ferrata, when the core
 was `crates/plumbline-core`; the earlier snapshot run below used commit 25aa07e. At the rename commit
@@ -377,6 +379,52 @@ box, 17 Nov 2026. Outputs: `results/residue/` ([`tables.md`](results/residue/tab
 * Re-check: `cd bench && cargo build --release -p residue-host && ./target/release/residue-host measure`
   (about a minute on the build box, guest build included; it builds only the residue guest);
   tests: `cargo test --release -p residue`.
+
+## 2026-11-17: the fewest signers in one transaction, one multiproof for the non-signers (experimental, unaudited)
+
+**Not in any deployed program; `crates/ferrata-core` unchanged.** [`RESIDUE.md`](RESIDUE.md) §9
+says what changed, why it is sound, what was tested and what an auditor must check. The signing key
+`aggregate − Σ non-signers` composed by `residue-agg` (one Merkle multiproof of all the non-signers'
+leaves instead of a branch each, the compressed key read off the uncompressed bytes, blst's batch
+addition, SHA-256 of 64 bytes as two compressions; `residue_agg::step1` is the core's `step1` with
+that one change) against the core's composition, in one bench guest (`guests/residue-agg-accel`):
+one whole update per execution as in the section below, finality update_1 against the store after
+update_0, signed by the bench's committee substituted in the store except the 510 row. Executor only
+(r0vm 3.0.5), Modal build box, 17 Nov 2026. Outputs: `results/residue/agg/` ([`tables.md`](results/residue/agg/tables.md),
+[`boundary.md`](results/residue/agg/boundary.md), `one-tx.txt`, `profile.txt`, `lez.txt`).
+
+| signers | witness folded: core / one multiproof | witness check: core / one multiproof | signer witness bytes |
+|---|---:|---:|---:|
+| 512 | 5,860,716 / 5,857,662 | 6,522,422 / 6,519,248 | 2 / 4 |
+| 510 (mainnet update_1, real committee) | 5,911,862 / 5,890,269 | 6,573,568 / 6,551,855 | 770 / 548 |
+| 450 | 7,417,118 / 6,519,708 | 8,078,824 / 7,181,294 | 23,810 / 10,532 |
+| 400 | 8,671,506 / 6,955,916 | 9,333,212 / 7,617,502 | 43,010 / 17,092 |
+| 342 (every third absent: the multiproof's most hashes) | 10,126,621 / **7,458,783** | 10,788,327 / **8,120,369** | 65,282 / 24,516 |
+
+* Execution user cycles of the whole execution; of `MAX_GAS_EXEC` (10M) at 342: 101.3% / **74.6%**
+  folded, 107.9% / **81.2%** with the witness check. With the final exponentiation the whole update
+  is still over at 342 (13,291,516 / 10,623,678). Every row with every path: `tables.md` (also 511,
+  343, 342 at random positions, and period updates).
+* A non-signer costs **9,418** cycles instead of 25,094 (this build; 25,213 in the section below):
+  per non-signer the core spends 11,778 on its branch's 9 SHA-256 nodes, 1,244 on its leaf, 4,839 on
+  one mixed addition, 2,862 decoding the key, 1,173 re-compressing it (`profile.txt`); the multiproof
+  needs at most 425 nodes for 170 non-signers instead of 1,530. No subgroup check is made on a
+  non-signer's key, in either composition.
+* **The fewest signers that fit one transaction**: with a branch per non-signer 348 (folded) and 374
+  (witness check) in the bare guest (`boundary.md`: 348 at 9,976,122, 347 at 10,001,188; 374 at
+  9,985,559, 373 at 10,010,661), and 386 through LEZ's state machine (9,985,704 execution gas; 380 to
+  385 exceed the budget); with one multiproof 342, the policy's floor, in every path that checks a
+  residue witness.
+* Through LEZ's state machine (in-process harness, LEZ v0.4.0-rc1; the experimental copy of the
+  program, which now also takes the non-signers as one multiproof): the 342-signer finality update in
+  one transaction was charged **8,318,805** execution gas (83.2%), applied, the store the natively
+  applied job's; with a branch per non-signer it exceeded the 10M budget; with one node of the
+  multiproof altered it was refused (exit 80). The 510-signer mainnet update: 6,606,692 (6,629,337
+  with a branch per non-signer in the same build).
+* Re-check: `cd bench && cargo test --release -p residue-agg && cargo build --release -p residue-host
+  && ./target/release/residue-host profile && ./target/release/residue-host measure-agg &&
+  ./target/release/residue-host boundary` (about two minutes on the build box, guest builds
+  included); LEZ: `RESIDUE.md` §9.8.
 
 ## 2026-11-09: the execution layer, with and without accelerated Keccak (commit 643e31b)
 

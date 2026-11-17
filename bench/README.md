@@ -97,6 +97,13 @@ An experimental replacement of the final exponentiation, used by no deployed pro
   LEZ program's `VerifyAll` runs it, with either final check.
 * `residue-host/`: `measure` (the table of `RESULTS.md`, into `results/residue/`) and `check`
   (test (d): the guest's verdicts on the real data's products).
+* `residue-agg/`: the signing key composed from one Merkle multiproof of all the non-signers (the
+  core's `step1` with that one change; [`RESIDUE.md`](RESIDUE.md) §9) and its tests (`tests/agg.rs`:
+  the core's `step1` compared on the vectors, the real chains and 2,288 committee/bitfield pairs;
+  refusals; forged multiproofs).
+* `guests/residue-agg-accel/`, built by `residue-methods/` beside `residue-accel`: one whole update
+  with either composition of the signing key, and the profile of a non-signer's cost;
+  `residue-host profile`, `measure-agg` and `boundary` run it (into `results/residue/agg/`).
 
 ```sh
 cd bench && export TMPDIR=$PWD/../../tmp && mkdir -p "$TMPDIR"
@@ -104,6 +111,10 @@ cargo test --release -p residue -- --nocapture         # (a)-(c); writes target/
 cargo build --release -p residue-host
 ./target/release/residue-host measure                  # results/residue/one-tx.txt, tables.md
 ./target/release/residue-host check                    # results/residue/guest-check.txt
+cargo test --release -p residue-agg -- --nocapture     # RESIDUE.md §9.5
+./target/release/residue-host profile                  # results/residue/agg/profile.txt
+./target/release/residue-host measure-agg              # results/residue/agg/one-tx.txt, tables.md
+./target/release/residue-host boundary                 # results/residue/agg/boundary.txt, boundary.md
 ```
 
 ## Notes
