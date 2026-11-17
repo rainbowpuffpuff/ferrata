@@ -25,7 +25,9 @@ machine of an experimental copy of the program (§6), made on 17 Nov 2026.
 * It does **not** fit at the worst participation the policy accepts (342 of 512), even folded: each
   of the 170 non-signers costs 25,213 cycles (its key and its Merkle branch to the committee root in
   step 1, and its 384 bytes of witness), 4.3M in all, and on LEZ its input costs about 0.37M more
-  (§6). A **period update does not fit at any participation**: adopting 512 keys costs 5,991,991
+  (§6). **With the non-signers' keys checked through one multiproof instead (§9), it fits**: LEZ's
+  state machine charged an experimental copy 8,318,805 execution gas (83.2%) for it; bare guest
+  7,458,783 folded. A **period update does not fit at any participation**: adopting 512 keys costs 5,991,991
   cycles on top of the verification.
 * The deployed program already takes a finality update in one public transaction (`VerifyAll`,
   9,124,896 execution gas at 510 of 512 here, 91.2% of the limit; `lez/RESULTS.md` §2 has 9,121,514
@@ -221,7 +223,8 @@ of what depends on it, builds the experimental guest.
 
 Not run through the state machine: the folded variant (derived: 6,629,246 − 660,640 + 576 bytes
 of `c^−1` at 5.7 cycles each ≈ 5.97M, 60% of the limit), and the 342-signer and period cases (the
-instance would need a committee whose keys we hold, from its bootstrap on): their bare-guest
+instance would need a committee whose keys we hold, from its bootstrap on; the 342-signer case was
+later run with the bench's committee written into the instance's store, §9.6): their bare-guest
 numbers (§5) are over the limit already, and LEZ adds about 5.7 cycles per byte of input (the
 342-signer finality update carries 64,512 bytes more signer witness than the 510-signer one: about
 0.37M more).
@@ -258,5 +261,265 @@ image and so a new image id (`docs/image-ids.md`), a new deployment and new inst
 program cannot be changed in place), new real proofs of the private path (the M0 proofs were made
 on the current image), the witness computation in the updater (host code: three exponentiations in
 Fp12 per update, not timed here), and an audit of the check. It would not replace the job path,
-which period updates and low participation still need. Nothing of this is done; the deployed
+which period updates still need (and low participation, unless the composition of §9 is adopted
+too). Nothing of this is done; the deployed
 programs are unchanged.
+
+## 9. The fewest signers in one transaction: one multiproof for the non-signers
+
+Measured on 17 Nov 2026, evening. **Experimental and unaudited, a bench measurement and an
+experimental copy of the program; nothing deployed changed** (no program or guest with an image id
+in `docs/image-ids.md`, and `crates/ferrata-core`, are untouched).
+
+**Verdict.** With the signing key composed from one Merkle multiproof for all the non-signers
+(`bench/residue-agg`) instead of a branch per non-signer, a finality update signed by the fewest
+members the policy accepts (342 of 512, the 170 absent members placed so that the multiproof needs
+the most hashes) fits one LEZ transaction: LEZ's state machine charged the experimental copy of the
+program **8,318,805** execution gas (**83.2%** of `MAX_GAS_EXEC`) with the residue-witness check
+(§6), and refused the same update with a branch per non-signer for exceeding the 10M budget. In the
+bare guest the whole update costs 8,120,369 user cycles with the witness check and **7,458,783**
+(74.6%) folded, against 10,788,327 and 10,126,621 with the core's composition in the same build.
+A non-signer now costs 9,418 cycles instead of 25,094. The composition makes the same checks on
+every key; §9.3 gives the argument. A period update still does not fit (13,482,391 folded at 342,
+11,913,877 at 510: the adoption of 512 keys is 5,991,991). With a branch per non-signer the fewest
+signers that fit are 386 through LEZ's state machine (bare guest: 348 folded, 374 with the witness
+check); with one multiproof every participation the policy accepts fits.
+
+### 9.1 Where a non-signer's cycles went
+
+`residue-host profile` (`results/residue/agg/profile.txt`): the parts of the core's composition
+(`steps.rs:632-666`, copied into the guest so that its parts can be timed), each run over the 170
+non-signers of the 342-signer case (every third member absent), divided by 170.
+
+| part (the core's composition) | cycles per non-signer | share |
+|---|---:|---:|
+| decode the uncompressed key: `blst_p1_deserialize` (flags, canonical, to Montgomery form 1,707, on the curve 834) | 2,862 | 13% |
+| not the identity | 110 | 0% |
+| re-compress the key (`blst_p1_affine_compress`: x out of Montgomery form, the sign of y) | 1,173 | 5% |
+| the key's SSZ leaf: SHA-256 of 64 bytes (sha2's streaming API) | 1,244 | 6% |
+| the branch: 9 SHA-256 nodes of 64 bytes (1,247 each) | 11,778 | 53% |
+| the sum: one `blst_p1_add_or_double_affine` | 4,839 | 22% |
+| bookkeeping (absent indices, count and length checks) | 44 | 0% |
+| **step 1, per non-signer** (the whole composition: 3,857,505 for 170, less the once-only 96,448) | **22,124** | |
+| read and decode its 384 bytes of witness (`SignerWitness::decode`: 469,468 for 170) | 2,762 | |
+
+There is **no subgroup check** of a non-signer's key in the core (nor of any key at adoption:
+`witness.rs`, "it leaves out the per-key subgroup check", as `check_committee_onchain`); for
+comparison, `blst_p1_affine_in_g1` would cost 352,513 cycles per key. **Nothing else depends on the
+participation**: at 512, 511, 510, 450, 400, 343 and 342 signers the Miller loop (3,275,069) and the
+final check (1,108,036; folded 3,722,450 together) are the same, the job's encoding and application
+differ by under 50 cycles, and step 1 and the witness's decoding grow by a fixed amount per
+non-signer (§9.6). Unit costs in the guest: `blst_fp_mul` 205, `blst_fp_inverse` 244 (RISC Zero's
+accelerated inversion), one SHA-256 node by sha2's streaming API 1,247, by two compressions of an
+aligned buffer 811.
+
+### 9.2 What changed
+
+`bench/residue-agg` (`src/lib.rs`), with `step1`: the core's `steps::step1` copied with one change,
+the composition of the signing key; the job it returns is the core's `Job` and the rest (`Job::step2`,
+the final check, `steps::apply`) is the core's code.
+
+1. **One multiproof** (`multiproof_root`): the leaves are computed from the supplied keys at the
+   positions of the clear bits of the bitfield; level by level from the leaves up, each known node is
+   hashed with its sibling, which is the computed node when the sibling is known too and otherwise
+   the next node of the witness; after the tree's depth (9) the one node left must be the committee's
+   key root, and every node of the witness must have been read. A node shared by several non-signers'
+   paths is hashed once: 170 non-signers need at most 425 hashes (every third member absent; any 170
+   absent members need at most Σ min(170, 2^k) over the levels = 425) instead of 1,530, and at most
+   256 witness nodes instead of 1,530.
+2. **The compressed key read off its bytes** (`compressed`): for an encoding blst has just accepted
+   (flags clear, x and y below p), the compressed key is x's 48 bytes with the compression flag and,
+   iff `y > (p − 1)/2`, the sign flag; blst gets the same bytes by converting x and y out of Montgomery
+   form.
+3. **The batch addition** (`blst_p1s_add`, blst's `bulk_addition.c`): Montgomery's trick, the
+   points added in pairs with one inversion per round; it handles a pair of equal points (doubling) and
+   of opposite points (the identity). The chain of mixed additions stays available (`Sum::Chain`) for
+   comparison.
+4. **SHA-256 of 64 bytes as two compressions** (`hash64`, `node`, `leaf`): the message and the fixed
+   padding block in one word-aligned 128-byte buffer, `sha2::compress256` (in the guest RISC Zero's
+   accelerator, one call for both blocks), instead of the streaming hasher, whose blocks RISC Zero's
+   `sha2` patch copies when they are unaligned.
+
+The witness (`NonSigners`): a `u16` key count, the keys (96 bytes each, in index order), a `u16` node
+count, the nodes (32 bytes each); strict (each count at most the committee size, the input consumed
+exactly). At 342 signers it is 22,756 to 24,516 bytes instead of 65,282.
+
+### 9.3 Why it is sound
+
+Let the store hold, for the signing committee, the key root `R` (the SSZ root of the leaves
+`L_i = SHA-256(K_i ‖ 0^16)`, `K_i` the compressed keys) and the aggregate key `A`. The core accepts
+non-signer `i`'s key `P_i` iff its encoding decodes to a point on the curve that is not the identity
+(blst's canonical decoding) and the leaf of `P_i`'s compressed form with the branch hashes to `R` at
+index `i`; the key is `A − Σ P_i`.
+
+**Claim.** If `residue_agg::signing_key` accepts, then for every absent member `i` the supplied point
+is the one the core accepts at index `i` (the curve point whose compressed form is `K_i`), unless
+SHA-256 has a collision; so the key it returns is the core's. Conversely, on the honest witness it
+accepts (completeness).
+
+**Proof.** (i) *Decoding*: `key_point` accepts exactly the encodings the core's `witness_key`
+accepts (the same blst call; the flag check refuses only encodings blst or the identity check
+refuses anyway). (ii) *Compressed form*: for those encodings x and y are below p, so x's bytes are
+its canonical encoding with the three flag bits free, and the order of y's big-endian bytes is its
+numeric order; ZCash's sign flag is "y is the larger of y and p − y", i.e. `y > (p − 1)/2`. So
+`compressed(P) = blst_p1_affine_compress(P)`. (iii) *Multiproof*: the positions of the leaves are
+the clear bits of the bitfield and the depth is fixed, so every node the verifier computes has a
+position fixed before any witness node is read. Suppose the computed root equals `R`. Going down
+from the root, a computed node equal to the true node at its position has its two children equal to
+the true children, else `SHA-256(a ‖ b) = SHA-256(A ‖ B)` with `(a, b) ≠ (A, B)` is a collision; a
+child the verifier computed is therefore the true node, whatever witness node may have stood beside
+it. By induction every computed leaf is the true leaf at its position: `SHA-256(compressed(P_i) ‖
+0^16) = L_i`, so `compressed(P_i) = K_i` (else a collision). This is the argument for one branch,
+applied to the union of the paths. (iv) *The point*: a point on the curve is determined by its
+compressed form (x, and the sign selects one of y and p − y; y = 0 has no point, as the curve's group
+over Fp has odd order). So `P_i` is the core's point for index `i`. (v) *The sum*: `blst_p1s_add`
+returns the group sum of the points (the group law is the same for points outside the subgroup);
+`A − Σ P_i` is then the core's key. (vi) *Completeness*: `multiproof_siblings` writes exactly the
+nodes `multiproof_root` reads, in its order. ∎
+
+The same refusals: a count that disagrees with the bitfield, a key that does not decode, a multiproof
+that does not give `R` or is not read to its end: `StepError::Witness` (80); an aggregate that does
+not decompress: `PubkeyInvalid`; the identity as the signing key: `SigningKeyIdentity`; as the core.
+
+**What each rule of the multiproof is for** (test `forged_multiproofs_show_why_each_rule_is_needed`):
+* *A known sibling is computed, never read.* A verifier that reads the sibling of node 40 from the
+  witness even though member 41 is absent too never looks at 41's key: the test replaces it by a point
+  chosen so that the signing key becomes an attacker's own key, puts 41's true leaf in the witness,
+  and that verifier accepts; the attacker's signature then verifies under the composed key. The real
+  verifier refuses it, with the forged and with the honest nodes.
+* *Every witness node is read.* Without it a witness with a node appended is accepted: not a forgery,
+  but a second encoding of the same witness; the real verifier refuses it.
+* *Positions from the bitfield.* A valid multiproof of other members, with their true keys, proves
+  those members; the bitfield's absent members are what must be subtracted. The real verifier,
+  computing the leaves at the bitfield's positions, refuses it.
+
+**What the store must hold** (candidate b: sum the signers or subtract the non-signers, whichever is
+fewer). Subtracting the non-signers needs the committee's key root and its aggregate key; summing the
+signers needs only the key root. The deployed store holds both (`CommitteeSummary`, 80 bytes per
+committee); the aggregate is checked at adoption to be the sum of the committee's keys
+(`AdoptionProgress::add_part`). Under the policy's floor the non-signers are at most 170 and the
+signers at least 342, so subtracting is always the smaller set: there is nothing to gain, and the
+composition stays subtractive (as the core's, `steps.rs` module documentation).
+
+**Checks considered for dropping** (candidate d). None is dropped. The on-curve check is not implied
+by the multiproof: the leaf binds only x and the sign of y, so a y off the curve with the right sign
+would pass the multiproof (test `refusals_are_the_cores`, "a key off the curve", refused by the
+on-curve check). There is no subgroup check to drop: the core makes none on a non-signer's key, and
+adoption makes none either, so the premise "keys checked when the committee was adopted" does not
+hold for the subgroup; that is the core's existing property, unchanged. The identity check is implied
+by the flag check and kept (110 cycles).
+
+### 9.4 The candidates
+
+| candidate | status | effect at 342 (per non-signer) |
+|---|---|---|
+| (a) one multiproof for all non-signers | **kept**: sound (§9.3), tested | the branch work 11,778 → 2,460 (425 hashes for 170, at 984 with bookkeeping; random positions 2,141); witness 65,282 → 24,516 bytes |
+| (b) the smaller side | nothing to gain: under the floor the non-signers are always fewer | none |
+| (c) batched affine additions | **kept**: blst's own `blst_p1s_add` | the sum 4,839 → 2,869 |
+| (c') an affine chain with one inversion per addition (inversion costs 244 cycles here) | **not done**: about 1,200 per addition by the unit costs, but new elliptic-curve code with its own edge cases to audit, for about 0.3M | estimated, not measured |
+| (d) dropping a check | **none dropped** (§9.3) | none |
+| the compressed key from the bytes | **kept**: equal to blst's on every accepted encoding | 1,173 → 307 |
+| SHA-256 as two compressions | **kept** | 1,247 → 811 per node |
+| decoding the key without blst (word-wise bytes, RISC Zero's bigint accelerator) | **not done**: more custom code for at most about 2,000 per key | not measured |
+
+### 9.5 Tests
+
+All on the Modal build box (`cargo test --release -p residue-agg`, 8 tests, 22.8 s), 17 Nov 2026;
+the existing suites unchanged and passing (`cargo test --release -p residue`; the harness's test of
+§6).
+
+| test | what | count | result |
+|---|---|---:|---|
+| constants and the hash | `(p − 1)/2` re-derived with num-bigint; `hash64`, `node`, `leaf` against SHA-256, `hash_pair`, `pubkey_leaf` | 20,000 messages | equal |
+| keys | `compressed` against `blst_p1_affine_compress` and the committed bytes on every key of 43 distinct committees (4 of the bench's, the mainnet and Sepolia committees of the fixtures) and its negation; `key_point` against the core's decoding on mutated encodings (each flag, the identity, zero, x + p, y + p, p − y, random bit flips) | 44,032 keys, 352,256 encodings | equal |
+| multiproof | round trips on leaf sets of every size at depths 1 to 10 (all, one, the last, every other, every third, a half, 40 random sets per depth); every single witness node altered, a leaf altered, a node missing, one left over, two swapped, leaves out of order, a duplicated leaf, an index beyond the tree, no leaves; the node count `2 × hashes − hashes − leaves + 1` | 459 sets, 12,255 tamperings | all round trip, all refused |
+| forgeries | the three of §9.3 | 3 | each accepted by the weakened rule, refused by `multiproof_root` |
+| step 1 = the core's | `residue_agg::step1` (batch and chain sums) against the core's `steps::step1`, job for job (the same `−key` bytes) or refusal code for refusal code: every update of the official `sync` vectors (52 cases, consensus-specs v1.7.0-beta.4), the mainnet replay (5 updates as served and as finality updates), the Sepolia chain through Gloas (32 period updates and the finality update) | 160 + 10 + 33 updates (91 + 9 + 33 accepted by step 1, 69 + 1 refused alike) | equal |
+| differential | the same comparison on (committee, bitfield) pairs: 44 committees (the 43 above and one with a negated and two duplicated keys) × 52 bitfields (342, 343, 400, 510, 511, 512 signers at random, every third absent, 170 first or last absent, the six members of the doubled and cancelling pairs absent, and random participations), on the mainnet store with the committee substituted | 2,288 pairs, 171 participations (342: 275, 343: 96, 400: 100, 510: 99, 511: 99, 512: 101) | equal |
+| refusals | another member's key, a key outside the committee, a non-signer's key twice, a negated key, a key off the curve, the compression flag, one altered node (every node of the multiproof, against a branch node for the core), a node missing, one left over, a key missing, one too many, the witness of another bitfield: the core's code (80) by both; 341 signers: `BelowSupermajority` by both; a trailing byte and a truncated witness: malformed | 268 tampered witnesses, 1 policy refusal, 2 encodings | refused alike |
+| batch sum | 16 pairs of opposite keys and 8 of equal keys absent (the first 32 sum to the identity) at 32 to 170 absent | 5 | batch = chain = the signers' sum |
+| guest | `residue-host profile`: the three compositions give the same key, `compressed` and `leaf` equal blst's and the core's on every key, the multiproof gives the key root, `node` equals `hash_pair` on a chain of 1,000 (4 bitfields); `residue-host measure-agg` and `boundary`: every one of the 69 executions gives the native new store (the signature verified with the key composed in the guest); 3 refusals in the guest (a node altered, a key outside the committee, another bitfield's witness: code 80) | 4 + 69 + 3 | pass |
+| LEZ | `lez/harness/tests/residue_experimental.rs`: 510 and 342 of 512 applied with one multiproof, the store equal to the native one; at 342 a branch per non-signer over the budget and one altered node refused (exit 80); the fewest signers that fit with a branch per non-signer | 3 tests (and the test of §6, unchanged) | pass |
+
+### 9.6 Numbers
+
+`residue-host measure-agg` (`results/residue/agg/tables.md`, `one-tx.txt`), the bench guest
+`guests/residue-agg-accel` (r0vm 3.0.5 executor; the same accelerated blst and SHA-256 as §5): one
+whole update per execution, as `VerifyAll` and `ApplyVerified`; finality update_1 against the store
+after update_0, signed by the bench's committee substituted in the store (§5's method) except the
+first row. Both compositions in the same guest build.
+
+| signers | witness folded: core, one multiproof | witness check: core, one multiproof | final exponentiation: core, one multiproof | signer witness bytes: core, multiproof |
+|---|---:|---:|---:|---:|
+| 512 | 5,860,716 / 5,857,662 | 6,522,422 / 6,519,248 | 9,025,611 / 9,022,557 | 2 / 4 |
+| 511 | 5,886,846 / 5,878,311 | 6,548,552 / 6,539,897 | 9,051,741 / 9,043,206 | 386 / 388 |
+| 510 (mainnet, real committee) | 5,911,862 / 5,890,269 | 6,573,568 / 6,551,855 | 9,076,757 / 9,055,164 | 770 / 548 |
+| 450 (62 absent at random) | 7,417,118 / 6,519,708 | 8,078,824 / 7,181,294 | 10,582,013 / 9,684,603 | 23,810 / 10,532 |
+| 400 (112 at random) | 8,671,506 / 6,955,916 | 9,333,212 / 7,617,502 | 11,836,401 / 10,120,811 | 43,010 / 17,092 |
+| 343 (169 at random) | 10,101,434 / 7,391,247 | 10,763,140 / 8,052,833 | 13,266,329 / 10,556,142 | 64,898 / 22,532 |
+| 342 (170 at random) | 10,126,502 / 7,403,007 | 10,788,208 / 8,064,593 | 13,291,397 / 10,567,902 | 65,282 / 22,756 |
+| **342 (every third absent: the most hashes)** | 10,126,621 / **7,458,783** | 10,788,327 / **8,120,369** | 13,291,516 / 10,623,678 | 65,282 / 24,516 |
+
+Execution user cycles of the whole execution (`SessionInfo::cycles`). With the core's composition
+this guest reproduces §5's figures within 549 cycles at 510 and 512 signers; at 342 it gives about
+20,800 fewer (10,126,621 against 10,147,477 folded: another guest binary). Per non-signer (342, every third
+absent, against 512): **9,418** cycles in all (step 1 9,224, decoding the witness 181, reading it 13)
+instead of 25,094 (step 1 22,298, decoding 2,760, reading 35); at random positions 9,090.
+
+**The fewest signers that fit one transaction** (`residue-host boundary`, `results/residue/agg/boundary.md`;
+absent members evenly spaced):
+
+| path | a branch per non-signer (before) | one multiproof (after) |
+|---|---|---|
+| witness folded, bare guest | **348** (9,976,122; 347: 10,001,188) | **342**, the policy's floor (7,458,783) |
+| witness check, bare guest | **374** (9,985,559; 373: 10,010,661) | **342** (8,120,369) |
+| witness check, LEZ's state machine (the copy of §6) | **386** (9,985,704 gas; 380 to 385: over the 10M budget) | **342** (8,318,805 gas) |
+| final exponentiation, bare guest | none at or below 512 | above 410 (410: 10,076,335): the final exponentiation alone is 3.6M |
+
+**Through LEZ's state machine** (`lez/harness/tests/residue_experimental.rs`, in-process harness, LEZ
+v0.4.0-rc1, as §6; output `results/residue/agg/lez.txt`): the experimental copy now also takes a
+signer witness that starts with the marker `0xffff` (a count above any committee's size, so never a
+valid `SignerWitness`) as a `NonSigners` witness, composed by `residue_agg::step1`; any other witness
+goes to the core's step 1 as before. For the 342-signer update the instance's store is given the
+bench's committee after update_0, as in the bench (§5), with LEZ's `force_insert_account`.
+
+| transaction | handlers run (cycles each) | execution gas | of `MAX_GAS_EXEC` | storage gas | result |
+|---|---|---:|---:|---:|---|
+| 342 of 512, a branch per non-signer + residue witness | `VerifyAll` | 10,000,000 | 100% | 69,769 | reverted: "Execution exceeded its cycle budget of 10000000 cycles" |
+| 342 of 512, one multiproof with one node altered | `VerifyAll` 1,494,948 | 1,494,948 | 14.9% | 29,005 | refused: exit 80 |
+| **342 of 512, one multiproof + residue witness** | `VerifyAll` 8,243,266 → `ApplyVerified` 58,187 → `Record` 17,352 | **8,318,805** | **83.2%** | 29,005 | applied; the store is the natively applied job's, the record is written |
+| 510 of 512 (mainnet), one multiproof + residue witness | `VerifyAll` 6,531,153 → 58,187 → 17,352 | 6,606,692 | 66.1% | 5,037 | applied; the store equals the native store |
+| 510 of 512 (mainnet), a branch per non-signer + residue witness (§6's transaction) | `VerifyAll` 6,553,798 → 58,187 → 17,352 | 6,629,337 | 66.3% | 5,257 | applied (§6: 6,629,246 with the copy before this change) |
+
+At 342 signers LEZ charges 198,436 more than the bare guest's whole update (8,120,369): the
+handlers' envelope (about 6 cycles per input byte on 24,518 bytes of signer witness) and the two
+handlers after `VerifyAll`. Folded into the Miller loop (not in the copy) the bare guest saves another
+661,586 at 342, so about 7.66M on LEZ (derived, not run). The copy's image id changed with this
+change (it is printed by the test; it is not in `docs/image-ids.md`).
+
+### 9.7 What an auditor must check (in addition to §7)
+
+1. `multiproof_root`: the pairing rule (a known sibling is computed, never read), the order the
+   witness is read in, that it is read to its end, the fixed depth, strictly increasing leaf indices
+   (they come from the bitfield), and `multiproof_siblings` as its exact counterpart.
+2. `compressed`: the constant `(p − 1)/2` and that it is used only on encodings `key_point` accepted.
+3. `key_point` against the core's `witness_key`: the same accepted set (tested on 352,256 encodings).
+4. `hash64`: the initial state, the padding block, the cast of the aligned buffer to two
+   `GenericArray` blocks, and RISC Zero's `sha2` patch of `compress256` in the guest.
+5. `blst_p1s_add`: blst's `bulk_addition.c` (not constant time: no secret is involved; scratch on the
+   stack with `alloca`, about 24 KB for 170 points); its doubling and identity cases.
+6. `residue_agg::step1` against `ferrata_core::steps::step1` at 510f05cf: `diff` shows the one change.
+7. The marker of the experimental copy, and that the copy refuses what the core refuses.
+
+### 9.8 What this does not change
+
+The deployed programs, their image ids and the deployed update path (three transactions, five with an
+adoption) are unchanged; the policy is unchanged (342 signers is still its floor). As for §8, the
+production change would be a new program image, deployment and real proofs, the multiproof witness
+in the updater (host code: `NonSigners::build`), and an audit of both the residue check and this
+composition. A **period update** still does not fit at any participation (folded: 11,913,877 at 510,
+13,482,391 at 342 in the bare guest); the job path stays for it. Re-check:
+`cd bench && cargo test --release -p residue-agg && cargo build --release -p residue-host &&
+./target/release/residue-host profile && ./target/release/residue-host measure-agg &&
+./target/release/residue-host boundary`; `cd lez && RISC0_DEV_MODE=1 cargo test -p harness --features
+residue-experimental --test residue_experimental -- --nocapture --test-threads 1`.

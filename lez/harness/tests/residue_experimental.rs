@@ -300,33 +300,9 @@ fn a_finality_update_in_one_transaction_with_one_multiproof() {
 /// the multiproof altered: refused. Honest: applied, the store equal to the natively applied job's.
 #[test]
 fn a_342_signer_finality_update_in_one_transaction_with_one_multiproof() {
-    let mut w = world_after_update_0();
-    let update = as_finality_update(&w.updates[1]);
-    let store = w.inst.store(&w.chain);
-    let real = signing_committee(w.native.core(), &update, &w.spec).clone();
-    let fake = fake_committee(512, 7);
-    let mut substituted = store.clone();
-    if substituted.current == CommitteeSummary::of(&real) {
-        substituted.current = CommitteeSummary::of(&fake.committee);
-    } else {
-        assert_eq!(substituted.next, Some(CommitteeSummary::of(&real)));
-        substituted.next = Some(CommitteeSummary::of(&fake.committee));
-    }
-    let actor = w.inst.actor();
-    let mut account = w.chain.state.get_account_by_id(actor.account_id);
-    let mut state: InstanceState = borsh::from_slice(account.data.actor_state(actor.program_account_id)).unwrap();
-    state.store = substituted.encode();
-    account.data.set_actor_state(actor.program_account_id, ActorState::from(borsh::to_vec(&state).unwrap()));
-    w.chain.state.force_insert_account(actor.account_id, account);
-    assert_eq!(w.inst.store(&w.chain), substituted);
-
-    let gvr = w.inst.config.genesis_validators_root;
-    let spec = w.spec.clone();
-    let ctx = Context { spec: &spec, genesis_validators_root: gvr, bls: &scenarios::BLS };
+    let (mut w, fake, substituted) = world_with_the_bench_committee();
     let bits: Vec<bool> = (0..512).map(|i| i % 3 != 2).collect();
-    let mut u = update.clone();
-    u.sync_aggregate.signature = sign(&fake, &bits, &sync_committee_signing_root(&update, &ctx));
-    u.sync_aggregate.bits = bits;
+    let u = signed_by(&w, &fake, bits);
     assert_eq!(u.sync_aggregate.participants(), 342);
     let (new, old, c, wit, expected) = native_job(&w, &substituted, &u, &fake.committee);
 
@@ -388,6 +364,88 @@ fn a_342_signer_finality_update_in_one_transaction_with_one_multiproof() {
         marked(&new).len(),
         old.encode().len()
     );
+}
+
+/// [`world_after_update_0`], then the store's signing committee for update_1 replaced by a
+/// committee whose keys the test holds (its summary), written with LEZ's `force_insert_account`.
+fn world_with_the_bench_committee() -> (World, ferrata_spectests::testkit::FakeCommittee, CompactStore) {
+    let mut w = world_after_update_0();
+    let update = as_finality_update(&w.updates[1]);
+    let store = w.inst.store(&w.chain);
+    let real = signing_committee(w.native.core(), &update, &w.spec).clone();
+    let fake = fake_committee(512, 7);
+    let mut substituted = store.clone();
+    if substituted.current == CommitteeSummary::of(&real) {
+        substituted.current = CommitteeSummary::of(&fake.committee);
+    } else {
+        assert_eq!(substituted.next, Some(CommitteeSummary::of(&real)));
+        substituted.next = Some(CommitteeSummary::of(&fake.committee));
+    }
+    let actor = w.inst.actor();
+    let mut account = w.chain.state.get_account_by_id(actor.account_id);
+    let mut state: InstanceState = borsh::from_slice(account.data.actor_state(actor.program_account_id)).unwrap();
+    state.store = substituted.encode();
+    account.data.set_actor_state(actor.program_account_id, ActorState::from(borsh::to_vec(&state).unwrap()));
+    w.chain.state.force_insert_account(actor.account_id, account);
+    assert_eq!(w.inst.store(&w.chain), substituted);
+    (w, fake, substituted)
+}
+
+/// update_1 as a finality update, signed by the members of `fake` whose bit is set.
+fn signed_by(w: &World, fake: &ferrata_spectests::testkit::FakeCommittee, bits: Vec<bool>) -> LightClientUpdate {
+    let update = as_finality_update(&w.updates[1]);
+    let gvr = w.inst.config.genesis_validators_root;
+    let ctx = Context { spec: &w.spec, genesis_validators_root: gvr, bls: &scenarios::BLS };
+    let mut u = update.clone();
+    u.sync_aggregate.signature = sign(fake, &bits, &sync_committee_signing_root(&update, &ctx));
+    u.sync_aggregate.bits = bits;
+    u
+}
+
+/// `absent` members absent, evenly spaced (with one multiproof, the most hashes that many need).
+fn spread(absent: usize) -> Vec<bool> {
+    let mut bits = vec![true; 512];
+    for j in 0..absent {
+        bits[j * 512 / absent] = false;
+    }
+    bits
+}
+
+/// EXPERIMENTAL: the fewest signers whose finality update fits one transaction through the copy
+/// with a branch per non-signer (the core's witness) and the residue witness: from 380 signers
+/// up, each sent once, until one is applied (the bench committee, as above).
+#[test]
+fn the_fewest_signers_that_fit_with_a_branch_per_non_signer() {
+    let (mut w, fake, substituted) = world_with_the_bench_committee();
+    let verifier = Actor::new(w.chain.payer, EXPERIMENTAL);
+    println!("| transaction | handlers run (cycles each) | execution gas | of MAX_GAS_EXEC 10M | storage gas (tx bytes) | base fee | result |");
+    println!("|---|---|---:|---:|---:|---:|---|");
+    let mut fewest = None;
+    for signers in 380..=400usize {
+        let u = signed_by(&w, &fake, spread(512 - signers));
+        let (_, old, c, wit, expected) = native_job(&w, &substituted, &u, &fake.committee);
+        let header = header_actor(w.inst.program, &w.inst.id, u.finalized_header.beacon.slot);
+        let time = w.inst.config.slot_start_ms(u.signature_slot) + 12_000;
+        let msg = verify_all_message(&w, &u, old.encode(), &c, &wit);
+        let report = w.chain.submit(
+            &format!("EXPERIMENTAL VerifyAll, a branch per non-signer + residue witness ({signers} of 512)"),
+            verifier,
+            msg,
+            vec![verifier, w.inst.actor(), header],
+            vec![],
+            time,
+        );
+        print_report(&report);
+        if report.ok() {
+            assert_eq!(w.inst.store(&w.chain), expected);
+            fewest = Some(signers);
+            break;
+        }
+        assert_eq!(report.exit_code, None, "over the cycle budget, not refused by a check");
+        assert_eq!(w.inst.store(&w.chain), substituted, "nothing changed");
+    }
+    println!("fewest signers that fit one transaction with a branch per non-signer: {fewest:?}");
+    assert!(fewest.is_some());
 }
 
 fn signing_committee<'a>(

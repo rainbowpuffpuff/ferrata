@@ -371,8 +371,9 @@ fn main() {
         Some("check") => guest_check(),
         Some("profile") => agg::profile(),
         Some("measure-agg") => agg::measure(),
+        Some("boundary") => agg::boundary(),
         _ => {
-            eprintln!("usage: residue-host measure | check | profile | measure-agg");
+            eprintln!("usage: residue-host measure | check | profile | measure-agg | boundary");
             std::process::exit(2);
         }
     }

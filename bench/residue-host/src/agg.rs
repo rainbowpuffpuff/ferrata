@@ -294,3 +294,62 @@ pub fn measure() {
     fs::write(dir.join("tables.md"), &table).unwrap();
     println!("{table}");
 }
+
+/// `absent` members absent, evenly spaced: with one multiproof, the most hashes that many need.
+fn spread(absent: usize) -> Vec<bool> {
+    let mut bits = vec![true; 512];
+    for j in 0..absent {
+        bits[j * 512 / absent] = false;
+    }
+    bits
+}
+
+/// Around the fewest signers that fit 10M user cycles: a branch per non-signer with the witness
+/// folded and with the witness check, and one multiproof with the final exponentiation.
+pub fn boundary() {
+    let b = base();
+    let mut raw = String::new();
+    let mut table = String::from(
+        "| path | aggregation | signers (absent evenly spaced) | execution user cycles | of 10M | fits |\n|---|---|---:|---:|---:|---|\n",
+    );
+    let runs: Vec<(u32, u32, Vec<usize>)> =
+        vec![(2, 0, vec![347, 348, 349]), (1, 0, vec![373, 374, 375]), (0, 1, vec![407, 408, 409, 410])];
+    for (path, aggregation, list) in runs {
+        for signers in list {
+            let u = signed(&b, &b.finality, spread(512 - signers));
+            let case = Case {
+                name: format!("finality, update_1 signed by the bench's committee: {signers}"),
+                store: b.substituted.clone(),
+                update: u,
+                committee: b.fake.committee.clone(),
+            };
+            let inp = native(&case, &b.spec, &b.gvr);
+            let new_signers = agg_witness(&case, &b.spec, &b.gvr);
+            let (c, w, c_inv): (&[u8], &[u8], &[u8]) = match path {
+                0 => (&[], &[], &[]),
+                1 => (&inp.c, &inp.w, &[]),
+                _ => (&inp.c, &inp.w, &inp.c_inv),
+            };
+            let signers_b: &[u8] = if aggregation == 0 { &inp.signers } else { &new_signers };
+            let run = execute(MODE_ONE_TX, &[path, aggregation], &[&inp.store, &inp.update, signers_b, &inp.keys, c, w, c_inv]);
+            assert_eq!(run.extra, inp.expected_store, "{}: the guest's new store", case.name);
+            let path_name = ["current (final exponentiation)", "witness", "witness folded"][path as usize];
+            let agg_name = ["core (a branch per non-signer)", "multiproof + batch sum"][aggregation as usize];
+            report(&mut raw, &format!("{} / {path_name} / {agg_name}", case.name), &run);
+            let cycles = run.info.cycles();
+            writeln!(
+                table,
+                "| {path_name} | {agg_name} | {signers} | {cycles} | {:.2}% | {} |",
+                cycles as f64 / 100_000.0,
+                if cycles <= 10_000_000 { "yes" } else { "no" }
+            )
+            .unwrap();
+            println!("{path_name} / {agg_name} / {signers}: {cycles}");
+        }
+    }
+    let dir = bench_dir().join("results/residue/agg");
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(dir.join("boundary.txt"), &raw).unwrap();
+    fs::write(dir.join("boundary.md"), &table).unwrap();
+    println!("{table}");
+}
