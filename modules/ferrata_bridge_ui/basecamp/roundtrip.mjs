@@ -100,24 +100,38 @@ async function reopenView(app, kind) {
   const before = await getJson(app, `${kind}Job`);
   writeJson("view-calls-before-reopen.json", await getJson(app, "callLog"));
   const toggle = "moduleRow.loadToggle.ferrata_bridge_ui";
-  // Basecamp lists the ui modules (apps) in its Apps Inspector and the core modules in its Module Inspector.
+  // The toggle shown: Basecamp lists the ui modules (apps) in its Apps Inspector and the core modules in its Module
+  // Inspector, and an inspector page not shown may still hold rows (a click there lands on what is shown instead).
+  const shown = async () => {
+    for (const id of await idsOf(app, "objectName", toggle)) {
+      const r = await app.inspector.send("evaluate", { objectId: id, expression: "visible ? text : ''" });
+      if (!r.error && r.result) return { id, text: r.result };
+    }
+    return null;
+  };
+  const press = async (t) => {
+    const r = await app.inspector.send("click", { objectId: t.id });
+    if (r.error) throw new Error(`click ${toggle}: ${r.error}`);
+    log({ click: toggle, was: t.text });
+  };
   await clickName(app, await sidebarSection(app, "Settings"));
-  let inspector = "";
+  let inspector = "", t = null;
   for (const section of ["Apps Inspector", "Module Inspector"]) {
     await app.click(section);
     await sleep(1000);
-    if ((await idsOf(app, "objectName", toggle)).length) { inspector = section; break; }
+    t = await shown();
+    if (t) { inspector = section; break; }
   }
-  check(inspector !== "", `the view's row in Basecamp's ${inspector || "Apps or Module Inspector"}`);
-  check((await evalIn(app, toggle, "text")) === "Unload", "the view is loaded");
-  await clickName(app, toggle);
-  await waitFor(app, async () => { const t = await evalIn(app, toggle, "text"); if (t !== "Load") throw new Error(t); }, 60000, "the view unloaded");
+  check(t !== null, `the view's row shown in Basecamp's ${inspector || "Apps or Module Inspector"}`);
+  check(t.text === "Unload", `the view is loaded (${t.text})`);
+  await press(t);
+  await waitFor(app, async () => { const u = await shown(); if (!u || u.text !== "Load") throw new Error(u ? u.text : "no row"); }, 60000, "the view unloaded");
   await waitFor(app, async () => { const n = (await idsOf(app, "objectName", V)).length; if (n !== 0) throw new Error(`${n} instances`); }, 15000, "the view's instance destroyed");
   log({ view_unloaded: true, inspector, views_left: 0 });
   check(true, "the view is gone (no instance of it left in Basecamp's window)");
   await shot(app, `${kind === "burn" ? "17c" : "14c"}-view-unloaded-while-the-${kind}-is-proven`);
-  await clickName(app, toggle);
-  await waitFor(app, async () => { const t = await evalIn(app, toggle, "text"); if (t !== "Unload") throw new Error(t); }, 60000, "the view loaded again");
+  await press(await shown());
+  await waitFor(app, async () => { const u = await shown(); if (!u || u.text !== "Unload") throw new Error(u ? u.text : "no row"); }, 60000, "the view loaded again");
   await clickName(app, "sidebar.app.ferrata_bridge_ui");
   await sleep(1000);
   await waitFor(app, async () => { const id = await get(app, `${kind}Job ? ${kind}Job.id : -1`); if (id !== before.id) throw new Error(`job ${id}`); }, 60000, "the reopened view found the job");
