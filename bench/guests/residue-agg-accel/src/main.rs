@@ -12,17 +12,18 @@ use std::hint::black_box;
 
 use blst::{
     blst_fp, blst_fp_from_bendian, blst_fp_inverse, blst_fp_mul, blst_p1, blst_p1_add_or_double,
-    blst_p1_add_or_double_affine, blst_p1_affine, blst_p1_affine_compress, blst_p1_affine_in_g1,
-    blst_p1_affine_is_inf, blst_p1_affine_on_curve, blst_p1_cneg, blst_p1_deserialize,
-    blst_p1_from_affine, blst_p1_is_inf, blst_p1_uncompress, blst_p1s_add, blst_p2_affine, blst_p2_deserialize,
-    BLST_ERROR,
+    blst_p1_add_or_double_affine, blst_p1_affine, blst_p1_affine_compress, blst_p1_affine_in_g1, blst_p1_affine_is_inf,
+    blst_p1_affine_on_curve, blst_p1_cneg, blst_p1_deserialize, blst_p1_from_affine, blst_p1_is_inf,
+    blst_p1_uncompress, blst_p1s_add, blst_p2_affine, blst_p2_deserialize, BLST_ERROR,
 };
 use ferrata_core::{
     fork::{ChainSpec, Preset, FAR_FUTURE_EPOCH},
     hash::hash_pair,
     merkle::is_valid_merkle_branch,
     steps::{self, Phase, StepError},
-    witness::{key_branch_depth, pubkey_leaf, CommitteeSummary, CompactStore, CompactUpdate, SignerWitness, UncompressedPubkey},
+    witness::{
+        key_branch_depth, pubkey_leaf, CommitteeSummary, CompactStore, CompactUpdate, SignerWitness, UncompressedPubkey,
+    },
     Error, Root,
 };
 use residue_agg::{NonSigners, Sum};
@@ -165,8 +166,9 @@ fn verify(
         })
         .map_err(core)?;
     let mut job = if aggregation == 0 {
-        let signers =
-            rec.time("D3 decode the signer witness (SignerWitness)", || SignerWitness::decode(signers_b, n)).map_err(core)?;
+        let signers = rec
+            .time("D3 decode the signer witness (SignerWitness)", || SignerWitness::decode(signers_b, n))
+            .map_err(core)?;
         rec.note("info: non-signers", signers.keys.len() as u64);
         rec.time("S1 step 1: policy, validation, signing key (non-signers' keys and branches), H(m)", || {
             steps::step1(&store, &update, &signers, update.signature_slot, &spec, &gvr, 1)
@@ -321,9 +323,11 @@ fn profile(rec: &mut Rec) -> Vec<u8> {
     let bits: Vec<bool> = bits_b.iter().map(|b| *b == 1).collect();
     let n = bits.len();
     let depth = key_branch_depth(n);
-    let old = rec.time("D3 decode the core's witness (SignerWitness::decode)", || SignerWitness::decode(&old_b, n))
+    let old = rec
+        .time("D3 decode the core's witness (SignerWitness::decode)", || SignerWitness::decode(&old_b, n))
         .expect("old witness");
-    let new = rec.time("D3n decode the multiproof witness (NonSigners::decode)", || NonSigners::decode(&new_b, n))
+    let new = rec
+        .time("D3n decode the multiproof witness (NonSigners::decode)", || NonSigners::decode(&new_b, n))
         .expect("new witness");
     let k = old.keys.len();
     rec.note("info: non-signers", k as u64);
@@ -332,7 +336,8 @@ fn profile(rec: &mut Rec) -> Vec<u8> {
     rec.note("info: multiproof siblings", new.siblings.len() as u64);
 
     // Whole compositions.
-    let a = rec.time("K0 the core's composition (copy of steps::signing_key)", || core_signing_key(&committee, &bits, &old));
+    let a = rec
+        .time("K0 the core's composition (copy of steps::signing_key)", || core_signing_key(&committee, &bits, &old));
     let b = rec.time("K1 residue_agg::signing_key, batch addition", || {
         residue_agg::signing_key(&committee, &bits, &new, Sum::Batch)
     });
@@ -349,17 +354,18 @@ fn profile(rec: &mut Rec) -> Vec<u8> {
         assert!(absent.len() == old.keys.len() && old.branches.iter().all(|br| br.len() == depth));
         absent
     });
-    let points: Vec<blst_p1_affine> = rec.time("P2 decode: blst_p1_deserialize (flags, canonical, to Montgomery form, on the curve, x != 0)", || {
-        old.keys
-            .iter()
-            .map(|key| {
-                let mut p = blst_p1_affine::default();
-                // SAFETY: 96 bytes read.
-                assert_eq!(unsafe { blst_p1_deserialize(&mut p, key.as_ptr()) }, BLST_ERROR::BLST_SUCCESS);
-                p
-            })
-            .collect()
-    });
+    let points: Vec<blst_p1_affine> =
+        rec.time("P2 decode: blst_p1_deserialize (flags, canonical, to Montgomery form, on the curve, x != 0)", || {
+            old.keys
+                .iter()
+                .map(|key| {
+                    let mut p = blst_p1_affine::default();
+                    // SAFETY: 96 bytes read.
+                    assert_eq!(unsafe { blst_p1_deserialize(&mut p, key.as_ptr()) }, BLST_ERROR::BLST_SUCCESS);
+                    p
+                })
+                .collect()
+        });
     rec.time("P2a  of which: x and y to Montgomery form (2 x blst_fp_from_bendian, no range check)", || {
         for key in &old.keys {
             let (mut x, mut y) = (blst_fp::default(), blst_fp::default());
@@ -383,17 +389,18 @@ fn profile(rec: &mut Rec) -> Vec<u8> {
             assert!(!unsafe { blst_p1_affine_is_inf(p) });
         }
     });
-    let compressed: Vec<[u8; 48]> = rec.time("P4 re-compress (blst_p1_affine_compress: x out of Montgomery form, sign of y)", || {
-        points
-            .iter()
-            .map(|p| {
-                let mut out = [0u8; 48];
-                // SAFETY: 48 bytes written.
-                unsafe { blst_p1_affine_compress(out.as_mut_ptr(), p) };
-                out
-            })
-            .collect()
-    });
+    let compressed: Vec<[u8; 48]> =
+        rec.time("P4 re-compress (blst_p1_affine_compress: x out of Montgomery form, sign of y)", || {
+            points
+                .iter()
+                .map(|p| {
+                    let mut out = [0u8; 48];
+                    // SAFETY: 48 bytes written.
+                    unsafe { blst_p1_affine_compress(out.as_mut_ptr(), p) };
+                    out
+                })
+                .collect()
+        });
     let leaves: Vec<Root> = rec.time("P5 the leaf: pubkey_leaf (SHA-256 of 64 bytes, sha2's streaming API)", || {
         compressed.iter().map(pubkey_leaf).collect()
     });
@@ -418,7 +425,10 @@ fn profile(rec: &mut Rec) -> Vec<u8> {
         let key_ptr: *mut blst_p1 = &mut key;
         // SAFETY: valid inputs.
         unsafe {
-            assert_eq!(blst_p1_uncompress(&mut aggregate, committee.aggregate_pubkey.as_ptr()), BLST_ERROR::BLST_SUCCESS);
+            assert_eq!(
+                blst_p1_uncompress(&mut aggregate, committee.aggregate_pubkey.as_ptr()),
+                BLST_ERROR::BLST_SUCCESS
+            );
             blst_p1_from_affine(key_ptr, &aggregate);
             blst_p1_cneg(&mut sum, true);
             blst_p1_add_or_double(key_ptr, key_ptr, &sum);
@@ -438,23 +448,26 @@ fn profile(rec: &mut Rec) -> Vec<u8> {
         old.keys.iter().map(residue_agg::compressed).collect()
     });
     assert_eq!(mine, compressed, "compressed() = blst_p1_affine_compress on every key");
-    let mine_leaves: Vec<Root> =
-        rec.time("C2 the leaf by two compressions (residue_agg::leaf)", || mine.iter().map(residue_agg::leaf).collect());
+    let mine_leaves: Vec<Root> = rec
+        .time("C2 the leaf by two compressions (residue_agg::leaf)", || mine.iter().map(residue_agg::leaf).collect());
     assert_eq!(mine_leaves, leaves, "leaf() = pubkey_leaf on every key");
     let indexed: Vec<(u32, Root)> = absent.iter().map(|&i| i as u32).zip(mine_leaves.iter().copied()).collect();
     let root = rec.time("C3 one multiproof of all the leaves (residue_agg::multiproof_root)", || {
         residue_agg::multiproof_root(&indexed, &new.siblings, depth)
     });
     assert_eq!(root, Some(committee.pubkeys_root), "the multiproof gives the key root");
-    rec.time("C3b the branches by two-compression hashes (9 x residue_agg::node per non-signer; for comparison)", || {
-        for ((leaf, branch), &index) in mine_leaves.iter().zip(&old.branches).zip(&absent) {
-            let mut v = *leaf;
-            for (i, s) in branch.iter().enumerate() {
-                v = if (index >> i) & 1 == 1 { residue_agg::node(s, &v) } else { residue_agg::node(&v, s) };
+    rec.time(
+        "C3b the branches by two-compression hashes (9 x residue_agg::node per non-signer; for comparison)",
+        || {
+            for ((leaf, branch), &index) in mine_leaves.iter().zip(&old.branches).zip(&absent) {
+                let mut v = *leaf;
+                for (i, s) in branch.iter().enumerate() {
+                    v = if (index >> i) & 1 == 1 { residue_agg::node(s, &v) } else { residue_agg::node(&v, s) };
+                }
+                assert_eq!(v, committee.pubkeys_root);
             }
-            assert_eq!(v, committee.pubkeys_root);
-        }
-    });
+        },
+    );
     let batch = rec.time("C4 the sum by blst_p1s_add (batch affine addition)", || {
         let mut acc = blst_p1::default();
         if !points.is_empty() {

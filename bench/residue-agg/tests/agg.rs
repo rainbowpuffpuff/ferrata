@@ -33,8 +33,7 @@ use ferrata_core::{
     upgrade::{upgrade_bootstrap, upgrade_update},
     validate::{sync_committee_signing_root, Context},
     witness::{
-        pubkey_leaf, uncompress_key, CommitteeSummary, CompactStore, CompactUpdate, SignerWitness,
-        UncompressedPubkey,
+        pubkey_leaf, uncompress_key, CommitteeSummary, CompactStore, CompactUpdate, SignerWitness, UncompressedPubkey,
     },
     Error, Root,
 };
@@ -139,7 +138,11 @@ fn sepolia_finality_update(b: &[u8]) -> LightClientUpdate {
 }
 
 /// The committee that signs `update` in the full store, if known.
-fn signing_committee<'a>(full: &'a StoreCore, update: &LightClientUpdate, spec: &ChainSpec) -> Option<&'a SyncCommittee> {
+fn signing_committee<'a>(
+    full: &'a StoreCore,
+    update: &LightClientUpdate,
+    spec: &ChainSpec,
+) -> Option<&'a SyncCommittee> {
     let c = if spec.period_at_slot(update.signature_slot) == spec.period_at_slot(full.finalized_header.beacon.slot) {
         &full.current_sync_committee
     } else {
@@ -414,7 +417,10 @@ fn multiproofs_round_trip_and_every_tampering_is_refused() {
             let siblings = multiproof_siblings(&tree, &indices);
             assert_eq!(multiproof_root(&at, &siblings, depth), Some(root), "depth {depth}, {} leaves", indices.len());
             // Siblings: two per hashed node, less the computed ones.
-            assert_eq!(siblings.len(), 2 * hashes_for(&indices, depth) - (hashes_for(&indices, depth) + indices.len() - 1));
+            assert_eq!(
+                siblings.len(),
+                2 * hashes_for(&indices, depth) - (hashes_for(&indices, depth) + indices.len() - 1)
+            );
             sets += 1;
             // Every single sibling altered, a leaf altered, one sibling dropped, one added, two swapped.
             for j in 0..siblings.len().min(64) {
@@ -454,8 +460,10 @@ fn multiproofs_round_trip_and_every_tampering_is_refused() {
     // 170 non-signers of 512: every third member (the worst case) and the separate branches.
     let worst: Vec<usize> = (0..512).filter(|i| i % 3 == 2).collect();
     assert_eq!(hashes_for(&worst, 9), 425);
-    println!("multiproofs: {sets} leaf sets at depths 1-10 round trip; {tampered} tampered proofs refused; 170 \
-              non-signers at every third index need 425 hashes (separate branches: 1,530)");
+    println!(
+        "multiproofs: {sets} leaf sets at depths 1-10 round trip; {tampered} tampered proofs refused; 170 \
+              non-signers at every third index need 425 hashes (separate branches: 1,530)"
+    );
 }
 
 /// The rules of `multiproof_root`, weakened one at a time: each weakened verifier accepts a forgery
@@ -464,7 +472,11 @@ mod weakened {
     use super::*;
 
     /// Takes the right sibling from the proof even when it is a known (computed) node.
-    pub fn trusts_the_proof_for_known_siblings(leaves: &[(u32, Root)], siblings: &[Root], depth: usize) -> Option<Root> {
+    pub fn trusts_the_proof_for_known_siblings(
+        leaves: &[(u32, Root)],
+        siblings: &[Root],
+        depth: usize,
+    ) -> Option<Root> {
         let mut layer = leaves.to_vec();
         let mut used = 0;
         for _ in 0..depth {
@@ -526,12 +538,12 @@ fn forged_multiproofs_show_why_each_rule_is_needed() {
     let mut weak_proof = Vec::new();
     {
         let mut layer: Vec<usize> = absent.clone();
-        for level in 0..9 {
+        for nodes in tree.iter().take(9) {
             let mut next = Vec::new();
             let mut i = 0;
             while i < layer.len() {
                 let index = layer[i];
-                weak_proof.push(tree[level][index ^ 1]);
+                weak_proof.push(nodes[index ^ 1]);
                 i += if index & 1 == 0 && i + 1 < layer.len() && layer[i + 1] == index + 1 { 2 } else { 1 };
                 next.push(index >> 1);
             }
@@ -548,11 +560,17 @@ fn forged_multiproofs_show_why_each_rule_is_needed() {
         "the weakened verifier accepts a key outside the committee"
     );
     // Under the weakened rule the composed key is the attacker's: aggregate − (Q40 + P' + Q100) = A.
-    let composed = sum_keys(&[committee.aggregate_pubkey, neg(&sum_keys(&[committee.pubkeys[40], p_prime, committee.pubkeys[100]]))]);
+    let composed = sum_keys(&[
+        committee.aggregate_pubkey,
+        neg(&sum_keys(&[committee.pubkeys[40], p_prime, committee.pubkeys[100]])),
+    ]);
     assert_eq!(composed, a_pk, "the forged witness turns the signing key into the attacker's");
     let msg = [9u8; 32];
     let sig = attacker.sign(&msg, DST, &[]);
-    assert_eq!(sig.verify(true, &msg, DST, &[], &PublicKey::uncompress(&composed).unwrap(), true), BLST_ERROR::BLST_SUCCESS);
+    assert_eq!(
+        sig.verify(true, &msg, DST, &[], &PublicKey::uncompress(&composed).unwrap(), true),
+        BLST_ERROR::BLST_SUCCESS
+    );
     // The real rule refuses it: with the forged siblings, and with the honest ones.
     assert_ne!(multiproof_root(&forged_leaves, &forged.siblings, 9), Some(summary.pubkeys_root));
     assert_ne!(multiproof_root(&forged_leaves, &honest.siblings, 9), Some(summary.pubkeys_root));
@@ -582,9 +600,11 @@ fn forged_multiproofs_show_why_each_rule_is_needed() {
     let other_leaves: Vec<(u32, Root)> = other.iter().map(|&i| (i as u32, leaves[i])).collect();
     assert_eq!(multiproof_root(&other_leaves, &other_witness.siblings, 9), Some(summary.pubkeys_root));
     assert_eq!(signing_key(&summary, &bits, &other_witness, Sum::Batch).unwrap_err(), StepError::Witness);
-    println!("forgeries: a known sibling read from the proof lets a key outside the committee in (here the \
+    println!(
+        "forgeries: a known sibling read from the proof lets a key outside the committee in (here the \
               attacker's own key becomes the signing key and its signature verifies); a leftover sibling; a \
-              valid multiproof of other members: each accepted by the weakened rule, refused by multiproof_root");
+              valid multiproof of other members: each accepted by the weakened rule, refused by multiproof_root"
+    );
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -631,9 +651,12 @@ fn step1_equals_the_core_on_every_sync_vector_and_the_real_chains() {
         let lc = |f: ferrata_core::fork::Fork| f.lc_fork().unwrap();
         let bootstrap_fork = lc(cfg.fork_for_digest(&gvr, hex_n(&meta["bootstrap_fork_digest"])).unwrap());
         let store_fork = lc(cfg.fork_for_version(as_version(&meta["store_fork_version"])).unwrap());
-        let bootstrap =
-            LightClientBootstrap::decode(&read_ssz_snappy(&dir.join("bootstrap.ssz_snappy")).unwrap(), bootstrap_fork, n)
-                .unwrap();
+        let bootstrap = LightClientBootstrap::decode(
+            &read_ssz_snappy(&dir.join("bootstrap.ssz_snappy")).unwrap(),
+            bootstrap_fork,
+            n,
+        )
+        .unwrap();
         let bootstrap = upgrade_bootstrap(bootstrap, bootstrap_fork, store_fork, spec).unwrap();
         let mut policy =
             FinalizedStore::initialize_with(&trusted, &bootstrap, store_fork, spec, &bls, Adoption::OnChain).unwrap();
@@ -655,7 +678,15 @@ fn step1_equals_the_core_on_every_sync_vector_and_the_real_chains() {
                     let store = CompactStore::of(policy.core());
                     let committee = signing_committee(policy.core(), &update, spec).cloned();
                     let label = format!("{name} step {i}");
-                    match compare(&label, &store, &CompactUpdate::of(&update), committee.as_ref(), current_slot, spec, &gvr) {
+                    match compare(
+                        &label,
+                        &store,
+                        &CompactUpdate::of(&update),
+                        committee.as_ref(),
+                        current_slot,
+                        spec,
+                        &gvr,
+                    ) {
                         Ok(_) => accepted += 1,
                         Err(_) => refused += 1,
                     }
@@ -696,7 +727,15 @@ fn step1_equals_the_core_on_every_sync_vector_and_the_real_chains() {
         for (kind, update) in [("as served", u.clone()), ("as a finality update", as_finality(&u))] {
             // Both outcomes are compared; update_0 as a finality update does not advance the
             // bootstrap's store (NotNewer), alike.
-            match compare(&format!("mainnet update_{i} {kind}"), &store, &CompactUpdate::of(&update), committee.as_ref(), u.signature_slot, &spec, &gvr) {
+            match compare(
+                &format!("mainnet update_{i} {kind}"),
+                &store,
+                &CompactUpdate::of(&update),
+                committee.as_ref(),
+                u.signature_slot,
+                &spec,
+                &gvr,
+            ) {
                 Ok(_) => mainnet_accepted += 1,
                 Err(_) => mainnet_refused += 1,
             }
@@ -722,16 +761,32 @@ fn step1_equals_the_core_on_every_sync_vector_and_the_real_chains() {
         let u = LightClientUpdate::decode(&fixture(d, &format!("update_{period}.ssz")), layout, 512).unwrap();
         let store = CompactStore::of(policy.core());
         let committee = signing_committee(policy.core(), &u, &spec).cloned();
-        compare(&format!("Sepolia period {period}"), &store, &CompactUpdate::of(&u), committee.as_ref(), u.signature_slot, &spec, &gvr)
-            .unwrap_or_else(|e| panic!("Sepolia period {period}: {e:?}"));
+        compare(
+            &format!("Sepolia period {period}"),
+            &store,
+            &CompactUpdate::of(&u),
+            committee.as_ref(),
+            u.signature_slot,
+            &spec,
+            &gvr,
+        )
+        .unwrap_or_else(|e| panic!("Sepolia period {period}: {e:?}"));
         sepolia_accepted += 1;
         policy.process_update(&u, u.signature_slot + 1, &ctx).unwrap();
     }
     let fu = sepolia_finality_update(&fixture(d, "finality_update.ssz"));
     let store = CompactStore::of(policy.core());
     let committee = signing_committee(policy.core(), &fu, &spec).cloned();
-    compare("Sepolia finality update", &store, &CompactUpdate::of(&fu), committee.as_ref(), fu.signature_slot, &spec, &gvr)
-        .unwrap();
+    compare(
+        "Sepolia finality update",
+        &store,
+        &CompactUpdate::of(&fu),
+        committee.as_ref(),
+        fu.signature_slot,
+        &spec,
+        &gvr,
+    )
+    .unwrap();
     sepolia_accepted += 1;
     println!(
         "step1 = the core's step1, job for job and code for code (batch and chain sums): official sync vectors \
@@ -838,15 +893,25 @@ fn differential_of_at_least_2000_committee_bitfield_pairs() {
             let signers = bits.iter().filter(|b| **b).count() as u64;
             let mut u = update.clone();
             u.sync_aggregate.bits = bits;
-            let r = compare(&format!("{label}, {signers} signers"), &store, &CompactUpdate::of(&u), Some(committee), u.signature_slot, &spec, &gvr);
+            let r = compare(
+                &format!("{label}, {signers} signers"),
+                &store,
+                &CompactUpdate::of(&u),
+                Some(committee),
+                u.signature_slot,
+                &spec,
+                &gvr,
+            );
             assert!(r.is_ok(), "{label}, {signers} signers: {r:?}");
             cases_run += 1;
             *by_participation.entry(signers).or_default() += 1;
         }
     }
     assert!(cases_run >= 2000, "{cases_run} cases");
-    let fixed: Vec<String> =
-        [342u64, 343, 400, 510, 511, 512].iter().map(|p| format!("{p}: {}", by_participation.get(p).copied().unwrap_or(0))).collect();
+    let fixed: Vec<String> = [342u64, 343, 400, 510, 511, 512]
+        .iter()
+        .map(|p| format!("{p}: {}", by_participation.get(p).copied().unwrap_or(0)))
+        .collect();
     println!(
         "differential: {cases_run} (committee, bitfield) pairs over {} committees ({} distinct participations; \
          at {}): residue_agg::step1 = the core's step1, job for job (the same -key), batch and chain sums",
@@ -968,15 +1033,20 @@ fn refusals_are_the_cores() {
     let n = NonSigners::build(committee, &bits341).unwrap();
     let below = Error::BelowSupermajority.code();
     assert_eq!(steps::step1(&store, &cl, &o, slot, &spec, &gvr, 1).map(|_| ()).map_err(|e| e.code()), Err(below));
-    assert_eq!(residue_agg::step1(&store, &cl, &n, slot, &spec, &gvr, 1, Sum::Batch).map(|_| ()).map_err(|e| e.code()), Err(below));
+    assert_eq!(
+        residue_agg::step1(&store, &cl, &n, slot, &spec, &gvr, 1, Sum::Batch).map(|_| ()).map_err(|e| e.code()),
+        Err(below)
+    );
     count += 1;
     // Strict encoding.
     let mut bytes = new.encode();
     bytes.push(0);
     assert_eq!(NonSigners::decode(&bytes, 512), Err(Error::Malformed));
     assert_eq!(NonSigners::decode(&new.encode()[..10], 512), Err(Error::Malformed));
-    println!("refusals: {count} tampered witnesses and the 341-signer update refused with the core's code, \
-              by both sums; trailing and truncated encodings refused");
+    println!(
+        "refusals: {count} tampered witnesses and the 341-signer update refused with the core's code, \
+              by both sums; trailing and truncated encodings refused"
+    );
 }
 
 /// A sum through the identity and a doubling inside the batch addition, against the chain.

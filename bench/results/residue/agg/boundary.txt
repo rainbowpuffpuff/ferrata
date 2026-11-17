@@ -15,7 +15,7 @@
        9957824  T  whole update: inputs read to new store (one cycle_count delta)
       10001188  EXECUTION user cycles (SessionInfo::cycles)
       11010048  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 11 segments)
-          0.45  executor wall-clock seconds
+          0.42  executor wall-clock seconds
 
 ### finality, update_1 signed by the bench's committee: 348 / witness folded / core (a branch per non-signer)
           8029  R  read the inputs
@@ -34,7 +34,7 @@
        9932758  T  whole update: inputs read to new store (one cycle_count delta)
        9976122  EXECUTION user cycles (SessionInfo::cycles)
       11010048  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 11 segments)
-          0.40  executor wall-clock seconds
+          0.43  executor wall-clock seconds
 
 ### finality, update_1 signed by the bench's committee: 349 / witness folded / core (a branch per non-signer)
           8005  R  read the inputs
@@ -53,7 +53,7 @@
        9907673  T  whole update: inputs read to new store (one cycle_count delta)
        9951037  EXECUTION user cycles (SessionInfo::cycles)
       11010048  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 11 segments)
-          0.41  executor wall-clock seconds
+          0.43  executor wall-clock seconds
 
 ### finality, update_1 signed by the bench's committee: 373 / witness / core (a branch per non-signer)
           6999  R  read the inputs
@@ -73,7 +73,7 @@
        9966446  T  whole update: inputs read to new store (one cycle_count delta)
       10010661  EXECUTION user cycles (SessionInfo::cycles)
       11010048  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 11 segments)
-          0.41  executor wall-clock seconds
+          0.44  executor wall-clock seconds
 
 ### finality, update_1 signed by the bench's committee: 374 / witness / core (a branch per non-signer)
           6945  R  read the inputs
@@ -93,7 +93,7 @@
        9941344  T  whole update: inputs read to new store (one cycle_count delta)
        9985559  EXECUTION user cycles (SessionInfo::cycles)
       11010048  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 11 segments)
-          0.40  executor wall-clock seconds
+          0.43  executor wall-clock seconds
 
 ### finality, update_1 signed by the bench's committee: 375 / witness / core (a branch per non-signer)
           6921  R  read the inputs
@@ -113,7 +113,7 @@
        9916265  T  whole update: inputs read to new store (one cycle_count delta)
        9960480  EXECUTION user cycles (SessionInfo::cycles)
       11010048  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 11 segments)
-          0.41  executor wall-clock seconds
+          0.44  executor wall-clock seconds
 
 ### finality, update_1 signed by the bench's committee: 407 / current (final exponentiation) / multiproof + batch sum
           3390  R  read the inputs
@@ -134,7 +134,7 @@
       10057707  T  whole update: inputs read to new store (one cycle_count delta)
       10102651  EXECUTION user cycles (SessionInfo::cycles)
       11010048  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 11 segments)
-          0.43  executor wall-clock seconds
+          0.47  executor wall-clock seconds
 
 ### finality, update_1 signed by the bench's committee: 408 / current (final exponentiation) / multiproof + batch sum
           3382  R  read the inputs
@@ -155,7 +155,7 @@
       10046036  T  whole update: inputs read to new store (one cycle_count delta)
       10090980  EXECUTION user cycles (SessionInfo::cycles)
       11010048  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 11 segments)
-          0.44  executor wall-clock seconds
+          0.48  executor wall-clock seconds
 
 ### finality, update_1 signed by the bench's committee: 409 / current (final exponentiation) / multiproof + batch sum
           3344  R  read the inputs
@@ -176,7 +176,7 @@
       10042339  T  whole update: inputs read to new store (one cycle_count delta)
       10087283  EXECUTION user cycles (SessionInfo::cycles)
       11010048  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 11 segments)
-          0.45  executor wall-clock seconds
+          0.48  executor wall-clock seconds
 
 ### finality, update_1 signed by the bench's committee: 410 / current (final exponentiation) / multiproof + batch sum
           3336  R  read the inputs
@@ -197,5 +197,5 @@
       10031391  T  whole update: inputs read to new store (one cycle_count delta)
       10076335  EXECUTION user cycles (SessionInfo::cycles)
       11010048  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 11 segments)
-          0.46  executor wall-clock seconds
+          0.47  executor wall-clock seconds
 

@@ -20,10 +20,15 @@ use ferrata_spectests::testkit::{fake_committee, sign};
 use residue_agg::{NonSigners, Sum};
 use risc0_zkvm::{default_executor, ExecutorEnv};
 
-use super::{as_finality, bench_dir, fixture, get, mainnet, native, report, root, signing_committee, Case, Run, GVR, TRUSTED};
+use super::{
+    as_finality, bench_dir, fixture, get, mainnet, native, report, root, signing_committee, Case, Run, GVR, TRUSTED,
+};
 
 const MODE_ONE_TX: u32 = 0;
 const MODE_PROFILE: u32 = 3;
+
+/// The executions of one case: (path, aggregation) pairs.
+type Runs = Vec<(u32, u32)>;
 
 fn execute(mode: u32, words: &[u32], blobs: &[&[u8]]) -> Run {
     let mut b = ExecutorEnv::builder();
@@ -172,8 +177,8 @@ pub fn measure() {
     let mut table = String::from(
         "| case | path | aggregation | D3 decode witness | S1 step 1 | S2+S3 (folded: one phase) | A adoption | rest | whole update (cycle_count) | execution user cycles | signer witness bytes | segments |\n|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n",
     );
-    let mut cases: Vec<(Case, Vec<(u32, u32)>)> = Vec::new();
-    let all: Vec<(u32, u32)> = vec![(0, 0), (0, 1), (1, 0), (1, 1), (2, 0), (2, 1)];
+    let mut cases: Vec<(Case, Runs)> = Vec::new();
+    let all: Runs = vec![(0, 0), (0, 1), (1, 0), (1, 1), (2, 0), (2, 1)];
     cases.push((
         Case {
             name: "finality, mainnet update_1 as served: 510 of 512 (real committee)".into(),
@@ -183,7 +188,7 @@ pub fn measure() {
         },
         all.clone(),
     ));
-    let mut choices: Vec<(String, Vec<bool>, Vec<(u32, u32)>)> = vec![
+    let mut choices: Vec<(String, Vec<bool>, Runs)> = vec![
         ("512 (all)".into(), vec![true; 512], all.clone()),
         ("511 (member 300 absent)".into(), (0..512).map(|i| i != 300).collect(), all.clone()),
         ("510 (update_1's bits)".into(), b.finality.sync_aggregate.bits.clone(), all.clone()),
@@ -237,15 +242,16 @@ pub fn measure() {
                 _ => (&inp.c, &inp.w, &inp.c_inv),
             };
             let signers: &[u8] = if aggregation == 0 { &inp.signers } else { &new_signers };
-            let run = execute(
-                MODE_ONE_TX,
-                &[path, aggregation],
-                &[&inp.store, &inp.update, signers, &inp.keys, c, w, c_inv],
-            );
+            let run =
+                execute(MODE_ONE_TX, &[path, aggregation], &[&inp.store, &inp.update, signers, &inp.keys, c, w, c_inv]);
             let path_name = ["current (final exponentiation)", "witness", "witness folded"][path as usize];
             let agg_name = ["core (a branch per non-signer)", "multiproof + batch sum", "multiproof + chain sum"]
                 [aggregation as usize];
-            assert_eq!(run.extra, inp.expected_store, "{} / {path_name} / {agg_name}: the guest's new store", case.name);
+            assert_eq!(
+                run.extra, inp.expected_store,
+                "{} / {path_name} / {agg_name}: the guest's new store",
+                case.name
+            );
             report(&mut raw, &format!("{} / {path_name} / {agg_name}", case.name), &run);
             let d3 = get(&run, "D3 ");
             let s1 = get(&run, "S1 ");
@@ -269,7 +275,8 @@ pub fn measure() {
     // Refusals in the guest, multiproof path: a sibling altered, a key swapped for a key outside
     // the committee, the witness of another bitfield.
     let u = signed(&b, &b.finality, every_third());
-    let case = Case { name: "342".into(), store: b.substituted.clone(), update: u, committee: b.fake.committee.clone() };
+    let case =
+        Case { name: "342".into(), store: b.substituted.clone(), update: u, committee: b.fake.committee.clone() };
     let inp = native(&case, &b.spec, &b.gvr);
     let good = NonSigners::build(&case.committee, &case.update.sync_aggregate.bits).unwrap();
     let mut altered = good.clone();
@@ -283,7 +290,11 @@ pub fn measure() {
         ("one non-signer's key replaced by a key outside the committee", foreign),
         ("the witness of another bitfield with as many non-signers", shifted),
     ] {
-        let run = execute(MODE_ONE_TX, &[2, 1], &[&inp.store, &inp.update, &w.encode(), &inp.keys, &inp.c, &inp.w, &inp.c_inv]);
+        let run = execute(
+            MODE_ONE_TX,
+            &[2, 1],
+            &[&inp.store, &inp.update, &w.encode(), &inp.keys, &inp.c, &inp.w, &inp.c_inv],
+        );
         assert_eq!(run.extra, vec![0xff, 80], "{label}: refused with the witness code (80)");
         report(&mut raw, &format!("REFUSAL (342, folded, multiproof): {label}"), &run);
     }
@@ -331,7 +342,11 @@ pub fn boundary() {
                 _ => (&inp.c, &inp.w, &inp.c_inv),
             };
             let signers_b: &[u8] = if aggregation == 0 { &inp.signers } else { &new_signers };
-            let run = execute(MODE_ONE_TX, &[path, aggregation], &[&inp.store, &inp.update, signers_b, &inp.keys, c, w, c_inv]);
+            let run = execute(
+                MODE_ONE_TX,
+                &[path, aggregation],
+                &[&inp.store, &inp.update, signers_b, &inp.keys, c, w, c_inv],
+            );
             assert_eq!(run.extra, inp.expected_store, "{}: the guest's new store", case.name);
             let path_name = ["current (final exponentiation)", "witness", "witness folded"][path as usize];
             let agg_name = ["core (a branch per non-signer)", "multiproof + batch sum"][aggregation as usize];

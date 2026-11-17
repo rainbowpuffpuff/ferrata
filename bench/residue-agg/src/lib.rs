@@ -32,16 +32,14 @@
 use blst::{
     blst_hash_to_g2, blst_p1, blst_p1_add_or_double, blst_p1_add_or_double_affine, blst_p1_affine,
     blst_p1_affine_is_inf, blst_p1_affine_serialize, blst_p1_cneg, blst_p1_deserialize, blst_p1_from_affine,
-    blst_p1_is_inf, blst_p1_to_affine, blst_p1_uncompress, blst_p1s_add, blst_p2, blst_p2_affine,
-    blst_p2_affine_in_g2, blst_p2_affine_is_inf, blst_p2_affine_serialize, blst_p2_to_affine, blst_p2_uncompress,
-    BLST_ERROR,
+    blst_p1_is_inf, blst_p1_to_affine, blst_p1_uncompress, blst_p1s_add, blst_p2, blst_p2_affine, blst_p2_affine_in_g2,
+    blst_p2_affine_is_inf, blst_p2_affine_serialize, blst_p2_to_affine, blst_p2_uncompress, BLST_ERROR,
 };
 use ferrata_core::{
     bls::DST,
     fork::ChainSpec,
     steps::{
-        apply_core_compact, update_advances, validate_compact, Job, PendingApply, Phase, SigningCommittee,
-        StepError,
+        apply_core_compact, update_advances, validate_compact, Job, PendingApply, Phase, SigningCommittee, StepError,
     },
     types::{BlsPubkey, BlsSignature},
     witness::{
@@ -57,8 +55,7 @@ use sha2::digest::generic_array::{typenum::U64, GenericArray};
 // ---------------------------------------------------------------------------------------------
 
 /// SHA-256's initial state.
-const IV: [u32; 8] =
-    [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
+const IV: [u32; 8] = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
 
 /// The padding block of a 64-byte message: `0x80`, zeros, the length in bits (512) big-endian.
 const PAD64: [u8; 64] = {
@@ -127,9 +124,9 @@ pub fn leaf(pk: &BlsPubkey) -> Root {
 
 /// `(p − 1)/2`, big-endian (`tests/agg.rs` re-derives it from p).
 pub const P_HALF: [u8; 48] = [
-    0x0d, 0x00, 0x88, 0xf5, 0x1c, 0xbf, 0xf3, 0x4d, 0x25, 0x8d, 0xd3, 0xdb, 0x21, 0xa5, 0xd6, 0x6b, 0xb2, 0x3b,
-    0xa5, 0xc2, 0x79, 0xc2, 0x89, 0x5f, 0xb3, 0x98, 0x69, 0x50, 0x7b, 0x58, 0x7b, 0x12, 0x0f, 0x55, 0xff, 0xff,
-    0x58, 0xa9, 0xff, 0xff, 0xdc, 0xff, 0x7f, 0xff, 0xff, 0xff, 0xd5, 0x55,
+    0x0d, 0x00, 0x88, 0xf5, 0x1c, 0xbf, 0xf3, 0x4d, 0x25, 0x8d, 0xd3, 0xdb, 0x21, 0xa5, 0xd6, 0x6b, 0xb2, 0x3b, 0xa5,
+    0xc2, 0x79, 0xc2, 0x89, 0x5f, 0xb3, 0x98, 0x69, 0x50, 0x7b, 0x58, 0x7b, 0x12, 0x0f, 0x55, 0xff, 0xff, 0x58, 0xa9,
+    0xff, 0xff, 0xdc, 0xff, 0x7f, 0xff, 0xff, 0xff, 0xd5, 0x55,
 ];
 
 /// The compressed encoding (`blst_p1_affine_compress`, the ZCash format) of a key given in the

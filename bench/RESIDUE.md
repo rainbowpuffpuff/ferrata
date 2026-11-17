@@ -342,7 +342,8 @@ the final check, `steps::apply`) is the core's code.
 
 The witness (`NonSigners`): a `u16` key count, the keys (96 bytes each, in index order), a `u16` node
 count, the nodes (32 bytes each); strict (each count at most the committee size, the input consumed
-exactly). At 342 signers it is 22,756 to 24,516 bytes instead of 65,282.
+exactly). At 342 signers it is at most 24,516 bytes (every third member absent; 22,756 at random
+positions) instead of 65,282.
 
 ### 9.3 Why it is sound
 
@@ -464,7 +465,11 @@ Execution user cycles of the whole execution (`SessionInfo::cycles`). With the c
 this guest reproduces §5's figures within 549 cycles at 510 and 512 signers; at 342 it gives about
 20,800 fewer (10,126,621 against 10,147,477 folded: another guest binary). Per non-signer (342, every third
 absent, against 512): **9,418** cycles in all (step 1 9,224, decoding the witness 181, reading it 13)
-instead of 25,094 (step 1 22,298, decoding 2,760, reading 35); at random positions 9,090.
+instead of 25,094 (step 1 22,298, decoding 2,760, reading 35); at random positions 9,090. Every
+third member absent is the worst case among the updates the policy accepts: what depends on where
+the absent members sit is the multiproof's hashes (at most the sum over the levels of min(k, 2^ℓ),
+425 for k = 170) and its nodes (at most 256), both reached there; the rest grows with the number of
+non-signers, at most 170.
 
 **The fewest signers that fit one transaction** (`residue-host boundary`, `results/residue/agg/boundary.md`;
 absent members evenly spaced):
