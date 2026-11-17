@@ -1,0 +1,32 @@
+[14:17:05] session 20261116T141705Z
+[14:17:08] restored generation 70 (144M)
+[14:17:09] Bedrock node up: {"cryptarchia_info":{"lib":"13f8829f462b65cbedebad0573865ddcab04fd39523ee8e7382a0bd496b419ec","lib_slot":9338483,"tip":"ad6a96bf354ed0f6629e936eff103af6697f176fdce51ab9f96899bf87ae07d2","slot":9338488,"height":8047,"state":"Bootstrapping"},"phase":"InitialBlockDownload"}
+[14:17:13] node slot 0 is unix second 1785493027
+[14:17:15] sequencer start 1: scheduler after 1 s; its blocks fall 7 s after an epoch second
+[14:17:15] sequencer stopped (exit 0)
+[14:17:20] sequencer start 2: scheduler after 0 s; its blocks fall 2 s after an epoch second
+[14:17:20] sequencer up, head block 653
+sepolia: instance at slot 11591392, head period 1415, 2 update(s), finality update yes; 3 request(s)
+mainnet: instance at slot 15667200, head period 1912, 1 update(s), finality update yes; 3 request(s)
+[14:19:17] driver exit 0
+[mainnet] update 001912.ssz (attested 15663315, finalized 15663232): not applied, the native client refuses it: UpdateIrrelevant
+[20261116T141705Z] mainnet #78 finality p1912 fin 15667808 Open (step 1)      applied        gas   2220916 block  662 +  9.6s 12789b794ea0293efe62f232fcae75c483fd87870101560a646ee055ba4beba9
+[20261116T141705Z] mainnet #78 finality p1912 fin 15667808 Miller (step 2)    applied        gas   3307963 block  663 +  9.9s 4ef726e25e69f5f4012f655df8112299452587038d97ac78c336c1464caa64ee
+[20261116T141705Z] mainnet #78 finality p1912 fin 15667808 Finish (step 3)    applied        gas   3723564 block  664 + 10.4s b2821214a984117ef043d2c1f3b6ced699b533339e686b10e9e738fb6fa59561
+[mainnet] mainnet #78 finality p1912 fin 15667808: applied (3 transactions, blocks 662-664); rotated false advanced true adopted false
+[mainnet] 1 job(s) applied this session, 0 committee handoff(s)
+blocks: 1..=664 (every one final on Bedrock)
+transactions: 662 sent; 662 applied, 0 refused with an exit code, 0 reverted otherwise, 0 dropped, 0 rejected at the RPC, 0 unfinished
+[14:19:18] sequencer stopped (exit 0)
+[14:19:26] node stopped (exit 143)
+state to save:
+154M	lab/state/bedrock
+2.0K	lab/state/config
+8.2M	lab/state/driver
+97M	lab/state/sequencer_home
+68439275 sequencer_home/rocksdb-0101010101010101010101010101010101010101010101010101010101010101/001055.log
+56868806 bedrock/state/db/008008.log
+28417107 bedrock/state/db/008005.sst
+18970465 bedrock/state/db/008009.sst
+18968935 bedrock/state/db/008007.sst
+[14:19:27] saved generation 71 (54398658 bytes)

@@ -1,2 +1,2 @@
-blocks: 1..=600 (every one final on Bedrock)
-transactions: 598 sent; 598 applied, 0 refused with an exit code, 0 reverted otherwise, 0 dropped, 0 rejected at the RPC, 0 unfinished
+blocks: 1..=768 (every one final on Bedrock)
+transactions: 765 sent; 765 applied, 0 refused with an exit code, 0 reverted otherwise, 0 dropped, 0 rejected at the RPC, 0 unfinished

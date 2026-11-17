@@ -1,7 +1,7 @@
-session	20261115T201705Z
-started	1794773836
+session	20261117T201707Z
+started	1794946644
 sepolia	ok	jobs 1	handoffs 0
 mainnet	ok	jobs 1	handoffs 0
-finished	1794773901
-head_block	600
-followed_to	600
+finished	1794946707
+head_block	768
+followed_to	768
