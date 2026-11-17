@@ -47,7 +47,11 @@ Every call is `call(method, params)` with one JSON value in and one out:
   the design has it. Where the host has `logos.callModuleAsync` (Basecamp) the view calls asynchronously, so it
   does not hold Basecamp's GUI thread. Basecamp's bridge serialises the module's string reply once more as a JSON
   string, and `moduleReply()` reads that, logosctl's form and the host's error payload. A host timeout is reported
-  as an outcome to check with a refresh.
+  as an outcome to check with a refresh. The private claim and burn are jobs of the module (`modules/README.md`,
+  `wallet`): the call starts the job and is answered at once; the view polls `job` every 3 s, shows the job's state
+  and time under the step (and in the header), keeps both steps' buttons disabled while it runs, applies the job's
+  reply once it is done, and, opened again, picks the module's jobs up (`jobs`; the burn's with the release delay it
+  was started with).
 - **On the devnet**: HTTP to `cli/examples/miniapp_devnet.rs`, which serves the same methods (`info`,
   `registry`, `price`, `deposit`, `relay`, `scan`, `claim`, `burn`, `checkpoint`, `release`,
   `set_endpoints`, `advance_time` (the devnet's clock, for letting a delay pass), `admin.status`,
@@ -137,13 +141,13 @@ with the private claim and burn proven for real; its results go to `results-real
 
 ## Not done
 
-- **Inside Basecamp in dev mode only, with Ethereum through a stand-in.** The private round trip ran in this view
-  inside Logos Basecamp (`b642a9a`) on a running LEZ sequencer and node, with `ferrata_bridge_module` and
-  `lez_core` loaded in the same Basecamp: 13 of 13 steps, each checked on the chains
-  ([`results-basecamp-roundtrip/`](results-basecamp-roundtrip/README.md)). Still not done:
-  - **Real proofs inside Basecamp.** Basecamp's bridge cuts a ui module's call to a core module at 20 s, and a real
-    claim or burn takes about four minutes. This needs the upstream fix described there, or the module's `claim`
-    and `burn` turned into a job that the view polls.
+- **Inside Basecamp with Ethereum through a stand-in.** The private round trip ran in this view inside Logos
+  Basecamp (`b642a9a`) on a running LEZ sequencer and node, with `ferrata_bridge_module` and `lez_core` loaded in the
+  same Basecamp: 13 of 13 steps, each checked on the chains, in dev mode
+  ([`results-basecamp-roundtrip/`](results-basecamp-roundtrip/README.md)) and with the private claim and burn proven
+  for real by `lez_core` there ([`real-proofs-jobs/`](results-basecamp-roundtrip/real-proofs-jobs/README.md)).
+  Basecamp still cuts a ui module's call to a core module at 20 s; the module runs the claim and burn as jobs the view
+  polls, so no call of the view lasts that long. Still not done:
   - **Ethereum through Logos Core's modules.** The module's Ethereum reads, the deposit's signing and sending and
     the release go through `seqnet-chain` (the user's keystore, the relayer) instead of `eth_rpc_module` and
     `keystore_module`/`tx_sender_module`; LEZ goes through `lez_core` with our patch.

@@ -48,10 +48,11 @@ The design notes specify these; there is no code for them here:
   `import_root` reads the vault through `eth_rpc_module`, row 109; the `wallet` method does not use it yet; its LEZ
   reads and private sends go through `lez_core` when the session says so, rows 113, 114); the view has run inside
   Logos Basecamp (`b642a9a`) with `ferrata_bridge_module` and `lez_core` loaded there, the whole private round
-  trip clicked through Basecamp and checked on the chains, in dev mode only (row 125,
-  [`modules/ferrata_bridge_ui/results-basecamp-roundtrip/`](../modules/ferrata_bridge_ui/results-basecamp-roundtrip/README.md)):
-  real proofs inside Basecamp wait on its 20 s cap on a view's call to a core module (an upstream fix, or the
-  module's claim and burn as a job the view polls); that devnet's Ethereum side is anvil finalized by a stand-in
+  trip clicked through Basecamp and checked on the chains (row 125,
+  [`modules/ferrata_bridge_ui/results-basecamp-roundtrip/`](../modules/ferrata_bridge_ui/results-basecamp-roundtrip/README.md)),
+  also with the private claim and burn proven for real by `lez_core` there (row 126): Basecamp still cuts a view's
+  call to a core module at 20 s, so the module runs the two as jobs the view polls (an upstream fix in
+  logos-view-module-runtime would make that unnecessary); that devnet's Ethereum side is anvil finalized by a stand-in
   committee, with the vault tests' mock verifier (no Groth16 proof) and a stand-in for the gas drop;
 - in the attestation program: consumers bound to the root id (the bridge, `ferrata_holdings` and the
   reference consumer still pin an instance); a chain of several EIP-2935 hops under a Gloas record (one hop

@@ -158,3 +158,12 @@ outcome only by refreshing, and lost the burn's release delay; the run stopped b
 Ethereum transactions, none reverted
 ([`l4-real-proofs/`](../../modules/ferrata_bridge_ui/results-basecamp-roundtrip/l4-real-proofs/README.md)).
 
+### `seqnet-basecamp-jobs-real` (17 Nov 14:50–15:08 UTC, `SEQNET_PROOFS=real`): the whole round trip in Basecamp, the claim and burn as jobs
+
+[`e2e/runs/seqnet-basecamp-jobs-real/`](../runs/seqnet-basecamp-jobs-real/SUMMARY.md); Basecamp's records and pictures:
+[`real-proofs-jobs/`](../../modules/ferrata_bridge_ui/results-basecamp-roundtrip/real-proofs-jobs/README.md). The
+module's claim and burn ran as jobs the view polled (`ferrata_bridge_module` `calls/src/jobs.rs`): `lez_core` proved
+the private claim in 247.1 s and the burn in 222.9 s inside Basecamp, the sequencer, verifying, applied them in LEZ
+blocks 74 and 97 (transactions 256,068 and 255,031 B), and the release paid 0.000997 ETH to the fresh address. 13 of 13
+steps, 64 checks; 191 calls of the view, 162 of them polls, the longest 3,176 ms, none cut by Basecamp's 20 s.
+

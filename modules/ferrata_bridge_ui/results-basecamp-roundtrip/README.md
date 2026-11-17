@@ -6,14 +6,17 @@ view, step by step, on a running LEZ devnet.** Basecamp (pinned commit `b642a9a`
 module through the `logos` object Basecamp injects; every user step was a click on the view inside Basecamp's
 window: connect, deposit, private claim, private burn, release, recovery, registry. After each step the chains were
 read directly and checked. Proofs were in RISC Zero dev mode. **13 of 13 steps passed, with 50 checks.**
-Basecamp's window was grabbed at every state: 23 pictures in [`pictures/`](pictures/).
+Basecamp's window was grabbed at every state: 23 pictures in [`pictures/`](pictures/). **On 17 November the same
+round trip ran inside Basecamp with real proofs** ([`real-proofs-jobs/`](real-proofs-jobs/README.md)): `lez_core`
+proved the private claim and burn there, and the module ran them as jobs the view polls, so that Basecamp's 20 s cap
+on a view's call (still there upstream) cut nothing.
 
 | Level (as the work item states them) | Reached | Evidence |
 |---|---|---|
 | L1: Basecamp built; the ui module and the core modules installed and loaded in one Basecamp | **yes** | [`probe/`](probe/) (3 of 3), pictures 01–02, `run/basecamp-run.log` lines "Successfully loaded core module" |
 | L2: the view calls `ferrata_bridge_module` through Basecamp's `logos` and shows live devnet data: account, balances on both sides, registry with caps | **yes** | pictures 04–06, 11, 15; the checks "the Ethereum balance the view shows equals anvil's" and "the LEZ side of the token is shown" |
 | L3: the whole round trip driven inside Basecamp, each step checked on the chains | **yes, dev-mode proofs** | [`run/events.jsonl`](run/events.jsonl) (13 steps, 50 checks), [`run/chain-checks.jsonl`](run/chain-checks.jsonl), [`e2e/runs/seqnet-basecamp-2/`](../../../e2e/runs/seqnet-basecamp-2/SUMMARY.md) |
-| L4: the private claim and burn proven for real | **no**: proven for real inside Basecamp and applied, but the view's calls were cut at 20 s and the release was not reached | "Not reached: L4" below; [`l4-real-proofs/`](l4-real-proofs/README.md) |
+| L4: the private claim and burn proven for real | **yes, 17 Nov**, with the claim and burn as jobs of the module that the view polls: 13 of 13 steps, 64 checks, the claim proven in 247.1 s and the burn in 222.9 s inside Basecamp, the release paid; 191 calls of the view, none cut. On 16 Nov, before the jobs, the view's calls were cut at 20 s and the release was not reached | "L4" below; [`real-proofs-jobs/`](real-proofs-jobs/README.md); the cut: [`l4-real-proofs/`](l4-real-proofs/README.md) |
 | L5: pictures of Basecamp's window at each step | **yes** | [`pictures/`](pictures/), 23 PNGs, 84–200 kB each, 3.6 MB in all |
 
 ## What ran, where
@@ -95,7 +98,7 @@ records. Across the run there were 103 LEZ and 15 Ethereum transactions, none re
   holdings of /0 from `scan`) with a Refresh button. Inside Logos it names the module's endpoints, not the devnet's
   defaults. The view also keeps its own call log (`callLog`: method, outcome, milliseconds).
 
-## Not reached: L4 (real proofs inside Basecamp)
+## L4: real proofs inside Basecamp (the cut measured on 16 November, the round trip reached with jobs on 17 November)
 
 **A ui module's call to a core module cannot last longer than 20 s in this Basecamp.** A private claim or burn
 proven for real by `lez_core` takes 229–249 s on this box (EVIDENCE row 114: claim 248.7 s, burn 228.8 s).
@@ -118,17 +121,28 @@ and the run stopped before the release. From the sources at Basecamp's pins:
 The smallest upstream change would be in logos-view-module-runtime: `callModuleAsync` passes `Timeout(timeoutMs)`
 to `invokeRemoteMethodAsync` when `timeoutMs > 0` (and a long one when it is 0), and the 30 s fallback timer is
 kept for the wait until the module is reachable, not for the call. Without an upstream change, the module can
-take the proof off the call: `claim`/`burn` start the work and return a job id, and the view polls `job`. That is
-host code, but it needs the module rebuilt and its suites run again; it was not done here. The drafted upstream
-issue is in the agent's report.
+take the proof off the call: `claim`/`burn` start the work and return a job id, and the view polls `job`.
+
+**Done on 17 November, without an upstream change** ([`real-proofs-jobs/`](real-proofs-jobs/README.md)): the cap is
+still in Basecamp's pin, and the module works around it. `ferrata_bridge_module`'s `wallet` `claim` and `burn` start a
+job in a thread of the module and answer at once (7 ms and 3 ms); `job` reports its state (queued, proving, sent,
+settled or failed), its time and, once done, the reply the call used to carry; `jobs` lists them, so a view that missed
+a reply, or one opened again, finds them. The view polls every 3 s. With `SEQNET_PROOFS=real` the whole round trip
+passed in Basecamp: 13 of 13 steps, 64 checks, the claim proven in 247.1 s (LEZ block 74), the burn in 222.9 s (block
+97), the release paid 0.000997 ETH to the fresh address, and the release held for the delay the burn's job carried.
+The view made 191 calls, 162 of them polls; the longest took 3,176 ms, and none was cut. The job's thread reaches
+`lez_core` through the SDK, which runs the call on the module's Qt thread and waits there in a nested event loop that
+also answers the view's polls; this needs the method that started the job to have returned (EVIDENCE row 121).
 
 ## What this does not show
 
 - **Ethereum through Logos Core's own modules.** Inside Basecamp the module's Ethereum reads, the deposit's
   signing and sending and the release still go through the stand-in `seqnet-chain`, not `eth_rpc_module`,
   `keystore_module` and `tx_sender_module`. LEZ goes through `lez_core`, and only with our patch (row 115).
-- **Real proofs** (L4 above). The vault's verifier is the mock (no Groth16), and anvil's blocks are finalized for
-  LEZ's light client by a stand-in committee.
+- **Real proofs beyond LEZ's private transactions.** The claim and burn were proven for real inside Basecamp on 17
+  November (L4 above), but the vault's verifier is the mock (no Groth16), and anvil's blocks are finalized for LEZ's
+  light client by a stand-in committee. Basecamp's 20 s cap on a view's call is still there upstream: the module
+  works around it with jobs.
 - **The user does not open the session.** `wallet open` (the chain service's address) and `wallet lez` (the user's
   LEZ wallet files for `lez_core`) are made by the driver through the view's `logos`, as the Qt Quick Test's
   `initTestCase` made `open`. In Logos the wallet SDK (LP-0021, unreleased) would stand there.

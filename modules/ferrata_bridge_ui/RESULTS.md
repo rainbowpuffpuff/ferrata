@@ -1,5 +1,19 @@
 # `ferrata_bridge_ui`: results
 
+## 17 November 2026: real proofs inside Logos Basecamp, the claim and burn as jobs
+
+**With real proofs, the whole private round trip ran in the view inside Logos Basecamp, and no call of the view was
+cut** ([`results-basecamp-roundtrip/real-proofs-jobs/`](results-basecamp-roundtrip/real-proofs-jobs/README.md), branch
+`basecamp-jobs`, the Modal build box). Basecamp still ends a view's call to a core module at 20 s (below); the
+module's `wallet` `claim` and `burn` now start a job in a thread of the module and answer at once, and the view polls
+the job every 3 s, shows its state and time under the step, keeps the steps disabled while it runs, applies its
+reply once done (the burn's with the release delay it was started with), and picks jobs up when it is opened again.
+With `SEQNET_PROOFS=real`: 13 of 13 steps, 64 checks; `lez_core` proved the private claim in 247.1 s (LEZ block 74)
+and the burn in 222.9 s (block 97) inside Basecamp, the sequencer verifying each receipt; the release paid 0.000997 ETH
+to the fresh address. 191 calls of the view (162 polls), the longest 3,176 ms, none cut. During each proof a second
+start of the step answered the running job, and a `scan` was refused at once. 25 pictures of Basecamp's window, two of
+a job proving and two of it settled. Ethereum stays behind the stand-in `seqnet-chain`, the vault's verifier the mock.
+
 ## 16 November 2026: the private round trip inside Logos Basecamp
 
 **Logos Basecamp itself ran the mini-app with its core modules, and a user's private round trip ran in the view
