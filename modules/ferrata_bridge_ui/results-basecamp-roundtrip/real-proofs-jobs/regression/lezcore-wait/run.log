@@ -1,0 +1,60 @@
+[16:21:50] seqnet lezcore-jobs-dev: mode lezcore, private proofs dev
+[16:21:50] LEZ session A: a new zone, the programs, the stand-in instance
+[16:25:36] session A: tip {"hash":"0xb6f8c626a22e3c17c13e917707e29f74ede6d33d0113682ab8cadf618bf74083","id":19}; bridge program 0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d (image 0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd), attestation program 0x86ce4d7f54bd68b4c7356398cfda192f791c83f6fa3c3102a18ac20fefdfa04c (image 0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df)
+[16:25:38] vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516 (mock verifier 0x25Fa4286d401bdc4AC7657bc7a1ebdE1B737F4b1), configId 0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c, genesisState 0x57beeab8cbbfc0f98a4ffd82a043ebf4a3030729bf9ebd2b9af832cd6062889c
+[2026-11-17T16:25:42Z] deploy complete: vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516, configId and genesisState as the run's identity
+[16:25:42] LEZ session X: the zone restored and running; hook-lezcore.sh
+[16:26:12] seqnet-chain: seqnet-chain: http://127.0.0.1:18700/ (vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516, configId 0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c, user 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC)
+[16:26:20] wallet open: {"chain":"http://127.0.0.1:18700/","chain_id":11155111,"config_id":"0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c","depositor":"0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc","module":"ferrata_bridge_mo
+[16:26:20] wallet lez_probe: {"accounts_json":["{\"account_id\":\"0xe629dd971612b72a39d9460a51e34f4835069ec70a15b61cec97b69f10c745c3\",\"kind\":\"public_pda\",\"program\":\"0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d\",\"seed\
+[16:26:28] Logos Core: ferrata_bridge_module and lez_core (patched) installed from their .lgx and loaded
+[16:26:29] wallet open: {"chain":"http://127.0.0.1:18700/","chain_id":11155111,"config_id":"0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c","depositor":"0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc","module":"ferrata_bridge_mo
+[16:26:29] wallet lez_probe: {"accounts_json":["{\"account_id\":\"0xe629dd971612b72a39d9460a51e34f4835069ec70a15b61cec97b69f10c745c3\",\"kind\":\"public_pda\",\"program\":\"0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d\",\"seed\
+[16:26:29] wallet lez: {"plain_path":"the zone's history and Ethereum: the chain service; a send lez_core refuses goes through the chain service","private_holding":"lez_core.sync_to_block + get_account_private, beside the chain service's walle
+[16:26:29] wallet info: {"backend":"ferrata_bridge_module in Logos Core; the chains through seqnet-chain (the stand-in for Logos Core's own modules)","chain_id":11155111,"config_id":"0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042
+[16:26:29] wallet scan: {"burns":[],"deposits":[],"holdings":[],"how":"ferrata_bridge_module recover over the whole deposit list (checked against depositRoot by the chain service) and the zone's applied calls: no per-item query","imported_roots
+[16:26:29] wallet registry: {"imported_root":null,"lez_config":null,"tokens":[{"decimals":18,"denominations":[{"amount":"1000000000000000","burn_fee":"0","checkpoint_fee":"1000000000000","index":0,"mint_fee":"0","relay_fee":"2000000000000"},{"amoun
+[16:26:29] wallet price: {"denomination":"1000000000000000","mint_fee":"0","relay_fee":"2000000000000","schedule":0,"total":"1002000000000000"}
+[16:26:29] wallet deposit: {"account":0,"amount":"1000000000000000","block":9,"commitment":"0xa421c67a1128eca72fe990ac38e1cca441643b358e3740d204409386cb10ed32","hidden":["the LEZ destination (C commits to it)"],"j":0,"kind":"private","leaf_index":
+[16:26:29] wallet scan: {"burns":[],"deposits":[{"account":0,"amount":"1000000000000000","dest":"0xd0029aa57943164511b1565faea8a7b0f0df439cc613c9ee5fc64366ac66fe85","j":0,"kind":"private","leaf_index":0,"nullifier":"0xcd6efdc213344cb4703558dba0
+[16:26:29] capture-1: capture of block 9 0xfc5bad161d1b54b540d6264323b51a9ba5fce696ee4fd1a10faa524bbf2379e0 (state root patched: False): 1 deposit(s), 6 slot(s)
+[16:26:30] operator: crown-driver crown-b --operator-only over capture-1
+[crown-b] bridge Register ETH (registry entry, schedules 0 and 1, leaf count) applied        gas    451572 block   25 +  9.8s fe827bfa3d9387609b2fedb6ed7eef669881c0c6dffb1894b45617842c381128
+[crown-b] token(cid, ETH): 1 schedule(s), known until leaf 1
+[crown-b] bridge ImportRoot n=1 (stage 1, block 9)                   applied        gas    301949 block   26 + 10.0s bffd696b7f92b1aeb2e14eee3533496aa04753fa73b295b1ab6f287323ea9197
+[crown-b] blocks 20..=26 (T1 0xdaa873b69828d02c11a6d2299427fad38716a2e823de1a546b5e25b1a7faaa81); 0 burn note(s) written to <work>/notes.json
+[16:27:27] wallet registry: {"imported_root":{"block_number":9,"config_id":"0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c","evm_chain_id":11155111,"leaf_count":1,"record_slot":11542656,"root":"0x8de765294b027c36b584555c3d6c7be0
+[16:27:27] gas drop stand-in: native LEZ to the user's private account /0 (seqnet-fund)
+{"step":"faucet public transfer (stand-in for the gas drop)","tx":"8899be120b3b99a7dff33ab6c52c508c5cf85a6d8aa34f0636228854f28c5eae","amount":"3000000000000","fee_paid_in_the_proof":null,"send_ms":2,"seen_ms":4005}
+{"step":"the user's private transfer public /0 -> private /0 (proven by LEZ's wallet)","tx":"c3c8c6088e8b2b2ddafa4beba919ad890b08144e991ed55c788441625015dbff","amount":"2000000000000","fee_paid_in_the_proof":"5070616","send_ms":114,"seen_ms":9093}
+[16:27:41] wallet scan: {"burns":[],"deposits":[{"account":0,"amount":"1000000000000000","dest":"0xd0029aa57943164511b1565faea8a7b0f0df439cc613c9ee5fc64366ac66fe85","j":0,"kind":"private","leaf_index":0,"nullifier":"0xcd6efdc213344cb4703558dba0
+[16:27:52] wallet claim: {"account":0,"balance":"1000000000000000","block":29,"hidden":["the destination account (an alias appears)","the leaf index","the depositor","the private balance"],"job":1,"made_by":"ferrata_bridge_module claim (the tool
+[16:27:52] wallet scan: {"burns":[],"deposits":[{"account":0,"amount":"1000000000000000","dest":"0xd0029aa57943164511b1565faea8a7b0f0df439cc613c9ee5fc64366ac66fe85","j":0,"kind":"private","leaf_index":0,"nullifier":"0xcd6efdc213344cb4703558dba0
+[16:27:52] the user's fresh Ethereum address for the release: 0x02403cD593f8d7dfc000363EEc01e40829473b52 (cast wallet new; its key is not kept)
+[16:28:01] wallet burn: {"account":0,"amount":"1000000000000000","balance":"0","block":30,"burn_index":0,"hidden":["the holder (a private account: an alias appears)","the Ethereum recipient (encrypted in the memo)"],"i":0,"job":2,"made_by":"fer
+[16:28:01] wallet scan: {"burns":[{"amount":"1000000000000000","burn_index":0,"i":0,"nullifier":"0x01596679d2a9c85930b98abde954c6d5804e007185114473c91ac522675cd584","recipient":"0x02403cd593f8d7dfc000363eec01e40829473b52","released":false}],"de
+[16:28:01] checkpoint: blocks 20..=30, once block 30 is final on Bedrock
+[16:28:22] realblocks-crown: node: 373 immutable blocks (0 other transactions), final inscriptions of LEZ blocks 1..=31: parse + re-hash + link + framing + BLAKE2b + verify_strict by the channel's 1 key(s) (13d0b5ed… 31): all 31 accepted; channel tip message = block 31's: true seqnet-19-30: 11 blocks, 32 transactions, 118078 
+[16:28:22] checkpoint_b executed (final program 0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e): {"executor_wall_s":0.164458648,"image_id":"0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e","input_bytes":120060,"journal_bytes":544,"journal_equals_native":true,"padded_cycles":5373952,"po2":[20,20,20,20,20,17],"segments":6,"user_cycles":4788823}
+[16:28:22] stand-in prover: the mock verifier accepts checkpoint_b's journal (sha256 0xc5ca736fce08ed40be85f2d0c575ef59f2a9c2fe170796aa2c2ed0495cbabca4)
+[16:28:22] relayer: {"event":"job-done","tx":null,"why":null} {"event":"candidate-waiting","tx":null,"why":null} {"event":"stop","tx":null,"why":"rounds"} 
+[16:28:22] anvil's clock moved on 3601 s: the candidate's wait (Delta 3600 s) (Ethereum time now 1794936503)
+[16:28:22] relayer: {"event":"start","tx":null} {"event":"finalized","tx":"0x9ece382c82f11d3825442ea1aca915ca419003ec8b840bb2d8e7dcc83afad383"} {"event":"stop","tx":null} 
+[16:28:22] vault: finalState 0xf91fda58645f5bbd027ff70e49536b1ff1a838416d982c90269cf658d565830d, checkpoints 1
+[16:28:22] wallet release: ERROR refused: vault error ReleaseDelayNotElapsed() (checked before sending: the roots that cover this burn open at Ethereum time 1794936623)
+[16:28:22] anvil's clock moved on 121 s: the release delay (120 s after finalizeAttested) (Ethereum time now 1794936624)
+[16:28:23] wallet release: {"block":16,"journal_sha256":"0x3a1a8475d975279b9b8588c01f6942e1429a8cd0615b54483c4fc256ad7936d4","made_by":"ferrata_bridge_module release (the wallet's rule: the newest accepted root whose delay has passed; the journal)
+[16:28:23] the fresh address 0x02403cD593f8d7dfc000363EEc01e40829473b52 holds 997000000000000 wei
+[16:28:23] wallet scan: {"burns":[{"amount":"1000000000000000","burn_index":0,"i":0,"nullifier":"0x01596679d2a9c85930b98abde954c6d5804e007185114473c91ac522675cd584","recipient":"0x02403cd593f8d7dfc000363eec01e40829473b52","released":true}],"dep
+[16:28:23] wallet lez_report: {"log":[{"calls":[{"method":"open","ms":114,"reply":"0"},{"method":"get_sequencer_addr","ms":1,"reply":"http://127.0.0.1:3040/"},{"method":"get_current_block_height","ms":6,"reply":"20"},{"method":"list_accounts","ms":1}
+[16:28:23] lez_core: {"reads":85,"reads_equal":85,"reads_failed":0,"private_reads":9,"private_reads_equal":9,"sends":3,"sends_sent":2}
+[16:28:23] the zone: 99 transactions in blocks 1..=32
+[16:28:23] hook-lezcore: done
+[16:28:25] driver exit 0
+[16:28:25] export failed (1)
+[16:28:25] sequencer stopped (exit 0)
+[16:28:34] node stopped (exit 143)
+[16:28:34] saved generation 2 (35151973 bytes; head block 32)
+[16:28:34] session x: ok
+seqnet-lezcore-jobs-dev: 99 LEZ and 15 Ethereum transactions, 0 user commands, 0 view calls
+[16:28:34] seqnet lezcore-jobs-dev: DONE
