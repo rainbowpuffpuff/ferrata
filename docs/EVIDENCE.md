@@ -182,8 +182,9 @@ side is a devnet we ran (LEZ testnet 0.4 does not exist).
   `integration5`'s program the same in row 41, 359,397 to 577,927; the frozen program's `Init` and `ImportRoot` in row
   27: 355,935 and 426,479); a mainnet-depth attestation was measured for the
   attestation program (row 3: 274,842 cycles for one slot), not for the bridge's import.
-- **On the light-client side**, the program's only real proof on a sequencer (row 6) is of an image from
-  before the attestation existed; the current source has run on sequencers without proofs in the fork rehearsals of row 83
+- **On the light-client side**, the program's real proofs on a sequencer are row 6's (an image from before the
+  attestation existed) and row 123's (the final programs' private update and a private attestation, on LEZ
+  v0.4.0-rc3 with one local validator); the current source has otherwise run on sequencers without proofs in the fork rehearsals of row 83
   and in the live run of row 91 (`Init` from a real Sepolia checkpoint inside its weak-subjectivity bound, which
   refused a 38-day-old one), earlier sources in rows 21, 22, 31 and 41.
 - **The checkpoints over real blocks** are of one-validator devnets with one channel key (n = t = 1), but one: row 24's
