@@ -1,0 +1,11 @@
+logos-basecamp b642a9aba732b80343a3a7b622dad8c65e534bdb: /nix/store/hv3jz3fhvpyrrmjzzipvirg73i6xjkvf-logos-basecamp-dev
+ferrata_bridge_ui install root: /nix/store/d74xvhr70i2kahvpvsdp6p3b6bgddqd8-logos-ferrata_bridge_ui-module-install
+lgpm: /nix/store/4z0d79dpvrh3bva8diyizid7qia0givq-logos-package-manager-cli-1.0.0-dev/bin/lgpm
+f19d92e4e60a1a8d9b8148f76a5555526d06efbde397b587f1c1fa979e99853d  ./logos-ferrata_bridge_module-module-lib.lgx
+df272fd35cd662fb6a0f77cec26a93198935305f38ac352c2ad99f029c66ce41  ./logos-lez_core-module-lib.lgx
+<basecamp-build>/modules-root/modules:
+ferrata_bridge_module
+lez_core
+
+<basecamp-build>/modules-root/plugins:
+route: lez_core; proofs: dev; reopen: 0

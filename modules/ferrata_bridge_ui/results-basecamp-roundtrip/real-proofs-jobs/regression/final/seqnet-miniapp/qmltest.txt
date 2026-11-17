@@ -1,0 +1,23 @@
+********* Start testing of ferrata_miniapp_logos *********
+Config: Using QtTest library 6.4.2, Qt 6.4.2 (x86_64-little_endian-lp64 shared (dynamic) release build; by GCC 13.2.0), ubuntu 24.04
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::initTestCase() qml: SESSION {"chain":"http://127.0.0.1:18700/","chain_id":11155111,"config_id":"0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c","depositor":"0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc","module":"ferrata_bridge_module wallet session","program":"0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d","proofs":"dev","vault":"0x67ac447386f2ea14ef2fbf55ef33ce1d8f386516"}
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::initTestCase()
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_01_connect()
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_02_registry()
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_03_deposit_private_by_default() qml: DEPOSIT Deposited 0.001 ETH to a private account (/0): transaction 0x2a1ca6…fdb102 in block 9, position #0. Public on Ethereum: the depositor address, the token, the denomination and fees, the time, the commitment C. Hidden: the LEZ destination (C commits to it).
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_03_deposit_private_by_default()
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_04_positions_before_import()
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_05_private_claim() qml: WAITED claim delay 299 min (the view's clock)
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_05_private_claim() qml: CLAIM {"tx":"b9f7a328cc74f7f298776c30436e3dde1721abb73015ace2cdb2256ce6708d0c","block":28,"proof":{"by":"LEZ's wallet library (send_privacy_preserving_tx_with_pre_check): executed and proven on this machine, verified by the sequencer","mode":"dev","prove_ms":1125,"receipt_bytes":16519,"tx_bytes":33055},"variant":"ClaimPrivately"}
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_05_private_claim()
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_06_private_burn_on_defaults() qml: BURN {"tx":"caeeb48672f011df6cbb52248117e815766c417fc31013326e0625d45142b888","block":29,"proof":{"by":"LEZ's wallet library (send_privacy_preserving_tx_with_pre_check): executed and proven on this machine, verified by the sequencer","mode":"dev","prove_ms":697,"receipt_bytes":16033,"tx_bytes":32018}}
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_06_private_burn_on_defaults()
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_07_checkpoint_and_private_release() qml: WAITED release delay 420 min (the view's clock)
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_07_checkpoint_and_private_release() qml: RELEASE Released: 0.000997 ETH paid to 0x64f57AB153AC3e4a8520421B89087d26a79A0217 in block 16 (transaction 0xf4186c…5903ea), sent by the relayer 0x70997970C51812dc3A010C7d01b50e0d17dc79C8 (ferrata-relayer, one round).
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_07_checkpoint_and_private_release()
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_08_jobs() qml: JOBS ["claim:settled","burn:settled"]
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_08_jobs() qml: CALLS 29 longest 84 ms
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_08_jobs()
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::cleanupTestCase()
+Totals: 10 passed, 0 failed, 0 skipped, 0 blacklisted, 128742ms
+********* Finished testing of ferrata_miniapp_logos *********

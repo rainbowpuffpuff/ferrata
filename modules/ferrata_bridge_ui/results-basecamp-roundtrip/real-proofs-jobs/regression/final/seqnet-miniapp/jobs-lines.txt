@@ -1,0 +1,2 @@
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_08_jobs() qml: JOBS ["claim:settled","burn:settled"]
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_08_jobs() qml: CALLS 29 longest 84 ms

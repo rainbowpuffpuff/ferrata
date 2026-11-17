@@ -1,0 +1,20 @@
+test lez::tests::accounts_map_to_lez_core_kinds ... ok
+test lez::tests::bytes_are_the_sdk_canonical_form ... ok
+test lez::tests::natively_lez_core_is_not_reachable ... ok
+test rpc::tests::the_request_names_the_path ... ok
+test rpc::tests::urls_and_bodies ... ok
+test tests::amounts ... ok
+test tests::selectors ... ok
+test tests::deposit_claim_status_round_trip ... ok
+test tests::burn_release_round_trip ... ok
+test tests::unreadable_requests ... ok
+test wallet::tests::release_by_the_wallet_rule ... ok
+test jobs::tests::a_failed_job_keeps_its_error_and_a_panic_fails_it ... ok
+test jobs::tests::unknown_id_and_missing_id ... ok
+test jobs::tests::wait_runs_the_step_in_the_call_and_answers_as_the_call_did ... ok
+test jobs::tests::a_job_answers_at_once_runs_in_its_thread_and_settles ... ok
+test jobs::tests::two_starts_of_one_step_give_one_job_and_another_step_is_refused ... ok
+test session::tests::the_view_reaches_the_jobs_through_wallet ... ok
+test session::tests::while_a_job_runs_what_would_wait_for_it_is_refused_at_once ... ok
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
