@@ -1,0 +1,13 @@
+# The experimental program copy through LEZ's state machine (in-process harness, LEZ v0.4.0-rc1), 17 Nov 2026
+# Modal build box; RISC0_DEV_MODE=1 (public transactions are executed and metered, not proven).
+# cd lez && RISC0_HOME=$PWD/../../risc0-home-lez RISC0_DEV_MODE=1 cargo test -p harness --test residue_experimental -- --nocapture
+# The handlers of the copy are labelled by its account (program 7MNn...), not by message: VerifyAll -> ApplyVerified -> Record.
+image ids in this build (they depend on the build path): experimental copy a097e9288461cadc782211f3ea1751574593816107e68ddfe38ae5cfd81a41f4, deployed program 816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df
+| transaction | handlers run (cycles each) | execution gas | of MAX_GAS_EXEC 10M | storage gas (tx bytes) | base fee | result |
+|---|---|---:|---:|---:|---:|---|
+| EXPERIMENTAL VerifyAll, residue witness with c tampered | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 6532961 | 6532961 | 65.3% | 5257 | 52305744 | refused: exit 40 |
+| EXPERIMENTAL VerifyAll, residue witness (finality update_1, 510 of 512 signers) | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 6553714 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 58186 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 17346 | 6629246 | 66.3% | 5257 | 53076024 | applied |
+| finality update in one transaction (VerifyAll) | VerifyAll 9049362 → ApplyVerified 58184 → Record 17350 | 9124896 | 91.2% | 4105 | 73032008 | applied |
+difference in execution gas, deployed minus experimental: 2495650
+test a_finality_update_in_one_transaction_with_the_residue_witness ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 12.26s

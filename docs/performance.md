@@ -82,6 +82,16 @@ container's CPU with 32 prover threads, where a live sequencer verified and appl
 re-executes them ([`bridge.md`](design/bridge.md) §7). A handler pays 5.7 cycles per byte it receives and
 about 3.4 per byte it sends on ([`attestation.md`](design/attestation.md) §4.3).
 
+**One public transaction with a residue witness (experimental, not deployed).** An unaudited copy of
+the program whose `VerifyAll` checks a residue witness (Novakovic and Eagen; `c ≠ 0`, `w ∈ Fp6`,
+`f·w == c^λ`) instead of computing the final exponentiation was charged **6,629,246** execution gas
+for the same finality update in one transaction (66.3% of `MAX_GAS_EXEC`), against 9,124,896 for the
+deployed `VerifyAll` in the same build (in-process harness). Bare guest, one whole update: 6,573,265
+user cycles (5,911,714 with the witness folded into the Miller loop); at the fewest signers the
+policy accepts (342 of 512) 10,809,028 (10,147,477 folded), and an update that adopts a committee
+11.9M to 16.8M: over the limit either way ([`bench/RESIDUE.md`](../bench/RESIDUE.md); EVIDENCE row
+127). The deployed programs are unchanged.
+
 **Statement verification by type**: P.1's table. **Proof time and size of an attestation**: the private
 attestation of a `Transfer`, 380,577 user cycles for the consumer's two transitions plus LEZ's privacy
 circuit, proven on one L4 in **16.1 s**, receipt **227,170 B**, transaction 231,214 B, peak host memory

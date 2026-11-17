@@ -1,7 +1,9 @@
 # Ferrata: cycles to verify one mainnet light-client update in a RISC Zero zkVM 3.0.5 guest
 
 (The execution layer, measured on 9 Nov 2026, has its own section below:
-"2026-11-09: the execution layer".)
+"2026-11-09: the execution layer". The residue-witness check, an experimental replacement of the
+final exponentiation measured on 17 Nov 2026, has one too: "2026-11-17: one update in one
+transaction with a residue witness", and its own note, [`RESIDUE.md`](RESIDUE.md).)
 
 **Former name.** Measured at commit f030475, before the project was renamed Ferrata, when the core
 was `crates/plumbline-core`; the earlier snapshot run below used commit 25aa07e. At the rename commit
@@ -334,6 +336,47 @@ measurements with the Full policy; they moved by at most 0.21 M.
 | segments (2^20 cycles each) | 4 |
 | **execution total incl. paging + padding** (Σ 2^po2) | 4,194,304 |
 | executor wall-clock | 0.2 s |
+
+## 2026-11-17: one update in one transaction with a residue witness (experimental, unaudited)
+
+**Not in any deployed program.** [`RESIDUE.md`](RESIDUE.md) says what the check is, why it is sound,
+what was tested and what an auditor must check. The program's `VerifyAll` work (decode the compact
+store, update and signer witness; step 1; the two-pair Miller loop; the final check; the adoption in
+one part; encode and apply the job) in one execution of `guests/residue-accel`, with the final
+exponentiation (current path), the residue-witness check (witness path) or that check folded into a
+Miller loop of our own (folded; `residue::fold`); mainnet update_1 against
+the store after update_0; the 342- and 512-signer rows sign the real update with a committee the
+bench holds, put in the store in place of the signing committee. Executor only (r0vm 3.0.5), blst
+`v0.3.16-risczero.0` and SHA-256 as `blst-accel`, the core of the branch (unchanged). Modal build
+box, 17 Nov 2026. Outputs: `results/residue/` ([`tables.md`](results/residue/tables.md), `one-tx.txt`,
+`guest-check.txt`).
+
+| update_1 as | signers | current path | witness path | witness folded into the Miller loop | of `MAX_GAS_EXEC`: witness, folded |
+|---|---:|---:|---:|---:|---:|
+| finality update | 510 of 512 (as served) | 9,076,609 | 6,573,265 | 5,911,714 | 65.7%, 59.1% |
+| finality update | 342 of 512 | 13,312,372 | 10,809,028 | 10,147,477 | 108.1%, 101.5% |
+| finality update | 512 of 512 | 9,025,217 | 6,521,873 | 5,860,322 | 65.2%, 58.6% |
+| period update (adopts 512 keys) | 510 of 512 (as served) | 15,100,180 | 12,596,637 | 11,935,103 | 126.0%, 119.4% |
+| period update | 342 of 512 | 19,335,943 | 16,832,400 | 16,170,866 | 168.3%, 161.7% |
+| period update | 512 of 512 | 15,048,788 | 12,545,245 | 11,883,711 | 125.5%, 118.8% |
+
+* Executor user cycles of the whole execution (`SessionInfo::cycles`). The final check: 3,611,883
+  cycles by the final exponentiation, 1,108,036 by the witness check (decoding `c` and `w`, `c ≠ 0`,
+  `w ∈ Fp6`, `f·w == c^λ`); the Miller loop and the check together 6,886,952, 4,383,105 and, folded,
+  3,722,465. Every other phase is the same in all paths (per phase: `results/residue/tables.md`).
+* A non-signer costs 25,213 cycles: 22,324 in step 1 (its uncompressed key and its Merkle branch to
+  the committee's key root) and 2,889 to read and decode its 384 bytes of witness. The adoption of
+  512 keys costs 5,991,991.
+* The guest refuses a witness with one bit of `c` flipped and one with `w` outside Fp6, and on the
+  folded path a `c^−1` that is not the inverse; on the 143 distinct products of the real data, its
+  verdicts by both paths equal the native ones.
+* Through LEZ's state machine (in-process harness, LEZ v0.4.0-rc1), an experimental copy of the
+  program with the witness check (not folded) was charged 6,629,246 execution gas for the 510-signer
+  finality update in one transaction, the deployed `VerifyAll` 9,124,896 in the same build
+  ([`RESIDUE.md`](RESIDUE.md) §6, `results/residue/lez-experimental.txt`).
+* Re-check: `cd bench && cargo build --release -p residue-host && ./target/release/residue-host measure`
+  (about a minute on the build box, guest build included; it builds only the residue guest);
+  tests: `cargo test --release -p residue`.
 
 ## 2026-11-09: the execution layer, with and without accelerated Keccak (commit 643e31b)
 

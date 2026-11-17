@@ -24,9 +24,9 @@
 //! follows (`guest-libs/pairing/src/bls12_381/pairing.rs`, commit df4e8c5c, MIT/Apache-2.0).
 //! This file is written from that description, not copied: the check and the witness algorithm
 //! are re-implemented on blst's Fp12 arithmetic (the accelerated blst in a RISC Zero guest); the
-//! exponents are derived from p, r and u by `gen_constants.py`. Where the algorithm follows
-//! gnark's `finalExpWitness`, credit is due to it: Copyright 2020-2025 Consensys Software Inc.,
-//! licensed under the Apache License, Version 2.0.
+//! exponents are derived from p, r and u by `gen_constants.py`. [`witness`] follows the steps of
+//! gnark's `finalExpWitness` (hints.go:151-218 at that commit; gnark is licensed under the Apache
+//! License, Version 2.0); no gnark or OpenVM source text is copied.
 #![allow(unsafe_code)]
 
 use blst::{
@@ -35,6 +35,7 @@ use blst::{
 };
 
 mod constants;
+pub mod fold;
 pub use constants::*;
 
 /// The canonical encoding of an Fp12 element: twelve big-endian 48-byte coefficients, in blst's
@@ -205,6 +206,14 @@ pub fn witness(f: &blst_fp12) -> (blst_fp12, blst_fp12) {
     let w = pow_be(&g, &W_EXP);
     let c = pow_be(&mul(f, &w), &LAMBDA_INV_MOD_F);
     (c, w)
+}
+
+/// `a^-1` (zero for zero), host side: the folded check's `c^-1` (see [`fold`]).
+pub fn inverse(a: &blst_fp12) -> blst_fp12 {
+    let mut out = blst_fp12::default();
+    // SAFETY: valid destination and source.
+    unsafe { blst::blst_fp12_inverse(&mut out, a) };
+    out
 }
 
 /// The current path's verdict: blst's final exponentiation, then the comparison with one

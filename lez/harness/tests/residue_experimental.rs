@@ -116,6 +116,11 @@ fn a_finality_update_in_one_transaction_with_the_residue_witness() {
     let header = header_actor(w.inst.program, &w.inst.id, update.finalized_header.beacon.slot);
     let time = w.inst.config.slot_start_ms(update.signature_slot) + 12_000;
 
+    println!(
+        "image ids in this build (they depend on the build path): experimental copy {}, deployed program {}",
+        image_id_hex(methods_residue_experimental::FERRATA_LEZ_RESIDUE_EXPERIMENTAL_ID),
+        image_id_hex(methods::FERRATA_LEZ_ID)
+    );
     println!("| transaction | handlers run (cycles each) | execution gas | of MAX_GAS_EXEC 10M | storage gas (tx bytes) | base fee | result |");
     println!("|---|---|---:|---:|---:|---:|---|");
 

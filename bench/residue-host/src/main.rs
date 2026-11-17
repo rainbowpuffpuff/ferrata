@@ -27,7 +27,7 @@ use ferrata_core::{
     Root,
 };
 use ferrata_spectests::testkit::{fake_committee, sign};
-use residue::{check, decode_fp12, encode_fp12, final_exp_is_one, witness, FP12_BYTES};
+use residue::{check, decode_fp12, encode_fp12, final_exp_is_one, inverse, witness, FP12_BYTES};
 use risc0_zkvm::{default_executor, ExecutorEnv, SessionInfo};
 use sha2::{Digest, Sha256};
 
@@ -125,6 +125,7 @@ struct Inputs {
     keys: Vec<u8>,
     c: [u8; FP12_BYTES],
     w: [u8; FP12_BYTES],
+    c_inv: [u8; FP12_BYTES],
     expected_store: Vec<u8>,
     product: [u8; FP12_BYTES],
 }
@@ -159,6 +160,7 @@ fn native(case: &Case, spec: &ChainSpec, gvr: &Root) -> Inputs {
         keys,
         c: encode_fp12(&c),
         w: encode_fp12(&w),
+        c_inv: encode_fp12(&inverse(&c)),
         expected_store: next.encode(),
         product,
     }
@@ -237,27 +239,39 @@ fn measure() {
     let gvr = root(GVR);
     let mut raw = String::new();
     let mut table = String::from(
-        "| case | path | S1 step 1 | S2 Miller | S3 final check | A adoption | rest (read, decode, encode, apply) | whole update (cycle_count) | execution user cycles | segments |\n|---|---|---:|---:|---:|---:|---:|---:|---:|---:|\n",
+        "| case | path | S1 step 1 | S2 Miller | S3 final check | S2+S3 (folded: one phase) | A adoption | rest (read, decode, encode, apply) | whole update (cycle_count) | execution user cycles | segments |\n|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n",
     );
     let mut ops_input = None;
     for case in cases(&spec, &gvr) {
         let inp = native(&case, &spec, &gvr);
         ops_input.get_or_insert((inp.product, inp.c, inp.w));
-        for (path, flag) in [("current (final exponentiation)", 0u32), ("witness (residue check)", 1)] {
-            let (c, w): (&[u8], &[u8]) = if flag == 1 { (&inp.c, &inp.w) } else { (&[], &[]) };
-            let run = execute(MODE_ONE_TX, &[flag], &[&inp.store, &inp.update, &inp.signers, &inp.keys, c, w]);
+        for (path, flag) in [
+            ("current (final exponentiation)", 0u32),
+            ("witness (residue check)", 1),
+            ("witness folded into the Miller loop", 2),
+        ] {
+            let (c, w, c_inv): (&[u8], &[u8], &[u8]) = match flag {
+                0 => (&[], &[], &[]),
+                1 => (&inp.c, &inp.w, &[]),
+                _ => (&inp.c, &inp.w, &inp.c_inv),
+            };
+            let run = execute(MODE_ONE_TX, &[flag], &[&inp.store, &inp.update, &inp.signers, &inp.keys, c, w, c_inv]);
             assert_eq!(run.extra, inp.expected_store, "{} / {path}: the guest's new store", case.name);
             report(&mut raw, &format!("{} / {path}", case.name), &run);
             let s1 = get(&run, "S1 ");
             let s2 = get(&run, "S2 ");
             let s3 = get(&run, "S3");
+            let s23 = s2 + s3 + get(&run, "S23f ");
             let a = get(&run, "A0 ") + get(&run, "A1 ");
             let whole = get(&run, "T  ");
+            let dash = |v: u64| if flag == 2 { "-".to_string() } else { v.to_string() };
             writeln!(
                 table,
-                "| {} | {path} | {s1} | {s2} | {s3} | {a} | {} | {whole} | {} | {} |",
+                "| {} | {path} | {s1} | {} | {} | {s23} | {a} | {} | {whole} | {} | {} |",
                 case.name,
-                whole - s1 - s2 - s3 - a,
+                dash(s2),
+                dash(s3),
+                whole - s1 - s23 - a,
                 run.info.cycles(),
                 run.info.segments.len()
             )
@@ -271,14 +285,20 @@ fn measure() {
     let inp = native(&case, &spec, &gvr);
     let mut flipped = inp.c;
     flipped[47] ^= 1;
-    let run = execute(MODE_ONE_TX, &[1], &[&inp.store, &inp.update, &inp.signers, &inp.keys, &flipped, &inp.w]);
+    let run = execute(MODE_ONE_TX, &[1], &[&inp.store, &inp.update, &inp.signers, &inp.keys, &flipped, &inp.w, &[]]);
     assert_eq!(run.extra, vec![0xff, 243], "a tampered c is refused with Mismatch (243)");
     report(&mut raw, "REFUSAL: finality update_1, witness path, c with one bit flipped", &run);
     let mut w_outside = inp.w;
     w_outside[300] = 1; // a coefficient of w's c1: w is no longer in Fp6
-    let run = execute(MODE_ONE_TX, &[1], &[&inp.store, &inp.update, &inp.signers, &inp.keys, &inp.c, &w_outside]);
+    let run = execute(MODE_ONE_TX, &[1], &[&inp.store, &inp.update, &inp.signers, &inp.keys, &inp.c, &w_outside, &[]]);
     assert_eq!(run.extra, vec![0xff, 242], "w outside Fp6 is refused with ScalingNotInFp6 (242)");
     report(&mut raw, "REFUSAL: finality update_1, witness path, w with a coefficient outside Fp6", &run);
+    let run = execute(MODE_ONE_TX, &[2], &[&inp.store, &inp.update, &inp.signers, &inp.keys, &inp.c, &inp.w, &inp.c]);
+    assert_eq!(run.extra, vec![0xff, 241], "a c^-1 that is not the inverse is refused (241)");
+    report(&mut raw, "REFUSAL: finality update_1, folded path, c given as its own inverse", &run);
+    let run = execute(MODE_ONE_TX, &[2], &[&inp.store, &inp.update, &inp.signers, &inp.keys, &flipped, &inp.w, &inp.c_inv]);
+    assert_eq!(run.extra, vec![0xff, 241], "a flipped c no longer matches its inverse (241)");
+    report(&mut raw, "REFUSAL: finality update_1, folded path, c with one bit flipped", &run);
 
     let (f, c, w) = ops_input.unwrap();
     let run = execute(MODE_OPS, &[], &[&f, &c, &w]);

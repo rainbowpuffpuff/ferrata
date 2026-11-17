@@ -84,6 +84,28 @@ cargo build --release -p exec-host      # compiles the two guests, then the host
 The host runs the light client natively to obtain the record of block 26,379,842, computes every
 expected result natively, and the guests assert them. Results and their reading: `RESULTS.md`.
 
+## The residue-witness check (`residue/`, experimental, unaudited)
+
+An experimental replacement of the final exponentiation, used by no deployed program
+([`RESIDUE.md`](RESIDUE.md)):
+
+* `residue/`: the check and the honest witness on blst (`src/lib.rs`), its constants
+  (`gen_constants.py` writes `src/constants.rs` from p, r and u, asserting every relation), and its
+  tests: `constants`, `real_data` (tests (a) and (b); needs `../scripts/fetch-vectors.sh`),
+  `differential` (test (c), 11,034 products).
+* `guests/residue-accel/`, built by `residue-methods/` alone: one whole update per execution, as the
+  LEZ program's `VerifyAll` runs it, with either final check.
+* `residue-host/`: `measure` (the table of `RESULTS.md`, into `results/residue/`) and `check`
+  (test (d): the guest's verdicts on the real data's products).
+
+```sh
+cd bench && export TMPDIR=$PWD/../../tmp && mkdir -p "$TMPDIR"
+cargo test --release -p residue -- --nocapture         # (a)-(c); writes target/residue-tuples-a.bin
+cargo build --release -p residue-host
+./target/release/residue-host measure                  # results/residue/one-tx.txt, tables.md
+./target/release/residue-host check                    # results/residue/guest-check.txt
+```
+
 ## Notes
 
 * The guest lockfiles are resolved for the guest toolchain's Rust 1.88. If they ever have to be
