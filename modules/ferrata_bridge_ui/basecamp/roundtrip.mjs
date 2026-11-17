@@ -12,7 +12,7 @@
 // answered at once, the view polls it; while a job proves, its picture is taken, the view's button is checked disabled, a
 // second start of the same step is checked to answer the running job, and a call that would wait for the proof is checked
 // refused at once. At the end every call of the view is checked answered within Basecamp's 20 s, none cut.
-// BASECAMP_REOPEN=1: while the burn's job proves, the view is unloaded and loaded again through Basecamp's Module
+// BASECAMP_REOPEN=1: while the burn's job proves, the view is unloaded and loaded again through Basecamp's Apps
 // Inspector (a fresh instance of the view), which must find the running job and complete the step.
 //
 // Environment: SEQNET_OPS (ops.sh), SEQNET_CHAIN_URL (seqnet-chain), BASECAMP_LEZ (lez_core | plain),
@@ -94,16 +94,21 @@ async function jobDone(app, kind) {
   check(j.state === "settled", `the ${kind}'s job ${j.id} settled (${j.state}${j.error ? ": " + j.error : ""}) after ${j.elapsed_ms} ms, its proof ${j.proving_ms} ms`);
   return j;
 }
-// R2: the view unloaded and loaded again through Basecamp's Module Inspector while the step's job proves; the fresh view
+// R2: the view unloaded and loaded again through Basecamp's Apps Inspector while the step's job proves; the fresh view
 // must find the job (it lists the module's jobs when it opens) and complete the step from it.
 async function reopenView(app, kind) {
   const before = await getJson(app, `${kind}Job`);
   writeJson("view-calls-before-reopen.json", await getJson(app, "callLog"));
   const toggle = "moduleRow.loadToggle.ferrata_bridge_ui";
+  // Basecamp lists the ui modules (apps) in its Apps Inspector and the core modules in its Module Inspector.
   await clickName(app, await sidebarSection(app, "Settings"));
-  await app.click("Module Inspector");
-  await sleep(500);
-  await waitFor(app, async () => { await idOf(app, toggle); }, 20000, "the view's row in the Module Inspector");
+  let inspector = "";
+  for (const section of ["Apps Inspector", "Module Inspector"]) {
+    await app.click(section);
+    await sleep(1000);
+    if ((await idsOf(app, "objectName", toggle)).length) { inspector = section; break; }
+  }
+  check(inspector !== "", `the view's row in Basecamp's ${inspector || "Apps or Module Inspector"}`);
   check((await evalIn(app, toggle, "text")) === "Unload", "the view is loaded");
   await clickName(app, toggle);
   await waitFor(app, async () => { const t = await evalIn(app, toggle, "text"); if (t !== "Load") throw new Error(t); }, 60000, "the view unloaded");
