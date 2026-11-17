@@ -159,6 +159,12 @@ with the private claim and burn proven for real; its results go to `results-real
     (`ops.sh`); the vault's verifier is the mock.
   - **Not the Basecamp users run.** This was its dev build, headless, in standalone mode, with the modules
     installed from local `.lgx` files.
+  - **The jobs' limits.** The module keeps its jobs in memory (at most 64): a module restarted during a proof loses
+    them, and the view then says "Unknown job". One private transaction at a time, and while it is proven the module
+    refuses at once the reads that would wait for `lez_core` (the view defers its refresh). A view opened again keeps
+    the release's delay (it travels with the burn's job) but not the claim's (kept by the view from the deposit), and
+    reads the registry only on its Registry tab. On the chain service's own path (`BASECAMP_LEZ=plain`) the proof is
+    the chain service's, which answers nothing else meanwhile: not run with real proofs.
 - The checkpoint and release proofs and the Groth16 wrap are the mock verifier on the devnet (named in the
   replies); real proofs on this path are the private transactions' only.
 - The vault's own admin functions (fee announcements, watchers, the 14-day role change, retirement) are
