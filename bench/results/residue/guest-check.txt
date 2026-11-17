@@ -1,0 +1,9 @@
+### CHECK (d): every product of test (a), the witness check and the final exponentiation in the guest
+           143  records
+     155251096  witness checks, cycles in all
+     512097872  final exponentiations, cycles in all
+     670618603  EXECUTION user cycles (SessionInfo::cycles)
+     703725568  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 672 segments)
+         26.34  executor wall-clock seconds
+
+(d) 143 records (143 valid, 0 invalid): the guest's verdicts equal the native ones, by both paths

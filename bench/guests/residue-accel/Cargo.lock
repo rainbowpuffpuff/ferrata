@@ -253,15 +253,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 
 [[package]]
-name = "bench-core"
-version = "0.1.0"
-dependencies = [
- "blst",
- "ferrata-core",
- "risc0-zkvm",
-]
-
-[[package]]
 name = "bit-vec"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -314,16 +305,6 @@ dependencies = [
  "risc0-bigint2",
  "threadpool",
  "zeroize",
-]
-
-[[package]]
-name = "blst_accel"
-version = "0.1.0"
-dependencies = [
- "bench-core",
- "blst",
- "risc0-zkvm",
- "sha2",
 ]
 
 [[package]]
@@ -1051,6 +1032,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "60aa6af80be32871323012e02e6e65f8a7cc7890931ae421d217ad8fe0df2ccf"
 dependencies = [
  "rand_core 0.10.1",
+]
+
+[[package]]
+name = "residue"
+version = "0.1.0"
+dependencies = [
+ "blst",
+]
+
+[[package]]
+name = "residue_accel"
+version = "0.1.0"
+dependencies = [
+ "blst",
+ "ferrata-core",
+ "residue",
+ "risc0-zkvm",
+ "sha2",
 ]
 
 [[package]]
